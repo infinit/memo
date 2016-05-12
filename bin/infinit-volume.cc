@@ -41,22 +41,14 @@ COMMAND(create)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
-  auto mountpoint = optional(args, "mountpoint");
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
   auto default_permissions = optional(args, "default-permissions");
-  std::vector<std::string> hosts;
-  infinit::overlay::NodeEndpoints eps;
-  if (args.count("peer"))
-  {
-    hosts = args["peer"].as<std::vector<std::string>>();
-    for (auto const& h: hosts)
-      eps[elle::UUID()].push_back(h);
-  }
+  infinit::MountOptions mo;
+  mo.merge(args);
   if (default_permissions && *default_permissions!= "r"
       && *default_permissions!= "rw")
     throw elle::Error("default-permissions must be 'r' or 'rw'");
-  infinit::Volume volume(name, mountpoint, network.name,
-    default_permissions);
+  infinit::Volume volume(name, network.name, mo, default_permissions);
   if (args.count("output"))
   {
     auto output = get_output(args);
@@ -68,7 +60,7 @@ COMMAND(create)
     ifnt.volume_save(volume);
     report_created("volume", name);
   }
-  if (aliased_flag(args, {"push-volume", "push"}))
+  if (flag(args, "push-volume") || flag(args, "push"))
     beyond_push("volume", name, volume, owner);
 }
 
@@ -78,7 +70,7 @@ COMMAND(export_)
   auto name = volume_name(args, owner);
   auto output = get_output(args);
   auto volume = ifnt.volume_get(name);
-  volume.mountpoint.reset();
+  volume.mount_options.mountpoint.reset();
   {
     elle::serialization::json::SerializerOut s(*output, false);
     s.serialize_forward(volume);
@@ -91,7 +83,7 @@ COMMAND(import)
   auto input = get_input(args);
   elle::serialization::json::SerializerIn s(*input, false);
   infinit::Volume volume(s);
-  volume.mountpoint = optional(args, "mountpoint");
+  volume.mount_options.mountpoint = optional(args, "mountpoint");
   ifnt.volume_save(volume);
   report_imported("volume", volume.name);
 }
@@ -102,7 +94,7 @@ COMMAND(push)
   auto name = volume_name(args, owner);
   auto volume = ifnt.volume_get(name);
   // Don't push the mountpoint to beyond.
-  volume.mountpoint = boost::none;
+  volume.mount_options.mountpoint = boost::none;
   auto network = ifnt.network_get(volume.network, owner);
   auto owner_uid = infinit::User::uid(*network.dht()->owner);
   beyond_push("volume", name, volume, owner);
@@ -298,11 +290,13 @@ COMMAND(run)
 {
   auto self = self_user(ifnt, args);
   auto name = volume_name(args, self);
+  auto volume = ifnt.volume_get(name);
+  volume.mount_options.merge(args);
+  auto const& mo = volume.mount_options;
   infinit::overlay::NodeEndpoints eps;
-  if (args.count("peer"))
+  if (mo.peers)
   {
-    auto peers = args["peer"].as<std::vector<std::string>>();
-    for (auto const& obj: peers)
+    for (auto const& obj:  *mo.peers)
     {
       auto file_eps = endpoints_from_file(obj);
       if (file_eps.size())
@@ -316,17 +310,14 @@ COMMAND(run)
       }
     }
   }
-  std::vector<std::string> fuse_options;
+
 #ifdef INFINIT_MACOSX
   if (!flag(args, option_disable_mac_utf8))
-    fuse_options.push_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
+    mo.fuse_options.push_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
 #endif
-  auto volume = ifnt.volume_get(name);
-  auto mountpoint = optional(args, "mountpoint");
-  if (!mountpoint)
-    mountpoint = volume.mountpoint;
+
   bool created_mountpoint = false;
-  if (mountpoint)
+  if (mo.mountpoint)
   {
 #ifdef INFINIT_WINDOWS
     if (mountpoint.get().size() == 2 && mountpoint.get()[1] == ':')
@@ -335,15 +326,15 @@ COMMAND(run)
 #endif
     try
     {
-      if (boost::filesystem::exists(mountpoint.get()))
+      if (boost::filesystem::exists(mo.mountpoint.get()))
       {
-        if (!boost::filesystem::is_directory(mountpoint.get()))
+        if (!boost::filesystem::is_directory(mo.mountpoint.get()))
           throw (elle::Error("mountpoint is not a directory"));
-        if (!boost::filesystem::is_empty(mountpoint.get()))
+        if (!boost::filesystem::is_empty(mo.mountpoint.get()))
           throw elle::Error("mountpoint is not empty");
       }
       created_mountpoint =
-        boost::filesystem::create_directories(mountpoint.get());
+        boost::filesystem::create_directories(mo.mountpoint.get());
     }
     catch (boost::filesystem::filesystem_error const& e)
     {
@@ -351,26 +342,13 @@ COMMAND(run)
                                       e.what()));
     }
   }
-  if (args.count("fuse-option"))
+  if (mo.fuse_options)
   {
-    if (mountpoint)
+    if (!mo.mountpoint)
       throw CommandLineError("FUSE options require the volume to be mounted");
-    for (auto const& opt: args["fuse-option"].as<std::vector<std::string>>())
-      fuse_options.push_back(opt);
   }
   auto network = ifnt.network_get(volume.network, self);
   ELLE_TRACE("run network");
-  bool cache = flag(args, option_cache);
-  auto cache_ram_size = optional<int>(args, option_cache_ram_size);
-  auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
-  auto cache_ram_invalidation =
-    optional<int>(args, option_cache_ram_invalidation);
-  auto disk_cache_size = optional<uint64_t>(args, option_cache_disk_size);
-  if (cache_ram_size || cache_ram_ttl || cache_ram_invalidation
-      || disk_cache_size)
-  {
-    cache = true;
-  }
 #ifndef INFINIT_WINDOWS
   if (flag(args, "daemon"))
     if (daemon(0, 1))
@@ -392,19 +370,17 @@ COMMAND(run)
           reactor::scheduler().terminate();
         });
   }
-  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
-  if (fetch)
+  if (mo.fetch)
     beyond_fetch_endpoints(network, eps);
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
   auto model = network.run(
     eps, true,
-    cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-    flag(args, "async"), disk_cache_size, compatibility_version, port);
+    mo.cache && mo.cache.get(), mo.cache_ram_size, mo.cache_ram_ttl, mo.cache_ram_invalidation,
+    mo.async && mo.async.get(), mo.cache_disk_size, compatibility_version, port);
   // Only push if we have are contributing storage.
-  bool push =
-    aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
+  bool push = mo.push && model->local();
   boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint;
   if (model->local())
   {
@@ -425,17 +401,12 @@ COMMAND(run)
       stat_thread = make_stat_update_thread(self, network, *model);
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
-    auto fs = volume.run(std::move(model),
-                         mountpoint,
-                         flag(args, "readonly")
+    auto fs = volume.run(std::move(model)
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
                          , optional(args, "mount-name")
 #endif
 #ifdef INFINIT_MACOSX
                          , optional(args, "mount-icon")
-#endif
-#ifndef INFINIT_WINDOWS
-                         , fuse_options
 #endif
                          );
     if (volume.default_permissions && !volume.default_permissions->empty())
@@ -477,7 +448,7 @@ COMMAND(run)
       {
         reactor::background([mountpoint]
           {
-            remove_path_from_finder_sidebar(mountpoint.get());
+            remove_path_from_finder_sidebar(mo.mountpoint.get());
           });
       }
 #endif
@@ -487,7 +458,7 @@ COMMAND(run)
       {
         try
         {
-          boost::filesystem::remove(mountpoint.get());
+          boost::filesystem::remove(mo.mountpoint.get());
         }
         catch (boost::filesystem::filesystem_error const&)
         {}
@@ -882,7 +853,7 @@ COMMAND(mount)
     auto self = self_user(ifnt, args);
     auto name = volume_name(args, self);
     auto volume = ifnt.volume_get(name);
-    if (!volume.mountpoint)
+    if (!volume.mount_options.mountpoint)
     {
       mandatory(args, "mountpoint",
                 "No default mountpoint for volume. mountpoint");
@@ -901,8 +872,8 @@ COMMAND(list)
       elle::json::Object o;
       o["name"] = volume.name;
       o["network"] = volume.network;
-      if (volume.mountpoint)
-        o["mountpoint"] = volume.mountpoint.get();
+      if (volume.mount_options.mountpoint)
+        o["mountpoint"] = volume.mount_options.mountpoint.get();
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
@@ -911,10 +882,18 @@ COMMAND(list)
     for (auto const& volume: ifnt.volumes_get())
     {
       std::cout << volume.name << ": network " << volume.network;
-      if (volume.mountpoint)
-        std::cout << " on " << volume.mountpoint.get();
+      if (volume.mount_options.mountpoint)
+        std::cout << " on " << volume.mount_options.mountpoint.get();
       std::cout << std::endl;
     }
+}
+
+template<typename T>
+T join(T const& a, T const& b)
+{
+  T res(a);
+  res.insert(res.end(), b.begin(), b.end());
+  return res;
 }
 
 int
@@ -953,7 +932,6 @@ main(int argc, char** argv)
       "peer address or file with list of peer addresses (host:port)" },
     { "push-endpoints", bool_switch(),
       elle::sprintf("push endpoints to %s", beyond(true)) },
-    { "push,p", bool_switch(), "alias for --push-endpoints" },
     { "publish", bool_switch(),
       "alias for --fetch-endpoints --push-endpoints" },
     option_endpoint_file,
@@ -971,20 +949,16 @@ main(int argc, char** argv)
       "Create a volume",
       &create,
       "--name VOLUME --network NETWORK [--mountpoint PATH]",
-      {
-        { "name,n", value<std::string>(), "created volume name" },
-        { "network,N", value<std::string>(), "underlying network to use" },
-        { "mountpoint,m", value<std::string>(),
-          "default location to mount the volume (optional)" },
-        option_output("volume"),
-        { "peer", value<std::vector<std::string>>()->multitoken(),
-          "peer to connect to (host:port)" },
-        { "push-volume", bool_switch(),
-          elle::sprintf("push the volume to %s", beyond(true)) },
-        { "push,p", bool_switch(), "alias for --push-volume" },
-        { "default-permissions,d", value<std::string>(),
-          "default permissions (optional: r,rw)"},
-      },
+      join(options_run_mount,
+        {
+          { "network,N", value<std::string>(), "underlying network to use" },
+          option_output("volume"),
+          { "push-volume", bool_switch(),
+            elle::sprintf("push the volume to %s", beyond(true)) },
+          { "push,p", bool_switch(), "alias for --push-endpoints --push-volume" },
+          { "default-permissions,d", value<std::string>(),
+            "default permissions (optional: r,rw)"},
+        })
     },
     {
       "export",
@@ -1032,7 +1006,10 @@ main(int argc, char** argv)
       "Run a volume",
       &run,
       "--name VOLUME [--mountpoint PATH]",
-      options_run_mount,
+      join( options_run_mount,
+        {
+          { "push,p", bool_switch(), "alias for --push-endpoints" },
+        }),
       {},
       options_run_mount_hidden,
     },
@@ -1041,7 +1018,10 @@ main(int argc, char** argv)
       "Mount a volume",
       &mount,
       "--name VOLUME [--mountpoint PATH]",
-      options_run_mount,
+      join( options_run_mount,
+        {
+          { "push,p", bool_switch(), "alias for --push-endpoints" },
+        }),
       {},
       options_run_mount_hidden,
     },

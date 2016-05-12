@@ -22,114 +22,22 @@ ELLE_LOG_COMPONENT("infinit-daemon");
 
 #include <main.hh>
 
-struct MountOptions
-{
-  MountOptions();
-  void to_commandline(std::vector<std::string>& arguments,
-                      std::unordered_map<std::string, std::string>& env) const;
-  std::string volume;
-  boost::optional<std::string> hub_url;
-  boost::optional<std::string> rdv;
-  boost::optional<std::vector<std::string>> fuse_options;
-  boost::optional<std::string> as;
-  boost::optional<bool> fetch;
-  boost::optional<bool> push;
-  boost::optional<bool> cache;
-  boost::optional<bool> async;
-  boost::optional<bool> readonly;
-  boost::optional<uint64_t> cache_ram_size;
-  boost::optional<uint64_t> cache_ram_ttl;
-  boost::optional<uint64_t> cache_ram_invalidation;
-  boost::optional<uint64_t> cache_disk_size;
-  boost::optional<std::string> mountpoint;
-  boost::optional<std::vector<std::string>> peers;
-  typedef infinit::serialization_tag serialization_tag;
-};
-
-DAS_MODEL(
-  MountOptions,
-  (volume)
-  (hub_url)
-  (rdv)
-  (fuse_options)
-  (fetch)
-  (push)
-  (cache)
-  (async)
-  (readonly)
-  (cache_ram_size)
-  (cache_ram_ttl)
-  (cache_ram_invalidation)
-  (cache_disk_size)
-  (mountpoint)
-  (as)
-  (peers),
-  DasMountOptions);
-
-DAS_MODEL_SERIALIZE(MountOptions);
-DAS_MODEL_DEFAULT(MountOptions, DasMountOptions);
-
-MountOptions::MountOptions()
-{}
-
-void
-MountOptions::to_commandline(std::vector<std::string>& arguments,
-                             std::unordered_map<std::string, std::string>& env) const
-{
-  if (rdv)
-    env.insert(std::make_pair("INFINIT_RDV", rdv.get()));
-  if (hub_url)
-    env.insert(std::make_pair("INFINIT_BEYOND", hub_url.get()));
-  arguments.push_back("--run");
-  arguments.push_back(volume);
-  if (fuse_options)
-    for (auto const& fo: fuse_options.get())
-    {
-      arguments.push_back("--fuse-option");
-      arguments.push_back(fo);
-    }
-  if (peers)
-    for (auto const& fo: peers.get())
-    {
-      arguments.push_back("--peer");
-      arguments.push_back(fo);
-    }
-  if (fetch && *fetch) arguments.push_back("--fetch");
-  if (push && *push) arguments.push_back("--push");
-  if (cache && *cache) arguments.push_back("--cache");
-  if (async && *async) arguments.push_back("--async");
-  if (readonly && *readonly) arguments.push_back("--readonly");
-  if (cache_ram_size) {arguments.push_back("--cache-ram-size"); arguments.push_back(std::to_string(cache_ram_size.get()));}
-  if (cache_ram_ttl) {arguments.push_back("--cache-ram-ttl"); arguments.push_back(std::to_string(cache_ram_ttl.get()));}
-  if (cache_ram_invalidation) {arguments.push_back("--cache-ram-invalidation"); arguments.push_back(std::to_string(cache_ram_invalidation.get()));}
-  if (cache_disk_size) {arguments.push_back("--cache-disk-size"); arguments.push_back(std::to_string(cache_disk_size.get()));}
-  if (mountpoint)
-  {
-    arguments.push_back("--mountpoint");
-    arguments.push_back(mountpoint.get());
-  }
-  if (as)
-  {
-    arguments.push_back("--as");
-    arguments.push_back(as.get());
-  }
-}
 
 struct Mount
 {
-  MountOptions options;
+  infinit::MountOptions options;
   std::unique_ptr<elle::system::Process> process;
 };
 
 class MountManager
 {
 public:
-  void create(std::string const& name, MountOptions const& options);
+  void create(std::string const& name, infinit::MountOptions const& options);
   void remove(std::string const& name);
   bool exists(std::string const& name);
   std::vector<std::string> list();
   void mount(std::string const& name);
-  std::string mount(boost::optional<std::string> name, MountOptions const& options);
+  std::string mount(boost::optional<std::string> name, infinit::MountOptions const& options);
   void umount(std::string const& name);
   void status(boost::optional<std::string> name,
               elle::serialization::SerializerOut& reply);
@@ -150,7 +58,7 @@ manager()
 }
 
 void
-MountManager::create(std::string const& name, MountOptions const& options)
+MountManager::create(std::string const& name, infinit::MountOptions const& options)
 {
   auto ser = elle::serialization::json::serialize(options);
   auto path = infinit::xdg_data_home() / "mounts" / name;
@@ -198,12 +106,12 @@ MountManager::mount(std::string const& name)
   if (!boost::filesystem::exists(path))
     throw elle::Exception("mount " + name + " does not exist");
   boost::filesystem::ifstream ifs(path);
-  auto mo = elle::serialization::json::deserialize<MountOptions>(ifs);
+  auto mo = elle::serialization::json::deserialize<infinit::MountOptions>(ifs);
   mount(name, mo);
 }
 
 std::string
-MountManager::mount(boost::optional<std::string> name, MountOptions const& options)
+MountManager::mount(boost::optional<std::string> name, infinit::MountOptions const& options)
 {
   if (!name)
     name = "mount_" + std::to_string(++_next_id);
@@ -446,7 +354,7 @@ process_command(elle::json::Object query)
       }
       else if (op == "create")
       {
-        auto mo = command.deserialize<MountOptions>("options");
+        auto mo = command.deserialize<infinit::MountOptions>("options");
         std::string name;
         command.serialize("name", name);
         manager().create(name, mo);
@@ -468,7 +376,7 @@ process_command(elle::json::Object query)
       }
       else if (op == "mount_volume")
       {
-        auto mo = command.deserialize<MountOptions>("options");
+        auto mo = command.deserialize<infinit::MountOptions>("options");
         boost::optional<std::string> name;
         command.serialize("name", name);
         name = manager().mount(name, mo);
@@ -687,7 +595,7 @@ DockerVolumePlugin::install(bool tcp)
       ELLE_TRACE("options retyped to %s", elle::json::pretty_print(sopts));
       std::stringstream s;
       elle::json::write(s, sopts, false);
-      auto mo = elle::serialization::json::deserialize<MountOptions>(s, false);
+      auto mo = elle::serialization::json::deserialize<infinit::MountOptions>(s, false);
       manager().create(name, mo);
       return "{\"Err\": \"\", \"Volume\": {\"Name\": \"" + name + "\" }}";
     });

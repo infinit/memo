@@ -812,7 +812,8 @@ class Passport(metaclass = Entity,
 class Volume(metaclass = Entity,
              insert = 'volume_insert',
              fields = fields('name', 'network',
-                             default_permissions = '')):
+                             default_permissions = '',
+                             mount_options = dict())):
 
   @property
   def id(self):

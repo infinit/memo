@@ -452,6 +452,291 @@ beyond_push(std::string const& where,
             bool report = true,
             bool beyond_error = false); // FIXME: Remove when migration done.
 
+static
+Mode::OptionDescription option_cache(
+  "cache", boost::program_options::bool_switch(),
+  "enable caching with default values");
+static
+Mode::OptionDescription option_cache_ram_size(
+  "cache-ram-size", boost::program_options::value<int>(),
+  "maximum RAM block cache size in bytes\n(default: 64 MB)",
+  {{"cache-size", boost::program_options::value<int>()}});
+static
+Mode::OptionDescription option_cache_ram_ttl(
+  "cache-ram-ttl", boost::program_options::value<int>(),
+  "RAM block cache time-to-live in seconds\n(default: 5 minutes)",
+  {{"cache-ttl", boost::program_options::value<int>()}});
+static
+Mode::OptionDescription option_cache_ram_invalidation(
+  "cache-ram-invalidation", boost::program_options::value<int>(),
+  "RAM block cache invalidation time in seconds\n(default: 15 seconds)",
+  {{"cache-invalidation", boost::program_options::value<int>()}});
+static
+Mode::OptionDescription option_cache_disk_size(
+  "cache-disk-size", boost::program_options::value<uint64_t>(),
+  "size of disk cache for immutable data in bytes\n(default: 512 MB)",
+  {{"disk-cache-size", boost::program_options::value<uint64_t>()}});
+static
+Mode::OptionDescription option_port_file(
+  "port-file", boost::program_options::value<std::string>(),
+  "write node listening port to file");
+static
+Mode::OptionDescription option_endpoint_file(
+  "endpoints-file", boost::program_options::value<std::string>(),
+  "write node listening endpoints to file\n(format: host:port\\n)");
+static
+Mode::OptionDescription option_port(
+  "port", boost::program_options::value<int>(),
+  "outbound port to use");
+static
+Mode::OptionDescription option_disable_mac_utf8(
+  "disable-utf-8-conversion", boost::program_options::bool_switch(),
+  "disable FUSE conversion of UTF-8 to native format");
+
+
+class CommandLineSerializer
+  : public elle::serialization::SerializerIn
+{
+public:
+  typedef elle::serialization::SerializerIn Super;
+  CommandLineSerializer(boost::program_options::variables_map const& vm)
+    : Super(ELLE_SFINAE_INSTANCE(std::istream), false)
+    , _variables(vm)
+  {}
+
+protected:
+  boost::program_options::variables_map const& _variables;
+
+  virtual
+  void
+  _serialize_array(std::string const& name,
+                   int size, // -1 for in(), array size for out()
+                   std::function<void ()> const& f)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, int64_t& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, uint64_t& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, int32_t& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, uint32_t& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, int8_t& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, uint8_t& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, double& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, bool& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, std::string& v)
+  {
+    v = this->_get(name).as<std::string>();
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, elle::Buffer& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, boost::posix_time::ptime& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize_option(std::string const& name,
+                    bool present,
+                    std::function<void ()> const& f)
+  {
+    if (this->_variables.count(name))
+      f();
+  }
+
+private:
+  boost::program_options::variable_value const&
+  _get(std::string const& name)
+  {
+    auto count = this->_variables.count(name);
+    if (!count)
+      throw elle::Error(elle::sprintf("missing required \"%s\" option", name));
+    if (count > 1)
+      throw elle::Error(elle::sprintf("duplicate \"%s\" option", name));
+    return this->_variables[name];
+  }
+};
+
+template <typename T>
+boost::optional<T>
+check_deprecated(boost::program_options::variables_map const& vm,
+                 Mode::OptionDescription const& option)
+{
+  for (auto const& deprecated: option.deprecated_options)
+  {
+    if (vm.count(deprecated->long_name()))
+    {
+      std::cerr << "WARNING: option \"--" << deprecated->long_name()
+                << "\" is deprecated "
+                << "use \"--" << option.long_name() << "\" instead."
+                << std::endl;
+      return vm[deprecated->long_name()].as<T>();
+    }
+  }
+  return boost::none;
+}
+
+template <typename T = std::string>
+boost::optional<T>
+optional(boost::program_options::variables_map const& vm,
+         std::string const& name)
+{
+  if (vm.count(name))
+    return vm[name].as<T>();
+  else
+    return {};
+}
+
+template <typename T = std::string>
+boost::optional<T>
+optional(boost::program_options::variables_map const& vm,
+         Mode::OptionDescription const& option)
+{
+  auto deprecated = check_deprecated<T>(vm, option);
+  if (deprecated)
+    return deprecated;
+  return optional<T>(vm, option.long_name());
+}
+
+template <typename T = std::string>
+T
+mandatory(boost::program_options::variables_map const& vm,
+          std::string const& name,
+          std::string const& desc)
+{
+  if (!vm.count(name))
+  {
+    throw CommandLineError(
+      elle::sprintf("%s unspecified (use --%s)", desc, name));
+  }
+  return vm[name].as<T>();
+}
+
+template <typename T = std::string>
+T
+mandatory(boost::program_options::variables_map const& vm,
+          Mode::OptionDescription const& option,
+          std::string const& desc)
+{
+  auto deprecated = check_deprecated<T>(vm, option);
+  if (deprecated)
+    return deprecated.get();
+  return mandatory<T>(vm, option.long_name(), desc);
+}
+
+template <typename T = std::string>
+T
+mandatory(boost::program_options::variables_map const& vm,
+          std::string const& name)
+{
+  return mandatory<T>(vm, name, name);
+}
+
+template <typename T = std::string>
+T
+mandatory(boost::program_options::variables_map const& vm,
+          Mode::OptionDescription const& option)
+{
+  auto deprecated = check_deprecated<T>(vm, option);
+  if (deprecated)
+    return deprecated.get();
+  return mandatory<T>(vm, option.long_name());
+}
+
+template <>
+inline
+std::vector<std::string>
+mandatory<std::vector<std::string>>(
+  boost::program_options::variables_map const& vm,
+  std::string const& name,
+  std::string const& desc)
+{
+  if (!vm.count(name))
+  {
+    throw CommandLineError(
+      elle::sprintf("%s unspecified (use --%s [value ...])", desc, name));
+  }
+  return vm[name].as<std::vector<std::string>>();
+}
+
+inline
+bool
+flag(boost::program_options::variables_map const& vm,
+     std::string const& name)
+{
+  return vm.count(name) && vm[name].as<bool>();
+}
+
+inline
+bool
+flag(boost::program_options::variables_map const& vm,
+     Mode::OptionDescription const& option)
+{
+  auto deprecated = check_deprecated<bool>(vm, option);
+  if (deprecated)
+    return deprecated.get();
+  return flag(vm, option.long_name());
+}
+
 namespace infinit
 {
   typedef infinit::AWSCredentials AWSCredentials;
@@ -1060,17 +1345,139 @@ namespace infinit
     model::doughnut::AdminKeys admin_keys;
   };
 
+
+  struct MountOptions
+  {
+    MountOptions();
+    void to_commandline(std::vector<std::string>& arguments,
+                        std::unordered_map<std::string, std::string>& env) const;
+    void merge(boost::program_options::variables_map const& args);
+    boost::optional<std::string> hub_url;
+    boost::optional<std::string> rdv;
+    boost::optional<std::vector<std::string>> fuse_options;
+    boost::optional<std::string> as;
+    boost::optional<bool> fetch;
+    boost::optional<bool> push;
+    boost::optional<bool> cache;
+    boost::optional<bool> async;
+    boost::optional<bool> readonly;
+    boost::optional<int> cache_ram_size;
+    boost::optional<int> cache_ram_ttl;
+    boost::optional<int> cache_ram_invalidation;
+    boost::optional<uint64_t> cache_disk_size;
+    boost::optional<std::string> mountpoint;
+    boost::optional<std::vector<std::string>> peers;
+    typedef infinit::serialization_tag serialization_tag;
+  };
+
+  inline
+  MountOptions::MountOptions()
+  {}
+
+  inline
+  void
+  MountOptions::merge(boost::program_options::variables_map const& args)
+  {
+    auto fuse_options = optional<std::vector<std::string>>(args, "fuse-option");
+    if (fuse_options)
+    {
+      if (!this->fuse_options)
+        this->fuse_options = std::vector<std::string>();
+      this->fuse_options.get().insert(this->fuse_options.get().end(),
+        fuse_options.get().begin(), fuse_options.get().end());
+    }
+    auto peers = optional<std::vector<std::string>>(args, "peer");
+    if (peers)
+    {
+      if (!this->peers)
+        this->peers = std::vector<std::string>();
+      this->peers.get().insert(this->peers.get().end(),
+        peers.get().begin(), peers.get().end());
+    }
+    if (auto v = optional(args, "mountpoint"))
+      mountpoint = v;
+    if (auto v = optional(args, "as"))
+      as = v;
+    if (flag(args, "readonly"))
+      readonly = true;
+    if (flag(args, "publish"))
+      fetch = push = true;
+    if (flag(args, "fetch"))
+      fetch = true;
+    if (flag(args, "push") || flag(args, "push-endpoints"))
+      push = true;
+    if (flag(args, "cache"))
+      cache = true;
+    if (flag(args, "async"))
+      async = true;
+    auto cache_ram_size = optional<int>(args, option_cache_ram_size);
+    if (cache_ram_size)
+      this->cache_ram_size = cache_ram_size;
+    auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
+    if (cache_ram_ttl)
+      this->cache_ram_ttl = cache_ram_ttl;
+    auto cache_ram_invalidation =
+      optional<int>(args, option_cache_ram_invalidation);
+    if (cache_ram_invalidation)
+      this->cache_ram_invalidation = cache_ram_invalidation;
+    auto disk_cache_size = optional<uint64_t>(args, option_cache_disk_size);
+    if (disk_cache_size)
+      this->cache_disk_size = disk_cache_size;
+  }
+
+  inline
+  void
+  MountOptions::to_commandline(std::vector<std::string>& arguments,
+                               std::unordered_map<std::string, std::string>& env) const
+  {
+    if (rdv)
+      env.insert(std::make_pair("INFINIT_RDV", rdv.get()));
+    if (hub_url)
+      env.insert(std::make_pair("INFINIT_BEYOND", hub_url.get()));
+    if (fuse_options)
+      for (auto const& fo: fuse_options.get())
+      {
+        arguments.push_back("--fuse-option");
+        arguments.push_back(fo);
+      }
+    if (peers)
+      for (auto const& fo: peers.get())
+      {
+        arguments.push_back("--peer");
+        arguments.push_back(fo);
+      }
+    if (fetch && *fetch) arguments.push_back("--fetch");
+    if (push && *push) arguments.push_back("--push");
+    if (cache && *cache) arguments.push_back("--cache");
+    if (async && *async) arguments.push_back("--async");
+    if (readonly && *readonly) arguments.push_back("--readonly");
+    if (cache_ram_size) {arguments.push_back("--cache-ram-size"); arguments.push_back(std::to_string(cache_ram_size.get()));}
+    if (cache_ram_ttl) {arguments.push_back("--cache-ram-ttl"); arguments.push_back(std::to_string(cache_ram_ttl.get()));}
+    if (cache_ram_invalidation) {arguments.push_back("--cache-ram-invalidation"); arguments.push_back(std::to_string(cache_ram_invalidation.get()));}
+    if (cache_disk_size) {arguments.push_back("--cache-disk-size"); arguments.push_back(std::to_string(cache_disk_size.get()));}
+    if (mountpoint)
+    {
+      arguments.push_back("--mountpoint");
+      arguments.push_back(mountpoint.get());
+    }
+    if (as)
+    {
+      arguments.push_back("--as");
+      arguments.push_back(as.get());
+    }
+  }
+
   struct Volume
   {
     Volume() {};
 
     Volume(std::string name,
-           boost::optional<std::string> mountpoint_,
            std::string network_,
+           MountOptions const& mount_options,
            boost::optional<std::string> default_permissions_)
       : name(std::move(name))
-      , mountpoint(std::move(mountpoint_))
       , network(std::move(network_))
+      , mount_options(mount_options)
       , default_permissions(std::move(default_permissions_))
     {
       check_name(this->name);
@@ -1086,24 +1493,25 @@ namespace infinit
     serialize(elle::serialization::Serializer& s)
     {
       s.serialize("name", this->name);
-      if (s.out() && !this->mountpoint)
-        s.serialize("mountpoint", this->mountpoint);
       s.serialize("network", this->network);
       s.serialize("default_permissions", this->default_permissions);
+      try
+      {
+        s.serialize("mount_options", this->mount_options);
+      }
+      catch (elle::Error const&e)
+      {
+        ELLE_TRACE("mount_options serialization error, assuming old version");
+      }
     }
 
     std::unique_ptr<reactor::filesystem::FileSystem>
-    run(std::shared_ptr<model::doughnut::Doughnut> dht,
-        boost::optional<std::string> mountpoint_ = {},
-        boost::optional<bool> readonly = {}
+    run(std::shared_ptr<model::doughnut::Doughnut> dht
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         , boost::optional<std::string> volname_ = {}
 #endif
 #ifdef INFINIT_MACOSX
         , boost::optional<std::string> volicon_ = {}
-#endif
-#ifndef INFINIT_WINDOWS
-        , boost::optional<std::vector<std::string>> fuse_options = {}
 #endif
     )
     {
@@ -1111,44 +1519,48 @@ namespace infinit
       if (!volname_)
         volname_ = this->name;
 #endif
+      {
+        std::vector<std::string> opts;
+        std::unordered_map<std::string, std::string> env;
+        mount_options.to_commandline(opts, env);
+        ELLE_TRACE("mount options: %s  environ %s", opts, env);
+      }
       boost::optional<boost::filesystem::path> mountpoint;
-      if (mountpoint_)
-        mountpoint = mountpoint_.get();
-      else if (this->mountpoint)
-        mountpoint = this->mountpoint.get();
+      if (this->mount_options.mountpoint)
+        mountpoint = boost::filesystem::path(this->mount_options.mountpoint.get());
       auto fs = elle::make_unique<filesystem::FileSystem>(
         this->name, dht, this->root_block_cache_dir(), mountpoint);
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       if (mountpoint)
       {
-        std::vector<std::string> mount_options = {
+        std::vector<std::string> fuse_options = {
           "infinit-volume",
           "-o", "noatime",
           "-o", "hard_remove",
         };
-        if (readonly && readonly.get())
+        if (mount_options.readonly && mount_options.readonly.get())
         {
-          mount_options.push_back("-o");
-          mount_options.push_back("ro");
+          fuse_options.push_back("-o");
+          fuse_options.push_back("ro");
         }
 #ifndef INFINIT_WINDOWS
-        if (fuse_options)
+        if (mount_options.fuse_options)
         {
-          for (auto const& opt: fuse_options.get())
+          for (auto const& opt: mount_options.fuse_options.get())
           {
-            mount_options.push_back("-o");
-            mount_options.push_back(opt);
+            fuse_options.push_back("-o");
+            fuse_options.push_back(opt);
           }
         }
 #endif
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         auto add_option =
-          [&mount_options] (std::string const& opt_name,
+          [&fuse_options] (std::string const& opt_name,
                             std::string const& opt_val)
           {
-            mount_options.push_back("-o");
-            mount_options.push_back(elle::sprintf("%s=%s", opt_name, opt_val));
+            fuse_options.push_back("-o");
+            fuse_options.push_back(elle::sprintf("%s=%s", opt_name, opt_val));
           };
         add_option("volname", volname_.get());
 #endif
@@ -1157,7 +1569,7 @@ namespace infinit
         if (volicon_)
           add_option("volicon", volicon_.get());
 #endif
-        driver->mount(mountpoint.get(), mount_options);
+        driver->mount(mountpoint.get(), fuse_options);
       }
       return driver;
     }
@@ -1169,8 +1581,8 @@ namespace infinit
     }
 
     std::string name;
-    boost::optional<std::string> mountpoint;
     std::string network;
+    MountOptions mount_options;
     boost::optional<std::string> default_permissions;
   };
 
@@ -2001,249 +2413,6 @@ namespace infinit
   };
 }
 
-class CommandLineSerializer
-  : public elle::serialization::SerializerIn
-{
-public:
-  typedef elle::serialization::SerializerIn Super;
-  CommandLineSerializer(boost::program_options::variables_map const& vm)
-    : Super(ELLE_SFINAE_INSTANCE(std::istream), false)
-    , _variables(vm)
-  {}
-
-protected:
-  boost::program_options::variables_map const& _variables;
-
-  virtual
-  void
-  _serialize_array(std::string const& name,
-                   int size, // -1 for in(), array size for out()
-                   std::function<void ()> const& f)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, int64_t& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, uint64_t& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, int32_t& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, uint32_t& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, int8_t& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, uint8_t& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, double& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, bool& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, std::string& v)
-  {
-    v = this->_get(name).as<std::string>();
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, elle::Buffer& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, boost::posix_time::ptime& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize_option(std::string const& name,
-                    bool present,
-                    std::function<void ()> const& f)
-  {
-    if (this->_variables.count(name))
-      f();
-  }
-
-private:
-  boost::program_options::variable_value const&
-  _get(std::string const& name)
-  {
-    auto count = this->_variables.count(name);
-    if (!count)
-      throw elle::Error(elle::sprintf("missing required \"%s\" option", name));
-    if (count > 1)
-      throw elle::Error(elle::sprintf("duplicate \"%s\" option", name));
-    return this->_variables[name];
-  }
-};
-
-template <typename T>
-boost::optional<T>
-check_deprecated(boost::program_options::variables_map const& vm,
-                 Mode::OptionDescription const& option)
-{
-  for (auto const& deprecated: option.deprecated_options)
-  {
-    if (vm.count(deprecated->long_name()))
-    {
-      std::cerr << "WARNING: option \"--" << deprecated->long_name()
-                << "\" is deprecated "
-                << "use \"--" << option.long_name() << "\" instead."
-                << std::endl;
-      return vm[deprecated->long_name()].as<T>();
-    }
-  }
-  return boost::none;
-}
-
-template <typename T = std::string>
-boost::optional<T>
-optional(boost::program_options::variables_map const& vm,
-         std::string const& name)
-{
-  if (vm.count(name))
-    return vm[name].as<T>();
-  else
-    return {};
-}
-
-template <typename T = std::string>
-boost::optional<T>
-optional(boost::program_options::variables_map const& vm,
-         Mode::OptionDescription const& option)
-{
-  auto deprecated = check_deprecated<T>(vm, option);
-  if (deprecated)
-    return deprecated;
-  return optional<T>(vm, option.long_name());
-}
-
-template <typename T = std::string>
-T
-mandatory(boost::program_options::variables_map const& vm,
-          std::string const& name,
-          std::string const& desc)
-{
-  if (!vm.count(name))
-  {
-    throw CommandLineError(
-      elle::sprintf("%s unspecified (use --%s)", desc, name));
-  }
-  return vm[name].as<T>();
-}
-
-template <typename T = std::string>
-T
-mandatory(boost::program_options::variables_map const& vm,
-          Mode::OptionDescription const& option,
-          std::string const& desc)
-{
-  auto deprecated = check_deprecated<T>(vm, option);
-  if (deprecated)
-    return deprecated.get();
-  return mandatory<T>(vm, option.long_name(), desc);
-}
-
-template <typename T = std::string>
-T
-mandatory(boost::program_options::variables_map const& vm,
-          std::string const& name)
-{
-  return mandatory<T>(vm, name, name);
-}
-
-template <typename T = std::string>
-T
-mandatory(boost::program_options::variables_map const& vm,
-          Mode::OptionDescription const& option)
-{
-  auto deprecated = check_deprecated<T>(vm, option);
-  if (deprecated)
-    return deprecated.get();
-  return mandatory<T>(vm, option.long_name());
-}
-
-template <>
-inline
-std::vector<std::string>
-mandatory<std::vector<std::string>>(
-  boost::program_options::variables_map const& vm,
-  std::string const& name,
-  std::string const& desc)
-{
-  if (!vm.count(name))
-  {
-    throw CommandLineError(
-      elle::sprintf("%s unspecified (use --%s [value ...])", desc, name));
-  }
-  return vm[name].as<std::vector<std::string>>();
-}
-
-inline
-bool
-flag(boost::program_options::variables_map const& vm,
-     std::string const& name)
-{
-  return vm.count(name) && vm[name].as<bool>();
-}
-
-inline
-bool
-flag(boost::program_options::variables_map const& vm,
-     Mode::OptionDescription const& option)
-{
-  auto deprecated = check_deprecated<bool>(vm, option);
-  if (deprecated)
-    return deprecated.get();
-  return flag(vm, option.long_name());
-}
-
 inline
 bool
 _one(bool seen)
@@ -2386,6 +2555,26 @@ get_username(boost::program_options::variables_map const& args,
 DAS_MODEL_FIELDS(
   infinit::User,
   (name, email, fullname, avatar_path, public_key, private_key, password_hash));
+
+DAS_MODEL(
+  infinit::MountOptions,
+  (hub_url
+  ,rdv
+  ,fuse_options
+  ,fetch
+  ,push
+  ,cache
+  ,async
+  ,readonly
+  ,cache_ram_size
+  ,cache_ram_ttl
+  ,cache_ram_invalidation
+  ,cache_disk_size
+  ,mountpoint
+  ,as
+  ,peers), DasMountOptions);
+DAS_MODEL_DEFAULT(infinit::MountOptions, DasMountOptions);
+DAS_MODEL_SERIALIZE(infinit::MountOptions);
 
 namespace infinit
 {
@@ -3082,44 +3271,3 @@ reactor::Thread::unique_ptr
 make_stat_update_thread(infinit::User const& self,
                         infinit::Network& network,
                         infinit::model::doughnut::Doughnut& model);
-
-static
-Mode::OptionDescription option_cache(
-  "cache", boost::program_options::bool_switch(),
-  "enable caching with default values");
-static
-Mode::OptionDescription option_cache_ram_size(
-  "cache-ram-size", boost::program_options::value<int>(),
-  "maximum RAM block cache size in bytes\n(default: 64 MB)",
-  {{"cache-size", boost::program_options::value<int>()}});
-static
-Mode::OptionDescription option_cache_ram_ttl(
-  "cache-ram-ttl", boost::program_options::value<int>(),
-  "RAM block cache time-to-live in seconds\n(default: 5 minutes)",
-  {{"cache-ttl", boost::program_options::value<int>()}});
-static
-Mode::OptionDescription option_cache_ram_invalidation(
-  "cache-ram-invalidation", boost::program_options::value<int>(),
-  "RAM block cache invalidation time in seconds\n(default: 15 seconds)",
-  {{"cache-invalidation", boost::program_options::value<int>()}});
-static
-Mode::OptionDescription option_cache_disk_size(
-  "cache-disk-size", boost::program_options::value<uint64_t>(),
-  "size of disk cache for immutable data in bytes\n(default: 512 MB)",
-  {{"disk-cache-size", boost::program_options::value<uint64_t>()}});
-static
-Mode::OptionDescription option_port_file(
-  "port-file", boost::program_options::value<std::string>(),
-  "write node listening port to file");
-static
-Mode::OptionDescription option_endpoint_file(
-  "endpoints-file", boost::program_options::value<std::string>(),
-  "write node listening endpoints to file\n(format: host:port\\n)");
-static
-Mode::OptionDescription option_port(
-  "port", boost::program_options::value<int>(),
-  "outbound port to use");
-static
-Mode::OptionDescription option_disable_mac_utf8(
-  "disable-utf-8-conversion", boost::program_options::bool_switch(),
-  "disable FUSE conversion of UTF-8 to native format");
