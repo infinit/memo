@@ -142,6 +142,8 @@ public:
   void status(boost::optional<std::string> name,
               elle::serialization::SerializerOut& reply);
   std::string mountpoint(std::string const& name);
+  ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_level);
+  ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_path);
 private:
   std::unordered_map<std::string, Mount> _mounts;
   int _next_id;
@@ -222,6 +224,14 @@ MountManager::mount(boost::optional<std::string> name, MountOptions const& optio
   arguments.push_back(self_path + "/infinit-volume");
   std::unordered_map<std::string, std::string> env;
   m.options.to_commandline(arguments, env);
+  if (_log_level)
+    env.insert(std::make_pair("ELLE_LOG_LEVEL", _log_level.get()));
+  if (_log_path)
+    env.insert(std::make_pair("ELLE_LOG_FILE",
+      _log_path.get() + "/infinit-volume-" + name.get()
+      + '-' + boost::posix_time::to_iso_extended_string(
+          boost::posix_time::microsec_clock::universal_time())
+      + ".log"));
   ELLE_TRACE("Spawning with %s %s", arguments, env);
   // FIXME upgrade Process to accept env
   for (auto const& e: env)
@@ -458,7 +468,6 @@ daemon_command(std::string const& s)
   return reply;
 }
 
-
 static
 std::string
 process_command(elle::json::Object query)
@@ -565,6 +574,10 @@ COMMAND(start)
   auto sockaddr = sock_path();
   boost::filesystem::remove(sockaddr);
   srv.listen(sockaddr);
+  auto loglevel = optional(args, "log-level");
+  manager().log_level(loglevel);
+  auto logpath = optional(args, "log-path");
+  manager().log_path(logpath);
   elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
   {
     while (true)
@@ -859,6 +872,8 @@ main(int argc, char** argv)
       "",
       {
         { "foreground,f", bool_switch(), "do not daemonize" },
+        { "log-level,l", value<std::string>(), "Log level to start volumes with"},
+        { "log-path,d", value<std::string>(), "Store volume logs in given path"},
       }
     },
     {
