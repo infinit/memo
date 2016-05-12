@@ -7,6 +7,7 @@
 #include <boost/filesystem/fstream.hpp>
 
 #include <elle/log.hh>
+#include <elle/system/PIDFile.hh>
 #include <elle/system/Process.hh>
 #include <elle/serialization/json.hh>
 
@@ -293,44 +294,6 @@ private:
 static
 std::string
 daemon_command(std::string const& s);
-
-/*----.
-| PID |
-`----*/
-
-namespace elle
-{
-  class PIDFile
-  {
-  public:
-    PIDFile(boost::filesystem::path path)
-      : _path(std::move(path))
-    {
-      boost::filesystem::ofstream ofs(this->_path);
-      ofs << getpid();
-    }
-
-    ~PIDFile()
-    {
-      boost::filesystem::remove(this->_path);
-    }
-
-    static
-    int
-    read(boost::filesystem::path const& path)
-    {
-      boost::filesystem::ifstream ifs(path);
-      if (!ifs.good())
-        elle::err("unable to open %s for reading", path);
-      int pid = -1;
-      if (!(ifs >> pid))
-        elle::err("unable to read PID from %s", path);
-      return pid;
-    }
-
-    ELLE_ATTRIBUTE_R(boost::filesystem::path, path);
-  };
-}
 
 class PIDFile
   : public elle::PIDFile
