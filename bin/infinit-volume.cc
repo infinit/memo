@@ -208,11 +208,13 @@ add_path_to_finder_sidebar(std::string const& path)
   {
     item_ref =
       (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
-    CFURLRef item_url = LSSharedFileListItemCopyResolvedURL(
+    CFURLRef item_url;
+    OSStatus err = LSSharedFileListItemResolve(
       item_ref,
       kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+      &item_url,
       NULL);
-    if (item_url)
+    if (err == noErr && item_url)
     {
       CFStringRef item_path = CFURLCopyPath(item_url);
       if (item_path)
@@ -268,11 +270,13 @@ remove_path_from_finder_sidebar(std::string const& path)
   {
     item_ref =
       (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
-    CFURLRef item_url = LSSharedFileListItemCopyResolvedURL(
+    CFURLRef item_url;
+    OSStatus err = LSSharedFileListItemResolve(
       item_ref,
       kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+      &item_url,
       NULL);
-    if (item_url)
+    if (err == noErr && item_url)
     {
       CFStringRef item_path = CFURLCopyPath(item_url);
       if (item_path)
