@@ -10,6 +10,7 @@
 #include <elle/system/PIDFile.hh>
 #include <elle/system/Process.hh>
 #include <elle/serialization/json.hh>
+#include <elle/system/self-path.hh>
 
 #include <reactor/network/http-server.hh>
 #include <reactor/network/unix-domain-server.hh>
@@ -21,7 +22,6 @@ ELLE_LOG_COMPONENT("infinit-daemon");
 
 #include <main.hh>
 
-std::string self_path;
 struct MountOptions
 {
   MountOptions();
@@ -222,7 +222,8 @@ MountManager::mount(boost::optional<std::string> name, MountOptions const& optio
     m.options.mountpoint = (boost::filesystem::temp_directory_path()
     / boost::filesystem::unique_path()).string();
   std::vector<std::string> arguments;
-  arguments.push_back(self_path + "/infinit-volume");
+  static const auto root = elle::system::self_path().parent_path();
+  arguments.push_back((root / "infinit-volume").string());
   std::unordered_map<std::string, std::string> env;
   m.options.to_commandline(arguments, env);
   if (_log_level)
@@ -767,15 +768,6 @@ DockerVolumePlugin::install()
 int
 main(int argc, char** argv)
 {
-  if (argv[0][0] == '/')
-    self_path = boost::filesystem::path(argv[0]).parent_path().string();
-  else
-  {
-    char cwd[4096];
-    getcwd(cwd, 4096);
-    self_path = boost::filesystem::path(std::string(cwd) + "/" + argv[0])
-      .parent_path().string();
-  }
   std::string arg1(argv[1]);
   bool dashed = true;
   auto commands = {"start", "stop", "status"};
