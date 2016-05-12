@@ -25,9 +25,6 @@ ELLE_LOG_COMPONENT("infinit-daemon");
 struct MountOptions
 {
   MountOptions();
-  MountOptions(elle::serialization::SerializerIn& s);
-  void
-  serialize(elle::serialization::Serializer& s);
   void to_commandline(std::vector<std::string>& arguments,
                       std::unordered_map<std::string, std::string>& env) const;
   std::string volume;
@@ -49,36 +46,31 @@ struct MountOptions
   typedef infinit::serialization_tag serialization_tag;
 };
 
+DAS_MODEL(
+  MountOptions,
+  (volume)
+  (hub_url)
+  (rdv)
+  (fuse_options)
+  (fetch)
+  (push)
+  (cache)
+  (async)
+  (readonly)
+  (cache_ram_size)
+  (cache_ram_ttl)
+  (cache_ram_invalidation)
+  (cache_disk_size)
+  (mountpoint)
+  (as)
+  (peers),
+  DasMountOptions);
+
+DAS_MODEL_SERIALIZE(MountOptions);
+DAS_MODEL_DEFAULT(MountOptions, DasMountOptions);
+
 MountOptions::MountOptions()
-{
-}
-
-
-MountOptions::MountOptions(elle::serialization::SerializerIn& s)
-{
-  serialize(s);
-}
-
-void
-MountOptions::serialize(elle::serialization::Serializer& s)
-{
-  s.serialize("volume", volume);
-  s.serialize("hub_url", hub_url);
-  s.serialize("rdv", rdv);
-  s.serialize("fuse_options", fuse_options);
-  s.serialize("fetch", fetch);
-  s.serialize("push", push);
-  s.serialize("cache", cache);
-  s.serialize("async", async);
-  s.serialize("readonly", readonly);
-  s.serialize("cache_ram_size", cache_ram_size);
-  s.serialize("cache_ram_ttl", cache_ram_ttl);
-  s.serialize("cache_ram_invalidation", cache_ram_invalidation);
-  s.serialize("cache_disk_size", cache_disk_size);
-  s.serialize("mountpoint", mountpoint);
-  s.serialize("as", as);
-  s.serialize("peers", peers);
-}
+{}
 
 void
 MountOptions::to_commandline(std::vector<std::string>& arguments,
@@ -121,7 +113,6 @@ MountOptions::to_commandline(std::vector<std::string>& arguments,
     arguments.push_back("--as");
     arguments.push_back(as.get());
   }
-
 }
 
 struct Mount
@@ -455,7 +446,7 @@ process_command(elle::json::Object query)
       }
       else if (op == "create")
       {
-        MountOptions mo(command);
+        auto mo = command.deserialize<MountOptions>("options");
         std::string name;
         command.serialize("name", name);
         manager().create(name, mo);
@@ -477,7 +468,7 @@ process_command(elle::json::Object query)
       }
       else if (op == "mount_volume")
       {
-        MountOptions mo(command);
+        auto mo = command.deserialize<MountOptions>("options");
         boost::optional<std::string> name;
         command.serialize("name", name);
         name = manager().mount(name, mo);
