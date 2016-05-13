@@ -22,117 +22,97 @@ ELLE_LOG_COMPONENT("infinit-daemon");
 
 #include <main.hh>
 
+infinit::Infinit ifnt;
 
 struct Mount
 {
-  infinit::MountOptions options;
   std::unique_ptr<elle::system::Process> process;
+  infinit::MountOptions options;
 };
 
 class MountManager
 {
 public:
-  void create(std::string const& name, infinit::MountOptions const& options);
-  void remove(std::string const& name);
-  bool exists(std::string const& name);
-  std::vector<std::string> list();
-  void mount(std::string const& name);
-  std::string mount(boost::optional<std::string> name, infinit::MountOptions const& options);
-  void umount(std::string const& name);
-  void status(boost::optional<std::string> name,
-              elle::serialization::SerializerOut& reply);
-  std::string mountpoint(std::string const& name);
+  void
+  start(std::string const& name, infinit::MountOptions opts = {}, bool force_mount = false);
+  void
+  stop(std::string const& name);
+  void
+  status(std::string const& name, elle::serialization::SerializerOut& reply);
+  bool
+  exists(std::string const& name);
+  std::string
+  mountpoint(std::string const& name);
+  std::vector<std::string>
+  list();
   ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_level);
   ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_path);
 private:
   std::unordered_map<std::string, Mount> _mounts;
-  int _next_id;
 };
-
-static
-MountManager&
-manager()
-{
-  static MountManager mm;
-  return mm;
-}
-
-void
-MountManager::create(std::string const& name, infinit::MountOptions const& options)
-{
-  auto ser = elle::serialization::json::serialize(options);
-  auto path = infinit::xdg_data_home() / "mounts" / name;
-  if (boost::filesystem::exists(path))
-    throw elle::Error("mount " + name + " already exists");
-  boost::filesystem::create_directories(path.parent_path());
-  boost::filesystem::ofstream ofs(path);
-  ofs.write(reinterpret_cast<const char*>(ser.contents()), ser.size());
-}
-
-void
-MountManager::remove(std::string const& name)
-{
-  auto path = infinit::xdg_data_home() / "mounts" / name;
-  if (!boost::filesystem::exists(path))
-    throw elle::Exception("mount " + name + " does not exist");
-  boost::filesystem::remove(path);
-}
 
 std::vector<std::string>
 MountManager::list()
 {
-  auto path = infinit::xdg_data_home() / "mounts";
   std::vector<std::string> res;
-  boost::filesystem::directory_iterator it(path);
-  boost::filesystem::directory_iterator end;
-  for (;it!=end; ++it)
-  {
-    res.push_back(it->path().filename().string());
-  }
+  for (auto const& volume: ifnt.volumes_get())
+    res.push_back(volume.name);
   return res;
 }
 
-bool
-MountManager::exists(std::string const& name)
+std::string
+MountManager::mountpoint(std::string const& name)
 {
-  auto path = infinit::xdg_data_home() / "mounts" / name;
-  return boost::filesystem::exists(path);
+  auto it = _mounts.find(name);
+  if (it == _mounts.end())
+    throw elle::Exception("not mounted: " + name);
+  ELLE_ASSERT(it->second.options.mountpoint);
+  return it->second.options.mountpoint.get();
+}
+
+bool
+MountManager::exists(std::string const& name_)
+{
+  std::string name(name_);
+  if (name.find("/") == name.npos)
+    name = elle::system::username() + "/" + name;
+  try
+  {
+    auto volume = ifnt.volume_get(name);
+    return true;
+  }
+  catch (elle::Error const& e)
+  {
+    return false;
+  }
 }
 
 void
-MountManager::mount(std::string const& name)
+MountManager::start(std::string const& name, infinit::MountOptions opts,
+                    bool force_mount)
 {
-  auto path = infinit::xdg_data_home() / "mounts" / name;
-  if (!boost::filesystem::exists(path))
-    throw elle::Exception("mount " + name + " does not exist");
-  boost::filesystem::ifstream ifs(path);
-  auto mo = elle::serialization::json::deserialize<infinit::MountOptions>(ifs);
-  mount(name, mo);
-}
-
-std::string
-MountManager::mount(boost::optional<std::string> name, infinit::MountOptions const& options)
-{
-  if (!name)
-    name = "mount_" + std::to_string(++_next_id);
-  Mount m;
-  m.options = options;
-  if (m.options.mountpoint && m.options.mountpoint.get() == "auto")
-    m.options.mountpoint = (boost::filesystem::temp_directory_path()
-    / boost::filesystem::unique_path()).string();
+  auto volume = ifnt.volume_get(name);
+  volume.mount_options.merge(opts);
+  Mount m{nullptr, volume.mount_options};
+  if (force_mount && !m.options.mountpoint)
+    m.options.mountpoint =
+    (boost::filesystem::temp_directory_path() / boost::filesystem::unique_path()).string();
   std::vector<std::string> arguments;
   static const auto root = elle::system::self_path().parent_path();
   arguments.push_back((root / "infinit-volume").string());
+  arguments.push_back("--run");
+  arguments.push_back(volume.name);
   std::unordered_map<std::string, std::string> env;
   m.options.to_commandline(arguments, env);
-  if (_log_level)
+  if (this->_log_level)
     env.insert(std::make_pair("ELLE_LOG_LEVEL", _log_level.get()));
-  if (_log_path)
-    env.insert(std::make_pair("ELLE_LOG_FILE",
-      _log_path.get() + "/infinit-volume-" + name.get()
-      + '-' + boost::posix_time::to_iso_extended_string(
-          boost::posix_time::microsec_clock::universal_time())
-      + ".log"));
+  if (this->_log_path)
+    env.insert(
+      std::make_pair("ELLE_LOG_FILE",
+                     _log_path.get() + "/infinit-volume-" + name
+                     + '-' + boost::posix_time::to_iso_extended_string(
+                       boost::posix_time::microsec_clock::universal_time())
+                     + ".log"));
   ELLE_TRACE("Spawning with %s %s", arguments, env);
   // FIXME upgrade Process to accept env
   for (auto const& e: env)
@@ -144,49 +124,41 @@ MountManager::mount(boost::optional<std::string> name, infinit::MountOptions con
       ::waitpid(pid, &status, 0);
   });
   t.detach();
-  _mounts.insert(std::make_pair(name.get(), std::move(m)));
-  return name.get();
+  this->_mounts.emplace(name, std::move(m));
 }
 
 void
-MountManager::umount(std::string const& name)
+MountManager::stop(std::string const& name)
 {
   auto it = _mounts.find(name);
   if (it == _mounts.end())
-    throw elle::Exception("not mounted: " + name);
-  kill(it->second.process->pid(), SIGTERM);
-  _mounts.erase(it);
+    throw elle::Error("not mounted: " + name);
+  ::kill(it->second.process->pid(), SIGTERM); // FIXME: try harder
+  this->_mounts.erase(it);
 }
 
-void MountManager::status(boost::optional<std::string> name,
-                          elle::serialization::SerializerOut& reply)
+void
+MountManager::status(std::string const& name,
+                     elle::serialization::SerializerOut& reply)
 {
-  auto it = _mounts.find(name.get());
-  if (it == _mounts.end())
-    throw elle::Exception("not mounted: " + name.get());
+  auto it = this->_mounts.find(name);
+  if (it == this->_mounts.end())
+    throw elle::Exception("not mounted: " + name);
   bool live = ! kill(it->second.process->pid(), 0);
   reply.serialize("live", live);
   if (it->second.options.mountpoint)
     reply.serialize("mountpoint", it->second.options.mountpoint.get());
 }
 
-std::string
-MountManager::mountpoint(std::string const& name)
-{
-  auto it = _mounts.find(name);
-  if (it == _mounts.end())
-    throw elle::Exception("not mounted: " + name);
-  return it->second.options.mountpoint.get();
-}
-
 class DockerVolumePlugin
 {
 public:
-  DockerVolumePlugin(bool tcp);
+  DockerVolumePlugin(MountManager& manager, bool tcp);
   ~DockerVolumePlugin();
   void install(bool tcp);
   void uninstall();
 private:
+  MountManager& _manager;
   std::unique_ptr<reactor::network::HttpServer> _server;
   std::unordered_map<std::string, int> _mount_count;
 };
@@ -333,7 +305,7 @@ daemon_command(std::string const& s)
 
 static
 std::string
-process_command(elle::json::Object query)
+process_command(elle::json::Object query, MountManager& manager)
 {
   ELLE_TRACE("command: %s", elle::json::pretty_print(query));
   elle::serialization::json::SerializerIn command(query, false);
@@ -352,54 +324,26 @@ process_command(elle::json::Object query)
       {
         throw elle::Exit(0);
       }
-      else if (op == "create")
+      else if (op == "volume-start")
       {
-        auto mo = command.deserialize<infinit::MountOptions>("options");
-        std::string name;
-        command.serialize("name", name);
-        manager().create(name, mo);
-        response.serialize("result", "Ok");
+        auto volume = command.deserialize<std::string>("volume");
+        auto opts =
+          command.deserialize<boost::optional<infinit::MountOptions>>("options");
+        manager.start(volume, opts ? opts.get() : infinit::MountOptions());
       }
-      else if (op == "remove")
+      else if (op == "volume-stop")
       {
-        std::string name;
-        command.serialize("name", name);
-        manager().remove(name);
-        response.serialize("result", "Ok");
+        auto volume = command.deserialize<std::string>("volume");
+        manager.stop(volume);
       }
-      else if (op == "mount")
+      else if (op == "volume-status")
       {
-        std::string name;
-        command.serialize("name", name);
-        manager().mount(name);
-        response.serialize("result", "Ok");
-      }
-      else if (op == "mount_volume")
-      {
-        auto mo = command.deserialize<infinit::MountOptions>("options");
-        boost::optional<std::string> name;
-        command.serialize("name", name);
-        name = manager().mount(name, mo);
-        response.serialize("name", name);
-        response.serialize("result", "Ok");
-      }
-      else if (op == "umount")
-      {
-        std::string name;
-        command.serialize("name", name);
-        manager().umount(name);
-        response.serialize("result", "Ok");
-      }
-      else if (op == "mount_status")
-      {
-        std::string name;
-        command.serialize("name", name);
-        manager().status(name, response);
-        response.serialize("result", "Ok");
+        auto volume = command.deserialize<std::string>("volume");
+        manager.status(volume, response);
       }
       else
       {
-        response.serialize("error", "Unknown operatior: " + op);
+        response.serialize("error", "unknown operation: " + op);
       }
     }
     catch (elle::Exception const& e)
@@ -429,7 +373,8 @@ COMMAND(start)
 {
   if (daemon_running())
     elle::err("daemon already running");
-  DockerVolumePlugin dvp(flag(args, "docker-socket-tcp"));
+  MountManager manager;
+  DockerVolumePlugin dvp(manager, flag(args, "docker-socket-tcp"));
   if (!flag(args, "foreground"))
     daemonize();
   PIDFile pid;
@@ -438,9 +383,9 @@ COMMAND(start)
   boost::filesystem::remove(sockaddr);
   srv.listen(sockaddr);
   auto loglevel = optional(args, "log-level");
-  manager().log_level(loglevel);
+  manager.log_level(loglevel);
   auto logpath = optional(args, "log-path");
-  manager().log_path(logpath);
+  manager.log_path(logpath);
   elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
   {
     while (true)
@@ -449,7 +394,7 @@ COMMAND(start)
       auto name = elle::sprintf("%s server", **socket);
       scope.run_background(
         name,
-        [socket]
+        [socket,&manager]
         {
           try
           {
@@ -457,7 +402,7 @@ COMMAND(start)
             {
               auto json =
                 boost::any_cast<elle::json::Object>(elle::json::read(**socket));
-              auto reply = process_command(json);
+              auto reply = process_command(json, manager);
               ELLE_TRACE("Writing reply: '%s'", reply);
               socket->write(reply);
             }
@@ -477,7 +422,8 @@ COMMAND(start)
   };
 }
 
-DockerVolumePlugin::DockerVolumePlugin(bool tcp)
+DockerVolumePlugin::DockerVolumePlugin(MountManager& manager, bool tcp)
+: _manager(manager)
 {
   install(tcp);
 }
@@ -489,49 +435,6 @@ DockerVolumePlugin::~DockerVolumePlugin()
 void
 DockerVolumePlugin::uninstall()
 {
-}
-
-elle::json::Object
-retype_json(elle::json::Object const& in)
-{
-  elle::json::Object res;
-  for (auto const& e: in)
-  {
-    auto val = boost::any_cast<std::string>(e.second);
-    boost::any o = val;
-    if (val == "true")
-      o = true;
-    else if (val == "false")
-      o = false;
-    else
-    {
-      try
-      {
-        std::size_t pos = 0;
-        int vi = std::stoi(val, &pos);
-        if (pos != val.size())
-          throw std::runtime_error("stoi failure");
-        o = vi;
-      }
-      catch (std::exception const&)
-      {
-        if (val.find(',') != val.npos)
-        {
-          std::vector<std::string> vals;
-          boost::algorithm::split(vals, val, boost::is_any_of(","),
-            boost::token_compress_on);
-          if (vals.back().empty())
-            vals.pop_back();
-          elle::json::Array jvals(vals.begin(), vals.end());
-          o = jvals;
-        }
-        else
-          o = val;
-      }
-    }
-    res.insert(std::make_pair(e.first, o));
-  }
-  return res;
 }
 
 void
@@ -559,6 +462,7 @@ DockerVolumePlugin::install(bool tcp)
     auto us = elle::make_unique<reactor::network::UnixDomainServer>();
     auto sock_path = boost::filesystem::path("/run") / "docker" / "plugins" / "infinit.sock";
     boost::filesystem::create_directories(sock_path.parent_path());
+    boost::filesystem::remove(sock_path, erc);
     us->listen(sock_path);
     this->_server = elle::make_unique<reactor::network::HttpServer>(std::move(us));
   }
@@ -583,35 +487,18 @@ DockerVolumePlugin::install(bool tcp)
     });
   _server->register_route("/VolumeDriver.Create", reactor::http::Method::POST,
     [] ROUTE_SIG {
-      auto stream = elle::IOStream(data.istreambuf());
-      // FIXME: detect and accept a dense option argument so that
-      // user can type '-o foo=bar,baz=baz' on docker cmd line
-      auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
-      auto name = boost::any_cast<std::string>(json.at("Name"));
-      auto opts = boost::any_cast<elle::json::Object>(json.at("Opts"));
-      ELLE_TRACE("got create %s with %s", name, elle::json::pretty_print(opts));
-      auto sopts = retype_json(opts);
-      ELLE_TRACE("options retyped to %s", elle::json::pretty_print(sopts));
-      std::stringstream s;
-      elle::json::write(s, sopts, false);
-      auto mo = elle::serialization::json::deserialize<infinit::MountOptions>(s, false);
-      manager().create(name, mo);
-      return "{\"Err\": \"\", \"Volume\": {\"Name\": \"" + name + "\" }}";
+      return "{\"Err\": \"Use 'infinit-volume --create'\"}";
     });
   _server->register_route("/VolumeDriver.Remove", reactor::http::Method::POST,
     [] ROUTE_SIG {
-      auto stream = elle::IOStream(data.istreambuf());
-      auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
-      auto name = boost::any_cast<std::string>(json.at("Name"));
-      manager().remove(name);
-      return "{\"Err\": \"\"}";
+      return "{\"Err\": \"Use 'infinit-volume --delete'\"}";
     });
   _server->register_route("/VolumeDriver.Get", reactor::http::Method::POST,
-    [] ROUTE_SIG {
+    [this] ROUTE_SIG {
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       auto name = boost::any_cast<std::string>(json.at("Name"));
-      if (manager().exists(name))
+      if (_manager.exists(name))
         return "{\"Err\": \"\", \"Volume\": {\"Name\": \"" + name + "\" }}";
       else
         return "{\"Err\": \"No such mount\"}";
@@ -629,12 +516,12 @@ DockerVolumePlugin::install(bool tcp)
       }
       else
       {
-        manager().mount(name);
+        _manager.start(name, {}, true);
         _mount_count.insert(std::make_pair(name, 1));
         reactor::sleep(4_sec);
       }
       std::string res = "{\"Err\": \"\", \"Mountpoint\": \""
-          + manager().mountpoint(name) +"\"}";
+          + _manager.mountpoint(name) +"\"}";
       ELLE_TRACE("reply: %s", res);
       return res;
     });
@@ -650,21 +537,21 @@ DockerVolumePlugin::install(bool tcp)
       if (it->second == 0)
       {
         _mount_count.erase(it);
-        manager().umount(name);
+        _manager.stop(name);
       }
       return "{\"Err\": \"\"}";
     });
   _server->register_route("/VolumeDriver.Path", reactor::http::Method::POST,
-    [] ROUTE_SIG {
+    [this] ROUTE_SIG {
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       auto name = boost::any_cast<std::string>(json.at("Name"));
       return "{\"Err\": \"\", \"Mountpoint\": \""
-          + manager().mountpoint(name) +"\"}";
+          + _manager.mountpoint(name) +"\"}";
     });
   _server->register_route("/VolumeDriver.List", reactor::http::Method::POST,
-    [] ROUTE_SIG {
-      auto list = manager().list();
+    [this] ROUTE_SIG {
+      auto list = _manager.list();
       std::string res("{\"Err\": \"\", \"Volumes\": [");
       for (auto const& n: list)
         res += "{\"Name\": \"" + n + "\"},";

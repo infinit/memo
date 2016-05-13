@@ -1352,6 +1352,7 @@ namespace infinit
     void to_commandline(std::vector<std::string>& arguments,
                         std::unordered_map<std::string, std::string>& env) const;
     void merge(boost::program_options::variables_map const& args);
+    void merge(MountOptions const& other);
     boost::optional<std::string> hub_url;
     boost::optional<std::string> rdv;
     boost::optional<std::vector<std::string>> fuse_options;
@@ -1374,26 +1375,52 @@ namespace infinit
   MountOptions::MountOptions()
   {}
 
+  template<typename T>
+  void merge(T& a, const T& b)
+  {
+    if (b)
+      a = b.get();
+  }
+  template<typename T>
+  void merge(boost::optional<std::vector<T>>& a,
+             boost::optional<std::vector<T>> const& b)
+  {
+    if (b)
+    {
+      if (!a)
+        a = std::vector<T>();
+      a.get().insert(a.get().end(), b.get().begin(), b.get().end());
+    }
+  }
+  inline
+  void
+  MountOptions::merge(MountOptions const& b)
+  {
+    infinit::merge(hub_url, b.hub_url);
+    infinit::merge(rdv, b.rdv);
+    infinit::merge(fuse_options, b.fuse_options);
+    infinit::merge(as, b.as);
+    infinit::merge(fetch, b.fetch);
+    infinit::merge(push, b.push);
+    infinit::merge(cache, b.cache);
+    infinit::merge(async, b.async);
+    infinit::merge(readonly, b.readonly);
+    infinit::merge(cache_ram_size, b.cache_ram_size);
+    infinit::merge(cache_ram_ttl, b.cache_ram_ttl);
+    infinit::merge(cache_ram_invalidation, b.cache_ram_invalidation);
+    infinit::merge(cache_disk_size, b.cache_disk_size);
+    infinit::merge(mountpoint, b.mountpoint);
+    infinit::merge(peers, b.peers);
+  }
+
   inline
   void
   MountOptions::merge(boost::program_options::variables_map const& args)
   {
     auto fuse_options = optional<std::vector<std::string>>(args, "fuse-option");
-    if (fuse_options)
-    {
-      if (!this->fuse_options)
-        this->fuse_options = std::vector<std::string>();
-      this->fuse_options.get().insert(this->fuse_options.get().end(),
-        fuse_options.get().begin(), fuse_options.get().end());
-    }
+    infinit::merge(this->fuse_options, fuse_options);
     auto peers = optional<std::vector<std::string>>(args, "peer");
-    if (peers)
-    {
-      if (!this->peers)
-        this->peers = std::vector<std::string>();
-      this->peers.get().insert(this->peers.get().end(),
-        peers.get().begin(), peers.get().end());
-    }
+    infinit::merge(this->peers, peers);
     if (auto v = optional(args, "mountpoint"))
       mountpoint = v;
     if (auto v = optional(args, "as"))
@@ -1501,7 +1528,7 @@ namespace infinit
       }
       catch (elle::Error const&e)
       {
-        ELLE_TRACE("mount_options serialization error, assuming old version");
+        ELLE_TRACE("mount_options serialization error, assuming old version: %s", e);
       }
     }
 
