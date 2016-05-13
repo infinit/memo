@@ -315,7 +315,7 @@ COMMAND(run)
   }
 
 #ifdef INFINIT_MACOSX
-  if (!flag(args, option_disable_mac_utf8))
+  if (mo.mountpoint && !flag(args, option_disable_mac_utf8))
   {
     if (!mo.fuse_options)
       mo.fuse_options = std::vector<std::string>();
