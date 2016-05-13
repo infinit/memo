@@ -49,6 +49,14 @@ COMMAND(create)
   auto name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
   std::unique_ptr<infinit::overlay::Configuration> overlay_config;
+  int overlays =
+      (args.count("kademlia") ? 1 : 0)
+    + (args.count("kalimero") ? 1 : 0)
+    + (args.count("kelips") ? 1 : 0)
+    + (args.count("stonehenge") ? 1 : 0)
+  ;
+  if (overlays > 1)
+    throw CommandLineError("Only one overlay type must be specified");
   if (args.count("stonehenge"))
   {
     auto stonehenge =
@@ -58,12 +66,16 @@ COMMAND(create)
     //   mandatory<std::vector<std::string>>(args, "peer", "stonehenge hosts");
     // overlay_config = std::move(stonehenge);
   }
-  if (args.count("kademlia"))
+  else if (args.count("kademlia"))
   {
     auto kad = elle::make_unique<infinit::overlay::kademlia::Configuration>();
     overlay_config = std::move(kad);
   }
-  if (args.count("kelips"))
+  else if (args.count("kalimero"))
+  {
+    overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
+  }
+  else // default to Kelips
   {
     auto kelips =
       elle::make_unique<infinit::overlay::kelips::Configuration>();
@@ -129,10 +141,6 @@ COMMAND(create)
       }
     }
     overlay_config = std::move(kelips);
-  }
-  if (!overlay_config)
-  {
-    overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
   }
   auto storage = storage_configuration(args);
   // Consensus
@@ -717,10 +725,10 @@ main(int argc, char** argv)
   using boost::program_options::bool_switch;
   Mode::OptionsDescription overlay_types_options("Overlay types");
   overlay_types_options.add_options()
-    ("kalimero", "use a Kalimero overlay network (default)")
-    ("kelips", "use a Kelips overlay network")
-    ("stonehenge", "use a Stonehenge overlay network")
+    ("kelips", "use a Kelips overlay network (default)")
+    ("kalimero", "use a Kalimero overlay network")
     ("kademlia", "use a Kademlia overlay network")
+    ("stonehenge", "use a Stonehenge overlay network")
     ;
   Mode::OptionsDescription consensus_types_options("Consensus types");
   consensus_types_options.add_options()
@@ -773,8 +781,8 @@ main(int argc, char** argv)
       {
         consensus_types_options,
         overlay_types_options,
-        stonehenge_options,
         kelips_options,
+        stonehenge_options,
       },
     },
     {
