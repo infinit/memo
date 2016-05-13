@@ -49,18 +49,12 @@ COMMAND(create)
   auto owner = self_user(ifnt, args);
   std::unique_ptr<infinit::overlay::Configuration> overlay_config;
   int overlays =
-      (args.count("kademlia") ? 1 : 0)
     + (args.count("kalimero") ? 1 : 0)
     + (args.count("kelips") ? 1 : 0)
   ;
   if (overlays > 1)
     throw CommandLineError("Only one overlay type must be specified");
-  if (args.count("kademlia"))
-  {
-    auto kad = elle::make_unique<infinit::overlay::kademlia::Configuration>();
-    overlay_config = std::move(kad);
-  }
-  else if (args.count("kalimero"))
+  if (args.count("kalimero"))
   {
     overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
   }
@@ -715,8 +709,7 @@ main(int argc, char** argv)
   Mode::OptionsDescription overlay_types_options("Overlay types");
   overlay_types_options.add_options()
     ("kelips", "use a Kelips overlay network (default)")
-    ("kalimero", "use a Kalimero overlay network")
-    ("kademlia", "use a Kademlia overlay network")
+    ("kalimero", "use a Kalimero overlay network.\nUsed for local testing")
     ;
   Mode::OptionsDescription consensus_types_options("Consensus types");
   consensus_types_options.add_options()
