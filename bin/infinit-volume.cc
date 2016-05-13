@@ -314,7 +314,11 @@ COMMAND(run)
 
 #ifdef INFINIT_MACOSX
   if (!flag(args, option_disable_mac_utf8))
-    mo.fuse_options.push_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
+  {
+    if (!mo.fuse_options)
+      mo.fuse_options = std::vector<std::string>();
+    mo.fuse_options.get().push_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
+  }
 #endif
 
   bool created_mountpoint = false;
@@ -434,8 +438,9 @@ COMMAND(run)
     }
 #ifdef INFINIT_MACOSX
     auto add_to_sidebar = flag(args, "finder-sidebar");
-    if (add_to_sidebar && mountpoint)
+    if (add_to_sidebar && mo.mountpoint)
     {
+      auto mountpoint = mo.mountpoint;
       reactor::background([mountpoint]
         {
           add_path_to_finder_sidebar(mountpoint.get());
@@ -445,11 +450,12 @@ COMMAND(run)
     elle::SafeFinally unmount([&]
     {
 #ifdef INFINIT_MACOSX
-      if (add_to_sidebar && mountpoint)
+      if (add_to_sidebar && mo.mountpoint)
       {
+        auto mountpoint = mo.mountpoint;
         reactor::background([mountpoint]
           {
-            remove_path_from_finder_sidebar(mo.mountpoint.get());
+            remove_path_from_finder_sidebar(mountpoint.get());
           });
       }
 #endif
