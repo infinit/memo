@@ -477,7 +477,6 @@ def configure(
     ('infinit-acl', [], True),
     ('infinit-block', [], True),
     ('infinit-credentials', [], True),
-    ('infinit-daemon', [], True),
     ('infinit-device', [], True),
     ('infinit-drive', [], True),
     ('infinit-journal', [], True),
@@ -494,6 +493,7 @@ def configure(
   ]
   if not windows:
     binaries_config.append(('sshfs', [], False))
+    binaries_config.append(('infinit-daemon', [], True))
     additional_libs.append(crash_reporter_lib)
     additional_libs += [elle_lib, reactor_lib, cryptography_lib]
   else:
