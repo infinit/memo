@@ -336,8 +336,6 @@ Locally created network "alice/cluster".
 The following overlay types are currently available:
 
 - Kalimero: Simple test overlay supporting only one node.
-- Stonehenge: Overlay supporting multiple storage nodes in a static configuration: the
-list of peers must never change or be reordered once set.
 - Kelips: Overlay with support for node churn. The _k_ argument specifies the
 number of groups to use, each group being responsible for _1/kth_ of the files.
 See the reference paper _<a href="http://iptps03.cs.berkeley.edu/final-papers/kelips.pdf" target="_blank">"Kelips: Building an Efficient and Stable P2P DHT through Increased Memory and Background Overhead"</a>_ for more information.

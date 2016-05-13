@@ -6,7 +6,6 @@
 
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/Kalimero.hh>
-#include <infinit/overlay/Stonehenge.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kademlia/kademlia.hh>
 #include <infinit/storage/Storage.hh>
@@ -53,20 +52,10 @@ COMMAND(create)
       (args.count("kademlia") ? 1 : 0)
     + (args.count("kalimero") ? 1 : 0)
     + (args.count("kelips") ? 1 : 0)
-    + (args.count("stonehenge") ? 1 : 0)
   ;
   if (overlays > 1)
     throw CommandLineError("Only one overlay type must be specified");
-  if (args.count("stonehenge"))
-  {
-    auto stonehenge =
-      elle::make_unique<infinit::overlay::StonehengeConfiguration>();
-    ELLE_ABORT("FIXME: stonehenge CLI peer parsing not implemented");
-    // stonehenge->peers =
-    //   mandatory<std::vector<std::string>>(args, "peer", "stonehenge hosts");
-    // overlay_config = std::move(stonehenge);
-  }
-  else if (args.count("kademlia"))
+  if (args.count("kademlia"))
   {
     auto kad = elle::make_unique<infinit::overlay::kademlia::Configuration>();
     overlay_config = std::move(kad);
@@ -728,17 +717,11 @@ main(int argc, char** argv)
     ("kelips", "use a Kelips overlay network (default)")
     ("kalimero", "use a Kalimero overlay network")
     ("kademlia", "use a Kademlia overlay network")
-    ("stonehenge", "use a Stonehenge overlay network")
     ;
   Mode::OptionsDescription consensus_types_options("Consensus types");
   consensus_types_options.add_options()
     ("paxos", "use Paxos consensus algorithm (default)")
     ("no-consensus", "use no consensus algorithm")
-    ;
-  Mode::OptionsDescription stonehenge_options("Stonehenge options");
-  stonehenge_options.add_options()
-    ("peer", value<std::vector<std::string>>()->multitoken(),
-     "hosts to connect to (host:port)")
     ;
   Mode::OptionsDescription kelips_options("Kelips options");
   kelips_options.add_options()
@@ -782,7 +765,6 @@ main(int argc, char** argv)
         consensus_types_options,
         overlay_types_options,
         kelips_options,
-        stonehenge_options,
       },
     },
     {
