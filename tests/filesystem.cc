@@ -1225,16 +1225,18 @@ test_filesystem(bool dht,
     bfs::remove(symlink_path);
   }
 
-  ELLE_LOG("utf-8");
-  const char* name = "éùßñЂ";
-  write(mount / name, "foo");
-  BOOST_CHECK_EQUAL(read(mount / name), "foo");
-  BOOST_CHECK_EQUAL(directory_count(mount), 1);
-  bfs::directory_iterator it(mount);
-  BOOST_CHECK_EQUAL(it->path().filename(), name);
-  BOOST_CHECK_EQUAL(it->path().filename(), std::string(name));
-  bfs::remove(mount / name);
-  BOOST_CHECK_EQUAL(directory_count(mount), 0);
+  ELLE_LOG("utf-8")
+  {
+    const char* name = "éùßñЂ";
+    write(mount / name, "foo");
+    BOOST_CHECK_EQUAL(read(mount / name), "foo");
+    BOOST_CHECK_EQUAL(directory_count(mount), 1);
+    bfs::directory_iterator it(mount);
+    BOOST_CHECK_EQUAL(it->path().filename(), name);
+    BOOST_CHECK_EQUAL(it->path().filename(), std::string(name));
+    bfs::remove(mount / name);
+    BOOST_CHECK_EQUAL(directory_count(mount), 0);
+  }
 }
 
 void
