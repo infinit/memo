@@ -888,6 +888,17 @@ COMMAND(list)
     }
 }
 
+COMMAND(update)
+{
+  auto self = self_user(ifnt, args);
+  auto name = volume_name(args, self);
+  auto volume = ifnt.volume_get(name);
+  volume.mount_options.merge(args);
+  ifnt.volume_save(volume, true);
+  if (flag(args, "push-volume") || flag(args, "push"))
+    beyond_push("volume", name, volume, self);
+}
+
 template<typename T>
 T join(T const& a, T const& b)
 {
@@ -1054,6 +1065,18 @@ main(int argc, char** argv)
       {},
       {},
     },
+    {
+      "update",
+      "Update a volume with default run options",
+      &update,
+      "--name VOLUME",
+      join(options_run_mount,
+        {
+          { "push,p", bool_switch(), "alias for --push-endpoints --push-volume" },
+          { "push-volume", bool_switch(),
+            elle::sprintf("push the volume to %s", beyond(true)) },
+        }),
+    }
   };
   return infinit::main("Infinit volume management utility", modes, argc, argv);
 }

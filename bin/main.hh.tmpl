@@ -2049,11 +2049,11 @@ namespace infinit
     }
 
     void
-    volume_save(Volume const& volume)
+    volume_save(Volume const& volume, bool overwrite = false)
     {
       boost::filesystem::ofstream f;
       this->_open_write(
-        f, this->_volume_path(volume.name), volume.name, "volume", false);
+        f, this->_volume_path(volume.name), volume.name, "volume", overwrite);
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(volume);
     }
