@@ -34,7 +34,9 @@ class MountManager
 {
 public:
   void
-  start(std::string const& name, infinit::MountOptions opts = {}, bool force_mount = false);
+  start(std::string const& name, infinit::MountOptions opts = {},
+        bool force_mount = false,
+        bool wait_for_mount = false);
   void
   stop(std::string const& name);
   void
@@ -87,9 +89,40 @@ MountManager::exists(std::string const& name_)
   }
 }
 
+bool
+is_mounted(std::string const& path)
+{
+#ifdef INFINIT_LINUX
+  auto mounts = boost::filesystem::path("/proc") / std::to_string(getpid()) / "mounts";
+  boost::filesystem::ifstream ifs(mounts);
+  while (!ifs.eof())
+  {
+    std::string line;
+    std::getline(ifs, line);
+    std::vector<std::string> elems;
+    boost::algorithm::split(elems, line, boost::is_any_of(" "));
+    if (elems.size() >= 2 && elems.at(1) == path)
+      return true;
+  }
+  return false;
+#elif defined(INFINIT_WINDOWS)
+  // We mount as drive letters under windows
+  return boost::filesystem::exists(path);
+#elif defined(INFINIT_MACOSX)
+  struct statfs sfs;
+  int res = statfs(path.c_str(), &sfs);
+  if (res)
+    return false;
+  return boost::filesystem::path(path) == boost::filesystem::path(sfs.f_mntonname);
+#else
+  throw elle::Error("is_mounted is not implemented");
+#endif
+}
+
 void
 MountManager::start(std::string const& name, infinit::MountOptions opts,
-                    bool force_mount)
+                    bool force_mount,
+                    bool wait_for_mount)
 {
   auto volume = ifnt.volume_get(name);
   volume.mount_options.merge(opts);
@@ -124,7 +157,25 @@ MountManager::start(std::string const& name, infinit::MountOptions opts,
       ::waitpid(pid, &status, 0);
   });
   t.detach();
+  auto mountpoint = m.options.mountpoint;
   this->_mounts.emplace(name, std::move(m));
+  if (wait_for_mount && mountpoint)
+  {
+    for (int i=0; i<100; ++i)
+    {
+      if (kill(pid, 0))
+      {
+        ELLE_TRACE("Process is dead: %s", strerror(errno));
+        break;
+      }
+      if (is_mounted(mountpoint.get()))
+        return;
+      reactor::sleep(100_ms);
+    }
+    ELLE_ERR("mount of %s failed", name);
+    stop(name);
+    throw elle::Error("Mount failure for " + name);
+  }
 }
 
 void
@@ -322,7 +373,8 @@ process_command(elle::json::Object query, MountManager& manager)
         auto volume = command.deserialize<std::string>("volume");
         auto opts =
           command.deserialize<boost::optional<infinit::MountOptions>>("options");
-        manager.start(volume, opts ? opts.get() : infinit::MountOptions());
+        manager.start(volume, opts ? opts.get() : infinit::MountOptions(),
+                      false, true);
       }
       else if (op == "volume-stop")
       {
@@ -510,9 +562,8 @@ DockerVolumePlugin::install(bool tcp)
       }
       else
       {
-        _manager.start(name, {}, true);
+        _manager.start(name, {}, true, true);
         _mount_count.insert(std::make_pair(name, 1));
-        reactor::sleep(4_sec);
       }
       std::string res = "{\"Err\": \"\", \"Mountpoint\": \""
           + _manager.mountpoint(name) +"\"}";

@@ -1180,7 +1180,7 @@ main(int argc, char** argv)
       &status,
       "--name VOLUME",
       {
-        { "name,n", value<std::string>(), "volume to remove" },
+        { "name,n", value<std::string>(), "volume to query" },
       },
       {}
     }
