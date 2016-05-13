@@ -2,7 +2,9 @@
 #include <elle/serialization/json.hh>
 
 #include <reactor/FDStream.hh>
-#include <reactor/network/unix-domain-socket.hh>
+#ifndef INFINIT_WINDOWS
+# include <reactor/network/unix-domain-socket.hh>
+#endif
 
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/ACB.hh>
@@ -293,7 +295,7 @@ COMMAND(run)
   auto name = volume_name(args, self);
   auto volume = ifnt.volume_get(name);
   volume.mount_options.merge(args);
-  auto const& mo = volume.mount_options;
+  auto& mo = volume.mount_options;
   infinit::overlay::NodeEndpoints eps;
   if (mo.peers)
   {
@@ -325,7 +327,7 @@ COMMAND(run)
   if (mo.mountpoint)
   {
 #ifdef INFINIT_WINDOWS
-    if (mountpoint.get().size() == 2 && mountpoint.get()[1] == ':')
+    if (mo.mountpoint.get().size() == 2 && mo.mountpoint.get()[1] == ':')
       ;
     else
 #endif
@@ -906,6 +908,7 @@ COMMAND(update)
     beyond_push("volume", name, volume, self);
 }
 
+#ifndef INFINIT_WINDOWS
 COMMAND(start)
 {
   auto self = self_user(ifnt, args);
@@ -981,6 +984,7 @@ COMMAND(status)
   }
   std::cout << "Ok" << std::endl;
 }
+#endif
 
 template<typename T>
 T join(T const& a, T const& b)
@@ -1160,6 +1164,7 @@ main(int argc, char** argv)
             elle::sprintf("push the volume to %s", beyond(true)) },
         }),
     },
+#ifndef INFINIT_WINDOWS
     {
       "start",
       "Start a volume through the daemon.",
@@ -1190,6 +1195,7 @@ main(int argc, char** argv)
       },
       {}
     }
+#endif
   };
   return infinit::main("Infinit volume management utility", modes, argc, argv);
 }
