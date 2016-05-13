@@ -12,6 +12,7 @@ from itertools import chain
 
 
 exe_ext = os.environ.get('EXE_EXT', '')
+host_os = os.environ.get('OS', '')
 
 ## -------- ##
 ## Binaries ##
@@ -335,7 +336,7 @@ class Beyond:
               args,
               env = env,
               input = (json.dumps(data) + '\n').encode('utf-8'),
-              timeout = 5)
+              timeout = 5 if host_os != 'windows' else 15)
           except Exception as e:
             raise Exception('impossible to import %s \'%s\': %s' % (
                             type, data['name'], e))
