@@ -2,6 +2,11 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+#ifdef INFINIT_MACOSX
+#  include <sys/param.h>
+#  include <sys/mount.h>
+#endif
+
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
