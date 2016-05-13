@@ -21,8 +21,9 @@ os.environ['INFINIT_CRASH_REPORTER_ENABLED'] = '0'
 
 def find_binaries():
   for path in chain(
+      [os.environ.get('INFINIT_BINARIES')],
       os.environ.get('PATH', '').split(':'),
-      ['bin', '/opt/infinit/bin', os.environ.get('INFINIT_BINARIES')],
+      ['bin', '/opt/infinit/bin'],
   ):
     if not path:
       continue
