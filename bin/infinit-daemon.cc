@@ -195,13 +195,6 @@ std::string
 daemon_command(std::string const& s);
 
 static
-boost::filesystem::path
-sock_path()
-{
-  return infinit::xdg_runtime_dir() / "daemon.sock";
-}
-
-static
 int
 daemon_running()
 {
@@ -291,7 +284,7 @@ daemon_command(std::string const& s)
     "main",
     [&]
     {
-      reactor::network::UnixDomainSocket sock(sock_path());
+      reactor::network::UnixDomainSocket sock(daemon_sock_path());
       std::string cmd = s + "\n";
       ELLE_TRACE("writing query: %s", s);
       sock.write(elle::ConstWeakBuffer(cmd.data(), cmd.size()));
@@ -343,8 +336,9 @@ process_command(elle::json::Object query, MountManager& manager)
       }
       else
       {
-        response.serialize("error", "unknown operation: " + op);
+        throw std::runtime_error(("unknown operation: " + op).c_str());
       }
+      response.serialize("result", "Ok");
     }
     catch (elle::Exception const& e)
     {
@@ -379,7 +373,7 @@ COMMAND(start)
     daemonize();
   PIDFile pid;
   reactor::network::UnixDomainServer srv;
-  auto sockaddr = sock_path();
+  auto sockaddr = daemon_sock_path();
   boost::filesystem::remove(sockaddr);
   srv.listen(sockaddr);
   auto loglevel = optional(args, "log-level");

@@ -2441,6 +2441,13 @@ namespace infinit
 }
 
 inline
+boost::filesystem::path
+daemon_sock_path()
+{
+  return infinit::xdg_runtime_dir() / "daemon.sock";
+}
+
+inline
 bool
 _one(bool seen)
 {

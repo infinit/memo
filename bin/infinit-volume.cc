@@ -2,6 +2,7 @@
 #include <elle/serialization/json.hh>
 
 #include <reactor/FDStream.hh>
+#include <reactor/network/unix-domain-socket.hh>
 
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/ACB.hh>
@@ -899,6 +900,82 @@ COMMAND(update)
     beyond_push("volume", name, volume, self);
 }
 
+COMMAND(start)
+{
+  auto self = self_user(ifnt, args);
+  auto name = volume_name(args, self);
+  infinit::MountOptions mo;
+  mo.merge(args);
+  reactor::network::UnixDomainSocket sock(daemon_sock_path());
+  std::stringstream ss;
+  {
+    elle::serialization::json::SerializerOut cmd(ss, false);
+    cmd.serialize("operation", "volume-start");
+    cmd.serialize("volume", name);
+    cmd.serialize("options", mo);
+  }
+  sock.write(elle::ConstWeakBuffer(ss.str().data(), ss.str().size()));
+  auto reply = sock.read_until("\n").string();
+  std::stringstream replystream(reply);
+  auto json = elle::json::read(replystream);
+  auto jsono = boost::any_cast<elle::json::Object>(json);
+  if (boost::any_cast<std::string>(jsono.at("result")) != "Ok")
+  {
+    std::cout << elle::json::pretty_print(json) << std::endl;
+    throw elle::Exit(1);
+  }
+  std::cout << "Ok" << std::endl;
+}
+
+COMMAND(stop)
+{
+  auto self = self_user(ifnt, args);
+  auto name = volume_name(args, self);
+  reactor::network::UnixDomainSocket sock(daemon_sock_path());
+  std::stringstream ss;
+  {
+    elle::serialization::json::SerializerOut cmd(ss, false);
+    cmd.serialize("operation", "volume-stop");
+    cmd.serialize("volume", name);
+  }
+  sock.write(elle::ConstWeakBuffer(ss.str().data(), ss.str().size()));
+  auto reply = sock.read_until("\n").string();
+  std::stringstream replystream(reply);
+  auto json = elle::json::read(replystream);
+  auto jsono = boost::any_cast<elle::json::Object>(json);
+  if (boost::any_cast<std::string>(jsono.at("result")) != "Ok")
+  {
+    std::cout << elle::json::pretty_print(json) << std::endl;
+    throw elle::Exit(1);
+  }
+  std::cout << "Ok" << std::endl;
+}
+
+COMMAND(status)
+{
+    auto self = self_user(ifnt, args);
+  auto name = volume_name(args, self);
+  reactor::network::UnixDomainSocket sock(daemon_sock_path());
+  std::stringstream ss;
+  {
+    elle::serialization::json::SerializerOut cmd(ss, false);
+    cmd.serialize("operation", "volume-status");
+    cmd.serialize("volume", name);
+  }
+  sock.write(elle::ConstWeakBuffer(ss.str().data(), ss.str().size()));
+  auto reply = sock.read_until("\n").string();
+  std::stringstream replystream(reply);
+  auto json = elle::json::read(replystream);
+  auto jsono = boost::any_cast<elle::json::Object>(json);
+  if (boost::any_cast<std::string>(jsono.at("result")) != "Ok"
+    || !boost::any_cast<bool>(jsono.at("live")))
+  {
+    std::cout << elle::json::pretty_print(json) << std::endl;
+    throw elle::Exit(1);
+  }
+  std::cout << "Ok" << std::endl;
+}
+
 template<typename T>
 T join(T const& a, T const& b)
 {
@@ -1076,6 +1153,36 @@ main(int argc, char** argv)
           { "push-volume", bool_switch(),
             elle::sprintf("push the volume to %s", beyond(true)) },
         }),
+    },
+    {
+      "start",
+      "Start a volume through the daemon.",
+      &start,
+      "--name VOLUME [--mountpoint PATH]",
+      join( options_run_mount,
+        {
+          { "push,p", bool_switch(), "alias for --push-endpoints" },
+        }),
+    },
+    {
+      "stop",
+      "Stop a volume",
+      &stop,
+      "--name VOLUME",
+      {
+        { "name,n", value<std::string>(), "volume to remove" },
+      },
+      {}
+    },
+    {
+      "status",
+      "Get volume status",
+      &status,
+      "--name VOLUME",
+      {
+        { "name,n", value<std::string>(), "volume to remove" },
+      },
+      {}
     }
   };
   return infinit::main("Infinit volume management utility", modes, argc, argv);
