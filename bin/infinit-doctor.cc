@@ -13,7 +13,9 @@
 #include <infinit/storage/GCS.hh>
 #include <infinit/storage/GoogleDrive.hh>
 #include <infinit/storage/Strip.hh>
-#include <infinit/storage/sftp.hh>
+#ifndef INFINIT_WINDOWS
+# include <infinit/storage/sftp.hh>
+#endif
 #include <infinit/storage/S3.hh>
 
 #include <reactor/connectivity/connectivity.hh>
@@ -502,10 +504,12 @@ _integrity(boost::program_options::variables_map const& args,
           elle::fprintf(output, "      [%s] Missing credential\n", result(status));
       }
     }
+#ifndef INFINIT_WINDOWS
     if (auto ssh = dynamic_cast<infinit::storage::SFTPStorageConfig const*>(storage.get()))
     {
       // XXX:
     }
+#endif
   }
   std::cout << "Networks:" << std::endl;
   for (auto& elem: networks)
