@@ -24,6 +24,10 @@ class Website(bottle.Bottle):
     self.__swu = sendwithus.api(api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d')
     self.__hub = os.environ.get('INFINIT_BEYOND', 'https://beyond.infinit.io')
 
+  def __call__(self, e, h):
+    e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')
+    return super().__call__(e, h)
+
   def debug(self):
     if hasattr(bottle.request, 'certificate') and \
        bottle.request.certificate in [
@@ -70,6 +74,14 @@ class Website(bottle.Bottle):
     return {
       'title': 'Download Infinit CLI Tools',
       'description': 'Download the Infinit command line tools for Mac, Linux or Windows.',
+    }
+
+  @route('/update', name = 'update')
+  @view('pages/update.html')
+  def root(self):
+    return {
+      'title': 'Upgrade Infinit CLI Tools',
+      'description': 'Upgrade your Infinit command line tools to the latest version to get all the new features.',
     }
 
   @route('/faq', name = 'faq')
@@ -152,6 +164,14 @@ class Website(bottle.Bottle):
       'description': 'Have a look at all the recent changes of the Infinit platform.',
     }
 
+  @route('/documentation/status', name = 'doc_status')
+  @view('pages/docs/status.html')
+  def root(self):
+    return {
+      'title': 'Status',
+      'description': 'Keep track of announcements regarding system wide issues or performance status.',
+    }
+
   @route('/documentation/storages/filesystem', name = 'doc_storages_filesystem')
   @view('pages/docs/filesystem.html')
   def root(self):
@@ -182,6 +202,14 @@ class Website(bottle.Bottle):
     return {
       'title': 'Upgrade Network',
       'description': 'Upgrade an Infinit network for all the clients to benefit from new features.',
+    }
+
+  @route('/documentation/environment-variables', name = 'doc_environment_variables')
+  @view('pages/docs/environment_variables.html')
+  def root(self):
+    return {
+      'title': 'Environment Variables',
+      'description': 'List of the environment variables that can be set to alter the behavior of the Infinit file system.',
     }
 
   @route('/documentation/comparison/', name = 'doc_comparisons')

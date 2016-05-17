@@ -1,19 +1,45 @@
 # Change Log
 
+Automatic replication of under-replicated data blocks and network
+performance improvement.
 
-## [0.5.5]
-
-Automatic replication of under-duplicated blocks and CPU usage improvement.
+## [0.6.0]
 
 ### Added
 
-- Automatically rebalance under-replicated blocks to new nodes.
+- Automatically rebalance under-replicated data blocks to new nodes.
+- Send network queries in batch when possible.
+- Enable to interrupt remote procedure call to save time when a query
+  is discarded.
+- Enable to set the inherit flag in default network permissions.
+- Support JSON output with `--script` for operation `--list` in
+  `infinit-drive`, `infinit-network`, `infinit-passport`,
+  `infinit-user` and `infinit-volume`.
+- Support `--pull` in combination with `--delete` to also remove
+  entities from the hub in `infinit-drive`, `infinit-network`,
+  `infinit-passport`, `infinit-user` and `infinit-volume`.
+- Add Kelips batch requests, greatly improving performances for large
+  set of files.
+- Push storage stats to the hub in `infinit-network` if `--push` is
+  passed.
+
+
+## [0.5.5] - 2016-04-25
+
+Automatic replication of under-replicated metadata blocks and CPU
+usage improvement.
+
+### Added
+
+- Automatically rebalance under-replicated metadata blocks to new
+  nodes.
 - Synchronize file content on `fsync` system call.
 - Cache the root block address locally to avoid recreating one if all
   storage nodes are down.
 - Add `infinit-journal` binary to inspect asynchronous write queue.
 - Add `infinit-connectivity` to test network connectivity
   capabilities.
+- Publish public IP to beyond.
 
 ### Changed
 
@@ -31,6 +57,10 @@ Automatic replication of under-duplicated blocks and CPU usage improvement.
 - Fix SEGV when shutting down while deciphering a block.
 - Handle conflicts when changing world permissions on a directory.
 - Fix misreported file size upon `truncate` or `ftruncate`.
+- Fixed async cache deadlock upon conflict on group blocks.
+- Ensure prefetcher work in parallel on large directories.
+- Report error if no servers are available to store data block.
+- Fix race condition when connecting several time to a peer.
 
 
 ## [0.5.4] - 2016-03-01

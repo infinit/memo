@@ -5,6 +5,7 @@
 #ifdef INFINIT_WINDOWS
 #include <fcntl.h>
 #endif
+#include <pair>
 #include <sys/stat.h> // S_IMFT...
 
 #include <elle/cast.hh>
@@ -17,10 +18,17 @@
 #undef stat
 #endif
 
+#include <elle/serialization/json.hh>
+
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/FileHandle.hh>
 #include <infinit/filesystem/umbrella.hh>
 #include <infinit/filesystem/xattribute.hh>
+
+#include <elle/bench.hh>
+#include <elle/cast.hh>
+#include <elle/os/environ.hh>
+
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/User.hh>
@@ -194,7 +202,7 @@ namespace infinit
         return;
       this->_first_block = std::dynamic_pointer_cast<ACLBlock>(
         this->_owner.fetch_or_die(_address, {}, this));
-      
+
       elle::SafeFinally remove_undecoded_first_block([&] {
           this->_first_block.reset();
       });
@@ -476,6 +484,8 @@ namespace infinit
     void
     File::stat(struct stat* st)
     {
+      static elle::Bench bench("bench.file.stat", 10000_sec);
+      elle::Bench::BenchScope bs(bench);
       ELLE_TRACE_SCOPE("%s: stat, parent %s", *this, _parent);
       memset(st, 0, sizeof(struct stat));
       st->st_mode = S_IFREG;
@@ -657,26 +667,28 @@ namespace infinit
     std::string
     File::getxattr(std::string const& key)
     {
-      if (auto special = xattr_special(key))
-      {
-        if (*special == "fat")
+      return umbrella(
+        [this, &key]
         {
-          _fetch();
-          std::stringstream res;
-          res <<  "total_size: "  << _filedata->_header.size  << "\n";
-          for (int i=0; i < signed(_filedata->_fat.size()); ++i)
+          if (auto special = xattr_special(key))
           {
-            res << i << ": " << _filedata->_fat[i].first << "\n";
+            if (*special == "fat")
+            {
+              this->_fetch();
+              std::vector<std::string> fat;
+              for (auto const& entry: this->_filedata->_fat)
+                fat.push_back(elle::sprintf("%x", entry.first));
+              return elle::serialization::json::serialize(fat, false).string();
+            }
+            else if (*special == "auth")
+            {
+              this->_ensure_first_block();
+              return perms_to_json(*this->_owner.block_store(),
+                                   dynamic_cast<ACLBlock&>(*this->_first_block));
+            }
           }
-          return res.str();
-        }
-        else if (*special == "auth")
-        {
-          _ensure_first_block();
-          return perms_to_json(*_owner.block_store(), dynamic_cast<ACLBlock&>(*_first_block));
-        }
-      }
-      return Node::getxattr(key);
+          return this->Node::getxattr(key);
+        });
     }
 
     void

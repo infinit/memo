@@ -15,6 +15,7 @@
 ELLE_LOG_COMPONENT("infinit-network");
 
 #include <main.hh>
+#include <xattrs.hh>
 
 infinit::Infinit ifnt;
 
@@ -80,6 +81,13 @@ COMMAND(create)
     }
     else
       kelips->k = 1;
+    if (auto timeout = optional<std::string>(args, "kelips-contact-timeout"))
+    {
+
+      kelips->contact_timeout_ms =
+        std::chrono::duration_from_string<std::chrono::milliseconds>(*timeout)
+        .count();
+    }
     if (args.count("encrypt"))
     {
       std::string enc = args["encrypt"].as<std::string>();
@@ -136,6 +144,7 @@ COMMAND(create)
       replication_factor = args["replication-factor"].as<int>();
     if (replication_factor < 1)
       throw CommandLineError("replication factor must be greater than 0");
+    auto eviction = optional<std::string>(args, "eviction-delay");
     bool no_consensus = args.count("no-consensus");
     bool paxos = args.count("paxos");
     if (!no_consensus)
@@ -143,19 +152,37 @@ COMMAND(create)
     if (!one(no_consensus, paxos))
       throw CommandLineError("more than one consensus specified");
     if (paxos)
+    {
       consensus_config = elle::make_unique<
         infinit::model::doughnut::consensus::Paxos::Configuration>(
-          replication_factor);
+          replication_factor,
+          eviction ?
+          std::chrono::duration_from_string<std::chrono::seconds>(*eviction) :
+          std::chrono::seconds(10 * 60));
+    }
     else
     {
       if (replication_factor != 1)
       {
-        throw CommandLineError(
+        throw elle::Error(
           "without consensus, replication factor must be 1");
       }
       consensus_config = elle::make_unique<
         infinit::model::doughnut::consensus::Configuration>();
     }
+  }
+  infinit::model::doughnut::AdminKeys admin_keys;
+  if (args.count("admin-r"))
+  {
+    auto admins = args["admin-r"].as<std::vector<std::string>>();
+    for (auto const& a: admins)
+      admin_keys.r.push_back(ifnt.user_get(a).public_key);
+  }
+  if (args.count("admin-rw"))
+  {
+    auto admins = args["admin-rw"].as<std::vector<std::string>>();
+    for (auto const& a: admins)
+      admin_keys.w.push_back(ifnt.user_get(a).public_key);
   }
   boost::optional<int> port;
   if (args.count("port"))
@@ -175,7 +202,8 @@ COMMAND(create)
                                             owner.private_key.get())),
       owner.name,
       std::move(port),
-      version);
+      version,
+      admin_keys);
   {
     infinit::Network network(ifnt.qualified_name(name, owner),
                              std::move(dht));
@@ -196,6 +224,37 @@ COMMAND(create)
     }
   }
 }
+static std::pair<infinit::cryptography::rsa::PublicKey, bool>
+user_key(std::string name, boost::optional<std::string> mountpoint)
+{
+  bool is_group = false;
+  if (!name.empty() && name[0] == '@')
+  {
+    is_group = true;
+    name = name.substr(1);
+  }
+  if (!name.empty() && name[0] == '{')
+  {
+    elle::Buffer buf(name);
+    elle::IOStream is(buf.istreambuf());
+    auto key = elle::serialization::json::deserialize
+      <infinit::cryptography::rsa::PublicKey>(is);
+    return std::make_pair(key, is_group);
+  }
+  if (!is_group)
+    return std::make_pair(ifnt.user_get(name).public_key, false);
+  if (!mountpoint)
+    throw elle::Error("A mountpoint is required to fetch groups.");
+  char buf[32768];
+  int res = port_getxattr(*mountpoint, "infinit.group.control_key." + name, buf, 16384, true);
+  if (res <= 0)
+    throw elle::Error("Unable to fetch group " + name);
+  elle::Buffer b(buf, res);
+  elle::IOStream is(b.istreambuf());
+    auto key = elle::serialization::json::deserialize
+      <infinit::cryptography::rsa::PublicKey>(is);
+  return std::make_pair(key, is_group);
+}
 
 COMMAND(update)
 {
@@ -207,6 +266,37 @@ COMMAND(update)
     dht.port = port.get();
   if (compatibility_version)
     dht.version = compatibility_version.get();
+  if (args.count("admin-r"))
+  {
+    for (auto u: args["admin-r"].as<std::vector<std::string>>())
+    {
+      auto r = user_key(u, optional(args, "mountpoint"));
+      auto& target = r.second ? dht.admin_keys.group_r : dht.admin_keys.r;
+      target.push_back(r.first);
+    }
+  }
+  if (args.count("admin-rw"))
+  {
+    for (auto u: args["admin-rw"].as<std::vector<std::string>>())
+    {
+      auto r = user_key(u, optional(args, "mountpoint"));
+      auto& target = r.second ? dht.admin_keys.group_w : dht.admin_keys.w;
+      target.push_back(r.first);
+    }
+  }
+  if (args.count("admin-remove"))
+  {
+    for (auto u: args["admin-remove"].as<std::vector<std::string>>())
+    {
+      auto r = user_key(u, optional(args, "mountpoint"));
+#define DEL(cont) cont.erase(std::remove(cont.begin(), cont.end(), r.first), cont.end())
+      DEL(dht.admin_keys.r);
+      DEL(dht.admin_keys.w);
+      DEL(dht.admin_keys.group_r);
+      DEL(dht.admin_keys.group_w);
+#undef DEL
+    }
+  }
   if (args.count("output"))
   {
     auto output = get_output(args);
@@ -230,11 +320,12 @@ COMMAND(export_)
   auto output = get_output(args);
   auto network_name = mandatory(args, "name", "network name");
   auto network = ifnt.network_get(network_name, owner);
+  network_name = network.name;
   {
     infinit::NetworkDescriptor desc(std::move(network));
     elle::serialization::json::serialize(desc, *output, false);
   }
-  report_exported(*output, "network", network.name);
+  report_exported(*output, "network", network_name);
 }
 
 COMMAND(fetch)
@@ -262,7 +353,8 @@ COMMAND(fetch)
             d->passport,
             self.name,
             d->port,
-            desc.version));
+            desc.version,
+            desc.admin_keys));
         ifnt.network_save(updated_network, true);
       }
       else
@@ -337,9 +429,20 @@ COMMAND(link_)
     {
       return infinit::Passport(
         self.public_key, desc.name,
-        infinit::cryptography::rsa::KeyPair(self.public_key, self.private_key.get()));
+        infinit::cryptography::rsa::KeyPair(self.public_key,
+                                            self.private_key.get()));
     }
-    return ifnt.passport_get(desc.name, self.name);
+    try
+    {
+      return ifnt.passport_get(desc.name, self.name);
+    }
+    catch (MissingLocalResource const&)
+    {
+      throw elle::Error(
+        elle::sprintf("missing passport (%s: %s), "
+                      "use infinit-passport to fetch or import",
+                      desc.name, self.name));
+    }
   }();
   bool ok = passport.verify(
     passport.certifier() ? *passport.certifier() : desc.owner);
@@ -359,7 +462,8 @@ COMMAND(link_)
       std::move(passport),
       self.name,
       boost::optional<int>(),
-      desc.version));
+      desc.version,
+      desc.admin_keys));
   auto has_output = optional(args, "output");
   auto output = has_output ? get_output(args) : nullptr;
   if (output)
@@ -375,13 +479,26 @@ COMMAND(link_)
 
 COMMAND(list)
 {
-  for (auto const& network: ifnt.networks_get())
+  if (script_mode)
   {
-    std::cout << network.name;
-    if (network.model)
-      std::cout << ": linked";
-    std::cout << std::endl;
+    elle::json::Array l;
+    for (auto const& network: ifnt.networks_get())
+    {
+      elle::json::Object o;
+      o["name"] = network.name;
+      o["linked"] = bool(network.model);
+      l.push_back(std::move(o));
+    }
+    elle::json::write(std::cout, l);
   }
+  else
+    for (auto const& network: ifnt.networks_get())
+    {
+      std::cout << network.name;
+      if (network.model)
+        std::cout << ": linked";
+      std::cout << std::endl;
+    }
 }
 
 COMMAND(push)
@@ -412,6 +529,21 @@ COMMAND(delete_)
   auto network_name = ifnt.qualified_name(name, owner);
   auto path = ifnt._network_path(network_name);
   auto network = ifnt.network_get(network_name, owner, false);
+  if (flag(args, "pull"))
+  {
+    try
+    {
+      beyond_delete("network", network_name, owner);
+    }
+    catch (MissingResource const& e)
+    {
+      // Ignore if the item is not on Beyond.
+    }
+    catch (elle::Error const& e)
+    {
+      throw;
+    }
+  }
   boost::filesystem::remove_all(network.cache_dir());
   if (boost::filesystem::remove(path))
     report_action("deleted", "network", network_name, std::string("locally"));
@@ -464,9 +596,12 @@ COMMAND(run)
     flag(args, "async"), disk_cache_size, compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
-            && dht->local()->storage();
+            && dht->local() && dht->local()->storage();
   if (!dht->local())
-    throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
+  {
+    throw elle::Error(elle::sprintf(
+      "network \"%s\" has no storage attached so is client only", name));
+  }
   if (auto port_file = optional(args, option_port_file))
     port_to_file(dht->local()->server_endpoint().port(), port_file.get());
   if (auto endpoint_file = optional(args, option_endpoint_file))
@@ -491,6 +626,9 @@ COMMAND(run)
     });
   auto run = [&]
     {
+      reactor::Thread::unique_ptr stat_thread;
+      if (push)
+        stat_thread = make_stat_update_thread(self, network, *dht);
       report_action("running", "network", network.name);
       reactor::sleep();
     };
@@ -575,6 +713,8 @@ main(int argc, char** argv)
   kelips_options.add_options()
     ("nodes", value<int>(), "estimate of the total number of nodes")
     ("k", value<int>(), "number of groups (default: 1)")
+    ("kelips-contact-timeout", value<std::string>(),
+     "ping timeout before considering a peer lost (default: 2min)")
     ("encrypt", value<std::string>(),
       "use encryption: no,lazy,yes (default: yes)")
     ("protocol", value<std::string>(),
@@ -595,11 +735,17 @@ main(int argc, char** argv)
           "storage to contribute (optional)" },
         { "port", value<int>(), "port to listen on (default: random)" },
         { "replication-factor,r", value<int>(),
+          "missing servers eviction delay (default: 10min)" },
+        { "eviction-delay,e", value<std::string>(),
           "data replication factor (default: 1)" },
         option_output("network"),
         { "push-network", bool_switch(),
           elle::sprintf("push the network to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-network" },
+        { "admin-r", value<std::vector<std::string>>()->multitoken(),
+          "Set an admin user that can read all data"},
+        { "admin-rw", value<std::vector<std::string>>()->multitoken(),
+          "Set an admin user that can read and write all data"},
       },
       {
         consensus_types_options,
@@ -621,6 +767,14 @@ main(int argc, char** argv)
             elle::sprintf("push the updated network to %s",
                           beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-network" },
+        { "admin-r", value<std::vector<std::string>>()->multitoken(),
+          "Set an admin user that can read all data"},
+        { "admin-rw", value<std::vector<std::string>>()->multitoken(),
+          "Set an admin user that can read and write all data"},
+        {"admin-remove", value<std::vector<std::string>>()->multitoken(),
+          "Remove given user to all admin lists"},
+        {"mountpoint", value<std::string>(),
+          "Mountpoint of a volume using this network, required to add admin groups"},
       },
       {},
     },
@@ -690,6 +844,8 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to delete" },
+        { "pull", bool_switch(),
+          elle::sprintf("pull the network if it is on %s", beyond(true)) },
       },
     },
     {

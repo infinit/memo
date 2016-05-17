@@ -44,7 +44,9 @@ namespace infinit
         void statfs(struct statvfs *) override;
         void utimens(const struct timespec tv[2]) override;
         void truncate(off_t new_size) override;
-        std::string getxattr(std::string const& name) override;
+        virtual
+        std::string
+        getxattr(std::string const& name) override;
         std::vector<std::string> listxattr() override;
         void setxattr(std::string const& name, std::string const& value, int flags) override;
         void removexattr(std::string const& name) override;

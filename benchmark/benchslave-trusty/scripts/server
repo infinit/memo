@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+sys.path.insert(0, '%s/lib' % os.path.dirname(os.path.realpath(__file__)))
+
+from common import *
+
+import logging
+import shutil
+import signal
+
+def parse_options():
+  import argparse
+  parser = argparse.ArgumentParser(description = 'Benchmark server')
+  parser.add_argument('--infinit-version',
+                      metavar = 'VERSION',
+                      type = str,
+                      help = 'Version of Infinit to use')
+  parser.add_argument('--skip-download',
+                      action = 'store_true',
+                      default = False)
+  return parser.parse_args()
+
+logger = logging.getLogger('Benchmark server')
+logger.setLevel(logging.DEBUG)
+log_stream_handler = logging.StreamHandler()
+log_formatter = logging.Formatter('%(asctime)s: [%(levelname)s] %(message)s')
+log_stream_handler.setFormatter(log_formatter)
+logger.addHandler(log_stream_handler)
+
+logger.info('Preparing server...')
+args = parse_options()
+if not args.skip_download and args.infinit_version is None:
+  raise Exception('must specify --infinit-version')
+if args.skip_download and args.infinit_version:
+  raise Exception('select either --skip-download or --infinit-version')
+scratch = '/bench_scratch'
+shutil.rmtree(scratch, ignore_errors = True)
+os.makedirs(scratch)
+
+# NFS
+nfs_storage = '%s/nfs_storage' % scratch
+shutil.rmtree(nfs_storage, ignore_errors = True)
+os.makedirs(nfs_storage)
+with open('/etc/exports', 'w') as f:
+  f.write(
+    '%s\t*(rw,sync,no_subtree_check,fsid=0,no_root_squash)\n' % nfs_storage)
+run(['service', 'rpcbind', 'restart'])
+run(['service', 'nfs-kernel-server', 'restart'])
+logger.info('NFS configured')
+
+# Infinit
+server_home = '%s/server_home' % scratch
+shutil.copytree('/server_home', server_home)
+if not args.skip_download:
+  logger.info('Installing Infinit...')
+  install_infinit(args.infinit_version)
+  logger.info('Installed infinit-%s' % args.infinit_version)
+infinit_env = {
+  'INFINIT_HOME': server_home,
+  'INFINIT_USER': 'bench',
+  'PATH': '/opt/infinit/bin:$PATH',
+}
+run(['infinit-network', '--update', 'n'], env = infinit_env)
+endpoint_file = '%s/endpoints' % scratch
+infinit_process = run([
+    'infinit-network', '--run', 'n',
+    '--endpoints-file', endpoint_file,
+    '--port', '60000',
+  ],
+  wait = False,
+  env = infinit_env,
+)
+while not os.path.exists(endpoint_file):
+  import time
+  time.sleep(1)
+with open(endpoint_file, 'r') as f:
+  endpoints = f.read()
+  endpoints = endpoints.split()
+  logger.info('Infinit endpoints: %s' % endpoints)
+
+def clean_up(signum, frame):
+  # Clean up
+  logger.info('Cleaning up...')
+  run(['service', 'nfs-kernel-server', 'stop'])
+  infinit_process.send_signal(signal.SIGINT)
+  infinit_process.wait()
+  shutil.rmtree(nfs_storage, ignore_errors = True)
+  shutil.rmtree(scratch, ignore_errors = True)
+  shutil.rmtree('/server_home/.local/state', ignore_errors = True)
+  if not args.skip_download:
+    try:
+      run(['dpkg', '-r', 'infinit'])
+    except:
+      pass
+  logger.info('Done')
+
+logger.info('Server ready')
+# Wait for ctrl+c to clean up
+signal.signal(signal.SIGINT, clean_up)
+signal.pause()

@@ -121,6 +121,21 @@ COMMAND(delete_)
   auto name = volume_name(args, owner);
   auto path = ifnt._volume_path(name);
   auto volume = ifnt.volume_get(name);
+  if (flag(args, "pull"))
+  {
+    try
+    {
+      beyond_delete("volume", name, owner);
+    }
+    catch (MissingResource const& e)
+    {
+      // Ignore if the item is not on Beyond.
+    }
+    catch (elle::Error const& e)
+    {
+      throw;
+    }
+  }
   boost::filesystem::remove_all(volume.root_block_cache_dir());
   if (boost::filesystem::remove(path))
     report_action("deleted", "volume", name, std::string("locally"));
@@ -193,11 +208,13 @@ add_path_to_finder_sidebar(std::string const& path)
   {
     item_ref =
       (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
-    CFURLRef item_url = LSSharedFileListItemCopyResolvedURL(
+    CFURLRef item_url;
+    OSStatus err = LSSharedFileListItemResolve(
       item_ref,
       kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+      &item_url,
       NULL);
-    if (item_url)
+    if (err == noErr && item_url)
     {
       CFStringRef item_path = CFURLCopyPath(item_url);
       if (item_path)
@@ -253,11 +270,13 @@ remove_path_from_finder_sidebar(std::string const& path)
   {
     item_ref =
       (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
-    CFURLRef item_url = LSSharedFileListItemCopyResolvedURL(
+    CFURLRef item_url;
+    OSStatus err = LSSharedFileListItemResolve(
       item_ref,
       kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+      &item_url,
       NULL);
-    if (item_url)
+    if (err == noErr && item_url)
     {
       CFStringRef item_path = CFURLCopyPath(item_url);
       if (item_path)
@@ -308,14 +327,43 @@ COMMAND(run)
   if (!flag(args, option_disable_mac_utf8))
     fuse_options.push_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
 #endif
+  auto volume = ifnt.volume_get(name);
+  auto mountpoint = optional(args, "mountpoint");
+  if (!mountpoint)
+    mountpoint = volume.mountpoint;
+  bool created_mountpoint = false;
+  if (mountpoint)
+  {
+#ifdef INFINIT_WINDOWS
+    if (mountpoint.get().size() == 2 && mountpoint.get()[1] == ':')
+      ;
+    else
+#endif
+    try
+    {
+      if (boost::filesystem::exists(mountpoint.get()))
+      {
+        if (!boost::filesystem::is_directory(mountpoint.get()))
+          throw (elle::Error("mountpoint is not a directory"));
+        if (!boost::filesystem::is_empty(mountpoint.get()))
+          throw elle::Error("mountpoint is not empty");
+      }
+      created_mountpoint =
+        boost::filesystem::create_directories(mountpoint.get());
+    }
+    catch (boost::filesystem::filesystem_error const& e)
+    {
+      throw elle::Error(elle::sprintf("unable to access mountpoint: %s",
+                                      e.what()));
+    }
+  }
   if (args.count("fuse-option"))
   {
-    if (!args.count("mountpoint"))
+    if (!mountpoint)
       throw CommandLineError("FUSE options require the volume to be mounted");
     for (auto const& opt: args["fuse-option"].as<std::vector<std::string>>())
       fuse_options.push_back(opt);
   }
-  auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, self);
   ELLE_TRACE("run network");
   bool cache = flag(args, option_cache);
@@ -378,43 +426,11 @@ COMMAND(run)
   auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
+    reactor::Thread::unique_ptr stat_thread;
     if (push)
-    {
-      ELLE_DEBUG("Connect callback to log storage stat");
-      model->local()->storage()->register_notifier([&] {
-        try
-        {
-          network.notify_storage(self, node_id);
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_WARN("Error notifying storage size change: %s", e);
-        }
-      });
-
-      {
-        static reactor::Thread updater("periodic storage stat updater", [&] {
-          while (true)
-          {
-            ELLE_LOG_COMPONENT("infinit-volume");
-            ELLE_DEBUG(
-              "Hourly notification to beyond with storage usage (periodic)");
-            try
-            {
-              network.notify_storage(self, node_id);
-            }
-            catch (elle::Error const& e)
-            {
-              ELLE_WARN("Error notifying storage size change: %s", e);
-            }
-            reactor::wait(updater, 60_min);
-          }
-        });
-      }
-    }
+      stat_thread = make_stat_update_thread(self, network, *model);
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
-    auto mountpoint = optional(args, "mountpoint");
     auto fs = volume.run(std::move(model),
                          mountpoint,
                          flag(args, "readonly")
@@ -430,21 +446,24 @@ COMMAND(run)
                          );
     if (volume.default_permissions && !volume.default_permissions->empty())
     {
-      auto ops = dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get());
+      auto ops =
+        dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get());
       ops->on_root_block_create.connect([&] {
-          ELLE_DEBUG("root_block hook triggered");
-          auto path = fs->path("/");
-          int mode = 0700;
-          if (*volume.default_permissions == "rw")
-            mode |= 06;
-          else if (*volume.default_permissions == "r")
-            mode |= 04;
-          else
-          {
-            ELLE_WARN("Unexpected default permissions %s", *volume.default_permissions);
-            return;
-          }
-          path->chmod(mode);
+        ELLE_DEBUG("root_block hook triggered");
+        auto path = fs->path("/");
+        int mode = 0700;
+        if (*volume.default_permissions == "rw")
+          mode |= 06;
+        else if (*volume.default_permissions == "r")
+          mode |= 04;
+        else
+        {
+          ELLE_WARN("Unexpected default permissions %s",
+                    *volume.default_permissions);
+          return;
+        }
+        path->chmod(mode);
+        path->setxattr("infinit.auth.inherit", "1", 0);
       });
     }
 #ifdef INFINIT_MACOSX
@@ -470,6 +489,15 @@ COMMAND(run)
 #endif
       ELLE_TRACE("unmounting")
         fs->unmount();
+      if (created_mountpoint)
+      {
+        try
+        {
+          boost::filesystem::remove(mountpoint.get());
+        }
+        catch (boost::filesystem::filesystem_error const&)
+        {}
+      }
     });
     if (script_mode)
     {
@@ -806,10 +834,6 @@ COMMAND(run)
           if (!pathname.empty())
             response.serialize("path", pathname);
         }
-        catch (reactor::FDStream::EOF const&)
-        {
-          return;
-        }
         catch (reactor::filesystem::Error const& e)
         {
           elle::serialization::json::SerializerOut response(std::cout);
@@ -824,12 +848,8 @@ COMMAND(run)
         }
         catch (elle::Error const& e)
         {
-#ifdef INFINIT_WINDOWS
-           // Something is outputing a ",'" garbage on stdout if we just
-           // return, which breaks the tests
-           exit(0);
-           return; // assume EOF
-#endif
+          if (stdin_stream.eof())
+            return;
           ELLE_LOG("bronk on op %s: %s", op, e);
           elle::serialization::json::SerializerOut response(std::cout);
           response.serialize("success", false);
@@ -879,13 +899,28 @@ COMMAND(mount)
 
 COMMAND(list)
 {
-  for (auto const& volume: ifnt.volumes_get())
+  if (script_mode)
   {
-    std::cout << volume.name << ": network " << volume.network;
-    if (volume.mountpoint)
-      std::cout << " on " << volume.mountpoint.get();
-    std::cout << std::endl;
+    elle::json::Array l;
+    for (auto const& volume: ifnt.volumes_get())
+    {
+      elle::json::Object o;
+      o["name"] = volume.name;
+      o["network"] = volume.network;
+      if (volume.mountpoint)
+        o["mountpoint"] = volume.mountpoint.get();
+      l.push_back(std::move(o));
+    }
+    elle::json::write(std::cout, l);
   }
+  else
+    for (auto const& volume: ifnt.volumes_get())
+    {
+      std::cout << volume.name << ": network " << volume.network;
+      if (volume.mountpoint)
+        std::cout << " on " << volume.mountpoint.get();
+      std::cout << std::endl;
+    }
 }
 
 int
@@ -909,6 +944,8 @@ main(int argc, char** argv)
     { "async", bool_switch(), "use asynchronous write operations" },
 #ifndef INFINIT_WINDOWS
     { "daemon,d", bool_switch(), "run as a background daemon" },
+    { "fuse-option", value<std::vector<std::string>>()->multitoken(),
+      "option to pass directly to FUSE" },
 #endif
     option_cache,
     option_cache_ram_size,
@@ -930,10 +967,6 @@ main(int argc, char** argv)
     option_port,
   };
   std::vector<Mode::OptionDescription> options_run_mount_hidden = {
-#ifndef INFINIT_WINDOWS
-    { "fuse-option", value<std::vector<std::string>>()->multitoken(),
-      "option to pass directly to FUSE" },
-#endif
 #ifdef INFINIT_MACOSX
     option_disable_mac_utf8,
 #endif
@@ -965,7 +998,7 @@ main(int argc, char** argv)
       &export_,
       "--name VOLUME",
       {
-        { "name,n", value<std::string>(), "network to export" },
+        { "name,n", value<std::string>(), "volume to export" },
         option_output("volume"),
       },
     },
@@ -1025,6 +1058,8 @@ main(int argc, char** argv)
       "--name VOLUME",
       {
         { "name,n", value<std::string>(), "volume to delete" },
+        { "pull", bool_switch(),
+          elle::sprintf("pull the volume if it is on %s", beyond(true)) },
       },
     },
     {

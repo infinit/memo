@@ -20,17 +20,17 @@ with Beyond() as beyond,\
 
   # Create alice.
   alice.run(['infinit-user', '--signup',  '--name', 'alice', '--email',  'alice@infinit.io'])
-  a = alice.run(['infinit-user', '--export', 'alice'])
+  a = alice.run_json(['infinit-user', '--export', 'alice'])
 
   # Create gods.
   god.run(['infinit-user', '--signup', '--name', 'god', '--email', 'god@paradis.up'])
   god1.run(['infinit-user', '--signup', '--name', 'god1', '--email', 'god1@paradis.up'])
   god2.run(['infinit-user', '--signup', '--name', 'god2', '--email', 'god2@paradis.up'])
   god3.run(['infinit-user', '--signup', '--name', 'god3', '--email', 'god3@paradis.up'])
-  g = god.run(['infinit-user', '--export', 'god'])
-  g1 = god1.run(['infinit-user', '--export', 'god1'])
-  g2 = god2.run(['infinit-user', '--export', 'god2'])
-  g3 = god3.run(['infinit-user', '--export', 'god3'])
+  g = god.run_json(['infinit-user', '--export', 'god'])
+  g1 = god1.run_json(['infinit-user', '--export', 'god1'])
+  g2 = god2.run_json(['infinit-user', '--export', 'god2'])
+  g3 = god3.run_json(['infinit-user', '--export', 'god3'])
 
   # Import alice as bob.
   bob.run(['infinit-user', '--import'], input = a)
@@ -42,9 +42,9 @@ with Beyond() as beyond,\
 
   # Create network & volume.
   bob.run(['infinit-network', '--create', '--name', 'network', '--as', 'bob', '--push'])
-  n = bob.run(['infinit-network', '--export', '--name', 'network', '--as', 'bob'])
+  n = bob.run_json(['infinit-network', '--export', '--name', 'network', '--as', 'bob'])
   bob.run(['infinit-volume', '--create', '--name', 'volume', '--network', 'network', '--as', 'bob', '--push'])
-  v = bob.run(['infinit-volume', '--export', '--name', 'volume', '--as', 'bob'])
+  v = bob.run_json(['infinit-volume', '--export', '--name', 'volume', '--as', 'bob'])
 
   # Create drive.
   description = 'a really long description: ' + 'x' * 1024
@@ -57,7 +57,7 @@ with Beyond() as beyond,\
     '--as', 'bob',
     '--push',
   ])
-  d = bob.run([
+  d = bob.run_json([
     'infinit-drive', '--export', '--name', 'employees', '--as', 'bob'])
 
   # Check integrity.
@@ -98,32 +98,34 @@ with Beyond() as beyond,\
            '--passport'])
 
   # Make sure alice doesn't have it.
-  l = alice.run(['infinit-drive', '--as', 'alice', '--list'])
+  l = alice.run_json(
+    ['infinit-drive', '--as', 'alice', '--list', '--script'])
   assertEq(len(l), 0)
 
   # Fetch invitations.
   alice.run(['infinit-drive', '--fetch', '--as', 'alice'])
 
   # Make sure alice has it.
-  l = alice.run(['infinit-drive', '--as', 'alice', '--list'])
+  l = alice.run_json(
+    ['infinit-drive', '--as', 'alice', '--list', '--script'])
   assertEq(len(l), 1)
 
-  drive_name = l[0].split(':')[0]
+  drive_name = l[0]['name']
   # Check that invitation is present.
-  drive = alice.run(['infinit-drive', '--export', '--name', drive_name, '--as', 'alice'])
+  drive = alice.run_json(['infinit-drive', '--export', '--name', drive_name, '--as', 'alice'])
   assert 'alice' in drive['users'].keys()
   assert drive['users']['alice']['status'] == 'pending'
 
   # Join it.
   alice.run(['infinit-drive', '--join', '--name', drive_name, '--as', 'alice'])
-  drive = alice.run(['infinit-drive', '--export', '--name', drive_name, '--as', 'alice'])
+  drive = alice.run_json(['infinit-drive', '--export', '--name', drive_name, '--as', 'alice'])
   assert drive['users']['alice']['status'] == 'ok'
 
   # Make sure it's replicated to other users.
-  drive = bob.run(['infinit-drive', '--export', '--name', drive_name, '--as', 'bob'])
+  drive = bob.run_json(['infinit-drive', '--export', '--name', drive_name, '--as', 'bob'])
   assert drive['users']['alice']['status'] == 'pending'
   bob.run(['infinit-drive', '--fetch', '--as', 'bob'])
-  drive = bob.run(['infinit-drive', '--export', '--name', drive_name, '--as', 'bob'])
+  drive = bob.run_json(['infinit-drive', '--export', '--name', drive_name, '--as', 'bob'])
   assert drive['users']['alice']['status'] == 'ok'
 
   users = []
@@ -143,9 +145,12 @@ with Beyond() as beyond,\
   god2.run(['infinit-drive', '--fetch', '--as', 'god2'])
   god3.run(['infinit-drive', '--fetch', '--as', 'god3'])
 
-  l1 = god1.run(['infinit-drive', '--list', '--as', 'god1'])
-  l2 = god2.run(['infinit-drive', '--list', '--as', 'god2'])
-  l3 = god3.run(['infinit-drive', '--list', '--as', 'god3'])
+  l1 = god1.run_json(
+    ['infinit-drive', '--list', '--as', 'god1', '--script'])
+  l2 = god2.run_json(
+    ['infinit-drive', '--list', '--as', 'god2', '--script'])
+  l3 = god3.run_json(
+    ['infinit-drive', '--list', '--as', 'god3', '--script'])
 
   assert l1 == l2 and l2 == l3
 
@@ -156,7 +161,7 @@ with Beyond() as beyond,\
   bob = User('bob', ifnt1)
   bob.run('infinit-user --signup --email bob@infinit.io')
 
-  l = bob.run('infinit-drive --list')
+  l = bob.run_json(['infinit-drive', '--list', '--script'])
   assert len(l) == 0
 
   bob.run('infinit-network --create %s -p' % bob.network)
@@ -165,17 +170,17 @@ with Beyond() as beyond,\
   bob.run('infinit-drive --create %s --network %s --volume %s -p' % (bob.drive,
                                                                      bob.network,
                                                                      bob.volume))
-  l = bob.run('infinit-drive --list')
-  assert l[0] == 'bob/bob-drive: ok'
+  l = bob.run_json(['infinit-drive', '--list', '--script'])
+  assert l[0] == {'name': 'bob/bob-drive', 'status': 'ok'}
 
   os.remove('%s/.local/share/infinit/filesystem/drives/%s' % (bob.infinit.dir,
                                                               bob.drive))
-  l = bob.run('infinit-drive --list')
+  l = bob.run_json(['infinit-drive', '--list', '--script'])
   assert len(l) == 0
 
   bob.run('infinit-drive --fetch')
-  l = bob.run('infinit-drive --list')
-  assert l[0] == 'bob/bob-drive: ok'
+  l = bob.run_json(['infinit-drive', '--list', '--script'])
+  assert l[0] == {'name': 'bob/bob-drive', 'status': 'ok'}
 
 with Beyond() as beyond, Infinit(beyond = beyond) as bob:
 
@@ -262,16 +267,21 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
       }
       invitee.run(['infinit-passport', '--fetch', '--as', name])
       assertEq(
-        len(invitee.run(['infinit-passport', '--list', '--as', name])),
+        len(invitee.run_json(
+          ['infinit-passport', '--list', '--as', name, '--script'])),
         0)
       res = requests.request(
         url = '%s/users/%s/confirm_email' % (beyond.domain, name),
         method = 'POST',
         **kwargs)
       res.raise_for_status()
+      errors = res.json()['errors']
+      if len(errors):
+        print(errors)
       invitee.run(['infinit-passport', '--fetch', '--as', name])
       assertEq(
-        len(invitee.run(['infinit-passport', '--list', '--as', name])),
+        len(invitee.run_json(
+          ['infinit-passport', '--list', '--as', name, '--script'])),
         1)
 
   # One invitation
@@ -290,3 +300,27 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
           list(itertools.chain(*itertools.product(['--email'], emails))))
   for email in emails:
     register(email)
+
+# Pull and delete.
+with Beyond() as beyond, Infinit(beyond = beyond) as b:
+  b.run(['infinit-user', '--signup', 'bob', '--email', 'bob@infinit.io'])
+  # Local and Beyond.
+  b.run(['infinit-network', '--create', '--as', 'bob', '--push', 'n'])
+  b.run(['infinit-volume', '--create', '--as', 'bob',
+         '--network', 'n', '--push', 'v'])
+  b.run(['infinit-drive', '--create', '--as', 'bob',
+         '--network', 'n', '--volume', 'v', '--push', 'd'])
+  assertEq(len(b.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 1)
+  b.run(['infinit-drive', '--delete', '--as', 'bob', 'd', '--pull'])
+  assertEq(len(b.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)
+  b.run(['infinit-drive', '--fetch', '--as', 'bob', 'd'], return_code = 1)
+  # Local only.
+  b.run(['infinit-network', '--create', '--as', 'bob', 'n2'])
+  b.run(['infinit-volume', '--create', '--as', 'bob',
+         '--network', 'n', 'v2'])
+  b.run(['infinit-drive', '--create', '--as', 'bob',
+         '--network', 'n2', '--volume', 'v2', 'd2'])
+  assertEq(len(b.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 1)
+  b.run(['infinit-drive', '--delete', '--as', 'bob', 'd2', '--pull'])
+  assertEq(len(b.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)
+

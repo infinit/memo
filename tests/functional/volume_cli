@@ -28,3 +28,20 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
   except Exception as e:
     pass
   bob.run(['infinit-volume', '--export', '--name', 'bob/volume', '--as', 'bob'])
+
+# Pull and delete.
+with Beyond() as beyond, Infinit(beyond = beyond) as bob:
+  bob.run(['infinit-user', '--signup', 'bob', '--email', 'b@infinit.io'])
+  bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '--push'])
+  # Local and Beyond.
+  bob.run(['infinit-volume', '--create', '--as', 'bob',
+           'v', '--network', 'n', '--push'])
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 1)
+  bob.run(['infinit-volume', '--delete', '--as', 'bob', 'v', '--pull'])
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
+  bob.run(['infinit-volume', '--fetch', '--as', 'bob', 'v'], return_code = 1)
+  # Local only.
+  bob.run(['infinit-volume', '--create', '--as', 'bob', 'v2', '--network', 'n'])
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 1)
+  bob.run(['infinit-volume', '--delete', '--as', 'bob', 'v2', '--pull'])
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)

@@ -4,6 +4,8 @@
 # include <memory>
 # include <boost/filesystem.hpp>
 
+# include <das/model.hh>
+# include <das/serializer.hh>
 # include <elle/ProducerPool.hh>
 # include <cryptography/rsa/KeyPair.hh>
 
@@ -19,6 +21,18 @@ namespace infinit
     namespace doughnut
     {
       struct ACLEntry;
+      struct AdminKeys
+      {
+        AdminKeys() {}
+        AdminKeys(AdminKeys&& b) = default;
+        AdminKeys(AdminKeys const& b) = default;
+        //AdminKeys& operator = (AdminKeys const& b) = default;
+        std::vector<infinit::cryptography::rsa::PublicKey> r;
+        std::vector<infinit::cryptography::rsa::PublicKey> w;
+        std::vector<infinit::cryptography::rsa::PublicKey> group_r;
+        std::vector<infinit::cryptography::rsa::PublicKey> group_w;
+      };
+
       class Doughnut // Doughnut. DougHnuT. Get it ?
         : public Model
         , public std::enable_shared_from_this<Doughnut>
@@ -41,7 +55,8 @@ namespace infinit
                  OverlayBuilder overlay_builder,
                  boost::optional<int> port,
                  std::unique_ptr<storage::Storage> local,
-                 boost::optional<elle::Version> version = {});
+                 boost::optional<elle::Version> version = {},
+                 AdminKeys const& admin_keys = {});
         Doughnut(Address id,
                  std::string const& name,
                  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
@@ -51,7 +66,8 @@ namespace infinit
                  OverlayBuilder overlay_builder,
                  boost::optional<int> port,
                  std::unique_ptr<storage::Storage> local,
-                 boost::optional<elle::Version> version = {});
+                 boost::optional<elle::Version> version = {},
+                 AdminKeys const& admin_keys = {});
         ~Doughnut();
 
       /*-----.
@@ -82,6 +98,7 @@ namespace infinit
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, user_init)
         ELLE_ATTRIBUTE(
           elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
+        ELLE_ATTRIBUTE_RX(AdminKeys, admin_keys);
 
       protected:
         virtual
@@ -111,6 +128,11 @@ namespace infinit
                boost::optional<int> local_version) const override;
         virtual
         void
+        _fetch(std::vector<AddressVersion> const& addresses,
+               std::function<void(Address, std::unique_ptr<blocks::Block>,
+                 std::exception_ptr)> res) const override;
+        virtual
+        void
         _remove(Address address, blocks::RemoveSignature rs) override;
         friend class Local;
       };
@@ -127,6 +149,7 @@ namespace infinit
         Passport passport;
         boost::optional<std::string> name;
         boost::optional<int> port;
+        AdminKeys admin_keys;
 
         Configuration(
           Address id,
@@ -138,7 +161,8 @@ namespace infinit
           Passport passport,
           boost::optional<std::string> name,
           boost::optional<int> port,
-          elle::Version version);
+          elle::Version version,
+          AdminKeys admin_keys);
         Configuration(Configuration&&) = default;
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
@@ -168,5 +192,9 @@ namespace infinit
 
 DAS_MODEL_FIELDS(infinit::model::doughnut::Configuration,
                  (overlay, keys, owner, passport, name));
+
+DAS_MODEL(infinit::model::doughnut::AdminKeys, (r, w, group_r, group_w), DasAdminKeys);
+DAS_MODEL_DEFAULT(infinit::model::doughnut::AdminKeys, DasAdminKeys);
+DAS_MODEL_SERIALIZE(infinit::model::doughnut::AdminKeys);
 
 #endif

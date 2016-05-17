@@ -27,12 +27,13 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
              '--name', 'alice',
              '--email', 'alice@infinit.io',
              '--password', 'loremipsword'])
-  alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
+  alice_json = alice.run_json(
+    ['infinit-user', '--export', '--name', 'alice', '--full'])
   alice2.run(['infinit-user', '--login',
               '--name', 'alice',
               '--password', 'loremipsword'])
-  alice2_json = alice2.run(['infinit-user', '--export', '--full',
-                            '--name', 'alice'])
+  alice2_json = alice2.run_json(
+    ['infinit-user', '--export', '--full', '--name', 'alice'])
   # XXX: Fix missing email.
   del alice_json['email']
   del alice2_json['email']
@@ -45,12 +46,13 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
              '--name', 'alice',
              '--email', 'alice@infinit.io',
              '--password', 'loremipsword'])
-  alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
+  alice_json = alice.run_json(
+    ['infinit-user', '--export', '--name', 'alice', '--full'])
   alice2.run(['infinit-user', '--login',
               '--name', 'alice',
               '--password', 'loremipsword'])
-  alice2_json = alice2.run(['infinit-user', '--export', '--full',
-                            '--name', 'alice'])
+  alice2_json = alice2.run_json(
+    ['infinit-user', '--export', '--full', '--name', 'alice'])
   # XXX: Fix missing email.
   # del alice_json['email']
   # del alice2_json['email']
@@ -62,9 +64,11 @@ with Beyond() as b, Infinit(beyond = b) as alice:
   alice.run(['infinit-user', '--push',
              '--name', 'alice',
              '--email', 'alice@infinit.io'])
-  alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
+  alice_json = alice.run_json(
+    ['infinit-user', '--export', '--name', 'alice', '--full'])
   try:
-    alice.run(['infinit-user', '--login', '--name', 'alice', '--password', 'loremipsword'])
+    alice.run(['infinit-user', '--login', '--name', 'alice',
+               '--password', 'loremipsword'])
     unreachable()
   except Exception as e:
     assertIn('doesn\'t use the hub to login', e.args[0])
@@ -210,3 +214,24 @@ with Beyond() as b, Infinit(beyond = b) as alice:
   except Exception as e:
     pass
   alice.run(['infinit-user', '--pull', '--as', 'bob', '--name', 'bob'])
+
+# Pull and delete.
+with Beyond() as beyond, \
+    Infinit(beyond = beyond) as bob, \
+    Infinit(beyond = beyond) as alice:
+  bob.run(
+    ['infinit-user', '--signup', '--name', 'bob', '--email', 'bob@infinit.io'])
+  alice.run(['infinit-user', '--create', '--name', 'alice'])
+  # Local and Beyond.
+  bob.run(
+    ['infinit-user', '--delete', '--as', 'bob', '--name', 'bob', '--pull'],
+    input = 'bob')
+  assertEq(len(bob.run_json(['infinit-user', '--list', '-s'])), 0)
+  alice.run(['infinit-user', '--fetch', '--as', 'alice', '--name', 'bob'],
+            return_code = 1)
+  # Local only.
+  alice.run(
+    ['infinit-user', '--delete', '--as', 'alice', '--name', 'alice', '--pull'],
+    input = 'alice')
+  assertEq(len(alice.run_json(['infinit-user', '--list', '-s'])), 0)
+

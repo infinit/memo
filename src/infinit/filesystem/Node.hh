@@ -50,6 +50,8 @@ namespace infinit
         , _parent(parent)
         , _name(name)
       {}
+
+    public:
       void
       rename(boost::filesystem::path const& where);
       void

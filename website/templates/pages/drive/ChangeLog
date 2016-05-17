@@ -1,3 +1,10 @@
+## [0.2.3] (backend 0.5.5) - 2016-04-25
+
+### Changed
+
+- Use backend 0.5.5.
+- Show synchronization state of drives.
+
 ## [0.2.1] (backend 0.5.2) - 2016-02-29
 
 ### Fixed

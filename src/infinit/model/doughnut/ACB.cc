@@ -182,10 +182,12 @@ namespace infinit
         static bool bg = elle::os::getenv("INFINIT_NO_BACKGROUND_DECODE", "").empty();
         if (bg)
         {
-          reactor::Thread::NonInterruptible ni;
-          reactor::background([&] {
-              target = k.open(src);
-          });
+          elle::With<reactor::Thread::NonInterruptible>() << [&]
+          {
+            reactor::background([&] {
+                target = k.open(src);
+              });
+          };
         }
         else
           target = k.open(src);
@@ -501,6 +503,17 @@ namespace infinit
         return res;
       }
 
+      static bool has_key(cryptography::rsa::PublicKey const& k,
+                          std::vector<ACLEntry> const& v, bool write)
+      {
+        auto it = std::find_if(v.begin(), v.end(),
+          [&](ACLEntry const& ent)
+          {
+            return ent.key == k && ent.read && ent.write >= write;
+          });
+        return it != v.end();
+      }
+
       /*-----------.
       | Validation |
       `-----------*/
@@ -550,8 +563,7 @@ namespace infinit
             return blocks::ValidationResult::failure("no write permissions");
           }
         }
-        ELLE_DEBUG("%s: check author signature, entry=%s, sig=%s",
-                   *this, !!entry, this->data_signature())
+        ELLE_DEBUG("check author signature")
         {
           if (is_group_entry)
           { // fetch latest key for group
@@ -581,6 +593,31 @@ namespace infinit
             }
           }
         }
+        return blocks::ValidationResult::success();
+      }
+
+      template <typename Block>
+      blocks::ValidationResult
+      BaseACB<Block>::validate_admin_keys(Model& model) const
+      {
+        // check for admin keys
+        auto const& aks = dynamic_cast<Doughnut const&>(model).admin_keys();
+        for (auto const& k: aks.r)
+          if (k != *this->owner_key() && !has_key(k, this->_acl_entries, false))
+            return blocks::ValidationResult::failure(
+              elle::sprintf("Missing admin R key %s", k));
+        for (auto const& k: aks.w)
+          if (k != *this->owner_key() && !has_key(k, this->_acl_entries, true))
+            return blocks::ValidationResult::failure(
+              elle::sprintf("Missing admin RW key %s", k));
+        for (auto const& k: aks.group_r)
+          if (k != *this->owner_key() && !has_key(k, this->_acl_group_entries, false))
+            return blocks::ValidationResult::failure(
+              elle::sprintf("Missing admin R group key %s", k));
+        for (auto const& k: aks.group_w)
+          if (k != *this->owner_key() && !has_key(k, this->_acl_group_entries, true))
+            return blocks::ValidationResult::failure(
+              elle::sprintf("Missing admin RW group key %s", k));
         return blocks::ValidationResult::success();
       }
 
@@ -646,9 +683,22 @@ namespace infinit
       {
         static elle::Bench bench("bench.acb.seal", 10000_sec);
         elle::Bench::BenchScope scope(bench);
+        std::shared_ptr<infinit::cryptography::rsa::PrivateKey> sign_key;
+
+        // enforce admin keys
+        auto const& aks = this->dht()->admin_keys();
+        for (auto const& k: aks.r)
+          if (k != *this->owner_key()) set_permissions(k, true, false);
+        for (auto const& k: aks.w)
+          if (k != *this->owner_key()) set_permissions(k, true, true);
+        for (auto const& k: aks.group_r)
+          if (k != *this->owner_key()) set_group_permissions(k, true, false);
+        for (auto const& k: aks.group_w)
+          if (k != *this->owner_key()) set_group_permissions(k, true, true);
+
         bool acl_changed = this->_acl_changed;
         bool data_changed = this->_data_changed;
-        std::shared_ptr<infinit::cryptography::rsa::PrivateKey> sign_key;
+
         if (acl_changed)
         {
           static elle::Bench bench("bench.acb.seal.aclchange", 10000_sec);
@@ -878,24 +928,41 @@ namespace infinit
       BaseACB<Block>::_validate_remove(Model& model,
                                        blocks::RemoveSignature const& rs) const
       {
+        ELLE_DUMP_SCOPE("%s: check %f validates removal", this, rs);
         if (!rs.block)
-          return blocks::ValidationResult::failure("Expected a block in RemoveSignature");
+        {
+          ELLE_DUMP("remove signature has no block");
+          return blocks::ValidationResult::failure(
+            "remove signature has no block");
+        }
         auto mb = dynamic_cast<Self*>(rs.block.get());
         if (!mb)
-          return blocks::ValidationResult::failure("Signature is not a mutable block");
+        {
+          ELLE_DUMP("remove signature block is not mutable");
+          return blocks::ValidationResult::failure(
+            "remove signature block is not mutable");
+        }
         if (!mb->deleted())
-          return blocks::ValidationResult::failure("Block not marked for deletion");
+        {
+          ELLE_DUMP("remove signature block's not marked for deletion");
+          return blocks::ValidationResult::failure(
+            "remove signature block's not marked for deletion");
+        }
         // FIXME: calling validate can change our address, and make
         // the validate(other) below fail
         auto valid = rs.block->validate(model);
         if (!valid)
+        {
+          ELLE_DUMP("remove signature block's is not valid");
           return valid;
-
+        }
         if (this->version() >= mb->version())
+        {
+          ELLE_DUMP("removal version %s is not greater than local version %s",
+                    mb->version(), this->version());
           return blocks::ValidationResult::conflict("invalid version");
-
-        valid = dynamic_cast<const blocks::Block*>(this)->validate(model, *mb);
-        if (!valid)
+        }
+        if (!(valid = this->blocks::Block::validate(model, *mb)))
           return valid;
         return blocks::ValidationResult::success();
       }

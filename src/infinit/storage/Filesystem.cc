@@ -6,6 +6,8 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
 
+#include <elle/bench.hh>
+#include <elle/Duration.hh>
 #include <elle/log.hh>
 
 #include <infinit/storage/Collision.hh>
@@ -58,6 +60,8 @@ namespace infinit
         ELLE_DEBUG("unable to open for reading: %s", this->_path(key));
         throw MissingKey(key);
       }
+      static elle::Bench bench("bench.fsstorage.get", 10000_sec);
+      elle::Bench::BenchScope bs(bench);
       elle::Buffer res;
       elle::IOStream output(res.ostreambuf());
       std::copy(std::istreambuf_iterator<char>(input),
@@ -72,6 +76,8 @@ namespace infinit
       Key key, elle::Buffer const& value, bool insert, bool update)
     {
       ELLE_TRACE("set %x", key);
+      static elle::Bench bench("bench.fsstorage.set", 10000_sec);
+      elle::Bench::BenchScope bs(bench);
       auto path = this->_path(key);
       bool exists = boost::filesystem::exists(path);
       int size = 0;
@@ -102,6 +108,8 @@ namespace infinit
     Filesystem::_erase(Key key)
     {
       ELLE_TRACE("erase %x", key);
+      static elle::Bench bench("bench.fsstorage.erase", 10000_sec);
+      elle::Bench::BenchScope bs(bench);
       auto path = this->_path(key);
       if (!exists(path))
         throw MissingKey(key);
@@ -116,6 +124,8 @@ namespace infinit
     std::vector<Key>
     Filesystem::_list()
     {
+      static elle::Bench bench("bench.fsstorage.list", 10000_sec);
+      elle::Bench::BenchScope bs(bench);
       std::vector<Key> res;
       boost::filesystem::recursive_directory_iterator it(this->root());
       boost::filesystem::recursive_directory_iterator iend;

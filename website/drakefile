@@ -81,6 +81,7 @@ def configure(
     'templates/pages/docs/src/markdown/reference.md',
     'templates/pages/docs/src/markdown/s3.md',
     'templates/pages/docs/src/markdown/upgrading.md',
+    'templates/pages/docs/src/markdown/environment_variables.md',
     'templates/pages/docs/src/markdown/technology.md',
   )
   changelog = drake.node(
@@ -133,7 +134,7 @@ def configure(
     )
 
   generated = copy_generated_pages(
-    drake.nodes(*[m.path(True).with_extension('html') for m in markdown])
+    drake.nodes(*[m.name_relative.with_extension('html') for m in markdown])
   ) + copy_generated_pages([changelog])
   templates = drake.nodes(
     'templates/base.html',
@@ -147,6 +148,7 @@ def configure(
     'templates/pages/opensource.html',
     'templates/pages/pricing.html',
     'templates/pages/solutions.html',
+    'templates/pages/update.html',
 
     'templates/pages/docs/changelog.html',
     'templates/pages/docs/comparison.html',
@@ -158,7 +160,9 @@ def configure(
     'templates/pages/docs/reference.html',
     'templates/pages/docs/roadmap.html',
     'templates/pages/docs/s3.html',
+    'templates/pages/docs/status.html',
     'templates/pages/docs/upgrading.html',
+    'templates/pages/docs/environment_variables.html',
     'templates/pages/docs/technology.html',
 
     'templates/pages/docs/get_started.html',
@@ -201,8 +205,10 @@ def configure(
     'resources/images/schema-decentralized@2x.png',
     'resources/images/schema-decentralized-s3.png',
     'resources/images/schema-decentralized-s3@2x.png',
-    'resources/images/schema-technology.png',
-    'resources/images/schema-technology@2x.png',
+    'resources/images/schema-technology-infinit.png',
+    'resources/images/schema-technology-infinit@2x.png',
+    'resources/images/schema-technology-dht-overlay.png',
+    'resources/images/schema-technology-dht-overlay@2x.png',
     'resources/images/desktop-client.png',
     'resources/images/desktop-client@2x.png',
     'resources/images/schema-file-system.png',
@@ -331,9 +337,10 @@ def configure(
     'resources/images/logos/xtreemfs.png',
     'resources/images/logos/xtreemfs@2x.png',
 
-    'resources/scripts/centralized.sh',
-    'resources/scripts/distributed.sh',
-    'resources/scripts/decentralized.sh',
+    'resources/scripts/get-started.sh',
+    'resources/scripts/deployments/centralized.sh',
+    'resources/scripts/deployments/distributed.sh',
+    'resources/scripts/deployments/decentralized.sh',
 
     'resources/fonts/icons.eot',
     'resources/fonts/icons.svg',
@@ -450,6 +457,14 @@ def configure(
     'resources/images/icons/debian@2x.png',
     'resources/images/icons/windows.png',
     'resources/images/icons/windows@2x.png',
+    'resources/images/icons/external-link.png',
+    'resources/images/icons/external-link@2x.png',
+    'resources/images/icons/status-healthy.png',
+    'resources/images/icons/status-healthy@2x.png',
+    'resources/images/icons/status-problems.png',
+    'resources/images/icons/status-problems@2x.png',
+    'resources/images/icons/status-down.png',
+    'resources/images/icons/status-down@2x.png',
   )
 
   resources = resources + resources_icons

@@ -101,7 +101,7 @@ namespace infinit
       }
       catch (elle::Exception const& e)
       {
-        ELLE_ERR("%s: unexpected exception: %s", model, e.what());
+        ELLE_ERR("%s: unexpected exception: %s\n%s", model, e.what(), e.backtrace());
         throw;
       }
       catch (...)
@@ -395,7 +395,7 @@ namespace infinit
         _root_block();
       ELLE_ASSERT(!path.empty() && path[0] == '/');
       std::vector<std::string> components;
-      boost::algorithm::split(components, path, boost::algorithm::is_any_of("/"));
+      boost::algorithm::split(components, path, boost::algorithm::is_any_of("/\\"));
       ELLE_DEBUG("%s: get %s (%s)", this, path, components);
       ELLE_ASSERT_EQ(components.front(), "");
       boost::filesystem::path current_path("/");

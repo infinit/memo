@@ -1,0 +1,206 @@
+//
+// Variables
+// -----------------------------------------
+
+@balloon-bg:         fade(#111, 90%);
+@balloon-font-size:  12px;
+@balloon-arrow-size: 6px;
+
+
+//
+// Mixins
+// -----------------------------------------
+
+.mixin-svg-arrow(@width, @height, @degrees) {
+    @arrow-width: @width * 2;
+    @arrow-height: @height * 2;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="@{arrow-width}" height="@{arrow-height}"><path fill="@{color}" transform="rotate(@{degrees})" d="M2.658,0.000 C-13.615,0.000 50.938,0.000 34.662,0.000 C28.662,0.000 23.035,12.002 18.660,12.002 C14.285,12.002 8.594,0.000 2.658,0.000 Z"/></svg>') no-repeat;
+    background-size: 100% auto;
+    height: @height;
+    width: @width;
+}
+
+.svg-arrow(@color, @position) {
+    & when (@position = up) {
+        @width: @balloon-arrow-size * 3;
+        @height: @balloon-arrow-size;
+        @degrees: 0;
+        .mixin-svg-arrow(@width, @height, @degrees);
+    }
+    & when (@position = down) {
+        @width: @balloon-arrow-size * 3;
+        @height: @balloon-arrow-size;
+        @degrees: 180 18 6;
+        .mixin-svg-arrow(@width, @height, @degrees);
+    }
+    & when (@position = left) {
+        @width: @balloon-arrow-size;
+        @height: @balloon-arrow-size * 3;
+        @degrees: -90 18 18;
+        .mixin-svg-arrow(@width, @height, @degrees);
+    }
+    & when (@position = right) {
+        @width: @balloon-arrow-size;
+        @height: @balloon-arrow-size * 3;
+        @degrees: 90 6 6;
+        .mixin-svg-arrow(@width, @height, @degrees);
+    }
+}
+
+.transition(@args) {
+    -webkit-transition: @args;
+            transition: @args;
+}
+
+.transform (@val) {
+    -webkit-transform: @val;
+        -ms-transform: @val;
+            transform: @val;
+}
+
+.transform-origin(@val) {
+    -webkit-transform-origin: @val;
+        -ms-transform-origin: @val;
+            transform-origin: @val;
+}
+
+.opacity(@trans) {
+    @multiply: @trans * 100;
+    -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=@{multiply})";
+        filter: alpha(opacity=@multiply);
+    -khtml-opacity: @trans;
+      -moz-opacity: @trans;
+           opacity: @trans;
+}
+
+.base-effects() {
+    .opacity(0);
+    pointer-events: none;
+    .transition(all .18s ease-out);
+}
+
+
+//
+// Styles
+// -----------------------------------------
+
+[data-balloon] {
+    position: relative; // alt. absolute or fixed
+    &:before,
+    &:after {
+        .base-effects();
+        bottom: 100%;
+        left: 50%;
+        position: absolute;
+        z-index: 10;
+        .transform(translate3d(-50%, 10px, 0));
+        .transform-origin(top);
+    }
+    &:before {
+        background: @balloon-bg;
+        border-radius: @balloon-font-size / 3;
+        color: #fff;
+        content: attr(data-balloon);
+        font-size: @balloon-font-size;
+        padding: .5em 1em;
+        white-space: nowrap;
+        margin-bottom: @balloon-arrow-size + 5;
+    }
+    &:after {
+        .svg-arrow(@balloon-bg, up);
+        content: "";
+        margin-bottom: @balloon-arrow-size - 1;
+    }
+    &:hover {
+        &:before,
+        &:after {
+            .opacity(1);
+            pointer-events: auto;
+            .transform(translate3d(-50%, 0, 0));
+        }
+    }
+
+    &[data-balloon-break] {
+        &:before {
+            white-space: normal;
+        }
+    }
+}
+
+[data-balloon-pos="down"] {
+    &:before,
+    &:after {
+        bottom: auto;
+        left: 50%;
+        top: 100%;
+        .transform(translate3d(-50%, -10px, 0));
+    }
+    &:before {
+        margin-top: @balloon-arrow-size + 5;
+    }
+    &:after {
+        .svg-arrow(@balloon-bg, down);
+        margin-top: @balloon-arrow-size - 1;
+        margin-bottom: 0;
+    }
+    &:hover {
+        &:before,
+        &:after { .transform(translate3d(-50%, 0, 0)); }
+    }
+}
+
+[data-balloon-pos="left"] {
+    &:before,
+    &:after {
+        bottom: auto;
+        left: auto;
+        right: 100%;
+        top: 50%;
+        .transform(translate3d(10px, -50%, 0));
+    }
+    &:before {
+        margin-right: @balloon-arrow-size + 5;
+    }
+    &:after {
+        .svg-arrow(@balloon-bg, left);
+        margin-right: @balloon-arrow-size - 1;
+        margin-bottom: 0;
+    }
+    &:hover {
+        &:before,
+        &:after { .transform(translate3d(0, -50%, 0)); }
+    }
+}
+
+[data-balloon-pos="right"] {
+    &:before,
+    &:after {
+        bottom: auto;
+        left: 100%;
+        top: 50%;
+        .transform(translate3d(-10px, -50%, 0));
+    }
+    &:before {
+        margin-left: @balloon-arrow-size + 5;
+    }
+    &:after {
+        .svg-arrow(@balloon-bg, right);
+        margin-bottom: 0;
+        margin-left: @balloon-arrow-size - 1;
+    }
+    &:hover {
+        &:before,
+        &:after { .transform(translate3d(0, -50%, 0)); }
+    }
+}
+
+:before {
+    [data-balloon-length]&          { white-space: normal; }
+    [data-balloon-length="small"]&  { width: 80px; }
+    [data-balloon-length="medium"]& { width: 150px; }
+    [data-balloon-length="large"]&  { width: 260px; }
+    [data-balloon-length="xlarge"]& { width: 90vw;
+        @media screen and (min-width: 768px) { width: 380px; }
+    }
+    [data-balloon-length="fit"]&    { width: 100%; }
+}

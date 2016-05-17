@@ -101,6 +101,9 @@ def parse_options():
                       type = bool,
                       default = True,
                       help = 'Enable email validation (activated by default)')
+  parser.add_argument('--port-file',
+                      type = str,
+                      help = 'File to write effective listen port to')
   return parser.parse_args()
 
 try:
@@ -135,8 +138,24 @@ try:
       kwargs['host'] = args.host
     if args.port is not None:
       kwargs['port'] = args.port
+    exited = False
+    if args.port_file is not None:
+      server = bottle.WSGIRefServer(**kwargs)
+      kwargs['server'] = server
+      def port_file_handler():
+        while server.port == 0 and not exited:
+          import time
+          time.sleep(.1)
+        with open(args.port_file, 'w') as f:
+          f.write('%s' % server.port)
+      import threading
+      t = threading.Thread(target = port_file_handler)
+      t.start()
     bottle.DEBUG = True
-    bottle.run(app = app, reloader = args.reload, **kwargs)
+    try:
+      bottle.run(app = app, reloader = args.reload, **kwargs)
+    finally:
+      exited = True
 except Exception as e:
   print('%s: fatal error: %s' % (sys.argv[0], e))
   raise

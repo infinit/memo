@@ -13,10 +13,10 @@ with Beyond() as beyond, Infinit(beyond) as bob, Infinit(beyond) as alice:
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
   bob.run(['infinit-user', '--fetch',
            '--name', 'alice'])
-  networks = []
+  networks = set()
   for i in range(10):
     network = 'network%r' % i
-    networks.append('bob/' + network)
+    networks.add('bob/%s' % network)
     bob.run(['infinit-network', '--create', '--push',
              '--name', network,
              '--as', 'bob'])
@@ -25,9 +25,9 @@ with Beyond() as beyond, Infinit(beyond) as bob, Infinit(beyond) as alice:
              '--user', 'alice',
              '--as', 'bob'])
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
-  l = map(lambda x: x.split(':')[0],
-          alice.run(['infinit-passport', '--list', '--as', 'alice']))
-  assertEq(set(l), set(networks))
+  l = set(p['network'] for p in alice.run_json(
+    ['infinit-passport', '--list', '--as', 'alice', '--script']))
+  assertEq(l, networks)
   for network in networks:
     alice.run(['infinit-network', '--fetch',
                '--name', network,
@@ -75,3 +75,27 @@ with Beyond(beyond_args = {'limits': {'networks': {'passports': limit}}}) as bey
   except Exception as e:
     assert 'sales@infinit.sh' in e.args[0]
     assert 'Payment Required' in e.args[0]
+
+# Pull and delete
+with Beyond() as beyond, \
+    Infinit(beyond = beyond) as bob, \
+    Infinit(beyond = beyond) as alice:
+  bob.run(['infinit-user', '--signup', 'bob', '--email', 'b@infinit.io'])
+  alice.run(['infinit-user', '--signup', 'alice', '--email', 'a@infinit.io'])
+  bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '--push'])
+  bob.run(['infinit-user', '--fetch', 'alice'])
+  bob.run(['infinit-passport', '--create', '--as', 'bob',
+           '-u', 'alice', '-n', 'n', '--push'])
+  alice.run(['infinit-network', '--fetch', '--as', 'alice', 'bob/n'])
+  alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
+  assertEq(len(alice.run_json(['infinit-passport', '--list', '-s'])), 1)
+  # Local and Beyond.
+  bob.run(['infinit-passport', '--delete', '--as', 'bob',
+           '-u', 'alice', '-n', 'n', '--pull'])
+  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s'])), 0)
+  # Local only.
+  alice.run(['infinit-passport', '--delete', '--as', 'alice',
+             '-u', 'alice', '-n', 'bob/n', '--pull'])
+  assertEq(len(alice.run_json(['infinit-passport', '--list', '-s'])), 0)
+  alice.run(['infinit-passport', '--fetch', '--as', 'alice',
+             '-u', 'alice', '-n', 'n'], return_code = 1)

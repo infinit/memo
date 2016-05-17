@@ -312,8 +312,36 @@ namespace infinit
           this->_push_op(Op(address, nullptr, {}, {}, std::move(rs)));
         }
 
-        // Fetch operation must be synchronous, else the consistency is not
-        // preserved.
+        void
+        Async::_fetch(std::vector<AddressVersion> const& addresses,
+                      std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                         std::exception_ptr)> res)
+        {
+          if (this->_init_thread && !this->_init_thread->done()
+            && reactor::scheduler().current() != this->_init_thread.get())
+            reactor::wait(this->_init_barrier);
+
+          this->_queue.open();
+          std::vector<AddressVersion> remain;
+          for (auto addr: addresses)
+          {
+            bool hit = false;
+            try
+            {
+              auto block = this->_fetch_cache(addr.first, addr.second, hit);
+              if (hit)
+                res(addr.first, std::move(block), {});
+              else
+                remain.push_back(addr);
+            }
+            catch (MissingBlock const& mb)
+            {
+              res(addr.first, {}, std::current_exception());
+            }
+          }
+          this->_backend->fetch(remain, res);
+        }
+
         std::unique_ptr<blocks::Block>
         Async::_fetch(Address address, boost::optional<int> local_version)
         {
@@ -322,9 +350,26 @@ namespace infinit
             reactor::wait(this->_init_barrier);
 
           this->_queue.open();
+
+          bool hit = false;
+          auto block = this->_fetch_cache(address, local_version, hit);
+          if (hit)
+            return block;
+          else
+            return this->_backend->fetch(address, local_version);
+        }
+
+        // Fetch operation must be synchronous, else the consistency is not
+        // preserved.
+        std::unique_ptr<blocks::Block>
+        Async::_fetch_cache(Address address, boost::optional<int> local_version,
+                            bool& hit)
+        {
+          hit = false;
           auto it = this->_operations.find(address);
           if (it != this->_operations.end())
           {
+            hit = true;
             if (it->block)
             {
               ELLE_TRACE("%s: fetch %s from memory queue", *this, address);
@@ -344,14 +389,14 @@ namespace infinit
               return res;
             }
           }
-          return this->_backend->fetch(address, local_version);
+          return {};
         }
 
         void
         Async::_process_loop()
         {
           reactor::wait(this->_init_barrier);
-          while (!_exit_requested)
+          while (!this->_exit_requested)
           {
             try
             {
@@ -362,109 +407,115 @@ namespace infinit
                   *this, *this->_first_disk_index)
                   this->_load_operations();
               int index = this->_queue.get();
-              if (_exit_requested)
+              if (this->_exit_requested)
                 break;
               auto it = this->_operations.get<1>().begin();
-              Op const* op = &*it;
-              bool must_delete = false;
+              elle::generic_unique_ptr<Op const> op(&*it, [] (Op const*) {});
               ELLE_ASSERT_EQ(op->index, index);
-              Address addr = op->address;
               ELLE_TRACE_SCOPE("%s: process %s", *this, op);
-              boost::optional<StoreMode> mode = op->mode;
-              int attempt = 0;
-              while (true)
-              {
-                try
-                {
-                  if (!mode)
-                    try
-                    {
-                      this->_backend->remove(addr, op->remove_signature);
-                    }
-                    catch (MissingBlock const&)
-                    {
-                      // Nothing: block was already removed.
-                    }
-                    catch (Conflict const& e)
-                    {
-                      ELLE_TRACE("Conflict removing %f: %s", addr, e);
-                      // try again, regenerating the remove signature
-                      auto block = this->_backend->fetch(addr);
-                      this->_backend->remove(addr, block->sign_remove(
-                        this->doughnut()));
-                    }
-                  else
-                  {
-                    this->_backend->store(
-                      std::move(elle::unconst(op)->block),
-                      *mode,
-                      std::move(elle::unconst(op)->resolver));
-                  }
-                  break;
-                }
-                catch (storage::Collision const& c)
-                {
-                  // check for idenpotence
-                  try
-                  {
-                    auto block = this->_backend->fetch(op->address);
-                    // op->block was moved, reload
-                    auto o = this->_load_op(op->index);
-                    if (block->blocks::Block::data()
-                      == o.block->blocks::Block::data())
-                    {
-                      ELLE_LOG("Idempotent replay detected at %s", op->index);
-                      break;
-                    }
-                  }
-                  catch (elle::Error const& e)
-                  {
-                    ELLE_LOG("error in async loop rechecking on %s: %s", op->index, e);
-                  }
-                }
-                catch (elle::Error const& e)
-                {
-                  ELLE_LOG("error in async loop on %s: %s, from:\n%s",
-                           op->index, e, e.backtrace());
-                }
-                // If we land here (no break) an error occurred
-                ++attempt;
-                reactor::sleep(std::min(20000_ms,
-                  boost::posix_time::milliseconds(200 * attempt)));
-                // reload block and try again
-                auto index = op->index;
-                if (must_delete)
-                  delete op;
-                ELLE_DEBUG("reload %s", index);
-                try
-                {
-                  op = new Op(_load_op(index));
-                  must_delete = true;
-                }
-                catch (elle::Error const& e)
-                {
-                  ELLE_WARN("%s: failed to reload %s: %s",
-                            this, index, e);
-                  break;
-                }
-              }
+              this->_process_operation(std::move(op));
               if (!this->_journal_dir.empty())
               {
                 auto path = boost::filesystem::path(this->_journal_dir) /
-                  std::to_string(op->index);
+                  std::to_string(index);
                 boost::filesystem::remove(path);
-                _last_processed_index = op->index;
+                this->_last_processed_index = index;
               }
               this->_operations.get<1>().erase(it);
-              if (must_delete)
-                delete op;
             }
             catch (elle::Error const& e)
             {
-              ELLE_ABORT("%s: async loop killed: %s", *this, e.what());
+              ELLE_ABORT("%s: async loop killed: %s\n",
+                         this, e.what(), e.backtrace());
             }
           }
           ELLE_TRACE("exiting loop");
+        }
+
+        void
+        Async::_process_operation(elle::generic_unique_ptr<Op const> op)
+        {
+          Address addr = op->address;
+          boost::optional<StoreMode> mode = op->mode;
+          int attempt = 0;
+          while (true)
+          {
+            try
+            {
+              if (!mode)
+                try
+                {
+                  this->_backend->remove(addr, op->remove_signature);
+                }
+                catch (MissingBlock const&)
+                {
+                  // Nothing: block was already removed.
+                }
+                catch (Conflict const& e)
+                {
+                  ELLE_TRACE("Conflict removing %f: %s", addr, e);
+                  // try again, regenerating the remove signature
+                  Address faddr(addr.value(),
+                                op->remove_signature.block ?
+                                  model::flags::mutable_block : model::flags::immutable_block,
+                                false);
+                  auto block = this->_backend->fetch(faddr);
+                  this->_backend->remove(addr, block->sign_remove(
+                    this->doughnut()));
+                }
+              else
+              {
+                this->_backend->store(
+                  std::move(elle::unconst(op.get())->block),
+                  *mode,
+                  std::move(elle::unconst(op.get())->resolver));
+              }
+              break;
+            }
+            catch (storage::Collision const& c)
+            {
+              // check for idempotence
+              try
+              {
+                auto block = this->_backend->fetch(op->address);
+                // op->block was moved, reload
+                auto o = this->_load_op(op->index);
+                if (block->blocks::Block::data()
+                  == o.block->blocks::Block::data())
+                {
+                  ELLE_LOG("skip idempotent replay %s", op->index);
+                  break;
+                }
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_LOG("error in async loop rechecking %s: %s", op->index, e);
+              }
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_LOG("error in async loop on %s: %s, from:\n%s",
+                       op->index, e, e.backtrace());
+            }
+            // If we land here (no break) an error occurred
+            ++attempt;
+            reactor::sleep(std::min(20000_ms,
+              boost::posix_time::milliseconds(200 * attempt)));
+            // reload block and try again
+            auto index = op->index;
+            ELLE_DEBUG("reload %s", index);
+            try
+            {
+              op = elle::generic_unique_ptr<Op const>(
+                new Op(this->_load_op(index)));
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_WARN("%s: failed to reload %s: %s",
+                        this, index, e);
+              break;
+            }
+          }
         }
 
         /*----------.

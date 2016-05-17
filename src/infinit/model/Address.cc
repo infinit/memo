@@ -80,16 +80,23 @@ namespace infinit
     Address
     Address::from_string(std::string const& repr)
     {
-      if (repr.length() != 64)
-        throw elle::Error(elle::sprintf("invalid address: %s", repr));
+      auto it = repr.begin();
+      if (repr.length() >= 2 && repr[0] == '0' && repr[1] == 'x')
+        it += 2;
       Value v;
       char c[3] = {0, 0, 0};
       for (int i = 0; i < 32; ++i)
       {
-        c[0] = repr[i * 2];
-        c[1] = repr[i * 2 + 1];
+        if (it == repr.end())
+          throw elle::Error(elle::sprintf("invalid address: %s", repr));
+        c[0] = *(it++);
+        if (it == repr.end())
+          throw elle::Error(elle::sprintf("invalid address: %s", repr));
+        c[1] = *(it++);
         v[i] = strtol(c, nullptr, 16);
       }
+      if (it != repr.end())
+        throw elle::Error(elle::sprintf("invalid address: %s", repr));
       return Address(v);
     }
 

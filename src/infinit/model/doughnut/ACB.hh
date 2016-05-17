@@ -187,6 +187,9 @@ namespace infinit
         blocks::ValidationResult
         _validate_remove(Model& model,
                          blocks::RemoveSignature const& rs) const override;
+      public:
+        blocks::ValidationResult
+        validate_admin_keys(Model& model) const;
       protected:
         class DataSignature
         {

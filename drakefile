@@ -3,6 +3,7 @@ import drake.cxx
 import drake.debian
 import drake.git
 import drake.python
+import drake.redhat
 import drake.valgrind
 
 import os
@@ -62,8 +63,7 @@ def configure(
     def execute(self):
       if not super().execute():
         return False
-      if cxx_toolkit.os == drake.os.macos and \
-          cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.gcc:
+      if cxx_toolkit.os == drake.os.macos:
         def set_lib_id(path):
           subprocess.check_output([
             'install_name_tool',
@@ -75,31 +75,32 @@ def configure(
           os.chmod(str(path), 0o755)
           if 'dylib' in str(path):
             set_lib_id(path)
-          otool_out = subprocess.check_output(['otool', '-L',  str(path)])
-          otool_lines = otool_out.decode('utf-8').strip().split('\n')
-          otool_lines = [
-            x.replace('\t', '').split(' ')[0]
-            for x in otool_lines[1:] if 'libstdc++' in x or 'libgcc_s' in x
-          ]
-          for l in otool_lines:
-            drake.command([
-              'install_name_tool', '-change',
-              l, '@rpath/%s' % (os.path.basename(l)), str(path)
-            ])
-            dep_dir = os.path.normpath(
-              os.path.join(os.path.dirname(str(path)), '..', 'lib'))
-            dep_file = \
-              os.path.normpath(os.path.join(dep_dir, os.path.basename(l)))
-            if not os.path.exists(dep_dir):
-              os.makedirs(dep_dir)
-            if not os.path.exists(dep_file):
-              import shutil
-              shutil.copy(l, dep_dir)
-              get_deps_fix_rpaths(drake.Path(dep_file))
-              os.chmod(dep_file, 0o755)
-              set_lib_id(dep_file)
-              os.chmod(dep_file, 0o555)
-          os.chmod(str(path), 0o555)
+          if cxx_toolkit.kind is drake.cxx.GccToolkit.Kind.gcc:
+            otool_out = subprocess.check_output(['otool', '-L',  str(path)])
+            otool_lines = otool_out.decode('utf-8').strip().split('\n')
+            otool_lines = [
+              x.replace('\t', '').split(' ')[0]
+              for x in otool_lines[1:] if 'libstdc++' in x or 'libgcc_s' in x
+            ]
+            for l in otool_lines:
+              drake.command([
+                'install_name_tool', '-change',
+                l, '@rpath/%s' % (os.path.basename(l)), str(path)
+              ])
+              dep_dir = os.path.normpath(
+                os.path.join(os.path.dirname(str(path)), '..', 'lib'))
+              dep_file = \
+                os.path.normpath(os.path.join(dep_dir, os.path.basename(l)))
+              if not os.path.exists(dep_dir):
+                os.makedirs(dep_dir)
+              if not os.path.exists(dep_file):
+                import shutil
+                shutil.copy(l, dep_dir)
+                get_deps_fix_rpaths(drake.Path(dep_file))
+                os.chmod(dep_file, 0o755)
+                set_lib_id(dep_file)
+                os.chmod(dep_file, 0o555)
+            os.chmod(str(path), 0o555)
 
         path = self.target().path()
         get_deps_fix_rpaths(path)
@@ -408,7 +409,11 @@ def configure(
     drake.node('bin/email.hh.tmpl')
     drake.node('bin/infinit-drive.cc.tmpl')
 
-  drake.node('bin/password.hh')
+  drake.nodes(
+    'bin/endpoint_file.hh',
+    'bin/password.hh',
+    'bin/xattrs.hh',
+  )
 
   bin_cxx_config = drake.cxx.Config(cxx_config)
   bin_cxx_config += elle.das.config
@@ -493,7 +498,7 @@ def configure(
     additional_libs += [elle_lib, reactor_lib, cryptography_lib]
   else:
     pass
-  binaries = {}
+  binaries = []
   global installed_binaries
   installed_binaries = []
   installed_symbols = []
@@ -502,6 +507,7 @@ def configure(
     drake.path_build('%s/opt/infinit/lib/infinit/debug' % debian_debug_dir)
   installed_libraries = []
   bin_version = drake.node('bin/version.cc')
+  bin_sources = drake.nodes('bin/main.cc', 'bin/main.hh')
   for name, libs, install in binaries_config:
     source = drake.node('bin/%s.cc' % name)
     bin = drake.cxx.Executable(
@@ -509,11 +515,11 @@ def configure(
         source,
         bin_version,
         infinit_lib,
-      ] + libs + additional_libs,
+      ] + bin_sources + libs + additional_libs,
       cxx_toolkit,
       bin_cxx_config)
     rule_build << bin
-    binaries[name] = bin
+    binaries.append(bin)
     if install:
       installed_binaries.append(bin)
       if not windows:
@@ -583,7 +589,8 @@ def configure(
   debian_nodes = install_nodes('debian/opt/infinit')
   git = drake.git.Git()
   if cxx_toolkit.os is drake.os.linux:
-    platform = 'linux'
+    from platform import linux_distribution
+    platform = linux_distribution()[0].lower()
   elif cxx_toolkit.os is drake.os.macos:
     platform = 'macosx'
   else:
@@ -603,6 +610,7 @@ def configure(
                strip_prefix = True),
   )
   rule_debian = drake.Rule('debian')
+  rule_debian_debug = drake.Rule('debian-debug')
   if cxx_toolkit.os is drake.os.linux:
     rule_debian << drake.debian.Packager(
       'infinit_%s_amd64.deb' % git.description(),
@@ -614,9 +622,76 @@ def configure(
                '%s/DEBIAN' % debian_debug_dir,
                strip_prefix = True),
   )
-  rule_debian << drake.debian.Packager(
+  debian_debug_package = drake.debian.Packager(
     'infinit-debug-symbols-%s-%s_0_amd64.deb' % (platform, git.description()),
     debian_debug_nodes, debian_debug_dir).package
+  rule_debian << debian_debug_package
+  rule_debian_debug << debian_debug_package
+
+  ## ------- ##
+  ## Red Hat ##
+  ## ------- ##
+
+  redhat_version = git.description().replace('-', '_')
+  redhat_rule = drake.Rule('redhat')
+  redhat_build_root = 'redhat/BUILDROOT'
+  redhat_nodes = list(install_nodes('%s/opt/infinit' % redhat_build_root))
+  def installed_files(nodes):
+    def clean_path(path):
+      return str(path).replace(
+        '%s/' % drake.path_build(), '').replace(redhat_build_root, '')
+    res = set()
+    for node in nodes:
+      res.add(clean_path(node))
+      if isinstance(node, drake.cxx.Executable):
+        for dep in node.dependencies_recursive:
+          res.add(clean_path(dep))
+    return sorted(list(res))
+
+  with drake.templating.Context(content = {
+      'changelog': '',
+      'files': '\n'.join(installed_files(redhat_nodes)),
+      'glibc_version': '2.12',
+      'version': redhat_version,
+  }):
+    drake.node('redhat-packaging/package/infinit.spec.tmpl')
+
+  redhat_nodes = chain(
+    redhat_nodes,
+    drake.copy(drake.nodes('redhat-packaging/package/infinit.spec'),
+               'redhat/SPECS', strip_prefix = True),
+  )
+
+  redhat_package = drake.redhat.Packager('infinit',
+                                         redhat_version,
+                                         'el6', 'x86_64',
+                                         drake.path_build('redhat'),
+                                         redhat_nodes).package
+  redhat_rule << redhat_package
+
+  redhat_repo_version = '0.1'
+  with drake.templating.Context(content = {
+      'base_url': 'http://127.0.0.1',
+      'gpg_key': 'http://127.0.0.1/gpg.pub',
+      'files': '/etc/yum.repo.d/infinit.repo',
+      'version': redhat_repo_version,
+  }):
+    drake.node('redhat-packaging/repository/infinit-release.spec.tmpl')
+    drake.node('redhat-packaging/repository/infinit.repo.tmpl')
+
+  redhat_repo_nodes = chain(
+    drake.copy(drake.nodes('redhat-packaging/repository/infinit-release.spec'),
+               'redhat-repo/SPECS', strip_prefix = True),
+    drake.copy(drake.nodes('redhat-packaging/repository/infinit.repo'),
+               'redhat-repo/BUILDROOT/etc/yum.repo.d', strip_prefix = True),
+  )
+
+  redhat_repo_package = drake.redhat.Packager('infinit-release',
+                                              redhat_repo_version,
+                                              'el6', 'x86_64',
+                                              drake.path_build('redhat-repo'),
+                                              redhat_repo_nodes).package
+  redhat_rule << redhat_repo_package
 
   ## ------ ##
   ## Beyond ##
@@ -670,44 +745,78 @@ def configure(
           ] + crash_test_libs,
           cxx_toolkit,
           bin_cxx_config)
-
-      test_names = [
-          'errors',
-          'single-user-two-devices-shared-storage',
-          'passport-restrictions',
-          'passport-sign-delegate',
-          #FIXME: 'flow',
-          # Test clis.
-          'main_cli',
-          'device_cli',
-          'user_cli',
-          'network_cli',
-          'passport_cli',
-          'volume_cli',
-          'drive_cli',
-          'storage_cli',
-          'cli-backward-compatibility',
-      ]
+      def functional_test(name, env = {}, binaries = []):
+        t = {
+          'name': name
+        }
+        if env:
+          t['env'] = env
+        if binaries:
+          t['dependencies'] = binaries
+          t['paths'] = [str(x.path(True).dirname()) for x in binaries]
+        return t
+      tests = list(
+        map(lambda x: functional_test(x),
+            [
+              'cli-backward-compatibility',
+              'device_cli',
+              'drive_cli',
+              'errors',
+              #FIXME: 'flow',
+              'main_cli',
+              'network_cli',
+              'passport-restrictions',
+              'passport-sign-delegate',
+              'passport_cli',
+              # 'rebalancing',
+              'single-user-two-devices-shared-storage',
+              'storage_cli',
+              'user_cli',
+              'volume_cli',
+            ]))
       if not windows:
-          test_names.append('crash-reporter')
-      for test_name in test_names:
-        test = drake.node('tests/functional/%s' % test_name)
+        tests.append(functional_test('crash-reporter'))
+      if linux:
+        pjdfstest = drake.include(
+          'pjdfstest',
+          cxx_toolkit = cxx_toolkit,
+          cxx_config = cxx_config)
+        tests.append(functional_test(
+          'pjdfstest',
+          {
+            'PJDFSTESTS': str(pjdfstest.tests_folder),
+            'PATH': '%s:%s' % (
+              drake.path_build('pjdfstest', absolute = True),
+              os.environ['PATH']),
+          },
+          [pjdfstest.pjdfstest]
+        ))
+      for t in tests:
+        test = drake.node('tests/functional/%s' % t['name'])
         rule_functional_tests << test
         if not windows:
           test.dependencies_add([crash_test_bin])
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
-        extra_path = [str(drake.path_build(installed_binaries[0].path(True).dirname(),
-                                 absolute = True))]
+        test.dependencies_add(t.get('dependencies', []))
+        test.dependency_add(drake.node('tests/functional/utils.py'))
+        binaries_path = str(drake.path_build(installed_binaries[0].path(True).dirname(),
+                                             absolute = True))
+        extra_path = [binaries_path]
+        extra_path += t.get('paths', [])
         if not windows:
-            extra_path.append(str(drake.path_build(crash_test_bin.path(True).dirname(),
-                                 absolute = True)))
+          extra_path.append(str(drake.path_build(crash_test_bin.path(True).dirname(),
+                                                 absolute = True)))
         extra_path.append(os.environ.get('PATH', ''))
         env = {
           'PYTHONPATH':
             str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
-          'PATH': ':'.join(extra_path)
+          'SOURCE_DIR': drake.path_source(),
+          'BUILD_DIR': drake.path_build(),
+          'OS': 'windows' if windows else 'unix',
+          'INFINIT_BINARIES': str(binaries_path)
         }
+        env.update(t.get('env', {}))
         if cxx_toolkit.os == drake.os.windows:
           env['EXE_EXT'] = '.exe'
         runner = drake.Runner(
@@ -738,9 +847,12 @@ def configure(
   cxx_config_tests.lib_path_runtime('../lib')
   cxx_config_tests.lib_path_runtime('../../lib') # For consensus/async test.
   cxx_config_tests += elle.boost.config_test(link = False)
+  cxx_config_tests += elle.boost.config_timer(link = False)
   if not windows:
     cxx_config_tests.library_add(
       drake.copy(elle.boost.test_dynamic, 'lib', True))
+    cxx_config_tests.library_add(
+      drake.copy(elle.boost.timer_dynamic, 'lib', True))
     cxx_config_tests += elle.boost.config_system(link = False)
     cxx_config_tests.library_add(
       drake.copy(elle.boost.system_dynamic, 'lib', True))
@@ -771,6 +883,7 @@ def configure(
 
     cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
     cxx_config_tests.library_add(elle.boost.test_static)
+    cxx_config_tests.library_add(elle.boost.timer_static)
     infinit_lib_tests = drake.copy(infinit_lib, 'tests',
                                    strip_prefix = True)
     infinit_lib_tests_consensus = drake.copy(infinit_lib, 'tests/consensus',
@@ -785,13 +898,13 @@ def configure(
     ('bandwidth', []),
     ('doughnut', []),
     ('faith', []),
+    ('filesystem', binaries),
     ('rpc', []),
     ('storage', [aws_lib]),
     ('async-conflict', []),
     ('kelips', []),
   ]
   if not windows:
-    tests_names.append(('filesystem', binaries.values()))
     tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
   else:
     tests_extra_libs = []
@@ -806,18 +919,15 @@ def configure(
       'tests/%s' % test_name,
       [
         drake.node('tests/%s.cc' % test_name),
-        ifnt_lib,
+        ifnt_lib
       ] + tests_extra_libs,
       cxx_toolkit,
       test_name == 'backward-compatibility' and cxx_config_tests_no_boost_test or cxx_config_tests)
     test.dependencies_add(dependencies)
-
     rule_tests << test
     env = {
       'SOURCE_DIR': drake.path_source(),
-      'PATH': '%s:%s' % (str(drake.path_build(
-        binaries['infinit'].path(True).dirname(),
-        absolute = True)), os.environ['PATH'])
+      'BUILD_DIR': drake.path_build(),
     }
     #  _____ _____  ____  __ _____
     # |  ___|_ _\ \/ /  \/  | ____|
@@ -834,4 +944,5 @@ def configure(
     else:
       runner = drake.Runner(exe = test, env = env)
     runner.reporting = drake.Runner.Reporting.on_failure
-    rule_check << runner.status
+    if not windows or test_name != 'filesystem':
+      rule_check << runner.status
