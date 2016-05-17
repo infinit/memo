@@ -16,7 +16,7 @@
 #include <infinit/storage/sftp.hh>
 #include <infinit/storage/S3.hh>
 
-#include <connectivity/connectivity.hh>
+#include <reactor/connectivity/connectivity.hh>
 #include <reactor/network/upnp.hh>
 #include <reactor/scheduler.hh>
 
@@ -30,7 +30,7 @@ static
 std::string
 result(bool value)
 {
-  return value ? "✓" : "×";
+  return value ? "Good" : "Bad";
 }
 
 // Return the infinit related environment.
@@ -59,8 +59,8 @@ _networking(boost::program_options::variables_map const& args,
   bool sane = true;
   bool verbose = flag(args, "verbose");
   // Contact beyond.
-  // XXX: Verbose.
-  std::cout << "Contacting " << beyond() << std::endl;
+  if (verbose)
+    std::cout << "Contacting " << beyond() << std::endl;
   {
     try
     {
@@ -71,18 +71,25 @@ _networking(boost::program_options::variables_map const& args,
       if (verbose || !status)
       {
         auto& output = status ? std::cout : std::cerr;
-        elle::fprintf(output, "Able to contact %s but got a %s error",
-                      beyond(), r.status());
+        elle::fprintf(output, "  Able to contact %s%s: ",
+                      beyond(),
+                      !status
+                      ? elle::sprintf(" but got a %s error", r.status())
+                      : std::string{});
         if (verbose)
-          output << "  ok" << std::endl << std::endl;
+          output << "ok" << std::endl;
       }
     }
     catch (elle::Error const&)
     {
-      elle::fprintf(std::cerr, "Unable to contact %s: %s\n", beyond(),
+      if (!verbose)
+        std::cerr << "Contacting " << beyond() << std::endl;
+      elle::fprintf(std::cerr, "  Unable to contact %s: %s\n", beyond(),
                     elle::exception_string());
     }
   }
+  if (verbose)
+    std::cout << std::endl;
   // Interfaces.
   auto interfaces = elle::network::Interface::get_map(
     elle::network::Interface::Filter::no_loopback);
@@ -100,6 +107,7 @@ _networking(boost::program_options::variables_map const& args,
 
   if (verbose)
     std::cout << "\nConnectivity:" << std::endl;
+  // XXX: This should be nat.infinit.sh or something.
   std::string host = "192.241.139.66";
   uint16_t port = 5456;
   auto run = [&] (std::string const& name,
@@ -145,7 +153,7 @@ _networking(boost::program_options::variables_map const& args,
   run("RDV_UTP", reactor::connectivity::rdv_utp);
   {
     std::stringstream nat;
-    nat << "NAT ";
+    nat << "  NAT ";
     bool status = true;
     try
     {
@@ -166,24 +174,24 @@ _networking(boost::program_options::variables_map const& args,
   {
     bool status = true;
     std::stringstream out;
-    out << "UPNP:" << std::endl;
+    out << "  UPNP:" << std::endl;
     auto upnp = reactor::network::UPNP::make();
     try
     {
       upnp->initialize();
-      out << "  available: " << upnp->available() << std::endl;
+      out << "    available: " << upnp->available() << std::endl;
       auto ip = upnp->external_ip();
-      out << "  external_ip: " << ip << std::endl;
+      out << "    external_ip: " << ip << std::endl;
       auto pm = upnp->setup_redirect(reactor::network::Protocol::tcp, 5678);
-      out << "  mapping: " << pm.internal_host << ':' << pm.internal_port
+      out << "    mapping: " << pm.internal_host << ':' << pm.internal_port
           << " -> " << pm.external_host << ':' << pm.external_port << std::endl;
       auto pm2 = upnp->setup_redirect(reactor::network::Protocol::udt, 5679);
-      out << "  mapping: " << pm2.internal_host << ':' << pm2.internal_port
+      out << "    mapping: " << pm2.internal_host << ':' << pm2.internal_port
           << " -> " << pm2.external_host << ':' << pm2.external_port << std::endl;
     }
     catch (std::exception const& e)
     {
-      out << "  exception: " << e.what() << std::endl;
+      out << "    exception: " << e.what() << std::endl;
       status = false;
     }
     sane &= status;
@@ -467,7 +475,7 @@ _integrity(boost::program_options::variables_map const& args,
       {
         auto& output = !status ? std::cerr : std::cout;
         elle::fprintf(output, "  [%s] %s (Filesystem):\n", result(status), storage->name);
-        elle::fprintf(output, "      [%s]", result(has_permission(fsconfig->path, true).first));
+        elle::fprintf(output, "      [%s] ", result(has_permission(fsconfig->path, true).first));
         permission(boost::filesystem::path(fsconfig->path), true);
       }
     }
