@@ -93,7 +93,7 @@ namespace infinit
                      Operation{OperationType::insert, _name, EntryType::file, b->address()},
                      DirectoryData::null_block,
                      true);
-      elle::SafeFinally remove_from_parent(
+      elle::With<elle::Finally>(
         [&]
         {
           this->_parent->_files.erase(_name);
@@ -106,19 +106,24 @@ namespace infinit
           {
             ELLE_WARN("rollback failure on %s", this->_name);
           }
-        });
-      FileData fd(_parent->_path / _name, b->address(), mode & 0700);
-      if (_parent->inherit_auth())
+        }) << [&] (elle::Finally& remove_from_parent)
       {
-        umbrella([&] { dynamic_cast<ACLBlock*>(parent_block.get())->copy_permissions(
-          dynamic_cast<ACLBlock&>(*b));
-        });
-      }
-      fd.write(*_owner.block_store(), WriteTarget::all, b, true);
-      std::unique_ptr<rfs::Handle> handle(
-        new FileHandle(*_owner.block_store(), fd, true, true, true));
-      remove_from_parent.abort();
-      return handle;
+        FileData fd(_parent->_path / _name, b->address(), mode & 0700);
+        if (_parent->inherit_auth())
+        {
+          umbrella(
+            [&]
+            {
+              dynamic_cast<ACLBlock*>(parent_block.get())->copy_permissions(
+                dynamic_cast<ACLBlock&>(*b));
+            });
+        }
+        fd.write(*_owner.block_store(), WriteTarget::all, b, true);
+        std::unique_ptr<rfs::Handle> handle(
+          new FileHandle(*_owner.block_store(), fd, true, true, true));
+        remove_from_parent.abort();
+        return handle;
+      };
     }
 
     void
