@@ -93,18 +93,20 @@ namespace infinit
                      Operation{OperationType::insert, _name, EntryType::file, b->address()},
                      DirectoryData::null_block,
                      true);
-      elle::SafeFinally remove_from_parent( [&] {
-          _parent->_files.erase(_name);
+      elle::SafeFinally remove_from_parent(
+        [&]
+        {
+          this->_parent->_files.erase(_name);
           try
           {
             _parent->write(*_owner.block_store(),
                            Operation{OperationType::remove, _name});
           }
-          catch(...)
+          catch (elle::Error const& e)
           {
-            ELLE_WARN("Rollback failure on %s", _name);
+            ELLE_WARN("rollback failure on %s", this->_name);
           }
-      });
+        });
       FileData fd(_parent->_path / _name, b->address(), mode & 0700);
       if (_parent->inherit_auth())
       {
