@@ -607,7 +607,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
         items.push_back(n);
       });
     ELLE_LOG("%x: %s", n.get(), items);
-    BOOST_CHECK(items.size() == 4);
+    BOOST_CHECK(items.size() == fss.size());
   }
   for(auto const& n: fss)
   {
