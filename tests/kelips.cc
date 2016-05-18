@@ -1,6 +1,8 @@
 #include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/test.hh>
 
+#include <reactor/for-each.hh>
+
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
@@ -151,6 +153,19 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   auto fs = elle::make_unique<reactor::filesystem::FileSystem>(std::move(ops), true);
   ELLE_LOG("Returning observer");
   return fs;
+}
+
+static std::vector<std::unique_ptr<rfs::FileSystem>>
+node_to_fs(std::vector<std::shared_ptr<imd::Doughnut>> const& nodes)
+{
+  std::vector<std::unique_ptr<rfs::FileSystem>> res;
+  for (auto n: nodes)
+  {
+    auto ops = elle::make_unique<infinit::filesystem::FileSystem>("volume",n);
+    auto fs = elle::make_unique<reactor::filesystem::FileSystem>(std::move(ops), true);
+    res.push_back(std::move(fs));
+  }
+  return res;
 }
 
 void
