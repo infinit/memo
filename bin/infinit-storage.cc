@@ -369,7 +369,7 @@ main(int argc, char** argv)
       "--name STORAGE STORAGE-TYPE [STORAGE-OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created storage name" },
-        { "capacity,c", value<std::string>(), "limit the storage capacity, "
+        { "capacity,c", value<std::string>(), "limit the storage capacity\n"
           "use: B,kB,kiB,GB,GiB,TB,TiB (optional)" },
         option_output("storage"),
         { "path", value<std::string>(), default_locations },
