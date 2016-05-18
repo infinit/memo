@@ -347,6 +347,8 @@ namespace infinit
             DirectoryConflictResolver dcr(model, op, _address);
             auto nb = dcr(*b, *b, first_write ? model::STORE_INSERT : model::STORE_UPDATE);
             b = elle::cast<ACLBlock>::runtime(nb);
+            // Update this with the conflict resolved data
+            update(*b, get_permissions(model, *b));
           }
           else
             b->data(data);
