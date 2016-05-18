@@ -1,6 +1,8 @@
 #include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/test.hh>
 
+#include <reactor/for-each.hh>
+
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
@@ -151,6 +153,19 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   auto fs = elle::make_unique<reactor::filesystem::FileSystem>(std::move(ops), true);
   ELLE_LOG("Returning observer");
   return fs;
+}
+
+static std::vector<std::unique_ptr<rfs::FileSystem>>
+node_to_fs(std::vector<std::shared_ptr<imd::Doughnut>> const& nodes)
+{
+  std::vector<std::unique_ptr<rfs::FileSystem>> res;
+  for (auto n: nodes)
+  {
+    auto ops = elle::make_unique<infinit::filesystem::FileSystem>("volume",n);
+    auto fs = elle::make_unique<reactor::filesystem::FileSystem>(std::move(ops), true);
+    res.push_back(std::move(fs));
+  }
+  return res;
 }
 
 void
@@ -567,6 +582,45 @@ ELLE_TEST_SCHEDULED(times)
   BOOST_CHECK(now - st.st_ctime >= 2);
 }
 
+#define CHECKED(exp) \
+try { exp} catch (std::exception const& e) { ELLE_WARN("%s", e.what());  throw;}
+ELLE_TEST_SCHEDULED(clients_parallel)
+{
+  elle::filesystem::TemporaryDirectory d;
+  auto tmp = d.path();
+  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(tmp, kp, 4, /*k*/1, /*repfactor*/1);
+  auto fss = node_to_fs(nodes);
+  fss.front()->path("/");
+  reactor::for_each_parallel(fss, [&](std::unique_ptr<rfs::FileSystem>& fs)
+    {
+      auto p = std::to_string((long)fs.get());
+      CHECKED(fs->path("/" + p)->mkdir(0666);)
+      CHECKED(fs->path("/" + p + "/0")->mkdir(0666);)
+    });
+  for(auto const& n: fss)
+  {
+    std::vector<std::string> items;
+    n->path("/")->list_directory([&] (std::string const& n, struct stat* stbuf)
+      {
+        items.push_back(n);
+      });
+    ELLE_LOG("%x: %s", n.get(), items);
+    BOOST_CHECK(items.size() == 4);
+  }
+  for(auto const& n: fss)
+  {
+    for (auto const& t: fss)
+    {
+      auto p = std::to_string((long)t.get());
+      struct stat st;
+      n->path("/" + p +"/0")->stat(&st);
+      BOOST_CHECK(S_ISDIR(st.st_mode));
+    }
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
@@ -579,6 +633,7 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(list_directory), 0, valgrind(10));
   suite.add(BOOST_TEST_CASE(list_directory_3), 0, valgrind(60));
   suite.add(BOOST_TEST_CASE(list_directory_5_3), 0, valgrind(60));
+  suite.add(BOOST_TEST_CASE(clients_parallel), 0, valgrind(60));
   // suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
   //suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
   // suite.add(BOOST_TEST_CASE(killed_nodes_k2), 0, 600);
