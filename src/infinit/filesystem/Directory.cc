@@ -252,8 +252,10 @@ namespace infinit
     void
     DirectoryData::update(Block& block, std::pair<bool, bool> perms)
     {
-      ELLE_DEBUG("%s updating from version %s at %f", this,
-        _block_version, block.address());
+      ELLE_DEBUG("%s updating from version %s to version %s at %f", this,
+                 _block_version,
+                 dynamic_cast<model::blocks::MutableBlock&>(block).version(),
+                 block.address());
       _last_used = FileSystem::now();
 
       bool empty = false;
