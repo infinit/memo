@@ -45,6 +45,10 @@ public-beyond:
     - ssh debian@debian.infinit.io 'make debian'
   only:
     - feature/public_beyond
+  tags:
+    - x86_64
+    - trusty
+    - gcc4
 
 x86_64-trusty-gcc4:
   stage: build
