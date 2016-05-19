@@ -45,6 +45,7 @@ def configure(
     codesign = False,
     beyond: bool = True,
     website: bool = True,
+    beyond_public: bool = False,
 ):
 
   if python3 is not None:
@@ -724,6 +725,7 @@ def configure(
           'binaries': installed_binaries,
           'debian': rule_debian
         }
+        public = beyond_public
       )
       if not windows:
         crash_test_libs = drake.copy([
