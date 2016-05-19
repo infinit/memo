@@ -144,9 +144,12 @@ namespace infinit
             : public doughnut::Remote
           {
           public:
+            typedef doughnut::Remote Super;
+
             template <typename ... Args>
-            RemotePeer(Args&& ... args)
-              : doughnut::Remote(std::forward<Args>(args) ...)
+            RemotePeer(Doughnut& dht, Address id, Args&& ... args)
+              : doughnut::Peer(id)
+              , Super(dht, id, std::forward<Args>(args) ...)
             {}
 
             virtual
@@ -192,6 +195,8 @@ namespace infinit
                       int factor,
                       bool rebalance_auto_expand,
                       std::chrono::system_clock::duration node_timeout,
+                      Doughnut& dht,
+                      Address id,
                       Args&& ... args);
             virtual
             ~LocalPeer();

@@ -19,7 +19,7 @@ namespace infinit
     namespace doughnut
     {
       class Local
-        : public Peer
+        : virtual public Peer
       {
       /*------.
       | Types |

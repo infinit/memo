@@ -26,7 +26,7 @@ namespace infinit
       class RemoteRPC;
 
       class Remote
-        : public Peer
+        : virtual public Peer
       {
       /*------.
       | Types |
