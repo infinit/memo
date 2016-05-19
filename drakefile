@@ -724,7 +724,7 @@ def configure(
         backend = {
           'binaries': installed_binaries,
           'debian': rule_debian
-        }
+        },
         public = beyond_public
       )
       if not windows:
