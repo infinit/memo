@@ -606,6 +606,34 @@ ELLE_TEST_SCHEDULED(clients_parallel)
   }
 }
 
+ELLE_TEST_SCHEDULED(many_conflicts)
+{
+  static const int node_count = 4;
+  elle::filesystem::TemporaryDirectory d;
+  auto tmp = d.path();
+  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(tmp, kp, node_count, /*k*/1, /*repfactor*/3);
+  auto fss = node_to_fs(nodes);
+  fss.front()->path("/");
+  reactor::for_each_parallel(fss, [&](std::unique_ptr<rfs::FileSystem>& fs)
+    {
+      for (int i=0; i<100; ++i)
+      {
+        fs->path("/" + std::to_string(i) + "_" + std::to_string((uint64_t)&fs))->mkdir(0666);
+      }
+  });
+  for (int j=0; j<node_count; ++j)
+  {
+    int count = 0;
+    fss[j]->path("/")->list_directory([&] (std::string const& n, struct stat* stbuf)
+      {
+        ++count;
+      });
+    BOOST_CHECK(count == 100 * node_count);
+  }
+}
+
 ELLE_TEST_SCHEDULED(remove_conflicts)
 {
   elle::filesystem::TemporaryDirectory d;
@@ -640,6 +668,7 @@ ELLE_TEST_SCHEDULED(remove_conflicts)
     });
   }
 }
+
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
@@ -653,6 +682,7 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(list_directory_3), 0, valgrind(60));
   suite.add(BOOST_TEST_CASE(list_directory_5_3), 0, valgrind(60));
   suite.add(BOOST_TEST_CASE(clients_parallel), 0, valgrind(60));
+  suite.add(BOOST_TEST_CASE(many_conflicts), 0, valgrind(60));
   suite.add(BOOST_TEST_CASE(remove_conflicts), 0, valgrind(60));
   // suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
   //suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
