@@ -595,7 +595,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
   fss.front()->path("/");
   reactor::for_each_parallel(fss, [&](std::unique_ptr<rfs::FileSystem>& fs)
     {
-      auto p = std::to_string((long)fs.get());
+      auto p = std::to_string((uint64_t)fs.get());
       CHECKED(fs->path("/" + p)->mkdir(0666);)
       CHECKED(fs->path("/" + p + "/0")->mkdir(0666);)
     });
@@ -613,7 +613,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
   {
     for (auto const& t: fss)
     {
-      auto p = std::to_string((long)t.get());
+      auto p = std::to_string((uint64_t)t.get());
       struct stat st;
       n->path("/" + p +"/0")->stat(&st);
       BOOST_CHECK(S_ISDIR(st.st_mode));
