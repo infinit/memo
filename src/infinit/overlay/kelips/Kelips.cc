@@ -3418,8 +3418,9 @@ namespace infinit
               Contact contact{{}, {}, c.first, Duration(0), Time(), 0};
               for (auto const& ep: c.second)
                 contact.endpoints.push_back(TimedEndpoint(ep, now()));
-              ELLE_LOG("%s: register %s", *this, contact);
+              ELLE_LOG("%s: register %f", this, contact);
               target[c.first] = std::move(contact);
+              this->on_discover()(address, false);
             }
           }
           else
