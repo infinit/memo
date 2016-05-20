@@ -3420,7 +3420,7 @@ namespace infinit
                 contact.endpoints.push_back(TimedEndpoint(ep, now()));
               ELLE_LOG("%s: register %f", this, contact);
               target[c.first] = std::move(contact);
-              this->on_discover()(address, false);
+              this->on_discover()(c.first, false);
             }
           }
           else
