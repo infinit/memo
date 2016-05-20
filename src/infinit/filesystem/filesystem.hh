@@ -153,6 +153,9 @@ namespace infinit
                  model::Address address,
                  boost::optional<int> local_version = {},
                  Node* node = nullptr);
+    std::pair<bool, bool>
+    get_permissions(model::Model& model,
+                    model::blocks::Block const& block);
     NAMED_ARGUMENT(volume_name);
     NAMED_ARGUMENT(model);
     NAMED_ARGUMENT(root_block_cache_dir);
@@ -202,8 +205,6 @@ namespace infinit
       // Check permissions and throws on access failure
       void
       ensure_permissions(model::blocks::Block const& block, bool r, bool w);
-      std::pair<bool, bool>
-      get_permissions(model::blocks::Block const& block);
 
       boost::signals2::signal<void()> on_root_block_create;
       std::shared_ptr<DirectoryData>

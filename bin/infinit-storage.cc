@@ -273,6 +273,7 @@ COMMAND(list)
 COMMAND(export_)
 {
   auto name = mandatory(args, "name", "storage name");
+  auto output = get_output(args);
   std::unique_ptr<infinit::storage::StorageConfig> storage = nullptr;
   try
   {
@@ -282,8 +283,8 @@ COMMAND(export_)
   {
     storage = ifnt.storage_get(ifnt.qualified_name(name, ifnt.user_get()));
   }
-  elle::serialization::json::SerializerOut out(*get_output(args), false);
-  out.serialize_forward(storage);
+  elle::serialization::json::serialize(storage, *output, false);
+  report_exported(*output, "storage", name);
 }
 
 COMMAND(import)
@@ -434,7 +435,7 @@ main(int argc, char** argv)
       "--name STORAGE STORAGE-TYPE [STORAGE-OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created storage name" },
-        { "capacity,c", value<std::string>(), "limit the storage capacity, "
+        { "capacity,c", value<std::string>(), "limit the storage capacity\n"
           "use: B,kB,kiB,GB,GiB,TB,TiB (optional)" },
         option_output("storage"),
         { "path", value<std::string>(), default_locations },

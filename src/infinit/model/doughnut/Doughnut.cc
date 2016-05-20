@@ -60,6 +60,7 @@ namespace infinit
         , _keys(keys)
         , _owner(std::move(owner))
         , _passport(std::move(passport))
+        , _admin_keys(admin_keys)
         , _consensus(consensus(*this))
         , _local(
           storage
@@ -67,7 +68,6 @@ namespace infinit
             : nullptr)
         , _overlay(overlay_builder(*this, id, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
-        , _admin_keys(admin_keys)
       {
         if (this->_local)
           this->_local->initialize();
@@ -93,7 +93,7 @@ namespace infinit
                    std::move(port),
                    std::move(storage),
                    std::move(version),
-                   std::move(admin_keys))
+                   admin_keys)
       {
         auto check_user_blocks = [name, this]
           {

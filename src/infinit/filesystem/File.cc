@@ -206,7 +206,7 @@ namespace infinit
       elle::SafeFinally remove_undecoded_first_block([&] {
           this->_first_block.reset();
       });
-      auto perms = _owner.get_permissions(*_first_block);
+      auto perms = get_permissions(*_owner.block_store(), *_first_block);
       _filedata = std::make_shared<FileData>(_parent->_path / _name, *_first_block, perms);
       remove_undecoded_first_block.abort();
     }

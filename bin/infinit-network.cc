@@ -721,7 +721,7 @@ main(int argc, char** argv)
     ("nodes", value<int>(), "estimate of the total number of nodes")
     ("k", value<int>(), "number of groups (default: 1)")
     ("kelips-contact-timeout", value<std::string>(),
-     "ping timeout before considering a peer lost (default: 2min)")
+     "ping timeout before considering a peer lost (default: 2 min)")
     ("encrypt", value<std::string>(),
       "use encryption: no,lazy,yes (default: yes)")
     ("protocol", value<std::string>(),
@@ -742,7 +742,7 @@ main(int argc, char** argv)
           "storage to contribute (optional)" },
         { "port", value<int>(), "port to listen on (default: random)" },
         { "replication-factor,r", value<int>(),
-          "missing servers eviction delay (default: 10min)" },
+          "missing servers eviction delay\n(default: 10 min)" },
         { "eviction-delay,e", value<std::string>(),
           "data replication factor (default: 1)" },
         option_output("network"),

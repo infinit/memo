@@ -326,11 +326,18 @@ namespace infinit
           for (auto addr: addresses)
           {
             bool hit = false;
-            auto block = this->_fetch_cache(addr.first, addr.second, hit);
-            if (hit)
-              res(addr.first, std::move(block), {});
-            else
-              remain.push_back(addr);
+            try
+            {
+              auto block = this->_fetch_cache(addr.first, addr.second, hit);
+              if (hit)
+                res(addr.first, std::move(block), {});
+              else
+                remain.push_back(addr);
+            }
+            catch (MissingBlock const& mb)
+            {
+              res(addr.first, {}, std::current_exception());
+            }
           }
           this->_backend->fetch(remain, res);
         }

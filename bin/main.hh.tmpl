@@ -2315,7 +2315,7 @@ option_output(std::string const& item)
 {
   return Mode::OptionDescription(
     "output,o", boost::program_options::value<std::string>(),
-    elle::sprintf("file to write the %s to (default: stdout)", item).c_str());
+    elle::sprintf("file to write the %s to\n(default: stdout)", item).c_str());
 }
 
 inline
