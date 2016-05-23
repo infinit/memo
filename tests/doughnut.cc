@@ -1071,8 +1071,21 @@ namespace rebalancing
     typedef infinit::model::Address Address;
 
     template <typename ... Args>
-    Local(Args&& ... args)
-      : Super(std::forward<Args>(args)...)
+    Local(infinit::model::doughnut::consensus::Paxos& paxos,
+          int factor,
+          bool rebalance_auto_expand,
+          std::chrono::system_clock::duration node_timeout,
+          infinit::model::doughnut::Doughnut& dht,
+          Address id,
+          Args&& ... args)
+      : infinit::model::doughnut::Peer(id)
+      , Super(paxos,
+              factor,
+              rebalance_auto_expand,
+              node_timeout,
+              dht,
+              id,
+              std::forward<Args>(args)...)
       , _all_barrier()
       , _propose_barrier()
       , _propose_bypass(false)
@@ -1087,10 +1100,9 @@ namespace rebalancing
       this->_confirm_barrier.open();
     }
 
-
     virtual
     boost::optional<PaxosClient::Accepted>
-    propose(PaxosServer::Quorum peers,
+    propose(PaxosServer::Quorum const& peers,
             Address address,
             PaxosClient::Proposal const& p) override
     {
@@ -1105,7 +1117,7 @@ namespace rebalancing
 
     virtual
     PaxosClient::Proposal
-    accept(PaxosServer::Quorum peers,
+    accept(PaxosServer::Quorum const& peers,
            Address address,
            PaxosClient::Proposal const& p,
            Value const& value) override
@@ -1118,7 +1130,7 @@ namespace rebalancing
 
     virtual
     void
-    confirm(PaxosServer::Quorum peers,
+    confirm(PaxosServer::Quorum const& peers,
             Address address,
             PaxosClient::Proposal const& p) override
     {

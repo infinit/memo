@@ -176,13 +176,13 @@ namespace infinit
         | Peer |
         `-----*/
 
-        class Peer
+        class PaxosPeer
           : public Paxos::PaxosClient::Peer
         {
         public:
-          Peer(overlay::Overlay::WeakMember member,
-               Address address,
-               boost::optional<int> local_version = {})
+          PaxosPeer(overlay::Overlay::WeakMember member,
+                    Address address,
+                    boost::optional<int> local_version = {})
             : Paxos::PaxosClient::Peer((ELLE_ASSERT(member.lock()),
                                         member.lock()->id()))
             , _member(std::move(member))
@@ -317,7 +317,7 @@ namespace infinit
           Paxos::PaxosClient::Peers res;
           for (auto member: dht.overlay()->lookup_nodes(q))
             res.push_back(
-              elle::make_unique<Peer>(std::move(member), address));
+              elle::make_unique<PaxosPeer>(std::move(member), address));
           return res;
         }
 
@@ -886,14 +886,14 @@ namespace infinit
         }
 
         boost::optional<Paxos::PaxosClient::Accepted>
-        Paxos::LocalPeer::propose(PaxosServer::Quorum peers,
+        Paxos::LocalPeer::propose(PaxosServer::Quorum const& peers,
                                   Address address,
                                   Paxos::PaxosClient::Proposal const& p)
         {
           ELLE_TRACE_SCOPE("%s: get proposal at %f: %s",
                            *this, address, p);
           auto& decision = this->_load_paxos(address, peers);
-          auto res = decision.paxos.propose(std::move(peers), p);
+          auto res = decision.paxos.propose(peers, p);
           BlockOrPaxos data(&decision);
           this->storage()->set(
             address,
@@ -903,7 +903,7 @@ namespace infinit
         }
 
         Paxos::PaxosClient::Proposal
-        Paxos::LocalPeer::accept(PaxosServer::Quorum peers,
+        Paxos::LocalPeer::accept(PaxosServer::Quorum const& peers,
                                  Address address,
                                  Paxos::PaxosClient::Proposal const& p,
                                  Value const& value)
@@ -953,7 +953,7 @@ namespace infinit
         }
 
         void
-        Paxos::LocalPeer::confirm(PaxosServer::Quorum peers,
+        Paxos::LocalPeer::confirm(PaxosServer::Quorum const& peers,
                                   Address address,
                                   Paxos::PaxosClient::Proposal const& p)
         {
@@ -1011,7 +1011,8 @@ namespace infinit
         }
 
         boost::optional<Paxos::PaxosClient::Accepted>
-        Paxos::LocalPeer::get(PaxosServer::Quorum peers, Address address,
+        Paxos::LocalPeer::get(PaxosServer::Quorum const& peers,
+                              Address address,
                               boost::optional<int> local_version)
         {
           ELLE_TRACE_SCOPE("%s: get %f from %f", *this, address, peers);
@@ -1392,7 +1393,7 @@ namespace infinit
               {
                 peers_id.insert(peer->id());
                 peers.push_back(
-                  elle::make_unique<Peer>(wpeer, b->address()));
+                  elle::make_unique<PaxosPeer>(wpeer, b->address()));
               }
             }
             if (peers.empty())
@@ -1448,7 +1449,7 @@ namespace infinit
                   this->doughnut(), e.expected(), b->address());
                 peers_id.clear();
                 for (auto const& peer: peers)
-                  peers_id.insert(static_cast<Peer&>(*peer).id());
+                  peers_id.insert(static_cast<PaxosPeer&>(*peer).id());
                 continue;
               }
               break;
@@ -1564,7 +1565,7 @@ namespace infinit
           std::unordered_map<Address, PaxosClient::Peers> peers;
           for (auto r: hits)
             peers[r.first].push_back(
-              elle::make_unique<Peer>(r.second, r.first, versions.at(r.first)));
+              elle::make_unique<PaxosPeer>(r.second, r.first, versions.at(r.first)));
           reactor::for_each_parallel(
             peers,
             [&] (std::pair<Address const, PaxosClient::Peers>& p)
@@ -1639,7 +1640,7 @@ namespace infinit
                 {
                   try
                   {
-                    if (auto member = static_cast<Peer&>(*peer).member().lock())
+                    if (auto member = static_cast<PaxosPeer&>(*peer).member().lock())
                       return member->fetch(address, local_version);
                     else
                       ELLE_WARN("%s: peer was deleted while storing", this);
@@ -1673,7 +1674,7 @@ namespace infinit
           PaxosClient::Peers peers;
           for (auto peer: owners)
             peers.push_back(
-              elle::make_unique<Peer>(peer, address, local_version));
+              elle::make_unique<PaxosPeer>(peer, address, local_version));
           ELLE_DEBUG("peers: %f", peers);
           return peers;
         }

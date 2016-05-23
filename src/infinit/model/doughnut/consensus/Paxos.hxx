@@ -19,6 +19,7 @@ namespace infinit
           Address id,
           Args&& ... args)
           : doughnut::Peer(id)
+          , Paxos::Peer(id)
           , doughnut::Local(dht, id, std::forward<Args>(args) ...)
           , _paxos(paxos)
           , _factor(factor)

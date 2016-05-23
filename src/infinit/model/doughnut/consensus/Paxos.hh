@@ -140,47 +140,79 @@ namespace infinit
         | Peer |
         `-----*/
         public:
-          class RemotePeer
-            : public doughnut::Remote
+          class Peer
+            : public virtual doughnut::Peer
           {
           public:
-            typedef doughnut::Remote Super;
-
-            template <typename ... Args>
-            RemotePeer(Doughnut& dht, Address id, Args&& ... args)
-              : doughnut::Peer(id)
-              , Super(dht, id, std::forward<Args>(args) ...)
+            typedef doughnut::Peer Super;
+            Peer(model::Address id)
+              : Super(id)
             {}
-
             virtual
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum const& peers,
                     Address address,
-                    PaxosClient::Proposal const& p);
+                    PaxosClient::Proposal const& p) = 0;
             virtual
             PaxosClient::Proposal
             accept(PaxosServer::Quorum const& peers,
                    Address address,
                    PaxosClient::Proposal const& p,
-                   Value const& value);
+                   Value const& value) = 0;
             virtual
             void
             confirm(PaxosServer::Quorum const& peers,
                     Address address,
-                    PaxosClient::Proposal const& p);
+                    PaxosClient::Proposal const& p) = 0;
             virtual
             boost::optional<PaxosClient::Accepted>
             get(PaxosServer::Quorum const& peers,
                 Address address,
-                boost::optional<int> local_version);
+                boost::optional<int> local_version) = 0;
           };
 
-          /*----------.
-          | LocalPeer |
-          `----------*/
+          class RemotePeer
+            : public Paxos::Peer
+            , public doughnut::Remote
+          {
+          public:
+            typedef doughnut::Remote Super;
+            template <typename ... Args>
+            RemotePeer(Doughnut& dht, Address id, Args&& ... args)
+              : doughnut::Peer(id)
+              , Paxos::Peer(id)
+              , Super(dht, id, std::forward<Args>(args) ...)
+            {}
+            virtual
+            boost::optional<PaxosClient::Accepted>
+            propose(PaxosServer::Quorum const& peers,
+                    Address address,
+                    PaxosClient::Proposal const& p) override;
+            virtual
+            PaxosClient::Proposal
+            accept(PaxosServer::Quorum const& peers,
+                   Address address,
+                   PaxosClient::Proposal const& p,
+                   Value const& value) override;
+            virtual
+            void
+            confirm(PaxosServer::Quorum const& peers,
+                    Address address,
+                    PaxosClient::Proposal const& p) override;
+            virtual
+            boost::optional<PaxosClient::Accepted>
+            get(PaxosServer::Quorum const& peers,
+                Address address,
+                boost::optional<int> local_version) override;
+          };
+
+        /*----------.
+        | LocalPeer |
+        `----------*/
         public:
           class LocalPeer
-            : public doughnut::Local
+            : public Paxos::Peer
+            , public doughnut::Local
           {
           /*-------------.
           | Construction |
@@ -222,25 +254,25 @@ namespace infinit
               AddressVersionQuorum;
             virtual
             boost::optional<PaxosClient::Accepted>
-            propose(PaxosServer::Quorum peers,
+            propose(PaxosServer::Quorum const& peers,
                     Address address,
-                    PaxosClient::Proposal const& p);
+                    PaxosClient::Proposal const& p) override;
             virtual
             PaxosClient::Proposal
-            accept(PaxosServer::Quorum peers,
+            accept(PaxosServer::Quorum const& peers,
                    Address address,
                    PaxosClient::Proposal const& p,
-                   Value const& value);
+                   Value const& value) override;
             virtual
             void
-            confirm(PaxosServer::Quorum peers,
+            confirm(PaxosServer::Quorum const& peers,
                     Address address,
-                    PaxosClient::Proposal const& p);
+                    PaxosClient::Proposal const& p) override;
             virtual
             boost::optional<PaxosClient::Accepted>
-            get(PaxosServer::Quorum peers,
+            get(PaxosServer::Quorum const& peers,
                 Address address,
-                boost::optional<int> local_version);
+                boost::optional<int> local_version) override;
             virtual
             void
             store(blocks::Block const& block, StoreMode mode) override;
