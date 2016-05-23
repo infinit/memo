@@ -740,7 +740,7 @@ main(int argc, char** argv)
           "data replication factor (default: 1)" },
         option_output("network"),
         { "push-network", bool_switch(),
-          elle::sprintf("push the network to %s", beyond(true)).c_str() },
+          elle::sprintf("push the network to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-network" },
         { "admin-r", value<std::vector<std::string>>()->multitoken(),
           "Set an admin user that can read all data"},
@@ -764,8 +764,7 @@ main(int argc, char** argv)
         { "port", value<int>(), "port to listen on (default: random)" },
         option_output("network"),
         { "push-network", bool_switch(),
-            elle::sprintf("push the updated network to %s",
-                          beyond(true)).c_str() },
+            elle::sprintf("push the updated network to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-network" },
         { "admin-r", value<std::vector<std::string>>()->multitoken(),
           "Set an admin user that can read all data"},
@@ -790,7 +789,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("Fetch a network from %s", beyond(true)).c_str(),
+      elle::sprintf("Fetch a network from %s", beyond(true)),
       &fetch,
       {},
       {
@@ -830,7 +829,7 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a network to %s", beyond(true)).c_str(),
+      elle::sprintf("Push a network to %s", beyond(true)),
       &push,
       "--name NETWORK",
       {
@@ -850,7 +849,7 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      elle::sprintf("Remove a network from %s", beyond(true)).c_str(),
+      elle::sprintf("Remove a network from %s", beyond(true)),
       &pull,
       "--name NETWORK",
       {
@@ -873,10 +872,10 @@ main(int argc, char** argv)
         option_cache_ram_invalidation,
         option_cache_disk_size,
         { "fetch-endpoints", bool_switch(),
-          elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
+          elle::sprintf("fetch endpoints from %s", beyond(true)) },
         { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
         { "push-endpoints", bool_switch(),
-          elle::sprintf("push endpoints to %s", beyond(true)).c_str() },
+          elle::sprintf("push endpoints to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-endpoints" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },
@@ -899,8 +898,7 @@ main(int argc, char** argv)
     },
     {
       "stats",
-      elle::sprintf(
-        "Fetch stats of a network on %s", beyond(true)).c_str(),
+      elle::sprintf("Fetch stats of a network on %s", beyond(true)),
       &stats,
       "--name NETWORK",
       {
