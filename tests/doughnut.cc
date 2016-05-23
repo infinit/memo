@@ -1078,7 +1078,7 @@ namespace rebalancing
           infinit::model::doughnut::Doughnut& dht,
           Address id,
           Args&& ... args)
-      : infinit::model::doughnut::Peer(id)
+      : infinit::model::doughnut::Peer(dht, id)
       , Super(paxos,
               factor,
               rebalance_auto_expand,

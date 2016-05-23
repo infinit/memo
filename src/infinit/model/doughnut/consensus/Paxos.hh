@@ -145,9 +145,7 @@ namespace infinit
           {
           public:
             typedef doughnut::Peer Super;
-            Peer(model::Address id)
-              : Super(id)
-            {}
+            Peer(Doughnut& dht, model::Address id);
             virtual
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum const& peers,
@@ -179,8 +177,8 @@ namespace infinit
             typedef doughnut::Remote Super;
             template <typename ... Args>
             RemotePeer(Doughnut& dht, Address id, Args&& ... args)
-              : doughnut::Peer(id)
-              , Paxos::Peer(id)
+              : doughnut::Peer(dht, id)
+              , Paxos::Peer(dht, id)
               , Super(dht, id, std::forward<Args>(args) ...)
             {}
             virtual

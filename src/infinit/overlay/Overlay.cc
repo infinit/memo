@@ -107,7 +107,8 @@ namespace infinit
                   {
                     ELLE_TRACE("%s: failed to lookup node %f: %s",
                                this, address, e);
-                    yield(WeakMember(new model::doughnut::DummyPeer(address)));
+                    yield(WeakMember(new model::doughnut::DummyPeer(
+                                       *this->doughnut(), address)));
                   }
                 });
             reactor::wait(scope);
