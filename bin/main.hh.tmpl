@@ -1426,7 +1426,7 @@ namespace infinit
     }
 
     void
-    passport_save(Passport const& passport)
+    passport_save(Passport const& passport, bool overwrite = false)
     {
       boost::filesystem::ofstream f;
       auto users = this->users_get();
@@ -1438,7 +1438,7 @@ namespace infinit
                             this->_passport_path(passport.network(), user.name),
                             elle::sprintf("%s: %s", passport.network(),
                                           user.name),
-                            "passport", false);
+                            "passport", overwrite);
           elle::serialization::json::SerializerOut s(f, false, true);
           s.serialize_forward(passport);
           return;
