@@ -349,7 +349,7 @@ namespace infinit
           auto b = elle::cast<ACLBlock>::runtime(model.fetch(_address));
           if (b->version() != _block_version)
           {
-            ELLE_LOG("Conflict: block version not expected: %s vs %s",
+            ELLE_TRACE("Conflict: block version not expected: %s vs %s",
                      b->version(), _block_version);
             DirectoryConflictResolver dcr(model, op, _address);
             auto nb = dcr(*b, *b, first_write ? model::STORE_INSERT : model::STORE_UPDATE);
