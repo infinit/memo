@@ -184,12 +184,15 @@ namespace infinit
                     boost::optional<int> local_version = {})
             : Paxos::PaxosClient::Peer((ELLE_ASSERT(member.lock()),
                                         member.lock()->id()))
-            , _member(std::move(member))
+            , _member(std::dynamic_pointer_cast<Paxos::Peer>(std::move(member)))
             , _address(address)
             , _local_version(local_version)
-          {}
+          {
+            if (!this->_member.lock())
+              ELLE_ABORT("invalid paxos peer: %s", member);
+          }
 
-          overlay::Overlay::Member
+          std::shared_ptr<Paxos::Peer>
           _lock_member()
           {
             auto member = this->_member.lock();
@@ -208,10 +211,10 @@ namespace infinit
           {
             BENCH("propose");
             auto member = this->_lock_member();
-            return network_exception_to_unavailable([&] {
-                if (auto peer = dynamic_cast<Paxos::Peer*>(member.get()))
-                  return peer->propose(q, this->_address, p);
-                ELLE_ABORT("invalid paxos peer: %s", member);
+            return network_exception_to_unavailable(
+              [&]
+              {
+                return member->propose(q, this->_address, p);
               });
           }
 
@@ -223,10 +226,10 @@ namespace infinit
           {
             BENCH("accept");
             auto member = this->_lock_member();
-            return network_exception_to_unavailable([&] {
-                if (auto peer = dynamic_cast<Paxos::Peer*>(member.get()))
-                  return peer->accept(q, this->_address, p, value);
-                ELLE_ABORT("invalid paxos peer: %s", member);
+            return network_exception_to_unavailable(
+              [&]
+              {
+                return member->accept(q, this->_address, p, value);
               });
           }
 
@@ -237,14 +240,12 @@ namespace infinit
           {
             BENCH("confirm");
             auto member = this->_lock_member();
-            return network_exception_to_unavailable([&] {
-                if (auto peer = dynamic_cast<Paxos::Peer*>(member.get()))
-                {
-                  if (peer->doughnut().version() >= elle::Version(0, 5, 0))
-                    peer->confirm(q, this->_address, p);
-                  return;
-                }
-                ELLE_ABORT("invalid paxos peer: %s", member);
+            return network_exception_to_unavailable(
+              [&]
+              {
+                if (member->doughnut().version() >=
+                    elle::Version(0, 5, 0))
+                  member->confirm(q, this->_address, p);
               });
           }
 
@@ -254,14 +255,15 @@ namespace infinit
           {
             BENCH("get");
             auto member = this->_lock_member();
-            return network_exception_to_unavailable([&] {
-              if (auto peer = dynamic_cast<Paxos::Peer*>(member.get()))
-                return peer->get(q, this->_address, this->_local_version);
-              ELLE_ABORT("invalid paxos peer: %s", member);
-            });
+            return network_exception_to_unavailable(
+              [&]
+              {
+                return member->get(q, this->_address, this->_local_version);
+              });
           }
 
-          ELLE_ATTRIBUTE_R(overlay::Overlay::WeakMember, member);
+          ELLE_ATTRIBUTE_R(
+            std::ambivalent_ptr<Paxos::Peer>, member);
           ELLE_ATTRIBUTE(Address, address);
           ELLE_ATTRIBUTE(boost::optional<int>, local_version);
         };
