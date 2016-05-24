@@ -5,6 +5,8 @@
 #include <boost/program_options.hpp>
 #include <boost/regex.hpp>
 
+#include <elle/log/CompositeLogger.hh>
+#include <elle/log/TextLogger.hh>
 #include <elle/Error.hh>
 #include <elle/Exit.hh>
 #include <elle/finally.hh>
@@ -78,6 +80,7 @@ beyond(bool help = false)
 }
 
 static boost::optional<elle::Version> compatibility_version;
+static std::unique_ptr<std::ofstream> critical_log_stream;
 
 class CommandLineError
   : public elle::Error
@@ -644,6 +647,7 @@ namespace infinit
               ("compatibility-version", value<std::string>(),
                "force compatibility version")
               ("version,v", "display version")
+              ("critical-log", "Path to critical log file, none to disable")
             ;
             if (!disable_as_arg || !disable_as_arg.get())
             {
@@ -670,6 +674,42 @@ namespace infinit
               {
                 std::cout << version_describe << std::endl;
                 throw elle::Exit(0);
+              }
+              auto critical_log_file = xdg_state_home() / "critical.log";
+              bool critical_log_disabled = false;
+              if (vm.count("critical-log"))
+              {
+                critical_log_file = vm["critical-log"].as<std::string>();
+                critical_log_disabled =
+                  (vm["critical-log"].as<std::string>() == "none");
+              }
+              if (!critical_log_disabled)
+              {
+                ELLE_TRACE("Initializing critical logger at %s",
+                           critical_log_file);
+                boost::system::error_code erc;
+                boost::filesystem::create_directories(
+                  critical_log_file.parent_path());
+                std::unique_ptr<elle::log::CompositeLogger> cl
+                  = elle::make_unique<elle::log::CompositeLogger>();
+                auto clptr = cl.get();
+                auto prev_logger = elle::log::logger(std::move(cl));
+                critical_log_stream.reset(new std::ofstream(
+                  critical_log_file.string(),
+                  std::fstream::app | std::fstream::out));
+                boost::optional<std::string> env_log_level;
+                if (elle::os::inenv("ELLE_LOG_LEVEL"))
+                  env_log_level = elle::os::getenv("ELLE_LOG_LEVEL");
+                elle::os::unsetenv("ELLE_LOG_LEVEL");
+                std::unique_ptr<elle::log::Logger> crit
+                 = elle::make_unique<elle::log::TextLogger>(
+                   *critical_log_stream, "LOG", false, true,
+                   false, true, false, true, true);
+                if (env_log_level)
+                  elle::os::setenv("ELLE_LOG_LEVEL", *env_log_level, true);
+                clptr->loggers().push_back(std::move(crit));
+                // log to crit only goes here
+                clptr->loggers().push_back(std::move(prev_logger));
               }
               bool help = vm.count("help");
               script_mode = vm.count("script");
