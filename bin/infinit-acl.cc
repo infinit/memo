@@ -84,9 +84,9 @@ collate_users(OptVecStr const& combined,
 
 static
 std::string
-public_key_from_username(std::string const& username)
+public_key_from_username(std::string const& username, bool fetch)
 {
-  auto user = ifnt.user_get(username);
+  auto user = ifnt.user_get(username, fetch);
   elle::Buffer buf;
   {
     elle::IOStream ios(buf.ostreambuf());
@@ -282,7 +282,8 @@ set_action(std::string const& path,
            bool inherit,
            bool disinherit,
            bool verbose,
-           bool fallback_xattrs)
+           bool fallback_xattrs,
+           bool fetch)
 {
   if (verbose)
     std::cout << "processing " << path << std::endl;
@@ -354,7 +355,7 @@ set_action(std::string const& path,
       {
         try
         {
-          set_attribute(public_key_from_username(username));
+          set_attribute(public_key_from_username(username, fetch));
         }
         catch (InvalidArgument const&)
         {
@@ -454,6 +455,7 @@ COMMAND(set)
     throw elle::Error("--traverse can only be used with mode 'r', 'rw'");
   bool verbose = flag(args, "verbose");
   bool fallback = flag(args, "fallback-xattrs");
+  bool fetch = flag(args, "fetch");
   // Don't do any operations before checking paths.
   for (auto const& path: paths)
   {
@@ -470,7 +472,7 @@ COMMAND(set)
   for (auto const& path: paths)
   {
     set_action(path, users, mode, omode, inherit, disinherit, verbose,
-               fallback);
+               fallback, fetch);
     if (traverse)
     {
       boost::filesystem::path working_path = boost::filesystem::absolute(path);
@@ -478,14 +480,14 @@ COMMAND(set)
       {
         working_path = working_path.parent_path();
         set_action(working_path.string(), users, "setr", "", false, false,
-                   verbose, fallback);
+                   verbose, fallback, fetch);
       }
     }
     if (recursive)
     {
       recursive_action(
         set_action, path, users, mode, omode, inherit, disinherit, verbose,
-        fallback);
+        fallback, fetch);
     }
   }
 }
@@ -496,7 +498,8 @@ group_add_remove(std::string const& path,
                  std::string const& group,
                  std::string const& object,
                  std::string const& action,
-                 bool fallback)
+                 bool fallback,
+                 bool fetch)
 {
   if (!object.length())
     throw CommandLineError("empty user or group name");
@@ -523,7 +526,7 @@ group_add_remove(std::string const& path,
     {
       try
       {
-        set_attr(public_key_from_username(name));
+        set_attr(public_key_from_username(name, fetch));
       }
       catch (elle::Error const& e)
       {
@@ -559,6 +562,7 @@ COMMAND(group)
   bool fallback = flag(args, "fallback-xattrs");
   std::string path = mandatory<std::string>(args, "path", "path in volume");
   enforce_in_mountpoint(path, fallback);
+  bool fetch = flag(args, "fetch");
   // Need to perform group actions on a directory in the volume.
   if (!boost::filesystem::is_directory(path))
     path = boost::filesystem::path(path).parent_path().string();
@@ -569,12 +573,12 @@ COMMAND(group)
   if (add)
   {
     for (auto const& obj: add.get())
-      group_add_remove(path, group, obj, "add", fallback);
+      group_add_remove(path, group, obj, "add", fallback, fetch);
   }
   if (rem)
   {
     for (auto const& obj: rem.get())
-      group_add_remove(path, group, obj, "remove", fallback);
+      group_add_remove(path, group, obj, "remove", fallback, fetch);
   }
   if (list)
   {
@@ -602,7 +606,7 @@ COMMAND(register_)
   bool fallback = flag(args, "fallback-xattrs");
   auto path = mandatory<std::string>(args, "path", "path to mountpoint");
   enforce_in_mountpoint(path, fallback);
-  auto user = ifnt.user_get(user_name);
+  auto user = ifnt.user_get(user_name, flag(args, "fetch"));
   auto passport = ifnt.passport_get(network.name, user_name);
   std::stringstream output;
   elle::serialization::json::serialize(passport, output, false);
@@ -619,6 +623,9 @@ main(int argc, char** argv)
   Mode::OptionDescription fallback_option = {
     "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
     "if system xattrs are not suppported"
+  };
+  Mode::OptionDescription fetch_option = {
+    "fetch", bool_switch(), "fetch users from " + beyond(true) +" if needed"
   };
   Mode::OptionDescription verbose_option = {
     "verbose", bool_switch(), "verbose output" };
@@ -657,6 +664,7 @@ main(int argc, char** argv)
           "add read permissions to parent directories" },
         fallback_option,
         verbose_option,
+        fetch_option,
       },
     },
     {
@@ -690,6 +698,7 @@ main(int argc, char** argv)
         { "path,p", value<std::string>(), "a path within the volume" },
         fallback_option,
         verbose_option,
+        fetch_option,
       },
     },
     {
@@ -703,6 +712,7 @@ main(int argc, char** argv)
         { "network,n", value<std::string>(), "name of the network"},
         { "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
           "if system xattrs are not suppported" },
+        fetch_option,
       },
     }
   };

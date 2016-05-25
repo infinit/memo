@@ -100,7 +100,7 @@ class Infinit(TemporaryDirectory):
   def drives_path(self):
     return '%s/drives' % self.data_home
 
-  def spawn(self, args, input = None, return_code = 0, env = {}):
+  def spawn(self, args, input = None, return_code = 0, env = {}, noscript=False):
     if isinstance(args, str):
       args = args.split(' ')
     if '/' not in args[0]:
@@ -125,7 +125,7 @@ class Infinit(TemporaryDirectory):
       env_['INFINIT_BEYOND'] = self.__beyond.domain
     env_.update(env)
     env_.update(self.__env)
-    if input is not None:
+    if input is not None and not noscript:
       args.append('-s')
     pretty = '%s %s' % (
       ' '.join('%s=%s' % (k, v) for k, v in env_.items()),
@@ -152,8 +152,8 @@ class Infinit(TemporaryDirectory):
     process.pretty = pretty
     return process
 
-  def run(self, args, input = None, return_code = 0, env = {}):
-    process = self.spawn(args, input, return_code, env)
+  def run(self, args, input = None, return_code = 0, env = {}, noscript=False):
+    process = self.spawn(args, input, return_code, env, noscript)
     out, err = process.communicate()
     process.wait()
     out = out.decode('utf-8')
@@ -243,7 +243,8 @@ class Emailer:
 
 class Beyond():
 
-  def __init__(self, beyond_args = {}, disable_authentication = False):
+  def __init__(self, beyond_args = {}, disable_authentication = False,
+               bottle_args = {}):
     super().__init__()
     self.__beyond_args = beyond_args
     self.__advance = timedelta()
@@ -255,6 +256,7 @@ class Beyond():
     self.__gcs = FakeGCS()
     self.__hub_delegate_user = None
     self.__disable_authentication = disable_authentication
+    self.__bottle_args = bottle_args
 
   def __enter__(self):
     couchdb = self.__couchdb.__enter__()
@@ -275,10 +277,12 @@ class Beyond():
         **args
       )
       setattr(self.__beyond, '_Beyond__now', self.now)
-      self.__app = infinit.beyond.bottle.Bottle(
-        beyond = self.__beyond,
-        gcs = self.__gcs
-      )
+      bargs = {
+        'beyond': self.__beyond,
+        'gcs': self.__gcs
+      }
+      bargs.update(self.__bottle_args)
+      self.__app = infinit.beyond.bottle.Bottle(**bargs)
       if self.__disable_authentication:
         self.__app.authenticate = lambda x: None
       self.emailer = Emailer()

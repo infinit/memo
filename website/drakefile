@@ -83,6 +83,7 @@ def configure(
     'templates/pages/docs/src/markdown/upgrading.md',
     'templates/pages/docs/src/markdown/environment_variables.md',
     'templates/pages/docs/src/markdown/technology.md',
+    'templates/pages/docs/src/markdown/ldap.md',
   )
   changelog = drake.node(
     'ChangeLog.html',

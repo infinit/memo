@@ -26,7 +26,7 @@ class BeyondChecker(BaseChecker):
       # It isn't a simple name, can't deduce what function it is.
       return
     if node.func.name == 'Response':
-      if len(node.args) != 2:
+      if len(node.args) not in [2,3]:
         self.add_message('E4200',
                          args = 'Response not passed two arguments',
                          node = node)

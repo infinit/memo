@@ -805,15 +805,17 @@ namespace infinit
         }
         else if (special->find("register.") == 0)
         {
-          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
-            this->_owner.block_store());
-          auto name = special->substr(9);
-          std::stringstream s(value);
-          auto p = elle::serialization::json::deserialize<model::doughnut::Passport>(s, false);
-          model::doughnut::UB ub(dht.get(), name, p, false);
-          model::doughnut::UB rub(dht.get(), name, p, true);
-          this->_owner.block_store()->store(ub,  model::STORE_INSERT, model::make_drop_conflict_resolver());
-          this->_owner.block_store()->store(rub, model::STORE_INSERT, model::make_drop_conflict_resolver());
+          umbrella([&] {
+            auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+              this->_owner.block_store());
+            auto name = special->substr(9);
+            std::stringstream s(value);
+            auto p = elle::serialization::json::deserialize<model::doughnut::Passport>(s, false);
+            model::doughnut::UB ub(dht.get(), name, p, false);
+            model::doughnut::UB rub(dht.get(), name, p, true);
+            this->_owner.block_store()->store(ub,  model::STORE_INSERT, model::make_drop_conflict_resolver());
+            this->_owner.block_store()->store(rub, model::STORE_INSERT, model::make_drop_conflict_resolver());
+          });
         }
         else if (*special == "fsck.deref")
         {

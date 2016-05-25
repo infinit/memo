@@ -83,11 +83,15 @@ class Bottle(bottle.Bottle):
       gcs = None,
       production = True,
       force_admin = False,
+      ldap_server = None,
+      admin_users = [],
   ):
     super().__init__(catchall = not production)
     self.__beyond = beyond
     self.__ban_list = ['demo', 'root', 'admin']
     self.__force_admin = force_admin
+    self.__ldap_server = ldap_server
+    self.__admin_users = admin_users
     self.install(bottle.CertificationPlugin())
     self.install(ResponsePlugin())
     self.install(JsongoPlugin())
@@ -111,6 +115,8 @@ class Bottle(bottle.Bottle):
     self.route('/users/<name>', method = 'GET')(self.user_get)
     self.route('/users/<name>', method = 'PUT')(self.user_put)
     self.route('/users/<name>', method = 'DELETE')(self.user_delete)
+    self.route('/ldap_users/<name>', method = 'GET')(self.user_from_ldap_dn)
+    self.route('/deleted_users/<name>', method= 'GET')(self.user_deleted_get)
 
     # Email confirmation
     self.route('/users/<name>/confirm_email',
@@ -207,6 +213,18 @@ class Bottle(bottle.Bottle):
   def check_admin(self):
     if self.__force_admin:
       return
+    if bottle.request.auth is not None and self.__ldap_server is not None:
+      (name, password) = bottle.request.auth
+      if name in self.__admin_users:
+        try:
+          user = self.user_from_name(name)
+          import ldap3
+          server = ldap3.Server(self.__ldap_server)
+          c = ldap3.Connection(server, user.ldap_dn, password, auto_bind=True)
+          c.extend.standard.who_am_i()
+          return
+        except:
+          pass
     if not hasattr(bottle.request, 'certificate'):
       raise exceptions.MissingCertificate()
     u = bottle.request.certificate
@@ -233,14 +251,15 @@ class Bottle(bottle.Bottle):
       self.check_admin()
     except exceptions.MissingCertificate:
       raise Response(401, {
-        'error': 'admin',
+        'error': 'auth/admin',
         'reason': 'administrator privilege required',
       })
     except exceptions.UserNotAdmin as e:
       raise Response(401, {
-        'error': 'admin',
+        'error': 'auth/admin',
         'reason': 'you (%s) are not an administrator' % e.user,
-      })
+      },
+      {'WWW-Authenticate': 'Basic realm="beyond"'})
 
   def __not_found(self, type, name):
     return Response(404, {
@@ -390,6 +409,15 @@ class Bottle(bottle.Bottle):
         raise self.__user_not_found(email)
       return []
 
+  def user_from_ldap_dn(self, name, throws = True):
+    try:
+      res = self.__beyond.user_by_ldap_dn(name)
+      return res.json()
+    except User.NotFound as e:
+      if throws:
+        raise self.__user_not_found(name)
+      return None
+
   def user_put(self, name):
     try:
       json = bottle.request.json
@@ -442,7 +470,8 @@ class Bottle(bottle.Bottle):
   def user_email_confirmed(self, name, email = None):
     user = self.user_from_name(name = name)
     email = email or user.email
-    if user.email is None or user.emails.get(email) == True:
+    if user.email is None or user.emails.get(email) == True \
+      or not self.__beyond.validate_email_address:
       raise Response(204, {})
     else:
       raise Response(404, {
@@ -476,6 +505,13 @@ class Bottle(bottle.Bottle):
 
   def user_get(self, name):
     return self.user_from_name(name = name).json()
+
+  def user_deleted_get(self, name):
+    self.require_admin()
+    try:
+      return self.__beyond.user_deleted_get(name)
+    except infinit.beyond.User.NotFound:
+      raise self.__not_found('deleted user', name)
 
   def user_delete(self, name):
     purge = True if bottle.request.query.purge else False
@@ -540,19 +576,39 @@ class Bottle(bottle.Bottle):
       })
     try:
       user = self.__beyond.user_get(name)
-      if user.password_hash is None:
-        raise Response(404,
-                     {
-                       'error': 'users/not_in', # Better name.
-                       'reason': 'User doesn\'t use the hub to login',
-                       'name': name
-                     })
-      if json['password_hash'] != user.password_hash:
-        raise Response(403,
+      if user.ldap_dn:
+        if json.get('password', None) is None:
+          raise Response(403,
+                         {
+                           'error': 'users/invalid_password',
+                           'reason': 'password missing for LDAP login',
+                         })
+        try:
+          import ldap3
+          server = ldap3.Server(self.__ldap_server)
+          c = ldap3.Connection(server, user.ldap_dn, json['password'],
+                               auto_bind=True)
+          c.extend.standard.who_am_i()
+        except Exception as e:
+          raise Response(403,
+                         {
+                           'error': 'user/invalid_password',
+                           'reason': str(e),
+                         })
+      else:
+        if user.password_hash is None:
+          raise Response(404,
                        {
-                         'error': 'users/invalid_password',
-                         'reason': 'password do not match',
+                         'error': 'users/not_in', # Better name.
+                         'reason': 'User doesn\'t use the hub to login',
+                         'name': name
                        })
+        if json['password_hash'] != user.password_hash:
+          raise Response(403,
+                         {
+                           'error': 'users/invalid_password',
+                           'reason': 'password do not match',
+                         })
       user = user.json(private = True)
       if 'private_key' in user:
         user['private_key'] = self.decrypt_key(user['private_key'])

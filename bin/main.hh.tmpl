@@ -455,6 +455,11 @@ beyond_push(std::string const& where,
             bool report = true,
             bool beyond_error = false); // FIXME: Remove when migration done.
 
+template<typename T>
+T
+beyond_fetch(std::string const& type,
+             std::string const& name);
+
 namespace infinit
 {
   typedef infinit::AWSCredentials AWSCredentials;
@@ -849,13 +854,15 @@ namespace infinit
     User(std::string const& name,
          cryptography::rsa::KeyPair const& keys,
          boost::optional<std::string> email = {},
-         boost::optional<std::string> fullname = {})
+         boost::optional<std::string> fullname = {},
+         boost::optional<std::string> ldap_dn = {})
       : name(name)
       , public_key(keys.K())
       , private_key(keys.k())
       , email(email)
       , fullname(fullname)
       , password_hash()
+      , ldap_dn(ldap_dn)
     {
       check_name(this->name, true);
     }
@@ -868,6 +875,7 @@ namespace infinit
       , email(s.deserialize<boost::optional<std::string>>("email"))
       , fullname(s.deserialize<boost::optional<std::string>>("fullname"))
       , password_hash()
+      , ldap_dn(s.deserialize<boost::optional<std::string>>("ldap_dn"))
     {
       check_name(this->name, true);
     }
@@ -893,6 +901,7 @@ namespace infinit
       s.serialize("password_hash", this->password_hash);
       s.serialize("private_key", this->private_key);
       s.serialize("public_key", this->public_key);
+      s.serialize("ldap_dn", this->ldap_dn);
     }
 
     static
@@ -925,6 +934,8 @@ namespace infinit
     boost::optional<std::string> fullname;
     boost::optional<std::string> avatar_path;
     boost::optional<std::string> password_hash;
+    boost::optional<std::string> password;
+    boost::optional<std::string> ldap_dn;
   };
 
   struct Network
@@ -1549,14 +1560,26 @@ namespace infinit
     }
 
     User
-    user_get(boost::optional<std::string> user = {}) const
+    user_get(boost::optional<std::string> user = {},
+             bool beyond_fallback = false) const
     {
       if (!user)
         user = elle::system::username();
-      boost::filesystem::ifstream f;
-      this->_open_read(f, this->_user_path(user.get()), user.get(), "user");
-      elle::serialization::json::SerializerIn s(f, false);
-      return s.deserialize<User>();
+      try
+      {
+        boost::filesystem::ifstream f;
+        this->_open_read(f, this->_user_path(user.get()), user.get(), "user");
+        elle::serialization::json::SerializerIn s(f, false);
+        return s.deserialize<User>();
+      }
+      catch (MissingLocalResource const& e)
+      {
+        if (!beyond_fallback)
+          throw;
+        ELLE_LOG("User %s not found locally, trying on %s", user, beyond(true));
+        auto u = beyond_fetch<User>("user", *user);
+        return u;
+      }
     }
 
     std::vector<User>
@@ -2425,18 +2448,18 @@ get_username(boost::program_options::variables_map const& args,
 
 DAS_MODEL_FIELDS(
   infinit::User,
-  (name, email, fullname, avatar_path, public_key, private_key, password_hash));
+  (name, email, fullname, avatar_path, public_key, private_key, password_hash, ldap_dn));
 
 namespace infinit
 {
-  DAS_MODEL_DEFINE(User, (name, fullname, avatar_path,  public_key), DasPublicUser);
-  DAS_MODEL_DEFINE(User, (name, email, avatar_path, fullname, public_key, private_key),
+  DAS_MODEL_DEFINE(User, (name, fullname, avatar_path,  public_key, ldap_dn), DasPublicUser);
+  DAS_MODEL_DEFINE(User, (name, email, avatar_path, fullname, public_key, ldap_dn, private_key),
                    DasUser);
   // Publication to the hub.
-  DAS_MODEL_DEFINE(User, (name, email, fullname, public_key),
+  DAS_MODEL_DEFINE(User, (name, email, fullname, public_key, ldap_dn),
                    DasPublicUserPublish);
   DAS_MODEL_DEFINE(
-    User, (name, email, fullname, public_key, private_key, password_hash),
+    User, (name, email, fullname, public_key, private_key, ldap_dn, password_hash),
     DasPrivateUserPublish);
 }
 
@@ -3122,6 +3145,11 @@ reactor::Thread::unique_ptr
 make_stat_update_thread(infinit::User const& self,
                         infinit::Network& network,
                         infinit::model::doughnut::Doughnut& model);
+#ifdef INFINIT_MACOSX
+# define SXA_EXTRA ,0
+#else
+# define SXA_EXTRA
+#endif
 
 static
 Mode::OptionDescription option_cache(
