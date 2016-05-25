@@ -3,6 +3,25 @@
 Automatic replication of under-replicated data blocks and network
 performance improvement.
 
+## [0.6.1]
+
+### Changed
+
+- Make Kelips the default overlay.
+- Fix conflict handling on file removal.
+
+### Fixed
+
+- Expect mode to be the first argument of all binaries, as any
+  prepended argument was previously ignored.
+- Enable to set ACLs on symlinks.
+
+### Removed
+
+- Remove experimental Kademlia overlay.
+- Remove testing Stonehenge overlay.
+
+
 ## [0.6.0]
 
 ### Added
