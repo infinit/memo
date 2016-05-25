@@ -778,8 +778,9 @@ section.doc {
       padding: 15px 50px 15px 20px; border-radius: 5px; color: #f8f8f2;
       margin-left: 0;
     }
-    &.alternate code, &.ribbon code { min-height: 48px; }
-    &.alternate code { background: #2B3F63; }
+    &.device2 code, &.device1 code, &.device3 code { min-height: 48px; }
+    &.device2 code { background: #2B3F63; }
+    &.device3 code { background: #632B2B; }
   }
 
   pre > div {
@@ -806,14 +807,25 @@ section.doc {
     border-left: 3px solid transparent; border-right: 3px solid darken(#808080, 20%);
     border-bottom: 3px solid transparent; border-top: 3px solid darken(#808080, 20%)
   }
-  pre.alternate > div span { background: #799AD4; }
-  pre.alternate > div span::before {
+  pre.device2 > div span { background: #799AD4; }
+  pre.device3 > div span { background: #D47979; }
+
+  pre.device2 > div span::before {
     border-left: 3px solid darken(#799AD4, 20%);
     border-top: 3px solid darken(#799AD4, 20%);
   }
-  pre.alternate > div span::after {
+  pre.device2 > div span::after {
     border-right: 3px solid darken(#799AD4, 20%);
     border-top: 3px solid darken(#799AD4, 20%);
+  }
+
+  pre.device3 > div span::before {
+    border-left: 3px solid darken(#D47979, 20%);
+    border-top: 3px solid darken(#D47979, 20%);
+  }
+  pre.device3 > div span::after {
+    border-right: 3px solid darken(#D47979, 20%);
+    border-top: 3px solid darken(#D47979, 20%);
   }
 
   img { max-width: 100%; }
