@@ -9,7 +9,7 @@
     <div id="menu-anchor"></div>
 
     <ul class="menu">
-      <li class="notice"><span>Through this guide, it should take you around <strong>5 minutes</strong> to deploy your own infrastructure!</span></li>
+      <li class="notice"><span>Through this guide, it should take you around <strong>10 minutes</strong> to deploy your own infrastructure!</span></li>
       <li class="installation"><a href="#installation">1. Installation</a></li>
       <li class="basic-test"><a href="#basic-test">2. Basic Test</a></li>
       <li class="create-infrastructure">
@@ -20,7 +20,8 @@
           <li class="create-a-network"><a href="#create-a-network">Create a network</a></li>
           <li class="create-a-volume"><a href="#create-a-volume">Create a volume</a></li>
           <li class="mount-the-volume"><a href="#mount-the-volume">Mount the volume</a></li>
-          <li class="access-from-another-machine"><a href="#access-from-another-machine">Access volume</a></li>
+          <li class="access-from-another-machine"><a href="#access-from-another-machine">Access the volume</a></li>
+          <li class="share-the-volume-with-another-user"><a href="#share-the-volume-with-another-user">Share the volume</a></li>
         </ul>
       </li>
       <li class="go-further"><a href="#go-further">4. Go Further</a></li>
@@ -213,7 +214,7 @@ bin/    lib/    share/</code></pre>
 
     <p>In the following, we are going to run the <em>infinit-volume</em> command by prefixing it with the environment variable <code>INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home</code> to tell the command where to look for the configuration files required for this test, in this case in the <code>share/</code> directory that is next to the binaries and contains the configuration file for this <em>demo</em> volume.</p>
 
-    <pre><code>$> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+    <pre><code>$> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ${demo_mountpoint} --publish --cache
 ...
 Fetched endpoints for "infinit/demo".
 Running network "infinit/demo".
@@ -319,7 +320,7 @@ Remotely saved volume "alice/my-volume".
 
     <p>Let’s access this volume by mounting it as easily as any other filesystem:</p>
 
-    <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-my-volume/ --async --cache --publish
+    <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-alice-volume/ --async --cache --publish
 Fetched endpoints for "alice/my-network".
 Running network "alice/my-network".
 Remotely saved endpoints for "alice/my-network".
@@ -329,10 +330,10 @@ Running volume "alice/my-volume".
 
     <p><em><strong>NOTE:</strong> This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit <code>CTRL^C</code> or interrupt the process. You should wait until the end of the guide to stop this process though.</em></p>
 
-    <p>That’s it! You can now create, list and access files from the mount point <code>~/mnt-my-volume</code>. Try creating a file right now:
+    <p>That’s it! You can now create, list and access files from the mount point <code>~/mnt-alice-volume</code>. Try creating a file right now:
 
-    <pre class="ribbon"><div><span>Device A</span></div><code>$> echo "everything is" > ~/mnt-my-volume/awesome.txt
-$> cat ~/mnt-my-volume/awesome.txt
+    <pre class="ribbon"><div><span>Device A</span></div><code>$> echo "everything is" > ~/mnt-alice-volume/awesome.txt
+$> cat ~/mnt-alice-volume/awesome.txt
 everything is</code></pre>
 
     <h3 id="access-from-another-machine">Access from another machine</h3>
@@ -374,25 +375,117 @@ Fetched volume "alice/my-volume".
 
     <p>Finally, the volume can be mounted on device B as simply as on device A:</p>
 
-    <pre class="alternate"><div><span>Device B</span></div><code>$> infinit-volume --mount --mountpoint ~/mnt-my-volume2/ --as alice --name my-volume --async --cache --publish
+    <pre class="alternate"><div><span>Device B</span></div><code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-alice-volume/ --async --cache --publish
 Fetch endpoints for "alice/my-network".
-Running network “alice/my-network”.
+Running network "alice/my-network".
 Running volume "alice/my-volume".
 ...
 </code></pre>
 
     <p>It is now time to check if the file you created on device A is synchronized with device B:</p>
 
-    <pre class="alternate"><div><span>Device B</span></div><code>$> ls ~/mnt-my-volume2/
-    awesome.txt
-$> cat ~/mnt-my-volume/awesome.txt
+    <pre class="alternate"><div><span>Device B</span></div><code>$> ls ~/mnt-alice-volume/
+awesome.txt
+$> cat ~/mnt-alice-volume/awesome.txt
 everything is
 </code></pre>
 
-    <p>That’s it, you’ve created a filesystem that you quickly connected to with two devices, without having to go through a complicated administrative process.</p>
+    <p>That’s it, you’ve created a filesystem that you quickly connected to two devices, without having to go through a complicated administrative process.</p>
+
+    <h3 id="share-the-volume-with-another-user">Share the volume</h3>
+
+    <p>We can now proceed a step further by allowing another user to connect to Alice's storage infrastructure and access/edit the files in the volume <code>alice/my-volume</code>.</p>
+
+    <p>First, let us create another user, unconventially named Bob, on a completely new device C. As mentioned earlier, if you don't have another device available, you can simulate one through the use of the <a href="${route('doc_environment_variables')}#infinit_home"><code>INFINIT_HOME</code></a> environment variable.</em></p>
+
+    <pre class="alternate"><div><span>Device C</span></div><code>$> infinit-user --signup --name bob --email bob@company.com --fullname "Bob"
+Generating RSA keypair.
+Remotely saved user "bob".
+</code></pre>
+
+    <p>In order for another user (e.g Bob) to be able to connect to someone else's storage infrastructure, a passport is required. Only the infrastructure owner, in this case Alice, can issue such passports through the use of the <em>infinit-passport</em> binary.</p>
+
+    <p>Back to device A and Alice to generate a passport for Bob. Note that in order to reference another user by its name, for generating a passport for instance, you first need to retrieve his/her user public identity from the Hub (or otherwise).</p>
+
+    <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-user --fetch --as alice --name bob
+Fetched user "bob".
+$> infinit-passport --create --as alice --network my-network --user bob --push
+Locally created passport "alice/my-network: bob".
+Remotely saved passport "alice/my-network: bob".
+</code></pre>
+
+    <p>Now that a passport has been issued, Bob can very easily retrieve it from the Hub in order to join Alice's storage network. For this, Bob must fetch Alice's public user identity, Alice's <code>alice/my-network</code> network descriptor along with the freshly issued passport:</p>
+
+    <pre class="alternate"><div><span>Device C</span></div><code>$> infinit-user --fetch --as bob --name alice
+Fetched user "alice".
+$> infinit-network --fetch --as bob --name alice/my-network
+Fetched network "alice/my-network".
+$> infinit-passport --fetch --as bob --network alice/my-network
+Fetched passport for "alice/my-network".
+</code></pre>
+
+    <p>With all the pieces fetched from the Hub, Bob can now link his current device C to Alice's storage network <code>alice/my-network</code>::</p>
+
+    <pre class="alternate"><div><span>Device C</span></div><code>$> infinit-network --link --as bob --name alice/my-network
+Linked device to network "alice/my-network".
+</code></pre>
+
+    <p>Once his device linked to the network, Bob can now mount Alice's volume. Note that the volume descriptor <code>alice/my-volume</code> must first be retrieved from the Hub in order for it to be mounted:</p>
+
+    <pre class="alternate"><div><span>Device C</span></div><code>$> infinit-volume --fetch --as bob --name alice/my-volume
+Fetched volume "alice/my-volume".
+$> infinit-volume --mount --as bob --name alice/my-volume --mountpoint ~/mnt-alice-volume/ --async --cache --publish
+Fetch endpoints for "alice/my-network".
+Running network "alice/my-network".
+Running volume "alice/my-volume".
+...
+</code></pre>
+
+    <p>Bob can now try to access the mounted volume as shown below:</p>
+
+    <pre class="alternate"><div><span>Device C</span></div><code>$> ls ~/mnt-alice-volume/
+ls: ~/mnt-alice-volume/: Permission denied
+</code></pre>
+
+    <p>As you can see, Bob cannot access Alice's volume because he has not been granted the permission to browse the root directory of <code>alice/my-volume</code>. Indeed, Infinit provides two layers of protections: passports prevent unauthorized computers to communicate with the servers of your storage infrastructure while an access control mechanism is provided to authorize other users to access/modify specific files and directories.</p>
+
+    <p>This lack of permission can be verified on Alice's device A, through the <code>infinit-acl</code> binary which can be used for access control purposes:</p>
+
+    <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-acl --list --path ~/mnt-alice-volume/
+~/mnt-alice-volume/:
+        alice: rw
+</code></pre>
+
+    <p>For Bob to access the file <code>awesome.txt</code> located in the volume, Alice needs to grant him access on both the root directory and the file itself:</p>
+
+    <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-acl --set --mode r --user bob --path ~/mnt-alice-volume/
+$> infinit-acl --set --mode r --user bob --path ~/mnt-alice-volume/awesome.txt
+$> infinit-acl --list --path ~/mnt-alice-volume/ --path ~/mnt-alice-volume/awesome.txt
+~/mnt-alice-volume/:
+  inherit: no
+        alice: rw
+        bob: r
+
+~/mnt-alice-volume/awesome.txt:
+        alice: rw
+        bob: r
+</code></pre>
+
+    <p><em><strong>NOTE:</strong> One could have relied on the <code>--traverse</code> option to grant read permission on all the directories leading to the target object. In other words, the following would have achieved the same result <code>$> infinit-acl --set --mode r --user bob --traverse --path ~/mnt-alice-volume/awesome.txt</code>.</em></p>
+
+    <p>Bob should now be able to browse the volume's root directory and read its file. Note however that he should not be able to modify it since Alice did not grant Bob the permission to write the file:</p>
+
+    <pre class="alternate"><div><span>Device C</span></div><code>$> infinit-acl --list --path ~/mnt-alice-volume/awesome.txt
+~/mnt-alice-volume/awesome.txt:
+        alice: rw
+        bob: r
+$> cat ~/mnt-alice-volume/awesome.txt
+everything is
+$> echo "or not" > ~/mnt-alice-volume/awesome.txt
+zsh: permission denied: ~/mnt-alice-volume/awesome.txt
+</code></pre>
 
     <p>Download full shell script: <a class="external" href="${url('scripts/get-started.sh')}"><img src="${url('images/icons/external-link.png')}">get_started.sh</a>.</p>
-
 
     <h2 id="go-further">4. Go Further</h2>
 
@@ -400,7 +493,7 @@ everything is
     <strong>Notice:</strong> Some features may not be entirely developed yet, please have a look at <a href="${route('doc_roadmap')}">our roadmap</a> to follow our advancement. You can also subscribe to <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">our newsletter</a> to get notified of our upcoming features.
     </blockquote>
 
-    <p>You can now invite other users to join the network, to contribute additional storage and/or share files and collaborate. Take a look at the <a href="${route('doc_deployments')}">examples of deployments</a> or the <a href="${route('doc_reference')}">reference documentation</a> to learn how to add additional storage, add more nodes, invite friends and configure the network to be more resilient.</p>
+    <p>You can now <a href="/documentation/reference#create-a-passport">authorize more users</a> to connect to the network, to <a href="/documentation/reference#link-a-device-to-a-network">contribute additional storage i.e scale up/out</a>, make the network resilient through <a href="/documentation/reference#create-a-network">redundancy</a> and <a href="/documentation/reference#drive">invite non-tech-savvy users to join drives</a> through a <a href="/drive">graphical user interface</a>. You can also keep reading the Infinit documentation through examples of deployments and/or the reference documentation:</p>
 
     <div>
       <a class="go_deployments" href="${route('doc_deployments')}">

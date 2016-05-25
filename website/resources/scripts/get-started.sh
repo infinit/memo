@@ -7,7 +7,15 @@
 #! /bin/bash
 
 export ELLE_LOG_TIME=1
-export ELLE_LOG_LEVEL="infinit.model.*:DEBUG,infinit.filesystem*:DEBUG"
+export ELLE_LOG_PID=1
+export ELLE_LOG_LEVEL="infinit.overlay*:DEBUG,infinit.model*:DEBUG,infinit.filesystem*:DEBUG,reactor.filesystem*:DEBUG,athena*:DEBUG"
+
+# ---------- globals ---------------------------------------------------------
+
+ROLE_CLIENT="Client"
+ROLE_SERVER="Server"
+ROLE_CLIENT_SERVER="Client/Server"
+ROLE_SERVER_CLIENT="${ROLE_CLIENT_SERVER}"
 
 # ---------- output ----------------------------------------------------------
 
@@ -30,6 +38,21 @@ oko()
   fi
 }
 
+http_request()
+{
+  uri="${1}"
+
+  curl -s "${1}"
+}
+
+json_get()
+{
+  document="${1}"
+  action="${2}"
+
+  echo ${document} | python -c "import json,sys;object=json.load(sys.stdin);${action}"
+}
+
 # ---------- utils -----------------------------------------------------------
 
 random()
@@ -46,6 +69,43 @@ arrayfy()
   array=( $(cat ${path}) )
   for i in ${array[@]} ; do echo $i ; done
   IFS=${_ifs}
+}
+
+UNIQUE_TRUE=1
+UNIQUE_FALSE=0
+array_combine()
+{
+  unique="${1}"
+  if [ ${unique} -eq ${UNIQUE_TRUE} ] ; then
+    _sort_options="-du"
+  else
+    _sort_options="-d"
+  fi
+  shift
+  _ifs="$IFS"
+  IFS=$'\n'
+  array=($(for item in ${@} ; do _array=("${!item}") ; for _item in "${_array[@]}" ; do echo "${_item}" ; done ; done | sort ${_sort_options}))
+  IFS="${_ifs}"
+  for i in ${array[@]} ; do
+    echo ${i}
+  done
+}
+
+array_compare()
+{
+  arrayA=("${!1}")
+  arrayB=("${!2}")
+
+  if [ ${#arrayA[@]} -ne ${#arrayB[@]} ] ; then
+    echo "1"
+    return
+  fi
+
+  _arrayA=$(echo ${arrayA[*]})
+  _arrayB=$(echo ${arrayB[*]})
+
+  [[ "${_arrayA}" = "${_arrayB}" ]]
+  echo ${?}
 }
 
 # ---------- log -------------------------------------------------------------
@@ -102,6 +162,21 @@ set_home()
 
 # ---------- functionalities -------------------------------------------------
 
+fqn()
+{
+  user="${1}"
+  object="${2}"
+
+  set +e
+  echo "${object}" | grep -- "/" >/dev/null 2>&1
+  if [ ${?} -eq 0 ] ; then
+    echo "${object}"
+  else
+    echo "${user}/${object}"
+  fi
+  set -e
+}
+
 create_user()
 {
   name="${1}"
@@ -150,7 +225,24 @@ run_network()
 
   pid=$(execute_background "infinit-network --run --as ${as} --name ${name} --endpoints-file ${endpoints_path} ${_peers} ${options}")
 
-  sleep 10
+  # wait for the endpoints to be published
+  set +e
+  echo "${options}" | grep -- "--publish\|--push-endpoints\|--push" >/dev/null 2>&1
+  if [ ${?} -eq 0 ] ; then
+    _fqn=$(fqn "${as}" "${name}")
+    while true ; do
+      _network=$(http_request "https://beyond.infinit.io/networks/${_fqn}")
+      _endpoints=$(json_get "${_network}" "print(len(object['endpoints']))")
+      if [ "${_endpoints}" != "0" ] ; then
+        break
+      fi
+      sleep 2
+    done
+  fi
+  set -e
+
+  # XXX
+  sleep 30
 
   echo "${pid}"
   echo "${endpoints_path}"
@@ -183,7 +275,39 @@ mount_volume()
 
   pid=$(execute_background "infinit-volume --mount --as ${as} --name ${name} --mountpoint ${mount_point} --endpoints-file ${endpoints_path} ${_peers} ${options}")
 
-  sleep 10
+  # wait for the endpoints to be published, if hub-assisted
+  set +e
+  echo "${options}" | grep -- "--publish\|--push-endpoints\|--push" >/dev/null 2>&1
+  if [ ${?} -eq 0 ] ; then
+    _volume_path=$(export_volume "${as}" "${name}")
+    track_file "${_volume_path}"
+    _volume=$(cat "${_volume_path}")
+    _network_name=$(json_get "${_volume}" "print(object['network'])")
+    _fqn=$(fqn "${as}" "${_network_name}")
+    while true ; do
+      _network=$(http_request "https://beyond.infinit.io/networks/${_fqn}")
+      _endpoints=$(json_get "${_network}" "print(len(object['endpoints']))")
+      if [ "${_endpoints}" != "0" ] ; then
+        break
+      fi
+      sleep 2
+    done
+  fi
+  set -e
+
+  # wait for the volume to be mounted
+  set +e
+  while true ; do
+    mount | grep -- "${mount_point}" >/dev/null 2>&1
+    if [ ${?} -eq 0 ] ; then
+      break
+    fi
+    sleep 2
+  done
+  set -e
+
+  # XXX
+  sleep 30
 
   echo "${pid}"
   echo "${endpoints_path}"
@@ -343,6 +467,18 @@ grant_access()
   target="${3}"
 
   execute_foreground "infinit-acl --set --mode ${mode} --path ${path} --user ${target}"
+}
+
+storage_blocks()
+{
+  user="${1}"
+  storage="${2}"
+
+  storage_path=$(json_get $(infinit-storage --export --as "${user}" --name "${storage}") "print(object['path'])")
+
+  for block in $(find ${storage_path} -type f) ; do
+    basename ${block}
+  done
 }
 
 # ---------- hub -------------------------------------------------------------
@@ -599,6 +735,11 @@ trap clean EXIT
 # ---------- arguments -------------------------------------------------------
 
 if ! [ -z ${1} ] ; then
+  if ! [ -f ${1}/infinit-user ] ; then
+    echo ""
+    echo "[WARNING] ${1} does not seem to contain the binary infinit-user etc."
+    echo ""
+  fi
   export PATH="${1}:${PATH}"
 fi
 
@@ -613,7 +754,8 @@ fi
 
 # ---------- globals ---------------------------------------------------------
 
-USER_NAME="alice.$(random)"
+USER_NAME_A="alice.$(random)"
+USER_NAME_B="bob.$(random)"
 
 # ---------- device A --------------------------------------------------------
 
@@ -624,12 +766,15 @@ echo "[Device A] Home location: ${infinit_home_A}"
 infinit_home_B=$(mktemp -d)
 track_directory "${infinit_home_B}"
 echo "[Device B] Home location: ${infinit_home_B}"
+infinit_home_C=$(mktemp -d)
+track_directory "${infinit_home_C}"
+echo "[Device C] Home location: ${infinit_home_C}"
 
 # create user
 set_home "${infinit_home_A}"
-echo "[Device A] Create user: ${USER_NAME}"
-create_user "${USER_NAME}" "--email nobody+${USER_NAME}@infinit.sh --push"
-track_user "${infinit_home_A}" "${USER_NAME}"
+echo "[Device A] Create user: ${USER_NAME_A}"
+create_user "${USER_NAME_A}" "--email nobody+${USER_NAME_A}@infinit.sh --push"
+track_user "${infinit_home_A}" "${USER_NAME_A}"
 
 # create storage
 storage_path_A=$(mktemp -d)
@@ -640,25 +785,23 @@ create_filesystem_storage "local" "1GB" "${storage_path_A}"
 # create network
 echo "[Device A] Create network: my-network"
 storages_A=("local")
-create_network "${USER_NAME}" "my-network" storages_A[@] "--kelips --push"
-track_network "${infinit_home_A}" "${USER_NAME}" "my-network"
+create_network "${USER_NAME_A}" "my-network" storages_A[@] "--kelips --push"
+track_network "${infinit_home_A}" "${USER_NAME_A}" "my-network"
 
 # create volume
 echo "[Device A] Create volume: my-volume"
-create_volume "${USER_NAME}" "my-network" "my-volume" "--push"
-track_volume "${infinit_home_A}" "${USER_NAME}" "my-volume"
+create_volume "${USER_NAME_A}" "my-network" "my-volume" "--push"
+track_volume "${infinit_home_A}" "${USER_NAME_A}" "my-volume"
 
 # mount volume
 mount_point_A=$(mktemp -d)
 track_directory "${mount_point_A}"
 echo "[Device A] Mount volume 'my-volume': ${mount_point_A}"
 peers_A=()
-output_A=$(mount_volume "${USER_NAME}" "my-volume" "${mount_point_A}" peers_A[@] "--publish")
+output_A=$(mount_volume "${USER_NAME_A}" "my-volume" "${mount_point_A}" peers_A[@] "--publish")
 pid_A=$(r "${output_A}" 1)
 track_file $(r "${output_A}" 2)
 track_mount "${mount_point_A}" "${pid_A}"
-
-sleep 3
 
 # create file
 echo "[Device A] Create and write file: awesome.txt"
@@ -667,7 +810,7 @@ echo "everything is" > ${mount_point_A}/awesome.txt
 # transmit user identity from device A to device B
 echo "[Device A] Transmit user identity from device A to device B"
 passphrase=$(random)
-transmit_identity "${USER_NAME}" "${passphrase}"
+transmit_identity "${USER_NAME_A}" "${passphrase}"
 
 # ---------- device B --------------------------------------------------------
 
@@ -676,24 +819,24 @@ set_home "${infinit_home_B}"
 
 # receive identity
 echo "[Device B] Receive identity from device A"
-receive_identity "${USER_NAME}" "${passphrase}"
+receive_identity "${USER_NAME_A}" "${passphrase}"
 
 # fetch objects
 echo "[Device B] Fetch network and volume"
-fetch_network "${USER_NAME}" "my-network"
-fetch_volume "${USER_NAME}" "my-network" "my-volume"
+fetch_network "${USER_NAME_A}" "my-network"
+fetch_volume "${USER_NAME_A}" "my-network" "my-volume"
 
 # link device
 echo "[Device B] Link new device to network 'my-network'"
 storages_B=()
-link_device "${USER_NAME}" "my-network" storages_B[@]
+link_device "${USER_NAME_A}" "my-network" storages_B[@]
 
 # mount volume
 mount_point_B=$(mktemp -d)
 track_directory "${mount_point_B}"
 echo "[Device B] Mount volume 'my-volume': ${mount_point_B}"
 peers_B=()
-output_B=$(mount_volume "${USER_NAME}" "my-volume" "${mount_point_B}" peers_B[@] "--publish")
+output_B=$(mount_volume "${USER_NAME_A}" "my-volume" "${mount_point_B}" peers_B[@] "--publish")
 pid_B=$(r "${output_B}" 1)
 track_file $(r "${output_B}" 2)
 track_mount "${mount_point_B}" "${pid_B}"
@@ -705,3 +848,91 @@ if [ "${content_B}" != "everything is" ] ; then
   echo "[error] unexpected content '${content_B}'"
   exit 1
 fi
+
+# ---------- device C --------------------------------------------------------
+
+# home
+set_home "${infinit_home_C}"
+
+# create user
+echo "[Device C] Create user: ${USER_NAME_B}"
+create_user "${USER_NAME_B}" "--email nobody+${USER_NAME_B}@infinit.sh --push"
+track_user "${infinit_home_C}" "${USER_NAME_B}"
+
+# ---------- device A --------------------------------------------------------
+
+# home
+set_home "${infinit_home_A}"
+
+# fetch user identity
+echo "[Device A] Fetch user identity: ${USER_NAME_B}"
+fetch_user "${USER_NAME_A}" "${USER_NAME_B}"
+
+# invite user B
+echo "[Device A] Invite user '${USER_NAME_B}' to the network 'my-network'"
+create_passport "${USER_NAME_A}" "my-network" "${USER_NAME_B}" "--push"
+track_passport "${infinit_home_A}" "${USER_NAME_A}" "my-network" "${USER_NAME_B}"
+
+# ---------- device C --------------------------------------------------------
+
+# home
+set_home "${infinit_home_C}"
+
+# fetch objects
+echo "[Device C] Fetch objects"
+fetch_user "${USER_NAME_B}" "${USER_NAME_A}"
+fetch_network "${USER_NAME_B}"
+fetch_volume "${USER_NAME_B}"
+fetch_passport "${USER_NAME_B}"
+
+# link device
+echo "[Device C] Link device to network '${USER_NAME_A}/my-network'"
+storages_C=()
+link_device "${USER_NAME_B}" "${USER_NAME_A}/my-network" storages_C[@]
+
+# mount volume
+mount_point_C=$(mktemp -d)
+track_directory "${mount_point_C}"
+echo "[Device C] Mount volume '${USER_NAME_A}/my-volume': ${mount_point_C}"
+peers_C=()
+output_C=$(mount_volume "${USER_NAME_B}" "${USER_NAME_A}/my-volume" "${mount_point_C}" peers_C[@] "--publish")
+pid_C=$(r "${output_C}" 1)
+track_file $(r "${output_C}" 2)
+track_mount "${mount_point_C}" "${pid_C}"
+
+# check if the root directory can be accessed
+if [ -x "${mount_point_C}" ] ; then
+  echo "[error] wrongly accessible root directory"
+  exit 1
+fi
+echo "[Device C] Check root directory accessibility: ok"
+
+# ---------- device A --------------------------------------------------------
+
+# home
+set_home "${infinit_home_A}"
+
+# grant user B access to the file
+echo "[Device A] Grant access to '${USER_NAME_B}'"
+grant_access "${mount_point_A}/" "r" "${USER_NAME_B}"
+grant_access "${mount_point_A}/awesome.txt" "r" "${USER_NAME_B}"
+
+# ---------- device C --------------------------------------------------------
+
+# home
+set_home "${infinit_home_C}"
+
+# read the file from device C
+content_C=$(cat ${mount_point_C}/awesome.txt)
+echo "[Device C] Read file 'awesome.txt': \"${content_C}\""
+if [ "${content_C}" != "everything is" ] ; then
+  echo "[error] unexpected content '${content_C}'"
+  exit 1
+fi
+
+# check that the same file is not writable
+if [ -w "${mount_point_C}/awesome.txt" ] ; then
+  echo "[error] wrongly writable file"
+  exit 1
+fi
+echo "[Device C] Check file writability: ok"
