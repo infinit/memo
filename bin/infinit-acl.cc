@@ -473,7 +473,7 @@ COMMAND(set)
                fallback);
     if (traverse)
     {
-      boost::filesystem::path working_path(path);
+      boost::filesystem::path working_path = boost::filesystem::absolute(path);
       while (!path_is_root(working_path.string(), fallback))
       {
         working_path = working_path.parent_path();

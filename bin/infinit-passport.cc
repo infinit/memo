@@ -84,7 +84,7 @@ COMMAND(fetch)
       "passport for",
       user_name.get(),
       self);
-    ifnt.passport_save(passport);
+    ifnt.passport_save(passport, true);
   }
   // Fetch all network passports if owner else fetch just the user's passport.
   else if (network_name)
@@ -103,7 +103,7 @@ COMMAND(fetch)
       {
         elle::serialization::json::SerializerIn s(user_passport.second, false);
         auto passport = s.deserialize<infinit::Passport>();
-        ifnt.passport_save(passport);
+        ifnt.passport_save(passport, true);
       }
     }
     else
@@ -113,7 +113,7 @@ COMMAND(fetch)
         "passport for",
         network_name.get(),
         self);
-      ifnt.passport_save(passport);
+      ifnt.passport_save(passport, true);
     }
   }
   else if (user_name && user_name.get() != self.name)
@@ -130,14 +130,7 @@ COMMAND(fetch)
         self.name,
         self);
     for (auto const& passport: res["passports"])
-    {
-      try
-      {
-        ifnt.passport_save(passport);
-      }
-      catch (ResourceAlreadyFetched const&)
-      {}
-    }
+      ifnt.passport_save(passport, true);
   }
 }
 

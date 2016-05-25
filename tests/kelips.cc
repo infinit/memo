@@ -624,6 +624,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
 ELLE_TEST_SCHEDULED(many_conflicts)
 {
   static const int node_count = 4;
+  static const int iter_count = 50;
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
@@ -633,7 +634,7 @@ ELLE_TEST_SCHEDULED(many_conflicts)
   fss.front()->path("/");
   reactor::for_each_parallel(fss, [&](std::unique_ptr<rfs::FileSystem>& fs)
     {
-      for (int i=0; i<100; ++i)
+      for (int i=0; i<iter_count; ++i)
       {
         fs->path("/" + std::to_string(i) + "_" + std::to_string((uint64_t)&fs))->mkdir(0666);
       }
@@ -645,7 +646,7 @@ ELLE_TEST_SCHEDULED(many_conflicts)
       {
         ++count;
       });
-    BOOST_CHECK(count == 100 * node_count);
+    BOOST_CHECK(count == iter_count * node_count);
   }
 }
 

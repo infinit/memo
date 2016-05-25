@@ -80,6 +80,7 @@ namespace infinit
       int _last_read_block; // block hit by last read operation
       static const uint64_t default_first_block_size;
       static const unsigned long max_cache_size = 20; // in blocks    };
+      friend class File;
     };
   }
 }

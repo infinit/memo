@@ -599,7 +599,11 @@ namespace infinit
       if (it != _size_map.end())
       {
         for (auto fh: it->second.second)
+        {
+          ELLE_WARN("Propagating truncate(%s) of %s to open file handle with size %s",
+                    new_size, _name, fh->_file._header.size);
           fh->ftruncate(new_size);
+        }
       }
     }
 
