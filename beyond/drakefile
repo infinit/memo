@@ -49,7 +49,8 @@ def configure(
     email_regex = '^[^@]+@[^@]+\.[^@]+$',
     name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$',
     delegate_user = 'hub',
-    backend = []
+    backend = [],
+    public = False
 ):
 
   global build, install, package, rule_check, tests
@@ -86,7 +87,7 @@ def configure(
     def _variable(self, name, value):
       return '%s = %r' % (name, value)
   PythonVersionGenerator(version, git)
-  with drake.templating.Context(content = {
+  credentials = {
       'dropbox_app_key': dropbox_app_key,
       'dropbox_app_secret': dropbox_app_secret,
       'google_app_key':
@@ -95,13 +96,18 @@ def configure(
       'gcs_app_key':
         '%s.apps.googleusercontent.com' % gcs_app_key,
       'gcs_app_secret': gcs_app_secret,
-      'email_regex': email_regex,
-      'name_regex': name_regex,
-      'delegate_user': delegate_user,
       'gcs_login': '798530033299-s9b7qmrc99trk8uid53giuvus1o74cif@developer.gserviceaccount.com',
       'gcs_key': gcs_key,
       'sendwithus_api_key': 'live_f237084a19cbf6b2373464481155d953a4d86e8d',
-  }):
+  }
+  if public:
+    credentials = dict(map(lambda x: (x, ''), credentials))
+  credentials.update({
+      'email_regex': email_regex,
+      'name_regex': name_regex,
+      'delegate_user': delegate_user,
+  })
+  with drake.templating.Context(content = credentials):
     drake.node('beyond.tmpl')
     drake.node('src/wsgi.py.tmpl')
     drake.node('src/validation.py.tmpl')

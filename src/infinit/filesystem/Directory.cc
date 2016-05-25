@@ -252,8 +252,17 @@ namespace infinit
     void
     DirectoryData::update(Block& block, std::pair<bool, bool> perms)
     {
-      ELLE_DEBUG("%s updating from version %s at %f", this,
-        _block_version, block.address());
+      auto new_version =  dynamic_cast<model::blocks::MutableBlock&>(block).version();
+      if (_block_version >= new_version)
+      {
+        ELLE_WARN("%s: ignoring update at %f from obsolete block %s since we have %s",
+                  this, block.address(), new_version, _block_version);
+        return;
+      }
+      ELLE_DEBUG("%s updating from version %s to version %s at %f", this,
+                 _block_version,
+                 new_version,
+                 block.address());
       _last_used = FileSystem::now();
 
       bool empty = false;
@@ -340,11 +349,13 @@ namespace infinit
           auto b = elle::cast<ACLBlock>::runtime(model.fetch(_address));
           if (b->version() != _block_version)
           {
-            ELLE_LOG("Conflict: block version not expected: %s vs %s",
+            ELLE_TRACE("Conflict: block version not expected: %s vs %s",
                      b->version(), _block_version);
             DirectoryConflictResolver dcr(model, op, _address);
             auto nb = dcr(*b, *b, first_write ? model::STORE_INSERT : model::STORE_UPDATE);
             b = elle::cast<ACLBlock>::runtime(nb);
+            // Update this with the conflict resolved data
+            update(*b, get_permissions(model, *b));
           }
           else
             b->data(data);

@@ -272,12 +272,13 @@ namespace infinit
         Paxos::PaxosClient::Peers
         lookup_nodes(Doughnut& dht,
                      Paxos::PaxosServer::Quorum const& q,
-                     Address address)
+                     Address address,
+                     boost::optional<int> local_version = boost::optional<int>())
         {
           Paxos::PaxosClient::Peers res;
           for (auto member: dht.overlay()->lookup_nodes(q))
-            res.push_back(
-              elle::make_unique<PaxosPeer>(std::move(member), address));
+            res.push_back(elle::make_unique<PaxosPeer>(
+                            std::move(member), address, local_version));
           return res;
         }
 
@@ -1630,7 +1631,7 @@ namespace infinit
               // FIXME: in some situation, even with a wrong quorum, we can have
               // a valid reduce (e.g. if we miss one host but have a majority)
               ELLE_DEBUG("%s", e.what());
-              peers = lookup_nodes(this->doughnut(), e.expected(), address);
+              peers = lookup_nodes(this->doughnut(), e.expected(), address, local_version);
             }
         }
 

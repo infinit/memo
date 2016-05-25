@@ -54,7 +54,7 @@ namespace infinit
     {
       if (_writable)
       {
-        auto sh = File::_size_map.at(_file.address());
+        auto& sh = File::_size_map.at(_file.address());
         auto it = std::find(sh.second.begin(), sh.second.end(), this);
         std::swap(*it, sh.second.back());
         sh.second.pop_back();

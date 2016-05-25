@@ -527,8 +527,10 @@ namespace removal
       ctx.set<infinit::model::doughnut::Doughnut*>(dht.dht.get());
       auto sig = elle::serialization::binary::deserialize<
         blocks::RemoveSignature>(rs_bad, true, ctx);
+      // we send a remove with an obsolete signature, so consensus will retry,
+      // but will fail to call sign_remove() since we don't have the proper keys
       BOOST_CHECK_THROW(
-        dht.dht->remove(address, sig), infinit::model::doughnut::Conflict);
+        dht.dht->remove(address, sig), infinit::model::doughnut::ValidationFailed);
     }
     ELLE_LOG("remove block")
     {
