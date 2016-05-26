@@ -53,7 +53,7 @@ namespace elle
     struct SerializeEndpoint
     {
       typedef elle::Buffer Type;
-       static Type convert(T& ep)
+      static Type convert(T& ep)
       {
         Type res;
         if (ep.address().is_v4())
