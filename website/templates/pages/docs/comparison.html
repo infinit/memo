@@ -54,7 +54,7 @@
 
       <div class="property ${'same' if is_similar else 'different'}">
         <img class="" src="${url('images/icons/' + property + '.png')}" alt="${property}">
-        <h2>${property.replace('_', ' ').title()}</h2>
+        <h2 id="${property}">${property.replace('_', ' ').title()}</h2>
         <p class="note">
         % if property == 'architecture':
           % if value == 'Object':

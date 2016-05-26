@@ -10,6 +10,7 @@
 
     <ul class="menu">
       <li class="notice"><span>Through this guide, it should take you around <strong>10 minutes</strong> to deploy your own infrastructure!</span></li>
+      <li><input type="text" id="docsearch"></li>
       <li class="installation"><a href="#installation">1. Installation</a></li>
       <li class="basic-test"><a href="#basic-test">2. Basic Test</a></li>
       <li class="create-infrastructure">
@@ -424,7 +425,7 @@ $> infinit-passport --fetch --as bob --network alice/my-network
 Fetched passport for "alice/my-network".
 </code></pre>
 
-    <p>With all the pieces fetched from the Hub, Bob can now link his current device C to Alice's storage network <code>alice/my-network</code>::</p>
+    <p>With all the pieces fetched from the Hub, Bob can now link his current device C to Alice's storage network <code>alice/my-network</code>:</p>
 
     <pre class="device3"><div><span>Device C</span></div><code>$> infinit-network --link --as bob --name alice/my-network
 Linked device to network "alice/my-network".
