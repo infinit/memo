@@ -1656,7 +1656,7 @@ namespace infinit
         if (is_regular_file(it->status()))
         {
           boost::filesystem::ifstream f;
-          this->_open_read(f, it->path(), name, "crendential");
+          this->_open_read(f, it->path(), name, "credential");
           res.push_back(
             elle::cast<T>::runtime(load<std::unique_ptr<Credentials>>(f)));
         }

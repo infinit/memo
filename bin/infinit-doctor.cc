@@ -277,7 +277,7 @@ bool
 permissions(bool verbose)
 {
   if (verbose)
-    std::cout << "Peprmissions:" << std::endl;
+    std::cout << "Permissions:" << std::endl;
   bool sane = true;
   sane &= permission(elle::system::home_directory(), verbose, true, 2);
   sane &= permission(infinit::xdg_cache_home(), verbose, false, 2);
@@ -464,10 +464,10 @@ _integrity(boost::program_options::variables_map const& args,
         auto& output = !status ? std::cerr : std::cout;
         elle::fprintf(output, "  [%s] %s (AWS):\n", result(status), storage->name);
         if (status)
-          elle::fprintf(output, "      [%s] Credential: %s\n",
+          elle::fprintf(output, "      [%s] Credentials: %s\n",
                 result(status), (*it)->display_name());
         else
-          elle::fprintf(output, "      [%s] Missing credential\n", result(status));
+          elle::fprintf(output, "      [%s] Missing credentials\n", result(status));
       }
     }
     if (auto fsconfig = dynamic_cast<infinit::storage::FilesystemStorageConfig const*>(storage.get()))
@@ -498,10 +498,10 @@ _integrity(boost::program_options::variables_map const& args,
         auto& output = !status ? std::cerr : std::cout;
         elle::fprintf(output, "  [%s] %s (GCS):\n", result(status), storage->name);
         if (status)
-          elle::fprintf(output, "      [%s] Credential: %s\n",
+          elle::fprintf(output, "      [%s] Credentials: %s\n",
                 result(status), (*it)->display_name());
         else
-          elle::fprintf(output, "      [%s] Missing credential\n", result(status));
+          elle::fprintf(output, "      [%s] Missing credentials\n", result(status));
       }
     }
 #ifndef INFINIT_WINDOWS
