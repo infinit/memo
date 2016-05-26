@@ -16,42 +16,42 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="byzantine">Byzantine fault tolerance</h2>
+          <h2 id="byzantine-fault-tolerance">Byzantine fault tolerance</h2>
           <p>Allow for the creation of untrustworthy networks (in which data is stored on storage resources that users may not trust) while ensuring reliability and security.</p>
         </div>
       </div>
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="heterogeneous">Heterogeneous storage contributions</h2>
-          <p>Balance the data while taking into account that some storage resources have more capacity than others.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="locking">Locking</h2>
-          <p>Allow applications to lock file system objects to prevent other user/applications to use them.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="backblaze">Backblaze B2 storage resource</h2>
+          <h2 id="backblaze-b2-storage">Backblaze B2 storage resource</h2>
           <p>Allow Backblaze B2 service to be used as a block storage resource.</p>
         </div>
       </div>
       <div class="step">
         <hr>
         <div class="desc">
-          <h2>Windows SMB/NFS integrations</h2>
-          <p>Provide an NFS/SMB integration server to easily integrate in existing production environments.</p>
+          <h2 id="windows-smb">Windows SMB integration</h2>
+          <p>Provide an SMB integration server to easily integrate in existing production environments.</p>
         </div>
       </div>
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="reliability">Storage reliability level</h2>
+          <h2 id="heterogeneous-storage-contributions">Heterogeneous storage contributions</h2>
+          <p>Balance the data while taking into account that some storage resources have more capacity than others.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="nfs">NFS integration</h2>
+          <p>Allow volumes to be mounted through the NFS protocol.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="storage-reliability-level">Storage reliability level</h2>
           <p>Allow the administrator to define the reliability of storage resources/providers. For instance, S3 already replicates data internally while a standalone server does not.</p>
         </div>
       </div>
@@ -65,14 +65,21 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="dropbox">Dropbox storage resource</h2>
+          <h2 id="dropbox-storage">Dropbox storage resource</h2>
           <p>Allow Dropbox to be used as a block storage resource.</p>
         </div>
       </div>
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="gdrive">Google Drive storage resource</h2>
+          <h2 id="file-locking">File locking</h2>
+          <p>Allow applications to lock file system objects to prevent other user/applications to use them.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="gdrive-storage">Google Drive storage resource</h2>
           <p>Allow Google Drive to be used as a block storage resource.</p>
         </div>
       </div>
@@ -83,21 +90,8 @@
           <p>Allow users to explore and roll-back to a previous version of a file.</p>
         </div>
       </div>
-
       <div class="step">
-        <div class="date">
-          Jul <br><span>2016</span>
-        </div>
-        <div class="desc">
-          <h2 id="optimizations">Optimizations</h2>
-          <p>Integrate many low-level networking, overlay network, distributed hash table and file system optimizations for various scenarios.</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="date">
-          Jun <br><span>2016</span>
-        </div>
+        <hr>
         <div class="desc">
           <h2 id="windows">Windows native file system integration</h2>
           <p>Provide a native interface for Windows operating systems to mount Infinit file systems.</p>
@@ -106,11 +100,28 @@
 
       <div class="step">
         <div class="date">
-          May <br><span>2016</span>
+          Jul <br><span>2016</span>
         </div>
         <div class="desc">
-          <h2 id="on-premise-hub">On-Premise Hub</h2>
-          <p>Integrate many low-level networking, overlay network, distributed hash table and file system optimizations for various scenarios.</p>
+          <h2 id="network-overlay-performance-optimizations">Performance optimizations</h2>
+          <p>Integrate low-level networking and overlay network optimizations.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="docker-volume-plugin">Docker volume plugin</h2>
+          <p>Allow Infinit volumes to be accessed directly from within Docker containers through the Docker volume plugin API.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="date">
+          June <br><span>2016</span>
+        </div>
+        <div class="desc">
+          <h2 id="on-premise-hub">On-premise Hub</h2>
+          <p>Allow the Hub to be deployed on premise to allow it to act as a gateway for mobility, to support both LDAP-based and standalone accounts (for external collaborators), to manage keys and more.</p>
         </div>
       </div>
       <div class="step">
@@ -118,6 +129,23 @@
         <div class="desc">
           <h2 id="ldap">LDAP</h2>
           <p>Integrate with LDAP to retrieve the users, groups and permissions in an existing organization.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="date">
+          May <br><span>2016</span>
+        </div>
+        <div class="desc">
+          <h2 id="ipv6">IPv6</h2>
+          <p>Add support for IPv6-based network interfaces.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="infinit-doctor">infinit-doctor</h2>
+          <p>Provide a binary to allow one to easily check the health of its local configuration, network capability and more.</p>
         </div>
       </div>
 
@@ -137,13 +165,20 @@
           <p>Allow to attach additional/detach storage resources and/or increase/decrease the storage capacity contributions from a device to an existing network, without incurring any interruption of service.</p>
         </div>
       </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="infinit-journal">infinit-journal</h2>
+          <p>Provide a binary to consult the state of the asynchronous cache, also known as journal.</p>
+        </div>
+      </div>
 
       <div class="step">
         <div class="date">
           Mar <br><span>2016</span>
         </div>
         <div class="desc">
-          <h2 id="rebalancing">Dynamic rebalancing</h2>
+          <h2 id="dynamic-rebalancing">Dynamic rebalancing</h2>
           <p>Dynamically rebalancing some blocks to another nodes following the fault of a storage node in order to maintain the replication factor defined by the network administrator.</p>
         </div>
       </div>
@@ -153,14 +188,14 @@
           Feb <br><span>2016</span>
         </div>
         <div class="desc">
-          <h2 id="gcs">Google Cloud Storage storage resource</h2>
+          <h2 id="gcs-storage">Google Cloud Storage storage resource</h2>
           <p>Allow Google Cloud Storage to be used as a block storage resource.</p>
         </div>
       </div>
       <div class="step soon">
         <hr>
         <div class="desc">
-          <h2 id="aws-s3">AWS S3 storage resource</h2>
+          <h2 id="aws-s3-storage">AWS S3 storage resource</h2>
           <p>Allow AWS S3 to be used as a block storage resource.</p>
         </div>
       </div>
@@ -177,21 +212,21 @@
       <div class="step soon">
         <hr>
         <div class="desc">
-          <h2 id="acg">Group-based access control</h2>
+          <h2 id="acl-groups">Group-based access control</h2>
           <p>Allow users to organize themselves into groups and control access to files/directories to those groups.</p>
         </div>
       </div>
       <div class="step soon">
         <hr>
         <div class="desc">
-          <h2 id="passports">Fine-grained passports</h2>
+          <h2 id="fine-grained-passports">Fine-grained passports</h2>
           <p>Allow the administrator to issue passport for a user to act either as a client and/or server (preventing a user from attaching additional storage resources) but also to control whether a user can put and/or get blocks in the network.</p>
         </div>
       </div>
       <div class="step soon">
         <hr>
         <div class="desc">
-          <h2 id="balancing">Storage load network-wide balancing</h2>
+          <h2 id="storage-distribution">Storage load network-wide balancing</h2>
           <p>Support distributing the blocks across several storage nodes that contribute storage capacity through one or more storage resources.</p>
         </div>
       </div>
@@ -201,7 +236,7 @@
           Dec <br><span>2015</span>
         </div>
         <div class="desc">
-          <h2 id="nat">NAT traversal</h2>
+          <h2 id="nat-traversal">NAT traversal</h2>
           <p>Improve the probability of connection by relying on NAT traversal if directly connection and uPnP failed.</p>
         </div>
       </div>
@@ -222,7 +257,7 @@
       <div class="step soon">
         <hr>
         <div class="desc">
-          <h2 id="multi-device">Multi-device user</h2>
+          <h2 id="multi-device-user">Multi-device user</h2>
           <p>Provide users ways to transfer their user identities to another device.</p>
         </div>
       </div>
@@ -231,7 +266,7 @@
           Nov <br><span>2015</span>
         </div>
         <div class="desc">
-          <h2 id="paxos">Paxos consensus</h2>
+          <h2 id="paxos-consensus">Paxos consensus</h2>
           <p>Introduce Paxos to reach consensus among the storage nodes responsible for the replicas of a specific piece of data.</p>
         </div>
       </div>
@@ -253,7 +288,7 @@
       <div class="step soon">
         <hr>
         <div class="desc">
-          <h2>Asynchronous operations</h2>
+          <h2 id="asynchronous-operations">Asynchronous operations</h2>
           <p>Support operations being performed asynchronously meaning that system calls return once the operation is committed in the journal with the data modifications being later published throughout the storage network.</p>
         </div>
       </div>
@@ -270,14 +305,14 @@
       <div class="step soon">
         <hr>
         <div class="desc">
-          <h2 id="ssh-import">Import SSH RSA key</h2>
+          <h2 id="ssh-key-import">Import SSH RSA key</h2>
           <p>Allow users to import their existing SSH RSA key to work with Infinit.</p>
         </div>
       </div>
       <div class="step soon">
         <hr>
         <div class="desc">
-          <h2 id="cloud-management">Cloud storage services management</h2>
+          <h2 id="credentials-management">Cloud storage services management</h2>
           <p>Offer an easy way to manage credentials to cloud storage services, possibly by relying on the Infinit Hub.</p>
         </div>
       </div>
@@ -291,7 +326,7 @@
       <div class="step soon">
         <hr>
         <div class="desc">
-          <h2 id="passport">Passport</h2>
+          <h2 id="passports">Passports</h2>
           <p>Allow the network administrator to authorize other users to connect and possibly contribute additional storage capacity.</p>
         </div>
       </div>
@@ -315,8 +350,8 @@
       <div class="step soon">
         <hr>
         <div class="desc">
-          <h2>OS X native file system integration</h2>
-          <p>Support for a native integration through the FUSE kernel module on OS X.</p>
+          <h2 id="osx">OS X native file system integration</h2>
+          <p>Support for a native integration through the FUSE kernel module on OSX.</p>
         </div>
       </div>
 
@@ -339,7 +374,7 @@
       <div class="step soon">
         <hr>
         <div class="desc">
-          <h2 id="multistorages">Multiple storage resources per server</h2>
+          <h2 id="multi-storage">Multiple storage resources per server</h2>
           <p>Allow nodes to attach several storage nodes and distribute blocks among those storages.</p>
         </div>
       </div>
