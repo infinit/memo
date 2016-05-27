@@ -1301,7 +1301,7 @@ namespace infinit
   {
     ELLE_ASSERT(input.is_open());
     elle::serialization::json::SerializerIn s(input, false);
-    return std::move(s.deserialize<T>());
+    return s.deserialize<T>();
   }
 
   template <typename T>
