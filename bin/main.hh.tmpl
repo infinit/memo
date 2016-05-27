@@ -1657,8 +1657,7 @@ namespace infinit
         {
           boost::filesystem::ifstream f;
           this->_open_read(f, it->path(), name, "credential");
-          res.push_back(
-            elle::cast<T>::runtime(load<std::unique_ptr<Credentials>>(f)));
+          res.push_back(std::dynamic_pointer_cast<T>(load<std::unique_ptr<Credentials>>(f)));
         }
       }
       return res;
@@ -1700,7 +1699,7 @@ namespace infinit
     credentials_aws(std::string const& uid) const
     {
       auto res = this->credentials("aws", uid);
-      return elle::cast<AWSCredentials>::runtime(res);
+      return std::dynamic_pointer_cast<AWSCredentials>(res);
     }
 
     void
@@ -1724,7 +1723,7 @@ namespace infinit
     credentials_dropbox(std::string const& uid) const
     {
       auto res = this->credentials("dropbox", uid);
-      return elle::cast<OAuthCredentials>::runtime(res);
+      return std::dynamic_pointer_cast<OAuthCredentials>(res);
     }
 
     void
@@ -1748,7 +1747,7 @@ namespace infinit
     credentials_google(std::string const& uid) const
     {
       auto res = this->credentials("google", uid);
-      return elle::cast<OAuthCredentials>::runtime(res);
+      return std::dynamic_pointer_cast<OAuthCredentials>(res);
     }
 
     void
@@ -1772,7 +1771,7 @@ namespace infinit
     credentials_gcs(std::string const& uid) const
     {
       auto res = this->credentials("gcs", uid);
-      return elle::cast<OAuthCredentials>::runtime(res);
+      return std::dynamic_pointer_cast<OAuthCredentials>(res);
     }
 
     boost::filesystem::path
