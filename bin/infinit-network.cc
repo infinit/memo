@@ -497,6 +497,8 @@ COMMAND(list)
       std::cout << network.name;
       if (network.model)
         std::cout << ": linked";
+      else
+        std::cout << ": not linked";
       std::cout << std::endl;
     }
 }
