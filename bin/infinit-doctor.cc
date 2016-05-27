@@ -547,10 +547,10 @@ _integrity(boost::program_options::variables_map const& args,
         auto it = storage_resources.find(storage);
         if (it == storage_resources.end())
           elle::fprintf(
-            output, "%s    [X] %s: Missing", "  ", storage);
+            output, "      [%s] storage resource %s: Missing", result(false), storage);
         else
           elle::fprintf(
-            output, "%s    [%s] %s", "  ", result(it->second.second), storage);
+            output, "      [%s] storage resource %s", result(it->second.second), storage);
         output << std::endl;
       }
     }
@@ -567,9 +567,9 @@ _integrity(boost::program_options::variables_map const& args,
     if (verbose || !status)
     {
       auto& output = !status ? std::cerr : std::cout;
-      elle::fprintf(output, "%s[%s] %s:\n%s    [%s] network: %s",
-                    "  ", result(status), volume.name,
-                    "  ", result(status), volume.network);
+      elle::fprintf(output, "  [%s] %s:\n      [%s] network: %s",
+                    result(status), volume.name,
+                    result(status), volume.network);
       output << std::endl;
     }
   }
@@ -590,10 +590,10 @@ _integrity(boost::program_options::variables_map const& args,
     {
       auto& output = !status ? std::cerr : std::cout;
       elle::fprintf(
-        output, "%s[%s] %s:\n%s    [%s] volume: %s\n%s    [%s] network %s",
-        "  ", result(status), drive.name,
-        "  ", result(volume_ok), drive.volume,
-        "  ", result(network_ok), drive.network
+        output, "  [%s] %s:\n      [%s] volume: %s\n      [%s] network: %s",
+        result(status), drive.name,
+        result(volume_ok), drive.volume,
+        result(network_ok), drive.network
       );
       output << std::endl;
     }
