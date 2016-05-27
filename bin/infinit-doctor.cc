@@ -464,10 +464,10 @@ _integrity(boost::program_options::variables_map const& args,
         auto& output = !status ? std::cerr : std::cout;
         elle::fprintf(output, "  [%s] %s (AWS):\n", result(status), storage->name);
         if (status)
-          elle::fprintf(output, "      [%s] Credentials: %s\n",
+          elle::fprintf(output, "    [%s] Credentials: %s\n",
                 result(status), (*it)->display_name());
         else
-          elle::fprintf(output, "      [%s] Missing credentials\n", result(status));
+          elle::fprintf(output, "    [%s] Missing credentials\n", result(status));
       }
     }
     if (auto fsconfig = dynamic_cast<infinit::storage::FilesystemStorageConfig const*>(storage.get()))
@@ -477,7 +477,7 @@ _integrity(boost::program_options::variables_map const& args,
       {
         auto& output = !status ? std::cerr : std::cout;
         elle::fprintf(output, "  [%s] %s (Filesystem):\n", result(status), storage->name);
-        elle::fprintf(output, "      [%s] ", result(has_permission(fsconfig->path, true).first));
+        elle::fprintf(output, "    [%s] ", result(has_permission(fsconfig->path, true).first));
         permission(boost::filesystem::path(fsconfig->path), true);
       }
     }
@@ -498,10 +498,10 @@ _integrity(boost::program_options::variables_map const& args,
         auto& output = !status ? std::cerr : std::cout;
         elle::fprintf(output, "  [%s] %s (GCS):\n", result(status), storage->name);
         if (status)
-          elle::fprintf(output, "      [%s] Credentials: %s\n",
+          elle::fprintf(output, "    [%s] Credentials: %s\n",
                 result(status), (*it)->display_name());
         else
-          elle::fprintf(output, "      [%s] Missing credentials\n", result(status));
+          elle::fprintf(output, "    [%s] Missing credentials\n", result(status));
       }
     }
 #ifndef INFINIT_WINDOWS
@@ -541,16 +541,16 @@ _integrity(boost::program_options::variables_map const& args,
     if (verbose || !status)
     {
       auto& output = !status ? std::cerr : std::cout;
-      elle::fprintf(output, "%s[%s] %s:\n", "  ", result(status), network.name);
+      elle::fprintf(output, "  [%s] %s:\n", result(status), network.name);
       for (auto storage: storage_names)
       {
         auto it = storage_resources.find(storage);
         if (it == storage_resources.end())
           elle::fprintf(
-            output, "      [%s] storage resource %s: Missing", result(false), storage);
+            output, "    [%s] storage resource %s: Missing", result(false), storage);
         else
           elle::fprintf(
-            output, "      [%s] storage resource %s", result(it->second.second), storage);
+            output, "    [%s] storage resource %s", result(it->second.second), storage);
         output << std::endl;
       }
     }
@@ -567,7 +567,7 @@ _integrity(boost::program_options::variables_map const& args,
     if (verbose || !status)
     {
       auto& output = !status ? std::cerr : std::cout;
-      elle::fprintf(output, "  [%s] %s:\n      [%s] network: %s",
+      elle::fprintf(output, "  [%s] %s:\n    [%s] network: %s",
                     result(status), volume.name,
                     result(status), volume.network);
       output << std::endl;
@@ -590,7 +590,7 @@ _integrity(boost::program_options::variables_map const& args,
     {
       auto& output = !status ? std::cerr : std::cout;
       elle::fprintf(
-        output, "  [%s] %s:\n      [%s] volume: %s\n      [%s] network: %s",
+        output, "  [%s] %s:\n    [%s] volume: %s\n    [%s] network: %s",
         result(status), drive.name,
         result(volume_ok), drive.volume,
         result(network_ok), drive.network
