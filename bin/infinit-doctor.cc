@@ -601,12 +601,19 @@ _integrity(boost::program_options::variables_map const& args,
   return sane;
 }
 
+static
+void
+report_error(bool sane)
+{
+  if (!sane)
+    throw elle::Error("Please check your configuration");
+}
+
 COMMAND(integrity)
 {
   bool sane = true;
   sane &= _integrity(args, boost::none);
-  if (!sane)
-    throw elle::Error("Please check your configuration");
+  report_error(sane);
 }
 
 COMMAND(networking)
@@ -618,8 +625,7 @@ COMMAND(sanity)
 {
   bool sane = true;
   sane &= _sanity(args, boost::none);
-  if (!sane)
-    throw elle::Error("Please check your configuration");
+  report_error(sane);
 }
 
 COMMAND(run_all)
@@ -628,8 +634,7 @@ COMMAND(run_all)
   sane &= _sanity(args, boost::none);
   sane &= _integrity(args, boost::none);
   sane &= _networking(args, boost::none);
-  if (!sane)
-    throw elle::Error("Please check your configuration");
+  report_error(sane);
 }
 
 int
