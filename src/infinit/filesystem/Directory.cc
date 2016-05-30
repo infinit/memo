@@ -23,6 +23,7 @@
 #include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/UB.hh>
+#include <infinit/model/doughnut/User.hh>
 
 
 #ifdef INFINIT_WINDOWS
@@ -1009,6 +1010,46 @@ namespace infinit
                   auto addr = this->_data->files().at(file).second;
                   auto block = this->_owner.block_store()->fetch(addr);
                   return elle::serialization::json::serialize(block).string();
+                });
+            }
+            else if (special->find("resolve.") == 0)
+            {
+              return umbrella(
+                [&]
+                {
+                  std::string what = special->substr(strlen("resolve."));
+                  if (what.empty())
+                    THROW_NODATA
+                  std::unique_ptr<model::doughnut::User> user;
+                  user = std::dynamic_pointer_cast<model::doughnut::User>
+                    (dht->make_user(what));
+                  if (!user)
+                  {
+                    auto block = elle::cast<ACLBlock>::runtime(
+                      this->_owner.block_store()->fetch(this->_data->address()));
+                    for (auto& e: block->list_permissions(*dht))
+                    {
+                      if (model::doughnut::short_key_hash(
+                        dynamic_cast<model::doughnut::User*>(e.user.get())->key())
+                          == what)
+                      {
+                        user = std::dynamic_pointer_cast<model::doughnut::User>
+                          (std::move(e.user));
+                        break;
+                      }
+                    }
+                  }
+                  if (!user)
+                    THROW_INVAL;
+                  elle::json::Object o;
+                  o["name"] = std::string(user->name());
+                  auto serkey = elle::serialization::json::serialize(user->key());
+                  std::stringstream s(serkey.string());
+                  o["key"] = elle::json::read(s);
+                  o["key_hash"] = model::doughnut::short_key_hash(user->key());
+                  std::stringstream ss;
+                  elle::json::write(ss, o, true);
+                  return ss.str();
                 });
             }
           }
