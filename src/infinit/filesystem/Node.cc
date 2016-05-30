@@ -12,6 +12,7 @@
 
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/umbrella.hh>
+#include <infinit/filesystem/Unreachable.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -98,8 +99,19 @@ namespace infinit
       boost::filesystem::path newpath = where.parent_path();
       if (!this->_parent)
         throw rfs::Error(EINVAL, "Cannot delete root node");
-      auto dir = std::dynamic_pointer_cast<Directory>(
-        this->_owner.filesystem()->path(newpath.string()));
+      auto destparent = this->_owner.filesystem()->path(newpath.string());
+      auto dir = std::dynamic_pointer_cast<Directory>(destparent);
+      if (!dir)
+      {
+        if (std::dynamic_pointer_cast<Unreachable>(destparent))
+        {
+          THROW_ACCES
+        }
+        else
+        {
+          THROW_NOTDIR
+        }
+      }
       dir->_fetch();
       if (dir->_data->_files.find(newname) != dir->_data->_files.end())
       {
