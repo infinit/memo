@@ -22,6 +22,8 @@ performance improvement.
   set of files.
 - Push storage stats to the hub in `infinit-network` if `--push` is
   passed.
+- `infinit-acl`: Enable to refer to users and groups with their short
+  key hash.
 
 
 ## [0.5.5] - 2016-04-25
