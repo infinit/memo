@@ -689,7 +689,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "group name" },
         { "create,c", bool_switch(), "create the group" },
         { "show", bool_switch(), "list group users and administrators" },
-        { "delete,d", bool_switch(), "delete an existing group" },
+        // { "delete,d", bool_switch(), "delete an existing group" },
         { "add-user", value<std::vector<std::string>>(), "add user to group" },
         { "add-admin", value<std::vector<std::string>>(),
           "add administrator to group" },

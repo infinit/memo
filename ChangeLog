@@ -25,6 +25,11 @@ performance improvement.
 - `infinit-acl`: Enable to refer to users and groups with their short
   key hash.
 
+### Removed
+
+- Remove the option to delete groups which will be handled properly
+  later.
+
 
 ## [0.5.5] - 2016-04-25
 
