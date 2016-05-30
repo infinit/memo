@@ -42,11 +42,12 @@ namespace infinit
       std::unique_ptr<ACLBlock> parent_block;
       if (this->_parent->inherit_auth())
       {
-        ELLE_DEBUG_SCOPE("inheriting auth");
-        parent_block = elle::cast<ACLBlock>::runtime(
-          this->_owner.block_store()->fetch(_parent->address()));
-        umbrella([&] { parent_block
-          ->copy_permissions(dynamic_cast<ACLBlock&>(*b));});
+        umbrella([&] {
+            ELLE_DEBUG_SCOPE("inheriting auth");
+            parent_block = elle::cast<ACLBlock>::runtime(
+              this->_owner.block_store()->fetch(_parent->address()));
+            parent_block->copy_permissions(dynamic_cast<ACLBlock&>(*b));
+        });
         DirectoryData dd {this->_parent->_path / _name, address};
         dd._inherit_auth = true;
         dd.write(*_owner.block_store(), Operation{OperationType::update, "/inherit"}, b, true, true);

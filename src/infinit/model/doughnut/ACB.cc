@@ -304,15 +304,22 @@ namespace infinit
           // FIXME: the block will always be sealed anyway, why encrypt a token
           // now ?
           elle::Buffer token;
-          Group g(*this->doughnut(), key);
-          if (this->_owner_token.size())
+          try
           {
-            auto secret = this->owner_private_key()->open(this->_owner_token);
-            token = g.current_public_key().seal(secret);
+            Group g(*this->doughnut(), key);
+            if (this->_owner_token.size())
+            {
+              auto secret = this->owner_private_key()->open(this->_owner_token);
+              token = g.current_public_key().seal(secret);
+            }
+            acl_entries.emplace_back(ACLEntry(key, read, write, token));
+            this->_group_version.push_back(g.version()-1);
+            this->_acl_changed = true;
           }
-          acl_entries.emplace_back(ACLEntry(key, read, write, token));
-          this->_group_version.push_back(g.version()-1);
-          this->_acl_changed = true;
+          catch (elle::Error const& e)
+          {
+            throw elle::Error(elle::sprintf("Failed to access group block: %s", e));
+          }
         }
         else
         {
@@ -567,19 +574,27 @@ namespace infinit
         {
           if (is_group_entry)
           { // fetch latest key for group
-            Group g(*this->doughnut(), entry->key);
-            auto pubkeys = g.group_public_keys();
-            if (group_index >= signed(this->_group_version.size()))
-              return blocks::ValidationResult::failure("group_version array too short");
-            auto key_index = this->_group_version[group_index];
-            if (key_index >= signed(pubkeys.size()))
-              return blocks::ValidationResult::failure("group key out of range");
-            auto& key = pubkeys[key_index];
-            ELLE_DEBUG("validating with group key %s: %s", key_index, key);
-            if (!key.verify(this->data_signature(), *this->_data_sign()))
+            try
             {
-              ELLE_DEBUG("%s: group author signature invalid", *this);
-              return blocks::ValidationResult::failure("Incorrect group key signature");
+              Group g(*this->doughnut(), entry->key);
+              auto pubkeys = g.group_public_keys();
+              if (group_index >= signed(this->_group_version.size()))
+                return blocks::ValidationResult::failure("group_version array too short");
+              auto key_index = this->_group_version[group_index];
+              if (key_index >= signed(pubkeys.size()))
+                return blocks::ValidationResult::failure("group key out of range");
+              auto& key = pubkeys[key_index];
+              ELLE_DEBUG("validating with group key %s: %s", key_index, key);
+              if (!key.verify(this->data_signature(), *this->_data_sign()))
+              {
+                ELLE_DEBUG("%s: group author signature invalid", *this);
+                return blocks::ValidationResult::failure("Incorrect group key signature");
+              }
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_TRACE("Error processing group entry: %s", e.what());
+              return blocks::ValidationResult::failure("Failed to access group");
             }
           }
           else
@@ -755,24 +770,33 @@ namespace infinit
           }
           for (auto& e: this->_acl_group_entries)
           {
-            Group g(*this->doughnut(), e.key);
-            if (e.read)
+            try
             {
-              e.token = g.current_public_key().seal(secret_buffer);
-              this->_group_version[idx - this->_acl_entries.size()] =
-                g.version() - 1;
-            }
-            if (!sign_key)
-            {
-              try
+              Group g(*this->doughnut(), e.key);
+              if (e.read)
               {
-                auto kp = g.current_key();
-                this->_editor = idx;
-                ELLE_DEBUG("we are editor from group %s", g);
-                sign_key = g.current_key().private_key();
+                e.token = g.current_public_key().seal(secret_buffer);
+                this->_group_version[idx - this->_acl_entries.size()] =
+                  g.version() - 1;
               }
-              catch (elle::Error const& e)
-              {}
+              if (!sign_key)
+              {
+                try
+                {
+                  auto kp = g.current_key();
+                  this->_editor = idx;
+                  ELLE_DEBUG("we are editor from group %s", g);
+                  sign_key = g.current_key().private_key();
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_DEBUG("group key access failed: %s", e);
+                }
+              }
+            }
+            catch (elle::Error const& e)
+            { // most likely missing group block
+              ELLE_LOG("Unexpected error accessing group: %s", e);
             }
             ++idx;
           }

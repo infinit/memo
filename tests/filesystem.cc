@@ -2084,6 +2084,31 @@ ELLE_TEST_SCHEDULED(rename_exceptions)
   BOOST_CHECK(S_ISDIR(st.st_mode));
 }
 
+
+ELLE_TEST_SCHEDULED(erased_group)
+{
+  DHTs servers(-1);
+  auto client1 = servers.client();
+  auto client2 = servers.client(true);
+  auto c2key = elle::serialization::json::serialize(client2.dht.dht->keys().K()).string();
+  client1.fs->path("/");
+  client1.fs->path("/")->setxattr("infinit.group.create", "grp", 0);
+  client1.fs->path("/")->setxattr("infinit.group.add", "grp:" + c2key, 0);
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", "@grp", 0);
+  client1.fs->path("/")->setxattr("infinit.auth.inherit", "true", 0);
+  client2.fs->path("/dir")->mkdir(0666);
+  client2.fs->path("/file")->create(O_RDWR | O_CREAT, 0666)->write(
+    elle::ConstWeakBuffer("foo", 3), 3, 0);
+  client1.fs->path("/")->setxattr("infinit.group.delete", "grp", 0);
+  // cant write to /, because last author is a group member: it fails validation
+  BOOST_CHECK_THROW(client1.fs->path("/dir2")->mkdir(0666), reactor::filesystem::Error);
+  // we have inherit enabled, copy_permissions will fail on the missing group
+  BOOST_CHECK_THROW(client2.fs->path("/dir/dir")->mkdir(0666), reactor::filesystem::Error);
+  client2.fs->path("/file")->open(O_RDWR, 0644)->write(
+    elle::ConstWeakBuffer("bar", 3), 3, 0);
+}
+
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -2111,4 +2136,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(data_embed), 0, 5);
   suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
   suite.add(BOOST_TEST_CASE(rename_exceptions), 0, 5);
+  suite.add(BOOST_TEST_CASE(erased_group), 0, 5);
 }
