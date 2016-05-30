@@ -2121,6 +2121,31 @@ ELLE_TEST_SCHEDULED(symlink_perms)
   BOOST_CHECK_NO_THROW(client2.fs->path("/foolink")->readlink());
 }
 
+
+ELLE_TEST_SCHEDULED(short_hash_key)
+{
+  DHTs servers(1);
+  auto client1 = servers.client();
+  auto key = infinit::cryptography::rsa::keypair::generate(512);
+  auto serkey = elle::serialization::json::serialize(key.K());
+  client1.fs->path("/")->setxattr("infinit.auth.setr", serkey.string(), 0);
+  auto jsperms = client1.fs->path("/")->getxattr("infinit.auth");
+  std::stringstream s(jsperms);
+  auto jperms = elle::json::read(s);
+  auto a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 2);
+  auto hash = boost::any_cast<std::string>(
+    boost::any_cast<elle::json::Object>(a.at(1)).at("name"));
+  ELLE_TRACE("got hash: %s", hash);
+  client1.fs->path("/")->setxattr("infinit.auth.clear", hash, 0);
+  jsperms = client1.fs->path("/")->getxattr("infinit.auth");
+  s.str(jsperms);
+  jperms = elle::json::read(s);
+  a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 1);
+  BOOST_CHECK_THROW(client1.fs->path("/")->setxattr("infinit.auth.clear", "#gogol", 0),
+                    std::exception);
+}
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -2147,4 +2172,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(paxos_race), 0, 5);
   suite.add(BOOST_TEST_CASE(data_embed), 0, 5);
   suite.add(BOOST_TEST_CASE(symlink_perms), 0, 5);
+  suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
 }

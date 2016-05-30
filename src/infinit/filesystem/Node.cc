@@ -16,6 +16,7 @@
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/NB.hh>
+#include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
 ELLE_LOG_COMPONENT("infinit.filesystem.Node");
@@ -474,13 +475,6 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: set_permissions(%s)", *this, flags);
       std::pair<bool, bool> perms = parse_flags(flags);
-      std::unique_ptr<infinit::model::User> user =
-        umbrella([&] {return this->_get_user(userkey);}, EINVAL);
-      if (!user)
-      {
-        ELLE_WARN("user %s does not exist", userkey);
-        THROW_INVAL;
-      }
       auto acl = std::dynamic_pointer_cast<model::blocks::ACLBlock>(
         this->_owner.fetch_or_die(self_address));
       if (!acl)
@@ -504,6 +498,30 @@ namespace infinit
       auto keys = dn->keys();
       if (keys.K() != *acb->owner_key())
         THROW_ACCES;
+      std::unique_ptr<infinit::model::User> user =
+        umbrella([&] {return this->_get_user(userkey);}, EINVAL);
+      if (!user)
+      {
+        if (!userkey.empty() && userkey[0] == '#')
+        { // might be a short hash, try to look it up in the block ACLs.
+          for (auto& e: acl->list_permissions(*dn))
+          {
+            if (e.user->name() == userkey
+              && model::doughnut::short_key_hash(
+                dynamic_cast<model::doughnut::User*>(e.user.get())->key())
+                  == userkey)
+            {
+              user = std::move(e.user);
+              break;
+            }
+          }
+        }
+        if (!user)
+        {
+          ELLE_WARN("user %s does not exist", userkey);
+          THROW_INVAL;
+        }
+      }
       ELLE_TRACE("Setting permission at %s for %s",
                  acl->address(), user->name());
       umbrella([&] {acl->set_permissions(*user, perms.first, perms.second);},
