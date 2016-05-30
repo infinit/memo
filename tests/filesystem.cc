@@ -2036,6 +2036,54 @@ ELLE_TEST_SCHEDULED(short_hash_key)
                     std::exception);
 }
 
+
+ELLE_TEST_SCHEDULED(rename_exceptions)
+{
+  // Ensure source does not get erased if rename fails under various conditions
+  DHTs servers(-1);
+  auto client1 = servers.client();
+  client1.fs->path("/");
+  auto client2 = servers.client(true);
+  BOOST_CHECK_THROW(client2.fs->path("/foo")->mkdir(0666), std::exception);
+
+  auto c2key = elle::serialization::json::serialize(client2.dht.dht->keys().K()).string();
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", c2key, 0);
+  ELLE_TRACE("create target inaccessible dir");
+  client1.fs->path("/dir")->mkdir(0600);
+  ELLE_TRACE("mkdir without perms");
+  BOOST_CHECK_THROW(client2.fs->path("/dir/foo")->mkdir(0666), std::exception);
+  ELLE_TRACE("create source dir");
+  client2.fs->path("/foo")->mkdir(0666);
+  ELLE_TRACE("Rename");
+  try
+  {
+    client2.fs->path("/foo")->rename("/dir/foo");
+    BOOST_CHECK(false);
+  }
+  catch (elle::Error const&e)
+  {
+    ELLE_TRACE("exc %s", e);
+  }
+  struct stat st;
+  client2.fs->path("/foo")->stat(&st);
+  BOOST_CHECK(S_ISDIR(st.st_mode));
+
+  // check again with read-only access
+  client1.fs->path("/dir")->setxattr("infinit.auth.setr", c2key, 0);
+  ELLE_TRACE("Rename2");
+  try
+  {
+    client2.fs->path("/foo")->rename("/dir/foo");
+    BOOST_CHECK(false);
+  }
+  catch (elle::Error const&e)
+  {
+    ELLE_TRACE("exc %s", e);
+  }
+  client2.fs->path("/foo")->stat(&st);
+  BOOST_CHECK(S_ISDIR(st.st_mode));
+}
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -2062,4 +2110,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(paxos_race), 0, 5);
   suite.add(BOOST_TEST_CASE(data_embed), 0, 5);
   suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
+  suite.add(BOOST_TEST_CASE(rename_exceptions), 0, 5);
 }

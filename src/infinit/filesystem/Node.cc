@@ -136,13 +136,16 @@ namespace infinit
         ELLE_DEBUG("removed move target %s", where);
       }
       auto data = this->_parent->_files.at(this->_name);
-      this->_parent->_files.erase(_name);
-      this->_parent->write(*this->_owner.block_store(),
-                            {OperationType::remove, this->_name});
+
       dir->_data->_files.insert(std::make_pair(newname, data));
       dir->_data->write(
         *this->_owner.block_store(),
         {OperationType::insert, newname, data.first, data.second});
+
+      this->_parent->_files.erase(_name);
+      this->_parent->write(*this->_owner.block_store(),
+                            {OperationType::remove, this->_name});
+
       this->_name = newname;
     }
 
