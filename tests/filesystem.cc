@@ -2165,6 +2165,46 @@ ELLE_TEST_SCHEDULED(erased_group)
     elle::ConstWeakBuffer("bar", 3), 3, 0);
 }
 
+ELLE_TEST_SCHEDULED(erased_group_recovery)
+{
+  DHTs servers(-1);
+  auto client1 = servers.client();
+  auto client2 = servers.client(true);
+  client1.fs->path("/");
+  auto c2key = elle::serialization::json::serialize(client2.dht.dht->keys().K()).string();
+  client1.fs->path("/")->setxattr("infinit.group.create", "grp", 0);
+  client1.fs->path("/")->setxattr("infinit.group.add", "grp:" + c2key, 0);
+  ELLE_TRACE("set group ACL");
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", "@grp", 0);
+  client1.fs->path("/")->setxattr("infinit.auth.inherit", "true", 0);
+  client1.fs->path("/dir")->mkdir(0666);
+  ELLE_TRACE("delete group");
+  client1.fs->path("/")->setxattr("infinit.group.delete", "grp", 0);
+  ELLE_TRACE("list auth");
+  auto jsperms = client1.fs->path("/dir")->getxattr("infinit.auth");
+  std::stringstream s(jsperms);
+  auto jperms = elle::json::read(s);
+  auto a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 2);
+  auto hash = boost::any_cast<std::string>(
+    boost::any_cast<elle::json::Object>(a.at(1)).at("name"));
+  ELLE_TRACE("got hash: %s", hash);
+  ELLE_TRACE("clear group from auth");
+  client1.fs->path("/dir")->setxattr("infinit.auth.clear", hash, 0);
+  ELLE_TRACE("recheck auth");
+  jsperms = client1.fs->path("/dir")->getxattr("infinit.auth");
+  s.str(jsperms);
+  jperms = elle::json::read(s);
+  a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 1);
+
+  client1.fs->path("/")->setxattr("infinit.auth.clear", hash, 0);
+  jsperms = client1.fs->path("/")->getxattr("infinit.auth");
+  s.str(jsperms);
+  jperms = elle::json::read(s);
+  a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 1);
+}
 
 ELLE_TEST_SUITE()
 {
@@ -2194,4 +2234,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
   suite.add(BOOST_TEST_CASE(rename_exceptions), 0, 5);
   suite.add(BOOST_TEST_CASE(erased_group), 0, 5);
+  suite.add(BOOST_TEST_CASE(erased_group_recovery), 0, 5);
 }

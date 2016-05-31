@@ -70,9 +70,39 @@ namespace infinit
         std::unique_ptr<model::User> user = this->_model->make_user(
           elle::Buffer(this->_userkey.data(), this->_userkey.size()));
         auto& acl = dynamic_cast<model::blocks::ACLBlock&>(current);
-        // Force a change
-        acl.set_permissions(*user, !this->_read, !this->_write);
-        acl.set_permissions(*user, this->_read, this->_write);
+        if (!user)
+        {
+          for (auto& e: acl.list_permissions(*this->_model))
+          {
+            if (model::doughnut::short_key_hash(
+                dynamic_cast<model::doughnut::User*>(e.user.get())->key())
+                  == this->_userkey)
+            {
+              user = std::move(e.user);
+              break;
+            }
+          }
+        }
+        if (!user)
+        {
+          ELLE_WARN("ACL conflict resolution failed: no user found for %s",
+                    this->_userkey);
+          acl.data(acl.data());
+        }
+        else
+        {
+          // Force a change to ensure a version bump
+          if (!user->name().empty() && user->name()[0] == '#')
+          { // we don't know if this is an user or a group so be careful
+            acl.set_permissions(*user, this->_read, this->_write);
+            acl.data(acl.data());
+          }
+          else
+          {
+            acl.set_permissions(*user, !this->_read, !this->_write);
+            acl.set_permissions(*user, this->_read, this->_write);
+          }
+        }
         return current.clone();
       }
 

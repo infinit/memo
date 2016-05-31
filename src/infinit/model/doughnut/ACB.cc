@@ -417,6 +417,19 @@ namespace infinit
         try
         {
           auto& user = dynamic_cast<User const&>(user_);
+          if (user.name()[0] == '#')
+          {
+            if (!read && !write)
+            { // This is safe, nothing will happen if entry is not found
+              this->set_group_permissions(user.key(), read, write);
+              this->set_permissions(user.key(), read, write);
+            }
+            else
+            {
+              ELLE_TRACE("set_permissions on unresolved key, assuming user");
+              this->set_permissions(user.key(), read, write);
+            }
+          }
           if (user.name()[0] == '@')
             this->set_group_permissions(user.key(), read, write);
           else
