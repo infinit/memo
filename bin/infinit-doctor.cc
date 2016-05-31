@@ -1,5 +1,5 @@
 #include <unordered_map>
-#include <pair>
+#include <utility>
 #include <map>
 
 #include <elle/log.hh>
@@ -115,13 +115,14 @@ _networking(boost::program_options::variables_map const& args,
   auto run = [&] (std::string const& name,
                   std::function<reactor::connectivity::Result (
                     std::string const& host,
-                    uint16_t port)> const& function)
+                    uint16_t port)> const& function,
+                  int deltaport = 0)
   {
     std::string result = elle::sprintf("  %s: ", name);
     auto status = true;
     try
     {
-      auto address = function(host, port);
+      auto address = function(host, port + deltaport);
       result += address.host;
       if (std::find(public_ips.begin(), public_ips.end(), address.host) ==
           public_ips.end())
@@ -152,7 +153,30 @@ _networking(boost::program_options::variables_map const& args,
   };
   run("TCP", reactor::connectivity::tcp);
   run("UDP", reactor::connectivity::udp);
-  run("RDV_UTP", reactor::connectivity::rdv_utp);
+  run("UTP",
+      std::bind(reactor::connectivity::utp,
+                std::placeholders::_1,
+                std::placeholders::_2,
+                0),
+      1);
+  run("UTP (XOR)",
+      std::bind(reactor::connectivity::utp,
+                std::placeholders::_1,
+                std::placeholders::_2,
+                0xFF),
+      2);
+  run("RDV UTP",
+      std::bind(reactor::connectivity::rdv_utp,
+                std::placeholders::_1,
+                std::placeholders::_2,
+                0),
+      1);
+  run("RDV UTP (XOR)",
+      std::bind(reactor::connectivity::rdv_utp,
+                std::placeholders::_1,
+                std::placeholders::_2,
+                0xFF),
+      2);
   {
     std::stringstream nat;
     nat << "  NAT ";
