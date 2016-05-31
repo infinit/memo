@@ -120,7 +120,7 @@ x86_64-windows-mingw4:
     - mkdir -p ../fs-build ../fs-install
     - farm/configure --arch x86_64 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
     - cd ../fs-build && python3 drake --website=false -j $(nproc) //build
-    - cd ../fs-build && python3 drake --website=false -j $(nproc / 4) //check
+    - cd ../fs-build && python3 drake --website=false -j $(($(nproc) / 4)) //check
     - rm -rf ../fs-install && mkdir -p ../fs-install
     - python3 drake -j $(nproc) //install
     - mv ../fs-install "../infinit-$(GIT_DIR=../fs/.git git describe)"
@@ -144,7 +144,7 @@ x86_64-windows-mingw4:
 #     - mkdir -p ../fs-build ../fs-install
 #     - farm/configure --arch i686 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
 #     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //build
-#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc / 4) //check
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(($(nproc) / 4)) //check
 #     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //install
 #   tags:
 #     - i686
