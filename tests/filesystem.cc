@@ -1760,6 +1760,49 @@ acl_paxos()
   test_acl(true);
 }
 
+class NoCheatConsensus: public infinit::model::doughnut::consensus::Consensus
+{
+public:
+  typedef infinit::model::doughnut::consensus::Consensus Super;
+  NoCheatConsensus(std::unique_ptr<Super> backend)
+  : Super(backend->doughnut())
+  , _backend(std::move(backend))
+  {}
+protected:
+  virtual
+  std::unique_ptr<infinit::model::blocks::Block>
+  _fetch(infinit::model::Address address, boost::optional<int> local_version)
+  {
+    auto res = _backend->fetch(address, local_version);
+    if (!res)
+      return res;
+    elle::Buffer buf;
+    {
+      elle::IOStream os(buf.ostreambuf());
+      elle::serialization::binary::serialize(res, os);
+    }
+    elle::IOStream is(buf.istreambuf());
+    elle::serialization::Context ctx;
+    ctx.set(&doughnut());
+    res = elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
+      is, true, ctx);
+    return std::move(res);
+  }
+  std::unique_ptr<Super> _backend;
+};
+
+std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
+no_cheat_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
+{
+  return elle::make_unique<NoCheatConsensus>(std::move(c));
+}
+
+std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
+same_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
+{
+  return std::move(c);
+}
+
 class DHTs
 {
 public:
@@ -1768,9 +1811,17 @@ public:
     : owner_keys(infinit::cryptography::rsa::keypair::generate(512))
     , dhts()
   {
+    pax = true;
+    if (count < 0)
+    {
+      pax = false;
+      count *= -1;
+    }
     for (int i = 0; i < count; ++i)
     {
-      this->dhts.emplace_back(owner = this->owner_keys, args ...);
+      this->dhts.emplace_back(paxos = pax,
+                              owner = this->owner_keys,
+                              args ...);
       for (int j = 0; j < i; ++j)
         this->dhts[j].overlay->connect(*this->dhts[i].overlay);
     }
@@ -1791,9 +1842,14 @@ public:
   };
 
   Client
-  client()
+  client(bool new_key = false)
   {
-    DHT client(keys = this->owner_keys, storage = nullptr);
+    DHT client(owner = this->owner_keys,
+               keys = new_key ? infinit::cryptography::rsa::keypair::generate(512)
+                                : this->owner_keys,
+               storage = nullptr,
+               make_consensus = pax ? same_consensus : no_cheat_consensus,
+               paxos = pax);
     for (auto& dht: this->dhts)
       dht.overlay->connect(*client.overlay);
     return Client("volume", std::move(client));
@@ -1801,6 +1857,7 @@ public:
 
   infinit::cryptography::rsa::KeyPair owner_keys;
   std::vector<DHT> dhts;
+  bool pax;
 };
 
 ELLE_TEST_SCHEDULED(write_truncate)
