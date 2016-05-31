@@ -472,7 +472,7 @@ $> infinit-acl --list --path ~/mnt-alice-volume/ --path ~/mnt-alice-volume/aweso
         bob: r
 </code></pre>
 
-    <p><em><strong>NOTE:</strong> One could have relied on the <code>--traverse</code> option to grant read permission on all the directories leading to the target object. In other words, the following would have achieved the same result <code>$> infinit-acl --set --mode r --user bob --traverse --path ~/mnt-alice-volume/awesome.txt</code>.</em></p>
+    <p><em><strong>NOTE:</strong> One could have relied on the <code>--traverse</code> option to grant read permission on all the directories leading to the target object. In other words, the following would have achieved the same result <code>infinit-acl --set --mode r --user bob --traverse --path ~/mnt-alice-volume/awesome.txt</code>.</em></p>
 
     <p>Bob should now be able to browse the volume's root directory and read its file. Note however that he should not be able to modify it since Alice did not grant Bob the permission to write the file:</p>
 
