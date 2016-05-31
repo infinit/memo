@@ -1225,16 +1225,18 @@ test_filesystem(bool dht,
     bfs::remove(symlink_path);
   }
 
-  ELLE_LOG("utf-8");
-  const char* name = "éùßñЂ";
-  write(mount / name, "foo");
-  BOOST_CHECK_EQUAL(read(mount / name), "foo");
-  BOOST_CHECK_EQUAL(directory_count(mount), 1);
-  bfs::directory_iterator it(mount);
-  BOOST_CHECK_EQUAL(it->path().filename(), name);
-  BOOST_CHECK_EQUAL(it->path().filename(), std::string(name));
-  bfs::remove(mount / name);
-  BOOST_CHECK_EQUAL(directory_count(mount), 0);
+  ELLE_LOG("utf-8")
+  {
+    const char* name = "éùßñЂ";
+    write(mount / name, "foo");
+    BOOST_CHECK_EQUAL(read(mount / name), "foo");
+    BOOST_CHECK_EQUAL(directory_count(mount), 1);
+    bfs::directory_iterator it(mount);
+    BOOST_CHECK_EQUAL(it->path().filename(), name);
+    BOOST_CHECK_EQUAL(it->path().filename(), std::string(name));
+    bfs::remove(mount / name);
+    BOOST_CHECK_EQUAL(directory_count(mount), 0);
+  }
 }
 
 void
@@ -1760,6 +1762,49 @@ acl_paxos()
   test_acl(true);
 }
 
+class NoCheatConsensus: public infinit::model::doughnut::consensus::Consensus
+{
+public:
+  typedef infinit::model::doughnut::consensus::Consensus Super;
+  NoCheatConsensus(std::unique_ptr<Super> backend)
+  : Super(backend->doughnut())
+  , _backend(std::move(backend))
+  {}
+protected:
+  virtual
+  std::unique_ptr<infinit::model::blocks::Block>
+  _fetch(infinit::model::Address address, boost::optional<int> local_version)
+  {
+    auto res = _backend->fetch(address, local_version);
+    if (!res)
+      return res;
+    elle::Buffer buf;
+    {
+      elle::IOStream os(buf.ostreambuf());
+      elle::serialization::binary::serialize(res, os);
+    }
+    elle::IOStream is(buf.istreambuf());
+    elle::serialization::Context ctx;
+    ctx.set(&doughnut());
+    res = elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
+      is, true, ctx);
+    return res;
+  }
+  std::unique_ptr<Super> _backend;
+};
+
+std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
+no_cheat_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
+{
+  return elle::make_unique<NoCheatConsensus>(std::move(c));
+}
+
+std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
+same_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
+{
+  return c;
+}
+
 class DHTs
 {
 public:
@@ -1768,9 +1813,17 @@ public:
     : owner_keys(infinit::cryptography::rsa::keypair::generate(512))
     , dhts()
   {
+    pax = true;
+    if (count < 0)
+    {
+      pax = false;
+      count *= -1;
+    }
     for (int i = 0; i < count; ++i)
     {
-      this->dhts.emplace_back(owner = this->owner_keys, args ...);
+      this->dhts.emplace_back(paxos = pax,
+                              owner = this->owner_keys,
+                              args ...);
       for (int j = 0; j < i; ++j)
         this->dhts[j].overlay->connect(*this->dhts[i].overlay);
     }
@@ -1791,9 +1844,14 @@ public:
   };
 
   Client
-  client()
+  client(bool new_key = false)
   {
-    DHT client(keys = this->owner_keys, storage = nullptr);
+    DHT client(owner = this->owner_keys,
+               keys = new_key ? infinit::cryptography::rsa::keypair::generate(512)
+                                : this->owner_keys,
+               storage = nullptr,
+               make_consensus = pax ? same_consensus : no_cheat_consensus,
+               paxos = pax);
     for (auto& dht: this->dhts)
       dht.overlay->connect(*client.overlay);
     return Client("volume", std::move(client));
@@ -1801,6 +1859,7 @@ public:
 
   infinit::cryptography::rsa::KeyPair owner_keys;
   std::vector<DHT> dhts;
+  bool pax;
 };
 
 ELLE_TEST_SCHEDULED(write_truncate)
@@ -2011,6 +2070,82 @@ ELLE_TEST_SCHEDULED(data_embed)
     2);
 }
 
+static std::string print_mode(int m)
+{
+  std::string res;
+  res += (m & 0200) ? 'r' : '-';
+  res += (m & 0400) ? 'w' : '-';
+  res += (m & 0100) ? 'x' : '-';
+  res += (m & 0020) ? 'r' : '-';
+  res += (m & 0040) ? 'w' : '-';
+  res += (m & 0010) ? 'x' : '-';
+  res += (m & 0002) ? 'r' : '-';
+  res += (m & 0004) ? 'w' : '-';
+  res += (m & 0001) ? 'x' : '-';
+  return res;
+}
+
+ELLE_TEST_SCHEDULED(symlink_perms)
+{
+  // If we enable paxos, it will cache blocks and feed them back to use.
+  // Since we use the Locals dirrectly(no remote), there is no
+  // serialization at all when fetching, which means we end up with
+  // already decyphered blocks
+  DHTs servers(-1);
+  auto client1 = servers.client(false);
+  auto client2 = servers.client(true);
+  ELLE_LOG("create file");
+  auto h = client1.fs->path("/foo")->create(O_RDWR |O_CREAT, S_IFREG | 0600);
+  ELLE_LOG("write file");
+  h->write(elle::ConstWeakBuffer("foo", 3), 3, 0);
+  h->close();
+  h.reset();
+  ELLE_LOG("create symlink");
+  client1.fs->path("/foolink")->symlink("/foo");
+  BOOST_CHECK_EQUAL(client1.fs->path("/foolink")->readlink(), "/foo");
+
+  ELLE_LOG("client2 check");
+  BOOST_CHECK_THROW(client2.fs->path("/foolink")->readlink(), std::exception);
+  BOOST_CHECK_THROW(client2.fs->path("/foo")->open(O_RDWR, 0), std::exception);
+
+  auto skey = serialize(client2.dht.dht->keys().K());
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", skey, 0);
+  client1.fs->path("/")->setxattr("infinit.auth.inherit", "true", 0);
+  BOOST_CHECK_THROW(client2.fs->path("/foolink")->readlink(), std::exception);
+  BOOST_CHECK_THROW(client2.fs->path("/foo")->open(O_RDWR, 0), std::exception);
+
+  client1.fs->path("/foolink2")->symlink("/foo");
+  BOOST_CHECK_NO_THROW(client2.fs->path("/foolink2")->readlink());
+
+  client1.fs->path("/foolink")->setxattr("infinit.auth.setr", skey, 0);
+  BOOST_CHECK_NO_THROW(client2.fs->path("/foolink")->readlink());
+}
+
+
+ELLE_TEST_SCHEDULED(short_hash_key)
+{
+  DHTs servers(1);
+  auto client1 = servers.client();
+  auto key = infinit::cryptography::rsa::keypair::generate(512);
+  auto serkey = elle::serialization::json::serialize(key.K());
+  client1.fs->path("/")->setxattr("infinit.auth.setr", serkey.string(), 0);
+  auto jsperms = client1.fs->path("/")->getxattr("infinit.auth");
+  std::stringstream s(jsperms);
+  auto jperms = elle::json::read(s);
+  auto a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 2);
+  auto hash = boost::any_cast<std::string>(
+    boost::any_cast<elle::json::Object>(a.at(1)).at("name"));
+  ELLE_TRACE("got hash: %s", hash);
+  client1.fs->path("/")->setxattr("infinit.auth.clear", hash, 0);
+  jsperms = client1.fs->path("/")->getxattr("infinit.auth");
+  s.str(jsperms);
+  jperms = elle::json::read(s);
+  a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 1);
+  BOOST_CHECK_THROW(client1.fs->path("/")->setxattr("infinit.auth.clear", "#gogol", 0),
+                    std::exception);
+}
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -2036,4 +2171,6 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(prefetcher_failure), 0, 5);
   suite.add(BOOST_TEST_CASE(paxos_race), 0, 5);
   suite.add(BOOST_TEST_CASE(data_embed), 0, 5);
+  suite.add(BOOST_TEST_CASE(symlink_perms), 0, 5);
+  suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
 }

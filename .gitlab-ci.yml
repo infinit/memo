@@ -28,6 +28,27 @@ x86_64-centos6-gcc4:
     - gcc4
   except:
     - feature/website
+    - feature/public_beyond
+
+public-beyond:
+  stage: build
+  script:
+    - git submodule sync --recursive
+    - git submodule update --init --recursive
+    - git fetch origin --tags
+    - mkdir -p ../fs-build ../fs-install
+    - farm/configure --public-beyond 1 --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+    - cd ../fs-build && python3 drake --website=false -j $(nproc) //beyond/build
+    - cd ../fs-build && python3 drake --website=false -j $(nproc) //beyond/install
+    - cd ../fs-build && python3 drake -j $(nproc) //beyond/debian
+    - scp ../fs-build/beyond/infinit-beyond_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository/infinit-beyond-public_$(GIT_DIR=../fs/.git git describe)_amd64.deb
+    - ssh debian@debian.infinit.io 'make debian'
+  only:
+    - feature/public_beyond
+  tags:
+    - x86_64
+    - trusty
+    - gcc4
 
 x86_64-trusty-gcc4:
   stage: build
@@ -49,6 +70,7 @@ x86_64-trusty-gcc4:
     - gcc4
   except:
     - feature/website
+    - feature/public_beyond
 
 x86_64-jessie-gcc4:
   stage: build
@@ -71,6 +93,7 @@ x86_64-jessie-gcc4:
     - gcc4
   except:
     - feature/website
+    - feature/public_beyond
 
 # i386-jessie-gcc4:
 #   stage: build
@@ -104,11 +127,13 @@ x86_64-windows-mingw4:
     - cd .. && zip -r "infinit-$(GIT_DIR=fs/.git git describe).zip" "infinit-$(GIT_DIR=fs/.git git describe)" && cd fs-build
     - mv "../infinit-$(GIT_DIR=../fs/.git git describe)" ../fs-install
     - scp "../infinit-$(GIT_DIR=../fs/.git git describe).zip" debian@debian.infinit.io:/tmp/www
-#    - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //install
   tags:
     - x86_64
     - windows
     - mingw4
+  except:
+    - feature/website
+    - feature/public_beyond
 
 # i686-windows-mingw4:
 #   stage: build
@@ -154,6 +179,7 @@ x86_64-osx-clang:
     - clang
   except:
     - feature/website
+    - feature/public_beyond
 
 website:
   stage: build

@@ -60,6 +60,7 @@ namespace infinit
         , _keys(keys)
         , _owner(std::move(owner))
         , _passport(std::move(passport))
+        , _admin_keys(admin_keys)
         , _consensus(consensus(*this))
         , _local(
           storage
@@ -67,7 +68,6 @@ namespace infinit
             : nullptr)
         , _overlay(overlay_builder(*this, id, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
-        , _admin_keys(admin_keys)
       {
         if (this->_local)
           this->_local->initialize();
@@ -93,7 +93,7 @@ namespace infinit
                    std::move(port),
                    std::move(storage),
                    std::move(version),
-                   std::move(admin_keys))
+                   admin_keys)
       {
         auto check_user_blocks = [name, this]
           {
@@ -257,13 +257,8 @@ namespace infinit
           catch (MissingBlock const&)
           {
             ELLE_TRACE("Reverse UB not found, returning public key hash");
-            auto buffer =
-              infinit::cryptography::rsa::publickey::der::encode(pub);
-            auto key_hash = infinit::cryptography::hash(
-              buffer, infinit::cryptography::Oneway::sha256);
-            std::string hex_hash = elle::format::hexadecimal::encode(key_hash);
-            return elle::make_unique<doughnut::User>(
-              pub, elle::sprintf("#%s", hex_hash.substr(0, 6)));
+            auto hash = short_key_hash(pub);
+            return elle::make_unique<doughnut::User>(pub, hash);
           }
         }
         else if (data[0] == '@')
@@ -518,6 +513,17 @@ namespace infinit
             admin_keys);
         }
         return dht;
+      }
+
+      std::string
+      short_key_hash(cryptography::rsa::PublicKey const& pub)
+      {
+        auto buffer =
+          infinit::cryptography::rsa::publickey::der::encode(pub);
+        auto key_hash = infinit::cryptography::hash(
+          buffer, infinit::cryptography::Oneway::sha256);
+        std::string hex_hash = elle::format::hexadecimal::encode(key_hash);
+        return elle::sprintf("#%s", hex_hash.substr(0, 6));
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::

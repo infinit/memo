@@ -75,6 +75,8 @@ with TemporaryDirectory() as tmp, \
   assertEq(response['success'], True)
   portfile = '%s/portfile' % tmp
   def peer():
+    while not os.path.exists(portfile):
+      time.sleep(0.1)
     with open(portfile, 'r') as f:
       return '127.0.0.1:%s' % int(f.readline())
   def run_volume():
@@ -85,7 +87,7 @@ with TemporaryDirectory() as tmp, \
   volume_process = infinit_1.spawn([
     'infinit-volume', '--run', '--as', 'user', 'volume',
     '--port-file', portfile])
-  time.sleep(2)
+  time.sleep(4)
   response = infinit_2.run_script(
     user = 'user2', volume = 'user/volume',
     peer = peer(),

@@ -99,7 +99,7 @@ with Beyond() as beyond,\
 
   # Make sure alice doesn't have it.
   l = alice.run_json(
-    ['infinit-drive', '--as', 'alice', '--list', '--script'])
+    ['infinit-drive', '--list', '--as', 'alice', '--script'])
   assertEq(len(l), 0)
 
   # Fetch invitations.
@@ -107,7 +107,7 @@ with Beyond() as beyond,\
 
   # Make sure alice has it.
   l = alice.run_json(
-    ['infinit-drive', '--as', 'alice', '--list', '--script'])
+    ['infinit-drive', '--list', '--as', 'alice', '--script'])
   assertEq(len(l), 1)
 
   drive_name = l[0]['name']
@@ -133,12 +133,14 @@ with Beyond() as beyond,\
     users += ['--user', name]
 
   # They do not have passports.
-  bob.run(['infinit-drive', '--as', 'bob',
+  bob.run(['infinit-drive',
            '--invite', 'employees',
+           '--as', 'bob',
            '--push'], return_code = 1)
   # Create them passports and push invitation.
-  bob.run(['infinit-drive', '--as', 'bob',
+  bob.run(['infinit-drive',
           '--invite', 'employees',
+          '--as', 'bob',
           '--push', '--passport'])
 
   god1.run(['infinit-drive', '--fetch', '--as', 'god1'])

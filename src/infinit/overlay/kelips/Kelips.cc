@@ -1,6 +1,6 @@
 #include <infinit/overlay/kelips/Kelips.hh>
 
-#include <pair>
+#include <utility>
 #include <algorithm>
 #include <random>
 #include <vector>
@@ -3212,7 +3212,7 @@ namespace infinit
         BENCH("make_peer");
         static bool disable_cache = getenv("INFINIT_DISABLE_PEER_CACHE");
         static int cache_count = std::stoi(elle::os::getenv("INFINIT_PEER_CACHE_DUP", "1"));
-        ELLE_TRACE("connecting to %s", hosts);
+        ELLE_TRACE("connecting to %f", hosts);
         if (hosts.first == _self || hosts.first == Address::null)
         {
           ELLE_TRACE("target is local");
@@ -3418,8 +3418,9 @@ namespace infinit
               Contact contact{{}, {}, c.first, Duration(0), Time(), 0};
               for (auto const& ep: c.second)
                 contact.endpoints.push_back(TimedEndpoint(ep, now()));
-              ELLE_LOG("%s: register %s", *this, contact);
+              ELLE_LOG("%s: register %f", this, contact);
               target[c.first] = std::move(contact);
+              this->on_discover()(c.first, false);
             }
           }
           else

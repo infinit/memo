@@ -1,11 +1,11 @@
 #include <infinit/filesystem/File.hh>
 
-#include <pair>
+#include <utility>
 
 #ifdef INFINIT_WINDOWS
 #include <fcntl.h>
 #endif
-#include <pair>
+
 #include <sys/stat.h> // S_IMFT...
 
 #include <elle/cast.hh>
@@ -206,7 +206,7 @@ namespace infinit
       elle::SafeFinally remove_undecoded_first_block([&] {
           this->_first_block.reset();
       });
-      auto perms = _owner.get_permissions(*_first_block);
+      auto perms = get_permissions(*_owner.block_store(), *_first_block);
       _filedata = std::make_shared<FileData>(_parent->_path / _name, *_first_block, perms);
       remove_undecoded_first_block.abort();
     }
@@ -599,7 +599,11 @@ namespace infinit
       if (it != _size_map.end())
       {
         for (auto fh: it->second.second)
+        {
+          ELLE_WARN("Propagating truncate(%s) of %s to open file handle with size %s",
+                    new_size, _name, fh->_file._header.size);
           fh->ftruncate(new_size);
+        }
       }
     }
 
