@@ -63,10 +63,10 @@ with TemporaryDirectory() as tmp, \
     user = 'user', operation = 'mkdir', path = '/beacon')
   assertEq(response['success'], True)
 
-  user_prefix = '/.local/share/infinit/filesystem/users/'
-  with open(infinit_1.dir + user_prefix + 'user2', 'r') as f:
-    j = json.loads(f.read())
-    u2_key = json.dumps(j['public_key'])
+  u2_key = infinit_1.run_json(
+    ['infinit-user', '--export', '--name', 'user2']
+  )['public_key']
+  u2_key = json.dumps(u2_key)
   response = infinit_1.run_script(
     user = 'user', operation = 'setxattr',
     name = 'user.infinit.auth.setrw',
