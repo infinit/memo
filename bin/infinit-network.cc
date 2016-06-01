@@ -6,7 +6,6 @@
 
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/Kalimero.hh>
-#include <infinit/overlay/Stonehenge.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kademlia/kademlia.hh>
 #include <infinit/storage/Storage.hh>
@@ -49,21 +48,17 @@ COMMAND(create)
   auto name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
   std::unique_ptr<infinit::overlay::Configuration> overlay_config;
-  if (args.count("stonehenge"))
+  int overlays =
+    + (args.count("kalimero") ? 1 : 0)
+    + (args.count("kelips") ? 1 : 0)
+  ;
+  if (overlays > 1)
+    throw CommandLineError("Only one overlay type must be specified");
+  if (args.count("kalimero"))
   {
-    auto stonehenge =
-      elle::make_unique<infinit::overlay::StonehengeConfiguration>();
-    ELLE_ABORT("FIXME: stonehenge CLI peer parsing not implemented");
-    // stonehenge->peers =
-    //   mandatory<std::vector<std::string>>(args, "peer", "stonehenge hosts");
-    // overlay_config = std::move(stonehenge);
+    overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
   }
-  if (args.count("kademlia"))
-  {
-    auto kad = elle::make_unique<infinit::overlay::kademlia::Configuration>();
-    overlay_config = std::move(kad);
-  }
-  if (args.count("kelips"))
+  else // default to Kelips
   {
     auto kelips =
       elle::make_unique<infinit::overlay::kelips::Configuration>();
@@ -129,10 +124,6 @@ COMMAND(create)
       }
     }
     overlay_config = std::move(kelips);
-  }
-  if (!overlay_config)
-  {
-    overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
   }
   auto storage = storage_configuration(args);
   // Consensus
@@ -717,27 +708,20 @@ main(int argc, char** argv)
   using boost::program_options::bool_switch;
   Mode::OptionsDescription overlay_types_options("Overlay types");
   overlay_types_options.add_options()
-    ("kalimero", "use a Kalimero overlay network (default)")
-    ("kelips", "use a Kelips overlay network")
-    ("stonehenge", "use a Stonehenge overlay network")
-    ("kademlia", "use a Kademlia overlay network")
+    ("kelips", "use a Kelips overlay network (default)")
+    ("kalimero", "use a Kalimero overlay network.\nUsed for local testing")
     ;
   Mode::OptionsDescription consensus_types_options("Consensus types");
   consensus_types_options.add_options()
     ("paxos", "use Paxos consensus algorithm (default)")
     ("no-consensus", "use no consensus algorithm")
     ;
-  Mode::OptionsDescription stonehenge_options("Stonehenge options");
-  stonehenge_options.add_options()
-    ("peer", value<std::vector<std::string>>()->multitoken(),
-     "hosts to connect to (host:port)")
-    ;
   Mode::OptionsDescription kelips_options("Kelips options");
   kelips_options.add_options()
     ("nodes", value<int>(), "estimate of the total number of nodes")
     ("k", value<int>(), "number of groups (default: 1)")
     ("kelips-contact-timeout", value<std::string>(),
-     "ping timeout before considering a peer lost (default: 2min)")
+     "ping timeout before considering a peer lost (default: 2 min)")
     ("encrypt", value<std::string>(),
       "use encryption: no,lazy,yes (default: yes)")
     ("protocol", value<std::string>(),
@@ -758,12 +742,12 @@ main(int argc, char** argv)
           "storage to contribute (optional)" },
         { "port", value<int>(), "port to listen on (default: random)" },
         { "replication-factor,r", value<int>(),
-          "missing servers eviction delay (default: 10min)" },
-        { "eviction-delay,e", value<std::string>(),
           "data replication factor (default: 1)" },
+        { "eviction-delay,e", value<std::string>(),
+          "missing servers eviction delay\n(default: 10 min)" },
         option_output("network"),
         { "push-network", bool_switch(),
-          elle::sprintf("push the network to %s", beyond(true)).c_str() },
+          elle::sprintf("push the network to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-network" },
         { "admin-r", value<std::vector<std::string>>()->multitoken(),
           "Set an admin user that can read all data"},
@@ -773,7 +757,6 @@ main(int argc, char** argv)
       {
         consensus_types_options,
         overlay_types_options,
-        stonehenge_options,
         kelips_options,
       },
     },
@@ -787,8 +770,7 @@ main(int argc, char** argv)
         { "port", value<int>(), "port to listen on (default: random)" },
         option_output("network"),
         { "push-network", bool_switch(),
-            elle::sprintf("push the updated network to %s",
-                          beyond(true)).c_str() },
+            elle::sprintf("push the updated network to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-network" },
         { "admin-r", value<std::vector<std::string>>()->multitoken(),
           "Set an admin user that can read all data"},
@@ -813,7 +795,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("Fetch a network from %s", beyond(true)).c_str(),
+      elle::sprintf("Fetch a network from %s", beyond(true)),
       &fetch,
       {},
       {
@@ -853,7 +835,7 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a network to %s", beyond(true)).c_str(),
+      elle::sprintf("Push a network to %s", beyond(true)),
       &push,
       "--name NETWORK",
       {
@@ -874,7 +856,7 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      elle::sprintf("Remove a network from %s", beyond(true)).c_str(),
+      elle::sprintf("Remove a network from %s", beyond(true)),
       &pull,
       "--name NETWORK",
       {
@@ -898,10 +880,10 @@ main(int argc, char** argv)
         option_cache_ram_invalidation,
         option_cache_disk_size,
         { "fetch-endpoints", bool_switch(),
-          elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
+          elle::sprintf("fetch endpoints from %s", beyond(true)) },
         { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
         { "push-endpoints", bool_switch(),
-          elle::sprintf("push endpoints to %s", beyond(true)).c_str() },
+          elle::sprintf("push endpoints to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-endpoints" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },
@@ -924,8 +906,7 @@ main(int argc, char** argv)
     },
     {
       "stats",
-      elle::sprintf(
-        "Fetch stats of a network on %s", beyond(true)).c_str(),
+      elle::sprintf("Fetch stats of a network on %s", beyond(true)),
       &stats,
       "--name NETWORK",
       {

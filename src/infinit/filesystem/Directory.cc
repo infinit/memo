@@ -23,6 +23,7 @@
 #include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/UB.hh>
+#include <infinit/model/doughnut/User.hh>
 
 
 #ifdef INFINIT_WINDOWS
@@ -252,8 +253,17 @@ namespace infinit
     void
     DirectoryData::update(Block& block, std::pair<bool, bool> perms)
     {
-      ELLE_DEBUG("%s updating from version %s at %f", this,
-        _block_version, block.address());
+      auto new_version =  dynamic_cast<model::blocks::MutableBlock&>(block).version();
+      if (_block_version >= new_version)
+      {
+        ELLE_WARN("%s: ignoring update at %f from obsolete block %s since we have %s",
+                  this, block.address(), new_version, _block_version);
+        return;
+      }
+      ELLE_DEBUG("%s updating from version %s to version %s at %f", this,
+                 _block_version,
+                 new_version,
+                 block.address());
       _last_used = FileSystem::now();
 
       bool empty = false;
@@ -340,11 +350,13 @@ namespace infinit
           auto b = elle::cast<ACLBlock>::runtime(model.fetch(_address));
           if (b->version() != _block_version)
           {
-            ELLE_LOG("Conflict: block version not expected: %s vs %s",
+            ELLE_TRACE("Conflict: block version not expected: %s vs %s",
                      b->version(), _block_version);
             DirectoryConflictResolver dcr(model, op, _address);
             auto nb = dcr(*b, *b, first_write ? model::STORE_INSERT : model::STORE_UPDATE);
             b = elle::cast<ACLBlock>::runtime(nb);
+            // Update this with the conflict resolved data
+            update(*b, get_permissions(model, *b));
           }
           else
             b->data(data);
@@ -998,6 +1010,46 @@ namespace infinit
                   auto addr = this->_data->files().at(file).second;
                   auto block = this->_owner.block_store()->fetch(addr);
                   return elle::serialization::json::serialize(block).string();
+                });
+            }
+            else if (special->find("resolve.") == 0)
+            {
+              return umbrella(
+                [&]
+                {
+                  std::string what = special->substr(strlen("resolve."));
+                  if (what.empty())
+                    THROW_NODATA
+                  std::unique_ptr<model::doughnut::User> user;
+                  user = std::dynamic_pointer_cast<model::doughnut::User>
+                    (dht->make_user(what));
+                  if (!user)
+                  {
+                    auto block = elle::cast<ACLBlock>::runtime(
+                      this->_owner.block_store()->fetch(this->_data->address()));
+                    for (auto& e: block->list_permissions(*dht))
+                    {
+                      if (model::doughnut::short_key_hash(
+                        dynamic_cast<model::doughnut::User*>(e.user.get())->key())
+                          == what)
+                      {
+                        user = std::dynamic_pointer_cast<model::doughnut::User>
+                          (std::move(e.user));
+                        break;
+                      }
+                    }
+                  }
+                  if (!user)
+                    THROW_INVAL;
+                  elle::json::Object o;
+                  o["name"] = std::string(user->name());
+                  auto serkey = elle::serialization::json::serialize(user->key());
+                  std::stringstream s(serkey.string());
+                  o["key"] = elle::json::read(s);
+                  o["key_hash"] = model::doughnut::short_key_hash(user->key());
+                  std::stringstream ss;
+                  elle::json::write(ss, o, true);
+                  return ss.str();
                 });
             }
           }

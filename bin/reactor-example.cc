@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
         std::vector<std::unique_ptr<reactor::Thread>> client_threads;
         while (true)
         {
-          std::shared_ptr<reactor::network::Socket> socket = server.accept();
+          std::shared_ptr<reactor::network::Socket> socket{server.accept().release()};
           client_threads.emplace_back(
             new reactor::Thread(
               sched, "serve",
