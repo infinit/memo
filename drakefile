@@ -764,7 +764,7 @@ def configure(
                 'dirs': ' '.join(
                   map(str, rootify(p.without_prefix(self.__path)
                                    for p in expected
-                                   if p is not drake.Path.dot))),
+                                   if p is not docker_path))),
                 'version': git.description(),
               },
               file = f)
