@@ -38,6 +38,11 @@ struct Mount
 class MountManager
 {
 public:
+  MountManager(boost::filesystem::path mount_root = boost::filesystem::temp_directory_path(),
+               std::string mount_substitute = "")
+   : _mount_root(mount_root)
+   , _mount_substitute(mount_substitute)
+   {}
   void
   start(std::string const& name, infinit::MountOptions opts = {},
         bool force_mount = false,
@@ -52,6 +57,8 @@ public:
   mountpoint(std::string const& name);
   std::vector<std::string>
   list();
+  ELLE_ATTRIBUTE_RW(boost::filesystem::path, mount_root);
+  ELLE_ATTRIBUTE_RW(std::string, mount_substitute);
   ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_level);
   ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_path);
 private:
@@ -74,7 +81,25 @@ MountManager::mountpoint(std::string const& name)
   if (it == _mounts.end())
     throw elle::Exception("not mounted: " + name);
   ELLE_ASSERT(it->second.options.mountpoint);
-  return it->second.options.mountpoint.get();
+  std::string pre = it->second.options.mountpoint.get();
+  if (!this->_mount_substitute.empty())
+  {
+    auto sep = this->_mount_substitute.find(":");
+    if (sep == std::string::npos)
+      pre = this->_mount_substitute + pre;
+    else
+    {
+      std::string search = this->_mount_substitute.substr(0, sep);
+      std::string repl = this->_mount_substitute.substr(sep+1);
+      auto pos = pre.find(search);
+      if (pos != pre.npos)
+      {
+        pre = pre.substr(0, pos) + repl + pre.substr(pos + search.size());
+      }
+    }
+  }
+  ELLE_TRACE("replying with mountpoint %s", pre);
+  return pre;
 }
 
 bool
@@ -134,7 +159,7 @@ MountManager::start(std::string const& name, infinit::MountOptions opts,
   Mount m{nullptr, volume.mount_options};
   if (force_mount && !m.options.mountpoint)
     m.options.mountpoint =
-    (boost::filesystem::temp_directory_path() / boost::filesystem::unique_path()).string();
+    (this->_mount_root / boost::filesystem::unique_path()).string();
   std::vector<std::string> arguments;
   static const auto root = elle::system::self_path().parent_path();
   arguments.push_back((root / "infinit-volume").string());
@@ -203,15 +228,18 @@ MountManager::status(std::string const& name,
   bool live = ! kill(it->second.process->pid(), 0);
   reply.serialize("live", live);
   if (it->second.options.mountpoint)
-    reply.serialize("mountpoint", it->second.options.mountpoint.get());
+  {
+    reply.serialize("mountpoint", mountpoint(name));
+  }
 }
 
 class DockerVolumePlugin
 {
 public:
-  DockerVolumePlugin(MountManager& manager, bool tcp);
+  DockerVolumePlugin(MountManager& manager);
   ~DockerVolumePlugin();
-  void install(bool tcp);
+  void install(bool tcp, boost::filesystem::path socket_path,
+               boost::filesystem::path descriptor_path);
   void uninstall();
 private:
   MountManager& _manager;
@@ -420,12 +448,31 @@ COMMAND(status)
     std::cout << "Stopped" << std::endl;
 }
 
+template<typename T = std::string>
+T
+with_default(boost::program_options::variables_map const& vm,
+              std::string const& name,
+              T default_value)
+{
+  auto opt = optional<T>(vm, name);
+  if (!opt)
+    return default_value;
+  else
+    return *opt;
+}
 COMMAND(start)
 {
+  ELLE_TRACE("starting daemon");
   if (daemon_running())
     elle::err("daemon already running");
-  MountManager manager;
-  DockerVolumePlugin dvp(manager, flag(args, "docker-socket-tcp"));
+  ELLE_TRACE("starting manager");
+  MountManager manager(
+    with_default<std::string>(args, "mount-root", boost::filesystem::temp_directory_path().string()),
+    with_default<std::string>(args, "docker-mount-substitute", ""));
+  DockerVolumePlugin dvp(manager);
+  dvp.install(flag(args, "docker-socket-tcp"),
+              with_default<std::string>(args, "docker-socket-path", "/run/docker/plugins"),
+              with_default<std::string>(args, "docker-descriptor-path", "/usr/lib/docker/plugins"));
   if (!flag(args, "foreground"))
     daemonize();
   PIDFile pid;
@@ -473,10 +520,9 @@ COMMAND(start)
   };
 }
 
-DockerVolumePlugin::DockerVolumePlugin(MountManager& manager, bool tcp)
+DockerVolumePlugin::DockerVolumePlugin(MountManager& manager)
 : _manager(manager)
 {
-  install(tcp);
 }
 DockerVolumePlugin::~DockerVolumePlugin()
 {
@@ -489,29 +535,30 @@ DockerVolumePlugin::uninstall()
 }
 
 void
-DockerVolumePlugin::install(bool tcp)
+DockerVolumePlugin::install(bool tcp,
+                            boost::filesystem::path socket_path,
+                            boost::filesystem::path descriptor_path)
 {
   // plugin path is either in /etc/docker/plugins or /usr/lib/docker/plugins
-  auto dir = boost::filesystem::path("/usr") /"lib"/ "docker" / "plugins";
   boost::system::error_code erc;
-  boost::filesystem::create_directories(dir, erc);
+  boost::filesystem::create_directories(descriptor_path, erc);
   if (tcp)
   {
     this->_server = elle::make_unique<reactor::network::HttpServer>();
     int port = _server->port();
     std::string url = "tcp://localhost:" + std::to_string(port);
-    boost::filesystem::ofstream ofs(dir / "infinit.spec");
+    boost::filesystem::ofstream ofs(descriptor_path / "infinit.spec");
     if (!ofs.good())
     {
       ELLE_LOG("Execute the following command: echo %s |sudo tee %s/infinit.spec",
-               url, dir.string());
+               url, descriptor_path.string());
     }
     ofs << url;
   }
   else
   {
     auto us = elle::make_unique<reactor::network::UnixDomainServer>();
-    auto sock_path = boost::filesystem::path("/run") / "docker" / "plugins" / "infinit.sock";
+    auto sock_path = socket_path / "infinit.sock";
     boost::filesystem::create_directories(sock_path.parent_path());
     boost::filesystem::remove(sock_path, erc);
     us->listen(sock_path);
@@ -519,11 +566,11 @@ DockerVolumePlugin::install(bool tcp)
   }
   {
     auto json = "\"name\": \"infinit\", \"address\": \"http://www.infinit.sh\"";
-    boost::filesystem::ofstream ofs(dir / "infinit.json");
+    boost::filesystem::ofstream ofs(descriptor_path / "infinit.json");
     if (!ofs.good())
     {
       ELLE_LOG("Execute the following command: echo '%s' |sudo tee %s/infinit.json",
-               json, dir.string());
+               json, descriptor_path.string());
     }
     ofs << json;
   }
@@ -634,6 +681,10 @@ main(int argc, char** argv)
         { "log-level,l", value<std::string>(), "Log level to start volumes with"},
         { "log-path,d", value<std::string>(), "Store volume logs in given path"},
         { "docker-socket-tcp", bool_switch(), "Use a TCP socket for docker plugin"},
+        { "docker-socket-path", value<std::string>(), "Path for plugin socket (/run/docker/plugins)"},
+        { "docker-descriptor-path", value<std::string>(), "Path for plugin descriptor (/usr/lib/docker/plugins)"},
+        { "mount-root", value<std::string>(), "Default root path of all mounts (/tmp)"},
+        { "docker-mount-substitute", value<std::string>(), "[from:to|prefix] : Substitute 'from' to 'to' in advertised path"},
       }
     },
     {
