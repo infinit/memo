@@ -250,8 +250,8 @@ class Website(bottle.Bottle):
   @view('pages/pricing.html')
   def root(self):
     return {
-      'title': 'Plans',
-      'description': 'Discover the different plans for small, medium and large enterprises.',
+      'title': 'Pricing',
+      'description': 'Infinit provides a free community version and an entreprise license with additional features.',
     }
 
   @route('/solutions', name = 'solutions')
