@@ -470,6 +470,22 @@ def configure(
     'resources/images/icons/status-problems@2x.png',
     'resources/images/icons/status-down.png',
     'resources/images/icons/status-down@2x.png',
+    'resources/images/icons/users.png',
+    'resources/images/icons/users@2x.png',
+    'resources/images/icons/address-book.png',
+    'resources/images/icons/address-book@2x.png',
+    'resources/images/icons/monitoring.png',
+    'resources/images/icons/monitoring@2x.png',
+    'resources/images/icons/priority.png',
+    'resources/images/icons/priority@2x.png',
+    'resources/images/icons/key.png',
+    'resources/images/icons/key@2x.png',
+    'resources/images/icons/device-iphone.png',
+    'resources/images/icons/device-iphone@2x.png',
+    'resources/images/icons/on-premise-hub.png',
+    'resources/images/icons/on-premise-hub@2x.png',
+    'resources/images/icons/consulting.png',
+    'resources/images/icons/consulting@2x.png',
   )
 
   resources = resources + resources_icons
