@@ -1500,16 +1500,22 @@ body.pricing {
     > p { text-align: center; width: 40%; margin: 0 auto;}
 
     .version {
-      width: 40%; padding: 0 5%; margin: 50px 0 100px 0; float: left; text-align: center;
+      width: 40%; padding: 0 5%; margin: 20px 0 100px 0; float: left; text-align: center;
 
       ul { list-style-type: none;}
+      ul:after { display: table; clear: both; content: '';}
       ul li { float: left; text-align: center; width: 40%; margin:10px 5% 20px 5%; }
       ul li:nth-child(2n+1) { clear: both; }
-      ul li span { display: block; clear: both; }
+      ul li span { display: block; clear: both; margin-top: 5px; }
       ul li img {
         max-height: 35px; max-width: 35px; width: auto; display: block;
-        padding-bottom: 5px; margin: auto;
+        margin: auto;
       }
+      ul li.key img { margin-top: 10px;}
+      ul li.key span { margin-top: 9px;}
+
+      ul li.connectors img { max-width: none; max-height: none; height: 35px; width: auto;}
+      ul li.key span { margin-top: 9px;}
 
       h2 {
         font-size: 16px; text-transform: uppercase; padding-bottom: 5px;
@@ -1522,6 +1528,10 @@ body.pricing {
         margin: 20px auto; width: 50%;
       }
       p { margin: 5px 0; }
+      p span {
+        color: #718287;background: #dbebf0; border-radius: 3px; padding: 4px 6px;
+        text-transform: uppercase; font-size: 10px; margin-left: 3px; font-weight: bold;
+      }
       a.button { margin-top: 15px; clear: both;}
     }
 
