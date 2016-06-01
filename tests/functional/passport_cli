@@ -74,7 +74,6 @@ with Beyond(beyond_args = {'limits': {'networks': {'passports': limit}}}) as bey
     unreachable()
   except Exception as e:
     assert 'sales@infinit.sh' in e.args[0]
-    assert 'Payment Required' in e.args[0]
 
 # Pull and delete
 with Beyond() as beyond, \

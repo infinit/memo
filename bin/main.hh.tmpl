@@ -2548,9 +2548,8 @@ _beyond_push(reactor::http::Request& r,
   {
     throw elle::Error(
       elle::sprintf(
-        "Pushing %s failed with status %s: Please contact sales@infinit.sh.",
-        type,
-        r.status()));
+        "Pushing %s failed (limit reached): Please contact sales@infinit.sh.",
+        type));
   }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
