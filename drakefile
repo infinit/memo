@@ -760,9 +760,10 @@ def configure(
         print('FROM ubuntu\n'
               'MAINTAINER Infinit <contact@infinit.sh>\n'
               'LABEL version="%(version)s"\n'
-              'ADD %(dirs)s /usr/\n' % {
-                'dirs': ' '.join(
-                  map(str, rootify(p.without_prefix(self.__path)
+              '%(adds)s\n'  % {
+                'adds': 'ADD ' + '\nADD '.join(
+                  map(lambda x: str(x) + ' /usr/' + str(x),
+                    rootify(p.without_prefix(self.__path)
                                    for p in expected
                                    if p is not docker_path))),
                 'version': git.description(),
