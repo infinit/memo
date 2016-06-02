@@ -634,42 +634,14 @@ namespace infinit
         }
         else
         {
-          if (it->second.dirty)
-          {
-            int id = it->first;
-            ELLE_TRACE("starting async flusher for %s", id);
-            auto ab = it->second.block;
-            _flushers.emplace_back(
-              new reactor::Thread("flusher", [this, id, ab] {
-                auto key = cryptography::random::generate<elle::Buffer>(32).string();
-                Address old_addr = Address::null;
-                if (_file._fat.size() > unsigned(id))
-                  old_addr = _file._fat.at(id).first;
-                elle::Buffer cdata;
-                if (ab->size() >= 262144)
-                  reactor::background([&] {
-                    cdata = cryptography::SecretKey(key).encipher(*ab);
-                  });
-                else
-                  cdata = cryptography::SecretKey(key).encipher(*ab);
-                auto block = _model.make_block<ImmutableBlock>(std::move(cdata), _file._address);
-                auto baddr = block->address();
-                _model.store(std::move(block), model::STORE_INSERT,
-                             model::make_drop_conflict_resolver());
-                if (baddr != old_addr)
-                {
-                  ELLE_DEBUG("Changing address of block %s: %s -> %s", id,
-                    old_addr, baddr);
-                  _fat_changed = true;
-                  this->_file._fat[id] = FileData::FatEntry(baddr, key);
-                  if (old_addr != Address::null)
-                  {
-                    unchecked_remove(_model, old_addr);
-                  }
-                }
-            }, reactor::Thread::managed = true));
-          }
+          auto entry = std::move(*it);
           this->_blocks.erase(it);
+          if (auto f = this->_flush_block(entry.first, std::move(entry.second)))
+            this->_flushers.emplace_back(
+              new reactor::Thread(
+                "flusher",
+                [f] { f(); },
+                reactor::Thread::managed = true));
         }
       }
       bool prev = this->_fat_changed;
