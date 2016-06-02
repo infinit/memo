@@ -1348,18 +1348,22 @@ namespace infinit
   load(std::ifstream& input)
   {
     ELLE_ASSERT(input.is_open());
-    elle::serialization::json::SerializerIn s(input, false);
-    return s.deserialize<T>();
+    return elle::serialization::json::deserialize<T>(
+      input,
+      false /* versioned */
+    );
   }
 
   template <typename T>
   void
-  save(std::ostream& output,
-       T const& resource)
+  save(std::ostream& output, T const& resource)
   {
     ELLE_ASSERT(output.good());
-    elle::serialization::json::SerializerOut s(output, false, true);
-    s.serialize_forward(resource);
+    elle::serialization::json::serialize(
+      resource, output,
+      false, /* versioned */
+      true /* pretty */
+    );
   }
 
   class Infinit
