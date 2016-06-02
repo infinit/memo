@@ -542,9 +542,10 @@ namespace infinit
       auto block = _model.make_block<ImmutableBlock>(std::move(cdata), _file._address);
       auto baddr = block->address();
       _model.store(std::move(block), model::STORE_INSERT, model::make_drop_conflict_resolver());
+
       if (baddr != prev)
       {
-        ELLE_DEBUG("Changing address of block %s: %s -> %s", it->first,
+        ELLE_DEBUG("Changing address of block %s: %s -> %s", id,
           prev, baddr);
         fat_change = true;
         _file._fat[id] = FileData::FatEntry(baddr, key);
@@ -553,7 +554,14 @@ namespace infinit
           unchecked_remove(_model, prev);
         }
       }
-      it->second.dirty = false;
+      // We yielded, some other task might have modified _blocks
+      it = this->_blocks.find(id);
+      if (it == this->_blocks.end())
+      {
+        ELLE_TRACE("block %s vanished", id);
+      }
+      else
+        it->second.dirty = false;
       return fat_change;
     }
 
