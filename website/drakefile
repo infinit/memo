@@ -81,6 +81,7 @@ def configure(
     'templates/pages/docs/src/markdown/s3.md',
     'templates/pages/docs/src/markdown/upgrading.md',
     'templates/pages/docs/src/markdown/environment_variables.md',
+    'templates/pages/docs/src/markdown/best_practices.md',
     'templates/pages/docs/src/markdown/technology.md',
   )
   changelog = drake.node(
@@ -163,6 +164,7 @@ def configure(
     'templates/pages/docs/status.html',
     'templates/pages/docs/upgrading.html',
     'templates/pages/docs/environment_variables.html',
+    'templates/pages/docs/best_practices.html',
     'templates/pages/docs/technology.html',
 
     'templates/pages/docs/get_started.html',

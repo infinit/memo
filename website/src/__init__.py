@@ -206,7 +206,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Upgrade Network',
-      'description': 'Upgrade an Infinit network for all the clients to benefit from new features.',
+      'description': 'How to upgrade an Infinit network for all the clients to benefit from new features.',
     }
 
   @route('/documentation/environment-variables', name = 'doc_environment_variables')
@@ -215,6 +215,14 @@ class Website(bottle.Bottle):
     return {
       'title': 'Environment Variables',
       'description': 'List of the environment variables that can be set to alter the behavior of the Infinit file system.',
+    }
+
+  @route('/documentation/best-practices', name = 'doc_best_practices')
+  @view('pages/docs/best_practices.html')
+  def root(self):
+    return {
+      'title': 'Best Practices',
+      'description': 'Best practices when administrating an Infinit storage infrastructure.',
     }
 
   @route('/documentation/comparison/', name = 'doc_comparisons')

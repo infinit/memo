@@ -61,6 +61,10 @@
       <a href="${route('doc_environment_variables')}">Environment Variables</a>
     </li>
 
+    <li ${'class="active"' if request.route.name == 'doc_best_practices ' else ''}>
+      <a href="${route('doc_best_practices')}">Best Practices</a>
+    </li>
+
     <li><hr></li>
 
     <li class="comparisons ${'active' if request.route.name == 'doc_comparison' else ''}">
