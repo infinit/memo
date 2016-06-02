@@ -522,16 +522,18 @@ namespace infinit
         this->_commit_first();
       }
     }
+
     bool
-    FileHandle::_flush_block(int id)
+    FileHandle::_flush_block(int id, CacheEntry entry)
     {
+      if (!entry.dirty)
+        return false;
       bool fat_change = false;
-      auto it = this->_blocks.find(id);
       Address prev = Address::null;
-      if (_file._fat.size() < unsigned(id))
+      if (signed(this->_file._fat.size()) < id)
         prev = _file._fat.at(id).first;
       auto key = cryptography::random::generate<elle::Buffer>(32).string();
-      auto ab = it->second.block;
+      auto ab = entry.block;
       elle::Buffer cdata;
       if (ab->size() >= 262144)
         reactor::background([&] {
@@ -539,10 +541,12 @@ namespace infinit
         });
       else
         cdata = cryptography::SecretKey(key).encipher(*ab);
-      auto block = _model.make_block<ImmutableBlock>(std::move(cdata), _file._address);
+      auto block = this->_model.make_block<ImmutableBlock>(
+        std::move(cdata), this->_file._address);
       auto baddr = block->address();
-      _model.store(std::move(block), model::STORE_INSERT, model::make_drop_conflict_resolver());
-
+      this->_model.store(std::move(block),
+                         model::STORE_INSERT,
+                         model::make_drop_conflict_resolver());
       if (baddr != prev)
       {
         ELLE_DEBUG("Changing address of block %s: %s -> %s", id,
@@ -554,14 +558,6 @@ namespace infinit
           unchecked_remove(_model, prev);
         }
       }
-      // We yielded, some other task might have modified _blocks
-      it = this->_blocks.find(id);
-      if (it == this->_blocks.end())
-      {
-        ELLE_TRACE("block %s vanished", id);
-      }
-      else
-        it->second.dirty = false;
       return fat_change;
     }
 
@@ -626,12 +622,12 @@ namespace infinit
           });
         ELLE_TRACE("Removing block %s from cache", it->first);
         if (cache_size == 0)
-        { // final flush, sync
-          if (it->second.dirty)
-          {
-            _fat_changed = _flush_block(it->first) || _fat_changed;
-          }
+        {
+          // final flush, sync
+          auto entry = std::move(*it);
           this->_blocks.erase(it);
+          if (this->_flush_block(entry.first, std::move(entry.second)))
+            this->_fat_changed = true;
         }
         else
         {
