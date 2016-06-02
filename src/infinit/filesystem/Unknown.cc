@@ -93,6 +93,7 @@ namespace infinit
                      Operation{OperationType::insert, _name, EntryType::file, b->address()},
                      DirectoryData::null_block,
                      true);
+      std::unique_ptr<rfs::Handle> handle;
       elle::With<elle::Finally>(
         [&]
         {
@@ -119,11 +120,11 @@ namespace infinit
             });
         }
         fd.write(*_owner.block_store(), WriteTarget::all, b, true);
-        std::unique_ptr<rfs::Handle> handle(
+        handle.reset(
           new FileHandle(*_owner.block_store(), fd, true, true, true));
         remove_from_parent.abort();
-        return handle;
       };
+      return handle;
     }
 
     void
