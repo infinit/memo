@@ -523,12 +523,11 @@ namespace infinit
       }
     }
 
-    bool
+    std::function<void ()>
     FileHandle::_flush_block(int id, CacheEntry entry)
     {
       if (!entry.dirty)
-        return false;
-      bool fat_change = false;
+        return {};
       Address prev = Address::null;
       if (signed(this->_file._fat.size()) < id)
         prev = _file._fat.at(id).first;
@@ -544,21 +543,25 @@ namespace infinit
       auto block = this->_model.make_block<ImmutableBlock>(
         std::move(cdata), this->_file._address);
       auto baddr = block->address();
-      this->_model.store(std::move(block),
-                         model::STORE_INSERT,
-                         model::make_drop_conflict_resolver());
       if (baddr != prev)
       {
-        ELLE_DEBUG("Changing address of block %s: %s -> %s", id,
-          prev, baddr);
-        fat_change = true;
-        _file._fat[id] = FileData::FatEntry(baddr, key);
-        if (prev != Address::null)
+        ELLE_DEBUG("%s: change address of block %s: %s -> %s",
+                   this, id, prev, baddr);
+        this->_file._fat[id] = FileData::FatEntry(baddr, key);
+        this->_fat_changed = true;
+        return [this, prev, block_ = block.release()] () mutable
         {
-          unchecked_remove(_model, prev);
-        }
+          auto block = std::unique_ptr<Block>(block_);
+          this->_model.store(std::move(block),
+                             model::STORE_INSERT,
+                             model::make_drop_conflict_resolver());
+          if (prev != Address::null)
+            unchecked_remove(this->_model, prev);
+
+        };
       }
-      return fat_change;
+      else
+        return {};
     }
 
     bool
@@ -626,8 +629,8 @@ namespace infinit
           // final flush, sync
           auto entry = std::move(*it);
           this->_blocks.erase(it);
-          if (this->_flush_block(entry.first, std::move(entry.second)))
-            this->_fat_changed = true;
+          if (auto f = this->_flush_block(entry.first, std::move(entry.second)))
+            f();
         }
         else
         {
