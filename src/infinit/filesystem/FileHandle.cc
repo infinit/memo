@@ -439,8 +439,7 @@ namespace infinit
         b = std::make_shared<elle::Buffer>(sk.decipher(crypted));
       }
 
-      auto inserted = this->_blocks.insert(std::make_pair(index,
-        CacheEntry{b, false}));
+      auto inserted = this->_blocks.emplace(index, CacheEntry{b, false});
       inserted.first->second.ready.open();
       inserted.first->second.last_use = std::chrono::high_resolution_clock::now();
       inserted.first->second.dirty = false; // we just fetched or inserted it
@@ -468,8 +467,7 @@ namespace infinit
     FileHandle::_prefetch(int idx)
     {
       ELLE_TRACE("%s: prefetch index %s", *this, idx);
-      auto inserted =
-        this->_blocks.insert(std::make_pair(idx, CacheEntry{}));
+      auto inserted = this->_blocks.emplace(idx, CacheEntry{});
       inserted.first->second.last_use = std::chrono::high_resolution_clock::now();
       inserted.first->second.dirty = false;
       auto addr = Address(this->_file._fat[idx].first.value(),
@@ -501,6 +499,7 @@ namespace infinit
           this->check_cache(this->max_cache_size);
       }, true);
     }
+
     void
     FileHandle::_commit_first()
     {
