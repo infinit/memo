@@ -369,10 +369,13 @@ namespace infinit
           auto it = _blocks.find(i);
           if (it != _blocks.end())
           {
-            reactor::wait(it->second.ready);
-            auto data = it->second.block;
-            data->size(targetsize);
-            it->second.dirty = true;
+            if (!it->second.block)
+              reactor::wait(it->second.ready);
+            if (auto data = it->second.block)
+            {
+              data->size(targetsize);
+              it->second.dirty = true;
+            }
           }
           else
           {
