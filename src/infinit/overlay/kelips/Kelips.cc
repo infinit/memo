@@ -992,7 +992,7 @@ namespace infinit
           {
             try
             {
-              infinit::model::doughnut::consensus::Paxos::RemotePeer peer(
+              infinit::model::doughnut::Remote peer(
                 elle::unconst(*this->doughnut()),
                 pl.first,
                 pl.second.front());
