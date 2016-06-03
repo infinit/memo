@@ -26,6 +26,13 @@ namespace infinit
     static const int max_lookahead_threads =
       std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_THREADS", "3"));
 
+    static
+    std::chrono::high_resolution_clock::time_point
+    now()
+    {
+      return std::chrono::high_resolution_clock::now();
+    }
+
     FileHandle::FileHandle(model::Model& model,
                            FileData data,
                            bool writable,
@@ -140,7 +147,7 @@ namespace infinit
           else
           {
             block = it->second.block;
-            it->second.last_use = std::chrono::high_resolution_clock::now();
+            it->second.last_use = now();
           }
         }
         if (!block)
@@ -272,7 +279,7 @@ namespace infinit
       {
         block = it->second.block;
         it->second.dirty = true;
-        it->second.last_use = std::chrono::high_resolution_clock::now();
+        it->second.last_use = now();
       }
       else
       {
@@ -282,7 +289,7 @@ namespace infinit
         auto const it = _blocks.find(block_idx);
         ELLE_ASSERT(it != _blocks.end());
         it->second.dirty = true;
-        it->second.last_use = std::chrono::high_resolution_clock::now();
+        it->second.last_use = now();
       }
       off_t block_offset = offset % block_size;
       if (block->size() < block_offset + size)
@@ -412,7 +419,7 @@ namespace infinit
       auto it = this->_blocks.find(index);
       if (it != this->_blocks.end())
       {
-        it->second.last_use = std::chrono::high_resolution_clock::now();
+        it->second.last_use = now();
         return it->second.block;
       }
       if (_file._fat.size() <= unsigned(index))
@@ -443,7 +450,7 @@ namespace infinit
 
       auto inserted = this->_blocks.emplace(index, CacheEntry{b, false});
       inserted.first->second.ready.open();
-      inserted.first->second.last_use = std::chrono::high_resolution_clock::now();
+      inserted.first->second.last_use = now();
       inserted.first->second.dirty = false; // we just fetched or inserted it
       return inserted.first->second.block;
     }
@@ -470,7 +477,7 @@ namespace infinit
     {
       ELLE_TRACE("%s: prefetch index %s", *this, idx);
       auto inserted = this->_blocks.emplace(idx, CacheEntry{});
-      inserted.first->second.last_use = std::chrono::high_resolution_clock::now();
+      inserted.first->second.last_use = now();
       inserted.first->second.dirty = false;
       auto addr = Address(this->_file._fat[idx].first.value(),
                           model::flags::immutable_block, false);
@@ -493,7 +500,7 @@ namespace infinit
           auto crypted = bl->take_data();
           auto b = std::make_shared<elle::Buffer>(
             cryptography::SecretKey(key).decipher(crypted));
-          this->_blocks[idx].last_use = std::chrono::high_resolution_clock::now();
+          this->_blocks[idx].last_use = now();
           this->_blocks[idx].block = b;
           this->_blocks[idx].ready.open();
           --this->_prefetchers_count;
