@@ -624,24 +624,17 @@ namespace infinit
               return a.second.last_use < b.second.last_use;
           });
         ELLE_TRACE("Removing block %s from cache", it->first);
-        if (cache_size == 0)
-        {
-          // final flush, sync
-          auto entry = std::move(*it);
-          this->_blocks.erase(it);
-          if (auto f = this->_flush_block(entry.first, std::move(entry.second)))
-            f();
-        }
-        else
         {
           auto entry = std::move(*it);
           this->_blocks.erase(it);
           if (auto f = this->_flush_block(entry.first, std::move(entry.second)))
-            this->_flushers.emplace_back(
-              new reactor::Thread(
-                "flusher",
-                [f] { f(); },
-                reactor::Thread::managed = true));
+            if (cache_size == 0)
+              f();
+            else
+              this->_flushers.emplace_back(
+                new reactor::Thread("flusher",
+                                    [f] { f(); },
+                                    reactor::Thread::managed = true));
         }
       }
       bool prev = this->_fat_changed;
