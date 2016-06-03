@@ -99,7 +99,7 @@ with TemporaryDirectory() as tmp, \
   finally:
     if volume_process is not None:
       volume_process.terminate()
-      out, err = volume_process.communicate()
+      out, err = volume_process.communicate(timeout = 30)
     if os.environ.get('OS') != 'windows':
       try:
         # SIGTERM is not caught on windows. Might be wine related.
