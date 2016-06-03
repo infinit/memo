@@ -28,7 +28,7 @@ infinit-passport --export --network cluster_network --user cluster_node --as clu
 
 INFINIT_HOME=/tmp/node_home infinit-network --link cluster_manager/cluster_network --as cluster_node
 INFINIT_HOME=/tmp/node_home infinit-volume --update cluster_manager/cluster_volume \
-  --as cluster_node --cache --peer $MANAGER_INFINIT_ENDPOINT
+  --as cluster_node --user cluster_node --cache --peer $MANAGER_INFINIT_ENDPOINT
 # initialize
 echo '{"operation": "stat", "path": "/"}' \
   | infinit-volume --run cluster_volume --as cluster_manager -s
@@ -41,8 +41,6 @@ infinit-acl --register --user cluster_node --path /tmp/mntcluster --network clus
 infinit-acl --set --mode rw --enable-inherit --user cluster_node --path /tmp/mntcluster
 kill $vol_pid
 sleep 5
-# run the storage node
-infinit-network --run cluster_network --as cluster_manager &
 
 # push the node configuration to KV
 kv $KV_URL set infinit/users/cluster_node "$(infinit-user --export --full cluster_node)"
@@ -52,6 +50,8 @@ data_dir=/tmp/node_home/.local/share/infinit/filesystem
 kv $KV_URL set infinit/networks/cluster_network "$(cat $data_dir/networks/cluster_manager/cluster_network)"
 kv $KV_URL set infinit/volumes/cluster_volume "$(cat $data_dir/volumes/cluster_manager/cluster_volume)"
 
+# run the storage node
+infinit-network --run cluster_network --as cluster_manager
 
 # PLAN B:create docker image for nodes with the configuration
 #mkdir -p /tmp/infinit_swarm_node
