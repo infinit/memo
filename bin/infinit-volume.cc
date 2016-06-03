@@ -1166,6 +1166,7 @@ main(int argc, char** argv)
           { "push,p", bool_switch(), "alias for --push-endpoints --push-volume" },
           { "push-volume", bool_switch(),
             elle::sprintf("push the volume to %s", beyond(true)) },
+          { "user,u", value<std::string>(), "force mounting user to USER"},
         }),
     },
 #ifndef INFINIT_WINDOWS

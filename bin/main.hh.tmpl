@@ -1465,6 +1465,8 @@ namespace infinit
       mountpoint = v;
     if (auto v = optional(args, "as"))
       as = v;
+    if (auto v = optional(args, "user"))
+      as = v;
     if (flag(args, "readonly"))
       readonly = true;
     if (flag(args, "publish"))
