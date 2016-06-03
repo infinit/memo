@@ -344,23 +344,25 @@ namespace infinit
         return;
       }
       uint64_t first_block_size = _file._data.size();
-      for (int i = _file._fat.size()-1; i >= 0; --i)
+      for (int i = this->_file._fat.size() - 1; i >= 0; --i)
       {
         auto offset = first_block_size + i * _file._header.block_size;
         if (signed(offset) >= new_size)
+        // Kick the block
         {
-          // kick the block
           ELLE_DEBUG("removing from fat at %s", i);
           unchecked_remove(_model, _file._fat[i].first);
           _file._fat.pop_back();
           _blocks.erase(i);
         }
         else if (signed(offset + _file._header.block_size) >= new_size)
-        { // truncate the block
+        // Truncate the block
+        {
           auto targetsize = new_size - offset;
           auto it = _blocks.find(i);
           if (it != _blocks.end())
           {
+            reactor::wait(it->second.ready);
             auto data = it->second.block;
             data->size(targetsize);
             it->second.dirty = true;
