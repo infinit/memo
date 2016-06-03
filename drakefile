@@ -717,10 +717,11 @@ def configure(
     #def local_mtime(self):
     #docker inspect  -f '{{ .Created }}' infinit:0.6.0-rc-169-g16efa2c
   class DockerBuilder(drake.Builder):
-    def __init__(self, image):
+    def __init__(self, image, adds = []):
       self.__image = image
+      self.__adds = adds
       drake.Builder.__init__(self,
-                             docker_nodes,
+                             docker_nodes + [x[0] for x in adds],
                              [docker_file, self.__image])
       self.__path = drake.path_build(docker_path)
     def execute(self):
@@ -749,7 +750,10 @@ def configure(
         return res
       expected = set(chain(*(parents(drake.Path(p))
                            for p in installed_files(docker_nodes))))
-      for g in rootify(effective - expected):
+      extras = set([x[0].path() for x in self.__adds])
+      self.output("Effective: %s" % effective)
+      self.output("Expected: %s" % expected)
+      for g in rootify(effective - expected - extras):
         self.output('Cleanup %s' % g)
         g = str(g)
         if os.path.isdir(g):
@@ -762,10 +766,14 @@ def configure(
               'LABEL version="%(version)s"\n'
               '%(adds)s\n'  % {
                 'adds': 'ADD ' + '\nADD '.join(
-                  map(lambda x: str(x) + ' /usr/' + str(x),
-                    rootify(p.without_prefix(self.__path)
-                                   for p in expected
-                                   if p is not docker_path))),
+                  chain(
+                    map(lambda x: str(x) + ' /usr/' + str(x),
+                      rootify(p.without_prefix(self.__path)
+                                     for p in expected
+                                     if p is not docker_path)),
+                    map(lambda x: str(x[0].path().without_prefix(self.__path)) + ' ' + x[1],
+                      self.__adds))
+                 ),
                 'version': git.description(),
               },
               file = f)
@@ -779,9 +787,21 @@ def configure(
       return True
   docker_path = drake.Path('docker')
   docker_nodes = list(install_nodes(docker_path, demo = False))
+  adds = [
+    (drake.copy(drake.nodes('share/infinit/docker/infinit-swarm-node.sh'),
+      docker_path, strip_prefix = True)[0],
+      '/usr/bin/infinit-swarm-node.sh'),
+    (drake.copy(drake.nodes('share/infinit/docker/infinit-swarm-manager.sh'),
+      docker_path, strip_prefix = True)[0],
+      '/usr/bin/infinit-swarm-manager.sh'),
+    (drake.copy(drake.nodes('share/infinit/docker/kv'),
+      docker_path, strip_prefix = True)[0],
+      '/usr/bin/kv'),
+    ]
+  print(adds)
   docker_image = DockerImage('docker', 'infinit', git.description())
   docker_file = drake.node(docker_path / 'Dockerfile')
-  DockerBuilder(docker_image)
+  DockerBuilder(docker_image, adds = adds)
 
   ## ------ ##
   ## Beyond ##
