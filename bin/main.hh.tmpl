@@ -1784,10 +1784,10 @@ namespace infinit
 
     Network
     network_get(std::string const& name_,
-                User const& owner,
+                boost::optional<User const&> owner,
                 bool require_model = true)
     {
-      auto name = qualified_name(name_, owner);
+      auto name = owner ? qualified_name(name_, *owner) : name_;
       boost::filesystem::ifstream f;
       this->_open_read(f, this->_network_path(name), name, "network");
       auto res = elle::serialization::json::deserialize<Network>(f, false);
@@ -1844,10 +1844,10 @@ namespace infinit
 
     NetworkDescriptor
     network_descriptor_get(std::string const& name_,
-                           User const& owner,
+                           boost::optional<User const&> owner,
                            bool or_network = true)
     {
-      auto name = qualified_name(name_, owner);
+      auto name = owner ? qualified_name(name_, *owner) : name_;
       try
       {
         boost::filesystem::ifstream f;

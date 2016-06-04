@@ -29,6 +29,105 @@ ELLE_LOG_COMPONENT("infinit-daemon");
 
 infinit::Infinit ifnt;
 
+void link_network(std::string const& name)
+{
+  auto desc = ifnt.network_descriptor_get(name, {}, false);
+  auto users = ifnt.users_get();
+  boost::optional<infinit::Passport> passport;
+  boost::optional<infinit::User> user;
+  ELLE_TRACE("checking if any user is owner");
+  for (auto const& u: users)
+  {
+    if (u.public_key == desc.owner)
+    {
+      passport.emplace(u.public_key, desc.name,
+        infinit::cryptography::rsa::KeyPair(u.public_key,
+                                            u.private_key.get()));
+      user.emplace(u);
+      break;
+    }
+  }
+  if (!passport)
+  {
+    ELLE_TRACE("Trying to acquire passport");
+    for (auto const& u: users)
+    {
+      try
+      {
+        passport.emplace(ifnt.passport_get(name, u.name));
+        user.emplace(u);
+        break;
+      }
+      catch (MissingLocalResource const&)
+      {
+        try
+        {
+          passport.emplace(beyond_fetch<infinit::Passport>(elle::sprintf(
+            "networks/%s/passports/%s", name, u.name),
+              "passport for",
+              name,
+              u));
+          user.emplace(u);
+          break;
+        }
+        catch (elle::Error const&)
+        {}
+      }
+    }
+  }
+  if (!passport)
+    throw elle::Error("Failed to acquire passport.");
+  ELLE_TRACE("Passport found for user %s", user->name);
+  infinit::Network network(
+    desc.name,
+    elle::make_unique<infinit::model::doughnut::Configuration>(
+      infinit::model::Address::random(0), // FIXME
+      std::move(desc.consensus),
+      std::move(desc.overlay),
+      std::unique_ptr<infinit::storage::StorageConfig>(),
+      user->keypair(),
+      std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
+      std::move(*passport),
+      user->name,
+      boost::optional<int>(),
+      desc.version,
+      desc.admin_keys));
+  ifnt.network_save(network, true);
+}
+
+void acquire_network(std::string const& name)
+{
+  infinit::NetworkDescriptor desc = beyond_fetch<infinit::NetworkDescriptor>("network", name);
+  ifnt.network_save(desc);
+  try
+  {
+    auto net = ifnt.network_get(name, {}, true);
+  }
+  catch (elle::Error const&)
+  {
+    link_network(name);
+  }
+}
+
+void acquire_volume(std::string const& name)
+{
+  auto desc = beyond_fetch<infinit::Volume>("volume", name);
+  ifnt.volume_save(desc, true);
+  try
+  {
+    auto net = ifnt.network_get(desc.network, {}, true);
+  }
+  catch (MissingLocalResource const&)
+  {
+    acquire_network(desc.network);
+  }
+  catch (elle::Error const&)
+  {
+    link_network(desc.network);
+  }
+}
+
+
 struct Mount
 {
   std::unique_ptr<elle::system::Process> process;
@@ -154,7 +253,16 @@ MountManager::start(std::string const& name, infinit::MountOptions opts,
                     bool force_mount,
                     bool wait_for_mount)
 {
-  auto volume = ifnt.volume_get(name);
+  infinit::Volume volume;
+  try
+  {
+    volume = ifnt.volume_get(name);
+  }
+  catch (MissingLocalResource const&)
+  {
+    acquire_volume(name);
+    volume = ifnt.volume_get(name);
+  }
   volume.mount_options.merge(opts);
   Mount m{nullptr, volume.mount_options};
   if (force_mount && !m.options.mountpoint)
@@ -448,6 +556,11 @@ COMMAND(status)
     std::cout << "Stopped" << std::endl;
 }
 
+COMMAND(acquire)
+{
+  acquire_volume(mandatory(args, "name"));
+}
+
 template<typename T = std::string>
 T
 with_default(boost::program_options::variables_map const& vm,
@@ -664,6 +777,15 @@ main(int argc, char** argv)
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Modes modes {
+    {
+      "acquire",
+      "Acquire volume data",
+      &acquire,
+      "",
+      {
+        {"name", value<std::string>(), "volume name"},
+      }
+    },
     {
       "status",
       "Query daemon status",
