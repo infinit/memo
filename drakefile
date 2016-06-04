@@ -788,15 +788,9 @@ def configure(
   docker_path = drake.Path('docker')
   docker_nodes = list(install_nodes(docker_path, demo = False))
   adds = [
-    (drake.copy(drake.nodes('share/infinit/docker/infinit-swarm-node.sh'),
+    (drake.copy(drake.nodes('share/infinit/docker/infinit-static.sh'),
       docker_path, strip_prefix = True)[0],
-      '/usr/bin/infinit-swarm-node.sh'),
-    (drake.copy(drake.nodes('share/infinit/docker/infinit-swarm-manager.sh'),
-      docker_path, strip_prefix = True)[0],
-      '/usr/bin/infinit-swarm-manager.sh'),
-    (drake.copy(drake.nodes('share/infinit/docker/kv'),
-      docker_path, strip_prefix = True)[0],
-      '/usr/bin/kv'),
+      '/usr/bin/infinit-static.sh'),
     ]
   print(adds)
   docker_image = DockerImage('docker', 'infinit', git.description())
