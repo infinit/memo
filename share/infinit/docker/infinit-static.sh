@@ -3,7 +3,9 @@
 peer=$1
 storage=false
 plugin=false
-
+if test -z "$INFINIT_PORT"; then
+  INFINIT_PORT=51234
+fi
 set -e
 
 if test "--help" =  "$peer"; then
@@ -38,7 +40,7 @@ fi
 
 if $storage; then
   infinit-storage --create --name cluster_storage --filesystem
-  infinit-network --create --name cluster_network --kelips --storage cluster_storage --as cluster_user --port 51234
+  infinit-network --create --name cluster_network --kelips --storage cluster_storage --as cluster_user --port $INFINIT_PORT
 else
   infinit-network --create --name cluster_network --kelips --as cluster_user
 fi
