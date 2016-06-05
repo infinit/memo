@@ -63,10 +63,10 @@ with TemporaryDirectory() as tmp, \
     user = 'user', operation = 'mkdir', path = '/beacon')
   assertEq(response['success'], True)
 
-  user_prefix = '/.local/share/infinit/filesystem/users/'
-  with open(infinit_1.dir + user_prefix + 'user2', 'r') as f:
-    j = json.loads(f.read())
-    u2_key = json.dumps(j['public_key'])
+  u2_key = infinit_1.run_json(
+    ['infinit-user', '--export', '--name', 'user2']
+  )['public_key']
+  u2_key = json.dumps(u2_key)
   response = infinit_1.run_script(
     user = 'user', operation = 'setxattr',
     name = 'user.infinit.auth.setrw',
@@ -79,34 +79,32 @@ with TemporaryDirectory() as tmp, \
       time.sleep(0.1)
     with open(portfile, 'r') as f:
       return '127.0.0.1:%s' % int(f.readline())
-  def run_volume():
-    infinit_1.run([
+  volume_process = None
+  try:
+    volume_process = infinit_1.spawn([
       'infinit-volume', '--run', '--as', 'user', 'volume',
-      '--port-file', portfile],
-      return_code = 118)
-  volume_process = infinit_1.spawn([
-    'infinit-volume', '--run', '--as', 'user', 'volume',
-    '--port-file', portfile])
-  time.sleep(4)
-  response = infinit_2.run_script(
-    user = 'user2', volume = 'user/volume',
-    peer = peer(),
-    operation = 'list_directory',
-    path = '/')
-  assertEq(response['success'], True)
-  assertEq(response['entries'], ['beacon'])
-  response = infinit_2.run_script(
-    user = 'user2', volume = 'user/volume', operation = 'mkdir', path = '/foo',
-    peer = peer())
-  assertEq(response['success'], False)
-  assertEq(response['message'], 'Access denied.')
-  volume_process.terminate()
-  out, err = volume_process.communicate()
-  if os.environ.get('OS') != 'windows':
-    try:
-      # SIGTERM is not caught on windows. Might be wine related.
-      assertEq(volume_process.wait(), 0)
-    except:
-      print('infinit-volume STDOUT: %s' % out)
-      print('infinit-volume STDERR: %s' % err)
-      raise
+      '--port-file', portfile])
+    time.sleep(4)
+    response = infinit_2.run_script(
+      user = 'user2', volume = 'user/volume',
+      peer = peer(), operation = 'list_directory', path = '/')
+    print(response)
+    assertEq(response['success'], True)
+    assertEq(response['entries'], ['beacon'])
+    response = infinit_2.run_script(
+      user = 'user2', volume = 'user/volume', operation = 'mkdir', path = '/foo',
+      peer = peer())
+    assertEq(response['success'], False)
+    assertEq(response['message'], 'Access denied.')
+  finally:
+    if volume_process is not None:
+      volume_process.terminate()
+      out, err = volume_process.communicate(timeout = 30)
+    if os.environ.get('OS') != 'windows':
+      try:
+        # SIGTERM is not caught on windows. Might be wine related.
+        assertEq(volume_process.wait(), 0)
+      except:
+        print('infinit-volume STDOUT: %s' % out)
+        print('infinit-volume STDERR: %s' % err)
+        raise

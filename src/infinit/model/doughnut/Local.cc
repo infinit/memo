@@ -39,9 +39,8 @@ namespace infinit
                    std::unique_ptr<storage::Storage> storage,
                    int port,
                    Protocol p)
-        : Super(std::move(id))
+        : Super(dht, std::move(id))
         , _storage(std::move(storage))
-        , _doughnut(dht)
       {
         try
         {

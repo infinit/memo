@@ -40,7 +40,6 @@ namespace infinit
     {
       namespace consensus
       {
-
         template<typename F>
         auto network_exception_to_unavailable(F f) -> decltype(f())
         {
@@ -176,21 +175,24 @@ namespace infinit
         | Peer |
         `-----*/
 
-        class Peer
+        class PaxosPeer
           : public Paxos::PaxosClient::Peer
         {
         public:
-          Peer(overlay::Overlay::WeakMember member,
-               Address address,
-               boost::optional<int> local_version = {})
+          PaxosPeer(overlay::Overlay::WeakMember member,
+                    Address address,
+                    boost::optional<int> local_version = {})
             : Paxos::PaxosClient::Peer((ELLE_ASSERT(member.lock()),
                                         member.lock()->id()))
-            , _member(std::move(member))
+            , _member(std::dynamic_pointer_cast<Paxos::Peer>(std::move(member)))
             , _address(address)
             , _local_version(local_version)
-          {}
+          {
+            if (!this->_member.lock())
+              ELLE_ABORT("invalid paxos peer: %s", member);
+          }
 
-          overlay::Overlay::Member
+          std::shared_ptr<Paxos::Peer>
           _lock_member()
           {
             auto member = this->_member.lock();
@@ -209,19 +211,11 @@ namespace infinit
           {
             BENCH("propose");
             auto member = this->_lock_member();
-            return network_exception_to_unavailable([&] {
-              if (auto local =
-                  dynamic_cast<Paxos::LocalPeer*>(member.get()))
-                return local->propose(
-                  q, this->_address, p);
-              else if (auto remote =
-                       dynamic_cast<Paxos::RemotePeer*>(member.get()))
-                return remote->propose(
-                  q, this->_address, p);
-              else if (dynamic_cast<DummyPeer*>(member.get()))
-                throw reactor::network::Exception("dummy peer unavailable");
-              ELLE_ABORT("invalid paxos peer: %s", member);
-            });
+            return network_exception_to_unavailable(
+              [&]
+              {
+                return member->propose(q, this->_address, p);
+              });
           }
 
           virtual
@@ -232,28 +226,11 @@ namespace infinit
           {
             BENCH("accept");
             auto member = this->_lock_member();
-            return network_exception_to_unavailable([&] {
-              if (auto local =
-                  dynamic_cast<Paxos::LocalPeer*>(member.get()))
-                return local->accept(
-                  q, this->_address, p, value);
-              else if (auto remote =
-                       dynamic_cast<Paxos::RemotePeer*>(member.get()))
-                {
-                  if (value.is<std::shared_ptr<blocks::Block>>()
-                      || remote->doughnut().version() >= elle::Version(0, 5, 0))
-                    return remote->accept(
-                      q, this->_address, p, value);
-                  else
-                  {
-                    ELLE_TRACE("unmanageable accept on non-block value");
-                    throw reactor::network::Exception("Peer unavailable");
-                  }
-                }
-              else if (dynamic_cast<DummyPeer*>(member.get()))
-                throw reactor::network::Exception("dummy peer unavailable");
-              ELLE_ABORT("invalid paxos peer: %s", member);
-            });
+            return network_exception_to_unavailable(
+              [&]
+              {
+                return member->accept(q, this->_address, p, value);
+              });
           }
 
           virtual
@@ -263,25 +240,13 @@ namespace infinit
           {
             BENCH("confirm");
             auto member = this->_lock_member();
-            return network_exception_to_unavailable([&] {
-              if (auto local =
-                  dynamic_cast<Paxos::LocalPeer*>(member.get()))
+            return network_exception_to_unavailable(
+              [&]
               {
-                if (local->doughnut().version() >= elle::Version(0, 5, 0))
-                  local->confirm(q, this->_address, p);
-                return;
-              }
-              else if (auto remote =
-                       dynamic_cast<Paxos::RemotePeer*>(member.get()))
-              {
-                if (remote->doughnut().version() >= elle::Version(0, 5, 0))
-                  remote->confirm(q, this->_address, p);
-                return;
-              }
-              else if (dynamic_cast<DummyPeer*>(member.get()))
-                throw reactor::network::Exception("dummy peer unavailable");
-              ELLE_ABORT("invalid paxos peer: %s", member);
-            });
+                if (member->doughnut().version() >=
+                    elle::Version(0, 5, 0))
+                  member->confirm(q, this->_address, p);
+              });
           }
 
           virtual
@@ -290,20 +255,15 @@ namespace infinit
           {
             BENCH("get");
             auto member = this->_lock_member();
-            return network_exception_to_unavailable([&] {
-              if (auto local =
-                  dynamic_cast<Paxos::LocalPeer*>(member.get()))
-                return local->get(q, this->_address, this->_local_version);
-              else if (auto remote =
-                       dynamic_cast<Paxos::RemotePeer*>(member.get()))
-                return remote->get(q, this->_address, this->_local_version);
-              else if (dynamic_cast<DummyPeer*>(member.get()))
-                throw reactor::network::Exception("dummy peer unavailable");
-              ELLE_ABORT("invalid paxos peer: %s", member);
-            });
+            return network_exception_to_unavailable(
+              [&]
+              {
+                return member->get(q, this->_address, this->_local_version);
+              });
           }
 
-          ELLE_ATTRIBUTE_R(overlay::Overlay::WeakMember, member);
+          ELLE_ATTRIBUTE_R(
+            std::ambivalent_ptr<Paxos::Peer>, member);
           ELLE_ATTRIBUTE(Address, address);
           ELLE_ATTRIBUTE(boost::optional<int>, local_version);
         };
@@ -317,10 +277,18 @@ namespace infinit
         {
           Paxos::PaxosClient::Peers res;
           for (auto member: dht.overlay()->lookup_nodes(q))
-            res.push_back(
-              elle::make_unique<Peer>(std::move(member), address, local_version));
+            res.push_back(elle::make_unique<PaxosPeer>(
+                            std::move(member), address, local_version));
           return res;
         }
+
+        /*-----.
+        | Peer |
+        `-----*/
+
+        Paxos::Peer::Peer(Doughnut& dht, model::Address id)
+          : Super(dht, id)
+        {}
 
         /*-----------.
         | RemotePeer |
@@ -350,7 +318,11 @@ namespace infinit
           return network_exception_to_unavailable([&] {
             if (this->doughnut().version() < elle::Version(0, 5, 0))
             {
-              ELLE_ASSERT(value.is<std::shared_ptr<blocks::Block>>());
+              if (!value.is<std::shared_ptr<blocks::Block>>())
+              {
+                ELLE_TRACE("unmanageable accept on non-block value");
+                throw reactor::network::Exception("Peer unavailable");
+              }
               auto accept = make_rpc<Paxos::PaxosClient::Proposal (
                 PaxosServer::Quorum peers,
                 Address,
@@ -887,14 +859,14 @@ namespace infinit
         }
 
         boost::optional<Paxos::PaxosClient::Accepted>
-        Paxos::LocalPeer::propose(PaxosServer::Quorum peers,
+        Paxos::LocalPeer::propose(PaxosServer::Quorum const& peers,
                                   Address address,
                                   Paxos::PaxosClient::Proposal const& p)
         {
           ELLE_TRACE_SCOPE("%s: get proposal at %f: %s",
                            *this, address, p);
           auto& decision = this->_load_paxos(address, peers);
-          auto res = decision.paxos.propose(std::move(peers), p);
+          auto res = decision.paxos.propose(peers, p);
           BlockOrPaxos data(&decision);
           this->storage()->set(
             address,
@@ -904,7 +876,7 @@ namespace infinit
         }
 
         Paxos::PaxosClient::Proposal
-        Paxos::LocalPeer::accept(PaxosServer::Quorum peers,
+        Paxos::LocalPeer::accept(PaxosServer::Quorum const& peers,
                                  Address address,
                                  Paxos::PaxosClient::Proposal const& p,
                                  Value const& value)
@@ -954,7 +926,7 @@ namespace infinit
         }
 
         void
-        Paxos::LocalPeer::confirm(PaxosServer::Quorum peers,
+        Paxos::LocalPeer::confirm(PaxosServer::Quorum const& peers,
                                   Address address,
                                   Paxos::PaxosClient::Proposal const& p)
         {
@@ -1012,7 +984,8 @@ namespace infinit
         }
 
         boost::optional<Paxos::PaxosClient::Accepted>
-        Paxos::LocalPeer::get(PaxosServer::Quorum peers, Address address,
+        Paxos::LocalPeer::get(PaxosServer::Quorum const& peers,
+                              Address address,
                               boost::optional<int> local_version)
         {
           ELLE_TRACE_SCOPE("%s: get %f from %f", *this, address, peers);
@@ -1393,7 +1366,7 @@ namespace infinit
               {
                 peers_id.insert(peer->id());
                 peers.push_back(
-                  elle::make_unique<Peer>(wpeer, b->address()));
+                  elle::make_unique<PaxosPeer>(wpeer, b->address()));
               }
             }
             if (peers.empty())
@@ -1449,7 +1422,7 @@ namespace infinit
                   this->doughnut(), e.expected(), b->address());
                 peers_id.clear();
                 for (auto const& peer: peers)
-                  peers_id.insert(static_cast<Peer&>(*peer).id());
+                  peers_id.insert(static_cast<PaxosPeer&>(*peer).id());
                 continue;
               }
               break;
@@ -1565,7 +1538,7 @@ namespace infinit
           std::unordered_map<Address, PaxosClient::Peers> peers;
           for (auto r: hits)
             peers[r.first].push_back(
-              elle::make_unique<Peer>(r.second, r.first, versions.at(r.first)));
+              elle::make_unique<PaxosPeer>(r.second, r.first, versions.at(r.first)));
           reactor::for_each_parallel(
             peers,
             [&] (std::pair<Address const, PaxosClient::Peers>& p)
@@ -1640,7 +1613,7 @@ namespace infinit
                 {
                   try
                   {
-                    if (auto member = static_cast<Peer&>(*peer).member().lock())
+                    if (auto member = static_cast<PaxosPeer&>(*peer).member().lock())
                       return member->fetch(address, local_version);
                     else
                       ELLE_WARN("%s: peer was deleted while storing", this);
@@ -1674,7 +1647,7 @@ namespace infinit
           PaxosClient::Peers peers;
           for (auto peer: owners)
             peers.push_back(
-              elle::make_unique<Peer>(peer, address, local_version));
+              elle::make_unique<PaxosPeer>(peer, address, local_version));
           ELLE_DEBUG("peers: %f", peers);
           return peers;
         }

@@ -46,7 +46,6 @@ def configure(
     codesign = False,
     beyond: bool = True,
     website: bool = True,
-    beyond_public: bool = False,
 ):
 
   if python3 is not None:
@@ -480,6 +479,7 @@ def configure(
     ('infinit-block', [], True),
     ('infinit-credentials', [], True),
     ('infinit-device', [], True),
+    ('infinit-doctor', [], True),
     ('infinit-drive', [], True),
     ('infinit-journal', [], True),
     ('infinit-network', [], True),
@@ -816,6 +816,7 @@ def configure(
     if beyond:
       beyond = drake.include(
         'beyond',
+        production_build = production_build,
         python = elle.python3,
         cryptography_python_module = elle.cryptography.python_module,
         sendwithus = sendwithus,
@@ -829,7 +830,6 @@ def configure(
           'binaries': installed_binaries,
           'debian': rule_debian
         },
-        public = beyond_public
       )
       if not windows:
         crash_test_libs = drake.copy([
