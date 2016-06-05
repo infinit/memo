@@ -717,13 +717,14 @@ def configure(
     #def local_mtime(self):
     #docker inspect  -f '{{ .Created }}' infinit:0.6.0-rc-169-g16efa2c
   class DockerBuilder(drake.Builder):
-    def __init__(self, image, adds = []):
+    def __init__(self, image, docker_file, files = []):
       self.__image = image
-      self.__adds = adds
+      self.__docker_file = docker_file
+      self.__files = files
       drake.Builder.__init__(self,
-                             docker_nodes + [x[0] for x in adds],
-                             [docker_file, self.__image])
-      self.__path = drake.path_build(docker_path)
+                             self.__files,
+                             [self.__docker_file, self.__image])
+      self.__path = self.__docker_file.path().dirname()
     def execute(self):
       # Cleanup
       effective = oset.oset()
@@ -749,29 +750,25 @@ def configure(
             res.add(p)
         return res
       expected = set(chain(*(parents(drake.Path(p))
-                           for p in installed_files(docker_nodes))))
-      extras = set([x[0].path() for x in self.__adds])
-      for g in rootify(effective - expected - extras):
+                           for p in installed_files(self.__files))))
+      for g in rootify(effective - expected):
         self.output('Cleanup %s' % g)
         g = str(g)
         if os.path.isdir(g):
           shutil.rmtree(str(g))
         else:
           os.remove(g)
-      with open(str(docker_file.path()), 'w') as f:
+      with open(str(self.__docker_file.path()), 'w') as f:
         print('FROM ubuntu\n'
               'MAINTAINER Infinit <contact@infinit.sh>\n'
               'LABEL version="%(version)s"\n'
-              '%(adds)s\n'  % {
-                'adds': 'ADD ' + '\nADD '.join(
-                  chain(
-                    map(lambda x: str(x) + ' /usr/' + str(x),
-                      rootify(p.without_prefix(self.__path)
-                                     for p in expected
-                                     if p is not docker_path)),
-                    map(lambda x: str(x[0].path().without_prefix(self.__path)) + ' ' + x[1],
-                      self.__adds))
-                 ),
+              'ADD %(adds)s /usr/\n'  % {
+                'adds': ' '.join(
+                  chain(map(str,
+                            rootify(p.without_prefix(self.__path)
+                                    for p in expected
+                                    if p is not docker_path)),
+                  )),
                 'version': git.description(),
               },
               file = f)
@@ -785,14 +782,12 @@ def configure(
       return True
   docker_path = drake.Path('docker')
   docker_nodes = list(install_nodes(docker_path, demo = False))
-  adds = [
-    (drake.copy(drake.nodes('share/infinit/docker/infinit-static.sh'),
-      docker_path, strip_prefix = True)[0],
-      '/usr/bin/infinit-static.sh'),
-    ]
+  docker_nodes.append(
+    drake.copy(drake.node('share/infinit/docker/infinit-static.sh'),
+               docker_path / 'bin', strip_prefix = True))
   docker_image = DockerImage('docker', 'infinit', git.description())
   docker_file = drake.node(docker_path / 'Dockerfile')
-  DockerBuilder(docker_image, adds = adds)
+  DockerBuilder(docker_image, docker_file, docker_nodes)
 
   ## ------ ##
   ## Beyond ##
