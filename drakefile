@@ -712,6 +712,7 @@ def configure(
     if beyond:
       beyond = drake.include(
         'beyond',
+        production_build = production_build,
         python = elle.python3,
         cryptography_python_module = elle.cryptography.python_module,
         sendwithus = sendwithus,

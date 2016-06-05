@@ -36,6 +36,7 @@ with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
 
 def configure(
+    production_build,
     python,
     cryptography_python_module,
     git,
@@ -89,22 +90,29 @@ def configure(
     def _variable(self, name, value):
       return '%s = %r' % (name, value)
   PythonVersionGenerator(version, git)
-  with drake.templating.Context(content = {
-      'dropbox_app_key': dropbox_app_key,
-      'dropbox_app_secret': dropbox_app_secret,
-      'google_app_key':
-        '%s.apps.googleusercontent.com' % google_app_key,
-      'google_app_secret': google_app_secret,
-      'gcs_app_key':
-        '%s.apps.googleusercontent.com' % gcs_app_key,
-      'gcs_app_secret': gcs_app_secret,
-      'gcs_login': gcs_login,
-      'gcs_key': gcs_key,
-      'sendwithus_api_key': sendwithus_api_key,
-      'email_regex': email_regex,
-      'name_regex': name_regex,
-      'delegate_user': delegate_user,
-  }):
+  secrets = {
+    'dropbox_app_key': dropbox_app_key,
+    'dropbox_app_secret': dropbox_app_secret,
+    'google_app_key':
+      '%s.apps.googleusercontent.com' % google_app_key,
+    'google_app_secret': google_app_secret,
+    'gcs_app_key':
+      '%s.apps.googleusercontent.com' % gcs_app_key,
+    'gcs_app_secret': gcs_app_secret,
+    'gcs_login': gcs_login,
+    'gcs_key': gcs_key,
+    'sendwithus_api_key': sendwithus_api_key,
+  }
+  if production_build:
+    for k in secrets:
+      secrets[k] = None
+  variables = {
+    'email_regex': email_regex,
+    'name_regex': name_regex,
+    'delegate_user': delegate_user,
+  }
+  variables.update(secrets)
+  with drake.templating.Context(content = variables):
     drake.node('bin/beyond.tmpl')
     drake.node('etc/uwsgi/apps-available/beyond.xml.tmpl')
     drake.node('src/wsgi.py.tmpl')
