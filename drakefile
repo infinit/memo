@@ -1,6 +1,7 @@
 import drake
 import drake.cxx
 import drake.debian
+import drake.docker
 import drake.git
 import drake.python
 import drake.redhat
@@ -702,92 +703,22 @@ def configure(
   ## Docker ##
   ## ------ ##
 
-  class DockerImage(drake.BaseNode):
-    def __init__(self, name, repository, tag):
-      path = drake.Drake.current.prefix / name
-      path = drake.Path(path._Path__path, False, True)
-      super().__init__(path)
-      self.__repository = repository
-      self.__tag = tag
-    def missing(self):
-      i = subprocess.check_output(
-        ['docker', 'images', '-q',
-         '%s:%s' % (self.__repository, self.__tag)])
-      return not bool(i)
-    #def local_mtime(self):
-    #docker inspect  -f '{{ .Created }}' infinit:0.6.0-rc-169-g16efa2c
-  class DockerBuilder(drake.Builder):
-    def __init__(self, image, docker_file, files = []):
-      self.__image = image
-      self.__docker_file = docker_file
-      self.__files = files
-      drake.Builder.__init__(self,
-                             self.__files,
-                             [self.__docker_file, self.__image])
-      self.__path = self.__docker_file.path().dirname()
-    def execute(self):
-      # Cleanup
-      effective = oset.oset()
-      for path, dirs, files in os.walk(str(self.__path)):
-        path = drake.Path(path)
-        for f in chain(files, dirs):
-          effective.add(path / f)
-      def parents(p):
-        while p != drake.Path.dot:
-          yield p
-          p = p.dirname()
-      def rootify(paths):
-        res = set()
-        for p in paths:
-          insert = True
-          for e in set(res):
-            if e.prefix_of(p):
-              insert = False
-              break
-            elif p.prefix_of(e):
-              res.remove(e)
-          if insert:
-            res.add(p)
-        return res
-      expected = set(chain(*(parents(drake.Path(p))
-                           for p in installed_files(self.__files))))
-      for g in rootify(effective - expected):
-        self.output('Cleanup %s' % g)
-        g = str(g)
-        if os.path.isdir(g):
-          shutil.rmtree(str(g))
-        else:
-          os.remove(g)
-      with open(str(self.__docker_file.path()), 'w') as f:
-        print('FROM ubuntu\n'
-              'MAINTAINER Infinit <contact@infinit.sh>\n'
-              'LABEL version="%(version)s"\n'
-              'ADD %(adds)s /usr/\n'  % {
-                'adds': ' '.join(
-                  chain(map(str,
-                            rootify(p.without_prefix(self.__path)
-                                    for p in expected
-                                    if p is not docker_path)),
-                  )),
-                'version': git.description(),
-              },
-              file = f)
-      self.cmd('Docker build image %s' % self.__path,
-               ['docker', 'build',
-                '--force-rm',
-                '--tag', 'infinit:%s' % git.description(),
-                 self.__path,
-               ],
-               throw = True)
-      return True
   docker_path = drake.Path('docker')
-  docker_nodes = list(install_nodes(docker_path, demo = False))
-  docker_nodes.append(
+  docker_image = drake.docker.DockerImage(
+    'docker', 'infinit', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'ubuntu',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.add(install_nodes(docker_path, demo = False), '/usr')
+  docker_file.add(
     drake.copy(drake.node('share/infinit/docker/infinit-static.sh'),
-               docker_path / 'bin', strip_prefix = True))
-  docker_image = DockerImage('docker', 'infinit', git.description())
-  docker_file = drake.node(docker_path / 'Dockerfile')
-  DockerBuilder(docker_image, docker_file, docker_nodes)
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  drake.docker.DockerBuilder(docker_image, docker_file)
 
   ## ------ ##
   ## Beyond ##
