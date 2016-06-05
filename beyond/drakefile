@@ -106,6 +106,7 @@ def configure(
       'delegate_user': delegate_user,
   }):
     drake.node('bin/beyond.tmpl')
+    drake.node('etc/uwsgi/apps-available/beyond.xml.tmpl')
     drake.node('src/wsgi.py.tmpl')
     drake.node('src/validation.py.tmpl')
 

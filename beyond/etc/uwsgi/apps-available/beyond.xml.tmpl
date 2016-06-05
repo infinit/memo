@@ -17,4 +17,13 @@
   <no-orphans/>
   <vacuum/>
   <logger>syslog:uwsgi-beyond</logger>
+  <set>gcs-login=${repr(gcs_login)}</set>
+  <set>gcs-key=${repr(gcs_key)}</set>
+  <set>dropbox-app-key=${repr(dropbox_app_key)}</set>
+  <set>dropbox-app-secret=${repr(dropbox_app_secret)}</set>
+  <set>google-app-key=${repr(google_app_key)}</set>
+  <set>google-app-secret=${repr(google_app_secret)}</set>
+  <set>gcs-app-key=${repr(gcs_app_key)}</set>
+  <set>gcs-app-secret=${repr(gcs_app_secret)}</set>
+  <set>sendwithus-api-key=${repr(sendwithus_api_key)}</set>
 </uwsgi>
