@@ -30,6 +30,10 @@ cat <<EOF >/tmp/cluster_user
 EOF
 infinit-user --import -i /tmp/cluster_user
 
+if ! test -z "$USERS"; then
+  echo "$USERS" |xargs -n 1 echo | while IFS=: read user password; do infinit-user --login --name $user --password $password || true; done
+fi
+
 if test "$1" = "enable_storage" || test "$2" = "enable_storage" || test "$3" = "enable_storage"; then
   storage=true
 fi
