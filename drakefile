@@ -751,8 +751,6 @@ def configure(
       expected = set(chain(*(parents(drake.Path(p))
                            for p in installed_files(docker_nodes))))
       extras = set([x[0].path() for x in self.__adds])
-      self.output("Effective: %s" % effective)
-      self.output("Expected: %s" % expected)
       for g in rootify(effective - expected - extras):
         self.output('Cleanup %s' % g)
         g = str(g)
@@ -792,7 +790,6 @@ def configure(
       docker_path, strip_prefix = True)[0],
       '/usr/bin/infinit-static.sh'),
     ]
-  print(adds)
   docker_image = DockerImage('docker', 'infinit', git.description())
   docker_file = drake.node(docker_path / 'Dockerfile')
   DockerBuilder(docker_image, adds = adds)
