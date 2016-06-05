@@ -15,9 +15,6 @@ import infinit.beyond
 import infinit.beyond.bottle
 import infinit.beyond.couchdb
 
-gcs_login = ${repr(gcs_login)}
-gcs_key = bytes(${repr(gcs_key)}, 'UTF-8')
-
 def parse_options():
   import argparse
   # Parse options
@@ -64,14 +61,20 @@ def parse_options():
                       help = 'Reload automatically when code changes',
                       action = 'store_true',
                       default = False)
-  parser.add_argument('--enable-gcs',
-                      help = 'Enable GCS resources uploading',
-                      action = 'store_true',
-                      default = False)
   parser.add_argument('--sendwithus-app-key',
                       type = str,
                       help = 'SendWithUs api key',
                       default = 'test_b71aa18fba1a03a9c314ca1d50eb8a8ceb37825c')
+  parser.add_argument('--gcs-login',
+                      metavar = 'LOGIN',
+                      type = str,
+                      help = 'Google Cloud Storage login',
+                      default = ${repr(gcs_login)})
+  parser.add_argument('--gcs-key',
+                      metavar = 'KEY',
+                      type = str,
+                      help = 'Google Cloud Storage key',
+                      default = ${repr(gcs_key)})
   parser.add_argument(
     '--couchdb-directory',
     metavar = 'PATH',
@@ -97,10 +100,10 @@ def parse_options():
 
 try:
   args = parse_options()
-  if args.enable_gcs:
+  if args.gcs_login is not None and args.gcs_key is not None:
     from infinit.beyond.gcs import GCS
-    gcs = GCS(login = gcs_login,
-              key = gcs_key,
+    gcs = GCS(login = args.gcs_login,
+              key = bytes(args.gcs_key, 'UTF-8'),
               bucket_ns = 'sh_infinit_beyond_dev')
   else:
     gcs = None
