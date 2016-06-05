@@ -105,7 +105,7 @@ def configure(
       'name_regex': name_regex,
       'delegate_user': delegate_user,
   }):
-    drake.node('beyond.tmpl')
+    drake.node('bin/beyond.tmpl')
     drake.node('src/wsgi.py.tmpl')
     drake.node('src/validation.py.tmpl')
 
@@ -186,8 +186,7 @@ def configure(
       yield node
     yield how(bottle,
               where / python_prefix, strip_prefix = True)
-    yield how(drake.node('beyond'),
-              where / 'bin', strip_prefix = True)
+    yield how(drake.node('bin/beyond'), where)
     if cryptography_python_module:
       yield how(cryptography_python_module,
                 where / python_prefix, strip_prefix = True)
@@ -210,7 +209,7 @@ def configure(
   ## ------ ##
 
   debian_nodes = install_nodes('debian/opt/infinit/beyond',
-                          how = drake.copy)
+                               how = drake.copy)
   git = drake.git.Git()
   with drake.templating.Context(content = {
       'version': git.description(),
