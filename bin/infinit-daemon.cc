@@ -698,7 +698,9 @@ DockerVolumePlugin::install(bool tcp,
     });
   _server->register_route("/VolumeDriver.Create", reactor::http::Method::POST,
     [] ROUTE_SIG {
-      return "{\"Err\": \"Use 'infinit-volume --create'\"}";
+      // Since we fetch on demand, we must let create pass
+      return "{\"Err\": \"\"}";
+      //return "{\"Err\": \"Use 'infinit-volume --create'\"}";
     });
   _server->register_route("/VolumeDriver.Remove", reactor::http::Method::POST,
     [] ROUTE_SIG {
