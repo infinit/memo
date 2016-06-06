@@ -37,7 +37,7 @@ def find_binaries():
       pass
     except subprocess.CalledProcessError:
       pass
-  raise Exception('unable to find infinit-user binary')
+  return None
 
 binary_path = find_binaries()
 
@@ -313,6 +313,8 @@ class Beyond:
         owner = owner, name = name)
 
   def process_invitations(self, user, email, drives):
+    if binary_path is None:
+      raise NotImplementedError()
     errors = []
     try:
       try:

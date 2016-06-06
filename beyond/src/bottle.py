@@ -434,7 +434,13 @@ class Bottle(bottle.Bottle):
     # Look for plain invites.
     drives = self.__beyond.user_drives_get(name = email)
     if len(drives):
-      errors = self.__beyond.process_invitations(user, email, drives)
+      try:
+        errors = self.__beyond.process_invitations(user, email, drives)
+      except NotImplementedError:
+        return {
+          'error':
+          'unable to process invitations: can\'t sign passports',
+        }
     raise Response(200, {
       'errors': errors
     })
