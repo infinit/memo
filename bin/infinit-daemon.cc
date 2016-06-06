@@ -127,6 +127,34 @@ void acquire_volume(std::string const& name)
   }
 }
 
+void acquire_volumes()
+{
+  auto users = ifnt.users_get();
+  for (auto const& u: users)
+  {
+    auto res = beyond_fetch<
+      std::unordered_map<std::string, std::vector<infinit::Volume>>>(
+        elle::sprintf("users/%s/volumes", u.name),
+        "volumes for user",
+        u.name,
+        u);
+    for (auto const& volume: res["volumes"])
+    {
+      try
+      {
+        acquire_volume(volume.name);
+      }
+      catch (ResourceAlreadyFetched const& error)
+      {
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_LOG("failed to acquire %s: %s", volume.name, e);
+      }
+    }
+  }
+}
+
 
 struct Mount
 {
@@ -167,6 +195,14 @@ private:
 std::vector<std::string>
 MountManager::list()
 {
+  try
+  {
+    acquire_volumes();
+  }
+  catch (elle::Error const& e)
+  {
+    ELLE_TRACE("Failed to acquire volumes from beyond: %s", e);
+  }
   std::vector<std::string> res;
   for (auto const& volume: ifnt.volumes_get())
     res.push_back(volume.name);
@@ -764,7 +800,7 @@ DockerVolumePlugin::install(bool tcp,
   _server->register_route("/VolumeDriver.List", reactor::http::Method::POST,
     [this] ROUTE_SIG {
       auto list = _manager.list();
-      std::string res("{\"Err\": \"\", \"Volumes\": [");
+      std::string res("{\"Err\": \"\", \"Volumes\": [ ");
       for (auto const& n: list)
         res += "{\"Name\": \"" + n + "\"},";
       res = res.substr(0, res.size()-1);
