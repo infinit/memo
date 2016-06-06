@@ -20,7 +20,18 @@ if echo $image |grep http; then
   image=docker-image-infinit.tgz
 fi
 
+if test -z "$beyond_image"; then
+  beyond_image=docker-image-beyond.tgz
+fi
+
+if echo $beyond_image |grep http; then
+  wget -O docker-image-beyond.tgz $beyond_image
+  beyond_image=docker-image-beyond.tgz
+fi
+
+
 docker import $image infinit:latest
+docker import $beyond_image beyond:latest
 
 if test -z "$INFINIT_PORT"; then
   INFINIT_PORT=51236
@@ -31,20 +42,27 @@ for node in $(docker node ls |grep READY |grep -v '*' | awk {'print $2'}); do
   DOCKER_HOST=$node:2375 docker import $image infinit:latest
   DOCKER_HOST=$node:2375 docker run --privileged --rm -v /:/tmp/hostroot ubuntu nsenter --mount=/tmp/hostroot/proc/1/ns/mnt mount --make-shared /
 done
-# run the storage on manager
+
+# run beyond on manager
+docker run -d -p 8080:8080 beyond /usr/bin/beyond --host 0.0.0.0
+
+# run the default volume storage on manager
 docker run -d -e INFINIT_PORT=$INFINIT_PORT -p $INFINIT_PORT:$INFINIT_PORT -p $INFINIT_PORT:$INFINIT_PORT/udp infinit /bin/bash /usr/bin/infinit-static.sh '' enable_storage
 
 # cant run the volume plugin as a service: no --privileged
 manager_host=$(docker node ls |grep '*' | awk '{print $3}')
 for node in $(docker node ls |grep READY |grep -v '*' | awk {'print $2'}); do
-  DOCKER_HOST=$node:2375 docker run -d --privileged -v /:/tmp/hostroot:shared infinit /bin/bash /usr/bin/infinit-static.sh $manager_host:$INFINIT_PORT enable_volume_plugin
+  DOCKER_HOST=$node:2375 docker run -d --privileged -e INFINIT_BEYOND=http://$manager_host:8080 -v /:/tmp/hostroot:shared infinit /bin/bash /usr/bin/infinit-static.sh $manager_host:$INFINIT_PORT enable_volume_plugin
 done
 
 
+# TEST ME WITH:
+# DOCKER_HOST=ip-192-168-34-67.us-west-2.compute.internal:2375 docker run -i -t --rm -v cluster_user/cluster_volume:/shared ubuntu /bin/bash
+# write to shared, exit and/or start on an other node, files are shared!
 
 
 
-
+# EXPERIMENTS
 #storage_sid=$(docker service create  -p 51234:51234 -p 51234:51234/udp infinit /bin/bash /usr/bin/infinit-static.sh '' enable_storage)
 # no way to know on which node the service is running
 #storage_host=
