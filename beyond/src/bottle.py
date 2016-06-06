@@ -16,6 +16,7 @@ from functools import partial
 
 from infinit.beyond import *
 from infinit.beyond.response import Response
+from infinit.beyond.gcs import GCS
 from infinit.beyond.plugins.jsongo import Plugin as JsongoPlugin
 from infinit.beyond.plugins.max_size import Plugin as MaxSizePlugin
 from infinit.beyond.plugins.response import Plugin as ResponsePlugin
