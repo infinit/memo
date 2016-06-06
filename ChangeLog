@@ -1,9 +1,9 @@
 # Change Log
 
+## [0.6.0] - 2016-06-06
+
 Automatic replication of under-replicated data blocks and network
 performance improvement.
-
-## [0.6.0]
 
 ### Added
 
@@ -29,6 +29,12 @@ performance improvement.
 
 - Remove the option to delete groups which will be handled properly
   later.
+
+### Fixed
+
+- Fix a crash when renaming a file to a non-writable location.
+- Fix file loss when renaming get interrupted.
+- Fix deserializing mutable blocks with `infinit-block`.
 
 
 ## [0.5.5] - 2016-04-25
