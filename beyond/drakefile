@@ -1,5 +1,6 @@
 import drake
 import drake.debian
+import drake.docker
 import drake.templating
 
 from itertools import chain
@@ -217,10 +218,19 @@ def configure(
   ## Debian ##
   ## ------ ##
 
+  ubuntu_dependencies = [
+    'couchdb',
+    'libjpeg-dev',
+    'python3',
+    'python3-bson',
+    'python3-pil',
+    'python3-requests',
+  ]
   debian_nodes = install_nodes('debian/opt/infinit/beyond',
                                how = drake.copy)
   git = drake.git.Git()
   with drake.templating.Context(content = {
+      'dependencies': ubuntu_dependencies,
       'version': git.description(),
       'version_major': git.version().split('.')[0],
       'version_minor': git.version().split('.')[1],
@@ -355,3 +365,24 @@ def configure(
     conf = pylintrc,
     plugins = pylint_checkers)
   rule_check << pylint_status
+
+  ## ------ ##
+  ## Docker ##
+  ## ------ ##
+
+  docker_path = drake.Path('docker')
+  docker_image = drake.docker.DockerImage(
+    'docker', 'infinit-beyond', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'ubuntu',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.add(
+    install_nodes(docker_path, how = drake.copy), '/usr')
+  docker_file.run('apt-get update')
+  for dep in ubuntu_dependencies:
+    docker_file.run('apt-get install -y %s' % dep)
+  drake.docker.DockerBuilder(docker_image, docker_file)
