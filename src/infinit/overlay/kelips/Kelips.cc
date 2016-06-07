@@ -3256,9 +3256,10 @@ namespace infinit
                                  std::bind(&Node::remote_retry_connect,
                                            this, std::placeholders::_1,
                                            uid)));
+            auto weak_res = Overlay::WeakMember::own(std::move(res));
             if (!disable_cache)
-              this->_peer_cache[hosts.first].push_back(res);
-            return res;
+              this->_peer_cache[hosts.first].push_back(weak_res);
+            return weak_res;
           }
           catch (elle::Error const& e)
           {
