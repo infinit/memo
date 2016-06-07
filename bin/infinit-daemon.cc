@@ -225,7 +225,7 @@ MountManager::mountpoint(std::string const& name)
 {
   auto it = _mounts.find(name);
   if (it == _mounts.end())
-    throw elle::Exception("not mounted: " + name);
+    throw elle::Error("not mounted: " + name);
   ELLE_ASSERT(it->second.options.mountpoint);
   std::string pre = it->second.options.mountpoint.get();
   if (!this->_mount_substitute.empty())
@@ -379,7 +379,7 @@ MountManager::status(std::string const& name,
 {
   auto it = this->_mounts.find(name);
   if (it == this->_mounts.end())
-    throw elle::Exception("not mounted: " + name);
+    throw elle::Error("not mounted: " + name);
   bool live = ! kill(it->second.process->pid(), 0);
   reply.serialize("live", live);
   if (it->second.options.mountpoint)
@@ -891,8 +891,18 @@ DockerVolumePlugin::install(bool tcp,
       std::string err;
       try
       {
-        _manager.create_volume(*optional(json, "Name"),
-          boost::any_cast<elle::json::Object>(json.at("Opts")));
+        elle::json::Object opts;
+        try
+        {
+          opts = boost::any_cast<elle::json::Object>(json.at("Opts"));
+        }
+        catch(...)
+        {}
+        _manager.create_volume(*optional(json, "Name"), opts);
+      }
+      catch (ResourceAlreadyFetched const&)
+      { // this can happen, docker seems to be caching volume list:
+        // a mount request can trigger a create request without any list
       }
       catch (elle::Error const& e)
       {
@@ -960,8 +970,17 @@ DockerVolumePlugin::install(bool tcp,
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       auto name = boost::any_cast<std::string>(json.at("Name"));
-      return "{\"Err\": \"\", \"Mountpoint\": \""
+      try
+      {
+        return "{\"Err\": \"\", \"Mountpoint\": \""
           + _manager.mountpoint(name) +"\"}";
+      }
+      catch (elle::Error const& e)
+      {
+        std::string err = elle::sprintf("%s", e);
+        boost::replace_all(err, "\"", "'");
+        return "{\"Err\": \"" + err + "\"}";
+      }
     });
   _server->register_route("/VolumeDriver.List", reactor::http::Method::POST,
     [this] ROUTE_SIG {
