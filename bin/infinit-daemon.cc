@@ -439,6 +439,10 @@ MountManager::create_network(elle::json::Object const& options,
       infinit::model::doughnut::consensus::Paxos::Configuration>(
         1, // replication_factor,
         std::chrono::seconds(10 * 60));
+  boost::optional<int> port;
+  auto portstring = optional(options, "port");
+  if (portstring)
+    port = std::stoi(*portstring);
   auto dht =
     elle::make_unique<infinit::model::doughnut::Configuration>(
       infinit::model::Address::random(0), // FIXME
@@ -453,7 +457,7 @@ MountManager::create_network(elle::json::Object const& options,
         infinit::cryptography::rsa::KeyPair(owner.public_key,
                                             owner.private_key.get())),
       owner.name,
-      boost::optional<int>(),
+      port,
       version,
       infinit::model::doughnut::AdminKeys());
   infinit::Network network(ifnt.qualified_name(*netname, owner),
