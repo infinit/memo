@@ -33,12 +33,14 @@ fi
 docker import $image infinit:latest
 docker import $beyond_image beyond:latest
 
-if test -z "$INFINIT_PORT"; then
-  INFINIT_PORT=51236
-fi
+
+other_nodes=$(docker node ls |grep READY |grep -v '*' | awk {'print $2'})
+self_node=$(docker node ls |grep '*' | awk '{print $3}')
+
+docker run --privileged --rm -v /:/tmp/hostroot ubuntu nsenter --mount=/tmp/hostroot/proc/1/ns/mnt mount --make-shared /
 
 # import infinit image on each node, and set / to shared mount
-for node in $(docker node ls |grep READY |grep -v '*' | awk {'print $2'}); do
+for node in $other_nodes; do
   DOCKER_HOST=$node:2375 docker import $image infinit:latest
   DOCKER_HOST=$node:2375 docker run --privileged --rm -v /:/tmp/hostroot ubuntu nsenter --mount=/tmp/hostroot/proc/1/ns/mnt mount --make-shared /
 done
@@ -46,14 +48,45 @@ done
 # run beyond on manager
 docker run -d -p 8080:8080 beyond /usr/bin/beyond --host 0.0.0.0
 
-# run the default volume storage on manager
-docker run -d -e INFINIT_PORT=$INFINIT_PORT -p $INFINIT_PORT:$INFINIT_PORT -p $INFINIT_PORT:$INFINIT_PORT/udp infinit /bin/bash /usr/bin/infinit-static.sh '' enable_storage
+sleep 4
+# initiate a default user
+docker run -e INFINIT_BEYOND=http://$self_node:8080 infinit \
+  infinit-user --create --name default_user --email none@none.com --fullname default \
+    --push --full --password docker
+
 
 # cant run the volume plugin as a service: no --privileged
-manager_host=$(docker node ls |grep '*' | awk '{print $3}')
-for node in $(docker node ls |grep READY |grep -v '*' | awk {'print $2'}); do
-  DOCKER_HOST=$node:2375 docker run -d --privileged -e INFINIT_BEYOND=http://$manager_host:8080 -v /:/tmp/hostroot:shared infinit /bin/bash /usr/bin/infinit-static.sh $manager_host:$INFINIT_PORT enable_volume_plugin
+for node in $other_nodes $self_node ; do
+  DOCKER_HOST=$node:2375 docker run -d --privileged -e INFINIT_BEYOND=http://$self_node:8080 -v /:/tmp/hostroot:shared infinit \
+    infinit-daemon --start --foreground \
+    --docker-socket-path /tmp/hostroot/run/docker/plugins \
+    --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins \
+    --mount-root /tmp/hostroot/tmp/ \
+    --docker-mount-substitute "hostroot/tmp:" \
+    --default-user default_user \
+    --default-network default_network \
+    --login-user default_user:docker
 done
+
+sleep 2
+
+# Hmm, the plugin might take some time to be visible
+docker volume ls
+
+#create a default volume, on this host, so our running infinit-daemon has
+#the storage
+#note: since we don't have service --privileged, we can't use service
+## so we can't user overlay networks, so we need to force a port
+docker volume create --driver infinit --name default_volume -o port=51236
+
+# run the network to put storage online
+docker run -p 51236:51236 -p 51236:51236/udp -d --volume-driver infinit -v default_user/default_volume:/unused ubuntu sleep 30000d
+
+
+
+
+
+
 
 
 # TEST ME WITH:
