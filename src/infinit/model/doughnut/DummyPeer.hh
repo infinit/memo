@@ -51,7 +51,7 @@ namespace infinit
         boost::optional<consensus::Paxos::PaxosClient::Accepted>
         propose(consensus::Paxos::PaxosServer::Quorum const& peers,
                 Address address,
-                consensus::Paxos::PaxosClient::Proposal const& p)
+                consensus::Paxos::PaxosClient::Proposal const& p) override
         {
           throw consensus::Paxos::PaxosClient::Peer::Unavailable();
         }
@@ -61,7 +61,7 @@ namespace infinit
         accept(consensus::Paxos::PaxosServer::Quorum const& peers,
                Address address,
                consensus::Paxos::PaxosClient::Proposal const& p,
-               consensus::Paxos::Value const& value)
+               consensus::Paxos::Value const& value) override
         {
           throw consensus::Paxos::PaxosClient::Peer::Unavailable();
         }
@@ -70,7 +70,7 @@ namespace infinit
         void
         confirm(consensus::Paxos::PaxosServer::Quorum const& peers,
                 Address address,
-                consensus::Paxos::PaxosClient::Proposal const& p)
+                consensus::Paxos::PaxosClient::Proposal const& p) override
         {
 
         }
@@ -79,7 +79,7 @@ namespace infinit
         boost::optional<consensus::Paxos::PaxosClient::Accepted>
         get(consensus::Paxos::PaxosServer::Quorum const& peers,
             Address address,
-            boost::optional<int> local_version)
+            boost::optional<int> local_version) override
         {
           throw consensus::Paxos::PaxosClient::Peer::Unavailable();
         }
