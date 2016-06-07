@@ -513,7 +513,8 @@ class DockerVolumePlugin
 public:
   DockerVolumePlugin(MountManager& manager);
   ~DockerVolumePlugin();
-  void install(bool tcp, boost::filesystem::path socket_path,
+  void install(bool tcp, int tcp_port,
+               boost::filesystem::path socket_path,
                boost::filesystem::path descriptor_path);
   void uninstall();
 private:
@@ -765,6 +766,7 @@ COMMAND(start)
     with_default<std::string>(args, "docker-mount-substitute", ""));
   DockerVolumePlugin dvp(manager);
   dvp.install(flag(args, "docker-socket-tcp"),
+              std::stoi(with_default<std::string>(args, "docker-socket-port", "0")),
               with_default<std::string>(args, "docker-socket-path", "/run/docker/plugins"),
               with_default<std::string>(args, "docker-descriptor-path", "/usr/lib/docker/plugins"));
   if (!flag(args, "foreground"))
@@ -836,6 +838,7 @@ DockerVolumePlugin::uninstall()
 
 void
 DockerVolumePlugin::install(bool tcp,
+                            int tcp_port,
                             boost::filesystem::path socket_path,
                             boost::filesystem::path descriptor_path)
 {
@@ -844,7 +847,9 @@ DockerVolumePlugin::install(bool tcp,
   boost::filesystem::create_directories(descriptor_path, erc);
   if (tcp)
   {
-    this->_server = elle::make_unique<reactor::network::HttpServer>();
+    auto unix_socket_path = socket_path / "infinit.sock";
+    boost::filesystem::remove(unix_socket_path, erc);
+    this->_server = elle::make_unique<reactor::network::HttpServer>(tcp_port);
     int port = _server->port();
     std::string url = "tcp://localhost:" + std::to_string(port);
     boost::filesystem::ofstream ofs(descriptor_path / "infinit.spec");
@@ -857,6 +862,7 @@ DockerVolumePlugin::install(bool tcp,
   }
   else
   {
+    boost::filesystem::remove(descriptor_path / "infinit.spec", erc);
     auto us = elle::make_unique<reactor::network::UnixDomainServer>();
     auto sock_path = socket_path / "infinit.sock";
     boost::filesystem::create_directories(sock_path.parent_path());
@@ -1025,6 +1031,7 @@ main(int argc, char** argv)
         { "foreground,f", bool_switch(), "do not daemonize" },
         { "log-level,l", value<std::string>(), "Log level to start volumes with"},
         { "log-path,d", value<std::string>(), "Store volume logs in given path"},
+        { "docker-socket-port", value<std::string>(), "TCP port to use"},
         { "docker-socket-tcp", bool_switch(), "Use a TCP socket for docker plugin"},
         { "docker-socket-path", value<std::string>(), "Path for plugin socket (/run/docker/plugins)"},
         { "docker-descriptor-path", value<std::string>(), "Path for plugin descriptor (/usr/lib/docker/plugins)"},
