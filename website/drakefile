@@ -71,7 +71,6 @@ def configure(
   markdown = drake.nodes(
     'templates/pages/docs/src/markdown/filesystem.md',
     'templates/pages/docs/src/markdown/gcs.md',
-    'templates/pages/docs/src/markdown/get_started.md',
     'templates/pages/docs/src/markdown/get_started/linux_apt_install.md',
     'templates/pages/docs/src/markdown/get_started/linux_tarball_install.md',
     'templates/pages/docs/src/markdown/get_started/linux_fuse_install.md',
@@ -82,6 +81,7 @@ def configure(
     'templates/pages/docs/src/markdown/s3.md',
     'templates/pages/docs/src/markdown/upgrading.md',
     'templates/pages/docs/src/markdown/environment_variables.md',
+    'templates/pages/docs/src/markdown/best_practices.md',
     'templates/pages/docs/src/markdown/technology.md',
   )
   changelog = drake.node(
@@ -123,6 +123,7 @@ def configure(
     'templates/pages/pricing.html',
     'templates/pages/solutions.html',
     'templates/pages/update.html',
+    'templates/pages/dropboxe.html',
 
     'templates/pages/docs/changelog.html',
     'templates/pages/docs/comparison.html',
@@ -137,10 +138,10 @@ def configure(
     'templates/pages/docs/status.html',
     'templates/pages/docs/upgrading.html',
     'templates/pages/docs/environment_variables.html',
+    'templates/pages/docs/best_practices.html',
     'templates/pages/docs/technology.html',
 
     'templates/pages/docs/get_started.html',
-    'templates/pages/docs/get_started_windows.html',
 
     'templates/pages/drive/drive.html',
     'templates/pages/drive/ChangeLog.html',
@@ -171,6 +172,8 @@ def configure(
     'resources/images/schema-infrastructure@2x.png',
     'resources/images/schema-global.png',
     'resources/images/schema-global@2x.png',
+    'resources/images/schema-global-dropbox.png',
+    'resources/images/schema-global-dropbox@2x.png',
     'resources/images/schema-centralized.png',
     'resources/images/schema-centralized@2x.png',
     'resources/images/schema-distributed.png',
@@ -221,6 +224,8 @@ def configure(
     'resources/images/schema-deployment-multi-servers@2x.png',
     'resources/images/schema-cover.png',
     'resources/images/terminal.png',
+    'resources/images/encryption-fs.png',
+    'resources/images/encryption-fs@2x.png',
 
     'resources/images/docs/gcs/create-bucket.png',
     'resources/images/docs/gcs/oauth-permissions.png',
@@ -407,6 +412,8 @@ def configure(
     'resources/images/icons/fire@2x.png',
     'resources/images/icons/cli.png',
     'resources/images/icons/cli@2x.png',
+    'resources/images/icons/lock.png',
+    'resources/images/icons/lock@2x.png',
     'resources/images/icons/caret-down.png',
     'resources/images/icons/caret-down@2x.png',
     'resources/images/icons/interoperability.png',
@@ -439,6 +446,22 @@ def configure(
     'resources/images/icons/status-problems@2x.png',
     'resources/images/icons/status-down.png',
     'resources/images/icons/status-down@2x.png',
+    'resources/images/icons/users.png',
+    'resources/images/icons/users@2x.png',
+    'resources/images/icons/address-book.png',
+    'resources/images/icons/address-book@2x.png',
+    'resources/images/icons/monitoring.png',
+    'resources/images/icons/monitoring@2x.png',
+    'resources/images/icons/priority.png',
+    'resources/images/icons/priority@2x.png',
+    'resources/images/icons/key.png',
+    'resources/images/icons/key@2x.png',
+    'resources/images/icons/device-iphone.png',
+    'resources/images/icons/device-iphone@2x.png',
+    'resources/images/icons/on-premise-hub.png',
+    'resources/images/icons/on-premise-hub@2x.png',
+    'resources/images/icons/consulting.png',
+    'resources/images/icons/consulting@2x.png',
   )
 
   resources = resources + resources_icons

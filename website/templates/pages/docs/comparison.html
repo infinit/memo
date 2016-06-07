@@ -54,7 +54,7 @@
 
       <div class="property ${'same' if is_similar else 'different'}">
         <img class="" src="${url('images/icons/' + property + '.png')}" alt="${property}">
-        <h2>${property.replace('_', ' ').title()}</h2>
+        <h2 id="${competitor_name}_${property}">${property.replace('_', ' ').title()}</h2>
         <p class="note">
         % if property == 'architecture':
           % if value == 'Object':
@@ -76,9 +76,9 @@
 
         % elif property == 'redundancy':
           % if 'Erasure Codes' in value:
-            Erasure codes consume less storage capacity than replication while provoding the same durability and availability guarantees. However, reconstructing a missing piece takes more time with erasure codes. <a class="open-popup" href="#redundancy">Read more.</a>
+            Erasure codes consume less storage capacity than replication. However, writes are slower while retrieval latency is increased. <a class="open-popup" href="#redundancy">Read more.</a>
           % elif value == 'Replication':
-            Replication is a simple redundancy mechanism that consumes more storage capacity than erasure codes but requires less time to reconstruct a missing piece.
+            Replication is a simple redundancy mechanism that consumes more storage capacity than erasure codes but are more adapted to primary storage.
           % else:
             Redundancy mechanisms ensure the availability and durability of the files stored in the storage infrastructure. <a class="open-popup" href="#redundancy">Read more.</a>
           % endif
@@ -225,7 +225,11 @@
 
       <h3>Erasure Codes</h3>
       <p><a href="https://en.wikipedia.org/wiki/Erasure_code" target="_blank"><strong>Erasure codes</strong></a>, such as <a href="https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction" target="_blank">Reed-Solomon</a>, do not create raw copies of a data item as replication does. Instead, error-correcting codes transform a data block of <em>k</em> symbols into a longer of <em>n</em> symbols such that the original data block can be recovered from a subset of the <em>n</em> symbols.</p>
-      <p>Erasure codes are more interesting than replication when it comes to storage consumption since less storage capacity is required to achieve the same durability and availability. However, the process of recreating a lost piece (replica or symbol) is cheaper with replication as an erasure-code-based system would need to reconstitute the original block by fetching <em>n</em> symbols before computing the missing symbol and restoring it.</p>
+      <p>Erasure codes are more interesting than replication when it comes to storage consumption since less storage capacity is required to achieve the same durability and availability. However, the process of writing is slower than with replication as more servers need to be contacted to host data symbols. Likewise, more computing power is required to reconstruct the original data from several pieces when accessing data, leading to more latency.</p>
+
+      <br>
+
+      <p>Erasure codes are more adapted to archiving while replication is often preferred for primary storage. Note however, than beyond 100TB of data, the gain in storage capacity achievable through erasure coding becomes interesting enough to be considered even for primary storage.</p>
 
       <br>
       <p class="note">Note that such redundancy mechanisms differ from <a href="https://en.wikipedia.org/wiki/Backup" target="_blank">backups</a>. Should a server fail, redundancy mechanisms ensure that clients can continue accessing the data transparently (property known as availability). Backups however require restoring a snapshot before the data becomes accessible again, process which can take several days during which the whole system is non-operational.</p>

@@ -5,6 +5,7 @@ import os
 import re
 import json
 
+from bottle import redirect
 from infinit.website.utils import resources_path, route, static_file, view
 
 def error(code, reason = ''):
@@ -164,6 +165,10 @@ class Website(bottle.Bottle):
       'description': 'Have a look at all the recent changes of the Infinit platform.',
     }
 
+  @route('/documentation/changelog/<path:path>')
+  def root(self, path):
+    redirect('/documentation/changelog#' + path)
+
   @route('/documentation/status', name = 'doc_status')
   @view('pages/docs/status.html')
   def root(self):
@@ -201,7 +206,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Upgrade Network',
-      'description': 'Upgrade an Infinit network for all the clients to benefit from new features.',
+      'description': 'How to upgrade an Infinit network for all the clients to benefit from new features.',
     }
 
   @route('/documentation/environment-variables', name = 'doc_environment_variables')
@@ -212,12 +217,20 @@ class Website(bottle.Bottle):
       'description': 'List of the environment variables that can be set to alter the behavior of the Infinit file system.',
     }
 
+  @route('/documentation/best-practices', name = 'doc_best_practices')
+  @view('pages/docs/best_practices.html')
+  def root(self):
+    return {
+      'title': 'Best Practices',
+      'description': 'Best practices when administrating an Infinit storage infrastructure.',
+    }
+
   @route('/documentation/comparison/', name = 'doc_comparisons')
   @route('/documentation/comparison/<path:path>', name = 'doc_comparison')
   @view('pages/docs/comparison.html')
   def root(self, path):
     file = resources_path() + '/json/comparisons.json'
-    with open(file) as json_file:
+    with open(file, encoding = 'utf-8') as json_file:
       json_data = json.load(json_file)
 
     referer = bottle.request.params.get('from')
@@ -245,8 +258,8 @@ class Website(bottle.Bottle):
   @view('pages/pricing.html')
   def root(self):
     return {
-      'title': 'Plans',
-      'description': 'Discover the different plans for small, medium and large enterprises.',
+      'title': 'Pricing',
+      'description': 'Infinit provides a free community version and an entreprise license with additional features.',
     }
 
   @route('/solutions', name = 'solutions')
@@ -299,6 +312,10 @@ class Website(bottle.Bottle):
       response = self.__swu.send(
         email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
         recipient = {'address': 'contact@infinit.sh'},
+        sender = {
+          'address': bottle.request.forms.get('email'),
+          'reply_to': bottle.request.forms.get('email')
+        },
         email_data = {
           f: bottle.request.forms.get(f) for f in ['first_name', 'last_name', 'email', 'message', 'phone', 'company', 'country'] if bottle.request.forms.get(f)
         })
@@ -324,6 +341,10 @@ class Website(bottle.Bottle):
       response = self.__swu.send(
         email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
         recipient = {'address': 'contact@infinit.sh'},
+        sender = {
+          'address': bottle.request.forms.get('email'),
+          'reply_to': bottle.request.forms.get('email')
+        },
         email_data = {
           'email': email,
           'message': '%s wants to join the Slack community.' % (email),

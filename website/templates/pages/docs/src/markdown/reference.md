@@ -61,7 +61,7 @@ Miscellaneous:
   -a [ --as ] arg              User to run commands as (default: system user)
 ```
 
-While the help when invoking the `--create` shows the options associated with creating a user:
+Each mode of each binary has its own help as well. For example the help when invoking the `--create` mode of _infinit-user_ shows the options associated with creating a user:
 
 ```
 $> infinit-user --create --help

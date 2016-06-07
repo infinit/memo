@@ -160,7 +160,7 @@ $(document).ready(function() {
         tooltip = $('#progressTooltip'),
         max, value, porcent;
 
-    max = docHeight - winHeight - $("footer").height();
+    max = docHeight - winHeight - ($("footer").height() + $('.next').height());
     progressBar.attr('max', max);
 
     $(document).on('scroll', function(){
@@ -173,11 +173,11 @@ $(document).ready(function() {
         tooltip.show();
       }
 
-      if (porcent > 96) {
+      if (value > $('#go-further').offset().top - 200) {
         tooltip.text('👍');
-      } else {
-        progressBar.attr('value', value);
       }
+
+      progressBar.attr('value', value);
 
       if (porcent < 1) {
         tooltip.hide();

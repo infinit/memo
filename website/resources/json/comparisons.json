@@ -152,7 +152,7 @@
     "name": "Ceph",
     "description": "Ceph is an object storage platform that stores data on a single distributed computer cluster. Ceph's distributed model aims at providing scalability at the exabyte level without single points of failure.",
     "properties": {
-      "architecture": "Block",
+      "architecture": "Object",
       "interface": "SDK",
       "model": "Distributed",
       "environment": "Controlled",
