@@ -447,7 +447,8 @@ namespace infinit
                     {
                       if (e)
                       {
-                        ELLE_TRACE("fetch error on %f: %s", a, e);
+                        ELLE_TRACE("fetch error on %f: %s",
+                                   a, elle::exception_string(e));
                         this->_cache.erase(a);
                       }
                       else

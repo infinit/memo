@@ -60,7 +60,8 @@ namespace infinit
       };
       void _commit_first();
       void _commit_all();
-      bool _flush_block(int id);
+      std::function<void ()>
+      _flush_block(int id, CacheEntry entry);
       void _prefetch(int idx);
       void _check_prefetch();
       // check cached data size, remove entries if needed

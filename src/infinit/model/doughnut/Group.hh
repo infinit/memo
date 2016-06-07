@@ -15,6 +15,7 @@ namespace infinit
     namespace doughnut
     {
       class Group
+        : public elle::Printable
       {
       public:
         Group(Doughnut& dht, std::string const& name);
@@ -58,6 +59,8 @@ namespace infinit
         group_public_keys();
         void
         destroy();
+        void
+        print(std::ostream& o) const;
       private:
         void _stack_push();
         cryptography::rsa::KeyPair _control_key();
