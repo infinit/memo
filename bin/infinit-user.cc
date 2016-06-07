@@ -16,8 +16,6 @@ infinit::Infinit ifnt;
 
 using boost::program_options::variables_map;
 
-static std::string _hub_salt = "@a.Fl$4'x!";
-
 template <typename Super>
 struct UserView
   : Super
@@ -383,44 +381,6 @@ COMMAND(signup_)
     return;
   }
   throw elle::Error(elle::sprintf("User %s already exists locally", name));
-}
-
-struct LoginCredentials
-{
-  LoginCredentials(std::string const& name,
-                   std::string const& password)
-    : name(name)
-    , password_hash(password)
-  {}
-
-  LoginCredentials(elle::serialization::SerializerIn& s)
-    : name(s.deserialize<std::string>("name"))
-    , password_hash(s.deserialize<std::string>("password_hash"))
-  {}
-
-  std::string name;
-  std::string password_hash;
-};
-
-DAS_MODEL(LoginCredentials, (name, password_hash), DasLoginCredentials)
-
-template <typename T>
-elle::json::Json
-beyond_login(std::string const& name,
-             T const& o)
-{
-  reactor::http::Request::Configuration c;
-  c.header_add("Content-Type", "application/json");
-  reactor::http::Request r(elle::sprintf("%s/users/%s/login", beyond(), name),
-                           reactor::http::Method::POST, std::move(c));
-  elle::serialization::json::serialize(o, r, false);
-  r.finalize();
-  if (r.status() != reactor::http::StatusCode::OK)
-  {
-    read_error<BeyondError>(r, "login", name);
-  }
-
-  return elle::json::read(r);
 }
 
 COMMAND(login)

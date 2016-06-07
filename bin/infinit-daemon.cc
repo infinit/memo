@@ -23,9 +23,12 @@
 
 #include <infinit/utility.hh>
 
+#include <infinit/storage/Filesystem.hh>
+
 ELLE_LOG_COMPONENT("infinit-daemon");
 
 #include <main.hh>
+#include <password.hh>
 
 infinit::Infinit ifnt;
 
@@ -184,10 +187,18 @@ public:
   mountpoint(std::string const& name);
   std::vector<std::string>
   list();
+  void
+  create_volume(std::string const& name,
+                elle::json::Object const& args);
+  infinit::Network
+  create_network(elle::json::Object const& options,
+                 infinit::User const& owner);
   ELLE_ATTRIBUTE_RW(boost::filesystem::path, mount_root);
   ELLE_ATTRIBUTE_RW(std::string, mount_substitute);
   ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_level);
   ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_path);
+  ELLE_ATTRIBUTE_RW(std::string, default_user);
+  ELLE_ATTRIBUTE_RW(std::string, default_network);
 private:
   std::unordered_map<std::string, Mount> _mounts;
 };
@@ -375,6 +386,126 @@ MountManager::status(std::string const& name,
   {
     reply.serialize("mountpoint", mountpoint(name));
   }
+}
+
+static
+boost::optional<std::string>
+optional(elle::json::Object const& options, std::string const& name)
+{
+  auto it = options.find(name);
+  if (it == options.end())
+    return {};
+  else
+    return boost::any_cast<std::string>(it->second);
+}
+
+infinit::Network
+MountManager::create_network(elle::json::Object const& options,
+                             infinit::User const& owner)
+{
+  auto netname = optional(options, "network");
+  if (!netname)
+    netname = _default_network;
+  ELLE_LOG("Creating network %s", netname);
+  std::unique_ptr<infinit::storage::StorageConfig> storage_config;
+  auto storagedesc = optional(options, "storage");
+  if (!storagedesc)
+  {
+    std::string storagename = *netname + "_storage";
+    boost::replace_all(storagename, "/", "_");
+    ELLE_LOG("Creating local storage %s", storagename);
+    auto path = infinit::xdg_data_home() / "blocks" / storagename;
+    storage_config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
+      storagename, path.string(), boost::optional<int64_t>());
+  }
+  else
+  {
+    try
+    {
+      storage_config = ifnt.storage_get(*storagedesc);
+    }
+    catch (MissingLocalResource const&)
+    {
+      throw elle::Error("Storage specification for new storage not implemented");
+    }
+  }
+  // create the network
+   auto kelips =
+    elle::make_unique<infinit::overlay::kelips::Configuration>();
+   kelips->k = 1;
+   kelips->rpc_protocol = infinit::model::doughnut::Local::Protocol::all;
+   std::unique_ptr<infinit::model::doughnut::consensus::Configuration> consensus_config;
+   consensus_config = elle::make_unique<
+      infinit::model::doughnut::consensus::Paxos::Configuration>(
+        1, // replication_factor,
+        std::chrono::seconds(10 * 60));
+  auto dht =
+    elle::make_unique<infinit::model::doughnut::Configuration>(
+      infinit::model::Address::random(0), // FIXME
+      std::move(consensus_config),
+      std::move(kelips),
+      std::move(storage_config),
+      owner.keypair(),
+      std::make_shared<infinit::cryptography::rsa::PublicKey>(owner.public_key),
+      infinit::model::doughnut::Passport(
+        owner.public_key,
+        ifnt.qualified_name(*netname, owner),
+        infinit::cryptography::rsa::KeyPair(owner.public_key,
+                                            owner.private_key.get())),
+      owner.name,
+      boost::optional<int>(),
+      version,
+      infinit::model::doughnut::AdminKeys());
+  infinit::Network network(ifnt.qualified_name(*netname, owner),
+                           std::move(dht));
+  ifnt.network_save(network);
+  report_created("network", *netname);
+  infinit::NetworkDescriptor desc(ifnt.network_get(*netname, owner, true));
+  beyond_push("network", desc.name, desc, owner);
+  return network;
+}
+
+void
+MountManager::create_volume(std::string const& name,
+                            elle::json::Object const& options)
+{
+  try
+  {
+    acquire_volumes();
+  }
+  catch (elle::Error const& e)
+  {
+    ELLE_TRACE("Failed to acquire volumes from beyond: %s", e);
+  }
+  auto username = optional(options, "user");
+  if (!username)
+    username = _default_user;
+  auto user = ifnt.user_get(*username);
+  auto netname = optional(options, "network");
+  if (!netname)
+    netname = _default_network;
+  infinit::Network network ([&]() -> infinit::Network {
+      try
+      {
+        return ifnt.network_get(*netname, user, true);
+      }
+      catch (MissingLocalResource const&)
+      {
+        return create_network(options, user);
+      }
+  }());
+  infinit::MountOptions mo;
+  mo.fetch = true;
+  mo.push = true;
+  mo.as = username;
+  mo.cache = true;
+  std::string qname(name);
+  if (qname.find("/") == qname.npos)
+    qname = *username + "/" + qname;
+  infinit::Volume volume(qname, network.name, mo, {});
+  ifnt.volume_save(volume);
+  report_created("volume", qname);
+  beyond_push("volume", qname, volume, user);
 }
 
 class DockerVolumePlugin
@@ -614,6 +745,20 @@ COMMAND(start)
   ELLE_TRACE("starting daemon");
   if (daemon_running())
     elle::err("daemon already running");
+  auto users = optional<std::vector<std::string>>(args, "login-user");
+  if(users) for (auto const& u: *users)
+  {
+    auto sep = u.find_first_of(":");
+    std::string name = u.substr(0, sep);
+    std::string pass = u.substr(sep+1);
+    LoginCredentials c {name, hash_password(pass, _hub_salt)};
+    das::Serializer<DasLoginCredentials> credentials{c};
+    auto json = beyond_login(name, credentials);
+    elle::serialization::json::SerializerIn input(json, false);
+    auto user = input.deserialize<infinit::User>();
+    ifnt.user_save(user, true);
+    report_action("saved", "user", name, std::string("locally"));
+  }
   ELLE_TRACE("starting manager");
   MountManager manager(
     with_default<std::string>(args, "mount-root", boost::filesystem::temp_directory_path().string()),
@@ -633,6 +778,12 @@ COMMAND(start)
   manager.log_level(loglevel);
   auto logpath = optional(args, "log-path");
   manager.log_path(logpath);
+  auto default_user = optional(args, "default-user");
+  if (default_user)
+    manager.default_user(*default_user);
+  auto default_network = optional(args, "default-network");
+  if (default_network)
+    manager.default_network(*default_network);
   elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
   {
     while (true)
@@ -733,9 +884,24 @@ DockerVolumePlugin::install(bool tcp,
       return "{\"Implements\": [\"VolumeDriver\"]}";
     });
   _server->register_route("/VolumeDriver.Create", reactor::http::Method::POST,
-    [] ROUTE_SIG {
+    [this] ROUTE_SIG {
+      auto stream = elle::IOStream(data.istreambuf());
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+      std::cerr << elle::json::pretty_print(json) << std::endl;
+      std::string err;
+      try
+      {
+        _manager.create_volume(*optional(json, "Name"),
+          boost::any_cast<elle::json::Object>(json.at("Opts")));
+      }
+      catch (elle::Error const& e)
+      {
+        err = elle::sprintf("%s", e);
+        ELLE_LOG("%s\n%s", e, e.backtrace());
+      }
+      boost::replace_all(err, "\"", "'");
       // Since we fetch on demand, we must let create pass
-      return "{\"Err\": \"\"}";
+      return "{\"Err\": \"" + err + "\"}";
       //return "{\"Err\": \"Use 'infinit-volume --create'\"}";
     });
   _server->register_route("/VolumeDriver.Remove", reactor::http::Method::POST,
@@ -845,6 +1011,10 @@ main(int argc, char** argv)
         { "docker-descriptor-path", value<std::string>(), "Path for plugin descriptor (/usr/lib/docker/plugins)"},
         { "mount-root", value<std::string>(), "Default root path of all mounts (/tmp)"},
         { "docker-mount-substitute", value<std::string>(), "[from:to|prefix] : Substitute 'from' to 'to' in advertised path"},
+        { "default-user", value<std::string>(), "Default user for volume creation"},
+        { "default-network", value<std::string>(), "Default netwwork for volume creation"},
+        { "login-user", value<std::vector<std::string>>()->multitoken(),
+            "login with selected user(s), of form 'user:password'"},
       }
     },
     {
