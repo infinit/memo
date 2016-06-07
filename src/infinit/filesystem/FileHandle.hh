@@ -60,7 +60,8 @@ namespace infinit
       };
       void _commit_first();
       void _commit_all();
-      bool _flush_block(int id);
+      std::function<void ()>
+      _flush_block(int id, CacheEntry entry);
       void _prefetch(int idx);
       void _check_prefetch();
       // check cached data size, remove entries if needed
@@ -80,6 +81,7 @@ namespace infinit
       int _last_read_block; // block hit by last read operation
       static const uint64_t default_first_block_size;
       static const unsigned long max_cache_size = 20; // in blocks    };
+      friend class File;
     };
   }
 }

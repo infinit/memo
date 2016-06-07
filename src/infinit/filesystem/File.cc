@@ -5,6 +5,7 @@
 #ifdef INFINIT_WINDOWS
 #include <fcntl.h>
 #endif
+#include <pair>
 #include <sys/stat.h> // S_IMFT...
 
 #include <elle/cast.hh>
@@ -23,6 +24,11 @@
 #include <infinit/filesystem/FileHandle.hh>
 #include <infinit/filesystem/umbrella.hh>
 #include <infinit/filesystem/xattribute.hh>
+
+#include <elle/bench.hh>
+#include <elle/cast.hh>
+#include <elle/os/environ.hh>
+
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/User.hh>
@@ -200,7 +206,7 @@ namespace infinit
       elle::SafeFinally remove_undecoded_first_block([&] {
           this->_first_block.reset();
       });
-      auto perms = _owner.get_permissions(*_first_block);
+      auto perms = get_permissions(*_owner.block_store(), *_first_block);
       _filedata = std::make_shared<FileData>(_parent->_path / _name, *_first_block, perms);
       remove_undecoded_first_block.abort();
     }
@@ -478,6 +484,8 @@ namespace infinit
     void
     File::stat(struct stat* st)
     {
+      static elle::Bench bench("bench.file.stat", 10000_sec);
+      elle::Bench::BenchScope bs(bench);
       ELLE_TRACE_SCOPE("%s: stat, parent %s", *this, _parent);
       memset(st, 0, sizeof(struct stat));
       st->st_mode = S_IFREG;
@@ -591,7 +599,24 @@ namespace infinit
       if (it != _size_map.end())
       {
         for (auto fh: it->second.second)
+        {
+          bool dirty = fh->_fat_changed;
+          if (!dirty)
+          {
+            for (auto const& b: fh->_blocks)
+            {
+              if (b.second.dirty && (b.first +1) * fh->_file._header.size < unsigned(new_size))
+              {
+                dirty = true;
+                break;
+              }
+            }
+          }
+          if (dirty)
+            ELLE_WARN("Propagating truncate(%s) of %s to open dirty file handle with size %s",
+                      new_size, _name, fh->_file._header.size);
           fh->ftruncate(new_size);
+        }
       }
     }
 

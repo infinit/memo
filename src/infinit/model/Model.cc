@@ -143,10 +143,12 @@ namespace infinit
     {
       if (auto res = this->_fetch(address, local_version))
       {
-        if (!res->validate(*this))
+        auto val = res->validate(*this);
+        if (!val)
         {
-          ELLE_WARN("%s: invalid block received for %s", *this, address);
-          throw elle::Error("invalid block");
+          ELLE_WARN("%s: invalid block received for %s:%s", *this, address,
+                    val.reason());
+          throw elle::Error("invalid block: " + val.reason());
         }
         return res;
       }
@@ -154,6 +156,41 @@ namespace infinit
       {
         ELLE_ASSERT(local_version);
         return nullptr;
+      }
+    }
+
+    void
+    Model::fetch(std::vector<AddressVersion> const& addresses,
+            std::function<void(Address, std::unique_ptr<blocks::Block>,
+                               std::exception_ptr)> res) const
+    {
+      this->_fetch(addresses, [&](Address addr,
+                                  std::unique_ptr<blocks::Block> block,
+                                  std::exception_ptr exception)
+        {
+          if (block && !block->validate(*this))
+            res(addr, {}, std::make_exception_ptr(elle::Error("invalid block")));
+          else
+            res(addr, std::move(block), exception);
+        });
+    }
+
+    void
+    Model::_fetch(std::vector<AddressVersion> const& addresses,
+                  std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                     std::exception_ptr)> res) const
+    {
+      for (auto addr: addresses)
+      {
+        try
+        {
+          auto block = _fetch(addr.first, addr.second);
+          res(addr.first, std::move(block), {});
+        }
+        catch (elle::Error const& e)
+        {
+          res(addr.first, {}, std::current_exception());
+        }
       }
     }
 

@@ -1,0 +1,5 @@
+{
+    "name" : "s",
+    "path" : "/bench_scratch/infinit_storage",
+    "type" : "filesystem"
+}

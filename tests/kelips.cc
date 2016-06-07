@@ -1,6 +1,8 @@
 #include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/test.hh>
 
+#include <reactor/for-each.hh>
+
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
@@ -153,6 +155,19 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   return fs;
 }
 
+static std::vector<std::unique_ptr<rfs::FileSystem>>
+node_to_fs(std::vector<std::shared_ptr<imd::Doughnut>> const& nodes)
+{
+  std::vector<std::unique_ptr<rfs::FileSystem>> res;
+  for (auto n: nodes)
+  {
+    auto ops = elle::make_unique<infinit::filesystem::FileSystem>("volume",n);
+    auto fs = elle::make_unique<reactor::filesystem::FileSystem>(std::move(ops), true);
+    res.push_back(std::move(fs));
+  }
+  return res;
+}
+
 void
 writefile(rfs::FileSystem& fs,
           std::string const& name,
@@ -215,6 +230,109 @@ ELLE_TEST_SCHEDULED(basic)
   }
 }
 
+static void make_files(rfs::FileSystem& fs, std::string const& name, int count)
+{
+  fs.path("/")->child(name)->mkdir(0);
+  for (int i=0; i<count; ++i)
+    fs.path("/")->child(name)->child(std::to_string(i))->create(O_CREAT | O_RDWR, 0);
+}
+
+static int dir_size(rfs::FileSystem& fs, std::string const& name)
+{
+  int count = 0;
+  fs.path("/")->child(name)->list_directory(
+    [&](std::string const& fname, struct stat*)
+    {
+      struct stat st;
+      fs.path("/")->child(name)->child(fname)->stat(&st);
+      ++count;
+    });
+  return count;
+}
+
+ELLE_TEST_SCHEDULED(list_directory)
+{
+  elle::filesystem::TemporaryDirectory d;
+  auto tmp = d.path();
+  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(tmp, kp, 1);
+  auto fswrite = make_observer(nodes.front(), tmp, kp, 1, 1, true, false, false);
+  auto fsc = make_observer(nodes.front(), tmp, kp, 1, 1, true, false, false);
+  auto fsca = make_observer(nodes.front(), tmp, kp, 1, 1, true, true, false);
+  auto fsa = make_observer(nodes.front(), tmp, kp, 1, 1, false, true, false);
+  ELLE_TRACE("write");
+  make_files(*fswrite, "50", 50);
+  ELLE_TRACE("list fsc");
+  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_TRACE("list fsca");
+  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_TRACE("list fsa");
+  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_TRACE("list fsc");
+  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_TRACE("list fsca");
+  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_TRACE("list fsa");
+  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_TRACE("done");
+}
+
+ELLE_TEST_SCHEDULED(list_directory_3)
+{
+  elle::filesystem::TemporaryDirectory d;
+  auto tmp = d.path();
+  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(tmp, kp, 3);
+  auto fswrite = make_observer(nodes.front(), tmp, kp, 1, 3, true, false, false);
+  auto fsc = make_observer(nodes.front(), tmp, kp, 1, 3, true, false, false);
+  auto fsca = make_observer(nodes.front(), tmp, kp, 1, 3, true, true, false);
+  auto fsa = make_observer(nodes.front(), tmp, kp, 1, 3, false, true, false);
+  ELLE_TRACE("write");
+  make_files(*fswrite, "50", 50);
+  ELLE_TRACE("list fsc");
+  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_TRACE("list fsca");
+  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_TRACE("list fsa");
+  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_TRACE("list fsc");
+  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_TRACE("list fsca");
+  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_TRACE("list fsa");
+  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_TRACE("done");
+}
+
+ELLE_TEST_SCHEDULED(list_directory_5_3)
+{
+  elle::filesystem::TemporaryDirectory d;
+  auto tmp = d.path();
+  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(tmp, kp, 5, 1, 3);
+  auto fswrite = make_observer(nodes.front(), tmp, kp, 1, 3, true, false, false);
+  auto fsc = make_observer(nodes.front(), tmp, kp, 1, 3, true, false, false);
+  auto fsca = make_observer(nodes.front(), tmp, kp, 1, 3, true, true, false);
+  auto fsa = make_observer(nodes.front(), tmp, kp, 1, 3, false, true, false);
+  ELLE_TRACE("write");
+  make_files(*fswrite, "50", 50);
+  ELLE_TRACE("list fsc");
+  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_TRACE("list fsca");
+  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_TRACE("list fsa");
+  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_TRACE("list fsc");
+  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_TRACE("list fsca");
+  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_TRACE("list fsa");
+  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_TRACE("done");
+}
 // ELLE_TEST_SCHEDULED(conflictor)
 // {
 //   auto tmp = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
@@ -464,15 +582,88 @@ ELLE_TEST_SCHEDULED(times)
   BOOST_CHECK(now - st.st_ctime >= 2);
 }
 
+#define CHECKED(exp) \
+try { exp} catch (std::exception const& e) { ELLE_WARN("%s", e.what());  throw;}
+ELLE_TEST_SCHEDULED(clients_parallel)
+{
+  elle::filesystem::TemporaryDirectory d;
+  auto tmp = d.path();
+  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(tmp, kp, 4, /*k*/1, /*repfactor*/1);
+  auto fss = node_to_fs(nodes);
+  fss.front()->path("/");
+  reactor::for_each_parallel(fss, [&](std::unique_ptr<rfs::FileSystem>& fs)
+    {
+      auto p = std::to_string((uint64_t)fs.get());
+      CHECKED(fs->path("/" + p)->mkdir(0666);)
+      CHECKED(fs->path("/" + p + "/0")->mkdir(0666);)
+    });
+  for(auto const& n: fss)
+  {
+    std::vector<std::string> items;
+    n->path("/")->list_directory([&] (std::string const& n, struct stat* stbuf)
+      {
+        items.push_back(n);
+      });
+    ELLE_LOG("%x: %s", n.get(), items);
+    BOOST_CHECK(items.size() == fss.size());
+  }
+  for(auto const& n: fss)
+  {
+    for (auto const& t: fss)
+    {
+      auto p = std::to_string((uint64_t)t.get());
+      struct stat st;
+      n->path("/" + p +"/0")->stat(&st);
+      BOOST_CHECK(S_ISDIR(st.st_mode));
+    }
+  }
+}
+
+ELLE_TEST_SCHEDULED(many_conflicts)
+{
+  static const int node_count = 4;
+  static const int iter_count = 50;
+  elle::filesystem::TemporaryDirectory d;
+  auto tmp = d.path();
+  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(tmp, kp, node_count, /*k*/1, /*repfactor*/3);
+  auto fss = node_to_fs(nodes);
+  fss.front()->path("/");
+  reactor::for_each_parallel(fss, [&](std::unique_ptr<rfs::FileSystem>& fs)
+    {
+      for (int i=0; i<iter_count; ++i)
+      {
+        fs->path("/" + std::to_string(i) + "_" + std::to_string((uint64_t)&fs))->mkdir(0666);
+      }
+  });
+  for (int j=0; j<node_count; ++j)
+  {
+    int count = 0;
+    fss[j]->path("/")->list_directory([&] (std::string const& n, struct stat* stbuf)
+      {
+        ++count;
+      });
+    BOOST_CHECK(count == iter_count * node_count);
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
   elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
   elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "2", 1);
   auto& suite = boost::unit_test::framework::master_test_suite();
-  suite.add(BOOST_TEST_CASE(basic), 0, valgrind(32));
+  suite.add(BOOST_TEST_CASE(basic), 0, valgrind(60));
   suite.add(BOOST_TEST_CASE(conflicts), 0, valgrind(32));
   suite.add(BOOST_TEST_CASE(times), 0, valgrind(32));
+  suite.add(BOOST_TEST_CASE(list_directory), 0, valgrind(10));
+  suite.add(BOOST_TEST_CASE(list_directory_3), 0, valgrind(60));
+  suite.add(BOOST_TEST_CASE(list_directory_5_3), 0, valgrind(60));
+  suite.add(BOOST_TEST_CASE(clients_parallel), 0, valgrind(60));
+  suite.add(BOOST_TEST_CASE(many_conflicts), 0, valgrind(60));
   // suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
   //suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
   // suite.add(BOOST_TEST_CASE(killed_nodes_k2), 0, 600);

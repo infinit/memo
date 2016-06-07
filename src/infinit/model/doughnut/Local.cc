@@ -43,26 +43,34 @@ namespace infinit
         , _storage(std::move(storage))
         , _doughnut(dht)
       {
-        ELLE_TRACE_SCOPE("%s: construct", this);
-        if (p == Protocol::tcp || p == Protocol::all)
+        try
         {
-          this->_server = elle::make_unique<reactor::network::TCPServer>();
-          this->_server->listen(port);
-          this->_server_thread = elle::make_unique<reactor::Thread>(
-            elle::sprintf("%s server", *this),
-            [this] { this->_serve_tcp(); });
+          ELLE_TRACE_SCOPE("%s: construct", this);
+          if (p == Protocol::tcp || p == Protocol::all)
+          {
+            this->_server = elle::make_unique<reactor::network::TCPServer>();
+            this->_server->listen(port);
+            this->_server_thread = elle::make_unique<reactor::Thread>(
+              elle::sprintf("%s server", *this),
+              [this] { this->_serve_tcp(); });
+          }
+          if (p == Protocol::utp || p == Protocol::all)
+          {
+            this->_utp_server = elle::make_unique<reactor::network::UTPServer>();
+            if (this->_server)
+              port = this->_server->port();
+            this->_utp_server->listen(port);
+            this->_utp_server_thread = elle::make_unique<reactor::Thread>(
+              elle::sprintf("%s utp server", *this),
+              [this] { this->_serve_utp(); });
+          }
+          ELLE_TRACE("%s: listen on %s", *this, this->server_endpoint());
         }
-        if (p == Protocol::utp || p == Protocol::all)
+        catch (std::exception const& e)
         {
-          this->_utp_server = elle::make_unique<reactor::network::UTPServer>();
-          if (this->_server)
-            port = this->_server->port();
-          this->_utp_server->listen(port);
-          this->_utp_server_thread = elle::make_unique<reactor::Thread>(
-            elle::sprintf("%s utp server", *this),
-            [this] { this->_serve_utp(); });
+          ELLE_WARN("Local initialization failed with: %s", e.what());
+          throw;
         }
-        ELLE_TRACE("%s: listen on %s", *this, this->server_endpoint());
       }
 
       Local::~Local()
@@ -124,6 +132,12 @@ namespace infinit
                 elle::sprintf("version %s is not superior to current version %s",
                               mblock->version(), mprevious->version()),
                 std::move(previous));
+            if (auto* acb = dynamic_cast<const ACB*>(mblock))
+            {
+              auto v = acb->validate_admin_keys(this->doughnut());
+              if (!v)
+                throw ValidationFailed(v.reason());
+            }
           }
           auto vr = previous->validate(this->doughnut(), block);
           if (!vr)
@@ -397,11 +411,18 @@ namespace infinit
               name,
               [this, socket]
               {
-                RPCServer rpcs(this->_doughnut.version());
-                this->_register_rpcs(rpcs);
-                this->_on_connect(rpcs);
-                rpcs.set_context<Doughnut*>(&this->_doughnut);
-                rpcs.serve(**socket);
+                try
+                {
+                  RPCServer rpcs(this->_doughnut.version());
+                  this->_register_rpcs(rpcs);
+                  this->_on_connect(rpcs);
+                  rpcs.set_context<Doughnut*>(&this->_doughnut);
+                  rpcs.serve(**socket);
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_WARN("drop client %s: %s", **socket, e);
+                }
               });
           }
         };

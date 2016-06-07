@@ -3,14 +3,22 @@
 #include <random>
 
 #include <sys/types.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #ifndef INFINIT_WINDOWS
-#include <sys/statvfs.h>
+# include <sys/statvfs.h>
+#endif
+
+#ifdef INFINIT_WINDOWS
+#undef stat
 #endif
 
 #ifdef INFINIT_LINUX
-#include <attr/xattr.h>
+# include <attr/xattr.h>
 #elif defined(INFINIT_MACOSX)
-#include <sys/xattr.h>
+# include <sys/xattr.h>
 #endif
 
 #include <boost/filesystem/fstream.hpp>
@@ -49,9 +57,9 @@
 
 ELLE_LOG_COMPONENT("test");
 
-# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                            INFINIT_MINOR,   \
-                                            INFINIT_SUBMINOR)
+#define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
+                                           INFINIT_MINOR,   \
+                                           INFINIT_SUBMINOR)
 
 
 namespace ifs = infinit::filesystem;
@@ -69,12 +77,86 @@ std::vector<boost::asio::ip::tcp::endpoint> endpoints;
 infinit::overlay::Stonehenge::Peers peers;
 std::vector<std::unique_ptr<elle::system::Process>> processes;
 
-static int setxattr_(bfs::path p, std::string const& name, std::string const& value)
+#ifdef INFINIT_WINDOWS
+#define O_CREAT _O_CREAT
+#define O_RDWR _O_RDWR
+#define S_IFREG _S_IFREG
+
+int setxattr(const char* path, const char* name, const void* value, int value_size, int)
 {
-  return setxattr(p.c_str(), name.c_str(), value.c_str(), value.size(), 0 SXA_EXTRA);
+  struct stat st;
+  stat(path, &st);
+  std::string attrpath;
+  if ((st.st_mode & S_IFDIR) || strlen(path) == 2)
+    attrpath = std::string(path) + "/" + "$xattrs..";
+  else
+    attrpath = bfs::path(path).parent_path().string() + "/$xattrs." + bfs::path(path).filename().string();
+  attrpath += std::string("/") + name;
+  std::ofstream ofs(attrpath);
+  ofs.write((const char*)value, value_size);
+  std::cerr << "setxattr '" << path << "' " << attrpath << ": " << ofs.good() << std::endl;
+  return 0;
 }
 
-std::string getxattr_(bfs::path p, std::string const& name)
+int setxattr(const wchar_t* path, const char* name, const void* value, int value_size, int)
+{
+  std::string s;
+  for (int i=0; path[i]; ++i)
+    s += (char)path[i];
+  return setxattr(s.c_str(), name, value, value_size, 0);
+}
+
+int stat(const wchar_t* path, struct stat* st)
+{
+  std::string s;
+  for (int i=0; path[i]; ++i)
+    s += (char)path[i];
+  return stat(s.c_str(), st);
+}
+int getxattr(const char* path, const char*name, void* buf, int buf_size)
+{
+  struct stat st;
+  stat(path, &st);
+  std::string attrpath;
+  if ((st.st_mode & S_IFDIR) || strlen(path) == 2)
+    attrpath = std::string(path) + "/" + "$xattrs..";
+  else
+    attrpath = bfs::path(path).parent_path().string() + "/$xattrs." + bfs::path(path).filename().string();
+  attrpath += std::string("/") + name;
+  std::ifstream ifs(attrpath);
+  ifs.read((char*)buf, buf_size);
+  std::cerr << "getxattr '" << path << "' " << attrpath << ": " << ifs.good() << std::endl;
+  auto gc = ifs.gcount();
+  return gc ? gc : -1;
+}
+int getxattr(const wchar_t* path, const char*name, void* buf, int buf_size)
+{
+  std::string s;
+  for (int i=0; path[i]; ++i)
+    s += (char)path[i];
+  return getxattr(s.c_str(), name, buf, buf_size);
+}
+
+int open(const wchar_t* path, int flags, int mode = 0)
+{
+  std::string s;
+  for (int i=0; path[i]; ++i)
+    s += (char)path[i];
+  return open(s.c_str(), flags, mode);
+}
+
+#endif
+
+static
+int
+setxattr_(bfs::path p, std::string const& name, std::string const& value)
+{
+  return setxattr(p.c_str(), name.c_str(), value.c_str(), value.size(),
+                  0 SXA_EXTRA);
+}
+
+std::string
+getxattr_(bfs::path p, std::string const& name)
 {
   char buf[2048];
   int res = getxattr(p.c_str(), name.c_str(), buf, 2048 SXA_EXTRA SXA_EXTRA);
@@ -87,40 +169,66 @@ std::string getxattr_(bfs::path p, std::string const& name)
     return "";
 }
 
-static int group_create(bfs::path p, std::string const& name)
+static
+int
+group_create(bfs::path p, std::string const& name)
 {
-  return setxattr(p.c_str(), "user.infinit.group.create", name.c_str(), name.size(), 0 SXA_EXTRA);
-}
-static int group_add(bfs::path p, std::string const& gname, std::string const& uname)
-{
-  std::string cmd = gname + ":" + uname;
-  return setxattr(p.c_str(), "user.infinit.group.add", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
-}
-static int group_remove(bfs::path p, std::string const& gname, std::string const& uname)
-{
-  std::string cmd = gname + ":" + uname;
-  return setxattr(p.c_str(), "user.infinit.group.remove", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+  return setxattr(p.c_str(), "user.infinit.group.create",
+                  name.c_str(), name.size(), 0 SXA_EXTRA);
 }
 
-static int group_add_admin(bfs::path p, std::string const& gname, std::string const& uname)
+static
+int
+group_add(bfs::path p, std::string const& gname, std::string const& uname)
 {
   std::string cmd = gname + ":" + uname;
-  return setxattr(p.c_str(), "user.infinit.group.addadmin", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+  return setxattr(p.c_str(), "user.infinit.group.add",
+                  cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
 }
-static int group_remove_admin(bfs::path p, std::string const& gname, std::string const& uname)
+
+static
+int
+group_remove(bfs::path p, std::string const& gname, std::string const& uname)
 {
   std::string cmd = gname + ":" + uname;
-  return setxattr(p.c_str(), "user.infinit.group.removeadmin", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+  return setxattr(p.c_str(), "user.infinit.group.remove",
+                  cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
 }
 
-static int group_delete(bfs::path p, std::string const& gname)
+static
+int
+group_add_admin(bfs::path p, std::string const& gname, std::string const& uname)
 {
-  return setxattr(p.c_str(), "user.infinit.group.delete", gname.c_str(), gname.size(), 0 SXA_EXTRA);
+  std::string cmd = gname + ":" + uname;
+  return setxattr(p.c_str(), "user.infinit.group.addadmin",
+                  cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
 }
 
-static void wait_for_mounts(boost::filesystem::path root, int count, struct statvfs* start = nullptr)
+static
+int
+group_remove_admin(
+  bfs::path p, std::string const& gname, std::string const& uname)
+{
+  std::string cmd = gname + ":" + uname;
+  return setxattr(p.c_str(), "user.infinit.group.removeadmin",
+                  cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+}
+
+static
+int
+group_delete(bfs::path p, std::string const& gname)
+{
+  return setxattr(p.c_str(), "user.infinit.group.delete",
+                  gname.c_str(), gname.size(), 0 SXA_EXTRA);
+}
+
+static
+void
+wait_for_mounts(
+  boost::filesystem::path root, int count, struct statvfs* start = nullptr)
 {
   struct statvfs stparent;
+#ifndef INFINIT_WINDOWS
   if (start)
   {
     stparent = *start;
@@ -128,20 +236,22 @@ static void wait_for_mounts(boost::filesystem::path root, int count, struct stat
   }
   else
     statvfs(root.string().c_str(), &stparent);
+#endif
   while (mount_points.size() < unsigned(count))
     usleep(20000);
-#ifdef INFINIT_MACOSX
+#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
   // stat change monitoring does not work for unknown reasons
   usleep(2000000);
   return;
-#endif
+#else
   struct statvfs st;
   for (int i=0; i<count; ++i)
   {
     while (true)
     {
       int res = statvfs(mount_points[i].c_str(), &st);
-      ELLE_TRACE("%s fsid: %s %s  blk %s %s", i, st.f_fsid, stparent.f_fsid, st.f_blocks, stparent.f_blocks);
+      ELLE_TRACE("%s fsid: %s %s  blk %s %s", i, st.f_fsid, stparent.f_fsid,
+                 st.f_blocks, stparent.f_blocks);
       // statvfs failure with EPERM means its mounted
       if (res < 0
         || st.f_fsid != stparent.f_fsid
@@ -152,21 +262,30 @@ static void wait_for_mounts(boost::filesystem::path root, int count, struct stat
       usleep(20000);
     }
   }
+#endif
 }
 
-static int directory_count(boost::filesystem::path const& p)
+static
+int
+directory_count(boost::filesystem::path const& p)
 {
+  boost::system::error_code erc;
   try
   {
-    boost::filesystem::directory_iterator d(p);
+    boost::filesystem::directory_iterator d(p, erc);
+    if (erc)
+      throw std::runtime_error("construction failed : " + erc.message());
     int s=0;
-    while (d!= boost::filesystem::directory_iterator())
+    while (d != boost::filesystem::directory_iterator())
     {
-      ++s; ++d;
+      ++s;
+      d.increment(erc);
+      if (erc)
+        throw std::runtime_error("increment failed : " + erc.message());
     }
     return s;
   }
-  catch(std::exception const& e)
+  catch (std::exception const& e)
   {
     ELLE_LOG("directory_count failed with %s", e.what());
     return -1;
@@ -230,7 +349,9 @@ can_access(boost::filesystem::path const& p,
   }
 }
 
-static bool touch(boost::filesystem::path const& p)
+static
+bool
+touch(boost::filesystem::path const& p)
 {
   boost::filesystem::ofstream ofs(p);
   if (!ofs.good())
@@ -239,7 +360,9 @@ static bool touch(boost::filesystem::path const& p)
   return true;
 }
 
-template<typename T> std::string serialize(T & t)
+template<typename T>
+std::string
+serialize(T & t)
 {
   elle::Buffer buf;
   {
@@ -254,9 +377,12 @@ template<typename T> std::string serialize(T & t)
 // Run nodes in a separate scheduler to avoid reentrency issues
 // ndmefyl: WHAT THE FUCK is that supposed to imply O.o
 reactor::Scheduler* nodes_sched;
-static void make_nodes(std::string store, int node_count,
-                       infinit::cryptography::rsa::KeyPair const& owner,
-                       bool paxos)
+static
+void
+make_nodes(std::string store,
+           int node_count,
+           infinit::cryptography::rsa::KeyPair const& owner,
+           bool paxos)
 {
   reactor::Scheduler s;
   nodes_sched = &s;
@@ -356,8 +482,14 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
       {
         mp = (mp / boost::filesystem::unique_path()).string();
       }
+#ifdef INFINIT_WINDOWS
+      mp.clear();
+      mp += ('t' + i);
+      mp += ':';
+#endif
       mount_points.push_back(mp);
-      boost::filesystem::create_directories(mp);
+      boost::system::error_code erc;
+      boost::filesystem::create_directories(mp, erc);
       if (nmount == 1)
       {
         ELLE_TRACE("configuring mounter...");
@@ -411,19 +543,24 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
         fs = new reactor::filesystem::FileSystem(std::move(ops), true);
         ELLE_TRACE("running mounter...");
         new reactor::Thread("mounter", [mp] {
-            ELLE_LOG("mounting on %s", mp);
-            mounted = true;
-            fs->mount(mp, {"", "-o", "hard_remove"}); // {"", "-d" /*, "-o", "use_ino"*/});
-            ELLE_TRACE("waiting...");
-            reactor::wait(*fs);
-            ELLE_TRACE("...done");
-#ifndef INFINIT_MACOSX
-            ELLE_LOG("filesystem unmounted");
-            nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
-            processes.clear();
+          ELLE_LOG("mounting on %s", mp);
+          mounted = true;
+          std::vector<std::string> mount_options = {"", "-o", "hard_remove"};  // {"", "-d" /*, "-o", "use_ino"*/});
+#ifdef INFINIT_MACOSX
+          mount_options.push_back("-o");
+          mount_options.push_back("nobrowse");
 #endif
-            reactor::scheduler().terminate();
-            });
+          fs->mount(mp, mount_options);
+          ELLE_TRACE("waiting...");
+          reactor::wait(*fs);
+          ELLE_TRACE("...done");
+#ifndef INFINIT_MACOSX
+          ELLE_LOG("filesystem unmounted");
+          nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
+          processes.clear();
+#endif
+          reactor::scheduler().terminate();
+        });
       }
       else
       {
@@ -535,7 +672,8 @@ run_filesystem(std::string const& store, std::string const& mountpoint)
   endpoints.clear();
   processes.clear();
   mounted = false;
-  auto tmp = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+  auto tmp = boost::filesystem::temp_directory_path()
+           / boost::filesystem::unique_path();
   std::unique_ptr<infinit::model::Model> model;
   reactor::Thread t(*sched, "fs", [&] {
     if (!elle::os::getenv("STORAGE_MEMORY", "").empty())
@@ -556,7 +694,9 @@ run_filesystem(std::string const& store, std::string const& mountpoint)
   sched->run();
 }
 
-static std::string read(boost::filesystem::path const& where)
+static
+std::string
+read(boost::filesystem::path const& where)
 {
   std::string text;
   boost::filesystem::ifstream ifs(where);
@@ -564,7 +704,9 @@ static std::string read(boost::filesystem::path const& where)
   return text;
 }
 
-static void read_all(boost::filesystem::path const& where)
+static
+void
+read_all(boost::filesystem::path const& where)
 {
   boost::filesystem::ifstream ifs(where);
   char buffer[1024];
@@ -576,7 +718,9 @@ static void read_all(boost::filesystem::path const& where)
   }
 }
 
-static void write(boost::filesystem::path const& where, std::string const& what)
+static
+void
+write(boost::filesystem::path const& where, std::string const& what)
 {
   boost::filesystem::ofstream ofs(where);
   ofs << what;
@@ -590,14 +734,20 @@ test_filesystem(bool dht,
                 bool paxos = true)
 {
   namespace bfs = boost::filesystem;
-  auto store = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
-  auto mount = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+  auto store = boost::filesystem::temp_directory_path()
+             / boost::filesystem::unique_path();
+  auto mount = boost::filesystem::temp_directory_path()
+             / boost::filesystem::unique_path();
   elle::os::setenv("INFINIT_HOME", store.string(), true);
   boost::filesystem::create_directories(mount);
   boost::filesystem::create_directories(store);
   mount_points.clear();
   struct statvfs statstart;
+#ifndef INFINIT_WINDOWS
   statvfs(mount.string().c_str(), &statstart);
+#else
+  mount = "t:";
+#endif
   std::vector<infinit::cryptography::rsa::PublicKey> keys;
   std::thread t([&] {
       if (dht)
@@ -607,6 +757,9 @@ test_filesystem(bool dht,
         run_filesystem(store.string(), mount.string());
     });
   wait_for_mounts(mount, 1, &statstart);
+#ifdef INFINIT_WINDOWS
+  Sleep(15000);
+#endif
   ELLE_LOG("starting test, mnt=%s, store=%s", mount, store);
 
   elle::SafeFinally remover([&] {
@@ -647,7 +800,6 @@ test_filesystem(bool dht,
       }
   });
   std::string text;
-
   {
     boost::filesystem::ofstream ofs(mount / "test");
     ofs << "Test";
@@ -659,7 +811,8 @@ test_filesystem(bool dht,
   }
   BOOST_CHECK_EQUAL(text, "Test");
   {
-    bfs::ofstream ofs(mount / "test", std::ofstream::out|std::ofstream::ate|std::ofstream::app);
+    bfs::ofstream ofs(mount / "test",
+                      std::ofstream::out|std::ofstream::ate|std::ofstream::app);
     ofs << "coin";
   }
   BOOST_CHECK_EQUAL(directory_count(mount), 1);
@@ -685,8 +838,14 @@ test_filesystem(bool dht,
         ofs.write(buffer, 16384);
     }
     int tfd = open( (mount / "tt").c_str(), O_RDWR);
-    ELLE_LOG("truncate file")
-      BOOST_CHECK_EQUAL(ftruncate(tfd, 0), 0);
+    ELLE_LOG("truncate file");
+    int tres = ftruncate(tfd, 0);
+    if (tres)
+      perror("ftruncate");
+    BOOST_CHECK_EQUAL(tres, 0);
+#ifndef INFINIT_WINDOWS
+    // FIXME: ftruncate is translated to dokany call SetEndOfFile() on the file,
+    // so the opened file handle is not notified
     ELLE_LOG("successive writes")
     {
       BOOST_CHECK_EQUAL(write(tfd, buffer, 16384), 16384);;
@@ -701,11 +860,14 @@ test_filesystem(bool dht,
     close(tfd);
     ELLE_LOG("check file size")
       BOOST_CHECK_EQUAL(bfs::file_size(mount / "tt"), 32413);
+#else
+    close(tfd);
+#endif
     bfs::remove(mount / "tt");
   }
 
   // hardlink
-#ifndef INFINIT_MACOSX
+#ifdef INFINIT_LINUX
   struct stat st;
   {
     bfs::ofstream ofs(mount / "test");
@@ -713,7 +875,10 @@ test_filesystem(bool dht,
   }
   bfs::create_hard_link(mount / "test", mount / "test2");
   {
-    bfs::ofstream ofs(mount / "test2", std::ofstream::out|std::ofstream::ate|std::ofstream::app);
+    bfs::ofstream ofs(mount / "test2",
+                      std::ofstream::out |
+                      std::ofstream::ate |
+                      std::ofstream::app);
     ofs << "coinB";
     ofs.close();
   }
@@ -728,7 +893,10 @@ test_filesystem(bool dht,
   BOOST_CHECK_EQUAL(text, "TestcoinB");
 
   {
-    bfs::ofstream ofs(mount / "test", std::ofstream::out|std::ofstream::ate|std::ofstream::app);
+    bfs::ofstream ofs(mount / "test",
+                      std::ofstream::out |
+                      std::ofstream::ate |
+                      std::ofstream::app);
     ofs << "coinA";
   }
   // XXX [@Matthieu]: Should be 500000.
@@ -752,7 +920,10 @@ test_filesystem(bool dht,
     ofs << "Test";
   }
   {
-    bfs::ofstream ofs(mount / "test", std::ofstream::out|std::ofstream::ate|std::ofstream::app);
+    bfs::ofstream ofs(mount / "test",
+                      std::ofstream::out |
+                      std::ofstream::ate |
+                      std::ofstream::app);
     ofs << "a";
     bfs::create_hard_link(mount / "test", mount / "test2");
     ofs << "b";
@@ -780,7 +951,8 @@ test_filesystem(bool dht,
     ifs.read(buffer, 20);
     BOOST_CHECK_EQUAL(ifs.gcount(), 16);
     char expect[] = {'f','o','o',0,0,0,0,0,0,0,0,0,0,'f','o','o'};
-    BOOST_CHECK_EQUAL(std::string(buffer, buffer + 16), std::string(expect, expect + 16));
+    BOOST_CHECK_EQUAL(std::string(buffer, buffer + 16),
+                      std::string(expect, expect + 16));
   }
   bfs::remove(mount / "test");
 
@@ -930,7 +1102,7 @@ test_filesystem(bool dht,
     std::default_random_engine gen;
     std::uniform_int_distribution<>dist(0, 255);
     {
-      boost::filesystem::ofstream ofs(mount / "tbig");
+      boost::filesystem::ofstream ofs(mount / "tbig", std::ios::binary);
       for (int i=0; i<10000000; ++i)
         ofs.put(dist(gen));
     }
@@ -950,7 +1122,7 @@ test_filesystem(bool dht,
         lseek(fd, sv, SEEK_SET);
         unsigned char c = dist(gen);
         ELLE_TRACE("Write 1 at %s", sv);
-        write(fd, &c, 1);
+        BOOST_CHECK_EQUAL(write(fd, &c, 1), 1);
       }
       ELLE_TRACE("Closing");
       close(fd);
@@ -985,23 +1157,30 @@ test_filesystem(bool dht,
     touch(mount / "file");
     setxattr((mount / "file").c_str(), "testattr", "foo", 3, 0 SXA_EXTRA);
     char attrlist[1024];
-    ssize_t sz = listxattr(mount.c_str(), attrlist, 1024 SXA_EXTRA);
+    ssize_t sz;
+#ifndef INFINIT_WINDOWS
+    sz = listxattr(mount.c_str(), attrlist, 1024 SXA_EXTRA);
     BOOST_CHECK_EQUAL(sz, strlen("testattr")+1);
     BOOST_CHECK_EQUAL(attrlist, "testattr");
     sz = listxattr( (mount / "file").c_str(), attrlist, 1024 SXA_EXTRA);
     BOOST_CHECK_EQUAL(sz, strlen("testattr")+1);
     BOOST_CHECK_EQUAL(attrlist, "testattr");
-    sz = getxattr(mount.c_str(), "testattr", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+    sz = getxattr(mount.c_str(), "testattr", attrlist,
+                  1024 SXA_EXTRA SXA_EXTRA);
+#endif
     BOOST_CHECK_EQUAL(sz, strlen("foo"));
     attrlist[sz] = 0;
     BOOST_CHECK_EQUAL(attrlist, "foo");
-    sz = getxattr( (mount / "file").c_str(), "testattr", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+    sz = getxattr( (mount / "file").c_str(), "testattr", attrlist,
+                  1024 SXA_EXTRA SXA_EXTRA);
     BOOST_CHECK_EQUAL(sz, strlen("foo"));
     attrlist[sz] = 0;
     BOOST_CHECK_EQUAL(attrlist, "foo");
-    sz = getxattr( (mount / "file").c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+    sz = getxattr( (mount / "file").c_str(), "nope", attrlist,
+                  1024 SXA_EXTRA SXA_EXTRA);
     BOOST_CHECK_EQUAL(sz, -1);
-    sz = getxattr( (mount / "nope").c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+    sz = getxattr( (mount / "nope").c_str(), "nope", attrlist,
+                  1024 SXA_EXTRA SXA_EXTRA);
     BOOST_CHECK_EQUAL(sz, -1);
     sz = getxattr( mount.c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
     BOOST_CHECK_EQUAL(sz, -1);
@@ -1022,6 +1201,30 @@ test_filesystem(bool dht,
     bfs::remove(mount / "test");
   }
 
+  ELLE_LOG("test symlink")
+  {
+    auto real_path = mount / "real_file";
+    auto symlink_path = mount / "symlink";
+    ELLE_TRACE("write real file")
+    {
+      bfs::ofstream ofs(real_path);
+      ofs << "something";
+    }
+    ELLE_TRACE("create symlink")
+    {
+      bfs::create_symlink(real_path, symlink_path);
+    }
+    std::string text;
+    ELLE_TRACE("read through symlink")
+    {
+      bfs::ifstream ifs(symlink_path);
+      ifs >> text;
+    }
+    BOOST_CHECK_EQUAL(text, "something");
+    bfs::remove(real_path);
+    bfs::remove(symlink_path);
+  }
+
   ELLE_LOG("utf-8");
   const char* name = "éùßñЂ";
   write(mount / name, "foo");
@@ -1034,29 +1237,34 @@ test_filesystem(bool dht,
   BOOST_CHECK_EQUAL(directory_count(mount), 0);
 }
 
-void test_basic()
+void
+test_basic()
 {
   test_filesystem(false);
 }
 
-void filesystem()
+void
+filesystem()
 {
   test_filesystem(true, 5, 1, 1, false);
 }
 
-void filesystem_paxos()
+void
+filesystem_paxos()
 {
   test_filesystem(true, 5, 1, 1, true);
 }
 
-void unmounter(boost::filesystem::path mount,
-               boost::filesystem::path store,
-               std::thread& t)
+void
+unmounter(boost::filesystem::path mount,
+          boost::filesystem::path store,
+          std::thread& t)
 {
   ELLE_LOG("unmounting");
   if (!nodes_sched->done())
     nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
   ELLE_LOG("cleaning up: TERM %s", processes.size());
+#ifndef INFINIT_WINDOWS
   for (auto const& p: processes)
     kill(p->pid(), SIGTERM);
   usleep(200000);
@@ -1064,6 +1272,7 @@ void unmounter(boost::filesystem::path mount,
   for (auto const& p: processes)
     kill(p->pid(), SIGKILL);
   usleep(200000);
+#endif
   // unmount all
   for (auto const& mp: mount_points)
   {
@@ -1092,7 +1301,9 @@ test_conflicts(bool paxos)
   bfs::create_directories(mount);
   bfs::create_directories(store);
   struct statvfs statstart;
+#ifndef INFINIT_WINDOWS
   statvfs(mount.string().c_str(), &statstart);
+#endif
   mount_points.clear();
   std::vector<infinit::cryptography::rsa::PublicKey> keys;
   std::thread t([&] {
@@ -1139,7 +1350,7 @@ test_conflicts(bool paxos)
       BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
     ELLE_LOG("close file 0")
       BOOST_CHECK_EQUAL(close(fd0), 0);
-    ::sleep(2);
+    ::usleep(2000000);
     ELLE_LOG("close file 1")
       BOOST_CHECK_EQUAL(close(fd1), 0);
     ELLE_LOG("read file 0")
@@ -1250,7 +1461,9 @@ test_acl(bool paxos)
   bfs::create_directories(mount);
   bfs::create_directories(store);
   struct statvfs statstart;
+#ifndef INFINIT_WINDOWS
   statvfs(mount.string().c_str(), &statstart);
+#endif
   mount_points.clear();
   std::vector<infinit::cryptography::rsa::PublicKey> keys;
   std::thread t([&] {
@@ -1402,7 +1615,8 @@ test_acl(bool paxos)
   ELLE_LOG("world-writable");
   bfs::create_directory(m0 / "dir4");
   BOOST_CHECK_EQUAL(directory_count(m1 / "dir4"), -1);
-  bfs::permissions(m0 / "dir4", bfs::add_perms |bfs::others_write | bfs::others_read);
+  bfs::permissions(m0 / "dir4",
+                   bfs::add_perms |bfs::others_write | bfs::others_read);
   BOOST_CHECK_EQUAL(directory_count(m1 / "dir4"), 0);
   write(m1 / "dir4" / "file", "foo");
   bfs::create_directory(m1 /"dir4"/ "dir");
@@ -1414,7 +1628,8 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(read(m1 / "dir4" / "file"), "foo");
 
   write(m0 / "file5", "foo");
-  bfs::permissions(m0 / "file5", bfs::add_perms |bfs::others_write | bfs::others_read);
+  bfs::permissions(m0 / "file5",
+                   bfs::add_perms |bfs::others_write | bfs::others_read);
   write(m1 / "file5", "bar");
   BOOST_CHECK_EQUAL(read(m1 / "file5"), "bar");
   BOOST_CHECK_EQUAL(read(m0 / "file5"), "bar");
@@ -1545,6 +1760,49 @@ acl_paxos()
   test_acl(true);
 }
 
+class NoCheatConsensus: public infinit::model::doughnut::consensus::Consensus
+{
+public:
+  typedef infinit::model::doughnut::consensus::Consensus Super;
+  NoCheatConsensus(std::unique_ptr<Super> backend)
+  : Super(backend->doughnut())
+  , _backend(std::move(backend))
+  {}
+protected:
+  virtual
+  std::unique_ptr<infinit::model::blocks::Block>
+  _fetch(infinit::model::Address address, boost::optional<int> local_version)
+  {
+    auto res = _backend->fetch(address, local_version);
+    if (!res)
+      return res;
+    elle::Buffer buf;
+    {
+      elle::IOStream os(buf.ostreambuf());
+      elle::serialization::binary::serialize(res, os);
+    }
+    elle::IOStream is(buf.istreambuf());
+    elle::serialization::Context ctx;
+    ctx.set(&doughnut());
+    res = elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
+      is, true, ctx);
+    return std::move(res);
+  }
+  std::unique_ptr<Super> _backend;
+};
+
+std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
+no_cheat_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
+{
+  return elle::make_unique<NoCheatConsensus>(std::move(c));
+}
+
+std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
+same_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
+{
+  return std::move(c);
+}
+
 class DHTs
 {
 public:
@@ -1553,9 +1811,17 @@ public:
     : owner_keys(infinit::cryptography::rsa::keypair::generate(512))
     , dhts()
   {
+    pax = true;
+    if (count < 0)
+    {
+      pax = false;
+      count *= -1;
+    }
     for (int i = 0; i < count; ++i)
     {
-      this->dhts.emplace_back(owner = this->owner_keys, args ...);
+      this->dhts.emplace_back(paxos = pax,
+                              owner = this->owner_keys,
+                              args ...);
       for (int j = 0; j < i; ++j)
         this->dhts[j].overlay->connect(*this->dhts[i].overlay);
     }
@@ -1576,9 +1842,14 @@ public:
   };
 
   Client
-  client()
+  client(bool new_key = false)
   {
-    DHT client(keys = this->owner_keys, storage = nullptr);
+    DHT client(owner = this->owner_keys,
+               keys = new_key ? infinit::cryptography::rsa::keypair::generate(512)
+                                : this->owner_keys,
+               storage = nullptr,
+               make_consensus = pax ? same_consensus : no_cheat_consensus,
+               paxos = pax);
     for (auto& dht: this->dhts)
       dht.overlay->connect(*client.overlay);
     return Client("volume", std::move(client));
@@ -1586,6 +1857,7 @@ public:
 
   infinit::cryptography::rsa::KeyPair owner_keys;
   std::vector<DHT> dhts;
+  bool pax;
 };
 
 ELLE_TEST_SCHEDULED(write_truncate)
@@ -1593,7 +1865,8 @@ ELLE_TEST_SCHEDULED(write_truncate)
   DHTs servers(1);
   auto client = servers.client();
   // the emacs save procedure: open() truncate() write()
-  auto handle = client.fs->path("/file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  auto handle =
+    client.fs->path("/file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
   handle->write(elle::ConstWeakBuffer("foo\nbar\nbaz\n", 12), 12, 0);
   handle->close();
   handle.reset();
@@ -1695,11 +1968,16 @@ ELLE_TEST_SCHEDULED(prefetcher_failure)
   o->fail_addresses().insert(fat[2]);
   auto handle = root->child("file")->open(O_RDWR, 0);
   char buf[16384];
-  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 8192), 16384);
+  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 8192),
+                    16384);
   reactor::sleep(200_ms);
   o->fail_addresses().clear();
-  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024*1024 + 8192), 16384);
-  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024*1024*2 + 8192), 16384);
+  BOOST_CHECK_EQUAL(
+    handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024 * 1024 + 8192),
+    16384);
+  BOOST_CHECK_EQUAL(
+    handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024 * 1024 * 2 + 8192),
+    16384);
 }
 
 ELLE_TEST_SCHEDULED(paxos_race)
@@ -1728,12 +2006,214 @@ ELLE_TEST_SCHEDULED(paxos_race)
   }
 }
 
+ELLE_TEST_SCHEDULED(data_embed)
+{
+  DHTs servers(1);
+  auto client = servers.client();
+  auto root = client.fs->path("/");
+  auto h = root->child("file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  h->write(elle::ConstWeakBuffer("foo", 3), 3, 0);
+  h->close();
+  h.reset();
+  BOOST_CHECK_EQUAL(
+    get_fat(root->child("file")->getxattr("user.infinit.fat")).size(),
+    0);
+
+  h = root->child("file")->open(O_RDWR, 0);
+  h->write(elle::ConstWeakBuffer("foo", 3), 3, 3);
+  h->close();
+  h.reset();
+  BOOST_CHECK_EQUAL(
+    get_fat(root->child("file")->getxattr("user.infinit.fat")).size(),
+    0);
+
+  h = root->child("file")->open(O_RDWR, 0);
+  char buf[1024] = {0};
+  BOOST_CHECK_EQUAL(h->read(elle::WeakBuffer(buf, 64), 64, 0), 6);
+  BOOST_CHECK_EQUAL(buf, std::string("foofoo"));
+  h->close();
+  h.reset();
+
+  h = root->child("file")->open(O_RDWR, 0);
+  h->write(elle::ConstWeakBuffer("barbarbaz", 9), 9, 0);
+  h->close();
+  h.reset();
+  BOOST_CHECK_EQUAL(
+    get_fat(root->child("file")->getxattr("user.infinit.fat")).size(),
+    0);
+    h = root->child("file")->open(O_RDWR, 0);
+  BOOST_CHECK_EQUAL(h->read(elle::WeakBuffer(buf, 64), 64, 0), 9);
+  BOOST_CHECK_EQUAL(buf, std::string("barbarbaz"));
+  h->close();
+  h.reset();
+
+  h = root->child("file")->open(O_RDWR, 0);
+  for (int i = 0; i < 1024; ++i)
+    h->write(elle::ConstWeakBuffer(buf, 1024), 1024, 1024*i);
+  h->close();
+  h.reset();
+  BOOST_CHECK_EQUAL(
+    get_fat(root->child("file")->getxattr("user.infinit.fat")).size(),
+    1);
+
+  h = root->child("file2")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  h->write(elle::ConstWeakBuffer(buf, 1024), 1024, 0);
+  for (int i = 0; i < 1024; ++i)
+    h->write(elle::ConstWeakBuffer(buf, 1024), 1024, 1024*i);
+  h->write(elle::ConstWeakBuffer(buf, 1024), 1024, 1024*1024);
+  h->close();
+  h.reset();
+  BOOST_CHECK_EQUAL(
+    get_fat(root->child("file2")->getxattr("user.infinit.fat")).size(),
+    2);
+}
+
+ELLE_TEST_SCHEDULED(short_hash_key)
+{
+  DHTs servers(1);
+  auto client1 = servers.client();
+  auto key = infinit::cryptography::rsa::keypair::generate(512);
+  auto serkey = elle::serialization::json::serialize(key.K());
+  client1.fs->path("/")->setxattr("infinit.auth.setr", serkey.string(), 0);
+  auto jsperms = client1.fs->path("/")->getxattr("infinit.auth");
+  std::stringstream s(jsperms);
+  auto jperms = elle::json::read(s);
+  auto a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 2);
+  auto hash = boost::any_cast<std::string>(
+    boost::any_cast<elle::json::Object>(a.at(1)).at("name"));
+  ELLE_TRACE("got hash: %s", hash);
+  client1.fs->path("/")->setxattr("infinit.auth.clear", hash, 0);
+  jsperms = client1.fs->path("/")->getxattr("infinit.auth");
+  s.str(jsperms);
+  jperms = elle::json::read(s);
+  a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 1);
+  BOOST_CHECK_THROW(client1.fs->path("/")->setxattr("infinit.auth.clear", "#gogol", 0),
+                    std::exception);
+}
+
+
+ELLE_TEST_SCHEDULED(rename_exceptions)
+{
+  // Ensure source does not get erased if rename fails under various conditions
+  DHTs servers(-1);
+  auto client1 = servers.client();
+  client1.fs->path("/");
+  auto client2 = servers.client(true);
+  BOOST_CHECK_THROW(client2.fs->path("/foo")->mkdir(0666), std::exception);
+
+  auto c2key = elle::serialization::json::serialize(client2.dht.dht->keys().K()).string();
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", c2key, 0);
+  ELLE_TRACE("create target inaccessible dir");
+  client1.fs->path("/dir")->mkdir(0600);
+  ELLE_TRACE("mkdir without perms");
+  BOOST_CHECK_THROW(client2.fs->path("/dir/foo")->mkdir(0666), std::exception);
+  ELLE_TRACE("create source dir");
+  client2.fs->path("/foo")->mkdir(0666);
+  ELLE_TRACE("Rename");
+  try
+  {
+    client2.fs->path("/foo")->rename("/dir/foo");
+    BOOST_CHECK(false);
+  }
+  catch (elle::Error const&e)
+  {
+    ELLE_TRACE("exc %s", e);
+  }
+  struct stat st;
+  client2.fs->path("/foo")->stat(&st);
+  BOOST_CHECK(S_ISDIR(st.st_mode));
+
+  // check again with read-only access
+  client1.fs->path("/dir")->setxattr("infinit.auth.setr", c2key, 0);
+  ELLE_TRACE("Rename2");
+  try
+  {
+    client2.fs->path("/foo")->rename("/dir/foo");
+    BOOST_CHECK(false);
+  }
+  catch (elle::Error const&e)
+  {
+    ELLE_TRACE("exc %s", e);
+  }
+  client2.fs->path("/foo")->stat(&st);
+  BOOST_CHECK(S_ISDIR(st.st_mode));
+}
+
+
+ELLE_TEST_SCHEDULED(erased_group)
+{
+  DHTs servers(-1);
+  auto client1 = servers.client();
+  auto client2 = servers.client(true);
+  auto c2key = elle::serialization::json::serialize(client2.dht.dht->keys().K()).string();
+  client1.fs->path("/");
+  client1.fs->path("/")->setxattr("infinit.group.create", "grp", 0);
+  client1.fs->path("/")->setxattr("infinit.group.add", "grp:" + c2key, 0);
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", "@grp", 0);
+  client1.fs->path("/")->setxattr("infinit.auth.inherit", "true", 0);
+  client2.fs->path("/dir")->mkdir(0666);
+  client2.fs->path("/file")->create(O_RDWR | O_CREAT, 0666)->write(
+    elle::ConstWeakBuffer("foo", 3), 3, 0);
+  client1.fs->path("/")->setxattr("infinit.group.delete", "grp", 0);
+  // cant write to /, because last author is a group member: it fails validation
+  BOOST_CHECK_THROW(client1.fs->path("/dir2")->mkdir(0666), reactor::filesystem::Error);
+  // we have inherit enabled, copy_permissions will fail on the missing group
+  BOOST_CHECK_THROW(client2.fs->path("/dir/dir")->mkdir(0666), reactor::filesystem::Error);
+  client2.fs->path("/file")->open(O_RDWR, 0644)->write(
+    elle::ConstWeakBuffer("bar", 3), 3, 0);
+}
+
+ELLE_TEST_SCHEDULED(erased_group_recovery)
+{
+  DHTs servers(-1);
+  auto client1 = servers.client();
+  auto client2 = servers.client(true);
+  client1.fs->path("/");
+  auto c2key = elle::serialization::json::serialize(client2.dht.dht->keys().K()).string();
+  client1.fs->path("/")->setxattr("infinit.group.create", "grp", 0);
+  client1.fs->path("/")->setxattr("infinit.group.add", "grp:" + c2key, 0);
+  ELLE_TRACE("set group ACL");
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", "@grp", 0);
+  client1.fs->path("/")->setxattr("infinit.auth.inherit", "true", 0);
+  client1.fs->path("/dir")->mkdir(0666);
+  ELLE_TRACE("delete group");
+  client1.fs->path("/")->setxattr("infinit.group.delete", "grp", 0);
+  ELLE_TRACE("list auth");
+  auto jsperms = client1.fs->path("/dir")->getxattr("infinit.auth");
+  std::stringstream s(jsperms);
+  auto jperms = elle::json::read(s);
+  auto a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 2);
+  auto hash = boost::any_cast<std::string>(
+    boost::any_cast<elle::json::Object>(a.at(1)).at("name"));
+  ELLE_TRACE("got hash: %s", hash);
+  ELLE_TRACE("clear group from auth");
+  client1.fs->path("/dir")->setxattr("infinit.auth.clear", hash, 0);
+  ELLE_TRACE("recheck auth");
+  jsperms = client1.fs->path("/dir")->getxattr("infinit.auth");
+  s.str(jsperms);
+  jperms = elle::json::read(s);
+  a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 1);
+
+  client1.fs->path("/")->setxattr("infinit.auth.clear", hash, 0);
+  jsperms = client1.fs->path("/")->getxattr("infinit.auth");
+  s.str(jsperms);
+  jperms = elle::json::read(s);
+  a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 1);
+}
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
   // There is unfortunately no more specific way.
-  setenv("BOOST_TEST_CATCH_SYSTEM_ERRORS", "no", 1);
+  elle::os::setenv("BOOST_TEST_CATCH_SYSTEM_ERRORS", "no", 1);
+#ifndef INFINIT_WINDOWS
   signal(SIGCHLD, SIG_IGN);
+#endif
   auto& suite = boost::unit_test::framework::master_test_suite();
   // only doughnut supported filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
   suite.add(BOOST_TEST_CASE(filesystem), 0, 120);
@@ -1750,4 +2230,9 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(write_truncate), 0, 1);
   suite.add(BOOST_TEST_CASE(prefetcher_failure), 0, 5);
   suite.add(BOOST_TEST_CASE(paxos_race), 0, 5);
+  suite.add(BOOST_TEST_CASE(data_embed), 0, 5);
+  suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
+  suite.add(BOOST_TEST_CASE(rename_exceptions), 0, 5);
+  suite.add(BOOST_TEST_CASE(erased_group), 0, 5);
+  suite.add(BOOST_TEST_CASE(erased_group_recovery), 0, 5);
 }

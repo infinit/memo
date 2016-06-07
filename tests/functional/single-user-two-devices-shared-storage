@@ -6,7 +6,7 @@ from utils import *
 with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2:
   # Device 1
   infinit_1.run(['infinit-user', '--create',  'user'])
-  user = infinit_1.run([
+  user = infinit_1.run_json([
     'infinit-user', '--export', '--full',  'user'
   ])
   infinit_1.run([
@@ -20,7 +20,7 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
     '--no-consensus',
     '--as', 'user',
   ])
-  network = infinit_1.run([
+  network = infinit_1.run_json([
     'infinit-network', '--export',
      'network',
     '--as', 'user',
@@ -30,21 +30,23 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
      'volume', '--network', 'network',
     '--as', 'user',
   ])
-  volume = infinit_1.run([
+  volume = infinit_1.run_json([
     'infinit-volume', '--export',
      'volume',
     '--as', 'user',
   ])
-  response = infinit_1.run([
-    'infinit-volume', '--run',
-    'volume',
-    '--as', 'user',
-  ],
-  input = {'operation': 'mkdir', 'path': '/beacon'})
+  response = infinit_1.run_json(
+    [
+      'infinit-volume', '--run',
+      'volume',
+      '--as', 'user',
+    ],
+    input = {'operation': 'mkdir', 'path': '/beacon'})
   if not response['success']:
     raise AssertionError('operation failed: %s' % response)
   # Device 2
-  response = infinit_2.run(['infinit-user', '--import'], input = user)
+  infinit_2.run(
+    ['infinit-user', '--import'], input = user)
   infinit_2.run([
     'infinit-storage', '--create',
      'storage',
@@ -58,12 +60,13 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
     '--as', 'user',
   ])
   infinit_2.run(['infinit-volume', '--import'], input = volume)
-  response = infinit_2.run([
-    'infinit-volume', '--run',
-    'volume',
-    '--as', 'user',
-  ],
-  input = {'operation': 'list_directory', 'path': '/'})
+  response = infinit_2.run_json(
+    [
+      'infinit-volume', '--run',
+      'volume',
+      '--as', 'user',
+    ],
+    input = {'operation': 'list_directory', 'path': '/'})
   if not response['success']:
     raise AssertionError('operation failed: %s' % response)
   assertEq(response['entries'], ['beacon'])

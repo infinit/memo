@@ -182,10 +182,12 @@ namespace infinit
         static bool bg = elle::os::getenv("INFINIT_NO_BACKGROUND_DECODE", "").empty();
         if (bg)
         {
-          reactor::Thread::NonInterruptible ni;
-          reactor::background([&] {
-              target = k.open(src);
-          });
+          elle::With<reactor::Thread::NonInterruptible>() << [&]
+          {
+            reactor::background([&] {
+                target = k.open(src);
+              });
+          };
         }
         else
           target = k.open(src);
@@ -302,15 +304,22 @@ namespace infinit
           // FIXME: the block will always be sealed anyway, why encrypt a token
           // now ?
           elle::Buffer token;
-          Group g(*this->doughnut(), key);
-          if (this->_owner_token.size())
+          try
           {
-            auto secret = this->owner_private_key()->open(this->_owner_token);
-            token = g.current_public_key().seal(secret);
+            Group g(*this->doughnut(), key);
+            if (this->_owner_token.size())
+            {
+              auto secret = this->owner_private_key()->open(this->_owner_token);
+              token = g.current_public_key().seal(secret);
+            }
+            acl_entries.emplace_back(ACLEntry(key, read, write, token));
+            this->_group_version.push_back(g.version()-1);
+            this->_acl_changed = true;
           }
-          acl_entries.emplace_back(ACLEntry(key, read, write, token));
-          this->_group_version.push_back(g.version()-1);
-          this->_acl_changed = true;
+          catch (elle::Error const& e)
+          {
+            throw elle::Error(elle::sprintf("Failed to access group block: %s", e));
+          }
         }
         else
         {
@@ -408,6 +417,19 @@ namespace infinit
         try
         {
           auto& user = dynamic_cast<User const&>(user_);
+          if (user.name()[0] == '#')
+          {
+            if (!read && !write)
+            { // This is safe, nothing will happen if entry is not found
+              this->set_group_permissions(user.key(), read, write);
+              this->set_permissions(user.key(), read, write);
+            }
+            else
+            {
+              ELLE_TRACE("set_permissions on unresolved key, assuming user");
+              this->set_permissions(user.key(), read, write);
+            }
+          }
           if (user.name()[0] == '@')
             this->set_group_permissions(user.key(), read, write);
           else
@@ -501,6 +523,17 @@ namespace infinit
         return res;
       }
 
+      static bool has_key(cryptography::rsa::PublicKey const& k,
+                          std::vector<ACLEntry> const& v, bool write)
+      {
+        auto it = std::find_if(v.begin(), v.end(),
+          [&](ACLEntry const& ent)
+          {
+            return ent.key == k && ent.read && ent.write >= write;
+          });
+        return it != v.end();
+      }
+
       /*-----------.
       | Validation |
       `-----------*/
@@ -550,24 +583,31 @@ namespace infinit
             return blocks::ValidationResult::failure("no write permissions");
           }
         }
-        ELLE_DEBUG("%s: check author signature, entry=%s, sig=%s",
-                   *this, !!entry, this->data_signature())
+        ELLE_DEBUG("check author signature")
         {
           if (is_group_entry)
           { // fetch latest key for group
-            Group g(*this->doughnut(), entry->key);
-            auto pubkeys = g.group_public_keys();
-            if (group_index >= signed(this->_group_version.size()))
-              return blocks::ValidationResult::failure("group_version array too short");
-            auto key_index = this->_group_version[group_index];
-            if (key_index >= signed(pubkeys.size()))
-              return blocks::ValidationResult::failure("group key out of range");
-            auto& key = pubkeys[key_index];
-            ELLE_DEBUG("validating with group key %s: %s", key_index, key);
-            if (!key.verify(this->data_signature(), *this->_data_sign()))
+            try
             {
-              ELLE_DEBUG("%s: group author signature invalid", *this);
-              return blocks::ValidationResult::failure("Incorrect group key signature");
+              Group g(*this->doughnut(), entry->key);
+              auto pubkeys = g.group_public_keys();
+              if (group_index >= signed(this->_group_version.size()))
+                return blocks::ValidationResult::failure("group_version array too short");
+              auto key_index = this->_group_version[group_index];
+              if (key_index >= signed(pubkeys.size()))
+                return blocks::ValidationResult::failure("group key out of range");
+              auto& key = pubkeys[key_index];
+              ELLE_DEBUG("validating with group key %s: %s", key_index, key);
+              if (!key.verify(this->data_signature(), *this->_data_sign()))
+              {
+                ELLE_DEBUG("%s: group author signature invalid", *this);
+                return blocks::ValidationResult::failure("Incorrect group key signature");
+              }
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_TRACE("Error processing group entry: %s", e.what());
+              return blocks::ValidationResult::failure("Failed to access group");
             }
           }
           else
@@ -581,6 +621,31 @@ namespace infinit
             }
           }
         }
+        return blocks::ValidationResult::success();
+      }
+
+      template <typename Block>
+      blocks::ValidationResult
+      BaseACB<Block>::validate_admin_keys(Model& model) const
+      {
+        // check for admin keys
+        auto const& aks = dynamic_cast<Doughnut const&>(model).admin_keys();
+        for (auto const& k: aks.r)
+          if (k != *this->owner_key() && !has_key(k, this->_acl_entries, false))
+            return blocks::ValidationResult::failure(
+              elle::sprintf("Missing admin R key %s", k));
+        for (auto const& k: aks.w)
+          if (k != *this->owner_key() && !has_key(k, this->_acl_entries, true))
+            return blocks::ValidationResult::failure(
+              elle::sprintf("Missing admin RW key %s", k));
+        for (auto const& k: aks.group_r)
+          if (k != *this->owner_key() && !has_key(k, this->_acl_group_entries, false))
+            return blocks::ValidationResult::failure(
+              elle::sprintf("Missing admin R group key %s", k));
+        for (auto const& k: aks.group_w)
+          if (k != *this->owner_key() && !has_key(k, this->_acl_group_entries, true))
+            return blocks::ValidationResult::failure(
+              elle::sprintf("Missing admin RW group key %s", k));
         return blocks::ValidationResult::success();
       }
 
@@ -646,9 +711,22 @@ namespace infinit
       {
         static elle::Bench bench("bench.acb.seal", 10000_sec);
         elle::Bench::BenchScope scope(bench);
+        std::shared_ptr<infinit::cryptography::rsa::PrivateKey> sign_key;
+
+        // enforce admin keys
+        auto const& aks = this->dht()->admin_keys();
+        for (auto const& k: aks.r)
+          if (k != *this->owner_key()) set_permissions(k, true, false);
+        for (auto const& k: aks.w)
+          if (k != *this->owner_key()) set_permissions(k, true, true);
+        for (auto const& k: aks.group_r)
+          if (k != *this->owner_key()) set_group_permissions(k, true, false);
+        for (auto const& k: aks.group_w)
+          if (k != *this->owner_key()) set_group_permissions(k, true, true);
+
         bool acl_changed = this->_acl_changed;
         bool data_changed = this->_data_changed;
-        std::shared_ptr<infinit::cryptography::rsa::PrivateKey> sign_key;
+
         if (acl_changed)
         {
           static elle::Bench bench("bench.acb.seal.aclchange", 10000_sec);
@@ -705,24 +783,33 @@ namespace infinit
           }
           for (auto& e: this->_acl_group_entries)
           {
-            Group g(*this->doughnut(), e.key);
-            if (e.read)
+            try
             {
-              e.token = g.current_public_key().seal(secret_buffer);
-              this->_group_version[idx - this->_acl_entries.size()] =
-                g.version() - 1;
-            }
-            if (!sign_key)
-            {
-              try
+              Group g(*this->doughnut(), e.key);
+              if (e.read)
               {
-                auto kp = g.current_key();
-                this->_editor = idx;
-                ELLE_DEBUG("we are editor from group %s", g);
-                sign_key = g.current_key().private_key();
+                e.token = g.current_public_key().seal(secret_buffer);
+                this->_group_version[idx - this->_acl_entries.size()] =
+                  g.version() - 1;
               }
-              catch (elle::Error const& e)
-              {}
+              if (!sign_key)
+              {
+                try
+                {
+                  auto kp = g.current_key();
+                  this->_editor = idx;
+                  ELLE_DEBUG("we are editor from group %s", g);
+                  sign_key = g.current_key().private_key();
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_DEBUG("group key access failed: %s", e);
+                }
+              }
+            }
+            catch (elle::Error const& e)
+            { // most likely missing group block
+              ELLE_LOG("Unexpected error accessing group: %s", e);
             }
             ++idx;
           }

@@ -116,14 +116,28 @@ COMMAND(create)
   std::unique_ptr<infinit::storage::StorageConfig> config;
   if (args.count("filesystem"))
   {
-    auto path = optional(args, "path");
-    if (!path)
-      path = (infinit::xdg_data_home() / "blocks" / name).string();
-    else
-      path = infinit::canonical_folder(*path).string();
+    auto user_path = optional(args, "path");
+    auto path = user_path
+              ? infinit::canonical_folder(user_path.get())
+              : (infinit::xdg_data_home() / "blocks" / name);
+    if (boost::filesystem::exists(path))
+    {
+      if (!boost::filesystem::is_directory(path))
+      {
+        throw elle::Error(
+          elle::sprintf("path is not directory: %s", path));
+      }
+      if (!boost::filesystem::is_empty(path))
+      {
+        std::cout << "WARNING: Path is not empty: " << path
+                  << std::endl
+                  << "WARNING: You may encounter unexpected behavior."
+                  << std::endl;
+      }
+    }
     config =
       elle::make_unique<infinit::storage::FilesystemStorageConfig>
-        (name, std::move(*path), std::move(capacity));
+        (name, std::move(path.string()), std::move(capacity));
   }
   else if (args.count("gcs"))
   {
@@ -243,6 +257,7 @@ COMMAND(list)
 COMMAND(export_)
 {
   auto name = mandatory(args, "name", "storage name");
+  auto output = get_output(args);
   std::unique_ptr<infinit::storage::StorageConfig> storage = nullptr;
   try
   {
@@ -252,8 +267,8 @@ COMMAND(export_)
   {
     storage = ifnt.storage_get(ifnt.qualified_name(name, ifnt.user_get()));
   }
-  elle::serialization::json::SerializerOut out(*get_output(args), false);
-  out.serialize_forward(storage);
+  elle::serialization::json::serialize(storage, *output, false);
+  report_exported(*output, "storage", name);
 }
 
 COMMAND(import)
@@ -273,6 +288,26 @@ COMMAND(delete_)
 {
   auto name = mandatory(args, "name", "storage name");
   auto storage = ifnt.storage_get(name);
+  bool clear = flag(args, "clear-content");
+  if (auto fs_storage =
+        dynamic_cast<infinit::storage::FilesystemStorageConfig*>(storage.get()))
+  {
+    if (clear)
+    {
+      try
+      {
+        boost::filesystem::remove_all(fs_storage->path);
+        report_action("cleared", "storage", fs_storage->name);
+      }
+      catch (boost::filesystem::filesystem_error const& e)
+      {
+        throw elle::Error(elle::sprintf("unable to clear storage contents: %s",
+                                        e.what()));
+      }
+    }
+  }
+  else if (clear)
+    throw elle::Error("only filesystem storages can be cleared");
   auto path = ifnt._storage_path(name);
   bool ok = boost::filesystem::remove(path);
   if (ok)
@@ -334,7 +369,7 @@ main(int argc, char** argv)
       "--name STORAGE STORAGE-TYPE [STORAGE-OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created storage name" },
-        { "capacity,c", value<std::string>(), "limit the storage capacity, "
+        { "capacity,c", value<std::string>(), "limit the storage capacity\n"
           "use: B,kB,kiB,GB,GiB,TB,TiB (optional)" },
         option_output("storage"),
         { "path", value<std::string>(), default_locations },
@@ -383,6 +418,8 @@ main(int argc, char** argv)
       "--name STORAGE",
       {
         { "name,n", value<std::string>(), "storage to delete" },
+        { "clear-content", bool_switch(),
+          "remove all blocks (filesystem only)" },
       },
     },
   };

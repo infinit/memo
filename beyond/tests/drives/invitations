@@ -33,6 +33,8 @@ def push_and_confirm(beyond, email, user = None):
   del params['name']
   res = beyond.post(
     'users/%s/confirm_email' % user['name'], json = params).json()
+  if len(res['errors']):
+    print(res['errors'])
   return user, res
 
 with Beyond() as beyond:

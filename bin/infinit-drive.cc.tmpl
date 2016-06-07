@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <iterator>
 
+#include <elle/json/json.hh>
 #include <elle/log.hh>
 
 // Must be placed before main.hh.
@@ -356,6 +357,21 @@ COMMAND(delete_)
   auto owner = self_user(ifnt, args);
   auto name = drive_name(args, owner);
   auto path = ifnt._drive_path(name);
+  if (flag(args, "pull"))
+  {
+    try
+    {
+      beyond_delete("drive", name, owner);
+    }
+    catch (MissingResource const& e)
+    {
+      // Ignore if the item is not on Beyond.
+    }
+    catch (elle::Error const& e)
+    {
+      throw;
+    }
+  }
   if (boost::filesystem::remove(path))
     report_action("deleted", "drive", name, std::string("locally"));
   else
@@ -375,13 +391,27 @@ COMMAND(list)
 {
   ELLE_TRACE_SCOPE("list");
   auto self = self_user(ifnt, args);
-  for (auto& drive: ifnt.drives_get())
+  if (script_mode)
   {
-    std::cout << drive.name;
-    if (drive.users.find(self.name) != drive.users.end())
-      std::cout << ": " << drive.users[self.name].status;
-    std::cout << std::endl;
+    elle::json::Array l;
+    for (auto& drive: ifnt.drives_get())
+    {
+      elle::json::Object o;
+      o["name"] = drive.name;
+      if (drive.users.find(self.name) != drive.users.end())
+        o["status"] = drive.users[self.name].status;
+      l.push_back(std::move(o));
+    }
+    elle::json::write(std::cout, l);
   }
+  else
+    for (auto& drive: ifnt.drives_get())
+    {
+      std::cout << drive.name;
+      if (drive.users.find(self.name) != drive.users.end())
+        std::cout << ": " << drive.users[self.name].status;
+      std::cout << std::endl;
+    }
 }
 
 static
@@ -505,7 +535,7 @@ main(int argc, char** argv)
         option_description,
         option_icon,
         { "push-drive", bool_switch(),
-          elle::sprintf("push the created drive to %s", beyond(true)).c_str() },
+          elle::sprintf("push the created drive to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-drive" },
       },
     },
@@ -556,18 +586,18 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a drive to %s", beyond(true)).c_str(),
+      elle::sprintf("Push a drive to %s", beyond(true)),
       &push,
       "--name NAME",
       {
         { "name,n", value<std::string>(),
-          elle::sprintf("drive to push to %s", beyond(true)).c_str() },
+          elle::sprintf("drive to push to %s", beyond(true)) },
         option_icon,
       }
     },
     {
       "fetch",
-      elle::sprintf("fetch drive from %s", beyond(true)).c_str(),
+      elle::sprintf("fetch drive from %s", beyond(true)),
       &fetch,
       "",
       {
@@ -587,11 +617,13 @@ main(int argc, char** argv)
       "--name NAME",
       {
         { "name,n", value<std::string>(), "drive to delete" },
+        { "pull", bool_switch(),
+          elle::sprintf("pull the drive if it is on %s", beyond(true)) },
       },
     },
     {
       "pull",
-      elle::sprintf("Remove a drive from %s", beyond(true)).c_str(),
+      elle::sprintf("Remove a drive from %s", beyond(true)),
       &pull,
       "--name NAME",
       {

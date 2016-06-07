@@ -1,0 +1,22 @@
+Name:           infinit
+Version:        ${version}
+Release:        1%{?dist}
+Summary:        Infinit distributed filesystem.
+
+Group:          Applications/File
+License:        Infinit License
+URL:            https://infinit.sh
+
+Requires:       glibc >= ${glibc_version}
+
+%%description
+Infinit distributed filesystem.
+
+%%files
+${files}
+
+%%changelog
+${changelog}
+
+%%clean
+echo NOOP

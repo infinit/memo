@@ -67,6 +67,9 @@ python=python3 -m couchdb
       time.sleep(0.1)
     while not os.path.exists(self.__path('uri')):
       time.sleep(0.1)
+    # Wait for the file to be written.
+    while os.stat(self.__path('uri')).st_size == 0:
+      time.sleep(0.1)
     with open(self.__path('uri'), 'r') as f:
       self.__uri = f.read().strip()
     while True:
@@ -175,6 +178,12 @@ class CouchDBDatastore:
   ## User ##
   ## ---- ##
 
+  def __user_purge_json(self, user):
+    user = dict(user)
+    user['id'] = user['_id']
+    del user['_id']
+    return user
+
   def user_insert(self, user):
     json = user.json(private = True,
                      hide_confirmation_codes = False)
@@ -184,13 +193,15 @@ class CouchDBDatastore:
     except couchdb.ResourceConflict:
       raise infinit.beyond.User.Duplicate()
 
+  def users_fetch(self):
+    return (
+      self.__user_purge_json(u.doc) for u in
+      self.__couchdb['users'].view('_all_docs', include_docs = True)
+      if not u.id.startswith('_design/'))
+
   def user_fetch(self, name):
     try:
-      json = self.__couchdb['users'][name]
-      json = dict(json)
-      json['id'] = json['_id']
-      del json['_id']
-      return json
+      return self.__user_purge_json(self.__couchdb['users'][name])
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.User.NotFound()
 

@@ -84,7 +84,7 @@ COMMAND(fetch)
       "passport for",
       user_name.get(),
       self);
-    ifnt.passport_save(passport);
+    ifnt.passport_save(passport, true);
   }
   // Fetch all network passports if owner else fetch just the user's passport.
   else if (network_name)
@@ -103,7 +103,7 @@ COMMAND(fetch)
       {
         elle::serialization::json::SerializerIn s(user_passport.second, false);
         auto passport = s.deserialize<infinit::Passport>();
-        ifnt.passport_save(passport);
+        ifnt.passport_save(passport, true);
       }
     }
     else
@@ -113,7 +113,7 @@ COMMAND(fetch)
         "passport for",
         network_name.get(),
         self);
-      ifnt.passport_save(passport);
+      ifnt.passport_save(passport, true);
     }
   }
   else if (user_name && user_name.get() != self.name)
@@ -130,14 +130,7 @@ COMMAND(fetch)
         self.name,
         self);
     for (auto const& passport: res["passports"])
-    {
-      try
-      {
-        ifnt.passport_save(passport);
-      }
-      catch (ResourceAlreadyFetched const&)
-      {}
-    }
+      ifnt.passport_save(passport, true);
   }
 }
 
@@ -210,6 +203,7 @@ COMMAND(list)
   {
     path = ifnt._passport_path();
   }
+  elle::json::Array l;
   for (boost_fs::recursive_directory_iterator it(path);
        it != boost_fs::recursive_directory_iterator();
        ++it)
@@ -219,11 +213,21 @@ COMMAND(list)
       auto user_name = it->path().filename().string();
       boost_fs::ifstream f;
       ifnt._open_read(f, it->path(), user_name, "passport");
-      elle::serialization::json::SerializerIn s(f, false);
-      auto passport =  s.deserialize<infinit::Passport>();
-      std::cout << passport.network() << ": " << user_name << std::endl;
+      auto passport =
+        elle::serialization::json::deserialize<infinit::Passport>(f, false);
+      if (script_mode)
+      {
+        elle::json::Object o;
+        o["network"] = passport.network();
+        o["user"] = user_name;
+        l.push_back(std::move(o));
+      }
+      else
+        std::cout << passport.network() << ": " << user_name << std::endl;
     }
   }
+  if (script_mode)
+    elle::json::write(std::cout, l);
 }
 
 COMMAND(delete_)
@@ -234,8 +238,29 @@ COMMAND(delete_)
   auto user_name = mandatory(args, "user", "user name");
   auto path = ifnt._passport_path(network_name, user_name);
   if (!boost::filesystem::exists(path))
-    throw elle::Error(
-      elle::sprintf("Passport for %s in %s not found", user_name, network_name));
+  {
+    throw elle::Error(elle::sprintf(
+      "Passport for %s in %s not found", user_name, network_name));
+  }
+  if (flag(args, "pull"))
+  {
+    try
+    {
+      beyond_delete(
+        elle::sprintf("networks/%s/passports/%s", network_name, user_name),
+        "passport for",
+        user_name,
+        self);
+    }
+    catch (MissingResource const& e)
+    {
+      // Ignore if the item is not on Beyond.
+    }
+    catch (elle::Error const& e)
+    {
+      throw;
+    }
+  }
   if (boost::filesystem::remove(path))
   {
     report_action("deleted", "passport",
@@ -346,6 +371,8 @@ main(int argc, char** argv)
       {
         { "network,n", value<std::string>(), "network name" },
         { "user,u", value<std::string>(), "user name" },
+        { "pull", bool_switch(),
+          elle::sprintf("pull the passport if it is on %s", beyond(true)) },
       },
     },
   };

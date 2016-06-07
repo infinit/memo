@@ -52,19 +52,24 @@ templates = {
   },
   'Internal/Crash Report': {
     'template': 'tem_fu5GEE6jxByj2SB4zM6CrH',
-    'version': 'ver_UcXopNCDszaggwtrhVcBSn',
   },
   'Internal/Passport Generation Error': {
-    'templte': 'tem_LdEi9v8WrTACa8BNUhoSte',
+    'template': 'tem_LdEi9v8WrTACa8BNUhoSte',
   },
   'User/Welcome': {
     'template': 'tem_Jsd948JkLqhBQs3fgGZSsS',
-    'version': 'ver_W9nDEtV4KzxWyrLtZDcAWE',
   },
   'User/Confirmation Email': {
     'template': 'tem_b6ZtsWVHKzv4PUBDU7WTZj',
   },
+  'Sales/New Customer': {
+    'template': 'tem_SEWGs7yLLupWz9nXCmGq9J'
+  }
 }
+# Make sure templates only contains entires named 'template' and 'version'.
+import itertools
+assert set(itertools.chain(*[list(x.keys()) for x in templates.values()])) == \
+       {'template'}
 
 class Beyond:
 
@@ -209,6 +214,10 @@ class Beyond:
   ## User ##
   ## ---- ##
 
+  def users_get(self):
+    return (User.from_json(self, user)
+            for user in self.__datastore.users_fetch())
+
   def user_get(self, name):
     json = self.__datastore.user_fetch(name = name)
     return User.from_json(self, json)
@@ -282,10 +291,10 @@ class Beyond:
               args,
               env = env,
               input = (json.dumps(data) + '\n').encode('utf-8'),
-              timeout = 1)
-          except Exception:
-            raise Exception('impossible to import %s \'%s\'',
-                            type, data['name'])
+              timeout = 5)
+          except Exception as e:
+            raise Exception('impossible to import %s \'%s\': %s' % (
+                            type, data['name'], e))
         import_data('user', user.json())
         import_data('user', beyond.json(private = True))
         for drive in drives:
@@ -295,19 +304,14 @@ class Beyond:
             except Network.NotFound:
               raise Exception('Unknown network \'%s\'' % drive.network)
             import_data('network', network.json())
-            subprocess.check_call(
+            output = subprocess.check_output(
               [
                 binary_path + 'infinit-passport' + exe_ext, '--create',
                 '--user', user.name,
                 '--network', network.name,
                 '--as', self.delegate_user,
-              ],
-              env = env)
-            output = subprocess.check_output(
-              [
-                binary_path + 'infinit-passport' + exe_ext, '--export',
-                '--user', user.name,
-                '--network', network.name
+                '--output', '-',
+                '--script',
               ],
               env = env)
             import json
@@ -450,8 +454,7 @@ class User:
         if hide_confirmation_codes:
           if self.emails[key] != True:
             return (key, False)
-        else:
-          return (key, self.emails[key])
+        return (key, self.emails[key])
       res['emails'] = dict(map(filter_confirmation_codes,
                                self.emails))
       if self.email is not None:
@@ -485,6 +488,17 @@ class User:
           'url_parameters': self.url_parameters(self.email)
         },
         **self.__beyond.template('User/Welcome')
+      )
+      self.__beyond.emailer.send_one(
+        recipient_email = 'sales@infinit.sh',
+        recipient_name = 'sales',
+        variables = {
+          'user': {
+            'email': self.email,
+            'name': self.name,
+          }
+        },
+        **self.__beyond.template('Sales/New Customer')
       )
 
   def confirmation_code(self, email):

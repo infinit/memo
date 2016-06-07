@@ -18,7 +18,8 @@ with TemporaryDirectory() as tmp, \
   def crash():
     # Crash returns 2 on OS X and 11 on Linux so work around with try except.
     try:
-      bob.run(['crasher', '--server', server, '--dumps', str(tmp), '--crash'])
+      bob.run(['tests/functional/bin/crasher',
+               '--server', server, '--dumps', str(tmp), '--crash'])
       assert False
     except Exception as e:
       from time import sleep
@@ -26,7 +27,8 @@ with TemporaryDirectory() as tmp, \
       pass
 
   def upload(server = server):
-    bob.run(['crasher', '--server', server, '--dumps', str(tmp)])
+    bob.run(['tests/functional/bin/crasher',
+             '--server', server, '--dumps', str(tmp)])
 
   # Nothing uploaded as there are no crashes.
   upload()

@@ -252,8 +252,17 @@ namespace infinit
     void
     DirectoryData::update(Block& block, std::pair<bool, bool> perms)
     {
-      ELLE_DEBUG("%s updating from version %s at %f", this,
-        _block_version, block.address());
+      auto new_version =  dynamic_cast<model::blocks::MutableBlock&>(block).version();
+      if (_block_version >= new_version)
+      {
+        ELLE_WARN("%s: ignoring update at %f from obsolete block %s since we have %s",
+                  this, block.address(), new_version, _block_version);
+        return;
+      }
+      ELLE_DEBUG("%s updating from version %s to version %s at %f", this,
+                 _block_version,
+                 new_version,
+                 block.address());
       _last_used = FileSystem::now();
 
       bool empty = false;
@@ -340,11 +349,13 @@ namespace infinit
           auto b = elle::cast<ACLBlock>::runtime(model.fetch(_address));
           if (b->version() != _block_version)
           {
-            ELLE_LOG("Conflict: block version not expected: %s vs %s",
+            ELLE_TRACE("Conflict: block version not expected: %s vs %s",
                      b->version(), _block_version);
             DirectoryConflictResolver dcr(model, op, _address);
             auto nb = dcr(*b, *b, first_write ? model::STORE_INSERT : model::STORE_UPDATE);
             b = elle::cast<ACLBlock>::runtime(nb);
+            // Update this with the conflict resolved data
+            update(*b, get_permissions(model, *b));
           }
           else
             b->data(data);
@@ -458,16 +469,21 @@ namespace infinit
     }
 
     void
-    DirectoryData::_prefetch(FileSystem& fs, std::shared_ptr<DirectoryData> self)
+    DirectoryData::_prefetch(FileSystem& fs,
+                             std::shared_ptr<DirectoryData> self)
     {
       ELLE_ASSERT_EQ(self.get(), this);
       static int prefetch_threads = std::stoi(
         elle::os::getenv("INFINIT_PREFETCH_THREADS", "3"));
       static int prefetch_depth = std::stoi(
         elle::os::getenv("INFINIT_PREFETCH_DEPTH", "2"));
+      static int prefetch_group = std::stoi(
+        elle::os::getenv("INFINIT_PREFETCH_GROUP", "5"));
+      int group_size = prefetch_group;
       int nthreads = prefetch_threads;
-      if (_prefetching || !nthreads
-        || (FileSystem::now() - this->_last_prefetch) < std::chrono::seconds(15))
+      if (this->_prefetching ||
+          nthreads == 0 ||
+          (FileSystem::now() - this->_last_prefetch) < std::chrono::seconds(15))
         return;
       this->_last_prefetch = FileSystem::now();
       auto files = std::make_shared<std::vector<PrefetchEntry>>();
@@ -480,8 +496,12 @@ namespace infinit
       this->_prefetching = true;
       auto running = std::make_shared<int>(nthreads);
       auto parked = std::make_shared<int>(0);
+      auto available = std::make_shared<reactor::Barrier>("files_prefetchable");
+      if (!files->empty())
+        available->open();
       auto prefetch_task =
-        [self, files, fs=&fs, running, parked, nthreads]
+        [self, files, fs = &fs, running,
+         parked, nthreads, group_size, available]
         {
           static elle::Bench bench("bench.fs.prefetch", 10000_sec);
           elle::Bench::BenchScope bs(bench);
@@ -497,50 +517,109 @@ namespace infinit
               if (*parked == nthreads)
               {
                 ELLE_DEBUG("all threads parked");
+                available->open();
                 should_exit = true;
                 break;
               }
               else
                 ELLE_DEBUG("%s/%s threads parked", *parked, nthreads);
-              reactor::sleep(100_ms);
+              available->close();
+              reactor::wait(*available);
               --*parked;
             }
             if (should_exit)
               break;
-            ++nf;
-            auto e = files->back();
-            ELLE_TRACE_SCOPE("%s: prefetch \"%s\"", *self, e.name);
-            files->pop_back();
-            std::unique_ptr<model::blocks::Block> block;
-            try
+            std::vector<model::Model::AddressVersion> addresses;
+            std::unordered_map<Address, int> recurse;
+            do
             {
+              ++nf;
+              auto e = files->back();
+              ELLE_TRACE_SCOPE("%s: prefetch \"%s\"", *self, e.name);
+              files->pop_back();
               Address addr(e.address.value(),
-                           model::flags::mutable_block, false);
-              block = fs->block_store()->fetch(addr, e.cached_version);
-              if (e.is_dir && e.level +1 < prefetch_depth)
+                model::flags::mutable_block, false);
+              addresses.push_back(std::make_pair(addr, e.cached_version));
+              if (e.is_dir && e.level + 1 < prefetch_depth)
+                recurse.insert(std::make_pair(addr, e.level));;
+            }
+            while (signed(addresses.size()) < group_size && !files->empty());
+            if (files->empty())
+              available->close();
+            if (addresses.size() == 1)
+            {
+              std::unique_ptr<model::blocks::Block> block;
+              try
               {
-                std::shared_ptr<DirectoryData> d;
-                if (block)
-                  d = std::shared_ptr<DirectoryData>(
-                    new DirectoryData({}, *block, {true, true}));
-                else
-                  d = *(fs->directory_cache().find(addr));
-
-                for (auto const& f: d->_files)
-                  files->push_back(
-                    PrefetchEntry{f.first, f.second.second, e.level+1,
-                                  f.second.first == EntryType::directory,
-                                  cached_version(*fs, f.second.second, f.second.first)
-                    });
+                Address addr = addresses.front().first;
+                block = fs->block_store()->fetch(addr, addresses.front().second);
+                if (!recurse.empty())
+                {
+                  std::shared_ptr<DirectoryData> d;
+                  if (block)
+                    d = std::shared_ptr<DirectoryData>(
+                      new DirectoryData({}, *block, {true, true}));
+                  else
+                    d = *(fs->directory_cache().find(addr));
+                  for (auto const& f: d->_files)
+                  {
+                    files->push_back(
+                      PrefetchEntry{f.first, f.second.second, recurse.at(addr)+1,
+                                    f.second.first == EntryType::directory,
+                                    cached_version(*fs, f.second.second, f.second.first)
+                      });
+                    available->open();
+                  }
+                }
+              }
+              catch(elle::Error const& e)
+              {
+                ELLE_TRACE("Exception while prefeching: %s", e.what());
+              }
+              catch(std::out_of_range const& e)
+              {
+                ELLE_TRACE("Entry vanished from cache: %s", e.what());
               }
             }
-            catch(elle::Error const& e)
-            {
-              ELLE_TRACE("Exception while prefeching: %s", e.what());
-            }
-            catch(std::out_of_range const& e)
-            {
-              ELLE_TRACE("Entry vanished from cache: %s", e.what());
+            else
+            { // multifetch
+              // FIXME: pass local versions
+              fs->block_store()->fetch(addresses,
+                  [&](Address addr, std::unique_ptr<model::blocks::Block> block,
+                      std::exception_ptr exception)
+                  {
+                    if (recurse.find(addr) != recurse.end()
+                      && recurse.at(addr) + 1 < prefetch_depth
+                      )
+                    {
+                      try
+                      {
+                        std::shared_ptr<DirectoryData> d;
+                        if (block)
+                        d = std::shared_ptr<DirectoryData>(
+                          new DirectoryData({}, *block, {true, true}));
+                        else
+                        {
+                          auto it = fs->directory_cache().find(addr);
+                          if (it == fs->directory_cache().end())
+                            throw elle::Error(
+                              elle::sprintf("directory at %f vanished from cache", addr));
+                          d = *it;
+                        }
+                        for (auto const& f: d->_files)
+                        files->push_back(
+                          PrefetchEntry{f.first, f.second.second, recurse.at(addr) +1,
+                              f.second.first == EntryType::directory,
+                              cached_version(*fs, f.second.second, f.second.first)
+                              });
+                        available->open();
+                      }
+                      catch (elle::Error const& e)
+                      {
+                        ELLE_TRACE("Exception while prefeching: %s", e.what());
+                      }
+                    }
+                  });
             }
           }
           ELLE_TRACE("prefetched %s entries in %s us",
@@ -565,10 +644,11 @@ namespace infinit
           }
       };
       for (int i = 0; i < nthreads; ++i)
-        fs.running().emplace_back(new reactor::Thread(
-          elle::sprintf("prefetcher %x-%s", (void*)parked.get(), i),
-          prefetch_task
-          ));
+        fs.running().emplace_back(
+          new reactor::Thread(
+            elle::sprintf("prefetcher %x-%s", (void*)parked.get(), i),
+            prefetch_task
+            ));
     }
 
     void
@@ -900,6 +980,17 @@ namespace infinit
               }
               a->sync();
               return "ok";
+            }
+            else if (special->find("group.control_key.") == 0)
+            {
+              std::string value = special->substr(strlen("group.control_key."));
+              return umbrella(
+                [&]
+                {
+                  model::doughnut::Group g(*dht, value);
+                  return elle::serialization::json::serialize(
+                    g.public_control_key()).string();
+                });
             }
             else if (special->find("group.list.") == 0)
             {

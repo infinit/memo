@@ -48,6 +48,11 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version) override;
           virtual
           void
+          _fetch(std::vector<AddressVersion> const& addresses,
+                 std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                    std::exception_ptr)> res) override;
+          virtual
+          void
           _remove(Address address, blocks::RemoveSignature rs) override;
 
           /*----------.
@@ -75,6 +80,9 @@ namespace infinit
           };
 
         private:
+          std::unique_ptr<blocks::Block>
+          _fetch_cache(Address address, boost::optional<int> local_version,
+                       bool& hit);
           void
           _process_loop();
           void

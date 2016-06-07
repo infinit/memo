@@ -20,6 +20,8 @@ from infinit.beyond.gcs import GCS
 from infinit.beyond.plugins.jsongo import Plugin as JsongoPlugin
 from infinit.beyond.plugins.max_size import Plugin as MaxSizePlugin
 from infinit.beyond.plugins.response import Plugin as ResponsePlugin
+from infinit.beyond.plugins.certification import Plugin \
+  as CertificationPlugin
 
 bottle.BaseRequest.MEMFILE_MAX = 2.5 * 1000 * 1000
 
@@ -80,14 +82,17 @@ class Bottle(bottle.Bottle):
       beyond,
       gcs = None,
       production = True,
+      force_admin = False,
   ):
     super().__init__(catchall = not production)
     self.__beyond = beyond
     self.__ban_list = ['demo', 'root', 'admin']
+    self.__force_admin = force_admin
     self.install(bottle.CertificationPlugin())
     self.install(ResponsePlugin())
     self.install(JsongoPlugin())
     self.install(MaxSizePlugin(bottle.BaseRequest.MEMFILE_MAX))
+    self.install(CertificationPlugin())
     self.route('/')(self.root)
     # GCS
     self.__gcs = gcs
@@ -100,7 +105,9 @@ class Bottle(bottle.Bottle):
         (getattr(self, 'user_%s_credentials_get' % s))
     self.route('/users/<username>/credentials/google/refresh') \
       (self.user_credentials_google_refresh)
-    # User
+
+    # Users
+    self.route('/users', method = 'GET')(self.users_get)
     self.route('/users/<name>', method = 'GET')(self.user_get)
     self.route('/users/<name>', method = 'PUT')(self.user_put)
     self.route('/users/<name>', method = 'DELETE')(self.user_delete)
@@ -196,6 +203,30 @@ class Bottle(bottle.Bottle):
       self.drive_icon_delete)
     # Crash reports
     self.route('/crash/report', method = 'PUT')(self.crash_report_put)
+
+  def require_admin(self):
+    if self.__force_admin:
+      return
+    if not hasattr(bottle.request, 'certificate'):
+      raise Response(401, {
+        'error': 'admin',
+        'reason': 'administrator privilege required',
+      })
+    u = bottle.request.certificate
+    if u not in [
+        'antony.mechin@infinit.io',
+        'baptiste.fradin@infinit.io',
+        'christopher.crone@infinit.io',
+        'gaetan.rochel@infinit.io',
+        'julien.quintard@infinit.io',
+        'matthieu.nottale@infinit.io',
+        'mefyl@infinit.io',
+    ]:
+      raise Response(401, {
+        'error': 'admin',
+        'reason': 'you (%s) are not an administrator' % u,
+      })
+
 
   def __not_found(self, type, name):
     return Response(404, {
@@ -399,6 +430,17 @@ class Bottle(bottle.Bottle):
         'reason': 'unknown email address'
       })
     raise Response(200, {})
+
+  def users_get(self):
+    self.require_admin()
+    def filter(u):
+      if 'private_key' in u:
+        u['private_key'] = None
+      return u
+    return {
+      'users': [filter(u.json(private = True))
+                for u in self.__beyond.users_get()],
+    }
 
   def user_get(self, name):
     return self.user_from_name(name = name).json()

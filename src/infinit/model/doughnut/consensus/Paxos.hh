@@ -8,6 +8,7 @@
 
 # include <elle/named.hh>
 # include <elle/unordered_map.hh>
+# include <elle/Error.hh>
 
 # include <reactor/Generator.hh>
 
@@ -33,6 +34,8 @@ namespace infinit
         NAMED_ARGUMENT(rebalance_auto_expand);
         NAMED_ARGUMENT(node_timeout);
 
+        struct BlockOrPaxos;
+
         class Paxos
           : public Consensus
         {
@@ -50,6 +53,8 @@ namespace infinit
           PaxosServer;
           typedef elle::Option<std::shared_ptr<blocks::Block>,
                                Paxos::PaxosClient::Quorum> Value;
+          typedef
+            std::pair<AddressVersion, PaxosServer::Quorum> AddressVersionQuorum;
 
         /*-------------.
         | Construction |
@@ -89,6 +94,15 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version) override;
           virtual
           void
+          _fetch(std::vector<AddressVersion> const& addresses,
+                 std::function<void(Address, std::unique_ptr<blocks::Block>,
+                   std::exception_ptr)> res) override;
+          std::unique_ptr<blocks::Block>
+          _fetch(Address address,
+                 PaxosClient::Peers peers,
+                 boost::optional<int> local_version);
+          virtual
+          void
           _remove(Address address, blocks::RemoveSignature rs) override;
           bool
           _rebalance(PaxosClient& client, Address address);
@@ -115,6 +129,12 @@ namespace infinit
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
                      std::unique_ptr<storage::Storage> storage) override;
+
+          typedef std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
+                            std::shared_ptr<elle::Error>>
+          AcceptedOrError;
+          typedef std::unordered_map<Address, AcceptedOrError>
+          GetMultiResult;
 
         /*-----.
         | Peer |
@@ -192,6 +212,9 @@ namespace infinit
           | Paxos |
           `------*/
           public:
+            typedef
+              std::pair<AddressVersion, PaxosServer::Quorum>
+              AddressVersionQuorum;
             virtual
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum peers,
@@ -242,13 +265,15 @@ namespace infinit
           private:
             void
             _remove(Address address);
+            BlockOrPaxos
+            _load(Address address);
             Decision&
-            _load(Address address,
-                  boost::optional<PaxosServer::Quorum> peers = {});
+            _load_paxos(Address address,
+                        boost::optional<PaxosServer::Quorum> peers = {});
             Decision&
-            _load(Address address, Decision decision);
+            _load_paxos(Address address, Decision decision);
             void
-            _cache(Address address, Quorum quorum);
+            _cache(Address address, bool immutable, Quorum quorum);
             void
             _discovered(Address id);
             void
@@ -269,11 +294,17 @@ namespace infinit
             ELLE_ATTRIBUTE(reactor::Thread, rebalance_thread);
             struct BlockRepartition
             {
-              BlockRepartition(Address address, PaxosServer::Quorum quorum);
+              BlockRepartition(Address address,
+                               bool immubable,
+                               PaxosServer::Quorum quorum);
               Address address;
+              bool immutable;
               PaxosServer::Quorum quorum;
               int
               replication_factor() const;
+              struct HashByAddress;
+              bool
+              operator ==(BlockRepartition const& rhs) const;
             };
             typedef bmi::multi_index_container<
               BlockRepartition,
@@ -318,14 +349,14 @@ namespace infinit
           class Configuration
             : public consensus::Configuration
           {
-          // Factory
           public:
-            Configuration(int replication_factor);
+            Configuration(int replication_factor,
+                          std::chrono::system_clock::duration node_timeout);
             virtual
             std::unique_ptr<Consensus>
             make(model::doughnut::Doughnut& dht) override;
             ELLE_ATTRIBUTE_R(int, replication_factor);
-          // Serialization
+            ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
           public:
             Configuration(elle::serialization::SerializerIn& s);
             virtual
@@ -336,8 +367,11 @@ namespace infinit
 
         struct BlockOrPaxos
         {
+          explicit
           BlockOrPaxos(blocks::Block& b);
+          explicit
           BlockOrPaxos(Paxos::LocalPeer::Decision* p);
+          explicit
           BlockOrPaxos(elle::serialization::SerializerIn& s);
           std::unique_ptr<
             blocks::Block, std::function<void(blocks::Block*)>> block;

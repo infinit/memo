@@ -53,12 +53,14 @@ namespace infinit
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
                          std::unique_ptr<storage::Storage> storage,
-                         boost::optional<elle::Version> version)
+                         boost::optional<elle::Version> version,
+                         AdminKeys const& admin_keys)
         : Model(std::move(version))
         , _id(std::move(id))
         , _keys(keys)
         , _owner(std::move(owner))
         , _passport(std::move(passport))
+        , _admin_keys(admin_keys)
         , _consensus(consensus(*this))
         , _local(
           storage
@@ -80,7 +82,8 @@ namespace infinit
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
                          std::unique_ptr<storage::Storage> storage,
-                         boost::optional<elle::Version> version)
+                         boost::optional<elle::Version> version,
+                         AdminKeys const& admin_keys)
         : Doughnut(std::move(id),
                    std::move(keys),
                    std::move(owner),
@@ -89,7 +92,8 @@ namespace infinit
                    std::move(overlay_builder),
                    std::move(port),
                    std::move(storage),
-                   std::move(version))
+                   std::move(version),
+                   admin_keys)
       {
         auto check_user_blocks = [name, this]
           {
@@ -253,13 +257,8 @@ namespace infinit
           catch (MissingBlock const&)
           {
             ELLE_TRACE("Reverse UB not found, returning public key hash");
-            auto buffer =
-              infinit::cryptography::rsa::publickey::der::encode(pub);
-            auto key_hash = infinit::cryptography::hash(
-              buffer, infinit::cryptography::Oneway::sha256);
-            std::string hex_hash = elle::format::hexadecimal::encode(key_hash);
-            return elle::make_unique<doughnut::User>(
-              pub, elle::sprintf("#%s", hex_hash.substr(0, 6)));
+            auto hash = short_key_hash(pub);
+            return elle::make_unique<doughnut::User>(pub, hash);
           }
         }
         else if (data[0] == '@')
@@ -301,6 +300,14 @@ namespace infinit
                        boost::optional<int> local_version) const
       {
         return this->_consensus->fetch(address, std::move(local_version));
+      }
+
+      void
+      Doughnut::_fetch(std::vector<AddressVersion> const& addresses,
+        std::function<void(Address, std::unique_ptr<blocks::Block>,
+          std::exception_ptr)> res) const
+      {
+        this->_consensus->fetch(addresses, res);
       }
 
       void
@@ -369,7 +376,8 @@ namespace infinit
         Passport passport_,
         boost::optional<std::string> name_,
         boost::optional<int> port_,
-        elle::Version version)
+        elle::Version version,
+        AdminKeys admin_keys)
         : ModelConfig(std::move(storage), std::move(version))
         , id(std::move(id_))
         , consensus(std::move(consensus_))
@@ -379,6 +387,7 @@ namespace infinit
         , passport(std::move(passport_))
         , name(std::move(name_))
         , port(std::move(port_))
+        , admin_keys(std::move(admin_keys))
       {}
 
       Configuration::Configuration(elle::serialization::SerializerIn& s)
@@ -394,7 +403,15 @@ namespace infinit
         , passport(s.deserialize<Passport>("passport"))
         , name(s.deserialize<boost::optional<std::string>>("name"))
         , port(s.deserialize<boost::optional<int>>("port"))
-      {}
+      {
+        try
+        {
+          s.serialize("admin_keys", this->admin_keys);
+        }
+        catch (elle::serialization::Error const&)
+        {
+        }
+      }
 
       void
       Configuration::serialize(elle::serialization::Serializer& s)
@@ -408,6 +425,7 @@ namespace infinit
         s.serialize("passport", this->passport);
         s.serialize("name", this->name);
         s.serialize("port", this->port);
+        s.serialize("admin_keys", this->admin_keys);
       }
 
       std::unique_ptr<infinit::model::Model>
@@ -476,7 +494,8 @@ namespace infinit
             std::move(overlay),
             std::move(port),
             std::move(storage),
-            version ? version.get() : this->version);
+            version ? version.get() : this->version,
+            admin_keys);
         }
         else
         {
@@ -490,9 +509,21 @@ namespace infinit
             std::move(overlay),
             std::move(port),
             std::move(storage),
-            version ? version.get() : this->version);
+            version ? version.get() : this->version,
+            admin_keys);
         }
         return dht;
+      }
+
+      std::string
+      short_key_hash(cryptography::rsa::PublicKey const& pub)
+      {
+        auto buffer =
+          infinit::cryptography::rsa::publickey::der::encode(pub);
+        auto key_hash = infinit::cryptography::hash(
+          buffer, infinit::cryptography::Oneway::sha256);
+        std::string hex_hash = elle::format::hexadecimal::encode(key_hash);
+        return elle::sprintf("#%s", hex_hash.substr(0, 6));
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::
