@@ -848,8 +848,9 @@ COMMAND(run)
   };
   if (local_endpoint && push)
   {
+    auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
     elle::With<InterfacePublisher>(
-      network, self, node_id, local_endpoint.get().port()) << [&]
+      network, self, node_id, local_endpoint.get().port(), advertise) << [&]
     {
       run();
     };
@@ -1036,6 +1037,9 @@ main(int argc, char** argv)
       elle::sprintf("push endpoints to %s", beyond(true)) },
     { "publish", bool_switch(),
       "alias for --fetch-endpoints --push-endpoints" },
+    { "advertise-host", value<std::vector<std::string>>()->multitoken(),
+      "advertise extra endpoint using given host"
+    },
     option_endpoint_file,
     option_port_file,
     option_port,

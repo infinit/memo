@@ -26,6 +26,7 @@
 #include <reactor/network/rdv-socket.hh>
 #include <reactor/network/rdv-socket.hh>
 #include <reactor/network/buffer.hh>
+#include <reactor/network/resolve.hh>
 
 #include <cryptography/hash.hh>
 #include <cryptography/rsa/KeyPair.hh>
@@ -3253,13 +3254,30 @@ private:
   InterfacePublisher(infinit::Network const& network,
                      infinit::User const& self,
                      infinit::model::Address const& node_id,
-                     int port)
+                     int port,
+                     boost::optional<std::vector<std::string>> advertise = {})
     : _url(elle::sprintf("networks/%s/endpoints/%s/%x",
                          network.name, self.name, node_id))
     , _network(network)
     , _self(self)
   {
     Endpoints endpoints;
+    if (advertise)
+    {
+      ELLE_TRACE("Adding hosts from advertise list");
+      for (auto const& a: *advertise)
+      {
+        try
+        {
+          auto host = reactor::network::resolve_tcp(a, std::to_string(port));
+          endpoints.addresses.push_back(host.address().to_string());
+        }
+        catch (reactor::network::ResolutionError const& e)
+        {
+          ELLE_LOG("failed to resolve %s: %s", a, e);
+        }
+      }
+    }
     ELLE_TRACE("Establishing UPNP mapping");
     try
     {

@@ -199,6 +199,7 @@ public:
   ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_path);
   ELLE_ATTRIBUTE_RW(std::string, default_user);
   ELLE_ATTRIBUTE_RW(std::string, default_network);
+  ELLE_ATTRIBUTE_RW(std::vector<std::string>, advertise_host);
 private:
   std::unordered_map<std::string, Mount> _mounts;
 };
@@ -322,6 +323,11 @@ MountManager::start(std::string const& name, infinit::MountOptions opts,
   arguments.push_back(volume.name);
   std::unordered_map<std::string, std::string> env;
   m.options.to_commandline(arguments, env);
+  for (auto const& host: _advertise_host)
+  {
+    arguments.push_back("--advertise-host");
+    arguments.push_back(host);
+  }
   if (this->_log_level)
     env.insert(std::make_pair("ELLE_LOG_LEVEL", _log_level.get()));
   if (this->_log_path)
@@ -790,6 +796,9 @@ COMMAND(start)
   auto default_network = optional(args, "default-network");
   if (default_network)
     manager.default_network(*default_network);
+  auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
+  if (advertise)
+    manager.advertise_host(*advertise);
   elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
   {
     while (true)
@@ -1045,6 +1054,8 @@ main(int argc, char** argv)
         { "default-network", value<std::string>(), "Default netwwork for volume creation"},
         { "login-user", value<std::vector<std::string>>()->multitoken(),
             "login with selected user(s), of form 'user:password'"},
+        { "advertise-host", value<std::vector<std::string>>()->multitoken(),
+            "advertise given hostname as an extra address"},
       }
     },
     {
