@@ -193,6 +193,9 @@ public:
   infinit::Network
   create_network(elle::json::Object const& options,
                  infinit::User const& owner);
+  void
+  update_network(infinit::Network& network,
+                 elle::json::Object const& options);
   ELLE_ATTRIBUTE_RW(boost::filesystem::path, mount_root);
   ELLE_ATTRIBUTE_RW(std::string, mount_substitute);
   ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_level);
@@ -405,6 +408,53 @@ optional(elle::json::Object const& options, std::string const& name)
     return boost::any_cast<std::string>(it->second);
 }
 
+void
+MountManager::update_network(infinit::Network& network,
+                             elle::json::Object const& options)
+{
+  bool updated = false;
+  auto storagedesc = optional(options, "storage");
+  if (storagedesc)
+  {
+    updated = true;
+    std::unique_ptr<infinit::storage::StorageConfig> storage_config;
+    if (storagedesc->empty())
+    {
+      std::string storagename = network.name + "_storage";
+      boost::replace_all(storagename, "/", "_");
+      ELLE_LOG("Creating local storage %s", storagename);
+      auto path = infinit::xdg_data_home() / "blocks" / storagename;
+      storage_config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
+        storagename, path.string(), boost::optional<int64_t>());
+    }
+    else
+    {
+      try
+      {
+        storage_config = ifnt.storage_get(*storagedesc);
+      }
+      catch (MissingLocalResource const&)
+      {
+        throw elle::Error("Storage specification for new storage not implemented");
+      }
+    }
+    network.model->storage = std::move(storage_config);
+  }
+  auto portstring = optional(options, "port");
+  if (portstring)
+  {
+    auto dht = dynamic_cast<infinit::model::doughnut::Configuration*>(network.model.get());
+    dht->port = std::stoi(*portstring);
+    if (*dht->port == 0)
+      dht->port.reset();
+    updated = true;
+  }
+  if (updated)
+  {
+    ifnt.network_save(network, true);
+  }
+}
+
 infinit::Network
 MountManager::create_network(elle::json::Object const& options,
                              infinit::User const& owner)
@@ -415,7 +465,7 @@ MountManager::create_network(elle::json::Object const& options,
   ELLE_LOG("Creating network %s", netname);
   std::unique_ptr<infinit::storage::StorageConfig> storage_config;
   auto storagedesc = optional(options, "storage");
-  if (!storagedesc)
+  if (!storagedesc || storagedesc->empty())
   {
     std::string storagename = *netname + "_storage";
     boost::replace_all(storagename, "/", "_");
@@ -497,7 +547,9 @@ MountManager::create_volume(std::string const& name,
   infinit::Network network ([&]() -> infinit::Network {
       try
       {
-        return ifnt.network_get(*netname, user, true);
+        auto net = ifnt.network_get(*netname, user, true);
+        update_network(net, options);
+        return net;
       }
       catch (MissingLocalResource const&)
       {
