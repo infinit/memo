@@ -251,3 +251,91 @@ with Beyond() as beyond, \
   bob.run(['infinit-volume', '--fetch', '--as', 'bob', 'v'], return_code = 1)
   bob.run(['infinit-drive', '--fetch', '--as', 'bob', 'd'], return_code = 1)
 
+# Admin read, read/write permissions.
+with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
+    Infinit(beyond = beyond) as alice, \
+    Infinit(beyond = beyond) as charlie, \
+    TemporaryDirectory() as tmp:
+  bob.run(['infinit-user', '--signup', '--name',
+           'bob', '--email', 'bob@infinit.io'])
+  alice.run(['infinit-user', '--signup', '--name', 'alice',
+             '--email', 'alice@infinit.io'])
+  charlie.run(['infinit-user', '--signup', '--name', 'charlie',
+               '--email', 'charlie@infinit.io'])
+  bob.run(['infinit-user', '--fetch', 'alice'])
+  bob.run(['infinit-user', '--fetch', 'charlie'])
+  # Create network
+  bob.run(['infinit-storage', '--create', '--filesystem', '--name', 's'])
+  bob.run(['infinit-network', '--create', '--as', 'bob', '--name', 'n',
+           '--storage', 's',
+           '--admin-rw', 'alice',
+           '--admin-r', 'charlie',
+           '--push'])
+  bob.run(['infinit-passport', '--create', '--as', 'bob',
+           '-n', 'n', '-u', 'alice', '--push'])
+  bob.run(['infinit-passport', '--create', '--as', 'bob',
+           '-n', 'n', '-u', 'charlie', '--push'])
+  bob.run(['infinit-volume', '--create', '--as', 'bob',
+           '--name', 'v', '--network', 'n', '--push'])
+  # Link to network.
+  alice.run(['infinit-network', '--fetch', '--as', 'alice'])
+  alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
+  alice.run(['infinit-volume', '--fetch', '--as', 'alice'])
+  alice.run(['infinit-network', '--link', '--as', 'alice', 'bob/n'])
+  charlie.run(['infinit-network', '--fetch', '--as', 'charlie'])
+  charlie.run(['infinit-passport', '--fetch', '--as', 'charlie'])
+  charlie.run(['infinit-volume', '--fetch', '--as', 'charlie'])
+  charlie.run(['infinit-network', '--link', '--as', 'charlie', 'bob/n'])
+  peer_file = '%s/peerfile' % tmp
+  def peer():
+    while not os.path.exists(peer_file):
+      time.sleep(0.1)
+    with open(peer_file, 'r') as f:
+      x = f.readline().split("\n")[0]
+      return x
+  try:
+    res = bob.run_script(user = 'bob', volume = 'bob/v',
+                         operation = 'write_file',
+                         path = '/some_file', content = 'some data')
+    assertEq(res['success'], True)
+    res = bob.run_script(user = 'bob', volume = 'bob/v',
+                         operation = 'read_file', path = '/some_file')
+    assertEq(res['success'], True)
+    assertEq(res['content'], 'some data')
+    net_proc = bob.spawn(['infinit-network', '--run', 'n', '--as', 'bob',
+                          '--endpoints-file', peer_file])
+    # Check both admins can read.
+    res = alice.run_script(user = 'alice', volume = 'bob/v', peer = peer(),
+                           operation = 'read_file', path = '/some_file')
+    assertEq(res['success'], True)
+    assertEq(res['content'], 'some data')
+    res = charlie.run_script(user = 'charlie', volume = 'bob/v', peer = peer(),
+                             operation = 'read_file', path = '/some_file')
+    assertEq(res['success'], True)
+    assertEq(res['content'], 'some data')
+    # Check only Alice can write to the file.
+    res = alice.run_script(user = 'alice', volume = 'bob/v', peer = peer(),
+                           operation = 'write_file',
+                           path = '/some_file', content = 'alice was here')
+    assertEq(res['success'], True)
+    res = charlie.run_script(user = 'charlie', volume = 'bob/v', peer = peer(),
+                             operation = 'write_file',
+                             path = '/some_file', content = 'charlie was here')
+    assertEq(res['success'], False)
+    # Check content of file is correct.
+    res = alice.run_script(user = 'alice', volume = 'bob/v', peer = peer(),
+                           operation = 'read_file', path = '/some_file')
+    assertEq(res['success'], True)
+    assertEq(res['content'], 'alice was here')
+  finally:
+    if net_proc is not None:
+      net_proc.terminate()
+      out, err = net_proc.communicate(timeout = 30)
+    if os.environ.get('OS') != 'windows':
+      try:
+        # SIGTERM is not caught on windows. Might be wine related.
+        assertEq(net_proc.wait(), 0)
+      except:
+        print('infinit-network STDOUT: %s' % out)
+        print('infinit-network STDERR: %s' % err)
+        raise
