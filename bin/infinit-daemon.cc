@@ -334,12 +334,16 @@ MountManager::start(std::string const& name, infinit::MountOptions opts,
   if (this->_log_level)
     env.insert(std::make_pair("ELLE_LOG_LEVEL", _log_level.get()));
   if (this->_log_path)
+  {
+    std::string sname(name);
+    boost::replace_all(sname, "/", "_");
     env.insert(
       std::make_pair("ELLE_LOG_FILE",
-                     _log_path.get() + "/infinit-volume-" + name
+                     _log_path.get() + "/infinit-volume-" + sname
                      + '-' + boost::posix_time::to_iso_extended_string(
                        boost::posix_time::microsec_clock::universal_time())
                      + ".log"));
+  }
   ELLE_TRACE("Spawning with %s %s", arguments, env);
   // FIXME upgrade Process to accept env
   for (auto const& e: env)
