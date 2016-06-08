@@ -917,7 +917,15 @@ DockerVolumePlugin::install(bool tcp,
         }
         catch(...)
         {}
-        _manager.create_volume(*optional(json, "Name"), opts);
+        auto name = optional(json, "Name");
+        if (!name)
+          throw elle::Error("Missing 'Name' argument");
+        // Hack to force docker to invoke our Create method on existing volume,
+        // which we want to do to update configuration
+        auto p = name->find('@');
+        if (p != std::string::npos)
+          name = name->substr(0, p);
+        _manager.create_volume(*name, opts);
       }
       catch (ResourceAlreadyFetched const&)
       { // this can happen, docker seems to be caching volume list:
