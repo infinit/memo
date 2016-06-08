@@ -258,6 +258,33 @@ namespace infinit
       `------------*/
 
       template <typename Block>
+      bool
+      BaseACB<Block>::_admin_user(cryptography::rsa::PublicKey const& key) const
+      {
+        for (auto const& k: this->doughnut()->admin_keys().r)
+          if (key == k)
+            return true;
+        for (auto const& k: this->doughnut()->admin_keys().w)
+          if (key == k)
+            return true;
+        return false;
+      }
+
+      template <typename Block>
+      bool
+      BaseACB<Block>::_admin_group(
+        cryptography::rsa::PublicKey const& key) const
+      {
+        for (auto const& k: this->doughnut()->admin_keys().group_r)
+          if (key == k)
+            return true;
+        for (auto const& k: this->doughnut()->admin_keys().group_w)
+          if (key == k)
+            return true;
+        return false;
+      }
+
+      template <typename Block>
       void
       BaseACB<Block>::_set_world_permissions(bool read, bool write)
       {
@@ -417,6 +444,11 @@ namespace infinit
         try
         {
           auto& user = dynamic_cast<User const&>(user_);
+          if (this->_admin_user(user.key()))
+            throw elle::Error("Cannot change permissions of network admin");
+          if (this->_admin_group(user.key()))
+            throw elle::Error(
+              "Cannot change permissions of network admin group");
           if (user.name()[0] == '#')
           {
             if (!read && !write)
