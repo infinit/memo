@@ -54,10 +54,18 @@ docker run -e INFINIT_BEYOND=http://$self_node:8080 infinit \
   infinit-user --create --name default_user --email none@none.com --fullname default \
     --push --full --password docker
 
-
+tcp=
+tcp_fwd=
+#tcp="--docker-socket-tcp --docker-socket-port 3210"
+#tcp_fwd="-p 3210:3210"
+log=
+log='--log-path /tmp --log-level *model*:DEBUG,*filesys*:DEBUG,*over*:DEBUG'
 # cant run the volume plugin as a service: no --privileged
 for node in $other_nodes $self_node ; do
-  DOCKER_HOST=$node:2375 docker run -d --privileged -e INFINIT_BEYOND=http://$self_node:8080 -v /:/tmp/hostroot:shared infinit \
+  DOCKER_HOST=$node:2375 docker run $tcp_fwd -d --privileged \
+    -e INFINIT_BEYOND=http://$self_node:8080 \
+    -e INFINIT_HTTP_NO_KEEPALIVE=1 \
+    -v /:/tmp/hostroot:shared infinit \
     infinit-daemon --start --foreground \
     --docker-socket-path /tmp/hostroot/run/docker/plugins \
     --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins \
@@ -65,7 +73,9 @@ for node in $other_nodes $self_node ; do
     --docker-mount-substitute "hostroot/tmp:" \
     --default-user default_user \
     --default-network default_network \
-    --login-user default_user:docker
+    --login-user default_user:docker \
+    --advertise-host $node \
+    $tcp $log
 done
 
 sleep 2
