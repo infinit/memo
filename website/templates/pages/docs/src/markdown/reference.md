@@ -340,6 +340,8 @@ The following overlay types are currently available:
 number of groups to use, each group being responsible for _1/kth_ of the files.
 See the reference paper _<a href="http://iptps03.cs.berkeley.edu/final-papers/kelips.pdf" target="_blank">"Kelips: Building an Efficient and Stable P2P DHT through Increased Memory and Background Overhead"</a>_ for more information.
 
+An administrator can be set for the network. This allows the given user either read or read/write permissions for all files in all volumes on the created network. To enable this feature, the `--admin-r USER` or `--admin-rw USER` arguments respectively.
+
 ### Push a network ###
 
 You can now push a network onto the Hub for other users to retrieve it. Note that the easiest way is always to append the `--push` option to the network creation command to perform both the creation and publication actions at once.
