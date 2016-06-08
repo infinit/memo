@@ -59,10 +59,13 @@ tcp_fwd=
 #tcp="--docker-socket-tcp --docker-socket-port 3210"
 #tcp_fwd="-p 3210:3210"
 log=
-log='--log-path /tmp --log-level *model*:DEBUG,*filesys*:DEBUG,*over*:DEBUG'
+log="--log-path /tmp --log-level *model*:DEBUG,*filesys*:DEBUG,*over*:DEBUG"
 # cant run the volume plugin as a service: no --privileged
 for node in $other_nodes $self_node ; do
   DOCKER_HOST=$node:2375 docker run $tcp_fwd -d --privileged \
+    -p 51236:51236 -p 51236:51236/udp  \
+    -e ELLE_LOG_LEVEL=infinit-daemon:DEBUG \
+    -e ELLE_LOG_FILE=/tmp/daemon.log \
     -e INFINIT_BEYOND=http://$self_node:8080 \
     -e INFINIT_HTTP_NO_KEEPALIVE=1 \
     -v /:/tmp/hostroot:shared infinit \
@@ -87,10 +90,10 @@ docker volume ls
 #the storage
 #note: since we don't have service --privileged, we can't use service
 ## so we can't user overlay networks, so we need to force a port
-docker volume create --driver infinit --name default_volume -o port=51236
+docker volume create --driver infinit --name default_volume@$RANDOM$RANDOM -o port=51236
 
 # run the network to put storage online
-docker run -p 51236:51236 -p 51236:51236/udp -d --volume-driver infinit -v default_user/default_volume:/unused ubuntu sleep 30000d
+docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ubuntu sleep 30000d
 
 
 
