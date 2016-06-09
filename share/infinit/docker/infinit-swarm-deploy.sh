@@ -59,11 +59,12 @@ docker network create --driver overlay --subnet 75.1.0.0/16 infinit
 # start beyond
 #BROKEN constraint="--constraint node.id==$self_id"
 constraint=
-docker service create --name beyond --network $network $constraint beyond /usr/bin/beyond --host 0.0.0.0
+docker service create --name beyond --restart-policy-max-attempts 1 --network $network $constraint beyond /usr/bin/beyond --host 0.0.0.0
 
 #get IP of beyond
-ip=$(docker service inspect beyond |grep Addr |cut '-d"' -f 4 | cut -d/ -f 1)
-
+# THIS IS WRONG, use docker network inspect instead
+#ip=$(docker service inspect beyond |grep Addr |cut '-d"' -f 4 | cut -d/ -f 1)
+ip=$(docker network inspect infinit |grep IPv4Address |cut '-d"' -f 4 | cut -d/ -f 1)
 beyond=http://$ip:8080
 
 sleep 4
@@ -72,12 +73,15 @@ sleep 4
 # FIXME docker run --net is broken, go through a service
 docker service create --name infinit_init --network $network \
   -e INFINIT_BEYOND=$beyond \
+  -e ELLE_LOG_LEVEL=infinit-user:DEBUG \
+  -e ELLE_LOG_FILE=/tmp/hostroot/tmp/user_create.log \
   --restart-policy-max-attempts 1 \
   infinit \
   infinit-user --create --name default_user --email none@none.com --fullname default \
     --push --full --password docker
+
 #FIXME: poll task count to know when it ends
-sleep 5
+sleep 20
 docker service rm infinit_init
 
 tcp=
@@ -92,9 +96,10 @@ mount_host_root_shared=
 # run the mountpoint manager service
 docker service create --name infinit --network $network --mode global \
     -e ELLE_LOG_LEVEL=infinit-daemon:DEBUG \
-    -e ELLE_LOG_FILE=/tmp/daemon.log \
+    -e ELLE_LOG_FILE=/tmp/hostroot/tmp/daemon.log \
     -e INFINIT_BEYOND=$beyond \
     -e INFINIT_HTTP_NO_KEEPALIVE=1 \
+    --restart-policy-delay 10s \
     $mount_host_root_shared \
     infinit \
     infinit-daemon --start --foreground \
