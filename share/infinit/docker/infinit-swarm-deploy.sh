@@ -36,23 +36,49 @@ docker import $beyond_image beyond:latest
 
 other_nodes=$(docker node ls |grep READY |grep -v '*' | awk {'print $2'})
 self_node=$(docker node ls |grep '*' | awk '{print $3}')
+self_id=$(docker node ls |grep '*' | awk '{print $1}')
 
-docker run --privileged --rm -v /:/tmp/hostroot ubuntu nsenter --mount=/tmp/hostroot/proc/1/ns/mnt mount --make-shared /
+# we hardcoded that one into docker
+mount_host_root=
+#mount_host_root="-v /:/tmp/hostroot"
+
+docker run --privileged --rm $mount_host_root ubuntu nsenter --mount=/tmp/hostroot/proc/1/ns/mnt mount --make-shared /
 
 # import infinit image on each node, and set / to shared mount
+# WARNING: this requires nodes hostname to actually resolve!
 for node in $other_nodes; do
   DOCKER_HOST=$node:2375 docker import $image infinit:latest
-  DOCKER_HOST=$node:2375 docker run --privileged --rm -v /:/tmp/hostroot ubuntu nsenter --mount=/tmp/hostroot/proc/1/ns/mnt mount --make-shared /
+  DOCKER_HOST=$node:2375 docker run --privileged --rm $mount_host_root ubuntu nsenter --mount=/tmp/hostroot/proc/1/ns/mnt mount --make-shared /
 done
 
-# run beyond on manager
-docker run -d -p 8080:8080 beyond /usr/bin/beyond --host 0.0.0.0
+network=infinit
+# create our overlay network
+docker network create --driver overlay --subnet 75.1.0.0/16 infinit
+
+
+# start beyond
+#BROKEN constraint="--constraint node.id==$self_id"
+constraint=
+docker service create --name beyond --network $network $constraint beyond /usr/bin/beyond --host 0.0.0.0
+
+#get IP of beyond
+ip=$(docker service inspect beyond |grep Addr |cut '-d"' -f 4 | cut -d/ -f 1)
+
+beyond=http://$ip:8080
 
 sleep 4
+
 # initiate a default user
-docker run -e INFINIT_BEYOND=http://$self_node:8080 infinit \
+# FIXME docker run --net is broken, go through a service
+docker service create --name infinit_init --network $network \
+  -e INFINIT_BEYOND=$beyond \
+  --restart-policy-max-attempts 1 \
+  infinit \
   infinit-user --create --name default_user --email none@none.com --fullname default \
     --push --full --password docker
+#FIXME: poll task count to know when it ends
+sleep 5
+docker service rm infinit_init
 
 tcp=
 tcp_fwd=
@@ -60,15 +86,17 @@ tcp_fwd=
 #tcp_fwd="-p 3210:3210"
 log=
 log="--log-path /tmp --log-level *model*:DEBUG,*filesys*:DEBUG,*over*:DEBUG"
-# cant run the volume plugin as a service: no --privileged
-for node in $other_nodes $self_node ; do
-  DOCKER_HOST=$node:2375 docker run $tcp_fwd -d --privileged \
-    -p 51236:51236 -p 51236:51236/udp  \
+
+# HARDCODED IN DOCKER mount_host_root_shared="-v /:/tmp/hostroot:shared"
+mount_host_root_shared=
+# run the mountpoint manager service
+docker service create --name infinit --network $network --mode global \
     -e ELLE_LOG_LEVEL=infinit-daemon:DEBUG \
     -e ELLE_LOG_FILE=/tmp/daemon.log \
-    -e INFINIT_BEYOND=http://$self_node:8080 \
+    -e INFINIT_BEYOND=$beyond \
     -e INFINIT_HTTP_NO_KEEPALIVE=1 \
-    -v /:/tmp/hostroot:shared infinit \
+    $mount_host_root_shared \
+    infinit \
     infinit-daemon --start --foreground \
     --docker-socket-path /tmp/hostroot/run/docker/plugins \
     --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins \
@@ -77,9 +105,7 @@ for node in $other_nodes $self_node ; do
     --default-user default_user \
     --default-network default_network \
     --login-user default_user:docker \
-    --advertise-host $node \
     $tcp $log
-done
 
 sleep 2
 
@@ -88,9 +114,8 @@ docker volume ls
 
 #create a default volume, on this host, so our running infinit-daemon has
 #the storage
-#note: since we don't have service --privileged, we can't use service
-## so we can't user overlay networks, so we need to force a port
-docker volume create --driver infinit --name default_volume@$RANDOM$RANDOM -o port=51236
+
+docker volume create --driver infinit --name default_volume@$RANDOM$RANDOM
 
 # run the network to put storage online
 docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ubuntu sleep 30000d
@@ -106,6 +131,8 @@ docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ub
 # DOCKER_HOST=ip-192-168-34-67.us-west-2.compute.internal:2375 docker run -i -t --rm -v cluster_user/cluster_volume:/shared ubuntu /bin/bash
 # write to shared, exit and/or start on an other node, files are shared!
 
+# apt-get update; apt-get install socat;
+# (echo -e 'POST /VolumeDriver.Mount HTTP/1.0\r\nContent-Length: 39\r\nContent-Type: text/json\r\n\r\n{"Name": "default_user/default_volume"}\r\n' ; sleep 2) | socat stdio unix-client:/tmp/realroot/run/docker/plugins/infinit.sock | | cut '-d"' -f 8 > /tmp/mountpoint
 
 
 # EXPERIMENTS
