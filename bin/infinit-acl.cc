@@ -282,7 +282,8 @@ set_action(std::string const& path,
            bool inherit,
            bool disinherit,
            bool verbose,
-           bool fallback_xattrs)
+           bool fallback_xattrs,
+           bool multi = false)
 {
   if (verbose)
     std::cout << "processing " << path << std::endl;
@@ -300,7 +301,10 @@ set_action(std::string const& path,
       }
       catch (PermissionDenied const&)
       {
-        std::cout << "permission denied, skipping " << path << std::endl;
+        if (multi)
+          std::cout << "permission denied, skipping " << path << std::endl;
+        else
+          std::cout << "permission denied " << path << std::endl;
       }
       catch (elle::Error const& error)
       {
@@ -318,7 +322,10 @@ set_action(std::string const& path,
     }
     catch (PermissionDenied const&)
     {
-      std::cout << "permission denied, skipping " << path << std::endl;
+      if (multi)
+        std::cout << "permission denied, skipping " << path << std::endl;
+      else
+        std::cout << "permission denied " << path << std::endl;
     }
     catch (InvalidArgument const&)
     {
@@ -332,7 +339,7 @@ set_action(std::string const& path,
     for (auto& username: users)
     {
       auto set_attribute =
-        [path, mode, fallback_xattrs] (std::string const& value)
+        [path, mode, fallback_xattrs, multi] (std::string const& value)
         {
           try
           {
@@ -341,7 +348,10 @@ set_action(std::string const& path,
           }
           catch (PermissionDenied const&)
           {
-            std::cout << "permission denied, skipping " << path << std::endl;
+            if (multi)
+              std::cout << "permission denied, skipping " << path << std::endl;
+            else
+              std::cout << "permission denied " << path << std::endl;
           }
         };
       try
@@ -467,10 +477,11 @@ COMMAND(set)
         path, inherit ? "enable" : "disable"));
     }
   }
+  bool multi = paths.size() > 1 || recursive;
   for (auto const& path: paths)
   {
     set_action(path, users, mode, omode, inherit, disinherit, verbose,
-               fallback);
+               fallback, multi);
     if (traverse)
     {
       boost::filesystem::path working_path = boost::filesystem::absolute(path);
@@ -478,14 +489,14 @@ COMMAND(set)
       {
         working_path = working_path.parent_path();
         set_action(working_path.string(), users, "setr", "", false, false,
-                   verbose, fallback);
+                   verbose, fallback, multi);
       }
     }
     if (recursive)
     {
       recursive_action(
         set_action, path, users, mode, omode, inherit, disinherit, verbose,
-        fallback);
+        fallback, multi);
     }
   }
 }
