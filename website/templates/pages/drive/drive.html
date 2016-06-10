@@ -2,6 +2,21 @@
 
 <%block name="content">
 
+  <%
+    if "mac" in request.path:
+      osname = "mac"
+    elif "linux" in request.path:
+      osname = "linux"
+    elif "windows" in request.path:
+      osname = "windows"
+    elif os() == "Macintosh":
+      osname = "mac"
+    elif os() == "Windows":
+      osname = "windows"
+    else:
+      osname = "linux"
+  %>
+
   <section class="intro">
     <h2>
       <img src="${url('images/icons/infinit-cloud-apps.png')}" alt="Logo Infinit Cloud Apps">
@@ -10,9 +25,9 @@
     <h1>Simple and secure file synchronization for professionals</h1>
     <p class="subtitle">Infinit Drive benefits from the simplicity of a consumer product, the security and scalability of enterprise-class technologies in addition to allowing one to choose where files are physically stored.</p>
 
-    % if os() == "Macintosh":
+    % if osname == "mac":
       <a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit%20Drive-0.2.5.dmg" class="button">Download</a>
-    % elif os() == "Windows":
+    % elif osname == "windows":
       <a target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" class="button">Get Invitation</a>
     % else:
       <a href="#install-linux" class="button linux_popup">Download</a>
@@ -63,9 +78,9 @@
   </section>
 
   <section class="cta">
-    % if os() == "Macintosh":
+    % if osname == "mac":
       <a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit%20Drive-0.2.5.dmg" class="button">Download</a>
-    % elif os() == "Windows":
+    % elif osname == "windows":
       <a target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" class="button">Get Invitation</a>
     % else:
       <a href="#install-linux" class="button linux_popup">Download</a>

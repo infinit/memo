@@ -69,6 +69,30 @@ class Website(bottle.Bottle):
       'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
+  @route('/drive/linux', name = 'drive_linux')
+  @view('pages/drive/drive.html')
+  def root(self):
+    return {
+      'title': 'Infinit Drive - Linux',
+      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+    }
+
+  @route('/drive/mac', name = 'drive_mac')
+  @view('pages/drive/drive.html')
+  def root(self):
+    return {
+      'title': 'Infinit Drive - Mac',
+      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+    }
+
+  @route('/drive/windows', name = 'drive_windows')
+  @view('pages/drive/drive.html')
+  def root(self):
+    return {
+      'title': 'Infinit Drive - Windows',
+      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+    }
+
   @route('/download', name = 'download')
   @view('pages/download.html')
   def root(self):
