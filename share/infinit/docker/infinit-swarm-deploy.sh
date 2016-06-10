@@ -59,13 +59,19 @@ docker network create --driver overlay --subnet 75.1.0.0/16 infinit
 # start beyond
 #BROKEN constraint="--constraint node.id==$self_id"
 constraint=
-docker service create --name beyond --restart-policy-max-attempts 1 --network $network $constraint beyond /usr/bin/beyond --host 0.0.0.0
+docker service create --name beyond --restart-max-attempts 1 --network $network $constraint beyond /usr/bin/beyond --host 0.0.0.0
 
-#get IP of beyond
-# THIS IS WRONG, use docker network inspect instead
-#ip=$(docker service inspect beyond |grep Addr |cut '-d"' -f 4 | cut -d/ -f 1)
-ip=$(docker network inspect infinit |grep IPv4Address |cut '-d"' -f 4 | cut -d/ -f 1)
+# access beyond through hostname
+beyond_id=$(docker service tasks beyond | tail -n 1 | awk '{print $1}')
+beyond_host=beyond.1.$beyond_id
+#beyond=http://$beyond_host:8080
+
+# access beyond through the virtual IP...
+ip=$(docker service inspect beyond |grep Addr |cut '-d"' -f 4 | cut -d/ -f 1)
 beyond=http://$ip:8080
+# THIS IS WRONG docker node inspect does not see containers in other nodes!
+#ip=$(docker network inspect infinit |grep IPv4Address |cut '-d"' -f 4 | cut -d/ -f 1)
+
 
 sleep 4
 
@@ -74,11 +80,10 @@ sleep 4
 docker service create --name infinit_init --network $network \
   -e INFINIT_BEYOND=$beyond \
   -e ELLE_LOG_LEVEL=infinit-user:DEBUG \
-  -e ELLE_LOG_FILE=/tmp/hostroot/tmp/user_create.log \
-  --restart-policy-max-attempts 1 \
+  --restart-max-attempts 1 \
   infinit \
-  infinit-user --create --name default_user --email none@none.com --fullname default \
-    --push --full --password docker
+  sh -c 'infinit-user --create --name default_user --email none@none.com --fullname default --push --full --password docker >/tmp/hostroot/tmp/user_create.log 2>&1'
+
 
 #FIXME: poll task count to know when it ends
 sleep 20
@@ -89,28 +94,21 @@ tcp_fwd=
 #tcp="--docker-socket-tcp --docker-socket-port 3210"
 #tcp_fwd="-p 3210:3210"
 log=
-log="--log-path /tmp --log-level *model*:DEBUG,*filesys*:DEBUG,*over*:DEBUG"
+log="--log-path /tmp/hostroot/tmp/ --log-level *model*:DEBUG,*filesys*:DEBUG,*over*:DEBUG"
 
 # HARDCODED IN DOCKER mount_host_root_shared="-v /:/tmp/hostroot:shared"
 mount_host_root_shared=
 # run the mountpoint manager service
+# beyond runs with a mono-request-at-a-time test serve so sleep a bit
 docker service create --name infinit --network $network --mode global \
     -e ELLE_LOG_LEVEL=infinit-daemon:DEBUG \
     -e ELLE_LOG_FILE=/tmp/hostroot/tmp/daemon.log \
     -e INFINIT_BEYOND=$beyond \
     -e INFINIT_HTTP_NO_KEEPALIVE=1 \
-    --restart-policy-delay 10s \
+    --restart-max-attempts 1 \
     $mount_host_root_shared \
     infinit \
-    infinit-daemon --start --foreground \
-    --docker-socket-path /tmp/hostroot/run/docker/plugins \
-    --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins \
-    --mount-root /tmp/hostroot/tmp/ \
-    --docker-mount-substitute "hostroot/tmp:" \
-    --default-user default_user \
-    --default-network default_network \
-    --login-user default_user:docker \
-    $tcp $log
+    bash -c "sleep \$(( \$RANDOM / 2000)); infinit-daemon --start --foreground --docker-socket-path /tmp/hostroot/run/docker/plugins --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins --mount-root /tmp/hostroot/tmp/ --docker-mount-substitute hostroot/tmp: --default-user default_user --default-network default_network --login-user default_user:docker $tcp $log"
 
 sleep 2
 
@@ -155,4 +153,15 @@ docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ub
 # get correct host to use
 #manager_host=$(docker node ls |grep '*' | awk '{print $3}')
 
+
+# Test network connectivity with a ping
+# docker service create --name ping --restart-max-attempts 1 --mode global --network infinit ubuntu sh -c '/tmp/hostroot/bin/ping -c 4  beyond.1.1vc1x3tzofg82kbh47u9ia6a8 > /tmp/hostroot/tmp/ping.log'
+# test beyond connectivity
+#docker service create --name tb --network infinit --restart-max-attempts 1 \
+#  --mode global -e LD_LIBRARY_PATH=/tmp/hostroot/lib/x86_64-linux-gnu:/tmp/hostroot/usr/lib/x86_64-linux-gnu \
+#  ubuntu sh -c "/tmp/hostroot/usr/bin/wget -O - $beyond >/tmp/hostroot/tmp/wg.log 2>&1"
+#
+#docker service create --name tb --network infinit --restart-max-attempts 1 \
+#  --mode global -e LD_LIBRARY_PATH=/tmp/hostroot/lib/x86_64-linux-gnu:/tmp/hostroot/usr/lib/x86_64-linux-gnu \
+#  ubuntu sh -c "/tmp/hostroot/usr/bin/wget -O - http://75.1.0.2:8080 >/tmp/hostroot/tmp/wg.log 2>&1"
 
