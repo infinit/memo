@@ -293,14 +293,6 @@ class Website(bottle.Bottle):
       'description': 'Infinit is used by device manufacturers, network operators and other businesses throughout the world to provide value to their customers.',
     }
 
-  @route('/about', name = 'about')
-  @view('pages/about.html')
-  def root(self):
-    return {
-      'title': 'About Infinit',
-      'description': 'Learn about the company and people behind Infinit.',
-    }
-
   @route('/press', name = 'press')
   @route('/press/tech', name = 'press')
   @view('pages/press/pr_tech.html')
