@@ -67,17 +67,17 @@ sleep 10
 # access beyond through hostname
 beyond_id=$(docker service tasks beyond | tail -n 1 | awk '{print $1}')
 beyond_host=beyond.1.$beyond_id
-#beyond=http://$beyond_host:8080
+beyond=http://$beyond_host:8080
 
 # access beyond through the virtual IP...
-ip=$(docker service inspect beyond |grep Addr |cut '-d"' -f 4 | cut -d/ -f 1)
-beyond=http://$ip:8080
+#ip=$(docker service inspect beyond |grep Addr |cut '-d"' -f 4 | cut -d/ -f 1)
+#beyond=http://$ip:8080
 # THIS IS WRONG docker node inspect does not see containers in other nodes!
 #ip=$(docker network inspect infinit |grep IPv4Address |cut '-d"' -f 4 | cut -d/ -f 1)
 
 
 # initiate a default user
-# FIXME docker run --net is broken, go through a service
+# NOTE docker run --net is unsupported, go through a service
 docker service create --name infinit_init --network $network \
   -e INFINIT_BEYOND=$beyond \
   -e ELLE_LOG_TIME=1 \
