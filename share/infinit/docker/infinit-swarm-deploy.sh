@@ -5,7 +5,7 @@
 if test "$1" = "kill"; then
   docker service ls |grep infinit | awk '{print $1}' | xargs -n 1 docker service rm
   docker ps --no-trunc | grep infinit | awk '{print $1}' |xargs -n 1 docker kill
-  for node in $(docker node ls |grep READY |grep -v '*' | awk {'print $2'}); do
+  for node in $(docker node ls |grep -i ready |grep -v '*' | awk {'print $2'}); do
     DOCKER_HOST=$node:2375 docker ps --no-trunc | grep infinit | awk '{print $1}' |DOCKER_HOST=$node:2375 xargs -n 1 docker kill
   done
   exit 0
@@ -34,7 +34,7 @@ docker import $image infinit:latest
 docker import $beyond_image beyond:latest
 
 
-other_nodes=$(docker node ls |grep READY |grep -v '*' | awk {'print $2'})
+other_nodes=$(docker node ls |grep -i ready |grep -v '*' | awk {'print $2'})
 self_node=$(docker node ls |grep '*' | awk '{print $3}')
 self_id=$(docker node ls |grep '*' | awk '{print $1}')
 
@@ -48,6 +48,7 @@ docker run --privileged --rm $mount_host_root ubuntu nsenter --mount=/tmp/hostro
 # WARNING: this requires nodes hostname to actually resolve!
 for node in $other_nodes; do
   DOCKER_HOST=$node:2375 docker import $image infinit:latest
+  DOCKER_HOST=$node:2375 docker import $beyond_image beyond:latest
   DOCKER_HOST=$node:2375 docker run --privileged --rm $mount_host_root ubuntu nsenter --mount=/tmp/hostroot/proc/1/ns/mnt mount --make-shared /
 done
 
@@ -164,4 +165,7 @@ docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ub
 #docker service create --name tb --network infinit --restart-max-attempts 1 \
 #  --mode global -e LD_LIBRARY_PATH=/tmp/hostroot/lib/x86_64-linux-gnu:/tmp/hostroot/usr/lib/x86_64-linux-gnu \
 #  ubuntu sh -c "/tmp/hostroot/usr/bin/wget -O - http://75.1.0.2:8080 >/tmp/hostroot/tmp/wg.log 2>&1"
-
+#
+#test IP attrib
+docker service create --name ti --network infinit --restart-max-attempts 1 \
+--mode global ubuntu sh -c "/tmp/hostroot/sbin/ifconfig >/tmp/hostroot/tmp/ifconfig.log"
