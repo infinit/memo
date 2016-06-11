@@ -1,0 +1,600 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+
+    "Description": "Docker for AWS POC6 1 manager node",
+
+    "Parameters": {
+        "KeyName": {
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Default": "id_rsa_aws",
+            "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
+        },
+        "InstanceType" : {
+            "Type" : "String",
+            "Description" : "EC2 HVM instance type (t2.micro, m3.medium, etc).",
+            "AllowedValues" : [
+                "t2.micro","t2.small","t2.medium","t2.large","m4.large","m4.xlarge","m4.2xlarge","m4.4xlarge","m4.10xlarge","m3.medium",
+                "m3.large","m3.xlarge","m3.2xlarge","c4.large","c4.xlarge","c4.2xlarge","c4.4xlarge","c4.8xlarge","c3.large","c3.xlarge",
+                "c3.2xlarge","c3.4xlarge","c3.8xlarge","r3.large","r3.xlarge","r3.2xlarge","r3.4xlarge","r3.8xlarge","i2.xlarge",
+                "i2.2xlarge","i2.4xlarge","i2.8xlarge" ],
+            "ConstraintDescription" : "Must be a valid EC2 HVM instance type.",
+            "Default" : "t2.micro"
+        },
+        "ManagerInstanceType" : {
+            "Type" : "String",
+            "Description" : "EC2 HVM instance type (t2.micro, m3.medium, etc).",
+            "AllowedValues" : [
+                "t2.micro","t2.small","t2.medium","t2.large","m4.large","m4.xlarge","m4.2xlarge","m4.4xlarge","m4.10xlarge","m3.medium",
+                "m3.large","m3.xlarge","m3.2xlarge","c4.large","c4.xlarge","c4.2xlarge","c4.4xlarge","c4.8xlarge","c3.large","c3.xlarge",
+                "c3.2xlarge","c3.4xlarge","c3.8xlarge","r3.large","r3.xlarge","r3.2xlarge","r3.4xlarge","r3.8xlarge","i2.xlarge",
+                "i2.2xlarge","i2.4xlarge","i2.8xlarge" ],
+            "ConstraintDescription" : "Must be a valid EC2 HVM instance type.",
+            "Default" : "t2.micro"
+        },
+        "ClusterSize" : {
+            "Type" : "Number",
+            "Default" : "3",
+            "MinValue" : "1",
+            "MaxValue" : "5",
+            "Description" : "Number of nodes in the Swarm cluster (1-5)."
+        }
+    },
+    "Metadata" : {
+        "AWS::CloudFormation::Interface" : {
+            "ParameterGroups" : [
+                {
+                    "Label" : { "default" : "Swarm Size" },
+                    "Parameters" : [ "ClusterSize" ]
+                },
+                {
+                    "Label" : { "default":"Swarm Properties" },
+                    "Parameters" : [ "ManagerInstanceType", "InstanceType", "KeyName" ]
+                }
+            ],
+            "ParameterLabels" : {
+                "ClusterSize" : { "default" : "Number of Swarm Agent nodes?" },
+                "InstanceType" : { "default" : "Agent node instance Type?" },
+                "ManagerInstanceType" : { "default" : "Swarm Manager instance Type?" },
+                "KeyName" : { "default" : "Which SSH key to use?" }
+            }
+        }
+    },
+    "Mappings": {
+
+        "VpcCidrs" : {
+            "vpc" : {
+                "cidr": "192.168.0.0/16"
+            },
+            "pubsubnet1" : {
+                "cidr": "192.168.33.0/24"
+            },
+            "pubsubnet2" : {
+                "cidr": "192.168.34.0/24"
+            }
+        },
+
+        "AWSInstanceType2Arch": {
+            "t2.micro": {
+                "Arch": "HVM64"
+            },
+            "t2.small": {
+                "Arch": "HVM64"
+            },
+            "t2.medium": {
+                "Arch": "HVM64"
+            },
+            "t2.large": {
+                "Arch": "HVM64"
+            },
+            "m3.medium": {
+                "Arch": "HVM64"
+            },
+            "m3.large": {
+                "Arch": "HVM64"
+            },
+            "m3.xlarge": {
+                "Arch": "HVM64"
+            },
+            "m3.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "m4.large": {
+                "Arch": "HVM64"
+            },
+            "m4.xlarge": {
+                "Arch": "HVM64"
+            },
+            "m4.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "m4.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "m4.10xlarge": {
+                "Arch": "HVM64"
+            },
+            "c3.large": {
+                "Arch": "HVM64"
+            },
+            "c3.xlarge": {
+                "Arch": "HVM64"
+            },
+            "c3.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "c3.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "c3.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "c4.large": {
+                "Arch": "HVM64"
+            },
+            "c4.xlarge": {
+                "Arch": "HVM64"
+            },
+            "c4.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "c4.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "c4.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "g2.2xlarge": {
+                "Arch": "HVMG2"
+            },
+            "r3.large": {
+                "Arch": "HVM64"
+            },
+            "r3.xlarge": {
+                "Arch": "HVM64"
+            },
+            "r3.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "r3.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "r3.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "i2.xlarge": {
+                "Arch": "HVM64"
+            },
+            "i2.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "i2.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "i2.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "d2.xlarge": {
+                "Arch": "HVM64"
+            },
+            "d2.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "d2.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "d2.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "hi1.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "hs1.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "cr1.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "cc2.8xlarge": {
+                "Arch": "HVM64"
+            }
+        },
+
+        "AWSRegionArch2AMI": {
+            "us-west-1": {
+                "HVM64": "ami-c45b21a4",
+                "HVMG2": "NOT_SUPPORTED"
+            },
+            "us-west-2": {
+                "HVM64": "ami-afd923cf",
+                "HVMG2": "NOT_SUPPORTED"
+            },
+            "us-east-1": {
+                "HVM64": "ami-58b14f35",
+                "HVMG2": "NOT_SUPPORTED"
+            },
+            "eu-west-1": {
+                "HVM64": "ami-724fdd01",
+                "HVMG2": "NOT_SUPPORTED"
+            },
+            "eu-central-1": {
+                "HVM64": "ami-a4db35cb",
+                "HVMG2": "NOT_SUPPORTED"
+            },
+            "ap-southeast-1": {
+                "HVM64": "ami-99f828fa",
+                "HVMG2": "NOT_SUPPORTED"
+            },
+            "ap-northeast-1": {
+                "HVM64": "ami-4ff51b2e",
+                "HVMG2": "NOT_SUPPORTED"
+            },
+            "ap-southeast-2": {
+                "HVM64": "ami-12a48a71",
+                "HVMG2": "NOT_SUPPORTED"
+            },
+            "ap-northeast-2": {
+                "HVM64": "ami-6fe72c01",
+                "HVMG2": "NOT_SUPPORTED"
+            },
+            "sa-east-1": {
+                "HVM64": "ami-987ff4f4",
+                "HVMG2": "NOT_SUPPORTED"
+            }
+        }
+    },
+
+    "Resources": {
+
+        "Vpc" : {
+            "Type" : "AWS::EC2::VPC",
+            "Properties" : {
+                "CidrBlock" : { "Fn::FindInMap" : [ "VpcCidrs", "vpc", "cidr" ] },
+                "EnableDnsSupport" : "true",
+                "EnableDnsHostnames" : "true",
+                "Tags": [
+                    { "Key" : "Name", "Value" : { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName"}, "VPC"] ] } }
+                ]
+            }
+        },
+
+        "PubSubnetAz1" : {
+            "Type" : "AWS::EC2::Subnet",
+            "Properties" : {
+                "VpcId" : { "Ref" : "Vpc" },
+                "CidrBlock" : { "Fn::FindInMap" : [ "VpcCidrs", "pubsubnet1", "cidr" ] },
+                "AvailabilityZone" : { "Fn::Select" : [ "0", { "Fn::GetAZs" : { "Ref" : "AWS::Region" } } ] },
+                "Tags": [
+                    { "Key" : "Name", "Value" : { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName"}, "Subnet1"] ] } }
+                ]
+            }
+        },
+
+        "PubSubnetAz2" : {
+            "Type" : "AWS::EC2::Subnet",
+            "Properties" : {
+                "VpcId" : { "Ref" : "Vpc" },
+                "CidrBlock" : { "Fn::FindInMap" : [ "VpcCidrs", "pubsubnet2", "cidr" ] },
+                "AvailabilityZone" :  { "Fn::Select" : [ "1", { "Fn::GetAZs" : { "Ref" : "AWS::Region" } } ] },
+                "Tags": [
+                    { "Key" : "Name", "Value" : { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName"}, "Subnet2"] ] } }
+                ]
+            }
+        },
+
+        "InternetGateway" : {
+            "Type" : "AWS::EC2::InternetGateway",
+            "Properties" : {
+                "Tags": [
+                    { "Key" : "Name", "Value" : { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName"}, "IGW"] ] } }
+                ]
+            }
+        },
+
+        "AttachGateway" : {
+            "DependsOn": "Vpc",
+            "Type" : "AWS::EC2::VPCGatewayAttachment",
+            "Properties" : {
+                "VpcId" : { "Ref" : "Vpc" },
+                "InternetGatewayId" : { "Ref" : "InternetGateway" }
+            }
+        },
+
+        "RouteViaIgw" : {
+            "Type" : "AWS::EC2::RouteTable",
+            "Properties" : {
+                "VpcId" : { "Ref" : "Vpc"}
+            }
+        },
+
+        "PublicRouteViaIgw" : {
+            "Type" : "AWS::EC2::Route",
+            "Properties" : {
+                "RouteTableId" : { "Ref" : "RouteViaIgw" },
+                "DestinationCidrBlock" : "0.0.0.0/0",
+                "GatewayId" : { "Ref" : "InternetGateway" }
+            }
+        },
+
+        "PubSubnet1RouteTableAssociation" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "PubSubnetAz1" },
+                "RouteTableId" : { "Ref" : "RouteViaIgw" }
+            }
+        },
+
+        "PubSubnet2RouteTableAssociation" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "PubSubnetAz2" },
+                "RouteTableId" : { "Ref" : "RouteViaIgw" }
+            }
+        },
+
+        "WideOpenVpcSG": {
+            "DependsOn": "NodeVpcSG",
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "GroupDescription": "Wide open",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "-1",
+                        "FromPort": "0",
+                        "ToPort": "65535",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+
+        "ManagerVpcSG": {
+            "DependsOn": "NodeVpcSG",
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "GroupDescription": "Manager SecurityGroup",
+                "SecurityGroupIngress": [
+                    {"IpProtocol": "tcp","FromPort": "22","ToPort": "22","CidrIp": "0.0.0.0/0"},
+                    {"IpProtocol": "tcp","FromPort": "2375","ToPort": "2375","CidrIp": "0.0.0.0/0"},
+                    {"IpProtocol" : "tcp", "FromPort" : "4500", "ToPort" : "4500", "SourceSecurityGroupId" : { "Fn::GetAtt" : [ "NodeVpcSG", "GroupId" ] } },
+                    {"IpProtocol" : "udp", "FromPort" : "4789", "ToPort" : "4789", "SourceSecurityGroupId" : { "Fn::GetAtt" : [ "NodeVpcSG", "GroupId" ] } },
+                    {"IpProtocol" : "tcp", "FromPort" : "7946", "ToPort" : "7946", "SourceSecurityGroupId" : { "Fn::GetAtt" : [ "NodeVpcSG", "GroupId" ] } },
+                    {"IpProtocol" : "udp", "FromPort" : "7946", "ToPort" : "7946", "SourceSecurityGroupId" : { "Fn::GetAtt" : [ "NodeVpcSG", "GroupId" ] } }
+                ]
+            }
+        },
+        "NodeVpcSG": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "GroupDescription": "Node SecurityGroup",
+                "SecurityGroupIngress": [
+                    {"IpProtocol": "tcp","FromPort": "22","ToPort": "22","CidrIp": "0.0.0.0/0"},
+                    {"IpProtocol": "tcp","FromPort": "80","ToPort": "80","CidrIp": "0.0.0.0/0"}
+                ]
+            }
+        },
+
+        "manager": {
+            "DependsOn" : "ExternalLoadBalancer",
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "AvailabilityZone" : { "Fn::Select" : [ "0", { "Fn::GetAZs" : { "Ref" : "AWS::Region" } } ] },
+		"IamInstanceProfile" : { "Ref" : "ProxyInstanceProfile" },
+                "InstanceType": {"Ref" : "InstanceType"},
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": ["AWSRegionArch2AMI", {
+                        "Ref": "AWS::Region"
+                    }, {
+                        "Fn::FindInMap": ["AWSInstanceType2Arch", {"Ref" : "InstanceType"}, "Arch"]
+                    }]
+                },
+                "NetworkInterfaces": [ {
+                    "AssociatePublicIpAddress": "true",
+                    "DeleteOnTermination" : "true",
+                    "DeviceIndex": "0",
+                    "SubnetId": { "Ref" : "PubSubnetAz1" },
+                    "GroupSet" : [ { "Ref" : "ManagerVpcSG" }, { "Ref" : "WideOpenVpcSG"} ]
+                } ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "", [
+                                "#!/bin/sh\n",
+                                "echo `wget -qO- http://169.254.169.254/latest/meta-data/hostname` > /etc/hostname; hostname -F /etc/hostname \n",
+				"echo \"",{"Ref": "ExternalLoadBalancer"}, "\" > /var/run/swarm_elb_name\n",
+                                "export PRIVATE_IP=`wget -qO- http://169.254.169.254/latest/meta-data/local-ipv4`\n",
+                                "sleep 10\n",
+                                "docker swarm init --auto-accept manager --auto-accept worker --listen-addr $PRIVATE_IP:4500\n",
+                                "sleep 5\n"
+                            ]
+                        ]
+                    }
+                },
+                "Tags": [
+                    { "Key" : "Name", "Value" : { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName"}, "Manager-1" ] ] } }
+                ]
+            }
+        },
+        "MyEIP" : {
+            "DependsOn" : "manager",
+            "Type" : "AWS::EC2::EIP",
+            "Properties" : {
+                "InstanceId" : { "Ref" : "manager" },
+                "Domain" : "vpc"
+            }
+        },
+        "RecoveryTestAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmDescription": "Trigger a recovery when instance status check fails for 15 consecutive minutes.",
+                "Namespace": "AWS/EC2" ,
+                "MetricName": "StatusCheckFailed_System",
+                "Statistic": "Minimum",
+                "Period": "60",
+                "EvaluationPeriods": "15",
+                "ComparisonOperator": "GreaterThanThreshold",
+                "Threshold": "0",
+                "AlarmActions": [ {"Fn::Join" : ["", ["arn:aws:automate:", { "Ref" : "AWS::Region" }, ":ec2:recover" ]]} ],
+                "Dimensions": [{"Name": "InstanceId","Value": {"Ref": "manager"}}]
+            }
+        },
+        "NodeAsg" : {
+            "DependsOn" : "manager",
+            "Type" : "AWS::AutoScaling::AutoScalingGroup",
+            "Properties" : {
+                "VPCZoneIdentifier" : [ { "Fn::Join" : [",", [ { "Ref" : "PubSubnetAz1" }, { "Ref" : "PubSubnetAz2" } ] ] } ],
+                "LaunchConfigurationName" : { "Ref" : "node" },
+                "MinSize" : "1",
+                "MaxSize" : "12",
+                "DesiredCapacity" : { "Ref" : "ClusterSize"},
+                "Tags": [
+                    { "Key" : "Name",
+                      "Value" : { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName"}, "Node" ] ] },
+                      "PropagateAtLaunch" : "true" }
+                ]
+            }
+        },
+        "node": {
+            "DependsOn": "manager",
+            "Type": "AWS::AutoScaling::LaunchConfiguration",
+            "Properties": {
+                "InstanceType": {"Ref" : "InstanceType"},
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": ["AWSRegionArch2AMI", {
+                        "Ref": "AWS::Region"
+                    }, {
+                        "Fn::FindInMap": ["AWSInstanceType2Arch", {"Ref" : "InstanceType"}, "Arch"]
+                    }]
+                },
+                "AssociatePublicIpAddress": "true",
+                "SecurityGroups": [ { "Ref" : "NodeVpcSG"}, { "Ref" : "WideOpenVpcSG"} ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "", [
+                                "#!/bin/sh\n",
+                                "echo `wget -qO- http://169.254.169.254/latest/meta-data/hostname` > /etc/hostname; hostname -F /etc/hostname \n",
+                                "sleep 10\n",
+                                "docker swarm join ", {
+                                    "Fn::GetAtt" : [ "manager", "PrivateIp" ]
+                                }, ":4500\n"
+                            ]
+                        ]
+                    }
+                }
+            }
+        },
+        "ExternalLoadBalancer" : {
+            "DependsOn" : "AttachGateway",
+            "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Properties" : {
+		"Subnets" : [
+		    {"Ref" : "PubSubnetAz1" },
+		    {"Ref" : "PubSubnetAz2" }
+		],
+		"LoadBalancerName" : { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName"}, "ELB" ] ] },
+		"CrossZone" : "true",
+                "Listeners" : [
+                    {
+                        "LoadBalancerPort" : "80",
+                        "InstancePort" : "80",
+			"Protocol" : "HTTP"
+                    }
+		],
+		"Tags": [
+                    {
+			"Key" : "Name",
+			"Value" : { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName"}, "ELB" ] ] }
+		    }
+		]
+            }
+        },
+	"ProxyRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+		"AssumeRolePolicyDocument": {
+		    "Version" : "2012-10-17",
+		    "Statement": [ {
+			"Effect": "Allow",
+			"Principal": {
+			    "Service": [ "ec2.amazonaws.com" ]
+			},
+			"Action": [ "sts:AssumeRole" ]
+		    } ]
+		},
+		"Path": "/"
+            }
+	},
+	"ProxyPolicies": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+		"PolicyName": "elb-update",
+		"PolicyDocument": {
+		    "Version" : "2012-10-17",
+		    "Statement": [ {
+			"Effect": "Allow",
+			"Action": "elasticloadbalancing:*",
+			"Resource": "*"
+		    } ]
+		},
+		"Roles": [ {
+		    "Ref": "ProxyRole"
+		} ]
+            }
+	},
+	"ProxyInstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+		"Path": "/",
+		"Roles": [ {
+		    "Ref": "ProxyRole"
+		} ]
+            }
+	}
+    },
+    "Outputs": {
+	"swarmDNS" : {
+	    "Description" : "External DNS for the Docker swarm",
+	    "Value" : {
+		"Fn::GetAtt" : [ "ExternalLoadBalancer", "DNSName" ]
+	    }
+	},
+        "managerElasticIP": {
+            "Description": "Public Elastic IP of manager",
+            "Value": {
+                "Ref" : "MyEIP"
+            }
+        },
+        "managerPrivateIP": {
+            "Description": "Private IP of manager",
+            "Value": {
+                "Fn::GetAtt": ["manager", "PrivateIp"]
+            }
+        },
+        "managerPublicIP": {
+            "Description": "Public IP of manager",
+            "Value": {
+                "Fn::GetAtt": ["manager", "PublicIp"]
+            }
+        },
+        "managerSSH" : {
+            "Description" : "SSH into Swarm Manager",
+            "Value" : { "Fn::Join" : [ "", [ "ssh root@", { "Fn::GetAtt" : [ "manager", "PublicIp" ] } ] ] }
+        }
+    }
+}
