@@ -60,8 +60,10 @@ docker network create --driver overlay --subnet 75.1.0.0/16 infinit
 # start beyond
 #BROKEN constraint="--constraint node.id==$self_id"
 constraint=
-docker service create --name beyond --restart-max-attempts 1 --network $network $constraint beyond /usr/bin/beyond --host 0.0.0.0
+docker service create --name beyond --restart-max-attempts 1 --network $network $constraint beyond \
+  bash -c "/usr/bin/beyond --host 0.0.0.0 >>/tmp/hostroot/tmp/beyond.log 2>&1"
 
+sleep 10
 # access beyond through hostname
 beyond_id=$(docker service tasks beyond | tail -n 1 | awk '{print $1}')
 beyond_host=beyond.1.$beyond_id
@@ -74,12 +76,11 @@ beyond=http://$ip:8080
 #ip=$(docker network inspect infinit |grep IPv4Address |cut '-d"' -f 4 | cut -d/ -f 1)
 
 
-sleep 4
-
 # initiate a default user
 # FIXME docker run --net is broken, go through a service
 docker service create --name infinit_init --network $network \
   -e INFINIT_BEYOND=$beyond \
+  -e ELLE_LOG_TIME=1 \
   -e ELLE_LOG_LEVEL=infinit-user:DEBUG \
   --restart-max-attempts 1 \
   infinit \
@@ -103,15 +104,15 @@ mount_host_root_shared=
 # beyond runs with a mono-request-at-a-time test serve so sleep a bit
 docker service create --name infinit --network $network --mode global \
     -e ELLE_LOG_LEVEL=infinit-daemon:DEBUG \
+    -e ELLE_LOG_TIME=1 \
     -e ELLE_LOG_FILE=/tmp/hostroot/tmp/daemon.log \
     -e INFINIT_BEYOND=$beyond \
     -e INFINIT_HTTP_NO_KEEPALIVE=1 \
-    --restart-max-attempts 1 \
     $mount_host_root_shared \
     infinit \
-    bash -c "sleep \$(( \$RANDOM / 2000)); infinit-daemon --start --foreground --docker-socket-path /tmp/hostroot/run/docker/plugins --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins --mount-root /tmp/hostroot/tmp/ --docker-mount-substitute hostroot/tmp: --default-user default_user --default-network default_network --login-user default_user:docker $tcp $log"
+    bash -c "sleep \$(( \$RANDOM / 2000)).\$RANDOM; infinit-daemon --start --foreground --docker-socket-path /tmp/hostroot/run/docker/plugins --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins --mount-root /tmp/hostroot/tmp/ --docker-mount-substitute hostroot/tmp: --default-user default_user --default-network default_network --login-user default_user:docker $tcp $log"
 
-sleep 2
+sleep 20
 
 # Hmm, the plugin might take some time to be visible
 docker volume ls
@@ -119,7 +120,10 @@ docker volume ls
 #create a default volume, on this host, so our running infinit-daemon has
 #the storage
 
-docker volume create --driver infinit --name default_volume@$RANDOM$RANDOM
+while ! docker volume create --driver infinit --name default_volume@$RANDOM$RANDOM ; do
+  echo "Failed to create volume, waiting for plugin..."
+  sleep 1
+done
 
 # run the network to put storage online
 docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ubuntu sleep 30000d
@@ -167,5 +171,5 @@ docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ub
 #  ubuntu sh -c "/tmp/hostroot/usr/bin/wget -O - http://75.1.0.2:8080 >/tmp/hostroot/tmp/wg.log 2>&1"
 #
 #test IP attrib
-docker service create --name ti --network infinit --restart-max-attempts 1 \
---mode global ubuntu sh -c "/tmp/hostroot/sbin/ifconfig >/tmp/hostroot/tmp/ifconfig.log"
+#docker service create --name ti --network infinit --restart-max-attempts 1 \
+#--mode global ubuntu sh -c "/tmp/hostroot/sbin/ifconfig >/tmp/hostroot/tmp/ifconfig.log"
