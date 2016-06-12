@@ -1,0 +1,179 @@
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+<script src='http://www.nottale.net/viz.js'></script>
+
+<style type="text/css">
+body{padding: 3em; }
+
+#menu * { 
+    padding:0; 
+    margin: 0; 
+    font: 12px georgia; 
+    list-style-type:none;}
+
+#menu { 
+    margin-top: 0px;
+    float: left;
+    line-height: 10px; 
+    left: 200px;}
+
+#menu a { 
+    display: block; 
+    text-decoration: none; 
+    color: #3B5330;}
+
+#menu a:hover { background: #B0BD97;}
+
+#menu ul li ul li a:hover { 
+    background: #ECF1E7; 
+    padding-left:9px;
+    border-left: solid 1px #000;}
+
+#menu ul li ul li {
+    width: 140px; 
+    border: none; 
+    color: #B0BD97;  
+    padding-top: 3px; 
+    padding-bottom:3px; 
+    padding-left: 3px; 
+    padding-right: 3px; 
+    background: #B0BD97;}
+
+#menu ul li ul li a { 
+    font: 11px arial; 
+    font-weight:normal; 
+    font-variant: small-caps; 
+    padding-top:3px; 
+    padding-bottom:3px;}
+
+#menu ul li {
+    float: left; 
+    width: 146px; 
+    font-weight: bold; 
+    border-top: solid 1px #283923; 
+    border-bottom: solid 1px #283923; 
+    background: #979E71;}
+
+#menu ul li a { 
+    font-weight: bold;
+    padding: 15px 10px;}
+
+#menu li{ 
+    position:relative; 
+    float:left;}
+
+#menu ul li ul, #menu:hover ul li ul, #menu:hover ul li:hover ul li ul{ 
+    display:none;
+    list-style-type:none; 
+    width: 140px;}
+
+#menu:hover ul, #menu:hover ul li:hover ul, #menu:hover ul li:hover ul li:hover ul { 
+    display:block;}
+
+#menu:hover ul li:hover ul li:hover ul { 
+    position: absolute;
+    margin-left: 145px;
+    margin-top: -22px;
+    font: 10px;}
+
+#menu:hover ul li:hover ul { 
+    position: absolute;
+    margin-top: 1px;
+    font: 10px;}
+
+
+</style>
+
+
+</head>
+<body>
+<script language='javascript'>
+targetNode = null;
+function sendit()
+{
+  data = document.getElementById('in').value;
+  document.getElementById('in').value = '';
+  console.log(data);
+  sendData(data);
+}
+function sendData(data)
+{
+  $.ajax('/update', {
+      'method': 'POST',
+      'data': {'data': data},
+      'error': function(x, err, ex) { console.log(err);},
+      'success': function(d, stat, x) { getit();}
+  });
+}
+function getit()
+{
+  $.ajax('/dotfile', {
+      'success': function(d, stat, x) {
+      $('#dot').text(d);
+      var svg = Viz(d, "svg");
+      //console.log(svg);
+      $('#svg').html(svg);
+      processit();
+      },
+      'error': function(x, err, ex) { console.log(err);}
+  });
+}
+
+function processit()
+{
+  svg = $('#svg')[0].children[0];
+  $('.node').click(function(ev) {
+      console.log(ev.currentTarget);
+      targetNode = ev.currentTarget;
+      mouseX=ev.pageX;
+      mouseY=ev.pageY;
+      $('#menu').css({position:"absolute",top:mouseY,left:mouseX});
+      $('#menu').show();
+  });
+}
+
+function setColor(color)
+{
+  $('#menu').hide();
+  var name = targetNode.children[2].textContent;
+  sendData(name + " color " + color);
+}
+
+function setShape(shape)
+{
+  $('#menu').hide();
+  var name = targetNode.children[2].textContent;
+  sendData(name + " shape " + shape);
+}
+
+setInterval(function() { getit();}, 2000);
+
+</script>
+<form onsubmit="sendit()" action="javascript:void(0)">
+<input type='text' name='in' id='in' />
+<input type='button' name='send' onclick='sendit()'/>
+<input type='button' name='get' onclick='getit()'/>
+</form>
+<div id='dot'></div>
+<div id='svg'></div>
+<div id="menu">
+<ul>
+<li>color
+<ul>
+<li> <a href='#' onClick='setColor("red")'>red  </a></li>
+<li> <a href='#' onClick='setColor("black")'>black</a></li>
+<li> <a href='#' onClick='setColor("green")'>green</a></li>
+</ul>
+</li>
+<li>shape
+<ul>
+<li> <a href='#' onClick='setShape("circle")'>circle  </a></li>
+<li> <a href='#' onClick='setShape("square")'>square</a></li>
+<li> <a href='#' onClick='setShape("elipse")'>elipse</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</body>
+</html>
