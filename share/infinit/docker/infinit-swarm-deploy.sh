@@ -133,12 +133,27 @@ docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ub
 
 
 # install image for test service
-#id=$(docker load -q < grapheditor.tgz | cut -d: -f 3)
-#docker tag $id grapheditor:latest
-#for n in $other_nodes; do
-#  DOCKER_HOST=$n:2375 docker load < grapheditor.tgz
-#  DOCKER_HOST=$n:2375 docker tag $id grapheditor:latest
-#done
+id=$(docker load -q < grapheditor.tgz | cut -d: -f 3)
+docker tag $id grapheditor:latest
+for n in $other_nodes; do
+  DOCKER_HOST=$n:2375 docker load < grapheditor.tgz
+  DOCKER_HOST=$n:2375 docker tag $id grapheditor:latest
+done
+# start once without infinit backed volume
+docker service create --name gen --mode global --restart-max-attempts 1 --publish 8081 grapheditor
+
+for n in $other_nodes; do DOCKER_HOST=$n:2375 docker volume ls ; done
+
+# start again with infinit volume backend
+#docker service create --name ge --mode global --restart-max-attempts 1 --mount type=volume,source=default_user/default_volume,target=/tmp/gw,writable=true --publish 8081 grapheditor
+#mounts in services is broken, workaround
+# force a mount on all nodes
+for n in $other_nodes; do
+  DOCKER_HOST=$n:2375 docker run -d --volume-driver infinit -v default_user/default_volume:/unused ubuntu sleep 1000d
+done
+# hijack the mount with a bind
+docker service create --name geinf --mode global --restart-max-attempts 1 --publish 8081 \
+  grapheditor bash -c "mkdir /tmp/gw; mount -o bind \$(mount | grep dev/fuse |cut '-d ' -f 3) /tmp/gw && cd /root && python3 graphed.py"
 
 
 # TEST ME WITH:
@@ -183,6 +198,6 @@ docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ub
 # docker service create --name test --restart-max-attempts 1 --mode global --mount source=/var,target=/tmp/var,writable=true,type=bind,propagation=shared ubuntu bash -c 'ls /tmp/var > /tmp/hostroot/tmp/ls.log'
 
 # start grapheditor, no infinit
-# docker service create --name gen --network canard --mode global --restart-max-attempts 1 --publish 8081 grapheditor
+# docker service create --name gen --mode global --restart-max-attempts 1 --publish 8081 grapheditor
 # graphed with infinit
 # docker service create --name ge --mode global --restart-max-attempts 1 --mount type=volume,source=default_user/default_volume,target=/tmp/gw,writable=true --publish 8081 grapheditor
