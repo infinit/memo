@@ -564,7 +564,7 @@ MountManager::create_volume(std::string const& name,
   mo.fetch = true;
   mo.push = true;
   mo.as = username;
-  mo.cache = true;
+  mo.cache = !optional(options, "nocache");;
   std::string qname(name);
   if (qname.find("/") == qname.npos)
     qname = *username + "/" + qname;
