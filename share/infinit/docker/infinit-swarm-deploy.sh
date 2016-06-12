@@ -120,7 +120,7 @@ docker volume ls
 #create a default volume, on this host, so our running infinit-daemon has
 #the storage
 
-while ! docker volume create --driver infinit --name default_volume@$RANDOM$RANDOM ; do
+while ! docker volume create --driver infinit --name default_volume@$RANDOM$RANDOM -o nocache; do
   echo "Failed to create volume, waiting for plugin..."
   sleep 1
 done
@@ -173,3 +173,5 @@ docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ub
 #test IP attrib
 #docker service create --name ti --network infinit --restart-max-attempts 1 \
 #--mode global ubuntu sh -c "/tmp/hostroot/sbin/ifconfig >/tmp/hostroot/tmp/ifconfig.log"
+#test service mount
+# docker service create --name test --restart-max-attempts 1 --mode global --mount source=/var,target=/tmp/var,writable=true,type=bind,propagation=shared ubuntu bash -c 'ls /tmp/var > /tmp/hostroot/tmp/ls.log'
