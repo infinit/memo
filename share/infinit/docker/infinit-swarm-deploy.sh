@@ -132,7 +132,13 @@ docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ub
 
 
 
-
+# install image for test service
+#id=$(docker load -q < grapheditor.tgz | cut -d: -f 3)
+#docker tag $id grapheditor:latest
+#for n in $other_nodes; do
+#  DOCKER_HOST=$n:2375 docker load < grapheditor.tgz
+#  DOCKER_HOST=$n:2375 docker tag $id grapheditor:latest
+#done
 
 
 # TEST ME WITH:
@@ -175,3 +181,8 @@ docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ub
 #--mode global ubuntu sh -c "/tmp/hostroot/sbin/ifconfig >/tmp/hostroot/tmp/ifconfig.log"
 #test service mount
 # docker service create --name test --restart-max-attempts 1 --mode global --mount source=/var,target=/tmp/var,writable=true,type=bind,propagation=shared ubuntu bash -c 'ls /tmp/var > /tmp/hostroot/tmp/ls.log'
+
+# start grapheditor, no infinit
+# docker service create --name gen --network canard --mode global --restart-max-attempts 1 --publish 8081 grapheditor
+# graphed with infinit
+# docker service create --name ge --mode global --restart-max-attempts 1 --mount type=volume,source=default_user/default_volume,target=/tmp/gw,writable=true --publish 8081 grapheditor
