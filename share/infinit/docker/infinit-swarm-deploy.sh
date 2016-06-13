@@ -11,28 +11,12 @@ if test "$1" = "kill"; then
   exit 0
 fi
 
-if test -z "$image"; then
-  image=docker-image-infinit.tgz
+if ! test -z "$1"; then
+  expect=$(( $1 + 1))
+  while test $(docker node ls -q |wc -l) != $expect; do
+    echo "Waiting for $expect nodes..."
+  done
 fi
-
-if echo $image |grep http; then
-  wget -O docker-image-infinit.tgz $image
-  image=docker-image-infinit.tgz
-fi
-
-if test -z "$beyond_image"; then
-  beyond_image=docker-image-beyond.tgz
-fi
-
-if echo $beyond_image |grep http; then
-  wget -O docker-image-beyond.tgz $beyond_image
-  beyond_image=docker-image-beyond.tgz
-fi
-
-
-docker import $image infinit:latest
-docker import $beyond_image beyond:latest
-
 
 other_nodes=$(docker node ls |grep -i ready |grep -v '*' | awk {'print $2'})
 self_node=$(docker node ls |grep '*' | awk '{print $3}')
@@ -44,11 +28,9 @@ mount_host_root=
 
 docker run --privileged --rm $mount_host_root ubuntu nsenter --mount=/tmp/hostroot/proc/1/ns/mnt mount --make-shared /
 
-# import infinit image on each node, and set / to shared mount
+#  set / to shared mount
 # WARNING: this requires nodes hostname to actually resolve!
 for node in $other_nodes; do
-  DOCKER_HOST=$node:2375 docker import $image infinit:latest
-  DOCKER_HOST=$node:2375 docker import $beyond_image beyond:latest
   DOCKER_HOST=$node:2375 docker run --privileged --rm $mount_host_root ubuntu nsenter --mount=/tmp/hostroot/proc/1/ns/mnt mount --make-shared /
 done
 
@@ -88,7 +70,11 @@ docker service create --name infinit_init --network $network \
 
 
 #FIXME: poll task count to know when it ends
-sleep 20
+sleep 5
+while test $(docker service tasks infinit_init | wc -l) != 1; do
+  sleep 1
+done
+
 docker service rm infinit_init
 
 tcp=
@@ -129,19 +115,10 @@ done
 docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ubuntu sleep 30000d
 
 
-
-
-
-# install image for test service
-id=$(docker load -q < grapheditor.tgz | cut -d: -f 3)
-docker tag $id grapheditor:latest
-for n in $other_nodes; do
-  DOCKER_HOST=$n:2375 docker load < grapheditor.tgz
-  DOCKER_HOST=$n:2375 docker tag $id grapheditor:latest
-done
 # start once without infinit backed volume
 docker service create --name gen --mode global --restart-max-attempts 1 --publish 8081 grapheditor
 
+# activate volume fetcher on each node to make docker aware of default_volume
 for n in $other_nodes; do DOCKER_HOST=$n:2375 docker volume ls ; done
 
 # start again with infinit volume backend
@@ -156,10 +133,7 @@ docker service create --name geinf --mode global --restart-max-attempts 1 --publ
   grapheditor bash -c "mkdir /tmp/gw; mount -o bind \$(mount | grep dev/fuse |cut '-d ' -f 3) /tmp/gw && cd /root && python3 graphed.py"
 
 
-# TEST ME WITH:
-# DOCKER_HOST=ip-192-168-34-67.us-west-2.compute.internal:2375 docker run -i -t --rm -v cluster_user/cluster_volume:/shared ubuntu /bin/bash
-# write to shared, exit and/or start on an other node, files are shared!
-
+# hack to force a mount by posting directly to the driver
 # apt-get update; apt-get install socat;
 # (echo -e 'POST /VolumeDriver.Mount HTTP/1.0\r\nContent-Length: 39\r\nContent-Type: text/json\r\n\r\n{"Name": "default_user/default_volume"}\r\n' ; sleep 2) | socat stdio unix-client:/tmp/realroot/run/docker/plugins/infinit.sock | | cut '-d"' -f 8 > /tmp/mountpoint
 
@@ -173,12 +147,6 @@ docker service create --name geinf --mode global --restart-max-attempts 1 --publ
 #    storage_host=$node
 #  fi
 #done
-#storage_host=$(docker node ls |grep READY |grep -v '*' | awk {'print $2'} | tail -n 1)
-#DOCKER_HOST=$storage_host:2375 docker run -d -p 51234:51234 -p 51234:51234/udp infinit /bin/bash /usr/bin/infinit-static.sh '' enable_storage
-
-# get correct host to use
-#manager_host=$(docker node ls |grep '*' | awk '{print $3}')
-
 
 # Test network connectivity with a ping
 # docker service create --name ping --restart-max-attempts 1 --mode global --network infinit ubuntu sh -c '/tmp/hostroot/bin/ping -c 4  beyond.1.1vc1x3tzofg82kbh47u9ia6a8 > /tmp/hostroot/tmp/ping.log'
@@ -196,8 +164,3 @@ docker service create --name geinf --mode global --restart-max-attempts 1 --publ
 #--mode global ubuntu sh -c "/tmp/hostroot/sbin/ifconfig >/tmp/hostroot/tmp/ifconfig.log"
 #test service mount
 # docker service create --name test --restart-max-attempts 1 --mode global --mount source=/var,target=/tmp/var,writable=true,type=bind,propagation=shared ubuntu bash -c 'ls /tmp/var > /tmp/hostroot/tmp/ls.log'
-
-# start grapheditor, no infinit
-# docker service create --name gen --mode global --restart-max-attempts 1 --publish 8081 grapheditor
-# graphed with infinit
-# docker service create --name ge --mode global --restart-max-attempts 1 --mount type=volume,source=default_user/default_volume,target=/tmp/gw,writable=true --publish 8081 grapheditor

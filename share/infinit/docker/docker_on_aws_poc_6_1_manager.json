@@ -206,7 +206,7 @@
                 "HVMG2": "NOT_SUPPORTED"
             },
             "us-west-2": {
-                "HVM64": "ami-0432c864",
+                "HVM64": "ami-160ef476",
                 "HVMG2": "NOT_SUPPORTED"
             },
             "us-east-1": {
@@ -417,7 +417,10 @@
                                 "export PRIVATE_IP=`wget -qO- http://169.254.169.254/latest/meta-data/local-ipv4`\n",
                                 "sleep 10\n",
                                 "docker swarm init --auto-accept manager --auto-accept worker --listen-addr $PRIVATE_IP:4500\n",
-                                "sleep 5\n"
+                                "sleep 5\n",
+                                "/home/ubuntu/infinit-swarm-deploy.sh ",
+                                {"Ref": "ClusterSize"},
+                                " 2>&1 | tee /tmp/deploy.log &\n"
                             ]
                         ]
                     }
