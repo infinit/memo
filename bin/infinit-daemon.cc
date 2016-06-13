@@ -329,6 +329,7 @@ MountManager::start(std::string const& name, infinit::MountOptions opts,
   arguments.push_back(volume.name);
   std::unordered_map<std::string, std::string> env;
   m.options.to_commandline(arguments, env);
+  arguments.push_back("--wait-if-no-storage");
   for (auto const& host: _advertise_host)
   {
     arguments.push_back("--advertise-host");
