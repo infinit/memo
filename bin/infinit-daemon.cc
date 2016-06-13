@@ -790,7 +790,7 @@ COMMAND(status)
     std::cout << "Stopped" << std::endl;
 }
 
-COMMAND(acquire)
+COMMAND(fetch)
 {
   acquire_volume(mandatory(args, "name"));
 }
@@ -1084,20 +1084,20 @@ main(int argc, char** argv)
   using boost::program_options::bool_switch;
   Modes modes {
     {
-      "acquire",
-      "Acquire volume data",
-      &acquire,
-      "",
+      "fetch",
+      elle::sprintf("Fetch volume and its dependencies from %s", beyond(true)),
+      &fetch,
+      "--name VOLUME",
       {
-        {"name", value<std::string>(), "volume name"},
-      }
+        { "name,n", value<std::string>(), "volume name" },
+      },
     },
     {
       "status",
       "Query daemon status",
       &status,
       "",
-      {}
+      {},
     },
     {
       "start",
@@ -1105,29 +1105,39 @@ main(int argc, char** argv)
       &start,
       "",
       {
-        { "foreground,f", bool_switch(), "do not daemonize" },
-        { "log-level,l", value<std::string>(), "Log level to start volumes with"},
-        { "log-path,d", value<std::string>(), "Store volume logs in given path"},
-        { "docker-socket-port", value<std::string>(), "TCP port to use"},
-        { "docker-socket-tcp", bool_switch(), "Use a TCP socket for docker plugin"},
-        { "docker-socket-path", value<std::string>(), "Path for plugin socket (/run/docker/plugins)"},
-        { "docker-descriptor-path", value<std::string>(), "Path for plugin descriptor (/usr/lib/docker/plugins)"},
-        { "mount-root", value<std::string>(), "Default root path of all mounts (/tmp)"},
-        { "docker-mount-substitute", value<std::string>(), "[from:to|prefix] : Substitute 'from' to 'to' in advertised path"},
-        { "default-user", value<std::string>(), "Default user for volume creation"},
-        { "default-network", value<std::string>(), "Default netwwork for volume creation"},
+        { "foreground,f", bool_switch(), "Do not daemonize" },
+        { "log-level,l", value<std::string>(),
+          "Log level to start volumes with (default: LOG)" },
+        { "log-path,d", value<std::string>(),
+          "Store volume logs in given path" },
+        { "docker-socket-port", value<std::string>(),
+          "TCP port to use to communicate with Docker" },
+        { "docker-socket-tcp", bool_switch(),
+          "Use a TCP socket for docker plugin" },
+        { "docker-socket-path", value<std::string>(),
+          "Path for plugin socket\n(default: /run/docker/plugins)" },
+        { "docker-descriptor-path", value<std::string>(),
+          "Path to add plugin descriptor\n(default: /usr/lib/docker/plugins)" },
+        { "mount-root", value<std::string>(),
+          "Default root path for all mounts (default: /tmp)" },
+        { "docker-mount-substitute", value<std::string>(),
+          "[from:to|prefix] : Substitute 'from' to 'to' in advertised path" },
+        { "default-user", value<std::string>(),
+          "Default user for volume creation" },
+        { "default-network", value<std::string>(),
+          "Default network for volume creation" },
         { "login-user", value<std::vector<std::string>>()->multitoken(),
-            "login with selected user(s), of form 'user:password'"},
+          "Login with selected user(s), of form 'user:password'" },
         { "advertise-host", value<std::vector<std::string>>()->multitoken(),
-            "advertise given hostname as an extra address"},
-      }
+          "Advertise given hostname as an extra address" },
+      },
     },
     {
       "stop",
       "Stop daemon",
       &stop,
       "",
-      {}
+      {},
     },
   };
   return infinit::main("Infinit daemon", modes, argc, argv);
