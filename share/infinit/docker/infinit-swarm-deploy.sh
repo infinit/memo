@@ -96,7 +96,7 @@ docker service create --name infinit --network $network --mode global \
     -e INFINIT_HTTP_NO_KEEPALIVE=1 \
     $mount_host_root_shared \
     infinit \
-    bash -c "sleep \$(( \$RANDOM / 2000)).\$RANDOM; infinit-daemon --start --foreground --docker-socket-path /tmp/hostroot/run/docker/plugins --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins --mount-root /tmp/hostroot/tmp/ --docker-mount-substitute hostroot/tmp: --default-user default_user --default-network default_network --login-user default_user:docker $tcp $log"
+    bash -c "sleep \$(( \$RANDOM / 2000)).\$RANDOM; infinit-daemon --start --foreground --docker-socket-path /tmp/hostroot/run/docker/plugins --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins --mount-root /tmp/hostroot/tmp/ --docker-mount-substitute hostroot/tmp: --default-user default_user --default-network default_network --login-user default_user:docker --mount default_user/default_volume $tcp $log"
 
 sleep 20
 
@@ -112,25 +112,30 @@ while ! docker volume create --driver infinit --name default_volume@$RANDOM$RAND
 done
 
 # run the network to put storage online
-docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ubuntu sleep 30000d
+# NOT NEEDED, automounter will do it
+#docker run  -d --volume-driver infinit -v default_user/default_volume:/unused ubuntu sleep 30000d
 
 
 # start once without infinit backed volume
 docker service create --name gen --mode global --restart-max-attempts 1 --publish 8081 grapheditor
 
 # activate volume fetcher on each node to make docker aware of default_volume
-for n in $other_nodes; do DOCKER_HOST=$n:2375 docker volume ls ; done
+# NOT NEEDE, automounter
+# for n in $other_nodes; do DOCKER_HOST=$n:2375 docker volume ls ; done
 
 # start again with infinit volume backend
 #docker service create --name ge --mode global --restart-max-attempts 1 --mount type=volume,source=default_user/default_volume,target=/tmp/gw,writable=true --publish 8081 grapheditor
 #mounts in services is broken, workaround
-# force a mount on all nodes
-for n in $other_nodes; do
-  DOCKER_HOST=$n:2375 docker run -d --volume-driver infinit -v default_user/default_volume:/unused ubuntu sleep 1000d
-done
+# NOT NEEDED, automounter force a mount on all nodes
+#for n in $other_nodes; do
+#  DOCKER_HOST=$n:2375 docker run -d --volume-driver infinit -v default_user/default_volume:/unused ubuntu sleep 1000d
+#done
+
 # hijack the mount with a bind
+# since said mount is coming from infinit-daemon auto-mount, we need to wait for
+# it to succeed
 docker service create --name geinf --mode global --restart-max-attempts 1 --publish 8081 \
-  grapheditor bash -c "mkdir /tmp/gw; mount -o bind \$(mount | grep dev/fuse |cut '-d ' -f 3) /tmp/gw && cd /root && python3 graphed.py"
+  grapheditor bash -c "mkdir /tmp/gw; while ! mount |grep default_user_default_volume; do sleep 2; done; mount -o bind \$(mount | grep default_user_default_volume |cut '-d ' -f 3) /tmp/gw && cd /root && python3 graphed.py >/tmp/hostroot/tmp/graphed.log 2>&1"
 
 
 # hack to force a mount by posting directly to the driver
