@@ -1119,7 +1119,7 @@ main(int argc, char** argv)
         { "docker-descriptor-path", value<std::string>(),
           "Path to add plugin descriptor\n(default: /usr/lib/docker/plugins)" },
         { "mount-root", value<std::string>(),
-          "Default root path for all mounts (default: /tmp)" },
+          "Default root path for all mounts\n(default: /tmp)" },
         { "docker-mount-substitute", value<std::string>(),
           "[from:to|prefix] : Substitute 'from' to 'to' in advertised path" },
         { "default-user", value<std::string>(),
