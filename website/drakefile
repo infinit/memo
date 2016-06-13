@@ -488,6 +488,10 @@ def configure(
     'resources/images/icons/on-premise-hub@2x.png',
     'resources/images/icons/consulting.png',
     'resources/images/icons/consulting@2x.png',
+    'resources/images/icons/cluster.png',
+    'resources/images/icons/cluster@2x.png',
+    'resources/images/icons/quota.png',
+    'resources/images/icons/quota@2x.png',
   )
 
   resources = resources + resources_icons
