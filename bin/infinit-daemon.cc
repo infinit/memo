@@ -586,6 +586,7 @@ public:
                boost::filesystem::path socket_path,
                boost::filesystem::path descriptor_path);
   void uninstall();
+  std::string mount(std::string const& name);
 private:
   MountManager& _manager;
   std::unique_ptr<reactor::network::HttpServer> _server;
@@ -798,6 +799,32 @@ COMMAND(fetch)
   acquire_volume(mandatory(args, "name"));
 }
 
+static
+void
+auto_mounter(std::vector<std::string> mounts,
+             DockerVolumePlugin& dvp)
+{
+  ELLE_TRACE("entering automounter");
+  while (!mounts.empty())
+  {
+    for (unsigned int i=0; i<mounts.size(); ++i)
+    try
+    {
+      dvp.mount(mounts[i]);
+      mounts[i] = mounts[mounts.size()-1];
+      mounts.pop_back();
+      --i;
+    }
+    catch (elle::Error const& e)
+    {
+      ELLE_TRACE("Mount of %s failed: %s", mounts[i], e);
+    }
+    if (!mounts.empty())
+      reactor::sleep(20_sec);
+  }
+  ELLE_TRACE("Exiting automounter");
+}
+
 template<typename T = std::string>
 T
 with_default(boost::program_options::variables_map const& vm,
@@ -858,6 +885,12 @@ COMMAND(start)
   auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
   if (advertise)
     manager.advertise_host(*advertise);
+  std::unique_ptr<reactor::Thread> mounter;
+  auto mount = optional<std::vector<std::string>>(args, "mount");
+  if (mount)
+    mounter = elle::make_unique<reactor::Thread>("mounter",
+      [&] {auto_mounter(*mount, dvp);});
+  elle::SafeFinally terminator([&] { if (mounter) mounter->terminate_now();});
   elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
   {
     while (true)
@@ -906,6 +939,23 @@ DockerVolumePlugin::~DockerVolumePlugin()
 void
 DockerVolumePlugin::uninstall()
 {
+}
+
+std::string
+DockerVolumePlugin::mount(std::string const& name)
+{
+  auto it = _mount_count.find(name);
+  if (it != _mount_count.end())
+  {
+    ELLE_TRACE("Already mounted");
+    ++it->second;
+  }
+  else
+  {
+    _manager.start(name, {}, true, true);
+    _mount_count.insert(std::make_pair(name, 1));
+  }
+  return _manager.mountpoint(name);
 }
 
 void
@@ -1019,19 +1069,9 @@ DockerVolumePlugin::install(bool tcp,
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       auto name = boost::any_cast<std::string>(json.at("Name"));
-      auto it = _mount_count.find(name);
-      if (it != _mount_count.end())
-      {
-        ELLE_TRACE("Already mounted");
-        ++it->second;
-      }
-      else
-      {
-        _manager.start(name, {}, true, true);
-        _mount_count.insert(std::make_pair(name, 1));
-      }
+      std::string mountpoint = mount(name);
       std::string res = "{\"Err\": \"\", \"Mountpoint\": \""
-          + _manager.mountpoint(name) +"\"}";
+          + mountpoint +"\"}";
       ELLE_TRACE("reply: %s", res);
       return res;
     });
@@ -1133,7 +1173,9 @@ main(int argc, char** argv)
           "Login with selected user(s), of form 'user:password'" },
         { "advertise-host", value<std::vector<std::string>>()->multitoken(),
           "Advertise given hostname as an extra address" },
-      },
+        { "mount,m", value<std::vector<std::string>>()->multitoken(),
+          "mount given volumes on startup, keep trying on error" }
+      }
     },
     {
       "stop",
