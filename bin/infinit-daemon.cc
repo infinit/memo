@@ -316,9 +316,12 @@ MountManager::start(std::string const& name, infinit::MountOptions opts,
   }
   volume.mount_options.merge(opts);
   Mount m{nullptr, volume.mount_options};
+  std::string mount_prefix(name + "-");
+  boost::replace_all(mount_prefix, "/", "_");
   if (force_mount && !m.options.mountpoint)
     m.options.mountpoint =
-    (this->_mount_root / boost::filesystem::unique_path()).string();
+    (this->_mount_root /
+      (mount_prefix + boost::filesystem::unique_path().string())).string();
   std::vector<std::string> arguments;
   static const auto root = elle::system::self_path().parent_path();
   arguments.push_back((root / "infinit-volume").string());
