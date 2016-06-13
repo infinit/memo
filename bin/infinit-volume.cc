@@ -381,8 +381,17 @@ COMMAND(run)
           reactor::scheduler().terminate();
         });
   }
+  bool has_storage = !! network.model->storage;
   if (mo.fetch)
-    beyond_fetch_endpoints(network, eps);
+  {
+    while(true)
+    {
+      beyond_fetch_endpoints(network, eps);
+      if (has_storage || !flag(args, "wait-if-no-storage") || !eps.empty())
+        break;
+      reactor::sleep(5_sec);
+    }
+  }
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
@@ -1039,6 +1048,9 @@ main(int argc, char** argv)
       "alias for --fetch-endpoints --push-endpoints" },
     { "advertise-host", value<std::vector<std::string>>()->multitoken(),
       "advertise extra endpoint using given host"
+    },
+    { "wait-if-no-storage", bool_switch(),
+      "Wait for at least one peer from fetch if we do not provide storage"
     },
     option_endpoint_file,
     option_port_file,
