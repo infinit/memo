@@ -96,7 +96,7 @@ docker service create --name infinit --network $network --mode global \
     -e INFINIT_HTTP_NO_KEEPALIVE=1 \
     $mount_host_root_shared \
     infinit \
-    bash -c "sleep \$(( \$RANDOM / 2000)).\$RANDOM; infinit-daemon --start --foreground --docker-socket-path /tmp/hostroot/run/docker/plugins --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins --mount-root /tmp/hostroot/tmp/ --docker-mount-substitute hostroot/tmp: --default-user default_user --default-network default_network --login-user default_user:docker --mount default_user/default_volume $tcp $log"
+    bash -c "sleep \$(( \$RANDOM / 2000)).\$RANDOM; infinit-daemon --start --foreground --docker-socket-path /tmp/hostroot/run/docker/plugins --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins --mount-root /tmp/hostroot/tmp/ --docker-mount-substitute hostroot/tmp: --as default_user --default-network default_network --login-user default_user:docker --mount default_user/default_volume $tcp $log"
 
 sleep 20
 

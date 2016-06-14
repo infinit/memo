@@ -327,6 +327,8 @@ MountManager::start(std::string const& name, infinit::MountOptions opts,
   arguments.push_back((root / "infinit-volume").string());
   arguments.push_back("--run");
   arguments.push_back(volume.name);
+  arguments.push_back("--as");
+  arguments.push_back(this->default_user());
   std::unordered_map<std::string, std::string> env;
   m.options.to_commandline(arguments, env);
   arguments.push_back("--wait-if-no-storage");
@@ -877,9 +879,7 @@ COMMAND(start)
   manager.log_level(loglevel);
   auto logpath = optional(args, "log-path");
   manager.log_path(logpath);
-  auto default_user = optional(args, "default-user");
-  if (default_user)
-    manager.default_user(*default_user);
+  manager.default_user(self_user(ifnt, args).name);
   auto default_network = optional(args, "default-network");
   if (default_network)
     manager.default_network(*default_network);
@@ -1166,8 +1166,6 @@ main(int argc, char** argv)
           "Default root path for all mounts\n(default: /tmp)" },
         { "docker-mount-substitute", value<std::string>(),
           "[from:to|prefix] : Substitute 'from' to 'to' in advertised path" },
-        { "default-user", value<std::string>(),
-          "Default user for volume creation" },
         { "default-network", value<std::string>(),
           "Default network for volume creation" },
         { "login-user", value<std::vector<std::string>>()->multitoken(),
