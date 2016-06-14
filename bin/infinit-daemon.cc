@@ -190,6 +190,8 @@ public:
   void
   create_volume(std::string const& name,
                 elle::json::Object const& args);
+  void
+  delete_volume(std::string const& name);
   infinit::Network
   create_network(elle::json::Object const& options,
                  infinit::User const& owner);
@@ -578,6 +580,23 @@ MountManager::create_volume(std::string const& name,
   ifnt.volume_save(volume);
   report_created("volume", qname);
   beyond_push("volume", qname, volume, user);
+}
+
+void
+MountManager::delete_volume(std::string const& name)
+{
+  auto owner = ifnt.user_get(this->default_user());
+  auto qname = ifnt.qualified_name(name, owner);
+  auto path = ifnt._volume_path(qname);
+  auto volume = ifnt.volume_get(qname);
+  beyond_delete("volume", qname, owner, true);
+  if (boost::filesystem::remove(path))
+    report_action("deleted", "volume", name, std::string("locally"));
+  else
+  {
+    throw elle::Error(
+      elle::sprintf("File for volume could not be deleted: %s", path));
+  }
 }
 
 class DockerVolumePlugin
@@ -1052,8 +1071,25 @@ DockerVolumePlugin::install(bool tcp,
       //return "{\"Err\": \"Use 'infinit-volume --create'\"}";
     });
   _server->register_route("/VolumeDriver.Remove", reactor::http::Method::POST,
-    [] ROUTE_SIG {
-      return "{\"Err\": \"Use 'infinit-volume --delete'\"}";
+    [this] ROUTE_SIG {
+      // Reverse the Create process.
+      auto stream = elle::IOStream(data.istreambuf());
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+      std::string err;
+      try
+      {
+        auto name = optional(json, "Name");
+        if (!name)
+          throw elle::Error("Missing 'Name' argument");
+        this->_manager.delete_volume(name.get());
+      }
+      catch (elle::Error const& e)
+      {
+        err = elle::sprintf("%s", e);
+        ELLE_LOG("%s\n%s", e, e.backtrace());
+      }
+      boost::replace_all(err, "\"", "'");
+      return "{\"Err\": \"" + err + "\"}";
     });
   _server->register_route("/VolumeDriver.Get", reactor::http::Method::POST,
     [this] ROUTE_SIG {
