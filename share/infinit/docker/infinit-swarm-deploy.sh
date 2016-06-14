@@ -22,18 +22,8 @@ other_nodes=$(docker node ls |grep -i ready |grep -v '*' | awk {'print $2'})
 self_node=$(docker node ls |grep '*' | awk '{print $3}')
 self_id=$(docker node ls |grep '*' | awk '{print $1}')
 
-# we hardcoded that one into docker
-mount_host_root=
-#mount_host_root="-v /:/tmp/hostroot"
-
-docker run --privileged --rm $mount_host_root ubuntu nsenter --mount=/tmp/hostroot/proc/1/ns/mnt mount --make-shared /
-
-#  set / to shared mount
-# WARNING: this requires nodes hostname to actually resolve!
-for node in $other_nodes; do
-  DOCKER_HOST=$node:2375 docker run --privileged --rm $mount_host_root ubuntu nsenter --mount=/tmp/hostroot/proc/1/ns/mnt mount --make-shared /
-done
-
+log_path=/var/log/infinit
+mkdir $log_path
 network=infinit
 # create our overlay network
 docker network create --driver overlay --subnet 75.1.0.0/16 infinit
@@ -42,8 +32,12 @@ docker network create --driver overlay --subnet 75.1.0.0/16 infinit
 # start beyond
 #BROKEN constraint="--constraint node.id==$self_id"
 constraint=
-docker service create --name beyond --restart-max-attempts 1 --network $network $constraint beyond \
-  bash -c "/usr/bin/beyond --host 0.0.0.0 >>/tmp/hostroot/tmp/beyond.log 2>&1"
+docker service create --name beyond \
+  --restart-max-attempts 1 \
+  --network $network $constraint \
+  --mount type=bind,source=$log_path,target=/tmp/infinit-logs,writable=true \
+  beyond \
+  bash -c "/usr/bin/beyond --host 0.0.0.0 >>/tmp/infinit-logs/beyond.log 2>&1"
 
 sleep 10
 # access beyond through hostname
@@ -65,11 +59,11 @@ docker service create --name infinit_init --network $network \
   -e ELLE_LOG_TIME=1 \
   -e ELLE_LOG_LEVEL=infinit-user:DEBUG \
   --restart-max-attempts 1 \
+  --mount type=bind,source=$log_path,target=/tmp/infinit-logs,writable=true \
   infinit \
-  sh -c 'infinit-user --create --name default_user --email none@none.com --fullname default --push --full --password docker >/tmp/hostroot/tmp/user_create.log 2>&1'
+  sh -c 'infinit-user --create --name default_user --email none@none.com --fullname default --push --full --password docker >/tmp/infinit-logs/user_create.log 2>&1'
 
 
-#FIXME: poll task count to know when it ends
 sleep 5
 while test $(docker service tasks infinit_init | wc -l) != 1; do
   sleep 1
@@ -84,17 +78,17 @@ tcp_fwd=
 log=
 log="--log-path /tmp/hostroot/tmp/ --log-level *model*:DEBUG,*filesys*:DEBUG,*over*:DEBUG"
 
-# HARDCODED IN DOCKER mount_host_root_shared="-v /:/tmp/hostroot:shared"
-mount_host_root_shared=
+
 # run the mountpoint manager service
-# beyond runs with a mono-request-at-a-time test serve so sleep a bit
+# FIXME beyond runs with a mono-request-at-a-time test serve so sleep a bit
+# FIXME finer-grained mount
 docker service create --name infinit --network $network --mode global \
     -e ELLE_LOG_LEVEL=infinit-daemon:DEBUG \
     -e ELLE_LOG_TIME=1 \
     -e ELLE_LOG_FILE=/tmp/hostroot/tmp/daemon.log \
     -e INFINIT_BEYOND=$beyond \
     -e INFINIT_HTTP_NO_KEEPALIVE=1 \
-    $mount_host_root_shared \
+    --mount type=bind,source=/,target=/tmp/hostroot,writable=true,bind-propagation=shared \
     infinit \
     bash -c "sleep \$(( \$RANDOM / 2000)).\$RANDOM; infinit-daemon --start --foreground --docker-socket-path /tmp/hostroot/run/docker/plugins --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins --mount-root /tmp/hostroot/tmp/ --docker-mount-substitute hostroot/tmp: --as default_user --default-network default_network --login-user default_user:docker --mount default_user/default_volume $tcp $log"
 
@@ -135,6 +129,7 @@ docker service create --name gen --mode global --restart-max-attempts 1 --publis
 # since said mount is coming from infinit-daemon auto-mount, we need to wait for
 # it to succeed
 docker service create --name geinf --mode global --restart-max-attempts 1 --publish 8081 \
+  --mount type=bind,source=/,target=/tmp/hostroot,writable=true,bind-propagation=shared \
   grapheditor bash -c "mkdir /tmp/gw; while ! mount |grep default_user_default_volume; do sleep 2; done; mount -o bind \$(mount | grep default_user_default_volume |cut '-d ' -f 3) /tmp/gw && cd /root && python3 graphed.py >/tmp/hostroot/tmp/graphed.log 2>&1"
 
 
