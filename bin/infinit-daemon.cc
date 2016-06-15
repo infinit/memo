@@ -329,8 +329,11 @@ MountManager::start(std::string const& name, infinit::MountOptions opts,
   arguments.push_back((root / "infinit-volume").string());
   arguments.push_back("--run");
   arguments.push_back(volume.name);
-  arguments.push_back("--as");
-  arguments.push_back(this->default_user());
+  if (!m.options.as)
+  {
+    arguments.push_back("--as");
+    arguments.push_back(this->default_user());
+  }
   std::unordered_map<std::string, std::string> env;
   m.options.to_commandline(arguments, env);
   arguments.push_back("--wait-if-no-storage");
