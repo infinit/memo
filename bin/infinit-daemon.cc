@@ -184,7 +184,7 @@ public:
   bool
   exists(std::string const& name);
   std::string
-  mountpoint(std::string const& name);
+  mountpoint(std::string const& name, bool ignore_subst=false);
   std::vector<std::string>
   list();
   void
@@ -227,14 +227,15 @@ MountManager::list()
 }
 
 std::string
-MountManager::mountpoint(std::string const& name)
+MountManager::mountpoint(std::string const& name, bool raw)
 {
   auto it = _mounts.find(name);
   if (it == _mounts.end())
     throw elle::Error("not mounted: " + name);
-  ELLE_ASSERT(it->second.options.mountpoint);
+  if (!it->second.options.mountpoint)
+    throw elle::Error("running without mountpoint: " + name);
   std::string pre = it->second.options.mountpoint.get();
-  if (!this->_mount_substitute.empty())
+  if (!raw && !this->_mount_substitute.empty())
   {
     auto sep = this->_mount_substitute.find(":");
     if (sep == std::string::npos)
@@ -793,7 +794,7 @@ process_command(elle::json::Object query, MountManager& manager)
         auto opts =
           command.deserialize<boost::optional<infinit::MountOptions>>("options");
         manager.start(volume, opts ? opts.get() : infinit::MountOptions(),
-                      false, true);
+                      true, true);
       }
       else if (op == "volume-stop")
       {
@@ -805,13 +806,27 @@ process_command(elle::json::Object query, MountManager& manager)
         auto volume = command.deserialize<std::string>("volume");
         manager.status(volume, response);
       }
+      else if (op ==  "volume-restart")
+      {
+        auto volume = command.deserialize<std::string>("volume");
+        infinit::MountOptions mo;
+        try
+        {
+          mo.mountpoint = manager.mountpoint(volume, true);
+        }
+        catch (elle::Error const&)
+        {}
+        manager.stop(volume);
+        reactor::sleep(5_sec);
+        manager.start(volume, mo, false, true);
+      }
       else
       {
         throw std::runtime_error(("unknown operation: " + op).c_str());
       }
       response.serialize("result", "Ok");
     }
-    catch (elle::Exception const& e)
+    catch (elle::Error const& e)
     {
       response.serialize("result", "Error");
       response.serialize("error", e.what());
@@ -1175,6 +1190,24 @@ DockerVolumePlugin::install(bool tcp,
     });
 }
 
+COMMAND(volume_start)
+{
+  auto name = mandatory(args, "name");
+  std::cout << daemon_command("{\"operation\": \"volume-start\", \"volume\": \"" + name +  "\"}");
+}
+
+COMMAND(volume_stop)
+{
+  auto name = mandatory(args, "name");
+  std::cout << daemon_command("{\"operation\": \"volume-stop\", \"volume\": \"" + name +  "\"}");
+}
+
+COMMAND(volume_restart)
+{
+  auto name = mandatory(args, "name");
+  std::cout << daemon_command("{\"operation\": \"volume-restart\", \"volume\": \"" + name +  "\"}");
+}
+
 int
 main(int argc, char** argv)
 {
@@ -1196,6 +1229,18 @@ main(int argc, char** argv)
       &status,
       "",
       {},
+    },
+    {
+      "volume-start", "Start a volume", &volume_start, "--name VOLUME",
+      {{ "name,n", value<std::string>(), "volume name"}},
+    },
+    {
+      "volume-stop", "Stop a volume", &volume_stop, "--name VOLUME",
+      {{ "name,n", value<std::string>(), "volume name"}},
+    },
+    {
+      "volume-restart", "Restart a volume", &volume_restart, "--name VOLUME",
+      {{ "name,n", value<std::string>(), "volume name"}},
     },
     {
       "start",
