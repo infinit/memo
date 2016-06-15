@@ -263,12 +263,12 @@ namespace infinit
       bool
       BaseACB<Block>::_admin_user(cryptography::rsa::PublicKey const& key) const
       {
-        for (auto const& k: this->doughnut()->admin_keys().r)
-          if (key == k)
-            return true;
-        for (auto const& k: this->doughnut()->admin_keys().w)
-          if (key == k)
-            return true;
+        auto const& r_keys = this->doughnut()->admin_keys().r;
+        if (std::find(r_keys.begin(), r_keys.end(), key) != r_keys.end())
+          return true;
+        auto const& w_keys = this->doughnut()->admin_keys().w;
+        if (std::find(w_keys.begin(), w_keys.end(), key) != w_keys.end())
+          return true;
         return false;
       }
 
@@ -277,12 +277,12 @@ namespace infinit
       BaseACB<Block>::_admin_group(
         cryptography::rsa::PublicKey const& key) const
       {
-        for (auto const& k: this->doughnut()->admin_keys().group_r)
-          if (key == k)
-            return true;
-        for (auto const& k: this->doughnut()->admin_keys().group_w)
-          if (key == k)
-            return true;
+        auto const& r_keys = this->doughnut()->admin_keys().group_r;
+        if (std::find(r_keys.begin(), r_keys.end(), key) != r_keys.end())
+          return true;
+        auto const& w_keys = this->doughnut()->admin_keys().group_w;
+        if (std::find(w_keys.begin(), w_keys.end(), key) != w_keys.end())
+          return true;
         return false;
       }
 
