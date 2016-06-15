@@ -88,6 +88,8 @@ docker service create --name infinit --network $network --mode global \
     -e ELLE_LOG_FILE=/tmp/hostroot/tmp/daemon.log \
     -e INFINIT_BEYOND=$beyond \
     -e INFINIT_HTTP_NO_KEEPALIVE=1 \
+    --mount type=bind,source=/tmp/infinit-root,target=/tmp/infinit-root,writable=true \
+    --mount type=bind,source=/root,target=/root,writable=true \
     --mount type=bind,source=/,target=/tmp/hostroot,writable=true,bind-propagation=shared \
     infinit \
     bash -c "sleep \$(( \$RANDOM / 2000)).\$RANDOM; infinit-daemon --start --foreground --docker-socket-path /tmp/hostroot/run/docker/plugins --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins --mount-root /tmp/hostroot/tmp/ --docker-mount-substitute hostroot/tmp: --as default_user --default-network default_network --login-user default_user:docker --mount default_user/default_volume $tcp $log"
