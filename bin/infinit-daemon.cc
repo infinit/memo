@@ -461,6 +461,17 @@ MountManager::update_network(infinit::Network& network,
       dht->port.reset();
     updated = true;
   }
+  auto rfstring = optional(options, "replication-factor");
+  if (rfstring)
+  {
+    auto dht = dynamic_cast<infinit::model::doughnut::Configuration*>(network.model.get());
+    int rf = std::stoi(*rfstring);
+    auto consensus = dynamic_cast
+      <infinit::model::doughnut::consensus::Paxos::Configuration*>
+        (dht->consensus.get());
+    consensus->replication_factor(rf);
+    updated = true;
+  }
   if (updated)
   {
     ifnt.network_save(network, true);
@@ -497,6 +508,10 @@ MountManager::create_network(elle::json::Object const& options,
       throw elle::Error("Storage specification for new storage not implemented");
     }
   }
+  int rf = 1;
+  auto rfstring = optional(options, "replication-factor");
+  if (rfstring)
+    rf = std::stoi(*rfstring);
   // create the network
    auto kelips =
     elle::make_unique<infinit::overlay::kelips::Configuration>();
@@ -505,7 +520,7 @@ MountManager::create_network(elle::json::Object const& options,
    std::unique_ptr<infinit::model::doughnut::consensus::Configuration> consensus_config;
    consensus_config = elle::make_unique<
       infinit::model::doughnut::consensus::Paxos::Configuration>(
-        1, // replication_factor,
+        rf,
         std::chrono::seconds(10 * 60));
   boost::optional<int> port;
   auto portstring = optional(options, "port");
