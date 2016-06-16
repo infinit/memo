@@ -13,7 +13,6 @@ os.environ['PYTHONPATH'] = '%s:%s' % (PYTHONPATH, os.environ.get('PYTHONPATH', '
 
 import infinit.beyond
 import infinit.beyond.bottle
-import infinit.beyond.couchdb
 
 def parse_options():
   import argparse
@@ -75,27 +74,64 @@ def parse_options():
                       type = str,
                       help = 'Google Cloud Storage key',
                       default = ${repr(gcs_key)})
+
+  ## --------- ##
+  ## Datastore ##
+  ## --------- ##
+
+  parser.add_argument(
+    '--datastore-type',
+    metavar = 'DRIVER',
+    type = str,
+    default = 'CouchDB',
+    help = 'Data storage backend (CouchDB, DynamoDB)')
+
+  ## ------- ##
+  ## CouchDB ##
+  ## ------- ##
+
   parser.add_argument(
     '--couchdb-directory',
     metavar = 'PATH',
     type = str,
     help = 'CouchDB persisent directory (temporary if unspecified)')
-  parser.add_argument('--couchdb-port',
-                      metavar = 'PORT',
-                      type = int,
-                      help = 'CouchDB port',
-                      default = 0)
-  parser.add_argument('--email-validation',
-                      type = bool,
-                      default = True,
-                      help = 'Enable email validation (activated by default)')
-  parser.add_argument('--port-file',
-                      type = str,
-                      help = 'File to write effective listen port to')
-  parser.add_argument('--force-admin',
-                      help = 'Force administrator mode',
-                      action = 'store_true',
-                      default = False)
+  parser.add_argument(
+    '--couchdb-port',
+    metavar = 'PORT',
+    type = int,
+    help = 'CouchDB port',
+    default = 0)
+
+  ## -------- ##
+  ## DynamoDB ##
+  ## -------- ##
+
+  parser.add_argument(
+    '--dynamodb-table',
+    metavar = 'TABLE',
+    type = str,
+    help = 'DynamoDB table')
+  parser.add_argument(
+    '--dynamodb-region',
+    metavar = 'REGION',
+    type = str,
+    default = 'us-east-1',
+    help = 'DynamoDB AWS region')
+
+  parser.add_argument(
+    '--email-validation',
+    type = bool,
+    default = True,
+    help = 'Enable email validation (activated by default)')
+  parser.add_argument(
+    '--port-file',
+    type = str,
+    help = 'File to write effective listen port to')
+  parser.add_argument(
+    '--force-admin',
+    help = 'Force administrator mode',
+    action = 'store_true',
+    default = False)
   return parser.parse_args()
 
 try:
@@ -107,11 +143,7 @@ try:
               bucket_ns = 'sh_infinit_beyond_dev')
   else:
     gcs = None
-  with infinit.beyond.couchdb.CouchDB(
-      port = args.couchdb_port,
-      directory = args.couchdb_directory,
-  ) as couchdb:
-    datastore = infinit.beyond.couchdb.CouchDBDatastore(couchdb)
+  def run(datastore):
     beyond = infinit.beyond.Beyond(
       datastore = datastore,
       dropbox_app_key = args.dropbox_app_key,
@@ -149,6 +181,24 @@ try:
       bottle.run(app = app, reloader = args.reload, **kwargs)
     finally:
       exited = True
+  datastore = args.datastore_type.lower()
+  if datastore == 'couchdb':
+    import infinit.beyond.couchdb
+    with infinit.beyond.couchdb.CouchDB(
+        port = args.couchdb_port,
+        directory = args.couchdb_directory,
+    ) as couchdb:
+      run(infinit.beyond.couchdb.CouchDBDatastore(couchdb))
+  elif datastore == 'dynamodb':
+    import infinit.beyond.dynamodb
+    if args.dynamodb_table is None:
+      raise Exception('missing mandatory argument: dynamodb-table')
+    run(infinit.beyond.dynamodb.DynamoDBDatastore(
+      region = args.dynamodb_region,
+      table = args.dynamodb_table,
+    ))
+  else:
+    raise Exception('unrecognize datastore type: %s' % datastore)
 except Exception as e:
   print('%s: fatal error: %s' % (sys.argv[0], e))
   raise
