@@ -25,6 +25,15 @@ class DynamoDBDatastore:
 
   def __put_duplicate(self, json, Exn):
     try:
+      # DynamoDB does not accept empty strings. Yeah, WTF.
+      def purge(json):
+        for k in list(json):
+          v = json[k]
+          if v == '':
+            del json[k]
+          elif isinstance(v, dict):
+            purge(json[k])
+      purge(json)
       self.__table.put_item(
         Item = json,
         Expected = {'id': {'Exists': False}},
