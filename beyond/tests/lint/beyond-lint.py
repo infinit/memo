@@ -62,7 +62,7 @@ class BeyondChecker(BaseChecker):
                 raise Exception(
                   'error name is not a literal string')
               chunks = name.value.split('/')
-              if len(chunks) != 2:
+              if len(chunks) < 2:
                 raise Exception(
                   'error name is not \'category/error\'')
           if mandatory:
