@@ -233,12 +233,12 @@ class Bottle(bottle.Bottle):
       self.check_admin()
     except exceptions.MissingCertificate:
       raise Response(401, {
-        'error': 'admin',
+        'error': 'admin/no_certificate',
         'reason': 'administrator privilege required',
       })
     except exceptions.UserNotAdmin as e:
       raise Response(401, {
-        'error': 'admin',
+        'error': 'admin/not_admin',
         'reason': 'you (%s) are not an administrator' % e.user,
       })
 
