@@ -1,19 +1,90 @@
+import infinit.beyond
+
 import boto3
 import botocore.exceptions
 import json
+import random
+import string
 
-import infinit.beyond
+class DynamoDB:
+
+  def __init__(self, table = None, region = None):
+    self.__region = region
+    self.__tablename = table
+    self.__delete = False
+
+  def __enter__(self):
+    self.__aws = boto3.session.Session(
+      region_name = self.__region,
+    )
+    self.__client = self.__aws.client('dynamodb')
+    self.__dynamodb = self.__aws.resource('dynamodb')
+    if self.__tablename is None:
+      self.__delete = True
+      rn = ''.join(random.choice(string.ascii_uppercase)
+                   for _ in range(8))
+      self.__tablename = 'beyond-test-%s' % rn
+      self.__client.create_table(
+        TableName = self.__tablename,
+        AttributeDefinitions = [
+          {
+            'AttributeName' : 'id',
+            'AttributeType' : 'S'
+          },
+          {
+            'AttributeName' : 'type',
+            'AttributeType' : 'S'
+          },
+          {
+            'AttributeName' : 'name',
+            'AttributeType' : 'S'
+          }
+        ],
+        KeySchema = [
+          { 'AttributeName': 'id' , 'KeyType': 'HASH' }
+        ],
+        GlobalSecondaryIndexes = [
+          {
+            'IndexName' : 'type',
+            'KeySchema' : [
+              { 'AttributeName': 'type' , 'KeyType': 'HASH' },
+              { 'AttributeName': 'name' , 'KeyType': 'RANGE' }
+            ],
+            'Projection' : { 'ProjectionType': 'ALL' },
+            'ProvisionedThroughput' : {
+              'ReadCapacityUnits' : 1,
+              'WriteCapacityUnits' : 1
+            }
+          }
+        ],
+        ProvisionedThroughput = {
+          'ReadCapacityUnits' : 1,
+          'WriteCapacityUnits' : 1
+        })
+      try:
+        waiter = self.__client.get_waiter('table_exists')
+        waiter.wait(TableName = self.__tablename)
+      except:
+        self.__delete_table()
+        raise
+    self.__table = self.__dynamodb.Table(self.__tablename)
+    return self.__table
+
+  def __exit__(self, *args, **kwargs):
+    if self.__delete:
+      self.__delete_table()
+
+  def __delete_table(self):
+    self.__client.delete_table(TableName = self.__tablename)
+
+  @property
+  def table(self):
+    return self.__table
 
 class DynamoDBDatastore:
 
-  def __init__(self, region, table):
-    self.__region = region
-    self.__tablename = table
-    self.__aws = boto3.session.Session(
-      region_name = region,
-    )
-    self.__dynamodb = self.__aws.resource('dynamodb')
-    self.__table = self.__dynamodb.Table(self.__tablename)
+  def __init__(self, table):
+    self.__table = table
 
   def __purge_json(self, o):
     del o['type']

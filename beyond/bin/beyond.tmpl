@@ -186,17 +186,14 @@ try:
     import infinit.beyond.couchdb
     with infinit.beyond.couchdb.CouchDB(
         port = args.couchdb_port,
-        directory = args.couchdb_directory,
-    ) as couchdb:
+        directory = args.couchdb_directory) as couchdb:
       run(infinit.beyond.couchdb.CouchDBDatastore(couchdb))
   elif datastore == 'dynamodb':
     import infinit.beyond.dynamodb
-    if args.dynamodb_table is None:
-      raise Exception('missing mandatory argument: dynamodb-table')
-    run(infinit.beyond.dynamodb.DynamoDBDatastore(
-      region = args.dynamodb_region,
-      table = args.dynamodb_table,
-    ))
+    with infinit.beyond.dynamodb.DynamoDB(
+        region = args.dynamodb_region,
+        table = args.dynamodb_table) as dynamodb:
+      run(infinit.beyond.dynamodb.DynamoDBDatastore(dynamodb))
   else:
     raise Exception('unrecognize datastore type: %s' % datastore)
 except Exception as e:
