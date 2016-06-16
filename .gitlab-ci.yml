@@ -29,7 +29,7 @@ x86_64-centos6-gcc4:
   except:
     - feature/website
 
-x86_64-trusty-gcc4:
+x86_64-ubuntu-gcc4:
   stage: build
   script:
     - git submodule sync --recursive
@@ -49,7 +49,7 @@ x86_64-trusty-gcc4:
     - docker push mefyl/infinit:$(GIT_DIR=../fs/.git git describe)
   tags:
     - x86_64
-    - trusty
+    - ubuntu
     - gcc4
   except:
     - feature/website
