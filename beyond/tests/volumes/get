@@ -24,8 +24,11 @@ with Beyond() as beyond:
              json = False)
       volume.put(beyond)
       res = beyond.get('volumes/%s' % volume['name']).json()
-      assert res['name'] == volume['name']
-      assert res['network'] == network['name']
+      assertEq(res['name'], volume['name'])
+      assertEq(res['network'], network['name'])
+      res = beyond.get('networks/%s/volumes' % network['name']).json()
+      assertEq(len(res['volumes']), 1)
+      assertEq(res['volumes'][0]['name'], volume['name'])
 
   if __name__ == '__main__':
     unittest.main()
