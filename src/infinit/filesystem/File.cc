@@ -444,6 +444,9 @@ namespace infinit
     File::unlink()
     {
       _ensure_first_block();
+      if ( !(_filedata->_header.mode & 0200)
+        || !(_parent->_header.mode & 0200))
+        THROW_ACCES;
       auto info = _parent->_files.at(_name);
       elle::SafeFinally revert([&] { _parent->_files[_name] = info;});
       _parent->_files.erase(_name);
