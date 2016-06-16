@@ -284,8 +284,9 @@ class Beyond:
   ## ------ ##
 
   def volume_get(self, owner, name):
-    return self.__datastore.volume_fetch(
-      owner = owner, name = name)
+    return Volume.from_json(
+      self,
+      self.__datastore.volume_fetch(owner = owner, name = name))
 
   def volume_delete(self, owner, name):
     return self.__datastore.volume_delete(

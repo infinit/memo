@@ -452,7 +452,7 @@ class CouchDBDatastore:
   def volume_fetch(self, owner, name):
     try:
       json = self.__couchdb['volumes']['%s/%s' % (owner, name)]
-      return infinit.beyond.Volume.from_json(self.beyond, json)
+      return json
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.Volume.NotFound()
 
