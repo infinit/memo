@@ -372,10 +372,9 @@ class CouchDBDatastore:
       raise e
 
   def networks_volumes_fetch(self, networks):
-    rows = self.__couchdb['volumes'].view(
-      'beyond/per_network_id', keys = list(map(lambda n: n.id, networks)))
-    volume_from_db = infinit.beyond.Volume.from_json
-    return list(map(lambda r: volume_from_db(self.beyond, r.value), rows))
+    return self.__couchdb['volumes'].view(
+      'beyond/per_network_id',
+      keys = list(map(lambda n: n.id, networks)))
 
   def __network_update(network, req):
     if network is None:

@@ -208,7 +208,9 @@ class Beyond:
     return self.__datastore.network_delete(owner = owner, name = name)
 
   def network_volumes_get(self, network):
-    return self.__datastore.networks_volumes_fetch(networks = [network])
+    return (
+      Volume.from_json(self, json) for json in
+      self.__datastore.networks_volumes_fetch(networks = [network]))
 
   def network_drives_get(self, network):
     return self.__datastore.network_drives_fetch(name = network.name)
