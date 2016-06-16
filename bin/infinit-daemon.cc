@@ -456,6 +456,11 @@ MountManager::update_network(infinit::Network& network,
     }
     network.model->storage = std::move(storage_config);
   }
+  else if (optional(options, "no-storage"))
+  {
+    network.model->storage.reset();
+    updated = true;
+  }
   auto portstring = optional(options, "port");
   if (portstring)
   {
@@ -596,7 +601,7 @@ MountManager::create_volume(std::string const& name,
   if (qname.find("/") == qname.npos)
     qname = *username + "/" + qname;
   infinit::Volume volume(qname, network.name, mo, {});
-  ifnt.volume_save(volume);
+  ifnt.volume_save(volume, true);
   report_created("volume", qname);
   beyond_push("volume", qname, volume, user);
 }
@@ -636,7 +641,7 @@ private:
 
 static
 std::string
-daemon_command(std::string const& s);
+daemon_command(std::string const& s, bool hold = false);
 
 class PIDFile
   : public elle::PIDFile
@@ -661,9 +666,7 @@ public:
   }
 };
 
-static
-std::string
-daemon_command(std::string const& s);
+
 
 static
 int
@@ -746,7 +749,7 @@ daemonize()
 
 static
 std::string
-daemon_command(std::string const& s)
+daemon_command(std::string const& s, bool hold)
 {
   reactor::Scheduler sched;
   std::string reply;
@@ -762,14 +765,41 @@ daemon_command(std::string const& s)
       ELLE_TRACE("reading result");
       reply = sock.read_until("\n").string();
       ELLE_TRACE("ok: '%s'", reply);
+      if (hold)
+        reactor::sleep();
     });
   sched.run();
   return reply;
 }
 
 static
+void
+restart_volume(MountManager& manager, std::string const& volume, bool always_start=false)
+{
+  infinit::MountOptions mo;
+  try
+  {
+    mo.mountpoint = manager.mountpoint(volume, true);
+  }
+  catch (elle::Error const&)
+  {}
+  try
+  {
+    manager.stop(volume);
+  }
+  catch (elle::Error const& e)
+  {
+    if (!always_start)
+      throw;
+  }
+  reactor::sleep(5_sec);
+  manager.start(volume, mo, false, true);
+}
+
+static
 std::string
-process_command(elle::json::Object query, MountManager& manager)
+process_command(elle::json::Object query, MountManager& manager,
+                std::function<void()>& on_end)
 {
   ELLE_TRACE("command: %s", elle::json::pretty_print(query));
   elle::serialization::json::SerializerIn command(query, false);
@@ -809,16 +839,34 @@ process_command(elle::json::Object query, MountManager& manager)
       else if (op ==  "volume-restart")
       {
         auto volume = command.deserialize<std::string>("volume");
-        infinit::MountOptions mo;
-        try
-        {
-          mo.mountpoint = manager.mountpoint(volume, true);
-        }
-        catch (elle::Error const&)
-        {}
-        manager.stop(volume);
-        reactor::sleep(5_sec);
-        manager.start(volume, mo, false, true);
+        restart_volume(manager, volume);
+      }
+      else if (op == "disable-storage")
+      {
+        auto volume = command.deserialize<std::string>("volume");
+        ELLE_LOG("Disabling storage on %s", volume);
+        elle::json::Object opts;
+        opts["no-storage"] = std::string();
+        manager.create_volume(volume, opts);
+        restart_volume(manager, volume);
+      }
+      else if (op == "enable-storage")
+      {
+        auto volume = command.deserialize<std::string>("volume");
+        ELLE_LOG("Enabling storage on %s", volume);
+        elle::json::Object opts;
+        opts["storage"] = std::string();
+        manager.create_volume(volume, opts);
+        restart_volume(manager, volume, true);
+        auto hold = command.deserialize<bool>("hold");
+        if (hold)
+          on_end = [volume,&manager]() {
+            ELLE_LOG("Disabling storage on %s", volume);
+            elle::json::Object opts;
+            opts["no-storage"] = std::string();
+            manager.create_volume(volume, opts);
+            restart_volume(manager, volume);
+          };
       }
       else
       {
@@ -954,13 +1002,25 @@ COMMAND(start)
         name,
         [socket,&manager]
         {
+          std::function<void()> on_end;
+          elle::SafeFinally sf([&] {
+              try
+              {
+                if (on_end)
+                  on_end();
+              }
+              catch(elle::Error const& e)
+              {
+                ELLE_WARN("Unexpected exception in on_end: %s", e);
+              }
+          });
           try
           {
             while (true)
             {
               auto json =
                 boost::any_cast<elle::json::Object>(elle::json::read(**socket));
-              auto reply = process_command(json, manager);
+              auto reply = process_command(json, manager, on_end);
               ELLE_TRACE("Writing reply: '%s'", reply);
               socket->write(reply);
             }
@@ -1208,6 +1268,20 @@ COMMAND(volume_restart)
   std::cout << daemon_command("{\"operation\": \"volume-restart\", \"volume\": \"" + name +  "\"}");
 }
 
+COMMAND(enable_storage)
+{
+  auto name = mandatory(args, "name");
+  auto hold = flag(args, "hold");
+  std::cout << daemon_command("{\"operation\": \"enable-storage\", \"volume\": \"" + name +  "\""
+    +",\"hold\": "  + (hold ? "true": "false")   + "}", hold);
+}
+
+COMMAND(disable_storage)
+{
+  auto name = mandatory(args, "name");
+  std::cout << daemon_command("{\"operation\": \"disable-storage\", \"volume\": \"" + name +  "\"}");
+}
+
 int
 main(int argc, char** argv)
 {
@@ -1241,6 +1315,25 @@ main(int argc, char** argv)
     {
       "volume-restart", "Restart a volume", &volume_restart, "--name VOLUME",
       {{ "name,n", value<std::string>(), "volume name"}},
+    },
+    {
+      "enable-storage",
+      "Enable storage on associated network",
+      &enable_storage,
+      "--name VOLUME [--hold]",
+      {
+        { "name,n", value<std::string>(), "volume name"},
+        { "hold", bool_switch(), "Keep storage online until this process terminates"}
+      },
+    },
+    {
+      "disable-storage",
+      "Disable storage on associated network",
+      &disable_storage,
+      "--name VOLUME",
+      {
+        { "name,n", value<std::string>(), "volume name"},
+      },
     },
     {
       "start",
