@@ -341,8 +341,7 @@ class CouchDBDatastore:
 
   def network_fetch(self, owner, name):
     try:
-      json = self.__couchdb['networks']['%s/%s' % (owner, name)]
-      return infinit.beyond.Network.from_json(self.beyond, json)
+      return self.__couchdb['networks']['%s/%s' % (owner, name)]
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.Network.NotFound()
 

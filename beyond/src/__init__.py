@@ -200,8 +200,9 @@ class Beyond:
   ## ------- ##
 
   def network_get(self, owner, name):
-    return self.__datastore.network_fetch(
-      owner = owner, name = name)
+    return Network.from_json(
+      self,
+      self.__datastore.network_fetch(owner = owner, name = name))
 
   def network_delete(self, owner, name):
     return self.__datastore.network_delete(owner = owner, name = name)
