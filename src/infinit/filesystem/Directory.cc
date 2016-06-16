@@ -689,6 +689,9 @@ namespace infinit
         throw rfs::Error(ENOTEMPTY, "Directory not empty");
       if (_parent.get() == nullptr)
         throw rfs::Error(EINVAL, "Cannot delete root node");
+      if ( !(_data->_header.mode & 0200)
+        || !(_parent->_header.mode & 0200))
+        THROW_ACCES;
       _parent->_files.erase(_name);
       _parent->write(*_owner.block_store(), {OperationType::remove, _name});
       umbrella([&] {_owner.block_store()->remove(_data->address());});

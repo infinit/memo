@@ -1790,6 +1790,26 @@ protected:
       is, true, ctx);
     return res;
   }
+  virtual
+  void
+  _remove(infinit::model::Address address, infinit::model::blocks::RemoveSignature rs)
+  {
+    if (rs.block)
+    {
+      elle::Buffer buf;
+      {
+        elle::IOStream os(buf.ostreambuf());
+        elle::serialization::binary::serialize(rs.block, os);
+      }
+      elle::IOStream is(buf.istreambuf());
+      elle::serialization::Context ctx;
+      ctx.set(&doughnut());
+      auto res = elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
+        is, true, ctx);
+      rs.block = std::move(res);
+    }
+    _backend->remove(address, rs);
+  }
   std::unique_ptr<Super> _backend;
 };
 
@@ -2250,6 +2270,60 @@ ELLE_TEST_SCHEDULED(erased_group_recovery)
   a = boost::any_cast<elle::json::Array>(jperms);
   BOOST_CHECK_EQUAL(a.size(), 1);
 }
+ELLE_TEST_SCHEDULED(remove_permissions)
+{
+  DHTs servers(-1);
+  auto client1 = servers.client(false);
+  auto client2 = servers.client(true);
+  auto skey = serialize(client2.dht.dht->keys().K());
+  client1.fs->path("/dir")->mkdir(0666);
+  client1.fs->path("/")->setxattr("infinit.auth.setr", skey, 0);
+  client1.fs->path("/dir")->setxattr("infinit.auth.setrw", skey, 0);
+  client1.fs->path("/dir")->setxattr("infinit.auth.inherit", "true", 0);
+  auto h = client2.fs->path("/dir/file")->create(O_CREAT|O_TRUNC|O_RDWR, 0666);
+  h->write(elle::ConstWeakBuffer("foo", 3), 3, 0);
+  h->close();
+  h.reset();
+  h = client1.fs->path("/dir/file")->open(O_RDONLY, 0666);
+  char buf[512] = {0};
+  int len = h->read(elle::WeakBuffer(buf, 512), 512, 0);
+  BOOST_CHECK_EQUAL(len, 3);
+  BOOST_CHECK_EQUAL(buf, std::string("foo"));
+  h->close();
+  h.reset();
+  client2.fs->path("/dir/file")->unlink();
+  struct stat st;
+  client2.fs->path("/dir")->stat(&st);
+  BOOST_CHECK(st.st_mode & S_IFDIR);
+  int count = 0;
+  client1.fs->path("/dir")->list_directory(
+      [&](std::string const&, struct stat*) { ++count;});
+  BOOST_CHECK_EQUAL(count, 0);
+
+  h = client1.fs->path("/file")->create(O_CREAT|O_TRUNC|O_RDWR, 0666);
+  h->write(elle::ConstWeakBuffer("bar", 3), 3, 0);
+  h->close();
+  h.reset();
+  client1.fs->path("/file")->setxattr("infinit.auth.setr", skey, 0);
+  BOOST_CHECK_THROW(client2.fs->path("/file")->unlink(), std::exception);
+  client1.fs->path("/file")->setxattr("infinit.auth.setrw", skey, 0);
+  BOOST_CHECK_THROW(client2.fs->path("/file")->unlink(), std::exception);
+  client1.fs->path("/file")->setxattr("infinit.auth.setr", skey, 0);
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", skey, 0);
+  BOOST_CHECK_THROW(client2.fs->path("/file")->unlink(), std::exception);
+  h = client1.fs->path("/file")->open(O_RDONLY, 0666);
+  len = h->read(elle::WeakBuffer(buf, 512), 512, 0);
+  BOOST_CHECK_EQUAL(len, 3);
+  BOOST_CHECK_EQUAL(buf, std::string("bar"));
+
+  client1.fs->path("/dir2")->mkdir(0666);
+  BOOST_CHECK_THROW(client2.fs->path("/dir2")->rmdir(), std::exception);
+  client1.fs->path("/")->setxattr("infinit.auth.setr", skey, 0);
+  client1.fs->path("/dir2")->setxattr("infinit.auth.setrw", skey, 0);
+  BOOST_CHECK_THROW(client2.fs->path("/dir2")->rmdir(), std::exception);
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", skey, 0);
+  BOOST_CHECK_NO_THROW(client2.fs->path("/dir2")->rmdir());
+}
 
 ELLE_TEST_SUITE()
 {
@@ -2282,4 +2356,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(rename_exceptions), 0, 5);
   suite.add(BOOST_TEST_CASE(erased_group), 0, 5);
   suite.add(BOOST_TEST_CASE(erased_group_recovery), 0, 5);
+  suite.add(BOOST_TEST_CASE(remove_permissions),0, 5);
 }
