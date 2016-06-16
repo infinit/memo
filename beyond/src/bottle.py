@@ -703,8 +703,7 @@ class Bottle(bottle.Bottle):
     self.authenticate(user)
     network = self.network_from_name(owner = owner, name = name)
     json = bottle.request.json
-    # FIXME
-    # if 'port' not in json or 'addresses' not in json
+    # FIXME: Absolutely not atomic!
     network.endpoints.setdefault(user.name, {})[node_id] = json
     network.save()
     raise Response(201, {}) # FIXME: 200 if existed

@@ -112,6 +112,9 @@ class DynamoDBDatastore:
   def network_insert(self, network):
     json = network.json()
     self.__augment_json(json, 'networks')
+    # Inserting that dictionary if absent is a PAIN with
+    # DynamoDB. Always include it.
+    json.setdefault('endpoints', {})
     self.__put_duplicate(json, infinit.beyond.Network.Duplicate)
 
   def network_fetch(self, owner, name):
@@ -127,7 +130,61 @@ class DynamoDBDatastore:
     raise NotImplementedError()
 
   def network_update(self, id, diff):
-    raise NotImplementedError()
+    # import sys
+    # print(diff, file = sys.stderr)
+    aset = []
+    adelete = []
+    names = {}
+    values = {}
+    count = 0
+    for user, passport in diff.get('passports', {}).items():
+      count += 1
+      names['#passport_name_%s' % count] = user
+      if passport is None:
+        adelete.append('passports.#passport_name_%s' % user)
+      else:
+        values[':passport_%s' % count] = passport
+        aset.append('passports.#passport_name_%s = :passport_%s' %
+                    (count, count))
+    count = 0
+    for user, node in diff.get('endpoints', {}).items():
+      count += 1
+      names['#user_%s' % count] = user
+      values[':node_%s' % (count)] = node
+      aset.append('endpoints.#user_%s = :node_%s' %
+                  (count, count))
+      # FIXME: endpoints deletion
+    # FIXME: storage
+    for field in ['passports', 'endpoints', 'storages']:
+      if field in diff:
+        del diff[field]
+    count = 0
+    for k, v in diff.items():
+      count += 1
+      names['#attr_%s' % count] = k
+      values[':attr_%s' % count] = v
+      aset.append('#attr_%s = :attr_%s' % (count, count))
+    # print(aset, adelete, names, values, file = sys.stderr)
+    expr = []
+    if aset:
+      expr.append('SET %s' % ','.join(aset))
+    if adelete:
+      expr.append('DELETE %s' % ','.join(adelete))
+    # print(expr, file = sys.stderr)
+    # print(names, file = sys.stderr)
+    # print(values, file = sys.stderr)
+    # print({'id': id}, file = sys.stderr)
+    if expr:
+      kwargs = {
+        'Key': {'id': 'networks/%s' % id},
+        'UpdateExpression': ''.join(expr),
+      }
+      if names:
+        kwargs['ExpressionAttributeNames'] = names
+      if values:
+        kwargs['ExpressionAttributeValues'] = values
+      self.__table.update_item(**kwargs)
+
 
   def networks_volumes_fetch(self, networks):
     # FIXME: table scan
