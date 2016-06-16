@@ -47,6 +47,9 @@ x86_64-ubuntu-gcc4:
     - python3 drake --website=false //docker
     - docker tag infinit:$(GIT_DIR=../fs/.git git describe) mefyl/infinit:$(GIT_DIR=../fs/.git git describe)
     - docker push mefyl/infinit:$(GIT_DIR=../fs/.git git describe)
+    - python3 drake --website=false //beyond/docker
+    - docker tag infinit-beyond:$(GIT_DIR=../fs/.git git describe) mefyl/infinit-beyond:$(GIT_DIR=../fs/.git git describe)
+    - docker push mefyl/infinit-beyond:$(GIT_DIR=../fs/.git git describe)
   tags:
     - x86_64
     - ubuntu
