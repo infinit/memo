@@ -1,4 +1,5 @@
 import boto3
+import botocore.exceptions
 import json
 
 import infinit.beyond
@@ -21,7 +22,18 @@ class DynamoDBDatastore:
   def __augment_json(self, o, t):
     o['type'] = t
     o['id'] = '%s/%s' % (t, o['name'])
-    return o
+
+  def __put_duplicate(self, json, Exn):
+    try:
+      self.__table.put_item(
+        Item = json,
+        Expected = {'id': {'Exists': False}},
+      )
+    except botocore.exceptions.ClientError as e:
+      if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+        raise Exn()
+      else:
+        raise
 
   ## ---- ##
   ## User ##
@@ -31,8 +43,7 @@ class DynamoDBDatastore:
     json = user.json(private = True,
                      hide_confirmation_codes = False)
     self.__augment_json(json, 'users')
-    # FIXME: handle duplicates
-    self.__table.put_item(Item = json)
+    self.__put_duplicate(json, infinit.beyond.User.Duplicate)
 
   def users_fetch(self):
     return (
