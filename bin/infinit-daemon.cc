@@ -277,6 +277,12 @@ MountManager::exists(std::string const& name_)
 bool
 is_mounted(std::string const& path)
 {
+  static int dummy_delay = std::stoi(elle::os::getenv("INFINIT_IS_MOUNTED_DUMMY_DELAY", "-1"));
+  if (dummy_delay >= 0)
+  {
+    reactor::sleep(boost::posix_time::seconds(dummy_delay));
+    return true;
+  }
 #ifdef INFINIT_LINUX
   auto mounts = boost::filesystem::path("/proc") / std::to_string(getpid()) / "mounts";
   boost::filesystem::ifstream ifs(mounts);
