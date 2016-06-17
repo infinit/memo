@@ -29,6 +29,10 @@ with Beyond() as beyond:
       res = beyond.get('networks/%s/volumes' % network['name']).json()
       assertEq(len(res['volumes']), 1)
       assertEq(res['volumes'][0]['name'], volume['name'])
+      res = beyond.get('users/%s/volumes' % user['name'],
+                       auth = user.private_key).json()
+      assertEq(len(res['volumes']), 1)
+      assertEq(res['volumes'][0]['name'], volume['name'])
 
   if __name__ == '__main__':
     unittest.main()
