@@ -1011,6 +1011,8 @@ COMMAND(start)
   if (advertise)
     manager.advertise_host(*advertise);
   std::unique_ptr<reactor::Thread> mounter;
+  if (flag(args, "wait-for-peers"))
+    manager.wait_for_peers(true);
   auto mount = optional<std::vector<std::string>>(args, "mount");
   if (mount)
     mounter = elle::make_unique<reactor::Thread>("mounter",
