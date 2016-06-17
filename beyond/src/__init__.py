@@ -252,7 +252,8 @@ class Beyond:
     return self.__datastore.user_delete(name = name)
 
   def user_networks_get(self, user):
-    return self.__datastore.user_networks_fetch(user = user)
+    return (Network.from_json(self, json) for json in
+            self.__datastore.user_networks_fetch(user = user))
 
   def user_volumes_get(self, user):
     networks = (Network.from_json(self, json) for json in
