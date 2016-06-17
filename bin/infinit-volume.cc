@@ -386,7 +386,16 @@ COMMAND(run)
   {
     while(true)
     {
-      beyond_fetch_endpoints(network, eps);
+      try
+      {
+        beyond_fetch_endpoints(network, eps);
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_WARN("Error fetching endpoints from beyond: %s, retrying...", e);
+        reactor::sleep(10_sec);
+        continue;
+      }
       if (!eps.empty())
         break;
       if ((!has_storage && flag(args, "wait-if-no-storage"))
