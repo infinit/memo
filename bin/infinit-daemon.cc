@@ -172,6 +172,7 @@ public:
                std::string mount_substitute = "")
    : _mount_root(mount_root)
    , _mount_substitute(mount_substitute)
+   , _wait_for_peers(false)
    {}
   void
   start(std::string const& name, infinit::MountOptions opts = {},
@@ -205,6 +206,7 @@ public:
   ELLE_ATTRIBUTE_RW(std::string, default_user);
   ELLE_ATTRIBUTE_RW(std::string, default_network);
   ELLE_ATTRIBUTE_RW(std::vector<std::string>, advertise_host);
+  ELLE_ATTRIBUTE_RW(bool, wait_for_peers);
 private:
   std::unordered_map<std::string, Mount> _mounts;
 };
@@ -338,6 +340,8 @@ MountManager::start(std::string const& name, infinit::MountOptions opts,
   std::unordered_map<std::string, std::string> env;
   m.options.to_commandline(arguments, env);
   arguments.push_back("--wait-if-no-storage");
+  if (_wait_for_peers)
+    arguments.push_back("--wait-for-peers");
   for (auto const& host: _advertise_host)
   {
     arguments.push_back("--advertise-host");
@@ -1365,7 +1369,10 @@ main(int argc, char** argv)
         { "advertise-host", value<std::vector<std::string>>()->multitoken(),
           "Advertise given hostname as an extra address" },
         { "mount,m", value<std::vector<std::string>>()->multitoken(),
-          "mount given volumes on startup, keep trying on error" }
+          "mount given volumes on startup, keep trying on error" },
+        {"wait-for-peers", bool_switch(),
+          "Always wait for at least one peer when mounting a volume"
+        },
       }
     },
     {
