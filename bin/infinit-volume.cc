@@ -387,9 +387,13 @@ COMMAND(run)
     while(true)
     {
       beyond_fetch_endpoints(network, eps);
-      if (has_storage || !flag(args, "wait-if-no-storage") || !eps.empty())
+      if (!eps.empty())
         break;
-      reactor::sleep(5_sec);
+      if ((!has_storage && flag(args, "wait-if-no-storage"))
+        || flag(args, "wait-for-peers"))
+        reactor::sleep(5_sec);
+      else
+        break;
     }
   }
   report_action("running", "network", network.name);
@@ -1051,6 +1055,9 @@ main(int argc, char** argv)
     },
     { "wait-if-no-storage", bool_switch(),
       "Wait for at least one peer from fetch if we do not provide storage"
+    },
+    { "wait-for-peers", bool_switch(),
+      "Wait for at least one peer from fetch"
     },
     option_endpoint_file,
     option_port_file,
