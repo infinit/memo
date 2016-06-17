@@ -567,7 +567,14 @@ MountManager::create_network(elle::json::Object const& options,
   ifnt.network_save(network);
   report_created("network", *netname);
   infinit::NetworkDescriptor desc(ifnt.network_get(*netname, owner, true));
-  beyond_push("network", desc.name, desc, owner);
+  try
+  {
+    beyond_push("network", desc.name, desc, owner);
+  }
+  catch (elle::Error const& e)
+  {
+    ELLE_WARN("Failed to push network %s to beyond: %s", desc.name, e);
+  }
   return network;
 }
 
@@ -613,7 +620,14 @@ MountManager::create_volume(std::string const& name,
   infinit::Volume volume(qname, network.name, mo, {});
   ifnt.volume_save(volume, true);
   report_created("volume", qname);
-  beyond_push("volume", qname, volume, user);
+  try
+  {
+    beyond_push("volume", qname, volume, user);
+  }
+  catch (elle::Error const& e)
+  {
+    ELLE_WARN("Failed to push %s to beyond: %s", qname, e);
+  }
 }
 
 void
