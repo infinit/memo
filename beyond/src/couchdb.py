@@ -277,9 +277,9 @@ class CouchDBDatastore:
     return self.__rows_to_networks(rows)
 
   def user_networks_fetch(self, user):
-    rows = self.__couchdb['networks'].view('beyond/per_user_key',
-                                           key = user.public_key)
-    return self.__rows_to_networks(rows)
+    return (doc.value for doc in
+            self.__couchdb['networks'].view('beyond/per_user_key',
+                                            key = user.public_key))
 
   def network_stats_fetch(self, network):
     rows = self.__couchdb['networks'].view('beyond/stat_view',
