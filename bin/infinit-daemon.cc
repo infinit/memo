@@ -25,6 +25,12 @@
 
 #include <infinit/storage/Filesystem.hh>
 
+#ifdef INFINIT_WINDOWS
+# include <shlwapi.h>
+#else
+# include <fnmatch.h>
+#endif
+
 ELLE_LOG_COMPONENT("infinit-daemon");
 
 #include <main.hh>
@@ -381,7 +387,7 @@ MountManager::start(std::string const& name, infinit::MountOptions opts,
   this->_mounts.emplace(name, std::move(m));
   if (wait_for_mount && mountpoint)
   {
-    for (int i=0; i<100; ++i)
+    for (int i=0; i<300; ++i)
     {
       if (kill(pid, 0))
       {
@@ -657,11 +663,18 @@ public:
                boost::filesystem::path descriptor_path);
   void uninstall();
   std::string mount(std::string const& name);
+  bool mounted(std::string const& name);
 private:
-  MountManager& _manager;
+  ELLE_ATTRIBUTE_R(MountManager&, manager);
   std::unique_ptr<reactor::network::HttpServer> _server;
   std::unordered_map<std::string, int> _mount_count;
 };
+
+bool
+DockerVolumePlugin::mounted(std::string const& name)
+{
+  return _mount_count.find(name) != _mount_count.end();
+}
 
 static
 std::string
@@ -927,6 +940,49 @@ COMMAND(fetch)
 }
 
 static
+bool
+glob_match(std::string const& glob, std::string const& s)
+{
+#ifdef INFINIT_WINDOWS
+  return ::PathMatchSpec(s.c_str(), glob.c_str()) == TRUE;
+#else
+  return fnmatch(glob.c_str(), s.c_str(), 0) == 0;
+#endif
+}
+
+static
+void
+auto_storage_provider(DockerVolumePlugin& dvp, std::string const& glob)
+{
+  while (true)
+  {
+    auto list = dvp.manager().list();
+    ELLE_DEBUG("listed %s volumes", list.size());
+    for (auto const&e: list)
+    {
+      bool match = glob_match(glob, e);
+      ELLE_DEBUG("scanning %s againts %s: %s", e, glob, match);
+      if (!match)
+        continue;
+      if (dvp.mounted(e))
+        continue;
+      try
+      {
+        elle::json::Object obj;
+        obj["storage"] = std::string();
+        dvp.manager().create_volume(e, obj);
+        dvp.mount(e);
+      }
+      catch (elle::Error const& er)
+      {
+        ELLE_WARN("Exception mounting %s: %s (will retry)", e, er);
+      }
+    }
+    reactor::sleep(10_sec);
+  }
+}
+
+static
 void
 auto_mounter(std::vector<std::string> mounts,
              DockerVolumePlugin& dvp)
@@ -1010,14 +1066,23 @@ COMMAND(start)
   auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
   if (advertise)
     manager.advertise_host(*advertise);
-  std::unique_ptr<reactor::Thread> mounter;
+  std::unique_ptr<reactor::Thread> mounter, provider;
   if (flag(args, "wait-for-peers"))
     manager.wait_for_peers(true);
+  auto ps = optional<std::string>(args, "provide-storage");
+  if (ps)
+  {
+    provider = elle::make_unique<reactor::Thread>("provider",
+      [ps,&dvp] { auto_storage_provider(dvp, *ps);});
+  }
   auto mount = optional<std::vector<std::string>>(args, "mount");
   if (mount)
     mounter = elle::make_unique<reactor::Thread>("mounter",
       [&] {auto_mounter(*mount, dvp);});
-  elle::SafeFinally terminator([&] { if (mounter) mounter->terminate_now();});
+  elle::SafeFinally terminator([&] {
+      if (mounter) mounter->terminate_now();
+      if (provider) provider->terminate_now();
+  });
   elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
   {
     while (true)
@@ -1394,6 +1459,9 @@ main(int argc, char** argv)
           "mount given volumes on startup, keep trying on error" },
         {"wait-for-peers", bool_switch(),
           "Always wait for at least one peer when mounting a volume"
+        },
+        {"provide-storage", value<std::string>(),
+          "Provide storage automatically for all discovered volumes matching glob pattern"
         },
       }
     },
