@@ -255,11 +255,11 @@ class Beyond:
     return self.__datastore.user_networks_fetch(user = user)
 
   def user_volumes_get(self, user):
-    # XXX: This requires two requests as we cannot combine results
-    # across databases.
-    networks = self.__datastore.user_networks_fetch(user = user)
-    return self.__datastore.networks_volumes_fetch(
-      networks = networks)
+    networks = (Network.from_json(self, json) for json in
+                self.__datastore.user_networks_fetch(user = user))
+    return (Volume.from_json(self, json) for json in
+            self.__datastore.networks_volumes_fetch(
+              networks = networks))
 
   def user_drives_get(self, name):
     return self.__datastore.user_drives_fetch(name = name)

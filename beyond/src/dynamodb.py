@@ -28,10 +28,6 @@ class DynamoDB:
         TableName = self.__tablename,
         AttributeDefinitions = [
           {
-            'AttributeName' : 'id',
-            'AttributeType' : 'S'
-          },
-          {
             'AttributeName' : 'type',
             'AttributeType' : 'S'
           },
@@ -41,21 +37,8 @@ class DynamoDB:
           }
         ],
         KeySchema = [
-          { 'AttributeName': 'id' , 'KeyType': 'HASH' }
-        ],
-        GlobalSecondaryIndexes = [
-          {
-            'IndexName' : 'type',
-            'KeySchema' : [
-              { 'AttributeName': 'type' , 'KeyType': 'HASH' },
-              { 'AttributeName': 'name' , 'KeyType': 'RANGE' }
-            ],
-            'Projection' : { 'ProjectionType': 'ALL' },
-            'ProvisionedThroughput' : {
-              'ReadCapacityUnits' : 1,
-              'WriteCapacityUnits' : 1
-            }
-          }
+          { 'AttributeName': 'type' , 'KeyType': 'HASH' },
+          { 'AttributeName': 'name' , 'KeyType': 'RANGE' }
         ],
         ProvisionedThroughput = {
           'ReadCapacityUnits' : 1,
@@ -92,7 +75,6 @@ class DynamoDBDatastore:
 
   def __augment_json(self, o, t):
     o['type'] = t
-    o['id'] = '%s/%s' % (t, o['name'])
 
   def __put_duplicate(self, json, Exn):
     try:
@@ -115,6 +97,9 @@ class DynamoDBDatastore:
       else:
         raise
 
+  def __delete(self, name, t):
+    self.__table.delete_item(Key = {'type': t, 'name': name})
+
   ## ---- ##
   ## User ##
   ## ---- ##
@@ -129,15 +114,13 @@ class DynamoDBDatastore:
     return (
       self.__purge_json(u) for u in
       self.__table.query(
-        IndexName = 'type',
-        Select = 'ALL_PROJECTED_ATTRIBUTES',
         KeyConditionExpression =
           boto3.dynamodb.conditions.Key('type').eq('users'))['Items']
       )
 
   def user_fetch(self, name):
     user = self.__table.get_item(
-      Key = {'id': 'users/%s' % name}).get('Item')
+      Key = {'type': 'users', 'name': name}).get('Item')
     if user is not None:
       return self.__purge_json(user)
     else:
@@ -150,7 +133,7 @@ class DynamoDBDatastore:
     raise NotImplementedError()
 
   def user_delete(self, name):
-    raise NotImplementedError()
+    self.__delete(name, 'users')
 
   def invitee_networks_fetch(self, invitee):
     raise NotImplementedError()
@@ -159,14 +142,12 @@ class DynamoDBDatastore:
     raise NotImplementedError()
 
   def user_networks_fetch(self, user):
-    # FIXME: table scan
     networks = self.__table.query(
-      IndexName = 'type',
-      Select = 'ALL_PROJECTED_ATTRIBUTES',
       KeyConditionExpression =
-      boto3.dynamodb.conditions.Key('type').eq('networks'))['Items']
+        boto3.dynamodb.conditions.Key('type').eq('networks'))['Items']
+    import sys
     for network in networks:
-      if network['owner'] == user.name:
+      if network['name'].split('/')[0] == user.name:
         yield self.__purge_json(network)
 
   def network_stats_fetch(self, network):
@@ -200,7 +181,7 @@ class DynamoDBDatastore:
   def network_fetch(self, owner, name):
     id = '/'.join([owner, name])
     network = self.__table.get_item(
-      Key = {'id': 'networks/%s' % id}).get('Item')
+      Key = {'type': 'networks', 'name': id}).get('Item')
     if network is not None:
       return self.__purge_json(network)
     else:
@@ -256,7 +237,7 @@ class DynamoDBDatastore:
     # print({'id': id}, file = sys.stderr)
     if expr:
       kwargs = {
-        'Key': {'id': 'networks/%s' % id},
+        'Key': {'type': 'networks', 'name': id},
         'UpdateExpression': ''.join(expr),
       }
       if names:
@@ -267,12 +248,10 @@ class DynamoDBDatastore:
 
 
   def networks_volumes_fetch(self, networks):
-    # FIXME: table scan
     volumes = self.__table.query(
-      IndexName = 'type',
-      Select = 'ALL_PROJECTED_ATTRIBUTES',
       KeyConditionExpression =
-      boto3.dynamodb.conditions.Key('type').eq('volumes'))['Items']
+        boto3.dynamodb.conditions.Key('type').eq('volumes'))['Items']
+    import sys
     for n in networks:
       for volume in volumes:
         if volume['network'] == n.name:
@@ -290,7 +269,7 @@ class DynamoDBDatastore:
   def volume_fetch(self, owner, name):
     id = '/'.join([owner, name])
     volume = self.__table.get_item(
-      Key = {'id': 'volumes/%s' % id}).get('Item')
+      Key = {'type': 'volumes', 'name': id}).get('Item')
     if volume is not None:
       return self.__purge_json(volume)
     else:
