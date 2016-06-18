@@ -529,7 +529,8 @@ _integrity(boost::program_options::variables_map const& args,
       }
     }
 #ifndef INFINIT_WINDOWS
-    if (auto ssh = dynamic_cast<infinit::storage::SFTPStorageConfig const*>(storage.get()))
+    if (/* auto ssh = */
+      dynamic_cast<infinit::storage::SFTPStorageConfig const*>(storage.get()))
     {
       // XXX:
     }
