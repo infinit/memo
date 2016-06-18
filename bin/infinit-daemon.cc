@@ -264,11 +264,8 @@ MountManager::mountpoint(std::string const& name, bool raw)
 }
 
 bool
-MountManager::exists(std::string const& name_)
+MountManager::exists(std::string const& name)
 {
-  std::string name(name_);
-  if (name.find("/") == name.npos)
-    name = elle::system::username() + "/" + name;
   try
   {
     auto volume = ifnt.volume_get(name);
@@ -656,7 +653,7 @@ MountManager::delete_volume(std::string const& name)
 class DockerVolumePlugin
 {
 public:
-  DockerVolumePlugin(MountManager& manager);
+  DockerVolumePlugin(MountManager& manager, infinit::User default_user);
   ~DockerVolumePlugin();
   void install(bool tcp, int tcp_port,
                boost::filesystem::path socket_path,
@@ -666,6 +663,7 @@ public:
   bool mounted(std::string const& name);
 private:
   ELLE_ATTRIBUTE_R(MountManager&, manager);
+  ELLE_ATTRIBUTE_R(infinit::User, default_user);
   std::unique_ptr<reactor::network::HttpServer> _server;
   std::unordered_map<std::string, int> _mount_count;
 };
@@ -1020,6 +1018,7 @@ with_default(boost::program_options::variables_map const& vm,
   else
     return *opt;
 }
+
 COMMAND(start)
 {
   ELLE_TRACE("starting daemon");
@@ -1043,11 +1042,12 @@ COMMAND(start)
   MountManager manager(
     with_default<std::string>(args, "mount-root", boost::filesystem::temp_directory_path().string()),
     with_default<std::string>(args, "docker-mount-substitute", ""));
-  DockerVolumePlugin dvp(manager);
-  dvp.install(flag(args, "docker-socket-tcp"),
-              std::stoi(with_default<std::string>(args, "docker-socket-port", "0")),
-              with_default<std::string>(args, "docker-socket-path", "/run/docker/plugins"),
-              with_default<std::string>(args, "docker-descriptor-path", "/usr/lib/docker/plugins"));
+  DockerVolumePlugin dvp(manager, self_user(ifnt, args));
+  dvp.install(
+    flag(args, "docker-socket-tcp"),
+    std::stoi(with_default<std::string>(args, "docker-socket-port", "0")),
+    with_default<std::string>(args, "docker-socket-path", "/run/docker/plugins"),
+    with_default<std::string>(args, "docker-descriptor-path", "/usr/lib/docker/plugins"));
   if (!flag(args, "foreground"))
     daemonize();
   PIDFile pid;
@@ -1131,10 +1131,12 @@ COMMAND(start)
   };
 }
 
-DockerVolumePlugin::DockerVolumePlugin(MountManager& manager)
-: _manager(manager)
-{
-}
+DockerVolumePlugin::DockerVolumePlugin(MountManager& manager,
+                                       infinit::User default_user)
+  : _manager(manager)
+  , _default_user(std::move(default_user))
+{}
+
 DockerVolumePlugin::~DockerVolumePlugin()
 {
   uninstall();
@@ -1280,7 +1282,7 @@ DockerVolumePlugin::install(bool tcp,
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       auto name = boost::any_cast<std::string>(json.at("Name"));
-      if (_manager.exists(name))
+      if (this->_manager.exists(ifnt.qualified_name(name, this->_default_user)))
         return "{\"Err\": \"\", \"Volume\": {\"Name\": \"" + name + "\" }}";
       else
         return "{\"Err\": \"No such mount\"}";
