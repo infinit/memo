@@ -426,7 +426,6 @@ parse_args(boost::program_options::options_description const& options,
 }
 
 extern bool script_mode;
-extern boost::optional<std::string> _as_user;
 
 static
 bool
@@ -713,8 +712,6 @@ namespace infinit
               }
               bool help = vm.count("help");
               script_mode = vm.count("script");
-              if (vm.count("as"))
-                _as_user = vm["as"].as<std::string>();
               Mode const* mode = nullptr;
               bool misplaced_mode = false;
               std::vector<std::string> tokens;
@@ -2985,12 +2982,7 @@ static
 std::string
 self_user_name(boost::program_options::variables_map const& args)
 {
-  static auto const env  = elle::os::getenv("INFINIT_USER", "");
-  if (!_as_user && !env.empty())
-    _as_user = env;
-  if (_as_user)
-    return _as_user.get();
-  return elle::system::username();
+  return get_username(args, "as");
 }
 
 inline
