@@ -275,14 +275,7 @@ COMMAND(export_)
   auto name = mandatory(args, "name", "storage name");
   auto output = get_output(args);
   std::unique_ptr<infinit::storage::StorageConfig> storage = nullptr;
-  try
-  {
-    storage = ifnt.storage_get(name);
-  }
-  catch(...)
-  {
-    storage = ifnt.storage_get(ifnt.qualified_name(name, ifnt.user_get()));
-  }
+  storage = ifnt.storage_get(name);
   elle::serialization::json::serialize(storage, *output, false);
   report_exported(*output, "storage", name);
 }
