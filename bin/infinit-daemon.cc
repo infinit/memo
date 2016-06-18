@@ -318,16 +318,18 @@ MountManager::start(std::string const& name, infinit::MountOptions opts,
                     bool force_mount,
                     bool wait_for_mount)
 {
-  infinit::Volume volume;
-  try
+  infinit::Volume volume = [&]
   {
-    volume = ifnt.volume_get(name);
-  }
-  catch (MissingLocalResource const&)
-  {
-    acquire_volume(name);
-    volume = ifnt.volume_get(name);
-  }
+    try
+    {
+      return ifnt.volume_get(name);
+    }
+    catch (MissingLocalResource const&)
+    {
+      acquire_volume(name);
+      return ifnt.volume_get(name);
+    }
+  }();
   volume.mount_options.merge(opts);
   Mount m{nullptr, volume.mount_options};
   std::string mount_prefix(name + "-");

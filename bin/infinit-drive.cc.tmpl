@@ -71,11 +71,8 @@ COMMAND(create)
 
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
 
-  infinit::Volume volume;
-  {
-    auto name = ifnt.qualified_name(mandatory(args, "volume"), owner);
-    volume = ifnt.volume_get(name);
-  }
+  infinit::Volume volume(
+    ifnt.volume_get(ifnt.qualified_name(mandatory(args, "volume"), owner)));
   infinit::Drive::Users users;
   infinit::Drive drive{name, owner, volume, network, desc ? *desc : "", users};
   ifnt.drive_save(drive);
