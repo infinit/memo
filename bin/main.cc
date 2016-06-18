@@ -19,3 +19,4 @@ make_stat_update_thread(infinit::User const& self,
 
 std::string program;
 bool script_mode = false;
+boost::optional<std::string> _as_user = {};
