@@ -396,7 +396,7 @@ _sanity(boost::program_options::variables_map const& args,
   // User name.
   sane &= test(
     [&] {
-      auto self_name = self_user_name(args);
+      auto self_name = self_user_name();
       if (verbose)
       {
         std::cout << "User:" << std::endl;
