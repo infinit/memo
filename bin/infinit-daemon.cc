@@ -1242,7 +1242,8 @@ DockerVolumePlugin::install(bool tcp,
         auto p = name->find('@');
         if (p != std::string::npos)
           name = name->substr(0, p);
-        _manager.create_volume(*name, opts);
+        this->_manager.create_volume(
+          ifnt.qualified_name(name.get(), this->_default_user), opts);
       }
       catch (ResourceAlreadyFetched const&)
       { // this can happen, docker seems to be caching volume list:
@@ -1269,7 +1270,8 @@ DockerVolumePlugin::install(bool tcp,
         auto name = optional(json, "Name");
         if (!name)
           throw elle::Error("Missing 'Name' argument");
-        this->_manager.delete_volume(name.get());
+        this->_manager.delete_volume(
+          ifnt.qualified_name(name.get(), this->_default_user));
       }
       catch (elle::Error const& e)
       {
@@ -1294,8 +1296,8 @@ DockerVolumePlugin::install(bool tcp,
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       auto name = boost::any_cast<std::string>(json.at("Name"));
-      std::string mountpoint =
-        mount(ifnt.qualified_name(name, this->_default_user));
+      name = ifnt.qualified_name(name, this->_default_user);
+      std::string mountpoint = mount(name);
       std::string res = "{\"Err\": \"\", \"Mountpoint\": \""
           + mountpoint +"\"}";
       ELLE_TRACE("reply: %s", res);
@@ -1306,6 +1308,7 @@ DockerVolumePlugin::install(bool tcp,
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       auto name = boost::any_cast<std::string>(json.at("Name"));
+      name = ifnt.qualified_name(name, this->_default_user);
       auto it = _mount_count.find(name);
       if (it == _mount_count.end())
         return "{\"Err\": \"No such mount\"}";
@@ -1322,10 +1325,11 @@ DockerVolumePlugin::install(bool tcp,
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       auto name = boost::any_cast<std::string>(json.at("Name"));
+      name = ifnt.qualified_name(name, this->_default_user);
       try
       {
         return "{\"Err\": \"\", \"Mountpoint\": \""
-          + _manager.mountpoint(name) +"\"}";
+          + this->_manager.mountpoint(name) +"\"}";
       }
       catch (elle::Error const& e)
       {
