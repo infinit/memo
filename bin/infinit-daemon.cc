@@ -1294,7 +1294,8 @@ DockerVolumePlugin::install(bool tcp,
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       auto name = boost::any_cast<std::string>(json.at("Name"));
-      std::string mountpoint = mount(name);
+      std::string mountpoint =
+        mount(ifnt.qualified_name(name, this->_default_user));
       std::string res = "{\"Err\": \"\", \"Mountpoint\": \""
           + mountpoint +"\"}";
       ELLE_TRACE("reply: %s", res);
