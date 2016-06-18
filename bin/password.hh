@@ -40,7 +40,7 @@ read_passphrase(std::string const& prompt_text = "Passphrase")
   return res;
 }
 
-static
+inline
 std::string
 _password(boost::program_options::variables_map const& args,
           std::string const& argument,
