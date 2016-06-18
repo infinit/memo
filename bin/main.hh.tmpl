@@ -2018,12 +2018,10 @@ namespace infinit
     }
 
     User
-    user_get(boost::optional<std::string> user = {}) const
+    user_get(std::string const& user) const
     {
-      if (!user)
-        user = elle::system::username();
       boost::filesystem::ifstream f;
-      this->_open_read(f, this->_user_path(user.get()), user.get(), "user");
+      this->_open_read(f, this->_user_path(user), user, "user");
       return load<User>(f);
     }
 
