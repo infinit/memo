@@ -2457,12 +2457,18 @@ get_input(boost::program_options::variables_map const& args)
 
 inline
 std::string
+get_username(boost::optional<std::string> const& opt)
+{
+  std::string env = elle::os::getenv("INFINIT_USER", "");
+  return opt ? opt.get() : (env.empty() ? elle::system::username() : env);
+}
+
+inline
+std::string
 get_username(boost::program_options::variables_map const& args,
              std::string const& name)
 {
-  auto opt = optional(args, name);
-  std::string env = elle::os::getenv("INFINIT_USER", "");
-  return opt ? opt.get() : (env.empty() ? elle::system::username() : env);
+  return get_username(optional(args, name));
 }
 
 DAS_MODEL_FIELDS(
@@ -2981,14 +2987,9 @@ beyond_delete(std::string const& type,
 inline
 static
 std::string
-self_user_name(boost::program_options::variables_map const& args)
+self_user_name()
 {
-  static auto const env  = elle::os::getenv("INFINIT_USER", "");
-  if (!_as_user && !env.empty())
-    _as_user = env;
-  if (_as_user)
-    return _as_user.get();
-  return elle::system::username();
+  return get_username(_as_user);
 }
 
 inline
@@ -2998,7 +2999,7 @@ self_user(infinit::Infinit const& ifnt,
           boost::program_options::variables_map const& args,
           bool private_mandatory = true)
 {
-  auto res = ifnt.user_get(self_user_name(args));
+  auto res = ifnt.user_get(self_user_name());
   if (private_mandatory && !res.private_key)
   {
     throw elle::Error(
