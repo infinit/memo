@@ -1710,7 +1710,7 @@ namespace infinit
     boost::filesystem::path
     root_block_cache_dir()
     {
-      return xdg_state_home() / this->network / this->name;
+      return xdg_state_home() / this->network / std::string(this->name);
     }
 
     void
