@@ -416,6 +416,11 @@ COMMAND(list)
   else
     for (auto const& user: users)
     {
+      auto self = self_user_name();
+      if (user.name == self)
+        std::cout << "* ";
+      else
+        std::cout << "  ";
       std::cout << user.name << ": public";
       if (user.private_key)
         std::cout << "/private keys";

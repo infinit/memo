@@ -17,7 +17,7 @@ class Output(str):
 
   @property
   def list(self):
-    return self.split('\r\n' if os.environ.get('EXE_EXT', '') else '\n')
+    return self.split('\r\n' if 'EXE_EXT' in os.environ else '\n')
 
 for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
   version = Version(version)
@@ -36,8 +36,13 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
   ## ------##
   ##  User ##
   ## ----- ##
-  users = run('infinit-user', '--list').list
-  assertEq(set(users), {'user: public/private keys', 'owner: public key only'})
+
+  assertEq(
+    run('infinit-user', '--list', '--script').json,
+    [
+      {'name': 'owner', 'has_private_key': False},
+      {'name': 'user', 'has_private_key': True},
+    ])
   # User 'user'.
   user = run('infinit-user', '--export', '--name', 'user', '--full').json
   assertEq(user['name'], 'user')
