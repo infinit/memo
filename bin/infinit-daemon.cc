@@ -192,7 +192,7 @@ public:
   exists(std::string const& name);
   std::string
   mountpoint(std::string const& name, bool ignore_subst=false);
-  std::vector<std::string>
+  std::vector<QName>
   list();
   void
   create_volume(std::string const& name,
@@ -217,7 +217,7 @@ private:
   std::unordered_map<std::string, Mount> _mounts;
 };
 
-std::vector<std::string>
+std::vector<QName>
 MountManager::list()
 {
   try
@@ -228,9 +228,9 @@ MountManager::list()
   {
     ELLE_TRACE("Failed to acquire volumes from beyond: %s", e);
   }
-  std::vector<std::string> res;
+  std::vector<QName> res;
   for (auto const& volume: ifnt.volumes_get())
-    res.push_back(volume.name);
+    res.emplace_back(volume.name);
   return res;
 }
 

@@ -55,6 +55,42 @@
 
 extern std::string program;
 
+class QName
+  : public std::string
+{
+public:
+  QName()
+    : QName("/")
+  {}
+
+  QName(std::string qname)
+    : std::string(std::move(qname))
+  {
+    if (this->find("/") == std::string::npos)
+      ELLE_ABORT("invalid qualified name: %s", *this);
+  }
+
+  QName(std::string const& qualifier, std::string const& name)
+    : std::string(elle::sprintf("%s/%s", qualifier, name))
+  {}
+
+  std::string
+  qualifier() const
+  {
+    auto pos = this->find("/");
+    ELLE_ASSERT_NEQ(pos, std::string::npos);
+    return this->substr(0, pos);
+  }
+
+  std::string
+  name() const
+  {
+    auto pos = this->find("/");
+    ELLE_ASSERT_NEQ(pos, std::string::npos);
+    return this->substr(pos + 1);
+  }
+};
+
 #define COMMAND(name) static void name(boost::program_options::variables_map const& args)
 
 #define NO_PRIVATE_KEY "user \"%s\" has no private key"
@@ -1559,7 +1595,7 @@ namespace infinit
   struct Volume
     : public elle::Printable
   {
-    Volume(std::string name,
+    Volume(QName name,
            std::string network_,
            MountOptions const& mount_options,
            boost::optional<std::string> default_permissions_)
@@ -1674,7 +1710,7 @@ namespace infinit
       out << "Volume(" << this->name << ")";
     }
 
-    std::string name;
+    QName name;
     std::string network;
     MountOptions mount_options;
     boost::optional<std::string> default_permissions;
