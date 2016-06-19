@@ -906,7 +906,7 @@ COMMAND(list)
     for (auto const& volume: ifnt.volumes_get())
     {
       elle::json::Object o;
-      o["name"] = volume.name;
+      o["name"] = std::string(volume.name);
       o["network"] = volume.network;
       if (volume.mount_options.mountpoint)
         o["mountpoint"] = volume.mount_options.mountpoint.get();
