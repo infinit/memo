@@ -609,11 +609,18 @@ def configure(
   }):
     drake.node('debian-packaging/release/control.tmpl')
     drake.node('debian-packaging/debug/control.tmpl')
+  def make_executable(target):
+    os.chmod(str(target), 0o755)
+    return True
   debian_nodes = chain(
     debian_nodes,
     drake.copy(drake.nodes('debian-packaging/release/control'),
                'debian/DEBIAN',
                strip_prefix = True),
+    drake.copy(drake.nodes('debian-packaging/release/postinst'),
+                           'debian/DEBIAN',
+                           post_process = make_executable,
+                           strip_prefix = True),
   )
   rule_debian = drake.Rule('debian')
   rule_debian_debug = drake.Rule('debian-debug')

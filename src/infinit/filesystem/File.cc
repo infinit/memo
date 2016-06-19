@@ -603,8 +603,21 @@ namespace infinit
       {
         for (auto fh: it->second.second)
         {
-          ELLE_WARN("Propagating truncate(%s) of %s to open file handle with size %s",
-                    new_size, _name, fh->_file._header.size);
+          bool dirty = fh->_fat_changed;
+          if (!dirty)
+          {
+            for (auto const& b: fh->_blocks)
+            {
+              if (b.second.dirty && (b.first +1) * fh->_file._header.size < unsigned(new_size))
+              {
+                dirty = true;
+                break;
+              }
+            }
+          }
+          if (dirty)
+            ELLE_WARN("Propagating truncate(%s) of %s to open dirty file handle with size %s",
+                      new_size, _name, fh->_file._header.size);
           fh->ftruncate(new_size);
         }
       }

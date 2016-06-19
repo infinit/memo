@@ -4,6 +4,8 @@
       h1 { margin-top: 0; font-size: 27px; line-height: 33px; }
     }
 
+    .btn-contact { display: none; }
+
     section.features {
       .headline, .terminal {  width: 90%; float: none;}
       .headline { text-align: center; padding: 0 5%; }
@@ -51,17 +53,29 @@
     .filters { width: 100%; margin:0; }
     #search-input input { width: 86%; margin: 0 5%; padding: 14px 2%; }
   }
+}
 
+@media (max-width:720px) {
+  body.pricing {
+    section.doc {
+      > p { width: 80%;}
+      .version { width: 90%; border-right: 0px; margin-bottom: 50px; }
+      .version.community { border-right: 0; }
+      .plan p { padding-left: 0;}
+      .plan hr { margin: 15px auto; width: 50%;}
+    }
+  }
 }
 
 @media (max-width:600px) {
   header {
-    ul li { display: none; }
-    ul li:last-child { display: block; }
+    > ul { display: none; }
+    nav { display: block; }
   }
 
   body.home {
     section.features {
+      p.title { padding-top: 0; margin-bottom: 0; }
       span.arrow { display: none; }
       .terminal .header { margin-top: -58px; }
     }
@@ -77,7 +91,7 @@
 
     section.encore {
       div.get_started, div.search_faq {
-        width: 90%; float: none; padding: 0 5%;
+        width: 96%; float: none; padding: 0 2%; margin: 0;
       }
       div.get_started { padding-top: 50px; }
       div.search_faq { padding-bottom: 50px; }
@@ -114,9 +128,26 @@
     }
   }
 
-  body.documentation, body.press {
+  body.documentation, body.press, body.opensource, body.contact, body.legal {
+    h1 { margin-top: 30px;}
     #sidebar { display: none; }
     section.doc { float: left; width: 84%; margin:0; padding: 0 7%;}
+  }
+
+  body.download {
+    section.platforms {
+      .platform { width: 100%; float: none; margin: 0; margin-bottom: 50px;}
+    }
+  }
+
+  body.contact {
+    form {
+      input[type="text"], input[type="email"] { width: 100%; margin-bottom: 10px; }
+    }
+  }
+
+  body.legal {
+    section.doc dd p { width: 100%; }
   }
 }
 

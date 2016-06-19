@@ -21,6 +21,7 @@ COMMAND(deserialize)
     }
     elle::serialization::Context ctx;
     ctx.set<infinit::model::doughnut::Doughnut*>(nullptr);
+    ctx.set<elle::Version>(elle::serialization_tag::version);
     auto block = elle::serialization::binary::deserialize<
       infinit::model::doughnut::consensus::BlockOrPaxos>(f, true, ctx);
     elle::serialization::json::serialize(block, *output);

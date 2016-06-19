@@ -46,6 +46,11 @@ a.button, button.button, input.button, body.documentation section.doc p a.button
   &.border.black:hover { background: lighten(@black, 20%); color: white !important;}
 
   &.big { font-size: 16px; text-align: center; padding: 13px 20px; }
+
+  &.disabled, &.disabled:hover {
+    background: #D2D2D2;
+    box-shadow: 0 3px 0 0 #9A9A9A;
+  }
 }
 
 .spacer { clear: both; }
@@ -84,6 +89,11 @@ input[type="text"], input[type="email"], input[type="password"], textarea {
 | Layout      |
 `------------*/
 
+#announcement {
+  padding: 10px 7%; border-bottom: 2px solid #F3F3F3; background: #fffad4;
+  color: #737129; text-align: center;
+}
+
 header {
   background: #F9F9F9; border-bottom: 2px solid #F3F3F3;
   padding: 10px 7% 5px 7%; min-height: 57px;
@@ -118,7 +128,7 @@ header {
     // }
   }
 
-  ul {
+  > ul {
     float: right; margin-top: 18px;
 
     li {
@@ -137,6 +147,32 @@ header {
       a.button { margin-top: -9px;}
     }
   }
+
+  nav {
+    float: right; margin-top: 22px; padding-bottom: 40px;
+    display: none; outline: none;
+
+    a { font-weight: 600; }
+    > a { padding: 10px; .transition(); opacity: 1; outline: none; }
+    ul {
+      display: none; position: absolute; width: 100%; left:0; margin: 0; padding:0;
+      top: 70px; z-index: 99;
+    }
+    ul li { text-align: right; }
+    ul li a {
+      padding: 13px 0; display: block; width: 100%; margin-right: 40px;
+      color: white; font-weight: 400; border-bottom: 1px solid lighten(@infinitblack, 15%);
+      border-top: 1px solid darken(@infinitblack, 20%); background: @infinitblack;
+      .transition();
+      &:hover { background: lighten(@infinitblack, 5%); }
+    }
+    ul li a span { margin-right: 38px; display: block;}
+
+    &.open > a { opacity: 0.5; }
+    &.open ul { display: block; }
+  }
+
+
 }
 
 section.blue {
@@ -521,7 +557,7 @@ body.home {
 | Drive       |
 `------------*/
 
-body.drive {
+body.drive, body.dropboxe {
   .content {
     h2 { font-size: 29px; line-height: 37px; }
     p { font-size: 16px; line-height: 26px; color: #4A4A4A; }
@@ -572,6 +608,11 @@ body.drive {
   section.integrations {
     clear:both; margin: 130px 15%;
 
+    table { float: right; margin-left: 20px;}
+    table tr td { text-align: center; }
+    table tr td img { float: none; margin:40px 25px 10px 25px;}
+    span.note {     color: #8a8a8a; font-style: italic;}
+
     h2 span {
       font-size: 15px; background: #C8D6DC; padding: 3px 6px;
       border-radius: 3px; color: white; font-weight: 600;
@@ -583,6 +624,35 @@ body.drive {
   section.cta {
     text-align: center; margin-bottom: 100px;
     img { vertical-align: text-bottom; margin-left: 3px; }
+  }
+}
+
+body.dropboxe {
+  section a { color: @infinitblue; .transition() }
+    section a:hover {
+      color: darken(@infinitblue, 10%);
+      border-bottom: 2px solid darken(@infinitblue, 10%);
+    }
+
+  section.intro {
+    img.icon { max-height: 33px; }
+    a.button { margin-top: 25px; margin-bottom: 25px; }
+    img.schema { margin-left: -50px;}
+  }
+
+  section.location {
+    border-top: 0;
+  }
+
+  section.encryption { padding-bottom: 60px;
+    img {
+      margin-top: 50px; width: 252px; height: 156px; margin-right: 100px;
+      float: left;
+    }
+  }
+
+  section.cta {
+    a.button { margin-right: 10px; vertical-align: middle; margin-top: 10px; }
   }
 }
 
@@ -708,8 +778,9 @@ section.doc {
       padding: 15px 50px 15px 20px; border-radius: 5px; color: #f8f8f2;
       margin-left: 0;
     }
-    &.alternate code, &.ribbon code { min-height: 48px; }
-    &.alternate code { background: #2B3F63; }
+    &.device2 code, &.device1 code, &.device3 code { min-height: 48px; }
+    &.device2 code { background: #2B3F63; }
+    &.device3 code { background: #632B2B; }
   }
 
   pre > div {
@@ -736,14 +807,25 @@ section.doc {
     border-left: 3px solid transparent; border-right: 3px solid darken(#808080, 20%);
     border-bottom: 3px solid transparent; border-top: 3px solid darken(#808080, 20%)
   }
-  pre.alternate > div span { background: #799AD4; }
-  pre.alternate > div span::before {
+  pre.device2 > div span { background: #799AD4; }
+  pre.device3 > div span { background: #D47979; }
+
+  pre.device2 > div span::before {
     border-left: 3px solid darken(#799AD4, 20%);
     border-top: 3px solid darken(#799AD4, 20%);
   }
-  pre.alternate > div span::after {
+  pre.device2 > div span::after {
     border-right: 3px solid darken(#799AD4, 20%);
     border-top: 3px solid darken(#799AD4, 20%);
+  }
+
+  pre.device3 > div span::before {
+    border-left: 3px solid darken(#D47979, 20%);
+    border-top: 3px solid darken(#D47979, 20%);
+  }
+  pre.device3 > div span::after {
+    border-right: 3px solid darken(#D47979, 20%);
+    border-top: 3px solid darken(#D47979, 20%);
   }
 
   img { max-width: 100%; }
@@ -797,6 +879,41 @@ body.pricing, body.press {
     margin-bottom: 30px;
   }
 
+  #docsearch {
+    padding: 8px 15px 8px 33px; max-width: 120px; border-radius: 30px; margin-left: -5px;
+    margin-bottom: 15px; background-size: 14px 14px;
+    .at2x('../images/icons/search.png', 14px, 14px);
+    background-color: transparent;
+    background-repeat: no-repeat; background-position: 13px 8px;
+  }
+
+  .algolia-docsearch-suggestion,
+  .aa-cursor .algolia-docsearch-suggestion--content { color: #252d3b; }
+  .algolia-docsearch-suggestion--category-header { background: #252d3b; }
+  .algolia-docsearch-footer { border-top: 0px solid #606060; }
+  .algolia-docsearch-suggestion--title { font-weight: 500; }
+  .algolia-docsearch-suggestion--text { color: #A0A0A0;}
+
+  .algolia-docsearch-suggestion--subcategory-column {
+    color: #8C8C8C; background: none; font-style: italic;
+    border-right: 1px solid #E0E0E0;
+  }
+  .algolia-docsearch-suggestion--wrapper:hover {
+    background: #f3f3f3;
+  }
+
+  .aa-dropdown-menu {
+    font-size: 14px; min-width: 520px; margin-left: -7px;
+    margin-top: -4px;
+  }
+
+  .algolia-docsearch-suggestion--highlight {
+    color: #252d3b;
+    background: #FFFFBE;
+  }
+
+  .algolia-docsearch-suggestion__secondary { border-top: 1px solid #E0E0E0; }
+
   ul.menu { position: absolute; margin-top: 20px; max-width: 250px; }
   ul.menu #menu-anchor { height: 1px; width: 100%;}
   ul.menu.fixed { position: fixed; top: 20px;}
@@ -812,6 +929,10 @@ body.pricing, body.press {
   }
 
   ul.menu > li { padding-top: 3px; padding-bottom: 5px; }
+  ul.menu > li hr {
+    border: 0px; height: 1px; background: #D2D2D2; padding: 0;
+    margin: 10px 0 7px 0; width: 70%;
+  }
   ul.menu li > a { font-size: 15px;  }
 
   ul.menu li ul {
@@ -950,7 +1071,7 @@ body.doc_get_started {
 body.faq {
   .content { min-height: 500px;}
 
-  h1 { text-align: center; margin-top: 40px; margin-bottom: 0px;}
+  h1 { text-align: center; margin-top: 40px; margin-bottom: 0px; font-size: 33px; }
 
   main { margin: 0 15%; }
 
@@ -1375,138 +1496,53 @@ body.pricing {
     padding-bottom: 10px; padding-left: 7%; padding-right: 7%; width: 86%;
     &:after { content: ''; display: table; clear: both; }
 
-    h1 { text-align:center; margin-bottom: 20px; border-bottom: none; display: none; }
-  }
+    h1 { text-align:center; margin-bottom: 0px; border-bottom: none;  }
+    > p { text-align: center; width: 40%; margin: 0 auto;}
 
-  .plan {
-    float: left; width: 30%; padding: 0 1% 100px 1%; text-align: left; position: relative;
-    border-radius: 5px; border-right: 1px solid #f2f2f2;
-  }
-  .plan h2 {
-    font-size: 22px; margin: 0 auto 15px auto; padding-top: 0;
-    border-bottom: 2px solid @infinitblack; width: 75%;
-    margin-top: 20px !important; margin-bottom: 20px; padding: 0 3% 17px 3%;
-  }
-  .plan h2 img { margin-top: -5px; margin-right: 8px; vertical-align: bottom;}
-  .plan p { margin: 7px 0; clear: both; padding-left: 11%;  }
-  .plan p.big { font-size: 16px; line-height: 24px;}
-  .plan p span { color: @infinitgray; }
-  .plan p span.badge {
-    color: #718287; background: #DBEBF0; border-radius: 3px; padding: 4px 6px;
-    text-transform: uppercase; font-size: 10px; margin-left: 3px; font-weight: bold;
-  }
-  .plan hr {
-    width: 70%; border: none; height: 1px; background: lighten(@infinitgray, 15%);
-    display: block; margin: 15px 0 15px 10%;
-  }
-  .plan p.price {
-    position: absolute; top:480px; width: 80%;
-    font-family: @helvetica; font-weight: 300; font-size: 23px; margin-bottom: 50px;
-    span { display: inline-block; margin-top: 26px; font-size: 18px; }
-  }
-  .plan a.button {
-    color:white; margin-top: 20px;
-  }
-  .plan a.button:hover { color: white; border-bottom: none; }
-  .plan:last-child { border-right: 0}
-  .plan:last-child h2 img {  margin-top: -13px; }
+    .version {
+      width: 40%; padding: 0 5%; margin: 20px 0 100px 0; float: left; text-align: center;
 
-  section.estimation {
-    text-align: center; min-height: 400px; width: 60%; padding: 50px 20% 100px 20%;
-    background: #F9F9F9; margin: 60px auto 0 auto;
+      ul { list-style-type: none;}
+      ul:after { display: table; clear: both; content: '';}
+      ul li { float: left; text-align: center; width: 40%; margin:10px 5% 20px 5%; }
+      ul li:nth-child(2n+1) { clear: both; }
+      ul li span { display: block; clear: both; margin-top: 5px; }
+      ul li img {
+        max-height: 35px; max-width: 35px; width: auto; display: block;
+        margin: auto;
+      }
+      ul li.key img { margin-top: 10px;}
+      ul li.key span { margin-top: 9px;}
 
-    h2 { font-size: 2em; margin-bottom: 0;}
-    p.subtitle { margin-bottom: 50px;}
+      ul li.connectors img { max-width: none; max-height: none; height: 35px; width: auto;}
+      ul li.key span { margin-top: 9px;}
 
-    .controls {
-      margin-bottom: 20px; width: 650px;
-
-      label {
-        font-size: 17px; font-weight: bold; vertical-align: super;
-        width: 80px; display: inline-block; text-align: left; margin-left: 20px;
+      h2 {
+        font-size: 16px; text-transform: uppercase; padding-bottom: 5px;
+        margin-top: 0;
+        border-bottom: 2px solid @infinitblack; display: inline-block;
       }
 
-      select { float: left; }
-
-      table, table tr td  { width: 100%; text-align: center; }
-      tr.users td, tr.storage td { padding-bottom: 25px; }
-      tr.storage td { position: relative;}
-
-      .slider {
-        max-width: 150px; min-height: 24px;
-        margin-left: 0 !important; margin-right: 0 !important;
+      hr {
+        background: #E6E6E6; height: 1px; border: none; display: block; clear: both;
+        margin: 20px auto; width: 50%;
       }
-      .slider, .select-style { display: inline-block;}
-
-      .select-style {
-        padding: 0; margin: 0; border: 1px solid #ccc; width: 172px;
-        border-radius: 3px; overflow: hidden; background-color: #fff;
-        background: #fff url("../images/icons/arrow-down.png") no-repeat 94% 50%;
-        position: absolute; left: 67%; top: -1px;
+      p { margin: 5px 0; }
+      p span {
+        color: #718287;background: #dbebf0; border-radius: 3px; padding: 4px 6px;
+        text-transform: uppercase; font-size: 10px; margin-left: 3px; font-weight: bold;
       }
-
-      .select-style select {
-        padding: 8px; background-image: none; font-size: 12.5px; width: 100%;
-        border: none; box-shadow: none; background-color: transparent;
-        -webkit-appearance: none; -moz-appearance: none; appearance: none;
-      }
-
-      tr.storage td {
-        a {
-          position: absolute; bottom: 25px; right: 0;
-          opacity: 1; .transition(); outline: none;
-          &:hover { opacity: 0.7 }
-        }
-        a.add { right: -30px; }
-      }
-
-      tr:nth-child(2) td a.remove { display: none; }
-      tr:nth-child(2) td a.add { right: 0; }
-
-
-      .select-style select:focus { outline: none;}
+      a.button { margin-top: 15px; clear: both;}
     }
 
-    .bracket {
-      .at2x('../images/icons/bracket-down.png', 249px, 50px);
-      width: 249px; height: 50px; margin: 20px auto 30px auto;
-    }
+    em { clear: both; display: block;  text-align: center; margin-bottom: 60px;}
 
-    .price {
-      padding-top: 0px; font-size: 34px; font-family: @helvetica;
-      padding-bottom: 70px;
+    .version.community { padding-right: 5%; border-right: 1px solid #E6E6E6; }
+    .version.community ul { width: 80%; margin-left: auto; margin-right: auto; }
+    .version.community ul li { width: 38%; margin-left: 6%; margin-right: 6%;}
 
-      span, p { font-weight: 200; }
-      p.free { display: none;}
-      p.free, p.infinit { margin-bottom: 0px;  margin-top: 31px; }
-      p.comparison { margin-top: 10px; }
-      p.comparison, p.comparison span {
-        font-weight: normal; color: lighten(#4A4A4A, 25%); font-size: 15px;
-        font-family: @sourcesans;
-      }
-    }
-
-
-
-    // table tr:nth-child(1) th { padding-top: 80px; clear: both; border-bottom: none; }
-
-    // table tr td { width: 16%; padding: 10px 2%; border-right: 1px solid #E6E6E6; }
-    // table tr td:first-child, table tr th:first-child { text-align: left; padding-left: 3%; }
-    // table tr td:last-child { border-right: none;}
-    // table tr.capacity td span { font-weight: bold; }
-    // table tr.price td {
-    //   font-family: @helvetica; font-size: 22px; font-weight: 300;
-    // }
-    // table tr td.users_disabled, table tr th.users_disabled,
-    // table tr td.capacity_disabled, table tr th.capacity_disabled {
-    //   opacity: 0.4; .transition(); position: relative;
-    //   filter: grayscale(100%);  -webkit-filter: grayscale(1);
-    // }
-
-    // table tr.price td.users_disabled, table tr.price td.capacity_disabled {
-    //   visibility: hidden;
-    //   &:after { content: '/'; visibility: visible; position: absolute; left:50%;}
-    // }
+    .version.enterprise { padding-left: 4%; }
+    .version.enterprise ul { width: 90%; margin-left: auto; margin-right: auto; }
   }
 
 }

@@ -1,9 +1,24 @@
+## [0.2.4] (backend 0.5.5) - 2016-05-02
+
+### Fixed
+
+- Fix registration process.
+- Fix broken link to the documentation.
+- Fix 'open' on Linux.
+
 ## [0.2.3] (backend 0.5.5) - 2016-04-25
 
 ### Changed
 
 - Use backend 0.5.5.
+- New login screen.
 - Show synchronization state of drives.
+
+## [0.2.2] (backend 0.5.4) - 2016-02-27
+
+### Changed
+
+- Use backend 0.5.4.
 
 ## [0.2.1] (backend 0.5.2) - 2016-02-29
 
@@ -19,3 +34,20 @@
 - Use backend 0.5.2.
 - Show only drives you own or you have been invited to.
 - Automatically open mountpoint after mounting a drive.
+
+## [0.2.0] (backend 0.5.0) - 2016-02-24
+
+### Added
+
+- Add email confirmation screen.
+
+### Changed
+
+- Use backend 0.5.0.
+- Show invitation individually.
+- Show mount / unmount buttons on the main view.
+- Turn update banner to a smaller alert message.
+
+### Removed
+
+- Remove detailed drive view.

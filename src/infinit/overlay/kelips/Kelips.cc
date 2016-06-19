@@ -3245,21 +3245,21 @@ namespace infinit
             std::string uid;
             if (hosts.first != Address::null)
               uid = elle::sprintf("%x", hosts.first);
-            auto res = Overlay::WeakMember(
-              new infinit::model::doughnut::consensus::Paxos::RemotePeer(
+            auto res =
+              std::make_shared<model::doughnut::consensus::Paxos::RemotePeer>(
                 elle::unconst(*this->doughnut()),
                 hosts.first,
                 endpoints,
                 uid,
-                elle::unconst(this)->_remotes_server));
-            std::dynamic_pointer_cast<model::doughnut::Remote>(res.payload())
-              ->retry_connect(std::function<bool(model::doughnut::Remote&)>(
-                std::bind(&Node::remote_retry_connect,
-                          this, std::placeholders::_1,
-                          uid)));
+                elle::unconst(this)->_remotes_server);
+            res->retry_connect(std::function<bool(model::doughnut::Remote&)>(
+                                 std::bind(&Node::remote_retry_connect,
+                                           this, std::placeholders::_1,
+                                           uid)));
+            auto weak_res = Overlay::WeakMember::own(std::move(res));
             if (!disable_cache)
-              this->_peer_cache[hosts.first].push_back(res);
-            return res;
+              this->_peer_cache[hosts.first].push_back(weak_res);
+            return weak_res;
           }
           catch (elle::Error const& e)
           {

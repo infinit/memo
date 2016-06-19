@@ -191,10 +191,10 @@ $> infinit-volume --fetch --as charlie
 $> infinit-passport --fetch --as charlie
 
 $> infinit-storage --create --filesystem --capacity 30GB --name local
-$> infinit-credentials --add --aws --account aws
+$> infinit-credentials --add --as charlie --aws --account aws
 Access Key ID: ********
 Secret Access Key: ********
-$> infinit-storage --create --s3 --account aws --region eu-central-1 --bucket charlie --folder alice.cluster --capacity 100GB --name s3
+$> infinit-storage --create --s3 --account aws --region eu-central-1 --bucket charlie --path alice.cluster --capacity 100GB --name s3
 $> infinit-network --link --as charlie --name alice/cluster --storage local --storage s3
 
 $> infinit-network --run --as charlie --name alice/cluster --async --cache --publish

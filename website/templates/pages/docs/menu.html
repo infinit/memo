@@ -2,6 +2,7 @@
   <div id="menu-anchor"></div>
 
   <ul class="menu">
+    <li><input type="text" id="docsearch"></li>
     <li ${'class="active"' if request.route.name == 'doc_overview' else ''}>
       <a href="${route('doc_overview')}">Overview</a>
     </li>
@@ -20,8 +21,8 @@
       </ul>
     </li>
 
-    <li class="scroll_menu ${'active' if request.route.name == 'doc_reference' else ''}">
-      <a href="${route('doc_reference')}">Reference</a>
+    <li class="dropdown scroll_menu ${'active clicked' if request.route.name == 'doc_reference' else ''}">
+      <a href="${route('doc_reference')}">Reference <img src="${url('images/icons/caret-down.png')}" alt=""></a>
 
       <ul>
         <li class="introduction"><a href="${route('doc_reference')}#introduction">Introduction</a></li>
@@ -59,6 +60,12 @@
     <li ${'class="active"' if request.route.name == 'doc_environment_variables' else ''}>
       <a href="${route('doc_environment_variables')}">Environment Variables</a>
     </li>
+
+    <li ${'class="active"' if request.route.name == 'doc_best_practices ' else ''}>
+      <a href="${route('doc_best_practices')}">Best Practices</a>
+    </li>
+
+    <li><hr></li>
 
     <li class="comparisons ${'active' if request.route.name == 'doc_comparison' else ''}">
       <a href="#">Comparisons <img src="${url('images/icons/caret-down.png')}" alt=""></a>
@@ -100,6 +107,10 @@
 
     <li ${'class="active"' if request.route.name == 'doc_changelog' else ''}>
       <a href="${route('doc_changelog')}">Change Log</a>
+    </li>
+
+    <li ${'class="active"' if request.route.name == 'doc_status' else ''}>
+      <a href="${route('doc_status')}">Status</a>
     </li>
 
   </ul>

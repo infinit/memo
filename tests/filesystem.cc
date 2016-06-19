@@ -2123,24 +2123,19 @@ ELLE_TEST_SCHEDULED(symlink_perms)
   ELLE_LOG("create symlink");
   client1.fs->path("/foolink")->symlink("/foo");
   BOOST_CHECK_EQUAL(client1.fs->path("/foolink")->readlink(), "/foo");
-
   ELLE_LOG("client2 check");
   BOOST_CHECK_THROW(client2.fs->path("/foolink")->readlink(), std::exception);
   BOOST_CHECK_THROW(client2.fs->path("/foo")->open(O_RDWR, 0), std::exception);
-
   auto skey = serialize(client2.dht.dht->keys().K());
   client1.fs->path("/")->setxattr("infinit.auth.setrw", skey, 0);
   client1.fs->path("/")->setxattr("infinit.auth.inherit", "true", 0);
   BOOST_CHECK_THROW(client2.fs->path("/foolink")->readlink(), std::exception);
   BOOST_CHECK_THROW(client2.fs->path("/foo")->open(O_RDWR, 0), std::exception);
-
   client1.fs->path("/foolink2")->symlink("/foo");
   BOOST_CHECK_NO_THROW(client2.fs->path("/foolink2")->readlink());
-
   client1.fs->path("/foolink")->setxattr("infinit.auth.setr", skey, 0);
   BOOST_CHECK_NO_THROW(client2.fs->path("/foolink")->readlink());
 }
-
 
 ELLE_TEST_SCHEDULED(short_hash_key)
 {
@@ -2165,6 +2160,115 @@ ELLE_TEST_SCHEDULED(short_hash_key)
   BOOST_CHECK_EQUAL(a.size(), 1);
   BOOST_CHECK_THROW(client1.fs->path("/")->setxattr("infinit.auth.clear", "#gogol", 0),
                     std::exception);
+}
+
+ELLE_TEST_SCHEDULED(rename_exceptions)
+{
+  // Ensure source does not get erased if rename fails under various conditions
+  DHTs servers(-1);
+  auto client1 = servers.client();
+  client1.fs->path("/");
+  auto client2 = servers.client(true);
+  BOOST_CHECK_THROW(client2.fs->path("/foo")->mkdir(0666), std::exception);
+  auto c2key = elle::serialization::json::serialize(client2.dht.dht->keys().K()).string();
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", c2key, 0);
+  ELLE_TRACE("create target inaccessible dir");
+  client1.fs->path("/dir")->mkdir(0600);
+  ELLE_TRACE("mkdir without perms");
+  BOOST_CHECK_THROW(client2.fs->path("/dir/foo")->mkdir(0666), std::exception);
+  ELLE_TRACE("create source dir");
+  client2.fs->path("/foo")->mkdir(0666);
+  ELLE_TRACE("Rename");
+  try
+  {
+    client2.fs->path("/foo")->rename("/dir/foo");
+    BOOST_CHECK(false);
+  }
+  catch (elle::Error const&e)
+  {
+    ELLE_TRACE("exc %s", e);
+  }
+  struct stat st;
+  client2.fs->path("/foo")->stat(&st);
+  BOOST_CHECK(S_ISDIR(st.st_mode));
+  // check again with read-only access
+  client1.fs->path("/dir")->setxattr("infinit.auth.setr", c2key, 0);
+  ELLE_TRACE("Rename2");
+  try
+  {
+    client2.fs->path("/foo")->rename("/dir/foo");
+    BOOST_CHECK(false);
+  }
+  catch (elle::Error const&e)
+  {
+    ELLE_TRACE("exc %s", e);
+  }
+  client2.fs->path("/foo")->stat(&st);
+  BOOST_CHECK(S_ISDIR(st.st_mode));
+}
+
+
+ELLE_TEST_SCHEDULED(erased_group)
+{
+  DHTs servers(-1);
+  auto client1 = servers.client();
+  auto client2 = servers.client(true);
+  auto c2key = elle::serialization::json::serialize(client2.dht.dht->keys().K()).string();
+  client1.fs->path("/");
+  client1.fs->path("/")->setxattr("infinit.group.create", "grp", 0);
+  client1.fs->path("/")->setxattr("infinit.group.add", "grp:" + c2key, 0);
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", "@grp", 0);
+  client1.fs->path("/")->setxattr("infinit.auth.inherit", "true", 0);
+  client2.fs->path("/dir")->mkdir(0666);
+  client2.fs->path("/file")->create(O_RDWR | O_CREAT, 0666)->write(
+    elle::ConstWeakBuffer("foo", 3), 3, 0);
+  client1.fs->path("/")->setxattr("infinit.group.delete", "grp", 0);
+  // cant write to /, because last author is a group member: it fails validation
+  BOOST_CHECK_THROW(client1.fs->path("/dir2")->mkdir(0666), reactor::filesystem::Error);
+  // we have inherit enabled, copy_permissions will fail on the missing group
+  BOOST_CHECK_THROW(client2.fs->path("/dir/dir")->mkdir(0666), reactor::filesystem::Error);
+  client2.fs->path("/file")->open(O_RDWR, 0644)->write(
+    elle::ConstWeakBuffer("bar", 3), 3, 0);
+}
+
+ELLE_TEST_SCHEDULED(erased_group_recovery)
+{
+  DHTs servers(-1);
+  auto client1 = servers.client();
+  auto client2 = servers.client(true);
+  client1.fs->path("/");
+  auto c2key = elle::serialization::json::serialize(client2.dht.dht->keys().K()).string();
+  client1.fs->path("/")->setxattr("infinit.group.create", "grp", 0);
+  client1.fs->path("/")->setxattr("infinit.group.add", "grp:" + c2key, 0);
+  ELLE_TRACE("set group ACL");
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", "@grp", 0);
+  client1.fs->path("/")->setxattr("infinit.auth.inherit", "true", 0);
+  client1.fs->path("/dir")->mkdir(0666);
+  ELLE_TRACE("delete group");
+  client1.fs->path("/")->setxattr("infinit.group.delete", "grp", 0);
+  ELLE_TRACE("list auth");
+  auto jsperms = client1.fs->path("/dir")->getxattr("infinit.auth");
+  std::stringstream s(jsperms);
+  auto jperms = elle::json::read(s);
+  auto a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 2);
+  auto hash = boost::any_cast<std::string>(
+    boost::any_cast<elle::json::Object>(a.at(1)).at("name"));
+  ELLE_TRACE("got hash: %s", hash);
+  ELLE_TRACE("clear group from auth");
+  client1.fs->path("/dir")->setxattr("infinit.auth.clear", hash, 0);
+  ELLE_TRACE("recheck auth");
+  jsperms = client1.fs->path("/dir")->getxattr("infinit.auth");
+  s.str(jsperms);
+  jperms = elle::json::read(s);
+  a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 1);
+  client1.fs->path("/")->setxattr("infinit.auth.clear", hash, 0);
+  jsperms = client1.fs->path("/")->getxattr("infinit.auth");
+  s.str(jsperms);
+  jperms = elle::json::read(s);
+  a = boost::any_cast<elle::json::Array>(jperms);
+  BOOST_CHECK_EQUAL(a.size(), 1);
 }
 
 ELLE_TEST_SCHEDULED(remove_permissions)
@@ -2249,5 +2353,8 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(data_embed), 0, 5);
   suite.add(BOOST_TEST_CASE(symlink_perms), 0, 5);
   suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
+  suite.add(BOOST_TEST_CASE(rename_exceptions), 0, 5);
+  suite.add(BOOST_TEST_CASE(erased_group), 0, 5);
+  suite.add(BOOST_TEST_CASE(erased_group_recovery), 0, 5);
   suite.add(BOOST_TEST_CASE(remove_permissions),0, 5);
 }

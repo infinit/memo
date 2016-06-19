@@ -410,11 +410,18 @@ namespace infinit
               name,
               [this, socket]
               {
-                RPCServer rpcs(this->_doughnut.version());
-                this->_register_rpcs(rpcs);
-                this->_on_connect(rpcs);
-                rpcs.set_context<Doughnut*>(&this->_doughnut);
-                rpcs.serve(**socket);
+                try
+                {
+                  RPCServer rpcs(this->_doughnut.version());
+                  this->_register_rpcs(rpcs);
+                  this->_on_connect(rpcs);
+                  rpcs.set_context<Doughnut*>(&this->_doughnut);
+                  rpcs.serve(**socket);
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_WARN("drop client %s: %s", **socket, e);
+                }
               });
           }
         };

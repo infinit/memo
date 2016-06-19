@@ -103,7 +103,6 @@ namespace infinit
           public_control_key();
           block();
           auto ctrl = _control_key();
-
           // UB
           auto addr = UB::hash_address(this->_name, this->_dht);
           auto block = _dht.fetch(addr);
@@ -112,7 +111,6 @@ namespace infinit
           sig.signature_key.emplace(ctrl.K());
           sig.signature.emplace(ctrl.k().sign(to_sign));
           this->_dht.remove(addr, sig);
-
           // RUB
           addr = UB::hash_address(*this->_public_control_key, this->_dht);
           block = _dht.fetch(addr);
@@ -120,7 +118,6 @@ namespace infinit
           sig.signature_key.emplace(ctrl.K());
           sig.signature.emplace(ctrl.k().sign(to_sign));
           this->_dht.remove(addr, sig);
-
           this->_dht.remove(this->_block->address(),
                             this->_block->sign_remove(this->_dht));
         });
@@ -325,12 +322,18 @@ namespace infinit
         });
       }
 
-      GroupConflictResolver::GroupConflictResolver(GroupConflictResolver&& b)
-      : _action(b._action)
-      , _key(std::move(b._key))
-      , _name(std::move(b._name))
+      void
+      Group::print(std::ostream& o) const
       {
+        elle::fprintf(o, "%s(\"%s\", \"%s\")", elle::type_info(*this),
+                      short_key_hash(this->public_control_key()), this->name());
       }
+
+      GroupConflictResolver::GroupConflictResolver(GroupConflictResolver&& b)
+        : _action(b._action)
+        , _key(std::move(b._key))
+        , _name(std::move(b._name))
+      {}
 
       GroupConflictResolver::GroupConflictResolver(elle::serialization::SerializerIn& s,
                                                    elle::Version const& v)

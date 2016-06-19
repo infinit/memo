@@ -12,6 +12,7 @@
 
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/umbrella.hh>
+#include <infinit/filesystem/Unreachable.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -69,9 +70,39 @@ namespace infinit
         std::unique_ptr<model::User> user = this->_model->make_user(
           elle::Buffer(this->_userkey.data(), this->_userkey.size()));
         auto& acl = dynamic_cast<model::blocks::ACLBlock&>(current);
-        // Force a change
-        acl.set_permissions(*user, !this->_read, !this->_write);
-        acl.set_permissions(*user, this->_read, this->_write);
+        if (!user)
+        {
+          for (auto& e: acl.list_permissions(*this->_model))
+          {
+            if (model::doughnut::short_key_hash(
+                dynamic_cast<model::doughnut::User*>(e.user.get())->key())
+                  == this->_userkey)
+            {
+              user = std::move(e.user);
+              break;
+            }
+          }
+        }
+        if (!user)
+        {
+          ELLE_WARN("ACL conflict resolution failed: no user found for %s",
+                    this->_userkey);
+          acl.data(acl.data());
+        }
+        else
+        {
+          // Force a change to ensure a version bump
+          if (!user->name().empty() && user->name()[0] == '#')
+          { // we don't know if this is an user or a group so be careful
+            acl.set_permissions(*user, this->_read, this->_write);
+            acl.data(acl.data());
+          }
+          else
+          {
+            acl.set_permissions(*user, !this->_read, !this->_write);
+            acl.set_permissions(*user, this->_read, this->_write);
+          }
+        }
         return current.clone();
       }
 
@@ -98,8 +129,19 @@ namespace infinit
       boost::filesystem::path newpath = where.parent_path();
       if (!this->_parent)
         throw rfs::Error(EINVAL, "Cannot delete root node");
-      auto dir = std::dynamic_pointer_cast<Directory>(
-        this->_owner.filesystem()->path(newpath.string()));
+      auto destparent = this->_owner.filesystem()->path(newpath.string());
+      auto dir = std::dynamic_pointer_cast<Directory>(destparent);
+      if (!dir)
+      {
+        if (std::dynamic_pointer_cast<Unreachable>(destparent))
+        {
+          THROW_ACCES
+        }
+        else
+        {
+          THROW_NOTDIR
+        }
+      }
       dir->_fetch();
       if (dir->_data->_files.find(newname) != dir->_data->_files.end())
       {
@@ -124,13 +166,16 @@ namespace infinit
         ELLE_DEBUG("removed move target %s", where);
       }
       auto data = this->_parent->_files.at(this->_name);
-      this->_parent->_files.erase(_name);
-      this->_parent->write(*this->_owner.block_store(),
-                            {OperationType::remove, this->_name});
+
       dir->_data->_files.insert(std::make_pair(newname, data));
       dir->_data->write(
         *this->_owner.block_store(),
         {OperationType::insert, newname, data.first, data.second});
+
+      this->_parent->_files.erase(_name);
+      this->_parent->write(*this->_owner.block_store(),
+                            {OperationType::remove, this->_name});
+
       this->_name = newname;
     }
 

@@ -73,22 +73,22 @@ with TemporaryDirectory() as tmp, \
     path = '/',
     value = u2_key)
   assertEq(response['success'], True)
-  portfile = '%s/portfile' % tmp
+  peerfile = '%s/peerfile' % tmp
   def peer():
-    while not os.path.exists(portfile):
+    while not os.path.exists(peerfile):
       time.sleep(0.1)
-    with open(portfile, 'r') as f:
-      return '127.0.0.1:%s' % int(f.readline())
-  volume_process = None
+    with open(peerfile, 'r') as f:
+      x = f.readline().split("\n")[0]
+      return x
   try:
     volume_process = infinit_1.spawn([
       'infinit-volume', '--run', '--as', 'user', 'volume',
-      '--port-file', portfile])
-    time.sleep(4)
+      '--endpoints-file', peerfile])
     response = infinit_2.run_script(
       user = 'user2', volume = 'user/volume',
-      peer = peer(), operation = 'list_directory', path = '/')
-    print(response)
+      peer = peer(),
+      operation = 'list_directory',
+      path = '/')
     assertEq(response['success'], True)
     assertEq(response['entries'], ['beacon'])
     response = infinit_2.run_script(

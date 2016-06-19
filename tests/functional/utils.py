@@ -153,7 +153,7 @@ class Infinit(TemporaryDirectory):
 
   def run(self, args, input = None, return_code = 0, env = {}):
     process = self.spawn(args, input, return_code, env)
-    out, err = process.communicate(timeout = 30)
+    out, err = process.communicate(timeout = 600)
     process.wait()
     out = out.decode('utf-8')
     err = err.decode('utf-8')
