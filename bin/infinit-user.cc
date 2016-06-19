@@ -397,10 +397,14 @@ COMMAND(login)
 
 COMMAND(list)
 {
+  auto users = ifnt.users_get();
+  std::sort(users.begin(), users.end(),
+            [] (infinit::User const& lhs, infinit::User const& rhs)
+            { return lhs.name < rhs.name; });
   if (script_mode)
   {
     elle::json::Array l;
-    for (auto const& user: ifnt.users_get())
+    for (auto const& user: users)
     {
       elle::json::Object o;
       o["name"] = user.name;
@@ -410,7 +414,7 @@ COMMAND(list)
     elle::json::write(std::cout, l);
   }
   else
-    for (auto const& user: ifnt.users_get())
+    for (auto const& user: users)
     {
       std::cout << user.name << ": public";
       if (user.private_key)
