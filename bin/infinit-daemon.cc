@@ -1340,10 +1340,10 @@ DockerVolumePlugin::install(bool tcp,
     });
   _server->register_route("/VolumeDriver.List", reactor::http::Method::POST,
     [this] ROUTE_SIG {
-      auto list = _manager.list();
       std::string res("{\"Err\": \"\", \"Volumes\": [ ");
-      for (auto const& n: list)
-        res += "{\"Name\": \"" + n + "\"},";
+      for (auto const& n: this->_manager.list())
+        res += "{\"Name\": \"" +
+          n.unqualified(this->_default_user.name) + "\"},";
       res = res.substr(0, res.size()-1);
       res += "]}";
       return res;

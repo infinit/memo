@@ -75,6 +75,15 @@ public:
   {}
 
   std::string
+  unqualified(std::string const& qualifier) const
+  {
+    if (this->qualifier() == qualifier)
+      return this->name();
+    else
+      return *this;
+  }
+
+  std::string
   qualifier() const
   {
     auto pos = this->find("/");
