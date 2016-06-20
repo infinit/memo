@@ -21,6 +21,10 @@
       </ul>
     </li>
 
+    <li ${'class="active"' if request.route.name == 'doc_hub' else ''}>
+      <a href="${route('doc_hub')}">Hub</a>
+    </li>
+
     <li class="dropdown scroll_menu ${'active clicked' if request.route.name == 'doc_reference' else ''}">
       <a href="${route('doc_reference')}">Reference <img src="${url('images/icons/caret-down.png')}" alt=""></a>
 
