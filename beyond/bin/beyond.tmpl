@@ -64,7 +64,7 @@ def parse_options():
   parser.add_argument('--sendwithus-app-key',
                       type = str,
                       help = 'SendWithUs api key',
-                      default = 'test_b71aa18fba1a03a9c314ca1d50eb8a8ceb37825c')
+                      default = ${repr(sendwithus_api_key)})
   parser.add_argument('--gcs-login',
                       metavar = 'LOGIN',
                       type = str,
