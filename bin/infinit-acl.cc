@@ -261,8 +261,22 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
         auto n = boost::any_cast<std::string>(d.at("name"));
         auto r = boost::any_cast<bool>(d.at("read"));
         auto w = boost::any_cast<bool>(d.at("write"));
+        auto admin = boost::any_cast<bool>(d.at("admin"));
+        auto owner = boost::any_cast<bool>(d.at("owner"));
         const char* mode = w ? (r ? "rw" : "w") : (r ? "r" : "none");
-        output << "\t" << n << ": " << mode << std::endl;
+        output << "\t" << n;
+        if (admin || owner)
+        {
+          output << " (";
+          if (admin)
+            output << "admin";
+          if (admin && owner)
+            output << ", ";
+          if (owner)
+            output << "owner";
+          output << ")";
+        }
+        output << ": " << mode << std::endl;
       }
       std::cout << output.str() << std::endl;
     }
