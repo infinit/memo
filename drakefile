@@ -555,6 +555,9 @@ def configure(
   connectivity = drake.copy(elle.reactor.connectivity, '.',
                             strip_prefix = 'elle/reactor')
   installed_binaries.append(connectivity)
+  for f in elle.reactor.fnetusermount_binaries:
+    t = drake.copy(f, '.', strip_prefix = 'elle/reactor')
+    installed_binaries.append(t)
 
   ## ----- ##
   ## Share ##
@@ -726,6 +729,7 @@ def configure(
     drake.copy(drake.node('share/infinit/docker/infinit-static.sh'),
                docker_path / 'bin', strip_prefix = True),
     '/usr')
+  docker_file.run('ln -s /usr/bin/fnetusermount-client /bin/fusermount')
   drake.docker.DockerBuilder(docker_image, docker_file)
 
   ## ------ ##
