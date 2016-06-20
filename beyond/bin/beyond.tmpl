@@ -18,44 +18,49 @@ import infinit.beyond.couchdb
 def parse_options():
   import argparse
   # Parse options
-  parser = argparse.ArgumentParser(description = 'to infinity !')
+  parser = argparse.ArgumentParser(add_help = False,
+                                   description = 'To infinity!')
+  parser.add_argument('-h', '--help',
+                      action = 'help',
+                      default = argparse.SUPPRESS,
+                      help = 'Show this help message and exit')
   parser.add_argument('--host',
                       metavar = 'HOST',
                       type = str,
-                      help = 'interface to listen on')
+                      help = 'Interface to listen on (default: 127.0.0.1)')
   parser.add_argument('--port',
                       metavar = 'PORT',
                       type = int,
-                      help = 'port to listen on')
+                      help = 'Port to listen on (default: 8080)')
   parser.add_argument('--dropbox-app-key',
                       metavar = 'KEY',
                       type = str,
-                      help = 'Dropbox app key',
+                      help = 'Dropbox application key',
                       default = ${repr(dropbox_app_key)})
   parser.add_argument('--dropbox-app-secret',
                       metavar = 'SECRET',
                       type = str,
-                      help = 'Dropbox app secret',
+                      help = 'Dropbox application secret',
                       default = ${repr(dropbox_app_secret)})
   parser.add_argument('--google-app-key',
                       metavar = 'KEY',
                       type = str,
-                      help = 'Google app key',
+                      help = 'Google Drive application key',
                       default = ${repr(google_app_key)})
   parser.add_argument('--google-app-secret',
                       metavar = 'SECRET',
                       type = str,
-                      help = 'Google app secret',
+                      help = 'Google application secret',
                       default = ${repr(google_app_secret)})
   parser.add_argument('--gcs-app-key',
                       metavar = 'KEY',
                       type = str,
-                      help = 'GCS app key',
+                      help = 'Google Cloud Storage application key',
                       default = ${repr(gcs_app_key)})
   parser.add_argument('--gcs-app-secret',
                       metavar = 'SECRET',
                       type = str,
-                      help = 'GCS app secret',
+                      help = 'Google Cloud Storage application secret',
                       default = ${repr(gcs_app_secret)})
   parser.add_argument('--reload',
                       help = 'Reload automatically when code changes',
@@ -63,32 +68,32 @@ def parse_options():
                       default = False)
   parser.add_argument('--sendwithus-app-key',
                       type = str,
-                      help = 'SendWithUs api key',
+                      help = 'SendWithUs API key',
                       default = ${repr(sendwithus_api_key)})
   parser.add_argument('--gcs-login',
                       metavar = 'LOGIN',
                       type = str,
-                      help = 'Google Cloud Storage login',
+                      help = 'Google Cloud Storage login for avatar storage',
                       default = ${repr(gcs_login)})
   parser.add_argument('--gcs-key',
                       metavar = 'KEY',
                       type = str,
-                      help = 'Google Cloud Storage key',
+                      help = 'Google Cloud Storage key for avatar storage',
                       default = ${repr(gcs_key)})
   parser.add_argument(
     '--couchdb-directory',
     metavar = 'PATH',
     type = str,
-    help = 'CouchDB persisent directory (temporary if unspecified)')
+    help = 'CouchDB persisent directory (default: temp directory)')
   parser.add_argument('--couchdb-port',
                       metavar = 'PORT',
                       type = int,
-                      help = 'CouchDB port',
+                      help = 'CouchDB port (default: 3198)',
                       default = 0)
   parser.add_argument('--email-validation',
                       type = bool,
                       default = True,
-                      help = 'Enable email validation (activated by default)')
+                      help = 'Enable email validation (default: true)')
   parser.add_argument('--port-file',
                       type = str,
                       help = 'File to write effective listen port to')
