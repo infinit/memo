@@ -732,6 +732,29 @@ def configure(
   docker_file.run('ln -s /usr/bin/fnetusermount-client /bin/fusermount')
   drake.docker.DockerBuilder(docker_image, docker_file)
 
+  #fnetusermount-server image
+  docker_path = drake.Path('docker-fnetusermount')
+  docker_image = drake.docker.DockerImage(
+    'docker-fnetusermount', 'infinit-fnetusermount', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'ubuntu',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.add(
+    drake.copy(elle.reactor.fnetusermount_binaries, docker_path / 'bin',
+      strip_prefix = True),
+    '/usr')
+  docker_file.add(
+    drake.copy(additional_libs, docker_path / 'lib',
+      strip_prefix = True),
+    '/usr')
+  docker_file.run('apt-get update')
+  docker_file.run('apt-get install -y fuse') # for fusermount
+  drake.docker.DockerBuilder(docker_image, docker_file)
+
   ## ------ ##
   ## Beyond ##
   ## ------ ##
