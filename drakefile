@@ -714,6 +714,7 @@ def configure(
   ## Docker ##
   ## ------ ##
 
+  # infinit image
   docker_path = drake.Path('docker')
   docker_image = drake.docker.DockerImage(
     'docker', 'infinit', git.description())
@@ -753,6 +754,25 @@ def configure(
     '/usr')
   docker_file.run('apt-get update')
   docker_file.run('apt-get install -y fuse') # for fusermount
+  drake.docker.DockerBuilder(docker_image, docker_file)
+
+  #deployment script image
+  docker_path = drake.Path('docker-deploy')
+  docker_image = drake.docker.DockerImage(
+    'docker-deploy', 'infinit-deploy', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'alpine:3.3',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-deploy/entry.sh'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.run('apk add --update bash ca-certificates jq groff less curl python py-pip && pip install awscli && apk --purge -v del py-pip && rm -rf /var/cache/apk/*')
+  docker_file.run(' mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2')
   drake.docker.DockerBuilder(docker_image, docker_file)
 
   ## ------ ##
