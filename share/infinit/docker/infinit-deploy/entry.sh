@@ -42,6 +42,19 @@ confirm_primary_ready()
     done
 }
 
+create_demo()
+{
+  docker service create --name demo1 --mode global --restart-max-attempts 1 --publish 8081 bearclaw/grapheditor
+}
+
+start_mount_helper()
+{
+  docker run --name infinit-mount-helper -d \
+        --privileged                 \
+        -v /tmp:/tmp:shared          \
+        $INFINIT_FNETUSERMOUNT_IMAGE \
+        bash -c "FNETUSERMOUNT_DEBUG=1 fnetusermount-server"
+}
 
 setup_manager()
 {
@@ -61,29 +74,29 @@ setup_manager()
     echo "   PRIMARY_RESULT=$PRIMARY_RESULT"
     
     mount --make-shared /
-    # run mount helper
-    if test -z "$DO_NOTHING"; then
-      docker run --name infinit-mount-helper -d \
-        --privileged                 \
-        -v /tmp:/tmp:shared          \
-        $INFINIT_FNETUSERMOUNT_IMAGE \
-        bash -c "FNETUSERMOUNT_DEBUG=1 fnetusermount-server"
-    fi
+
     if [ $PRIMARY_RESULT -ne 0 ]; then
         echo "   non-primary Manager"
         confirm_primary_ready
         docker swarm join --manager --listen-addr $PRIVATE_IP:4500 $MANAGER_IP:4500
         docker swarm update --auto-accept manager --auto-accept worker
+        start_mount_helper
         return 0
     fi
     
     docker swarm init --auto-accept manager --auto-accept worker --listen-addr $PRIVATE_IP:4500
-
+    count=$(($N_NODES + $N_MANAGERS))
+    while test -n "$WAIT_FOR_NODES" && test $(docker node ls -q |wc -l) -ne $count; do
+      echo "waiting for other nodes..."
+      sleep 2
+    done
     if ! test -z "$DO_NOTHING"; then
       return 0
     fi
+    start_mount_helper
+    if test "$STOP_AT" = 0; then create_demo; return 0; fi
     docker network create --driver overlay --subnet 75.1.0.0/16 infinit
-
+    if test "$STOP_AT" = 1; then create_demo; return 0; fi
     # run replicated beyond FIXME : run on all managers
     if docker service create --help 2>&1 |grep -q scale; then
       scale_arg=--scale
@@ -102,7 +115,7 @@ setup_manager()
     INFINIT_BEYOND=http://$ip:8080
     # cant scan for beyond, it is available only in our overlay network
     sleep 8
- 
+    if test "$STOP_AT" = 2; then create_demo; return 0; fi
     # create our initial user
     docker service create --name infinit_init --network infinit \
         -e INFINIT_BEYOND=$INFINIT_BEYOND \
@@ -117,7 +130,7 @@ setup_manager()
       sleep 1
     done
     docker service rm infinit_init
-
+    if test "$STOP_AT" = 3; then create_demo; return 0; fi
     # run the infinit main service. no need for shared, we delegate mountpoint creation
     # FIXME: finer-grained binds
     # FIXME: provide storage on managers only
@@ -133,7 +146,7 @@ setup_manager()
     --mount type=bind,source=/,target=/tmp/hostroot,writable=true \
     $INFINIT_DAEMON_IMAGE \
     bash -c "sleep \$(( \$RANDOM / 2000)).\$RANDOM; infinit-daemon --start --foreground --docker-socket-path /tmp/hostroot/run/docker/plugins --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins --mount-root /tmp --as default_user --default-network default_network --login-user default_user:docker --mount default_user/default_volume"
-
+    if test "$STOP_AT" = 4; then create_demo; return 0; fi
     while ! docker volume create --driver infinit --name default_volume@$RANDOM$RANDOM -o nocache -o replication-factor=$N_MANAGERS; do
       echo "Failed to create volume, waiting for plugin..."
       sleep 1
@@ -143,6 +156,11 @@ setup_manager()
       # run our test service without infinit backend
       docker service create --name demo1 --mode global --restart-max-attempts 1 --publish 8081 bearclaw/grapheditor
       # run our test service with infinit backend
+      # FIXME: requires a bind-propagation=shared, but it crashes docker
+      # FIXME: remove all hacks when mounting volumes with driver in services works
+      while ! docker run --rm -v /tmp:/tmp ubuntu mount |grep -q default_user; do
+        sleep 3
+      done
       docker service create --name demo2 --mode global --restart-max-attempts 1 --publish 8081 \
         --mount type=bind,source=/tmp,target=/tmp,writable=true \
         bearclaw/grapheditor bash -c "while ! mount |grep default_user_default_volume; do sleep 2; done; ln -s \$(mount | grep default_user_default_volume |cut '-d ' -f 3) /tmp/gw && cd /root && python3 graphed.py"
