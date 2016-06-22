@@ -128,7 +128,7 @@ namespace infinit
       {
         if (this->_public_control_key)
           return *_public_control_key;
-        ELLE_TRACE_SCOPE("%s: fetch", *this);
+        ELLE_TRACE_SCOPE("%s: fetch", this->_name);
         auto ub = elle::cast<UB>::runtime(
           this->_dht.fetch(UB::hash_address(_name, this->_dht)));
         elle::unconst(this)->_public_control_key.emplace(ub->key());
