@@ -4,6 +4,7 @@ MAINTAINER Infinit <contact@infinit.sh>
 RUN apt-get update
 RUN apt-get install -y python3
 RUN apt-get install -y python3-bottle
+RUN apt-get install -y net-tools
 
 ADD main.html /root
 ADD graphed.py /root

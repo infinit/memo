@@ -19,6 +19,10 @@ class Bottle(bottle.Bottle):
     with open('viz.js', 'r') as f:
       return f.read()
   def dot_get(self):
+    ip_cmd = "ifconfig eth0 |grep 'inet add' | awk '{print $2}' | cut -d: -f 2"
+    with os.popen(ip_cmd) as ipf:
+      ip = ipf.read()
+      ip = ip.replace('\n', '')
     dot = 'graph G {\n'
     toplevel = os.listdir(self.__path)
     for f in toplevel:
@@ -29,6 +33,7 @@ class Bottle(bottle.Bottle):
         with open(os.path.join(self.__path, f, a), 'r') as fi:
           dot += a + '=' + fi.read().replace('\n', '') +','
       dot += '];\n'
+    dot += 'ip[label="' + ip + '"];\n'
     dot += '\n}'
     return dot
   def dot_update(self):
