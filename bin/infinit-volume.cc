@@ -546,7 +546,6 @@ COMMAND(run)
         std::string handlename;
         try
         {
-          op = pathname = handlename = "";
           auto json =
             boost::any_cast<elle::json::Object>(elle::json::read(stdin_stream));
           ELLE_TRACE("got command: %s", json);
