@@ -2800,7 +2800,8 @@ namespace infinit
               return;
             }
           }
-          ELLE_TRACE("git did not complete locally (%s)", result_set.size());
+          ELLE_TRACE_SCOPE("%s: get did not complete locally (%s)",
+                           this, result_set.size());
           for (int i = 0; i < attempts; ++i)
           {
             packet::GetFileRequest req(r);
@@ -2815,7 +2816,7 @@ namespace infinit
             if (it == _state.contacts[_group].end())
             {
               ELLE_TRACE("no contact to forward GET to");
-              continue;
+              break;
             }
             auto ir =
               this->_pending_requests.insert(std::make_pair(req.request_id, r));
