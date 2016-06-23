@@ -432,7 +432,8 @@ COMMAND(run)
     report_action("running", "volume", volume.name);
     auto fs = volume.run(std::move(model),
                          mountpoint,
-                         flag(args, "readonly")
+                         flag(args, "readonly"),
+                         flag(args, "allow-root-creation")
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
                          , optional(args, "mount-name")
 #endif
@@ -948,6 +949,8 @@ main(int argc, char** argv)
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   std::vector<Mode::OptionDescription> options_run_mount = {
+    {"allow-root-creation", bool_switch(),
+        "create the filesystem root if not found"},
     { "name", value<std::string>(), "volume name" },
     { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
     { "readonly", bool_switch(), "mount as readonly" },

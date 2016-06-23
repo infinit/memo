@@ -538,7 +538,8 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           INFINIT_ELLE_VERSION);
         ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;
-        ops = elle::make_unique<ifs::FileSystem>("default-volume", std::move(model));
+        ops = elle::make_unique<ifs::FileSystem>(
+          "default-volume", std::move(model), ifs::allow_root_creation = true);
         ELLE_TRACE("instantiating fs...");
         fs = new reactor::filesystem::FileSystem(std::move(ops), true);
         ELLE_TRACE("running mounter...");
@@ -684,7 +685,7 @@ run_filesystem(std::string const& store, std::string const& mountpoint)
       std::unique_ptr<infinit::storage::Storage>(g_storage),
       INFINIT_ELLE_VERSION);
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
-      "default-volume", std::move(model));
+      "default-volume", std::move(model), ifs::allow_root_creation = true);
     fs = new reactor::filesystem::FileSystem(std::move(ops), true);
     mount_points.push_back(mountpoint);
     mounted = true;
@@ -1855,7 +1856,7 @@ public:
       : dht(std::move(dht))
       , fs(elle::make_unique<reactor::filesystem::FileSystem>(
              elle::make_unique<infinit::filesystem::FileSystem>(
-               name, this->dht.dht),
+               name, this->dht.dht, ifs::allow_root_creation = true),
              true))
     {}
 

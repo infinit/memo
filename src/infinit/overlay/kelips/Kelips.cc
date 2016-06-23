@@ -846,16 +846,6 @@ namespace infinit
                                   this->_rdv_id + "_", this->_rdv_host, 120_sec);
                               });
               }));
-        if (_config.bootstrap_nodes.empty())
-        {
-          ELLE_LOG("Filesystem running in bootstrap read/write mode.");
-          _bootstraping.open();
-        }
-        else
-        {
-          ELLE_LOG("Filesystem is read-only until peers are reached");
-          _bootstraping.close();
-        }
         start();
         if (auto l = local)
         {
@@ -2040,11 +2030,6 @@ namespace infinit
         if (addr == _self)
           return;
         int g = group_of(addr);
-        if (g == _group && !_bootstraping.opened() && !observer)
-        {
-          ELLE_LOG("Peer found, write enabled");
-          _bootstraping.open();
-        }
         Contact* c = get_or_make(addr, observer, {endpoint},
           observer || g == _group || signed(_state.contacts[g].size()) < _config.max_other_contacts);
         if (!c)
@@ -2863,6 +2848,7 @@ namespace infinit
       Node::kelipsPut(Address file, int n)
       {
         BENCH("kelipsPut");
+        ELLE_TRACE_SCOPE("%s: put %s on %s nodes", this, file, n);
         int fg = group_of(file);
         packet::PutFileRequest p;
         p.query_node = false;
@@ -2891,19 +2877,26 @@ namespace infinit
             it = random_from(_state.contacts[_group], _gen);
           if (it == _state.contacts[_group].end())
           {
-            if (fg != _group || _observer)
+            if (fg != this->_group || this->_observer)
+            {
+              ELLE_TRACE("no suitable node found");
               return {};
+            }
             // Bootstraping only: Store locally.
             if (_config.bootstrap_nodes.empty())
             {
-              _promised_files.push_back(p.fileAddress);
+              ELLE_TRACE("no peer, store locally");
+              this->_promised_files.push_back(p.fileAddress);
               results.push_back(PeerLocation(Address::null, {RpcEndpoint(
                 boost::asio::ip::address::from_string("127.0.0.1"),
               this->_port)}));
               return results;
             }
             else
+            {
+              ELLE_TRACE("why the fuck not ...");
               return results;
+            }
           }
           _pending_requests[req.request_id] = r;
           ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
@@ -3346,12 +3339,6 @@ namespace infinit
                     infinit::overlay::Operation op) const
       {
         BENCH("lookup");
-        if (op != infinit::overlay::Operation::OP_FETCH)
-        {
-          ELLE_TRACE("Waiting for bootstrap");
-          reactor::wait(elle::unconst(this)->_bootstraping);
-          ELLE_TRACE("bootstrap opened");
-        }
         return reactor::generator<Overlay::WeakMember>(
           [this, address, n, op]
           (reactor::Generator<Overlay::WeakMember>::yielder const& yield)

@@ -346,8 +346,6 @@ namespace infinit
         std::vector<Address> _pending_bootstrap_address;
         std::vector<Address> _bootstrap_requests_sent;
         reactor::network::UTPServer _remotes_server;
-        /// Whether we've seen someone from our group.
-        reactor::Barrier _bootstraping;
         int _next_id;
         int _port;
         bool _observer;

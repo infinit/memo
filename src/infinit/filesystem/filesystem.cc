@@ -61,13 +61,15 @@ namespace infinit
         std::string const& volume_name,
         std::shared_ptr<model::Model> model,
         boost::optional<boost::filesystem::path> root_block_cache_dir,
-        boost::optional<boost::filesystem::path> mountpoint)
+        boost::optional<boost::filesystem::path> mountpoint,
+        bool allow_root_creation)
       : _block_store(std::move(model))
       , _single_mount(false)
       , _volume_name(volume_name)
       , _root_block_cache_dir(root_block_cache_dir)
       , _mountpoint(mountpoint)
       , _root_address(Address::null)
+      , _allow_root_creation(allow_root_creation)
     {
       auto& dht = dynamic_cast<model::doughnut::Doughnut&>(
         *this->_block_store.get());
@@ -221,9 +223,11 @@ namespace infinit
       return {};
     }
 
-    std::unique_ptr<MutableBlock>
-    FileSystem::_root_block()
+    Address
+    FileSystem::root_address()
     {
+      if (this->_root_address != Address::null)
+        return this->_root_address;
       boost::optional<boost::filesystem::path> root_cache;
       if (this->root_block_cache_dir())
       {
@@ -236,20 +240,24 @@ namespace infinit
       bool migrate = true;
       auto dn = std::dynamic_pointer_cast<dht::Doughnut>(this->_block_store);
       auto const bootstrap_name = this->_volume_name + ".root";
-      Address addr = dht::NB::address(
+      Address bootstrap_addr = dht::NB::address(
         *dn->owner(), bootstrap_name, dn->version());
       while (true)
       {
         try
         {
-          ELLE_DEBUG_SCOPE("fetch root bootstrap block at %f", addr);
-          auto block = this->_block_store->fetch(addr);
-          addr = Address(
+          ELLE_DEBUG_SCOPE("fetch root bootstrap block at %f", bootstrap_addr);
+          auto block = this->_block_store->fetch(bootstrap_addr);
+          this->_root_address = Address(
             Address::from_string(block->data().string().substr(2)).value(),
             model::flags::mutable_block,
             false);
-          ELLE_DEBUG_SCOPE("fetch root block at %f", addr);
-          break;
+          if (root_cache && !boost::filesystem::exists(*root_cache))
+          {
+            boost::filesystem::ofstream ofs(*root_cache);
+            elle::fprintf(ofs, "%x", this->_root_address);
+          }
+          return this->_root_address;
         }
         catch (model::MissingBlock const& e)
         {
@@ -262,7 +270,8 @@ namespace infinit
               auto old = std::dynamic_pointer_cast<dht::NB>(
                 this->_block_store->fetch(old_addr));
               ELLE_LOG_SCOPE(
-                "migrate old bootstrap block from %s to %s", old_addr, addr);
+                "migrate old bootstrap block from %s to %s",
+                old_addr, bootstrap_addr);
               auto nb = elle::make_unique<dht::NB>(
                 dn.get(), dn->owner(), bootstrap_name,
                 old->data(), old->signature());
@@ -274,23 +283,31 @@ namespace infinit
             {}
           if (*dn->owner() == dn->keys().K())
           {
-            if (root_cache && boost::filesystem::exists(*root_cache))
+            if (!this->_allow_root_creation)
+            {
+              ELLE_WARN(
+                "unable to find root block, allow creation with "
+                "--allow-root-creation");
+            }
+            else if (root_cache && boost::filesystem::exists(*root_cache))
             {
               ELLE_WARN(
                 "refusing to recreate root block, marker set: %s", root_cache);
             }
             else
             {
-              std::unique_ptr<MutableBlock> mb;
               ELLE_TRACE("create missing root block")
               {
-                mb = dn->make_block<ACLBlock>();
-                this->store_or_die(mb->clone(), model::STORE_INSERT,
+                auto root = dn->make_block<ACLBlock>();
+                auto address = root->address();
+                this->store_or_die(
+                  std::move(root), model::STORE_INSERT,
                   model::make_drop_conflict_resolver());
+                this->_root_address = address;
               }
               ELLE_TRACE("create missing root bootstrap block")
               {
-                auto saddr = elle::sprintf("%x", mb->address());
+                auto saddr = elle::sprintf("%x", this->_root_address);
                 elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
                 auto nb = elle::make_unique<dht::NB>(
                   dn.get(), dn->owner(), bootstrap_name, baddr);
@@ -299,21 +316,13 @@ namespace infinit
                 if (root_cache)
                   boost::filesystem::ofstream(*root_cache) << saddr;
               }
-              _root_address = mb->address();
               on_root_block_create();
-              return mb;
+              return this->_root_address;
             }
           }
           reactor::sleep(1_sec);
         }
       }
-      if (root_cache && !boost::filesystem::exists(*root_cache))
-      {
-        boost::filesystem::ofstream ofs(*root_cache);
-        elle::fprintf(ofs, "%x", addr);
-      }
-      _root_address = addr;
-      return elle::cast<MutableBlock>::runtime(fetch_or_die(addr));
     }
 
     std::pair<bool, bool>
@@ -389,16 +398,13 @@ namespace infinit
         while (_directory_cache.size() > unsigned(max_cache_size))
           _directory_cache.get<1>().erase(_directory_cache.get<1>().begin());
       }
-
-      if (_root_address == Address::null)
-        _root_block();
       ELLE_ASSERT(!path.empty() && path[0] == '/');
       std::vector<std::string> components;
       boost::algorithm::split(components, path, boost::algorithm::is_any_of("/\\"));
       ELLE_DEBUG("%s: get %s (%s)", this, path, components);
       ELLE_ASSERT_EQ(components.front(), "");
       boost::filesystem::path current_path("/");
-      auto d = get(current_path, _root_address);
+      auto d = get(current_path, this->root_address());
       std::shared_ptr<DirectoryData> dp;
       for (int i=1; i< signed(components.size()) - 1; ++i)
       {
