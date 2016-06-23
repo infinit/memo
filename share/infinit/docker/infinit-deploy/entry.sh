@@ -16,7 +16,11 @@ INFINIT_VERSION="0.6.0-docker-demo-1-185-ga2feedc"
 INFINIT_DAEMON_IMAGE="bearclaw/infinit:$INFINIT_VERSION"
 INFINIT_BEYOND_IMAGE="bearclaw/infinit-beyond:$INFINIT_VERSION"
 INFINIT_FNETUSERMOUNT_IMAGE="bearclaw/infinit-fnetusermount:$INFINIT_VERSION"
-
+# root path for infinit volume mounts
+mount_root=/tmp/infinit-mounts
+fnetusermount_socket_path=/run/fnetusermount
+# Path for infinit storage and configuration
+infinit_config=/var/lib/infinit
 get_primary_manager_ip()
 {
     echo "Get Primary Manager IP"
@@ -49,9 +53,12 @@ create_demo()
 
 start_mount_helper()
 {
+  rm $fnetusermount_socket_path/fnetusermount.sock
   docker run --name infinit-mount-helper -d \
         --privileged                 \
-        -v /tmp:/tmp:shared          \
+        -v $mount_root:$mount_root:shared          \
+        -v $fnetusermount_socket_path:$fnetusermount_socket_path   \
+        -e FNETUSERMOUNT_SOCKET_PATH=$fnetusermount_socket_path/fnetusermount.sock \
         $INFINIT_FNETUSERMOUNT_IMAGE \
         bash -c "FNETUSERMOUNT_DEBUG=1 fnetusermount-server"
 }
@@ -60,7 +67,7 @@ setup_manager()
 {
     echo "Setup Manager"
     export PRIVATE_IP=`wget -qO- http://169.254.169.254/latest/meta-data/local-ipv4`
-    
+
     echo "   PRIVATE_IP=$PRIVATE_IP"
     # try to write to the table as the primary_manager, if it succeeds then it is the first
     # and it is the primary manager. If it fails, then it isn't first, and treat the record
@@ -72,7 +79,7 @@ setup_manager()
         --return-consumed-capacity TOTAL
     PRIMARY_RESULT=$?
     echo "   PRIMARY_RESULT=$PRIMARY_RESULT"
-    
+
     mount --make-shared /
 
     if [ $PRIMARY_RESULT -ne 0 ]; then
@@ -83,7 +90,7 @@ setup_manager()
         start_mount_helper
         return 0
     fi
-    
+
     docker swarm init --auto-accept manager --auto-accept worker --listen-addr $PRIVATE_IP:4500
     count=$(($N_NODES + $N_MANAGERS))
     while test -n "$WAIT_FOR_NODES" && test $(docker node ls -q |wc -l) -ne $count; do
@@ -97,12 +104,13 @@ setup_manager()
     if test "$STOP_AT" = 0; then create_demo; return 0; fi
     docker network create --driver overlay --subnet 75.1.0.0/16 infinit
     if test "$STOP_AT" = 1; then create_demo; return 0; fi
-    # run replicated beyond FIXME : run on all managers
+
     if docker service create --help 2>&1 |grep -q scale; then
       scale_arg=--scale
     else
       scale_arg=--replicas
     fi
+    # run replicated beyond FIXME : run on all managers
     docker service create --name infinit-beyond --network infinit \
       $scale_arg $N_MANAGERS \
       -e PYTHONUNBUFFERED=1  \
@@ -141,11 +149,14 @@ setup_manager()
     -e INFINIT_BEYOND=$INFINIT_BEYOND \
     -e INFINIT_HTTP_NO_KEEPALIVE=1 \
     -e INFINIT_IS_MOUNTED_DUMMY_DELAY=4 \
-    --mount type=bind,source=/tmp,target=/tmp,writable=true \
-    --mount type=bind,source=/root,target=/root,writable=true \
-    --mount type=bind,source=/,target=/tmp/hostroot,writable=true \
+    -e FNETUSERMOUNT_SOCKET_PATH=$fnetusermount_socket_path/fnetusermount.sock \
+    --mount type=bind,source=$fnetusermount_socket_path,target=$fnetusermount_socket_path,writable=true \
+    --mount type=bind,source=$mount_root,target=$mount_root,writable=true \
+    --mount type=bind,source=$infinit_config,target=/root,writable=true \
+    --mount type=bind,source=/run/docker/plugins,target=/run/docker/plugins,writable=true \
+    --mount type=bind,source=/usr/lib/docker/plugins,target=/usr/lib/docker/plugins,writable=true \
     $INFINIT_DAEMON_IMAGE \
-    bash -c "sleep \$(( \$RANDOM / 2000)).\$RANDOM; infinit-daemon --start --foreground --docker-socket-path /tmp/hostroot/run/docker/plugins --docker-descriptor-path /tmp/hostroot/usr/lib/docker/plugins --mount-root /tmp --as default_user --default-network default_network --login-user default_user:docker --mount default_user/default_volume"
+    bash -c "sleep \$(( \$RANDOM / 2000)).\$RANDOM; infinit-daemon --start --foreground --mount-root $mount_root --as default_user --default-network default_network --login-user default_user:docker --mount default_user/default_volume"
     if test "$STOP_AT" = 4; then create_demo; return 0; fi
     while ! docker volume create --driver infinit --name default_volume@$RANDOM$RANDOM -o nocache -o replication-factor=$N_MANAGERS; do
       echo "Failed to create volume, waiting for plugin..."
@@ -158,11 +169,11 @@ setup_manager()
       # run our test service with infinit backend
       # FIXME: requires a bind-propagation=shared, but it crashes docker
       # FIXME: remove all hacks when mounting volumes with driver in services works
-      while ! docker run --rm -v /tmp:/tmp ubuntu mount |grep -q default_user; do
+      while ! docker run --rm -v $mount_root:$mount_root ubuntu mount |grep -q default_user; do
         sleep 3
       done
       docker service create --name demo2 --mode global --restart-max-attempts 1 --publish 8081 \
-        --mount type=bind,source=/tmp,target=/tmp,writable=true \
+        --mount type=bind,source=$mount_root,target=$mount_root,writable=true \
         bearclaw/grapheditor bash -c "while ! mount |grep default_user_default_volume; do sleep 2; done; ln -s \$(mount | grep default_user_default_volume |cut '-d ' -f 3) /tmp/gw && cd /root && python3 graphed.py"
     fi
 }
@@ -180,11 +191,7 @@ setup_node()
       return 0
     fi
     # run mount helper
-    docker run --name infinit-mount-helper -d \
-      --privileged                 \
-      -v /tmp:/tmp:shared          \
-      $INFINIT_FNETUSERMOUNT_IMAGE \
-      bash -c "FNETUSERMOUNT_DEBUG=1 fnetusermount-server"
+    start_mount_helper
 }
 
 # if it is a manager, setup as manager, if not, setup as worker node.
