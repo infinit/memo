@@ -363,6 +363,61 @@ namespace infinit
         }
       }
 
+      elle::Buffer
+      Doughnut::ensure_key(cryptography::rsa::PublicKey const& k)
+      {
+        auto serial = cryptography::rsa::publickey::der::encode(k);
+        auto hash = cryptography::hash(serial, cryptography::Oneway::sha256);
+        if (!this->_consensus)
+          return hash; // assume test mode
+        auto it = this->_key_hash_cache.find(hash);
+        if (it != this->_key_hash_cache.end())
+          return hash;
+        auto hub = elle::make_unique<UB>(this, ':' + hash.string(), k);
+        try
+        {
+          this->_key_hash_cache[hash].reset(new cryptography::rsa::PublicKey(k));
+          store(std::move(hub), STORE_INSERT, make_drop_conflict_resolver());
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_TRACE("Error storing key hash block: %s", e);
+        }
+        return hash;
+      }
+
+      std::shared_ptr<cryptography::rsa::PublicKey>
+      Doughnut::resolve_key(elle::Buffer const& hash)
+      {
+        auto it = this->_key_hash_cache.find(hash);
+        if (it != this->_key_hash_cache.end())
+          return it->second;
+
+        auto const addr = UB::hash_address(':' + hash.string(), *this);
+        try
+        {
+          auto block = this->fetch(addr);
+          auto ub = elle::cast<UB>::runtime(block);
+          // validate
+          auto serial = cryptography::rsa::publickey::der::encode(ub->key());
+          auto ubhash = cryptography::hash(serial, cryptography::Oneway::sha256);
+          if (hash != ubhash)
+          {
+            ELLE_WARN("Key hash do not match fetching key hash block: %x vs %x",
+              hash, ubhash);
+            elle::err("Key hash do not match");
+          }
+          auto skey = std::make_shared<cryptography::rsa::PublicKey>(ub->key());
+          this->_key_hash_cache.insert(std::make_pair(hash, skey));
+          return skey;
+        }
+        catch (MissingBlock const& b)
+        {
+          ELLE_WARN("Missing key hash block at %f: %s", addr, b);
+          throw;
+        }
+      }
+
       Configuration::~Configuration()
       {}
 

@@ -31,15 +31,16 @@ namespace infinit
                  bool write_,
                  elle::Buffer token_);
         ACLEntry(ACLEntry const& other);
-        ACLEntry(elle::serialization::SerializerIn& s);
-        void serialize(elle::serialization::Serializer& s);
+        ACLEntry(elle::serialization::SerializerIn& s, elle::Version const& v);
+        void serialize(elle::serialization::Serializer& s, elle::Version const& v);
         ACLEntry&
         operator =(ACLEntry&& other) = default;
 
         bool operator == (ACLEntry const& b) const;
 
         typedef infinit::serialization_tag serialization_tag;
-        static ACLEntry deserialize(elle::serialization::SerializerIn& s);
+        static ACLEntry deserialize(elle::serialization::SerializerIn& s,
+                                    elle::Version const& v);
       };
 
       template<typename Block>
@@ -54,7 +55,7 @@ namespace infinit
         typedef BaseOKB<Block> Super;
 
         static_assert(!std::is_base_of<boost::optional_detail::optional_tag, ACLEntry>::value, "");
-        static_assert(std::is_constructible<ACLEntry, elle::serialization::SerializerIn&>::value, "");
+        static_assert(std::is_constructible<ACLEntry, elle::serialization::SerializerIn&, elle::Version const&>::value, "");
 
       /*-------------.
       | Construction |

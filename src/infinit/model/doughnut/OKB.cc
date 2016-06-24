@@ -22,6 +22,58 @@ namespace infinit
   {
     namespace doughnut
     {
+
+      cryptography::rsa::PublicKey
+      deserialize_key_hash(elle::serialization::SerializerIn& s,
+                           elle::Version const& v,
+                           std::string const& field_name,
+                           Doughnut* dn)
+      {
+        if (v < elle::Version(0, 7, 0))
+          return s.deserialize<cryptography::rsa::PublicKey>(field_name);
+        else
+        {
+          elle::Buffer b;
+          s.serialize(field_name + "_hash", b);
+          if (!dn)
+            elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
+          ELLE_ASSERT(dn);
+          auto k = dn->resolve_key(b);
+          return *k;
+        }
+      }
+
+      void
+      serialize_key_hash(elle::serialization::Serializer& s,
+                         elle::Version const& v,
+                         cryptography::rsa::PublicKey& key,
+                         std::string const& field_name,
+                         Doughnut* dn)
+      {
+        if (v < elle::Version(0, 7, 0))
+          s.serialize(field_name, key);
+        else
+        {
+          if (s.in())
+          {
+            elle::Buffer b;
+            s.serialize(field_name + "_hash", b);
+            if (!dn)
+              elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
+            ELLE_ASSERT(dn);
+            auto k = dn->resolve_key(b);
+            key = std::move(*k);
+          }
+          else
+          {
+            if (!dn)
+              elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
+            ELLE_ASSERT(dn);
+            auto hash = dn->ensure_key(key);
+            s.serialize(field_name + "_hash", hash);
+          }
+        }
+      }
       OKBHeader::OKBHeader(Doughnut* dht,
                            cryptography::rsa::KeyPair const& keys,
                            boost::optional<elle::Buffer> salt)
@@ -116,10 +168,10 @@ namespace infinit
       }
 
       OKBHeader::OKBHeader(elle::serialization::SerializerIn& s,
-                           elle::Version const&)
+                           elle::Version const& v)
         : _salt()
         , _owner_key(std::make_shared(
-                       s.deserialize<cryptography::rsa::PublicKey>("key")))
+            deserialize_key_hash(s, v, "key")))
         , _signature()
       {
         s.serialize_context<Doughnut*>(this->_dht);
@@ -289,7 +341,7 @@ namespace infinit
         ELLE_ASSERT(s_.out());
         auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
         s.serialize("salt", this->_block.salt());
-        s.serialize("owner_key", *this->_block.owner_key());
+        serialize_key_hash(s, v, *this->_block.owner_key(), "owner_key", _block.dht());
         s.serialize("version", this->_block._version);
         this->_serialize(s, v);
       }
@@ -428,7 +480,7 @@ namespace infinit
                                 elle::Version const& version)
       {
         this->Super::serialize(s, version);
-        s.serialize("key", *this->_owner_key);
+        serialize_key_hash(s, version, *this->_owner_key, "key", this->dht());
         s.serialize("owner", static_cast<OKBHeader&>(*this));
         this->_serialize(s, version);
       }

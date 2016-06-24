@@ -81,15 +81,15 @@ namespace infinit
         , token{other.token}
       {}
 
-      ACLEntry::ACLEntry(elle::serialization::SerializerIn& s)
-        : ACLEntry(deserialize(s))
+      ACLEntry::ACLEntry(elle::serialization::SerializerIn& s, elle::Version const& v)
+        : ACLEntry(deserialize(s, v))
       {}
 
       ACLEntry
-      ACLEntry::deserialize(elle::serialization::SerializerIn& s)
+      ACLEntry::deserialize(elle::serialization::SerializerIn& s,
+                            elle::Version const& v)
       {
-
-        auto key = s.deserialize<cryptography::rsa::PublicKey>("key");
+        auto key = deserialize_key_hash(s, v, "key");
         auto read = s.deserialize<bool>("read");
         auto write = s.deserialize<bool>("write");
         auto token = s.deserialize<elle::Buffer>("token");
@@ -105,9 +105,10 @@ namespace infinit
       }
 
       void
-      ACLEntry::serialize(elle::serialization::Serializer& s)
+      ACLEntry::serialize(elle::serialization::Serializer& s,
+                          elle::Version const& v)
       {
-        s.serialize("key", key);
+        serialize_key_hash(s, v, key, "key");
         s.serialize("read", read);
         s.serialize("write", write);
         s.serialize("token", token);
@@ -1082,7 +1083,8 @@ namespace infinit
         ELLE_ASSERT(s_.out());
         auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
         s.serialize("salt", this->_block.salt());
-        s.serialize("key", *this->_block.owner_key());
+        serialize_key_hash(s, v, *this->_block.owner_key(), "key", this->_block.dht());
+        s.set_context<Doughnut*>(this->_block.dht()); // for acl entries
         s.serialize("version", this->_block.data_version());
         s.serialize("data", this->_block.blocks::Block::data());
         s.serialize("owner_token", this->_block.owner_token());
@@ -1166,6 +1168,7 @@ namespace infinit
       {
         if (!this->_data_signature)
           this->_data_signature = std::make_shared<typename Super::SignFuture>();
+        s.set_context<Doughnut*>(this->dht());
         s.serialize("editor", this->_editor);
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl_entries);
