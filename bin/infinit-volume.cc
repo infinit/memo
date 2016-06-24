@@ -397,9 +397,6 @@ COMMAND(run)
           reactor::scheduler().terminate();
         });
   }
-  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
-  if (fetch)
-    beyond_fetch_endpoints(network, eps);
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
@@ -410,6 +407,7 @@ COMMAND(run)
   // Only push if we have are contributing storage.
   bool push =
     aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
+  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint;
   if (model->local())
   {
@@ -425,6 +423,12 @@ COMMAND(run)
   auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
+    if (fetch)
+    {
+      infinit::overlay::NodeEndpoints eps;
+      beyond_fetch_endpoints(network, eps);
+      model->overlay()->discover(eps);
+    }
     reactor::Thread::unique_ptr stat_thread;
     if (push)
       stat_thread = make_stat_update_thread(self, network, *model);
