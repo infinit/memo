@@ -35,6 +35,17 @@ namespace infinit
       return {};
     }
 
+    /*------.
+    | Peers |
+    `------*/
+
+    void
+    Overlay::discover(NodeEndpoints const& peers)
+    {
+      ELLE_TRACE("%s: discover new peers: %s", this, peers);
+      this->_discover(peers);
+    }
+
     /*-------.
     | Lookup |
     `-------*/

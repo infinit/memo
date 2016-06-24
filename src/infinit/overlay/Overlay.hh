@@ -54,6 +54,17 @@ namespace infinit
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
 
     /*------.
+    | Peers |
+    `------*/
+    public:
+      void
+      discover(NodeEndpoints const& peers);
+    protected:
+      virtual
+      void
+      _discover(NodeEndpoints const& peers) = 0;
+
+    /*------.
     | Hooks |
     `------*/
     public:
@@ -93,6 +104,7 @@ namespace infinit
       virtual
       WeakMember
       _lookup_node(model::Address address) = 0;
+
     /*------.
     | Query |
     `------*/

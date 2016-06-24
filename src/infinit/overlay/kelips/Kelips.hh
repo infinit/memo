@@ -303,7 +303,13 @@ namespace infinit
         void
         process_update(SerState const& s);
         void
-        bootstrap(bool use_bootstrap_nodes);
+        bootstrap(bool use_bootstrap_nodes,
+                  bool use_contacts = true,
+                  std::vector<PeerLocation> const& peers = {});
+        void
+        _discover(NodeEndpoints const& peers) override;
+        void
+        send_bootstrap(PeerLocation const& l);
         SerState
         get_serstate(PeerLocation peer);
         void

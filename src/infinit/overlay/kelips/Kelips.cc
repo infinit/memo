@@ -1015,7 +1015,9 @@ namespace infinit
       }
 
       void
-      Node::bootstrap(bool use_bootstrap_nodes)
+      Node::bootstrap(bool use_bootstrap_nodes,
+                      bool use_contacts,
+                      std::vector<PeerLocation> const& peers)
       {
         ELLE_TRACE("starting bootstrap procedure");
         std::set<Address> scanned;
@@ -1023,9 +1025,12 @@ namespace infinit
         if (use_bootstrap_nodes)
           for (auto const& b: _config.bootstrap_nodes)
             candidates.insert(b);
-        for (auto const& c: this->_state.contacts[_group])
-          candidates.insert(PeerLocation(c.second.address,
-            endpoints_extract_convert(c.second.endpoints)));
+        if (use_contacts)
+          for (auto const& c: this->_state.contacts[_group])
+            candidates.insert(PeerLocation(c.second.address,
+              endpoints_extract_convert(c.second.endpoints)));
+        for (auto peer: peers)
+          candidates.insert(peer);
         while (!candidates.empty())
         {
           PeerLocation pl = *candidates.begin();
@@ -1054,6 +1059,92 @@ namespace infinit
         }
         ELLE_TRACE("scanned %s nodes", scanned.size());
         // FIXME: weed out over-duplicated blocks
+      }
+
+      static
+      std::vector<PeerLocation>
+      convert_endpoints(Address id, NodeEndpoints const& hosts)
+      {
+        std::vector<PeerLocation> res;
+        for (auto const& host: hosts)
+        {
+          ELLE_TRACE("processing %x (%s endpoints)", host.first, host.second.size());
+          if (host.first == id)
+            continue;
+          PeerLocation pl;
+          if (host.first == model::Address())
+            pl.first = Address::null;
+          else
+            pl.first = Address(host.first);
+          for (auto const& ep: host.second)
+          {
+            try
+            {
+              auto p = ep.find_first_of(':');
+              if (p == ep.npos)
+                throw std::runtime_error("missing ':'");
+              auto addr = ep.substr(0, p);
+              auto port = ep.substr(p+1);
+              auto endpoint = reactor::network::resolve_tcp(addr, port);
+              pl.second.push_back(endpoint);
+            }
+            catch(std::exception const& e)
+            {
+              ELLE_LOG("skipping malformed address: %s", ep);
+            }
+          }
+          res.push_back(pl);
+        }
+        return res;
+      }
+
+      void
+      Node::_discover(NodeEndpoints const& eps)
+      {
+        auto peers = convert_endpoints(this->node_id(), eps);
+        this->bootstrap(false, false, peers);
+        for (auto peer: peers)
+          send_bootstrap(peer);
+      }
+
+      void
+      Node::send_bootstrap(PeerLocation const& l)
+      {
+        packet::BootstrapRequest req;
+        req.sender = this->_self;
+        if (l.first != Address::null)
+        {
+          std::vector<GossipEndpoint> eps;
+          for (auto const& ep: l.second)
+            eps.push_back(e2e(ep));
+          Contact& c = *get_or_make(l.first, false, eps);
+          ELLE_TRACE("%s: sending bootstrap to node %s", *this, l);
+          if (!_config.encrypt || _config.accept_plain)
+            send(req, c);
+          else
+          {
+            packet::RequestKey req(make_key_request());
+            send(req, c);
+            _pending_bootstrap_address.push_back(l.first);
+          }
+        }
+        else
+        {
+          ELLE_TRACE("Sending bootstrap to node %s", l.second);
+          if (!_config.encrypt || _config.accept_plain)
+          {
+            for (auto const& ep: l.second)
+              send(req, e2e(ep), Address::null);
+          }
+          else
+          {
+            packet::RequestKey req(make_key_request());
+            for (auto const& ep: l.second)
+              send(req, e2e(ep), Address::null);
+          }
+          for (auto const& ep: l.second)
+            _pending_bootstrap_endpoints.push_back(e2e(ep));
+        }
       }
 
       void
@@ -1092,9 +1183,7 @@ namespace infinit
             _gossip.set_local_id(id);
           }
         }
-
         ELLE_TRACE("%s: bound to udp, member of group %s", *this, _group);
-
         if (!this->local())
         {
           _listener_thread.reset(new reactor::Thread(
@@ -1120,57 +1209,13 @@ namespace infinit
             new reactor::Thread(
               "emitter", std::bind(&Node::gossipEmitter, this)));
         }
-
         // Send a bootstrap request to bootstrap nodes and all
         // nodes in group
-        packet::BootstrapRequest req;
-        req.sender = _self;
-
-        auto send_bootstrap = [&req, this](PeerLocation const& l)
-        {
-          if (l.first != Address::null)
-          {
-            std::vector<GossipEndpoint> eps;
-            for (auto const& ep: l.second)
-              eps.push_back(e2e(ep));
-            Contact& c = *get_or_make(l.first, false, eps);
-            ELLE_TRACE("%s: sending bootstrap to node %s", *this, l);
-            if (!_config.encrypt || _config.accept_plain)
-              send(req, c);
-            else
-            {
-              packet::RequestKey req(make_key_request());
-              send(req, c);
-              _pending_bootstrap_address.push_back(l.first);
-            }
-          }
-          else
-          {
-            ELLE_TRACE("Sending bootstrap to node %s", l.second);
-            if (!_config.encrypt || _config.accept_plain)
-            {
-              for (auto const& ep: l.second)
-                send(req, e2e(ep), Address::null);
-            }
-            else
-            {
-              packet::RequestKey req(make_key_request());
-              for (auto const& ep: l.second)
-                send(req, e2e(ep), Address::null);
-            }
-            for (auto const& ep: l.second)
-              _pending_bootstrap_endpoints.push_back(e2e(ep));
-          }
-        };
         for (auto const& e: _config.bootstrap_nodes)
-        {
           send_bootstrap(e);
-        }
         for (auto& c: _state.contacts[_group])
-        {
           send_bootstrap(PeerLocation(c.second.address,
             endpoints_extract_convert(c.second.endpoints)));
-        }
         if (_config.wait)
           wait(_config.wait);
         ELLE_TRACE("%s: node engaged", *this);
@@ -3889,35 +3934,7 @@ namespace infinit
                           std::shared_ptr<model::doughnut::Local> local,
                           model::doughnut::Doughnut* dht)
       {
-        for (auto const& host: hosts)
-        {
-          ELLE_TRACE("processing %x (%s endpoints)", host.first, host.second.size());
-          if (host.first == id)
-            continue;
-          PeerLocation pl;
-          if (host.first == model::Address())
-            pl.first = Address::null;
-          else
-            pl.first = Address(host.first);
-          for (auto const& ep: host.second)
-          {
-            try
-            {
-              auto p = ep.find_first_of(':');
-              if (p == ep.npos)
-                throw std::runtime_error("missing ':'");
-              auto addr = ep.substr(0, p);
-              auto port = ep.substr(p+1);
-              auto endpoint = reactor::network::resolve_tcp(addr, port);
-              pl.second.push_back(endpoint);
-            }
-            catch(std::exception const& e)
-            {
-              ELLE_LOG("skipping malformed address: %s", ep);
-            }
-          }
-          this->bootstrap_nodes.push_back(pl);
-        }
+        this->bootstrap_nodes = convert_endpoints(id, hosts);
         return elle::make_unique<Node>(
           *this, std::move(id), std::move(local), dht);
       }
