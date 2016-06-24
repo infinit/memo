@@ -1,0 +1,58 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <section class="intro">
+    <h2>
+      <img class="icon" src="${url('images/icons/infinit-cli.png')}" alt="Logo Infinit Cloud Apps">
+      Infinit — Project Dropboxe
+    </h2>
+    <h1>Access all your files without sync but with real encryption</h1>
+    <p class="subtitle">Build scalable and secure storage infrastructures by aggregating local storage and various cloud storages such as Amazon S3 or Dropbox.</p><br><br>
+
+    <img class="schema" src="${url('images/schema-global-dropbox.png')}" alt="Infinit Project">
+  </section>
+
+  <section class="location encryption">
+    <img class="security" src="${url('images/encryption-fs.png')}">
+    <h2>Real encryption</h2>
+    <p>With Dropbox, only the communications are encrypted while the blocks are stored in plain form on the servers.</p>
+
+    <p>But Infinit — Project Dropboxe provides a storage solution that both encrypts in transit and at rest so that a block of data cannot be decrypted by a potentially malicious storage server. It helps not <a href="http://thenextweb.com/apps/2014/10/14/dropbox-passwords-leak-online-alleged-hack/#gref" target="_blank">having your</a> <a href="http://techcrunch.com/2014/10/11/edward-snowden-new-yorker-festival/" target="_blank">passwords leaked</a> around the Internet.<p>
+  </section>
+
+  <section class="location">
+    <img src="${url('images/bg-worldmap.png')}" alt="Data Location Control">
+    <h2>Control the location of your data</h2>
+    <p>When creating your infrastructure, you can choose where your files will actually be stored in your country or even on a specific hosting provider.
+    </p>
+  </section>
+
+  <section class="access">
+    <h2>Store and access your files</h2>
+    <p>Store, access and even stream files as if they were stored on your local hard disk. It's a revolutionary new way to access all your files since 5 years.</p>
+    <img src="${url('images/virtual-disk-mac.png')}" alt="Virtual Disk">
+  </section>
+
+  <section class="integrations">
+    <table>
+      <tr>
+        <td><img src="${url('images/logos/aws-s3.png')}" alt="AWS S3"></td>
+        <td><img src="${url('images/logos/gcs.png')}" alt="GCS"></td>
+        <td><img src="${url('images/logos/dropbox.png')}" alt="Dropbox"></td>
+      </tr>
+      <tr>
+        <td>✓</td>
+        <td>✓</td>
+        <td><span class="note">soon</span></td>
+      </tr>
+    </table>
+
+    <h2>Aggregate storage from different providers</h2>
+    <p>Infinit — Project Dropboxe lets you build hybrid infrastructures by combining local storages from your computers, but also cloud providers like Amazon S3 or Google Cloud Storage.</p>
+  </section>
+
+  <section class="cta doc">
+    <p class="note">NOTE: we know our name is <a href="https://blogs.dropbox.com/business/2016/04/announcing-project-infinite/" target="_blank">great</a>, but you should also check out our <a href="${route('home')}">peer to peer file system</a>!</p>
+  </section>
+</%block>

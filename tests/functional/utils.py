@@ -76,6 +76,30 @@ class Infinit(TemporaryDirectory):
   def env(self):
     return self.__env
 
+  @property
+  def data_home(self):
+    return '%s/.local/share/infinit/filesystem' % self.dir
+
+  @property
+  def storages_path(self):
+    return '%s/storages' % self.data_home
+
+  @property
+  def networks_path(self):
+    return '%s/networks' % self.data_home
+
+  @property
+  def passports_path(self):
+    return '%s/passports' % self.data_home
+
+  @property
+  def volumes_path(self):
+    return '%s/volumes' % self.data_home
+
+  @property
+  def drives_path(self):
+    return '%s/drives' % self.data_home
+
   def spawn(self, args, input = None, return_code = 0, env = {}):
     if isinstance(args, str):
       args = args.split(' ')
@@ -93,8 +117,7 @@ class Infinit(TemporaryDirectory):
       env_['INFINIT_HOME'] = self.dir
     if self.__user is not None:
       env_['INFINIT_USER'] = self.__user
-    if 'WINEDEBUG' in os.environ:
-      env_['WINEDEBUG'] = os.environ['WINEDEBUG']
+    env_['WINEDEBUG'] = os.environ.get('WINEDEBUG', '-all')
     if 'ELLE_LOG_LEVEL' in os.environ:
       env_['ELLE_LOG_LEVEL'] = os.environ['ELLE_LOG_LEVEL']
     if self.__beyond is not None:
@@ -130,7 +153,7 @@ class Infinit(TemporaryDirectory):
 
   def run(self, args, input = None, return_code = 0, env = {}):
     process = self.spawn(args, input, return_code, env)
-    out, err = process.communicate()
+    out, err = process.communicate(timeout = 600)
     process.wait()
     out = out.decode('utf-8')
     err = err.decode('utf-8')

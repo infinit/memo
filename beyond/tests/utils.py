@@ -116,7 +116,13 @@ class Beyond:
     else:
       self.__advance += timedelta(seconds = seconds)
 
-  def request(self, url, throws = True, json = {}, auth = None, extra_headers = {}, **kwargs):
+  def request(self, url,
+              throws = True,
+              json = {},
+              auth = None,
+              timestamp = None,
+              extra_headers = {},
+              **kwargs):
     # Older requests don't have json parameter
     if json is not None or 'data' in kwargs:
       if 'data' not in kwargs:
@@ -125,21 +131,22 @@ class Beyond:
         kwargs['data'] = json.dumps(j)
         kwargs['headers'] = {'Content-Type': 'application/json'}
       kwargs.setdefault('headers', {}).update(extra_headers)
-      if auth is not None:
+      if auth:
         der = base64.b64decode(auth['rsa'].encode('utf-8'))
         k = RSA.importKey(der)
         data = kwargs['data']
         if not isinstance(data, bytes):
           data = data.encode('latin-1')
         h = base64.b64encode(hashlib.sha256(data).digest())
-        t = str(int(time.time()))
+        t = str(timestamp) if timestamp else str(int(time.time()))
         string_to_sign = kwargs['method'] + ';' + url + ';'
         string_to_sign += h.decode('latin-1') + ';' + t
         raw_sig = PKCS1_v1_5.new(k).sign(
           SHA256.new(string_to_sign.encode('latin-1')))
         sig = base64.b64encode(raw_sig)
         kwargs['headers']['infinit-signature'] = sig
-        kwargs['headers']['infinit-time'] = t
+        if timestamp is not False:
+          kwargs['headers']['infinit-time'] = t
     response = requests.request(url = '%s/%s' % (self.host, url),
                                 allow_redirects = False,
                                 **kwargs)
@@ -182,7 +189,7 @@ def url_parameters(url):
     urllib.parse.urlparse(url).query)
   return {x: params[x][0] for x in params.keys()}
 
-def throws(function, expected = None, json = True):
+def throws(function, expected = None, json = True, error = None):
   try:
     function()
     assert False
@@ -192,6 +199,8 @@ def throws(function, expected = None, json = True):
     if not json:
       return e.response
     response = e.response.json()
+    if error:
+      assertEq(response['error'], error)
     assert 'reason' in response
     assert 'error' in response
     return response
@@ -316,11 +325,15 @@ class Network(dict):
   def owner(self):
     return self.__owner
 
-  def put(self, hub, owner = None):
+  def put(self, hub, owner = None, **kwargs):
     if owner is None:
       owner = self.owner
-    return hub.put('networks/%s' % self['name'], json = self,
-                   auth = owner.private_key)
+    if kwargs.get('auth') is not None:
+      auth = kwargs.pop('auth')
+    else:
+      auth = owner.private_key
+    return hub.put(
+      'networks/%s' % self['name'], json = self, auth = auth, **kwargs)
 
 class Passport(dict):
 
@@ -398,12 +411,18 @@ class Drive(dict):
       self['status'] = status
       self['create_home'] = create_home
 
-  def __init__(self, volume, description = "Lorem ipsum", members = {}, name = None):
+  def __init__(self,
+               volume,
+               owner = None,
+               description = "Lorem ipsum",
+               members = {},
+               name = None):
     name = name or 'drive_' + random_sequence()
     self.__short_name = name
     self.__volume = volume
-    self['name'] = volume.network.owner['name'] + '/' + self.__short_name
-    self['owner'] = volume.network.owner['name']
+    self.__owner = owner if owner else volume.network.owner
+    self['owner'] = owner['name'] if owner else volume.network.owner['name']
+    self['name'] = self['owner'] + '/' + self.__short_name
     self['network'] = self.volume.network['name']
     self['volume'] = self.volume['name']
     self['description'] = description
@@ -415,7 +434,7 @@ class Drive(dict):
 
   def put(self, hub, owner = None):
     if owner is None:
-      owner = self.volume.network.owner
+      owner = self.__owner
     return hub.put('drives/%s' % self['name'], json = self,
                    auth = owner.private_key)
 

@@ -97,27 +97,6 @@ public_key_from_username(std::string const& username)
 }
 
 static
-int
-port_setxattr(std::string const& file,
-              std::string const& key,
-              std::string const& value,
-              bool fallback_xattrs)
-{
-#ifndef INFINIT_WINDOWS
-  int res = setxattr(
-    file.c_str(), key.c_str(), value.data(), value.size(), 0 SXA_EXTRA);
-  if (res >= 0 || !fallback_xattrs)
-    return res;
-#endif
-  if (!fallback_xattrs)
-    elle::unreachable();
-  auto attr_dir = file_xattrs_dir(file);
-  boost::filesystem::ofstream ofs(attr_dir / key);
-  ofs.write(value.data(), value.size());
-  return 0;
-}
-
-static
 boost::optional<std::string>
 path_mountpoint(std::string const& path, bool fallback)
 {
@@ -282,8 +261,22 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
         auto n = boost::any_cast<std::string>(d.at("name"));
         auto r = boost::any_cast<bool>(d.at("read"));
         auto w = boost::any_cast<bool>(d.at("write"));
+        auto admin = boost::any_cast<bool>(d.at("admin"));
+        auto owner = boost::any_cast<bool>(d.at("owner"));
         const char* mode = w ? (r ? "rw" : "w") : (r ? "r" : "none");
-        output << "\t" << n << ": " << mode << std::endl;
+        output << "\t" << n;
+        if (admin || owner)
+        {
+          output << " (";
+          if (admin)
+            output << "admin";
+          if (admin && owner)
+            output << ", ";
+          if (owner)
+            output << "owner";
+          output << ")";
+        }
+        output << ": " << mode << std::endl;
       }
       std::cout << output.str() << std::endl;
     }
@@ -303,7 +296,8 @@ set_action(std::string const& path,
            bool inherit,
            bool disinherit,
            bool verbose,
-           bool fallback_xattrs)
+           bool fallback_xattrs,
+           bool multi = false)
 {
   if (verbose)
     std::cout << "processing " << path << std::endl;
@@ -321,7 +315,10 @@ set_action(std::string const& path,
       }
       catch (PermissionDenied const&)
       {
-        std::cout << "permission denied, skipping " << path << std::endl;
+        if (multi)
+          std::cout << "permission denied, skipping " << path << std::endl;
+        else
+          std::cout << "permission denied " << path << std::endl;
       }
       catch (elle::Error const& error)
       {
@@ -339,7 +336,10 @@ set_action(std::string const& path,
     }
     catch (PermissionDenied const&)
     {
-      std::cout << "permission denied, skipping " << path << std::endl;
+      if (multi)
+        std::cout << "permission denied, skipping " << path << std::endl;
+      else
+        std::cout << "permission denied " << path << std::endl;
     }
     catch (InvalidArgument const&)
     {
@@ -353,7 +353,7 @@ set_action(std::string const& path,
     for (auto& username: users)
     {
       auto set_attribute =
-        [path, mode, fallback_xattrs] (std::string const& value)
+        [path, mode, fallback_xattrs, multi] (std::string const& value)
         {
           try
           {
@@ -362,7 +362,10 @@ set_action(std::string const& path,
           }
           catch (PermissionDenied const&)
           {
-            std::cout << "permission denied, skipping " << path << std::endl;
+            if (multi)
+              std::cout << "permission denied, skipping " << path << std::endl;
+            else
+              std::cout << "permission denied " << path << std::endl;
           }
         };
       try
@@ -488,25 +491,26 @@ COMMAND(set)
         path, inherit ? "enable" : "disable"));
     }
   }
+  bool multi = paths.size() > 1 || recursive;
   for (auto const& path: paths)
   {
     set_action(path, users, mode, omode, inherit, disinherit, verbose,
-               fallback);
+               fallback, multi);
     if (traverse)
     {
-      boost::filesystem::path working_path(path);
+      boost::filesystem::path working_path = boost::filesystem::absolute(path);
       while (!path_is_root(working_path.string(), fallback))
       {
         working_path = working_path.parent_path();
         set_action(working_path.string(), users, "setr", "", false, false,
-                   verbose, fallback);
+                   verbose, fallback, multi);
       }
     }
     if (recursive)
     {
       recursive_action(
         set_action, path, users, mode, omode, inherit, disinherit, verbose,
-        fallback);
+        fallback, multi);
     }
   }
 }
@@ -689,7 +693,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "group name" },
         { "create,c", bool_switch(), "create the group" },
         { "show", bool_switch(), "list group users and administrators" },
-        { "delete,d", bool_switch(), "delete an existing group" },
+        // { "delete,d", bool_switch(), "delete an existing group" },
         { "add-user", value<std::vector<std::string>>(), "add user to group" },
         { "add-admin", value<std::vector<std::string>>(),
           "add administrator to group" },

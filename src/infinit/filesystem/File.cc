@@ -1,11 +1,11 @@
 #include <infinit/filesystem/File.hh>
 
-#include <pair>
+#include <utility>
 
 #ifdef INFINIT_WINDOWS
 #include <fcntl.h>
 #endif
-#include <pair>
+
 #include <sys/stat.h> // S_IMFT...
 
 #include <elle/cast.hh>
@@ -127,14 +127,18 @@ namespace infinit
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<FileConflictResolver> _register_fcr("fcr");
 
-    static std::string perms_to_json(model::Model& model, ACLBlock& block)
+    static
+    std::string
+    perms_to_json(model::Model& model, ACLBlock& block)
     {
       auto perms = block.list_permissions(model);
       elle::json::Array v;
       for (auto const& perm: perms)
       {
         elle::json::Object o;
+        o["admin"] = perm.admin;
         o["name"] = perm.user->name();
+        o["owner"] = perm.owner;
         o["read"] = perm.read;
         o["write"] = perm.write;
         v.push_back(o);
@@ -206,7 +210,7 @@ namespace infinit
       elle::SafeFinally remove_undecoded_first_block([&] {
           this->_first_block.reset();
       });
-      auto perms = _owner.get_permissions(*_first_block);
+      auto perms = get_permissions(*_owner.block_store(), *_first_block);
       _filedata = std::make_shared<FileData>(_parent->_path / _name, *_first_block, perms);
       remove_undecoded_first_block.abort();
     }
@@ -444,6 +448,9 @@ namespace infinit
     File::unlink()
     {
       _ensure_first_block();
+      if ( !(_filedata->_header.mode & 0200)
+        || !(_parent->_header.mode & 0200))
+        THROW_ACCES;
       auto info = _parent->_files.at(_name);
       elle::SafeFinally revert([&] { _parent->_files[_name] = info;});
       _parent->_files.erase(_name);
@@ -599,7 +606,24 @@ namespace infinit
       if (it != _size_map.end())
       {
         for (auto fh: it->second.second)
+        {
+          bool dirty = fh->_fat_changed;
+          if (!dirty)
+          {
+            for (auto const& b: fh->_blocks)
+            {
+              if (b.second.dirty && (b.first +1) * fh->_file._header.size < unsigned(new_size))
+              {
+                dirty = true;
+                break;
+              }
+            }
+          }
+          if (dirty)
+            ELLE_WARN("Propagating truncate(%s) of %s to open dirty file handle with size %s",
+                      new_size, _name, fh->_file._header.size);
           fh->ftruncate(new_size);
+        }
       }
     }
 

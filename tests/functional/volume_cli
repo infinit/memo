@@ -45,3 +45,72 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
   assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 1)
   bob.run(['infinit-volume', '--delete', '--as', 'bob', 'v2', '--pull'])
   assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
+
+# Purge.
+with Beyond() as beyond, Infinit(beyond = beyond) as bob:
+  bob.run(['infinit-user', '--signup', 'bob', '--email', 'bob@infinit.io'])
+  bob.run(['infinit-storage', '--create', '--as', 'bob', 's', '--filesystem'])
+  bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '-S', 's', '-p'])
+  bob.run(['infinit-volume', '--create', '--as', 'bob', 'v', '-N', 'n', '-p'])
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 1)
+  bob.run(['infinit-drive', '--create', '--as', 'bob', 'd',
+           '-V', 'v', '-N', 'n', '-p'])
+  assertEq(
+    len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 1)
+  bob.run(['infinit-volume', '--delete', '--as', 'bob',
+           '--purge', '--pull', 'v'])
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
+  assertEq(
+    len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)
+  bob.run(['infinit-volume', '--fetch', '--as', 'bob', 'v'], return_code = 1)
+  bob.run(['infinit-drive', '--fetch', '--as', 'bob', 'd'], return_code = 1)
+
+def alice_bob_network_volume(alice, bob, network = "network", volume = "volume"):
+  bob.run(['infinit-user', '--signup', 'bob', '--email', 'bob@infinit.io'])
+  alice.run(
+    ['infinit-user', '--signup', 'alice', '--email', 'alice@infinit.io'])
+  bob.run(['infinit-user', '--fetch', 'alice', '--as', 'bob'])
+  alice.run(['infinit-user', '--fetch', 'bob', '--as', 'alice'])
+  bob.run(['infinit-storage', '--create', '--as', 'bob', 's', '--filesystem'])
+  bob.run(['infinit-network', '--create', '--kelips', '--as', 'bob', network,
+           '-S', 's', '-p'])
+  bob.run(['infinit-volume', '--create', '--as', 'bob', volume, '-N', network, '-p'])
+  return network, volume
+
+# getxattr infinit.resolve.<username>.
+with Beyond() as beyond, \
+  Infinit(beyond = beyond) as bob, \
+  Infinit(beyond = beyond) as alice:
+  network, volume = alice_bob_network_volume(alice, bob)
+  bob.run(['infinit-passport', '--create', '--as', 'bob', '--network', network,
+           '--user', 'alice', '--allow-create-passport', '--push'])
+  passport = bob.run_json(
+    ['infinit-passport', '--export', '--network', network, '--user', 'alice',
+     '--as', 'bob'])
+  def resolve(user_name):
+    res = bob.run(['infinit-volume', '--run', '--as', 'bob', '--name', volume],
+                  input = {
+                    "operation":"getxattr",
+                    "name":"infinit.resolve.%s" % user_name,
+                    "path": "/"})
+    return json.loads(res[0])
+  # Of course, bob is present:
+  res = resolve('bob')
+  assertEq(res["success"], True)
+  # Alice is not.
+  res = resolve('alice')
+  assertEq(res["success"], False)
+  assertEq(res["code"], 22)
+  # Register alice (# Equivalent of infinit-acl --register but doesn't
+  # require a mountpoint.)
+  res = bob.run(
+    ['infinit-volume', '--run', '--as', 'bob', '--name', volume],
+    input = {"operation":"setxattr",
+             "name": "user.infinit.register.alice",
+             "path": "/",
+             "value": json.dumps(passport)
+           })
+  res = json.loads(res[0])
+  assertEq(res["success"], True)
+  res = resolve('alice')
+  assertEq(res["success"], True)

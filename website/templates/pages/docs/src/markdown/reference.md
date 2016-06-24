@@ -61,7 +61,7 @@ Miscellaneous:
   -a [ --as ] arg              User to run commands as (default: system user)
 ```
 
-While the help when invoking the `--create` shows the options associated with creating a user:
+Each mode of each binary has its own help as well. For example the help when invoking the `--create` mode of _infinit-user_ shows the options associated with creating a user:
 
 ```
 $> infinit-user --create --help
@@ -91,8 +91,6 @@ The name/identifier of the object on which you wish to operate can be specified 
 $> infinit-volume --push --name personal
 $> infinit-volume --push personal
 ```
-
-With the exception of the _infinit-user_ binary, one can specify the Infinit user behind the action by relying on the `--as` option followed by the user name. If not specified, the `$INFINIT_USER` environment variable is used, unless not set in which case the system user name is used.
 
 ### Hub ###
 
@@ -190,12 +188,57 @@ alice: public/private keys
 bob: public key only
 ```
 
+### Pull a user ####
+
+To remove a user from the Hub, you can use the `--pull` mode. The `--name` option specifies which user to pull while the `--as` option specifies which user should sign the pull request. Currently a user can only pull themself but in the future there will be the concept of administrator users who can pull other users.
+
+```
+$> infinit-user --pull --as alice --name --alice
+Remotely deleted user "alice".
+```
+
+To pull all objects that the user has pushed to the Hub along with the user itself, you can specify the `--purge` option:
+
+```
+$> infinit-user --pull --as alice --name --alice --purge
+Remotely deleted user "alice".
+```
+
+### Delete a user ###
+
+Users can be locally deleted using the `--delete` mode. If the user has a private key, you will be prompted before the user is deleted as losing a user's public key will mean that you can no longer perform actions as that user. This includes pulling the user or any objects they have pushed to the Hub. To avoid being prompted, the `--force` option can be used.
+
+```
+$> infinit-user --delete --name alice
+WARNING: The local copy of the user’s private key will be removed.
+WARNING: You will no longer be able to perform actions on the Hub
+WARNING: for this user.
+
+Confirm the name of the user you would like to delete: alice
+Locally deleted user "alice".
+```
+
+To be symmetric with the `--push` option of the create mode, the `--pull` is provided with the delete mode. This will remove the user both on the Hub and locally.
+
+```
+$> infinit-user --delete --as alice --name alice --pull
+WARNING: The local copy of the user’s private key will be removed.
+WARNING: You will no longer be able to perform actions on the Hub
+WARNING: for this user.
+
+Confirm the name of the user you would like to delete: alice
+Remotely deleted user "alice".
+Locally deleted user "alice".
+```
+
+There is also the option `--purge` to locally remove all objects created by the user which can be combined with `--pull` to remove all objects owned by the user from the Hub.
+
 Credentials
 -----------
 
 The _infinit-credentials_ binary manages the credentials for your cloud services. Cloud services, such as Amazon Web Services, Google Cloud Storage and Dropbox, can be used to add storage to your networks. Infinit considers these cloud services as basic and unprivileged datastores that are used to store blocks of encrypted data.
 
-*__NOTE__: Because this binary requires the Hub for some types of credentials (such as Dropbox and Google), you may need to register your user on the Infinit Hub. For more information, please refer to the <a href="#user">User</a> section, more specifically how to <a href="#sign-up-on-the-hub">Sign up on the Hub</a>.*
+_**NOTE**: Because this binary requires the Hub for some types of credentials (such as Dropbox and Google), you may need to register your user on the Infinit Hub. For more information, please refer to the <a href="#user">User</a> section, more specifically how to <a href="#sign-up-on-the-hub">Sign up on the Hub</a>._
 
 
 ### Add credentials ###
@@ -231,6 +274,15 @@ GCS:
   alice@company.com: Alice
 ```
 
+### Delete credentials ###
+
+Credentials can be locally removed using the `--delete` mode:
+
+```
+$> infinit-credentials --delete --aws --name s3-user
+Locally deleted credentials "s3-user".
+```
+
 Storage
 -------
 
@@ -257,6 +309,12 @@ However, the process differs depending on the nature of the storage resource. Pl
 
 _**NOTE**: Do not hesitate to <a href="http://help.infinit.sh" target="_blank">vote for and/or request</a> the types of storage backends that you would like to see supported in the future._
 
+### Delete a storage resource ###
+
+You can locally delete a storage resource using the `--delete` mode. For filesystem storage resources, you can clear their contents using the `--clear-content` option.
+
+Using `--purge --pull` will locally delete the network, volumes and drives that depend on the storage resource along with pulling all dependent objects that belong to the user from the Hub.
+
 Network
 -------
 
@@ -278,11 +336,11 @@ Locally created network "alice/cluster".
 The following overlay types are currently available:
 
 - Kalimero: Simple test overlay supporting only one node.
-- Stonehenge: Overlay supporting multiple storage nodes in a static configuration: the
-list of peers must never change or be reordered once set.
 - Kelips: Overlay with support for node churn. The _k_ argument specifies the
 number of groups to use, each group being responsible for _1/kth_ of the files.
 See the reference paper _<a href="http://iptps03.cs.berkeley.edu/final-papers/kelips.pdf" target="_blank">"Kelips: Building an Efficient and Stable P2P DHT through Increased Memory and Background Overhead"</a>_ for more information.
+
+An administrator can be set for the network. This allows the given user either read or read/write permissions for all files in all volumes on the created network. To enable this feature, the `--admin-r USER` or `--admin-rw USER` arguments respectively.
 
 ### Push a network ###
 
@@ -371,6 +429,14 @@ Upgrading a network, say from _0.3.0_ to _0.5.0_, allows nodes to benefit from t
 
 The complete procedure is detailed in the [Upgrading a network](/documentation/upgrading) guide.
 
+### Pull a network ###
+
+Networks can be pulled from the Hub using the `--pull` mode. If the `--purge` option is used, all volumes and drives which rely on the given network and belong to the user will be pulled as well.
+
+### Delete a network ###
+
+To delete a network locally, the `--delete` mode is used. This can be used in conjunction with the `--purge` and `--pull` options to, respectively, delete volumes and drives that depend on the network locally and pull them from the Hub. Note only volumes and drives owned by the user can be pulled from the Hub.
+
 Passport
 --------
 
@@ -438,7 +504,7 @@ $> infinit-passport --list --as bob
 alice/cluster: bob
 ```
 
-*__NOTE__: The _infinit-passport_ binary also provides options to fetch all the passports for a specific user or for a specific network.*
+_**NOTE**: The _infinit-passport_ binary also provides options to fetch all the passports for a specific user or for a specific network._
 
 That's it, you will now be able to <a href="#link-a-device-to-a-network">link devices to the networks</a> these passports allow you to.
 
@@ -547,6 +613,14 @@ everything is
 ```
 
 **IMPORTANT**: It is possible that the volume owner didn't grant you access to the root directory, in which case you would get a "Permission Denied" error when listing the mount point. In this case, request that the volume owner <a href="#grant-revoke-access">grant's you access</a>.
+
+### Pull a volume ###
+
+To pull a volume from the Hub, the `--pull` mode is used. When combined with the `--purge` option, drives that depend on the volume that are owned by the user are also pulled.
+
+### Delete a volume ###
+
+To locally delete a volume, the `--delete` mode is used. This can be used in conjunction with the `--purge` and `--pull` options to, respectively, delete drives that depend on the volume locally and pulls the dependent drives and volume from the Hub. Node that the volume and drives will only be pulled if the user is the owner.
 
 Access Control List
 -------------------
@@ -915,6 +989,14 @@ Joined drive "alice/workspace".
 ```
 
 That's it, you are now allowed to mount the volume (i.e. 'alice/shared') associated with the drive to browse, store and access files. Note that you could have done that without using through the drive invitation process because you are using the command-line tools. Non-tech-savvy users, however, will appreciate having an interface with only the drives they have been invited to join and thus have access to.
+
+### Pull a drive ###
+
+A drive can be pulled from the Hub using the `--pull` mode. The `--purge` option is kept for consistency but currently has no effect.
+
+### Delete a drive ###
+
+To locally delete a drive, the `--delete` mode is used. This can be combined with the `--pull` option to remove the drive from the Hub. The `--purge` option is kept for consistency but currently has no effect.
 
 LDAP
 ----

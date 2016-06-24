@@ -2,6 +2,7 @@
 
 #include <reactor/scheduler.hh>
 #include <reactor/network/tcp-server.hh>
+#include <reactor/network/tcp-socket.hh>
 
 #include <protocol/Serializer.hh>
 #include <protocol/ChanneledStream.hh>
@@ -28,12 +29,12 @@ ELLE_TEST_SCHEDULED(move)
               { return elle::make_unique<int>(a + *b); }));
       s.serve(*socket);
     }));
-
+  elle::Version version(INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
   reactor::network::TCPSocket stream("127.0.0.1", server.port());
-  infinit::protocol::Serializer serializer(stream, false);
+  infinit::protocol::Serializer serializer(stream, version, false);
   infinit::protocol::ChanneledStream channels(serializer);
   infinit::RPC<std::unique_ptr<int> (int, std::unique_ptr<int>)>
-    rpc("coin", channels, elle::Version(INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR));
+    rpc("coin", channels, version);
   try
   {
     BOOST_CHECK_EQUAL(*rpc(7, elle::make_unique<int>(35)), 42);

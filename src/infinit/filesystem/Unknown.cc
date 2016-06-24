@@ -42,11 +42,12 @@ namespace infinit
       std::unique_ptr<ACLBlock> parent_block;
       if (this->_parent->inherit_auth())
       {
-        ELLE_DEBUG_SCOPE("inheriting auth");
-        parent_block = elle::cast<ACLBlock>::runtime(
-          this->_owner.block_store()->fetch(_parent->address()));
-        umbrella([&] { parent_block
-          ->copy_permissions(dynamic_cast<ACLBlock&>(*b));});
+        umbrella([&] {
+            ELLE_DEBUG_SCOPE("inheriting auth");
+            parent_block = elle::cast<ACLBlock>::runtime(
+              this->_owner.block_store()->fetch(_parent->address()));
+            parent_block->copy_permissions(dynamic_cast<ACLBlock&>(*b));
+        });
         DirectoryData dd {this->_parent->_path / _name, address};
         dd._inherit_auth = true;
         dd.write(*_owner.block_store(), Operation{OperationType::update, "/inherit"}, b, true, true);
@@ -123,13 +124,21 @@ namespace infinit
     Unknown::symlink(boost::filesystem::path const& where)
     {
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
+      auto parent_block = this->_owner.block_store()->fetch(_parent->address());
+      _owner.ensure_permissions(*parent_block, true, true);
       auto b = _owner.block_store()->make_block<infinit::model::blocks::ACLBlock>();
-      FileHeader fh(0, 1, S_IFLNK | 0666,
+      FileHeader fh(0, 1, S_IFLNK | 0600,
                     time(nullptr), time(nullptr), time(nullptr),
                     0);
       fh.symlink_target = where.string();
       auto serdata = elle::serialization::binary::serialize(fh);
       b->data(serdata);
+      if (_parent->inherit_auth())
+      {
+        umbrella([&] { dynamic_cast<ACLBlock*>(parent_block.get())->copy_permissions(
+          dynamic_cast<ACLBlock&>(*b));
+        });
+      }
       auto addr = b->address();
       _owner.store_or_die(std::move(b), model::STORE_INSERT,
                           model::make_drop_conflict_resolver());

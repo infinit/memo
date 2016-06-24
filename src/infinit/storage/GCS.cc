@@ -128,16 +128,22 @@ namespace infinit
         }
         try
         {
-          auto next = response.get<std::string>("NextMarker");
+          auto next = response.get_child("ListBucketResult").get<std::string>("NextMarker");
           url = elle::sprintf(
             "https://storage.googleapis.com/%s?prefix=%s&marker=%s",
             this->_bucket, this->_root, next);
         }
-        catch (std::exception const&)
+        catch (std::exception const& e)
         {
+          ELLE_TRACE("listing finished: %s", e.what());
           break;
         }
       }
+      if (result.empty())
+        ELLE_TRACE("listing is empty");
+      else
+        ELLE_TRACE("reloaded %s keys from %s to %s", result.size(),
+          result.front(), result.back());
       return result;
     }
 

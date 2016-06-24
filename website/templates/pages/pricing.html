@@ -3,125 +3,75 @@
 <%block name="content">
 
   <section class="doc">
-    <h1>Plans</h1>
+    <h1>Pricing</h1>
+    <p>Infinit provides a free community version and an entreprise license with additional features.</p><br>
 
-    <div class="plan startup">
-      <h2>
-        <img src="${url('images/icons/startup.png')}" alt="Startup">
-        Startup
-      </h2>
-      <p class="big max_users" data-max-users="30">Up to 30 users</p>
-      <p class="big">1 integration</p>
+    <div class="version community">
+      <h2>Community</h2>
+      <ul>
+        <li>
+          <img src="${url('images/icons/users.png')}" alt="Infinit Users">
+          <span>Unlimited Users</span>
+        </li>
+        <li>
+          <img src="${url('images/icons/network.png')}" alt="Infinit Networks">
+          <span>Unlimited Clusters</span>
+        </li>
+      </ul>
       <hr>
-      <p>On-premise, public, private <br>or hybrid infrastructure</p>
-      <p>Unlimited volumes</p>
-      <p>Encryption <span>(in-transit and at-rest)</span></p>
+      <p>Encryption (in-transit and at-rest)</p>
       <p>Read/write access control</p>
       <p>Unlimited storage capacity*</p>
-      <p>Unlimited number of devices per user</p>
+      <p>Default access permissions</p>
       <p>Unlimited file size</p>
-      <p>Desktop apps <span>(Windows, Mac, Linux)</span></p>
-      <p>Mobile apps  <span>(iOS, Android)</span> <span class="badge">soon</span></p>
-      <p class="price">
-        Free<br>
-        <a href="${route('doc_get_started')}" class="button">Get Started</a>
-      </p>
+      <p>Basic Support</p>
+      <p>Hierarchical Groups</p>
+      <p>Desktop apps (Windows, Mac, Linux)</p>
+      <p>Mobile apps (iOS, Android) <span>soon</span></p>
+      <p>Versioning <span>soon</span></p>
+      <a href="${route('doc_get_started')}" class="button">Get Started</a>
     </div>
 
-    <div class="plan business">
-      <h2>
-        <img src="${url('images/icons/business.png')}" alt="Business">
-        Business
-      </h2>
-      <p class="big">Up to 300 users</p>
-      <p class="big">3 integrations</p>
-      <hr>
-      <p><strong>Everything from Startup</strong>
-      <p>+ Default access permissions <span class="badge">soon</span></p>
-      <p>+ Versioning <span class="badge">soon</span></p>
-      <p>+ Groups <span class="badge">soon</span></p>
-      <p>+ Premium Support</p>
-      <p class="price" data-price="9">
-        $9/user/month<br>
-        <span>coming soon</span>
-      </p>
+    <div class="version enterprise">
+      <h2>Enterprise</h2>
+      <ul>
+        <li>
+          <img src="${url('images/icons/address-book.png')}" alt="Infinit Users">
+          <span>LDAP/Active Directory</span>
+        </li>
+        <li class="connectors">
+          <img src="${url('images/icons/interface.png')}" alt="Infinit Networks">
+          <span>NFS/SMB Connectors</span>
+        </li>
+        <li>
+          <img src="${url('images/icons/monitoring.png')}" alt="Infinit Users">
+          <span>Monitoring</span>
+        </li>
+        <li>
+          <img src="${url('images/icons/priority.png')}" alt="Infinit Networks">
+          <span>Priority Support</span>
+        </li>
+        <li class="key">
+          <img src="${url('images/icons/key.png')}" alt="Infinit Users">
+          <span>Key Management</span>
+        </li>
+        <li>
+          <img src="${url('images/icons/device-iphone.png')}" alt="Infinit Networks">
+          <span>Device Management</span>
+        </li>
+        <li>
+          <img src="${url('images/icons/on-premise-hub.png')}" alt="Infinit Users">
+          <span>On-Premise Hub</span>
+        </li>
+        <li>
+          <img src="${url('images/icons/consulting.png')}" alt="Infinit Networks">
+          <span>Consulting/Training</span>
+        </li>
+      </ul>
+      <a href="${route('contact')}" class="button">Request Quote</a>
     </div>
 
-    <div class="plan enterprise">
-      <h2>
-        <img src="${url('images/icons/enterprise.png')}" alt="Enterprise">
-        Enterprise
-      </h2>
-      <p class="big">Unlimited users</p>
-      <p class="big">Unlimited integrations</p>
-      <hr>
-      <p><strong>Everything from Business</strong>
-      <p>+ Priority Support</p>
-      <p>+ Monitoring</p>
-      <p>+ Analytics</p>
-      <p>+ On-premise Hub</p>
-      <p>+ LDAP/AD integration</p>
-      <p>+ Key management</p>
-      <p>+ Device management</p>
-      <p>+ NFS/Samba interface</p>
-      <p class="price">Custom<br>
-        <a href="${route('contact')}" class="button">Request Quote</a>
-      </p>
-    </div>
-
-  </section>
-<div class="spacer"></div>
-
-  <section class="estimation">
-    <h2>Estimate Cost</h2>
-    <p class="subtitle">Choose the number of users and the storage capacity you need.</p>
-
-    <table class="controls">
-      <tr class="users">
-        <td>
-          <input type="text" name="users" id="usersInput" data-slider="true" data-slider-range="1, 300" data-slider-step="1" value="30" data-slider-highlight="true">
-          <label for="usersInput" id="usersLabel"><span>30</span> users</label>
-        </td>
-      </tr>
-      <tr class="storage">
-        <td>
-          <input type="text" name="capacity" class="capacityInput">
-          <label class="capacityLabel"><span>1</span> TB</label>
-
-          <div class="select-style">
-            <select class="storageSelect">
-              <option style="background-image:url(${url('images/icons/rocket.png')});" selected data-price="0.06">Amazon S3</option>
-              <option data-price="0.01">Backblaze B2</option>
-              <option data-price="0.052">Google Cloud Storage</option>
-              <option data-price="0.18">HP Cloud Object Storage</option>
-              <option data-price="0.06">Microsoft Azure Storage</option>
-              <option data-price="0.08">SoftLayer Object Storage</option>
-              <option data-price="0.05">On-Premise</option>
-            </select>
-          </div>
-
-          <a class="remove" href="#"><img src="${url('images/icons/remove.png')}"></a>
-          <a class="add" href="#"><img src="${url('images/icons/add.png')}"></a>
-        </td>
-        <tr class="add_storage">
-        </tr>
-      </tr>
-    </table>
-
-    <div class="spacer"></div>
-    <div class="bracket"></div>
-
-    <div class="price">
-      <div class="license">
-        <p class="infinit">$<span>3300</span>/year</p>
-        <p class="free">Free</p>
-        <p class="comparison" style="display:none;">
-          <span class="porcentage">24</span>% cheaper than
-          <span class="service">Dropbox</span>
-        </p>
-      </div>
-
-    </div>
+    <em>* Storage capacity fees are not included.</em>
 
   </section>
 

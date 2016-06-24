@@ -317,20 +317,19 @@ namespace infinit
     }
 
     std::pair<bool, bool>
-    FileSystem::get_permissions(model::blocks::Block const& block)
+    get_permissions(model::Model& m, model::blocks::Block const& block)
     {
-      auto dn =
-        std::dynamic_pointer_cast<model::doughnut::Doughnut>(block_store());
+      auto& dn = dynamic_cast<model::doughnut::Doughnut&>(m);
       auto acb = dynamic_cast<const model::doughnut::ACB*>(&block);
       bool r = false, w = false;
       ELLE_ASSERT(acb);
-      if (dn->keys().K() == *acb->owner_key())
+      if (dn.keys().K() == *acb->owner_key())
         return std::make_pair(true, true);
       for (auto const& e: acb->acl_entries())
       {
         if (e.read <= r && e.write <= w)
           continue; // this entry doesnt add any perm
-        if (e.key == dn->keys().K())
+        if (e.key == dn.keys().K())
         {
           r = r || e.read;
           w = w || e.write;
@@ -348,7 +347,7 @@ namespace infinit
         }
         try
         {
-          model::doughnut::Group g(*dn, e.key);
+          model::doughnut::Group g(dn, e.key);
           auto keys = g.group_keys();
           if (acb->group_version()[idx] < signed(keys.size()))
           {
@@ -374,7 +373,7 @@ namespace infinit
     FileSystem::ensure_permissions(model::blocks::Block const& block,
                                    bool r, bool w)
     {
-      auto perms = get_permissions(block);
+      auto perms = get_permissions(*_block_store, block);
       if (perms.first < r || perms.second < w)
         throw rfs::Error(EACCES, "Access denied.");
     }
@@ -499,7 +498,7 @@ namespace infinit
           bench_hit.add(block ? 0 : 1);
           std::pair<bool, bool> perms;
           if (block)
-            perms = get_permissions(*block);
+            perms = get_permissions(*_block_store, *block);
           if (!block)
           {
             fd = *fit;
@@ -555,7 +554,7 @@ namespace infinit
       it = _directory_cache.find(address);
       std::pair<bool, bool> perms;
       if (block)
-        perms = get_permissions(*block);
+        perms = get_permissions(*_block_store, *block);
       if (!block)
       {
         bench_hit.add(1);

@@ -19,7 +19,7 @@ namespace infinit
     namespace doughnut
     {
       class Local
-        : public Peer
+        : virtual public Peer
       {
       /*------.
       | Types |
@@ -59,7 +59,6 @@ namespace infinit
         void
         cleanup();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
-        ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
 
       /*-----------.
       | Networking |

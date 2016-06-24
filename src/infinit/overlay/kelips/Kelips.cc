@@ -1,6 +1,6 @@
 #include <infinit/overlay/kelips/Kelips.hh>
 
-#include <pair>
+#include <utility>
 #include <algorithm>
 #include <random>
 #include <vector>
@@ -1029,7 +1029,7 @@ namespace infinit
           {
             try
             {
-              infinit::model::doughnut::consensus::Paxos::RemotePeer peer(
+              infinit::model::doughnut::Remote peer(
                 elle::unconst(*this->doughnut()),
                 pl.first,
                 pl.second.front());
@@ -2842,7 +2842,8 @@ namespace infinit
               return;
             }
           }
-          ELLE_TRACE("git did not complete locally (%s)", result_set.size());
+          ELLE_TRACE_SCOPE("%s: get did not complete locally (%s)",
+                           this, result_set.size());
           for (int i = 0; i < attempts; ++i)
           {
             packet::GetFileRequest req(r);
@@ -2857,7 +2858,7 @@ namespace infinit
             if (it == _state.contacts[_group].end())
             {
               ELLE_TRACE("no contact to forward GET to");
-              continue;
+              break;
             }
             auto ir =
               this->_pending_requests.insert(std::make_pair(req.request_id, r));
@@ -3254,7 +3255,7 @@ namespace infinit
         BENCH("make_peer");
         static bool disable_cache = getenv("INFINIT_DISABLE_PEER_CACHE");
         static int cache_count = std::stoi(elle::os::getenv("INFINIT_PEER_CACHE_DUP", "1"));
-        ELLE_TRACE("connecting to %s", hosts);
+        ELLE_TRACE("connecting to %f", hosts);
         if (hosts.first == _self || hosts.first == Address::null)
         {
           ELLE_TRACE("target is local");
@@ -3287,21 +3288,21 @@ namespace infinit
             std::string uid;
             if (hosts.first != Address::null)
               uid = elle::sprintf("%x", hosts.first);
-            auto res = Overlay::WeakMember(
-              new infinit::model::doughnut::consensus::Paxos::RemotePeer(
+            auto res =
+              std::make_shared<model::doughnut::consensus::Paxos::RemotePeer>(
                 elle::unconst(*this->doughnut()),
                 hosts.first,
                 endpoints,
                 uid,
-                elle::unconst(this)->_remotes_server));
-            std::dynamic_pointer_cast<model::doughnut::Remote>(res.payload())
-              ->retry_connect(std::function<bool(model::doughnut::Remote&)>(
-                std::bind(&Node::remote_retry_connect,
-                          this, std::placeholders::_1,
-                          uid)));
+                elle::unconst(this)->_remotes_server);
+            res->retry_connect(std::function<bool(model::doughnut::Remote&)>(
+                                 std::bind(&Node::remote_retry_connect,
+                                           this, std::placeholders::_1,
+                                           uid)));
+            auto weak_res = Overlay::WeakMember::own(std::move(res));
             if (!disable_cache)
-              this->_peer_cache[hosts.first].push_back(res);
-            return res;
+              this->_peer_cache[hosts.first].push_back(weak_res);
+            return weak_res;
           }
           catch (elle::Error const& e)
           {
@@ -3460,8 +3461,9 @@ namespace infinit
               Contact contact{{}, {}, c.first, Duration(0), Time(), 0};
               for (auto const& ep: c.second)
                 contact.endpoints.push_back(TimedEndpoint(ep, now()));
-              ELLE_LOG("%s: register %s", *this, contact);
+              ELLE_LOG("%s: register %f", this, contact);
               target[c.first] = std::move(contact);
+              this->on_discover()(c.first, false);
             }
           }
           else

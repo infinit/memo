@@ -28,3 +28,44 @@ class NoLongerAvailable(Exception):
 
   def __init__(self, object):
     super().__init__('Resource %s is not longer available' % object)
+
+class AuthenticationException(Exception):
+  pass
+
+class MissingCertificate(AuthenticationException):
+
+  def __init__(self):
+    super().__init__('Missing certificate for authentication')
+
+class UserNotAdmin(AuthenticationException):
+
+  def __init__(self, user):
+    self.user = user
+    super().__init__('User (%s) is not an administrator' % user)
+
+class BannedUser(AuthenticationException):
+
+  def __init__(self, user):
+    self.user = user
+    super().__init__('User (%s) is banned' % user)
+
+class MissingSignature(AuthenticationException):
+
+  def __init__(self):
+    super().__init__('Missing signature for authentication')
+
+class MissingTimeHeader(AuthenticationException):
+
+  def __init__(self):
+    super().__init__('Missing time header for authentication')
+
+class ClockSkew(AuthenticationException):
+
+  def __init__(self, delay):
+    self.delay = delay
+    super().__init__('Request signed outside (+/- %ds) of window' % delay)
+
+class InvalidAuthentication(AuthenticationException):
+
+  def __init__(self):
+    super().__init__('Invalid authentication')

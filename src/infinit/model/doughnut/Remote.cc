@@ -26,10 +26,9 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Remote::Remote(Doughnut& doughnut, Address id,
+      Remote::Remote(Doughnut& dht, Address id,
                      std::string const& host, int port)
-        : Super(std::move(id))
-        , _doughnut(doughnut)
+        : Super(dht, std::move(id))
         , _socket()
         , _serializer()
         , _channels()
@@ -48,10 +47,9 @@ namespace infinit
           });
       }
 
-      Remote::Remote(Doughnut& doughnut, Address id,
+      Remote::Remote(Doughnut& dht, Address id,
                      boost::asio::ip::tcp::endpoint endpoint)
-        : Super(std::move(id))
-        , _doughnut(doughnut)
+        : Super(dht, std::move(id))
         , _socket(nullptr)
         , _serializer()
         , _channels()
@@ -77,11 +75,11 @@ namespace infinit
           });
       }
 
-      Remote::Remote(Doughnut& doughnut, Address id,
+      Remote::Remote(Doughnut& doughnut,
+                     Address id,
                      boost::asio::ip::udp::endpoint endpoint,
                      reactor::network::UTPServer& server)
-        : Super(std::move(id))
-        , _doughnut(doughnut)
+        : Super(doughnut, std::move(id))
         , _utp_socket(nullptr)
         , _serializer()
         , _channels()
@@ -105,8 +103,7 @@ namespace infinit
                      std::vector<boost::asio::ip::udp::endpoint> endpoints,
                      std::string const& peer_id,
                      reactor::network::UTPServer& server)
-        : Super(std::move(id))
-        , _doughnut(doughnut)
+        : Super(doughnut, std::move(id))
         , _utp_socket(nullptr)
         , _serializer()
         , _channels()
@@ -162,7 +159,10 @@ namespace infinit
               {
                 _connected = false;
                 this->_serializer.reset(
-                  new protocol::Serializer(socket(), false));
+                  new protocol::Serializer(
+                    socket(),
+                    elle_serialization_version(this->_doughnut.version()),
+                    false));
                 this->_channels.reset(
                   new protocol::ChanneledStream(*this->_serializer));
                 static bool disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");

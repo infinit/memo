@@ -70,5 +70,74 @@ with Beyond() as beyond:
              json = False,
              expected = 404)
 
+    def test_purge_normal(self):
+      user = User()
+      user.put(beyond)
+      network = Network(name = 'n', owner = user)
+      network.put(beyond)
+      volume = Volume(name = 'v', network = network)
+      volume.put(beyond)
+      drive = Drive(name = 'd', volume = volume)
+      drive.put(beyond)
+      beyond.delete('networks/%s' % network['name'],
+                    auth = user.private_key,
+                    params = {'purge': 'true'})
+      throws(lambda: beyond.get('networks/%s' % network['name'], json = False),
+             404)
+      throws(lambda: beyond.get('volumes/%s' % volume['name'], json = False),
+             404)
+      throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
+             404)
+
+    # Check that we don't skip drives when a volume has already been pulled.
+    def test_purge_partial(self):
+      user = User()
+      user.put(beyond)
+      network = Network(name = 'n', owner = user)
+      network.put(beyond)
+      volume = Volume(name = 'v', network = network)
+      volume.put(beyond)
+      drive = Drive(name = 'd', volume = volume)
+      drive.put(beyond)
+      beyond.delete('volumes/%s' % volume['name'], auth = user.private_key)
+      beyond.delete('networks/%s' % network['name'],
+                    auth = user.private_key,
+                    params = {'purge': 'true'})
+      throws(lambda: beyond.get('networks/%s' % network['name'], json = False),
+             404)
+      throws(lambda: beyond.get('volumes/%s' % volume['name'], json = False),
+             404)
+      throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
+             404)
+
+    # Check that we only remove objects owned by the user doing the purge.
+    def test_purge_multi_user(self):
+      bob = User()
+      bob.put(beyond)
+      alice = User()
+      alice.put(beyond)
+      network = Network(name = 'n', owner = bob)
+      network.put(beyond)
+      volume1 = Volume(name = 'v', owner = bob, network = network)
+      volume1.put(beyond)
+      volume2 = Volume(name = 'v2', owner = alice, network = network)
+      volume2.put(beyond)
+      drive1 = Drive(name = 'd', owner = bob, volume = volume1)
+      drive1.put(beyond)
+      drive2 = Drive(name = 'd2', owner = alice, volume = volume2)
+      drive2.put(beyond)
+      beyond.delete('networks/%s' % network['name'],
+                    auth = bob.private_key,
+                    params = {'purge': 'true'})
+      throws(lambda: beyond.get('networks/%s' % network['name'], json = False),
+             404)
+      throws(lambda: beyond.get('volumes/%s' % volume1['name'], json = False),
+             404)
+      throws(lambda: beyond.get('drives/%s' % drive1['name'], json = False),
+             404)
+      # Ensure that alice's objects are still on Beyond.
+      beyond.get('volumes/%s' % volume2['name'])
+      beyond.get('drives/%s' % drive2['name'])
+
   if __name__ == '__main__':
     unittest.main()

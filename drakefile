@@ -478,6 +478,7 @@ def configure(
     ('infinit-block', [], True),
     ('infinit-credentials', [], True),
     ('infinit-device', [], True),
+    ('infinit-doctor', [], True),
     ('infinit-drive', [], True),
     ('infinit-journal', [], True),
     ('infinit-network', [], True),
@@ -506,6 +507,7 @@ def configure(
     drake.path_build('%s/opt/infinit/lib/infinit/debug' % debian_debug_dir)
   installed_libraries = []
   bin_version = drake.node('bin/version.cc')
+  bin_sources = drake.nodes('bin/main.cc', 'bin/main.hh')
   for name, libs, install in binaries_config:
     source = drake.node('bin/%s.cc' % name)
     bin = drake.cxx.Executable(
@@ -513,7 +515,7 @@ def configure(
         source,
         bin_version,
         infinit_lib,
-      ] + libs + additional_libs,
+      ] + bin_sources + libs + additional_libs,
       cxx_toolkit,
       bin_cxx_config)
     rule_build << bin
@@ -601,11 +603,18 @@ def configure(
   }):
     drake.node('debian-packaging/release/control.tmpl')
     drake.node('debian-packaging/debug/control.tmpl')
+  def make_executable(target):
+    os.chmod(str(target), 0o755)
+    return True
   debian_nodes = chain(
     debian_nodes,
     drake.copy(drake.nodes('debian-packaging/release/control'),
                'debian/DEBIAN',
                strip_prefix = True),
+    drake.copy(drake.nodes('debian-packaging/release/postinst'),
+                           'debian/DEBIAN',
+                           post_process = make_executable,
+                           strip_prefix = True),
   )
   rule_debian = drake.Rule('debian')
   rule_debian_debug = drake.Rule('debian-debug')
@@ -710,6 +719,7 @@ def configure(
     if beyond:
       beyond = drake.include(
         'beyond',
+        production_build = production_build,
         python = elle.python3,
         cryptography_python_module = elle.cryptography.python_module,
         sendwithus = sendwithus,
@@ -722,7 +732,7 @@ def configure(
         backend = {
           'binaries': installed_binaries,
           'debian': rule_debian
-        }
+        },
       )
       if not windows:
         crash_test_libs = drake.copy([
@@ -753,6 +763,7 @@ def configure(
           t['dependencies'] = binaries
           t['paths'] = [str(x.path(True).dirname()) for x in binaries]
         return t
+      utils = drake.node('tests/functional/utils.py')
       tests = list(
         map(lambda x: functional_test(x),
             [
@@ -819,7 +830,8 @@ def configure(
           env['EXE_EXT'] = '.exe'
         runner = drake.Runner(
           exe = test,
-          env = env
+          env = env,
+          sources = [utils],
         )
         rule_functional_check << runner.status
         runner.reporting = drake.Runner.Reporting.on_failure

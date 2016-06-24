@@ -11,6 +11,7 @@
 #include <infinit/storage/Storage.hh>
 
 #ifdef INFINIT_MACOSX
+# include <reactor/network/reachability.hh>
 # define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
 # include <crash_reporting/gcc_fix.hh>
 # include <CoreServices/CoreServices.h>
@@ -112,7 +113,7 @@ COMMAND(pull)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
-  beyond_delete("volume", name, owner);
+  beyond_delete("volume", name, owner, false, flag(args, "purge"));
 }
 
 COMMAND(delete_)
@@ -121,21 +122,19 @@ COMMAND(delete_)
   auto name = volume_name(args, owner);
   auto path = ifnt._volume_path(name);
   auto volume = ifnt.volume_get(name);
-  if (flag(args, "pull"))
+  bool purge = flag(args, "purge");
+  bool pull = flag(args, "pull");
+  if (purge)
   {
-    try
+    for (auto const& drive: ifnt.drives_for_volume(name))
     {
-      beyond_delete("volume", name, owner);
-    }
-    catch (MissingResource const& e)
-    {
-      // Ignore if the item is not on Beyond.
-    }
-    catch (elle::Error const& e)
-    {
-      throw;
+      auto drive_path = ifnt._drive_path(drive);
+      if (boost::filesystem::remove(drive_path))
+        report_action("deleted", "drive", drive, std::string("locally"));
     }
   }
+  if (pull)
+    beyond_delete("volume", name, owner, true, purge);
   boost::filesystem::remove_all(volume.root_block_cache_dir());
   if (boost::filesystem::remove(path))
     report_action("deleted", "volume", name, std::string("locally"));
@@ -208,11 +207,13 @@ add_path_to_finder_sidebar(std::string const& path)
   {
     item_ref =
       (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
-    CFURLRef item_url = LSSharedFileListItemCopyResolvedURL(
+    CFURLRef item_url;
+    OSStatus err = LSSharedFileListItemResolve(
       item_ref,
       kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+      &item_url,
       NULL);
-    if (item_url)
+    if (err == noErr && item_url)
     {
       CFStringRef item_path = CFURLCopyPath(item_url);
       if (item_path)
@@ -268,11 +269,13 @@ remove_path_from_finder_sidebar(std::string const& path)
   {
     item_ref =
       (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
-    CFURLRef item_url = LSSharedFileListItemCopyResolvedURL(
+    CFURLRef item_url;
+    OSStatus err = LSSharedFileListItemResolve(
       item_ref,
       kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+      &item_url,
       NULL);
-    if (item_url)
+    if (err == noErr && item_url)
     {
       CFStringRef item_path = CFURLCopyPath(item_url);
       if (item_path)
@@ -355,7 +358,7 @@ COMMAND(run)
   }
   if (args.count("fuse-option"))
   {
-    if (mountpoint)
+    if (!mountpoint)
       throw CommandLineError("FUSE options require the volume to be mounted");
     for (auto const& opt: args["fuse-option"].as<std::vector<std::string>>())
       fuse_options.push_back(opt);
@@ -422,40 +425,9 @@ COMMAND(run)
   auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
+    reactor::Thread::unique_ptr stat_thread;
     if (push)
-    {
-      ELLE_DEBUG("Connect callback to log storage stat");
-      model->local()->storage()->register_notifier([&] {
-        try
-        {
-          network.notify_storage(self, node_id);
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_WARN("Error notifying storage size change: %s", e);
-        }
-      });
-
-      {
-        static reactor::Thread updater("periodic storage stat updater", [&] {
-          while (true)
-          {
-            ELLE_LOG_COMPONENT("infinit-volume");
-            ELLE_DEBUG(
-              "Hourly notification to beyond with storage usage (periodic)");
-            try
-            {
-              network.notify_storage(self, node_id);
-            }
-            catch (elle::Error const& e)
-            {
-              ELLE_WARN("Error notifying storage size change: %s", e);
-            }
-            reactor::wait(updater, 60_min);
-          }
-        });
-      }
-    }
+      stat_thread = make_stat_update_thread(self, network, *model);
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
     auto fs = volume.run(std::move(model),
@@ -502,10 +474,13 @@ COMMAND(run)
           add_path_to_finder_sidebar(mountpoint.get());
         });
     }
+    std::unique_ptr<reactor::network::Reachability> reachability;
 #endif
     elle::SafeFinally unmount([&]
     {
 #ifdef INFINIT_MACOSX
+      if (reachability)
+        reachability->stop();
       if (add_to_sidebar && mountpoint)
       {
         reactor::background([mountpoint]
@@ -526,6 +501,23 @@ COMMAND(run)
         {}
       }
     });
+#ifdef INFINIT_MACOSX
+    if (elle::os::getenv("INFINIT_LOG_REACHABILITY", "") != "0")
+    {
+      reachability.reset(new reactor::network::Reachability(
+        {},
+        [&] (reactor::network::Reachability::NetworkStatus status)
+        {
+          using NetworkStatus = reactor::network::Reachability::NetworkStatus;
+          if (status == NetworkStatus::Unreachable)
+            ELLE_LOG("lost network connection");
+          else
+            ELLE_LOG("got network connection");
+        },
+        true));
+      reachability->start();
+    }
+#endif
     if (script_mode)
     {
 #ifndef INFINIT_WINDOWS
@@ -554,7 +546,6 @@ COMMAND(run)
         std::string handlename;
         try
         {
-          op = pathname = handlename = "";
           auto json =
             boost::any_cast<elle::json::Object>(elle::json::read(stdin_stream));
           ELLE_TRACE("got command: %s", json);
@@ -1087,6 +1078,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "volume to delete" },
         { "pull", bool_switch(),
           elle::sprintf("pull the volume if it is on %s", beyond(true)) },
+        { "purge", bool_switch(), "remove objects that depend on the volume" },
       },
     },
     {
@@ -1096,6 +1088,7 @@ main(int argc, char** argv)
       "--name VOLUME",
       {
         { "name,n", value<std::string>(), "volume to remove" },
+        { "purge", bool_switch(), "remove objects that depend on the volume" },
       },
     },
     {

@@ -12,6 +12,7 @@ from itertools import chain
 
 
 exe_ext = os.environ.get('EXE_EXT', '')
+host_os = os.environ.get('OS', '')
 
 ## -------- ##
 ## Binaries ##
@@ -52,14 +53,12 @@ templates = {
   },
   'Internal/Crash Report': {
     'template': 'tem_fu5GEE6jxByj2SB4zM6CrH',
-    'version': 'ver_UcXopNCDszaggwtrhVcBSn',
   },
   'Internal/Passport Generation Error': {
     'template': 'tem_LdEi9v8WrTACa8BNUhoSte',
   },
   'User/Welcome': {
     'template': 'tem_Jsd948JkLqhBQs3fgGZSsS',
-    'version': 'ver_W9nDEtV4KzxWyrLtZDcAWE',
   },
   'User/Confirmation Email': {
     'template': 'tem_b6ZtsWVHKzv4PUBDU7WTZj',
@@ -71,7 +70,7 @@ templates = {
 # Make sure templates only contains entires named 'template' and 'version'.
 import itertools
 assert set(itertools.chain(*[list(x.keys()) for x in templates.values()])) == \
-       {'template', 'version'}
+       {'template'}
 
 class Beyond:
 
@@ -206,11 +205,26 @@ class Beyond:
   def network_delete(self, owner, name):
     return self.__datastore.network_delete(owner = owner, name = name)
 
-  def network_volumes_get(self, name):
-    return self.__datastore.networks_volumes_fetch(networks = [name])
+  def network_volumes_get(self, network):
+    return self.__datastore.networks_volumes_fetch(networks = [network])
+
+  def network_drives_get(self, network):
+    return self.__datastore.network_drives_fetch(name = network.name)
 
   def network_stats_get(self, name):
     return self.__datastore.network_stats_fetch(network = name)
+
+  def network_purge(self, user, network):
+    # Remove drives in case the user has already remove their volumes.
+    # Only remove objects owned by the user.
+    drives = self.network_drives_get(network = network)
+    for d in drives:
+      if d.owner == user.name:
+        self.drive_delete(owner = d.owner, name = d.unqualified_name)
+    volumes = self.network_volumes_get(network = network)
+    for v in volumes:
+      if v.owner == user.name:
+        self.volume_delete(owner = v.owner, name = v.unqualified_name)
 
   ## ---- ##
   ## User ##
@@ -246,6 +260,23 @@ class Beyond:
   def user_drives_get(self, name):
     return self.__datastore.user_drives_fetch(name = name)
 
+  def user_purge(self, user):
+    # Remove elements individually in case the user has already removed some.
+    # Only remove objects owned by the user.
+    drives = self.user_drives_get(name = user.name)
+    for d in drives:
+      if d.owner == user.name:
+        self.drive_delete(owner = d.owner, name = d.unqualified_name)
+    volumes = self.user_volumes_get(user = user)
+    for v in volumes:
+      if v.owner == user.name:
+        self.volume_delete(owner = v.owner, name = v.unqualified_name)
+    networks = self.user_networks_get(user = user)
+    for n in networks:
+      if n.owner == user.name:
+        self.network_purge(network = network)
+        self.network_delete(owner = n.owner, name = n.unqualified_name)
+
   ## ------ ##
   ## Volume ##
   ## ------ ##
@@ -257,6 +288,16 @@ class Beyond:
   def volume_delete(self, owner, name):
     return self.__datastore.volume_delete(
       owner = owner, name = name)
+
+  def volume_drives_get(self, name):
+    return self.__datastore.volume_drives_fetch(name = name)
+
+  def volume_purge(self, user, volume):
+    # Only remove objects owned by the user.
+    drives = self.volume_drives_get(name = volume.name)
+    for d in drives:
+      if d.owner == user.name:
+        self.drive_delete(owner = d.owner, name = d.unqualified_name)
 
   ## ----- ##
   ## Drive ##
@@ -293,7 +334,7 @@ class Beyond:
               args,
               env = env,
               input = (json.dumps(data) + '\n').encode('utf-8'),
-              timeout = 1)
+              timeout = 5 if host_os != 'windows' else 15)
           except Exception as e:
             raise Exception('impossible to import %s \'%s\': %s' % (
                             type, data['name'], e))
@@ -306,19 +347,14 @@ class Beyond:
             except Network.NotFound:
               raise Exception('Unknown network \'%s\'' % drive.network)
             import_data('network', network.json())
-            subprocess.check_call(
+            output = subprocess.check_output(
               [
                 binary_path + 'infinit-passport' + exe_ext, '--create',
                 '--user', user.name,
                 '--network', network.name,
                 '--as', self.delegate_user,
-              ],
-              env = env)
-            output = subprocess.check_output(
-              [
-                binary_path + 'infinit-passport' + exe_ext, '--export',
-                '--user', user.name,
-                '--network', network.name
+                '--output', '-',
+                '--script',
               ],
               env = env)
             import json
@@ -744,6 +780,14 @@ class Network(metaclass = Entity,
   def id(self):
     return self.name
 
+  @property
+  def owner(self):
+    return self.name.split('/')[0]
+
+  @property
+  def unqualified_name(self):
+    return self.name.split('/')[1]
+
   def __eq__(self, other):
     if self.name != other.name or \
        self.owner != other.owner or \
@@ -773,6 +817,14 @@ class Volume(metaclass = Entity,
   def id(self):
     return self.name
 
+  @property
+  def owner(self):
+    return self.name.split('/')[0]
+
+  @property
+  def unqualified_name(self):
+    return self.name.split('/')[1]
+
   def __eq__(self, other):
     if self.name != other.name or self.network != other.network:
       return False
@@ -788,6 +840,14 @@ class Drive(
   @property
   def id(self):
     return self.name
+
+  @property
+  def owner(self):
+    return self.name.split('/')[0]
+
+  @property
+  def unqualified_name(self):
+    return self.name.split('/')[1]
 
   def __eq__(self, other):
     if self.name != other.name or \
