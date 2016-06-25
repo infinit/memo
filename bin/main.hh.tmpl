@@ -3037,6 +3037,9 @@ private:
     , _network(network)
     , _self(self)
   {
+    bool v4 = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
+    bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+     && network.dht()->version >= elle::Version(0, 7, 0);
     Endpoints endpoints;
     ELLE_TRACE("Establishing UPNP mapping");
     try
@@ -3046,7 +3049,9 @@ private:
       _port_map_udp = _upnp->setup_redirect(reactor::network::Protocol::udt, port);
       _port_map_tcp = _upnp->setup_redirect(reactor::network::Protocol::tcp, port);
       ELLE_TRACE("got mappings: %s, %s", _port_map_udp, _port_map_tcp);
-      endpoints.addresses.push_back(_port_map_udp.external_host);
+      if ( (v4 && _port_map_udp.external_host.find_first_of(':') == std::string::npos)
+        || (v6 && _port_map_udp.external_host.find_first_of(':') != std::string::npos))
+        endpoints.addresses.push_back(_port_map_udp.external_host);
     }
     catch (std::exception const& e)
     {
@@ -3059,7 +3064,7 @@ private:
       if (host.empty())
         throw std::runtime_error("RDV disabled");
       int port = 7890;
-      auto p = host.find_first_of(':');
+      auto p = host.find_last_of(':');
       if ( p!= host.npos)
       {
         port = std::stoi(host.substr(p+1));
@@ -3087,7 +3092,11 @@ private:
       spoll.abort();
       ELLE_TRACE("RDV gave endpoint %s", socket.public_endpoint());
       if (socket.public_endpoint().port())
-        endpoints.addresses.push_back(socket.public_endpoint().address().to_string());
+      {
+        auto addr = socket.public_endpoint().address();
+        if ( (addr.is_v4() && v4) || (addr.is_v6() && v6))
+          endpoints.addresses.push_back(addr.to_string());
+      }
     }
     catch (std::exception const& e)
     {
@@ -3099,8 +3108,12 @@ private:
            elle::network::Interface::Filter::only_up |
            elle::network::Interface::Filter::no_loopback |
            elle::network::Interface::Filter::no_autoip))
-      if (itf.second.ipv4_address.size() > 0)
+    {
+      if (itf.second.ipv4_address.size() > 0 && v4)
         endpoints.addresses.push_back(itf.second.ipv4_address);
+      if (v6) for (auto const& addr: itf.second.ipv6_address)
+        endpoints.addresses.push_back(addr);
+    }
     endpoints.port = port;
     beyond_push(this->_url, std::string("endpoints for"),
                 network.name, endpoints, self, false);

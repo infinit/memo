@@ -416,7 +416,7 @@ _sanity(boost::program_options::variables_map const& args,
 
 template <typename T>
 std::map<std::string, std::pair<T, bool>>
-parse(std::vector<T>& container)
+parse(std::vector<T> container)
 {
   std::map<std::string, std::pair<T, bool>> output;
   for (auto& item: container)
@@ -431,7 +431,7 @@ parse(std::vector<T>& container)
 
 template <typename T>
 std::map<std::string, std::pair<std::unique_ptr<T>, bool>>
-parse(std::vector<std::unique_ptr<T>>& container)
+parse(std::vector<std::unique_ptr<T>> container)
 {
   std::map<std::string, std::pair<std::unique_ptr<T>, bool>> output;
   for (auto& item: container)
@@ -450,19 +450,13 @@ _integrity(boost::program_options::variables_map const& args,
            boost::optional<std::ostream&> output_stream)
 {
   bool sane = true;
-#define CONVERT(entity_getter, ...)                       \
-  [] () {                                                 \
-    auto entities = entity_getter(__VA_ARGS__);           \
-    return parse(entities);                               \
-  }()
-
-  auto users = CONVERT(ifnt.users_get);
+  auto users = parse(ifnt.users_get());
   auto aws_credentials = ifnt.credentials_aws();
   auto gcs_credentials = ifnt.credentials_gcs();
-  auto storage_resources = CONVERT(ifnt.storages_get);
-  auto drives = CONVERT(ifnt.drives_get);
-  auto volumes = CONVERT(ifnt.volumes_get);
-  auto networks = CONVERT(ifnt.networks_get);
+  auto storage_resources = parse(ifnt.storages_get());
+  auto drives = parse(ifnt.drives_get());
+  auto volumes = parse(ifnt.volumes_get());
+  auto networks = parse(ifnt.networks_get());
   auto verbose = flag(args, "verbose");
   std::cout << "Storage resources:" << std::endl;
   for (auto& elem: storage_resources)

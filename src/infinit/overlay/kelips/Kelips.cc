@@ -60,8 +60,16 @@ namespace elle
       static Type convert(T& ep)
       {
         Type res;
-        auto addr = ep.address().to_v4().to_bytes();
-        res.append(addr.data(), addr.size());
+        if (ep.address().is_v4())
+        {
+          auto addr = ep.address().to_v4().to_bytes();
+          res.append(addr.data(), addr.size());
+        }
+        else
+        {
+          auto addr = ep.address().to_v6().to_bytes();
+          res.append(addr.data(), addr.size());
+        }
         unsigned short port = ep.port();
         res.append(&port, 2);
         return res;
@@ -69,12 +77,28 @@ namespace elle
 
       static T convert(elle::Buffer& repr)
       {
-        ELLE_ASSERT(repr.size() == 6);
-        unsigned short port;
-        memcpy(&port, &repr[4], 2);
-        auto addr = boost::asio::ip::address_v4(
-          std::array<unsigned char, 4>{{repr[0], repr[1], repr[2], repr[3]}});
-        return T(addr, port);
+        ELLE_ASSERT(repr.size() == 6 || repr.size() == 18);
+        if (repr.size() == 6)
+        {
+          unsigned short port;
+          memcpy(&port, &repr[4], 2);
+          auto addr = boost::asio::ip::address_v4(
+            std::array<unsigned char, 4>{{repr[0], repr[1], repr[2], repr[3]}});
+          return T(addr, port);
+        }
+        else
+        {
+          unsigned short port;
+          memcpy(&port, &repr[16], 2);
+          auto addr = boost::asio::ip::address_v6(
+            std::array<unsigned char, 16>{{
+            repr[0], repr[1], repr[2], repr[3],
+            repr[4], repr[5], repr[6], repr[7],
+            repr[8], repr[9], repr[10], repr[11],
+            repr[12], repr[13], repr[14], repr[15],
+            }});
+          return T(addr, port);
+        }
       }
     };
 
@@ -128,7 +152,7 @@ struct PrettyGossipEndpoint
 
   operator infinit::overlay::kelips::GossipEndpoint()
   {
-    size_t sep = this->_repr.find_first_of(':');
+    size_t sep = this->_repr.find_last_of(':');
     auto a = boost::asio::ip::address::from_string(this->_repr.substr(0, sep));
     int p = std::stoi(this->_repr.substr(sep + 1));
     return infinit::overlay::kelips::GossipEndpoint(a, p);
@@ -825,10 +849,13 @@ namespace infinit
             std::cerr << elle::json::pretty_print(json);
         });
 #endif
+        bool v4 = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
+        bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+          && doughnut->version() >= elle::Version(0, 7, 0);
         _self = Address(this->node_id());
         if (!local)
           ELLE_LOG("Running in observer mode");
-        _remotes_server.listen(0);
+        _remotes_server.listen(0, v6);
         ELLE_DEBUG("remotes server listening on %s", _remotes_server.local_endpoint());
         _rdv_host = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
         _rdv_id = elle::sprintf("%x", this->_self);
@@ -890,14 +917,24 @@ namespace infinit
                  elle::network::Interface::Filter::only_up |
                  elle::network::Interface::Filter::no_loopback |
                  elle::network::Interface::Filter::no_autoip))
-            if (itf.second.ipv4_address.size() > 0)
+          {
+            if (itf.second.ipv4_address.size() > 0 && v4)
             {
               this->_local_endpoints.push_back(TimedEndpoint(GossipEndpoint(
-                                                               boost::asio::ip::address::from_string(itf.second.ipv4_address),
-                                                               _port), now()));
+                boost::asio::ip::address::from_string(itf.second.ipv4_address),
+                _port), now()));
               ELLE_LOG("%s: listening on %s:%s",
                        *this, itf.second.ipv4_address, _port);
             }
+            if (v6) for (auto const& addr: itf.second.ipv6_address)
+            {
+              this->_local_endpoints.push_back(TimedEndpoint(GossipEndpoint(
+                boost::asio::ip::address::from_string(addr),
+                _port), now()));
+              ELLE_LOG("%s: listening on %s:%s",
+                       *this, addr, _port);
+            }
+          }
           if (!this->_rdv_host.empty())
             this->_rdv_connect_thread_local.reset(
               new reactor::Thread(
@@ -1080,17 +1117,17 @@ namespace infinit
           {
             try
             {
-              auto p = ep.find_first_of(':');
+              auto p = ep.find_last_of(':');
               if (p == ep.npos)
                 throw std::runtime_error("missing ':'");
               auto addr = ep.substr(0, p);
               auto port = ep.substr(p+1);
-              auto endpoint = reactor::network::resolve_tcp(addr, port);
+              auto endpoint = reactor::network::resolve_tcp(addr, port, false);
               pl.second.push_back(endpoint);
             }
             catch(std::exception const& e)
             {
-              ELLE_LOG("skipping malformed address: %s", ep);
+              ELLE_LOG("skipping malformed address: %s: %s", ep, e.what());
             }
           }
           res.push_back(pl);
@@ -1157,7 +1194,12 @@ namespace infinit
         _gossip.socket()->close();
         if (!this->local())
         {
-          _gossip.bind(GossipEndpoint({}, _port));
+          bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+            && doughnut()->version() >= elle::Version(0, 7, 0);
+          if (v6)
+            _gossip.bind(GossipEndpoint(boost::asio::ip::address_v6::any(), _port));
+          else
+            _gossip.bind(GossipEndpoint(boost::asio::ip::address_v4::any(), _port));
           if (!_rdv_host.empty())
             _rdv_connect_gossip_thread.reset(
               new reactor::Thread(
@@ -1166,7 +1208,7 @@ namespace infinit
                   std::string id = elle::sprintf("%x", _self);
                   std::string host = _rdv_host;
                   int port = 7890;
-                  auto p = host.find_first_of(':');
+                  auto p = host.find_last_of(':');
                   if ( p!= host.npos)
                   {
                     port = std::stoi(host.substr(p+1));
