@@ -68,9 +68,9 @@ namespace infinit
           }
           ELLE_TRACE("%s: listen on %s", *this, this->server_endpoint());
         }
-        catch (std::exception const& e)
+        catch (elle::Error const& e)
         {
-          ELLE_WARN("local initialization failed with: %s", e.what());
+          ELLE_WARN("%s: initialization failed with: %s", e.what());
           throw;
         }
       }
