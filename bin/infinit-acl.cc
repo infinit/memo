@@ -261,8 +261,22 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
         auto n = boost::any_cast<std::string>(d.at("name"));
         auto r = boost::any_cast<bool>(d.at("read"));
         auto w = boost::any_cast<bool>(d.at("write"));
+        auto admin = boost::any_cast<bool>(d.at("admin"));
+        auto owner = boost::any_cast<bool>(d.at("owner"));
         const char* mode = w ? (r ? "rw" : "w") : (r ? "r" : "none");
-        output << "\t" << n << ": " << mode << std::endl;
+        output << "\t" << n;
+        if (admin || owner)
+        {
+          output << " (";
+          if (admin)
+            output << "admin";
+          if (admin && owner)
+            output << ", ";
+          if (owner)
+            output << "owner";
+          output << ")";
+        }
+        output << ": " << mode << std::endl;
       }
       std::cout << output.str() << std::endl;
     }
@@ -283,7 +297,8 @@ set_action(std::string const& path,
            bool disinherit,
            bool verbose,
            bool fallback_xattrs,
-           bool fetch)
+           bool fetch,
+           bool multi = false)
 {
   if (verbose)
     std::cout << "processing " << path << std::endl;
@@ -301,7 +316,10 @@ set_action(std::string const& path,
       }
       catch (PermissionDenied const&)
       {
-        std::cout << "permission denied, skipping " << path << std::endl;
+        if (multi)
+          std::cout << "permission denied, skipping " << path << std::endl;
+        else
+          std::cout << "permission denied " << path << std::endl;
       }
       catch (elle::Error const& error)
       {
@@ -319,7 +337,10 @@ set_action(std::string const& path,
     }
     catch (PermissionDenied const&)
     {
-      std::cout << "permission denied, skipping " << path << std::endl;
+      if (multi)
+        std::cout << "permission denied, skipping " << path << std::endl;
+      else
+        std::cout << "permission denied " << path << std::endl;
     }
     catch (InvalidArgument const&)
     {
@@ -333,7 +354,7 @@ set_action(std::string const& path,
     for (auto& username: users)
     {
       auto set_attribute =
-        [path, mode, fallback_xattrs] (std::string const& value)
+        [path, mode, fallback_xattrs, multi] (std::string const& value)
         {
           try
           {
@@ -342,7 +363,10 @@ set_action(std::string const& path,
           }
           catch (PermissionDenied const&)
           {
-            std::cout << "permission denied, skipping " << path << std::endl;
+            if (multi)
+              std::cout << "permission denied, skipping " << path << std::endl;
+            else
+              std::cout << "permission denied " << path << std::endl;
           }
         };
       try
@@ -469,10 +493,11 @@ COMMAND(set)
         path, inherit ? "enable" : "disable"));
     }
   }
+  bool multi = paths.size() > 1 || recursive;
   for (auto const& path: paths)
   {
     set_action(path, users, mode, omode, inherit, disinherit, verbose,
-               fallback, fetch);
+               fallback, fetch, multi);
     if (traverse)
     {
       boost::filesystem::path working_path = boost::filesystem::absolute(path);
@@ -480,14 +505,14 @@ COMMAND(set)
       {
         working_path = working_path.parent_path();
         set_action(working_path.string(), users, "setr", "", false, false,
-                   verbose, fallback, fetch);
+                   verbose, fallback, fetch, multi);
       }
     }
     if (recursive)
     {
       recursive_action(
         set_action, path, users, mode, omode, inherit, disinherit, verbose,
-        fallback, fetch);
+        fallback, fetch, multi);
     }
   }
 }
@@ -676,7 +701,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "group name" },
         { "create,c", bool_switch(), "create the group" },
         { "show", bool_switch(), "list group users and administrators" },
-        { "delete,d", bool_switch(), "delete an existing group" },
+        // { "delete,d", bool_switch(), "delete an existing group" },
         { "add-user", value<std::vector<std::string>>(), "add user to group" },
         { "add-admin", value<std::vector<std::string>>(),
           "add administrator to group" },

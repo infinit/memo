@@ -257,13 +257,8 @@ namespace infinit
           catch (MissingBlock const&)
           {
             ELLE_TRACE("Reverse UB not found, returning public key hash");
-            auto buffer =
-              infinit::cryptography::rsa::publickey::der::encode(pub);
-            auto key_hash = infinit::cryptography::hash(
-              buffer, infinit::cryptography::Oneway::sha256);
-            std::string hex_hash = elle::format::hexadecimal::encode(key_hash);
-            return elle::make_unique<doughnut::User>(
-              pub, elle::sprintf("#%s", hex_hash.substr(0, 6)));
+            auto hash = short_key_hash(pub);
+            return elle::make_unique<doughnut::User>(pub, hash);
           }
         }
         else if (data[0] == '@')
@@ -518,6 +513,17 @@ namespace infinit
             admin_keys);
         }
         return dht;
+      }
+
+      std::string
+      short_key_hash(cryptography::rsa::PublicKey const& pub)
+      {
+        auto buffer =
+          infinit::cryptography::rsa::publickey::der::encode(pub);
+        auto key_hash = infinit::cryptography::hash(
+          buffer, infinit::cryptography::Oneway::sha256);
+        std::string hex_hash = elle::format::hexadecimal::encode(key_hash);
+        return elle::sprintf("#%s", hex_hash.substr(0, 6));
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::

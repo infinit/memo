@@ -1,6 +1,7 @@
 #include <infinit/model/doughnut/Local.hh>
 
 #include <elle/log.hh>
+#include <elle/os/environ.hh>
 #include <elle/network/Interface.hh>
 #include <elle/utility/Move.hh>
 
@@ -39,17 +40,18 @@ namespace infinit
                    std::unique_ptr<storage::Storage> storage,
                    int port,
                    Protocol p)
-        : Super(std::move(id))
+        : Super(dht, std::move(id))
         , _storage(std::move(storage))
-        , _doughnut(dht)
       {
         try
         {
           ELLE_TRACE_SCOPE("%s: construct", this);
+          bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+              && dht.version() >= elle::Version(0, 7, 0);
           if (p == Protocol::tcp || p == Protocol::all)
           {
             this->_server = elle::make_unique<reactor::network::TCPServer>();
-            this->_server->listen(port);
+            this->_server->listen(port, v6);
             this->_server_thread = elle::make_unique<reactor::Thread>(
               elle::sprintf("%s server", *this),
               [this] { this->_serve_tcp(); });
@@ -59,16 +61,16 @@ namespace infinit
             this->_utp_server = elle::make_unique<reactor::network::UTPServer>();
             if (this->_server)
               port = this->_server->port();
-            this->_utp_server->listen(port);
+            this->_utp_server->listen(port, v6);
             this->_utp_server_thread = elle::make_unique<reactor::Thread>(
               elle::sprintf("%s utp server", *this),
               [this] { this->_serve_utp(); });
           }
           ELLE_TRACE("%s: listen on %s", *this, this->server_endpoint());
         }
-        catch (std::exception const& e)
+        catch (elle::Error const& e)
         {
-          ELLE_WARN("Local initialization failed with: %s", e.what());
+          ELLE_WARN("%s: initialization failed with: %s", e.what());
           throw;
         }
       }
@@ -411,11 +413,18 @@ namespace infinit
               name,
               [this, socket]
               {
-                RPCServer rpcs(this->_doughnut.version());
-                this->_register_rpcs(rpcs);
-                this->_on_connect(rpcs);
-                rpcs.set_context<Doughnut*>(&this->_doughnut);
-                rpcs.serve(**socket);
+                try
+                {
+                  RPCServer rpcs(this->_doughnut.version());
+                  this->_register_rpcs(rpcs);
+                  this->_on_connect(rpcs);
+                  rpcs.set_context<Doughnut*>(&this->_doughnut);
+                  rpcs.serve(**socket);
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_WARN("drop client %s: %s", **socket, e);
+                }
               });
           }
         };

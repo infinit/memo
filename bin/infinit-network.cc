@@ -459,7 +459,7 @@ COMMAND(link_)
   auto output = has_output ? get_output(args) : nullptr;
   if (output)
   {
-    ifnt.network_save(network, *output);
+    infinit::save(*output, network);
   }
   else
   {
@@ -489,6 +489,8 @@ COMMAND(list)
       std::cout << network.name;
       if (network.model)
         std::cout << ": linked";
+      else
+        std::cout << ": not linked";
       std::cout << std::endl;
     }
   }

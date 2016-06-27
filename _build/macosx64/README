@@ -1,0 +1,4 @@
+Website
+-------
+
+./drake //website/build && PYTHONPATH="$PWD/website/lib/python3.5" python3.5 -m infinit.website

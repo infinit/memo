@@ -26,6 +26,13 @@ namespace infinit
     static const int max_lookahead_threads =
       std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_THREADS", "3"));
 
+    static
+    std::chrono::high_resolution_clock::time_point
+    now()
+    {
+      return std::chrono::high_resolution_clock::now();
+    }
+
     FileHandle::FileHandle(model::Model& model,
                            FileData data,
                            bool writable,
@@ -140,7 +147,7 @@ namespace infinit
           else
           {
             block = it->second.block;
-            it->second.last_use = std::chrono::high_resolution_clock::now();
+            it->second.last_use = now();
           }
         }
         if (!block)
@@ -272,7 +279,7 @@ namespace infinit
       {
         block = it->second.block;
         it->second.dirty = true;
-        it->second.last_use = std::chrono::high_resolution_clock::now();
+        it->second.last_use = now();
       }
       else
       {
@@ -282,7 +289,7 @@ namespace infinit
         auto const it = _blocks.find(block_idx);
         ELLE_ASSERT(it != _blocks.end());
         it->second.dirty = true;
-        it->second.last_use = std::chrono::high_resolution_clock::now();
+        it->second.last_use = now();
       }
       off_t block_offset = offset % block_size;
       if (block->size() < block_offset + size)
@@ -344,26 +351,31 @@ namespace infinit
         return;
       }
       uint64_t first_block_size = _file._data.size();
-      for (int i = _file._fat.size()-1; i >= 0; --i)
+      for (int i = this->_file._fat.size() - 1; i >= 0; --i)
       {
         auto offset = first_block_size + i * _file._header.block_size;
         if (signed(offset) >= new_size)
+        // Kick the block
         {
-          // kick the block
           ELLE_DEBUG("removing from fat at %s", i);
           unchecked_remove(_model, _file._fat[i].first);
           _file._fat.pop_back();
           _blocks.erase(i);
         }
         else if (signed(offset + _file._header.block_size) >= new_size)
-        { // truncate the block
+        // Truncate the block
+        {
           auto targetsize = new_size - offset;
           auto it = _blocks.find(i);
           if (it != _blocks.end())
           {
-            auto data = it->second.block;
-            data->size(targetsize);
-            it->second.dirty = true;
+            if (!it->second.block)
+              reactor::wait(it->second.ready);
+            if (auto data = it->second.block)
+            {
+              data->size(targetsize);
+              it->second.dirty = true;
+            }
           }
           else
           {
@@ -410,7 +422,7 @@ namespace infinit
       auto it = this->_blocks.find(index);
       if (it != this->_blocks.end())
       {
-        it->second.last_use = std::chrono::high_resolution_clock::now();
+        it->second.last_use = now();
         return it->second.block;
       }
       if (_file._fat.size() <= unsigned(index))
@@ -439,10 +451,9 @@ namespace infinit
         b = std::make_shared<elle::Buffer>(sk.decipher(crypted));
       }
 
-      auto inserted = this->_blocks.insert(std::make_pair(index,
-        CacheEntry{b, false}));
+      auto inserted = this->_blocks.emplace(index, CacheEntry{b, false});
       inserted.first->second.ready.open();
-      inserted.first->second.last_use = std::chrono::high_resolution_clock::now();
+      inserted.first->second.last_use = now();
       inserted.first->second.dirty = false; // we just fetched or inserted it
       return inserted.first->second.block;
     }
@@ -468,9 +479,8 @@ namespace infinit
     FileHandle::_prefetch(int idx)
     {
       ELLE_TRACE("%s: prefetch index %s", *this, idx);
-      auto inserted =
-        this->_blocks.insert(std::make_pair(idx, CacheEntry{}));
-      inserted.first->second.last_use = std::chrono::high_resolution_clock::now();
+      auto inserted = this->_blocks.emplace(idx, CacheEntry{});
+      inserted.first->second.last_use = now();
       inserted.first->second.dirty = false;
       auto addr = Address(this->_file._fat[idx].first.value(),
                           model::flags::immutable_block, false);
@@ -493,7 +503,7 @@ namespace infinit
           auto crypted = bl->take_data();
           auto b = std::make_shared<elle::Buffer>(
             cryptography::SecretKey(key).decipher(crypted));
-          this->_blocks[idx].last_use = std::chrono::high_resolution_clock::now();
+          this->_blocks[idx].last_use = now();
           this->_blocks[idx].block = b;
           this->_blocks[idx].ready.open();
           --this->_prefetchers_count;
@@ -501,6 +511,7 @@ namespace infinit
           this->check_cache(this->max_cache_size);
       }, true);
     }
+
     void
     FileHandle::_commit_first()
     {
@@ -522,16 +533,17 @@ namespace infinit
         this->_commit_first();
       }
     }
-    bool
-    FileHandle::_flush_block(int id)
+
+    std::function<void ()>
+    FileHandle::_flush_block(int id, CacheEntry entry)
     {
-      bool fat_change = false;
-      auto it = this->_blocks.find(id);
+      if (!entry.dirty)
+        return {};
       Address prev = Address::null;
-      if (_file._fat.size() < unsigned(id))
+      if (signed(this->_file._fat.size()) < id)
         prev = _file._fat.at(id).first;
       auto key = cryptography::random::generate<elle::Buffer>(32).string();
-      auto ab = it->second.block;
+      auto ab = entry.block;
       elle::Buffer cdata;
       if (ab->size() >= 262144)
         reactor::background([&] {
@@ -539,22 +551,28 @@ namespace infinit
         });
       else
         cdata = cryptography::SecretKey(key).encipher(*ab);
-      auto block = _model.make_block<ImmutableBlock>(std::move(cdata), _file._address);
+      auto block = this->_model.make_block<ImmutableBlock>(
+        std::move(cdata), this->_file._address);
       auto baddr = block->address();
-      _model.store(std::move(block), model::STORE_INSERT, model::make_drop_conflict_resolver());
       if (baddr != prev)
       {
-        ELLE_DEBUG("Changing address of block %s: %s -> %s", it->first,
-          prev, baddr);
-        fat_change = true;
-        _file._fat[id] = FileData::FatEntry(baddr, key);
-        if (prev != Address::null)
+        ELLE_DEBUG("%s: change address of block %s: %s -> %s",
+                   this, id, prev, baddr);
+        this->_file._fat[id] = FileData::FatEntry(baddr, key);
+        this->_fat_changed = true;
+        return [this, prev, block_ = block.release()] () mutable
         {
-          unchecked_remove(_model, prev);
-        }
+          auto block = std::unique_ptr<Block>(block_);
+          this->_model.store(std::move(block),
+                             model::STORE_INSERT,
+                             model::make_drop_conflict_resolver());
+          if (prev != Address::null)
+            unchecked_remove(this->_model, prev);
+
+        };
       }
-      it->second.dirty = false;
-      return fat_change;
+      else
+        return {};
     }
 
     bool
@@ -617,52 +635,17 @@ namespace infinit
               return a.second.last_use < b.second.last_use;
           });
         ELLE_TRACE("Removing block %s from cache", it->first);
-        if (cache_size == 0)
-        { // final flush, sync
-          if (it->second.dirty)
-          {
-            _fat_changed = _flush_block(it->first) || _fat_changed;
-          }
-          this->_blocks.erase(it);
-        }
-        else
         {
-          if (it->second.dirty)
-          {
-            int id = it->first;
-            ELLE_TRACE("starting async flusher for %s", id);
-            auto ab = it->second.block;
-            _flushers.emplace_back(
-              new reactor::Thread("flusher", [this, id, ab] {
-                auto key = cryptography::random::generate<elle::Buffer>(32).string();
-                Address old_addr = Address::null;
-                if (_file._fat.size() > unsigned(id))
-                  old_addr = _file._fat.at(id).first;
-                elle::Buffer cdata;
-                if (ab->size() >= 262144)
-                  reactor::background([&] {
-                    cdata = cryptography::SecretKey(key).encipher(*ab);
-                  });
-                else
-                  cdata = cryptography::SecretKey(key).encipher(*ab);
-                auto block = _model.make_block<ImmutableBlock>(std::move(cdata), _file._address);
-                auto baddr = block->address();
-                _model.store(std::move(block), model::STORE_INSERT,
-                             model::make_drop_conflict_resolver());
-                if (baddr != old_addr)
-                {
-                  ELLE_DEBUG("Changing address of block %s: %s -> %s", id,
-                    old_addr, baddr);
-                  _fat_changed = true;
-                  this->_file._fat[id] = FileData::FatEntry(baddr, key);
-                  if (old_addr != Address::null)
-                  {
-                    unchecked_remove(_model, old_addr);
-                  }
-                }
-            }, reactor::Thread::managed = true));
-          }
+          auto entry = std::move(*it);
           this->_blocks.erase(it);
+          if (auto f = this->_flush_block(entry.first, std::move(entry.second)))
+            if (cache_size == 0)
+              f();
+            else
+              this->_flushers.emplace_back(
+                new reactor::Thread("flusher",
+                                    [f] { f(); },
+                                    reactor::Thread::managed = true));
         }
       }
       bool prev = this->_fat_changed;

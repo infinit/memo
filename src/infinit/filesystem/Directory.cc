@@ -23,6 +23,7 @@
 #include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/UB.hh>
+#include <infinit/model/doughnut/User.hh>
 
 
 #ifdef INFINIT_WINDOWS
@@ -469,7 +470,8 @@ namespace infinit
     }
 
     void
-    DirectoryData::_prefetch(FileSystem& fs, std::shared_ptr<DirectoryData> self)
+    DirectoryData::_prefetch(FileSystem& fs,
+                             std::shared_ptr<DirectoryData> self)
     {
       ELLE_ASSERT_EQ(self.get(), this);
       static int prefetch_threads = std::stoi(
@@ -480,8 +482,9 @@ namespace infinit
         elle::os::getenv("INFINIT_PREFETCH_GROUP", "5"));
       int group_size = prefetch_group;
       int nthreads = prefetch_threads;
-      if (_prefetching || !nthreads
-        || (FileSystem::now() - this->_last_prefetch) < std::chrono::seconds(15))
+      if (this->_prefetching ||
+          nthreads == 0 ||
+          (FileSystem::now() - this->_last_prefetch) < std::chrono::seconds(15))
         return;
       this->_last_prefetch = FileSystem::now();
       auto files = std::make_shared<std::vector<PrefetchEntry>>();
@@ -494,8 +497,12 @@ namespace infinit
       this->_prefetching = true;
       auto running = std::make_shared<int>(nthreads);
       auto parked = std::make_shared<int>(0);
+      auto available = std::make_shared<reactor::Barrier>("files_prefetchable");
+      if (!files->empty())
+        available->open();
       auto prefetch_task =
-        [self, files, fs=&fs, running, parked, nthreads, group_size]
+        [self, files, fs = &fs, running,
+         parked, nthreads, group_size, available]
         {
           static elle::Bench bench("bench.fs.prefetch", 10000_sec);
           elle::Bench::BenchScope bs(bench);
@@ -511,12 +518,14 @@ namespace infinit
               if (*parked == nthreads)
               {
                 ELLE_DEBUG("all threads parked");
+                available->open();
                 should_exit = true;
                 break;
               }
               else
                 ELLE_DEBUG("%s/%s threads parked", *parked, nthreads);
-              reactor::sleep(100_ms);
+              available->close();
+              reactor::wait(*available);
               --*parked;
             }
             if (should_exit)
@@ -534,7 +543,10 @@ namespace infinit
               addresses.push_back(std::make_pair(addr, e.cached_version));
               if (e.is_dir && e.level + 1 < prefetch_depth)
                 recurse.insert(std::make_pair(addr, e.level));;
-            } while (signed(addresses.size()) < group_size && !files->empty());
+            }
+            while (signed(addresses.size()) < group_size && !files->empty());
+            if (files->empty())
+              available->close();
             if (addresses.size() == 1)
             {
               std::unique_ptr<model::blocks::Block> block;
@@ -550,13 +562,15 @@ namespace infinit
                       new DirectoryData({}, *block, {true, true}));
                   else
                     d = *(fs->directory_cache().find(addr));
-              
                   for (auto const& f: d->_files)
+                  {
                     files->push_back(
                       PrefetchEntry{f.first, f.second.second, recurse.at(addr)+1,
                                     f.second.first == EntryType::directory,
                                     cached_version(*fs, f.second.second, f.second.first)
                       });
+                    available->open();
+                  }
                 }
               }
               catch(elle::Error const& e)
@@ -596,9 +610,10 @@ namespace infinit
                         for (auto const& f: d->_files)
                         files->push_back(
                           PrefetchEntry{f.first, f.second.second, recurse.at(addr) +1,
-                                         f.second.first == EntryType::directory,
-                                         cached_version(*fs, f.second.second, f.second.first)
-                        });
+                              f.second.first == EntryType::directory,
+                              cached_version(*fs, f.second.second, f.second.first)
+                              });
+                        available->open();
                       }
                       catch (elle::Error const& e)
                       {
@@ -630,10 +645,11 @@ namespace infinit
           }
       };
       for (int i = 0; i < nthreads; ++i)
-        fs.running().emplace_back(new reactor::Thread(
-          elle::sprintf("prefetcher %x-%s", (void*)parked.get(), i),
-          prefetch_task
-          ));
+        fs.running().emplace_back(
+          new reactor::Thread(
+            elle::sprintf("prefetcher %x-%s", (void*)parked.get(), i),
+            prefetch_task
+            ));
     }
 
     void
@@ -673,6 +689,9 @@ namespace infinit
         throw rfs::Error(ENOTEMPTY, "Directory not empty");
       if (_parent.get() == nullptr)
         throw rfs::Error(EINVAL, "Cannot delete root node");
+      if ( !(_data->_header.mode & 0200)
+        || !(_parent->_header.mode & 0200))
+        THROW_ACCES;
       _parent->_files.erase(_name);
       _parent->write(*_owner.block_store(), {OperationType::remove, _name});
       umbrella([&] {_owner.block_store()->remove(_data->address());});
@@ -760,7 +779,9 @@ namespace infinit
       for (auto const& perm: perms)
       {
         elle::json::Object o;
+        o["admin"] = perm.admin;
         o["name"] = perm.user->name();
+        o["owner"] = perm.owner;
         o["read"] = perm.read;
         o["write"] = perm.write;
         v.push_back(o);
@@ -1011,6 +1032,46 @@ namespace infinit
                   auto addr = this->_data->files().at(file).second;
                   auto block = this->_owner.block_store()->fetch(addr);
                   return elle::serialization::json::serialize(block).string();
+                });
+            }
+            else if (special->find("resolve.") == 0)
+            {
+              return umbrella(
+                [&]
+                {
+                  std::string what = special->substr(strlen("resolve."));
+                  if (what.empty())
+                    THROW_NODATA
+                  std::unique_ptr<model::doughnut::User> user;
+                  user = std::dynamic_pointer_cast<model::doughnut::User>
+                    (dht->make_user(what));
+                  if (!user)
+                  {
+                    auto block = elle::cast<ACLBlock>::runtime(
+                      this->_owner.block_store()->fetch(this->_data->address()));
+                    for (auto& e: block->list_permissions(*dht))
+                    {
+                      if (model::doughnut::short_key_hash(
+                        dynamic_cast<model::doughnut::User*>(e.user.get())->key())
+                          == what)
+                      {
+                        user = std::dynamic_pointer_cast<model::doughnut::User>
+                          (std::move(e.user));
+                        break;
+                      }
+                    }
+                  }
+                  if (!user)
+                    THROW_INVAL;
+                  elle::json::Object o;
+                  o["name"] = std::string(user->name());
+                  auto serkey = elle::serialization::json::serialize(user->key());
+                  std::stringstream s(serkey.string());
+                  o["key"] = elle::json::read(s);
+                  o["key_hash"] = model::doughnut::short_key_hash(user->key());
+                  std::stringstream ss;
+                  elle::json::write(ss, o, true);
+                  return ss.str();
                 });
             }
           }

@@ -34,6 +34,10 @@
       <link rel="canonical" href="https://infinit.sh/press" />
     % endif
 
+    % if 'doc_' in request.route.name:
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css" />
+    % endif
+
     <link rel="icon" type="image/png" href="${url('images/favicon@2x.png')}" />
     <link rel="stylesheet" type="text/css" media="all" href="${url('css/main.min.css')}" />
   </head>
@@ -43,8 +47,31 @@
     <div id="popup_notice"><span class="icon"></span> <span class="message"></span></div>
     <div id="full"></div>
 
+    % if request.route.name == 'home':
+    <!--
+      <div id="announcement"></div>
+    -->
+    % endif
+
     <header>
-      <a href="${route('home')}"><img src="${url('images/logo.png')}" alt="Infinit"><span>Storage</span></a>
+      <a href="${route('home')}">
+        <img src="${url('images/logo.png')}" alt="Infinit">
+        <span>Storage</span>
+      </a>
+
+      <nav>
+        <a href="#">☰ &nbsp; MENU</a>
+        <ul>
+          <li><a href="${route('faq')}"><span>FAQ</span></a></li>
+          <li><a href="${route('doc_technology')}"><span>Technology</span></a></li>
+          <li><a href="${route('doc_get_started')}"><span>Get Started</span></a></li>
+          <li><a href="${route('doc_deployments')}"><span>Examples</span></a></li>
+          <li><a href="${route('doc_reference')}"><span>Reference</span></a></li>
+          <li><a href="${route('pricing')}"><span>Pricing</span></a></li>
+          <li><a href="${route('doc_roadmap')}"><span>Roadmap</span></a></li>
+          <li><a href="${route('doc_changelog')}"><span>Change Log</span></a></li>
+        </ul>
+      </nav>
 
       <ul>
         <li>
@@ -151,6 +178,16 @@
       <script src="//cdn.jsdelivr.net/algoliasearch/3/algoliasearch.min.js"></script>
       <script src="//cdn.jsdelivr.net/autocomplete.js/0/autocomplete.min.js"></script>
     %endif
+
+    % if 'doc_' in request.route.name:
+      <script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script>
+      <script type="text/javascript"> docsearch({
+        apiKey: 'b430c7fa7482c946d41e19bfc147b247',
+        indexName: 'infinit',
+        inputSelector: '#docsearch'
+      });
+      </script>
+    % endif
 
     <script type="text/javascript" src="${url('js/scripts.min.js')}"></script>
     <link href='https://fonts.googleapis.com/css?family=Ubuntu+Mono' rel='stylesheet' type='text/css'>

@@ -186,6 +186,9 @@ namespace infinit
              boost::optional<elle::Version> version = {},
              boost::optional<int> port = {});
       };
+
+      std::string
+      short_key_hash(cryptography::rsa::PublicKey const& pub);
     }
   }
 }

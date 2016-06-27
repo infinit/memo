@@ -15,7 +15,6 @@ Pillow==2.7.0
 pyasn1==0.1.7
 pyasn1-modules==0.0.5
 pycrypto==2.6.1
-pymongo==2.8
 pytz==2014.10
 requests==2.5.1
 rsa==3.1.4

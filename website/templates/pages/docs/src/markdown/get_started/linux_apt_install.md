@@ -4,8 +4,8 @@
 gpg: key 6821EB43: public key "Infinit &lt;contact@infinit.one&gt;" imported
 </code></pre>
 
-<p>Ensure that you have the <code>add-apt-repository</code> command installed:
-<pre><code>$> sudo apt-get install software-properties-common
+<p>Ensure that you have the <code>add-apt-repository</code> command and <code>apt-transport-https</code> installed:
+<pre><code>$> sudo apt-get install software-properties-common apt-transport-https
 Reading package lists... Done
 Building dependency tree
 Reading state information... Done

@@ -11,6 +11,8 @@ install = None
 tests = None
 package = None
 
+gcs_login = '798530033299-s9b7qmrc99trk8uid53giuvus1o74cif' \
+            '@developer.gserviceaccount.com'
 gcs_key = '''-----BEGIN PRIVATE KEY-----
 MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBALCm3D3cHlKYRygk
 vRgesY39WUGeUN/sCBsVaxMuga1bCAZ6fVoh58pQEmeBpkjaVdtB0nz9ZBVoeDtR
@@ -28,11 +30,14 @@ cun1SplfUKZQZywA8ueUU/ZuGj/XXwopPR5LgWW7sgkwdCklQUPjcecWEZFy/ODl
 e9FGZj7sEHpPuDE=
 -----END PRIVATE KEY-----
 '''
+# sendwithus_api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d'
+sendwithus_api_key = 'test_b71aa18fba1a03a9c314ca1d50eb8a8ceb37825c'
 
 with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
 
 def configure(
+    production_build,
     python,
     cryptography_python_module,
     git,
@@ -49,8 +54,7 @@ def configure(
     email_regex = '^[^@]+@[^@]+\.[^@]+$',
     name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$',
     delegate_user = 'hub',
-    backend = [],
-    public = False
+    backend = []
 ):
 
   global build, install, package, rule_check, tests
@@ -87,28 +91,31 @@ def configure(
     def _variable(self, name, value):
       return '%s = %r' % (name, value)
   PythonVersionGenerator(version, git)
-  credentials = {
-      'dropbox_app_key': dropbox_app_key,
-      'dropbox_app_secret': dropbox_app_secret,
-      'google_app_key':
-        '%s.apps.googleusercontent.com' % google_app_key,
-      'google_app_secret': google_app_secret,
-      'gcs_app_key':
-        '%s.apps.googleusercontent.com' % gcs_app_key,
-      'gcs_app_secret': gcs_app_secret,
-      'gcs_login': '798530033299-s9b7qmrc99trk8uid53giuvus1o74cif@developer.gserviceaccount.com',
-      'gcs_key': gcs_key,
-      'sendwithus_api_key': 'live_f237084a19cbf6b2373464481155d953a4d86e8d',
+  secrets = {
+    'dropbox_app_key': dropbox_app_key,
+    'dropbox_app_secret': dropbox_app_secret,
+    'google_app_key':
+      '%s.apps.googleusercontent.com' % google_app_key,
+    'google_app_secret': google_app_secret,
+    'gcs_app_key':
+      '%s.apps.googleusercontent.com' % gcs_app_key,
+    'gcs_app_secret': gcs_app_secret,
+    'gcs_login': gcs_login,
+    'gcs_key': gcs_key,
+    'sendwithus_api_key': sendwithus_api_key,
   }
-  if public:
-    credentials = dict(map(lambda x: (x, ''), credentials))
-  credentials.update({
-      'email_regex': email_regex,
-      'name_regex': name_regex,
-      'delegate_user': delegate_user,
-  })
-  with drake.templating.Context(content = credentials):
-    drake.node('beyond.tmpl')
+  if production_build:
+    for k in secrets:
+      secrets[k] = None
+  variables = {
+    'email_regex': email_regex,
+    'name_regex': name_regex,
+    'delegate_user': delegate_user,
+  }
+  variables.update(secrets)
+  with drake.templating.Context(content = variables):
+    drake.node('bin/beyond.tmpl')
+    drake.node('etc/uwsgi/apps-available/beyond.xml.tmpl')
     drake.node('src/wsgi.py.tmpl')
     drake.node('src/validation.py.tmpl')
 
@@ -189,8 +196,7 @@ def configure(
       yield node
     yield how(bottle,
               where / python_prefix, strip_prefix = True)
-    yield how(drake.node('beyond'),
-              where / 'bin', strip_prefix = True)
+    yield how(drake.node('bin/beyond'), where)
     if cryptography_python_module:
       yield how(cryptography_python_module,
                 where / python_prefix, strip_prefix = True)
@@ -213,7 +219,7 @@ def configure(
   ## ------ ##
 
   debian_nodes = install_nodes('debian/opt/infinit/beyond',
-                          how = drake.copy)
+                               how = drake.copy)
   git = drake.git.Git()
   with drake.templating.Context(content = {
       'version': git.description(),

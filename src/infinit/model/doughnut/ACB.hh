@@ -143,6 +143,12 @@ namespace infinit
         std::pair<bool, bool>
         _get_world_permissions() override;
 
+      private:
+        bool
+        _admin_user(cryptography::rsa::PublicKey const& key) const;
+        bool
+        _admin_group(cryptography::rsa::PublicKey const& key) const;
+
       /*-----------.
       | Validation |
       `-----------*/

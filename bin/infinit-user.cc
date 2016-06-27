@@ -235,7 +235,7 @@ COMMAND(create)
                                optional(args, "ldap-name"));
   if (output)
   {
-    ifnt.user_save(user, *output);
+    save(*output, user);
     report_exported(*output, "user", user.name);
   }
   else

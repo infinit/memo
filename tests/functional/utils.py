@@ -100,7 +100,8 @@ class Infinit(TemporaryDirectory):
   def drives_path(self):
     return '%s/drives' % self.data_home
 
-  def spawn(self, args, input = None, return_code = 0, env = {}, noscript=False):
+  def spawn(self, args, input = None, return_code = 0, env = {},
+            noscript = False):
     if isinstance(args, str):
       args = args.split(' ')
     if '/' not in args[0]:
@@ -117,8 +118,7 @@ class Infinit(TemporaryDirectory):
       env_['INFINIT_HOME'] = self.dir
     if self.__user is not None:
       env_['INFINIT_USER'] = self.__user
-    if 'WINEDEBUG' in os.environ:
-      env_['WINEDEBUG'] = os.environ['WINEDEBUG']
+    env_['WINEDEBUG'] = os.environ.get('WINEDEBUG', '-all')
     if 'ELLE_LOG_LEVEL' in os.environ:
       env_['ELLE_LOG_LEVEL'] = os.environ['ELLE_LOG_LEVEL']
     if self.__beyond is not None:
@@ -152,9 +152,9 @@ class Infinit(TemporaryDirectory):
     process.pretty = pretty
     return process
 
-  def run(self, args, input = None, return_code = 0, env = {}, noscript=False):
+  def run(self, args, input = None, return_code = 0, env = {}, noscript = False):
     process = self.spawn(args, input, return_code, env, noscript)
-    out, err = process.communicate()
+    out, err = process.communicate(timeout = 600)
     process.wait()
     out = out.decode('utf-8')
     err = err.decode('utf-8')

@@ -11,6 +11,7 @@
 #include <infinit/storage/Storage.hh>
 
 #ifdef INFINIT_MACOSX
+# include <reactor/network/reachability.hh>
 # define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
 # include <crash_reporting/gcc_fix.hh>
 # include <CoreServices/CoreServices.h>
@@ -473,10 +474,13 @@ COMMAND(run)
           add_path_to_finder_sidebar(mountpoint.get());
         });
     }
+    std::unique_ptr<reactor::network::Reachability> reachability;
 #endif
     elle::SafeFinally unmount([&]
     {
 #ifdef INFINIT_MACOSX
+      if (reachability)
+        reachability->stop();
       if (add_to_sidebar && mountpoint)
       {
         reactor::background([mountpoint]
@@ -497,6 +501,23 @@ COMMAND(run)
         {}
       }
     });
+#ifdef INFINIT_MACOSX
+    if (elle::os::getenv("INFINIT_LOG_REACHABILITY", "") != "0")
+    {
+      reachability.reset(new reactor::network::Reachability(
+        {},
+        [&] (reactor::network::Reachability::NetworkStatus status)
+        {
+          using NetworkStatus = reactor::network::Reachability::NetworkStatus;
+          if (status == NetworkStatus::Unreachable)
+            ELLE_LOG("lost network connection");
+          else
+            ELLE_LOG("got network connection");
+        },
+        true));
+      reachability->start();
+    }
+#endif
     if (script_mode)
     {
 #ifndef INFINIT_WINDOWS
@@ -525,7 +546,6 @@ COMMAND(run)
         std::string handlename;
         try
         {
-          op = pathname = handlename = "";
           auto json =
             boost::any_cast<elle::json::Object>(elle::json::read(stdin_stream));
           ELLE_TRACE("got command: %s", json);

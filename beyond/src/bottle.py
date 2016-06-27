@@ -373,7 +373,6 @@ class Bottle(bottle.Bottle):
          'gaetan.rochel@infinit.io',
          'julien.quintard@infinit.io',
          'matthieu.nottale@infinit.io',
-         'patrick.perlmutter@infinit.io',
          'quentin.hocquet@infinit.io',
        ]:
       return True
