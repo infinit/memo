@@ -16,3 +16,8 @@ RUN apt-get install -y python3-pip
 RUN apt-get install -y realpath
 RUN pip3 install mistune
 RUN pip3 install oset
+
+ADD . /root/fs
+
+WORKDIR /root/fs/_build/linux64
+RUN python3 ./drake -j $(nproc) //install --prefix=/usr
