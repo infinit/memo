@@ -1033,6 +1033,15 @@ namespace infinit
       out << "Network(" << this->name << ")";
     }
 
+    bool
+    allowed(infinit::User const& user) const
+    {
+      if (this->model == nullptr)
+        return false;
+      // Compare passport's public key and user public key.
+      return this->dht()->passport.user() == user.public_key;
+    }
+
     std::string name;
     std::unique_ptr<model::ModelConfig> model;
   };

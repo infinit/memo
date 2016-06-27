@@ -470,7 +470,7 @@ COMMAND(list)
     {
       elle::json::Object o;
       o["name"] = network.name;
-      o["linked"] = bool(network.model);
+      o["linked"] = bool(network.model) && network.allowed(self);
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
@@ -480,7 +480,7 @@ COMMAND(list)
     for (auto const& network: ifnt.networks_get(self))
     {
       std::cout << network.name;
-      if (network.model)
+      if (network.model && network.allowed(self))
         std::cout << ": linked";
       else
         std::cout << ": not linked";
