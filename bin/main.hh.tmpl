@@ -2839,6 +2839,8 @@ signature_headers(
   infinit::User const& self,
   boost::optional<elle::ConstWeakBuffer> payload = {})
 {
+  if (!self.private_key)
+    elle::err("no private key for %s, unable to sign request", self.name);
   using namespace infinit::cryptography;
   auto semi_colon_append = [](elle::Buffer& buffer, std::string const& str)
     {
