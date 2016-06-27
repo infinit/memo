@@ -3963,6 +3963,8 @@ namespace infinit
                 throw std::runtime_error("missing ':'");
               auto addr = ep.substr(0, p);
               auto port = ep.substr(p+1);
+              if (addr.size() >= 2 && addr[0] == '[' && addr[addr.size()-1] == ']')
+                addr = addr.substr(1, addr.size()-2); // quoted ipv6
               auto endpoint = reactor::network::resolve_tcp(addr, port, false);
               pl.second.push_back(endpoint);
             }

@@ -241,9 +241,11 @@ namespace infinit
       std::vector<reactor::network::TCPServer::EndPoint>
       Local::server_endpoints()
       {
-        auto any_ip = boost::asio::ip::address();
+        bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+                  && this->doughnut().version() >= elle::Version(0, 7, 0);
         auto ep = this->server_endpoint();
-        if (ep.address() != any_ip)
+        if (ep.address() != boost::asio::ip::address_v6::any()
+         && ep.address() != boost::asio::ip::address_v4::any())
           return { ep };
 
         std::vector<reactor::network::TCPServer::EndPoint> res;
@@ -251,12 +253,22 @@ namespace infinit
                        elle::network::Interface::Filter::no_loopback |
                        elle::network::Interface::Filter::no_autoip);
         for (auto const& itf: elle::network::Interface::get_map(filter))
-        if (!itf.second.ipv4_address.empty()
-            && itf.second.ipv4_address != any_ip.to_string())
         {
-          res.push_back(reactor::network::TCPServer::EndPoint(
-            boost::asio::ip::address::from_string(itf.second.ipv4_address),
-            ep.port()));
+          if (!itf.second.ipv4_address.empty()
+              && itf.second.ipv4_address != boost::asio::ip::address_v4::any().to_string())
+          {
+            res.push_back(reactor::network::TCPServer::EndPoint(
+              boost::asio::ip::address::from_string(itf.second.ipv4_address),
+              ep.port()));
+          }
+          if (v6)
+          for (auto const& ip6: itf.second.ipv6_address)
+          {
+            if (ip6 != boost::asio::ip::address_v6::any().to_string())
+              res.push_back(reactor::network::TCPServer::EndPoint(
+                boost::asio::ip::address::from_string(ip6),
+                ep.port()));
+          }
         }
         return res;
       }
