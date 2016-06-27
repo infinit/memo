@@ -971,7 +971,9 @@ with_default(boost::program_options::variables_map const& vm,
     return *opt;
 }
 
-COMMAND(start)
+static
+void
+_run(boost::program_options::variables_map const& args, bool detach)
 {
   ELLE_TRACE("starting daemon");
   if (daemon_running())
@@ -1000,7 +1002,7 @@ COMMAND(start)
     std::stoi(with_default<std::string>(args, "docker-socket-port", "0")),
     with_default<std::string>(args, "docker-socket-path", "/run/docker/plugins"),
     with_default<std::string>(args, "docker-descriptor-path", "/usr/lib/docker/plugins"));
-  if (!flag(args, "foreground"))
+  if (detach)
     daemonize();
   PIDFile pid;
   reactor::network::UnixDomainServer srv;
@@ -1072,6 +1074,16 @@ COMMAND(start)
         });
     }
   };
+}
+
+COMMAND(start)
+{
+  _run(args, true);
+}
+
+COMMAND(run)
+{
+  _run(args, false);
 }
 
 DockerVolumePlugin::DockerVolumePlugin(MountManager& manager,
@@ -1323,11 +1335,42 @@ COMMAND(disable_storage)
   std::cout << daemon_command("{\"operation\": \"disable-storage\", \"volume\": \"" + name +  "\"}");
 }
 
+using boost::program_options::value;
+using boost::program_options::bool_switch;
+
+std::vector<Mode::OptionDescription> options_run = {
+  { "log-level,l", value<std::string>(),
+    "Log level to start volumes with (default: LOG)" },
+  { "log-path,d", value<std::string>(),
+    "Store volume logs in given path" },
+  { "docker-socket-port", value<std::string>(),
+    "TCP port to use to communicate with Docker" },
+  { "docker-socket-tcp", bool_switch(),
+    "Use a TCP socket for docker plugin" },
+  { "docker-socket-path", value<std::string>(),
+    "Path for plugin socket\n(default: /run/docker/plugins)" },
+  { "docker-descriptor-path", value<std::string>(),
+    "Path to add plugin descriptor\n(default: /usr/lib/docker/plugins)" },
+  { "mount-root", value<std::string>(),
+    "Default root path for all mounts\n(default: /tmp)" },
+  { "docker-mount-substitute", value<std::string>(),
+    "[from:to|prefix] : Substitute 'from' to 'to' in advertised path" },
+  { "default-network", value<std::string>(),
+    "Default network for volume creation" },
+  { "login-user", value<std::vector<std::string>>()->multitoken(),
+    "Login with selected user(s), of form 'user:password'" },
+  { "advertise-host", value<std::vector<std::string>>()->multitoken(),
+    "Advertise given hostname as an extra address" },
+  { "mount,m", value<std::vector<std::string>>()->multitoken(),
+    "mount given volumes on startup, keep trying on error" },
+  {"wait-for-peers", bool_switch(),
+   "Always wait for at least one peer when mounting a volume"
+  },
+};
+
 int
 main(int argc, char** argv)
 {
-  using boost::program_options::value;
-  using boost::program_options::bool_switch;
   Modes modes {
     {
       "fetch",
@@ -1377,40 +1420,18 @@ main(int argc, char** argv)
       },
     },
     {
+      "run",
+      "Run daemon",
+      &run,
+      "",
+      options_run,
+    },
+    {
       "start",
       "Start daemon",
       &start,
       "",
-      {
-        { "foreground,f", bool_switch(), "Do not daemonize" },
-        { "log-level,l", value<std::string>(),
-          "Log level to start volumes with (default: LOG)" },
-        { "log-path,d", value<std::string>(),
-          "Store volume logs in given path" },
-        { "docker-socket-port", value<std::string>(),
-          "TCP port to use to communicate with Docker" },
-        { "docker-socket-tcp", bool_switch(),
-          "Use a TCP socket for docker plugin" },
-        { "docker-socket-path", value<std::string>(),
-          "Path for plugin socket\n(default: /run/docker/plugins)" },
-        { "docker-descriptor-path", value<std::string>(),
-          "Path to add plugin descriptor\n(default: /usr/lib/docker/plugins)" },
-        { "mount-root", value<std::string>(),
-          "Default root path for all mounts\n(default: /tmp)" },
-        { "docker-mount-substitute", value<std::string>(),
-          "[from:to|prefix] : Substitute 'from' to 'to' in advertised path" },
-        { "default-network", value<std::string>(),
-          "Default network for volume creation" },
-        { "login-user", value<std::vector<std::string>>()->multitoken(),
-          "Login with selected user(s), of form 'user:password'" },
-        { "advertise-host", value<std::vector<std::string>>()->multitoken(),
-          "Advertise given hostname as an extra address" },
-        { "mount,m", value<std::vector<std::string>>()->multitoken(),
-          "mount given volumes on startup, keep trying on error" },
-        {"wait-for-peers", bool_switch(),
-          "Always wait for at least one peer when mounting a volume"
-        },
-      }
+      options_run,
     },
     {
       "stop",
