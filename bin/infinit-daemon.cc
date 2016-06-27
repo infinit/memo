@@ -135,6 +135,8 @@ void acquire_volumes()
   auto users = ifnt.users_get();
   for (auto const& u: users)
   {
+    if (!u.private_key)
+      continue;
     auto res = beyond_fetch<
       std::unordered_map<std::string, std::vector<infinit::Volume>>>(
         elle::sprintf("users/%s/volumes", u.name),
