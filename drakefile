@@ -745,10 +745,12 @@ def configure(
     labels = {
       'version': git.description(),
     })
-  docker_file.add(
-    drake.copy(elle.reactor.fnetusermount_binaries, docker_path / 'bin',
-      strip_prefix = True),
-    '/usr')
+  if elle.reactor.fnetusermount_binaries is not None:
+    docker_file.add(
+      drake.copy(
+        elle.reactor.fnetusermount_binaries, docker_path / 'bin',
+        strip_prefix = True),
+      '/usr')
   docker_file.add(
     drake.copy(additional_libs, docker_path / 'lib',
       strip_prefix = True),
