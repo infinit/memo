@@ -83,6 +83,8 @@ namespace infinit
         ELLE_ATTRIBUTE_R(bool, world_writable);
         ELLE_ATTRIBUTE_R(bool, deleted);
         ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PrivateKey>, sign_key);
+        // Version used for tokens and secrets
+        ELLE_ATTRIBUTE_R(elle::Version, seal_version);
       protected:
         elle::Buffer const& data_signature() const;
 

@@ -1358,7 +1358,7 @@ namespace rebalancing
       address = block->address();
       dht_a.dht->store(std::move(block), infinit::model::STORE_INSERT);
     }
-    BOOST_CHECK_EQUAL(storage_a.size(), 1u + (immutable ? 0u : 1u) ); // + key hash block
+    BOOST_CHECK(storage_a.find(address) != storage_a.end());
     ELLE_LOG("restart with 2 DHTs")
     {
       DHT dht_a(id = id_a,
