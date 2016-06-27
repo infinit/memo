@@ -310,7 +310,8 @@ is_mounted(std::string const& path)
 }
 
 void
-MountManager::start(std::string const& name, infinit::MountOptions opts,
+MountManager::start(std::string const& name,
+                    infinit::MountOptions opts,
                     bool force_mount,
                     bool wait_for_mount)
 {
@@ -327,6 +328,9 @@ MountManager::start(std::string const& name, infinit::MountOptions opts,
     }
   }();
   volume.mount_options.merge(opts);
+  // FIXME: Don't hardcode those.
+  volume.mount_options.async = true;
+  volume.mount_options.cache = true;
   Mount m{nullptr, volume.mount_options};
   std::string mount_prefix(name + "-");
   boost::replace_all(mount_prefix, "/", "_");
