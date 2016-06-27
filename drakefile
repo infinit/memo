@@ -555,9 +555,10 @@ def configure(
   connectivity = drake.copy(elle.reactor.connectivity, '.',
                             strip_prefix = 'elle/reactor')
   installed_binaries.append(connectivity)
-  for f in elle.reactor.fnetusermount_binaries:
-    t = drake.copy(f, '.', strip_prefix = 'elle/reactor')
-    installed_binaries.append(t)
+  if elle.reactor.fnetusermount_binaries is not None:
+    for f in elle.reactor.fnetusermount_binaries:
+      t = drake.copy(f, '.', strip_prefix = 'elle/reactor')
+      installed_binaries.append(t)
 
   ## ----- ##
   ## Share ##
