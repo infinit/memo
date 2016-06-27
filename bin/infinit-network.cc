@@ -451,7 +451,7 @@ COMMAND(link_)
   auto output = has_output ? get_output(args) : nullptr;
   if (output)
   {
-    infinit::save(*output, network);
+    infinit::save(*output, network, false);
   }
   else
   {

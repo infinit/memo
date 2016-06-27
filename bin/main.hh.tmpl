@@ -1365,13 +1365,13 @@ namespace infinit
 
   template <typename T>
   void
-  save(std::ostream& output, T const& resource)
+  save(std::ostream& output, T const& resource, bool pretty = true)
   {
     ELLE_ASSERT(output.good());
     elle::serialization::json::serialize(
       resource, output,
       false, /* versioned */
-      true /* pretty */
+      pretty
     );
   }
 
