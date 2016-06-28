@@ -154,7 +154,7 @@ COMMAND(populate_network)
   // Push all users
   for (auto const& u: users)
   {
-    ELLE_TRACE("Pusing user %s (%s)", u.second.name, u.first);
+    ELLE_TRACE("Pushing user %s (%s)", u.second.name, u.first);
     infinit::model::doughnut::Passport passport(
       u.second.public_key,
       network.name,
@@ -317,7 +317,7 @@ COMMAND(populate_beyond)
 }
 
 #define LDAP_CORE_OPTIONS \
-        {"server", value<std::string>(), "URL to LDAP server"},     \
+        {"server", value<std::string>(), "URL of LDAP server"},     \
         {"domain,d", value<std::string>(), "LDAP domain"},          \
         {"user,u", value<std::string>(), "LDAP username"},          \
         {"password,p", value<std::string>(), "LDAP password"}
@@ -332,18 +332,19 @@ main(int argc, char** argv)
       "populate-network",
       "Register LDAP users and groups to a network",
       &populate_network,
-      {},
+      "--server SERVER --domain DOMAIN --user USER --network NETWORK "
+      "--mountpoint MOUNTPOINT --searchbase SEARCHBASE",
       {
         LDAP_CORE_OPTIONS,
         {"searchbase,b", value<std::string>(), "search starting point (without domain)"},
-        {"filter,f", value<std::string>(), "raw LDAP query to use (default: objectClass=posixGroup)"},
+        {"filter,f", value<std::string>(), "raw LDAP query to use\n(default: objectClass=posixGroup)"},
         {"object-class,o", value<std::string>(), "Filter results (default: posixGroup)"},
         {"mountpoint,m", value<std::string>(), "Path to a mounted volume of the network"},
         {"network,n", value<std::string>(), "Network name"},
-        {"as", value<std::string>(), "user"},
+        {"as", value<std::string>(), "Infinit user to use"},
         {"drive", value<std::string>(), "If set, invites all found users to the drive"},
-        {"create-home", bool_switch(), "Create user home directory"},
-        {"permissions", value<std::string>(), "Permissions to give: in (r,rw, none) (default: rw)"},
+        // {"create-home", bool_switch(), "Create user home directory"},
+        {"permissions", value<std::string>(), "Permissions to give (r,rw,none – default: rw)"},
         {"deny-write", bool_switch(), "Create a passport for read-only access"},
         {"deny-storage", bool_switch(), "Create a passport that cannot contribute storage"},
       }
@@ -352,21 +353,21 @@ main(int argc, char** argv)
       "populate-beyond",
       "Register LDAP users on beyond",
       &populate_beyond,
-      {},
+      "--server SERVER --domain DOMAIN --user USER --searchbase SEARCHBASE",
       {
         LDAP_CORE_OPTIONS,
         {"searchbase,b", value<std::string>(), "search starting point (without domain)"},
-        {"filter,f", value<std::string>(), "raw LDAP query to use (default: objectClass=person)"},
+        {"filter,f", value<std::string>(), "raw LDAP query to use\n(default: objectClass=person)"},
         {"object-class,o", value<std::string>(), "Filter results (default: person)"},
         {"username-pattern,U", value<std::string>(),
-          "beyond unique username to set (default: $(cn)%). Remove the '%'"
+          "beyond unique username to set\n(default: $(cn)%). Remove the '%' "
           "to disable unique username generator"},
         {"email-pattern,e", value<std::string>(),
-          "email address pattern (default: $(mail)"},
+          "email address pattern (default: $(mail))"},
         {"fullname-pattern,F", value<std::string>(),
-          "fullname pattern (default: $(cn)"},
+          "fullname pattern (default: $(cn))"},
       },
     }
   };
-  return infinit::main("Infinit ldap utility", modes, argc, argv, {});
+  return infinit::main("Infinit LDAP utility", modes, argc, argv, {});
 }
