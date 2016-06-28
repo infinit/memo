@@ -44,14 +44,12 @@ done
 INFINIT_DATA_HOME=$rootdir/conf0 infinit-network --create --storage storage --name kelips --port $port_base --as $user $network_args
 exported_network=$(INFINIT_DATA_HOME=$rootdir/conf0 infinit-network --export --as $user --name kelips)
 
-# get hashed user name for $user
-user_hash=$( cd conf0/networks && ls)
 # import and join network
 for i in $(seq 1 $nodes); do
   echo $exported_network | INFINIT_DATA_HOME=$rootdir/conf$i infinit-network --import
   INFINIT_DATA_HOME=$rootdir/conf0 infinit-passport --create --as $user --network kelips --user $user$i --output - \
   | INFINIT_DATA_HOME=$rootdir/conf$i infinit-passport --import
-  INFINIT_DATA_HOME=$rootdir/conf$i infinit-network --link --as $user$i --name $user_hash/kelips --storage storage $(port $i $port_base $nports)
+  INFINIT_DATA_HOME=$rootdir/conf$i infinit-network --link --as $user$i --name $user/kelips --storage storage $(port $i $port_base $nports)
 done
 
 #observers
@@ -65,7 +63,7 @@ for i in $(seq 0 $observers); do
 
   INFINIT_DATA_HOME=$rootdir/conf0 infinit-passport --create --as $user --network kelips --user obs$i --output - \
   | INFINIT_DATA_HOME=$rootdir/observer_conf_$i infinit-passport --import
-  INFINIT_DATA_HOME=$rootdir/observer_conf_$i infinit-network --link --as obs$i --name $user_hash/kelips
+  INFINIT_DATA_HOME=$rootdir/observer_conf_$i infinit-network --link --as obs$i --name $user/kelips
 done
 
 # create volume
@@ -80,10 +78,10 @@ done
 
 echo '#!/bin/bash' > $rootdir/run-nodes.sh
 chmod a+x $rootdir/run-nodes.sh
-echo "INFINIT_DATA_HOME=$rootdir/conf0 infinit-volume --run --as $user --name $user_hash/kelips --mountpoint mount_0 --async --cache &" >> $rootdir/run-nodes.sh
+echo "INFINIT_DATA_HOME=$rootdir/conf0 infinit-volume --run --as $user --name $user/kelips --mountpoint mount_0 --async --cache --allow-root-creation &" >> $rootdir/run-nodes.sh
 echo 'sleep 2' >> $rootdir/run-nodes.sh
 for i in $(seq 1 $nodes); do
-  echo "INFINIT_DATA_HOME=$rootdir/conf$i infinit-network --run --as $user$i --name $user_hash/kelips --peer 127.0.0.1:$port_base &" >> $rootdir/run-nodes.sh
+  echo "INFINIT_DATA_HOME=$rootdir/conf$i infinit-network --run --as $user$i --name $user/kelips --peer 127.0.0.1:$port_base &" >> $rootdir/run-nodes.sh
 done
 
 for i in $(seq 0 $observers); do
