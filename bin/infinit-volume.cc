@@ -913,8 +913,7 @@ COMMAND(mount)
     auto volume = ifnt.volume_get(name);
     if (!volume.mountpoint)
     {
-      mandatory(args, "mountpoint",
-                "No default mountpoint for volume. mountpoint");
+      mandatory(args, "mountpoint", "mountpoint");
     }
   }
   run(args);
