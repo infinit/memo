@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
 
+# WARNING: Nukes all data on LDAP server in dc=infinit,dc=nodomain
+
+# -------------------------
+# Running this test by hand
+# -------------------------
+# 1) Start an LDAP server
+# docker run -d -p 38900:389 -e SLAPD_PASSWORD=pass -e SLAPD_DOMAIN=infinit.nodomain dinkel/openldap
+# 3) Run test from the build directory
+# LDAP_URL=ldap://localhost:38900 LDAP_CREDS="cn=admin,dc=infinit,dc=nodomain:pass" PYTHONPATH=beyond/lib/python3.4:../../tests/functional  SOURCE_DIR=../..  BUILD_DIR=.  OS=unix  INFINIT_BINARIES=bin  ./../../tests/functional/ldap
+
 from utils import *
 import json
 import random
@@ -19,20 +29,24 @@ def check_success(response, ifnt):
 ldap_url = os.environ.get('LDAP_URL', None)
 ldap_creds = os.environ.get('LDAP_CREDS', None)
 if not ldap_url or not ldap_creds:
+  print('WARNING: will nuke all data in dc=infinit,dc=nodomain on LDAP server')
   print('Missing environ LDAP_URL and/or LDAP_CREDS')
   exit(1)
 ldap_creds = ldap_creds.split(':')
 
 #populate ldap with our test data
-dc = 'test-%s' % int(random.random()*100000)
+# FIXME: Currently we don't run this test on the buildfarm as it requires an
+# LDAP server. When it does, we will need to randomize the dc.
+# dc = 'test-%s' % int(random.random()*100000)
+dc = 'infinit'
 ldap_data = [
-  """dn: dc=%s,dc=nodomain
+  '''dn: dc=%s,dc=nodomain
 objectClass: dcObject
 objectClass: organization
 dc: %s
-o: %s""" % (dc, dc, dc),
+o: %s''' % (dc, dc, dc),
 
-  """dn: cn=bob,dc=%s,dc=nodomain
+  '''dn: cn=bob,dc=%s,dc=nodomain
 objectClass: posixAccount
 objectClass: inetOrgPerson
 cn: Bob Bob
@@ -43,8 +57,9 @@ uidNumber: 1001
 gidNumber: 1001
 userPassword: foobar
 homeDirectory: /
-""" % (dc),
-  """dn: cn=alice,dc=%s,dc=nodomain
+''' % (dc),
+
+  '''dn: cn=alice,dc=%s,dc=nodomain
 objectClass: posixAccount
 objectClass: inetOrgPerson
 cn: Alice Alice
@@ -55,27 +70,21 @@ uidNumber: 1002
 gidNumber: 1002
 userPassword: foobar
 homeDirectory: /
-""" % (dc),
+''' % (dc),
 
-"""dn: cn=grp,dc=%s,dc=nodomain
+  '''dn: cn=grp,dc=%s,dc=nodomain
 cn: grp
 objectClass: posixGroup
 gidNumber: 500
 memberUid: aalice
-memberUid: bbob""" % (dc)
-
+memberUid: bbob''' % (dc),
 ]
 
 ldap_add_cmd = ['/usr/bin/ldapadd', \
        '-D', ldap_creds[0], '-w', ldap_creds[1], '-H', ldap_url]
 
 class LdapCleaner:
-  def __init__(self,ifnt):
-    self.__ifnt = ifnt
-    pass
-  def __enter__(self):
-    pass
-  def __exit__(self, *args, **kwargs):
+  def __nuke_data(self):
     data, err = self.__ifnt.run(['/usr/bin/ldapsearch', \
         '-D', ldap_creds[0], '-w', ldap_creds[1], '-H', ldap_url, \
         '-b', 'dc=%s,dc=nodomain' % dc, '-LLL', 'dn'])
@@ -88,6 +97,14 @@ class LdapCleaner:
         '-D', ldap_creds[0], '-w', ldap_creds[1], '-H', ldap_url, \
         edn])
 
+  def __init__(self,ifnt):
+    self.__ifnt = ifnt
+    pass
+  def __enter__(self):
+    self.__nuke_data()
+  def __exit__(self, *args, **kwargs):
+    self.__nuke_data()
+
 with Beyond(bottle_args = {'ldap_server': ldap_url}) as beyond,\
      Infinit(beyond = beyond) as bob,\
      Infinit(beyond = beyond) as bob2,\
@@ -95,7 +112,7 @@ with Beyond(bottle_args = {'ldap_server': ldap_url}) as beyond,\
      Infinit(beyond = beyond) as admin,\
      LdapCleaner(bob) as lc:
   for e in ldap_data:
-    bob.run(ldap_add_cmd, input=e, noscript = True)
+    bob.run(ldap_add_cmd, input = e, noscript = True)
   # Create user with ldap backend
   bob.run(['infinit-user', '--create', '--push', '--full',\
     '--email', 'bob@company.com', '--fullname', 'Bob Bob', \
@@ -150,24 +167,26 @@ with Beyond(bottle_args = {'ldap_server': ldap_url}) as beyond,\
     input = {'operation': 'mkdir', 'path': '/beacon'})
   if not response['success']:
     raise AssertionError('operation failed: %s' % response)
-  #Run the volume
-  mountpoint = '%s/%s' % (admin.dir, 'mountpoint')
-  os.mkdir(mountpoint)
-  with admin.spawn('infinit-volume --run --name volume --mountpoint %s --as adm'
-    % mountpoint) as p:
-    try:
-      #Run batch drive populator
-      admin.run(['infinit-ldap', '--populate-network', \
-        '--server', ldap_url, \
-        '--domain', '', '--searchbase', 'dc=%s,dc=nodomain'  % (dc), \
-        '--user', ldap_creds[0], '--password', ldap_creds[1], \
-        '--as', 'adm',
-        '--mountpoint', mountpoint, '-n', 'network', '--drive', 'adm/drive'])
-      print(admin.last_err)
-    finally:
-      p.send_signal(2)
+  p = None
+  try:
+    #Run the volume
+    mountpoint = '%s/%s' % (admin.dir, 'mountpoint')
+    os.mkdir(mountpoint)
+    p = admin.spawn(['infinit-volume', '--run', '--name', 'volume',
+                     '--mountpoint', mountpoint, '--as', 'adm'])
+    #Run batch drive populator
+    admin.run(['infinit-ldap', '--populate-network', \
+      '--server', ldap_url, \
+      '--domain', '', '--searchbase', 'dc=%s,dc=nodomain'  % (dc), \
+      '--user', ldap_creds[0], '--password', ldap_creds[1], \
+      '--as', 'adm',
+      '--mountpoint', mountpoint, '-n', 'network', '--drive', 'adm/drive'])
+    print(admin.last_err)
+  finally:
+    if p:
+      p.terminate()
   # Test population was successful: pushed users and group
-  response = admin.run_script(user = 'adm', seq = 
+  response = admin.run_script(user = 'adm', seq =
     [
       {'operation': 'mkdir', 'path': '/foo'},
       {'operation': 'setxattr', 'path': '/',
