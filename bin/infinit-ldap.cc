@@ -124,15 +124,8 @@ COMMAND(populate_network)
   }
 
   for (auto const& m: all_members)
-  { // FIXME: batch
-    // FIXME: for some unknown reason, this search with an empty searcbase fails
-    // in some ldap configurations (multiple dcs)
-    // so use the last component of the searchbase that was given to us
-    std::string sb = searchbase;
-    auto p = sb.find_last_of(",");
-    if (p != sb.npos)
-      sb = sb.substr(p+1);
-    auto r = ldap.search(elle::ldap::Attr(sb), "uid="+m, {});
+  {
+    auto r = ldap.search(searchbase, "uid="+m, {});
     dns[m] = r.front().at("dn").front();
   }
 
