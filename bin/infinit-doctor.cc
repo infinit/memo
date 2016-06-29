@@ -3,6 +3,7 @@
 #include <map>
 
 #include <elle/log.hh>
+#include <elle/string/algorithm.hh>
 #include <elle/log/TextLogger.hh>
 #include <elle/string/algorithm.hh>
 #include <elle/system/Process.hh>
@@ -27,17 +28,1016 @@ ELLE_LOG_COMPONENT("infinit-doctor");
 #include <main.hh>
 
 infinit::Infinit ifnt;
-
-static
-std::string
-result(bool value)
+typedef std::unordered_map<std::string, std::string> Environment;
+namespace reporting
 {
-  return value ? "Good" : "Bad";
-}
+  static
+  std::string
+  result(bool value)
+  {
+    return value ? "OK" : "Bad";
+  }
+
+  static
+  void
+  section(std::ostream& out,
+          std::string name)
+  {
+    out << " = " << name << " = " << std::endl;
+    out << std::endl;
+  }
+
+  template <typename C, typename ... Args>
+  void
+  store(C& container,
+        std::string const& key,
+        Args&&... args)
+  {
+    container.emplace(
+      std::piecewise_construct,
+      std::forward_as_tuple(key),
+      std::forward_as_tuple(std::forward<Args>(args)...));
+  }
+
+  template <typename C>
+  bool
+  sane(C const& c)
+  {
+    return std::all_of(c.begin(),
+                       c.end(),
+                       [&] (typename C::value_type const& x)
+                       {
+                         return x.second.sane;
+                       });
+  }
+
+  static
+  std::ostream&
+  faulty(std::ostream& out,
+         std::string const& name)
+  {
+    return out << "[33;01;31m[" << name << "][0m";
+  }
+
+  static
+  std::ostream&
+  warning(std::ostream& out,
+         std::string const& name)
+  {
+    return out << "[33;01;33m[" << name << "][0m";
+  }
+
+  template <typename C>
+  void
+  print(std::ostream& out,
+        std::string const& name,
+        C const& container,
+        bool verbose)
+  {
+    bool broken = std::find_if(
+      container.begin(), container.end(),
+      [&] (typename C::value_type const& r)
+      {
+        return !r.second.sane;
+      }) != container.end();
+    if (verbose || broken)
+      out << name << ":" << std::endl;
+    for (auto const& item: container)
+      if (verbose || !item.second.sane)
+      {
+        out << "  ";
+        if (item.second.sane)
+          out << item.first;
+        else
+          faulty(out, item.first);
+        item.second.print(out << " ", verbose);
+        // out << std::endl;
+      }
+  }
+
+  struct Result
+  {
+    typedef boost::optional<std::string> Reason;
+
+    Result()
+      : sane(false)
+      , reason()
+    {}
+
+    Result(bool sane, Reason const& reason = Reason{})
+      : sane(sane)
+      , reason(reason)
+    {}
+
+    Result(elle::serialization::SerializerIn& s)
+    {
+      this->serialize(s);
+    }
+
+    virtual
+    ~Result()
+    {
+    }
+
+    bool sane;
+    Reason reason;
+
+    virtual
+    void
+    _print(std::ostream& out, bool verbose) const{};
+
+    std::ostream&
+    print(std::ostream& out, bool verbose) const
+    {
+      this->_print(out, verbose);
+      if (!sane)
+      {
+        if (this->reason)
+          out << " (" << *this->reason << ")";
+      }
+      return out << std::endl;
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("sane", this->sane);
+      s.serialize("reason", this->reason);
+    }
+  };
+
+  struct IntegrityResults
+  {
+    struct Result:
+      public reporting::Result
+    {
+      using reporting::Result::Result;
+
+      std::ostream&
+      print(std::ostream& out, bool verbose) const
+      {
+        if (!sane)
+          out << "is faulty because ";
+        this->_print(out, verbose);
+        if (!sane && this->reason)
+          out << " (" << *this->reason << ")";
+        return out << std::endl;
+      }
+    };
+
+    // Use inheritance maybe ?
+    struct StorageResoucesResult
+      : public Result
+    {
+      StorageResoucesResult(
+        bool sane,
+        std::string const& type,
+        reporting::Result::Reason const& reason = reporting::Result::Reason{})
+        : Result(sane, reason)
+        , type(type)
+      {
+      }
+
+      StorageResoucesResult(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
+
+      StorageResoucesResult() = default;
+
+      void
+      _print(std::ostream& out, bool) const override
+      {
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("type", this->type);
+      }
+
+      std::string type;
+    };
+
+    struct NetworkResult
+      : public Result
+    {
+      typedef
+      boost::optional<std::vector<std::string>>
+      FaultyStorageResources;
+      NetworkResult(
+        bool sane,
+        FaultyStorageResources storage_resources = FaultyStorageResources{},
+        Result::Reason extra_reason = Result::Reason{})
+        : Result(sane, extra_reason)
+        , storage_resources(storage_resources)
+      {
+      }
+
+      NetworkResult(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
+
+      NetworkResult() = default;
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("storage_resources", this->storage_resources);
+      }
+
+      void
+      _print(std::ostream& out, bool verbose) const override
+      {
+        if (this->storage_resources)
+        {
+          if (this->storage_resources->size() > 0)
+            faulty(out, elle::join(storage_resources->begin(), storage_resources->end(), "], ["));
+          if (this->storage_resources->size() == 1)
+            out << " storage resource is faulty";
+          else if (this->storage_resources->size() > 1)
+            out << " storage resources are faulty";
+        }
+      }
+
+      FaultyStorageResources storage_resources;
+    };
+
+    struct VolumeResult
+      : public Result
+    {
+      typedef boost::optional<std::string> FaultyNetwork;
+
+      VolumeResult(bool sane,
+                   FaultyNetwork faulty_network = FaultyNetwork{},
+                   Result::Reason extra_reason = Result::Reason{})
+        : Result(sane, extra_reason)
+        , faulty_network(faulty_network)
+      {
+      }
+
+      VolumeResult(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
+
+      VolumeResult() = default;
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("network", this->faulty_network);
+      }
+
+      void
+      _print(std::ostream& out, bool) const override
+      {
+        if (this->faulty_network)
+        {
+          faulty(out << "network ", *this->faulty_network) << " is faulty";
+        }
+      }
+
+      FaultyNetwork faulty_network;
+    };
+
+    struct DriveResult
+      : public Result
+    {
+      typedef boost::optional<std::string> FaultyVolume
+      ;
+      DriveResult(bool sane,
+                  FaultyVolume faulty_volume = FaultyVolume{},
+                  Result::Reason extra_reason = Result::Reason{})
+        : Result(sane, extra_reason)
+        , faulty_volume(faulty_volume)
+      {
+      }
+
+      DriveResult(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
+
+      DriveResult() = default;
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("volume", this->faulty_volume);
+      }
+
+      void
+      _print(std::ostream& out, bool) const override
+      {
+        if (this->faulty_volume)
+        {
+          faulty(out << "volume ", *this->faulty_volume) << " is faulty";
+        }
+      }
+
+      FaultyVolume faulty_volume;
+    };
+
+    IntegrityResults()
+    {
+    }
+
+    IntegrityResults(elle::serialization::SerializerIn& s)
+    {
+      this->serialize(s);
+    }
+
+    bool
+    sane() const
+    {
+      return reporting::sane(this->storage_resources)
+        && reporting::sane(this->networks)
+        && reporting::sane(this->volumes)
+        && reporting::sane(this->drives);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("storage resources", this->storage_resources);
+      s.serialize("networks", this->networks);
+      s.serialize("volumes", this->volumes);
+      s.serialize("drives", this->drives);
+      if (s.out())
+      {
+        bool sane = this->sane();
+        s.serialize("sane", sane);
+      }
+    }
+
+    void
+    print(std::ostream& out, bool verbose) const
+    {
+      if (!this->sane() || verbose)
+        section(out, "Integrity");
+      reporting::print(out, "Storage resources", storage_resources, verbose);
+      reporting::print(out, "Networks", networks, verbose);
+      reporting::print(out, "Volumes", volumes, verbose);
+      reporting::print(out, "Drives", drives, verbose);
+    }
+
+    std::unordered_map<std::string, StorageResoucesResult> storage_resources;
+    std::unordered_map<std::string, NetworkResult> networks;
+    std::unordered_map<std::string, VolumeResult> volumes;
+    std::unordered_map<std::string, DriveResult> drives;
+  };
+
+  struct SanityResults
+  {
+    struct UserResult
+      : public reporting::Result
+    {
+      UserResult() = default;
+
+      UserResult(std::tuple<bool, Result::Reason> const& validity,
+                 std::string const &name)
+        : Result(std::get<0>(validity), std::get<1>(validity))
+        , name(name)
+      {
+      }
+
+      UserResult(std::string const& name)
+        : UserResult(valid(name), name)
+      {
+      }
+
+      std::tuple<bool, Result::Reason>
+      valid(std::string const& name) const
+      {
+        try
+        {
+          infinit::check_name(name);
+          return {true, Result::Reason {}};
+        }
+        catch (...)
+        {
+          return {false, Result::Reason{elle::exception_string()}};
+        }
+      }
+
+      void
+      _print(std::ostream& out, bool verbose) const override
+      {
+        if (!sane || verbose)
+        {
+          out << "User name:";;
+          if (sane)
+            out << " " << this->name;
+          else
+            faulty(out << std::endl << "  ", this->name) << " is invalid";
+        }
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("name", this->name);
+      }
+
+      std::string name;
+    };
+
+    struct SpaceLeft
+      : public reporting::Result
+    {
+      SpaceLeft(size_t minimum,
+                double minimum_ratio,
+                size_t available,
+                size_t capacity,
+                Result::Reason const& reason = Result::Reason {})
+        : Result(
+          capacity == 0
+          ? false
+          : ((available / (double) capacity) < minimum_ratio)
+          && available < minimum, reason)
+        , minimum(minimum)
+        , minimum_ratio(minimum_ratio)
+        , available(available)
+        , capacity(capacity)
+      {
+      }
+
+      SpaceLeft(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
+
+      SpaceLeft() = default;
+
+      void
+      _print(std::ostream& out, bool verbose) const override
+      {
+        if (!sane || verbose)
+        {
+          out << "Disk space left:";
+          if (!sane)
+            warning(out << std::endl << "  ", "low");
+          elle::fprintf(out, " %s available (%s%%)",
+                        this->available,
+                        100 * this->available / (double) this->capacity);
+        }
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("minimum", this->minimum);
+        s.serialize("minimum_ratio", this->minimum_ratio);
+        s.serialize("available", this->available);
+        s.serialize("capacity", this->capacity);
+
+      }
+
+      size_t minimum;
+      double minimum_ratio;
+      size_t available;
+      size_t capacity;
+    };
+
+    struct EnvironmentResult
+      : public reporting::Result
+    {
+      EnvironmentResult(Environment const& environment)
+        : Result(environment.size() == 0)
+        , environment(environment)
+      {
+      }
+
+      EnvironmentResult(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
+
+      EnvironmentResult() = default;
+
+      void
+      print(std::ostream& out, bool verbose) const
+      {
+        if (!this->sane || verbose)
+        {
+          out << "Environment:" << std::endl;
+          for (auto const& entry: this->environment)
+            faulty(out << "  ", entry.first) << ": " << entry.second << std::endl;
+        }
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("entries", this->environment);
+      }
+
+      Environment environment;
+    };
+
+    struct PermissionResult
+      : public reporting::Result
+    {
+      PermissionResult(bool exists, bool read, bool write)
+        : Result(exists && read && write)
+        , exists(exists)
+        , read(read)
+        , write(write)
+      {
+      }
+
+      PermissionResult() = default;
+
+      PermissionResult(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
+
+      void
+      _print(std::ostream& out, bool verbose) const override
+      {
+        if (!sane || verbose)
+        {
+          out
+            << "exists: " << result(this->exists)
+            << ", readable: " << result(this->read)
+            << ", writable: " << result(this->write);
+        }
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("exists", this->exists);
+        s.serialize("read", this->read);
+        s.serialize("write", this->write);
+      }
+
+      bool exists;
+      bool read;
+      bool write;
+    };
+    typedef std::unordered_map<std::string, PermissionResult> PermissionResults;
+
+
+    SanityResults() = default;
+
+    SanityResults(elle::serialization::SerializerIn& s)
+    {
+      this->serialize(s);
+    }
+
+    void
+    print(std::ostream& out, bool verbose) const
+    {
+      if (!this->sane() || verbose)
+        section(out, "Sanity");
+      user.print(out, verbose);
+      space_left.print(out, verbose);
+      environment.print(out, verbose);
+      reporting::print(out, "Permissions", permissions, verbose);
+    }
+
+    bool
+    sane() const
+    {
+      return this->user.sane
+        && this->space_left.sane
+        && this->environment.sane
+        && reporting::sane(this->permissions);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("user name", this->user);
+      s.serialize("space left", this->space_left);
+      s.serialize("environment", this->environment);
+      s.serialize("permissions", this->permissions);
+      if (s.out())
+      {
+        bool sane = this->sane();
+        s.serialize("sane", sane);
+      }
+    }
+
+    UserResult user;
+    SpaceLeft space_left;
+    EnvironmentResult environment;
+    PermissionResults permissions;
+  };
+
+  struct NetworkingResults
+    : public reporting::Result
+  {
+    struct BeyondResult
+      : public reporting::Result
+    {
+      using Result::Result;
+
+      void
+      _print(std::ostream& out, bool verbose) const override
+      {
+        if (!this->sane || verbose)
+        {
+          out << "Connection to " << ::beyond() << ":";
+          if (!sane)
+            faulty(out << std::endl << "  ", result(this->sane));
+          else
+            out << result(this->sane);
+        }
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+      }
+    };
+
+    struct InterfaceResults
+      : public reporting::Result
+    {
+      typedef std::vector<std::string> IPs;
+      InterfaceResults(IPs const& ips)
+        : Result(ips.size() > 0)
+        , entries(ips)
+      {
+      }
+
+      InterfaceResults(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
+
+      InterfaceResults() = default;
+
+      using Result::Result;
+
+      void
+      _print(std::ostream& out, bool verbose) const override
+      {
+        if (!this->sane || verbose)
+        {
+          out << "Interfaces:" << std::endl;
+          for (auto const& entry: this->entries)
+          {
+            out << "  " << entry << std::endl;
+          }
+        }
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("entries", this->entries);
+      }
+
+      IPs entries;
+    };
+
+    struct ProtocolResult
+      : public reporting::Result
+    {
+      using Result::Result;
+
+      ProtocolResult(std::string const& address,
+                     uint16_t local_port,
+                     uint16_t remote_port,
+                     bool internal)
+        : Result(true)
+        , address(address)
+        , local_port(local_port)
+        , remote_port(remote_port)
+      {
+      }
+
+      ProtocolResult(std::string const& error)
+        : Result(false, error)
+      {
+      }
+
+      ProtocolResult() = default;
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("address", this->address);
+        s.serialize("local_port", this->local_port);
+        s.serialize("remote_port", this->remote_port);
+        s.serialize("internal", this->internal);
+      }
+
+      void
+      _print(std::ostream& out, bool verbose) const override
+      {
+        if (!this->sane || verbose)
+        {
+          if (this->address)
+            out << std::endl << "    Address: " << *this->address;
+          if (this->local_port)
+            out << std::endl << "    Local port: " << *this->local_port;
+          if (this->remote_port)
+            out << std::endl << "    Remote port: " << *this->remote_port;
+          if (this->internal)
+            out << std::endl << "    Internal: " << *this->internal;
+        }
+      }
+
+      boost::optional<std::string> address;
+      boost::optional<uint16_t> local_port;
+      boost::optional<uint16_t> remote_port;
+      boost::optional<bool> internal;
+    };
+    typedef std::unordered_map<std::string, ProtocolResult> ProtocolResults;
+
+    struct NatResult
+      : public reporting::Result
+    {
+      NatResult(bool cone)
+        : Result(true)
+        , cone(cone)
+      {
+      }
+
+      NatResult(std::string const& error)
+        : Result(false, error)
+      {
+      }
+
+      NatResult() = default;
+
+      NatResult(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
+
+      void
+      _print(std::ostream& out, bool verbose) const override
+      {
+        if (!this->sane || verbose)
+        {
+          out << "NAT: ";
+          if (this->sane)
+            out << (this->cone ? "CONE" : "NOT CONE");
+          else
+            faulty(out << std::endl << "  ", elle::sprintf("%s", result(false)));
+        }
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("cone", cone);
+      }
+
+      bool cone;
+    };
+
+    struct UPNPResult
+      : public reporting::Result
+    {
+      struct RedirectionResult
+        : public reporting::Result
+      {
+        // This probably exist somewhere...
+        struct Address
+          : elle::Printable
+        {
+          Address(std::string host,
+                  uint16_t port)
+            : host(host)
+            , port(port)
+          {
+          }
+
+          Address(elle::serialization::SerializerIn& s)
+          {
+            this->serialize(s);
+          }
+
+          void
+          print(std::ostream& out) const override
+          {
+            out << this->host << ":" << this->port;
+          }
+
+          void
+          serialize(elle::serialization::Serializer& s)
+          {
+            s.serialize("host", this->host);
+            s.serialize("port", this->port);
+          }
+
+          std::string host;
+          uint16_t port;
+        };
+
+        RedirectionResult(bool sane = false,
+                          Result::Reason const& reason = Result::Reason {})
+          : Result(sane, reason)
+        {
+        }
+
+        RedirectionResult(elle::serialization::SerializerIn& s)
+        {
+          this->serialize(s);
+        }
+
+        void
+        serialize(elle::serialization::Serializer& s)
+        {
+          Result::serialize(s);
+          s.serialize("internal", this->internal);
+          s.serialize("external", this->external);
+        }
+
+        void
+        _print(std::ostream& out, bool verbose) const override
+        {
+          if (!this->sane || verbose)
+          {
+            if (internal)
+              out << std::endl << "    internal: " << this->internal;
+            if (internal)
+              out << std::endl << "    external: " << this->external;
+            if (!sane)
+              out << std::endl << "    >";
+          }
+        }
+
+        boost::optional<Address> internal;
+        boost::optional<Address> external;
+      };
+
+      UPNPResult(bool available = false)
+        : Result(available)
+        , available(available)
+      {
+      }
+
+      UPNPResult(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
+
+      void
+      _print(std::ostream& out, bool verbose) const override
+      {
+        if (!this->sane || verbose)
+        {
+          out << "UPNP:" << std::endl;
+          out << "  available: " << this->available << std::endl;
+          if (this->external)
+            out << "  external IP address: " << this->external;
+          else
+            out << "  no external IP address";
+          out << std::endl;
+          for (auto const& redirection: redirections)
+          {
+            out << "  ";
+            if (redirection.second.sane)
+              out << redirection.first;
+            else
+              warning(out, redirection.first);
+            redirection.second.print(out << ": ", verbose);
+            out << std::endl;
+          }
+        }
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("available", this->available);
+        s.serialize("external", this->external);
+        s.serialize("redirections", this->redirections);
+      }
+
+      bool available;
+      boost::optional<std::string> external;
+      std::unordered_map<std::string, RedirectionResult> redirections;
+    };
+
+    NetworkingResults()
+      : Result(false)
+    {
+    }
+
+    NetworkingResults(elle::serialization::SerializerIn& s)
+    {
+      this->serialize(s);
+    }
+
+    void
+    print(std::ostream& out, bool verbose) const
+    {
+      if (!this->sane() | verbose)
+        section(out, "Networking");
+      this->beyond.print(out, verbose);
+      this->interfaces.print(out, verbose);
+      this->nat.print(out, verbose);
+      this->upnp.print(out, verbose);
+      reporting::print(out, "Protocols", this->protocols, verbose);
+    }
+
+    bool
+    sane() const
+    {
+      return this->beyond.sane
+        && this->interfaces.sane
+        && this->nat.sane
+        && this->upnp.sane
+        && reporting::sane(this->protocols);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("beyond", this->beyond);
+      s.serialize("interfaces", this->interfaces);
+      s.serialize("protocols", this->protocols);
+      s.serialize("nat", this->nat);
+      s.serialize("upnp", this->upnp);
+      if (s.out())
+      {
+        bool sane = this->sane();
+        s.serialize("sane", sane);
+      }
+    }
+
+    BeyondResult beyond;
+    InterfaceResults interfaces;
+    ProtocolResults protocols;
+    NatResult nat;
+    UPNPResult upnp;
+  };
+
+  struct All
+  {
+    All()
+    {
+    }
+
+    All(elle::serialization::SerializerIn& s)
+      : integrity(s.deserialize<IntegrityResults>("integrity"))
+      , sanity(s.deserialize<SanityResults>("sanity"))
+      , networking(s.deserialize<NetworkingResults>("networking"))
+    {
+    }
+
+    IntegrityResults integrity;
+    SanityResults sanity;
+    NetworkingResults networking;
+
+    void
+    print(std::ostream& out, bool verbose) const
+    {
+      integrity.print(out, verbose);
+      sanity.print(out, verbose);
+      networking.print(out, verbose);
+    }
+
+    bool
+    sane() const
+    {
+      return this->integrity.sane()
+        && this->sanity.sane()
+        && this->networking.sane();
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("integrity", this->integrity);
+      s.serialize("sanity", this->sanity);
+      s.serialize("networking", this->networking);
+      if (s.out())
+      {
+        bool sane = this->sane();
+        s.serialize("sane", sane);
+      }
+    }
+  };
+};
 
 // Return the infinit related environment.
 static
-std::unordered_map<std::string, std::string>
+Environment
 infinit_related_environment()
 {
   auto environ = elle::os::environ();
@@ -54,61 +1054,38 @@ infinit_related_environment()
 }
 
 static
-bool
+void
 _networking(boost::program_options::variables_map const& args,
-            boost::optional<std::ostream&> output_stream)
+            reporting::NetworkingResults& results)
 {
-  bool sane = true;
-  bool verbose = flag(args, "verbose");
   // Contact beyond.
-  if (verbose)
-    std::cout << "Contacting " << beyond() << std::endl;
   {
     try
     {
       reactor::http::Request r(beyond(), reactor::http::Method::GET);
       reactor::wait(r);
       auto status = (r.status() == reactor::http::StatusCode::OK);
-      sane &= status;
-      if (verbose || !status)
-      {
-        auto& output = status ? std::cout : std::cerr;
-        elle::fprintf(output, "  Able to contact %s%s: ",
-                      beyond(),
-                      !status
-                      ? elle::sprintf(" but got a %s error", r.status())
-                      : std::string{});
-        if (verbose)
-          output << "ok" << std::endl;
-      }
+      if (status)
+        results.beyond = {status};
+      else
+        results.beyond = {status, elle::sprintf("%s", r.status())};
     }
     catch (elle::Error const&)
     {
-      if (!verbose)
-        std::cerr << "Contacting " << beyond() << std::endl;
-      elle::fprintf(std::cerr, "  Unable to contact %s: %s\n", beyond(),
-                    elle::exception_string());
+      results.beyond = {false, elle::exception_string()};
     }
   }
-  if (verbose)
-    std::cout << std::endl;
   // Interfaces.
   auto interfaces = elle::network::Interface::get_map(
     elle::network::Interface::Filter::no_loopback);
-  if (verbose)
-    std::cout << "Local IP Addresses:" << std::endl;
   std::vector<std::string> public_ips;
   for (auto i: interfaces)
   {
     if (i.second.ipv4_address.empty())
       continue;
-    if (verbose)
-      std::cout << "  " << i.second.ipv4_address << std::endl;
     public_ips.push_back(i.second.ipv4_address);
   }
-
-  if (verbose)
-    std::cout << "\nConnectivity:" << std::endl;
+  results.interfaces = {public_ips};
   // XXX: This should be nat.infinit.sh or something.
   std::string host = "192.241.139.66";
   uint16_t port = 5456;
@@ -117,40 +1094,26 @@ _networking(boost::program_options::variables_map const& args,
                     std::string const& host,
                     uint16_t port)> const& function,
                   int deltaport = 0)
-  {
-    std::string result = elle::sprintf("  %s: ", name);
-    auto status = true;
-    try
     {
-      auto address = function(host, port + deltaport);
-      result += address.host;
-      if (std::find(public_ips.begin(), public_ips.end(), address.host) ==
-          public_ips.end())
-        result += " (external)";
-      else
-        result += " (internal)";
-      if (address.local_port)
+      std::string result = elle::sprintf("  %s: ", name);
+      try
       {
-        result += " ";
-        if (address.local_port == address.remote_port)
-          result += "same port";
-        else
-          result += elle::sprintf("different ports (local: %s, remote: %s)",
-                               address.local_port, address.remote_port);
+        auto address = function(host, port + deltaport);
+        bool external = std::find(
+          public_ips.begin(), public_ips.end(), address.host
+          ) == public_ips.end();
+        reporting::store(results.protocols, name, host, address.local_port,
+                         address.remote_port, !external);
       }
-    }
-    catch (...)
-    {
-      result += elle::exception_string();
-      status = false;
-    }
-    sane &= status;
-    if (!status || verbose)
-    {
-      auto& output = status ? std::cout : std::cerr;
-      output << result << std::endl;
-    }
-  };
+      catch (reactor::Terminate const&)
+      {
+        throw;
+      }
+      catch (...)
+      {
+        reporting::store(results.protocols, name, elle::exception_string());
+      }
+    };
   run("TCP", reactor::connectivity::tcp);
   run("UDP", reactor::connectivity::udp);
   run("UTP",
@@ -177,57 +1140,70 @@ _networking(boost::program_options::variables_map const& args,
                 std::placeholders::_2,
                 0xFF),
       2);
+
   {
-    std::stringstream nat;
-    nat << "  NAT ";
-    bool status = true;
     try
     {
-      nat << reactor::connectivity::nat(host, port) << std::endl;
+      auto nat = reactor::connectivity::nat(host, port);
+      // Super uglY.
+      auto cone = nat.find("NOT_CONE") == std::string::npos &&
+        nat.find("CONE") != std::string::npos;
+      results.nat = {cone};
     }
-    catch (std::runtime_error const&)
+    catch (reactor::Terminate const&)
     {
-      nat << elle::exception_string() << std::endl;
-      status = false;
+      throw;
     }
-    sane &= status;
-    if (!status || verbose)
+    catch (...)
     {
-      auto& output = status ? std::cout : std::cerr;
-      output << nat.str() << std::endl;
+      results.nat = {elle::exception_string()};
     }
   }
   {
-    bool status = true;
-    std::stringstream out;
-    out << "  UPNP:" << std::endl;
     auto upnp = reactor::network::UPNP::make();
     try
     {
+      results.upnp.sane = true;
+      results.upnp.available = false;
       upnp->initialize();
-      out << "    available: " << upnp->available() << std::endl;
-      auto ip = upnp->external_ip();
-      out << "    external_ip: " << ip << std::endl;
-      auto pm = upnp->setup_redirect(reactor::network::Protocol::tcp, 5678);
-      out << "    mapping: " << pm.internal_host << ':' << pm.internal_port
-          << " -> " << pm.external_host << ':' << pm.external_port << std::endl;
-      auto pm2 = upnp->setup_redirect(reactor::network::Protocol::udt, 5679);
-      out << "    mapping: " << pm2.internal_host << ':' << pm2.internal_port
-          << " -> " << pm2.external_host << ':' << pm2.external_port << std::endl;
+      results.upnp.available = upnp->available();
+      results.upnp.external = upnp->external_ip();
+      typedef reporting::NetworkingResults::UPNPResult::RedirectionResult::Address
+        Address;
+      auto redirect = [&] (std::string type,
+                           reactor::network::Protocol protocol,
+                           uint16_t port)
+        {
+          reporting::store(results.upnp.redirections, type);
+          auto& res = results.upnp.redirections[type];
+          try
+          {
+            auto pm = upnp->setup_redirect(protocol, port);
+            res.internal = Address{pm.internal_host, std::stoi(pm.internal_port)};
+            res.external = Address{pm.external_host, std::stoi(pm.external_port)};
+          }
+          catch (reactor::Terminate const&)
+          {
+            throw;
+          }
+          catch (...)
+          {
+            res = {false, elle::exception_string()};
+          }
+        };
+      redirect("tcp", reactor::network::Protocol::tcp, 5678);
+      redirect("udt", reactor::network::Protocol::udt, 5679);
     }
-    catch (std::exception const& e)
+    catch (reactor::Terminate const&)
     {
-      out << "    exception: " << e.what() << std::endl;
-      status = false;
+      throw;
     }
-    sane &= status;
-    if (!status || verbose)
+    catch (...)
     {
-      auto& output = status ? std::cout : std::cerr;
-      output << out.str() << std::endl;
+      results.upnp.sane = false;
+      results.upnp.reason = elle::exception_string();
     }
   }
-  return sane;
 }
 
 // Return the current user permissions on a given path.
@@ -236,7 +1212,7 @@ std::pair<bool, bool>
 permissions(boost::filesystem::path const& path)
 {
   if (!boost::filesystem::exists(path))
-    throw elle::Error("Doesn't exist");
+    throw elle::Error(elle::sprintf("%s doesn't exist", path));
   auto s = boost::filesystem::status(path);
   bool read = s.permissions() & boost::filesystem::perms::owner_read;
   bool write = s.permissions() & boost::filesystem::perms::owner_write;
@@ -281,68 +1257,6 @@ has_permission(boost::filesystem::path const& path,
 
 static
 bool
-permission(boost::filesystem::path const& path,
-           bool verbose,
-           bool mandatory = true,
-           uint32_t indent = 0)
-{
-  auto sane = has_permission(path, mandatory);
-  if (verbose || !sane.first)
-  {
-    auto& output = sane.first ? std::cout : std::cerr;
-    output << std::string(indent, ' ') << path.string() << ": "
-           << (sane.first ? std::string{"ok"} : sane.second) << std::endl;
-  }
-  return sane.first;
-}
-
-static
-bool
-permissions(bool verbose)
-{
-  if (verbose)
-    std::cout << "Permissions:" << std::endl;
-  bool sane = true;
-  sane &= permission(elle::system::home_directory(), verbose, true, 2);
-  sane &= permission(infinit::xdg_cache_home(), verbose, false, 2);
-  sane &= permission(infinit::xdg_config_home(), verbose, false, 2);
-  sane &= permission(infinit::xdg_data_home(), verbose, false, 2);
-  sane &= permission(infinit::xdg_state_home(), verbose, false, 2);
-  return sane;
-}
-
-static
-bool
-environment(bool verbose)
-{
-  auto env = infinit_related_environment();
-  if (verbose)
-  {
-    std::cout << "Environment:" << std::endl;
-    for (auto const& entry: env)
-      std::cout << "  " << entry.first << "=" << entry.second << std::endl;
-  }
-  return true;
-}
-
-static
-bool
-space_left(bool verbose, double min_ratio, uint32_t min_absolute)
-{
-  auto f = boost::filesystem::space(infinit::xdg_data_home());
-  double ratio = f.available / (double) f.capacity;
-  bool full = (ratio < min_ratio) || (f.available < min_absolute);
-  if (verbose || full)
-  {
-    auto& output = full ? std::cerr : std::cout;
-    output << "Space:" << std::endl;
-    output << "  space left: " << f.available << " (" << ratio * 100 << "%)" << std::endl;
-  }
-  return true;
-}
-
-static
-bool
 fuse(bool verbose)
 {
 #if 0
@@ -363,60 +1277,58 @@ fuse(bool verbose)
 }
 
 static
-bool
+void
 _sanity(boost::program_options::variables_map const& args,
-        boost::optional<std::ostream&> output_stream)
+        reporting::SanityResults& result)
 {
-  bool sane = true;
-  auto test = [] (std::function<void()> const& todo,
-                  std::string message = "") -> bool
-  {
-    try
-    {
-      todo();
-      return true;
-    }
-    catch (...)
-    {
-      if (!message.empty())
-        std::cerr << elle::exception_string() << std::endl;
-      else
-        std::cerr << message << std::endl;
-      return false;
-    }
-  };
-  bool verbose = flag(args, "verbose");
-  if (verbose)
-  {
-    std::cout << "Disclaimer: " << std::endl;
-    std::cout << "" << std::endl;
-    std::cout << std::endl;
-  }
-
   // User name.
-  sane &= test(
-    [&] {
-      auto self_name = self_user_name();
-      if (verbose)
+  try
+  {
+    auto self_name = self_user_name();
+    result.user = {self_name};
+  }
+  catch (...)
+  {
+    result.user = {};
+  }
+  // Space left
+  {
+    size_t min = 50 * 1024 * 1024;
+    double min_ratio = 0.02;
+    auto f = boost::filesystem::space(infinit::xdg_data_home());
+    result.space_left = {min, min_ratio, f.available, f.capacity};
+  }
+  // Env.
+  {
+    auto env = infinit_related_environment();
+    result.environment = {env};
+  }
+  // Permissions.
+  {
+    auto test_permissions = [&] (boost::filesystem::path const& path)
       {
-        std::cout << "User:" << std::endl;
-        std::cout << "  default user name: " << self_name << std::endl;
-      }
-      // static const boost::regex allowed("${name_regex}");
-      // boost::smatch str_matches;
-      // if (!boost::regex_match(test_name, str_matches, allowed))
-      //   throw elle::Error("You won't be able to push this user on beyond");
-    }, "Invalid or unrecognized user name");
-  sane &= space_left(verbose, 0.02, 50 * 1024 * 1024);
-  sane &= environment(verbose);
-  sane &= permissions(verbose);
-  sane &= fuse(verbose);
-  return sane;
+        if (!boost::filesystem::exists(path))
+          reporting::store(result.permissions, path.string(), false, false, false);
+        else
+        {
+          auto s = boost::filesystem::status(path);
+          bool read = s.permissions() & boost::filesystem::perms::owner_read;
+          bool write = s.permissions() & boost::filesystem::perms::owner_write;
+          reporting::store(result.permissions, path.string(), true, read, write);
+        }
+      };
+
+    test_permissions(elle::system::home_directory());
+    test_permissions(infinit::xdg_cache_home());
+    test_permissions(infinit::xdg_config_home());
+    test_permissions(infinit::xdg_data_home());
+    test_permissions(infinit::xdg_state_home());
+  }
 }
 
 template <typename T>
 std::map<std::string, std::pair<T, bool>>
-parse(std::vector<T> container)
+                   parse(std::vector<T> container)
 {
   std::map<std::string, std::pair<T, bool>> output;
   for (auto& item: container)
@@ -431,7 +1343,7 @@ parse(std::vector<T> container)
 
 template <typename T>
 std::map<std::string, std::pair<std::unique_ptr<T>, bool>>
-parse(std::vector<std::unique_ptr<T>> container)
+                   parse(std::vector<std::unique_ptr<T>> container)
 {
   std::map<std::string, std::pair<std::unique_ptr<T>, bool>> output;
   for (auto& item: container)
@@ -445,11 +1357,10 @@ parse(std::vector<std::unique_ptr<T>> container)
 }
 
 static
-bool
+void
 _integrity(boost::program_options::variables_map const& args,
-           boost::optional<std::ostream&> output_stream)
+           reporting::IntegrityResults& results)
 {
-  bool sane = true;
   auto users = parse(ifnt.users_get());
   auto aws_credentials = ifnt.credentials_aws();
   auto gcs_credentials = ifnt.credentials_gcs();
@@ -457,8 +1368,6 @@ _integrity(boost::program_options::variables_map const& args,
   auto drives = parse(ifnt.drives_get());
   auto volumes = parse(ifnt.volumes_get());
   auto networks = parse(ifnt.networks_get());
-  auto verbose = flag(args, "verbose");
-  std::cout << "Storage resources:" << std::endl;
   for (auto& elem: storage_resources)
   {
     auto& storage = elem.second.first;
@@ -471,33 +1380,21 @@ _integrity(boost::program_options::variables_map const& args,
           aws_credentials.end(),
           [&s3config] (std::unique_ptr<infinit::AWSCredentials, std::default_delete<infinit::Credentials>> const& credentials)
           {
-            #define COMPARE(field) (credentials->field == s3config->credentials.field())
-                return COMPARE(access_key_id) && COMPARE(secret_access_key);
-            #undef COMPARE
+#define COMPARE(field) (credentials->field == s3config->credentials.field())
+            return COMPARE(access_key_id) && COMPARE(secret_access_key);
+#undef COMPARE
           });
       status = (it != aws_credentials.end());
-      sane &= status;
-      if (verbose || !status)
-      {
-        auto& output = !status ? std::cerr : std::cout;
-        elle::fprintf(output, "  [%s] %s (AWS):\n", result(status), storage->name);
-        if (status)
-          elle::fprintf(output, "    [%s] Credentials: %s\n",
-                result(status), (*it)->display_name());
-        else
-          elle::fprintf(output, "    [%s] Missing credentials\n", result(status));
-      }
+      if (status)
+        reporting::store(results.storage_resources, storage->name, status, "S3");
+      else
+        reporting::store(results.storage_resources, storage->name, status, "S3", std::string("Missing credentials"));
     }
     if (auto fsconfig = dynamic_cast<infinit::storage::FilesystemStorageConfig const*>(storage.get()))
     {
-      status = has_permission(fsconfig->path).first;
-      if (verbose || !status)
-      {
-        auto& output = !status ? std::cerr : std::cout;
-        elle::fprintf(output, "  [%s] %s (Filesystem):\n", result(status), storage->name);
-        elle::fprintf(output, "    [%s] ", result(has_permission(fsconfig->path, true).first));
-        permission(boost::filesystem::path(fsconfig->path), true);
-      }
+      auto perms = has_permission(fsconfig->path);
+      status = perms.first;
+      reporting::store(results.storage_resources, storage->name, status, "filesystem", perms.second);
     }
     if (auto gcsconfig = dynamic_cast<infinit::storage::GCSConfig const*>(storage.get()))
     {
@@ -510,17 +1407,10 @@ _integrity(boost::program_options::variables_map const& args,
             return credentials->refresh_token == gcsconfig->refresh_token;
           });
       status = (it != gcs_credentials.end());
-      sane &= status;
-      if (verbose || !status)
-      {
-        auto& output = !status ? std::cerr : std::cout;
-        elle::fprintf(output, "  [%s] %s (GCS):\n", result(status), storage->name);
-        if (status)
-          elle::fprintf(output, "    [%s] Credentials: %s\n",
-                result(status), (*it)->display_name());
-        else
-          elle::fprintf(output, "    [%s] Missing credentials\n", result(status));
-      }
+      if (status)
+        reporting::store(results.storage_resources, storage->name, status, "GCS");
+      else
+        reporting::store(results.storage_resources, storage->name, status, "GCS", std::string("Missing credentials"));
     }
 #ifndef INFINIT_WINDOWS
     if (/* auto ssh = */
@@ -530,7 +1420,6 @@ _integrity(boost::program_options::variables_map const& args,
     }
 #endif
   }
-  std::cout << "Networks:" << std::endl;
   for (auto& elem: networks)
   {
     auto const& network = elem.second.first;
@@ -548,33 +1437,23 @@ _integrity(boost::program_options::variables_map const& args,
           storage_names.push_back(network.model->storage->name);
       }
     }
+    std::vector<std::string> faulty;
     status = storage_names.size() == 0 || std::all_of(
       storage_names.begin(),
       storage_names.end(),
       [&] (std::string const& name) -> bool
       {
         auto it = storage_resources.find(name);
-        return (it != storage_resources.end() && it->second.second);
+        auto res = (it != storage_resources.end() && it->second.second);
+        if (!res)
+          faulty.push_back(name);
+        return res;
       });
-    sane &= status;
-    if (verbose || !status)
-    {
-      auto& output = !status ? std::cerr : std::cout;
-      elle::fprintf(output, "  [%s] %s:\n", result(status), network.name);
-      for (auto storage: storage_names)
-      {
-        auto it = storage_resources.find(storage);
-        if (it == storage_resources.end())
-          elle::fprintf(
-            output, "    [%s] storage resource %s: Missing", result(false), storage);
-        else
-          elle::fprintf(
-            output, "    [%s] storage resource %s", result(it->second.second), storage);
-        output << std::endl;
-      }
-    }
+    if (status)
+      reporting::store(results.networks, network.name, status);
+    else
+      reporting::store(results.networks, network.name, status, faulty);
   }
-  std::cout << "Volumes:" << std::endl;
   for (auto& elems: volumes)
   {
     auto const& volume = elems.second.first;
@@ -582,17 +1461,11 @@ _integrity(boost::program_options::variables_map const& args,
     auto network = networks.find(volume.network);
     auto network_presents = network != networks.end();
     status = network_presents && network->second.second;
-    sane &= status;
-    if (verbose || !status)
-    {
-      auto& output = !status ? std::cerr : std::cout;
-      elle::fprintf(output, "  [%s] %s:\n    [%s] network: %s",
-                    result(status), volume.name,
-                    result(status), volume.network);
-      output << std::endl;
-    }
+    if (status)
+      reporting::store(results.volumes, volume.name, status);
+    else
+      reporting::store(results.volumes, volume.name, status, volume.network);
   }
-  std::cout << "Drives:" << std::endl;
   for (auto& elems: drives)
   {
     auto const& drive = elems.second.first;
@@ -604,56 +1477,69 @@ _integrity(boost::program_options::variables_map const& args,
     auto network_presents = network != networks.end();
     auto network_ok = network_presents && network->second.second;
     status = network_ok && volume_ok;
-    sane &= status;
-    if (verbose || !status)
-    {
-      auto& output = !status ? std::cerr : std::cout;
-      elle::fprintf(
-        output, "  [%s] %s:\n    [%s] volume: %s\n    [%s] network: %s",
-        result(status), drive.name,
-        result(volume_ok), drive.volume,
-        result(network_ok), drive.network
-      );
-      output << std::endl;
-    }
+    if (status)
+      reporting::store(results.drives, drive.name, status);
+    else
+      reporting::store(results.drives, drive.name, status, drive.volume);
   }
-  return sane;
 }
 
 static
 void
-report_error(bool sane)
+report_error(std::ostream& out,
+             bool sane)
 {
   if (!sane)
     throw elle::Error("Please check your configuration");
+  else if (!script_mode)
+    out << "All good!" << std::endl;
 }
+
+template <typename Report>
+void
+output(std::ostream& out,
+       Report const& results,
+       bool verbose)
+{
+  if (script_mode)
+    infinit::save(out, results);
+  else
+    results.print(out, verbose);
+}
+
 
 COMMAND(integrity)
 {
-  bool sane = true;
-  sane &= _integrity(args, boost::none);
-  report_error(sane);
+  reporting::IntegrityResults results;
+  _integrity(args, results);
+  output(std::cout, results, flag(args, "verbose"));
+  report_error(std::cout, results.sane());
 }
 
 COMMAND(networking)
 {
-  _networking(args, boost::none);
+  reporting::NetworkingResults results;
+  _networking(args, results);
+  output(std::cout, results, flag(args, "verbose"));
+  report_error(std::cout, results.sane());
 }
 
 COMMAND(sanity)
 {
-  bool sane = true;
-  sane &= _sanity(args, boost::none);
-  report_error(sane);
+  reporting::SanityResults results;
+  _sanity(args, results);
+  output(std::cout, results, flag(args, "verbose"));
+  report_error(std::cout, results.sane());
 }
 
 COMMAND(run_all)
 {
-  bool sane = true;
-  sane &= _sanity(args, boost::none);
-  sane &= _integrity(args, boost::none);
-  sane &= _networking(args, boost::none);
-  report_error(sane);
+  reporting::All a;
+  _sanity(args, a.sanity);
+  _integrity(args, a.integrity);
+  _networking(args, a.networking);
+  output(std::cout, a, flag(args, "verbose"));
+  report_error(std::cout, a.sane());
 }
 
 int
@@ -662,44 +1548,44 @@ main(int argc, char** argv)
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Mode::OptionDescription verbose =
-   { "verbose,v", bool_switch(), "output everything" };
+    { "verbose,v", bool_switch(), "output everything" };
 
   Modes modes {
     {
       "all",
-      "Perform all possible checks",
-      &run_all,
-      "",
-      {
-        verbose
-      }
+        "Perform all possible checks",
+        &run_all,
+        "",
+        {
+          verbose
+            }
     },
     {
       "networking",
-      "Perform networking checks",
-      &networking,
-      "",
-      {
-        verbose
-      }
+        "Perform networking checks",
+        &networking,
+        "",
+        {
+          verbose
+            }
     },
     {
       "sanity",
-      "Perform sanity checks",
-      &sanity,
-      "",
-      {
-        verbose
-      }
+        "Perform sanity checks",
+        &sanity,
+        "",
+        {
+          verbose
+            }
     },
     {
       "integrity",
-      "Perform integrity checks",
-      &integrity,
-      "",
-      {
-        verbose
-      }
+        "Perform integrity checks",
+        &integrity,
+        "",
+        {
+          verbose
+            }
     }
   };
   return infinit::main("Infinit diagnostic utility", modes, argc, argv,
