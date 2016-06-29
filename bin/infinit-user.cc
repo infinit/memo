@@ -215,15 +215,21 @@ COMMAND(create)
   bool push = aliased_flag(args, {"push-user", "push"});
   auto has_output = optional(args, "output");
   auto output = has_output ? get_output(args) : nullptr;
+  auto ldap_name = optional(args, "ldap-name");
+  auto full = flag(args, "full");
   if (!push)
   {
-    if (flag(args, "full") || flag(args, "password"))
+    if (ldap_name)
+      throw CommandLineError("LDAP can only be used with the Hub, add --push");
+    if (full || flag(args, "password"))
     {
       throw CommandLineError(
         elle::sprintf("--full and --password are only used when pushing "
                       "a user to %s", beyond(true)));
     }
   }
+  if (ldap_name && !full)
+    throw CommandLineError("LDAP user creation requires --full");
   auto name = get_name(args);
   auto email = optional(args, "email");
   if (email && !valid_email(email.get()))
@@ -232,7 +238,7 @@ COMMAND(create)
                                optional(args, "key"),
                                email,
                                optional(args, "fullname"),
-                               optional(args, "ldap-name"));
+                               ldap_name);
   if (output)
   {
     save(*output, user);
@@ -551,12 +557,13 @@ main(int argc, char** argv)
   Mode::OptionDescription option_avatar =
     { "avatar", value<std::string>(), "path to an image to use as avatar" };
   Mode::OptionDescription option_key =
-    {"key,k", value<std::string>(),
+    { "key,k", value<std::string>(),
       "RSA key pair in PEM format - e.g. your SSH key "
       "(default: generate key pair)" };
   Mode::OptionDescription option_ldap_dn =
-    {"ldap-name,l", value<std::string>(),
-      "ldap distinguised name of the user, enables auth through LDAP"};
+    { "ldap-name,l", value<std::string>(),
+      "LDAP distinguished name of the user, "
+      "enables authentication through LDAP" };
   Modes modes {
     {
       "create",
