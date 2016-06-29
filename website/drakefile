@@ -83,7 +83,6 @@ def configure(
     'templates/pages/docs/src/markdown/environment_variables.md',
     'templates/pages/docs/src/markdown/best_practices.md',
     'templates/pages/docs/src/markdown/technology.md',
-    'templates/pages/docs/src/markdown/hub.md',
   )
   changelog = drake.node(
     'ChangeLog.html',
@@ -150,7 +149,6 @@ def configure(
     'templates/pages/pricing.html',
     'templates/pages/solutions.html',
     'templates/pages/update.html',
-    'templates/pages/dropboxe.html',
 
     'templates/pages/docs/changelog.html',
     'templates/pages/docs/comparison.html',
@@ -167,7 +165,6 @@ def configure(
     'templates/pages/docs/environment_variables.html',
     'templates/pages/docs/best_practices.html',
     'templates/pages/docs/technology.html',
-    'templates/pages/docs/hub.html',
 
     'templates/pages/docs/get_started.html',
 
