@@ -104,11 +104,12 @@ class Infinit(TemporaryDirectory):
             noscript = False):
     if isinstance(args, str):
       args = args.split(' ')
-    if '/' not in args[0]:
-      args[0] = 'bin/%s' % args[0]
-    build_dir = os.environ.get('BUILD_DIR')
-    if build_dir:
-      args[0] = '%s/%s' % (build_dir, args[0])
+    if args[0][0] != '/':
+      if '/' not in args[0]:
+        args[0] = 'bin/%s' % args[0]
+      build_dir = os.environ.get('BUILD_DIR')
+      if build_dir:
+        args[0] = '%s/%s' % (build_dir, args[0])
     args[0] += os.environ.get('EXE_EXT', '')
     env_ = {
       'INFINIT_RDV': '',
@@ -152,7 +153,8 @@ class Infinit(TemporaryDirectory):
     process.pretty = pretty
     return process
 
-  def run(self, args, input = None, return_code = 0, env = {}, noscript = False):
+  def run(self, args, input = None, return_code = 0, env = {},
+          noscript = False):
     process = self.spawn(args, input, return_code, env, noscript)
     out, err = process.communicate(timeout = 600)
     process.wait()
