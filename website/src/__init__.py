@@ -328,7 +328,6 @@ class Website(bottle.Bottle):
         email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
         recipient = {'address': 'contact@infinit.sh'},
         sender = {
-          'address': bottle.request.forms.get('email'),
           'reply_to': bottle.request.forms.get('email')
         },
         email_data = {
@@ -357,7 +356,6 @@ class Website(bottle.Bottle):
         email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
         recipient = {'address': 'contact@infinit.sh'},
         sender = {
-          'address': bottle.request.forms.get('email'),
           'reply_to': bottle.request.forms.get('email')
         },
         email_data = {
