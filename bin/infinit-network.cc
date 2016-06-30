@@ -591,9 +591,6 @@ COMMAND(run)
       }
     }
   }
-  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
-  if (fetch)
-    beyond_fetch_endpoints(network, eps);
   bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
   auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
@@ -612,7 +609,8 @@ COMMAND(run)
     flag(args, "async"), disk_cache_size, compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
-            && dht->local() && dht->local()->storage();
+    && dht->local() && dht->local()->storage();
+  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (!dht->local())
   {
     throw elle::Error(elle::sprintf(
@@ -642,6 +640,12 @@ COMMAND(run)
     });
   auto run = [&]
     {
+      if (fetch)
+      {
+        infinit::overlay::NodeEndpoints eps;
+        beyond_fetch_endpoints(network, eps);
+        dht->overlay()->discover(eps);
+      }
       reactor::Thread::unique_ptr stat_thread;
       if (push)
         stat_thread = make_stat_update_thread(self, network, *dht);

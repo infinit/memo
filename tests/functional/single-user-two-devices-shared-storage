@@ -40,6 +40,7 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
       'infinit-volume', '--run',
       'volume',
       '--as', 'user',
+      '--allow-root-creation',
     ],
     input = {'operation': 'mkdir', 'path': '/beacon'})
   if not response['success']:

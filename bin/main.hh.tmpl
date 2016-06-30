@@ -1155,7 +1155,8 @@ namespace infinit
     std::unique_ptr<reactor::filesystem::FileSystem>
     run(std::shared_ptr<model::doughnut::Doughnut> dht,
         boost::optional<std::string> mountpoint_ = {},
-        boost::optional<bool> readonly = {}
+        boost::optional<bool> readonly = {},
+        bool allow_root_creation = false
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         , boost::optional<std::string> volname_ = {}
 #endif
@@ -1177,7 +1178,11 @@ namespace infinit
       else if (this->mountpoint)
         mountpoint = this->mountpoint.get();
       auto fs = elle::make_unique<filesystem::FileSystem>(
-        this->name, dht, this->root_block_cache_dir(), mountpoint);
+        infinit::filesystem::model = dht,
+        infinit::filesystem::allow_root_creation = allow_root_creation,
+        infinit::filesystem::volume_name = this->name,
+        infinit::filesystem::root_block_cache_dir = this->root_block_cache_dir(),
+        infinit::filesystem::mountpoint = mountpoint);
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       if (mountpoint)

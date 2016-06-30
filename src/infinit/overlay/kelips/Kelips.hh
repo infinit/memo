@@ -303,7 +303,13 @@ namespace infinit
         void
         process_update(SerState const& s);
         void
-        bootstrap(bool use_bootstrap_nodes);
+        bootstrap(bool use_bootstrap_nodes,
+                  bool use_contacts = true,
+                  std::vector<PeerLocation> const& peers = {});
+        void
+        _discover(NodeEndpoints const& peers) override;
+        void
+        send_bootstrap(PeerLocation const& l);
         SerState
         get_serstate(PeerLocation peer);
         void
@@ -346,8 +352,6 @@ namespace infinit
         std::vector<Address> _pending_bootstrap_address;
         std::vector<Address> _bootstrap_requests_sent;
         reactor::network::UTPServer _remotes_server;
-        /// Whether we've seen someone from our group.
-        reactor::Barrier _bootstraping;
         int _next_id;
         int _port;
         bool _observer;

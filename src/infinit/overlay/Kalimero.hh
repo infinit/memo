@@ -10,10 +10,26 @@ namespace infinit
     class Kalimero
       : public Overlay
     {
+    /*-------------.
+    | Construction |
+    `-------------*/
     public:
       Kalimero(model::doughnut::Doughnut* dht,
                model::Address node_id,
                std::shared_ptr<model::doughnut::Local> local);
+
+    /*------.
+    | Peers |
+    `------*/
+    protected:
+      virtual
+      void
+      _discover(NodeEndpoints const& peers) override;
+
+    /*-------.
+    | Lookup |
+    `-------*/
+    protected:
       virtual
       reactor::Generator<WeakMember>
       _lookup(model::Address address, int n, Operation op) const override;

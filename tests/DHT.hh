@@ -45,6 +45,12 @@ public:
     this->disconnect_all();
   }
 
+  void
+  _discover(infinit::overlay::NodeEndpoints const& peers) override
+  {
+    ELLE_ABORT("not implemented");
+  }
+
   static
   std::unique_ptr<Overlay>
   make(infinit::model::doughnut::Doughnut& d,

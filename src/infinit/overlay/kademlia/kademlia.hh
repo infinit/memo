@@ -63,6 +63,13 @@ namespace kademlia
     void remove(Address address);
     void fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b);
     void print(std::ostream& stream) const override;
+  /*------.
+  | Peers |
+  `------*/
+  protected:
+    virtual
+    void
+    _discover(infinit::overlay::NodeEndpoints const& peers) override;
   protected:
     virtual reactor::Generator<WeakMember>
     _lookup(infinit::model::Address address,
