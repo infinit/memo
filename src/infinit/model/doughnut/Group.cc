@@ -67,7 +67,7 @@ namespace infinit
       void
       Group::create()
       {
-        ELLE_TRACE_SCOPE("%s: create", *this);
+        ELLE_TRACE_SCOPE("%s: create", this->_name);
         infinit::filesystem::umbrella([&] {
             try
             {
