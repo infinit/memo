@@ -129,6 +129,10 @@ namespace infinit
             else
               missing.push_back(a);
           }
+          // Don't pass local_version to fetch, prioritizing cache feed over
+          // this optimization.
+          for (auto& av: missing)
+            av.second.reset();
           _backend->fetch(missing,
             [&](Address addr, std::unique_ptr<blocks::Block> block,
                 std::exception_ptr exc)
