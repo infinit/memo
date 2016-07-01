@@ -550,6 +550,8 @@ namespace infinit
         };
         REGISTER(FileBootstrapRequest, "fileBootstrapRequest");
 
+        static bool serialize_compress = true;
+
         struct Gossip: public Packet
         {
           Gossip()
@@ -566,7 +568,44 @@ namespace infinit
             s.serialize("sender", sender);
             s.serialize("observer", observer);
             s.serialize("contacts", contacts);
-            s.serialize("files", files);
+            if (!serialize_compress)
+              s.serialize("files", files);
+            else if (s.out())
+            { // out
+              std::vector<Address> addresses;
+              std::unordered_map<Address, int> index;
+              std::unordered_multimap<Address, std::pair<Time, int>> cfiles;
+              for (auto f: files)
+              {
+                auto addr = f.second.second;
+                int idx;
+                auto it = index.find(addr);
+                if (it == index.end())
+                {
+                  addresses.push_back(addr);
+                  index.insert(std::make_pair(addr, addresses.size()-1));
+                  idx = addresses.size()-1;
+                }
+                else
+                  idx = it->second;
+                cfiles.insert(std::make_pair(addr,
+                                             std::make_pair(f.second.first, idx)));
+              }
+              s.serialize("file_addresses", addresses);
+              s.serialize("file_files", cfiles);
+            }
+            else
+            { // in
+              std::vector<Address> addresses;
+              std::unordered_multimap<Address, std::pair<Time, int>> cfiles;
+              s.serialize("file_addresses", addresses);
+              s.serialize("file_files", cfiles);
+              files.clear();
+              for (auto c: cfiles)
+                files.insert(std::make_pair(
+                  c.first,
+                  std::make_pair(c.second.first, addresses.at(c.second.second))));
+            }
           }
           // address -> (last_seen, val)
           std::unordered_map<Address, std::vector<TimedEndpoint>> contacts;
@@ -574,7 +613,6 @@ namespace infinit
         };
         REGISTER(Gossip, "gossip");
 
-        static bool serialize_compress_result = true;
         void result_out(elle::serialization::Serializer& s,
                         std::vector<std::vector<PeerLocation>> const& results)
         {
@@ -665,7 +703,7 @@ namespace infinit
             s.serialize("address", fileAddresses);
             s.serialize("ttl", ttl);
             s.serialize("count", count);
-            if (!serialize_compress_result)
+            if (!serialize_compress)
                s.serialize("result", results);
             else
             {
@@ -705,7 +743,7 @@ namespace infinit
             s.serialize("id", request_id);
             s.serialize("origin", origin);
             s.serialize("address", fileAddresses);
-            if (!serialize_compress_result)
+            if (!serialize_compress)
                s.serialize("result", results);
             else
             {
@@ -928,7 +966,7 @@ namespace infinit
         , _dropped_gets(0)
         , _failed_puts(0)
       {
-        packet::serialize_compress_result = doughnut->version() >= elle::Version(0, 7, 0);
+        packet::serialize_compress = doughnut->version() >= elle::Version(0, 7, 0);
 #ifndef INFINIT_WINDOWS
         reactor::scheduler().signal_handle(SIGUSR1, [this] {
             auto json = this->query("stats", {});
