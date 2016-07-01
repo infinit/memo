@@ -1696,7 +1696,7 @@ namespace infinit
         elle::Buffer buf;
         while (true)
         {
-          buf.size(5000);
+          buf.size(20000);
           GossipEndpoint source;
           ELLE_DUMP("%s: receiving packet...", *this);
           int sz = _gossip.receive_from(reactor::network::Buffer(buf.mutable_contents(), buf.size()),
