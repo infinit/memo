@@ -66,15 +66,16 @@ struct UserData
   std::string email;
 };
 
-elle::ldap::LDAPClient make_ldap(variables_map const& args)
+elle::ldap::LDAPClient
+make_ldap(variables_map const& args)
 {
+  auto server = mandatory(args, "server");
+  auto domain = mandatory(args, "domain");
+  auto user = mandatory(args, "user");
   auto password = optional(args, "password");
   if (!password)
     password = read_passphrase("LDAP password");
-  elle::ldap::LDAPClient ldap(mandatory(args, "server"),
-                              elle::ldap::Attr(mandatory(args, "domain")),
-                              mandatory(args, "user"),
-                              *password);
+  elle::ldap::LDAPClient ldap(server, domain, user, *password);
   return ldap;
 }
 
@@ -215,14 +216,14 @@ COMMAND(populate_network)
   }
 }
 
-COMMAND(populate_beyond)
+COMMAND(populate_hub)
 {
   auto ldap = make_ldap(args);
   auto searchbase = mandatory(args, "searchbase");
   auto objectclass = optional(args, "object-class");
   auto filter = optional(args, "filter");
   if (filter && objectclass)
-    throw elle::Error("filter and object-class can't both be specified");
+    throw elle::Error("specify either --filter or --object-class");
   if (objectclass)
     filter = "objectClass=" + *objectclass;
   else if (!filter)
@@ -242,7 +243,7 @@ COMMAND(populate_beyond)
   extract_fields(*fullname_pattern, fields);
   ELLE_TRACE("will search %s and fetch fields %s", *filter, fields);
   auto res = ldap.search(searchbase, *filter, fields);
-  ELLE_TRACE("Ldap returned %s", res);
+  ELLE_TRACE("LDAP returned %s", res);
 
   // username -> fields
   std::unordered_map<std::string, UserData> missing;
@@ -251,20 +252,23 @@ COMMAND(populate_beyond)
     auto dn = r.at("dn")[0];
     try
     {
-      auto u = beyond_fetch<infinit::User>("ldap_user",
-                                           reactor::http::url_encode(dn));
+      auto u = beyond_fetch<infinit::User>(
+        elle::sprintf("ldap_users/%s", reactor::http::url_encode(dn)),
+        "LDAP user",
+        dn);
       ELLE_TRACE("got %s -> %s", dn, u.name);
     }
     catch (MissingResource const& e)
     {
-      ELLE_TRACE("%s not in beyond: %s", dn, e);
+      ELLE_TRACE("%s not on %s: %s", dn, beyond(true), e);
       for (int i=0; ; ++i)
       {
         auto username = make_field(*pattern, r, i);
         try
         {
-          auto u = beyond_fetch<infinit::User>("user",
-                                               reactor::http::url_encode(username));
+          auto u = beyond_fetch<infinit::User>(
+            "user",
+            reactor::http::url_encode(username));
           ELLE_TRACE("username %s taken", username);
           if ((*pattern).find('%') == std::string::npos)
           {
@@ -285,18 +289,21 @@ COMMAND(populate_beyond)
     }
   }
 
-  std::cout << "Will register the following users:" << std::endl;
+  std::cout << std::endl << "Will register the following users:" << std::endl;
   for (auto& m: missing)
-    std::cout << elle::sprintf("%s: email %s  fullname %s  dn %s",
-                               m.first, m.second.email, m.second.fullname,
-                               m.second.dn) << std::endl;
+  {
+    std::cout << elle::sprintf(
+      "%s: %s (%s) DN: %s",
+      m.first, m.second.fullname, m.second.email, m.second.dn) << std::endl;
+  }
   std::cout << std::endl;
-  std::cout << "Proceeed ? (y/n)" << std::endl;
+  std::cout << "Proceed? [Y/n] ";
   std::string line;
   std::getline(std::cin, line);
-  if (line != "y")
+  std::transform(line.begin(), line.end(), line.begin(), ::toupper);
+  if (line != "Y")
   {
-    std::cout << "aborting" << std::endl;
+    std::cout << "Aborting..." << std::endl;
     return;
   }
   for (auto& m: missing)
@@ -343,9 +350,9 @@ main(int argc, char** argv)
       }
     },
     {
-      "populate-beyond",
-      "Register LDAP users on beyond",
-      &populate_beyond,
+      "populate-hub",
+      "Register LDAP users on the Hub",
+      &populate_hub,
       "--server SERVER --domain DOMAIN --user USER --searchbase SEARCHBASE",
       {
         LDAP_CORE_OPTIONS,
@@ -353,7 +360,7 @@ main(int argc, char** argv)
         {"filter,f", value<std::string>(), "raw LDAP query to use\n(default: objectClass=person)"},
         {"object-class,o", value<std::string>(), "Filter results (default: person)"},
         {"username-pattern,U", value<std::string>(),
-          "beyond unique username to set\n(default: $(cn)%). Remove the '%' "
+          "Hub unique username to set\n(default: $(cn)%). Remove the '%' "
           "to disable unique username generator"},
         {"email-pattern,e", value<std::string>(),
           "email address pattern (default: $(mail))"},

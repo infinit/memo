@@ -123,7 +123,7 @@ with Beyond(bottle_args = {'ldap_server': ldap_url}) as beyond,\
   assertEq(len(ul), 1)
 
   # Test batcher beyond populator
-  bob.run(['infinit-ldap', '--populate-beyond', '--server', ldap_url, \
+  bob.run(['infinit-ldap', '--populate-hub', '--server', ldap_url, \
       '--domain', '', '--searchbase', 'dc=%s,dc=nodomain'  % (dc), \
       '--user', ldap_creds[0], '--password', ldap_creds[1], \
       '--username-pattern', '$(uid)'],
