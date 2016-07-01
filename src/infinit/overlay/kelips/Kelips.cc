@@ -2395,7 +2395,7 @@ namespace infinit
               found = true;
             }
             else
-              ELLE_LOG("%s: have file but not node", *this);
+              ELLE_TRACE("%s: have file but not node", *this);
           }
           if (!found)
             continue;
@@ -2782,8 +2782,8 @@ namespace infinit
               boost::posix_time::milliseconds(_config.query_timeout_ms));
           if (!r->barrier.opened())
           {
-            ELLE_LOG("%s: mget request on %s timeout (try %s)",
-              *this, files, i);
+            ELLE_LOG("%s: mget request to %s on %s timeout (try %s)",
+              *this, it->second, files, i);
             this->_pending_requests.erase(ir.first);
           }
           else
