@@ -409,6 +409,11 @@ class Bottle(bottle.Bottle):
       return []
 
   def user_from_ldap_dn(self, name, throws = True):
+    if self.__ldap_server is None:
+      raise Response(501, {
+        'error': 'LDAP/not_implemented',
+        'reason': 'LDAP support not enabled',
+      })
     try:
       res = self.__beyond.user_by_ldap_dn(name)
       return res.json()
@@ -421,6 +426,11 @@ class Bottle(bottle.Bottle):
     try:
       json = bottle.request.json
       self.__ensure_names_match('user', name, json)
+      if json.get('ldap_dn') and self.__ldap_server is None:
+        raise Response(501, {
+          'error': 'LDAP/not_implemented',
+          'reason': 'LDAP support not enabled',
+        })
       if 'private_key' in json:
         json['private_key'] = self.encrypt_key(json['private_key'])
       user = User.from_json(self.__beyond, json,
@@ -575,7 +585,7 @@ class Bottle(bottle.Bottle):
       })
     try:
       user = self.__beyond.user_get(name)
-      if user.ldap_dn:
+      if user.ldap_dn and self.__ldap_server is not None:
         if json.get('password', None) is None:
           raise Response(403,
                          {
