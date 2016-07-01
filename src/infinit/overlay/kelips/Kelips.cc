@@ -574,6 +574,76 @@ namespace infinit
         };
         REGISTER(Gossip, "gossip");
 
+        static bool serialize_compress_result = true;
+        void result_out(elle::serialization::Serializer& s,
+                        std::vector<std::vector<PeerLocation>> const& results)
+        {
+          // index peerlocations
+          std::vector<PeerLocation> locs;
+          std::unordered_map<Address, int> loc_indexes;
+          for (auto const& r: results)
+          {
+            for (auto const&pl: r)
+            {
+              auto it = loc_indexes.find(pl.first);
+              if (it == loc_indexes.end())
+              {
+                locs.push_back(pl);
+                loc_indexes.insert(std::make_pair(pl.first, locs.size() - 1));
+              }
+            }
+          }
+          // index results (int list)
+          std::map<std::vector<int>, int> res_indexes;
+          std::vector<std::vector<int>> output;
+          for (auto const& r: results)
+          {
+            std::vector<int> o;
+            for (auto const& pl: r)
+            {
+              auto it = loc_indexes.find(pl.first);
+              ELLE_ASSERT(it != loc_indexes.end());
+              o.push_back(it->second);
+            }
+            std::sort(o.begin(), o.end());
+            auto it = res_indexes.find(o);
+            if (it == res_indexes.end())
+            {
+              output.push_back(o);
+              res_indexes.insert(std::make_pair(o, output.size()-1));
+            }
+            else
+            {
+              output.push_back({it->second * (-1) -1 }); //careful, 0 == -0
+            }
+          }
+          s.serialize("result_endpoints", locs);
+          s.serialize("result_indexes", output);
+        }
+        void
+        result_in(elle::serialization::Serializer& s,
+                  std::vector<std::vector<PeerLocation>> & results)
+        {
+          std::vector<PeerLocation> locs;
+          std::vector<std::vector<int>> input;
+          s.serialize("result_endpoints", locs);
+          s.serialize("result_indexes", input);
+          results.clear();
+          for (auto const& o: input)
+          {
+            if (o.size() == 1 && o.front() < 0)
+            {
+              results.push_back(results.at((o.front()+1)*(-1)));
+            }
+            else
+            {
+              std::vector<PeerLocation> r;
+              for (auto i: o)
+                r.push_back(locs.at(i));
+              results.push_back(r);
+            }
+          }
+        }
         struct MultiGetFileRequest: public Packet
         {
           MultiGetFileRequest()
@@ -595,7 +665,15 @@ namespace infinit
             s.serialize("address", fileAddresses);
             s.serialize("ttl", ttl);
             s.serialize("count", count);
-            s.serialize("results", results);
+            if (!serialize_compress_result)
+               s.serialize("result", results);
+            else
+            {
+               if (s.in())
+                 result_in(s, results);
+               else
+                 result_out(s, results);
+            }
           }
 
           int request_id;
@@ -618,6 +696,7 @@ namespace infinit
             serialize(input);
           }
 
+
           void
           serialize(elle::serialization::Serializer& s)
           {
@@ -626,7 +705,15 @@ namespace infinit
             s.serialize("id", request_id);
             s.serialize("origin", origin);
             s.serialize("address", fileAddresses);
-            s.serialize("result", results);
+            if (!serialize_compress_result)
+               s.serialize("result", results);
+            else
+            {
+               if (s.in())
+                 result_in(s, results);
+               else
+                 result_out(s, results);
+            }
             s.serialize("ttl", ttl);
           }
 
@@ -841,6 +928,7 @@ namespace infinit
         , _dropped_gets(0)
         , _failed_puts(0)
       {
+        packet::serialize_compress_result = doughnut->version() >= elle::Version(0, 7, 0);
 #ifndef INFINIT_WINDOWS
         reactor::scheduler().signal_handle(SIGUSR1, [this] {
             auto json = this->query("stats", {});
