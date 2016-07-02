@@ -418,11 +418,11 @@ namespace reporting
         try
         {
           infinit::check_name(name);
-          return {true, Result::Reason {}};
+          return std::make_tuple(true, Result::Reason{});
         }
         catch (...)
         {
-          return {false, Result::Reason{elle::exception_string()}};
+          return std::make_tuple(false, Result::Reason{elle::exception_string()});
         }
       }
 
