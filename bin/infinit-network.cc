@@ -116,9 +116,8 @@ COMMAND(create)
       std::string proto = args["protocol"].as<std::string>();
       try
       {
-        kelips->rpc_protocol =
-          elle::serialization::Serialize<
-            infinit::model::doughnut::Local::Protocol>::convert(proto);
+        kelips->rpc_protocol = elle::serialization::Serialize<
+          infinit::model::doughnut::Protocol>::convert(proto);
       }
       catch (elle::serialization::Error const& e)
       {

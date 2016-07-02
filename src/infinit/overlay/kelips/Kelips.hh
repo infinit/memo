@@ -155,7 +155,7 @@ namespace infinit
         int wait;
         bool encrypt;
         bool accept_plain;
-        infinit::model::doughnut::Local::Protocol rpc_protocol;
+        infinit::model::doughnut::Protocol rpc_protocol;
         GossipConfiguration gossip;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
