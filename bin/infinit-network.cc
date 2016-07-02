@@ -4,6 +4,8 @@
 #include <elle/serialization/json.hh>
 #include <elle/json/exceptions.hh>
 
+#include <reactor/FDStream.hh>
+
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
@@ -608,18 +610,17 @@ COMMAND(run)
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, compatibility_version, port);
   // Only push if we have are contributing storage.
-  bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
-    && dht->local() && dht->local()->storage();
-  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
-  if (!dht->local())
+  bool push = aliased_flag(args, {"push-endpoints", "push", "publish"}) &&
+    dht->local() && dht->local()->storage();
+  if (!dht->local() && (!script_mode || push))
+    elle::err("network %s is client only since no storage is attached", name);
+  if (dht->local())
   {
-    throw elle::Error(elle::sprintf(
-      "network \"%s\" has no storage attached so is client only", name));
+    if (auto port_file = optional(args, option_port_file))
+      port_to_file(dht->local()->server_endpoint().port(), port_file.get());
+    if (auto endpoint_file = optional(args, option_endpoint_file))
+      endpoints_to_file(dht->local()->server_endpoints(), endpoint_file.get());
   }
-  if (auto port_file = optional(args, option_port_file))
-    port_to_file(dht->local()->server_endpoint().port(), port_file.get());
-  if (auto endpoint_file = optional(args, option_endpoint_file))
-    endpoints_to_file(dht->local()->server_endpoints(), endpoint_file.get());
   static const std::vector<int> signals = {SIGINT, SIGTERM
 #ifndef INFINIT_WINDOWS
     ,SIGQUIT
@@ -650,7 +651,75 @@ COMMAND(run)
       if (push)
         stat_thread = make_stat_update_thread(self, network, *dht);
       report_action("running", "network", network.name);
-      reactor::sleep();
+      if (script_mode)
+      {
+#ifndef INFINIT_WINDOWS
+        reactor::FDStream stdin_stream(0);
+#else
+        // Windows does not support async io on stdin
+        elle::Buffer input;
+        while (true)
+        {
+          char buf[4096];
+          std::cin.read(buf, 4096);
+          int count = std::cin.gcount();
+          if (count > 0)
+            input.append(buf, count);
+          else
+          break;
+        }
+        auto stdin_stream = elle::IOStream(input.istreambuf());
+#endif
+        while (true)
+        {
+          try
+          {
+            auto json = boost::any_cast<elle::json::Object>(
+              elle::json::read(stdin_stream));
+            elle::serialization::json::SerializerIn command(json, false);
+            command.set_context<infinit::model::doughnut::Doughnut*>(dht.get());
+            auto op = command.deserialize<std::string>("operation");
+            if (op == "fetch")
+            {
+              auto address =
+                command.deserialize<infinit::model::Address>("address");
+              auto block = dht->fetch(address);
+              ELLE_ASSERT(block);
+              elle::serialization::json::SerializerOut response(
+                std::cout, false, true);
+              response.serialize("success", true);
+              response.serialize("value", block);
+            }
+            else if (op == "insert" || op == "update")
+            {
+              auto block = command.deserialize<
+                std::unique_ptr<infinit::model::blocks::Block>>("value");
+              if (!block)
+                elle::err("missing field: value");
+              dht->store(
+                std::move(block),
+                op == "insert" ?
+                infinit::model::STORE_INSERT : infinit::model::STORE_UPDATE);
+              elle::serialization::json::SerializerOut response(
+                std::cout, false, true);
+              response.serialize("success", true);
+            }
+            else
+              elle::err("invalide operation: %s", op);
+          }
+          catch (elle::Error const& e)
+          {
+            if (stdin_stream.eof())
+              return;
+            elle::serialization::json::SerializerOut response(
+              std::cout, false, true);
+            response.serialize("success", false);
+            response.serialize("message", e.what());
+          }
+        }
+      }
+      else
+        reactor::sleep();
     };
   if (push)
   {
