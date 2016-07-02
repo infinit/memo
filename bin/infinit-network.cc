@@ -611,6 +611,7 @@ COMMAND(run)
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"}) &&
     dht->local() && dht->local()->storage();
+  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (!dht->local() && (!script_mode || push))
     elle::err("network %s is client only since no storage is attached", name);
   if (dht->local())
