@@ -1263,7 +1263,7 @@ has_permission(boost::filesystem::path const& path,
   return std::make_pair(sane, res);
 }
 
-static
+
 bool
 fuse(bool /*verbose*/)
 {
