@@ -268,7 +268,7 @@ with Beyond() as beyond, \
     ['infinit-volume', '--create', '--as', 'a', 'v', '--network', 'b/n', '-p'])
   alice.run(['infinit-drive', '--create', '--as', 'a', 'd2',
              '-N', 'b/n', '-V', 'v', '-p'])
-  alice.run(['infinit-network', '--delete', '--as', 'a', 'b/n'])
+  alice.run(['infinit-network', '--delete', '--as', 'a', 'b/n', '--unlink'])
   alice.run(
     ['infinit-passport', '--delete', '--as', 'a', '-n', 'b/n', '-u', 'a'])
   # Create new network and invite bob.

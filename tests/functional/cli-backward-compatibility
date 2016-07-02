@@ -200,25 +200,35 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
         {'name': 'owner/network1', 'linked': True },
       ],
       key = 'name')
-    user('infinit-network', '--delete', '--name', 'owner/network1')
+    # Network is still linked for other.
+    throws(lambda: user('infinit-network', '--delete', '--name', 'owner/network1'))
+    # Unlink it.
+    user('infinit-network', '--unlink', '--name', 'owner/network1')
+    # Can't unlink it twice.
+    throws(lambda: user('infinit-network', '--unlink', '--name', 'owner/network1'))
     assertEq(
       user('infinit-network', '--list'),
       [
-        {'name': 'owner/network0', 'linked': True }
+        {'name': 'owner/network0', 'linked': True },
+        {'name': 'owner/network1', 'linked': False },
       ],
       key = 'name')
+    # User can create a network (and is automatically linked with it) and
+    # delete it direct.
     user('infinit-network', '--create', '--kelips', '--name', 'network')
     assertEq(
       user('infinit-network', '--list'),
       [
-        {'name': 'user/network', 'linked': True },
         {'name': 'owner/network0', 'linked': True },
+        {'name': 'owner/network1', 'linked': False },
+        {'name': 'user/network', 'linked': True },
       ],
       key = 'name')
-    user('infinit-network', '--delete', '--name', 'user/network')
+    user('infinit-network', '--delete', '--name', 'user/network', '--unlink')
     assertEq(
       user('infinit-network', '--list'),
       [
-        {'name': 'owner/network0', 'linked': True}
+        {'name': 'owner/network0', 'linked': True},
+        {'name': 'owner/network1', 'linked': False },
       ],
       key = 'name')

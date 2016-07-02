@@ -21,6 +21,24 @@ infinit::Infinit ifnt;
 #include <endpoint_file.hh>
 
 static
+bool
+remove(boost::filesystem::path const& path,
+       std::string const& network_name,
+       std::string const& message)
+{
+  if (boost::filesystem::exists(path))
+  {
+    if (boost::filesystem::remove(path))
+      report_action("deleted", message, network_name, std::string("locally"));
+    else
+      throw elle::Error(
+        elle::sprintf("File for network could not be deleted: %s", path));
+    return true;
+  }
+  return false;
+};
+
+static
 std::unique_ptr<infinit::storage::StorageConfig>
 storage_configuration(boost::program_options::variables_map const& args)
 {
@@ -489,6 +507,25 @@ COMMAND(list)
   }
 }
 
+COMMAND(unlink_)
+{
+  auto self = self_user(ifnt, args);
+  auto network_name = mandatory(args, "name", "network name");
+  auto network = ifnt.network_get(network_name, self);
+  auto path = ifnt._network_path(network_name, self);
+  // This should never happen because network_get ensure the model is present.
+  ELLE_ASSERT(network.model);
+  if (!remove(path, network.name, "link for network"))
+  {
+    // Linked network stored as a network descriptor (pre 0.6.1).
+    auto descriptor = ifnt.network_descriptor_get(network_name, self);
+    auto descriptor_path = ifnt._network_descriptor_path(network_name);
+    remove(descriptor_path, network.name, "link for network");
+    // Restore descriptor from network.
+    ifnt.network_save(descriptor);
+  }
+}
+
 COMMAND(push)
 {
   auto network_name = mandatory(args, "name", "network name");
@@ -510,16 +547,37 @@ COMMAND(pull)
   beyond_delete("network", network_name, owner, false, flag(args, "purge"));
 }
 
+
 COMMAND(delete_)
 {
   auto name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
   auto network_name = ifnt.qualified_name(name, owner);
   auto network = ifnt.network_get(network_name, owner, false);
-  auto path = ifnt._network_path(network_name, owner);
-  auto descriptor_path = ifnt._network_descriptor_path(network_name);
   bool purge = flag(args, "purge");
+  bool unlink = flag(args, "unlink");
   bool pull = flag(args, "pull");
+  // Users having the network linked.
+  auto users = ifnt.users_get();
+  users.erase(
+    std::remove_if(
+      users.begin(), users.end(),
+      [&] (infinit::User const& u)
+      {
+        return !boost::filesystem::exists(ifnt._network_path(network_name, u));
+      }),
+    users.end());
+  if (users.size() > 0 || std::find(users.begin(), users.end(), owner) != users.end())
+  {
+    std::vector<std::string> user_names;
+    for (auto const& user: users)
+      user_names.emplace_back(user.name);
+    if (!unlink)
+      throw elle::Error(
+        elle::sprintf("Network is still linked with this device by %s. "
+                      "Please unlink it first or user --delete --unlink",
+                      user_names));
+  }
   if (purge)
   {
     auto volumes = ifnt.volumes_for_network(network_name);
@@ -554,24 +612,18 @@ COMMAND(delete_)
   }
   if (pull)
     beyond_delete("network", network_name, owner, true, purge);
-  boost::filesystem::remove_all(network.cache_dir());
-  auto del = [&] (boost::filesystem::path const& path,
-                  std::string const& message)
+  bool deleted = false;
+  if (std::find(users.begin(), users.end(), owner) == users.end())
+    users.emplace_back(owner);
+  for (auto const& user: users)
   {
-    if (boost::filesystem::exists(path))
-    {
-      if (boost::filesystem::remove(path))
-        report_action("deleted", message, network_name, std::string("locally"));
-      else
-        throw elle::Error(
-          elle::sprintf("File for network could not be deleted: %s", path));
-      return true;
-    }
-    return false;
-  };
-  bool network_deleted = del(path, "linked network");
-  bool network_descriptor_deleted = del(descriptor_path, "network");
-  if (!network_deleted && !network_descriptor_deleted)
+    auto path = ifnt._network_path(network_name, user);
+    auto descriptor_path = ifnt._network_descriptor_path(network_name);
+    boost::filesystem::remove_all(network.cache_dir());
+    deleted |= remove(path, network.name, "linked network");
+    deleted |= remove(descriptor_path, network.name, "network");
+  }
+  if (!deleted)
   {
     throw elle::Error("Nothing has been deleted");
   }
@@ -839,6 +891,20 @@ main(int argc, char** argv)
       },
     },
     {
+      "unlink",
+      "Unlink this device from a network",
+      &unlink_,
+      "--name NETWORK",
+      {
+        { "name,n", value<std::string>(), "network to unlink from" },
+      },
+      {},
+      // Hidden options.
+      {
+        option_output("network"),
+      },
+    },
+    {
       "list",
       "List networks",
       &list,
@@ -863,6 +929,7 @@ main(int argc, char** argv)
         { "pull", bool_switch(),
           elle::sprintf("pull the network if it is on %s", beyond(true)) },
         { "purge", bool_switch(), "remove objects that depend on the network" },
+        { "unlink", bool_switch(), "automatically unlink network if linked" },
       },
     },
     {

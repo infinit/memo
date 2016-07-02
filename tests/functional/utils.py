@@ -369,7 +369,7 @@ class User():
     self.storage = '%s/%s-storage' % (name, name)
     self.network = '%s/%s-network' % (name, name)
     self.volume = '%s/%s-volume' % (name, name)
-    self.mountpoint = '%s/mountpoint' % infinit.dir
+    self.mountpoint = '%s/%s-mountpoint' % (infinit.dir, name)
     self.drive = '%s/%s-drive' % (name, name)
     os.mkdir(self.mountpoint)
 
