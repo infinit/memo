@@ -26,7 +26,8 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Remote::Remote(Doughnut& dht, Address id,
+      Remote::Remote(Doughnut& dht,
+                     Address id,
                      boost::asio::ip::tcp::endpoint endpoint)
         : Super(dht, std::move(id))
         , _socket(nullptr)
@@ -78,7 +79,8 @@ namespace infinit
           });
       }
 
-      Remote::Remote(Doughnut& doughnut, Address id,
+      Remote::Remote(Doughnut& doughnut,
+                     Address id,
                      std::vector<boost::asio::ip::udp::endpoint> endpoints,
                      std::string const& peer_id,
                      reactor::network::UTPServer& server)

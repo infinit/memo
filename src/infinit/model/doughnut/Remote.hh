@@ -39,12 +39,15 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        Remote(Doughnut& doughnut, Address id,
+        Remote(Doughnut& doughnut,
+               Address id,
                boost::asio::ip::tcp::endpoint endpoint);
-        Remote(Doughnut& doughnut, Address id,
+        Remote(Doughnut& doughnut,
+               Address id,
                boost::asio::ip::udp::endpoint endpoint,
                reactor::network::UTPServer& server);
-        Remote(Doughnut& doughnut, Address id,
+        Remote(Doughnut& doughnut,
+               Address id,
                std::vector<boost::asio::ip::udp::endpoint> endpoints,
                std::string const& peer_id,
                reactor::network::UTPServer& server);
