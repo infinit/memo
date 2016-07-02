@@ -1257,7 +1257,7 @@ has_permission(boost::filesystem::path const& path,
 
 static
 bool
-fuse(bool verbose)
+fuse(bool /*verbose*/)
 {
 #if 0
   try
