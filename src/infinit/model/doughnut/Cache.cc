@@ -245,7 +245,7 @@ namespace infinit
             {
               static elle::Bench bench("bench.cache.pending_wait", 10000_sec);
               elle::Bench::BenchScope bs(bench);
-              ELLE_TRACE("%s: fetch on %s pending", this, address);
+              ELLE_TRACE("%s: fetch on %f pending", this, address);
               auto b = it->second;
               b->wait();
               return _fetch(address, local_version);
