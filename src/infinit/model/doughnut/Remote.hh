@@ -42,8 +42,6 @@ namespace infinit
         Remote(Doughnut& doughnut, Address id,
                boost::asio::ip::tcp::endpoint endpoint);
         Remote(Doughnut& doughnut, Address id,
-               std::string const& host, int port);
-        Remote(Doughnut& doughnut, Address id,
                boost::asio::ip::udp::endpoint endpoint,
                reactor::network::UTPServer& server);
         Remote(Doughnut& doughnut, Address id,

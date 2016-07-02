@@ -9,6 +9,8 @@
 
 #include <das/serializer.hh>
 
+#include <reactor/network/resolve.hh>
+
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh> // FIXME
 
@@ -107,7 +109,8 @@ namespace infinit
       return Overlay::WeakMember(
         new infinit::model::doughnut::consensus::Paxos::RemotePeer(
           elle::unconst(*this->doughnut()),
-          peer.id, peer.endpoint->host, peer.endpoint->port));
+          peer.id, reactor::network::resolve_tcp(
+            peer.endpoint->host, std::to_string(peer.endpoint->port))));
     }
 
     StonehengeConfiguration::StonehengeConfiguration()

@@ -27,27 +27,6 @@ namespace infinit
       `-------------*/
 
       Remote::Remote(Doughnut& dht, Address id,
-                     std::string const& host, int port)
-        : Super(dht, std::move(id))
-        , _socket()
-        , _serializer()
-        , _channels()
-        , _connection_thread()
-        , _fast_fail(false)
-        , _connected(false)
-        , _reconnection_id(0)
-      {
-        this->_connect(
-          elle::sprintf("%s:%s", host, port),
-          [host, port, this] () -> std::iostream&
-          {
-            this->_socket.reset(
-              new reactor::network::TCPSocket(host, port));
-            return *this->_socket;
-          });
-      }
-
-      Remote::Remote(Doughnut& dht, Address id,
                      boost::asio::ip::tcp::endpoint endpoint)
         : Super(dht, std::move(id))
         , _socket(nullptr)
