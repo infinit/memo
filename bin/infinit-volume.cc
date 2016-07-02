@@ -448,6 +448,33 @@ COMMAND(run)
                          , fuse_options
 #endif
                          );
+    // Experimental: poll root on mount to trigger caching.
+#   if 0
+    boost::optional<std::thread> root_poller;
+    if (mo.mountpoint && mo.cache && mo.cache.get())
+      root_poller.emplace(
+        [root = mo.mountpoint.get()]
+        {
+          try
+          {
+            boost::filesystem::status(root);
+            for (auto it = boost::filesystem::directory_iterator(root);
+                 it != boost::filesystem::directory_iterator();
+                 ++it)
+              ;
+          }
+          catch (boost::filesystem::filesystem_error const& e)
+          {
+            ELLE_WARN("error polling root: %s", e);
+          }
+        });
+    elle::SafeFinally root_poller_join(
+      [&]
+      {
+        if (root_poller)
+          root_poller->join();
+      });
+#   endif
     if (volume.default_permissions && !volume.default_permissions->empty())
     {
       auto ops =
