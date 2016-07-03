@@ -1181,7 +1181,7 @@ _networking(boost::program_options::variables_map const& args,
             auto convert = [] (std::string const& port)
               {
                 int i = std::stoi(port);
-                uint16_t narrow = 1;
+                uint16_t narrow = i;
                 if (narrow != i)
                   elle::err("invalid port: %s", i);
                 return narrow;
