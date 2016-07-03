@@ -49,7 +49,6 @@ namespace infinit
         Remote(Doughnut& doughnut,
                Address id,
                std::vector<boost::asio::ip::udp::endpoint> endpoints,
-               std::string const& peer_id,
                reactor::network::UTPServer& server);
         virtual
         ~Remote();
@@ -72,7 +71,6 @@ namespace infinit
         reconnect(elle::DurationOpt timeout = elle::DurationOpt()) override;
         void
         initiate_connect(std::vector<boost::asio::ip::udp::endpoint> endpoints,
-                         std::string const& peer_id,
                          reactor::network::UTPServer& server);
         void
         initiate_connect(boost::asio::ip::tcp::endpoint endpoint);

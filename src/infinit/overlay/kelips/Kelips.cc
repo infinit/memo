@@ -994,14 +994,10 @@ namespace infinit
           try
           {
             ELLE_DEBUG("utp connect to %s", pl);
-            std::string uid;
-            if (pl.first != Address::null)
-              uid = elle::sprintf("%x", pl.first);
             infinit::model::doughnut::Remote peer(
               elle::unconst(*this->doughnut()),
               pl.first,
               endpoints,
-              uid,
               elle::unconst(this)->_remotes_server);
             peer.connect(5_sec);
             ELLE_DEBUG("utp connected");
@@ -3325,20 +3321,15 @@ namespace infinit
         {
           try
           {
-            std::string uid;
-            if (hosts.first != Address::null)
-              uid = elle::sprintf("%x", hosts.first);
             auto res =
               std::make_shared<model::doughnut::consensus::Paxos::RemotePeer>(
                 elle::unconst(*this->doughnut()),
                 hosts.first,
                 endpoints,
-                uid,
                 elle::unconst(this)->_remotes_server);
             res->retry_connect(std::function<bool(model::doughnut::Remote&)>(
                                  std::bind(&Node::remote_retry_connect,
-                                           this, std::placeholders::_1,
-                                           uid)));
+                                           this, std::placeholders::_1)));
             auto weak_res = Overlay::WeakMember::own(std::move(res));
             if (!disable_cache)
               this->_peer_cache[hosts.first].push_back(weak_res);
@@ -3372,14 +3363,11 @@ namespace infinit
       }
 
       bool
-      Node::remote_retry_connect(model::doughnut::Remote& remote, std::string const& id)
+      Node::remote_retry_connect(model::doughnut::Remote& remote)
       {
-        if (id.empty())
-          return false;
         // Perform a lookup for the node
         boost::optional<PeerLocation> result;
-        auto address = Address::from_string(id.substr(2));
-        kelipsGet(address, 1, false, -1, true, false, [&](PeerLocation p)
+        kelipsGet(remote.id(), 1, false, -1, true, false, [&](PeerLocation p)
           {
             result = p;
           });
@@ -3388,7 +3376,7 @@ namespace infinit
         std::vector<GossipEndpoint> ge;
         for (auto const& e: result->second)
           ge.push_back(e2e(e));
-        remote.initiate_connect(ge, id, _remotes_server);
+        remote.initiate_connect(ge, this->_remotes_server);
         return true;
       }
 

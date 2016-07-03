@@ -82,7 +82,6 @@ namespace infinit
       Remote::Remote(Doughnut& doughnut,
                      Address id,
                      std::vector<boost::asio::ip::udp::endpoint> endpoints,
-                     std::string const& peer_id,
                      reactor::network::UTPServer& server)
         : Super(doughnut, std::move(id))
         , _utp_socket(nullptr)
@@ -93,21 +92,22 @@ namespace infinit
         , _connected(false)
         , _reconnection_id(0)
       {
-        this->initiate_connect(endpoints, peer_id, server);
+        this->initiate_connect(endpoints, server);
       }
 
       void
-      Remote::initiate_connect(std::vector<boost::asio::ip::udp::endpoint> endpoints,
-                               std::string const& peer_id,
-                               reactor::network::UTPServer& server)
+      Remote::initiate_connect(
+        std::vector<boost::asio::ip::udp::endpoint> endpoints,
+        reactor::network::UTPServer& server)
       {
-        ELLE_DEBUG("%s: initiate_connect UTP://%s at %s", this, peer_id, endpoints);
+        ELLE_DEBUG("%s: initiate_connect utp://%s", this, endpoints);
         this->_connect(
           elle::sprintf("%s", endpoints),
-          [this, endpoints, peer_id, &server] () -> std::iostream&
+          [this, endpoints, &server] () -> std::iostream&
           {
             this->_utp_socket.reset(new reactor::network::UTPSocket(server));
-            this->_utp_socket->connect(peer_id, endpoints);
+            this->_utp_socket->connect(elle::sprintf("%x", this->id()),
+                                       endpoints);
             return *this->_utp_socket;
           });
       }

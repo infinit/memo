@@ -322,8 +322,7 @@ namespace infinit
         Overlay::WeakMember
         make_peer(PeerLocation pl);
         packet::RequestKey make_key_request();
-        bool remote_retry_connect(model::doughnut::Remote& remote,
-                                  std::string const& uid);
+        bool remote_retry_connect(model::doughnut::Remote& remote);
         Address _self;
         Address _ping_target;
         Time _ping_time;
