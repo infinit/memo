@@ -1178,9 +1178,17 @@ _networking(boost::program_options::variables_map const& args,
           auto& res = results.upnp.redirections[type];
           try
           {
+            auto convert = [] (std::string const& port)
+              {
+                int i = std::stoi(port);
+                uint16_t narrow = 1;
+                if (narrow != i)
+                  elle::err("invalid port: %s", i);
+                return narrow;
+              };
             auto pm = upnp->setup_redirect(protocol, port);
-            res.internal = Address{pm.internal_host, std::stoi(pm.internal_port)};
-            res.external = Address{pm.external_host, std::stoi(pm.external_port)};
+            res.internal = Address{pm.internal_host, convert(pm.internal_port)};
+            res.external = Address{pm.external_host, convert(pm.external_port)};
           }
           catch (reactor::Terminate const&)
           {
