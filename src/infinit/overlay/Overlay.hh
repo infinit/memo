@@ -88,12 +88,20 @@ namespace infinit
       /// Lookup a single node
       WeakMember
       lookup(model::Address address, Operation op) const;
-      /// Lookup a node from its uid
+      /** Lookup a node from its id.
+       *
+       * @arg id Id of the node to lookup.
+       * @raise elle::Error if the node is not found.
+       */
       WeakMember
-      lookup_node(model::Address address);
-      /// Lookup nodes from uids
+      lookup_node(model::Address id);
+      /** Lookup nodes from their ids.
+       *
+       * @arg ids ids of the nodes to lookup.
+       * @raise elle::Error if the node is not found.
+       */
       reactor::Generator<WeakMember>
-      lookup_nodes(std::unordered_set<model::Address> address);
+      lookup_nodes(std::unordered_set<model::Address> ids);
     protected:
       virtual
       reactor::Generator<std::pair<model::Address, WeakMember>>
