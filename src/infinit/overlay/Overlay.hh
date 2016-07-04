@@ -11,6 +11,7 @@
 # include <reactor/Generator.hh>
 
 # include <infinit/model/Address.hh>
+# include <infinit/model/Endpoints.hh>
 # include <infinit/model/doughnut/fwd.hh>
 # include <infinit/serialization.hh>
 
@@ -18,8 +19,9 @@ namespace infinit
 {
   namespace overlay
   {
-    typedef std::unordered_map<model::Address, std::vector<std::string>>
-      NodeEndpoints;
+    using model::Endpoints;
+    using model::NodeLocation;
+    using model::NodeLocations;
 
     enum Operation
     {
@@ -58,11 +60,11 @@ namespace infinit
     `------*/
     public:
       void
-      discover(NodeEndpoints const& peers);
+      discover(NodeLocations const& peers);
     protected:
       virtual
       void
-      _discover(NodeEndpoints const& peers) = 0;
+      _discover(NodeLocations const& peers) = 0;
 
     /*------.
     | Hooks |
@@ -140,7 +142,7 @@ namespace infinit
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
       make(model::Address id,
-           NodeEndpoints const&,
+           std::vector<Endpoints> const&,
            std::shared_ptr<model::doughnut::Local> local,
            model::doughnut::Doughnut* doughnut) = 0;
     };

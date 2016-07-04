@@ -45,14 +45,6 @@ COMMAND(create)
   auto mountpoint = optional(args, "mountpoint");
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
   auto default_permissions = optional(args, "default-permissions");
-  std::vector<std::string> hosts;
-  infinit::overlay::NodeEndpoints eps;
-  if (args.count("peer"))
-  {
-    hosts = args["peer"].as<std::vector<std::string>>();
-    for (auto const& h: hosts)
-      eps[elle::UUID()].push_back(h);
-  }
   if (default_permissions && *default_permissions!= "r"
       && *default_permissions!= "rw")
     throw elle::Error("default-permissions must be 'r' or 'rw'");
@@ -303,22 +295,16 @@ COMMAND(run)
 {
   auto self = self_user(ifnt, args);
   auto name = volume_name(args, self);
-  infinit::overlay::NodeEndpoints eps;
+  std::vector<infinit::model::Endpoints> eps;
   if (args.count("peer"))
   {
     auto peers = args["peer"].as<std::vector<std::string>>();
-    for (auto const& obj: peers)
+    for (auto const& peer: peers)
     {
-      auto file_eps = endpoints_from_file(obj);
-      if (file_eps.size())
-      {
-        for (auto const& ep: file_eps)
-          eps[infinit::model::Address::null].push_back(ep);
-      }
+      if (boost::filesystem::exists(peer))
+        eps.emplace_back(endpoints_from_file(peer));
       else
-      {
-        eps[infinit::model::Address::null].push_back(obj);
-      }
+        eps.emplace_back(infinit::model::Endpoints({peer}));
     }
   }
   std::vector<std::string> fuse_options;
@@ -425,7 +411,7 @@ COMMAND(run)
   {
     if (fetch)
     {
-      infinit::overlay::NodeEndpoints eps;
+      infinit::overlay::NodeLocations eps;
       beyond_fetch_endpoints(network, eps);
       model->overlay()->discover(eps);
     }

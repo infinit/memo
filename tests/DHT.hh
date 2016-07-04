@@ -46,7 +46,7 @@ public:
   }
 
   void
-  _discover(infinit::overlay::NodeEndpoints const& peers) override
+  _discover(infinit::model::NodeLocations const& peers) override
   {
     ELLE_ABORT("not implemented");
   }

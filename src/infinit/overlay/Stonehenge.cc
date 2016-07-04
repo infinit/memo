@@ -55,7 +55,7 @@ namespace infinit
     `------*/
 
     void
-    Stonehenge::_discover(NodeEndpoints const& peers)
+    Stonehenge::_discover(NodeLocations const& peers)
     {
       elle::err("Stonehenge cannot discover new nodes");
     }
@@ -133,7 +133,7 @@ namespace infinit
 
     std::unique_ptr<infinit::overlay::Overlay>
     StonehengeConfiguration::make(model::Address id,
-                                  NodeEndpoints const&,
+                                  std::vector<Endpoints> const&,
                                   std::shared_ptr<model::doughnut::Local> local,
                                   model::doughnut::Doughnut* dht)
     {

@@ -438,7 +438,7 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::model::Model>
-      Configuration::make(overlay::NodeEndpoints const& hosts,
+      Configuration::make(std::vector<Endpoints> const& hosts,
                           bool client,
                           boost::filesystem::path const& dir)
       {
@@ -447,7 +447,7 @@ namespace infinit
 
       std::unique_ptr<Doughnut>
       Configuration::make(
-        overlay::NodeEndpoints const& hosts,
+        std::vector<Endpoints> const& hosts,
         bool client,
         boost::filesystem::path const& p,
         bool async,

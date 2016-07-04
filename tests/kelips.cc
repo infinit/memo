@@ -30,7 +30,7 @@ namespace bfs = boost::filesystem;
 namespace imd = infinit::model::doughnut;
 namespace iok = infinit::overlay::kelips;
 
-infinit::overlay::NodeEndpoints endpoints;
+std::vector<infinit::model::Endpoints> endpoints;
 
 static std::vector<std::shared_ptr<imd::Doughnut>>
 run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
@@ -87,11 +87,11 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
     res.push_back(dn);
     //if (res.size() == 1)
     {
-      std::string ep = "127.0.0.1:"
-        + std::to_string(dn->local()->server_endpoint().port());
-      std::vector<std::string> eps;
-      eps.push_back(ep);
-      endpoints.emplace(dn->id(), eps);
+      infinit::model::Endpoints eps;
+      eps.emplace_back(
+        boost::asio::ip::address::from_string("127.0.0.1"),
+        dn->local()->server_endpoint().port());
+      endpoints.emplace_back(eps);
     }
   }
   return res;

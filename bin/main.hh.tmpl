@@ -970,7 +970,7 @@ namespace infinit
     }
 
     std::unique_ptr<model::doughnut::Doughnut>
-    run(overlay::NodeEndpoints const& hosts = overlay::NodeEndpoints(),
+    run(std::vector<infinit::model::Endpoints> const& hosts = {},
         bool client = false,
         bool cache = false,
         boost::optional<int> cache_size = {},
@@ -3136,8 +3136,7 @@ private:
 inline
 void
 beyond_fetch_endpoints(infinit::Network const& network,
-                       std::unordered_map<infinit::model::Address,
-                                          std::vector<std::string>>& hosts)
+                       infinit::model::NodeLocations& hosts)
 {
   reactor::http::Request r(
     elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name));
@@ -3159,10 +3158,11 @@ beyond_fetch_endpoints(infinit::Network const& network,
           infinit::model::Address::from_string(node.first.substr(2));
         elle::serialization::json::SerializerIn s(node.second, false);
         auto endpoints = s.deserialize<Endpoints>();
-        std::vector<std::string> addresses;
+        infinit::model::Endpoints eps;
         for (auto const& addr: endpoints.addresses)
-          addresses.push_back(elle::sprintf("%s:%s", addr, endpoints.port));
-        hosts[uuid] = addresses;
+          eps.emplace_back(boost::asio::ip::address::from_string(addr),
+                           endpoints.port);
+        hosts.emplace_back(uuid, std::move(eps));
       }
     }
     catch (std::exception const& e)

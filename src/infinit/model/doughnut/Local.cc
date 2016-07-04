@@ -55,18 +55,22 @@ namespace infinit
             this->_server_thread = elle::make_unique<reactor::Thread>(
               elle::sprintf("%s server", *this),
               [this] { this->_serve_tcp(); });
+            ELLE_LOG("%s: listen on tcp://%s",
+                     this, this->_server->local_endpoint());
           }
           if (p == Protocol::utp || p == Protocol::all)
           {
-            this->_utp_server = elle::make_unique<reactor::network::UTPServer>();
+            this->_utp_server =
+              elle::make_unique<reactor::network::UTPServer>();
             if (this->_server)
               port = this->_server->port();
             this->_utp_server->listen(port, v6);
             this->_utp_server_thread = elle::make_unique<reactor::Thread>(
               elle::sprintf("%s utp server", *this),
               [this] { this->_serve_utp(); });
+            ELLE_LOG("%s: listen on utp://%s",
+                     this, this->_utp_server->local_endpoint());
           }
-          ELLE_TRACE("%s: listen on %s", *this, this->server_endpoint());
         }
         catch (elle::Error const& e)
         {

@@ -24,7 +24,7 @@ namespace infinit
     protected:
       virtual
       void
-      _discover(NodeEndpoints const& peers) override;
+      _discover(NodeLocations const& peers) override;
 
     /*-------.
     | Lookup |
@@ -48,7 +48,7 @@ namespace infinit
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
       make(model::Address id,
-           NodeEndpoints const& hosts,
+           std::vector<Endpoints> const& hosts,
            std::shared_ptr<model::doughnut::Local> local,
            model::doughnut::Doughnut* doughnut) override;
     };

@@ -97,7 +97,7 @@ namespace infinit
 
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(overlay::NodeEndpoints const&,
+        make(std::vector<Endpoints> const&,
              bool,
              boost::filesystem::path const&) override
         {

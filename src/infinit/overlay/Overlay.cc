@@ -40,9 +40,9 @@ namespace infinit
     `------*/
 
     void
-    Overlay::discover(NodeEndpoints const& peers)
+    Overlay::discover(NodeLocations const& peers)
     {
-      ELLE_TRACE("%s: discover new peers: %s", this, peers);
+      ELLE_TRACE("%s: discover new peers: %f", this, peers);
       this->_discover(peers);
     }
 

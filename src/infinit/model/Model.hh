@@ -9,6 +9,7 @@
 # include <elle/Version.hh>
 
 # include <infinit/model/Address.hh>
+# include <infinit/model/Endpoints.hh>
 # include <infinit/model/User.hh>
 # include <infinit/model/blocks/fwd.hh>
 # include <infinit/serialization.hh>
@@ -16,12 +17,6 @@
 
 namespace infinit
 {
-  namespace overlay
-  {
-    typedef std::unordered_map<model::Address, std::vector<std::string>>
-      NodeEndpoints;
-  }
-
   namespace model
   {
     enum StoreMode
@@ -142,7 +137,7 @@ namespace infinit
       serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::model::Model>
-      make(overlay::NodeEndpoints const& hosts,
+      make(std::vector<Endpoints> const& hosts,
            bool client,
            boost::filesystem::path const& dir) = 0;
       typedef infinit::serialization_tag serialization_tag;

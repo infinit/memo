@@ -574,22 +574,16 @@ COMMAND(run)
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
-  infinit::overlay::NodeEndpoints eps;
+  std::vector<infinit::model::Endpoints> eps;
   if (args.count("peer"))
   {
     auto peers = args["peer"].as<std::vector<std::string>>();
-    for (auto const& obj: peers)
+    for (auto const& peer: peers)
     {
-      auto file_eps = endpoints_from_file(obj);
-      if (file_eps.size())
-      {
-        for (auto const& ep: file_eps)
-          eps[infinit::model::Address::null].push_back(ep);
-      }
+      if (boost::filesystem::exists(peer))
+        eps.emplace_back(endpoints_from_file(peer));
       else
-      {
-        eps[infinit::model::Address::null].push_back(obj);
-      }
+        eps.emplace_back(infinit::model::Endpoints({peer}));
     }
   }
   bool cache = flag(args, option_cache);
@@ -643,7 +637,7 @@ COMMAND(run)
     {
       if (fetch)
       {
-        infinit::overlay::NodeEndpoints eps;
+        infinit::model::NodeLocations eps;
         beyond_fetch_endpoints(network, eps);
         dht->overlay()->discover(eps);
       }

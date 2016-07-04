@@ -376,10 +376,6 @@ check(variables_map const& args)
 
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
-  std::unordered_map<infinit::model::Address, std::vector<std::string>> hosts;
-  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch"});
-  if (fetch)
-    beyond_fetch_endpoints(network, hosts);
   bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
   auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
@@ -387,8 +383,14 @@ check(variables_map const& args)
     optional<int>(args, option_cache_ram_invalidation);
   report_action("running", "network", network.name);
   auto model = network.run(
-    hosts, true, cache,
+    {}, true, cache,
     cache_ram_size, cache_ram_ttl, cache_ram_invalidation, flag(args, "async"));
+  if (aliased_flag(args, {"fetch-endpoints", "fetch"}))
+  {
+    infinit::model::NodeLocations hosts;
+    beyond_fetch_endpoints(network, hosts);
+    model->overlay()->discover(hosts);
+  }
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
     args["volume"].as<std::string>(),
     std::shared_ptr<infinit::model::doughnut::Doughnut>(model.release()));

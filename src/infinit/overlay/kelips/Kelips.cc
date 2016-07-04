@@ -278,12 +278,12 @@ namespace infinit
       }
 
       static
-      std::vector<RpcEndpoint>
+      Endpoints
       endpoints_extract_convert(std::vector<TimedEndpoint> const& endpoints)
       {
-        std::vector<RpcEndpoint> res;
+        Endpoints res;
         for (auto const& ep: endpoints)
-          res.push_back(e2e(ep.first));
+          res.emplace_back(ep.first.address(), ep.first.port());
         return res;
       }
 
@@ -923,16 +923,15 @@ namespace infinit
               this->_local_endpoints.push_back(TimedEndpoint(GossipEndpoint(
                 boost::asio::ip::address::from_string(itf.second.ipv4_address),
                 _port), now()));
-              ELLE_LOG("%s: listening on %s:%s",
-                       *this, itf.second.ipv4_address, _port);
+              ELLE_DEBUG("add local endpoint %s:%s",
+                         itf.second.ipv4_address, this->_port);
             }
             if (v6) for (auto const& addr: itf.second.ipv6_address)
             {
               this->_local_endpoints.push_back(TimedEndpoint(GossipEndpoint(
                 boost::asio::ip::address::from_string(addr),
                 _port), now()));
-              ELLE_LOG("%s: listening on %s:%s",
-                       *this, addr, _port);
+              ELLE_DEBUG("add local endpoint %s:%s", addr, this->_port);
             }
           }
           if (!this->_rdv_host.empty())
@@ -982,56 +981,57 @@ namespace infinit
         ELLE_DEBUG("%s: destroyed", *this);
       }
 
-      SerState Node::get_serstate(PeerLocation pl)
+      SerState Node::get_serstate(NodeLocation const& location)
       {
-        std::vector<GossipEndpoint> endpoints;
-        for (auto const& ep: pl.second)
-          endpoints.push_back(GossipEndpoint(ep.address(), ep.port()));
+        ELLE_DEBUG_SCOPE("fetch state of %f", location);
         using Protocol = infinit::model::doughnut::Protocol;
         auto protocol = this->_config.rpc_protocol;
+        // FIXME: don't duplicate remote creation
         if (protocol == Protocol::utp || protocol == Protocol::all)
         {
           try
           {
-            ELLE_DEBUG("utp connect to %s", pl);
+            ELLE_DEBUG_SCOPE("establish UTP connection");
             infinit::model::doughnut::Remote peer(
               elle::unconst(*this->doughnut()),
-              pl.first,
-              endpoints,
+              location.id(),
+              location.endpoints().udp(),
               elle::unconst(this)->_remotes_server);
             peer.connect(5_sec);
-            ELLE_DEBUG("utp connected");
             auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
-            return rpc();
+            ELLE_DEBUG("fetch state")
+              return rpc();
           }
           catch (elle::Error const& e)
           {
-            ELLE_WARN("%s: UTP connection failed with %s: %s", *this, endpoints, e);
+            ELLE_WARN("%s: UTP connection failed with %s: %s",
+                      this, location.endpoints().udp(), e);
           }
         }
         if (protocol == Protocol::tcp || protocol == Protocol::all)
         {
-          if (!pl.second.empty())
+          if (!location.endpoints().empty())
           {
-            try
-            {
-              infinit::model::doughnut::Remote peer(
-                elle::unconst(*this->doughnut()),
-                pl.first,
-                pl.second.front());
-              peer.connect(5_sec);
-              auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
-              return rpc();
-            }
-            catch (elle::Error const& e)
-            {
-              ELLE_WARN("%s: TCP connection failed with %s: %s", *this,
-                endpoints.front(), e);
-            }
+            for (auto const& ep: location.endpoints())
+              try
+              {
+                ELLE_DEBUG_SCOPE("establish TCP connection to %s", ep);
+                infinit::model::doughnut::Remote peer(
+                  elle::unconst(*this->doughnut()),
+                  location.id(),
+                  ep.tcp());
+                peer.connect(5_sec);
+                auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
+                ELLE_DEBUG("fetch state")
+                  return rpc();
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_WARN("%s: TCP connection failed with %s: %s", this, ep, e);
+              }
           }
         }
-        throw elle::Error(
-          elle::sprintf("%s: Failed to contact peer %s", *this, endpoints.front()));
+        elle::err("%s: failed to contact peer %s", this, location);
       }
 
       void
@@ -1050,93 +1050,58 @@ namespace infinit
       void
       Node::bootstrap(bool use_bootstrap_nodes,
                       bool use_contacts,
-                      std::vector<PeerLocation> const& peers)
+                      NodeLocations const& peers)
       {
-        ELLE_TRACE("starting bootstrap procedure");
-        std::set<Address> scanned;
-        std::set<PeerLocation> candidates;
+        ELLE_TRACE_SCOPE("%s: bootstrap", this);
+        std::unordered_set<Address> scanned;
+        NodeLocations candidates;
         if (use_bootstrap_nodes)
-          for (auto const& b: _config.bootstrap_nodes)
-            candidates.insert(b);
+          for (auto const& eps: _config.bootstrap_nodes)
+            candidates.emplace_back(Address::null, eps);
         if (use_contacts)
           for (auto const& c: this->_state.contacts[_group])
-            candidates.insert(PeerLocation(c.second.address,
-              endpoints_extract_convert(c.second.endpoints)));
-        for (auto peer: peers)
-          candidates.insert(peer);
+            candidates.emplace_back(
+              c.second.address,
+              endpoints_extract_convert(c.second.endpoints));
+        candidates.insert(candidates.end(), peers.begin(), peers.end());
         while (!candidates.empty())
         {
-          PeerLocation pl = *candidates.begin();
-          candidates.erase(pl);
-          ELLE_DEBUG("fetching %s, %s candidates remaining", pl, candidates.size());
+          NodeLocation location = candidates.back();
+          candidates.pop_back();
+          bool const unknown = location.id() == model::Address::null;
+          if (!unknown && contains(scanned, location.id()))
+            continue;
+          ELLE_DEBUG_SCOPE("bootstrap %f", location);
           try
           {
-            SerState res = get_serstate(pl);
+            SerState res = get_serstate(location);
             // ugly hack, embeded self address
-            scanned.insert(res.second.back().second);
+            auto peer_id = res.second.back().second;
             res.second.pop_back();
+            if (location.id() != model::Address::null &&
+                peer_id != location.id())
+              ELLE_WARN("endpoints for peer %f reach peer %f instead",
+                        location.id(), peer_id);
+            scanned.emplace(peer_id);
             process_update(res);
-            for (auto const&c: _state.contacts[_group])
-            {
-              if (!scanned.count(c.first))
-              {
-                candidates.insert(PeerLocation(c.first,
-                  endpoints_extract_convert(c.second.endpoints)));
-              }
-            }
+            for (auto const& c: this->_state.contacts[_group])
+              if (!contains(scanned, c.first))
+                candidates.emplace_back(
+                  c.first,
+                  endpoints_extract_convert(c.second.endpoints));
           }
           catch (elle::Error const& e)
           {
-            ELLE_WARN("%s", e);
+            ELLE_WARN("error bootstraping Kelips node: %s", e);
           }
         }
         ELLE_TRACE("scanned %s nodes", scanned.size());
         // FIXME: weed out over-duplicated blocks
       }
 
-      static
-      std::vector<PeerLocation>
-      convert_endpoints(Address id, NodeEndpoints const& hosts)
-      {
-        std::vector<PeerLocation> res;
-        for (auto const& host: hosts)
-        {
-          ELLE_TRACE("processing %x (%s endpoints)", host.first, host.second.size());
-          if (host.first == id)
-            continue;
-          PeerLocation pl;
-          if (host.first == model::Address())
-            pl.first = Address::null;
-          else
-            pl.first = Address(host.first);
-          for (auto const& ep: host.second)
-          {
-            try
-            {
-              auto p = ep.find_last_of(':');
-              if (p == ep.npos)
-                throw std::runtime_error("missing ':'");
-              auto addr = ep.substr(0, p);
-              auto port = ep.substr(p+1);
-              if (addr.size() >= 2 && addr[0] == '[' && addr[addr.size()-1] == ']')
-                addr = addr.substr(1, addr.size()-2); // quoted ipv6
-              auto endpoint = reactor::network::resolve_tcp(addr, port, false);
-              pl.second.push_back(endpoint);
-            }
-            catch(std::exception const& e)
-            {
-              ELLE_LOG("skipping malformed address: %s: %s", ep, e.what());
-            }
-          }
-          res.push_back(pl);
-        }
-        return res;
-      }
-
       void
-      Node::_discover(NodeEndpoints const& eps)
+      Node::_discover(NodeLocations const& peers)
       {
-        auto peers = convert_endpoints(this->node_id(), eps);
         if (!this->_observer)
           this->bootstrap(false, false, peers);
         for (auto peer: peers)
@@ -1144,94 +1109,91 @@ namespace infinit
       }
 
       void
-      Node::send_bootstrap(PeerLocation const& l)
+      Node::send_bootstrap(NodeLocation const& l)
       {
         packet::BootstrapRequest req;
         req.sender = this->_self;
-        if (l.first != Address::null)
+        if (l.id() != Address::null)
         {
-          std::vector<GossipEndpoint> eps;
-          for (auto const& ep: l.second)
-            eps.push_back(e2e(ep));
-          Contact& c = *get_or_make(l.first, false, eps);
-          ELLE_TRACE("%s: sending bootstrap to node %s", *this, l);
+          Contact& c = *get_or_make(l.id(), false, l.endpoints().udp());
+          ELLE_DEBUG_SCOPE("send bootstrap to %f", l);
           if (!_config.encrypt || _config.accept_plain)
             send(req, c);
           else
           {
             packet::RequestKey req(make_key_request());
             send(req, c);
-            _pending_bootstrap_address.push_back(l.first);
+            _pending_bootstrap_address.push_back(l.id());
           }
         }
         else
         {
-          ELLE_TRACE("Sending bootstrap to node %s", l.second);
+          ELLE_DEBUG_SCOPE("send bootstrap to %f", l.endpoints());
           if (!_config.encrypt || _config.accept_plain)
           {
-            for (auto const& ep: l.second)
-              send(req, e2e(ep), Address::null);
+            for (auto const& ep: l.endpoints())
+              send(req, ep.udp(), Address::null);
           }
           else
           {
             packet::RequestKey req(make_key_request());
-            for (auto const& ep: l.second)
-              send(req, e2e(ep), Address::null);
+            for (auto const& ep: l.endpoints())
+              send(req, ep.udp(), Address::null);
           }
-          for (auto const& ep: l.second)
-            _pending_bootstrap_endpoints.push_back(e2e(ep));
+          for (auto const& ep: l.endpoints())
+            this->_pending_bootstrap_endpoints.push_back(ep.udp());
         }
       }
 
       void
       Node::engage()
       {
-        ELLE_TRACE("bootstraping");
+        ELLE_TRACE_SCOPE("%s: start serving", this);
         if (!_observer)
-          bootstrap(true);
-        ELLE_TRACE("joining");
-        _gossip.socket()->close();
+          this->bootstrap(true);
+        this->_gossip.socket()->close();
         if (!this->local())
         {
           bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
             && doughnut()->version() >= elle::Version(0, 7, 0);
           if (v6)
-            _gossip.bind(GossipEndpoint(boost::asio::ip::address_v6::any(), _port));
+            this->_gossip.bind(
+              GossipEndpoint(boost::asio::ip::address_v6::any(), this->_port));
           else
-            _gossip.bind(GossipEndpoint(boost::asio::ip::address_v4::any(), _port));
-          if (!_rdv_host.empty())
-            _rdv_connect_gossip_thread.reset(
+            this->_gossip.bind(
+              GossipEndpoint(boost::asio::ip::address_v4::any(), this->_port));
+          if (!this->_rdv_host.empty())
+            this->_rdv_connect_gossip_thread.reset(
               new reactor::Thread(
                 "rdv gossip connect", [this]
                 {
                   std::string id = elle::sprintf("%x", _self);
-                  std::string host = _rdv_host;
+                  std::string host = this->_rdv_host;
                   int port = 7890;
                   auto p = host.find_last_of(':');
-                  if ( p!= host.npos)
+                  if (p != host.npos)
                   {
                     port = std::stoi(host.substr(p+1));
                     host = host.substr(0, p);
                   }
-                  retry_forever(10_sec, 120_sec, "RDV connect",
-                                [&] {
-                                  _gossip.rdv_connect(id, host, port, 120_sec);
-                });
+                  retry_forever(
+                    10_sec, 120_sec, "RDV connect",
+                    [&]
+                    {
+                      this->_gossip.rdv_connect(id, host, port, 120_sec);
+                    });
                 }));
           else
           {
             std::string id = elle::sprintf("%x", _self);
-            _gossip.set_local_id(id);
+            this->_gossip.set_local_id(id);
           }
-        }
-        ELLE_TRACE("%s: bound to udp, member of group %s", *this, _group);
-        if (!this->local())
-        {
-          _listener_thread.reset(new reactor::Thread(
+          ELLE_DEBUG("member of group %s", this->_group);
+          this->_listener_thread.reset(new reactor::Thread(
                                    "listener",
                                    std::bind(&Node::gossipListener, this)));
-          ELLE_LOG("%s: listening on port %s",
-            *this, _gossip.local_endpoint().port());
+          ELLE_LOG("%s: listening as observer on %s",
+                   this, this->_gossip.local_endpoint().port());
         }
         else
         {
@@ -1239,7 +1201,7 @@ namespace infinit
             "KELIPSGS", std::bind(&Node::onPacket, this, std::placeholders::_1,
               std::placeholders::_2));
           ELLE_LOG("%s: listening on %s",
-            *this, this->local()->utp_server()->local_endpoint());
+            this, this->local()->utp_server()->local_endpoint());
         }
         if (!_observer)
         {
@@ -1252,14 +1214,16 @@ namespace infinit
         }
         // Send a bootstrap request to bootstrap nodes and all
         // nodes in group
-        for (auto const& e: _config.bootstrap_nodes)
-          send_bootstrap(e);
-        for (auto& c: _state.contacts[_group])
-          send_bootstrap(PeerLocation(c.second.address,
-            endpoints_extract_convert(c.second.endpoints)));
-        if (_config.wait)
-          wait(_config.wait);
-        ELLE_TRACE("%s: node engaged", *this);
+        ELLE_DEBUG("contact bootstrap nodes")
+          for (auto const& e: _config.bootstrap_nodes)
+            this->send_bootstrap(NodeLocation(model::Address::null, e));
+        ELLE_DEBUG("contact group nodes")
+          for (auto& c: _state.contacts[_group])
+            this->send_bootstrap(
+              NodeLocation(c.second.address,
+                           endpoints_extract_convert(c.second.endpoints)));
+        if (this->_config.wait)
+          wait(this->_config.wait);
       }
 
       void Node::start()
@@ -1268,10 +1232,7 @@ namespace infinit
         _state.contacts.resize(_config.k);
         // If we are not an observer, we must wait for Local port information
         if (_observer)
-        {
-          ELLE_TRACE("%s: engage", *this);
           engage();
-        }
       }
 
       void
@@ -2224,11 +2185,12 @@ namespace infinit
       void
       Node::onBootstrapRequest(packet::BootstrapRequest* p)
       {
+        ELLE_TRACE("%s: received bootstrap request from %f", this, p->sender);
         auto ep = p->endpoint;
         int g = group_of(p->sender);
         if (g == _group && !p->observer)
         {
-          PeerLocation peer(p->sender, {e2e(ep)});
+          NodeLocation peer(p->sender, {e2e(ep)});
           reactor::Thread::unique_ptr t(
             new reactor::Thread("reverse bootstraper",
             [this, peer] {
@@ -2247,10 +2209,8 @@ namespace infinit
           auto ptr = t.get();
           _bootstraper_threads.insert(std::make_pair(ptr, std::move(t)));
         }
-
         packet::Gossip res;
         res.sender = _self;
-
         int group_count = _state.contacts[g].size();
         // Special case to avoid the randomized fetcher running for ever
         if (group_count <= _config.gossip.bootstrap_group_target + 5)
@@ -2342,7 +2302,7 @@ namespace infinit
 
       void
       Node::addLocalResults(packet::GetFileRequest* p,
-        reactor::yielder<PeerLocation>::type const* yield)
+                            reactor::yielder<PeerLocation>::type const* yield)
       {
         static elle::Bench nlocalhit("kelips.localhit", 10_sec);
         int nhit = 0;
@@ -2378,7 +2338,7 @@ namespace infinit
             }
             else
             {
-              endpoints = endpoints_extract_convert(_local_endpoints);
+              endpoints = endpoints_extract_convert(_local_endpoints).tcp();
             }
             found = true;
           }
@@ -2388,7 +2348,8 @@ namespace infinit
             if (contact_it != _state.contacts[fg].end())
             {
               ELLE_DEBUG("%s: found other", *this);
-              endpoints = endpoints_extract_convert(contact_it->second.endpoints);
+              endpoints =
+                endpoints_extract_convert(contact_it->second.endpoints).tcp();
               found = true;
             }
             else
@@ -2480,8 +2441,9 @@ namespace infinit
           auto& target = _state.contacts[fg];
           auto it = target.find(p->fileAddress);
           if (it != target.end())
-            p->result.push_back(PeerLocation(it->first,
-              endpoints_extract_convert(it->second.endpoints)));
+            p->result.emplace_back(
+              it->first,
+              endpoints_extract_convert(it->second.endpoints).tcp());
         }
         else if (fg == _group)
         {
@@ -2624,8 +2586,8 @@ namespace infinit
               // That makes us a home node for this address, but
               // wait until we get the RPC to store anything
               ELLE_DEBUG("%s: inserting in insert_result", *this);
-              p->insert_result.push_back(std::make_pair(_self,
-                endpoints_extract_convert(_local_endpoints)));
+              p->insert_result.emplace_back(
+                this->_self, endpoints_extract_convert(_local_endpoints).tcp());
               _promised_files.push_back(p->fileAddress);
             }
             else
@@ -2866,8 +2828,10 @@ namespace infinit
             auto it = target.find(file);
             if (it != target.end())
             {
-              yield(PeerLocation(it->first,
-                endpoints_extract_convert(it->second.endpoints)));
+              yield(
+                PeerLocation(
+                  it->first,
+                  endpoints_extract_convert(it->second.endpoints).tcp()));
               return;
             }
           }
@@ -3469,6 +3433,8 @@ namespace infinit
       void
       Node::process_update(SerState const& s)
       {
+        ELLE_DEBUG("register %s contacts and %s blocks",
+                   s.first.size(), s.second.size());
         for (auto const& c: s.first)
         {
           if (c.first == _self)
@@ -3963,11 +3929,11 @@ namespace infinit
 
       std::unique_ptr<infinit::overlay::Overlay>
       Configuration::make(Address id,
-                          NodeEndpoints const& hosts,
+                          std::vector<Endpoints> const& hosts,
                           std::shared_ptr<model::doughnut::Local> local,
                           model::doughnut::Doughnut* dht)
       {
-        this->bootstrap_nodes = convert_endpoints(id, hosts);
+        this->bootstrap_nodes = hosts;
         return elle::make_unique<Node>(
           *this, std::move(id), std::move(local), dht);
       }

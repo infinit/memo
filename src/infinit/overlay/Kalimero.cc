@@ -23,7 +23,7 @@ namespace infinit
     `------*/
 
     void
-    Kalimero::_discover(NodeEndpoints const& peers)
+    Kalimero::_discover(NodeLocations const&)
     {
       elle::err("Kalimero cannot discover new nodes");
     }
@@ -71,13 +71,12 @@ namespace infinit
 
     std::unique_ptr<infinit::overlay::Overlay>
     KalimeroConfiguration::make(model::Address id,
-                                NodeEndpoints const& hosts,
+                                std::vector<Endpoints> const& hosts,
                                 std::shared_ptr<model::doughnut::Local> local,
                                 model::doughnut::Doughnut* dht)
     {
       if (!hosts.empty())
-        throw elle::Error(
-          elle::sprintf("kalimero cannot access other nodes (%s)", hosts));
+        elle::err("kalimero cannot access other nodes: %s", hosts);
       return elle::make_unique<Kalimero>(dht, id, std::move(local));
     }
 

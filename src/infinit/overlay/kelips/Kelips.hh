@@ -150,7 +150,7 @@ namespace infinit
         int file_timeout_ms;
         int ping_interval_ms;
         int ping_timeout_ms;
-        std::vector<PeerLocation> bootstrap_nodes;
+        std::vector<Endpoints> bootstrap_nodes;
         /// wait for 'wait' nodes before starting
         int wait;
         bool encrypt;
@@ -159,8 +159,8 @@ namespace infinit
         GossipConfiguration gossip;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(Address id, NodeEndpoints
-             const& hosts,
+        make(Address id,
+             std::vector<Endpoints> const& hosts,
              std::shared_ptr<model::doughnut::Local> server,
              model::doughnut::Doughnut* doughnut) override;
       };
@@ -305,13 +305,13 @@ namespace infinit
         void
         bootstrap(bool use_bootstrap_nodes,
                   bool use_contacts = true,
-                  std::vector<PeerLocation> const& peers = {});
+                  NodeLocations const& peers = {});
         void
-        _discover(NodeEndpoints const& peers) override;
+        _discover(NodeLocations const& peers) override;
         void
-        send_bootstrap(PeerLocation const& l);
+        send_bootstrap(NodeLocation const& l);
         SerState
-        get_serstate(PeerLocation peer);
+        get_serstate(NodeLocation const& peer);
         void
         contact(Address address); // establish contact with peer and flush buffer
         void onPacket(reactor::network::Buffer buf, GossipEndpoint source);

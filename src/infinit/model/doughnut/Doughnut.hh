@@ -170,11 +170,11 @@ namespace infinit
         serialize(elle::serialization::Serializer& s);
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(overlay::NodeEndpoints const& hosts,
+        make(std::vector<Endpoints> const& hosts,
              bool client,
-             boost::filesystem::path const& p);
+             boost::filesystem::path const& p) override;
         std::unique_ptr<Doughnut>
-        make(overlay::NodeEndpoints const& hosts,
+        make(std::vector<Endpoints> const& hosts,
              bool client,
              boost::filesystem::path const& p,
              bool async = false,

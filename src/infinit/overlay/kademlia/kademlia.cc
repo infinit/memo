@@ -127,7 +127,7 @@ namespace kademlia
   `------*/
 
   void
-  Kademlia::_discover(infinit::overlay::NodeEndpoints const& peers)
+  Kademlia::_discover(infinit::model::NodeLocations const&)
   {
     ELLE_ABORT("unimplemented");
   }
@@ -288,12 +288,14 @@ namespace kademlia
       [this] { this->_cleanup();});
     _republisher = elle::make_unique<reactor::Thread>("republisher",
       [this] { this->_republish();});
-    for (auto const& ep: _config.bootstrap_nodes)
+    for (auto const& ep: this->_config.bootstrap_nodes)
     {
       packet::Ping p;
       p.sender = _self;
-      p.remote_endpoint = ep;
-      send(elle::serialization::json::serialize(&p), ep);
+      // FIXME: handle bootsrap nodes with several endpoints.
+      auto first = *ep.begin();
+      p.remote_endpoint = Endpoint(first.address(), first.port());
+      send(elle::serialization::json::serialize(&p), first.udp());
     }
     if (_config.wait)
     {
@@ -994,15 +996,11 @@ namespace infinit
       std::unique_ptr<infinit::overlay::Overlay>
       Configuration::make(
         model::Address id,
-        NodeEndpoints const& hosts,
+        std::vector<Endpoints> const& hosts,
         std::shared_ptr<infinit::model::doughnut::Local> local,
         model::doughnut::Doughnut* doughnut)
       {
-        for (auto const& host: hosts)
-          for (auto const& ep: host.second)
-        config.bootstrap_nodes.push_back(
-          elle::serialization::Serialize< ::kademlia::PrettyEndpoint>
-          ::convert(ep));
+        config.bootstrap_nodes = hosts;
         return elle::make_unique< ::kademlia::Kademlia>(
           id, config, std::move(local), doughnut);
       }
