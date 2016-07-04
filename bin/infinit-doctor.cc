@@ -501,10 +501,10 @@ namespace reporting
 
       }
 
-      size_t minimum;
+      uint64_t minimum;
       double minimum_ratio;
-      size_t available;
-      size_t capacity;
+      uint64_t available;
+      uint64_t capacity;
     };
 
     struct EnvironmentResult
