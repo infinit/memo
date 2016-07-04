@@ -53,7 +53,7 @@ COMMAND(stats)
   elle::json::Object res;
   for (auto const& network: networks)
   {
-    boost::filesystem::path async_path = network.cache_dir() / "async";
+    boost::filesystem::path async_path = network.cache_dir(owner) / "async";
     int operation_count = 0;
     int64_t data_size = 0;
     if (boost::filesystem::exists(async_path))
@@ -93,14 +93,14 @@ COMMAND(export_)
   auto network_name =
     ifnt.qualified_name(mandatory(args, "network", "Network"), owner);
   auto network = ifnt.network_get(network_name, owner);
-  boost::filesystem::path async_path = network.cache_dir() / "async";
+  boost::filesystem::path async_path = network.cache_dir(owner) / "async";
   auto operation = mandatory<int>(args, "operation");
   boost::filesystem::ifstream i(async_path / elle::sprintf("%s", operation));
   if (!i.good())
     throw elle::Error(elle::sprintf("no such operation: %s", operation));
   {
     elle::serialization::Context ctx;
-    auto dht = network.run();
+    auto dht = network.run(owner);
     ctx.set<infinit::model::doughnut::Doughnut*>(dht.get());
     ctx.set(infinit::model::doughnut::ACBDontWaitForSignature{});
     ctx.set(infinit::model::doughnut::OKBDontWaitForSignature{});

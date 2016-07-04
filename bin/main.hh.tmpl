@@ -969,7 +969,8 @@ namespace infinit
     }
 
     std::unique_ptr<model::doughnut::Doughnut>
-    run(overlay::NodeEndpoints const& hosts = overlay::NodeEndpoints(),
+    run(User const& user,
+        overlay::NodeEndpoints const& hosts = overlay::NodeEndpoints(),
         bool client = false,
         bool cache = false,
         boost::optional<int> cache_size = {},
@@ -985,7 +986,7 @@ namespace infinit
       return this->dht()->make(
         hosts,
         client,
-        this->cache_dir(),
+        this->cache_dir(user),
         async_writes,
         cache,
         cache_size,
@@ -1022,9 +1023,36 @@ namespace infinit
     }
 
     boost::filesystem::path
-    cache_dir() const
+    cache_dir(User const& user) const
     {
-      return xdg_state_home() / "cache" / this->name;
+      // "/cache" and "/async" are added by Doughnut.
+      auto old_dir = xdg_state_home() / "cache" / this->name;
+      auto new_dir = xdg_state_home() / "cache" / user.name / this->name;
+      create_directories(new_dir / "async");
+      if (boost::filesystem::exists(old_dir / "async") &&
+          !boost::filesystem::is_empty(old_dir / "async"))
+      {
+        for (boost::filesystem::recursive_directory_iterator it(old_dir / "async");
+             it != boost::filesystem::recursive_directory_iterator();
+             ++it)
+        {
+          if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+          {
+            boost::filesystem::copy_file(
+              it->path(),
+              new_dir / "async" / it->path().filename());
+          }
+        }
+        boost::filesystem::remove_all(old_dir / "async");
+      }
+      if (boost::filesystem::exists(old_dir / "cache") &&
+          !boost::filesystem::is_empty(old_dir / "cache"))
+      {
+        ELLE_WARN("old cache location (%s/cache) is being emptied in favor of "
+                  "the new cache location (%s/cache)", old_dir, new_dir);
+        boost::filesystem::remove_all(old_dir / "cache");
+      }
+      return new_dir;
     }
 
     void

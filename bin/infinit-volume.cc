@@ -404,6 +404,7 @@ COMMAND(run)
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
   auto model = network.run(
+    self,
     eps, true,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, compatibility_version, port);

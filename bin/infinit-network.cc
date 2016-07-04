@@ -619,7 +619,7 @@ COMMAND(delete_)
   {
     auto path = ifnt._network_path(network_name, user);
     auto descriptor_path = ifnt._network_descriptor_path(network_name);
-    boost::filesystem::remove_all(network.cache_dir());
+    boost::filesystem::remove_all(network.cache_dir(user));
     deleted |= remove(path, network.name, "linked network");
     deleted |= remove(descriptor_path, network.name, "network");
   }
@@ -668,6 +668,7 @@ COMMAND(run)
   }
   auto port = optional<int>(args, option_port);
   auto dht = network.run(
+    self,
     eps, false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, compatibility_version, port);
