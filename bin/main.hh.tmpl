@@ -1385,20 +1385,20 @@ namespace infinit
   {
   public:
     bool
-    is_qualified_name(std::string const& network_name)
+    is_qualified_name(std::string const& object_name)
     {
-      if (network_name.find("/") != std::string::npos)
+      if (object_name.find("/") != std::string::npos)
         return true;
       return false;
     }
 
     std::string
-    qualified_name(std::string const& network_name, User const& owner)
+    qualified_name(std::string const& object_name, User const& owner)
     {
-      if (network_name.find("/") != std::string::npos)
-        return network_name;
+      if (object_name.find("/") != std::string::npos)
+        return object_name;
       else
-        return elle::sprintf("%s/%s", owner.name, network_name);
+        return elle::sprintf("%s/%s", owner.name, object_name);
     }
 
     std::string
