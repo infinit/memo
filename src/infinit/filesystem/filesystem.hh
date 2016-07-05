@@ -156,10 +156,11 @@ namespace infinit
     std::pair<bool, bool>
     get_permissions(model::Model& model,
                     model::blocks::Block const& block);
-    NAMED_ARGUMENT(volume_name);
+    NAMED_ARGUMENT(allow_root_creation);
     NAMED_ARGUMENT(model);
-    NAMED_ARGUMENT(root_block_cache_dir);
     NAMED_ARGUMENT(mountpoint);
+    NAMED_ARGUMENT(root_block_cache_dir);
+    NAMED_ARGUMENT(volume_name);
     /** Filesystem using a Block Storage as backend.
     * Directory: nodes are serialized, and contains name, stat() and block
     *            address of the directory content
@@ -179,7 +180,8 @@ namespace infinit
         std::string const& volume_name,
         std::shared_ptr<infinit::model::Model> model,
         boost::optional<boost::filesystem::path> root_block_cache_dir = {},
-        boost::optional<boost::filesystem::path> mountpoint = {});
+        boost::optional<boost::filesystem::path> mountpoint = {},
+        bool allow_root_creation = false);
       void
       print_cache_stats();
       std::shared_ptr<reactor::filesystem::Path>
@@ -212,7 +214,8 @@ namespace infinit
       void filesystem(reactor::filesystem::FileSystem* fs) override;
       reactor::filesystem::FileSystem* filesystem();
     private:
-      std::unique_ptr<model::blocks::MutableBlock> _root_block();
+      Address
+      root_address();
       ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::model::Model>, block_store);
       ELLE_ATTRIBUTE_RW(bool, single_mount);
       ELLE_ATTRIBUTE_R(std::string, volume_name);
@@ -222,6 +225,7 @@ namespace infinit
                        root_block_cache_dir);
       ELLE_ATTRIBUTE_R(boost::optional<boost::filesystem::path>, mountpoint);
       ELLE_ATTRIBUTE_R(model::Address, root_address);
+      ELLE_ATTRIBUTE_R(bool, allow_root_creation);
 
       typedef bmi::multi_index_container<
         std::shared_ptr<DirectoryData>,

@@ -397,9 +397,6 @@ COMMAND(run)
           reactor::scheduler().terminate();
         });
   }
-  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
-  if (fetch)
-    beyond_fetch_endpoints(network, eps);
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
@@ -410,6 +407,7 @@ COMMAND(run)
   // Only push if we have are contributing storage.
   bool push =
     aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
+  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint;
   if (model->local())
   {
@@ -425,6 +423,12 @@ COMMAND(run)
   auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
+    if (fetch)
+    {
+      infinit::overlay::NodeEndpoints eps;
+      beyond_fetch_endpoints(network, eps);
+      model->overlay()->discover(eps);
+    }
     reactor::Thread::unique_ptr stat_thread;
     if (push)
       stat_thread = make_stat_update_thread(self, network, *model);
@@ -432,7 +436,8 @@ COMMAND(run)
     report_action("running", "volume", volume.name);
     auto fs = volume.run(std::move(model),
                          mountpoint,
-                         flag(args, "readonly")
+                         flag(args, "readonly"),
+                         flag(args, "allow-root-creation")
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
                          , optional(args, "mount-name")
 #endif
@@ -443,6 +448,33 @@ COMMAND(run)
                          , fuse_options
 #endif
                          );
+    // Experimental: poll root on mount to trigger caching.
+#   if 0
+    boost::optional<std::thread> root_poller;
+    if (mo.mountpoint && mo.cache && mo.cache.get())
+      root_poller.emplace(
+        [root = mo.mountpoint.get()]
+        {
+          try
+          {
+            boost::filesystem::status(root);
+            for (auto it = boost::filesystem::directory_iterator(root);
+                 it != boost::filesystem::directory_iterator();
+                 ++it)
+              ;
+          }
+          catch (boost::filesystem::filesystem_error const& e)
+          {
+            ELLE_WARN("error polling root: %s", e);
+          }
+        });
+    elle::SafeFinally root_poller_join(
+      [&]
+      {
+        if (root_poller)
+          root_poller->join();
+      });
+#   endif
     if (volume.default_permissions && !volume.default_permissions->empty())
     {
       auto ops =
@@ -908,8 +940,7 @@ COMMAND(mount)
     auto volume = ifnt.volume_get(name);
     if (!volume.mountpoint)
     {
-      mandatory(args, "mountpoint",
-                "No default mountpoint for volume. mountpoint");
+      mandatory(args, "mountpoint", "mountpoint");
     }
   }
   run(args);
@@ -948,6 +979,8 @@ main(int argc, char** argv)
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   std::vector<Mode::OptionDescription> options_run_mount = {
+    {"allow-root-creation", bool_switch(),
+        "create the filesystem root if not found"},
     { "name", value<std::string>(), "volume name" },
     { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
     { "readonly", bool_switch(), "mount as readonly" },

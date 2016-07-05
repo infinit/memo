@@ -1,16 +1,15 @@
 #include <infinit/overlay/kademlia/kademlia.hh>
 
+#include <elle/json/exceptions.hh>
 #include <elle/log.hh>
-
 #include <elle/serialization/Serializer.hh>
-#include <elle/serialization/json.hh>
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/binary/SerializerIn.hh>
 #include <elle/serialization/binary/SerializerOut.hh>
-
-#include <elle/json/exceptions.hh>
+#include <elle/serialization/json.hh>
 
 #include <cryptography/hash.hh>
+
 #include <reactor/network/buffer.hh>
 #include <reactor/network/exception.hh>
 
@@ -123,6 +122,15 @@ namespace kademlia
     , storage_lifetime_ms(120000)
   {}
 
+  /*------.
+  | Peers |
+  `------*/
+
+  void
+  Kademlia::_discover(infinit::overlay::NodeEndpoints const& peers)
+  {
+    ELLE_ABORT("unimplemented");
+  }
 
   namespace packet
   {

@@ -153,11 +153,17 @@ class Infinit(TemporaryDirectory):
     process.pretty = pretty
     return process
 
-  def run(self, args, input = None, return_code = 0, env = {},
-          noscript = False):
-    process = self.spawn(args, input, return_code, env, noscript)
-    out, err = process.communicate(timeout = 600)
-    process.wait()
+  def run(self, args, input = None, return_code = 0, env = {}):
+    try:
+      process = self.spawn(args, input, return_code, env)
+      out, err = process.communicate(timeout = 600)
+      process.wait()
+    except KeyboardInterrupt:
+      process.terminate()
+      out, err = process.communicate(timeout = 30)
+      print('STDOUT: %s' % out.decode('utf-8'))
+      print('STDERR: %s' % err.decode('utf-8'))
+      raise
     out = out.decode('utf-8')
     err = err.decode('utf-8')
     if process.returncode != return_code:
@@ -187,7 +193,7 @@ class Infinit(TemporaryDirectory):
                  seq = None,
                  peer = None,
                  **kwargs):
-    cmd = ['infinit-volume', '--run', volume]
+    cmd = ['infinit-volume', '--run', volume, '--allow-root-creation']
     if user is not None:
       cmd += ['--as', user]
     if peer is not None:

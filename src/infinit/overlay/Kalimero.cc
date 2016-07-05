@@ -8,11 +8,29 @@ namespace infinit
 {
   namespace overlay
   {
+    /*-------------.
+    | Construction |
+    `-------------*/
+
     Kalimero::Kalimero(model::doughnut::Doughnut* dht,
                        model::Address node_id,
                        std::shared_ptr<model::doughnut::Local> local)
       : Overlay(dht, std::move(local), std::move(node_id))
     {}
+
+    /*------.
+    | Peers |
+    `------*/
+
+    void
+    Kalimero::_discover(NodeEndpoints const& peers)
+    {
+      elle::err("Kalimero cannot discover new nodes");
+    }
+
+    /*-------.
+    | Lookup |
+    `-------*/
 
     reactor::Generator<Kalimero::WeakMember>
     Kalimero::_lookup(model::Address address, int n, Operation op) const
