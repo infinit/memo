@@ -85,19 +85,35 @@ ldap_add_cmd = ['/usr/bin/ldapadd', \
 
 class LdapCleaner:
   def __nuke_data(self):
-    data, err = self.__ifnt.run(['/usr/bin/ldapsearch', \
-        '-D', ldap_creds[0], '-w', ldap_creds[1], '-H', ldap_url, \
-        '-b', 'dc=%s,dc=nodomain' % dc, '-LLL', 'dn'])
-    print(data)
-    for l in reversed(data.split('\n')):
-      if l == '':
-        continue
-      edn = l[4:]
-      self.__ifnt.run(['/usr/bin/ldapdelete', \
-        '-D', ldap_creds[0], '-w', ldap_creds[1], '-H', ldap_url, \
-        edn])
+    def fetch_ldap_data(return_code = 0):
+      data, err = self.__ifnt.run([
+        '/usr/bin/ldapsearch',
+        '-D', ldap_creds[0],
+        '-w', ldap_creds[1],
+        '-H', ldap_url,
+        '-b', 'dc=%s,dc=nodomain' % dc,
+        '-LLL', 'dn'
+      ], return_code = return_code)
+      return (data, err)
+    try:
+      data, err = fetch_ldap_data(return_code = 0)
+      print(data)
+      for l in reversed(data.split('\n')):
+        if l == '':
+          continue
+        edn = l[4:]
+        self.__ifnt.run([
+          '/usr/bin/ldapdelete',
+          '-D', ldap_creds[0],
+          '-w', ldap_creds[1],
+          '-H', ldap_url,
+          edn
+        ])
+    except:
+      # If we get an error, it might be because the server is already clean.
+      fetch_ldap_data(return_code = 32)
 
-  def __init__(self,ifnt):
+  def __init__(self, ifnt):
     self.__ifnt = ifnt
     pass
   def __enter__(self):
@@ -168,23 +184,30 @@ with Beyond(bottle_args = {'ldap_server': ldap_url}) as beyond,\
   if not response['success']:
     raise AssertionError('operation failed: %s' % response)
   p = None
+  portfile = '%s/portfile' % admin.dir
   try:
     #Run the volume
     mountpoint = '%s/%s' % (admin.dir, 'mountpoint')
     os.mkdir(mountpoint)
     p = admin.spawn(['infinit-volume', '--run', '--name', 'volume',
-                     '--mountpoint', mountpoint, '--as', 'adm'])
+                     '--mountpoint', mountpoint, '--as', 'adm',
+                     '--port-file', portfile])
+    while not os.path.exists(portfile):
+      time.sleep(0.1)
     #Run batch drive populator
-    admin.run(['infinit-ldap', '--populate-network', \
-      '--server', ldap_url, \
-      '--domain', '', '--searchbase', 'dc=%s,dc=nodomain'  % (dc), \
-      '--user', ldap_creds[0], '--password', ldap_creds[1], \
+    admin.run(['infinit-ldap', '--drive-invite',
+      '--server', ldap_url,
+      '--domain', '', '--searchbase', 'dc=%s,dc=nodomain'  % (dc),
+      '--user', ldap_creds[0], '--password', ldap_creds[1],
       '--as', 'adm',
-      '--mountpoint', mountpoint, '-n', 'network', '--drive', 'adm/drive'])
+      '--mountpoint', mountpoint, '--drive', 'adm/drive',
+      '--create-home', '--root-permissions', 'r'])
     print(admin.last_err)
   finally:
     if p:
       p.terminate()
+    if os.path.exists(portfile):
+      os.remove(portfile)
   # Test population was successful: pushed users and group
   response = admin.run_script(user = 'adm', seq =
     [
@@ -201,20 +224,54 @@ with Beyond(bottle_args = {'ldap_server': ldap_url}) as beyond,\
   alice.run(['infinit-user', '--fetch', 'adm'])
   alice.run(['infinit-network', '--fetch', '--as', 'aalice', 'adm/network'])
   alice.run(['infinit-volume', '--fetch', '--as', 'aalice', 'adm/volume'])
-  alice.run(['infinit-passport', '--fetch', '--as', 'aalice', '--network', 'adm/network'])
+  alice.run(['infinit-passport', '--fetch', '--as', 'aalice',
+             '--network', 'adm/network'])
   alice.run(['infinit-network', '--link', '--as', 'aalice', 'adm/network'])
-  portfile = '%s/portfile' % admin.dir
-  volume_process = admin.spawn([
-    'infinit-volume', '--run', '--as', 'adm', 'volume',
-    '--port-file', portfile])
-  time.sleep(2)
-  with open(portfile, 'r') as f:
-    peer = '127.0.0.1:%s' % int(f.readline())
-  response = alice.run_script(user = 'aalice', volume = 'adm/volume', peer = peer,
-                              operation = 'list_directory', path = '/')
-  volume_process.terminate()
-  check_success([response], alice)
-  assertEq(response['entries'], ['beacon', 'foo'])
+  volume_process = None
+  try:
+    volume_process = admin.spawn([
+      'infinit-volume', '--run', '--as', 'adm', 'volume',
+      '--port-file', portfile])
+    while not os.path.exists(portfile):
+      time.sleep(0.1)
+    with open(portfile, 'r') as f:
+      peer = '127.0.0.1:%s' % int(f.readline())
+    response = alice.run_script(user = 'aalice', volume = 'adm/volume',
+                                peer = peer, operation = 'list_directory',
+                                path = '/')
+    check_success([response], alice)
+    assertEq(response['entries'], ['home', 'beacon', 'foo'])
+    # Check root directory permissions
+    response = alice.run_script(user = 'aalice', volume = 'adm/volume',
+                                peer = peer, operation = 'mkdir',
+                                path = '/alice_yo')
+    assertEq(response['success'], False)
+    assertEq(response['code'], 13)
+    # Check home directories
+    response = alice.run_script(user = 'aalice', volume = 'adm/volume',
+                                peer = peer, operation = 'list_directory',
+                                path = '/home')
+    check_success([response], alice)
+    assertEq(response['entries'], ['bob', 'aalice'])
+    response = alice.run_script(user = 'aalice', volume = 'adm/volume',
+                                peer = peer, operation = 'mkdir',
+                                path = '/home/aalice/something')
+    check_success([response], alice)
+    response = alice.run_script(user = 'aalice', volume = 'adm/volume',
+                                peer = peer, operation = 'list_directory',
+                                path = '/home/aalice')
+    check_success([response], alice)
+    assertEq(response['entries'], ['something'])
+    response = alice.run_script(user = 'aalice', volume = 'adm/volume',
+                                peer = peer, operation = 'list_directory',
+                                path = '/home/bob')
+    assertEq(response['success'], False)
+    assertEq(response['code'], 13)
+  finally:
+    if volume_process:
+      volume_process.terminate()
+    if os.path.exists(portfile):
+      os.remove(portfile)
   # drive check
   bob2.run(['infinit-drive', '--fetch', '--as', 'bob', '--name', 'adm/drive'])
   bob2.run(['infinit-drive', '--join', '--as', 'bob', '--name', 'adm/drive'])
