@@ -366,6 +366,7 @@ COMMAND(set)
   std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
   auto omode_ = optional(args, "others-mode");
   auto omode = omode_? omode_.get() : "";
+  std::transform(omode.begin(), omode.end(), omode.begin(), ::tolower);
   auto it = std::find(allowed_modes.begin(), allowed_modes.end(), omode);
   if (it == allowed_modes.end())
   {
