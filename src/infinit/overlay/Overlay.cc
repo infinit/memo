@@ -17,10 +17,8 @@ namespace infinit
     `-------------*/
 
     Overlay::Overlay(model::doughnut::Doughnut* dht,
-                     std::shared_ptr<infinit::model::doughnut::Local> local,
-                     model::Address node_id)
-      : _node_id(std::move(node_id))
-      , _doughnut(dht)
+                     std::shared_ptr<infinit::model::doughnut::Local> local)
+      : _doughnut(dht)
       , _local(local)
     {}
 

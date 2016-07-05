@@ -718,7 +718,7 @@ COMMAND(run)
   if (push)
   {
     elle::With<InterfacePublisher>(
-      network, self, dht->overlay()->node_id(),
+      network, self, dht->id(),
       dht->local()->server_endpoint().port()) << [&]
     {
       run();

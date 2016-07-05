@@ -56,10 +56,9 @@ make(
         };
   infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
         [=] (infinit::model::doughnut::Doughnut& dht,
-             infinit::model::Address id,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return elle::make_unique<infinit::overlay::Kalimero>(&dht, id, local);
+          return elle::make_unique<infinit::overlay::Kalimero>(&dht, local);
         };
   auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
     node_id,

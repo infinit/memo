@@ -67,10 +67,9 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
         };
     infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
         [&] (infinit::model::doughnut::Doughnut& dht,
-             infinit::model::Address id,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return config.make(id, endpoints, local, &dht);
+          return config.make(endpoints, local, &dht);
         };
     infinit::model::Address::Value v;
     memset(v, 0, sizeof(v));
@@ -135,10 +134,9 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   };
   infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
   [&] (infinit::model::doughnut::Doughnut& dht,
-    infinit::model::Address id,
-    std::shared_ptr<infinit::model::doughnut::Local> local)
+       std::shared_ptr<infinit::model::doughnut::Local> local)
   {
-    return config.make(id, endpoints, local, &dht);
+    return config.make(endpoints, local, &dht);
   };
   auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
     infinit::model::Address::random(0), // FIXME

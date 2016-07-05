@@ -66,7 +66,7 @@ namespace infinit
           storage
             ? this->_consensus->make_local(std::move(port), std::move(storage))
             : nullptr)
-        , _overlay(overlay_builder(*this, id, this->_local))
+        , _overlay(overlay_builder(*this, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
       {
         if (this->_local)
@@ -482,10 +482,9 @@ namespace infinit
             return consensus;
           };
         Doughnut::OverlayBuilder overlay =
-          [&] (Doughnut& dht, Address id, std::shared_ptr<Local> local)
+          [&] (Doughnut& dht, std::shared_ptr<Local> local)
           {
-            return this->overlay->make(
-              std::move(id), hosts, std::move(local), &dht);
+            return this->overlay->make(hosts, std::move(local), &dht);
           };
         auto port = port_ ? port_.get() : this->port ? this->port.get() : 0;
         std::unique_ptr<storage::Storage> storage;

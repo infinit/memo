@@ -18,9 +18,8 @@ public:
   typedef infinit::overlay::Overlay Super;
 
   Overlay(infinit::model::doughnut::Doughnut* d,
-          std::shared_ptr< infinit::model::doughnut::Local> local,
-          infinit::model::Address id)
-    : Super(d, local, id)
+          std::shared_ptr< infinit::model::doughnut::Local> local)
+    : Super(d, local)
   {
     if (local)
     {
@@ -54,19 +53,18 @@ public:
   static
   std::unique_ptr<Overlay>
   make(infinit::model::doughnut::Doughnut& d,
-       infinit::model::Address id,
        std::shared_ptr<infinit::model::doughnut::Local> local)
   {
-    return elle::make_unique<Overlay>(&d, local, id);
+    return elle::make_unique<Overlay>(&d, local);
   }
 
   void
   connect(Overlay& other)
   {
     if (this->_peers.emplace(&other).second)
-      this->on_discover()(other.node_id(), !other.doughnut()->local());
+      this->on_discover()(other.doughnut()->id(), !other.doughnut()->local());
     if (other._peers.emplace(this).second)
-      other.on_discover()(this->node_id(), !this->doughnut()->local());
+      other.on_discover()(this->doughnut()->id(), !this->doughnut()->local());
   }
 
   void
@@ -81,9 +79,9 @@ public:
   {
     bool me = this->_peers.erase(&other);
     if (other._peers.erase(this))
-      other.on_disappear()(this->node_id(), !this->doughnut()->local());
+      other.on_disappear()(this->doughnut()->id(), !this->doughnut()->local());
     if (me)
-      this->on_disappear()(other.node_id(), !other.doughnut()->local());
+      this->on_disappear()(other.doughnut()->id(), !other.doughnut()->local());
   }
 
   void
@@ -200,7 +198,6 @@ public:
                      std::function<
                      std::unique_ptr<infinit::overlay::Overlay>(
                        infinit::model::doughnut::Doughnut& d,
-                       infinit::model::Address id,
                        std::shared_ptr< infinit::model::doughnut::Local> local)>
                        make_overlay,
                      std::function<
@@ -264,10 +261,9 @@ private:
     auto make_overlay =
       [this] (
         infinit::model::doughnut::Doughnut& d,
-        infinit::model::Address id,
         std::shared_ptr<infinit::model::doughnut::Local> local)
       {
-        auto res = Overlay::make(d, std::move(id), std::move(local));
+        auto res = Overlay::make(d, std::move(local));
         this->overlay = res.get();
         return res;
       };

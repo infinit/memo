@@ -217,15 +217,14 @@ namespace kademlia
     dst = E2(src.address(), src.port());
   }
 
-  Kademlia::Kademlia(infinit::model::Address node_id,
-                     Configuration const& config,
+  Kademlia::Kademlia(Configuration const& config,
                      std::shared_ptr<Local> local,
                      infinit::model::doughnut::Doughnut* doughnut)
-    : Overlay(doughnut, std::move(local), std::move(node_id))
+    : Overlay(doughnut, std::move(local))
     , _config(config)
   {
     srand(time(nullptr) + getpid());
-    _self = _config.node_id;
+    this->_self = doughnut->id();
     _routes.resize(_config.address_size);
     Address::Value v;
     memset(v, 0xFF, sizeof(Address::Value));
@@ -426,7 +425,7 @@ namespace kademlia
   }
   int Kademlia::bucket_of(Address const& a)
   {
-    Address d = dist(a, _config.node_id);
+    Address d = dist(a, this->_self);
     auto dv = d.value();
     for (int p=sizeof(Address::Value)-1; p>=0; --p)
     {
@@ -603,7 +602,6 @@ namespace kademlia
 
   void Configuration::serialize(elle::serialization::Serializer& s)
   {
-    s.serialize("node_id", node_id);
     s.serialize("port", port);
     s.serialize("bootstrap_nodes", bootstrap_nodes);
     s.serialize("wait", wait);
@@ -995,14 +993,13 @@ namespace infinit
 
       std::unique_ptr<infinit::overlay::Overlay>
       Configuration::make(
-        model::Address id,
         std::vector<Endpoints> const& hosts,
         std::shared_ptr<infinit::model::doughnut::Local> local,
         model::doughnut::Doughnut* doughnut)
       {
         config.bootstrap_nodes = hosts;
         return elle::make_unique< ::kademlia::Kademlia>(
-          id, config, std::move(local), doughnut);
+          config, std::move(local), doughnut);
       }
       static const elle::serialization::Hierarchy<overlay::Configuration>::
       Register<Configuration> _registerKademliaOverlayConfig("kademlia");

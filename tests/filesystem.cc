@@ -417,12 +417,11 @@ make_nodes(std::string store,
         };
       infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
         [=] (infinit::model::doughnut::Doughnut& dht,
-             infinit::model::Address id,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
           return elle::make_unique<infinit::overlay::Stonehenge>(
-            id, peers, std::move(local), &dht);
-        };
+            peers, std::move(local), &dht);
+         };
       nodes.emplace_back(
         new infinit::model::doughnut::Doughnut(
           peers[i].id,
@@ -518,11 +517,10 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           };
         infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
           [=] (infinit::model::doughnut::Doughnut& dht,
-               infinit::model::Address id,
                std::shared_ptr<infinit::model::doughnut::Local> local)
           {
             return elle::make_unique<infinit::overlay::Stonehenge>(
-              std::move(id), peers, std::move(local), &dht);
+              peers, std::move(local), &dht);
           };
         std::unique_ptr<infinit::model::Model> model =
         elle::make_unique<infinit::model::doughnut::Doughnut>(

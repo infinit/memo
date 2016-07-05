@@ -47,11 +47,9 @@ namespace infinit
     `-------------*/
     public:
       Overlay(model::doughnut::Doughnut* dht,
-              std::shared_ptr<infinit::model::doughnut::Local> local,
-              model::Address node_id);
+              std::shared_ptr<infinit::model::doughnut::Local> local);
       virtual
       ~Overlay();
-      ELLE_ATTRIBUTE_R(model::Address, node_id);
       ELLE_ATTRIBUTE_R(model::doughnut::Doughnut*, doughnut);
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
 
@@ -141,8 +139,7 @@ namespace infinit
       typedef infinit::serialization_tag serialization_tag;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make(model::Address id,
-           std::vector<Endpoints> const&,
+      make(std::vector<Endpoints> const&,
            std::shared_ptr<model::doughnut::Local> local,
            model::doughnut::Doughnut* doughnut) = 0;
     };

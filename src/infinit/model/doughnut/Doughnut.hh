@@ -43,7 +43,7 @@ namespace infinit
       public:
         typedef std::function<
           std::unique_ptr<infinit::overlay::Overlay>(
-            Doughnut& dht, Address id, std::shared_ptr<Local> server)>
+            Doughnut& dht, std::shared_ptr<Local> server)>
           OverlayBuilder;
         typedef std::function<
           std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;

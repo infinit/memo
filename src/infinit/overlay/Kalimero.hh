@@ -15,7 +15,6 @@ namespace infinit
     `-------------*/
     public:
       Kalimero(model::doughnut::Doughnut* dht,
-               model::Address node_id,
                std::shared_ptr<model::doughnut::Local> local);
 
     /*------.
@@ -47,8 +46,7 @@ namespace infinit
       serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make(model::Address id,
-           std::vector<Endpoints> const& hosts,
+      make(std::vector<Endpoints> const& hosts,
            std::shared_ptr<model::doughnut::Local> local,
            model::doughnut::Doughnut* doughnut) override;
     };

@@ -162,8 +162,7 @@ namespace infinit
         GossipConfiguration gossip;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(Address id,
-             std::vector<Endpoints> const& hosts,
+        make(std::vector<Endpoints> const& hosts,
              std::shared_ptr<model::doughnut::Local> server,
              model::doughnut::Doughnut* doughnut) override;
       };
@@ -179,7 +178,6 @@ namespace infinit
       {
       public:
         Node(Configuration const& config,
-             model::Address node_id,
              std::shared_ptr<model::doughnut::Local> local,
              infinit::model::doughnut::Doughnut* doughnut);
         virtual ~Node();
@@ -367,7 +365,6 @@ namespace infinit
         ELLE_ATTRIBUTE(
           (std::unordered_map<Address, std::vector<Overlay::WeakMember>>),
           peer_cache);
-        // node_id -> (lookup_thread, lookup_success)
         std::unordered_map<Address,
           std::pair<reactor::Thread::unique_ptr, bool>> _node_lookups;
         std::unordered_map<reactor::Thread*, reactor::Thread::unique_ptr>

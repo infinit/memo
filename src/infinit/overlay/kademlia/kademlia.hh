@@ -27,7 +27,6 @@ namespace kademlia
     Configuration(elle::serialization::SerializerIn& input) {serialize(input);}
     void
     serialize(elle::serialization::Serializer& s);
-    Address node_id;
     int port;
     std::vector<infinit::model::Endpoints> bootstrap_nodes;
     int wait;
@@ -54,8 +53,7 @@ namespace kademlia
     , public elle::Printable
   {
   public:
-    Kademlia(infinit::model::Address node_id,
-             Configuration const& config,
+    Kademlia(Configuration const& config,
              std::shared_ptr<infinit::model::doughnut::Local> server,
              infinit::model::doughnut::Doughnut* doughnut);
     virtual ~Kademlia();
@@ -168,8 +166,7 @@ namespace infinit
         serialize(elle::serialization::Serializer& s) override;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(model::Address id,
-             std::vector<Endpoints> const& hosts,
+        make(std::vector<Endpoints> const& hosts,
              std::shared_ptr<infinit::model::doughnut::Local> local,
              model::doughnut::Doughnut* doughnut) override;
         ::kademlia::Configuration config;

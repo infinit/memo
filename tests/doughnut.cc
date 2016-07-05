@@ -79,13 +79,12 @@ public:
       version_c = boost::optional<elle::Version>(),
       make_overlay =
       [] (int,
-          infinit::model::Address id,
           infinit::overlay::Stonehenge::Peers peers,
           std::shared_ptr<infinit::model::doughnut::Local> local,
           infinit::model::doughnut::Doughnut& d)
       {
         return elle::make_unique<infinit::overlay::Stonehenge>(
-          id, peers, std::move(local), &d);
+          peers, std::move(local), &d);
       },
       make_consensus =
       [] (std::unique_ptr<dht::consensus::Consensus> c)
@@ -109,7 +108,6 @@ public:
                       std::function<
                         std::unique_ptr<infinit::overlay::Stonehenge>(
                           int,
-                          infinit::model::Address id,
                           infinit::overlay::Stonehenge::Peers peers,
                           std::shared_ptr<
                             infinit::model::doughnut::Local> local,
@@ -160,7 +158,6 @@ private:
        std::function<
          std::unique_ptr<infinit::overlay::Stonehenge>(
            int,
-           infinit::model::Address id,
            infinit::overlay::Stonehenge::Peers peers,
            std::shared_ptr<infinit::model::doughnut::Local> local,
            infinit::model::doughnut::Doughnut& d)> make_overlay,
@@ -209,13 +206,12 @@ private:
     make_overlay =
       [make_overlay, &stonehenges] (
         int n,
-        infinit::model::Address id,
         infinit::overlay::Stonehenge::Peers peers,
         std::shared_ptr<infinit::model::doughnut::Local> local,
         infinit::model::doughnut::Doughnut& d)
       {
         auto res = make_overlay(
-          n, std::move(id), std::move(peers), std::move(local), d);
+          n, std::move(peers), std::move(local), d);
         stonehenges.emplace_back(res.get());
         return res;
       };
@@ -227,10 +223,9 @@ private:
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
         [=] (infinit::model::doughnut::Doughnut& d,
-             infinit::model::Address id,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return make_overlay(0, id, members, std::move(local), d);
+          return make_overlay(0, members, std::move(local), d);
         }),
       boost::optional<int>(),
       std::move(storage_a),
@@ -243,10 +238,9 @@ private:
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
         [=] (infinit::model::doughnut::Doughnut& d,
-             infinit::model::Address id,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return make_overlay(1, id, members, std::move(local), d);
+          return make_overlay(1, members, std::move(local), d);
         }),
       boost::optional<int>(),
       std::move(storage_b),
@@ -259,10 +253,9 @@ private:
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
         [=] (infinit::model::doughnut::Doughnut& d,
-             infinit::model::Address id,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return make_overlay(2, id, members, std::move(local), d);
+          return make_overlay(2, members, std::move(local), d);
         }),
       boost::optional<int>(),
       std::move(storage_c),
@@ -708,19 +701,18 @@ ELLE_TEST_SCHEDULED(wrong_quorum)
   DHTs dhts(
     make_overlay =
     [&stonehenge] (int dht,
-                   infinit::model::Address id,
                    infinit::overlay::Stonehenge::Peers peers,
                    std::shared_ptr<infinit::model::doughnut::Local> local,
                    infinit::model::doughnut::Doughnut& d)
     {
       if (dht == 0)
       {
-        stonehenge = new WrongQuorumStonehenge(id, peers, std::move(local), &d);
+        stonehenge = new WrongQuorumStonehenge(peers, std::move(local), &d);
         return std::unique_ptr<infinit::overlay::Stonehenge>(stonehenge);
       }
       else
         return elle::make_unique<infinit::overlay::Stonehenge>(
-          id, peers, std::move(local), &d);
+          peers, std::move(local), &d);
     });
   auto block = dhts.dht_a->make_block<blocks::MutableBlock>();
   {

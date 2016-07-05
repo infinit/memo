@@ -829,10 +829,9 @@ namespace infinit
       }
 
       Node::Node(Configuration const& config,
-                 model::Address node_id,
                  std::shared_ptr<Local> local,
                  infinit::model::doughnut::Doughnut* doughnut)
-        : Overlay(doughnut, local, std::move(node_id))
+        : Overlay(doughnut, local)
         , _config(config)
         , _next_id(1)
         , _port(0)
@@ -852,7 +851,7 @@ namespace infinit
         bool v4 = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
         bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
           && doughnut->version() >= elle::Version(0, 7, 0);
-        _self = Address(this->node_id());
+        this->_self = Address(this->doughnut()->id());
         if (!local)
           ELLE_LOG("Running in observer mode");
         _remotes_server.listen(0, v6);
@@ -3928,14 +3927,12 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make(Address id,
-                          std::vector<Endpoints> const& hosts,
+      Configuration::make(std::vector<Endpoints> const& hosts,
                           std::shared_ptr<model::doughnut::Local> local,
                           model::doughnut::Doughnut* dht)
       {
         this->bootstrap_nodes = hosts;
-        return elle::make_unique<Node>(
-          *this, std::move(id), std::move(local), dht);
+        return elle::make_unique<Node>(*this, std::move(local), dht);
       }
 
       static const

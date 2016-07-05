@@ -406,7 +406,6 @@ COMMAND(run)
                         endpoint_file.get());
     }
   }
-  auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
     if (fetch)
@@ -907,7 +906,7 @@ COMMAND(run)
   if (local_endpoint && push)
   {
     elle::With<InterfacePublisher>(
-      network, self, node_id, local_endpoint.get().port()) << [&]
+      network, self, model->id(), local_endpoint.get().port()) << [&]
     {
       run();
     };
