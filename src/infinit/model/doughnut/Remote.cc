@@ -106,8 +106,10 @@ namespace infinit
           [this, endpoints, &server] () -> std::iostream&
           {
             this->_utp_socket.reset(new reactor::network::UTPSocket(server));
-            this->_utp_socket->connect(elle::sprintf("%x", this->id()),
-                                       endpoints);
+            std::string cid;
+            if (this->id() != Address::null)
+              cid = elle::sprintf("%x", this->id());
+            this->_utp_socket->connect(cid, endpoints);
             return *this->_utp_socket;
           });
       }
