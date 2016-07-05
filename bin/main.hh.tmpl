@@ -1534,6 +1534,8 @@ namespace infinit
         path = this->_passport_path() / network.get();
       else
         path = this->_passport_path();
+      if (!boost::filesystem::exists(path))
+        return res;
       for (boost_fs::recursive_directory_iterator it(path);
            it != boost_fs::recursive_directory_iterator();
            ++it)
