@@ -1,75 +1,64 @@
-#ifdef INFINIT_LINUX
-# include <attr/xattr.h>
-#elif defined(INFINIT_MACOSX)
-# include <sys/xattr.h>
-#endif
+#ifndef INFINIT_BIN_XATTRS_HH
+# define INFINIT_BIN_XATTRS_HH
+# include <string>
 
-static
-boost::filesystem::path
-file_xattrs_dir(std::string const& file)
+# ifdef INFINIT_LINUX
+#  include <attr/xattr.h>
+# elif defined(INFINIT_MACOSX)
+#  include <sys/xattr.h>
+# endif
+
+# include <boost/filesystem/path.hpp>
+# include <boost/optional/optional.hpp>
+
+# include <elle/error.hh>
+
+class InvalidArgument
+  : public elle::Error
 {
-  boost::filesystem::path p(file);
-  auto filename = p.filename();
-  auto dir = p.parent_path();
-  boost::filesystem::path res;
-  // dir might be outside the filesystem, so dont go below file if its a
-  // directory
-  if (boost::filesystem::is_directory(file))
-    res = p / "$xattrs..";
-  else
-    res = dir / ("$xattrs." + filename.string());
-  boost::system::error_code erc;
-  boost::filesystem::create_directory(res, erc);
-  return res;
-}
+public:
+  InvalidArgument(std::string const& error)
+    : elle::Error(error)
+  {}
+};
 
-static
+class PermissionDenied
+  : public elle::Error
+{
+public:
+  PermissionDenied(std::string const& error)
+    : elle::Error(error)
+  {}
+};
+
+boost::filesystem::path
+file_xattrs_dir(std::string const& file);
+
 int
 port_getxattr(std::string const& file,
               std::string const& key,
               char* val, int val_size,
-              bool fallback_xattrs)
-{
-#ifndef INFINIT_WINDOWS
-  int res = -1;
-# ifdef INFINIT_MACOSX
-  res = getxattr(file.c_str(), key.c_str(), val, val_size, 0, XATTR_NOFOLLOW);
-# else
-  res = lgetxattr(file.c_str(), key.c_str(), val, val_size);
-# endif
+              bool fallback_xattrs);
 
-  if (res >= 0 || !fallback_xattrs)
-    return res;
-#endif
-  if (!fallback_xattrs)
-    elle::unreachable();
-  auto attr_dir = file_xattrs_dir(file);
-  boost::filesystem::ifstream ifs(attr_dir / key);
-  ifs.read(val, val_size);
-  return ifs.gcount();
-}
-
-static
 int
 port_setxattr(std::string const& file,
               std::string const& key,
               std::string const& value,
-              bool fallback_xattrs)
-{
-#ifndef INFINIT_WINDOWS
-# ifdef INFINIT_MACOSX
-  int res = setxattr(
-    file.c_str(), key.c_str(), value.data(), value.size(), 0, XATTR_NOFOLLOW);
-# else
-  int res = lsetxattr(file.c_str(), key.c_str(), value.data(), value.size(), 0);
+              bool fallback_xattrs);
+
+boost::optional<std::string>
+path_mountpoint(std::string const& path, bool fallback);
+
+void
+enforce_in_mountpoint(
+  std::string const& path, bool enforce_directory, bool fallback);
+
+bool
+path_is_root(std::string const& path, bool fallback);
+
+boost::filesystem::path
+mountpoint_root(std::string const& path_in_mount, bool fallback);
+
+# include <xattrs.hxx>
+
 #endif
-  if (res >= 0 || !fallback_xattrs)
-    return res;
-#endif
-  if (!fallback_xattrs)
-    elle::unreachable();
-  auto attr_dir = file_xattrs_dir(file);
-  boost::filesystem::ofstream ofs(attr_dir / key);
-  ofs.write(value.data(), value.size());
-  return 0;
-}

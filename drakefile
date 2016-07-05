@@ -412,7 +412,12 @@ def configure(
   drake.nodes(
     'bin/endpoint_file.hh',
     'bin/password.hh',
+  )
+
+  xattr_sources = drake.nodes(
+    'bin/xattrs.cc',
     'bin/xattrs.hh',
+    'bin/xattrs.hxx',
   )
 
   bin_cxx_config = drake.cxx.Config(cxx_config)
@@ -470,32 +475,33 @@ def configure(
                       ', '.join(searched_for))
 
   # Build
+  # ('binary name', [additional sources], [additional libraries], ship)
   binaries_config = [
-    ('doughnode', [], False),
-    ('generatekeys', [], False),
-    ('infinit', [], False),
-    ('infinit-acl', [], True),
-    ('infinit-block', [], True),
-    ('infinit-credentials', [], True),
-    ('infinit-device', [], True),
-    ('infinit-doctor', [], True),
-    ('infinit-drive', [], True),
-    ('infinit-journal', [], True),
-    ('infinit-network', [], True),
-    ('infinit-passport', [], True),
-    ('infinit-smb', [], False),
-    ('infinit-storage', (not windows) and [aws_lib] or [], True),
-    ('infinit-user', [], True),
-    ('infinit-volume', [], True),
-    ('infinit-webdav', [], False),
-    ('infinit-fsck', [], False),
-    ('reactor-example', [], False),
-    # ('s3fs', [aws_lib], False),
+    ('doughnode', [], [], False),
+    ('generatekeys', [], [], False),
+    ('infinit', [], [], False),
+    ('infinit-acl', [xattr_sources], [], True),
+    ('infinit-block', [], [], True),
+    ('infinit-credentials', [], [], True),
+    ('infinit-device', [], [], True),
+    ('infinit-doctor', [], [], True),
+    ('infinit-drive', [], [], True),
+    ('infinit-journal', [], [], True),
+    ('infinit-network', [xattr_sources], [], True),
+    ('infinit-passport', [], [], True),
+    ('infinit-smb', [], [], False),
+    ('infinit-storage', [], (not windows) and [aws_lib] or [], True),
+    ('infinit-user', [], [], True),
+    ('infinit-volume', [], [], True),
+    ('infinit-webdav', [], [], False),
+    ('infinit-fsck', [], [], False),
+    ('reactor-example', [], [], False),
+    # ('s3fs', [], [aws_lib], False),
   ]
   if elle.elle.ldap:
-    binaries_config.append(('infinit-ldap', [], True))
+    binaries_config.append(('infinit-ldap', [xattr_sources], [], True))
   if not windows:
-    binaries_config.append(('sshfs', [], False))
+    binaries_config.append(('sshfs', [], [], False))
     additional_libs.append(crash_reporter_lib)
     additional_libs += [elle_lib, reactor_lib, cryptography_lib]
   else:
@@ -510,14 +516,17 @@ def configure(
   installed_libraries = []
   bin_version = drake.node('bin/version.cc')
   bin_sources = drake.nodes('bin/main.cc', 'bin/main.hh')
-  for name, libs, install in binaries_config:
+  for name, other_sources, libs, install in binaries_config:
     source = drake.node('bin/%s.cc' % name)
+    additional_sources = []
+    for s in other_sources:
+      additional_sources.extend(s)
     bin = drake.cxx.Executable(
       'bin/%s' % name, [
         source,
         bin_version,
         infinit_lib,
-      ] + bin_sources + libs + additional_libs,
+      ] + bin_sources + additional_sources + libs + additional_libs,
       cxx_toolkit,
       bin_cxx_config)
     rule_build << bin

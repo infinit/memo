@@ -96,80 +96,6 @@ public_key_from_username(std::string const& username, bool fetch)
   return buf.string();
 }
 
-static
-boost::optional<std::string>
-path_mountpoint(std::string const& path, bool fallback)
-{
-  char buffer[4095];
-  int sz = port_getxattr(path, "infinit.mountpoint", buffer, 4095, fallback);
-  if (sz <= 0)
-    return {};
-  return std::string(buffer, sz);
-}
-
-static
-void
-enforce_in_mountpoint(std::string const& path_, bool fallback)
-{
-  auto path = boost::filesystem::absolute(path_);
-  if (!boost::filesystem::exists(path))
-    throw elle::Error(elle::sprintf("path does not exist: %s", path_));
-  for (auto const& p: {path, path.parent_path()})
-  {
-    auto mountpoint = path_mountpoint(p.string(), fallback);
-    if (mountpoint && !mountpoint.get().empty())
-      return;
-  }
-  throw elle::Error(elle::sprintf("%s not in an Infinit volume", path_));
-}
-
-static
-bool
-path_is_root(std::string const& path, bool fallback)
-{
-  char buffer[4095];
-  int sz = port_getxattr(path, "infinit.root", buffer, 4095, fallback);
-  if (sz < 0)
-    return false;
-  return std::string(buffer, sz) == std::string("true");
-}
-
-class InvalidArgument
-  : public elle::Error
-{
-public:
-  InvalidArgument(std::string const& error)
-    : elle::Error(error)
-  {}
-};
-
-class PermissionDenied
-  : public elle::Error
-{
-public:
-  PermissionDenied(std::string const& error)
-    : elle::Error(error)
-  {}
-};
-
-template<typename F, typename ... Args>
-void
-check(F func, Args ... args)
-{
-  int res = func(args...);
-  if (res < 0)
-  {
-    int error_number = errno;
-    auto* e = std::strerror(error_number);
-    if (error_number == EINVAL)
-      throw InvalidArgument(std::string(e));
-    else if (error_number == EACCES)
-      throw PermissionDenied(std::string(e));
-    else
-      throw elle::Error(std::string(e));
-  }
-}
-
 template<typename A, typename ... Args>
 void
 recursive_action(A action, std::string const& path, Args ... args)
@@ -425,7 +351,7 @@ COMMAND(list)
   bool fallback = flag(args, "fallback-xattrs");
   for (auto const& path: paths)
   {
-    enforce_in_mountpoint(path, fallback);
+    enforce_in_mountpoint(path, false, fallback);
     list_action(path, verbose, fallback);
     if (recursive)
       recursive_action(list_action, path, verbose, fallback);
@@ -483,7 +409,7 @@ COMMAND(set)
   // Don't do any operations before checking paths.
   for (auto const& path: paths)
   {
-    enforce_in_mountpoint(path, fallback);
+    enforce_in_mountpoint(path, false, fallback);
     if ((inherit || disinherit)
         && !recursive
         && !boost::filesystem::is_directory(path))
@@ -586,7 +512,7 @@ COMMAND(group)
     throw CommandLineError("specify only one action at a time");
   bool fallback = flag(args, "fallback-xattrs");
   std::string path = mandatory<std::string>(args, "path", "path in volume");
-  enforce_in_mountpoint(path, fallback);
+  enforce_in_mountpoint(path, true, fallback);
   bool fetch = flag(args, "fetch");
   // Need to perform group actions on a directory in the volume.
   if (!boost::filesystem::is_directory(path))
@@ -630,7 +556,7 @@ COMMAND(register_)
   auto network = ifnt.network_get(network_name, self);
   bool fallback = flag(args, "fallback-xattrs");
   auto path = mandatory<std::string>(args, "path", "path to mountpoint");
-  enforce_in_mountpoint(path, fallback);
+  enforce_in_mountpoint(path, true, fallback);
   auto user = ifnt.user_get(user_name, flag(args, "fetch"));
   auto passport = ifnt.passport_get(network.name, user_name);
   std::stringstream output;
