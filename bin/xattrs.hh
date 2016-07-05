@@ -11,7 +11,7 @@
 # include <boost/filesystem/path.hpp>
 # include <boost/optional/optional.hpp>
 
-# include <elle/error.hh>
+# include <elle/Error.hh>
 
 class InvalidArgument
   : public elle::Error
