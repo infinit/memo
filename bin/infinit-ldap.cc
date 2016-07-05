@@ -41,9 +41,10 @@ extract_fields(std::string const& pattern, std::vector<std::string>& res)
 
 static
 std::string
-make_field(std::string pattern,
-              std::unordered_map<std::string, std::vector<std::string>> const& attrs,
-              int i = 0)
+make_field(
+  std::string pattern,
+  std::unordered_map<std::string, std::vector<std::string>> const& attrs,
+  int i = 0)
 {
   std::vector<std::string> fields;
   extract_fields(pattern, fields);
@@ -79,26 +80,22 @@ make_ldap(variables_map const& args)
   return ldap;
 }
 
-COMMAND(populate_network)
+static
+std::unordered_map<std::string, infinit::User>
+_populate_network(boost::program_options::variables_map const& args,
+                  std::string const& network_name)
 {
   auto self = self_user(ifnt, args);
-  auto network = infinit::NetworkDescriptor(ifnt.network_get(mandatory(args, "network"), self));
-  auto drive_name = optional(args, "drive");
-  boost::optional<infinit::Drive> drive;
-  if (drive_name)
-    drive = ifnt.drive_get(*drive_name);
-  bool create_home = flag(args, "create-home");
-  std::string permissions = "rw";
-  auto perm_arg = optional(args, "permissions");
-  if (perm_arg)
-    permissions = *perm_arg;
+  auto network =
+    infinit::NetworkDescriptor(ifnt.network_get(network_name, self));
   auto mountpoint = mandatory(args, "mountpoint");
+  enforce_in_mountpoint(mountpoint, true, true);
   auto ldap = make_ldap(args);
   auto searchbase = mandatory(args, "searchbase");
   auto objectclass = optional(args, "object-class");
   auto filter = optional(args, "filter");
   if (filter && objectclass)
-    throw elle::Error("filter and object-class can't both be specified");
+    throw elle::Error("specify either --filter or --object-class");
   if (objectclass)
     filter = "objectClass=" + *objectclass;
   else if (!filter)
@@ -135,20 +132,23 @@ COMMAND(populate_network)
   {
     try
     {
-      auto u = beyond_fetch<infinit::User>("ldap_user",
-                                           reactor::http::url_encode(m.second));
+      auto u = beyond_fetch<infinit::User>(
+        elle::sprintf("ldap_users/%s", reactor::http::url_encode(m.second)),
+        "LDAP user",
+        m.second);
       users.insert(std::make_pair(m.first, u));
     }
     catch (elle::Error const& e)
     {
-      ELLE_LOG("Failed to fetch user %s from %s", m.second, beyond(true));
+      ELLE_WARN("Failed to fetch user %s from %s", m.second, beyond(true));
     }
   }
 
   // Push all users
   for (auto const& u: users)
   {
-    ELLE_TRACE("Pushing user %s (%s)", u.second.name, u.first);
+    auto user_name = u.second.name;
+    ELLE_TRACE("Pushing user %s (%s)", user_name, u.first);
     infinit::model::doughnut::Passport passport(
       u.second.public_key,
       network.name,
@@ -161,45 +161,59 @@ COMMAND(populate_network)
     try
     {
       beyond_push(
-        elle::sprintf("networks/%s/passports/%s", network.name, u.second.name),
+        elle::sprintf("networks/%s/passports/%s", network.name, user_name),
         "passport",
-        elle::sprintf("%s: %s", network.name, u.second.name),
+        elle::sprintf("%s: %s", network.name, user_name),
         passport,
         self);
     }
     catch (elle::Error const& e)
     {
-      ELLE_LOG("failed to push passport for %s: %s", u.second.name, e);
-    }
-    if (drive)
-    {
-      try
-      {
-        beyond_push(
-          elle::sprintf("drives/%s/invitations/%s", drive->name, u.second.name),
-          "invitation",
-          elle::sprintf("%s: %s", drive->name, u.second.name),
-          infinit::Drive::User(permissions, "ok", create_home),
-          self,
-          true,
-          true);
-      }
-      catch(elle::Error const& e)
-      {
-        ELLE_LOG("failed to push drive invite for %s: %s", u.second.name, e);
-      }
+      ELLE_WARN("Failed to push passport for %s: %s", user_name, e);
     }
     auto passport_ser = elle::serialization::json::serialize(passport, false);
-    int res = port_setxattr(mountpoint, "infinit.register." + u.second.name,
-                            passport_ser.string(), true);
+    char buf[4096];
+    int res = port_getxattr(mountpoint,
+                            elle::sprintf("infinit.resolve.%s", user_name),
+                            buf, 4095, true);
+    if (res > 0)
+    {
+      std::cout
+         << elle::sprintf("User \"%s\" already registerd to network.", user_name)
+         << std::endl;
+      continue;
+    }
+    res = port_setxattr(mountpoint, "infinit.register." + user_name,
+                        passport_ser.string(), true);
     if (res)
-      ELLE_LOG("Failed to set user %s: %s", u.second.name, res);
+      ELLE_WARN("Failed to set user %s: %s", user_name, res);
+    else
+    {
+      std::cout << elle::sprintf("Registered user \"%s\" to network.",
+                                 user_name)
+                << std::endl;
+    }
   }
   // Push groups
   for (auto const& g: groups)
   {
     ELLE_TRACE_SCOPE("Creating group %s", g.first);
-    port_setxattr(mountpoint, "infinit.group.create", g.first, true);
+    char buf[4096];
+    int res = port_getxattr(mountpoint,
+                            elle::sprintf("infinit.resolve.%s", g.first),
+                            buf, 4095, true);
+    if (res > 0)
+    {
+      std::cout
+        << elle::sprintf("Group \"%s\" already exists on network.", g.first)
+        << std::endl;
+    }
+    else
+    {
+      port_setxattr(mountpoint, "infinit.group.create", g.first, true);
+      std::cout << elle::sprintf("Added group \"%s\" to network.", g.first)
+                << std::endl;
+    }
     for (auto const& m: g.second)
     {
       if (users.find(m) == users.end())
@@ -212,6 +226,117 @@ COMMAND(populate_network)
         g.first + ':' + users.at(m).name, true);
       if (res)
         ELLE_LOG("Failed to add %s to group %s: %s", m, g.first, res);
+      else
+      {
+        std::cout << elle::sprintf(
+          "Added user \"%s\" to group \"%s\" on network.", m, g.first);
+        std::cout << std::endl;
+      }
+    }
+  }
+  return users;
+}
+
+COMMAND(populate_network)
+{
+  auto network_name = mandatory(args, "network");
+  _populate_network(args, network_name);
+}
+
+COMMAND(drive_invite)
+{
+  auto self = self_user(ifnt, args);
+  auto drive =
+    ifnt.drive_get(ifnt.qualified_name(mandatory(args, "drive"), self));
+  auto network = ifnt.network_descriptor_get(drive.network, self);
+  bool create_home = flag(args, "create-home");
+  std::string permissions = "rw";
+  auto perm_arg = optional(args, "root-permissions");
+  if (perm_arg)
+  {
+    permissions = *perm_arg;
+    std::transform(permissions.begin(), permissions.end(), permissions.begin(),
+                   ::tolower);
+  }
+  std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
+  auto it = std::find(allowed_modes.begin(), allowed_modes.end(), permissions);
+  if (it == allowed_modes.end())
+  {
+    throw CommandLineError(
+      elle::sprintf("mode must be one of: %s", allowed_modes));
+  }
+  std::vector<std::string> modes_map = {"setr", "setw", "setrw", "", ""};
+  auto mode = modes_map[it - allowed_modes.begin()];
+  auto mountpoint = mountpoint_root(mandatory(args, "mountpoint"), true);
+  auto users = _populate_network(args, drive.network);
+  for (auto const& u: users)
+  {
+    auto set_permissions = [] (boost::filesystem::path const& folder,
+                               std::string const& perms,
+                               std::string const& user_name) {
+      check(port_setxattr, folder.string(),
+        elle::sprintf("user.infinit.auth.%s", perms), user_name, true);
+    };
+    if (!mode.empty())
+    {
+      if (u.second.public_key != network.owner)
+      {
+        try
+        {
+          set_permissions(mountpoint, mode, u.second.name);
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_WARN("Unable to set permissions on root directory (%s): %s",
+                    mountpoint, e);
+        }
+      }
+    }
+    if (create_home)
+    {
+      auto home_dir = mountpoint / "home";
+      auto user_dir = home_dir / u.second.name;
+      if (boost::filesystem::create_directories(user_dir))
+      {
+        if (u.second.public_key != network.owner)
+        {
+          try
+          {
+            if (mode.empty())
+              set_permissions(mountpoint, "setr", u.second.name);
+            set_permissions(home_dir, "setr", u.second.name);
+            set_permissions(user_dir, "setrw", u.second.name);
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN(
+              "Unable to set permissions on user home directory (%s): %s",
+               user_dir, e);
+          }
+        }
+        std::cout << elle::sprintf("Created home directory: %s.", user_dir)
+                  << std::endl;
+      }
+      else
+      {
+        ELLE_WARN("Unable to create home directory for %s: %s.",
+                 u.second.name, user_dir);
+      }
+    }
+    try
+    {
+      beyond_push(
+        elle::sprintf("drives/%s/invitations/%s", drive.name, u.second.name),
+        "invitation",
+        elle::sprintf("%s: %s", drive.name, u.second.name),
+        infinit::Drive::User(permissions, "ok", create_home),
+        self,
+        true,
+        true);
+    }
+    catch (elle::Error const& e)
+    {
+      ELLE_WARN("failed to push drive invite for %s: %s", u.second.name, e);
     }
   }
 }
@@ -289,6 +414,11 @@ COMMAND(populate_hub)
     }
   }
 
+  if (!missing.size())
+  {
+    std::cout << std::endl << "No new users to register" << std::endl;
+    return;
+  }
   std::cout << std::endl << "Will register the following users:" << std::endl;
   for (auto& m: missing)
   {
@@ -297,18 +427,19 @@ COMMAND(populate_hub)
       m.first, m.second.fullname, m.second.email, m.second.dn) << std::endl;
   }
   std::cout << std::endl;
-  std::cout << "Proceed? [Y/n] ";
+  std::cout << "Proceed? [y/n] ";
   std::string line;
   std::getline(std::cin, line);
-  std::transform(line.begin(), line.end(), line.begin(), ::toupper);
-  if (line != "Y")
+  std::transform(line.begin(), line.end(), line.begin(), ::tolower);
+  if (line != "y")
   {
     std::cout << "Aborting..." << std::endl;
     return;
   }
   for (auto& m: missing)
   {
-    infinit::User u(m.first, infinit::cryptography::rsa::keypair::generate(2048),
+    infinit::User u(m.first,
+                    infinit::cryptography::rsa::keypair::generate(2048),
                     m.second.email, m.second.fullname, m.second.dn);
     das::Serializer<infinit::DasPrivateUserPublish> view{u};
     ELLE_TRACE("pushing %s", u.name);
@@ -316,11 +447,26 @@ COMMAND(populate_hub)
   }
 }
 
-#define LDAP_CORE_OPTIONS \
-        {"server", value<std::string>(), "URL of LDAP server"},     \
-        {"domain,d", value<std::string>(), "LDAP domain"},          \
-        {"user,u", value<std::string>(), "LDAP username"},          \
-        {"password,p", value<std::string>(), "LDAP password"}
+#define LDAP_CORE_OPTIONS                                     \
+  { "server", value<std::string>(), "URL of LDAP server" },   \
+  { "domain,d", value<std::string>(), "LDAP domain" },        \
+  { "user,u", value<std::string>(), "LDAP username" },        \
+  { "password,p", value<std::string>(), "LDAP password" }
+
+#define LDAP_NETWORK_OPTIONS                                                  \
+  { "searchbase,b", value<std::string>(),                                     \
+    "search starting point (without domain)" },                               \
+  { "filter,f", value<std::string>(),                                         \
+    "raw LDAP query to use\n(default: objectClass=posixGroup)" },             \
+  { "object-class,o", value<std::string>(),                                   \
+    "Filter results (default: posixGroup)" },                                 \
+  { "mountpoint,m", value<std::string>(),                                     \
+    "Path to a mounted volume of the network" },                              \
+  { "as", value<std::string>(), "Infinit user to use" },                      \
+  { "deny-write", bool_switch(), "Create a passport for read-only access" },  \
+  { "deny-storage", bool_switch(),                                            \
+    "Create a passport that cannot contribute storage" }
+
 int
 main(int argc, char** argv)
 {
@@ -329,45 +475,55 @@ main(int argc, char** argv)
   using boost::program_options::bool_switch;
   Modes modes {
     {
-      "populate-network",
-      "Register LDAP users and groups to a network",
-      &populate_network,
-      "--server SERVER --domain DOMAIN --user USER --network NETWORK "
-      "--mountpoint MOUNTPOINT --searchbase SEARCHBASE",
-      {
-        LDAP_CORE_OPTIONS,
-        {"searchbase,b", value<std::string>(), "search starting point (without domain)"},
-        {"filter,f", value<std::string>(), "raw LDAP query to use\n(default: objectClass=posixGroup)"},
-        {"object-class,o", value<std::string>(), "Filter results (default: posixGroup)"},
-        {"mountpoint,m", value<std::string>(), "Path to a mounted volume of the network"},
-        {"network,n", value<std::string>(), "Network name"},
-        {"as", value<std::string>(), "Infinit user to use"},
-        {"drive", value<std::string>(), "If set, invites all found users to the drive"},
-        // {"create-home", bool_switch(), "Create user home directory"},
-        {"permissions", value<std::string>(), "Permissions to give (r,rw,none – default: rw)"},
-        {"deny-write", bool_switch(), "Create a passport for read-only access"},
-        {"deny-storage", bool_switch(), "Create a passport that cannot contribute storage"},
-      }
-    },
-    {
       "populate-hub",
       "Register LDAP users on the Hub",
       &populate_hub,
       "--server SERVER --domain DOMAIN --user USER --searchbase SEARCHBASE",
       {
         LDAP_CORE_OPTIONS,
-        {"searchbase,b", value<std::string>(), "search starting point (without domain)"},
-        {"filter,f", value<std::string>(), "raw LDAP query to use\n(default: objectClass=person)"},
-        {"object-class,o", value<std::string>(), "Filter results (default: person)"},
-        {"username-pattern,U", value<std::string>(),
+        { "searchbase,b", value<std::string>(),
+          "search starting point (without domain)" },
+        { "filter,f", value<std::string>(),
+          "raw LDAP query to use\n(default: objectClass=person)" },
+        { "object-class,o", value<std::string>(),
+          "Filter results (default: person)" },
+        { "username-pattern,U", value<std::string>(),
           "Hub unique username to set\n(default: $(cn)%). Remove the '%' "
           "to disable unique username generator"},
-        {"email-pattern,e", value<std::string>(),
-          "email address pattern (default: $(mail))"},
-        {"fullname-pattern,F", value<std::string>(),
-          "fullname pattern (default: $(cn))"},
+        { "email-pattern,e", value<std::string>(),
+          "email address pattern (default: $(mail))" },
+        { "fullname-pattern,F", value<std::string>(),
+          "fullname pattern (default: $(cn))" },
       },
-    }
+    },
+    {
+      "populate-network",
+      "Register LDAP users and groups to a network",
+      &populate_network,
+      "--server SERVER --domain DOMAIN --user USER --searchbase SEARCHBASE "
+      "--network NETWORK --mountpoint MOUNTPOINT",
+      {
+        LDAP_CORE_OPTIONS,
+        { "network,n", value<std::string>(), "Network name" },
+        LDAP_NETWORK_OPTIONS,
+      },
+    },
+    {
+      "drive-invite",
+      "Invite LDAP users to a drive",
+      &drive_invite,
+      "--server SERVER --domain DOMAIN --user USER --searchbase SEARCHBASE "
+      "--drive DRIVE --mountpoint MOUNTPOINT",
+      {
+        LDAP_CORE_OPTIONS,
+        { "drive", value<std::string>(), "drive to invite users to" },
+        { "root-permissions", value<std::string>(),
+          "Volume root permissions to give\n(r,rw,none – default: rw)" },
+        { "create-home", bool_switch(),
+          "Create user home directory of the form home/<user>" },
+        LDAP_NETWORK_OPTIONS,
+      },
+    },
   };
   return infinit::main("Infinit LDAP utility", modes, argc, argv, {});
 }
