@@ -86,6 +86,7 @@ namespace infinit
                                     return;
                                   this->_process_loop();
                                 }))
+          , _in_push(false)
         {
           if (!this->_journal_dir.empty())
           {
@@ -263,6 +264,11 @@ namespace infinit
         void
         Async::_push_op(Op op)
         {
+          bool reentered = this->_in_push;
+          this->_in_push = true;
+          elle::SafeFinally ipreset([this] { this->_in_push = false;});
+          if (reentered)
+            ipreset.abort();
           op.index = ++this->_next_index;
           ELLE_TRACE_SCOPE("%s: push %s", *this, op);
           if (!this->_journal_dir.empty())
@@ -275,22 +281,34 @@ namespace infinit
             sout.set_context(OKBDontWaitForSignature{});
             sout.serialize_forward(op);
           }
-          if (!this->_first_disk_index)
+          if (reentered)
           {
-            if (!this->_journal_dir.empty() &&
-                this->_queue.size() >= this->_queue.max_size())
+            this->_reentered_ops.emplace_back(std::move(op));
+            return;
+          }
+          auto queue = [this](Op op)
+          {
+            if (!this->_first_disk_index)
             {
-              ELLE_TRACE("in-memory asynchronous queue at capacity at index %s",
-                         op.index);
-              this->_first_disk_index = op.index;
-              op.block.reset();
+              if (!this->_journal_dir.empty() &&
+                  this->_queue.size() >= this->_queue.max_size())
+              {
+                ELLE_TRACE("in-memory asynchronous queue at capacity at index %s",
+                           op.index);
+                this->_first_disk_index = op.index;
+                op.block.reset();
+              }
+              else
+                this->_queue.put(op.index);
             }
             else
-              this->_queue.put(op.index);
-          }
-          else
-            op.block.reset();
-          this->_operations.emplace(std::move(op));
+              op.block.reset();
+            this->_operations.emplace(std::move(op));
+          };
+          queue(std::move(op));
+          for (auto& op: this->_reentered_ops)
+            queue(std::move(op));
+          this->_reentered_ops.clear();
         }
 
         void
