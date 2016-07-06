@@ -346,15 +346,15 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
     with open(peer_file, 'r') as f:
       x = f.readline().split("\n")[0]
       return x
+  res = bob.run_script(user = 'bob', volume = 'bob/v',
+                       operation = 'write_file',
+                       path = '/some_file', content = 'some data')
+  assertEq(res['success'], True)
+  res = bob.run_script(user = 'bob', volume = 'bob/v',
+                       operation = 'read_file', path = '/some_file')
+  assertEq(res['success'], True)
+  assertEq(res['content'], 'some data')
   try:
-    res = bob.run_script(user = 'bob', volume = 'bob/v',
-                         operation = 'write_file',
-                         path = '/some_file', content = 'some data')
-    assertEq(res['success'], True)
-    res = bob.run_script(user = 'bob', volume = 'bob/v',
-                         operation = 'read_file', path = '/some_file')
-    assertEq(res['success'], True)
-    assertEq(res['content'], 'some data')
     net_proc = bob.spawn(['infinit-network', '--run', 'n', '--as', 'bob',
                           '--endpoints-file', peer_file])
     # Check both admins can read.
@@ -384,11 +384,11 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
     if net_proc is not None:
       net_proc.terminate()
       out, err = net_proc.communicate(timeout = 30)
-    if os.environ.get('OS') != 'windows':
-      try:
-        # SIGTERM is not caught on windows. Might be wine related.
-        assertEq(net_proc.wait(), 0)
-      except:
-        print('infinit-network STDOUT: %s' % out)
-        print('infinit-network STDERR: %s' % err)
-        raise
+      if os.environ.get('OS') != 'windows':
+        try:
+          # SIGTERM is not caught on windows. Might be wine related.
+          assertEq(net_proc.wait(), 0)
+        except:
+          print('infinit-network STDOUT: %s' % out)
+          print('infinit-network STDERR: %s' % err)
+          raise

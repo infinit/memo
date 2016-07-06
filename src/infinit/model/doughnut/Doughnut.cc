@@ -97,67 +97,72 @@ namespace infinit
       {
         auto check_user_blocks = [name, this]
           {
-            try
-            {
-              auto const addr = UB::hash_address(name, *this);
-              ELLE_TRACE_SCOPE("%s: check user block", *this);
-              auto block = this->fetch(addr);
-              ELLE_DEBUG("%s: user block for %s already present at %x",
-                         *this, name, block->address());
-              auto ub = elle::cast<UB>::runtime(block);
-              if (ub->key() != this->keys().K())
-                throw elle::Error(
-                  elle::sprintf(
-                    "user block exists at %s(%x) with different key",
-                    name, addr));
-            }
-            catch (MissingBlock const&)
-            {
-              auto user = elle::make_unique<UB>(this, name, this->passport());
-              ELLE_TRACE_SCOPE("%s: store user block at %f for %s",
-                               this, user->address(), name);
+            while (true)
               try
               {
-                this->store(std::move(user), STORE_INSERT,
-                            make_drop_conflict_resolver());
+                auto const addr = UB::hash_address(name, *this);
+                ELLE_TRACE_SCOPE("%s: check user block", *this);
+                auto block = this->fetch(addr);
+                ELLE_DEBUG("%s: user block for %s already present at %x",
+                           *this, name, block->address());
+                auto ub = elle::cast<UB>::runtime(block);
+                if (ub->key() != this->keys().K())
+                  throw elle::Error(
+                    elle::sprintf(
+                      "user block exists at %s(%x) with different key",
+                      name, addr));
+                break;
               }
-              catch (elle::Error const& e)
+              catch (MissingBlock const&)
               {
-                ELLE_TRACE("%s: failed to store user block: %s", *this, e);
+                auto user = elle::make_unique<UB>(this, name, this->passport());
+                ELLE_TRACE_SCOPE("%s: store user block at %f for %s",
+                                 this, user->address(), name);
+                try
+                {
+                  this->store(std::move(user), STORE_INSERT,
+                              make_drop_conflict_resolver());
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_TRACE("%s: failed to store user block: %s", *this, e);
+                  reactor::sleep(1_sec);
+                }
               }
-            }
-            try
-            {
-              auto const addr = UB::hash_address(this->keys().K(), *this);
-              ELLE_TRACE_SCOPE("%s: check user reverse block", *this);
-              auto block = this->fetch(addr);
-              ELLE_DEBUG("%s: user reverse block for %s already present at %x",
-                         *this, name, block->address());
-              auto ub = elle::cast<UB>::runtime(block);
-              if (ub->name() != name)
+            while (true)
+              try
               {
-                throw elle::Error(elle::sprintf(
-                  "user reverse block exists at %s(%x) with different name: %s",
-                  name, addr, ub->name()));
+                auto const addr = UB::hash_address(this->keys().K(), *this);
+                ELLE_TRACE_SCOPE("%s: check user reverse block", *this);
+                auto block = this->fetch(addr);
+                ELLE_DEBUG("%s: user reverse block for %s already present at %x",
+                           *this, name, block->address());
+                auto ub = elle::cast<UB>::runtime(block);
+                if (ub->name() != name)
+                {
+                  elle::err("user reverse block exists at %s (%f) "
+                            "with different name: %s", name, addr, ub->name());
+                }
+                break;
               }
-            }
-            catch (MissingBlock const&)
-            {
-              auto user =
+              catch (MissingBlock const&)
+              {
+                auto user =
                 elle::make_unique<UB>(this, name, this->passport(), true);
-              ELLE_TRACE_SCOPE("%s: store reverse user block at %f", this,
-                               user->address());
-              try
-              {
-                this->store(std::move(user), STORE_INSERT,
-                            make_drop_conflict_resolver());
+                ELLE_TRACE_SCOPE("%s: store reverse user block at %f", this,
+                                 user->address());
+                try
+                {
+                  this->store(std::move(user), STORE_INSERT,
+                              make_drop_conflict_resolver());
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_TRACE("%s: failed to store reverse user block: %s",
+                             *this, e);
+                  reactor::sleep(1_sec);
+                }
               }
-              catch (elle::Error const& e)
-              {
-                ELLE_TRACE("%s: failed to store reverse user block: %s",
-                           *this, e);
-              }
-            }
           };
         this->_user_init.reset(new reactor::Thread(
           elle::sprintf("%s: user blocks checker", *this),
@@ -168,7 +173,11 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: destruct", *this);
         if (this->_user_init)
-          this->_user_init->terminate_now();
+        {
+          if (!reactor::wait(*this->_user_init, 5_sec))
+            this->_user_init->terminate_now();
+          this->_user_init.reset();
+        }
         if (this->_local)
           this->_local->cleanup();
         this->_consensus.reset();

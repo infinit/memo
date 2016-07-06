@@ -10,6 +10,7 @@
 # include <infinit/RPC.hh>
 # include <infinit/model/doughnut/Peer.hh>
 # include <infinit/model/doughnut/fwd.hh>
+# include <infinit/model/doughnut/protocol.hh>
 # include <infinit/storage/Storage.hh>
 
 namespace infinit
@@ -27,12 +28,6 @@ namespace infinit
       public:
         typedef Local Self;
         typedef Peer Super;
-        enum class Protocol
-        {
-          tcp = 1,
-          utp = 2,
-          all = 3
-        };
 
       /*-------------.
       | Construction |
@@ -132,20 +127,4 @@ namespace infinit
   }
 }
 
-namespace elle
-{
-  namespace serialization
-  {
-    template<> struct Serialize<infinit::model::doughnut::Local::Protocol>
-    {
-      typedef std::string Type;
-      static
-      std::string
-      convert(infinit::model::doughnut::Local::Protocol p);
-      static
-      infinit::model::doughnut::Local::Protocol
-      convert(std::string const& repr);
-    };
-  }
-}
 #endif

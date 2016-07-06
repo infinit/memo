@@ -129,6 +129,10 @@ namespace infinit
             else
               missing.push_back(a);
           }
+          // Don't pass local_version to fetch, prioritizing cache feed over
+          // this optimization.
+          for (auto& av: missing)
+            av.second.reset();
           _backend->fetch(missing,
             [&](Address addr, std::unique_ptr<blocks::Block> block,
                 std::exception_ptr exc)
@@ -241,7 +245,7 @@ namespace infinit
             {
               static elle::Bench bench("bench.cache.pending_wait", 10000_sec);
               elle::Bench::BenchScope bs(bench);
-              ELLE_TRACE("%s: fetch on %s pending", this, address);
+              ELLE_TRACE("%s: fetch on %f pending", this, address);
               auto b = it->second;
               b->wait();
               return _fetch(address, local_version);
