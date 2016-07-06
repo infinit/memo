@@ -3,6 +3,7 @@
 import json
 
 from distutils.version import LooseVersion as Version
+from itertools import chain
 from utils import *
 from copy import copy
 from operator import itemgetter
@@ -12,11 +13,12 @@ from functools import partial
 path = os.path.dirname(os.path.realpath(__file__))
 
 _assertEq = assertEq
-def assertEq(x, y, key = 'name'):
+def assertEq(x, y):
   if isinstance(x, list) and isinstance(y, list):
+    keys = set(chain(*[x.keys() for x in chain(x, y)]))
     return _assertEq(
-      sorted(x, key=itemgetter(key)),
-      sorted(y, key=itemgetter(key))
+      sorted(x, key=itemgetter(*keys)),
+      sorted(y, key=itemgetter(*keys))
     )
   else:
     return _assertEq(x, y)
@@ -64,8 +66,7 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
              [
                {'name': 'owner/network1', 'linked': False},
                {'name': 'owner/network0', 'linked': True}
-             ],
-             key = 'name')
+             ])
     # Network 'network1'.
     try:
       network1 = user('infinit-network', '--export', '--name', 'owner/network1')
@@ -89,7 +90,7 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
       {'network': 'owner/network1', 'user': 'other'},
       {'network': 'owner/network1', 'user': 'user'},
       {'network': 'owner/network0', 'user': 'user'}
-    ], key = 'network'),
+    ])
     for passport in map(
         lambda network: user('infinit-passport', '--export',
                             '--user', 'user', '--network', network),
@@ -198,8 +199,7 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
       [
         {'name': 'owner/network0', 'linked': True },
         {'name': 'owner/network1', 'linked': True },
-      ],
-      key = 'name')
+      ])
     # Network is still linked for other.
     throws(lambda: user('infinit-network', '--delete', '--name', 'owner/network1'))
     # Unlink it.
@@ -211,8 +211,7 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
       [
         {'name': 'owner/network0', 'linked': True },
         {'name': 'owner/network1', 'linked': False },
-      ],
-      key = 'name')
+      ])
     # User can create a network (and is automatically linked with it) and
     # delete it direct.
     user('infinit-network', '--create', '--kelips', '--name', 'network')
@@ -222,13 +221,11 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
         {'name': 'owner/network0', 'linked': True },
         {'name': 'owner/network1', 'linked': False },
         {'name': 'user/network', 'linked': True },
-      ],
-      key = 'name')
+      ])
     user('infinit-network', '--delete', '--name', 'user/network', '--unlink')
     assertEq(
       user('infinit-network', '--list'),
       [
         {'name': 'owner/network0', 'linked': True},
         {'name': 'owner/network1', 'linked': False },
-      ],
-      key = 'name')
+      ])
