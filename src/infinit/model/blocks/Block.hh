@@ -82,7 +82,7 @@ namespace infinit
         void
         seal(boost::optional<int> version = {});
         ValidationResult
-        validate(Model const& model) const;
+        validate(Model const& model, bool writing) const;
         ValidationResult
         validate(Model const& model, const Block& new_block) const;
         void
@@ -99,7 +99,7 @@ namespace infinit
         _seal(boost::optional<int> version);
         virtual
         ValidationResult
-        _validate(Model const& model) const;
+        _validate(Model const& model, bool writing) const;
         virtual
         ValidationResult
         _validate(Model const& model, const Block& new_block) const;
