@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+
+import os
+import os.path
+import pwd
+import socket
+import subprocess
+import sys
+
+from itertools import chain
+
+ROOT = os.path.realpath(os.path.dirname(__file__))
+DISTCC = os.environ.get(
+  'DISTCC_DIR', '%s/.distcc' % os.environ['HOME'])
+CCACHE = os.environ.get(
+  'CCACHE_DIR', '%s/.ccache' % os.environ['HOME'])
+SRC = os.path.realpath('%s/../../..' % ROOT)
+USER = subprocess.check_output(['whoami']).decode().strip()
+fmt = {
+  'ccache': CCACHE,
+  'distcc': DISTCC,
+  'root': ROOT,
+  'src': SRC,
+}
+
+def call(cmd):
+  print(' '.join(cmd))
+  subprocess.check_call(cmd)
+
+call([
+  'docker', 'build', '--quiet',
+
+  '--build-arg', 'user=%s' % pwd.getpwuid(os.getuid())[0],
+  '--build-arg', 'builddir=%s/build' % ROOT,
+  '--tag', 'infinit/build:xenial',
+  '%s/docker' % ROOT
+])
+
+env = {
+  'PYTHONUNBUFFERED': 1,
+}
+for fwd in [
+    'ELLE_REAL_ASSERT',
+    'DRAKE_DEBUG_BACKTRACE',
+    'DRAKE_EXPLAIN',
+    'DRAKE_RAW',
+]:
+  v = os.environ.get(fwd)
+  if v is not None:
+    env[fwd] = v
+
+call([
+  'docker', 'run', '--rm',
+  '--privileged',
+  # Needed to monitor distcc
+  '--hostname', socket.gethostname(), '--pid', 'host',
+  '--volume', '%(ccache)s:%(ccache)s' % fmt,
+  '--volume', '%(distcc)s:%(distcc)s' % fmt,
+  '--volume', '%(src)s:%(src)s' % fmt,
+  '--volume', '/run/docker.sock:/run/docker.sock',
+  ] + list(chain(*(('--env', '%s=%s' % i) for i in env.items()))) + [
+  '--user', USER,
+  'infinit/build:xenial'] + sys.argv[1:])
