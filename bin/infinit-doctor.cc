@@ -43,8 +43,7 @@ namespace reporting
   section(std::ostream& out,
           std::string name)
   {
-    out << " = " << name << " = " << std::endl;
-    out << std::endl;
+    out << "= " << name << " =" << std::endl;
   }
 
   template <typename C, typename ... Args>
@@ -114,17 +113,17 @@ namespace reporting
         return !r.second.sane();
       }) != container.end();
     if (verbose || broken)
-      out << name << ":" << std::endl;
+      out << "* " << name << ":" << std::endl;
     for (auto const& item: container)
       if (verbose || !item.second.sane())
       {
-        out << "  ";
+        out << "  - ";
         if (item.second.sane())
           out << item.first;
         else
           faulty(out, item.first);
         item.second.print(out << " ", verbose);
-        // out << std::endl;
+        out << std::endl;
       }
   }
 
@@ -174,13 +173,13 @@ namespace reporting
 
   public:
     std::ostream&
-    print(std::ostream& out, bool verbose) const
+    print(std::ostream& out, bool verbose, bool rc = true) const
     {
       if (this->show(verbose))
-        this->_print(out, verbose);
+        this->_print(out << "* ", verbose);
       if (this->show(verbose) && this->reason)
         out << " (" << *this->reason << ")";
-      if (this->show(verbose))
+      if (rc && this->show(verbose))
         out << std::endl;
       return out;
     }
@@ -212,7 +211,7 @@ namespace reporting
         this->_print(out, verbose);
         if (!this->sane() && this->reason)
           out << " (" << *this->reason << ")";
-        return out << std::endl;
+        return out;
       }
     };
 
@@ -570,7 +569,7 @@ namespace reporting
         {
           out << "Environment:" << std::endl;
           for (auto const& entry: this->environment)
-            warn(out << "  ", entry.first) << ": " << entry.second << std::endl;
+            warn(out << "  - ", entry.first) << ": " << entry.second << std::endl;
         }
       }
 
@@ -603,7 +602,7 @@ namespace reporting
       }
 
       void
-      _print(std::ostream& out, bool verbose) const override
+      print(std::ostream& out, bool verbose) const
       {
         if (this->show(verbose))
         {
@@ -644,7 +643,7 @@ namespace reporting
         section(out, "Sanity");
       user.print(out, verbose);
       space_left.print(out, verbose);
-      environment.print(out, verbose);
+      environment.print(out, verbose, false);
       reporting::print(out, "Permissions", permissions, verbose);
     }
 
@@ -701,9 +700,9 @@ namespace reporting
         {
           out << "Connection to " << ::beyond() << ":";
           if (!this->sane())
-            faulty(out << std::endl << "  ", result(this->sane()));
+            faulty(out << std::endl << "  - ", result(this->sane()));
           else
-            out << result(this->sane());
+            out << " " << result(this->sane());
         }
       }
 
@@ -741,7 +740,7 @@ namespace reporting
           out << "Interfaces:" << std::endl;
           for (auto const& entry: this->entries)
           {
-            out << "  " << entry << std::endl;
+            out << "  - " << entry << std::endl;
           }
         }
       }
@@ -791,18 +790,18 @@ namespace reporting
       }
 
       void
-      _print(std::ostream& out, bool verbose) const override
+      print(std::ostream& out, bool verbose) const
       {
         if (this->show(verbose))
         {
           if (this->address)
-            out << std::endl << "    Address: " << *this->address;
+            out << std::endl << "    - Address: " << *this->address;
           if (this->local_port)
-            out << std::endl << "    Local port: " << *this->local_port;
+            out << std::endl << "    - Local port: " << *this->local_port;
           if (this->remote_port)
-            out << std::endl << "    Remote port: " << *this->remote_port;
+            out << std::endl << "    - Remote port: " << *this->remote_port;
           if (this->internal)
-            out << std::endl << "    Internal: " << *this->internal;
+            out << std::endl << "    - Internal: " << *this->internal;
         }
       }
 
@@ -843,7 +842,7 @@ namespace reporting
           if (this->sane())
             out << "OK (" << (this->cone ? "CONE" : "NOT CONE") << ")";
           else
-            faulty(out << std::endl << "  ", elle::sprintf("%s", result(false)));
+            faulty(out << std::endl << "    ", elle::sprintf("%s", result(false)));
         }
       }
 
@@ -916,17 +915,17 @@ namespace reporting
         }
 
         void
-        _print(std::ostream& out, bool verbose) const override
+        print(std::ostream& out, bool verbose) const
         {
           if (this->show(verbose))
           {
             out << result(this->sane());
             if (internal)
-              out << std::endl << "    internal: " << this->internal;
-            if (internal)
-              out << std::endl << "    external: " << this->external;
+              out << std::endl << "      - internal: " << this->internal;
+            if (external)
+              out << std::endl << "      - external: " << this->external;
             if (!this->sane() && this->reason)
-              out << std::endl << "   >" << *this->reason;
+              out << std::endl << "      - Reason: " << *this->reason;
           }
         }
 
@@ -951,15 +950,15 @@ namespace reporting
         if (this->show(verbose))
         {
           out << "UPNP:" << std::endl;
-          out << "  available: " << this->available << std::endl;
+          out << "  - available: " << this->available << std::endl;
           if (this->external)
-            out << "  external IP address: " << this->external;
+            out << "  - external IP address: " << this->external;
           else
-            out << "  no external IP address";
+            out << "  - no external IP address";
           out << std::endl;
           for (auto const& redirection: redirections)
           {
-            out << "  ";
+            out << "    - ";
             if (redirection.second.sane())
               out << redirection.first;
             else
@@ -1000,9 +999,9 @@ namespace reporting
       if (!this->sane() | verbose)
         section(out, "Networking");
       this->beyond.print(out, verbose);
-      this->interfaces.print(out, verbose);
+      this->interfaces.print(out, verbose, false);
       this->nat.print(out, verbose);
-      this->upnp.print(out, verbose);
+      this->upnp.print(out, verbose, false);
       reporting::print(out, "Protocols", this->protocols, verbose);
     }
 
@@ -1127,11 +1126,11 @@ void
 _networking(boost::program_options::variables_map const& args,
             reporting::NetworkingResults& results)
 {
-  // Contact beyond.
+  ELLE_TRACE("contact beyond")
   {
     try
     {
-      reactor::http::Request r(beyond(), reactor::http::Method::GET);
+      reactor::http::Request r(beyond(), reactor::http::Method::GET, {10_sec});
       reactor::wait(r);
       auto status = (r.status() == reactor::http::StatusCode::OK);
       if (status)
@@ -1144,17 +1143,19 @@ _networking(boost::program_options::variables_map const& args,
       results.beyond = {false, elle::exception_string()};
     }
   }
-  // Interfaces.
-  auto interfaces = elle::network::Interface::get_map(
-    elle::network::Interface::Filter::no_loopback);
   std::vector<std::string> public_ips;
-  for (auto i: interfaces)
+  ELLE_TRACE("list interfaces")
   {
-    if (i.second.ipv4_address.empty())
-      continue;
-    public_ips.push_back(i.second.ipv4_address);
+    auto interfaces = elle::network::Interface::get_map(
+      elle::network::Interface::Filter::no_loopback);
+    for (auto i: interfaces)
+    {
+      if (i.second.ipv4_address.empty())
+        continue;
+      public_ips.push_back(i.second.ipv4_address);
+    }
+    results.interfaces = {public_ips};
   }
-  results.interfaces = {public_ips};
   // XXX: This should be nat.infinit.sh or something.
   std::string host = "192.241.139.66";
   uint16_t port = 5456;
@@ -1164,6 +1165,7 @@ _networking(boost::program_options::variables_map const& args,
                     uint16_t port)> const& function,
                   int deltaport = 0)
     {
+      ELLE_TRACE("connect using %s to %s:%s", name, host, port + deltaport);
       std::string result = elle::sprintf("  %s: ", name);
       try
       {
@@ -1209,7 +1211,7 @@ _networking(boost::program_options::variables_map const& args,
                 std::placeholders::_2,
                 0xFF),
       2);
-
+  ELLE_TRACE("NAT")
   {
     try
     {
@@ -1228,6 +1230,7 @@ _networking(boost::program_options::variables_map const& args,
       results.nat = {elle::exception_string()};
     }
   }
+  ELLE_TRACE("UPNP")
   {
     auto upnp = reactor::network::UPNP::make();
     try
@@ -1360,29 +1363,29 @@ void
 _sanity(boost::program_options::variables_map const& args,
         reporting::SanityResults& result)
 {
-  // User name.
-  try
-  {
-    auto self_name = self_user_name();
-    result.user = {self_name};
-  }
-  catch (...)
-  {
-    result.user = {};
-  }
-  // Space left
+  ELLE_TRACE("user name")
+    try
+    {
+      auto self_name = self_user_name();
+      result.user = {self_name};
+    }
+    catch (...)
+    {
+      result.user = {};
+    }
+  ELLE_TRACE("calculate space left")
   {
     size_t min = 50 * 1024 * 1024;
     double min_ratio = 0.02;
     auto f = boost::filesystem::space(infinit::xdg_data_home());
     result.space_left = {min, min_ratio, f.available, f.capacity};
   }
-  // Env.
+  ELLE_TRACE("look for Infinit related environment")
   {
     auto env = infinit_related_environment();
     result.environment = {env};
   }
-  // Permissions.
+  ELLE_TRACE("check permissions")
   {
     auto test_permissions = [&] (boost::filesystem::path const& path)
       {
@@ -1396,7 +1399,6 @@ _sanity(boost::program_options::variables_map const& args,
           reporting::store(result.permissions, path.string(), true, read, write);
         }
       };
-
     test_permissions(elle::system::home_directory());
     test_permissions(infinit::xdg_cache_home());
     test_permissions(infinit::xdg_config_home());
@@ -1447,120 +1449,124 @@ _integrity(boost::program_options::variables_map const& args,
   auto drives = parse(ifnt.drives_get());
   auto volumes = parse(ifnt.volumes_get());
   auto networks = parse(ifnt.networks_get());
-  for (auto& elem: storage_resources)
-  {
-    auto& storage = elem.second.first;
-    auto& status = elem.second.second;
-    if (auto s3config = dynamic_cast<infinit::storage::S3StorageConfig const*>(storage.get()))
+  ELLE_TRACE("verify storage resources")
+    for (auto& elem: storage_resources)
     {
-      auto it =
-        std::find_if(
-          aws_credentials.begin(),
-          aws_credentials.end(),
-          [&s3config] (std::unique_ptr<infinit::AWSCredentials, std::default_delete<infinit::Credentials>> const& credentials)
-          {
+      auto& storage = elem.second.first;
+      auto& status = elem.second.second;
+      if (auto s3config = dynamic_cast<infinit::storage::S3StorageConfig const*>(storage.get()))
+      {
+        auto it =
+          std::find_if(
+            aws_credentials.begin(),
+            aws_credentials.end(),
+            [&s3config] (std::unique_ptr<infinit::AWSCredentials, std::default_delete<infinit::Credentials>> const& credentials)
+            {
 #define COMPARE(field) (credentials->field == s3config->credentials.field())
-            return COMPARE(access_key_id) && COMPARE(secret_access_key);
+              return COMPARE(access_key_id) && COMPARE(secret_access_key);
 #undef COMPARE
-          });
-      status = (it != aws_credentials.end());
-      if (status)
-        reporting::store(results.storage_resources, storage->name, status, "S3");
-      else
-        reporting::store(results.storage_resources, storage->name, status, "S3", std::string("Missing credentials"));
-    }
-    if (auto fsconfig = dynamic_cast<infinit::storage::FilesystemStorageConfig const*>(storage.get()))
-    {
-      auto perms = has_permission(fsconfig->path);
-      status = perms.first;
-      reporting::store(results.storage_resources, storage->name, status, "filesystem", perms.second);
-    }
-    if (auto gcsconfig = dynamic_cast<infinit::storage::GCSConfig const*>(storage.get()))
-    {
-      auto it =
-        std::find_if(
-          gcs_credentials.begin(),
-          gcs_credentials.end(),
-          [&gcsconfig] (std::unique_ptr<infinit::OAuthCredentials, std::default_delete<infinit::Credentials>> const& credentials)
-          {
-            return credentials->refresh_token == gcsconfig->refresh_token;
-          });
-      status = (it != gcs_credentials.end());
-      if (status)
-        reporting::store(results.storage_resources, storage->name, status, "GCS");
-      else
-        reporting::store(results.storage_resources, storage->name, status, "GCS", std::string("Missing credentials"));
-    }
-#ifndef INFINIT_WINDOWS
-    if (/* auto ssh = */
-      dynamic_cast<infinit::storage::SFTPStorageConfig const*>(storage.get()))
-    {
-      // XXX:
-    }
-#endif
-  }
-  for (auto& elem: networks)
-  {
-    auto const& network = elem.second.first;
-    auto& status = elem.second.second;
-    std::vector<std::string> storage_names;
-    if (network.model)
-    {
-      if (network.model->storage)
-      {
-        if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
-              network.model->storage.get()))
-          for (auto const& s: strip->storage)
-            storage_names.push_back(s->name);
+            });
+        status = (it != aws_credentials.end());
+        if (status)
+          reporting::store(results.storage_resources, storage->name, status, "S3");
         else
-          storage_names.push_back(network.model->storage->name);
+          reporting::store(results.storage_resources, storage->name, status, "S3", std::string("Missing credentials"));
       }
-    }
-    std::vector<std::string> faulty;
-    status = storage_names.size() == 0 || std::all_of(
-      storage_names.begin(),
-      storage_names.end(),
-      [&] (std::string const& name) -> bool
+      if (auto fsconfig = dynamic_cast<infinit::storage::FilesystemStorageConfig const*>(storage.get()))
       {
-        auto it = storage_resources.find(name);
-        auto res = (it != storage_resources.end() && it->second.second);
-        if (!res)
-          faulty.push_back(name);
-        return res;
-      });
-    if (status)
-      reporting::store(results.networks, network.name, status);
-    else
-      reporting::store(results.networks, network.name, status, faulty);
-  }
-  for (auto& elems: volumes)
-  {
-    auto const& volume = elems.second.first;
-    auto& status = elems.second.second;
-    auto network = networks.find(volume.network);
-    auto network_presents = network != networks.end();
-    status = network_presents && network->second.second;
-    if (status)
-      reporting::store(results.volumes, volume.name, status);
-    else
-      reporting::store(results.volumes, volume.name, status, volume.network);
-  }
-  for (auto& elems: drives)
-  {
-    auto const& drive = elems.second.first;
-    auto& status = elems.second.second;
-    auto volume = volumes.find(drive.volume);
-    auto volume_presents = volume != volumes.end();
-    auto volume_ok = volume_presents && volume->second.second;
-    auto network = networks.find(drive.network);
-    auto network_presents = network != networks.end();
-    auto network_ok = network_presents && network->second.second;
-    status = network_ok && volume_ok;
-    if (status)
-      reporting::store(results.drives, drive.name, status);
-    else
-      reporting::store(results.drives, drive.name, status, drive.volume);
-  }
+        auto perms = has_permission(fsconfig->path);
+        status = perms.first;
+        reporting::store(results.storage_resources, storage->name, status, "filesystem", perms.second);
+      }
+      if (auto gcsconfig = dynamic_cast<infinit::storage::GCSConfig const*>(storage.get()))
+      {
+        auto it =
+          std::find_if(
+            gcs_credentials.begin(),
+            gcs_credentials.end(),
+            [&gcsconfig] (std::unique_ptr<infinit::OAuthCredentials, std::default_delete<infinit::Credentials>> const& credentials)
+            {
+              return credentials->refresh_token == gcsconfig->refresh_token;
+            });
+        status = (it != gcs_credentials.end());
+        if (status)
+          reporting::store(results.storage_resources, storage->name, status, "GCS");
+        else
+          reporting::store(results.storage_resources, storage->name, status, "GCS", std::string("Missing credentials"));
+      }
+#ifndef INFINIT_WINDOWS
+      if (/* auto ssh = */
+        dynamic_cast<infinit::storage::SFTPStorageConfig const*>(storage.get()))
+      {
+        // XXX:
+      }
+#endif
+    }
+  ELLE_TRACE("verify networks")
+    for (auto& elem: networks)
+    {
+      auto const& network = elem.second.first;
+      auto& status = elem.second.second;
+      std::vector<std::string> storage_names;
+      if (network.model)
+      {
+        if (network.model->storage)
+        {
+          if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
+                network.model->storage.get()))
+            for (auto const& s: strip->storage)
+              storage_names.push_back(s->name);
+          else
+            storage_names.push_back(network.model->storage->name);
+        }
+      }
+      std::vector<std::string> faulty;
+      status = storage_names.size() == 0 || std::all_of(
+        storage_names.begin(),
+        storage_names.end(),
+        [&] (std::string const& name) -> bool
+        {
+          auto it = storage_resources.find(name);
+          auto res = (it != storage_resources.end() && it->second.second);
+          if (!res)
+            faulty.push_back(name);
+          return res;
+        });
+      if (status)
+        reporting::store(results.networks, network.name, status);
+      else
+        reporting::store(results.networks, network.name, status, faulty);
+    }
+  ELLE_TRACE("verify volumes")
+    for (auto& elems: volumes)
+    {
+      auto const& volume = elems.second.first;
+      auto& status = elems.second.second;
+      auto network = networks.find(volume.network);
+      auto network_presents = network != networks.end();
+      status = network_presents && network->second.second;
+      if (status)
+        reporting::store(results.volumes, volume.name, status);
+      else
+        reporting::store(results.volumes, volume.name, status, volume.network);
+    }
+  ELLE_TRACE("verify drives")
+    for (auto& elems: drives)
+    {
+      auto const& drive = elems.second.first;
+      auto& status = elems.second.second;
+      auto volume = volumes.find(drive.volume);
+      auto volume_presents = volume != volumes.end();
+      auto volume_ok = volume_presents && volume->second.second;
+      auto network = networks.find(drive.network);
+      auto network_presents = network != networks.end();
+      auto network_ok = network_presents && network->second.second;
+      status = network_ok && volume_ok;
+      if (status)
+        reporting::store(results.drives, drive.name, status);
+      else
+        reporting::store(results.drives, drive.name, status, drive.volume);
+    }
 }
 
 static
@@ -1642,7 +1648,7 @@ main(int argc, char** argv)
         "",
         {
           verbose
-            }
+        }
     },
     {
       "networking",
@@ -1651,7 +1657,7 @@ main(int argc, char** argv)
         "",
         {
           verbose
-            }
+        }
     },
     {
       "sanity",
@@ -1660,7 +1666,7 @@ main(int argc, char** argv)
         "",
         {
           verbose
-            }
+        }
     },
     {
       "integrity",
@@ -1669,7 +1675,7 @@ main(int argc, char** argv)
         "",
         {
           verbose
-            }
+        }
     }
   };
   return infinit::main("Infinit diagnostic utility", modes, argc, argv,
