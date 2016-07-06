@@ -73,6 +73,17 @@ namespace reporting
       return std::any_of(c.begin(), c.end(), filter);
   }
 
+  template <typename C>
+  bool
+  warning(C const& c)
+  {
+    return std::any_of(c.begin(), c.end(),
+                       [&] (typename C::value_type const& x)
+                       {
+                         return x.second.warning();
+                       });
+  }
+
   static
   std::ostream&
   faulty(std::ostream& out,
@@ -83,8 +94,8 @@ namespace reporting
 
   static
   std::ostream&
-  warning(std::ostream& out,
-         std::string const& name)
+  warn(std::ostream& out,
+       std::string const& name)
   {
     return out << "[33;01;33m[" << name << "][0m";
   }
@@ -124,11 +135,15 @@ namespace reporting
     Result()
       : _sane(false)
       , reason()
+      , _warning(false)
     {}
 
-    Result(bool sane, Reason const& reason = Reason{})
+    Result(bool sane,
+           Reason const& reason = Reason{},
+           boost::optional<bool> warning = boost::none)
       : _sane(sane)
       , reason(reason)
+      , _warning(warning)
     {}
 
     Result(elle::serialization::SerializerIn& s)
@@ -143,6 +158,8 @@ namespace reporting
 
     ELLE_ATTRIBUTE_RW(bool, sane);
     Reason reason;
+    ELLE_ATTRIBUTE_RW(bool, warning);
+
 
     virtual
     void
@@ -152,7 +169,7 @@ namespace reporting
     bool
     show(bool verbose) const
     {
-      return !this->sane() || verbose;
+      return !this->sane() || verbose || this->warning();
     }
 
   public:
@@ -173,11 +190,15 @@ namespace reporting
     {
       s.serialize("sane", this->_sane);
       s.serialize("reason", this->reason);
+      s.serialize("warning", this->_warning);
     }
   };
 
   struct IntegrityResults
+    : public Result
   {
+    using Result::Result;
+
     struct Result:
       public reporting::Result
     {
@@ -372,6 +393,15 @@ namespace reporting
         && reporting::sane(this->drives);
     }
 
+    bool
+    warning() const
+    {
+      return reporting::warning(this->storage_resources)
+        || reporting::warning(this->networks)
+        || reporting::warning(this->volumes)
+        || reporting::warning(this->drives);
+    }
+
     void
     serialize(elle::serialization::Serializer& s)
     {
@@ -404,7 +434,10 @@ namespace reporting
   };
 
   struct SanityResults
+    : public reporting::Result
   {
+    using Result::Result;
+
     struct UserResult
       : public reporting::Result
     {
@@ -467,11 +500,9 @@ namespace reporting
                 size_t available,
                 size_t capacity,
                 Result::Reason const& reason = Result::Reason {})
-        : Result(
-          capacity == 0
-          ? false
-          : ((available / (double) capacity) < minimum_ratio)
-          && available < minimum, reason)
+        : Result(capacity != 0,
+                 reason,
+                 ((available / (double) capacity) < minimum_ratio) && available < minimum)
         , minimum(minimum)
         , minimum_ratio(minimum_ratio)
         , available(available)
@@ -492,8 +523,8 @@ namespace reporting
         if (this->show(verbose))
         {
           out << "Disk space left:";
-          if (!this->sane())
-            warning(out << std::endl << "  ", "low");
+          if (!this->sane() || this->warning())
+            (this->warning() ? warn : faulty)(out << std::endl << "  ", "low");
           elle::fprintf(out, " %s available (%s%%)",
                         this->available,
                         100 * this->available / (double) this->capacity);
@@ -508,7 +539,6 @@ namespace reporting
         s.serialize("minimum_ratio", this->minimum_ratio);
         s.serialize("available", this->available);
         s.serialize("capacity", this->capacity);
-
       }
 
       uint64_t minimum;
@@ -521,7 +551,7 @@ namespace reporting
       : public reporting::Result
     {
       EnvironmentResult(Environment const& environment)
-        : Result(environment.size() == 0)
+        : Result(true, reporting::Result::Reason{}, environment.size() != 0)
         , environment(environment)
       {
       }
@@ -534,13 +564,13 @@ namespace reporting
       EnvironmentResult() = default;
 
       void
-      print(std::ostream& out, bool verbose) const
+      _print(std::ostream& out, bool verbose) const override
       {
         if (this->show(verbose))
         {
           out << "Environment:" << std::endl;
           for (auto const& entry: this->environment)
-            faulty(out << "  ", entry.first) << ": " << entry.second << std::endl;
+            warn(out << "  ", entry.first) << ": " << entry.second << std::endl;
         }
       }
 
@@ -610,7 +640,7 @@ namespace reporting
     void
     print(std::ostream& out, bool verbose) const
     {
-      if (!this->sane() || verbose)
+      if (!this->sane() || this->warning() || verbose)
         section(out, "Sanity");
       user.print(out, verbose);
       space_left.print(out, verbose);
@@ -625,6 +655,15 @@ namespace reporting
         && this->space_left.sane()
         && this->environment.sane()
         && reporting::sane(this->permissions);
+    }
+
+    bool
+    warning() const
+    {
+      return this->user.warning()
+        || this->space_left.warning()
+        || this->environment.warning()
+        || reporting::warning(this->permissions);
     }
 
     void
@@ -923,7 +962,7 @@ namespace reporting
             if (redirection.second.sane())
               out << redirection.first;
             else
-              warning(out, redirection.first);
+              warn(out, redirection.first);
             redirection.second.print(out << ": ", verbose);
             out << std::endl;
           }
@@ -974,6 +1013,16 @@ namespace reporting
         && this->nat.sane()
         && this->upnp.sane()
         && reporting::sane(this->protocols, false);
+    }
+
+    bool
+    warning() const
+    {
+      return this->beyond.warning()
+        || this->interfaces.warning()
+        || this->nat.warning()
+        || this->upnp.warning()
+        || reporting::warning(this->protocols);
     }
 
     void
@@ -1029,6 +1078,14 @@ namespace reporting
       return this->integrity.sane()
         && this->sanity.sane()
         && this->networking.sane();
+    }
+
+    bool
+    warning() const
+    {
+      return this->integrity.warning()
+        || this->sanity.warning()
+        || this->networking.warning();
     }
 
     void
@@ -1221,6 +1278,7 @@ _networking(boost::program_options::variables_map const& args,
     catch (...)
     {
       // UPNP is always considered sane.
+      results.upnp.warning(true);
       results.upnp.reason = elle::exception_string();
     }
   }
@@ -1506,13 +1564,18 @@ _integrity(boost::program_options::variables_map const& args,
 
 static
 void
-report_error(std::ostream& out,
-             bool sane)
+report_error(std::ostream& out, bool sane, bool warning = false)
 {
   if (!sane)
-    throw elle::Error("Please check your configuration");
+    throw elle::Error("Please refer to each individual error message");
   else if (!script_mode)
-    out << "All good!" << std::endl;
+  {
+    if (warning)
+      out << "If you encounter any issues, try fixing the problems indicated by the warning messages";
+    else
+      out << "All good!";
+    out  << std::endl;
+  }
 }
 
 template <typename Report>
@@ -1533,7 +1596,7 @@ COMMAND(integrity)
   reporting::IntegrityResults results;
   _integrity(args, results);
   output(std::cout, results, flag(args, "verbose"));
-  report_error(std::cout, results.sane());
+  report_error(std::cout, results.sane(), results.warning());
 }
 
 COMMAND(networking)
@@ -1541,7 +1604,7 @@ COMMAND(networking)
   reporting::NetworkingResults results;
   _networking(args, results);
   output(std::cout, results, flag(args, "verbose"));
-  report_error(std::cout, results.sane());
+  report_error(std::cout, results.sane(), results.warning());
 }
 
 COMMAND(sanity)
@@ -1549,7 +1612,7 @@ COMMAND(sanity)
   reporting::SanityResults results;
   _sanity(args, results);
   output(std::cout, results, flag(args, "verbose"));
-  report_error(std::cout, results.sane());
+  report_error(std::cout, results.sane(), results.warning());
 }
 
 COMMAND(run_all)
@@ -1559,7 +1622,7 @@ COMMAND(run_all)
   _integrity(args, a.integrity);
   _networking(args, a.networking);
   output(std::cout, a, flag(args, "verbose"));
-  report_error(std::cout, a.sane());
+  report_error(std::cout, a.sane(), a.warning());
 }
 
 int
