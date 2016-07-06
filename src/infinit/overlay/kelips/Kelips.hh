@@ -34,14 +34,15 @@ namespace infinit
   {
     namespace kelips
     {
-      typedef boost::asio::ip::tcp::endpoint RpcEndpoint;
-      typedef boost::asio::ip::udp::endpoint GossipEndpoint;
+      typedef model::Endpoint Endpoint;
+      typedef model::Endpoints Endpoints;
+      typedef model::NodeLocation NodeLocation;
       typedef infinit::model::Address Address;
       typedef std::chrono::time_point<std::chrono::system_clock> Time;
       typedef Time::duration Duration;
       //typedef std::chrono::duration<long, std::ratio<1, 1000000>> Duration;
 
-      typedef std::pair<GossipEndpoint, Time> TimedEndpoint;
+      typedef std::pair<Endpoint, Time> TimedEndpoint;
       struct Contact
       {
         // Endpoint we last received a message from
@@ -56,8 +57,6 @@ namespace infinit
         reactor::Thread::unique_ptr contacter;
         std::vector<elle::Buffer> pending;
       };
-
-      typedef std::pair<Address, std::vector<RpcEndpoint>> PeerLocation;
 
       std::ostream&
       operator << (std::ostream& output, Contact const& contact);
@@ -168,7 +167,7 @@ namespace infinit
       };
 
       typedef std::pair<
-        std::unordered_map<Address, std::vector<GossipEndpoint>>, // contacts
+        std::unordered_map<Address, Endpoints>, // contacts
         std::vector<std::pair<Address, Address>> // address, home_node
       > SerState;
 
@@ -188,7 +187,7 @@ namespace infinit
         void
         address(Address file,
                 infinit::overlay::Operation op,
-                int n, std::function<void(PeerLocation)> yield);
+                int n, std::function<void(NodeLocation)> yield);
         void
         print(std::ostream& stream) const override;
         /// local hooks interface
@@ -226,9 +225,9 @@ namespace infinit
         void
         send(packet::Packet& p, Contact& c);
         void
-        send(packet::Packet& p, GossipEndpoint ep, Address addr);
+        send(packet::Packet& p, Endpoint ep, Address addr);
         void
-        send(packet::Packet& p, Contact* c, GossipEndpoint* ep, Address* addr);
+        send(packet::Packet& p, Contact* c, Endpoint* ep, Address* addr);
         /// consistent address -> group mapper
         int
         group_of(Address const& address) const;
@@ -240,7 +239,7 @@ namespace infinit
         pinger();
         /// opportunistic contact grabbing
         void
-        onContactSeen(Address addr, GossipEndpoint endpoint, bool observer);
+        onContactSeen(Address addr, Endpoint endpoint, bool observer);
         void
         onPong(packet::Pong*);
         void
@@ -272,20 +271,20 @@ namespace infinit
         void
         cleanup();
         void
-        addLocalResults(packet::GetFileRequest* p, reactor::yielder<PeerLocation>::type const* yield);
+        addLocalResults(packet::GetFileRequest* p, reactor::yielder<NodeLocation>::type const* yield);
         void
         addLocalResults(packet::MultiGetFileRequest* p,
-                        reactor::yielder<std::pair<Address, PeerLocation>>::type const* yield,
+                        reactor::yielder<std::pair<Address, NodeLocation>>::type const* yield,
                         std::vector<std::set<Address>>& result_sets);
         void
         kelipsMGet(std::vector<Address> files, int n,
-                   std::function<void (std::pair<Address, PeerLocation>)> yield);
+                   std::function<void (std::pair<Address, NodeLocation>)> yield);
         void
         kelipsGet(Address file, int n, bool local_override, int attempts,
           bool query_node,
           bool fast_mode, // return as soon as we have a result
-          std::function<void(PeerLocation)> yield);
-        std::vector<PeerLocation>
+          std::function<void(NodeLocation)> yield);
+        std::vector<NodeLocation>
         kelipsPut(Address file, int n);
         std::unordered_multimap<Address, std::pair<Time, Address>>
         pickFiles();
@@ -315,13 +314,13 @@ namespace infinit
         get_serstate(NodeLocation const& peer);
         void
         contact(Address address); // establish contact with peer and flush buffer
-        void onPacket(reactor::network::Buffer buf, GossipEndpoint source);
-        void process(elle::Buffer const& buf, GossipEndpoint source);
+        void onPacket(reactor::network::Buffer buf, Endpoint source);
+        void process(elle::Buffer const& buf, Endpoint source);
         Contact*
         get_or_make(Address address, bool observer,
-          std::vector<GossipEndpoint> endpoints, bool make=true);
+          std::vector<Endpoint> endpoints, bool make=true);
         Overlay::WeakMember
-        make_peer(PeerLocation pl);
+        make_peer(NodeLocation pl);
         packet::RequestKey make_key_request();
         bool remote_retry_connect(model::doughnut::Remote& remote);
         Address _self;
@@ -348,7 +347,7 @@ namespace infinit
         std::unordered_map<Address,
           std::pair<infinit::cryptography::SecretKey, bool>> _keys;
         /// Bootstrap pending auth.
-        std::vector<GossipEndpoint> _pending_bootstrap_endpoints;
+        Endpoints _pending_bootstrap_endpoints;
         std::vector<Address> _pending_bootstrap_address;
         std::vector<Address> _bootstrap_requests_sent;
         reactor::network::UTPServer _remotes_server;
