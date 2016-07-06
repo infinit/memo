@@ -152,9 +152,17 @@ class Infinit(TemporaryDirectory):
     return process
 
   def run(self, args, input = None, return_code = 0, env = {}):
-    process = self.spawn(args, input, return_code, env)
-    out, err = process.communicate(timeout = 600)
-    process.wait()
+    try:
+      process = self.spawn(args, input, return_code, env)
+      out, err = process.communicate(timeout = 600)
+      process.wait()
+    except KeyboardInterrupt:
+      process.terminate()
+      out, err = process.communicate(timeout = 30)
+      print('STDOUT: %s' % out.decode('utf-8'))
+      print('STDERR: %s' % err.decode('utf-8'))
+      raise
+
     out = out.decode('utf-8')
     err = err.decode('utf-8')
     if process.returncode != return_code:
@@ -164,6 +172,7 @@ class Infinit(TemporaryDirectory):
     self.last_out = out
     self.last_err = err
     return out, err
+
 
   def run_json(self, *args, **kwargs):
     out, err = self.run(*args, **kwargs)
@@ -184,7 +193,7 @@ class Infinit(TemporaryDirectory):
                  seq = None,
                  peer = None,
                  **kwargs):
-    cmd = ['infinit-volume', '--run', volume]
+    cmd = ['infinit-volume', '--run', volume, '--allow-root-creation']
     if user is not None:
       cmd += ['--as', user]
     if peer is not None:

@@ -286,6 +286,8 @@ def configure(
     'src/infinit/model/doughnut/ValidationFailed.hh',
     'src/infinit/model/doughnut/consensus/Paxos.cc',
     'src/infinit/model/doughnut/consensus/Paxos.hh',
+    'src/infinit/model/doughnut/protocol.cc',
+    'src/infinit/model/doughnut/protocol.hh',
     'src/infinit/model/faith/Faith.cc',
     'src/infinit/model/faith/Faith.hh',
     'src/infinit/model/paranoid/Paranoid.cc',
@@ -547,10 +549,6 @@ def configure(
       symbols_dir = '%s/%s' % (prefix, git.version())
       for s in installed_symbols:
         rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
-
-  connectivity = drake.copy(elle.reactor.connectivity, '.',
-                            strip_prefix = 'elle/reactor')
-  installed_binaries.append(connectivity)
 
   ## ----- ##
   ## Share ##

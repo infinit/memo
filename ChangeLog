@@ -3,16 +3,31 @@
 
 ## [0.6.1]
 
+### Added
+
+- Add `--script` mode to `infinit-network`.
+- Add `infinit-doctor` to diagnose common setup issues.
+
 ### Changed
 
+- Require `--allow-root-creation` to create the root block with
+  `infinit-volume`.
 - Make Kelips the default overlay.
 - Fix conflict handling on file removal.
+- Show administrator in owners in `infinit-acl --list`.
+- Prevent changing network admin permissions.
+- Push endpoints to beyond before fetching them, to ensure nodes
+  always see each other.
 
 ### Fixed
 
 - Expect mode to be the first argument of all binaries, as any
   prepended argument was previously ignored.
 - Enable to set ACLs on symlinks.
+- Check permissions locally to fail immediately on `unlink` and
+  `rmdir` in asynchronous mode.
+- Fix swapped `r` and `w` flags in permissions.
+- Fix error when deserializing mutable blocks with `infinit-block`.
 
 ### Removed
 

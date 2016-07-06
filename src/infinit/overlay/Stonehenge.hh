@@ -34,6 +34,14 @@ namespace infinit
                  model::doughnut::Doughnut* doughnut);
       ELLE_ATTRIBUTE_R(Peers, peers);
 
+    /*------.
+    | Peers |
+    `------*/
+    protected:
+      virtual
+      void
+      _discover(NodeEndpoints const& peers) override;
+
     /*-------.
     | Lookup |
     `-------*/

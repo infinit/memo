@@ -457,6 +457,10 @@ beyond_push(std::string const& where,
 
 namespace infinit
 {
+  static const std::string invalid_name(
+    "name (%s) must only contain lower case alphanumeric and - . _ "
+    "characters but not start with the . character");
+
   typedef infinit::AWSCredentials AWSCredentials;
   typedef infinit::Credentials Credentials;
   typedef infinit::OAuthCredentials OAuthCredentials;
@@ -467,13 +471,10 @@ namespace infinit
   void
   check_name(std::string const& name, bool no_slash = false)
   {
-    static const std::string error_message(
-      "name (%s) must only contain lower case alphanumeric and - . _ "
-      "characters but not start with the . character");
     std::string test_name;
     auto slash_pos = name.find_first_of("/");
     if (no_slash && slash_pos != std::string::npos)
-      throw CommandLineError(elle::sprintf(error_message, name));
+      throw CommandLineError(elle::sprintf(invalid_name, name));
     if (slash_pos == std::string::npos)
       test_name = name;
     else
@@ -481,7 +482,7 @@ namespace infinit
     static const boost::regex allowed("${name_regex}");
     boost::smatch str_matches;
     if (!boost::regex_match(test_name, str_matches, allowed))
-      throw CommandLineError(elle::sprintf(error_message, test_name));
+      throw CommandLineError(elle::sprintf(invalid_name, test_name));
   }
 
   inline
@@ -1155,7 +1156,8 @@ namespace infinit
     std::unique_ptr<reactor::filesystem::FileSystem>
     run(std::shared_ptr<model::doughnut::Doughnut> dht,
         boost::optional<std::string> mountpoint_ = {},
-        boost::optional<bool> readonly = {}
+        boost::optional<bool> readonly = {},
+        bool allow_root_creation = false
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         , boost::optional<std::string> volname_ = {}
 #endif
@@ -1177,7 +1179,11 @@ namespace infinit
       else if (this->mountpoint)
         mountpoint = this->mountpoint.get();
       auto fs = elle::make_unique<filesystem::FileSystem>(
-        this->name, dht, this->root_block_cache_dir(), mountpoint);
+        infinit::filesystem::model = dht,
+        infinit::filesystem::allow_root_creation = allow_root_creation,
+        infinit::filesystem::volume_name = this->name,
+        infinit::filesystem::root_block_cache_dir = this->root_block_cache_dir(),
+        infinit::filesystem::mountpoint = mountpoint);
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       if (mountpoint)

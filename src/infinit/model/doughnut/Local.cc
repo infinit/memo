@@ -10,15 +10,16 @@
 #include <cryptography/rsa/Padding.hh>
 
 #include <reactor/Scope.hh>
+#include <reactor/network/utp-server.hh>
 
+#include <infinit/model/MissingBlock.hh>
+#include <infinit/model/Model.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
-#include <infinit/model/blocks/MutableBlock.hh>
-#include <infinit/model/Model.hh>
-#include <infinit/model/MissingBlock.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
@@ -453,43 +454,6 @@ namespace infinit
       {
         this->_serve([this] { return this->_utp_server->accept(); });
       }
-    }
-  }
-}
-
-namespace elle
-{
-  namespace serialization
-  {
-    using namespace infinit::model::doughnut;
-    std::string
-    Serialize<Local::Protocol>::convert(
-      Local::Protocol p)
-    {
-      switch (p)
-      {
-        case Local::Protocol::tcp:
-          return "tcp";
-        case Local::Protocol::utp:
-          return "utp";
-        case Local::Protocol::all:
-          return "all";
-        default:
-          elle::unreachable();
-      }
-    }
-
-    Local::Protocol
-    Serialize<Local::Protocol>::convert(std::string const& repr)
-    {
-      if (repr == "tcp")
-        return Local::Protocol::tcp;
-      else if (repr == "utp")
-        return Local::Protocol::utp;
-      else if (repr == "all")
-        return Local::Protocol::all;
-      else
-        throw Error("Expected one of tcp, utp, all,  got '" + repr + "'");
     }
   }
 }

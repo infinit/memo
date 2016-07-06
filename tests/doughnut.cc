@@ -1564,11 +1564,15 @@ ELLE_TEST_SCHEDULED(admin_keys)
   BOOST_CHECK_EQUAL(ba4->data(), std::string("bar"));
 
   // try to change admin user's permissions
-  auto b_perm = client.dht->fetch(ba->address());
-  no_cheating(client.dht.get(), b_perm);
+  auto b_perm = dht.dht->make_block<blocks::ACLBlock>();
+  b_perm->data(std::string("admin user data"));
+  dht.dht->store(*b_perm, infinit::model::STORE_INSERT);
+  auto fetched_b_perm = dht.dht->fetch(b_perm->address());
+  no_cheating(dht.dht.get(), fetched_b_perm);
+  b_perm.reset(dynamic_cast<blocks::ACLBlock*>(fetched_b_perm.release()));
   BOOST_CHECK_THROW(
-    dynamic_cast<blocks::ACLBlock*>(b_perm.get())->set_permissions(
-      *client.dht->make_user(elle::serialization::json::serialize(admin.K())),
+    b_perm->set_permissions(
+      *dht.dht->make_user(elle::serialization::json::serialize(admin.K())),
     false, false), elle::Error);
 
   // check group admin key
