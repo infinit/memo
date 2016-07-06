@@ -101,27 +101,23 @@ namespace infinit
         [this, addresses]
         (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
         {
-          elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
-          {
-            for (auto const& address: addresses)
-              scope.run_background(
-                elle::sprintf("%s: fetch node by address", *this),
-                [&]
-                {
-                  try
-                  {
-                    yield(this->_lookup_node(address));
-                  }
-                  catch (elle::Error const& e)
-                  {
-                    ELLE_TRACE("%s: failed to lookup node %f: %s",
-                               this, address, e);
-                    yield(WeakMember(new model::doughnut::DummyPeer(
-                                       *this->doughnut(), address)));
-                  }
-                });
-            reactor::wait(scope);
-          };
+          reactor::for_each_parallel(
+            addresses,
+            [&] (model::Address const& address)
+            {
+              try
+              {
+                yield(this->_lookup_node(address));
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_TRACE("%s: failed to lookup node %f: %s",
+                           this, address, e);
+                yield(WeakMember(new model::doughnut::DummyPeer(
+                                   *this->doughnut(), address)));
+              }
+            },
+            "fetch node by address");
         });
     }
 
