@@ -98,15 +98,15 @@ namespace reporting
       container.begin(), container.end(),
       [&] (typename C::value_type const& r)
       {
-        return !r.second.sane;
+        return !r.second.sane();
       }) != container.end();
     if (verbose || broken)
       out << name << ":" << std::endl;
     for (auto const& item: container)
-      if (verbose || !item.second.sane)
+      if (verbose || !item.second.sane())
       {
         out << "  ";
-        if (item.second.sane)
+        if (item.second.sane())
           out << item.first;
         else
           faulty(out, item.first);
@@ -120,12 +120,12 @@ namespace reporting
     typedef boost::optional<std::string> Reason;
 
     Result()
-      : sane(false)
+      : _sane(false)
       , reason()
     {}
 
     Result(bool sane, Reason const& reason = Reason{})
-      : sane(sane)
+      : _sane(sane)
       , reason(reason)
     {}
 
@@ -139,29 +139,37 @@ namespace reporting
     {
     }
 
-    bool sane;
+    ELLE_ATTRIBUTE_RW(bool, sane);
     Reason reason;
 
     virtual
     void
     _print(std::ostream& out, bool verbose) const{};
 
+  protected:
+    bool
+    show(bool verbose) const
+    {
+      return !this->sane() || verbose;
+    }
+
+  public:
     std::ostream&
     print(std::ostream& out, bool verbose) const
     {
-      this->_print(out, verbose);
-      if (!sane)
-      {
-        if (this->reason)
-          out << " (" << *this->reason << ")";
-      }
-      return out << std::endl;
+      if (this->show(verbose))
+        this->_print(out, verbose);
+      if (this->show(verbose) && this->reason)
+        out << " (" << *this->reason << ")";
+      if (this->show(verbose))
+        out << std::endl;
+      return out;
     }
 
     void
     serialize(elle::serialization::Serializer& s)
     {
-      s.serialize("sane", this->sane);
+      s.serialize("sane", this->_sane);
       s.serialize("reason", this->reason);
     }
   };
@@ -176,10 +184,10 @@ namespace reporting
       std::ostream&
       print(std::ostream& out, bool verbose) const
       {
-        if (!sane)
+        if (!this->sane())
           out << "is faulty because ";
         this->_print(out, verbose);
-        if (!sane && this->reason)
+        if (!this->sane() && this->reason)
           out << " (" << *this->reason << ")";
         return out << std::endl;
       }
@@ -429,10 +437,10 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!sane || verbose)
+        if (this->show(verbose))
         {
-          out << "User name:";;
-          if (sane)
+          out << "User name:";
+          if (this->sane())
             out << " " << this->name;
           else
             faulty(out << std::endl << "  ", this->name) << " is invalid";
@@ -479,10 +487,10 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!sane || verbose)
+        if (this->show(verbose))
         {
           out << "Disk space left:";
-          if (!sane)
+          if (!this->sane())
             warning(out << std::endl << "  ", "low");
           elle::fprintf(out, " %s available (%s%%)",
                         this->available,
@@ -526,7 +534,7 @@ namespace reporting
       void
       print(std::ostream& out, bool verbose) const
       {
-        if (!this->sane || verbose)
+        if (this->show(verbose))
         {
           out << "Environment:" << std::endl;
           for (auto const& entry: this->environment)
@@ -565,7 +573,7 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!sane || verbose)
+        if (this->show(verbose))
         {
           out
             << "exists: " << result(this->exists)
@@ -611,9 +619,9 @@ namespace reporting
     bool
     sane() const
     {
-      return this->user.sane
-        && this->space_left.sane
-        && this->environment.sane
+      return this->user.sane()
+        && this->space_left.sane()
+        && this->environment.sane()
         && reporting::sane(this->permissions);
     }
 
@@ -648,13 +656,13 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!this->sane || verbose)
+        if (this->show(verbose))
         {
           out << "Connection to " << ::beyond() << ":";
-          if (!sane)
-            faulty(out << std::endl << "  ", result(this->sane));
+          if (!this->sane())
+            faulty(out << std::endl << "  ", result(this->sane()));
           else
-            out << result(this->sane);
+            out << result(this->sane());
         }
       }
 
@@ -687,7 +695,7 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!this->sane || verbose)
+        if (this->show(verbose))
         {
           out << "Interfaces:" << std::endl;
           for (auto const& entry: this->entries)
@@ -743,7 +751,7 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!this->sane || verbose)
+        if (this->show(verbose))
         {
           if (this->address)
             out << std::endl << "    Address: " << *this->address;
@@ -787,11 +795,11 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!this->sane || verbose)
+        if (this->show(verbose))
         {
           out << "NAT: ";
-          if (this->sane)
-            out << (this->cone ? "CONE" : "NOT CONE");
+          if (this->sane())
+            out << "OK (" << (this->cone ? "CONE" : "NOT CONE") << ")";
           else
             faulty(out << std::endl << "  ", elle::sprintf("%s", result(false)));
         }
@@ -868,14 +876,15 @@ namespace reporting
         void
         _print(std::ostream& out, bool verbose) const override
         {
-          if (!this->sane || verbose)
+          if (this->show(verbose))
           {
+            out << result(this->sane());
             if (internal)
               out << std::endl << "    internal: " << this->internal;
             if (internal)
               out << std::endl << "    external: " << this->external;
-            if (!sane)
-              out << std::endl << "    >";
+            if (!this->sane() && this->reason)
+              out << std::endl << "   >" << *this->reason;
           }
         }
 
@@ -897,7 +906,7 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!this->sane || verbose)
+        if (this->show(verbose))
         {
           out << "UPNP:" << std::endl;
           out << "  available: " << this->available << std::endl;
@@ -909,7 +918,7 @@ namespace reporting
           for (auto const& redirection: redirections)
           {
             out << "  ";
-            if (redirection.second.sane)
+            if (redirection.second.sane())
               out << redirection.first;
             else
               warning(out, redirection.first);
@@ -958,10 +967,10 @@ namespace reporting
     bool
     sane() const
     {
-      return this->beyond.sane
-        && this->interfaces.sane
-        && this->nat.sane
-        && this->upnp.sane
+      return this->beyond.sane()
+        && this->interfaces.sane()
+        && this->nat.sane()
+        && this->upnp.sane()
         && reporting::sane(this->protocols);
     }
 
@@ -1163,7 +1172,7 @@ _networking(boost::program_options::variables_map const& args,
     auto upnp = reactor::network::UPNP::make();
     try
     {
-      results.upnp.sane = true;
+      results.upnp.sane(true);
       results.upnp.available = false;
       upnp->initialize();
       results.upnp.available = upnp->available();
@@ -1187,6 +1196,7 @@ _networking(boost::program_options::variables_map const& args,
                 return narrow;
               };
             auto pm = upnp->setup_redirect(protocol, port);
+            res.sane(true);
             res.internal = Address{pm.internal_host, convert(pm.internal_port)};
             res.external = Address{pm.external_host, convert(pm.external_port)};
           }
@@ -1208,7 +1218,7 @@ _networking(boost::program_options::variables_map const& args,
     }
     catch (...)
     {
-      results.upnp.sane = false;
+      // UPNP is always considered sane.
       results.upnp.reason = elle::exception_string();
     }
   }
