@@ -339,16 +339,19 @@ namespace infinit
       }
       namespace packet
       {
+        struct CompressPeerLocations{};
+
         template<typename T>
         elle::Buffer
-        serialize(T const& packet, model::doughnut::Doughnut* dn = nullptr)
+        serialize(T const& packet, model::doughnut::Doughnut& dn)
         {
           ELLE_ASSERT(&packet);
           elle::Buffer buf;
           elle::IOStream stream(buf.ostreambuf());
           Serializer::SerializerOut output(stream, false);
-          if (dn)
-            elle::unconst(output.context()).set(dn);
+          output.set_context(&dn);
+          if (dn.version() >= elle::Version(0, 7, 0))
+            output.set_context(CompressPeerLocations{});
           auto ptr = &(packet::Packet&)packet;
           output.serialize_forward(ptr);
           return buf;
@@ -387,7 +390,8 @@ namespace infinit
           }
 
           std::unique_ptr<Packet>
-          decrypt(infinit::cryptography::SecretKey const& k)
+          decrypt(infinit::cryptography::SecretKey const& k,
+                  model::doughnut::Doughnut& dn)
           {
             elle::Buffer plain = k.decipher(
               payload,
@@ -396,6 +400,9 @@ namespace infinit
               infinit::cryptography::Oneway::sha256);
             elle::IOStream stream(plain.istreambuf());
             Serializer::SerializerIn input(stream, false);
+            if (dn.version() >= elle::Version(0, 7, 0))
+              input.set_context(CompressPeerLocations{});
+            input.set_context(&dn);
             std::unique_ptr<packet::Packet> packet;
             input.serialize_forward(packet);
             return packet;
@@ -403,9 +410,10 @@ namespace infinit
           }
 
           void encrypt(infinit::cryptography::SecretKey const& k,
-                       Packet const& p)
+                       Packet const& p,
+                       model::doughnut::Doughnut& dn)
           {
-            elle::Buffer plain = packet::serialize(p);
+            elle::Buffer plain = packet::serialize(p, dn);
             payload = k.encipher(plain,
                                  infinit::cryptography::Cipher::aes256,
                                  infinit::cryptography::Mode::cbc,
@@ -550,7 +558,10 @@ namespace infinit
         };
         REGISTER(FileBootstrapRequest, "fileBootstrapRequest");
 
-        static bool serialize_compress = true;
+        static bool serialize_compress(elle::serialization::Serializer& s)
+        {
+          return s.context().has<CompressPeerLocations>();
+        }
 
         struct Gossip: public Packet
         {
@@ -568,7 +579,7 @@ namespace infinit
             s.serialize("sender", sender);
             s.serialize("observer", observer);
             s.serialize("contacts", contacts);
-            if (!serialize_compress)
+            if (!serialize_compress(s))
               s.serialize("files", files);
             else if (s.out())
             { // out
@@ -703,7 +714,7 @@ namespace infinit
             s.serialize("address", fileAddresses);
             s.serialize("ttl", ttl);
             s.serialize("count", count);
-            if (!serialize_compress)
+            if (!serialize_compress(s))
                s.serialize("result", results);
             else
             {
@@ -743,7 +754,7 @@ namespace infinit
             s.serialize("id", request_id);
             s.serialize("origin", origin);
             s.serialize("address", fileAddresses);
-            if (!serialize_compress)
+            if (!serialize_compress(s))
                s.serialize("result", results);
             else
             {
@@ -966,7 +977,6 @@ namespace infinit
         , _dropped_gets(0)
         , _failed_puts(0)
       {
-        packet::serialize_compress = doughnut->version() >= elle::Version(0, 7, 0);
 #ifndef INFINIT_WINDOWS
         reactor::scheduler().signal_handle(SIGUSR1, [this] {
             auto json = this->query("stats", {});
@@ -1463,7 +1473,7 @@ namespace infinit
           || (!key.first && _config.accept_plain)
           )
         {
-          b = packet::serialize(p, this->doughnut());
+          b = packet::serialize(p, *this->doughnut());
           send_key_request = _config.encrypt && !is_crypto;
         }
         else
@@ -1483,9 +1493,9 @@ namespace infinit
             {
               static elle::Bench decrypt("kelips.encrypt", 10_sec);
               elle::Bench::BenchScope bs(decrypt);
-              ep.encrypt(*key.first, p);
+              ep.encrypt(*key.first, p, *this->doughnut());
             }
-            b = packet::serialize(ep, this->doughnut());
+            b = packet::serialize(ep, *this->doughnut());
           }
         }
         if (send_key_request)
@@ -1563,7 +1573,9 @@ namespace infinit
         std::unique_ptr<packet::Packet> packet;
         elle::IOStream stream(buf.istreambuf());
         Serializer::SerializerIn input(stream, false);
-        elle::unconst(input.context()).set(this->doughnut());
+        input.set_context(this->doughnut());
+        if (this->doughnut()->version() >= elle::Version(0, 7, 0))
+          input.set_context(packet::CompressPeerLocations{});
         try
         {
           input.serialize_forward(packet);
@@ -1601,7 +1613,7 @@ namespace infinit
               {
                 static elle::Bench decrypt("kelips.decrypt", 10_sec);
                 elle::Bench::BenchScope bs(decrypt);
-                plain = p->decrypt(*key.first);
+                plain = p->decrypt(*key.first, *this->doughnut());
               }
               if (plain->sender != p->sender)
               {
@@ -2211,7 +2223,7 @@ namespace infinit
           p.contacts.clear();
           p.files.clear();
           p.contacts = pickContacts();
-          elle::Buffer buf = serialize(p);
+          elle::Buffer buf = serialize(p, *this->doughnut());
           auto targets = pickOutsideTargets();
           for (auto const& a: targets)
           {
@@ -2221,7 +2233,7 @@ namespace infinit
           }
           // Add some files, just for group targets
           p.files = pickFiles();
-          buf = serialize(p);
+          buf = serialize(p, *this->doughnut());
           targets = pickGroupTargets();
           if (p.files.size() && targets.empty())
             ELLE_TRACE("%s: have files but no group member known", *this);
@@ -3085,7 +3097,7 @@ namespace infinit
           auto r = std::make_shared<PendingRequest>();
           r->startTime = now();
           r->barrier.close();
-          elle::Buffer buf = serialize(req);
+          elle::Buffer buf = serialize(req, *this->doughnut());
           // Select target node
           auto it = random_from(_state.contacts[fg], _gen);
           if (it == _state.contacts[fg].end())
