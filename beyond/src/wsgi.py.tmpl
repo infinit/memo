@@ -29,11 +29,6 @@ beyond = infinit.beyond.Beyond(
   gcs_app_secret = uwsgi.opt.get('gcs-app-secret)}'),
   validate_email_address = False,
   sendwithus_api_key = uwsgi.opt.get('sendwithus-api-key)}'),
-  limits = {
-    'networks': {
-      'passports': 30
-    }
-  },
   delegate_user = ${repr(delegate_user)},
 )
 application = infinit.beyond.bottle.Bottle(beyond, gcs = gcs)
