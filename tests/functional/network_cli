@@ -18,8 +18,11 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   # Simulate the network being run with cache and async.
   import os
   state_dir = '%s/.local/state/infinit/filesystem' % bob
-  os.makedirs('%s/cache/bob/broken' % state_dir)
-  bob.run(['infinit-network', '--delete', '--name', 'broken', '--as', 'bob', '--unlink'])
+  os.makedirs('%s/cache/bob/bob/broken/async' % state_dir)
+  os.makedirs('%s/cache/bob/bob/broken/cache' % state_dir)
+  assertEq(len(os.listdir('%s/cache/bob/bob/broken' % state_dir)), 2)
+  bob.run(['infinit-network', '--delete', '--name', 'broken', '--as', 'bob',
+           '--unlink'])
   # Ensure network cache directory is removed
   assertEq(len(os.listdir('%s/cache/bob' % state_dir)), 0)
 

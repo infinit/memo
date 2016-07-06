@@ -620,7 +620,8 @@ COMMAND(delete_)
   {
     auto path = ifnt._network_path(network_name, user);
     auto descriptor_path = ifnt._network_descriptor_path(network_name);
-    boost::filesystem::remove_all(network.cache_dir(user));
+    // Cache dir is ../<user>/<owner>/<network>
+    boost::filesystem::remove_all(network.cache_dir(user).parent_path());
     deleted |= remove(path, network.name, "linked network");
     deleted |= remove(descriptor_path, network.name, "network");
   }
