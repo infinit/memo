@@ -769,6 +769,7 @@ namespace reporting
         , address(address)
         , local_port(local_port)
         , remote_port(remote_port)
+        , internal(internal)
       {
       }
 
