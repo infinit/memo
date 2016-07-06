@@ -161,6 +161,9 @@ namespace infinit
                                           elle::Version(0, 4, 0));
             elle::unconst(this)->_block = elle::cast<GB>::runtime(
               this->_dht.fetch(addr));
+            ELLE_WARN(
+              "group block %s has an obsolete address and requires migration",
+              addr);
             return *this->_block;
           }
           catch (MissingBlock const&)

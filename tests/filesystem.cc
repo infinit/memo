@@ -2091,21 +2091,6 @@ ELLE_TEST_SCHEDULED(data_embed)
     2);
 }
 
-static std::string print_mode(int m)
-{
-  std::string res;
-  res += (m & 0200) ? 'r' : '-';
-  res += (m & 0400) ? 'w' : '-';
-  res += (m & 0100) ? 'x' : '-';
-  res += (m & 0020) ? 'r' : '-';
-  res += (m & 0040) ? 'w' : '-';
-  res += (m & 0010) ? 'x' : '-';
-  res += (m & 0002) ? 'r' : '-';
-  res += (m & 0004) ? 'w' : '-';
-  res += (m & 0001) ? 'x' : '-';
-  return res;
-}
-
 ELLE_TEST_SCHEDULED(symlink_perms)
 {
   // If we enable paxos, it will cache blocks and feed them back to use.

@@ -1113,7 +1113,7 @@ namespace infinit
         std::vector<GossipEndpoint> endpoints;
         for (auto const& ep: pl.second)
           endpoints.push_back(GossipEndpoint(ep.address(), ep.port()));
-        using Protocol = infinit::model::doughnut::Local::Protocol;
+        using Protocol = infinit::model::doughnut::Protocol;
         auto protocol = this->_config.rpc_protocol;
         if (protocol == Protocol::utp || protocol == Protocol::all)
         {
@@ -3445,7 +3445,7 @@ namespace infinit
         std::vector<GossipEndpoint> endpoints;
         for (auto const& ep: hosts.second)
           endpoints.push_back(GossipEndpoint(ep.address(), ep.port()));
-        using Protocol = infinit::model::doughnut::Local::Protocol;
+        using Protocol = infinit::model::doughnut::Protocol;
         auto protocol = this->_config.rpc_protocol;
         if (protocol == Protocol::utp || protocol == Protocol::all)
         {
@@ -3811,7 +3811,7 @@ namespace infinit
         elle::json::Object res;
         if (k == "protocol")
         {
-          using Protocol = infinit::model::doughnut::Local::Protocol;
+          using Protocol = infinit::model::doughnut::Protocol;
           if (!v)
             res["protocol"] = _config.rpc_protocol == Protocol::utp ?
           "utp" : (_config.rpc_protocol == Protocol::tcp ? "tcp" : "all");
@@ -4030,7 +4030,7 @@ namespace infinit
         , wait(0)
         , encrypt(false)
         , accept_plain(true)
-        , rpc_protocol(infinit::model::doughnut::Local::Protocol::all)
+        , rpc_protocol(infinit::model::doughnut::Protocol::all)
         , gossip()
       {}
 

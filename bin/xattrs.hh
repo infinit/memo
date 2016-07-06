@@ -49,7 +49,7 @@ port_getxattr(std::string const& file,
   return ifs.gcount();
 }
 
-static
+inline
 int
 port_setxattr(std::string const& file,
               std::string const& key,

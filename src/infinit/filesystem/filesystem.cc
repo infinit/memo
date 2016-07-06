@@ -422,7 +422,7 @@ namespace infinit
             xroot = xroot->child(components[j]);
           return xroot;
         }
-
+        ELLE_DEBUG_SCOPE("get sub-component %s", name);
         auto const& files = d->files();
         auto it = files.find(name);
         if (it == files.end() || it->second.first != EntryType::directory)
@@ -550,7 +550,7 @@ namespace infinit
     std::shared_ptr<DirectoryData>
     FileSystem::get(boost::filesystem::path path, model::Address address)
     {
-      ELLE_DEBUG_SCOPE("%s: getting directory at %s", this, address);
+      ELLE_DEBUG_SCOPE("%s: get directory at %f", this, address);
       static elle::Bench bench_hit("bench.filesystem.dircache.hit", 1000_sec);
       boost::optional<int> version;
       auto it = _directory_cache.find(address);
