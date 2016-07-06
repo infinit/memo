@@ -77,7 +77,7 @@ Will register the following users:
 ewilliams: Eve Williams (ewilliams@company.com) DN: cn=ewilliams,ou=engineering,dc=infinit,dc=nodomain
 bjones: Bob Jones (bjones@company.com) DN: cn=bjones,ou=marketing,dc=infinit,dc=nodomain
 
-Proceed? [Y/n] Y
+Proceed? [y/n] y
 Remotely saved user "ewilliams".
 Remotely saved user "bjones".
 ```
@@ -125,11 +125,11 @@ LDAP Password: ******
 Fetched LDAP user "cn=asmith,ou=engineering,dc=company,dc=com".
 Fetched LDAP user "cn=bjones,ou=marketing,dc=company,dc=company".
 Fetched LDAP user "cn=ewilliams,ou=engineering,dc=company,dc=company".
-Remotely saved passport "asmith/n: ewilliams".
+Remotely saved passport "asmith/my-network: ewilliams".
 Registered user "ewilliams" to network.
-Remotely saved passport "asmith/n: bjones".
+Remotely saved passport "asmith/my-network: bjones".
 Registered user "bjones" to network.
-Remotely saved passport "asmith/n: asmith".
+Remotely saved passport "asmith/my-network: asmith".
 User "asmith" already registerd to network.
 Added group "marketing" to network.
 Added user "bjones" to group "marketing" on network.
@@ -163,16 +163,16 @@ There are several prerequisites that need to be met before you can proceed:
 There are several steps that the command will automate. It will perform an LDAP search based on the [query arguments given](#ldap-query-arugments), fetching the desired POSIX groups, their associated users along with any other users that meet the search requirements. The corresponding Infinit users will then be fetched from the on premise Hub so that [passports](documentation/reference#create-a-passport) can be created and pushed to the on premise Hub and so that the users can registered to the network along with the POSIX groups. Once registered, the users will be given permissions to the root of the volume as specified by the `--root-permissions`. If the `--create-home` flag is passed, each user will have a home directory created for them at `home/<username>`. The users will then be invited to the drive via email.
 
 ```
-$> infinit-ldap --drive-invite --as asmith --server ldap.company.com --domain "dc=company,dc=com" --searchbase "" --user "admin" --mountpoint /mnt/my-volume --network my-network --drive my-drive --root-permissions --create-home
+$> infinit-ldap --drive-invite --as asmith --server ldap.company.com --domain "dc=company,dc=com" --searchbase "" --user "admin" --mountpoint /mnt/my-volume --drive my-drive --root-permissions --create-home
 LDAP password: ******
 Fetched LDAP user "cn=asmith,ou=engineering,dc=company,dc=com".
 Fetched LDAP user "cn=bjones,ou=marketing,dc=company,dc=com".
 Fetched LDAP user "cn=ewilliams,ou=engineering,dc=company,dc=com".
-Remotely saved passport "asmith/n: ewilliams".
+Remotely saved passport "asmith/my-network: ewilliams".
 Registered user "ewilliams" to network.
-Remotely saved passport "asmith/n: bjones".
+Remotely saved passport "asmith/my-network: bjones".
 Registered user "bjones" to network.
-Remotely saved passport "asmith/n: asmith".
+Remotely saved passport "asmith/my-network: asmith".
 User "asmith" already registerd to network.
 Added group "marketing" to network.
 Added user "bjones" to group "marketing" on network.
@@ -184,9 +184,9 @@ Added user "asmith" to group "all" on network.
 Added user "bjones" to group "all" on network.
 Added user "ewilliams" to group "all" on network.
 Created home directory: "/Volumes/v/home/ewilliams".
-Remotely saved invitation "asmith/d: ewilliams".
+Remotely saved invitation "asmith/my-drive: ewilliams".
 Created home directory: "/Volumes/v/home/bjones".
-Remotely saved invitation "asmith/d: bjones".
+Remotely saved invitation "asmith/my-drive: bjones".
 Created home directory: "/Volumes/v/home/asmith".
-Remotely saved invitation "asmith/d: asmith".
+Remotely saved invitation "asmith/my-drive: asmith".
 ```
