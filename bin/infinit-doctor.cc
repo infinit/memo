@@ -61,14 +61,16 @@ namespace reporting
 
   template <typename C>
   bool
-  sane(C const& c)
+  sane(C const& c, bool all = true)
   {
-    return std::all_of(c.begin(),
-                       c.end(),
-                       [&] (typename C::value_type const& x)
-                       {
-                         return x.second.sane;
-                       });
+    auto filter = [&] (typename C::value_type const& x)
+      {
+        return x.second.sane();
+      };
+    if (all)
+      return std::all_of(c.begin(), c.end(), filter);
+    else
+      return std::any_of(c.begin(), c.end(), filter);
   }
 
   static
@@ -971,7 +973,7 @@ namespace reporting
         && this->interfaces.sane()
         && this->nat.sane()
         && this->upnp.sane()
-        && reporting::sane(this->protocols);
+        && reporting::sane(this->protocols, false);
     }
 
     void
