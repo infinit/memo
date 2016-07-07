@@ -156,7 +156,7 @@ setup_manager()
     --mount type=bind,source=/run/docker/plugins,target=/run/docker/plugins,writable=true \
     --mount type=bind,source=/usr/lib/docker/plugins,target=/usr/lib/docker/plugins,writable=true \
     $INFINIT_DAEMON_IMAGE \
-    bash -c "sleep \$(( \$RANDOM / 2000)).\$RANDOM; infinit-daemon --start --foreground --mount-root $mount_root --as default_user --default-network default_network --login-user default_user:docker --mount default_user/default_volume"
+    bash -c "sleep \$(( \$RANDOM / 2000)).\$RANDOM; infinit-daemon --start --foreground --mount-root $mount_root --as default_user --default-network default_network --login-user default_user:docker"
     if test "$STOP_AT" = 4; then create_demo; return 0; fi
     while ! docker volume create --driver infinit --name default_volume@$RANDOM$RANDOM -o nocache -o replication-factor=$N_MANAGERS; do
       echo "Failed to create volume, waiting for plugin..."
@@ -167,14 +167,9 @@ setup_manager()
       # run our test service without infinit backend
       docker service create --name demo1 --mode global --restart-max-attempts 1 --publish 8081 bearclaw/grapheditor
       # run our test service with infinit backend
-      # FIXME: requires a bind-propagation=shared, but it crashes docker
-      # FIXME: remove all hacks when mounting volumes with driver in services works
-      while ! docker run --rm -v $mount_root:$mount_root ubuntu mount |grep -q default_user; do
-        sleep 3
-      done
       docker service create --name demo2 --mode global --restart-max-attempts 1 --publish 8081 \
-        --mount type=bind,source=$mount_root,target=$mount_root,writable=true \
-        bearclaw/grapheditor bash -c "while ! mount |grep default_user_default_volume; do sleep 2; done; ln -s \$(mount | grep default_user_default_volume |cut '-d ' -f 3) /tmp/gw && cd /root && python3 graphed.py"
+        --mount type=volume,volume-driver=infinit,source=default_network/default_volume,target=/tmp/gw,writable=true \
+        bearclaw/grapheditor bash -c "cd /root && python3 graphed.py"
     fi
 }
 
