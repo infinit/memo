@@ -514,7 +514,7 @@ COMMAND(unlink_)
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
   auto network = ifnt.network_get(network_name, self);
-  auto path = ifnt._network_path(network_name, self);
+  auto path = ifnt._network_path(network.name, self);
   // This should never happen because network_get ensure the model is present.
   ELLE_ASSERT(network.model);
   if (!remove(path, network.name, "link for network"))
@@ -554,8 +554,7 @@ COMMAND(delete_)
 {
   auto name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
-  auto network_name = ifnt.qualified_name(name, owner);
-  auto network = ifnt.network_get(network_name, owner, false);
+  auto network = ifnt.network_get(name, owner, false);
   bool purge = flag(args, "purge");
   bool unlink = flag(args, "unlink");
   bool pull = flag(args, "pull");
@@ -566,7 +565,7 @@ COMMAND(delete_)
       users.begin(), users.end(),
       [&] (infinit::User const& u)
       {
-        return !boost::filesystem::exists(ifnt._network_path(network_name, u));
+        return !boost::filesystem::exists(ifnt._network_path(network.name, u));
       }),
     users.end());
   if (users.size() > 0 || std::find(users.begin(), users.end(), owner) != users.end())
@@ -582,7 +581,7 @@ COMMAND(delete_)
   }
   if (purge)
   {
-    auto volumes = ifnt.volumes_for_network(network_name);
+    auto volumes = ifnt.volumes_for_network(network.name);
     std::vector<std::string> drives;
     for (auto const& volume: volumes)
     {
@@ -601,26 +600,26 @@ COMMAND(delete_)
       if (boost::filesystem::remove(vol_path))
         report_action("deleted", "volume", volume, std::string("locally"));
     }
-    for (auto const& user: ifnt.user_passports_for_network(network_name))
+    for (auto const& user: ifnt.user_passports_for_network(network.name))
     {
-      auto passport_path = ifnt._passport_path(network_name, user);
+      auto passport_path = ifnt._passport_path(network.name, user);
       if (boost::filesystem::remove(passport_path))
       {
         report_action("deleted", "passport",
-                      elle::sprintf("%s: %s", network_name, user),
+                      elle::sprintf("%s: %s", network.name, user),
                       std::string("locally"));
       }
     }
   }
   if (pull)
-    beyond_delete("network", network_name, owner, true, purge);
+    beyond_delete("network", network.name, owner, true, purge);
   bool deleted = false;
   if (std::find(users.begin(), users.end(), owner) == users.end())
     users.emplace_back(owner);
   for (auto const& user: users)
   {
-    auto path = ifnt._network_path(network_name, user);
-    auto descriptor_path = ifnt._network_descriptor_path(network_name);
+    auto path = ifnt._network_path(network.name, user);
+    auto descriptor_path = ifnt._network_descriptor_path(network.name);
     // Cache dir is ../<user>/<owner>/<network>
     boost::filesystem::remove_all(network.cache_dir(user).parent_path());
     deleted |= remove(path, network.name, "linked network");
