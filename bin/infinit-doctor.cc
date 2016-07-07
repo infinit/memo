@@ -1575,13 +1575,18 @@ void
 report_error(std::ostream& out, bool sane, bool warning = false)
 {
   if (!sane)
-    throw elle::Error("Please refer to each individual error message");
+    throw elle::Error("Please refer to each individual error message. "
+                      "If you cannot figure out how to fix your issues, "
+                      "please visit https://infinit.sh/faq.");
   else if (!script_mode)
   {
     if (warning)
-      out << "If you encounter any issues, try fixing the problems indicated by the warning messages";
+    {
+      out << "Doctor detected minor issues but nothing that should prevent ";
+      out << "Infinit from working.";
+    }
     else
-      out << "All good!";
+      out << "All good, everything should work.";
     out  << std::endl;
   }
 }
