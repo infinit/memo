@@ -517,6 +517,8 @@ COMMAND(unlink_)
   auto path = ifnt._network_path(network.name, self);
   // This should never happen because network_get ensure the model is present.
   ELLE_ASSERT(network.model);
+  // XXX Should check async cache to make sure that it's empty.
+  boost::filesystem::remove_all(network.cache_dir(self).parent_path());
   if (!remove(path, network.name, "link for network"))
   {
     // Linked network stored as a network descriptor (pre 0.6.1).
