@@ -248,6 +248,9 @@ with Beyond() as beyond, \
     ['infinit-network', '--create', '--as', 'b', 'n', '--storage', 's', '-p'])
   assert not path.exists('%s/b/n' % bob.networks_path)
   assert path.exists('%s/b/b/n' % bob.linked_networks_path)
+  bob.run(['infinit-network', '--run', '--name', 'n', '--as', 'b',
+           '--async', '--cache', '-s'])
+  assertEq(len(os.listdir('%s/cache/b/b/n' % bob.state_path)), 2)
   bob.run(
     ['infinit-volume', '--create', '--as', 'b', 'v', '--network', 'n', '-p'])
   assert path.exists('%s/b/v' % bob.volumes_path)
@@ -290,3 +293,4 @@ with Beyond() as beyond, \
   assert not path.exists('%s/b/d' % bob.drives_path)
   assert not path.exists('%s/b/n/a' % bob.passports_path)
   assert not path.exists('%s/a/n/b' % bob.passports_path)
+  assertEq(len(os.listdir('%s/cache/b' % bob.state_path)), 0)
