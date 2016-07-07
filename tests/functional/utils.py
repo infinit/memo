@@ -81,6 +81,10 @@ class Infinit(TemporaryDirectory):
     return '%s/.local/share/infinit/filesystem' % self.dir
 
   @property
+  def state_path(self):
+    return '%s/.local/state/infinit/filesystem' % self.dir
+
+  @property
   def storages_path(self):
     return '%s/storages' % self.data_home
 
@@ -386,7 +390,7 @@ class User():
 
   def run(self, cli, **kargs):
     return self.infinit.run(
-      cli.split(' '),
+      cli.split(' ') if isinstance(cli, str) else cli,
       env = { 'INFINIT_USER': self.name }, **kargs)
 
   def run_json(self, *args, **kwargs):

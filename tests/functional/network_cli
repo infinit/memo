@@ -15,27 +15,28 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   except Exception as e:
     pass
   bob.run(['infinit-network', '--create', 'broken', '--as', 'bob'])
-  # Simulate the network being run with cache and async.
-  import os
-  state_dir = '%s/.local/state/infinit/filesystem' % bob
-  os.makedirs('%s/cache/bob/bob/broken/async' % state_dir)
-  os.makedirs('%s/cache/bob/bob/broken/cache' % state_dir)
-  assertEq(len(os.listdir('%s/cache/bob/bob/broken' % state_dir)), 2)
+  bob.run(['infinit-network', '--run', '--name', 'broken', '--as', 'bob',
+           '--async', '--cache', '-s'])
+  # Ensure network cache directory is created
+  assertEq(len(os.listdir('%s/cache/bob/bob/broken' % bob.state_path)), 2)
   bob.run(['infinit-network', '--delete', '--name', 'broken', '--as', 'bob',
            '--unlink'])
   # Ensure network cache directory is removed
-  assertEq(len(os.listdir('%s/cache/bob' % state_dir)), 0)
+  assertEq(len(os.listdir('%s/cache/bob' % bob.state_path)), 0)
 
   bob.run(['infinit-network', '--create', 'broken', '--as', 'bob'])
+  bob.run(['infinit-network', '--run', '--name', 'broken', '--as', 'bob',
+           '--async', '--cache', '-s'])
+  assertEq(len(os.listdir('%s/cache/bob/bob/broken' % bob.state_path)), 2)
   # Specified.
   bob.run(
     ['infinit-network', '--delete', 'bob/broken', '--as', 'bob', '--unlink'])
+  assertEq(len(os.listdir('%s/cache/bob' % bob.state_path)), 0)
   bob.run(
     ['infinit-network', '--create', '--name', 'osef', '--as', 'bob'])
   net = bob.run_json(
     ['infinit-network', '--export', '--name', 'osef', '--as', 'bob'])
-  alice.run(['infinit-network', '--import'],
-            input = net)
+  alice.run(['infinit-network', '--import'], input = net)
   try:
     alice.run(['infinit-network', '--delete',
                '--name', 'osef', '--as', 'alice'])
@@ -203,7 +204,11 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
   # Local and Beyond.
   bob.run(['infinit-user', '--signup', 'bob', '--email', 'bob@infinit.io'])
   bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '--push'])
+  bob.run(['infinit-network', '--run', '--name', 'n', '--as', 'bob',
+           '--async', '--cache', '-s'])
+  assertEq(len(os.listdir('%s/cache/bob/bob/n' % bob.state_path)), 2)
   bob.run(['infinit-network', '--delete', '--as', 'bob', 'n', '--unlink'])
+  assertEq(len(os.listdir('%s/cache/bob' % bob.state_path)), 0)
   bob.run(['infinit-network', '--fetch', '--as', 'bob', 'n'])
   assertEq(len(bob.run_json(['infinit-network', '--list', '--as', 'bob', '-s'])), 1)
   bob.run(['infinit-network', '--delete', '--as', 'bob', 'n', '--pull', '--unlink'])
@@ -224,6 +229,12 @@ def remove_network_linked_by_two_users(owner_remove = True):
     owner.run('infinit-user --signup --email owner@infinit.sh ' + owner.name)
     invitee.run('infinit-user --signup --email invitee@infinit.sh ' + invitee.name)
     owner.run('infinit-network --create n --push')
+    owner.run(['infinit-network', '--run', '--name', 'n',
+               '--async', '--cache', '-s'])
+    assertEq(len(os.listdir('%(state)s/cache/%(user_name)s/%(owner_name)s/n' % {
+      'state': infinit.state_path,
+      'user_name': owner.name,
+      'owner_name': owner.name})), 2)
     assertEq(
       owner.run_json('infinit-network --list --script'),
       [
@@ -243,18 +254,32 @@ def remove_network_linked_by_two_users(owner_remove = True):
         {'name': '%s/n' % owner.name, 'linked': False}
       ])
     invitee.run('infinit-network --link --name %s/n' % owner.name)
+    invitee.run(['infinit-network', '--run', '--name', '%s/n' % owner.name,
+                 '--async', '--cache', '-s'])
+    assertEq(len(os.listdir('%(state)s/cache/%(user_name)s/%(owner_name)s/n' % {
+      'state': infinit.state_path,
+      'user_name': invitee.name,
+      'owner_name': owner.name})), 2)
     assertEq(
       invitee.run_json('infinit-network --list --script'),
       [
         {'name': '%s/n' % owner.name, 'linked': True}
       ])
     invitee.run('infinit-network --unlink --name %s/n' % owner.name)
+    assertEq(len(os.listdir('%(state)s/cache/%(name)s' % {
+      'state': infinit.state_path, 'name': invitee.name})), 0)
     assertEq(
       invitee.run_json('infinit-network --list --script'),
       [
         {'name': '%s/n' % owner.name, 'linked': False}
       ])
     invitee.run('infinit-network --link --name %s/n' % owner.name)
+    invitee.run(['infinit-network', '--run', '--name', '%s/n' % owner.name,
+                 '--async', '--cache', '-s'])
+    assertEq(len(os.listdir('%(state)s/cache/%(user_name)s/%(owner_name)s/n' % {
+      'state': infinit.state_path,
+      'user_name': invitee.name,
+      'owner_name': owner.name})), 2)
     if owner_remove:
       throws(lambda: owner.run('infinit-network --delete n'))
       owner.run('infinit-network --delete n --unlink')
@@ -263,6 +288,10 @@ def remove_network_linked_by_two_users(owner_remove = True):
       invitee.run('infinit-network --delete %s/n --unlink' % owner.name)
     assertEq(owner.run_json('infinit-network --list --script'), [])
     assertEq(invitee.run_json('infinit-network --list --script'), [])
+    assertEq(len(os.listdir('%(state)s/cache/%(name)s' % {
+      'state': infinit.state_path, 'name': owner.name})), 0)
+    assertEq(len(os.listdir('%(state)s/cache/%(name)s' % {
+      'state': infinit.state_path, 'name': invitee.name})), 0)
 
 remove_network_linked_by_two_users(owner_remove = True)
 remove_network_linked_by_two_users(owner_remove = False)
@@ -275,11 +304,17 @@ with Beyond() as beyond, \
   bob.run(['infinit-storage', '--create', '--as', 'bob', 's', '--filesystem'])
   bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '-S', 's', '-p'])
   assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 1)
+  bob.run(['infinit-network', '--run', '--name', 'n', '--as', 'bob',
+           '--async', '--cache', '-s'])
+  assertEq(len(os.listdir('%s/cache/bob/bob/n' % bob.state_path)), 2)
   bob.run(['infinit-user', '--fetch', 'alice'])
   bob.run(['infinit-passport', '--create', '--as', 'bob',
            '-u', 'alice', '-n', 'n', '-p'])
   assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'bob'])), 1)
   alice.run(['infinit-network', '--create', '--as', 'alice', 'n', '-p'])
+  alice.run(['infinit-network', '--run', '--name', 'n', '--as', 'alice',
+             '--async', '--cache', '-s'])
+  assertEq(len(os.listdir('%s/cache/alice/alice/n' % alice.state_path)), 2)
   alice.run(['infinit-user', '--fetch', 'bob'])
   alice.run(['infinit-passport', '--create', '--as', 'alice',
            '-u', 'bob', '-n', 'n', '-p'])
@@ -298,6 +333,7 @@ with Beyond() as beyond, \
   assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
   assertEq(
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)
+  assertEq(len(os.listdir('%s/cache/bob' % bob.state_path)), 0)
   bob.run(['infinit-network', '--fetch', '--as', 'bob', 'n'], return_code = 1)
   alice.run(['infinit-passport', '--fetch', '--as', 'alice', '-n' 'bob/n'],
             return_code = 1)
