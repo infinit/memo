@@ -2320,12 +2320,12 @@ ELLE_TEST_SUITE()
   auto& suite = boost::unit_test::framework::master_test_suite();
   // only doughnut supported filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
   suite.add(BOOST_TEST_CASE(filesystem), 0, 120);
-  suite.add(BOOST_TEST_CASE(filesystem_paxos), 0, 120);
+  suite.add(BOOST_TEST_CASE(filesystem_paxos), 0, 240);
 #ifndef INFINIT_MACOSX
   // osxfuse fails to handle two mounts at the same time, the second fails
   // with a mysterious 'permission denied'
   suite.add(BOOST_TEST_CASE(acl), 0, 120);
-  suite.add(BOOST_TEST_CASE(acl_paxos), 0, 120);
+  suite.add(BOOST_TEST_CASE(acl_paxos), 0, 240);
   suite.add(BOOST_TEST_CASE(conflicts), 0, 120);
   suite.add(BOOST_TEST_CASE(conflicts_paxos), 0, 120);
 #endif
