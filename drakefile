@@ -289,6 +289,8 @@ def configure(
     'src/infinit/model/doughnut/ValidationFailed.hh',
     'src/infinit/model/doughnut/consensus/Paxos.cc',
     'src/infinit/model/doughnut/consensus/Paxos.hh',
+    'src/infinit/model/doughnut/protocol.cc',
+    'src/infinit/model/doughnut/protocol.hh',
     'src/infinit/model/faith/Faith.cc',
     'src/infinit/model/faith/Faith.hh',
     'src/infinit/model/paranoid/Paranoid.cc',
@@ -552,9 +554,6 @@ def configure(
       for s in installed_symbols:
         rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
 
-  connectivity = drake.copy(elle.reactor.connectivity, '.',
-                            strip_prefix = 'elle/reactor')
-  installed_binaries.append(connectivity)
   if elle.reactor.fnetusermount_binaries is not None:
     for f in elle.reactor.fnetusermount_binaries:
       t = drake.copy(f, '.', strip_prefix = 'elle/reactor')
@@ -841,6 +840,7 @@ def configure(
           t['dependencies'] = binaries
           t['paths'] = [str(x.path(True).dirname()) for x in binaries]
         return t
+      utils = drake.node('tests/functional/utils.py')
       tests = list(
         map(lambda x: functional_test(x),
             [
@@ -907,7 +907,8 @@ def configure(
           env['EXE_EXT'] = '.exe'
         runner = drake.Runner(
           exe = test,
-          env = env
+          env = env,
+          sources = [utils],
         )
         rule_functional_check << runner.status
         runner.reporting = drake.Runner.Reporting.on_failure

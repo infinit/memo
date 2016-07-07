@@ -149,8 +149,10 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
     overlay,
     boost::optional<int>(),
     std::unique_ptr<infinit::storage::Storage>());
-  auto ops = elle::make_unique<infinit::filesystem::FileSystem>("volume", dn);
-  auto fs = elle::make_unique<reactor::filesystem::FileSystem>(std::move(ops), true);
+  auto ops = elle::make_unique<infinit::filesystem::FileSystem>(
+    "volume", dn, infinit::filesystem::allow_root_creation = true);
+  auto fs = elle::make_unique<reactor::filesystem::FileSystem>(
+    std::move(ops), true);
   ELLE_LOG("Returning observer");
   return fs;
 }
@@ -161,8 +163,10 @@ node_to_fs(std::vector<std::shared_ptr<imd::Doughnut>> const& nodes)
   std::vector<std::unique_ptr<rfs::FileSystem>> res;
   for (auto n: nodes)
   {
-    auto ops = elle::make_unique<infinit::filesystem::FileSystem>("volume",n);
-    auto fs = elle::make_unique<reactor::filesystem::FileSystem>(std::move(ops), true);
+    auto ops = elle::make_unique<infinit::filesystem::FileSystem>(
+      "volume", n, infinit::filesystem::allow_root_creation = true);
+    auto fs = elle::make_unique<reactor::filesystem::FileSystem>(
+      std::move(ops), true);
     res.push_back(std::move(fs));
   }
   return res;

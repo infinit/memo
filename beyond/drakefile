@@ -31,7 +31,8 @@ cun1SplfUKZQZywA8ueUU/ZuGj/XXwopPR5LgWW7sgkwdCklQUPjcecWEZFy/ODl
 e9FGZj7sEHpPuDE=
 -----END PRIVATE KEY-----
 '''
-sendwithus_api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d'
+# sendwithus_api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d'
+sendwithus_api_key = 'test_b71aa18fba1a03a9c314ca1d50eb8a8ceb37825c'
 
 with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())

@@ -1,6 +1,7 @@
 #include <infinit/model/doughnut/Local.hh>
 
 #include <elle/log.hh>
+#include <elle/os/environ.hh>
 #include <elle/network/Interface.hh>
 #include <elle/utility/Move.hh>
 
@@ -9,15 +10,16 @@
 #include <cryptography/rsa/Padding.hh>
 
 #include <reactor/Scope.hh>
+#include <reactor/network/utp-server.hh>
 
+#include <infinit/model/MissingBlock.hh>
+#include <infinit/model/Model.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
-#include <infinit/model/blocks/MutableBlock.hh>
-#include <infinit/model/Model.hh>
-#include <infinit/model/MissingBlock.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
@@ -45,10 +47,12 @@ namespace infinit
         try
         {
           ELLE_TRACE_SCOPE("%s: construct", this);
+          bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+              && dht.version() >= elle::Version(0, 7, 0);
           if (p == Protocol::tcp || p == Protocol::all)
           {
             this->_server = elle::make_unique<reactor::network::TCPServer>();
-            this->_server->listen(port);
+            this->_server->listen(port, v6);
             this->_server_thread = elle::make_unique<reactor::Thread>(
               elle::sprintf("%s server", *this),
               [this] { this->_serve_tcp(); });
@@ -58,16 +62,16 @@ namespace infinit
             this->_utp_server = elle::make_unique<reactor::network::UTPServer>();
             if (this->_server)
               port = this->_server->port();
-            this->_utp_server->listen(port);
+            this->_utp_server->listen(port, v6);
             this->_utp_server_thread = elle::make_unique<reactor::Thread>(
               elle::sprintf("%s utp server", *this),
               [this] { this->_serve_utp(); });
           }
           ELLE_TRACE("%s: listen on %s", *this, this->server_endpoint());
         }
-        catch (std::exception const& e)
+        catch (elle::Error const& e)
         {
-          ELLE_WARN("Local initialization failed with: %s", e.what());
+          ELLE_WARN("%s: initialization failed with: %s", e.what());
           throw;
         }
       }
@@ -111,7 +115,7 @@ namespace infinit
         ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         ELLE_DEBUG("%s: validate block", *this)
-          if (auto res = block.validate(this->doughnut())); else
+          if (auto res = block.validate(this->doughnut(), true)); else
             throw ValidationFailed(res.reason());
         try
         {
@@ -131,12 +135,6 @@ namespace infinit
                 elle::sprintf("version %s is not superior to current version %s",
                               mblock->version(), mprevious->version()),
                 std::move(previous));
-            if (auto* acb = dynamic_cast<const ACB*>(mblock))
-            {
-              auto v = acb->validate_admin_keys(this->doughnut());
-              if (!v)
-                throw ValidationFailed(v.reason());
-            }
           }
           auto vr = previous->validate(this->doughnut(), block);
           if (!vr)
@@ -238,9 +236,11 @@ namespace infinit
       std::vector<reactor::network::TCPServer::EndPoint>
       Local::server_endpoints()
       {
-        auto any_ip = boost::asio::ip::address();
+        bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+                  && this->doughnut().version() >= elle::Version(0, 7, 0);
         auto ep = this->server_endpoint();
-        if (ep.address() != any_ip)
+        if (ep.address() != boost::asio::ip::address_v6::any()
+         && ep.address() != boost::asio::ip::address_v4::any())
           return { ep };
 
         std::vector<reactor::network::TCPServer::EndPoint> res;
@@ -248,12 +248,22 @@ namespace infinit
                        elle::network::Interface::Filter::no_loopback |
                        elle::network::Interface::Filter::no_autoip);
         for (auto const& itf: elle::network::Interface::get_map(filter))
-        if (!itf.second.ipv4_address.empty()
-            && itf.second.ipv4_address != any_ip.to_string())
         {
-          res.push_back(reactor::network::TCPServer::EndPoint(
-            boost::asio::ip::address::from_string(itf.second.ipv4_address),
-            ep.port()));
+          if (!itf.second.ipv4_address.empty()
+              && itf.second.ipv4_address != boost::asio::ip::address_v4::any().to_string())
+          {
+            res.push_back(reactor::network::TCPServer::EndPoint(
+              boost::asio::ip::address::from_string(itf.second.ipv4_address),
+              ep.port()));
+          }
+          if (v6)
+          for (auto const& ip6: itf.second.ipv6_address)
+          {
+            if (ip6 != boost::asio::ip::address_v6::any().to_string())
+              res.push_back(reactor::network::TCPServer::EndPoint(
+                boost::asio::ip::address::from_string(ip6),
+                ep.port()));
+          }
         }
         return res;
       }
@@ -438,43 +448,6 @@ namespace infinit
       {
         this->_serve([this] { return this->_utp_server->accept(); });
       }
-    }
-  }
-}
-
-namespace elle
-{
-  namespace serialization
-  {
-    using namespace infinit::model::doughnut;
-    std::string
-    Serialize<Local::Protocol>::convert(
-      Local::Protocol p)
-    {
-      switch (p)
-      {
-        case Local::Protocol::tcp:
-          return "tcp";
-        case Local::Protocol::utp:
-          return "utp";
-        case Local::Protocol::all:
-          return "all";
-        default:
-          elle::unreachable();
-      }
-    }
-
-    Local::Protocol
-    Serialize<Local::Protocol>::convert(std::string const& repr)
-    {
-      if (repr == "tcp")
-        return Local::Protocol::tcp;
-      else if (repr == "utp")
-        return Local::Protocol::utp;
-      else if (repr == "all")
-        return Local::Protocol::all;
-      else
-        throw Error("Expected one of tcp, utp, all,  got '" + repr + "'");
     }
   }
 }

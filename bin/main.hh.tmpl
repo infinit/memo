@@ -788,6 +788,10 @@ flag(boost::program_options::variables_map const& vm,
 
 namespace infinit
 {
+  static const std::string invalid_name(
+    "name (%s) must only contain lower case alphanumeric and - . _ "
+    "characters but not start with the . character");
+
   typedef infinit::AWSCredentials AWSCredentials;
   typedef infinit::Credentials Credentials;
   typedef infinit::OAuthCredentials OAuthCredentials;
@@ -798,13 +802,10 @@ namespace infinit
   void
   check_name(std::string const& name, bool no_slash = false)
   {
-    static const std::string error_message(
-      "name (%s) must only contain lower case alphanumeric and - . _ "
-      "characters but not start with the . character");
     std::string test_name;
     auto slash_pos = name.find_first_of("/");
     if (no_slash && slash_pos != std::string::npos)
-      throw CommandLineError(elle::sprintf(error_message, name));
+      throw CommandLineError(elle::sprintf(invalid_name, name));
     if (slash_pos == std::string::npos)
       test_name = name;
     else
@@ -812,7 +813,7 @@ namespace infinit
     static const boost::regex allowed("${name_regex}");
     boost::smatch str_matches;
     if (!boost::regex_match(test_name, str_matches, allowed))
-      throw CommandLineError(elle::sprintf(error_message, test_name));
+      throw CommandLineError(elle::sprintf(invalid_name, test_name));
   }
 
   inline
@@ -1639,7 +1640,10 @@ namespace infinit
     }
 
     std::unique_ptr<reactor::filesystem::FileSystem>
-    run(std::shared_ptr<model::doughnut::Doughnut> dht
+    run(std::shared_ptr<model::doughnut::Doughnut> dht,
+        boost::optional<std::string> mountpoint_ = {},
+        boost::optional<bool> readonly = {},
+        bool allow_root_creation = false
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         , boost::optional<std::string> volname_ = {}
 #endif
@@ -1662,7 +1666,11 @@ namespace infinit
       if (this->mount_options.mountpoint)
         mountpoint = boost::filesystem::path(this->mount_options.mountpoint.get());
       auto fs = elle::make_unique<filesystem::FileSystem>(
-        this->name, dht, this->root_block_cache_dir(), mountpoint);
+        infinit::filesystem::model = dht,
+        infinit::filesystem::allow_root_creation = allow_root_creation,
+        infinit::filesystem::volume_name = this->name,
+        infinit::filesystem::root_block_cache_dir = this->root_block_cache_dir(),
+        infinit::filesystem::mountpoint = mountpoint);
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       if (mountpoint)
@@ -3304,6 +3312,9 @@ private:
     , _network(network)
     , _self(self)
   {
+    bool v4 = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
+    bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+     && network.dht()->version >= elle::Version(0, 7, 0);
     Endpoints endpoints;
     if (advertise)
     {
@@ -3329,7 +3340,9 @@ private:
       _port_map_udp = _upnp->setup_redirect(reactor::network::Protocol::udt, port);
       _port_map_tcp = _upnp->setup_redirect(reactor::network::Protocol::tcp, port);
       ELLE_TRACE("got mappings: %s, %s", _port_map_udp, _port_map_tcp);
-      endpoints.addresses.push_back(_port_map_udp.external_host);
+      if ( (v4 && _port_map_udp.external_host.find_first_of(':') == std::string::npos)
+        || (v6 && _port_map_udp.external_host.find_first_of(':') != std::string::npos))
+        endpoints.addresses.push_back(_port_map_udp.external_host);
     }
     catch (std::exception const& e)
     {
@@ -3342,7 +3355,7 @@ private:
       if (host.empty())
         throw std::runtime_error("RDV disabled");
       int port = 7890;
-      auto p = host.find_first_of(':');
+      auto p = host.find_last_of(':');
       if ( p!= host.npos)
       {
         port = std::stoi(host.substr(p+1));
@@ -3370,7 +3383,11 @@ private:
       spoll.abort();
       ELLE_TRACE("RDV gave endpoint %s", socket.public_endpoint());
       if (socket.public_endpoint().port())
-        endpoints.addresses.push_back(socket.public_endpoint().address().to_string());
+      {
+        auto addr = socket.public_endpoint().address();
+        if ( (addr.is_v4() && v4) || (addr.is_v6() && v6))
+          endpoints.addresses.push_back(addr.to_string());
+      }
     }
     catch (std::exception const& e)
     {
@@ -3382,8 +3399,12 @@ private:
            elle::network::Interface::Filter::only_up |
            elle::network::Interface::Filter::no_loopback |
            elle::network::Interface::Filter::no_autoip))
-      if (itf.second.ipv4_address.size() > 0)
+    {
+      if (itf.second.ipv4_address.size() > 0 && v4)
         endpoints.addresses.push_back(itf.second.ipv4_address);
+      if (v6) for (auto const& addr: itf.second.ipv6_address)
+        endpoints.addresses.push_back(addr);
+    }
     endpoints.port = port;
     beyond_push(this->_url, std::string("endpoints for"),
                 network.name, endpoints, self, false);

@@ -379,7 +379,7 @@ main(int argc, char** argv)
                       *std::move(nb->owner()));
                   loaded = std::move(nb);
                 }
-                ELLE_ASSERT(loaded->validate(set.dht));
+                ELLE_ASSERT(loaded->validate(set.dht, false));
               }
               {
                 auto path = it->path() / elle::sprintf("%s.bin", name);

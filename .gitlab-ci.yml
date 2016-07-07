@@ -18,7 +18,8 @@ x86_64-centos6-gcc4:
     - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //check"
     - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //install"
     - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //redhat"
-    - scp ../fs-build/infinit-$(GIT_DIR=../fs/.git git describe | sed -e 's:-:_:g' )-1.el6.x86_64.rpm debian@debian.infinit.io:/tmp/www
+    - ssh debian@debian.infinit.io mkdir -p --mode 755 /tmp/www/
+    - scp ../fs-build/infinit-$(GIT_DIR=../fs/.git git describe | sed -e 's:-:_:g' )-1.el6.x86_64.rpm debian@debian.infinit.io:/tmp/www/
     - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //debian-debug"
     - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then scp ../fs-build/infinit-debug-symbols-centos-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb debian@debian.infinit.io:repository; fi
     - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then ssh debian@debian.infinit.io 'make debian'; fi
@@ -110,7 +111,8 @@ x86_64-windows-mingw4:
     - mv ../fs-install "../infinit-$(GIT_DIR=../fs/.git git describe)"
     - cd .. && zip -r "infinit-$(GIT_DIR=fs/.git git describe).zip" "infinit-$(GIT_DIR=fs/.git git describe)" && cd fs-build
     - mv "../infinit-$(GIT_DIR=../fs/.git git describe)" ../fs-install
-    - scp "../infinit-$(GIT_DIR=../fs/.git git describe).zip" debian@debian.infinit.io:/tmp/www
+    - ssh debian@debian.infinit.io mkdir -p --mode 755 /tmp/www/
+    - scp "../infinit-$(GIT_DIR=../fs/.git git describe).zip" debian@debian.infinit.io:/tmp/www/
   tags:
     - x86_64
     - windows

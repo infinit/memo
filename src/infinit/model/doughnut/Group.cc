@@ -67,7 +67,7 @@ namespace infinit
       void
       Group::create()
       {
-        ELLE_TRACE_SCOPE("%s: create", *this);
+        ELLE_TRACE_SCOPE("%s: create", this->_name);
         infinit::filesystem::umbrella([&] {
             try
             {
@@ -128,7 +128,7 @@ namespace infinit
       {
         if (this->_public_control_key)
           return *_public_control_key;
-        ELLE_TRACE_SCOPE("%s: fetch", *this);
+        ELLE_TRACE_SCOPE("%s: fetch", this->_name);
         auto ub = elle::cast<UB>::runtime(
           this->_dht.fetch(UB::hash_address(_name, this->_dht)));
         elle::unconst(this)->_public_control_key.emplace(ub->key());
@@ -161,6 +161,9 @@ namespace infinit
                                           elle::Version(0, 4, 0));
             elle::unconst(this)->_block = elle::cast<GB>::runtime(
               this->_dht.fetch(addr));
+            ELLE_WARN(
+              "group block %s has an obsolete address and requires migration",
+              addr);
             return *this->_block;
           }
           catch (MissingBlock const&)

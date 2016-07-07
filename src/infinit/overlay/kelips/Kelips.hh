@@ -1,19 +1,22 @@
 #ifndef INFINIT_OVERLAY_KELIPS_HH
 # define INFINIT_OVERLAY_KELIPS_HH
 
-# include <infinit/overlay/Overlay.hh>
-# include <reactor/network/rdv-socket.hh>
-# include <reactor/Barrier.hh>
-# include <reactor/Generator.hh>
+# include <chrono>
+# include <random>
+
 # include <elle/serialization/Serializer.hh>
 
-#include <infinit/model/doughnut/Local.hh>
-#include <infinit/model/doughnut/Remote.hh>
-#include <infinit/storage/Storage.hh>
+# include <cryptography/SecretKey.hh>
 
-#include <cryptography/SecretKey.hh>
-#include <random>
-#include <chrono>
+# include <reactor/Barrier.hh>
+# include <reactor/Generator.hh>
+# include <reactor/network/rdv-socket.hh>
+# include <reactor/network/utp-server.hh>
+
+# include <infinit/model/doughnut/Local.hh>
+# include <infinit/model/doughnut/Remote.hh>
+# include <infinit/overlay/Overlay.hh>
+# include <infinit/storage/Storage.hh>
 
 namespace std
 {
@@ -155,7 +158,7 @@ namespace infinit
         int wait;
         bool encrypt;
         bool accept_plain;
-        infinit::model::doughnut::Local::Protocol rpc_protocol;
+        infinit::model::doughnut::Protocol rpc_protocol;
         GossipConfiguration gossip;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
@@ -303,7 +306,13 @@ namespace infinit
         void
         process_update(SerState const& s);
         void
-        bootstrap(bool use_bootstrap_nodes);
+        bootstrap(bool use_bootstrap_nodes,
+                  bool use_contacts = true,
+                  std::vector<PeerLocation> const& peers = {});
+        void
+        _discover(NodeEndpoints const& peers) override;
+        void
+        send_bootstrap(PeerLocation const& l);
         SerState
         get_serstate(PeerLocation peer);
         void
@@ -346,8 +355,6 @@ namespace infinit
         std::vector<Address> _pending_bootstrap_address;
         std::vector<Address> _bootstrap_requests_sent;
         reactor::network::UTPServer _remotes_server;
-        /// Whether we've seen someone from our group.
-        reactor::Barrier _bootstraping;
         int _next_id;
         int _port;
         bool _observer;

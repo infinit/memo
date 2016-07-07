@@ -14,6 +14,7 @@
 #include <infinit/storage/Storage.hh>
 
 #ifdef INFINIT_MACOSX
+# include <reactor/network/reachability.hh>
 # define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
 # include <crash_reporting/gcc_fix.hh>
 # include <CoreServices/CoreServices.h>
@@ -381,30 +382,6 @@ COMMAND(run)
           reactor::scheduler().terminate();
         });
   }
-  bool has_storage = !! network.model->storage;
-  if (mo.fetch)
-  {
-    while(true)
-    {
-      try
-      {
-        beyond_fetch_endpoints(network, eps);
-      }
-      catch (elle::Error const& e)
-      {
-        ELLE_WARN("Error fetching endpoints from beyond: %s, retrying...", e);
-        reactor::sleep(10_sec);
-        continue;
-      }
-      if (!eps.empty())
-        break;
-      if ((!has_storage && flag(args, "wait-if-no-storage"))
-        || flag(args, "wait-for-peers"))
-        reactor::sleep(5_sec);
-      else
-        break;
-    }
-  }
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
@@ -429,12 +406,41 @@ COMMAND(run)
   auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
+    if (mo.fetch && *mo.fetch)
+    {
+      bool has_storage = !! network.model->storage;
+      infinit::overlay::NodeEndpoints eps;
+      while(true)
+      {
+        try
+        {
+          beyond_fetch_endpoints(network, eps);
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_WARN("Error fetching endpoints from beyond: %s, retrying...", e);
+          reactor::sleep(10_sec);
+          continue;
+        }
+        if (!eps.empty())
+          break;
+        if ((!has_storage && flag(args, "wait-if-no-storage"))
+          || flag(args, "wait-for-peers"))
+          reactor::sleep(5_sec);
+        else
+          break;
+      }
+      model->overlay()->discover(eps);
+    }
     reactor::Thread::unique_ptr stat_thread;
     if (push)
       stat_thread = make_stat_update_thread(self, network, *model);
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
-    auto fs = volume.run(std::move(model)
+    auto fs = volume.run(std::move(model),
+                         mo.mountpoint,
+                         mo.readonly,
+                         flag(args, "allow-root-creation")
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
                          , optional(args, "mount-name")
 #endif
@@ -442,6 +448,33 @@ COMMAND(run)
                          , optional(args, "mount-icon")
 #endif
                          );
+    // Experimental: poll root on mount to trigger caching.
+#   if 0
+    boost::optional<std::thread> root_poller;
+    if (mo.mountpoint && mo.cache && mo.cache.get())
+      root_poller.emplace(
+        [root = mo.mountpoint.get()]
+        {
+          try
+          {
+            boost::filesystem::status(root);
+            for (auto it = boost::filesystem::directory_iterator(root);
+                 it != boost::filesystem::directory_iterator();
+                 ++it)
+              ;
+          }
+          catch (boost::filesystem::filesystem_error const& e)
+          {
+            ELLE_WARN("error polling root: %s", e);
+          }
+        });
+    elle::SafeFinally root_poller_join(
+      [&]
+      {
+        if (root_poller)
+          root_poller->join();
+      });
+#   endif
     if (volume.default_permissions && !volume.default_permissions->empty())
     {
       auto ops =
@@ -474,10 +507,13 @@ COMMAND(run)
           add_path_to_finder_sidebar(mountpoint.get());
         });
     }
+    std::unique_ptr<reactor::network::Reachability> reachability;
 #endif
     elle::SafeFinally unmount([&]
     {
 #ifdef INFINIT_MACOSX
+      if (reachability)
+        reachability->stop();
       if (add_to_sidebar && mo.mountpoint)
       {
         auto mountpoint = mo.mountpoint;
@@ -499,6 +535,23 @@ COMMAND(run)
         {}
       }
     });
+#ifdef INFINIT_MACOSX
+    if (elle::os::getenv("INFINIT_LOG_REACHABILITY", "") != "0")
+    {
+      reachability.reset(new reactor::network::Reachability(
+        {},
+        [&] (reactor::network::Reachability::NetworkStatus status)
+        {
+          using NetworkStatus = reactor::network::Reachability::NetworkStatus;
+          if (status == NetworkStatus::Unreachable)
+            ELLE_LOG("lost network connection");
+          else
+            ELLE_LOG("got network connection");
+        },
+        true));
+      reachability->start();
+    }
+#endif
     if (script_mode)
     {
 #ifndef INFINIT_WINDOWS
@@ -527,7 +580,6 @@ COMMAND(run)
         std::string handlename;
         try
         {
-          op = pathname = handlename = "";
           auto json =
             boost::any_cast<elle::json::Object>(elle::json::read(stdin_stream));
           ELLE_TRACE("got command: %s", json);
@@ -891,8 +943,7 @@ COMMAND(mount)
     auto volume = ifnt.volume_get(name);
     if (!volume.mount_options.mountpoint)
     {
-      mandatory(args, "mountpoint",
-                "No default mountpoint for volume. mountpoint");
+      mandatory(args, "mountpoint", "mountpoint");
     }
   }
   run(args);
@@ -1028,6 +1079,8 @@ main(int argc, char** argv)
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   std::vector<Mode::OptionDescription> options_run_mount = {
+    {"allow-root-creation", bool_switch(),
+        "create the filesystem root if not found"},
     { "name", value<std::string>(), "volume name" },
     { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
     { "readonly", bool_switch(), "mount as readonly" },

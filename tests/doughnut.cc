@@ -1550,10 +1550,23 @@ ELLE_TEST_SCHEDULED(admin_keys)
   no_cheating(cadm.dht.get(), ba4);
   BOOST_CHECK_EQUAL(ba4->data(), std::string("bar"));
 
+  // try to change admin user's permissions
+  auto b_perm = dht.dht->make_block<blocks::ACLBlock>();
+  b_perm->data(std::string("admin user data"));
+  dht.dht->store(*b_perm, infinit::model::STORE_INSERT);
+  auto fetched_b_perm = dht.dht->fetch(b_perm->address());
+  no_cheating(dht.dht.get(), fetched_b_perm);
+  b_perm.reset(dynamic_cast<blocks::ACLBlock*>(fetched_b_perm.release()));
+  BOOST_CHECK_THROW(
+    b_perm->set_permissions(
+      *dht.dht->make_user(elle::serialization::json::serialize(admin.K())),
+    false, false), elle::Error);
+
   // check group admin key
   auto gadmin = infinit::cryptography::rsa::keypair::generate(512);
   DHT cadmg(storage = nullptr, keys=gadmin, owner=owner_key);
   cadmg.overlay->connect(*dht.overlay);
+  std::unique_ptr<infinit::cryptography::rsa::PublicKey> g_K;
   {
     dht::Group g(*dht.dht, "g");
     g.create();
@@ -1562,6 +1575,8 @@ ELLE_TEST_SCHEDULED(admin_keys)
     cadmg.dht->admin_keys().group_r.push_back(g.public_control_key());
     dht.dht->admin_keys().group_r.push_back(g.public_control_key());
     client.dht->admin_keys().group_r.push_back(g.public_control_key());
+    g_K.reset(
+      new infinit::cryptography::rsa::PublicKey(g.public_control_key()));
   }
 
   auto bg = client.dht->make_block<blocks::ACLBlock>();
@@ -1569,6 +1584,14 @@ ELLE_TEST_SCHEDULED(admin_keys)
   client.dht->store(*bg, infinit::model::STORE_INSERT);
   auto bg2 = cadmg.dht->fetch(bg->address());
   BOOST_CHECK_EQUAL(bg2->data(), std::string("baz"));
+
+  // try to change admin group's permissions
+  auto bg_perm = cadmg.dht->fetch(bg->address());
+  // no_cheating(cadmg.dht.get(), bg_perm);
+  BOOST_CHECK_THROW(
+    dynamic_cast<blocks::ACLBlock*>(bg_perm.get())->set_permissions(
+      *cadmg.dht->make_user(elle::serialization::json::serialize(g_K)),
+    false, false), elle::Error);
 }
 
 ELLE_TEST_SUITE()

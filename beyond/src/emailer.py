@@ -19,7 +19,6 @@ class SendWithUs(Base):
     import sendwithus.encoder
     class JSONEncoder(sendwithus.encoder.SendwithusJSONEncoder):
       def default(self, obj):
-        import bson
         import datetime
         if isinstance(obj, datetime.datetime):
           return {
@@ -31,8 +30,6 @@ class SendWithUs(Base):
             'second': obj.second,
             'weekday': obj.weekday(),
           }
-        if isinstance(obj, bson.ObjectId):
-          return str(obj)
         return super().default(obj)
     self.__json_encoder = JSONEncoder
     self.__swu = sendwithus.api(

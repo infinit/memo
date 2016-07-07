@@ -88,11 +88,13 @@ with Beyond() as beyond, \
     ['infinit-passport', '--export', '--network', network, '--user', 'alice',
      '--as', 'bob'])
   def resolve(user_name):
-    res = bob.run(['infinit-volume', '--run', '--as', 'bob', '--name', volume],
-                  input = {
-                    "operation":"getxattr",
-                    "name":"infinit.resolve.%s" % user_name,
-                    "path": "/"})
+    res = bob.run(
+      ['infinit-volume', '--run', '--allow-root-creation',
+       '--as', 'bob', '--name', volume],
+      input = {
+        "operation":"getxattr",
+        "name":"infinit.resolve.%s" % user_name,
+        "path": "/"})
     return json.loads(res[0])
   # Of course, bob is present:
   res = resolve('bob')

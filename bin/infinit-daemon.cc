@@ -540,7 +540,7 @@ MountManager::create_network(elle::json::Object const& options,
    auto kelips =
     elle::make_unique<infinit::overlay::kelips::Configuration>();
    kelips->k = 1;
-   kelips->rpc_protocol = infinit::model::doughnut::Local::Protocol::all;
+   kelips->rpc_protocol = infinit::model::doughnut::Protocol::all;
    std::unique_ptr<infinit::model::doughnut::consensus::Configuration> consensus_config;
    consensus_config = elle::make_unique<
       infinit::model::doughnut::consensus::Paxos::Configuration>(

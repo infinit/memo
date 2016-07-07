@@ -890,14 +890,8 @@ namespace infinit
           if (block)
           {
             ELLE_DEBUG("validate block")
-              if (auto res = block->validate(this->doughnut())); else
+              if (auto res = block->validate(this->doughnut(), true)); else
                 throw ValidationFailed(res.reason());
-            if (auto* acb = dynamic_cast<ACB*>(block.get()))
-            {
-              auto v = acb->validate_admin_keys(this->doughnut());
-              if (!v)
-                throw ValidationFailed(v.reason());
-            }
           }
           auto& decision = this->_load_paxos(address);
           auto& paxos = decision.paxos;
@@ -1151,8 +1145,7 @@ namespace infinit
                 lookup_nodes(
                   this->doughnut(), paxos.quorum(), address);
               if (peers.empty())
-                throw elle::Error(
-                  elle::sprintf("No peer available for fetch %x", address));
+                elle::err("no peer available for fetching %f", address);
               Paxos::PaxosClient client(this->doughnut().id(),
                                         std::move(peers));
               auto chosen = client.choose(version, block);
@@ -1187,7 +1180,7 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: store %f", *this, block);
           ELLE_DEBUG("%s: validate block", *this)
-            if (auto res = block.validate(this->doughnut())); else
+            if (auto res = block.validate(this->doughnut(), true)); else
               throw ValidationFailed(res.reason());
           if (!dynamic_cast<blocks::ImmutableBlock const*>(&block))
             throw ValidationFailed("bypassing Paxos for a mutable block");
@@ -1370,10 +1363,9 @@ namespace infinit
               }
             }
             if (peers.empty())
-              throw elle::Error(
-                elle::sprintf("no peer available for %s of %f",
-                  op == overlay::OP_INSERT ? "insertion" : "update",
-                  b->address()));
+              elle::err("no peer available for %s of %f",
+                        op == overlay::OP_INSERT ? "insertion" : "update",
+                        b->address());
             ELLE_DEBUG("owners: %f", peers);
             // FIXME: client is persisted on conflict resolution, hence the
             // round number is kept and won't start at 0.
@@ -1448,10 +1440,9 @@ namespace infinit
               }
             };
             if (reached.size() == 0u)
-              throw elle::Error(
-                elle::sprintf("no peer available for %s of %f",
-                              op == overlay::OP_INSERT ? "insertion" : "update",
-                              b->address()));
+              elle::err("no peer available for %s of %f",
+                        op == overlay::OP_INSERT ? "insertion" : "update",
+                        b->address());
             if (this->doughnut().version() >= elle::Version(0, 6, 0))
               for (auto peer: reached)
                 if (auto local =
