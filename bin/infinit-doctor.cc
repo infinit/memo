@@ -179,8 +179,16 @@ namespace reporting
       if (this->show(verbose))
         this->_print(out << "* ", verbose);
       if (this->show(verbose) && this->reason)
-        out << " (" << *this->reason << ")";
-      if (rc && this->show(verbose))
+      {
+        out << std::endl;
+        out << "  - ";
+        if (this->warning())
+          warn(out, "Warning");
+        else
+          faulty(out, "Error");
+        out << ": " << *this->reason;
+      }
+      if ((rc && this->show(verbose)) || this->reason)
         out << std::endl;
       return out;
     }
@@ -524,7 +532,7 @@ namespace reporting
         {
           out << "Disk space left:";
           if (!this->sane() || this->warning())
-            (this->warning() ? warn : faulty)(out << std::endl << "  ", "low");
+            (this->warning() ? warn : faulty)(out << std::endl << "  - ", "low");
           elle::fprintf(out, " %s available (%s%%)",
                         this->available,
                         100 * this->available / (double) this->capacity);
@@ -842,8 +850,6 @@ namespace reporting
           out << "NAT: ";
           if (this->sane())
             out << "OK (" << (this->cone ? "CONE" : "NOT CONE") << ")";
-          else
-            faulty(out << std::endl << "    ", elle::sprintf("%s", result(false)));
         }
       }
 
@@ -956,7 +962,8 @@ namespace reporting
             out << "  - external IP address: " << this->external;
           else
             out << "  - no external IP address";
-          out << std::endl;
+          if (redirections.size() > 0)
+            out << std::endl;
           for (auto const& redirection: redirections)
           {
             out << "    - ";
@@ -1240,7 +1247,9 @@ _networking(boost::program_options::variables_map const& args,
       results.upnp.available = false;
       upnp->initialize();
       results.upnp.available = upnp->available();
+      results.upnp.warning(true);
       results.upnp.external = upnp->external_ip();
+      results.upnp.warning(false);
       typedef reporting::NetworkingResults::UPNPResult::RedirectionResult::Address
         Address;
       auto redirect = [&] (std::string type,
