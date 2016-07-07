@@ -128,7 +128,9 @@ with Beyond(bottle_args = {'ldap_server': ldap_url}) as beyond,\
      Infinit(beyond = beyond) as admin,\
      LdapCleaner(bob) as lc:
   for e in ldap_data:
-    bob.run(ldap_add_cmd, input = e, noscript = True)
+    p = bob.spawn(ldap_add_cmd, input = e, noscript = True)
+    p.communicate()
+    p.wait()
   # Create user with ldap backend
   bob.run(['infinit-user', '--create', '--push', '--full',\
     '--email', 'bob@company.com', '--fullname', 'Bob Bob', \
@@ -139,12 +141,15 @@ with Beyond(bottle_args = {'ldap_server': ldap_url}) as beyond,\
   assertEq(len(ul), 1)
 
   # Test batcher beyond populator
-  bob.run(['infinit-ldap', '--populate-hub', '--server', ldap_url, \
+  p = bob.spawn(['infinit-ldap', '--populate-hub', '--server', ldap_url, \
       '--domain', '', '--searchbase', 'dc=%s,dc=nodomain'  % (dc), \
       '--user', ldap_creds[0], '--password', ldap_creds[1], \
       '--username-pattern', '$(uid)'],
       noscript = True, input='y\n')
-  alice.run(['infinit-user', '--login', '--name', 'aalice', '--password', 'foobar'])
+  p.communicate()
+  p.wait()
+  alice.run(['infinit-user', '--login', '--name', 'aalice',
+             '--password', 'foobar'])
   ul = alice.run_json(['infinit-user', '--list', '-s'])
   assertEq(len(ul), 1)
 
@@ -179,6 +184,7 @@ with Beyond(bottle_args = {'ldap_server': ldap_url}) as beyond,\
       'infinit-volume', '--run',
       'volume',
       '--as', 'adm',
+      '--allow-root-creation',
     ],
     input = {'operation': 'mkdir', 'path': '/beacon'})
   if not response['success']:
@@ -227,11 +233,10 @@ with Beyond(bottle_args = {'ldap_server': ldap_url}) as beyond,\
   alice.run(['infinit-passport', '--fetch', '--as', 'aalice',
              '--network', 'adm/network'])
   alice.run(['infinit-network', '--link', '--as', 'aalice', 'adm/network'])
-  volume_process = None
+  p = None
   try:
-    volume_process = admin.spawn([
-      'infinit-volume', '--run', '--as', 'adm', 'volume',
-      '--port-file', portfile])
+    p = admin.spawn(['infinit-volume', '--run', '--as', 'adm', 'volume',
+                     '--port-file', portfile])
     while not os.path.exists(portfile):
       time.sleep(0.1)
     with open(portfile, 'r') as f:
@@ -268,8 +273,8 @@ with Beyond(bottle_args = {'ldap_server': ldap_url}) as beyond,\
     assertEq(response['success'], False)
     assertEq(response['code'], 13)
   finally:
-    if volume_process:
-      volume_process.terminate()
+    if p:
+      p.terminate()
     if os.path.exists(portfile):
       os.remove(portfile)
   # drive check
