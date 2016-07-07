@@ -1431,7 +1431,7 @@ namespace infinit
     }
 
     std::string
-    qualified_name(std::string const& network_name, User const& owner)
+    qualified_name(std::string const& network_name, User const& owner) const
     {
       if (network_name.find("/") != std::string::npos)
         return network_name;
@@ -1965,8 +1965,8 @@ namespace infinit
     _network_path(std::string const& name,
                   User const& user) const
     {
-      ELLE_ASSERT(is_qualified_name(name));
-      return this->_network_path(user) / name;
+      auto network_name = this->qualified_name(name, user);
+      return this->_network_path(user) / network_name;
     }
 
     boost::filesystem::path
