@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 
 from utils import *
 from math import *
@@ -79,6 +79,9 @@ with Beyond() as beyond, \
   assertEq(len(bob.run_json(['infinit-storage', '--list', '-s'])), 1)
   bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '-S', 's', '-p'])
   assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 1)
+  bob.run(['infinit-network', '--run', '--name', 'n', '--as', 'bob',
+           '--async', '--cache', '-s'])
+  assertEq(len(os.listdir('%s/cache/bob/bob/n' % bob.state_path)), 2)
   bob.run(['infinit-passport', '--create', '--as', 'bob',
            '-u', 'alice', '-n', 'n', '-p'])
   assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'bob'])), 1)
@@ -105,3 +108,4 @@ with Beyond() as beyond, \
   bob.run(['infinit-drive', '--fetch', '--as', 'bob', 'd'], return_code = 1)
   alice.run(['infinit-passport', '--fetch', '--as', 'alice',
              '-u', 'alice', '-n', 'bob/n'], return_code = 1)
+  assertEq(len(os.listdir('%s/cache/bob' % bob.state_path)), 0)
