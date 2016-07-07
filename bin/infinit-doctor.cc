@@ -43,7 +43,8 @@ namespace reporting
   section(std::ostream& out,
           std::string name)
   {
-    out << "= " << name << " =" << std::endl;
+    boost::algorithm::to_upper(name);
+    out << std::endl <<  "[1m" << name << ":" << "[0m" << std::endl;
   }
 
   template <typename C, typename ... Args>
@@ -419,7 +420,7 @@ namespace reporting
     print(std::ostream& out, bool verbose) const
     {
       if (!this->sane() || verbose)
-        section(out, "Integrity");
+        section(out, "Infinit integrity");
       reporting::print(out, "Storage resources", storage_resources, verbose);
       reporting::print(out, "Networks", networks, verbose);
       reporting::print(out, "Volumes", volumes, verbose);
@@ -640,7 +641,7 @@ namespace reporting
     print(std::ostream& out, bool verbose) const
     {
       if (!this->sane() || this->warning() || verbose)
-        section(out, "Sanity");
+        section(out, "System sanity");
       user.print(out, verbose);
       space_left.print(out, verbose);
       environment.print(out, verbose, false);
@@ -997,7 +998,7 @@ namespace reporting
     print(std::ostream& out, bool verbose) const
     {
       if (!this->sane() | verbose)
-        section(out, "Networking");
+        section(out, "Networking capabilities");
       this->beyond.print(out, verbose);
       this->interfaces.print(out, verbose, false);
       this->nat.print(out, verbose);
