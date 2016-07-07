@@ -71,7 +71,7 @@ namespace infinit
         _seal(boost::optional<int> version) override;
         virtual
         blocks::ValidationResult
-        _validate(Model const& model) const override;
+        _validate(Model const& model, bool writing) const override;
         virtual
         blocks::RemoveSignature
         _sign_remove(Model& model) const override;

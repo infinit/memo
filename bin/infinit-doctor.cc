@@ -43,8 +43,7 @@ namespace reporting
   section(std::ostream& out,
           std::string name)
   {
-    out << " = " << name << " = " << std::endl;
-    out << std::endl;
+    out << "= " << name << " =" << std::endl;
   }
 
   template <typename C, typename ... Args>
@@ -61,13 +60,26 @@ namespace reporting
 
   template <typename C>
   bool
-  sane(C const& c)
+  sane(C const& c, bool all = true)
   {
-    return std::all_of(c.begin(),
-                       c.end(),
+    auto filter = [&] (typename C::value_type const& x)
+      {
+        return x.second.sane();
+      };
+    if (all)
+      return std::all_of(c.begin(), c.end(), filter);
+    else
+      return std::any_of(c.begin(), c.end(), filter);
+  }
+
+  template <typename C>
+  bool
+  warning(C const& c)
+  {
+    return std::any_of(c.begin(), c.end(),
                        [&] (typename C::value_type const& x)
                        {
-                         return x.second.sane;
+                         return x.second.warning();
                        });
   }
 
@@ -81,8 +93,8 @@ namespace reporting
 
   static
   std::ostream&
-  warning(std::ostream& out,
-         std::string const& name)
+  warn(std::ostream& out,
+       std::string const& name)
   {
     return out << "[33;01;33m[" << name << "][0m";
   }
@@ -98,20 +110,20 @@ namespace reporting
       container.begin(), container.end(),
       [&] (typename C::value_type const& r)
       {
-        return !r.second.sane;
+        return !r.second.sane();
       }) != container.end();
     if (verbose || broken)
-      out << name << ":" << std::endl;
+      out << "* " << name << ":" << std::endl;
     for (auto const& item: container)
-      if (verbose || !item.second.sane)
+      if (verbose || !item.second.sane())
       {
-        out << "  ";
-        if (item.second.sane)
+        out << "  - ";
+        if (item.second.sane())
           out << item.first;
         else
           faulty(out, item.first);
         item.second.print(out << " ", verbose);
-        // out << std::endl;
+        out << std::endl;
       }
   }
 
@@ -120,13 +132,17 @@ namespace reporting
     typedef boost::optional<std::string> Reason;
 
     Result()
-      : sane(false)
+      : _sane(false)
       , reason()
+      , _warning(false)
     {}
 
-    Result(bool sane, Reason const& reason = Reason{})
-      : sane(sane)
+    Result(bool sane,
+           Reason const& reason = Reason{},
+           boost::optional<bool> warning = boost::none)
+      : _sane(sane)
       , reason(reason)
+      , _warning(warning)
     {}
 
     Result(elle::serialization::SerializerIn& s)
@@ -139,35 +155,49 @@ namespace reporting
     {
     }
 
-    bool sane;
+    ELLE_ATTRIBUTE_RW(bool, sane);
     Reason reason;
+    ELLE_ATTRIBUTE_RW(bool, warning);
+
 
     virtual
     void
     _print(std::ostream& out, bool verbose) const{};
 
-    std::ostream&
-    print(std::ostream& out, bool verbose) const
+  protected:
+    bool
+    show(bool verbose) const
     {
-      this->_print(out, verbose);
-      if (!sane)
-      {
-        if (this->reason)
-          out << " (" << *this->reason << ")";
-      }
-      return out << std::endl;
+      return !this->sane() || verbose || this->warning();
+    }
+
+  public:
+    std::ostream&
+    print(std::ostream& out, bool verbose, bool rc = true) const
+    {
+      if (this->show(verbose))
+        this->_print(out << "* ", verbose);
+      if (this->show(verbose) && this->reason)
+        out << " (" << *this->reason << ")";
+      if (rc && this->show(verbose))
+        out << std::endl;
+      return out;
     }
 
     void
     serialize(elle::serialization::Serializer& s)
     {
-      s.serialize("sane", this->sane);
+      s.serialize("sane", this->_sane);
       s.serialize("reason", this->reason);
+      s.serialize("warning", this->_warning);
     }
   };
 
   struct IntegrityResults
+    : public Result
   {
+    using Result::Result;
+
     struct Result:
       public reporting::Result
     {
@@ -176,12 +206,12 @@ namespace reporting
       std::ostream&
       print(std::ostream& out, bool verbose) const
       {
-        if (!sane)
+        if (!this->sane())
           out << "is faulty because ";
         this->_print(out, verbose);
-        if (!sane && this->reason)
+        if (!this->sane() && this->reason)
           out << " (" << *this->reason << ")";
-        return out << std::endl;
+        return out;
       }
     };
 
@@ -362,6 +392,15 @@ namespace reporting
         && reporting::sane(this->drives);
     }
 
+    bool
+    warning() const
+    {
+      return reporting::warning(this->storage_resources)
+        || reporting::warning(this->networks)
+        || reporting::warning(this->volumes)
+        || reporting::warning(this->drives);
+    }
+
     void
     serialize(elle::serialization::Serializer& s)
     {
@@ -394,7 +433,10 @@ namespace reporting
   };
 
   struct SanityResults
+    : public reporting::Result
   {
+    using Result::Result;
+
     struct UserResult
       : public reporting::Result
     {
@@ -429,10 +471,10 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!sane || verbose)
+        if (this->show(verbose))
         {
-          out << "User name:";;
-          if (sane)
+          out << "User name:";
+          if (this->sane())
             out << " " << this->name;
           else
             faulty(out << std::endl << "  ", this->name) << " is invalid";
@@ -457,11 +499,9 @@ namespace reporting
                 size_t available,
                 size_t capacity,
                 Result::Reason const& reason = Result::Reason {})
-        : Result(
-          capacity == 0
-          ? false
-          : ((available / (double) capacity) < minimum_ratio)
-          && available < minimum, reason)
+        : Result(capacity != 0,
+                 reason,
+                 ((available / (double) capacity) < minimum_ratio) && available < minimum)
         , minimum(minimum)
         , minimum_ratio(minimum_ratio)
         , available(available)
@@ -479,11 +519,11 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!sane || verbose)
+        if (this->show(verbose))
         {
           out << "Disk space left:";
-          if (!sane)
-            warning(out << std::endl << "  ", "low");
+          if (!this->sane() || this->warning())
+            (this->warning() ? warn : faulty)(out << std::endl << "  ", "low");
           elle::fprintf(out, " %s available (%s%%)",
                         this->available,
                         100 * this->available / (double) this->capacity);
@@ -498,7 +538,6 @@ namespace reporting
         s.serialize("minimum_ratio", this->minimum_ratio);
         s.serialize("available", this->available);
         s.serialize("capacity", this->capacity);
-
       }
 
       uint64_t minimum;
@@ -511,7 +550,7 @@ namespace reporting
       : public reporting::Result
     {
       EnvironmentResult(Environment const& environment)
-        : Result(environment.size() == 0)
+        : Result(true, reporting::Result::Reason{}, environment.size() != 0)
         , environment(environment)
       {
       }
@@ -524,13 +563,13 @@ namespace reporting
       EnvironmentResult() = default;
 
       void
-      print(std::ostream& out, bool verbose) const
+      _print(std::ostream& out, bool verbose) const override
       {
-        if (!this->sane || verbose)
+        if (this->show(verbose))
         {
           out << "Environment:" << std::endl;
           for (auto const& entry: this->environment)
-            faulty(out << "  ", entry.first) << ": " << entry.second << std::endl;
+            warn(out << "  - ", entry.first) << ": " << entry.second << std::endl;
         }
       }
 
@@ -563,9 +602,9 @@ namespace reporting
       }
 
       void
-      _print(std::ostream& out, bool verbose) const override
+      print(std::ostream& out, bool verbose) const
       {
-        if (!sane || verbose)
+        if (this->show(verbose))
         {
           out
             << "exists: " << result(this->exists)
@@ -600,21 +639,30 @@ namespace reporting
     void
     print(std::ostream& out, bool verbose) const
     {
-      if (!this->sane() || verbose)
+      if (!this->sane() || this->warning() || verbose)
         section(out, "Sanity");
       user.print(out, verbose);
       space_left.print(out, verbose);
-      environment.print(out, verbose);
+      environment.print(out, verbose, false);
       reporting::print(out, "Permissions", permissions, verbose);
     }
 
     bool
     sane() const
     {
-      return this->user.sane
-        && this->space_left.sane
-        && this->environment.sane
+      return this->user.sane()
+        && this->space_left.sane()
+        && this->environment.sane()
         && reporting::sane(this->permissions);
+    }
+
+    bool
+    warning() const
+    {
+      return this->user.warning()
+        || this->space_left.warning()
+        || this->environment.warning()
+        || reporting::warning(this->permissions);
     }
 
     void
@@ -648,13 +696,13 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!this->sane || verbose)
+        if (this->show(verbose))
         {
           out << "Connection to " << ::beyond() << ":";
-          if (!sane)
-            faulty(out << std::endl << "  ", result(this->sane));
+          if (!this->sane())
+            faulty(out << std::endl << "  - ", result(this->sane()));
           else
-            out << result(this->sane);
+            out << " " << result(this->sane());
         }
       }
 
@@ -687,12 +735,12 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!this->sane || verbose)
+        if (this->show(verbose))
         {
           out << "Interfaces:" << std::endl;
           for (auto const& entry: this->entries)
           {
-            out << "  " << entry << std::endl;
+            out << "  - " << entry << std::endl;
           }
         }
       }
@@ -720,6 +768,7 @@ namespace reporting
         , address(address)
         , local_port(local_port)
         , remote_port(remote_port)
+        , internal(internal)
       {
       }
 
@@ -741,18 +790,18 @@ namespace reporting
       }
 
       void
-      _print(std::ostream& out, bool verbose) const override
+      print(std::ostream& out, bool verbose) const
       {
-        if (!this->sane || verbose)
+        if (this->show(verbose))
         {
           if (this->address)
-            out << std::endl << "    Address: " << *this->address;
+            out << std::endl << "    - Address: " << *this->address;
           if (this->local_port)
-            out << std::endl << "    Local port: " << *this->local_port;
+            out << std::endl << "    - Local port: " << *this->local_port;
           if (this->remote_port)
-            out << std::endl << "    Remote port: " << *this->remote_port;
+            out << std::endl << "    - Remote port: " << *this->remote_port;
           if (this->internal)
-            out << std::endl << "    Internal: " << *this->internal;
+            out << std::endl << "    - Internal: " << *this->internal;
         }
       }
 
@@ -787,13 +836,13 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!this->sane || verbose)
+        if (this->show(verbose))
         {
           out << "NAT: ";
-          if (this->sane)
-            out << (this->cone ? "CONE" : "NOT CONE");
+          if (this->sane())
+            out << "OK (" << (this->cone ? "CONE" : "NOT CONE") << ")";
           else
-            faulty(out << std::endl << "  ", elle::sprintf("%s", result(false)));
+            faulty(out << std::endl << "    ", elle::sprintf("%s", result(false)));
         }
       }
 
@@ -866,16 +915,17 @@ namespace reporting
         }
 
         void
-        _print(std::ostream& out, bool verbose) const override
+        print(std::ostream& out, bool verbose) const
         {
-          if (!this->sane || verbose)
+          if (this->show(verbose))
           {
+            out << result(this->sane());
             if (internal)
-              out << std::endl << "    internal: " << this->internal;
-            if (internal)
-              out << std::endl << "    external: " << this->external;
-            if (!sane)
-              out << std::endl << "    >";
+              out << std::endl << "      - internal: " << this->internal;
+            if (external)
+              out << std::endl << "      - external: " << this->external;
+            if (!this->sane() && this->reason)
+              out << std::endl << "      - Reason: " << *this->reason;
           }
         }
 
@@ -897,22 +947,22 @@ namespace reporting
       void
       _print(std::ostream& out, bool verbose) const override
       {
-        if (!this->sane || verbose)
+        if (this->show(verbose))
         {
           out << "UPNP:" << std::endl;
-          out << "  available: " << this->available << std::endl;
+          out << "  - available: " << this->available << std::endl;
           if (this->external)
-            out << "  external IP address: " << this->external;
+            out << "  - external IP address: " << this->external;
           else
-            out << "  no external IP address";
+            out << "  - no external IP address";
           out << std::endl;
           for (auto const& redirection: redirections)
           {
-            out << "  ";
-            if (redirection.second.sane)
+            out << "    - ";
+            if (redirection.second.sane())
               out << redirection.first;
             else
-              warning(out, redirection.first);
+              warn(out, redirection.first);
             redirection.second.print(out << ": ", verbose);
             out << std::endl;
           }
@@ -949,20 +999,30 @@ namespace reporting
       if (!this->sane() | verbose)
         section(out, "Networking");
       this->beyond.print(out, verbose);
-      this->interfaces.print(out, verbose);
+      this->interfaces.print(out, verbose, false);
       this->nat.print(out, verbose);
-      this->upnp.print(out, verbose);
+      this->upnp.print(out, verbose, false);
       reporting::print(out, "Protocols", this->protocols, verbose);
     }
 
     bool
     sane() const
     {
-      return this->beyond.sane
-        && this->interfaces.sane
-        && this->nat.sane
-        && this->upnp.sane
-        && reporting::sane(this->protocols);
+      return this->beyond.sane()
+        && this->interfaces.sane()
+        && this->nat.sane()
+        && this->upnp.sane()
+        && reporting::sane(this->protocols, false);
+    }
+
+    bool
+    warning() const
+    {
+      return this->beyond.warning()
+        || this->interfaces.warning()
+        || this->nat.warning()
+        || this->upnp.warning()
+        || reporting::warning(this->protocols);
     }
 
     void
@@ -1020,6 +1080,14 @@ namespace reporting
         && this->networking.sane();
     }
 
+    bool
+    warning() const
+    {
+      return this->integrity.warning()
+        || this->sanity.warning()
+        || this->networking.warning();
+    }
+
     void
     serialize(elle::serialization::Serializer& s)
     {
@@ -1058,11 +1126,11 @@ void
 _networking(boost::program_options::variables_map const& args,
             reporting::NetworkingResults& results)
 {
-  // Contact beyond.
+  ELLE_TRACE("contact beyond")
   {
     try
     {
-      reactor::http::Request r(beyond(), reactor::http::Method::GET);
+      reactor::http::Request r(beyond(), reactor::http::Method::GET, {10_sec});
       reactor::wait(r);
       auto status = (r.status() == reactor::http::StatusCode::OK);
       if (status)
@@ -1075,17 +1143,19 @@ _networking(boost::program_options::variables_map const& args,
       results.beyond = {false, elle::exception_string()};
     }
   }
-  // Interfaces.
-  auto interfaces = elle::network::Interface::get_map(
-    elle::network::Interface::Filter::no_loopback);
   std::vector<std::string> public_ips;
-  for (auto i: interfaces)
+  ELLE_TRACE("list interfaces")
   {
-    if (i.second.ipv4_address.empty())
-      continue;
-    public_ips.push_back(i.second.ipv4_address);
+    auto interfaces = elle::network::Interface::get_map(
+      elle::network::Interface::Filter::no_loopback);
+    for (auto i: interfaces)
+    {
+      if (i.second.ipv4_address.empty())
+        continue;
+      public_ips.push_back(i.second.ipv4_address);
+    }
+    results.interfaces = {public_ips};
   }
-  results.interfaces = {public_ips};
   // XXX: This should be nat.infinit.sh or something.
   std::string host = "192.241.139.66";
   uint16_t port = 5456;
@@ -1095,6 +1165,7 @@ _networking(boost::program_options::variables_map const& args,
                     uint16_t port)> const& function,
                   int deltaport = 0)
     {
+      ELLE_TRACE("connect using %s to %s:%s", name, host, port + deltaport);
       std::string result = elle::sprintf("  %s: ", name);
       try
       {
@@ -1140,7 +1211,7 @@ _networking(boost::program_options::variables_map const& args,
                 std::placeholders::_2,
                 0xFF),
       2);
-
+  ELLE_TRACE("NAT")
   {
     try
     {
@@ -1159,11 +1230,12 @@ _networking(boost::program_options::variables_map const& args,
       results.nat = {elle::exception_string()};
     }
   }
+  ELLE_TRACE("UPNP")
   {
     auto upnp = reactor::network::UPNP::make();
     try
     {
-      results.upnp.sane = true;
+      results.upnp.sane(true);
       results.upnp.available = false;
       upnp->initialize();
       results.upnp.available = upnp->available();
@@ -1187,6 +1259,7 @@ _networking(boost::program_options::variables_map const& args,
                 return narrow;
               };
             auto pm = upnp->setup_redirect(protocol, port);
+            res.sane(true);
             res.internal = Address{pm.internal_host, convert(pm.internal_port)};
             res.external = Address{pm.external_host, convert(pm.external_port)};
           }
@@ -1208,7 +1281,8 @@ _networking(boost::program_options::variables_map const& args,
     }
     catch (...)
     {
-      results.upnp.sane = false;
+      // UPNP is always considered sane.
+      results.upnp.warning(true);
       results.upnp.reason = elle::exception_string();
     }
   }
@@ -1289,29 +1363,29 @@ void
 _sanity(boost::program_options::variables_map const& args,
         reporting::SanityResults& result)
 {
-  // User name.
-  try
-  {
-    auto self_name = self_user_name();
-    result.user = {self_name};
-  }
-  catch (...)
-  {
-    result.user = {};
-  }
-  // Space left
+  ELLE_TRACE("user name")
+    try
+    {
+      auto self_name = self_user_name();
+      result.user = {self_name};
+    }
+    catch (...)
+    {
+      result.user = {};
+    }
+  ELLE_TRACE("calculate space left")
   {
     size_t min = 50 * 1024 * 1024;
     double min_ratio = 0.02;
     auto f = boost::filesystem::space(infinit::xdg_data_home());
     result.space_left = {min, min_ratio, f.available, f.capacity};
   }
-  // Env.
+  ELLE_TRACE("look for Infinit related environment")
   {
     auto env = infinit_related_environment();
     result.environment = {env};
   }
-  // Permissions.
+  ELLE_TRACE("check permissions")
   {
     auto test_permissions = [&] (boost::filesystem::path const& path)
       {
@@ -1325,7 +1399,6 @@ _sanity(boost::program_options::variables_map const& args,
           reporting::store(result.permissions, path.string(), true, read, write);
         }
       };
-
     test_permissions(elle::system::home_directory());
     test_permissions(infinit::xdg_cache_home());
     test_permissions(infinit::xdg_config_home());
@@ -1376,131 +1449,140 @@ _integrity(boost::program_options::variables_map const& args,
   auto drives = parse(ifnt.drives_get());
   auto volumes = parse(ifnt.volumes_get());
   auto networks = parse(ifnt.networks_get());
-  for (auto& elem: storage_resources)
-  {
-    auto& storage = elem.second.first;
-    auto& status = elem.second.second;
-    if (auto s3config = dynamic_cast<infinit::storage::S3StorageConfig const*>(storage.get()))
+  ELLE_TRACE("verify storage resources")
+    for (auto& elem: storage_resources)
     {
-      auto it =
-        std::find_if(
-          aws_credentials.begin(),
-          aws_credentials.end(),
-          [&s3config] (std::unique_ptr<infinit::AWSCredentials, std::default_delete<infinit::Credentials>> const& credentials)
-          {
+      auto& storage = elem.second.first;
+      auto& status = elem.second.second;
+      if (auto s3config = dynamic_cast<infinit::storage::S3StorageConfig const*>(storage.get()))
+      {
+        auto it =
+          std::find_if(
+            aws_credentials.begin(),
+            aws_credentials.end(),
+            [&s3config] (std::unique_ptr<infinit::AWSCredentials, std::default_delete<infinit::Credentials>> const& credentials)
+            {
 #define COMPARE(field) (credentials->field == s3config->credentials.field())
-            return COMPARE(access_key_id) && COMPARE(secret_access_key);
+              return COMPARE(access_key_id) && COMPARE(secret_access_key);
 #undef COMPARE
-          });
-      status = (it != aws_credentials.end());
-      if (status)
-        reporting::store(results.storage_resources, storage->name, status, "S3");
-      else
-        reporting::store(results.storage_resources, storage->name, status, "S3", std::string("Missing credentials"));
-    }
-    if (auto fsconfig = dynamic_cast<infinit::storage::FilesystemStorageConfig const*>(storage.get()))
-    {
-      auto perms = has_permission(fsconfig->path);
-      status = perms.first;
-      reporting::store(results.storage_resources, storage->name, status, "filesystem", perms.second);
-    }
-    if (auto gcsconfig = dynamic_cast<infinit::storage::GCSConfig const*>(storage.get()))
-    {
-      auto it =
-        std::find_if(
-          gcs_credentials.begin(),
-          gcs_credentials.end(),
-          [&gcsconfig] (std::unique_ptr<infinit::OAuthCredentials, std::default_delete<infinit::Credentials>> const& credentials)
-          {
-            return credentials->refresh_token == gcsconfig->refresh_token;
-          });
-      status = (it != gcs_credentials.end());
-      if (status)
-        reporting::store(results.storage_resources, storage->name, status, "GCS");
-      else
-        reporting::store(results.storage_resources, storage->name, status, "GCS", std::string("Missing credentials"));
-    }
-#ifndef INFINIT_WINDOWS
-    if (/* auto ssh = */
-      dynamic_cast<infinit::storage::SFTPStorageConfig const*>(storage.get()))
-    {
-      // XXX:
-    }
-#endif
-  }
-  for (auto& elem: networks)
-  {
-    auto const& network = elem.second.first;
-    auto& status = elem.second.second;
-    std::vector<std::string> storage_names;
-    if (network.model)
-    {
-      if (network.model->storage)
-      {
-        if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
-              network.model->storage.get()))
-          for (auto const& s: strip->storage)
-            storage_names.push_back(s->name);
+            });
+        status = (it != aws_credentials.end());
+        if (status)
+          reporting::store(results.storage_resources, storage->name, status, "S3");
         else
-          storage_names.push_back(network.model->storage->name);
+          reporting::store(results.storage_resources, storage->name, status, "S3", std::string("Missing credentials"));
       }
-    }
-    std::vector<std::string> faulty;
-    status = storage_names.size() == 0 || std::all_of(
-      storage_names.begin(),
-      storage_names.end(),
-      [&] (std::string const& name) -> bool
+      if (auto fsconfig = dynamic_cast<infinit::storage::FilesystemStorageConfig const*>(storage.get()))
       {
-        auto it = storage_resources.find(name);
-        auto res = (it != storage_resources.end() && it->second.second);
-        if (!res)
-          faulty.push_back(name);
-        return res;
-      });
-    if (status)
-      reporting::store(results.networks, network.name, status);
-    else
-      reporting::store(results.networks, network.name, status, faulty);
-  }
-  for (auto& elems: volumes)
-  {
-    auto const& volume = elems.second.first;
-    auto& status = elems.second.second;
-    auto network = networks.find(volume.network);
-    auto network_presents = network != networks.end();
-    status = network_presents && network->second.second;
-    if (status)
-      reporting::store(results.volumes, volume.name, status);
-    else
-      reporting::store(results.volumes, volume.name, status, volume.network);
-  }
-  for (auto& elems: drives)
-  {
-    auto const& drive = elems.second.first;
-    auto& status = elems.second.second;
-    auto volume = volumes.find(drive.volume);
-    auto volume_presents = volume != volumes.end();
-    auto volume_ok = volume_presents && volume->second.second;
-    auto network = networks.find(drive.network);
-    auto network_presents = network != networks.end();
-    auto network_ok = network_presents && network->second.second;
-    status = network_ok && volume_ok;
-    if (status)
-      reporting::store(results.drives, drive.name, status);
-    else
-      reporting::store(results.drives, drive.name, status, drive.volume);
-  }
+        auto perms = has_permission(fsconfig->path);
+        status = perms.first;
+        reporting::store(results.storage_resources, storage->name, status, "filesystem", perms.second);
+      }
+      if (auto gcsconfig = dynamic_cast<infinit::storage::GCSConfig const*>(storage.get()))
+      {
+        auto it =
+          std::find_if(
+            gcs_credentials.begin(),
+            gcs_credentials.end(),
+            [&gcsconfig] (std::unique_ptr<infinit::OAuthCredentials, std::default_delete<infinit::Credentials>> const& credentials)
+            {
+              return credentials->refresh_token == gcsconfig->refresh_token;
+            });
+        status = (it != gcs_credentials.end());
+        if (status)
+          reporting::store(results.storage_resources, storage->name, status, "GCS");
+        else
+          reporting::store(results.storage_resources, storage->name, status, "GCS", std::string("Missing credentials"));
+      }
+#ifndef INFINIT_WINDOWS
+      if (/* auto ssh = */
+        dynamic_cast<infinit::storage::SFTPStorageConfig const*>(storage.get()))
+      {
+        // XXX:
+      }
+#endif
+    }
+  ELLE_TRACE("verify networks")
+    for (auto& elem: networks)
+    {
+      auto const& network = elem.second.first;
+      auto& status = elem.second.second;
+      std::vector<std::string> storage_names;
+      if (network.model)
+      {
+        if (network.model->storage)
+        {
+          if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
+                network.model->storage.get()))
+            for (auto const& s: strip->storage)
+              storage_names.push_back(s->name);
+          else
+            storage_names.push_back(network.model->storage->name);
+        }
+      }
+      std::vector<std::string> faulty;
+      status = storage_names.size() == 0 || std::all_of(
+        storage_names.begin(),
+        storage_names.end(),
+        [&] (std::string const& name) -> bool
+        {
+          auto it = storage_resources.find(name);
+          auto res = (it != storage_resources.end() && it->second.second);
+          if (!res)
+            faulty.push_back(name);
+          return res;
+        });
+      if (status)
+        reporting::store(results.networks, network.name, status);
+      else
+        reporting::store(results.networks, network.name, status, faulty);
+    }
+  ELLE_TRACE("verify volumes")
+    for (auto& elems: volumes)
+    {
+      auto const& volume = elems.second.first;
+      auto& status = elems.second.second;
+      auto network = networks.find(volume.network);
+      auto network_presents = network != networks.end();
+      status = network_presents && network->second.second;
+      if (status)
+        reporting::store(results.volumes, volume.name, status);
+      else
+        reporting::store(results.volumes, volume.name, status, volume.network);
+    }
+  ELLE_TRACE("verify drives")
+    for (auto& elems: drives)
+    {
+      auto const& drive = elems.second.first;
+      auto& status = elems.second.second;
+      auto volume = volumes.find(drive.volume);
+      auto volume_presents = volume != volumes.end();
+      auto volume_ok = volume_presents && volume->second.second;
+      auto network = networks.find(drive.network);
+      auto network_presents = network != networks.end();
+      auto network_ok = network_presents && network->second.second;
+      status = network_ok && volume_ok;
+      if (status)
+        reporting::store(results.drives, drive.name, status);
+      else
+        reporting::store(results.drives, drive.name, status, drive.volume);
+    }
 }
 
 static
 void
-report_error(std::ostream& out,
-             bool sane)
+report_error(std::ostream& out, bool sane, bool warning = false)
 {
   if (!sane)
-    throw elle::Error("Please check your configuration");
+    throw elle::Error("Please refer to each individual error message");
   else if (!script_mode)
-    out << "All good!" << std::endl;
+  {
+    if (warning)
+      out << "If you encounter any issues, try fixing the problems indicated by the warning messages";
+    else
+      out << "All good!";
+    out  << std::endl;
+  }
 }
 
 template <typename Report>
@@ -1521,7 +1603,7 @@ COMMAND(integrity)
   reporting::IntegrityResults results;
   _integrity(args, results);
   output(std::cout, results, flag(args, "verbose"));
-  report_error(std::cout, results.sane());
+  report_error(std::cout, results.sane(), results.warning());
 }
 
 COMMAND(networking)
@@ -1529,7 +1611,7 @@ COMMAND(networking)
   reporting::NetworkingResults results;
   _networking(args, results);
   output(std::cout, results, flag(args, "verbose"));
-  report_error(std::cout, results.sane());
+  report_error(std::cout, results.sane(), results.warning());
 }
 
 COMMAND(sanity)
@@ -1537,7 +1619,7 @@ COMMAND(sanity)
   reporting::SanityResults results;
   _sanity(args, results);
   output(std::cout, results, flag(args, "verbose"));
-  report_error(std::cout, results.sane());
+  report_error(std::cout, results.sane(), results.warning());
 }
 
 COMMAND(run_all)
@@ -1547,7 +1629,7 @@ COMMAND(run_all)
   _integrity(args, a.integrity);
   _networking(args, a.networking);
   output(std::cout, a, flag(args, "verbose"));
-  report_error(std::cout, a.sane());
+  report_error(std::cout, a.sane(), a.warning());
 }
 
 int
@@ -1566,7 +1648,7 @@ main(int argc, char** argv)
         "",
         {
           verbose
-            }
+        }
     },
     {
       "networking",
@@ -1575,7 +1657,7 @@ main(int argc, char** argv)
         "",
         {
           verbose
-            }
+        }
     },
     {
       "sanity",
@@ -1584,7 +1666,7 @@ main(int argc, char** argv)
         "",
         {
           verbose
-            }
+        }
     },
     {
       "integrity",
@@ -1593,7 +1675,7 @@ main(int argc, char** argv)
         "",
         {
           verbose
-            }
+        }
     }
   };
   return infinit::main("Infinit diagnostic utility", modes, argc, argv,

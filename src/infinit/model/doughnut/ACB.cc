@@ -584,12 +584,12 @@ namespace infinit
 
       template <typename Block>
       blocks::ValidationResult
-      BaseACB<Block>::_validate(Model const& model) const
+      BaseACB<Block>::_validate(Model const& model, bool writing) const
       {
         static elle::Bench bench("bench.acb._validate", 10000_sec);
         elle::Bench::BenchScope scope(bench);
         ELLE_DEBUG("%s: validate owner part", *this)
-          if (auto res = Super::_validate(model)); else
+          if (auto res = Super::_validate(model, writing)); else
             return res;
         if (this->_world_writable)
           return blocks::ValidationResult::success();
@@ -665,12 +665,17 @@ namespace infinit
             }
           }
         }
+        if (writing)
+        {
+          if (auto res = this->_validate_admin_keys(model)); else
+            return res;
+        }
         return blocks::ValidationResult::success();
       }
 
       template <typename Block>
       blocks::ValidationResult
-      BaseACB<Block>::validate_admin_keys(Model& model) const
+      BaseACB<Block>::_validate_admin_keys(Model const& model) const
       {
         // check for admin keys
         auto const& aks = dynamic_cast<Doughnut const&>(model).admin_keys();
@@ -1031,7 +1036,7 @@ namespace infinit
         }
         // FIXME: calling validate can change our address, and make
         // the validate(other) below fail
-        auto valid = rs.block->validate(model);
+        auto valid = rs.block->validate(model, true);
         if (!valid)
         {
           ELLE_DUMP("remove signature block's is not valid");

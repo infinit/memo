@@ -156,7 +156,7 @@ namespace infinit
         void
         Cache::_insert_cache(blocks::Block& b)
         {
-          if (!b.validate(doughnut()))
+          if (!b.validate(doughnut(), false))
           {
             ELLE_WARN("%s: invalid block received for %s", this, b.address());
             throw elle::Error("invalid block");

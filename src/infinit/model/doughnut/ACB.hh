@@ -160,7 +160,7 @@ namespace infinit
       protected:
         virtual
         blocks::ValidationResult
-        _validate(Model const& model) const override;
+        _validate(Model const& model, bool writing) const override;
         virtual
         blocks::ValidationResult
         _validate(Model const& model,
@@ -193,9 +193,8 @@ namespace infinit
         blocks::ValidationResult
         _validate_remove(Model& model,
                          blocks::RemoveSignature const& rs) const override;
-      public:
         blocks::ValidationResult
-        validate_admin_keys(Model& model) const;
+        _validate_admin_keys(Model const& model) const;
       protected:
         class DataSignature
         {
