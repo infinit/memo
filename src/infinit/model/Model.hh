@@ -52,6 +52,30 @@ namespace infinit
       description() const = 0;
     };
 
+    // A resolver that just override the previous version.
+    class DummyConflictResolver
+      : public ConflictResolver
+    {
+      typedef ConflictResolver Super;
+    public:
+      DummyConflictResolver();
+    public:
+      DummyConflictResolver(elle::serialization::SerializerIn& s,
+                            elle::Version const& version);
+
+      std::unique_ptr<blocks::Block>
+      operator() (blocks::Block& block,
+                  blocks::Block& current,
+                  model::StoreMode mode) final;
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& v) override;
+
+      std::string
+      description() const override;
+    };
+
     std::unique_ptr<ConflictResolver>
     make_drop_conflict_resolver();
 
