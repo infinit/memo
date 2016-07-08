@@ -12,6 +12,7 @@ namespace infinit
   namespace model
   {
     class Endpoint
+      : public elle::Printable
     {
     public:
       Endpoint(boost::asio::ip::address address,
@@ -32,10 +33,15 @@ namespace infinit
       serialize(elle::serialization::Serializer& s);
       ELLE_ATTRIBUTE_R(boost::asio::ip::address, address);
       ELLE_ATTRIBUTE_R(int, port);
-    };
 
-    std::ostream&
-    operator <<(std::ostream& output, Endpoint const& loc);
+    /*----------.
+    | Printable |
+    `----------*/
+    public:
+      virtual
+      void
+      print(std::ostream& stream) const override;
+    };
 
     class Endpoints
       : public std::vector<Endpoint>

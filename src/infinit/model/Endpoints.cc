@@ -125,11 +125,14 @@ namespace infinit
       }
     }
 
-    std::ostream&
-    operator <<(std::ostream& output, Endpoint const& loc)
+    /*----------.
+    | Printable |
+    `----------*/
+
+    void
+    Endpoint::print(std::ostream& output) const
     {
-      elle::fprintf(output, "%s:%s", loc.address(), loc.port());
-      return output;
+      elle::fprintf(output, "%s:%s", this->address(), this->port());
     }
 
     std::vector<boost::asio::ip::tcp::endpoint>
