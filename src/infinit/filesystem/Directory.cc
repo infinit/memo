@@ -192,6 +192,16 @@ namespace infinit
       s.serialize("opetype", _op.entry_type, elle::serialization::as<int>());
     }
 
+    model::SquashOperation
+    DirectoryConflictResolver::squashable(ConflictResolver const& b)
+    {
+      if (dynamic_cast<DirectoryConflictResolver const *>(&b))
+        return {model::Squash::at_first_position,
+                model::SquashConflictResolverOptions(10)};
+      else
+        return {model::Squash::none, {}};
+    }
+
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<DirectoryConflictResolver> _register_dcr("dcr");
 

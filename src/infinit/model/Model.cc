@@ -260,5 +260,78 @@ namespace infinit
     {
       return elle::make_unique<DummyConflictResolver>();
     }
+
+    SquashConflictResolverOptions::SquashConflictResolverOptions()
+    : max_size(0)
+    {}
+    SquashConflictResolverOptions::SquashConflictResolverOptions(int max_size)
+    : max_size(max_size)
+    {}
+
+    class MergeConflictResolver: public ConflictResolver
+    {
+    public:
+      MergeConflictResolver()
+      {}
+      MergeConflictResolver(elle::serialization::SerializerIn& s,
+                            elle::Version const& v)
+      {
+        serialize(s, v);
+      }
+      MergeConflictResolver(std::unique_ptr<ConflictResolver> a,
+                            std::unique_ptr<ConflictResolver> b,
+                            SquashConflictResolverOptions const& config)
+      : _config(config)
+      {
+        _resolvers.push_back(std::move(a));
+        _resolvers.push_back(std::move(b));
+      }
+      void add(std::unique_ptr<ConflictResolver> a)
+      {
+        _resolvers.push_back(std::move(a));
+      }
+      std::unique_ptr<blocks::Block>
+      operator() (blocks::Block& block,
+                  blocks::Block& current,
+                  model::StoreMode mode) override
+      {
+        auto res = (*_resolvers.front())(block, current, mode);
+        for (unsigned int i=1; i< _resolvers.size(); ++i)
+          res = (*_resolvers[i])(block, *res, mode);
+        return res;
+      }
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& v) override
+      {
+        s.serialize("resolvers", _resolvers);
+      }
+      SquashOperation
+      squashable(ConflictResolver const& b)
+      {
+        if (_config.max_size && unsigned(_config.max_size) <= _resolvers.size())
+          return {Squash::none, {}};
+        return _resolvers.back()->squashable(b);
+      }
+    private:
+      SquashConflictResolverOptions _config;
+      std::vector<std::unique_ptr<ConflictResolver>> _resolvers;
+    };
+
+    std::unique_ptr<ConflictResolver>
+    make_merge_conflict_resolver(std::unique_ptr<ConflictResolver> a,
+                                 std::unique_ptr<ConflictResolver> b,
+                                 SquashConflictResolverOptions const& config)
+    {
+      if (auto m = dynamic_cast<MergeConflictResolver*>(a.get()))
+      {
+        m->add(std::move(b));
+        return std::move(a);
+      }
+      else
+        return elle::make_unique<MergeConflictResolver>(std::move(a), std::move(b), config);
+    }
+    static const elle::serialization::Hierarchy<model::ConflictResolver>::
+    Register<MergeConflictResolver> _register_mcr("merge");
   }
 }

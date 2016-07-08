@@ -3,6 +3,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
+#include <elle/os/environ.hh>
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/json.hh>
 #include <elle/bench.hh>
@@ -263,6 +264,75 @@ namespace infinit
         void
         Async::_push_op(Op op)
         {
+          // squash check
+          static bool squash_enabled = elle::os::getenv("INFINIT_ASYNC_DISABLE_SQUASH", "").empty();
+          auto its = this->_operations.get<0>().equal_range(op.address);
+          if (squash_enabled && its.second != its.first)
+          {
+            auto most_recent_it = std::max_element(its.first, its.second,
+              [](Op const& a, Op const& b)
+              {
+                return a.index < b.index;
+              });
+            if (op.resolver && most_recent_it->resolver
+              && most_recent_it->index != this->_operations.get<1>().begin()->index)
+            {
+              auto squash =
+                most_recent_it->resolver->squashable(*op.resolver);
+              if (squash.first != Squash::none)
+              {
+                ELLE_DEBUG("%s: squashing %f at index %s", this, op.address,
+                           most_recent_it->index);
+                auto cr = make_merge_conflict_resolver(
+                    std::move(elle::unconst(most_recent_it->resolver)),
+                    std::move(op.resolver),
+                    squash.second);
+                if (squash.first == Squash::at_first_position)
+                {
+                  this->_operations.get<0>().modify(
+                    most_recent_it, [&](Op& o) {
+                      o.block = std::move(op.block);
+                      o.mode = std::move(op.mode);
+                      o.remove_signature = std::move(op.remove_signature);
+                      o.resolver = std::move(cr);
+                    });
+                  if (!this->_journal_dir.empty())
+                  {
+                    auto path =
+                      boost::filesystem::path(_journal_dir) / std::to_string(most_recent_it->index);
+                    boost::filesystem::ofstream os(path, std::ios::binary);
+                    elle::serialization::binary::SerializerOut sout(os);
+                    sout.set_context(ACBDontWaitForSignature{});
+                    sout.set_context(OKBDontWaitForSignature{});
+                    sout.serialize_forward(*most_recent_it);
+                  }
+                  return;
+                }
+                else
+                { // Squash::at_last_position
+                  op.resolver = std::move(cr);
+                  int idx = most_recent_it->index;
+                  int lastidx = this->_operations.get<1>().rbegin()->index;
+                  this->_operations.get<0>().erase(most_recent_it);
+                  if (!this->_journal_dir.empty())
+                  {
+                    auto path = boost::filesystem::path(this->_journal_dir) /
+                      std::to_string(idx);
+                    boost::filesystem::remove(path);
+                  }
+                  if (this->_first_disk_index
+                    && this->_first_disk_index.get() == idx)
+                  {
+                    if (++*this->_first_disk_index > lastidx)
+                      this->_first_disk_index.reset();
+                  }
+                  // go on to regular push_op
+                }
+
+              }
+            }
+          }
+
           op.index = ++this->_next_index;
           ELLE_TRACE_SCOPE("%s: push %s", *this, op);
           if (!this->_journal_dir.empty())
@@ -410,6 +480,14 @@ namespace infinit
               if (this->_exit_requested)
                 break;
               auto it = this->_operations.get<1>().begin();
+              while (it == this->_operations.get<1>().end() || it->index > index)
+              {
+                ELLE_DEBUG("index %s in queue not in ops (have %s)", index,
+                           it->index);
+                index = this->_queue.get();
+                it = this->_operations.get<1>().begin();
+              }
+
               elle::generic_unique_ptr<Op const> op(&*it, [] (Op const*) {});
               ELLE_ASSERT_EQ(op->index, index);
               ELLE_TRACE_SCOPE("%s: process %s", *this, op);
@@ -435,6 +513,9 @@ namespace infinit
         void
         Async::_process_operation(elle::generic_unique_ptr<Op const> op)
         {
+          static const int delay = std::stoi(elle::os::getenv("INFINIT_ASYNC_POP_DELAY", "0"));
+          if (delay)
+            reactor::sleep(boost::posix_time::milliseconds(delay));
           Address addr = op->address;
           boost::optional<StoreMode> mode = op->mode;
           int attempt = 0;

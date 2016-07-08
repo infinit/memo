@@ -30,6 +30,22 @@ namespace infinit
       STORE_UPDATE
     };
 
+    enum class Squash
+    {
+      none,
+      at_first_position,
+      at_last_position,
+    };
+
+    struct SquashConflictResolverOptions
+    {
+      SquashConflictResolverOptions();
+      SquashConflictResolverOptions(int max_size);
+      int max_size;
+    };
+
+    typedef std::pair<Squash, SquashConflictResolverOptions> SquashOperation;
+
     // Called in case of conflict error. Returns the new block to retry with
     // or null to abort
     class ConflictResolver
@@ -43,6 +59,10 @@ namespace infinit
                    blocks::Block& current,
                    StoreMode mode) = 0;
       virtual
+      SquashOperation
+      squashable(ConflictResolver const& b)
+      { return {Squash::none, {}};}
+      virtual
       void
       serialize(elle::serialization::Serializer& s,
                 elle::Version const& v) override = 0;
@@ -50,6 +70,10 @@ namespace infinit
 
     std::unique_ptr<ConflictResolver>
     make_drop_conflict_resolver();
+    std::unique_ptr<ConflictResolver>
+    make_merge_conflict_resolver(std::unique_ptr<ConflictResolver> a,
+                                 std::unique_ptr<ConflictResolver> b,
+                                 SquashConflictResolverOptions const& opts);
 
     class Model
     {

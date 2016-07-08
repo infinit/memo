@@ -124,6 +124,8 @@ namespace infinit
                    model::StoreMode mode) override;
        void serialize(elle::serialization::Serializer& s,
                       elle::Version const& v) override;
+       model::SquashOperation
+       squashable(ConflictResolver const& b) override;
        model::Model* _model;
        Operation _op;
        Address _address;
