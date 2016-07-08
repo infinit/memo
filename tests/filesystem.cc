@@ -74,7 +74,7 @@ reactor::Scheduler* sched;
 std::vector<std::string> mount_points;
 std::vector<std::unique_ptr<infinit::model::doughnut::Doughnut>> nodes;
 std::vector<boost::asio::ip::tcp::endpoint> endpoints;
-infinit::overlay::Stonehenge::Peers peers;
+infinit::model::NodeLocations peers;
 std::vector<std::unique_ptr<elle::system::Process>> processes;
 
 #ifdef INFINIT_WINDOWS
@@ -387,8 +387,10 @@ make_nodes(std::string store,
   reactor::Scheduler s;
   nodes_sched = &s;
   reactor::Thread t(s, "nodes", [&] {
+    std::vector<infinit::model::Address> ids;
+    ids.reserve(node_count);
     for (int i = 0; i < node_count; ++i)
-      peers.emplace_back(infinit::model::Address::random(0)); // FIXME
+      ids.emplace_back(infinit::model::Address::random(0)); // FIXME
     for (int i = 0; i < node_count; ++i)
     {
       // Create storage
@@ -419,12 +421,13 @@ make_nodes(std::string store,
         [=] (infinit::model::doughnut::Doughnut& dht,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return elle::make_unique<infinit::overlay::Stonehenge>(
-            peers, std::move(local), &dht);
+          auto res = elle::make_unique<infinit::overlay::Stonehenge>(
+            infinit::model::NodeLocations(), std::move(local), &dht);
+          return res;
          };
       nodes.emplace_back(
         new infinit::model::doughnut::Doughnut(
-          peers[i].id,
+          ids[i],
           std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
           owner.public_key(),
           passport,
@@ -435,12 +438,13 @@ make_nodes(std::string store,
           INFINIT_ELLE_VERSION));
     }
     for (int i = 0; i < node_count; ++i)
-      peers[i].endpoint = infinit::overlay::Stonehenge::Peer::Endpoint{
-        "127.0.0.1", nodes[i]->local()->server_endpoint().port()};
+      peers.emplace_back(
+        ids[i],
+        infinit::model::Endpoints(
+          {{"127.0.0.1", nodes[i]->local()->server_endpoint().port()}}));
     for (auto const& node: nodes)
       elle::unconst(static_cast<infinit::overlay::Stonehenge*>(
                       node->overlay().get())->peers()) = peers;
-
   });
   ELLE_LOG("Running node scheduler");
   s.run();
@@ -519,8 +523,9 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           [=] (infinit::model::doughnut::Doughnut& dht,
                std::shared_ptr<infinit::model::doughnut::Local> local)
           {
-            return elle::make_unique<infinit::overlay::Stonehenge>(
+            auto res = elle::make_unique<infinit::overlay::Stonehenge>(
               peers, std::move(local), &dht);
+            return res;
           };
         std::unique_ptr<infinit::model::Model> model =
         elle::make_unique<infinit::model::doughnut::Doughnut>(
@@ -600,12 +605,13 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           for (auto const& p: peers)
           {
             elle::json::Object po;
-            po["host"] = p.endpoint->host;
-            po["port"] = p.endpoint->port;
             po["id"] = elle::format::base64::encode(
               elle::ConstWeakBuffer(
-                p.id.value(),
+                p.id().value(),
                 sizeof(infinit::model::Address::Value))).string();
+            ELLE_ASSERT_GT(p.endpoints().size(), 0u);
+            po["host"] = p.endpoints()[0].address().to_string();
+            po["port"] = p.endpoints()[0].port();
             v.push_back(po);
           }
           overlay["peers"] = v;
