@@ -35,9 +35,6 @@ namespace infinit
       this->_port = std::stoi(repr.substr(sep + 1));
     }
 
-    ELLE_SERIALIZE_CONSTRUCT_DEFINE(Endpoint)
-    {}
-
     bool
     Endpoint::operator == (Endpoint const& b) const
     {

@@ -21,13 +21,11 @@ namespace infinit
       Endpoint(std::string const& repr);
       Endpoint(const Endpoint& b) = default;
       Endpoint();
-      ELLE_SERIALIZE_CONSTRUCT_DECLARE(Endpoint);
       bool operator == (Endpoint const& b) const;
       boost::asio::ip::tcp::endpoint
       tcp() const;
       boost::asio::ip::udp::endpoint
       udp() const;
-      ELLE_SERIALIZE_FRIEND_FOR(Endpoint);
       void
       serialize(elle::serialization::Serializer& s);
       ELLE_ATTRIBUTE_R(boost::asio::ip::address, address);
