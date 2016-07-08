@@ -87,26 +87,71 @@ COMMAND(stats)
     elle::json::write(std::cout, res);
 }
 
+#define SETUP_CONTEXT()                                                 \
+  auto owner = self_user(ifnt, args);                                   \
+  auto network_name =                                                   \
+    ifnt.qualified_name(mandatory(args, "network", "Network"), owner);  \
+  auto network = ifnt.network_get(network_name, owner);                 \
+  elle::serialization::Context ctx;                                     \
+  auto dht = network.run();                                             \
+  ctx.set<infinit::model::doughnut::Doughnut*>(dht.get());              \
+  ctx.set(infinit::model::doughnut::ACBDontWaitForSignature{});         \
+  ctx.set(infinit::model::doughnut::OKBDontWaitForSignature{});
+
+
 COMMAND(export_)
 {
-  auto owner = self_user(ifnt, args);
-  auto network_name =
-    ifnt.qualified_name(mandatory(args, "network", "Network"), owner);
-  auto network = ifnt.network_get(network_name, owner);
+  SETUP_CONTEXT();
   boost::filesystem::path async_path = network.cache_dir() / "async";
   auto operation = mandatory<int>(args, "operation");
   boost::filesystem::ifstream i(async_path / elle::sprintf("%s", operation));
   if (!i.good())
     throw elle::Error(elle::sprintf("no such operation: %s", operation));
+  auto op = elle::serialization::binary::deserialize<
+    infinit::model::doughnut::consensus::Async::Op>(i, true, ctx);
+  elle::serialization::json::serialize(op, std::cout);
+}
+
+COMMAND(describe)
+{
+  SETUP_CONTEXT();
+  boost::filesystem::path async_path = network.cache_dir() / "async";
+  auto operation = optional<int>(args, "operation");
+  auto report = [&] (boost::filesystem::path const& path)
+    {
+      boost::filesystem::ifstream i(path);
+      if (!i.good())
+        throw elle::Error(elle::sprintf("no such operation: %s", operation));
+      auto name = path.filename().string();
+      {
+        std::cout << name << ": ";
+        try
+        {
+          auto op = elle::serialization::binary::deserialize<
+            infinit::model::doughnut::consensus::Async::Op>(i, true, ctx);
+          if (op.resolver != nullptr)
+            std::cout << op.resolver->description();
+          else
+            std::cout << "no resolver for this operation";
+        }
+        catch (elle::serialization::Error const&)
+        {
+          std::cout << "[ERROR] " << elle::exception_string();
+        }
+        std::cout << std::endl;
+      }
+    };
+  if (operation)
   {
-    elle::serialization::Context ctx;
-    auto dht = network.run();
-    ctx.set<infinit::model::doughnut::Doughnut*>(dht.get());
-    ctx.set(infinit::model::doughnut::ACBDontWaitForSignature{});
-    ctx.set(infinit::model::doughnut::OKBDontWaitForSignature{});
-    auto op = elle::serialization::binary::deserialize<
-      infinit::model::doughnut::consensus::Async::Op>(i, true, ctx);
-    elle::serialization::json::serialize(op, std::cout);
+    report(async_path / elle::sprintf("%s", operation.get()));
+  }
+  else
+  {
+    for (auto const& path:
+           infinit::model::doughnut::consensus::Async::entries(async_path))
+    {
+      report(path);
+    }
   }
 }
 
@@ -133,6 +178,16 @@ main(int argc, char** argv)
       {
         { "network,N", value<std::string>(), "network to check" },
         { "operation,O", value<int>(), "operation to export" },
+      },
+    },
+   {
+      "describe",
+      "Describe asynchronous operation(s)",
+      &describe,
+      "--network NETWORK [--operation OPERATION]",
+      {
+        { "network,N", value<std::string>(), "network to check" },
+        { "operation,O", value<int>(), "operation to pretty" },
       },
     },
   };
