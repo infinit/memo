@@ -23,6 +23,44 @@ namespace infinit
 {
   namespace filesystem
   {
+    struct NewFolderResolver
+      : public model::DummyConflictResolver
+    {
+      typedef DummyConflictResolver Super;
+      NewFolderResolver(boost::filesystem::path const& path)
+        : Super()
+        , _path(path.string())
+      {
+      }
+
+      NewFolderResolver(elle::serialization::Serializer& s,
+                        elle::Version const& version)
+        : Super() // Do not call Super(s, version)
+      {
+        this->serialize(s, version);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& version) override
+      {
+        Super::serialize(s, version);
+        s.serialize("path", this->_path);
+      }
+
+      std::string
+      description() const override
+      {
+        return elle::sprintf("make directory %s", this->_path);
+      }
+
+      ELLE_ATTRIBUTE(std::string, path);
+    };
+
+    static const elle::serialization::Hierarchy<infinit::model::ConflictResolver>::
+    Register<NewFolderResolver> _register_new_folder_resolver(
+      "NewFolderResolver");
+
 
     Unknown::Unknown(FileSystem& owner,
                      std::shared_ptr<DirectoryData> parent,
@@ -53,8 +91,10 @@ namespace infinit
         dd.write(*_owner.block_store(), Operation{OperationType::update, "/inherit"}, b, true, true);
       }
       else
-        this->_owner.store_or_die(std::move(b), model::STORE_INSERT,
-                                  model::make_drop_conflict_resolver());
+        this->_owner.store_or_die(
+          std::move(b), model::STORE_INSERT,
+          elle::make_unique<NewFolderResolver>(
+            (this->_parent->_path / _name)));
       ELLE_ASSERT_EQ(this->_parent->_files.find(this->_name),
                      this->_parent->_files.end());
       this->_parent->_files.emplace(
@@ -120,6 +160,49 @@ namespace infinit
       return handle;
     }
 
+    struct NewSymlinkResolver
+      : public model::DummyConflictResolver
+    {
+      typedef DummyConflictResolver Super;
+      NewSymlinkResolver(boost::filesystem::path const& source,
+                         boost::filesystem::path const& destination)
+        : Super()
+        , _source(source.string())
+        , _destination(destination.string())
+      {
+      }
+
+      NewSymlinkResolver(elle::serialization::Serializer& s,
+                    elle::Version const& version)
+        : Super() // Do not call Super(s, version)
+      {
+        this->serialize(s, version);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& version) override
+      {
+        Super::serialize(s, version);
+        s.serialize("source", this->_source);
+        s.serialize("destination", this->_destination);
+      }
+
+      std::string
+      description() const
+      {
+        return elle::sprintf("create symlink from %s to %s",
+                             this->_source, this->_destination);
+      }
+
+      ELLE_ATTRIBUTE(std::string, source);
+      ELLE_ATTRIBUTE(std::string, destination);
+    };
+
+    static const elle::serialization::Hierarchy<infinit::model::ConflictResolver>::
+    Register<NewSymlinkResolver> _register_new_symlink_resolver(
+      "NewSymlinkResolver");
+
     void
     Unknown::symlink(boost::filesystem::path const& where)
     {
@@ -140,8 +223,10 @@ namespace infinit
         });
       }
       auto addr = b->address();
-      _owner.store_or_die(std::move(b), model::STORE_INSERT,
-                          model::make_drop_conflict_resolver());
+      _owner.store_or_die(
+        std::move(b), model::STORE_INSERT,
+        elle::make_unique<NewSymlinkResolver>(this->_parent->_path / this->_name,
+                                              where));
       this->_parent->_files.emplace(
         this->_name, std::make_pair(EntryType::symlink, addr));
       _parent->write(*_owner.block_store(),

@@ -57,7 +57,7 @@ namespace infinit
       : public ConflictResolver
     {
       typedef ConflictResolver Super;
-    public:
+    protected:
       DummyConflictResolver();
     public:
       DummyConflictResolver(elle::serialization::SerializerIn& s,
@@ -75,9 +75,6 @@ namespace infinit
       std::string
       description() const override;
     };
-
-    std::unique_ptr<ConflictResolver>
-    make_drop_conflict_resolver();
 
     class Model
     {

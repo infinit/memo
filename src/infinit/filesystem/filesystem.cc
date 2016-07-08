@@ -223,6 +223,120 @@ namespace infinit
       return {};
     }
 
+    struct BlockMigration
+      : public model::DummyConflictResolver
+    {
+      typedef DummyConflictResolver Super;
+      BlockMigration(Address const& from,
+             Address const& to)
+        : Super()
+        , _from(from)
+        , _to(to)
+      {
+      }
+
+      BlockMigration(elle::serialization::Serializer& s,
+          elle::Version const& version)
+        : Super() // Do not call Super(s, version)
+      {
+        this->serialize(s, version);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& version) override
+      {
+        Super::serialize(s, version);
+        s.serialize("from", this->_from);
+        s.serialize("to", this->_to);
+      }
+
+      std::string
+      description() const override
+      {
+        return elle::sprintf("migrate %f to %f", this->_from, this->_to);
+      }
+
+      ELLE_ATTRIBUTE(Address, from);
+      ELLE_ATTRIBUTE(Address, to);
+    };
+
+    static const elle::serialization::Hierarchy<model::ConflictResolver>::
+    Register<BlockMigration> _register_BlockMigration_resolver("BlockMigration");
+
+    struct InsertRootBlock
+      : public model::DummyConflictResolver
+    {
+      typedef DummyConflictResolver Super;
+      InsertRootBlock(Address const& address)
+        : Super()
+        , _address(address)
+      {
+      }
+
+      InsertRootBlock(elle::serialization::Serializer& s,
+                      elle::Version const& version)
+        : Super()
+      {
+        this->serialize(s, version);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& version) override
+      {
+        Super::serialize(s, version);
+        s.serialize("address", this->_address);
+      }
+
+      std::string
+      description() const override
+      {
+        return elle::sprintf("insert root block at %s", this->_address);
+      }
+
+      ELLE_ATTRIBUTE(Address, address);
+    };
+
+    static const elle::serialization::Hierarchy<model::ConflictResolver>::
+    Register<InsertRootBlock> _register_InsertRootBlock_resolver("InsertRootBlock");
+
+    struct InsertRootBootstrapBlock
+      : public model::DummyConflictResolver
+    {
+      typedef DummyConflictResolver Super;
+      InsertRootBootstrapBlock(Address const& address)
+        : Super()
+        , _address(address)
+      {
+      }
+
+      InsertRootBootstrapBlock(elle::serialization::Serializer& s,
+                               elle::Version const& version)
+        : Super()
+      {
+        this->serialize(s, version);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& version) override
+      {
+        Super::serialize(s, version);
+      }
+
+      std::string
+      description() const override
+      {
+        return elle::sprintf("insert bootstrap root block at %s", this->_address);
+      }
+
+      ELLE_ATTRIBUTE(Address, address);
+    };
+
+    static const elle::serialization::Hierarchy<infinit::model::ConflictResolver>::
+    Register<InsertRootBootstrapBlock> _register_InsertRootBootstrapBlock_resolver("InsertRootBootstrapBlockResolver");
+
     Address
     FileSystem::root_address()
     {
@@ -275,8 +389,9 @@ namespace infinit
               auto nb = elle::make_unique<dht::NB>(
                 dn.get(), dn->owner(), bootstrap_name,
                 old->data(), old->signature());
-              this->store_or_die(std::move(nb), model::STORE_INSERT,
-                                 model::make_drop_conflict_resolver());
+              this->store_or_die(
+                std::move(nb), model::STORE_INSERT,
+                elle::make_unique<BlockMigration>(old_addr, bootstrap_addr));
               continue;
             }
             catch (model::MissingBlock const&)
@@ -300,9 +415,8 @@ namespace infinit
               {
                 auto root = dn->make_block<ACLBlock>();
                 auto address = root->address();
-                this->store_or_die(
-                  std::move(root), model::STORE_INSERT,
-                  model::make_drop_conflict_resolver());
+                this->store_or_die(move(root), model::STORE_INSERT,
+                                   elle::make_unique<InsertRootBlock>(address));
                 this->_root_address = address;
               }
               ELLE_TRACE("create missing root bootstrap block")
@@ -311,8 +425,9 @@ namespace infinit
                 elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
                 auto nb = elle::make_unique<dht::NB>(
                   dn.get(), dn->owner(), bootstrap_name, baddr);
+                auto address = nb->address();
                 this->store_or_die(std::move(nb), model::STORE_INSERT,
-                  model::make_drop_conflict_resolver());
+                                   elle::make_unique<InsertRootBootstrapBlock>(address));
                 if (root_cache)
                   boost::filesystem::ofstream(*root_cache) << saddr;
               }

@@ -534,6 +534,52 @@ namespace infinit
       }
     }
 
+    struct InsertBlockResolver
+      : public model::DummyConflictResolver
+    {
+      typedef DummyConflictResolver Super;
+      InsertBlockResolver(boost::filesystem::path const& path,
+                          Address const& address,
+                          bool async = false)
+        : Super()
+        , _path(path.string())
+        , _address(address)
+        , _async(async)
+      {
+      }
+
+      InsertBlockResolver(elle::serialization::Serializer& s,
+          elle::Version const& version)
+        : Super() // Do not call Super(s, version)
+      {
+        this->serialize(s, version);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& version) override
+      {
+        Super::serialize(s, version);
+        s.serialize("path", this->_path);
+        s.serialize("address", this->_address);
+        s.serialize("async", this->_async);
+      }
+
+      std::string
+      description() const override
+      {
+        return elle::sprintf("insert block (%s) for %s (async: %s)",
+                             this->_address, this->_path, this->_async);
+      }
+
+      ELLE_ATTRIBUTE(std::string, path);
+      ELLE_ATTRIBUTE(Address, address);
+      ELLE_ATTRIBUTE(bool, async)
+    };
+
+    static const elle::serialization::Hierarchy<infinit::model::ConflictResolver>::
+    Register<InsertBlockResolver> _register_insert_block_resolver("insert_block_resolver");
+
     std::function<void ()>
     FileHandle::_flush_block(int id, CacheEntry entry)
     {
@@ -560,12 +606,12 @@ namespace infinit
                    this, id, prev, baddr);
         this->_file._fat[id] = FileData::FatEntry(baddr, key);
         this->_fat_changed = true;
-        return [this, prev, block_ = block.release()] () mutable
+        return [this, baddr, prev, block_ = block.release()] () mutable
         {
           auto block = std::unique_ptr<Block>(block_);
-          this->_model.store(std::move(block),
-                             model::STORE_INSERT,
-                             model::make_drop_conflict_resolver());
+          this->_model.store(
+            std::move(block), model::STORE_INSERT,
+            elle::make_unique<InsertBlockResolver>(this->_file.path(), baddr));
           if (prev != Address::null)
             unchecked_remove(this->_model, prev);
 

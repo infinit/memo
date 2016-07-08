@@ -31,6 +31,7 @@
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
+#include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
@@ -120,8 +121,9 @@ namespace infinit
                                  this, user->address(), name);
                 try
                 {
-                  this->store(std::move(user), STORE_INSERT,
-                              make_drop_conflict_resolver());
+                  this->store(
+                    std::move(user), STORE_INSERT,
+                    elle::make_unique<UserBlockUpserter>(name));
                 }
                 catch (elle::Error const& e)
                 {
@@ -153,8 +155,9 @@ namespace infinit
                                  user->address());
                 try
                 {
-                  this->store(std::move(user), STORE_INSERT,
-                              make_drop_conflict_resolver());
+                this->store(
+                  std::move(user), STORE_INSERT,
+                  elle::make_unique<ReverseUserBlockUpserter>(name));
                 }
                 catch (elle::Error const& e)
                 {

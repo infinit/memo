@@ -280,6 +280,8 @@ def configure(
     'src/infinit/model/doughnut/Remote.hxx',
     'src/infinit/model/doughnut/UB.cc',
     'src/infinit/model/doughnut/UB.hh',
+    'src/infinit/model/doughnut/conflict/UBUpserter.hh',
+    'src/infinit/model/doughnut/conflict/UBUpserter.cc',
     'src/infinit/model/doughnut/User.cc',
     'src/infinit/model/doughnut/User.hh',
     'src/infinit/model/doughnut/ValidationFailed.cc',

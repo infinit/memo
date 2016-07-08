@@ -543,6 +543,48 @@ namespace infinit
       Node::utimens(tv);
     }
 
+    struct NewBlockResolver
+      : public model::DummyConflictResolver
+    {
+      typedef DummyConflictResolver Super;
+      NewBlockResolver(std::string const& name,
+                    Address const address)
+        : Super()
+        , _name(name)
+        , _address(address)
+      {
+      }
+
+      NewBlockResolver(elle::serialization::Serializer& s,
+                    elle::Version const& version)
+        : Super() // Do not call Super(s, version)
+      {
+        this->serialize(s, version);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& version) override
+      {
+        Super::serialize(s, version);
+        s.serialize("name", this->_name);
+        s.serialize("address", this->_address);
+      }
+
+      std::string
+      description() const
+      {
+        return elle::sprintf("insert new block (%f) for file %s",
+                             this->_address, this->_name);
+      }
+
+      ELLE_ATTRIBUTE(std::string, name);
+      ELLE_ATTRIBUTE(Address, address);
+    };
+
+    static const elle::serialization::Hierarchy<infinit::model::ConflictResolver>::
+    Register<NewBlockResolver> _register_nbr("NewBlockResolver");
+
     void
     File::truncate(off_t new_size)
     {
@@ -596,8 +638,9 @@ namespace infinit
             sk.encipher(buf), _address);
           _owner.unchecked_remove(_filedata->_fat[i].first);
           _filedata->_fat[i].first = newblock->address();
-          _owner.store_or_die(std::move(newblock), model::STORE_INSERT,
-            model::make_drop_conflict_resolver());
+          this->_owner.store_or_die(
+            std::move(newblock), model::STORE_INSERT,
+            elle::make_unique<NewBlockResolver>(this->_name, this->_address));
         }
       }
       // check first block data

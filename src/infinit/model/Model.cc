@@ -270,11 +270,5 @@ namespace infinit
 
     static const elle::serialization::Hierarchy<ConflictResolver>::
     Register<DummyConflictResolver> _register_dcr("dummy");
-
-    std::unique_ptr<ConflictResolver>
-    make_drop_conflict_resolver()
-    {
-      return elle::make_unique<DummyConflictResolver>();
-    }
   }
 }
