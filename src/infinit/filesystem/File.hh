@@ -94,6 +94,8 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s,
                 elle::Version const& version) override;
+      std::string
+      description() const override;
       boost::filesystem::path _path;
       model::Model* _model;
       WriteTarget _target;

@@ -46,6 +46,10 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s,
                 elle::Version const& v) override = 0;
+
+      virtual
+      std::string
+      description() const = 0;
     };
 
     std::unique_ptr<ConflictResolver>

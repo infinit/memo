@@ -192,6 +192,15 @@ namespace infinit
       s.serialize("opetype", _op.entry_type, elle::serialization::as<int>());
     }
 
+    std::string
+    DirectoryConflictResolver::description() const
+    {
+      return elle::sprintf("edit directory: %s %s \"%s\"",
+                           this->_op.type,
+                           this->_op.entry_type,
+                           this->_op.target);
+    }
+
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<DirectoryConflictResolver> _register_dcr("dcr");
 

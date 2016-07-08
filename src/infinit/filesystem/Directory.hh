@@ -127,6 +127,9 @@ namespace infinit
       serialize(elle::serialization::Serializer& s,
                 elle::Version const& v) override;
 
+      std::string
+      description() const override;
+
       model::Model* _model;
       Operation _op;
       Address _address;

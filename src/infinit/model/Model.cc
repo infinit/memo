@@ -251,6 +251,12 @@ namespace infinit
         ELLE_WARN("Conflict editing %f, dropping changes", block.address());
         return current.clone();
       }
+
+      std::string
+      description() const override
+      {
+        return "unknown";
+      }
     };
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<DummyConflictResolver> _register_dcr("dummy");

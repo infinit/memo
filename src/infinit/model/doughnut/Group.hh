@@ -95,6 +95,10 @@ namespace infinit
                     model::StoreMode mode) override;
         void serialize(elle::serialization::Serializer& s,
                        elle::Version const& v) override;
+
+        std::string
+        description() const override;
+
         Action _action;
         std::unique_ptr<cryptography::rsa::PublicKey> _key;
         std::string _name;

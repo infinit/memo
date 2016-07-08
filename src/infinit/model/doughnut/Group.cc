@@ -396,6 +396,13 @@ namespace infinit
         return std::move(res);
       }
 
+      std::string
+      GroupConflictResolver::description() const
+      {
+        doughnut::User user(*this->_key, this->_name);
+        return elle::sprintf("%s \"%s\" to group", this->_action, user.name());
+      }
+
       static const elle::serialization::Hierarchy<model::ConflictResolver>::
       Register<GroupConflictResolver> _register_gcr("gcr");
     }

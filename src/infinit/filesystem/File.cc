@@ -123,6 +123,11 @@ namespace infinit
       }
     }
 
+    std::string
+    FileConflictResolver::description() const
+    {
+      return elle::sprintf("edit file %s", this->_path);
+    }
 
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<FileConflictResolver> _register_fcr("fcr");
