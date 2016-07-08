@@ -16,6 +16,8 @@ namespace infinit
     public:
       Endpoint(boost::asio::ip::address address,
                int port);
+      Endpoint(std::string const& address,
+               int port);
       Endpoint(boost::asio::ip::tcp::endpoint ep);
       Endpoint(boost::asio::ip::udp::endpoint ep);
       Endpoint(std::string const& repr);

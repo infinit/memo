@@ -1,3 +1,5 @@
+#include <reactor/network/resolve.hh>
+
 #include <infinit/model/Endpoints.hh>
 
 namespace infinit
@@ -5,14 +7,19 @@ namespace infinit
   namespace model
   {
     Endpoint::Endpoint()
-    : _address()
-    , _port(0)
+      : _address()
+      , _port(0)
     {}
 
     Endpoint::Endpoint(boost::asio::ip::address address,
                        int port)
       : _address(std::move(address))
       , _port(port)
+    {}
+
+    Endpoint::Endpoint(std::string const& address,
+                       int port)
+      : Endpoint(reactor::network::resolve_udp(address, std::to_string(port)))
     {}
 
     Endpoint::Endpoint(boost::asio::ip::tcp::endpoint ep)
