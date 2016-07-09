@@ -129,6 +129,19 @@ namespace infinit
     | Printable |
     `----------*/
 
+    Endpoints::Endpoints()
+    {}
+
+    Endpoints::Endpoints(std::vector<Endpoint> const& ep)
+      : std::vector<Endpoint>(ep)
+    {}
+
+    Endpoints::Endpoints(std::vector<boost::asio::ip::udp::endpoint> const& eps)
+    {
+      for (auto const& e: eps)
+        this->emplace_back(e);
+    }
+
     void
     Endpoint::print(std::ostream& output) const
     {
@@ -152,13 +165,6 @@ namespace infinit
                      [] (Endpoint const& e) { return e.udp(); });
       return res;
     }
-
-    Endpoints::Endpoints(std::vector<Endpoint> const& ep)
-    : std::vector<Endpoint>(ep)
-    {}
-
-    Endpoints::Endpoints()
-    {}
 
     NodeLocation::NodeLocation(model::Address id, Endpoints endpoints)
       : _id(std::move(id))
