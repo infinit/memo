@@ -135,13 +135,6 @@ namespace infinit
         operator()(Args const& ... args);
         Remote* _remote;
       };
-
-      template<typename F>
-      RemoteRPC<F>
-      Remote::make_rpc(std::string const& name)
-      {
-        return RemoteRPC<F>(name, this);
-      }
     }
   }
 }
