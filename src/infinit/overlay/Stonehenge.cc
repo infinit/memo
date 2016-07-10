@@ -10,6 +10,7 @@
 #include <das/serializer.hh>
 
 #include <reactor/network/resolve.hh>
+#include <reactor/network/utp-server.hh>
 
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh> // FIXME
@@ -96,8 +97,9 @@ namespace infinit
         new infinit::model::doughnut::consensus::Paxos::RemotePeer(
           elle::unconst(*this->doughnut()),
           peer.id(),
-          // FIXME: handle several TCP endpoints in peer
-          peer.endpoints()[0].tcp()));
+          peer.endpoints(),
+          boost::optional<reactor::network::UTPServer&>(),
+          model::doughnut::Protocol::tcp));
     }
 
     StonehengeConfiguration::StonehengeConfiguration()

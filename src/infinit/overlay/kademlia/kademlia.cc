@@ -496,13 +496,13 @@ namespace kademlia
       }
       infinit::overlay::Overlay::Members res;
       ELLE_TRACE("%s: Connecting remote %s", *this, s.value[0]);
-      boost::asio::ip::tcp::endpoint ep;
-      endpoint_to_endpoint(s.value[0], ep);
       res.emplace_back(
         new infinit::model::doughnut::Remote(
           const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-          /* FIXME BEARCLAW */ Address(),
-          ep));
+          /* FIXME BEARCLAW */ infinit::model::Address(),
+          infinit::model::Endpoints(s.value),
+          boost::optional<reactor::network::UTPServer&>(),
+          infinit::model::doughnut::Protocol::tcp));
       ELLE_TRACE("%s: returning", *this);
       return reactor::generator<WeakMember>(
         [res] (reactor::yielder<WeakMember>::type const& yield)
@@ -519,13 +519,13 @@ namespace kademlia
     infinit::overlay::Overlay::Members res;
     if (!q->storeResult.empty())
     {
-      boost::asio::ip::tcp::endpoint ep;
-      endpoint_to_endpoint(q->storeResult[0], ep);
       res.emplace_back(
         new infinit::model::doughnut::Remote(
           const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
           /* FIXME BEARCLAW */ Address(),
-          ep));
+          infinit::model::Endpoints(q->storeResult),
+          boost::optional<reactor::network::UTPServer&>(),
+          infinit::model::doughnut::Protocol::tcp));
     }
     else
       throw infinit::model::MissingBlock(address);

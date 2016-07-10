@@ -13,6 +13,7 @@
 # include <infinit/model/doughnut/fwd.hh>
 # include <infinit/model/doughnut/Doughnut.hh>
 # include <infinit/model/doughnut/Peer.hh>
+# include <infinit/model/doughnut/protocol.hh>
 
 # include <infinit/RPC.hh>
 
@@ -41,26 +42,19 @@ namespace infinit
       public:
         Remote(Doughnut& doughnut,
                Address id,
-               boost::asio::ip::tcp::endpoint endpoint);
-        Remote(Doughnut& doughnut,
-               Address id,
-               boost::asio::ip::udp::endpoint endpoint,
-               reactor::network::UTPServer& server);
-        Remote(Doughnut& doughnut,
-               Address id,
-               std::vector<boost::asio::ip::udp::endpoint> endpoints,
-               reactor::network::UTPServer& server);
+               Endpoints endpoints,
+               boost::optional<reactor::network::UTPServer&> server,
+               Protocol protocol = Protocol::all);
         virtual
         ~Remote();
       protected:
-        ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPSocket>, socket);
-        ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::UTPSocket>, utp_socket);
+        ELLE_ATTRIBUTE(std::unique_ptr<std::iostream>, socket);
         ELLE_ATTRIBUTE(std::unique_ptr<protocol::Serializer>, serializer);
         ELLE_ATTRIBUTE_R(std::unique_ptr<protocol::ChanneledStream>,
                          channels, protected);
 
       /*-----------.
-      | Networking |
+      | Connection |
       `-----------*/
       public:
         virtual
@@ -69,11 +63,20 @@ namespace infinit
         virtual
         void
         reconnect(elle::DurationOpt timeout = elle::DurationOpt()) override;
+      private:
         void
-        initiate_connect(std::vector<boost::asio::ip::udp::endpoint> endpoints,
-                         reactor::network::UTPServer& server);
-        void
-        initiate_connect(boost::asio::ip::tcp::endpoint endpoint);
+        _connect();
+        ELLE_ATTRIBUTE(bool, connected);
+        ELLE_ATTRIBUTE(bool, reconnecting);
+        ELLE_ATTRIBUTE_R(int, reconnection_id);
+        ELLE_ATTRIBUTE_RW(Endpoints, endpoints);
+        ELLE_ATTRIBUTE(boost::optional<reactor::network::UTPServer&>,
+                       utp_server);
+
+      /*-----------.
+      | Networking |
+      `-----------*/
+      public:
         template<typename F>
         RemoteRPC<F>
         make_rpc(std::string const& name);
@@ -82,15 +85,9 @@ namespace infinit
         safe_perform(std::string const& name, std::function<R()> op);
       private:
         void
-        _connect(std::string endpoint,
-                 std::function <std::iostream& ()> const& socket);
-        void
-        _key_exchange();
-        ELLE_ATTRIBUTE(std::function <std::iostream& ()>, connector);
-        ELLE_ATTRIBUTE(std::string, endpoint);
+        _key_exchange(protocol::ChanneledStream& channels);
+        ELLE_ATTRIBUTE(Protocol, protocol);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
-        ELLE_ATTRIBUTE(reactor::Mutex, connection_mutex);
-        ELLE_ATTRIBUTE(reactor::Mutex, reconnection_mutex);
         ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
         /* Callback is expected to retry an async connection, with
            potentially updated endpoints. Should return false if it
@@ -98,9 +95,6 @@ namespace infinit
         */
         ELLE_ATTRIBUTE_RW(std::function<bool (Remote&)>, retry_connect);
         ELLE_ATTRIBUTE_R(bool, fast_fail);
-        // Do *not* use, call connect() instead.
-        ELLE_ATTRIBUTE(bool, connected);
-        ELLE_ATTRIBUTE_R(int, reconnection_id);
       /*-------.
       | Blocks |
       `-------*/

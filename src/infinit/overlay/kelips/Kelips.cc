@@ -894,57 +894,29 @@ namespace infinit
         ELLE_DEBUG("%s: destroyed", *this);
       }
 
-      SerState Node::get_serstate(NodeLocation const& location)
+      SerState
+      Node::get_serstate(NodeLocation const& location)
       {
         ELLE_DEBUG_SCOPE("fetch state of %f", location);
-        using Protocol = infinit::model::doughnut::Protocol;
-        auto protocol = this->_config.rpc_protocol;
         // FIXME: don't duplicate remote creation
-        if (protocol == Protocol::utp || protocol == Protocol::all)
+        try
         {
-          try
-          {
-            ELLE_DEBUG_SCOPE("establish UTP connection");
-            infinit::model::doughnut::Remote peer(
-              elle::unconst(*this->doughnut()),
-              location.id(),
-              location.endpoints().udp(),
-              elle::unconst(this)->_remotes_server);
-            peer.connect(5_sec);
-            auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
-            ELLE_DEBUG("fetch state")
-              return rpc();
-          }
-          catch (elle::Error const& e)
-          {
-            ELLE_WARN("%s: UTP connection failed with %s: %s",
-                      this, location.endpoints().udp(), e);
-          }
+          ELLE_DEBUG_SCOPE("establish UTP connection");
+          infinit::model::doughnut::Remote peer(
+            elle::unconst(*this->doughnut()),
+            location.id(),
+            location.endpoints(),
+            elle::unconst(this)->_remotes_server,
+            this->_config.rpc_protocol);
+          peer.connect(5_sec);
+          auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
+          ELLE_DEBUG("fetch state")
+            return rpc();
         }
-        if (protocol == Protocol::tcp || protocol == Protocol::all)
+        catch (elle::Error const& e)
         {
-          if (!location.endpoints().empty())
-          {
-            for (auto const& ep: location.endpoints())
-              try
-              {
-                ELLE_DEBUG_SCOPE("establish TCP connection to %s", ep);
-                infinit::model::doughnut::Remote peer(
-                  elle::unconst(*this->doughnut()),
-                  location.id(),
-                  ep.tcp());
-                peer.connect(5_sec);
-                auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
-                ELLE_DEBUG("fetch state")
-                  return rpc();
-              }
-              catch (elle::Error const& e)
-              {
-                ELLE_WARN("%s: TCP connection failed with %s: %s", this, ep, e);
-              }
-          }
+          elle::err("connection failed to %s", location);
         }
-        elle::err("%s: failed to contact peer %s", this, location);
       }
 
       void
@@ -3189,51 +3161,27 @@ namespace infinit
           if (it != _peer_cache.end() && signed(it->second.size()) >= cache_count)
             return it->second[rand() % it->second.size()];
         }
-        using Protocol = infinit::model::doughnut::Protocol;
-        auto protocol = this->_config.rpc_protocol;
-        if (protocol == Protocol::utp || protocol == Protocol::all)
+        try
         {
-          try
-          {
-            auto res =
-              std::make_shared<model::doughnut::consensus::Paxos::RemotePeer>(
-                elle::unconst(*this->doughnut()),
-                hosts.id(),
-                hosts.endpoints().udp(),
-                elle::unconst(this)->_remotes_server);
-            res->retry_connect(std::function<bool(model::doughnut::Remote&)>(
-                                 std::bind(&Node::remote_retry_connect,
-                                           this, std::placeholders::_1)));
-            auto weak_res = Overlay::WeakMember::own(std::move(res));
-            if (!disable_cache)
-              this->_peer_cache[hosts.id()].push_back(weak_res);
-            return weak_res;
-          }
-          catch (elle::Error const& e)
-          {
-            ELLE_WARN("%s: UTP connection failed with %s: %s", *this, hosts, e);
-          }
+          auto res =
+            std::make_shared<model::doughnut::consensus::Paxos::RemotePeer>(
+              elle::unconst(*this->doughnut()),
+              hosts.id(),
+              hosts.endpoints(),
+              elle::unconst(this)->_remotes_server,
+              this->_config.rpc_protocol);
+          res->retry_connect(std::function<bool(model::doughnut::Remote&)>(
+                               std::bind(&Node::remote_retry_connect,
+                                         this, std::placeholders::_1)));
+          auto weak_res = Overlay::WeakMember::own(std::move(res));
+          if (!disable_cache)
+            this->_peer_cache[hosts.id()].push_back(weak_res);
+          return weak_res;
         }
-        if (protocol == Protocol::tcp || protocol == Protocol::all)
+        catch (elle::Error const& e)
         {
-          if (!hosts.endpoints().empty())
-          {
-            try
-            {
-              // FIXME: don't always yield paxos
-              return Overlay::WeakMember(
-                new infinit::model::doughnut::consensus::Paxos::RemotePeer(
-                  elle::unconst(*this->doughnut()),
-                  hosts.id(),
-                  hosts.endpoints().front().tcp()));
-            }
-            catch (elle::Error const& e)
-            {
-              ELLE_WARN("%s: TCP connection failed with %s: %s", *this, hosts, e);
-            }
-          }
+          elle::err("failed to connect to %f", hosts);
         }
-        throw elle::Error(elle::sprintf("Failed to connect to %s", hosts));
       }
 
       bool
@@ -3245,10 +3193,14 @@ namespace infinit
           {
             result = p;
           });
-        if (!result)
+        if (result)
+        {
+          remote.endpoints(result->endpoints());
+          return true;
+        }
+        else
           return false;
-        remote.initiate_connect(result->endpoints().udp(), this->_remotes_server);
-        return true;
+
       }
 
       reactor::Generator<std::pair<model::Address, Node::WeakMember>>

@@ -5,6 +5,7 @@
 #include <elle/utils.hh>
 #include <elle/bench.hh>
 
+#include <reactor/Scope.hh>
 #include <reactor/thread.hh>
 #include <reactor/scheduler.hh>
 
@@ -28,90 +29,24 @@ namespace infinit
 
       Remote::Remote(Doughnut& dht,
                      Address id,
-                     boost::asio::ip::tcp::endpoint endpoint)
+                     Endpoints endpoints,
+                     boost::optional<reactor::network::UTPServer&> server,
+                     Protocol protocol)
         : Super(dht, std::move(id))
         , _socket(nullptr)
         , _serializer()
         , _channels()
+        , _connected(false)
+        , _reconnecting(false)
+        , _reconnection_id(0)
+        , _endpoints(std::move(endpoints))
+        , _utp_server(server)
+        , _protocol(protocol)
         , _connection_thread()
         , _fast_fail(false)
-        , _connected(false)
-        , _reconnection_id(0)
       {
-        this->initiate_connect(endpoint);
-      }
-
-      void
-      Remote::initiate_connect(boost::asio::ip::tcp::endpoint endpoint)
-      {
-        ELLE_DEBUG("%s: initiate_connect TCP://%s", this, endpoint);
-        this->_connect(
-          elle::sprintf("%s", endpoint),
-          [endpoint, this] () -> std::iostream&
-          {
-            this->_socket.reset(
-              new reactor::network::TCPSocket(endpoint));
-            return *this->_socket;
-          });
-      }
-
-      Remote::Remote(Doughnut& doughnut,
-                     Address id,
-                     boost::asio::ip::udp::endpoint endpoint,
-                     reactor::network::UTPServer& server)
-        : Super(doughnut, std::move(id))
-        , _utp_socket(nullptr)
-        , _serializer()
-        , _channels()
-        , _connection_thread()
-        , _fast_fail(false)
-        , _connected(false)
-        , _reconnection_id(0)
-      {
-        this->_connect(
-          elle::sprintf("%s", endpoint),
-          [this, endpoint, &server] () -> std::iostream&
-          {
-            this->_utp_socket.reset(
-              new reactor::network::UTPSocket(
-                server, endpoint.address().to_string(), endpoint.port()));
-            return *this->_utp_socket;
-          });
-      }
-
-      Remote::Remote(Doughnut& doughnut,
-                     Address id,
-                     std::vector<boost::asio::ip::udp::endpoint> endpoints,
-                     reactor::network::UTPServer& server)
-        : Super(doughnut, std::move(id))
-        , _utp_socket(nullptr)
-        , _serializer()
-        , _channels()
-        , _connection_thread()
-        , _fast_fail(false)
-        , _connected(false)
-        , _reconnection_id(0)
-      {
-        this->initiate_connect(endpoints, server);
-      }
-
-      void
-      Remote::initiate_connect(
-        std::vector<boost::asio::ip::udp::endpoint> endpoints,
-        reactor::network::UTPServer& server)
-      {
-        ELLE_DEBUG("%s: initiate_connect utp://%s", this, endpoints);
-        this->_connect(
-          elle::sprintf("%s", endpoints),
-          [this, endpoints, &server] () -> std::iostream&
-          {
-            this->_utp_socket.reset(new reactor::network::UTPSocket(server));
-            std::string cid;
-            if (this->id() != Address::null)
-              cid = elle::sprintf("%x", this->id());
-            this->_utp_socket->connect(cid, endpoints);
-            return *this->_utp_socket;
-          });
+        ELLE_ASSERT(server || protocol != Protocol::utp);
+        this->_connect();
       }
 
       Remote::~Remote()
@@ -122,48 +57,85 @@ namespace infinit
       `-----------*/
 
       void
-      Remote::_connect(
-        std::string endpoint,
-        std::function <std::iostream& ()> const& socket)
+      Remote::_connect()
       {
-        reactor::Lock lock(this->_connection_mutex);
+        static bool disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
         ELLE_TRACE_SCOPE("%s: connect", *this);
         ++this->_reconnection_id;
-        this->_connector = socket;
-        this->_endpoint = endpoint;
         if (this->_connection_thread)
           this->_connection_thread->terminate_now();
         this->_connection_thread.reset(
           new reactor::Thread(
-            elle::sprintf("%s connection", *this),
-            [this, endpoint, socket]
+            elle::sprintf("%s connection", this),
+            [this]
             {
-              try
-              {
-                _connected = false;
-                this->_serializer.reset(
-                  new protocol::Serializer(
-                    socket(),
+              this->_connected = false;
+              auto handshake = [&] (std::unique_ptr<std::iostream> socket)
+                {
+                  auto serializer = elle::make_unique<protocol::Serializer>(
+                    *socket,
                     elle_serialization_version(this->_doughnut.version()),
-                    false));
-                this->_channels.reset(
-                  new protocol::ChanneledStream(*this->_serializer));
-                static bool disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
-                if (!disable_key)
-                  this->_key_exchange();
-                ELLE_TRACE("connected");
-                _connected = true;
-              }
-              catch (reactor::network::Exception const&)
-              { // Upper layers may retry on network::Exception
-                throw;
-              }
-              catch (elle::Error const&)
+                    false);
+                  auto channels =
+                    elle::make_unique<protocol::ChanneledStream>(*serializer);
+                  if (!disable_key)
+                    this->_key_exchange(*channels);
+                  ELLE_TRACE("connected");
+                  this->_socket = std::move(socket);
+                  this->_serializer = std::move(serializer);
+                  this->_channels = std::move(channels);
+                  this->_connected = true;
+                };
+              auto umbrella = [&] (std::function<void ()> const& f)
+                {
+                  return [f]
+                  {
+                    try
+                    {
+                      f();
+                    }
+                    catch (reactor::network::Exception const&)
+                    {
+                      // ignored
+                    }
+                  };
+                };
+              elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
               {
-                elle::throw_with_nested(
-                  elle::Error(
-                    elle::sprintf("connection failed to %s", endpoint)));
-              }
+                if (this->_protocol == Protocol::tcp ||
+                    this->_protocol == Protocol::all)
+                  for (auto const& e: this->_endpoints)
+                    scope.run_background(
+                      elle::sprintf("%s: connect to tcp://%s", this, e),
+                      umbrella(
+                        [&]
+                        {
+                          using reactor::network::TCPSocket;
+                          handshake(elle::make_unique<TCPSocket>(e.tcp()));
+                          scope.terminate_now();
+                        }));
+                if (this->_protocol == Protocol::utp ||
+                    this->_protocol == Protocol::all)
+                  scope.run_background(
+                    elle::sprintf("%s: connect to utp://%s",
+                                  this, this->_endpoints),
+                    umbrella(
+                      [&]
+                      {
+                        std::string cid;
+                        if (this->id() != Address::null)
+                          cid = elle::sprintf("%x", this->id());
+                        auto socket =
+                          elle::make_unique<reactor::network::UTPSocket>(
+                            *this->_utp_server);
+                        socket->connect(cid, this->_endpoints.udp());
+                        handshake(std::move(socket));
+                        scope.terminate_now();
+                      }));
+                reactor::wait(scope);
+              };
+              if (!this->_connected)
+                elle::err("connection to %f failed", this->_endpoints);
             },
             reactor::Thread::managed = true));
       }
@@ -185,22 +157,23 @@ namespace infinit
               throw reactor::network::TimeOut();
           }
         }
-        while (!_connected);
+        while (!this->_connected);
       }
 
       void
       Remote::reconnect(elle::DurationOpt timeout)
       {
-        if (!this->_reconnection_mutex.locked())
+        if (!this->_reconnecting)
         {
-          ELLE_DEBUG("reconnecting...");
-          reactor::Lock lock(this->_reconnection_mutex);
+          auto lock = elle::scoped_assignment(this->_reconnecting, true);
+          ELLE_TRACE("%s: reconnect");
           this->_credentials = {};
-          if (!retry_connect() || !retry_connect()(*this))
-            _connect(this->_endpoint, this->_connector);
+          if (this->_retry_connect)
+            this->_retry_connect(*this);
+          _connect();
         }
         else
-          ELLE_DEBUG("skipping overlaped reconnect");
+          ELLE_DEBUG("skip overlapped reconnect");
         connect(timeout);
       }
 
@@ -209,7 +182,7 @@ namespace infinit
       `-------*/
 
       void
-      Remote::_key_exchange()
+      Remote::_key_exchange(protocol::ChanneledStream& channels)
       {
         ELLE_TRACE_SCOPE("%s: exchange keys", *this);
         try
@@ -223,7 +196,7 @@ namespace infinit
               typedef std::pair<Challenge, std::unique_ptr<Passport>>
               AuthSyn(Passport const&, elle::Version const&);
               RPC<AuthSyn> auth_syn(
-                "auth_syn", *this->_channels, this->_doughnut.version());
+                "auth_syn", channels, this->_doughnut.version());
               auth_syn.set_context<Doughnut*>(&this->_doughnut);
               auto version = this->_doughnut.version();
               // 0.5.0 compares the full version for compatibility instead of
@@ -239,7 +212,7 @@ namespace infinit
               typedef std::pair<Challenge, std::unique_ptr<Passport>>
               AuthSyn(Passport const&);
               RPC<AuthSyn> auth_syn(
-                "auth_syn", *this->_channels, this->_doughnut.version());
+                "auth_syn", channels, this->_doughnut.version());
               return auth_syn(this->_doughnut.passport());
             }
           }();
@@ -278,8 +251,8 @@ namespace infinit
             RPC<bool (elle::Buffer const&,
                       elle::Buffer const&,
                       elle::Buffer const&)>
-              auth_ack("auth_ack", *this->_channels, this->_doughnut.version(),
-                       nullptr);
+              auth_ack("auth_ack",
+                       channels, this->_doughnut.version(), nullptr);
             auth_ack(sealed_key,
                      challenge_passport.first.second,
                      signed_challenge);
