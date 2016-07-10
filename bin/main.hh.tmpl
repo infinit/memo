@@ -3181,6 +3181,9 @@ namespace infinit
   {
     return beyond_fetch<Drive>("drive", name);
   }
+
+  std::unique_ptr<std::istream>
+  commands_input(boost::program_options::variables_map const& args);
 }
 
 #ifdef INFINIT_MACOSX

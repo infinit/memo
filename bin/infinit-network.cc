@@ -4,8 +4,6 @@
 #include <elle/serialization/json.hh>
 #include <elle/json/exceptions.hh>
 
-#include <reactor/FDStream.hh>
-
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
@@ -647,29 +645,13 @@ COMMAND(run)
       report_action("running", "network", network.name);
       if (script_mode)
       {
-#ifndef INFINIT_WINDOWS
-        reactor::FDStream stdin_stream(0);
-#else
-        // Windows does not support async io on stdin
-        elle::Buffer input;
-        while (true)
-        {
-          char buf[4096];
-          std::cin.read(buf, 4096);
-          int count = std::cin.gcount();
-          if (count > 0)
-            input.append(buf, count);
-          else
-          break;
-        }
-        auto stdin_stream = elle::IOStream(input.istreambuf());
-#endif
+        auto input = infinit::commands_input(args);
         while (true)
         {
           try
           {
             auto json = boost::any_cast<elle::json::Object>(
-              elle::json::read(stdin_stream));
+              elle::json::read(*input));
             elle::serialization::json::SerializerIn command(json, false);
             command.set_context<infinit::model::doughnut::Doughnut*>(dht.get());
             auto op = command.deserialize<std::string>("operation");
@@ -703,7 +685,7 @@ COMMAND(run)
           }
           catch (elle::Error const& e)
           {
-            if (stdin_stream.eof())
+            if (input->eof())
               return;
             elle::serialization::json::SerializerOut response(
               std::cout, false, true);
@@ -939,6 +921,7 @@ main(int argc, char** argv)
       &run,
       "--name NETWORK",
       {
+        option_input("commands"),
         { "name,n", value<std::string>(), "network to run" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer address or file with list of peer addresses (host:port)" },

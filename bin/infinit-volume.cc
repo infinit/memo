@@ -1,8 +1,6 @@
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
-#include <reactor/FDStream.hh>
-
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -537,23 +535,7 @@ COMMAND(run)
 #endif
     if (script_mode)
     {
-#ifndef INFINIT_WINDOWS
-      reactor::FDStream stdin_stream(0);
-#else
-      // Windows does not support async io on stdin
-      elle::Buffer input;
-      while (true)
-      {
-        char buf[4096];
-        std::cin.read(buf, 4096);
-        int count = std::cin.gcount();
-        if (count > 0)
-          input.append(buf, count);
-        else
-          break;
-      }
-      auto stdin_stream = elle::IOStream(input.istreambuf());
-#endif
+      auto input = infinit::commands_input(args);
       std::unordered_map<std::string,
         std::unique_ptr<reactor::filesystem::Handle>> handles;
       while (true)
@@ -564,7 +546,7 @@ COMMAND(run)
         try
         {
           auto json =
-            boost::any_cast<elle::json::Object>(elle::json::read(stdin_stream));
+            boost::any_cast<elle::json::Object>(elle::json::read(*input));
           ELLE_TRACE("got command: %s", json);
           elle::serialization::json::SerializerIn command(json, false);
           op = command.deserialize<std::string>("operation");
@@ -883,7 +865,7 @@ COMMAND(run)
         }
         catch (elle::Error const& e)
         {
-          if (stdin_stream.eof())
+          if (input->eof())
             return;
           ELLE_LOG("bronk on op %s: %s", op, e);
           elle::serialization::json::SerializerOut response(std::cout);
@@ -966,6 +948,7 @@ main(int argc, char** argv)
   std::vector<Mode::OptionDescription> options_run_mount = {
     {"allow-root-creation", bool_switch(),
         "create the filesystem root if not found"},
+    option_input("commands"),
     { "name", value<std::string>(), "volume name" },
     { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
     { "readonly", bool_switch(), "mount as readonly" },
