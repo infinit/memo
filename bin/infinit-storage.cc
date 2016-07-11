@@ -293,82 +293,66 @@ COMMAND(import)
   }
 }
 
+// { network/name: [users] }
+std::unordered_map<std::string, std::vector<std::string>>
+_networks_for_storage(std::string const& storage_name)
+{
+  std::unordered_map<std::string, std::vector<std::string>> res;
+  for (auto const& u: ifnt.users_get())
+  {
+    if (!u.private_key)
+      continue;
+    for (auto const& n: ifnt.networks_get(u, true))
+    {
+      auto* d =
+        dynamic_cast<infinit::model::doughnut::Configuration*>(n.model.get());
+      if (d && d->storage && d->storage->name == storage_name)
+      {
+        if (res.count(n.name))
+        {
+          auto& users = res.at(n.name);
+          users.emplace_back(u.name);
+        }
+        else
+          res[n.name] = {u.name};
+      }
+    }
+  }
+  return res;
+}
+
 COMMAND(delete_)
 {
   auto name = mandatory(args, "name", "storage name");
   auto storage = ifnt.storage_get(name);
   bool clear = flag(args, "clear-content");
   bool purge = flag(args, "purge");
-  bool pull = flag(args, "pull");
-  auto owner = self_user(ifnt, args);
-  if (pull && !purge)
-    throw elle::Error("\"--pull\" option is only valid when using \"--purge\"");
-  if (auto fs_storage =
-        dynamic_cast<infinit::storage::FilesystemStorageConfig*>(storage.get()))
-  {
-    if (clear)
-    {
-      try
-      {
-        boost::filesystem::remove_all(fs_storage->path);
-        report_action("cleared", "storage", fs_storage->name);
-      }
-      catch (boost::filesystem::filesystem_error const& e)
-      {
-        throw elle::Error(elle::sprintf("unable to clear storage contents: %s",
-                                        e.what()));
-      }
-    }
-  }
-  else if (clear)
+  auto user = self_user(ifnt, args);
+  auto fs_storage =
+    dynamic_cast<infinit::storage::FilesystemStorageConfig*>(storage.get());
+  if (clear && !fs_storage)
     throw elle::Error("only filesystem storages can be cleared");
   if (purge)
   {
-    auto networks = ifnt.networks_for_storage(owner, name);
-    std::vector<std::string> volumes;
-    for (auto const& network: networks)
-    {
-      auto net_vols = ifnt.volumes_for_network(network);
-      volumes.insert(volumes.end(), net_vols.begin(), net_vols.end());
-      for (auto const& user: ifnt.user_passports_for_network(network))
-      {
-        auto passport_path = ifnt._passport_path(network, user);
-        if (boost::filesystem::remove(passport_path))
-        {
-          report_action("deleted", "passport",
-                        elle::sprintf("%s: %s", network, user),
-                        std::string("locally"));
-        }
-      }
-    }
-    for (auto const& volume: volumes)
-    {
-      auto vol_drives = ifnt.drives_for_volume(volume);
-      for (auto const& drive: vol_drives)
-      {
-        auto drive_path = ifnt._drive_path(drive);
-        if (boost::filesystem::remove(drive_path))
-          report_action("deleted", "drive", drive, std::string("locally"));
-      }
-    }
-    for (auto const& volume: volumes)
-    {
-      auto vol_path = ifnt._volume_path(volume);
-      if (boost::filesystem::remove(vol_path))
-        report_action("deleted", "volume", volume, std::string("locally"));
-    }
-    for (auto const& network: networks)
-    {
-      // Only need to pull network as Beyond handles cleaning up properly.
-      if (pull)
-        beyond_delete("network", network, owner, true, purge);
-      auto net_path = ifnt._network_path(network, owner);
-      if (boost::filesystem::remove(net_path))
-        report_action("deleted", "network", network, std::string("locally"));
-    }
+    for (auto const& pair: _networks_for_storage(name))
+      for (auto const& user_name: pair.second)
+        ifnt.network_unlink(pair.first, ifnt.user_get(user_name), true);
   }
   auto path = ifnt._storage_path(name);
   bool ok = boost::filesystem::remove(path);
+  if (clear)
+  {
+    try
+    {
+      boost::filesystem::remove_all(fs_storage->path);
+      report_action("cleared", "storage", fs_storage->name);
+    }
+    catch (boost::filesystem::filesystem_error const& e)
+    {
+      throw elle::Error(elle::sprintf("unable to clear storage contents: %s",
+                                      e.what()));
+    }
+  }
   if (ok)
     report_action("deleted", "storage", storage->name);
   else
