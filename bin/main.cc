@@ -32,7 +32,7 @@ namespace infinit
         auto file = elle::make_unique<boost::filesystem::ifstream>(path);
         if (!file->good())
           elle::err("unable to open \"%s\" for reading", path);
-        return file;
+        return std::move(file);
       }
     }
   #ifndef INFINIT_WINDOWS
