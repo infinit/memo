@@ -70,6 +70,8 @@ namespace infinit
                blocks::RemoveSignature remove_signature_ = {}
                );
             Op(elle::serialization::SerializerIn& ser);
+            Op(Op && b);
+            void operator = (Op && b);
             void serialize(elle::serialization::Serializer& ser);
             Address address;
             std::unique_ptr<blocks::Block> block;
@@ -77,6 +79,7 @@ namespace infinit
             std::unique_ptr<ConflictResolver> resolver;
             blocks::RemoveSignature remove_signature;
             int index;
+            int version;
           };
 
         private:

@@ -45,7 +45,7 @@ namespace infinit
         operator <<(std::ostream& o, Async::Op const& op)
         {
           if (op.mode)
-            elle::fprintf(o, "Op::store(%s, %s)", op.index, *op.block);
+            elle::fprintf(o, "Op::store(%s, %s)", op.index, op.block);
           else
             elle::fprintf(o, "Op::remove(%s)", op.index);
           return o;
@@ -66,6 +66,14 @@ namespace infinit
           s.serialize("mode", mode);
           s.serialize("resolver", resolver);
           s.serialize("remove_signature", remove_signature);
+          if (s.in())
+          {
+            if (auto mb = dynamic_cast<blocks::MutableBlock*>(block.get()))
+              version = mb->version();
+            else if (auto mb = dynamic_cast<blocks::MutableBlock*>(
+              remove_signature.block.get()))
+            version = mb->version();
+          }
         }
 
         Async::Async(std::unique_ptr<Consensus> backend,
@@ -264,6 +272,7 @@ namespace infinit
         void
         Async::_push_op(Op op)
         {
+          op.index = -1; // for nice debug prints, we will set that later
           // squash check
           static bool squash_enabled = elle::os::getenv("INFINIT_ASYNC_DISABLE_SQUASH", "").empty();
           auto its = this->_operations.get<0>().equal_range(op.address);
@@ -274,6 +283,8 @@ namespace infinit
               {
                 return a.index < b.index;
               });
+            // Check for squashability: we need resolvers, and we can't touch
+            // the head of the queue since it's currently being processed
             if (op.resolver && most_recent_it->resolver
               && most_recent_it->index != this->_operations.get<1>().begin()->index)
             {
@@ -281,14 +292,28 @@ namespace infinit
                 most_recent_it->resolver->squashable(*op.resolver);
               if (squash.first != Squash::none)
               {
-                ELLE_DEBUG("%s: squashing %f at index %s", this, op.address,
-                           most_recent_it->index);
+                ELLE_DEBUG("%s: squashing %s on %s", this, op,
+                           *most_recent_it);
                 auto cr = make_merge_conflict_resolver(
                     std::move(elle::unconst(most_recent_it->resolver)),
                     std::move(op.resolver),
                     squash.second);
+                // We will use the last block and the merged conflict resolver
+                // for our new squashed operation.
+                // But we must also set version to the first operation's version
+                // or we will miss some conflicts.
+                ACB* acb = dynamic_cast<ACB*>(op.block.get());
+                if (!acb)
+                  acb = dynamic_cast<ACB*>(op.remove_signature.block.get());
+                ELLE_DEBUG("Changing %s version to %s", acb, most_recent_it->version);
+                if (acb)
+                  acb->seal(most_recent_it->version);
+                else
+                  ELLE_WARN("Unable to reset block version (got %s (from %s)",
+                    acb, op);
                 if (squash.first == Squash::at_first_position)
                 {
+                  ELLE_DEBUG("overwriting op at %s", most_recent_it->index);
                   this->_operations.get<0>().modify(
                     most_recent_it, [&](Op& o) {
                       o.block = std::move(op.block);
@@ -313,6 +338,7 @@ namespace infinit
                   op.resolver = std::move(cr);
                   int idx = most_recent_it->index;
                   int lastidx = this->_operations.get<1>().rbegin()->index;
+                  ELLE_DEBUG("Erasing op at %s", most_recent_it->index);
                   this->_operations.get<0>().erase(most_recent_it);
                   if (!this->_journal_dir.empty())
                   {
@@ -601,7 +627,34 @@ namespace infinit
           , mode(std::move(mode_))
           , resolver(std::move(resolver_))
           , remove_signature(remove_signature_)
-        {}
+          , version(-1)
+        {
+          if (auto mb = dynamic_cast<blocks::MutableBlock*>(block.get()))
+            version = mb->version();
+          else if (auto mb = dynamic_cast<blocks::MutableBlock*>(
+            remove_signature.block.get()))
+            version = mb->version();
+        }
+        Async::Op::Op(Op&& b)
+        : address(b.address)
+        {
+          *this = std::move(b);
+        }
+        void
+        Async::Op::operator=(Op&& b)
+        {
+          address = b.address;
+          block = std::move(b.block);
+          mode = b.mode;
+          resolver = std::move(b.resolver);
+          remove_signature = std::move(b.remove_signature);
+          index = b.index;
+          if (auto mb = dynamic_cast<blocks::MutableBlock*>(block.get()))
+            version = mb->version();
+          else if (auto mb = dynamic_cast<blocks::MutableBlock*>(
+            remove_signature.block.get()))
+          version = mb->version();
+        }
       }
     }
   }
