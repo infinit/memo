@@ -55,6 +55,11 @@ namespace infinit
           void
           _remove(Address address, blocks::RemoveSignature rs) override;
 
+        public:
+          static
+          std::vector<boost::filesystem::path>
+          entries(boost::filesystem::path const& root);
+
           /*----------.
           | Operation |
           `----------*/
@@ -128,4 +133,10 @@ namespace infinit
   }
 }
 
+namespace std
+{
+  std::ostream&
+  operator <<(std::ostream& o,
+              infinit::model::doughnut::consensus::Async::Op const& op);
+}
 #endif

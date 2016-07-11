@@ -107,14 +107,15 @@ namespace infinit
       ELLE_ATTRIBUTE(std::unique_ptr<ACLBlock>, block);
     };
 
-    class DirectoryConflictResolver: public model::ConflictResolver
+    class DirectoryConflictResolver:
+      public model::ConflictResolver
     {
     public:
-       DirectoryConflictResolver(elle::serialization::SerializerIn& s,
-                                 elle::Version const& v);
-       DirectoryConflictResolver(DirectoryConflictResolver&& b);
-       DirectoryConflictResolver();
-       DirectoryConflictResolver(model::Model& model,
+      DirectoryConflictResolver(elle::serialization::SerializerIn& s,
+                                elle::Version const& v);
+      DirectoryConflictResolver(DirectoryConflictResolver&& b);
+      DirectoryConflictResolver();
+      DirectoryConflictResolver(model::Model& model,
                                 Operation op,
                                 Address address);
        ~DirectoryConflictResolver();
