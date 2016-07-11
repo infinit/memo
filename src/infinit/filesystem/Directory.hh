@@ -129,6 +129,7 @@ namespace infinit
        model::Model* _model;
        Operation _op;
        Address _address;
+       static bool squash_at_first;
        typedef infinit::serialization_tag serialization_tag;
     };
 
