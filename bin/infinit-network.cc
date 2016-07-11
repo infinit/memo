@@ -22,23 +22,6 @@ infinit::Infinit ifnt;
 
 #include <endpoint_file.hh>
 
-static
-bool
-remove(boost::filesystem::path const& path,
-       std::string const& network_name,
-       std::string const& message)
-{
-  if (boost::filesystem::exists(path))
-  {
-    if (boost::filesystem::remove(path))
-      report_action("deleted", message, network_name, std::string("locally"));
-    else
-      throw elle::Error(
-        elle::sprintf("File for network could not be deleted: %s", path));
-    return true;
-  }
-  return false;
-};
 
 static
 std::unique_ptr<infinit::storage::StorageConfig>
@@ -227,11 +210,11 @@ COMMAND(create)
       ifnt.network_save(owner, network);
       report_created("network", network.name);
     }
+    infinit::NetworkDescriptor desc(std::move(network));
+    if (!args.count("output"))
+      ifnt.network_save(desc);
     if (aliased_flag(args, {"push-network", "push"}))
-    {
-      infinit::NetworkDescriptor desc(std::move(network));
       beyond_push("network", desc.name, desc, owner);
-    }
   }
 }
 static std::pair<infinit::cryptography::rsa::PublicKey, bool>
@@ -490,7 +473,7 @@ COMMAND(list)
     {
       elle::json::Object o;
       o["name"] = network.name;
-      o["linked"] = bool(network.model) && network.allowed(self);
+      o["linked"] = bool(network.model) && network.user_linked(self);
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
@@ -500,7 +483,7 @@ COMMAND(list)
     for (auto const& network: ifnt.networks_get(self))
     {
       std::cout << network.name;
-      if (network.model && network.allowed(self))
+      if (network.model && network.user_linked(self))
         std::cout << ": linked";
       else
         std::cout << ": not linked";
@@ -513,21 +496,8 @@ COMMAND(unlink_)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
-  auto network = ifnt.network_get(network_name, self);
-  auto path = ifnt._network_path(network.name, self);
-  // This should never happen because network_get ensure the model is present.
-  ELLE_ASSERT(network.model);
-  // XXX Should check async cache to make sure that it's empty.
-  boost::filesystem::remove_all(network.cache_dir(self).parent_path());
-  if (!remove(path, network.name, "link for network"))
-  {
-    // Linked network stored as a network descriptor (pre 0.6.1).
-    auto descriptor = ifnt.network_descriptor_get(network_name, self);
-    auto descriptor_path = ifnt._network_descriptor_path(network_name);
-    remove(descriptor_path, network.name, "link for network");
-    // Restore descriptor from network.
-    ifnt.network_save(descriptor);
-  }
+  auto network = ifnt.network_get(network_name, self, true);
+  ifnt.network_unlink(network.name, self, true);
 }
 
 COMMAND(push)
@@ -560,25 +530,15 @@ COMMAND(delete_)
   bool purge = flag(args, "purge");
   bool unlink = flag(args, "unlink");
   bool pull = flag(args, "pull");
-  // Users having the network linked.
-  auto users = ifnt.users_get();
-  users.erase(
-    std::remove_if(
-      users.begin(), users.end(),
-      [&] (infinit::User const& u)
-      {
-        return !boost::filesystem::exists(ifnt._network_path(network.name, u));
-      }),
-    users.end());
-  if (users.size() > 0 || std::find(users.begin(), users.end(), owner) != users.end())
+  auto linked_users = ifnt.network_linked_users(network.name);
+  if (linked_users.size() && !unlink)
   {
     std::vector<std::string> user_names;
-    for (auto const& user: users)
-      user_names.emplace_back(user.name);
-    if (!unlink)
-      throw elle::Error(
+    for (auto const& u: linked_users)
+      user_names.emplace_back(u.name);
+    throw elle::Error(
         elle::sprintf("Network is still linked with this device by %s. "
-                      "Please unlink it first or user --delete --unlink",
+                      "Please unlink it first or add the --unlink flag",
                       user_names));
   }
   if (purge)
@@ -615,22 +575,7 @@ COMMAND(delete_)
   }
   if (pull)
     beyond_delete("network", network.name, owner, true, purge);
-  bool deleted = false;
-  if (std::find(users.begin(), users.end(), owner) == users.end())
-    users.emplace_back(owner);
-  for (auto const& user: users)
-  {
-    auto path = ifnt._network_path(network.name, user);
-    auto descriptor_path = ifnt._network_descriptor_path(network.name);
-    // Cache dir is ../<user>/<owner>/<network>
-    boost::filesystem::remove_all(network.cache_dir(user).parent_path());
-    deleted |= remove(path, network.name, "linked network");
-    deleted |= remove(descriptor_path, network.name, "network");
-  }
-  if (!deleted)
-  {
-    throw elle::Error("Nothing has been deleted");
-  }
+  ifnt.network_delete(name, owner, unlink, true);
 }
 
 COMMAND(run)
