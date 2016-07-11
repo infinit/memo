@@ -69,43 +69,31 @@ with Infinit() as bob:
   test(bob, '1010101')
 
 # Purge.
-with Beyond() as beyond, \
-    Infinit(beyond = beyond) as bob, Infinit(beyond = beyond) as alice:
+with Beyond() as beyond, Infinit(beyond = beyond) as tmp:
+  bob = User(infinit = tmp, name = 'bob')
+  alice = User(infinit = tmp, name = 'alice')
   bob.run(['infinit-user', '--signup', 'bob', '--email', 'bob@infinit.io'])
   alice.run(
     ['infinit-user', '--signup', 'alice', '--email', 'alice@infinit.io'])
-  bob.run(['infinit-user', '--fetch', 'alice'])
   bob.run(['infinit-storage', '--create', '--as', 'bob', 's', '--filesystem'])
   assertEq(len(bob.run_json(['infinit-storage', '--list', '-s'])), 1)
   bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '-S', 's', '-p'])
+  assert os.path.exists('%s/bob/bob/n' % tmp.linked_networks_path)
   assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 1)
+  bob.run(['infinit-passport', '--create', '--as', 'bob',
+           '-u', 'alice', '-n', 'n'])
+  alice.run(['infinit-network', '--link', '--as', 'alice', 'bob/n', '-S', 's'])
+  assert os.path.exists('%s/alice/bob/n' % tmp.linked_networks_path)
   bob.run(['infinit-network', '--run', '--name', 'n', '--as', 'bob',
            '--async', '--cache', '-s'])
-  assertEq(len(os.listdir('%s/cache/bob/bob/n' % bob.state_path)), 2)
-  bob.run(['infinit-passport', '--create', '--as', 'bob',
-           '-u', 'alice', '-n', 'n', '-p'])
-  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'bob'])), 1)
-  alice.run(['infinit-passport', '--fetch', '--as', 'alice',
-             '-u', 'alice', '-n', 'bob/n'])
-  alice.run(['infinit-passport', '--delete', '--as', 'alice',
-             '-u', 'alice', '-n', 'bob/n'])
-  bob.run(['infinit-volume', '--create', '--as', 'bob', 'v', '-N', 'n', '-p'])
-  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s', '--as', 'bob'])), 1)
-  bob.run(['infinit-drive', '--create', '--as', 'bob', 'd',
-           '-V', 'v', '-N', 'n', '-p'])
-  assertEq(
-    len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 1)
+  assertEq(len(os.listdir('%s/cache/bob/bob/n' % tmp.state_path)), 2)
   bob.run(['infinit-storage', '--delete', '--as', 'bob',
            '--purge', '--pull', 's'])
   assertEq(len(bob.run_json(['infinit-storage', '--list', '-s', '--as', 'bob'])), 0)
-  assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 0)
-  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'bob'])), 0)
-  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s', '--as', 'bob'])), 0)
-  assertEq(
-    len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)
-  bob.run(['infinit-network', '--fetch', '--as', 'bob', 'n'], return_code = 1)
-  bob.run(['infinit-volume', '--fetch', '--as', 'bob', 'v'], return_code = 1)
-  bob.run(['infinit-drive', '--fetch', '--as', 'bob', 'd'], return_code = 1)
-  alice.run(['infinit-passport', '--fetch', '--as', 'alice',
-             '-u', 'alice', '-n', 'bob/n'], return_code = 1)
-  assertEq(len(os.listdir('%s/cache/bob' % bob.state_path)), 0)
+  # Ensure the descriptor is still there.
+  assertEq(len(os.listdir(tmp.networks_path)), 1)
+  # Ensure linked network has been removed.
+  assert not os.path.exists('%s/bob/bob/n' % tmp.linked_networks_path)
+  assert not os.path.exists('%s/alice/bob/n' % tmp.linked_networks_path)
+  # Ensure network cache has been removed.
+  assertEq(len(os.listdir('%s/cache/bob' % tmp.state_path)), 0)
