@@ -15,6 +15,10 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   except Exception as e:
     pass
   bob.run(['infinit-network', '--create', 'broken', '--as', 'bob'])
+  # Check descriptor is created.
+  assertEq(len(os.listdir(bob.networks_path)), 1)
+  # Check network is linked.
+  assertEq(len(os.listdir(bob.linked_networks_path)), 1)
   bob.run(['infinit-network', '--run', '--name', 'broken', '--as', 'bob',
            '--async', '--cache', '-s'])
   # Ensure network cache directory is created
@@ -45,6 +49,47 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
     pass
   alice.run(['infinit-network', '--delete',
              '--name', 'bob/osef', '--as', 'alice', '--unlink'])
+
+# Unlinking
+with Infinit() as tmp:
+  bob = User(name = 'bob', infinit = tmp)
+  bob.run(['infinit-user', '--create'])
+  bob.run(['infinit-storage', '--create', 's', '--filesystem'])
+  bob.run(['infinit-network', '--create', 'n', '--storage', 's'])
+  # Check descriptor is created.
+  assertEq(len(os.listdir(bob.infinit.networks_path)), 1)
+  # Check network is linked.
+  assertEq(len(os.listdir(bob.infinit.linked_networks_path)), 1)
+  # Store descriptor.
+  descriptor = None
+  with open('%s/bob/n' % bob.infinit.networks_path) as f:
+    descriptor = f.read()
+  # Store linked network.
+  linked_net = None
+  with open('%s/bob/bob/n' % bob.infinit.linked_networks_path, 'r') as f:
+    linked_net = f.read()
+  bob.run(['infinit-network', '--run', 'n', '-s', '--async', '--cache'])
+  # Ensure cache directories created.
+  assertEq(len(os.listdir('%s/cache/bob/bob/n' % bob.infinit.state_path)), 2)
+  bob.run(['infinit-network', '--unlink', 'n'])
+  # Ensure cache directories removed.
+  assertEq(len(os.listdir('%s/cache/bob' % bob.infinit.state_path)), 0)
+  # Check network is no longer linked.
+  assertEq(len(os.listdir('%s/bob/bob' % bob.infinit.linked_networks_path)), 0)
+  # Check network descriptor still exists.
+  assertEq(len(os.listdir(bob.infinit.networks_path)), 1)
+  bob.run(['infinit-network', '--delete', 'n'])
+  assertEq(len(os.listdir('%s/bob' % bob.infinit.networks_path)), 0)
+  # Simulate old link behaviour: copy linked network to descriptor folder,
+  # check that unlink changes it to a network descriptor.
+  with open('%s/bob/n' % bob.infinit.networks_path, 'w') as f:
+    f.write(linked_net)
+  assertEq(len(os.listdir(bob.infinit.networks_path)), 1)
+  bob.run(['infinit-network', '--unlink', 'n'])
+  assertEq(len(os.listdir(bob.infinit.networks_path)), 1)
+  with open('%s/bob/n' % bob.infinit.networks_path) as f:
+    test = f.read()
+    assertEq(test, descriptor)
 
 # Fetch & list.
 with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
@@ -79,6 +124,16 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   # Still one, alice hasn't been invited to the 2nd network.
   l = alice.run_json(['infinit-network', '--list', '--script', '--as', 'alice'])
   assertEq(len(l), 1)
+  # Check that listing moves linked networks.
+  bob_n, _ = bob.run(['infinit-network', '--create', 'bob-linked', '--as', 'bob',
+                      '--output', '-'])
+  assert not os.path.exists('%s/bob/bob/bob-linked' % bob.linked_networks_path)
+  with open('%s/bob/bob-linked' % bob.networks_path, 'w') as f:
+    f.write(bob_n)
+  bob.run(['infinit-network', '--list', '--as', 'bob'])
+  with open('%s/bob/bob/bob-linked' % bob.linked_networks_path) as f:
+    test = f.read()
+    assertEq(test, bob_n)
 
 # Update network.
 with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
@@ -220,7 +275,6 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
   bob.run(['infinit-network', '--delete', '--as', 'bob', 'n2', '--pull', '--unlink'])
   assertEq(len(bob.run_json(['infinit-network', '--list', '--as', 'bob', '-s'])), 0)
 
-
 # Delete multi user.
 def remove_network_linked_by_two_users(owner_remove = True):
   with Beyond() as beyond, Infinit(beyond = beyond) as infinit:
@@ -295,6 +349,7 @@ def remove_network_linked_by_two_users(owner_remove = True):
 
 remove_network_linked_by_two_users(owner_remove = True)
 remove_network_linked_by_two_users(owner_remove = False)
+
 # Purge.
 with Beyond() as beyond, \
     Infinit(beyond = beyond) as bob, Infinit(beyond = beyond) as alice:
