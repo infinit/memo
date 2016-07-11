@@ -3,6 +3,7 @@
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
 
+#include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -331,9 +332,101 @@ ELLE_TEST_SCHEDULED(async_groups)
   BOOST_CHECK(true);
 }
 
+ELLE_TEST_SCHEDULED(async_squash)
+{
+  auto node_id = infinit::model::Address::random(0);
+  auto path = bfs::temp_directory_path() / bfs::unique_path();
+  auto kp = infinit::cryptography::rsa::keypair::generate(1024);
+  ELLE_LOG("root path: %s", path);
+  elle::os::setenv("INFINIT_HOME", path.string(), true);
+  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
+  elle::SafeFinally cleanup_path([&] {
+      boost::filesystem::remove_all(path);
+  });
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  auto fs = make(path, node_id, true, 100, kp);
+  fs->path("/d1")->mkdir(0600);
+  fs->path("/d2")->mkdir(0600);
+  writefile(fs, "f3", "foo");
+  writefile(fs, "f4", "foo");
+  BOOST_CHECK_EQUAL(root_count(fs), 4);
+
+  fs.reset();
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  fs = make(path, node_id, true, 100, kp);
+  BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
+  BOOST_CHECK_EQUAL(root_count(fs), 4);
+
+  fs.reset();
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  fs = make(path, node_id, false, 0, kp);
+  BOOST_CHECK_EQUAL(root_count(fs), 4);
+}
+
+void run_async_squash_conflict();
+
+ELLE_TEST_SCHEDULED(async_squash_conflict_first)
+{
+  infinit::filesystem::DirectoryConflictResolver::squash_at_first = true;
+  run_async_squash_conflict();
+}
+
+ELLE_TEST_SCHEDULED(async_squash_conflict_last)
+{
+  infinit::filesystem::DirectoryConflictResolver::squash_at_first = false;
+  run_async_squash_conflict();
+}
+
+void run_async_squash_conflict()
+{
+  auto node_id = infinit::model::Address::random(0);
+  auto path = bfs::temp_directory_path() / bfs::unique_path();
+  auto kp = infinit::cryptography::rsa::keypair::generate(1024);
+  ELLE_LOG("root path: %s", path);
+  elle::os::setenv("INFINIT_HOME", path.string(), true);
+  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
+  elle::SafeFinally cleanup_path([&] {
+      boost::filesystem::remove_all(path);
+  });
+
+  auto fs = make(path, node_id, false, 0, kp);
+  BOOST_CHECK_EQUAL(root_count(fs), 0);
+  fs.reset();
+
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  fs = make(path, node_id, true, 100, kp);
+  fs->path("/d1")->mkdir(0600);
+  fs->path("/d2")->mkdir(0600);
+  fs->path("/dr")->mkdir(0600);
+  writefile(fs, "f3", "foo");
+  writefile(fs, "fr", "foo");
+  writefile(fs, "f4", "foo");
+  fs->path("/dr")->rmdir();
+  fs->path("/fr")->unlink();
+  BOOST_CHECK_EQUAL(root_count(fs), 4);
+
+  fs.reset();
+  fs = make(path, node_id, false, 0, kp);
+  writefile(fs, "fc", "foo");
+  BOOST_CHECK_EQUAL(root_count(fs), 1);
+
+  fs.reset();
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  fs = make(path, node_id, true, 100, kp);
+  BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
+  BOOST_CHECK_EQUAL(root_count(fs), 5);
+
+  fs.reset();
+  fs = make(path, node_id, false, 0, kp);
+  BOOST_CHECK_EQUAL(root_count(fs), 5);
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(async_cache), 0, valgrind(10));
   suite.add(BOOST_TEST_CASE(async_groups), 0, valgrind(10));
+  suite.add(BOOST_TEST_CASE(async_squash), 0, valgrind(10));
+  suite.add(BOOST_TEST_CASE(async_squash_conflict_first), 0, valgrind(10));
+  suite.add(BOOST_TEST_CASE(async_squash_conflict_last), 0, valgrind(10));
 }
