@@ -34,9 +34,9 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
       e = {'INFINIT_USER': as_user}
       return t.run_json(env = e, args = list(args) + ['--script'], **kwargs)
     user = partial(run, as_user = 'user')
-    ## ------##
-    ##  User ##
-    ## ----- ##
+    ## ---- ##
+    ## User ##
+    ## ---- ##
     users = user('infinit-user', '--list')
     print(users)
     assertEq(users, [
@@ -181,15 +181,15 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
       { 'name': 'owner/network1', 'linked': False },
     ])
     assertEq(other('infinit-network', '--list'), [
+      { 'name': 'new/network', 'linked': False },
       { 'name': 'owner/network0', 'linked': False },
       { 'name': 'owner/network1', 'linked': True },
     ])
     assertEq(user('infinit-network', '--list'), [
+      { 'name': 'new/network', 'linked': False },
       { 'name': 'owner/network0', 'linked': True },
       { 'name': 'owner/network1', 'linked': True },
     ])
-    # print(l)
-    # assert False
 
     ## -------------- ##
     ## Network delete ##
@@ -197,8 +197,9 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
     assertEq(
       user('infinit-network', '--list'),
       [
-        {'name': 'owner/network0', 'linked': True },
-        {'name': 'owner/network1', 'linked': True },
+        { 'name': 'new/network', 'linked': False },
+        { 'name': 'owner/network0', 'linked': True },
+        { 'name': 'owner/network1', 'linked': True },
       ])
     # Network is still linked for other.
     throws(lambda: user('infinit-network', '--delete', '--name', 'owner/network1'))
@@ -209,8 +210,9 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
     assertEq(
       user('infinit-network', '--list'),
       [
-        {'name': 'owner/network0', 'linked': True },
-        {'name': 'owner/network1', 'linked': False },
+        { 'name': 'new/network', 'linked': False },
+        { 'name': 'owner/network0', 'linked': True },
+        { 'name': 'owner/network1', 'linked': False },
       ])
     # User can create a network (and is automatically linked with it) and
     # delete it direct.
@@ -218,14 +220,16 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
     assertEq(
       user('infinit-network', '--list'),
       [
-        {'name': 'owner/network0', 'linked': True },
-        {'name': 'owner/network1', 'linked': False },
-        {'name': 'user/network', 'linked': True },
+        { 'name': 'new/network', 'linked': False },
+        { 'name': 'owner/network0', 'linked': True },
+        { 'name': 'owner/network1', 'linked': False },
+        { 'name': 'user/network', 'linked': True },
       ])
     user('infinit-network', '--delete', '--name', 'user/network', '--unlink')
     assertEq(
       user('infinit-network', '--list'),
       [
-        {'name': 'owner/network0', 'linked': True},
-        {'name': 'owner/network1', 'linked': False },
+        { 'name': 'new/network', 'linked': False },
+        { 'name': 'owner/network0', 'linked': True},
+        { 'name': 'owner/network1', 'linked': False },
       ])
