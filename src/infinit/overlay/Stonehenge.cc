@@ -99,6 +99,7 @@ namespace infinit
           peer.id(),
           peer.endpoints(),
           boost::optional<reactor::network::UTPServer&>(),
+          boost::optional<infinit::model::doughnut::Remote::Refetcher>(),
           model::doughnut::Protocol::tcp));
     }
 

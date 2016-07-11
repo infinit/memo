@@ -322,7 +322,6 @@ namespace infinit
         Overlay::WeakMember
         make_peer(NodeLocation pl);
         packet::RequestKey make_key_request();
-        bool remote_retry_connect(model::doughnut::Remote& remote);
         Address _self;
         Address _ping_target;
         Time _ping_time;
@@ -368,6 +367,9 @@ namespace infinit
           std::pair<reactor::Thread::unique_ptr, bool>> _node_lookups;
         std::unordered_map<reactor::Thread*, reactor::Thread::unique_ptr>
           _bootstraper_threads;
+      private:
+        boost::optional<model::Endpoints>
+        _refetch_endpoints(model::Address id);
       };
     }
   }

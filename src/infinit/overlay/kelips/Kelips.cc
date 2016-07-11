@@ -907,6 +907,8 @@ namespace infinit
             location.id(),
             location.endpoints(),
             elle::unconst(this)->_remotes_server,
+            model::doughnut::Remote::Refetcher(
+              std::bind(&Node::_refetch_endpoints, this, location.id())),
             this->_config.rpc_protocol);
           peer.connect(5_sec);
           auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
@@ -3169,10 +3171,9 @@ namespace infinit
               hosts.id(),
               hosts.endpoints(),
               elle::unconst(this)->_remotes_server,
+              model::doughnut::Remote::Refetcher(
+                std::bind(&Node::_refetch_endpoints, this, hosts.id())),
               this->_config.rpc_protocol);
-          res->retry_connect(std::function<bool(model::doughnut::Remote&)>(
-                               std::bind(&Node::remote_retry_connect,
-                                         this, std::placeholders::_1)));
           auto weak_res = Overlay::WeakMember::own(std::move(res));
           if (!disable_cache)
             this->_peer_cache[hosts.id()].push_back(weak_res);
@@ -3184,22 +3185,20 @@ namespace infinit
         }
       }
 
-      bool
-      Node::remote_retry_connect(model::doughnut::Remote& remote)
+      boost::optional<model::Endpoints>
+      Node::_refetch_endpoints(model::Address id)
       {
         // Perform a lookup for the node
         boost::optional<NodeLocation> result;
-        kelipsGet(remote.id(), 1, false, -1, true, false, [&](NodeLocation p)
-          {
-            result = p;
-          });
+        kelipsGet(id, 1, false, -1, true, false,
+                  [&] (NodeLocation p)
+                  {
+                    result = p;
+                  });
         if (result)
-        {
-          remote.endpoints(result->endpoints());
-          return true;
-        }
+          return result->endpoints();
         else
-          return false;
+          return {};
 
       }
 

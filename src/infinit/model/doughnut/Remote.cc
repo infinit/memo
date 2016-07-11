@@ -31,6 +31,7 @@ namespace infinit
                      Address id,
                      Endpoints endpoints,
                      boost::optional<reactor::network::UTPServer&> server,
+                     boost::optional<Refetcher> const& refetch,
                      Protocol protocol)
         : Super(dht, std::move(id))
         , _socket(nullptr)
@@ -168,9 +169,10 @@ namespace infinit
           auto lock = elle::scoped_assignment(this->_reconnecting, true);
           ELLE_TRACE("%s: reconnect");
           this->_credentials = {};
-          if (this->_retry_connect)
-            this->_retry_connect(*this);
-          _connect();
+          if (this->_refetch_endpoints)
+            if (auto eps = this->_refetch_endpoints())
+              this->_endpoints = std::move(eps.get());
+          this->_connect();
         }
         else
           ELLE_DEBUG("skip overlapped reconnect");

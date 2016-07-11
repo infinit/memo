@@ -35,6 +35,7 @@ namespace infinit
       public:
         typedef Remote Self;
         typedef Peer Super;
+        typedef std::function<boost::optional<Endpoints> ()> Refetcher;
 
       /*-------------.
       | Construction |
@@ -44,6 +45,7 @@ namespace infinit
                Address id,
                Endpoints endpoints,
                boost::optional<reactor::network::UTPServer&> server,
+               boost::optional<Refetcher> const& refetch = {},
                Protocol protocol = Protocol::all);
         virtual
         ~Remote();
@@ -69,7 +71,7 @@ namespace infinit
         ELLE_ATTRIBUTE(bool, connected);
         ELLE_ATTRIBUTE(bool, reconnecting);
         ELLE_ATTRIBUTE_R(int, reconnection_id);
-        ELLE_ATTRIBUTE_RW(Endpoints, endpoints);
+        ELLE_ATTRIBUTE_R(Endpoints, endpoints);
         ELLE_ATTRIBUTE(boost::optional<reactor::network::UTPServer&>,
                        utp_server);
 
@@ -89,11 +91,7 @@ namespace infinit
         ELLE_ATTRIBUTE(Protocol, protocol);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
         ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
-        /* Callback is expected to retry an async connection, with
-           potentially updated endpoints. Should return false if it
-           did nothing.
-        */
-        ELLE_ATTRIBUTE_RW(std::function<bool (Remote&)>, retry_connect);
+        ELLE_ATTRIBUTE_R(Refetcher, refetch_endpoints);
         ELLE_ATTRIBUTE_R(bool, fast_fail);
       /*-------.
       | Blocks |

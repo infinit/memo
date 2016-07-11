@@ -502,6 +502,7 @@ namespace kademlia
           /* FIXME BEARCLAW */ infinit::model::Address(),
           infinit::model::Endpoints(s.value),
           boost::optional<reactor::network::UTPServer&>(),
+          boost::optional<infinit::model::doughnut::Remote::Refetcher>(),
           infinit::model::doughnut::Protocol::tcp));
       ELLE_TRACE("%s: returning", *this);
       return reactor::generator<WeakMember>(
@@ -525,6 +526,7 @@ namespace kademlia
           /* FIXME BEARCLAW */ Address(),
           infinit::model::Endpoints(q->storeResult),
           boost::optional<reactor::network::UTPServer&>(),
+          boost::optional<infinit::model::doughnut::Remote::Refetcher>(),
           infinit::model::doughnut::Protocol::tcp));
     }
     else
