@@ -198,8 +198,7 @@ COMMAND(create)
       version,
       admin_keys);
   {
-    infinit::Network network(ifnt.qualified_name(name, owner),
-                             std::move(dht));
+    infinit::Network network(ifnt.qualified_name(name, owner), std::move(dht));
     if (args.count("output"))
     {
       auto output = get_output(args);
@@ -825,7 +824,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "created network name" },
         { "storage,S", value<std::vector<std::string>>()->multitoken(),
-          "storage to contribute (optional)" },
+          "storage to contribute (optional, data striped over multiple)" },
         { "port", value<int>(), "port to listen on (default: random)" },
         { "replication-factor,r", value<int>(),
           "data replication factor (default: 1)" },
@@ -908,7 +907,7 @@ main(int argc, char** argv)
       {},
       // Hidden options.
       {
-        { "storage", value<std::vector<std::string>>()->multitoken(),
+        { "storage,S", value<std::vector<std::string>>()->multitoken(),
           "storage to contribute (optional)" },
         option_output("network"),
       },
