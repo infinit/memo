@@ -890,14 +890,8 @@ namespace infinit
           if (block)
           {
             ELLE_DEBUG("validate block")
-              if (auto res = block->validate(this->doughnut())); else
+              if (auto res = block->validate(this->doughnut(), true)); else
                 throw ValidationFailed(res.reason());
-            if (auto* acb = dynamic_cast<ACB*>(block.get()))
-            {
-              auto v = acb->validate_admin_keys(this->doughnut());
-              if (!v)
-                throw ValidationFailed(v.reason());
-            }
           }
           auto& decision = this->_load_paxos(address);
           auto& paxos = decision.paxos;
@@ -1186,7 +1180,7 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: store %f", *this, block);
           ELLE_DEBUG("%s: validate block", *this)
-            if (auto res = block.validate(this->doughnut())); else
+            if (auto res = block.validate(this->doughnut(), true)); else
               throw ValidationFailed(res.reason());
           if (!dynamic_cast<blocks::ImmutableBlock const*>(&block))
             throw ValidationFailed("bypassing Paxos for a mutable block");

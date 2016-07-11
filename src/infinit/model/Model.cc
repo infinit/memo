@@ -143,7 +143,7 @@ namespace infinit
     {
       if (auto res = this->_fetch(address, local_version))
       {
-        auto val = res->validate(*this);
+        auto val = res->validate(*this, false);
         if (!val)
         {
           ELLE_WARN("%s: invalid block received for %s:%s", *this, address,
@@ -168,7 +168,7 @@ namespace infinit
                                   std::unique_ptr<blocks::Block> block,
                                   std::exception_ptr exception)
         {
-          if (block && !block->validate(*this))
+          if (block && !block->validate(*this, false))
             res(addr, {}, std::make_exception_ptr(elle::Error("invalid block")));
           else
             res(addr, std::move(block), exception);

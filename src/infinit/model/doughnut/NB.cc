@@ -112,7 +112,7 @@ namespace infinit
 
       // FIXME: factor with CHB
       blocks::ValidationResult
-      NB::_validate(Model const& model) const
+      NB::_validate(Model const& model, bool writing) const
       {
         Address expected_address;
         ELLE_DEBUG("%s: check address", *this)
@@ -178,7 +178,7 @@ namespace infinit
         NB* other = dynamic_cast<NB*>(sig.block.get());
         if (!other)
           return blocks::ValidationResult::failure("not a NB");
-        auto val = other->validate(model);
+        auto val = other->validate(model, true);
         if (!val)
           return val;
         if (other->address() != this->address())

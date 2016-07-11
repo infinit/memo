@@ -40,15 +40,6 @@ namespace infinit
       namespace consensus
       {
         struct OpAddressOnly{};
-        std::ostream&
-        operator <<(std::ostream& o, Async::Op const& op)
-        {
-          if (op.mode)
-            elle::fprintf(o, "Op::store(%s, %s)", op.index, *op.block);
-          else
-            elle::fprintf(o, "Op::remove(%s)", op.index);
-          return o;
-        }
 
         Async::Op::Op(elle::serialization::SerializerIn& ser)
         {
@@ -106,6 +97,24 @@ namespace infinit
           else
             this->_init_barrier.open();
         }
+
+        std::vector<boost::filesystem::path>
+        Async::entries(boost::filesystem::path const& root)
+        {
+          std::vector<boost::filesystem::path> paths;
+          std::copy(boost::filesystem::directory_iterator(root),
+                    boost::filesystem::directory_iterator(),
+                    std::back_inserter(paths));
+          std::sort(paths.begin(), paths.end(),
+                    [] (boost::filesystem::path const& a,
+                        boost::filesystem::path const& b) -> bool
+                    {
+                      return std::stoi(a.filename().string()) <
+                        std::stoi(b.filename().string());
+                    });
+          return paths;
+        }
+
         void
         Async::_init()
         {
@@ -116,20 +125,7 @@ namespace infinit
          ELLE_TRACE_SCOPE("%s: restore journal from %s",
                           *this, this->_journal_dir);
          boost::filesystem::path p(_journal_dir);
-         std::vector<boost::filesystem::path> files;
-         for (auto it = boost::filesystem::directory_iterator(this->_journal_dir);
-              it != boost::filesystem::directory_iterator();
-              ++it)
-           files.push_back(it->path());
-         std::sort(
-           files.begin(),
-           files.end(),
-           [] (boost::filesystem::path const& a,
-               boost::filesystem::path const& b) -> bool
-           {
-             return std::stoi(a.filename().string()) <
-               std::stoi(b.filename().string());
-           });
+         auto files = Async::entries(p);
          for (auto const& p: files)
          {
            auto id = std::stoi(p.filename().string());
@@ -523,5 +519,19 @@ namespace infinit
         {}
       }
     }
+  }
+}
+
+namespace std
+{
+  std::ostream&
+  operator <<(std::ostream& o,
+              infinit::model::doughnut::consensus::Async::Op const& op)
+  {
+    if (op.mode)
+      elle::fprintf(o, "Op::store(%s, %s)", op.index, *op.block);
+    else
+      elle::fprintf(o, "Op::remove(%s)", op.index);
+    return o;
   }
 }

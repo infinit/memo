@@ -81,18 +81,18 @@ namespace infinit
       {}
 
       ValidationResult
-      Block::validate(Model const& model) const
+      Block::validate(Model const& model, bool writing) const
       {
         ELLE_TRACE_SCOPE("%s: validate", *this);
         if (this->_validated)
           return ValidationResult::success();
-        ValidationResult res = this->_validate(model);
+        ValidationResult res = this->_validate(model, writing);
         elle::unconst(this)->_validated = res;
         return res;
       }
 
       ValidationResult
-      Block::_validate(Model const&) const
+      Block::_validate(Model const&, bool) const
       {
         return ValidationResult::success();
       }
