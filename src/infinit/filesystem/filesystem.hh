@@ -260,6 +260,17 @@ namespace infinit
   }
 }
 
+namespace std
+{
+  std::ostream&
+  operator <<(std::ostream& out,
+              infinit::filesystem::EntryType entry);
+
+  std::ostream&
+  operator <<(std::ostream& out,
+              infinit::filesystem::OperationType operation);
+}
+
 # include <infinit/filesystem/Filesystem.hxx>
 
 #endif

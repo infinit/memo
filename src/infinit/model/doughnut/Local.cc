@@ -115,7 +115,7 @@ namespace infinit
         ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         ELLE_DEBUG("%s: validate block", *this)
-          if (auto res = block.validate(this->doughnut())); else
+          if (auto res = block.validate(this->doughnut(), true)); else
             throw ValidationFailed(res.reason());
         try
         {
@@ -135,12 +135,6 @@ namespace infinit
                 elle::sprintf("version %s is not superior to current version %s",
                               mblock->version(), mprevious->version()),
                 std::move(previous));
-            if (auto* acb = dynamic_cast<const ACB*>(mblock))
-            {
-              auto v = acb->validate_admin_keys(this->doughnut());
-              if (!v)
-                throw ValidationFailed(v.reason());
-            }
           }
           auto vr = previous->validate(this->doughnut(), block);
           if (!vr)
