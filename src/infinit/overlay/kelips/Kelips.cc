@@ -231,8 +231,7 @@ namespace infinit
 
       static
       void
-      merge_peerlocations(std::vector<NodeLocation>& dst,
-                          std::vector<NodeLocation>const& src)
+      merge_peerlocations(NodeLocations& dst, NodeLocations const& src)
       {
         for (auto const& r: src)
         {
@@ -538,21 +537,22 @@ namespace infinit
         };
         REGISTER(Gossip, "gossip");
 
-        void result_out(elle::serialization::Serializer& s,
-                        std::vector<std::vector<PeerLocation>> const& results)
+        static
+        void
+        result_out(elle::serialization::Serializer& s,
+                   std::vector<NodeLocations> const& results)
         {
-          // index peerlocations
-          std::vector<PeerLocation> locs;
+          NodeLocations locs;
           std::unordered_map<Address, int> loc_indexes;
           for (auto const& r: results)
           {
-            for (auto const&pl: r)
+            for (auto const& loc: r)
             {
-              auto it = loc_indexes.find(pl.first);
+              auto it = loc_indexes.find(loc.id());
               if (it == loc_indexes.end())
               {
-                locs.push_back(pl);
-                loc_indexes.insert(std::make_pair(pl.first, locs.size() - 1));
+                locs.push_back(loc);
+                loc_indexes.insert(std::make_pair(loc.id(), locs.size() - 1));
               }
             }
           }
@@ -562,9 +562,9 @@ namespace infinit
           for (auto const& r: results)
           {
             std::vector<int> o;
-            for (auto const& pl: r)
+            for (auto const& loc: r)
             {
-              auto it = loc_indexes.find(pl.first);
+              auto it = loc_indexes.find(loc.id());
               ELLE_ASSERT(it != loc_indexes.end());
               o.push_back(it->second);
             }
@@ -583,11 +583,13 @@ namespace infinit
           s.serialize("result_endpoints", locs);
           s.serialize("result_indexes", output);
         }
+
+        static
         void
         result_in(elle::serialization::Serializer& s,
-                  std::vector<std::vector<PeerLocation>> & results)
+                  std::vector<NodeLocations> & results)
         {
-          std::vector<PeerLocation> locs;
+          NodeLocations locs;
           std::vector<std::vector<int>> input;
           s.serialize("result_endpoints", locs);
           s.serialize("result_indexes", input);
@@ -600,14 +602,16 @@ namespace infinit
             }
             else
             {
-              std::vector<PeerLocation> r;
+              NodeLocations r;
               for (auto i: o)
                 r.push_back(locs.at(i));
               results.push_back(r);
             }
           }
         }
-        struct MultiGetFileRequest: public Packet
+
+        struct MultiGetFileRequest
+          : public Packet
         {
           MultiGetFileRequest()
           {}
@@ -645,7 +649,7 @@ namespace infinit
           int ttl;
           int count;
           std::vector<Address> fileAddresses;
-          std::vector<std::vector<NodeLocation>> results;
+          std::vector<NodeLocations> results;
         };
         REGISTER(MultiGetFileRequest, "mget");
 
@@ -685,7 +689,7 @@ namespace infinit
           Address origin;
           std::vector<Address> fileAddresses;
           int ttl;
-          std::vector<std::vector<NodeLocation>> results;
+          std::vector<NodeLocations> results;
         };
         REGISTER(MultiGetFileReply, "mgetReply");
 
@@ -724,7 +728,7 @@ namespace infinit
           /// number of results we want
           int count;
           /// partial result
-          std::vector<NodeLocation> result;
+          NodeLocations result;
           /// Request is for a node and not a file
           bool query_node;
         };
@@ -757,7 +761,7 @@ namespace infinit
           Address origin;
           Address fileAddress;
           int ttl;
-          std::vector<NodeLocation> result;
+          NodeLocations result;
         };
         REGISTER(GetFileReply, "getReply");
 
@@ -781,7 +785,7 @@ namespace infinit
 
           // Nodes already having the block go in GetFileRequest::result,
           // insert_result is for new peers accepting it
-          std::vector<NodeLocation> insert_result;
+          NodeLocations insert_result;
           /// insert when this reaches 0
           int insert_ttl;
         };
@@ -815,8 +819,8 @@ namespace infinit
           Address origin;
           Address fileAddress;
           int ttl;
-          std::vector<NodeLocation> results;
-          std::vector<NodeLocation> insert_results;
+          NodeLocations results;
+          NodeLocations insert_results;
         };
         REGISTER(PutFileReply, "putReply");
 
@@ -825,9 +829,9 @@ namespace infinit
 
       struct PendingRequest
       {
-        std::vector<NodeLocation> result;
-        std::vector<NodeLocation> insert_result;
-        std::vector<std::vector<NodeLocation>> multi_result;
+        NodeLocations result;
+        NodeLocations insert_result;
+        std::vector<NodeLocations> multi_result;
         reactor::Barrier barrier;
         Time startTime;
       };
@@ -2572,7 +2576,7 @@ namespace infinit
         _pending_requests.erase(it);
       }
 
-      static bool in_peerlocation(std::vector<NodeLocation> const& pl,
+      static bool in_peerlocation(NodeLocations const& pl,
                                   Address addr)
       {
         return std::find_if(pl.begin(), pl.end(),
@@ -2696,7 +2700,7 @@ namespace infinit
       {
         if (op == infinit::overlay::OP_INSERT)
         {
-          std::vector<NodeLocation> res = kelipsPut(file, n);
+          NodeLocations res = kelipsPut(file, n);
           for (auto r: res)
             yield(r);
         }
@@ -2918,7 +2922,7 @@ namespace infinit
         return f();
       }
 
-      std::vector<NodeLocation>
+      NodeLocations
       Node::kelipsPut(Address file, int n)
       {
         BENCH("kelipsPut");
@@ -2935,8 +2939,8 @@ namespace infinit
         p.count = n;
         // If there is only two nodes, inserting is deterministic without the rand
         p.insert_ttl = _config.query_put_insert_ttl + (rand()%2);
-        std::vector<NodeLocation> results;
-        std::vector<NodeLocation> insert_results;
+        NodeLocations results;
+        NodeLocations insert_results;
         for (int i = 0; i < _config.query_put_retries; ++i)
         {
           packet::PutFileRequest req = p;
@@ -3773,7 +3777,7 @@ namespace infinit
             {
               Address addr = to_scan.back();
               to_scan.pop_back();
-              std::vector<NodeLocation> res;
+              NodeLocations res;
               kelipsGet(addr, factor, false, 3, false, false, [&](NodeLocation pl) {
                   res.push_back(pl);
               });
