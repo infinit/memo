@@ -3281,50 +3281,10 @@ namespace infinit
       Overlay::WeakMember
       Node::make_peer(NodeLocation hosts)
       {
-        BENCH("make_peer");
-        static bool disable_cache = getenv("INFINIT_DISABLE_PEER_CACHE");
-        static int cache_count = std::stoi(elle::os::getenv("INFINIT_PEER_CACHE_DUP", "1"));
-        ELLE_TRACE("connecting to %f", hosts);
-        if (hosts.id() == _self || hosts.id() == Address::null)
-        {
-          ELLE_TRACE("target is local");
-          return this->local();
-        }
-        for (auto const& ep: hosts.endpoints())
-        {
-          for (auto const& l: _local_endpoints)
-            if (ep == l.first)
-            {
-              ELLE_TRACE("target is local");
-              return this->local();
-            }
-        }
-        if (!disable_cache)
-        {
-          auto it = this->_peer_cache.find(hosts.id());
-          if (it != _peer_cache.end() && signed(it->second.size()) >= cache_count)
-            return it->second[rand() % it->second.size()];
-        }
-        try
-        {
-          auto res =
-            std::make_shared<model::doughnut::consensus::Paxos::RemotePeer>(
-              elle::unconst(*this->doughnut()),
-              hosts.id(),
-              hosts.endpoints(),
-              elle::unconst(this)->_remotes_server,
-              model::EndpointsRefetcher(
-                std::bind(&Node::_refetch_endpoints, this, hosts.id())),
-              this->_config.rpc_protocol);
-          auto weak_res = Overlay::WeakMember::own(std::move(res));
-          if (!disable_cache)
-            this->_peer_cache[hosts.id()].push_back(weak_res);
-          return weak_res;
-        }
-        catch (elle::Error const& e)
-        {
-          elle::err("failed to connect to %f", hosts);
-        }
+        return this->doughnut()->dock().make_peer(
+          hosts,
+          model::EndpointsRefetcher(
+            std::bind(&Node::_refetch_endpoints, this, hosts.id())));
       }
 
       boost::optional<model::Endpoints>

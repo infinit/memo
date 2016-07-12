@@ -11,6 +11,7 @@
 
 # include <infinit/model/Model.hh>
 # include <infinit/model/doughnut/Consensus.hh>
+# include <infinit/model/doughnut/Dock.hh>
 # include <infinit/model/doughnut/Passport.hh>
 # include <infinit/overlay/Overlay.hh>
 
@@ -99,6 +100,7 @@ namespace infinit
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, user_init)
         ELLE_ATTRIBUTE(
           elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
+        ELLE_ATTRIBUTE_RX(Dock, dock);
 
       protected:
         virtual

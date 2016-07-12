@@ -14,6 +14,7 @@
 
 #include <reactor/Scope.hh>
 #include <reactor/exception.hh>
+#include <reactor/network/utp-server.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
@@ -68,6 +69,8 @@ namespace infinit
             : nullptr)
         , _overlay(overlay_builder(*this, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
+        // FIXME: move protocol configuration to doughnut
+        , _dock(*this, Protocol::all)
       {
         if (this->_local)
           this->_local->initialize();
