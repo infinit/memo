@@ -50,7 +50,6 @@ namespace infinit
         break;
     }
     return res;
-    auto stdin_stream = elle::IOStream(input.istreambuf());
   #endif
   }
 }
