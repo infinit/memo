@@ -1340,6 +1340,12 @@ DockerVolumePlugin::install(bool tcp,
       res += "]}";
       return res;
     });
+   _server->register_route("/VolumeDriver.Capabilities", reactor::http::Method::POST,
+     [this] ROUTE_SIG {
+       return "{}";
+   });
+}
+
 COMMAND(volume_list)
 {
   std::cout << daemon_command("{\"operation\": \"volume-list\"}");
