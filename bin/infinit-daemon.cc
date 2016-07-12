@@ -167,6 +167,19 @@ struct Mount
   infinit::MountOptions options;
 };
 
+struct MountInfo
+{
+  std::string name;
+  bool live;
+  boost::optional<std::string> mountpoint;
+  void serialize(elle::serialization::Serializer& s)
+  {
+    s.serialize("name", name);
+    s.serialize("live", live);
+    s.serialize("mountpoint", mountpoint);
+  }
+};
+
 class MountManager
 {
 public:
@@ -190,6 +203,8 @@ public:
   mountpoint(std::string const& name, bool ignore_subst=false);
   std::vector<QName>
   list();
+  std::vector<MountInfo>
+  status();
   void
   create_volume(std::string const& name,
                 elle::json::Object const& args);
@@ -426,6 +441,21 @@ MountManager::status(std::string const& name,
   {
     reply.serialize("mountpoint", mountpoint(name));
   }
+}
+
+std::vector<MountInfo>
+MountManager::status()
+{
+  std::vector<MountInfo> res;
+  for (auto const& m: _mounts)
+  {
+    MountInfo mount;
+    mount.live = !kill(m.second.process->pid(), 0);
+    mount.name = m.first;
+    mount.mountpoint = m.second.options.mountpoint;
+    res.push_back(mount);
+  }
+  return res;
 }
 
 static
@@ -847,6 +877,15 @@ process_command(elle::json::Object query, MountManager& manager,
       else if (op == "stop")
       {
         throw elle::Exit(0);
+      }
+      else if (op == "volume-list")
+      {
+        auto res = manager.list();
+        response.serialize("volumes", res);
+      }
+      else if (op == "volume-status")
+      {
+        response.serialize("volumes", manager.status());
       }
       else if (op == "volume-start")
       {
@@ -1301,6 +1340,14 @@ DockerVolumePlugin::install(bool tcp,
       res += "]}";
       return res;
     });
+COMMAND(volume_list)
+{
+  std::cout << daemon_command("{\"operation\": \"volume-list\"}");
+}
+
+COMMAND(volume_status)
+{
+  std::cout << daemon_command("{\"operation\": \"volume-status\"}");
 }
 
 COMMAND(volume_start)
@@ -1399,6 +1446,14 @@ main(int argc, char** argv)
     {
       "volume-restart", "Restart a volume", &volume_restart, "--name VOLUME",
       {{ "name,n", value<std::string>(), "volume name"}},
+    },
+    {
+      "volume-list", "List available volumes", &volume_list, "--name VOLUME",
+      {},
+    },
+    {
+      "volume-status", "List running volumes", &volume_status, "--name VOLUME",
+      {},
     },
     {
       "enable-storage",
