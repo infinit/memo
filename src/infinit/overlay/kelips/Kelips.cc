@@ -1047,7 +1047,7 @@ namespace infinit
             location.id(),
             location.endpoints(),
             elle::unconst(this)->_remotes_server,
-            model::doughnut::Remote::Refetcher(
+            model::EndpointsRefetcher(
               std::bind(&Node::_refetch_endpoints, this, location.id())),
             this->_config.rpc_protocol);
           peer.connect(5_sec);
@@ -3313,7 +3313,7 @@ namespace infinit
               hosts.id(),
               hosts.endpoints(),
               elle::unconst(this)->_remotes_server,
-              model::doughnut::Remote::Refetcher(
+              model::EndpointsRefetcher(
                 std::bind(&Node::_refetch_endpoints, this, hosts.id())),
               this->_config.rpc_protocol);
           auto weak_res = Overlay::WeakMember::own(std::move(res));

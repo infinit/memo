@@ -35,7 +35,6 @@ namespace infinit
       public:
         typedef Remote Self;
         typedef Peer Super;
-        typedef std::function<boost::optional<Endpoints> ()> Refetcher;
 
       /*-------------.
       | Construction |
@@ -45,7 +44,7 @@ namespace infinit
                Address id,
                Endpoints endpoints,
                boost::optional<reactor::network::UTPServer&> server,
-               boost::optional<Refetcher> const& refetch = {},
+               boost::optional<EndpointsRefetcher> const& refetch = {},
                Protocol protocol = Protocol::all);
         virtual
         ~Remote();
@@ -91,7 +90,7 @@ namespace infinit
         ELLE_ATTRIBUTE(Protocol, protocol);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
         ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
-        ELLE_ATTRIBUTE_R(Refetcher, refetch_endpoints);
+        ELLE_ATTRIBUTE_R(EndpointsRefetcher, refetch_endpoints);
         ELLE_ATTRIBUTE_R(bool, fast_fail);
       /*-------.
       | Blocks |

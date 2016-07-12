@@ -31,7 +31,7 @@ namespace infinit
                      Address id,
                      Endpoints endpoints,
                      boost::optional<reactor::network::UTPServer&> server,
-                     boost::optional<Refetcher> const& refetch,
+                     boost::optional<EndpointsRefetcher> const& refetch,
                      Protocol protocol)
         : Super(dht, std::move(id))
         , _socket(nullptr)
