@@ -26,7 +26,7 @@ namespace infinit
   boost::filesystem::path
   home()
   {
-    static auto const infinit_home = elle::os::getenv("INFINIT_HOME", "");
+    auto const infinit_home = elle::os::getenv("INFINIT_HOME", "");
     return infinit_home.empty() ? elle::system::home_directory() : infinit_home;
   }
 
@@ -77,7 +77,7 @@ namespace infinit
   boost::filesystem::path
   tmpdir()
   {
-    static auto const res = elle::os::getenv("TMPDIR", "/tmp");
+    auto const res = elle::os::getenv("TMPDIR", "/tmp");
     return res;
   }
 
