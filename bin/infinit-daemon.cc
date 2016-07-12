@@ -818,12 +818,22 @@ daemon_command(std::string const& s, bool hold)
     "main",
     [&]
     {
-      reactor::network::UnixDomainSocket sock(daemon_sock_path());
+      // try local then global
+      std::unique_ptr<reactor::network::UnixDomainSocket> sock;
+      try
+      {
+        sock.reset(new reactor::network::UnixDomainSocket(daemon_sock_path()));
+      }
+      catch(elle::Error const&)
+      {
+        sock.reset(new  reactor::network::UnixDomainSocket(
+          boost::filesystem::path("/tmp/infinit-root/daemon.sock")));
+      }
       std::string cmd = s + "\n";
       ELLE_TRACE("writing query: %s", s);
-      sock.write(elle::ConstWeakBuffer(cmd.data(), cmd.size()));
+      sock->write(elle::ConstWeakBuffer(cmd.data(), cmd.size()));
       ELLE_TRACE("reading result");
-      reply = sock.read_until("\n").string();
+      reply = sock->read_until("\n").string();
       ELLE_TRACE("ok: '%s'", reply);
       if (hold)
         reactor::sleep();
