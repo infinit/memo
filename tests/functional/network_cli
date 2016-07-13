@@ -133,7 +133,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   bob.run(['infinit-network', '--list', '--as', 'bob'])
   with open('%s/bob/bob/bob-linked' % bob.linked_networks_path) as f:
     test = f.read()
-    assertEq(test, bob_n)
+    assertEq(json.loads(test), json.loads(bob_n))
 
 # Update network.
 with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
