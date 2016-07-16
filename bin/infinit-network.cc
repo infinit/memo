@@ -22,6 +22,7 @@ infinit::Infinit ifnt;
 
 #include <endpoint_file.hh>
 
+
 static
 std::unique_ptr<infinit::storage::StorageConfig>
 storage_configuration(boost::program_options::variables_map const& args)
@@ -197,8 +198,7 @@ COMMAND(create)
       version,
       admin_keys);
   {
-    infinit::Network network(ifnt.qualified_name(name, owner),
-                             std::move(dht));
+    infinit::Network network(ifnt.qualified_name(name, owner), std::move(dht));
     if (args.count("output"))
     {
       auto output = get_output(args);
@@ -206,14 +206,14 @@ COMMAND(create)
     }
     else
     {
-      ifnt.network_save(network);
+      ifnt.network_save(owner, network);
       report_created("network", network.name);
     }
+    infinit::NetworkDescriptor desc(std::move(network));
+    if (!args.count("output"))
+      ifnt.network_save(desc);
     if (aliased_flag(args, {"push-network", "push"}))
-    {
-      infinit::NetworkDescriptor desc(std::move(network));
       beyond_push("network", desc.name, desc, owner);
-    }
   }
 }
 static std::pair<infinit::cryptography::rsa::PublicKey, bool>
@@ -253,6 +253,7 @@ COMMAND(update)
   auto name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
   auto network = ifnt.network_get(name, owner);
+  network.ensure_allowed(owner, "update");
   auto& dht = *network.dht();
   if (auto port = optional<int>(args, "port"))
     dht.port = port.get();
@@ -296,7 +297,7 @@ COMMAND(update)
   }
   else
   {
-    ifnt.network_save(network, true);
+    ifnt.network_save(owner, network, true);
     report_updated("network", network.name);
   }
   if (aliased_flag(args, {"push-network", "push"}))
@@ -347,15 +348,18 @@ COMMAND(fetch)
             d->port,
             desc.version,
             desc.admin_keys));
-        ifnt.network_save(updated_network, true);
+        ifnt.network_save(self, updated_network, true);
       }
       else
       {
+        // The network was present but not linked, just overwrite it with the
+        // new descriptor.
         ifnt.network_save(desc, true);
       }
     }
     catch (MissingLocalResource const& e)
     {
+      // The network wasn't present at all.
       ifnt.network_save(desc);
     }
   };
@@ -403,18 +407,7 @@ COMMAND(link_)
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
   auto storage = storage_configuration(args);
-  auto desc = [&] () -> infinit::NetworkDescriptor
-  {
-    try
-    {
-      return ifnt.network_descriptor_get(network_name, self, false);
-    }
-    catch (elle::serialization::Error const&)
-    {
-      throw elle::Error(elle::sprintf(
-        "this device has already been linked to %s", network_name));
-    }
-  }();
+  auto desc = ifnt.network_descriptor_get(network_name, self);
   auto passport = [&] () -> infinit::Passport
   {
     if (self.public_key == desc.owner)
@@ -460,41 +453,50 @@ COMMAND(link_)
   auto output = has_output ? get_output(args) : nullptr;
   if (output)
   {
-    infinit::save(*output, network);
+    infinit::save(*output, network, false);
   }
   else
   {
-    ifnt.network_save(network, true);
+    ifnt.network_save(self, network, true);
     report_action("linked", "device to network", network.name);
   }
 }
 
 COMMAND(list)
 {
+  auto self = self_user(ifnt, args);
   if (script_mode)
   {
     elle::json::Array l;
-    for (auto const& network: ifnt.networks_get())
+    for (auto const& network: ifnt.networks_get(self))
     {
       elle::json::Object o;
       o["name"] = network.name;
-      o["linked"] = bool(network.model);
+      o["linked"] = bool(network.model) && network.user_linked(self);
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
   }
   else
   {
-    for (auto const& network: ifnt.networks_get())
+    for (auto const& network: ifnt.networks_get(self))
     {
       std::cout << network.name;
-      if (network.model)
+      if (network.model && network.user_linked(self))
         std::cout << ": linked";
       else
         std::cout << ": not linked";
       std::cout << std::endl;
     }
   }
+}
+
+COMMAND(unlink_)
+{
+  auto self = self_user(ifnt, args);
+  auto network_name = mandatory(args, "name", "network name");
+  auto network = ifnt.network_get(network_name, self, true);
+  ifnt.network_unlink(network.name, self, true);
 }
 
 COMMAND(push)
@@ -518,18 +520,29 @@ COMMAND(pull)
   beyond_delete("network", network_name, owner, false, flag(args, "purge"));
 }
 
+
 COMMAND(delete_)
 {
   auto name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
-  auto network_name = ifnt.qualified_name(name, owner);
-  auto path = ifnt._network_path(network_name);
-  auto network = ifnt.network_get(network_name, owner, false);
+  auto network = ifnt.network_get(name, owner, false);
   bool purge = flag(args, "purge");
+  bool unlink = flag(args, "unlink");
   bool pull = flag(args, "pull");
+  auto linked_users = ifnt.network_linked_users(network.name);
+  if (linked_users.size() && !unlink)
+  {
+    std::vector<std::string> user_names;
+    for (auto const& u: linked_users)
+      user_names.emplace_back(u.name);
+    throw elle::Error(
+        elle::sprintf("Network is still linked with this device by %s. "
+                      "Please unlink it first or add the --unlink flag",
+                      user_names));
+  }
   if (purge)
   {
-    auto volumes = ifnt.volumes_for_network(network_name);
+    auto volumes = ifnt.volumes_for_network(network.name);
     std::vector<std::string> drives;
     for (auto const& volume: volumes)
     {
@@ -548,25 +561,20 @@ COMMAND(delete_)
       if (boost::filesystem::remove(vol_path))
         report_action("deleted", "volume", volume, std::string("locally"));
     }
-    for (auto const& user: ifnt.user_passports_for_network(network_name))
+    for (auto const& user: ifnt.user_passports_for_network(network.name))
     {
-      auto passport_path = ifnt._passport_path(network_name, user);
+      auto passport_path = ifnt._passport_path(network.name, user);
       if (boost::filesystem::remove(passport_path))
       {
         report_action("deleted", "passport",
-                      elle::sprintf("%s: %s", network_name, user),
+                      elle::sprintf("%s: %s", network.name, user),
                       std::string("locally"));
       }
     }
   }
   if (pull)
-    beyond_delete("network", network_name, owner, true, purge);
-  boost::filesystem::remove_all(network.cache_dir());
-  if (boost::filesystem::remove(path))
-    report_action("deleted", "network", network_name, std::string("locally"));
-  else
-    throw elle::Error(
-      elle::sprintf("File for network could not be deleted: %s", path));
+    beyond_delete("network", network.name, owner, true, purge);
+  ifnt.network_delete(name, owner, unlink, true);
 }
 
 COMMAND(run)
@@ -574,6 +582,7 @@ COMMAND(run)
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
+  network.ensure_allowed(self, "run");
   infinit::overlay::NodeEndpoints eps;
   if (args.count("peer"))
   {
@@ -605,6 +614,7 @@ COMMAND(run)
   }
   auto port = optional<int>(args, option_port);
   auto dht = network.run(
+    self,
     eps, false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, compatibility_version, port);
@@ -814,7 +824,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "created network name" },
         { "storage,S", value<std::vector<std::string>>()->multitoken(),
-          "storage to contribute (optional)" },
+          "storage to contribute (optional, data striped over multiple)" },
         { "port", value<int>(), "port to listen on (default: random)" },
         { "replication-factor,r", value<int>(),
           "data replication factor (default: 1)" },
@@ -897,8 +907,22 @@ main(int argc, char** argv)
       {},
       // Hidden options.
       {
-        { "storage", value<std::vector<std::string>>()->multitoken(),
+        { "storage,S", value<std::vector<std::string>>()->multitoken(),
           "storage to contribute (optional)" },
+        option_output("network"),
+      },
+    },
+    {
+      "unlink",
+      "Unlink this device from a network",
+      &unlink_,
+      "--name NETWORK",
+      {
+        { "name,n", value<std::string>(), "network to unlink from" },
+      },
+      {},
+      // Hidden options.
+      {
         option_output("network"),
       },
     },
@@ -927,6 +951,7 @@ main(int argc, char** argv)
         { "pull", bool_switch(),
           elle::sprintf("pull the network if it is on %s", beyond(true)) },
         { "purge", bool_switch(), "remove objects that depend on the network" },
+        { "unlink", bool_switch(), "automatically unlink network if linked" },
       },
     },
     {

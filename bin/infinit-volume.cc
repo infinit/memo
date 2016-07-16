@@ -364,6 +364,7 @@ COMMAND(run)
       fuse_options.push_back(opt);
   }
   auto network = ifnt.network_get(volume.network, self);
+  network.ensure_allowed(self, "run", "volume");
   ELLE_TRACE("run network");
   bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
@@ -401,6 +402,7 @@ COMMAND(run)
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
   auto model = network.run(
+    self,
     eps, true,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, compatibility_version, port);
