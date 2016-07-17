@@ -360,6 +360,7 @@ COMMAND(run)
       throw CommandLineError("FUSE options require the volume to be mounted");
   }
   auto network = ifnt.network_get(volume.network, self);
+  network.ensure_allowed(self, "run", "volume");
   ELLE_TRACE("run network");
 #ifndef INFINIT_WINDOWS
   if (flag(args, "daemon"))
@@ -386,6 +387,7 @@ COMMAND(run)
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
   auto model = network.run(
+    self,
     eps, true,
     mo.cache && mo.cache.get(), mo.cache_ram_size, mo.cache_ram_ttl, mo.cache_ram_invalidation,
     mo.async && mo.async.get(), mo.cache_disk_size, compatibility_version, port);

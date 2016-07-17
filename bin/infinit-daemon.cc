@@ -102,11 +102,23 @@ struct SystemUser
   }
 };
 
+static
+std::pair<std::string, infinit::User>
+split(std::string const& name)
+{
+  auto p = name.find_first_of('/');
+  if (p == name.npos)
+    elle::err("Malformed qualified name");
+  return std::make_pair(name.substr(p+1),
+                        ifnt.user_get(name.substr(0, p))
+                        );
+}
 
 
 void link_network(std::string const& name)
 {
-  auto desc = ifnt.network_descriptor_get(name, {}, false);
+  auto cname = split(name);
+  auto desc = ifnt.network_descriptor_get(cname.first, cname.second, false);
   auto users = ifnt.users_get();
   boost::optional<infinit::Passport> passport;
   boost::optional<infinit::User> user;
@@ -167,7 +179,7 @@ void link_network(std::string const& name)
       boost::optional<int>(),
       desc.version,
       desc.admin_keys));
-  ifnt.network_save(network, true);
+  ifnt.network_save(std::move(network), true);
 }
 
 void acquire_network(std::string const& name)
@@ -176,7 +188,8 @@ void acquire_network(std::string const& name)
   ifnt.network_save(desc);
   try
   {
-    auto net = ifnt.network_get(name, {}, true);
+    auto nname = split(name);
+    auto net = ifnt.network_get(nname.first, nname.second, true);
   }
   catch (elle::Error const&)
   {
@@ -190,7 +203,8 @@ void acquire_volume(std::string const& name)
   ifnt.volume_save(desc, true);
   try
   {
-    auto net = ifnt.network_get(desc.network, {}, true);
+    auto nname = split(desc.network);
+    auto net = ifnt.network_get(nname.first, nname.second, true);
   }
   catch (MissingLocalResource const&)
   {
@@ -600,7 +614,7 @@ MountManager::update_network(infinit::Network& network,
   }
   if (updated)
   {
-    ifnt.network_save(network, true);
+    ifnt.network_save(std::move(network), true);
   }
 }
 
@@ -671,7 +685,7 @@ MountManager::create_network(elle::json::Object const& options,
       infinit::model::doughnut::AdminKeys());
   infinit::Network network(ifnt.qualified_name(*netname, owner),
                            std::move(dht));
-  ifnt.network_save(network);
+  ifnt.network_save(std::move(network));
   report_created("network", *netname);
   infinit::NetworkDescriptor desc(ifnt.network_get(*netname, owner, true));
   try

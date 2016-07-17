@@ -18,6 +18,8 @@
 - Prevent changing network admin permissions.
 - Push endpoints to beyond before fetching them, to ensure nodes
   always see each other.
+- Reduce Kelips packet size, improving network banddith
+  performances.
 
 ### Fixed
 
@@ -28,6 +30,7 @@
   `rmdir` in asynchronous mode.
 - Fix swapped `r` and `w` flags in permissions.
 - Fix error when deserializing mutable blocks with `infinit-block`.
+- Linking a network with several users will now behave correcly.
 
 ### Removed
 

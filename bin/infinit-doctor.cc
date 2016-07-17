@@ -43,7 +43,8 @@ namespace reporting
   section(std::ostream& out,
           std::string name)
   {
-    out << "= " << name << " =" << std::endl;
+    boost::algorithm::to_upper(name);
+    out << std::endl <<  "[1m" << name << ":" << "[0m" << std::endl;
   }
 
   template <typename C, typename ... Args>
@@ -178,8 +179,16 @@ namespace reporting
       if (this->show(verbose))
         this->_print(out << "* ", verbose);
       if (this->show(verbose) && this->reason)
-        out << " (" << *this->reason << ")";
-      if (rc && this->show(verbose))
+      {
+        out << std::endl;
+        out << "  - ";
+        if (this->warning())
+          warn(out, "Warning");
+        else
+          faulty(out, "Error");
+        out << ": " << *this->reason;
+      }
+      if ((rc && this->show(verbose)) || this->reason)
         out << std::endl;
       return out;
     }
@@ -419,7 +428,7 @@ namespace reporting
     print(std::ostream& out, bool verbose) const
     {
       if (!this->sane() || verbose)
-        section(out, "Integrity");
+        section(out, "Infinit integrity");
       reporting::print(out, "Storage resources", storage_resources, verbose);
       reporting::print(out, "Networks", networks, verbose);
       reporting::print(out, "Volumes", volumes, verbose);
@@ -523,7 +532,7 @@ namespace reporting
         {
           out << "Disk space left:";
           if (!this->sane() || this->warning())
-            (this->warning() ? warn : faulty)(out << std::endl << "  ", "low");
+            (this->warning() ? warn : faulty)(out << std::endl << "  - ", "low");
           elle::fprintf(out, " %s available (%s%%)",
                         this->available,
                         100 * this->available / (double) this->capacity);
@@ -640,7 +649,7 @@ namespace reporting
     print(std::ostream& out, bool verbose) const
     {
       if (!this->sane() || this->warning() || verbose)
-        section(out, "Sanity");
+        section(out, "System sanity");
       user.print(out, verbose);
       space_left.print(out, verbose);
       environment.print(out, verbose, false);
@@ -841,8 +850,6 @@ namespace reporting
           out << "NAT: ";
           if (this->sane())
             out << "OK (" << (this->cone ? "CONE" : "NOT CONE") << ")";
-          else
-            faulty(out << std::endl << "    ", elle::sprintf("%s", result(false)));
         }
       }
 
@@ -955,7 +962,8 @@ namespace reporting
             out << "  - external IP address: " << this->external;
           else
             out << "  - no external IP address";
-          out << std::endl;
+          if (redirections.size() > 0)
+            out << std::endl;
           for (auto const& redirection: redirections)
           {
             out << "    - ";
@@ -997,7 +1005,7 @@ namespace reporting
     print(std::ostream& out, bool verbose) const
     {
       if (!this->sane() | verbose)
-        section(out, "Networking");
+        section(out, "Networking capabilities");
       this->beyond.print(out, verbose);
       this->interfaces.print(out, verbose, false);
       this->nat.print(out, verbose);
@@ -1239,7 +1247,9 @@ _networking(boost::program_options::variables_map const& args,
       results.upnp.available = false;
       upnp->initialize();
       results.upnp.available = upnp->available();
+      results.upnp.warning(true);
       results.upnp.external = upnp->external_ip();
+      results.upnp.warning(false);
       typedef reporting::NetworkingResults::UPNPResult::RedirectionResult::Address
         Address;
       auto redirect = [&] (std::string type,
@@ -1448,7 +1458,15 @@ _integrity(boost::program_options::variables_map const& args,
   auto storage_resources = parse(ifnt.storages_get());
   auto drives = parse(ifnt.drives_get());
   auto volumes = parse(ifnt.volumes_get());
-  auto networks = parse(ifnt.networks_get());
+  boost::optional<infinit::User> user;
+  try
+  {
+    user = self_user(ifnt, args);
+  }
+  catch (...)
+  {
+  }
+  auto networks = parse(ifnt.networks_get(user));
   ELLE_TRACE("verify storage resources")
     for (auto& elem: storage_resources)
     {
@@ -1574,13 +1592,18 @@ void
 report_error(std::ostream& out, bool sane, bool warning = false)
 {
   if (!sane)
-    throw elle::Error("Please refer to each individual error message");
+    throw elle::Error("Please refer to each individual error message. "
+                      "If you cannot figure out how to fix your issues, "
+                      "please visit https://infinit.sh/faq.");
   else if (!script_mode)
   {
     if (warning)
-      out << "If you encounter any issues, try fixing the problems indicated by the warning messages";
+    {
+      out << "Doctor detected minor issues but nothing that should prevent ";
+      out << "Infinit from working.";
+    }
     else
-      out << "All good!";
+      out << "All good, everything should work.";
     out  << std::endl;
   }
 }

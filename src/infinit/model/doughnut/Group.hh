@@ -104,4 +104,10 @@ namespace infinit
   }
 }
 
+namespace std
+{
+  std::ostream&
+  operator << (std::ostream& out,
+               infinit::model::doughnut::GroupConflictResolver::Action action);
+}
 #endif
