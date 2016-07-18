@@ -1132,8 +1132,9 @@ namespace infinit
       if (boost::filesystem::exists(old_dir / "cache") &&
           !boost::filesystem::is_empty(old_dir / "cache"))
       {
-        ELLE_WARN("old cache location (%s/cache) is being emptied in favor of "
-                  "the new cache location (%s/cache)", old_dir, new_dir);
+        ELLE_WARN("old cache location (\"%s/cache\") is being emptied in favor "
+                  "of the new cache location (\"%s/cache\")",
+                  old_dir.string(), new_dir.string());
         boost::filesystem::remove_all(old_dir / "cache");
       }
       return new_dir;
