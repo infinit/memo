@@ -34,6 +34,15 @@ ELLE_LOG_COMPONENT("infinit-daemon");
 
 infinit::Infinit ifnt;
 
+static
+int
+checked_call(int res, std::string const& syscall)
+{
+  if (res == -1)
+    elle::err("unable to %s: %s", syscall, strerror(errno));
+  return res;
+}
+
 struct SystemUser
 {
   SystemUser(unsigned int uid, unsigned int gid, std::string name, std::string home)
@@ -81,8 +90,8 @@ struct SystemUser
       elle::os::unsetenv("INFINIT_DATA_HOME");
       prev_euid = geteuid();
       prev_egid = getegid();
-      setegid(su.gid);
-      seteuid(su.uid);
+      checked_call(setegid(su.gid), "set group id");
+      checked_call(seteuid(su.uid), "set user id");
     }
     Lock(Lock const& b) = delete;
     Lock(Lock && b) = default;
@@ -94,8 +103,8 @@ struct SystemUser
         elle::os::setenv("INFINIT_HOME", prev_home, 1);
       if (!prev_data_home.empty())
         elle::os::setenv("INFINIT_DATA_HOME", prev_data_home, 1);
-      seteuid(prev_euid);
-      setegid(prev_egid);
+      checked_call(seteuid(prev_euid), "set group id");
+      checked_call(setegid(prev_egid), "set user id");
     }
     std::string prev_home, prev_data_home;
     int prev_euid, prev_egid;
