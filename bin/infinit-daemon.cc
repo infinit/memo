@@ -1152,7 +1152,7 @@ fill_manager_options(MountManager& manager,
   manager.log_level(loglevel);
   auto logpath = optional(args, "log-path");
   manager.log_path(logpath);
-  manager.default_user(self_user(ifnt, args).name);
+  manager.default_user(self_user_name(args));
   auto default_network = optional(args, "default-network");
   if (default_network)
     manager.default_network(*default_network);
