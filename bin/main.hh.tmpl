@@ -515,7 +515,8 @@ beyond_push(std::string const& where,
             T const& o,
             infinit::User const& self,
             bool report = true,
-            bool beyond_error = false); // FIXME: Remove when migration done.
+            bool beyond_error = false, // FIXME: Remove when migration done.
+            bool update = false);
 
 namespace infinit
 {
@@ -2527,7 +2528,8 @@ _beyond_push(reactor::http::Request& r,
              std::string const& type,
              std::string const& name,
              bool report = false,
-             bool beyonderror = false)
+             bool beyond_error = false,
+             bool update = false)
 {
   r.finalize();
   reactor::wait(r);
@@ -2538,8 +2540,10 @@ _beyond_push(reactor::http::Request& r,
   }
   else if (r.status() == reactor::http::StatusCode::OK)
   {
-    if (report)
-      report_action("Already pushed", type, name);
+    if (report && update)
+      report_action("updated", type, name, std::string("remotely"));
+    else
+      report_action("already pushed", type, name);
   }
   else if (r.status() == reactor::http::StatusCode::Conflict)
   {
@@ -2556,7 +2560,7 @@ _beyond_push(reactor::http::Request& r,
   }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
-    if (beyonderror)
+    if (beyond_error)
       read_error<BeyondError>(r, type, name);
     else
       read_error<MissingResource>(r, type, name);
@@ -2614,7 +2618,8 @@ beyond_push_data(std::string const& where,
                  std::string const& content_type,
                  infinit::User const& self,
                  bool report = true,
-                 bool beyond_error = false)
+                 bool beyond_error = false,
+                 bool update = false)
 {
   reactor::http::Request::Configuration c;
   c.header_add("Content-Type", content_type);
@@ -2626,7 +2631,7 @@ beyond_push_data(std::string const& where,
     elle::sprintf("%s/%s", beyond(), where),
     reactor::http::Method::PUT, std::move(c));
   r << object.string();
-  _beyond_push(r, type, name, report, beyond_error);
+  _beyond_push(r, type, name, report, beyond_error, update);
 }
 
 template <typename T>
@@ -2637,7 +2642,8 @@ beyond_push(std::string const& where,
             T const& o,
             infinit::User const& self,
             bool report,
-            bool beyond_error)
+            bool beyond_error,
+            bool update)
 {
   std::stringstream stream;
   elle::serialization::json::serialize(o, stream, false);
@@ -2645,16 +2651,22 @@ beyond_push(std::string const& where,
   ELLE_TRACE("pushing %s/%s with payload %s", type, name, payload_);
   elle::ConstWeakBuffer payload{payload_.data(), payload_.size()};
   beyond_push_data(
-    where, type, name, payload, "application/json", self, report, beyond_error);
+    where, type, name, payload, "application/json", self, report, beyond_error,
+    update);
 }
 
 template <typename T>
 void
-beyond_push(std::string const& type, std::string const& name, T const& o,
-  infinit::User const& self, bool report = true, bool beyond_error = false)
+beyond_push(std::string const& type,
+            std::string const& name,
+            T const& o,
+            infinit::User const& self,
+            bool report = true,
+            bool beyond_error = false,
+            bool update = false)
 {
   beyond_push(elle::sprintf("%ss/%s", type, name), type, name, o, self, report,
-      beyond_error);
+      beyond_error, update);
 }
 
 static
