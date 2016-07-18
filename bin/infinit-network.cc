@@ -1,3 +1,8 @@
+// http://opensource.apple.com/source/mDNSResponder/mDNSResponder-576.30.4/mDNSPosix/PosixDaemon.c
+#if __APPLE__
+# define daemon yes_we_know_that_daemon_is_deprecated_in_os_x_10_5_thankyou
+#endif
+
 #include <memory>
 
 #include <elle/log.hh>
@@ -22,6 +27,10 @@ infinit::Infinit ifnt;
 
 #include <endpoint_file.hh>
 
+#if __APPLE__
+# undef daemon
+extern int daemon(int, int);
+#endif
 
 static
 std::unique_ptr<infinit::storage::StorageConfig>
