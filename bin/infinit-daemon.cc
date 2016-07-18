@@ -805,8 +805,8 @@ MountManager::delete_volume(std::string const& name)
 class DockerVolumePlugin
 {
 public:
-  DockerVolumePlugin(MountManager& manager, infinit::User default_user,
-    SystemUser& user, reactor::Mutex& mutex);
+  DockerVolumePlugin(MountManager& manager,
+                     SystemUser& user, reactor::Mutex& mutex);
   ~DockerVolumePlugin();
   void install(bool tcp, int tcp_port,
                boost::filesystem::path socket_path,
@@ -815,7 +815,6 @@ public:
   std::string mount(std::string const& name);
 private:
   ELLE_ATTRIBUTE_R(MountManager&, manager);
-  ELLE_ATTRIBUTE_R(infinit::User, default_user);
   std::unique_ptr<reactor::network::HttpServer> _server;
   std::unordered_map<std::string, int> _mount_count;
   SystemUser& _user;
@@ -1208,8 +1207,9 @@ _run(boost::program_options::variables_map const& args, bool detach)
       with_default<std::string>(args, "docker-mount-substitute", "")));
     MountManager& root_manager = *managers[getuid()];
     fill_manager_options(root_manager, args);
-    docker = elle::make_unique<DockerVolumePlugin>(root_manager,
-      self_user(ifnt, args), system_user, mutex);
+    docker = elle::make_unique<DockerVolumePlugin>(
+      root_manager,
+       system_user, mutex);
     auto mount = optional<std::vector<std::string>>(args, "mount");
     if (mount)
       mounter = elle::make_unique<reactor::Thread>("mounter",
@@ -1338,11 +1338,9 @@ COMMAND(run)
 }
 
 DockerVolumePlugin::DockerVolumePlugin(MountManager& manager,
-                                       infinit::User default_user,
                                        SystemUser& user,
                                        reactor::Mutex& mutex)
   : _manager(manager)
-  , _default_user(std::move(default_user))
   , _user(user)
   , _mutex(mutex)
 {}
@@ -1451,8 +1449,7 @@ DockerVolumePlugin::install(bool tcp,
         auto p = name->find('@');
         if (p != std::string::npos)
           name = name->substr(0, p);
-        this->_manager.create_volume(
-          ifnt.qualified_name(name.get(), this->_default_user), opts);
+        this->_manager.create_volume(name.get(), opts);
       }
       catch (ResourceAlreadyFetched const&)
       { // this can happen, docker seems to be caching volume list:
@@ -1480,8 +1477,7 @@ DockerVolumePlugin::install(bool tcp,
         auto name = optional(json, "Name");
         if (!name)
           throw elle::Error("Missing 'Name' argument");
-        this->_manager.delete_volume(
-          ifnt.qualified_name(name.get(), this->_default_user));
+        this->_manager.delete_volume(name.get());
       }
       catch (elle::Error const& e)
       {
@@ -1497,7 +1493,7 @@ DockerVolumePlugin::install(bool tcp,
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       auto name = boost::any_cast<std::string>(json.at("Name"));
-      if (this->_manager.exists(ifnt.qualified_name(name, this->_default_user)))
+      if (this->_manager.exists(name))
         return "{\"Err\": \"\", \"Volume\": {\"Name\": \"" + name + "\" }}";
       else
         return "{\"Err\": \"No such mount\"}";
@@ -1508,7 +1504,6 @@ DockerVolumePlugin::install(bool tcp,
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       auto name = boost::any_cast<std::string>(json.at("Name"));
-      name = ifnt.qualified_name(name, this->_default_user);
       std::string mountpoint = mount(name);
       std::string res = "{\"Err\": \"\", \"Mountpoint\": \""
           + mountpoint +"\"}";
@@ -1521,7 +1516,6 @@ DockerVolumePlugin::install(bool tcp,
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       auto name = boost::any_cast<std::string>(json.at("Name"));
-      name = ifnt.qualified_name(name, this->_default_user);
       auto it = _mount_count.find(name);
       if (it == _mount_count.end())
         return "{\"Err\": \"No such mount\"}";
@@ -1539,7 +1533,6 @@ DockerVolumePlugin::install(bool tcp,
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       auto name = boost::any_cast<std::string>(json.at("Name"));
-      name = ifnt.qualified_name(name, this->_default_user);
       try
       {
         return "{\"Err\": \"\", \"Mountpoint\": \""
@@ -1557,8 +1550,7 @@ DockerVolumePlugin::install(bool tcp,
       auto lock = this->_user.enter(this->_mutex);
       std::string res("{\"Err\": \"\", \"Volumes\": [ ");
       for (auto const& n: this->_manager.list())
-        res += "{\"Name\": \"" +
-          n.unqualified(this->_default_user.name) + "\"},";
+        res += "{\"Name\": \"" + n  + "\"},";
       res = res.substr(0, res.size()-1);
       res += "]}";
       return res;
