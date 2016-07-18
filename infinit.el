@@ -6,7 +6,7 @@
    "elle/cryptography/sources"
    )
  "_build"
- "./drake -j 3 //build"
+ (concat "./drake -j " (int-to-string system-cores-logical) " //build")
  ""
  '()
 )
