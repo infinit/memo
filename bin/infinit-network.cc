@@ -640,24 +640,11 @@ COMMAND(run)
     if (auto endpoint_file = optional(args, option_endpoint_file))
       endpoints_to_file(dht->local()->server_endpoints(), endpoint_file.get());
   }
-  static const std::vector<int> signals = {SIGINT, SIGTERM
-#ifndef INFINIT_WINDOWS
-    ,SIGQUIT
-#endif
-  };
 #ifndef INFINIT_WINDOWS
   if (flag(args, "daemon"))
     if (daemon(0, 1))
       perror("daemon:");
 #endif
-  for (auto signal: signals)
-    reactor::scheduler().signal_handle(
-    signal,
-    [&]
-    {
-      ELLE_TRACE("terminating");
-      reactor::scheduler().terminate();
-    });
   auto run = [&]
     {
       if (fetch)

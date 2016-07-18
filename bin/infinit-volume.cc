@@ -392,22 +392,6 @@ COMMAND(run)
     if (daemon(0, 1))
       perror("daemon:");
 #endif
-  if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
-  {
-    static const std::vector<int> signals = {SIGINT, SIGTERM
-#ifndef INFINIT_WINDOWS
-    , SIGQUIT
-#endif
-    };
-    for (auto signal: signals)
-      reactor::scheduler().signal_handle(
-        signal,
-        [&]
-        {
-          ELLE_TRACE("terminating");
-          reactor::scheduler().terminate();
-        });
-  }
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);

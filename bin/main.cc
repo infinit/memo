@@ -119,9 +119,9 @@ namespace infinit
         sched,
         "main",
         [&sched, &modes, &desc, argc, argv,
-         &positional_arg, &disable_as_arg, &hidden_modes
+         &positional_arg, &disable_as_arg, &hidden_modes, &main_thread
 #ifndef INFINIT_WINDOWS
-         ,&crash_reporter
+         , &crash_reporter
 #endif
           ]
         {
@@ -131,6 +131,22 @@ namespace infinit
           // Not required on OS X, see: boost/libs/filesystem/src/path.cpp:819
           check_broken_locale();
 #endif
+          if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
+          {
+            static const std::vector<int> signals = {SIGINT, SIGTERM
+#ifndef INFINIT_WINDOWS
+                                                     , SIGQUIT
+#endif
+            };
+            for (auto signal: signals)
+              reactor::scheduler().signal_handle(
+                signal,
+                [&]
+                {
+                  ELLE_TRACE("terminating");
+                  main_thread.terminate();
+                });
+          }
           ELLE_TRACE("parse command line")
           {
             using boost::program_options::value;
