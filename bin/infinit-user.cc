@@ -417,7 +417,7 @@ COMMAND(list)
   else
     for (auto const& user: users)
     {
-      auto self = self_user_name();
+      auto self = self_user_name(args);
       if (user.name == self)
         std::cout << "* ";
       else
