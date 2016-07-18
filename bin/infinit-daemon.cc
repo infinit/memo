@@ -44,6 +44,7 @@ struct SystemUser
   {}
   SystemUser(unsigned int uid)
   : uid(uid)
+  , gid(0)
   {
     struct passwd * pwd = getpwuid(uid);
     if (!pwd)
@@ -1267,6 +1268,7 @@ _run(boost::program_options::variables_map const& args, bool detach)
       #error "unsupported platform"
 #endif
       static reactor::Mutex mutex;
+      (void)gid;
       SystemUser system_user(uid);
       MountManager* user_manager = nullptr;
       auto it = managers.find(uid);
