@@ -174,17 +174,34 @@ COMMAND(create)
     }
   }
   infinit::model::doughnut::AdminKeys admin_keys;
+  auto add_admin =
+    [&admin_keys] (infinit::cryptography::rsa::PublicKey const& key,
+                   bool read, bool write)
+    {
+      if (read && !write)
+      {
+        auto& target = admin_keys.r;
+        if (std::find(target.begin(), target.end(), key) == target.end())
+          target.push_back(key);
+      }
+      if (write) // Implies RW.
+      {
+        auto& target = admin_keys.w;
+        if (std::find(target.begin(), target.end(), key) == target.end())
+          target.push_back(key);
+      }
+    };
   if (args.count("admin-r"))
   {
     auto admins = args["admin-r"].as<std::vector<std::string>>();
     for (auto const& a: admins)
-      admin_keys.r.push_back(ifnt.user_get(a).public_key);
+      add_admin(ifnt.user_get(a).public_key, true, false);
   }
   if (args.count("admin-rw"))
   {
     auto admins = args["admin-rw"].as<std::vector<std::string>>();
     for (auto const& a: admins)
-      admin_keys.w.push_back(ifnt.user_get(a).public_key);
+      add_admin(ifnt.user_get(a).public_key, true, true);
   }
   boost::optional<int> port;
   if (args.count("port"))
@@ -208,23 +225,25 @@ COMMAND(create)
       admin_keys);
   {
     infinit::Network network(ifnt.qualified_name(name, owner), std::move(dht));
+    std::unique_ptr<infinit::NetworkDescriptor> desc;
     if (args.count("output"))
     {
       auto output = get_output(args);
       elle::serialization::json::serialize(network, *output, false);
+      desc.reset(new infinit::NetworkDescriptor(std::move(network)));
     }
     else
     {
       ifnt.network_save(owner, network);
-      report_created("network", network.name);
+      desc.reset(new infinit::NetworkDescriptor(std::move(network)));
+      ifnt.network_save(*desc);
+      report_created("network", desc->name);
     }
-    infinit::NetworkDescriptor desc(std::move(network));
-    if (!args.count("output"))
-      ifnt.network_save(desc);
     if (aliased_flag(args, {"push-network", "push"}))
-      beyond_push("network", desc.name, desc, owner);
+      beyond_push("network", desc->name, *desc, owner);
   }
 }
+
 static std::pair<infinit::cryptography::rsa::PublicKey, bool>
 user_key(std::string name, boost::optional<std::string> mountpoint)
 {
@@ -268,23 +287,40 @@ COMMAND(update)
     dht.port = port.get();
   if (infinit::compatibility_version)
     dht.version = infinit::compatibility_version.get();
+  bool changed_admins = false;
+  auto add_admin = [&dht] (infinit::cryptography::rsa::PublicKey const& key,
+                           bool group, bool read, bool write)
+    {
+      if (read && !write)
+      {
+        auto& target = group ? dht.admin_keys.group_r : dht.admin_keys.r;
+        if (std::find(target.begin(), target.end(), key) == target.end())
+          target.push_back(key);
+      }
+      if (write) // Implies RW.
+      {
+        auto& target = group ? dht.admin_keys.group_w : dht.admin_keys.w;
+        if (std::find(target.begin(), target.end(), key) == target.end())
+          target.push_back(key);
+      }
+    };
   if (args.count("admin-r"))
   {
     for (auto u: args["admin-r"].as<std::vector<std::string>>())
     {
       auto r = user_key(u, optional(args, "mountpoint"));
-      auto& target = r.second ? dht.admin_keys.group_r : dht.admin_keys.r;
-      target.push_back(r.first);
+      add_admin(r.first, r.second, true, false);
     }
+    changed_admins = true;
   }
   if (args.count("admin-rw"))
   {
     for (auto u: args["admin-rw"].as<std::vector<std::string>>())
     {
       auto r = user_key(u, optional(args, "mountpoint"));
-      auto& target = r.second ? dht.admin_keys.group_w : dht.admin_keys.w;
-      target.push_back(r.first);
+      add_admin(r.first, r.second, true, true);
     }
+    changed_admins = true;
   }
   if (args.count("admin-remove"))
   {
@@ -298,21 +334,29 @@ COMMAND(update)
       DEL(dht.admin_keys.group_w);
 #undef DEL
     }
+    changed_admins = true;
   }
+  std::unique_ptr<infinit::NetworkDescriptor> desc;
   if (args.count("output"))
   {
     auto output = get_output(args);
     elle::serialization::json::serialize(network, *output, false);
+    desc.reset(new infinit::NetworkDescriptor(std::move(network)));
   }
   else
   {
     ifnt.network_save(owner, network, true);
-    report_updated("network", network.name);
+    report_updated("linked network", network.name);
+    desc.reset(new infinit::NetworkDescriptor(std::move(network)));
+    report_updated("network", desc->name);
   }
   if (aliased_flag(args, {"push-network", "push"}))
+    beyond_push("network", desc->name, *desc, owner, true, false, true);
+  if (changed_admins && !args.count("output"))
   {
-    infinit::NetworkDescriptor desc(std::move(network));
-    beyond_push("network", desc.name, desc, owner);
+    std::cout << "INFO: Changes to network admins do not affect existing data."
+              << "INFO: New admins will only be granted access on next write."
+              << std::endl;
   }
 }
 
@@ -321,10 +365,9 @@ COMMAND(export_)
   auto owner = self_user(ifnt, args);
   auto output = get_output(args);
   auto network_name = mandatory(args, "name", "network name");
-  auto network = ifnt.network_get(network_name, owner);
-  network_name = network.name;
+  auto desc = ifnt.network_descriptor_get(network_name, owner);
+  network_name = desc.name;
   {
-    infinit::NetworkDescriptor desc(std::move(network));
     elle::serialization::json::serialize(desc, *output, false);
   }
   report_exported(*output, "network", network_name);
@@ -357,7 +400,9 @@ COMMAND(fetch)
             d->port,
             desc.version,
             desc.admin_keys));
+        // Update both the linked network and the descriptor.
         ifnt.network_save(self, updated_network, true);
+        ifnt.network_save(desc, true);
       }
       else
       {
@@ -517,7 +562,7 @@ COMMAND(push)
     auto& dht = *network.dht();
     auto owner_uid = infinit::User::uid(*dht.owner);
     infinit::NetworkDescriptor desc(std::move(network));
-    beyond_push("network", desc.name, desc, self);
+    beyond_push("network", desc.name, desc, self, true, false, true);
   }
 }
 
@@ -831,9 +876,9 @@ main(int argc, char** argv)
           elle::sprintf("push the network to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-network" },
         { "admin-r", value<std::vector<std::string>>()->multitoken(),
-          "Set an admin user that can read all data"},
+          "Set admin users that can read all data" },
         { "admin-rw", value<std::vector<std::string>>()->multitoken(),
-          "Set an admin user that can read and write all data"},
+          "Set admin users that can read and write all data" },
       },
       {
         consensus_types_options,
@@ -854,12 +899,15 @@ main(int argc, char** argv)
           elle::sprintf("push the updated network to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-network" },
         { "admin-r", value<std::vector<std::string>>()->multitoken(),
-          "Add an admin user that can read all data"},
+          "Add an admin user that can read all data\n"
+          "(prefix: @<group>, requires mountpoint)" },
         { "admin-rw", value<std::vector<std::string>>()->multitoken(),
-          "Add an admin user that can read and write all data"},
+          "Add an admin user that can read and write all data\n"
+          "(prefix: @<group>, requires mountpoint)" },
         { "admin-remove", value<std::vector<std::string>>()->multitoken(),
-          "Remove given user to all admin lists" },
-        { "mountpoint", value<std::string>(),
+          "Remove given users from all admin lists\n"
+          "(prefix: @<group>, requires mountpoint)" },
+        { "mountpoint,m", value<std::string>(),
           "Mountpoint of a volume using this network, "
           "required to add admin groups" },
       },
