@@ -498,3 +498,62 @@ with Beyond() as beyond, Infinit(beyond = beyond, user = 'bob') as bob, \
   finally:
     _terminate_process(net_proc)
     os.remove(peer_file)
+  # Add Dave as a read/write admin, remove Charlie.
+  if os.environ.get('OS') != 'windows':
+    vol_proc = None
+    try:
+      m_point = '%s/mount' % bob
+      vol_proc = bob.spawn(['infinit-volume', '--run', '--as', 'bob', 'v',
+                            '-m', m_point, '--endpoints-file', peer_file])
+      wait_for_mount = peer()
+      bob.run(['infinit-network', '--update', '--as', 'bob', '--name', 'n',
+               '-m', m_point, '--push',
+               '--admin-rw', 'dave', '--admin-remove', 'charlie'])
+    finally:
+      _terminate_process(vol_proc)
+      os.remove(peer_file)
+    def _update_network(user):
+      user.run(['infinit-network', '--fetch', 'bob/n', '--as', user.user])
+    _update_network(alice)
+    _update_network(charlie)
+    _update_network(dave)
+    # Create new file.
+    res = bob.run_script(user = 'bob', volume = 'bob/v',
+                         operation = 'write_file',
+                         path = '/new_file',
+                         content = 'after changing admins')
+    assertEq(res['success'], True)
+    net_proc = None
+    try:
+      net_proc = bob.spawn(['infinit-network', '--run', 'n', '--as', 'bob',
+                            '--endpoints-file', peer_file])
+      # Check Alice can create a file.
+      res = alice.run_script(user = 'alice', volume = 'bob/v', peer = peer(),
+                            operation = 'write_file',
+                            path = '/alices_file', content = 'mine!')
+      assertEq(res['success'], True)
+      # Check that Dave doesn't have access to existing files.
+      res = dave.run_script(user = 'dave', volume = 'bob/v', peer = peer(),
+                            operation = 'read_file', path = '/some_file')
+      assertEq(res['success'], False)
+      # Check that Charlie no longer has access.
+      res = charlie.run_script(user = 'charlie', volume = 'bob/v', peer = peer(),
+                               operation = 'read_file', path = '/new_file')
+      assertEq(res['success'], False)
+      # Check that Dave has read access to new files and can write to it.
+      res = dave.run_script(user = 'dave', volume = 'bob/v', peer = peer(),
+                            operation = 'read_file', path = '/new_file')
+      assertEq(res['success'], True)
+      assertEq(res['content'], 'after changing admins')
+      res = dave.run_script(user = 'dave', volume = 'bob/v', peer = peer(),
+                            operation = 'write_file',
+                            path = '/new_file', content = 'dave was here')
+      assertEq(res['success'], True)
+      # Check that overwrite of file worked.
+      res = alice.run_script(user = 'alice', volume = 'bob/v', peer = peer(),
+                             operation = 'read_file', path = '/new_file')
+      assertEq(res['success'], True)
+      assertEq(res['content'], 'dave was here')
+    finally:
+      _terminate_process(net_proc)
+      os.remove(peer_file)
