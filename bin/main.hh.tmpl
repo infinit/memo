@@ -869,6 +869,7 @@ namespace infinit
       , overlay(std::move(network.dht()->overlay))
       , owner(std::move(*network.dht()->owner))
       , version(std::move(network.dht()->version))
+      , admin_keys(std::move(network.dht()->admin_keys))
     {
       check_name(this->name);
     }
@@ -888,6 +889,13 @@ namespace infinit
       {
         // Oldest versions did not specify compatibility version.
         this->version = elle::Version(0, 3, 0);
+      }
+      try
+      {
+        s.serialize("admin_keys", this->admin_keys);
+      }
+      catch (elle::serialization::Error const&)
+      {
       }
     }
 
