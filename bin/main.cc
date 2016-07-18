@@ -83,6 +83,7 @@ mode_arguments(
 
 namespace infinit
 {
+  boost::optional<elle::Version> compatibility_version;
   int
   main(std::string desc,
        Modes const& modes,

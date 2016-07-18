@@ -79,7 +79,6 @@ beyond(bool help = false)
   return res;
 }
 
-static boost::optional<elle::Version> compatibility_version;
 static std::unique_ptr<std::ofstream> critical_log_stream;
 
 class CommandLineError
@@ -520,6 +519,7 @@ beyond_push(std::string const& where,
 
 namespace infinit
 {
+  extern boost::optional<elle::Version> compatibility_version;
   static const std::string invalid_name(
     "name (%s) must only contain lower case alphanumeric and - . _ "
     "characters but not start with the . character");

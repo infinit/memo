@@ -266,8 +266,8 @@ COMMAND(update)
   auto& dht = *network.dht();
   if (auto port = optional<int>(args, "port"))
     dht.port = port.get();
-  if (compatibility_version)
-    dht.version = compatibility_version.get();
+  if (infinit::compatibility_version)
+    dht.version = infinit::compatibility_version.get();
   if (args.count("admin-r"))
   {
     for (auto u: args["admin-r"].as<std::vector<std::string>>())
@@ -626,7 +626,7 @@ COMMAND(run)
     self,
     eps, false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-    flag(args, "async"), disk_cache_size, compatibility_version, port);
+    flag(args, "async"), disk_cache_size, infinit::compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"}) &&
     dht->local() && dht->local()->storage();

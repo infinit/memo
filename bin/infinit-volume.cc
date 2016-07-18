@@ -399,7 +399,7 @@ COMMAND(run)
     self,
     eps, true,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-    flag(args, "async"), disk_cache_size, compatibility_version, port);
+    flag(args, "async"), disk_cache_size, infinit::compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push =
     aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
