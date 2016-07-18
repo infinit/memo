@@ -1277,7 +1277,8 @@ namespace infinit
       Node::_discover(NodeEndpoints const& eps)
       {
         auto peers = convert_endpoints(this->node_id(), eps);
-        this->bootstrap(false, false, peers);
+        if (!this->_observer)
+          this->bootstrap(false, false, peers);
         for (auto peer: peers)
           send_bootstrap(peer);
       }
