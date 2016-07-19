@@ -415,8 +415,8 @@ In order to run a network, just use the option `--run`. Note that the `--publish
 
 ```
 $> infinit-network --run --as alice --name cluster --publish
-Fetched endpoints for "alice/cluster".
 Running network "alice/cluster".
+Fetched endpoints for "alice/cluster".
 Remotely pushed endpoints for "alice/cluster".
 ...
 ```
@@ -586,13 +586,12 @@ Mounting an Infinit volume is very similar to mounting any other file system. As
 
 Note that if you have been invited to join the network, you will need to fetch the volume before being able to mount it. Refer to the <a href="#list-the-volumes">List the volumes</a> section in this case.
 
-The following command mounts an Infinit file system. Note that the `--publish` option tells the binary to rely on the Hub to ease the process of connecting to the underlying network by providing you with the endpoint of bootstrap nodes while publishing your own endpoint for other nodes to find you as well:
+The following command mounts an Infinit file system. If a volume is being mounted for the first time, the `--allow-root-creation` option must be passed so that the volume root block is written. Note that the `--publish` option tells the binary to rely on the Hub to ease the process of connecting to the underlying network by providing you with the endpoint of bootstrap nodes while publishing your own endpoint for other nodes to find you as well:
 
 ```
-$> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --publish
-Fetched endpoints for "alice/cluster".
+$> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --allow-root-creation --publish
 Running network "alice/cluster".
-Remotely saved endpoints for "alice/cluster".
+Fetched endpoints for "alice/cluster".
 Running volume "alice/shared".
 ...
 ```
