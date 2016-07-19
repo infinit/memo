@@ -7,6 +7,8 @@
 
 - Add `--script` mode to `infinit-network`.
 - Add `infinit-doctor` to diagnose common setup issues.
+- Add `--describe` mode to `infinit-journal` to get human friendly descriptions
+  of pending asynchronous operations.
 
 ### Changed
 
