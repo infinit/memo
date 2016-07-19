@@ -368,22 +368,24 @@ alice/cluster
 
 ### Link a device to a network ###
 
-Let us say that you want to connect a device to a network, this device being different from the one on which the network has been created but which is still used by the same user.
+Before a network can be connected to, it must be linked to a user on the device. When creating the network with the `--create` option, the network is linked automatically.
 
-There are two ways to do this depending on who you are in relation to the network: its owner or an invited user.
+Upon linking to (or creating) the network, storage can be contributed to it using the `--storage` argument. This will be demonstrated below.
+
+There are two distinct cases for linking networks which depend on the given user's relation to the network: the user is the owner on another device or the user is an invitee.
 
 #### As the owner ####
 
 As the owner of the network, the system automatically recognizes you and allows you to link any of your devices to the network. The process in this case is straightforward.
 
-When linking a device to a network, you can decide to contribute storage from the new device. In the example below, Alice connects one of her other devices and contributes storage capacity from her personal Network-Attached Storage (NAS).
+In the example below, Alice connects one of her other devices and contributes storage capacity from her personal Network-Attached Storage (NAS).
 
 ```
 $> infinit-network --link --as alice --name cluster --storage nas
 Linked device to network "alice/cluster".
 ```
 
-_**NOTE**: Keep in mind that the action of linking a device to a network must only be performed once on every new device._
+_**NOTE**: Keep in mind that the action of linking a device to a network must only be performed once per user on every new device._
 
 #### As an invitee ####
 
