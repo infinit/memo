@@ -365,7 +365,15 @@ namespace infinit
       elle::Buffer serdata;
       {
         elle::IOStream os(serdata.ostreambuf());
-        elle::serialization::binary::SerializerOut output(os);
+        auto version = model.version();
+        auto versions =
+        elle::serialization::_details::dependencies<typename elle::serialization::_details::serialization_tag<FileData>::type>(
+          version, 42);
+        versions.emplace(
+          elle::type_info<typename elle::serialization::_details::serialization_tag<FileData>::type>(),
+          version);
+        elle::serialization::binary::SerializerOut output(os,
+          versions, true);
         output.serialize("header", _header);
         output.serialize("fat", _fat);
         output.serialize("data", _data);

@@ -228,8 +228,15 @@ namespace infinit
       _inherit_auth = false;
     }
 
+    DirectoryData::DirectoryData(elle::serialization::Serializer& s,
+                                 elle::Version const& v)
+    {
+      serialize(s, v);
+    }
+
     void
-    DirectoryData::serialize(elle::serialization::Serializer& s)
+    DirectoryData::serialize(elle::serialization::Serializer& s,
+                             elle::Version const& v)
     {
       s.serialize("header", this->_header);
       s.serialize("content", this->_files);
@@ -331,9 +338,17 @@ namespace infinit
       elle::Buffer data;
       {
         elle::IOStream os(data.ostreambuf());
-        elle::serialization::binary::SerializerOut output(os);
+        auto version = model.version();
+        auto versions =
+        elle::serialization::_details::dependencies<typename elle::serialization::_details::serialization_tag<FileData>::type>(
+          version, 42);
+        versions.emplace(
+          elle::type_info<typename elle::serialization::_details::serialization_tag<FileData>::type>(),
+          version);
+        elle::serialization::binary::SerializerOut output(os, versions, true);
         output.serialize_forward(*this);
       }
+
       try
       {
         int version = 0;
