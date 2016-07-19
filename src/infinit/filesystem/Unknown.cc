@@ -51,7 +51,7 @@ namespace infinit
       std::string
       description() const override
       {
-        return elle::sprintf("make directory %s", this->_path);
+        return elle::sprintf("create directory %s", this->_path);
       }
 
       ELLE_ATTRIBUTE(std::string, path);

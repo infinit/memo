@@ -93,7 +93,7 @@ namespace infinit
         std::string
         description() const override
         {
-          return elle::sprintf("write Group Block for %s", this->_name);
+          return elle::sprintf("write group block for %s", this->_name);
         }
 
       private:
@@ -450,8 +450,10 @@ namespace infinit
       std::string
       GroupConflictResolver::description() const
       {
+        // User is not necessary a "User", it can be a Group.
         doughnut::User user(*this->_key, this->_name);
-        return elle::sprintf("%s \"%s\" to group", this->_action, user.name());
+        return elle::sprintf("%s \"%s\" to/from group", this->_action,
+                             user.name());
       }
 
       static const elle::serialization::Hierarchy<model::ConflictResolver>::

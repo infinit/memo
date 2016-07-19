@@ -567,7 +567,7 @@ namespace infinit
       std::string
       description() const override
       {
-        return elle::sprintf("insert block (%s) for %s (async: %s)",
+        return elle::sprintf("insert block (%f) for %s (async: %s)",
                              this->_address, this->_path, this->_async);
       }
 

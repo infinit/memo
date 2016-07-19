@@ -290,7 +290,7 @@ namespace infinit
       std::string
       description() const override
       {
-        return elle::sprintf("insert root block at %s", this->_address);
+        return elle::sprintf("insert root block at %f", this->_address);
       }
 
       ELLE_ATTRIBUTE(Address, address);

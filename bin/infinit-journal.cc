@@ -192,7 +192,7 @@ main(int argc, char** argv)
       "--network NETWORK [--operation OPERATION]",
       {
         { "network,N", value<std::string>(), "network to check" },
-        { "operation,O", value<int>(), "operation to pretty" },
+        { "operation,O", value<int>(), "operation to describe" },
       },
     },
   };
