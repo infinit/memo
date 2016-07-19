@@ -782,7 +782,8 @@ class Network(metaclass = Entity,
                 version = '0.3.0',
                 passports = {},
                 endpoints = {},
-                storages = {})):
+                storages = {},
+                admin_keys = {})):
 
   @property
   def id(self):
@@ -800,7 +801,8 @@ class Network(metaclass = Entity,
     if self.name != other.name or \
        self.owner != other.owner or \
        self.consensus != other.consensus or \
-       self.overlay != other.overlay:
+       self.overlay != other.overlay or \
+       self.admin_keys != other.admin_keys:
       return False
     return True
 

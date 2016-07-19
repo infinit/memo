@@ -1,3 +1,8 @@
+// http://opensource.apple.com/source/mDNSResponder/mDNSResponder-576.30.4/mDNSPosix/PosixDaemon.c
+#if __APPLE__
+# define daemon yes_we_know_that_daemon_is_deprecated_in_os_x_10_5_thankyou
+#endif
+
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
@@ -31,6 +36,11 @@ ELLE_LOG_COMPONENT("infinit-volume");
 infinit::Infinit ifnt;
 
 #include <endpoint_file.hh>
+
+#if __APPLE__
+# undef daemon
+extern int daemon(int, int);
+#endif
 
 using boost::program_options::variables_map;
 
@@ -367,22 +377,6 @@ COMMAND(run)
     if (daemon(0, 1))
       perror("daemon:");
 #endif
-  if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
-  {
-    static const std::vector<int> signals = {SIGINT, SIGTERM
-#ifndef INFINIT_WINDOWS
-    , SIGQUIT
-#endif
-    };
-    for (auto signal: signals)
-      reactor::scheduler().signal_handle(
-        signal,
-        [&]
-        {
-          ELLE_TRACE("terminating");
-          reactor::scheduler().terminate();
-        });
-  }
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
@@ -390,7 +384,7 @@ COMMAND(run)
     self,
     eps, true,
     mo.cache && mo.cache.get(), mo.cache_ram_size, mo.cache_ram_ttl, mo.cache_ram_invalidation,
-    mo.async && mo.async.get(), mo.cache_disk_size, compatibility_version, port);
+    mo.async && mo.async.get(), mo.cache_disk_size, infinit::compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push = mo.push && model->local();
   boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint;

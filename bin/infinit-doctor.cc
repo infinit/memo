@@ -1347,6 +1347,7 @@ has_permission(boost::filesystem::path const& path,
   return std::make_pair(sane, res);
 }
 
+#if false
 static
 bool
 fuse(bool /*verbose*/)
@@ -1367,6 +1368,7 @@ fuse(bool /*verbose*/)
   return true;
 #endif
 }
+#endif
 
 static
 void
