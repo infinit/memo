@@ -432,6 +432,7 @@ MountManager::start(std::string const& name,
   // FIXME: Don't hardcode those.
   volume.mount_options.async = true;
   volume.mount_options.cache = true;
+  volume.mount_options.fetch = true;
   Mount m{nullptr, volume.mount_options};
   std::string mount_prefix(name + "-");
   boost::replace_all(mount_prefix, "/", "_");
