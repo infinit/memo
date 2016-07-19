@@ -284,8 +284,9 @@ namespace infinit
       if (empty)
       {
         ELLE_DEBUG("block is empty");
+        auto now = time(nullptr);
         _header = FileHeader(0, 1, S_IFDIR | 0600,
-                             time(nullptr), time(nullptr), time(nullptr),
+                             now, now, now, now,
                              File::default_block_size);
         _inherit_auth = false;
       }

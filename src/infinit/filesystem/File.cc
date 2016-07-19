@@ -241,8 +241,9 @@ namespace infinit
       if (empty)
       {
         ELLE_DEBUG("file block is empty");
+        auto now = time(nullptr);
         _header = FileHeader(0, 1, S_IFREG | 0600,
-                             time(nullptr), time(nullptr), time(nullptr),
+                             now, now, now, now,
                              File::default_block_size);
       }
       else
@@ -286,7 +287,7 @@ namespace infinit
       _block_version = -1;
       _last_used = FileSystem::now();
       _header = FileHeader ( 0, 1, S_IFREG | mode,
-        time(nullptr), time(nullptr), time(nullptr),
+        time(nullptr), time(nullptr), time(nullptr), time(nullptr),
         File::default_block_size
       );
     }

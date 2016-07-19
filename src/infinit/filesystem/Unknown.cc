@@ -127,8 +127,9 @@ namespace infinit
       auto parent_block = this->_owner.block_store()->fetch(_parent->address());
       _owner.ensure_permissions(*parent_block, true, true);
       auto b = _owner.block_store()->make_block<infinit::model::blocks::ACLBlock>();
+      auto now = time(nullptr);
       FileHeader fh(0, 1, S_IFLNK | 0600,
-                    time(nullptr), time(nullptr), time(nullptr),
+                    now, now, now, now,
                     0);
       fh.symlink_target = where.string();
       auto serdata = elle::serialization::binary::serialize(fh);
