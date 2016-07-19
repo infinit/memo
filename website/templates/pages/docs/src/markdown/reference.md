@@ -619,7 +619,7 @@ To pull a volume from the Hub, the `--pull` mode is used. When combined with the
 
 ### Delete a volume ###
 
-To locally delete a volume, the `--delete` mode is used. This can be used in conjunction with the `--purge` and `--pull` options to, respectively, delete drives that depend on the volume locally and pulls the dependent drives and volume from the Hub. Node that the volume and drives will only be pulled if the user is the owner.
+To locally delete a volume, the `--delete` mode is used. This can be used in conjunction with the `--purge` and `--pull` options to, respectively, delete drives that depend on the volume locally and pulls the dependent drives and volume from the Hub. Note that the volume and drives will only be pulled if the user is the owner.
 
 Access Control List
 -------------------
