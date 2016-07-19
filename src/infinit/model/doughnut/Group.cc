@@ -73,8 +73,7 @@ namespace infinit
         GroupBlockInserter(std::string const& name)
           : Super()
           , _name(name)
-        {
-        }
+        {}
 
         GroupBlockInserter(elle::serialization::Serializer& s,
                            elle::Version const& version)
@@ -398,8 +397,7 @@ namespace infinit
       }
 
       GroupConflictResolver::~GroupConflictResolver()
-      {
-      }
+      {}
 
       void
       GroupConflictResolver::serialize(elle::serialization::Serializer& s,

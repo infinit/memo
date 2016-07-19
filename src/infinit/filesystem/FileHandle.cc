@@ -545,12 +545,11 @@ namespace infinit
         , _path(path.string())
         , _address(address)
         , _async(async)
-      {
-      }
+      {}
 
       InsertBlockResolver(elle::serialization::Serializer& s,
           elle::Version const& version)
-        : Super() // Do not call Super(s, version)
+        : Super()
       {
         this->serialize(s, version);
       }

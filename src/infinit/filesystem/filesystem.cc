@@ -232,8 +232,7 @@ namespace infinit
         : Super()
         , _from(from)
         , _to(to)
-      {
-      }
+      {}
 
       BlockMigration(elle::serialization::Serializer& s,
           elle::Version const& version)
@@ -271,8 +270,7 @@ namespace infinit
       InsertRootBlock(Address const& address)
         : Super()
         , _address(address)
-      {
-      }
+      {}
 
       InsertRootBlock(elle::serialization::Serializer& s,
                       elle::Version const& version)
@@ -308,8 +306,7 @@ namespace infinit
       InsertRootBootstrapBlock(Address const& address)
         : Super()
         , _address(address)
-      {
-      }
+      {}
 
       InsertRootBootstrapBlock(elle::serialization::Serializer& s,
                                elle::Version const& version)

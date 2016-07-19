@@ -10,8 +10,7 @@ namespace infinit
     {
       UserBlockUpserter::UserBlockUpserter(std::string const& name)
         : _name(name)
-      {
-      }
+      {}
 
       UserBlockUpserter::UserBlockUpserter(elle::serialization::Serializer& s,
                                            elle::Version const& version)
@@ -36,8 +35,7 @@ namespace infinit
 
       ReverseUserBlockUpserter::ReverseUserBlockUpserter(std::string const& name)
         : _name(name)
-      {
-      }
+      {}
 
       ReverseUserBlockUpserter::ReverseUserBlockUpserter(elle::serialization::Serializer& s,
                                            elle::Version const& version)

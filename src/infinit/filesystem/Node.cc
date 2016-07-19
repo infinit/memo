@@ -26,8 +26,8 @@ namespace infinit
 {
   namespace filesystem
   {
-    class ACLConflictResolver:
-      public model::ConflictResolver
+    class ACLConflictResolver
+      : public model::ConflictResolver
     {
     public:
       ACLConflictResolver(model::Model* model,

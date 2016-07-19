@@ -552,8 +552,7 @@ namespace infinit
         : Super()
         , _name(name)
         , _address(address)
-      {
-      }
+      {}
 
       NewBlockResolver(elle::serialization::Serializer& s,
                     elle::Version const& version)

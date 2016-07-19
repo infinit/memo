@@ -169,8 +169,7 @@ namespace infinit
         : Super()
         , _source(source.string())
         , _destination(destination.string())
-      {
-      }
+      {}
 
       NewSymlinkResolver(elle::serialization::Serializer& s,
                     elle::Version const& version)
