@@ -65,14 +65,14 @@ namespace infinit
       std::string
       description() const override
       {
-        std::string permssions = elle::sprintf(
+        std::string permissions = elle::sprintf(
           "%s%s",
           (this->_read ? "r" : ""),
           (this->_write ? "w" : ""));
-        if (permssions.empty())
-          permssions = "none";
-        return elle::sprintf("set permssions \"%s\" to \"%s\"",
-                             permssions, this->_userkey);
+        if (permissions.empty())
+          permissions = "none";
+        return elle::sprintf("give %s permissions to \"%s\"",
+                             permissions, this->_userkey);
       }
 
       std::unique_ptr<Block>
