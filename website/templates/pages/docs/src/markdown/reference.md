@@ -720,7 +720,7 @@ Every user with the volume descriptor and read permissions can consult the Acces
 ```
 $> infinit-acl --list --path /mnt/shared/awesome.txt
 /mnt/shared/awesome.txt:
-     alice: rw
+     alice: rw (owner)
      bob: r
 ```
 
