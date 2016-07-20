@@ -188,7 +188,7 @@ namespace infinit
       }
 
       std::string
-      description() const
+      description() const override
       {
         return elle::sprintf("create symlink from %s to %s",
                              this->_source, this->_destination);

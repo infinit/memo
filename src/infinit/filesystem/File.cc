@@ -571,7 +571,7 @@ namespace infinit
       }
 
       std::string
-      description() const
+      description() const override
       {
         return elle::sprintf("insert new block (%f) for file %s",
                              this->_address, this->_name);
