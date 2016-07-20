@@ -725,9 +725,14 @@ def configure(
     labels = {
       'version': git.description(),
     })
+  docker_file.run('apt-get update && apt-get install -y python3')
   docker_file.add(install_nodes(docker_path, demo = False), '/usr')
   docker_file.add(
     drake.copy(drake.node('share/infinit/docker/infinit-static.sh'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-service-runner.py'),
                docker_path / 'bin', strip_prefix = True),
     '/usr')
   docker_file.run('ln -s /usr/bin/fnetusermount-client /bin/fusermount')
