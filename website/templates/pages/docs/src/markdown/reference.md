@@ -368,22 +368,24 @@ alice/cluster
 
 ### Link a device to a network ###
 
-Let us say that you want to connect a device to a network, this device being different from the one on which the network has been created but which is still used by the same user.
+Before a network can be connected to, it must be linked to a user on the device. When creating the network with the `--create` option, the network is linked automatically.
 
-There are two ways to do this depending on who you are in relation to the network: its owner or an invited user.
+Upon linking to (or creating) the network, storage can be contributed to it using the `--storage` argument. This will be demonstrated below.
+
+There are two distinct cases for linking networks which depend on the given user's relation to the network: the user is the owner on another device or the user is an invitee.
 
 #### As the owner ####
 
 As the owner of the network, the system automatically recognizes you and allows you to link any of your devices to the network. The process in this case is straightforward.
 
-When linking a device to a network, you can decide to contribute storage from the new device. In the example below, Alice connects one of her other devices and contributes storage capacity from her personal Network-Attached Storage (NAS).
+In the example below, Alice connects one of her other devices and contributes storage capacity from her personal Network-Attached Storage (NAS).
 
 ```
 $> infinit-network --link --as alice --name cluster --storage nas
 Linked device to network "alice/cluster".
 ```
 
-_**NOTE**: Keep in mind that the action of linking a device to a network must only be performed once on every new device._
+_**NOTE**: Keep in mind that the action of linking a device to a network must only be performed once per user on every new device._
 
 #### As an invitee ####
 
@@ -415,8 +417,8 @@ In order to run a network, just use the option `--run`. Note that the `--publish
 
 ```
 $> infinit-network --run --as alice --name cluster --publish
-Fetched endpoints for "alice/cluster".
 Running network "alice/cluster".
+Fetched endpoints for "alice/cluster".
 Remotely pushed endpoints for "alice/cluster".
 ...
 ```
@@ -586,13 +588,12 @@ Mounting an Infinit volume is very similar to mounting any other file system. As
 
 Note that if you have been invited to join the network, you will need to fetch the volume before being able to mount it. Refer to the <a href="#list-the-volumes">List the volumes</a> section in this case.
 
-The following command mounts an Infinit file system. Note that the `--publish` option tells the binary to rely on the Hub to ease the process of connecting to the underlying network by providing you with the endpoint of bootstrap nodes while publishing your own endpoint for other nodes to find you as well:
+The following command mounts an Infinit file system. If a volume is being mounted for the first time, the `--allow-root-creation` option must be passed so that the volume root block is written. Note that the `--publish` option tells the binary to rely on the Hub to ease the process of connecting to the underlying network by providing you with the endpoint of bootstrap nodes while publishing your own endpoint for other nodes to find you as well:
 
 ```
-$> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --publish
-Fetched endpoints for "alice/cluster".
+$> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --allow-root-creation --publish
 Running network "alice/cluster".
-Remotely saved endpoints for "alice/cluster".
+Fetched endpoints for "alice/cluster".
 Running volume "alice/shared".
 ...
 ```
@@ -620,7 +621,7 @@ To pull a volume from the Hub, the `--pull` mode is used. When combined with the
 
 ### Delete a volume ###
 
-To locally delete a volume, the `--delete` mode is used. This can be used in conjunction with the `--purge` and `--pull` options to, respectively, delete drives that depend on the volume locally and pulls the dependent drives and volume from the Hub. Node that the volume and drives will only be pulled if the user is the owner.
+To locally delete a volume, the `--delete` mode is used. This can be used in conjunction with the `--purge` and `--pull` options to, respectively, delete drives that depend on the volume locally and pulls the dependent drives and volume from the Hub. Note that the volume and drives will only be pulled if the user is the owner.
 
 Access Control List
 -------------------

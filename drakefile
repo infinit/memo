@@ -557,6 +557,7 @@ def configure(
   ## ----- ##
 
   demo_home = drake.nodes(
+    'demo-home/linked_networks/demo/infinit/demo',
     'demo-home/networks/infinit/demo',
     'demo-home/passports/infinit/demo/demo',
     'demo-home/users/demo',

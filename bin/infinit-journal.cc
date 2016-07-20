@@ -48,12 +48,12 @@ COMMAND(stats)
   }
   else
   {
-    networks = ifnt.networks_get();
+    networks = ifnt.networks_get(owner);
   }
   elle::json::Object res;
   for (auto const& network: networks)
   {
-    boost::filesystem::path async_path = network.cache_dir() / "async";
+    boost::filesystem::path async_path = network.cache_dir(owner) / "async";
     int operation_count = 0;
     int64_t data_size = 0;
     if (boost::filesystem::exists(async_path))
@@ -106,7 +106,7 @@ COMMAND(export_)
     ifnt.qualified_name(mandatory(args, "network", "Network"), owner),
     owner);
   auto id = elle::sprintf("%s", mandatory<int>(args, "operation"));
-  auto path = network.cache_dir() / "async" / id;
+  auto path = network.cache_dir(owner) / "async" / id;
   boost::filesystem::ifstream f;
   ifnt._open_read(f, path, id, "operation");
   auto dht = network.run();
@@ -124,7 +124,7 @@ COMMAND(describe)
     owner);
   auto dht = network.run();
   auto ctx = context(owner, dht);
-  boost::filesystem::path async_path = network.cache_dir() / "async";
+  boost::filesystem::path async_path = network.cache_dir(owner) / "async";
   auto operation = optional<int>(args, "operation");
   auto report = [&] (boost::filesystem::path const& path)
     {
@@ -149,9 +149,7 @@ COMMAND(describe)
       std::cout << std::endl;
     };
   if (operation)
-  {
     report(async_path / elle::sprintf("%s", *operation));
-  }
   else
     for (auto const& path:
          infinit::model::doughnut::consensus::Async::entries(async_path))

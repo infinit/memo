@@ -1277,7 +1277,8 @@ namespace infinit
       Node::_discover(NodeEndpoints const& eps)
       {
         auto peers = convert_endpoints(this->node_id(), eps);
-        this->bootstrap(false, false, peers);
+        if (!this->_observer)
+          this->bootstrap(false, false, peers);
         for (auto peer: peers)
           send_bootstrap(peer);
       }
@@ -2746,7 +2747,13 @@ namespace infinit
         addLocalResults(p, nullptr);
         // don't accept put requests until we know our endpoint
         // Accept the put locally if we know no other node
-        if (fg == _group
+        bool quota_check = true;
+        if (local()
+          && local()->storage()
+          && local()->storage()->capacity())
+          quota_check = local()->storage()->capacity() > local()->storage()->usage() + 1024*1024 * 2;
+        if (quota_check
+          &&  fg == _group
           &&  ((p->insert_ttl == 0 && !_local_endpoints.empty())
               || _state.contacts[_group].empty()))
         {

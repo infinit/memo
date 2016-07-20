@@ -243,10 +243,11 @@ namespace infinit
                 "auth_syn", *this->_channels, this->_doughnut.version());
               auth_syn.set_context<Doughnut*>(&this->_doughnut);
               auto version = this->_doughnut.version();
-              // 0.5.0 compares the full version for compatibility instead of
-              // dropping the subminor component. Always set it to 0.
+              // 0.5.0 and 0.6.0 compares the full version it receives for
+              // compatibility instead of dropping the subminor component. Set
+              // it to 0 until >=0.7.0, which will drop subminor as expected.
               auto subminor =
-                version >= elle::Version(0, 6, 0) ? version.subminor() : 0;
+                version >= elle::Version(0, 7, 0) ? version.subminor() : 0;
               return auth_syn(
                 this->_doughnut.passport(),
                 elle::Version(version.major(), version.minor(), subminor));
