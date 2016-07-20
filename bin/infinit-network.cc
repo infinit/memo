@@ -288,6 +288,15 @@ COMMAND(update)
   if (infinit::compatibility_version)
     dht.version = infinit::compatibility_version.get();
   bool changed_admins = false;
+  auto check_group_mount = [&args, &network] (bool group)
+    {
+      if (group && !args.count("mountpoint"))
+      {
+        throw CommandLineError(
+          "Must specify mountpoint of volume on "
+          "network \"%s\" to edit group admins", network.name);
+      }
+    };
   auto add_admin = [&dht] (infinit::cryptography::rsa::PublicKey const& key,
                            bool group, bool read, bool write)
     {
@@ -309,6 +318,7 @@ COMMAND(update)
     for (auto u: args["admin-r"].as<std::vector<std::string>>())
     {
       auto r = user_key(u, optional(args, "mountpoint"));
+      check_group_mount(r.second);
       add_admin(r.first, r.second, true, false);
     }
     changed_admins = true;
@@ -318,6 +328,7 @@ COMMAND(update)
     for (auto u: args["admin-rw"].as<std::vector<std::string>>())
     {
       auto r = user_key(u, optional(args, "mountpoint"));
+      check_group_mount(r.second);
       add_admin(r.first, r.second, true, true);
     }
     changed_admins = true;
@@ -327,6 +338,7 @@ COMMAND(update)
     for (auto u: args["admin-remove"].as<std::vector<std::string>>())
     {
       auto r = user_key(u, optional(args, "mountpoint"));
+      check_group_mount(r.second);
 #define DEL(cont) cont.erase(std::remove(cont.begin(), cont.end(), r.first), cont.end())
       DEL(dht.admin_keys.r);
       DEL(dht.admin_keys.w);
@@ -354,8 +366,9 @@ COMMAND(update)
     beyond_push("network", desc->name, *desc, owner, true, false, true);
   if (changed_admins && !args.count("output"))
   {
-    std::cout << "INFO: Changes to network admins do not affect existing data."
-              << "INFO: New admins will only be granted access on next write."
+    std::cout << "INFO: Changes to network admins do not affect existing data:"
+              << "INFO: Admin access will be updated on the next write to each"
+              << "INFO: file or folder."
               << std::endl;
   }
 }
