@@ -313,7 +313,7 @@ _**NOTE**: Do not hesitate to <a href="http://help.infinit.sh" target="_blank">v
 
 You can locally delete a storage resource using the `--delete` mode. For filesystem storage resources, you can clear their contents using the `--clear-content` option.
 
-Using `--purge --pull` will locally delete the network, volumes and drives that depend on the storage resource along with pulling all dependent objects that belong to the user from the Hub.
+Using `--purge` will unlink all networks that use the storage locally.
 
 Network
 -------
