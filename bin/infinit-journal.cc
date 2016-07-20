@@ -96,7 +96,7 @@ context(infinit::User const& owner,
   ctx.set<infinit::model::doughnut::Doughnut*>(dht.get());
   ctx.set(infinit::model::doughnut::ACBDontWaitForSignature{});
   ctx.set(infinit::model::doughnut::OKBDontWaitForSignature{});
-  return std::move(ctx);
+  return ctx;
 }
 
 COMMAND(export_)
