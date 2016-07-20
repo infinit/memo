@@ -1,5 +1,47 @@
 #! /usr/bin/env python3
 
+# This utility monitors a beyond, and runs infinit-network on all swarm nodes,
+# providing storage.
+
+'''
+# Sample usage, running all commands through docker images:
+
+export BEYOND_HOST=http://my_beyond:8081
+export INFINIT_IMAGE=bearclaw/infinit:latest
+export BEYOND_IMAGE=bearclaw/infinit-beyond:latest
+export USERNAME=bob
+export PASSWORD=bob
+export USER=$USERNAME:$PASSWORD
+
+# start beyond
+docker run -e PYTHONUNBUFFERED=1 -d --publish 8081:8081 $BEYOND_IMAGE \
+  beyond --port 8081 --host 0.0.0.0
+
+# start monitor. Requires access to docker and infinit binaries
+docker run -d                                                            \
+  -v /home/docker/.ssh:/root/.ssh:ro                                     \
+  -v /var/run/docker.sock:/var/run/docker.sock                           \
+  -v /var/lib/docker/swarm/lb_name:/var/lib/docker/swarm/lb_name:ro      \
+  -v /var/lib/docker/swarm/elb.config:/var/lib/docker/swarm/elb.config   \
+  -v /usr/bin/docker:/usr/bin/docker                                     \
+  -v /var/log:/var/log                                                   \
+  -e PYTHONUNBUFFERED=1                                                  \
+  $INFINIT_IMAGE                                                          \
+  infinit-service-runner.py --watch --login $USER --beyond $BEYOND_HOST \
+  --image $INFINIT_IMAGE
+
+# mount a new volume on the default network
+docker run --privileged -d -v /tmp:/tmp:shared  \
+  $INFINIT_IMAGE \
+  infinit-service-runner.py --mount --login $USER --beyond $BEYOND_HOST \
+  --mountpoint /tmp/shared --volume default_volume --network default_network
+
+# make an other network. It will be automatically detected and instantiated on all nodes
+docker run --rm -it -e INFINIT_BEYOND=$BEYOND_HOST \
+  $INFINIT_IMAGE \
+  bash -c 'infinit-user --login --name $USERNAME --password $PASSWORD && infinit-network --create --name net2  --kelips --as $USERNAME --push'
+'''
+
 # TODO:
 # graceful exit on 'service rm'
 # networking
