@@ -463,8 +463,6 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "storage to delete" },
         { "clear-content", bool_switch(),
           "remove all blocks (filesystem only)" },
-        { "pull", bool_switch(), elle::sprintf("pull objects that depend on "
-          "the storage if they are on %s", beyond(true)) },
         { "purge", bool_switch(), "remove objects that depend on the storage" },
       },
     },
