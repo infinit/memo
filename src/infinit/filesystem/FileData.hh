@@ -80,8 +80,6 @@ namespace infinit
       void serialize(elle::serialization::Serializer& s,
                      elle::Version const& v)
       {
-        ELLE_LOG_COMPONENT("filesystem");
-        ELLE_DEBUG("%sserializing with %s", s.in()?"de": "", v);
         s.serialize("size", size);
         s.serialize("links", links);
         s.serialize("mode", mode);

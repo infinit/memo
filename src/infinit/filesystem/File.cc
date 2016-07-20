@@ -368,10 +368,10 @@ namespace infinit
         elle::IOStream os(serdata.ostreambuf());
         auto version = model.version();
         auto versions =
-        elle::serialization::_details::dependencies<typename elle::serialization::_details::serialization_tag<FileData>::type>(
-          version, 42);
+          elle::serialization::_details::dependencies<typename FileData::serialization_tag>(
+            version, 42);
         versions.emplace(
-          elle::type_info<typename elle::serialization::_details::serialization_tag<FileData>::type>(),
+          elle::type_info<typename FileData::serialization_tag>(),
           version);
         elle::serialization::binary::SerializerOut output(os,
           versions, true);
