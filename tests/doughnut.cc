@@ -563,7 +563,7 @@ class AppendConflictResolver
   std::string
   description() const override
   {
-    return "";
+    return "Append data to block";
   }
 
   virtual
