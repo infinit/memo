@@ -439,6 +439,44 @@ Networks can be pulled from the Hub using the `--pull` mode. If the `--purge` op
 
 To delete a network locally, the `--delete` mode is used. This can be used in conjunction with the `--purge` and `--pull` options to, respectively, delete volumes and drives that depend on the network locally and pull them from the Hub. Note only volumes and drives owned by the user can be pulled from the Hub.
 
+### Network administrators ###
+
+Networks can be assigned administrators who have either read only or read/write access to all blocks (and thus implicitly files and folders) stored on a network. As Infinit is completely decentralized there are two limiting factors: all users must have the same network descriptor and changes to administrators are not retroactive.
+
+On creation of a network, individual administrators can be added using the `--admin-r` and `--admin-rw` arguments as shown in the example that follows:
+
+```
+$> infinit-network --create --as alice --storage local --admin-r bob --name administrated-cluster --push
+Locally created network "alice/administrated-cluster".
+Remotely saved network "alice/administrated-cluster".
+```
+
+Once a network has been created, administrator users and groups can be added using the `--update` action. Note that as [groups](#create-a-group) are stored internally in the network DHT, you will need to have [created](#create-a-volume) and [mounted](#mount-a-volume) a volume on the network to add an administrator group.
+
+```
+$> infinit-network --update --as alice --admin-rw charlie @managers --mountpoint /path/to/mounted/volume/on/network --push
+Updated linked network "alice/administrated-cluster".
+Updated network "alice/administrated-cluster".
+Remotely updated "alice/adminstrated-cluster".
+INFO: Changes to network admins do not affect existing data:
+INFO: Admin access will be updated on the next write to each
+INFO: file or folder.
+```
+
+**IMPORTANT**: All storage nodes and users who have already run the network will need to fetch the new network descriptor and relaunch the network. Changes to administrator rights occur on the next write to any given file or folder.
+
+Similarly, administrators can be removed using the `--admin-remove` argument.
+
+```
+$> infinit-network --update --as alice --admin-remove bob --mountpoint /path/to/mounted/volume/on/network --push
+Updated linked network "alice/administrated-cluster".
+Updated network "alice/administrated-cluster".
+Remotely updated "alice/adminstrated-cluster".
+INFO: Changes to network admins do not affect existing data:
+INFO: Admin access will be updated on the next write to each
+INFO: file or folder.
+```
+
 Passport
 --------
 
