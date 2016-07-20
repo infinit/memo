@@ -109,7 +109,7 @@ COMMAND(export_)
   auto path = network.cache_dir(owner) / "async" / id;
   boost::filesystem::ifstream f;
   ifnt._open_read(f, path, id, "operation");
-  auto dht = network.run();
+  auto dht = network.run(owner);
   auto ctx = context(owner, dht);
   auto op = elle::serialization::binary::deserialize<
     infinit::model::doughnut::consensus::Async::Op>(f, true, ctx);
@@ -122,7 +122,7 @@ COMMAND(describe)
   auto network = ifnt.network_get(
     ifnt.qualified_name(mandatory(args, "network", "Network"), owner),
     owner);
-  auto dht = network.run();
+  auto dht = network.run(owner);
   auto ctx = context(owner, dht);
   boost::filesystem::path async_path = network.cache_dir(owner) / "async";
   auto operation = optional<int>(args, "operation");
