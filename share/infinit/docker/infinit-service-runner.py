@@ -40,6 +40,14 @@ docker run --privileged -d -v /tmp:/tmp:shared  \
 docker run --rm -it -e INFINIT_BEYOND=$BEYOND_HOST \
   $INFINIT_IMAGE \
   bash -c 'infinit-user --login --name $USERNAME --password $PASSWORD && infinit-network --create --name net2  --kelips --as $USERNAME --push'
+
+# Manually provide storage on all nodes for given network 'mynet'
+docker service create --name storage_mynet \
+  --mode global \
+  --mount source=/root/infinit,target=/root/infinit,type=bind,writable=true \
+  -e INFINIT_HOME=/root/infinit \
+  $INFINIT_IMAGE infinit-service-runner.py --run --network mynet \
+  --beyond $BEYOND_HOST --login $USER
 '''
 
 # TODO:
@@ -92,6 +100,9 @@ class Infinit:
       raise Exception(
         'command failed with code %s: %s\nstdout: %s\nstderr: %s' % \
         (process.returncode, '', out, err))
+    elif process.returncode != 0:
+      print('command failed with code %s: %s\nstdout: %s\nstderr: %s' % \
+        (process.returncode, '', out, err))
     return out, err
 
   def ifnt_run_json(self, cmd):
@@ -111,13 +122,13 @@ class InfinitNetworkRunner(Infinit):
     return len(list(filter(lambda x: x['name'] == name, storages))) != 0
   def prepare(self, with_storage):
     up = self._user.split(':')
-    self.ifnt_run('infinit-user --login --name ' + up[0] + ' --password ' + up[1], with_as = False)
-    self.ifnt_run('infinit-network --fetch --name ' + self.__network)
+    self.ifnt_run('infinit-user --login --name ' + up[0] + ' --password ' + up[1], with_as = False, raise_on_error = False)
+    self.ifnt_run('infinit-network --fetch --name ' + self.__network, raise_on_error = False)
     if with_storage:
       storage_name = 'storage-' + self.__network.replace('/', '-')
       if not self.has_storage(storage_name):
         self.ifnt_run('infinit-storage --create --name ' + storage_name + ' --filesystem')
-        self.ifnt_run('infinit-network --link --name ' + self.__network + ' --storage ' + storage_name)
+      self.ifnt_run('infinit-network --link --name ' + self.__network + ' --storage ' + storage_name, raise_on_error = False)
     else:
       try:
         self.ifnt_run('infinit-network --link --name ' + self.__network)
@@ -144,10 +155,14 @@ class InfinitNetworkRunner(Infinit):
 
 class InfinitServiceRunner(Infinit):
   def __init__(self, user, beyond, poll_interval=10,
-               infinit_image = 'bearclaw/infinit:latest'):
+               infinit_image = 'bearclaw/infinit:latest',
+               network = 'docker',
+               volume = 'docker'):
     super().__init__(user, beyond)
     self.__poll_interval = poll_interval
     self.__infinit_image = infinit_image
+    self.__network = network
+    self.__volume = volume
 
   def service_running(self, name):
     sname = 'infinit-network-' + name.replace('/', '-')
@@ -173,7 +188,7 @@ class InfinitServiceRunner(Infinit):
     subprocess.Popen(cmd)
   def list_networks(self):
     return self.ifnt_run_json('infinit-network --list -s')
-  def run(self):
+  def init(self):
     up = self._user.split(':')
     try:
       self.ifnt_run('infinit-user --login --name ' + up[0] + ' --password ' + up[1], with_as = False)
@@ -183,8 +198,10 @@ class InfinitServiceRunner(Infinit):
         + ' --email nobody@nowhere.com --push --full')
     self.ifnt_run('infinit-network --fetch')
     networks = self.list_networks()
-    if len(networks) == 0:
-      self.ifnt_run('infinit-network --create --name default_network --kelips --push')
+    self.ifnt_run('infinit-network --create --name ' + self.__network + ' --kelips --push', raise_on_error = False)
+    self.ifnt_run('infinit-volume --create --name ' + self.__volume + ' --network ' + self.__network + ' --push', raise_on_error = False)
+  def run(self):
+    self.init()
     while True:
       self.ifnt_run('infinit-network --fetch')
       networks = self.list_networks()
@@ -213,18 +230,21 @@ def parse_options():
                       help = 'Show this help message and exit')
   parser.add_argument('--watch', action='store_true', help = 'enter network watch mode')
   parser.add_argument('--run',   action='store_true', help = 'run a network')
-  parser.add_argument('--login', type=str, help = 'user:password to login as')
+  parser.add_argument('--login', type=str, help = 'user:password to login as', default='docker:docker')
   parser.add_argument('--beyond', type=str, help = 'beyond URL', default='https://beyond.infinit.io')
   parser.add_argument('--image', type=str, help = 'infinit docker image to use')
-  parser.add_argument('--network', type=str, help = 'network to connect to (run mode)')
+  parser.add_argument('--network', type=str, help = 'network to connect to (run mode)', default='docker')
   parser.add_argument('--mount', action='store_true', help = 'mount a volume')
   parser.add_argument('--mountpoint', type=str, help = 'mountpoint')
-  parser.add_argument('--volume', type=str, help = 'volume to mount')
+  parser.add_argument('--volume', type=str, help = 'volume to mount', default='docker')
+  parser.add_argument('--init', action='store_true', help = 'Initialize beyond with given user,network and volume')
   return parser.parse_args()
 
 args = parse_options()
-if not args.watch and not args.run and not args.mount:
-  raise Exception('Either watch or run or mount must be specified')
+if os.environ.get('INFINIT_BEYOND', None) is not None:
+  args.beyond = os.environ['INFINIT_BEYOND']
+if not args.watch and not args.run and not args.mount and not args.init:
+  args.run = True
 if args.watch:
   ifr = InfinitServiceRunner(args.login, args.beyond, infinit_image = args.image)
   ifr.run()
@@ -234,3 +254,7 @@ elif args.run:
 elif args.mount:
   inr = InfinitNetworkRunner(args.login, args.beyond, args.network)
   inr.mount(args.mountpoint, args.volume)
+elif args.init:
+  ifr = InfinitServiceRunner(args.login, args.beyond, infinit_image = args.image,
+    network = args.network, volume = args.volume)
+  ifr.init()
