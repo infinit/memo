@@ -87,8 +87,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as tmp:
   bob.run(['infinit-network', '--run', '--name', 'n', '--as', 'bob',
            '--async', '--cache', '-s'])
   assertEq(len(os.listdir('%s/cache/bob/bob/n' % tmp.state_path)), 2)
-  bob.run(['infinit-storage', '--delete', '--as', 'bob',
-           '--purge', '--pull', 's'])
+  bob.run(['infinit-storage', '--delete', '--as', 'bob', '--purge', 's'])
   assertEq(len(bob.run_json(['infinit-storage', '--list', '-s', '--as', 'bob'])), 0)
   # Ensure the descriptor is still there.
   assertEq(len(os.listdir(tmp.networks_path)), 1)
