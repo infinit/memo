@@ -243,6 +243,8 @@ def parse_options():
 args = parse_options()
 if os.environ.get('INFINIT_BEYOND', None) is not None:
   args.beyond = os.environ['INFINIT_BEYOND']
+if os.environ.get('SECRET', None) is not None:
+  args.login = args.login.split(':')[0] + ':' + os.environ['SECRET']
 if not args.watch and not args.run and not args.mount and not args.init:
   args.run = True
 if args.watch:
