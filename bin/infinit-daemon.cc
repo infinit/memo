@@ -1183,7 +1183,7 @@ _run(boost::program_options::variables_map const& args, bool detach)
     }
     ELLE_TRACE("starting initial manager");
     managers[getuid()].reset(new MountManager(
-      with_default<std::string>(args, "mount-root", boost::filesystem::temp_directory_path().string()),
+      with_default<std::string>(args, "mount-root", "/run/infinit/mnt"),
       with_default<std::string>(args, "docker-mount-substitute", "")));
     MountManager& root_manager = *managers[getuid()];
     fill_manager_options(root_manager, args);
@@ -1252,7 +1252,7 @@ _run(boost::program_options::variables_map const& args, bool detach)
       if (it == managers.end())
       {
         auto lock = system_user.enter(mutex);
-        user_manager = new MountManager(with_default<std::string>(args, "mount-root", boost::filesystem::temp_directory_path().string()),
+        user_manager = new MountManager(with_default<std::string>(args, "mount-root", "/run/infinit/mnt"),
                                         with_default<std::string>(args, "docker-mount-substitute", ""));
         fill_manager_options(*user_manager, args);
         managers[uid].reset(user_manager);
@@ -1609,7 +1609,7 @@ std::vector<Mode::OptionDescription> options_run = {
   { "docker-descriptor-path", value<std::string>(),
     "Path to add plugin descriptor\n(default: /usr/lib/docker/plugins)" },
   { "mount-root", value<std::string>(),
-    "Default root path for all mounts\n(default: /tmp)" },
+    "Default root path for all mounts\n(default: /run/infinit/mnt)" },
   { "docker-mount-substitute", value<std::string>(),
     "[from:to|prefix] : Substitute 'from' to 'to' in advertised path" },
   { "default-network", value<std::string>(),
