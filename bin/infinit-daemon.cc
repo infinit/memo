@@ -74,6 +74,9 @@ struct SystemUser
       prev_home = elle::os::getenv("INFINIT_HOME", "");
       prev_data_home = elle::os::getenv("INFINIT_DATA_HOME", "");
       elle::os::setenv("INFINIT_HOME", su.home, 1);
+      if (!elle::os::getenv("INFINIT_HOME_OVERRIDE", "").empty())
+        elle::os::setenv("INFINIT_HOME",
+          elle::os::getenv("INFINIT_HOME_OVERRIDE", ""), 1);
       elle::os::unsetenv("INFINIT_DATA_HOME");
       prev_euid = geteuid();
       prev_egid = getegid();
@@ -179,6 +182,7 @@ void link_network(std::string const& name)
       boost::optional<int>(),
       desc.version,
       desc.admin_keys));
+  ifnt.network_save(*user, network, true);
   ifnt.network_save(std::move(network), true);
 }
 
@@ -428,6 +432,19 @@ MountManager::start(std::string const& name,
       return ifnt.volume_get(name);
     }
   }();
+  try
+  {
+    auto nname = split(volume.network);
+    auto net = ifnt.network_get(nname.first, nname.second, true);
+  }
+  catch (MissingLocalResource const&)
+  {
+    acquire_network(volume.network);
+  }
+  catch (elle::Error const&)
+  {
+    link_network(volume.network);
+  }
   volume.mount_options.merge(opts);
   // FIXME: Don't hardcode those.
   volume.mount_options.async = true;
