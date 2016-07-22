@@ -1,6 +1,8 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_CONSENSUS_HH
 # define INFINIT_MODEL_DOUGHNUT_CONSENSUS_HH
 
+# include <elle/Clonable.hh>
+
 # include <infinit/model/doughnut/fwd.hh>
 # include <infinit/model/doughnut/Peer.hh>
 # include <infinit/overlay/Overlay.hh>
@@ -115,12 +117,16 @@ namespace infinit
 
         class Configuration
           : public elle::serialization::VirtuallySerializable<false>
+          , public elle::Clonable<Configuration>
         {
         /*--------.
         | Factory |
         `--------*/
         public:
           Configuration() = default;
+          virtual
+          std::unique_ptr<Configuration>
+          clone() const override;
           virtual
           std::unique_ptr<Consensus>
           make(model::doughnut::Doughnut& dht);
