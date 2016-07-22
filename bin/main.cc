@@ -29,7 +29,6 @@ mode_arguments(
   Modes const& modes, boost::optional<Modes> hidden_modes,
   boost::program_options::basic_parsed_options<char> const& parsed)
 {
-  program = argv[0];
   bool after_mode = false;
   std::vector<std::string> res;
   // Valid tokens are modes + unrecognized options.
@@ -96,6 +95,7 @@ namespace infinit
   {
     try
     {
+      program = argv[0];
       std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
 #ifndef INFINIT_WINDOWS
       std::unique_ptr<crash_reporting::CrashReporter> crash_reporter;
