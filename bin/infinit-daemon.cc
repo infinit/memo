@@ -454,9 +454,21 @@ MountManager::start(std::string const& name,
   std::string mount_prefix(name + "-");
   boost::replace_all(mount_prefix, "/", "_");
   if (force_mount && !m.options.mountpoint)
+  {
+    auto username = elle::system::username();
+    auto mountbase = this->_mount_root / username;
+    boost::system::error_code erc;
+    boost::filesystem::create_directories(mountbase);
+    boost::filesystem::permissions(mountbase,
+      boost::filesystem::remove_perms
+      | boost::filesystem::others_read
+      | boost::filesystem::others_exe
+      | boost::filesystem::others_write
+      );
     m.options.mountpoint =
-    (this->_mount_root /
+    (mountbase /
       (mount_prefix + boost::filesystem::unique_path().string())).string();
+  }
   std::vector<std::string> arguments;
   static const auto root = elle::system::self_path().parent_path();
   arguments.push_back((root / "infinit-volume").string());
@@ -1165,6 +1177,11 @@ _run(boost::program_options::variables_map const& args, bool detach)
   std::unordered_map<int, std::unique_ptr<MountManager>> managers;
   std::unique_ptr<DockerVolumePlugin> docker;
   std::unique_ptr<reactor::Thread> mounter;
+  auto mountpoint = with_default<std::string>(args, "mount-root", "/run/infinit/mnt");
+  boost::system::error_code erc;
+  namespace bfs = boost::filesystem;
+  bfs::create_directories(mountpoint);
+  bfs::permissions(mountpoint, bfs::add_perms | bfs::all_all);
   {
     auto lock = system_user.enter(mutex);
     auto users = optional<std::vector<std::string>>(args, "login-user");
