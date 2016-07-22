@@ -390,10 +390,14 @@ COMMAND(fetch)
 {
   auto self = self_user(ifnt, args);
   auto network_name_ = optional(args, "name");
-  auto save = [&self] (infinit::NetworkDescriptor desc) {
-    try
+  auto save = [&self] (infinit::NetworkDescriptor desc_) {
+    // Save or update network descriptor.
+    ifnt.network_save(desc_, true);
+    for (auto const& u: ifnt.network_linked_users(desc_.name))
     {
-      auto network = ifnt.network_get(desc.name, self, false);
+      // Copy network descriptor.
+      auto desc = desc_;
+      auto network = ifnt.network_get(desc.name, u, false);
       if (network.model)
       {
         auto* d = dynamic_cast<infinit::model::doughnut::Configuration*>(
@@ -406,28 +410,17 @@ COMMAND(fetch)
             std::move(desc.consensus),
             std::move(desc.overlay),
             std::move(d->storage),
-            self.keypair(),
-            std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
+            u.keypair(),
+            std::make_shared<infinit::cryptography::rsa::PublicKey>(
+              desc.owner),
             d->passport,
-            self.name,
+            u.name,
             d->port,
             desc.version,
             desc.admin_keys));
-        // Update both the linked network and the descriptor.
-        ifnt.network_save(self, updated_network, true);
-        ifnt.network_save(desc, true);
+        // Update linked network for user.
+        ifnt.network_save(u, updated_network, true);
       }
-      else
-      {
-        // The network was present but not linked, just overwrite it with the
-        // new descriptor.
-        ifnt.network_save(desc, true);
-      }
-    }
-    catch (MissingLocalResource const& e)
-    {
-      // The network wasn't present at all.
-      ifnt.network_save(desc);
     }
   };
   if (network_name_)
