@@ -465,6 +465,11 @@ namespace infinit
         Doughnut::ConsensusBuilder consensus =
           [&] (Doughnut& dht)
           {
+            if (!this->consensus)
+            {
+              elle::err(
+                "invalid network configuration, missing field \"consensus\"");
+            }
             auto consensus = this->consensus->make(dht);
             if (async)
             {
@@ -487,6 +492,11 @@ namespace infinit
         Doughnut::OverlayBuilder overlay =
           [&] (Doughnut& dht, Address id, std::shared_ptr<Local> local)
           {
+            if (!this->overlay)
+            {
+              elle::err(
+                "invalid network configuration, missing field \"overlay\"");
+            }
             return this->overlay->make(
               std::move(id), hosts, std::move(local), &dht);
           };
