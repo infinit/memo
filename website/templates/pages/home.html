@@ -47,7 +47,7 @@
       </div>
 
       <div class="multipurpose">
-        <img src="${url('images/icons/globe.png')}">
+        <img src="${url('images/icons/multipurpose.png')}">
         <h3>Multi Purpose</h3>
         <p>Infinit can be accessed through block (iSCSI), object (AWS S3, OpenStack Swift) and file (FUSE-like, NFS, SMB etc.) protocols, the whole through a single distributed platform.</p>
       </div>
@@ -78,6 +78,7 @@
 
         <img src="${url('images/mesos.png')}">
       </div>
+      <div class="spacer"><br></div>
     </section>
 
     <section class="press">
@@ -109,10 +110,11 @@
       <p>Deploy distributed storage infrastructure to meet your  applications requirements: I/O, scalability, security, latency etc.</p>
       <a class="button big" href="${route('doc_get_started')}">Get Started</a>
 
-      <strong class="questions">Have more questions?</strong>
-      <p class="faq">Search an answer in our <a href="${route('faq')}">FAQ</a></p>
-
-      <input type="text" id="search" placeholder="Search FAQ..." />
+      <div class="faq">
+        <strong>Have more questions?</strong>
+        <p>Search an answer in our <a href="${route('faq')}">FAQ</a></p>
+        <input type="text" id="search" placeholder="Search FAQ..." />
+      </div>
     </div>
 
     <div class="contact">

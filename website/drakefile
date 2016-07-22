@@ -268,6 +268,7 @@ def configure(
     'resources/images/bg/grey@2x.png',
     'resources/images/bg/dots.png',
     'resources/images/bg/dots@2x.png',
+    'resources/images/bg/grey@2x.gif',
 
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',
@@ -518,6 +519,8 @@ def configure(
     'resources/images/icons/quota@2x.png',
     'resources/images/icons/software.png',
     'resources/images/icons/software@2x.png',
+    'resources/images/icons/multipurpose.png',
+    'resources/images/icons/multipurpose@2x.png',
   )
 
   resources = resources + resources_icons

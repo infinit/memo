@@ -60,6 +60,8 @@ a.button, button.button, input.button, body.documentation section.doc p a.button
 }
 
 .spacer { clear: both; }
+.clearfix { overflow: auto; zoom: 1;}
+
 
 .popup {
   position: relative; background: #FFF; border-radius: 5px;
@@ -295,7 +297,7 @@ footer nav > ul > li {
 | Home        |
 `------------*/
 
-body.home, body.home2 {
+body.home {
   header { background: white; }
   section { clear: both; font-size: 15px; }
 
@@ -363,7 +365,6 @@ body.home, body.home2 {
       min-height: 180px; margin-bottom: 30px;
 
       &.scalable { margin-top: -7px;}
-      &.multipurpose { margin-top: -13px;}
       &:nth-child(3n) { clear: both; }
       p { font-size: 15px; color: #959595; line-height: 19px; padding: 0 12%;}
       .cta { width: 100%; min-height: 0; padding:0;}
@@ -391,7 +392,8 @@ body.home, body.home2 {
   section.press {
     text-align: center; padding: 80px 0;
 
-    img { margin:0 3% 20px 3%; float: left;}
+    img { margin:0 4% 25px 3%; float: left;}
+    img:last-child { margin-top: 11px;}
     a.siliconangle img { vertical-align: bottom;  }
     a:hover img { opacity: 1; filter:none; -webkit-filter: none; }
   }
@@ -400,12 +402,12 @@ body.home, body.home2 {
     background-image: -webkit-linear-gradient(#1288BD 0%, #089FC8 50%, #07A399 100%);
     background-image: -o-linear-gradient(#1288BD 0%, #089FC8 50%, #07A399 100%);
     background-image: linear-gradient(#1288BD 0%, #089FC8 50%, #07A399 100%);
-    color:white; min-height: 310px; margin: 80px 0;
+    color:white; min-height: 310px; margin: 80px 0 0 0;
     padding-top: 60px;
 
     h2 { text-align: left; margin-top: 20px; }
-    img { float: right; margin-right: 6%; }
-    p { font-size: 17px; max-width: 500px; line-height: 24px; font-weight: 400;}
+    img { float: right; margin: 0 6%; }
+    p { font-size: 17px; max-width: 500px; line-height: 24px; font-weight: 400; padding-bottom: 70px;}
     h2, p, a.button { margin-left: 6%; }
     a.button { margin-bottom: 50px}
   }
@@ -413,7 +415,9 @@ body.home, body.home2 {
 
 
   section.encore {
-    text-align: center; padding:0 7%; font-size: 15px;
+    text-align: center; padding:80px 7% 0 7%; font-size: 15px;
+    .at2x('../images/bg/dots.png', 27px, 15px); background-repeat: repeat;
+    &:after { content: ""; display: table; clear: both; }
 
     p.title {
       max-width: 510px; margin: 15px auto 0 auto;
@@ -445,10 +449,14 @@ body.home, body.home2 {
 
     div.tutorial {
       p { margin-top: 20px; }
-      p.faq { margin-top: 10px;}
       a { color: @infinitblue; }
-      input[type=text] { width: 65%; margin-left: 15%;}
-      strong.questions { display: block; margin-top: 50px; }
+
+      div.faq {
+        width: 70%; margin: 0 auto;
+        p { margin-top: 10px;}
+        strong { display: block; margin-top: 50px; }
+        input[type=text] { width: 100%; }
+      }
     }
 
     .algolia-autocomplete { width: 100%; }
@@ -458,7 +466,7 @@ body.home, body.home2 {
     .algolia-autocomplete .aa-dropdown-menu {
       background-color: #fff; border: 2px solid #e2e2e2;
       border-top: 1px solid #e2e2e2; width: 100%;
-      border-top: none; margin-top: -3px;
+      border-top: none; margin-top: -7px;
     }
     .algolia-autocomplete .aa-dropdown-menu .aa-suggestion {
       cursor: pointer; padding: 8px 15px; font-size: 14.5px; text-align: left;
