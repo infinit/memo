@@ -292,7 +292,8 @@ public:
   void
   start(std::string const& name, infinit::MountOptions opts = {},
         bool force_mount = false,
-        bool wait_for_mount = false);
+        bool wait_for_mount = false,
+        std::vector<std::string> const& extra_args = {});
   void
   stop(std::string const& name);
   void
@@ -428,7 +429,8 @@ void
 MountManager::start(std::string const& name,
                     infinit::MountOptions opts,
                     bool force_mount,
-                    bool wait_for_mount)
+                    bool wait_for_mount,
+                    std::vector<std::string> const& extra_args)
 {
   infinit::Volume volume = [&]
   {
@@ -503,6 +505,7 @@ MountManager::start(std::string const& name,
     arguments.push_back("--advertise-host");
     arguments.push_back(host);
   }
+  arguments.insert(arguments.end(), extra_args.begin(), extra_args.end());
   if (this->_log_level)
     env.insert(std::make_pair("ELLE_LOG_LEVEL", _log_level.get()));
   if (this->_log_path)
@@ -792,6 +795,15 @@ MountManager::create_volume(std::string const& name,
   catch (elle::Error const& e)
   {
     ELLE_WARN("Failed to push %s to beyond: %s", qname, e);
+  }
+  // Create the root block
+  if (elle::os::getenv("INFINIT_NO_ROOT_CREATION", "").empty())
+  {
+    start(qname, mo, true, true, {"--allow-root-creation"});
+    auto mp = mountpoint(qname, true);
+    struct stat st;
+    stat(mp.c_str(), &st);
+    stop(qname);
   }
 }
 
