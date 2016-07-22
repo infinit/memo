@@ -449,6 +449,10 @@ MountManager::start(std::string const& name,
   // FIXME: Don't hardcode those.
   volume.mount_options.async = true;
   volume.mount_options.cache = true;
+  if (!volume.mount_options.fuse_options)
+    volume.mount_options.fuse_options = std::vector<std::string>{"allow_root"};
+  else
+    volume.mount_options.fuse_options->push_back("allow_root");
   volume.mount_options.fetch = true;
   Mount m{nullptr, volume.mount_options};
   std::string mount_prefix(name + "-");
@@ -1180,8 +1184,8 @@ _run(boost::program_options::variables_map const& args, bool detach)
   auto mountpoint = with_default<std::string>(args, "mount-root", "/run/infinit/mnt");
   boost::system::error_code erc;
   namespace bfs = boost::filesystem;
-  bfs::create_directories(mountpoint);
-  bfs::permissions(mountpoint, bfs::add_perms | bfs::all_all);
+  if (bfs::create_directories(mountpoint))
+    bfs::permissions(mountpoint, bfs::add_perms | bfs::all_all);
   {
     auto lock = system_user.enter(mutex);
     auto users = optional<std::vector<std::string>>(args, "login-user");
