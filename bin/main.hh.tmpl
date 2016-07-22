@@ -875,6 +875,15 @@ namespace infinit
       check_name(this->name);
     }
 
+    NetworkDescriptor(NetworkDescriptor const& desc)
+      : name(desc.name)
+      , consensus(desc.consensus->clone())
+      , overlay(desc.overlay->clone())
+      , owner(desc.owner)
+      , version(desc.version)
+      , admin_keys(desc.admin_keys)
+    {}
+
     void
     serialize(elle::serialization::Serializer& s)
     {
