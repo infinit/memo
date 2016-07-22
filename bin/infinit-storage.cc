@@ -365,7 +365,6 @@ COMMAND(delete_)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   infinit::check_broken_locale();

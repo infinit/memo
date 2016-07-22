@@ -29,6 +29,7 @@ mode_arguments(
   Modes const& modes, boost::optional<Modes> hidden_modes,
   boost::program_options::basic_parsed_options<char> const& parsed)
 {
+  program = argv[0];
   bool after_mode = false;
   std::vector<std::string> res;
   // Valid tokens are modes + unrecognized options.

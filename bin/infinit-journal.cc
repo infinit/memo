@@ -161,7 +161,6 @@ COMMAND(describe)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   Modes modes = {
     {

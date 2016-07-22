@@ -971,7 +971,6 @@ COMMAND(list)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   std::vector<Mode::OptionDescription> options_run_mount = {

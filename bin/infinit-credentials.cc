@@ -253,7 +253,6 @@ COMMAND(delete_)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   Mode::OptionsDescription services_options("Services");
   services_options.add_options()

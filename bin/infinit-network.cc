@@ -835,7 +835,6 @@ COMMAND(stats)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Mode::OptionsDescription overlay_types_options("Overlay types");
