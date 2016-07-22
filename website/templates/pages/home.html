@@ -9,203 +9,172 @@
   </a>
 
   <section class="presentation">
+    <h1>Infinit Storage Platform</h1>
+    <h2>An open-source decentralized software-based storage platform for modern environments.</h2>
 
-    <div class="headline">
-      <h1>Decentralized Software&#8209;Based File&nbsp;Storage&nbsp;Platform</h1>
-      <h3>#peer&#8209;to&#8209;peer #security #redundancy #filesystem #open&#8209;source</h3>
-      <a href="${route('doc_get_started')}" class="button big">Get Started</a>
-
-      <img src="${url('images/schema-global.png')}" alt="Schema of Infinit">
-    </div>
+    <img src="${url('images/schema-global2.png')}" alt="Schema of Infinit">
   </section>
 
-  <section class="features summary">
-    <div class="wrapper">
-      <p class="title">Create flexible and controllable storage infrastructure</p>
-      <hr>
-
-      <div class="network">
-        <img src="${url('images/icons/network.png')}">
-        <h3>Create Network</h3>
-        <p>Create a network composed of several machines, clients and/or servers.</p>
-      </div>
-
-      <span class="arrow"><img src="${url('images/icons/arrow-right.png')}"></span>
-
-      <div class="storage">
-        <img src="${url('images/icons/storage.png')}">
-        <h3>Attach Storage</h3>
-        <p>Attach storage resources to a machine, being a local disk, a cloud provider or else.</p>
-      </div>
-
-      <span class="arrow"><img src="${url('images/icons/arrow-right.png')}"></span>
-
-      <div class="volume">
-        <img src="${url('images/icons/folder.png')}">
-        <h3>Mount Volume</h3>
-        <p>Create a volume and access files through a POSIX-compliant file system interface.­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­</p>
-      </div>
-
-      <hr>
-
-      <div class="terminal">
-        <div class="header">
-          <ul><li class="red"></li><li class="yellow"></li><li class="green"></li></ul>
-        </div>
-<pre><code id="commands">$> infinit-storage --create --s3 --name s3 --capacity 10TB
-Created storage "s3".
-
-$> infinit-network --create --storage s3 --storage local&#8209;disk&#8209;1 --storage local&#8209;disk&#8209;2 --replication-factor 3 --name hybrid-cloud
-Created network "hybrid-cloud".
-
-$> infinit-volume --create --network hybrid-cloud --name company
-Starting network "hybrid-cloud".
-Creating volume root blocks.
-Created volume "company".
-
-$> infinit-volume --mount --name company --mountpoint /mnt/company/
-Mounting volume "company".
-
-$> cp -R Engineering/ /mnt/company/
-
-$> ​▎
-</code></pre>
-      </div>
-
-  </div>
-  </section>
 
   <div class="wrapper">
-    <section class="features benefits">
-      <p class="title">Infinit is deployed once and evolves along with your needs</p>
+    <section class="features">
+
+      <h2>Multiple workflows, a single platform</h2>
+      <p class="title">Infinit's decentralized storage platform transforms commodity servers into multiple flexible, scalable, secure and fault-tolerant storage infrastructure tailored for your applications.</p>
 
       <div>
-        <img src="${url('images/icons/scalability.png')}">
+        <img src="${url('images/icons/software.png')}">
+        <h3>Software-Defined</h3>
+        <p>Infinit can be deployed anywhere: bare metal, virtual machines and containers alike, running on vendor-specific appliances or commodity hardware. As a result, an enterprise can expect its total cost of ownership (TCO) to be lowered by 70+%.</p>
+      </div>
+
+      <div>
+        <img src="${url('images/icons/code.png')}">
+        <h3>Programmatic</h3>
+        <p>Through command-line tools, APIs and a notification system, developers and operators can deploy, manage and monitor multiple concurrent storage infrastructure, each with its own set of properties: redundancy, encryption, data placement etc.</p>
+      </div>
+
+      <div class="scalable">
+        <img src="${url('images/icons/scalable-yellow.png')}">
         <h3>Scalable</h3>
-        <p>Scales on demand according to your business requirements, from 1GB to petabytes and beyond.</p>
+        <p>Infinit's decentralized architecture (no metadata server) allows for storage infrastructure to very quickly scale out to thousands of nodes and petabytes of data, while removing bottlenecks and single points of failure.</p>
+      </div>
+
+      <div class="performance">
+        <img src="${url('images/icons/fault_tolerance.png')}">
+        <h3>Self Healing</h3>
+        <p>Infinit’s unique fault tolerance mechanism supports both crashes and Byzantine failures, automatically rebalancing data so as to maintain the system in an healthy state at any time.</p>
+      </div>
+
+      <div class="multipurpose">
+        <img src="${url('images/icons/globe.png')}">
+        <h3>Multi Purpose</h3>
+        <p>Infinit can be accessed through block (iSCSI), object (AWS S3, OpenStack Swift) and file (FUSE-like, NFS, SMB etc.) protocols, the whole through a single distributed platform.</p>
       </div>
 
       <div>
         <img src="${url('images/icons/security.png')}">
-        <h3>Secure</h3>
-        <p>All the files are encrypted both in transit and at rest through bank-level cryptographic algorithms.</p>
+        <h3>Modern</h3>
+        <p>Infinit comes naturally bundled with encryption, distributed caching, multi-site redundancy, provisioning, hyper-scaling/hyper-convergence (e.g in Docker Swarm) deployments, and application tailoring through policy-based capabilities.</p>
+      </div>
+    </section>
+
+    <section class="product">
+      <h2>For developers and operators alike</h2>
+      <p class="title">Infinit provides both a command-line interface, APIs and integration into DevOps favorite tools.</p>
+
+      <div class="developers">
+        <strong>Developers</strong>
+        <p>Deploy distributed storage infrastructure to meet your  applications requirements: I/O, scalability, security, latency etc.</p>
+        <a class="button" href="${route('doc_get_started')}">Get Started</a><br>
+
+        <img src="${url('images/terminal-home.png')}"><br>
       </div>
 
-      <div class="fault">
-        <img src="${url('images/icons/fault_tolerance.png')}">
-        <h3>Fault Tolerant</h3>
-        <p>Designed to tolerate disk, server and even malicious failures and to automatically adapt without any human intervention.</p>
-      </div>
+      <div class="operators">
+        <strong>Operators</strong>
+        <p>Manage and monitor your Infinit large-scale deployments through datacenter control planes such as Docker UCP or Mesosphere.</p>
+        <span>Coming soon!</span>
 
-      <div class="performance">
-        <img src="${url('images/icons/rocket.png')}">
-        <h3>Efficient</h3>
-        <p>Benefit from a high-throughput network protocol for faster and on-demand data retrieval.</p>
+        <img src="${url('images/mesos.png')}">
       </div>
+    </section>
 
-      <div class="software">
-        <img src="${url('images/icons/code.png')}">
-        <h3>Hardware Agnostic</h3>
-        <p>100% software-based system for building enterprise-class storage infrastructure.</p>
-      </div>
-
-      <div>
-        <img src="${url('images/icons/globe.png')}">
-        <h3>Flexible</h3>
-        <p>Control your costs and the localisation of your data by selecting the storage resources &amp; providers involved in your infrastructure.</p>
-      </div>
-
-      <div class="cta"><a class="button border black" href="${route('doc_overview')}">Learn More</a></div>
+    <section class="press">
+      <img class="docker" src="${url('images/logos/docker.png')}" alt="docker logo">
+      <img class="coreos" src="${url('images/logos/coreos.png')}" alt="coreos logo">
+      <img class="kubernetes" src="${url('images/logos/kubernetes.png')}" alt="kubernetes logo">
+      <img class="openstack" src="${url('images/logos/openstack.png')}" alt="openstack logo">
+      <img class="mesosphere" src="${url('images/logos/mesosphere.png')}" alt="Mesosphere logo">
     </section>
   </div>
 
 
-  <section class="client">
-    <div class="app">
-      <img src="${url('images/desktop-client.png')}" alt="Infinit Drive Desktop App">
+  <section class="docker">
+    <div class="wrapper">
+      <img src="${url('images/logos/docker-big.png')}" alt="docker logo">
+      <h2>Infinit + Docker = ❤</h2>
+      <p>Infinit storage platform comes with several Docker integrations: from a Docker volume plugin to more cluster-based integrations at the Docker Swarm level, allowing for container migration and application scaling.</p>
+      <!--<a class="button white" href="#">Learn More</a>-->
     </div>
-
-    <div class="users">
-      <h3>Desktop Client</h3>
-      <p>Invite your non-tech-savvy colleagues to join drives you defined in your freshly created storage infrastructure.</p>
-      <img src="${url('images/icons/platforms.png')}" alt="Available for Mac, Windows and Linux"><br>
-
-      <a class="button" href="${route('drive')}">Discover Infinit Drive</a>
-    </div>
-  </section>
-
-
-  <section class="usecases">
-    <p class="title">Infinit is the result of 8 years of research and development</p>
-
-    <div class="usecase infrastructure">
-      <img src="${url('images/schema-infrastructure.png')}" alt="Schema Overlay Network">
-      <h2>Overlay Network</h2>
-      <p>Connects thousands of computing devices in peer-to-peer in order to scale and prevent any bottleneck or single point of failure.</p>
-    </div>
-
-    <div class="usecase dht">
-      <img src="${url('images/schema-dht.png')}" alt="Schema DHT">
-      <h2>Distributed Hash Table</h2>
-      <p>Replicates encrypted blocks of data in order to ensure their availability and reliability in a decentralized manner.</p>
-    </div>
-
-    <div class="usecase fs">
-      <img src="${url('images/schema-file-system.png')}" alt="Schema File System">
-      <h2>File System</h2>
-      <p>Provides a low-level virtual disk interface on top of the DHT, allowing for a hierarchical organization of files.</p>
-    </div>
-
-    <a class="button border black" href="${route('doc_technology')}">More about our technology</a>
   </section>
 
 
   <section class="encore">
+    <h2>Ready to start?</h2>
+    <p class="title">Infinit can be used for free through its open source community version while enterprise licenses provide advanced functionalities.</p>
 
-    <div class="get_started">
-      <p class="title">Start using Infinit now</p>
-      <p class="subtitle">Create your first infrastructure in a few minutes</p>
-
+    <div class="tutorial">
+      <strong>Tutorial</strong>
+      <p>Deploy distributed storage infrastructure to meet your  applications requirements: I/O, scalability, security, latency etc.</p>
       <a class="button big" href="${route('doc_get_started')}">Get Started</a>
-      <br><br><br><br><br><br>
-    </div>
 
-    <div class="search_faq">
-      <p class="title">Have more questions?</p>
-      <p class="subtitle">Search an answer in our <a href="${route('faq')}">FAQ</a></p>
+      <strong class="questions">Have more questions?</strong>
+      <p class="faq">Search an answer in our <a href="${route('faq')}">FAQ</a></p>
 
       <input type="text" id="search" placeholder="Search FAQ..." />
     </div>
-    <!--
-    <div>
-      <img src="${url('images/terminal-mini.png')}">
-      <h4>Storage Infrastructure</h4>
-      <span>for sysadmins and devops</span>
-      <p>Build sophisticated and efficient software-based storage infrastructure by relying on public, private or hybrid cloud environments.</p>
-      <a href="${route('doc_get_started')}" class="button">Get Started</a>
+
+    <div class="contact">
+      <strong>Contact Us</strong>
+      <form action="${route('contact')}" id="contact_form" method="POST">
+
+      <input type="text" name="first_name" placeholder="First Name*" required>
+      <input type="text" name="last_name" placeholder="Last Name*" required>
+      <input class="email" type="email" name="email" placeholder="Email*" required>
+      <textarea name="message" required></textarea>
+
+      <button type="submit" class="button btn-send-contact">Send</button>
+    </form>
     </div>
-    <div>
-      <img src="${url('images/desktop-client-mini.png')}">
-      <h4>Drive</h4>
-      <span>for small and medium businesses</span>
-      <p>Benefit from a easy-to-use and secure cloud file synchronization solution while controlling in which country/provider your data is stored.</p>
-      <a href="${route('drive')}" class="button">Download</a>
-    </div>
-    <div>
-      <img src="${url('images/branded-apps.png')}">
-      <h4>Cloud Storage as a Service</h4>
-      <span>for network operators and device manufacturers</span>
-      <p>Integrate a pre-build branded cloud file storage service that will increase engagement and create a new revenue stream.</p>
-      <a href="${route('solutions')}" class="button">Browse Solutions</a>
-    </div>
-    -->
   </section>
 
-  <section class="press">
-    <a href="http://techcrunch.com/2016/02/16/infinits-file-storage-platform-lets-you-unify-cloud-storage-servers-and-local-computers/"><img src="${url('images/logos/techcrunch.png')}" alt="techcrunch logo"></a>
-    <a class="siliconangle" href="http://siliconangle.com/blog/2016/02/16/infinit-wants-to-become-the-docker-of-storage/"><img src="${url('images/logos/siliconangle.png')}" alt="siliconangle logo"></a>
-    <a href="http://www.infoworld.com/article/3020684/storage/startup-infinit-takes-on-dropbox-box-using-cloud-and-local-storage.html"><img src="${url('images/logos/infoworld.png')}" alt="infoworld logo"></a>
+
+  <section class="news">
+    <div class="blog">
+      <strong class="title">Latest blogposts</strong>
+      <div class="article">
+        <h3><a href="http://blog.infinit.sh/how-to-set-up-a-decentralized-storage-infrastrcture-with-infinit-and-digital-ocean/" target="_blank">How to set up a decentralized storage infrastructure with Infinit and Digital Ocean</a></h3>
+        <span class="date">— 28 June 2016</span>
+        <p>With this tutorial, our goal is to create a simple NFS-like infrastructure with only two machines. One... <a href="http://blog.infinit.sh/how-to-set-up-a-decentralized-storage-infrastrcture-with-infinit-and-digital-ocean/">Read More</a></p>
+      </div>
+
+      <div class="article">
+        <h3><a href="http://blog.infinit.sh/release-0-6-0-automatic-rebalancing-and-performance-improvements/" target="_blank">Release 0.6.0 — Automatic rebalancing and performance improvements</a></h3>
+        <span class="date">— 08 June 2016</span>
+        <p>With this tutorial, our goal is to create a simple NFS-like infrastructure with only two machines. One... <a href="http://blog.infinit.sh/release-0-6-0-automatic-rebalancing-and-performance-improvements/">Read More</a></p>
+      </div>
+
+      <div class="article">
+        <h3><a href="http://blog.infinit.sh/infinit-meetup-1-distributed-storage-systems-live-demo/" target="_blank">How to set up a decentralized storage infrastructure with Infinit and Digital Ocean</a></h3>
+        <span class="date">— 28 June 2016</span>
+        <p>With this tutorial, our goal is to create a simple NFS-like infrastructure with only two machines. One... <a href="http://blog.infinit.sh/infinit-meetup-1-distributed-storage-systems-live-demo/">Read More</a></p>
+      </div>
+    </div>
+
+    <div class="news">
+      <strong class="title">Latest news</strong>
+      <div class="event">
+        <img src="${url('images/logos/meetup.png')}" alt="meetup logo">
+        <strong>Infinit Meetup #2 — Drinks and Talks</strong>
+        <span class="date">05 July 2016 - Paris</span>
+        <a target="_blank" href="http://www.meetup.com/Infinit-Paris/events/231333549/">Learn More</a>
+      </div>
+
+      <div class="tweet">
+        <img src="${url('images/logos/twitter-infinit.png')}" alt="twitter infinit logo">
+        <p><a href="https://twitter.com/infinit_sh">@infinit_sh</a>: On our way to @dockercon :) Don’t hesitate to contact us if you want to have a chat! <span>#DockerCon</span> <span class="date">— 12 June 2016</span></p>
+      </div>
+
+      <div class="event">
+        <img src="${url('images/logos/meetup.png')}" alt="meetup logo">
+        <strong>Infinit Meetup #1 — Introduction to Distributed Storage Systems</strong>
+        <span class="date">12 June 2016 - Paris</span>
+        <a target="_blank" href="http://www.meetup.com/Infinit-Paris/events/231333549/">Learn More</a>
+      </div>
+    </div>
   </section>
+  <div class="spacer"><br><br><br><br><br><br></div>
 
 
 </%block>
