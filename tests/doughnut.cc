@@ -1071,6 +1071,7 @@ namespace rebalancing
     std::string
     description() const override
     {
+      return "";
     }
 
     ELLE_ATTRIBUTE_R(elle::Buffer, previous);
