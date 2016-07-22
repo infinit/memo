@@ -1300,7 +1300,7 @@ namespace infinit
         std::remove_if(res.begin(), res.end(),
         [&] (infinit::User const& u)
         {
-          return !boost::filesystem::exists(this->_network_path(name, u));
+          return !boost::filesystem::exists(this->_network_path(name, u, false));
         }),
         res.end());
       return res;
@@ -1824,19 +1824,21 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _network_path(User const& user) const
+    _network_path(User const& user, bool create_dir = true) const
     {
       auto root = xdg_data_home() / "linked_networks" / user.name;
-      create_directories(root);
+      if (create_dir)
+        create_directories(root);
       return root;
     }
 
     boost::filesystem::path
     _network_path(std::string const& name,
-                  User const& user) const
+                  User const& user,
+                  bool create_dir = true) const
     {
       auto network_name = this->qualified_name(name, user);
-      return this->_network_path(user) / network_name;
+      return this->_network_path(user, create_dir) / network_name;
     }
 
     boost::filesystem::path
