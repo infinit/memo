@@ -41,8 +41,12 @@ namespace infinit
     struct KalimeroConfiguration
       : public Configuration
     {
+      typedef KalimeroConfiguration Self;
+      typedef Configuration Super;
+
       KalimeroConfiguration();
       KalimeroConfiguration(elle::serialization::SerializerIn& input);
+      ELLE_CLONABLE();
       void
       serialize(elle::serialization::Serializer& s) override;
       virtual
