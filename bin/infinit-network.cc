@@ -430,25 +430,15 @@ COMMAND(fetch)
   }
   else // Fetch all networks for self.
   {
-    // FIXME: Workaround for NetworkDescriptor's copy constructor being deleted.
-    // Remove when serialization does not require copy.
-    auto res = beyond_fetch_json(elle::sprintf("users/%s/networks", self.name),
-                                 "networks for user",
-                                 self.name,
-                                 self);
-    auto root = boost::any_cast<elle::json::Object>(res);
-    auto networks_vec =
-      boost::any_cast<std::vector<elle::json::Json>>(root["networks"]);
-    for (auto const& network_json: networks_vec)
-    {
-      try
-      {
-        elle::serialization::json::SerializerIn input(network_json, false);
-        save(input.deserialize<infinit::NetworkDescriptor>());
-      }
-      catch (ResourceAlreadyFetched const& error)
-      {}
-    }
+    auto res =
+      beyond_fetch<std::unordered_map<std::string,
+                                      std::vector<infinit::NetworkDescriptor>>>(
+      elle::sprintf("users/%s/networks", self.name),
+      "networks for user",
+      self.name,
+      self);
+    for (auto const& n: res["networks"])
+      save(n);
   }
 }
 
