@@ -365,6 +365,7 @@ body.home {
       min-height: 180px; margin-bottom: 30px;
 
       &.scalable { margin-top: -7px;}
+      &.modern { margin-top: -5px; }
       &:nth-child(3n) { clear: both; }
       p { font-size: 15px; color: #959595; line-height: 19px; padding: 0 12%;}
       .cta { width: 100%; min-height: 0; padding:0;}
@@ -391,8 +392,8 @@ body.home {
 
   section.press {
     text-align: center; padding: 80px 0;
-
-    img { margin:0 4% 25px 3%; float: left;}
+    .logos { width: 950px; text-align: center; margin: 0 auto;}
+    img { margin:0 20px 25px 20px; float: left; display: inline}
     img:last-child { margin-top: 11px;}
     a.siliconangle img { vertical-align: bottom;  }
     a:hover img { opacity: 1; filter:none; -webkit-filter: none; }
@@ -508,7 +509,7 @@ body.home {
       }
 
       .tweet {
-        img { margin: 13px 20px 0px 5px; }
+        img { margin: 13px 20px 10px 5px; }
         a { text-transform: none; }
         p span, span.date { color: @infinitgray; }
         span.date { font-weight: 300; }
