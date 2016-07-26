@@ -2,6 +2,7 @@ import drake
 import drake.cxx
 import drake.debian
 import drake.git
+import drake.license_file
 import drake.python
 import drake.redhat
 import drake.valgrind
@@ -564,6 +565,13 @@ def configure(
     'demo-home/volumes/infinit/demo',
   )
 
+  ## -------- ##
+  ## Licenses ##
+  ## -------- ##
+
+  license_file = drake.node('OSS-licenses')
+  drake.license_file.Packager(license_folder = 'licenses', license_file)
+
   ## ------- ##
   ## Install ##
   ## ------- ##
@@ -574,6 +582,8 @@ def configure(
                           builder = PatchAndInstall)
     yield from drake.copy(
       demo_home, where / 'share/infinit/filesystem/test/home', 'demo-home')
+    yield from drake.copy(
+      [license_file], where / 'share/infinit/filesystem/licenses')
 
   rule_install << install_nodes(prefix)
 
