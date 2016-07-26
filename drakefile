@@ -570,7 +570,7 @@ def configure(
   ## -------- ##
 
   license_file = drake.node('OSS-licenses')
-  drake.license_file.Packager(license_folder = 'licenses', license_file)
+  drake.license_file.Packager('licenses', license_file)
 
   ## ------- ##
   ## Install ##
