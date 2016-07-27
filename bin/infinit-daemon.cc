@@ -458,14 +458,10 @@ MountManager::start(std::string const& name,
     link_network(volume.network);
   }
   volume.mount_options.merge(opts);
-  // FIXME: Don't hardcode those.
-  volume.mount_options.async = true;
-  volume.mount_options.cache = true;
   if (!volume.mount_options.fuse_options)
     volume.mount_options.fuse_options = std::vector<std::string>{"allow_root"};
   else
     volume.mount_options.fuse_options->push_back("allow_root");
-  volume.mount_options.fetch = true;
   Mount m{nullptr, volume.mount_options};
   std::string mount_prefix(name + "-");
   boost::replace_all(mount_prefix, "/", "_");
@@ -778,23 +774,31 @@ MountManager::create_volume(std::string const& name,
       }
   }());
   infinit::MountOptions mo;
-  mo.fetch = true;
-  mo.push = true;
+  bool use_beyond = !optional(options, "no-beyond");
+  if (use_beyond)
+  {
+    mo.fetch = true;
+    mo.push = true;
+  }
   mo.as = username;
-  mo.cache = !optional(options, "nocache");;
+  mo.cache = !optional(options, "no-cache");
+  mo.async = !optional(options, "no-async");
   std::string qname(name);
   if (qname.find("/") == qname.npos)
     qname = *username + "/" + qname;
   infinit::Volume volume(qname, network.name, mo, {});
   ifnt.volume_save(volume, true);
   report_created("volume", qname);
-  try
+  if (use_beyond)
   {
-    beyond_push("volume", qname, volume, user);
-  }
-  catch (elle::Error const& e)
-  {
-    ELLE_WARN("Failed to push %s to beyond: %s", qname, e);
+    try
+    {
+      beyond_push("volume", qname, volume, user);
+    }
+    catch (elle::Error const& e)
+    {
+      ELLE_WARN("Failed to push %s to beyond: %s", qname, e);
+    }
   }
   // Create the root block
   if (elle::os::getenv("INFINIT_NO_ROOT_CREATION", "").empty())
