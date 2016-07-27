@@ -127,8 +127,18 @@ split(std::string const& name)
                         );
 }
 
+static
+boost::optional<std::string>
+optional(elle::json::Object const& options, std::string const& name)
+{
+  auto it = options.find(name);
+  if (it == options.end())
+    return {};
+  else
+    return boost::any_cast<std::string>(it->second);
+}
 
-void link_network(std::string const& name)
+void link_network(std::string const& name, elle::json::Object const& options)
 {
   auto cname = split(name);
   auto desc = ifnt.network_descriptor_get(cname.first, cname.second, false);
@@ -178,13 +188,37 @@ void link_network(std::string const& name)
   if (!passport)
     throw elle::Error("Failed to acquire passport.");
   ELLE_TRACE("Passport found for user %s", user->name);
+
+  std::unique_ptr<infinit::storage::StorageConfig> storage_config;
+  auto storagedesc = optional(options, "storage");
+  if (storagedesc && storagedesc->empty())
+  {
+    std::string storagename = name + "_storage";
+    boost::replace_all(storagename, "/", "_");
+    ELLE_LOG("Creating local storage %s", storagename);
+    auto path = infinit::xdg_data_home() / "blocks" / storagename;
+    storage_config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
+      storagename, path.string(), boost::optional<int64_t>());
+  }
+  else if (storagedesc)
+  {
+    try
+    {
+      storage_config = ifnt.storage_get(*storagedesc);
+    }
+    catch (MissingLocalResource const&)
+    {
+      throw elle::Error("Storage specification for new storage not implemented");
+    }
+  }
+
   infinit::Network network(
     desc.name,
     elle::make_unique<infinit::model::doughnut::Configuration>(
       infinit::model::Address::random(0), // FIXME
       std::move(desc.consensus),
       std::move(desc.overlay),
-      std::unique_ptr<infinit::storage::StorageConfig>(),
+      std::move(storage_config),
       user->keypair(),
       std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
       std::move(*passport),
@@ -207,7 +241,7 @@ void acquire_network(std::string const& name)
   }
   catch (elle::Error const&)
   {
-    link_network(name);
+    link_network(name, {});
   }
 }
 
@@ -226,7 +260,7 @@ void acquire_volume(std::string const& name)
   }
   catch (elle::Error const&)
   {
-    link_network(desc.network);
+    link_network(desc.network, {});
   }
 }
 
@@ -455,7 +489,7 @@ MountManager::start(std::string const& name,
   }
   catch (elle::Error const&)
   {
-    link_network(volume.network);
+    link_network(volume.network, {});
   }
   volume.mount_options.merge(opts);
   if (!volume.mount_options.fuse_options)
@@ -587,17 +621,6 @@ MountManager::status()
   return res;
 }
 
-static
-boost::optional<std::string>
-optional(elle::json::Object const& options, std::string const& name)
-{
-  auto it = options.find(name);
-  if (it == options.end())
-    return {};
-  else
-    return boost::any_cast<std::string>(it->second);
-}
-
 void
 MountManager::update_network(infinit::Network& network,
                              elle::json::Object const& options)
@@ -669,28 +692,7 @@ MountManager::create_network(elle::json::Object const& options,
   if (!netname)
     netname = _default_network;
   ELLE_LOG("Creating network %s", netname);
-  std::unique_ptr<infinit::storage::StorageConfig> storage_config;
-  auto storagedesc = optional(options, "storage");
-  if (!storagedesc || storagedesc->empty())
-  {
-    std::string storagename = *netname + "_storage";
-    boost::replace_all(storagename, "/", "_");
-    ELLE_LOG("Creating local storage %s", storagename);
-    auto path = infinit::xdg_data_home() / "blocks" / storagename;
-    storage_config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
-      storagename, path.string(), boost::optional<int64_t>());
-  }
-  else
-  {
-    try
-    {
-      storage_config = ifnt.storage_get(*storagedesc);
-    }
-    catch (MissingLocalResource const&)
-    {
-      throw elle::Error("Storage specification for new storage not implemented");
-    }
-  }
+
   int rf = 1;
   auto rfstring = optional(options, "replication-factor");
   if (rfstring)
@@ -714,7 +716,7 @@ MountManager::create_network(elle::json::Object const& options,
       infinit::model::Address::random(0), // FIXME
       std::move(consensus_config),
       std::move(kelips),
-      std::move(storage_config),
+      std::unique_ptr<infinit::storage::StorageConfig>(),
       owner.keypair(),
       std::make_shared<infinit::cryptography::rsa::PublicKey>(owner.public_key),
       infinit::model::doughnut::Passport(
@@ -726,20 +728,24 @@ MountManager::create_network(elle::json::Object const& options,
       port,
       version,
       infinit::model::doughnut::AdminKeys());
-  infinit::Network network(ifnt.qualified_name(*netname, owner),
-                           std::move(dht));
+  auto fullname = ifnt.qualified_name(*netname, owner);
+  infinit::Network network(fullname, std::move(dht));
   ifnt.network_save(std::move(network));
   report_created("network", *netname);
+  link_network(fullname, options);
   infinit::NetworkDescriptor desc(ifnt.network_get(*netname, owner, true));
-  try
+  if (!optional(options, "no-beyond"))
   {
-    beyond_push("network", desc.name, desc, owner);
+    try
+    {
+      beyond_push("network", desc.name, desc, owner);
+    }
+    catch (elle::Error const& e)
+    {
+      ELLE_WARN("Failed to push network %s to beyond: %s", desc.name, e);
+    }
   }
-  catch (elle::Error const& e)
-  {
-    ELLE_WARN("Failed to push network %s to beyond: %s", desc.name, e);
-  }
-  return network;
+  return ifnt.network_get(*netname, owner, true);
 }
 
 void
@@ -761,6 +767,9 @@ MountManager::create_volume(std::string const& name,
   auto netname = optional(options, "network");
   if (!netname)
     netname = _default_network;
+  auto nname = *netname;
+  if (nname.find("/") == nname.npos)
+    nname = *username + "/" + nname;
   infinit::Network network ([&]() -> infinit::Network {
       try
       {
@@ -772,7 +781,13 @@ MountManager::create_volume(std::string const& name,
       {
         return create_network(options, user);
       }
+      catch (elle::Error const&)
+      {
+        link_network(nname, options);
+        return ifnt.network_get(*netname, user, true);
+      }
   }());
+
   infinit::MountOptions mo;
   bool use_beyond = !optional(options, "no-beyond");
   if (use_beyond)
