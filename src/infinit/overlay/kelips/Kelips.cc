@@ -2308,10 +2308,18 @@ namespace infinit
         int g = group_of(p->sender);
         if (g != _group && !p->files.empty())
           ELLE_WARN("%s: Received files from another group: %s at %s", *this, p->sender, p->endpoint);
-        for (auto const& c: p->contacts)
+        for (auto& c: p->contacts)
         {
           if (c.first == _self)
             continue;
+          auto contact_timeout = std::chrono::milliseconds(_config.contact_timeout_ms);
+          endpoints_cleanup(c.second, now() - contact_timeout);
+          if (c.second.empty())
+          {
+            ELLE_DEBUG("%s: dropping contact entry %f with only obsolete endpoints",
+                       *this, c.first);
+            continue;
+          }
           int g = group_of(c.first);
           auto& target = _state.contacts[g];
           auto it = target.find(c.first);
