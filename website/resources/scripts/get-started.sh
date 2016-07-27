@@ -785,7 +785,7 @@ create_filesystem_storage "local" "1GB" "${storage_path_A}"
 # create network
 echo "[Device A] Create network: my-network"
 storages_A=("local")
-create_network "${USER_NAME_A}" "my-network" storages_A[@] "--kelips --push"
+create_network "${USER_NAME_A}" "my-network" storages_A[@] "--push"
 track_network "${infinit_home_A}" "${USER_NAME_A}" "my-network"
 
 # create volume
@@ -798,7 +798,7 @@ mount_point_A=$(mktemp -d)
 track_directory "${mount_point_A}"
 echo "[Device A] Mount volume 'my-volume': ${mount_point_A}"
 peers_A=()
-output_A=$(mount_volume "${USER_NAME_A}" "my-volume" "${mount_point_A}" peers_A[@] "--publish")
+output_A=$(mount_volume "${USER_NAME_A}" "my-volume" "${mount_point_A}" peers_A[@] "--publish --allow-root-creation")
 pid_A=$(r "${output_A}" 1)
 track_file $(r "${output_A}" 2)
 track_mount "${mount_point_A}" "${pid_A}"

@@ -3,6 +3,7 @@ import drake.cxx
 import drake.debian
 import drake.docker
 import drake.git
+import drake.license_file
 import drake.python
 import drake.redhat
 import drake.valgrind
@@ -283,6 +284,8 @@ def configure(
     'src/infinit/model/doughnut/Remote.hxx',
     'src/infinit/model/doughnut/UB.cc',
     'src/infinit/model/doughnut/UB.hh',
+    'src/infinit/model/doughnut/conflict/UBUpserter.hh',
+    'src/infinit/model/doughnut/conflict/UBUpserter.cc',
     'src/infinit/model/doughnut/User.cc',
     'src/infinit/model/doughnut/User.hh',
     'src/infinit/model/doughnut/ValidationFailed.cc',
@@ -564,11 +567,19 @@ def configure(
   ## ----- ##
 
   demo_home = drake.nodes(
+    'demo-home/linked_networks/demo/infinit/demo',
     'demo-home/networks/infinit/demo',
     'demo-home/passports/infinit/demo/demo',
     'demo-home/users/demo',
     'demo-home/volumes/infinit/demo',
   )
+
+  ## -------- ##
+  ## Licenses ##
+  ## -------- ##
+
+  license_file = drake.node('OSS-licenses')
+  drake.license_file.Packager('licenses', license_file)
 
   ## ------- ##
   ## Install ##
@@ -580,8 +591,9 @@ def configure(
                           builder = PatchAndInstall)
     if demo:
       yield from drake.copy(
-        demo_home,
-        where / 'share/infinit/filesystem/test/home', 'demo-home')
+        demo_home, where / 'share/infinit/filesystem/test/home', 'demo-home')
+    yield from drake.copy(
+      [license_file], where / 'share/infinit/filesystem/licenses')
 
   rule_install << install_nodes(prefix)
 

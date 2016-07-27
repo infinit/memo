@@ -385,8 +385,12 @@ namespace infinit
             : public consensus::Configuration
           {
           public:
+            typedef Configuration Self;
+            typedef consensus::Configuration Super;
+          public:
             Configuration(int replication_factor,
                           std::chrono::system_clock::duration node_timeout);
+            ELLE_CLONABLE();
             virtual
             std::unique_ptr<Consensus>
             make(model::doughnut::Doughnut& dht) override;

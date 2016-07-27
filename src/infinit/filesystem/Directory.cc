@@ -20,6 +20,7 @@
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/UB.hh>
@@ -190,6 +191,15 @@ namespace infinit
       s.serialize("optarget", _op.target);
       s.serialize("opaddr", _op.address);
       s.serialize("opetype", _op.entry_type, elle::serialization::as<int>());
+    }
+
+    std::string
+    DirectoryConflictResolver::description() const
+    {
+      return elle::sprintf("edit directory: %s %s \"%s\"",
+                           this->_op.type,
+                           this->_op.entry_type,
+                           this->_op.target);
     }
 
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
@@ -833,8 +843,12 @@ namespace infinit
           auto p = elle::serialization::json::deserialize<model::doughnut::Passport>(s, false);
           model::doughnut::UB ub(dht.get(), name, p, false);
           model::doughnut::UB rub(dht.get(), name, p, true);
-          this->_owner.block_store()->store(ub,  model::STORE_INSERT, model::make_drop_conflict_resolver());
-          this->_owner.block_store()->store(rub, model::STORE_INSERT, model::make_drop_conflict_resolver());
+          this->_owner.block_store()->store(
+            ub, model::STORE_INSERT,
+            elle::make_unique<model::doughnut::UserBlockUpserter>(name));
+          this->_owner.block_store()->store(
+            rub, model::STORE_INSERT,
+            elle::make_unique<model::doughnut::ReverseUserBlockUpserter>(name));
         }
         else if (*special == "fsck.deref")
         {

@@ -288,6 +288,15 @@ COMMAND(update)
   if (infinit::compatibility_version)
     dht.version = infinit::compatibility_version.get();
   bool changed_admins = false;
+  auto check_group_mount = [&args, &network] (bool group)
+    {
+      if (group && !args.count("mountpoint"))
+      {
+        throw CommandLineError(
+          "Must specify mountpoint of volume on "
+          "network \"%s\" to edit group admins", network.name);
+      }
+    };
   auto add_admin = [&dht] (infinit::cryptography::rsa::PublicKey const& key,
                            bool group, bool read, bool write)
     {
@@ -309,6 +318,7 @@ COMMAND(update)
     for (auto u: args["admin-r"].as<std::vector<std::string>>())
     {
       auto r = user_key(u, optional(args, "mountpoint"));
+      check_group_mount(r.second);
       add_admin(r.first, r.second, true, false);
     }
     changed_admins = true;
@@ -318,6 +328,7 @@ COMMAND(update)
     for (auto u: args["admin-rw"].as<std::vector<std::string>>())
     {
       auto r = user_key(u, optional(args, "mountpoint"));
+      check_group_mount(r.second);
       add_admin(r.first, r.second, true, true);
     }
     changed_admins = true;
@@ -327,6 +338,7 @@ COMMAND(update)
     for (auto u: args["admin-remove"].as<std::vector<std::string>>())
     {
       auto r = user_key(u, optional(args, "mountpoint"));
+      check_group_mount(r.second);
 #define DEL(cont) cont.erase(std::remove(cont.begin(), cont.end(), r.first), cont.end())
       DEL(dht.admin_keys.r);
       DEL(dht.admin_keys.w);
@@ -354,8 +366,9 @@ COMMAND(update)
     beyond_push("network", desc->name, *desc, owner, true, false, true);
   if (changed_admins && !args.count("output"))
   {
-    std::cout << "INFO: Changes to network admins do not affect existing data."
-              << "INFO: New admins will only be granted access on next write."
+    std::cout << "INFO: Changes to network admins do not affect existing data:"
+              << "INFO: Admin access will be updated on the next write to each"
+              << "INFO: file or folder."
               << std::endl;
   }
 }
@@ -377,10 +390,14 @@ COMMAND(fetch)
 {
   auto self = self_user(ifnt, args);
   auto network_name_ = optional(args, "name");
-  auto save = [&self] (infinit::NetworkDescriptor desc) {
-    try
+  auto save = [&self] (infinit::NetworkDescriptor desc_) {
+    // Save or update network descriptor.
+    ifnt.network_save(desc_, true);
+    for (auto const& u: ifnt.network_linked_users(desc_.name))
     {
-      auto network = ifnt.network_get(desc.name, self, false);
+      // Copy network descriptor.
+      auto desc = desc_;
+      auto network = ifnt.network_get(desc.name, u, false);
       if (network.model)
       {
         auto* d = dynamic_cast<infinit::model::doughnut::Configuration*>(
@@ -393,28 +410,17 @@ COMMAND(fetch)
             std::move(desc.consensus),
             std::move(desc.overlay),
             std::move(d->storage),
-            self.keypair(),
-            std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
+            u.keypair(),
+            std::make_shared<infinit::cryptography::rsa::PublicKey>(
+              desc.owner),
             d->passport,
-            self.name,
+            u.name,
             d->port,
             desc.version,
             desc.admin_keys));
-        // Update both the linked network and the descriptor.
-        ifnt.network_save(self, updated_network, true);
-        ifnt.network_save(desc, true);
+        // Update linked network for user.
+        ifnt.network_save(u, updated_network, true);
       }
-      else
-      {
-        // The network was present but not linked, just overwrite it with the
-        // new descriptor.
-        ifnt.network_save(desc, true);
-      }
-    }
-    catch (MissingLocalResource const& e)
-    {
-      // The network wasn't present at all.
-      ifnt.network_save(desc);
     }
   };
   if (network_name_)
@@ -424,25 +430,15 @@ COMMAND(fetch)
   }
   else // Fetch all networks for self.
   {
-    // FIXME: Workaround for NetworkDescriptor's copy constructor being deleted.
-    // Remove when serialization does not require copy.
-    auto res = beyond_fetch_json(elle::sprintf("users/%s/networks", self.name),
-                                 "networks for user",
-                                 self.name,
-                                 self);
-    auto root = boost::any_cast<elle::json::Object>(res);
-    auto networks_vec =
-      boost::any_cast<std::vector<elle::json::Json>>(root["networks"]);
-    for (auto const& network_json: networks_vec)
-    {
-      try
-      {
-        elle::serialization::json::SerializerIn input(network_json, false);
-        save(input.deserialize<infinit::NetworkDescriptor>());
-      }
-      catch (ResourceAlreadyFetched const& error)
-      {}
-    }
+    auto res =
+      beyond_fetch<std::unordered_map<std::string,
+                                      std::vector<infinit::NetworkDescriptor>>>(
+      elle::sprintf("users/%s/networks", self.name),
+      "networks for user",
+      self.name,
+      self);
+    for (auto const& n: res["networks"])
+      save(n);
   }
 }
 
@@ -829,7 +825,6 @@ COMMAND(stats)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Mode::OptionsDescription overlay_types_options("Overlay types");

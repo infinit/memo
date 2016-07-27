@@ -1206,6 +1206,15 @@ namespace infinit
       check_name(this->name);
     }
 
+    NetworkDescriptor(NetworkDescriptor const& desc)
+      : name(desc.name)
+      , consensus(desc.consensus->clone())
+      , overlay(desc.overlay->clone())
+      , owner(desc.owner)
+      , version(desc.version)
+      , admin_keys(desc.admin_keys)
+    {}
+
     void
     serialize(elle::serialization::Serializer& s)
     {
@@ -1778,7 +1787,7 @@ namespace infinit
         std::remove_if(res.begin(), res.end(),
         [&] (infinit::User const& u)
         {
-          return !boost::filesystem::exists(this->_network_path(name, u));
+          return !boost::filesystem::exists(this->_network_path(name, u, false));
         }),
         res.end());
       return res;
@@ -2302,19 +2311,21 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _network_path(User const& user) const
+    _network_path(User const& user, bool create_dir = true) const
     {
       auto root = xdg_data_home() / "linked_networks" / user.name;
-      create_directories(root);
+      if (create_dir)
+        create_directories(root);
       return root;
     }
 
     boost::filesystem::path
     _network_path(std::string const& name,
-                  User const& user) const
+                  User const& user,
+                  bool create_dir = true) const
     {
       auto network_name = this->qualified_name(name, user);
-      return this->_network_path(user) / network_name;
+      return this->_network_path(user, create_dir) / network_name;
     }
 
     boost::filesystem::path
@@ -2998,9 +3009,6 @@ fetch_data(std::string const& url,
   return r;
 }
 
-// FIXME: Workaround used to handle objects that have had their copy
-// constructor deleted. See infinit-network.cc:fetch(), NetworkDescriptor.
-// Remove when serialization does not require copy.
 static
 std::unique_ptr<reactor::http::Request>
 beyond_fetch_data(std::string const& where,

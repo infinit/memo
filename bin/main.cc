@@ -95,6 +95,7 @@ namespace infinit
   {
     try
     {
+      program = argv[0];
       std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
 #ifndef INFINIT_WINDOWS
       std::unique_ptr<crash_reporting::CrashReporter> crash_reporter;

@@ -365,7 +365,6 @@ COMMAND(delete_)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   infinit::check_broken_locale();
@@ -463,8 +462,6 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "storage to delete" },
         { "clear-content", bool_switch(),
           "remove all blocks (filesystem only)" },
-        { "pull", bool_switch(), elle::sprintf("pull objects that depend on "
-          "the storage if they are on %s", beyond(true)) },
         { "purge", bool_switch(), "remove objects that depend on the storage" },
       },
     },
