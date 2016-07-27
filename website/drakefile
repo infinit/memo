@@ -525,6 +525,8 @@ def configure(
     'resources/images/icons/multipurpose@2x.png',
     'resources/images/icons/modern.png',
     'resources/images/icons/modern@2x.png',
+    'resources/images/icons/healing.png',
+    'resources/images/icons/healing@2x.png',
   )
 
   resources = resources + resources_icons
