@@ -2655,7 +2655,20 @@ std::string
 get_username(boost::program_options::variables_map const& args,
              std::string const& name)
 {
-  if (auto opt = optional(args, name))
+  auto opt = optional(args, name);
+  if (name == "as")
+  {
+    if (_as_user)
+      return _as_user.get();
+  }
+  else if (name == "name")
+  {
+    if (opt)
+      return opt.get();
+    else if (_as_user)
+      return _as_user.get();
+  }
+  else if (opt)
     return opt.get();
   std::string env = elle::os::getenv("INFINIT_USER", "");
   return env.empty() ? elle::system::username() : env;
