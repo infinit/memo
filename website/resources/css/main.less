@@ -695,16 +695,42 @@ section.doc {
 
   p, li, p.note, strong { line-height: 23px; font-size: 15px; }
   p.note, em { font-style: italic; color: #8C8C8C; }
-  p a, li a { color: @infinitblue; .transition() }
 
   p.title {
     font-family: @helvetica; font-weight: 300;font-size: 26px; line-height: 39px;
     width: 90%;
   }
 
+  p a:after, li a::after {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: darken(@infinitblue, 10%);
+    content: '';
+    opacity: 0;
+    -webkit-transition: opacity 0.2s, -webkit-transform 0.2s;
+    -moz-transition: opacity 0.2s, -moz-transform 0.2s;
+    transition: opacity 0.2s, transform 0.2s;
+    -webkit-transform: translateY(7px);
+    -moz-transform: translateY(7px);
+    transform: translateY(7px);
+  }
+
+  p a:hover::after, li a:hover:after,
+  p a:focus::after, li a:focus:after {
+    opacity: 1;
+    -webkit-transform: translateY(0px);
+    -moz-transform: translateY(0px);
+    transform: translateY(0px);
+  }
+
+  p a, li a { color: @infinitblue; .transition(); padding-bottom: 1px; position: relative;}
+
   p a:hover, li a:hover {
     color: darken(@infinitblue, 10%);
-    border-bottom: 2px solid darken(@infinitblue, 10%);
+    // border-bottom: 2px solid darken(@infinitblue, 10%);
   }
 
   h2 { margin-top: 70px; font-size: 1.9em;}
