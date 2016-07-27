@@ -31,6 +31,7 @@
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
+#include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
@@ -120,8 +121,9 @@ namespace infinit
                                  this, user->address(), name);
                 try
                 {
-                  this->store(std::move(user), STORE_INSERT,
-                              make_drop_conflict_resolver());
+                  this->store(
+                    std::move(user), STORE_INSERT,
+                    elle::make_unique<UserBlockUpserter>(name));
                 }
                 catch (elle::Error const& e)
                 {
@@ -153,8 +155,9 @@ namespace infinit
                                  user->address());
                 try
                 {
-                  this->store(std::move(user), STORE_INSERT,
-                              make_drop_conflict_resolver());
+                this->store(
+                  std::move(user), STORE_INSERT,
+                  elle::make_unique<ReverseUserBlockUpserter>(name));
                 }
                 catch (elle::Error const& e)
                 {
@@ -462,6 +465,11 @@ namespace infinit
         Doughnut::ConsensusBuilder consensus =
           [&] (Doughnut& dht)
           {
+            if (!this->consensus)
+            {
+              elle::err(
+                "invalid network configuration, missing field \"consensus\"");
+            }
             auto consensus = this->consensus->make(dht);
             if (async)
             {
@@ -484,6 +492,11 @@ namespace infinit
         Doughnut::OverlayBuilder overlay =
           [&] (Doughnut& dht, Address id, std::shared_ptr<Local> local)
           {
+            if (!this->overlay)
+            {
+              elle::err(
+                "invalid network configuration, missing field \"overlay\"");
+            }
             return this->overlay->make(
               std::move(id), hosts, std::move(local), &dht);
           };

@@ -355,13 +355,9 @@ namespace infinit
               [this, auth_syn] (Passport const& p, elle::Version const& v)
                 -> std::pair<Challenge, Passport*>
               {
-                auto dht_version = this->_doughnut.version();
-                auto version =
-                  elle::Version(dht_version.major(), dht_version.minor(), 0);
-                if (v != version)
-                  throw elle::Error(
-                    elle::sprintf("invalid version %s, we use %s",
-                                  v, this->_doughnut.version()));
+                auto dht_v = this->_doughnut.version();
+                if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
+                  elle::err("invalid version %s, we use %s", v, dht_v);
                 return auth_syn(p);
               }));
         }

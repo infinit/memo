@@ -81,12 +81,20 @@ class Infinit(TemporaryDirectory):
     return '%s/.local/share/infinit/filesystem' % self.dir
 
   @property
+  def state_path(self):
+    return '%s/.local/state/infinit/filesystem' % self.dir
+
+  @property
   def storages_path(self):
     return '%s/storages' % self.data_home
 
   @property
   def networks_path(self):
     return '%s/networks' % self.data_home
+
+  @property
+  def linked_networks_path(self):
+    return '%s/linked_networks' % self.data_home
 
   @property
   def passports_path(self):
@@ -212,6 +220,13 @@ def assertNeq(a, b):
 def assertIn(a, b):
   if a not in b:
     raise AssertionError('%r not in %r' % (a, b))
+
+def throws(f):
+  try:
+    f()
+    assert False
+  except Exception:
+    pass
 
 import bottle
 
@@ -371,7 +386,7 @@ class User():
     self.storage = '%s/%s-storage' % (name, name)
     self.network = '%s/%s-network' % (name, name)
     self.volume = '%s/%s-volume' % (name, name)
-    self.mountpoint = '%s/mountpoint' % infinit.dir
+    self.mountpoint = '%s/%s-mountpoint' % (infinit.dir, name)
     self.drive = '%s/%s-drive' % (name, name)
     os.mkdir(self.mountpoint)
 
@@ -379,7 +394,7 @@ class User():
 
   def run(self, cli, **kargs):
     return self.infinit.run(
-      cli.split(' '),
+      cli.split(' ') if isinstance(cli, str) else cli,
       env = { 'INFINIT_USER': self.name }, **kargs)
 
   def run_json(self, *args, **kwargs):

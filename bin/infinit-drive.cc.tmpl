@@ -68,9 +68,7 @@ COMMAND(create)
   auto owner = self_user(ifnt, args);
   auto name = drive_name(args, owner);
   auto desc = optional(args, "description");
-
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
-
   infinit::Volume volume;
   {
     auto name = ifnt.qualified_name(mandatory(args, "volume"), owner);
@@ -503,7 +501,6 @@ icon_path(std::string const& name)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Mode::OptionDescription option_description =

@@ -26,7 +26,8 @@ namespace infinit
 {
   namespace filesystem
   {
-    class ACLConflictResolver: public model::ConflictResolver
+    class ACLConflictResolver
+      : public model::ConflictResolver
     {
     public:
       ACLConflictResolver(model::Model* model,
@@ -45,8 +46,9 @@ namespace infinit
         serialize(s, v);
       }
 
-      void serialize(elle::serialization::Serializer& s,
-                     elle::Version const& v) override
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& v) override
       {
         s.serialize("read", this->_read);
         s.serialize("write", this->_write);
@@ -58,6 +60,19 @@ namespace infinit
           ELLE_ASSERT(model);
           this->_model = model;
         }
+      }
+
+      std::string
+      description() const override
+      {
+        std::string permissions = elle::sprintf(
+          "%s%s",
+          (this->_read ? "r" : ""),
+          (this->_write ? "w" : ""));
+        if (permissions.empty())
+          permissions = "none";
+        return elle::sprintf("give %s permissions to \"%s\"",
+                             permissions, this->_userkey);
       }
 
       std::unique_ptr<Block>

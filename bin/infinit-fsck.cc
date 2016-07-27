@@ -387,6 +387,7 @@ check(variables_map const& args)
     optional<int>(args, option_cache_ram_invalidation);
   report_action("running", "network", network.name);
   auto model = network.run(
+    self,
     hosts, true, cache,
     cache_ram_size, cache_ram_ttl, cache_ram_invalidation, flag(args, "async"));
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
@@ -399,7 +400,6 @@ check(variables_map const& args)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Modes modes {

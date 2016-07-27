@@ -1,3 +1,8 @@
+// http://opensource.apple.com/source/mDNSResponder/mDNSResponder-576.30.4/mDNSPosix/PosixDaemon.c
+#if __APPLE__
+# define daemon yes_we_know_that_daemon_is_deprecated_in_os_x_10_5_thankyou
+#endif
+
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
@@ -28,6 +33,11 @@ ELLE_LOG_COMPONENT("infinit-volume");
 infinit::Infinit ifnt;
 
 #include <endpoint_file.hh>
+
+#if __APPLE__
+# undef daemon
+extern int daemon(int, int);
+#endif
 
 using boost::program_options::variables_map;
 
@@ -364,6 +374,7 @@ COMMAND(run)
       fuse_options.push_back(opt);
   }
   auto network = ifnt.network_get(volume.network, self);
+  network.ensure_allowed(self, "run", "volume");
   ELLE_TRACE("run network");
   bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
@@ -381,29 +392,14 @@ COMMAND(run)
     if (daemon(0, 1))
       perror("daemon:");
 #endif
-  if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
-  {
-    static const std::vector<int> signals = {SIGINT, SIGTERM
-#ifndef INFINIT_WINDOWS
-    , SIGQUIT
-#endif
-    };
-    for (auto signal: signals)
-      reactor::scheduler().signal_handle(
-        signal,
-        [&]
-        {
-          ELLE_TRACE("terminating");
-          reactor::scheduler().terminate();
-        });
-  }
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
   auto model = network.run(
+    self,
     eps, true,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-    flag(args, "async"), disk_cache_size, compatibility_version, port);
+    flag(args, "async"), disk_cache_size, infinit::compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push =
     aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
@@ -975,7 +971,6 @@ COMMAND(list)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   std::vector<Mode::OptionDescription> options_run_mount = {

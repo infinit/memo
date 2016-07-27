@@ -315,6 +315,8 @@ COMMAND(delete_)
   }
   if (purge)
   {
+    // XXX Remove volumes and drives that are on network owned by this user.
+    // Currently only the owner of a network can create volumes/drives.
     auto owner = [] (std::string const& qualified_name) {
       return qualified_name.substr(0, qualified_name.find("/"));
     };
@@ -352,14 +354,13 @@ COMMAND(delete_)
                       std::string("locally"));
       }
     }
-    for (auto const& network_: ifnt.networks_get())
+    for (auto const& network_: ifnt.networks_get(user))
     {
       auto network = network_.name;
-      if (owner(network) != user.name)
-        continue;
-      auto network_path = ifnt._network_path(network);
-      if (boost::filesystem::remove(network_path))
-        report_action("deleted", "network", network, std::string("locally"));
+      if (owner(network) == user.name)
+        ifnt.network_delete(network, user, true, true);
+      else
+        ifnt.network_unlink(network, user, true);
     }
   }
   if (avatar_path(name))
@@ -542,7 +543,6 @@ avatar_path(std::string const& name)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Mode::OptionDescription option_push_full =

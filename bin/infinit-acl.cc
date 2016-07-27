@@ -571,7 +571,6 @@ main(int argc, char** argv)
 {
   using boost::program_options::value;
   using boost::program_options::bool_switch;
-  program = argv[0];
   Mode::OptionDescription fallback_option = {
     "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
     "if system xattrs are not suppported"

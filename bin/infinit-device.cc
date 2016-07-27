@@ -202,7 +202,6 @@ COMMAND(receive)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Mode::OptionDescription option_passphrase = {
