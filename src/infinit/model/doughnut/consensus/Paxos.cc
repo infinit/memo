@@ -642,6 +642,11 @@ namespace infinit
                   {
                     q = e.expected();
                   }
+                  catch (elle::Error const& e)
+                  {
+                    ELLE_TRACE("Eviction of %s failed with %s", address, e);
+                    break;
+                  }
                 }
               }
               else
