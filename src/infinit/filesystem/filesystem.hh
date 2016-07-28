@@ -10,8 +10,11 @@
 # include <boost/multi_index/sequenced_index.hpp>
 # include <boost/multi_index_container.hpp>
 
+# include <cryptography/rsa/KeyPair.hh>
+
 # include <reactor/filesystem.hh>
 # include <reactor/thread.hh>
+
 # include <infinit/model/Model.hh>
 # include <infinit/filesystem/FileData.hh>
 
@@ -159,6 +162,7 @@ namespace infinit
     NAMED_ARGUMENT(allow_root_creation);
     NAMED_ARGUMENT(model);
     NAMED_ARGUMENT(mountpoint);
+    NAMED_ARGUMENT(owner);
     NAMED_ARGUMENT(root_block_cache_dir);
     NAMED_ARGUMENT(volume_name);
     /** Filesystem using a Block Storage as backend.
@@ -179,6 +183,7 @@ namespace infinit
       FileSystem(
         std::string const& volume_name,
         std::shared_ptr<infinit::model::Model> model,
+        boost::optional<infinit::cryptography::rsa::PublicKey> owner = {},
         boost::optional<boost::filesystem::path> root_block_cache_dir = {},
         boost::optional<boost::filesystem::path> mountpoint = {},
         bool allow_root_creation = false);
@@ -216,8 +221,12 @@ namespace infinit
     private:
       Address
       root_address();
+    public:
+      infinit::cryptography::rsa::PublicKey const&
+      owner() const;
       ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::model::Model>, block_store);
       ELLE_ATTRIBUTE_RW(bool, single_mount);
+      ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::PublicKey>, owner);
       ELLE_ATTRIBUTE_R(std::string, volume_name);
       ELLE_ATTRIBUTE_R(std::string, network_name);
       ELLE_ATTRIBUTE_R(bool, read_only);
