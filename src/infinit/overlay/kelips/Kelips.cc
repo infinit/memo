@@ -599,7 +599,7 @@ namespace infinit
                 }
                 else
                   idx = it->second;
-                cfiles.insert(std::make_pair(addr,
+                cfiles.insert(std::make_pair(f.first,
                                              std::make_pair(f.second.first, idx)));
               }
               s.serialize("file_addresses", addresses);
