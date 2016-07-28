@@ -332,9 +332,7 @@ namespace infinit
         bool remote_retry_connect(model::doughnut::Remote& remote,
                                   std::string const& uid);
         Address _self;
-        Address _ping_target;
-        Time _ping_time;
-        reactor::Barrier _ping_barrier;
+        std::unordered_map<Address, Time> _ping_time;
         std::vector<TimedEndpoint> _local_endpoints;
         /// group we are in
         int _group;

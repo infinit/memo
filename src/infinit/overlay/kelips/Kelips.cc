@@ -2276,13 +2276,15 @@ namespace infinit
       void
       Node::onPong(packet::Pong* p)
       {
-        if (!(p->sender == _ping_target))
+        auto tit = _ping_time.find(p->sender);
+        if (tit == _ping_time.end())
         {
-          ELLE_WARN("%s: Pong from unexpected host: expected %x, got %x", *this, _ping_target,
-            p->sender);
+          ELLE_LOG("%s: Unexpected pong from %f", *this, p->sender);
           return;
         }
-        Duration d = now() - _ping_time;
+        ELLE_DUMP("%s: got pong reply from %f", *this, p->sender);
+        Duration d = now() - tit->second;
+        _ping_time.erase(tit);
         int g = group_of(p->sender);
         Contacts& target = _state.contacts[g];
         auto it = target.find(p->sender);
@@ -2293,8 +2295,6 @@ namespace infinit
         {
           it->second.rtt = d;
         }
-        _ping_target = Address();
-        _ping_barrier.open();
         GossipEndpoint endpoint = p->remote_endpoint;
         endpoints_update(_local_endpoints, endpoint);
         auto contact_timeout = std::chrono::milliseconds(_config.contact_timeout_ms);
@@ -3313,23 +3313,21 @@ namespace infinit
             int v = random2(_gen);
             auto it = _state.contacts[group].begin();
             while(v--) ++it;
+            auto tit = _ping_time.find(it->second.address);
+            if (tit != _ping_time.end()
+              && now() - tit->second < std::chrono::milliseconds(_config.ping_timeout_ms))
+            {
+              reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
+              continue;
+            }
             target = &it->second;
-            _ping_target = it->first;
             break;
           }
           packet::Ping p;
           p.sender = _self;
-          _ping_time = now();
-          ELLE_DUMP("%s: pinging %x", *this, _ping_target);
+          ELLE_DUMP("%s: pinging %x", *this, target->address);
+          _ping_time[target->address] = now();
           send(p, *target);
-          bool ok = reactor::wait(_ping_barrier,
-                                  boost::posix_time::milliseconds(_config.ping_timeout_ms));
-          if (ok)
-            ELLE_DUMP("%s: got pong reply", *this);
-          else
-            ELLE_TRACE("%s: Ping timeout on %x", *this, _ping_target);
-          // onPong did the job for us
-          _ping_barrier.close();
         }
       }
 
