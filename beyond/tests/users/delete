@@ -7,16 +7,16 @@ import urllib.parse
 
 from utils import *
 
-class Test(unittest.TestCase):
+with Beyond() as beyond:
 
-  def test_delete_unknown(self):
-    with Beyond() as beyond:
+  class Test(unittest.TestCase):
+
+    def test_delete_unknown(self):
       throws(lambda: beyond.delete('users/castor'),
              404,
              json = False)
 
-  def test_works(self):
-    with Beyond() as beyond:
+    def test_works(self):
       user = User()
       throws(lambda: beyond.get('users/%s' % user['name']),
              404,
@@ -33,8 +33,7 @@ class Test(unittest.TestCase):
              404,
              json = False)
 
-  def test_deleting_another_user(self):
-    with Beyond() as beyond:
+    def test_deleting_another_user(self):
       alice = User()
       bob = User()
       beyond.put('users/%s' % alice['name'], json = alice)
@@ -44,8 +43,7 @@ class Test(unittest.TestCase):
              403,
              json = False)
 
-  def test_purge(self):
-    with Beyond() as beyond:
+    def test_purge(self):
       user = User()
       user.put(beyond)
       network = Network(name = 'n', owner = user)
@@ -66,9 +64,8 @@ class Test(unittest.TestCase):
       throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
              404)
 
-  # Ensure that only the user who does the purge has their objects removed.
-  def test_purge_multi_user(self):
-    with Beyond() as beyond:
+    # Ensure that only the user who does the purge has their objects removed.
+    def test_purge_multi_user(self):
       user1 = User()
       user1.put(beyond)
       user2 = User()
@@ -97,11 +94,11 @@ class Test(unittest.TestCase):
       beyond.get('volumes/%s' % volume2['name'])
       beyond.get('drives/%s' % drive2['name'])
 
-  def test_admin(self):
-    with Beyond(force_admin = True) as admin_beyond:
-      alice = User()
-      admin_beyond.put('users/%s' % alice['name'], json = alice)
-      admin_beyond.delete('users/%s' % alice['name'])
+    def test_admin(self):
+      with Beyond(force_admin = True) as admin_beyond:
+        alice = User()
+        admin_beyond.put('users/%s' % alice['name'], json = alice)
+        admin_beyond.delete('users/%s' % alice['name'])
 
-if __name__ == '__main__':
-  unittest.main()
+  if __name__ == '__main__':
+    unittest.main()
