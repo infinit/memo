@@ -405,6 +405,7 @@ namespace infinit
                 elle::sprintf("%s: rebalancing inspector", this),
                 [this]
                 {
+                  ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
                   try
                   {
                     ELLE_TRACE_SCOPE("%s: inspect disk blocks for rebalancing",
@@ -463,6 +464,7 @@ namespace infinit
             {
               if (this->_rebalance_auto_expand)
               {
+                ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
                 static auto const op = overlay::OP_FETCH;
                 PaxosServer::Quorum q;
                 if (this->_quorums.find(address) == this->_quorums.end())
@@ -603,6 +605,7 @@ namespace infinit
         void
         Paxos::LocalPeer::_disappeared_evict(model::Address lost_id)
         {
+          ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
           auto blocks = this->_node_blocks.find(lost_id);
           if (blocks != this->_node_blocks.end())
             for (auto address: blocks->second)
@@ -665,6 +668,7 @@ namespace infinit
         void
         Paxos::LocalPeer::_rebalance()
         {
+          ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
           auto propagate = [this] (PaxosServer& paxos,
                                    Address a,
                                    PaxosServer::Quorum q)
@@ -1674,6 +1678,7 @@ namespace infinit
         bool
         Paxos::rebalance(Address address)
         {
+          ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
           ELLE_TRACE_SCOPE("%s: rebalance %f", *this, address);
           auto client = this->_client(address);
           return this->_rebalance(client, address);
@@ -1701,6 +1706,7 @@ namespace infinit
         bool
         Paxos::_rebalance(PaxosClient& client, Address address)
         {
+          ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
           ELLE_ASSERT_GTE(this->doughnut().version(), elle::Version(0, 5, 0));
           auto latest = this->_latest(client, address);
           // FIXME: handle immutable block errors
@@ -1724,6 +1730,7 @@ namespace infinit
         bool
         Paxos::rebalance(Address address, PaxosClient::Quorum const& ids)
         {
+          ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
           ELLE_TRACE_SCOPE("%s: rebalance %f to %f", *this, address, ids);
           auto client = this->_client(address);
           auto latest = this->_latest(client, address);
@@ -1736,6 +1743,7 @@ namespace infinit
                           PaxosClient::Quorum const& ids,
                           int version)
         {
+          ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
           std::unique_ptr<PaxosClient> replace;
           while (true)
           {
