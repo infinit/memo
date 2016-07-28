@@ -828,6 +828,7 @@ class Volume(metaclass = Entity,
              insert = 'volume_insert',
              hasher = lambda v: hash(v.name),
              fields = fields('name', 'network',
+                             owner = Optional(),
                              default_permissions = '')):
 
   @property

@@ -388,6 +388,8 @@ class Volume(dict):
     self.__owner = owner or self.network.owner
     self['name'] = self.__owner['name'] + '/' + name
     self['network'] = self.__network['name']
+    if owner is not None:
+      self['owner'] = self.__owner['public_key']
 
   @property
   def network(self):

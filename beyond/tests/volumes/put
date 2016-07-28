@@ -26,6 +26,25 @@ with Beyond() as beyond:
       res = beyond.get('volumes/%s' % volume['name']).json()
       assertEq(res['name'], volume['name'])
       assertEq(res['network'], network['name'])
+      assert 'owner' not in res
+
+    def test_different_owner(self):
+      user = User()
+      user2 = User()
+      user.put(beyond)
+      user2.put(beyond)
+      network = Network(name = 'server1,server2', owner = user)
+      network.put(beyond)
+      volume = Volume(name = 'business', network = network, owner = user2)
+      throws(lambda: beyond.get('volumes/%s' % volume['name']),
+             404,
+             json = False)
+      volume.put(beyond)
+      res = beyond.get('volumes/%s' % volume['name']).json()
+      assertEq(res['name'], volume['name'])
+      assertEq(res['network'], network['name'])
+      assert 'owner' in res
+      assertEq(res['owner'], user2['public_key'])
 
     def test_already_pushed(self):
       # Test same already pushed
