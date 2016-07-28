@@ -71,7 +71,7 @@ namespace infinit
         }
         catch (elle::Error const& e)
         {
-          ELLE_WARN("%s: initialization failed with: %s", e.what());
+          ELLE_WARN("%s: initialization failed with: %s", this, e.what());
           throw;
         }
       }
