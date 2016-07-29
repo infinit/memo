@@ -64,6 +64,29 @@ with Beyond() as beyond:
       throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
              404)
 
+    def test_purge_on_owned_networks(self):
+      user = User()
+      user.put(beyond)
+      user2 = User()
+      user2.put(beyond)
+      network = Network(name = 'n', owner = user2)
+      network.put(beyond)
+      volume = Volume(name = 'v', network = network, owner = user)
+      volume.put(beyond)
+      drive = Drive(name = 'd', volume = volume, owner = user)
+      drive.put(beyond)
+      beyond.delete('users/%s' % user['name'],
+                    auth = user.private_key,
+                    params = {'purge': 'true'})
+      throws(lambda: beyond.get('users/%s' % user['name'], json = False),
+             404)
+      # Network will not be deleted.
+      beyond.get('networks/%s' % network['name'])
+      throws(lambda: beyond.get('volumes/%s' % volume['name'], json = False),
+             404)
+      throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
+             404)
+
     # Ensure that only the user who does the purge has their objects removed.
     def test_purge_multi_user(self):
       user1 = User()
