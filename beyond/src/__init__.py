@@ -648,9 +648,11 @@ class Entity(type):
   def __new__(self, name, superclasses, content,
               insert = None,
               update = None,
+              hasher = None,
               fields = {}):
     self_type = None
     content['fields'] = fields
+    content['__hash__'] = lambda self: hasher(self)
     # Init
     def __init__(self, beyond, **kwargs):
       self.__beyond = beyond
@@ -748,6 +750,7 @@ class Entity(type):
   def __init__(self, name, superclasses, content,
                insert = None,
                update = None,
+               hasher = None,
                fields = []):
     for f in fields:
       content[f] = property(
@@ -812,6 +815,7 @@ class Passport(metaclass = Entity,
 
 class Volume(metaclass = Entity,
              insert = 'volume_insert',
+             hasher = lambda v: hash(v.name),
              fields = fields('name', 'network',
                              default_permissions = '')):
 
