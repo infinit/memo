@@ -324,6 +324,7 @@ public:
    , _mount_substitute(mount_substitute)
    , _wait_for_peers(false)
    {}
+  ~MountManager();
   void
   start(std::string const& name, infinit::MountOptions opts = {},
         bool force_mount = false,
@@ -363,6 +364,12 @@ public:
 private:
   std::unordered_map<std::string, Mount> _mounts;
 };
+
+MountManager::~MountManager()
+{
+  while (!this->_mounts.empty())
+    this->stop(this->_mounts.begin()->first);
+}
 
 std::vector<QName>
 MountManager::list()
@@ -588,7 +595,21 @@ MountManager::stop(std::string const& name)
   auto it = _mounts.find(name);
   if (it == _mounts.end())
     throw elle::Error("not mounted: " + name);
-  ::kill(it->second.process->pid(), SIGTERM); // FIXME: try harder
+  auto pid = it->second.process->pid();
+  ::kill(pid, SIGTERM);
+  int count = 0;
+  bool force_kill = true;
+  while (count++ < 15)
+  {
+    reactor::sleep(1_sec);
+    if (::kill(pid, 0))
+    {
+      force_kill = false;
+      break;
+    }
+  }
+  if (force_kill)
+    ::kill(pid, SIGKILL);
   this->_mounts.erase(it);
 }
 
