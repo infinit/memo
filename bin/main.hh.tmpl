@@ -849,6 +849,17 @@ flag(boost::program_options::variables_map const& vm,
   return flag(vm, option.long_name());
 }
 
+inline
+bool
+exclusive_flag(boost::program_options::variables_map const& vm,
+               std::vector<std::string> const& flags)
+{
+  int count = 0;
+  for (auto const& f: flags)
+    count += (flag(vm, f) ? 1 : 0);
+  return (count == 1);
+}
+
 namespace infinit
 {
   extern boost::optional<elle::Version> compatibility_version;
