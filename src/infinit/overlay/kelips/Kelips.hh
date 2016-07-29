@@ -177,6 +177,10 @@ namespace infinit
         std::vector<std::pair<Address, Address>> // address, home_node
       > SerState;
 
+      typedef std::pair<std::vector<std::pair<Address, std::vector<GossipEndpoint>>>, // contacts
+        std::vector<std::pair<std::string, int>> // delta-blockaddr, owner_index
+      > SerState2;
+
       class Node
         : public infinit::overlay::Overlay
         , public elle::Printable
