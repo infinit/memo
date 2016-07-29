@@ -130,6 +130,8 @@ class CouchDBDatastore:
                   views = [
                     ('per_network_id',
                      self.__volumes_per_network_id_map),
+                    ('per_owner_key',
+                     self.__volumes_per_owner_map),
                   ])
     self.__design('drives',
                   updates = [('update', self.__drive_update)],
@@ -290,6 +292,11 @@ class CouchDBDatastore:
       res = rows[0].value
     return res
 
+  def owner_volumes_fetch(self, owner):
+    rows = self.__couchdb['volumes'].view('beyond/per_owner_key',
+                                          key = owner.public_key)
+    return self.__rows_to_networks(rows)
+
   ## ------- ##
   ## Pairing ##
   ## ------- ##
@@ -375,6 +382,12 @@ class CouchDBDatastore:
   def networks_volumes_fetch(self, networks):
     rows = self.__couchdb['volumes'].view(
       'beyond/per_network_id', keys = list(map(lambda n: n.id, networks)))
+    volume_from_db = infinit.beyond.Volume.from_json
+    return list(map(lambda r: volume_from_db(self.beyond, r.value), rows))
+
+  def user_volumes_fetch(self, user):
+    rows = self.__couchdb['volumes'].view(
+      'beyond/per_owner_key', key = user.public_key)
     volume_from_db = infinit.beyond.Volume.from_json
     return list(map(lambda r: volume_from_db(self.beyond, r.value), rows))
 
@@ -481,6 +494,9 @@ class CouchDBDatastore:
 
   def __volumes_per_network_id_map(volume):
     yield volume['network'], volume
+
+  def __volumes_per_owner_map(volume):
+    yield volume.get('owner', None), volume
 
   ## ----- ##
   ## Drive ##

@@ -205,9 +205,10 @@ def throws(function, expected = None, json = True, error = None):
     assert 'error' in response
     return response
 
-def assertEq(a, b):
-  if a != b:
-    raise AssertionError('%r != %r' % (a, b))
+def assertEq(*args):
+  import operator
+  if not all(map(lambda x: operator.eq(x, args[0]), args[1:])):
+    raise AssertionError('all elements of %s are not equal' % ", ".join(map(str, args)))
 
 def assertIn(o, container):
   if o not in container:

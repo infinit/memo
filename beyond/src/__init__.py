@@ -254,8 +254,8 @@ class Beyond:
     # XXX: This requires two requests as we cannot combine results
     # across databases.
     networks = self.__datastore.user_networks_fetch(user = user)
-    return self.__datastore.networks_volumes_fetch(
-      networks = networks)
+    return set(self.__datastore.networks_volumes_fetch(
+      networks = networks) + self.__datastore.user_volumes_fetch(user))
 
   def user_drives_get(self, name):
     return self.__datastore.user_drives_fetch(name = name)
