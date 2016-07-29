@@ -1675,8 +1675,8 @@ COMMAND(manage_volumes)
     std::string opts;
     for (auto const& f: flags)
       opts += elle::sprintf("\"--%s\", ", f);
-    opts = opts.substr(-2);
-    CommandLineError("Specify one of %s", opts);
+    opts = opts.substr(0, opts.size() - 2);
+    throw CommandLineError("Specify one of %s", opts);
   }
   if (flag(args, "list"))
     volume_list();
