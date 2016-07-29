@@ -138,7 +138,8 @@ optional(elle::json::Object const& options, std::string const& name)
     return boost::any_cast<std::string>(it->second);
 }
 
-void link_network(std::string const& name, elle::json::Object const& options)
+void link_network(std::string const& name,
+                  elle::json::Object const& options = elle::json::Object())
 {
   auto cname = split(name);
   auto desc = ifnt.network_descriptor_get(cname.first, cname.second, false);
@@ -241,7 +242,7 @@ void acquire_network(std::string const& name)
   }
   catch (elle::Error const&)
   {
-    link_network(name, {});
+    link_network(name);
   }
 }
 
@@ -260,7 +261,7 @@ void acquire_volume(std::string const& name)
   }
   catch (elle::Error const&)
   {
-    link_network(desc.network, {});
+    link_network(desc.network);
   }
 }
 
@@ -489,7 +490,7 @@ MountManager::start(std::string const& name,
   }
   catch (elle::Error const&)
   {
-    link_network(volume.network, {});
+    link_network(volume.network);
   }
   volume.mount_options.merge(opts);
   if (!volume.mount_options.fuse_options)
