@@ -1260,18 +1260,23 @@ _run(boost::program_options::variables_map const& args, bool detach)
       mounter = elle::make_unique<reactor::Thread>("mounter",
         [&] {auto_mounter(*mount, *docker);});
   }
-  try
+  if (!flag(args, "docker-disable"))
   {
-    docker->install(
-      flag(args, "docker-socket-tcp"),
-      std::stoi(with_default<std::string>(args, "docker-socket-port", "0")),
-      with_default<std::string>(args, "docker-socket-path", "/run/docker/plugins"),
-      with_default<std::string>(args, "docker-descriptor-path", "/usr/lib/docker/plugins"));
-  }
-  catch(std::exception const& e)
-  {
-    ELLE_ERR("Failed to install docker plugin: %s", e);
-    ELLE_ERR("Docker plugin disabled.");
+    try
+    {
+      docker->install(
+        flag(args, "docker-socket-tcp"),
+        std::stoi(with_default<std::string>(args, "docker-socket-port", "0")),
+        with_default<std::string>(
+          args, "docker-socket-path", "/run/docker/plugins"),
+        with_default<std::string>(
+          args, "docker-descriptor-path", "/usr/lib/docker/plugins"));
+    }
+    catch (std::exception const& e)
+    {
+      ELLE_ERR("Failed to install docker plugin: %s", e.what());
+      ELLE_ERR("Docker plugin disabled");
+    }
   }
   if (detach)
     daemonize();
@@ -1319,8 +1324,9 @@ _run(boost::program_options::variables_map const& args, bool detach)
       if (it == managers.end())
       {
         auto lock = system_user.enter(mutex);
-        user_manager = new MountManager(with_default<std::string>(args, "mount-root", "/run/infinit/mnt"),
-                                        with_default<std::string>(args, "docker-mount-substitute", ""));
+        user_manager = new MountManager(
+          with_default<std::string>(args, "mount-root", "/run/infinit/mnt"),
+          with_default<std::string>(args, "docker-mount-substitute", ""));
         fill_manager_options(*user_manager, args);
         managers[uid].reset(user_manager);
       }
@@ -1622,32 +1628,66 @@ DockerVolumePlugin::install(bool tcp,
    });
 }
 
-COMMAND(volume_list)
+static
+void
+volume_list()
 {
   std::cout << daemon_command("{\"operation\": \"volume-list\"}");
 }
 
-COMMAND(volume_status)
+static
+void
+volume_status()
 {
   std::cout << daemon_command("{\"operation\": \"volume-status\"}");
 }
 
-COMMAND(volume_start)
+static
+void
+volume_start(std::string const& name)
 {
-  auto name = mandatory(args, "name");
-  std::cout << daemon_command("{\"operation\": \"volume-start\", \"volume\": \"" + name +  "\"}");
+  std::cout << daemon_command(
+    "{\"operation\": \"volume-start\", \"volume\": \"" + name +  "\"}");
 }
 
-COMMAND(volume_stop)
+static
+void
+volume_stop(std::string const& name)
 {
-  auto name = mandatory(args, "name");
-  std::cout << daemon_command("{\"operation\": \"volume-stop\", \"volume\": \"" + name +  "\"}");
+  std::cout << daemon_command(
+    "{\"operation\": \"volume-stop\", \"volume\": \"" + name +  "\"}");
 }
 
-COMMAND(volume_restart)
+static
+void
+volume_restart(std::string const& name)
 {
-  auto name = mandatory(args, "name");
-  std::cout << daemon_command("{\"operation\": \"volume-restart\", \"volume\": \"" + name +  "\"}");
+  std::cout << daemon_command(
+    "{\"operation\": \"volume-restart\", \"volume\": \"" + name +  "\"}");
+}
+
+COMMAND(manage_volumes)
+{
+  std::vector<std::string> flags =
+    { "list", "status", "start", "stop", "restart" };
+  if (!exclusive_flag(args, flags))
+  {
+    std::string opts;
+    for (auto const& f: flags)
+      opts += elle::sprintf("\"--%s\", ", f);
+    opts = opts.substr(-2);
+    CommandLineError("Specify one of %s", opts);
+  }
+  if (flag(args, "list"))
+    volume_list();
+  if (flag(args, "status"))
+    volume_status();
+  if (flag(args, "start"))
+    volume_start(mandatory(args, "name"));
+  if (flag(args, "stop"))
+    volume_stop(mandatory(args, "name"));
+  if (flag(args, "restart"))
+    volume_restart(mandatory(args, "name"));
 }
 
 COMMAND(enable_storage)
@@ -1664,99 +1704,50 @@ COMMAND(disable_storage)
   std::cout << daemon_command("{\"operation\": \"disable-storage\", \"volume\": \"" + name +  "\"}");
 }
 
-using boost::program_options::value;
-using boost::program_options::bool_switch;
-
-std::vector<Mode::OptionDescription> options_run = {
-  { "log-level,l", value<std::string>(),
-    "Log level to start volumes with (default: LOG)" },
-  { "log-path,d", value<std::string>(),
-    "Store volume logs in given path" },
-  {"docker-user", value<std::string>(),
-   "System user to use for docker plugin"},
-  { "docker-socket-port", value<std::string>(),
-    "TCP port to use to communicate with Docker" },
-  { "docker-socket-tcp", bool_switch(),
-    "Use a TCP socket for docker plugin" },
-  { "docker-socket-path", value<std::string>(),
-    "Path for plugin socket\n(default: /run/docker/plugins)" },
-  { "docker-descriptor-path", value<std::string>(),
-    "Path to add plugin descriptor\n(default: /usr/lib/docker/plugins)" },
-  { "mount-root", value<std::string>(),
-    "Default root path for all mounts\n(default: /run/infinit/mnt)" },
-  { "docker-mount-substitute", value<std::string>(),
-    "[from:to|prefix] : Substitute 'from' to 'to' in advertised path" },
-  { "default-network", value<std::string>(),
-    "Default network for volume creation" },
-  { "login-user", value<std::vector<std::string>>()->multitoken(),
-    "Login with selected user(s), of form 'user:password'" },
-  { "advertise-host", value<std::vector<std::string>>()->multitoken(),
-    "Advertise given hostname as an extra address" },
-  { "mount,m", value<std::vector<std::string>>()->multitoken(),
-    "mount given volumes on startup, keep trying on error" },
-  {"wait-for-peers", bool_switch(),
-   "Always wait for at least one peer when mounting a volume"
-  },
-};
-
 int
 main(int argc, char** argv)
 {
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
+
+  std::vector<Mode::OptionDescription> options_run = {
+    { "login-user", value<std::vector<std::string>>()->multitoken(),
+      "Login with selected user(s), of form 'user:password'" },
+    { "mount-root", value<std::string>(),
+      "Default root path for all mounts\n(default: /run/infinit/mnt)" },
+    { "default-network", value<std::string>(),
+      "Default network for volume creation" },
+    { "advertise-host", value<std::vector<std::string>>()->multitoken(),
+      "Advertise given hostname as an extra endpoint when running volumes" },
+    { "mount,m", value<std::vector<std::string>>()->multitoken(),
+      "mount given volumes on startup, keep trying on error" },
+    { "wait-for-peers", bool_switch(),
+      "Always wait for at least one peer when mounting a volume" },
+    { "docker-disable", bool_switch(), "Disable the Docker plugin" },
+    { "docker-user", value<std::string>(), elle::sprintf(
+      "System user to use for docker plugin (default: %s)",
+        SystemUser(getuid()).name) },
+    { "docker-socket-tcp", bool_switch(),
+      "Use a TCP socket for docker plugin" },
+    { "docker-socket-port", value<std::string>(),
+      "TCP port to use to communicate with Docker\n(default: random)" },
+    { "docker-socket-path", value<std::string>(),
+      "Path for plugin socket\n(default: /run/docker/plugins)" },
+    { "docker-descriptor-path", value<std::string>(),
+      "Path to add plugin descriptor\n(default: /usr/lib/docker/plugins)" },
+    { "docker-mount-substitute", value<std::string>(),
+      "[from:to|prefix] : Substitute 'from' to 'to' in advertised path" },
+    { "log-level,l", value<std::string>(),
+      "Log level to start volumes with (default: LOG)" },
+    { "log-path,d", value<std::string>(), "Store volume logs in given path" },
+  };
   Modes modes {
-    {
-      "fetch",
-      elle::sprintf("Fetch volume and its dependencies from %s", beyond(true)),
-      &fetch,
-      "--name VOLUME",
-      {
-        { "name,n", value<std::string>(), "volume name" },
-      },
-    },
     {
       "status",
       "Query daemon status",
       &status,
       "",
       {},
-    },
-    {
-      "volume-start", "Start a volume", &volume_start, "--name VOLUME",
-      {{ "name,n", value<std::string>(), "volume name"}},
-    },
-    {
-      "volume-stop", "Stop a volume", &volume_stop, "--name VOLUME",
-      {{ "name,n", value<std::string>(), "volume name"}},
-    },
-    {
-      "volume-restart", "Restart a volume", &volume_restart, "--name VOLUME",
-      {{ "name,n", value<std::string>(), "volume name"}},
-    },
-    {
-      "volume-list", "List available volumes", &volume_list, "--name VOLUME",
-      {},
-    },
-    {
-      "volume-status", "List running volumes", &volume_status, "--name VOLUME",
-      {},
-    },
-    {
-      "enable-storage",
-      "Enable storage on associated network",
-      &enable_storage,
-      "--name VOLUME [--hold]",
-      {
-        { "name,n", value<std::string>(), "volume name"},
-        { "hold", bool_switch(), "Keep storage online until this process terminates"}
-      },
-    },
-    {
-      "disable-storage",
-      "Disable storage on associated network",
-      &disable_storage,
-      "--name VOLUME",
-      {
-        { "name,n", value<std::string>(), "volume name"},
-      },
     },
     {
       "run",
@@ -1779,6 +1770,51 @@ main(int argc, char** argv)
       "",
       {},
     },
+    {
+      "manage-volumes",
+      "Manage daemon controlled volumes",
+      &manage_volumes,
+      "[--name VOLUME]",
+      {
+        { "list", bool_switch(), "list all volumes" },
+        { "status", bool_switch(), "list all volume statuses" },
+        { "start", bool_switch(), "start volume" },
+        { "stop", bool_switch(), "stop volume" },
+        { "restart", bool_switch(), "restart volume" },
+        { "name", value<std::string>(), "volume name" },
+      },
+    },
   };
-  return infinit::main("Infinit daemon", modes, argc, argv);
+  Modes hidden_modes {
+    {
+      "fetch",
+      elle::sprintf("Fetch volume and its dependencies from %s", beyond(true)),
+      &fetch,
+      "--name VOLUME",
+      {
+        { "name,n", value<std::string>(), "volume name" },
+      },
+    },
+    {
+      "enable-storage",
+      "Enable storage on associated network",
+      &enable_storage,
+      "--name VOLUME [--hold]",
+      {
+        { "name,n", value<std::string>(), "volume name"},
+        { "hold", bool_switch(), "Keep storage online until this process terminates" },
+      },
+    },
+    {
+      "disable-storage",
+      "Disable storage on associated network",
+      &disable_storage,
+      "--name VOLUME",
+      {
+        { "name,n", value<std::string>(), "volume name" },
+      },
+    },
+  };
+  return infinit::main(
+    "Infinit daemon", modes, argc, argv, {}, {}, hidden_modes);
 }
