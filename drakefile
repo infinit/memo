@@ -747,6 +747,10 @@ def configure(
     drake.copy(drake.node('share/infinit/docker/infinit-service-runner.py'),
                docker_path / 'bin', strip_prefix = True),
     '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-context.sh'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
   docker_file.run('ln -s /usr/bin/fnetusermount-client /bin/fusermount')
   drake.docker.DockerBuilder(docker_image, docker_file)
 
