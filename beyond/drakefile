@@ -273,6 +273,7 @@ def configure(
       'users/delete',
       'users/welcome',
       'networks/delete',
+      'networks/get',
       'networks/put',
       'networks/storage',
       'volumes/put',

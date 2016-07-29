@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+from operator import itemgetter
+
+from utils import *
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_normal(self):
+      user = User()
+      user.put(beyond)
+      network = Network(name = 'server1,server2', owner = user)
+      throws(lambda: beyond.get('networks/%s' % network['name']),
+             404,
+             json = False)
+      network.put(beyond)
+      res = beyond.get('networks/%s' % network['name']).json()
+      assert res['name'] == network['name']
+      assert res['owner'] == user['public_key']
+
+    def test_all(self):
+      user = User()
+      user.put(beyond)
+      network = Network(name = 'all_infinit', owner = user)
+      network.put(beyond)
+      network2 = Network(name = 'server1,server2', owner = user)
+      network2.put(beyond)
+      res = beyond.get('users/%s/networks' % user['name'],
+                       auth = user.private_key).json()
+      networks = sorted(res['networks'], key = itemgetter('name'))
+      assertEq(len(networks), 2)
+      assertEq(networks[0]['owner'], networks[1]['owner'], user['public_key'])
+      assertEq(networks[0]['name'], network['name'])
+      assertEq(networks[1]['name'], network2['name'])
+
+  if __name__ == '__main__':
+    unittest.main()
