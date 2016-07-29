@@ -851,8 +851,8 @@ public:
                      SystemUser& user, reactor::Mutex& mutex);
   ~DockerVolumePlugin();
   void install(bool tcp, int tcp_port,
-               boost::filesystem::path socket_path,
-               boost::filesystem::path descriptor_path);
+               boost::filesystem::path socket_folder,
+               boost::filesystem::path descriptor_folder);
   void uninstall();
   std::string mount(std::string const& name);
 private:
@@ -861,6 +861,9 @@ private:
   std::unordered_map<std::string, int> _mount_count;
   SystemUser& _user;
   reactor::Mutex& _mutex;
+  boost::filesystem::path _socket_path;
+  boost::filesystem::path _spec_json_path;
+  boost::filesystem::path _spec_url_path;
 };
 
 static
@@ -1396,6 +1399,10 @@ DockerVolumePlugin::~DockerVolumePlugin()
 void
 DockerVolumePlugin::uninstall()
 {
+  boost::system::error_code erc;
+  boost::filesystem::remove(this->_socket_path, erc);
+  boost::filesystem::remove(this->_spec_json_path, erc);
+  boost::filesystem::remove(this->_spec_url_path, erc);
 }
 
 std::string
@@ -1418,46 +1425,57 @@ DockerVolumePlugin::mount(std::string const& name)
 void
 DockerVolumePlugin::install(bool tcp,
                             int tcp_port,
-                            boost::filesystem::path socket_path,
-                            boost::filesystem::path descriptor_path)
+                            boost::filesystem::path socket_folder,
+                            boost::filesystem::path descriptor_folder)
 {
   // plugin path is either in /etc/docker/plugins or /usr/lib/docker/plugins
   boost::system::error_code erc;
-  boost::filesystem::create_directories(descriptor_path, erc);
+  create_directories(descriptor_folder, erc);
+  if (erc)
+  {
+    elle::err("Unable to create descriptor folder (%s): %s",
+              descriptor_folder, erc.message());
+  }
+  boost::filesystem::create_directories(socket_folder, erc);
+  if (erc)
+  {
+    elle::err("Unable to create socket folder (%s): %s",
+              socket_folder, erc.message());
+  }
+  this->_socket_path = socket_folder / "infinit.sock";
+  boost::filesystem::remove(this->_socket_path, erc);
+  this->_spec_json_path = descriptor_folder / "infinit.json";
+  boost::filesystem::remove(this->_spec_json_path, erc);
+  this->_spec_url_path = descriptor_folder / "infinit.spec";
+  boost::filesystem::remove(this->_spec_url_path, erc);
   if (tcp)
   {
-    auto unix_socket_path = socket_path / "infinit.sock";
-    boost::filesystem::remove(unix_socket_path, erc);
     this->_server = elle::make_unique<reactor::network::HttpServer>(tcp_port);
-    int port = _server->port();
-    std::string url = "tcp://localhost:" + std::to_string(port);
-    boost::filesystem::ofstream ofs(descriptor_path / "infinit.spec");
+    int port = this->_server->port();
+    std::string url = elle::sprintf("tcp://localhost:%s", port);
+    boost::filesystem::ofstream ofs(this->_spec_url_path);
     if (!ofs.good())
-    {
-      ELLE_LOG("Execute the following command: echo %s |sudo tee %s/infinit.spec",
-               url, descriptor_path.string());
-    }
+      elle::err("Unable to write to URL .spec file: %s", this->_spec_url_path);
     ofs << url;
   }
   else
   {
-    boost::filesystem::remove(descriptor_path / "infinit.spec", erc);
     auto us = elle::make_unique<reactor::network::UnixDomainServer>();
-    auto sock_path = socket_path / "infinit.sock";
-    boost::filesystem::create_directories(sock_path.parent_path());
-    boost::filesystem::remove(sock_path, erc);
-    us->listen(sock_path);
-    this->_server = elle::make_unique<reactor::network::HttpServer>(std::move(us));
+    us->listen(this->_socket_path);
+    this->_server =
+      elle::make_unique<reactor::network::HttpServer>(std::move(us));
   }
   {
-    auto json = "\"name\": \"infinit\", \"address\": \"http://www.infinit.sh\"";
-    boost::filesystem::ofstream ofs(descriptor_path / "infinit.json");
+    elle::json::Object json;
+    json["Name"] = std::string("infinit");
+    json["Addr"] = std::string("https://infinit.sh");
+    boost::filesystem::ofstream ofs(this->_spec_json_path);
     if (!ofs.good())
     {
-      ELLE_LOG("Execute the following command: echo '%s' |sudo tee %s/infinit.json",
-               json, descriptor_path.string());
+      elle::err("Unable to write JSON plugin description: %s",
+                this->_spec_json_path);
     }
-    ofs << json;
+    elle::json::write(ofs, json);
   }
   #define ROUTE_SIG  (reactor::network::HttpServer::Headers const&,     \
                       reactor::network::HttpServer::Cookies const&,     \
