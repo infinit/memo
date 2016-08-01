@@ -422,6 +422,9 @@ body.home {
 
     p.title {
       max-width: 510px; margin: 15px auto 0 auto;
+
+      a { color: @infinitblue; .transition(); }
+      a:hover { color: darken(@infinitblue, 10%); }
     }
 
     div.tutorial, div.contact {
@@ -455,7 +458,7 @@ body.home {
       div.faq {
         width: 70%; margin: 0 auto;
         p { margin-top: 10px;}
-        strong { display: block; margin-top: 50px; }
+        strong { display: block; margin-top: 70px; }
         input[type=text] { width: 100%; }
       }
     }
