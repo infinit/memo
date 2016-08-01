@@ -1,8 +1,6 @@
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <signal.h>
-#include <sys/types.h>
 #include <pwd.h>
+#include <signal.h>
+#include <sys/wait.h>
 
 #ifdef INFINIT_MACOSX
 #  include <sys/param.h>
@@ -16,6 +14,7 @@
 #include <elle/log.hh>
 #include <elle/system/PIDFile.hh>
 #include <elle/system/Process.hh>
+#include <elle/system/unistd.hh>
 #include <elle/serialization/json.hh>
 #include <elle/system/self-path.hh>
 
@@ -33,15 +32,6 @@ ELLE_LOG_COMPONENT("infinit-daemon");
 #include <password.hh>
 
 infinit::Infinit ifnt;
-
-static
-int
-checked_call(int res, std::string const& syscall)
-{
-  if (res == -1)
-    elle::err("unable to %s: %s", syscall, strerror(errno));
-  return res;
-}
 
 struct SystemUser
 {
@@ -90,8 +80,8 @@ struct SystemUser
       elle::os::unsetenv("INFINIT_DATA_HOME");
       prev_euid = geteuid();
       prev_egid = getegid();
-      checked_call(setegid(su.gid), "set group id");
-      checked_call(seteuid(su.uid), "set user id");
+      elle::setegid(su.gid);
+      elle::seteuid(su.uid);
     }
     Lock(Lock const& b) = delete;
     Lock(Lock && b) = default;
@@ -103,8 +93,8 @@ struct SystemUser
         elle::os::setenv("INFINIT_HOME", prev_home, 1);
       if (!prev_data_home.empty())
         elle::os::setenv("INFINIT_DATA_HOME", prev_data_home, 1);
-      checked_call(seteuid(prev_euid), "set group id");
-      checked_call(setegid(prev_egid), "set user id");
+      elle::seteuid(prev_euid);
+      elle::setegid(prev_egid);
     }
     std::string prev_home, prev_data_home;
     int prev_euid, prev_egid;
