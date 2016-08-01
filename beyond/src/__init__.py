@@ -223,12 +223,12 @@ class Beyond:
     # Only remove objects owned by the user.
     drives = self.network_drives_get(network = network)
     for d in drives:
-      if d.owner == user.name:
-        self.drive_delete(owner = d.owner, name = d.unqualified_name)
+      if d.owner_name == user.name:
+        self.drive_delete(owner = d.owner_name, name = d.unqualified_name)
     volumes = self.network_volumes_get(network = network)
     for v in volumes:
-      if v.owner == user.name:
-        self.volume_delete(owner = v.owner, name = v.unqualified_name)
+      if v.owner_name == user.name:
+        self.volume_delete(owner = v.owner_name, name = v.unqualified_name)
 
   ## ---- ##
   ## User ##
@@ -270,17 +270,17 @@ class Beyond:
     # Only remove objects owned by the user.
     drives = self.user_drives_get(name = user.name)
     for d in drives:
-      if d.owner == user.name:
-        self.drive_delete(owner = d.owner, name = d.unqualified_name)
+      if d.owner_name == user.name:
+        self.drive_delete(owner = d.owner_name, name = d.unqualified_name)
     volumes = self.user_volumes_get(user = user)
     for v in volumes:
-      if v.owner == user.name:
-        self.volume_delete(owner = v.owner, name = v.unqualified_name)
+      if v.owner_name == user.name:
+        self.volume_delete(owner = v.owner_name, name = v.unqualified_name)
     networks = self.user_networks_get(user = user)
     for n in networks:
-      if n.owner == user.name:
-        self.network_purge(network = network)
-        self.network_delete(owner = n.owner, name = n.unqualified_name)
+      if n.owner_name == user.name:
+        self.network_purge(user = user, network = n)
+        self.network_delete(owner = n.owner_name, name = n.unqualified_name)
 
   ## ------ ##
   ## Volume ##
@@ -302,8 +302,8 @@ class Beyond:
     # Only remove objects owned by the user.
     drives = self.volume_drives_get(name = volume.name)
     for d in drives:
-      if d.owner == user.name:
-        self.drive_delete(owner = d.owner, name = d.unqualified_name)
+      if d.owner_name == user.name:
+        self.drive_delete(owner = d.owner_name, name = d.unqualified_name)
 
   ## ----- ##
   ## Drive ##
@@ -656,9 +656,11 @@ class Entity(type):
   def __new__(self, name, superclasses, content,
               insert = None,
               update = None,
+              hasher = None,
               fields = {}):
     self_type = None
     content['fields'] = fields
+    content['__hash__'] = lambda self: hasher(self)
     # Init
     def __init__(self, beyond, **kwargs):
       self.__beyond = beyond
@@ -756,6 +758,7 @@ class Entity(type):
   def __init__(self, name, superclasses, content,
                insert = None,
                update = None,
+               hasher = None,
                fields = []):
     for f in fields:
       content[f] = property(
@@ -790,7 +793,7 @@ class Network(metaclass = Entity,
     return self.name
 
   @property
-  def owner(self):
+  def owner_name(self):
     return self.name.split('/')[0]
 
   @property
@@ -820,6 +823,7 @@ class Passport(metaclass = Entity,
 
 class Volume(metaclass = Entity,
              insert = 'volume_insert',
+             hasher = lambda v: hash(v.name),
              fields = fields('name', 'network',
                              default_permissions = '',
                              mount_options = dict())):
@@ -829,7 +833,7 @@ class Volume(metaclass = Entity,
     return self.name
 
   @property
-  def owner(self):
+  def owner_name(self):
     return self.name.split('/')[0]
 
   @property
@@ -853,7 +857,7 @@ class Drive(
     return self.name
 
   @property
-  def owner(self):
+  def owner_name(self):
     return self.name.split('/')[0]
 
   @property
