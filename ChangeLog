@@ -3,6 +3,14 @@
 <!--
 ## [0.7.0]
 
+### Added
+
+- IPv6 support.
+
+### Changed
+
+- Optimize Kelips packet size.
+
 ### Fixed
 
 - The 'creation time' shown when displaying file informations on MacOS
