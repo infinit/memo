@@ -1012,12 +1012,19 @@ daemon_command(std::string const& s, bool hold)
       std::unique_ptr<reactor::network::UnixDomainSocket> sock;
       try
       {
-        sock.reset(new reactor::network::UnixDomainSocket(daemon_sock_path()));
+        try
+        {
+          sock.reset(new reactor::network::UnixDomainSocket(daemon_sock_path()));
+        }
+        catch (elle::Error const&)
+        {
+          sock.reset(new reactor::network::UnixDomainSocket(
+            boost::filesystem::path("/tmp/infinit-root/daemon.sock")));
+        }
       }
-      catch(elle::Error const&)
+      catch (reactor::network::ConnectionRefused const&)
       {
-        sock.reset(new reactor::network::UnixDomainSocket(
-          boost::filesystem::path("/tmp/infinit-root/daemon.sock")));
+        elle::err("ensure that an instance of infinit-daemon is running");
       }
       std::string cmd = s + "\n";
       ELLE_TRACE("writing query: %s", s);
