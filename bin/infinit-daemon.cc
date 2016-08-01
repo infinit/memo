@@ -486,6 +486,8 @@ MountManager::start(std::string const& name,
       return ifnt.volume_get(name);
     }
   }();
+  if (this->_mounts.count(volume.name))
+    elle::err("already mounted: %s", volume.name);
   try
   {
     auto nname = split(volume.network);
