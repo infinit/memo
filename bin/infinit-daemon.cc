@@ -1020,7 +1020,8 @@ daemon_command(std::string const& s, bool hold)
       ELLE_TRACE("writing query: %s", s);
       sock->write(elle::ConstWeakBuffer(cmd.data(), cmd.size()));
       ELLE_TRACE("reading result");
-      auto stream = elle::IOStream(sock->read_until("\n").istreambuf());
+      auto buffer = sock->read_until("\n");
+      auto stream = elle::IOStream(buffer.istreambuf());
       res = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       if (hold)
         reactor::sleep();
