@@ -1320,9 +1320,14 @@ _run(boost::program_options::variables_map const& args, bool detach)
   srv.listen(sockaddr);
   chmod(sockaddr.string().c_str(), 0666);
 
-  elle::SafeFinally terminator([&] { if (mounter) mounter->terminate_now();});
+  elle::SafeFinally terminator([&] {
+    if (mounter)
+      mounter->terminate_now();
+    ELLE_LOG("stopped daemon");
+  });
   elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
   {
+    ELLE_LOG("started daemon");
     while (true)
     {
       auto socket = elle::utility::move_on_copy(srv.accept());
