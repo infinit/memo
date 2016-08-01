@@ -51,6 +51,7 @@ namespace infinit
                     Block& block, std::pair<bool, bool> perms);
       DirectoryData(boost::filesystem::path path,
                     model::Address address);
+      DirectoryData(elle::serialization::Serializer& s, elle::Version const& v);
       void
       update(model::blocks::Block& block, std::pair<bool, bool> perms);
       void
@@ -62,7 +63,7 @@ namespace infinit
       void
       _prefetch(FileSystem& fs, std::shared_ptr<DirectoryData> self);
       void
-      serialize(elle::serialization::Serializer&);
+      serialize(elle::serialization::Serializer&, elle::Version const& v);
       typedef infinit::serialization_tag serialization_tag;
       ELLE_ATTRIBUTE_R(model::Address, address);
       ELLE_ATTRIBUTE_R(int, block_version);
@@ -140,6 +141,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(std::vector<FatEntry>, fat);
       ELLE_ATTRIBUTE_R(elle::Buffer, data);
       ELLE_ATTRIBUTE_R(boost::filesystem::path, path);
+      typedef infinit::serialization_tag serialization_tag;
       friend class FileSystem;
       friend class File;
       friend class FileHandle;

@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.6.2]
+
+### Fixed
+
+- The 'creation time' shown when displaying file informations on MacOS
+  is now filled correctly.
 
 ## [0.6.1] - 2016-08-01
 
