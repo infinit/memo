@@ -1285,6 +1285,7 @@ _run(boost::program_options::variables_map const& args, bool detach)
   }
   if (!flag(args, "docker-disable"))
   {
+#if !defined(INFINIT_PRODUCTION_BUILD) || defined(INFINIT_LINUX)
     try
     {
       docker->install(
@@ -1300,6 +1301,7 @@ _run(boost::program_options::variables_map const& args, bool detach)
       ELLE_ERR("Failed to install docker plugin: %s", e.what());
       ELLE_ERR("Docker plugin disabled");
     }
+#endif
   }
   if (detach)
     daemonize();
@@ -1421,8 +1423,13 @@ DockerVolumePlugin::DockerVolumePlugin(MountManager& manager,
                                        SystemUser& user,
                                        reactor::Mutex& mutex)
   : _manager(manager)
+  , _server(nullptr)
+  , _mount_count()
   , _user(user)
   , _mutex(mutex)
+  , _socket_path()
+  , _spec_json_path()
+  , _spec_url_path()
 {}
 
 DockerVolumePlugin::~DockerVolumePlugin()
@@ -1434,9 +1441,12 @@ void
 DockerVolumePlugin::uninstall()
 {
   boost::system::error_code erc;
-  boost::filesystem::remove(this->_socket_path, erc);
-  boost::filesystem::remove(this->_spec_json_path, erc);
-  boost::filesystem::remove(this->_spec_url_path, erc);
+  if (!this->_socket_path.empty())
+    boost::filesystem::remove(this->_socket_path, erc);
+  if (!this->_spec_json_path.empty())
+    boost::filesystem::remove(this->_spec_json_path, erc);
+  if (!this->_spec_url_path.empty())
+    boost::filesystem::remove(this->_spec_url_path, erc);
 }
 
 std::string
@@ -1809,6 +1819,7 @@ main(int argc, char** argv)
       "mount given volumes on startup, keep trying on error" },
     { "wait-for-peers", bool_switch(),
       "Always wait for at least one peer when mounting a volume" },
+#if !defined(INFINIT_PRODUCTION_BUILD) || defined(INFINIT_LINUX)
     { "docker-disable", bool_switch(), "Disable the Docker plugin" },
     { "docker-user", value<std::string>(), elle::sprintf(
       "System user to use for docker plugin (default: %s)",
@@ -1823,6 +1834,7 @@ main(int argc, char** argv)
       "Path to add plugin descriptor\n(default: /usr/lib/docker/plugins)" },
     { "docker-mount-substitute", value<std::string>(),
       "[from:to|prefix] : Substitute 'from' to 'to' in advertised path" },
+#endif
     { "log-level,l", value<std::string>(),
       "Log level to start volumes with (default: LOG)" },
     { "log-path,d", value<std::string>(), "Store volume logs in given path" },
