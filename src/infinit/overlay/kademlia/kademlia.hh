@@ -160,8 +160,11 @@ namespace infinit
       struct Configuration
         : public overlay::Configuration
       {
+        typedef Configuration Self;
+        typedef overlay::Configuration Super;
         Configuration();
         Configuration(elle::serialization::SerializerIn& input);
+        ELLE_CLONABLE();
         void
         serialize(elle::serialization::Serializer& s) override;
         virtual

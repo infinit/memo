@@ -79,7 +79,6 @@ beyond(bool help = false)
   return res;
 }
 
-static boost::optional<elle::Version> compatibility_version;
 static std::unique_ptr<std::ofstream> critical_log_stream;
 
 class CommandLineError
@@ -219,6 +218,72 @@ struct Storages
 DAS_MODEL(Storages, (usage, capacity), DasStorages);
 DAS_MODEL_DEFAULT(Storages, DasStorages);
 DAS_MODEL_SERIALIZE(Storages);
+
+extern bool script_mode;
+extern boost::optional<std::string> _as_user;
+
+inline
+void
+report(std::string const& msg)
+{
+  if (!script_mode)
+  {
+    elle::printf("%s%s.", (char)toupper(msg[0]), msg.substr(1));
+    std::cout << std::endl;
+  }
+}
+
+inline
+void
+report_action(std::string const& action,
+              std::string const& type,
+              std::string const& name,
+              boost::optional<std::string> where_ = {})
+{
+  std::string where = where_ ? elle::sprintf("%s ", where_.get()) : "";
+  report(elle::sprintf("%s%s %s \"\%s\"", where, action, type, name));
+}
+
+inline
+void
+report_created(std::string const& type, std::string const& name)
+{
+  report_action("created", type, name, std::string("locally"));
+}
+
+inline
+void
+report_updated(std::string const& type, std::string const& name)
+{
+  report_action("updated", type, name, std::string("locally"));
+}
+
+inline
+void
+report_imported(std::string const& type, std::string const& name)
+{
+  report_action("imported", type, name);
+}
+
+inline
+void
+report_action_output(std::ostream& output,
+                     std::string const& action,
+                     std::string const& type,
+                     std::string const& name)
+{
+  if (&output != &std::cout)
+    report_action(action, type, name);
+}
+
+inline
+void
+report_exported(std::ostream& output,
+                std::string const& type,
+                std::string const& name)
+{
+  report_action_output(output, "exported", type, name);
+}
 
 struct Mode
 {
@@ -425,9 +490,6 @@ parse_args(boost::program_options::options_description const& options,
   return res;
 }
 
-extern bool script_mode;
-extern boost::optional<std::string> _as_user;
-
 static
 bool
 is_hidden_file(boost::filesystem::path const& path)
@@ -453,10 +515,17 @@ beyond_push(std::string const& where,
             T const& o,
             infinit::User const& self,
             bool report = true,
-            bool beyond_error = false); // FIXME: Remove when migration done.
+            bool beyond_error = false, // FIXME: Remove when migration done.
+            bool update = false);
+
+template<typename T>
+T
+beyond_fetch(std::string const& type,
+             std::string const& name);
 
 namespace infinit
 {
+  extern boost::optional<elle::Version> compatibility_version;
   static const std::string invalid_name(
     "name (%s) must only contain lower case alphanumeric and - . _ "
     "characters but not start with the . character");
@@ -502,71 +571,6 @@ namespace infinit
     }
   }
 
-  // Return arguments for mode in the correct order.
-  // Note: just using "collect_unrecognized" is insufficient as this changes
-  // the order and does not handle the case where the binary has a mode and
-  // mode argument with the same name.
-  static
-  std::vector<std::string>
-  mode_arguments(
-    std::vector<std::string> tokens,
-    Mode const* mode,
-    Modes const& modes, boost::optional<Modes> hidden_modes,
-    boost::program_options::basic_parsed_options<char> const& parsed)
-  {
-    bool after_mode = false;
-    std::vector<std::string> res;
-    // Valid tokens are modes + unrecognized options.
-    std::vector<std::string> valid_tokens;
-    bool handling_valid_option = false;
-    for (auto const& m: modes)
-      valid_tokens.push_back(elle::sprintf("--%s", m.name));
-    if (hidden_modes)
-    {
-      for (auto const& m: hidden_modes.get())
-        valid_tokens.push_back(elle::sprintf("--%s", m.name));
-    }
-    for (auto val: boost::program_options::collect_unrecognized(
-          parsed.options, boost::program_options::include_positional))
-      valid_tokens.push_back(val);
-    for (auto const& token: tokens)
-    {
-      if (token == elle::sprintf("--%s", mode->name) && !after_mode)
-      {
-        after_mode = true;
-        // Handle case where token directly after mode is positional argument.
-        // e.g.: infinit-user --create bob
-        handling_valid_option = true;
-        continue;
-      }
-      if (!after_mode)
-        continue;
-      // We're after the mode in the tokens, check if we have a valid token.
-      if (std::find(valid_tokens.begin(), valid_tokens.end(), token)
-          != valid_tokens.end())
-      {
-        // Check if token is an option descriptor.
-        // Could start with - or --
-        if (token.find("-") == 0)
-          handling_valid_option = true;
-        // Only push back valid option descriptors and their associated values.
-        if (handling_valid_option)
-          res.push_back(token);
-      }
-      // If we were passed an option descriptor, it's not a valid one. Ignore
-      // proceeding value.
-      else if (token.find("-") == 0)
-        handling_valid_option = false;
-      // Assume invalid option descriptors are not multitoken and accept next
-      // token as it is a positional argument.
-      // e.g.: infinit-network --export --as owner network
-      else
-        handling_valid_option = true;
-    }
-    return res;
-  }
-
-  inline
   int
   main(std::string desc,
        Modes const& modes,
@@ -574,276 +578,7 @@ namespace infinit
        char** argv,
        boost::optional<std::string> positional_arg = {},
        boost::optional<bool> disable_as_arg = {},
-       boost::optional<Modes> hidden_modes = {})
-  {
-    try
-    {
-      std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
-#ifndef INFINIT_WINDOWS
-      std::unique_ptr<crash_reporting::CrashReporter> crash_reporter;
-#ifdef INFINIT_PRODUCTION_BUILD
-      bool const production_build = true;
-#else
-      bool const production_build = false;
-#endif
-      if (production_build &&
-          elle::os::getenv("INFINIT_CRASH_REPORTER", "") != "0" ||
-          elle::os::getenv("INFINIT_CRASH_REPORTER", "") == "1")
-      {
-        std::string crash_url =
-          elle::sprintf("%s/crash/report",
-          crash_host.length() ? crash_host : beyond());
-        auto dumps_path = canonical_folder(xdg_cache_home() / "crashes");
-        crash_reporter = elle::make_unique<crash_reporting::CrashReporter>(
-          crash_url, dumps_path, version_describe);
-      }
-#endif
-      reactor::Scheduler sched;
-      reactor::Thread main_thread(
-        sched,
-        "main",
-        [&sched, &modes, &desc, argc, argv,
-         &positional_arg, &disable_as_arg, &hidden_modes
-#ifndef INFINIT_WINDOWS
-         ,&crash_reporter
-#endif
-         ]
-        {
-#ifdef INFINIT_LINUX
-          // boost::filesystem uses the default locale, detect here if it
-          // cant be instantiated.
-          // Not required on OS X, see: boost/libs/filesystem/src/path.cpp:819
-          check_broken_locale();
-#endif
-          ELLE_TRACE("parse command line")
-          {
-            using boost::program_options::value;
-            Mode::OptionsDescription mode_options("Modes");
-            for (auto const& mode: modes)
-              mode_options.add_options()(mode.name, mode.description);
-            Mode::OptionsDescription hidden_mode_options("Hidden Modes");
-            if (hidden_modes)
-            {
-              for (auto const& mode: hidden_modes.get())
-                hidden_mode_options.add_options()(mode.name, mode.description);
-            }
-            Mode::OptionsDescription options(desc);
-            Mode::OptionsDescription visible_options(desc);
-            auto add_options =
-              [&] (boost::program_options::options_description const& m_options,
-                   bool visible_in_production = true)
-              {
-                if (m_options.options().size() == 0)
-                  return;
-                options.add(m_options);
-                if (visible_in_production || show_hidden_options())
-                  visible_options.add(m_options);
-              };
-            add_options(mode_options);
-            add_options(hidden_mode_options, false);
-            Mode::OptionsDescription misc("Miscellaneous");
-            misc.add_options()
-              ("help,h", "display the help")
-              ("script,s", "silence all extraneous human friendly messages")
-              ("compatibility-version", value<std::string>(),
-               "force compatibility version")
-              ("version,v", "display version")
-              ("critical-log", "Path to critical log file, none to disable")
-            ;
-            if (!disable_as_arg || !disable_as_arg.get())
-            {
-              misc.add_options()
-                ("as,a", value<std::string>(),
-                 "user to run commands as (default: system user)")
-              ;
-            }
-            add_options(misc);
-            boost::program_options::variables_map vm;
-            try
-            {
-              auto parser =
-                boost::program_options::command_line_parser(argc, argv);
-              parser.options(options);
-              parser.allow_unregistered();
-              auto parsed = parser.run();
-              store(parsed, vm);
-              notify(vm);
-              if (vm.count("compatibility-version"))
-                compatibility_version = elle::Version::from_string(
-                  vm["compatibility-version"].as<std::string>());
-              if (vm.count("version"))
-              {
-                std::cout << version_describe << std::endl;
-                throw elle::Exit(0);
-              }
-              auto critical_log_file = xdg_state_home() / "critical.log";
-              bool critical_log_disabled = false;
-              if (vm.count("critical-log"))
-              {
-                critical_log_file = vm["critical-log"].as<std::string>();
-                critical_log_disabled =
-                  (vm["critical-log"].as<std::string>() == "none");
-              }
-              if (!critical_log_disabled)
-              {
-                ELLE_TRACE("Initializing critical logger at %s",
-                           critical_log_file);
-                boost::system::error_code erc;
-                boost::filesystem::create_directories(
-                  critical_log_file.parent_path());
-                std::unique_ptr<elle::log::CompositeLogger> cl
-                  = elle::make_unique<elle::log::CompositeLogger>();
-                auto clptr = cl.get();
-                auto prev_logger = elle::log::logger(std::move(cl));
-                critical_log_stream.reset(new std::ofstream(
-                  critical_log_file.string(),
-                  std::fstream::app | std::fstream::out));
-                boost::optional<std::string> env_log_level;
-                if (elle::os::inenv("ELLE_LOG_LEVEL"))
-                  env_log_level = elle::os::getenv("ELLE_LOG_LEVEL");
-                elle::os::unsetenv("ELLE_LOG_LEVEL");
-                std::unique_ptr<elle::log::Logger> crit
-                 = elle::make_unique<elle::log::TextLogger>(
-                   *critical_log_stream, "LOG", false, true,
-                   false, true, false, true, true);
-                if (env_log_level)
-                  elle::os::setenv("ELLE_LOG_LEVEL", *env_log_level, true);
-                clptr->loggers().push_back(std::move(crit));
-                // log to crit only goes here
-                clptr->loggers().push_back(std::move(prev_logger));
-              }
-              bool help = vm.count("help");
-              script_mode = vm.count("script");
-              if (vm.count("as"))
-                _as_user = vm["as"].as<std::string>();
-              Mode const* mode = nullptr;
-              bool misplaced_mode = false;
-              std::vector<std::string> tokens;
-              for (int i = 0; i < argc; i++)
-                tokens.emplace_back(std::string(argv[i]));
-              auto get_mode = [&] (Modes const& modes)
-                {
-                  int pos = std::distance(tokens.begin(), tokens.end());
-                  for (auto const& m: modes)
-                  {
-                    if (vm.count(m.name))
-                    {
-                      int new_pos = std::distance(
-                        tokens.begin(),
-                        std::find(tokens.begin(), tokens.end(),
-                                  elle::sprintf("--%s", m.name)));
-                      if (new_pos < pos)
-                      {
-                        mode = &m;
-                        pos = new_pos;
-                      }
-                    }
-                  }
-                  if (mode && pos != 1)
-                    misplaced_mode = true;
-                };
-              get_mode(modes);
-              if (mode == nullptr && hidden_modes)
-                get_mode(hidden_modes.get());
-              if (misplaced_mode)
-              {
-                (help ? std::cout : std::cerr) << "MODE must be the first argument." << std::endl;
-                mode = nullptr;
-              }
-              if (!mode)
-              {
-                std::ostream& output = help ? std::cout : std::cerr;
-                output << "Usage: " << program
-                       << " MODE [OPTIONS...]" << std::endl;
-                output << std::endl;
-                output << visible_options;
-                output << std::endl;
-                if (help)
-                  throw elle::Exit(0);
-                else
-                  throw elle::Error("mode unspecified");
-              }
-              if (help)
-              {
-                mode->help(std::cout);
-                return;
-              }
-              std::unique_ptr<reactor::Thread> crash_upload_thread;
-#ifndef INFINIT_WINDOWS
-              if (crash_reporter && crash_reporter->crashes_pending_upload())
-              {
-                crash_upload_thread.reset(new reactor::Thread("upload crashes",
-                  [&crash_reporter]
-                  {
-                    crash_reporter->upload_existing();
-                  }));
-              }
-#endif
-              try
-              {
-                std::vector<std::string> args =
-                  mode_arguments(tokens, mode, modes, hidden_modes, parsed);
-                mode->action(parse_args(mode->options, args,
-                             (positional_arg ? positional_arg.get() : "name")));
-                if (crash_upload_thread)
-                  reactor::wait(*crash_upload_thread);
-              }
-              catch (CommandLineError const&)
-              {
-                mode->help(std::cerr);
-                if (crash_upload_thread)
-                  reactor::wait(*crash_upload_thread);
-                throw;
-              }
-              catch (boost::program_options::error_with_option_name const& e)
-              {
-                mode->help(std::cerr);
-                if (crash_upload_thread)
-                  reactor::wait(*crash_upload_thread);
-                throw;
-              }
-              catch (elle::Exception const&)
-              {
-                if (crash_upload_thread)
-                  reactor::wait(*crash_upload_thread);
-                throw;
-              }
-            }
-            catch (boost::program_options::error_with_option_name const& e)
-            {
-              throw elle::Error(
-                elle::sprintf("command line error: %s", e.what()));
-            }
-          }
-        });
-      sched.run();
-    }
-    catch (elle::Exit const& e)
-    {
-      return e.return_code();
-    }
-    catch (elle::Exception const& e)
-    {
-      ELLE_TRACE("fatal error: %s\n%s", e.what(), e.backtrace());
-      if (!elle::os::getenv("INFINIT_BACKTRACE", "").empty())
-      {
-        elle::fprintf(std::cerr, "%s: fatal error: %s\n%s\n", argv[0],
-                      e.what(), e.backtrace());
-      }
-      else
-      {
-        elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
-      }
-      return 1;
-    }
-    catch (std::exception const& e)
-    {
-      ELLE_TRACE("fatal error: %s", e.what());
-      elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
-      return 1;
-    }
-    return 0;
-  }
+       boost::optional<Modes> hidden_modes = {});
 
   struct User
     : public elle::Printable
@@ -851,13 +586,15 @@ namespace infinit
     User(std::string const& name,
          cryptography::rsa::KeyPair const& keys,
          boost::optional<std::string> email = {},
-         boost::optional<std::string> fullname = {})
+         boost::optional<std::string> fullname = {},
+         boost::optional<std::string> ldap_dn = {})
       : name(name)
       , public_key(keys.K())
       , private_key(keys.k())
       , email(email)
       , fullname(fullname)
       , password_hash()
+      , ldap_dn(ldap_dn)
     {
       check_name(this->name, true);
     }
@@ -870,6 +607,7 @@ namespace infinit
       , email(s.deserialize<boost::optional<std::string>>("email"))
       , fullname(s.deserialize<boost::optional<std::string>>("fullname"))
       , password_hash()
+      , ldap_dn(s.deserialize<boost::optional<std::string>>("ldap_dn"))
     {
       check_name(this->name, true);
     }
@@ -895,6 +633,7 @@ namespace infinit
       s.serialize("password_hash", this->password_hash);
       s.serialize("private_key", this->private_key);
       s.serialize("public_key", this->public_key);
+      s.serialize("ldap_dn", this->ldap_dn);
     }
 
     static
@@ -938,6 +677,8 @@ namespace infinit
     boost::optional<std::string> fullname;
     boost::optional<std::string> avatar_path;
     boost::optional<std::string> password_hash;
+    boost::optional<std::string> password;
+    boost::optional<std::string> ldap_dn;
   };
 
   struct Network
@@ -969,8 +710,30 @@ namespace infinit
       return static_cast<model::doughnut::Configuration*>(this->model.get());
     }
 
+    bool
+    user_linked(infinit::User const& user) const
+    {
+      if (this->model == nullptr)
+        return false;
+      // Compare passport's public key and user public key.
+      return this->dht()->passport.user() == user.public_key;
+    }
+
+    void
+    ensure_allowed(infinit::User const& user,
+                   std::string const& action,
+                   std::string const& resource = "network") const
+    {
+      if (!this->user_linked(user))
+        throw elle::Error(
+          elle::sprintf("You cannot %s this %s as %s",
+                        action, resource, user.name));
+    }
+
+
     std::unique_ptr<model::doughnut::Doughnut>
-    run(std::vector<infinit::model::Endpoints> const& hosts = {},
+    run(User const& user,
+        std::vector<infinit::model::Endpoints> const& hosts = {},
         bool client = false,
         bool cache = false,
         boost::optional<int> cache_size = {},
@@ -986,7 +749,7 @@ namespace infinit
       return this->dht()->make(
         hosts,
         client,
-        this->cache_dir(),
+        this->cache_dir(user),
         async_writes,
         cache,
         cache_size,
@@ -1023,9 +786,37 @@ namespace infinit
     }
 
     boost::filesystem::path
-    cache_dir() const
+    cache_dir(User const& user) const
     {
-      return xdg_state_home() / "cache" / this->name;
+      // "/cache" and "/async" are added by Doughnut.
+      auto old_dir = xdg_state_home() / "cache" / this->name;
+      auto new_dir = xdg_state_home() / "cache" / user.name / this->name;
+      create_directories(new_dir / "async");
+      if (boost::filesystem::exists(old_dir / "async") &&
+          !boost::filesystem::is_empty(old_dir / "async"))
+      {
+        for (boost::filesystem::recursive_directory_iterator it(old_dir / "async");
+             it != boost::filesystem::recursive_directory_iterator();
+             ++it)
+        {
+          if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+          {
+            boost::filesystem::copy_file(
+              it->path(),
+              new_dir / "async" / it->path().filename());
+          }
+        }
+        boost::filesystem::remove_all(old_dir / "async");
+      }
+      if (boost::filesystem::exists(old_dir / "cache") &&
+          !boost::filesystem::is_empty(old_dir / "cache"))
+      {
+        ELLE_WARN("old cache location (\"%s/cache\") is being emptied in favor "
+                  "of the new cache location (\"%s/cache\")",
+                  old_dir.string(), new_dir.string());
+        boost::filesystem::remove_all(old_dir / "cache");
+      }
+      return new_dir;
     }
 
     void
@@ -1090,9 +881,19 @@ namespace infinit
       , overlay(std::move(network.dht()->overlay))
       , owner(std::move(*network.dht()->owner))
       , version(std::move(network.dht()->version))
+      , admin_keys(std::move(network.dht()->admin_keys))
     {
       check_name(this->name);
     }
+
+    NetworkDescriptor(NetworkDescriptor const& desc)
+      : name(desc.name)
+      , consensus(desc.consensus->clone())
+      , overlay(desc.overlay->clone())
+      , owner(desc.owner)
+      , version(desc.version)
+      , admin_keys(desc.admin_keys)
+    {}
 
     void
     serialize(elle::serialization::Serializer& s)
@@ -1109,6 +910,13 @@ namespace infinit
       {
         // Oldest versions did not specify compatibility version.
         this->version = elle::Version(0, 3, 0);
+      }
+      try
+      {
+        s.serialize("admin_keys", this->admin_keys);
+      }
+      catch (elle::serialization::Error const&)
+      {
       }
     }
 
@@ -1362,13 +1170,13 @@ namespace infinit
 
   template <typename T>
   void
-  save(std::ostream& output, T const& resource)
+  save(std::ostream& output, T const& resource, bool pretty = true)
   {
     ELLE_ASSERT(output.good());
     elle::serialization::json::serialize(
       resource, output,
       false, /* versioned */
-      true /* pretty */
+      pretty
     );
   }
 
@@ -1376,69 +1184,201 @@ namespace infinit
   {
   public:
     bool
-    is_qualified_name(std::string const& network_name)
+    is_qualified_name(std::string const& object_name) const
     {
-      if (network_name.find("/") != std::string::npos)
-        return true;
-      return false;
+      return (object_name.find("/") != std::string::npos);
     }
 
     std::string
-    qualified_name(std::string const& network_name, User const& owner)
+    qualified_name(std::string const& object_name, User const& owner) const
     {
-      if (network_name.find("/") != std::string::npos)
-        return network_name;
+      if (object_name.find("/") != std::string::npos)
+        return object_name;
       else
-        return elle::sprintf("%s/%s", owner.name, network_name);
-    }
-
-    std::string
-    network_path_get(std::string const& name_, User const& owner)
-    {
-      std::string name = qualified_name(name_, owner);
-      std::string path = this->_network_path(name).string();
-      if (boost::filesystem::exists(path))
-        return path;
-      throw elle::Error(
-        elle::sprintf("network \"%s\" not found", name));
+        return elle::sprintf("%s/%s", owner.name, object_name);
     }
 
     Network
     network_get(std::string const& name_,
-                User const& owner,
+                User const& user,
                 bool require_model = true)
     {
-      auto name = qualified_name(name_, owner);
+      auto name = qualified_name(name_, user);
       boost::filesystem::ifstream f;
-      this->_open_read(f, this->_network_path(name), name, "network");
-      auto res = load<Network>(f);
-      if (!res.model && require_model)
+      // Move linked networks found in the descriptor folder to the correct
+      // place.
+      bool move = false;
+      try
       {
-        throw elle::Error(
-          elle::sprintf("this device is not yet linked to the network \"%s\" "
-                        "link it using infinit-network", name_));
+        this->_open_read(f, this->_network_path(name, user), name, "network");
+      }
+      catch (MissingLocalResource const&)
+      {
+        this->_open_read(
+          f, this->_network_descriptor_path(name), name, "network");
+        move = true;
+      }
+      auto res = elle::serialization::json::deserialize<Network>(f, false);
+      std::string const not_linked_msg = elle::sprintf(
+        "%s has not yet linked to the network \"%s\" on this device. "
+        "Link using infinit-network --link", user.name, res.name);
+      if (!res.model && require_model)
+        elle::err(not_linked_msg);
+      if (move && res.model)
+      {
+        // Ensure that passed user is same as that linked to network.
+        if (!res.user_linked(user))
+          elle::err(not_linked_msg);
+        boost::filesystem::ifstream temp_f;
+        this->_open_read(
+          temp_f, this->_network_descriptor_path(name), name, "network");
+        auto temp_net =
+          elle::serialization::json::deserialize<Network>(temp_f, false);
+        NetworkDescriptor desc(std::move(temp_net));
+        auto old_path = this->_network_descriptor_path(res.name);
+        auto path = this->_network_path(res.name, user);
+        create_directories(path.parent_path());
+        boost::filesystem::rename(old_path, path);
+        this->network_save(desc);
       }
       return res;
     }
 
     std::vector<Network>
-    networks_get() const
+    networks_get(
+      boost::optional<infinit::User> self, bool require_linked = false) const
     {
       namespace boost_fs = boost::filesystem;
       std::vector<Network> res;
-      for (boost_fs::recursive_directory_iterator it(this->_network_path());
-           it != boost_fs::recursive_directory_iterator();
-           ++it)
+      auto extract =
+        [&] (boost::filesystem::path const& path, bool move) {
+          for (boost_fs::recursive_directory_iterator it(path);
+               it != boost_fs::recursive_directory_iterator();
+               ++it)
+          {
+            if (!is_regular_file(it->status()) || is_hidden_file(it->path()))
+              continue;
+            boost_fs::ifstream f;
+            this->_open_read(
+              f, it->path(), "network", it->path().filename().string());
+            auto network =
+              elle::serialization::json::deserialize<Network>(f, false);
+            if (require_linked && !network.model)
+              continue;
+            if (move && network.model && self && network.user_linked(*self))
+            {
+              boost::filesystem::ifstream temp_f;
+              this->_open_read(
+                temp_f, it->path(), "network", it->path().filename().string());
+              auto temp_net =
+                elle::serialization::json::deserialize<Network>(temp_f, false);
+              NetworkDescriptor desc(std::move(temp_net));
+              auto path = this->_network_path(network.name, *self);
+              create_directories(path.parent_path());
+              boost::filesystem::rename(it->path(), path);
+              this->network_save(desc);
+            }
+            // Ignore duplicates.
+            if (std::find_if(res.begin(), res.end(),
+                  [&network] (Network const& n) {
+                    return n.name == network.name;
+                  }) == res.end())
+            {
+              res.push_back(std::move(network));
+            }
+          }
+      };
+      if (self)
       {
-        if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+        // Start by linked networks first.
+        extract(this->_network_path(*self), false);
+      }
+      // Then network descriptors and possibly old linked networks.
+      extract(this->_network_descriptor_path(), true);
+      return res;
+    }
+
+    std::vector<User>
+    network_linked_users(std::string const& name_,
+                         boost::optional<User> user = boost::none)
+    {
+      ELLE_ASSERT(is_qualified_name(name_) || user);
+      auto name = name_;
+      if (user)
+        name = qualified_name(name_, *user);
+      auto res = this->users_get();
+      res.erase(
+        std::remove_if(res.begin(), res.end(),
+        [&] (infinit::User const& u)
         {
-          boost_fs::ifstream f;
-          this->_open_read(
-            f, it->path(), it->path().filename().string(), "network");
-          res.push_back(load<Network>(f));
+          return !boost::filesystem::exists(this->_network_path(name, u, false));
+        }),
+        res.end());
+      return res;
+    }
+
+    void
+    network_unlink(std::string const& name_, User const& user, bool report)
+    {
+      auto name = qualified_name(name_, user);
+      auto network = this->network_get(name, user, true);
+      auto path = this->_network_path(network.name, user);
+      // XXX Should check async cache to make sure that it's empty.
+      boost::filesystem::remove_all(network.cache_dir(user).parent_path());
+      if (boost::filesystem::exists(path))
+      {
+        boost::system::error_code erc;
+        boost::filesystem::remove(path, erc);
+        if (!erc)
+          report_action("Unlinked", "network", network.name);
+        else
+        {
+          ELLE_WARN("Unable to unlink network \"%s\": %s",
+                    network.name, erc.message());
         }
       }
-      return res;
+    }
+
+    void
+    network_delete(
+      std::string const& name_, User const& user, bool unlink, bool report)
+    {
+      // Ensure if unqualified name is passed, we qualify with passed user.
+      auto name = qualified_name(name_, user);
+      auto network = this->network_get(name, user, false);
+      // Get a list of users who have linked the network.
+      auto linked_users = this->network_linked_users(name);
+      if (linked_users.size() && !unlink)
+      {
+        std::vector<std::string> user_names;
+        for (auto const& u: linked_users)
+          user_names.emplace_back(u.name);
+        throw elle::Error(elle::sprintf(
+          "Network is still linked with this device by %s.", user_names));
+      }
+      boost::system::error_code erc;
+      for (auto const& u: linked_users)
+      {
+        auto linked_path = this->_network_path(name, u);
+        boost::filesystem::remove(linked_path, erc);
+        boost::filesystem::remove_all(network.cache_dir(u).parent_path());
+        if (erc)
+        {
+          ELLE_WARN("Unable to unlink network \"%s\" for \"%s\": %s",
+                    name, u.name, erc.message());
+        }
+        else if (report)
+          report_action("unlinked", "network", name);
+      }
+      auto desc_path = this->_network_descriptor_path(name);
+      boost::filesystem::remove(desc_path, erc);
+      if (erc)
+      {
+        ELLE_WARN("Unable to remove network descriptor \"%s\": %s",
+                  name, erc.message());
+      }
+      else if (report)
+        report_action("deleted", "network", name);
     }
 
     std::vector<Drive>
@@ -1470,8 +1410,16 @@ namespace infinit
       try
       {
         boost::filesystem::ifstream f;
-        this->_open_read(f, this->_network_path(name), name, "network");
-        return load<NetworkDescriptor>(f);
+        try
+        {
+          this->_open_read(f, this->_network_path(name, owner), name, "network");
+        }
+        catch (MissingLocalResource const&)
+        {
+          this->_open_read(f, this->_network_descriptor_path(name), name, "network");
+        }
+        elle::serialization::json::SerializerIn s(f, false);
+        return s.deserialize<NetworkDescriptor>();
       }
       catch (elle::serialization::Error const&)
       {
@@ -1489,19 +1437,20 @@ namespace infinit
     }
 
     void
-    network_save(NetworkDescriptor const& network, bool overwrite = false)
+    network_save(NetworkDescriptor const& network, bool overwrite = false) const
     {
       boost::filesystem::ofstream f;
-      this->_open_write(f, this->_network_path(network.name),
+      this->_open_write(f, this->_network_descriptor_path(network.name),
                         network.name, "network", overwrite);
       save(f, network);
     }
 
     void
-    network_save(Network const& network, bool overwrite = false)
+    network_save(infinit::User const& self,
+                 Network const& network, bool overwrite = false) const
     {
       boost::filesystem::ofstream f;
-      this->_open_write(f, this->_network_path(network.name),
+      this->_open_write(f, this->_network_path(network.name, self),
                         network.name, "network", overwrite);
       save(f, network);
     }
@@ -1525,6 +1474,8 @@ namespace infinit
         path = this->_passport_path() / network.get();
       else
         path = this->_passport_path();
+      if (!boost::filesystem::exists(path))
+        return res;
       for (boost_fs::recursive_directory_iterator it(path);
            it != boost_fs::recursive_directory_iterator();
            ++it)
@@ -1582,11 +1533,22 @@ namespace infinit
     }
 
     User
-    user_get(std::string const& user) const
+    user_get(std::string const& user, bool beyond_fallback = false) const
     {
-      boost::filesystem::ifstream f;
-      this->_open_read(f, this->_user_path(user), user, "user");
-      return load<User>(f);
+      try
+      {
+        boost::filesystem::ifstream f;
+        this->_open_read(f, this->_user_path(user), user, "user");
+        return load<User>(f);
+      }
+      catch (MissingLocalResource const& e)
+      {
+        if (!beyond_fallback)
+          throw;
+        ELLE_LOG("User %s not found locally, trying on %s", user, beyond(true));
+        auto u = beyond_fetch<User>("user", user);
+        return u;
+      }
     }
 
     std::vector<User>
@@ -1872,7 +1834,7 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _network_path() const
+    _network_descriptor_path() const
     {
       auto root = xdg_data_home() / "networks";
       create_directories(root);
@@ -1880,9 +1842,27 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _network_path(std::string const& name) const
+    _network_descriptor_path(std::string const& name) const
     {
-      return this->_network_path() / name;
+      return this->_network_descriptor_path() / name;
+    }
+
+    boost::filesystem::path
+    _network_path(User const& user, bool create_dir = true) const
+    {
+      auto root = xdg_data_home() / "linked_networks" / user.name;
+      if (create_dir)
+        create_directories(root);
+      return root;
+    }
+
+    boost::filesystem::path
+    _network_path(std::string const& name,
+                  User const& user,
+                  bool create_dir = true) const
+    {
+      auto network_name = this->qualified_name(name, user);
+      return this->_network_path(user, create_dir) / network_name;
     }
 
     boost::filesystem::path
@@ -1961,7 +1941,7 @@ namespace infinit
                 boost::filesystem::path const& path,
                 std::string const& name,
                 std::string const& type,
-                bool overwrite = false)
+                bool overwrite = false) const
     {
       ELLE_DEBUG("open %s \"%s\" (%s) for writing", type, name, path);
       create_directories(path.parent_path());
@@ -2036,23 +2016,6 @@ namespace infinit
 
     Drive
     drive_fetch(std::string const& name);
-
-    std::vector<std::string>
-    networks_for_storage(std::string const& storage_name)
-    {
-      std::vector<std::string> res;
-      using namespace infinit::model::doughnut;
-      for (auto const& network: this->networks_get())
-      {
-        if (network.model)
-        {
-          auto* d = dynamic_cast<Configuration*>(network.model.get());
-          if (d && d->storage->name == storage_name)
-            res.push_back(network.name);
-        }
-      }
-      return res;
-    }
 
     std::vector<std::string>
     user_passports_for_network(std::string const& network_name)
@@ -2479,82 +2442,19 @@ get_username(boost::program_options::variables_map const& args,
 
 DAS_MODEL_FIELDS(
   infinit::User,
-  (name, email, fullname, avatar_path, public_key, private_key, password_hash));
+  (name, email, fullname, avatar_path, public_key, private_key, password_hash, ldap_dn));
 
 namespace infinit
 {
-  DAS_MODEL_DEFINE(User, (name, fullname, avatar_path,  public_key), DasPublicUser);
-  DAS_MODEL_DEFINE(User, (name, email, avatar_path, fullname, public_key, private_key),
+  DAS_MODEL_DEFINE(User, (name, fullname, avatar_path,  public_key, ldap_dn), DasPublicUser);
+  DAS_MODEL_DEFINE(User, (name, email, avatar_path, fullname, public_key, ldap_dn, private_key),
                    DasUser);
   // Publication to the hub.
-  DAS_MODEL_DEFINE(User, (name, email, fullname, public_key),
+  DAS_MODEL_DEFINE(User, (name, email, fullname, public_key, ldap_dn),
                    DasPublicUserPublish);
   DAS_MODEL_DEFINE(
-    User, (name, email, fullname, public_key, private_key, password_hash),
+    User, (name, email, fullname, public_key, private_key, ldap_dn, password_hash),
     DasPrivateUserPublish);
-}
-
-inline
-void
-report(std::string const& msg)
-{
-  if (!script_mode)
-  {
-    elle::printf("%s%s.", (char)toupper(msg[0]), msg.substr(1));
-    std::cout << std::endl;
-  }
-}
-
-inline
-void
-report_action(std::string const& action,
-              std::string const& type,
-              std::string const& name,
-              boost::optional<std::string> where_ = {})
-{
-  std::string where = where_ ? elle::sprintf("%s ", where_.get()) : "";
-  report(elle::sprintf("%s%s %s \"\%s\"", where, action, type, name));
-}
-
-inline
-void
-report_created(std::string const& type, std::string const& name)
-{
-  report_action("created", type, name, std::string("locally"));
-}
-
-inline
-void
-report_updated(std::string const& type, std::string const& name)
-{
-  report_action("updated", type, name, std::string("locally"));
-}
-
-inline
-void
-report_imported(std::string const& type, std::string const& name)
-{
-  report_action("imported", type, name);
-}
-
-inline
-void
-report_action_output(std::ostream& output,
-                     std::string const& action,
-                     std::string const& type,
-                     std::string const& name)
-{
-  if (&output != &std::cout)
-    report_action(action, type, name);
-}
-
-inline
-void
-report_exported(std::ostream& output,
-                std::string const& type,
-                std::string const& name)
-{
-  report_action_output(output, "exported", type, name);
 }
 
 typedef std::unordered_map<std::string, std::string> Headers;
@@ -2663,7 +2563,8 @@ _beyond_push(reactor::http::Request& r,
              std::string const& type,
              std::string const& name,
              bool report = false,
-             bool beyonderror = false)
+             bool beyond_error = false,
+             bool update = false)
 {
   r.finalize();
   reactor::wait(r);
@@ -2674,8 +2575,10 @@ _beyond_push(reactor::http::Request& r,
   }
   else if (r.status() == reactor::http::StatusCode::OK)
   {
-    if (report)
-      report_action("Already pushed", type, name);
+    if (report && update)
+      report_action("updated", type, name, std::string("remotely"));
+    else
+      report_action("already pushed", type, name);
   }
   else if (r.status() == reactor::http::StatusCode::Conflict)
   {
@@ -2692,7 +2595,7 @@ _beyond_push(reactor::http::Request& r,
   }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
-    if (beyonderror)
+    if (beyond_error)
       read_error<BeyondError>(r, type, name);
     else
       read_error<MissingResource>(r, type, name);
@@ -2750,7 +2653,8 @@ beyond_push_data(std::string const& where,
                  std::string const& content_type,
                  infinit::User const& self,
                  bool report = true,
-                 bool beyond_error = false)
+                 bool beyond_error = false,
+                 bool update = false)
 {
   reactor::http::Request::Configuration c;
   c.header_add("Content-Type", content_type);
@@ -2762,7 +2666,7 @@ beyond_push_data(std::string const& where,
     elle::sprintf("%s/%s", beyond(), where),
     reactor::http::Method::PUT, std::move(c));
   r << object.string();
-  _beyond_push(r, type, name, report, beyond_error);
+  _beyond_push(r, type, name, report, beyond_error, update);
 }
 
 template <typename T>
@@ -2773,7 +2677,8 @@ beyond_push(std::string const& where,
             T const& o,
             infinit::User const& self,
             bool report,
-            bool beyond_error)
+            bool beyond_error,
+            bool update)
 {
   std::stringstream stream;
   elle::serialization::json::serialize(o, stream, false);
@@ -2781,16 +2686,22 @@ beyond_push(std::string const& where,
   ELLE_TRACE("pushing %s/%s with payload %s", type, name, payload_);
   elle::ConstWeakBuffer payload{payload_.data(), payload_.size()};
   beyond_push_data(
-    where, type, name, payload, "application/json", self, report, beyond_error);
+    where, type, name, payload, "application/json", self, report, beyond_error,
+    update);
 }
 
 template <typename T>
 void
-beyond_push(std::string const& type, std::string const& name, T const& o,
-  infinit::User const& self, bool report = true, bool beyond_error = false)
+beyond_push(std::string const& type,
+            std::string const& name,
+            T const& o,
+            infinit::User const& self,
+            bool report = true,
+            bool beyond_error = false,
+            bool update = false)
 {
   beyond_push(elle::sprintf("%ss/%s", type, name), type, name, o, self, report,
-      beyond_error);
+      beyond_error, update);
 }
 
 static
@@ -2855,9 +2766,6 @@ fetch_data(std::string const& url,
   return r;
 }
 
-// FIXME: Workaround used to handle objects that have had their copy
-// constructor deleted. See infinit-network.cc:fetch(), NetworkDescriptor.
-// Remove when serialization does not require copy.
 static
 std::unique_ptr<reactor::http::Request>
 beyond_fetch_data(std::string const& where,
@@ -3196,6 +3104,11 @@ reactor::Thread::unique_ptr
 make_stat_update_thread(infinit::User const& self,
                         infinit::Network& network,
                         infinit::model::doughnut::Doughnut& model);
+#ifdef INFINIT_MACOSX
+# define SXA_EXTRA ,0
+#else
+# define SXA_EXTRA
+#endif
 
 static
 Mode::OptionDescription option_cache(

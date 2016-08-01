@@ -519,6 +519,7 @@ run(variables_map const& args)
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
+  network.ensure_allowed(self, "run");
   bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
   auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
@@ -526,7 +527,8 @@ run(variables_map const& args)
     optional<int>(args, option_cache_ram_invalidation);
   report_action("running", "network", network.name);
   auto model = network.run(
-    {}, true, cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
+    self, {}, true, cache,
+    cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"));
   if (aliased_flag(args, {"fetch-endpoints", "fetch"}))
   {
@@ -544,7 +546,6 @@ run(variables_map const& args)
 
 int main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Modes modes {

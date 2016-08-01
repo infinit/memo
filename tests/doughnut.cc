@@ -550,6 +550,12 @@ class AppendConflictResolver
     return std::unique_ptr<blocks::Block>(res.release());
   }
 
+  std::string
+  description() const override
+  {
+    return "Append data to block";
+  }
+
   virtual
   void
   serialize(elle::serialization::Serializer& s,
@@ -1049,6 +1055,12 @@ namespace rebalancing
               elle::Version const&) override
     {
       s.serialize("previous", this->_previous);
+    }
+
+    std::string
+    description() const override
+    {
+      return "";
     }
 
     ELLE_ATTRIBUTE_R(elle::Buffer, previous);

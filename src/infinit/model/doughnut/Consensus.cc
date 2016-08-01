@@ -339,6 +339,12 @@ namespace infinit
         Configuration::Configuration(elle::serialization::SerializerIn&)
         {}
 
+        std::unique_ptr<Configuration>
+        Configuration::clone() const
+        {
+          return std::unique_ptr<Configuration>(new Configuration());
+        }
+
         std::unique_ptr<Consensus>
         Configuration::make(model::doughnut::Doughnut& dht)
         {

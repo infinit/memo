@@ -87,6 +87,7 @@ class Beyond:
       validate_email_address = True,
       limits = {},
       delegate_user = 'hub',
+      keep_deleted_users = False,
   ):
     self.__datastore = datastore
     self.__datastore.beyond = self
@@ -103,6 +104,7 @@ class Beyond:
     else:
       self.__emailer = emailer.NoOp()
     self.__delegate_user = delegate_user
+    self.__keep_deleted_users = keep_deleted_users
 
   @property
   def limits(self):
@@ -219,12 +221,12 @@ class Beyond:
     # Only remove objects owned by the user.
     drives = self.network_drives_get(network = network)
     for d in drives:
-      if d.owner == user.name:
-        self.drive_delete(owner = d.owner, name = d.unqualified_name)
+      if d.owner_name == user.name:
+        self.drive_delete(owner = d.owner_name, name = d.unqualified_name)
     volumes = self.network_volumes_get(network = network)
     for v in volumes:
-      if v.owner == user.name:
-        self.volume_delete(owner = v.owner, name = v.unqualified_name)
+      if v.owner_name == user.name:
+        self.volume_delete(owner = v.owner_name, name = v.unqualified_name)
 
   ## ---- ##
   ## User ##
@@ -244,7 +246,16 @@ class Beyond:
       raise User.NotFound()
     return [User.from_json(self, u) for u in users]
 
+  def user_by_ldap_dn(self, dn):
+    user = self.__datastore.user_by_ldap_dn(dn)
+    return User.from_json(self, user)
+
+  def user_deleted_get(self, name):
+    return self.__datastore.user_deleted_get(name)
+
   def user_delete(self, name):
+    if self.__keep_deleted_users:
+      self.__datastore.user_deleted_add(name)
     return self.__datastore.user_delete(name = name)
 
   def user_networks_get(self, user):
@@ -265,17 +276,17 @@ class Beyond:
     # Only remove objects owned by the user.
     drives = self.user_drives_get(name = user.name)
     for d in drives:
-      if d.owner == user.name:
-        self.drive_delete(owner = d.owner, name = d.unqualified_name)
+      if d.owner_name == user.name:
+        self.drive_delete(owner = d.owner_name, name = d.unqualified_name)
     volumes = self.user_volumes_get(user = user)
     for v in volumes:
-      if v.owner == user.name:
-        self.volume_delete(owner = v.owner, name = v.unqualified_name)
+      if v.owner_name == user.name:
+        self.volume_delete(owner = v.owner_name, name = v.unqualified_name)
     networks = self.user_networks_get(user = user)
     for n in networks:
-      if n.owner == user.name:
-        self.network_purge(network = network)
-        self.network_delete(owner = n.owner, name = n.unqualified_name)
+      if n.owner_name == user.name:
+        self.network_purge(user = user, network = n)
+        self.network_delete(owner = n.owner_name, name = n.unqualified_name)
 
   ## ------ ##
   ## Volume ##
@@ -296,8 +307,8 @@ class Beyond:
     # Only remove objects owned by the user.
     drives = self.volume_drives_get(name = volume.name)
     for d in drives:
-      if d.owner == user.name:
-        self.drive_delete(owner = d.owner, name = d.unqualified_name)
+      if d.owner_name == user.name:
+        self.drive_delete(owner = d.owner_name, name = d.unqualified_name)
 
   ## ----- ##
   ## Drive ##
@@ -417,6 +428,7 @@ class User:
       ('gcs_accounts', None),
       ('password_hash', None),
       ('private_key', None),
+      ('ldap_dn', None),
     ]
   }
   class Duplicate(Exception):
@@ -436,7 +448,8 @@ class User:
                dropbox_accounts = None,
                google_accounts = None,
                gcs_accounts = None,
-               emails = {}
+               emails = {},
+               ldap_dn = None,
   ):
     self.__beyond = beyond
     self.__id = id
@@ -457,6 +470,7 @@ class User:
       if self.__email not in self.__emails:
         self.__emails[self.__email] = True
     self.__emails_original = deepcopy(self.emails)
+    self.__ldap_dn = ldap_dn
 
   @classmethod
   def from_json(self, beyond, json, check_integrity = False):
@@ -482,6 +496,7 @@ class User:
       google_accounts = json.get('google_accounts', []),
       gcs_accounts = json.get('gcs_accounts', []),
       emails = json.get('emails', {}),
+      ldap_dn = json.get('ldap_dn', None)
     )
 
   def json(self,
@@ -514,6 +529,8 @@ class User:
         res['private_key'] = self.private_key
       if self.password_hash is not None:
         res['password_hash'] = self.password_hash
+      if self.ldap_dn is not None:
+        res['ldap_dn'] = self.ldap_dn
     return res
 
   def create(self):
@@ -638,6 +655,10 @@ class User:
   def gcs_accounts(self):
     return self.__gcs_accounts
 
+  @property
+  def ldap_dn(self):
+    return self.__ldap_dn
+
   def __eq__(self, other):
     if self.name != other.name or self.public_key != other.public_key:
       return False
@@ -648,9 +669,11 @@ class Entity(type):
   def __new__(self, name, superclasses, content,
               insert = None,
               update = None,
+              hasher = None,
               fields = {}):
     self_type = None
     content['fields'] = fields
+    content['__hash__'] = lambda self: hasher(self)
     # Init
     def __init__(self, beyond, **kwargs):
       self.__beyond = beyond
@@ -748,6 +771,7 @@ class Entity(type):
   def __init__(self, name, superclasses, content,
                insert = None,
                update = None,
+               hasher = None,
                fields = []):
     for f in fields:
       content[f] = property(
@@ -774,14 +798,15 @@ class Network(metaclass = Entity,
                 version = '0.3.0',
                 passports = {},
                 endpoints = {},
-                storages = {})):
+                storages = {},
+                admin_keys = {})):
 
   @property
   def id(self):
     return self.name
 
   @property
-  def owner(self):
+  def owner_name(self):
     return self.name.split('/')[0]
 
   @property
@@ -792,7 +817,8 @@ class Network(metaclass = Entity,
     if self.name != other.name or \
        self.owner != other.owner or \
        self.consensus != other.consensus or \
-       self.overlay != other.overlay:
+       self.overlay != other.overlay or \
+       self.admin_keys != other.admin_keys:
       return False
     return True
 
@@ -810,6 +836,7 @@ class Passport(metaclass = Entity,
 
 class Volume(metaclass = Entity,
              insert = 'volume_insert',
+             hasher = lambda v: hash(v.name),
              fields = fields('name', 'network',
                              default_permissions = '')):
 
@@ -818,7 +845,7 @@ class Volume(metaclass = Entity,
     return self.name
 
   @property
-  def owner(self):
+  def owner_name(self):
     return self.name.split('/')[0]
 
   @property
@@ -842,7 +869,7 @@ class Drive(
     return self.name
 
   @property
-  def owner(self):
+  def owner_name(self):
     return self.name.split('/')[0]
 
   @property

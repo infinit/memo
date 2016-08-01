@@ -3,6 +3,7 @@
 
 # include <unordered_map>
 
+# include <elle/Clonable.hh>
 # include <elle/json/json.hh>
 # include <elle/log.hh>
 
@@ -125,6 +126,7 @@ namespace infinit
 
     struct Configuration
       : public elle::serialization::VirtuallySerializable<false>
+      , public elle::Clonable<Configuration>
     {
       Configuration() = default;
       Configuration(elle::serialization::SerializerIn& input);

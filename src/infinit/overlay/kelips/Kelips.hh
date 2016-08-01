@@ -126,8 +126,12 @@ namespace infinit
       struct Configuration
         : public overlay::Configuration
       {
+        typedef Configuration Self;
+        typedef overlay::Configuration Super;
+
         Configuration();
         Configuration(elle::serialization::SerializerIn& input);
+        ELLE_CLONABLE();
         void
         serialize(elle::serialization::Serializer& s) override;
         /// number of groups
@@ -170,6 +174,11 @@ namespace infinit
         std::unordered_map<Address, Endpoints>, // contacts
         std::vector<std::pair<Address, Address>> // address, home_node
       > SerState;
+
+      typedef std::pair<
+        std::vector<std::pair<Address, Endpoints>>, // contacts
+        std::vector<std::pair<std::string, int>> // delta-blockaddr, owner_index
+      > SerState2;
 
       class Node
         : public infinit::overlay::Overlay
@@ -323,9 +332,7 @@ namespace infinit
         make_peer(NodeLocation pl);
         packet::RequestKey make_key_request();
         Address _self;
-        Address _ping_target;
-        Time _ping_time;
-        reactor::Barrier _ping_barrier;
+        std::unordered_map<Address, Time> _ping_time;
         std::vector<TimedEndpoint> _local_endpoints;
         /// group we are in
         int _group;

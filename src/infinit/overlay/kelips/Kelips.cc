@@ -512,7 +512,7 @@ namespace infinit
                 }
                 else
                   idx = it->second;
-                cfiles.insert(std::make_pair(addr,
+                cfiles.insert(std::make_pair(f.first,
                                              std::make_pair(f.second.first, idx)));
               }
               s.serialize("file_addresses", addresses);
@@ -964,6 +964,54 @@ namespace infinit
                     res.second.push_back(std::make_pair(Address::null, _self));
                     return res;
                   }));
+              rpcs.add(
+                "kelips_fetch_state2",
+                std::function<SerState2 ()>(
+                  [this] ()
+                  {
+                    SerState2 res;
+                    std::unordered_map<Address, int> index;
+                    Endpoints eps;
+                    for (auto const& e: _local_endpoints)
+                      eps.push_back(e.first);
+                    res.first.emplace_back(this->_self, eps);
+                    index[_self] = 0;
+                    for (auto const& contacts: this->_state.contacts)
+                      for (auto const& c: contacts)
+                      {
+                        Endpoints eps;
+                        for (auto const& e: c.second.endpoints)
+                          eps.push_back(e.first);
+                        index[c.second.address] = res.first.size();
+                        res.first.emplace_back(c.second.address, eps);
+                      }
+                    std::multimap<Address, Address> ofiles; // ordered fileId -> owner
+                    for (auto const& f: this->_state.files)
+                      ofiles.insert(std::make_pair(f.second.address, f.second.home_node));
+                    Address prev = Address::null;
+                    for (auto const& f: ofiles)
+                    {
+                      auto faddr = f.first;
+                      auto fhome = f.second;
+                      int p = 0;
+                      while (p<32 && faddr.value()[p] == prev.value()[p])
+                        ++p;
+                      std::string daddr(faddr.value()+p, faddr.value()+32);
+                      int idx = 0;
+                      auto it = index.find(fhome);
+                      if (it == index.end())
+                      {
+                        res.first.emplace_back(fhome, Endpoints());
+                        index[fhome] = res.first.size()-1;
+                        idx = res.first.size()-1;
+                      }
+                      else
+                        idx = it->second;
+                      res.second.push_back(std::make_pair(daddr, idx));
+                      prev = faddr;
+                    }
+                    return res;
+                  }));
             });
           this->_port = l->server_endpoint().port();
           for (auto const& itf: elle::network::Interface::get_map(
@@ -1051,9 +1099,34 @@ namespace infinit
               std::bind(&Node::_refetch_endpoints, this, location.id())),
             this->_config.rpc_protocol);
           peer.connect(5_sec);
-          auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
-          ELLE_DEBUG("fetch state")
+          if (this->doughnut()->version() < elle::Version(0, 7, 0))
+          {
+            auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
             return rpc();
+          }
+          else
+          {
+            auto rpc = peer.make_rpc<SerState2()>("kelips_fetch_state2");
+            SerState2 state = rpc();
+            SerState res;
+            for (auto const& c: state.first)
+              if (!c.second.empty())
+                res.first.insert(c);
+            Address prev = Address::null;
+            for (auto const& f: state.second)
+            {
+              Address next = prev;
+              ELLE_ASSERT(f.first.size() <= 32);
+              memcpy(
+                const_cast<unsigned char*>(next.value() + 32 - f.first.size()),
+                f.first.data(), f.first.size());
+              res.second.emplace_back(next, state.first.at(f.second).first);
+              prev = next;
+            }
+            // UGLY HACK we must preserve
+            res.second.emplace_back(Address::null, state.first.front().first);
+            return res;
+          }
         }
         catch (elle::Error const& e)
         {
@@ -2125,13 +2198,15 @@ namespace infinit
       void
       Node::onPong(packet::Pong* p)
       {
-        if (!(p->sender == _ping_target))
+        auto tit = _ping_time.find(p->sender);
+        if (tit == _ping_time.end())
         {
-          ELLE_WARN("%s: Pong from unexpected host: expected %x, got %x", *this, _ping_target,
-            p->sender);
+          ELLE_LOG("%s: Unexpected pong from %f", *this, p->sender);
           return;
         }
-        Duration d = now() - _ping_time;
+        ELLE_DUMP("%s: got pong reply from %f", *this, p->sender);
+        Duration d = now() - tit->second;
+        _ping_time.erase(tit);
         int g = group_of(p->sender);
         Contacts& target = _state.contacts[g];
         auto it = target.find(p->sender);
@@ -2142,8 +2217,6 @@ namespace infinit
         {
           it->second.rtt = d;
         }
-        _ping_target = Address();
-        _ping_barrier.open();
         Endpoint endpoint = p->remote_endpoint;
         endpoints_update(_local_endpoints, endpoint);
         auto contact_timeout = std::chrono::milliseconds(_config.contact_timeout_ms);
@@ -2157,10 +2230,18 @@ namespace infinit
         int g = group_of(p->sender);
         if (g != _group && !p->files.empty())
           ELLE_WARN("%s: Received files from another group: %s at %s", *this, p->sender, p->endpoint);
-        for (auto const& c: p->contacts)
+        for (auto& c: p->contacts)
         {
           if (c.first == _self)
             continue;
+          auto contact_timeout = std::chrono::milliseconds(_config.contact_timeout_ms);
+          endpoints_cleanup(c.second, now() - contact_timeout);
+          if (c.second.empty())
+          {
+            ELLE_DEBUG("%s: dropping contact entry %f with only obsolete endpoints",
+                       *this, c.first);
+            continue;
+          }
           int g = group_of(c.first);
           auto& target = _state.contacts[g];
           auto it = target.find(c.first);
@@ -2595,7 +2676,13 @@ namespace infinit
         addLocalResults(p, nullptr);
         // don't accept put requests until we know our endpoint
         // Accept the put locally if we know no other node
-        if (fg == _group
+        bool quota_check = true;
+        if (local()
+          && local()->storage()
+          && local()->storage()->capacity())
+          quota_check = local()->storage()->capacity() > local()->storage()->usage() + 1024*1024 * 2;
+        if (quota_check
+          &&  fg == _group
           &&  ((p->insert_ttl == 0 && !_local_endpoints.empty())
               || _state.contacts[_group].empty()))
         {
@@ -2932,6 +3019,7 @@ namespace infinit
         p.query_node = false;
         p.sender = _self;
         p.originAddress = _self;
+        p.observer = this->_observer;
         for (auto const& te: _local_endpoints)
           p.originEndpoints.push_back(te.first);
         p.fileAddress = file;
@@ -3149,23 +3237,21 @@ namespace infinit
             int v = random2(_gen);
             auto it = _state.contacts[group].begin();
             while(v--) ++it;
+            auto tit = _ping_time.find(it->second.address);
+            if (tit != _ping_time.end()
+              && now() - tit->second < std::chrono::milliseconds(_config.ping_timeout_ms))
+            {
+              reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
+              continue;
+            }
             target = &it->second;
-            _ping_target = it->first;
             break;
           }
           packet::Ping p;
           p.sender = _self;
-          _ping_time = now();
-          ELLE_DUMP("%s: pinging %x", *this, _ping_target);
+          ELLE_DUMP("%s: pinging %x", *this, target->address);
+          _ping_time[target->address] = now();
           send(p, *target);
-          bool ok = reactor::wait(_ping_barrier,
-                                  boost::posix_time::milliseconds(_config.ping_timeout_ms));
-          if (ok)
-            ELLE_DUMP("%s: got pong reply", *this);
-          else
-            ELLE_TRACE("%s: Ping timeout on %x", *this, _ping_target);
-          // onPong did the job for us
-          _ping_barrier.close();
         }
       }
 

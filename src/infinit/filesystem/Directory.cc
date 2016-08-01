@@ -20,6 +20,7 @@
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/UB.hh>
@@ -192,6 +193,15 @@ namespace infinit
       s.serialize("opetype", _op.entry_type, elle::serialization::as<int>());
     }
 
+    std::string
+    DirectoryConflictResolver::description() const
+    {
+      return elle::sprintf("edit directory: %s %s \"%s\"",
+                           this->_op.type,
+                           this->_op.entry_type,
+                           this->_op.target);
+    }
+
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<DirectoryConflictResolver> _register_dcr("dcr");
 
@@ -228,8 +238,15 @@ namespace infinit
       _inherit_auth = false;
     }
 
+    DirectoryData::DirectoryData(elle::serialization::Serializer& s,
+                                 elle::Version const& v)
+    {
+      this->serialize(s, v);
+    }
+
     void
-    DirectoryData::serialize(elle::serialization::Serializer& s)
+    DirectoryData::serialize(elle::serialization::Serializer& s,
+                             elle::Version const& v)
     {
       s.serialize("header", this->_header);
       s.serialize("content", this->_files);
@@ -277,8 +294,9 @@ namespace infinit
       if (empty)
       {
         ELLE_DEBUG("block is empty");
+        auto now = time(nullptr);
         _header = FileHeader(0, 1, S_IFDIR | 0600,
-                             time(nullptr), time(nullptr), time(nullptr),
+                             now, now, now, now,
                              File::default_block_size);
         _inherit_auth = false;
       }
@@ -331,7 +349,14 @@ namespace infinit
       elle::Buffer data;
       {
         elle::IOStream os(data.ostreambuf());
-        elle::serialization::binary::SerializerOut output(os);
+        auto version = model.version();
+        auto versions =
+          elle::serialization::_details::dependencies<typename FileData::serialization_tag>(
+            version, 42);
+        versions.emplace(
+          elle::type_info<typename FileData::serialization_tag>(),
+          version);
+        elle::serialization::binary::SerializerOut output(os, versions, true);
         output.serialize_forward(*this);
       }
       try
@@ -833,8 +858,12 @@ namespace infinit
           auto p = elle::serialization::json::deserialize<model::doughnut::Passport>(s, false);
           model::doughnut::UB ub(dht.get(), name, p, false);
           model::doughnut::UB rub(dht.get(), name, p, true);
-          this->_owner.block_store()->store(ub,  model::STORE_INSERT, model::make_drop_conflict_resolver());
-          this->_owner.block_store()->store(rub, model::STORE_INSERT, model::make_drop_conflict_resolver());
+          this->_owner.block_store()->store(
+            ub, model::STORE_INSERT,
+            elle::make_unique<model::doughnut::UserBlockUpserter>(name));
+          this->_owner.block_store()->store(
+            rub, model::STORE_INSERT,
+            elle::make_unique<model::doughnut::ReverseUserBlockUpserter>(name));
         }
         else if (*special == "fsck.deref")
         {

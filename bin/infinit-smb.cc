@@ -27,7 +27,10 @@ run(variables_map const& args)
     optional<int>(args, option_cache_ram_invalidation);
   report_action("running", "network", network.name);
   auto model = network.run(
-    {}, true, cache,
+    self,
+    {},
+    true,
+    cache,
     cache_ram_size, cache_ram_ttl, cache_ram_invalidation, flag(args, "async"));
   if (aliased_flag(args, {"fetch-endpoints", "fetch"}))
   {
@@ -46,7 +49,6 @@ run(variables_map const& args)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Modes modes {
