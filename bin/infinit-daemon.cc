@@ -309,7 +309,8 @@ struct MountInfo
   print(std::ostream& out) const override
   {
     out << name << ": "
-        << (live && mountpoint ? "mounted" : (live ? "running" : "stopped"));
+        << (live && mountpoint ? "mounted"
+                               : (mountpoint ? "crashed" : "not running"));
     if (mountpoint)
       out << ": " << *mountpoint;
   }
