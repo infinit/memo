@@ -303,15 +303,25 @@ struct Mount
 };
 
 struct MountInfo
+  : elle::Printable
 {
   std::string name;
   bool live;
   boost::optional<std::string> mountpoint;
-  void serialize(elle::serialization::Serializer& s)
+  void
+  serialize(elle::serialization::Serializer& s)
   {
     s.serialize("name", name);
     s.serialize("live", live);
     s.serialize("mountpoint", mountpoint);
+  }
+  void
+  print(std::ostream& out) const override
+  {
+    out << name << ": "
+        << (live && mountpoint ? "mounted" : (live ? "running" : "stopped"));
+    if (mountpoint)
+      out << ": " << *mountpoint;
   }
 };
 
@@ -619,13 +629,12 @@ MountManager::status(std::string const& name,
 {
   auto it = this->_mounts.find(name);
   if (it == this->_mounts.end())
-    throw elle::Error("not mounted: " + name);
+    elle::err("not mounted: %s", name);
   bool live = ! kill(it->second.process->pid(), 0);
   reply.serialize("live", live);
+  reply.serialize("name", name);
   if (it->second.options.mountpoint)
-  {
     reply.serialize("mountpoint", mountpoint(name));
-  }
 }
 
 std::vector<MountInfo>
@@ -888,7 +897,7 @@ private:
 };
 
 static
-std::string
+elle::json::Object
 daemon_command(std::string const& s, bool hold = false);
 
 class PIDFile
@@ -996,11 +1005,11 @@ daemonize()
 }
 
 static
-std::string
+elle::json::Object
 daemon_command(std::string const& s, bool hold)
 {
   reactor::Scheduler sched;
-  std::string reply;
+  elle::json::Object res;
   reactor::Thread main_thread(
     sched,
     "main",
@@ -1014,20 +1023,20 @@ daemon_command(std::string const& s, bool hold)
       }
       catch(elle::Error const&)
       {
-        sock.reset(new  reactor::network::UnixDomainSocket(
+        sock.reset(new reactor::network::UnixDomainSocket(
           boost::filesystem::path("/tmp/infinit-root/daemon.sock")));
       }
       std::string cmd = s + "\n";
       ELLE_TRACE("writing query: %s", s);
       sock->write(elle::ConstWeakBuffer(cmd.data(), cmd.size()));
       ELLE_TRACE("reading result");
-      reply = sock->read_until("\n").string();
-      ELLE_TRACE("ok: '%s'", reply);
+      auto stream = elle::IOStream(sock->read_until("\n").istreambuf());
+      res = boost::any_cast<elle::json::Object>(elle::json::read(stream));
       if (hold)
         reactor::sleep();
     });
   sched.run();
-  return reply;
+  return res;
 }
 
 static
@@ -1083,7 +1092,12 @@ process_command(elle::json::Object query, MountManager& manager,
       }
       else if (op == "volume-status")
       {
-        response.serialize("volumes", manager.status());
+        auto volume =
+          command.deserialize<boost::optional<std::string>>("volume");
+        if (volume)
+          manager.status(*volume, response);
+        else
+          response.serialize("volumes", manager.status());
       }
       else if (op == "volume-start")
       {
@@ -1092,21 +1106,19 @@ process_command(elle::json::Object query, MountManager& manager,
           command.deserialize<boost::optional<infinit::MountOptions>>("options");
         manager.start(volume, opts ? opts.get() : infinit::MountOptions(),
                       true, true);
+        response.serialize("volume", volume);
       }
       else if (op == "volume-stop")
       {
         auto volume = command.deserialize<std::string>("volume");
         manager.stop(volume);
+        response.serialize("volume", volume);
       }
-      else if (op == "volume-status")
-      {
-        auto volume = command.deserialize<std::string>("volume");
-        manager.status(volume, response);
-      }
-      else if (op ==  "volume-restart")
+      else if (op == "volume-restart")
       {
         auto volume = command.deserialize<std::string>("volume");
         restart_volume(manager, volume);
+        response.serialize("volume", volume);
       }
       else if (op == "disable-storage")
       {
@@ -1650,41 +1662,99 @@ DockerVolumePlugin::install(bool tcp,
 }
 
 static
-void
-volume_list()
+elle::serialization::json::SerializerIn
+cmd_response_serializer(elle::json::Object const& json,
+                        std::string const& action)
 {
-  std::cout << daemon_command("{\"operation\": \"volume-list\"}");
+  elle::serialization::json::SerializerIn s(json, false);
+  if (json.count("error"))
+    elle::err("Unable to %s: %s", action, s.deserialize<std::string>("error"));
+  return s;
 }
 
 static
 void
-volume_status()
+volume_list()
 {
-  std::cout << daemon_command("{\"operation\": \"volume-status\"}");
+  auto json = daemon_command("{\"operation\": \"volume-list\"}");
+  if (script_mode)
+    std::cout << json;
+  else
+  {
+    auto res = cmd_response_serializer(json, "list volumes");
+    for (auto const& v: res.deserialize<std::vector<std::string>>("volumes"))
+      std::cout << v << std::endl;
+  }
+}
+
+static
+void
+volume_status(boost::optional<std::string> name)
+{
+  auto json = daemon_command(elle::sprintf(
+    "{\"operation\": \"volume-status\"%s}",
+    (name ? elle::sprintf(" ,\"volume\": \"%s\"", *name) : "")));
+  if (script_mode)
+    std::cout << json;
+  else
+  {
+    auto res = cmd_response_serializer(json, "fetch volume status");
+    if (name)
+      std::cout << res.deserialize<MountInfo>() << std::endl;
+    else
+    {
+      for (auto const& m: res.deserialize<std::vector<MountInfo>>("volumes"))
+        std::cout << m << std::endl;
+    }
+  }
 }
 
 static
 void
 volume_start(std::string const& name)
 {
-  std::cout << daemon_command(
+  auto json = daemon_command(
     "{\"operation\": \"volume-start\", \"volume\": \"" + name +  "\"}");
+  if (script_mode)
+    std::cout << json;
+  else
+  {
+    auto res = cmd_response_serializer(json, "start volume");
+    std::cout << "Started: " << res.deserialize<std::string>("volume")
+              << std::endl;
+  }
 }
 
 static
 void
 volume_stop(std::string const& name)
 {
-  std::cout << daemon_command(
+  auto json = daemon_command(
     "{\"operation\": \"volume-stop\", \"volume\": \"" + name +  "\"}");
+  if (script_mode)
+    std::cout << json;
+  else
+  {
+    auto res = cmd_response_serializer(json, "stop volume");
+    std::cout << "Stopped: " << res.deserialize<std::string>("volume")
+              << std::endl;
+  }
 }
 
 static
 void
 volume_restart(std::string const& name)
 {
-  std::cout << daemon_command(
+  auto json = daemon_command(
     "{\"operation\": \"volume-restart\", \"volume\": \"" + name +  "\"}");
+  if (script_mode)
+    std::cout << json;
+  else
+  {
+    auto res = cmd_response_serializer(json, "restart volume");
+    std::cout << "Restarted: " << res.deserialize<std::string>("volume")
+              << std::endl;
+  }
 }
 
 COMMAND(manage_volumes)
@@ -1702,7 +1772,7 @@ COMMAND(manage_volumes)
   if (flag(args, "list"))
     volume_list();
   if (flag(args, "status"))
-    volume_status();
+    volume_status(optional(args, "name"));
   if (flag(args, "start"))
     volume_start(mandatory(args, "name"));
   if (flag(args, "stop"))
