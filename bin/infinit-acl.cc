@@ -84,9 +84,9 @@ collate_users(OptVecStr const& combined,
 
 static
 std::string
-public_key_from_username(std::string const& username)
+public_key_from_username(std::string const& username, bool fetch)
 {
-  auto user = ifnt.user_get(username);
+  auto user = ifnt.user_get(username, fetch);
   elle::Buffer buf;
   {
     elle::IOStream ios(buf.ostreambuf());
@@ -94,80 +94,6 @@ public_key_from_username(std::string const& username)
     so.serialize_forward(user.public_key);
   }
   return buf.string();
-}
-
-static
-boost::optional<std::string>
-path_mountpoint(std::string const& path, bool fallback)
-{
-  char buffer[4095];
-  int sz = port_getxattr(path, "infinit.mountpoint", buffer, 4095, fallback);
-  if (sz <= 0)
-    return {};
-  return std::string(buffer, sz);
-}
-
-static
-void
-enforce_in_mountpoint(std::string const& path_, bool fallback)
-{
-  auto path = boost::filesystem::absolute(path_);
-  if (!boost::filesystem::exists(path))
-    throw elle::Error(elle::sprintf("path does not exist: %s", path_));
-  for (auto const& p: {path, path.parent_path()})
-  {
-    auto mountpoint = path_mountpoint(p.string(), fallback);
-    if (mountpoint && !mountpoint.get().empty())
-      return;
-  }
-  throw elle::Error(elle::sprintf("%s not in an Infinit volume", path_));
-}
-
-static
-bool
-path_is_root(std::string const& path, bool fallback)
-{
-  char buffer[4095];
-  int sz = port_getxattr(path, "infinit.root", buffer, 4095, fallback);
-  if (sz < 0)
-    return false;
-  return std::string(buffer, sz) == std::string("true");
-}
-
-class InvalidArgument
-  : public elle::Error
-{
-public:
-  InvalidArgument(std::string const& error)
-    : elle::Error(error)
-  {}
-};
-
-class PermissionDenied
-  : public elle::Error
-{
-public:
-  PermissionDenied(std::string const& error)
-    : elle::Error(error)
-  {}
-};
-
-template<typename F, typename ... Args>
-void
-check(F func, Args ... args)
-{
-  int res = func(args...);
-  if (res < 0)
-  {
-    int error_number = errno;
-    auto* e = std::strerror(error_number);
-    if (error_number == EINVAL)
-      throw InvalidArgument(std::string(e));
-    else if (error_number == EACCES)
-      throw PermissionDenied(std::string(e));
-    else
-      throw elle::Error(std::string(e));
-  }
 }
 
 template<typename A, typename ... Args>
@@ -297,6 +223,7 @@ set_action(std::string const& path,
            bool disinherit,
            bool verbose,
            bool fallback_xattrs,
+           bool fetch,
            bool multi = false)
 {
   if (verbose)
@@ -378,7 +305,7 @@ set_action(std::string const& path,
       {
         try
         {
-          set_attribute(public_key_from_username(username));
+          set_attribute(public_key_from_username(username, fetch));
         }
         catch (InvalidArgument const&)
         {
@@ -424,7 +351,7 @@ COMMAND(list)
   bool fallback = flag(args, "fallback-xattrs");
   for (auto const& path: paths)
   {
-    enforce_in_mountpoint(path, fallback);
+    enforce_in_mountpoint(path, false, fallback);
     list_action(path, verbose, fallback);
     if (recursive)
       recursive_action(list_action, path, verbose, fallback);
@@ -439,6 +366,7 @@ COMMAND(set)
   std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
   auto omode_ = optional(args, "others-mode");
   auto omode = omode_? omode_.get() : "";
+  std::transform(omode.begin(), omode.end(), omode.begin(), ::tolower);
   auto it = std::find(allowed_modes.begin(), allowed_modes.end(), omode);
   if (it == allowed_modes.end())
   {
@@ -478,10 +406,11 @@ COMMAND(set)
     throw elle::Error("--traverse can only be used with mode 'r', 'rw'");
   bool verbose = flag(args, "verbose");
   bool fallback = flag(args, "fallback-xattrs");
+  bool fetch = flag(args, "fetch");
   // Don't do any operations before checking paths.
   for (auto const& path: paths)
   {
-    enforce_in_mountpoint(path, fallback);
+    enforce_in_mountpoint(path, false, fallback);
     if ((inherit || disinherit)
         && !recursive
         && !boost::filesystem::is_directory(path))
@@ -495,7 +424,7 @@ COMMAND(set)
   for (auto const& path: paths)
   {
     set_action(path, users, mode, omode, inherit, disinherit, verbose,
-               fallback, multi);
+               fallback, fetch, multi);
     if (traverse)
     {
       boost::filesystem::path working_path = boost::filesystem::absolute(path);
@@ -503,14 +432,14 @@ COMMAND(set)
       {
         working_path = working_path.parent_path();
         set_action(working_path.string(), users, "setr", "", false, false,
-                   verbose, fallback, multi);
+                   verbose, fallback, fetch, multi);
       }
     }
     if (recursive)
     {
       recursive_action(
         set_action, path, users, mode, omode, inherit, disinherit, verbose,
-        fallback, multi);
+        fallback, fetch, multi);
     }
   }
 }
@@ -521,7 +450,8 @@ group_add_remove(std::string const& path,
                  std::string const& group,
                  std::string const& object,
                  std::string const& action,
-                 bool fallback)
+                 bool fallback,
+                 bool fetch)
 {
   if (!object.length())
     throw CommandLineError("empty user or group name");
@@ -548,7 +478,7 @@ group_add_remove(std::string const& path,
     {
       try
       {
-        set_attr(public_key_from_username(name));
+        set_attr(public_key_from_username(name, fetch));
       }
       catch (elle::Error const& e)
       {
@@ -583,7 +513,8 @@ COMMAND(group)
     throw CommandLineError("specify only one action at a time");
   bool fallback = flag(args, "fallback-xattrs");
   std::string path = mandatory<std::string>(args, "path", "path in volume");
-  enforce_in_mountpoint(path, fallback);
+  enforce_in_mountpoint(path, true, fallback);
+  bool fetch = flag(args, "fetch");
   // Need to perform group actions on a directory in the volume.
   if (!boost::filesystem::is_directory(path))
     path = boost::filesystem::path(path).parent_path().string();
@@ -594,12 +525,12 @@ COMMAND(group)
   if (add)
   {
     for (auto const& obj: add.get())
-      group_add_remove(path, group, obj, "add", fallback);
+      group_add_remove(path, group, obj, "add", fallback, fetch);
   }
   if (rem)
   {
     for (auto const& obj: rem.get())
-      group_add_remove(path, group, obj, "remove", fallback);
+      group_add_remove(path, group, obj, "remove", fallback, fetch);
   }
   if (list)
   {
@@ -626,8 +557,8 @@ COMMAND(register_)
   auto network = ifnt.network_get(network_name, self);
   bool fallback = flag(args, "fallback-xattrs");
   auto path = mandatory<std::string>(args, "path", "path to mountpoint");
-  enforce_in_mountpoint(path, fallback);
-  auto user = ifnt.user_get(user_name);
+  enforce_in_mountpoint(path, true, fallback);
+  auto user = ifnt.user_get(user_name, flag(args, "fetch"));
   auto passport = ifnt.passport_get(network.name, user_name);
   std::stringstream output;
   elle::serialization::json::serialize(passport, output, false);
@@ -643,6 +574,9 @@ main(int argc, char** argv)
   Mode::OptionDescription fallback_option = {
     "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
     "if system xattrs are not suppported"
+  };
+  Mode::OptionDescription fetch_option = {
+    "fetch", bool_switch(), "fetch users from " + beyond(true) +" if needed"
   };
   Mode::OptionDescription verbose_option = {
     "verbose", bool_switch(), "verbose output" };
@@ -681,6 +615,7 @@ main(int argc, char** argv)
           "add read permissions to parent directories" },
         fallback_option,
         verbose_option,
+        fetch_option,
       },
     },
     {
@@ -714,6 +649,7 @@ main(int argc, char** argv)
         { "path,p", value<std::string>(), "a path within the volume" },
         fallback_option,
         verbose_option,
+        fetch_option,
       },
     },
     {
@@ -727,6 +663,7 @@ main(int argc, char** argv)
         { "network,n", value<std::string>(), "name of the network"},
         { "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
           "if system xattrs are not suppported" },
+        fetch_option,
       },
     }
   };
