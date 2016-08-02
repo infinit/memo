@@ -96,6 +96,46 @@ with Beyond() as beyond:
       beyond.get('users/%s/passports' % B['name'], auth = B)
       beyond.get('users/%s/passports' % A['name'], auth = A)
 
+    def passport_as_allowed_user(self, owner, delegate, invitee, delete_as):
+      network = Network(name = 'osef', owner = owner)
+      network.put(beyond)
+      throws(lambda: Passport(network, invitee).put(beyond, delegate), 403)
+      # Put a passport that doesn't delegate rights to invite.
+      p = Passport(network, delegate, delegate = False)
+      p.put(beyond, owner)
+      # Make sure the user can't push.
+      throws(lambda: Passport(network, invitee).put(beyond, delegate), 403)
+      # Reset.
+      p.delete(beyond, owner)
+      # Put a passport that delegates rights to invite.
+      p = Passport(network, delegate, delegate = True)
+      p.put(beyond, owner)
+      # Make sure delegate can invite invitee.
+      x = Passport(network, invitee)
+      x.put(beyond, delegate)
+      r = beyond.get(
+        'networks/%s/passports/%s' % (network['name'], invitee['name']),
+        auth = invitee).json()
+      # Make sure the owner, the delegate or the invitee can delete the
+      # passport.
+      x.delete(beyond, delete_as)
+      # Make sure the delegate cannot delete passport he didn't issue.
+      random = User()
+      random.put(beyond)
+      p = Passport(network, random)
+      p.put(beyond)
+      # Because passport has been issued by owner, delegate is not able to
+      # delete it.
+      throws(lambda: p.delete(beyond, delegate), 403)
+
+    def test_passports_as_allowed_user(self):
+      o, d, i = users(3, beyond)
+      self.passport_as_allowed_user(o, d, i, o)
+      o, d, i = users(3, beyond)
+      self.passport_as_allowed_user(o, d, i, d)
+      o, d, i = users(3, beyond)
+      self.passport_as_allowed_user(o, d, i, i)
+
     def test_authorisation_get(self):
       user = User()
       user.put(beyond)

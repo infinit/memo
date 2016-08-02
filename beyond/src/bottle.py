@@ -733,12 +733,43 @@ class Bottle(bottle.Bottle):
     else:
       return passport
 
+  def authenticate_via_passport(self, network):
+    user_name = bottle.request.headers.get('infinit-user')
+    if user_name is None:
+      return None
+    try:
+      if user_name in network.passports and network.passports[user_name].get(
+          'allow_sign', False):
+        user = self.user_from_name(name = user_name)
+        self.__authenticate(user)
+        return user
+    except Exception:
+      pass
+    return None
+
+  def ensure_is_certifier(self, user, passport):
+    if passport.certifier != user.public_key:
+      raise Response(403, {
+        'error': 'user/not_the_passport_certifier',
+        'reason': 'not the passport certifier',
+      })
+
   def network_passport_put(self, owner, name, invitee):
     user = self.user_from_name(name = owner)
-    self.authenticate(user)
-    network = self.network_from_name(owner = owner, name = name)
+    network = None
+    try:
+      self.authenticate(user)
+    except Exception as e:
+      network = self.network_from_name(owner = owner, name = name)
+      user = self.authenticate_via_passport(network)
+      if user is None:
+        raise e
     json = bottle.request.json
     passport = Passport(self.__beyond, **json)
+    if network is None:
+      network = self.network_from_name(owner = owner, name = name)
+    else: # User was authenticate via his passport.
+      self.ensure_is_certifier(user, passport)
     network.passports[invitee] = passport.json()
     limit = self.__beyond.limits.get(
       'networks', {}).get('passports', None)
@@ -752,11 +783,24 @@ class Bottle(bottle.Bottle):
 
   def network_passport_delete(self, owner, name, invitee):
     user = self.user_from_name(name = owner)
+    network = None
     try:
       self.authenticate(user)
     except Exception:
-      self.authenticate(self.user_from_name(name = invitee))
-    network = self.network_from_name(owner = owner, name = name)
+      try:
+        self.authenticate(self.user_from_name(name = invitee))
+      except Exception as e:
+        network = self.network_from_name(owner = owner, name = name)
+        user = self.authenticate_via_passport(network)
+        if user is None:
+          raise e
+    if network is None:
+      network = self.network_from_name(owner = owner, name = name)
+    elif network.passports[invitee] is not None:
+      # User was authenticate via his passport.
+      self.ensure_is_certifier(
+        user,
+        Passport.from_json(self.__beyond, network.passports[invitee]))
     network.passports[invitee] = None
     network.save()
     return {}

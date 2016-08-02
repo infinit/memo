@@ -846,7 +846,7 @@ class Passport(metaclass = Entity,
                                allow_write = True,
                                allow_storage = True,
                                allow_sign = False,
-                               certifier = False)):
+                               certifier = Optional())):
   pass
 
 class Volume(metaclass = Entity,

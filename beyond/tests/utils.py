@@ -218,7 +218,7 @@ def throws(function, expected = None, json = True, error = None):
 def assertEq(*args):
   import operator
   if not all(map(lambda x: operator.eq(x, args[0]), args[1:])):
-    raise AssertionError('all elements of %s are not equal' % ", ".join(map(str, args)))
+    raise AssertionError('all elements of [%s] are not equal' % ", ".join(map(str, args)))
 
 def assertIn(o, container):
   if o not in container:
@@ -277,6 +277,13 @@ class User(dict):
       user['private_key'] = self.__private_key
       user['password_hash'] = self.__password_hash
     return hub.put('users/%s' % self['name'], json = user)
+
+def users(count, beyond):
+  for i in range(count):
+    u = User()
+    if beyond:
+      u.put(beyond)
+    yield u
 
 class Network(dict):
   kelips = {
@@ -348,7 +355,9 @@ class Network(dict):
 
 class Passport(dict):
 
-  def __init__(self, network, invitee, signature = 'signature'):
+  def __init__(self, network, invitee,
+               signature = 'signature',
+               delegate = False):
     self.__network = network
     self['network'] = self.__network['name']
     self.__invitee = invitee
@@ -356,6 +365,7 @@ class Passport(dict):
     self['signature'] = signature
     self['allow_write'] = True
     self['allow_storage'] = True
+    self['allow_sign'] = delegate
 
   @property
   def network(self):
@@ -368,6 +378,8 @@ class Passport(dict):
   def put(self, hub, owner = None):
     if owner is None:
       owner = self.network.owner
+    if owner != self.network.owner:
+      self['certifier'] = owner['public_key']
     return hub.put('networks/%s/passports/%s' % (self.network['name'],
                                                  self.invitee['name']),
                    json = self,
