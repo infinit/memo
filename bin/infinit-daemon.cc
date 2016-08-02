@@ -905,7 +905,7 @@ public:
   boost::filesystem::path
   path()
   {
-    return infinit::xdg_runtime_dir () / "daemon.pid";
+    return infinit::xdg_runtime_dir() / "daemon.pid";
   }
 
   static
@@ -916,77 +916,93 @@ public:
   }
 };
 
-
-
 static
-int
+bool
 daemon_running()
 {
-  int pid = -1;
-  try
-  {
-    pid = PIDFile::read();
-  }
-  catch (elle::Error const& e)
-  {
-    ELLE_TRACE("error getting PID: %s", e);
-    return 0;
-  }
-  if (kill(pid, 0) != 0)
-    return 0;
   try
   {
     daemon_command("{\"operation\": \"status\"}");
-    return pid;
+    return true;
   }
   catch (elle::Error const& e)
   {
     ELLE_TRACE("status command threw %s", e);
-    return 0;
+    return false;
   }
 }
+
+static
+int
+daemon_pid(bool ensure_running = false)
+{
+  int pid = 0;
+  static boost::filesystem::path root_pid("/tmp/infinit-root/daemon.pid");
+  try
+  {
+    // FIXME: Try current user, then root. Must be a better way to do this.
+    try
+    {
+      pid = PIDFile::read();
+    }
+    catch (elle::Error const&)
+    {
+      pid = elle::PIDFile::read(root_pid);
+    }
+    if (ensure_running && !daemon_running())
+      pid = 0;
+  }
+  catch (elle::Error const& e)
+  {
+    ELLE_TRACE("error getting PID from %s and %s: %s",
+               PIDFile::path(), root_pid, e);
+  }
+  return pid;
+}
+
+static
+elle::serialization::json::SerializerIn
+cmd_response_serializer(elle::json::Object const& json,
+                        std::string const& action);
 
 static
 void
 daemon_stop()
 {
-  int pid = daemon_running();
+  int pid = daemon_pid(true);
   if (!pid)
     elle::err("daemon is not running");
   try
   {
-    daemon_command("{\"operation\": \"stop\"}");
+    auto json = daemon_command("{\"operation\": \"stop\"}");
+    cmd_response_serializer(json, "stop daemon");
   }
-  catch (elle::Error const& e)
-  {
-    ELLE_TRACE("stop command threw %s", e);
-  }
-  for (int i = 0; i<50; ++i)
-  {
-    if (kill(pid, 0))
+  catch (reactor::network::ConnectionClosed const&)
+  {}
+  auto signal_and_wait_exit = [pid] (boost::optional<int> signal = {}) {
+    if (kill(pid, 0) && errno == EPERM)
+      elle::err("permission denied");
+    if (signal)
     {
-      std::cout << "daemon stopped" << std::endl;
-      return;
+      ELLE_TRACE("sending %s", strsignal(*signal));
+      if (kill(pid, *signal))
+        return false;
+      std::cout << "daemon signaled, waiting..." << std::endl;
     }
-    usleep(100000);
-  }
-  ELLE_TRACE("Sending TERM to %s", pid);
-  if (kill(pid, SIGTERM))
-    ELLE_TRACE("kill failed");
-  for (int i=0; i<50; ++i)
-  {
-    if (kill(pid, 0))
-      return;
-    usleep(100000);
-  }
-  ELLE_TRACE("Process still running, sending KILL");
-  kill(pid, SIGKILL);
-  for (int i=0; i<50; ++i)
-  {
-    if (kill(pid, 0))
-      return;
-    usleep(100000);
-  }
+    int count = 0;
+    while (++count < 150)
+    {
+      if (kill(pid, 0) && errno == ESRCH)
+        return true;
+      usleep(100000);
+    }
+    return false;
+  };
+  if (!signal_and_wait_exit())
+    if (!signal_and_wait_exit(SIGTERM))
+      if (!signal_and_wait_exit(SIGKILL))
+        elle::err("unable to stop daemon");
+  std::cout << "daemon stopped" << std::endl;
 }
 
 static
@@ -1084,7 +1100,10 @@ process_command(elle::json::Object query, MountManager& manager,
       }
       else if (op == "stop")
       {
-        throw elle::Exit(0);
+        if (getuid() == geteuid())
+          throw elle::Exit(0);
+        else
+          elle::err("permission denied");
       }
       else if (op == "volume-list")
       {
