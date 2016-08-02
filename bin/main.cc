@@ -133,22 +133,6 @@ namespace infinit
           // Not required on OS X, see: boost/libs/filesystem/src/path.cpp:819
           check_broken_locale();
 #endif
-          if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
-          {
-            static const std::vector<int> signals = {SIGINT, SIGTERM
-#ifndef INFINIT_WINDOWS
-                                                     , SIGQUIT
-#endif
-            };
-            for (auto signal: signals)
-              reactor::scheduler().signal_handle(
-                signal,
-                [&]
-                {
-                  ELLE_TRACE("terminating");
-                  main_thread.terminate();
-                });
-          }
           ELLE_TRACE("parse command line")
           {
             using boost::program_options::value;
@@ -312,12 +296,31 @@ namespace infinit
                                                               }));
               }
 #endif
+              boost::signals2::signal<void ()> killed;
+              if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
+              {
+                static const std::vector<int> signals = {SIGINT, SIGTERM
+#ifndef INFINIT_WINDOWS
+                                                         , SIGQUIT
+#endif
+                };
+                for (auto signal: signals)
+                  reactor::scheduler().signal_handle(
+                    signal,
+                    [&]
+                    {
+                      main_thread.terminate();
+                      killed();
+                    });
+              }
               try
               {
                 std::vector<std::string> args =
                   mode_arguments(tokens, mode, modes, hidden_modes, parsed);
-                mode->action(parse_args(mode->options, args,
-                                        (positional_arg ? positional_arg.get() : "name")));
+                mode->action(
+                  parse_args(mode->options, args,
+                             (positional_arg ? positional_arg.get() : "name")),
+                  killed);
                 if (crash_upload_thread)
                   reactor::wait(*crash_upload_thread);
               }

@@ -939,7 +939,7 @@ COMMAND(mount)
       mandatory(args, "mountpoint", "mountpoint");
     }
   }
-  run(args);
+  run(args, killed);
 }
 
 COMMAND(list)
