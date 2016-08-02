@@ -1,16 +1,15 @@
 #include <infinit/overlay/kademlia/kademlia.hh>
 
+#include <elle/json/exceptions.hh>
 #include <elle/log.hh>
-
 #include <elle/serialization/Serializer.hh>
-#include <elle/serialization/json.hh>
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/binary/SerializerIn.hh>
 #include <elle/serialization/binary/SerializerOut.hh>
-
-#include <elle/json/exceptions.hh>
+#include <elle/serialization/json.hh>
 
 #include <cryptography/hash.hh>
+
 #include <reactor/network/buffer.hh>
 #include <reactor/network/exception.hh>
 
@@ -43,7 +42,7 @@ namespace elle
       }
       static kademlia::PrettyEndpoint convert(std::string const& repr)
       {
-        size_t sep = repr.find_first_of(':');
+        size_t sep = repr.find_last_of(':');
         auto addr = boost::asio::ip::address::from_string(repr.substr(0, sep));
         int port = std::stoi(repr.substr(sep + 1));
         return kademlia::PrettyEndpoint(addr, port);
@@ -56,20 +55,45 @@ namespace elle
       static Type convert(T& ep)
       {
         Type res;
-        auto addr = ep.address().to_v4().to_bytes();
-        res.append(addr.data(), addr.size());
+        if (ep.address().is_v4())
+        {
+          auto addr = ep.address().to_v4().to_bytes();
+          res.append(addr.data(), addr.size());
+        }
+        else
+        {
+          auto addr = ep.address().to_v6().to_bytes();
+          res.append(addr.data(), addr.size());
+        }
         unsigned short port = ep.port();
         res.append(&port, 2);
         return res;
       }
+
       static T convert(elle::Buffer& repr)
       {
-        ELLE_ASSERT(repr.size() == 6);
-        unsigned short port;
-        memcpy(&port, &repr[4], 2);
-        auto addr = boost::asio::ip::address_v4(
-          std::array<unsigned char, 4>{{repr[0], repr[1], repr[2], repr[3]}});
-        return T(addr, port);
+        ELLE_ASSERT(repr.size() == 6 || repr.size() == 18);
+        if (repr.size() == 6)
+        {
+          unsigned short port;
+          memcpy(&port, &repr[4], 2);
+          auto addr = boost::asio::ip::address_v4(
+            std::array<unsigned char, 4>{{repr[0], repr[1], repr[2], repr[3]}});
+          return T(addr, port);
+        }
+        else
+        {
+          unsigned short port;
+          memcpy(&port, &repr[16], 2);
+          auto addr = boost::asio::ip::address_v6(
+            std::array<unsigned char, 16>{{
+            repr[0], repr[1], repr[2], repr[3],
+            repr[4], repr[5], repr[6], repr[7],
+            repr[8], repr[9], repr[10], repr[11],
+            repr[12], repr[13], repr[14], repr[15],
+            }});
+          return T(addr, port);
+        }
       }
     };
     template<> struct Serialize<kademlia::Endpoint>
@@ -98,6 +122,15 @@ namespace kademlia
     , storage_lifetime_ms(120000)
   {}
 
+  /*------.
+  | Peers |
+  `------*/
+
+  void
+  Kademlia::_discover(infinit::overlay::NodeEndpoints const& peers)
+  {
+    ELLE_ABORT("unimplemented");
+  }
 
   namespace packet
   {

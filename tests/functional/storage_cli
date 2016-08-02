@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 
 from utils import *
 from math import *
@@ -67,3 +67,32 @@ with Infinit() as bob:
   test(bob, '1024')
   test(bob, '101010')
   test(bob, '1010101')
+
+# Purge.
+with Beyond() as beyond, Infinit(beyond = beyond) as tmp:
+  bob = User(infinit = tmp, name = 'bob')
+  alice = User(infinit = tmp, name = 'alice')
+  bob.run(['infinit-user', '--signup', 'bob', '--email', 'bob@infinit.io'])
+  alice.run(
+    ['infinit-user', '--signup', 'alice', '--email', 'alice@infinit.io'])
+  bob.run(['infinit-storage', '--create', '--as', 'bob', 's', '--filesystem'])
+  assertEq(len(bob.run_json(['infinit-storage', '--list', '-s'])), 1)
+  bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '-S', 's', '-p'])
+  assert os.path.exists('%s/bob/bob/n' % tmp.linked_networks_path)
+  assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 1)
+  bob.run(['infinit-passport', '--create', '--as', 'bob',
+           '-u', 'alice', '-n', 'n'])
+  alice.run(['infinit-network', '--link', '--as', 'alice', 'bob/n', '-S', 's'])
+  assert os.path.exists('%s/alice/bob/n' % tmp.linked_networks_path)
+  bob.run(['infinit-network', '--run', '--name', 'n', '--as', 'bob',
+           '--async', '--cache', '-s'])
+  assertEq(len(os.listdir('%s/cache/bob/bob/n' % tmp.state_path)), 2)
+  bob.run(['infinit-storage', '--delete', '--as', 'bob', '--purge', 's'])
+  assertEq(len(bob.run_json(['infinit-storage', '--list', '-s', '--as', 'bob'])), 0)
+  # Ensure the descriptor is still there.
+  assertEq(len(os.listdir(tmp.networks_path)), 1)
+  # Ensure linked network has been removed.
+  assert not os.path.exists('%s/bob/bob/n' % tmp.linked_networks_path)
+  assert not os.path.exists('%s/alice/bob/n' % tmp.linked_networks_path)
+  # Ensure network cache has been removed.
+  assertEq(len(os.listdir('%s/cache/bob' % tmp.state_path)), 0)

@@ -1,11 +1,11 @@
 #include <infinit/filesystem/File.hh>
 
-#include <pair>
+#include <utility>
 
 #ifdef INFINIT_WINDOWS
 #include <fcntl.h>
 #endif
-#include <pair>
+
 #include <sys/stat.h> // S_IMFT...
 
 #include <elle/cast.hh>
@@ -43,14 +43,14 @@ namespace infinit
     static std::string print_mode(int m)
     {
       std::string res;
-      res += (m & 0200) ? 'r' : '-';
-      res += (m & 0400) ? 'w' : '-';
+      res += (m & 0400) ? 'r' : '-';
+      res += (m & 0200) ? 'w' : '-';
       res += (m & 0100) ? 'x' : '-';
-      res += (m & 0020) ? 'r' : '-';
-      res += (m & 0040) ? 'w' : '-';
+      res += (m & 0040) ? 'r' : '-';
+      res += (m & 0020) ? 'w' : '-';
       res += (m & 0010) ? 'x' : '-';
-      res += (m & 0002) ? 'r' : '-';
-      res += (m & 0004) ? 'w' : '-';
+      res += (m & 0004) ? 'r' : '-';
+      res += (m & 0002) ? 'w' : '-';
       res += (m & 0001) ? 'x' : '-';
       return res;
     }
@@ -123,18 +123,27 @@ namespace infinit
       }
     }
 
+    std::string
+    FileConflictResolver::description() const
+    {
+      return elle::sprintf("edit file %s", this->_path);
+    }
 
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<FileConflictResolver> _register_fcr("fcr");
 
-    static std::string perms_to_json(model::Model& model, ACLBlock& block)
+    static
+    std::string
+    perms_to_json(model::Model& model, ACLBlock& block)
     {
       auto perms = block.list_permissions(model);
       elle::json::Array v;
       for (auto const& perm: perms)
       {
         elle::json::Object o;
+        o["admin"] = perm.admin;
         o["name"] = perm.user->name();
+        o["owner"] = perm.owner;
         o["read"] = perm.read;
         o["write"] = perm.write;
         v.push_back(o);
@@ -444,6 +453,9 @@ namespace infinit
     File::unlink()
     {
       _ensure_first_block();
+      if ( !(_filedata->_header.mode & 0200)
+        || !(_parent->_header.mode & 0200))
+        THROW_ACCES;
       auto info = _parent->_files.at(_name);
       elle::SafeFinally revert([&] { _parent->_files[_name] = info;});
       _parent->_files.erase(_name);
@@ -531,6 +543,47 @@ namespace infinit
       Node::utimens(tv);
     }
 
+    struct NewBlockResolver
+      : public model::DummyConflictResolver
+    {
+      typedef DummyConflictResolver Super;
+      NewBlockResolver(std::string const& name,
+                    Address const address)
+        : Super()
+        , _name(name)
+        , _address(address)
+      {}
+
+      NewBlockResolver(elle::serialization::Serializer& s,
+                    elle::Version const& version)
+        : Super() // Do not call Super(s, version)
+      {
+        this->serialize(s, version);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& version) override
+      {
+        Super::serialize(s, version);
+        s.serialize("name", this->_name);
+        s.serialize("address", this->_address);
+      }
+
+      std::string
+      description() const override
+      {
+        return elle::sprintf("insert new block (%f) for file %s",
+                             this->_address, this->_name);
+      }
+
+      ELLE_ATTRIBUTE(std::string, name);
+      ELLE_ATTRIBUTE(Address, address);
+    };
+
+    static const elle::serialization::Hierarchy<infinit::model::ConflictResolver>::
+    Register<NewBlockResolver> _register_nbr("NewBlockResolver");
+
     void
     File::truncate(off_t new_size)
     {
@@ -584,8 +637,9 @@ namespace infinit
             sk.encipher(buf), _address);
           _owner.unchecked_remove(_filedata->_fat[i].first);
           _filedata->_fat[i].first = newblock->address();
-          _owner.store_or_die(std::move(newblock), model::STORE_INSERT,
-            model::make_drop_conflict_resolver());
+          this->_owner.store_or_die(
+            std::move(newblock), model::STORE_INSERT,
+            elle::make_unique<NewBlockResolver>(this->_name, this->_address));
         }
       }
       // check first block data

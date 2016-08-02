@@ -149,8 +149,10 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
     overlay,
     boost::optional<int>(),
     std::unique_ptr<infinit::storage::Storage>());
-  auto ops = elle::make_unique<infinit::filesystem::FileSystem>("volume", dn);
-  auto fs = elle::make_unique<reactor::filesystem::FileSystem>(std::move(ops), true);
+  auto ops = elle::make_unique<infinit::filesystem::FileSystem>(
+    "volume", dn, infinit::filesystem::allow_root_creation = true);
+  auto fs = elle::make_unique<reactor::filesystem::FileSystem>(
+    std::move(ops), true);
   ELLE_LOG("Returning observer");
   return fs;
 }
@@ -161,8 +163,10 @@ node_to_fs(std::vector<std::shared_ptr<imd::Doughnut>> const& nodes)
   std::vector<std::unique_ptr<rfs::FileSystem>> res;
   for (auto n: nodes)
   {
-    auto ops = elle::make_unique<infinit::filesystem::FileSystem>("volume",n);
-    auto fs = elle::make_unique<reactor::filesystem::FileSystem>(std::move(ops), true);
+    auto ops = elle::make_unique<infinit::filesystem::FileSystem>(
+      "volume", n, infinit::filesystem::allow_root_creation = true);
+    auto fs = elle::make_unique<reactor::filesystem::FileSystem>(
+      std::move(ops), true);
     res.push_back(std::move(fs));
   }
   return res;
@@ -650,6 +654,41 @@ ELLE_TEST_SCHEDULED(many_conflicts)
   }
 }
 
+ELLE_TEST_SCHEDULED(remove_conflicts)
+{
+  elle::filesystem::TemporaryDirectory d;
+  auto tmp = d.path();
+  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(tmp, kp, 2, /*k*/1, /*repfactor*/1);
+  auto fss = node_to_fs(nodes);
+  fss.front()->path("/");
+  // Don't try to simplify, of all those runs only two
+  // trigger an edit conflict
+  for (int i=0; i<100; ++i)
+  {
+    fss[0]->path("/foo")->mkdir(0666);
+    std::vector<int> is{0, 1};
+    reactor::for_each_parallel(is, [i,&fss](int s) {
+      int which = (i/2)%2;
+      if (s == (i%2))
+        try {
+          for (int y=0; y<i%10; ++y)
+            reactor::yield();
+          fss[which]->path("/foo")->setxattr("bar", "baz", 0);
+        }
+        catch (reactor::filesystem::Error const&)
+        {}
+      else
+      {
+        for (int y=0; y<i/10; ++y)
+          reactor::yield();
+        fss[1-which]->path("/foo")->rmdir();
+      }
+    });
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
@@ -664,6 +703,7 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(list_directory_5_3), 0, valgrind(60));
   suite.add(BOOST_TEST_CASE(clients_parallel), 0, valgrind(60));
   suite.add(BOOST_TEST_CASE(many_conflicts), 0, valgrind(60));
+  suite.add(BOOST_TEST_CASE(remove_conflicts), 0, valgrind(60));
   // suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
   //suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
   // suite.add(BOOST_TEST_CASE(killed_nodes_k2), 0, 600);

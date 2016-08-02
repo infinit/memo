@@ -38,18 +38,21 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: deserialize", *this);
         this->_serialize(s, version);
         // Extract owner key if possible
-        auto const& keys = this->doughnut()->keys();
-        auto it = this->_admin_keys.find(keys.K());
-        if (it != this->_admin_keys.end())
+        if (this->doughnut())
         {
-          ELLE_DEBUG("we are group admin");
-          this->_owner_private_key =
-            std::make_shared(elle::serialization::binary::deserialize<
+          auto const& keys = this->doughnut()->keys();
+          auto it = this->_admin_keys.find(keys.K());
+          if (it != this->_admin_keys.end())
+          {
+            ELLE_DEBUG("we are group admin");
+            this->_owner_private_key =
+              std::make_shared(elle::serialization::binary::deserialize<
                              cryptography::rsa::PrivateKey>(
                                keys.k().open(it->second)));
+          }
+          else
+            ELLE_DEBUG("we are not group admin");
         }
-        else
-          ELLE_DEBUG("we are not group admin");
       }
 
       GB::~GB()

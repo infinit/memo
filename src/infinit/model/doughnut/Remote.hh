@@ -26,7 +26,7 @@ namespace infinit
       class RemoteRPC;
 
       class Remote
-        : public Peer
+        : virtual public Peer
       {
       /*------.
       | Types |
@@ -53,7 +53,6 @@ namespace infinit
         virtual
         ~Remote();
       protected:
-        ELLE_ATTRIBUTE_R(Doughnut&, doughnut, protected);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPSocket>, socket);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::UTPSocket>, utp_socket);
         ELLE_ATTRIBUTE(std::unique_ptr<protocol::Serializer>, serializer);

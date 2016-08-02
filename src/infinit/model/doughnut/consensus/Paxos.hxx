@@ -15,8 +15,12 @@ namespace infinit
           int factor,
           bool rebalance_auto_expand,
           std::chrono::system_clock::duration node_timeout,
+          Doughnut& dht,
+          Address id,
           Args&& ... args)
-          : doughnut::Local(std::forward<Args>(args) ...)
+          : doughnut::Peer(dht, id)
+          , Paxos::Peer(dht, id)
+          , doughnut::Local(dht, id, std::forward<Args>(args) ...)
           , _paxos(paxos)
           , _factor(factor)
           , _rebalance_auto_expand(rebalance_auto_expand)

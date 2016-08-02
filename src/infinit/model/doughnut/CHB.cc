@@ -61,7 +61,7 @@ namespace infinit
       {}
 
       blocks::ValidationResult
-      CHB::_validate(Model const& model) const
+      CHB::_validate(Model const& model, bool writing) const
       {
         ELLE_DEBUG_SCOPE("%s: validate", *this);
         auto expected_address =

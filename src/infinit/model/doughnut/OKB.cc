@@ -356,7 +356,7 @@ namespace infinit
 
       template <typename Block>
       blocks::ValidationResult
-      BaseOKB<Block>::_validate(Model const& model) const
+      BaseOKB<Block>::_validate(Model const& model, bool writing) const
       {
         static elle::Bench bench("bench.okb._validate", 10000_sec);
         elle::Bench::BenchScope scope(bench);

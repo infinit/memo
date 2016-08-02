@@ -63,6 +63,13 @@ namespace kademlia
     void remove(Address address);
     void fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b);
     void print(std::ostream& stream) const override;
+  /*------.
+  | Peers |
+  `------*/
+  protected:
+    virtual
+    void
+    _discover(infinit::overlay::NodeEndpoints const& peers) override;
   protected:
     virtual reactor::Generator<WeakMember>
     _lookup(infinit::model::Address address,
@@ -155,8 +162,11 @@ namespace infinit
       struct Configuration
         : public overlay::Configuration
       {
+        typedef Configuration Self;
+        typedef overlay::Configuration Super;
         Configuration();
         Configuration(elle::serialization::SerializerIn& input);
+        ELLE_CLONABLE();
         void
         serialize(elle::serialization::Serializer& s) override;
         virtual

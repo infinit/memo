@@ -11,6 +11,7 @@
 #include <infinit/model/doughnut/GB.hh>
 #include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
+#include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/blocks/GroupBlock.hh>
 #include <infinit/filesystem/umbrella.hh>
 
@@ -64,10 +65,49 @@ namespace infinit
         s.push_back(*this->_public_control_key);
       }
 
+      struct GroupBlockInserter
+        : public DummyConflictResolver
+      {
+        typedef DummyConflictResolver Super;
+
+        GroupBlockInserter(std::string const& name)
+          : Super()
+          , _name(name)
+        {}
+
+        GroupBlockInserter(elle::serialization::Serializer& s,
+                           elle::Version const& version)
+          : Super()
+        {
+          this->serialize(s, version);
+        }
+
+        void
+        serialize(elle::serialization::Serializer& s,
+                  elle::Version const& version) override
+        {
+          Super::serialize(s, version);
+          s.serialize("name", this->_name);
+        }
+
+        std::string
+        description() const override
+        {
+          return elle::sprintf("write group block for %s", this->_name);
+        }
+
+      private:
+        ELLE_ATTRIBUTE(std::string, name);
+      };
+
+      static const elle::serialization::Hierarchy<ConflictResolver>::
+      Register<GroupBlockInserter> _register_group_block_inserter(
+        "GroupBlockInserter");
+
       void
       Group::create()
       {
-        ELLE_TRACE_SCOPE("%s: create", *this);
+        ELLE_TRACE_SCOPE("%s: create", this->_name);
         infinit::filesystem::umbrella([&] {
             try
             {
@@ -87,9 +127,21 @@ namespace infinit
             auto rub = elle::make_unique<UB>(&_dht, "@"+_name,
               *gb->owner_key(), true);
             // FIXME
-            _dht.store(std::move(ub), STORE_INSERT, make_drop_conflict_resolver());
-            _dht.store(std::move(rub), STORE_INSERT, make_drop_conflict_resolver());
-            _dht.store(std::move(gb), STORE_INSERT, make_drop_conflict_resolver());
+            _dht.store(
+              std::move(ub), STORE_INSERT,
+              elle::make_unique<UserBlockUpserter>(
+                elle::sprintf("@%s", this->_name))
+            );
+            _dht.store(
+              std::move(rub), STORE_INSERT,
+              elle::make_unique<ReverseUserBlockUpserter>(
+                elle::sprintf("@%s", this->_name))
+            );
+            _dht.store(
+              std::move(gb), STORE_INSERT,
+              elle::make_unique<GroupBlockInserter>(
+                elle::sprintf("@%s", this->_name))
+            );
             ELLE_DEBUG("...done");
         });
       }
@@ -128,7 +180,7 @@ namespace infinit
       {
         if (this->_public_control_key)
           return *_public_control_key;
-        ELLE_TRACE_SCOPE("%s: fetch", *this);
+        ELLE_TRACE_SCOPE("%s: fetch", this->_name);
         auto ub = elle::cast<UB>::runtime(
           this->_dht.fetch(UB::hash_address(_name, this->_dht)));
         elle::unconst(this)->_public_control_key.emplace(ub->key());
@@ -161,6 +213,9 @@ namespace infinit
                                           elle::Version(0, 4, 0));
             elle::unconst(this)->_block = elle::cast<GB>::runtime(
               this->_dht.fetch(addr));
+            ELLE_WARN(
+              "group block %s has an obsolete address and requires migration",
+              addr);
             return *this->_block;
           }
           catch (MissingBlock const&)
@@ -342,8 +397,7 @@ namespace infinit
       }
 
       GroupConflictResolver::~GroupConflictResolver()
-      {
-      }
+      {}
 
       void
       GroupConflictResolver::serialize(elle::serialization::Serializer& s,
@@ -392,8 +446,44 @@ namespace infinit
         }
         return std::move(res);
       }
+
+      std::string
+      GroupConflictResolver::description() const
+      {
+        // User is not necessary a "User", it can be a Group.
+        doughnut::User user(*this->_key, this->_name);
+        return elle::sprintf("%s \"%s\" to/from group", this->_action,
+                             user.name());
+      }
+
       static const elle::serialization::Hierarchy<model::ConflictResolver>::
       Register<GroupConflictResolver> _register_gcr("gcr");
     }
+  }
+}
+
+namespace std
+{
+  std::ostream&
+  operator << (std::ostream& out,
+               infinit::model::doughnut::GroupConflictResolver::Action action)
+  {
+    using namespace infinit::model::doughnut;
+    switch (action)
+    {
+      case GroupConflictResolver::Action::add_member:
+        out << "add member";
+        break;
+      case GroupConflictResolver::Action::remove_member:
+        out << "remove member";
+        break;
+      case GroupConflictResolver::Action::add_admin:
+        out << "add admin";
+        break;
+      case GroupConflictResolver::Action::remove_admin:
+        out << "remove admin";
+        break;
+    }
+    return out;
   }
 }

@@ -229,7 +229,7 @@ COMMAND(create)
                                optional(args, "fullname"));
   if (output)
   {
-    ifnt.user_save(user, *output);
+    save(*output, user);
     report_exported(*output, "user", user.name);
   }
   else
@@ -263,13 +263,14 @@ COMMAND(pull)
 {
   auto self = self_user(ifnt, args);
   auto user = get_name(args);
-  beyond_delete("user", user, self);
+  beyond_delete("user", user, self, false, flag(args, "purge"));
 }
 
 COMMAND(delete_)
 {
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
+  bool purge = flag(args, "purge");
   if (user.private_key && (!flag(args, "force") || script_mode))
   {
     std::string res;
@@ -292,20 +293,62 @@ COMMAND(delete_)
     try
     {
       auto self = self_user(ifnt, args);
-      beyond_delete("user", name, self);
+      beyond_delete("user", name, self, true, purge);
     }
     catch (MissingLocalResource const& e)
     {
       throw elle::Error("unable to pull user, ensure the user has been set "
                         "using --as or INFINIT_USER");
     }
-    catch (MissingResource const& e)
+  }
+  if (purge)
+  {
+    // XXX Remove volumes and drives that are on network owned by this user.
+    // Currently only the owner of a network can create volumes/drives.
+    auto owner = [] (std::string const& qualified_name) {
+      return qualified_name.substr(0, qualified_name.find("/"));
+    };
+    for (auto const& drive_: ifnt.drives_get())
     {
-      // Ignore if the item is not on Beyond.
+      auto drive = drive_.name;
+      if (owner(drive) != user.name)
+        continue;
+      auto drive_path = ifnt._drive_path(drive);
+      if (boost::filesystem::remove(drive_path))
+        report_action("deleted", "drive", drive, std::string("locally"));
     }
-    catch (elle::Error const& e)
+    for (auto const& volume_: ifnt.volumes_get())
     {
-      throw;
+      auto volume = volume_.name;
+      if (owner(volume) != user.name)
+        continue;
+      auto volume_path = ifnt._volume_path(volume);
+      if (boost::filesystem::remove(volume_path))
+        report_action("deleted", "volume", volume, std::string("locally"));
+    }
+    for (auto const& pair: ifnt.passports_get())
+    {
+      auto network = pair.first.network();
+      if (owner(network) != user.name &&
+          pair.second != user.name)
+      {
+        continue;
+      }
+      auto passport_path = ifnt._passport_path(network, pair.second);
+      if (boost::filesystem::remove(passport_path))
+      {
+        report_action("deleted", "passport",
+                      elle::sprintf("%s: %s", network, pair.second),
+                      std::string("locally"));
+      }
+    }
+    for (auto const& network_: ifnt.networks_get(user))
+    {
+      auto network = network_.name;
+      if (owner(network) == user.name)
+        ifnt.network_delete(network, user, true, true);
+      else
+        ifnt.network_unlink(network, user, true);
     }
   }
   if (avatar_path(name))
@@ -481,7 +524,6 @@ avatar_path(std::string const& name)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Mode::OptionDescription option_push_full =
@@ -559,6 +601,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user to remove (default: system user)" },
+        { "purge", bool_switch(), "remove objects owned by the user" },
       },
     },
     {
@@ -572,6 +615,7 @@ main(int argc, char** argv)
         { "force", bool_switch(), "delete the user without any prompt" },
         { "pull", bool_switch(),
           elle::sprintf("pull the user if it is on %s", beyond(true)) },
+        { "purge", bool_switch(), "remove objects owned by the user" },
       },
     },
     {

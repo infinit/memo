@@ -29,7 +29,8 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
   DHT client(keys = k, storage = nullptr);
   client.overlay->connect(*server_a.overlay);
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
-    "test/bandwidth", client.dht);
+    "test/bandwidth", client.dht,
+    infinit::filesystem::allow_root_creation = true);
   reactor::filesystem::FileSystem driver(std::move(fs), true);
   auto root = driver.path("/");
   int const max = std::stoi(elle::os::getenv("ITERATIONS", "100"));

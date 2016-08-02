@@ -1,3 +1,8 @@
+// http://opensource.apple.com/source/mDNSResponder/mDNSResponder-576.30.4/mDNSPosix/PosixDaemon.c
+#if __APPLE__
+# define daemon yes_we_know_that_daemon_is_deprecated_in_os_x_10_5_thankyou
+#endif
+
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
@@ -11,6 +16,7 @@
 #include <infinit/storage/Storage.hh>
 
 #ifdef INFINIT_MACOSX
+# include <reactor/network/reachability.hh>
 # define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
 # include <crash_reporting/gcc_fix.hh>
 # include <CoreServices/CoreServices.h>
@@ -27,6 +33,11 @@ ELLE_LOG_COMPONENT("infinit-volume");
 infinit::Infinit ifnt;
 
 #include <endpoint_file.hh>
+
+#if __APPLE__
+# undef daemon
+extern int daemon(int, int);
+#endif
 
 using boost::program_options::variables_map;
 
@@ -112,7 +123,7 @@ COMMAND(pull)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
-  beyond_delete("volume", name, owner);
+  beyond_delete("volume", name, owner, false, flag(args, "purge"));
 }
 
 COMMAND(delete_)
@@ -121,21 +132,19 @@ COMMAND(delete_)
   auto name = volume_name(args, owner);
   auto path = ifnt._volume_path(name);
   auto volume = ifnt.volume_get(name);
-  if (flag(args, "pull"))
+  bool purge = flag(args, "purge");
+  bool pull = flag(args, "pull");
+  if (purge)
   {
-    try
+    for (auto const& drive: ifnt.drives_for_volume(name))
     {
-      beyond_delete("volume", name, owner);
-    }
-    catch (MissingResource const& e)
-    {
-      // Ignore if the item is not on Beyond.
-    }
-    catch (elle::Error const& e)
-    {
-      throw;
+      auto drive_path = ifnt._drive_path(drive);
+      if (boost::filesystem::remove(drive_path))
+        report_action("deleted", "drive", drive, std::string("locally"));
     }
   }
+  if (pull)
+    beyond_delete("volume", name, owner, true, purge);
   boost::filesystem::remove_all(volume.root_block_cache_dir());
   if (boost::filesystem::remove(path))
     report_action("deleted", "volume", name, std::string("locally"));
@@ -365,6 +374,7 @@ COMMAND(run)
       fuse_options.push_back(opt);
   }
   auto network = ifnt.network_get(volume.network, self);
+  network.ensure_allowed(self, "run", "volume");
   ELLE_TRACE("run network");
   bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
@@ -382,35 +392,18 @@ COMMAND(run)
     if (daemon(0, 1))
       perror("daemon:");
 #endif
-  if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
-  {
-    static const std::vector<int> signals = {SIGINT, SIGTERM
-#ifndef INFINIT_WINDOWS
-    , SIGQUIT
-#endif
-    };
-    for (auto signal: signals)
-      reactor::scheduler().signal_handle(
-        signal,
-        [&]
-        {
-          ELLE_TRACE("terminating");
-          reactor::scheduler().terminate();
-        });
-  }
-  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
-  if (fetch)
-    beyond_fetch_endpoints(network, eps);
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
   auto model = network.run(
+    self,
     eps, true,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-    flag(args, "async"), disk_cache_size, compatibility_version, port);
+    flag(args, "async"), disk_cache_size, infinit::compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push =
     aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
+  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint;
   if (model->local())
   {
@@ -426,6 +419,12 @@ COMMAND(run)
   auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
+    if (fetch)
+    {
+      infinit::overlay::NodeEndpoints eps;
+      beyond_fetch_endpoints(network, eps);
+      model->overlay()->discover(eps);
+    }
     reactor::Thread::unique_ptr stat_thread;
     if (push)
       stat_thread = make_stat_update_thread(self, network, *model);
@@ -433,7 +432,8 @@ COMMAND(run)
     report_action("running", "volume", volume.name);
     auto fs = volume.run(std::move(model),
                          mountpoint,
-                         flag(args, "readonly")
+                         flag(args, "readonly"),
+                         flag(args, "allow-root-creation")
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
                          , optional(args, "mount-name")
 #endif
@@ -444,6 +444,33 @@ COMMAND(run)
                          , fuse_options
 #endif
                          );
+    // Experimental: poll root on mount to trigger caching.
+#   if 0
+    boost::optional<std::thread> root_poller;
+    if (mo.mountpoint && mo.cache && mo.cache.get())
+      root_poller.emplace(
+        [root = mo.mountpoint.get()]
+        {
+          try
+          {
+            boost::filesystem::status(root);
+            for (auto it = boost::filesystem::directory_iterator(root);
+                 it != boost::filesystem::directory_iterator();
+                 ++it)
+              ;
+          }
+          catch (boost::filesystem::filesystem_error const& e)
+          {
+            ELLE_WARN("error polling root: %s", e);
+          }
+        });
+    elle::SafeFinally root_poller_join(
+      [&]
+      {
+        if (root_poller)
+          root_poller->join();
+      });
+#   endif
     if (volume.default_permissions && !volume.default_permissions->empty())
     {
       auto ops =
@@ -475,10 +502,13 @@ COMMAND(run)
           add_path_to_finder_sidebar(mountpoint.get());
         });
     }
+    std::unique_ptr<reactor::network::Reachability> reachability;
 #endif
     elle::SafeFinally unmount([&]
     {
 #ifdef INFINIT_MACOSX
+      if (reachability)
+        reachability->stop();
       if (add_to_sidebar && mountpoint)
       {
         reactor::background([mountpoint]
@@ -499,6 +529,23 @@ COMMAND(run)
         {}
       }
     });
+#ifdef INFINIT_MACOSX
+    if (elle::os::getenv("INFINIT_LOG_REACHABILITY", "") != "0")
+    {
+      reachability.reset(new reactor::network::Reachability(
+        {},
+        [&] (reactor::network::Reachability::NetworkStatus status)
+        {
+          using NetworkStatus = reactor::network::Reachability::NetworkStatus;
+          if (status == NetworkStatus::Unreachable)
+            ELLE_LOG("lost network connection");
+          else
+            ELLE_LOG("got network connection");
+        },
+        true));
+      reachability->start();
+    }
+#endif
     if (script_mode)
     {
 #ifndef INFINIT_WINDOWS
@@ -527,7 +574,6 @@ COMMAND(run)
         std::string handlename;
         try
         {
-          op = pathname = handlename = "";
           auto json =
             boost::any_cast<elle::json::Object>(elle::json::read(stdin_stream));
           ELLE_TRACE("got command: %s", json);
@@ -890,8 +936,7 @@ COMMAND(mount)
     auto volume = ifnt.volume_get(name);
     if (!volume.mountpoint)
     {
-      mandatory(args, "mountpoint",
-                "No default mountpoint for volume. mountpoint");
+      mandatory(args, "mountpoint", "mountpoint");
     }
   }
   run(args);
@@ -926,10 +971,11 @@ COMMAND(list)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   std::vector<Mode::OptionDescription> options_run_mount = {
+    {"allow-root-creation", bool_switch(),
+        "create the filesystem root if not found"},
     { "name", value<std::string>(), "volume name" },
     { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
     { "readonly", bool_switch(), "mount as readonly" },
@@ -1060,6 +1106,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "volume to delete" },
         { "pull", bool_switch(),
           elle::sprintf("pull the volume if it is on %s", beyond(true)) },
+        { "purge", bool_switch(), "remove objects that depend on the volume" },
       },
     },
     {
@@ -1069,6 +1116,7 @@ main(int argc, char** argv)
       "--name VOLUME",
       {
         { "name,n", value<std::string>(), "volume to remove" },
+        { "purge", bool_switch(), "remove objects that depend on the volume" },
       },
     },
     {

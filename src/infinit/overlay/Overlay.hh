@@ -3,6 +3,7 @@
 
 # include <unordered_map>
 
+# include <elle/Clonable.hh>
 # include <elle/json/json.hh>
 # include <elle/log.hh>
 
@@ -54,6 +55,17 @@ namespace infinit
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
 
     /*------.
+    | Peers |
+    `------*/
+    public:
+      void
+      discover(NodeEndpoints const& peers);
+    protected:
+      virtual
+      void
+      _discover(NodeEndpoints const& peers) = 0;
+
+    /*------.
     | Hooks |
     `------*/
     public:
@@ -93,6 +105,7 @@ namespace infinit
       virtual
       WeakMember
       _lookup_node(model::Address address) = 0;
+
     /*------.
     | Query |
     `------*/
@@ -105,6 +118,7 @@ namespace infinit
 
     struct Configuration
       : public elle::serialization::VirtuallySerializable<false>
+      , public elle::Clonable<Configuration>
     {
       Configuration() = default;
       Configuration(elle::serialization::SerializerIn& input);

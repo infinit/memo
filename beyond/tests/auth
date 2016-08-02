@@ -13,7 +13,7 @@ user = User()
 
 import requests
 
-with Beyond() as beyond:
+with Beyond(force_admin = False) as beyond:
 
   class Test(unittest.TestCase):
 
@@ -30,12 +30,36 @@ with Beyond() as beyond:
       for i in range(0, 10):
         u = User()
         u.put(beyond)
-        try:
-          beyond.delete('users/%s' % u['name'],
-                        auth = evil.private_key)
-          assert False
-        except requests.exceptions.HTTPError as e:
-          assert e.response.status_code == 403
+        throws(lambda: beyond.delete('users/%s' % u['name'],
+                                     auth = evil.private_key),
+               403, error = 'user/unauthorized')
+
+    def test_banned_user(self):
+      demo = User(name = 'demo')
+      demo.put(beyond)
+      network = Network(owner = demo)
+      throws(lambda: network.put(beyond), 403, error = 'user/forbidden')
+
+    def test_no_signature(self):
+      user = User()
+      user.put(beyond)
+      network = Network(owner = user)
+      throws(lambda: network.put(beyond, auth = False),
+             401, error = 'user/unauthorized')
+
+    def test_no_timestamp(self):
+      user = User()
+      user.put(beyond)
+      network = Network(owner = user)
+      throws(lambda: network.put(beyond, timestamp = False),
+             400, error = 'user/unauthorized')
+
+    def test_wrong_timestamp(self):
+      user = User()
+      user.put(beyond)
+      network = Network(owner = user)
+      throws(lambda: network.put(beyond, timestamp = 1),
+             401, error = 'user/unauthorized')
 
   if __name__ == '__main__':
     unittest.main()

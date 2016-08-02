@@ -1,19 +1,22 @@
 #ifndef INFINIT_OVERLAY_KELIPS_HH
 # define INFINIT_OVERLAY_KELIPS_HH
 
-# include <infinit/overlay/Overlay.hh>
-# include <reactor/network/rdv-socket.hh>
-# include <reactor/Barrier.hh>
-# include <reactor/Generator.hh>
+# include <chrono>
+# include <random>
+
 # include <elle/serialization/Serializer.hh>
 
-#include <infinit/model/doughnut/Local.hh>
-#include <infinit/model/doughnut/Remote.hh>
-#include <infinit/storage/Storage.hh>
+# include <cryptography/SecretKey.hh>
 
-#include <cryptography/SecretKey.hh>
-#include <random>
-#include <chrono>
+# include <reactor/Barrier.hh>
+# include <reactor/Generator.hh>
+# include <reactor/network/rdv-socket.hh>
+# include <reactor/network/utp-server.hh>
+
+# include <infinit/model/doughnut/Local.hh>
+# include <infinit/model/doughnut/Remote.hh>
+# include <infinit/overlay/Overlay.hh>
+# include <infinit/storage/Storage.hh>
 
 namespace std
 {
@@ -124,8 +127,12 @@ namespace infinit
       struct Configuration
         : public overlay::Configuration
       {
+        typedef Configuration Self;
+        typedef overlay::Configuration Super;
+
         Configuration();
         Configuration(elle::serialization::SerializerIn& input);
+        ELLE_CLONABLE();
         void
         serialize(elle::serialization::Serializer& s) override;
         /// number of groups
@@ -155,7 +162,7 @@ namespace infinit
         int wait;
         bool encrypt;
         bool accept_plain;
-        infinit::model::doughnut::Local::Protocol rpc_protocol;
+        infinit::model::doughnut::Protocol rpc_protocol;
         GossipConfiguration gossip;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
@@ -169,6 +176,10 @@ namespace infinit
         std::unordered_map<Address, std::vector<GossipEndpoint>>, // contacts
         std::vector<std::pair<Address, Address>> // address, home_node
       > SerState;
+
+      typedef std::pair<std::vector<std::pair<Address, std::vector<GossipEndpoint>>>, // contacts
+        std::vector<std::pair<std::string, int>> // delta-blockaddr, owner_index
+      > SerState2;
 
       class Node
         : public infinit::overlay::Overlay
@@ -303,7 +314,13 @@ namespace infinit
         void
         process_update(SerState const& s);
         void
-        bootstrap(bool use_bootstrap_nodes);
+        bootstrap(bool use_bootstrap_nodes,
+                  bool use_contacts = true,
+                  std::vector<PeerLocation> const& peers = {});
+        void
+        _discover(NodeEndpoints const& peers) override;
+        void
+        send_bootstrap(PeerLocation const& l);
         SerState
         get_serstate(PeerLocation peer);
         void
@@ -319,9 +336,7 @@ namespace infinit
         bool remote_retry_connect(model::doughnut::Remote& remote,
                                   std::string const& uid);
         Address _self;
-        Address _ping_target;
-        Time _ping_time;
-        reactor::Barrier _ping_barrier;
+        std::unordered_map<Address, Time> _ping_time;
         std::vector<TimedEndpoint> _local_endpoints;
         /// group we are in
         int _group;
@@ -346,8 +361,6 @@ namespace infinit
         std::vector<Address> _pending_bootstrap_address;
         std::vector<Address> _bootstrap_requests_sent;
         reactor::network::UTPServer _remotes_server;
-        /// Whether we've seen someone from our group.
-        reactor::Barrier _bootstraping;
         int _next_id;
         int _port;
         bool _observer;

@@ -2,6 +2,8 @@
 
 from utils import *
 
+import signal
+
 def run(mode):
   with TemporaryDirectory() as port_tmp, \
        TemporaryDirectory() as tmp, \
@@ -85,6 +87,8 @@ def run(mode):
     assertEq(response['success'], True)
     portfile = '%s/port' % port_tmp
     def peer():
+      while not os.path.exists(portfile):
+        time.sleep(0.1)
       with open(portfile, 'r') as f:
         return '127.0.0.1:%s' % int(f.readline())
     def run_volume():
@@ -108,7 +112,8 @@ def run(mode):
     tu.start()
     time.sleep(4)
     assertEq(res, None)
-    user.process.kill()
+    user.process.send_signal(signal.SIGINT)
+    user.process.wait()
 
     if mode:
       # Try the same thing with adm, registering its passport in the process
@@ -121,8 +126,8 @@ def run(mode):
     else:
       # register adm passport
       # We need to kill and restart running volume because of fixed port
-      owner.process.kill()
-      time.sleep(1)
+      owner.process.send_signal(signal.SIGINT)
+      owner.process.wait()
       network_prefix = \
         '/.local/share/infinit/filesystem/passports/owner/network/'
       with open(adm.dir + network_prefix + 'adm', 'r') as f:
@@ -136,7 +141,7 @@ def run(mode):
         value = adm_passport)
       t = threading.Thread(target = run_volume)
       t.start()
-      time.sleep(1)
+      time.sleep(4)
     # and now again with user, should work since adm pushed the intermediate passport
     res = user.run_script(
       user = 'user', volume = 'owner/vol', operation = 'list_directory',
@@ -144,7 +149,8 @@ def run(mode):
       path = '/')
     assertEq(res['success'], True)
     assertEq(res['entries'], ['beacon'])
-    owner.process.kill()
+    owner.process.send_signal(signal.SIGINT)
+    owner.process.wait()
     t.join()
 
 run(True)

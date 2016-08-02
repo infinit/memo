@@ -245,12 +245,28 @@ COMMAND(create)
 COMMAND(list)
 {
   auto storages = ifnt.storages_get();
-  for (auto const& storage: storages)
+  if (script_mode)
   {
-    std::cout << storage->name << ": "
-              << (storage->capacity ? pretty_print(storage->capacity.get())
-                                    : "unlimited")
-              << std::endl;
+    elle::json::Array l;
+    for (auto const& storage: storages)
+    {
+      elle::json::Object o;
+      o["name"] = storage->name;
+      o["capacity"] = (storage->capacity ? pretty_print(storage->capacity.get())
+                                         : "unlimited");
+      l.push_back(std::move(o));
+    }
+    elle::json::write(std::cout, l);
+  }
+  else
+  {
+    for (auto const& storage: storages)
+    {
+      std::cout << storage->name << ": "
+                << (storage->capacity ? pretty_print(storage->capacity.get())
+                                      : "unlimited")
+                << std::endl;
+    }
   }
 }
 
@@ -259,14 +275,7 @@ COMMAND(export_)
   auto name = mandatory(args, "name", "storage name");
   auto output = get_output(args);
   std::unique_ptr<infinit::storage::StorageConfig> storage = nullptr;
-  try
-  {
-    storage = ifnt.storage_get(name);
-  }
-  catch(...)
-  {
-    storage = ifnt.storage_get(ifnt.qualified_name(name, ifnt.user_get()));
-  }
+  storage = ifnt.storage_get(name);
   elle::serialization::json::serialize(storage, *output, false);
   report_exported(*output, "storage", name);
 }
@@ -284,32 +293,66 @@ COMMAND(import)
   }
 }
 
+// { network/name: [users] }
+std::unordered_map<std::string, std::vector<std::string>>
+_networks_for_storage(std::string const& storage_name)
+{
+  std::unordered_map<std::string, std::vector<std::string>> res;
+  for (auto const& u: ifnt.users_get())
+  {
+    if (!u.private_key)
+      continue;
+    for (auto const& n: ifnt.networks_get(u, true))
+    {
+      auto* d =
+        dynamic_cast<infinit::model::doughnut::Configuration*>(n.model.get());
+      if (d && d->storage && d->storage->name == storage_name)
+      {
+        if (res.count(n.name))
+        {
+          auto& users = res.at(n.name);
+          users.emplace_back(u.name);
+        }
+        else
+          res[n.name] = {u.name};
+      }
+    }
+  }
+  return res;
+}
+
 COMMAND(delete_)
 {
   auto name = mandatory(args, "name", "storage name");
   auto storage = ifnt.storage_get(name);
   bool clear = flag(args, "clear-content");
-  if (auto fs_storage =
-        dynamic_cast<infinit::storage::FilesystemStorageConfig*>(storage.get()))
-  {
-    if (clear)
-    {
-      try
-      {
-        boost::filesystem::remove_all(fs_storage->path);
-        report_action("cleared", "storage", fs_storage->name);
-      }
-      catch (boost::filesystem::filesystem_error const& e)
-      {
-        throw elle::Error(elle::sprintf("unable to clear storage contents: %s",
-                                        e.what()));
-      }
-    }
-  }
-  else if (clear)
+  bool purge = flag(args, "purge");
+  auto user = self_user(ifnt, args);
+  auto fs_storage =
+    dynamic_cast<infinit::storage::FilesystemStorageConfig*>(storage.get());
+  if (clear && !fs_storage)
     throw elle::Error("only filesystem storages can be cleared");
+  if (purge)
+  {
+    for (auto const& pair: _networks_for_storage(name))
+      for (auto const& user_name: pair.second)
+        ifnt.network_unlink(pair.first, ifnt.user_get(user_name), true);
+  }
   auto path = ifnt._storage_path(name);
   bool ok = boost::filesystem::remove(path);
+  if (clear)
+  {
+    try
+    {
+      boost::filesystem::remove_all(fs_storage->path);
+      report_action("cleared", "storage", fs_storage->name);
+    }
+    catch (boost::filesystem::filesystem_error const& e)
+    {
+      throw elle::Error(elle::sprintf("unable to clear storage contents: %s",
+                                      e.what()));
+    }
+  }
   if (ok)
     report_action("deleted", "storage", storage->name);
   else
@@ -322,7 +365,6 @@ COMMAND(delete_)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   infinit::check_broken_locale();
@@ -420,6 +462,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "storage to delete" },
         { "clear-content", bool_switch(),
           "remove all blocks (filesystem only)" },
+        { "purge", bool_switch(), "remove objects that depend on the storage" },
       },
     },
   };

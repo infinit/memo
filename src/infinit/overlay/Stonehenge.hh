@@ -34,6 +34,14 @@ namespace infinit
                  model::doughnut::Doughnut* doughnut);
       ELLE_ATTRIBUTE_R(Peers, peers);
 
+    /*------.
+    | Peers |
+    `------*/
+    protected:
+      virtual
+      void
+      _discover(NodeEndpoints const& peers) override;
+
     /*-------.
     | Lookup |
     `-------*/
@@ -55,6 +63,8 @@ namespace infinit
     struct StonehengeConfiguration
       : public Configuration
     {
+      typedef StonehengeConfiguration Self;
+      typedef Configuration Super;
       struct Peer
       {
         std::string host;
@@ -65,6 +75,7 @@ namespace infinit
       std::vector<Peer> peers;
       StonehengeConfiguration();
       StonehengeConfiguration(elle::serialization::SerializerIn& input);
+      ELLE_CLONABLE();
       void
       serialize(elle::serialization::Serializer& s) override;
       virtual

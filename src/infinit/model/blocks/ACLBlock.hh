@@ -57,12 +57,16 @@ namespace infinit
 
         struct Entry
         {
-          Entry() {}
-          Entry(std::unique_ptr<User> u, bool r, bool w)
-          : user(std::move(u)), read(r), write(w) {}
+          Entry()
+          {}
+          Entry(std::unique_ptr<User> u, bool r, bool w, bool a, bool o = false)
+            : user(std::move(u)), admin(a), owner(o), read(r), write(w)
+          {}
           Entry(Entry&& b) = default;
 
           std::unique_ptr<User> user;
+          bool admin;
+          bool owner;
           bool read;
           bool write;
         };

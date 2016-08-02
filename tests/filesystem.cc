@@ -538,7 +538,8 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           INFINIT_ELLE_VERSION);
         ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;
-        ops = elle::make_unique<ifs::FileSystem>("default-volume", std::move(model));
+        ops = elle::make_unique<ifs::FileSystem>(
+          "default-volume", std::move(model), ifs::allow_root_creation = true);
         ELLE_TRACE("instantiating fs...");
         fs = new reactor::filesystem::FileSystem(std::move(ops), true);
         ELLE_TRACE("running mounter...");
@@ -684,7 +685,7 @@ run_filesystem(std::string const& store, std::string const& mountpoint)
       std::unique_ptr<infinit::storage::Storage>(g_storage),
       INFINIT_ELLE_VERSION);
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
-      "default-volume", std::move(model));
+      "default-volume", std::move(model), ifs::allow_root_creation = true);
     fs = new reactor::filesystem::FileSystem(std::move(ops), true);
     mount_points.push_back(mountpoint);
     mounted = true;
@@ -1225,16 +1226,18 @@ test_filesystem(bool dht,
     bfs::remove(symlink_path);
   }
 
-  ELLE_LOG("utf-8");
-  const char* name = "éùßñЂ";
-  write(mount / name, "foo");
-  BOOST_CHECK_EQUAL(read(mount / name), "foo");
-  BOOST_CHECK_EQUAL(directory_count(mount), 1);
-  bfs::directory_iterator it(mount);
-  BOOST_CHECK_EQUAL(it->path().filename(), name);
-  BOOST_CHECK_EQUAL(it->path().filename(), std::string(name));
-  bfs::remove(mount / name);
-  BOOST_CHECK_EQUAL(directory_count(mount), 0);
+  ELLE_LOG("utf-8")
+  {
+    const char* name = "éùßñЂ";
+    write(mount / name, "foo");
+    BOOST_CHECK_EQUAL(read(mount / name), "foo");
+    BOOST_CHECK_EQUAL(directory_count(mount), 1);
+    bfs::directory_iterator it(mount);
+    BOOST_CHECK_EQUAL(it->path().filename(), name);
+    BOOST_CHECK_EQUAL(it->path().filename(), std::string(name));
+    bfs::remove(mount / name);
+    BOOST_CHECK_EQUAL(directory_count(mount), 0);
+  }
 }
 
 void
@@ -1786,7 +1789,27 @@ protected:
     ctx.set(&doughnut());
     res = elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
       is, true, ctx);
-    return std::move(res);
+    return res;
+  }
+  virtual
+  void
+  _remove(infinit::model::Address address, infinit::model::blocks::RemoveSignature rs)
+  {
+    if (rs.block)
+    {
+      elle::Buffer buf;
+      {
+        elle::IOStream os(buf.ostreambuf());
+        elle::serialization::binary::serialize(rs.block, os);
+      }
+      elle::IOStream is(buf.istreambuf());
+      elle::serialization::Context ctx;
+      ctx.set(&doughnut());
+      auto res = elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
+        is, true, ctx);
+      rs.block = std::move(res);
+    }
+    _backend->remove(address, rs);
   }
   std::unique_ptr<Super> _backend;
 };
@@ -1800,7 +1823,7 @@ no_cheat_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensu
 std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
 same_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
 {
-  return std::move(c);
+  return c;
 }
 
 class DHTs
@@ -1833,7 +1856,7 @@ public:
       : dht(std::move(dht))
       , fs(elle::make_unique<reactor::filesystem::FileSystem>(
              elle::make_unique<infinit::filesystem::FileSystem>(
-               name, this->dht.dht),
+               name, this->dht.dht, ifs::allow_root_creation = true),
              true))
     {}
 
@@ -2068,6 +2091,38 @@ ELLE_TEST_SCHEDULED(data_embed)
     2);
 }
 
+ELLE_TEST_SCHEDULED(symlink_perms)
+{
+  // If we enable paxos, it will cache blocks and feed them back to use.
+  // Since we use the Locals dirrectly(no remote), there is no
+  // serialization at all when fetching, which means we end up with
+  // already decyphered blocks
+  DHTs servers(-1);
+  auto client1 = servers.client(false);
+  auto client2 = servers.client(true);
+  ELLE_LOG("create file");
+  auto h = client1.fs->path("/foo")->create(O_RDWR |O_CREAT, S_IFREG | 0600);
+  ELLE_LOG("write file");
+  h->write(elle::ConstWeakBuffer("foo", 3), 3, 0);
+  h->close();
+  h.reset();
+  ELLE_LOG("create symlink");
+  client1.fs->path("/foolink")->symlink("/foo");
+  BOOST_CHECK_EQUAL(client1.fs->path("/foolink")->readlink(), "/foo");
+  ELLE_LOG("client2 check");
+  BOOST_CHECK_THROW(client2.fs->path("/foolink")->readlink(), std::exception);
+  BOOST_CHECK_THROW(client2.fs->path("/foo")->open(O_RDWR, 0), std::exception);
+  auto skey = serialize(client2.dht.dht->keys().K());
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", skey, 0);
+  client1.fs->path("/")->setxattr("infinit.auth.inherit", "true", 0);
+  BOOST_CHECK_THROW(client2.fs->path("/foolink")->readlink(), std::exception);
+  BOOST_CHECK_THROW(client2.fs->path("/foo")->open(O_RDWR, 0), std::exception);
+  client1.fs->path("/foolink2")->symlink("/foo");
+  BOOST_CHECK_NO_THROW(client2.fs->path("/foolink2")->readlink());
+  client1.fs->path("/foolink")->setxattr("infinit.auth.setr", skey, 0);
+  BOOST_CHECK_NO_THROW(client2.fs->path("/foolink")->readlink());
+}
+
 ELLE_TEST_SCHEDULED(short_hash_key)
 {
   DHTs servers(1);
@@ -2093,7 +2148,6 @@ ELLE_TEST_SCHEDULED(short_hash_key)
                     std::exception);
 }
 
-
 ELLE_TEST_SCHEDULED(rename_exceptions)
 {
   // Ensure source does not get erased if rename fails under various conditions
@@ -2102,7 +2156,6 @@ ELLE_TEST_SCHEDULED(rename_exceptions)
   client1.fs->path("/");
   auto client2 = servers.client(true);
   BOOST_CHECK_THROW(client2.fs->path("/foo")->mkdir(0666), std::exception);
-
   auto c2key = elle::serialization::json::serialize(client2.dht.dht->keys().K()).string();
   client1.fs->path("/")->setxattr("infinit.auth.setrw", c2key, 0);
   ELLE_TRACE("create target inaccessible dir");
@@ -2124,7 +2177,6 @@ ELLE_TEST_SCHEDULED(rename_exceptions)
   struct stat st;
   client2.fs->path("/foo")->stat(&st);
   BOOST_CHECK(S_ISDIR(st.st_mode));
-
   // check again with read-only access
   client1.fs->path("/dir")->setxattr("infinit.auth.setr", c2key, 0);
   ELLE_TRACE("Rename2");
@@ -2197,13 +2249,66 @@ ELLE_TEST_SCHEDULED(erased_group_recovery)
   jperms = elle::json::read(s);
   a = boost::any_cast<elle::json::Array>(jperms);
   BOOST_CHECK_EQUAL(a.size(), 1);
-
   client1.fs->path("/")->setxattr("infinit.auth.clear", hash, 0);
   jsperms = client1.fs->path("/")->getxattr("infinit.auth");
   s.str(jsperms);
   jperms = elle::json::read(s);
   a = boost::any_cast<elle::json::Array>(jperms);
   BOOST_CHECK_EQUAL(a.size(), 1);
+}
+ELLE_TEST_SCHEDULED(remove_permissions)
+{
+  DHTs servers(-1);
+  auto client1 = servers.client(false);
+  auto client2 = servers.client(true);
+  auto skey = serialize(client2.dht.dht->keys().K());
+  client1.fs->path("/dir")->mkdir(0666);
+  client1.fs->path("/")->setxattr("infinit.auth.setr", skey, 0);
+  client1.fs->path("/dir")->setxattr("infinit.auth.setrw", skey, 0);
+  client1.fs->path("/dir")->setxattr("infinit.auth.inherit", "true", 0);
+  auto h = client2.fs->path("/dir/file")->create(O_CREAT|O_TRUNC|O_RDWR, 0666);
+  h->write(elle::ConstWeakBuffer("foo", 3), 3, 0);
+  h->close();
+  h.reset();
+  h = client1.fs->path("/dir/file")->open(O_RDONLY, 0666);
+  char buf[512] = {0};
+  int len = h->read(elle::WeakBuffer(buf, 512), 512, 0);
+  BOOST_CHECK_EQUAL(len, 3);
+  BOOST_CHECK_EQUAL(buf, std::string("foo"));
+  h->close();
+  h.reset();
+  client2.fs->path("/dir/file")->unlink();
+  struct stat st;
+  client2.fs->path("/dir")->stat(&st);
+  BOOST_CHECK(st.st_mode & S_IFDIR);
+  int count = 0;
+  client1.fs->path("/dir")->list_directory(
+      [&](std::string const&, struct stat*) { ++count;});
+  BOOST_CHECK_EQUAL(count, 0);
+
+  h = client1.fs->path("/file")->create(O_CREAT|O_TRUNC|O_RDWR, 0666);
+  h->write(elle::ConstWeakBuffer("bar", 3), 3, 0);
+  h->close();
+  h.reset();
+  client1.fs->path("/file")->setxattr("infinit.auth.setr", skey, 0);
+  BOOST_CHECK_THROW(client2.fs->path("/file")->unlink(), std::exception);
+  client1.fs->path("/file")->setxattr("infinit.auth.setrw", skey, 0);
+  BOOST_CHECK_THROW(client2.fs->path("/file")->unlink(), std::exception);
+  client1.fs->path("/file")->setxattr("infinit.auth.setr", skey, 0);
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", skey, 0);
+  BOOST_CHECK_THROW(client2.fs->path("/file")->unlink(), std::exception);
+  h = client1.fs->path("/file")->open(O_RDONLY, 0666);
+  len = h->read(elle::WeakBuffer(buf, 512), 512, 0);
+  BOOST_CHECK_EQUAL(len, 3);
+  BOOST_CHECK_EQUAL(buf, std::string("bar"));
+
+  client1.fs->path("/dir2")->mkdir(0666);
+  BOOST_CHECK_THROW(client2.fs->path("/dir2")->rmdir(), std::exception);
+  client1.fs->path("/")->setxattr("infinit.auth.setr", skey, 0);
+  client1.fs->path("/dir2")->setxattr("infinit.auth.setrw", skey, 0);
+  BOOST_CHECK_THROW(client2.fs->path("/dir2")->rmdir(), std::exception);
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", skey, 0);
+  BOOST_CHECK_NO_THROW(client2.fs->path("/dir2")->rmdir());
 }
 
 ELLE_TEST_SUITE()
@@ -2231,8 +2336,11 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(prefetcher_failure), 0, 5);
   suite.add(BOOST_TEST_CASE(paxos_race), 0, 5);
   suite.add(BOOST_TEST_CASE(data_embed), 0, 5);
+  suite.add(BOOST_TEST_CASE(symlink_perms), 0, 5);
+  suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
   suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
   suite.add(BOOST_TEST_CASE(rename_exceptions), 0, 5);
   suite.add(BOOST_TEST_CASE(erased_group), 0, 5);
   suite.add(BOOST_TEST_CASE(erased_group_recovery), 0, 5);
+  suite.add(BOOST_TEST_CASE(remove_permissions),0, 5);
 }

@@ -90,7 +90,7 @@ namespace infinit
 
       // FIXME: factor with CHB
       blocks::ValidationResult
-      UB::_validate(Model const& model) const
+      UB::_validate(Model const& model, bool writing) const
       {
         ELLE_DEBUG_SCOPE("%s: validate", *this);
         auto expected_address = this->reverse() ?

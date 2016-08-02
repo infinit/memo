@@ -527,8 +527,10 @@ namespace removal
       ctx.set<infinit::model::doughnut::Doughnut*>(dht.dht.get());
       auto sig = elle::serialization::binary::deserialize<
         blocks::RemoveSignature>(rs_bad, true, ctx);
+      // we send a remove with an obsolete signature, so consensus will retry,
+      // but will fail to call sign_remove() since we don't have the proper keys
       BOOST_CHECK_THROW(
-        dht.dht->remove(address, sig), infinit::model::doughnut::Conflict);
+        dht.dht->remove(address, sig), infinit::model::doughnut::ValidationFailed);
     }
     ELLE_LOG("remove block")
     {
@@ -556,6 +558,12 @@ class AppendConflictResolver
     auto res = std::dynamic_pointer_cast<blocks::MutableBlock>(current.clone());
     res->data([] (elle::Buffer& data) { data.append("B", 1); });
     return std::unique_ptr<blocks::Block>(res.release());
+  }
+
+  std::string
+  description() const override
+  {
+    return "Append data to block";
   }
 
   virtual
@@ -1060,6 +1068,12 @@ namespace rebalancing
       s.serialize("previous", this->_previous);
     }
 
+    std::string
+    description() const override
+    {
+      return "";
+    }
+
     ELLE_ATTRIBUTE_R(elle::Buffer, previous);
   };
 
@@ -1071,8 +1085,21 @@ namespace rebalancing
     typedef infinit::model::Address Address;
 
     template <typename ... Args>
-    Local(Args&& ... args)
-      : Super(std::forward<Args>(args)...)
+    Local(infinit::model::doughnut::consensus::Paxos& paxos,
+          int factor,
+          bool rebalance_auto_expand,
+          std::chrono::system_clock::duration node_timeout,
+          infinit::model::doughnut::Doughnut& dht,
+          Address id,
+          Args&& ... args)
+      : infinit::model::doughnut::Peer(dht, id)
+      , Super(paxos,
+              factor,
+              rebalance_auto_expand,
+              node_timeout,
+              dht,
+              id,
+              std::forward<Args>(args)...)
       , _all_barrier()
       , _propose_barrier()
       , _propose_bypass(false)
@@ -1087,10 +1114,9 @@ namespace rebalancing
       this->_confirm_barrier.open();
     }
 
-
     virtual
     boost::optional<PaxosClient::Accepted>
-    propose(PaxosServer::Quorum peers,
+    propose(PaxosServer::Quorum const& peers,
             Address address,
             PaxosClient::Proposal const& p) override
     {
@@ -1105,7 +1131,7 @@ namespace rebalancing
 
     virtual
     PaxosClient::Proposal
-    accept(PaxosServer::Quorum peers,
+    accept(PaxosServer::Quorum const& peers,
            Address address,
            PaxosClient::Proposal const& p,
            Value const& value) override
@@ -1118,7 +1144,7 @@ namespace rebalancing
 
     virtual
     void
-    confirm(PaxosServer::Quorum peers,
+    confirm(PaxosServer::Quorum const& peers,
             Address address,
             PaxosClient::Proposal const& p) override
     {
@@ -1536,10 +1562,23 @@ ELLE_TEST_SCHEDULED(admin_keys)
   no_cheating(cadm.dht.get(), ba4);
   BOOST_CHECK_EQUAL(ba4->data(), std::string("bar"));
 
+  // try to change admin user's permissions
+  auto b_perm = dht.dht->make_block<blocks::ACLBlock>();
+  b_perm->data(std::string("admin user data"));
+  dht.dht->store(*b_perm, infinit::model::STORE_INSERT);
+  auto fetched_b_perm = dht.dht->fetch(b_perm->address());
+  no_cheating(dht.dht.get(), fetched_b_perm);
+  b_perm.reset(dynamic_cast<blocks::ACLBlock*>(fetched_b_perm.release()));
+  BOOST_CHECK_THROW(
+    b_perm->set_permissions(
+      *dht.dht->make_user(elle::serialization::json::serialize(admin.K())),
+    false, false), elle::Error);
+
   // check group admin key
   auto gadmin = infinit::cryptography::rsa::keypair::generate(512);
   DHT cadmg(storage = nullptr, keys=gadmin, owner=owner_key);
   cadmg.overlay->connect(*dht.overlay);
+  std::unique_ptr<infinit::cryptography::rsa::PublicKey> g_K;
   {
     dht::Group g(*dht.dht, "g");
     g.create();
@@ -1548,6 +1587,8 @@ ELLE_TEST_SCHEDULED(admin_keys)
     cadmg.dht->admin_keys().group_r.push_back(g.public_control_key());
     dht.dht->admin_keys().group_r.push_back(g.public_control_key());
     client.dht->admin_keys().group_r.push_back(g.public_control_key());
+    g_K.reset(
+      new infinit::cryptography::rsa::PublicKey(g.public_control_key()));
   }
 
   auto bg = client.dht->make_block<blocks::ACLBlock>();
@@ -1555,6 +1596,14 @@ ELLE_TEST_SCHEDULED(admin_keys)
   client.dht->store(*bg, infinit::model::STORE_INSERT);
   auto bg2 = cadmg.dht->fetch(bg->address());
   BOOST_CHECK_EQUAL(bg2->data(), std::string("baz"));
+
+  // try to change admin group's permissions
+  auto bg_perm = cadmg.dht->fetch(bg->address());
+  // no_cheating(cadmg.dht.get(), bg_perm);
+  BOOST_CHECK_THROW(
+    dynamic_cast<blocks::ACLBlock*>(bg_perm.get())->set_permissions(
+      *cadmg.dht->make_user(elle::serialization::json::serialize(g_K)),
+    false, false), elle::Error);
 }
 
 ELLE_TEST_SUITE()

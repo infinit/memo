@@ -35,6 +35,17 @@ namespace infinit
       return {};
     }
 
+    /*------.
+    | Peers |
+    `------*/
+
+    void
+    Overlay::discover(NodeEndpoints const& peers)
+    {
+      ELLE_TRACE("%s: discover new peers: %s", this, peers);
+      this->_discover(peers);
+    }
+
     /*-------.
     | Lookup |
     `-------*/
@@ -107,7 +118,8 @@ namespace infinit
                   {
                     ELLE_TRACE("%s: failed to lookup node %f: %s",
                                this, address, e);
-                    yield(WeakMember(new model::doughnut::DummyPeer(address)));
+                    yield(WeakMember(new model::doughnut::DummyPeer(
+                                       *this->doughnut(), address)));
                   }
                 });
             reactor::wait(scope);

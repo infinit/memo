@@ -167,7 +167,8 @@ main(int argc, char** argv)
           ELLE_TRACE("initialize filesystem")
             {
               fs = elle::make_unique<infinit::filesystem::FileSystem>
-                ("default-volume", std::move(model));
+                ("default-volume", std::move(model),
+                 infinit::filesystem::allow_root_creation = true);
             }
           if (cfg.single_mount && *cfg.single_mount)
             fs->single_mount(true);

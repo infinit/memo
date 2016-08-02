@@ -28,7 +28,8 @@ with Infinit() as user:
   with user.spawn(['infinit-volume',
                    '--mount', '--mountpoint', mountpoint,
                    '--as', 'user',
-                   '--name', 'volume']) as p:
+                   '--name', 'volume',
+                   '--allow-root-creation']) as p:
     try:
       ready = False
       while not ready:

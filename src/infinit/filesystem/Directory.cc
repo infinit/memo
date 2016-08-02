@@ -1,7 +1,7 @@
 #include <infinit/filesystem/Directory.hh>
 
 #include <unordered_map>
-#include <pair>
+#include <utility>
 
 #include <elle/bench.hh>
 #include <elle/cast.hh>
@@ -20,9 +20,11 @@
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/UB.hh>
+#include <infinit/model/doughnut/User.hh>
 
 
 #ifdef INFINIT_WINDOWS
@@ -189,6 +191,15 @@ namespace infinit
       s.serialize("optarget", _op.target);
       s.serialize("opaddr", _op.address);
       s.serialize("opetype", _op.entry_type, elle::serialization::as<int>());
+    }
+
+    std::string
+    DirectoryConflictResolver::description() const
+    {
+      return elle::sprintf("edit directory: %s %s \"%s\"",
+                           this->_op.type,
+                           this->_op.entry_type,
+                           this->_op.target);
     }
 
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
@@ -688,6 +699,9 @@ namespace infinit
         throw rfs::Error(ENOTEMPTY, "Directory not empty");
       if (_parent.get() == nullptr)
         throw rfs::Error(EINVAL, "Cannot delete root node");
+      if ( !(_data->_header.mode & 0200)
+        || !(_parent->_header.mode & 0200))
+        THROW_ACCES;
       _parent->_files.erase(_name);
       _parent->write(*_owner.block_store(), {OperationType::remove, _name});
       umbrella([&] {_owner.block_store()->remove(_data->address());});
@@ -775,7 +789,9 @@ namespace infinit
       for (auto const& perm: perms)
       {
         elle::json::Object o;
+        o["admin"] = perm.admin;
         o["name"] = perm.user->name();
+        o["owner"] = perm.owner;
         o["read"] = perm.read;
         o["write"] = perm.write;
         v.push_back(o);
@@ -827,8 +843,12 @@ namespace infinit
           auto p = elle::serialization::json::deserialize<model::doughnut::Passport>(s, false);
           model::doughnut::UB ub(dht.get(), name, p, false);
           model::doughnut::UB rub(dht.get(), name, p, true);
-          this->_owner.block_store()->store(ub,  model::STORE_INSERT, model::make_drop_conflict_resolver());
-          this->_owner.block_store()->store(rub, model::STORE_INSERT, model::make_drop_conflict_resolver());
+          this->_owner.block_store()->store(
+            ub, model::STORE_INSERT,
+            elle::make_unique<model::doughnut::UserBlockUpserter>(name));
+          this->_owner.block_store()->store(
+            rub, model::STORE_INSERT,
+            elle::make_unique<model::doughnut::ReverseUserBlockUpserter>(name));
         }
         else if (*special == "fsck.deref")
         {
@@ -1010,6 +1030,57 @@ namespace infinit
                   for (auto const& m: members)
                     va.push_back(m->name());
                   o["admins"] = va;
+                  std::stringstream ss;
+                  elle::json::write(ss, o, true);
+                  return ss.str();
+                });
+            }
+            else if (special->find("blockof.") == 0)
+            {
+              return umbrella(
+                [&]
+                {
+                  std::string file = special->substr(strlen("blockof."));
+                  auto addr = this->_data->files().at(file).second;
+                  auto block = this->_owner.block_store()->fetch(addr);
+                  return elle::serialization::json::serialize(block).string();
+                });
+            }
+            else if (special->find("resolve.") == 0)
+            {
+              return umbrella(
+                [&]
+                {
+                  std::string what = special->substr(strlen("resolve."));
+                  if (what.empty())
+                    THROW_NODATA
+                  std::unique_ptr<model::doughnut::User> user;
+                  user = std::dynamic_pointer_cast<model::doughnut::User>
+                    (dht->make_user(what));
+                  if (!user)
+                  {
+                    auto block = elle::cast<ACLBlock>::runtime(
+                      this->_owner.block_store()->fetch(this->_data->address()));
+                    for (auto& e: block->list_permissions(*dht))
+                    {
+                      if (model::doughnut::short_key_hash(
+                        dynamic_cast<model::doughnut::User*>(e.user.get())->key())
+                          == what)
+                      {
+                        user = std::dynamic_pointer_cast<model::doughnut::User>
+                          (std::move(e.user));
+                        break;
+                      }
+                    }
+                  }
+                  if (!user)
+                    THROW_INVAL;
+                  elle::json::Object o;
+                  o["name"] = std::string(user->name());
+                  auto serkey = elle::serialization::json::serialize(user->key());
+                  std::stringstream s(serkey.string());
+                  o["key"] = elle::json::read(s);
+                  o["key_hash"] = model::doughnut::short_key_hash(user->key());
                   std::stringstream ss;
                   elle::json::write(ss, o, true);
                   return ss.str();

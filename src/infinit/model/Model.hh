@@ -46,10 +46,35 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s,
                 elle::Version const& v) override = 0;
+
+      virtual
+      std::string
+      description() const = 0;
     };
 
-    std::unique_ptr<ConflictResolver>
-    make_drop_conflict_resolver();
+    // A resolver that just override the previous version.
+    class DummyConflictResolver
+      : public ConflictResolver
+    {
+      typedef ConflictResolver Super;
+    protected:
+      DummyConflictResolver();
+    public:
+      DummyConflictResolver(elle::serialization::SerializerIn& s,
+                            elle::Version const& version);
+
+      std::unique_ptr<blocks::Block>
+      operator() (blocks::Block& block,
+                  blocks::Block& current,
+                  model::StoreMode mode) final;
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& v) override;
+
+      std::string
+      description() const override;
+    };
 
     class Model
     {
@@ -59,7 +84,8 @@ namespace infinit
       ELLE_ATTRIBUTE_R(elle::Version, version);
       template <typename Block>
       std::unique_ptr<Block>
-      make_block(elle::Buffer data = elle::Buffer(), Address owner = Address::null) const;
+      make_block(elle::Buffer data = elle::Buffer(),
+                 Address owner = Address::null) const;
       std::unique_ptr<User>
       make_user(elle::Buffer const& data) const;
       void
@@ -101,7 +127,8 @@ namespace infinit
       _make_mutable_block() const;
       virtual
       std::unique_ptr<blocks::ImmutableBlock>
-      _make_immutable_block(elle::Buffer content, Address owner = Address::null) const;
+      _make_immutable_block(elle::Buffer content,
+                            Address owner = Address::null) const;
       virtual
       std::unique_ptr<blocks::ACLBlock>
       _make_acl_block() const;

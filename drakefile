@@ -2,6 +2,7 @@ import drake
 import drake.cxx
 import drake.debian
 import drake.git
+import drake.license_file
 import drake.python
 import drake.redhat
 import drake.valgrind
@@ -280,12 +281,16 @@ def configure(
     'src/infinit/model/doughnut/Remote.hxx',
     'src/infinit/model/doughnut/UB.cc',
     'src/infinit/model/doughnut/UB.hh',
+    'src/infinit/model/doughnut/conflict/UBUpserter.hh',
+    'src/infinit/model/doughnut/conflict/UBUpserter.cc',
     'src/infinit/model/doughnut/User.cc',
     'src/infinit/model/doughnut/User.hh',
     'src/infinit/model/doughnut/ValidationFailed.cc',
     'src/infinit/model/doughnut/ValidationFailed.hh',
     'src/infinit/model/doughnut/consensus/Paxos.cc',
     'src/infinit/model/doughnut/consensus/Paxos.hh',
+    'src/infinit/model/doughnut/protocol.cc',
+    'src/infinit/model/doughnut/protocol.hh',
     'src/infinit/model/faith/Faith.cc',
     'src/infinit/model/faith/Faith.hh',
     'src/infinit/model/paranoid/Paranoid.cc',
@@ -478,6 +483,7 @@ def configure(
     ('infinit-block', [], True),
     ('infinit-credentials', [], True),
     ('infinit-device', [], True),
+    ('infinit-doctor', [], True),
     ('infinit-drive', [], True),
     ('infinit-journal', [], True),
     ('infinit-network', [], True),
@@ -547,20 +553,24 @@ def configure(
       for s in installed_symbols:
         rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
 
-  connectivity = drake.copy(elle.reactor.connectivity, '.',
-                            strip_prefix = 'elle/reactor')
-  installed_binaries.append(connectivity)
-
   ## ----- ##
   ## Share ##
   ## ----- ##
 
   demo_home = drake.nodes(
+    'demo-home/linked_networks/demo/infinit/demo',
     'demo-home/networks/infinit/demo',
     'demo-home/passports/infinit/demo/demo',
     'demo-home/users/demo',
     'demo-home/volumes/infinit/demo',
   )
+
+  ## -------- ##
+  ## Licenses ##
+  ## -------- ##
+
+  license_file = drake.node('OSS-licenses')
+  drake.license_file.Packager('licenses', license_file)
 
   ## ------- ##
   ## Install ##
@@ -572,6 +582,8 @@ def configure(
                           builder = PatchAndInstall)
     yield from drake.copy(
       demo_home, where / 'share/infinit/filesystem/test/home', 'demo-home')
+    yield from drake.copy(
+      [license_file], where / 'share/infinit/filesystem/licenses')
 
   rule_install << install_nodes(prefix)
 
@@ -602,11 +614,18 @@ def configure(
   }):
     drake.node('debian-packaging/release/control.tmpl')
     drake.node('debian-packaging/debug/control.tmpl')
+  def make_executable(target):
+    os.chmod(str(target), 0o755)
+    return True
   debian_nodes = chain(
     debian_nodes,
     drake.copy(drake.nodes('debian-packaging/release/control'),
                'debian/DEBIAN',
                strip_prefix = True),
+    drake.copy(drake.nodes('debian-packaging/release/postinst'),
+                           'debian/DEBIAN',
+                           post_process = make_executable,
+                           strip_prefix = True),
   )
   rule_debian = drake.Rule('debian')
   rule_debian_debug = drake.Rule('debian-debug')
@@ -711,6 +730,7 @@ def configure(
     if beyond:
       beyond = drake.include(
         'beyond',
+        production_build = production_build,
         python = elle.python3,
         cryptography_python_module = elle.cryptography.python_module,
         sendwithus = sendwithus,
@@ -723,7 +743,7 @@ def configure(
         backend = {
           'binaries': installed_binaries,
           'debian': rule_debian
-        }
+        },
       )
       if not windows:
         crash_test_libs = drake.copy([
@@ -754,6 +774,7 @@ def configure(
           t['dependencies'] = binaries
           t['paths'] = [str(x.path(True).dirname()) for x in binaries]
         return t
+      utils = drake.node('tests/functional/utils.py')
       tests = list(
         map(lambda x: functional_test(x),
             [
@@ -820,7 +841,8 @@ def configure(
           env['EXE_EXT'] = '.exe'
         runner = drake.Runner(
           exe = test,
-          env = env
+          env = env,
+          sources = [utils],
         )
         rule_functional_check << runner.status
         runner.reporting = drake.Runner.Reporting.on_failure

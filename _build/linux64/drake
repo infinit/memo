@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+sys.path.insert(0, '%s/../../elle/drake/src' % os.path.dirname(__file__))
+
+import drake
+import drake.cxx
+
+cfg = drake.cxx.Config()
+cfg.enable_debug_symbols()
+cfg.enable_optimization()
+
+with drake.Drake('../..') as d:
+  d.run(
+    cxx_config = cfg,
+  )

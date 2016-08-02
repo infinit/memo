@@ -23,9 +23,51 @@ with Beyond() as beyond:
       beyond.get('volumes/%s' % volume['name'])
       beyond.delete('volumes/%s' % volume['name'],
                     auth = user.private_key)
-      throws(lambda: beyond.get('volumes/%s' % volume['name'],
-                                json = False),
+      throws(lambda: beyond.get('volumes/%s' % volume['name'], json = False),
              404)
+
+    def test_purge(self):
+      user = User()
+      user.put(beyond)
+      network = Network(name = 'n', owner = user)
+      network.put(beyond)
+      volume = Volume(name = 'v', network = network)
+      volume.put(beyond)
+      drive = Drive(name = 'd', volume = volume)
+      drive.put(beyond)
+      beyond.delete('volumes/%s' % volume['name'],
+                    auth = user.private_key,
+                    params = {'purge': 'true'})
+      throws(lambda: beyond.get('volumes/%s' % volume['name'], json = False),
+             404)
+      throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
+             404)
+
+    # Check that we only remove objects owned by the user doing the purge.
+    def test_purge_multi_user(self):
+      user1 = User()
+      user1.put(beyond)
+      user2 = User()
+      user2.put(beyond)
+      network = Network(name = 'n', owner = user1)
+      network.put(beyond)
+      volume1 = Volume(name = 'v1', owner = user1, network = network)
+      volume1.put(beyond)
+      volume2 = Volume(name = 'v2', owner = user2, network = network)
+      volume2.put(beyond)
+      drive1 = Drive(name = 'd1', owner = user1, volume = volume1)
+      drive1.put(beyond)
+      drive2 = Drive(name = 'd2', owner = user2, volume = volume2)
+      drive2.put(beyond)
+      beyond.delete('volumes/%s' % volume1['name'],
+                    auth = user1.private_key,
+                    params = {'purge': 'true'})
+      throws(lambda: beyond.get('volumes/%s' % volume1['name'], json = False),
+             404)
+      throws(lambda: beyond.get('drives/%s' % drive1['name'], json = False),
+             404)
+      beyond.get('volumes/%s' % volume2['name'])
+      beyond.get('drives/%s' % drive2['name'])
 
   if __name__ == '__main__':
     unittest.main()

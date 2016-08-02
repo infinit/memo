@@ -143,7 +143,7 @@ namespace infinit
     {
       if (auto res = this->_fetch(address, local_version))
       {
-        auto val = res->validate(*this);
+        auto val = res->validate(*this, false);
         if (!val)
         {
           ELLE_WARN("%s: invalid block received for %s:%s", *this, address,
@@ -168,7 +168,7 @@ namespace infinit
                                   std::unique_ptr<blocks::Block> block,
                                   std::exception_ptr exception)
         {
-          if (block && !block->validate(*this))
+          if (block && !block->validate(*this, false))
             res(addr, {}, std::make_exception_ptr(elle::Error("invalid block")));
           else
             res(addr, std::move(block), exception);
@@ -234,31 +234,41 @@ namespace infinit
         this->version = elle::Version(0, 3, 0);
       }
     }
-    class DummyConflictResolver: public ConflictResolver
-    {
-    public:
-      DummyConflictResolver() {}
-      DummyConflictResolver(elle::serialization::SerializerIn& s) {}
-      void serialize(elle::serialization::Serializer& s,
-                     elle::Version const&) override
-      {
-      }
-      std::unique_ptr<blocks::Block>
-      operator() (blocks::Block& block,
-                  blocks::Block& current,
-                  model::StoreMode mode) override
-      {
-        ELLE_WARN("Conflict editing %f, dropping changes", block.address());
-        return current.clone();
-      }
-    };
-    static const elle::serialization::Hierarchy<model::ConflictResolver>::
-    Register<DummyConflictResolver> _register_dcr("dummy");
 
-    std::unique_ptr<ConflictResolver>
-    make_drop_conflict_resolver()
+    DummyConflictResolver::DummyConflictResolver()
     {
-      return elle::make_unique<DummyConflictResolver>();
     }
+
+    DummyConflictResolver::DummyConflictResolver(
+      elle::serialization::SerializerIn& s,
+      elle::Version const& version)
+      : DummyConflictResolver()
+    {
+      this->serialize(s, version);
+    }
+
+    void
+    DummyConflictResolver::serialize(elle::serialization::Serializer& s,
+                                     elle::Version const& v)
+    {
+    }
+
+    std::unique_ptr<blocks::Block>
+    DummyConflictResolver::operator() (blocks::Block& block,
+                                       blocks::Block& current,
+                                       model::StoreMode mode)
+    {
+      ELLE_WARN("Conflict editing %f, dropping changes", block.address());
+      return current.clone();
+    }
+
+    std::string
+    DummyConflictResolver::description() const
+    {
+      return "unknown";
+    }
+
+    static const elle::serialization::Hierarchy<ConflictResolver>::
+    Register<DummyConflictResolver> _register_dcr("dummy");
   }
 }

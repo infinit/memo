@@ -139,7 +139,24 @@ namespace infinit
         void
         Consensus::remove(Address address, blocks::RemoveSignature rs)
         {
-          return this->_remove(address, std::move(rs));
+          int count = 0;
+          while (true)
+          {
+            ++count;
+            try
+            {
+              this->_remove(address, std::move(rs));
+              return;
+            }
+            catch (Conflict const& e)
+            {
+              if (!(count%10))
+                ELLE_LOG("%s: edit conflict removing block %f, retrying",
+                         this, address);
+              auto block = this->fetch(address);
+              rs = block->sign_remove(this->doughnut());
+            }
+          }
         }
 
         void
@@ -321,6 +338,12 @@ namespace infinit
 
         Configuration::Configuration(elle::serialization::SerializerIn&)
         {}
+
+        std::unique_ptr<Configuration>
+        Configuration::clone() const
+        {
+          return std::unique_ptr<Configuration>(new Configuration());
+        }
 
         std::unique_ptr<Consensus>
         Configuration::make(model::doughnut::Doughnut& dht)

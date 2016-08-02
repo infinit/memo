@@ -26,10 +26,9 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Remote::Remote(Doughnut& doughnut, Address id,
+      Remote::Remote(Doughnut& dht, Address id,
                      std::string const& host, int port)
-        : Super(std::move(id))
-        , _doughnut(doughnut)
+        : Super(dht, std::move(id))
         , _socket()
         , _serializer()
         , _channels()
@@ -48,10 +47,9 @@ namespace infinit
           });
       }
 
-      Remote::Remote(Doughnut& doughnut, Address id,
+      Remote::Remote(Doughnut& dht, Address id,
                      boost::asio::ip::tcp::endpoint endpoint)
-        : Super(std::move(id))
-        , _doughnut(doughnut)
+        : Super(dht, std::move(id))
         , _socket(nullptr)
         , _serializer()
         , _channels()
@@ -77,11 +75,11 @@ namespace infinit
           });
       }
 
-      Remote::Remote(Doughnut& doughnut, Address id,
+      Remote::Remote(Doughnut& doughnut,
+                     Address id,
                      boost::asio::ip::udp::endpoint endpoint,
                      reactor::network::UTPServer& server)
-        : Super(std::move(id))
-        , _doughnut(doughnut)
+        : Super(doughnut, std::move(id))
         , _utp_socket(nullptr)
         , _serializer()
         , _channels()
@@ -105,8 +103,7 @@ namespace infinit
                      std::vector<boost::asio::ip::udp::endpoint> endpoints,
                      std::string const& peer_id,
                      reactor::network::UTPServer& server)
-        : Super(std::move(id))
-        , _doughnut(doughnut)
+        : Super(doughnut, std::move(id))
         , _utp_socket(nullptr)
         , _serializer()
         , _channels()
@@ -246,10 +243,11 @@ namespace infinit
                 "auth_syn", *this->_channels, this->_doughnut.version());
               auth_syn.set_context<Doughnut*>(&this->_doughnut);
               auto version = this->_doughnut.version();
-              // 0.5.0 compares the full version for compatibility instead of
-              // dropping the subminor component. Always set it to 0.
+              // 0.5.0 and 0.6.0 compares the full version it receives for
+              // compatibility instead of dropping the subminor component. Set
+              // it to 0 until >=0.7.0, which will drop subminor as expected.
               auto subminor =
-                version >= elle::Version(0, 6, 0) ? version.subminor() : 0;
+                version >= elle::Version(0, 7, 0) ? version.subminor() : 0;
               return auth_syn(
                 this->_doughnut.passport(),
                 elle::Version(version.major(), version.minor(), subminor));

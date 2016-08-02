@@ -1,5 +1,47 @@
 # Change Log
 
+
+## [0.6.1] - 2016-08-01
+
+Performances improvements, bug fixes and debug utilities.
+
+### Added
+
+- Add `--script` mode to `infinit-network`.
+- Add `infinit-doctor` to diagnose common setup issues.
+- Add `--describe` mode to `infinit-journal` to get human friendly descriptions
+  of pending asynchronous operations.
+
+### Changed
+
+- Require `--allow-root-creation` to create the root block with
+  `infinit-volume`.
+- Make Kelips the default overlay.
+- Fix conflict handling on file removal.
+- Show administrator in owners in `infinit-acl --list`.
+- Prevent changing network admin permissions.
+- Push endpoints to beyond before fetching them, to ensure nodes
+  always see each other.
+- Reduce Kelips packet size, improving network banddith
+  performances.
+
+### Fixed
+
+- Expect mode to be the first argument of all binaries, as any
+  prepended argument was previously ignored.
+- Enable to set ACLs on symlinks.
+- Check permissions locally to fail immediately on `unlink` and
+  `rmdir` in asynchronous mode.
+- Fix swapped `r` and `w` flags in permissions.
+- Fix error when deserializing mutable blocks with `infinit-block`.
+- Linking a network with several users will now behave correcly.
+
+### Removed
+
+- Remove experimental Kademlia overlay.
+- Remove testing Stonehenge overlay.
+
+
 ## [0.6.0] - 2016-06-06
 
 Automatic replication of under-replicated data blocks and network

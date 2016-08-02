@@ -1,12 +1,18 @@
+// http://opensource.apple.com/source/mDNSResponder/mDNSResponder-576.30.4/mDNSPosix/PosixDaemon.c
+#if __APPLE__
+# define daemon yes_we_know_that_daemon_is_deprecated_in_os_x_10_5_thankyou
+#endif
+
 #include <memory>
 
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 #include <elle/json/exceptions.hh>
 
+#include <reactor/FDStream.hh>
+
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/Kalimero.hh>
-#include <infinit/overlay/Stonehenge.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kademlia/kademlia.hh>
 #include <infinit/storage/Storage.hh>
@@ -20,6 +26,11 @@ ELLE_LOG_COMPONENT("infinit-network");
 infinit::Infinit ifnt;
 
 #include <endpoint_file.hh>
+
+#if __APPLE__
+# undef daemon
+extern int daemon(int, int);
+#endif
 
 static
 std::unique_ptr<infinit::storage::StorageConfig>
@@ -49,21 +60,17 @@ COMMAND(create)
   auto name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
   std::unique_ptr<infinit::overlay::Configuration> overlay_config;
-  if (args.count("stonehenge"))
+  int overlays =
+    + (args.count("kalimero") ? 1 : 0)
+    + (args.count("kelips") ? 1 : 0)
+  ;
+  if (overlays > 1)
+    throw CommandLineError("Only one overlay type must be specified");
+  if (args.count("kalimero"))
   {
-    auto stonehenge =
-      elle::make_unique<infinit::overlay::StonehengeConfiguration>();
-    ELLE_ABORT("FIXME: stonehenge CLI peer parsing not implemented");
-    // stonehenge->peers =
-    //   mandatory<std::vector<std::string>>(args, "peer", "stonehenge hosts");
-    // overlay_config = std::move(stonehenge);
+    overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
   }
-  if (args.count("kademlia"))
-  {
-    auto kad = elle::make_unique<infinit::overlay::kademlia::Configuration>();
-    overlay_config = std::move(kad);
-  }
-  if (args.count("kelips"))
+  else // default to Kelips
   {
     auto kelips =
       elle::make_unique<infinit::overlay::kelips::Configuration>();
@@ -119,9 +126,8 @@ COMMAND(create)
       std::string proto = args["protocol"].as<std::string>();
       try
       {
-        kelips->rpc_protocol =
-          elle::serialization::Serialize<
-            infinit::model::doughnut::Local::Protocol>::convert(proto);
+        kelips->rpc_protocol = elle::serialization::Serialize<
+          infinit::model::doughnut::Protocol>::convert(proto);
       }
       catch (elle::serialization::Error const& e)
       {
@@ -129,10 +135,6 @@ COMMAND(create)
       }
     }
     overlay_config = std::move(kelips);
-  }
-  if (!overlay_config)
-  {
-    overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
   }
   auto storage = storage_configuration(args);
   // Consensus
@@ -172,17 +174,34 @@ COMMAND(create)
     }
   }
   infinit::model::doughnut::AdminKeys admin_keys;
+  auto add_admin =
+    [&admin_keys] (infinit::cryptography::rsa::PublicKey const& key,
+                   bool read, bool write)
+    {
+      if (read && !write)
+      {
+        auto& target = admin_keys.r;
+        if (std::find(target.begin(), target.end(), key) == target.end())
+          target.push_back(key);
+      }
+      if (write) // Implies RW.
+      {
+        auto& target = admin_keys.w;
+        if (std::find(target.begin(), target.end(), key) == target.end())
+          target.push_back(key);
+      }
+    };
   if (args.count("admin-r"))
   {
     auto admins = args["admin-r"].as<std::vector<std::string>>();
     for (auto const& a: admins)
-      admin_keys.r.push_back(ifnt.user_get(a).public_key);
+      add_admin(ifnt.user_get(a).public_key, true, false);
   }
   if (args.count("admin-rw"))
   {
     auto admins = args["admin-rw"].as<std::vector<std::string>>();
     for (auto const& a: admins)
-      admin_keys.w.push_back(ifnt.user_get(a).public_key);
+      add_admin(ifnt.user_get(a).public_key, true, true);
   }
   boost::optional<int> port;
   if (args.count("port"))
@@ -205,25 +224,26 @@ COMMAND(create)
       version,
       admin_keys);
   {
-    infinit::Network network(ifnt.qualified_name(name, owner),
-                             std::move(dht));
+    infinit::Network network(ifnt.qualified_name(name, owner), std::move(dht));
+    std::unique_ptr<infinit::NetworkDescriptor> desc;
     if (args.count("output"))
     {
       auto output = get_output(args);
       elle::serialization::json::serialize(network, *output, false);
+      desc.reset(new infinit::NetworkDescriptor(std::move(network)));
     }
     else
     {
-      ifnt.network_save(network);
-      report_created("network", network.name);
+      ifnt.network_save(owner, network);
+      desc.reset(new infinit::NetworkDescriptor(std::move(network)));
+      ifnt.network_save(*desc);
+      report_created("network", desc->name);
     }
     if (aliased_flag(args, {"push-network", "push"}))
-    {
-      infinit::NetworkDescriptor desc(std::move(network));
-      beyond_push("network", desc.name, desc, owner);
-    }
+      beyond_push("network", desc->name, *desc, owner);
   }
 }
+
 static std::pair<infinit::cryptography::rsa::PublicKey, bool>
 user_key(std::string name, boost::optional<std::string> mountpoint)
 {
@@ -261,34 +281,64 @@ COMMAND(update)
   auto name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
   auto network = ifnt.network_get(name, owner);
+  network.ensure_allowed(owner, "update");
   auto& dht = *network.dht();
   if (auto port = optional<int>(args, "port"))
     dht.port = port.get();
-  if (compatibility_version)
-    dht.version = compatibility_version.get();
+  if (infinit::compatibility_version)
+    dht.version = infinit::compatibility_version.get();
+  bool changed_admins = false;
+  auto check_group_mount = [&args, &network] (bool group)
+    {
+      if (group && !args.count("mountpoint"))
+      {
+        throw CommandLineError(
+          "Must specify mountpoint of volume on "
+          "network \"%s\" to edit group admins", network.name);
+      }
+    };
+  auto add_admin = [&dht] (infinit::cryptography::rsa::PublicKey const& key,
+                           bool group, bool read, bool write)
+    {
+      if (read && !write)
+      {
+        auto& target = group ? dht.admin_keys.group_r : dht.admin_keys.r;
+        if (std::find(target.begin(), target.end(), key) == target.end())
+          target.push_back(key);
+      }
+      if (write) // Implies RW.
+      {
+        auto& target = group ? dht.admin_keys.group_w : dht.admin_keys.w;
+        if (std::find(target.begin(), target.end(), key) == target.end())
+          target.push_back(key);
+      }
+    };
   if (args.count("admin-r"))
   {
     for (auto u: args["admin-r"].as<std::vector<std::string>>())
     {
       auto r = user_key(u, optional(args, "mountpoint"));
-      auto& target = r.second ? dht.admin_keys.group_r : dht.admin_keys.r;
-      target.push_back(r.first);
+      check_group_mount(r.second);
+      add_admin(r.first, r.second, true, false);
     }
+    changed_admins = true;
   }
   if (args.count("admin-rw"))
   {
     for (auto u: args["admin-rw"].as<std::vector<std::string>>())
     {
       auto r = user_key(u, optional(args, "mountpoint"));
-      auto& target = r.second ? dht.admin_keys.group_w : dht.admin_keys.w;
-      target.push_back(r.first);
+      check_group_mount(r.second);
+      add_admin(r.first, r.second, true, true);
     }
+    changed_admins = true;
   }
   if (args.count("admin-remove"))
   {
     for (auto u: args["admin-remove"].as<std::vector<std::string>>())
     {
       auto r = user_key(u, optional(args, "mountpoint"));
+      check_group_mount(r.second);
 #define DEL(cont) cont.erase(std::remove(cont.begin(), cont.end(), r.first), cont.end())
       DEL(dht.admin_keys.r);
       DEL(dht.admin_keys.w);
@@ -296,21 +346,30 @@ COMMAND(update)
       DEL(dht.admin_keys.group_w);
 #undef DEL
     }
+    changed_admins = true;
   }
+  std::unique_ptr<infinit::NetworkDescriptor> desc;
   if (args.count("output"))
   {
     auto output = get_output(args);
     elle::serialization::json::serialize(network, *output, false);
+    desc.reset(new infinit::NetworkDescriptor(std::move(network)));
   }
   else
   {
-    ifnt.network_save(network, true);
-    report_updated("network", network.name);
+    ifnt.network_save(owner, network, true);
+    report_updated("linked network", network.name);
+    desc.reset(new infinit::NetworkDescriptor(std::move(network)));
+    report_updated("network", desc->name);
   }
   if (aliased_flag(args, {"push-network", "push"}))
+    beyond_push("network", desc->name, *desc, owner, true, false, true);
+  if (changed_admins && !args.count("output"))
   {
-    infinit::NetworkDescriptor desc(std::move(network));
-    beyond_push("network", desc.name, desc, owner);
+    std::cout << "INFO: Changes to network admins do not affect existing data:"
+              << "INFO: Admin access will be updated on the next write to each"
+              << "INFO: file or folder."
+              << std::endl;
   }
 }
 
@@ -319,10 +378,9 @@ COMMAND(export_)
   auto owner = self_user(ifnt, args);
   auto output = get_output(args);
   auto network_name = mandatory(args, "name", "network name");
-  auto network = ifnt.network_get(network_name, owner);
-  network_name = network.name;
+  auto desc = ifnt.network_descriptor_get(network_name, owner);
+  network_name = desc.name;
   {
-    infinit::NetworkDescriptor desc(std::move(network));
     elle::serialization::json::serialize(desc, *output, false);
   }
   report_exported(*output, "network", network_name);
@@ -332,10 +390,14 @@ COMMAND(fetch)
 {
   auto self = self_user(ifnt, args);
   auto network_name_ = optional(args, "name");
-  auto save = [&self] (infinit::NetworkDescriptor desc) {
-    try
+  auto save = [&self] (infinit::NetworkDescriptor desc_) {
+    // Save or update network descriptor.
+    ifnt.network_save(desc_, true);
+    for (auto const& u: ifnt.network_linked_users(desc_.name))
     {
-      auto network = ifnt.network_get(desc.name, self, false);
+      // Copy network descriptor.
+      auto desc = desc_;
+      auto network = ifnt.network_get(desc.name, u, false);
       if (network.model)
       {
         auto* d = dynamic_cast<infinit::model::doughnut::Configuration*>(
@@ -348,23 +410,17 @@ COMMAND(fetch)
             std::move(desc.consensus),
             std::move(desc.overlay),
             std::move(d->storage),
-            self.keypair(),
-            std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
+            u.keypair(),
+            std::make_shared<infinit::cryptography::rsa::PublicKey>(
+              desc.owner),
             d->passport,
-            self.name,
+            u.name,
             d->port,
             desc.version,
             desc.admin_keys));
-        ifnt.network_save(updated_network, true);
+        // Update linked network for user.
+        ifnt.network_save(u, updated_network, true);
       }
-      else
-      {
-        ifnt.network_save(desc, true);
-      }
-    }
-    catch (MissingLocalResource const& e)
-    {
-      ifnt.network_save(desc);
     }
   };
   if (network_name_)
@@ -374,25 +430,15 @@ COMMAND(fetch)
   }
   else // Fetch all networks for self.
   {
-    // FIXME: Workaround for NetworkDescriptor's copy constructor being deleted.
-    // Remove when serialization does not require copy.
-    auto res = beyond_fetch_json(elle::sprintf("users/%s/networks", self.name),
-                                 "networks for user",
-                                 self.name,
-                                 self);
-    auto root = boost::any_cast<elle::json::Object>(res);
-    auto networks_vec =
-      boost::any_cast<std::vector<elle::json::Json>>(root["networks"]);
-    for (auto const& network_json: networks_vec)
-    {
-      try
-      {
-        elle::serialization::json::SerializerIn input(network_json, false);
-        save(input.deserialize<infinit::NetworkDescriptor>());
-      }
-      catch (ResourceAlreadyFetched const& error)
-      {}
-    }
+    auto res =
+      beyond_fetch<std::unordered_map<std::string,
+                                      std::vector<infinit::NetworkDescriptor>>>(
+      elle::sprintf("users/%s/networks", self.name),
+      "networks for user",
+      self.name,
+      self);
+    for (auto const& n: res["networks"])
+      save(n);
   }
 }
 
@@ -411,18 +457,7 @@ COMMAND(link_)
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
   auto storage = storage_configuration(args);
-  auto desc = [&] () -> infinit::NetworkDescriptor
-  {
-    try
-    {
-      return ifnt.network_descriptor_get(network_name, self, false);
-    }
-    catch (elle::serialization::Error const&)
-    {
-      throw elle::Error(elle::sprintf(
-        "this device has already been linked to %s", network_name));
-    }
-  }();
+  auto desc = ifnt.network_descriptor_get(network_name, self);
   auto passport = [&] () -> infinit::Passport
   {
     if (self.public_key == desc.owner)
@@ -468,39 +503,50 @@ COMMAND(link_)
   auto output = has_output ? get_output(args) : nullptr;
   if (output)
   {
-    ifnt.network_save(network, *output);
+    infinit::save(*output, network, false);
   }
   else
   {
-    ifnt.network_save(network, true);
+    ifnt.network_save(self, network, true);
     report_action("linked", "device to network", network.name);
   }
 }
 
 COMMAND(list)
 {
+  auto self = self_user(ifnt, args);
   if (script_mode)
   {
     elle::json::Array l;
-    for (auto const& network: ifnt.networks_get())
+    for (auto const& network: ifnt.networks_get(self))
     {
       elle::json::Object o;
       o["name"] = network.name;
-      o["linked"] = bool(network.model);
+      o["linked"] = bool(network.model) && network.user_linked(self);
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
   }
   else
-    for (auto const& network: ifnt.networks_get())
+  {
+    for (auto const& network: ifnt.networks_get(self))
     {
       std::cout << network.name;
-      if (network.model)
+      if (network.model && network.user_linked(self))
         std::cout << ": linked";
       else
         std::cout << ": not linked";
       std::cout << std::endl;
     }
+  }
+}
+
+COMMAND(unlink_)
+{
+  auto self = self_user(ifnt, args);
+  auto network_name = mandatory(args, "name", "network name");
+  auto network = ifnt.network_get(network_name, self, true);
+  ifnt.network_unlink(network.name, self, true);
 }
 
 COMMAND(push)
@@ -512,7 +558,7 @@ COMMAND(push)
     auto& dht = *network.dht();
     auto owner_uid = infinit::User::uid(*dht.owner);
     infinit::NetworkDescriptor desc(std::move(network));
-    beyond_push("network", desc.name, desc, self);
+    beyond_push("network", desc.name, desc, self, true, false, true);
   }
 }
 
@@ -521,37 +567,64 @@ COMMAND(pull)
   auto name_ = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
   auto network_name = ifnt.qualified_name(name_, owner);
-  beyond_delete("network", network_name, owner);
+  beyond_delete("network", network_name, owner, false, flag(args, "purge"));
 }
+
 
 COMMAND(delete_)
 {
   auto name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
-  auto network_name = ifnt.qualified_name(name, owner);
-  auto path = ifnt._network_path(network_name);
-  auto network = ifnt.network_get(network_name, owner, false);
-  if (flag(args, "pull"))
+  auto network = ifnt.network_get(name, owner, false);
+  bool purge = flag(args, "purge");
+  bool unlink = flag(args, "unlink");
+  bool pull = flag(args, "pull");
+  auto linked_users = ifnt.network_linked_users(network.name);
+  if (linked_users.size() && !unlink)
   {
-    try
+    std::vector<std::string> user_names;
+    for (auto const& u: linked_users)
+      user_names.emplace_back(u.name);
+    throw elle::Error(
+        elle::sprintf("Network is still linked with this device by %s. "
+                      "Please unlink it first or add the --unlink flag",
+                      user_names));
+  }
+  if (purge)
+  {
+    auto volumes = ifnt.volumes_for_network(network.name);
+    std::vector<std::string> drives;
+    for (auto const& volume: volumes)
     {
-      beyond_delete("network", network_name, owner);
+      auto vol_drives = ifnt.drives_for_volume(volume);
+      drives.insert(drives.end(), vol_drives.begin(), vol_drives.end());
     }
-    catch (MissingResource const& e)
+    for (auto const& drive: drives)
     {
-      // Ignore if the item is not on Beyond.
+      auto drive_path = ifnt._drive_path(drive);
+      if (boost::filesystem::remove(drive_path))
+        report_action("deleted", "drive", drive, std::string("locally"));
     }
-    catch (elle::Error const& e)
+    for (auto const& volume: volumes)
     {
-      throw;
+      auto vol_path = ifnt._volume_path(volume);
+      if (boost::filesystem::remove(vol_path))
+        report_action("deleted", "volume", volume, std::string("locally"));
+    }
+    for (auto const& user: ifnt.user_passports_for_network(network.name))
+    {
+      auto passport_path = ifnt._passport_path(network.name, user);
+      if (boost::filesystem::remove(passport_path))
+      {
+        report_action("deleted", "passport",
+                      elle::sprintf("%s: %s", network.name, user),
+                      std::string("locally"));
+      }
     }
   }
-  boost::filesystem::remove_all(network.cache_dir());
-  if (boost::filesystem::remove(path))
-    report_action("deleted", "network", network_name, std::string("locally"));
-  else
-    throw elle::Error(
-      elle::sprintf("File for network could not be deleted: %s", path));
+  if (pull)
+    beyond_delete("network", network.name, owner, true, purge);
+  ifnt.network_delete(name, owner, unlink, true);
 }
 
 COMMAND(run)
@@ -559,6 +632,7 @@ COMMAND(run)
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
+  network.ensure_allowed(self, "run");
   infinit::overlay::NodeEndpoints eps;
   if (args.count("peer"))
   {
@@ -577,9 +651,6 @@ COMMAND(run)
       }
     }
   }
-  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
-  if (fetch)
-    beyond_fetch_endpoints(network, eps);
   bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
   auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
@@ -593,46 +664,109 @@ COMMAND(run)
   }
   auto port = optional<int>(args, option_port);
   auto dht = network.run(
+    self,
     eps, false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-    flag(args, "async"), disk_cache_size, compatibility_version, port);
+    flag(args, "async"), disk_cache_size, infinit::compatibility_version, port);
   // Only push if we have are contributing storage.
-  bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
-            && dht->local() && dht->local()->storage();
-  if (!dht->local())
+  bool push = aliased_flag(args, {"push-endpoints", "push", "publish"}) &&
+    dht->local() && dht->local()->storage();
+  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
+  if (!dht->local() && (!script_mode || push))
+    elle::err("network %s is client only since no storage is attached", name);
+  if (dht->local())
   {
-    throw elle::Error(elle::sprintf(
-      "network \"%s\" has no storage attached so is client only", name));
+    if (auto port_file = optional(args, option_port_file))
+      port_to_file(dht->local()->server_endpoint().port(), port_file.get());
+    if (auto endpoint_file = optional(args, option_endpoint_file))
+      endpoints_to_file(dht->local()->server_endpoints(), endpoint_file.get());
   }
-  if (auto port_file = optional(args, option_port_file))
-    port_to_file(dht->local()->server_endpoint().port(), port_file.get());
-  if (auto endpoint_file = optional(args, option_endpoint_file))
-    endpoints_to_file(dht->local()->server_endpoints(), endpoint_file.get());
-  static const std::vector<int> signals = {SIGINT, SIGTERM
-#ifndef INFINIT_WINDOWS
-    ,SIGQUIT
-#endif
-  };
 #ifndef INFINIT_WINDOWS
   if (flag(args, "daemon"))
     if (daemon(0, 1))
       perror("daemon:");
 #endif
-  for (auto signal: signals)
-    reactor::scheduler().signal_handle(
-    signal,
-    [&]
-    {
-      ELLE_TRACE("terminating");
-      reactor::scheduler().terminate();
-    });
   auto run = [&]
     {
+      if (fetch)
+      {
+        infinit::overlay::NodeEndpoints eps;
+        beyond_fetch_endpoints(network, eps);
+        dht->overlay()->discover(eps);
+      }
       reactor::Thread::unique_ptr stat_thread;
       if (push)
         stat_thread = make_stat_update_thread(self, network, *dht);
       report_action("running", "network", network.name);
-      reactor::sleep();
+      if (script_mode)
+      {
+#ifndef INFINIT_WINDOWS
+        reactor::FDStream stdin_stream(0);
+#else
+        // Windows does not support async io on stdin
+        elle::Buffer input;
+        while (true)
+        {
+          char buf[4096];
+          std::cin.read(buf, 4096);
+          int count = std::cin.gcount();
+          if (count > 0)
+            input.append(buf, count);
+          else
+          break;
+        }
+        auto stdin_stream = elle::IOStream(input.istreambuf());
+#endif
+        while (true)
+        {
+          try
+          {
+            auto json = boost::any_cast<elle::json::Object>(
+              elle::json::read(stdin_stream));
+            elle::serialization::json::SerializerIn command(json, false);
+            command.set_context<infinit::model::doughnut::Doughnut*>(dht.get());
+            auto op = command.deserialize<std::string>("operation");
+            if (op == "fetch")
+            {
+              auto address =
+                command.deserialize<infinit::model::Address>("address");
+              auto block = dht->fetch(address);
+              ELLE_ASSERT(block);
+              elle::serialization::json::SerializerOut response(
+                std::cout, false, true);
+              response.serialize("success", true);
+              response.serialize("value", block);
+            }
+            else if (op == "insert" || op == "update")
+            {
+              auto block = command.deserialize<
+                std::unique_ptr<infinit::model::blocks::Block>>("value");
+              if (!block)
+                elle::err("missing field: value");
+              dht->store(
+                std::move(block),
+                op == "insert" ?
+                infinit::model::STORE_INSERT : infinit::model::STORE_UPDATE);
+              elle::serialization::json::SerializerOut response(
+                std::cout, false, true);
+              response.serialize("success", true);
+            }
+            else
+              elle::err("invalide operation: %s", op);
+          }
+          catch (elle::Error const& e)
+          {
+            if (stdin_stream.eof())
+              return;
+            elle::serialization::json::SerializerOut response(
+              std::cout, false, true);
+            response.serialize("success", false);
+            response.serialize("message", e.what());
+          }
+        }
+      }
+      else
+        reactor::sleep();
     };
   if (push)
   {
@@ -691,25 +825,17 @@ COMMAND(stats)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Mode::OptionsDescription overlay_types_options("Overlay types");
   overlay_types_options.add_options()
-    ("kalimero", "use a Kalimero overlay network (default)")
-    ("kelips", "use a Kelips overlay network")
-    ("stonehenge", "use a Stonehenge overlay network")
-    ("kademlia", "use a Kademlia overlay network")
+    ("kelips", "use a Kelips overlay network (default)")
+    ("kalimero", "use a Kalimero overlay network.\nUsed for local testing")
     ;
   Mode::OptionsDescription consensus_types_options("Consensus types");
   consensus_types_options.add_options()
     ("paxos", "use Paxos consensus algorithm (default)")
     ("no-consensus", "use no consensus algorithm")
-    ;
-  Mode::OptionsDescription stonehenge_options("Stonehenge options");
-  stonehenge_options.add_options()
-    ("peer", value<std::vector<std::string>>()->multitoken(),
-     "hosts to connect to (host:port)")
     ;
   Mode::OptionsDescription kelips_options("Kelips options");
   kelips_options.add_options()
@@ -734,7 +860,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "created network name" },
         { "storage,S", value<std::vector<std::string>>()->multitoken(),
-          "storage to contribute (optional)" },
+          "storage to contribute (optional, data striped over multiple)" },
         { "port", value<int>(), "port to listen on (default: random)" },
         { "replication-factor,r", value<int>(),
           "data replication factor (default: 1)" },
@@ -745,14 +871,13 @@ main(int argc, char** argv)
           elle::sprintf("push the network to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-network" },
         { "admin-r", value<std::vector<std::string>>()->multitoken(),
-          "Set an admin user that can read all data"},
+          "Set admin users that can read all data" },
         { "admin-rw", value<std::vector<std::string>>()->multitoken(),
-          "Set an admin user that can read and write all data"},
+          "Set admin users that can read and write all data" },
       },
       {
         consensus_types_options,
         overlay_types_options,
-        stonehenge_options,
         kelips_options,
       },
     },
@@ -766,16 +891,20 @@ main(int argc, char** argv)
         { "port", value<int>(), "port to listen on (default: random)" },
         option_output("network"),
         { "push-network", bool_switch(),
-            elle::sprintf("push the updated network to %s", beyond(true)) },
+          elle::sprintf("push the updated network to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-network" },
         { "admin-r", value<std::vector<std::string>>()->multitoken(),
-          "Set an admin user that can read all data"},
+          "Add an admin user that can read all data\n"
+          "(prefix: @<group>, requires mountpoint)" },
         { "admin-rw", value<std::vector<std::string>>()->multitoken(),
-          "Set an admin user that can read and write all data"},
-        {"admin-remove", value<std::vector<std::string>>()->multitoken(),
-          "Remove given user to all admin lists"},
-        {"mountpoint", value<std::string>(),
-          "Mountpoint of a volume using this network, required to add admin groups"},
+          "Add an admin user that can read and write all data\n"
+          "(prefix: @<group>, requires mountpoint)" },
+        { "admin-remove", value<std::vector<std::string>>()->multitoken(),
+          "Remove given users from all admin lists\n"
+          "(prefix: @<group>, requires mountpoint)" },
+        { "mountpoint,m", value<std::string>(),
+          "Mountpoint of a volume using this network, "
+          "required to add admin groups" },
       },
       {},
     },
@@ -818,8 +947,22 @@ main(int argc, char** argv)
       {},
       // Hidden options.
       {
-        { "storage", value<std::vector<std::string>>()->multitoken(),
+        { "storage,S", value<std::vector<std::string>>()->multitoken(),
           "storage to contribute (optional)" },
+        option_output("network"),
+      },
+    },
+    {
+      "unlink",
+      "Unlink this device from a network",
+      &unlink_,
+      "--name NETWORK",
+      {
+        { "name,n", value<std::string>(), "network to unlink from" },
+      },
+      {},
+      // Hidden options.
+      {
         option_output("network"),
       },
     },
@@ -847,6 +990,8 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "network to delete" },
         { "pull", bool_switch(),
           elle::sprintf("pull the network if it is on %s", beyond(true)) },
+        { "purge", bool_switch(), "remove objects that depend on the network" },
+        { "unlink", bool_switch(), "automatically unlink network if linked" },
       },
     },
     {
@@ -856,6 +1001,7 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to remove" },
+        { "purge", bool_switch(), "remove objects that depend on the network" },
       },
     },
     {

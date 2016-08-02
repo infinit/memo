@@ -76,6 +76,38 @@ class Infinit(TemporaryDirectory):
   def env(self):
     return self.__env
 
+  @property
+  def data_home(self):
+    return '%s/.local/share/infinit/filesystem' % self.dir
+
+  @property
+  def state_path(self):
+    return '%s/.local/state/infinit/filesystem' % self.dir
+
+  @property
+  def storages_path(self):
+    return '%s/storages' % self.data_home
+
+  @property
+  def networks_path(self):
+    return '%s/networks' % self.data_home
+
+  @property
+  def linked_networks_path(self):
+    return '%s/linked_networks' % self.data_home
+
+  @property
+  def passports_path(self):
+    return '%s/passports' % self.data_home
+
+  @property
+  def volumes_path(self):
+    return '%s/volumes' % self.data_home
+
+  @property
+  def drives_path(self):
+    return '%s/drives' % self.data_home
+
   def spawn(self, args, input = None, return_code = 0, env = {}):
     if isinstance(args, str):
       args = args.split(' ')
@@ -93,8 +125,7 @@ class Infinit(TemporaryDirectory):
       env_['INFINIT_HOME'] = self.dir
     if self.__user is not None:
       env_['INFINIT_USER'] = self.__user
-    if 'WINEDEBUG' in os.environ:
-      env_['WINEDEBUG'] = os.environ['WINEDEBUG']
+    env_['WINEDEBUG'] = os.environ.get('WINEDEBUG', '-all')
     if 'ELLE_LOG_LEVEL' in os.environ:
       env_['ELLE_LOG_LEVEL'] = os.environ['ELLE_LOG_LEVEL']
     if self.__beyond is not None:
@@ -129,9 +160,17 @@ class Infinit(TemporaryDirectory):
     return process
 
   def run(self, args, input = None, return_code = 0, env = {}):
-    process = self.spawn(args, input, return_code, env)
-    out, err = process.communicate()
-    process.wait()
+    try:
+      process = self.spawn(args, input, return_code, env)
+      out, err = process.communicate(timeout = 600)
+      process.wait()
+    except KeyboardInterrupt:
+      process.terminate()
+      out, err = process.communicate(timeout = 30)
+      print('STDOUT: %s' % out.decode('utf-8'))
+      print('STDERR: %s' % err.decode('utf-8'))
+      raise
+
     out = out.decode('utf-8')
     err = err.decode('utf-8')
     if process.returncode != return_code:
@@ -141,6 +180,7 @@ class Infinit(TemporaryDirectory):
     self.last_out = out
     self.last_err = err
     return out, err
+
 
   def run_json(self, *args, **kwargs):
     out, err = self.run(*args, **kwargs)
@@ -161,7 +201,7 @@ class Infinit(TemporaryDirectory):
                  seq = None,
                  peer = None,
                  **kwargs):
-    cmd = ['infinit-volume', '--run', volume]
+    cmd = ['infinit-volume', '--run', volume, '--allow-root-creation']
     if user is not None:
       cmd += ['--as', user]
     if peer is not None:
@@ -180,6 +220,13 @@ def assertNeq(a, b):
 def assertIn(a, b):
   if a not in b:
     raise AssertionError('%r not in %r' % (a, b))
+
+def throws(f):
+  try:
+    f()
+    assert False
+  except Exception:
+    pass
 
 import bottle
 
@@ -335,7 +382,7 @@ class User():
     self.storage = '%s/%s-storage' % (name, name)
     self.network = '%s/%s-network' % (name, name)
     self.volume = '%s/%s-volume' % (name, name)
-    self.mountpoint = '%s/mountpoint' % infinit.dir
+    self.mountpoint = '%s/%s-mountpoint' % (infinit.dir, name)
     self.drive = '%s/%s-drive' % (name, name)
     os.mkdir(self.mountpoint)
 
@@ -343,7 +390,7 @@ class User():
 
   def run(self, cli, **kargs):
     return self.infinit.run(
-      cli.split(' '),
+      cli.split(' ') if isinstance(cli, str) else cli,
       env = { 'INFINIT_USER': self.name }, **kargs)
 
   def run_json(self, *args, **kwargs):

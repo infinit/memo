@@ -143,6 +143,12 @@ namespace infinit
         std::pair<bool, bool>
         _get_world_permissions() override;
 
+      private:
+        bool
+        _admin_user(cryptography::rsa::PublicKey const& key) const;
+        bool
+        _admin_group(cryptography::rsa::PublicKey const& key) const;
+
       /*-----------.
       | Validation |
       `-----------*/
@@ -154,7 +160,7 @@ namespace infinit
       protected:
         virtual
         blocks::ValidationResult
-        _validate(Model const& model) const override;
+        _validate(Model const& model, bool writing) const override;
         virtual
         blocks::ValidationResult
         _validate(Model const& model,
@@ -187,9 +193,8 @@ namespace infinit
         blocks::ValidationResult
         _validate_remove(Model& model,
                          blocks::RemoveSignature const& rs) const override;
-      public:
         blocks::ValidationResult
-        validate_admin_keys(Model& model) const;
+        _validate_admin_keys(Model const& model) const;
       protected:
         class DataSignature
         {

@@ -213,17 +213,12 @@ bin/    lib/    share/</code></pre>
 
     <p>First, you need to understand that all the files that the Infinit command-line tools and file system binary create and use are located in the <code>$INFINIT_HOME</code> directory which, by default, is set to <code>$HOME</code>. More specifically, the configuration files are stored in <code>$INFINIT_DATA_HOME</code> (set by default to <code>$INFINIT_HOME/.local/share/infinit/filesystem/</code>) while other files such as cached blocks, journaled operations etc. are stored in other directories. All these <a href="${route('doc_environment_variables')}">environment variables</a> can be changed according to your needs.</p>
 
-    <p>In the following, we are going to run the <em>infinit-volume</em> command by prefixing it with the environment variable <code>INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home</code> to tell the command where to look for the configuration files required for this test, in this case in the <code>share/</code> directory that is next to the binaries and contains the configuration file for this <em>demo</em> volume.</p>
+    <p>In the following, we are going to run the <em>infinit-volume</em> command by prefixing it with the environment variable <code>INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home</code> to tell the command where to look for the configuration files required for this test, in this case in the <code>share/</code> directory that is next to the binaries and contains the configuration file for this <em>demo</em> volume. We also add the <code>INFINIT_STATE_HOME</code> environment variable to temporarily store the local block cache.</p>
 
-    <pre><code>$> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ${demo_mountpoint} --publish --cache
+    <pre><code>$> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ INFINIT_STATE_HOME=/tmp/infinit-demo/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ${demo_mountpoint} --publish --cache
 ...
-Fetched endpoints for "infinit/demo".
 Running network "infinit/demo".
-[           infinit-volume           ] [main] client version: 0.5.4
-[        infinit.model.Model         ] [main] infinit::model::Model(0x7f7ffbc02bf0): compatibility version 0.3.0
-[        infinit.overlay.kelips        ] [main] Running in observer mode
-[        infinit.overlay.kelips        ] [main] Filesystem is read-only until peers are reached
-[        infinit.overlay.kelips        ] [main] Kelips(0.0.0.0:0): listening on port 62046
+Fetched endpoints for "infinit/demo".
 Running volume "infinit/demo".
 ...</code></pre>
 
@@ -299,7 +294,7 @@ Created storage "local".</code></pre>
 
     <p>The <em>infinit-network</em> command is used to create the network, specifying a name along with the list of storage resources to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the <code>local</code> storage resource is used but you could plug as many as you like. Obviously, you need to substitute <code>alice</code> with your username:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>$> infinit-network --create --as alice --storage local --kelips --name my-network --push
+    <pre class="device1"><div><span>Device A</span></div><code>$> infinit-network --create --as alice --storage local --name my-network --push
 Locally created network "alice/my-network".
 Remotely saved network "alice/my-network".
 </code></pre>
@@ -321,10 +316,9 @@ Remotely saved volume "alice/my-volume".
 
     <p>Let’s access this volume by mounting it as easily as any other filesystem:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-alice-volume/ --async --cache --publish
-Fetched endpoints for "alice/my-network".
+    <pre class="device1"><div><span>Device A</span></div><code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-alice-volume/ --allow-root-creation --async --cache --publish
 Running network "alice/my-network".
-Remotely saved endpoints for "alice/my-network".
+Fetched endpoints for "alice/my-network".
 Running volume "alice/my-volume".
 ...
 </code></pre>
@@ -436,8 +430,8 @@ Linked device to network "alice/my-network".
     <pre class="device3"><div><span>Device C</span></div><code>$> infinit-volume --fetch --as bob --name alice/my-volume
 Fetched volume "alice/my-volume".
 $> infinit-volume --mount --as bob --name alice/my-volume --mountpoint ~/mnt-alice-volume/ --async --cache --publish
-Fetch endpoints for "alice/my-network".
 Running network "alice/my-network".
+Fetched endpoints for "alice/my-network".
 Running volume "alice/my-volume".
 ...
 </code></pre>
@@ -454,7 +448,7 @@ ls: ~/mnt-alice-volume/: Permission denied
 
     <pre class="device1"><div><span>Device A</span></div><code>$> infinit-acl --list --path ~/mnt-alice-volume/
 ~/mnt-alice-volume/:
-        alice: rw
+        alice: rw (owner)
 </code></pre>
 
     <p>For Bob to access the file <code>awesome.txt</code> located in the volume, Alice needs to grant him access on both the root directory and the file itself:</p>
@@ -464,11 +458,11 @@ $> infinit-acl --set --mode r --user bob --path ~/mnt-alice-volume/awesome.txt
 $> infinit-acl --list --path ~/mnt-alice-volume/ --path ~/mnt-alice-volume/awesome.txt
 ~/mnt-alice-volume/:
   inherit: no
-        alice: rw
+        alice: rw (owner)
         bob: r
 
 ~/mnt-alice-volume/awesome.txt:
-        alice: rw
+        alice: rw (owner)
         bob: r
 </code></pre>
 
@@ -478,7 +472,7 @@ $> infinit-acl --list --path ~/mnt-alice-volume/ --path ~/mnt-alice-volume/aweso
 
     <pre class="device3"><div><span>Device C</span></div><code>$> infinit-acl --list --path ~/mnt-alice-volume/awesome.txt
 ~/mnt-alice-volume/awesome.txt:
-        alice: rw
+        alice: rw (owner)
         bob: r
 $> cat ~/mnt-alice-volume/awesome.txt
 everything is

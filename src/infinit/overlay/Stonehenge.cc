@@ -48,6 +48,16 @@ namespace infinit
         throw elle::Error("empty peer list");
     }
 
+    /*------.
+    | Peers |
+    `------*/
+
+    void
+    Stonehenge::_discover(NodeEndpoints const& peers)
+    {
+      elle::err("Stonehenge cannot discover new nodes");
+    }
+
     /*-------.
     | Lookup |
     `-------*/

@@ -4,6 +4,7 @@
 # include <elle/Duration.hh>
 
 # include <infinit/model/blocks/Block.hh>
+# include <infinit/model/doughnut/fwd.hh>
 # include <infinit/model/Model.hh>
 
 namespace infinit
@@ -19,9 +20,10 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        Peer(Address id);
+        Peer(Doughnut& dht, Address id);
         virtual
         ~Peer();
+        ELLE_ATTRIBUTE_R(Doughnut&, doughnut, protected);
         ELLE_ATTRIBUTE_R(Address, id);
 
       /*-----------.

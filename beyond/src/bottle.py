@@ -204,14 +204,11 @@ class Bottle(bottle.Bottle):
     # Crash reports
     self.route('/crash/report', method = 'PUT')(self.crash_report_put)
 
-  def require_admin(self):
+  def check_admin(self):
     if self.__force_admin:
       return
     if not hasattr(bottle.request, 'certificate'):
-      raise Response(401, {
-        'error': 'admin',
-        'reason': 'administrator privilege required',
-      })
+      raise exceptions.MissingCertificate()
     u = bottle.request.certificate
     if u not in [
         'antony.mechin@infinit.io',
@@ -222,11 +219,28 @@ class Bottle(bottle.Bottle):
         'matthieu.nottale@infinit.io',
         'mefyl@infinit.io',
     ]:
+      raise exceptions.UserNotAdmin(user = u)
+
+  def is_admin(self):
+    try:
+      self.check_admin()
+      return True
+    except exceptions.AuthenticationException:
+      return False
+
+  def require_admin(self):
+    try:
+      self.check_admin()
+    except exceptions.MissingCertificate:
       raise Response(401, {
         'error': 'admin',
-        'reason': 'you (%s) are not an administrator' % u,
+        'reason': 'administrator privilege required',
       })
-
+    except exceptions.UserNotAdmin as e:
+      raise Response(401, {
+        'error': 'admin',
+        'reason': 'you (%s) are not an administrator' % e.user,
+      })
 
   def __not_found(self, type, name):
     return Response(404, {
@@ -247,30 +261,18 @@ class Bottle(bottle.Bottle):
         'reason': 'entity name and route must match',
       })
 
-  def authenticate(self, user):
+  def __authenticate(self, user):
     if user.name in self.__ban_list:
-      raise Response(403, {
-        'error': 'user/forbidden',
-        'reason': 'this user cannot perform any operation'
-      })
+      raise exceptions.BannedUser(user = user.name)
     signature_raw = bottle.request.headers.get('infinit-signature')
     if signature_raw is None:
-      raise Response(401, {
-        'error': 'user/unauthorized',
-        'reason': 'authentication required',
-      })
+      raise exceptions.MissingSignature()
     request_time = bottle.request.headers.get('infinit-time')
     if request_time is None:
-      raise Response(400, {
-        'error': 'user/unauthorized',
-        'reason': 'missing time header',
-      })
+      raise exceptions.MissingTimeHeader()
     delay = abs(time.time() - int(request_time)) # UTC
     if delay > 300:
-      raise Response(401, {
-        'error': 'user/unauthorized',
-        'reason': 'request was issued %ss ago, check system clock' % delay,
-      })
+      raise exceptions.ClockSkew(delay = delay)
     rawk = user.public_key['rsa']
     der = b64decode(rawk.encode('latin-1'))
     k = Crypto.PublicKey.RSA.importKey(der)
@@ -287,10 +289,7 @@ class Bottle(bottle.Bottle):
     verifier = Crypto.Signature.PKCS1_v1_5.new(k)
     try:
       if not verifier.verify(local_hash, signature_crypted):
-        raise Response(403, {
-          'error': 'user/unauthorized',
-          'reason': 'invalid authentication',
-        })
+        raise exceptions.InvalidAuthentication()
     # XXX: Sometimes, verify fails if the keys used differ, raising:
     # > ValueError('Plaintext to large')
     # This happens ONLY if the keys are different so we can consider
@@ -298,12 +297,45 @@ class Bottle(bottle.Bottle):
     # block and run 'tests/auth'.
     except ValueError as e:
       if e.args[0] == 'Plaintext too large':
-        raise Response(403, {
+        raise exceptions.InvalidAuthentication()
+      raise
+    pass
+
+  def authenticate(self, user):
+    try:
+      self.__authenticate(user)
+    except exceptions.BannedUser:
+      raise Response(403, {
+        'error': 'user/forbidden',
+        'reason': 'this user cannot perform any operation'
+      })
+    except exceptions.MissingSignature:
+      raise Response(401, {
+        'error': 'user/unauthorized',
+        'reason': 'authentication required',
+      })
+    except exceptions.MissingTimeHeader:
+      raise Response(400, {
+        'error': 'user/unauthorized',
+        'reason': 'missing time header',
+      })
+    except exceptions.ClockSkew as e:
+      raise Response(401, {
+        'error': 'user/unauthorized',
+        'reason': 'request was issued %ss ago, check system clock' % e.delay,
+      })
+    except exceptions.InvalidAuthentication:
+      raise Response(403, {
           'error': 'user/unauthorized',
           'reason': 'invalid authentication',
         })
-      raise
-    pass
+
+  def is_authenticated(self, user):
+    try:
+      self.__authenticate(user)
+      return True
+    except exceptions.AuthenticationException:
+      return False
 
   def root(self):
     return {
@@ -322,7 +354,6 @@ class Bottle(bottle.Bottle):
          'gaetan.rochel@infinit.io',
          'julien.quintard@infinit.io',
          'matthieu.nottale@infinit.io',
-         'patrick.perlmutter@infinit.io',
          'quentin.hocquet@infinit.io',
        ]:
       return True
@@ -446,8 +477,13 @@ class Bottle(bottle.Bottle):
     return self.user_from_name(name = name).json()
 
   def user_delete(self, name):
+    purge = True if bottle.request.query.purge else False
     user = self.user_from_name(name = name)
-    self.authenticate(user)
+    if not self.is_authenticated(user) and not self.is_admin():
+      # Throw HTTP exception.
+      self.authenticate(user)
+    if purge:
+      self.__beyond.user_purge(user = user)
     self.__beyond.user_delete(name)
 
   def user_avatar_put(self, name):
@@ -675,9 +711,12 @@ class Bottle(bottle.Bottle):
     return {}
 
   def network_delete(self, owner, name):
+    purge = True if bottle.request.query.purge else False
     user = self.user_from_name(name = owner)
     self.authenticate(user)
-    self.network_from_name(owner = owner, name = name)
+    network = self.network_from_name(owner = owner, name = name)
+    if purge:
+      self.__beyond.network_purge(user = user, network = network)
     self.__beyond.network_delete(owner, name)
 
   def network_volumes_get(self, owner, name):
@@ -740,9 +779,12 @@ class Bottle(bottle.Bottle):
       })
 
   def volume_delete(self, owner, name):
+    purge = True if bottle.request.query.purge else False
     user = self.user_from_name(name = owner)
     self.authenticate(user)
-    self.volume_from_name(owner = owner, name = name)
+    volume = self.volume_from_name(owner = owner, name = name)
+    if purge:
+      self.__beyond.volume_purge(user = user, volume = volume)
     self.__beyond.volume_delete(owner = owner, name = name)
 
   ## ----- ##

@@ -175,9 +175,11 @@ namespace infinit
         return this->_data_version;
       }
 
-      static void background_open(elle::Buffer & target,
-                                  elle::Buffer const& src,
-                                  infinit::cryptography::rsa::PrivateKey const& k)
+      static
+      void
+      background_open(elle::Buffer& target,
+                      elle::Buffer const& src,
+                      cryptography::rsa::PrivateKey const& k)
       {
         static bool bg = elle::os::getenv("INFINIT_NO_BACKGROUND_DECODE", "").empty();
         if (bg)
@@ -256,6 +258,33 @@ namespace infinit
       /*------------.
       | Permissions |
       `------------*/
+
+      template <typename Block>
+      bool
+      BaseACB<Block>::_admin_user(cryptography::rsa::PublicKey const& key) const
+      {
+        auto const& r_keys = this->doughnut()->admin_keys().r;
+        if (std::find(r_keys.begin(), r_keys.end(), key) != r_keys.end())
+          return true;
+        auto const& w_keys = this->doughnut()->admin_keys().w;
+        if (std::find(w_keys.begin(), w_keys.end(), key) != w_keys.end())
+          return true;
+        return false;
+      }
+
+      template <typename Block>
+      bool
+      BaseACB<Block>::_admin_group(
+        cryptography::rsa::PublicKey const& key) const
+      {
+        auto const& r_keys = this->doughnut()->admin_keys().group_r;
+        if (std::find(r_keys.begin(), r_keys.end(), key) != r_keys.end())
+          return true;
+        auto const& w_keys = this->doughnut()->admin_keys().group_w;
+        if (std::find(w_keys.begin(), w_keys.end(), key) != w_keys.end())
+          return true;
+        return false;
+      }
 
       template <typename Block>
       void
@@ -417,6 +446,11 @@ namespace infinit
         try
         {
           auto& user = dynamic_cast<User const&>(user_);
+          if (this->_admin_user(user.key()))
+            throw elle::Error("Cannot change permissions of network admin");
+          if (this->_admin_group(user.key()))
+            throw elle::Error(
+              "Cannot change permissions of network admin group");
           if (user.name()[0] == '#')
           {
             if (!read && !write)
@@ -491,12 +525,18 @@ namespace infinit
         std::vector<ACB::Entry> res;
         auto owner = make_user(*this->owner_key());
         if (owner)
-          res.emplace_back(std::move(owner), true, true);
+        {
+          res.emplace_back(std::move(owner), true, true,
+                           this->_admin_user(*this->owner_key()), true);
+        }
         for (auto const& ent: this->_acl_entries)
         {
           auto user = make_user(ent.key);
           if (user)
-            res.emplace_back(std::move(user), ent.read, ent.write);
+          {
+            res.emplace_back(
+              std::move(user), ent.read, ent.write, this->_admin_user(ent.key));
+          }
         }
         for (auto const& ent: this->_acl_group_entries)
         {
@@ -508,7 +548,8 @@ namespace infinit
             else
               user = this->doughnut()->make_user(
                 elle::serialization::json::serialize(ent.key));
-            res.emplace_back(std::move(user), ent.read, ent.write);
+            res.emplace_back(std::move(user), ent.read, ent.write,
+                             this->_admin_group(ent.key));
           }
           catch(reactor::Terminate const& e)
           {
@@ -517,14 +558,17 @@ namespace infinit
           catch(std::exception const& e)
           {
             ELLE_TRACE("Exception making user: %s", e);
-            res.emplace_back(elle::make_unique<model::User>(), ent.read, ent.write);
+            res.emplace_back(elle::make_unique<model::User>(),
+                             ent.read, ent.write, this->_admin_group(ent.key));
           }
         }
         return res;
       }
 
-      static bool has_key(cryptography::rsa::PublicKey const& k,
-                          std::vector<ACLEntry> const& v, bool write)
+      static
+      bool
+      has_key(cryptography::rsa::PublicKey const& k,
+              std::vector<ACLEntry> const& v, bool write)
       {
         auto it = std::find_if(v.begin(), v.end(),
           [&](ACLEntry const& ent)
@@ -540,12 +584,12 @@ namespace infinit
 
       template <typename Block>
       blocks::ValidationResult
-      BaseACB<Block>::_validate(Model const& model) const
+      BaseACB<Block>::_validate(Model const& model, bool writing) const
       {
         static elle::Bench bench("bench.acb._validate", 10000_sec);
         elle::Bench::BenchScope scope(bench);
         ELLE_DEBUG("%s: validate owner part", *this)
-          if (auto res = Super::_validate(model)); else
+          if (auto res = Super::_validate(model, writing)); else
             return res;
         if (this->_world_writable)
           return blocks::ValidationResult::success();
@@ -621,12 +665,17 @@ namespace infinit
             }
           }
         }
+        if (writing)
+        {
+          if (auto res = this->_validate_admin_keys(model)); else
+            return res;
+        }
         return blocks::ValidationResult::success();
       }
 
       template <typename Block>
       blocks::ValidationResult
-      BaseACB<Block>::validate_admin_keys(Model& model) const
+      BaseACB<Block>::_validate_admin_keys(Model const& model) const
       {
         // check for admin keys
         auto const& aks = dynamic_cast<Doughnut const&>(model).admin_keys();
@@ -987,7 +1036,7 @@ namespace infinit
         }
         // FIXME: calling validate can change our address, and make
         // the validate(other) below fail
-        auto valid = rs.block->validate(model);
+        auto valid = rs.block->validate(model, true);
         if (!valid)
         {
           ELLE_DUMP("remove signature block's is not valid");

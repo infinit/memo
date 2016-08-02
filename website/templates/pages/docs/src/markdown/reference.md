@@ -188,12 +188,57 @@ alice: public/private keys
 bob: public key only
 ```
 
+### Pull a user ####
+
+To remove a user from the Hub, you can use the `--pull` mode. The `--name` option specifies which user to pull while the `--as` option specifies which user should sign the pull request. Currently a user can only pull themself but in the future there will be the concept of administrator users who can pull other users.
+
+```
+$> infinit-user --pull --as alice --name --alice
+Remotely deleted user "alice".
+```
+
+To pull all objects that the user has pushed to the Hub along with the user itself, you can specify the `--purge` option:
+
+```
+$> infinit-user --pull --as alice --name --alice --purge
+Remotely deleted user "alice".
+```
+
+### Delete a user ###
+
+Users can be locally deleted using the `--delete` mode. If the user has a private key, you will be prompted before the user is deleted as losing a user's public key will mean that you can no longer perform actions as that user. This includes pulling the user or any objects they have pushed to the Hub. To avoid being prompted, the `--force` option can be used.
+
+```
+$> infinit-user --delete --name alice
+WARNING: The local copy of the user’s private key will be removed.
+WARNING: You will no longer be able to perform actions on the Hub
+WARNING: for this user.
+
+Confirm the name of the user you would like to delete: alice
+Locally deleted user "alice".
+```
+
+To be symmetric with the `--push` option of the create mode, the `--pull` is provided with the delete mode. This will remove the user both on the Hub and locally.
+
+```
+$> infinit-user --delete --as alice --name alice --pull
+WARNING: The local copy of the user’s private key will be removed.
+WARNING: You will no longer be able to perform actions on the Hub
+WARNING: for this user.
+
+Confirm the name of the user you would like to delete: alice
+Remotely deleted user "alice".
+Locally deleted user "alice".
+```
+
+There is also the option `--purge` to locally remove all objects created by the user which can be combined with `--pull` to remove all objects owned by the user from the Hub.
+
 Credentials
 -----------
 
 The _infinit-credentials_ binary manages the credentials for your cloud services. Cloud services, such as Amazon Web Services, Google Cloud Storage and Dropbox, can be used to add storage to your networks. Infinit considers these cloud services as basic and unprivileged datastores that are used to store blocks of encrypted data.
 
-*__NOTE__: Because this binary requires the Hub for some types of credentials (such as Dropbox and Google), you may need to register your user on the Infinit Hub. For more information, please refer to the <a href="#user">User</a> section, more specifically how to <a href="#sign-up-on-the-hub">Sign up on the Hub</a>.*
+_**NOTE**: Because this binary requires the Hub for some types of credentials (such as Dropbox and Google), you may need to register your user on the Infinit Hub. For more information, please refer to the <a href="#user">User</a> section, more specifically how to <a href="#sign-up-on-the-hub">Sign up on the Hub</a>._
 
 
 ### Add credentials ###
@@ -229,6 +274,15 @@ GCS:
   alice@company.com: Alice
 ```
 
+### Delete credentials ###
+
+Credentials can be locally removed using the `--delete` mode:
+
+```
+$> infinit-credentials --delete --aws --name s3-user
+Locally deleted credentials "s3-user".
+```
+
 Storage
 -------
 
@@ -255,6 +309,12 @@ However, the process differs depending on the nature of the storage resource. Pl
 
 _**NOTE**: Do not hesitate to <a href="http://help.infinit.sh" target="_blank">vote for and/or request</a> the types of storage backends that you would like to see supported in the future._
 
+### Delete a storage resource ###
+
+You can locally delete a storage resource using the `--delete` mode. For filesystem storage resources, you can clear their contents using the `--clear-content` option.
+
+Using `--purge` will unlink all networks that use the storage locally.
+
 Network
 -------
 
@@ -276,11 +336,11 @@ Locally created network "alice/cluster".
 The following overlay types are currently available:
 
 - Kalimero: Simple test overlay supporting only one node.
-- Stonehenge: Overlay supporting multiple storage nodes in a static configuration: the
-list of peers must never change or be reordered once set.
 - Kelips: Overlay with support for node churn. The _k_ argument specifies the
 number of groups to use, each group being responsible for _1/kth_ of the files.
 See the reference paper _<a href="http://iptps03.cs.berkeley.edu/final-papers/kelips.pdf" target="_blank">"Kelips: Building an Efficient and Stable P2P DHT through Increased Memory and Background Overhead"</a>_ for more information.
+
+An administrator can be set for the network. This allows the given user either read or read/write permissions for all files in all volumes on the created network. To enable this feature, the `--admin-r USER` or `--admin-rw USER` arguments respectively.
 
 ### Push a network ###
 
@@ -308,22 +368,24 @@ alice/cluster
 
 ### Link a device to a network ###
 
-Let us say that you want to connect a device to a network, this device being different from the one on which the network has been created but which is still used by the same user.
+Before a network can be connected to, it must be linked to a user on the device. When creating the network with the `--create` option, the network is linked automatically.
 
-There are two ways to do this depending on who you are in relation to the network: its owner or an invited user.
+Upon linking to (or creating) the network, storage can be contributed to it using the `--storage` argument. This will be demonstrated below.
+
+There are two distinct cases for linking networks which depend on the given user's relation to the network: the user is the owner on another device or the user is an invitee.
 
 #### As the owner ####
 
 As the owner of the network, the system automatically recognizes you and allows you to link any of your devices to the network. The process in this case is straightforward.
 
-When linking a device to a network, you can decide to contribute storage from the new device. In the example below, Alice connects one of her other devices and contributes storage capacity from her personal Network-Attached Storage (NAS).
+In the example below, Alice connects one of her other devices and contributes storage capacity from her personal Network-Attached Storage (NAS).
 
 ```
 $> infinit-network --link --as alice --name cluster --storage nas
 Linked device to network "alice/cluster".
 ```
 
-_**NOTE**: Keep in mind that the action of linking a device to a network must only be performed once on every new device._
+_**NOTE**: Keep in mind that the action of linking a device to a network must only be performed once per user on every new device._
 
 #### As an invitee ####
 
@@ -355,8 +417,8 @@ In order to run a network, just use the option `--run`. Note that the `--publish
 
 ```
 $> infinit-network --run --as alice --name cluster --publish
-Fetched endpoints for "alice/cluster".
 Running network "alice/cluster".
+Fetched endpoints for "alice/cluster".
 Remotely pushed endpoints for "alice/cluster".
 ...
 ```
@@ -368,6 +430,52 @@ Every node, no matter the version of its Infinit software, will always run in a 
 Upgrading a network, say from _0.3.0_ to _0.5.0_, allows nodes to benefit from the functionality introduced between those versions. The process of upgrading a network goes through several steps, from updating the network descriptor to distributing it to the clients and servers to finally restarting the nodes to take the new descriptor into account.
 
 The complete procedure is detailed in the [Upgrading a network](/documentation/upgrading) guide.
+
+### Pull a network ###
+
+Networks can be pulled from the Hub using the `--pull` mode. If the `--purge` option is used, all volumes and drives which rely on the given network and belong to the user will be pulled as well.
+
+### Delete a network ###
+
+To delete a network locally, the `--delete` mode is used. This can be used in conjunction with the `--purge` and `--pull` options to, respectively, delete volumes and drives that depend on the network locally and pull them from the Hub. Note only volumes and drives owned by the user can be pulled from the Hub.
+
+### Network administrators ###
+
+Networks can be assigned administrators who have either read only or read/write access to all blocks (and thus implicitly files and folders) stored on a network. As Infinit is completely decentralized there are two limiting factors: all users must have the same network descriptor and changes to administrators are not retroactive.
+
+On creation of a network, individual administrators can be added using the `--admin-r` and `--admin-rw` arguments as shown in the example that follows:
+
+```
+$> infinit-network --create --as alice --storage local --admin-r bob --name administrated-cluster --push
+Locally created network "alice/administrated-cluster".
+Remotely saved network "alice/administrated-cluster".
+```
+
+Once a network has been created, administrator users and groups can be added using the `--update` action. Note that as [groups](#create-a-group) are stored internally in the network DHT, you will need to have [created](#create-a-volume) and [mounted](#mount-a-volume) a volume on the network to add an administrator group.
+
+```
+$> infinit-network --update --as alice --admin-rw charlie @managers --mountpoint /path/to/mounted/volume/on/network --push
+Updated linked network "alice/administrated-cluster".
+Updated network "alice/administrated-cluster".
+Remotely updated "alice/adminstrated-cluster".
+INFO: Changes to network admins do not affect existing data:
+INFO: Admin access will be updated on the next write to each
+INFO: file or folder.
+```
+
+**IMPORTANT**: All storage nodes and users who have already run the network will need to fetch the new network descriptor and relaunch the network. Changes to administrator rights occur on the next write to any given file or folder.
+
+Similarly, administrators can be removed using the `--admin-remove` argument.
+
+```
+$> infinit-network --update --as alice --admin-remove bob --mountpoint /path/to/mounted/volume/on/network --push
+Updated linked network "alice/administrated-cluster".
+Updated network "alice/administrated-cluster".
+Remotely updated "alice/adminstrated-cluster".
+INFO: Changes to network admins do not affect existing data:
+INFO: Admin access will be updated on the next write to each
+INFO: file or folder.
+```
 
 Passport
 --------
@@ -436,7 +544,7 @@ $> infinit-passport --list --as bob
 alice/cluster: bob
 ```
 
-*__NOTE__: The _infinit-passport_ binary also provides options to fetch all the passports for a specific user or for a specific network.*
+_**NOTE**: The _infinit-passport_ binary also provides options to fetch all the passports for a specific user or for a specific network._
 
 That's it, you will now be able to <a href="#link-a-device-to-a-network">link devices to the networks</a> these passports allow you to.
 
@@ -518,13 +626,12 @@ Mounting an Infinit volume is very similar to mounting any other file system. As
 
 Note that if you have been invited to join the network, you will need to fetch the volume before being able to mount it. Refer to the <a href="#list-the-volumes">List the volumes</a> section in this case.
 
-The following command mounts an Infinit file system. Note that the `--publish` option tells the binary to rely on the Hub to ease the process of connecting to the underlying network by providing you with the endpoint of bootstrap nodes while publishing your own endpoint for other nodes to find you as well:
+The following command mounts an Infinit file system. If a volume is being mounted for the first time, the `--allow-root-creation` option must be passed so that the volume root block is written. Note that the `--publish` option tells the binary to rely on the Hub to ease the process of connecting to the underlying network by providing you with the endpoint of bootstrap nodes while publishing your own endpoint for other nodes to find you as well:
 
 ```
-$> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --publish
-Fetched endpoints for "alice/cluster".
+$> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --allow-root-creation --publish
 Running network "alice/cluster".
-Remotely saved endpoints for "alice/cluster".
+Fetched endpoints for "alice/cluster".
 Running volume "alice/shared".
 ...
 ```
@@ -545,6 +652,14 @@ everything is
 ```
 
 **IMPORTANT**: It is possible that the volume owner didn't grant you access to the root directory, in which case you would get a "Permission Denied" error when listing the mount point. In this case, request that the volume owner <a href="#grant-revoke-access">grant's you access</a>.
+
+### Pull a volume ###
+
+To pull a volume from the Hub, the `--pull` mode is used. When combined with the `--purge` option, drives that depend on the volume that are owned by the user are also pulled.
+
+### Delete a volume ###
+
+To locally delete a volume, the `--delete` mode is used. This can be used in conjunction with the `--purge` and `--pull` options to, respectively, delete drives that depend on the volume locally and pulls the dependent drives and volume from the Hub. Note that the volume and drives will only be pulled if the user is the owner.
 
 Access Control List
 -------------------
@@ -605,7 +720,7 @@ Every user with the volume descriptor and read permissions can consult the Acces
 ```
 $> infinit-acl --list --path /mnt/shared/awesome.txt
 /mnt/shared/awesome.txt:
-     alice: rw
+     alice: rw (owner)
      bob: r
 ```
 
@@ -913,6 +1028,14 @@ Joined drive "alice/workspace".
 ```
 
 That's it, you are now allowed to mount the volume (i.e. 'alice/shared') associated with the drive to browse, store and access files. Note that you could have done that without using through the drive invitation process because you are using the command-line tools. Non-tech-savvy users, however, will appreciate having an interface with only the drives they have been invited to join and thus have access to.
+
+### Pull a drive ###
+
+A drive can be pulled from the Hub using the `--pull` mode. The `--purge` option is kept for consistency but currently has no effect.
+
+### Delete a drive ###
+
+To locally delete a drive, the `--delete` mode is used. This can be combined with the `--pull` option to remove the drive from the Hub. The `--purge` option is kept for consistency but currently has no effect.
 
 LDAP
 ----

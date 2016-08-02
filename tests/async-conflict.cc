@@ -70,8 +70,10 @@ make(
     overlay,
     boost::optional<int>(),
     std::move(s));
-  auto ops = elle::make_unique<infinit::filesystem::FileSystem>("volume", dn);
-  auto fs = elle::make_unique<reactor::filesystem::FileSystem>(std::move(ops), true);
+  auto ops = elle::make_unique<infinit::filesystem::FileSystem>(
+    "volume", dn, infinit::filesystem::allow_root_creation = true);
+  auto fs = elle::make_unique<reactor::filesystem::FileSystem>(
+    std::move(ops), true);
   return fs;
 }
 
