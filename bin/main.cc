@@ -142,7 +142,9 @@ namespace infinit
             };
             for (auto signal: signals)
             {
+#ifndef INFINIT_WINDOWS
               ELLE_DEBUG("set signal handler for %s", strsignal(signal));
+#endif
               reactor::scheduler().signal_handle(
                 signal,
                 [&]
