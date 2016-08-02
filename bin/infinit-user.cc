@@ -151,9 +151,13 @@ _push(variables_map const& args, infinit::User& user, bool atomic)
     user.fullname = fullname;
     user_updated = true;
   }
+  auto ldap_dn = optional(args, "ldap-name");
+  if (ldap_dn)
+    user.ldap_dn = *ldap_dn;
   if (flag(args, "full"))
   {
-    user.password_hash = hub_password_hash(args);
+    if (!ldap_dn)
+      user.password_hash = hub_password_hash(args);
     das::Serializer<infinit::DasPrivateUserPublish> view{user};
     beyond_push("user", user.name, view, user);
   }
@@ -183,7 +187,8 @@ infinit::User
 create_(std::string const& name,
         boost::optional<std::string> keys_file,
         boost::optional<std::string> email,
-        boost::optional<std::string> fullname)
+        boost::optional<std::string> fullname,
+        boost::optional<std::string> ldap_name)
 {
   auto keys = [&] // -> infinit::cryptography::rsa::KeyPair
   {
@@ -200,7 +205,7 @@ create_(std::string const& name,
     }
   }();
 
-  return infinit::User{name, keys, email, fullname};
+  return infinit::User{name, keys, email, fullname, ldap_name};
 }
 
 COMMAND(create)
@@ -208,15 +213,21 @@ COMMAND(create)
   bool push = aliased_flag(args, {"push-user", "push"});
   auto has_output = optional(args, "output");
   auto output = has_output ? get_output(args) : nullptr;
+  auto ldap_name = optional(args, "ldap-name");
+  auto full = flag(args, "full");
   if (!push)
   {
-    if (flag(args, "full") || flag(args, "password"))
+    if (ldap_name)
+      throw CommandLineError("LDAP can only be used with the Hub, add --push");
+    if (full || flag(args, "password"))
     {
       throw CommandLineError(
         elle::sprintf("--full and --password are only used when pushing "
                       "a user to %s", beyond(true)));
     }
   }
+  if (ldap_name && !full)
+    throw CommandLineError("LDAP user creation requires --full");
   auto name = get_name(args);
   auto email = optional(args, "email");
   if (email && !valid_email(email.get()))
@@ -224,7 +235,8 @@ COMMAND(create)
   infinit::User user = create_(name,
                                optional(args, "key"),
                                email,
-                               optional(args, "fullname"));
+                               optional(args, "fullname"),
+                               ldap_name);
   if (output)
   {
     save(*output, user);
@@ -370,7 +382,8 @@ COMMAND(signup_)
   infinit::User user = create_(name,
                                optional(args, "key"),
                                email,
-                               optional(args, "fullname"));
+                               optional(args, "fullname"),
+                               optional(args, "ldap-name"));
   try
   {
     ifnt.user_get(name);
@@ -387,7 +400,9 @@ COMMAND(signup_)
 COMMAND(login)
 {
   auto name = get_name(args);
-  LoginCredentials c{name, hub_password_hash(args)};
+  auto pass = _password(args, "password", "Password");
+  auto hashed_pass = hash_password(pass, _hub_salt);
+  LoginCredentials c{ name, hashed_pass, pass };
   das::Serializer<DasLoginCredentials> credentials{c};
   auto json = beyond_login(name, credentials);
   elle::serialization::json::SerializerIn input(json, false);
@@ -507,9 +522,13 @@ main(int argc, char** argv)
   Mode::OptionDescription option_avatar =
     { "avatar", value<std::string>(), "path to an image to use as avatar" };
   Mode::OptionDescription option_key =
-    {"key,k", value<std::string>(),
+    { "key,k", value<std::string>(),
       "RSA key pair in PEM format - e.g. your SSH key "
       "(default: generate key pair)" };
+  Mode::OptionDescription option_ldap_dn =
+    { "ldap-name,l", value<std::string>(),
+      "LDAP distinguished name of the user, "
+      "enables authentication through LDAP" };
   Modes modes {
     {
       "create",
@@ -527,6 +546,7 @@ main(int argc, char** argv)
         option_fullname,
         option_push_full,
         option_push_password,
+        option_ldap_dn,
         option_output("user"),
       },
     },
@@ -615,6 +635,7 @@ main(int argc, char** argv)
         option_key,
         option_push_full,
         option_push_password,
+        option_ldap_dn,
       },
     },
     {

@@ -246,8 +246,9 @@ namespace infinit
       if (empty)
       {
         ELLE_DEBUG("file block is empty");
+        auto now = time(nullptr);
         _header = FileHeader(0, 1, S_IFREG | 0600,
-                             time(nullptr), time(nullptr), time(nullptr),
+                             now, now, now, now,
                              File::default_block_size);
       }
       else
@@ -291,7 +292,7 @@ namespace infinit
       _block_version = -1;
       _last_used = FileSystem::now();
       _header = FileHeader ( 0, 1, S_IFREG | mode,
-        time(nullptr), time(nullptr), time(nullptr),
+        time(nullptr), time(nullptr), time(nullptr), time(nullptr),
         File::default_block_size
       );
     }
@@ -370,7 +371,15 @@ namespace infinit
       elle::Buffer serdata;
       {
         elle::IOStream os(serdata.ostreambuf());
-        elle::serialization::binary::SerializerOut output(os);
+        auto version = model.version();
+        auto versions =
+          elle::serialization::_details::dependencies<typename FileData::serialization_tag>(
+            version, 42);
+        versions.emplace(
+          elle::type_info<typename FileData::serialization_tag>(),
+          version);
+        elle::serialization::binary::SerializerOut output(os,
+          versions, true);
         output.serialize("header", _header);
         output.serialize("fat", _fat);
         output.serialize("data", _data);
