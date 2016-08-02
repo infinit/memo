@@ -191,7 +191,7 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
         auto admin = boost::any_cast<bool>(d.at("admin"));
         auto owner = boost::any_cast<bool>(d.at("owner"));
         const char* mode = w ? (r ? "rw" : "w") : (r ? "r" : "none");
-        output << "\t" << n;
+        output << "    " << n;
         if (admin || owner)
         {
           output << " (";
@@ -205,7 +205,7 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
         }
         output << ": " << mode << std::endl;
       }
-      std::cout << output.str() << std::endl;
+      std::cout << output.str();
     }
     catch (std::exception const& e)
     {
