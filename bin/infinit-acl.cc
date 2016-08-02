@@ -116,6 +116,7 @@ recursive_action(A action, std::string const& path, Args ... args)
       continue;
     }
     action(it->path().string(), args...);
+    reactor::yield();
   }
 }
 
