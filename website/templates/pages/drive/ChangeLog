@@ -1,3 +1,16 @@
+## [0.2.6] (backend 0.6.1) - 2016-08-03
+
+### Changed
+
+- Use backend 0.6.1.
+
+## [0.2.5] (backend 0.6.0) - 2016-06-08
+
+### Changed
+
+- Use backend 0.6.0.
+- Change mountpoint name to be the drive name.
+
 ## [0.2.4] (backend 0.5.5) - 2016-05-02
 
 ### Fixed
