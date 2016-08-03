@@ -1709,6 +1709,24 @@ body.solutions {
   }
 }
 
+body.notfound {
+  .content {
+    text-align: center; min-height: 500px;
+    .error { position: absolute; top:30%; text-align: center; z-index: 4; width: 100%; }
+    h1 { font-size: 65px;}
+    p { font-size: 20px; }
+    a { color: @infinitblue; .transition(); }
+    a:hover { color: darken(@infinitblue, 10%); }
+  }
+
+  #pt {
+    position: absolute; z-index: 3;
+    width: 100%;
+    height: 100%;
+  }
+  footer { display: none;}
+}
+
 
 
 /*--------------.
