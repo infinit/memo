@@ -15,6 +15,8 @@ for i in range(4):
 
 from bottle import mako_view as view, mako_template as template
 
+# bottle.TEMPLATE_PATH = ['%s/share/infinit/website/templates' % PREFIX]
+
 def url(url):
   host = '://'.join(bottle.request.urlparts[:2])
   if url and url[0] != '/':

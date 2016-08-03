@@ -644,7 +644,7 @@ namespace infinit
                   }
                   catch (elle::Error const& e)
                   {
-                    ELLE_TRACE("Eviction of %s failed with %s", address, e);
+                    ELLE_TRACE("%s: eviction of %s failed: %s", this, address, e);
                     break;
                   }
                 }

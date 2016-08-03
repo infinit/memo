@@ -13,22 +13,22 @@ gcs_login = uwsgi.opt.get('gcs-login')
 gcs_key = uwsgi.opt.get('gcs-key')
 if gcs_login is not None and gcs_key is not None:
   gcs = infinit.beyond.gcs.GCS(
-    login = gcs_login,
-    key = bytes(gcs_key, 'UTF-8'),
+    login = gcs_login.decode(),
+    key = gcs_key,
     bucket_ns = 'sh_infinit_beyond')
 else:
   gcs = None
 
 beyond = infinit.beyond.Beyond(
   datastore = datastore,
-  dropbox_app_key = uwsgi.opt.get('dropbox-app-key)}'),
-  dropbox_app_secret = uwsgi.opt.get('dropbox-app-secret)}'),
-  google_app_key = uwsgi.opt.get('google-app-key)}'),
-  google_app_secret = uwsgi.opt.get('google-app-secret)}'),
-  gcs_app_key = uwsgi.opt.get('gcs-app-key)}'),
-  gcs_app_secret = uwsgi.opt.get('gcs-app-secret)}'),
+  dropbox_app_key = uwsgi.opt.get('dropbox-app-key').decode(),
+  dropbox_app_secret = uwsgi.opt.get('dropbox-app-secret').decode(),
+  google_app_key = uwsgi.opt.get('google-app-key').decode(),
+  google_app_secret = uwsgi.opt.get('google-app-secret').decode(),
+  gcs_app_key = uwsgi.opt.get('gcs-app-key').decode(),
+  gcs_app_secret = uwsgi.opt.get('gcs-app-secret').decode(),
   validate_email_address = False,
-  sendwithus_api_key = uwsgi.opt.get('sendwithus-api-key)}'),
+  sendwithus_api_key = uwsgi.opt.get('sendwithus-api-key').decode(),
   delegate_user = ${repr(delegate_user)},
 )
 application = infinit.beyond.bottle.Bottle(beyond, gcs = gcs)

@@ -179,8 +179,12 @@ namespace infinit
             boost::program_options::variables_map vm;
             try
             {
-              auto parser =
-                boost::program_options::command_line_parser(argc, argv);
+              namespace po = boost::program_options;
+              auto parser = po::command_line_parser(argc, argv);
+              auto style =
+                static_cast<int>(po::command_line_style::default_style);
+              style &= ~po::command_line_style::allow_guessing;
+              parser.style(style);
               parser.options(options);
               parser.allow_unregistered();
               auto parsed = parser.run();
@@ -305,6 +309,10 @@ namespace infinit
 #endif
                 };
                 for (auto signal: signals)
+                {
+#ifndef INFINIT_WINDOWS
+                  ELLE_DEBUG("set signal handler for %s", strsignal(signal));
+#endif
                   reactor::scheduler().signal_handle(
                     signal,
                     [&]
@@ -312,6 +320,7 @@ namespace infinit
                       main_thread.terminate();
                       killed();
                     });
+                }
               }
               try
               {

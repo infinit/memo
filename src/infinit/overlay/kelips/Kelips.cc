@@ -3168,6 +3168,7 @@ namespace infinit
         p.query_node = false;
         p.sender = _self;
         p.originAddress = _self;
+        p.observer = this->_observer;
         for (auto const& te: _local_endpoints)
           p.originEndpoints.push_back(te.first);
         p.fileAddress = file;

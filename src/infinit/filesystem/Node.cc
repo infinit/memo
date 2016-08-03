@@ -483,6 +483,9 @@ namespace infinit
       }
       st->st_dev = 1;
       st->st_ino = (unsigned short)(uint64_t)(void*)this;
+#ifdef INFINIT_MACOSX
+      st->st_birthtime = h.btime;
+#endif
       ELLE_DEBUG("%s: stat mode=%x size=%s links=%s",
                  *this, h.mode&0777, h.size, h.links);
     }
