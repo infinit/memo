@@ -1,5 +1,7 @@
 #include <elle/log.hh>
 
+#include <reactor/http/url.hh>
+
 #include <das/serializer.hh>
 
 #include <cryptography/rsa/KeyPair.hh>
@@ -102,7 +104,8 @@ COMMAND(fetch)
     };
     try
     {
-      auto user = beyond_fetch<infinit::User>("user", name);
+      auto user = beyond_fetch<infinit::User>("user",
+                                              reactor::http::url_encode(name));
       ifnt.user_save(std::move(user));
       avatar();
     }
@@ -481,6 +484,21 @@ COMMAND(list)
     }
 }
 
+COMMAND(hash_)
+{
+  auto name = get_name(args);
+  auto user = ifnt.user_get(name);
+  auto key_hash = infinit::model::doughnut::short_key_hash(user.public_key);
+  if (script_mode)
+  {
+    elle::json::Object res;
+    res[name] = key_hash;
+    elle::json::write(std::cout, res);
+  }
+  else
+    std::cout << key_hash << std::endl;
+}
+
 template <typename Buffer>
 void
 _save_avatar(std::string const& name,
@@ -604,7 +622,8 @@ main(int argc, char** argv)
       &fetch,
       {},
       {
-        { "name,n", value<std::vector<std::string>>(), "user to fetch" },
+        { "name,n", value<std::vector<std::string>>(),
+          "user with name or hash to fetch" },
         { "no-avatar", bool_switch(), "do not fetch user avatar" },
       },
     },
@@ -692,5 +711,17 @@ main(int argc, char** argv)
       &list,
     },
   };
-  return infinit::main("Infinit user utility", modes, argc, argv, {});
+  Modes hidden_modes {
+    {
+      "hash",
+      "Get short hash of user's key",
+      &hash_,
+      "--name USER",
+      {
+        { "name,n", value<std::string>(), "user name (default: system user)" },
+      },
+    },
+  };
+  return infinit::main(
+    "Infinit user utility", modes, argc, argv, {}, {}, hidden_modes);
 }
