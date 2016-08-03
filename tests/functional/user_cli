@@ -299,3 +299,18 @@ with Beyond() as beyond, \
   assert not path.exists('%s/b/n/a' % bob.passports_path)
   assert not path.exists('%s/a/n/b' % bob.passports_path)
   assertEq(len(os.listdir('%s/cache/b' % bob.state_path)), 0)
+
+# User by hash.
+with Beyond() as beyond, Infinit(beyond = beyond) as alice:
+  alice.run(['infinit-user', '--signup', 'alice',
+             '--email', 'alice@infinit.sh'])
+  user = alice.run_json(['infinit-user', '--export', 'alice'])
+  key_hash = alice.run_json(
+    ['infinit-user', '--hash', '-s', '--name', 'alice'])['alice']
+  alice.run(['infinit-user', '--delete', '--as', 'alice', '--name', 'alice'],
+            input = 'alice')
+  assertEq(len(alice.run_json(['infinit-user', '--list', '-s'])), 0)
+  alice.run(['infinit-user', '--fetch', key_hash])
+  fetched_user = alice.run_json(
+    ['infinit-user', '--export', '-s', '--name', 'alice'])
+  assertEq(fetched_user, user)
