@@ -123,12 +123,6 @@ def parse_options():
     default = 'us-east-1',
     help = 'DynamoDB AWS region')
   parser.add_argument(
-    '--couchdb-port',
-    metavar = 'PORT',
-    type = int,
-    help = 'CouchDB port (default: random)',
-    default = 0)
-  parser.add_argument(
     '--email-validation',
     type = bool,
     default = True,
