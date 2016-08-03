@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <!-- ${version} -->
     <%
-    title = context.get('title', 'Infinit - Decentralized Software‑Based File Storage Platform')
+    title = context.get('title', 'Infinit Storage Platform')
     description = context.get('description', 'Infinit allows for the creation of flexible, secure and controlled file storage infrastructure on top of public, private or hybrid cloud resources.')
     %>
     <title>${title}</title>
@@ -30,6 +30,10 @@
       <link rel="canonical" href="https://infinit.sh${route('doc_get_started')}" />
     % endif
 
+    % if 'drive' in request.route.name:
+      <link rel="canonical" href="https://infinit.sh${route('drive')}" />
+    % endif
+
     % if 'press' in request.route.name:
       <link rel="canonical" href="https://infinit.sh/press" />
     % endif
@@ -42,21 +46,18 @@
     <link rel="stylesheet" type="text/css" media="all" href="${url('css/main.min.css')}" />
   </head>
 
-  <body class="${request.route.name} ${'documentation' if request.route.name[:4] == 'doc_' else ''} ${'doc_get_started' if 'doc_get_started' in request.route.name else ''}">
+  <body class="${request.route.name} ${'documentation' if request.route.name[:4] == 'doc_' else ''} ${'doc_get_started' if 'doc_get_started' in request.route.name else ''} ${'drive' if request.route.name[:5] == 'drive' else ''}">
 
     <div id="popup_notice"><span class="icon"></span> <span class="message"></span></div>
     <div id="full"></div>
 
     % if request.route.name == 'home':
-    <!--
-      <div id="announcement"></div>
-    -->
+      <!--<div id="announcement">We're organizing an <a href="http://www.meetup.com/Infinit-Paris/events/231333549/" target="_blank">Infinit Meetup</a> about distributed storage with Docker in Paris on 5 July. <a href="http://www.meetup.com/Infinit-Paris/events/231333549/" target="_blank">Join us!</a></div>-->
     % endif
 
     <header>
       <a href="${route('home')}">
         <img src="${url('images/logo.png')}" alt="Infinit">
-        <span>Storage</span>
       </a>
 
       <nav>
@@ -118,26 +119,28 @@
             </li>
             <li class="list-company">
               <ul>
-                <li><a href="http://infinit.one">About</a></li>
+                <li class="category">Company</li>
                 <li><a href="${route('contact')}">Contact</a></li>
-                <li><a href="http://blog.infinit.one">Blog</a></li>
+                <li><a href="http://blog.infinit.sh">Blog</a></li>
                 <li><a href="${route('legal')}">Legal</a></li>
               </ul>
             </li>
             <li class="list-help">
               <ul>
+                <li class="category">Resources</li>
                 <li><a href="${route('doc_get_started')}">Get Started</a></li>
                 <li><a href="${route('doc_overview')}">Documentation</a></li>
-                <li><a href="${route('download')}">Download</a></li>
                 <li><a href="http://help.infinit.sh">Feedback</a></li>
+                <li><a href="${route('opensource')}">Open Source</a></li>
+                <li><a href="${route('doc_status')}">Status</a></li>
               </ul>
             </li>
             <li class="list-product">
               <ul>
+                <li class="category">Software</li>
+                <li><a href="${route('download')}">Download</a></li>
+                <li><a href="${route('update')}">Update</a></li>
                 <li><a href="${route('pricing')}">Pricing</a></li>
-                <li><a href="${route('solutions')}">Solutions</a></li>
-                <li><a href="${route('opensource')}">Open Source</a></li>
-                <li><a href="${route('doc_status')}">Status</a></li>
               </ul>
             </li>
             <li class="connect">
