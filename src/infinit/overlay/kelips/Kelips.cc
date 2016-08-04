@@ -1047,6 +1047,54 @@ namespace infinit
                     res.second.push_back(std::make_pair(Address::null, _self));
                     return res;
                   }));
+              rpcs.add(
+                "kelips_fetch_state2",
+                std::function<SerState2 ()>(
+                  [this] ()
+                  {
+                    SerState2 res;
+                    std::unordered_map<Address, int> index;
+                    std::vector<GossipEndpoint> eps;
+                    for (auto const& e: _local_endpoints)
+                      eps.push_back(e.first);
+                    res.first.push_back(std::make_pair(_self, eps));
+                    index[_self] = 0;
+                    for (auto const& contacts: this->_state.contacts)
+                      for (auto const& c: contacts)
+                      {
+                        std::vector<GossipEndpoint> eps;
+                        for (auto const& e: c.second.endpoints)
+                          eps.push_back(e.first);
+                        index[c.second.address] = res.first.size();
+                        res.first.push_back(std::make_pair(c.second.address, eps));
+                      }
+                    std::multimap<Address, Address> ofiles; // ordered fileId -> owner
+                    for (auto const& f: this->_state.files)
+                      ofiles.insert(std::make_pair(f.second.address, f.second.home_node));
+                    Address prev = Address::null;
+                    for (auto const& f: ofiles)
+                    {
+                      auto faddr = f.first;
+                      auto fhome = f.second;
+                      int p = 0;
+                      while (p<32 && faddr.value()[p] == prev.value()[p])
+                        ++p;
+                      std::string daddr(faddr.value()+p, faddr.value()+32);
+                      int idx = 0;
+                      auto it = index.find(fhome);
+                      if (it == index.end())
+                      {
+                        res.first.push_back(std::make_pair(fhome, std::vector<GossipEndpoint>()));
+                        index[fhome] = res.first.size()-1;
+                        idx = res.first.size()-1;
+                      }
+                      else
+                        idx = it->second;
+                      res.second.push_back(std::make_pair(daddr, idx));
+                      prev = faddr;
+                    }
+                    return res;
+                  }));
             });
           this->_port = l->server_endpoint().port();
           for (auto const& itf: elle::network::Interface::get_map(
@@ -1120,6 +1168,32 @@ namespace infinit
 
       SerState Node::get_serstate(PeerLocation pl)
       {
+        auto proceed = [this](infinit::model::doughnut::Remote& peer) -> SerState
+        {
+          if (this->doughnut()->version() < elle::Version(0, 7, 0))
+          {
+            auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
+            return rpc();
+          }
+          auto rpc = peer.make_rpc<SerState2()>("kelips_fetch_state2");
+          SerState2 state = rpc();
+          SerState res;
+          for (auto const& c: state.first)
+            if (!c.second.empty())
+              res.first.insert(c);
+          Address prev = Address::null;
+          for (auto const& f: state.second)
+          {
+            Address next = prev;
+            ELLE_ASSERT(f.first.size() <= 32);
+            memcpy(const_cast<unsigned char*>(next.value()+32-f.first.size()), f.first.data(), f.first.size());
+            res.second.push_back(std::make_pair(next, state.first.at(f.second).first));
+            prev = next;
+          }
+          // UGLY HACK we must preserve
+          res.second.push_back(std::make_pair(Address::null, state.first.front().first));
+          return res;
+        };
         std::vector<GossipEndpoint> endpoints;
         for (auto const& ep: pl.second)
           endpoints.push_back(GossipEndpoint(ep.address(), ep.port()));
@@ -1141,8 +1215,7 @@ namespace infinit
               elle::unconst(this)->_remotes_server);
             peer.connect(5_sec);
             ELLE_DEBUG("utp connected");
-            auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
-            return rpc();
+            return proceed(peer);
           }
           catch (elle::Error const& e)
           {
@@ -1160,8 +1233,7 @@ namespace infinit
                 pl.first,
                 pl.second.front());
               peer.connect(5_sec);
-              auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
-              return rpc();
+              return proceed(peer);
             }
             catch (elle::Error const& e)
             {
@@ -3096,6 +3168,7 @@ namespace infinit
         p.query_node = false;
         p.sender = _self;
         p.originAddress = _self;
+        p.observer = this->_observer;
         for (auto const& te: _local_endpoints)
           p.originEndpoints.push_back(te.first);
         p.fileAddress = file;

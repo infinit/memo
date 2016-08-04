@@ -21,9 +21,19 @@
   <priority>0.8</priority>
 </url>
 <url>
-  <loc>https://infinit.sh/solutions</loc>
+  <loc>https://infinit.sh/pricing</loc>
   <changefreq>monthly</changefreq>
   <priority>0.8</priority>
+</url>
+<url>
+  <loc>https://infinit.sh/solutions</loc>
+  <changefreq>monthly</changefreq>
+  <priority>0.6</priority>
+</url>
+<url>
+  <loc>https://infinit.sh/donwload</loc>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
 </url>
 <url>
   <loc>https://infinit.sh/open-source</loc>
@@ -32,6 +42,11 @@
 </url>
 <url>
   <loc>https://infinit.sh/documentation/overview</loc>
+  <changefreq>monthly</changefreq>
+  <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://infinit.sh/documentation/deployments</loc>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
 </url>
@@ -46,6 +61,36 @@
   <priority>0.8</priority>
 </url>
 <url>
+  <loc>https://infinit.sh/documentation/upgrading</loc>
+  <changefreq>monthly</changefreq>
+  <priority>0.6</priority>
+</url>
+<url>
+  <loc>https://infinit.sh/documentation/storages/filesystem</loc>
+  <changefreq>monthly</changefreq>
+  <priority>0.6</priority>
+</url>
+<url>
+  <loc>https://infinit.sh/documentation/storages/s3</loc>
+  <changefreq>monthly</changefreq>
+  <priority>0.6</priority>
+</url>
+<url>
+  <loc>https://infinit.sh/documentation/storages/gcs</loc>
+  <changefreq>monthly</changefreq>
+  <priority>0.6</priority>
+</url>
+<url>
+  <loc>https://infinit.sh/documentation/environment-variables</loc>
+  <changefreq>monthly</changefreq>
+  <priority>0.6</priority>
+</url>
+<url>
+  <loc>https://infinit.sh/documentation/best-practices</loc>
+  <changefreq>monthly</changefreq>
+  <priority>0.6</priority>
+</url>
+<url>
   <loc>https://infinit.sh/documentation/roadmap</loc>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
@@ -54,6 +99,168 @@
   <loc>https://infinit.sh/documentation/changelog</loc>
   <changefreq>monthly</changefreq>
   <priority>0.7</priority>
+</url>
+<url>
+  <loc>https://infinit.sh/documentation/status</loc>
+  <changefreq>monthly</changefreq>
+  <priority>0.5</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/aerofs</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>
+https://infinit.sh/documentation/comparison/amazon-cloud-drive
+</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/aws-s3</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>
+https://infinit.sh/documentation/comparison/backblaze
+</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>
+https://infinit.sh/documentation/comparison/bitcasa
+</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/bsync</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/box</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/ceph</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/coda</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>
+https://infinit.sh/documentation/comparison/dropbox
+</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>
+https://infinit.sh/documentation/comparison/glusterfs
+</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/gcs</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/hammer</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/hdfs</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/icloud</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>
+https://infinit.sh/documentation/comparison/infinit
+</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/ipfs</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/lustre</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>
+https://infinit.sh/documentation/comparison/moosefs
+</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/nfs</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>
+https://infinit.sh/documentation/comparison/owncloud
+</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/pydio</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/storj</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>
+https://infinit.sh/documentation/comparison/sugarsync
+</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>
+https://infinit.sh/documentation/comparison/tahoe-lafs
+</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://infinit.sh/documentation/comparison/wuala</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>
+https://infinit.sh/documentation/comparison/xtreemfs
+</loc>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
 </url>
 <url>
   <loc>https://infinit.sh/contact</loc>

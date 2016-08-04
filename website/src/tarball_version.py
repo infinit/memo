@@ -1,1 +1,1 @@
-tarball_version = '0.6.0'
+tarball_version = '0.6.1'

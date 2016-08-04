@@ -1,7 +1,38 @@
 # Change Log
 
+<!--
+## [0.7.0]
 
-## [0.6.1]
+### Added
+
+- IPv6 support.
+
+### Changed
+
+- Optimize Kelips packet size.
+
+### Fixed
+
+- The 'creation time' shown when displaying file informations on MacOS
+  is now filled correctly.
+-->
+
+## [0.6.2]
+
+### Added
+
+- Enable to forcefully kill pending fs operation on shutdown with a
+  triple `SIGINT`.
+
+### Fixed
+
+- Fix segmentation fault on shutdown
+
+
+## [0.6.1] - 2016-08-01
+
+Diagnostic utilities, ability to link networks with several users, bug
+fixes and performances improvements.
 
 ### Added
 
@@ -33,6 +64,7 @@
 - Fix swapped `r` and `w` flags in permissions.
 - Fix error when deserializing mutable blocks with `infinit-block`.
 - Linking a network with several users will now behave correcly.
+- Fix deadlock on SIGINT.
 
 ### Removed
 

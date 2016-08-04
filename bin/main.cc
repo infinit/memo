@@ -133,22 +133,6 @@ namespace infinit
           // Not required on OS X, see: boost/libs/filesystem/src/path.cpp:819
           check_broken_locale();
 #endif
-          if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
-          {
-            static const std::vector<int> signals = {SIGINT, SIGTERM
-#ifndef INFINIT_WINDOWS
-                                                     , SIGQUIT
-#endif
-            };
-            for (auto signal: signals)
-              reactor::scheduler().signal_handle(
-                signal,
-                [&]
-                {
-                  ELLE_TRACE("terminating");
-                  main_thread.terminate();
-                });
-          }
           ELLE_TRACE("parse command line")
           {
             using boost::program_options::value;
@@ -195,8 +179,12 @@ namespace infinit
             boost::program_options::variables_map vm;
             try
             {
-              auto parser =
-                boost::program_options::command_line_parser(argc, argv);
+              namespace po = boost::program_options;
+              auto parser = po::command_line_parser(argc, argv);
+              auto style =
+                static_cast<int>(po::command_line_style::default_style);
+              style &= ~po::command_line_style::allow_guessing;
+              parser.style(style);
               parser.options(options);
               parser.allow_unregistered();
               auto parsed = parser.run();
@@ -312,12 +300,36 @@ namespace infinit
                                                               }));
               }
 #endif
+              boost::signals2::signal<void ()> killed;
+              if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
+              {
+                static const std::vector<int> signals = {SIGINT, SIGTERM
+#ifndef INFINIT_WINDOWS
+                                                         , SIGQUIT
+#endif
+                };
+                for (auto signal: signals)
+                {
+#ifndef INFINIT_WINDOWS
+                  ELLE_DEBUG("set signal handler for %s", strsignal(signal));
+#endif
+                  reactor::scheduler().signal_handle(
+                    signal,
+                    [&]
+                    {
+                      main_thread.terminate();
+                      killed();
+                    });
+                }
+              }
               try
               {
                 std::vector<std::string> args =
                   mode_arguments(tokens, mode, modes, hidden_modes, parsed);
-                mode->action(parse_args(mode->options, args,
-                                        (positional_arg ? positional_arg.get() : "name")));
+                mode->action(
+                  parse_args(mode->options, args,
+                             (positional_arg ? positional_arg.get() : "name")),
+                  killed);
                 if (crash_upload_thread)
                   reactor::wait(*crash_upload_thread);
               }
