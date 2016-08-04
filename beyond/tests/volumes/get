@@ -36,7 +36,7 @@ with Beyond() as beyond:
       volume2 = Volume(name = 'fun', network = network)
       volume2.put(beyond)
       res = beyond.get('users/%s/volumes' % user['name'],
-                       auth = user.private_key).json()
+                       auth = user).json()
       volumes = sorted(res['volumes'], key = itemgetter('name'))
       assertEq(len(volumes), 2)
       assertEq(volumes[0]['network'], volumes[1]['network'], network['name'])
@@ -55,7 +55,7 @@ with Beyond() as beyond:
       volume2 = Volume(name = 'business2', network = network, owner = user2)
       volume2.put(beyond)
       res = beyond.get('users/%s/volumes' % user2['name'],
-                       auth = user2.private_key).json()
+                       auth = user2).json()
       volumes = sorted(res['volumes'], key = itemgetter('name'))
       print(volumes)
       assertEq(len(volumes), 2)

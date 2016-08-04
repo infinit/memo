@@ -19,7 +19,7 @@ with Beyond() as beyond:
       network = Network(name = 'infinit', owner = user)
       network.put(beyond, owner = user)
       beyond.delete('networks/%s' % network['name'],
-                    auth = user.private_key)
+                    auth = user)
 
     def test_push_passport_and_delete(self):
       alice, bob = User(), User()
@@ -29,7 +29,7 @@ with Beyond() as beyond:
       passport = Passport(network, bob)
       passport.put(beyond)
       beyond.delete('networks/%s' % network['name'],
-                    auth = alice.private_key)
+                    auth = alice)
 
     def test_push_pull_push_pull(self):
       user = User()
@@ -38,7 +38,7 @@ with Beyond() as beyond:
       for i in range(0, 10):
         network.put(beyond, owner = user)
         beyond.delete('networks/%s' % network['name'],
-                      auth = user.private_key)
+                      auth = user)
 
     def test_authentication(self):
       user = User()
@@ -55,7 +55,7 @@ with Beyond() as beyond:
       network = Network(name = 'infinit', owner = alice)
       network.put(beyond, owner = alice)
       throws(lambda: beyond.delete('networks/%s' % network['name'],
-                                   auth = bob.private_key),
+                                   auth = bob),
              json = False,
              expected = 403)
 
@@ -66,7 +66,7 @@ with Beyond() as beyond:
              json = False,
              expected = 404)
       throws(lambda: beyond.delete('networks/%s/unknown' % user['name'],
-                                   auth = user.private_key),
+                                   auth = user),
              json = False,
              expected = 404)
 
@@ -80,7 +80,7 @@ with Beyond() as beyond:
       drive = Drive(name = 'd', volume = volume)
       drive.put(beyond)
       beyond.delete('networks/%s' % network['name'],
-                    auth = user.private_key,
+                    auth = user,
                     params = {'purge': 'true'})
       throws(lambda: beyond.get('networks/%s' % network['name'], json = False),
              404)
@@ -99,9 +99,9 @@ with Beyond() as beyond:
       volume.put(beyond)
       drive = Drive(name = 'd', volume = volume)
       drive.put(beyond)
-      beyond.delete('volumes/%s' % volume['name'], auth = user.private_key)
+      beyond.delete('volumes/%s' % volume['name'], auth = user)
       beyond.delete('networks/%s' % network['name'],
-                    auth = user.private_key,
+                    auth = user,
                     params = {'purge': 'true'})
       throws(lambda: beyond.get('networks/%s' % network['name'], json = False),
              404)
@@ -127,7 +127,7 @@ with Beyond() as beyond:
       drive2 = Drive(name = 'd2', owner = alice, volume = volume2)
       drive2.put(beyond)
       beyond.delete('networks/%s' % network['name'],
-                    auth = bob.private_key,
+                    auth = bob,
                     params = {'purge': 'true'})
       throws(lambda: beyond.get('networks/%s' % network['name'], json = False),
              404)

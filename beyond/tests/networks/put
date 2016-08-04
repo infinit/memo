@@ -101,12 +101,12 @@ with Beyond() as beyond:
       passport.put(beyond)
       invitee_passport = beyond.get(
         'networks/%s/passports/%s' % (network['name'], invitee['name']),
-        auth = invitee.private_key).json()
+        auth = invitee).json()
       network['version'] = '0.1.5'
       network.put(beyond, owner = user)
       invitee_passport_2 = beyond.get(
         'networks/%s/passports/%s' % (network['name'], invitee['name']),
-        auth = invitee.private_key).json()
+        auth = invitee).json()
       compare(invitee_passport, invitee_passport_2)
 
     def test_endpoints_are_kept(self):
@@ -118,16 +118,16 @@ with Beyond() as beyond:
       passport.put(beyond)
       invitee_passport = beyond.put(
         'networks/%s/endpoints/%s/node_id' % (network['name'], invitee['name']),
-        auth = invitee.private_key,
+        auth = invitee,
         json = {'stuff': 1}).json()
       invitee_passport = beyond.get(
         'networks/%s/endpoints' % network['name'],
-        auth = invitee.private_key).json()
+        auth = invitee).json()
       network['version'] = '0.1.5'
       network.put(beyond, owner = user)
       invitee_passport_2 = beyond.get(
         'networks/%s/endpoints' % network['name'],
-        auth = invitee.private_key).json()
+        auth = invitee).json()
       compare(invitee_passport, invitee_passport_2)
 
   if __name__ == '__main__':

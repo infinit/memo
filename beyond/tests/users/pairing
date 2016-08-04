@@ -38,7 +38,7 @@ class PairData(dict):
 
   def put(self, hub, owner):
     return hub.put('users/%s/pairing' % self.__user['name'], json = self,
-                   auth = owner.private_key)
+                   auth = owner)
 
 with Beyond() as beyond:
 

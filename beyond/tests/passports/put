@@ -24,7 +24,7 @@ with Beyond() as beyond:
       passport.put(beyond)
       beyond.get('networks/%s/passports/%s' % (
         network['name'], invitee['name']),
-                 auth = invitee.private_key)
+                 auth = invitee)
 
     def test_all_your_passports(self):
       count = 10
@@ -38,7 +38,7 @@ with Beyond() as beyond:
         passport = Passport(network, invitee)
         passport.put(beyond)
       l = beyond.get('users/%s/passports' % invitee['name'],
-                     auth = invitee.private_key).json()
+                     auth = invitee).json()
       assertEq(len(l['passports']), count)
 
     def test_authorisation_put(self):
@@ -67,7 +67,7 @@ with Beyond() as beyond:
         passport = Passport(networks[i], invitee)
         passport.put(beyond, owner = user)
       beyond.get('users/%s/passports' % invitee['name'],
-                 auth = invitee.private_key)
+                 auth = invitee)
 
     def test_multiple_users(self):
       def populate(invite):
@@ -82,7 +82,7 @@ with Beyond() as beyond:
       for i in range(10):
         populate(i % 2)
       user, invitee, network = populate(True)
-      beyond.get('users/%s/passports' % invitee['name'], auth = invitee.private_key)
+      beyond.get('users/%s/passports' % invitee['name'], auth = invitee)
 
     def test_owning_a_network_and_being_invited_to_another(self):
       A, B = User(), User()
@@ -93,8 +93,8 @@ with Beyond() as beyond:
       network_b.put(beyond)
       Passport(network_a, B).put(beyond)
       Passport(network_b, A).put(beyond)
-      beyond.get('users/%s/passports' % B['name'], auth = B.private_key)
-      beyond.get('users/%s/passports' % A['name'], auth = A.private_key)
+      beyond.get('users/%s/passports' % B['name'], auth = B)
+      beyond.get('users/%s/passports' % A['name'], auth = A)
 
     def test_authorisation_get(self):
       user = User()

@@ -28,7 +28,7 @@ with Beyond() as beyond:
              json = False)
       beyond.get('users/%s' % user['name'])
       beyond.delete('users/%s' % user['name'],
-                    auth = user.private_key)
+                    auth = user)
       throws(lambda: beyond.get('users/%s' % user['name']),
              404,
              json = False)
@@ -39,7 +39,7 @@ with Beyond() as beyond:
       beyond.put('users/%s' % alice['name'], json = alice)
       beyond.put('users/%s' % bob['name'], json = bob)
       throws(lambda: beyond.delete('users/%s' % bob['name'],
-                                   auth = alice.private_key),
+                                   auth = alice),
              403,
              json = False)
 
@@ -53,7 +53,7 @@ with Beyond() as beyond:
       drive = Drive(name = 'd', volume = volume)
       drive.put(beyond)
       beyond.delete('users/%s' % user['name'],
-                    auth = user.private_key,
+                    auth = user,
                     params = {'purge': 'true'})
       throws(lambda: beyond.get('users/%s' % user['name'], json = False),
              404)
@@ -76,7 +76,7 @@ with Beyond() as beyond:
       drive = Drive(name = 'd', volume = volume, owner = user)
       drive.put(beyond)
       beyond.delete('users/%s' % user['name'],
-                    auth = user.private_key,
+                    auth = user,
                     params = {'purge': 'true'})
       throws(lambda: beyond.get('users/%s' % user['name'], json = False),
              404)
@@ -104,7 +104,7 @@ with Beyond() as beyond:
       drive2 = Drive(name = 'd2', owner = user2, volume = volume2)
       drive2.put(beyond)
       beyond.delete('users/%s' % user1['name'],
-                    auth = user1.private_key,
+                    auth = user1,
                     params = {'purge': 'true'})
       throws(lambda: beyond.get('users/%s' % user1['name'], json = False),
              404)

@@ -132,7 +132,12 @@ class Beyond:
         kwargs['headers'] = {'Content-Type': 'application/json'}
       kwargs.setdefault('headers', {}).update(extra_headers)
       if auth:
-        der = base64.b64decode(auth['rsa'].encode('utf-8'))
+        # Ugly but make the api simpler.
+        if 'private_key' in auth:
+          private_key = auth['private_key']
+        else:
+          private_key = auth.private_key
+        der = base64.b64decode(private_key['rsa'].encode('utf-8'))
         k = RSA.importKey(der)
         data = kwargs['data']
         if not isinstance(data, bytes):
@@ -332,7 +337,7 @@ class Network(dict):
     if kwargs.get('auth') is not None:
       auth = kwargs.pop('auth')
     else:
-      auth = owner.private_key
+      auth = owner
     return hub.put(
       'networks/%s' % self['name'], json = self, auth = auth, **kwargs)
 
@@ -361,7 +366,14 @@ class Passport(dict):
     return hub.put('networks/%s/passports/%s' % (self.network['name'],
                                                  self.invitee['name']),
                    json = self,
-                   auth = owner.private_key)
+                   auth = owner)
+
+  def delete(self, hub, owner = None):
+    if owner is None:
+      owner = self.network.owner
+    return hub.delete('networks/%s/passports/%s' % (self.network['name'],
+                                                    self.invitee['name']),
+                      auth = owner)
 
 class Statistics(dict):
 
@@ -378,7 +390,7 @@ class Statistics(dict):
     return hub.put('networks/%s/stat/%s/%s' % (
       self.__network['name'], user['name'], self.__node_id),
                    json = self,
-                   auth = user.private_key)
+                   auth = user)
 
 class Volume(dict):
 
@@ -400,7 +412,7 @@ class Volume(dict):
     if owner is None:
       owner = self.__owner
     return hub.put('volumes/%s' % self['name'], json = self,
-                   auth = owner.private_key)
+                   auth = owner)
 
 class Drive(dict):
 
@@ -439,7 +451,7 @@ class Drive(dict):
     if owner is None:
       owner = self.__owner
     return hub.put('drives/%s' % self['name'], json = self,
-                   auth = owner.private_key)
+                   auth = owner)
 
   def invite(self, hub, invitee, **kwargs):
     '''Invite one user to the drive.
@@ -453,7 +465,7 @@ class Drive(dict):
     owner = self.volume.network.owner
     return hub.put('drives/%s/invitations/%s' % (self['name'], invitee),
                    json = invitation,
-                   auth = owner.private_key)
+                   auth = owner)
 
   def invite_many(self, hub, invitees, **kwargs):
     json = {}
@@ -466,7 +478,7 @@ class Drive(dict):
     owner = self.volume.network.owner
     return hub.put('drives/%s/invitations' % self['name'],
                    json = json,
-                   auth = owner.private_key)
+                   auth = owner)
 
 
   def accept(self, hub, invitee, **kwargs):
@@ -476,7 +488,7 @@ class Drive(dict):
     owner = self.volume.network.owner
     return hub.put('drives/%s/invitations/%s' % (self['name'], invitee['name']),
                    json = invitation,
-                   auth = invitee.private_key)
+                   auth = invitee)
 
   def accept_many(self, hub, invitees, **kwargs):
     for invitee in invitees:

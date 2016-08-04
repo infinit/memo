@@ -32,7 +32,7 @@ with Beyond() as beyond:
       network2 = Network(name = 'server1,server2', owner = user)
       network2.put(beyond)
       res = beyond.get('users/%s/networks' % user['name'],
-                       auth = user.private_key).json()
+                       auth = user).json()
       networks = sorted(res['networks'], key = itemgetter('name'))
       assertEq(len(networks), 2)
       assertEq(networks[0]['owner'], networks[1]['owner'], user['public_key'])

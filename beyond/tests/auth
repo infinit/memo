@@ -22,7 +22,7 @@ with Beyond(force_admin = False) as beyond:
         u = User()
         u.put(beyond)
         beyond.delete('users/%s' % u['name'],
-                      auth = u.private_key)
+                      auth = u)
 
     def test_authentication_error(self):
       evil = User()
@@ -31,7 +31,7 @@ with Beyond(force_admin = False) as beyond:
         u = User()
         u.put(beyond)
         throws(lambda: beyond.delete('users/%s' % u['name'],
-                                     auth = evil.private_key),
+                                     auth = evil),
                403, error = 'user/unauthorized')
 
     def test_banned_user(self):

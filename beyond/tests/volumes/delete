@@ -22,7 +22,7 @@ with Beyond() as beyond:
       volume.put(beyond)
       beyond.get('volumes/%s' % volume['name'])
       beyond.delete('volumes/%s' % volume['name'],
-                    auth = user.private_key)
+                    auth = user)
       throws(lambda: beyond.get('volumes/%s' % volume['name'], json = False),
              404)
 
@@ -36,7 +36,7 @@ with Beyond() as beyond:
       drive = Drive(name = 'd', volume = volume)
       drive.put(beyond)
       beyond.delete('volumes/%s' % volume['name'],
-                    auth = user.private_key,
+                    auth = user,
                     params = {'purge': 'true'})
       throws(lambda: beyond.get('volumes/%s' % volume['name'], json = False),
              404)
@@ -60,7 +60,7 @@ with Beyond() as beyond:
       drive2 = Drive(name = 'd2', owner = user2, volume = volume2)
       drive2.put(beyond)
       beyond.delete('volumes/%s' % volume1['name'],
-                    auth = user1.private_key,
+                    auth = user1,
                     params = {'purge': 'true'})
       throws(lambda: beyond.get('volumes/%s' % volume1['name'], json = False),
              404)
