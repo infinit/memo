@@ -1105,17 +1105,15 @@ main(int argc, char** argv)
       "peer address or file with list of peer addresses (host:port)" },
     { "push-endpoints", bool_switch(),
       elle::sprintf("push endpoints to %s", beyond(true)) },
+    { "push,p", bool_switch(), "alias for --push-endpoints" },
     { "publish", bool_switch(),
       "alias for --fetch-endpoints --push-endpoints" },
     { "advertise-host", value<std::vector<std::string>>()->multitoken(),
-      "advertise extra endpoint using given host"
-    },
+      "advertise extra endpoint using given host" },
     { "wait-if-no-storage", bool_switch(),
-      "Wait for at least one peer from fetch if we do not provide storage"
-    },
+      "Wait for at least one peer from fetch if we do not provide storage" },
     { "wait-for-peers", bool_switch(),
-      "Wait for at least one peer from fetch"
-    },
+      "Wait for at least one peer from fetch" },
     option_endpoint_file,
     option_port_file,
     option_port,
