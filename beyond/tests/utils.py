@@ -137,6 +137,10 @@ class Beyond:
           private_key = auth['private_key']
         else:
           private_key = auth.private_key
+        if 'name' in auth:
+          user = auth['name']
+        else:
+          user = auth.name
         der = base64.b64decode(private_key['rsa'].encode('utf-8'))
         k = RSA.importKey(der)
         data = kwargs['data']
@@ -152,6 +156,7 @@ class Beyond:
         kwargs['headers']['infinit-signature'] = sig
         if timestamp is not False:
           kwargs['headers']['infinit-time'] = t
+        kwargs['headers']['infinit-user'] = user
     response = requests.request(url = '%s/%s' % (self.host, url),
                                 allow_redirects = False,
                                 **kwargs)
