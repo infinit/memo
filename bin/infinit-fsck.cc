@@ -76,7 +76,6 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
   auto block = fs->block_store()->fetch(addr);
   addr = Address::from_string(block->data().string().substr(2));
   account_for(blocks, addr, "root block");
-
   std::vector<PathPtr> queue;
   auto root = fs->path("/");
   queue.push_back(root);
@@ -195,7 +194,6 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
       ELLE_WARN("Unknown filesystem entry type");
     }
   }
-
   // process unaccounted for blocks
   try {
     root->child("lost+found")->mkdir(700);
@@ -353,10 +351,7 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
   ELLE_LOG("Relinked to lost+found %s block(s).", acbs.size());
 }
 
-
-
-void
-check(variables_map const& args)
+COMMAND(check)
 {
   auto name = mandatory(args, "name", "network name");
   auto blocklist_file = mandatory(args, "blocklist", "block list");

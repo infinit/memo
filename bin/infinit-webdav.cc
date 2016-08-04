@@ -513,8 +513,7 @@ infinit::Infinit ifnt;
 
 using boost::program_options::variables_map;
 
-void
-run(variables_map const& args)
+COMMAND(run)
 {
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);

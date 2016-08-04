@@ -444,6 +444,27 @@ COMMAND(run)
                          , fuse_options
 #endif
                          );
+    boost::signals2::scoped_connection killer = killed.connect(
+      [&, count = std::make_shared<int>(0)] ()
+      {
+        if (*count == 0)
+          ++*count;
+        else if (*count == 1)
+        {
+          ++*count;
+          ELLE_LOG("already shutting down gracefully, "
+                   "repeat to force filesystem operations termination");
+        }
+        else if (*count == 2)
+        {
+          ++*count;
+          ELLE_LOG("force termination");
+          fs->kill();
+        }
+        else
+          ELLE_LOG(
+            "already forcing termination as hard as possible");
+      });
     // Experimental: poll root on mount to trigger caching.
 #   if 0
     boost::optional<std::thread> root_poller;
@@ -939,7 +960,7 @@ COMMAND(mount)
       mandatory(args, "mountpoint", "mountpoint");
     }
   }
-  run(args);
+  run(args, killed);
 }
 
 COMMAND(list)

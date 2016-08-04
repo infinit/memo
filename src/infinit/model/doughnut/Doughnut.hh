@@ -99,6 +99,7 @@ namespace infinit
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, user_init)
         ELLE_ATTRIBUTE(
           elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
+        ELLE_ATTRIBUTE(reactor::Barrier, terminating);
 
       protected:
         virtual
