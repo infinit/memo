@@ -2507,6 +2507,7 @@ signature_headers(
   std::unordered_map<std::string, std::string> res = {
     { "infinit-signature", encoded_signature.string() },
     { "infinit-time", now },
+    { "infinit-user", self.name },
   };
   return res;
 }
