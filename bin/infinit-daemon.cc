@@ -324,6 +324,7 @@ public:
    : _mount_root(mount_root)
    , _mount_substitute(mount_substitute)
    , _wait_for_peers(false)
+   , _use_beyond(false)
    {}
   ~MountManager();
   void
@@ -362,6 +363,7 @@ public:
   ELLE_ATTRIBUTE_RW(std::string, default_network);
   ELLE_ATTRIBUTE_RW(std::vector<std::string>, advertise_host);
   ELLE_ATTRIBUTE_RW(bool, wait_for_peers);
+  ELLE_ATTRIBUTE_RW(bool, use_beyond);
 private:
   std::unordered_map<std::string, Mount> _mounts;
 };
@@ -525,6 +527,11 @@ MountManager::start(std::string const& name,
     m.options.mountpoint =
     (mountbase /
       (mount_prefix + boost::filesystem::unique_path().string())).string();
+  }
+  if (this->_use_beyond)
+  {
+    m.options.push = true;
+    m.options.fetch = true;
   }
   std::vector<std::string> arguments;
   static const auto root = elle::system::self_path().parent_path();
@@ -758,7 +765,7 @@ MountManager::create_network(elle::json::Object const& options,
   report_created("network", *netname);
   link_network(fullname, options);
   infinit::NetworkDescriptor desc(ifnt.network_get(*netname, owner, true));
-  if (!optional(options, "no-beyond"))
+  if (!optional(options, "no-beyond") && this->_use_beyond)
   {
     try
     {
@@ -813,7 +820,7 @@ MountManager::create_volume(std::string const& name,
   }());
 
   infinit::MountOptions mo;
-  bool use_beyond = !optional(options, "no-beyond");
+  bool use_beyond = !optional(options, "no-beyond") && this->_use_beyond;
   if (use_beyond)
   {
     mo.fetch = true;
@@ -1249,6 +1256,7 @@ fill_manager_options(MountManager& manager,
   manager.log_level(loglevel);
   auto logpath = optional(args, "log-path");
   manager.log_path(logpath);
+  manager.use_beyond(flag(args, "use-beyond"));
   manager.default_user(self_user_name(args));
   auto default_network = optional(args, "default-network");
   if (default_network)
@@ -1849,6 +1857,8 @@ main(int argc, char** argv)
       "mount given volumes on startup, keep trying on error" },
     { "wait-for-peers", bool_switch(),
       "Always wait for at least one peer when mounting a volume" },
+    { "use-beyond", bool_switch(),
+      "Run volumes with '--publish' option, publish created volumes"},
 #if !defined(INFINIT_PRODUCTION_BUILD) || defined(INFINIT_LINUX)
     { "docker-disable", bool_switch(), "Disable the Docker plugin" },
     { "docker-user", value<std::string>(), elle::sprintf(
