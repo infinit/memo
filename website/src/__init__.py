@@ -16,6 +16,12 @@ def error(code, reason = ''):
     'reason': reason
   }
 
+# @route('/404')
+# @view('pages/404.html')
+# def custom404(error):
+#   return bottle.TEMPLATE_PATH
+  # return {}
+
 class Website(bottle.Bottle):
 
   def __init__(self):
@@ -24,6 +30,9 @@ class Website(bottle.Bottle):
     route.apply(self)
     self.__swu = sendwithus.api(api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d')
     self.__hub = os.environ.get('INFINIT_BEYOND', 'https://beyond.infinit.io')
+    # self.error_handler = {
+    #   404: custom404,
+    # }
 
   def __call__(self, e, h):
     e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')
@@ -38,7 +47,6 @@ class Website(bottle.Bottle):
          'gaetan.rochel@infinit.io',
          'julien.quintard@infinit.io',
          'matthieu.nottale@infinit.io',
-         'patrick.perlmutter@infinit.io',
          'quentin.hocquet@infinit.io',
        ]:
       return True
@@ -50,6 +58,14 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'description': 'Infinit allows for the creation of flexible, secure and controlled file storage infrastructure on top of public, private or hybrid cloud resources.',
+    }
+
+  @route('/404', name = 'notfound')
+  @view('pages/404')
+  def root(self):
+    return {
+      'title': '404',
+      'description': 'The page you were looking for isn\'t here.',
     }
 
   @route('/documentation', name = 'doc_overview')
@@ -66,6 +82,30 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Infinit Drive',
+      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+    }
+
+  @route('/drive/linux', name = 'drive_linux')
+  @view('pages/drive/drive.html')
+  def root(self):
+    return {
+      'title': 'Infinit Drive - Linux',
+      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+    }
+
+  @route('/drive/mac', name = 'drive_mac')
+  @view('pages/drive/drive.html')
+  def root(self):
+    return {
+      'title': 'Infinit Drive - Mac',
+      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+    }
+
+  @route('/drive/windows', name = 'drive_windows')
+  @view('pages/drive/drive.html')
+  def root(self):
+    return {
+      'title': 'Infinit Drive - Windows',
       'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
@@ -270,14 +310,6 @@ class Website(bottle.Bottle):
       'description': 'Infinit is used by device manufacturers, network operators and other businesses throughout the world to provide value to their customers.',
     }
 
-  @route('/about', name = 'about')
-  @view('pages/about.html')
-  def root(self):
-    return {
-      'title': 'About Infinit',
-      'description': 'Learn about the company and people behind Infinit.',
-    }
-
   @route('/press', name = 'press')
   @route('/press/tech', name = 'press')
   @view('pages/press/pr_tech.html')
@@ -313,7 +345,6 @@ class Website(bottle.Bottle):
         email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
         recipient = {'address': 'contact@infinit.sh'},
         sender = {
-          'address': bottle.request.forms.get('email'),
           'reply_to': bottle.request.forms.get('email')
         },
         email_data = {
@@ -342,7 +373,6 @@ class Website(bottle.Bottle):
         email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
         recipient = {'address': 'contact@infinit.sh'},
         sender = {
-          'address': bottle.request.forms.get('email'),
           'reply_to': bottle.request.forms.get('email')
         },
         email_data = {

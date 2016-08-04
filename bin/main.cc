@@ -175,6 +175,10 @@ namespace infinit
 #endif
             };
             for (auto signal: signals)
+            {
+#ifndef INFINIT_WINDOWS
+              ELLE_DEBUG("set signal handler for %s", strsignal(signal));
+#endif
               reactor::scheduler().signal_handle(
                 signal,
                 [&]
@@ -182,6 +186,7 @@ namespace infinit
                   ELLE_TRACE("terminating");
                   main_thread.terminate();
                 });
+            }
           }
           ELLE_TRACE("parse command line")
           {

@@ -20,8 +20,7 @@ from infinit.beyond.gcs import GCS
 from infinit.beyond.plugins.jsongo import Plugin as JsongoPlugin
 from infinit.beyond.plugins.max_size import Plugin as MaxSizePlugin
 from infinit.beyond.plugins.response import Plugin as ResponsePlugin
-from infinit.beyond.plugins.certification import Plugin \
-  as CertificationPlugin
+from infinit.beyond.plugins.certification import Plugin as CertificationPlugin
 
 bottle.BaseRequest.MEMFILE_MAX = 2.5 * 1000 * 1000
 
@@ -400,6 +399,12 @@ class Bottle(bottle.Bottle):
         raise self.__user_not_found(name)
       return None
 
+  def user_from_short_key_hash(self, hash):
+    try:
+      return self.__beyond.user_by_short_key_hash(hash)
+    except User.NotFound as e:
+      raise self.__user_not_found(hash)
+
   def users_from_email(self, email, throws = True):
     try:
       return self.__beyond.users_by_email(email)
@@ -513,7 +518,10 @@ class Bottle(bottle.Bottle):
     }
 
   def user_get(self, name):
-    return self.user_from_name(name = name).json()
+    if len(name) == 7 and name[0] == '#':
+      return self.user_from_short_key_hash(hash = name).json()
+    else:
+      return self.user_from_name(name = name).json()
 
   def user_deleted_get(self, name):
     self.require_admin()
