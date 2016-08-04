@@ -72,6 +72,7 @@ namespace infinit
         , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
         // FIXME: move protocol configuration to doughnut
         , _dock(*this, Protocol::all)
+        , _terminating()
       {
         if (this->_local)
           this->_local->initialize();
@@ -131,7 +132,9 @@ namespace infinit
                 catch (elle::Error const& e)
                 {
                   ELLE_TRACE("%s: failed to store user block: %s", *this, e);
-                  reactor::sleep(1_sec);
+                  if (this->_terminating.opened())
+                    break;
+                  reactor::wait(this->_terminating, 1_sec);
                 }
               }
             while (true)
@@ -166,7 +169,9 @@ namespace infinit
                 {
                   ELLE_TRACE("%s: failed to store reverse user block: %s",
                              *this, e);
-                  reactor::sleep(1_sec);
+                  if (this->_terminating.opened())
+                    break;
+                  reactor::wait(this->_terminating, 1_sec);
                 }
               }
           };
@@ -178,6 +183,7 @@ namespace infinit
       Doughnut::~Doughnut()
       {
         ELLE_TRACE_SCOPE("%s: destruct", *this);
+        this->_terminating.open();
         if (this->_user_init)
         {
           if (!reactor::wait(*this->_user_init, 5_sec))

@@ -14,8 +14,7 @@ using boost::program_options::variables_map;
 
 infinit::Infinit ifnt;
 
-void
-run(variables_map const& args)
+COMMAND(run)
 {
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
@@ -44,7 +43,6 @@ run(variables_map const& args)
   new infinit::smb::SMBServer(std::move(fs));
   reactor::sleep();
 }
-
 
 int
 main(int argc, char** argv)

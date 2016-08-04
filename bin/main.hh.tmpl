@@ -54,7 +54,11 @@
 
 extern std::string program;
 
-#define COMMAND(name) static void name(boost::program_options::variables_map const& args)
+#define COMMAND(name)                                           \
+  static                                                        \
+  void                                                          \
+  name(boost::program_options::variables_map const& args,       \
+       boost::signals2::signal<void()>& killed)                 \
 
 #define NO_PRIVATE_KEY "user \"%s\" has no private key"
 
@@ -384,7 +388,8 @@ struct Mode
   };
 
   typedef
-    std::function<void (boost::program_options::variables_map const&)> Action;
+    std::function<void (boost::program_options::variables_map const&,
+                        boost::signals2::signal<void ()>&)> Action;
   typedef std::vector<OptionDescription> Options;
   typedef std::vector<OptionsDescription> OptionsVector;
 

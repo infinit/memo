@@ -221,11 +221,13 @@ def assertIn(a, b):
   if a not in b:
     raise AssertionError('%r not in %r' % (a, b))
 
-def throws(f):
+def throws(f, contains = None):
   try:
     f()
     assert False
-  except Exception:
+  except Exception as e:
+    if contains is not None:
+      assertIn(contains, str(e))
     pass
 
 import bottle

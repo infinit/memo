@@ -144,7 +144,7 @@ COMMAND(transmit_user)
 COMMAND(transmit)
 {
   if (flag(args, "user"))
-    transmit_user(args);
+    transmit_user(args, killed);
   else
     throw CommandLineError("Must specify type of object to transmit");
 }
@@ -194,7 +194,7 @@ COMMAND(receive_user)
 COMMAND(receive)
 {
   if (flag(args, "user"))
-    receive_user(args);
+    receive_user(args, killed);
   else
     throw CommandLineError("Must specify type of object to receive");
 }
