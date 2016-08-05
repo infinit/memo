@@ -508,9 +508,11 @@ def configure(
   ]
   if elle.elle.ldap:
     binaries_config.append(('infinit-ldap', [xattr_sources], [], True))
+  if (cxx_toolkit.os is drake.os.linux) or \
+      (production_build is False and cxx_toolkit.os is drake.os.macos):
+    binaries_config.append(('infinit-daemon', [], [], True))
   if not windows:
     binaries_config.append(('sshfs', [], [], False))
-    binaries_config.append(('infinit-daemon', [], [], True))
     additional_libs.append(crash_reporter_lib)
     additional_libs += [elle_lib, reactor_lib, cryptography_lib]
   else:
