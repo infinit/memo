@@ -515,17 +515,15 @@ MountManager::start(std::string const& name,
   if (force_mount && !m.options.mountpoint)
   {
     auto username = elle::system::username();
-    auto mountbase = this->_mount_root / username;
     boost::system::error_code erc;
-    boost::filesystem::create_directories(mountbase);
-    boost::filesystem::permissions(mountbase,
+    boost::filesystem::permissions(this->_mount_root,
       boost::filesystem::remove_perms
       | boost::filesystem::others_read
       | boost::filesystem::others_exe
       | boost::filesystem::others_write
       );
     m.options.mountpoint =
-    (mountbase /
+    (this->_mount_root /
       (mount_prefix + boost::filesystem::unique_path().string())).string();
   }
   if (this->_use_beyond)
@@ -1286,11 +1284,48 @@ _run(boost::program_options::variables_map const& args, bool detach)
   std::unordered_map<int, std::unique_ptr<MountManager>> managers;
   std::unique_ptr<DockerVolumePlugin> docker;
   std::unique_ptr<reactor::Thread> mounter;
-  auto mountpoint = with_default<std::string>(args, "mount-root", "/run/infinit/mnt");
-  boost::system::error_code erc;
   namespace bfs = boost::filesystem;
-  if (bfs::create_directories(mountpoint))
-    bfs::permissions(mountpoint, bfs::add_perms | bfs::all_all);
+  // Always call get_mount_root() before entering the SystemUser.
+  auto get_mount_root = [&] (SystemUser const& user) {
+    if (args.count("mount-root"))
+    {
+      bfs::path res(args["mount-root"].as<std::string>());
+      if (!bfs::exists(res))
+        elle::err("mount root does not exist");
+      if (!bfs::is_directory(res))
+        elle::err("mount root is not a directory");
+      // Add the uid so that we have a directory for each user.
+      res /= std::to_string(user.uid);
+      if (bfs::create_directories(res))
+      {
+        elle::chown(res.string(), user.uid, user.gid);
+        bfs::permissions(res.string(), bfs::owner_all);
+      }
+      return bfs::canonical(res).string();
+    }
+    else
+    {
+      auto env_run_dir = elle::os::getenv("XDG_RUNTIME_DIR", "");
+      auto user_run_dir = !env_run_dir.empty()
+        ? env_run_dir : elle::sprintf("/run/user/%s", user.uid);
+      if (bfs::create_directories(user_run_dir))
+      {
+        elle::chown(user_run_dir, user.uid, user.gid);
+        bfs::permissions(user_run_dir, bfs::owner_all);
+      }
+      {
+        if (mutex.locked())
+          elle::err("call get_mount_root() before .enter() on the SystemUser");
+        auto lock = user.enter(mutex);
+        auto res = elle::sprintf("%s/infinit/filesystem/mnt", user_run_dir);
+        bfs::create_directories(res);
+        return res;
+      }
+    }
+  };
+  auto user_mount_root = get_mount_root(system_user);
+  auto docker_mount_sub = with_default<std::string>(
+    args, "docker-mount-substitute", "");
   {
     auto lock = system_user.enter(mutex);
     auto users = optional<std::vector<std::string>>(args, "login-user");
@@ -1308,14 +1343,12 @@ _run(boost::program_options::variables_map const& args, bool detach)
       report_action("saved", "user", name, std::string("locally"));
     }
     ELLE_TRACE("starting initial manager");
-    managers[getuid()].reset(new MountManager(
-      with_default<std::string>(args, "mount-root", "/run/infinit/mnt"),
-      with_default<std::string>(args, "docker-mount-substitute", "")));
+    managers[getuid()].reset(new MountManager(user_mount_root,
+                                              docker_mount_sub));
     MountManager& root_manager = *managers[getuid()];
     fill_manager_options(root_manager, args);
     docker = elle::make_unique<DockerVolumePlugin>(
-      root_manager,
-       system_user, mutex);
+      root_manager, system_user, mutex);
     auto mount = optional<std::vector<std::string>>(args, "mount");
     if (mount)
       mounter = elle::make_unique<reactor::Thread>("mounter",
@@ -1389,12 +1422,11 @@ _run(boost::program_options::variables_map const& args, bool detach)
       SystemUser system_user(uid);
       MountManager* user_manager = nullptr;
       auto it = managers.find(uid);
+      auto peer_mount_root = get_mount_root(system_user);
       if (it == managers.end())
       {
         auto lock = system_user.enter(mutex);
-        user_manager = new MountManager(
-          with_default<std::string>(args, "mount-root", "/run/infinit/mnt"),
-          with_default<std::string>(args, "docker-mount-substitute", ""));
+        user_manager = new MountManager(peer_mount_root, docker_mount_sub);
         fill_manager_options(*user_manager, args);
         managers[uid].reset(user_manager);
       }
@@ -1847,8 +1879,9 @@ main(int argc, char** argv)
   std::vector<Mode::OptionDescription> options_run = {
     { "login-user", value<std::vector<std::string>>()->multitoken(),
       "Login with selected user(s), of form 'user:password'" },
-    { "mount-root", value<std::string>(),
-      "Default root path for all mounts\n(default: /run/infinit/mnt)" },
+    { "mount-root", value<std::string>(), elle::sprintf(
+      "Default root path for all mounts\n(default: %s/mnt)",
+      infinit::xdg_runtime_dir().string()) },
     { "default-network", value<std::string>(),
       "Default network for volume creation" },
     { "advertise-host", value<std::vector<std::string>>()->multitoken(),
