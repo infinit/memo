@@ -1924,14 +1924,14 @@ main(int argc, char** argv)
     },
     {
       "run",
-      "Run daemon",
+      "Run daemon in the foreground",
       &run,
       "",
       options_run,
     },
     {
       "start",
-      "Start daemon",
+      "Start daemon in the background",
       &start,
       "",
       options_run,
@@ -1942,20 +1942,6 @@ main(int argc, char** argv)
       &stop,
       "",
       {},
-    },
-    {
-      "manage-volumes",
-      "Manage daemon controlled volumes",
-      &manage_volumes,
-      "[--name VOLUME]",
-      {
-        { "list", bool_switch(), "list all volumes" },
-        { "status", bool_switch(), "list all volume statuses" },
-        { "start", bool_switch(), "start volume" },
-        { "stop", bool_switch(), "stop volume" },
-        { "restart", bool_switch(), "restart volume" },
-        { "name", value<std::string>(), "volume name" },
-      },
     },
   };
   Modes hidden_modes {
@@ -1985,6 +1971,20 @@ main(int argc, char** argv)
       "--name VOLUME",
       {
         { "name,n", value<std::string>(), "volume name" },
+      },
+    },
+    {
+      "manage-volumes",
+      "Manage daemon controlled volumes",
+      &manage_volumes,
+      "[--name VOLUME]",
+      {
+        { "list", bool_switch(), "list all volumes" },
+        { "status", bool_switch(), "list all volume statuses" },
+        { "start", bool_switch(), "start volume" },
+        { "stop", bool_switch(), "stop volume" },
+        { "restart", bool_switch(), "restart volume" },
+        { "name", value<std::string>(), "volume name" },
       },
     },
   };
