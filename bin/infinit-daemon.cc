@@ -329,7 +329,6 @@ public:
                std::string mount_substitute = "")
    : _mount_root(mount_root)
    , _mount_substitute(mount_substitute)
-   , _wait_for_peers(false)
    , _use_beyond(false)
    {}
   ~MountManager();
@@ -368,7 +367,6 @@ public:
   ELLE_ATTRIBUTE_RW(std::string, default_user);
   ELLE_ATTRIBUTE_RW(std::string, default_network);
   ELLE_ATTRIBUTE_RW(std::vector<std::string>, advertise_host);
-  ELLE_ATTRIBUTE_RW(bool, wait_for_peers);
   ELLE_ATTRIBUTE_RW(bool, use_beyond);
 private:
   std::unordered_map<std::string, Mount> _mounts;
@@ -549,9 +547,6 @@ MountManager::start(std::string const& name,
   }
   std::unordered_map<std::string, std::string> env;
   m.options.to_commandline(arguments, env);
-  arguments.push_back("--wait-if-no-storage");
-  if (_wait_for_peers)
-    arguments.push_back("--wait-for-peers");
   for (auto const& host: _advertise_host)
   {
     arguments.push_back("--advertise-host");
@@ -1268,8 +1263,6 @@ fill_manager_options(MountManager& manager,
   auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
   if (advertise)
     manager.advertise_host(*advertise);
-  if (flag(args, "wait-for-peers"))
-    manager.wait_for_peers(true);
 }
 
 static
@@ -1897,8 +1890,6 @@ main(int argc, char** argv)
       "Advertise given hostname as an extra endpoint when running volumes" },
     { "mount,m", value<std::vector<std::string>>()->multitoken(),
       "mount given volumes on startup, keep trying on error" },
-    { "wait-for-peers", bool_switch(),
-      "Always wait for at least one peer when mounting a volume" },
     { "use-beyond", bool_switch(),
       "Run volumes with '--publish' option, publish created volumes"},
 #if !defined(INFINIT_PRODUCTION_BUILD) || defined(INFINIT_LINUX)

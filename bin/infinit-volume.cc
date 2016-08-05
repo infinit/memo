@@ -404,7 +404,6 @@ COMMAND(run)
   {
     if (mo.fetch && *mo.fetch)
     {
-      bool has_storage = !! network.model->storage;
       infinit::overlay::NodeEndpoints eps;
       while(true)
       {
@@ -419,11 +418,6 @@ COMMAND(run)
           continue;
         }
         if (!eps.empty())
-          break;
-        if ((!has_storage && flag(args, "wait-if-no-storage"))
-          || flag(args, "wait-for-peers"))
-          reactor::sleep(5_sec);
-        else
           break;
       }
       model->overlay()->discover(eps);
@@ -1109,12 +1103,6 @@ main(int argc, char** argv)
       "alias for --fetch-endpoints --push-endpoints" },
     { "advertise-host", value<std::vector<std::string>>()->multitoken(),
       "advertise extra endpoint using given host"
-    },
-    { "wait-if-no-storage", bool_switch(),
-      "Wait for at least one peer from fetch if we do not provide storage"
-    },
-    { "wait-for-peers", bool_switch(),
-      "Wait for at least one peer from fetch"
     },
     option_endpoint_file,
     option_port_file,
