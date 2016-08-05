@@ -2,9 +2,13 @@
 #include <signal.h>
 #include <sys/wait.h>
 
+#ifdef INFINIT_LINUX
+# include <mntent.h>
+#endif
+
 #ifdef INFINIT_MACOSX
-#  include <sys/param.h>
-#  include <sys/mount.h>
+# include <sys/param.h>
+# include <sys/mount.h>
 #endif
 
 #include <boost/algorithm/string.hpp>
@@ -441,25 +445,21 @@ MountManager::exists(std::string const& name)
 bool
 is_mounted(std::string const& path)
 {
-  static int dummy_delay = std::stoi(elle::os::getenv("INFINIT_IS_MOUNTED_DUMMY_DELAY", "-1"));
-  if (dummy_delay >= 0)
-  {
-    reactor::sleep(boost::posix_time::seconds(dummy_delay));
-    return true;
-  }
 #ifdef INFINIT_LINUX
-  auto mounts = boost::filesystem::path("/proc") / std::to_string(getpid()) / "mounts";
-  boost::filesystem::ifstream ifs(mounts);
-  while (!ifs.eof())
+  FILE* mtab = setmntent("/etc/mtab", "r");
+  struct mntent mnt;
+  char strings[4096];
+  bool found = false;
+  while (getmntent_r(mtab, &mnt, strings, sizeof(strings)))
   {
-    std::string line;
-    std::getline(ifs, line);
-    std::vector<std::string> elems;
-    boost::algorithm::split(elems, line, boost::is_any_of(" "));
-    if (elems.size() >= 2 && elems.at(1) == path)
-      return true;
+    if (std::string(mnt.mnt_dir) == path)
+    {
+      found = true;
+      break;
+    }
   }
-  return false;
+  endmntent(mtab);
+  return found;
 #elif defined(INFINIT_WINDOWS)
   // We mount as drive letters under windows
   return boost::filesystem::exists(path);
@@ -581,20 +581,19 @@ MountManager::start(std::string const& name,
   this->_mounts.emplace(name, std::move(m));
   if (wait_for_mount && mountpoint)
   {
-    for (int i=0; i<100; ++i)
+    for (int i = 0; i < 100; ++i)
     {
       if (kill(pid, 0))
       {
-        ELLE_TRACE("Process is dead: %s", strerror(errno));
+        ELLE_WARN("infinit-volume for \"%s\" not running", name);
         break;
       }
       if (is_mounted(mountpoint.get()))
         return;
       reactor::sleep(100_ms);
     }
-    ELLE_ERR("mount of %s failed", name);
-    stop(name);
-    throw elle::Error("Mount failure for " + name);
+    this->stop(name);
+    elle::err("unable to mount %s", name);
   }
 }
 
@@ -606,9 +605,8 @@ MountManager::stop(std::string const& name)
     throw elle::Error("not mounted: " + name);
   auto pid = it->second.process->pid();
   ::kill(pid, SIGTERM);
-  int count = 0;
   bool force_kill = true;
-  while (count++ < 15)
+  for (int i = 0; i < 15; ++i)
   {
     reactor::sleep(1_sec);
     if (::kill(pid, 0))
