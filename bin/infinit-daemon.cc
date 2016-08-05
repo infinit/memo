@@ -907,9 +907,23 @@ public:
 
   static
   boost::filesystem::path
+  root_path()
+  {
+    namespace bfs = boost::filesystem;
+    bfs::path res("/run/user/0/infinit/filesystem/daemon.pid");
+    if (getuid() == 0 && bfs::create_directories(res.parent_path()))
+      bfs::permissions(res.parent_path(), bfs::add_perms | bfs::others_read);
+    return res;
+  }
+
+  static
+  boost::filesystem::path
   path()
   {
-    return infinit::xdg_runtime_dir() / "daemon.pid";
+    if (getuid() == 0)
+      return root_path();
+    else
+      return infinit::xdg_runtime_dir() / "daemon.pid";
   }
 
   static
@@ -941,7 +955,6 @@ int
 daemon_pid(bool ensure_running = false)
 {
   int pid = 0;
-  static boost::filesystem::path root_pid("/tmp/infinit-root/daemon.pid");
   try
   {
     // FIXME: Try current user, then root. Must be a better way to do this.
@@ -951,7 +964,7 @@ daemon_pid(bool ensure_running = false)
     }
     catch (elle::Error const&)
     {
-      pid = elle::PIDFile::read(root_pid);
+      pid = elle::PIDFile::read(PIDFile::root_path());
     }
     if (ensure_running && !daemon_running())
       pid = 0;
@@ -959,7 +972,7 @@ daemon_pid(bool ensure_running = false)
   catch (elle::Error const& e)
   {
     ELLE_TRACE("error getting PID from %s and %s: %s",
-               PIDFile::path(), root_pid, e);
+               PIDFile::path(), PIDFile::root_path(), e);
   }
   return pid;
 }
