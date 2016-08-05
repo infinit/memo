@@ -41,7 +41,7 @@ struct SystemUser
   , name(name)
   , home(home)
   {}
-  SystemUser(unsigned int uid)
+  SystemUser(unsigned int uid, boost::optional<std::string> home_ = {})
   : uid(uid)
   , gid(0)
   {
@@ -49,16 +49,22 @@ struct SystemUser
     if (!pwd)
       elle::err("No user found with uid %s", uid);
     name = pwd->pw_name;
-    home = pwd->pw_dir;
+    if (home_)
+      this->home = *home_;
+    else
+      home = pwd->pw_dir;
     gid = pwd->pw_gid;
   }
-  SystemUser(std::string const& name)
+  SystemUser(std::string const& name, boost::optional<std::string> home_ = {})
   {
     struct passwd * pwd = getpwnam(name.c_str());
     if (!pwd)
       elle::err("No user found with name %s", name);
     this->name = pwd->pw_name;
-    home = pwd->pw_dir;
+    if (home_)
+      home = *home_;
+    else
+      home = pwd->pw_dir;
     uid = pwd->pw_uid;
     gid = pwd->pw_gid;
   }
@@ -1275,10 +1281,11 @@ _run(boost::program_options::variables_map const& args, bool detach)
     elle::err("daemon already running");
   auto system_user = [&]() {
     auto name = optional(args, "docker-user");
+    auto home = optional(args, "docker-home");
     if (name)
-      return SystemUser(*name);
+      return SystemUser(*name, home);
     else
-      return SystemUser(getuid());
+      return SystemUser(getuid(), home);
   }();
   reactor::Mutex mutex;
   std::unordered_map<int, std::unique_ptr<MountManager>> managers;
@@ -1899,6 +1906,8 @@ main(int argc, char** argv)
     { "docker-user", value<std::string>(), elle::sprintf(
       "System user to use for docker plugin (default: %s)",
         SystemUser(getuid()).name) },
+    { "docker-home", value<std::string>(),
+      "Home directory to use for Docker user\n(default: /home/<docker-user>)" },
     { "docker-socket-tcp", bool_switch(),
       "Use a TCP socket for docker plugin" },
     { "docker-socket-port", value<std::string>(),
