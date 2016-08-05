@@ -83,11 +83,13 @@ namespace infinit
 
   inline
   boost::filesystem::path
-  xdg_runtime_dir()
+  xdg_runtime_dir(boost::optional<std::string> fallback = {})
   {
     return _xdg(
       "RUNTIME_DIR",
-      tmpdir() / elle::sprintf("infinit-%s", elle::system::username()));
+      fallback
+        ? *fallback
+        : tmpdir() / elle::sprintf("infinit-%s", elle::system::username()));
   }
 
   inline
