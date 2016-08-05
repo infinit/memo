@@ -13,9 +13,8 @@ namespace infinit
     `-------------*/
 
     Kalimero::Kalimero(model::doughnut::Doughnut* dht,
-                       model::Address node_id,
                        std::shared_ptr<model::doughnut::Local> local)
-      : Overlay(dht, std::move(local), std::move(node_id))
+      : Overlay(dht, std::move(local))
     {}
 
     /*------.
@@ -23,7 +22,7 @@ namespace infinit
     `------*/
 
     void
-    Kalimero::_discover(NodeEndpoints const& peers)
+    Kalimero::_discover(NodeLocations const&)
     {
       elle::err("Kalimero cannot discover new nodes");
     }
@@ -70,15 +69,13 @@ namespace infinit
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
-    KalimeroConfiguration::make(model::Address id,
-                                NodeEndpoints const& hosts,
+    KalimeroConfiguration::make(std::vector<Endpoints> const& hosts,
                                 std::shared_ptr<model::doughnut::Local> local,
                                 model::doughnut::Doughnut* dht)
     {
       if (!hosts.empty())
-        throw elle::Error(
-          elle::sprintf("kalimero cannot access other nodes (%s)", hosts));
-      return elle::make_unique<Kalimero>(dht, id, std::move(local));
+        elle::err("kalimero cannot access other nodes: %s", hosts);
+      return elle::make_unique<Kalimero>(dht, std::move(local));
     }
 
     static const

@@ -1,5 +1,7 @@
 #include <elle/log.hh>
 
+#include <reactor/FDStream.hh>
+
 ELLE_LOG_COMPONENT("infinit");
 
 #include <main.hh>
@@ -83,6 +85,38 @@ mode_arguments(
 
 namespace infinit
 {
+  std::unique_ptr<std::istream>
+  commands_input(boost::program_options::variables_map const& args)
+  {
+    if (args.count("input"))
+    {
+      auto path = args["input"].as<std::string>();
+      if (path != "-")
+      {
+        auto file = elle::make_unique<boost::filesystem::ifstream>(path);
+        if (!file->good())
+          elle::err("unable to open \"%s\" for reading", path);
+        return std::move(file);
+      }
+    }
+#ifndef INFINIT_WINDOWS
+    return elle::make_unique<reactor::FDStream>(0);
+#else
+    // Windows does not support async io on stdin
+    auto res = elle::make_unique<std::stringstream>();
+    while (true)
+    {
+      char buf[4096];
+      std::cin.read(buf, 4096);
+      if (int count = std::cin.gcount())
+        res->write(buf, count);
+      else
+        break;
+    }
+    return res;
+#endif
+  }
+
   boost::optional<elle::Version> compatibility_version;
   int
   main(std::string desc,
@@ -133,22 +167,6 @@ namespace infinit
           // Not required on OS X, see: boost/libs/filesystem/src/path.cpp:819
           check_broken_locale();
 #endif
-          if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
-          {
-            static const std::vector<int> signals = {SIGINT, SIGTERM
-#ifndef INFINIT_WINDOWS
-                                                     , SIGQUIT
-#endif
-            };
-            for (auto signal: signals)
-              reactor::scheduler().signal_handle(
-                signal,
-                [&]
-                {
-                  ELLE_TRACE("terminating");
-                  main_thread.terminate();
-                });
-          }
           ELLE_TRACE("parse command line")
           {
             using boost::program_options::value;
@@ -316,12 +334,36 @@ namespace infinit
                                                               }));
               }
 #endif
+              boost::signals2::signal<void ()> killed;
+              if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
+              {
+                static const std::vector<int> signals = {SIGINT, SIGTERM
+#ifndef INFINIT_WINDOWS
+                                                         , SIGQUIT
+#endif
+                };
+                for (auto signal: signals)
+                {
+#ifndef INFINIT_WINDOWS
+                  ELLE_DEBUG("set signal handler for %s", strsignal(signal));
+#endif
+                  reactor::scheduler().signal_handle(
+                    signal,
+                    [&]
+                    {
+                      main_thread.terminate();
+                      killed();
+                    });
+                }
+              }
               try
               {
                 std::vector<std::string> args =
                   mode_arguments(tokens, mode, modes, hidden_modes, parsed);
-                mode->action(parse_args(mode->options, args,
-                                        (positional_arg ? positional_arg.get() : "name")));
+                mode->action(
+                  parse_args(mode->options, args,
+                             (positional_arg ? positional_arg.get() : "name")),
+                  killed);
                 if (crash_upload_thread)
                   reactor::wait(*crash_upload_thread);
               }

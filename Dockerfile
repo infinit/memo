@@ -20,4 +20,6 @@ RUN pip3 install oset
 ADD . /root/fs
 
 WORKDIR /root/fs/_build/linux64
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
 RUN python3 ./drake -j $(nproc) //install --prefix=/usr

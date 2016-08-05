@@ -6,7 +6,6 @@
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
-#include <reactor/FDStream.hh>
 #ifndef INFINIT_WINDOWS
 # include <reactor/network/unix-domain-socket.hh>
 #endif
@@ -311,23 +310,19 @@ COMMAND(run)
   auto volume = ifnt.volume_get(name);
   volume.mount_options.merge(args);
   auto& mo = volume.mount_options;
-  infinit::overlay::NodeEndpoints eps;
-  if (mo.peers)
-  {
-    for (auto const& obj:  *mo.peers)
-    {
-      auto file_eps = endpoints_from_file(obj);
-      if (file_eps.size())
-      {
-        for (auto const& ep: file_eps)
-          eps[infinit::model::Address::null].push_back(ep);
-      }
+  std::vector<infinit::model::Endpoints> eps;
+  auto add_peers = [&] (std::vector<std::string> const& peers) {
+    for (auto const& obj: peers)
+      if (boost::filesystem::exists(obj))
+        for (auto const& peer: endpoints_from_file(obj))
+          eps.emplace_back(infinit::model::Endpoints({peer}));
       else
-      {
-        eps[infinit::model::Address::null].push_back(obj);
-      }
-    }
-  }
+        eps.emplace_back(infinit::model::Endpoints({obj}));
+  };
+  if (mo.peers)
+    add_peers(*mo.peers);
+  if (args.count("peer"))
+    add_peers(args["peer"].as<std::vector<std::string>>());
 
 #ifdef INFINIT_MACOSX
   if (mo.mountpoint && !flag(args, option_disable_mac_utf8))
@@ -399,27 +394,12 @@ COMMAND(run)
                         endpoint_file.get());
     }
   }
-  auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
     if (mo.fetch && *mo.fetch)
     {
-      infinit::overlay::NodeEndpoints eps;
-      while(true)
-      {
-        try
-        {
-          beyond_fetch_endpoints(network, eps);
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_WARN("Error fetching endpoints from beyond: %s, retrying...", e);
-          reactor::sleep(10_sec);
-          continue;
-        }
-        if (!eps.empty())
-          break;
-      }
+      infinit::overlay::NodeLocations eps;
+      beyond_fetch_endpoints(network, eps);
       model->overlay()->discover(eps);
     }
     reactor::Thread::unique_ptr stat_thread;
@@ -438,6 +418,27 @@ COMMAND(run)
                          , optional(args, "mount-icon")
 #endif
                          );
+    boost::signals2::scoped_connection killer = killed.connect(
+      [&, count = std::make_shared<int>(0)] ()
+      {
+        if (*count == 0)
+          ++*count;
+        else if (*count == 1)
+        {
+          ++*count;
+          ELLE_LOG("already shutting down gracefully, "
+                   "repeat to force filesystem operations termination");
+        }
+        else if (*count == 2)
+        {
+          ++*count;
+          ELLE_LOG("force termination");
+          fs->kill();
+        }
+        else
+          ELLE_LOG(
+            "already forcing termination as hard as possible");
+      });
     // Experimental: poll root on mount to trigger caching.
 #   if 0
     boost::optional<std::thread> root_poller;
@@ -544,23 +545,7 @@ COMMAND(run)
 #endif
     if (script_mode)
     {
-#ifndef INFINIT_WINDOWS
-      reactor::FDStream stdin_stream(0);
-#else
-      // Windows does not support async io on stdin
-      elle::Buffer input;
-      while (true)
-      {
-        char buf[4096];
-        std::cin.read(buf, 4096);
-        int count = std::cin.gcount();
-        if (count > 0)
-          input.append(buf, count);
-        else
-          break;
-      }
-      auto stdin_stream = elle::IOStream(input.istreambuf());
-#endif
+      auto input = infinit::commands_input(args);
       std::unordered_map<std::string,
         std::unique_ptr<reactor::filesystem::Handle>> handles;
       while (true)
@@ -571,7 +556,7 @@ COMMAND(run)
         try
         {
           auto json =
-            boost::any_cast<elle::json::Object>(elle::json::read(stdin_stream));
+            boost::any_cast<elle::json::Object>(elle::json::read(*input));
           ELLE_TRACE("got command: %s", json);
           elle::serialization::json::SerializerIn command(json, false);
           op = command.deserialize<std::string>("operation");
@@ -890,7 +875,7 @@ COMMAND(run)
         }
         catch (elle::Error const& e)
         {
-          if (stdin_stream.eof())
+          if (input->eof())
             return;
           ELLE_LOG("bronk on op %s: %s", op, e);
           elle::serialization::json::SerializerOut response(std::cout);
@@ -914,7 +899,7 @@ COMMAND(run)
   {
     auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
     elle::With<InterfacePublisher>(
-      network, self, node_id, local_endpoint.get().port(), advertise) << [&]
+      network, self, model->id(), local_endpoint.get().port(), advertise) << [&]
     {
       run();
     };
@@ -936,7 +921,7 @@ COMMAND(mount)
       mandatory(args, "mountpoint", "mountpoint");
     }
   }
-  run(args);
+  run(args, killed);
 }
 
 COMMAND(list)
@@ -1070,6 +1055,7 @@ main(int argc, char** argv)
   std::vector<Mode::OptionDescription> options_run_mount = {
     {"allow-root-creation", bool_switch(),
         "create the filesystem root if not found"},
+    option_input("commands"),
     { "name", value<std::string>(), "volume name" },
     { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
     { "readonly", bool_switch(), "mount as readonly" },

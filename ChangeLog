@@ -17,6 +17,18 @@
   is now filled correctly.
 -->
 
+## [0.6.2]
+
+### Added
+
+- Enable to forcefully kill pending fs operation on shutdown with a
+  triple `SIGINT`.
+
+### Fixed
+
+- Fix segmentation fault on shutdown
+
+
 ## [0.6.1] - 2016-08-01
 
 Diagnostic utilities, ability to link networks with several users, bug

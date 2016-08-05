@@ -12,7 +12,7 @@
     </li>
 
     <li class="scroll_menu examples ${'active clicked' if request.route.name == 'doc_deployments' else ''}">
-      <a href="${route('doc_deployments')}">Examples</a>
+      <a href="${route('doc_deployments')}">Examples </a>
 
       <ul>
         <li class="centralized"><a href="${route('doc_deployments')}#centralized">Centralized (single server)</a></li>
@@ -21,8 +21,8 @@
       </ul>
     </li>
 
-    <li class="dropdown scroll_menu ${'active clicked' if request.route.name == 'doc_reference' else ''}">
-      <a href="${route('doc_reference')}">Reference <img src="${url('images/icons/caret-down.png')}" alt=""></a>
+    <li class="scroll_menu reference ${'active clicked' if request.route.name == 'doc_reference' else ''}">
+      <a href="${route('doc_reference')}">Reference </a>
 
       <ul>
         <li class="introduction"><a href="${route('doc_reference')}#introduction">Introduction</a></li>

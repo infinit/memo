@@ -9,8 +9,6 @@
 #include <elle/serialization/json.hh>
 #include <elle/json/exceptions.hh>
 
-#include <reactor/FDStream.hh>
-
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
@@ -633,22 +631,16 @@ COMMAND(run)
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
   network.ensure_allowed(self, "run");
-  infinit::overlay::NodeEndpoints eps;
+  std::vector<infinit::model::Endpoints> eps;
   if (args.count("peer"))
   {
     auto peers = args["peer"].as<std::vector<std::string>>();
-    for (auto const& obj: peers)
+    for (auto const& peer: peers)
     {
-      auto file_eps = endpoints_from_file(obj);
-      if (file_eps.size())
-      {
-        for (auto const& ep: file_eps)
-          eps[infinit::model::Address::null].push_back(ep);
-      }
+      if (boost::filesystem::exists(peer))
+        eps.emplace_back(endpoints_from_file(peer));
       else
-      {
-        eps[infinit::model::Address::null].push_back(obj);
-      }
+        eps.emplace_back(infinit::model::Endpoints({peer}));
     }
   }
   bool cache = flag(args, option_cache);
@@ -690,7 +682,7 @@ COMMAND(run)
     {
       if (fetch)
       {
-        infinit::overlay::NodeEndpoints eps;
+        infinit::model::NodeLocations eps;
         beyond_fetch_endpoints(network, eps);
         dht->overlay()->discover(eps);
       }
@@ -700,29 +692,13 @@ COMMAND(run)
       report_action("running", "network", network.name);
       if (script_mode)
       {
-#ifndef INFINIT_WINDOWS
-        reactor::FDStream stdin_stream(0);
-#else
-        // Windows does not support async io on stdin
-        elle::Buffer input;
-        while (true)
-        {
-          char buf[4096];
-          std::cin.read(buf, 4096);
-          int count = std::cin.gcount();
-          if (count > 0)
-            input.append(buf, count);
-          else
-          break;
-        }
-        auto stdin_stream = elle::IOStream(input.istreambuf());
-#endif
+        auto input = infinit::commands_input(args);
         while (true)
         {
           try
           {
             auto json = boost::any_cast<elle::json::Object>(
-              elle::json::read(stdin_stream));
+              elle::json::read(*input));
             elle::serialization::json::SerializerIn command(json, false);
             command.set_context<infinit::model::doughnut::Doughnut*>(dht.get());
             auto op = command.deserialize<std::string>("operation");
@@ -756,7 +732,7 @@ COMMAND(run)
           }
           catch (elle::Error const& e)
           {
-            if (stdin_stream.eof())
+            if (input->eof())
               return;
             elle::serialization::json::SerializerOut response(
               std::cout, false, true);
@@ -771,7 +747,7 @@ COMMAND(run)
   if (push)
   {
     elle::With<InterfacePublisher>(
-      network, self, dht->overlay()->node_id(),
+      network, self, dht->id(),
       dht->local()->server_endpoint().port()) << [&]
     {
       run();
@@ -1010,6 +986,7 @@ main(int argc, char** argv)
       &run,
       "--name NETWORK",
       {
+        option_input("commands"),
         { "name,n", value<std::string>(), "network to run" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer address or file with list of peer addresses (host:port)" },

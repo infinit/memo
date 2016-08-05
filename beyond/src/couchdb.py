@@ -107,6 +107,7 @@ class CouchDBDatastore:
                     ('per_name', self.__user_per_name),
                     ('per_email', self.__user_per_email),
                     ('per_ldap_dn', self.__user_per_ldap_dn),
+                    ('per_short_key_hash', self.__user_per_short_key_hash),
                   ])
     self.__design('deleted-users',
                   updates = [],
@@ -210,6 +211,18 @@ class CouchDBDatastore:
       return self.__user_purge_json(self.__couchdb['users'][name])
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.User.NotFound()
+
+  def __user_per_short_key_hash(user):
+    from base64 import b64decode
+    from hashlib import sha256
+    key_hash = sha256(b64decode(user['public_key']['rsa'])).hexdigest()
+    yield '#%s' % key_hash[0:6], user
+
+  def user_by_short_key_hash(self, hash):
+    rows = self.__couchdb['users'].view('beyond/per_short_key_hash', key = hash)
+    if len(rows) == 0:
+      raise infinit.beyond.User.NotFound()
+    return [r.value for r in rows][0]
 
   def __user_per_email(user):
     for email, confirmation in user.get('emails', {}).items():

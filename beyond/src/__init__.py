@@ -244,6 +244,10 @@ class Beyond:
     json = self.__datastore.user_fetch(name = name)
     return User.from_json(self, json)
 
+  def user_by_short_key_hash(self, hash):
+    json = self.__datastore.user_by_short_key_hash(hash = hash)
+    return User.from_json(self, json)
+
   def users_by_email(self, email):
     users = self.__datastore.users_by_email(email = email)
     if len(users) == 0:
