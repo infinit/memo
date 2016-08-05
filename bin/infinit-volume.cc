@@ -6,8 +6,6 @@
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
-#include <reactor/FDStream.hh>
-
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -55,14 +53,6 @@ COMMAND(create)
   auto mountpoint = optional(args, "mountpoint");
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
   auto default_permissions = optional(args, "default-permissions");
-  std::vector<std::string> hosts;
-  infinit::overlay::NodeEndpoints eps;
-  if (args.count("peer"))
-  {
-    hosts = args["peer"].as<std::vector<std::string>>();
-    for (auto const& h: hosts)
-      eps[elle::UUID()].push_back(h);
-  }
   if (default_permissions && *default_permissions!= "r"
       && *default_permissions!= "rw")
     throw elle::Error("default-permissions must be 'r' or 'rw'");
@@ -313,22 +303,16 @@ COMMAND(run)
 {
   auto self = self_user(ifnt, args);
   auto name = volume_name(args, self);
-  infinit::overlay::NodeEndpoints eps;
+  std::vector<infinit::model::Endpoints> eps;
   if (args.count("peer"))
   {
     auto peers = args["peer"].as<std::vector<std::string>>();
-    for (auto const& obj: peers)
+    for (auto const& peer: peers)
     {
-      auto file_eps = endpoints_from_file(obj);
-      if (file_eps.size())
-      {
-        for (auto const& ep: file_eps)
-          eps[infinit::model::Address::null].push_back(ep);
-      }
+      if (boost::filesystem::exists(peer))
+        eps.emplace_back(endpoints_from_file(peer));
       else
-      {
-        eps[infinit::model::Address::null].push_back(obj);
-      }
+        eps.emplace_back(infinit::model::Endpoints({peer}));
     }
   }
   std::vector<std::string> fuse_options;
@@ -416,12 +400,11 @@ COMMAND(run)
                         endpoint_file.get());
     }
   }
-  auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
     if (fetch)
     {
-      infinit::overlay::NodeEndpoints eps;
+      infinit::overlay::NodeLocations eps;
       beyond_fetch_endpoints(network, eps);
       model->overlay()->discover(eps);
     }
@@ -569,23 +552,7 @@ COMMAND(run)
 #endif
     if (script_mode)
     {
-#ifndef INFINIT_WINDOWS
-      reactor::FDStream stdin_stream(0);
-#else
-      // Windows does not support async io on stdin
-      elle::Buffer input;
-      while (true)
-      {
-        char buf[4096];
-        std::cin.read(buf, 4096);
-        int count = std::cin.gcount();
-        if (count > 0)
-          input.append(buf, count);
-        else
-          break;
-      }
-      auto stdin_stream = elle::IOStream(input.istreambuf());
-#endif
+      auto input = infinit::commands_input(args);
       std::unordered_map<std::string,
         std::unique_ptr<reactor::filesystem::Handle>> handles;
       while (true)
@@ -596,7 +563,7 @@ COMMAND(run)
         try
         {
           auto json =
-            boost::any_cast<elle::json::Object>(elle::json::read(stdin_stream));
+            boost::any_cast<elle::json::Object>(elle::json::read(*input));
           ELLE_TRACE("got command: %s", json);
           elle::serialization::json::SerializerIn command(json, false);
           op = command.deserialize<std::string>("operation");
@@ -915,7 +882,7 @@ COMMAND(run)
         }
         catch (elle::Error const& e)
         {
-          if (stdin_stream.eof())
+          if (input->eof())
             return;
           ELLE_LOG("bronk on op %s: %s", op, e);
           elle::serialization::json::SerializerOut response(std::cout);
@@ -938,7 +905,7 @@ COMMAND(run)
   if (local_endpoint && push)
   {
     elle::With<InterfacePublisher>(
-      network, self, node_id, local_endpoint.get().port()) << [&]
+      network, self, model->id(), local_endpoint.get().port()) << [&]
     {
       run();
     };
@@ -997,6 +964,7 @@ main(int argc, char** argv)
   std::vector<Mode::OptionDescription> options_run_mount = {
     {"allow-root-creation", bool_switch(),
         "create the filesystem root if not found"},
+    option_input("commands"),
     { "name", value<std::string>(), "volume name" },
     { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
     { "readonly", bool_switch(), "mount as readonly" },

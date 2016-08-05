@@ -17,10 +17,8 @@ namespace infinit
     `-------------*/
 
     Overlay::Overlay(model::doughnut::Doughnut* dht,
-                     std::shared_ptr<infinit::model::doughnut::Local> local,
-                     model::Address node_id)
-      : _node_id(std::move(node_id))
-      , _doughnut(dht)
+                     std::shared_ptr<infinit::model::doughnut::Local> local)
+      : _doughnut(dht)
       , _local(local)
     {}
 
@@ -40,9 +38,9 @@ namespace infinit
     `------*/
 
     void
-    Overlay::discover(NodeEndpoints const& peers)
+    Overlay::discover(NodeLocations const& peers)
     {
-      ELLE_TRACE("%s: discover new peers: %s", this, peers);
+      ELLE_TRACE("%s: discover new peers: %f", this, peers);
       this->_discover(peers);
     }
 
@@ -103,27 +101,23 @@ namespace infinit
         [this, addresses]
         (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
         {
-          elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
-          {
-            for (auto const& address: addresses)
-              scope.run_background(
-                elle::sprintf("%s: fetch node by address", *this),
-                [&]
-                {
-                  try
-                  {
-                    yield(this->_lookup_node(address));
-                  }
-                  catch (elle::Error const& e)
-                  {
-                    ELLE_TRACE("%s: failed to lookup node %f: %s",
-                               this, address, e);
-                    yield(WeakMember(new model::doughnut::DummyPeer(
-                                       *this->doughnut(), address)));
-                  }
-                });
-            reactor::wait(scope);
-          };
+          reactor::for_each_parallel(
+            addresses,
+            [&] (model::Address const& address)
+            {
+              try
+              {
+                yield(this->_lookup_node(address));
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_TRACE("%s: failed to lookup node %f: %s",
+                           this, address, e);
+                yield(WeakMember(new model::doughnut::DummyPeer(
+                                   *this->doughnut(), address)));
+              }
+            },
+            "fetch node by address");
         });
     }
 

@@ -1,5 +1,7 @@
 #include <elle/log.hh>
 
+#include <reactor/FDStream.hh>
+
 ELLE_LOG_COMPONENT("infinit");
 
 #include <main.hh>
@@ -83,6 +85,38 @@ mode_arguments(
 
 namespace infinit
 {
+  std::unique_ptr<std::istream>
+  commands_input(boost::program_options::variables_map const& args)
+  {
+    if (args.count("input"))
+    {
+      auto path = args["input"].as<std::string>();
+      if (path != "-")
+      {
+        auto file = elle::make_unique<boost::filesystem::ifstream>(path);
+        if (!file->good())
+          elle::err("unable to open \"%s\" for reading", path);
+        return std::move(file);
+      }
+    }
+#ifndef INFINIT_WINDOWS
+    return elle::make_unique<reactor::FDStream>(0);
+#else
+    // Windows does not support async io on stdin
+    auto res = elle::make_unique<std::stringstream>();
+    while (true)
+    {
+      char buf[4096];
+      std::cin.read(buf, 4096);
+      if (int count = std::cin.gcount())
+        res->write(buf, count);
+      else
+        break;
+    }
+    return res;
+#endif
+  }
+
   boost::optional<elle::Version> compatibility_version;
   int
   main(std::string desc,
