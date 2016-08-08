@@ -127,7 +127,7 @@ namespace infinit
         }
 
         void
-        serialize(elle::serialization::Serializer& s)
+        serialize(elle::serialization::Serializer& s) override
         {
           ModelConfig::serialize(s);
           this->_serialize(s);

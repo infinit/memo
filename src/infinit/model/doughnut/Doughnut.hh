@@ -170,7 +170,7 @@ namespace infinit
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
         void
-        serialize(elle::serialization::Serializer& s);
+        serialize(elle::serialization::Serializer& s) override;
         virtual
         std::unique_ptr<infinit::model::Model>
         make(std::vector<Endpoints> const& hosts,
