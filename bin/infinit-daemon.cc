@@ -333,7 +333,8 @@ public:
                std::string mount_substitute = "")
    : _mount_root(mount_root)
    , _mount_substitute(mount_substitute)
-   , _use_beyond(false)
+   , _fetch(false)
+   , _push(false)
    {}
   ~MountManager();
   void
@@ -371,7 +372,8 @@ public:
   ELLE_ATTRIBUTE_RW(std::string, default_user);
   ELLE_ATTRIBUTE_RW(std::string, default_network);
   ELLE_ATTRIBUTE_RW(std::vector<std::string>, advertise_host);
-  ELLE_ATTRIBUTE_RW(bool, use_beyond);
+  ELLE_ATTRIBUTE_RW(bool, fetch);
+  ELLE_ATTRIBUTE_RW(bool, push);
 private:
   std::unordered_map<std::string, Mount> _mounts;
 };
@@ -530,11 +532,10 @@ MountManager::start(std::string const& name,
     (this->_mount_root /
       (mount_prefix + boost::filesystem::unique_path().string())).string();
   }
-  if (this->_use_beyond)
-  {
-    m.options.push = true;
+  if (this->_fetch)
     m.options.fetch = true;
-  }
+  if (this->_push)
+    m.options.push = true;
   std::vector<std::string> arguments;
   static const auto root = elle::system::self_path().parent_path();
   arguments.push_back((root / "infinit-volume").string());
@@ -762,7 +763,7 @@ MountManager::create_network(elle::json::Object const& options,
   report_created("network", *netname);
   link_network(fullname, options);
   infinit::NetworkDescriptor desc(ifnt.network_get(*netname, owner, true));
-  if (!optional(options, "no-beyond") && this->_use_beyond)
+  if (!optional(options, "no-beyond") && this->_push)
   {
     try
     {
@@ -817,12 +818,12 @@ MountManager::create_volume(std::string const& name,
   }());
 
   infinit::MountOptions mo;
-  bool use_beyond = !optional(options, "no-beyond") && this->_use_beyond;
-  if (use_beyond)
-  {
+  bool fetch = !optional(options, "no-beyond") && this->_fetch;
+  bool push = !optional(options, "no-beyond") && this->_push;
+  if (fetch)
     mo.fetch = true;
+  if (push)
     mo.push = true;
-  }
   mo.as = username;
   mo.cache = !optional(options, "no-cache");
   mo.async = !optional(options, "no-async");
@@ -832,7 +833,7 @@ MountManager::create_volume(std::string const& name,
   infinit::Volume volume(qname, network.name, mo, {});
   ifnt.volume_save(volume, true);
   report_created("volume", qname);
-  if (use_beyond)
+  if (push)
   {
     try
     {
@@ -1266,7 +1267,8 @@ fill_manager_options(MountManager& manager,
   manager.log_level(loglevel);
   auto logpath = optional(args, "log-path");
   manager.log_path(logpath);
-  manager.use_beyond(flag(args, "use-beyond"));
+  manager.fetch(aliased_flag(args, { "fetch", "publish" }));
+  manager.push(aliased_flag(args, { "push", "publish" }));
   manager.default_user(self_user_name(args));
   auto default_network = optional(args, "default-network");
   if (default_network)
@@ -1901,12 +1903,13 @@ main(int argc, char** argv)
       "Advertise given hostname as an extra endpoint when running volumes" },
     { "mount,m", value<std::vector<std::string>>()->multitoken(),
       "mount given volumes on startup, keep trying on error" },
-    { "use-beyond", bool_switch(),
-      "Run volumes with '--publish' option, publish created volumes"},
+    { "fetch,f", bool_switch(), "Run volumes with --fetch" },
+    { "push,p", bool_switch(), "Run volumes with --push" },
+    { "publish", bool_switch(), "Alias for --fetch --push" },
 #if !defined(INFINIT_PRODUCTION_BUILD) || defined(INFINIT_LINUX)
     { "docker-disable", bool_switch(), "Disable the Docker plugin" },
     { "docker-user", value<std::string>(), elle::sprintf(
-      "System user to use for docker plugin (default: %s)",
+      "System user to use for docker plugin\n(default: %s)",
         SystemUser(getuid()).name) },
     { "docker-home", value<std::string>(),
       "Home directory to use for Docker user\n(default: /home/<docker-user>)" },
