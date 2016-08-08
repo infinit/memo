@@ -22,7 +22,7 @@ Performances improvements, bug fixes and debug utilities.
 - Prevent changing network admin permissions.
 - Push endpoints to beyond before fetching them, to ensure nodes
   always see each other.
-- Reduce Kelips packet size, improving network banddith
+- Reduce Kelips packet size, improving network bandwidth
   performances.
 
 ### Fixed
