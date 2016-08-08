@@ -18,8 +18,6 @@ infinit::Infinit ifnt;
 
 using boost::program_options::variables_map;
 
-static std::string _hub_salt = "@a.Fl$4'x!";
-
 template <typename Super>
 struct UserView
   : Super
@@ -402,54 +400,12 @@ COMMAND(signup_)
   throw elle::Error(elle::sprintf("User %s already exists locally", name));
 }
 
-struct LoginCredentials
-{
-  LoginCredentials(std::string const& name,
-                   std::string const& password_hash,
-                   std::string const& password = "")
-    : name(name)
-    , password_hash(password_hash)
-    , password(password)
-  {}
-
-  LoginCredentials(elle::serialization::SerializerIn& s)
-    : name(s.deserialize<std::string>("name"))
-    , password_hash(s.deserialize<std::string>("password_hash"))
-    , password(s.deserialize<std::string>("password"))
-  {}
-
-  std::string name;
-  std::string password_hash;
-  std::string password;
-};
-
-DAS_MODEL(LoginCredentials, (name, password_hash, password), DasLoginCredentials)
-
-template <typename T>
-elle::json::Json
-beyond_login(std::string const& name,
-             T const& o)
-{
-  reactor::http::Request::Configuration c;
-  c.header_add("Content-Type", "application/json");
-  reactor::http::Request r(elle::sprintf("%s/users/%s/login", beyond(), name),
-                           reactor::http::Method::POST, std::move(c));
-  elle::serialization::json::serialize(o, r, false);
-  r.finalize();
-  if (r.status() != reactor::http::StatusCode::OK)
-  {
-    read_error<BeyondError>(r, "login", name);
-  }
-
-  return elle::json::read(r);
-}
-
 COMMAND(login)
 {
   auto name = get_name(args);
   auto pass = _password(args, "password", "Password");
   auto hashed_pass = hash_password(pass, _hub_salt);
-  LoginCredentials c{name, hashed_pass, pass };
+  LoginCredentials c{ name, hashed_pass, pass };
   das::Serializer<DasLoginCredentials> credentials{c};
   auto json = beyond_login(name, credentials);
   elle::serialization::json::SerializerIn input(json, false);
@@ -460,10 +416,14 @@ COMMAND(login)
 
 COMMAND(list)
 {
+  auto users = ifnt.users_get();
+  std::sort(users.begin(), users.end(),
+            [] (infinit::User const& lhs, infinit::User const& rhs)
+            { return lhs.name < rhs.name; });
   if (script_mode)
   {
     elle::json::Array l;
-    for (auto const& user: ifnt.users_get())
+    for (auto const& user: users)
     {
       elle::json::Object o;
       o["name"] = user.name;
@@ -473,8 +433,13 @@ COMMAND(list)
     elle::json::write(std::cout, l);
   }
   else
-    for (auto const& user: ifnt.users_get())
+    for (auto const& user: users)
     {
+      auto self = self_user_name(args);
+      if (user.name == self)
+        std::cout << "* ";
+      else
+        std::cout << "  ";
       std::cout << user.name << ": public";
       if (user.private_key)
         std::cout << "/private keys";

@@ -2,12 +2,6 @@
 # define INFINIT_BIN_XATTRS_HH
 # include <string>
 
-# ifdef INFINIT_LINUX
-#  include <attr/xattr.h>
-# elif defined(INFINIT_MACOSX)
-#  include <sys/xattr.h>
-# endif
-
 # include <boost/filesystem/path.hpp>
 # include <boost/optional/optional.hpp>
 

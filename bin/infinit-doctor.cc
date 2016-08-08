@@ -1378,7 +1378,7 @@ _sanity(boost::program_options::variables_map const& args,
   ELLE_TRACE("user name")
     try
     {
-      auto self_name = self_user_name();
+      auto self_name = self_user_name(args);
       result.user = {self_name};
     }
     catch (...)

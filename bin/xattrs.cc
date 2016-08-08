@@ -1,5 +1,11 @@
 #include <xattrs.hh>
 
+# ifdef INFINIT_LINUX
+#  include <attr/xattr.h>
+# elif defined(INFINIT_MACOSX)
+#  include <sys/xattr.h>
+# endif
+
 #include <boost/filesystem.hpp>
 
 #include <elle/assert.hh>
@@ -96,7 +102,7 @@ enforce_in_mountpoint(
     if (mountpoint && !mountpoint.get().empty())
       return;
   }
-  elle::err(elle::sprintf("%s not in an Infinit volume", path_));
+  elle::err("%s not in an Infinit volume", path_);
 }
 
 bool

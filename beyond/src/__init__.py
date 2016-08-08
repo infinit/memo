@@ -22,8 +22,9 @@ os.environ['INFINIT_CRASH_REPORTER_ENABLED'] = '0'
 
 def find_binaries():
   for path in chain(
+      [os.environ.get('INFINIT_BINARIES')],
       os.environ.get('PATH', '').split(':'),
-      ['bin', '/opt/infinit/bin', os.environ.get('INFINIT_BINARIES')],
+      ['bin', '/opt/infinit/bin'],
   ):
     if not path:
       continue
@@ -36,7 +37,7 @@ def find_binaries():
       pass
     except subprocess.CalledProcessError:
       pass
-  raise Exception('unable to find infinit-user binary')
+  return None
 
 binary_path = find_binaries()
 
@@ -201,14 +202,17 @@ class Beyond:
   ## ------- ##
 
   def network_get(self, owner, name):
-    return self.__datastore.network_fetch(
-      owner = owner, name = name)
+    return Network.from_json(
+      self,
+      self.__datastore.network_fetch(owner = owner, name = name))
 
   def network_delete(self, owner, name):
     return self.__datastore.network_delete(owner = owner, name = name)
 
   def network_volumes_get(self, network):
-    return self.__datastore.networks_volumes_fetch(networks = [network])
+    return (
+      Volume.from_json(self, json) for json in
+      self.__datastore.networks_volumes_fetch(networks = [network]))
 
   def network_drives_get(self, network):
     return self.__datastore.network_drives_fetch(name = network.name)
@@ -263,14 +267,15 @@ class Beyond:
     return self.__datastore.user_delete(name = name)
 
   def user_networks_get(self, user):
-    return self.__datastore.user_networks_fetch(user = user)
+    return (Network.from_json(self, json) for json in
+            self.__datastore.user_networks_fetch(user = user))
 
   def user_volumes_get(self, user):
-    # XXX: This requires two requests as we cannot combine results
-    # across databases.
-    networks = self.__datastore.user_networks_fetch(user = user)
-    return self.__datastore.networks_volumes_fetch(
-      networks = networks)
+    networks = (Network.from_json(self, json) for json in
+                self.__datastore.user_networks_fetch(user = user))
+    return (Volume.from_json(self, json) for json in
+            self.__datastore.networks_volumes_fetch(
+              networks = networks))
 
   def user_drives_get(self, name):
     return self.__datastore.user_drives_fetch(name = name)
@@ -297,8 +302,9 @@ class Beyond:
   ## ------ ##
 
   def volume_get(self, owner, name):
-    return self.__datastore.volume_fetch(
-      owner = owner, name = name)
+    return Volume.from_json(
+      self,
+      self.__datastore.volume_fetch(owner = owner, name = name))
 
   def volume_delete(self, owner, name):
     return self.__datastore.volume_delete(
@@ -327,6 +333,8 @@ class Beyond:
         owner = owner, name = name)
 
   def process_invitations(self, user, email, drives):
+    if binary_path is None:
+      raise NotImplementedError()
     errors = []
     try:
       try:
@@ -842,7 +850,8 @@ class Volume(metaclass = Entity,
              insert = 'volume_insert',
              hasher = lambda v: hash(v.name),
              fields = fields('name', 'network',
-                             default_permissions = '')):
+                             default_permissions = '',
+                             mount_options = dict())):
 
   @property
   def id(self):

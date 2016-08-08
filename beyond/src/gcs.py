@@ -5,7 +5,6 @@ import requests
 import time
 import urllib.parse
 
-from oauth2client.client import SignedJwtAssertionCredentials
 import Crypto.Hash.SHA256 as SHA256
 import Crypto.PublicKey.RSA as RSA
 import Crypto.Signature.PKCS1_v1_5 as PKCS1_v1_5
@@ -26,10 +25,12 @@ class GCS:
     return self.__bucket_ns + name
 
   def __credentials(self):
+    scope = 'https://www.googleapis.com/auth/devstorage.read_write'
+    from oauth2client.client import SignedJwtAssertionCredentials
     credentials = SignedJwtAssertionCredentials(
       self.__login,
       self.__key,
-      scope = 'https://www.googleapis.com/auth/devstorage.read_write')
+      scope = scope)
     credentials.refresh(httplib2.Http())
     return credentials.access_token
 

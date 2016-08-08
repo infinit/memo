@@ -1,8 +1,11 @@
 #ifndef INFINIT_UTILITY_HH
-#define INFINIT_UTILITY_HH
+# define INFINIT_UTILITY_HH
 
-#include <boost/filesystem.hpp>
-#include <elle/system/home_directory.hh>
+# include <boost/filesystem.hpp>
+
+# include <elle/os/environ.hh>
+# include <elle/system/home_directory.hh>
+# include <elle/system/username.hh>
 
 namespace infinit
 {
@@ -23,21 +26,30 @@ namespace infinit
   boost::filesystem::path
   home()
   {
-    static auto const infinit_home = elle::os::getenv("INFINIT_HOME", "");
+    auto const infinit_home = elle::os::getenv("INFINIT_HOME", "");
     return infinit_home.empty() ? elle::system::home_directory() : infinit_home;
   }
 
   inline
   boost::filesystem::path
-  _xdg_home(std::string const& type, std::string const& def)
+  _xdg(std::string const& type,
+            boost::filesystem::path const& def)
   {
-    auto const infinit = elle::os::getenv("INFINIT_" + type + "_HOME", "");
-    auto const xdg = elle::os::getenv("XDG_" + type + "_HOME", "");
+    auto const infinit = elle::os::getenv("INFINIT_" + type, "");
+    auto const xdg = elle::os::getenv("XDG_" + type, "");
     auto const dir =
       !infinit.empty() ? infinit :
-      !xdg.empty() ? xdg :
-      home() / def / "infinit/filesystem";
+      !xdg.empty() ? boost::filesystem::path(xdg) / "infinit/filesystem" :
+      def;
     return canonical_folder(dir);
+  }
+
+  inline
+  boost::filesystem::path
+  _xdg_home(std::string const& type,
+            boost::filesystem::path const& def)
+  {
+    return _xdg(type + "_HOME", home() / def / "infinit/filesystem");
   }
 
   inline
@@ -59,6 +71,25 @@ namespace infinit
   xdg_data_home()
   {
     return _xdg_home("DATA", ".local/share");
+  }
+
+  inline
+  boost::filesystem::path
+  tmpdir()
+  {
+    auto const res = elle::os::getenv("TMPDIR", "/tmp");
+    return res;
+  }
+
+  inline
+  boost::filesystem::path
+  xdg_runtime_dir(boost::optional<std::string> fallback = {})
+  {
+    return _xdg(
+      "RUNTIME_DIR",
+      fallback
+        ? *fallback
+        : tmpdir() / elle::sprintf("infinit-%s", elle::system::username()));
   }
 
   inline

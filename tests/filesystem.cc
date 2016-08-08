@@ -2260,6 +2260,7 @@ ELLE_TEST_SCHEDULED(erased_group_recovery)
   a = boost::any_cast<elle::json::Array>(jperms);
   BOOST_CHECK_EQUAL(a.size(), 1);
 }
+
 ELLE_TEST_SCHEDULED(remove_permissions)
 {
   DHTs servers(-1);
@@ -2341,7 +2342,6 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(paxos_race), 0, 5);
   suite.add(BOOST_TEST_CASE(data_embed), 0, 5);
   suite.add(BOOST_TEST_CASE(symlink_perms), 0, 5);
-  suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
   suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
   suite.add(BOOST_TEST_CASE(rename_exceptions), 0, 5);
   suite.add(BOOST_TEST_CASE(erased_group), 0, 5);

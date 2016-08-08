@@ -200,6 +200,8 @@ with Beyond(bottle_args = {'ldap_server': ldap_url}) as beyond,\
                      '--port-file', portfile])
     while not os.path.exists(portfile):
       time.sleep(0.1)
+    while len(os.listdir(mountpoint)) == 0:
+      time.sleep(1)
     #Run batch drive populator
     admin.run(['infinit-ldap', '--drive-invite',
       '--server', ldap_url,

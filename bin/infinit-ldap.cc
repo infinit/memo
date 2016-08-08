@@ -89,7 +89,7 @@ _populate_network(boost::program_options::variables_map const& args,
   auto network =
     infinit::NetworkDescriptor(ifnt.network_get(network_name, self));
   auto mountpoint = mandatory(args, "mountpoint");
-  enforce_in_mountpoint(mountpoint, true, true);
+  enforce_in_mountpoint(mountpoint, true, false);
   auto ldap = make_ldap(args);
   auto searchbase = mandatory(args, "searchbase");
   auto objectclass = optional(args, "object-class");
