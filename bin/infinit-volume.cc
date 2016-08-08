@@ -1015,7 +1015,7 @@ COMMAND(stop)
 
 COMMAND(status)
 {
-    auto self = self_user(ifnt, args);
+  auto self = self_user(ifnt, args);
   auto name = volume_name(args, self);
   reactor::network::UnixDomainSocket sock(daemon_sock_path());
   std::stringstream ss;
@@ -1039,37 +1039,55 @@ COMMAND(status)
 }
 #endif
 
-template<typename T>
-T join(T const& a, T const& b)
+enum class RunMode
 {
-  T res(a);
-  res.insert(res.end(), b.begin(), b.end());
-  return res;
-}
+  create,
+  run,
+  update,
+};
 
-int
-main(int argc, char** argv)
+std::vector<Mode::OptionDescription>
+run_options(RunMode mode)
 {
   using boost::program_options::value;
-  using boost::program_options::bool_switch;
-  std::vector<Mode::OptionDescription> options_run_mount = {
-    {"allow-root-creation", bool_switch(),
-        "create the filesystem root if not found"},
-    option_input("commands"),
-    { "name", value<std::string>(), "volume name" },
+#define BOOL_IMPLICIT \
+  boost::program_options::value<bool>()->implicit_value(true, "true")
+  std::vector<Mode::OptionDescription> res;
+  auto add_option = [&res] (Mode::OptionDescription const& opt) {
+    res.push_back(opt);
+  };
+  auto add_options = [&res] (std::vector<Mode::OptionDescription> const& opts) {
+    for (auto const& opt: opts)
+      res.push_back(opt);
+  };
+  add_option({ "name", value<std::string>(), "volume name" });
+  if (mode == RunMode::create)
+  {
+    add_options({
+      { "network,N", value<std::string>(), "underlying network to use" },
+      { "push-volume", BOOL_IMPLICIT,
+        elle::sprintf("push the volume to %s", beyond(true)) },
+      option_output("volume"),
+      { "default-permissions,d", value<std::string>(),
+        "default permissions (optional: r,rw)"}
+    });
+  }
+  add_options({
+    { "allow-root-creation", BOOL_IMPLICIT,
+      "create the filesystem root if not found" },
     { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
-    { "readonly", bool_switch(), "mount as readonly" },
+    { "readonly", BOOL_IMPLICIT, "mount as readonly" },
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
     { "mount-name", value<std::string>(), "name of mounted volume" },
 #endif
 #ifdef INFINIT_MACOSX
     { "mount-icon", value<std::string>(),
       "path to an icon for mounted volume" },
-    { "finder-sidebar", bool_switch(), "show volume in Finder sidebar" },
+    { "finder-sidebar", BOOL_IMPLICIT, "show volume in Finder sidebar" },
 #endif
-    { "async", bool_switch(), "use asynchronous write operations" },
+    { "async", BOOL_IMPLICIT, "use asynchronous write operations" },
 #ifndef INFINIT_WINDOWS
-    { "daemon,d", bool_switch(), "run as a background daemon" },
+    { "daemon,d", BOOL_IMPLICIT, "run as a background daemon" },
     { "fuse-option", value<std::vector<std::string>>()->multitoken(),
       "option to pass directly to FUSE" },
 #endif
@@ -1078,14 +1096,21 @@ main(int argc, char** argv)
     option_cache_ram_ttl,
     option_cache_ram_invalidation,
     option_cache_disk_size,
-    { "fetch-endpoints", bool_switch(),
+    { "fetch-endpoints", BOOL_IMPLICIT,
       elle::sprintf("fetch endpoints from %s", beyond(true)) },
-    { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
+    { "fetch,f", BOOL_IMPLICIT, "alias for --fetch-endpoints" },
     { "peer", value<std::vector<std::string>>()->multitoken(),
       "peer address or file with list of peer addresses (host:port)" },
-    { "push-endpoints", bool_switch(),
+    { "push-endpoints", BOOL_IMPLICIT,
       elle::sprintf("push endpoints to %s", beyond(true)) },
-    { "publish", bool_switch(),
+  });
+  if (mode == RunMode::create)
+    add_option(
+      { "push,p", BOOL_IMPLICIT, "alias for --push-endpoints --push-volume" });
+  if (mode == RunMode::run || mode == RunMode::update)
+    add_option({ "push,p", BOOL_IMPLICIT, "alias for --push-endpoints" });
+  add_options({
+    { "publish", BOOL_IMPLICIT,
       "alias for --fetch-endpoints --push-endpoints" },
     { "advertise-host", value<std::vector<std::string>>()->multitoken(),
       "advertise extra endpoint using given host"
@@ -1093,7 +1118,20 @@ main(int argc, char** argv)
     option_endpoint_file,
     option_port_file,
     option_port,
-  };
+    option_input("commands"),
+  });
+  if (mode == RunMode::update)
+    add_option(
+      { "user,u", value<std::string>(), "force mounting user to USER" });
+#undef BOOL_IMPLICIT
+  return res;
+}
+
+int
+main(int argc, char** argv)
+{
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
   std::vector<Mode::OptionDescription> options_run_mount_hidden = {
 #ifdef INFINIT_MACOSX
     option_disable_mac_utf8,
@@ -1105,16 +1143,7 @@ main(int argc, char** argv)
       "Create a volume",
       &create,
       "--name VOLUME --network NETWORK [--mountpoint PATH]",
-      join(options_run_mount,
-        {
-          { "network,N", value<std::string>(), "underlying network to use" },
-          option_output("volume"),
-          { "push-volume", bool_switch(),
-            elle::sprintf("push the volume to %s", beyond(true)) },
-          { "push,p", bool_switch(), "alias for --push-endpoints --push-volume" },
-          { "default-permissions,d", value<std::string>(),
-            "default permissions (optional: r,rw)"},
-        })
+      run_options(RunMode::create),
     },
     {
       "export",
@@ -1162,10 +1191,7 @@ main(int argc, char** argv)
       "Run a volume",
       &run,
       "--name VOLUME [--mountpoint PATH]",
-      join( options_run_mount,
-        {
-          { "push,p", bool_switch(), "alias for --push-endpoints" },
-        }),
+      run_options(RunMode::run),
       {},
       options_run_mount_hidden,
     },
@@ -1174,10 +1200,7 @@ main(int argc, char** argv)
       "Mount a volume",
       &mount,
       "--name VOLUME [--mountpoint PATH]",
-      join( options_run_mount,
-        {
-          { "push,p", bool_switch(), "alias for --push-endpoints" },
-        }),
+      run_options(RunMode::run),
       {},
       options_run_mount_hidden,
     },
@@ -1208,20 +1231,13 @@ main(int argc, char** argv)
       "List volumes",
       &list,
       {},
-      {},
     },
     {
       "update",
       "Update a volume with default run options",
       &update,
       "--name VOLUME",
-      join(options_run_mount,
-        {
-          { "push,p", bool_switch(), "alias for --push-endpoints --push-volume" },
-          { "push-volume", bool_switch(),
-            elle::sprintf("push the volume to %s", beyond(true)) },
-          { "user,u", value<std::string>(), "force mounting user to USER"},
-        }),
+      run_options(RunMode::update),
     },
 #ifndef INFINIT_WINDOWS
     {
@@ -1229,10 +1245,7 @@ main(int argc, char** argv)
       "Start a volume through the daemon.",
       &start,
       "--name VOLUME [--mountpoint PATH]",
-      join( options_run_mount,
-        {
-          { "push,p", bool_switch(), "alias for --push-endpoints" },
-        }),
+      run_options(RunMode::run),
     },
     {
       "stop",
@@ -1242,7 +1255,6 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "volume to remove" },
       },
-      {}
     },
     {
       "status",
@@ -1252,8 +1264,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "volume to query" },
       },
-      {}
-    }
+    },
 #endif
   };
   return infinit::main("Infinit volume management utility", modes, argc, argv);
