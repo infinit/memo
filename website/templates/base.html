@@ -6,6 +6,10 @@
     <%
     title = context.get('title', 'Infinit Storage Platform')
     description = context.get('description', 'Infinit allows for the creation of flexible, secure and controlled file storage infrastructure on top of public, private or hybrid cloud resources.')
+    try:
+      route_name = request.route.name
+    except RuntimeError:
+      route_name = ()
     %>
     <title>${title}</title>
     <meta name="description" content="${description}" />
@@ -26,19 +30,19 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
-    % if 'doc_get_started' in request.route.name:
+    % if 'doc_get_started' in route_name:
       <link rel="canonical" href="https://infinit.sh${route('doc_get_started')}" />
     % endif
 
-    % if 'drive' in request.route.name:
+    % if 'drive' in route_name:
       <link rel="canonical" href="https://infinit.sh${route('drive')}" />
     % endif
 
-    % if 'press' in request.route.name:
+    % if 'press' in route_name:
       <link rel="canonical" href="https://infinit.sh/press" />
     % endif
 
-    % if 'doc_' in request.route.name:
+    % if 'doc_' in route_name:
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css" />
     % endif
 
@@ -46,12 +50,12 @@
     <link rel="stylesheet" type="text/css" media="all" href="${url('css/main.min.css')}" />
   </head>
 
-  <body class="${request.route.name} ${'documentation' if request.route.name[:4] == 'doc_' else ''} ${'doc_get_started' if 'doc_get_started' in request.route.name else ''} ${'drive' if request.route.name[:5] == 'drive' else ''}">
+  <body class="${route_name} ${'documentation' if route_name[:4] == 'doc_' else ''} ${'doc_get_started' if 'doc_get_started' in route_name else ''} ${'drive' if route_name[:5] == 'drive' else ''}">
 
     <div id="popup_notice"><span class="icon"></span> <span class="message"></span></div>
     <div id="full"></div>
 
-    % if request.route.name == 'home':
+    % if route_name == 'home':
       <!--<div id="announcement">We're organizing an <a href="http://www.meetup.com/Infinit-Paris/events/231333549/" target="_blank">Infinit Meetup</a> about distributed storage with Docker in Paris on 5 July. <a href="http://www.meetup.com/Infinit-Paris/events/231333549/" target="_blank">Join us!</a></div>-->
     % endif
 
@@ -76,13 +80,13 @@
 
       <ul>
         <li>
-          <a ${'class="active"' if request.route.name[:15] == 'doc_get_started' else ''} href="${route('doc_get_started')}">Get Started</a>
+          <a ${'class="active"' if route_name[:15] == 'doc_get_started' else ''} href="${route('doc_get_started')}">Get Started</a>
         </li>
         <li>
-          <a ${'class="active"' if request.route.name[:4] == 'doc_' and request.route.name[:15] != 'doc_get_started' and request.route.name != 'doc_faq' else ''} href="${route('doc_overview')}">Documentation</a>
+          <a ${'class="active"' if route_name[:4] == 'doc_' and route_name[:15] != 'doc_get_started' and route_name != 'doc_faq' else ''} href="${route('doc_overview')}">Documentation</a>
         </li>
         <li>
-          <a ${'class="active"' if request.route.name == 'faq' else ''} href="${route('faq')}">FAQ</a>
+          <a ${'class="active"' if route_name == 'faq' else ''} href="${route('faq')}">FAQ</a>
         </li>
       </ul>
     </header>
@@ -173,16 +177,16 @@
       </div>
     </footer>
 
-    % if 'faq' in request.route.name:
+    % if 'faq' in route_name:
       <script type="text/javascript" src="${url('js/instantsearch.min.js')}"></script>
     %endif
 
-    % if 'home' in request.route.name:
+    % if 'home' in route_name:
       <script src="//cdn.jsdelivr.net/algoliasearch/3/algoliasearch.min.js"></script>
       <script src="//cdn.jsdelivr.net/autocomplete.js/0/autocomplete.min.js"></script>
     %endif
 
-    % if 'doc_' in request.route.name:
+    % if 'doc_' in route_name:
       <script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script>
       <script type="text/javascript"> docsearch({
         apiKey: 'b430c7fa7482c946d41e19bfc147b247',
