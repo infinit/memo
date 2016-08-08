@@ -1367,7 +1367,7 @@ _run(boost::program_options::variables_map const& args, bool detach)
       mounter = elle::make_unique<reactor::Thread>("mounter",
         [&] {auto_mounter(*mount, *docker);});
   }
-  if (!flag(args, "docker-disable"))
+  if (flag(args, "docker"))
   {
 #if !defined(INFINIT_PRODUCTION_BUILD) || defined(INFINIT_LINUX)
     try
@@ -1890,7 +1890,6 @@ main(int argc, char** argv)
 {
   using boost::program_options::value;
   using boost::program_options::bool_switch;
-
   std::vector<Mode::OptionDescription> options_run = {
     { "login-user", value<std::vector<std::string>>()->multitoken(),
       "Login with selected user(s), of form 'user:password'" },
@@ -1907,7 +1906,9 @@ main(int argc, char** argv)
     { "push,p", bool_switch(), "Run volumes with --push" },
     { "publish", bool_switch(), "Alias for --fetch --push" },
 #if !defined(INFINIT_PRODUCTION_BUILD) || defined(INFINIT_LINUX)
-    { "docker-disable", bool_switch(), "Disable the Docker plugin" },
+    { "docker",
+      value<bool>()->implicit_value(true, "true")->default_value(true, "true"),
+      "Enable the Docker plugin\n(default: true)" },
     { "docker-user", value<std::string>(), elle::sprintf(
       "System user to use for docker plugin\n(default: %s)",
         SystemUser(getuid()).name) },
