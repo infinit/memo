@@ -17,6 +17,15 @@
   is now filled correctly.
 -->
 
+
+## [0.6.3]
+
+### Added
+
+- Add new `Koordinate` overlay that enable to run several overlay
+  algorithms on nodes.
+
+
 ## [0.6.2]
 
 ### Added
