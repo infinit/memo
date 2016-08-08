@@ -6,7 +6,12 @@ import re
 import json
 
 from bottle import redirect
-from infinit.website.utils import resources_path, route, static_file, view
+from infinit.website.utils import \
+  error_page, \
+  resources_path, \
+  route, \
+  static_file, \
+  view
 
 def error(code, reason = ''):
   bottle.response.status = code
@@ -16,23 +21,15 @@ def error(code, reason = ''):
     'reason': reason
   }
 
-# @route('/404')
-# @view('pages/404.html')
-# def custom404(error):
-#   return bottle.TEMPLATE_PATH
-  # return {}
-
 class Website(bottle.Bottle):
 
   def __init__(self):
     super().__init__()
     self.install(bottle.CertificationPlugin())
     route.apply(self)
+    error_page.apply(self)
     self.__swu = sendwithus.api(api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d')
     self.__hub = os.environ.get('INFINIT_BEYOND', 'https://beyond.infinit.io')
-    # self.error_handler = {
-    #   404: custom404,
-    # }
 
   def __call__(self, e, h):
     e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')
@@ -60,7 +57,7 @@ class Website(bottle.Bottle):
       'description': 'Infinit allows for the creation of flexible, secure and controlled file storage infrastructure on top of public, private or hybrid cloud resources.',
     }
 
-  @route('/404', name = 'notfound')
+  @error_page(404)
   @view('pages/404')
   def root(self):
     return {
