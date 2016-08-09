@@ -302,20 +302,6 @@ def configure(
     'src/infinit/model/faith/Faith.hh',
     'src/infinit/model/paranoid/Paranoid.cc',
     'src/infinit/model/paranoid/Paranoid.hh',
-    'src/infinit/overlay/Kalimero.cc',
-    'src/infinit/overlay/Kalimero.hh',
-    'src/infinit/overlay/koordinate/Configuration.cc',
-    'src/infinit/overlay/koordinate/Configuration.hh',
-    'src/infinit/overlay/koordinate/Koordinate.cc',
-    'src/infinit/overlay/koordinate/Koordinate.hh',
-    'src/infinit/overlay/Overlay.cc',
-    'src/infinit/overlay/Overlay.hh',
-    'src/infinit/overlay/Stonehenge.cc',
-    'src/infinit/overlay/Stonehenge.hh',
-    'src/infinit/overlay/kademlia/kademlia.cc',
-    'src/infinit/overlay/kademlia/kademlia.hh',
-    'src/infinit/overlay/kelips/Kelips.cc',
-    'src/infinit/overlay/kelips/Kelips.hh',
     'src/infinit/serialization.cc',
     'src/infinit/serialization.hh',
     'src/infinit/smb/smb.cc',
@@ -360,6 +346,7 @@ def configure(
     'src/infinit/utility.hh',
     'src/infinit/version.hh',
   )
+  infinit_sources += drake.include('src/infinit/overlay').sources
   if not windows:
     infinit_sources += drake.nodes(
       'src/infinit/storage/sftp.cc',
