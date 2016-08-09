@@ -88,14 +88,11 @@ path_mountpoint(std::string const& path, bool fallback)
 }
 
 void
-enforce_in_mountpoint(
-  std::string const& path_, bool enforce_directory, bool fallback)
+enforce_in_mountpoint(std::string const& path_, bool fallback)
 {
   auto path = boost::filesystem::absolute(path_);
   if (!boost::filesystem::exists(path))
     elle::err(elle::sprintf("path does not exist: %s", path_));
-  if (enforce_directory && !boost::filesystem::is_directory(path))
-    elle::err(elle::sprintf("path must be a directory: %s", path_));
   for (auto const& p: {path, path.parent_path()})
   {
     auto mountpoint = path_mountpoint(p.string(), fallback);
@@ -118,7 +115,7 @@ path_is_root(std::string const& path, bool fallback)
 boost::filesystem::path
 mountpoint_root(std::string const& path_in_mount, bool fallback)
 {
-  enforce_in_mountpoint(path_in_mount, false, fallback);
+  enforce_in_mountpoint(path_in_mount, fallback);
   boost::filesystem::path res = boost::filesystem::absolute(path_in_mount);
   while (!path_is_root(res.string(), fallback))
     res = res.parent_path();

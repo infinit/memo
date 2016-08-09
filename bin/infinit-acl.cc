@@ -352,7 +352,7 @@ COMMAND(list)
   bool fallback = flag(args, "fallback-xattrs");
   for (auto const& path: paths)
   {
-    enforce_in_mountpoint(path, false, fallback);
+    enforce_in_mountpoint(path, fallback);
     list_action(path, verbose, fallback);
     if (recursive)
       recursive_action(list_action, path, verbose, fallback);
@@ -411,7 +411,7 @@ COMMAND(set)
   // Don't do any operations before checking paths.
   for (auto const& path: paths)
   {
-    enforce_in_mountpoint(path, false, fallback);
+    enforce_in_mountpoint(path, fallback);
     if ((inherit || disinherit)
         && !recursive
         && !boost::filesystem::is_directory(path))
@@ -514,7 +514,7 @@ COMMAND(group)
     throw CommandLineError("specify only one action at a time");
   bool fallback = flag(args, "fallback-xattrs");
   std::string path = mandatory<std::string>(args, "path", "path in volume");
-  enforce_in_mountpoint(path, true, fallback);
+  enforce_in_mountpoint(path, fallback);
   bool fetch = flag(args, "fetch");
   // Need to perform group actions on a directory in the volume.
   if (!boost::filesystem::is_directory(path))
@@ -558,7 +558,7 @@ COMMAND(register_)
   auto network = ifnt.network_get(network_name, self);
   bool fallback = flag(args, "fallback-xattrs");
   auto path = mandatory<std::string>(args, "path", "path to mountpoint");
-  enforce_in_mountpoint(path, true, fallback);
+  enforce_in_mountpoint(path, fallback);
   auto user = ifnt.user_get(user_name, flag(args, "fetch"));
   auto passport = ifnt.passport_get(network.name, user_name);
   std::stringstream output;
