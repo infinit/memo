@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include <elle/cast.hh>
 #include <elle/serialization/json.hh>
 
 #include <infinit/filesystem/Directory.hh>
@@ -15,8 +16,11 @@
 #include <infinit/filesystem/Unreachable.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/NB.hh>
+#include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
@@ -267,7 +271,25 @@ namespace infinit
       {
         auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
           this->_owner.block_store());
-        if (*special == "block.nodes")
+        if (special->find("auth.") == 0)
+        {
+          auto perms = special->substr(5);
+          ELLE_DEBUG("set permissions %s", perms);
+          set_permissions(perms, v, this->_address);
+          return;
+        }
+        else if (special->find("auth_others") == 0)
+        {
+          auto block = this->_header_block();
+          bool r = v.find("r") != std::string::npos;
+          bool w = v.find("w") != std::string::npos;
+          umbrella([&] {
+              block->set_world_permissions(r, w);
+              _commit(WriteTarget::block);
+          }, EACCES);
+          return;
+        }
+        else if (*special == "block.nodes")
         {
           auto ids = elle::serialization::json::deserialize<
             std::unordered_set<model::Address>>(v);
@@ -289,16 +311,86 @@ namespace infinit
             return;
           }
         }
-        if (special->find("auth_others") == 0)
+        else if (special->find("register.") == 0)
         {
-          auto block = this->_header_block();
-          bool r = v.find("r") != std::string::npos;
-          bool w = v.find("w") != std::string::npos;
-          umbrella([&] {
-              block->set_world_permissions(r, w);
-              _commit(WriteTarget::block);
-          }, EACCES);
+          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+            this->_owner.block_store());
+          auto name = special->substr(9);
+          std::stringstream s(v);
+          auto p =
+            elle::serialization::json::deserialize<model::doughnut::Passport>(
+              s, false);
+          model::doughnut::UB ub(dht.get(), name, p, false);
+          model::doughnut::UB rub(dht.get(), name, p, true);
+          this->_owner.block_store()->store(
+            ub, model::STORE_INSERT,
+            elle::make_unique<model::doughnut::UserBlockUpserter>(name));
+          this->_owner.block_store()->store(
+            rub, model::STORE_INSERT,
+            elle::make_unique<model::doughnut::ReverseUserBlockUpserter>(name));
           return;
+        }
+        else if (special->find("group.") == 0)
+        {
+          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+            this->_owner.block_store());
+          if (dht->version() < elle::Version(0, 4, 0))
+          {
+            ELLE_WARN(
+              "drop group operation as network version %s is too old "
+              "(groups are available from 0.4.0)",
+              dht->version());
+            THROW_NOSYS;
+          }
+          auto operation = special->substr(6);
+          if (operation == "create")
+          {
+            model::doughnut::Group g(*dht, v);
+            g.create();
+            return;
+          }
+          else if (operation == "delete")
+          {
+            model::doughnut::Group g(*dht, v);
+            g.destroy();
+            return;
+          }
+          else if (operation == "add")
+          {
+            auto sep = v.find_first_of(':');
+            auto gn = v.substr(0, sep);
+            auto userdata = v.substr(sep+1);
+            model::doughnut::Group g(*dht, gn);
+            g.add_member(elle::Buffer(userdata.data(), userdata.size()));
+            return;
+          }
+          else if (operation == "remove")
+          {
+            auto sep = v.find_first_of(':');
+            auto gn = v.substr(0, sep);
+            auto userdata = v.substr(sep+1);
+            model::doughnut::Group g(*dht, gn);
+            g.remove_member(elle::Buffer(userdata.data(), userdata.size()));
+            return;
+          }
+          else if (operation == "addadmin")
+          {
+            auto sep = v.find_first_of(':');
+            auto gn = v.substr(0, sep);
+            auto userdata = v.substr(sep+1);
+            model::doughnut::Group g(*dht, gn);
+            g.add_admin(elle::Buffer(userdata.data(), userdata.size()));
+            return;
+          }
+          else if (operation == "removeadmin")
+          {
+            auto sep = v.find_first_of(':');
+            auto gn = v.substr(0, sep);
+            auto userdata = v.substr(sep+1);
+            model::doughnut::Group g(*dht, gn);
+            g.remove_admin(elle::Buffer(userdata.data(), userdata.size()));
+            return;
+          }
         }
         throw rfs::Error(ENOATTR, "no such attribute", elle::Backtrace());
       }
@@ -408,11 +500,89 @@ namespace infinit
             return getxattr_block(*dht, op, addr);
           }
         }
+        else if (special->find("group.") == 0)
+        {
+          auto operation = special->substr(6);
+          if (operation.find("control_key.") == 0)
+          {
+            std::string value = operation.substr(strlen("control_key."));
+            return umbrella(
+              [&]
+              {
+                model::doughnut::Group g(*dht, value);
+                return elle::serialization::json::serialize(
+                  g.public_control_key()).string();
+              });
+          }
+          else if (operation.find("list.") == 0)
+          {
+            std::string value = operation.substr(strlen("list."));
+            return umbrella(
+              [&]
+              {
+                model::doughnut::Group g(*dht, value);
+                elle::json::Object o;
+                auto members = g.list_members();
+                elle::json::Array v;
+                for (auto const& m: members)
+                  v.push_back(m->name());
+                o["members"] = v;
+                members = g.list_admins();
+                elle::json::Array va;
+                for (auto const& m: members)
+                  va.push_back(m->name());
+                o["admins"] = va;
+                std::stringstream ss;
+                elle::json::write(ss, o, true);
+                return ss.str();
+              });
+          }
+        }
         else if (special->find("mountpoint") == 0)
         {
           return (
             this->_owner.mountpoint() ? this->_owner.mountpoint().get().string()
                                       : "");
+        }
+        else if (special->find("resolve.") == 0)
+        {
+          return umbrella(
+            [&]
+            {
+              std::string what = special->substr(strlen("resolve."));
+              if (what.empty())
+                THROW_NODATA
+              std::unique_ptr<model::doughnut::User> user;
+              user = std::dynamic_pointer_cast<model::doughnut::User>
+                (dht->make_user(what));
+              if (!user)
+              {
+                auto block = elle::cast<ACLBlock>::runtime(
+                  this->_owner.block_store()->fetch(this->_address));
+                for (auto& e: block->list_permissions(*dht))
+                {
+                  if (model::doughnut::short_key_hash(
+                    dynamic_cast<model::doughnut::User*>(e.user.get())->key())
+                      == what)
+                  {
+                    user = std::dynamic_pointer_cast<model::doughnut::User>
+                      (std::move(e.user));
+                    break;
+                  }
+                }
+              }
+              if (!user)
+                THROW_INVAL;
+              elle::json::Object o;
+              o["name"] = std::string(user->name());
+              auto serkey = elle::serialization::json::serialize(user->key());
+              std::stringstream s(serkey.string());
+              o["key"] = elle::json::read(s);
+              o["key_hash"] = model::doughnut::short_key_hash(user->key());
+              std::stringstream ss;
+              elle::json::write(ss, o, true);
+              return ss.str();
+            });
         }
         else if (special->find("root") == 0)
         {
