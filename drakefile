@@ -205,18 +205,13 @@ def configure(
     'src/infinit/RPC.hh',
     'src/infinit/RPC.hxx',
     'src/infinit/Version.hh',
-    'src/infinit/credentials/AWSCredentials.cc',
-    'src/infinit/credentials/AWSCredentials.hh',
-    'src/infinit/credentials/Credentials.cc',
-    'src/infinit/credentials/Credentials.hh',
-    'src/infinit/credentials/OAuthCredentials.cc',
-    'src/infinit/credentials/OAuthCredentials.hh',
     'src/infinit/serialization.cc',
     'src/infinit/serialization.hh',
     'src/infinit/smb/smb.cc',
     'src/infinit/utility.hh',
     'src/infinit/version.hh',
   )
+  infinit_sources += drake.include('src/infinit/credentials').sources
   infinit_sources += drake.include('src/infinit/filesystem').sources
   infinit_sources += drake.include('src/infinit/model').sources
   infinit_sources += drake.include('src/infinit/overlay').sources
