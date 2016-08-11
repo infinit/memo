@@ -31,6 +31,8 @@ namespace infinit
       OP_REMOVE,
       OP_FETCH_FAST, ///< Fetch faster but can return a subset of requested nodes
     };
+    std::ostream&
+    operator <<(std::ostream& output, Operation op);
 
     class Overlay
     {

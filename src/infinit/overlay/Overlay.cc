@@ -12,6 +12,34 @@ namespace infinit
 {
   namespace overlay
   {
+    /*----------.
+    | Operation |
+    `----------*/
+
+    std::ostream&
+    operator <<(std::ostream& output, Operation op)
+    {
+      switch (op)
+      {
+        case OP_FETCH:
+          output << "fetch";
+          break;
+        case OP_INSERT:
+          output << "insert";
+          break;
+        case OP_UPDATE:
+          output << "update";
+          break;
+        case OP_REMOVE:
+          output << "remove";
+          break;
+        case OP_FETCH_FAST:
+          output << "fetch_fast";
+          break;
+      }
+      return output;
+    }
+
     /*-------------.
     | Construction |
     `-------------*/
