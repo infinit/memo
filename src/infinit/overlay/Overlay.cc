@@ -27,6 +27,12 @@ namespace infinit
       ELLE_TRACE("%s: destruct", this);
     }
 
+    model::Address const&
+    Overlay::id() const
+    {
+      return this->_doughnut->id();
+    }
+
     elle::json::Json
     Overlay::query(std::string const& k, boost::optional<std::string> const& v)
     {

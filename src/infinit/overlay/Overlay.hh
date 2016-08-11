@@ -7,7 +7,6 @@
 # include <elle/json/json.hh>
 # include <elle/log.hh>
 
-
 # include <reactor/network/tcp-socket.hh>
 # include <reactor/Generator.hh>
 
@@ -52,6 +51,7 @@ namespace infinit
       virtual
       ~Overlay();
       ELLE_ATTRIBUTE_R(model::doughnut::Doughnut*, doughnut);
+      ELLE_attribute_r(model::Address, id);
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
 
     /*------.
