@@ -85,14 +85,14 @@ namespace infinit
     reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
     Overlay::lookup(std::vector<model::Address> const& addresses, int n) const
     {
-      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %s", *this, n, addresses);
+      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %f", *this, n, addresses);
       return this->_lookup(addresses, n);
     }
 
     reactor::Generator<Overlay::WeakMember>
     Overlay::lookup(model::Address address, int n, Operation op) const
     {
-      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %f", this, n, address);
+      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %f (%s)", this, n, address, op);
       return this->_lookup(address, n, op);
     }
 
