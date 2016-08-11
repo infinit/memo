@@ -383,7 +383,7 @@ namespace infinit
                  elle::Buffer const& /*token*/,
                  elle::Buffer const& signed_challenge) -> bool
           {
-            ELLE_TRACE("auth_ack, dn=%s", this->_doughnut);
+            ELLE_TRACE("%s: authentication ack", this);
             if (stored_challenge->empty())
               throw elle::Error("auth_syn must be called before auth_ack");
             auto& passport = this->_passports.at(&rpcs);
@@ -420,6 +420,7 @@ namespace infinit
               name,
               [this, socket]
               {
+                ELLE_TRACE_SCOPE("%s: serve %s", this, **socket);
                 try
                 {
                   RPCServer rpcs(this->_doughnut.version());
