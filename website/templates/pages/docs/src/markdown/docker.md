@@ -66,7 +66,7 @@ $> docker run -it --rm --volume-driver infinit -v alice/my-volume:/path/to/mount
 
 ```
 
-_**IMPORTANT**: If the volume was created using `infinit-volume --create` ensure that you have run it and accessed it at least once with the `--allow-root-creation` flag._
+_**IMPORTANT**: Ensure that you have run the volume and accessed it at least once with the `--allow-root-creation` flag._
 
 Volume mount options
 --------------------
