@@ -1,6 +1,11 @@
+DYNAMODB = False
+
 import infinit.beyond
 import infinit.beyond.bottle
-import infinit.beyond.couchdb
+if DYNAMODB:
+  import infinit.beyond.dynamodb
+else:
+  import infinit.beyond.couchdb
 
 import time
 import bottle
@@ -49,7 +54,10 @@ class Beyond:
     self.__app = None
     self.__advance = timedelta()
     self.__beyond = None
-    self.__couchdb = infinit.beyond.couchdb.CouchDB()
+    if DYNAMODB:
+      self.__db = infinit.beyond.dynamodb.DynamoDB()
+    else:
+      self.__db = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
     self.__beyond_args = beyond_args
     self.__create_delegate_user = create_delegate_user
@@ -72,8 +80,11 @@ class Beyond:
     setattr(self.__beyond, '_Beyond__emailer', emailer)
 
   def __enter__(self):
-    couchdb = self.__couchdb.__enter__()
-    self.__datastore = infinit.beyond.couchdb.CouchDBDatastore(couchdb)
+    db = self.__db.__enter__()
+    if DYNAMODB:
+      self.__datastore = infinit.beyond.dynamodb.DynamoDBDatastore(db)
+    else:
+      self.__datastore = infinit.beyond.couchdb.CouchDBDatastore(db)
     default_args = {
       'dropbox_app_key': 'db_key',
       'dropbox_app_secret': 'db_secret',
@@ -161,7 +172,7 @@ class Beyond:
     self.__app = None
     self.__beyond = None
     self.__datastore = None
-    self.__couchdb.__exit__(*args)
+    self.__db.__exit__(*args)
 
   @property
   def host(self):

@@ -6,7 +6,6 @@ namespace infinit
   {
     namespace doughnut
     {
-
       template<typename F, typename ...Args>
       typename RPC<F>::result_type
       remote_call_next(RemoteRPC<F>* ptr, Args const& ... args)
@@ -131,6 +130,12 @@ namespace infinit
         }
       }
 
+      template<typename F>
+      RemoteRPC<F>
+      Remote::make_rpc(std::string const& name)
+      {
+        return RemoteRPC<F>(name, this);
+      }
     }
   }
 }

@@ -26,6 +26,7 @@
 #include <reactor/network/rdv-socket.hh>
 #include <reactor/network/rdv-socket.hh>
 #include <reactor/network/buffer.hh>
+#include <reactor/network/resolve.hh>
 
 #include <cryptography/hash.hh>
 #include <cryptography/rsa/KeyPair.hh>
@@ -54,7 +55,56 @@
 
 extern std::string program;
 
-#define COMMAND(name) static void name(boost::program_options::variables_map const& args)
+class QName
+  : public std::string
+{
+public:
+  QName()
+    : QName("/")
+  {}
+
+  QName(std::string qname)
+    : std::string(std::move(qname))
+  {
+    if (this->find("/") == std::string::npos)
+      ELLE_ABORT("invalid qualified name: %s", *this);
+  }
+
+  QName(std::string const& qualifier, std::string const& name)
+    : std::string(elle::sprintf("%s/%s", qualifier, name))
+  {}
+
+  std::string
+  unqualified(std::string const& qualifier) const
+  {
+    if (this->qualifier() == qualifier)
+      return this->name();
+    else
+      return *this;
+  }
+
+  std::string
+  qualifier() const
+  {
+    auto pos = this->find("/");
+    ELLE_ASSERT_NEQ(pos, std::string::npos);
+    return this->substr(0, pos);
+  }
+
+  std::string
+  name() const
+  {
+    auto pos = this->find("/");
+    ELLE_ASSERT_NEQ(pos, std::string::npos);
+    return this->substr(pos + 1);
+  }
+};
+
+#define COMMAND(name)                                           \
+  static                                                        \
+  void                                                          \
+  name(boost::program_options::variables_map const& args,       \
+       boost::signals2::signal<void()>& killed)                 \
 
 #define NO_PRIVATE_KEY "user \"%s\" has no private key"
 
@@ -384,7 +434,8 @@ struct Mode
   };
 
   typedef
-    std::function<void (boost::program_options::variables_map const&)> Action;
+    std::function<void (boost::program_options::variables_map const&,
+                        boost::signals2::signal<void ()>&)> Action;
   typedef std::vector<OptionDescription> Options;
   typedef std::vector<OptionsDescription> OptionsVector;
 
@@ -518,6 +569,339 @@ beyond_push(std::string const& where,
             bool beyond_error = false, // FIXME: Remove when migration done.
             bool update = false);
 
+static
+Mode::OptionDescription option_cache(
+  "cache", boost::program_options::value<bool>()->implicit_value(true, "true"),
+  "enable caching with default values");
+static
+Mode::OptionDescription option_cache_ram_size(
+  "cache-ram-size", boost::program_options::value<int>(),
+  "maximum RAM block cache size in bytes\n(default: 64 MB)",
+  {{"cache-size", boost::program_options::value<int>()}});
+static
+Mode::OptionDescription option_cache_ram_ttl(
+  "cache-ram-ttl", boost::program_options::value<int>(),
+  "RAM block cache time-to-live in seconds\n(default: 5 minutes)",
+  {{"cache-ttl", boost::program_options::value<int>()}});
+static
+Mode::OptionDescription option_cache_ram_invalidation(
+  "cache-ram-invalidation", boost::program_options::value<int>(),
+  "RAM block cache invalidation time in seconds\n(default: 15 seconds)",
+  {{"cache-invalidation", boost::program_options::value<int>()}});
+static
+Mode::OptionDescription option_cache_disk_size(
+  "cache-disk-size", boost::program_options::value<uint64_t>(),
+  "size of disk cache for immutable data in bytes\n(default: 512 MB)",
+  {{"disk-cache-size", boost::program_options::value<uint64_t>()}});
+static
+Mode::OptionDescription option_port_file(
+  "port-file", boost::program_options::value<std::string>(),
+  "write node listening port to file");
+static
+Mode::OptionDescription option_endpoint_file(
+  "endpoints-file", boost::program_options::value<std::string>(),
+  "write node listening endpoints to file\n(format: host:port\\n)");
+static
+Mode::OptionDescription option_port(
+  "port", boost::program_options::value<int>(),
+  "outbound port to use");
+static
+Mode::OptionDescription option_disable_mac_utf8(
+  "disable-utf-8-conversion", boost::program_options::bool_switch(),
+  "disable FUSE conversion of UTF-8 to native format");
+
+
+class CommandLineSerializer
+  : public elle::serialization::SerializerIn
+{
+public:
+  typedef elle::serialization::SerializerIn Super;
+  CommandLineSerializer(boost::program_options::variables_map const& vm)
+    : Super(ELLE_SFINAE_INSTANCE(std::istream), false)
+    , _variables(vm)
+  {}
+
+protected:
+  boost::program_options::variables_map const& _variables;
+
+  virtual
+  void
+  _serialize_array(std::string const& name,
+                   int size, // -1 for in(), array size for out()
+                   std::function<void ()> const& f)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, int64_t& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, uint64_t& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, int32_t& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, uint32_t& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, int8_t& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, uint8_t& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, double& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, bool& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, std::string& v)
+  {
+    v = this->_get(name).as<std::string>();
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, elle::Buffer& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize(std::string const& name, boost::posix_time::ptime& v)
+  {
+    ELLE_ABORT("not handled");
+  }
+
+  virtual
+  void
+  _serialize_option(std::string const& name,
+                    bool present,
+                    std::function<void ()> const& f)
+  {
+    if (this->_variables.count(name))
+      f();
+  }
+
+private:
+  boost::program_options::variable_value const&
+  _get(std::string const& name)
+  {
+    auto count = this->_variables.count(name);
+    if (!count)
+      throw elle::Error(elle::sprintf("missing required \"%s\" option", name));
+    if (count > 1)
+      throw elle::Error(elle::sprintf("duplicate \"%s\" option", name));
+    return this->_variables[name];
+  }
+};
+
+template <typename T>
+boost::optional<T>
+check_deprecated(boost::program_options::variables_map const& vm,
+                 Mode::OptionDescription const& option)
+{
+  for (auto const& deprecated: option.deprecated_options)
+  {
+    if (vm.count(deprecated->long_name()))
+    {
+      std::cerr << "WARNING: option \"--" << deprecated->long_name()
+                << "\" is deprecated "
+                << "use \"--" << option.long_name() << "\" instead."
+                << std::endl;
+      return vm[deprecated->long_name()].as<T>();
+    }
+  }
+  return boost::none;
+}
+
+template <typename T = std::string>
+boost::optional<T>
+optional(boost::program_options::variables_map const& vm,
+         std::string const& name)
+{
+  if (vm.count(name))
+    return vm[name].as<T>();
+  else
+    return {};
+}
+
+template <bool>
+boost::optional<bool>
+optional(boost::program_options::variables_map const& vm,
+         std::string const& name)
+{
+  if (vm.count(name))
+    return vm[name].empty() || vm[name].as<bool>();
+  return {};
+}
+
+template <typename T = std::string>
+boost::optional<T>
+optional(boost::program_options::variables_map const& vm,
+         Mode::OptionDescription const& option)
+{
+  auto deprecated = check_deprecated<T>(vm, option);
+  if (deprecated)
+    return deprecated;
+  return optional<T>(vm, option.long_name());
+}
+
+template <typename T = std::string>
+T
+mandatory(boost::program_options::variables_map const& vm,
+          std::string const& name,
+          std::string const& desc)
+{
+  if (!vm.count(name))
+  {
+    throw CommandLineError(
+      elle::sprintf("%s unspecified (use --%s)", desc, name));
+  }
+  return vm[name].as<T>();
+}
+
+template <typename T = std::string>
+T
+mandatory(boost::program_options::variables_map const& vm,
+          Mode::OptionDescription const& option,
+          std::string const& desc)
+{
+  auto deprecated = check_deprecated<T>(vm, option);
+  if (deprecated)
+    return deprecated.get();
+  return mandatory<T>(vm, option.long_name(), desc);
+}
+
+template <typename T = std::string>
+T
+mandatory(boost::program_options::variables_map const& vm,
+          std::string const& name)
+{
+  return mandatory<T>(vm, name, name);
+}
+
+template <typename T = std::string>
+T
+mandatory(boost::program_options::variables_map const& vm,
+          Mode::OptionDescription const& option)
+{
+  auto deprecated = check_deprecated<T>(vm, option);
+  if (deprecated)
+    return deprecated.get();
+  return mandatory<T>(vm, option.long_name());
+}
+
+template <>
+inline
+std::vector<std::string>
+mandatory<std::vector<std::string>>(
+  boost::program_options::variables_map const& vm,
+  std::string const& name,
+  std::string const& desc)
+{
+  if (!vm.count(name))
+  {
+    throw CommandLineError(
+      elle::sprintf("%s unspecified (use --%s [value ...])", desc, name));
+  }
+  return vm[name].as<std::vector<std::string>>();
+}
+
+inline
+bool
+flag(boost::program_options::variables_map const& vm,
+     std::string const& name)
+{
+  return vm.count(name) && vm[name].as<bool>();
+}
+
+inline
+bool
+flag(boost::program_options::variables_map const& vm,
+     Mode::OptionDescription const& option)
+{
+  auto deprecated = check_deprecated<bool>(vm, option);
+  if (deprecated)
+    return deprecated.get();
+  return flag(vm, option.long_name());
+}
+
+inline
+boost::optional<bool>
+optional_aliased_flag(boost::program_options::variables_map const& vm,
+                      std::vector<std::string> const& aliases)
+{
+  for (auto const& alias: aliases)
+    if (vm.count(alias))
+      return vm[alias].as<bool>();
+  return {};
+}
+
+inline
+bool
+aliased_flag(boost::program_options::variables_map const& vm,
+             std::vector<std::string> const& aliases)
+{
+  for (auto const& alias: aliases)
+    if (vm.count(alias) && vm[alias].as<bool>())
+      return true;
+  return false;
+}
+
+inline
+bool
+exclusive_flag(boost::program_options::variables_map const& vm,
+               std::vector<std::string> const& flags)
+{
+  int count = 0;
+  for (auto const& f: flags)
+    count += (flag(vm, f) ? 1 : 0);
+  return (count == 1);
+}
+
+template<typename T>
+T
+beyond_fetch(std::string const& type,
+             std::string const& name);
+
 namespace infinit
 {
   extern boost::optional<elle::Version> compatibility_version;
@@ -581,13 +965,15 @@ namespace infinit
     User(std::string const& name,
          cryptography::rsa::KeyPair const& keys,
          boost::optional<std::string> email = {},
-         boost::optional<std::string> fullname = {})
+         boost::optional<std::string> fullname = {},
+         boost::optional<std::string> ldap_dn = {})
       : name(name)
       , public_key(keys.K())
       , private_key(keys.k())
       , email(email)
       , fullname(fullname)
       , password_hash()
+      , ldap_dn(ldap_dn)
     {
       check_name(this->name, true);
     }
@@ -600,6 +986,7 @@ namespace infinit
       , email(s.deserialize<boost::optional<std::string>>("email"))
       , fullname(s.deserialize<boost::optional<std::string>>("fullname"))
       , password_hash()
+      , ldap_dn(s.deserialize<boost::optional<std::string>>("ldap_dn"))
     {
       check_name(this->name, true);
     }
@@ -625,6 +1012,7 @@ namespace infinit
       s.serialize("password_hash", this->password_hash);
       s.serialize("private_key", this->private_key);
       s.serialize("public_key", this->public_key);
+      s.serialize("ldap_dn", this->ldap_dn);
     }
 
     static
@@ -668,6 +1056,8 @@ namespace infinit
     boost::optional<std::string> fullname;
     boost::optional<std::string> avatar_path;
     boost::optional<std::string> password_hash;
+    boost::optional<std::string> password;
+    boost::optional<std::string> ldap_dn;
   };
 
   struct Network
@@ -722,7 +1112,7 @@ namespace infinit
 
     std::unique_ptr<model::doughnut::Doughnut>
     run(User const& user,
-        overlay::NodeEndpoints const& hosts = overlay::NodeEndpoints(),
+        std::vector<infinit::model::Endpoints> const& hosts = {},
         bool client = false,
         bool cache = false,
         boost::optional<int> cache_size = {},
@@ -917,18 +1307,156 @@ namespace infinit
     model::doughnut::AdminKeys admin_keys;
   };
 
+
+  struct MountOptions
+  {
+    MountOptions();
+    void to_commandline(std::vector<std::string>& arguments,
+                        std::unordered_map<std::string, std::string>& env) const;
+    void merge(boost::program_options::variables_map const& args);
+    void merge(MountOptions const& other);
+    boost::optional<std::string> hub_url;
+    boost::optional<std::string> rdv;
+    boost::optional<std::vector<std::string>> fuse_options;
+    boost::optional<std::string> as;
+    boost::optional<bool> fetch;
+    boost::optional<bool> push;
+    boost::optional<bool> cache;
+    boost::optional<bool> async;
+    boost::optional<bool> readonly;
+    boost::optional<int> cache_ram_size;
+    boost::optional<int> cache_ram_ttl;
+    boost::optional<int> cache_ram_invalidation;
+    boost::optional<uint64_t> cache_disk_size;
+    boost::optional<std::string> mountpoint;
+    boost::optional<std::vector<std::string>> peers;
+    typedef infinit::serialization_tag serialization_tag;
+  };
+
+  inline
+  MountOptions::MountOptions()
+  {}
+
+  template<typename T>
+  void merge(T& a, const T& b)
+  {
+    if (b)
+      a = b.get();
+  }
+
+  template<typename T>
+  void merge(boost::optional<std::vector<T>>& a,
+             boost::optional<std::vector<T>> const& b)
+  {
+    if (b)
+    {
+      if (!a)
+        a = std::vector<T>();
+      a.get().insert(a.get().end(), b.get().begin(), b.get().end());
+    }
+  }
+  inline
+  void
+  MountOptions::merge(MountOptions const& b)
+  {
+    infinit::merge(hub_url, b.hub_url);
+    infinit::merge(rdv, b.rdv);
+    infinit::merge(fuse_options, b.fuse_options);
+    infinit::merge(as, b.as);
+    infinit::merge(fetch, b.fetch);
+    infinit::merge(push, b.push);
+    infinit::merge(cache, b.cache);
+    infinit::merge(async, b.async);
+    infinit::merge(readonly, b.readonly);
+    infinit::merge(cache_ram_size, b.cache_ram_size);
+    infinit::merge(cache_ram_ttl, b.cache_ram_ttl);
+    infinit::merge(cache_ram_invalidation, b.cache_ram_invalidation);
+    infinit::merge(cache_disk_size, b.cache_disk_size);
+    infinit::merge(mountpoint, b.mountpoint);
+    infinit::merge(peers, b.peers);
+  }
+
+  inline
+  void
+  MountOptions::merge(boost::program_options::variables_map const& args)
+  {
+    infinit::merge(this->fuse_options,
+                   optional<std::vector<std::string>>(args, "fuse-option"));
+    infinit::merge(this->peers,
+                   optional<std::vector<std::string>>(args, "peer"));
+    infinit::merge(this->mountpoint, optional(args, "mountpoint"));
+    // FIXME: Why user and as?
+    infinit::merge(this->as, optional(args, "as"));
+    infinit::merge(this->as, optional(args, "user"));
+    infinit::merge(this->readonly, optional<bool>(args, "readonly"));
+    infinit::merge(this->fetch, optional_aliased_flag(args, {
+      "fetch-endpoints", "fetch", "publish"}));
+    infinit::merge(this->push, optional_aliased_flag(args, {
+      "push-endpoints", "push", "publish"}));
+    infinit::merge(this->cache, optional<bool>(args, option_cache));
+    infinit::merge(this->async, optional<bool>(args, "async"));
+    infinit::merge(this->cache_ram_size,
+                   optional<int>(args, option_cache_ram_size));
+    infinit::merge(this->cache_ram_ttl,
+                   optional<int>(args, option_cache_ram_ttl));
+    infinit::merge(this->cache_ram_invalidation,
+                   optional<int>(args, option_cache_ram_invalidation));
+    infinit::merge(this->cache_disk_size,
+                   optional<uint64_t>(args, option_cache_disk_size));
+  }
+
+  inline
+  void
+  MountOptions::to_commandline(std::vector<std::string>& arguments,
+                               std::unordered_map<std::string, std::string>& env) const
+  {
+    if (rdv)
+      env.insert(std::make_pair("INFINIT_RDV", rdv.get()));
+    if (hub_url)
+      env.insert(std::make_pair("INFINIT_BEYOND", hub_url.get()));
+    if (fuse_options)
+      for (auto const& fo: fuse_options.get())
+      {
+        arguments.push_back("--fuse-option");
+        arguments.push_back(fo);
+      }
+    if (peers)
+      for (auto const& fo: peers.get())
+      {
+        arguments.push_back("--peer");
+        arguments.push_back(fo);
+      }
+    if (fetch && *fetch) arguments.push_back("--fetch");
+    if (push && *push) arguments.push_back("--push");
+    if (cache && *cache) arguments.push_back("--cache");
+    if (async && *async) arguments.push_back("--async");
+    if (readonly && *readonly) arguments.push_back("--readonly");
+    if (cache_ram_size) {arguments.push_back("--cache-ram-size"); arguments.push_back(std::to_string(cache_ram_size.get()));}
+    if (cache_ram_ttl) {arguments.push_back("--cache-ram-ttl"); arguments.push_back(std::to_string(cache_ram_ttl.get()));}
+    if (cache_ram_invalidation) {arguments.push_back("--cache-ram-invalidation"); arguments.push_back(std::to_string(cache_ram_invalidation.get()));}
+    if (cache_disk_size) {arguments.push_back("--cache-disk-size"); arguments.push_back(std::to_string(cache_disk_size.get()));}
+    if (mountpoint)
+    {
+      arguments.push_back("--mountpoint");
+      arguments.push_back(mountpoint.get());
+    }
+    if (as)
+    {
+      arguments.push_back("--as");
+      arguments.push_back(as.get());
+    }
+  }
+
   struct Volume
     : public elle::Printable
   {
-    Volume() {};
-
-    Volume(std::string name,
-           boost::optional<std::string> mountpoint_,
+    Volume(QName name,
            std::string network_,
+           MountOptions const& mount_options,
            boost::optional<std::string> default_permissions_)
       : name(std::move(name))
-      , mountpoint(std::move(mountpoint_))
       , network(std::move(network_))
+      , mount_options(mount_options)
       , default_permissions(std::move(default_permissions_))
     {
       check_name(this->name);
@@ -944,10 +1472,16 @@ namespace infinit
     serialize(elle::serialization::Serializer& s)
     {
       s.serialize("name", this->name);
-      if (s.out() && !this->mountpoint)
-        s.serialize("mountpoint", this->mountpoint);
       s.serialize("network", this->network);
       s.serialize("default_permissions", this->default_permissions);
+      try
+      {
+        s.serialize("mount_options", this->mount_options);
+      }
+      catch (elle::Error const&e)
+      {
+        ELLE_TRACE("mount_options serialization error, assuming old version: %s", e);
+      }
     }
 
     std::unique_ptr<reactor::filesystem::FileSystem>
@@ -961,20 +1495,21 @@ namespace infinit
 #ifdef INFINIT_MACOSX
         , boost::optional<std::string> volicon_ = {}
 #endif
-#ifndef INFINIT_WINDOWS
-        , boost::optional<std::vector<std::string>> fuse_options = {}
-#endif
     )
     {
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
       if (!volname_)
         volname_ = this->name;
 #endif
+      {
+        std::vector<std::string> opts;
+        std::unordered_map<std::string, std::string> env;
+        mount_options.to_commandline(opts, env);
+        ELLE_TRACE("mount options: %s  environ %s", opts, env);
+      }
       boost::optional<boost::filesystem::path> mountpoint;
-      if (mountpoint_)
-        mountpoint = mountpoint_.get();
-      else if (this->mountpoint)
-        mountpoint = this->mountpoint.get();
+      if (this->mount_options.mountpoint)
+        mountpoint = boost::filesystem::path(this->mount_options.mountpoint.get());
       auto fs = elle::make_unique<filesystem::FileSystem>(
         infinit::filesystem::model = dht,
         infinit::filesystem::allow_root_creation = allow_root_creation,
@@ -985,33 +1520,33 @@ namespace infinit
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       if (mountpoint)
       {
-        std::vector<std::string> mount_options = {
+        std::vector<std::string> fuse_options = {
           "infinit-volume",
           "-o", "noatime",
           "-o", "hard_remove",
         };
-        if (readonly && readonly.get())
+        if (mount_options.readonly && mount_options.readonly.get())
         {
-          mount_options.push_back("-o");
-          mount_options.push_back("ro");
+          fuse_options.push_back("-o");
+          fuse_options.push_back("ro");
         }
 #ifndef INFINIT_WINDOWS
-        if (fuse_options)
+        if (mount_options.fuse_options)
         {
-          for (auto const& opt: fuse_options.get())
+          for (auto const& opt: mount_options.fuse_options.get())
           {
-            mount_options.push_back("-o");
-            mount_options.push_back(opt);
+            fuse_options.push_back("-o");
+            fuse_options.push_back(opt);
           }
         }
 #endif
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         auto add_option =
-          [&mount_options] (std::string const& opt_name,
+          [&fuse_options] (std::string const& opt_name,
                             std::string const& opt_val)
           {
-            mount_options.push_back("-o");
-            mount_options.push_back(elle::sprintf("%s=%s", opt_name, opt_val));
+            fuse_options.push_back("-o");
+            fuse_options.push_back(elle::sprintf("%s=%s", opt_name, opt_val));
           };
         add_option("volname", volname_.get());
 #endif
@@ -1020,7 +1555,7 @@ namespace infinit
         if (volicon_)
           add_option("volicon", volicon_.get());
 #endif
-        driver->mount(mountpoint.get(), mount_options);
+        driver->mount(mountpoint.get(), fuse_options);
       }
       return driver;
     }
@@ -1028,7 +1563,7 @@ namespace infinit
     boost::filesystem::path
     root_block_cache_dir()
     {
-      return xdg_state_home() / this->network / this->name;
+      return xdg_state_home() / this->network / std::string(this->name);
     }
 
     void
@@ -1037,9 +1572,9 @@ namespace infinit
       out << "Volume(" << this->name << ")";
     }
 
-    std::string name;
-    boost::optional<std::string> mountpoint;
+    QName name;
     std::string network;
+    MountOptions mount_options;
     boost::optional<std::string> default_permissions;
   };
 
@@ -1173,18 +1708,18 @@ namespace infinit
   {
   public:
     bool
-    is_qualified_name(std::string const& network_name) const
+    is_qualified_name(std::string const& object_name) const
     {
-      return (network_name.find("/") != std::string::npos);
+      return (object_name.find("/") != std::string::npos);
     }
 
     std::string
-    qualified_name(std::string const& network_name, User const& owner) const
+    qualified_name(std::string const& object_name, User const& owner) const
     {
-      if (network_name.find("/") != std::string::npos)
-        return network_name;
+      if (object_name.find("/") != std::string::npos)
+        return object_name;
       else
-        return elle::sprintf("%s/%s", owner.name, network_name);
+        return elle::sprintf("%s/%s", owner.name, object_name);
     }
 
     Network
@@ -1463,6 +1998,8 @@ namespace infinit
         path = this->_passport_path() / network.get();
       else
         path = this->_passport_path();
+      if (!boost::filesystem::exists(path))
+        return res;
       for (boost_fs::recursive_directory_iterator it(path);
            it != boost_fs::recursive_directory_iterator();
            ++it)
@@ -1520,11 +2057,22 @@ namespace infinit
     }
 
     User
-    user_get(std::string const& user) const
+    user_get(std::string const& user, bool beyond_fallback = false) const
     {
-      boost::filesystem::ifstream f;
-      this->_open_read(f, this->_user_path(user), user, "user");
-      return load<User>(f);
+      try
+      {
+        boost::filesystem::ifstream f;
+        this->_open_read(f, this->_user_path(user), user, "user");
+        return load<User>(f);
+      }
+      catch (MissingLocalResource const& e)
+      {
+        if (!beyond_fallback)
+          throw;
+        ELLE_LOG("User %s not found locally, trying on %s", user, beyond(true));
+        auto u = beyond_fetch<User>("user", user);
+        return u;
+      }
     }
 
     std::vector<User>
@@ -1616,11 +2164,11 @@ namespace infinit
     }
 
     void
-    volume_save(Volume const& volume)
+    volume_save(Volume const& volume, bool overwrite = false)
     {
       boost::filesystem::ofstream f;
       this->_open_write(
-        f, this->_volume_path(volume.name), volume.name, "volume", false);
+        f, this->_volume_path(volume.name), volume.name, "volume", overwrite);
       save(f, volume);
     }
 
@@ -1951,7 +2499,6 @@ namespace infinit
     void
     drive_save(Drive const& drive,
                bool overwrite = true)
-
     {
       boost::filesystem::ofstream f;
       this->_open_write(f, this->_drive_path(drive.name), drive.name, "drive",
@@ -2028,247 +2575,11 @@ namespace infinit
   };
 }
 
-class CommandLineSerializer
-  : public elle::serialization::SerializerIn
-{
-public:
-  typedef elle::serialization::SerializerIn Super;
-  CommandLineSerializer(boost::program_options::variables_map const& vm)
-    : Super(ELLE_SFINAE_INSTANCE(std::istream), false)
-    , _variables(vm)
-  {}
-
-protected:
-  boost::program_options::variables_map const& _variables;
-
-  virtual
-  void
-  _serialize_array(std::string const& name,
-                   int size, // -1 for in(), array size for out()
-                   std::function<void ()> const& f)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, int64_t& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, uint64_t& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, int32_t& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, uint32_t& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, int8_t& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, uint8_t& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, double& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, bool& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, std::string& v)
-  {
-    v = this->_get(name).as<std::string>();
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, elle::Buffer& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize(std::string const& name, boost::posix_time::ptime& v)
-  {
-    ELLE_ABORT("not handled");
-  }
-
-  virtual
-  void
-  _serialize_option(std::string const& name,
-                    bool present,
-                    std::function<void ()> const& f)
-  {
-    if (this->_variables.count(name))
-      f();
-  }
-
-private:
-  boost::program_options::variable_value const&
-  _get(std::string const& name)
-  {
-    auto count = this->_variables.count(name);
-    if (!count)
-      throw elle::Error(elle::sprintf("missing required \"%s\" option", name));
-    if (count > 1)
-      throw elle::Error(elle::sprintf("duplicate \"%s\" option", name));
-    return this->_variables[name];
-  }
-};
-
-template <typename T>
-boost::optional<T>
-check_deprecated(boost::program_options::variables_map const& vm,
-                 Mode::OptionDescription const& option)
-{
-  for (auto const& deprecated: option.deprecated_options)
-  {
-    if (vm.count(deprecated->long_name()))
-    {
-      std::cerr << "WARNING: option \"--" << deprecated->long_name()
-                << "\" is deprecated "
-                << "use \"--" << option.long_name() << "\" instead."
-                << std::endl;
-      return vm[deprecated->long_name()].as<T>();
-    }
-  }
-  return boost::none;
-}
-
-template <typename T = std::string>
-boost::optional<T>
-optional(boost::program_options::variables_map const& vm,
-         std::string const& name)
-{
-  if (vm.count(name))
-    return vm[name].as<T>();
-  else
-    return {};
-}
-
-template <typename T = std::string>
-boost::optional<T>
-optional(boost::program_options::variables_map const& vm,
-         Mode::OptionDescription const& option)
-{
-  auto deprecated = check_deprecated<T>(vm, option);
-  if (deprecated)
-    return deprecated;
-  return optional<T>(vm, option.long_name());
-}
-
-template <typename T = std::string>
-T
-mandatory(boost::program_options::variables_map const& vm,
-          std::string const& name,
-          std::string const& desc)
-{
-  if (!vm.count(name))
-  {
-    throw CommandLineError(
-      elle::sprintf("%s unspecified (use --%s)", desc, name));
-  }
-  return vm[name].as<T>();
-}
-
-template <typename T = std::string>
-T
-mandatory(boost::program_options::variables_map const& vm,
-          Mode::OptionDescription const& option,
-          std::string const& desc)
-{
-  auto deprecated = check_deprecated<T>(vm, option);
-  if (deprecated)
-    return deprecated.get();
-  return mandatory<T>(vm, option.long_name(), desc);
-}
-
-template <typename T = std::string>
-T
-mandatory(boost::program_options::variables_map const& vm,
-          std::string const& name)
-{
-  return mandatory<T>(vm, name, name);
-}
-
-template <typename T = std::string>
-T
-mandatory(boost::program_options::variables_map const& vm,
-          Mode::OptionDescription const& option)
-{
-  auto deprecated = check_deprecated<T>(vm, option);
-  if (deprecated)
-    return deprecated.get();
-  return mandatory<T>(vm, option.long_name());
-}
-
-template <>
 inline
-std::vector<std::string>
-mandatory<std::vector<std::string>>(
-  boost::program_options::variables_map const& vm,
-  std::string const& name,
-  std::string const& desc)
+boost::filesystem::path
+daemon_sock_path()
 {
-  if (!vm.count(name))
-  {
-    throw CommandLineError(
-      elle::sprintf("%s unspecified (use --%s [value ...])", desc, name));
-  }
-  return vm[name].as<std::vector<std::string>>();
-}
-
-inline
-bool
-flag(boost::program_options::variables_map const& vm,
-     std::string const& name)
-{
-  return vm.count(name) && vm[name].as<bool>();
-}
-
-inline
-bool
-flag(boost::program_options::variables_map const& vm,
-     Mode::OptionDescription const& option)
-{
-  auto deprecated = check_deprecated<bool>(vm, option);
-  if (deprecated)
-    return deprecated.get();
-  return flag(vm, option.long_name());
+  return infinit::xdg_runtime_dir() / "daemon.sock";
 }
 
 inline
@@ -2321,19 +2632,6 @@ bool
 all(Args&& ... args)
 {
   return true;
-}
-
-inline
-bool
-aliased_flag(boost::program_options::variables_map const& vm,
-             std::vector<std::string> aliases)
-{
-  for (std::string const& alias: aliases)
-  {
-    if (vm.count(alias) && vm[alias].as<bool>())
-      return true;
-  }
-  return false;
 }
 
 inline
@@ -2402,34 +2700,62 @@ get_input(boost::program_options::variables_map const& args)
 
 inline
 std::string
-get_username(boost::optional<std::string> const& opt)
-{
-  std::string env = elle::os::getenv("INFINIT_USER", "");
-  return opt ? opt.get() : (env.empty() ? elle::system::username() : env);
-}
-
-inline
-std::string
 get_username(boost::program_options::variables_map const& args,
              std::string const& name)
 {
-  return get_username(optional(args, name));
+  auto opt = optional(args, name);
+  if (name == "as")
+  {
+    if (_as_user)
+      return _as_user.get();
+  }
+  else if (name == "name")
+  {
+    if (opt)
+      return opt.get();
+    else if (_as_user)
+      return _as_user.get();
+  }
+  else if (opt)
+    return opt.get();
+  std::string env = elle::os::getenv("INFINIT_USER", "");
+  return env.empty() ? elle::system::username() : env;
 }
 
 DAS_MODEL_FIELDS(
   infinit::User,
-  (name, email, fullname, avatar_path, public_key, private_key, password_hash));
+  (name, email, fullname, avatar_path, public_key, private_key, password_hash, ldap_dn));
+
+DAS_MODEL(
+  infinit::MountOptions,
+  (hub_url
+  ,rdv
+  ,fuse_options
+  ,fetch
+  ,push
+  ,cache
+  ,async
+  ,readonly
+  ,cache_ram_size
+  ,cache_ram_ttl
+  ,cache_ram_invalidation
+  ,cache_disk_size
+  ,mountpoint
+  ,as
+  ,peers), DasMountOptions);
+DAS_MODEL_DEFAULT(infinit::MountOptions, DasMountOptions);
+DAS_MODEL_SERIALIZE(infinit::MountOptions);
 
 namespace infinit
 {
-  DAS_MODEL_DEFINE(User, (name, fullname, avatar_path,  public_key), DasPublicUser);
-  DAS_MODEL_DEFINE(User, (name, email, avatar_path, fullname, public_key, private_key),
+  DAS_MODEL_DEFINE(User, (name, fullname, avatar_path,  public_key, ldap_dn), DasPublicUser);
+  DAS_MODEL_DEFINE(User, (name, email, avatar_path, fullname, public_key, ldap_dn, private_key),
                    DasUser);
   // Publication to the hub.
-  DAS_MODEL_DEFINE(User, (name, email, fullname, public_key),
+  DAS_MODEL_DEFINE(User, (name, email, fullname, public_key, ldap_dn),
                    DasPublicUserPublish);
   DAS_MODEL_DEFINE(
-    User, (name, email, fullname, public_key, private_key, password_hash),
+    User, (name, email, fullname, public_key, private_key, ldap_dn, password_hash),
     DasPrivateUserPublish);
 }
 
@@ -2452,6 +2778,8 @@ signature_headers(
   infinit::User const& self,
   boost::optional<elle::ConstWeakBuffer> payload = {})
 {
+  if (!self.private_key)
+    elle::err("no private key for %s, unable to sign request", self.name);
   using namespace infinit::cryptography;
   auto semi_colon_append = [](elle::Buffer& buffer, std::string const& str)
     {
@@ -2877,9 +3205,9 @@ beyond_delete(std::string const& type,
 inline
 static
 std::string
-self_user_name()
+self_user_name(boost::program_options::variables_map const& args)
 {
-  return get_username(_as_user);
+  return get_username(args, "as");
 }
 
 inline
@@ -2889,7 +3217,7 @@ self_user(infinit::Infinit const& ifnt,
           boost::program_options::variables_map const& args,
           bool private_mandatory = true)
 {
-  auto res = ifnt.user_get(self_user_name());
+  auto res = ifnt.user_get(self_user_name(args));
   if (private_mandatory && !res.private_key)
   {
     throw elle::Error(
@@ -2916,7 +3244,8 @@ private:
   InterfacePublisher(infinit::Network const& network,
                      infinit::User const& self,
                      infinit::model::Address const& node_id,
-                     int port)
+                     int port,
+                     boost::optional<std::vector<std::string>> advertise = {})
     : _url(elle::sprintf("networks/%s/endpoints/%s/%x",
                          network.name, self.name, node_id))
     , _network(network)
@@ -2926,6 +3255,22 @@ private:
     bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
      && network.dht()->version >= elle::Version(0, 7, 0);
     Endpoints endpoints;
+    if (advertise)
+    {
+      ELLE_TRACE("Adding hosts from advertise list");
+      for (auto const& a: *advertise)
+      {
+        try
+        {
+          auto host = reactor::network::resolve_tcp(a, std::to_string(port));
+          endpoints.addresses.push_back(host.address().to_string());
+        }
+        catch (reactor::network::ResolutionError const& e)
+        {
+          ELLE_LOG("failed to resolve %s: %s", a, e);
+        }
+      }
+    }
     ELLE_TRACE("Establishing UPNP mapping");
     try
     {
@@ -3020,8 +3365,7 @@ private:
 inline
 void
 beyond_fetch_endpoints(infinit::Network const& network,
-                       std::unordered_map<infinit::model::Address,
-                                          std::vector<std::string>>& hosts)
+                       infinit::model::NodeLocations& hosts)
 {
   reactor::http::Request r(
     elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name));
@@ -3043,10 +3387,11 @@ beyond_fetch_endpoints(infinit::Network const& network,
           infinit::model::Address::from_string(node.first.substr(2));
         elle::serialization::json::SerializerIn s(node.second, false);
         auto endpoints = s.deserialize<Endpoints>();
-        std::vector<std::string> addresses;
+        infinit::model::Endpoints eps;
         for (auto const& addr: endpoints.addresses)
-          addresses.push_back(elle::sprintf("%s:%s", addr, endpoints.port));
-        hosts[uuid] = addresses;
+          eps.emplace_back(boost::asio::ip::address::from_string(addr),
+                           endpoints.port);
+        hosts.emplace_back(uuid, std::move(eps));
       }
     }
     catch (std::exception const& e)
@@ -3065,6 +3410,9 @@ namespace infinit
   {
     return beyond_fetch<Drive>("drive", name);
   }
+
+  std::unique_ptr<std::istream>
+  commands_input(boost::program_options::variables_map const& args);
 }
 
 #ifdef INFINIT_MACOSX
@@ -3077,44 +3425,52 @@ reactor::Thread::unique_ptr
 make_stat_update_thread(infinit::User const& self,
                         infinit::Network& network,
                         infinit::model::doughnut::Doughnut& model);
+#ifdef INFINIT_MACOSX
+# define SXA_EXTRA ,0
+#else
+# define SXA_EXTRA
+#endif
 
-static
-Mode::OptionDescription option_cache(
-  "cache", boost::program_options::bool_switch(),
-  "enable caching with default values");
-static
-Mode::OptionDescription option_cache_ram_size(
-  "cache-ram-size", boost::program_options::value<int>(),
-  "maximum RAM block cache size in bytes\n(default: 64 MB)",
-  {{"cache-size", boost::program_options::value<int>()}});
-static
-Mode::OptionDescription option_cache_ram_ttl(
-  "cache-ram-ttl", boost::program_options::value<int>(),
-  "RAM block cache time-to-live in seconds\n(default: 5 minutes)",
-  {{"cache-ttl", boost::program_options::value<int>()}});
-static
-Mode::OptionDescription option_cache_ram_invalidation(
-  "cache-ram-invalidation", boost::program_options::value<int>(),
-  "RAM block cache invalidation time in seconds\n(default: 15 seconds)",
-  {{"cache-invalidation", boost::program_options::value<int>()}});
-static
-Mode::OptionDescription option_cache_disk_size(
-  "cache-disk-size", boost::program_options::value<uint64_t>(),
-  "size of disk cache for immutable data in bytes\n(default: 512 MB)",
-  {{"disk-cache-size", boost::program_options::value<uint64_t>()}});
-static
-Mode::OptionDescription option_port_file(
-  "port-file", boost::program_options::value<std::string>(),
-  "write node listening port to file");
-static
-Mode::OptionDescription option_endpoint_file(
-  "endpoints-file", boost::program_options::value<std::string>(),
-  "write node listening endpoints to file\n(format: host:port\\n)");
-static
-Mode::OptionDescription option_port(
-  "port", boost::program_options::value<int>(),
-  "outbound port to use");
-static
-Mode::OptionDescription option_disable_mac_utf8(
-  "disable-utf-8-conversion", boost::program_options::bool_switch(),
-  "disable FUSE conversion of UTF-8 to native format");
+static std::string _hub_salt = "@a.Fl$4'x!";
+
+struct LoginCredentials
+{
+  LoginCredentials(std::string const& name,
+                   std::string const& password_hash,
+                   std::string const& password = "")
+    : name(name)
+    , password_hash(password_hash)
+    , password(password)
+  {}
+
+  LoginCredentials(elle::serialization::SerializerIn& s)
+    : name(s.deserialize<std::string>("name"))
+    , password_hash(s.deserialize<std::string>("password_hash"))
+    , password(s.deserialize<std::string>("password"))
+  {}
+
+  std::string name;
+  std::string password_hash;
+  std::string password;
+};
+
+DAS_MODEL(LoginCredentials, (name, password_hash, password), DasLoginCredentials)
+
+template <typename T>
+elle::json::Json
+beyond_login(std::string const& name,
+             T const& o)
+{
+  reactor::http::Request::Configuration c;
+  c.header_add("Content-Type", "application/json");
+  reactor::http::Request r(elle::sprintf("%s/users/%s/login", beyond(), name),
+                           reactor::http::Method::POST, std::move(c));
+  elle::serialization::json::serialize(o, r, false);
+  r.finalize();
+  if (r.status() != reactor::http::StatusCode::OK)
+  {
+    read_error<BeyondError>(r, "login", name);
+  }
+
+  return elle::json::read(r);
+}

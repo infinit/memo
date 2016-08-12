@@ -22,8 +22,9 @@ os.environ['INFINIT_CRASH_REPORTER_ENABLED'] = '0'
 
 def find_binaries():
   for path in chain(
+      [os.environ.get('INFINIT_BINARIES')],
       os.environ.get('PATH', '').split(':'),
-      ['bin', '/opt/infinit/bin', os.environ.get('INFINIT_BINARIES')],
+      ['bin', '/opt/infinit/bin'],
   ):
     if not path:
       continue
@@ -36,7 +37,7 @@ def find_binaries():
       pass
     except subprocess.CalledProcessError:
       pass
-  raise Exception('unable to find infinit-user binary')
+  return None
 
 binary_path = find_binaries()
 
@@ -87,6 +88,7 @@ class Beyond:
       validate_email_address = True,
       limits = {},
       delegate_user = 'hub',
+      keep_deleted_users = False,
   ):
     self.__datastore = datastore
     self.__datastore.beyond = self
@@ -103,6 +105,7 @@ class Beyond:
     else:
       self.__emailer = emailer.NoOp()
     self.__delegate_user = delegate_user
+    self.__keep_deleted_users = keep_deleted_users
 
   @property
   def limits(self):
@@ -199,14 +202,17 @@ class Beyond:
   ## ------- ##
 
   def network_get(self, owner, name):
-    return self.__datastore.network_fetch(
-      owner = owner, name = name)
+    return Network.from_json(
+      self,
+      self.__datastore.network_fetch(owner = owner, name = name))
 
   def network_delete(self, owner, name):
     return self.__datastore.network_delete(owner = owner, name = name)
 
   def network_volumes_get(self, network):
-    return self.__datastore.networks_volumes_fetch(networks = [network])
+    return (
+      Volume.from_json(self, json) for json in
+      self.__datastore.networks_volumes_fetch(networks = [network]))
 
   def network_drives_get(self, network):
     return self.__datastore.network_drives_fetch(name = network.name)
@@ -238,24 +244,38 @@ class Beyond:
     json = self.__datastore.user_fetch(name = name)
     return User.from_json(self, json)
 
+  def user_by_short_key_hash(self, hash):
+    json = self.__datastore.user_by_short_key_hash(hash = hash)
+    return User.from_json(self, json)
+
   def users_by_email(self, email):
     users = self.__datastore.users_by_email(email = email)
     if len(users) == 0:
       raise User.NotFound()
     return [User.from_json(self, u) for u in users]
 
+  def user_by_ldap_dn(self, dn):
+    user = self.__datastore.user_by_ldap_dn(dn)
+    return User.from_json(self, user)
+
+  def user_deleted_get(self, name):
+    return self.__datastore.user_deleted_get(name)
+
   def user_delete(self, name):
+    if self.__keep_deleted_users:
+      self.__datastore.user_deleted_add(name)
     return self.__datastore.user_delete(name = name)
 
   def user_networks_get(self, user):
-    return self.__datastore.user_networks_fetch(user = user)
+    return (Network.from_json(self, json) for json in
+            self.__datastore.user_networks_fetch(user = user))
 
   def user_volumes_get(self, user):
-    # XXX: This requires two requests as we cannot combine results
-    # across databases.
-    networks = self.__datastore.user_networks_fetch(user = user)
-    return self.__datastore.networks_volumes_fetch(
-      networks = networks)
+    networks = (Network.from_json(self, json) for json in
+                self.__datastore.user_networks_fetch(user = user))
+    return (Volume.from_json(self, json) for json in
+            self.__datastore.networks_volumes_fetch(
+              networks = networks))
 
   def user_drives_get(self, name):
     return self.__datastore.user_drives_fetch(name = name)
@@ -282,8 +302,9 @@ class Beyond:
   ## ------ ##
 
   def volume_get(self, owner, name):
-    return self.__datastore.volume_fetch(
-      owner = owner, name = name)
+    return Volume.from_json(
+      self,
+      self.__datastore.volume_fetch(owner = owner, name = name))
 
   def volume_delete(self, owner, name):
     return self.__datastore.volume_delete(
@@ -312,6 +333,8 @@ class Beyond:
         owner = owner, name = name)
 
   def process_invitations(self, user, email, drives):
+    if binary_path is None:
+      raise NotImplementedError()
     errors = []
     try:
       try:
@@ -417,6 +440,7 @@ class User:
       ('gcs_accounts', None),
       ('password_hash', None),
       ('private_key', None),
+      ('ldap_dn', None),
     ]
   }
   class Duplicate(Exception):
@@ -436,7 +460,8 @@ class User:
                dropbox_accounts = None,
                google_accounts = None,
                gcs_accounts = None,
-               emails = {}
+               emails = {},
+               ldap_dn = None,
   ):
     self.__beyond = beyond
     self.__id = id
@@ -457,6 +482,7 @@ class User:
       if self.__email not in self.__emails:
         self.__emails[self.__email] = True
     self.__emails_original = deepcopy(self.emails)
+    self.__ldap_dn = ldap_dn
 
   @classmethod
   def from_json(self, beyond, json, check_integrity = False):
@@ -482,6 +508,7 @@ class User:
       google_accounts = json.get('google_accounts', []),
       gcs_accounts = json.get('gcs_accounts', []),
       emails = json.get('emails', {}),
+      ldap_dn = json.get('ldap_dn', None)
     )
 
   def json(self,
@@ -514,6 +541,8 @@ class User:
         res['private_key'] = self.private_key
       if self.password_hash is not None:
         res['password_hash'] = self.password_hash
+      if self.ldap_dn is not None:
+        res['ldap_dn'] = self.ldap_dn
     return res
 
   def create(self):
@@ -637,6 +666,10 @@ class User:
   @property
   def gcs_accounts(self):
     return self.__gcs_accounts
+
+  @property
+  def ldap_dn(self):
+    return self.__ldap_dn
 
   def __eq__(self, other):
     if self.name != other.name or self.public_key != other.public_key:
@@ -817,7 +850,8 @@ class Volume(metaclass = Entity,
              insert = 'volume_insert',
              hasher = lambda v: hash(v.name),
              fields = fields('name', 'network',
-                             default_permissions = '')):
+                             default_permissions = '',
+                             mount_options = dict())):
 
   @property
   def id(self):

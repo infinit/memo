@@ -1,5 +1,7 @@
 #include <elle/log.hh>
 
+#include <reactor/http/url.hh>
+
 #include <das/serializer.hh>
 
 #include <cryptography/rsa/KeyPair.hh>
@@ -15,8 +17,6 @@ ELLE_LOG_COMPONENT("infinit-user");
 infinit::Infinit ifnt;
 
 using boost::program_options::variables_map;
-
-static std::string _hub_salt = "@a.Fl$4'x!";
 
 template <typename Super>
 struct UserView
@@ -102,7 +102,8 @@ COMMAND(fetch)
     };
     try
     {
-      auto user = beyond_fetch<infinit::User>("user", name);
+      auto user = beyond_fetch<infinit::User>("user",
+                                              reactor::http::url_encode(name));
       ifnt.user_save(std::move(user));
       avatar();
     }
@@ -153,9 +154,13 @@ _push(variables_map const& args, infinit::User& user, bool atomic)
     user.fullname = fullname;
     user_updated = true;
   }
+  auto ldap_dn = optional(args, "ldap-name");
+  if (ldap_dn)
+    user.ldap_dn = *ldap_dn;
   if (flag(args, "full"))
   {
-    user.password_hash = hub_password_hash(args);
+    if (!ldap_dn)
+      user.password_hash = hub_password_hash(args);
     das::Serializer<infinit::DasPrivateUserPublish> view{user};
     beyond_push("user", user.name, view, user);
   }
@@ -185,7 +190,8 @@ infinit::User
 create_(std::string const& name,
         boost::optional<std::string> keys_file,
         boost::optional<std::string> email,
-        boost::optional<std::string> fullname)
+        boost::optional<std::string> fullname,
+        boost::optional<std::string> ldap_name)
 {
   auto keys = [&] // -> infinit::cryptography::rsa::KeyPair
   {
@@ -202,7 +208,7 @@ create_(std::string const& name,
     }
   }();
 
-  return infinit::User{name, keys, email, fullname};
+  return infinit::User{name, keys, email, fullname, ldap_name};
 }
 
 COMMAND(create)
@@ -210,15 +216,21 @@ COMMAND(create)
   bool push = aliased_flag(args, {"push-user", "push"});
   auto has_output = optional(args, "output");
   auto output = has_output ? get_output(args) : nullptr;
+  auto ldap_name = optional(args, "ldap-name");
+  auto full = flag(args, "full");
   if (!push)
   {
-    if (flag(args, "full") || flag(args, "password"))
+    if (ldap_name)
+      throw CommandLineError("LDAP can only be used with the Hub, add --push");
+    if (full || flag(args, "password"))
     {
       throw CommandLineError(
         elle::sprintf("--full and --password are only used when pushing "
                       "a user to %s", beyond(true)));
     }
   }
+  if (ldap_name && !full)
+    throw CommandLineError("LDAP user creation requires --full");
   auto name = get_name(args);
   auto email = optional(args, "email");
   if (email && !valid_email(email.get()))
@@ -226,7 +238,8 @@ COMMAND(create)
   infinit::User user = create_(name,
                                optional(args, "key"),
                                email,
-                               optional(args, "fullname"));
+                               optional(args, "fullname"),
+                               ldap_name);
   if (output)
   {
     save(*output, user);
@@ -372,7 +385,8 @@ COMMAND(signup_)
   infinit::User user = create_(name,
                                optional(args, "key"),
                                email,
-                               optional(args, "fullname"));
+                               optional(args, "fullname"),
+                               optional(args, "ldap-name"));
   try
   {
     ifnt.user_get(name);
@@ -386,48 +400,12 @@ COMMAND(signup_)
   throw elle::Error(elle::sprintf("User %s already exists locally", name));
 }
 
-struct LoginCredentials
-{
-  LoginCredentials(std::string const& name,
-                   std::string const& password)
-    : name(name)
-    , password_hash(password)
-  {}
-
-  LoginCredentials(elle::serialization::SerializerIn& s)
-    : name(s.deserialize<std::string>("name"))
-    , password_hash(s.deserialize<std::string>("password_hash"))
-  {}
-
-  std::string name;
-  std::string password_hash;
-};
-
-DAS_MODEL(LoginCredentials, (name, password_hash), DasLoginCredentials)
-
-template <typename T>
-elle::json::Json
-beyond_login(std::string const& name,
-             T const& o)
-{
-  reactor::http::Request::Configuration c;
-  c.header_add("Content-Type", "application/json");
-  reactor::http::Request r(elle::sprintf("%s/users/%s/login", beyond(), name),
-                           reactor::http::Method::POST, std::move(c));
-  elle::serialization::json::serialize(o, r, false);
-  r.finalize();
-  if (r.status() != reactor::http::StatusCode::OK)
-  {
-    read_error<BeyondError>(r, "login", name);
-  }
-
-  return elle::json::read(r);
-}
-
 COMMAND(login)
 {
   auto name = get_name(args);
-  LoginCredentials c{name, hub_password_hash(args)};
+  auto pass = _password(args, "password", "Password");
+  auto hashed_pass = hash_password(pass, _hub_salt);
+  LoginCredentials c{ name, hashed_pass, pass };
   das::Serializer<DasLoginCredentials> credentials{c};
   auto json = beyond_login(name, credentials);
   elle::serialization::json::SerializerIn input(json, false);
@@ -438,10 +416,14 @@ COMMAND(login)
 
 COMMAND(list)
 {
+  auto users = ifnt.users_get();
+  std::sort(users.begin(), users.end(),
+            [] (infinit::User const& lhs, infinit::User const& rhs)
+            { return lhs.name < rhs.name; });
   if (script_mode)
   {
     elle::json::Array l;
-    for (auto const& user: ifnt.users_get())
+    for (auto const& user: users)
     {
       elle::json::Object o;
       o["name"] = user.name;
@@ -451,8 +433,13 @@ COMMAND(list)
     elle::json::write(std::cout, l);
   }
   else
-    for (auto const& user: ifnt.users_get())
+    for (auto const& user: users)
     {
+      auto self = self_user_name(args);
+      if (user.name == self)
+        std::cout << "* ";
+      else
+        std::cout << "  ";
       std::cout << user.name << ": public";
       if (user.private_key)
         std::cout << "/private keys";
@@ -460,6 +447,21 @@ COMMAND(list)
         std::cout << " key only";
       std::cout << std::endl;
     }
+}
+
+COMMAND(hash_)
+{
+  auto name = get_name(args);
+  auto user = ifnt.user_get(name);
+  auto key_hash = infinit::model::doughnut::short_key_hash(user.public_key);
+  if (script_mode)
+  {
+    elle::json::Object res;
+    res[name] = key_hash;
+    elle::json::write(std::cout, res);
+  }
+  else
+    std::cout << key_hash << std::endl;
 }
 
 template <typename Buffer>
@@ -538,9 +540,13 @@ main(int argc, char** argv)
   Mode::OptionDescription option_avatar =
     { "avatar", value<std::string>(), "path to an image to use as avatar" };
   Mode::OptionDescription option_key =
-    {"key,k", value<std::string>(),
+    { "key,k", value<std::string>(),
       "RSA key pair in PEM format - e.g. your SSH key "
       "(default: generate key pair)" };
+  Mode::OptionDescription option_ldap_dn =
+    { "ldap-name,l", value<std::string>(),
+      "LDAP distinguished name of the user, "
+      "enables authentication through LDAP" };
   Modes modes {
     {
       "create",
@@ -558,6 +564,7 @@ main(int argc, char** argv)
         option_fullname,
         option_push_full,
         option_push_password,
+        option_ldap_dn,
         option_output("user"),
       },
     },
@@ -580,7 +587,8 @@ main(int argc, char** argv)
       &fetch,
       {},
       {
-        { "name,n", value<std::vector<std::string>>(), "user to fetch" },
+        { "name,n", value<std::vector<std::string>>(),
+          "user with name or hash to fetch" },
         { "no-avatar", bool_switch(), "do not fetch user avatar" },
       },
     },
@@ -646,6 +654,7 @@ main(int argc, char** argv)
         option_key,
         option_push_full,
         option_push_password,
+        option_ldap_dn,
       },
     },
     {
@@ -667,5 +676,17 @@ main(int argc, char** argv)
       &list,
     },
   };
-  return infinit::main("Infinit user utility", modes, argc, argv, {});
+  Modes hidden_modes {
+    {
+      "hash",
+      "Get short hash of user's key",
+      &hash_,
+      "--name USER",
+      {
+        { "name,n", value<std::string>(), "user name (default: system user)" },
+      },
+    },
+  };
+  return infinit::main(
+    "Infinit user utility", modes, argc, argv, {}, {}, hidden_modes);
 }

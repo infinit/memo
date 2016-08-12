@@ -116,3 +116,28 @@ with Beyond() as beyond, \
   assertEq(res["success"], True)
   res = resolve('alice')
   assertEq(res["success"], True)
+
+# Update volume descriptor with mount options.
+with Infinit() as alice:
+  alice.run(['infinit-user', '--create', 'alice'])
+  alice.run(['infinit-storage', '--create', 's', '--filesystem'])
+  alice.run(['infinit-network', '--create', '--as', 'alice', 'n',
+             '--storage', 's'])
+  alice.run(['infinit-volume', '--create', '--as', 'alice', 'v',
+             '--network', 'n'])
+  def vol():
+    return alice.run_json(['infinit-volume', '--export', '--as', 'alice', 'v'])
+  assertEq(vol()['mount_options'], None)
+  # Ensure update with no options does not set anything.
+  alice.run(['infinit-volume', '--update', '--as', 'alice', 'v'])
+  assertEq(vol()['mount_options'], None)
+  alice.run(['infinit-volume', '--update', '--as', 'alice', 'v',
+             '--publish', '--cache'])
+  mount_opts = vol()['mount_options']
+  assertEq(mount_opts['fetch'], True)
+  assertEq(mount_opts['push'], True)
+  assertEq(mount_opts['cache'], True)
+  # Check unsetting of option
+  alice.run(['infinit-volume', '--update', '--as', 'alice', 'v', '--cache=no'])
+  mount_opts = vol()['mount_options']
+  assertEq(mount_opts['cache'], False)

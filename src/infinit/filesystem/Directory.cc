@@ -238,8 +238,15 @@ namespace infinit
       _inherit_auth = false;
     }
 
+    DirectoryData::DirectoryData(elle::serialization::Serializer& s,
+                                 elle::Version const& v)
+    {
+      this->serialize(s, v);
+    }
+
     void
-    DirectoryData::serialize(elle::serialization::Serializer& s)
+    DirectoryData::serialize(elle::serialization::Serializer& s,
+                             elle::Version const& v)
     {
       s.serialize("header", this->_header);
       s.serialize("content", this->_files);
@@ -287,8 +294,9 @@ namespace infinit
       if (empty)
       {
         ELLE_DEBUG("block is empty");
+        auto now = time(nullptr);
         _header = FileHeader(0, 1, S_IFDIR | 0600,
-                             time(nullptr), time(nullptr), time(nullptr),
+                             now, now, now, now,
                              File::default_block_size);
         _inherit_auth = false;
       }
@@ -341,7 +349,14 @@ namespace infinit
       elle::Buffer data;
       {
         elle::IOStream os(data.ostreambuf());
-        elle::serialization::binary::SerializerOut output(os);
+        auto version = model.version();
+        auto versions =
+          elle::serialization::_details::dependencies<typename FileData::serialization_tag>(
+            version, 42);
+        versions.emplace(
+          elle::type_info<typename FileData::serialization_tag>(),
+          version);
+        elle::serialization::binary::SerializerOut output(os, versions, true);
         output.serialize_forward(*this);
       }
       try

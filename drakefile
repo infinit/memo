@@ -1,6 +1,7 @@
 import drake
 import drake.cxx
 import drake.debian
+import drake.docker
 import drake.git
 import drake.license_file
 import drake.python
@@ -8,6 +9,7 @@ import drake.redhat
 import drake.valgrind
 
 import os
+import oset
 import shutil
 
 from itertools import chain
@@ -199,36 +201,39 @@ def configure(
                       production_build = production_build)
 
   infinit_sources = drake.nodes(
+    'src/infinit/RPC.cc',
     'src/infinit/RPC.hh',
     'src/infinit/RPC.hxx',
-    'src/infinit/utility.hh',
+    'src/infinit/Version.hh',
     'src/infinit/credentials/AWSCredentials.cc',
     'src/infinit/credentials/AWSCredentials.hh',
     'src/infinit/credentials/Credentials.cc',
     'src/infinit/credentials/Credentials.hh',
     'src/infinit/credentials/OAuthCredentials.cc',
     'src/infinit/credentials/OAuthCredentials.hh',
-    'src/infinit/filesystem/filesystem.cc',
-    'src/infinit/filesystem/filesystem.hh',
     'src/infinit/filesystem/Directory.cc',
     'src/infinit/filesystem/Directory.hh',
     'src/infinit/filesystem/File.cc',
     'src/infinit/filesystem/File.hh',
+    'src/infinit/filesystem/FileData.hh',
     'src/infinit/filesystem/FileHandle.cc',
     'src/infinit/filesystem/FileHandle.hh',
-    'src/infinit/filesystem/FileData.hh',
     'src/infinit/filesystem/Node.cc',
     'src/infinit/filesystem/Node.hh',
     'src/infinit/filesystem/Symlink.cc',
     'src/infinit/filesystem/Symlink.hh',
-    'src/infinit/filesystem/umbrella.hh',
     'src/infinit/filesystem/Unknown.cc',
     'src/infinit/filesystem/Unknown.hh',
     'src/infinit/filesystem/Unreachable.hh',
+    'src/infinit/filesystem/filesystem.cc',
+    'src/infinit/filesystem/filesystem.hh',
+    'src/infinit/filesystem/umbrella.hh',
     'src/infinit/filesystem/xattribute.cc',
     'src/infinit/filesystem/xattribute.hh',
     'src/infinit/model/Address.cc',
     'src/infinit/model/Address.hh',
+    'src/infinit/model/Endpoints.cc',
+    'src/infinit/model/Endpoints.hh',
     'src/infinit/model/MissingBlock.cc',
     'src/infinit/model/MissingBlock.hh',
     'src/infinit/model/Model.cc',
@@ -252,14 +257,16 @@ def configure(
     'src/infinit/model/doughnut/ACB.hh',
     'src/infinit/model/doughnut/Async.cc',
     'src/infinit/model/doughnut/Async.hh',
-    'src/infinit/model/doughnut/Cache.cc',
-    'src/infinit/model/doughnut/Cache.hh',
     'src/infinit/model/doughnut/CHB.cc',
     'src/infinit/model/doughnut/CHB.hh',
+    'src/infinit/model/doughnut/Cache.cc',
+    'src/infinit/model/doughnut/Cache.hh',
     'src/infinit/model/doughnut/Conflict.cc',
     'src/infinit/model/doughnut/Conflict.hh',
     'src/infinit/model/doughnut/Consensus.cc',
     'src/infinit/model/doughnut/Consensus.hh',
+    'src/infinit/model/doughnut/Dock.cc',
+    'src/infinit/model/doughnut/Dock.hh',
     'src/infinit/model/doughnut/Doughnut.cc',
     'src/infinit/model/doughnut/Doughnut.hh',
     'src/infinit/model/doughnut/GB.cc',
@@ -346,9 +353,8 @@ def configure(
     'src/infinit/storage/Strip.cc',
     'src/infinit/storage/Strip.hh',
     'src/infinit/storage/fwd.hh',
-
+    'src/infinit/utility.hh',
     'src/infinit/version.hh',
-    'src/infinit/Version.hh',
   )
   if not windows:
     infinit_sources += drake.nodes(
@@ -417,7 +423,12 @@ def configure(
   drake.nodes(
     'bin/endpoint_file.hh',
     'bin/password.hh',
+  )
+
+  xattr_sources = drake.nodes(
+    'bin/xattrs.cc',
     'bin/xattrs.hh',
+    'bin/xattrs.hxx',
   )
 
   bin_cxx_config = drake.cxx.Config(cxx_config)
@@ -475,30 +486,36 @@ def configure(
                       ', '.join(searched_for))
 
   # Build
+  # ('binary name', [additional sources], [additional libraries], ship)
   binaries_config = [
-    ('doughnode', [], False),
-    ('generatekeys', [], False),
-    ('infinit', [], False),
-    ('infinit-acl', [], True),
-    ('infinit-block', [], True),
-    ('infinit-credentials', [], True),
-    ('infinit-device', [], True),
-    ('infinit-doctor', [], True),
-    ('infinit-drive', [], True),
-    ('infinit-journal', [], True),
-    ('infinit-network', [], True),
-    ('infinit-passport', [], True),
-    ('infinit-smb', [], False),
-    ('infinit-storage', (not windows) and [aws_lib] or [], True),
-    ('infinit-user', [], True),
-    ('infinit-volume', [], True),
-    ('infinit-webdav', [], False),
-    ('infinit-fsck', [], False),
-    ('reactor-example', [], False),
-    # ('s3fs', [aws_lib], False),
+    ('doughnode', [], [], False),
+    ('generatekeys', [], [], False),
+    ('infinit', [], [], False),
+    ('infinit-acl', [xattr_sources], [], True),
+    ('infinit-block', [], [], True),
+    ('infinit-credentials', [], [], True),
+    ('infinit-device', [], [], True),
+    ('infinit-doctor', [], [], True),
+    ('infinit-drive', [], [], True),
+    ('infinit-journal', [], [], True),
+    ('infinit-network', [xattr_sources], [], True),
+    ('infinit-passport', [], [], True),
+    ('infinit-smb', [], [], False),
+    ('infinit-storage', [], (not windows) and [aws_lib] or [], True),
+    ('infinit-user', [], [], True),
+    ('infinit-volume', [], [], True),
+    ('infinit-webdav', [], [], False),
+    ('infinit-fsck', [], [], False),
+    ('reactor-example', [], [], False),
+    # ('s3fs', [], [aws_lib], False),
   ]
+  if elle.elle.ldap:
+    binaries_config.append(('infinit-ldap', [xattr_sources], [], True))
+  if (cxx_toolkit.os is drake.os.linux) or \
+      (production_build is False and cxx_toolkit.os is drake.os.macos):
+    binaries_config.append(('infinit-daemon', [], [], True))
   if not windows:
-    binaries_config.append(('sshfs', [], False))
+    binaries_config.append(('sshfs', [], [], False))
     additional_libs.append(crash_reporter_lib)
     additional_libs += [elle_lib, reactor_lib, cryptography_lib]
   else:
@@ -513,14 +530,17 @@ def configure(
   installed_libraries = []
   bin_version = drake.node('bin/version.cc')
   bin_sources = drake.nodes('bin/main.cc', 'bin/main.hh')
-  for name, libs, install in binaries_config:
+  for name, other_sources, libs, install in binaries_config:
     source = drake.node('bin/%s.cc' % name)
+    additional_sources = []
+    for s in other_sources:
+      additional_sources.extend(s)
     bin = drake.cxx.Executable(
       'bin/%s' % name, [
         source,
         bin_version,
         infinit_lib,
-      ] + bin_sources + libs + additional_libs,
+      ] + bin_sources + additional_sources + libs + additional_libs,
       cxx_toolkit,
       bin_cxx_config)
     rule_build << bin
@@ -553,6 +573,11 @@ def configure(
       for s in installed_symbols:
         rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
 
+  if elle.reactor.fnetusermount_binaries is not None:
+    for f in elle.reactor.fnetusermount_binaries:
+      t = drake.copy(f, '.', strip_prefix = 'elle/reactor')
+      installed_binaries.append(t)
+
   ## ----- ##
   ## Share ##
   ## ----- ##
@@ -576,12 +601,13 @@ def configure(
   ## Install ##
   ## ------- ##
 
-  def install_nodes(where):
+  def install_nodes(where, demo = True):
     where = drake.Path(where)
     yield from drake.copy(installed_binaries, where, None,
                           builder = PatchAndInstall)
-    yield from drake.copy(
-      demo_home, where / 'share/infinit/filesystem/test/home', 'demo-home')
+    if demo:
+      yield from drake.copy(
+        demo_home, where / 'share/infinit/filesystem/test/home', 'demo-home')
     yield from drake.copy(
       [license_file], where / 'share/infinit/filesystem/licenses')
 
@@ -710,6 +736,83 @@ def configure(
                                               drake.path_build('redhat-repo'),
                                               redhat_repo_nodes).package
   redhat_rule << redhat_repo_package
+
+
+  ## ------ ##
+  ## Docker ##
+  ## ------ ##
+
+  # infinit image
+  docker_path = drake.Path('docker')
+  docker_image = drake.docker.DockerImage(
+    'docker', 'infinit', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'ubuntu',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.run('apt-get update && apt-get install -y python3')
+  docker_file.add(install_nodes(docker_path, demo = False), '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-static.sh'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-service-runner.py'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-context.sh'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.run('ln -s /usr/bin/fnetusermount-client /bin/fusermount')
+  drake.docker.DockerBuilder(docker_image, docker_file)
+
+  #fnetusermount-server image
+  if elle.reactor.fnetusermount_binaries is not None:
+    docker_path = drake.Path('docker-fnetusermount')
+    docker_image = drake.docker.DockerImage(
+      'docker-fnetusermount', 'infinit-fnetusermount', git.description())
+    docker_file = drake.docker.DockerFile(
+      docker_path / 'Dockerfile',
+      image = 'ubuntu',
+      maintainer = 'Infinit <contact@infinit.sh>',
+      labels = {
+        'version': git.description(),
+      })
+    docker_file.add(
+      drake.copy(
+        elle.reactor.fnetusermount_binaries, docker_path / 'bin',
+        strip_prefix = True),
+      '/usr')
+    docker_file.add(
+      drake.copy(additional_libs, docker_path / 'lib',
+        strip_prefix = True),
+      '/usr')
+    docker_file.run('apt-get update')
+    docker_file.run('apt-get install -y fuse') # for fusermount
+    drake.docker.DockerBuilder(docker_image, docker_file)
+
+  #deployment script image
+  docker_path = drake.Path('docker-deploy')
+  docker_image = drake.docker.DockerImage(
+    'docker-deploy', 'infinit-deploy', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'alpine:3.3',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-deploy/entry.sh'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.run('apk add --update bash ca-certificates jq groff less curl python py-pip && pip install awscli && apk --purge -v del py-pip && rm -rf /var/cache/apk/*')
+  docker_file.run(' mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2')
+  drake.docker.DockerBuilder(docker_image, docker_file)
 
   ## ------ ##
   ## Beyond ##

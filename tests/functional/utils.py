@@ -108,14 +108,16 @@ class Infinit(TemporaryDirectory):
   def drives_path(self):
     return '%s/drives' % self.data_home
 
-  def spawn(self, args, input = None, return_code = 0, env = {}):
+  def spawn(self, args, input = None, return_code = 0, env = {},
+            noscript = False):
     if isinstance(args, str):
       args = args.split(' ')
-    if '/' not in args[0]:
-      args[0] = 'bin/%s' % args[0]
-    build_dir = os.environ.get('BUILD_DIR')
-    if build_dir:
-      args[0] = '%s/%s' % (build_dir, args[0])
+    if args[0][0] != '/':
+      if '/' not in args[0]:
+        args[0] = 'bin/%s' % args[0]
+      build_dir = os.environ.get('BUILD_DIR')
+      if build_dir:
+        args[0] = '%s/%s' % (build_dir, args[0])
     args[0] += os.environ.get('EXE_EXT', '')
     env_ = {
       'INFINIT_RDV': '',
@@ -132,7 +134,7 @@ class Infinit(TemporaryDirectory):
       env_['INFINIT_BEYOND'] = self.__beyond.domain
     env_.update(env)
     env_.update(self.__env)
-    if input is not None:
+    if input is not None and not noscript:
       args.append('-s')
     pretty = '%s %s' % (
       ' '.join('%s=%s' % (k, v) for k, v in env_.items()),
@@ -170,7 +172,6 @@ class Infinit(TemporaryDirectory):
       print('STDOUT: %s' % out.decode('utf-8'))
       print('STDERR: %s' % err.decode('utf-8'))
       raise
-
     out = out.decode('utf-8')
     err = err.decode('utf-8')
     if process.returncode != return_code:
@@ -180,7 +181,6 @@ class Infinit(TemporaryDirectory):
     self.last_out = out
     self.last_err = err
     return out, err
-
 
   def run_json(self, *args, **kwargs):
     out, err = self.run(*args, **kwargs)
@@ -221,11 +221,13 @@ def assertIn(a, b):
   if a not in b:
     raise AssertionError('%r not in %r' % (a, b))
 
-def throws(f):
+def throws(f, contains = None):
   try:
     f()
     assert False
-  except Exception:
+  except Exception as e:
+    if contains is not None:
+      assertIn(contains, str(e))
     pass
 
 import bottle
@@ -266,7 +268,8 @@ class Emailer:
 
 class Beyond():
 
-  def __init__(self, beyond_args = {}, disable_authentication = False):
+  def __init__(self, beyond_args = {}, disable_authentication = False,
+               bottle_args = {}):
     super().__init__()
     self.__beyond_args = beyond_args
     self.__advance = timedelta()
@@ -278,6 +281,7 @@ class Beyond():
     self.__gcs = FakeGCS()
     self.__hub_delegate_user = None
     self.__disable_authentication = disable_authentication
+    self.__bottle_args = bottle_args
 
   def __enter__(self):
     couchdb = self.__couchdb.__enter__()
@@ -298,10 +302,12 @@ class Beyond():
         **args
       )
       setattr(self.__beyond, '_Beyond__now', self.now)
-      self.__app = infinit.beyond.bottle.Bottle(
-        beyond = self.__beyond,
-        gcs = self.__gcs
-      )
+      bargs = {
+        'beyond': self.__beyond,
+        'gcs': self.__gcs
+      }
+      bargs.update(self.__bottle_args)
+      self.__app = infinit.beyond.bottle.Bottle(**bargs)
       if self.__disable_authentication:
         self.__app.authenticate = lambda x: None
       self.emailer = Emailer()
