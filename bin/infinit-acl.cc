@@ -120,18 +120,128 @@ recursive_action(A action, std::string const& path, Args ... args)
   }
 }
 
-static
+template<typename A, typename Res, typename ... Args>
 void
-list_action(std::string const& path, bool verbose, bool fallback_xattrs)
+recursive_action(std::vector<Res>& output,
+                 A action,
+                 std::string const& path, Args ... args)
 {
-  if (verbose)
-    std::cout << "processing " << path << std::endl;
-  bool dir = boost::filesystem::is_directory(path);
+  recursive_action(
+    [&] (std::string const& path) {
+      output.push_back(action(path, args...));
+    }, path);
+}
+
+struct PermissionsResult
+{
+  // Factor this class.
+  struct Permissions
+  {
+    Permissions() = default;
+    Permissions(Permissions const&) = default;
+
+    Permissions(elle::serialization::Serializer& s)
+    {
+      this->serialize(s);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("read", this->read);
+      s.serialize("write", this->write);
+      s.serialize("owner", this->owner);
+      s.serialize("admin", this->admin);
+      s.serialize("name", this->name);
+    }
+
+    bool read;
+    bool write;
+    bool owner;
+    bool admin;
+    std::string name;
+  };
+
+  struct Directory
+  {
+    Directory() = default;
+    Directory(Directory const&) = default;
+
+    Directory(elle::serialization::Serializer& s)
+    {
+      this->serialize(s);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("inherit", this->inherit);
+    }
+
+    bool inherit;
+  };
+
+  struct World
+  {
+    World() = default;
+    World(World const&) = default;
+
+    World(elle::serialization::Serializer& s)
+    {
+      this->serialize(s);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("read", this->read);
+      s.serialize("write", this->write);
+    }
+
+    bool read;
+    bool write;
+  };
+
+  PermissionsResult() = default;
+  PermissionsResult(PermissionsResult const&) = default;
+
+  PermissionsResult(elle::serialization::Serializer& s)
+  {
+    this->serialize(s);
+  }
+
+  void
+  serialize(elle::serialization::Serializer& s)
+  {
+    s.serialize("path", this->path);
+    s.serialize("error", this->error);
+    s.serialize("permissions", this->permissions);
+    s.serialize("directory", this->directory);
+    s.serialize("world", this->world);
+  }
+
+  std::string path;
+  boost::optional<std::string> error;
+  std::vector<Permissions> permissions;
+  boost::optional<Directory> directory;
+  boost::optional<World> world;
+};
+
+static
+PermissionsResult
+get_acl(std::string const& path, bool fallback_xattrs)
+{
+  PermissionsResult res;
+  res.path = path;
   char buf[4096];
+  bool dir = boost::filesystem::is_directory(path);
   int sz = port_getxattr(
     path.c_str(), "user.infinit.auth", buf, 4095, fallback_xattrs);
   if (sz < 0)
-    perror(path.c_str());
+  {
+    auto err = errno;
+    res.error = std::string{std::strerror(err)};
+  }
   else
   {
     buf[sz] = 0;
@@ -150,67 +260,105 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
         dir_inherit = (buf == std::string("true"));
       }
     }
+
     try
     {
-      // [{name: s, read: bool, write: bool}]
-      std::stringstream output;
-      output << path << ":" << std::endl;
-      if (dir_inherit)
-      {
-#if defined(__GNUC__) && !defined(__clang__)
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-        output << "  inherit: "
-               << (dir_inherit.get() ? "yes" : "no")
-               << std::endl;
-#if defined(__GNUC__) && !defined(__clang__)
-# pragma GCC diagnostic pop
-#endif
-      }
-      struct stat st;
-      int res = ::stat(path.c_str(),&st);
-      if (res != 0)
-        perror(path.c_str());
-      else
-      {
-        if (st.st_mode & 06)
-        {
-          output << "  world: " << ((st.st_mode & 02) ? "rw" : "r")
-                 << std::endl;
-        }
-      }
       elle::json::Json j = elle::json::read(ss);
       auto a = boost::any_cast<elle::json::Array>(j);
-      for (auto& li: a)
+      for (auto const& _entry: a)
       {
-        auto d = boost::any_cast<elle::json::Object>(li);
-        auto n = boost::any_cast<std::string>(d.at("name"));
-        auto r = boost::any_cast<bool>(d.at("read"));
-        auto w = boost::any_cast<bool>(d.at("write"));
-        auto admin = boost::any_cast<bool>(d.at("admin"));
-        auto owner = boost::any_cast<bool>(d.at("owner"));
-        const char* mode = w ? (r ? "rw" : "w") : (r ? "r" : "none");
-        output << "    " << n;
-        if (admin || owner)
-        {
-          output << " (";
-          if (admin)
-            output << "admin";
-          if (admin && owner)
-            output << ", ";
-          if (owner)
-            output << "owner";
-          output << ")";
-        }
-        output << ": " << mode << std::endl;
+        auto const& entry = boost::any_cast<elle::json::Object>(_entry);
+        PermissionsResult::Permissions perms;
+        perms.read = boost::any_cast<bool>(entry.at("read"));
+        perms.write = boost::any_cast<bool>(entry.at("write"));
+        perms.admin = boost::any_cast<bool>(entry.at("admin"));
+        perms.owner = boost::any_cast<bool>(entry.at("owner"));
+        perms.name = boost::any_cast<std::string>(entry.at("name"));
+        res.permissions.push_back(perms);
       }
-      std::cout << output.str();
+      if (dir)
+      {
+        PermissionsResult::Directory dir;
+        if (dir_inherit)
+          dir.inherit = *dir_inherit;
+        res.directory = dir;
+      }
+      {
+        struct stat st;
+        int stat_result = ::stat(path.c_str(),&st);
+        if (stat_result != 0)
+          perror(path.c_str());
+        else
+        {
+          if (st.st_mode & 06)
+          {
+            PermissionsResult::World world;
+            world.read = true;
+            world.write = st.st_mode & 02;
+            res.world = world;
+          }
+        }
+      }
+      return res;
     }
-    catch (std::exception const& e)
+    catch (reactor::Terminate const&)
     {
-      std::cout << path << " : " << buf << std::endl;
+      throw;
     }
+    catch (...)
+    {
+      res.error = elle::exception_string();
+    }
+  }
+  return res;
+}
+
+static
+void
+list_action(std::string const& path, bool verbose, bool fallback_xattrs)
+{
+  if (verbose)
+    std::cout << "processing " << path << std::endl;
+  auto res = get_acl(path, fallback_xattrs);
+  if (res.error)
+    std::cerr << path << ": " << *res.error
+              << std::endl;
+  else
+  {
+    std::stringstream output;
+    output << path << ":" << std::endl;
+    if (res.directory)
+    {
+      output << "  inherit: "
+             << ((*res.directory).inherit ? "yes" : "no")
+             << std::endl;
+    }
+    if (res.world)
+    {
+      output << "  world: "
+             << ((*res.world).write ? "rw" : "r")
+             << std::endl;
+    }
+    for (auto& perm: res.permissions)
+    {
+      const char* mode = perm.write
+        ? (perm.read ? "rw" : "w")
+        : (perm.read ? "r" : "none");
+      output << "    " << perm.name;
+      if (perm.admin || perm.owner)
+      {
+        output << " (";
+        if (perm.admin)
+          output << "admin";
+        if (perm.admin && perm.owner)
+          output << ", ";
+        if (perm.owner)
+          output << "owner";
+        output << ")";
+      }
+      output << ": " << mode << std::endl;
+    }
+    std::cout << output.str();
   }
 }
 
@@ -353,9 +501,20 @@ COMMAND(list)
   for (auto const& path: paths)
   {
     enforce_in_mountpoint(path, fallback);
-    list_action(path, verbose, fallback);
-    if (recursive)
-      recursive_action(list_action, path, verbose, fallback);
+    if (script_mode)
+    {
+      auto permissions = std::vector<PermissionsResult>();
+      permissions.push_back(get_acl(path, fallback));
+      if (recursive)
+        recursive_action(permissions, get_acl, path, fallback);
+      elle::serialization::json::serialize(permissions, std::cout, false);
+    }
+    else
+    {
+      list_action(path, verbose, fallback);
+      if (recursive)
+        recursive_action(list_action, path, verbose, fallback);
+    }
   }
 }
 
@@ -439,8 +598,8 @@ COMMAND(set)
     if (recursive)
     {
       recursive_action(
-        set_action, path, users, mode, omode, inherit, disinherit, verbose,
-        fallback, fetch, multi);
+        set_action, path, users, mode, omode, inherit, disinherit,
+        verbose, fallback, fetch, multi);
     }
   }
 }
