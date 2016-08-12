@@ -25,6 +25,14 @@
 - Add new `Koordinate` overlay that enable to run several overlay
   algorithms on nodes.
 
+### Changed
+
+- Make `--filesystem` the default type for `infinit-storage --create`.
+
+### Fixed
+
+- Refuse multiple storage types in `infinit-storage --create`.
+
 
 ## [0.6.2]
 
