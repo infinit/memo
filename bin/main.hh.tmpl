@@ -571,7 +571,7 @@ beyond_push(std::string const& where,
 
 static
 Mode::OptionDescription option_cache(
-  "cache", boost::program_options::bool_switch(),
+  "cache", boost::program_options::value<bool>()->implicit_value(true, "true"),
   "enable caching with default values");
 static
 Mode::OptionDescription option_cache_ram_size(
@@ -763,6 +763,16 @@ optional(boost::program_options::variables_map const& vm,
     return {};
 }
 
+template <bool>
+boost::optional<bool>
+optional(boost::program_options::variables_map const& vm,
+         std::string const& name)
+{
+  if (vm.count(name))
+    return vm[name].empty() || vm[name].as<bool>();
+  return {};
+}
+
 template <typename T = std::string>
 boost::optional<T>
 optional(boost::program_options::variables_map const& vm,
@@ -852,6 +862,28 @@ flag(boost::program_options::variables_map const& vm,
   if (deprecated)
     return deprecated.get();
   return flag(vm, option.long_name());
+}
+
+inline
+boost::optional<bool>
+optional_aliased_flag(boost::program_options::variables_map const& vm,
+                      std::vector<std::string> const& aliases)
+{
+  for (auto const& alias: aliases)
+    if (vm.count(alias))
+      return vm[alias].as<bool>();
+  return {};
+}
+
+inline
+bool
+aliased_flag(boost::program_options::variables_map const& vm,
+             std::vector<std::string> const& aliases)
+{
+  for (auto const& alias: aliases)
+    if (vm.count(alias) && vm[alias].as<bool>())
+      return true;
+  return false;
 }
 
 inline
@@ -1311,6 +1343,7 @@ namespace infinit
     if (b)
       a = b.get();
   }
+
   template<typename T>
   void merge(boost::optional<std::vector<T>>& a,
              boost::optional<std::vector<T>> const& b)
@@ -1347,41 +1380,29 @@ namespace infinit
   void
   MountOptions::merge(boost::program_options::variables_map const& args)
   {
-    auto fuse_options = optional<std::vector<std::string>>(args, "fuse-option");
-    infinit::merge(this->fuse_options, fuse_options);
-    auto peers = optional<std::vector<std::string>>(args, "peer");
-    infinit::merge(this->peers, peers);
-    if (auto v = optional(args, "mountpoint"))
-      mountpoint = v;
-    if (auto v = optional(args, "as"))
-      as = v;
-    if (auto v = optional(args, "user"))
-      as = v;
-    if (flag(args, "readonly"))
-      readonly = true;
-    if (flag(args, "publish"))
-      fetch = push = true;
-    if (flag(args, "fetch"))
-      fetch = true;
-    if (flag(args, "push") || flag(args, "push-endpoints"))
-      push = true;
-    if (flag(args, "cache"))
-      cache = true;
-    if (flag(args, "async"))
-      async = true;
-    auto cache_ram_size = optional<int>(args, option_cache_ram_size);
-    if (cache_ram_size)
-      this->cache_ram_size = cache_ram_size;
-    auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
-    if (cache_ram_ttl)
-      this->cache_ram_ttl = cache_ram_ttl;
-    auto cache_ram_invalidation =
-      optional<int>(args, option_cache_ram_invalidation);
-    if (cache_ram_invalidation)
-      this->cache_ram_invalidation = cache_ram_invalidation;
-    auto disk_cache_size = optional<uint64_t>(args, option_cache_disk_size);
-    if (disk_cache_size)
-      this->cache_disk_size = disk_cache_size;
+    infinit::merge(this->fuse_options,
+                   optional<std::vector<std::string>>(args, "fuse-option"));
+    infinit::merge(this->peers,
+                   optional<std::vector<std::string>>(args, "peer"));
+    infinit::merge(this->mountpoint, optional(args, "mountpoint"));
+    // FIXME: Why user and as?
+    infinit::merge(this->as, optional(args, "as"));
+    infinit::merge(this->as, optional(args, "user"));
+    infinit::merge(this->readonly, optional<bool>(args, "readonly"));
+    infinit::merge(this->fetch, optional_aliased_flag(args, {
+      "fetch-endpoints", "fetch", "publish"}));
+    infinit::merge(this->push, optional_aliased_flag(args, {
+      "push-endpoints", "push", "publish"}));
+    infinit::merge(this->cache, optional<bool>(args, option_cache));
+    infinit::merge(this->async, optional<bool>(args, "async"));
+    infinit::merge(this->cache_ram_size,
+                   optional<int>(args, option_cache_ram_size));
+    infinit::merge(this->cache_ram_ttl,
+                   optional<int>(args, option_cache_ram_ttl));
+    infinit::merge(this->cache_ram_invalidation,
+                   optional<int>(args, option_cache_ram_invalidation));
+    infinit::merge(this->cache_disk_size,
+                   optional<uint64_t>(args, option_cache_disk_size));
   }
 
   inline
@@ -2612,19 +2633,6 @@ bool
 all(Args&& ... args)
 {
   return true;
-}
-
-inline
-bool
-aliased_flag(boost::program_options::variables_map const& vm,
-             std::vector<std::string> aliases)
-{
-  for (std::string const& alias: aliases)
-  {
-    if (vm.count(alias) && vm[alias].as<bool>())
-      return true;
-  }
-  return false;
 }
 
 inline

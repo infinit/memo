@@ -1,3 +1,8 @@
+// http://opensource.apple.com/source/mDNSResponder/mDNSResponder-576.30.4/mDNSPosix/PosixDaemon.c
+#if __APPLE__
+# define daemon yes_we_know_that_daemon_is_deprecated_in_os_x_10_5_thankyou
+#endif
+
 #include <pwd.h>
 #include <signal.h>
 #include <sys/wait.h>
@@ -34,6 +39,11 @@ ELLE_LOG_COMPONENT("infinit-daemon");
 
 #include <main.hh>
 #include <password.hh>
+
+#if __APPLE__
+# undef daemon
+extern int daemon(int, int);
+#endif
 
 infinit::Infinit ifnt;
 
@@ -1367,7 +1377,7 @@ _run(boost::program_options::variables_map const& args, bool detach)
       mounter = elle::make_unique<reactor::Thread>("mounter",
         [&] {auto_mounter(*mount, *docker);});
   }
-  if (!flag(args, "docker-disable"))
+  if (flag(args, "docker"))
   {
 #if !defined(INFINIT_PRODUCTION_BUILD) || defined(INFINIT_LINUX)
     try
@@ -1890,24 +1900,26 @@ main(int argc, char** argv)
 {
   using boost::program_options::value;
   using boost::program_options::bool_switch;
-
   std::vector<Mode::OptionDescription> options_run = {
     { "login-user", value<std::vector<std::string>>()->multitoken(),
       "Login with selected user(s), of form 'user:password'" },
     { "mount-root", value<std::string>(), elle::sprintf(
-      "Default root path for all mounts\n(default: %s/mnt)",
-      infinit::xdg_runtime_dir().string()) },
-    { "default-network", value<std::string>(),
-      "Default network for volume creation" },
+      "Default root path for all mounts\n(default: %s/infinit/filesystem/mnt)",
+      elle::os::getenv("XDG_RUNTIME_DIR",
+                       elle::sprintf("/run/user/%s", getuid()))) },
+    // { "default-network", value<std::string>(),
+    //   "Default network for volume creation" },
     { "advertise-host", value<std::vector<std::string>>()->multitoken(),
       "Advertise given hostname as an extra endpoint when running volumes" },
-    { "mount,m", value<std::vector<std::string>>()->multitoken(),
-      "mount given volumes on startup, keep trying on error" },
+    // { "mount,m", value<std::vector<std::string>>()->multitoken(),
+    //   "mount given volumes on startup, keep trying on error" },
     { "fetch,f", bool_switch(), "Run volumes with --fetch" },
     { "push,p", bool_switch(), "Run volumes with --push" },
     { "publish", bool_switch(), "Alias for --fetch --push" },
 #if !defined(INFINIT_PRODUCTION_BUILD) || defined(INFINIT_LINUX)
-    { "docker-disable", bool_switch(), "Disable the Docker plugin" },
+    { "docker",
+      value<bool>()->implicit_value(true, "true")->default_value(true, "true"),
+      "Enable the Docker plugin\n(default: true)" },
     { "docker-user", value<std::string>(), elle::sprintf(
       "System user to use for docker plugin\n(default: %s)",
         SystemUser(getuid()).name) },

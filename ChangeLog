@@ -37,14 +37,18 @@
 
 ## [0.6.2]
 
+Docker volume plugin and shutdown behavior fixes.
+
 ### Added
 
 - Enable to forcefully kill pending fs operation on shutdown with a
   triple `SIGINT`.
+- Add `infinint-daemon` that can act as a Docker volume plugin.
+- Enable to fetch users with their short key hash  from the hub.
 
 ### Fixed
 
-- Fix segmentation fault on shutdown
+- Fix segmentation fault on shutdown.
 
 
 ## [0.6.1] - 2016-08-01
