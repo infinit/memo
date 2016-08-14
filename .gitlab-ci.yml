@@ -88,22 +88,6 @@ x86_64-jessie-gcc4:
       - _build
     key: "$CI_BUILD_NAME/$CI_BUILD_REF_NAME"
 
-# i386-jessie-gcc4:
-#   stage: build
-#   script:
-#     - git submodule sync --recursive
-#     - git submodule update --init --recursive
-#     - git fetch origin --tags
-#     - mkdir -p ../fs-build ../fs-install
-#     - farm/configure --arch i386 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //build
-#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //check
-#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //install
-#   tags:
-#     - i386
-#     - jessie
-#     - gcc4
-
 x86_64-windows-mingw4:
   stage: build
   script:
@@ -127,22 +111,6 @@ x86_64-windows-mingw4:
     - mingw4
   except:
     - feature/website
-
-# i686-windows-mingw4:
-#   stage: build
-#   script:
-#     - git submodule sync --recursive
-#     - git submodule update --init --recursive
-#     - git fetch origin --tags
-#     - mkdir -p ../fs-build ../fs-install
-#     - farm/configure --arch i686 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //build
-#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(($(nproc) / 4)) //check
-#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //install
-#   tags:
-#     - i686
-#     - windows
-#     - mingw4
 
 x86_64-osx-clang:
   stage: build
