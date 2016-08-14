@@ -74,8 +74,8 @@ x86_64-jessie-gcc4:
     - python3 drake --website=false --beyond=false -j $(nproc) //check
     - python3 drake --website=false --beyond=false -j $(nproc) //install
     - python3 drake --website=false --beyond=false -j $(nproc) //debian
-    - scp "$BUILD_DIR/infinit_${DESC}_amd64.deb" debian@debian.infinit.io:repository
-    - if GIT_DIR=../.git git describe --exact-match HEAD; then scp "$BUILD_DIRinfinit-debug-symbols-debian-${DESC}_0_amd64.deb" debian@debian.infinit.io:repository; fi
+    - scp "infinit_${DESC}_amd64.deb" debian@debian.infinit.io:repository
+    - if GIT_DIR=../.git git describe --exact-match HEAD; then scp "infinit-debug-symbols-debian-${DESC}_0_amd64.deb" debian@debian.infinit.io:repository; fi
     - ssh debian@debian.infinit.io 'make debian'
   tags:
     - x86_64
