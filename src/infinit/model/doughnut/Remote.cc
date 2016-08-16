@@ -235,11 +235,14 @@ namespace infinit
       Remote::Auth
       _auth_0_7(Remote& self, protocol::ChanneledStream& channels)
       {
-        using AuthSyn = Remote::Auth (Passport const&, elle::Version const&);
+        using AuthSyn =
+          Remote::Auth (Address, Passport const&, elle::Version const&);
         RPC<AuthSyn> auth_syn(
           "auth_syn", channels, self.doughnut().version());
         auth_syn.set_context<Doughnut*>(&self.doughnut());
-        return auth_syn(self.doughnut().passport(), self.doughnut().version());
+        return auth_syn(self.id(),
+                        self.doughnut().passport(),
+                        self.doughnut().version());
       }
 
       void

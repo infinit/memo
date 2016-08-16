@@ -353,12 +353,13 @@ namespace infinit
           };
         if (this->_doughnut.version() >= elle::Version(0, 7, 0))
         {
-          using AuthSyn = Remote::Auth (Passport const&, elle::Version const&);
+          using AuthSyn =
+            Remote::Auth (Address id, Passport const&, elle::Version const&);
           rpcs.add(
             "auth_syn", std::function<AuthSyn>(
               [this, auth_syn]
-              (Passport const& p, elle::Version const& v)
-              -> Remote::Auth
+              (Address id, Passport const& p, elle::Version const& v)
+                -> Remote::Auth
               {
                 auto dht_v = this->_doughnut.version();
                 if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
