@@ -18,24 +18,24 @@
 -->
 
 
-## [0.6.3]
+<!-- ## [0.6.3] -->
 
-### Added
+<!-- ### Added -->
 
-- Add new `Koordinate` overlay that enable to run several overlay
-  algorithms on nodes.
-- Add `--script` mode to `infinit-acl --list`.
+<!-- - Add new `Koordinate` overlay that enable to run several overlay -->
+<!--   algorithms on nodes. -->
+<!-- - Add `--script` mode to `infinit-acl --list`. -->
 
-### Changed
+<!-- ### Changed -->
 
-- Make `--filesystem` the default type for `infinit-storage --create`.
+<!-- - Make `--filesystem` the default type for `infinit-storage --create`. -->
 
-### Fixed
+<!-- ### Fixed -->
 
-- Refuse multiple storage types in `infinit-storage --create`.
+<!-- - Refuse multiple storage types in `infinit-storage --create`. -->
 
 
-## [0.6.2]
+## [0.6.2] - 2016-08-12
 
 Docker volume plugin and shutdown behavior fixes.
 
