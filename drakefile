@@ -48,6 +48,7 @@ def configure(
     codesign = False,
     beyond: bool = True,
     website: bool = True,
+    enable_crash_reporting: bool = True,
 ):
 
   if python3 is not None:
@@ -255,7 +256,7 @@ def configure(
     cxx_config_infinit)
   rule_build << infinit_lib
 
-  if not windows:
+  if not windows and enable_crash_reporting:
     crash_reporting = drake.include('crash_reporting',
                                     cxx_toolkit = cxx_toolkit,
                                     cxx_config = cxx_config)
@@ -325,10 +326,13 @@ def configure(
   # Ship libstdc++
   additional_libs = []
   if linux:
-    output = subprocess.check_output(['ldconfig', '-p'])
-    path = None
     searched_for = {'libstdc++', 'libgcc_s'}
     need_64 = cxx_toolkit.architecture == drake.architecture.x86_64
+    try:
+      output = subprocess.check_output(['ldconfig', '-p'])
+    except Exception:
+      output = ''.join([ (need_64 and 'x86-64 ' or '') + '/usr/lib/'+x+'.so\n' for x in searched_for]).encode('utf-8')
+    path = None
     for line in output.decode('utf-8').split('\n'):
       for searched in searched_for:
         if searched in line:
@@ -376,7 +380,8 @@ def configure(
     binaries_config.append(('infinit-daemon', [], [], True))
   if not windows:
     binaries_config.append(('sshfs', [], [], False))
-    additional_libs.append(crash_reporter_lib)
+    if enable_crash_reporting:
+      additional_libs.append(crash_reporter_lib)
     additional_libs += [elle_lib, reactor_lib, cryptography_lib]
   else:
     pass
@@ -407,7 +412,7 @@ def configure(
     binaries.append(bin)
     if install:
       installed_binaries.append(bin)
-      if not windows:
+      if not windows and enable_crash_reporting:
         bin_sym = drake.node('bin/symbols/%s.sym' % name)
         crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
                                          debian_syms_dir,
@@ -419,7 +424,7 @@ def configure(
         for lib in binary.dynamic_libraries:
           add_libraries(lib)
       add_libraries(bin)
-  if not windows:
+  if not windows and enable_crash_reporting:
     for lib in set(installed_libraries):
       lib_sym = drake.node('lib/symbols/%s.sym' % lib.path().basename())
       crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
@@ -630,6 +635,36 @@ def configure(
   docker_file.run('ln -s /usr/bin/fnetusermount-client /bin/fusermount')
   drake.docker.DockerBuilder(docker_image, docker_file)
 
+
+  # infinit alpine image
+  docker_path = drake.Path('docker-alpine')
+  docker_image = drake.docker.DockerImage(
+    'docker-alpine', 'infinit-alpine', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'alpine',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.add(install_nodes(docker_path, demo = False), '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-static.sh'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-service-runner.py'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-context.sh'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.run('ln -s /usr/bin/fnetusermount-client /bin/fusermount')
+  drake.docker.DockerBuilder(docker_image, docker_file)
+
+
+
   #fnetusermount-server image
   if elle.reactor.fnetusermount_binaries is not None:
     docker_path = drake.Path('docker-fnetusermount')
@@ -708,7 +743,7 @@ def configure(
           'debian': rule_debian
         },
       )
-      if not windows:
+      if not windows and enable_crash_reporting:
         crash_test_libs = drake.copy([
             crash_reporter_lib,
             cryptography_lib,
@@ -757,7 +792,7 @@ def configure(
               'user_cli',
               'volume_cli',
             ]))
-      if not windows:
+      if not windows and enable_crash_reporting:
         tests.append(functional_test('crash-reporter'))
       if linux:
         pjdfstest = drake.include(
@@ -777,7 +812,7 @@ def configure(
       for t in tests:
         test = drake.node('tests/functional/%s' % t['name'])
         rule_functional_tests << test
-        if not windows:
+        if not windows and enable_crash_reporting:
           test.dependencies_add([crash_test_bin])
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
@@ -787,7 +822,7 @@ def configure(
                                              absolute = True))
         extra_path = [binaries_path]
         extra_path += t.get('paths', [])
-        if not windows:
+        if not windows and enable_crash_reporting:
           extra_path.append(str(drake.path_build(crash_test_bin.path(True).dirname(),
                                                  absolute = True)))
         extra_path.append(os.environ.get('PATH', ''))
