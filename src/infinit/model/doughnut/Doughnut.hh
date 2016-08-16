@@ -89,6 +89,10 @@ namespace infinit
                bool require_write,
                bool require_storage,
                bool require_sign);
+        std::shared_ptr<cryptography::rsa::PublicKey>
+        resolve_key(elle::Buffer const& hash);
+        elle::Buffer
+        ensure_key(cryptography::rsa::PublicKey const& k);
         ELLE_ATTRIBUTE_R(Address, id);
         ELLE_ATTRIBUTE(std::shared_ptr<cryptography::rsa::KeyPair>, keys);
         ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PublicKey>, owner);
@@ -103,6 +107,9 @@ namespace infinit
         ELLE_ATTRIBUTE_RX(Dock, dock);
         ELLE_ATTRIBUTE(reactor::Barrier, terminating);
 
+        typedef std::unordered_map<elle::Buffer,
+           std::shared_ptr<cryptography::rsa::PublicKey>> KeyHashCache;
+        ELLE_ATTRIBUTE_R(KeyHashCache, key_hash_cache);
       protected:
         virtual
         std::unique_ptr<blocks::MutableBlock>

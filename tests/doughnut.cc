@@ -277,6 +277,19 @@ private:
   }
 };
 
+template<typename C>
+int
+mutable_block_count(C const& c)
+{
+  int res = 0;
+  for (auto const& i: c)
+  {
+    if (i.mutable_block())
+      ++res;
+  }
+  return res;
+}
+
 ELLE_TEST_SCHEDULED(CHB, (bool, paxos))
 {
   DHTs dhts(paxos);
@@ -977,7 +990,7 @@ namespace rebalancing
       b->data(std::string("quorum_duel"));
       dht_a.dht->store(*b, infinit::model::STORE_INSERT);
     }
-    BOOST_CHECK_EQUAL(dht_c.overlay->blocks().size(), 1u);
+    BOOST_CHECK_EQUAL(mutable_block_count(dht_c.overlay->blocks()), 1u);
     ELLE_LOG("disconnect third DHT")
       dht_c.overlay->disconnect_all();
     ELLE_LOG("rebalance block to quorum of 1")
@@ -990,7 +1003,7 @@ namespace rebalancing
       dht_c.overlay->connect_recursive(*dht_a.overlay);
     ELLE_LOG("write block to quorum of 1")
     {
-      BOOST_CHECK_EQUAL(dht_c.overlay->blocks().size(), 1u);
+      BOOST_CHECK_EQUAL(mutable_block_count(dht_c.overlay->blocks()), 1u);
       b->data(std::string("quorum_duel_edited"));
       dht_c.dht->store(*b, infinit::model::STORE_UPDATE);
     }
@@ -1012,7 +1025,7 @@ namespace rebalancing
       b->data(std::string("quorum_duel"));
       dht_a.dht->store(*b, infinit::model::STORE_INSERT);
     }
-    BOOST_CHECK_EQUAL(dht_c.overlay->blocks().size(), 1u);
+    BOOST_CHECK_EQUAL(mutable_block_count(dht_c.overlay->blocks()), 1u);
     ELLE_LOG("disconnect third DHT")
       dht_c.overlay->disconnect_all();
     ELLE_LOG("rebalance block to quorum of 2")
@@ -1025,7 +1038,7 @@ namespace rebalancing
       dht_c.overlay->connect_recursive(*dht_a.overlay);
     ELLE_LOG("write block to quorum of 2")
     {
-      BOOST_CHECK_EQUAL(dht_c.overlay->blocks().size(), 1u);
+      BOOST_CHECK_EQUAL(mutable_block_count(dht_c.overlay->blocks()), 1u);
       b->data(std::string("quorum_duel_edited"));
       dht_c.dht->store(*b, infinit::model::STORE_UPDATE);
     }
@@ -1346,7 +1359,7 @@ namespace rebalancing
       address = block->address();
       dht_a.dht->store(std::move(block), infinit::model::STORE_INSERT);
     }
-    BOOST_CHECK_EQUAL(storage_a.size(), 1u);
+    BOOST_CHECK(storage_a.find(address) != storage_a.end());
     ELLE_LOG("restart with 2 DHTs")
     {
       DHT dht_a(id = id_a,
