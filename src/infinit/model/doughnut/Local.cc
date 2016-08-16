@@ -19,6 +19,7 @@
 #include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/OKB.hh>
+#include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/storage/MissingKey.hh>
 
@@ -350,7 +351,24 @@ namespace infinit
               std::make_pair(*stored_challenge, elle::Buffer()), // we no longuer need token
               const_cast<Passport*>(&_doughnut.passport()));
           };
-        if (this->_doughnut.version() >= elle::Version(0, 4, 0))
+        if (this->_doughnut.version() >= elle::Version(0, 7, 0))
+        {
+          using AuthSyn = Remote::Auth (Passport const&, elle::Version const&);
+          rpcs.add(
+            "auth_syn", std::function<AuthSyn>(
+              [this, auth_syn]
+              (Passport const& p, elle::Version const& v)
+              -> Remote::Auth
+              {
+                auto dht_v = this->_doughnut.version();
+                if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
+                  elle::err("invalid version %s, we use %s", v, dht_v);
+                auto res = auth_syn(p);
+                return Remote::Auth(
+                  this->id(), std::move(res.first), *res.second);
+              }));
+        }
+        else if (this->_doughnut.version() >= elle::Version(0, 4, 0))
         {
           typedef std::pair<Challenge, Passport*>
             AuthSyn(Passport const&, elle::Version const&);

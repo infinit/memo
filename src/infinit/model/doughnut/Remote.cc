@@ -23,6 +23,25 @@ namespace infinit
   {
     namespace doughnut
     {
+      /*-----.
+      | Auth |
+      `-----*/
+
+      Remote::Auth::Auth(Address id,
+                         Challenge challenge,
+                         Passport passport)
+        : id(std::move(id))
+        , challenge(std::move(challenge))
+        , passport(std::move(passport))
+      {}
+
+      Remote::Auth::Auth(elle::serialization::SerializerIn& input)
+        : id(input.deserialize<Address>("id"))
+        , challenge(input.deserialize<Challenge>("challenge"))
+        , passport(input.deserialize<Passport>("passport"))
+      {}
+
+
       /*-------------.
       | Construction |
       `-------------*/
@@ -183,38 +202,44 @@ namespace infinit
       | Blocks |
       `-------*/
 
-      // challenge, token
-      using Challenge = std::pair<elle::Buffer, elle::Buffer>;
-
       static
-      std::pair<Challenge, std::unique_ptr<Passport>>
+      std::pair<Remote::Challenge, std::unique_ptr<Passport>>
       _auth_0_3(Remote& self, protocol::ChanneledStream& channels)
       {
-        typedef std::pair<Challenge, std::unique_ptr<Passport>>
-          AuthSyn(Passport const&);
+        using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+          (Passport const&);
         RPC<AuthSyn> auth_syn(
           "auth_syn", channels, self.doughnut().version());
         return auth_syn(self.doughnut().passport());
       }
 
       static
-      std::pair<Challenge, std::unique_ptr<Passport>>
+      std::pair<Remote::Challenge, std::unique_ptr<Passport>>
       _auth_0_4(Remote& self, protocol::ChanneledStream& channels)
       {
-        typedef std::pair<Challenge, std::unique_ptr<Passport>>
-          AuthSyn(Passport const&, elle::Version const&);
+        using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+          (Passport const&, elle::Version const&);
         RPC<AuthSyn> auth_syn(
           "auth_syn", channels, self.doughnut().version());
         auth_syn.set_context<Doughnut*>(&self.doughnut());
         auto version = self.doughnut().version();
         // 0.5.0 and 0.6.0 compares the full version it receives for
         // compatibility instead of dropping the subminor component. Set
-        // it to 0 until >=0.7.0, which will drop subminor as expected.
-        auto subminor =
-          version >= elle::Version(0, 7, 0) ? version.subminor() : 0;
+        // it to 0.
         return auth_syn(
           self.doughnut().passport(),
-          elle::Version(version.major(), version.minor(), subminor));
+          elle::Version(version.major(), version.minor(), 0));
+      }
+
+      static
+      Remote::Auth
+      _auth_0_7(Remote& self, protocol::ChanneledStream& channels)
+      {
+        using AuthSyn = Remote::Auth (Passport const&, elle::Version const&);
+        RPC<AuthSyn> auth_syn(
+          "auth_syn", channels, self.doughnut().version());
+        auth_syn.set_context<Doughnut*>(&self.doughnut());
+        return auth_syn(self.doughnut().passport(), self.doughnut().version());
       }
 
       void
@@ -225,7 +250,14 @@ namespace infinit
         {
           auto challenge_passport = [&]
           {
-            if (this->_doughnut.version() >= elle::Version(0, 4, 0))
+            if (this->_doughnut.version() >= elle::Version(0, 7, 0))
+            {
+              auto res = _auth_0_7(*this, channels);
+              return std::make_pair(
+                res.challenge,
+                elle::make_unique<Passport>(std::move(res.passport)));
+            }
+            else if (this->_doughnut.version() >= elle::Version(0, 4, 0))
               return _auth_0_4(*this, channels);
             else
               return _auth_0_3(*this, channels);
