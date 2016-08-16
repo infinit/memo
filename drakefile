@@ -661,6 +661,8 @@ def configure(
                docker_path / 'bin', strip_prefix = True),
     '/usr')
   docker_file.run('ln -s /usr/bin/fnetusermount-client /bin/fusermount')
+  docker_file.run("ln -s 'libstdc++.so' '/usr/lib/libstdc++.so.6'")
+  docker_file.run("ln -s 'libgcc_s.so' '/usr/lib/libgcc_s.so.1'")
   drake.docker.DockerBuilder(docker_image, docker_file)
 
 
