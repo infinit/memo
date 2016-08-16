@@ -157,7 +157,7 @@ website:
     - ssh debian@debian.infinit.io 'make debian'
   tags:
     - x86_64
-    - trusty
+    - ubuntu
     - gcc4
   only:
     - feature/website
