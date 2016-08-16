@@ -471,8 +471,8 @@ _save_avatar(std::string const& name,
 {
   boost::filesystem::ofstream f;
   ifnt._open_write(f, ifnt._user_avatar_path(name),
-                   name, "avatar", true);
-  f << buffer.string();
+                   name, "avatar", true, std::ios::out | std::ios::binary);
+  f.write(reinterpret_cast<char const*>(buffer.contents()), buffer.size());
   report_action("saved", "avatar", name, std::string("locally"));
 }
 

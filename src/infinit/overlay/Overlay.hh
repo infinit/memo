@@ -7,7 +7,6 @@
 # include <elle/json/json.hh>
 # include <elle/log.hh>
 
-
 # include <reactor/network/tcp-socket.hh>
 # include <reactor/Generator.hh>
 
@@ -32,6 +31,8 @@ namespace infinit
       OP_REMOVE,
       OP_FETCH_FAST, ///< Fetch faster but can return a subset of requested nodes
     };
+    std::ostream&
+    operator <<(std::ostream& output, Operation op);
 
     class Overlay
     {
@@ -52,6 +53,7 @@ namespace infinit
       virtual
       ~Overlay();
       ELLE_ATTRIBUTE_R(model::doughnut::Doughnut*, doughnut);
+      ELLE_attribute_r(model::Address, id);
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
 
     /*------.

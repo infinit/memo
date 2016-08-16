@@ -44,8 +44,7 @@ boost::optional<std::string>
 path_mountpoint(std::string const& path, bool fallback);
 
 void
-enforce_in_mountpoint(
-  std::string const& path, bool enforce_directory, bool fallback);
+enforce_in_mountpoint(std::string const& path, bool fallback);
 
 bool
 path_is_root(std::string const& path, bool fallback);

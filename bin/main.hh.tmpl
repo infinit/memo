@@ -2465,7 +2465,8 @@ namespace infinit
                 boost::filesystem::path const& path,
                 std::string const& name,
                 std::string const& type,
-                bool overwrite = false) const
+                bool overwrite = false,
+                std::ios_base::openmode mode = std::ios_base::out) const
     {
       ELLE_DEBUG("open %s \"%s\" (%s) for writing", type, name, path);
       create_directories(path.parent_path());
@@ -2474,7 +2475,7 @@ namespace infinit
         throw ResourceAlreadyFetched(
           elle::sprintf("%s \"%s\" already exists", type, name));
       }
-      f.open(path);
+      f.open(path, mode);
       if (!f.good())
       {
         throw elle::Error(

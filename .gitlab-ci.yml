@@ -64,14 +64,18 @@ x86_64-jessie-gcc4:
     - git submodule sync --recursive
     - git submodule update --init --recursive
     - git fetch origin --tags
-    - mkdir -p ../fs-build ../fs-install
-    - farm/configure --arch x86_64 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-    - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //build
-    - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //check
-    - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //install
-    - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //debian
-    - scp ../fs-build/infinit_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
-    - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then scp ../fs-build/infinit-debug-symbols-debian-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb debian@debian.infinit.io:repository; fi
+    - BUILD_DIR=_build
+    - INSTALL_DIR=_instal
+    - DESC=$(git describe)
+    - mkdir -p "$BUILD_DIR" "$INSTALL_DIR"
+    - farm/configure --arch x86_64 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
+    - cd "$BUILD_DIR"
+    - python3 drake --website=false --beyond=false -j $(nproc) //build
+    - python3 drake --website=false --beyond=false -j $(nproc) //check
+    - python3 drake --website=false --beyond=false -j $(nproc) //install
+    - python3 drake --website=false --beyond=false -j $(nproc) //debian
+    - scp "infinit_${DESC}_amd64.deb" debian@debian.infinit.io:repository
+    - if GIT_DIR=../.git git describe --exact-match HEAD; then scp "infinit-debug-symbols-debian-${DESC}_0_amd64.deb" debian@debian.infinit.io:repository; fi
     - ssh debian@debian.infinit.io 'make debian'
   tags:
     - x86_64
@@ -79,22 +83,10 @@ x86_64-jessie-gcc4:
     - gcc4
   except:
     - feature/website
-
-# i386-jessie-gcc4:
-#   stage: build
-#   script:
-#     - git submodule sync --recursive
-#     - git submodule update --init --recursive
-#     - git fetch origin --tags
-#     - mkdir -p ../fs-build ../fs-install
-#     - farm/configure --arch i386 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //build
-#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //check
-#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //install
-#   tags:
-#     - i386
-#     - jessie
-#     - gcc4
+  cache:
+    paths:
+      - _build
+    key: "$CI_BUILD_NAME/$CI_BUILD_REF_NAME"
 
 x86_64-windows-mingw4:
   stage: build
@@ -119,22 +111,6 @@ x86_64-windows-mingw4:
     - mingw4
   except:
     - feature/website
-
-# i686-windows-mingw4:
-#   stage: build
-#   script:
-#     - git submodule sync --recursive
-#     - git submodule update --init --recursive
-#     - git fetch origin --tags
-#     - mkdir -p ../fs-build ../fs-install
-#     - farm/configure --arch i686 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //build
-#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(($(nproc) / 4)) //check
-#     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //install
-#   tags:
-#     - i686
-#     - windows
-#     - mingw4
 
 x86_64-osx-clang:
   stage: build

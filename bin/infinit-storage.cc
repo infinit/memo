@@ -114,32 +114,17 @@ COMMAND(create)
   if (capacity_repr)
     capacity = convert_capacity(*capacity_repr);
   std::unique_ptr<infinit::storage::StorageConfig> config;
-  if (args.count("filesystem"))
-  {
-    auto user_path = optional(args, "path");
-    auto path = user_path
-              ? infinit::canonical_folder(user_path.get())
-              : (infinit::xdg_data_home() / "blocks" / name);
-    if (boost::filesystem::exists(path))
-    {
-      if (!boost::filesystem::is_directory(path))
-      {
-        throw elle::Error(
-          elle::sprintf("path is not directory: %s", path));
-      }
-      if (!boost::filesystem::is_empty(path))
-      {
-        std::cout << "WARNING: Path is not empty: " << path
-                  << std::endl
-                  << "WARNING: You may encounter unexpected behavior."
-                  << std::endl;
-      }
-    }
-    config =
-      elle::make_unique<infinit::storage::FilesystemStorageConfig>
-        (name, std::move(path.string()), std::move(capacity));
-  }
-  else if (args.count("gcs"))
+  int types =
+    + (args.count("dropbox") ? 1 : 0)
+    + (args.count("filesystem") ? 1 : 0)
+    + (args.count("gcs") ? 1 : 0)
+    + (args.count("google-drive") ? 1 : 0)
+    + (args.count("s3") ? 1 : 0)
+    + (args.count("ssh") ? 1 : 0)
+  ;
+  if (types > 1)
+    throw CommandLineError("only one storage type may be specified");
+  if (args.count("gcs"))
   {
     auto root = optional(args, "path");
     if (!root)
@@ -226,8 +211,31 @@ COMMAND(create)
       name, host, path, capacity);
   }
 #endif
-  if (!config)
-    throw CommandLineError("storage type unspecified");
+  else // filesystem by default
+  {
+    auto user_path = optional(args, "path");
+    auto path = user_path
+              ? infinit::canonical_folder(user_path.get())
+              : (infinit::xdg_data_home() / "blocks" / name);
+    if (boost::filesystem::exists(path))
+    {
+      if (!boost::filesystem::is_directory(path))
+      {
+        throw elle::Error(
+          elle::sprintf("path is not directory: %s", path));
+      }
+      if (!boost::filesystem::is_empty(path))
+      {
+        std::cout << "WARNING: Path is not empty: " << path
+                  << std::endl
+                  << "WARNING: You may encounter unexpected behavior."
+                  << std::endl;
+      }
+    }
+    config =
+      elle::make_unique<infinit::storage::FilesystemStorageConfig>
+        (name, std::move(path.string()), std::move(capacity));
+  }
   if (args.count("output"))
   {
     auto output = get_output(args);
@@ -370,7 +378,7 @@ main(int argc, char** argv)
   infinit::check_broken_locale();
   Mode::OptionsDescription storage_types("Storage types");
   storage_types.add_options()
-    ("filesystem", "store data on a local filesystem")
+    ("filesystem", "store data on a local filesystem (default)")
     ("gcs", "store data using Google Cloud Storage")
     ("s3", "store data using Amazon S3")
     ;
