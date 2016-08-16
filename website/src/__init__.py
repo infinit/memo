@@ -238,6 +238,14 @@ class Website(bottle.Bottle):
       'description': 'Create a storage resource that uses an Amazon S3 bucket.',
     }
 
+  @route('/documentation/docker/volume-plugin', name = 'doc_docker_plugin')
+  @view('pages/docs/docker_volume_plugin.html')
+  def root(self):
+    return {
+      'title': 'Docker Volume Plugin',
+      'description': 'The Infinit Docker volume plugins enable Engine deployments to be integrated with Infinit volumes and enable data volumes to persist beyond the lifetime of a single Engine host. ',
+    }
+
   @route('/documentation/upgrading', name = 'doc_upgrading')
   @view('pages/docs/upgrading.html')
   def root(self):
