@@ -164,7 +164,10 @@ struct PermissionsResult
 
   struct Directory
   {
-    Directory() = default;
+    Directory()
+      : inherit(false)
+    {}
+
     Directory(Directory const&) = default;
 
     Directory(elle::serialization::Serializer& s)
