@@ -672,7 +672,15 @@ namespace infinit
           if (dirty)
             ELLE_WARN("Propagating truncate(%s) of %s to open dirty file handle with size %s",
                       new_size, _name, fh->_file._header.size);
-          fh->ftruncate(new_size);
+          if (dirty || new_size)
+            fh->ftruncate(new_size);
+          else
+          { // No need to go through block removal again
+            fh->_file._fat.clear();
+            fh->_file._data.reset();
+            fh->_file._header.size = 0;
+            fh->_blocks.clear();
+          }
         }
       }
     }
