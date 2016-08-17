@@ -63,13 +63,12 @@ namespace infinit
       `--------*/
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make(std::vector<Endpoints> const& hosts,
-                          std::shared_ptr<model::doughnut::Local> local,
+      Configuration::make(std::shared_ptr<model::doughnut::Local> local,
                           model::doughnut::Doughnut* doughnut)
       {
         Koordinate::Backends backends;
         for (auto& conf: this->_backends)
-          backends.emplace_back(conf->make(hosts, local, doughnut));
+          backends.emplace_back(conf->make(local, doughnut));
         return elle::make_unique<Koordinate>(
           doughnut, std::move(local), std::move(backends));
       }

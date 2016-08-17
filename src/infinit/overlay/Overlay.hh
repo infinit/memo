@@ -149,8 +149,7 @@ namespace infinit
       typedef infinit::serialization_tag serialization_tag;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make(std::vector<Endpoints> const&,
-           std::shared_ptr<model::doughnut::Local> local,
+      make(std::shared_ptr<model::doughnut::Local> local,
            model::doughnut::Doughnut* doughnut) = 0;
     };
   }

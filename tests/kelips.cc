@@ -69,7 +69,9 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
         [&] (infinit::model::doughnut::Doughnut& dht,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return config.make(endpoints, local, &dht);
+          auto res = config.make(local, &dht);
+          res->discover(endpoints);
+          return res;
         };
     infinit::model::Address::Value v;
     memset(v, 0, sizeof(v));
@@ -136,7 +138,9 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   [&] (infinit::model::doughnut::Doughnut& dht,
        std::shared_ptr<infinit::model::doughnut::Local> local)
   {
-    return config.make(endpoints, local, &dht);
+    auto res = config.make(local, &dht);
+    res->discover(endpoints);
+    return res;
   };
   auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
     infinit::model::Address::random(0), // FIXME

@@ -113,8 +113,7 @@ namespace infinit
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
-    StonehengeConfiguration::make(std::vector<Endpoints> const&,
-                                  std::shared_ptr<model::doughnut::Local> local,
+    StonehengeConfiguration::make(std::shared_ptr<model::doughnut::Local> local,
                                   model::doughnut::Doughnut* dht)
     {
       NodeLocations peers;

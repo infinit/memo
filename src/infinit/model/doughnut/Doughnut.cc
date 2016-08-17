@@ -465,16 +465,14 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::model::Model>
-      Configuration::make(std::vector<Endpoints> const& hosts,
-                          bool client,
+      Configuration::make(bool client,
                           boost::filesystem::path const& dir)
       {
-        return this->make(hosts, client, dir, false, false);
+        return this->make(client, dir, false, false);
       }
 
       std::unique_ptr<Doughnut>
       Configuration::make(
-        std::vector<Endpoints> const& hosts,
         bool client,
         boost::filesystem::path const& p,
         bool async,
@@ -519,7 +517,7 @@ namespace infinit
             if (!this->overlay)
               elle::err(
                 "invalid network configuration, missing field \"overlay\"");
-            return this->overlay->make(hosts, std::move(local), &dht);
+            return this->overlay->make(std::move(local), &dht);
           };
         auto port = port_ ? port_.get() : this->port ? this->port.get() : 0;
         std::unique_ptr<storage::Storage> storage;

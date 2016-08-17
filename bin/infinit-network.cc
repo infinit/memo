@@ -654,18 +654,6 @@ COMMAND(run)
     }
   }
   network.ensure_allowed(self, "run");
-  std::vector<infinit::model::Endpoints> eps;
-  if (args.count("peer"))
-  {
-    auto peers = args["peer"].as<std::vector<std::string>>();
-    for (auto const& peer: peers)
-    {
-      if (boost::filesystem::exists(peer))
-        eps.emplace_back(endpoints_from_file(peer));
-      else
-        eps.emplace_back(infinit::model::Endpoints({peer}));
-    }
-  }
   bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
   auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
@@ -680,9 +668,22 @@ COMMAND(run)
   auto port = optional<int>(args, option_port);
   auto dht = network.run(
     self,
-    eps, false,
+    false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, infinit::compatibility_version, port);
+  if (args.count("peer"))
+  {
+    std::vector<infinit::model::Endpoints> eps;
+    auto peers = args["peer"].as<std::vector<std::string>>();
+    for (auto const& peer: peers)
+    {
+      if (boost::filesystem::exists(peer))
+        eps.emplace_back(endpoints_from_file(peer));
+      else
+        eps.emplace_back(infinit::model::Endpoints({peer}));
+    }
+    dht->overlay()->discover(eps);
+  }
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"}) &&
     dht->local() && dht->local()->storage();

@@ -157,7 +157,6 @@ namespace infinit
         int file_timeout_ms;
         int ping_interval_ms;
         int ping_timeout_ms;
-        std::vector<Endpoints> bootstrap_nodes;
         /// wait for 'wait' nodes before starting
         int wait;
         bool encrypt;
@@ -166,8 +165,7 @@ namespace infinit
         GossipConfiguration gossip;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(std::vector<Endpoints> const& hosts,
-             std::shared_ptr<model::doughnut::Local> server,
+        make(std::shared_ptr<model::doughnut::Local> server,
              model::doughnut::Doughnut* doughnut) override;
       };
 
@@ -311,8 +309,7 @@ namespace infinit
         void
         process_update(SerState const& s);
         void
-        bootstrap(bool use_bootstrap_nodes,
-                  bool use_contacts = true,
+        bootstrap(bool use_contacts = true,
                   NodeLocations const& peers = {});
         void
         _discover(NodeLocations const& peers) override;
