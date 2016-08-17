@@ -61,6 +61,10 @@ namespace infinit
     `------*/
     public:
       void
+      discover(Endpoints const& peer);
+      void
+      discover(std::vector<Endpoints> const& peers);
+      void
       discover(NodeLocation const& peer);
       void
       discover(NodeLocations const& peers);

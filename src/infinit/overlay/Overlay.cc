@@ -72,6 +72,21 @@ namespace infinit
     `------*/
 
     void
+    Overlay::discover(Endpoints const& peer)
+    {
+      this->discover(NodeLocation(model::Address::null, peer));
+    }
+
+    void
+    Overlay::discover(std::vector<Endpoints> const& peers)
+    {
+      NodeLocations locs;
+      for (auto const& eps: peers)
+        locs.emplace_back(model::Address::null, eps);
+      this->discover(std::move(locs));
+    }
+
+    void
     Overlay::discover(NodeLocation const& peer)
     {
       ELLE_TRACE("%s: discover %f", this, peer);
@@ -138,6 +153,7 @@ namespace infinit
     reactor::Generator<Overlay::WeakMember>
     Overlay::lookup_nodes(std::unordered_set<model::Address> addresses)
     {
+      ELLE_TRACE_SCOPE("%s: lookup nodes %f", this, addresses);
       return reactor::generator<Overlay::WeakMember>(
         [this, addresses]
         (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
