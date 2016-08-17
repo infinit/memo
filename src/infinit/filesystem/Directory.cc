@@ -20,10 +20,7 @@
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
-#include <infinit/model/doughnut/conflict/UBUpserter.hh>
-#include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/Local.hh>
-#include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
 
 
@@ -842,34 +839,14 @@ namespace infinit
           this->_data->write(
             *_owner.block_store(),
             {OperationType::update, on ? "/inherit" : "/disinherit"});
-        }
-        else if (special->find("auth.") == 0)
-        {
-          auto perms = special->substr(5);
-          ELLE_DEBUG("set permissions %s", perms);
-          set_permissions(perms, value, this->_data->address());
-        }
-        else if (special->find("register.") == 0)
-        {
-          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
-            this->_owner.block_store());
-          auto name = special->substr(9);
-          std::stringstream s(value);
-          auto p = elle::serialization::json::deserialize<model::doughnut::Passport>(s, false);
-          model::doughnut::UB ub(dht.get(), name, p, false);
-          model::doughnut::UB rub(dht.get(), name, p, true);
-          this->_owner.block_store()->store(
-            ub, model::STORE_INSERT,
-            elle::make_unique<model::doughnut::UserBlockUpserter>(name));
-          this->_owner.block_store()->store(
-            rub, model::STORE_INSERT,
-            elle::make_unique<model::doughnut::ReverseUserBlockUpserter>(name));
+          return;
         }
         else if (*special == "fsck.deref")
         {
           this->_data->_files.erase(value);
           this->_data->write(*_owner.block_store(), {OperationType::remove, value}, DirectoryData::null_block,
                              true);
+          return;
         }
         else if (*special == "fsck.ref")
         {
@@ -889,12 +866,14 @@ namespace infinit
           this->_data->_files[ename] = std::make_pair(type, eaddr);
           this->_data->write(*_owner.block_store(), {OperationType::insert, ename}, DirectoryData::null_block,
                       true);
+          return;
         }
         else if (*special == "fsck.rmblock")
         {
           umbrella([&] {
               this->_owner.block_store()->remove(Address::from_string(value));
           });
+          return;
         }
         else if (*special == "fsck.unlink")
         {
@@ -916,66 +895,10 @@ namespace infinit
                                Operation{OperationType::remove, value},
                                DirectoryData::null_block, true);
           }
-        }
-        else if (special->find("group.") == 0)
-        {
-          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
-            this->_owner.block_store());
-          if (dht->version() < elle::Version(0, 4, 0))
-          {
-            ELLE_WARN(
-              "drop group operation as network version %s is too old "
-              "(groups are available from 0.4.0)",
-              dht->version());
-            THROW_NOSYS;
-          }
-          special = special->substr(6);
-          if (*special == "create")
-          {
-            model::doughnut::Group g(*dht, value);
-            g.create();
-          }
-          else if (*special == "delete")
-          {
-            model::doughnut::Group g(*dht, value);
-            g.destroy();
-          }
-          else if (*special == "add")
-          {
-            auto sep = value.find_first_of(':');
-            auto gn = value.substr(0, sep);
-            auto userdata = value.substr(sep+1);
-            model::doughnut::Group g(*dht, gn);
-            g.add_member(elle::Buffer(userdata.data(), userdata.size()));
-          }
-          else if (*special == "remove")
-          {
-            auto sep = value.find_first_of(':');
-            auto gn = value.substr(0, sep);
-            auto userdata = value.substr(sep+1);
-            model::doughnut::Group g(*dht, gn);
-            g.remove_member(elle::Buffer(userdata.data(), userdata.size()));
-          }
-          else if (*special == "addadmin")
-          {
-            auto sep = value.find_first_of(':');
-            auto gn = value.substr(0, sep);
-            auto userdata = value.substr(sep+1);
-            model::doughnut::Group g(*dht, gn);
-            g.add_admin(elle::Buffer(userdata.data(), userdata.size()));
-          }
-          else if (*special == "removeadmin")
-          {
-            auto sep = value.find_first_of(':');
-            auto gn = value.substr(0, sep);
-            auto userdata = value.substr(sep+1);
-            model::doughnut::Group g(*dht, gn);
-            g.remove_admin(elle::Buffer(userdata.data(), userdata.size()));
-          }
+          return;
         }
       }
-      else
-        Node::setxattr(name, value, flags);
+      Node::setxattr(name, value, flags);
     }
 
     std::string
@@ -1016,40 +939,6 @@ namespace infinit
               a->sync();
               return "ok";
             }
-            else if (special->find("group.control_key.") == 0)
-            {
-              std::string value = special->substr(strlen("group.control_key."));
-              return umbrella(
-                [&]
-                {
-                  model::doughnut::Group g(*dht, value);
-                  return elle::serialization::json::serialize(
-                    g.public_control_key()).string();
-                });
-            }
-            else if (special->find("group.list.") == 0)
-            {
-              std::string value = special->substr(strlen("group.list."));
-              return umbrella(
-                [&]
-                {
-                  model::doughnut::Group g(*dht, value);
-                  elle::json::Object o;
-                  auto members = g.list_members();
-                  elle::json::Array v;
-                  for (auto const& m: members)
-                    v.push_back(m->name());
-                  o["members"] = v;
-                  members = g.list_admins();
-                  elle::json::Array va;
-                  for (auto const& m: members)
-                    va.push_back(m->name());
-                  o["admins"] = va;
-                  std::stringstream ss;
-                  elle::json::write(ss, o, true);
-                  return ss.str();
-                });
-            }
             else if (special->find("blockof.") == 0)
             {
               return umbrella(
@@ -1059,46 +948,6 @@ namespace infinit
                   auto addr = this->_data->files().at(file).second;
                   auto block = this->_owner.block_store()->fetch(addr);
                   return elle::serialization::json::serialize(block).string();
-                });
-            }
-            else if (special->find("resolve.") == 0)
-            {
-              return umbrella(
-                [&]
-                {
-                  std::string what = special->substr(strlen("resolve."));
-                  if (what.empty())
-                    THROW_NODATA
-                  std::unique_ptr<model::doughnut::User> user;
-                  user = std::dynamic_pointer_cast<model::doughnut::User>
-                    (dht->make_user(what));
-                  if (!user)
-                  {
-                    auto block = elle::cast<ACLBlock>::runtime(
-                      this->_owner.block_store()->fetch(this->_data->address()));
-                    for (auto& e: block->list_permissions(*dht))
-                    {
-                      if (model::doughnut::short_key_hash(
-                        dynamic_cast<model::doughnut::User*>(e.user.get())->key())
-                          == what)
-                      {
-                        user = std::dynamic_pointer_cast<model::doughnut::User>
-                          (std::move(e.user));
-                        break;
-                      }
-                    }
-                  }
-                  if (!user)
-                    THROW_INVAL;
-                  elle::json::Object o;
-                  o["name"] = std::string(user->name());
-                  auto serkey = elle::serialization::json::serialize(user->key());
-                  std::stringstream s(serkey.string());
-                  o["key"] = elle::json::read(s);
-                  o["key_hash"] = model::doughnut::short_key_hash(user->key());
-                  std::stringstream ss;
-                  elle::json::write(ss, o, true);
-                  return ss.str();
                 });
             }
           }

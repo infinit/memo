@@ -9,6 +9,9 @@
 
 #include <das/serializer.hh>
 
+#include <reactor/network/resolve.hh>
+#include <reactor/network/utp-server.hh>
+
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh> // FIXME
 
@@ -27,33 +30,19 @@ namespace infinit
     | Construction |
     `-------------*/
 
-    Stonehenge::Peer::Peer(model::Address id_)
-      : id(std::move(id_))
-      , endpoint()
-    {}
-
-    Stonehenge::Peer::Peer(model::Address id_, Endpoint e)
-      : id(std::move(id_))
-      , endpoint(std::move(e))
-    {}
-
-    Stonehenge::Stonehenge(model::Address node_id,
-                           Peers peers,
+    Stonehenge::Stonehenge(NodeLocations peers,
                            std::shared_ptr<model::doughnut::Local> local,
                            model::doughnut::Doughnut* doughnut)
-      : Overlay(doughnut, std::move(local), std::move(node_id))
+      : Overlay(doughnut, std::move(local))
       , _peers(std::move(peers))
-    {
-      if (this->_peers.empty())
-        throw elle::Error("empty peer list");
-    }
+    {}
 
     /*------.
     | Peers |
     `------*/
 
     void
-    Stonehenge::_discover(NodeEndpoints const& peers)
+    Stonehenge::_discover(NodeLocations const& peers)
     {
       elle::err("Stonehenge cannot discover new nodes");
     }
@@ -93,21 +82,25 @@ namespace infinit
     Stonehenge::_lookup_node(model::Address address)
     {
       for (auto const& peer: this->_peers)
-        if (peer.id == address)
+        if (peer.id() == address)
           return this->_make_member(peer);
       ELLE_WARN("%s: could not find peer %s", *this, address);
       return Overlay::Member(nullptr);
     }
 
     Overlay::WeakMember
-    Stonehenge::_make_member(Peer const& peer) const
+    Stonehenge::_make_member(NodeLocation const& peer) const
     {
-      if (!peer.endpoint)
-        throw elle::Error(elle::sprintf("missing endpoint for %s", peer.id));
+      if (peer.endpoints().empty())
+        throw elle::Error(elle::sprintf("missing endpoint for %f", peer.id()));
       return Overlay::WeakMember(
         new infinit::model::doughnut::consensus::Paxos::RemotePeer(
           elle::unconst(*this->doughnut()),
-          peer.id, peer.endpoint->host, peer.endpoint->port));
+          peer.id(),
+          peer.endpoints(),
+          boost::optional<reactor::network::UTPServer&>(),
+          boost::optional<model::EndpointsRefetcher>(),
+          model::doughnut::Protocol::tcp));
     }
 
     StonehengeConfiguration::StonehengeConfiguration()
@@ -129,20 +122,19 @@ namespace infinit
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
-    StonehengeConfiguration::make(model::Address id,
-                                  NodeEndpoints const&,
+    StonehengeConfiguration::make(std::vector<Endpoints> const&,
                                   std::shared_ptr<model::doughnut::Local> local,
                                   model::doughnut::Doughnut* dht)
     {
-      Stonehenge::Peers peers;
+      NodeLocations peers;
       for (auto const& peer: this->peers)
       {
         peers.emplace_back(
           peer.id,
-          Stonehenge::Peer::Endpoint{peer.host, peer.port});
+          Endpoints({model::Endpoint(peer.host, peer.port)}));
       }
       return elle::make_unique<infinit::overlay::Stonehenge>(
-        id, peers, std::move(local), dht);
+        peers, std::move(local), dht);
     }
 
     static const elle::serialization::Hierarchy<Configuration>::

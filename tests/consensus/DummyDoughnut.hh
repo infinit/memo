@@ -21,7 +21,7 @@ public:
       infinit::model::doughnut::Passport(keys.K(), "network", keys),
       [] (infinit::model::doughnut::Doughnut&)
       { return nullptr; },
-      [] (infinit::model::doughnut::Doughnut&, infinit::model::Address,
+      [] (infinit::model::doughnut::Doughnut&,
           std::shared_ptr<infinit::model::doughnut::Local>)
       { return nullptr; },
       {}, nullptr,

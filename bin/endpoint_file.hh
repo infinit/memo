@@ -1,25 +1,18 @@
+#include <reactor/network/resolve.hh>
+
 static
-std::vector<std::string>
+infinit::model::Endpoints
 endpoints_from_file(boost::filesystem::path const& path)
 {
-  try
-  {
-    boost::filesystem::ifstream f;
-    ifnt._open_read(f, path, "", "port file");
-    std::vector<std::string> res;
-    std::string line;
-    while (std::getline(f, line))
-    {
-      if (line.length())
-        res.push_back(line);
-    }
-    return res;
-  }
-  catch (elle::Error const& e)
-  {
-    ELLE_DUMP("unable to read port file: %s", e);
-    return {};
-  }
+  boost::filesystem::ifstream f;
+  ifnt._open_read(f, path, "", "port file");
+  if (!f.good())
+    elle::err("unable to open for reading: %s", path);
+  infinit::model::Endpoints res;
+  for (std::string line; std::getline(f, line); )
+    if (line.length())
+      res.emplace_back(infinit::model::Endpoint(line));
+  return res;
 }
 
 static

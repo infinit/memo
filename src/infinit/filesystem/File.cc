@@ -778,12 +778,7 @@ namespace infinit
       if (auto special = xattr_special(name))
       {
         ELLE_DEBUG("found special %s", *special);
-        if (special->find("auth.") == 0)
-        {
-          set_permissions(special->substr(strlen("auth.")), value, _address);
-          return;
-        }
-        else if (*special == "fsck.nullentry")
+        if (*special == "fsck.nullentry")
         {
           _fetch();
           int idx = std::stoi(value);

@@ -324,9 +324,9 @@ class CouchDBDatastore:
     return self.__rows_to_networks(rows)
 
   def user_networks_fetch(self, user):
-    rows = self.__couchdb['networks'].view('beyond/per_user_key',
-                                           key = user.public_key)
-    return self.__rows_to_networks(rows)
+    return (doc.value for doc in
+            self.__couchdb['networks'].view('beyond/per_user_key',
+                                            key = user.public_key))
 
   def network_stats_fetch(self, network):
     rows = self.__couchdb['networks'].view('beyond/stat_view',
@@ -393,8 +393,7 @@ class CouchDBDatastore:
 
   def network_fetch(self, owner, name):
     try:
-      json = self.__couchdb['networks']['%s/%s' % (owner, name)]
-      return infinit.beyond.Network.from_json(self.beyond, json)
+      return self.__couchdb['networks']['%s/%s' % (owner, name)]
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.Network.NotFound()
 
@@ -425,16 +424,15 @@ class CouchDBDatastore:
       raise e
 
   def networks_volumes_fetch(self, networks):
-    rows = self.__couchdb['volumes'].view(
-      'beyond/per_network_id', keys = list(map(lambda n: n.id, networks)))
-    volume_from_db = infinit.beyond.Volume.from_json
-    return list(map(lambda r: volume_from_db(self.beyond, r.value), rows))
+    return (doc.value for doc in
+            self.__couchdb['volumes'].view(
+              'beyond/per_network_id',
+              keys = list(map(lambda n: n.id, networks))))
 
   def user_volumes_fetch(self, user):
-    rows = self.__couchdb['volumes'].view(
-      'beyond/per_owner_key', key = user.public_key)
-    volume_from_db = infinit.beyond.Volume.from_json
-    return list(map(lambda r: volume_from_db(self.beyond, r.value), rows))
+    return (doc.value for doc in
+            self.__couchdb['volumes'].view(
+              'beyond/per_owner_key', key = user.public_key))
 
   def __network_update(network, req):
     if network is None:
@@ -511,7 +509,7 @@ class CouchDBDatastore:
   def volume_fetch(self, owner, name):
     try:
       json = self.__couchdb['volumes']['%s/%s' % (owner, name)]
-      return infinit.beyond.Volume.from_json(self.beyond, json)
+      return json
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.Volume.NotFound()
 

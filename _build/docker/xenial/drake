@@ -41,6 +41,7 @@ env = {
 }
 for fwd in [
     'ELLE_REAL_ASSERT',
+    'DISTCC_HOSTS',
     'DRAKE_DEBUG_BACKTRACE',
     'DRAKE_EXPLAIN',
     'DRAKE_RAW',

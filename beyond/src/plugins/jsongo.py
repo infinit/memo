@@ -1,3 +1,7 @@
+try:
+  import boto3.dynamodb.types
+except ImportError:
+  boto3 = None
 import calendar
 import datetime
 import uuid
@@ -13,6 +17,9 @@ def jsonify(value):
     return value.__class__(jsonify(sub) for sub in value)
   elif isinstance(value, datetime.datetime):
     return calendar.timegm(value.timetuple())
+  elif boto3 is not None and \
+       isinstance(value, boto3.dynamodb.types.Decimal):
+    return int(value)
   else:
     return value
 

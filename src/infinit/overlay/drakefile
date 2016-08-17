@@ -1,0 +1,16 @@
+sources = drake.nodes(
+  'Kalimero.cc',
+  'Kalimero.hh',
+  'koordinate/Configuration.cc',
+  'koordinate/Configuration.hh',
+  'koordinate/Koordinate.cc',
+  'koordinate/Koordinate.hh',
+  'Overlay.cc',
+  'Overlay.hh',
+  'Stonehenge.cc',
+  'Stonehenge.hh',
+  'kademlia/kademlia.cc',
+  'kademlia/kademlia.hh',
+  'kelips/Kelips.cc',
+  'kelips/Kelips.hh',
+)
