@@ -1,0 +1,11 @@
+[couchdb]
+uri_file = /run/couchdb/uri
+database_dir = /var/lib/couchdb/db-data
+view_index_dir = /var/lib/couchdb/db-data
+
+[log]
+file = ${log_file}
+level = ${log_level}
+
+[query_servers]
+python = python3 -m couchdb
