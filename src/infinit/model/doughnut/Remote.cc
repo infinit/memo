@@ -256,6 +256,11 @@ namespace infinit
             if (this->_doughnut.version() >= elle::Version(0, 7, 0))
             {
               auto res = _auth_0_7(*this, channels);
+              if (this->_id == model::Address::null)
+                this->_id = res.id;
+              else if (this->_id != res.id)
+                elle::err("peer id mismatch: expected %f, got %f",
+                          this->_id, res.id);
               return std::make_pair(
                 res.challenge,
                 elle::make_unique<Passport>(std::move(res.passport)));

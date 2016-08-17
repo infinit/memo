@@ -24,7 +24,7 @@ namespace infinit
         virtual
         ~Peer();
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut, protected);
-        ELLE_ATTRIBUTE_R(Address, id);
+        ELLE_ATTRIBUTE_R(Address, id, protected);
 
       /*-----------.
       | Networking |
