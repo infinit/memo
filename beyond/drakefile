@@ -1,6 +1,7 @@
 import drake
 import drake.debian
 import drake.docker
+import drake.license_file
 import drake.templating
 
 from itertools import chain
@@ -61,6 +62,13 @@ def configure(
   global build, install, package, rule_check, tests
 
   binaries = backend.get('binaries', [])
+
+  ## -------- ##
+  ## Licenses ##
+  ## -------- ##
+
+  license_file = drake.node('OSS-licenses')
+  drake.license_file.Packager('licenses', license_file)
 
   class PythonCopy(drake.Copy):
 
@@ -205,6 +213,7 @@ def configure(
       yield how(cryptography_python_module,
                 where / prefix, strip_prefix = True)
     yield drake.touch(where / prefix / 'infinit/__init__.py')
+    yield drake.copy(license_file, where / 'licenses', strip_prefix = True)
 
   build = drake.Rule('build')
   build << binaries
