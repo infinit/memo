@@ -2328,7 +2328,6 @@ ELLE_TEST_SCHEDULED(remove_permissions)
   BOOST_CHECK_NO_THROW(client2.fs->path("/dir2")->rmdir());
 }
 
-
 ELLE_TEST_SCHEDULED(create_excl)
 {
   DHTs servers(1, with_cache = true);
@@ -2345,6 +2344,36 @@ ELLE_TEST_SCHEDULED(create_excl)
   BOOST_CHECK_THROW(
     client2.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644),
     reactor::filesystem::Error);
+}
+
+ELLE_TEST_SCHEDULED(sparse_file)
+{
+  // Under windows, a 'cp' causes a ftruncate(target_size), so check that it
+  // works
+  DHTs servers(-1);
+  auto client = servers.client();
+  client.fs->path("/");
+  for (int iter = 0; iter < 2; ++iter)
+  { // run twice to get 'non-existing' and 'existing' initial states
+    auto h = client.fs->path("/file")->create(O_RDWR | O_CREAT|O_TRUNC, 0666);
+    char buf[191];
+    char obuf[191];
+    for (int i=0; i<191; ++i)
+      buf[i] = i%191;
+    int sz = 191 * (1 + 2500000/191);
+    h->ftruncate(sz);
+    for (int i=0;i<2500000; i+= 191)
+    {
+      h->write(elle::ConstWeakBuffer(buf, 191), 191, i);
+    }
+    h->close();
+    h = client.fs->path("/file")->open(O_RDONLY, 0666);
+    for (int i=0;i<2500000; i+= 191)
+    {
+      h->read(elle::WeakBuffer(obuf, 191), 191, i);
+      BOOST_CHECK(!memcmp(obuf, buf, 191));
+    }
+  }
 }
 
 ELLE_TEST_SUITE()
@@ -2379,4 +2408,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(erased_group_recovery), 0, 5);
   suite.add(BOOST_TEST_CASE(remove_permissions),0, 5);
   suite.add(BOOST_TEST_CASE(create_excl),0, 5);
+  suite.add(BOOST_TEST_CASE(sparse_file),0, 5);
 }

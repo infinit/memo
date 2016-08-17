@@ -608,13 +608,7 @@ namespace infinit
       if (new_size > signed(_filedata->_header.size))
       {
         auto h = open(O_RDWR, 0666);
-        char buf[16384] = {0};
-        int64_t sz = _filedata->_header.size;
-        while (sz < new_size)
-        {
-          auto nsz = std::min(off_t(16384), new_size - sz);
-          sz += h->write(elle::WeakBuffer(buf, nsz), nsz, sz);
-        }
+        h->ftruncate(new_size);
         h->close();
         return;
       }
