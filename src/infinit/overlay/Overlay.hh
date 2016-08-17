@@ -118,6 +118,10 @@ namespace infinit
       virtual
       reactor::Generator<WeakMember>
       _lookup(model::Address address, int n, Operation op) const = 0;
+      /** Lookup a node by id
+       *
+       *  @raise elle::Error if the node cannot be found.
+       */
       virtual
       WeakMember
       _lookup_node(model::Address address) = 0;
