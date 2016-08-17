@@ -61,6 +61,8 @@ namespace infinit
     `------*/
     public:
       void
+      discover(NodeLocation const& peer);
+      void
       discover(NodeLocations const& peers);
     protected:
       virtual
