@@ -12,6 +12,7 @@
 #include <reactor/Scope.hh>
 #include <reactor/network/utp-server.hh>
 
+#include <infinit/model/Endpoints.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/Model.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
@@ -225,20 +226,18 @@ namespace infinit
       | Server |
       `-------*/
 
-      reactor::network::TCPServer::EndPoint
+      Endpoint
       Local::server_endpoint()
       {
         if (this->_server)
           return this->_server->local_endpoint();
         else if (this->_utp_server)
-        {
-          auto ep = this->_utp_server->local_endpoint();
-          return reactor::network::TCPServer::EndPoint(ep.address(), ep.port()-100);
-        }
-        else throw elle::Error("Local not listening on any endpoint");
+          return this->_utp_server->local_endpoint();
+        else
+          elle::err("local not listening on any endpoint");
       }
 
-      std::vector<reactor::network::TCPServer::EndPoint>
+      Endpoints
       Local::server_endpoints()
       {
         bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
@@ -247,8 +246,7 @@ namespace infinit
         if (ep.address() != boost::asio::ip::address_v6::any()
          && ep.address() != boost::asio::ip::address_v4::any())
           return { ep };
-
-        std::vector<reactor::network::TCPServer::EndPoint> res;
+        Endpoints res;
         auto filter = (elle::network::Interface::Filter::only_up |
                        elle::network::Interface::Filter::no_loopback |
                        elle::network::Interface::Filter::no_autoip);
