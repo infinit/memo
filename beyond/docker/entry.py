@@ -54,22 +54,22 @@ def parse_options():
   parser.add_argument(
     '--ssl-certificate',
     type = str,
-    help = 'SSL certificate file name',
+    help = 'SSL certificate relative path',
   )
   parser.add_argument(
     '--ssl-certificate-key',
     type = str,
-    help = 'SSL certificate key file name',
+    help = 'SSL certificate key relative path',
   )
   parser.add_argument(
     '--ssl-client-certificate',
     type = str,
-    help = argparse.SUPPRESS,#'SSL client certificate file name',
+    help = argparse.SUPPRESS,#'SSL client certificate relative path',
   )
   parser.add_argument(
     '--ldap-server',
     type = str,
-    help = 'Hostname or URL of the ldap server',
+    help = 'Hostname or URL of the LDAP server',
   )
   parser.add_argument(
     '--admin-users',
