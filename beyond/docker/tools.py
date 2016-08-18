@@ -8,7 +8,7 @@ def beyond_opts_from_args(args, exceptions):
   res = []
   for k, v in vars(args).items():
     if k not in exceptions and v is not None:
-      res.append('%s=%s' % (k.replace('_', '-'), json.dumps(v)))
+      res.append('%s=%s' % (k.replace('_', '-'), repr(v)))
   return json.dumps(res)
 
 def render_file(template, result, data):
