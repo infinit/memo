@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# Script used to launch a Beyond server.
+# eg:
+# python3 /scripts/entry.py --server-name beyond.infinit.sh --ssl-certificate server.crt --ssl-certificate-key server.key --ldap-server ldap-server
+
 import argparse
 import mako
 import os
@@ -157,13 +161,3 @@ finally:
     subprocess.run(['couchdb', '-d', '-p', couchdb_pid])
 
 print('Stopped')
-
-# TODO:
-# x Handle passing options to beyond and bottle
-# x Ensure LDAP works
-# - Drake docker file generator should keep order
-# - Add simple emailer (required for verifying email address)
-# - Ensure avatars work (perhaps store them locally if no GCS is given)
-# - External CouchDB
-
-# python3 /scripts/entry.py --server-name beyond.infinit.sh --ssl-certificate server.crt --ssl-certificate-key server.key --ldap-server ldap-server
