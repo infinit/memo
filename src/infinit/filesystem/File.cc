@@ -622,12 +622,15 @@ namespace infinit
         if (signed(offset) >= new_size)
         { // kick the block
           ELLE_DEBUG("removing %f", _filedata->_fat[i].first);
-          _owner.unchecked_remove(_filedata->_fat[i].first);
+          if (_filedata->_fat[i].first != Address::null)
+            _owner.unchecked_remove(_filedata->_fat[i].first);
           _filedata->_fat.pop_back();
         }
         else if (signed(offset + _filedata->_header.block_size) >= new_size)
         { // maybe truncate the block
           ELLE_DEBUG("truncating %f", _filedata->_fat[i].first);
+          if (_filedata->_fat[i].first == Address::null)
+            continue;
           auto targetsize = new_size - offset;
           cryptography::SecretKey sk(_filedata->_fat[i].second);
           auto block = _owner.fetch_or_die(_filedata->_fat[i].first);
