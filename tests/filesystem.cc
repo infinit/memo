@@ -1998,15 +1998,17 @@ ELLE_TEST_SCHEDULED(prefetcher_failure)
   ::Overlay* o = dynamic_cast< ::Overlay*>(client.dht.dht->overlay().get());
   auto root = client.fs->path("/");
   BOOST_CHECK(o);
-  root->child("file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  auto h = root->child("file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
   // grow to 2 data blocks
-  root->child("file")->truncate(1024*1024*3);
+  char buf[16384];
+  for (int i=0; i<1024*3; ++i)
+    h->write(elle::ConstWeakBuffer(buf, 1024), 1024,  1024*i);
+  h->close();
   auto fat = get_fat(root->child("file")->getxattr("user.infinit.fat"));
   BOOST_CHECK_EQUAL(fat.size(), 3);
   o->fail_addresses().insert(fat[1]);
   o->fail_addresses().insert(fat[2]);
   auto handle = root->child("file")->open(O_RDWR, 0);
-  char buf[16384];
   BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 8192),
                     16384);
   reactor::sleep(200_ms);
