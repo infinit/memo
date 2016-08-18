@@ -7,10 +7,31 @@
 import argparse
 import mako
 import os
+import signal
 import subprocess
+import sys
 
 from utils.nginx_conf import NGINXConfig
 from utils.tools import *
+
+couchdb_pid = '/run/couchdb/pid'
+if os.path.exists(couchdb_pid):
+  os.remove(couchdb_pid)
+uwsgi_pid = '/run/uwsgi/app/beyond/pid'
+if os.path.exists(uwsgi_pid):
+  os.remove(uwsgi_pid)
+
+def signal_handler(signum, frame):
+  print('Stopping...')
+  if os.path.exists(uwsgi_pid):
+    subprocess.run(['uwsgi', '--stop', uwsgi_pid])
+  if os.path.exists(couchdb_pid):
+    subprocess.run(['couchdb', '-d', '-p', couchdb_pid])
+  print('Stopped')
+  sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 def parse_options():
   parser = argparse.ArgumentParser(
@@ -43,7 +64,7 @@ def parse_options():
   parser.add_argument(
     '--ssl-client-certificate',
     type = str,
-    help = 'SSL client certificate file name',
+    help = argparse.SUPPRESS,#'SSL client certificate file name',
   )
   parser.add_argument(
     '--ldap-server',
@@ -54,7 +75,7 @@ def parse_options():
     '--admin-users',
     type = str,
     nargs = '+',
-    help = 'List of admin users',
+    help = argparse.SUPPRESS,#'List of admin users',
   )
   parser.add_argument(
     '--keep-deleted-users',
@@ -157,37 +178,21 @@ with open(nginx_conf, 'w') as f:
     )
     print(nginx_server_ssl_conf, file = f)
 
-couchdb_pid = '/run/couchdb/pid'
-if os.path.exists(couchdb_pid):
-  os.remove(couchdb_pid)
 couchdb_uri = '/run/couchdb/uri'
 if os.path.exists(couchdb_uri):
   os.remove(couchdb_uri)
-uwsgi_pid = '/run/uwsgi/app/beyond/pid'
-if os.path.exists(uwsgi_pid):
-  os.remove(uwsgi_pid)
 
-try:
-  couchdb_cmd = [
-    '/usr/bin/couchdb', '-b',
-    '-p', couchdb_pid,
-    '-o', '/dev/null' if disable_logs else '%s/stdout' % log_couchdb,
-    '-e', '/dev/null' if disable_logs else '%s/stderr' % log_couchdb,
-  ]
-  subprocess.check_output(couchdb_cmd)
-  wait_service(couchdb_uri, 'CouchDB')
-  subprocess.run([
-    '/usr/bin/uwsgi',
-    '--json', uwsgi_conf,
-  ])
-  wait_service(uwsgi_pid, 'uWSGI')
-  subprocess.run(['/usr/sbin/nginx'])
-except KeyboardInterrupt as e:
-  print('Stopping...')
-finally:
-  if os.path.exists(uwsgi_pid):
-    subprocess.run(['uwsgi', '--stop', uwsgi_pid])
-  if os.path.exists(couchdb_pid):
-    subprocess.run(['couchdb', '-d', '-p', couchdb_pid])
-
-print('Stopped')
+couchdb_cmd = [
+  '/usr/bin/couchdb', '-b',
+  '-p', couchdb_pid,
+  '-o', '/dev/null' if disable_logs else '%s/stdout' % log_couchdb,
+  '-e', '/dev/null' if disable_logs else '%s/stderr' % log_couchdb,
+]
+subprocess.check_output(couchdb_cmd)
+wait_service(couchdb_uri, 'CouchDB')
+subprocess.run([
+  '/usr/bin/uwsgi',
+  '--json', uwsgi_conf,
+])
+wait_service(uwsgi_pid, 'uWSGI')
+subprocess.run(['/usr/sbin/nginx'])
