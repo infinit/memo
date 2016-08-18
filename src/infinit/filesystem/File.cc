@@ -670,8 +670,15 @@ namespace infinit
             }
           }
           if (dirty)
+          {
+#ifdef INFINIT_WINDOWS
+            // Propagating to dirty open files breaks saving of office documents.
+            continue;
+#else
             ELLE_WARN("Propagating truncate(%s) of %s to open dirty file handle with size %s",
                       new_size, _name, fh->_file._header.size);
+#endif
+          }
           if (dirty || new_size)
             fh->ftruncate(new_size);
           else
