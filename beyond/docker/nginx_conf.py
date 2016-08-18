@@ -7,7 +7,8 @@ class NGINXConfig:
                log_folder = None,
                ssl_certificate = None,
                ssl_certificate_key = None,
-               ssl_client_certificate = None
+               ssl_client_certificate = None,
+               uwsgi_socket_path = None,
   ):
     self.__server_name = server_name
     self.__ssl_certificate = ssl_certificate
@@ -19,6 +20,7 @@ class NGINXConfig:
     self.__ssl_certificate_key = ssl_certificate_key
     self.__ssl_client_certificate = ssl_client_certificate
     self.__log_folder = log_folder
+    self.__uwsgi_socket_path = uwsgi_socket_path
 
   def _log_file(self, log_type):
     if not self.__log_folder:
@@ -60,7 +62,7 @@ class NGINXConfig:
 
   location /
   {
-    uwsgi_pass unix:///run/uwsgi/app/beyond/socket;
+    uwsgi_pass unix://%(uwsgi_socket_path)s;
     include uwsgi_params;
     uwsgi_param UWSGI_SCHEME $scheme;
     uwsgi_param SERVER_SOFTWARE nginx/$nginx_version;
@@ -75,4 +77,5 @@ class NGINXConfig:
   'error_log': self._log_file('error'),
   'ssl_server': self._ssl_server_text(),
   'ssl_location': self._ssl_location_text(),
+  'uwsgi_socket_path': self.__uwsgi_socket_path,
 }

@@ -95,7 +95,7 @@ args = parse_options()
 disable_logs = args.disable_logs
 ssl = True if args.ssl_certificate else False
 
-log_root = '/var/log/beyond'
+log_root = '/log'
 log_couchdb = '%s/couchdb' % log_root
 log_nginx = '%s/nginx' % log_root
 log_uwsgi = '%s/uwsgi' % log_root
@@ -111,7 +111,7 @@ if not disable_logs:
   _enforce_log_dir(log_uwsgi)
 
 if ssl:
-  cert_folder = '/etc/nginx/certs'
+  cert_folder = '/certificates'
   if not args.ssl_certificate_key:
     raise Exception(
       'Missing certificate key, specify with "--ssl-certificate-key"')
@@ -144,17 +144,27 @@ beyond_exceptions = [] \
 
 print('Starting beyond...')
 
+couchdb_uri = '/run/couchdb/uri'
+if os.path.exists(couchdb_uri):
+  os.remove(couchdb_uri)
+
 render_file('/scripts/templates/couchdb.ini.tmpl',
             '/etc/couchdb/local.d/beyond.ini', {
+  'datastore': '/couchdb/db-data',
   'log_file': '/dev/null' if disable_logs else '%s/log' % log_couchdb,
   'log_level': 'log',
+  'uri_file': couchdb_uri,
 })
+
+uwsgi_socket_path = '/run/uwsgi/app/beyond/socket'
 
 uwsgi_conf = '/etc/uwsgi/apps-enabled/beyond.json'
 render_file('/scripts/templates/uwsgi.json.tmpl',
             uwsgi_conf, {
   'log_file': '/dev/null' if disable_logs else '%s/log' % log_uwsgi,
   'options': beyond_opts_from_args(args, beyond_exceptions),
+  'pid_file': uwsgi_pid,
+  'uwsgi_socket': uwsgi_socket_path,
 })
 
 nginx_conf = '/etc/nginx/sites-enabled/beyond'
@@ -163,6 +173,7 @@ with open(nginx_conf, 'w') as f:
     server_name = args.server_name,
     listen = 80,
     log_folder = None if disable_logs else log_nginx,
+    uwsgi_socket_path = uwsgi_socket_path,
   )
   print(nginx_server_conf, file = f)
   if args.ssl_certificate:
@@ -175,12 +186,9 @@ with open(nginx_conf, 'w') as f:
       ssl_certificate = ssl_certificate,
       ssl_certificate_key = ssl_certificate_key,
       ssl_client_certificate = ssl_client_certificate,
+      uwsgi_socket_path = uwsgi_socket_path,
     )
     print(nginx_server_ssl_conf, file = f)
-
-couchdb_uri = '/run/couchdb/uri'
-if os.path.exists(couchdb_uri):
-  os.remove(couchdb_uri)
 
 couchdb_cmd = [
   '/usr/bin/couchdb', '-b',

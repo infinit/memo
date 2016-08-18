@@ -2,8 +2,8 @@
   "uwsgi":
   {
     "daemonize": "${log_file}",
-    "pidfile": "/run/uwsgi/app/beyond/pid",
-    "socket": "/run/uwsgi/app/beyond/socket",
+    "pidfile": "${pid_file}",
+    "socket": "${uwsgi_socket}",
     "plugin": "python3",
     "pythonpath": "/lib/python3.5",
     "env": "INFINIT_CRASH_REPORTER=0",
