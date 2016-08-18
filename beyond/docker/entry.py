@@ -13,11 +13,21 @@ from utils.nginx_conf import NGINXConfig
 from utils.tools import *
 
 def parse_options():
-  parser = argparse.ArgumentParser(description = 'Infinit Hub Server')
+  parser = argparse.ArgumentParser(
+    add_help = False,
+    prog = 'python3 /scripts/entry.py',
+    description = 'Infinit Hub Server',
+  )
+  parser.add_argument(
+    '-h', '--help',
+    action = 'help',
+    default = argparse.SUPPRESS,
+    help = 'Show this help message and exit',
+  )
   parser.add_argument(
     '--server-name',
     type = str,
-    help = 'Server hostname',
+    help = 'Server host name',
     required = True,
   )
   parser.add_argument(
@@ -38,17 +48,20 @@ def parse_options():
   parser.add_argument(
     '--ldap-server',
     type = str,
-    help = 'Hostname or URL of the ldap server')
+    help = 'Hostname or URL of the ldap server',
+  )
   parser.add_argument(
     '--admin-users',
     type = str,
     nargs = '+',
-    help = 'Comma-separated list of admin users')
+    help = 'List of admin users',
+  )
   parser.add_argument(
     '--keep-deleted-users',
     type = bool,
     default = False,
-    help = 'Retain data from deleted users')
+    help = 'Retain data from deleted users',
+  )
   parser.add_argument(
     '--disable-logs',
     action = 'store_true',
@@ -75,6 +88,24 @@ if not disable_logs:
   _enforce_log_dir(log_couchdb)
   _enforce_log_dir(log_nginx)
   _enforce_log_dir(log_uwsgi)
+
+if ssl:
+  cert_folder = '/etc/nginx/certs'
+  if not args.ssl_certificate_key:
+    raise Exception(
+      'Missing certificate key, specify with "--ssl-certificate-key"')
+  def _cert_file_path(filename, desc):
+    res = '%s/%s' % (cert_folder, filename)
+    if not os.path.exists(res):
+      raise Exception('%s not found with file name: %s' % (desc, filename))
+    return res
+  ssl_certificate = _cert_file_path(args.ssl_certificate, 'SSL certificate')
+  ssl_certificate_key = \
+    _cert_file_path(args.ssl_certificate_key, 'SSL certificate key')
+  if args.ssl_client_certificate:
+    ssl_client_certificate = _cert_file_path(args.ssl_client_certificate)
+  else:
+    ssl_client_certificate = None
 
 nginx_options = [
   'server_name',
@@ -114,16 +145,15 @@ with open(nginx_conf, 'w') as f:
   )
   print(nginx_server_conf, file = f)
   if args.ssl_certificate:
-    cert_folder = '/etc/nginx/certs'
     client_cert_path = '%s/%s' % (cert_folder, args.ssl_client_certificate) \
       if args.ssl_client_certificate else None
     nginx_server_ssl_conf = NGINXConfig(
       server_name = args.server_name,
       listen = 443,
       log_folder = None if disable_logs else log_nginx,
-      ssl_certificate = '%s/%s' % (cert_folder, args.ssl_certificate),
-      ssl_certificate_key = '%s/%s' % (cert_folder, args.ssl_certificate_key),
-      ssl_client_certificate = client_cert_path,
+      ssl_certificate = ssl_certificate,
+      ssl_certificate_key = ssl_certificate_key,
+      ssl_client_certificate = ssl_client_certificate,
     )
     print(nginx_server_ssl_conf, file = f)
 
