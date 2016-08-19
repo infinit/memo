@@ -24,7 +24,6 @@ file_xattrs_dir(std::string const& file)
   else
     res = dir / ("$xattrs." + filename.string());
   boost::system::error_code erc;
-  boost::filesystem::create_directory(res, erc);
   return res;
 }
 
