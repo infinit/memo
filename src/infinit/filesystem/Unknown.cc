@@ -118,6 +118,8 @@ namespace infinit
       mode |= S_IFREG;
       if (_parent->_files.find(_name) != _parent->_files.end())
       {
+        if (flags & O_EXCL)
+          THROW_EXIST;
         ELLE_WARN("File %s exists where it should not", _name);
         File f(_owner, _parent->_files.at(_name).second, {}, _parent, _name);
         return f.open(flags, mode);
@@ -131,7 +133,9 @@ namespace infinit
         std::make_pair(_name,
           std::make_pair(EntryType::file, b->address())));
       _parent->write(*_owner.block_store(),
-                     Operation{OperationType::insert, _name, EntryType::file, b->address()},
+                     Operation{
+                       (flags & O_EXCL) ? OperationType::insert_exclusive : OperationType::insert,
+                       _name, EntryType::file, b->address()},
                      DirectoryData::null_block,
                      true);
       std::unique_ptr<rfs::Handle> handle;

@@ -33,7 +33,8 @@ namespace infinit
     {
       insert,
       update,
-      remove
+      remove,
+      insert_exclusive,
     };
     struct Operation
     {
@@ -87,7 +88,8 @@ namespace infinit
                                  model::StoreMode store_mode,
                                  model::Model& model,
                                  Operation op,
-                                 Address address);
+                                 Address address,
+                                 bool deserialized);
     };
     enum class WriteTarget
     {
