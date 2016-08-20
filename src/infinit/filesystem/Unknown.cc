@@ -15,6 +15,7 @@
 #endif
 #ifdef INFINIT_WINDOWS
   #undef stat
+  #define O_EXCL _O_EXCL
 #endif
 
 ELLE_LOG_COMPONENT("infinit.filesystem.Unknown");
