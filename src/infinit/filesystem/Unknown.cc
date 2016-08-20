@@ -9,6 +9,7 @@
 #include <reactor/filesystem.hh>
 
 #include <sys/stat.h> // S_IMFT...
+#include <fcntl.h> // O_EXCL
 
 #ifdef INFINIT_LINUX
   #include <attr/xattr.h>
