@@ -415,7 +415,6 @@ def configure(
       if not windows and enable_crash_reporting:
         bin_sym = drake.node('bin/symbols/%s.sym' % name)
         crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
-                                         debian_syms_dir,
                                          bin,
                                          bin_sym)
         installed_symbols.append(bin_sym)
@@ -428,7 +427,6 @@ def configure(
     for lib in set(installed_libraries):
       lib_sym = drake.node('lib/symbols/%s.sym' % lib.path().basename())
       crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
-                                       debian_syms_dir,
                                        lib,
                                        lib_sym)
       installed_symbols.append(lib_sym)
@@ -531,7 +529,7 @@ def configure(
                '%s/DEBIAN' % debian_debug_dir,
                strip_prefix = True),
   )
-  debian_debug_package = drake.debian.Packager(
+  debian_debug_package = crash_reporting.SymbolsPackager(
     'infinit-debug-symbols-%s-%s_0_amd64.deb' % (platform, git.description()),
     debian_debug_nodes, debian_debug_dir).package
   rule_debian << debian_debug_package
