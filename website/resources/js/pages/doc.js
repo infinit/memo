@@ -167,7 +167,7 @@ $(document).ready(function() {
        value = $(window).scrollTop();
        porcent = value / max * 100;
 
-      if (porcent > 1 && porcent < 96) {
+      if (porcent > 1 && porcent < 98) {
         tooltip.text(Math.round(porcent) + '%');
         tooltip.css('left', (porcent - 1) + '%');
         tooltip.show();
@@ -177,7 +177,9 @@ $(document).ready(function() {
         tooltip.text('👍');
       }
 
-      progressBar.attr('value', value);
+      if (porcent < 96) {
+        progressBar.attr('value', value);
+      }
 
       if (porcent < 1) {
         tooltip.hide();
