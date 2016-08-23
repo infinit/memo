@@ -473,7 +473,7 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
   mounted = false;
   auto owner_keys = infinit::cryptography::rsa::keypair::generate(2048);
   new std::thread([&] { make_nodes(store, node_count, owner_keys, paxos);});
-  while (nodes.size() != unsigned(node_count))
+  while (peers.size() != unsigned(node_count))
     usleep(100000);
   ELLE_TRACE("got %s nodes, preparing %s mounts", nodes.size(), nmount);
   std::vector<reactor::Thread*> threads;
@@ -524,6 +524,7 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           [=] (infinit::model::doughnut::Doughnut& dht,
                std::shared_ptr<infinit::model::doughnut::Local> local)
           {
+            ELLE_DEBUG("Instanciating stonehenge with %s peers", peers.size());
             auto res = elle::make_unique<infinit::overlay::Stonehenge>(
               peers, std::move(local), &dht);
             return res;
