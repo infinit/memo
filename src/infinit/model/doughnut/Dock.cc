@@ -129,7 +129,7 @@ namespace infinit
         {
           auto it = this->_peer_cache.find(loc.id());
           if (it != _peer_cache.end())
-            return it->second;
+            return overlay::Overlay::WeakMember::own(it->second);
         }
         try
         {
@@ -141,9 +141,9 @@ namespace infinit
               this->_utp_server,
               refetcher,
               this->_protocol);
-          auto weak_res = overlay::Overlay::WeakMember::own(std::move(res));
           if (!disable_cache)
-            this->_peer_cache.emplace(loc.id(), weak_res);
+            this->_peer_cache.emplace(loc.id(), res);
+          auto weak_res = overlay::Overlay::WeakMember::own(std::move(res));
           return weak_res;
         }
         catch (elle::Error const& e)

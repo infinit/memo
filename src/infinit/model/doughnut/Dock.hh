@@ -42,8 +42,7 @@ namespace infinit
         overlay::Overlay::WeakMember
         make_peer(NodeLocation peer,
                   boost::optional<EndpointsRefetcher> refetcher);
-        typedef
-          std::unordered_map<Address, overlay::Overlay::WeakMember> PeerCache;
+        using PeerCache = std::unordered_map<Address, overlay::Overlay::Member>;
         ELLE_ATTRIBUTE_R(PeerCache, peer_cache);
       };
     }
