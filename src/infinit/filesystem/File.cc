@@ -711,6 +711,8 @@ namespace infinit
     std::unique_ptr<rfs::Handle>
     File::create(int flags, mode_t mode)
     {
+      if (flags & O_EXCL)
+        THROW_EXIST;
       if (flags & O_TRUNC)
         truncate(0);
       _fetch();

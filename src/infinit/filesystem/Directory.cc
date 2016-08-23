@@ -64,7 +64,8 @@ namespace infinit
                                model::StoreMode store_mode,
                                model::Model& model,
                                Operation op,
-                               Address address)
+                               Address address,
+                               bool deserialized)
     {
        ELLE_TRACE("edit conflict on %s (%s %s)",
                   b.address(), op.type, op.target);
@@ -72,12 +73,20 @@ namespace infinit
        switch(op.type)
        {
        case OperationType::insert:
+       case OperationType::insert_exclusive:
          ELLE_ASSERT(!op.target.empty());
          if (d.files().find(op.target) != d.files().end())
          {
            ELLE_LOG("Conflict: the object %s was also created remotely,"
              " your changes will overwrite the previous content.",
              op.target);
+           if (op.type == OperationType::insert_exclusive)
+           {
+             if (deserialized)
+               ELLE_WARN("Ignoring 'exclusive' create flag in asynchronous mode");
+             else
+               THROW_EXIST;
+           }
          }
          ELLE_TRACE("insert: Overriding entry %s", op.target);
          d._files[op.target] = std::make_pair(op.entry_type, op.address);
@@ -143,6 +152,7 @@ namespace infinit
       elle::serialization::SerializerIn& s,
       elle::Version const& v)
       : _model(nullptr)
+      , _deserialized(true)
     {
       serialize(s, v);
     }
@@ -151,10 +161,12 @@ namespace infinit
       : _model(b._model)
       , _op(b._op)
       , _address(b._address)
+      , _deserialized(b._deserialized)
     {}
 
     DirectoryConflictResolver::DirectoryConflictResolver()
       : _model(nullptr)
+      , _deserialized(false)
     {}
 
     DirectoryConflictResolver::DirectoryConflictResolver(model::Model& model,
@@ -163,6 +175,7 @@ namespace infinit
       : _model(&model)
       , _op(op)
       , _address(address)
+      , _deserialized(false)
     {}
 
     DirectoryConflictResolver::~DirectoryConflictResolver()
@@ -175,13 +188,15 @@ namespace infinit
     {
       return resolve_directory_conflict(
         block, current, mode,
-        *this->_model, this->_op, this->_address);
+        *this->_model, this->_op, this->_address, this->_deserialized);
     }
 
     void
     DirectoryConflictResolver::serialize(elle::serialization::Serializer& s,
                                          elle::Version const& version)
     {
+      if (s.in())
+        this->_deserialized = true;
       std::string path;
       s.serialize("path", path); // for backward compatibility
       s.serialize("optype", _op.type, elle::serialization::as<int>());
