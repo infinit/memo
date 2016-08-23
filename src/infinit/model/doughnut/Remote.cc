@@ -57,21 +57,26 @@ namespace infinit
         , _socket(nullptr)
         , _serializer()
         , _channels()
-        , _connected(false)
+        , _connected()
         , _reconnecting(false)
         , _reconnection_id(0)
         , _endpoints(std::move(endpoints))
         , _utp_server(server)
         , _protocol(protocol)
         , _fast_fail(false)
-        , _connection_thread()
+        , _thread()
       {
+        ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_ASSERT(server || protocol != Protocol::utp);
         this->_connect();
       }
 
       Remote::~Remote()
-      {}
+      {
+        ELLE_TRACE_SCOPE("%s: destruct", this);
+        if (this->_thread)
+          this->_thread->terminate_now();
+      }
 
       /*-----------.
       | Networking |
@@ -83,14 +88,14 @@ namespace infinit
         static bool disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
         ELLE_TRACE_SCOPE("%s: connect", *this);
         ++this->_reconnection_id;
-        if (this->_connection_thread)
-          this->_connection_thread->terminate_now();
-        this->_connection_thread.reset(
+        if (this->_thread)
+          this->_thread->terminate_now();
+        this->_thread.reset(
           new reactor::Thread(
             elle::sprintf("%s connection", this),
             [this]
             {
-              this->_connected = false;
+              this->_connected.close();
               auto handshake = [&] (std::unique_ptr<std::iostream> socket)
                 {
                   auto serializer = elle::make_unique<protocol::Serializer>(
@@ -105,7 +110,7 @@ namespace infinit
                   this->_socket = std::move(socket);
                   this->_serializer = std::move(serializer);
                   this->_channels = std::move(channels);
-                  this->_connected = true;
+                  this->_connected.open();
                 };
               auto umbrella = [&, this] (std::function<void ()> const& f)
                 {
@@ -160,29 +165,16 @@ namespace infinit
                 reactor::wait(scope);
               };
               if (!this->_connected)
-                elle::err("connection to %f failed", this->_endpoints);
-            },
-            reactor::Thread::managed = true));
+                this->_connected.raise<elle::Error>(
+                  elle::sprintf("connection to %f failed", this->_endpoints));
+            }));
       }
 
       void
       Remote::connect(elle::DurationOpt timeout)
       {
-        do
-        {
-          auto start = boost::posix_time::microsec_clock::universal_time();
-          if (!reactor::wait(*this->_connection_thread, timeout))
-            throw reactor::network::TimeOut();
-          // Either connect succeeded, or it was restarted
-          if (timeout)
-          {
-            timeout = *timeout -
-              (boost::posix_time::microsec_clock::universal_time() - start);
-            if (timeout->is_negative() && !_connected)
-              throw reactor::network::TimeOut();
-          }
-        }
-        while (!this->_connected);
+        if (!reactor::wait(this->_connected, timeout))
+          throw reactor::network::TimeOut();
       }
 
       void

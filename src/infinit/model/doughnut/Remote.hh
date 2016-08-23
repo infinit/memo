@@ -79,7 +79,7 @@ namespace infinit
       private:
         void
         _connect();
-        ELLE_ATTRIBUTE(bool, connected);
+        ELLE_ATTRIBUTE(reactor::Barrier, connected);
         ELLE_ATTRIBUTE(bool, reconnecting);
         ELLE_ATTRIBUTE_R(int, reconnection_id);
         ELLE_ATTRIBUTE_R(Endpoints, endpoints);
@@ -103,7 +103,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
         ELLE_ATTRIBUTE_R(EndpointsRefetcher, refetch_endpoints);
         ELLE_ATTRIBUTE_R(bool, fast_fail);
-        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
+        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, thread);
 
       /*-------.
       | Blocks |

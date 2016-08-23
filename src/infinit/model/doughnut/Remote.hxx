@@ -77,7 +77,7 @@ namespace infinit
           bool connect_running = false;
           try
           {
-            if (!reactor::wait(*this->_connection_thread, 0_sec))
+            if (!this->_connected)
             { // still connecting
               ELLE_DEBUG("still connecting");
               connect_running = true;
