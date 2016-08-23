@@ -148,6 +148,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
 
   alice.run(['infinit-network', '--fetch', '--name', 'bob/n', '--as', 'alice'])
   alice.run(['infinit-network', '--link', '--name', 'bob/n', '--as', 'alice'])
+  # Make sure you can only link once.
+  throws(lambda: alice.run(['infinit-network', '--link', '--name', 'bob/n', '--as', 'alice']))
   e0 = alice.run_json(['infinit-network', '--export', '--name', 'bob/n', '--as', 'alice'])
   new_version = '9.9.9'
   bob.run(['infinit-network', '--update', '--name', 'n', '--compatibility-version', new_version, '--as', 'bob', '--push'])
