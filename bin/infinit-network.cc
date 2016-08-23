@@ -454,6 +454,11 @@ COMMAND(link_)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
+  {
+    auto network = ifnt.network_get(network_name, self, false);
+    if (network.model != nullptr)
+      elle::err("%s is already linked with %s", network.name, self.name);
+  }
   auto storage = storage_configuration(args);
   auto desc = ifnt.network_descriptor_get(network_name, self);
   auto passport = [&] () -> infinit::Passport

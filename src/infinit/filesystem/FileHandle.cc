@@ -463,6 +463,8 @@ namespace infinit
       {
         if (nidx >= signed(_file._fat.size()))
           break;
+        if (_file._fat[nidx].first == Address::null)
+          continue;
         if (this->_blocks.find(nidx) == this->_blocks.end())
         {
           _prefetch(nidx);

@@ -410,6 +410,12 @@ namespace infinit
         ELLE_TRACE("permission exception: %s", e.what());
         throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
       }
+      catch(rfs::Error const& e)
+      {
+        ELLE_TRACE("filesystem error storing %x: %s",
+                  _address, e);
+        throw;
+      }
       catch(elle::Error const& e)
       {
         ELLE_WARN("unexpected elle error storing %x: %s",

@@ -25,6 +25,27 @@ namespace infinit
       | Construction |
       `-------------*/
 
+    static void retry_forever(elle::Duration start_delay, elle::Duration max_delay,
+                              std::string action_name,
+                              std::function<void()> action)
+    {
+      elle::Duration delay = start_delay;
+      while (true)
+      {
+        try
+        {
+          action();
+          return;
+        }
+        catch (elle::Exception const& e)
+        {
+          ELLE_WARN("%s: execption %s", action_name, e.what());
+          delay = std::min(delay * 2, max_delay);
+          reactor::sleep(delay);
+        }
+      }
+    }
+
       Dock::Dock(Doughnut& doughnut, Protocol protocol)
         : _doughnut(doughnut)
         , _protocol(protocol)
@@ -35,7 +56,29 @@ namespace infinit
                       *this->_local_utp_server)
       {
         if (this->_local_utp_server)
-          this->_local_utp_server->listen(0);
+        {
+          bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+            && doughnut.version() >= elle::Version(0, 7, 0);
+          this->_local_utp_server->listen(0, v6);
+        }
+        auto rdv_host = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
+        if (!rdv_host.empty())
+        {
+          auto uid = elle::sprintf("%x", _doughnut.id());
+          this->_rdv_connect_thread.reset(
+            new reactor::Thread(
+              "rdv_connect",
+              [this, uid, rdv_host]
+              {
+                // The remotes_server does not accept incoming connections,
+                // it is used to connect Remotes
+                retry_forever(10_sec, 120_sec, "Dock RDV connect",
+                              [&] {
+                                this->_utp_server.rdv_connect(
+                                    uid, rdv_host, 120_sec);
+                              });
+              }));
+        }
         for (auto const& interface: elle::network::Interface::get_map(
                elle::network::Interface::Filter::only_up |
                elle::network::Interface::Filter::no_loopback |
@@ -53,6 +96,20 @@ namespace infinit
         , _utp_server(source._utp_server)
       {}
 
+      Dock::~Dock()
+      {
+        if (this->_rdv_connect_thread)
+          this->_rdv_connect_thread->terminate_now();
+        this->_rdv_connect_thread.reset();
+      }
+
+      void
+      Dock::cleanup()
+      {
+        if (this->_rdv_connect_thread)
+          this->_rdv_connect_thread->terminate_now();
+        this->_rdv_connect_thread.reset();
+      }
       /*-----.
       | Peer |
       `-----*/
