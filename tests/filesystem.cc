@@ -2018,7 +2018,7 @@ ELLE_TEST_SCHEDULED(paxos_race)
   {
     reactor::Thread t1("t1", [&] { r1->child("foo")->mkdir(0700);});
     reactor::Thread t2("t2", [&] { r2->child("bar")->mkdir(0700);});
-    reactor::wait({&t1, &t2});
+    reactor::wait({t1, t2});
   }
   ELLE_LOG("check")
   {
