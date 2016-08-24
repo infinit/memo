@@ -2038,11 +2038,11 @@ ELLE_TEST_SCHEDULED(paxos_race)
     int count = 0;
     c1.fs->path("/")->list_directory(
       [&](std::string const&, struct stat*) { ++count;});
-    BOOST_CHECK_EQUAL(count, 2);
+    BOOST_CHECK_EQUAL(count, 4);
     count = 0;
     c2.fs->path("/")->list_directory(
       [&](std::string const&, struct stat*) { ++count;});
-    BOOST_CHECK_EQUAL(count, 2);
+    BOOST_CHECK_EQUAL(count, 4);
   }
 }
 
@@ -2302,7 +2302,7 @@ ELLE_TEST_SCHEDULED(remove_permissions)
   int count = 0;
   client1.fs->path("/dir")->list_directory(
       [&](std::string const&, struct stat*) { ++count;});
-  BOOST_CHECK_EQUAL(count, 0);
+  BOOST_CHECK_EQUAL(count, 2);
 
   h = client1.fs->path("/file")->create(O_CREAT|O_TRUNC|O_RDWR, 0666);
   h->write(elle::ConstWeakBuffer("bar", 3), 3, 0);

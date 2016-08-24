@@ -129,7 +129,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     int count = 0;
     fs->path("/")->list_directory([&](std::string const&, struct stat*)
                                   { ++count;});
-    BOOST_CHECK_EQUAL(count, 1);
+    BOOST_CHECK_EQUAL(count, 3);
     handle = fs->path("/")->child("foo")->open(O_RDONLY, 0666);
     char buf[10] = {0};
     handle->read(elle::WeakBuffer(buf, 3), 3, 0);
@@ -165,7 +165,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     int count = 0;
     fs->path("/")->list_directory([&](std::string const&, struct stat*)
                                   { ++count;});
-    BOOST_CHECK_EQUAL(count, 3);
+    BOOST_CHECK_EQUAL(count, 5);
     fs.reset();
   }
 
@@ -184,7 +184,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     // restart with async which will dequeue
     fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
-    BOOST_CHECK_EQUAL(root_count(fs), 5);
+    BOOST_CHECK_EQUAL(root_count(fs), 7);
     fs.reset();
   }
 
@@ -203,7 +203,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     // restart with async which will dequeue
     fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
-    BOOST_CHECK_EQUAL(root_count(fs), 6);
+    BOOST_CHECK_EQUAL(root_count(fs), 8);
     fs.reset();
   }
 
@@ -222,7 +222,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     // restart with async which will dequeue
     fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
-    BOOST_CHECK_EQUAL(root_count(fs), 6);
+    BOOST_CHECK_EQUAL(root_count(fs), 8);
     struct stat st;
     fs->path("/")->child("samefile")->stat(&st);
     BOOST_CHECK_EQUAL(st.st_size, 3);
@@ -247,7 +247,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     // restart with async which will dequeue
     fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
-    BOOST_CHECK_EQUAL(root_count(fs), 6);
+    BOOST_CHECK_EQUAL(root_count(fs), 8);
     auto auth = fs->path("/")->child("samefile")->getxattr("user.infinit.auth");
     std::stringstream sauth(auth);
     auto jauth = elle::json::read(sauth);
