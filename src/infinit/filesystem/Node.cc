@@ -177,7 +177,7 @@ namespace infinit
           }
           catch(rfs::Error const& e)
           {
-            throw rfs::Error(EISDIR, "Target is a directory");
+            throw rfs::Error(ENOTEMPTY, "Target is a directory");
           }
         }
         else
