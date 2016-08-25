@@ -104,18 +104,6 @@ namespace infinit
       Local::cleanup()
       {}
 
-      /*-----------.
-      | Networking |
-      `-----------*/
-
-      void
-      Local::connect(elle::DurationOpt)
-      {}
-
-      void
-      Local::reconnect(elle::DurationOpt)
-      {}
-
       /*-------.
       | Blocks |
       `-------*/

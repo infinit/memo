@@ -72,10 +72,10 @@ namespace infinit
       public:
         virtual
         void
-        connect(elle::DurationOpt timeout = elle::DurationOpt()) override;
+        connect(elle::DurationOpt timeout = elle::DurationOpt());
         virtual
         void
-        reconnect(elle::DurationOpt timeout = elle::DurationOpt()) override;
+        reconnect(elle::DurationOpt timeout = elle::DurationOpt());
       private:
         void
         _connect();

@@ -55,17 +55,6 @@ namespace infinit
         cleanup();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
 
-      /*-----------.
-      | Networking |
-      `-----------*/
-      public:
-        virtual
-        void
-        connect(elle::DurationOpt timeout) override;
-        virtual
-        void
-        reconnect(elle::DurationOpt timeout) override;
-
       /*-------.
       | Blocks |
       `-------*/

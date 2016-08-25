@@ -26,17 +26,6 @@ namespace infinit
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut, protected);
         ELLE_ATTRIBUTE_R(Address, id, protected);
 
-      /*-----------.
-      | Networking |
-      `-----------*/
-      public:
-        virtual
-        void
-        connect(elle::DurationOpt timeout = elle::DurationOpt()) = 0;
-        virtual
-        void
-        reconnect(elle::DurationOpt timeout = elle::DurationOpt()) = 0;
-
       /*-------.
       | Blocks |
       `-------*/
