@@ -80,13 +80,13 @@
 
       <ul>
         <li>
-          <a ${'class="active"' if route_name[:15] == 'doc_get_started' else ''} href="${route('doc_get_started')}">Get Started</a>
-        </li>
-        <li>
           <a ${'class="active"' if route_name[:4] == 'doc_' and route_name[:15] != 'doc_get_started' and route_name != 'doc_faq' else ''} href="${route('doc_overview')}">Documentation</a>
         </li>
         <li>
           <a ${'class="active"' if route_name == 'faq' else ''} href="${route('faq')}">FAQ</a>
+        </li>
+        <li>
+          <a class="get_started ${'active' if route_name[:15] == 'doc_get_started' else ''}" href="${route('doc_get_started')}">Get Started</a>
         </li>
       </ul>
     </header>
