@@ -26,13 +26,20 @@ namespace infinit
   class RPCHandler
   {
   public:
+    RPCHandler(std::string name)
+      : _name(std::move(name))
+    {}
     virtual
     ~RPCHandler() = default;
     virtual
     void
     handle(elle::serialization::SerializerIn& input,
            elle::serialization::SerializerOut& output) = 0;
+    ELLE_ATTRIBUTE_R(std::string, name);
   };
+
+  std::ostream&
+  operator <<(std::ostream& output, RPCHandler const& rpc);
 
 #ifdef __clang__
   // Clang fails on the other simpler list implementation by
@@ -84,8 +91,10 @@ namespace infinit
     : public RPCHandler
   {
   public:
-    ConcreteRPCHandler(std::function<R (Args...)> const& function)
-      : _function(function)
+    ConcreteRPCHandler(std::string name,
+                       std::function<R (Args...)> const& function)
+      : RPCHandler(std::move(name))
+      , _function(function)
     {}
     ELLE_ATTRIBUTE_R(std::function<R (Args...)>, function);
 
@@ -229,7 +238,7 @@ namespace infinit
     add(std::string const& name, std::function<R (Args...)> f)
     {
       this->_rpcs[name] =
-        elle::make_unique<ConcreteRPCHandler<R, Args...>>(f);
+        elle::make_unique<ConcreteRPCHandler<R, Args...>>(name, f);
     }
 
     void
