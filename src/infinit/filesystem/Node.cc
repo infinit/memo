@@ -280,7 +280,7 @@ namespace infinit
         }
         else if (special->find("auth_others") == 0)
         {
-          auto block = this->_header_block();
+          auto block = this->_header_block(true);
           bool r = v.find("r") != std::string::npos;
           bool w = v.find("w") != std::string::npos;
           umbrella([&] {

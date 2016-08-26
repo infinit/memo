@@ -793,8 +793,13 @@ namespace infinit
     }
 
     model::blocks::ACLBlock*
-    Directory::_header_block()
+    Directory::_header_block(bool force)
     {
+      if (!_block && force)
+      {
+        this->_fetch();
+        ELLE_ASSERT(_block);
+      }
       return _block.get();
     }
 
