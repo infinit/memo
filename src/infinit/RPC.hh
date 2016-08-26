@@ -115,9 +115,8 @@ namespace infinit
           typename std::remove_reference<typename Remaining::Head>::type>::type
         Head;
       ELLE_LOG_COMPONENT("infinit.RPC");
-      ELLE_DEBUG("%s: get argument %s", *this, n);
       auto arg = input.deserialize<Head>(elle::sprintf("arg%s", n));
-      ELLE_DEBUG("%s: got argument: %s", *this, arg);
+      ELLE_DUMP("got argument: %s", arg);
       this->_handle<typename Remaining::Tail,
                     Parsed..., typename Remaining::Head>(
         n + 1, input, output, std::forward<Parsed>(parsed)..., std::move(arg));
@@ -139,10 +138,9 @@ namespace infinit
         typename std::remove_const<typename std::remove_reference<typename Remaining::Head>::type>::type
         Head;
       ELLE_LOG_COMPONENT("infinit.RPC");
-      ELLE_DEBUG("%s: get argument %s", *this, n);
       auto arg =
         input.deserialize<std::unique_ptr<Head>>(elle::sprintf("arg%s", n));
-      ELLE_DEBUG("%s: got argument: %s", *this, *arg);
+      ELLE_DUMP("got argument: %s", *arg);
       this->_handle<typename Remaining::Tail,
                     Parsed..., typename Remaining::Head>(
         n + 1, input, output, std::forward<Parsed>(parsed)..., std::move(*arg));
@@ -263,8 +261,7 @@ namespace infinit
       {
 	auto channel = channels.accept();
 	auto request = channel.read();
-	ELLE_DEBUG("Processing one request, key=%s, len=%s data=%x",
-	  !!this->_key, request.size(), request);
+	ELLE_TRACE_SCOPE("%s: process RPC", this);
 	bool had_key = !!_key;
 	if (had_key)
 	{
