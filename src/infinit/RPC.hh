@@ -274,6 +274,7 @@ namespace infinit
 	bool had_key = !!_key;
 	if (had_key)
 	{
+          ELLE_DEBUG_SCOPE("decipher RPC");
 	  try
 	  {
 	    static elle::Bench bench("bench.rpcserve.decipher", 10000_sec);
@@ -289,7 +290,6 @@ namespace infinit
 	    }
 	    else
 	      request = this->_key->decipher(request);
-	    ELLE_DEBUG("Wrote %s plain bytes", request.size());
 	  }
 	  catch(std::exception const& e)
 	  {
@@ -376,13 +376,15 @@ namespace infinit
             elle::Version const& version,
             elle::Buffer* credentials = nullptr);
 
-    elle::Buffer credentials()
+    elle::Buffer
+    credentials()
     {
       if (this->_key)
         return this->_key->password();
       else
         return {};
     }
+
     template <typename T>
     void
     set_context(T value)
@@ -528,18 +530,19 @@ namespace infinit
         {
           static elle::Bench bench("bench.rpcclient.encipher", 10000_sec);
           elle::Bench::BenchScope bs(bench);
-          if (call.size() > 262144)
-          {
-            elle::With<reactor::Thread::NonInterruptible>() << [&] {
-              reactor::background([&] {
-                  call = self.key()->encipher(
-                    elle::ConstWeakBuffer(call.contents(), call.size()));
-              });
-            };
-          }
-          else
-            call = self.key()->encipher(
-              elle::ConstWeakBuffer(call.contents(), call.size()));
+          ELLE_DEBUG("encipher request")
+            if (call.size() > 262144)
+            {
+              elle::With<reactor::Thread::NonInterruptible>() << [&] {
+                reactor::background([&] {
+                    call = self.key()->encipher(
+                      elle::ConstWeakBuffer(call.contents(), call.size()));
+                  });
+              };
+            }
+            else
+              call = self.key()->encipher(
+                elle::ConstWeakBuffer(call.contents(), call.size()));
         }
         ELLE_DEBUG("send request")
           channel.write(call);
