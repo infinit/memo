@@ -98,18 +98,18 @@ namespace infinit
 
       Dock::~Dock()
       {
-        if (this->_rdv_connect_thread)
-          this->_rdv_connect_thread->terminate_now();
-        this->_rdv_connect_thread.reset();
+        this->cleanup();
       }
 
       void
       Dock::cleanup()
       {
+        ELLE_TRACE_SCOPE("%s: destruct", this);
         if (this->_rdv_connect_thread)
           this->_rdv_connect_thread->terminate_now();
         this->_rdv_connect_thread.reset();
       }
+
       /*-----.
       | Peer |
       `-----*/
