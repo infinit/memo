@@ -283,6 +283,14 @@ namespace infinit
           auto block = this->_header_block(true);
           bool r = v.find("r") != std::string::npos;
           bool w = v.find("w") != std::string::npos;
+          if (r)
+            this->_header().mode |= 04;
+          else
+            this->_header().mode &= ~04;
+          if (w)
+            this->_header().mode |= 02;
+          else
+            this->_header().mode &= ~02;
           umbrella([&] {
               block->set_world_permissions(r, w);
               _commit(WriteTarget::block);
