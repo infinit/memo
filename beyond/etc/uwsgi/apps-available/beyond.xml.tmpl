@@ -1,6 +1,5 @@
 <uwsgi>
   <plugin>python3</plugin>
-  <plugin>syslog</plugin>
   <pythonpath>/opt/infinit/beyond/lib/python3.4</pythonpath>
   <env>INFINIT_CRASH_REPORTER=0</env>
   <module>infinit.beyond.wsgi</module>
@@ -16,7 +15,6 @@
   <reload-on-rss>512</reload-on-rss>
   <no-orphans/>
   <vacuum/>
-  <logger>syslog:uwsgi-beyond</logger>
   <set>gcs-login=${repr(gcs_login)}</set>
   <set>gcs-key=${repr(gcs_key)}</set>
   <set>dropbox-app-key=${repr(dropbox_app_key)}</set>
