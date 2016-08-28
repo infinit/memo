@@ -1,6 +1,6 @@
 <uwsgi>
   <plugin>python3</plugin>
-  <pythonpath>/opt/infinit/beyond/lib/python3.4</pythonpath>
+  <pythonpath>/opt/infinit/beyond/lib/python${python_version_major}.${python_version_minor}</pythonpath>
   <env>INFINIT_CRASH_REPORTER=0</env>
   <module>infinit.beyond.wsgi</module>
   <master/>
