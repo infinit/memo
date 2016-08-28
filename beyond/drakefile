@@ -173,18 +173,17 @@ def configure(
       'rsa-3.3.dist-info',
       'six-1.10.0.dist-info',
     ])
-  sources += oauth2client.targets()
+  print(python_prefix())
   crypto = drake.PythonModule(
     'pycrypto',
     python_prefix(),
     dependencies = [],
     module_name = 'Crypto')
-  sources += crypto.targets()
+  print(crypto.targets())
   PIL = drake.PythonModule(
     'PILLOW', python_prefix(),
     module_name = 'PIL',
     dependencies = ['Pillow-3.0.0.egg-info'])
-  sources += PIL.targets()
   def install_nodes(where, how, python_version = python.version):
     prefix = python_prefix(python_version)
     where = drake.Path(where)
