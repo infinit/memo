@@ -9,11 +9,10 @@ from utils import *
 
 from copy import deepcopy
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'server1,server2', owner = user)
@@ -26,8 +25,29 @@ with Beyond() as beyond:
       res = beyond.get('volumes/%s' % volume['name']).json()
       assertEq(res['name'], volume['name'])
       assertEq(res['network'], network['name'])
+      assert 'owner' not in res
 
-    def test_already_pushed(self):
+  def test_different_owner(self):
+    with Beyond() as beyond:
+      user = User()
+      user2 = User()
+      user.put(beyond)
+      user2.put(beyond)
+      network = Network(name = 'server1,server2', owner = user)
+      network.put(beyond)
+      volume = Volume(name = 'business', network = network, owner = user2)
+      throws(lambda: beyond.get('volumes/%s' % volume['name']),
+             404,
+             json = False)
+      volume.put(beyond)
+      res = beyond.get('volumes/%s' % volume['name']).json()
+      assertEq(res['name'], volume['name'])
+      assertEq(res['network'], network['name'])
+      assert 'owner' in res
+      assertEq(res['owner'], user2['public_key'])
+
+  def test_already_pushed(self):
+    with Beyond() as beyond:
       # Test same already pushed
       user = User()
       user.put(beyond)
@@ -42,7 +62,8 @@ with Beyond() as beyond:
       volume['network'] = 'foo/bar'
       throws(lambda: volume.put(beyond), 409)
 
-    def test_user_demo_is_not_allowed_to_put(self):
+  def test_user_demo_is_not_allowed_to_put(self):
+    with Beyond() as beyond:
       infinit = User(name = 'infinit')
       infinit.put(beyond)
       demo = User(name = 'demo')
@@ -57,5 +78,5 @@ with Beyond() as beyond:
              expected = 403,
              json = False)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

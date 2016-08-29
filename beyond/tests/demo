@@ -8,11 +8,10 @@ from utils import *
 demo_user = User(name = 'demo')
 infinit_user = User(name = 'infinit')
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_all(self):
+  def test_all(self):
+    with Beyond() as beyond:
       # Push demo.
       demo_user.put(beyond)
       # Push infinit.
@@ -28,17 +27,17 @@ with Beyond() as beyond:
 
       # Destroying stuff.
       throws(lambda: beyond.delete('networks/%s' % demo_network['name'],
-                                   auth = demo_user.private_key),
+                                   auth = demo_user),
              expected = 403, json = False)
       throws(lambda: beyond.delete('volumes/%s' % demo_volume['name'],
-                                   auth = demo_user.private_key),
+                                   auth = demo_user),
              expected = 403, json = False)
       throws(lambda: beyond.delete('networks/%s/passports/%s' % (
         demo_volume['name'], demo_user['name']),
-                                   auth = demo_user.private_key),
+                                   auth = demo_user),
              expected = 403, json = False)
       throws(lambda: beyond.delete('users/%s' % demo_user['name'],
-                                   auth = demo_user.private_key),
+                                   auth = demo_user),
              expected = 403, json = False)
 
       # Pushing stuff.
@@ -47,6 +46,5 @@ with Beyond() as beyond:
       vol = Volume(name = 'Pirate', network = demo_network, owner = demo_user)
       throws(lambda: vol.put(beyond), expected = 403, json = False)
 
-
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

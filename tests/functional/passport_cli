@@ -98,3 +98,33 @@ with Beyond() as beyond, \
   assertEq(len(alice.run_json(['infinit-passport', '--list', '-s'])), 0)
   alice.run(['infinit-passport', '--fetch', '--as', 'alice',
              '-u', 'alice', '-n', 'n'], return_code = 1)
+
+# Push passport on an network you don't own.
+with Beyond() as beyond, \
+    Infinit(beyond = beyond) as bob, \
+    Infinit(beyond = beyond) as alice, \
+    Infinit(beyond = beyond) as eve:
+  bob.run(['infinit-user', '--signup', 'bob', '--email', 'b@infinit.io'])
+  alice.run(['infinit-user', '--signup', 'alice', '--email', 'a@infinit.io'])
+  eve.run(['infinit-user', '--signup', 'eve', '--email', 'eve@infinit.io'])
+  bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '--push'])
+  bob.run(['infinit-user', '--fetch', 'alice'])
+  bob.run(['infinit-passport', '--create', '--as', 'bob',
+           '-u', 'alice', '-n', 'n', '--push'])
+  alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
+  alice.run(['infinit-network', '--fetch', '--as', 'alice'])
+  alice.run(['infinit-user', '--fetch', 'eve'])
+  throws(lambda: alice.run(['infinit-passport', '--create', '--as', 'alice',
+                            '-u', 'eve', '-n', 'bob/n', '--push']),
+         'Forbidden pushing passport')
+  # Remove created passport.
+  alice.run(['infinit-passport', '--delete', '--as', 'alice',
+             '-u', 'eve', '-n', 'bob/n']),
+  # Remove alice passport that cannot sign other passports.
+  bob.run(['infinit-passport', '--delete', '--pull', '--as', 'bob',
+           '-u', 'alice', '-n', 'n'])
+  bob.run(['infinit-passport', '--create', '--as', 'bob', '--allow-create-passport',
+           '-u', 'alice', '-n', 'n', '--push'])
+  alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
+  alice.run(['infinit-passport', '--create', '--as', 'alice',
+             '-u', 'eve', '-n', 'bob/n', '--push'])
