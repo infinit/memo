@@ -6,6 +6,7 @@
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/json.hh>
 #include <elle/bench.hh>
+#include <elle/ScopedAssignment.hh>
 
 #include <das/model.hh>
 #include <das/serializer.hh>
@@ -261,10 +262,7 @@ namespace infinit
         Async::_push_op(Op op)
         {
           bool reentered = this->_in_push;
-          this->_in_push = true;
-          elle::SafeFinally ipreset([this] { this->_in_push = false;});
-          if (reentered)
-            ipreset.abort();
+          auto in_push = elle::scoped_assignment(this->_in_push, true);
           op.index = ++this->_next_index;
           ELLE_TRACE_SCOPE("%s: push %s", *this, op);
           if (!this->_journal_dir.empty())
