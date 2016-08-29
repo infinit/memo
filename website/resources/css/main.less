@@ -1504,12 +1504,18 @@ body.pricing {
     padding-bottom: 10px; padding-left: 7%; padding-right: 7%; width: 86%;
     &:after { content: ''; display: table; clear: both; }
 
-    h1 { text-align:center; margin-bottom: 0px; border-bottom: none;  }
-    > p { text-align: center; width: 60%; margin: 0 auto; font-size: 22px;
+    h1 {
+      text-align:center; margin-bottom: 0px; border-bottom: none; font-size: 46px;
+      margin-top: 20px;
+    }
+    > p { text-align: center; width: 50%; margin: 0 auto; font-size: 22px;
       line-height: 30px;}
 
     .version {
-      width: 40%; margin: 20px 0 100px 0; float: left; text-align: center;
+      width: 35%; margin: 40px 0 100px 0; float: left; text-align: center;
+      padding-bottom: 50px;
+      background: #FFFFFF; box-shadow: 0px 0px 3px 0px rgba(0,0,0,0.17);
+      border-radius: 3px;
 
       ul { list-style-type: none;}
       ul:after { display: table; clear: both; content: '';}
@@ -1529,14 +1535,15 @@ body.pricing {
       ul li.cluster img { margin-top: 6px;}
       ul li.cluster span.note { font-size: 13px; color: @infinitgray; line-height: 17px;}
 
+      > img { margin-top: 45px; }
       h2 {
-        font-size: 16px; text-transform: uppercase; padding-bottom: 5px; margin-top: 0;
+        font-size: 16px; text-transform: uppercase; padding-bottom: 5px; margin-top: 10px;
         border-bottom: 2px solid @infinitblack; display: inline-block;
       }
 
       hr {
         background: #E6E6E6; height: 1px; border: none; display: block; clear: both;
-        margin: 20px auto; width: 50%;
+        margin: 0px auto 20px auto; width: 50%;
       }
       p { margin: 5px 0; }
       p span {
@@ -1548,11 +1555,12 @@ body.pricing {
 
     em { clear: both; display: block;  text-align: center; margin-bottom: 60px;}
 
-    .version.community { margin-left: 10%; }
+    .version.community { margin-left: 15%; }
     .version.community ul { width: 80%; margin-left: auto; margin-right: auto; }
     .version.community ul li { width: 38%; margin-left: 6%; margin-right: 6%;}
 
-    .version.enterprise { margin-right: 10%; }
+    .version.enterprise { margin-right: 15%; background: #FAFAFA; }
+    .version.enterprise > img { margin-top: 37px; }
     .version.enterprise ul { width: 90%; margin-left: auto; margin-right: auto; }
   }
 

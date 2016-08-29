@@ -400,6 +400,8 @@ def configure(
     'resources/images/icons/business@2x.png',
     'resources/images/icons/enterprise.png',
     'resources/images/icons/enterprise@2x.png',
+    'resources/images/icons/community.png',
+    'resources/images/icons/community@2x.png',
     'resources/images/icons/infinit-cloud-api.png',
     'resources/images/icons/infinit-cloud-api@2x.png',
     'resources/images/icons/infinit-cloud-drive.png',
