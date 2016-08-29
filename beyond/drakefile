@@ -250,8 +250,7 @@ def configure(
     debian_nodes,
     drake.copy(drake.nodes('control'), 'debian/DEBIAN'),
     drake.copy(
-      drake.nodes('etc/rsyslog.d/10-infinit.conf',
-                  'usr/share/ca-certificates/extra/infinit.crt'),
+      drake.nodes('etc/rsyslog.d/10-infinit.conf'),
       'debian',
     ),
     drake.copy(
