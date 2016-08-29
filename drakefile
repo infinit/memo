@@ -237,7 +237,7 @@ def configure(
     cxx_config_infinit.lib('iphlpapi')
     cxx_config_infinit.lib('crypt32')
     libtype = drake.cxx.DynLib
-    extra_libs = [dokan_lib]
+    extra_libs = [drake.copy(dokan_lib, 'bin', strip_prefix = True)]
     cxx_config_infinit.use_whole_archive()
   else:
     extra_libs = []
