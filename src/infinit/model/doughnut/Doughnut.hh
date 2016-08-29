@@ -105,7 +105,7 @@ namespace infinit
         ELLE_ATTRIBUTE(
           elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
         ELLE_ATTRIBUTE_RX(Dock, dock);
-        ELLE_ATTRIBUTE(reactor::Barrier, terminating);
+        ELLE_ATTRIBUTE_RX(reactor::Barrier, terminating);
 
         typedef std::unordered_map<elle::Buffer,
            std::shared_ptr<cryptography::rsa::PublicKey>> KeyHashCache;
