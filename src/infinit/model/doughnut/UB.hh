@@ -44,6 +44,9 @@ namespace infinit
         Address
         hash_address(cryptography::rsa::PublicKey const& key,
                      Doughnut const& dht);
+        static
+        elle::Buffer
+        hash(cryptography::rsa::PublicKey const& key);
         ELLE_ATTRIBUTE_R(std::string, name);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, key);
         ELLE_ATTRIBUTE_R(bool, reverse);

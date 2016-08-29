@@ -127,9 +127,8 @@ namespace infinit
               *gb->owner_key());
             auto rub = elle::make_unique<UB>(&_dht, "@"+_name,
               *gb->owner_key(), true);
-            auto serial = cryptography::rsa::publickey::der::encode(*gb->owner_key());
-            auto hash = cryptography::hash(serial, cryptography::Oneway::sha256);
-            auto hub = elle::make_unique<UB>(&_dht, ':' + hash.string(), *gb->owner_key());
+            auto hub = elle::make_unique<UB>(
+              &_dht, ':' + UB::hash(*gb->owner_key()).string(), *gb->owner_key());
             // FIXME
             _dht.store(
               std::move(hub), STORE_INSERT,

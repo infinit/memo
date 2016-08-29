@@ -387,8 +387,7 @@ namespace infinit
       elle::Buffer
       Doughnut::ensure_key(cryptography::rsa::PublicKey const& k)
       {
-        auto serial = cryptography::rsa::publickey::der::encode(k);
-        auto hash = cryptography::hash(serial, cryptography::Oneway::sha256);
+        auto hash = UB::hash(k);
         if (!this->_consensus)
           return hash; // assume test mode
         auto it = this->_key_hash_cache.find(hash);
@@ -411,6 +410,7 @@ namespace infinit
       std::shared_ptr<cryptography::rsa::PublicKey>
       Doughnut::resolve_key(elle::Buffer const& hash)
       {
+        ELLE_DEBUG("%s: Resolving key from %x", this, hash);
         auto it = this->_key_hash_cache.find(hash);
         if (it != this->_key_hash_cache.end())
           return it->second;
@@ -420,9 +420,10 @@ namespace infinit
         {
           auto block = this->fetch(addr);
           auto ub = elle::cast<UB>::runtime(block);
+          if (!ub)
+            elle::err("%s: block at %s is not an UB", this, addr);
           // validate
-          auto serial = cryptography::rsa::publickey::der::encode(ub->key());
-          auto ubhash = cryptography::hash(serial, cryptography::Oneway::sha256);
+          auto ubhash = UB::hash(ub->key());
           if (hash != ubhash)
           {
             ELLE_WARN("Key hash do not match fetching key hash block: %x vs %x",
@@ -602,10 +603,7 @@ namespace infinit
       std::string
       short_key_hash(cryptography::rsa::PublicKey const& pub)
       {
-        auto buffer =
-          infinit::cryptography::rsa::publickey::der::encode(pub);
-        auto key_hash = infinit::cryptography::hash(
-          buffer, infinit::cryptography::Oneway::sha256);
+        auto key_hash = UB::hash(pub);
         std::string hex_hash = elle::format::hexadecimal::encode(key_hash);
         return elle::sprintf("#%s", hex_hash.substr(0, 6));
       }
