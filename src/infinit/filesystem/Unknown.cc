@@ -9,12 +9,14 @@
 #include <reactor/filesystem.hh>
 
 #include <sys/stat.h> // S_IMFT...
+#include <fcntl.h> // O_EXCL
 
 #ifdef INFINIT_LINUX
   #include <attr/xattr.h>
 #endif
 #ifdef INFINIT_WINDOWS
   #undef stat
+  #define O_EXCL _O_EXCL
 #endif
 
 ELLE_LOG_COMPONENT("infinit.filesystem.Unknown");
@@ -118,6 +120,8 @@ namespace infinit
       mode |= S_IFREG;
       if (_parent->_files.find(_name) != _parent->_files.end())
       {
+        if (flags & O_EXCL)
+          THROW_EXIST;
         ELLE_WARN("File %s exists where it should not", _name);
         File f(_owner, _parent->_files.at(_name).second, {}, _parent, _name);
         return f.open(flags, mode);
@@ -131,7 +135,9 @@ namespace infinit
         std::make_pair(_name,
           std::make_pair(EntryType::file, b->address())));
       _parent->write(*_owner.block_store(),
-                     Operation{OperationType::insert, _name, EntryType::file, b->address()},
+                     Operation{
+                       (flags & O_EXCL) ? OperationType::insert_exclusive : OperationType::insert,
+                       _name, EntryType::file, b->address()},
                      DirectoryData::null_block,
                      true);
       std::unique_ptr<rfs::Handle> handle;

@@ -9,17 +9,22 @@
 - Add new `Koordinate` overlay that enable to run several overlay
   algorithms on nodes.
 - Add `--script` mode to `infinit-acl --list`.
+- Support `O_EXCL` when opening files.
 
 ### Changed
 
 - Optimize Kelips packet size.
 - Make `--filesystem` the default type for `infinit-storage --create`.
+- Use a single UDP socket for all UTP networking.
 
 ### Fixed
 
-- The 'creation time' shown when displaying file informations on MacOS
-  is now filled correctly.
+- Fill creation time attributes OSX.
 - Refuse multiple storage types in `infinit-storage --create`.
+- Refuse relinking a linked network.
+- Return `ENOTEMPTY` instead of `EISDIR` when expected.
+- Yield `.` and `..` when listing directories.
+- Fix SEGV in `infinit-acl --set --others-mode`.
 
 
 ## [0.6.2] - 2016-08-12

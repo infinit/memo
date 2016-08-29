@@ -80,6 +80,7 @@ std::vector<std::unique_ptr<elle::system::Process>> processes;
 #ifdef INFINIT_WINDOWS
 #define O_CREAT _O_CREAT
 #define O_RDWR _O_RDWR
+#define O_EXCL _O_EXCL
 #define S_IFREG _S_IFREG
 
 int setxattr(const char* path, const char* name, const void* value, int value_size, int)
@@ -472,7 +473,7 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
   mounted = false;
   auto owner_keys = infinit::cryptography::rsa::keypair::generate(2048);
   new std::thread([&] { make_nodes(store, node_count, owner_keys, paxos);});
-  while (nodes.size() != unsigned(node_count))
+  while (peers.size() != unsigned(node_count))
     usleep(100000);
   ELLE_TRACE("got %s nodes, preparing %s mounts", nodes.size(), nmount);
   std::vector<reactor::Thread*> threads;
@@ -523,6 +524,7 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           [=] (infinit::model::doughnut::Doughnut& dht,
                std::shared_ptr<infinit::model::doughnut::Local> local)
           {
+            ELLE_DEBUG("Instanciating stonehenge with %s peers", peers.size());
             auto res = elle::make_unique<infinit::overlay::Stonehenge>(
               peers, std::move(local), &dht);
             return res;
@@ -1424,6 +1426,17 @@ test_conflicts(bool paxos)
     BOOST_CHECK_EQUAL(read(m0/"file6"), "nioc");
     BOOST_CHECK_EQUAL(read(m1/"file6"), "nioc");
   }
+  ELLE_LOG("create O_EXCL");
+  {
+    int fd0 = open((m0 / "file7").string().c_str(), O_CREAT | O_EXCL | O_RDWR, 0644);
+    BOOST_CHECK(fd0 != -1);
+    int fd1 = open((m1 / "file7").string().c_str(), O_CREAT | O_EXCL | O_RDWR, 0644);
+    int err = errno;
+    BOOST_CHECK_EQUAL(fd1, -1);
+    BOOST_CHECK_EQUAL(err, EEXIST);
+    close(fd0);
+    close(fd1);
+  }
 }
 
 void
@@ -1848,7 +1861,7 @@ public:
     {
       this->dhts.emplace_back(paxos = pax,
                               owner = this->owner_keys,
-                              args ...);
+                              std::forward<Args>(args) ...);
       for (int j = 0; j < i; ++j)
         this->dhts[j].overlay->connect(*this->dhts[i].overlay);
     }
@@ -2025,11 +2038,11 @@ ELLE_TEST_SCHEDULED(paxos_race)
     int count = 0;
     c1.fs->path("/")->list_directory(
       [&](std::string const&, struct stat*) { ++count;});
-    BOOST_CHECK_EQUAL(count, 2);
+    BOOST_CHECK_EQUAL(count, 4);
     count = 0;
     c2.fs->path("/")->list_directory(
       [&](std::string const&, struct stat*) { ++count;});
-    BOOST_CHECK_EQUAL(count, 2);
+    BOOST_CHECK_EQUAL(count, 4);
   }
 }
 
@@ -2289,7 +2302,7 @@ ELLE_TEST_SCHEDULED(remove_permissions)
   int count = 0;
   client1.fs->path("/dir")->list_directory(
       [&](std::string const&, struct stat*) { ++count;});
-  BOOST_CHECK_EQUAL(count, 0);
+  BOOST_CHECK_EQUAL(count, 2);
 
   h = client1.fs->path("/file")->create(O_CREAT|O_TRUNC|O_RDWR, 0666);
   h->write(elle::ConstWeakBuffer("bar", 3), 3, 0);
@@ -2314,6 +2327,25 @@ ELLE_TEST_SCHEDULED(remove_permissions)
   BOOST_CHECK_THROW(client2.fs->path("/dir2")->rmdir(), std::exception);
   client1.fs->path("/")->setxattr("infinit.auth.setrw", skey, 0);
   BOOST_CHECK_NO_THROW(client2.fs->path("/dir2")->rmdir());
+}
+
+
+ELLE_TEST_SCHEDULED(create_excl)
+{
+  DHTs servers(1, with_cache = true);
+  auto client1 = servers.client(false);
+  auto client2 = servers.client(false);
+  // cache feed
+  client1.fs->path("/");
+  client2.fs->path("/");
+  client1.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644);
+  BOOST_CHECK_THROW(
+    client2.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644),
+    reactor::filesystem::Error);
+  // again, now that our cache knows the file
+  BOOST_CHECK_THROW(
+    client2.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644),
+    reactor::filesystem::Error);
 }
 
 ELLE_TEST_SUITE()
@@ -2347,4 +2379,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(erased_group), 0, 5);
   suite.add(BOOST_TEST_CASE(erased_group_recovery), 0, 5);
   suite.add(BOOST_TEST_CASE(remove_permissions),0, 5);
+  suite.add(BOOST_TEST_CASE(create_excl),0, 5);
 }

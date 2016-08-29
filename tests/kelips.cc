@@ -245,6 +245,8 @@ static int dir_size(rfs::FileSystem& fs, std::string const& name)
   fs.path("/")->child(name)->list_directory(
     [&](std::string const& fname, struct stat*)
     {
+      if (fname == "." || fname == "..")
+        return;
       struct stat st;
       fs.path("/")->child(name)->child(fname)->stat(&st);
       ++count;
@@ -609,7 +611,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
         items.push_back(n);
       });
     ELLE_LOG("%x: %s", n.get(), items);
-    BOOST_CHECK(items.size() == fss.size());
+    BOOST_CHECK(items.size() == fss.size()+2);
   }
   for(auto const& n: fss)
   {
@@ -648,7 +650,7 @@ ELLE_TEST_SCHEDULED(many_conflicts)
       {
         ++count;
       });
-    BOOST_CHECK(count == iter_count * node_count);
+    BOOST_CHECK(count == iter_count * node_count + 2);
   }
 }
 
