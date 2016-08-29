@@ -211,6 +211,8 @@ def configure(
   package = drake.python.Package('beyond', python_prefix(), built,
                                  fullname = 'infinit.beyond')
   build << built
+  for p in oauth2client, crypto, PIL:
+    build << p.targets()
 
   install = drake.Rule('install')
   install << install_nodes(
