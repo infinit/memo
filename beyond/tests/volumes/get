@@ -8,11 +8,10 @@ from operator import itemgetter
 
 from utils import *
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'server1,server2', owner = user)
@@ -33,7 +32,8 @@ with Beyond() as beyond:
       assertEq(len(res['volumes']), 1)
       assertEq(res['volumes'][0]['name'], volume['name'])
 
-    def test_all(self):
+  def test_all(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'server1,server2', owner = user)
@@ -50,7 +50,8 @@ with Beyond() as beyond:
       assertEq(volumes[0]['name'], volume['name'])
       assertEq(volumes[1]['name'], volume2['name'])
 
-    def test_on_network_you_dont_own(self):
+  def test_on_network_you_dont_own(self):
+    with Beyond() as beyond:
       user = User()
       user2 = User()
       user.put(beyond)
@@ -70,5 +71,5 @@ with Beyond() as beyond:
       assertEq(volumes[0]['name'], volume['name'])
       assertEq(volumes[1]['name'], volume2['name'])
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

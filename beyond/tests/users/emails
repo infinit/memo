@@ -8,24 +8,31 @@ import bottle
 def function(beyond, email):
   return {'emails': [u.json() for u in beyond.app.users_from_email(email)]}
 
-with Beyond(validate_email_address = False) as beyond:
+def users_from_email(beyond, email):
+  return beyond.get('users/by_email/%s' % email).json()['emails']
 
-  beyond.app.route('/users/by_email/<email>')(lambda email: function(beyond, email))
+_Beyond = Beyond
+class Beyond(_Beyond):
 
-  def users_from_email(email):
-    return beyond.get('users/by_email/%s' % email).json()['emails']
+  def __enter__(self):
+    super().__enter__()
+    self.app.route('/users/by_email/<email>')(lambda email: function(self, email))
+    return self
 
-  class Test(unittest.TestCase):
+class Test(unittest.TestCase):
 
-    def test_all(self):
+  def test_all(self):
+    with Beyond() as beyond:
       throws(lambda: beyond.get('users/by_email/foo@infinit.io'), 404)
 
-    def test_foo(self):
+  def test_foo(self):
+    with Beyond() as beyond:
       u = User()
       u.put(beyond)
       beyond.get('users/by_email/%s' % u['email'])
 
-    def test_emails_no_emails(self):
+  def test_emails_no_emails(self):
+    with Beyond(validate_email_address = False) as beyond:
       h1 = User()
       n1 = User()
       del n1['email']
@@ -34,23 +41,24 @@ with Beyond(validate_email_address = False) as beyond:
       del n2['email']
       for u in [h1, n1, h2, n2]:
         u.put(beyond)
-      res = users_from_email(h1['email'])
+      res = users_from_email(beyond, h1['email'])
       assertEq(len(res), 1)
       g1 = res[0]
-      res = users_from_email(h2['email'])
+      res = users_from_email(beyond, h2['email'])
       assertEq(len(res), 1)
       g2 = res[0]
       assertEq(h1['name'], g1['name'])
       assertEq(h2['name'], g2['name'])
 
-    def test_many_people_with_the_same_email_address(self):
+  def test_many_people_with_the_same_email_address(self):
+    with Beyond() as beyond:
       u1 = User()
       u2 = User()
       u2['email'] = u1['email']
       u1.put(beyond)
       u2.put(beyond)
-      users = users_from_email(u2['email'])
+      users = users_from_email(beyond, u2['email'])
       assertEq(len(users), 2)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

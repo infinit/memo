@@ -8,11 +8,10 @@ import urllib.parse
 
 from utils import *
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_flow(self):
+  def test_flow(self):
+    with Beyond() as beyond:
       # User
       r = beyond.put('users/mefyl', json = mefyl)
       self.assertEqual(r.status_code, 201)
@@ -63,5 +62,5 @@ with Beyond() as beyond:
       self.maxDiff = None
       self.assertEqual(r.json(), passport)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

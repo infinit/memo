@@ -9,17 +9,18 @@ from utils import *
 
 from copy import deepcopy
 
-with Beyond(create_delegate_user = False,
-            force_admin = True) as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_do_not_exist(self):
+  def test_do_not_exist(self):
+    with Beyond(create_delegate_user = False,
+                force_admin = True) as beyond:
       throws(lambda: beyond.get('users/castor'),
              404,
              json = False)
 
-    def test_works(self):
+  def test_works(self):
+    with Beyond(create_delegate_user = False,
+                force_admin = True) as beyond:
       user = User()
       throws(lambda: beyond.get('users/%s' % user['name']),
              404,
@@ -35,5 +36,5 @@ with Beyond(create_delegate_user = False,
         assertEq(users['users'][0][k], user[k])
 
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

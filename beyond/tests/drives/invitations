@@ -37,13 +37,11 @@ def push_and_confirm(beyond, email, user = None):
     print(res['errors'])
   return user, res
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  beyond.emailer = Emailer()
-
-  class Test(unittest.TestCase):
-
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond() as beyond:
+      beyond.emailer = Emailer()
       user, network, volume, drive = setup(beyond)
       email = random_email()
       drive.invite(beyond, email)
@@ -55,7 +53,9 @@ with Beyond() as beyond:
                              auth = bob).json()['passports']
       assertEq(len(passports), 1)
 
-    def test_errors(self):
+  def test_errors(self):
+    with Beyond() as beyond:
+      beyond.emailer = Emailer()
       user, network, volume, drive = setup(beyond)
       email = random_email()
       drive.invite(beyond, email)
@@ -76,7 +76,9 @@ with Beyond() as beyond:
       assertEq(len(emails), 1)
       assertIn('Unknown network', emails[0]['errors'])
 
-    def test_multiple_invitations(self):
+  def test_multiple_invitations(self):
+    with Beyond() as beyond:
+      beyond.emailer = Emailer()
       user, _, _, drive = setup(beyond)
       _, _, _, drive1 = setup(beyond, user)
       _, _, _, drive2 = setup(beyond, user)
@@ -94,7 +96,9 @@ with Beyond() as beyond:
                                   auth = u).json()[entities]),
                    2)
 
-    def test_drive_deleted(self):
+  def test_drive_deleted(self):
+    with Beyond() as beyond:
+      beyond.emailer = Emailer()
       user, network, volume, drive = setup(beyond)
       email = random_email()
       drive.invite(beyond, email)
@@ -108,7 +112,9 @@ with Beyond() as beyond:
                              auth = bob).json()['passports']
       assertEq(len(passports), 0)
 
-    def test_network_deleted(self):
+  def test_network_deleted(self):
+    with Beyond() as beyond:
+      beyond.emailer = Emailer()
       user, network, volume, drive = setup(beyond)
       email = random_email()
       drive.invite(beyond, email)
@@ -118,7 +124,9 @@ with Beyond() as beyond:
       assertEq(len(confirmation['errors']), 1)
       assertIn(network['name'], confirmation['errors'][0])
 
-    def test_delete(self):
+  def test_delete(self):
+    with Beyond() as beyond:
+      beyond.emailer = Emailer()
       user, network, volume, drive = setup(beyond)
       email = random_email()
       drive.invite(beyond, email)
@@ -126,5 +134,5 @@ with Beyond() as beyond:
         drive['name'], email),
                     auth = user)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

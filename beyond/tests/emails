@@ -8,11 +8,11 @@ import urllib.parse
 from utils import *
 
 # XXX: Test the right send with us template is called.
-with Beyond() as beyond:
 
-  class Test(unittest.TestCase):
+class Test(unittest.TestCase):
 
-    def test_welcome(self):
+  def test_welcome(self):
+    with Beyond() as beyond:
       emailer = Emailer()
       beyond.emailer = emailer
       user = User()
@@ -22,23 +22,24 @@ with Beyond() as beyond:
       for key in ['email', 'name']:
         assert key in email
 
-    def create_drive(user):
-      n = Network(name = 'network', owner = user)
-      n.put(beyond)
-      v = Volume(name = 'volume', network = n)
-      v.put(beyond)
-      d = Drive(name = 'Coucou', volume = v, description = "Lorem")
-      d.put(beyond)
-      return n, v, d
+  def create_drive(beyond, user):
+    n = Network(name = 'network', owner = user)
+    n.put(beyond)
+    v = Volume(name = 'volume', network = n)
+    v.put(beyond)
+    d = Drive(name = 'Coucou', volume = v, description = "Lorem")
+    d.put(beyond)
+    return n, v, d
 
-    def test_drive_invite(self):
+  def test_drive_invite(self):
+    with Beyond() as beyond:
       emailer = Emailer()
       beyond.emailer = emailer
       alice, bob = User(), User()
       alice.put(beyond), bob.put(beyond)
       assert 'User/Welcome' in emailer.get(alice['email'])
       assert 'User/Welcome' in emailer.get(bob['email'])
-      n, v, d = Test.create_drive(bob)
+      n, v, d = Test.create_drive(beyond, bob)
       # Invite alice.
       p = Passport(n, invitee = alice)
       p.put(beyond)
@@ -65,5 +66,5 @@ with Beyond() as beyond:
       assert 'icon' in email['drive']
       assertEq(len(emailer.get_specifics(alice['email'], 'Drive/Joined')), 0)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

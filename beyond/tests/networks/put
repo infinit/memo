@@ -16,11 +16,10 @@ def compare(orig, new):
     else:
       assertEq(orig[k], new[k])
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'infinit', owner = user)
@@ -32,7 +31,8 @@ with Beyond() as beyond:
       assert res['name'] == network['name']
       assert res['owner'] == network['owner']
 
-    def test_missing_field(self):
+  def test_missing_field(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       for key in ['consensus', 'overlay']:
@@ -43,7 +43,8 @@ with Beyond() as beyond:
         assert 'missing_field' in  res['error']
         assert key in res['error']
 
-    def test_invalid_format(self):
+  def test_invalid_format(self):
+    with Beyond() as beyond:
       user = User()
       def network_name(name):
         network = Network(name = name, owner = user)
@@ -52,7 +53,8 @@ with Beyond() as beyond:
         assert 'invalid_format' in r['error']
       pass
 
-    def test_repush(self):
+  def test_repush(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'infinit', owner = user)
@@ -61,7 +63,8 @@ with Beyond() as beyond:
       res = network.put(beyond, owner = user)
       assertEq(res.status_code, 200)
 
-    def _test_update(self, update, expected = 204):
+  def _test_update(self, update, expected = 204):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'infinit', owner = user)
@@ -79,7 +82,8 @@ with Beyond() as beyond:
         new_network = beyond.get('networks/%s' % network['name']).json()
       return new_network
 
-    def test_update(self):
+  def test_update(self):
+    with Beyond() as beyond:
       network = self._test_update(
         {'consensus': {'type': 'paxos', 'replication-factor': 11}},
         200)
@@ -92,7 +96,8 @@ with Beyond() as beyond:
       assertEq(network['version'], '9.9.9')
       network = self._test_update({}, 200)
 
-    def test_passports_are_kept(self):
+  def test_passports_are_kept(self):
+    with Beyond() as beyond:
       user, invitee = User(), User()
       user.put(beyond), invitee.put(beyond)
       network = Network(name = 'infinit', owner = user)
@@ -109,7 +114,8 @@ with Beyond() as beyond:
         auth = invitee).json()
       compare(invitee_passport, invitee_passport_2)
 
-    def test_endpoints_are_kept(self):
+  def test_endpoints_are_kept(self):
+    with Beyond() as beyond:
       user, invitee = User(), User()
       user.put(beyond), invitee.put(beyond)
       network = Network(name = 'infinit', owner = user)
@@ -148,5 +154,5 @@ with Beyond() as beyond:
       assertEq(endpoints_3[invitee['name']]['node_id'], endpoint)
       assertEq(endpoints_3[invitee['name']]['node_id_2'], endpoint)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

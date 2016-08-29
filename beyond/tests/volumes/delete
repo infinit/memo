@@ -9,11 +9,10 @@ from utils import *
 
 from copy import deepcopy
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'server1,server2', owner = user)
@@ -26,7 +25,8 @@ with Beyond() as beyond:
       throws(lambda: beyond.get('volumes/%s' % volume['name'], json = False),
              404)
 
-    def test_purge(self):
+  def test_purge(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'n', owner = user)
@@ -44,7 +44,8 @@ with Beyond() as beyond:
              404)
 
     # Check that we only remove objects owned by the user doing the purge.
-    def test_purge_multi_user(self):
+  def test_purge_multi_user(self):
+    with Beyond() as beyond:
       user1 = User()
       user1.put(beyond)
       user2 = User()
@@ -69,5 +70,5 @@ with Beyond() as beyond:
       beyond.get('volumes/%s' % volume2['name'])
       beyond.get('drives/%s' % drive2['name'])
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

@@ -10,11 +10,11 @@ from utils import *
 from copy import deepcopy
 
 limit = 5
-with Beyond(limits = {'networks': {'passports': 5}}) as beyond:
 
-  class Test(unittest.TestCase):
+class Test(unittest.TestCase):
 
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond(limits = {'networks': {'passports': 5}}) as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'infinit', owner = user)
@@ -43,5 +43,5 @@ with Beyond(limits = {'networks': {'passports': 5}}) as beyond:
       # Check ading the (limit + 1 )th fails.
       throws(lambda: put_passport(), 402)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()
