@@ -168,7 +168,7 @@ namespace infinit
         }
         fd.write(*_owner.block_store(), WriteTarget::all, b, true);
         handle.reset(
-          new FileHandle(*_owner.block_store(), fd, true, true, true));
+          new FileHandle(_owner, fd, true, true));
         remove_from_parent.abort();
       };
       return handle;

@@ -2348,6 +2348,75 @@ ELLE_TEST_SCHEDULED(create_excl)
     reactor::filesystem::Error);
 }
 
+ELLE_TEST_SCHEDULED(multiple_writers)
+{
+  struct stat st;
+  DHTs servers(1, with_cache = true);
+  auto client = servers.client(false);
+  char buffer[1024], buffer2[1024];
+  for (int i=0; i<1024; ++i)
+    buffer[i] = i % 391;
+  auto b = elle::WeakBuffer(buffer, 1024);
+  auto b2 = elle::WeakBuffer(buffer2, 1024);
+  {
+    auto h1 = client.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644);
+    auto h2 = client.fs->path("/file")->open(O_RDWR, 0644);
+    h1->write(b, 1024, 0);
+    auto sz = h2->read(b2, 1024, 0);
+    BOOST_CHECK_EQUAL(sz, 1024);
+    BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+    h2->write(b, 1024, 512);
+    sz = h1->read(b2, 1024, 512);
+    BOOST_CHECK_EQUAL(sz, 1024);
+    BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+  }
+  bool do_yield = true;
+  auto seq_write = [&] {
+      for (int i=0; i<20; ++i)
+      {
+        auto h = client.fs->path("/file")->open(O_RDWR, 0644);
+        for (int o = 0; o < 1024*30; ++o)
+        {
+          h->write(b, 1024, o*1024);
+          if (do_yield)
+            reactor::yield();
+        }
+      }
+  };
+  {
+    do_yield = true;
+    reactor::Thread t1("writer 1", seq_write);
+    reactor::Thread t2("writer 2", seq_write);
+    reactor::Thread t3("writer 3", seq_write);
+    reactor::Thread t4("writer 4", seq_write);
+    reactor::wait({t1, t2, t3, t4});
+    client.fs->path("/file")->stat(&st);
+    BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
+    auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
+    for (int o = 0; o < 1024*30; ++o)
+    {
+      h->read(b2, 1024, o * 1024);
+      BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+    }
+  }
+  {
+    do_yield = false;
+    reactor::Thread t1("writer 1", seq_write);
+    reactor::Thread t2("writer 2", seq_write);
+    reactor::Thread t3("writer 3", seq_write);
+    reactor::Thread t4("writer 4", seq_write);
+    reactor::wait({t1, t2, t3, t4});
+    client.fs->path("/file")->stat(&st);
+    BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
+    auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
+    for (int o = 0; o < 1024*30; ++o)
+    {
+      h->read(b2, 1024, o * 1024);
+      BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+    }
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -2380,4 +2449,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(erased_group_recovery), 0, 5);
   suite.add(BOOST_TEST_CASE(remove_permissions),0, 5);
   suite.add(BOOST_TEST_CASE(create_excl),0, 5);
+  suite.add(BOOST_TEST_CASE(multiple_writers),0, 3600);
 }

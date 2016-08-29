@@ -657,11 +657,12 @@ namespace infinit
       this->_filedata->_header.size = new_size;
       this->_commit(WriteTarget::data);
 
-      // propagate to all write-opened file handles
-      auto it = _size_map.find(_filedata->address());
-      if (it != _size_map.end())
+      // propagate to all opened file handles
+      auto it = _owner.file_buffers().find(_filedata->address());
+      if (it != _owner.file_buffers().end())
       {
-        for (auto fh: it->second.second)
+        auto fh = it->second.lock();
+        if (fh)
         {
           bool dirty = fh->_fat_changed;
           if (!dirty)
@@ -678,7 +679,7 @@ namespace infinit
           if (dirty)
             ELLE_WARN("Propagating truncate(%s) of %s to open dirty file handle with size %s",
                       new_size, _name, fh->_file._header.size);
-          fh->ftruncate(new_size);
+          fh->ftruncate(nullptr, new_size);
         }
       }
     }
@@ -704,7 +705,7 @@ namespace infinit
       }
       return umbrella([&] {
         return std::unique_ptr<rfs::Handle>(
-          new FileHandle(*_owner.block_store(), *_filedata, needw, false, true));
+          new FileHandle(_owner, *_filedata, needw, false));
       });
     }
 
@@ -718,7 +719,7 @@ namespace infinit
       _fetch();
       //ELLE_DEBUG("Forcing entry %s", full_path());
       return std::unique_ptr<rfs::Handle>(
-        new FileHandle(*_owner.block_store(), *_filedata, true));
+        new FileHandle(_owner, *_filedata, true));
     }
 
     model::blocks::ACLBlock*

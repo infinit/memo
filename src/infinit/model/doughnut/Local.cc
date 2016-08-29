@@ -433,6 +433,12 @@ namespace infinit
                 {
                   ELLE_WARN("drop client %s: %s", **socket, e);
                 }
+                elle::With<reactor::Thread::NonInterruptible>() << [&]
+                {
+                  ELLE_DEBUG("%s: RESETING", this);
+                  (*socket).reset();
+                  ELLE_DEBUG("%s: RESETED", this);
+                };
               });
           }
         };

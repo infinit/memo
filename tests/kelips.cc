@@ -336,6 +336,17 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
   ELLE_TRACE("list fsa");
   ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
   ELLE_TRACE("done");
+  ELLE_TRACE("kill fsa");
+  fsa.reset();
+  ELLE_TRACE("kill fsca");
+  fsca.reset();
+  ELLE_TRACE("kill fsc");
+  fsc.reset();
+  ELLE_TRACE("kill fswrite");
+  fswrite.reset();
+  ELLE_TRACE("kill nodes");
+  nodes.clear();
+  ELLE_TRACE("kill the rest");
 }
 // ELLE_TEST_SCHEDULED(conflictor)
 // {
