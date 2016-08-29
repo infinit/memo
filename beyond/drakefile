@@ -118,7 +118,7 @@ def configure(
   variables.update(secrets)
   with drake.templating.Context(content = variables):
     drake.node('bin/beyond.tmpl')
-    drake.node('etc/uwsgi/apps-available/beyond.xml.tmpl')
+    drake.node('etc/uwsgi/beyond.xml.tmpl')
     drake.node('src/wsgi.py.tmpl')
     drake.node('src/validation.py.tmpl')
 
@@ -252,9 +252,12 @@ def configure(
     drake.copy(
       drake.nodes('etc/nginx/sites-available/beyond',
                   'etc/rsyslog.d/10-infinit.conf',
-                  'etc/uwsgi/apps-available/beyond.xml',
                   'usr/share/ca-certificates/extra/infinit.crt'),
       'debian',
+    ),
+    drake.copy(
+      drake.nodes('etc/uwsgi/beyond.xml'),
+      'debian/opt/infinit/beyond',
     ),
   )
   debian = drake.Rule('debian')
