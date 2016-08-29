@@ -173,13 +173,11 @@ def configure(
       'rsa-3.3.dist-info',
       'six-1.10.0.dist-info',
     ])
-  print(python_prefix())
   crypto = drake.PythonModule(
     'pycrypto',
     python_prefix(),
     dependencies = [],
     module_name = 'Crypto')
-  print(crypto.targets())
   PIL = drake.PythonModule(
     'PILLOW', python_prefix(),
     module_name = 'PIL',
