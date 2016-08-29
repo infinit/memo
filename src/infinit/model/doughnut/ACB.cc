@@ -837,16 +837,19 @@ namespace infinit
             key = secret;
           }
           ELLE_DUMP("%s: new block secret: %s", *this, key.get());
-          auto version = this->doughnut()->version();
-          auto elle_version = elle_serialization_version(version);
+          auto seal_version = this->doughnut()->version();
+          static bool no_encrypt = elle::os::inenv("INFINIT_DISABLE_TOKEN_ENCRYPT");
+          if (no_encrypt)
+            seal_version = std::min(seal_version, elle::Version(0, 6, 0));
+          auto elle_version = elle_serialization_version(seal_version);
           elle::Buffer secret_buffer;
-          if (version < elle::Version(0, 7, 0))
+          if (seal_version < elle::Version(0, 7, 0))
             secret_buffer =
               elle::serialization::json::serialize(key.get(), elle_version);
           else
             secret_buffer = key.get().password().string();
-          this->_seal_version = version;
-          bool use_encrypt = version >= elle::Version(0, 7, 0);
+          this->_seal_version = seal_version;
+          bool use_encrypt = seal_version >= elle::Version(0, 7, 0);
           this->_owner_token = use_encrypt ?
             this->owner_key()->encrypt(secret_buffer, acb_padding)
             : this->owner_key()->seal(secret_buffer);
