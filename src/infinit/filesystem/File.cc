@@ -711,6 +711,8 @@ namespace infinit
     std::unique_ptr<rfs::Handle>
     File::create(int flags, mode_t mode)
     {
+      if (flags & O_EXCL)
+        THROW_EXIST;
       if (flags & O_TRUNC)
         truncate(0);
       _fetch();
@@ -720,7 +722,7 @@ namespace infinit
     }
 
     model::blocks::ACLBlock*
-    File::_header_block()
+    File::_header_block(bool)
     {
       _ensure_first_block();
       return dynamic_cast<model::blocks::ACLBlock*>(_first_block.get());

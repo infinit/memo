@@ -42,7 +42,7 @@ ELLE_LOG_COMPONENT("infinit-daemon");
 
 #if __APPLE__
 # undef daemon
-extern int daemon(int, int);
+extern "C" int daemon(int, int);
 #endif
 
 infinit::Infinit ifnt;

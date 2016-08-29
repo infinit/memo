@@ -241,8 +241,6 @@ namespace infinit
         int
         group_of(Address const& address) const;
         void
-        gossipListener();
-        void
         gossipEmitter();
         void
         pinger();
@@ -341,9 +339,8 @@ namespace infinit
         reactor::network::RDVSocket _gossip;
         reactor::Mutex _udp_send_mutex;
         reactor::Thread::unique_ptr
-          _emitter_thread, _listener_thread, _pinger_thread,
-          _rereplicator_thread, _rdv_connect_thread, _rdv_connect_thread_local,
-          _rdv_connect_gossip_thread;
+          _emitter_thread, _pinger_thread,
+          _rereplicator_thread;
         std::default_random_engine _gen;
         std::unordered_map<int, std::shared_ptr<PendingRequest>>
           _pending_requests;
@@ -356,7 +353,6 @@ namespace infinit
         Endpoints _pending_bootstrap_endpoints;
         std::vector<Address> _pending_bootstrap_address;
         std::vector<Address> _bootstrap_requests_sent;
-        reactor::network::UTPServer _remotes_server;
         int _next_id;
         int _port;
         bool _observer;
@@ -364,8 +360,6 @@ namespace infinit
         int _dropped_gets;
         int _failed_puts;
         std::unordered_map<Address, int> _under_duplicated;
-        std::string _rdv_id;
-        std::string _rdv_host;
         std::unordered_map<std::string, elle::Buffer> _challenges;
         ELLE_ATTRIBUTE(
           (std::unordered_map<Address, std::vector<Overlay::WeakMember>>),

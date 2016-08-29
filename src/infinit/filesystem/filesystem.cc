@@ -744,6 +744,9 @@ namespace std
       case infinit::filesystem::OperationType::insert:
         out << "insert";
         break;
+      case infinit::filesystem::OperationType::insert_exclusive:
+        out << "insert_exclusive";
+        break;
       case infinit::filesystem::OperationType::update:
         out << "update";
         break;
