@@ -4,6 +4,7 @@
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
+#include <elle/Option.hh>
 #include <elle/utility/Move.hh>
 
 #include <cryptography/hash.hh>
@@ -22,6 +23,8 @@ namespace infinit
   {
     namespace doughnut
     {
+      typedef elle::Option<cryptography::rsa::PublicKey, elle::Buffer>
+      KeyOrHash;
 
       cryptography::rsa::PublicKey
       deserialize_key_hash(elle::serialization::SerializerIn& s,
@@ -31,15 +34,19 @@ namespace infinit
       {
         if (v < elle::Version(0, 7, 0))
           return s.deserialize<cryptography::rsa::PublicKey>(field_name);
-        else
+        KeyOrHash koh = s.deserialize<KeyOrHash>(field_name + "_koh");
+        if (koh.is<elle::Buffer>())
         {
-          elle::Buffer b;
-          s.serialize(field_name + "_hash", b);
           if (!dn)
             elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
           ELLE_ASSERT(dn);
-          auto k = dn->resolve_key(b);
-          return *k;
+          auto buf = koh.get<elle::Buffer>();
+          auto k = dn->resolve_key(buf);
+          return *k; // Dont move me I'm cached in doughnut!
+        }
+        else
+        {
+          return std::move(koh.get<cryptography::rsa::PublicKey>());
         }
       }
 
@@ -50,27 +57,34 @@ namespace infinit
                          std::string const& field_name,
                          Doughnut* dn)
       {
+        // Pre-0.7 serializes the key, post 0.7 serializes KeyOrHash
         if (v < elle::Version(0, 7, 0))
           s.serialize(field_name, key);
         else
         {
           if (s.in())
           {
-            elle::Buffer b;
-            s.serialize(field_name + "_hash", b);
-            if (!dn)
-              elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
-            ELLE_ASSERT(dn);
-            auto k = dn->resolve_key(b);
-            key = std::move(*k);
+            key = std::move(deserialize_key_hash(
+              dynamic_cast<elle::serialization::SerializerIn&>(s),
+              v, field_name, dn));
           }
           else
           {
-            if (!dn)
-              elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
-            ELLE_ASSERT(dn);
-            auto hash = dn->ensure_key(key);
-            s.serialize(field_name + "_hash", hash);
+            static bool disable_hash = elle::os::inenv("INFINIT_DISABLE_KEY_HASH");
+            if (disable_hash)
+            {
+              KeyOrHash koh(key);
+              s.serialize(field_name + "_koh", koh);
+            }
+            else
+            {
+              if (!dn)
+                elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
+              ELLE_ASSERT(dn);
+              auto hash = dn->ensure_key(key);
+              KeyOrHash koh(hash);
+              s.serialize(field_name + "_koh", koh);
+            }
           }
         }
       }
