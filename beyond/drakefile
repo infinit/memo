@@ -208,11 +208,13 @@ def configure(
   build = drake.Rule('build')
   build << binaries
   built = list(install_nodes(where = '.', how = copy_python))
-  package = drake.python.Package('beyond', python_prefix(), built,
-                                 fullname = 'infinit.beyond')
+  mods = list(
+    chain(*(p.targets() for p in [oauth2client, crypto, PIL])))
+  package = drake.python.Package(
+    'beyond', python_prefix(), built + mods,
+    fullname = 'infinit.beyond')
   build << built
-  for p in oauth2client, crypto, PIL:
-    build << p.targets()
+  build << mods
 
   install = drake.Rule('install')
   install << install_nodes(
