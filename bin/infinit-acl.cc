@@ -25,6 +25,17 @@ static const char group_prefix = '@';
 
 static
 bool
+fallback_enabled(boost::program_options::variables_map const& args)
+{
+#ifdef INFINIT_WINDOWS
+  return true;
+#else
+  return flag(args, "fallback-xattrs");
+#endif
+}
+
+static
+bool
 is_admin(std::string const& obj)
 {
   return obj.length() > 0 && obj[0] == admin_prefix;
@@ -500,7 +511,7 @@ COMMAND(list)
     throw CommandLineError("missing path argument");
   bool recursive = flag(args, "recursive");
   bool verbose = flag(args, "verbose");
-  bool fallback = flag(args, "fallback-xattrs");
+  bool fallback = fallback_enabled(args);
   for (auto const& path: paths)
   {
     enforce_in_mountpoint(path, fallback);
@@ -568,7 +579,7 @@ COMMAND(set)
   if (traverse && mode.find("setr") != 0)
     throw elle::Error("--traverse can only be used with mode 'r', 'rw'");
   bool verbose = flag(args, "verbose");
-  bool fallback = flag(args, "fallback-xattrs");
+  bool fallback = fallback_enabled(args);
   bool fetch = flag(args, "fetch");
   // Don't do any operations before checking paths.
   for (auto const& path: paths)
@@ -674,7 +685,7 @@ COMMAND(group)
     throw CommandLineError("no action specified");
   if (action_count > 1)
     throw CommandLineError("specify only one action at a time");
-  bool fallback = flag(args, "fallback-xattrs");
+  bool fallback = fallback_enabled(args);
   std::string path = mandatory<std::string>(args, "path", "path in volume");
   enforce_in_mountpoint(path, fallback);
   bool fetch = flag(args, "fetch");
@@ -718,7 +729,7 @@ COMMAND(register_)
   auto user_name = mandatory<std::string>(args, "user", "user name");
   auto network_name = mandatory<std::string>(args, "network", "network name");
   auto network = ifnt.network_get(network_name, self);
-  bool fallback = flag(args, "fallback-xattrs");
+  bool fallback = fallback_enabled(args);
   auto path = mandatory<std::string>(args, "path", "path to mountpoint");
   enforce_in_mountpoint(path, fallback);
   auto user = ifnt.user_get(user_name, flag(args, "fetch"));
@@ -752,9 +763,12 @@ main(int argc, char** argv)
       {
         { "path,p", value<std::vector<std::string>>(), "paths" },
         { "recursive,R", bool_switch(), "list recursively" },
-        fallback_option,
         verbose_option,
       },
+      {},
+      {
+        fallback_option,
+      }
     },
     {
       "set",
@@ -776,10 +790,13 @@ main(int argc, char** argv)
         { "recursive,R", bool_switch(), "apply recursively" },
         { "traverse", bool_switch(),
           "add read permissions to parent directories" },
-        fallback_option,
         verbose_option,
         fetch_option,
       },
+      {},
+      {
+        fallback_option,
+      }
     },
     {
       "group",
@@ -810,10 +827,13 @@ main(int argc, char** argv)
                         "(prefix: %s<group>, %s<admin>)",
                         group_prefix, admin_prefix) },
         { "path,p", value<std::string>(), "a path within the volume" },
-        fallback_option,
         verbose_option,
         fetch_option,
       },
+      {},
+      {
+        fallback_option,
+      }
     },
     {
       "register",
@@ -824,10 +844,12 @@ main(int argc, char** argv)
         { "user,u", value<std::string>(), "user to register"},
         { "path,p", value<std::string>(), "path to mountpoint" },
         { "network,n", value<std::string>(), "name of the network"},
-        { "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
-          "if system xattrs are not suppported" },
         fetch_option,
       },
+      {},
+      {
+        fallback_option,
+      }
     }
   };
   Modes hidden_modes = {

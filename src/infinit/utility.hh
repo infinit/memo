@@ -4,7 +4,7 @@
 # include <boost/filesystem.hpp>
 
 # include <elle/os/environ.hh>
-# include <elle/system/home_directory.hh>
+# include <elle/system/user_paths.hh>
 # include <elle/system/username.hh>
 
 namespace infinit

@@ -25,11 +25,10 @@ class FakeGCS:
   def download_url(self, bucket, path, *args, **kwargs):
     return self.__icons[path]
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(owner = user)
@@ -51,14 +50,14 @@ with Beyond() as beyond:
           extra_headers = {'Content-Type': 'image/%s' % format}
           beyond.put('drives/%s/icon' % drive['name'],
                      extra_headers = extra_headers,
-                     auth = user.private_key,
+                     auth = user,
                      json = None,
                      data = bs.getvalue())
           res = beyond.get('drives/%s/icon' % drive['name'])
           assertEq(res.status_code, 303)
           assert 'Location' in res.headers
           beyond.delete('drives/%s/icon' % drive['name'],
-                        auth = user.private_key)
+                        auth = user)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

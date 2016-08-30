@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from infinit.beyond.bottle import Entity
+from infinit.beyond.bottle import Entity, Optional
 
 import unittest
 
@@ -22,7 +22,7 @@ class Test(unittest.TestCase):
       assertIn('missing mandatory JSON key', e.args[0])
       assertIn('name', e.args[0])
 
-  def test_optional_field_added(self):
+  def test_default_field_added(self):
 
     class Foo(metaclass = Entity,
               fields = {
@@ -38,6 +38,21 @@ class Test(unittest.TestCase):
     f = Foo.from_json(None, {'name': 'polux', 'with_default': 3131})
     assertEq(f.name, 'polux')
     assertEq(f.with_default, 3131)
+
+  def test_optional_field(self):
+
+    class Foo(metaclass = Entity,
+              insert = 'network_insert',
+              update = 'network_update',
+              fields = {
+                'name': Optional(),
+              }):
+      pass
+    expected = {'name': 'lobster'}
+    assertEq(Foo.from_json(None, {}).json(), {})
+    assertEq(Foo.from_json(None, expected).json(), expected)
+    assertEq(Foo(None, **{}).json(), {})
+    assertEq(Foo(None, **expected).json(), expected)
 
   def test_field_removed(self):
 

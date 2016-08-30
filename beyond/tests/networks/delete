@@ -9,19 +9,19 @@ from utils import *
 
 from copy import deepcopy
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'infinit', owner = user)
       network.put(beyond, owner = user)
       beyond.delete('networks/%s' % network['name'],
-                    auth = user.private_key)
+                    auth = user)
 
-    def test_push_passport_and_delete(self):
+  def test_push_passport_and_delete(self):
+    with Beyond() as beyond:
       alice, bob = User(), User()
       alice.put(beyond), bob.put(beyond)
       network = Network(name = 'infinit', owner = alice)
@@ -29,18 +29,20 @@ with Beyond() as beyond:
       passport = Passport(network, bob)
       passport.put(beyond)
       beyond.delete('networks/%s' % network['name'],
-                    auth = alice.private_key)
+                    auth = alice)
 
-    def test_push_pull_push_pull(self):
+  def test_push_pull_push_pull(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'infinit', owner = user)
       for i in range(0, 10):
         network.put(beyond, owner = user)
         beyond.delete('networks/%s' % network['name'],
-                      auth = user.private_key)
+                      auth = user)
 
-    def test_authentication(self):
+  def test_authentication(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'infinit', owner = user)
@@ -49,28 +51,31 @@ with Beyond() as beyond:
              json = False,
              expected = 401)
 
-    def test_deleting_someone_else_network(self):
+  def test_deleting_someone_else_network(self):
+    with Beyond() as beyond:
       alice, bob = User(), User()
       alice.put(beyond), bob.put(beyond)
       network = Network(name = 'infinit', owner = alice)
       network.put(beyond, owner = alice)
       throws(lambda: beyond.delete('networks/%s' % network['name'],
-                                   auth = bob.private_key),
+                                   auth = bob),
              json = False,
              expected = 403)
 
-    def test_deleting_an_unknown_network(self):
+  def test_deleting_an_unknown_network(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       throws(lambda: beyond.get('networks/%s/unknown' % user['name']),
              json = False,
              expected = 404)
       throws(lambda: beyond.delete('networks/%s/unknown' % user['name'],
-                                   auth = user.private_key),
+                                   auth = user),
              json = False,
              expected = 404)
 
-    def test_purge_normal(self):
+  def test_purge_normal(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'n', owner = user)
@@ -80,7 +85,7 @@ with Beyond() as beyond:
       drive = Drive(name = 'd', volume = volume)
       drive.put(beyond)
       beyond.delete('networks/%s' % network['name'],
-                    auth = user.private_key,
+                    auth = user,
                     params = {'purge': 'true'})
       throws(lambda: beyond.get('networks/%s' % network['name'], json = False),
              404)
@@ -89,8 +94,9 @@ with Beyond() as beyond:
       throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
              404)
 
-    # Check that we don't skip drives when a volume has already been pulled.
-    def test_purge_partial(self):
+  # Check that we don't skip drives when a volume has already been pulled.
+  def test_purge_partial(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'n', owner = user)
@@ -99,9 +105,9 @@ with Beyond() as beyond:
       volume.put(beyond)
       drive = Drive(name = 'd', volume = volume)
       drive.put(beyond)
-      beyond.delete('volumes/%s' % volume['name'], auth = user.private_key)
+      beyond.delete('volumes/%s' % volume['name'], auth = user)
       beyond.delete('networks/%s' % network['name'],
-                    auth = user.private_key,
+                    auth = user,
                     params = {'purge': 'true'})
       throws(lambda: beyond.get('networks/%s' % network['name'], json = False),
              404)
@@ -110,8 +116,9 @@ with Beyond() as beyond:
       throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
              404)
 
-    # Check that we only remove objects owned by the user doing the purge.
-    def test_purge_multi_user(self):
+  # Check that we only remove objects owned by the user doing the purge.
+  def test_purge_multi_user(self):
+    with Beyond() as beyond:
       bob = User()
       bob.put(beyond)
       alice = User()
@@ -127,7 +134,7 @@ with Beyond() as beyond:
       drive2 = Drive(name = 'd2', owner = alice, volume = volume2)
       drive2.put(beyond)
       beyond.delete('networks/%s' % network['name'],
-                    auth = bob.private_key,
+                    auth = bob,
                     params = {'purge': 'true'})
       throws(lambda: beyond.get('networks/%s' % network['name'], json = False),
              404)
@@ -139,5 +146,5 @@ with Beyond() as beyond:
       beyond.get('volumes/%s' % volume2['name'])
       beyond.get('drives/%s' % drive2['name'])
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

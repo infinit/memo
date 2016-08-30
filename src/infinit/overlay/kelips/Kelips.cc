@@ -105,27 +105,6 @@ struct PrettyEndpoint
   ELLE_ATTRIBUTE_R(std::string, repr);
 };
 
-
-static void retry_forever(elle::Duration start_delay, elle::Duration max_delay,
-                          std::string action_name,
-                          std::function<void()> action)
-{
-  elle::Duration delay = start_delay;
-  while (true)
-  {
-    try
-    {
-      action();
-      return;
-    }
-    catch (elle::Exception const& e)
-    {
-      ELLE_WARN("%s: execption %s", action_name, e.what());
-      delay = std::min(delay * 2, max_delay);
-      reactor::sleep(delay);
-    }
-  }
-}
 namespace std
 {
   namespace chrono
@@ -908,24 +887,6 @@ namespace infinit
         this->_self = Address(this->doughnut()->id());
         if (!local)
           ELLE_LOG("Running in observer mode");
-        _remotes_server.listen(0, v6);
-        ELLE_DEBUG("remotes server listening on %s", _remotes_server.local_endpoint());
-        _rdv_host = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
-        _rdv_id = elle::sprintf("%x", this->_self);
-        if (!_rdv_host.empty())
-          this->_rdv_connect_thread.reset(
-            new reactor::Thread(
-              "rdv_connect",
-              [this]
-              {
-                // The remotes_server does not accept incoming connections,
-                // it is used to connect Remotes
-                retry_forever(10_sec, 120_sec, "Remote RDV connect",
-                              [&] {
-                                this->_remotes_server.rdv_connect(
-                                  this->_rdv_id + "_", this->_rdv_host, 120_sec);
-                              });
-              }));
         start();
         if (auto l = local)
         {
@@ -1035,19 +996,6 @@ namespace infinit
               ELLE_DEBUG("add local endpoint %s:%s", addr, this->_port);
             }
           }
-          if (!this->_rdv_host.empty())
-            this->_rdv_connect_thread_local.reset(
-              new reactor::Thread(
-                "rdv_connect",
-                [this,l] {
-                  retry_forever(10_sec, 120_sec, "RDV connect",
-                                [&] {
-                                  l->utp_server()->rdv_connect(
-                                    this->_rdv_id, this->_rdv_host, 120_sec);
-                                });
-                }));
-            else
-              l->utp_server()->set_local_id(this->_rdv_id);
           reload_state(*l);
           this->engage();
         }
@@ -1070,14 +1018,7 @@ namespace infinit
         if (this->local())
           this->local()->utp_server()->socket()->unregister_reader("KELIPSGS");
         _emitter_thread.reset();
-        _listener_thread.reset();
         _pinger_thread.reset();
-        ELLE_DEBUG("%s: destroy rdv thread", *this);
-        _rdv_connect_thread.reset();
-        _rdv_connect_thread_local.reset();
-        _rdv_connect_gossip_thread.reset();
-        // Terminate rdv threads
-        ELLE_DEBUG("%s: destroy rdv threads", *this);
         this->_state.contacts.clear();
         ELLE_DEBUG("%s: destroyed", *this);
       }
@@ -1094,7 +1035,7 @@ namespace infinit
             elle::unconst(*this->doughnut()),
             location.id(),
             location.endpoints(),
-            elle::unconst(this)->_remotes_server,
+            elle::unconst(this)->doughnut()->dock().utp_server(),
             model::EndpointsRefetcher(
               std::bind(&Node::_refetch_endpoints, this, location.id())),
             this->_config.rpc_protocol);
@@ -1251,58 +1192,11 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: start serving", this);
         if (!_observer)
           this->bootstrap(true);
-        this->_gossip.socket()->close();
-        if (!this->local())
-        {
-          bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
-            && doughnut()->version() >= elle::Version(0, 7, 0);
-          if (v6)
-            this->_gossip.bind(
-              Endpoint(boost::asio::ip::address_v6::any(), this->_port).udp());
-          else
-            this->_gossip.bind(
-              Endpoint(boost::asio::ip::address_v4::any(), this->_port).udp());
-          if (!this->_rdv_host.empty())
-            this->_rdv_connect_gossip_thread.reset(
-              new reactor::Thread(
-                "rdv gossip connect", [this]
-                {
-                  std::string id = elle::sprintf("%x", _self);
-                  std::string host = this->_rdv_host;
-                  int port = 7890;
-                  auto p = host.find_last_of(':');
-                  if (p != host.npos)
-                  {
-                    port = std::stoi(host.substr(p+1));
-                    host = host.substr(0, p);
-                  }
-                  retry_forever(
-                    10_sec, 120_sec, "RDV connect",
-                    [&]
-                    {
-                      this->_gossip.rdv_connect(id, host, port, 120_sec);
-                    });
-                }));
-          else
-          {
-            std::string id = elle::sprintf("%x", _self);
-            this->_gossip.set_local_id(id);
-          }
-          ELLE_DEBUG("member of group %s", this->_group);
-          this->_listener_thread.reset(new reactor::Thread(
-                                   "listener",
-                                   std::bind(&Node::gossipListener, this)));
-          ELLE_LOG("%s: listening as observer on %s",
-                   this, this->_gossip.local_endpoint().port());
-        }
-        else
-        {
-          this->local()->utp_server()->socket()->register_reader(
-            "KELIPSGS", std::bind(&Node::onPacket, this, std::placeholders::_1,
-              std::placeholders::_2));
-          ELLE_LOG("%s: listening on %s",
-            this, this->local()->utp_server()->local_endpoint());
-        }
+        this->doughnut()->dock().utp_server().socket()->register_reader(
+          "KELIPSGS", std::bind(&Node::onPacket, this, std::placeholders::_1,
+            std::placeholders::_2));
+        ELLE_LOG("%s: listening on %s",
+          this, this->doughnut()->dock().utp_server().local_endpoint());
         if (!_observer)
         {
           this->_pinger_thread.reset(
@@ -1463,13 +1357,12 @@ namespace infinit
         b.size(b.size()+8);
         memmove(b.mutable_contents()+8, b.contents(), b.size()-8);
         memcpy(b.mutable_contents(), "KELIPSGS", 8);
-        auto& sock = this->local() ? *this->local()->utp_server()->socket()
-          : _gossip;
+        auto& sock = this->doughnut()->dock().utp_server().socket();
         static bool async = getenv("INFINIT_KELIPS_ASYNC_SEND");
         if (async)
         {
           std::shared_ptr<elle::Buffer> sbuf = std::make_shared<elle::Buffer>(std::move(b));
-          sock.socket()->async_send_to(
+          sock->socket()->async_send_to(
             boost::asio::buffer(sbuf->contents(), sbuf->size()),
             e.udp(),
             [sbuf] (  const boost::system::error_code& error,
@@ -1480,7 +1373,7 @@ namespace infinit
         {
           try
           {
-            sock.send_to(reactor::network::Buffer(b.contents(), b.size()), e.udp());
+            sock->send_to(reactor::network::Buffer(b.contents(), b.size()), e.udp());
           }
           catch (reactor::network::Exception const&)
           { // FIXME: do something
@@ -1749,34 +1642,6 @@ namespace infinit
           ELLE_WARN("%s: Unknown packet type %s", *this, typeid(*p).name());
         #undef CASE
       };
-
-      void
-      Node::gossipListener()
-      {
-        elle::Buffer buf;
-        while (true)
-        {
-          buf.size(20000);
-          boost::asio::ip::udp::endpoint udp_endpoint;
-          ELLE_DUMP("%s: receiving packet...", *this);
-          int sz = _gossip.receive_from(reactor::network::Buffer(buf.mutable_contents(), buf.size()),
-                                        udp_endpoint);
-          Endpoint source(udp_endpoint);
-          buf.size(sz);
-          ELLE_DUMP("%s: received %s bytes from %s:\n%s", *this, sz, source, buf.string());
-          memmove(buf.mutable_contents(), buf.contents()+8, buf.size()-8);
-          buf.size(sz - 8);
-          ELLE_DUMP("%s: received %s bytes from %s:\n%s", *this, sz, source, buf.string());
-          static int counter = 1;
-
-          static bool async = getenv("INFINIT_KELIPS_ASYNC");
-          if (async)
-            new reactor::Thread(elle::sprintf("process %s", counter++),
-              [buf, source, this] { this->process(buf, source);}, true);
-          else
-            process(buf, source);
-        }
-      }
 
       template<typename T, typename U, typename G, typename C>
       void
@@ -3548,9 +3413,8 @@ namespace infinit
         auto peers = endpoints_extract(it->second.endpoints);
         // this yields, thus invalidating the iterator
         ELLE_DEBUG("contacting %s on %s", id, peers);
-        auto& rsock =
-          this->local() ? *this->local()->utp_server()->socket() : _gossip;
-        auto res = rsock.contact(id, Endpoints(peers).udp());
+        auto& rsock = this->doughnut()->dock().utp_server().socket();
+        auto res = rsock->contact(id, Endpoints(peers).udp());
         it = contacts->find(address);
         if (it == contacts->end())
           return;
@@ -3568,11 +3432,9 @@ namespace infinit
           b.size(b.size()+8);
           memmove(b.mutable_contents()+8, b.contents(), b.size()-8);
           memcpy(b.mutable_contents(), "KELIPSGS", 8);
-          auto& sock =
-            this->local() ? *this->local()->utp_server()->socket() : _gossip;
           try
           {
-            sock.send_to(reactor::network::Buffer(b.contents(), b.size()), res);
+            rsock->send_to(reactor::network::Buffer(b.contents(), b.size()), res);
           }
           catch (reactor::network::Exception const&)
           { // FIXME: do something

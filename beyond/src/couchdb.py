@@ -135,6 +135,8 @@ class CouchDBDatastore:
                   views = [
                     ('per_network_id',
                      self.__volumes_per_network_id_map),
+                    ('per_owner_key',
+                     self.__volumes_per_owner_map),
                   ])
     self.__design('drives',
                   updates = [('update', self.__drive_update)],
@@ -335,6 +337,11 @@ class CouchDBDatastore:
       res = rows[0].value
     return res
 
+  def owner_volumes_fetch(self, owner):
+    rows = self.__couchdb['volumes'].view('beyond/per_owner_key',
+                                          key = owner.public_key)
+    return self.__rows_to_networks(rows)
+
   ## ------- ##
   ## Pairing ##
   ## ------- ##
@@ -421,6 +428,11 @@ class CouchDBDatastore:
             self.__couchdb['volumes'].view(
               'beyond/per_network_id',
               keys = list(map(lambda n: n.id, networks))))
+
+  def user_volumes_fetch(self, user):
+    return (doc.value for doc in
+            self.__couchdb['volumes'].view(
+              'beyond/per_owner_key', key = user.public_key))
 
   def __network_update(network, req):
     if network is None:
@@ -525,6 +537,9 @@ class CouchDBDatastore:
 
   def __volumes_per_network_id_map(volume):
     yield volume['network'], volume
+
+  def __volumes_per_owner_map(volume):
+    yield volume.get('owner', None), volume
 
   ## ----- ##
   ## Drive ##

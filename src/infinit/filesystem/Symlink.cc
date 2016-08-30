@@ -45,8 +45,10 @@ namespace infinit
     }
 
     model::blocks::ACLBlock*
-    Symlink::_header_block()
+    Symlink::_header_block(bool force)
     {
+      if (force && !this->_block)
+        this->_fetch();
       return dynamic_cast<model::blocks::ACLBlock*>(this->_block.get());
     }
 
@@ -67,6 +69,8 @@ namespace infinit
       {
         this->_fetch();
         this->Node::stat(st);
+        if (this->_h.symlink_target)
+          st->st_size = this->_h.symlink_target->size();
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {

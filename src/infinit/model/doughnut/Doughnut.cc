@@ -68,10 +68,10 @@ namespace infinit
           storage
             ? this->_consensus->make_local(std::move(port), std::move(storage))
             : nullptr)
-        , _overlay(overlay_builder(*this, this->_local))
-        , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
         // FIXME: move protocol configuration to doughnut
         , _dock(*this, Protocol::all)
+        , _overlay(overlay_builder(*this, this->_local))
+        , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
         , _terminating()
       {
         if (this->_local)
@@ -183,6 +183,7 @@ namespace infinit
           this->_local->cleanup();
         this->_consensus.reset();
         this->_overlay.reset();
+        this->_dock.cleanup();
         if (this->_local)
         {
           if (!this->_local.unique())

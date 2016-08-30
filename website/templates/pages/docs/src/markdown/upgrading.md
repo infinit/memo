@@ -30,7 +30,7 @@ Upgrading process
 
 The following provides advices that should be followed in order to make sure the process of upgrading goes as smoothly as possible:
 
-1. Ask the users of the network to update their software (Infinit Drive or command-line tools) to the newest version available on [Infinit's website](http://infinit.sh/get-started)<!-- XXX[to change for /update] -->. Note that the updating method depends on your operating system (Linux, Windows, MacOS X etc.) and the way you retrieved the Infinit software (_apt-get_, _homebrew_, tarball etc.).
+1. Ask the users of the network to update their software (Infinit Drive or command-line tools) to the newest version available on [Infinit's website](http://infinit.sh/get-started)<!-- XXX[to change for /update] -->. Note that the updating method depends on your operating system (Linux, Windows, macOS etc.) and the way you retrieved the Infinit software (_apt-get_, _homebrew_, tarball etc.).
 2. Once all the users have updated their software, say to version _0.5.2_, the administrator can proceed to upgrading the network. In the meantime, the users can keep using the network through the new client software as it will operate in the compatibility version defined in the network descriptor, as detailed earlier.
 3. The administrator can upgrade the network descriptor to the version of his/her choice. Make sure not to exceed the highest version supported by all the clients or some will find themselves incapable to connect to the network. The following example shows how to upgrade a network descriptor:
    ```

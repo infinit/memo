@@ -9,6 +9,7 @@ namespace infinit
     FileSystem
     _init(std::string const& volume_name,
           std::shared_ptr<model::Model> model,
+          boost::optional<cryptography::rsa::PublicKey> owner,
           boost::optional<boost::filesystem::path> root_block_cache_dir,
           boost::optional<boost::filesystem::path> mountpoint,
           bool allow_root_creation)
@@ -16,6 +17,7 @@ namespace infinit
       return FileSystem(
         volume_name,
         std::move(model),
+        std::move(owner),
         std::move(root_block_cache_dir),
         std::move(mountpoint),
         allow_root_creation);
@@ -26,6 +28,7 @@ namespace infinit
       : FileSystem(elle::named::prototype(
                      filesystem::volume_name,
                      filesystem::model,
+                     filesystem::owner = boost::none,
                      filesystem::root_block_cache_dir = boost::none,
                      filesystem::mountpoint = boost::none,
                      filesystem::allow_root_creation = false)

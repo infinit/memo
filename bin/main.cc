@@ -131,7 +131,7 @@ namespace infinit
     {
       program = argv[0];
       std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
-#ifndef INFINIT_WINDOWS
+#if  !defined(INFINIT_WINDOWS) && !defined(NO_EXECINFO)
       std::unique_ptr<crash_reporting::CrashReporter> crash_reporter;
 #ifdef INFINIT_PRODUCTION_BUILD
       bool const production_build = true;
@@ -156,7 +156,7 @@ namespace infinit
         "main",
         [&sched, &modes, &desc, argc, argv,
          &positional_arg, &disable_as_arg, &hidden_modes, &main_thread
-#ifndef INFINIT_WINDOWS
+#if !defined(INFINIT_WINDOWS) && !defined(NO_EXECINFO)
          , &crash_reporter
 #endif
           ]
@@ -324,7 +324,7 @@ namespace infinit
                 return;
               }
               std::unique_ptr<reactor::Thread> crash_upload_thread;
-#ifndef INFINIT_WINDOWS
+#if !defined(INFINIT_WINDOWS) && !defined(NO_EXECINFO)
               if (crash_reporter && crash_reporter->crashes_pending_upload())
               {
                 crash_upload_thread.reset(new reactor::Thread("upload crashes",

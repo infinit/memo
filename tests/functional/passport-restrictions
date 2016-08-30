@@ -90,7 +90,7 @@ with TemporaryDirectory() as tmp, \
       operation = 'list_directory',
       path = '/')
     assertEq(response['success'], True)
-    assertEq(response['entries'], ['beacon'])
+    assertEq(sorted(response['entries']), ['.', '..', 'beacon'])
     response = infinit_2.run_script(
       user = 'user2', volume = 'user/volume', operation = 'mkdir', path = '/foo',
       peer = peer())

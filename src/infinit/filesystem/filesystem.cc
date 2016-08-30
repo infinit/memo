@@ -60,11 +60,13 @@ namespace infinit
     FileSystem::FileSystem(
         std::string const& volume_name,
         std::shared_ptr<model::Model> model,
+        boost::optional<infinit::cryptography::rsa::PublicKey> owner,
         boost::optional<boost::filesystem::path> root_block_cache_dir,
         boost::optional<boost::filesystem::path> mountpoint,
         bool allow_root_creation)
       : _block_store(std::move(model))
       , _single_mount(false)
+      , _owner(owner)
       , _volume_name(volume_name)
       , _root_block_cache_dir(root_block_cache_dir)
       , _mountpoint(mountpoint)
@@ -200,6 +202,7 @@ namespace infinit
         throw rfs::Error(EIO, e.what());
       }
     }
+
     std::unique_ptr<model::blocks::Block>
     FileSystem::fetch_or_die(model::Address address,
                              boost::optional<int> local_version,
@@ -352,8 +355,8 @@ namespace infinit
       bool migrate = true;
       auto dn = std::dynamic_pointer_cast<dht::Doughnut>(this->_block_store);
       auto const bootstrap_name = this->_volume_name + ".root";
-      Address bootstrap_addr = dht::NB::address(
-        *dn->owner(), bootstrap_name, dn->version());
+      Address bootstrap_addr =
+        dht::NB::address(this->owner(), bootstrap_name, dn->version());
       while (true)
       {
         try
@@ -394,7 +397,7 @@ namespace infinit
             }
             catch (model::MissingBlock const&)
             {}
-          if (*dn->owner() == dn->keys().K())
+          if (this->owner() == dn->keys().K())
           {
             if (!this->_allow_root_creation)
             {
@@ -421,8 +424,10 @@ namespace infinit
               {
                 auto saddr = elle::sprintf("%x", this->_root_address);
                 elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
+                auto k =
+                  std::make_shared<infinit::cryptography::rsa::PublicKey>(this->owner());
                 auto nb = elle::make_unique<dht::NB>(
-                  dn.get(), dn->owner(), bootstrap_name, baddr);
+                  dn.get(), k, bootstrap_name, baddr);
                 auto address = nb->address();
                 this->store_or_die(std::move(nb), model::STORE_INSERT,
                                    elle::make_unique<InsertRootBootstrapBlock>(address));
@@ -436,6 +441,15 @@ namespace infinit
           reactor::sleep(1_sec);
         }
       }
+    }
+
+    infinit::cryptography::rsa::PublicKey const&
+    FileSystem::owner() const
+    {
+      if (this->_owner)
+        return *this->_owner;
+      auto dn = std::dynamic_pointer_cast<dht::Doughnut>(this->_block_store);
+      return *dn->owner();
     }
 
     std::pair<bool, bool>
@@ -729,6 +743,9 @@ namespace std
     {
       case infinit::filesystem::OperationType::insert:
         out << "insert";
+        break;
+      case infinit::filesystem::OperationType::insert_exclusive:
+        out << "insert_exclusive";
         break;
       case infinit::filesystem::OperationType::update:
         out << "update";

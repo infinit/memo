@@ -5,6 +5,7 @@
 
 # include <infinit/model/doughnut/Doughnut.hh>
 # include <infinit/model/doughnut/Local.hh>
+# include <infinit/model/doughnut/Cache.hh>
 # include <infinit/model/doughnut/consensus/Paxos.hh>
 # include <infinit/storage/Memory.hh>
 
@@ -166,6 +167,18 @@ NAMED_ARGUMENT(storage);
 NAMED_ARGUMENT(make_overlay);
 NAMED_ARGUMENT(make_consensus);
 NAMED_ARGUMENT(version);
+NAMED_ARGUMENT(with_cache);
+
+std::unique_ptr<dht::consensus::Consensus>
+add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
+{
+  if (enable)
+    return elle::make_unique<
+      infinit::model::doughnut::consensus::Cache>
+        (std::move(c), 1000);
+  else
+    return std::move(c);
+}
 
 class DHT
 {
@@ -188,7 +201,8 @@ public:
         return c;
       },
       dht::consensus::rebalance_auto_expand = true,
-      dht::consensus::node_timeout = std::chrono::minutes(10)
+      dht::consensus::node_timeout = std::chrono::minutes(10),
+      with_cache = false
       ).call([this] (bool paxos,
                      infinit::cryptography::rsa::KeyPair keys,
                      boost::optional<infinit::cryptography::rsa::KeyPair> owner,
@@ -205,7 +219,9 @@ public:
                        std::unique_ptr<dht::consensus::Consensus>
                        )> make_consensus,
                      bool rebalance_auto_expand,
-                     std::chrono::system_clock::duration node_timeout)
+                     std::chrono::system_clock::duration node_timeout,
+                     bool with_cache
+                     )
              {
                this-> init(paxos,
                            keys,
@@ -215,7 +231,8 @@ public:
                            version,
                            std::move(make_consensus),
                            rebalance_auto_expand,
-                           node_timeout);
+                           node_timeout,
+                           with_cache);
              }, std::forward<Args>(args)...);
   }
 
@@ -234,7 +251,8 @@ private:
          std::unique_ptr<dht::consensus::Consensus>(
            std::unique_ptr<dht::consensus::Consensus>)> make_consensus,
        bool rebalance_auto_expand,
-       std::chrono::system_clock::duration node_timeout)
+       std::chrono::system_clock::duration node_timeout,
+       bool with_cache)
   {
     auto keys =
       std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_));
@@ -243,19 +261,19 @@ private:
       consensus =
         [&] (dht::Doughnut& dht)
         {
-          return make_consensus(
+          return add_cache(with_cache, make_consensus(
             elle::make_unique<dht::consensus::Paxos>(
               dht::consensus::doughnut = dht,
               dht::consensus::replication_factor = 3,
               dht::consensus::rebalance_auto_expand = rebalance_auto_expand,
-              dht::consensus::node_timeout = node_timeout));
+              dht::consensus::node_timeout = node_timeout)));
         };
     else
       consensus =
         [&] (dht::Doughnut& dht)
         {
-          return make_consensus(
-            elle::make_unique<dht::consensus::Consensus>(dht));
+          return add_cache(with_cache, make_consensus(
+            elle::make_unique<dht::consensus::Consensus>(dht)));
         };
     dht::Passport passport(keys->K(), "network-name", owner);
     auto make_overlay =

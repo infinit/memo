@@ -100,11 +100,11 @@ namespace infinit
         ELLE_ATTRIBUTE_RX(AdminKeys, admin_keys);
         ELLE_ATTRIBUTE_R(std::unique_ptr<consensus::Consensus>, consensus)
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
+        ELLE_ATTRIBUTE_RX(Dock, dock);
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, user_init)
         ELLE_ATTRIBUTE(
           elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
-        ELLE_ATTRIBUTE_RX(Dock, dock);
         ELLE_ATTRIBUTE_RX(reactor::Barrier, terminating);
 
         typedef std::unordered_map<elle::Buffer,
