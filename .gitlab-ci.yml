@@ -67,7 +67,7 @@ x86_64-jessie-gcc4:
     - INSTALL_DIR=_instal
     - DESC=$(git describe)
     - ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
-    - ssh buildslave@cache.buildslave.infinit.sh test -e "cache/fs/$CI_BUILD_REF_NAME/" && time rsync -racu  buildslave@cache.buildslave.infinit.sh:"cache/fs/$CI_BUILD_REF_NAME/" "/cache/fs/$CI_BUILD_REF_NAME/"
+    - ssh buildslave@cache.buildslave.infinit.sh test -e "cache/fs/$CI_BUILD_REF_NAME/" && time rsync --rsync-path="/home/buildslave/rsync-lock" -racu  buildslave@cache.buildslave.infinit.sh:"cache/fs/$CI_BUILD_REF_NAME/" "/cache/fs/$CI_BUILD_REF_NAME/"
     - mkdir -p "$INSTALL_DIR"
     - farm/configure --arch x86_64 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
@@ -79,7 +79,7 @@ x86_64-jessie-gcc4:
     - if GIT_DIR="$CI_PROJECT_DIR/.git" git describe --exact-match HEAD; then scp "infinit-debug-symbols-debian-${DESC}_0_amd64.deb" buildslave@packages.infinit.sh:debian; fi
     - ssh buildslave@packages.infinit.sh 'make debian'
     - ssh buildslave@cache.buildslave.infinit.sh mkdir -p "cache/fs/$CI_BUILD_REF_NAME-$CI_RUNNER_ID"
-    - time rsync -racu "/cache/fs/$CI_BUILD_REF_NAME/" buildslave@cache.buildslave.infinit.sh:"cache/fs/$CI_BUILD_REF_NAME-$CI_RUNNER_ID"
+    - time rsync --rsync-path="/home/buildslave/rsync-lock" -racu "/cache/fs/$CI_BUILD_REF_NAME/" buildslave@cache.buildslave.infinit.sh:"cache/fs/$CI_BUILD_REF_NAME-$CI_RUNNER_ID"
     - ssh buildslave@cache.buildslave.infinit.sh ln -sfn "$(basename $CI_BUILD_REF_NAME-$CI_RUNNER_ID)" "cache/fs/$CI_BUILD_REF_NAME"
     - rm "$BUILD_DIR" # Prevent a recursive cleanup of the cache next run
   tags:
