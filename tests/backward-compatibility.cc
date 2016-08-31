@@ -181,6 +181,8 @@ struct TestSet
     nb->seal();
     ub->seal();
     rub->seal();
+    elle::unconst(dht.key_hash_cache()).insert(std::make_pair(
+      dht::UB::hash(keys->K()), keys->public_key()));
   }
 
   void apply(std::string const& action,
