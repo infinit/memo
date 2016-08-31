@@ -1847,8 +1847,13 @@ class DHTs
 {
 public:
   template <typename ... Args>
+  DHTs(int count)
+   : DHTs(count, {})
+  {
+  }
+  template <typename ... Args>
   DHTs(int count,
-       boost::optional<infinit::cryptography::rsa::KeyPair> kp = {},
+       boost::optional<infinit::cryptography::rsa::KeyPair> kp,
        Args ... args)
     : owner_keys(kp? *kp : infinit::cryptography::rsa::keypair::generate(512))
     , dhts()
