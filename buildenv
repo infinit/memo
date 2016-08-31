@@ -50,6 +50,7 @@ class State:
     self.__parser = self.__options_parser()
     self.__opts = self.__parser.parse_args()
     self.__branch = self.__opts.branch
+    self.__cache = None
     self.__git = None
 
   @property
@@ -102,6 +103,22 @@ class State:
                         action = 'store_true',
                         help = 'Pick adequate build tree',
     )
+    parser.add_argument('-d', '--cache-download-build-tree',
+                        action = 'store_true',
+                        help = 'Download build tree cache',
+    )
+    parser.add_argument('-u', '--cache-upload-build-tree',
+                        action = 'store_true',
+                        help = 'Upload build tree cache',
+    )
+    parser.add_argument('-n', '--cache-namespace',
+                        type = str,
+                        help = 'Subdirectory where to locate cache',
+    )
+    parser.add_argument('-i', '--cache-id',
+                        type = str,
+                        help = 'Concurrent cache unique id',
+    )
     parser.add_argument('-l', '--link-build-tree',
                         type = str,
                         help = 'Create symlink to picked build tree',
@@ -115,7 +132,7 @@ class State:
                         default = ROOT,
                         help = 'Source tree location',
     )
-    parser.add_argument('-d', '--dry-run',
+    parser.add_argument('-D', '--dry-run',
                         action = 'store_true',
                         help = 'Do not modify anything',
     )
@@ -154,8 +171,16 @@ class State:
       return tree
     elif self.__opts.show_build_tree:
       return self.show_build_tree()
+    elif self.__opts.cache_download_build_tree:
+      return self.download_build_tree()
+    elif self.__opts.cache_upload_build_tree:
+      return self.upload_build_tree()
     else:
       raise CLError('specify an action')
+
+  @property
+  def build_tree(self):
+    return '%s/%s' % (self.__opts.build_trees_root, self.branch)
 
   def pick_build_tree(self):
     state = self.__state
@@ -175,7 +200,6 @@ class State:
       else:
         del build_trees[branch]
         previous = None
-    path = '%s/%s' % (self.__opts.build_trees_root, branch)
     clone_d = None
     clone = None
     clone_branch = None
@@ -193,17 +217,17 @@ class State:
     build_trees[branch] = {
       'creation': datetime.datetime.utcnow(),
       'last_use': datetime.datetime.utcnow(),
-      'path': path,
+      'path': self.build_tree,
       'rev': current_rev,
     }
     if clone is not None:
       if not self.__opts.dry_run:
-        tmp = '%s.tmp' % path
+        tmp = '%s.tmp' % self.build_tree
         try:
           copy(tree['path'], tmp)
           fr = os.path.realpath(tree['path'])
           fr = '%s/.drake/%s' % (tmp, fr)
-          to = os.path.realpath(path)
+          to = os.path.realpath(self.build_tree)
           to = '%s/.drake/%s' % (tmp, to)
           mkpath(os.path.dirname(to))
           rm(to)
@@ -212,18 +236,18 @@ class State:
           rm(tmp)
           raise
         else:
-          mv(tmp, path)
+          mv(tmp, self.build_tree)
       return {
         'status': 'cloned from %s' % clone_branch,
-        'path': path,
+        'path': self.build_tree,
         'rev': tree['rev'],
       }
     else:
       if not self.__opts.dry_run:
-        mkpath(path)
+        mkpath(self.build_tree)
       return {
         'status': 'new build tree',
-        'path': path,
+        'path': self.build_tree,
         'rev': None,
       }
 
@@ -235,10 +259,76 @@ class State:
     else:
       return None
 
+  cache_url = 'buildslave@cache.buildslave.infinit.sh'
+
+  def cache(self):
+    if self.__cache is None:
+      self.__cache = sh.ssh.bake(self.cache_url,
+                                 _tty_in = False,
+                                 _tty_out = False)
+    return self.__cache
+
+  class Lock:
+
+    def __init__(self, path):
+      self.__path = path
+
+    def __enter__(self):
+      sh.ssh(State.cache_url, 'lockfile-create', self.__path)
+
+    def __exit__(self, t, v, tb):
+        sh.ssh(State.cache_url, 'lockfile-remove', self.__path)
+
+  @property
+  def cache_dir(self):
+    import getpass
+    ns = self.__opts.cache_namespace or getpass.getuser()
+    return 'cache/%s/fs/%s' % (ns, self.branch)
+
+  def download_build_tree(self):
+    try:
+      sh.ssh(self.cache_url, 'test', '-e', self.cache_dir)
+    except ErrorReturnCode:
+      return {
+        'status': 'no cached build tree',
+      }
+    else:
+      if not self.__opts.dry_run:
+        with State.Lock(self.cache_dir):
+          sh.rsync('-racu',
+                   '%s:%s/' % (self.cache_url, self.cache_dir),
+                   self.build_tree)
+    return {
+      'status': 'downloaded build tree',
+      'source': self.cache_dir,
+      'destination': self.build_tree,
+    }
+
+  def upload_build_tree(self):
+    d = self.cache_dir
+    concurrent = self.__opts.cache_id is not None
+    if concurrent:
+      d = '%s-%s' % (d, self.__opts.cache_id)
+    if not self.__opts.dry_run:
+      sh.ssh(self.cache_url, 'mkdir', '-p', d)
+      with State.Lock(d):
+        sh.rsync('-racu', '%s/' % self.build_tree,
+                 '%s:%s' % (self.cache_url, d))
+      if concurrent:
+        sh.ssh(self.cache_url,
+               'ln', '-sfn', os.path.basename(d), self.cache_dir)
+    return {
+      'status': 'uploaded build tree',
+      'source': self.build_tree,
+      'destination': d,
+    }
+
 try:
   with State() as state:
-    json.dump(collections.OrderedDict(state.run()), sys.stdout,
-              default = json_converter)
+    res = state.run()
+    if isinstance(res, dict):
+      res = collections.OrderedDict(res)
+    json.dump(res, sys.stdout, default = json_converter)
     print()
 except CLError as e:
   state.parser.print_usage(file = sys.stderr)
