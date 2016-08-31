@@ -1890,8 +1890,8 @@ public:
 
   template<typename... Args>
   Client
-  client(bool new_key = false,
-         boost::optional<infinit::cryptography::rsa::KeyPair> kp = {},
+  client(bool new_key,
+         boost::optional<infinit::cryptography::rsa::KeyPair> kp,
          Args... args)
   {
     auto k = kp ? *kp
@@ -1908,6 +1908,12 @@ public:
     for (auto& dht: this->dhts)
       dht.overlay->connect(*client.overlay);
     return Client("volume", std::move(client));
+  }
+
+  Client
+  client(bool new_key = false)
+  {
+    return client(new_key, {});
   }
 
   infinit::cryptography::rsa::KeyPair owner_keys;
