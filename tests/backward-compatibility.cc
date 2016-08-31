@@ -82,6 +82,14 @@ public:
   }
 
   virtual
+  elle::Buffer
+  encrypt(elle::ConstWeakBuffer const& plain,
+          infinit::cryptography::rsa::Padding const padding) const override
+  {
+    return elle::Buffer(plain);
+  }
+
+  virtual
   bool
   verify(elle::ConstWeakBuffer const& signature,
          elle::ConstWeakBuffer const& plain,
