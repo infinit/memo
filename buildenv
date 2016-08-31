@@ -288,7 +288,7 @@ class State:
   def download_build_tree(self):
     try:
       sh.ssh(self.cache_url, 'test', '-e', self.cache_dir)
-    except ErrorReturnCode:
+    except sh.ErrorReturnCode:
       return {
         'status': 'no cached build tree',
       }
