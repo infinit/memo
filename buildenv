@@ -136,6 +136,10 @@ class State:
                         action = 'store_true',
                         help = 'Do not modify anything',
     )
+    parser.add_argument('-v', '--verbose',
+                        action = 'store_true',
+                        help = 'Increase verbosity',
+    )
     return parser
 
   @property
@@ -295,9 +299,10 @@ class State:
     else:
       if not self.__opts.dry_run:
         with State.Lock(self.cache_dir):
-          sh.rsync('-racu',
-                   '%s:%s/' % (self.cache_url, self.cache_dir),
-                   self.build_tree)
+          sh.rsync(
+            '-racu' + ('v' if self.__opts.verbose else ''),
+            '%s:%s/' % (self.cache_url, self.cache_dir),
+            self.build_tree)
     return {
       'status': 'downloaded build tree',
       'source': self.cache_dir,
@@ -312,8 +317,10 @@ class State:
     if not self.__opts.dry_run:
       sh.ssh(self.cache_url, 'mkdir', '-p', d)
       with State.Lock(d):
-        sh.rsync('-racu', '%s/' % self.build_tree,
-                 '%s:%s' % (self.cache_url, d))
+        sh.rsync(
+          '-racuv''-racu' + ('v' if self.__opts.verbose else ''),
+          '%s/' % self.build_tree,
+          '%s:%s' % (self.cache_url, d))
       if concurrent:
         sh.ssh(self.cache_url,
                'ln', '-sfn', os.path.basename(d), self.cache_dir)

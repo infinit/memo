@@ -68,7 +68,7 @@ x86_64-jessie-gcc4:
     - INSTALL_DIR="${SOURCE_DIR}/_install"
     - DESC=$(git describe)
     - ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
-    - ./buildenv --cache-download-build-tree --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID"
+    - ./buildenv --cache-download-build-tree --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID" --verbose
     - mkdir -p "$INSTALL_DIR"
     - farm/configure --arch x86_64 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
@@ -80,7 +80,7 @@ x86_64-jessie-gcc4:
     - if GIT_DIR="${SOURCE_DIR}/.git" git describe --exact-match HEAD; then scp "infinit-debug-symbols-debian-${DESC}_0_amd64.deb" buildslave@packages.infinit.sh:debian; fi
     - ssh buildslave@packages.infinit.sh 'make debian'
     - cd "${SOURCE_DIR}"
-    - ./buildenv --cache-upload-build-tree --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID"
+    - ./buildenv --cache-upload-build-tree --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID" --verbose
   tags:
     - x86_64
     - jessie
