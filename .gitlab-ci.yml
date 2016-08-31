@@ -78,6 +78,7 @@ x86_64-jessie-gcc4:
     - scp "infinit_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
     - if GIT_DIR="$CI_PROJECT_DIR/.git" git describe --exact-match HEAD; then scp "infinit-debug-symbols-debian-${DESC}_0_amd64.deb" buildslave@packages.infinit.sh:debian; fi
     - ssh buildslave@packages.infinit.sh 'make debian'
+    - cd "$CI_PROJECT_DIR"
     - ./buildenv --cache-upload-build-tree --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID"
     - rm "$BUILD_DIR" # Prevent a recursive cleanup of the cache next run
   tags:
