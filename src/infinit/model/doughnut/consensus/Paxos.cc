@@ -471,8 +471,13 @@ namespace infinit
                 {
                   for (auto wpeer: this->doughnut().overlay()->lookup(
                          address, this->_factor, op))
+                  {
                     if (auto peer = wpeer.lock())
                       q.insert(peer->id());
+                    elle::With<reactor::Thread::NonInterruptible>() << [&] {
+                        wpeer.reset();
+                    };
+                  }
                   this->_cache(address, true, q);
                   if (signed(q.size()) < this->_factor)
                   {
