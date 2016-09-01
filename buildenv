@@ -275,7 +275,7 @@ class State:
   class Lock:
 
     def __init__(self, path):
-      self.__path = path
+      self.__path = '%s/rsync' % path
 
     def __enter__(self):
       sh.ssh(State.cache_url, 'lockfile-create', self.__path)
