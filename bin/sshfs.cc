@@ -6,7 +6,6 @@
 #include <infinit/model/faith/Faith.hh>
 #include <infinit/storage/Crypt.hh>
 #include <infinit/storage/sftp.hh>
-#include <infinit/version.hh>
 
 #include "version.hh"
 

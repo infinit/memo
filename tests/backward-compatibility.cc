@@ -20,6 +20,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/File.hh>
+#include <infinit/utility.hh>
 
 ELLE_LOG_COMPONENT("backward-compatibility");
 
