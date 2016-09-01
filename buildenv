@@ -291,8 +291,13 @@ class State:
 
   def rsync(self, s, d):
     v = self.__opts.verbose
-    res = sh.rsync(
-      '-racu' + ('v' if v else ''), s, d)
+    args = [
+      '--recursive', '--archive', '--checksum', '--update',
+      s, d,
+    ]
+    if v:
+      args.append('--stats')
+    res = sh.rsync(*args)
     if v:
       print(res)
 
