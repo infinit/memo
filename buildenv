@@ -289,6 +289,13 @@ class State:
     ns = self.__opts.cache_namespace or getpass.getuser()
     return 'cache/%s/fs/%s' % (ns, self.branch)
 
+  def rsync(self, s, d):
+    v = self.__opts.verbose
+    res = sh.rsync(
+      '-racu' + ('v' if v else ''), s, d)
+    if v:
+      print(res)
+
   def download_build_tree(self):
     try:
       sh.ssh(self.cache_url, 'test', '-e', self.cache_dir)
@@ -299,10 +306,10 @@ class State:
     else:
       if not self.__opts.dry_run:
         with State.Lock(self.cache_dir):
-          sh.rsync(
-            '-racu' + ('v' if self.__opts.verbose else ''),
+          self.rsync(
             '%s:%s/' % (self.cache_url, self.cache_dir),
             self.build_tree)
+
     return {
       'status': 'downloaded build tree',
       'source': self.cache_dir,
@@ -317,8 +324,7 @@ class State:
     if not self.__opts.dry_run:
       sh.ssh(self.cache_url, 'mkdir', '-p', d)
       with State.Lock(d):
-        sh.rsync(
-          '-racu' + ('v' if self.__opts.verbose else ''),
+        self.rsync(
           '%s/' % self.build_tree,
           '%s:%s' % (self.cache_url, d))
       if concurrent:
