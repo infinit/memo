@@ -209,6 +209,7 @@ def configure(
     'src/infinit/serialization.cc',
     'src/infinit/serialization.hh',
     'src/infinit/smb/smb.cc',
+    'src/infinit/utility.cc',
     'src/infinit/utility.hh',
     'src/infinit/version.hh',
   )

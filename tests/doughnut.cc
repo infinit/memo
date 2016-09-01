@@ -26,7 +26,6 @@
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/overlay/Stonehenge.hh>
 #include <infinit/storage/Memory.hh>
-#include <infinit/version.hh>
 
 #include "DHT.hh"
 

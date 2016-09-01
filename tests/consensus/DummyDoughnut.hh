@@ -2,7 +2,6 @@
 # define DUMMYDOUGHNUT_HH
 
 #include <infinit/model/doughnut/Doughnut.hh>
-#include <infinit/version.hh>
 
 class DummyDoughnut
   : public infinit::model::doughnut::Doughnut
@@ -24,8 +23,7 @@ public:
       [] (infinit::model::doughnut::Doughnut&,
           std::shared_ptr<infinit::model::doughnut::Local>)
       { return nullptr; },
-      {}, nullptr,
-      elle::Version(INFINIT_MAJOR, INFINIT_MINOR,0))
+      {}, nullptr)
   {}
 };
 

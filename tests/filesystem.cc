@@ -45,7 +45,7 @@
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/Memory.hh>
 #include <infinit/storage/Storage.hh>
-#include <infinit/version.hh>
+#include <infinit/utility.hh>
 
 #include "DHT.hh"
 
@@ -56,11 +56,6 @@
 #endif
 
 ELLE_LOG_COMPONENT("test");
-
-#define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                           INFINIT_MINOR,   \
-                                           INFINIT_SUBMINOR)
-
 
 namespace ifs = infinit::filesystem;
 namespace rfs = reactor::filesystem;
@@ -436,7 +431,7 @@ make_nodes(std::string store,
           overlay,
           boost::optional<int>(),
           std::move(s),
-          INFINIT_ELLE_VERSION));
+          infinit::version));
     }
     for (int i = 0; i < node_count; ++i)
       peers.emplace_back(
@@ -540,7 +535,7 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           overlay,
           boost::optional<int>(),
           nullptr,
-          INFINIT_ELLE_VERSION);
+          infinit::version);
         ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;
         ops = elle::make_unique<ifs::FileSystem>(
@@ -618,8 +613,10 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           }
           overlay["peers"] = v;
           model["overlay"] = std::move(overlay);
-          model["version"] =
-            elle::sprintf("%s.%s", INFINIT_MAJOR, INFINIT_MINOR);
+          model["version"] = elle::sprintf(
+            "%s.%s",
+            int(infinit::version.major()),
+            int(infinit::version.minor()));
         }
         r["model"] = model;
         std::string kps;
@@ -689,7 +686,7 @@ run_filesystem(std::string const& store, std::string const& mountpoint)
       storage = new infinit::storage::Filesystem(store);
     model = elle::make_unique<infinit::model::faith::Faith>(
       std::unique_ptr<infinit::storage::Storage>(g_storage),
-      INFINIT_ELLE_VERSION);
+      infinit::version);
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
       "default-volume", std::move(model), ifs::allow_root_creation = true);
     fs = new reactor::filesystem::FileSystem(std::move(ops), true);
