@@ -431,7 +431,7 @@ make_nodes(std::string store,
           overlay,
           boost::optional<int>(),
           std::move(s),
-          infinit::version));
+          infinit::version()));
     }
     for (int i = 0; i < node_count; ++i)
       peers.emplace_back(
@@ -535,7 +535,7 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           overlay,
           boost::optional<int>(),
           nullptr,
-          infinit::version);
+          infinit::version());
         ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;
         ops = elle::make_unique<ifs::FileSystem>(
@@ -615,8 +615,8 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           model["overlay"] = std::move(overlay);
           model["version"] = elle::sprintf(
             "%s.%s",
-            int(infinit::version.major()),
-            int(infinit::version.minor()));
+            int(infinit::version().major()),
+            int(infinit::version().minor()));
         }
         r["model"] = model;
         std::string kps;
@@ -686,7 +686,7 @@ run_filesystem(std::string const& store, std::string const& mountpoint)
       storage = new infinit::storage::Filesystem(store);
     model = elle::make_unique<infinit::model::faith::Faith>(
       std::unique_ptr<infinit::storage::Storage>(g_storage),
-      infinit::version);
+      infinit::version());
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
       "default-volume", std::move(model), ifs::allow_root_creation = true);
     fs = new reactor::filesystem::FileSystem(std::move(ops), true);

@@ -12,7 +12,8 @@
 
 namespace infinit
 {
-  extern elle::Version const version;
+  elle::Version
+  version();
 
   inline
   boost::filesystem::path

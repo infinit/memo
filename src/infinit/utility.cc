@@ -3,5 +3,9 @@
 
 namespace infinit
 {
-  elle::Version const version(INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
+  elle::Version
+  version()
+  {
+    return elle::Version(INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
+  }
 }

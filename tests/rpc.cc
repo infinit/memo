@@ -30,10 +30,10 @@ ELLE_TEST_SCHEDULED(move)
       s.serve(*socket);
     }));
   reactor::network::TCPSocket stream("127.0.0.1", server.port());
-  infinit::protocol::Serializer serializer(stream, infinit::version, false);
+  infinit::protocol::Serializer serializer(stream, infinit::version(), false);
   infinit::protocol::ChanneledStream channels(serializer);
   infinit::RPC<std::unique_ptr<int> (int, std::unique_ptr<int>)>
-    rpc("coin", channels, infinit::version);
+    rpc("coin", channels, infinit::version());
   try
   {
     BOOST_CHECK_EQUAL(*rpc(7, elle::make_unique<int>(35)), 42);
