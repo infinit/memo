@@ -318,7 +318,7 @@ class State:
       sh.ssh(self.cache_url, 'mkdir', '-p', d)
       with State.Lock(d):
         sh.rsync(
-          '-racuv''-racu' + ('v' if self.__opts.verbose else ''),
+          '-racu' + ('v' if self.__opts.verbose else ''),
           '%s/' % self.build_tree,
           '%s:%s' % (self.cache_url, d))
       if concurrent:
