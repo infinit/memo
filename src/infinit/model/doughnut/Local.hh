@@ -100,9 +100,9 @@ namespace infinit
       | Server |
       `-------*/
       public:
-        reactor::network::TCPServer::EndPoint
+        Endpoint
         server_endpoint();
-        std::vector<reactor::network::TCPServer::EndPoint>
+        Endpoints
         server_endpoints();
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPServer>, server);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, server_thread);

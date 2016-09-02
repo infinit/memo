@@ -490,9 +490,7 @@ namespace infinit
     typename std::enable_if<!std::is_same<Res, void>::value, R>::type
     get_result(elle::serialization::SerializerIn& input)
     {
-      R result;
-      input.serialize("value", result);
-      return std::move(result);
+      return input.deserialize<R>("value");
     }
 
     static

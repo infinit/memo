@@ -2786,9 +2786,7 @@ namespace infinit
             if (it_us != its.second && (n == 1 || local_override || fast_mode))
             {
               ELLE_DEBUG("get satifsfied locally");
-              yield(NodeLocation(Address::null,
-                {Endpoint(boost::asio::ip::address::from_string("127.0.0.1"),
-                            this->_port)}));
+              yield(NodeLocation(this->id(), {}));
               return;
             }
             // add result for our own file table
@@ -2918,9 +2916,7 @@ namespace infinit
             {
               ELLE_TRACE("no peer, store locally");
               this->_promised_files.push_back(p.fileAddress);
-              results.push_back(NodeLocation(Address::null, {Endpoint(
-                boost::asio::ip::address::from_string("127.0.0.1"),
-              this->_port)}));
+              results.emplace_back(this->id(), model::Endpoints());
               return results;
             }
             else

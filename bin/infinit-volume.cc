@@ -382,7 +382,7 @@ COMMAND(run)
     mo.async && mo.async.get(), mo.cache_disk_size, infinit::compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push = mo.push && model->local();
-  boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint;
+  boost::optional<infinit::model::Endpoint> local_endpoint;
   if (model->local())
   {
     local_endpoint = model->local()->server_endpoint();
