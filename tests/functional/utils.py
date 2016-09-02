@@ -166,7 +166,7 @@ class Infinit(TemporaryDirectory):
       process = self.spawn(args, input, return_code, env)
       out, err = process.communicate(timeout = 600)
       process.wait()
-    except KeyboardInterrupt:
+    except (subprocess.TimeoutExpired, KeyboardInterrupt):
       process.terminate()
       out, err = process.communicate(timeout = 30)
       print('STDOUT: %s' % out.decode('utf-8'))
