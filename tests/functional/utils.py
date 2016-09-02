@@ -168,7 +168,12 @@ class Infinit(TemporaryDirectory):
       process.wait()
     except (subprocess.TimeoutExpired, KeyboardInterrupt):
       process.terminate()
-      out, err = process.communicate(timeout = 30)
+      try:
+        out, err = process.communicate(timeout = 30)
+      except ValueError:
+        # Python bug, throws ValueError. But in that case blocking read is fine
+        out = process.stdout.read()
+        err = process.stderr.read()
       print('STDOUT: %s' % out.decode('utf-8'))
       print('STDERR: %s' % err.decode('utf-8'))
       raise
