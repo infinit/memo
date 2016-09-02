@@ -393,7 +393,7 @@ main(int argc, char** argv)
               }
               {
                 auto path = it->path() / elle::sprintf("%s.bin", name);
-                boost::filesystem::ifstream input(path);
+                boost::filesystem::ifstream input(path, std::ios::binary);
                 if (!input.good())
                   throw elle::Error(elle::sprintf("unable to open %s", path));
                 elle::Buffer contents(
@@ -426,7 +426,7 @@ main(int argc, char** argv)
               }
               {
                 auto path = it->path() / elle::sprintf("%s.bin", name);
-                boost::filesystem::ifstream input(path);
+                boost::filesystem::ifstream input(path, std::ios::binary);
                 if (!input.good())
                 {
                   ELLE_WARN("unable to open %s", path);
