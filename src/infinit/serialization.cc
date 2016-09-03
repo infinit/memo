@@ -1,10 +1,9 @@
+#include <infinit/utility.hh>
 #include <infinit/serialization.hh>
-#include <infinit/version.hh>
 
 namespace infinit
 {
-  elle::Version serialization_tag::version(
-    INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
+  elle::Version serialization_tag::version(infinit::version());
   elle::unordered_map<elle::Version, elle::serialization::Serializer::Versions>
   serialization_tag::dependencies{{
     { elle::Version(0, 3, 0),

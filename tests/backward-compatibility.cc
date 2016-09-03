@@ -20,9 +20,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/File.hh>
-
-#include <infinit/version.hh>
-
+#include <infinit/utility.hh>
 
 ELLE_LOG_COMPONENT("backward-compatibility");
 
@@ -282,7 +280,7 @@ main(int argc, char** argv)
   }
   if (vm.count("version"))
   {
-    std::cout << INFINIT_VERSION << std::endl;
+    std::cout << infinit::version() << std::endl;
     return 0;
   }
   reactor::Scheduler sched;
@@ -299,7 +297,8 @@ main(int argc, char** argv)
         <infinit::cryptography::rsa::KeyPair>(K, k);
       if (vm.count("generate"))
       {
-        elle::Version current_version(INFINIT_MAJOR, INFINIT_MINOR, 0);
+        elle::Version current_version(
+          infinit::version().major(), infinit::version().minor(), 0);
         auto current = path(current_version);
         std::cout << "Create reference data for version "
                   << current_version << std::endl;

@@ -35,6 +35,18 @@ namespace infinit
       public:
         typedef Remote Self;
         typedef Peer Super;
+        /// Challenge, token
+        using Challenge = std::pair<elle::Buffer, elle::Buffer>;
+        struct Auth
+        {
+          Auth(Address id,
+               Challenge challenge,
+               Passport passport);
+          Auth(elle::serialization::SerializerIn& input);
+          Address id;
+          Challenge challenge;
+          Passport passport;
+        };
 
       /*-------------.
       | Construction |

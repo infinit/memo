@@ -6,28 +6,26 @@
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/blocks/GroupBlock.hh>
-#include <infinit/version.hh>
+#include <infinit/utility.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.Model");
-
-static const elle::Version default_version(
-  INFINIT_MAJOR, INFINIT_MINOR, 0);
 
 namespace infinit
 {
   namespace model
   {
     Model::Model(boost::optional<elle::Version> version)
-      : _version(version ? *version : default_version)
+      : _version(
+        version ? *version :
+        elle::Version(
+          infinit::version().major(), infinit::version().minor(), 0))
     {
       ELLE_LOG("%s: compatibility version %s", *this, this->_version);
-      static elle::Version const current_version = elle::Version(
-        INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
-      if (this->_version > current_version)
+      if (this->_version > infinit::version())
         throw elle::Error(
           elle::sprintf(
             "compatibility version %s is too recent for infinit version %s",
-            this->_version, current_version));
+            this->_version, infinit::version()));
     }
 
     template <>

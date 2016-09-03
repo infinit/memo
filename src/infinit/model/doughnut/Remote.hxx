@@ -1,11 +1,18 @@
 #include <elle/os/environ.hh>
 
+DAS_MODEL_FIELDS(infinit::model::doughnut::Remote::Auth,
+                 (id)(challenge)(passport));
+
 namespace infinit
 {
   namespace model
   {
     namespace doughnut
     {
+      DAS_MODEL_DEFINE(infinit::model::doughnut::Remote::Auth,
+                       (id)(challenge)(passport),
+                       DasAuth);
+
       template<typename F, typename ...Args>
       typename RPC<F>::result_type
       remote_call_next(RemoteRPC<F>* ptr, Args const& ... args)
@@ -139,3 +146,7 @@ namespace infinit
     }
   }
 }
+
+DAS_MODEL_DEFAULT(infinit::model::doughnut::Remote::Auth,
+                  infinit::model::doughnut::DasAuth);
+DAS_MODEL_SERIALIZE(infinit::model::doughnut::Remote::Auth);
