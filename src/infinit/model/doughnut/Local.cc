@@ -75,9 +75,13 @@ namespace infinit
                      this, this->_utp_server->local_endpoint());
           }
         }
-        catch (elle::Error const& e)
+        catch (std::exception const& e)
         {
           ELLE_WARN("%s: initialization failed with: %s", this, e.what());
+          if (this->_server_thread)
+            this->_server_thread->terminate_now();
+          if (this->_utp_server_thread)
+            this->_utp_server_thread->terminate_now();
           throw;
         }
       }

@@ -62,8 +62,8 @@ namespace infinit
         , _endpoints(std::move(endpoints))
         , _utp_server(server)
         , _protocol(protocol)
-        , _connection_thread()
         , _fast_fail(false)
+        , _connection_thread()
       {
         ELLE_ASSERT(server || protocol != Protocol::utp);
         this->_connect();

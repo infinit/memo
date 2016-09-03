@@ -206,6 +206,17 @@ namespace infinit
                    elle::Version const& version);
       };
 
+      void
+      serialize_key_hash(elle::serialization::Serializer& s,
+                         elle::Version const& v,
+                         cryptography::rsa::PublicKey& key,
+                         std::string const& field_name,
+                         Doughnut* dn = nullptr);
+      cryptography::rsa::PublicKey
+      deserialize_key_hash(elle::serialization::SerializerIn& s,
+                           elle::Version const& v,
+                           std::string const& field_name,
+                           Doughnut* dn = nullptr);
       typedef BaseOKB<blocks::MutableBlock> OKB;
     }
   }

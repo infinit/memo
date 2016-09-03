@@ -4,6 +4,7 @@
 
 #include <cryptography/rsa/KeyPair.hh>
 #include <cryptography/rsa/PublicKey.hh>
+#include <cryptography/hash.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -126,7 +127,14 @@ namespace infinit
               *gb->owner_key());
             auto rub = elle::make_unique<UB>(&_dht, "@"+_name,
               *gb->owner_key(), true);
+            auto hub = elle::make_unique<UB>(
+              &_dht, ':' + UB::hash(*gb->owner_key()).string(), *gb->owner_key());
             // FIXME
+            _dht.store(
+              std::move(hub), STORE_INSERT,
+              elle::make_unique<UserBlockUpserter>(
+                elle::sprintf("@%s", this->_name))
+            );
             _dht.store(
               std::move(ub), STORE_INSERT,
               elle::make_unique<UserBlockUpserter>(
