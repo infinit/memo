@@ -72,6 +72,7 @@ x86_64-jessie-gcc4:
     - mkdir -p "$INSTALL_DIR"
     - farm/configure --arch x86_64 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
+    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - python3 drake --website=false --beyond=false -j $(nproc) //build
     - python3 drake --website=false --beyond=false -j $(nproc) //check
     - python3 drake --website=false --beyond=false -j $(nproc) //install
