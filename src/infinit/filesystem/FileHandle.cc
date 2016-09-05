@@ -317,7 +317,12 @@ namespace infinit
         block = _block_at(block_idx, true);
         ELLE_ASSERT(block);
         check_cache(src);
-        auto const it = _blocks.find(block_idx);
+        auto it = _blocks.find(block_idx);
+        if (it == _blocks.end())
+        {
+          _block_at(block_idx, true);
+          it = _blocks.find(block_idx);
+        }
         ELLE_ASSERT(it != _blocks.end());
         reactor::wait(it->second.ready);
         it->second.dirty = true;
@@ -630,44 +635,52 @@ namespace infinit
       if (!entry.dirty)
         return {};
 
-      Address prev = Address::null;
-      if (signed(this->_file._fat.size()) < id)
-        prev = _file._fat.at(id).first;
-      auto key = cryptography::random::generate<elle::Buffer>(32).string();
-      auto ab = entry.block;
-      elle::Buffer cdata;
-      if (ab->size() >= 262144)
+
+      elle::Buffer data(*entry.block);
+
+      return [this, id, data_ = std::move(data)] () mutable
       {
-        entry.ready.close();
-        elle::SafeFinally ready_open([&] { entry.ready.open();});
-        reactor::background([&] {
-            cdata = cryptography::SecretKey(key).encipher(*ab);
+        boost::optional<CacheEntry*> ent;
+        auto it = this->_blocks.find(id);
+        if (it != this->_blocks.end())
+        {
+          ent = &it->second;
+          // FIXME: is this safe?
+          reactor::wait((*ent)->ready);
+          (*ent)->ready.close();
+        }
+        elle::SafeFinally interrupt_guard([&] {
+            ELLE_WARN("Flusher %s was interrupted", id);
+            if (ent)
+              (*ent)->ready.open();
         });
-      }
-      else
-        cdata = cryptography::SecretKey(key).encipher(*ab);
-      auto block = this->_model.make_block<ImmutableBlock>(
-        std::move(cdata), this->_file._address);
-      auto baddr = block->address();
-      if (baddr != prev)
-      {
-        ELLE_DEBUG("%s: change address of block %s: %s -> %s",
-                   this, id, prev, baddr);
+        auto key = cryptography::random::generate<elle::Buffer>(32).string();
+        elle::Buffer cdata;
+        if (data_.size() >= 262144)
+        {
+          reactor::background([&] {
+              cdata = cryptography::SecretKey(key).encipher(data_);
+          });
+        }
+        else
+          cdata = cryptography::SecretKey(key).encipher(data_);
+        auto block = this->_model.make_block<ImmutableBlock>(
+          std::move(cdata), this->_file._address);
+        auto baddr = block->address();
+        this->_model.store(
+          std::move(block), model::STORE_INSERT,
+          elle::make_unique<InsertBlockResolver>(this->_file.path(), baddr));
+        Address prev = Address::null;
+        if (signed(this->_file._fat.size()) > id)
+          prev = _file._fat.at(id).first;
         this->_file._fat[id] = FileData::FatEntry(baddr, key);
         this->_fat_changed = true;
-        return [this, baddr, prev, block_ = block.release()] () mutable
-        {
-          auto block = std::unique_ptr<Block>(block_);
-          this->_model.store(
-            std::move(block), model::STORE_INSERT,
-            elle::make_unique<InsertBlockResolver>(this->_file.path(), baddr));
-          if (prev != Address::null)
-            unchecked_remove(this->_model, prev);
-
-        };
-      }
-      else
-        return {};
+        if (prev != Address::null)
+          unchecked_remove(this->_model, prev);
+        if (ent)
+          (*ent)->ready.open();
+        interrupt_guard.abort();
+      };
     }
 
     bool
@@ -694,7 +707,7 @@ namespace infinit
             [&](Flusher const& f) {
               return f.first.get() == thread;
             });
-          if (it->second.empty())
+          if (it != _flushers.end() && it->second.empty())
             _flushers.erase(it);
         }
       }
@@ -760,6 +773,8 @@ namespace infinit
           auto it = std::min_element(this->_blocks.begin(), this->_blocks.end(),
             [](Elem const& a, Elem const& b) -> bool
             {
+              if (a.second.ready.opened() != b.second.ready.opened())
+                return a.second.ready.opened();
               if (a.second.last_use == b.second.last_use)
                 return a.first < b.first;
               else
@@ -767,6 +782,11 @@ namespace infinit
             });
           ELLE_TRACE("Removing block %s from cache", it->first);
           {
+            if (!it->second.ready.opened())
+            {
+              ELLE_DEBUG("Waiting for readyness");
+              reactor::wait(it->second.ready);
+            }
             auto entry = std::move(*it);
             auto writers = entry.second.writers;
             this->_blocks.erase(it);
