@@ -74,12 +74,13 @@ reactor::Scheduler* sched;
 std::vector<std::string> mount_points;
 std::vector<std::unique_ptr<infinit::model::doughnut::Doughnut>> nodes;
 std::vector<boost::asio::ip::tcp::endpoint> endpoints;
-infinit::overlay::Stonehenge::Peers peers;
+infinit::model::NodeLocations peers;
 std::vector<std::unique_ptr<elle::system::Process>> processes;
 
 #ifdef INFINIT_WINDOWS
 #define O_CREAT _O_CREAT
 #define O_RDWR _O_RDWR
+#define O_EXCL _O_EXCL
 #define S_IFREG _S_IFREG
 
 int setxattr(const char* path, const char* name, const void* value, int value_size, int)
@@ -387,8 +388,10 @@ make_nodes(std::string store,
   reactor::Scheduler s;
   nodes_sched = &s;
   reactor::Thread t(s, "nodes", [&] {
+    std::vector<infinit::model::Address> ids;
+    ids.reserve(node_count);
     for (int i = 0; i < node_count; ++i)
-      peers.emplace_back(infinit::model::Address::random(0)); // FIXME
+      ids.emplace_back(infinit::model::Address::random(0)); // FIXME
     for (int i = 0; i < node_count; ++i)
     {
       // Create storage
@@ -417,15 +420,15 @@ make_nodes(std::string store,
         };
       infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
         [=] (infinit::model::doughnut::Doughnut& dht,
-             infinit::model::Address id,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return elle::make_unique<infinit::overlay::Stonehenge>(
-            id, peers, std::move(local), &dht);
-        };
+          auto res = elle::make_unique<infinit::overlay::Stonehenge>(
+            infinit::model::NodeLocations(), std::move(local), &dht);
+          return res;
+         };
       nodes.emplace_back(
         new infinit::model::doughnut::Doughnut(
-          peers[i].id,
+          ids[i],
           std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
           owner.public_key(),
           passport,
@@ -436,12 +439,13 @@ make_nodes(std::string store,
           INFINIT_ELLE_VERSION));
     }
     for (int i = 0; i < node_count; ++i)
-      peers[i].endpoint = infinit::overlay::Stonehenge::Peer::Endpoint{
-        "127.0.0.1", nodes[i]->local()->server_endpoint().port()};
+      peers.emplace_back(
+        ids[i],
+        infinit::model::Endpoints(
+          {{"127.0.0.1", nodes[i]->local()->server_endpoint().port()}}));
     for (auto const& node: nodes)
       elle::unconst(static_cast<infinit::overlay::Stonehenge*>(
                       node->overlay().get())->peers()) = peers;
-
   });
   ELLE_LOG("Running node scheduler");
   s.run();
@@ -469,7 +473,7 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
   mounted = false;
   auto owner_keys = infinit::cryptography::rsa::keypair::generate(2048);
   new std::thread([&] { make_nodes(store, node_count, owner_keys, paxos);});
-  while (nodes.size() != unsigned(node_count))
+  while (peers.size() != unsigned(node_count))
     usleep(100000);
   ELLE_TRACE("got %s nodes, preparing %s mounts", nodes.size(), nmount);
   std::vector<reactor::Thread*> threads;
@@ -518,11 +522,12 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           };
         infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
           [=] (infinit::model::doughnut::Doughnut& dht,
-               infinit::model::Address id,
                std::shared_ptr<infinit::model::doughnut::Local> local)
           {
-            return elle::make_unique<infinit::overlay::Stonehenge>(
-              std::move(id), peers, std::move(local), &dht);
+            ELLE_DEBUG("Instanciating stonehenge with %s peers", peers.size());
+            auto res = elle::make_unique<infinit::overlay::Stonehenge>(
+              peers, std::move(local), &dht);
+            return res;
           };
         std::unique_ptr<infinit::model::Model> model =
         elle::make_unique<infinit::model::doughnut::Doughnut>(
@@ -602,12 +607,13 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           for (auto const& p: peers)
           {
             elle::json::Object po;
-            po["host"] = p.endpoint->host;
-            po["port"] = p.endpoint->port;
             po["id"] = elle::format::base64::encode(
               elle::ConstWeakBuffer(
-                p.id.value(),
+                p.id().value(),
                 sizeof(infinit::model::Address::Value))).string();
+            ELLE_ASSERT_GT(p.endpoints().size(), 0u);
+            po["host"] = p.endpoints()[0].address().to_string();
+            po["port"] = p.endpoints()[0].port();
             v.push_back(po);
           }
           overlay["peers"] = v;
@@ -1420,6 +1426,17 @@ test_conflicts(bool paxos)
     BOOST_CHECK_EQUAL(read(m0/"file6"), "nioc");
     BOOST_CHECK_EQUAL(read(m1/"file6"), "nioc");
   }
+  ELLE_LOG("create O_EXCL");
+  {
+    int fd0 = open((m0 / "file7").string().c_str(), O_CREAT | O_EXCL | O_RDWR, 0644);
+    BOOST_CHECK(fd0 != -1);
+    int fd1 = open((m1 / "file7").string().c_str(), O_CREAT | O_EXCL | O_RDWR, 0644);
+    int err = errno;
+    BOOST_CHECK_EQUAL(fd1, -1);
+    BOOST_CHECK_EQUAL(err, EEXIST);
+    close(fd0);
+    close(fd1);
+  }
 }
 
 void
@@ -1844,7 +1861,7 @@ public:
     {
       this->dhts.emplace_back(paxos = pax,
                               owner = this->owner_keys,
-                              args ...);
+                              std::forward<Args>(args) ...);
       for (int j = 0; j < i; ++j)
         this->dhts[j].overlay->connect(*this->dhts[i].overlay);
     }
@@ -2014,18 +2031,18 @@ ELLE_TEST_SCHEDULED(paxos_race)
   {
     reactor::Thread t1("t1", [&] { r1->child("foo")->mkdir(0700);});
     reactor::Thread t2("t2", [&] { r2->child("bar")->mkdir(0700);});
-    reactor::wait({&t1, &t2});
+    reactor::wait({t1, t2});
   }
   ELLE_LOG("check")
   {
     int count = 0;
     c1.fs->path("/")->list_directory(
       [&](std::string const&, struct stat*) { ++count;});
-    BOOST_CHECK_EQUAL(count, 2);
+    BOOST_CHECK_EQUAL(count, 4);
     count = 0;
     c2.fs->path("/")->list_directory(
       [&](std::string const&, struct stat*) { ++count;});
-    BOOST_CHECK_EQUAL(count, 2);
+    BOOST_CHECK_EQUAL(count, 4);
   }
 }
 
@@ -2256,6 +2273,7 @@ ELLE_TEST_SCHEDULED(erased_group_recovery)
   a = boost::any_cast<elle::json::Array>(jperms);
   BOOST_CHECK_EQUAL(a.size(), 1);
 }
+
 ELLE_TEST_SCHEDULED(remove_permissions)
 {
   DHTs servers(-1);
@@ -2284,7 +2302,7 @@ ELLE_TEST_SCHEDULED(remove_permissions)
   int count = 0;
   client1.fs->path("/dir")->list_directory(
       [&](std::string const&, struct stat*) { ++count;});
-  BOOST_CHECK_EQUAL(count, 0);
+  BOOST_CHECK_EQUAL(count, 2);
 
   h = client1.fs->path("/file")->create(O_CREAT|O_TRUNC|O_RDWR, 0666);
   h->write(elle::ConstWeakBuffer("bar", 3), 3, 0);
@@ -2311,6 +2329,25 @@ ELLE_TEST_SCHEDULED(remove_permissions)
   BOOST_CHECK_NO_THROW(client2.fs->path("/dir2")->rmdir());
 }
 
+
+ELLE_TEST_SCHEDULED(create_excl)
+{
+  DHTs servers(1, with_cache = true);
+  auto client1 = servers.client(false);
+  auto client2 = servers.client(false);
+  // cache feed
+  client1.fs->path("/");
+  client2.fs->path("/");
+  client1.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644);
+  BOOST_CHECK_THROW(
+    client2.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644),
+    reactor::filesystem::Error);
+  // again, now that our cache knows the file
+  BOOST_CHECK_THROW(
+    client2.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644),
+    reactor::filesystem::Error);
+}
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -2322,12 +2359,12 @@ ELLE_TEST_SUITE()
   auto& suite = boost::unit_test::framework::master_test_suite();
   // only doughnut supported filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
   suite.add(BOOST_TEST_CASE(filesystem), 0, 120);
-  suite.add(BOOST_TEST_CASE(filesystem_paxos), 0, 120);
+  suite.add(BOOST_TEST_CASE(filesystem_paxos), 0, 240);
 #ifndef INFINIT_MACOSX
   // osxfuse fails to handle two mounts at the same time, the second fails
   // with a mysterious 'permission denied'
   suite.add(BOOST_TEST_CASE(acl), 0, 120);
-  suite.add(BOOST_TEST_CASE(acl_paxos), 0, 120);
+  suite.add(BOOST_TEST_CASE(acl_paxos), 0, 240);
   suite.add(BOOST_TEST_CASE(conflicts), 0, 120);
   suite.add(BOOST_TEST_CASE(conflicts_paxos), 0, 120);
 #endif
@@ -2338,9 +2375,9 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(data_embed), 0, 5);
   suite.add(BOOST_TEST_CASE(symlink_perms), 0, 5);
   suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
-  suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
   suite.add(BOOST_TEST_CASE(rename_exceptions), 0, 5);
   suite.add(BOOST_TEST_CASE(erased_group), 0, 5);
   suite.add(BOOST_TEST_CASE(erased_group_recovery), 0, 5);
   suite.add(BOOST_TEST_CASE(remove_permissions),0, 5);
+  suite.add(BOOST_TEST_CASE(create_excl),0, 5);
 }

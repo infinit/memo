@@ -84,9 +84,9 @@ collate_users(OptVecStr const& combined,
 
 static
 std::string
-public_key_from_username(std::string const& username)
+public_key_from_username(std::string const& username, bool fetch)
 {
-  auto user = ifnt.user_get(username);
+  auto user = ifnt.user_get(username, fetch);
   elle::Buffer buf;
   {
     elle::IOStream ios(buf.ostreambuf());
@@ -94,80 +94,6 @@ public_key_from_username(std::string const& username)
     so.serialize_forward(user.public_key);
   }
   return buf.string();
-}
-
-static
-boost::optional<std::string>
-path_mountpoint(std::string const& path, bool fallback)
-{
-  char buffer[4095];
-  int sz = port_getxattr(path, "infinit.mountpoint", buffer, 4095, fallback);
-  if (sz <= 0)
-    return {};
-  return std::string(buffer, sz);
-}
-
-static
-void
-enforce_in_mountpoint(std::string const& path_, bool fallback)
-{
-  auto path = boost::filesystem::absolute(path_);
-  if (!boost::filesystem::exists(path))
-    throw elle::Error(elle::sprintf("path does not exist: %s", path_));
-  for (auto const& p: {path, path.parent_path()})
-  {
-    auto mountpoint = path_mountpoint(p.string(), fallback);
-    if (mountpoint && !mountpoint.get().empty())
-      return;
-  }
-  throw elle::Error(elle::sprintf("%s not in an Infinit volume", path_));
-}
-
-static
-bool
-path_is_root(std::string const& path, bool fallback)
-{
-  char buffer[4095];
-  int sz = port_getxattr(path, "infinit.root", buffer, 4095, fallback);
-  if (sz < 0)
-    return false;
-  return std::string(buffer, sz) == std::string("true");
-}
-
-class InvalidArgument
-  : public elle::Error
-{
-public:
-  InvalidArgument(std::string const& error)
-    : elle::Error(error)
-  {}
-};
-
-class PermissionDenied
-  : public elle::Error
-{
-public:
-  PermissionDenied(std::string const& error)
-    : elle::Error(error)
-  {}
-};
-
-template<typename F, typename ... Args>
-void
-check(F func, Args ... args)
-{
-  int res = func(args...);
-  if (res < 0)
-  {
-    int error_number = errno;
-    auto* e = std::strerror(error_number);
-    if (error_number == EINVAL)
-      throw InvalidArgument(std::string(e));
-    else if (error_number == EACCES)
-      throw PermissionDenied(std::string(e));
-    else
-      throw elle::Error(std::string(e));
-  }
 }
 
 template<typename A, typename ... Args>
@@ -190,21 +116,135 @@ recursive_action(A action, std::string const& path, Args ... args)
       continue;
     }
     action(it->path().string(), args...);
+    reactor::yield();
   }
 }
 
-static
+template<typename A, typename Res, typename ... Args>
 void
-list_action(std::string const& path, bool verbose, bool fallback_xattrs)
+recursive_action(std::vector<Res>& output,
+                 A action,
+                 std::string const& path, Args ... args)
 {
-  if (verbose)
-    std::cout << "processing " << path << std::endl;
-  bool dir = boost::filesystem::is_directory(path);
+  recursive_action(
+    [&] (std::string const& path) {
+      output.push_back(action(path, args...));
+    }, path);
+}
+
+struct PermissionsResult
+{
+  // Factor this class.
+  struct Permissions
+  {
+    Permissions() = default;
+    Permissions(Permissions const&) = default;
+
+    Permissions(elle::serialization::Serializer& s)
+    {
+      this->serialize(s);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("read", this->read);
+      s.serialize("write", this->write);
+      s.serialize("owner", this->owner);
+      s.serialize("admin", this->admin);
+      s.serialize("name", this->name);
+    }
+
+    bool read;
+    bool write;
+    bool owner;
+    bool admin;
+    std::string name;
+  };
+
+  struct Directory
+  {
+    Directory()
+      : inherit(false)
+    {}
+
+    Directory(Directory const&) = default;
+
+    Directory(elle::serialization::Serializer& s)
+    {
+      this->serialize(s);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("inherit", this->inherit);
+    }
+
+    bool inherit;
+  };
+
+  struct World
+  {
+    World() = default;
+    World(World const&) = default;
+
+    World(elle::serialization::Serializer& s)
+    {
+      this->serialize(s);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("read", this->read);
+      s.serialize("write", this->write);
+    }
+
+    bool read;
+    bool write;
+  };
+
+  PermissionsResult() = default;
+  PermissionsResult(PermissionsResult const&) = default;
+
+  PermissionsResult(elle::serialization::Serializer& s)
+  {
+    this->serialize(s);
+  }
+
+  void
+  serialize(elle::serialization::Serializer& s)
+  {
+    s.serialize("path", this->path);
+    s.serialize("error", this->error);
+    s.serialize("permissions", this->permissions);
+    s.serialize("directory", this->directory);
+    s.serialize("world", this->world);
+  }
+
+  std::string path;
+  boost::optional<std::string> error;
+  std::vector<Permissions> permissions;
+  boost::optional<Directory> directory;
+  boost::optional<World> world;
+};
+
+static
+PermissionsResult
+get_acl(std::string const& path, bool fallback_xattrs)
+{
+  PermissionsResult res;
+  res.path = path;
   char buf[4096];
+  bool dir = boost::filesystem::is_directory(path);
   int sz = port_getxattr(
     path.c_str(), "user.infinit.auth", buf, 4095, fallback_xattrs);
   if (sz < 0)
-    perror(path.c_str());
+  {
+    auto err = errno;
+    res.error = std::string{std::strerror(err)};
+  }
   else
   {
     buf[sz] = 0;
@@ -223,67 +263,105 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
         dir_inherit = (buf == std::string("true"));
       }
     }
+
     try
     {
-      // [{name: s, read: bool, write: bool}]
-      std::stringstream output;
-      output << path << ":" << std::endl;
-      if (dir_inherit)
-      {
-#if defined(__GNUC__) && !defined(__clang__)
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-        output << "  inherit: "
-               << (dir_inherit.get() ? "yes" : "no")
-               << std::endl;
-#if defined(__GNUC__) && !defined(__clang__)
-# pragma GCC diagnostic pop
-#endif
-      }
-      struct stat st;
-      int res = ::stat(path.c_str(),&st);
-      if (res != 0)
-        perror(path.c_str());
-      else
-      {
-        if (st.st_mode & 06)
-        {
-          output << "  world: " << ((st.st_mode & 02) ? "rw" : "r")
-                 << std::endl;
-        }
-      }
       elle::json::Json j = elle::json::read(ss);
       auto a = boost::any_cast<elle::json::Array>(j);
-      for (auto& li: a)
+      for (auto const& _entry: a)
       {
-        auto d = boost::any_cast<elle::json::Object>(li);
-        auto n = boost::any_cast<std::string>(d.at("name"));
-        auto r = boost::any_cast<bool>(d.at("read"));
-        auto w = boost::any_cast<bool>(d.at("write"));
-        auto admin = boost::any_cast<bool>(d.at("admin"));
-        auto owner = boost::any_cast<bool>(d.at("owner"));
-        const char* mode = w ? (r ? "rw" : "w") : (r ? "r" : "none");
-        output << "\t" << n;
-        if (admin || owner)
-        {
-          output << " (";
-          if (admin)
-            output << "admin";
-          if (admin && owner)
-            output << ", ";
-          if (owner)
-            output << "owner";
-          output << ")";
-        }
-        output << ": " << mode << std::endl;
+        auto const& entry = boost::any_cast<elle::json::Object>(_entry);
+        PermissionsResult::Permissions perms;
+        perms.read = boost::any_cast<bool>(entry.at("read"));
+        perms.write = boost::any_cast<bool>(entry.at("write"));
+        perms.admin = boost::any_cast<bool>(entry.at("admin"));
+        perms.owner = boost::any_cast<bool>(entry.at("owner"));
+        perms.name = boost::any_cast<std::string>(entry.at("name"));
+        res.permissions.push_back(perms);
       }
-      std::cout << output.str() << std::endl;
+      if (dir)
+      {
+        PermissionsResult::Directory dir;
+        if (dir_inherit)
+          dir.inherit = *dir_inherit;
+        res.directory = dir;
+      }
+      {
+        struct stat st;
+        int stat_result = ::stat(path.c_str(),&st);
+        if (stat_result != 0)
+          perror(path.c_str());
+        else
+        {
+          if (st.st_mode & 06)
+          {
+            PermissionsResult::World world;
+            world.read = true;
+            world.write = st.st_mode & 02;
+            res.world = world;
+          }
+        }
+      }
+      return res;
     }
-    catch (std::exception const& e)
+    catch (reactor::Terminate const&)
     {
-      std::cout << path << " : " << buf << std::endl;
+      throw;
     }
+    catch (...)
+    {
+      res.error = elle::exception_string();
+    }
+  }
+  return res;
+}
+
+static
+void
+list_action(std::string const& path, bool verbose, bool fallback_xattrs)
+{
+  if (verbose)
+    std::cout << "processing " << path << std::endl;
+  auto res = get_acl(path, fallback_xattrs);
+  if (res.error)
+    std::cerr << path << ": " << *res.error
+              << std::endl;
+  else
+  {
+    std::stringstream output;
+    output << path << ":" << std::endl;
+    if (res.directory)
+    {
+      output << "  inherit: "
+             << ((*res.directory).inherit ? "yes" : "no")
+             << std::endl;
+    }
+    if (res.world)
+    {
+      output << "  world: "
+             << ((*res.world).write ? "rw" : "r")
+             << std::endl;
+    }
+    for (auto& perm: res.permissions)
+    {
+      const char* mode = perm.write
+        ? (perm.read ? "rw" : "w")
+        : (perm.read ? "r" : "none");
+      output << "    " << perm.name;
+      if (perm.admin || perm.owner)
+      {
+        output << " (";
+        if (perm.admin)
+          output << "admin";
+        if (perm.admin && perm.owner)
+          output << ", ";
+        if (perm.owner)
+          output << "owner";
+        output << ")";
+      }
+      output << ": " << mode << std::endl;
+    }
+    std::cout << output.str();
   }
 }
 
@@ -297,6 +375,7 @@ set_action(std::string const& path,
            bool disinherit,
            bool verbose,
            bool fallback_xattrs,
+           bool fetch,
            bool multi = false)
 {
   if (verbose)
@@ -378,7 +457,7 @@ set_action(std::string const& path,
       {
         try
         {
-          set_attribute(public_key_from_username(username));
+          set_attribute(public_key_from_username(username, fetch));
         }
         catch (InvalidArgument const&)
         {
@@ -425,9 +504,20 @@ COMMAND(list)
   for (auto const& path: paths)
   {
     enforce_in_mountpoint(path, fallback);
-    list_action(path, verbose, fallback);
-    if (recursive)
-      recursive_action(list_action, path, verbose, fallback);
+    if (script_mode)
+    {
+      auto permissions = std::vector<PermissionsResult>();
+      permissions.push_back(get_acl(path, fallback));
+      if (recursive)
+        recursive_action(permissions, get_acl, path, fallback);
+      elle::serialization::json::serialize(permissions, std::cout, false);
+    }
+    else
+    {
+      list_action(path, verbose, fallback);
+      if (recursive)
+        recursive_action(list_action, path, verbose, fallback);
+    }
   }
 }
 
@@ -439,6 +529,7 @@ COMMAND(set)
   std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
   auto omode_ = optional(args, "others-mode");
   auto omode = omode_? omode_.get() : "";
+  std::transform(omode.begin(), omode.end(), omode.begin(), ::tolower);
   auto it = std::find(allowed_modes.begin(), allowed_modes.end(), omode);
   if (it == allowed_modes.end())
   {
@@ -478,6 +569,7 @@ COMMAND(set)
     throw elle::Error("--traverse can only be used with mode 'r', 'rw'");
   bool verbose = flag(args, "verbose");
   bool fallback = flag(args, "fallback-xattrs");
+  bool fetch = flag(args, "fetch");
   // Don't do any operations before checking paths.
   for (auto const& path: paths)
   {
@@ -495,7 +587,7 @@ COMMAND(set)
   for (auto const& path: paths)
   {
     set_action(path, users, mode, omode, inherit, disinherit, verbose,
-               fallback, multi);
+               fallback, fetch, multi);
     if (traverse)
     {
       boost::filesystem::path working_path = boost::filesystem::absolute(path);
@@ -503,14 +595,14 @@ COMMAND(set)
       {
         working_path = working_path.parent_path();
         set_action(working_path.string(), users, "setr", "", false, false,
-                   verbose, fallback, multi);
+                   verbose, fallback, fetch, multi);
       }
     }
     if (recursive)
     {
       recursive_action(
-        set_action, path, users, mode, omode, inherit, disinherit, verbose,
-        fallback, multi);
+        set_action, path, users, mode, omode, inherit, disinherit,
+        verbose, fallback, fetch, multi);
     }
   }
 }
@@ -521,7 +613,8 @@ group_add_remove(std::string const& path,
                  std::string const& group,
                  std::string const& object,
                  std::string const& action,
-                 bool fallback)
+                 bool fallback,
+                 bool fetch)
 {
   if (!object.length())
     throw CommandLineError("empty user or group name");
@@ -548,7 +641,7 @@ group_add_remove(std::string const& path,
     {
       try
       {
-        set_attr(public_key_from_username(name));
+        set_attr(public_key_from_username(name, fetch));
       }
       catch (elle::Error const& e)
       {
@@ -584,6 +677,7 @@ COMMAND(group)
   bool fallback = flag(args, "fallback-xattrs");
   std::string path = mandatory<std::string>(args, "path", "path in volume");
   enforce_in_mountpoint(path, fallback);
+  bool fetch = flag(args, "fetch");
   // Need to perform group actions on a directory in the volume.
   if (!boost::filesystem::is_directory(path))
     path = boost::filesystem::path(path).parent_path().string();
@@ -594,12 +688,12 @@ COMMAND(group)
   if (add)
   {
     for (auto const& obj: add.get())
-      group_add_remove(path, group, obj, "add", fallback);
+      group_add_remove(path, group, obj, "add", fallback, fetch);
   }
   if (rem)
   {
     for (auto const& obj: rem.get())
-      group_add_remove(path, group, obj, "remove", fallback);
+      group_add_remove(path, group, obj, "remove", fallback, fetch);
   }
   if (list)
   {
@@ -627,7 +721,7 @@ COMMAND(register_)
   bool fallback = flag(args, "fallback-xattrs");
   auto path = mandatory<std::string>(args, "path", "path to mountpoint");
   enforce_in_mountpoint(path, fallback);
-  auto user = ifnt.user_get(user_name);
+  auto user = ifnt.user_get(user_name, flag(args, "fetch"));
   auto passport = ifnt.passport_get(network.name, user_name);
   std::stringstream output;
   elle::serialization::json::serialize(passport, output, false);
@@ -640,10 +734,12 @@ main(int argc, char** argv)
 {
   using boost::program_options::value;
   using boost::program_options::bool_switch;
-  program = argv[0];
   Mode::OptionDescription fallback_option = {
     "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
     "if system xattrs are not suppported"
+  };
+  Mode::OptionDescription fetch_option = {
+    "fetch", bool_switch(), "fetch users from " + beyond(true) +" if needed"
   };
   Mode::OptionDescription verbose_option = {
     "verbose", bool_switch(), "verbose output" };
@@ -669,7 +765,8 @@ main(int argc, char** argv)
         { "path,p", value<std::vector<std::string>>(), "paths" },
         { "user,u", value<std::vector<std::string>>()->multitoken(),
           elle::sprintf("users and groups (prefix: %s<group>)", group_prefix) },
-        { "group,g", value<std::vector<std::string>>(), "groups" },
+        { "group,g", value<std::vector<std::string>>()->multitoken(),
+          "groups" },
         { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
         { "others-mode,o", value<std::string>(),
           "access mode for other network users: r,w,rw,none" },
@@ -682,6 +779,7 @@ main(int argc, char** argv)
           "add read permissions to parent directories" },
         fallback_option,
         verbose_option,
+        fetch_option,
       },
     },
     {
@@ -715,6 +813,7 @@ main(int argc, char** argv)
         { "path,p", value<std::string>(), "a path within the volume" },
         fallback_option,
         verbose_option,
+        fetch_option,
       },
     },
     {
@@ -728,6 +827,7 @@ main(int argc, char** argv)
         { "network,n", value<std::string>(), "name of the network"},
         { "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
           "if system xattrs are not suppported" },
+        fetch_option,
       },
     }
   };

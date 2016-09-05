@@ -148,7 +148,7 @@ public:
       dht::Passport(keys->K(), "network", *keys),
       [] (dht::Doughnut&)
       { return nullptr; },
-      [] (dht::Doughnut&, infinit::model::Address, std::shared_ptr<dht::Local>)
+      [] (dht::Doughnut&, std::shared_ptr<dht::Local>)
       { return nullptr; },
       {}, nullptr, v)
   {}

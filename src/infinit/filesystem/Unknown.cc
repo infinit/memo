@@ -9,12 +9,14 @@
 #include <reactor/filesystem.hh>
 
 #include <sys/stat.h> // S_IMFT...
+#include <fcntl.h> // O_EXCL
 
 #ifdef INFINIT_LINUX
   #include <attr/xattr.h>
 #endif
 #ifdef INFINIT_WINDOWS
   #undef stat
+  #define O_EXCL _O_EXCL
 #endif
 
 ELLE_LOG_COMPONENT("infinit.filesystem.Unknown");
@@ -23,6 +25,44 @@ namespace infinit
 {
   namespace filesystem
   {
+    struct NewFolderResolver
+      : public model::DummyConflictResolver
+    {
+      typedef DummyConflictResolver Super;
+      NewFolderResolver(boost::filesystem::path const& path)
+        : Super()
+        , _path(path.string())
+      {
+      }
+
+      NewFolderResolver(elle::serialization::Serializer& s,
+                        elle::Version const& version)
+        : Super() // Do not call Super(s, version)
+      {
+        this->serialize(s, version);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& version) override
+      {
+        Super::serialize(s, version);
+        s.serialize("path", this->_path);
+      }
+
+      std::string
+      description() const override
+      {
+        return elle::sprintf("create directory %s", this->_path);
+      }
+
+      ELLE_ATTRIBUTE(std::string, path);
+    };
+
+    static const elle::serialization::Hierarchy<infinit::model::ConflictResolver>::
+    Register<NewFolderResolver> _register_new_folder_resolver(
+      "NewFolderResolver");
+
 
     Unknown::Unknown(FileSystem& owner,
                      std::shared_ptr<DirectoryData> parent,
@@ -53,8 +93,10 @@ namespace infinit
         dd.write(*_owner.block_store(), Operation{OperationType::update, "/inherit"}, b, true, true);
       }
       else
-        this->_owner.store_or_die(std::move(b), model::STORE_INSERT,
-                                  model::make_drop_conflict_resolver());
+        this->_owner.store_or_die(
+          std::move(b), model::STORE_INSERT,
+          elle::make_unique<NewFolderResolver>(
+            (this->_parent->_path / _name)));
       ELLE_ASSERT_EQ(this->_parent->_files.find(this->_name),
                      this->_parent->_files.end());
       this->_parent->_files.emplace(
@@ -78,6 +120,8 @@ namespace infinit
       mode |= S_IFREG;
       if (_parent->_files.find(_name) != _parent->_files.end())
       {
+        if (flags & O_EXCL)
+          THROW_EXIST;
         ELLE_WARN("File %s exists where it should not", _name);
         File f(_owner, _parent->_files.at(_name).second, {}, _parent, _name);
         return f.open(flags, mode);
@@ -91,34 +135,86 @@ namespace infinit
         std::make_pair(_name,
           std::make_pair(EntryType::file, b->address())));
       _parent->write(*_owner.block_store(),
-                     Operation{OperationType::insert, _name, EntryType::file, b->address()},
+                     Operation{
+                       (flags & O_EXCL) ? OperationType::insert_exclusive : OperationType::insert,
+                       _name, EntryType::file, b->address()},
                      DirectoryData::null_block,
                      true);
-      elle::SafeFinally remove_from_parent( [&] {
-          _parent->_files.erase(_name);
+      std::unique_ptr<rfs::Handle> handle;
+      elle::With<elle::Finally>(
+        [&]
+        {
+          this->_parent->_files.erase(_name);
           try
           {
             _parent->write(*_owner.block_store(),
                            Operation{OperationType::remove, _name});
           }
-          catch(...)
+          catch (elle::Error const& e)
           {
-            ELLE_WARN("Rollback failure on %s", _name);
+            ELLE_WARN("rollback failure on %s", this->_name);
           }
-      });
-      FileData fd(_parent->_path / _name, b->address(), mode & 0700);
-      if (_parent->inherit_auth())
+        }) << [&] (elle::Finally& remove_from_parent)
       {
-        umbrella([&] { dynamic_cast<ACLBlock*>(parent_block.get())->copy_permissions(
-          dynamic_cast<ACLBlock&>(*b));
-        });
-      }
-      fd.write(*_owner.block_store(), WriteTarget::all, b, true);
-      std::unique_ptr<rfs::Handle> handle(
-        new FileHandle(*_owner.block_store(), fd, true, true, true));
-      remove_from_parent.abort();
+        FileData fd(_parent->_path / _name, b->address(), mode & 0700);
+        if (_parent->inherit_auth())
+        {
+          umbrella(
+            [&]
+            {
+              dynamic_cast<ACLBlock*>(parent_block.get())->copy_permissions(
+                dynamic_cast<ACLBlock&>(*b));
+            });
+        }
+        fd.write(*_owner.block_store(), WriteTarget::all, b, true);
+        handle.reset(
+          new FileHandle(*_owner.block_store(), fd, true, true, true));
+        remove_from_parent.abort();
+      };
       return handle;
     }
+
+    struct NewSymlinkResolver
+      : public model::DummyConflictResolver
+    {
+      typedef DummyConflictResolver Super;
+      NewSymlinkResolver(boost::filesystem::path const& source,
+                         boost::filesystem::path const& destination)
+        : Super()
+        , _source(source.string())
+        , _destination(destination.string())
+      {}
+
+      NewSymlinkResolver(elle::serialization::Serializer& s,
+                    elle::Version const& version)
+        : Super() // Do not call Super(s, version)
+      {
+        this->serialize(s, version);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& version) override
+      {
+        Super::serialize(s, version);
+        s.serialize("source", this->_source);
+        s.serialize("destination", this->_destination);
+      }
+
+      std::string
+      description() const override
+      {
+        return elle::sprintf("create symlink from %s to %s",
+                             this->_source, this->_destination);
+      }
+
+      ELLE_ATTRIBUTE(std::string, source);
+      ELLE_ATTRIBUTE(std::string, destination);
+    };
+
+    static const elle::serialization::Hierarchy<infinit::model::ConflictResolver>::
+    Register<NewSymlinkResolver> _register_new_symlink_resolver(
+      "NewSymlinkResolver");
 
     void
     Unknown::symlink(boost::filesystem::path const& where)
@@ -127,8 +223,9 @@ namespace infinit
       auto parent_block = this->_owner.block_store()->fetch(_parent->address());
       _owner.ensure_permissions(*parent_block, true, true);
       auto b = _owner.block_store()->make_block<infinit::model::blocks::ACLBlock>();
+      auto now = time(nullptr);
       FileHeader fh(0, 1, S_IFLNK | 0600,
-                    time(nullptr), time(nullptr), time(nullptr),
+                    now, now, now, now,
                     0);
       fh.symlink_target = where.string();
       auto serdata = elle::serialization::binary::serialize(fh);
@@ -140,8 +237,10 @@ namespace infinit
         });
       }
       auto addr = b->address();
-      _owner.store_or_die(std::move(b), model::STORE_INSERT,
-                          model::make_drop_conflict_resolver());
+      _owner.store_or_die(
+        std::move(b), model::STORE_INSERT,
+        elle::make_unique<NewSymlinkResolver>(this->_parent->_path / this->_name,
+                                              where));
       this->_parent->_files.emplace(
         this->_name, std::make_pair(EntryType::symlink, addr));
       _parent->write(*_owner.block_store(),

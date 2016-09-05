@@ -12,21 +12,53 @@ namespace infinit
 {
   namespace overlay
   {
+    /*----------.
+    | Operation |
+    `----------*/
+
+    std::ostream&
+    operator <<(std::ostream& output, Operation op)
+    {
+      switch (op)
+      {
+        case OP_FETCH:
+          output << "fetch";
+          break;
+        case OP_INSERT:
+          output << "insert";
+          break;
+        case OP_UPDATE:
+          output << "update";
+          break;
+        case OP_REMOVE:
+          output << "remove";
+          break;
+        case OP_FETCH_FAST:
+          output << "fetch_fast";
+          break;
+      }
+      return output;
+    }
+
     /*-------------.
     | Construction |
     `-------------*/
 
     Overlay::Overlay(model::doughnut::Doughnut* dht,
-                     std::shared_ptr<infinit::model::doughnut::Local> local,
-                     model::Address node_id)
-      : _node_id(std::move(node_id))
-      , _doughnut(dht)
+                     std::shared_ptr<infinit::model::doughnut::Local> local)
+      : _doughnut(dht)
       , _local(local)
     {}
 
     Overlay::~Overlay()
     {
       ELLE_TRACE("%s: destruct", this);
+    }
+
+    model::Address const&
+    Overlay::id() const
+    {
+      return this->_doughnut->id();
     }
 
     elle::json::Json
@@ -40,9 +72,9 @@ namespace infinit
     `------*/
 
     void
-    Overlay::discover(NodeEndpoints const& peers)
+    Overlay::discover(NodeLocations const& peers)
     {
-      ELLE_TRACE("%s: discover new peers: %s", this, peers);
+      ELLE_TRACE("%s: discover new peers: %f", this, peers);
       this->_discover(peers);
     }
 
@@ -53,14 +85,14 @@ namespace infinit
     reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
     Overlay::lookup(std::vector<model::Address> const& addresses, int n) const
     {
-      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %s", *this, n, addresses);
+      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %f", *this, n, addresses);
       return this->_lookup(addresses, n);
     }
 
     reactor::Generator<Overlay::WeakMember>
     Overlay::lookup(model::Address address, int n, Operation op) const
     {
-      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %f", this, n, address);
+      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %f (%s)", this, n, address, op);
       return this->_lookup(address, n, op);
     }
 
@@ -103,27 +135,23 @@ namespace infinit
         [this, addresses]
         (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
         {
-          elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
-          {
-            for (auto const& address: addresses)
-              scope.run_background(
-                elle::sprintf("%s: fetch node by address", *this),
-                [&]
-                {
-                  try
-                  {
-                    yield(this->_lookup_node(address));
-                  }
-                  catch (elle::Error const& e)
-                  {
-                    ELLE_TRACE("%s: failed to lookup node %f: %s",
-                               this, address, e);
-                    yield(WeakMember(new model::doughnut::DummyPeer(
-                                       *this->doughnut(), address)));
-                  }
-                });
-            reactor::wait(scope);
-          };
+          reactor::for_each_parallel(
+            addresses,
+            [&] (model::Address const& address)
+            {
+              try
+              {
+                yield(this->_lookup_node(address));
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_TRACE("%s: failed to lookup node %f: %s",
+                           this, address, e);
+                yield(WeakMember(new model::doughnut::DummyPeer(
+                                   *this->doughnut(), address)));
+              }
+            },
+            "fetch node by address");
         });
     }
 

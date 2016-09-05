@@ -14,6 +14,7 @@
 
 #include <reactor/Scope.hh>
 #include <reactor/exception.hh>
+#include <reactor/network/utp-server.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
@@ -31,6 +32,7 @@
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
+#include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
@@ -66,8 +68,11 @@ namespace infinit
           storage
             ? this->_consensus->make_local(std::move(port), std::move(storage))
             : nullptr)
-        , _overlay(overlay_builder(*this, id, this->_local))
+        // FIXME: move protocol configuration to doughnut
+        , _dock(*this, Protocol::all)
+        , _overlay(overlay_builder(*this, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
+        , _terminating()
       {
         if (this->_local)
           this->_local->initialize();
@@ -120,13 +125,16 @@ namespace infinit
                                  this, user->address(), name);
                 try
                 {
-                  this->store(std::move(user), STORE_INSERT,
-                              make_drop_conflict_resolver());
+                  this->store(
+                    std::move(user), STORE_INSERT,
+                    elle::make_unique<UserBlockUpserter>(name));
                 }
                 catch (elle::Error const& e)
                 {
                   ELLE_TRACE("%s: failed to store user block: %s", *this, e);
-                  reactor::sleep(1_sec);
+                  if (this->_terminating.opened())
+                    break;
+                  reactor::wait(this->_terminating, 1_sec);
                 }
               }
             while (true)
@@ -153,14 +161,17 @@ namespace infinit
                                  user->address());
                 try
                 {
-                  this->store(std::move(user), STORE_INSERT,
-                              make_drop_conflict_resolver());
+                this->store(
+                  std::move(user), STORE_INSERT,
+                  elle::make_unique<ReverseUserBlockUpserter>(name));
                 }
                 catch (elle::Error const& e)
                 {
                   ELLE_TRACE("%s: failed to store reverse user block: %s",
                              *this, e);
-                  reactor::sleep(1_sec);
+                  if (this->_terminating.opened())
+                    break;
+                  reactor::wait(this->_terminating, 1_sec);
                 }
               }
           };
@@ -172,6 +183,7 @@ namespace infinit
       Doughnut::~Doughnut()
       {
         ELLE_TRACE_SCOPE("%s: destruct", *this);
+        this->_terminating.open();
         if (this->_user_init)
         {
           if (!reactor::wait(*this->_user_init, 5_sec))
@@ -182,6 +194,7 @@ namespace infinit
           this->_local->cleanup();
         this->_consensus.reset();
         this->_overlay.reset();
+        this->_dock.cleanup();
         if (this->_local)
         {
           if (!this->_local.unique())
@@ -438,7 +451,7 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::model::Model>
-      Configuration::make(overlay::NodeEndpoints const& hosts,
+      Configuration::make(std::vector<Endpoints> const& hosts,
                           bool client,
                           boost::filesystem::path const& dir)
       {
@@ -447,7 +460,7 @@ namespace infinit
 
       std::unique_ptr<Doughnut>
       Configuration::make(
-        overlay::NodeEndpoints const& hosts,
+        std::vector<Endpoints> const& hosts,
         bool client,
         boost::filesystem::path const& p,
         bool async,
@@ -462,6 +475,11 @@ namespace infinit
         Doughnut::ConsensusBuilder consensus =
           [&] (Doughnut& dht)
           {
+            if (!this->consensus)
+            {
+              elle::err(
+                "invalid network configuration, missing field \"consensus\"");
+            }
             auto consensus = this->consensus->make(dht);
             if (async)
             {
@@ -482,10 +500,12 @@ namespace infinit
             return consensus;
           };
         Doughnut::OverlayBuilder overlay =
-          [&] (Doughnut& dht, Address id, std::shared_ptr<Local> local)
+          [&] (Doughnut& dht, std::shared_ptr<Local> local)
           {
-            return this->overlay->make(
-              std::move(id), hosts, std::move(local), &dht);
+            if (!this->overlay)
+              elle::err(
+                "invalid network configuration, missing field \"overlay\"");
+            return this->overlay->make(hosts, std::move(local), &dht);
           };
         auto port = port_ ? port_.get() : this->port ? this->port.get() : 0;
         std::unique_ptr<storage::Storage> storage;

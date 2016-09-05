@@ -1,5 +1,6 @@
 import drake
 import drake.debian
+import drake.docker
 import drake.templating
 
 from itertools import chain
@@ -111,6 +112,8 @@ def configure(
     'email_regex': email_regex,
     'name_regex': name_regex,
     'delegate_user': delegate_user,
+    'python_version_major': python.version.major,
+    'python_version_minor': python.version.minor,
   }
   variables.update(secrets)
   with drake.templating.Context(content = variables):
@@ -123,6 +126,7 @@ def configure(
     'src/__init__.py',
     'src/bottle.py',
     'src/couchdb.py',
+    'src/dynamodb.py',
     'src/gcs.py',
     'src/wsgi.py',
     'src/validation.py',
@@ -152,9 +156,10 @@ def configure(
     'couchdb-python/couchdb/design.py',
   )
 
-  python_prefix = drake.Path('lib/python%s' % python.version)
+  def python_prefix(version = python.version):
+    return drake.Path('lib/python%s' % version)
   oauth2client = drake.PythonModule(
-    'oauth2client', python_prefix,
+    'oauth2client', python_prefix(),
     version = '1.5.2', # Upgrade to the new stable.
     dependencies = [
       'httplib2',
@@ -168,44 +173,44 @@ def configure(
       'rsa-3.3.dist-info',
       'six-1.10.0.dist-info',
     ])
-  sources += oauth2client.targets()
+  print(python_prefix())
   crypto = drake.PythonModule(
     'pycrypto',
-    python_prefix,
+    python_prefix(),
     dependencies = [],
     module_name = 'Crypto')
-  sources += crypto.targets()
+  print(crypto.targets())
   PIL = drake.PythonModule(
-    'PILLOW', python_prefix,
+    'PILLOW', python_prefix(),
     module_name = 'PIL',
     dependencies = ['Pillow-3.0.0.egg-info'])
-  sources += PIL.targets()
-  def install_nodes(where, how):
+  def install_nodes(where, how, python_version = python.version):
+    prefix = python_prefix(python_version)
     where = drake.Path(where)
     for node in how(sources,
-                    where / python_prefix / 'infinit/beyond',
+                    where / prefix / 'infinit/beyond',
                     strip_prefix = 'src'):
       yield node
     for node in how(couchdb_sources,
-                    where / python_prefix,
+                    where / prefix,
                     strip_prefix = 'couchdb-python'):
       yield node
     for node in how(sendwithus.nodes,
-                    where / python_prefix,
+                    where / prefix,
                     strip_prefix = '../%s' % sendwithus.root):
       yield node
     yield how(bottle,
-              where / python_prefix, strip_prefix = True)
+              where / prefix, strip_prefix = True)
     yield how(drake.node('bin/beyond'), where)
     if cryptography_python_module:
       yield how(cryptography_python_module,
-                where / python_prefix, strip_prefix = True)
-    yield drake.touch(where / python_prefix / 'infinit/__init__.py')
+                where / prefix, strip_prefix = True)
+    yield drake.touch(where / prefix / 'infinit/__init__.py')
 
   build = drake.Rule('build')
   build << binaries
   built = list(install_nodes(where = '.', how = copy_python))
-  package = drake.python.Package('beyond', python_prefix, built,
+  package = drake.python.Package('beyond', python_prefix(), built,
                                  fullname = 'infinit.beyond')
   build << built
 
@@ -218,10 +223,22 @@ def configure(
   ## Debian ##
   ## ------ ##
 
+  ubuntu_dependencies = [
+    'couchdb',
+    'libjpeg-dev',
+    'python3',
+    'python3-boto3',
+    'python3-bson',
+    'python3-crypto',
+    'python3-httplib2',
+    'python3-pil',
+    'python3-requests',
+  ]
   debian_nodes = install_nodes('debian/opt/infinit/beyond',
                                how = drake.copy)
   git = drake.git.Git()
   with drake.templating.Context(content = {
+      'dependencies': ubuntu_dependencies,
       'version': git.description(),
       'version_major': git.version().split('.')[0],
       'version_minor': git.version().split('.')[1],
@@ -255,7 +272,7 @@ def configure(
   test_utils = drake.Node('tests/utils.py')
   path = ':'.join(
     map(lambda x: str(x),
-        [drake.path_build(python_prefix),
+        [drake.path_build(python_prefix()),
          test_utils.path().dirname()]))
   for test_name in [
       'auth',
@@ -273,6 +290,7 @@ def configure(
       'users/delete',
       'users/welcome',
       'networks/delete',
+      'networks/get',
       'networks/put',
       'networks/storage',
       'volumes/put',
@@ -356,3 +374,25 @@ def configure(
     conf = pylintrc,
     plugins = pylint_checkers)
   rule_check << pylint_status
+
+  ## ------ ##
+  ## Docker ##
+  ## ------ ##
+
+  docker_path = drake.Path('docker')
+  docker_image = drake.docker.DockerImage(
+    'docker', 'infinit-beyond', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'ubuntu',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.add(
+    install_nodes(docker_path, how = drake.copy,
+                  python_version = drake.Version(3, 5)), '/usr')
+  docker_file.run('apt-get update')
+  for dep in ubuntu_dependencies:
+    docker_file.run('apt-get install -y %s' % dep)
+  drake.docker.DockerBuilder(docker_image, docker_file)

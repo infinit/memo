@@ -1347,6 +1347,7 @@ has_permission(boost::filesystem::path const& path,
   return std::make_pair(sane, res);
 }
 
+#if false
 static
 bool
 fuse(bool /*verbose*/)
@@ -1367,6 +1368,7 @@ fuse(bool /*verbose*/)
   return true;
 #endif
 }
+#endif
 
 static
 void
@@ -1376,7 +1378,7 @@ _sanity(boost::program_options::variables_map const& args,
   ELLE_TRACE("user name")
     try
     {
-      auto self_name = self_user_name();
+      auto self_name = self_user_name(args);
       result.user = {self_name};
     }
     catch (...)
@@ -1458,7 +1460,15 @@ _integrity(boost::program_options::variables_map const& args,
   auto storage_resources = parse(ifnt.storages_get());
   auto drives = parse(ifnt.drives_get());
   auto volumes = parse(ifnt.volumes_get());
-  auto networks = parse(ifnt.networks_get());
+  boost::optional<infinit::User> user;
+  try
+  {
+    user = self_user(ifnt, args);
+  }
+  catch (...)
+  {
+  }
+  auto networks = parse(ifnt.networks_get(user));
   ELLE_TRACE("verify storage resources")
     for (auto& elem: storage_resources)
     {

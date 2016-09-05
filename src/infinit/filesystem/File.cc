@@ -123,6 +123,11 @@ namespace infinit
       }
     }
 
+    std::string
+    FileConflictResolver::description() const
+    {
+      return elle::sprintf("edit file %s", this->_path);
+    }
 
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<FileConflictResolver> _register_fcr("fcr");
@@ -241,8 +246,9 @@ namespace infinit
       if (empty)
       {
         ELLE_DEBUG("file block is empty");
+        auto now = time(nullptr);
         _header = FileHeader(0, 1, S_IFREG | 0600,
-                             time(nullptr), time(nullptr), time(nullptr),
+                             now, now, now, now,
                              File::default_block_size);
       }
       else
@@ -286,7 +292,7 @@ namespace infinit
       _block_version = -1;
       _last_used = FileSystem::now();
       _header = FileHeader ( 0, 1, S_IFREG | mode,
-        time(nullptr), time(nullptr), time(nullptr),
+        time(nullptr), time(nullptr), time(nullptr), time(nullptr),
         File::default_block_size
       );
     }
@@ -365,7 +371,15 @@ namespace infinit
       elle::Buffer serdata;
       {
         elle::IOStream os(serdata.ostreambuf());
-        elle::serialization::binary::SerializerOut output(os);
+        auto version = model.version();
+        auto versions =
+          elle::serialization::_details::dependencies<typename FileData::serialization_tag>(
+            version, 42);
+        versions.emplace(
+          elle::type_info<typename FileData::serialization_tag>(),
+          version);
+        elle::serialization::binary::SerializerOut output(os,
+          versions, true);
         output.serialize("header", _header);
         output.serialize("fat", _fat);
         output.serialize("data", _data);
@@ -538,6 +552,47 @@ namespace infinit
       Node::utimens(tv);
     }
 
+    struct NewBlockResolver
+      : public model::DummyConflictResolver
+    {
+      typedef DummyConflictResolver Super;
+      NewBlockResolver(std::string const& name,
+                    Address const address)
+        : Super()
+        , _name(name)
+        , _address(address)
+      {}
+
+      NewBlockResolver(elle::serialization::Serializer& s,
+                    elle::Version const& version)
+        : Super() // Do not call Super(s, version)
+      {
+        this->serialize(s, version);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& version) override
+      {
+        Super::serialize(s, version);
+        s.serialize("name", this->_name);
+        s.serialize("address", this->_address);
+      }
+
+      std::string
+      description() const override
+      {
+        return elle::sprintf("insert new block (%f) for file %s",
+                             this->_address, this->_name);
+      }
+
+      ELLE_ATTRIBUTE(std::string, name);
+      ELLE_ATTRIBUTE(Address, address);
+    };
+
+    static const elle::serialization::Hierarchy<infinit::model::ConflictResolver>::
+    Register<NewBlockResolver> _register_nbr("NewBlockResolver");
+
     void
     File::truncate(off_t new_size)
     {
@@ -591,8 +646,9 @@ namespace infinit
             sk.encipher(buf), _address);
           _owner.unchecked_remove(_filedata->_fat[i].first);
           _filedata->_fat[i].first = newblock->address();
-          _owner.store_or_die(std::move(newblock), model::STORE_INSERT,
-            model::make_drop_conflict_resolver());
+          this->_owner.store_or_die(
+            std::move(newblock), model::STORE_INSERT,
+            elle::make_unique<NewBlockResolver>(this->_name, this->_address));
         }
       }
       // check first block data
@@ -655,6 +711,8 @@ namespace infinit
     std::unique_ptr<rfs::Handle>
     File::create(int flags, mode_t mode)
     {
+      if (flags & O_EXCL)
+        THROW_EXIST;
       if (flags & O_TRUNC)
         truncate(0);
       _fetch();
@@ -664,7 +722,7 @@ namespace infinit
     }
 
     model::blocks::ACLBlock*
-    File::_header_block()
+    File::_header_block(bool)
     {
       _ensure_first_block();
       return dynamic_cast<model::blocks::ACLBlock*>(_first_block.get());
@@ -722,12 +780,7 @@ namespace infinit
       if (auto special = xattr_special(name))
       {
         ELLE_DEBUG("found special %s", *special);
-        if (special->find("auth.") == 0)
-        {
-          set_permissions(special->substr(strlen("auth.")), value, _address);
-          return;
-        }
-        else if (*special == "fsck.nullentry")
+        if (*special == "fsck.nullentry")
         {
           _fetch();
           int idx = std::stoi(value);

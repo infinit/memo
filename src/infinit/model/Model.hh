@@ -9,6 +9,7 @@
 # include <elle/Version.hh>
 
 # include <infinit/model/Address.hh>
+# include <infinit/model/Endpoints.hh>
 # include <infinit/model/User.hh>
 # include <infinit/model/blocks/fwd.hh>
 # include <infinit/serialization.hh>
@@ -16,12 +17,6 @@
 
 namespace infinit
 {
-  namespace overlay
-  {
-    typedef std::unordered_map<model::Address, std::vector<std::string>>
-      NodeEndpoints;
-  }
-
   namespace model
   {
     enum StoreMode
@@ -66,14 +61,40 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s,
                 elle::Version const& v) override = 0;
+
+      virtual
+      std::string
+      description() const = 0;
     };
 
-    std::unique_ptr<ConflictResolver>
-    make_drop_conflict_resolver();
     std::unique_ptr<ConflictResolver>
     make_merge_conflict_resolver(std::unique_ptr<ConflictResolver> a,
                                  std::unique_ptr<ConflictResolver> b,
                                  SquashConflictResolverOptions const& opts);
+
+    // A resolver that just override the previous version.
+    class DummyConflictResolver
+      : public ConflictResolver
+    {
+      typedef ConflictResolver Super;
+    protected:
+      DummyConflictResolver();
+    public:
+      DummyConflictResolver(elle::serialization::SerializerIn& s,
+                            elle::Version const& version);
+
+      std::unique_ptr<blocks::Block>
+      operator() (blocks::Block& block,
+                  blocks::Block& current,
+                  model::StoreMode mode) final;
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& v) override;
+
+      std::string
+      description() const override;
+    };
 
     class Model
     {
@@ -168,7 +189,7 @@ namespace infinit
       serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::model::Model>
-      make(overlay::NodeEndpoints const& hosts,
+      make(std::vector<Endpoints> const& hosts,
            bool client,
            boost::filesystem::path const& dir) = 0;
       typedef infinit::serialization_tag serialization_tag;

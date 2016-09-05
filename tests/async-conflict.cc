@@ -57,10 +57,9 @@ make(
         };
   infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
         [=] (infinit::model::doughnut::Doughnut& dht,
-             infinit::model::Address id,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return elle::make_unique<infinit::overlay::Kalimero>(&dht, id, local);
+          return elle::make_unique<infinit::overlay::Kalimero>(&dht, local);
         };
   auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
     node_id,
@@ -131,7 +130,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     int count = 0;
     fs->path("/")->list_directory([&](std::string const&, struct stat*)
                                   { ++count;});
-    BOOST_CHECK_EQUAL(count, 1);
+    BOOST_CHECK_EQUAL(count, 3);
     handle = fs->path("/")->child("foo")->open(O_RDONLY, 0666);
     char buf[10] = {0};
     handle->read(elle::WeakBuffer(buf, 3), 3, 0);
@@ -167,7 +166,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     int count = 0;
     fs->path("/")->list_directory([&](std::string const&, struct stat*)
                                   { ++count;});
-    BOOST_CHECK_EQUAL(count, 3);
+    BOOST_CHECK_EQUAL(count, 5);
     fs.reset();
   }
 
@@ -186,7 +185,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     // restart with async which will dequeue
     fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
-    BOOST_CHECK_EQUAL(root_count(fs), 5);
+    BOOST_CHECK_EQUAL(root_count(fs), 7);
     fs.reset();
   }
 
@@ -205,7 +204,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     // restart with async which will dequeue
     fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
-    BOOST_CHECK_EQUAL(root_count(fs), 6);
+    BOOST_CHECK_EQUAL(root_count(fs), 8);
     fs.reset();
   }
 
@@ -224,7 +223,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     // restart with async which will dequeue
     fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
-    BOOST_CHECK_EQUAL(root_count(fs), 6);
+    BOOST_CHECK_EQUAL(root_count(fs), 8);
     struct stat st;
     fs->path("/")->child("samefile")->stat(&st);
     BOOST_CHECK_EQUAL(st.st_size, 3);
@@ -249,7 +248,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     // restart with async which will dequeue
     fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
-    BOOST_CHECK_EQUAL(root_count(fs), 6);
+    BOOST_CHECK_EQUAL(root_count(fs), 8);
     auto auth = fs->path("/")->child("samefile")->getxattr("user.infinit.auth");
     std::stringstream sauth(auth);
     auto jauth = elle::json::read(sauth);
@@ -349,18 +348,18 @@ ELLE_TEST_SCHEDULED(async_squash)
   fs->path("/d2")->mkdir(0600);
   writefile(fs, "f3", "foo");
   writefile(fs, "f4", "foo");
-  BOOST_CHECK_EQUAL(root_count(fs), 4);
+  BOOST_CHECK_EQUAL(root_count(fs), 6);
 
   fs.reset();
   elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
   fs = make(path, node_id, true, 100, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
-  BOOST_CHECK_EQUAL(root_count(fs), 4);
+  BOOST_CHECK_EQUAL(root_count(fs), 6);
 
   fs.reset();
   elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
   fs = make(path, node_id, false, 0, kp);
-  BOOST_CHECK_EQUAL(root_count(fs), 4);
+  BOOST_CHECK_EQUAL(root_count(fs), 6);
 }
 
 void run_async_squash_conflict();
@@ -390,7 +389,7 @@ void run_async_squash_conflict()
   });
 
   auto fs = make(path, node_id, false, 0, kp);
-  BOOST_CHECK_EQUAL(root_count(fs), 0);
+  BOOST_CHECK_EQUAL(root_count(fs), 2);
   fs.reset();
 
   elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
@@ -403,22 +402,22 @@ void run_async_squash_conflict()
   writefile(fs, "f4", "foo");
   fs->path("/dr")->rmdir();
   fs->path("/fr")->unlink();
-  BOOST_CHECK_EQUAL(root_count(fs), 4);
+  BOOST_CHECK_EQUAL(root_count(fs), 6);
 
   fs.reset();
   fs = make(path, node_id, false, 0, kp);
   writefile(fs, "fc", "foo");
-  BOOST_CHECK_EQUAL(root_count(fs), 1);
+  BOOST_CHECK_EQUAL(root_count(fs), 3);
 
   fs.reset();
   elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
   fs = make(path, node_id, true, 100, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
-  BOOST_CHECK_EQUAL(root_count(fs), 5);
+  BOOST_CHECK_EQUAL(root_count(fs), 7);
 
   fs.reset();
   fs = make(path, node_id, false, 0, kp);
-  BOOST_CHECK_EQUAL(root_count(fs), 5);
+  BOOST_CHECK_EQUAL(root_count(fs), 7);
 }
 
 ELLE_TEST_SUITE()

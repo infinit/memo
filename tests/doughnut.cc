@@ -79,13 +79,12 @@ public:
       version_c = boost::optional<elle::Version>(),
       make_overlay =
       [] (int,
-          infinit::model::Address id,
-          infinit::overlay::Stonehenge::Peers peers,
+          infinit::model::NodeLocations peers,
           std::shared_ptr<infinit::model::doughnut::Local> local,
           infinit::model::doughnut::Doughnut& d)
       {
         return elle::make_unique<infinit::overlay::Stonehenge>(
-          id, peers, std::move(local), &d);
+          peers, std::move(local), &d);
       },
       make_consensus =
       [] (std::unique_ptr<dht::consensus::Consensus> c)
@@ -109,8 +108,7 @@ public:
                       std::function<
                         std::unique_ptr<infinit::overlay::Stonehenge>(
                           int,
-                          infinit::model::Address id,
-                          infinit::overlay::Stonehenge::Peers peers,
+                          infinit::model::NodeLocations peers,
                           std::shared_ptr<
                             infinit::model::doughnut::Local> local,
                           infinit::model::doughnut::Doughnut& d)> make_overlay,
@@ -160,8 +158,7 @@ private:
        std::function<
          std::unique_ptr<infinit::overlay::Stonehenge>(
            int,
-           infinit::model::Address id,
-           infinit::overlay::Stonehenge::Peers peers,
+           infinit::model::NodeLocations peers,
            std::shared_ptr<infinit::model::doughnut::Local> local,
            infinit::model::doughnut::Doughnut& d)> make_overlay,
        std::function<
@@ -201,21 +198,20 @@ private:
       this->keys_b->K(), "network-name", *this->keys_a);
     dht::Passport passport_c(
       this->keys_c->K(), "network-name", *this->keys_a);
-    infinit::overlay::Stonehenge::Peers members;
-    members.emplace_back(id_a);
-    members.emplace_back(id_b);
-    members.emplace_back(id_c);
+    infinit::model::NodeLocations members;
+    members.emplace_back(id_a, infinit::model::Endpoints());
+    members.emplace_back(id_b, infinit::model::Endpoints());
+    members.emplace_back(id_c, infinit::model::Endpoints());
     std::vector<infinit::overlay::Stonehenge*> stonehenges;
     make_overlay =
       [make_overlay, &stonehenges] (
         int n,
-        infinit::model::Address id,
-        infinit::overlay::Stonehenge::Peers peers,
+        infinit::model::NodeLocations peers,
         std::shared_ptr<infinit::model::doughnut::Local> local,
         infinit::model::doughnut::Doughnut& d)
       {
         auto res = make_overlay(
-          n, std::move(id), std::move(peers), std::move(local), d);
+          n, std::move(peers), std::move(local), d);
         stonehenges.emplace_back(res.get());
         return res;
       };
@@ -227,10 +223,9 @@ private:
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
         [=] (infinit::model::doughnut::Doughnut& d,
-             infinit::model::Address id,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return make_overlay(0, id, members, std::move(local), d);
+          return make_overlay(0, members, std::move(local), d);
         }),
       boost::optional<int>(),
       std::move(storage_a),
@@ -243,10 +238,9 @@ private:
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
         [=] (infinit::model::doughnut::Doughnut& d,
-             infinit::model::Address id,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return make_overlay(1, id, members, std::move(local), d);
+          return make_overlay(1, members, std::move(local), d);
         }),
       boost::optional<int>(),
       std::move(storage_b),
@@ -259,10 +253,9 @@ private:
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
         [=] (infinit::model::doughnut::Doughnut& d,
-             infinit::model::Address id,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return make_overlay(2, id, members, std::move(local), d);
+          return make_overlay(2, members, std::move(local), d);
         }),
       boost::optional<int>(),
       std::move(storage_c),
@@ -270,19 +263,16 @@ private:
     for (auto* stonehenge: stonehenges)
       for (auto& peer: stonehenge->peers())
       {
-        elle::unconst(peer).endpoint =
-          infinit::overlay::Stonehenge::Peer::Endpoint{"127.0.0.1", 0};
-        if (peer.id == id_a)
-          elle::unconst(peer).endpoint->port =
-            this->dht_a->local()->server_endpoint().port();
-        else if (peer.id == id_b)
-          elle::unconst(peer).endpoint->port =
-            this->dht_b->local()->server_endpoint().port();
-        else if (peer.id == id_c)
-          elle::unconst(peer).endpoint->port =
-            this->dht_c->local()->server_endpoint().port();
+        int port;
+        if (peer.id() == id_a)
+          port = this->dht_a->local()->server_endpoint().port();
+        else if (peer.id() == id_b)
+          port = this->dht_b->local()->server_endpoint().port();
+        else if (peer.id() == id_c)
+          port = this->dht_c->local()->server_endpoint().port();
         else
-          ELLE_ABORT("unknown doughnut id: %s", peer.id);
+          ELLE_ABORT("unknown doughnut id: %f", peer.id());
+        elle::unconst(peer.endpoints()).emplace_back("127.0.0.1", port);
       }
   }
 };
@@ -560,6 +550,12 @@ class AppendConflictResolver
     return std::unique_ptr<blocks::Block>(res.release());
   }
 
+  std::string
+  description() const override
+  {
+    return "Append data to block";
+  }
+
   virtual
   void
   serialize(elle::serialization::Serializer& s,
@@ -708,19 +704,18 @@ ELLE_TEST_SCHEDULED(wrong_quorum)
   DHTs dhts(
     make_overlay =
     [&stonehenge] (int dht,
-                   infinit::model::Address id,
-                   infinit::overlay::Stonehenge::Peers peers,
+                   infinit::model::NodeLocations peers,
                    std::shared_ptr<infinit::model::doughnut::Local> local,
                    infinit::model::doughnut::Doughnut& d)
     {
       if (dht == 0)
       {
-        stonehenge = new WrongQuorumStonehenge(id, peers, std::move(local), &d);
+        stonehenge = new WrongQuorumStonehenge(peers, std::move(local), &d);
         return std::unique_ptr<infinit::overlay::Stonehenge>(stonehenge);
       }
       else
         return elle::make_unique<infinit::overlay::Stonehenge>(
-          id, peers, std::move(local), &d);
+          peers, std::move(local), &d);
     });
   auto block = dhts.dht_a->make_block<blocks::MutableBlock>();
   {
@@ -1060,6 +1055,12 @@ namespace rebalancing
               elle::Version const&) override
     {
       s.serialize("previous", this->_previous);
+    }
+
+    std::string
+    description() const override
+    {
+      return "";
     }
 
     ELLE_ATTRIBUTE_R(elle::Buffer, previous);

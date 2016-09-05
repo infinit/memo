@@ -1,0 +1,10 @@
+{
+    "allow_sign" : false,
+    "allow_storage" : true,
+    "allow_write" : true,
+    "network" : "owner/network1",
+    "signature" : "Fw6FC0BCtvH5357lEiicYQqTAuYKOM5MbTAJpwUsQUoli1fHNgv+2VkdQ9ldF4SlVr2Ktucrf5R2oksv73CRQytMmFbdAmOH2OzMCrHFcZqzDUTKM8aMZG3gjr15ptcmD5mcJah0WkEoM1NbQrJPkOcJdGYFUui0OgF9JrPHfVu066Y0QDVsr3boihJ/YzLXOsBerngxUtPGdX4ajNbdvs24gSQGm1BN0w7tv7d/4ZYDEA7sVHPy/zONMnIVHAv4bfSg/r21LVOxTgrwq+RAzNQ3C4MfcIoDUs/1SDJiZYTo+rW338+mMwRgaPijwFrPbxAX2K+Hw1YBIETup5PiNg==",
+    "user" : {
+        "rsa" : "MIIBCgKCAQEAvyV5GXo5yUx69gJGY9icAZbuZrkQzAUjaxDH2+4/dH3JknJApyXzCW7nQYabTqALtoDQJy6r6UL4VDiv1RpPw+aPqz4kjSywXiEd4BF5A0Q0r+LT0/7mcbcNSnK/AoGBT0n52uyjO5i6yo0aXVf0rT8T1DdQZbDGPpYsbnh5F2hRpB9xo6yGFfTHgLcGbW7X9D1bDd+Vhs3pbp5q5VHXJ4HxKsXylxpRQGglsEOMDKTfejghPMQNgbfPQw6TaPCUGuXYXj5pj+5h+ixx782zvX69UNVEmUQn8p7MupbehgHM7hRpbBG9UAAwnylgdUQWIET5Z7izrQNJd1LWh23t5wIDAQAB"
+    }
+}

@@ -53,7 +53,7 @@ _password(boost::program_options::variables_map const& args,
   return password.get();
 };
 
-static
+inline
 std::string
 hash_password(std::string const& password_,
               std::string salt)

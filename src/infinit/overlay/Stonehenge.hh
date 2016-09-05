@@ -14,25 +14,11 @@ namespace infinit
     | Construction |
     `-------------*/
     public:
-      struct Peer
-      {
-        model::Address id;
-        struct Endpoint
-        {
-          std::string host;
-          int port;
-        };
-        boost::optional<Endpoint> endpoint;
-        Peer(model::Address id);
-        Peer(model::Address id, Endpoint e);
-      };
       typedef boost::asio::ip::tcp::endpoint Host;
-      typedef std::vector<Peer> Peers;
-      Stonehenge(model::Address node_id,
-                 Peers hosts,
+      Stonehenge(NodeLocations hosts,
                  std::shared_ptr<model::doughnut::Local> local,
                  model::doughnut::Doughnut* doughnut);
-      ELLE_ATTRIBUTE_R(Peers, peers);
+      ELLE_ATTRIBUTE_R(NodeLocations, peers);
 
     /*------.
     | Peers |
@@ -40,7 +26,7 @@ namespace infinit
     protected:
       virtual
       void
-      _discover(NodeEndpoints const& peers) override;
+      _discover(NodeLocations const& peers) override;
 
     /*-------.
     | Lookup |
@@ -57,12 +43,14 @@ namespace infinit
 
     private:
       Overlay::WeakMember
-      _make_member(Peer const& p) const;
+      _make_member(NodeLocation const& p) const;
     };
 
     struct StonehengeConfiguration
       : public Configuration
     {
+      typedef StonehengeConfiguration Self;
+      typedef Configuration Super;
       struct Peer
       {
         std::string host;
@@ -73,12 +61,12 @@ namespace infinit
       std::vector<Peer> peers;
       StonehengeConfiguration();
       StonehengeConfiguration(elle::serialization::SerializerIn& input);
+      ELLE_CLONABLE();
       void
       serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make(model::Address id,
-           NodeEndpoints const& hosts,
+      make(std::vector<Endpoints> const& hosts,
            std::shared_ptr<model::doughnut::Local> local,
            model::doughnut::Doughnut* doughnut) override;
     };

@@ -30,5 +30,8 @@ class Plugin(object):
         }
       except Response as response:
         bottle.response.status = response.status
+        if response.headers is not None:
+          for e in response.headers.items():
+            bottle.response.set_header(e[0], e[1])
         return response.body
     return wrapper

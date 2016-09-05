@@ -144,7 +144,7 @@ COMMAND(transmit_user)
 COMMAND(transmit)
 {
   if (flag(args, "user"))
-    transmit_user(args);
+    transmit_user(args, killed);
   else
     throw CommandLineError("Must specify type of object to transmit");
 }
@@ -194,7 +194,7 @@ COMMAND(receive_user)
 COMMAND(receive)
 {
   if (flag(args, "user"))
-    receive_user(args);
+    receive_user(args, killed);
   else
     throw CommandLineError("Must specify type of object to receive");
 }
@@ -202,7 +202,6 @@ COMMAND(receive)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Mode::OptionDescription option_passphrase = {

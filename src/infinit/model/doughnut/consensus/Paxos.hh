@@ -385,13 +385,17 @@ namespace infinit
             : public consensus::Configuration
           {
           public:
+            typedef Configuration Self;
+            typedef consensus::Configuration Super;
+          public:
             Configuration(int replication_factor,
                           std::chrono::system_clock::duration node_timeout);
+            ELLE_CLONABLE();
             virtual
             std::unique_ptr<Consensus>
             make(model::doughnut::Doughnut& dht) override;
-            ELLE_ATTRIBUTE_R(int, replication_factor);
-            ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
+            ELLE_ATTRIBUTE_RW(int, replication_factor);
+            ELLE_ATTRIBUTE_RW(std::chrono::system_clock::duration, node_timeout);
           public:
             Configuration(elle::serialization::SerializerIn& s);
             virtual

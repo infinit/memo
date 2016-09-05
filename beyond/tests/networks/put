@@ -116,19 +116,37 @@ with Beyond() as beyond:
       res = network.put(beyond, owner = user)
       passport = Passport(network, invitee)
       passport.put(beyond)
-      invitee_passport = beyond.put(
-        'networks/%s/endpoints/%s/node_id' % (network['name'], invitee['name']),
+      endpoint = {
+        'addresses': [
+          '198.211.123.209',
+          '10.14.0.5',
+        ],
+        'port': 47339
+      }
+      beyond.put(
+        'networks/%s/endpoints/%s/node_id' % (
+          network['name'], invitee['name']),
         auth = invitee.private_key,
-        json = {'stuff': 1}).json()
-      invitee_passport = beyond.get(
+        json = endpoint).json()
+      endpoints = beyond.get(
         'networks/%s/endpoints' % network['name'],
         auth = invitee.private_key).json()
       network['version'] = '0.1.5'
       network.put(beyond, owner = user)
-      invitee_passport_2 = beyond.get(
+      endpoints_2 = beyond.get(
         'networks/%s/endpoints' % network['name'],
         auth = invitee.private_key).json()
-      compare(invitee_passport, invitee_passport_2)
+      assertEq(endpoints, endpoints_2)
+      beyond.put(
+        'networks/%s/endpoints/%s/node_id_2' % (
+          network['name'], invitee['name']),
+        auth = invitee.private_key,
+        json = endpoint).json()
+      endpoints_3 = beyond.get(
+        'networks/%s/endpoints' % network['name'],
+        auth = invitee.private_key).json()
+      assertEq(endpoints_3[invitee['name']]['node_id'], endpoint)
+      assertEq(endpoints_3[invitee['name']]['node_id_2'], endpoint)
 
   if __name__ == '__main__':
     unittest.main()

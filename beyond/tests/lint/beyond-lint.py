@@ -26,7 +26,7 @@ class BeyondChecker(BaseChecker):
       # It isn't a simple name, can't deduce what function it is.
       return
     if node.func.name == 'Response':
-      if len(node.args) != 2:
+      if len(node.args) not in [2,3]:
         self.add_message('E4200',
                          args = 'Response not passed two arguments',
                          node = node)
@@ -62,7 +62,7 @@ class BeyondChecker(BaseChecker):
                 raise Exception(
                   'error name is not a literal string')
               chunks = name.value.split('/')
-              if len(chunks) != 2:
+              if len(chunks) < 2:
                 raise Exception(
                   'error name is not \'category/error\'')
           if mandatory:

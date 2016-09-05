@@ -45,15 +45,18 @@ namespace infinit
     }
 
     model::blocks::ACLBlock*
-    Symlink::_header_block()
+    Symlink::_header_block(bool force)
     {
+      if (force && !this->_block)
+        this->_fetch();
       return dynamic_cast<model::blocks::ACLBlock*>(this->_block.get());
     }
 
     void
     Symlink::_commit(WriteTarget)
     {
-      auto data = elle::serialization::binary::serialize(this->_h);
+      auto data = elle::serialization::binary::serialize(this->_h,
+        this->_owner.block_store()->version(), true);
       this->_block->data(data);
       this->_owner.store_or_die(std::move(this->_block), model::STORE_UPDATE);
     }
@@ -66,6 +69,8 @@ namespace infinit
       {
         this->_fetch();
         this->Node::stat(st);
+        if (this->_h.symlink_target)
+          st->st_size = this->_h.symlink_target->size();
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
@@ -153,15 +158,6 @@ namespace infinit
                       std::string const& value,
                       int flags)
     {
-      if (auto special = xattr_special(name))
-      {
-        ELLE_DEBUG("found special %s", *special);
-        if (special->find("auth.") == 0)
-        {
-          set_permissions(special->substr(strlen("auth.")), value, _address);
-          return;
-        }
-      }
       Node::setxattr(name, value, flags);
     }
 

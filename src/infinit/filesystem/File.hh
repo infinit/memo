@@ -74,7 +74,7 @@ namespace infinit
         void _fetch() override;
         void _commit(WriteTarget target) override;
         FileHeader& _header() override;
-        model::blocks::ACLBlock* _header_block() override;
+        model::blocks::ACLBlock* _header_block(bool) override;
 
     };
 
@@ -94,6 +94,8 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s,
                 elle::Version const& version) override;
+      std::string
+      description() const override;
       boost::filesystem::path _path;
       model::Model* _model;
       WriteTarget _target;

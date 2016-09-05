@@ -114,32 +114,17 @@ COMMAND(create)
   if (capacity_repr)
     capacity = convert_capacity(*capacity_repr);
   std::unique_ptr<infinit::storage::StorageConfig> config;
-  if (args.count("filesystem"))
-  {
-    auto user_path = optional(args, "path");
-    auto path = user_path
-              ? infinit::canonical_folder(user_path.get())
-              : (infinit::xdg_data_home() / "blocks" / name);
-    if (boost::filesystem::exists(path))
-    {
-      if (!boost::filesystem::is_directory(path))
-      {
-        throw elle::Error(
-          elle::sprintf("path is not directory: %s", path));
-      }
-      if (!boost::filesystem::is_empty(path))
-      {
-        std::cout << "WARNING: Path is not empty: " << path
-                  << std::endl
-                  << "WARNING: You may encounter unexpected behavior."
-                  << std::endl;
-      }
-    }
-    config =
-      elle::make_unique<infinit::storage::FilesystemStorageConfig>
-        (name, std::move(path.string()), std::move(capacity));
-  }
-  else if (args.count("gcs"))
+  int types =
+    + (args.count("dropbox") ? 1 : 0)
+    + (args.count("filesystem") ? 1 : 0)
+    + (args.count("gcs") ? 1 : 0)
+    + (args.count("google-drive") ? 1 : 0)
+    + (args.count("s3") ? 1 : 0)
+    + (args.count("ssh") ? 1 : 0)
+  ;
+  if (types > 1)
+    throw CommandLineError("only one storage type may be specified");
+  if (args.count("gcs"))
   {
     auto root = optional(args, "path");
     if (!root)
@@ -226,8 +211,31 @@ COMMAND(create)
       name, host, path, capacity);
   }
 #endif
-  if (!config)
-    throw CommandLineError("storage type unspecified");
+  else // filesystem by default
+  {
+    auto user_path = optional(args, "path");
+    auto path = user_path
+              ? infinit::canonical_folder(user_path.get())
+              : (infinit::xdg_data_home() / "blocks" / name);
+    if (boost::filesystem::exists(path))
+    {
+      if (!boost::filesystem::is_directory(path))
+      {
+        throw elle::Error(
+          elle::sprintf("path is not directory: %s", path));
+      }
+      if (!boost::filesystem::is_empty(path))
+      {
+        std::cout << "WARNING: Path is not empty: " << path
+                  << std::endl
+                  << "WARNING: You may encounter unexpected behavior."
+                  << std::endl;
+      }
+    }
+    config =
+      elle::make_unique<infinit::storage::FilesystemStorageConfig>
+        (name, std::move(path.string()), std::move(capacity));
+  }
   if (args.count("output"))
   {
     auto output = get_output(args);
@@ -293,82 +301,66 @@ COMMAND(import)
   }
 }
 
+// { network/name: [users] }
+std::unordered_map<std::string, std::vector<std::string>>
+_networks_for_storage(std::string const& storage_name)
+{
+  std::unordered_map<std::string, std::vector<std::string>> res;
+  for (auto const& u: ifnt.users_get())
+  {
+    if (!u.private_key)
+      continue;
+    for (auto const& n: ifnt.networks_get(u, true))
+    {
+      auto* d =
+        dynamic_cast<infinit::model::doughnut::Configuration*>(n.model.get());
+      if (d && d->storage && d->storage->name == storage_name)
+      {
+        if (res.count(n.name))
+        {
+          auto& users = res.at(n.name);
+          users.emplace_back(u.name);
+        }
+        else
+          res[n.name] = {u.name};
+      }
+    }
+  }
+  return res;
+}
+
 COMMAND(delete_)
 {
   auto name = mandatory(args, "name", "storage name");
   auto storage = ifnt.storage_get(name);
   bool clear = flag(args, "clear-content");
   bool purge = flag(args, "purge");
-  bool pull = flag(args, "pull");
-  auto owner = self_user(ifnt, args);
-  if (pull && !purge)
-    throw elle::Error("\"--pull\" option is only valid when using \"--purge\"");
-  if (auto fs_storage =
-        dynamic_cast<infinit::storage::FilesystemStorageConfig*>(storage.get()))
-  {
-    if (clear)
-    {
-      try
-      {
-        boost::filesystem::remove_all(fs_storage->path);
-        report_action("cleared", "storage", fs_storage->name);
-      }
-      catch (boost::filesystem::filesystem_error const& e)
-      {
-        throw elle::Error(elle::sprintf("unable to clear storage contents: %s",
-                                        e.what()));
-      }
-    }
-  }
-  else if (clear)
+  auto user = self_user(ifnt, args);
+  auto fs_storage =
+    dynamic_cast<infinit::storage::FilesystemStorageConfig*>(storage.get());
+  if (clear && !fs_storage)
     throw elle::Error("only filesystem storages can be cleared");
   if (purge)
   {
-    auto networks = ifnt.networks_for_storage(name);
-    std::vector<std::string> volumes;
-    for (auto const& network: networks)
-    {
-      auto net_vols = ifnt.volumes_for_network(network);
-      volumes.insert(volumes.end(), net_vols.begin(), net_vols.end());
-      for (auto const& user: ifnt.user_passports_for_network(network))
-      {
-        auto passport_path = ifnt._passport_path(network, user);
-        if (boost::filesystem::remove(passport_path))
-        {
-          report_action("deleted", "passport",
-                        elle::sprintf("%s: %s", network, user),
-                        std::string("locally"));
-        }
-      }
-    }
-    for (auto const& volume: volumes)
-    {
-      auto vol_drives = ifnt.drives_for_volume(volume);
-      for (auto const& drive: vol_drives)
-      {
-        auto drive_path = ifnt._drive_path(drive);
-        if (boost::filesystem::remove(drive_path))
-          report_action("deleted", "drive", drive, std::string("locally"));
-      }
-    }
-    for (auto const& volume: volumes)
-    {
-      auto vol_path = ifnt._volume_path(volume);
-      if (boost::filesystem::remove(vol_path))
-        report_action("deleted", "volume", volume, std::string("locally"));
-    }
-    for (auto const& network: networks)
-    {
-      // Only need to pull network as Beyond handles cleaning up properly.
-      if (pull)
-        beyond_delete("network", network, owner, true, purge);
-      auto net_path = ifnt._network_path(network);
-      if (boost::filesystem::remove(net_path))
-        report_action("deleted", "network", network, std::string("locally"));
-    }
+    for (auto const& pair: _networks_for_storage(name))
+      for (auto const& user_name: pair.second)
+        ifnt.network_unlink(pair.first, ifnt.user_get(user_name), true);
   }
   auto path = ifnt._storage_path(name);
   bool ok = boost::filesystem::remove(path);
+  if (clear)
+  {
+    try
+    {
+      boost::filesystem::remove_all(fs_storage->path);
+      report_action("cleared", "storage", fs_storage->name);
+    }
+    catch (boost::filesystem::filesystem_error const& e)
+    {
+      throw elle::Error(elle::sprintf("unable to clear storage contents: %s",
+                                      e.what()));
+    }
+  }
   if (ok)
     report_action("deleted", "storage", storage->name);
   else
@@ -381,13 +373,12 @@ COMMAND(delete_)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   infinit::check_broken_locale();
   Mode::OptionsDescription storage_types("Storage types");
   storage_types.add_options()
-    ("filesystem", "store data on a local filesystem")
+    ("filesystem", "store data on a local filesystem (default)")
     ("gcs", "store data using Google Cloud Storage")
     ("s3", "store data using Amazon S3")
     ;
@@ -479,8 +470,6 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "storage to delete" },
         { "clear-content", bool_switch(),
           "remove all blocks (filesystem only)" },
-        { "pull", bool_switch(), elle::sprintf("pull objects that depend on "
-          "the storage if they are on %s", beyond(true)) },
         { "purge", bool_switch(), "remove objects that depend on the storage" },
       },
     },

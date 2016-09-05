@@ -11,6 +11,7 @@
 
 # include <infinit/model/Model.hh>
 # include <infinit/model/doughnut/Consensus.hh>
+# include <infinit/model/doughnut/Dock.hh>
 # include <infinit/model/doughnut/Passport.hh>
 # include <infinit/overlay/Overlay.hh>
 
@@ -43,7 +44,7 @@ namespace infinit
       public:
         typedef std::function<
           std::unique_ptr<infinit::overlay::Overlay>(
-            Doughnut& dht, Address id, std::shared_ptr<Local> server)>
+            Doughnut& dht, std::shared_ptr<Local> server)>
           OverlayBuilder;
         typedef std::function<
           std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;
@@ -95,10 +96,12 @@ namespace infinit
         ELLE_ATTRIBUTE_RX(AdminKeys, admin_keys);
         ELLE_ATTRIBUTE_R(std::unique_ptr<consensus::Consensus>, consensus)
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
+        ELLE_ATTRIBUTE_RX(Dock, dock);
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, user_init)
         ELLE_ATTRIBUTE(
           elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
+        ELLE_ATTRIBUTE(reactor::Barrier, terminating);
 
       protected:
         virtual
@@ -167,14 +170,14 @@ namespace infinit
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
         void
-        serialize(elle::serialization::Serializer& s);
+        serialize(elle::serialization::Serializer& s) override;
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(overlay::NodeEndpoints const& hosts,
+        make(std::vector<Endpoints> const& hosts,
              bool client,
-             boost::filesystem::path const& p);
+             boost::filesystem::path const& p) override;
         std::unique_ptr<Doughnut>
-        make(overlay::NodeEndpoints const& hosts,
+        make(std::vector<Endpoints> const& hosts,
              bool client,
              boost::filesystem::path const& p,
              bool async = false,

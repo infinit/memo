@@ -68,14 +68,9 @@ COMMAND(create)
   auto owner = self_user(ifnt, args);
   auto name = drive_name(args, owner);
   auto desc = optional(args, "description");
-
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
-
-  infinit::Volume volume;
-  {
-    auto name = ifnt.qualified_name(mandatory(args, "volume"), owner);
-    volume = ifnt.volume_get(name);
-  }
+  infinit::Volume volume(
+    ifnt.volume_get(ifnt.qualified_name(mandatory(args, "volume"), owner)));
   infinit::Drive::Users users;
   infinit::Drive drive{name, owner, volume, network, desc ? *desc : "", users};
   ifnt.drive_save(drive);
@@ -446,8 +441,8 @@ _save_icon(std::string const& name,
 {
   boost::filesystem::ofstream f;
   ifnt._open_write(f, ifnt._drive_icon_path(name),
-                   name, "icon", true);
-  f << buffer.string();
+                   name, "icon", true, std::ios::out | std::ios::binary);
+  f.write(reinterpret_cast<char const*>(buffer.contents()), buffer.size());
   report_action("fetched", "icon", name, std::string("locally"));
 }
 
@@ -503,7 +498,6 @@ icon_path(std::string const& name)
 int
 main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Mode::OptionDescription option_description =

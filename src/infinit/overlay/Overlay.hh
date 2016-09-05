@@ -3,14 +3,15 @@
 
 # include <unordered_map>
 
+# include <elle/Clonable.hh>
 # include <elle/json/json.hh>
 # include <elle/log.hh>
-
 
 # include <reactor/network/tcp-socket.hh>
 # include <reactor/Generator.hh>
 
 # include <infinit/model/Address.hh>
+# include <infinit/model/Endpoints.hh>
 # include <infinit/model/doughnut/fwd.hh>
 # include <infinit/serialization.hh>
 
@@ -18,8 +19,9 @@ namespace infinit
 {
   namespace overlay
   {
-    typedef std::unordered_map<model::Address, std::vector<std::string>>
-      NodeEndpoints;
+    using model::Endpoints;
+    using model::NodeLocation;
+    using model::NodeLocations;
 
     enum Operation
     {
@@ -29,6 +31,8 @@ namespace infinit
       OP_REMOVE,
       OP_FETCH_FAST, ///< Fetch faster but can return a subset of requested nodes
     };
+    std::ostream&
+    operator <<(std::ostream& output, Operation op);
 
     class Overlay
     {
@@ -45,12 +49,11 @@ namespace infinit
     `-------------*/
     public:
       Overlay(model::doughnut::Doughnut* dht,
-              std::shared_ptr<infinit::model::doughnut::Local> local,
-              model::Address node_id);
+              std::shared_ptr<infinit::model::doughnut::Local> local);
       virtual
       ~Overlay();
-      ELLE_ATTRIBUTE_R(model::Address, node_id);
       ELLE_ATTRIBUTE_R(model::doughnut::Doughnut*, doughnut);
+      ELLE_attribute_r(model::Address, id);
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
 
     /*------.
@@ -58,11 +61,11 @@ namespace infinit
     `------*/
     public:
       void
-      discover(NodeEndpoints const& peers);
+      discover(NodeLocations const& peers);
     protected:
       virtual
       void
-      _discover(NodeEndpoints const& peers) = 0;
+      _discover(NodeLocations const& peers) = 0;
 
     /*------.
     | Hooks |
@@ -88,12 +91,20 @@ namespace infinit
       /// Lookup a single node
       WeakMember
       lookup(model::Address address, Operation op) const;
-      /// Lookup a node from its uid
+      /** Lookup a node from its id.
+       *
+       * @arg id Id of the node to lookup.
+       * @raise elle::Error if the node is not found.
+       */
       WeakMember
-      lookup_node(model::Address address);
-      /// Lookup nodes from uids
+      lookup_node(model::Address id);
+      /** Lookup nodes from their ids.
+       *
+       * @arg ids ids of the nodes to lookup.
+       * @raise elle::Error if the node is not found.
+       */
       reactor::Generator<WeakMember>
-      lookup_nodes(std::unordered_set<model::Address> address);
+      lookup_nodes(std::unordered_set<model::Address> ids);
     protected:
       virtual
       reactor::Generator<std::pair<model::Address, WeakMember>>
@@ -117,6 +128,7 @@ namespace infinit
 
     struct Configuration
       : public elle::serialization::VirtuallySerializable<false>
+      , public elle::Clonable<Configuration>
     {
       Configuration() = default;
       Configuration(elle::serialization::SerializerIn& input);
@@ -131,8 +143,7 @@ namespace infinit
       typedef infinit::serialization_tag serialization_tag;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make(model::Address id,
-           NodeEndpoints const&,
+      make(std::vector<Endpoints> const&,
            std::shared_ptr<model::doughnut::Local> local,
            model::doughnut::Doughnut* doughnut) = 0;
     };

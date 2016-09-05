@@ -25,6 +25,7 @@ namespace infinit
       uint64_t atime; // access:  read,
       uint64_t mtime; // content change  dir: create/delete file
       uint64_t ctime; //attribute change+content change
+      uint64_t btime; // birth time
       uint64_t block_size; // size of each data block
       std::unordered_map<std::string, elle::Buffer> xattrs;
       boost::optional<std::string> symlink_target;
@@ -32,7 +33,7 @@ namespace infinit
       typedef infinit::serialization_tag serialization_tag;
 
       FileHeader(uint64_t size, uint64_t links, uint32_t mode, uint64_t atime,
-        uint64_t mtime, uint64_t ctime, uint64_t block_size,
+        uint64_t mtime, uint64_t ctime, uint64_t btime, uint64_t block_size,
         std::unordered_map<std::string, elle::Buffer> xattrs
           = std::unordered_map<std::string, elle::Buffer>())
         : size(size)
@@ -43,6 +44,7 @@ namespace infinit
         , atime(atime)
         , mtime(mtime)
         , ctime(ctime)
+        , btime(btime)
         , block_size(block_size)
         , xattrs(std::move(xattrs))
       {
@@ -69,12 +71,14 @@ namespace infinit
         #endif
       }
 
-      FileHeader(elle::serialization::SerializerIn& s)
+      FileHeader(elle::serialization::SerializerIn& s,
+                 elle::Version const& v)
       {
-        serialize(s);
+        serialize(s, v);
       }
 
-      void serialize(elle::serialization::Serializer& s)
+      void serialize(elle::serialization::Serializer& s,
+                     elle::Version const& v)
       {
         s.serialize("size", size);
         s.serialize("links", links);
@@ -87,6 +91,10 @@ namespace infinit
         s.serialize("gid", gid);
         s.serialize("symlink_target", symlink_target);
         s.serialize("xattrs", xattrs);
+        if (s.in())
+          btime = 0;
+        if (v >= elle::Version(0, 7, 0))
+          s.serialize("btime", btime);
       }
     };
   }

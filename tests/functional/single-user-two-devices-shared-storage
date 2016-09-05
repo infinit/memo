@@ -70,7 +70,7 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
     input = {'operation': 'list_directory', 'path': '/'})
   if not response['success']:
     raise AssertionError('operation failed: %s' % response)
-  assertEq(response['entries'], ['beacon'])
+  assertEq(sorted(response['entries']), ['.', '..', 'beacon'])
   # XATTRS
   response = infinit_1.run_script(user = 'user', operation = 'setxattr',
                                   path = '/beacon',

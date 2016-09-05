@@ -234,31 +234,32 @@ namespace infinit
         this->version = elle::Version(0, 3, 0);
       }
     }
-    class DummyConflictResolver: public ConflictResolver
-    {
-    public:
-      DummyConflictResolver() {}
-      DummyConflictResolver(elle::serialization::SerializerIn& s) {}
-      void serialize(elle::serialization::Serializer& s,
-                     elle::Version const&) override
-      {
-      }
-      std::unique_ptr<blocks::Block>
-      operator() (blocks::Block& block,
-                  blocks::Block& current,
-                  model::StoreMode mode) override
-      {
-        ELLE_WARN("Conflict editing %f, dropping changes", block.address());
-        return current.clone();
-      }
-    };
-    static const elle::serialization::Hierarchy<model::ConflictResolver>::
-    Register<DummyConflictResolver> _register_dcr("dummy");
 
-    std::unique_ptr<ConflictResolver>
-    make_drop_conflict_resolver()
+    DummyConflictResolver::DummyConflictResolver()
     {
-      return elle::make_unique<DummyConflictResolver>();
+    }
+
+    DummyConflictResolver::DummyConflictResolver(
+      elle::serialization::SerializerIn& s,
+      elle::Version const& version)
+      : DummyConflictResolver()
+    {
+      this->serialize(s, version);
+    }
+
+    void
+    DummyConflictResolver::serialize(elle::serialization::Serializer& s,
+                                     elle::Version const& v)
+    {
+    }
+
+    std::unique_ptr<blocks::Block>
+    DummyConflictResolver::operator() (blocks::Block& block,
+                                       blocks::Block& current,
+                                       model::StoreMode mode)
+    {
+      ELLE_WARN("Conflict editing %f, dropping changes", block.address());
+      return current.clone();
     }
 
     SquashConflictResolverOptions::SquashConflictResolverOptions()
@@ -313,6 +314,15 @@ namespace infinit
           return {Squash::none, {}};
         return _resolvers.back()->squashable(b);
       }
+      std::string
+      description() const override
+      {
+        std::string res("Squash(");
+        for (auto const& c: _resolvers)
+          res += c->description() + ",";
+        res += ')';
+        return res;
+      }
     private:
       SquashConflictResolverOptions _config;
       std::vector<std::unique_ptr<ConflictResolver>> _resolvers;
@@ -333,5 +343,14 @@ namespace infinit
     }
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<MergeConflictResolver> _register_mcr("merge");
+
+    std::string
+    DummyConflictResolver::description() const
+    {
+      return "unknown";
+    }
+
+    static const elle::serialization::Hierarchy<ConflictResolver>::
+    Register<DummyConflictResolver> _register_dcr("dummy");
   }
 }

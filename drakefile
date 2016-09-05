@@ -1,12 +1,15 @@
 import drake
 import drake.cxx
 import drake.debian
+import drake.docker
 import drake.git
+import drake.license_file
 import drake.python
 import drake.redhat
 import drake.valgrind
 
 import os
+import oset
 import shutil
 
 from itertools import chain
@@ -45,6 +48,7 @@ def configure(
     codesign = False,
     beyond: bool = True,
     website: bool = True,
+    enable_crash_reporting: bool = True,
 ):
 
   if python3 is not None:
@@ -198,155 +202,21 @@ def configure(
                       production_build = production_build)
 
   infinit_sources = drake.nodes(
+    'src/infinit/RPC.cc',
     'src/infinit/RPC.hh',
     'src/infinit/RPC.hxx',
-    'src/infinit/utility.hh',
-    'src/infinit/credentials/AWSCredentials.cc',
-    'src/infinit/credentials/AWSCredentials.hh',
-    'src/infinit/credentials/Credentials.cc',
-    'src/infinit/credentials/Credentials.hh',
-    'src/infinit/credentials/OAuthCredentials.cc',
-    'src/infinit/credentials/OAuthCredentials.hh',
-    'src/infinit/filesystem/filesystem.cc',
-    'src/infinit/filesystem/filesystem.hh',
-    'src/infinit/filesystem/Directory.cc',
-    'src/infinit/filesystem/Directory.hh',
-    'src/infinit/filesystem/File.cc',
-    'src/infinit/filesystem/File.hh',
-    'src/infinit/filesystem/FileHandle.cc',
-    'src/infinit/filesystem/FileHandle.hh',
-    'src/infinit/filesystem/FileData.hh',
-    'src/infinit/filesystem/Node.cc',
-    'src/infinit/filesystem/Node.hh',
-    'src/infinit/filesystem/Symlink.cc',
-    'src/infinit/filesystem/Symlink.hh',
-    'src/infinit/filesystem/umbrella.hh',
-    'src/infinit/filesystem/Unknown.cc',
-    'src/infinit/filesystem/Unknown.hh',
-    'src/infinit/filesystem/Unreachable.hh',
-    'src/infinit/filesystem/xattribute.cc',
-    'src/infinit/filesystem/xattribute.hh',
-    'src/infinit/model/Address.cc',
-    'src/infinit/model/Address.hh',
-    'src/infinit/model/MissingBlock.cc',
-    'src/infinit/model/MissingBlock.hh',
-    'src/infinit/model/Model.cc',
-    'src/infinit/model/Model.hh',
-    'src/infinit/model/Model.hxx',
-    'src/infinit/model/User.hh',
-    'src/infinit/model/blocks/ACLBlock.cc',
-    'src/infinit/model/blocks/ACLBlock.hh',
-    'src/infinit/model/blocks/Block.cc',
-    'src/infinit/model/blocks/Block.hh',
-    'src/infinit/model/blocks/GroupBlock.cc',
-    'src/infinit/model/blocks/GroupBlock.hh',
-    'src/infinit/model/blocks/ImmutableBlock.cc',
-    'src/infinit/model/blocks/ImmutableBlock.hh',
-    'src/infinit/model/blocks/MutableBlock.cc',
-    'src/infinit/model/blocks/MutableBlock.hh',
-    'src/infinit/model/blocks/ValidationResult.cc',
-    'src/infinit/model/blocks/ValidationResult.hh',
-    'src/infinit/model/blocks/fwd.hh',
-    'src/infinit/model/doughnut/ACB.cc',
-    'src/infinit/model/doughnut/ACB.hh',
-    'src/infinit/model/doughnut/Async.cc',
-    'src/infinit/model/doughnut/Async.hh',
-    'src/infinit/model/doughnut/Cache.cc',
-    'src/infinit/model/doughnut/Cache.hh',
-    'src/infinit/model/doughnut/CHB.cc',
-    'src/infinit/model/doughnut/CHB.hh',
-    'src/infinit/model/doughnut/Conflict.cc',
-    'src/infinit/model/doughnut/Conflict.hh',
-    'src/infinit/model/doughnut/Consensus.cc',
-    'src/infinit/model/doughnut/Consensus.hh',
-    'src/infinit/model/doughnut/Doughnut.cc',
-    'src/infinit/model/doughnut/Doughnut.hh',
-    'src/infinit/model/doughnut/GB.cc',
-    'src/infinit/model/doughnut/GB.hh',
-    'src/infinit/model/doughnut/Group.cc',
-    'src/infinit/model/doughnut/Group.hh',
-    'src/infinit/model/doughnut/Local.cc',
-    'src/infinit/model/doughnut/Local.hh',
-    'src/infinit/model/doughnut/NB.cc',
-    'src/infinit/model/doughnut/NB.hh',
-    'src/infinit/model/doughnut/OKB.cc',
-    'src/infinit/model/doughnut/OKB.hh',
-    'src/infinit/model/doughnut/Passport.cc',
-    'src/infinit/model/doughnut/Passport.hh',
-    'src/infinit/model/doughnut/Peer.cc',
-    'src/infinit/model/doughnut/Peer.hh',
-    'src/infinit/model/doughnut/Remote.cc',
-    'src/infinit/model/doughnut/Remote.hh',
-    'src/infinit/model/doughnut/Remote.hxx',
-    'src/infinit/model/doughnut/UB.cc',
-    'src/infinit/model/doughnut/UB.hh',
-    'src/infinit/model/doughnut/User.cc',
-    'src/infinit/model/doughnut/User.hh',
-    'src/infinit/model/doughnut/ValidationFailed.cc',
-    'src/infinit/model/doughnut/ValidationFailed.hh',
-    'src/infinit/model/doughnut/consensus/Paxos.cc',
-    'src/infinit/model/doughnut/consensus/Paxos.hh',
-    'src/infinit/model/doughnut/protocol.cc',
-    'src/infinit/model/doughnut/protocol.hh',
-    'src/infinit/model/faith/Faith.cc',
-    'src/infinit/model/faith/Faith.hh',
-    'src/infinit/model/paranoid/Paranoid.cc',
-    'src/infinit/model/paranoid/Paranoid.hh',
-    'src/infinit/overlay/Kalimero.cc',
-    'src/infinit/overlay/Kalimero.hh',
-    'src/infinit/overlay/Overlay.cc',
-    'src/infinit/overlay/Overlay.hh',
-    'src/infinit/overlay/Stonehenge.cc',
-    'src/infinit/overlay/Stonehenge.hh',
-    'src/infinit/overlay/kademlia/kademlia.cc',
-    'src/infinit/overlay/kademlia/kademlia.hh',
-    'src/infinit/overlay/kelips/Kelips.cc',
-    'src/infinit/overlay/kelips/Kelips.hh',
+    'src/infinit/Version.hh',
     'src/infinit/serialization.cc',
     'src/infinit/serialization.hh',
     'src/infinit/smb/smb.cc',
-    'src/infinit/storage/Adb.cc',
-    'src/infinit/storage/Adb.hh',
-    'src/infinit/storage/Async.cc',
-    'src/infinit/storage/Async.hh',
-    'src/infinit/storage/Cache.cc',
-    'src/infinit/storage/Cache.hh',
-    'src/infinit/storage/Collision.cc',
-    'src/infinit/storage/Collision.hh',
-    'src/infinit/storage/Crypt.cc',
-    'src/infinit/storage/Crypt.hh',
-    'src/infinit/storage/Dropbox.cc',
-    'src/infinit/storage/Dropbox.hh',
-    'src/infinit/storage/Filesystem.cc',
-    'src/infinit/storage/Filesystem.hh',
-    'src/infinit/storage/GCS.cc',
-    'src/infinit/storage/GCS.hh',
-    'src/infinit/storage/GoogleAPI.cc',
-    'src/infinit/storage/GoogleAPI.hh',
-    'src/infinit/storage/GoogleDrive.cc',
-    'src/infinit/storage/GoogleDrive.hh',
-    'src/infinit/storage/InsufficientSpace.cc',
-    'src/infinit/storage/InsufficientSpace.hh',
-    'src/infinit/storage/Key.hh',
-    'src/infinit/storage/Latency.cc',
-    'src/infinit/storage/Latency.hh',
-    'src/infinit/storage/Memory.cc',
-    'src/infinit/storage/Memory.hh',
-    'src/infinit/storage/Mirror.cc',
-    'src/infinit/storage/Mirror.hh',
-    'src/infinit/storage/MissingKey.cc',
-    'src/infinit/storage/MissingKey.hh',
-    'src/infinit/storage/S3.cc',
-    'src/infinit/storage/S3.hh',
-    'src/infinit/storage/Storage.cc',
-    'src/infinit/storage/Storage.hh',
-    'src/infinit/storage/Strip.cc',
-    'src/infinit/storage/Strip.hh',
-    'src/infinit/storage/fwd.hh',
-
+    'src/infinit/utility.hh',
     'src/infinit/version.hh',
-    'src/infinit/Version.hh',
   )
+  infinit_sources += drake.include('src/infinit/credentials').sources
+  infinit_sources += drake.include('src/infinit/filesystem').sources
+  infinit_sources += drake.include('src/infinit/model').sources
+  infinit_sources += drake.include('src/infinit/overlay').sources
+  infinit_sources += drake.include('src/infinit/storage').sources
   if not windows:
     infinit_sources += drake.nodes(
       'src/infinit/storage/sftp.cc',
@@ -386,7 +256,7 @@ def configure(
     cxx_config_infinit)
   rule_build << infinit_lib
 
-  if not windows:
+  if not windows and enable_crash_reporting:
     crash_reporting = drake.include('crash_reporting',
                                     cxx_toolkit = cxx_toolkit,
                                     cxx_config = cxx_config)
@@ -414,7 +284,12 @@ def configure(
   drake.nodes(
     'bin/endpoint_file.hh',
     'bin/password.hh',
+  )
+
+  xattr_sources = drake.nodes(
+    'bin/xattrs.cc',
     'bin/xattrs.hh',
+    'bin/xattrs.hxx',
   )
 
   bin_cxx_config = drake.cxx.Config(cxx_config)
@@ -451,10 +326,13 @@ def configure(
   # Ship libstdc++
   additional_libs = []
   if linux:
-    output = subprocess.check_output(['ldconfig', '-p'])
-    path = None
     searched_for = {'libstdc++', 'libgcc_s'}
     need_64 = cxx_toolkit.architecture == drake.architecture.x86_64
+    try:
+      output = subprocess.check_output(['ldconfig', '-p'])
+    except Exception:
+      output = ''.join([ (need_64 and 'x86-64 ' or '') + '/usr/lib/'+x+'.so\n' for x in searched_for]).encode('utf-8')
+    path = None
     for line in output.decode('utf-8').split('\n'):
       for searched in searched_for:
         if searched in line:
@@ -472,31 +350,38 @@ def configure(
                       ', '.join(searched_for))
 
   # Build
+  # ('binary name', [additional sources], [additional libraries], ship)
   binaries_config = [
-    ('doughnode', [], False),
-    ('generatekeys', [], False),
-    ('infinit', [], False),
-    ('infinit-acl', [], True),
-    ('infinit-block', [], True),
-    ('infinit-credentials', [], True),
-    ('infinit-device', [], True),
-    ('infinit-doctor', [], True),
-    ('infinit-drive', [], True),
-    ('infinit-journal', [], True),
-    ('infinit-network', [], True),
-    ('infinit-passport', [], True),
-    ('infinit-smb', [], False),
-    ('infinit-storage', (not windows) and [aws_lib] or [], True),
-    ('infinit-user', [], True),
-    ('infinit-volume', [], True),
-    ('infinit-webdav', [], False),
-    ('infinit-fsck', [], False),
-    ('reactor-example', [], False),
-    # ('s3fs', [aws_lib], False),
+    ('doughnode', [], [], False),
+    ('generatekeys', [], [], False),
+    ('infinit', [], [], False),
+    ('infinit-acl', [xattr_sources], [], True),
+    ('infinit-block', [], [], True),
+    ('infinit-credentials', [], [], True),
+    ('infinit-device', [], [], True),
+    ('infinit-doctor', [], [], True),
+    ('infinit-drive', [], [], True),
+    ('infinit-journal', [], [], True),
+    ('infinit-network', [xattr_sources], [], True),
+    ('infinit-passport', [], [], True),
+    ('infinit-smb', [], [], False),
+    ('infinit-storage', [], (not windows) and [aws_lib] or [], True),
+    ('infinit-user', [], [], True),
+    ('infinit-volume', [], [], True),
+    ('infinit-webdav', [], [], False),
+    ('infinit-fsck', [], [], False),
+    ('reactor-example', [], [], False),
+    # ('s3fs', [], [aws_lib], False),
   ]
+  if elle.elle.ldap:
+    binaries_config.append(('infinit-ldap', [xattr_sources], [], True))
+  if (cxx_toolkit.os is drake.os.linux) or \
+      (production_build is False and cxx_toolkit.os is drake.os.macos):
+    binaries_config.append(('infinit-daemon', [], [], True))
   if not windows:
-    binaries_config.append(('sshfs', [], False))
-    additional_libs.append(crash_reporter_lib)
+    binaries_config.append(('sshfs', [], [], False))
+    if enable_crash_reporting:
+      additional_libs.append(crash_reporter_lib)
     additional_libs += [elle_lib, reactor_lib, cryptography_lib]
   else:
     pass
@@ -510,24 +395,26 @@ def configure(
   installed_libraries = []
   bin_version = drake.node('bin/version.cc')
   bin_sources = drake.nodes('bin/main.cc', 'bin/main.hh')
-  for name, libs, install in binaries_config:
+  for name, other_sources, libs, install in binaries_config:
     source = drake.node('bin/%s.cc' % name)
+    additional_sources = []
+    for s in other_sources:
+      additional_sources.extend(s)
     bin = drake.cxx.Executable(
       'bin/%s' % name, [
         source,
         bin_version,
         infinit_lib,
-      ] + bin_sources + libs + additional_libs,
+      ] + bin_sources + additional_sources + libs + additional_libs,
       cxx_toolkit,
       bin_cxx_config)
     rule_build << bin
     binaries.append(bin)
     if install:
       installed_binaries.append(bin)
-      if not windows:
+      if not windows and enable_crash_reporting:
         bin_sym = drake.node('bin/symbols/%s.sym' % name)
         crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
-                                         debian_syms_dir,
                                          bin,
                                          bin_sym)
         installed_symbols.append(bin_sym)
@@ -536,11 +423,10 @@ def configure(
         for lib in binary.dynamic_libraries:
           add_libraries(lib)
       add_libraries(bin)
-  if not windows:
+  if not windows and enable_crash_reporting:
     for lib in set(installed_libraries):
       lib_sym = drake.node('lib/symbols/%s.sym' % lib.path().basename())
       crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
-                                       debian_syms_dir,
                                        lib,
                                        lib_sym)
       installed_symbols.append(lib_sym)
@@ -550,27 +436,43 @@ def configure(
       for s in installed_symbols:
         rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
 
+  if elle.reactor.fnetusermount_binaries is not None:
+    for f in elle.reactor.fnetusermount_binaries:
+      t = drake.copy(f, '.', strip_prefix = 'elle/reactor')
+      installed_binaries.append(t)
+
   ## ----- ##
   ## Share ##
   ## ----- ##
 
   demo_home = drake.nodes(
+    'demo-home/linked_networks/demo/infinit/demo',
     'demo-home/networks/infinit/demo',
     'demo-home/passports/infinit/demo/demo',
     'demo-home/users/demo',
     'demo-home/volumes/infinit/demo',
   )
 
+  ## -------- ##
+  ## Licenses ##
+  ## -------- ##
+
+  license_file = drake.node('OSS-licenses')
+  drake.license_file.Packager('licenses', license_file)
+
   ## ------- ##
   ## Install ##
   ## ------- ##
 
-  def install_nodes(where):
+  def install_nodes(where, demo = True):
     where = drake.Path(where)
     yield from drake.copy(installed_binaries, where, None,
                           builder = PatchAndInstall)
+    if demo:
+      yield from drake.copy(
+        demo_home, where / 'share/infinit/filesystem/test/home', 'demo-home')
     yield from drake.copy(
-      demo_home, where / 'share/infinit/filesystem/test/home', 'demo-home')
+      [license_file], where / 'share/infinit/filesystem/licenses')
 
   rule_install << install_nodes(prefix)
 
@@ -615,23 +517,24 @@ def configure(
                            strip_prefix = True),
   )
   rule_debian = drake.Rule('debian')
-  rule_debian_debug = drake.Rule('debian-debug')
   if cxx_toolkit.os is drake.os.linux:
     rule_debian << drake.debian.Packager(
       'infinit_%s_amd64.deb' % git.description(),
       debian_nodes, 'debian').package
 
-  debian_debug_nodes = chain(
-    installed_symbols,
-    drake.copy(drake.nodes('debian-packaging/debug/control'),
-               '%s/DEBIAN' % debian_debug_dir,
-               strip_prefix = True),
-  )
-  debian_debug_package = drake.debian.Packager(
-    'infinit-debug-symbols-%s-%s_0_amd64.deb' % (platform, git.description()),
-    debian_debug_nodes, debian_debug_dir).package
-  rule_debian << debian_debug_package
-  rule_debian_debug << debian_debug_package
+  if not windows and enable_crash_reporting:
+    rule_debian_debug = drake.Rule('debian-debug')
+    debian_debug_nodes = chain(
+      installed_symbols,
+      drake.copy(drake.nodes('debian-packaging/debug/control'),
+                 '%s/DEBIAN' % debian_debug_dir,
+                 strip_prefix = True),
+    )
+    debian_debug_package = crash_reporting.SymbolsPackager(
+      'infinit-debug-symbols-%s-%s_0_amd64.deb' % (platform, git.description()),
+      debian_debug_nodes, debian_debug_dir).package
+    rule_debian << debian_debug_package
+    rule_debian_debug << debian_debug_package
 
   ## ------- ##
   ## Red Hat ##
@@ -698,6 +601,115 @@ def configure(
                                               redhat_repo_nodes).package
   redhat_rule << redhat_repo_package
 
+
+  ## ------ ##
+  ## Docker ##
+  ## ------ ##
+
+  # infinit image
+  docker_path = drake.Path('docker')
+  docker_image = drake.docker.DockerImage(
+    'docker', 'infinit', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'ubuntu',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.run('apt-get update && apt-get install -y python3')
+  docker_file.add(install_nodes(docker_path, demo = False), '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-static.sh'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-service-runner.py'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-context.sh'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.run('ln -s /usr/bin/fnetusermount-client /bin/fusermount')
+  drake.docker.DockerBuilder(docker_image, docker_file)
+
+
+  # infinit alpine image
+  docker_path = drake.Path('docker-alpine')
+  docker_image = drake.docker.DockerImage(
+    'docker-alpine', 'infinit-alpine', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'alpine',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.add(install_nodes(docker_path, demo = False), '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-static.sh'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-service-runner.py'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-context.sh'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.run('ln -s /usr/bin/fnetusermount-client /bin/fusermount')
+  docker_file.run("ln -s 'libstdc++.so' '/usr/lib/libstdc++.so.6'")
+  docker_file.run("ln -s 'libgcc_s.so' '/usr/lib/libgcc_s.so.1'")
+  drake.docker.DockerBuilder(docker_image, docker_file)
+
+
+
+  #fnetusermount-server image
+  if elle.reactor.fnetusermount_binaries is not None:
+    docker_path = drake.Path('docker-fnetusermount')
+    docker_image = drake.docker.DockerImage(
+      'docker-fnetusermount', 'infinit-fnetusermount', git.description())
+    docker_file = drake.docker.DockerFile(
+      docker_path / 'Dockerfile',
+      image = 'ubuntu',
+      maintainer = 'Infinit <contact@infinit.sh>',
+      labels = {
+        'version': git.description(),
+      })
+    docker_file.add(
+      drake.copy(
+        elle.reactor.fnetusermount_binaries, docker_path / 'bin',
+        strip_prefix = True),
+      '/usr')
+    docker_file.add(
+      drake.copy(additional_libs, docker_path / 'lib',
+        strip_prefix = True),
+      '/usr')
+    docker_file.run('apt-get update')
+    docker_file.run('apt-get install -y fuse') # for fusermount
+    drake.docker.DockerBuilder(docker_image, docker_file)
+
+  #deployment script image
+  docker_path = drake.Path('docker-deploy')
+  docker_image = drake.docker.DockerImage(
+    'docker-deploy', 'infinit-deploy', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'alpine:3.3',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.add(
+    drake.copy(drake.node('share/infinit/docker/infinit-deploy/entry.sh'),
+               docker_path / 'bin', strip_prefix = True),
+    '/usr')
+  docker_file.run('apk add --update bash ca-certificates jq groff less curl python py-pip && pip install awscli && apk --purge -v del py-pip && rm -rf /var/cache/apk/*')
+  docker_file.run(' mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2')
+  drake.docker.DockerBuilder(docker_image, docker_file)
+
   ## ------ ##
   ## Beyond ##
   ## ------ ##
@@ -732,7 +744,7 @@ def configure(
           'debian': rule_debian
         },
       )
-      if not windows:
+      if not windows and enable_crash_reporting:
         crash_test_libs = drake.copy([
             crash_reporter_lib,
             cryptography_lib,
@@ -781,7 +793,7 @@ def configure(
               'user_cli',
               'volume_cli',
             ]))
-      if not windows:
+      if not windows and enable_crash_reporting:
         tests.append(functional_test('crash-reporter'))
       if linux:
         pjdfstest = drake.include(
@@ -801,7 +813,7 @@ def configure(
       for t in tests:
         test = drake.node('tests/functional/%s' % t['name'])
         rule_functional_tests << test
-        if not windows:
+        if not windows and enable_crash_reporting:
           test.dependencies_add([crash_test_bin])
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
@@ -811,7 +823,7 @@ def configure(
                                              absolute = True))
         extra_path = [binaries_path]
         extra_path += t.get('paths', [])
-        if not windows:
+        if not windows and enable_crash_reporting:
           extra_path.append(str(drake.path_build(crash_test_bin.path(True).dirname(),
                                                  absolute = True)))
         extra_path.append(os.environ.get('PATH', ''))

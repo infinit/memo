@@ -513,16 +513,12 @@ infinit::Infinit ifnt;
 
 using boost::program_options::variables_map;
 
-void
-run(variables_map const& args)
+COMMAND(run)
 {
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
-  std::unordered_map<infinit::model::Address, std::vector<std::string>> hosts;
-  bool fetch = args.count("fetch") && args["fetch"].as<bool>();
-  if (fetch)
-    beyond_fetch_endpoints(network, hosts);
+  network.ensure_allowed(self, "run");
   bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
   auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
@@ -530,20 +526,25 @@ run(variables_map const& args)
     optional<int>(args, option_cache_ram_invalidation);
   report_action("running", "network", network.name);
   auto model = network.run(
-    hosts, true, cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
+    self, {}, true, cache,
+    cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"));
+  if (aliased_flag(args, {"fetch-endpoints", "fetch"}))
+  {
+    infinit::model::NodeLocations hosts;
+    beyond_fetch_endpoints(network, hosts);
+    model->overlay()->discover(hosts);
+  }
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
     args["volume"].as<std::string>(),
     std::shared_ptr<infinit::model::doughnut::Doughnut>(model.release()));
   reactor::filesystem::FileSystem rfs(std::move(fs), true);
-
   WebServer ws([&](HTTPQuery const& q) {return webdav(q, rfs);});
   ws.listen(8080);
 }
 
 int main(int argc, char** argv)
 {
-  program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Modes modes {

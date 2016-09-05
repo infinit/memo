@@ -30,7 +30,7 @@ namespace bfs = boost::filesystem;
 namespace imd = infinit::model::doughnut;
 namespace iok = infinit::overlay::kelips;
 
-infinit::overlay::NodeEndpoints endpoints;
+std::vector<infinit::model::Endpoints> endpoints;
 
 static std::vector<std::shared_ptr<imd::Doughnut>>
 run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
@@ -67,10 +67,9 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
         };
     infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
         [&] (infinit::model::doughnut::Doughnut& dht,
-             infinit::model::Address id,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return config.make(id, endpoints, local, &dht);
+          return config.make(endpoints, local, &dht);
         };
     infinit::model::Address::Value v;
     memset(v, 0, sizeof(v));
@@ -87,11 +86,11 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
     res.push_back(dn);
     //if (res.size() == 1)
     {
-      std::string ep = "127.0.0.1:"
-        + std::to_string(dn->local()->server_endpoint().port());
-      std::vector<std::string> eps;
-      eps.push_back(ep);
-      endpoints.emplace(dn->id(), eps);
+      infinit::model::Endpoints eps;
+      eps.emplace_back(
+        boost::asio::ip::address::from_string("127.0.0.1"),
+        dn->local()->server_endpoint().port());
+      endpoints.emplace_back(eps);
     }
   }
   return res;
@@ -135,10 +134,9 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   };
   infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
   [&] (infinit::model::doughnut::Doughnut& dht,
-    infinit::model::Address id,
-    std::shared_ptr<infinit::model::doughnut::Local> local)
+       std::shared_ptr<infinit::model::doughnut::Local> local)
   {
-    return config.make(id, endpoints, local, &dht);
+    return config.make(endpoints, local, &dht);
   };
   auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
     infinit::model::Address::random(0), // FIXME
@@ -247,6 +245,8 @@ static int dir_size(rfs::FileSystem& fs, std::string const& name)
   fs.path("/")->child(name)->list_directory(
     [&](std::string const& fname, struct stat*)
     {
+      if (fname == "." || fname == "..")
+        return;
       struct stat st;
       fs.path("/")->child(name)->child(fname)->stat(&st);
       ++count;
@@ -611,7 +611,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
         items.push_back(n);
       });
     ELLE_LOG("%x: %s", n.get(), items);
-    BOOST_CHECK(items.size() == fss.size());
+    BOOST_CHECK(items.size() == fss.size()+2);
   }
   for(auto const& n: fss)
   {
@@ -650,7 +650,7 @@ ELLE_TEST_SCHEDULED(many_conflicts)
       {
         ++count;
       });
-    BOOST_CHECK(count == iter_count * node_count);
+    BOOST_CHECK(count == iter_count * node_count + 2);
   }
 }
 
@@ -695,15 +695,15 @@ ELLE_TEST_SUITE()
   elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
   elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "2", 1);
   auto& suite = boost::unit_test::framework::master_test_suite();
-  suite.add(BOOST_TEST_CASE(basic), 0, valgrind(60));
-  suite.add(BOOST_TEST_CASE(conflicts), 0, valgrind(32));
-  suite.add(BOOST_TEST_CASE(times), 0, valgrind(32));
-  suite.add(BOOST_TEST_CASE(list_directory), 0, valgrind(10));
-  suite.add(BOOST_TEST_CASE(list_directory_3), 0, valgrind(60));
-  suite.add(BOOST_TEST_CASE(list_directory_5_3), 0, valgrind(60));
-  suite.add(BOOST_TEST_CASE(clients_parallel), 0, valgrind(60));
-  suite.add(BOOST_TEST_CASE(many_conflicts), 0, valgrind(60));
-  suite.add(BOOST_TEST_CASE(remove_conflicts), 0, valgrind(60));
+  suite.add(BOOST_TEST_CASE(basic), 0, valgrind(120));
+  suite.add(BOOST_TEST_CASE(conflicts), 0, valgrind(120));
+  suite.add(BOOST_TEST_CASE(times), 0, valgrind(120));
+  suite.add(BOOST_TEST_CASE(list_directory), 0, valgrind(120));
+  suite.add(BOOST_TEST_CASE(list_directory_3), 0, valgrind(120));
+  suite.add(BOOST_TEST_CASE(list_directory_5_3), 0, valgrind(120));
+  suite.add(BOOST_TEST_CASE(clients_parallel), 0, valgrind(120));
+  suite.add(BOOST_TEST_CASE(many_conflicts), 0, valgrind(120));
+  suite.add(BOOST_TEST_CASE(remove_conflicts), 0, valgrind(120));
   // suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
   //suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
   // suite.add(BOOST_TEST_CASE(killed_nodes_k2), 0, 600);
