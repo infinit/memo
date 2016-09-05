@@ -2485,8 +2485,10 @@ ELLE_TEST_SCHEDULED(multiple_writers)
     ELLE_TRACE("resulting file: %s bytes", st.st_size);
     auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
     for (int o=0; o < st.st_size; o+= 1024)
-      h->read(elle::WeakBuffer(buffer, std::min(1024L, st.st_size-o)),
-              std::min(1024L, st.st_size-o), o);
+    {
+      auto len = std::min(off_t(1024), off_t(st.st_size-o));
+      h->read(elle::WeakBuffer(buffer, len), len, o);
+    }
   }
 }
 
