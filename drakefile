@@ -254,7 +254,8 @@ def configure(
                        elle_lib
                        ] + extra_libs,
     cxx_toolkit,
-    cxx_config_infinit)
+    cxx_config_infinit,
+    strip = windows)
   rule_build << infinit_lib
 
   if not windows and enable_crash_reporting:
@@ -408,7 +409,8 @@ def configure(
         infinit_lib,
       ] + bin_sources + additional_sources + libs + additional_libs,
       cxx_toolkit,
-      bin_cxx_config)
+      bin_cxx_config,
+      strip = windows)
     rule_build << bin
     binaries.append(bin)
     if install:
