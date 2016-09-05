@@ -231,7 +231,7 @@ run_network()
   if [ ${?} -eq 0 ] ; then
     _fqn=$(fqn "${as}" "${name}")
     while true ; do
-      _network=$(http_request "https://beyond.infinit.io/networks/${_fqn}")
+      _network=$(http_request "https://beyond.infinit.sh/networks/${_fqn}")
       _endpoints=$(json_get "${_network}" "print(len(object['endpoints']))")
       if [ "${_endpoints}" != "0" ] ; then
         break
@@ -285,7 +285,7 @@ mount_volume()
     _network_name=$(json_get "${_volume}" "print(object['network'])")
     _fqn=$(fqn "${as}" "${_network_name}")
     while true ; do
-      _network=$(http_request "https://beyond.infinit.io/networks/${_fqn}")
+      _network=$(http_request "https://beyond.infinit.sh/networks/${_fqn}")
       _endpoints=$(json_get "${_network}" "print(len(object['endpoints']))")
       if [ "${_endpoints}" != "0" ] ; then
         break

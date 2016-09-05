@@ -379,12 +379,8 @@ namespace infinit
         return;
       if (new_size > signed(current))
       {
-        char buf[16384] = {0};
-        while (current < new_size)
-        {
-          auto nsz = std::min(off_t(16384), new_size - current);
-          current += write(src, elle::WeakBuffer(buf, nsz), nsz, current);
-        }
+        this->_file._header.size = new_size;
+        _dirty = true;
         return;
       }
       uint64_t first_block_size = _file._data.size();

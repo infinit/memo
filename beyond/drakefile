@@ -112,11 +112,13 @@ def configure(
     'email_regex': email_regex,
     'name_regex': name_regex,
     'delegate_user': delegate_user,
+    'python_version_major': python.version.major,
+    'python_version_minor': python.version.minor,
   }
   variables.update(secrets)
   with drake.templating.Context(content = variables):
     drake.node('bin/beyond.tmpl')
-    drake.node('etc/uwsgi/apps-available/beyond.xml.tmpl')
+    drake.node('etc/uwsgi/beyond.xml.tmpl')
     drake.node('src/wsgi.py.tmpl')
     drake.node('src/validation.py.tmpl')
 
@@ -171,18 +173,15 @@ def configure(
       'rsa-3.3.dist-info',
       'six-1.10.0.dist-info',
     ])
-  sources += oauth2client.targets()
   crypto = drake.PythonModule(
     'pycrypto',
     python_prefix(),
     dependencies = [],
     module_name = 'Crypto')
-  sources += crypto.targets()
   PIL = drake.PythonModule(
     'PILLOW', python_prefix(),
     module_name = 'PIL',
     dependencies = ['Pillow-3.0.0.egg-info'])
-  sources += PIL.targets()
   def install_nodes(where, how, python_version = python.version):
     prefix = python_prefix(python_version)
     where = drake.Path(where)
@@ -209,9 +208,13 @@ def configure(
   build = drake.Rule('build')
   build << binaries
   built = list(install_nodes(where = '.', how = copy_python))
-  package = drake.python.Package('beyond', python_prefix(), built,
-                                 fullname = 'infinit.beyond')
+  mods = list(
+    chain(*(p.targets() for p in [oauth2client, crypto, PIL])))
+  package = drake.python.Package(
+    'beyond', python_prefix(), built + mods,
+    fullname = 'infinit.beyond')
   build << built
+  build << mods
 
   install = drake.Rule('install')
   install << install_nodes(
@@ -249,11 +252,12 @@ def configure(
     debian_nodes,
     drake.copy(drake.nodes('control'), 'debian/DEBIAN'),
     drake.copy(
-      drake.nodes('etc/nginx/sites-available/beyond',
-                  'etc/rsyslog.d/10-infinit.conf',
-                  'etc/uwsgi/apps-available/beyond.xml',
-                  'usr/share/ca-certificates/extra/infinit.crt'),
+      drake.nodes('etc/rsyslog.d/10-infinit.conf'),
       'debian',
+    ),
+    drake.copy(
+      drake.nodes('etc/uwsgi/beyond.xml'),
+      'debian/opt/infinit/beyond',
     ),
   )
   debian = drake.Rule('debian')

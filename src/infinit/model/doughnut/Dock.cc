@@ -120,7 +120,7 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: get %f", this, loc);
         static bool disable_cache = getenv("INFINIT_DISABLE_PEER_CACHE");
-        if (loc.id() == this->_doughnut.id() || loc.id() == Address::null)
+        if (loc.id() == this->_doughnut.id())
         {
           ELLE_TRACE("peer is ourself");
           return this->_doughnut.local();

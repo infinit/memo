@@ -37,7 +37,7 @@ def configure(
     cxx_toolkit = None,
     cxx_config = drake.cxx.Config(),
     production_build = False,
-    beyond_host = 'https://beyond.infinit.io',
+    beyond_host = 'https://beyond.infinit.sh',
     boost = None,
     prefix = '/usr',
     valgrind = None,
@@ -209,6 +209,7 @@ def configure(
     'src/infinit/serialization.cc',
     'src/infinit/serialization.hh',
     'src/infinit/smb/smb.cc',
+    'src/infinit/utility.cc',
     'src/infinit/utility.hh',
     'src/infinit/version.hh',
   )
@@ -237,7 +238,7 @@ def configure(
     cxx_config_infinit.lib('iphlpapi')
     cxx_config_infinit.lib('crypt32')
     libtype = drake.cxx.DynLib
-    extra_libs = [dokan_lib]
+    extra_libs = [drake.copy(dokan_lib, 'bin', strip_prefix = True)]
     cxx_config_infinit.use_whole_archive()
   else:
     extra_libs = []
@@ -253,7 +254,8 @@ def configure(
                        elle_lib
                        ] + extra_libs,
     cxx_toolkit,
-    cxx_config_infinit)
+    cxx_config_infinit,
+    strip = windows)
   rule_build << infinit_lib
 
   if not windows and enable_crash_reporting:
@@ -407,7 +409,8 @@ def configure(
         infinit_lib,
       ] + bin_sources + additional_sources + libs + additional_libs,
       cxx_toolkit,
-      bin_cxx_config)
+      bin_cxx_config,
+      strip = windows)
     rule_build << bin
     binaries.append(bin)
     if install:

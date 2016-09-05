@@ -9,16 +9,17 @@ from utils import *
 
 from copy import deepcopy
 
-with Beyond() as beyond:
+th Beyond() as beyond:
 
-  class Test(unittest.TestCase):
+class Test(unittest.TestCase):
 
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network('infinit', owner = user)
       res = beyond.get('networks/%s' % network['name']).json()
 
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

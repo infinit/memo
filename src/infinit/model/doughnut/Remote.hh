@@ -35,6 +35,18 @@ namespace infinit
       public:
         typedef Remote Self;
         typedef Peer Super;
+        /// Challenge, token
+        using Challenge = std::pair<elle::Buffer, elle::Buffer>;
+        struct Auth
+        {
+          Auth(Address id,
+               Challenge challenge,
+               Passport passport);
+          Auth(elle::serialization::SerializerIn& input);
+          Address id;
+          Challenge challenge;
+          Passport passport;
+        };
 
       /*-------------.
       | Construction |
@@ -88,10 +100,10 @@ namespace infinit
         void
         _key_exchange(protocol::ChanneledStream& channels);
         ELLE_ATTRIBUTE(Protocol, protocol);
-        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
         ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
         ELLE_ATTRIBUTE_R(EndpointsRefetcher, refetch_endpoints);
         ELLE_ATTRIBUTE_R(bool, fast_fail);
+        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
       /*-------.
       | Blocks |
       `-------*/

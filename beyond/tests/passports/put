@@ -9,11 +9,10 @@ from utils import *
 
 from copy import deepcopy
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'infinit', owner = user)
@@ -24,9 +23,10 @@ with Beyond() as beyond:
       passport.put(beyond)
       beyond.get('networks/%s/passports/%s' % (
         network['name'], invitee['name']),
-                 auth = invitee.private_key)
+                 auth = invitee)
 
-    def test_all_your_passports(self):
+  def test_all_your_passports(self):
+    with Beyond() as beyond:
       count = 10
       user = User()
       user.put(beyond)
@@ -38,10 +38,11 @@ with Beyond() as beyond:
         passport = Passport(network, invitee)
         passport.put(beyond)
       l = beyond.get('users/%s/passports' % invitee['name'],
-                     auth = invitee.private_key).json()
+                     auth = invitee).json()
       assertEq(len(l['passports']), count)
 
-    def test_authorisation_put(self):
+  def test_authorisation_put(self):
+    with Beyond() as beyond:
       user, invitee, evil = User(), User(), User()
       user.put(beyond)
       evil.put(beyond)
@@ -55,7 +56,8 @@ with Beyond() as beyond:
       except Exception:
         pass
 
-    def test_multiple_networks(self):
+  def test_multiple_networks(self):
+    with Beyond() as beyond:
       user, invitee = User(), User()
       user.put(beyond), invitee.put(beyond)
       networks = {}
@@ -67,9 +69,10 @@ with Beyond() as beyond:
         passport = Passport(networks[i], invitee)
         passport.put(beyond, owner = user)
       beyond.get('users/%s/passports' % invitee['name'],
-                 auth = invitee.private_key)
+                 auth = invitee)
 
-    def test_multiple_users(self):
+  def test_multiple_users(self):
+    with Beyond() as beyond:
       def populate(invite):
         user, invitee = User(), User()
         user.put(beyond), invitee.put(beyond)
@@ -82,9 +85,10 @@ with Beyond() as beyond:
       for i in range(10):
         populate(i % 2)
       user, invitee, network = populate(True)
-      beyond.get('users/%s/passports' % invitee['name'], auth = invitee.private_key)
+      beyond.get('users/%s/passports' % invitee['name'], auth = invitee)
 
-    def test_owning_a_network_and_being_invited_to_another(self):
+  def test_owning_a_network_and_being_invited_to_another(self):
+    with Beyond() as beyond:
       A, B = User(), User()
       A.put(beyond), B.put(beyond)
       network_a = Network(name = 'infinit', owner = A)
@@ -93,10 +97,52 @@ with Beyond() as beyond:
       network_b.put(beyond)
       Passport(network_a, B).put(beyond)
       Passport(network_b, A).put(beyond)
-      beyond.get('users/%s/passports' % B['name'], auth = B.private_key)
-      beyond.get('users/%s/passports' % A['name'], auth = A.private_key)
+      beyond.get('users/%s/passports' % B['name'], auth = B)
+      beyond.get('users/%s/passports' % A['name'], auth = A)
 
-    def test_authorisation_get(self):
+  def passport_as_allowed_user(self, beyond, owner, delegate, invitee, delete_as):
+    network = Network(name = 'osef', owner = owner)
+    network.put(beyond)
+    throws(lambda: Passport(network, invitee).put(beyond, delegate), 403)
+    # Put a passport that doesn't delegate rights to invite.
+    p = Passport(network, delegate, delegate = False)
+    p.put(beyond, owner)
+    # Make sure the user can't push.
+    throws(lambda: Passport(network, invitee).put(beyond, delegate), 403)
+    # Reset.
+    p.delete(beyond, owner)
+    # Put a passport that delegates rights to invite.
+    p = Passport(network, delegate, delegate = True)
+    p.put(beyond, owner)
+    # Make sure delegate can invite invitee.
+    x = Passport(network, invitee)
+    x.put(beyond, delegate)
+    r = beyond.get(
+      'networks/%s/passports/%s' % (network['name'], invitee['name']),
+      auth = invitee).json()
+    # Make sure the owner, the delegate or the invitee can delete the
+    # passport.
+    x.delete(beyond, delete_as)
+    # Make sure the delegate cannot delete passport he didn't issue.
+    random = User()
+    random.put(beyond)
+    p = Passport(network, random)
+    p.put(beyond)
+    # Because passport has been issued by owner, delegate is not able to
+    # delete it.
+    throws(lambda: p.delete(beyond, delegate), 403)
+
+  def test_passports_as_allowed_user(self):
+    with Beyond() as beyond:
+      o, d, i = users(3, beyond)
+      self.passport_as_allowed_user(beyond, o, d, i, o)
+      o, d, i = users(3, beyond)
+      self.passport_as_allowed_user(beyond, o, d, i, d)
+      o, d, i = users(3, beyond)
+      self.passport_as_allowed_user(beyond, o, d, i, i)
+
+  def test_authorisation_get(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'infinit', owner = user)
@@ -112,5 +158,5 @@ with Beyond() as beyond:
       except Exception:
         pass
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

@@ -4,6 +4,7 @@
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
+#include <elle/Option.hh>
 #include <elle/utility/Move.hh>
 
 #include <cryptography/hash.hh>
@@ -22,6 +23,71 @@ namespace infinit
   {
     namespace doughnut
     {
+      typedef elle::Option<cryptography::rsa::PublicKey, elle::Buffer>
+      KeyOrHash;
+
+      cryptography::rsa::PublicKey
+      deserialize_key_hash(elle::serialization::SerializerIn& s,
+                           elle::Version const& v,
+                           std::string const& field_name,
+                           Doughnut* dn)
+      {
+        if (v < elle::Version(0, 7, 0))
+          return s.deserialize<cryptography::rsa::PublicKey>(field_name);
+        KeyOrHash koh = s.deserialize<KeyOrHash>(field_name + "_koh");
+        if (koh.is<elle::Buffer>())
+        {
+          if (!dn)
+            elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
+          ELLE_ASSERT(dn);
+          auto buf = koh.get<elle::Buffer>();
+          auto k = dn->resolve_key(buf);
+          return *k; // Dont move me I'm cached in doughnut!
+        }
+        else
+        {
+          return std::move(koh.get<cryptography::rsa::PublicKey>());
+        }
+      }
+
+      void
+      serialize_key_hash(elle::serialization::Serializer& s,
+                         elle::Version const& v,
+                         cryptography::rsa::PublicKey& key,
+                         std::string const& field_name,
+                         Doughnut* dn)
+      {
+        // Pre-0.7 serializes the key, post 0.7 serializes KeyOrHash
+        if (v < elle::Version(0, 7, 0))
+          s.serialize(field_name, key);
+        else
+        {
+          if (s.in())
+          {
+            key = std::move(deserialize_key_hash(
+              dynamic_cast<elle::serialization::SerializerIn&>(s),
+              v, field_name, dn));
+          }
+          else
+          {
+            static bool disable_hash = elle::os::inenv("INFINIT_DISABLE_KEY_HASH");
+            if (disable_hash)
+            {
+              KeyOrHash koh(key);
+              s.serialize(field_name + "_koh", koh);
+            }
+            else
+            {
+              if (!dn)
+                elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
+              ELLE_ASSERT(dn);
+              auto hash = dn->ensure_key(key);
+              KeyOrHash koh(hash);
+              s.serialize(field_name + "_koh", koh);
+            }
+          }
+        }
+      }
       OKBHeader::OKBHeader(Doughnut* dht,
                            cryptography::rsa::KeyPair const& keys,
                            boost::optional<elle::Buffer> salt)
@@ -116,10 +182,10 @@ namespace infinit
       }
 
       OKBHeader::OKBHeader(elle::serialization::SerializerIn& s,
-                           elle::Version const&)
+                           elle::Version const& v)
         : _salt()
         , _owner_key(std::make_shared(
-                       s.deserialize<cryptography::rsa::PublicKey>("key")))
+            deserialize_key_hash(s, v, "key")))
         , _signature()
       {
         s.serialize_context<Doughnut*>(this->_dht);
@@ -289,7 +355,7 @@ namespace infinit
         ELLE_ASSERT(s_.out());
         auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
         s.serialize("salt", this->_block.salt());
-        s.serialize("owner_key", *this->_block.owner_key());
+        serialize_key_hash(s, v, *this->_block.owner_key(), "owner_key", _block.dht());
         s.serialize("version", this->_block._version);
         this->_serialize(s, v);
       }
@@ -428,7 +494,7 @@ namespace infinit
                                 elle::Version const& version)
       {
         this->Super::serialize(s, version);
-        s.serialize("key", *this->_owner_key);
+        serialize_key_hash(s, version, *this->_owner_key, "key", this->dht());
         s.serialize("owner", static_cast<OKBHeader&>(*this));
         this->_serialize(s, version);
       }

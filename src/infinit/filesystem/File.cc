@@ -608,13 +608,7 @@ namespace infinit
       if (new_size > signed(_filedata->_header.size))
       {
         auto h = open(O_RDWR, 0666);
-        char buf[16384] = {0};
-        int64_t sz = _filedata->_header.size;
-        while (sz < new_size)
-        {
-          auto nsz = std::min(off_t(16384), new_size - sz);
-          sz += h->write(elle::WeakBuffer(buf, nsz), nsz, sz);
-        }
+        h->ftruncate(new_size);
         h->close();
         return;
       }
@@ -628,12 +622,15 @@ namespace infinit
         if (signed(offset) >= new_size)
         { // kick the block
           ELLE_DEBUG("removing %f", _filedata->_fat[i].first);
-          _owner.unchecked_remove(_filedata->_fat[i].first);
+          if (_filedata->_fat[i].first != Address::null)
+            _owner.unchecked_remove(_filedata->_fat[i].first);
           _filedata->_fat.pop_back();
         }
         else if (signed(offset + _filedata->_header.block_size) >= new_size)
         { // maybe truncate the block
           ELLE_DEBUG("truncating %f", _filedata->_fat[i].first);
+          if (_filedata->_fat[i].first == Address::null)
+            continue;
           auto targetsize = new_size - offset;
           cryptography::SecretKey sk(_filedata->_fat[i].second);
           auto block = _owner.fetch_or_die(_filedata->_fat[i].first);
@@ -677,9 +674,24 @@ namespace infinit
             }
           }
           if (dirty)
+          {
+#ifdef INFINIT_WINDOWS
+            // Propagating to dirty open files breaks saving of office documents.
+            continue;
+#else
             ELLE_WARN("Propagating truncate(%s) of %s to open dirty file handle with size %s",
                       new_size, _name, fh->_file._header.size);
-          fh->ftruncate(nullptr, new_size);
+#endif
+          }
+          if (dirty || new_size)
+            fh->ftruncate(nullptr, new_size);
+          else
+          { // No need to go through block removal again
+            fh->_file._fat.clear();
+            fh->_file._data.reset();
+            fh->_file._header.size = 0;
+            fh->_blocks.clear();
+          }
         }
       }
     }

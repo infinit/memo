@@ -20,9 +20,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/File.hh>
-
-#include <infinit/version.hh>
-
+#include <infinit/utility.hh>
 
 ELLE_LOG_COMPONENT("backward-compatibility");
 
@@ -77,6 +75,14 @@ public:
   seal(elle::ConstWeakBuffer const& plain,
        infinit::cryptography::Cipher const cipher,
        infinit::cryptography::Mode const mode) const override
+  {
+    return elle::Buffer(plain);
+  }
+
+  virtual
+  elle::Buffer
+  encrypt(elle::ConstWeakBuffer const& plain,
+          infinit::cryptography::rsa::Padding const padding) const override
   {
     return elle::Buffer(plain);
   }
@@ -173,6 +179,8 @@ struct TestSet
     nb->seal();
     ub->seal();
     rub->seal();
+    elle::unconst(dht.key_hash_cache()).insert(std::make_pair(
+      dht::UB::hash(keys->K()), keys->public_key()));
   }
 
   void apply(std::string const& action,
@@ -272,7 +280,7 @@ main(int argc, char** argv)
   }
   if (vm.count("version"))
   {
-    std::cout << INFINIT_VERSION << std::endl;
+    std::cout << infinit::version() << std::endl;
     return 0;
   }
   reactor::Scheduler sched;
@@ -289,7 +297,8 @@ main(int argc, char** argv)
         <infinit::cryptography::rsa::KeyPair>(K, k);
       if (vm.count("generate"))
       {
-        elle::Version current_version(INFINIT_MAJOR, INFINIT_MINOR, 0);
+        elle::Version current_version(
+          infinit::version().major(), infinit::version().minor(), 0);
         auto current = path(current_version);
         std::cout << "Create reference data for version "
                   << current_version << std::endl;
@@ -383,7 +392,7 @@ main(int argc, char** argv)
               }
               {
                 auto path = it->path() / elle::sprintf("%s.bin", name);
-                boost::filesystem::ifstream input(path);
+                boost::filesystem::ifstream input(path, std::ios::binary);
                 if (!input.good())
                   throw elle::Error(elle::sprintf("unable to open %s", path));
                 elle::Buffer contents(
@@ -416,7 +425,7 @@ main(int argc, char** argv)
               }
               {
                 auto path = it->path() / elle::sprintf("%s.bin", name);
-                boost::filesystem::ifstream input(path);
+                boost::filesystem::ifstream input(path, std::ios::binary);
                 if (!input.good())
                 {
                   ELLE_WARN("unable to open %s", path);

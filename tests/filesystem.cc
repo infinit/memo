@@ -45,7 +45,7 @@
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/Memory.hh>
 #include <infinit/storage/Storage.hh>
-#include <infinit/version.hh>
+#include <infinit/utility.hh>
 
 #include "DHT.hh"
 
@@ -56,11 +56,6 @@
 #endif
 
 ELLE_LOG_COMPONENT("test");
-
-#define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                           INFINIT_MINOR,   \
-                                           INFINIT_SUBMINOR)
-
 
 namespace ifs = infinit::filesystem;
 namespace rfs = reactor::filesystem;
@@ -436,7 +431,7 @@ make_nodes(std::string store,
           overlay,
           boost::optional<int>(),
           std::move(s),
-          INFINIT_ELLE_VERSION));
+          infinit::version()));
     }
     for (int i = 0; i < node_count; ++i)
       peers.emplace_back(
@@ -540,7 +535,7 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           overlay,
           boost::optional<int>(),
           nullptr,
-          INFINIT_ELLE_VERSION);
+          infinit::version());
         ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;
         ops = elle::make_unique<ifs::FileSystem>(
@@ -618,8 +613,10 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           }
           overlay["peers"] = v;
           model["overlay"] = std::move(overlay);
-          model["version"] =
-            elle::sprintf("%s.%s", INFINIT_MAJOR, INFINIT_MINOR);
+          model["version"] = elle::sprintf(
+            "%s.%s",
+            int(infinit::version().major()),
+            int(infinit::version().minor()));
         }
         r["model"] = model;
         std::string kps;
@@ -689,7 +686,7 @@ run_filesystem(std::string const& store, std::string const& mountpoint)
       storage = new infinit::storage::Filesystem(store);
     model = elle::make_unique<infinit::model::faith::Faith>(
       std::unique_ptr<infinit::storage::Storage>(g_storage),
-      INFINIT_ELLE_VERSION);
+      infinit::version());
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
       "default-volume", std::move(model), ifs::allow_root_creation = true);
     fs = new reactor::filesystem::FileSystem(std::move(ops), true);
@@ -1847,8 +1844,15 @@ class DHTs
 {
 public:
   template <typename ... Args>
-  DHTs(int count, Args ... args)
-    : owner_keys(infinit::cryptography::rsa::keypair::generate(512))
+  DHTs(int count)
+   : DHTs(count, {})
+  {
+  }
+  template <typename ... Args>
+  DHTs(int count,
+       boost::optional<infinit::cryptography::rsa::KeyPair> kp,
+       Args ... args)
+    : owner_keys(kp? *kp : infinit::cryptography::rsa::keypair::generate(512))
     , dhts()
   {
     pax = true;
@@ -1881,18 +1885,32 @@ public:
     std::unique_ptr<reactor::filesystem::FileSystem> fs;
   };
 
+  template<typename... Args>
   Client
-  client(bool new_key = false)
+  client(bool new_key,
+         boost::optional<infinit::cryptography::rsa::KeyPair> kp,
+         Args... args)
   {
+    auto k = kp ? *kp
+        : new_key ? infinit::cryptography::rsa::keypair::generate(512)
+          : this->owner_keys;
+    ELLE_LOG("new client with owner=%f key=%f", this->owner_keys.K(), k.K());
     DHT client(owner = this->owner_keys,
-               keys = new_key ? infinit::cryptography::rsa::keypair::generate(512)
-                                : this->owner_keys,
+               keys = k,
                storage = nullptr,
                make_consensus = pax ? same_consensus : no_cheat_consensus,
-               paxos = pax);
+               paxos = pax,
+               std::forward<Args>(args) ...
+               );
     for (auto& dht: this->dhts)
       dht.overlay->connect(*client.overlay);
     return Client("volume", std::move(client));
+  }
+
+  Client
+  client(bool new_key = false)
+  {
+    return client(new_key, {});
   }
 
   infinit::cryptography::rsa::KeyPair owner_keys;
@@ -1999,15 +2017,17 @@ ELLE_TEST_SCHEDULED(prefetcher_failure)
   ::Overlay* o = dynamic_cast< ::Overlay*>(client.dht.dht->overlay().get());
   auto root = client.fs->path("/");
   BOOST_CHECK(o);
-  root->child("file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  auto h = root->child("file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
   // grow to 2 data blocks
-  root->child("file")->truncate(1024*1024*3);
+  char buf[16384];
+  for (int i=0; i<1024*3; ++i)
+    h->write(elle::ConstWeakBuffer(buf, 1024), 1024,  1024*i);
+  h->close();
   auto fat = get_fat(root->child("file")->getxattr("user.infinit.fat"));
   BOOST_CHECK_EQUAL(fat.size(), 3);
   o->fail_addresses().insert(fat[1]);
   o->fail_addresses().insert(fat[2]);
   auto handle = root->child("file")->open(O_RDWR, 0);
-  char buf[16384];
   BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 8192),
                     16384);
   reactor::sleep(200_ms);
@@ -2329,10 +2349,9 @@ ELLE_TEST_SCHEDULED(remove_permissions)
   BOOST_CHECK_NO_THROW(client2.fs->path("/dir2")->rmdir());
 }
 
-
 ELLE_TEST_SCHEDULED(create_excl)
 {
-  DHTs servers(1, with_cache = true);
+  DHTs servers(1, {}, with_cache = true);
   auto client1 = servers.client(false);
   auto client2 = servers.client(false);
   // cache feed
@@ -2414,6 +2433,128 @@ ELLE_TEST_SCHEDULED(multiple_writers)
       h->read(b2, 1024, o * 1024);
       BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
     }
+
+ELLE_TEST_SCHEDULED(sparse_file)
+{
+  // Under windows, a 'cp' causes a ftruncate(target_size), so check that it
+  // works
+  DHTs servers(-1);
+  auto client = servers.client();
+  client.fs->path("/");
+  for (int iter = 0; iter < 2; ++iter)
+  { // run twice to get 'non-existing' and 'existing' initial states
+    auto h = client.fs->path("/file")->create(O_RDWR | O_CREAT|O_TRUNC, 0666);
+    char buf[191];
+    char obuf[191];
+    for (int i=0; i<191; ++i)
+      buf[i] = i%191;
+    int sz = 191 * (1 + 2500000/191);
+    h->ftruncate(sz);
+    for (int i=0;i<2500000; i+= 191)
+    {
+      h->write(elle::ConstWeakBuffer(buf, 191), 191, i);
+    }
+    h->close();
+    h = client.fs->path("/file")->open(O_RDONLY, 0666);
+    for (int i=0;i<2500000; i+= 191)
+    {
+      h->read(elle::WeakBuffer(obuf, 191), 191, i);
+      BOOST_CHECK(!memcmp(obuf, buf, 191));
+    }
+  }
+}
+
+#include <elle/Option.hh>
+
+ELLE_TEST_SCHEDULED(upgrade_06_07)
+{
+  infinit::storage::Memory::Blocks blocks;
+  auto owner_key = infinit::cryptography::rsa::keypair::generate(512);
+  auto other_key = infinit::cryptography::rsa::keypair::generate(512);
+  auto other_key2 = infinit::cryptography::rsa::keypair::generate(512);
+  auto nid = infinit::model::Address::random(0);
+  char buf[1024];
+  {
+    DHTs dhts(1, owner_key,
+              keys = owner_key,
+              storage = elle::make_unique<infinit::storage::Memory>(blocks),
+              version = elle::Version(0,6,0),
+              id = nid);
+    auto client = dhts.client(false, {}, version = elle::Version(0, 6, 0));
+    client.fs->path("/dir")->mkdir(0666);
+    auto h = client.fs->path("/dir/file")->create(O_RDWR|O_CREAT, 0666);
+    char buf[1024];
+    for (int i=0; i<1200; ++i)
+      h->write(elle::ConstWeakBuffer(buf, 1024), 1024, i * 1024);
+    h->close();
+    h.reset();
+    client.fs->path("/dir/file")->setxattr("infinit.auth.setrw",
+      elle::serialization::json::serialize(other_key.K()).string(), 0);
+    client.fs->path("/dir/")->setxattr("infinit.auth.setrw",
+      elle::serialization::json::serialize(other_key.K()).string(), 0);
+    client.fs->path("/")->setxattr("infinit.auth.setrw",
+      elle::serialization::json::serialize(other_key.K()).string(), 0);
+  }
+  {
+    BOOST_CHECK(blocks.size());
+    DHTs dhts(1, owner_key,
+              keys = owner_key,
+              storage = elle::make_unique<infinit::storage::Memory>(blocks),
+              version = elle::Version(0,7,0),
+              dht::consensus::rebalance_auto_expand = false,
+              id = nid
+              );
+    auto client = dhts.client(false);
+    struct stat st;
+    client.fs->path("/")->stat(&st);
+    client.fs->path("/dir")->stat(&st);
+    client.fs->path("/dir/file")->stat(&st);
+    client.fs->path("/dir2")->mkdir(0666);
+    auto h = client.fs->path("/dir/file2")->create(O_RDWR|O_CREAT, 0666);
+    for (int i=0; i<1200; ++i)
+      h->write(elle::ConstWeakBuffer(buf, 1024), 1024, i * 1024);
+    h->close();
+    h.reset();
+    h = client.fs->path("/dir/file")->create(O_RDWR|O_CREAT, 0666);
+    for (int i=0; i<1200; ++i)
+      h->write(elle::ConstWeakBuffer(buf, 1024), 1024, i * 1024);
+    h->close();
+    h.reset();
+    client.fs->path("/dir/file")->setxattr("infinit.auth.setr",
+      elle::serialization::json::serialize(other_key.K()).string(), 0);
+    client.fs->path("/dir/file")->setxattr("infinit.auth.setr",
+      elle::serialization::json::serialize(other_key2.K()).string(), 0);
+    auto client2 = dhts.client(false, other_key);
+    client2.fs->path("/")->stat(&st);
+    client2.fs->path("/dir")->stat(&st);
+    client2.fs->path("/dir/file")->stat(&st);
+  }
+  {
+    BOOST_CHECK(blocks.size());
+    DHTs dhts(1, owner_key,
+              keys = owner_key,
+              storage = elle::make_unique<infinit::storage::Memory>(blocks),
+              version = elle::Version(0,7,0),
+              dht::consensus::rebalance_auto_expand = false,
+              id = nid
+              );
+    auto client = dhts.client(false);
+    struct stat st;
+    client.fs->path("/")->stat(&st);
+    client.fs->path("/dir")->stat(&st);
+    client.fs->path("/dir/file")->stat(&st);
+    client.fs->path("/dir/file2")->stat(&st);
+    client.fs->path("/dir2")->stat(&st);
+    auto h = client.fs->path("/dir/file2")->open(O_RDONLY, 0666);
+    BOOST_CHECK_EQUAL(1024, h->read(elle::WeakBuffer(buf, 1024), 1024, 0));
+    h->close();
+    h = client.fs->path("/dir/file")->open(O_RDONLY, 0666);
+    BOOST_CHECK_EQUAL(1024, h->read(elle::WeakBuffer(buf, 1024), 1024, 0));
+    h->close();
+    auto client2 = dhts.client(false, other_key);
+    client2.fs->path("/")->stat(&st);
+    client2.fs->path("/dir")->stat(&st);
+    client2.fs->path("/dir/file")->stat(&st);
   }
 }
 
@@ -2426,17 +2567,7 @@ ELLE_TEST_SUITE()
   signal(SIGCHLD, SIG_IGN);
 #endif
   auto& suite = boost::unit_test::framework::master_test_suite();
-  // only doughnut supported filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
-  suite.add(BOOST_TEST_CASE(filesystem), 0, 120);
-  suite.add(BOOST_TEST_CASE(filesystem_paxos), 0, 240);
-#ifndef INFINIT_MACOSX
-  // osxfuse fails to handle two mounts at the same time, the second fails
-  // with a mysterious 'permission denied'
-  suite.add(BOOST_TEST_CASE(acl), 0, 120);
-  suite.add(BOOST_TEST_CASE(acl_paxos), 0, 240);
-  suite.add(BOOST_TEST_CASE(conflicts), 0, 120);
-  suite.add(BOOST_TEST_CASE(conflicts_paxos), 0, 120);
-#endif
+  // Fast tests that do not mount
   suite.add(BOOST_TEST_CASE(write_unlink), 0, 1);
   suite.add(BOOST_TEST_CASE(write_truncate), 0, 1);
   suite.add(BOOST_TEST_CASE(prefetcher_failure), 0, 5);
@@ -2450,4 +2581,21 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(remove_permissions),0, 5);
   suite.add(BOOST_TEST_CASE(create_excl),0, 5);
   suite.add(BOOST_TEST_CASE(multiple_writers),0, 3600);
+  suite.add(BOOST_TEST_CASE(sparse_file),0, 5);
+  suite.add(BOOST_TEST_CASE(upgrade_06_07),0, 5);
+
+  // Mounting tests
+  // only doughnut supported filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
+  if (elle::os::inenv("FAST_TESTS_ONLY"))
+    return;
+  suite.add(BOOST_TEST_CASE(filesystem), 0, 120);
+  suite.add(BOOST_TEST_CASE(filesystem_paxos), 0, 240);
+#ifndef INFINIT_MACOSX
+  // osxfuse fails to handle two mounts at the same time, the second fails
+  // with a mysterious 'permission denied'
+  suite.add(BOOST_TEST_CASE(acl), 0, 120);
+  suite.add(BOOST_TEST_CASE(acl_paxos), 0, 3600);
+  suite.add(BOOST_TEST_CASE(conflicts), 0, 120);
+  suite.add(BOOST_TEST_CASE(conflicts_paxos), 0, 120);
+#endif
 }
