@@ -535,15 +535,17 @@ namespace infinit
         ELLE_WARN("unexpected exception on stat: %s", e);
         throw rfs::Error(EIO, elle::sprintf("%s", e));
       }
-      auto it = this->_size_map.find(_filedata->address());
-      if (it != this->_size_map.end())
+      auto it = _owner.file_buffers().find(_filedata->address());
+      if (it != _owner.file_buffers().end())
       {
-        ELLE_DEBUG("open file size overwrite: %s -> %s",
-                   st->st_size, it->second.first);
-        st->st_size = it->second.first;
+        auto fh = it->second.lock();
+        if (fh)
+        {
+          ELLE_DEBUG("open file size overwrite: %s -> %s",
+                     st->st_size, fh->_file._header.size);
+          st->st_size = fh->_file._header.size;
+        }
       }
-      else
-        ELLE_DEBUG("stat size: %s", st->st_size);
     }
 
     void
@@ -597,11 +599,6 @@ namespace infinit
     File::truncate(off_t new_size)
     {
       _fetch();
-      elle::SafeFinally write_cache_size([&] {
-          auto it = _size_map.find(this->_address);
-          if (it != _size_map.end())
-            it->second.first = new_size;
-      });
       ELLE_TRACE("%s: truncate %s -> %s", *this, _filedata->_header.size, new_size);
       if (new_size == signed(_filedata->_header.size))
         return;
@@ -825,7 +822,5 @@ namespace infinit
     {
       elle::fprintf(stream, "File(\"%s\")", this->_name);
     }
-
-    File::SizeMap File::_size_map;
   }
 }
