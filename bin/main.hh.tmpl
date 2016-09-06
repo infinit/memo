@@ -2574,6 +2574,11 @@ namespace infinit
       return res;
     }
   };
+#ifndef INFINIT_WINDOWS
+  typedef int DaemonHandle;
+  DaemonHandle daemon_hold(int nochdir, int noclose);
+  void daemon_release(DaemonHandle handle);
+#endif
 }
 
 inline

@@ -679,9 +679,9 @@ COMMAND(run)
       endpoints_to_file(dht->local()->server_endpoints(), endpoint_file.get());
   }
 #ifndef INFINIT_WINDOWS
+  infinit::DaemonHandle daemon_handle;
   if (flag(args, "daemon"))
-    if (daemon(0, 1))
-      perror("daemon:");
+    daemon_handle = infinit::daemon_hold(0, 1);
 #endif
   auto run = [&]
     {
@@ -695,6 +695,13 @@ COMMAND(run)
       if (push)
         stat_thread = make_stat_update_thread(self, network, *dht);
       report_action("running", "network", network.name);
+#ifndef INFINIT_WINDOWS
+      if (flag(args, "daemon"))
+      {
+        ELLE_TRACE("releasing daemon");
+        infinit::daemon_release(daemon_handle);
+      }
+#endif
       if (script_mode)
       {
         auto input = infinit::commands_input(args);

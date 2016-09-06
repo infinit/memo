@@ -368,9 +368,9 @@ COMMAND(run)
   network.ensure_allowed(self, "run", "volume");
   ELLE_TRACE("run network");
 #ifndef INFINIT_WINDOWS
+  infinit::DaemonHandle daemon_handle;
   if (flag(args, "daemon"))
-    if (daemon(0, 1))
-      perror("daemon:");
+    daemon_handle = infinit::daemon_hold(0, 1);
 #endif
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
@@ -541,6 +541,13 @@ COMMAND(run)
         },
         true));
       reachability->start();
+    }
+#endif
+#ifndef INFINIT_WINDOWS
+    if (flag(args, "daemon"))
+    {
+      ELLE_TRACE("releasing daemon");
+      infinit::daemon_release(daemon_handle);
     }
 #endif
     if (script_mode)

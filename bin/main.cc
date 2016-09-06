@@ -423,6 +423,53 @@ namespace infinit
     }
     return 0;
   }
+
+#ifndef INFINIT_WINDOWS
+  DaemonHandle
+  daemon_hold(int nochdir, int noclose)
+  {
+    int pipefd[2]; // reader, writer
+    if (pipe(pipefd))
+      throw elle::Error(strerror(errno));
+    int cpid = fork();
+    if (cpid == -1)
+      throw elle::Error(strerror(errno));
+    else if (cpid == 0)
+    { // child
+      if (setsid()==-1)
+        throw elle::Error(strerror(errno));
+      if (!nochdir)
+        chdir("/");
+      if (!noclose)
+      {
+        int fd = open("/dev/null", O_RDWR);
+        dup2(fd, 0);
+        dup2(fd, 1);
+        dup2(fd, 2);
+      }
+      close(pipefd[0]);
+      return pipefd[1];
+    }
+    else
+    { // parent
+      close(pipefd[1]);
+      char buf;
+      int res = read(pipefd[0], &buf, 1);
+      ELLE_LOG("DETACHING %s %s", res, strerror(errno));
+      if (res < 1)
+        exit(1);
+      else
+        exit(0);
+    }
+  }
+  void
+  daemon_release(DaemonHandle handle)
+  {
+    char buf = 1;
+    if (write(handle, &buf, 1)!=1)
+      perror("daemon_release");
+  }
+#endif
 }
 
 std::string program;
