@@ -83,7 +83,7 @@ namespace infinit
       ValidationResult
       Block::validate(Model const& model, bool writing) const
       {
-        ELLE_TRACE_SCOPE("%s: validate", *this);
+        ELLE_TRACE_SCOPE("%s: validate, cached=%s", *this, this->_validated);
         if (this->_validated)
           return ValidationResult::success();
         ValidationResult res = this->_validate(model, writing);
