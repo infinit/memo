@@ -194,12 +194,13 @@ class State:
     previous = build_trees.get(branch)
     if previous is not None:
       if os.path.exists(previous['path']):
+        previous_rev = previous['rev']
         previous['rev'] = current_rev
         previous['last_use'] = datetime.datetime.utcnow()
         return {
            'status': 'existing build tree',
            'path': previous['path'],
-           'rev': previous['rev'],
+           'rev': previous_rev,
          }
       else:
         del build_trees[branch]
