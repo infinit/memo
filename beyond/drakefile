@@ -239,18 +239,9 @@ def configure(
   debian_nodes = install_nodes('debian/opt/infinit/beyond',
                                how = drake.copy)
   git = drake.git.Git()
-  with drake.templating.Context(content = {
-      'dependencies': ubuntu_dependencies,
-      'version': git.description(),
-      'version_major': git.version().split('.')[0],
-      'version_minor': git.version().split('.')[1],
-      'python_version_major': python.version.major,
-      'python_version_minor': python.version.minor,
-  }):
-    drake.node('control.tmpl')
+  version = git.version()
   debian_nodes = chain(
     debian_nodes,
-    drake.copy(drake.nodes('control'), 'debian/DEBIAN'),
     drake.copy(
       drake.nodes('etc/rsyslog.d/10-infinit.conf'),
       'debian',
@@ -263,6 +254,16 @@ def configure(
   debian = drake.Rule('debian')
   debian << drake.debian.Packager(
     'infinit-beyond_%s_amd64.deb' % git.description(),
+    {
+      'Package': 'infinit-beyond',
+      'Maintainer': 'Quentin Hocquet <debian@infinit.io>',
+      'Version': version,
+      'Homepage': 'http://www.infinit.sh',
+      'Architecture': 'amd64',
+      'Depends': ', '.join(
+        ubuntu_dependencies + ['infinit (= %s)' % version]),
+      'Description': 'Infinit beyond server.',
+    },
     debian_nodes, 'debian').package
   if backend.get('debian'):
     debian << backend.get('debian')
