@@ -125,7 +125,10 @@ namespace infinit
             bool hit = false;
             auto block = this->_fetch_cache(a.first, a.second, hit, true);
             if (hit)
+            {
+              ELLE_DEBUG("cache hit on %f", a);
               res(a.first, std::move(block), {});
+            }
             else
               missing.push_back(a);
           }
@@ -133,7 +136,7 @@ namespace infinit
           // this optimization.
           for (auto& av: missing)
             av.second.reset();
-          _backend->fetch(missing,
+          this->_backend->fetch(missing,
             [&](Address addr, std::unique_ptr<blocks::Block> block,
                 std::exception_ptr exc)
             {
@@ -149,7 +152,7 @@ namespace infinit
         Cache::_fetch(Address address, boost::optional<int> local_version)
         {
           bool hit = false;
-          auto res = _fetch_cache(address, local_version, hit);
+          auto res = this->_fetch_cache(address, local_version, hit);
           return res;
         }
 
@@ -180,13 +183,14 @@ namespace infinit
             this->_cache.emplace(b.clone());
 
         }
+
         std::unique_ptr<blocks::Block>
-        Cache::_fetch_cache(Address address, boost::optional<int> local_version,
-                            bool& cache_hit, bool cache_only)
+        Cache::_fetch_cache(Address address,
+                            boost::optional<int> local_version,
+                            bool& cache_hit,
+                            bool cache_only)
         {
           cache_hit = false;
-          ELLE_TRACE_SCOPE("%s: fetch %f (local_version: %s)",
-                           this, address, local_version);
           static elle::Bench bench_hit("bench.cache.ram.hit", 1000_sec);
           static elle::Bench bench_disk_hit("bench.cache.disk.hit", 1000_sec);
           static elle::Bench bench("bench.cache._fetch", 10000_sec);
@@ -195,7 +199,7 @@ namespace infinit
           if (hit != this->_cache.end())
           {
             cache_hit = true;
-            ELLE_DEBUG("cache hit");
+            ELLE_DEBUG("cache hit on %f", address);
             this->_cache.modify(
               hit, [] (CachedBlock& b) { b.last_used(now()); });
             bench_hit.add(1);
@@ -222,7 +226,7 @@ namespace infinit
             if (disk_hit != this->_disk_cache.end())
             {
               cache_hit = true;
-              ELLE_DEBUG("cache hit(disk)");
+              ELLE_DEBUG("disk cache hit on %f", address);
               bench_disk_hit.add(1);
               auto path = *this->_disk_cache_path / elle::sprintf("%x", address);
               boost::filesystem::ifstream is(path, std::ios::binary);
@@ -235,7 +239,7 @@ namespace infinit
             }
             else
             {
-              ELLE_DEBUG("cache miss");
+              ELLE_DEBUG("cache miss on %f", address);
               bench_disk_hit.add(0);
             }
             if (cache_only)
