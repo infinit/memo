@@ -22,6 +22,7 @@
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
+#include <infinit/model/doughnut/HandshakeFailed.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
@@ -364,10 +365,12 @@ namespace infinit
                 -> Remote::Auth
               {
                 if (this->doughnut().id() == id)
-                  elle::err("Incoming peer has same id than us: %s", id);
+                  throw HandshakeFailed(
+                    elle::sprintf("Incoming peer has same id than us: %s", id));
                 auto dht_v = this->_doughnut.version();
                 if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
-                  elle::err("invalid version %s, we use %s", v, dht_v);
+                  throw HandshakeFailed(
+                    elle::sprintf("invalid version %s, we use %s", v, dht_v));
                 auto res = auth_syn(p);
                 return Remote::Auth(
                   this->id(), std::move(res.first), *res.second);
