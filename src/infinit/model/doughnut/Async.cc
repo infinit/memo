@@ -502,13 +502,15 @@ namespace infinit
             // If we land here (no break) an error occurred
             {
               ++attempt;
-              auto delay = std::min(20000_ms, 200_ms * attempt);
+              auto delay = std::min(
+                20000_ms,
+                boost::posix_time::milliseconds(200 * attempt));
               ELLE_DEBUG("wait %s before retrying", delay)
                 reactor::sleep(delay);
             }
             // reload block and try again
             auto index = op->index;
-            ELLE_TRACE_SCOPE("reload operation %s", index)
+            ELLE_TRACE("reload operation %s", index)
               try
               {
                 op = elle::generic_unique_ptr<Op const>(
