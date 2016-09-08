@@ -363,6 +363,8 @@ namespace infinit
               (Address id, Passport const& p, elle::Version const& v)
                 -> Remote::Auth
               {
+                if (this->doughnut().id() == id)
+                  elle::err("Incoming peer has same id than us: %s", id);
                 auto dht_v = this->_doughnut.version();
                 if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
                   elle::err("invalid version %s, we use %s", v, dht_v);
