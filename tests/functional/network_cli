@@ -452,9 +452,7 @@ with Beyond() as beyond, Infinit(beyond = beyond, user = 'bob') as bob, \
   def peer():
     while not os.path.exists(peer_file):
       time.sleep(0.1)
-    with open(peer_file, 'r') as f:
-      x = f.readline().split("\n")[0]
-      return x
+    return peer_file
   res = bob.run_script(user = 'bob', volume = 'bob/v',
                        operation = 'write_file',
                        path = '/some_file', content = 'some data')
