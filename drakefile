@@ -30,6 +30,8 @@ name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$'
 
 beyond_delegate_user = 'hub'
 
+license_file = None
+
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
 
@@ -459,7 +461,7 @@ def configure(
   ## -------- ##
   ## Licenses ##
   ## -------- ##
-
+  global license_file
   license_file = drake.node('OSS-licenses')
   drake.license_file.Packager('licenses', license_file)
 
