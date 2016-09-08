@@ -89,12 +89,12 @@ namespace infinit
           }
           if (max_size)
             this->_queue.max_size(max_size);
-          this->_queue.close();
           if (!this->_journal_dir.empty())
           {
             this->_init_barrier.close();
-            _init_thread.reset(new reactor::Thread(elle::sprintf("%s init", *this),
-              [this] { this->_init();}));
+            this->_init_thread.reset(
+              new reactor::Thread(elle::sprintf("%s: restore journal", this),
+                                  [this] { this->_init();}));
           }
           else
             this->_init_barrier.open();
@@ -120,45 +120,47 @@ namespace infinit
         void
         Async::_init()
         {
-          reactor::sleep(100_ms);
           elle::SafeFinally open_barrier([this] {
               this->_init_barrier.open();
-          });
-         ELLE_TRACE_SCOPE("%s: restore journal from %s",
-                          *this, this->_journal_dir);
-         boost::filesystem::path p(_journal_dir);
-         auto files = Async::entries(p);
-         for (auto const& p: files)
-         {
-           auto id = std::stoi(p.filename().string());
-           Op op;
-           try
-           {
-             op = this->_load_op(id,
-               this->_queue.size() < this->_queue.max_size());
-           }
-           catch (elle::Error const& e)
-           {
-             ELLE_WARN("Failed to reload %s: %s", id, e);
-             continue;
-           }
-           this->_next_index = std::max(id, this->_next_index);
-           if (this->_queue.size() < this->_queue.max_size())
-             this->_queue.put(op.index);
-           else
-           {
-             if (!this->_first_disk_index)
-             {
-               ELLE_TRACE(
-                 "in-memory asynchronous queue at capacity at index %s",
-                 op.index);
-               this->_first_disk_index = op.index;
-             }
-             op.block.reset();
-           }
-           this->_operations.emplace(std::move(op));
-         }
-         ELLE_TRACE("...done restoring journal");
+            });
+          ELLE_TRACE_SCOPE("%s: restore journal from %s",
+                           *this, this->_journal_dir);
+          boost::filesystem::path p(_journal_dir);
+          auto files = Async::entries(p);
+          for (auto const& p: files)
+          {
+            auto id = std::stoi(p.filename().string());
+            Op op;
+            try
+            {
+              op = this->_load_op(id,
+                this->_queue.size() < this->_queue.max_size());
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_WARN("Failed to reload %s: %s", id, e);
+              continue;
+            }
+            this->_next_index = std::max(id, this->_next_index);
+            if (this->_queue.size() < this->_queue.max_size())
+            {
+              ELLE_WARN("PUT");
+              this->_queue.put(op.index);
+            }
+            else
+            {
+              if (!this->_first_disk_index)
+              {
+                ELLE_TRACE(
+                  "in-memory asynchronous queue at capacity at index %s",
+                  op.index);
+                this->_first_disk_index = op.index;
+              }
+              op.block.reset();
+            }
+            this->_operations.emplace(std::move(op));
+          }
+          ELLE_TRACE("restored %s operations", this->_queue.size());
         }
 
         Async::~Async()
@@ -329,10 +331,10 @@ namespace infinit
                       std::function<void(Address, std::unique_ptr<blocks::Block>,
                                          std::exception_ptr)> res)
         {
-          if (this->_init_thread && !this->_init_thread->done()
-            && reactor::scheduler().current() != this->_init_thread.get())
+          // Do not deadlock from init_thread.
+          if (this->_init_thread && !this->_init_thread->done() &&
+              reactor::scheduler().current() != this->_init_thread.get())
             reactor::wait(this->_init_barrier);
-
           this->_queue.open();
           std::vector<AddressVersion> remain;
           for (auto addr: addresses)
@@ -357,10 +359,10 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Async::_fetch(Address address, boost::optional<int> local_version)
         {
-          if (this->_init_thread && !this->_init_thread->done()
-            && reactor::scheduler().current() != this->_init_thread.get())
+          // Do not deadlock from init_thread.
+          if (this->_init_thread && !this->_init_thread->done() &&
+              reactor::scheduler().current() != this->_init_thread.get())
             reactor::wait(this->_init_barrier);
-
           this->_queue.open();
 
           bool hit = false;
@@ -424,7 +426,6 @@ namespace infinit
               auto it = this->_operations.get<1>().begin();
               elle::generic_unique_ptr<Op const> op(&*it, [] (Op const*) {});
               ELLE_ASSERT_EQ(op->index, index);
-              ELLE_TRACE_SCOPE("%s: process %s", *this, op);
               this->_process_operation(std::move(op));
               if (!this->_journal_dir.empty())
               {
@@ -454,6 +455,7 @@ namespace infinit
           {
             try
             {
+              ELLE_TRACE_SCOPE("process %s", op);
               if (!mode)
                 try
                 {
@@ -498,23 +500,26 @@ namespace infinit
                        op->index, e, e.backtrace());
             }
             // If we land here (no break) an error occurred
-            ++attempt;
-            reactor::sleep(std::min(20000_ms,
-              boost::posix_time::milliseconds(200 * attempt)));
+            {
+              ++attempt;
+              auto delay = std::min(20000_ms, 200_ms * attempt);
+              ELLE_DEBUG("wait %s before retrying", delay)
+                reactor::sleep(delay);
+            }
             // reload block and try again
             auto index = op->index;
-            ELLE_DEBUG("reload %s", index);
-            try
-            {
-              op = elle::generic_unique_ptr<Op const>(
-                new Op(this->_load_op(index)));
-            }
-            catch (elle::Error const& e)
-            {
-              ELLE_WARN("%s: failed to reload %s: %s",
-                        this, index, e);
-              break;
-            }
+            ELLE_TRACE_SCOPE("reload operation %s", index)
+              try
+              {
+                op = elle::generic_unique_ptr<Op const>(
+                  new Op(this->_load_op(index)));
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_WARN("%s: failed to reload %s: %s",
+                          this, index, e);
+                break;
+              }
           }
         }
 
