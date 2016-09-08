@@ -16,6 +16,8 @@
 - Optimize Kelips packet size.
 - Make `--filesystem` the default type for `infinit-storage --create`.
 - Use a single UDP socket for all UTP networking.
+- Resolve backtrace symbols lazily to save CPU.
+- Cache group blocks address resolution to save CPU.
 
 ### Fixed
 
@@ -25,6 +27,7 @@
 - Return `ENOTEMPTY` instead of `EISDIR` when expected.
 - Yield `.` and `..` when listing directories.
 - Fix SEGV in `infinit-acl --set --others-mode`.
+- Fix UTF-8 characters serialization in configuration files.
 
 
 ## [0.6.2] - 2016-08-12
