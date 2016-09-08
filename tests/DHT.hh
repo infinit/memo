@@ -177,7 +177,7 @@ add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
       infinit::model::doughnut::consensus::Cache>
         (std::move(c), 1000);
   else
-    return std::move(c);
+    return c;
 }
 
 class DHT

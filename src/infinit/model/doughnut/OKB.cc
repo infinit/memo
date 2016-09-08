@@ -64,9 +64,9 @@ namespace infinit
         {
           if (s.in())
           {
-            key = std::move(deserialize_key_hash(
+            key = deserialize_key_hash(
               dynamic_cast<elle::serialization::SerializerIn&>(s),
-              v, field_name, dn));
+              v, field_name, dn);
           }
           else
           {
