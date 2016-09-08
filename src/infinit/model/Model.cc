@@ -139,6 +139,8 @@ namespace infinit
     std::unique_ptr<blocks::Block>
     Model::fetch(Address address, boost::optional<int> local_version) const
     {
+      ELLE_TRACE_SCOPE("%s: fetch %f if newer than %s",
+                       this, address, local_version);
       if (auto res = this->_fetch(address, local_version))
       {
         auto val = res->validate(*this, false);
@@ -162,6 +164,7 @@ namespace infinit
             std::function<void(Address, std::unique_ptr<blocks::Block>,
                                std::exception_ptr)> res) const
     {
+      ELLE_TRACE_SCOPE("%s: fetch %s blockes", this, addresses.size());
       this->_fetch(addresses, [&](Address addr,
                                   std::unique_ptr<blocks::Block> block,
                                   std::exception_ptr exception)
