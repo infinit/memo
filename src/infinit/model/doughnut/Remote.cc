@@ -1,4 +1,5 @@
 #include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/HandshakeFailed.hh>
 
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
@@ -106,9 +107,9 @@ namespace infinit
                   this->_channels = std::move(channels);
                   this->_connected = true;
                 };
-              auto umbrella = [&] (std::function<void ()> const& f)
+              auto umbrella = [&, this] (std::function<void ()> const& f)
                 {
-                  return [f]
+                  return [f, this]
                   {
                     try
                     {
@@ -117,6 +118,10 @@ namespace infinit
                     catch (reactor::network::Exception const&)
                     {
                       // ignored
+                    }
+                    catch (HandshakeFailed const& hs)
+                    {
+                      ELLE_WARN("%s: %s", this, hs);
                     }
                   };
                 };
@@ -240,9 +245,17 @@ namespace infinit
         RPC<AuthSyn> auth_syn(
           "auth_syn", channels, self.doughnut().version());
         auth_syn.set_context<Doughnut*>(&self.doughnut());
-        return auth_syn(self.id(),
-                        self.doughnut().passport(),
-                        self.doughnut().version());
+        auto res = auth_syn(self.doughnut().id(),
+                            self.doughnut().passport(),
+                            self.doughnut().version());
+        if (res.id == self.doughnut().id())
+          throw HandshakeFailed(elle::sprintf("Peer has same id than us: %s",
+                                              res.id));
+        if (self.id() != Address::null && self.id() != res.id)
+          throw HandshakeFailed(
+            elle::sprintf("Peer id mismatch: expected %s, got %s",
+                          self.id(), res.id));
+        return res;
       }
 
       void

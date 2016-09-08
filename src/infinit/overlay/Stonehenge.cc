@@ -91,6 +91,8 @@ namespace infinit
     Overlay::WeakMember
     Stonehenge::_make_member(NodeLocation const& peer) const
     {
+      if (peer.id() == this->doughnut()->id())
+        return this->doughnut()->local();
       if (peer.endpoints().empty())
         throw elle::Error(elle::sprintf("missing endpoint for %f", peer.id()));
       return Overlay::WeakMember(

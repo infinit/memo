@@ -437,7 +437,8 @@ make_nodes(std::string store,
       peers.emplace_back(
         ids[i],
         infinit::model::Endpoints(
-          {{"127.0.0.1", nodes[i]->local()->server_endpoint().port()}}));
+          {{boost::asio::ip::address::from_string("127.0.0.1"),
+          nodes[i]->local()->server_endpoint().port()}}));
     for (auto const& node: nodes)
       elle::unconst(static_cast<infinit::overlay::Stonehenge*>(
                       node->overlay().get())->peers()) = peers;
