@@ -400,7 +400,7 @@ namespace infinit
       std::shared_ptr<cryptography::rsa::PublicKey>
       Doughnut::resolve_key(elle::Buffer const& hash)
       {
-        ELLE_DEBUG("%s: Resolving key from %x", this, hash);
+        ELLE_DEBUG("%s: resolve key from %x", this, hash);
         auto it = this->_key_hash_cache.find(hash);
         if (it != this->_key_hash_cache.end())
           return it->second;
@@ -416,9 +416,10 @@ namespace infinit
           auto ubhash = UB::hash(ub->key());
           if (hash != ubhash)
           {
-            ELLE_WARN("Key hash do not match fetching key hash block: %x vs %x",
+            ELLE_WARN(
+              "key hash does not match fetched key hash block: %x vs %x",
               hash, ubhash);
-            elle::err("Key hash do not match");
+            elle::err("key hash does not match");
           }
           auto skey = std::make_shared<cryptography::rsa::PublicKey>(ub->key());
           this->_key_hash_cache.insert(std::make_pair(hash, skey));
@@ -426,7 +427,7 @@ namespace infinit
         }
         catch (MissingBlock const& b)
         {
-          ELLE_WARN("Missing key hash block at %f: %s", addr, b);
+          ELLE_WARN("missing key hash block at %f: %s", addr, b);
           throw;
         }
       }
