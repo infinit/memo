@@ -91,18 +91,7 @@ namespace infinit
     Overlay::WeakMember
     Stonehenge::_make_member(NodeLocation const& peer) const
     {
-      if (peer.id() == this->doughnut()->id())
-        return this->doughnut()->local();
-      if (peer.endpoints().empty())
-        throw elle::Error(elle::sprintf("missing endpoint for %f", peer.id()));
-      return Overlay::WeakMember(
-        new infinit::model::doughnut::consensus::Paxos::RemotePeer(
-          elle::unconst(*this->doughnut()),
-          peer.id(),
-          peer.endpoints(),
-          boost::optional<reactor::network::UTPServer&>(),
-          boost::optional<model::EndpointsRefetcher>(),
-          model::doughnut::Protocol::tcp));
+      return this->doughnut()->dock().make_peer(peer, {});
     }
 
     StonehengeConfiguration::StonehengeConfiguration()
