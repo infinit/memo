@@ -3149,8 +3149,10 @@ namespace infinit
             {
               ELLE_LOG("%s: erase %s from %s", *this, it->second, idx);
               auto addr = it->second.address;
+              bool discovered = it->second.discovered;
               it = contacts.erase(it);
-              this->on_disappear()(addr, false);
+              if (discovered)
+                this->on_disappear()(addr, false);
             }
             else
               ++it;
@@ -3353,7 +3355,7 @@ namespace infinit
             if (g == this->_group ||
                 signed(target.size()) < this->_config.max_other_contacts)
             {
-              Contact contact{{}, {}, c.first, Duration(0), Time(), 0};
+              Contact contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
               for (auto const& ep: c.second)
                 contact.endpoints.push_back(TimedEndpoint(ep, now()));
               ELLE_LOG("%s: register %f", this, contact);
@@ -3365,6 +3367,11 @@ namespace infinit
           {
             for (auto const& ep: c.second)
               endpoints_update(it->second.endpoints, ep);
+            if (!it->second.discovered)
+            {
+              it->second.discovered = true;
+              this->on_discover()(it->first, false);
+            }
           }
         }
         for (auto const& f: s.second)
@@ -3408,12 +3415,16 @@ namespace infinit
         }
         auto peers = endpoints_extract(it->second.endpoints);
         // this yields, thus invalidating the iterator
-        ELLE_DEBUG("contacting %s on %s", id, peers);
+        ELLE_TRACE("contacting %s on %s", id, peers);
         auto& rsock = this->doughnut()->dock().utp_server().socket();
         auto res = rsock->contact(id, Endpoints(peers).udp());
+        ELLE_TRACE("contact %s yielded %s", id, res);
         it = contacts->find(address);
         if (it == contacts->end())
+        {
+          ELLE_TRACE("contact to removed entry %s, dropping", id)
           return;
+        }
         if (!it->second.validated_endpoint)
         {
           it->second.validated_endpoint = TimedEndpoint(res, now());
@@ -3432,8 +3443,9 @@ namespace infinit
           {
             rsock->send_to(reactor::network::Buffer(b.contents(), b.size()), res);
           }
-          catch (reactor::network::Exception const&)
+          catch (reactor::network::Exception const& e)
           { // FIXME: do something
+            ELLE_TRACE("network exception sending to %s: %s", res, e);
           }
         }
       }
@@ -3469,11 +3481,12 @@ namespace infinit
         }
         if (!make)
           return nullptr;
-        Contact c {{},  {}, address, Duration(), Time(), 0};
+        Contact c {{},  {}, address, Duration(), Time(), 0, {}, {}, observer};
         for (auto const& ep: endpoints)
           c.endpoints.push_back(TimedEndpoint(ep, now()));
         auto inserted = target->insert(std::make_pair(address, std::move(c)));
-        if (inserted.second)
+        // for non-observers, only notify discovery after bootstrap completes
+        if (inserted.second && observer)
           this->on_discover()(address, observer);
         return &inserted.first->second;
       }
@@ -3579,6 +3592,7 @@ namespace infinit
                   {"endpoints", elle::sprintf("%s", contact.second.endpoints.size())},
                   {"last_seen",
                   elle::sprintf("%ss", last_seen.count())},
+                  {"discovered", contact.second.discovered},
               });
             }
             res[elle::sprintf("%s", i)] = elle::json::Object{
