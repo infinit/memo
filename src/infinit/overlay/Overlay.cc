@@ -89,14 +89,23 @@ namespace infinit
     void
     Overlay::discover(NodeLocation const& peer)
     {
-      ELLE_TRACE("%s: discover %f", this, peer);
-      this->_discover(NodeLocations{peer});
+      this->discover(NodeLocations{peer});
     }
 
     void
-    Overlay::discover(NodeLocations const& peers)
+    Overlay::discover(NodeLocations const& peers_)
     {
-      ELLE_TRACE("%s: discover %f", this, peers);
+      ELLE_TRACE("%s: discover %f", this, peers_);
+      NodeLocations peers(peers_);
+      auto it = std::remove_if(peers.begin(), peers.end(),
+        [this] (NodeLocation const& nl)
+        {
+          bool is_us = (nl.id() == this->doughnut()->id());
+          if (is_us)
+            ELLE_TRACE("%s: removeing ourself from peer list", this);
+          return is_us;
+        });
+      peers.erase(it, peers.end());
       this->_discover(peers);
     }
 
