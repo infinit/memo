@@ -249,11 +249,11 @@ namespace infinit
                             self.doughnut().passport(),
                             self.doughnut().version());
         if (res.id == self.doughnut().id())
-          throw HandshakeFailed(elle::sprintf("Peer has same id than us: %s",
+          throw HandshakeFailed(elle::sprintf("peer has same id as us: %s",
                                               res.id));
         if (self.id() != Address::null && self.id() != res.id)
           throw HandshakeFailed(
-            elle::sprintf("Peer id mismatch: expected %s, got %s",
+            elle::sprintf("peer id mismatch: expected %s, got %s",
                           self.id(), res.id));
         return res;
       }

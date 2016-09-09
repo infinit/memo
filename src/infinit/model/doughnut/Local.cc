@@ -366,7 +366,7 @@ namespace infinit
               {
                 if (this->doughnut().id() == id)
                   throw HandshakeFailed(
-                    elle::sprintf("Incoming peer has same id than us: %s", id));
+                    elle::sprintf("incoming peer has same id as us: %s", id));
                 auto dht_v = this->_doughnut.version();
                 if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
                   throw HandshakeFailed(
