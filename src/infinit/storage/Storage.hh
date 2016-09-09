@@ -70,7 +70,8 @@ namespace infinit
       ELLE_ATTRIBUTE_R(int64_t, usage, protected);
       ELLE_ATTRIBUTE(int64_t, base_usage);
       ELLE_ATTRIBUTE(int64_t, step);
-      ELLE_ATTRIBUTE((std::unordered_map<Key, int>), size_cache, mutable);
+      ELLE_ATTRIBUTE((std::unordered_map<Key, int>), size_cache,
+                     mutable, protected);
       ELLE_ATTRIBUTE(boost::signals2::signal<void ()>, on_storage_size_change);
     };
 
