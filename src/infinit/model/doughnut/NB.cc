@@ -27,29 +27,25 @@ namespace infinit
              elle::Buffer signature)
         : Super(NB::address(*owner, name, doughnut->version()), std::move(data))
         , _doughnut(std::move(doughnut))
-        , _keys()
         , _owner(std::move(owner))
         , _name(std::move(name))
         , _signature(std::move(signature))
       {}
 
       NB::NB(Doughnut* doughnut,
-             infinit::cryptography::rsa::KeyPair keys,
              std::string name,
              elle::Buffer data,
              elle::Buffer signature)
-        : Super(NB::address(keys.K(), name, doughnut->version()), std::move(data))
-        , _doughnut(std::move(doughnut))
-        , _keys(std::move(keys))
-        , _owner(this->_keys->public_key())
-        , _name(std::move(name))
-        , _signature(std::move(signature))
+        : NB(doughnut,
+             doughnut->keys().public_key(),
+             std::move(name),
+             std::move(data),
+             std::move(signature))
       {}
 
       NB::NB(NB const& other)
         : Super(other)
         , _doughnut(other._doughnut)
-        , _keys(other._keys)
         , _owner(other._owner)
         , _name(other._name)
         , _signature(other._signature)
@@ -86,13 +82,9 @@ namespace infinit
       {
         if (!this->_signature.empty())
           return;
-        if (this->_keys)
-          ELLE_ASSERT_EQ(this->_keys->K(), *this->owner());
-        else
-          ELLE_ASSERT_EQ(this->doughnut()->keys().K(), *this->owner());
+        ELLE_ASSERT_EQ(this->doughnut()->keys().K(), *this->owner());
         auto sign = this->_data_sign();
-        auto const& key = _keys ? _keys->k() : this->doughnut()->keys().k();
-        this->_signature = key.sign(sign);
+        this->_signature = this->doughnut()->keys().k().sign(sign);
       }
 
       elle::Buffer
@@ -162,7 +154,6 @@ namespace infinit
       {
         blocks::RemoveSignature res;
         res.block.reset(new NB(this->_doughnut,
-                               this->_doughnut->keys(),
                                this->_name,
                                elle::Buffer("INFINIT_REMOVE", 14)));
         res.block->seal();
