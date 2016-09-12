@@ -680,9 +680,17 @@ COMMAND(run)
   auto port = optional<int>(args, option_port);
   auto dht = network.run(
     self,
-    eps, false,
+    {}, false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, infinit::compatibility_version, port);
+  if (auto plf = optional(args, "peer-list-file"))
+  {
+    auto more_peers = infinit::hook_peer_discovery(*dht, *plf);
+    ELLE_TRACE("Peer list file got %s peers", more_peers.size());
+    if (!more_peers.empty())
+      dht->overlay()->discover(more_peers);
+  }
+  dht->overlay()->discover(eps);
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"}) &&
     dht->local() && dht->local()->storage();
@@ -1036,6 +1044,8 @@ main(int argc, char** argv)
           "alias for --fetch-endpoints --push-endpoints" },
         option_endpoint_file,
         option_port_file,
+        { "peer-list-file", value<std::string>(),
+          "Periodically write list of known peers to given file"},
         option_port,
 #ifndef INFINIT_WINDOWS
         { "daemon,d", bool_switch(), "run as a background daemon"},

@@ -385,9 +385,17 @@ COMMAND(run)
   auto port = optional<int>(args, option_port);
   auto model = network.run(
     self,
-    eps, true,
+    {}, true,
     mo.cache && mo.cache.get(), mo.cache_ram_size, mo.cache_ram_ttl, mo.cache_ram_invalidation,
     mo.async && mo.async.get(), mo.cache_disk_size, infinit::compatibility_version, port);
+  if (auto plf = optional(args, "peer-list-file"))
+  {
+    auto more_peers = infinit::hook_peer_discovery(*model, *plf);
+    ELLE_TRACE("Peer list file got %s peers", more_peers.size());
+    if (!more_peers.empty())
+      model->overlay()->discover(more_peers);
+  }
+  model->overlay()->discover(eps);
   // Only push if we have are contributing storage.
   bool push = mo.push && model->local();
   boost::optional<infinit::model::Endpoint> local_endpoint;
@@ -1116,6 +1124,8 @@ run_options(RunMode mode)
     { "fetch,f", BOOL_IMPLICIT, "alias for --fetch-endpoints" },
     { "peer", value<std::vector<std::string>>()->multitoken(),
       "peer address or file with list of peer addresses (host:port)" },
+    { "peer-list-file", value<std::string>(),
+      "Periodically write list of known peers to given file"},
     { "push-endpoints", BOOL_IMPLICIT,
       elle::sprintf("push endpoints to %s", beyond(true)) },
   });
