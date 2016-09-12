@@ -158,37 +158,9 @@ namespace reporting
     {
     }
 
-    bool _sane;
+    ELLE_ATTRIBUTE_RW(bool, sane, virtual);
     Reason reason;
-    bool _warning;
-
-    virtual
-    bool
-    sane() const
-    {
-      return this->_sane;
-    }
-
-    virtual
-    void
-    sane(bool val)
-    {
-      this->_sane = val;
-    }
-
-    virtual
-    bool
-    warning() const
-    {
-      return this->_warning;
-    }
-
-    virtual
-    void
-    warning(bool val)
-    {
-      this->_warning = val;
-    }
+    ELLE_ATTRIBUTE_RW(bool, warning, virtual);
 
     virtual
     void
