@@ -231,6 +231,7 @@ namespace infinit
       }
       namespace packet
       {
+        static bool disable_compression = elle::os::inenv("KELIPS_DISABLE_COMPRESSION");
         struct CompressPeerLocations{};
 
         template<typename T>
@@ -242,7 +243,7 @@ namespace infinit
           elle::IOStream stream(buf.ostreambuf());
           Serializer::SerializerOut output(stream, false);
           output.set_context(&dn);
-          if (dn.version() >= elle::Version(0, 7, 0))
+          if (dn.version() >= elle::Version(0, 7, 0) && !disable_compression)
             output.set_context(CompressPeerLocations{});
           auto ptr = &(packet::Packet&)packet;
           output.serialize_forward(ptr);
@@ -292,7 +293,7 @@ namespace infinit
               infinit::cryptography::Oneway::sha256);
             elle::IOStream stream(plain.istreambuf());
             Serializer::SerializerIn input(stream, false);
-            if (dn.version() >= elle::Version(0, 7, 0))
+            if (dn.version() >= elle::Version(0, 7, 0) && !disable_compression)
               input.set_context(CompressPeerLocations{});
             input.set_context(&dn);
             std::unique_ptr<packet::Packet> packet;
@@ -1040,7 +1041,7 @@ namespace infinit
               std::bind(&Node::_refetch_endpoints, this, location.id())),
             this->_config.rpc_protocol);
           peer.connect(5_sec);
-          if (this->doughnut()->version() < elle::Version(0, 7, 0))
+          if (this->doughnut()->version() < elle::Version(0, 7, 0) || disable_compression)
           {
             auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
             return rpc();
@@ -1389,7 +1390,7 @@ namespace infinit
         elle::IOStream stream(buf.istreambuf());
         Serializer::SerializerIn input(stream, false);
         input.set_context(this->doughnut());
-        if (this->doughnut()->version() >= elle::Version(0, 7, 0))
+        if (this->doughnut()->version() >= elle::Version(0, 7, 0) && !disable_compression)
           input.set_context(packet::CompressPeerLocations{});
         try
         {
