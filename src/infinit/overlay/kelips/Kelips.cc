@@ -3365,9 +3365,10 @@ namespace infinit
               Contact contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
               for (auto const& ep: c.second)
                 contact.endpoints.push_back(TimedEndpoint(ep, now()));
+              NodeLocation nl(c.first, c.second);
               ELLE_LOG("%s: register %f", this, contact);
               target[c.first] = std::move(contact);
-              this->on_discover()(c.first, false);
+              this->on_discover()(nl, false);
             }
           }
           else
@@ -3377,7 +3378,8 @@ namespace infinit
             if (!it->second.discovered)
             {
               it->second.discovered = true;
-              this->on_discover()(it->first, false);
+              NodeLocation nl(it->first, endpoints_extract(it->second.endpoints));
+              this->on_discover()(nl, false);
             }
           }
         }
@@ -3491,10 +3493,11 @@ namespace infinit
         Contact c {{},  {}, address, Duration(), Time(), 0, {}, {}, observer};
         for (auto const& ep: endpoints)
           c.endpoints.push_back(TimedEndpoint(ep, now()));
+        NodeLocation nl(address, endpoints);
         auto inserted = target->insert(std::make_pair(address, std::move(c)));
         // for non-observers, only notify discovery after bootstrap completes
         if (inserted.second && observer)
-          this->on_discover()(address, observer);
+          this->on_discover()(nl, observer);
         return &inserted.first->second;
       }
 
