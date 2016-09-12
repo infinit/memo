@@ -1041,7 +1041,7 @@ namespace infinit
               std::bind(&Node::_refetch_endpoints, this, location.id())),
             this->_config.rpc_protocol);
           peer.connect(5_sec);
-          if (this->doughnut()->version() < elle::Version(0, 7, 0) || disable_compression)
+          if (this->doughnut()->version() < elle::Version(0, 7, 0) || packet::disable_compression)
           {
             auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
             return rpc();
@@ -1390,7 +1390,7 @@ namespace infinit
         elle::IOStream stream(buf.istreambuf());
         Serializer::SerializerIn input(stream, false);
         input.set_context(this->doughnut());
-        if (this->doughnut()->version() >= elle::Version(0, 7, 0) && !disable_compression)
+        if (this->doughnut()->version() >= elle::Version(0, 7, 0) && !packet::disable_compression)
           input.set_context(packet::CompressPeerLocations{});
         try
         {
