@@ -109,9 +109,29 @@ Note that some binaries operate in hub mode by default. For instance the _infini
 Doctor
 ------
 
-The _infinit-doctor_ binary provides an easy way to check the health of your local environment: configuration files, version of the software, networking capabilities etc.
+The _infinit-doctor_ binary provides an easy way to check the health of your local environment: configuration files, version of the software, networking capabilities etc. To run all available tests, the `--all` option can be used.
 
-This binary is _not yet available_.
+```
+$> infinit-doctor --all
+All good, everything should work.
+```
+
+### Networking ###
+
+To ensure that a client has the required networking access to use Infinit, the `--networking` option runs several tests:
+
+- Ensure HTTPS access to the Hub.
+- Check connectivity with a remote server using TCP and UDP.
+- Check for UPnP availability.
+- Check if the host is behind a NAT.
+
+### Sanity ###
+
+A system sanity check can be run using the `--sanity` option. This will check things like folder permissions, amount of free space and if there are any Infinit environment variables set.
+
+### Integrity ###
+
+To ensure that the local infrastructure descriptors are valid, the `--integrity` option can be used. This will do things like check that networks used by volumes have been fetched and linked to, that the compatibility version of the networks work with the current binaries, etc.
 
 User
 ----
