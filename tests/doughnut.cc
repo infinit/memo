@@ -432,8 +432,7 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
 {
   DHTs dhts(paxos);
   auto block = elle::make_unique<dht::NB>(
-    dhts.dht_a.get(), dhts.keys_a->public_key(), "blockname",
-    elle::Buffer("blockdata", 9));
+    *dhts.dht_a, "blockname", elle::Buffer("blockdata", 9));
   ELLE_LOG("owner: store NB")
     dhts.dht_a->store(*block, infinit::model::STORE_INSERT);
   {
@@ -446,8 +445,7 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
   }
   { // overwrite
     auto block = elle::make_unique<dht::NB>(
-      dhts.dht_a.get(), dhts.keys_a->public_key(), "blockname",
-      elle::Buffer("blockdatb", 9));
+      *dhts.dht_a, "blockname", elle::Buffer("blockdatb", 9));
     BOOST_CHECK_THROW(dhts.dht_a->store(*block, infinit::model::STORE_UPDATE),
                       std::exception);
   }

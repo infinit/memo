@@ -388,7 +388,7 @@ namespace infinit
                 "migrate old bootstrap block from %s to %s",
                 old_addr, bootstrap_addr);
               auto nb = elle::make_unique<dht::NB>(
-                dn.get(), dn->owner(), bootstrap_name,
+                *dn, dn->owner(), bootstrap_name,
                 old->data(), old->signature());
               this->store_or_die(
                 std::move(nb), model::STORE_INSERT,
@@ -425,12 +425,15 @@ namespace infinit
                 auto saddr = elle::sprintf("%x", this->_root_address);
                 elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
                 auto k =
-                  std::make_shared<infinit::cryptography::rsa::PublicKey>(this->owner());
+                  std::make_shared<infinit::cryptography::rsa::PublicKey>(
+                    this->owner());
                 auto nb = elle::make_unique<dht::NB>(
-                  dn.get(), k, bootstrap_name, baddr);
+                  *dn, k, bootstrap_name, baddr);
                 auto address = nb->address();
-                this->store_or_die(std::move(nb), model::STORE_INSERT,
-                                   elle::make_unique<InsertRootBootstrapBlock>(address));
+                this->store_or_die(
+                  std::move(nb),
+                  model::STORE_INSERT,
+                  elle::make_unique<InsertRootBootstrapBlock>(address));
                 if (root_cache)
                   boost::filesystem::ofstream(*root_cache) << saddr;
               }

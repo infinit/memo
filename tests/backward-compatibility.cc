@@ -168,8 +168,7 @@ struct TestSet
     , chb(new dht::CHB(&dht, std::string("CHB contents"), salt))
     , acb(new dht::ACB(&dht, std::string("ACB contents"), salt))
     , okb(new dht::OKB(&dht, std::string("OKB contents"), salt))
-    , nb(new dht::NB(&dht, keys->public_key(),
-                     "NB name", std::string("NB contents")))
+    , nb(new dht::NB(dht, "NB name", std::string("NB contents")))
     , ub(new dht::UB(&dht, "USERNAME", keys->K(), false))
     , rub(new dht::UB(&dht, "USERNAME", keys->K(), true))
   {

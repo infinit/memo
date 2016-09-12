@@ -20,24 +20,24 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      NB::NB(Doughnut* doughnut,
+      NB::NB(Doughnut& doughnut,
              std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
              std::string name,
              elle::Buffer data,
              elle::Buffer signature)
-        : Super(NB::address(*owner, name, doughnut->version()), std::move(data))
-        , _doughnut(std::move(doughnut))
+        : Super(NB::address(*owner, name, doughnut.version()), std::move(data))
+        , _doughnut(doughnut)
         , _owner(std::move(owner))
         , _name(std::move(name))
         , _signature(std::move(signature))
       {}
 
-      NB::NB(Doughnut* doughnut,
+      NB::NB(Doughnut& doughnut,
              std::string name,
              elle::Buffer data,
              elle::Buffer signature)
         : NB(doughnut,
-             doughnut->keys().public_key(),
+             doughnut.keys().public_key(),
              std::move(name),
              std::move(data),
              std::move(signature))
@@ -82,16 +82,15 @@ namespace infinit
       {
         if (!this->_signature.empty())
           return;
-        ELLE_ASSERT_EQ(this->doughnut()->keys().K(), *this->owner());
+        ELLE_ASSERT_EQ(this->doughnut().keys().K(), *this->owner());
         auto sign = this->_data_sign();
-        this->_signature = this->doughnut()->keys().k().sign(sign);
+        this->_signature = this->doughnut().keys().k().sign(sign);
       }
 
       elle::Buffer
       NB::_data_sign() const
       {
-        // FIXME use doughnut version
-        bool pre04 = this->_doughnut->version() < elle::Version(0, 4, 0);
+        bool pre04 = this->_doughnut.version() < elle::Version(0, 4, 0);
         elle::Buffer res;
         {
           elle::IOStream output(res.ostreambuf());
@@ -110,7 +109,7 @@ namespace infinit
         ELLE_DEBUG("%s: check address", *this)
         {
           expected_address = NB::address(*this->owner(), this->name(),
-                                         this->_doughnut->version());
+                                         this->_doughnut.version());
           if (!equal_unflagged(this->address(), expected_address))
           {
             auto reason = elle::sprintf("address %x invalid, expecting %x",
@@ -129,7 +128,7 @@ namespace infinit
           }
         }
         /*
-         if (this->_doughnut->version() >= elle::Version(0, 5, 0))
+         if (this->_doughnut.version() >= elle::Version(0, 5, 0))
           elle::unconst(this)->_address = expected_address; // upgrade from unmasked if required
         */
         return blocks::ValidationResult::success();
@@ -186,17 +185,24 @@ namespace infinit
       | Serialization |
       `--------------*/
 
+      static
+      Doughnut&
+      dht(elle::serialization::SerializerIn& input)
+      {
+        Doughnut* res;
+        input.serialize_context<Doughnut*>(res);
+        return *res;
+      }
+
       NB::NB(elle::serialization::SerializerIn& input,
              elle::Version const& version)
         : Super(input, version)
-        , _doughnut(nullptr)
+        , _doughnut(dht(input))
         , _owner(std::make_shared(
                    input.deserialize<cryptography::rsa::PublicKey>("owner")))
         , _name(input.deserialize<std::string>("name"))
         , _signature(input.deserialize<elle::Buffer>("signature"))
-      {
-        input.serialize_context<Doughnut*>(this->_doughnut);
-      }
+      {}
 
       void
       NB::serialize(elle::serialization::Serializer& s,
