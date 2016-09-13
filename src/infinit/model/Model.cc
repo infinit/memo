@@ -164,13 +164,14 @@ namespace infinit
             std::function<void(Address, std::unique_ptr<blocks::Block>,
                                std::exception_ptr)> res) const
     {
-      ELLE_TRACE_SCOPE("%s: fetch %s blockes", this, addresses.size());
+      ELLE_TRACE_SCOPE("%s: fetch %s blocks", this, addresses.size());
       this->_fetch(addresses, [&](Address addr,
                                   std::unique_ptr<blocks::Block> block,
                                   std::exception_ptr exception)
         {
           if (block && !block->validate(*this, false))
-            res(addr, {}, std::make_exception_ptr(elle::Error("invalid block")));
+            res(addr, {},
+                std::make_exception_ptr(elle::Error("invalid block")));
           else
             res(addr, std::move(block), exception);
         });
@@ -237,8 +238,7 @@ namespace infinit
     }
 
     DummyConflictResolver::DummyConflictResolver()
-    {
-    }
+    {}
 
     DummyConflictResolver::DummyConflictResolver(
       elle::serialization::SerializerIn& s,
@@ -251,8 +251,7 @@ namespace infinit
     void
     DummyConflictResolver::serialize(elle::serialization::Serializer& s,
                                      elle::Version const& v)
-    {
-    }
+    {}
 
     std::unique_ptr<blocks::Block>
     DummyConflictResolver::operator() (blocks::Block& block,
