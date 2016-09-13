@@ -2495,6 +2495,12 @@ namespace infinit
         }
         ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id,
                    p->results);
+        static elle::Bench stime = elle::Bench("kelips.GETM_RTT", boost::posix_time::seconds(5));
+        stime.add(std::chrono::duration_cast<std::chrono::microseconds>(
+          (now() - it->second->startTime)).count());
+        static elle::Bench shops = elle::Bench("kelips.GETM_HOPS", boost::posix_time::seconds(5));
+        shops.add(p->ttl);
+
         it->second->multi_result = p->results;
         it->second->barrier.open();
         _pending_requests.erase(it);
