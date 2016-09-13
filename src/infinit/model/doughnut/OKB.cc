@@ -317,13 +317,6 @@ namespace infinit
       }
 
       template <typename Block>
-      int
-      BaseOKB<Block>::version() const
-      {
-        return this->_version;
-      }
-
-      template <typename Block>
       elle::Buffer const&
       BaseOKB<Block>::data() const
       {
