@@ -277,9 +277,11 @@ namespace infinit
 	    if (request.size() > 262144)
 	    {
 	      auto key = this->_key.get();
-	      reactor::background([&] {
-		  request = key->decipher(request);
-	      });
+	      elle::With<reactor::Thread::NonInterruptible>() << [&] {
+	        reactor::background([&] {
+	            request = key->decipher(request);
+	        });
+	      };
 	    }
 	    else
 	      request = this->_key->decipher(request);
@@ -329,10 +331,12 @@ namespace infinit
 	  if (response.size() >= 262144)
 	  {
 	    auto key = this->_key.get();
-	    reactor::background([&] {
-		response = key->encipher(
-		  elle::ConstWeakBuffer(response.contents(), response.size()));
-	    });
+	    elle::With<reactor::Thread::NonInterruptible>() << [&] {
+	      reactor::background([&] {
+	          response = key->encipher(
+	            elle::ConstWeakBuffer(response.contents(), response.size()));
+	      });
+	    };
 	  }
 	  else
 	    response = _key->encipher(
@@ -522,10 +526,12 @@ namespace infinit
           elle::Bench::BenchScope bs(bench);
           if (call.size() > 262144)
           {
-            reactor::background([&] {
-                call = self.key()->encipher(
-                  elle::ConstWeakBuffer(call.contents(), call.size()));
-            });
+            elle::With<reactor::Thread::NonInterruptible>() << [&] {
+              reactor::background([&] {
+                  call = self.key()->encipher(
+                    elle::ConstWeakBuffer(call.contents(), call.size()));
+              });
+            };
           }
           else
             call = self.key()->encipher(
@@ -543,10 +549,12 @@ namespace infinit
           elle::Bench::BenchScope bs(bench);
           if (response.size() > 262144)
           {
-            reactor::background([&] {
-              response = self.key()->decipher(
-                elle::ConstWeakBuffer(response.contents(), response.size()));
-            });
+            elle::With<reactor::Thread::NonInterruptible>() << [&] {
+              reactor::background([&] {
+                  response = self.key()->decipher(
+                    elle::ConstWeakBuffer(response.contents(), response.size()));
+              });
+            };
           }
           else
             response = self.key()->decipher(
