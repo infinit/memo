@@ -111,9 +111,7 @@ namespace infinit
       | Content |
       `--------*/
       public:
-        virtual
-        elle::Buffer const&
-        data() const override;
+        ELLE_attribute_r(elle::Buffer, data, override);
         virtual
         void
         data(elle::Buffer data) override;
