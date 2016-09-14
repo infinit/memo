@@ -6,10 +6,11 @@
 ### Added
 
 - IPv6 support.
-- Add new `Koordinate` overlay that enable to run several overlay
+- Add new `Koordinate` overlay that enables running several overlay
   algorithms on nodes.
 - Add `--script` mode to `infinit-acl --list`.
 - Support `O_EXCL` when opening files.
+- Support for S3 compatible storages.
 
 ### Changed
 
@@ -21,7 +22,7 @@
 
 ### Fixed
 
-- Fill creation time attributes OSX.
+- Fill creation time attributes macOS.
 - Refuse multiple storage types in `infinit-storage --create`.
 - Refuse relinking a linked network.
 - Return `ENOTEMPTY` instead of `EISDIR` when expected.
