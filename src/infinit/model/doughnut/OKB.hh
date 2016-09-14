@@ -39,7 +39,7 @@ namespace infinit
       public:
         blocks::ValidationResult
         validate(Address const& address) const;
-        ELLE_ATTRIBUTE_R(elle::Buffer, salt);
+        ELLE_ATTRIBUTE_R(elle::Buffer, salt, protected);
         ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PublicKey>,
                          owner_key);
         ELLE_ATTRIBUTE_R(elle::Buffer, signature);
@@ -58,7 +58,7 @@ namespace infinit
         OKBHeader(elle::serialization::SerializerIn& input,
                   elle::Version const& version);
         void
-        serialize(elle::serialization::Serializer& s);
+        serialize(elle::serialization::Serializer& s, elle::Version const& v);
         static
         Address
         hash_address(Doughnut const& dht,

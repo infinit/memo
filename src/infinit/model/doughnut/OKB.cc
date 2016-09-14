@@ -156,11 +156,14 @@ namespace infinit
             .total_milliseconds();
           _salt.append(&now, 8);
         }
-        auto owner_key_buffer =
-          elle::serialization::json::serialize(
-            *this->_owner_key, elle::Version(0,0,0));
-        owner_key_buffer.append(_salt.contents(), _salt.size());
-        this->_signature = keys.k().sign(owner_key_buffer);
+        if (this->doughnut()->version() < elle::Version(0, 7, 0))
+        {
+          auto owner_key_buffer =
+            elle::serialization::json::serialize(
+              *this->_owner_key, elle::Version(0, 0, 0));
+          owner_key_buffer.append(_salt.contents(), _salt.size());
+          this->_signature = keys.k().sign(owner_key_buffer);
+        }
       }
 
       OKBHeader::OKBHeader(OKBHeader const& other)
@@ -184,7 +187,7 @@ namespace infinit
                               elle::Version const& compatibility_version)
       {
         auto key_buffer = elle::serialization::json::serialize(
-          key, elle::Version(0,0,0));
+          key, elle::Version(0, 0, 0));
         key_buffer.append(salt.contents(), salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
@@ -215,18 +218,6 @@ namespace infinit
             return blocks::ValidationResult::failure(reason);
           }
         }
-        ELLE_DEBUG("%s: check owner key", *this)
-        {
-          auto owner_key_buffer = elle::serialization::json::serialize(
-            *this->_owner_key, elle::Version(0, 0, 0));
-          owner_key_buffer.append(_salt.contents(), _salt.size());
-          if (!this->_owner_key->verify(
-                this->OKBHeader::_signature, owner_key_buffer))
-          {
-            ELLE_DEBUG("%s: invalid owner key", *this);
-            return blocks::ValidationResult::failure("invalid owner key");
-          }
-        }
         return blocks::ValidationResult::success();
       }
 
@@ -238,14 +229,19 @@ namespace infinit
         , _signature()
       {
         s.serialize_context<Doughnut*>(this->_doughnut);
-        s.serialize("owner", *this);
+        if (v < elle::Version(0, 7, 0))
+          s.serialize("owner", *this);
+        else
+          this->serialize(s, v);
       }
 
       void
-      OKBHeader::serialize(elle::serialization::Serializer& input)
+      OKBHeader::serialize(elle::serialization::Serializer& input,
+                           elle::Version const& v)
       {
         input.serialize("salt", this->_salt);
-        input.serialize("signature", this->_signature);
+        if (v < elle::Version(0, 7, 0))
+          input.serialize("signature", this->_signature);
       }
 
       /*-------------.
@@ -539,7 +535,10 @@ namespace infinit
         this->Super::serialize(s, version);
         serialize_key_hash(
           s, version, *this->_owner_key, "key", this->doughnut());
-        s.serialize("owner", static_cast<OKBHeader&>(*this));
+        if (version < elle::Version(0, 7, 0))
+          s.serialize("owner", static_cast<OKBHeader&>(*this));
+        else
+          s.serialize("salt", this->_salt);
         this->_serialize(s, version);
       }
 
