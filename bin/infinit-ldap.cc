@@ -504,7 +504,7 @@ main(int argc, char** argv)
       "--network NETWORK --mountpoint MOUNTPOINT",
       {
         LDAP_CORE_OPTIONS,
-        { "network,n", value<std::string>(), "Network name" },
+        { "network,N", value<std::string>(), "Network name" },
         LDAP_NETWORK_OPTIONS,
       },
     },

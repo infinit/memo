@@ -648,7 +648,7 @@ main(int argc, char** argv)
       "--email EMAIL",
       {
         { "name,n", value<std::string>(), "user name (default: system user)" },
-        { "email,n", value<std::string>(), "valid email address" },
+        { "email", value<std::string>(), "valid email address" },
         option_fullname,
         option_avatar,
         option_key,

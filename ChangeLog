@@ -19,6 +19,7 @@
 - Use a single UDP socket for all UTP networking.
 - Resolve backtrace symbols lazily to save CPU.
 - Cache group blocks address resolution to save CPU.
+- Standardize `-n` to mean `--name` and `-N` to mean `--network`.
 
 ### Fixed
 

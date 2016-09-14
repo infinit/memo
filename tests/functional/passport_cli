@@ -84,20 +84,20 @@ with Beyond() as beyond, \
   bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '--push'])
   bob.run(['infinit-user', '--fetch', 'alice'])
   bob.run(['infinit-passport', '--create', '--as', 'bob',
-           '-u', 'alice', '-n', 'n', '--push'])
+           '-u', 'alice', '-N', 'n', '--push'])
   alice.run(['infinit-network', '--fetch', '--as', 'alice', 'bob/n'])
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
   assertEq(len(alice.run_json(['infinit-passport', '--list', '-s'])), 1)
   # Local and Beyond.
   bob.run(['infinit-passport', '--delete', '--as', 'bob',
-           '-u', 'alice', '-n', 'n', '--pull'])
+           '-u', 'alice', '-N', 'n', '--pull'])
   assertEq(len(bob.run_json(['infinit-passport', '--list', '-s'])), 0)
   # Local only.
   alice.run(['infinit-passport', '--delete', '--as', 'alice',
-             '-u', 'alice', '-n', 'bob/n', '--pull'])
+             '-u', 'alice', '-N', 'bob/n', '--pull'])
   assertEq(len(alice.run_json(['infinit-passport', '--list', '-s'])), 0)
   alice.run(['infinit-passport', '--fetch', '--as', 'alice',
-             '-u', 'alice', '-n', 'n'], return_code = 1)
+             '-u', 'alice', '-N', 'n'], return_code = 1)
 
 # Push passport on an network you don't own.
 with Beyond() as beyond, \
@@ -110,21 +110,21 @@ with Beyond() as beyond, \
   bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '--push'])
   bob.run(['infinit-user', '--fetch', 'alice'])
   bob.run(['infinit-passport', '--create', '--as', 'bob',
-           '-u', 'alice', '-n', 'n', '--push'])
+           '-u', 'alice', '-N', 'n', '--push'])
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
   alice.run(['infinit-network', '--fetch', '--as', 'alice'])
   alice.run(['infinit-user', '--fetch', 'eve'])
   throws(lambda: alice.run(['infinit-passport', '--create', '--as', 'alice',
-                            '-u', 'eve', '-n', 'bob/n', '--push']),
+                            '-u', 'eve', '-N', 'bob/n', '--push']),
          'Forbidden pushing passport')
   # Remove created passport.
   alice.run(['infinit-passport', '--delete', '--as', 'alice',
-             '-u', 'eve', '-n', 'bob/n']),
+             '-u', 'eve', '-N', 'bob/n']),
   # Remove alice passport that cannot sign other passports.
   bob.run(['infinit-passport', '--delete', '--pull', '--as', 'bob',
-           '-u', 'alice', '-n', 'n'])
+           '-u', 'alice', '-N', 'n'])
   bob.run(['infinit-passport', '--create', '--as', 'bob', '--allow-create-passport',
-           '-u', 'alice', '-n', 'n', '--push'])
+           '-u', 'alice', '-N', 'n', '--push'])
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
   alice.run(['infinit-passport', '--create', '--as', 'alice',
-             '-u', 'eve', '-n', 'bob/n', '--push'])
+             '-u', 'eve', '-N', 'bob/n', '--push'])

@@ -843,7 +843,7 @@ main(int argc, char** argv)
       {
         { "user,u", value<std::string>(), "user to register"},
         { "path,p", value<std::string>(), "path to mountpoint" },
-        { "network,n", value<std::string>(), "name of the network"},
+        { "network,N", value<std::string>(), "name of the network"},
         fetch_option,
       },
       {},
