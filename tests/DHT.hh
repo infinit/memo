@@ -310,16 +310,29 @@ private:
         this->overlay = res.get();
         return res;
       };
-    this->dht = std::make_shared<dht::Doughnut>(
-      id,
-      keys,
-      owner.public_key(),
-      passport,
-      consensus,
-      infinit::model::doughnut::Doughnut::OverlayBuilder(make_overlay),
-      boost::optional<int>(),
-      std::move(storage),
-      version);
+    if (user_name.empty())
+      this->dht = std::make_shared<dht::Doughnut>(
+        id,
+        keys,
+        owner.public_key(),
+        passport,
+        consensus,
+        infinit::model::doughnut::Doughnut::OverlayBuilder(make_overlay),
+        boost::optional<int>(),
+        std::move(storage),
+        version);
+    else
+      this->dht = std::make_shared<dht::Doughnut>(
+        id,
+        user_name,
+        keys,
+        owner.public_key(),
+        passport,
+        consensus,
+        infinit::model::doughnut::Doughnut::OverlayBuilder(make_overlay),
+        boost::optional<int>(),
+        std::move(storage),
+        version);
   }
 };
 
