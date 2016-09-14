@@ -119,6 +119,11 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
               boost::optional<int> local_version) const override;
+
+        typedef
+        std::unordered_map<uint64_t, std::shared_ptr<cryptography::rsa::PublicKey>>
+        KeyHashCache;
+        ELLE_ATTRIBUTE_RX(KeyHashCache, key_hash_cache);
       };
 
       template<typename F>
@@ -132,7 +137,9 @@ namespace infinit
                   remote->doughnut().version(),
                   elle::unconst(&remote->credentials()))
           , _remote(remote)
-        {}
+        {
+          this->set_context(remote);
+        }
         template<typename ...Args>
         typename Super::result_type
         operator()(Args const& ... args);

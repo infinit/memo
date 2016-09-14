@@ -14,6 +14,8 @@
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/blocks/GroupBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Remote.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.OKB");
 
@@ -23,7 +25,7 @@ namespace infinit
   {
     namespace doughnut
     {
-      typedef elle::Option<cryptography::rsa::PublicKey, elle::Buffer>
+      typedef elle::Option<cryptography::rsa::PublicKey, uint64_t>
       KeyOrHash;
 
       cryptography::rsa::PublicKey
@@ -35,14 +37,27 @@ namespace infinit
         if (v < elle::Version(0, 7, 0))
           return s.deserialize<cryptography::rsa::PublicKey>(field_name);
         KeyOrHash koh = s.deserialize<KeyOrHash>(field_name + "_koh");
-        if (koh.is<elle::Buffer>())
+        if (koh.is<uint64_t>())
         {
-          if (!dn)
-            elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
-          ELLE_ASSERT(dn);
-          auto buf = koh.get<elle::Buffer>();
-          auto k = dn->resolve_key(buf);
-          return *k; // Dont move me I'm cached in doughnut!
+          uint64_t index = koh.get<uint64_t>();
+          Remote* remote = nullptr;
+          elle::unconst(s.context()).get(remote);
+          ELLE_ASSERT(remote);
+          auto it = remote->key_hash_cache().find(index);
+          if (it == remote->key_hash_cache().end())
+          {
+            // query the remote for it
+            ELLE_TRACE("Querying remote %s for %s", remote, index);
+            auto rpc = remote->make_rpc<std::vector<std::shared_ptr<cryptography::rsa::PublicKey>>(std::vector<uint64_t> const&)>("resolve_keys");
+            auto keys = rpc(std::vector<uint64_t>{index});
+            if (keys.size() != 1)
+              elle::err("resolve_keys for %s on %s gave %s replies",
+                        index, remote, keys.size());
+            remote->key_hash_cache().insert(std::make_pair(index, keys.front()));
+            return *keys.front();
+          }
+          else
+            return *it->second; // Dont move me I'm cached in Remote!
         }
         else
         {
@@ -71,7 +86,9 @@ namespace infinit
           else
           {
             static bool disable_hash = elle::os::inenv("INFINIT_DISABLE_KEY_HASH");
-            if (disable_hash)
+            Local* local = nullptr;
+            elle::unconst(s.context()).get(local, (Local*)nullptr);
+            if (!local || disable_hash)
             {
               KeyOrHash koh(key);
               s.serialize(field_name + "_koh", koh);
@@ -81,7 +98,9 @@ namespace infinit
               if (!dn)
                 elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
               ELLE_ASSERT(dn);
-              auto hash = dn->ensure_key(key);
+              auto hash = dn->ensure_key(
+                std::make_shared<cryptography::rsa::PublicKey>(key));
+              ELLE_TRACE("serializing key hash %s -> %s", key, hash);
               KeyOrHash koh(hash);
               s.serialize(field_name + "_koh", koh);
             }

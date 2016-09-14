@@ -291,6 +291,7 @@ namespace infinit
       void
       Local::_register_rpcs(RPCServer& rpcs)
       {
+        rpcs.set_context(this);
         rpcs._destroying.connect([this] ( RPCServer* rpcs)
           {
             this->_passports.erase(rpcs);
@@ -431,6 +432,16 @@ namespace infinit
               std::move(password)));
             return true;
           }));
+        rpcs.add("resolve_keys",
+          std::function<std::vector<std::shared_ptr<infinit::cryptography::rsa::PublicKey>>(
+            std::vector<uint64_t> const&)>(
+          [this](std::vector<uint64_t> const& hashes) {
+            std::vector<std::shared_ptr<infinit::cryptography::rsa::PublicKey>> res;
+            for (auto const& h: hashes)
+              res.emplace_back(this->doughnut().resolve_key(h));
+            return res;
+          }
+          ));
       }
 
       void

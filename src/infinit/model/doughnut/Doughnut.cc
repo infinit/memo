@@ -374,62 +374,29 @@ namespace infinit
         }
       }
 
-      elle::Buffer
-      Doughnut::ensure_key(cryptography::rsa::PublicKey const& k)
+      uint64_t
+      Doughnut::ensure_key(std::shared_ptr<cryptography::rsa::PublicKey> const& k)
       {
-        auto hash = UB::hash(k);
-        if (!this->_consensus)
-          return hash; // assume test mode
-        auto it = this->_key_hash_cache.find(hash);
-        if (it != this->_key_hash_cache.end())
-          return hash;
-        auto hub = elle::make_unique<UB>(this, ':' + hash.string(), k);
-        try
-        {
-          this->_key_hash_cache[hash].reset(new cryptography::rsa::PublicKey(k));
-          store(std::move(hub), STORE_INSERT,
-            elle::make_unique<UserBlockUpserter>(':' + hash.string()));
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_TRACE("Error storing key hash block: %s", e);
-        }
-        return hash;
+        auto it = this->_reverse_key_hash_cache.find(*k);
+        if (it != this->_reverse_key_hash_cache.end())
+          return it->second;
+        uint64_t index = this->_reverse_key_hash_cache.size();
+        this->_reverse_key_hash_cache.insert(std::make_pair(*k, index));
+        this->_key_hash_cache.insert(std::make_pair(index, k));
+        return index;
       }
 
       std::shared_ptr<cryptography::rsa::PublicKey>
-      Doughnut::resolve_key(elle::Buffer const& hash)
+      Doughnut::resolve_key(uint64_t hash)
       {
-        ELLE_DEBUG("%s: resolve key from %x", this, hash);
+        ELLE_DUMP("%s: resolve key from %x", this, hash);
         auto it = this->_key_hash_cache.find(hash);
         if (it != this->_key_hash_cache.end())
+        {
+          ELLE_DUMP("%s: resolved from cache: %x", this, hash);
           return it->second;
-
-        auto const addr = UB::hash_address(':' + hash.string(), *this);
-        try
-        {
-          auto block = this->fetch(addr);
-          auto ub = elle::cast<UB>::runtime(block);
-          if (!ub)
-            elle::err("%s: block at %s is not an UB", this, addr);
-          // validate
-          auto ubhash = UB::hash(ub->key());
-          if (hash != ubhash)
-          {
-            ELLE_WARN(
-              "key hash does not match fetched key hash block: %x vs %x",
-              hash, ubhash);
-            elle::err("key hash does not match");
-          }
-          auto skey = std::make_shared<cryptography::rsa::PublicKey>(ub->key());
-          this->_key_hash_cache.insert(std::make_pair(hash, skey));
-          return skey;
         }
-        catch (MissingBlock const& b)
-        {
-          ELLE_WARN("missing key hash block at %f: %s", addr, b);
-          throw;
-        }
+        elle::err("%s: failed to resolve key hash locally: %x", this, hash);
       }
 
       Configuration::~Configuration()
