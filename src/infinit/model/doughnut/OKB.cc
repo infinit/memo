@@ -138,11 +138,11 @@ namespace infinit
           }
         }
       }
+
       OKBHeader::OKBHeader(Doughnut* dht,
                            cryptography::rsa::KeyPair const& keys,
                            boost::optional<elle::Buffer> salt)
-        : _dht(dht)
-        , _owner_key(keys.public_key())
+        : _owner_key(keys.public_key())
         , _signature()
         , _doughnut(dht)
       {
@@ -164,8 +164,7 @@ namespace infinit
       }
 
       OKBHeader::OKBHeader(OKBHeader const& other)
-        : _dht(other._dht)
-        , _salt(other._salt)
+        : _salt(other._salt)
         , _owner_key(other._owner_key)
         , _signature(other._signature)
         , _doughnut(other._doughnut)
@@ -196,7 +195,7 @@ namespace infinit
       Address
       OKBHeader::_hash_address() const
       {
-        return hash_address(*this->_dht, *this->_owner_key, this->_salt);
+        return hash_address(*this->_doughnut, *this->_owner_key, this->_salt);
       }
 
       blocks::ValidationResult
@@ -238,7 +237,7 @@ namespace infinit
             deserialize_key_hash(s, v, "key")))
         , _signature()
       {
-        s.serialize_context<Doughnut*>(this->_dht);
+        s.serialize_context<Doughnut*>(this->_doughnut);
         s.serialize("owner", *this);
       }
 
@@ -398,7 +397,8 @@ namespace infinit
         ELLE_ASSERT(s_.out());
         auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
         s.serialize("salt", this->_block.salt());
-        serialize_key_hash(s, v, *this->_block.owner_key(), "owner_key", _block.dht());
+        serialize_key_hash(s, v, *this->_block.owner_key(),
+                           "owner_key", this->_block.doughnut());
         s.serialize("version", this->_block._version);
         this->_serialize(s, v);
       }
@@ -537,7 +537,8 @@ namespace infinit
                                 elle::Version const& version)
       {
         this->Super::serialize(s, version);
-        serialize_key_hash(s, version, *this->_owner_key, "key", this->dht());
+        serialize_key_hash(
+          s, version, *this->_owner_key, "key", this->doughnut());
         s.serialize("owner", static_cast<OKBHeader&>(*this));
         this->_serialize(s, version);
       }
@@ -547,7 +548,6 @@ namespace infinit
       BaseOKB<Block>::_serialize(elle::serialization::Serializer& s,
                                  elle::Version const& version)
       {
-        s.serialize_context<Doughnut*>(this->_doughnut);
         s.serialize("version", this->_version);
         if (!this->_signature)
           this->_signature = std::make_shared<SignFuture>();
