@@ -2512,7 +2512,7 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(rename_exceptions), 0, 5);
   suite.add(BOOST_TEST_CASE(erased_group), 0, 5);
   suite.add(BOOST_TEST_CASE(erased_group_recovery), 0, 5);
-  suite.add(BOOST_TEST_CASE(remove_permissions),0, 5);
+  suite.add(BOOST_TEST_CASE(remove_permissions), 0, 10);
   suite.add(BOOST_TEST_CASE(create_excl),0, 5);
   suite.add(BOOST_TEST_CASE(sparse_file),0, 5);
   suite.add(BOOST_TEST_CASE(upgrade_06_07),0, 5);
