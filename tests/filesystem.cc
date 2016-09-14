@@ -2502,20 +2502,20 @@ ELLE_TEST_SUITE()
 #endif
   auto& suite = boost::unit_test::framework::master_test_suite();
   // Fast tests that do not mount
-  suite.add(BOOST_TEST_CASE(write_unlink), 0, 1);
-  suite.add(BOOST_TEST_CASE(write_truncate), 0, 1);
-  suite.add(BOOST_TEST_CASE(prefetcher_failure), 0, 5);
-  suite.add(BOOST_TEST_CASE(paxos_race), 0, 5);
-  suite.add(BOOST_TEST_CASE(data_embed), 0, 5);
-  suite.add(BOOST_TEST_CASE(symlink_perms), 0, 5);
-  suite.add(BOOST_TEST_CASE(short_hash_key), 0, 5);
-  suite.add(BOOST_TEST_CASE(rename_exceptions), 0, 5);
-  suite.add(BOOST_TEST_CASE(erased_group), 0, 5);
-  suite.add(BOOST_TEST_CASE(erased_group_recovery), 0, 5);
-  suite.add(BOOST_TEST_CASE(remove_permissions), 0, 10);
-  suite.add(BOOST_TEST_CASE(create_excl),0, 5);
-  suite.add(BOOST_TEST_CASE(sparse_file),0, 5);
-  suite.add(BOOST_TEST_CASE(upgrade_06_07),0, 5);
+  suite.add(BOOST_TEST_CASE(write_unlink), 0, valgrind(1));
+  suite.add(BOOST_TEST_CASE(write_truncate), 0, valgrind(1));
+  suite.add(BOOST_TEST_CASE(prefetcher_failure), 0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(paxos_race), 0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(data_embed), 0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(symlink_perms), 0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(short_hash_key), 0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(rename_exceptions), 0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(erased_group), 0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(erased_group_recovery), 0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(remove_permissions), 0, valgrind(10));
+  suite.add(BOOST_TEST_CASE(create_excl),0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(sparse_file),0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(upgrade_06_07),0, valgrind(5));
 
   // Mounting tests
   // only doughnut supported filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
