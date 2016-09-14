@@ -74,6 +74,7 @@ namespace infinit
                std::unique_ptr<ConflictResolver> resolver_ = {},
                blocks::RemoveSignature remove_signature_ = {}
                );
+            explicit
             Op(elle::serialization::SerializerIn& ser);
             void serialize(elle::serialization::Serializer& ser);
             Address address;
