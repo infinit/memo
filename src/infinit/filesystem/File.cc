@@ -222,19 +222,20 @@ namespace infinit
 
     FileData::FileData(boost::filesystem::path path,
                        Block& block, std::pair<bool, bool> perms)
-    : _address(block.address())
-    , _path(path)
+      : _address(block.address())
+      , _path(path)
     {
       update(block, perms);
       _last_used = FileSystem::now();
     }
+
     void
     FileData::update(Block& block, std::pair<bool, bool> perms)
     {
-      ELLE_DEBUG("%s: updating from %f ver=%s, worldperm=%s",
-                 this, block.address(),
-                 dynamic_cast<ACLBlock&>(block).version(),
-                 dynamic_cast<ACLBlock&>(block).get_world_permissions());
+      ELLE_TRACE_SCOPE("%s: update from %f (version: %s, worldperm: %s)",
+                       this, block.address(),
+                       dynamic_cast<ACLBlock&>(block).version(),
+                       dynamic_cast<ACLBlock&>(block).get_world_permissions());
       bool empty;
       elle::IOStream is(
         umbrella([&] {
