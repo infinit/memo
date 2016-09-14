@@ -3,6 +3,13 @@
 
 # include <memory>
 # include <boost/filesystem.hpp>
+# include <boost/multi_index/hashed_index.hpp>
+# include <boost/multi_index/identity.hpp>
+# include <boost/multi_index/mem_fun.hpp>
+# include <boost/multi_index/member.hpp>
+# include <boost/multi_index/ordered_index.hpp>
+# include <boost/multi_index/sequenced_index.hpp>
+# include <boost/multi_index_container.hpp>
 
 # include <das/model.hh>
 # include <das/serializer.hh>
@@ -21,6 +28,7 @@ namespace infinit
   {
     namespace doughnut
     {
+      namespace bmi = boost::multi_index;
       struct ACLEntry;
       struct AdminKeys
       {
@@ -107,13 +115,27 @@ namespace infinit
           elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
         ELLE_ATTRIBUTE_RX(reactor::Barrier, terminating);
 
-        typedef std::unordered_map<uint64_t,
-           std::shared_ptr<cryptography::rsa::PublicKey>> KeyHashCache;
-        ELLE_ATTRIBUTE_R(KeyHashCache, key_hash_cache);
-        typedef std::unordered_map<
-          cryptography::rsa::PublicKey,
-          uint64_t> ReverseKeyHashCache;
-        ELLE_ATTRIBUTE_R(ReverseKeyHashCache, reverse_key_hash_cache);
+      public:
+        struct KeyHash
+        {
+          uint64_t hash;
+          std::shared_ptr<cryptography::rsa::PublicKey> key;
+          cryptography::rsa::PublicKey const& raw_key() const
+          {
+            return *key;
+          }
+        };
+        typedef bmi::multi_index_container<
+          KeyHash,
+          bmi::indexed_by<
+            bmi::hashed_unique<
+              bmi::const_mem_fun<
+                KeyHash,
+                cryptography::rsa::PublicKey const&, &KeyHash::raw_key>,
+                std::hash<infinit::cryptography::rsa::PublicKey>>,
+            bmi::hashed_unique<
+              bmi::member<KeyHash, uint64_t, &KeyHash::hash>>>> KeyCache;
+        ELLE_ATTRIBUTE_R(KeyCache, key_cache);
       protected:
         virtual
         std::unique_ptr<blocks::MutableBlock>

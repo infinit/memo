@@ -119,11 +119,8 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
               boost::optional<int> local_version) const override;
-
-        typedef
-        std::unordered_map<uint64_t, std::shared_ptr<cryptography::rsa::PublicKey>>
-        KeyHashCache;
-        ELLE_ATTRIBUTE_RX(KeyHashCache, key_hash_cache);
+      public:
+        ELLE_ATTRIBUTE_RX(Doughnut::KeyCache, key_hash_cache);
       };
 
       template<typename F>

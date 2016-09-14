@@ -377,12 +377,12 @@ namespace infinit
       uint64_t
       Doughnut::ensure_key(std::shared_ptr<cryptography::rsa::PublicKey> const& k)
       {
-        auto it = this->_reverse_key_hash_cache.find(*k);
-        if (it != this->_reverse_key_hash_cache.end())
-          return it->second;
-        uint64_t index = this->_reverse_key_hash_cache.size();
-        this->_reverse_key_hash_cache.insert(std::make_pair(*k, index));
-        this->_key_hash_cache.insert(std::make_pair(index, k));
+        auto it = this->_key_cache.get<0>().find(*k);
+        if (it != this->_key_cache.get<0>().end())
+          return it->hash;
+
+        uint64_t index = this->_key_cache.get<0>().size();
+        this->_key_cache.insert(KeyHash{index, k});
         return index;
       }
 
@@ -390,11 +390,11 @@ namespace infinit
       Doughnut::resolve_key(uint64_t hash)
       {
         ELLE_DUMP("%s: resolve key from %x", this, hash);
-        auto it = this->_key_hash_cache.find(hash);
-        if (it != this->_key_hash_cache.end())
+        auto it = this->_key_cache.get<1>().find(hash);
+        if (it != this->_key_cache.get<1>().end())
         {
           ELLE_DUMP("%s: resolved from cache: %x", this, hash);
-          return it->second;
+          return it->key;
         }
         elle::err("%s: failed to resolve key hash locally: %x", this, hash);
       }
