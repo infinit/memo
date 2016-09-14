@@ -1,7 +1,29 @@
-#!/bin/sh
+#!/usr/bin/env python3
 
-git submodule update --init --recursive || exit 125
-cd _build/linux64
-if ! python3 ./drake -j $(nproc) "$@"; then
-    exit 1
-fi
+import os.path
+import sh
+import sys
+
+SELF = os.path.realpath(sys.argv[0])
+ROOT = os.path.dirname(SELF)
+BUILD = '%s/_build/linux64' % ROOT
+import multiprocessing
+JOBS = multiprocessing.cpu_count()
+
+def repor(msg):
+  print(msg, file = sys.stderr)
+
+git = sh.git.bake(_cwd = ROOT)
+try:
+  git('submodule', 'update', '--init', '--recursive')
+except Exception as e:
+  print(e, file = sys.stderr)
+  report('unable to update submodules, skipping commit')
+  exit(125)
+
+drake = sh.Command('%s/drake' % BUILD).bake(_cwd = BUILD)
+try:
+  drake('-j', str(JOBS), *sys.argv)
+except Exception as e:
+  print(e, file = sys.stderr)
+  exit(1)
