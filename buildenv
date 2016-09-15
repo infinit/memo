@@ -280,7 +280,10 @@ class State:
       if datetime.datetime.utcnow() - tree['last_use'] > delay:
         cleaned.append(b)
         del trees[b]
-        shutil.rmtree(tree['path'])
+        try:
+          shutil.rmtree(tree['path'])
+        except FileNotFoundError:
+          pass
     return {
       'cleaned': cleaned,
     }
