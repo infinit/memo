@@ -111,6 +111,10 @@ class State:
                         action = 'store_true',
                         help = 'Upload build tree cache',
     )
+    parser.add_argument('-c', '--cleanup-build-trees',
+                        action = 'store_true',
+                        help = 'Garbage collect unused build trees',
+    )
     parser.add_argument('-n', '--cache-namespace',
                         type = str,
                         help = 'Subdirectory where to locate cache',
@@ -179,6 +183,8 @@ class State:
       return self.download_build_tree()
     elif self.__opts.cache_upload_build_tree:
       return self.upload_build_tree()
+    elif self.__opts.cleanup_build_trees:
+      return self.garbage_collect_build_trees()
     else:
       raise CLError('specify an action')
 
@@ -263,6 +269,21 @@ class State:
       return previous
     else:
       return None
+
+  def garbage_collect_build_trees(self):
+    delay = datetime.timedelta(minutes = 1)
+    cleaned = []
+    state = self.__state
+    trees = state.setdefault('build-trees', {})
+    for b in list(trees):
+      tree = trees[b]
+      if datetime.datetime.utcnow() - tree['last_use'] > delay:
+        cleaned.append(b)
+        del trees[b]
+        shutil.rmtree(tree['path'])
+    return {
+      'cleaned': cleaned,
+    }
 
   cache_url = 'buildslave@cache.buildslave.infinit.sh'
 
