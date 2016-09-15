@@ -50,6 +50,8 @@ namespace infinit
         , _parent(parent)
         , _name(name)
       {}
+      std::string
+      perms_to_json(model::Model& model, ACLBlock& block);
 
     public:
       void
