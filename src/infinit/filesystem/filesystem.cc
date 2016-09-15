@@ -596,6 +596,8 @@ namespace infinit
       auto address = Address(it->second.second.value(), model::flags::mutable_block, false);
       switch(it->second.first)
       {
+      case EntryType::pending:
+        return std::shared_ptr<rfs::Path>(new Unknown(*this, d, name));
       case EntryType::symlink:
         return std::shared_ptr<rfs::Path>(new Symlink(*this, address, d, name));
       case EntryType::file:
@@ -725,6 +727,9 @@ namespace std
   {
     switch (entry)
     {
+      case infinit::filesystem::EntryType::pending:
+        out << "pending";
+        break;
       case infinit::filesystem::EntryType::file:
         out << "file";
         break;

@@ -712,6 +712,8 @@ namespace infinit
       {
         switch(e.second.first)
         {
+        case EntryType::pending:
+          continue;
         case EntryType::file:
           st.st_mode = S_IFREG;
           break;

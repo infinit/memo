@@ -113,6 +113,85 @@ namespace infinit
     }
 
     std::unique_ptr<rfs::Handle>
+    Unknown::create_0_7(int flags, mode_t mode)
+    {
+      std::unique_ptr<rfs::Handle> handle;
+      auto parent_block = this->_owner.block_store()->fetch(_parent->address());
+      _owner.ensure_permissions(*parent_block, true, true);
+      auto b = _owner.block_store()->make_block<infinit::model::blocks::ACLBlock>();
+      // Add pending entry to parent so we can't leak b
+      _parent->_files.insert(
+        std::make_pair(_name,
+          std::make_pair(EntryType::pending, b->address())));
+      _parent->write(*_owner.block_store(),
+                     Operation{
+                       (flags & O_EXCL) ? OperationType::insert_exclusive : OperationType::insert,
+                       _name, EntryType::pending, b->address()},
+                     DirectoryData::null_block,
+                     true);
+      // arm rollback
+      elle::With<elle::Finally>(
+        [&]
+        {
+          this->_parent->_files.erase(_name);
+          try
+          {
+            _parent->write(*_owner.block_store(),
+                           Operation{OperationType::remove, _name});
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN("rollback failure on %s", this->_name);
+          }
+        }) << [&] (elle::Finally& remove_from_parent)
+      {
+
+        // Handle acl inheritance
+        FileData fd(_parent->_path / _name, b->address(), mode & 0700);
+        if (_parent->inherit_auth())
+        {
+          umbrella(
+            [&]
+            {
+              dynamic_cast<ACLBlock*>(parent_block.get())->copy_permissions(
+                dynamic_cast<ACLBlock&>(*b));
+            });
+        }
+        // push b
+        fd.write(*_owner.block_store(), WriteTarget::all, b, true);
+        // arm rollback
+        elle::With<elle::Finally>(
+        [&]
+        {
+          try
+          {
+            _owner.block_store()->remove(b->address());
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN("rollback failure on %s", this->_name);
+          }
+        }) << [&] (elle::Finally& remove_block)
+        {
+          // push definitive entry to directory
+          _parent->_files[_name] = std::make_pair(EntryType::file, b->address());
+          _parent->write(*_owner.block_store(),
+                         Operation{
+                           OperationType::insert,
+                           _name, EntryType::file, b->address()},
+                         DirectoryData::null_block,
+                         true);
+          remove_block.abort();
+          remove_from_parent.abort();
+          handle.reset(
+            new FileHandle(*_owner.block_store(), fd, true, true, true));
+        };
+      };
+      return handle;
+    }
+
+
+    std::unique_ptr<rfs::Handle>
     Unknown::create(int flags, mode_t mode)
     {
       if (_owner.read_only())
@@ -126,6 +205,8 @@ namespace infinit
         File f(_owner, _parent->_files.at(_name).second, {}, _parent, _name);
         return f.open(flags, mode);
       }
+      if (_owner.block_store()->version() >= elle::Version(0, 7, 0))
+        return this->create_0_7(flags, mode);
       auto parent_block = this->_owner.block_store()->fetch(_parent->address());
       _owner.ensure_permissions(*parent_block, true, true);
       auto b = _owner.block_store()->make_block<infinit::model::blocks::ACLBlock>();

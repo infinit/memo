@@ -30,7 +30,8 @@ namespace infinit
     {
       file,
       directory,
-      symlink
+      symlink,
+      pending
     };
     enum class OperationType
     {

@@ -2398,6 +2398,51 @@ ELLE_TEST_SCHEDULED(sparse_file)
   }
 }
 
+ELLE_TEST_SCHEDULED(create_race)
+{
+  DHTs dhts(3 /*, {},version = elle::Version(0, 6, 0)*/);
+  auto client1 = dhts.client(false, {}, /*version = elle::Version(0,6,0),*/ yielding_overlay = true);
+  auto client2 = dhts.client(false, {}, /*version = elle::Version(0,6,0),*/ yielding_overlay = true);
+  client1.fs->path("/");
+  reactor::Thread tpoll("poller", [&] {
+      while (true)
+      {
+        try
+        {
+          auto h = client2.fs->path("/file")->open(O_RDONLY, 0644);
+          char buf[1024];
+          int len = h->read(elle::WeakBuffer(buf, 1024), 1024, 0);
+          auto content = std::string(buf, buf+len);
+          if (content.empty())
+            ELLE_LOG("Empty content");
+          else
+          {
+            BOOST_CHECK_EQUAL(content, "foo");
+            break;
+          }
+        }
+        catch(rfs::Error const& e)
+        {
+          BOOST_CHECK_EQUAL(e.error_code(), ENOENT);
+        }
+        reactor::yield();
+      }
+  });
+  reactor::yield();
+  reactor::yield();
+  try
+  {
+    auto h = client1.fs->path("/file")->create(O_CREAT|O_RDWR, 0644);
+    h->write(elle::ConstWeakBuffer("foo", 3), 3, 0);
+    h->close();
+  }
+  catch(elle::Error const& e)
+  {
+    ELLE_WARN("kraboum %s", e);
+  }
+  reactor::wait(tpoll);
+}
+
 #include <elle/Option.hh>
 
 ELLE_TEST_SCHEDULED(upgrade_06_07)
@@ -2516,6 +2561,7 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(create_excl),0, valgrind(5));
   suite.add(BOOST_TEST_CASE(sparse_file),0, valgrind(5));
   suite.add(BOOST_TEST_CASE(upgrade_06_07),0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(create_race),0, valgrind(5));
 
   // Mounting tests
   // only doughnut supported filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
