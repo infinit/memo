@@ -261,8 +261,7 @@ get_acl(std::string const& path, bool fallback_xattrs)
     std::stringstream ss;
     ss.str(buf);
     boost::optional<bool> dir_inherit;
-    boost::system::error_code erc;
-    bool dir = boost::filesystem::is_directory(path, erc);
+    bool dir = boost::filesystem::is_directory(path);
     if (dir)
     {
       int sz = port_getxattr(
