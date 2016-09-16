@@ -694,7 +694,7 @@ namespace reporting
     PermissionResults permissions;
   };
 
-  struct NetworkingResults
+  struct ConnectivityResults
     : public reporting::Result
   {
     struct BeyondResult
@@ -991,12 +991,12 @@ namespace reporting
       std::unordered_map<std::string, RedirectionResult> redirections;
     };
 
-    NetworkingResults()
+    ConnectivityResults()
       : Result(false)
     {
     }
 
-    NetworkingResults(elle::serialization::SerializerIn& s)
+    ConnectivityResults(elle::serialization::SerializerIn& s)
     {
       this->serialize(s);
     }
@@ -1005,7 +1005,7 @@ namespace reporting
     print(std::ostream& out, bool verbose) const
     {
       if (!this->sane() | verbose)
-        section(out, "Networking capabilities");
+        section(out, "Connectivity capabilities");
       this->beyond.print(out, verbose);
       this->interfaces.print(out, verbose, false);
       this->nat.print(out, verbose);
@@ -1064,20 +1064,20 @@ namespace reporting
     All(elle::serialization::SerializerIn& s)
       : integrity(s.deserialize<IntegrityResults>("integrity"))
       , sanity(s.deserialize<SanityResults>("sanity"))
-      , networking(s.deserialize<NetworkingResults>("networking"))
+      , connectivity(s.deserialize<ConnectivityResults>("connectivity"))
     {
     }
 
     IntegrityResults integrity;
     SanityResults sanity;
-    NetworkingResults networking;
+    ConnectivityResults connectivity;
 
     void
     print(std::ostream& out, bool verbose) const
     {
       integrity.print(out, verbose);
       sanity.print(out, verbose);
-      networking.print(out, verbose);
+      connectivity.print(out, verbose);
     }
 
     bool
@@ -1085,7 +1085,7 @@ namespace reporting
     {
       return this->integrity.sane()
         && this->sanity.sane()
-        && this->networking.sane();
+        && this->connectivity.sane();
     }
 
     bool
@@ -1093,7 +1093,7 @@ namespace reporting
     {
       return this->integrity.warning()
         || this->sanity.warning()
-        || this->networking.warning();
+        || this->connectivity.warning();
     }
 
     void
@@ -1101,7 +1101,7 @@ namespace reporting
     {
       s.serialize("integrity", this->integrity);
       s.serialize("sanity", this->sanity);
-      s.serialize("networking", this->networking);
+      s.serialize("connectivity", this->connectivity);
       if (s.out())
       {
         bool sane = this->sane();
@@ -1131,8 +1131,8 @@ infinit_related_environment()
 
 static
 void
-_networking(boost::program_options::variables_map const& args,
-            reporting::NetworkingResults& results)
+_connectivity(boost::program_options::variables_map const& args,
+            reporting::ConnectivityResults& results)
 {
   ELLE_TRACE("contact beyond")
   {
@@ -1250,7 +1250,7 @@ _networking(boost::program_options::variables_map const& args,
       results.upnp.warning(true);
       results.upnp.external = upnp->external_ip();
       results.upnp.warning(false);
-      typedef reporting::NetworkingResults::UPNPResult::RedirectionResult::Address
+      typedef reporting::ConnectivityResults::UPNPResult::RedirectionResult::Address
         Address;
       auto redirect = [&] (std::string type,
                            reactor::network::Protocol protocol,
@@ -1631,10 +1631,10 @@ COMMAND(integrity)
   report_error(std::cout, results.sane(), results.warning());
 }
 
-COMMAND(networking)
+COMMAND(connectivity)
 {
-  reporting::NetworkingResults results;
-  _networking(args, results);
+  reporting::ConnectivityResults results;
+  _connectivity(args, results);
   output(std::cout, results, flag(args, "verbose"));
   report_error(std::cout, results.sane(), results.warning());
 }
@@ -1652,7 +1652,7 @@ COMMAND(run_all)
   reporting::All a;
   _sanity(args, a.sanity);
   _integrity(args, a.integrity);
-  _networking(args, a.networking);
+  _connectivity(args, a.connectivity);
   output(std::cout, a, flag(args, "verbose"));
   report_error(std::cout, a.sane(), a.warning());
 }
@@ -1676,13 +1676,13 @@ main(int argc, char** argv)
         }
     },
     {
-      "networking",
-        "Perform networking checks",
-        &networking,
-        "",
-        {
-          verbose
-        }
+      "connectivity",
+      "Perform connectivity checks",
+      &connectivity,
+      "",
+      {
+        verbose
+      }
     },
     {
       "sanity",
