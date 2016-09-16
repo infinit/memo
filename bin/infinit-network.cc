@@ -121,16 +121,7 @@ COMMAND(create)
     }
     if (args.count("protocol"))
     {
-      std::string proto = args["protocol"].as<std::string>();
-      try
-      {
-        kelips->rpc_protocol = elle::serialization::Serialize<
-          infinit::model::doughnut::Protocol>::convert(proto);
-      }
-      catch (elle::serialization::Error const& e)
-      {
-        throw CommandLineError("'protocol' must be 'utp', 'tcp' or 'all'");
-      }
+      kelips->rpc_protocol = protocol_get(args);
     }
     overlay_config = std::move(kelips);
   }

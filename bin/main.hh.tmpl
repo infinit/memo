@@ -2641,6 +2641,22 @@ all(Args&& ... args)
 }
 
 inline
+infinit::model::doughnut::Protocol
+protocol_get(boost::program_options::variables_map const& args)
+{
+  std::string proto = args["protocol"].as<std::string>();
+  try
+  {
+    return elle::serialization::Serialize<
+      infinit::model::doughnut::Protocol>::convert(proto);
+  }
+  catch (elle::serialization::Error const& e)
+  {
+    throw CommandLineError("'protocol' must be 'utp', 'tcp' or 'all'");
+  }
+}
+
+inline
 Mode::OptionDescription
 option_output(std::string const& item)
 {
