@@ -106,7 +106,7 @@ protected:
   }
   virtual
   std::unique_ptr<infinit::model::blocks::Block>
-  _fetch(infinit::model::Address address, boost::optional<int> local_version)
+  _fetch(infinit::model::Address address, boost::optional<int> local_version) override
   {
     auto res = _backend->fetch(address, local_version);
     if (!res)
@@ -133,7 +133,7 @@ protected:
   }
   virtual
   void
-  _remove(infinit::model::Address address, infinit::model::blocks::RemoveSignature rs)
+  _remove(infinit::model::Address address, infinit::model::blocks::RemoveSignature rs) override
   {
     if (rs.block)
     {
@@ -1096,7 +1096,7 @@ ELLE_TEST_SCHEDULED(basic)
     BOOST_CHECK_EQUAL(count, 6);
     BOOST_CHECK_EQUAL(buf, "foofoo");
     h->close();
-    BOOST_CHECK_EQUAL(directory_count(fs->path("/")), 2); 
+    BOOST_CHECK_EQUAL(directory_count(fs->path("/")), 2);
   }
   {
     ELLE_LOG("rename");
@@ -1105,7 +1105,7 @@ ELLE_TEST_SCHEDULED(basic)
     write_file(fs->path("/test3"), "foo");
     fs->path("/test2")->rename("/test3");
     BOOST_CHECK_EQUAL(read_file(fs->path("/test3")), "Test");
-    BOOST_CHECK_EQUAL(directory_count(fs->path("/")), 3); 
+    BOOST_CHECK_EQUAL(directory_count(fs->path("/")), 3);
     fs->path("/dir")->mkdir(0644);
     write_file(fs->path("/dir/foo"), "bar");
     BOOST_CHECK_THROW(fs->path("/test3")->rename("/dir"), rfs::Error);

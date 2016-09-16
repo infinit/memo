@@ -96,7 +96,7 @@ namespace infinit
                 boost::optional<elle::Buffer> salt,
                 cryptography::rsa::KeyPair const& owner_keys);
         BaseOKB(BaseOKB const& other);
-        ELLE_ATTRIBUTE_R(int, version, virtual);
+        ELLE_ATTRIBUTE_R(int, version, virtual, override);
       protected:
         typedef reactor::BackgroundFuture<elle::Buffer> SignFuture;
         ELLE_ATTRIBUTE(std::shared_ptr<SignFuture>, signature, protected);
