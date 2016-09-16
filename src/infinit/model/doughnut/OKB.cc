@@ -1,6 +1,7 @@
 #include <infinit/model/doughnut/OKB.hh>
 
 #include <elle/bench.hh>
+#include <elle/cast.hh>
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
@@ -16,6 +17,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/UB.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.OKB");
 
@@ -25,7 +27,10 @@ namespace infinit
   {
     namespace doughnut
     {
-      typedef elle::Option<cryptography::rsa::PublicKey, uint64_t>
+      /* Maintain backward compatibility with a short-livel 0.7.0 using
+       * key hashes instead of ids
+      */
+      typedef elle::Option<cryptography::rsa::PublicKey, elle::Buffer, uint64_t>
       KeyOrHash;
 
       cryptography::rsa::PublicKey
@@ -37,6 +42,22 @@ namespace infinit
         if (v < elle::Version(0, 7, 0))
           return s.deserialize<cryptography::rsa::PublicKey>(field_name);
         KeyOrHash koh = s.deserialize<KeyOrHash>(field_name + "_koh");
+        if (koh.is<elle::Buffer>())
+        {
+          auto buf = koh.get<elle::Buffer>();
+          ELLE_WARN("Key hash spotted in block: %x, resolving...", buf);
+          auto const addr = UB::hash_address(':' + buf.string(), *dn);
+          try
+          {
+            auto block = dn->fetch(addr);
+            auto ub = elle::cast<UB>::runtime(block);
+            return ub->key();
+          }
+          catch (elle::Error const& e)
+          {
+            elle::err("Failed to retreive key hash block at %f: %s", addr, e);
+          }
+        }
         if (koh.is<uint64_t>())
         {
           uint64_t index = koh.get<uint64_t>();
