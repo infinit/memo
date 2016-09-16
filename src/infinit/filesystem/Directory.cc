@@ -930,7 +930,7 @@ namespace infinit
             {
               auto block = elle::cast<ACLBlock>::runtime(
                 this->_owner.block_store()->fetch(this->_data->address()));
-              return this->perms_to_json(*this->_owner.block_store(), *block);
+              return this->perms_to_json(*block);
             }
             else if (*special == "auth.inherit")
             {

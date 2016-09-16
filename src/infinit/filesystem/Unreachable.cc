@@ -55,8 +55,7 @@ namespace infinit
           {
             if (*special == "auth")
             {
-              return this->perms_to_json(*this->_owner.block_store(),
-                                         dynamic_cast<ACLBlock&>(*this->_data));
+              return this->perms_to_json(dynamic_cast<ACLBlock&>(*this->_data));
             }
             else if (this->_type == EntryType::directory &&
                      *special == "auth.inherit")

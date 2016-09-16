@@ -758,7 +758,6 @@ namespace infinit
             {
               this->_ensure_first_block();
               return this->perms_to_json(
-                *this->_owner.block_store(),
                 dynamic_cast<ACLBlock&>(*this->_first_block));
             }
           }

@@ -709,9 +709,9 @@ namespace infinit
     }
 
     std::string
-    Node::perms_to_json(model::Model& model, ACLBlock& block)
+    Node::perms_to_json(ACLBlock& block)
     {
-      auto perms = block.list_permissions(model);
+      auto perms = block.list_permissions(*this->_owner.block_store());
       elle::json::Array v;
       for (auto const& perm: perms)
       {
