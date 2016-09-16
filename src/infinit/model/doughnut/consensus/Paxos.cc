@@ -884,7 +884,7 @@ namespace infinit
           BlockOrPaxos data(&decision);
           this->storage()->set(
             address,
-            elle::serialization::binary::serialize(data),
+            elle::serialization::binary::serialize(data, this->doughnut().version()),
             true, true);
           return res;
         }
