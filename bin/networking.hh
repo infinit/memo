@@ -3,6 +3,8 @@
 
 using namespace boost::posix_time;
 
+# include <version.hh>
+
 namespace bytes
 {
   // XXX: Move that somewher on elle.
@@ -39,7 +41,7 @@ namespace infinit
       : public infinit::RPCServer
     {
       RPCs()
-        : infinit::RPCServer() // infinit::version())
+        : infinit::RPCServer() // ::version)
       {
         this->add("download", std::function<size_t (elle::Buffer const&)>(
                     [] (elle::Buffer const& body)
@@ -79,7 +81,7 @@ namespace infinit
       std::cout << "  Upload:" << std::endl;
       // My download is the server upload.
       infinit::RPC<size_t (elle::Buffer)> upload(
-        "download", channels, infinit::version());
+        "download", channels, ::version);
 
       elle::Buffer buff(packet_size);
       auto start = microsec_clock::universal_time();
@@ -111,7 +113,7 @@ namespace infinit
 
       // My upload is the server download.
       infinit::RPC<elle::Buffer (size_t)> download(
-        "upload", channels, infinit::version());
+        "upload", channels, ::version);
 
       std::cout << "  Download:" << std::endl;
       auto start = microsec_clock::universal_time();
@@ -481,7 +483,7 @@ namespace infinit
             return;
           }
           infinit::protocol::Serializer serializer(
-            *socket, infinit::version(), false);
+            *socket, ::version, false);
           infinit::protocol::ChanneledStream stream(serializer);
           action(stream);
         };
@@ -510,7 +512,7 @@ namespace infinit
               return;
             }
             infinit::protocol::Serializer serializer(
-              *socket, infinit::version(), false);
+              *socket, ::version, false);
             infinit::protocol::ChanneledStream stream(serializer);
             action(stream);
           };
