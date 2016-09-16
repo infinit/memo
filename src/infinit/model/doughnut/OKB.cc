@@ -44,6 +44,9 @@ namespace infinit
         KeyOrHash koh = s.deserialize<KeyOrHash>(field_name + "_koh");
         if (koh.is<elle::Buffer>())
         {
+          if (!dn)
+            elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
+          ELLE_ASSERT(dn);
           auto buf = koh.get<elle::Buffer>();
           ELLE_WARN("Key hash spotted in block: %x, resolving...", buf);
           auto const addr = UB::hash_address(':' + buf.string(), *dn);
