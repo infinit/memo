@@ -26,6 +26,7 @@
 ELLE_LOG_COMPONENT("infinit-doctor");
 
 #include <main.hh>
+#include <networking.hh>
 
 infinit::Infinit ifnt;
 typedef std::unordered_map<std::string, std::string> Environment;
@@ -1647,6 +1648,27 @@ COMMAND(sanity)
   report_error(std::cout, results.sane(), results.warning());
 }
 
+COMMAND(networking)
+{
+  bool server = args.count("host") == 0;
+  // if (solo)
+  // {
+  //   infinit::networking::Servers servers(args);
+  //   infinit::networking::perfom("127.0.0.1", args);
+  // }
+  if (server)
+  {
+    std::cout << "[Server mode]" << std::endl;
+    infinit::networking::Servers servers(args);
+    reactor::sleep();
+  }
+  else
+  {
+    std::cout << "[Client mode]" << std::endl;
+    infinit::networking::perfom(mandatory<std::string>(args, "host"), args);
+  }
+}
+
 COMMAND(run_all)
 {
   reporting::All a;
@@ -1664,6 +1686,37 @@ main(int argc, char** argv)
   using boost::program_options::bool_switch;
   Mode::OptionDescription verbose =
     { "verbose,v", bool_switch(), "output everything" };
+  Mode::OptionDescription protocol = {
+    "protocol", value<std::string>(),
+    "RPC protocol to use: tcp,utp,all (default: all)"
+  };
+  Mode::OptionDescription packet_size =
+    { "packet_size,s", value<uint64_t>(),
+      "size of the packet to send (client only)" };
+  Mode::OptionDescription packets_count =
+    { "packets_count,n", value<uint64_t>(),
+      "number of packets to exchange (client only)" };
+  Mode::OptionDescription host =
+    { "host,H", value<std::string>(),
+      "the host to connect to (if not specified, you are considered server)" };
+  Mode::OptionDescription port =
+    { "port,p", value<uint16_t>(),
+      "port to perform tests on (if unspecified,"
+      "\n  --tcp_port = port,"
+      "\n  --utp_port = port + 1,"
+      "\n  --xored_utp_port = port + 2)" };
+  Mode::OptionDescription tcp_port =
+    { "tcp_port,t", value<uint16_t>(), "port to perform tcp tests on"};
+  Mode::OptionDescription utp_port =
+    { "utp_port,u", value<uint16_t>(), "port to perform utp tests on"};
+  Mode::OptionDescription xored_utp_port =
+    { "xored_utp_port,x", value<uint16_t>(), "port to perform xored utp tests on"};
+  Mode::OptionDescription xored =
+    { "xored,X", value<std::string>(),
+      "performs test applying a 0xFF xor on the utp traffic, value=yes,no,both"};
+  Mode::OptionDescription mode =
+    { "mode,m", value<std::string>(),
+      "mode to use: upload,download,all (default: all) (client only)" };
 
   Modes modes {
     {
@@ -1701,6 +1754,23 @@ main(int argc, char** argv)
         {
           verbose
         }
+    },
+    {
+      "networking",
+      "Perform networking speed test per protocol",
+      &networking,
+      "",
+      {
+        mode,
+        protocol,
+        packet_size,
+        packets_count,
+        host,
+        port,
+        tcp_port,
+        utp_port,
+        xored_utp_port
+      }
     }
   };
   return infinit::main("Infinit diagnostic utility", modes, argc, argv,
