@@ -1186,17 +1186,18 @@ ELLE_TEST_SCHEDULED(basic)
     ELLE_LOG("randomizing a file");
     std::default_random_engine gen;
     std::uniform_int_distribution<>dist(0, 255);
+    auto const random_size = 10000;
     {
       auto h = fs->path("/tbig")->create(O_CREAT|O_RDWR, 0644);
-      for (int i=0; i<10000000; ++i)
+      for (int i = 0; i < random_size; ++i)
       {
         unsigned char c = dist(gen);
         h->write(elle::ConstWeakBuffer(&c, 1), 1, i);
       }
       h->close();
     }
-    BOOST_CHECK_EQUAL(file_size(fs->path("/tbig")), 10000000);
-    std::uniform_int_distribution<>dist2(0, 9999999);
+    BOOST_CHECK_EQUAL(file_size(fs->path("/tbig")), random_size);
+    std::uniform_int_distribution<>dist2(0, random_size - 1);
     for (int i=0; i < 2; ++i)
     {
       auto h = fs->path("/tbig")->open(O_RDWR, 0644);
@@ -1208,7 +1209,7 @@ ELLE_TEST_SCHEDULED(basic)
       }
       h->close();
     }
-    BOOST_CHECK_EQUAL(file_size(fs->path("/tbig")), 10000000);
+    BOOST_CHECK_EQUAL(file_size(fs->path("/tbig")), random_size);
   }
   {
     ELLE_LOG("truncate");
