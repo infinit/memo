@@ -346,13 +346,10 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
     output << path << ":" << std::endl;
     if (res.directory)
     {
-      auto inherit = [dir = *res.directory] ()
-        {
-          if (dir.inherit)
-            return dir.inherit.get() ? "true" : "false";
-          return "unknown";
-        }();
-      output << "  inherit: " << inherit << std::endl;
+      auto dir = *res.directory;
+      output << "  inherit: "
+             << (dir.inherit ? dir.inherit.get() ? "true" : "false" : "unknown")
+             << std::endl;
     }
     if (res.world)
     {
