@@ -1096,6 +1096,7 @@ namespace rebalancing
       , Super(paxos,
               factor,
               rebalance_auto_expand,
+              true,
               node_timeout,
               dht,
               id,
