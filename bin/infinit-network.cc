@@ -635,6 +635,24 @@ COMMAND(run)
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
+  {
+    auto rebalancing_auto_expand = optional<bool>(
+      args, "paxos-rebalancing-auto-expand");
+    auto rebalancing_inspect = optional<bool>(
+      args, "paxos-rebalancing-inspect");
+    if (rebalancing_auto_expand || rebalancing_inspect)
+    {
+      auto paxos = dynamic_cast<
+        infinit::model::doughnut::consensus::Paxos::Configuration*>(
+          network.dht()->consensus.get());
+      if (!paxos)
+        throw CommandLineError("paxos options on non-paxos consensus");
+      if (rebalancing_auto_expand)
+        paxos->rebalance_auto_expand(rebalancing_auto_expand.get());
+      if (rebalancing_inspect)
+        paxos->rebalance_inspect(rebalancing_inspect.get());
+    }
+  }
   network.ensure_allowed(self, "run");
   std::vector<infinit::model::Endpoints> eps;
   if (args.count("peer"))
@@ -1016,6 +1034,14 @@ main(int argc, char** argv)
         { "daemon,d", bool_switch(), "run as a background daemon"},
 #endif
       },
+      {},
+      // Hidden options
+      {
+        { "paxos-rebalancing-auto-expand", value<bool>(),
+            "whether to automatically rebalance under-replicated blocks"},
+        { "paxos-rebalancing-inspect", value<bool>(),
+            "whether to inspect all blocks on startup and trigger rebalancing"},
+      }
     },
     {
       "list-storage",

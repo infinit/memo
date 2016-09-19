@@ -141,11 +141,13 @@ namespace infinit
                      int factor,
                      bool lenient_fetch,
                      bool rebalance_auto_expand,
+                     bool rebalance_inspect,
                      std::chrono::system_clock::duration node_timeout)
           : Super(doughnut)
           , _factor(factor)
           , _lenient_fetch(lenient_fetch)
           , _rebalance_auto_expand(rebalance_auto_expand)
+          , _rebalance_inspect(rebalance_inspect)
           , _node_timeout(node_timeout)
         {
           if (getenv("INFINIT_PAXOS_LENIENT_FETCH"))
@@ -164,6 +166,7 @@ namespace infinit
             *this,
             this->factor(),
             this->_rebalance_auto_expand,
+            this->_rebalance_inspect,
             this->_node_timeout,
             this->doughnut(),
             this->doughnut().id(),
@@ -399,7 +402,7 @@ namespace infinit
               if (!observer)
                 this->_disappeared(id);
             });
-          if (this->_factor > 1)
+          if (this->_rebalance_inspect && this->_factor > 1)
             this->_rebalance_inspector.reset(
               new reactor::Thread(
                 elle::sprintf("%s: rebalancing inspector", this),
@@ -1902,6 +1905,8 @@ namespace infinit
           : consensus::Configuration()
           , _replication_factor(replication_factor)
           , _node_timeout(node_timeout)
+          , _rebalance_auto_expand(true)
+          , _rebalance_inspect(true)
         {}
 
         std::unique_ptr<Consensus>
@@ -1910,7 +1915,9 @@ namespace infinit
           return elle::make_unique<Paxos>(
             dht,
             consensus::replication_factor = this->_replication_factor,
-            consensus::node_timeout = this->_node_timeout);
+            consensus::node_timeout = this->_node_timeout,
+            consensus::rebalance_auto_expand = this->_rebalance_auto_expand,
+            consensus::rebalance_inspect = this->_rebalance_inspect);
         }
 
         Paxos::Configuration::Configuration(
