@@ -451,6 +451,7 @@ namespace infinit
           if (decision != this->_addresses.end())
             return BlockOrPaxos(&decision->second);
           else
+          {
             ELLE_TRACE_SCOPE("%s: load %f from storage", *this, address);
             auto buffer = this->storage()->get(address);
             elle::serialization::Context context;
@@ -464,7 +465,8 @@ namespace infinit
             {
               if (this->_rebalance_auto_expand)
               {
-                ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
+                ELLE_LOG_COMPONENT(
+                  "infinit.model.doughnut.consensus.Paxos.rebalance");
                 static auto const op = overlay::OP_FETCH;
                 PaxosServer::Quorum q;
                 if (this->_quorums.find(address) == this->_quorums.end())
@@ -494,6 +496,7 @@ namespace infinit
                 &this->_load_paxos(address, std::move(*stored.paxos)));
             else
               ELLE_ABORT("no block and no paxos ?");
+          }
         }
 
         Paxos::LocalPeer::Decision&
