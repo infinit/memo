@@ -384,36 +384,33 @@ namespace infinit
       std::vector<cryptography::rsa::PublicKey>
       Remote::_resolve_keys(std::vector<int> ids)
       {
-        std::vector<cryptography::rsa::PublicKey> res;
-        std::vector<int> missing;
-        for (auto id: ids)
-          if (this->_key_hash_cache.get<1>().find(id) ==
-              this->_key_hash_cache.get<1>().end())
-            missing.emplace_back(id);
-        std::vector<cryptography::rsa::PublicKey> missing_keys;
-        if (missing.size())
         {
-          auto rpc = this->make_rpc<std::vector<cryptography::rsa::PublicKey>(
-            std::vector<int> const&)>("resolve_keys");
-          missing_keys = rpc(missing);
-        }
-        if (missing_keys.size() != missing.size())
-          elle::err("resolve_keys for %s keys on %s gave %s replies",
-                    missing.size(), this, missing_keys.size());
-        // Don't play smart here: we yielded, the cache might have changed. We
-        // do need those two iterators to check ids/keys association.
-        auto missing_id_it = missing.begin();
-        auto missing_key_it = missing_keys.begin();
-        for (auto id: ids)
-        {
-          if (missing_id_it != missing.end() && id == *missing_id_it)
+          std::vector<int> missing;
+          for (auto id: ids)
+            if (this->_key_hash_cache.get<1>().find(id) ==
+                this->_key_hash_cache.get<1>().end())
+              missing.emplace_back(id);
+          if (missing.size())
           {
-            res.emplace_back(std::move(*missing_key_it));
-            ++missing_id_it;
-            ++missing_key_it;
+            ELLE_TRACE("%s: fetch %s keys by ids", this, missing.size());
+            auto rpc = this->make_rpc<std::vector<cryptography::rsa::PublicKey>(
+              std::vector<int> const&)>("resolve_keys");
+            auto missing_keys = rpc(missing);
+            if (missing_keys.size() != missing.size())
+              elle::err("resolve_keys for %s keys on %s gave %s replies",
+                        missing.size(), this, missing_keys.size());
+            auto id_it = missing.begin();
+            auto key_it = missing_keys.begin();
+            for (; id_it != missing.end(); ++id_it, ++key_it)
+              this->_key_hash_cache.emplace(*id_it, std::move(*key_it));
           }
-          else
-            res.emplace_back(*this->_key_hash_cache.get<1>().find(id)->key);
+        }
+        std::vector<cryptography::rsa::PublicKey> res;
+        for (auto id: ids)
+        {
+          auto it = this->_key_hash_cache.get<1>().find(id);
+          ELLE_ASSERT(it != this->_key_hash_cache.get<1>().end());
+          res.emplace_back(*it->key);
         }
         return res;
       }
