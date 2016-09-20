@@ -421,10 +421,8 @@ namespace infinit
       std::unordered_map<int, cryptography::rsa::PublicKey>
       Remote::_resolve_all_keys()
       {
-        std::unordered_map<int, cryptography::rsa::PublicKey> res;
-        for (auto const& k: this->doughnut().key_cache())
-          res.emplace(k.hash, *k.key);
-        return res;
+        using Keys = std::unordered_map<int, cryptography::rsa::PublicKey>;
+        return this->make_rpc<Keys()>("resolve_all_keys")();
       }
     }
   }
