@@ -419,7 +419,12 @@ namespace infinit
       Remote::_resolve_all_keys()
       {
         using Keys = std::unordered_map<int, cryptography::rsa::PublicKey>;
-        return this->make_rpc<Keys()>("resolve_all_keys")();
+        auto res = this->make_rpc<Keys()>("resolve_all_keys")();
+        for (auto const& key: res)
+          if (this->_key_hash_cache.get<1>().find(key.first) ==
+              this->_key_hash_cache.get<1>().end())
+            this->_key_hash_cache.emplace(key.first, key.second);
+        return res;
       }
     }
   }
