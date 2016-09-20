@@ -30,7 +30,7 @@ namespace infinit
       /* Maintain backward compatibility with a short-livel 0.7.0 using
        * key hashes instead of ids
       */
-      typedef elle::Option<cryptography::rsa::PublicKey, elle::Buffer, uint64_t>
+      typedef elle::Option<cryptography::rsa::PublicKey, elle::Buffer, int>
       KeyOrHash;
 
       cryptography::rsa::PublicKey
@@ -61,9 +61,9 @@ namespace infinit
             elle::err("Failed to retreive key hash block at %f: %s", addr, e);
           }
         }
-        if (koh.is<uint64_t>())
+        if (koh.is<int>())
         {
-          uint64_t index = koh.get<uint64_t>();
+          uint64_t index = koh.get<int>();
           Remote* remote = nullptr;
           elle::unconst(s.context()).get(remote, (Remote*)nullptr);
           Local* local = nullptr;

@@ -374,15 +374,15 @@ namespace infinit
         }
       }
 
-      uint64_t
+      int
       Doughnut::ensure_key(std::shared_ptr<cryptography::rsa::PublicKey> const& k)
       {
         auto it = this->_key_cache.get<0>().find(*k);
         if (it != this->_key_cache.get<0>().end())
           return it->hash;
 
-        uint64_t index = this->_key_cache.get<0>().size();
-        this->_key_cache.insert(KeyHash{index, k});
+        int index = this->_key_cache.get<0>().size();
+        this->_key_cache.insert(KeyHash(index, k));
         return index;
       }
 

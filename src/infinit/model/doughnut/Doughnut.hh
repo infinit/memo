@@ -99,7 +99,7 @@ namespace infinit
                bool require_sign);
         std::shared_ptr<cryptography::rsa::PublicKey>
         resolve_key(uint64_t hash);
-        uint64_t
+        int
         ensure_key(std::shared_ptr<cryptography::rsa::PublicKey> const& k);
         ELLE_ATTRIBUTE_R(Address, id);
         ELLE_ATTRIBUTE(std::shared_ptr<cryptography::rsa::KeyPair>, keys);
@@ -118,7 +118,17 @@ namespace infinit
       public:
         struct KeyHash
         {
-          uint64_t hash;
+          KeyHash(int h, cryptography::rsa::PublicKey k)
+            : hash(h)
+            , key(std::make_shared(std::move(k)))
+          {}
+
+          KeyHash(int h, std::shared_ptr<cryptography::rsa::PublicKey> k)
+            : hash(h)
+            , key(std::move(k))
+          {}
+
+          int hash;
           std::shared_ptr<cryptography::rsa::PublicKey> key;
           cryptography::rsa::PublicKey const& raw_key() const
           {
@@ -134,7 +144,7 @@ namespace infinit
                 cryptography::rsa::PublicKey const&, &KeyHash::raw_key>,
                 std::hash<infinit::cryptography::rsa::PublicKey>>,
             bmi::hashed_unique<
-              bmi::member<KeyHash, uint64_t, &KeyHash::hash>>>> KeyCache;
+              bmi::member<KeyHash, int, &KeyHash::hash>>>> KeyCache;
         ELLE_ATTRIBUTE_R(KeyCache, key_cache);
       protected:
         virtual
