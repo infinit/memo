@@ -189,7 +189,7 @@ namespace infinit
       Doughnut&
       dht(elle::serialization::SerializerIn& input)
       {
-        Doughnut* res;
+        Doughnut* res = nullptr;
         input.serialize_context<Doughnut*>(res);
         return *res;
       }
