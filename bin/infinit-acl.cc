@@ -176,7 +176,7 @@ struct PermissionsResult
   struct Directory
   {
     Directory()
-      : inherit(false)
+      : inherit(boost::none)
     {}
 
     Directory(Directory const&) = default;
@@ -192,7 +192,7 @@ struct PermissionsResult
       s.serialize("inherit", this->inherit);
     }
 
-    bool inherit;
+    boost::optional<bool> inherit;
   };
 
   struct World
@@ -248,7 +248,6 @@ get_acl(std::string const& path, bool fallback_xattrs)
   PermissionsResult res;
   res.path = path;
   char buf[4096];
-  bool dir = boost::filesystem::is_directory(path);
   int sz = port_getxattr(
     path.c_str(), "user.infinit.auth", buf, 4095, fallback_xattrs);
   if (sz < 0)
@@ -269,6 +268,7 @@ get_acl(std::string const& path, bool fallback_xattrs)
 #ifndef __clang__
 # pragma GCC diagnostic pop
 #endif
+    bool dir = boost::filesystem::is_directory(path);
     if (dir)
     {
       int sz = port_getxattr(
@@ -278,7 +278,10 @@ get_acl(std::string const& path, bool fallback_xattrs)
       else
       {
         buf[sz] = 0;
-        dir_inherit = (buf == std::string("true"));
+        if (buf == std::string("true"))
+          dir_inherit = true;
+        else if (buf == std::string("false"))
+          dir_inherit = false;
       }
     }
 
@@ -350,8 +353,9 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
     output << path << ":" << std::endl;
     if (res.directory)
     {
+      auto dir = *res.directory;
       output << "  inherit: "
-             << ((*res.directory).inherit ? "yes" : "no")
+             << (dir.inherit ? dir.inherit.get() ? "true" : "false" : "unknown")
              << std::endl;
     }
     if (res.world)

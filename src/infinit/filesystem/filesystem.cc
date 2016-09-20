@@ -618,15 +618,15 @@ namespace infinit
           catch (infinit::model::doughnut::ValidationFailed const& e)
           {
             ELLE_TRACE("perm exception %s", e);
-            return std::make_shared<Unreachable>(*this, d, name,
-              address, EntryType::file);
+            return std::make_shared<Unreachable>(*this, std::move(block), d,
+              name, address, EntryType::file);
           }
           catch (reactor::filesystem::Error const& e)
           {
             if (e.error_code() == EACCES)
             {
-              return std::make_shared<Unreachable>(*this, d, name,
-                address, EntryType::file);
+              return std::make_shared<Unreachable>(*this, std::move(block), d,
+                name, address, EntryType::file);
             }
             else
               throw e;
@@ -668,8 +668,13 @@ namespace infinit
           {
             if (e.error_code() == EACCES)
             {
-              return std::make_shared<Unreachable>(*this, d, name,
-                address, EntryType::directory);
+              auto fit = _file_cache.find(address);
+              boost::optional<int> version;
+              if (fit != _file_cache.end())
+                version = (*fit)->block_version();
+              auto block = fetch_or_die(address, version);
+              return std::make_shared<Unreachable>(*this, std::move(block), d,
+                name, address, EntryType::directory);
             }
             else
               throw e;

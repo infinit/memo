@@ -13,6 +13,7 @@ sources = drake.nodes(
   'Unknown.cc',
   'Unknown.hh',
   'Unreachable.hh',
+  'Unreachable.cc',
   'filesystem.cc',
   'filesystem.hh',
   'umbrella.hh',

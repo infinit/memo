@@ -708,6 +708,26 @@ namespace infinit
       return std::make_pair(r, w);
     }
 
+    std::string
+    Node::perms_to_json(ACLBlock& block)
+    {
+      auto perms = block.list_permissions(*this->_owner.block_store());
+      elle::json::Array v;
+      for (auto const& perm: perms)
+      {
+        elle::json::Object o;
+        o["admin"] = perm.admin;
+        o["name"] = perm.user->name();
+        o["owner"] = perm.owner;
+        o["read"] = perm.read;
+        o["write"] = perm.write;
+        v.push_back(o);
+      }
+      std::stringstream ss;
+      elle::json::write(ss, v, true);
+      return ss.str();
+    }
+
     void
     Node::set_permissions(std::string const& flags,
                           std::string const& userkey,

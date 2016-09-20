@@ -827,27 +827,6 @@ namespace infinit
     | Extended attributes |
     `--------------------*/
 
-    static
-    std::string
-    perms_to_json(model::Model& model, ACLBlock& block)
-    {
-      auto perms = block.list_permissions(model);
-      elle::json::Array v;
-      for (auto const& perm: perms)
-      {
-        elle::json::Object o;
-        o["admin"] = perm.admin;
-        o["name"] = perm.user->name();
-        o["owner"] = perm.owner;
-        o["read"] = perm.read;
-        o["write"] = perm.write;
-        v.push_back(o);
-      }
-      std::stringstream ss;
-      elle::json::write(ss, v, true);
-      return ss.str();
-    }
-
     std::vector<std::string>
     Directory::listxattr()
     {
@@ -951,7 +930,7 @@ namespace infinit
             {
               auto block = elle::cast<ACLBlock>::runtime(
                 this->_owner.block_store()->fetch(this->_data->address()));
-              return perms_to_json(*this->_owner.block_store(), *block);
+              return this->perms_to_json(*block);
             }
             else if (*special == "auth.inherit")
             {
