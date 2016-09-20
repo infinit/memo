@@ -69,31 +69,9 @@ namespace infinit
           Local* local = nullptr;
           elle::unconst(s.context()).get(local, (Local*)nullptr);
           ELLE_ASSERT(remote || local);
-          if (remote)
-          {
-            auto it = remote->key_hash_cache().get<1>().find(index);
-            if (it == remote->key_hash_cache().get<1>().end())
-            {
-              // query the remote for it
-              ELLE_TRACE("Querying remote %s for %s", remote, index);
-              auto rpc = remote->make_rpc<std::vector<std::shared_ptr<cryptography::rsa::PublicKey>>(std::vector<uint64_t> const&)>("resolve_keys");
-              auto keys = rpc(std::vector<uint64_t>{index});
-              if (keys.size() != 1)
-                elle::err("resolve_keys for %s on %s gave %s replies",
-                          index, remote, keys.size());
-              remote->key_hash_cache().insert(Doughnut::KeyHash{index, keys.front()});
-              return *keys.front();
-            }
-            else
-              return *it->key; // Dont move me I'm cached in Remote!
-          }
-          else
-          { // local
-            if (!dn)
-              elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
-            ELLE_ASSERT(dn);
-            return *dn->resolve_key(index);
-          }
+          auto peer =
+            remote ? static_cast<Peer*>(remote) : static_cast<Peer*>(local);
+          return peer->resolve_key(index);
         }
         else
         {
@@ -121,7 +99,8 @@ namespace infinit
           }
           else
           {
-            static bool disable_hash = elle::os::inenv("INFINIT_DISABLE_KEY_HASH");
+            static bool disable_hash =
+              elle::os::inenv("INFINIT_DISABLE_KEY_HASH");
             Local* local = nullptr;
             elle::unconst(s.context()).get(local, (Local*)nullptr);
             Remote* remote = nullptr;

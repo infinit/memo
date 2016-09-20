@@ -82,6 +82,17 @@ namespace infinit
         _fetch(Address address,
                boost::optional<int> local_version) const override;
 
+      /*-----.
+      | Keys |
+      `-----*/
+      protected:
+        virtual
+        std::vector<cryptography::rsa::PublicKey>
+        _resolve_keys(std::vector<int> ids) override;
+        virtual
+        std::unordered_map<int, cryptography::rsa::PublicKey>
+        _resolve_all_keys() override;
+
       /*------.
       | Hooks |
       `------*/

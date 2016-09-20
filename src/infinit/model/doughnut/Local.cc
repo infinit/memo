@@ -227,6 +227,28 @@ namespace infinit
         this->_on_remove(address);
       }
 
+      /*-----.
+      | Keys |
+      `-----*/
+
+      std::vector<cryptography::rsa::PublicKey>
+      Local::_resolve_keys(std::vector<int> ids)
+      {
+        std::vector<infinit::cryptography::rsa::PublicKey> res;
+        for (auto const& h: ids)
+          res.emplace_back(*this->doughnut().resolve_key(h));
+        return res;
+      }
+
+      std::unordered_map<int, cryptography::rsa::PublicKey>
+      Local::_resolve_all_keys()
+      {
+        std::unordered_map<int, cryptography::rsa::PublicKey> res;
+        for (auto const& k: this->doughnut().key_cache())
+          res.emplace(k.hash, *k.key);
+        return res;
+      }
+
       /*-------.
       | Server |
       `-------*/
@@ -432,16 +454,15 @@ namespace infinit
               std::move(password)));
             return true;
           }));
-        rpcs.add("resolve_keys",
-          std::function<std::vector<std::shared_ptr<infinit::cryptography::rsa::PublicKey>>(
-            std::vector<uint64_t> const&)>(
-          [this](std::vector<uint64_t> const& hashes) {
-            std::vector<std::shared_ptr<infinit::cryptography::rsa::PublicKey>> res;
-            for (auto const& h: hashes)
-              res.emplace_back(this->doughnut().resolve_key(h));
-            return res;
-          }
-          ));
+        using Keys = std::vector<cryptography::rsa::PublicKey>;
+        rpcs.add(
+          "resolve_keys",
+          std::function<Keys (std::vector<int> const&)>(
+            std::bind(&Local::_resolve_keys, this, std::placeholders::_1)));
+        using KeysMap = std::unordered_map<int, cryptography::rsa::PublicKey>;
+        rpcs.add(
+          "resolve_all_keys",
+          std::function<KeysMap()>(std::bind(&Local::_resolve_all_keys, this)));
       }
 
       void

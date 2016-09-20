@@ -376,6 +376,56 @@ namespace infinit
           remove(address);
         }
       }
+
+      /*-----.
+      | Keys |
+      `-----*/
+
+      std::vector<cryptography::rsa::PublicKey>
+      Remote::_resolve_keys(std::vector<int> ids)
+      {
+        std::vector<cryptography::rsa::PublicKey> res;
+        std::vector<int> missing;
+        for (auto id: ids)
+          if (this->_key_hash_cache.get<1>().find(id) ==
+              this->_key_hash_cache.get<1>().end())
+            missing.emplace_back(id);
+        std::vector<cryptography::rsa::PublicKey> missing_keys;
+        if (missing.size())
+        {
+          auto rpc = this->make_rpc<std::vector<cryptography::rsa::PublicKey>(
+            std::vector<int> const&)>("resolve_keys");
+          missing_keys = rpc(missing);
+        }
+        if (missing_keys.size() != missing.size())
+          elle::err("resolve_keys for %s keys on %s gave %s replies",
+                    missing.size(), this, missing_keys.size());
+        // Don't play smart here: we yielded, the cache might have changed. We
+        // do need those two iterators to check ids/keys association.
+        auto missing_id_it = missing.begin();
+        auto missing_key_it = missing_keys.begin();
+        for (auto id: ids)
+        {
+          if (missing_id_it != missing.end() && id == *missing_id_it)
+          {
+            res.emplace_back(std::move(*missing_key_it));
+            ++missing_id_it;
+            ++missing_key_it;
+          }
+          else
+            res.emplace_back(*this->_key_hash_cache.get<1>().find(id)->key);
+        }
+        return res;
+      }
+
+      std::unordered_map<int, cryptography::rsa::PublicKey>
+      Remote::_resolve_all_keys()
+      {
+        std::unordered_map<int, cryptography::rsa::PublicKey> res;
+        for (auto const& k: this->doughnut().key_cache())
+          res.emplace(k.hash, *k.key);
+        return res;
+      }
     }
   }
 }

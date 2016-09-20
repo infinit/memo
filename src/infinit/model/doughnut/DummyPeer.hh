@@ -47,6 +47,18 @@ namespace infinit
           throw reactor::network::Exception("Peer unavailable");
         }
 
+        std::vector<cryptography::rsa::PublicKey>
+        _resolve_keys(std::vector<int> ids) override
+        {
+          elle::unreachable();
+        }
+
+        std::unordered_map<int, cryptography::rsa::PublicKey>
+        _resolve_all_keys() override
+        {
+          elle::unreachable();
+        }
+
         virtual
         boost::optional<consensus::Paxos::PaxosClient::Accepted>
         propose(consensus::Paxos::PaxosServer::Quorum const& peers,

@@ -104,6 +104,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(EndpointsRefetcher, refetch_endpoints);
         ELLE_ATTRIBUTE_R(bool, fast_fail);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
+
       /*-------.
       | Blocks |
       `-------*/
@@ -119,8 +120,18 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
               boost::optional<int> local_version) const override;
-      public:
-        ELLE_ATTRIBUTE_RX(Doughnut::KeyCache, key_hash_cache);
+
+      /*-----.
+      | Keys |
+      `-----*/
+      protected:
+        virtual
+        std::vector<cryptography::rsa::PublicKey>
+        _resolve_keys(std::vector<int> ids) override;
+        virtual
+        std::unordered_map<int, cryptography::rsa::PublicKey>
+        _resolve_all_keys() override;
+        ELLE_ATTRIBUTE_R(Doughnut::KeyCache, key_hash_cache);
       };
 
       template<typename F>
