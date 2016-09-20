@@ -467,10 +467,18 @@ namespace infinit
                 }
               else
               {
+#ifndef __clang__
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
                 this->_backend->store(
                   std::move(elle::unconst(op.get())->block),
                   *mode,
                   std::move(elle::unconst(op.get())->resolver));
+#ifndef __clang__
+# pragma GCC diagnostic pop
+#endif
               }
               break;
             }
