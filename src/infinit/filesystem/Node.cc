@@ -591,6 +591,18 @@ namespace infinit
               return ss.str();
             });
         }
+        else if (*special == "resolve_all_keys")
+        {
+          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+            this->_owner.block_store());
+          elle::json::Object res;
+          for (auto wpeer: dht->dock().peer_cache())
+            if (auto peer = wpeer.second.lock())
+              res[elle::sprintf("%s", peer->id())] = peer->resolve_all_keys();
+          std::stringstream ss;
+          elle::json::write(ss, res, true);
+          return ss.str();
+        }
         else if (special->find("root") == 0)
         {
           return this->full_path() == this->full_path().root_path() ? "true"
