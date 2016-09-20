@@ -598,7 +598,12 @@ namespace infinit
           elle::json::Object res;
           for (auto wpeer: dht->dock().peer_cache())
             if (auto peer = wpeer.second.lock())
-              res[elle::sprintf("%s", peer->id())] = peer->resolve_all_keys();
+            {
+              elle::json::Array keys;
+              for (auto const& key: peer->resolve_all_keys())
+                keys.emplace_back(model::doughnut::short_key_hash(key.second));
+              res[elle::sprintf("%s", peer->id())] =  std::move(keys);
+            }
           std::stringstream ss;
           elle::json::write(ss, res, true);
           return ss.str();
