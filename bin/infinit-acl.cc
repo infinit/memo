@@ -261,10 +261,14 @@ get_acl(std::string const& path, bool fallback_xattrs)
     buf[sz] = 0;
     std::stringstream ss;
     ss.str(buf);
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#ifndef __clang__
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
     boost::optional<bool> dir_inherit;
-#pragma GCC diagnostic pop
+#ifndef __clang__
+# pragma GCC diagnostic pop
+#endif
     if (dir)
     {
       int sz = port_getxattr(
