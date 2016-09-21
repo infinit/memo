@@ -15,11 +15,13 @@
 ### Changed
 
 - Optimize Kelips packet size.
+- Optimize blocks transmitted size.
 - Make `--filesystem` the default type for `infinit-storage --create`.
 - Use a single UDP socket for all UTP networking.
 - Resolve backtrace symbols lazily to save CPU.
 - Cache group blocks address resolution to save CPU.
 - Standardize `-n` to mean `--name` and `-N` to mean `--network`.
+- Reduce logs impact on CPU.
 
 ### Fixed
 
@@ -30,6 +32,7 @@
 - Yield `.` and `..` when listing directories.
 - Fix SEGV in `infinit-acl --set --others-mode`.
 - Fix UTF-8 characters serialization in configuration files.
+- Enable to read ACLs of a file with no read permissions on Linux.
 
 
 ## [0.6.2] - 2016-08-12
