@@ -82,4 +82,13 @@ $(document).ready(function() {
     $('#slack').show();
   }
 
+  if (window.location.hash === '#social') {
+    $.magnificPopup.open({
+      items: { src: '#social'},
+      type: 'inline'
+    }, 0);
+
+    $('#social').show();
+  }
+
 });
