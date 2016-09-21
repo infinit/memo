@@ -216,11 +216,11 @@ class State:
     clone_branch = None
     for b, tree in build_trees.items():
       rev = tree['rev']
-      base = self.git('merge-base', rev, 'origin/%s' % branch).strip()
+      base = self.git('merge-base', rev, current_rev).strip()
       def distance(r):
         return int(sh.wc(self.git('log', '%s..%s' % (base, r),
                                   '--pretty=oneline'), '-l'))
-      d = distance('origin/%s' % branch) + distance(rev)
+      d = distance(current_rev) + distance(rev)
       if clone is None or d < clone_d:
         clone = tree
         clone_branch = b
