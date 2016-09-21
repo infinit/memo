@@ -112,7 +112,7 @@ namespace infinit
               ELLE_ASSERT(dn);
               auto hash = dn->ensure_key(
                 std::make_shared<cryptography::rsa::PublicKey>(key));
-              ELLE_DEBUG("serialize key hash for %s: %s", key, hash);
+              ELLE_DUMP("serialize key hash for %s: %s", key, hash);
               KeyOrHash koh(hash);
               s.serialize(field_name + "_koh", koh);
             }
@@ -122,7 +122,7 @@ namespace infinit
               auto it = key_hash_cache.get<0>().find(key);
               if (it != key_hash_cache.get<0>().end())
               {
-                ELLE_DEBUG("serialize key hash for %s: %s", key, it->hash);
+                ELLE_DUMP("serialize key hash for %s: %s", key, it->hash);
                 KeyOrHash koh(it->hash);
                 s.serialize(field_name + "_koh", koh);
               }
