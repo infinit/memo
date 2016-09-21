@@ -283,7 +283,7 @@ footer nav > ul > li {
   }
 }
 
-#slack {
+#slack, #social {
   text-align: center;
 
   img { width: 200px; height: auto; margin: auto; }
@@ -291,6 +291,28 @@ footer nav > ul > li {
 
   input[type="email"] { min-width: 200px; margin-top: 20px;}
   .button {  margin-top: 15px; }
+}
+
+#social {
+  overflow: auto; padding: 0;
+  img { width: 100%; }
+  strong, p, ul { padding: 0 20px; }
+  strong { padding-top: 20px; font-weight: bold; display: block; }
+  ul {
+    padding-bottom: 20px; width: 82%; margin-left: 10%; padding-top: 10px;
+    li { float: left; font-size: 15px; width: 44%; text-align: left; }
+    li:last-child { margin-bottom: 40px; }
+    li a {
+      .transition(); opacity: 1;
+      display: block; background: #f7f7f7;
+      padding: 8%; margin: 4%; border-radius: 5px;
+    }
+    li a:hover { opacity: 0.6; }
+    li a:before { margin-right: .4em; }
+    li a.icon-infinit:before { color: @infinitred; }
+    li a.icon-facebook:before { color: #3B5998; }
+    li a.icon-twitter:before { color: #1DA1F2; }
+  }
 }
 
 

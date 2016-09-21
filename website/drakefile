@@ -236,6 +236,8 @@ def configure(
     'resources/images/encryption-fs@2x.png',
     'resources/images/mesos.png',
     'resources/images/mesos@2x.png',
+    'resources/images/social-village.png',
+    'resources/images/social-village@2x.png',
 
     'resources/images/docs/gcs/create-bucket.png',
     'resources/images/docs/gcs/oauth-permissions.png',
