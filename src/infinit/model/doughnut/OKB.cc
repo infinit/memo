@@ -159,7 +159,7 @@ namespace infinit
             .total_milliseconds();
           _salt.append(&now, 8);
         }
-        if (this->doughnut()->version() < elle::Version(0, 7, 1))
+        if (this->doughnut()->version() < elle::Version(0, 8, 0))
         {
           auto owner_key_buffer =
             elle::serialization::json::serialize(
@@ -232,7 +232,7 @@ namespace infinit
         , _signature()
       {
         s.serialize_context<Doughnut*>(this->_doughnut);
-        if (v < elle::Version(0, 7, 1))
+        if (v < elle::Version(0, 8, 0))
           s.serialize("owner", *this);
         else
           this->serialize(s, v);
@@ -243,7 +243,7 @@ namespace infinit
                            elle::Version const& v)
       {
         input.serialize("salt", this->_salt);
-        if (v < elle::Version(0, 7, 1))
+        if (v < elle::Version(0, 8, 0))
           input.serialize("signature", this->_signature);
       }
 
@@ -538,7 +538,7 @@ namespace infinit
         this->Super::serialize(s, version);
         serialize_key_hash(
           s, version, *this->_owner_key, "key", this->doughnut());
-        if (version < elle::Version(0, 7, 1))
+        if (version < elle::Version(0, 8, 0))
           s.serialize("owner", static_cast<OKBHeader&>(*this));
         else
           s.serialize("salt", this->_salt);
