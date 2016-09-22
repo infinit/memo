@@ -143,6 +143,7 @@ namespace infinit
               this->_protocol);
           if (!disable_cache)
             this->_peer_cache.emplace(loc.id(), res);
+          this->_on_connect(*res);
           auto weak_res = overlay::Overlay::WeakMember::own(std::move(res));
           return weak_res;
         }

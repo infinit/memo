@@ -5,6 +5,7 @@
 
 # include <reactor/network/utp-socket.hh>
 
+# include <infinit/RPC.hh>
 # include <infinit/model/Address.hh>
 # include <infinit/model/doughnut/protocol.hh>
 # include <infinit/overlay/Overlay.hh>
@@ -34,6 +35,9 @@ namespace infinit
                        local_utp_server);
         ELLE_ATTRIBUTE_R(reactor::network::UTPServer&, utp_server);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, rdv_connect_thread);
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<void (Remote&)>,
+          on_connect);
 
       /*-----.
       | Peer |
