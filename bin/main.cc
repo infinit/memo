@@ -1,4 +1,5 @@
 #include <elle/log.hh>
+#include <elle/system/unistd.hh>
 
 #include <reactor/FDStream.hh>
 
@@ -439,7 +440,7 @@ namespace infinit
       if (setsid()==-1)
         throw elle::Error(strerror(errno));
       if (!nochdir)
-        chdir("/");
+        elle::chdir("/");
       if (!noclose)
       {
         int fd = open("/dev/null", O_RDWR);
