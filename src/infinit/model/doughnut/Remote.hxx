@@ -35,7 +35,7 @@ namespace infinit
             if (!creds.empty())
             {
               elle::Buffer c(creds);
-              this->key() = elle::make_unique<cryptography::SecretKey>(std::move(c));
+              this->key().emplace(std::move(c));
             }
             return helper();
         });

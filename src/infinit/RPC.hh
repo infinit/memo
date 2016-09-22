@@ -311,10 +311,10 @@ namespace infinit
 	    elle::Bench::BenchScope bs(bench);
 	    if (request.size() > 262144)
 	    {
-	      auto key = this->_key.get();
+	      auto& key = this->_key.get();
 	      elle::With<reactor::Thread::NonInterruptible>() << [&] {
 	        reactor::background([&] {
-	            request = key->decipher(request);
+	            request = key.decipher(request);
 	        });
 	      };
 	    }
@@ -364,11 +364,12 @@ namespace infinit
 	  elle::Bench::BenchScope bs(bench);
 	  if (response.size() >= 262144)
 	  {
-	    auto key = this->_key.get();
+	    auto& key = this->_key.get();
 	    elle::With<reactor::Thread::NonInterruptible>() << [&] {
 	      reactor::background([&] {
-	          response = key->encipher(
-	            elle::ConstWeakBuffer(response.contents(), response.size()));
+	          response = key.encipher(
+	            elle::ConstWeakBuffer(response.contents(),
+                                          response.size()));
 	      });
 	    };
 	  }
@@ -389,7 +390,7 @@ namespace infinit
 
     std::unordered_map<std::string, std::unique_ptr<RPCHandler>> _rpcs;
     elle::serialization::Context _context;
-    std::unique_ptr<infinit::cryptography::SecretKey> _key;
+    boost::optional<infinit::cryptography::SecretKey> _key;
     boost::signals2::signal<void(RPCServer*)> _destroying;
     ELLE_ATTRIBUTE(elle::Version, version);
   };
@@ -402,9 +403,10 @@ namespace infinit
   {
   public:
     using Passport = infinit::model::doughnut::Passport;
-    BaseRPC(std::string name, protocol::ChanneledStream& channels,
+    BaseRPC(std::string name,
+            protocol::ChanneledStream& channels,
             elle::Version const& version,
-            elle::Buffer* credentials = nullptr);
+            boost::optional<cryptography::SecretKey> key = {});
 
     elle::Buffer
     credentials()
@@ -428,7 +430,8 @@ namespace infinit
     elle::serialization::Context _context;
     ELLE_ATTRIBUTE_R(std::string, name);
     ELLE_ATTRIBUTE_R(protocol::ChanneledStream*, channels, protected);
-    ELLE_ATTRIBUTE_RX(std::unique_ptr<infinit::cryptography::SecretKey>, key, protected);
+    ELLE_ATTRIBUTE_RX(
+      boost::optional<infinit::cryptography::SecretKey>, key, protected);
     ELLE_ATTRIBUTE_R(elle::Version, version, protected);
   };
 
@@ -441,10 +444,24 @@ namespace infinit
     : public BaseRPC
   {
   public:
-    RPC(std::string name, protocol::ChanneledStream& channels,
+    RPC(std::string name,
+        protocol::ChanneledStream& channels,
         elle::Version const& version,
-        elle::Buffer* credentials = nullptr)
-      : BaseRPC(std::move(name), channels, version, credentials)
+        boost::optional<cryptography::SecretKey> key = {})
+      : BaseRPC(std::move(name), channels, version, std::move(key))
+    {}
+
+    RPC(std::string name,
+        protocol::ChanneledStream& channels,
+        elle::Version const& version,
+        elle::Buffer* credentials)
+      : RPC(
+        std::move(name),
+        channels,
+        version,
+        credentials && !credentials->empty() ?
+        boost::optional<cryptography::SecretKey>(elle::Buffer(*credentials)) :
+        boost::optional<cryptography::SecretKey>())
     {}
 
     void
@@ -457,10 +474,24 @@ namespace infinit
     : public BaseRPC
   {
   public:
-    RPC(std::string name, protocol::ChanneledStream& channels,
+    RPC(std::string name,
+        protocol::ChanneledStream& channels,
         elle::Version const& version,
-        elle::Buffer* credentials = nullptr)
-      : BaseRPC(std::move(name), channels, version, credentials)
+        boost::optional<cryptography::SecretKey> key = {})
+      : BaseRPC(std::move(name), channels, version, std::move(key))
+    {}
+
+    RPC(std::string name,
+        protocol::ChanneledStream& channels,
+        elle::Version const& version,
+        elle::Buffer* credentials)
+      : RPC(
+        std::move(name),
+        channels,
+        version,
+        credentials && !credentials->empty() ?
+        boost::optional<cryptography::SecretKey>(elle::Buffer(*credentials)) :
+        boost::optional<cryptography::SecretKey>())
     {}
 
     R
@@ -624,18 +655,12 @@ namespace infinit
   BaseRPC::BaseRPC(std::string name,
                    protocol::ChanneledStream& channels,
                    elle::Version const& version,
-                   elle::Buffer* credentials
-                   )
+                   boost::optional<cryptography::SecretKey> key)
     : _name(std::move(name))
     , _channels(&channels)
+    , _key(std::move(key))
     , _version(version)
-  {
-    if (credentials && !credentials->empty())
-    {
-      elle::Buffer creds(*credentials);
-      _key = elle::make_unique<cryptography::SecretKey>(std::move(creds));
-    }
-  }
+  {}
 
   std::ostream&
   operator <<(std::ostream& o, BaseRPC const& rpc);

@@ -438,8 +438,7 @@ namespace infinit
               enc_key,
               infinit::cryptography::Cipher::aes256,
               infinit::cryptography::Mode::cbc);
-            rpcs._key.reset(new infinit::cryptography::SecretKey(
-              std::move(password)));
+            rpcs._key.emplace(std::move(password));
             return true;
           }));
         using Keys = std::vector<cryptography::rsa::PublicKey>;
