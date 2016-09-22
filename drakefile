@@ -30,6 +30,8 @@ name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$'
 
 beyond_delegate_user = 'hub'
 
+license_file = None
+
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
 
@@ -37,7 +39,7 @@ def configure(
     cxx_toolkit = None,
     cxx_config = drake.cxx.Config(),
     production_build = False,
-    beyond_host = 'https://beyond.infinit.io',
+    beyond_host = 'https://beyond.infinit.sh',
     boost = None,
     prefix = '/usr',
     valgrind = None,
@@ -209,6 +211,7 @@ def configure(
     'src/infinit/serialization.cc',
     'src/infinit/serialization.hh',
     'src/infinit/smb/smb.cc',
+    'src/infinit/utility.cc',
     'src/infinit/utility.hh',
     'src/infinit/version.hh',
   )
@@ -237,7 +240,7 @@ def configure(
     cxx_config_infinit.lib('iphlpapi')
     cxx_config_infinit.lib('crypt32')
     libtype = drake.cxx.DynLib
-    extra_libs = [dokan_lib]
+    extra_libs = [drake.copy(dokan_lib, 'bin', strip_prefix = True)]
     cxx_config_infinit.use_whole_archive()
   else:
     extra_libs = []
@@ -253,7 +256,8 @@ def configure(
                        elle_lib
                        ] + extra_libs,
     cxx_toolkit,
-    cxx_config_infinit)
+    cxx_config_infinit,
+    strip = windows)
   rule_build << infinit_lib
 
   if not windows and enable_crash_reporting:
@@ -407,7 +411,8 @@ def configure(
         infinit_lib,
       ] + bin_sources + additional_sources + libs + additional_libs,
       cxx_toolkit,
-      bin_cxx_config)
+      bin_cxx_config,
+      strip = windows)
     rule_build << bin
     binaries.append(bin)
     if install:
@@ -456,7 +461,7 @@ def configure(
   ## -------- ##
   ## Licenses ##
   ## -------- ##
-
+  global license_file
   license_file = drake.node('OSS-licenses')
   drake.license_file.Packager('licenses', license_file)
 
@@ -490,27 +495,16 @@ def configure(
   git = drake.git.Git()
   if cxx_toolkit.os is drake.os.linux:
     from platform import linux_distribution
-    platform = linux_distribution()[0].lower()
+    platform = linux_distribution()[0].lower().replace(' ', '-')
   elif cxx_toolkit.os is drake.os.macos:
     platform = 'macosx'
   else:
     platform = 'unknown'
-  with drake.templating.Context(content = {
-      'platform': platform,
-      'version': git.description(),
-      'version_major': git.version().split('.')[0],
-      'version_minor': git.version().split('.')[1],
-  }):
-    drake.node('debian-packaging/release/control.tmpl')
-    drake.node('debian-packaging/debug/control.tmpl')
   def make_executable(target):
     os.chmod(str(target), 0o755)
     return True
   debian_nodes = chain(
     debian_nodes,
-    drake.copy(drake.nodes('debian-packaging/release/control'),
-               'debian/DEBIAN',
-               strip_prefix = True),
     drake.copy(drake.nodes('debian-packaging/release/postinst'),
                            'debian/DEBIAN',
                            post_process = make_executable,
@@ -520,19 +514,38 @@ def configure(
   if cxx_toolkit.os is drake.os.linux:
     rule_debian << drake.debian.Packager(
       'infinit_%s_amd64.deb' % git.description(),
-      debian_nodes, 'debian').package
+      {
+        'Package': 'infinit',
+        'Maintainer': 'Quentin Hocquet <mefyl@infinit.io>',
+        'Version': git.description(),
+        'Homepage': 'https://www.infinit.sh',
+        'Architecture': 'amd64',
+        'Description': 'Infinit distributed filesystem.',
+        'Section': 'utils',
+        'Priority': 'optional',
+      },
+      debian_nodes,
+      'debian').package
 
   if not windows and enable_crash_reporting:
     rule_debian_debug = drake.Rule('debian-debug')
-    debian_debug_nodes = chain(
-      installed_symbols,
-      drake.copy(drake.nodes('debian-packaging/debug/control'),
-                 '%s/DEBIAN' % debian_debug_dir,
-                 strip_prefix = True),
-    )
+    name = 'infinit-debug-symbols-%s-%s_0_amd64.deb' % (platform, git.description())
     debian_debug_package = crash_reporting.SymbolsPackager(
-      'infinit-debug-symbols-%s-%s_0_amd64.deb' % (platform, git.description()),
-      debian_debug_nodes, debian_debug_dir).package
+      name,
+      {
+        'Package': 'infinit-debug-symbols-%s-%s' % \
+          (platform, git.description()),
+        'Maintainer': 'Quentin Hocquet <mefyl@infinit.io>',
+        'Version': '0',
+        'Homepage': 'https://www.infinit.sh',
+        'Architecture': 'amd64',
+        'Description':
+          'Infinit distributed filesystem debug symbols.',
+        'Section': 'utils',
+        'Priority': 'optional',
+      },
+      installed_symbols,
+      debian_debug_dir).package
     rule_debian << debian_debug_package
     rule_debian_debug << debian_debug_package
 

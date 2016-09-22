@@ -12,11 +12,10 @@ from copy import deepcopy
 user = User()
 user2 = User()
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_invalid_routes(self):
+  def test_invalid_routes(self):
+    with Beyond() as beyond:
       def not_found(route):
         throws(lambda: beyond.put(route, json = user),
                404,
@@ -31,7 +30,8 @@ with Beyond() as beyond:
       # User name (unknown) doesn't match user['name'].
       conflict('users/unknown')
 
-    def test_missing_field(self):
+  def test_missing_field(self):
+    with Beyond() as beyond:
       def missing_field(fields):
         r = throws(lambda: beyond.put('users/%s' % user['name'], json =
                                       {
@@ -45,7 +45,8 @@ with Beyond() as beyond:
       missing_field(['name', 'email'])
       missing_field(['email', 'public_key'])
 
-    def test_invalid_field(self):
+  def test_invalid_field(self):
+    with Beyond() as beyond:
       def invalid_field(fields):
         u = deepcopy(user)
         u.update(fields)
@@ -59,7 +60,8 @@ with Beyond() as beyond:
       invalid_field({'email': '@raton.fr'})
       invalid_field({'email': 'castor@raton.'})
 
-    def test_duplicates(self):
+  def test_duplicates(self):
+    with Beyond() as beyond:
       def copy(update):
         u = deepcopy(user)
         u.update(update)
@@ -82,5 +84,5 @@ with Beyond() as beyond:
       # duplicate(u, should_fail = False)
       # res = beyond.get('users/%s' % u['name']).json()
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

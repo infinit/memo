@@ -34,6 +34,7 @@ namespace infinit
                        local_utp_server);
         ELLE_ATTRIBUTE_R(reactor::network::UTPServer&, utp_server);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, rdv_connect_thread);
+
       /*-----.
       | Peer |
       `-----*/
@@ -43,7 +44,7 @@ namespace infinit
                   boost::optional<EndpointsRefetcher> refetcher);
         typedef
           std::unordered_map<Address, overlay::Overlay::WeakMember> PeerCache;
-        ELLE_ATTRIBUTE(PeerCache, peer_cache);
+        ELLE_ATTRIBUTE_R(PeerCache, peer_cache);
       };
     }
   }

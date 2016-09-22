@@ -143,7 +143,16 @@ class Beyond:
         kwargs['headers'] = {'Content-Type': 'application/json'}
       kwargs.setdefault('headers', {}).update(extra_headers)
       if auth:
-        der = base64.b64decode(auth['rsa'].encode('utf-8'))
+        # Ugly but make the api simpler.
+        if 'private_key' in auth:
+          private_key = auth['private_key']
+        else:
+          private_key = auth.private_key
+        if 'name' in auth:
+          user = auth['name']
+        else:
+          user = auth.name
+        der = base64.b64decode(private_key['rsa'].encode('utf-8'))
         k = RSA.importKey(der)
         data = kwargs['data']
         if not isinstance(data, bytes):
@@ -158,6 +167,7 @@ class Beyond:
         kwargs['headers']['infinit-signature'] = sig
         if timestamp is not False:
           kwargs['headers']['infinit-time'] = t
+        kwargs['headers']['infinit-user'] = user
     response = requests.request(url = '%s/%s' % (self.host, url),
                                 allow_redirects = False,
                                 **kwargs)
@@ -219,7 +229,7 @@ def throws(function, expected = None, json = True, error = None):
 def assertEq(*args):
   import operator
   if not all(map(lambda x: operator.eq(x, args[0]), args[1:])):
-    raise AssertionError('all elements of %s are not equal' % ", ".join(map(str, args)))
+    raise AssertionError('all elements of [%s] are not equal' % ", ".join(map(str, args)))
 
 def assertIn(o, container):
   if o not in container:
@@ -278,6 +288,13 @@ class User(dict):
       user['private_key'] = self.__private_key
       user['password_hash'] = self.__password_hash
     return hub.put('users/%s' % self['name'], json = user)
+
+def users(count, beyond):
+  for i in range(count):
+    u = User()
+    if beyond:
+      u.put(beyond)
+    yield u
 
 class Network(dict):
   kelips = {
@@ -343,13 +360,15 @@ class Network(dict):
     if kwargs.get('auth') is not None:
       auth = kwargs.pop('auth')
     else:
-      auth = owner.private_key
+      auth = owner
     return hub.put(
       'networks/%s' % self['name'], json = self, auth = auth, **kwargs)
 
 class Passport(dict):
 
-  def __init__(self, network, invitee, signature = 'signature'):
+  def __init__(self, network, invitee,
+               signature = 'signature',
+               delegate = False):
     self.__network = network
     self['network'] = self.__network['name']
     self.__invitee = invitee
@@ -357,6 +376,7 @@ class Passport(dict):
     self['signature'] = signature
     self['allow_write'] = True
     self['allow_storage'] = True
+    self['allow_sign'] = delegate
 
   @property
   def network(self):
@@ -369,10 +389,19 @@ class Passport(dict):
   def put(self, hub, owner = None):
     if owner is None:
       owner = self.network.owner
+    if owner != self.network.owner:
+      self['certifier'] = owner['public_key']
     return hub.put('networks/%s/passports/%s' % (self.network['name'],
                                                  self.invitee['name']),
                    json = self,
-                   auth = owner.private_key)
+                   auth = owner)
+
+  def delete(self, hub, owner = None):
+    if owner is None:
+      owner = self.network.owner
+    return hub.delete('networks/%s/passports/%s' % (self.network['name'],
+                                                    self.invitee['name']),
+                      auth = owner)
 
 class Statistics(dict):
 
@@ -389,7 +418,7 @@ class Statistics(dict):
     return hub.put('networks/%s/stat/%s/%s' % (
       self.__network['name'], user['name'], self.__node_id),
                    json = self,
-                   auth = user.private_key)
+                   auth = user)
 
 class Volume(dict):
 
@@ -400,6 +429,8 @@ class Volume(dict):
     self.__owner = owner or self.network.owner
     self['name'] = self.__owner['name'] + '/' + name
     self['network'] = self.__network['name']
+    if owner is not None:
+      self['owner'] = self.__owner['public_key']
 
   @property
   def network(self):
@@ -409,7 +440,7 @@ class Volume(dict):
     if owner is None:
       owner = self.__owner
     return hub.put('volumes/%s' % self['name'], json = self,
-                   auth = owner.private_key)
+                   auth = owner)
 
 class Drive(dict):
 
@@ -448,7 +479,7 @@ class Drive(dict):
     if owner is None:
       owner = self.__owner
     return hub.put('drives/%s' % self['name'], json = self,
-                   auth = owner.private_key)
+                   auth = owner)
 
   def invite(self, hub, invitee, **kwargs):
     '''Invite one user to the drive.
@@ -462,7 +493,7 @@ class Drive(dict):
     owner = self.volume.network.owner
     return hub.put('drives/%s/invitations/%s' % (self['name'], invitee),
                    json = invitation,
-                   auth = owner.private_key)
+                   auth = owner)
 
   def invite_many(self, hub, invitees, **kwargs):
     json = {}
@@ -475,7 +506,7 @@ class Drive(dict):
     owner = self.volume.network.owner
     return hub.put('drives/%s/invitations' % self['name'],
                    json = json,
-                   auth = owner.private_key)
+                   auth = owner)
 
 
   def accept(self, hub, invitee, **kwargs):
@@ -485,7 +516,7 @@ class Drive(dict):
     owner = self.volume.network.owner
     return hub.put('drives/%s/invitations/%s' % (self['name'], invitee['name']),
                    json = invitation,
-                   auth = invitee.private_key)
+                   auth = invitee)
 
   def accept_many(self, hub, invitees, **kwargs):
     for invitee in invitees:

@@ -118,7 +118,7 @@ def configure(
   variables.update(secrets)
   with drake.templating.Context(content = variables):
     drake.node('bin/beyond.tmpl')
-    drake.node('etc/uwsgi/apps-available/beyond.xml.tmpl')
+    drake.node('etc/uwsgi/beyond.xml.tmpl')
     drake.node('src/wsgi.py.tmpl')
     drake.node('src/validation.py.tmpl')
 
@@ -173,13 +173,11 @@ def configure(
       'rsa-3.3.dist-info',
       'six-1.10.0.dist-info',
     ])
-  print(python_prefix())
   crypto = drake.PythonModule(
     'pycrypto',
     python_prefix(),
     dependencies = [],
     module_name = 'Crypto')
-  print(crypto.targets())
   PIL = drake.PythonModule(
     'PILLOW', python_prefix(),
     module_name = 'PIL',
@@ -210,9 +208,13 @@ def configure(
   build = drake.Rule('build')
   build << binaries
   built = list(install_nodes(where = '.', how = copy_python))
-  package = drake.python.Package('beyond', python_prefix(), built,
-                                 fullname = 'infinit.beyond')
+  mods = list(
+    chain(*(p.targets() for p in [oauth2client, crypto, PIL])))
+  package = drake.python.Package(
+    'beyond', python_prefix(), built + mods,
+    fullname = 'infinit.beyond')
   build << built
+  build << mods
 
   install = drake.Rule('install')
   install << install_nodes(
@@ -237,29 +239,31 @@ def configure(
   debian_nodes = install_nodes('debian/opt/infinit/beyond',
                                how = drake.copy)
   git = drake.git.Git()
-  with drake.templating.Context(content = {
-      'dependencies': ubuntu_dependencies,
-      'version': git.description(),
-      'version_major': git.version().split('.')[0],
-      'version_minor': git.version().split('.')[1],
-      'python_version_major': python.version.major,
-      'python_version_minor': python.version.minor,
-  }):
-    drake.node('control.tmpl')
+  version = git.version()
   debian_nodes = chain(
     debian_nodes,
-    drake.copy(drake.nodes('control'), 'debian/DEBIAN'),
     drake.copy(
-      drake.nodes('etc/nginx/sites-available/beyond',
-                  'etc/rsyslog.d/10-infinit.conf',
-                  'etc/uwsgi/apps-available/beyond.xml',
-                  'usr/share/ca-certificates/extra/infinit.crt'),
+      drake.nodes('etc/rsyslog.d/10-infinit.conf'),
       'debian',
+    ),
+    drake.copy(
+      drake.nodes('etc/uwsgi/beyond.xml'),
+      'debian/opt/infinit/beyond',
     ),
   )
   debian = drake.Rule('debian')
   debian << drake.debian.Packager(
     'infinit-beyond_%s_amd64.deb' % git.description(),
+    {
+      'Package': 'infinit-beyond',
+      'Maintainer': 'Quentin Hocquet <debian@infinit.io>',
+      'Version': version,
+      'Homepage': 'http://www.infinit.sh',
+      'Architecture': 'amd64',
+      'Depends': ', '.join(
+        ubuntu_dependencies + ['infinit (= %s)' % version]),
+      'Description': 'Infinit beyond server.',
+    },
     debian_nodes, 'debian').package
   if backend.get('debian'):
     debian << backend.get('debian')

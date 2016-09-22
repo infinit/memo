@@ -231,7 +231,7 @@ def parse_options():
   parser.add_argument('--watch', action='store_true', help = 'enter network watch mode')
   parser.add_argument('--run',   action='store_true', help = 'run a network')
   parser.add_argument('--login', type=str, help = 'user:password to login as', default='docker:docker')
-  parser.add_argument('--beyond', type=str, help = 'beyond URL', default='https://beyond.infinit.io')
+  parser.add_argument('--beyond', type=str, help = 'beyond URL', default='https://beyond.infinit.sh')
   parser.add_argument('--image', type=str, help = 'infinit docker image to use')
   parser.add_argument('--network', type=str, help = 'network to connect to (run mode)', default='docker')
   parser.add_argument('--mount', action='store_true', help = 'mount a volume')

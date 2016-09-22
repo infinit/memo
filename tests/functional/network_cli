@@ -366,7 +366,7 @@ with Beyond() as beyond, \
   assertEq(len(os.listdir('%s/cache/bob/bob/n' % bob.state_path)), 2)
   bob.run(['infinit-user', '--fetch', 'alice'])
   bob.run(['infinit-passport', '--create', '--as', 'bob',
-           '-u', 'alice', '-n', 'n', '-p'])
+           '-u', 'alice', '-N', 'n', '-p'])
   assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'bob'])), 1)
   alice.run(['infinit-network', '--create', '--as', 'alice', 'n', '-p'])
   alice.run(['infinit-network', '--run', '--name', 'n', '--as', 'alice',
@@ -374,7 +374,7 @@ with Beyond() as beyond, \
   assertEq(len(os.listdir('%s/cache/alice/alice/n' % alice.state_path)), 2)
   alice.run(['infinit-user', '--fetch', 'bob'])
   alice.run(['infinit-passport', '--create', '--as', 'alice',
-           '-u', 'bob', '-n', 'n', '-p'])
+           '-u', 'bob', '-N', 'n', '-p'])
   bob.run(['infinit-passport', '--fetch', '--as', 'bob'])
   assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'bob'])), 2)
   bob.run(['infinit-volume', '--create', '--as', 'bob', 'v', '-N', 'n', '-p'])
@@ -392,7 +392,7 @@ with Beyond() as beyond, \
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)
   assertEq(len(os.listdir('%s/cache/bob' % bob.state_path)), 0)
   bob.run(['infinit-network', '--fetch', '--as', 'bob', 'n'], return_code = 1)
-  alice.run(['infinit-passport', '--fetch', '--as', 'alice', '-n' 'bob/n'],
+  alice.run(['infinit-passport', '--fetch', '--as', 'alice', '-N' 'bob/n'],
             return_code = 1)
   bob.run(['infinit-volume', '--fetch', '--as', 'bob', 'v'], return_code = 1)
   bob.run(['infinit-drive', '--fetch', '--as', 'bob', 'd'], return_code = 1)
@@ -435,7 +435,7 @@ with Beyond() as beyond, Infinit(beyond = beyond, user = 'bob') as bob, \
            '--name', 'v', '--network', 'n', '--push'])
   def _create_passport(user):
     bob.run(['infinit-passport', '--create', '--as', 'bob',
-             '-n', 'n', '-u', user.user, '--push'])
+             '-N', 'n', '-u', user.user, '--push'])
   _create_passport(alice)
   _create_passport(charlie)
   _create_passport(dave)
@@ -452,9 +452,7 @@ with Beyond() as beyond, Infinit(beyond = beyond, user = 'bob') as bob, \
   def peer():
     while not os.path.exists(peer_file):
       time.sleep(0.1)
-    with open(peer_file, 'r') as f:
-      x = f.readline().split("\n")[0]
-      return x
+    return peer_file
   res = bob.run_script(user = 'bob', volume = 'bob/v',
                        operation = 'write_file',
                        path = '/some_file', content = 'some data')

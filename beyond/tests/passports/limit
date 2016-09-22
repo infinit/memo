@@ -10,11 +10,11 @@ from utils import *
 from copy import deepcopy
 
 limit = 5
-with Beyond(limits = {'networks': {'passports': 5}}) as beyond:
 
-  class Test(unittest.TestCase):
+class Test(unittest.TestCase):
 
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond(limits = {'networks': {'passports': 5}}) as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'infinit', owner = user)
@@ -27,7 +27,7 @@ with Beyond(limits = {'networks': {'passports': 5}}) as beyond:
         passport.put(beyond)
         beyond.get('networks/%s/passports/%s' % (
           network['name'], invitee['name']),
-                   auth = invitee.private_key)
+                   auth = invitee)
         return invitee
 
       for _ in range(limit):
@@ -37,11 +37,11 @@ with Beyond(limits = {'networks': {'passports': 5}}) as beyond:
       # Pull a passport.
       beyond.delete('networks/%s/passports/%s' % (
         network['name'], last_invitee['name']),
-                  auth = user.private_key)
+                  auth = user)
       # Check adding the (limit)th works.
       put_passport()
       # Check ading the (limit + 1 )th fails.
       throws(lambda: put_passport(), 402)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

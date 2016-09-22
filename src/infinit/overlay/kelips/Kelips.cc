@@ -231,6 +231,7 @@ namespace infinit
       }
       namespace packet
       {
+        static bool disable_compression = elle::os::inenv("KELIPS_DISABLE_COMPRESSION");
         struct CompressPeerLocations{};
 
         template<typename T>
@@ -242,7 +243,7 @@ namespace infinit
           elle::IOStream stream(buf.ostreambuf());
           Serializer::SerializerOut output(stream, false);
           output.set_context(&dn);
-          if (dn.version() >= elle::Version(0, 7, 0))
+          if (dn.version() >= elle::Version(0, 7, 0) && !disable_compression)
             output.set_context(CompressPeerLocations{});
           auto ptr = &(packet::Packet&)packet;
           output.serialize_forward(ptr);
@@ -292,7 +293,7 @@ namespace infinit
               infinit::cryptography::Oneway::sha256);
             elle::IOStream stream(plain.istreambuf());
             Serializer::SerializerIn input(stream, false);
-            if (dn.version() >= elle::Version(0, 7, 0))
+            if (dn.version() >= elle::Version(0, 7, 0) && !disable_compression)
               input.set_context(CompressPeerLocations{});
             input.set_context(&dn);
             std::unique_ptr<packet::Packet> packet;
@@ -1040,7 +1041,7 @@ namespace infinit
               std::bind(&Node::_refetch_endpoints, this, location.id())),
             this->_config.rpc_protocol);
           peer.connect(5_sec);
-          if (this->doughnut()->version() < elle::Version(0, 7, 0))
+          if (this->doughnut()->version() < elle::Version(0, 7, 0) || packet::disable_compression)
           {
             auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
             return rpc();
@@ -1389,7 +1390,7 @@ namespace infinit
         elle::IOStream stream(buf.istreambuf());
         Serializer::SerializerIn input(stream, false);
         input.set_context(this->doughnut());
-        if (this->doughnut()->version() >= elle::Version(0, 7, 0))
+        if (this->doughnut()->version() >= elle::Version(0, 7, 0) && !packet::disable_compression)
           input.set_context(packet::CompressPeerLocations{});
         try
         {
@@ -2494,6 +2495,12 @@ namespace infinit
         }
         ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id,
                    p->results);
+        static elle::Bench stime = elle::Bench("kelips.GETM_RTT", boost::posix_time::seconds(5));
+        stime.add(std::chrono::duration_cast<std::chrono::microseconds>(
+          (now() - it->second->startTime)).count());
+        static elle::Bench shops = elle::Bench("kelips.GETM_HOPS", boost::posix_time::seconds(5));
+        shops.add(p->ttl);
+
         it->second->multi_result = p->results;
         it->second->barrier.open();
         _pending_requests.erase(it);
@@ -2786,9 +2793,7 @@ namespace infinit
             if (it_us != its.second && (n == 1 || local_override || fast_mode))
             {
               ELLE_DEBUG("get satifsfied locally");
-              yield(NodeLocation(Address::null,
-                {Endpoint(boost::asio::ip::address::from_string("127.0.0.1"),
-                            this->_port)}));
+              yield(NodeLocation(this->id(), {}));
               return;
             }
             // add result for our own file table
@@ -2918,9 +2923,7 @@ namespace infinit
             {
               ELLE_TRACE("no peer, store locally");
               this->_promised_files.push_back(p.fileAddress);
-              results.push_back(NodeLocation(Address::null, {Endpoint(
-                boost::asio::ip::address::from_string("127.0.0.1"),
-              this->_port)}));
+              results.emplace_back(this->id(), model::Endpoints());
               return results;
             }
             else
@@ -3153,8 +3156,10 @@ namespace infinit
             {
               ELLE_LOG("%s: erase %s from %s", *this, it->second, idx);
               auto addr = it->second.address;
+              bool discovered = it->second.discovered;
               it = contacts.erase(it);
-              this->on_disappear()(addr, false);
+              if (discovered)
+                this->on_disappear()(addr, false);
             }
             else
               ++it;
@@ -3357,7 +3362,7 @@ namespace infinit
             if (g == this->_group ||
                 signed(target.size()) < this->_config.max_other_contacts)
             {
-              Contact contact{{}, {}, c.first, Duration(0), Time(), 0};
+              Contact contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
               for (auto const& ep: c.second)
                 contact.endpoints.push_back(TimedEndpoint(ep, now()));
               ELLE_LOG("%s: register %f", this, contact);
@@ -3369,6 +3374,11 @@ namespace infinit
           {
             for (auto const& ep: c.second)
               endpoints_update(it->second.endpoints, ep);
+            if (!it->second.discovered)
+            {
+              it->second.discovered = true;
+              this->on_discover()(it->first, false);
+            }
           }
         }
         for (auto const& f: s.second)
@@ -3412,12 +3422,16 @@ namespace infinit
         }
         auto peers = endpoints_extract(it->second.endpoints);
         // this yields, thus invalidating the iterator
-        ELLE_DEBUG("contacting %s on %s", id, peers);
+        ELLE_TRACE("contacting %s on %s", id, peers);
         auto& rsock = this->doughnut()->dock().utp_server().socket();
         auto res = rsock->contact(id, Endpoints(peers).udp());
+        ELLE_TRACE("contact %s yielded %s", id, res);
         it = contacts->find(address);
         if (it == contacts->end())
+        {
+          ELLE_TRACE("contact to removed entry %s, dropping", id)
           return;
+        }
         if (!it->second.validated_endpoint)
         {
           it->second.validated_endpoint = TimedEndpoint(res, now());
@@ -3436,8 +3450,9 @@ namespace infinit
           {
             rsock->send_to(reactor::network::Buffer(b.contents(), b.size()), res);
           }
-          catch (reactor::network::Exception const&)
+          catch (reactor::network::Exception const& e)
           { // FIXME: do something
+            ELLE_TRACE("network exception sending to %s: %s", res, e);
           }
         }
       }
@@ -3473,11 +3488,12 @@ namespace infinit
         }
         if (!make)
           return nullptr;
-        Contact c {{},  {}, address, Duration(), Time(), 0};
+        Contact c {{},  {}, address, Duration(), Time(), 0, {}, {}, observer};
         for (auto const& ep: endpoints)
           c.endpoints.push_back(TimedEndpoint(ep, now()));
         auto inserted = target->insert(std::make_pair(address, std::move(c)));
-        if (inserted.second)
+        // for non-observers, only notify discovery after bootstrap completes
+        if (inserted.second && observer)
           this->on_discover()(address, observer);
         return &inserted.first->second;
       }
@@ -3583,6 +3599,7 @@ namespace infinit
                   {"endpoints", elle::sprintf("%s", contact.second.endpoints.size())},
                   {"last_seen",
                   elle::sprintf("%ss", last_seen.count())},
+                  {"discovered", contact.second.discovered},
               });
             }
             res[elle::sprintf("%s", i)] = elle::json::Object{
