@@ -2,6 +2,7 @@
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/overlay/kouncil/Kouncil.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 
 #include "DHT.hh"
@@ -73,6 +74,11 @@ ELLE_TEST_SUITE()
       return elle::make_unique<kelips::Node>(
         kelips::Configuration(), local, &dht);
     };
+  auto const kouncil_builder =
+    [] (Doughnut& dht, std::shared_ptr<Local> local)
+    {
+      return elle::make_unique<kouncil::Kouncil>(&dht, local);
+    };
 #define OVERLAY(Name)                                                   \
   auto Name = BOOST_TEST_SUITE(#Name);                                  \
   master.add(Name);                                                     \
@@ -83,5 +89,6 @@ ELLE_TEST_SUITE()
     Name->add(BOOST_TEST_CASE(basics_anonymous), 0, valgrind(5));       \
   }
   OVERLAY(kelips);
+  OVERLAY(kouncil);
 #undef OVERLAY
 }

@@ -12,7 +12,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
-#include <infinit/overlay/kademlia/kademlia.hh>
+#include <infinit/overlay/kouncil/Configuration.hh>
 #include <infinit/storage/Storage.hh>
 #include <infinit/storage/Strip.hh>
 
@@ -61,12 +61,17 @@ COMMAND(create)
   int overlays =
     + (args.count("kalimero") ? 1 : 0)
     + (args.count("kelips") ? 1 : 0)
+    + (args.count("kouncil") ? 1 : 0)
   ;
   if (overlays > 1)
     throw CommandLineError("Only one overlay type must be specified");
   if (args.count("kalimero"))
   {
     overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
+  }
+  if (args.count("kouncil"))
+  {
+    overlay_config.reset(new infinit::overlay::kouncil::Configuration());
   }
   else // default to Kelips
   {
@@ -838,6 +843,7 @@ main(int argc, char** argv)
   overlay_types_options.add_options()
     ("kelips", "use a Kelips overlay network (default)")
     ("kalimero", "use a Kalimero overlay network.\nUsed for local testing")
+    ("kouncil", "use a Kouncil overlay network")
     ;
   Mode::OptionsDescription consensus_types_options("Consensus types");
   consensus_types_options.add_options()
