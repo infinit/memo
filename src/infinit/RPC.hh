@@ -241,15 +241,15 @@ namespace infinit
         elle::make_unique<ConcreteRPCHandler<R, Args...>>(name, f);
     }
 
+    template <typename F, typename ... Args>
+    static
     void
-    serve(std::iostream& s)
+    umbrella(F const& f, Args&& ... args)
     {
       ELLE_LOG_COMPONENT("infinit.RPC");
       try
       {
-        protocol::Serializer serializer(
-          s, elle_serialization_version(this->_version), false);
-        _serve(serializer);
+        f(std::forward<Args>(args)...);
       }
       catch (infinit::protocol::Serializer::EOF const&)
       {}
@@ -262,10 +262,40 @@ namespace infinit
     }
 
     void
+    serve(std::iostream& s)
+    {
+      umbrella(
+        [&]
+        {
+          protocol::Serializer serializer(
+            s, elle_serialization_version(this->_version), false);
+          this->_serve(serializer);
+        });
+    }
+
+    void
+    serve(protocol::Serializer& serializer)
+    {
+      umbrella([&] { this->_serve(serializer); });
+    }
+
+    void
     _serve(protocol::Serializer& serializer)
     {
-      ELLE_LOG_COMPONENT("infinit.RPC");
       protocol::ChanneledStream channels(serializer);
+      this->_serve(channels);
+    }
+
+    void
+    serve(protocol::ChanneledStream& channels)
+    {
+      umbrella([&] { this->_serve(channels); });
+    }
+
+    void
+    _serve(protocol::ChanneledStream& channels)
+    {
+      ELLE_LOG_COMPONENT("infinit.RPC");
       while (true)
       {
 	auto channel = channels.accept();
