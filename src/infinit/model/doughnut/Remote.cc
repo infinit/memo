@@ -92,7 +92,7 @@ namespace infinit
           this->_thread->terminate_now();
         this->_thread.reset(
           new reactor::Thread(
-            elle::sprintf("%s connection", this),
+            elle::sprintf("%f worker", this),
             [this]
             {
               this->_connected.close();
@@ -106,7 +106,7 @@ namespace infinit
                     elle::make_unique<protocol::ChanneledStream>(*serializer);
                   if (!disable_key)
                     this->_key_exchange(*channels);
-                  ELLE_TRACE("connected");
+                  ELLE_TRACE("%s: connected", this);
                   this->_socket = std::move(socket);
                   this->_serializer = std::move(serializer);
                   this->_channels = std::move(channels);
@@ -136,7 +136,8 @@ namespace infinit
                     this->_protocol == Protocol::all)
                   for (auto const& e: this->_endpoints)
                     scope.run_background(
-                      elle::sprintf("%s: connect to tcp://%s", this, e),
+                      elle::sprintf("%s: connect to tcp://%s",
+                                    reactor::scheduler().current()->name(), e),
                       umbrella(
                         [&]
                         {
