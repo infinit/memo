@@ -934,6 +934,7 @@ def configure(
     ('faith', []),
     ('filesystem', binaries),
     ('kelips', []),
+    ('overlay', []),
     ('rpc', []),
     ('storage', [aws_lib]),
   ]
