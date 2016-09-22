@@ -104,6 +104,12 @@ namespace infinit
       Local::cleanup()
       {}
 
+      elle::Version const&
+      Local::version() const
+      {
+        return this->_doughnut.version();
+      }
+
       /*-------.
       | Blocks |
       `-------*/
@@ -459,24 +465,31 @@ namespace infinit
         {
           while (true)
           {
-            auto socket = elle::utility::move_on_copy(accept());
-            auto name = elle::sprintf("%s: %s server", *this, **socket);
+            auto socket = std::shared_ptr<std::iostream>(accept().release());
+            auto name = elle::sprintf("%s: %s server", this, socket);
             scope.run_background(
               name,
-              [this, socket]
+              [this, socket = std::move(socket)]
               {
-                ELLE_TRACE_SCOPE("%s: serve %s", this, **socket);
                 try
                 {
-                  RPCServer rpcs(this->_doughnut.version());
-                  this->_register_rpcs(rpcs);
-                  this->_on_connect(rpcs);
-                  rpcs.set_context<Doughnut*>(&this->_doughnut);
-                  rpcs.serve(**socket);
+                  this->_peers.emplace_front(
+                    std::make_shared<Connection>(*this, std::move(socket)));
+                  auto it = this->_peers.begin();
+                  elle::SafeFinally f([&] { this->_peers.erase(it); });
+                  (*it)->_run();
+                }
+                catch (infinit::protocol::Serializer::EOF const&)
+                {}
+                catch (reactor::network::ConnectionClosed const& e)
+                {}
+                catch (reactor::network::SocketClosed const& e)
+                {
+                  ELLE_TRACE("unexpected SocketClosed: %s", e.backtrace());
                 }
                 catch (elle::Error const& e)
                 {
-                  ELLE_WARN("drop client %s: %s", **socket, e);
+                  ELLE_WARN("drop client %s: %s", socket, e);
                 }
               });
           }
@@ -493,6 +506,31 @@ namespace infinit
       Local::_serve_utp()
       {
         this->_serve([this] { return this->_utp_server->accept(); });
+      }
+
+      /*-----------.
+      | Connection |
+      `-----------*/
+
+      Local::Connection::Connection(Local& local,
+                                    std::shared_ptr<std::iostream> stream)
+        : _local(local)
+        , _stream(std::move(stream))
+        , _serializer(*this->_stream,
+                      elle_serialization_version(local.doughnut().version()),
+                      false)
+        , _channels(this->_serializer)
+        , _rpcs(this->_local.doughnut().version())
+      {
+        this->_local._register_rpcs(this->_rpcs);
+        this->_local._on_connect(this->_rpcs);
+        this->_rpcs.set_context<Doughnut*>(&this->_local.doughnut());
+      }
+
+      void
+      Local::Connection::_run()
+      {
+        this->_rpcs.serve(this->_channels);
       }
     }
   }

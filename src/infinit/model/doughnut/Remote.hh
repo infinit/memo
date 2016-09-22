@@ -65,6 +65,7 @@ namespace infinit
         ELLE_ATTRIBUTE(std::unique_ptr<protocol::Serializer>, serializer);
         ELLE_ATTRIBUTE_R(std::unique_ptr<protocol::ChanneledStream>,
                          channels, protected);
+        ELLE_ATTRIBUTE_RX(RPCServer, rpc_server);
 
       /*-----------.
       | Connection |
