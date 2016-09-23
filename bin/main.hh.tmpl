@@ -3,7 +3,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/program_options.hpp>
-#include <boost/regex.hpp>
 
 #include <elle/log/CompositeLogger.hh>
 #include <elle/log/TextLogger.hh>
@@ -55,51 +54,6 @@
 #include "version.hh"
 
 extern std::string program;
-
-class QName
-  : public std::string
-{
-public:
-  QName()
-    : QName("/")
-  {}
-
-  QName(std::string qname)
-    : std::string(std::move(qname))
-  {
-    if (this->find("/") == std::string::npos)
-      ELLE_ABORT("invalid qualified name: %s", *this);
-  }
-
-  QName(std::string const& qualifier, std::string const& name)
-    : std::string(elle::sprintf("%s/%s", qualifier, name))
-  {}
-
-  std::string
-  unqualified(std::string const& qualifier) const
-  {
-    if (this->qualifier() == qualifier)
-      return this->name();
-    else
-      return *this;
-  }
-
-  std::string
-  qualifier() const
-  {
-    auto pos = this->find("/");
-    ELLE_ASSERT_NEQ(pos, std::string::npos);
-    return this->substr(0, pos);
-  }
-
-  std::string
-  name() const
-  {
-    auto pos = this->find("/");
-    ELLE_ASSERT_NEQ(pos, std::string::npos);
-    return this->substr(pos + 1);
-  }
-};
 
 #define COMMAND(name)                                           \
   static                                                        \
@@ -915,24 +869,6 @@ namespace infinit
   typedef infinit::OAuthCredentials OAuthCredentials;
 
   typedef infinit::model::doughnut::Passport Passport;
-
-  inline
-  void
-  check_name(std::string const& name, bool no_slash = false)
-  {
-    std::string test_name;
-    auto slash_pos = name.find_first_of("/");
-    if (no_slash && slash_pos != std::string::npos)
-      throw CommandLineError(elle::sprintf(invalid_name, name));
-    if (slash_pos == std::string::npos)
-      test_name = name;
-    else
-      test_name = name.substr(slash_pos + 1);
-    static const boost::regex allowed("${name_regex}");
-    boost::smatch str_matches;
-    if (!boost::regex_match(test_name, str_matches, allowed))
-      throw CommandLineError(elle::sprintf(invalid_name, test_name));
-  }
 
   inline
   void
