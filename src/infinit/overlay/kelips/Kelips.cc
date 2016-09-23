@@ -3519,6 +3519,11 @@ namespace infinit
         // for non-observers, only notify discovery after bootstrap completes
         if (inserted.second && observer)
           this->on_discover()(address, observer);
+        if (!inserted.second)
+        { // we still want the new endpoints
+          for (auto const& ep: endpoints)
+            endpoints_update(inserted.first->second.endpoints, ep);
+        }
         return &inserted.first->second;
       }
 
