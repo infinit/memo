@@ -450,6 +450,7 @@ class User:
       ('public_key', None),
     ],
     'optional': [
+      ('description', None),
       ('dropbox_accounts', None),
       ('fullname', None),
       ('google_accounts', None),
@@ -478,6 +479,7 @@ class User:
                gcs_accounts = None,
                emails = {},
                ldap_dn = None,
+               description = None,
   ):
     self.__beyond = beyond
     self.__id = id
@@ -499,6 +501,7 @@ class User:
         self.__emails[self.__email] = True
     self.__emails_original = deepcopy(self.emails)
     self.__ldap_dn = ldap_dn
+    self.__description = description
 
   @classmethod
   def from_json(self, beyond, json, check_integrity = False):
@@ -524,7 +527,8 @@ class User:
       google_accounts = json.get('google_accounts', []),
       gcs_accounts = json.get('gcs_accounts', []),
       emails = json.get('emails', {}),
-      ldap_dn = json.get('ldap_dn', None)
+      ldap_dn = json.get('ldap_dn', None),
+      description = json.get('description', None),
     )
 
   def json(self,
@@ -533,6 +537,7 @@ class User:
     res = {
       'name': self.name,
       'public_key': self.public_key,
+      'description': self.description,
     }
     if private:
       # Turn confirmations code into 'False'.
@@ -686,6 +691,10 @@ class User:
   @property
   def ldap_dn(self):
     return self.__ldap_dn
+
+  @property
+  def description(self):
+    return self.__description
 
   def __eq__(self, other):
     if self.name != other.name or self.public_key != other.public_key:
