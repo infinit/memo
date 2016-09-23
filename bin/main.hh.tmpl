@@ -605,7 +605,10 @@ static
 Mode::OptionDescription option_disable_mac_utf8(
   "disable-utf-8-conversion", boost::program_options::bool_switch(),
   "disable FUSE conversion of UTF-8 to native format");
-
+static
+Mode::OptionDescription option_poll_beyond(
+  "poll-hub", boost::program_options::value<int>()->default_value(-1)->implicit_value(300),
+  "Poll the Hub every N (default 300) seconds");
 
 class CommandLineSerializer
   : public elle::serialization::SerializerIn
@@ -1326,6 +1329,7 @@ namespace infinit
     boost::optional<uint64_t> cache_disk_size;
     boost::optional<std::string> mountpoint;
     boost::optional<std::vector<std::string>> peers;
+    boost::optional<int> poll_beyond;
     typedef infinit::serialization_tag serialization_tag;
   };
 
@@ -1370,6 +1374,7 @@ namespace infinit
     infinit::merge(cache_disk_size, b.cache_disk_size);
     infinit::merge(mountpoint, b.mountpoint);
     infinit::merge(peers, b.peers);
+    infinit::merge(poll_beyond, b.poll_beyond);
   }
 
   inline
@@ -1399,6 +1404,8 @@ namespace infinit
                    optional<int>(args, option_cache_ram_invalidation));
     infinit::merge(this->cache_disk_size,
                    optional<uint64_t>(args, option_cache_disk_size));
+    infinit::merge(this->poll_beyond,
+                   optional<int>(args, option_poll_beyond));
   }
 
   inline
@@ -1431,6 +1438,7 @@ namespace infinit
     if (cache_ram_ttl) {arguments.push_back("--cache-ram-ttl"); arguments.push_back(std::to_string(cache_ram_ttl.get()));}
     if (cache_ram_invalidation) {arguments.push_back("--cache-ram-invalidation"); arguments.push_back(std::to_string(cache_ram_invalidation.get()));}
     if (cache_disk_size) {arguments.push_back("--cache-disk-size"); arguments.push_back(std::to_string(cache_disk_size.get()));}
+    if (poll_beyond && *poll_beyond >0) {arguments.push_back("--poll-hub"); arguments.push_back(std::to_string(poll_beyond.get()));}
     if (mountpoint)
     {
       arguments.push_back("--mountpoint");
@@ -2744,7 +2752,8 @@ DAS_MODEL(
   ,cache_disk_size
   ,mountpoint
   ,as
-  ,peers), DasMountOptions);
+  ,peers
+  ,poll_beyond), DasMountOptions);
 DAS_MODEL_DEFAULT(infinit::MountOptions, DasMountOptions);
 DAS_MODEL_SERIALIZE(infinit::MountOptions);
 

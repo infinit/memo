@@ -404,11 +404,14 @@ COMMAND(run)
   }
   auto run = [&]
   {
+    reactor::Thread::unique_ptr poll_thread;
     if (mo.fetch && *mo.fetch)
     {
       infinit::overlay::NodeLocations eps;
       beyond_fetch_endpoints(network, eps);
       model->overlay()->discover(eps);
+      if (mo.poll_beyond && *mo.poll_beyond > 0)
+        poll_thread = make_poll_beyond_thread(*model, network, eps, *mo.poll_beyond);
     }
     reactor::Thread::unique_ptr stat_thread;
     if (push)
@@ -1133,6 +1136,7 @@ run_options(RunMode mode)
     option_endpoint_file,
     option_port_file,
     option_port,
+    option_poll_beyond,
     option_input("commands"),
   });
   if (mode == RunMode::update)
