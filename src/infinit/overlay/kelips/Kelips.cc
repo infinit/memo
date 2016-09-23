@@ -2761,13 +2761,14 @@ namespace infinit
       Node::kelipsGet(Address file, int n, bool local_override, int attempts,
                       bool query_node,
                       bool fast_mode,
-                      std::function <void(NodeLocation)> yield)
+                      std::function <void(NodeLocation)> yield,
+                      bool ignore_local_cache)
       {
         BENCH("kelipsGet");
         ELLE_TRACE_SCOPE("%s: get %s", *this, file);
         if (attempts == -1)
           attempts = _config.query_get_retries;
-        auto f = [this,file,n,local_override, attempts, yield, query_node, fast_mode]() {
+        auto f = [this,file,n,local_override, attempts, yield, query_node, fast_mode, ignore_local_cache]() {
           std::set<Address> result_set;
           packet::GetFileRequest r;
           r.sender = _self;
@@ -2782,7 +2783,7 @@ namespace infinit
           int fg = group_of(file);
           static elle::Bench bench_localresult("kelips.localresult", 10_sec);
           static elle::Bench bench_localbypass("kelips.localbypass", 10_sec);
-          if (!query_node && fg == _group)
+          if (!query_node && fg == _group && !ignore_local_cache)
           {
             // check if we have it locally
             auto its = _state.files.equal_range(file);
@@ -2807,7 +2808,7 @@ namespace infinit
               return;
             }
           }
-          if (query_node)
+          if (query_node && !ignore_local_cache)
           {
             auto& target = _state.contacts[fg];
             auto it = target.find(file);
@@ -2873,6 +2874,22 @@ namespace infinit
               }
               if (signed(result_set.size()) >= (fast_mode ? 1 : n))
                 break;
+            }
+          }
+          if (result_set.empty() && ignore_local_cache)
+          {
+            ELLE_DEBUG("%s: result set empty, using local cache", this);
+            if (query_node)
+            {
+              auto& target = _state.contacts[fg];
+              auto it = target.find(file);
+              if (it != target.end())
+              {
+                yield(
+                  NodeLocation(
+                    it->first,
+                    endpoints_extract(it->second.endpoints)));
+              }
             }
           }
         };
