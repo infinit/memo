@@ -3430,6 +3430,11 @@ reactor::Thread::unique_ptr
 make_stat_update_thread(infinit::User const& self,
                         infinit::Network& network,
                         infinit::model::doughnut::Doughnut& model);
+reactor::Thread::unique_ptr
+make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
+                        infinit::Network& network,
+                        infinit::overlay::NodeLocations const& locs,
+                        int interval);
 
 static std::string _hub_salt = "@a.Fl$4'x!";
 

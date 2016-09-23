@@ -24,6 +24,59 @@ make_stat_update_thread(infinit::User const& self,
   return reactor::every(60_min, "periodic storage stat updater", notify);
 }
 
+reactor::Thread::unique_ptr
+make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
+                        infinit::Network& network,
+                        infinit::overlay::NodeLocations const& locs_,
+                        int interval)
+{
+  auto poll = [&, locs_, interval]
+    {
+      infinit::overlay::NodeLocations locs = locs_;
+      while (true)
+      {
+        reactor::sleep(boost::posix_time::seconds(interval));
+        infinit::overlay::NodeLocations news;
+        try
+        {
+          beyond_fetch_endpoints(network, news, true);
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_WARN("exception fetching endpoints: %s", e);
+          continue;
+        }
+        std::unordered_set<infinit::model::Address> new_addresses;
+        for (auto const& n: news)
+        {
+          new_addresses.insert(n.id());
+          auto uid = n.id();
+          auto it = std::find_if(locs.begin(), locs.end(),
+            [&](infinit::model::NodeLocation const& nl) { return nl.id() == uid;});
+          if (it == locs.end())
+          {
+            ELLE_TRACE("calling discover() on new peer %s", n);
+            locs.emplace_back(n);
+            model.overlay()->discover({n});
+          }
+          else if (it->endpoints() != n.endpoints())
+          {
+            ELLE_TRACE("calling discover() on updated peer %s", n);
+            it->endpoints() = n.endpoints();
+            model.overlay()->discover({n});
+          }
+        }
+        auto it = std::remove_if(locs.begin(), locs.end(),
+          [&](infinit::model::NodeLocation const& nl)
+          {
+            return new_addresses.find(nl.id()) == new_addresses.end();
+          });
+        locs.erase(it, locs.end());
+      }
+    };
+  return reactor::Thread::unique_ptr(new reactor::Thread("beyond poller", poll));
+}
+
 // Return arguments for mode in the correct order.
 // Note: just using "collect_unrecognized" is insufficient as this changes
 // the order and does not handle the case where the binary has a mode and
