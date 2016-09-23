@@ -121,7 +121,7 @@ beyond(bool help = false)
   if (help && !elle::os::inenv("INFINIT_BEYOND"))
     return "the Hub";
 
-  auto static const res = elle::os::getenv("INFINIT_BEYOND", "${beyond_host}");
+  auto res = elle::os::getenv("INFINIT_BEYOND", "${beyond_host}");
   return res;
 }
 
