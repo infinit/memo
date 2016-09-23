@@ -361,7 +361,7 @@ public:
   exists(std::string const& name);
   std::string
   mountpoint(std::string const& name, bool ignore_subst=false);
-  std::vector<QName>
+  std::vector<infinit::descriptor::BaseDescriptor::Name>
   list();
   std::vector<MountInfo>
   status();
@@ -395,7 +395,7 @@ MountManager::~MountManager()
     this->stop(this->_mounts.begin()->first);
 }
 
-std::vector<QName>
+std::vector<infinit::descriptor::BaseDescriptor::Name>
 MountManager::list()
 {
   try
@@ -406,7 +406,7 @@ MountManager::list()
   {
     ELLE_TRACE("Failed to acquire volumes from beyond: %s", e);
   }
-  std::vector<QName> res;
+  std::vector<infinit::descriptor::BaseDescriptor::Name> res;
   for (auto const& volume: ifnt.volumes_get())
     res.emplace_back(volume.name);
   return res;
@@ -841,7 +841,7 @@ MountManager::create_volume(std::string const& name,
   std::string qname(name);
   if (qname.find("/") == qname.npos)
     qname = *username + "/" + qname;
-  infinit::Volume volume(qname, network.name, mo, {});
+  infinit::Volume volume(qname, network.name, mo, {}, {});
   ifnt.volume_save(volume, true);
   report_created("volume", qname);
   if (push)

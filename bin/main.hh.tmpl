@@ -1449,30 +1449,30 @@ namespace infinit
   }
 
   struct Volume
-    : public elle::Printable
+    : public descriptor::TemplatedBaseDescriptor<Volume>
   {
-    Volume(QName name,
-           std::string network_,
+    Volume(descriptor::BaseDescriptor::Name name,
+           std::string network,
            MountOptions const& mount_options,
-           boost::optional<std::string> default_permissions_)
-      : name(std::move(name))
-      , network(std::move(network_))
+           boost::optional<std::string> default_permissions,
+           boost::optional<std::string> description)
+      : descriptor::TemplatedBaseDescriptor<Volume>(std::move(name),
+                                                    std::move(description))
+      , network(std::move(network))
       , mount_options(mount_options)
-      , default_permissions(std::move(default_permissions_))
-    {
-      check_name(this->name);
-    }
+      , default_permissions(std::move(default_permissions))
+    {}
 
     Volume(elle::serialization::SerializerIn& s)
+      : descriptor::TemplatedBaseDescriptor<Volume>(s)
     {
       this->serialize(s);
-      check_name(this->name);
     }
 
     void
-    serialize(elle::serialization::Serializer& s)
+    serialize(elle::serialization::Serializer& s) override
     {
-      s.serialize("name", this->name);
+      descriptor::TemplatedBaseDescriptor<Volume>::serialize(s);
       s.serialize("network", this->network);
       s.serialize("default_permissions", this->default_permissions);
       try
@@ -1573,7 +1573,6 @@ namespace infinit
       out << "Volume(" << this->name << ")";
     }
 
-    QName name;
     std::string network;
     MountOptions mount_options;
     boost::optional<std::string> default_permissions;
