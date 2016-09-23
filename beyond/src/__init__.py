@@ -857,7 +857,8 @@ class Network(metaclass = Entity,
                 passports = {},
                 endpoints = {},
                 storages = {},
-                admin_keys = {})):
+                admin_keys = {},
+                description = Optional())):
 
   @property
   def id(self):
