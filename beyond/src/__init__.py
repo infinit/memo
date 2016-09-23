@@ -923,8 +923,8 @@ class Drive(
     metaclass = Entity,
     insert = 'drive_insert',
     update = 'drive_update',
-    fields = fields('name', 'owner', 'network',
-                    'volume', 'description', users = {})):
+    fields = fields('name', 'owner', 'network','volume', 'description',
+                    users = {}, description = Optional())):
 
   @property
   def id(self):
