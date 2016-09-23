@@ -43,6 +43,7 @@
 #include <infinit/utility.hh>
 #include <infinit/credentials/AWSCredentials.hh>
 #include <infinit/credentials/OAuthCredentials.hh>
+#include <infinit/descriptor/TemplatedBaseDescriptor.hh>
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -960,26 +961,32 @@ namespace infinit
        boost::optional<Modes> hidden_modes = {});
 
   struct User
-    : public elle::Printable
+    : public descriptor::TemplatedBaseDescriptor<User>
   {
     User(std::string const& name,
          cryptography::rsa::KeyPair const& keys,
          boost::optional<std::string> email = {},
          boost::optional<std::string> fullname = {},
-         boost::optional<std::string> ldap_dn = {})
-      : name(name)
+         boost::optional<std::string> ldap_dn = {},
+         boost::optional<std::string> description = {})
+      : descriptor::TemplatedBaseDescriptor<User>(name, std::move(description))
       , public_key(keys.K())
       , private_key(keys.k())
       , email(email)
       , fullname(fullname)
       , password_hash()
       , ldap_dn(ldap_dn)
+    {}
+
+    static
+    bool
+    permit_name_slash()
     {
-      check_name(this->name, true);
+      return false;
     }
 
     User(elle::serialization::SerializerIn& s)
-      : name(s.deserialize<std::string>("name"))
+      : descriptor::TemplatedBaseDescriptor<User>(s)
       , public_key(s.deserialize<cryptography::rsa::PublicKey>("public_key"))
       , private_key(s.deserialize<boost::optional<
                       cryptography::rsa::PrivateKey>>("private_key"))
@@ -987,9 +994,7 @@ namespace infinit
       , fullname(s.deserialize<boost::optional<std::string>>("fullname"))
       , password_hash()
       , ldap_dn(s.deserialize<boost::optional<std::string>>("ldap_dn"))
-    {
-      check_name(this->name, true);
-    }
+    {}
 
     infinit::cryptography::rsa::KeyPair
     keypair() const
@@ -1003,12 +1008,12 @@ namespace infinit
     }
 
     void
-    serialize(elle::serialization::Serializer& s)
+    serialize(elle::serialization::Serializer& s) override
     {
+      descriptor::TemplatedBaseDescriptor<User>::serialize(s);
       s.serialize("email", this->email);
       s.serialize("fullname", this->fullname);
       s.serialize("avatar", this->avatar_path);
-      s.serialize("name", this->name);
       s.serialize("password_hash", this->password_hash);
       s.serialize("private_key", this->private_key);
       s.serialize("public_key", this->public_key);
@@ -1048,7 +1053,6 @@ namespace infinit
       out << ")";
     }
 
-    std::string name;
     cryptography::rsa::PublicKey public_key;
     boost::optional<cryptography::rsa::PrivateKey> private_key;
     // Hub.
@@ -2646,7 +2650,16 @@ option_output(std::string const& item)
 {
   return Mode::OptionDescription(
     "output,o", boost::program_options::value<std::string>(),
-    elle::sprintf("file to write the %s to\n(default: stdout)", item).c_str());
+    elle::sprintf("file to write the %s to\n(default: stdout)", item));
+}
+
+inline
+Mode::OptionDescription
+option_description(std::string const& item)
+{
+  return Mode::OptionDescription(
+    "description", boost::program_options::value<std::string>(),
+    elle::sprintf("description of %s", item));
 }
 
 inline
@@ -2730,7 +2743,14 @@ get_username(boost::program_options::variables_map const& args,
 
 DAS_MODEL_FIELDS(
   infinit::User,
-  (name, email, fullname, avatar_path, public_key, private_key, password_hash, ldap_dn));
+    ( email
+    , fullname
+    , avatar_path
+    , public_key
+    , private_key
+    , password_hash
+    , ldap_dn
+  ));
 
 DAS_MODEL(
   infinit::MountOptions,
@@ -2754,14 +2774,24 @@ DAS_MODEL_SERIALIZE(infinit::MountOptions);
 
 namespace infinit
 {
-  DAS_MODEL_DEFINE(User, (name, fullname, avatar_path,  public_key, ldap_dn), DasPublicUser);
-  DAS_MODEL_DEFINE(User, (name, email, avatar_path, fullname, public_key, ldap_dn, private_key),
-                   DasUser);
-  // Publication to the hub.
-  DAS_MODEL_DEFINE(User, (name, email, fullname, public_key, ldap_dn),
-                   DasPublicUserPublish);
   DAS_MODEL_DEFINE(
-    User, (name, email, fullname, public_key, private_key, ldap_dn, password_hash),
+    User,
+    (name, description, fullname,  public_key, ldap_dn),
+    DasPublicUser);
+  DAS_MODEL_DEFINE(
+    User,
+    (name, description, email, avatar_path, fullname, public_key, ldap_dn,
+     private_key),
+    DasUser);
+  // Publication to the hub.
+  DAS_MODEL_DEFINE(
+    User,
+    (name, description, email, fullname, public_key, ldap_dn),
+    DasPublicUserPublish);
+  DAS_MODEL_DEFINE(
+    User,
+    (name, description, email, fullname, public_key, private_key, ldap_dn,
+     password_hash),
     DasPrivateUserPublish);
 }
 

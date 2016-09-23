@@ -191,7 +191,8 @@ create_(std::string const& name,
         boost::optional<std::string> keys_file,
         boost::optional<std::string> email,
         boost::optional<std::string> fullname,
-        boost::optional<std::string> ldap_name)
+        boost::optional<std::string> ldap_name,
+        boost::optional<std::string> description)
 {
   auto keys = [&] // -> infinit::cryptography::rsa::KeyPair
   {
@@ -208,7 +209,7 @@ create_(std::string const& name,
     }
   }();
 
-  return infinit::User{name, keys, email, fullname, ldap_name};
+  return infinit::User{name, keys, email, fullname, ldap_name, description};
 }
 
 COMMAND(create)
@@ -239,7 +240,8 @@ COMMAND(create)
                                optional(args, "key"),
                                email,
                                optional(args, "fullname"),
-                               ldap_name);
+                               ldap_name,
+                               optional(args, "description"));
   if (output)
   {
     save(*output, user);
@@ -386,7 +388,8 @@ COMMAND(signup_)
                                optional(args, "key"),
                                email,
                                optional(args, "fullname"),
-                               optional(args, "ldap-name"));
+                               optional(args, "ldap-name"),
+                               optional(args, "description"));
   try
   {
     ifnt.user_get(name);
@@ -426,8 +429,10 @@ COMMAND(list)
     for (auto const& user: users)
     {
       elle::json::Object o;
-      o["name"] = user.name;
+      o["name"] = static_cast<std::string>(user.name);
       o["has_private_key"] = bool(user.private_key);
+      if (user.description)
+        o["description"] = user.description.get();
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
@@ -440,7 +445,10 @@ COMMAND(list)
         std::cout << "* ";
       else
         std::cout << "  ";
-      std::cout << user.name << ": public";
+      std::cout << user.name;
+      if (user.description)
+        std::cout << " \"" << user.description.get() << "\"";
+      std::cout << ": public";
       if (user.private_key)
         std::cout << "/private keys";
       else
@@ -555,6 +563,7 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(), "user name (default: system user)" },
+        option_description("user"),
         option_key,
         { "push-user", bool_switch(),
           elle::sprintf("push the user to %s", beyond(true)) },
@@ -648,6 +657,7 @@ main(int argc, char** argv)
       "--email EMAIL",
       {
         { "name,n", value<std::string>(), "user name (default: system user)" },
+        option_description("user"),
         { "email", value<std::string>(), "valid email address" },
         option_fullname,
         option_avatar,
