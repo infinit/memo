@@ -68,14 +68,56 @@ namespace infinit
           storage
             ? this->_consensus->make_local(std::move(port), std::move(storage))
             : nullptr)
-        , _overlay(overlay_builder(*this, this->_local))
-        , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
         // FIXME: move protocol configuration to doughnut
         , _dock(*this, Protocol::all)
+        , _overlay(overlay_builder(*this, this->_local))
+        , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
         , _terminating()
       {
         if (this->_local)
           this->_local->initialize();
+      }
+
+      template<typename ConflictResolver, typename F, typename FF, typename... Args>
+      void check_push(Doughnut& d,
+                      std::string const& what,
+                      Address where,
+                      F (UB::*checker)(void) const,
+                      FF value,
+                      Args... create)
+      {
+        while (true)
+          try
+          {
+            ELLE_TRACE_SCOPE("%s: check %s", d, what);
+            auto block = d.fetch(where);
+            ELLE_DEBUG("%s: %s already present at %x",
+                       d, what, block->address());
+            auto ub = elle::cast<UB>::runtime(block);
+            if (((ub.get())->*checker)() != value)
+              elle::err("%s: %s exists but differrs at %x: %s != %s",
+                        d, what, where, value, ((ub.get())->*checker)());
+            break;
+          }
+          catch (MissingBlock const&)
+          {
+            auto user = elle::make_unique<UB>(create...);
+            ELLE_TRACE_SCOPE("%s: store %s at %f",
+              d, what, user->address());
+            try
+            {
+              d.store(
+                std::move(user), STORE_INSERT,
+                elle::make_unique<ConflictResolver>(what));
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_TRACE("%s: failed to store %s: %s", d, what, e);
+              if (d.terminating().opened())
+                break;
+              reactor::wait(d.terminating(), 1_sec);
+            }
+          }
       }
 
       Doughnut::Doughnut(Address id,
@@ -102,78 +144,25 @@ namespace infinit
       {
         auto check_user_blocks = [name, this]
           {
-            while (true)
-              try
-              {
-                auto const addr = UB::hash_address(name, *this);
-                ELLE_TRACE_SCOPE("%s: check user block", *this);
-                auto block = this->fetch(addr);
-                ELLE_DEBUG("%s: user block for %s already present at %x",
-                           *this, name, block->address());
-                auto ub = elle::cast<UB>::runtime(block);
-                if (ub->key() != this->keys().K())
-                  throw elle::Error(
-                    elle::sprintf(
-                      "user block exists at %s(%x) with different key",
-                      name, addr));
-                break;
-              }
-              catch (MissingBlock const&)
-              {
-                auto user = elle::make_unique<UB>(this, name, this->passport());
-                ELLE_TRACE_SCOPE("%s: store user block at %f for %s",
-                                 this, user->address(), name);
-                try
-                {
-                  this->store(
-                    std::move(user), STORE_INSERT,
-                    elle::make_unique<UserBlockUpserter>(name));
-                }
-                catch (elle::Error const& e)
-                {
-                  ELLE_TRACE("%s: failed to store user block: %s", *this, e);
-                  if (this->_terminating.opened())
-                    break;
-                  reactor::wait(this->_terminating, 1_sec);
-                }
-              }
-            while (true)
-              try
-              {
-                auto const addr = UB::hash_address(this->keys().K(), *this);
-                ELLE_TRACE_SCOPE("%s: check user reverse block", *this);
-                auto block = this->fetch(addr);
-                ELLE_DEBUG("%s: user reverse block for %s already present at %x",
-                           *this, name, block->address());
-                auto ub = elle::cast<UB>::runtime(block);
-                if (ub->name() != name)
-                {
-                  elle::err("user reverse block exists at %s (%f) "
-                            "with different name: %s", name, addr, ub->name());
-                }
-                break;
-              }
-              catch (MissingBlock const&)
-              {
-                auto user =
-                elle::make_unique<UB>(this, name, this->passport(), true);
-                ELLE_TRACE_SCOPE("%s: store reverse user block at %f", this,
-                                 user->address());
-                try
-                {
-                this->store(
-                  std::move(user), STORE_INSERT,
-                  elle::make_unique<ReverseUserBlockUpserter>(name));
-                }
-                catch (elle::Error const& e)
-                {
-                  ELLE_TRACE("%s: failed to store reverse user block: %s",
-                             *this, e);
-                  if (this->_terminating.opened())
-                    break;
-                  reactor::wait(this->_terminating, 1_sec);
-                }
-              }
+            check_push<UserBlockUpserter>(*this,
+              elle::sprintf("user block for %s", name),
+              UB::hash_address(name, *this),
+              &UB::key,
+              this->keys().K(),
+              this, name, this->passport());
+            check_push<ReverseUserBlockUpserter>(*this,
+              elle::sprintf("reverse user block for %s", name),
+              UB::hash_address(this->keys().K(), *this),
+              &UB::name,
+              name,
+              this, name, this->passport(), true);
+            auto hash = UB::hash(this->keys().K());
+            check_push<UserBlockUpserter>(*this,
+              elle::sprintf("key hash block for %s", name),
+              UB::hash_address(':' + hash.string(), *this),
+              &UB::key,
+              this->keys().K(),
+              this, ':' + hash.string(), this->keys().K());
           };
         this->_user_init.reset(new reactor::Thread(
           elle::sprintf("%s: user blocks checker", *this),
@@ -194,6 +183,7 @@ namespace infinit
           this->_local->cleanup();
         this->_consensus.reset();
         this->_overlay.reset();
+        this->_dock.cleanup();
         if (this->_local)
         {
           if (!this->_local.unique())
@@ -384,6 +374,31 @@ namespace infinit
         }
       }
 
+      int
+      Doughnut::ensure_key(std::shared_ptr<cryptography::rsa::PublicKey> const& k)
+      {
+        auto it = this->_key_cache.get<0>().find(*k);
+        if (it != this->_key_cache.get<0>().end())
+          return it->hash;
+
+        int index = this->_key_cache.get<0>().size();
+        this->_key_cache.insert(KeyHash(index, k));
+        return index;
+      }
+
+      std::shared_ptr<cryptography::rsa::PublicKey>
+      Doughnut::resolve_key(uint64_t hash)
+      {
+        ELLE_DUMP("%s: resolve key from %x", this, hash);
+        auto it = this->_key_cache.get<1>().find(hash);
+        if (it != this->_key_cache.get<1>().end())
+        {
+          ELLE_DUMP("%s: resolved from cache: %x", this, hash);
+          return it->key;
+        }
+        elle::err("%s: failed to resolve key hash locally: %x", this, hash);
+      }
+
       Configuration::~Configuration()
       {}
 
@@ -546,10 +561,7 @@ namespace infinit
       std::string
       short_key_hash(cryptography::rsa::PublicKey const& pub)
       {
-        auto buffer =
-          infinit::cryptography::rsa::publickey::der::encode(pub);
-        auto key_hash = infinit::cryptography::hash(
-          buffer, infinit::cryptography::Oneway::sha256);
+        auto key_hash = UB::hash(pub);
         std::string hex_hash = elle::format::hexadecimal::encode(key_hash);
         return elle::sprintf("#%s", hex_hash.substr(0, 6));
       }

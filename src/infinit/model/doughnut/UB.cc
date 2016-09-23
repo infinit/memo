@@ -70,6 +70,14 @@ namespace infinit
                        dht.version() >= elle::Version(0, 5, 0));
       }
 
+      elle::Buffer
+      UB::hash(cryptography::rsa::PublicKey const& key)
+      {
+        auto serial = cryptography::rsa::publickey::der::encode(key);
+        auto hash = cryptography::hash(serial, cryptography::Oneway::sha256);
+        return hash;
+      }
+
       /*-------.
       | Clone  |
       `-------*/

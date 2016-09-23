@@ -25,6 +25,17 @@ static const char group_prefix = '@';
 
 static
 bool
+fallback_enabled(boost::program_options::variables_map const& args)
+{
+#ifdef INFINIT_WINDOWS
+  return true;
+#else
+  return flag(args, "fallback-xattrs");
+#endif
+}
+
+static
+bool
 is_admin(std::string const& obj)
 {
   return obj.length() > 0 && obj[0] == admin_prefix;
@@ -165,7 +176,7 @@ struct PermissionsResult
   struct Directory
   {
     Directory()
-      : inherit(false)
+      : inherit(boost::none)
     {}
 
     Directory(Directory const&) = default;
@@ -181,7 +192,7 @@ struct PermissionsResult
       s.serialize("inherit", this->inherit);
     }
 
-    bool inherit;
+    boost::optional<bool> inherit;
   };
 
   struct World
@@ -237,7 +248,6 @@ get_acl(std::string const& path, bool fallback_xattrs)
   PermissionsResult res;
   res.path = path;
   char buf[4096];
-  bool dir = boost::filesystem::is_directory(path);
   int sz = port_getxattr(
     path.c_str(), "user.infinit.auth", buf, 4095, fallback_xattrs);
   if (sz < 0)
@@ -250,7 +260,15 @@ get_acl(std::string const& path, bool fallback_xattrs)
     buf[sz] = 0;
     std::stringstream ss;
     ss.str(buf);
+#ifndef __clang__
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
     boost::optional<bool> dir_inherit;
+#ifndef __clang__
+# pragma GCC diagnostic pop
+#endif
+    bool dir = boost::filesystem::is_directory(path);
     if (dir)
     {
       int sz = port_getxattr(
@@ -260,7 +278,10 @@ get_acl(std::string const& path, bool fallback_xattrs)
       else
       {
         buf[sz] = 0;
-        dir_inherit = (buf == std::string("true"));
+        if (buf == std::string("true"))
+          dir_inherit = true;
+        else if (buf == std::string("false"))
+          dir_inherit = false;
       }
     }
 
@@ -332,8 +353,9 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
     output << path << ":" << std::endl;
     if (res.directory)
     {
+      auto dir = *res.directory;
       output << "  inherit: "
-             << ((*res.directory).inherit ? "yes" : "no")
+             << (dir.inherit ? dir.inherit.get() ? "true" : "false" : "unknown")
              << std::endl;
     }
     if (res.world)
@@ -500,7 +522,7 @@ COMMAND(list)
     throw CommandLineError("missing path argument");
   bool recursive = flag(args, "recursive");
   bool verbose = flag(args, "verbose");
-  bool fallback = flag(args, "fallback-xattrs");
+  bool fallback = fallback_enabled(args);
   for (auto const& path: paths)
   {
     enforce_in_mountpoint(path, fallback);
@@ -568,7 +590,7 @@ COMMAND(set)
   if (traverse && mode.find("setr") != 0)
     throw elle::Error("--traverse can only be used with mode 'r', 'rw'");
   bool verbose = flag(args, "verbose");
-  bool fallback = flag(args, "fallback-xattrs");
+  bool fallback = fallback_enabled(args);
   bool fetch = flag(args, "fetch");
   // Don't do any operations before checking paths.
   for (auto const& path: paths)
@@ -674,7 +696,7 @@ COMMAND(group)
     throw CommandLineError("no action specified");
   if (action_count > 1)
     throw CommandLineError("specify only one action at a time");
-  bool fallback = flag(args, "fallback-xattrs");
+  bool fallback = fallback_enabled(args);
   std::string path = mandatory<std::string>(args, "path", "path in volume");
   enforce_in_mountpoint(path, fallback);
   bool fetch = flag(args, "fetch");
@@ -718,7 +740,7 @@ COMMAND(register_)
   auto user_name = mandatory<std::string>(args, "user", "user name");
   auto network_name = mandatory<std::string>(args, "network", "network name");
   auto network = ifnt.network_get(network_name, self);
-  bool fallback = flag(args, "fallback-xattrs");
+  bool fallback = fallback_enabled(args);
   auto path = mandatory<std::string>(args, "path", "path to mountpoint");
   enforce_in_mountpoint(path, fallback);
   auto user = ifnt.user_get(user_name, flag(args, "fetch"));
@@ -752,9 +774,12 @@ main(int argc, char** argv)
       {
         { "path,p", value<std::vector<std::string>>(), "paths" },
         { "recursive,R", bool_switch(), "list recursively" },
-        fallback_option,
         verbose_option,
       },
+      {},
+      {
+        fallback_option,
+      }
     },
     {
       "set",
@@ -765,7 +790,8 @@ main(int argc, char** argv)
         { "path,p", value<std::vector<std::string>>(), "paths" },
         { "user,u", value<std::vector<std::string>>()->multitoken(),
           elle::sprintf("users and groups (prefix: %s<group>)", group_prefix) },
-        { "group,g", value<std::vector<std::string>>(), "groups" },
+        { "group,g", value<std::vector<std::string>>()->multitoken(),
+          "groups" },
         { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
         { "others-mode,o", value<std::string>(),
           "access mode for other network users: r,w,rw,none" },
@@ -776,10 +802,13 @@ main(int argc, char** argv)
         { "recursive,R", bool_switch(), "apply recursively" },
         { "traverse", bool_switch(),
           "add read permissions to parent directories" },
-        fallback_option,
         verbose_option,
         fetch_option,
       },
+      {},
+      {
+        fallback_option,
+      }
     },
     {
       "group",
@@ -810,10 +839,13 @@ main(int argc, char** argv)
                         "(prefix: %s<group>, %s<admin>)",
                         group_prefix, admin_prefix) },
         { "path,p", value<std::string>(), "a path within the volume" },
-        fallback_option,
         verbose_option,
         fetch_option,
       },
+      {},
+      {
+        fallback_option,
+      }
     },
     {
       "register",
@@ -823,11 +855,13 @@ main(int argc, char** argv)
       {
         { "user,u", value<std::string>(), "user to register"},
         { "path,p", value<std::string>(), "path to mountpoint" },
-        { "network,n", value<std::string>(), "name of the network"},
-        { "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
-          "if system xattrs are not suppported" },
+        { "network,N", value<std::string>(), "name of the network"},
         fetch_option,
       },
+      {},
+      {
+        fallback_option,
+      }
     }
   };
   Modes hidden_modes = {

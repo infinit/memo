@@ -342,12 +342,8 @@ namespace infinit
         return;
       if (new_size > signed(current))
       {
-        char buf[16384] = {0};
-        while (current < new_size)
-        {
-          auto nsz = std::min(off_t(16384), new_size - current);
-          current += write(elle::WeakBuffer(buf, nsz), nsz, current);
-        }
+        this->_file._header.size = new_size;
+        _dirty = true;
         return;
       }
       uint64_t first_block_size = _file._data.size();
@@ -467,6 +463,8 @@ namespace infinit
       {
         if (nidx >= signed(_file._fat.size()))
           break;
+        if (_file._fat[nidx].first == Address::null)
+          continue;
         if (this->_blocks.find(nidx) == this->_blocks.end())
         {
           _prefetch(nidx);

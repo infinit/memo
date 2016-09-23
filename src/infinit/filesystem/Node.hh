@@ -50,6 +50,8 @@ namespace infinit
         , _parent(parent)
         , _name(name)
       {}
+      std::string
+      perms_to_json(ACLBlock& block);
 
     public:
       void
@@ -83,7 +85,7 @@ namespace infinit
       _header() = 0;
       virtual
       model::blocks::ACLBlock*
-      _header_block() = 0;
+      _header_block(bool force = false) = 0;
       std::unique_ptr<infinit::model::User>
       _get_user(std::string const& value);
 

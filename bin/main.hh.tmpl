@@ -16,7 +16,7 @@
 #include <elle/json/exceptions.hh>
 #include <elle/network/Interface.hh>
 #include <elle/os/environ.hh>
-#include <elle/system/home_directory.hh>
+#include <elle/system/user_paths.hh>
 #include <elle/system/username.hh>
 
 #include <das/model.hh>
@@ -2574,6 +2574,11 @@ namespace infinit
       return res;
     }
   };
+#ifndef INFINIT_WINDOWS
+  typedef int DaemonHandle;
+  DaemonHandle daemon_hold(int nochdir, int noclose);
+  void daemon_release(DaemonHandle handle);
+#endif
 }
 
 inline
@@ -2807,6 +2812,7 @@ signature_headers(
   std::unordered_map<std::string, std::string> res = {
     { "infinit-signature", encoded_signature.string() },
     { "infinit-time", now },
+    { "infinit-user", self.name },
   };
   return res;
 }

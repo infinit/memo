@@ -3,18 +3,24 @@
 
 # include <boost/filesystem.hpp>
 
+# include <elle/Option.hh>
+# include <elle/Version.hh>
+# include <elle/err.hh>
 # include <elle/os/environ.hh>
-# include <elle/system/home_directory.hh>
+# include <elle/system/user_paths.hh>
 # include <elle/system/username.hh>
 
 namespace infinit
 {
+  elle::Version
+  version();
+
   inline
   boost::filesystem::path
   canonical_folder(boost::filesystem::path const& path)
   {
     if (exists(path) && !is_directory(path))
-      throw elle::Error(elle::sprintf("not a directory: %s", path));
+      elle::err("not a directory: %s", path);
     create_directories(path);
     boost::system::error_code erc;
     permissions(

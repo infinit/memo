@@ -19,7 +19,6 @@
 #include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Group.hh>
-#include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
@@ -177,7 +176,7 @@ namespace infinit
           }
           catch(rfs::Error const& e)
           {
-            throw rfs::Error(EISDIR, "Target is a directory");
+            throw rfs::Error(ENOTEMPTY, "Target is a directory");
           }
         }
         else
@@ -280,9 +279,17 @@ namespace infinit
         }
         else if (special->find("auth_others") == 0)
         {
-          auto block = this->_header_block();
+          auto block = this->_header_block(true);
           bool r = v.find("r") != std::string::npos;
           bool w = v.find("w") != std::string::npos;
+          if (r)
+            this->_header().mode |= 04;
+          else
+            this->_header().mode &= ~04;
+          if (w)
+            this->_header().mode |= 02;
+          else
+            this->_header().mode &= ~02;
           umbrella([&] {
               block->set_world_permissions(r, w);
               _commit(WriteTarget::block);
@@ -584,6 +591,23 @@ namespace infinit
               return ss.str();
             });
         }
+        else if (*special == "resolve_all_keys")
+        {
+          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+            this->_owner.block_store());
+          elle::json::Object res;
+          for (auto wpeer: dht->dock().peer_cache())
+            if (auto peer = wpeer.second.lock())
+            {
+              elle::json::Array keys;
+              for (auto const& key: peer->resolve_all_keys())
+                keys.emplace_back(model::doughnut::short_key_hash(key.second));
+              res[elle::sprintf("%s", peer->id())] =  std::move(keys);
+            }
+          std::stringstream ss;
+          elle::json::write(ss, res, true);
+          return ss.str();
+        }
         else if (special->find("root") == 0)
         {
           return this->full_path() == this->full_path().root_path() ? "true"
@@ -699,6 +723,26 @@ namespace infinit
       else
         THROW_NODATA;
       return std::make_pair(r, w);
+    }
+
+    std::string
+    Node::perms_to_json(ACLBlock& block)
+    {
+      auto perms = block.list_permissions(*this->_owner.block_store());
+      elle::json::Array v;
+      for (auto const& perm: perms)
+      {
+        elle::json::Object o;
+        o["admin"] = perm.admin;
+        o["name"] = perm.user->name();
+        o["owner"] = perm.owner;
+        o["read"] = perm.read;
+        o["write"] = perm.write;
+        v.push_back(o);
+      }
+      std::stringstream ss;
+      elle::json::write(ss, v, true);
+      return ss.str();
     }
 
     void

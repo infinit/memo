@@ -1,6 +1,7 @@
 import drake
 import drake.debian
 import drake.docker
+import drake.license_file
 import drake.templating
 
 from itertools import chain
@@ -62,6 +63,13 @@ def configure(
 
   binaries = backend.get('binaries', [])
 
+  ## -------- ##
+  ## Licenses ##
+  ## -------- ##
+
+  license_file = drake.node('OSS-licenses')
+  drake.license_file.Packager('licenses', license_file)
+
   class PythonCopy(drake.Copy):
 
     def execute(self):
@@ -112,11 +120,13 @@ def configure(
     'email_regex': email_regex,
     'name_regex': name_regex,
     'delegate_user': delegate_user,
+    'python_version_major': python.version.major,
+    'python_version_minor': python.version.minor,
   }
   variables.update(secrets)
   with drake.templating.Context(content = variables):
     drake.node('bin/beyond.tmpl')
-    drake.node('etc/uwsgi/apps-available/beyond.xml.tmpl')
+    drake.node('etc/uwsgi/beyond.xml.tmpl')
     drake.node('src/wsgi.py.tmpl')
     drake.node('src/validation.py.tmpl')
 
@@ -171,18 +181,15 @@ def configure(
       'rsa-3.3.dist-info',
       'six-1.10.0.dist-info',
     ])
-  sources += oauth2client.targets()
   crypto = drake.PythonModule(
     'pycrypto',
     python_prefix(),
     dependencies = [],
     module_name = 'Crypto')
-  sources += crypto.targets()
   PIL = drake.PythonModule(
     'PILLOW', python_prefix(),
     module_name = 'PIL',
     dependencies = ['Pillow-3.0.0.egg-info'])
-  sources += PIL.targets()
   def install_nodes(where, how, python_version = python.version):
     prefix = python_prefix(python_version)
     where = drake.Path(where)
@@ -205,13 +212,18 @@ def configure(
       yield how(cryptography_python_module,
                 where / prefix, strip_prefix = True)
     yield drake.touch(where / prefix / 'infinit/__init__.py')
+    yield drake.copy(license_file, where / 'licenses', strip_prefix = True)
 
   build = drake.Rule('build')
   build << binaries
   built = list(install_nodes(where = '.', how = copy_python))
-  package = drake.python.Package('beyond', python_prefix(), built,
-                                 fullname = 'infinit.beyond')
+  mods = list(
+    chain(*(p.targets() for p in [oauth2client, crypto, PIL])))
+  package = drake.python.Package(
+    'beyond', python_prefix(), built + mods,
+    fullname = 'infinit.beyond')
   build << built
+  build << mods
 
   install = drake.Rule('install')
   install << install_nodes(
@@ -227,7 +239,6 @@ def configure(
     'libjpeg-dev',
     'python3',
     'python3-boto3',
-    'python3-bson',
     'python3-crypto',
     'python3-httplib2',
     'python3-pil',
@@ -236,29 +247,31 @@ def configure(
   debian_nodes = install_nodes('debian/opt/infinit/beyond',
                                how = drake.copy)
   git = drake.git.Git()
-  with drake.templating.Context(content = {
-      'dependencies': ubuntu_dependencies,
-      'version': git.description(),
-      'version_major': git.version().split('.')[0],
-      'version_minor': git.version().split('.')[1],
-      'python_version_major': python.version.major,
-      'python_version_minor': python.version.minor,
-  }):
-    drake.node('control.tmpl')
+  version = git.description()
   debian_nodes = chain(
     debian_nodes,
-    drake.copy(drake.nodes('control'), 'debian/DEBIAN'),
     drake.copy(
-      drake.nodes('etc/nginx/sites-available/beyond',
-                  'etc/rsyslog.d/10-infinit.conf',
-                  'etc/uwsgi/apps-available/beyond.xml',
-                  'usr/share/ca-certificates/extra/infinit.crt'),
+      drake.nodes('etc/rsyslog.d/10-infinit.conf'),
       'debian',
+    ),
+    drake.copy(
+      drake.nodes('etc/uwsgi/beyond.xml'),
+      'debian/opt/infinit/beyond',
     ),
   )
   debian = drake.Rule('debian')
   debian << drake.debian.Packager(
     'infinit-beyond_%s_amd64.deb' % git.description(),
+    {
+      'Package': 'infinit-beyond',
+      'Maintainer': 'Quentin Hocquet <debian@infinit.io>',
+      'Version': version,
+      'Homepage': 'http://www.infinit.sh',
+      'Architecture': 'amd64',
+      'Depends': ', '.join(
+        ubuntu_dependencies + ['infinit (= %s)' % version]),
+      'Description': 'Infinit beyond server.',
+    },
     debian_nodes, 'debian').package
   if backend.get('debian'):
     debian << backend.get('debian')
@@ -378,6 +391,14 @@ def configure(
   ## Docker ##
   ## ------ ##
 
+  docker_dependencies = chain(ubuntu_dependencies, [
+    'nginx',
+    'python3-mako',
+    'python3-ldap3',
+    'uwsgi',
+    'uwsgi-plugin-python3',
+  ])
+
   docker_path = drake.Path('docker')
   docker_image = drake.docker.DockerImage(
     'docker', 'infinit-beyond', git.description())
@@ -391,7 +412,43 @@ def configure(
   docker_file.add(
     install_nodes(docker_path, how = drake.copy,
                   python_version = drake.Version(3, 5)), '/usr')
+  docker_file.add(
+    drake.copy(binaries, docker_path / 'bin',
+               strip_prefix = True), '/usr')
+  docker_service_templates = drake.copy(drake.nodes(
+    'docker/couchdb.ini.tmpl',
+    'docker/uwsgi.json.tmpl',
+  ), docker_path / 'scripts' / 'templates', strip_prefix = True)
+  docker_file.add(docker_service_templates, '')
+  docker_script_utils = drake.copy(drake.nodes(
+    'docker/nginx_conf.py',
+    'docker/tools.py',
+  ), docker_path / 'scripts' / 'utils', strip_prefix = True)
+  docker_file.add(docker_script_utils, '')
+  docker_file.add(
+    drake.copy(drake.node('docker/entry.py'), docker_path / 'scripts',
+               strip_prefix = True), '')
   docker_file.run('apt-get update')
-  for dep in ubuntu_dependencies:
+  for dep in docker_dependencies:
     docker_file.run('apt-get install -y %s' % dep)
+  # Remove default configuration files
+  default_files = [
+    '/etc/uwsgi/apps-enabled/README',
+    '/etc/nginx/sites-enabled/default',
+  ]
+  docker_file.run('rm %s' % ' '.join(default_files))
+  # Set nginx to run in the foreground
+  docker_file.run('echo "\\ndaemon off;" >> /etc/nginx/nginx.conf')
+  make_directories = [
+    '/var/run/couchdb',
+    '/var/run/uwsgi/app/beyond',
+  ]
+  docker_file.run('mkdir -p %s' % ' '.join(make_directories))
+  docker_file.volumes([
+    '/etc/nginx/certs',
+    '/var/lib/couchdb',
+    '/var/log/beyond',
+  ])
+  docker_file.ports([80, 443])
+  docker_file.entry_point(['/usr/bin/python3', '/scripts/entry.py'])
   drake.docker.DockerBuilder(docker_image, docker_file)

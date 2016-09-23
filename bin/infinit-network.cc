@@ -27,7 +27,7 @@ infinit::Infinit ifnt;
 
 #if __APPLE__
 # undef daemon
-extern int daemon(int, int);
+extern "C" int daemon(int, int);
 #endif
 
 static
@@ -454,6 +454,11 @@ COMMAND(link_)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
+  {
+    auto network = ifnt.network_get(network_name, self, false);
+    if (network.model != nullptr)
+      elle::err("%s is already linked with %s", network.name, self.name);
+  }
   auto storage = storage_configuration(args);
   auto desc = ifnt.network_descriptor_get(network_name, self);
   auto passport = [&] () -> infinit::Passport
@@ -630,6 +635,24 @@ COMMAND(run)
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
+  {
+    auto rebalancing_auto_expand = optional<bool>(
+      args, "paxos-rebalancing-auto-expand");
+    auto rebalancing_inspect = optional<bool>(
+      args, "paxos-rebalancing-inspect");
+    if (rebalancing_auto_expand || rebalancing_inspect)
+    {
+      auto paxos = dynamic_cast<
+        infinit::model::doughnut::consensus::Paxos::Configuration*>(
+          network.dht()->consensus.get());
+      if (!paxos)
+        throw CommandLineError("paxos options on non-paxos consensus");
+      if (rebalancing_auto_expand)
+        paxos->rebalance_auto_expand(rebalancing_auto_expand.get());
+      if (rebalancing_inspect)
+        paxos->rebalance_inspect(rebalancing_inspect.get());
+    }
+  }
   network.ensure_allowed(self, "run");
   std::vector<infinit::model::Endpoints> eps;
   if (args.count("peer"))
@@ -674,9 +697,9 @@ COMMAND(run)
       endpoints_to_file(dht->local()->server_endpoints(), endpoint_file.get());
   }
 #ifndef INFINIT_WINDOWS
+  infinit::DaemonHandle daemon_handle;
   if (flag(args, "daemon"))
-    if (daemon(0, 1))
-      perror("daemon:");
+    daemon_handle = infinit::daemon_hold(0, 1);
 #endif
   auto run = [&]
     {
@@ -690,6 +713,13 @@ COMMAND(run)
       if (push)
         stat_thread = make_stat_update_thread(self, network, *dht);
       report_action("running", "network", network.name);
+#ifndef INFINIT_WINDOWS
+      if (flag(args, "daemon"))
+      {
+        ELLE_TRACE("releasing daemon");
+        infinit::daemon_release(daemon_handle);
+      }
+#endif
       if (script_mode)
       {
         auto input = infinit::commands_input(args);
@@ -1011,6 +1041,14 @@ main(int argc, char** argv)
         { "daemon,d", bool_switch(), "run as a background daemon"},
 #endif
       },
+      {},
+      // Hidden options
+      {
+        { "paxos-rebalancing-auto-expand", value<bool>(),
+            "whether to automatically rebalance under-replicated blocks"},
+        { "paxos-rebalancing-inspect", value<bool>(),
+            "whether to inspect all blocks on startup and trigger rebalancing"},
+      }
     },
     {
       "list-storage",

@@ -1,4 +1,5 @@
 #include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/HandshakeFailed.hh>
 
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
@@ -23,6 +24,25 @@ namespace infinit
   {
     namespace doughnut
     {
+      /*-----.
+      | Auth |
+      `-----*/
+
+      Remote::Auth::Auth(Address id,
+                         Challenge challenge,
+                         Passport passport)
+        : id(std::move(id))
+        , challenge(std::move(challenge))
+        , passport(std::move(passport))
+      {}
+
+      Remote::Auth::Auth(elle::serialization::SerializerIn& input)
+        : id(input.deserialize<Address>("id"))
+        , challenge(input.deserialize<Challenge>("challenge"))
+        , passport(input.deserialize<Passport>("passport"))
+      {}
+
+
       /*-------------.
       | Construction |
       `-------------*/
@@ -43,8 +63,8 @@ namespace infinit
         , _endpoints(std::move(endpoints))
         , _utp_server(server)
         , _protocol(protocol)
-        , _connection_thread()
         , _fast_fail(false)
+        , _connection_thread()
       {
         ELLE_ASSERT(server || protocol != Protocol::utp);
         this->_connect();
@@ -87,9 +107,9 @@ namespace infinit
                   this->_channels = std::move(channels);
                   this->_connected = true;
                 };
-              auto umbrella = [&] (std::function<void ()> const& f)
+              auto umbrella = [&, this] (std::function<void ()> const& f)
                 {
-                  return [f]
+                  return [f, this]
                   {
                     try
                     {
@@ -98,6 +118,10 @@ namespace infinit
                     catch (reactor::network::Exception const&)
                     {
                       // ignored
+                    }
+                    catch (HandshakeFailed const& hs)
+                    {
+                      ELLE_WARN("%s: %s", this, hs);
                     }
                   };
                 };
@@ -167,7 +191,7 @@ namespace infinit
         if (!this->_reconnecting)
         {
           auto lock = elle::scoped_assignment(this->_reconnecting, true);
-          ELLE_TRACE("%s: reconnect");
+          ELLE_TRACE("%s: reconnect", this);
           this->_credentials = {};
           if (this->_refetch_endpoints)
             if (auto eps = this->_refetch_endpoints())
@@ -183,41 +207,81 @@ namespace infinit
       | Blocks |
       `-------*/
 
+      static
+      std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+      _auth_0_3(Remote& self, protocol::ChanneledStream& channels)
+      {
+        using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+          (Passport const&);
+        RPC<AuthSyn> auth_syn(
+          "auth_syn", channels, self.doughnut().version());
+        return auth_syn(self.doughnut().passport());
+      }
+
+      static
+      std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+      _auth_0_4(Remote& self, protocol::ChanneledStream& channels)
+      {
+        using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+          (Passport const&, elle::Version const&);
+        RPC<AuthSyn> auth_syn(
+          "auth_syn", channels, self.doughnut().version());
+        auth_syn.set_context<Doughnut*>(&self.doughnut());
+        auto version = self.doughnut().version();
+        // 0.5.0 and 0.6.0 compares the full version it receives for
+        // compatibility instead of dropping the subminor component. Set
+        // it to 0.
+        return auth_syn(
+          self.doughnut().passport(),
+          elle::Version(version.major(), version.minor(), 0));
+      }
+
+      static
+      Remote::Auth
+      _auth_0_7(Remote& self, protocol::ChanneledStream& channels)
+      {
+        using AuthSyn =
+          Remote::Auth (Address, Passport const&, elle::Version const&);
+        RPC<AuthSyn> auth_syn(
+          "auth_syn", channels, self.doughnut().version());
+        auth_syn.set_context<Doughnut*>(&self.doughnut());
+        auto res = auth_syn(self.doughnut().id(),
+                            self.doughnut().passport(),
+                            self.doughnut().version());
+        if (res.id == self.doughnut().id())
+          throw HandshakeFailed(elle::sprintf("peer has same id as us: %s",
+                                              res.id));
+        if (self.id() != Address::null && self.id() != res.id)
+          throw HandshakeFailed(
+            elle::sprintf("peer id mismatch: expected %s, got %s",
+                          self.id(), res.id));
+        return res;
+      }
+
       void
       Remote::_key_exchange(protocol::ChanneledStream& channels)
       {
         ELLE_TRACE_SCOPE("%s: exchange keys", *this);
         try
         {
-          // challenge, token
-          typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
           auto challenge_passport = [&]
           {
-            if (this->_doughnut.version() >= elle::Version(0, 4, 0))
+            if (this->_doughnut.version() >= elle::Version(0, 7, 0))
             {
-              typedef std::pair<Challenge, std::unique_ptr<Passport>>
-              AuthSyn(Passport const&, elle::Version const&);
-              RPC<AuthSyn> auth_syn(
-                "auth_syn", channels, this->_doughnut.version());
-              auth_syn.set_context<Doughnut*>(&this->_doughnut);
-              auto version = this->_doughnut.version();
-              // 0.5.0 and 0.6.0 compares the full version it receives for
-              // compatibility instead of dropping the subminor component. Set
-              // it to 0 until >=0.7.0, which will drop subminor as expected.
-              auto subminor =
-                version >= elle::Version(0, 7, 0) ? version.subminor() : 0;
-              return auth_syn(
-                this->_doughnut.passport(),
-                elle::Version(version.major(), version.minor(), subminor));
+              auto res = _auth_0_7(*this, channels);
+              if (this->_id == model::Address::null)
+                this->_id = res.id;
+              else if (this->_id != res.id)
+                elle::err("peer id mismatch: expected %f, got %f",
+                          this->_id, res.id);
+              return std::make_pair(
+                res.challenge,
+                elle::make_unique<Passport>(std::move(res.passport)));
             }
+            else if (this->_doughnut.version() >= elle::Version(0, 4, 0))
+              return _auth_0_4(*this, channels);
             else
-            {
-              typedef std::pair<Challenge, std::unique_ptr<Passport>>
-              AuthSyn(Passport const&);
-              RPC<AuthSyn> auth_syn(
-                "auth_syn", channels, this->_doughnut.version());
-              return auth_syn(this->_doughnut.passport());
-            }
+              return _auth_0_3(*this, channels);
           }();
           auto& remote_passport = challenge_passport.second;
           ELLE_ASSERT(remote_passport);
@@ -311,6 +375,56 @@ namespace infinit
             ("remove");
           remove(address);
         }
+      }
+
+      /*-----.
+      | Keys |
+      `-----*/
+
+      std::vector<cryptography::rsa::PublicKey>
+      Remote::_resolve_keys(std::vector<int> ids)
+      {
+        {
+          std::vector<int> missing;
+          for (auto id: ids)
+            if (this->_key_hash_cache.get<1>().find(id) ==
+                this->_key_hash_cache.get<1>().end())
+              missing.emplace_back(id);
+          if (missing.size())
+          {
+            ELLE_TRACE("%s: fetch %s keys by ids", this, missing.size());
+            auto rpc = this->make_rpc<std::vector<cryptography::rsa::PublicKey>(
+              std::vector<int> const&)>("resolve_keys");
+            auto missing_keys = rpc(missing);
+            if (missing_keys.size() != missing.size())
+              elle::err("resolve_keys for %s keys on %s gave %s replies",
+                        missing.size(), this, missing_keys.size());
+            auto id_it = missing.begin();
+            auto key_it = missing_keys.begin();
+            for (; id_it != missing.end(); ++id_it, ++key_it)
+              this->_key_hash_cache.emplace(*id_it, std::move(*key_it));
+          }
+        }
+        std::vector<cryptography::rsa::PublicKey> res;
+        for (auto id: ids)
+        {
+          auto it = this->_key_hash_cache.get<1>().find(id);
+          ELLE_ASSERT(it != this->_key_hash_cache.get<1>().end());
+          res.emplace_back(*it->key);
+        }
+        return res;
+      }
+
+      std::unordered_map<int, cryptography::rsa::PublicKey>
+      Remote::_resolve_all_keys()
+      {
+        using Keys = std::unordered_map<int, cryptography::rsa::PublicKey>;
+        auto res = this->make_rpc<Keys()>("resolve_all_keys")();
+        for (auto const& key: res)
+          if (this->_key_hash_cache.get<1>().find(key.first) ==
+              this->_key_hash_cache.get<1>().end())
+            this->_key_hash_cache.emplace(key.first, key.second);
+        return res;
       }
     }
   }

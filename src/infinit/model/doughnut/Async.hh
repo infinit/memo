@@ -74,6 +74,7 @@ namespace infinit
                std::unique_ptr<ConflictResolver> resolver_ = {},
                blocks::RemoveSignature remove_signature_ = {}
                );
+            explicit
             Op(elle::serialization::SerializerIn& ser);
             void serialize(elle::serialization::Serializer& ser);
             Address address;
@@ -124,6 +125,8 @@ namespace infinit
           ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, process_thread);
           ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, init_thread);
           ELLE_ATTRIBUTE(reactor::Barrier, init_barrier);
+          ELLE_ATTRIBUTE(bool, in_push);
+          ELLE_ATTRIBUTE(std::vector<Op>, reentered_ops);
         };
       }
     }

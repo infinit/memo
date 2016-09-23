@@ -30,7 +30,7 @@ namespace infinit
 #ifndef INFINIT_WINDOWS
       st->st_blocks = st->st_size / 512;
 #endif
-      st->st_mode =  S_IFREG;
+      st->st_mode =  S_IFREG | 0666;
     }
     void
     XAttributeFile::truncate(off_t new_size)

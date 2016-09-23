@@ -46,32 +46,56 @@
       else:
         osname = "linux"
 
-      if osname == "mac" or osname == "linux":
-        demo_mountpoint = "~/mnt-demo"
+      if osname != "windows":
+        cat_command = "cat"
         demo_home = "$PWD/share/infinit/filesystem/test/home/"
-        ls_command = "ls"
+        demo_mountpoint = "~/mnt-demo"
+        demo_mountpoint_abs = "~/mnt-demo"
+        dir = "/"
+        dir_end = "/"
+        env_home = "$HOME"
+        env_infinit_home = "$INFINIT_HOME"
+        env_infinit_data_home = "$INFINIT_DATA_HOME"
+        env_infinit_state_home = "$INFINIT_STATE_HOME"
+        env_pwd = "$PWD"
         exe = ""
+        guide_mountpoint = "~/mnt-alice-volume"
+        guide_mountpoint_abs = "~/mnt-alice-volume"
+        guide_storage_dir = "/var/storage/infinit/"
+        ls_command = "ls"
+        temp_dir = "/tmp/infinit-demo/"
+        term = "$>"
       else:
+        cat_command = "type"
+        demo_home = "%CD%\\share\\infinit\\filesystem\\test\\home"
         demo_mountpoint = "z:"
-        demo_home = "c:/PATH_TO_INFINIT/share/infinit/filesystem/test/home/"
-        ls_command = "dir"
+        demo_mountpoint_abs = "z:\\"
+        dir = "\\"
+        dir_end = ""
+        env_home = "%HOMEPATH%"
+        env_infinit_home = "%INFINIT_HOME%"
+        env_infinit_data_home = "%INFINIT_DATA_HOME%"
+        env_infinit_state_home = "%INFINIT_STATE_HOME%"
+        env_pwd = "%CD%"
         exe = ".exe"
+        guide_mountpoint = "z:"
+        guide_mountpoint_abs = "z:\\"
+        guide_storage_dir = "C:\\storage\\infinit"
+        ls_command = "dir"
+        temp_dir = "%TEMP%\\infinit-demo"
+        term = ">"
     %>
 
     <h1>Get Started</h1>
 
     % if osname == "windows":
-    <blockquote class="warning">
-      <strong>Note:</strong> Our Windows version is not publicly released yet. You can <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">sign up to our newsletter</a> to get informed of the public release!
-    </blockquote>
-
-    <p><em>The following is written for users of Linux. You can also see the <a href="${route('doc_get_started_mac')}">Mac</a> guide.</em></p>
+    <p><em>The following is written for users of Windows. If you are not using this platform, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_mac')}">macOS</a> guide.</em></p>
 
     % elif osname == "mac":
-    <p><em>The following is written for users of Mac OS X. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+    <p><em>The following is written for users of macOS. If you are not using this platform, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
 
     % else:
-    <p><em>The following is written for users of Linux. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_mac')}">Mac</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+    <p><em>The following is written for users of Linux. If you are not this platform, please refer to the <a href="${route('doc_get_started_mac')}">macOS</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
 
     % endif
 
@@ -83,12 +107,8 @@
 
     % if osname == "mac":
       <%include file='generated/get_started/mac_fuse_install.html'/>
-      <!-- % elif osname == "windows": -->
-
-      <!-- <p> Infinit relies on <a href="https://github.com/dokan-dev/dokany">dokany</a> to create filesystems in userland. You will need to install it from the link below:</p>
-      <p><a href="https://github.com/dokan-dev/dokany/releases/download/v1.0.0-RC1/DokanSetup.exe" class="button">Download DOKANY</a></p> -->
-
-      <!-- <em><strong>NOTE</strong>: Infinit currently requires a 64 bit version of Windows 7 or Windows 8.</em> -->
+      % elif osname == "windows":
+      <%include file='generated/get_started/windows_dokany_install.html'/>
     % else:
       <%include file='generated/get_started/linux_fuse_install.html'/>
     % endif
@@ -142,14 +162,14 @@ bin/    lib/    share/
         </div>
     </div>
 
-    <!-- % elif osname == "windows": -->
+    % elif osname == "windows":
+    <%include file='generated/get_started/windows_tarball_install.html'/>
 
-    <!-- <img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
-    <p>Click the link below to download the Infinit command-line tools:</p>
+    <p>Using the command line, navigate into the directory where Infinit was extracted.</p>
 
-    <a href="https://storage.googleapis.com/sh_infinit_releases/windows/Infinit-windows-${tarball_version}.zip
-    " class="button">Download Command Line Tools</a>
-    <p>Extract the downloaded zip file to some directory.</p> -->
+    <pre><code>> cd C:\Users\%USERNAME%\Downloads\infinit-${tarball_version}
+> dir
+    </code></pre>
 
     % else:
 
@@ -202,21 +222,35 @@ bin/    lib/    share/</code></pre>
     % endif
 
     <ul>
-      <li>The <code>bin/</code> subdirectory contains the actual Infinit binaries such as <em>infinit-user</em>, <em>infinit-network</em>, etc.</li>
-      <li>The <code>lib/</code> subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).</li>
-      <li>The <code>share/infinit/filesystem/test/</code> subdirectory is provided for you to quickly test the command-line tools, see below.</li>
+      <li>The <code>bin${dir_end}</code> subdirectory contains the actual Infinit binaries such as <em>infinit-user${exe}</em>, <em>infinit-network${exe}</em>, etc.</li>
+      % if osname == "mac" or osname == "linux":
+      <li>The <code>lib${dir_end}</code> subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).</li>
+      % endif
+      <li>The <code>share${dir}infinit${dir}filesystem${dir}test${dir_end}</code> subdirectory is provided for you to quickly test the command-line tools, see below.</li>
     </ul>
 
 
     <h2 id="basic-test">2. Basic Test</h2>
 
-    <p>For you to quickly (through a single command) try Infinit out, the following is going to let you <strong>mount an existing volume</strong> and access files through a mount point. Don’t worry, this <em>demo</em> file system only contains test files that we put there ourselves for you to test Infinit. You cannot do any harm to those files since you only have read-only access to this test volume.</p>
+    <p>For you to quickly (through a single command) try Infinit out, the following is going to let you <strong>mount an existing volume</strong> and access files through a mount point. Don’t worry, this <em>demo</em> file system only contains test files that we put there ourselves for you to test Infinit. You cannot do any harm to those files since you have read-only access to this test volume.</p>
 
-    <p>First, you need to understand that all the files that the Infinit command-line tools and file system binary create and use are located in the <code>$INFINIT_HOME</code> directory which, by default, is set to <code>$HOME</code>. More specifically, the configuration files are stored in <code>$INFINIT_DATA_HOME</code> (set by default to <code>$INFINIT_HOME/.local/share/infinit/filesystem/</code>) while other files such as cached blocks, journaled operations etc. are stored in other directories. All these <a href="${route('doc_environment_variables')}">environment variables</a> can be changed according to your needs.</p>
+    <p>First, you need to understand that all the files that the Infinit command-line tools and file system binary create and use are located in the <code>${env_infinit_home}</code> directory which, by default, is set to <code>${env_home}</code>. More specifically, the configuration files are stored in <code>${env_infinit_data_home}</code> (set by default to <code>${env_infinit_home}${dir}.local${dir}share${dir}infinit${dir}filesystem${dir_end}</code>) while other files such as cached blocks, journaled operations etc. are stored in other directories. All these <a href="${route('doc_environment_variables')}">environment variables</a> can be changed according to your needs.</p>
 
-    <p>In the following, we are going to run the <em>infinit-volume</em> command by prefixing it with the environment variable <code>INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home</code> to tell the command where to look for the configuration files required for this test, in this case in the <code>share/</code> directory that is next to the binaries and contains the configuration file for this <em>demo</em> volume. We also add the <code>INFINIT_STATE_HOME</code> environment variable to temporarily store the local block cache.</p>
+    <p>We are going to run the <em>infinit-volume</em> command
+    % if osname == "windows":
+    after setting
+    % else:
+     by prefixing it with
+    %endif
+    the environment variable <code>INFINIT_DATA_HOME=${env_pwd}${dir}share${dir}infinit${dir}filesystem${dir}test${dir}home</code> to tell the command where to look for the configuration files required for this test, in this case in the <code>share${dir_end}</code> directory that is next to the binaries and contains the configuration file for this <em>demo</em> volume. We also add the <code>${env_infinit_state_home}</code> environment variable to temporarily store the local block cache.</p>
 
-    <pre><code>$> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ INFINIT_STATE_HOME=/tmp/infinit-demo/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ${demo_mountpoint} --publish --cache
+    % if osname == "windows":
+    <pre><code>> set "INFINIT_DATA_HOME=${demo_home}" && set "INFINIT_STATE_HOME=${temp_dir}"
+
+> bin${dir}infinit-volume --mount --as demo --name infinit/demo --mountpoint ${demo_mountpoint} --publish --cache
+    % else:
+    <pre><code>${term} INFINIT_DATA_HOME=${demo_home} INFINIT_STATE_HOME=${temp_dir} bin${dir}infinit-volume --mount --as demo --name infinit/demo --mountpoint ${demo_mountpoint} --publish --cache
+    % endif
 ...
 Running network "infinit/demo".
 Fetched endpoints for "infinit/demo".
@@ -225,28 +259,39 @@ Running volume "infinit/demo".
 
     <p><em><strong>NOTE:</strong> You can stop this test volume by hitting <code>CTRL^C</code> or by interrupting the infinit-volume process.</em></p>
 
-    <p>This command mounts the volume named <code>infinit/demo</code> on behalf of the user ‘demo’ and makes it accessible through the mount point <code>${demo_mountpoint}</code>.</p>
+    <p>This command mounts the volume named <code>infinit/demo</code> on behalf of the user ‘demo’ and makes it accessible through the mount point <code>${demo_mountpoint}</code>.
+    % if osname == "windows":
+    Note that when mounting a volume on Windows, you must specify an unused drive letter as the mount point argument. Mounting to an arbitrary path is not supported.
+    % endif
+    </p>
 
-    <p>Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point <code>${demo_mountpoint}</code> as you would any other POSIX-compliant filesystem.</p>
+    <p>Now open another terminal
+    % if osname == "windows":
+    or Windows Explorer.
+    % else:
+    .
+    % endif
+    You can access the files in the ‘demo’ volume by browsing the mount point <code>${demo_mountpoint_abs}</code> as you would any other POSIX-compliant filesystem.</p>
 
     <p>Infinit streams the data as it is needed from our server in the US. This allows you to access the files immediately without having to wait for them to be cloned locally as you would with a cloud storage service like Dropbox.</p>
 
-    <pre><code>$> ${ls_command} ${demo_mountpoint}
-Aosta Valley/         Brannenburg/          Cape Town/        Infinit_MakingOf.mp4      New York/             Paris/</code></pre>
+    <pre><code>${term} ${ls_command} ${demo_mountpoint_abs}
+Aosta Valley${dir_end}         Brannenburg${dir_end}          Cape Town${dir_end}        Infinit_MakingOf.mp4      New York${dir_end}             Paris${dir_end}</code></pre>
 
-    <!-- <div>
+    <div>
     % if osname == "windows":
     </div>
 
-    <p><em><strong>NOTE</strong>: You must specify an unused drive letter as the mount point argument, mounting to an arbitrary path is not supported.</em></p>
+    <!-- <p><em><strong>NOTE</strong>: If the new drive does not appear automatically in the <code>my PC</code> virtual directory, try entering <code>${demo_mountpoint}</code> in the url bar of explorer. If this fails with an error, open the start menu, select <code>run command</code>, and enter at the prompt <code>explorer ${demo_mountpoint}</code>.</em></p> -->
 
-    <p>You can also browse the files from an explorer window.</p>
+    <p>Unset your environment variables before proceeding with this guide:</p>
 
-    <p><em><strong>NOTE</strong>: If the new drive does not appear automatically in the `my PC` virtual directory, try entering `z:` in the url bar of explorer. If this fails with an error, open the start menu, select `run command`, and enter at the prompt `explorer z:`.</em></p>
+    <pre><code>${term} set "INFINIT_DATA_HOME=" && set "INFINIT_STATE_HOME="
+    </code></pre>
 
     <div>
     % endif
-    </div> -->
+    </div>
 
     <h2 id="create-infrastructure">3. Create Infrastructure</h2>
 
@@ -256,15 +301,15 @@ Aosta Valley/         Brannenburg/          Cape Town/        Infinit_MakingOf.m
 
     <p><em><strong>NOTE:</strong> For more information to learn how to set up completely decentralized infrastructure, how to plug cloud storage services such as AWS S3, Google Cloud Storage etc. or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files as usual, please refer to the <a href="${route('doc_reference')}">reference documentation</a>.</em></p>
 
-    <p>First, add the <code>bin/</code> directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:</p>
+    <p>First, add the <code>bin${dir_end}</code> directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:</p>
 
     <div>
-    <!-- % if osname == "windows":
-    <pre><code>$> set PATH=c:/path_to_infinit/bin;%PATH%
-    </code></pre> -->
-    <!-- % else: -->
+    % if osname == "windows":
+    <pre><code>> set PATH=%CD%\bin;%PATH%
+    </code></pre>
+    % else:
     <pre><code>$> export PATH=$PWD/bin/:$PATH</code></pre>
-    <!-- %endif -->
+    % endif
     </div>
 
     <h3 id="create-a-user">Create a user</h3>
@@ -273,7 +318,7 @@ Aosta Valley/         Brannenburg/          Cape Town/        Infinit_MakingOf.m
 
     <p>All the commands that follow use the user name <code>alice</code> but you should <strong>pick your own unique user name</strong>:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>$> infinit-user --signup --name alice --email alice@company.com --fullname "Alice"
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-user --signup --name alice --email alice@company.com --fullname "Alice"
 Generating RSA keypair.
 Remotely saved user "alice".
 </code></pre>
@@ -282,11 +327,11 @@ Remotely saved user "alice".
 
     <p>A storage resource behaves like a hard disk, storing data blocks without understanding the data’s meaning. The beauty of Infinit is that it is completely agnostic of the nature of such storage resources.</p>
 
-    <p>Next, we are going to declare a local storage resource. A local storage stores data blocks as files in a directory (such as <code>/var/storage/infinit/</code>) on the local filesystem.</p>
+    <p>Next, we are going to declare a local storage resource. A local storage stores data blocks as files in a directory (such as <code>${guide_storage_dir}</code>) on the local filesystem.</p>
 
     <p>The binary <em>infinit-storage</em> is used for this purpose. The option <code>--filesystem</code> is used to indicate that the storage will be on the local filesystem:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>$> infinit-storage --create --filesystem --name local --capacity 1GB
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-storage --create --filesystem --name local --capacity 1GB
 Created storage "local".</code></pre>
 
     <h3 id="create-a-network">Create a network</h3>
@@ -295,7 +340,7 @@ Created storage "local".</code></pre>
 
     <p>The <em>infinit-network</em> command is used to create the network, specifying a name along with the list of storage resources to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the <code>local</code> storage resource is used but you could plug as many as you like. Obviously, you need to substitute <code>alice</code> with your username:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>$> infinit-network --create --as alice --storage local --name my-network --push
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-network --create --as alice --storage local --name my-network --push
 Locally created network "alice/my-network".
 Remotely saved network "alice/my-network".
 </code></pre>
@@ -306,7 +351,7 @@ Remotely saved network "alice/my-network".
 
     <p>The last step on this device consists of creating a logical volume to store and access files. Volumes can be manipulated through the <em>infinit-volume</em> binary as shown next:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>$> infinit-volume --create --as alice --network my-network --name my-volume --push
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-volume --create --as alice --network my-network --name my-volume --push
 Locally created volume "alice/my-volume".
 Remotely saved volume "alice/my-volume".
 </code></pre>
@@ -317,7 +362,7 @@ Remotely saved volume "alice/my-volume".
 
     <p>Let’s access this volume by mounting it as easily as any other filesystem:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-alice-volume/ --allow-root-creation --async --cache --publish
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-volume --mount --as alice --name my-volume --mountpoint ${guide_mountpoint} --allow-root-creation --async --cache --publish
 Running network "alice/my-network".
 Fetched endpoints for "alice/my-network".
 Running volume "alice/my-volume".
@@ -326,10 +371,10 @@ Running volume "alice/my-volume".
 
     <p><em><strong>NOTE:</strong> This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit <code>CTRL^C</code> or interrupt the process. You should wait until the end of the guide to stop this process though.</em></p>
 
-    <p>That’s it! You can now create, list and access files from the mount point <code>~/mnt-alice-volume</code>. Try creating a file right now:
+    <p>That’s it! You can now create, list and access files from the mount point <code>${guide_mountpoint_abs}</code>. Try creating a file right now:
 
-    <pre class="device1"><div><span>Device A</span></div><code>$> echo "everything is" > ~/mnt-alice-volume/awesome.txt
-$> cat ~/mnt-alice-volume/awesome.txt
+    <pre class="device1"><div><span>Device A</span></div><code>${term} echo "everything is" > ${guide_mountpoint}${dir}awesome.txt
+${term} ${cat_command} ${guide_mountpoint}${dir}awesome.txt
 everything is</code></pre>
 
     <h3 id="access-from-another-machine">Access from another machine</h3>
@@ -340,7 +385,7 @@ everything is</code></pre>
 
     <p>Let’s transmit the user’s identity to the other device. Note that it will be encrypted with a passphrase chosen by you. Also you will only have 5 minutes to retrieve it on device B.</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>$> infinit-device --transmit --user --as alice
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-device --transmit --user --as alice
 Passphrase: ********
 Transmitted user identity for "alice".
 User identity on the Hub for: 297 seconds
@@ -348,7 +393,7 @@ User identity on the Hub for: 297 seconds
 
     <p>Now let’s move to device B. First, you need to download, install and configure the Infinit command-line tools on this new device as you did for device A. Please refer to the first sections of this guide for that purpose.</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>$> infinit-device --receive --user --name alice
+    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit-device --receive --user --name alice
 Passphrase: ********
 Received user identity for "alice".
 </code></pre>
@@ -357,21 +402,21 @@ Received user identity for "alice".
 
     <p>The next steps consist of fetching the resources that you previously pushed on the Hub: networks and volumes.</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>$> infinit-network --fetch --as alice --name my-network
+    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit-network --fetch --as alice --name my-network
 Fetched network "alice/my-network".
-$> infinit-volume --fetch --as alice --name my-volume
+${term} infinit-volume --fetch --as alice --name my-volume
 Fetched volume "alice/my-volume".
 </code></pre>
 
     <p>Let’s link this device to the <code>my-network</code> network you created on device A.</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>$> infinit-network --link --as alice --name my-network
-    Linked device to network "alice/my-network".
+    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit-network --link --as alice --name my-network
+Linked device to network "alice/my-network".
     </code></pre>
 
     <p>Finally, the volume can be mounted on device B as simply as on device A:</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-alice-volume/ --async --cache --publish
+    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit-volume --mount --as alice --name my-volume --mountpoint ${guide_mountpoint} --async --cache --publish
 Fetch endpoints for "alice/my-network".
 Running network "alice/my-network".
 Running volume "alice/my-volume".
@@ -380,9 +425,9 @@ Running volume "alice/my-volume".
 
     <p>It is now time to check if the file you created on device A is synchronized with device B:</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>$> ls ~/mnt-alice-volume/
+    <pre class="device2"><div><span>Device B</span></div><code>${term} ${ls_command} ${guide_mountpoint}${dir}
 awesome.txt
-$> cat ~/mnt-alice-volume/awesome.txt
+${term} ${cat_command} ${guide_mountpoint}${dir}awesome.txt
 everything is
 </code></pre>
 
@@ -394,7 +439,7 @@ everything is
 
     <p>First, let us create another user, unconventially named Bob, on a completely new device C. As mentioned earlier, if you don't have another device available, you can simulate one through the use of the <a href="${route('doc_environment_variables')}#infinit_home">INFINIT_HOME</a> environment variable.</em></p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>$> infinit-user --signup --name bob --email bob@company.com --fullname "Bob"
+    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit-user --signup --name bob --email bob@company.com --fullname "Bob"
 Generating RSA keypair.
 Remotely saved user "bob".
 </code></pre>
@@ -403,34 +448,34 @@ Remotely saved user "bob".
 
     <p>Back to device A and Alice to generate a passport for Bob. Note that in order to reference another user by its name, for generating a passport for instance, you first need to retrieve his/her user public identity from the Hub (or otherwise).</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>$> infinit-user --fetch --as alice --name bob
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-user --fetch --as alice --name bob
 Fetched user "bob".
-$> infinit-passport --create --as alice --network my-network --user bob --push
+${term} infinit-passport --create --as alice --network my-network --user bob --push
 Locally created passport "alice/my-network: bob".
 Remotely saved passport "alice/my-network: bob".
 </code></pre>
 
     <p>Now that a passport has been issued, Bob can very easily retrieve it from the Hub in order to join Alice's storage network. For this, Bob must fetch Alice's public user identity, Alice's <code>alice/my-network</code> network descriptor along with the freshly issued passport:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>$> infinit-user --fetch --as bob --name alice
+    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit-user --fetch --as bob --name alice
 Fetched user "alice".
-$> infinit-network --fetch --as bob --name alice/my-network
+${term} infinit-network --fetch --as bob --name alice/my-network
 Fetched network "alice/my-network".
-$> infinit-passport --fetch --as bob --network alice/my-network
+${term} infinit-passport --fetch --as bob --network alice/my-network
 Fetched passport for "alice/my-network".
 </code></pre>
 
     <p>With all the pieces fetched from the Hub, Bob can now link his current device C to Alice's storage network <code>alice/my-network</code>:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>$> infinit-network --link --as bob --name alice/my-network
+    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit-network --link --as bob --name alice/my-network
 Linked device to network "alice/my-network".
 </code></pre>
 
     <p>Once his device linked to the network, Bob can now mount Alice's volume. Note that the volume descriptor <code>alice/my-volume</code> must first be retrieved from the Hub in order for it to be mounted:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>$> infinit-volume --fetch --as bob --name alice/my-volume
+    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit-volume --fetch --as bob --name alice/my-volume
 Fetched volume "alice/my-volume".
-$> infinit-volume --mount --as bob --name alice/my-volume --mountpoint ~/mnt-alice-volume/ --async --cache --publish
+${term} infinit-volume --mount --as bob --name alice/my-volume --mountpoint ${guide_mountpoint} --async --cache --publish
 Running network "alice/my-network".
 Fetched endpoints for "alice/my-network".
 Running volume "alice/my-volume".
@@ -439,46 +484,54 @@ Running volume "alice/my-volume".
 
     <p>Bob can now try to access the mounted volume as shown below:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>$> ls ~/mnt-alice-volume/
-ls: ~/mnt-alice-volume/: Permission denied
+    <pre class="device3"><div><span>Device C</span></div><code>${term} ${ls_command} ${guide_mountpoint}
+% if osname == "windows":
+Access is denied.
+% else:
+${ls_command}: ${guide_mountpoint}: Permission denied
+% endif
 </code></pre>
 
     <p>As you can see, Bob cannot access Alice's volume because he has not been granted the permission to browse the root directory of <code>alice/my-volume</code>. Indeed, Infinit provides two layers of protections: passports prevent unauthorized computers to communicate with the servers of your storage infrastructure while an access control mechanism is provided to authorize other users to access/modify specific files and directories.</p>
 
     <p>This lack of permission can be verified on Alice's device A, through the <code>infinit-acl</code> binary which can be used for access control purposes:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>$> infinit-acl --list --path ~/mnt-alice-volume/
-~/mnt-alice-volume/:
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-acl --list --path ${guide_mountpoint_abs}
+${guide_mountpoint_abs}:
         alice: rw (owner)
 </code></pre>
 
     <p>For Bob to access the file <code>awesome.txt</code> located in the volume, Alice needs to grant him access on both the root directory and the file itself:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>$> infinit-acl --set --mode r --user bob --path ~/mnt-alice-volume/
-$> infinit-acl --set --mode r --user bob --path ~/mnt-alice-volume/awesome.txt
-$> infinit-acl --list --path ~/mnt-alice-volume/ --path ~/mnt-alice-volume/awesome.txt
-~/mnt-alice-volume/:
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-acl --set --mode r --user bob --path ${guide_mountpoint_abs}
+${term} infinit-acl --set --mode r --user bob --path ${guide_mountpoint}${dir}awesome.txt
+${term} infinit-acl --list --path ${guide_mountpoint_abs} --path ${guide_mountpoint}${dir}awesome.txt
+${guide_mountpoint_abs}:
   inherit: no
         alice: rw (owner)
         bob: r
 
-~/mnt-alice-volume/awesome.txt:
+${guide_mountpoint}${dir}awesome.txt:
         alice: rw (owner)
         bob: r
 </code></pre>
 
-    <p><em><strong>NOTE:</strong> One could have relied on the <code>--traverse</code> option to grant read permission on all the directories leading to the target object. In other words, the following would have achieved the same result <code>infinit-acl --set --mode r --user bob --traverse --path ~/mnt-alice-volume/awesome.txt</code>.</em></p>
+    <p><em><strong>NOTE:</strong> One could have relied on the <code>--traverse</code> option to grant read permission on all the directories leading to the target object. In other words, the following would have achieved the same result <code>infinit-acl --set --mode r --user bob --traverse --path ${guide_mountpoint}${dir}awesome.txt</code>.</em></p>
 
     <p>Bob should now be able to browse the volume's root directory and read its file. Note however that he should not be able to modify it since Alice did not grant Bob the permission to write the file:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>$> infinit-acl --list --path ~/mnt-alice-volume/awesome.txt
-~/mnt-alice-volume/awesome.txt:
+    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit-acl --list --path ${guide_mountpoint}${dir}awesome.txt
+${guide_mountpoint}${dir}awesome.txt:
         alice: rw (owner)
         bob: r
-$> cat ~/mnt-alice-volume/awesome.txt
+${term} ${cat_command} ${guide_mountpoint}${dir}awesome.txt
 everything is
-$> echo "or not" > ~/mnt-alice-volume/awesome.txt
-zsh: permission denied: ~/mnt-alice-volume/awesome.txt
+${term} echo "or not" > ${guide_mountpoint}${dir}awesome.txt
+% if osname == "windows":
+Access is denied.
+% else:
+zsh: permission denied: ${guide_mountpoint}${dir}awesome.txt
+% endif
 </code></pre>
 
     <p>Download full shell script: <a class="external" href="${url('scripts/get-started.sh')}"><img src="${url('images/icons/external-link.png')}">get_started.sh</a>.</p>

@@ -29,7 +29,7 @@ class Website(bottle.Bottle):
     route.apply(self)
     error_page.apply(self)
     self.__swu = sendwithus.api(api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d')
-    self.__hub = os.environ.get('INFINIT_BEYOND', 'https://beyond.infinit.io')
+    self.__hub = os.environ.get('INFINIT_BEYOND', 'https://beyond.infinit.sh')
 
   def __call__(self, e, h):
     e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')

@@ -82,6 +82,17 @@ namespace infinit
         _fetch(Address address,
                boost::optional<int> local_version) const override;
 
+      /*-----.
+      | Keys |
+      `-----*/
+      protected:
+        virtual
+        std::vector<cryptography::rsa::PublicKey>
+        _resolve_keys(std::vector<int> ids) override;
+        virtual
+        std::unordered_map<int, cryptography::rsa::PublicKey>
+        _resolve_all_keys() override;
+
       /*------.
       | Hooks |
       `------*/
@@ -100,9 +111,9 @@ namespace infinit
       | Server |
       `-------*/
       public:
-        reactor::network::TCPServer::EndPoint
+        Endpoint
         server_endpoint();
-        std::vector<reactor::network::TCPServer::EndPoint>
+        Endpoints
         server_endpoints();
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPServer>, server);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, server_thread);

@@ -38,11 +38,12 @@ namespace infinit
       std::string getxattr(std::string const& k) override {THROW_NODATA;}
       void _fetch() override {}
       void _commit(WriteTarget target) override {}
-      model::blocks::ACLBlock* _header_block() override { return nullptr;}
+      model::blocks::ACLBlock* _header_block(bool) override { return nullptr;}
       FileHeader& _header() override THROW_NOENT;
       virtual
       void
       print(std::ostream& stream) const override;
+      std::unique_ptr<rfs::Handle> create_0_7(int flags, mode_t mode);
     private:
     };
   }

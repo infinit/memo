@@ -82,7 +82,7 @@ namespace infinit
       void _fetch() override;
       void _fetch(std::unique_ptr<ACLBlock> block);
       void _commit(WriteTarget target) override;
-      model::blocks::ACLBlock* _header_block() override;
+      model::blocks::ACLBlock* _header_block(bool) override;
       FileHeader& _header() override;
       void move_recurse(boost::filesystem::path const& current,
           boost::filesystem::path const& where);
@@ -91,15 +91,7 @@ namespace infinit
       friend class Symlink;
       friend class Node;
       friend class FileHandle;
-      friend std::unique_ptr<Block>
-      resolve_directory_conflict(
-        Block& b,
-        Block& current,
-        model::StoreMode store_mode,
-        boost::filesystem::path p,
-        FileSystem& owner,
-        Operation op,
-        std::weak_ptr<Directory> wd);
+
       void _commit(Operation op, bool set_mtime = false);
       void _push_changes(Operation op, bool first_write = false);
       friend class FileSystem;
@@ -133,6 +125,7 @@ namespace infinit
       model::Model* _model;
       Operation _op;
       Address _address;
+      bool _deserialized;
       typedef infinit::serialization_tag serialization_tag;
     };
 
@@ -143,7 +136,8 @@ namespace infinit
                                boost::filesystem::path p,
                                FileSystem& owner,
                                Operation op,
-                               std::weak_ptr<Directory> wd);
+                               std::weak_ptr<Directory> wd,
+                               bool deserialized);
   }
 }
 

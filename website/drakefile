@@ -72,11 +72,13 @@ def configure(
     'templates/pages/docs/src/markdown/filesystem.md',
     'templates/pages/docs/src/markdown/gcs.md',
     'templates/pages/docs/src/markdown/get_started/linux_apt_install.md',
-    'templates/pages/docs/src/markdown/get_started/linux_tarball_install.md',
     'templates/pages/docs/src/markdown/get_started/linux_fuse_install.md',
+    'templates/pages/docs/src/markdown/get_started/linux_tarball_install.md',
+    'templates/pages/docs/src/markdown/get_started/mac_fuse_install.md',
     'templates/pages/docs/src/markdown/get_started/mac_homebrew_install.md',
     'templates/pages/docs/src/markdown/get_started/mac_tarball_install.md',
-    'templates/pages/docs/src/markdown/get_started/mac_fuse_install.md',
+    'templates/pages/docs/src/markdown/get_started/windows_dokany_install.md',
+    'templates/pages/docs/src/markdown/get_started/windows_tarball_install.md',
     'templates/pages/docs/src/markdown/reference.md',
     'templates/pages/docs/src/markdown/s3.md',
     'templates/pages/docs/src/markdown/upgrading.md',
@@ -553,18 +555,18 @@ def configure(
   ## ------ ##
 
   git = drake.git.Git()
-  with drake.templating.Context(content = {
-      'version': git.description(),
-      'version_major': git.version().split('.')[0],
-      'version_minor': git.version().split('.')[1],
-      'python_version_major': python.version.major,
-      'python_version_minor': python.version.minor,
-  }):
-    drake.node('control.tmpl')
   package = chain(copy_sources('debian/opt/infinit/sh'),
-                  copy_templates('debian/opt/infinit/sh'),
-                  drake.copy(drake.nodes('control'), 'debian/DEBIAN'))
+                  copy_templates('debian/opt/infinit/sh'))
   debian = drake.Rule('debian')
   debian << drake.debian.Packager(
     'infinit-sh_%s_amd64.deb' % git.description(),
+    {
+      'Package': 'infinit-sh',
+      'Maintainer': 'Quentin Hocquet <debian@infinit.io>',
+      'Version': git.version(),
+      'Homepage': 'http://www.infinit.sh',
+      'Architecture': 'amd64',
+      'Depends': 'python3, python3-requests, python3-mako',
+      'Description': 'Infinit beyond server.',
+    },
     package, 'debian').package

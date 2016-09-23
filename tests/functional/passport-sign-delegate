@@ -122,7 +122,7 @@ def run(mode):
         peer = peer(),
         path = '/')
       assertEq(res['success'], True)
-      assertEq(res['entries'], ['beacon'])
+      assertEq(sorted(res['entries']), ['.', '..', 'beacon'])
     else:
       # register adm passport
       # We need to kill and restart running volume because of fixed port
@@ -148,7 +148,7 @@ def run(mode):
       peer = peer(),
       path = '/')
     assertEq(res['success'], True)
-    assertEq(res['entries'], ['beacon'])
+    assertEq(sorted(res['entries']), ['.', '..', 'beacon'])
     owner.process.send_signal(signal.SIGINT)
     owner.process.wait()
     t.join()

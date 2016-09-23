@@ -64,7 +64,8 @@ namespace infinit
                                model::StoreMode store_mode,
                                model::Model& model,
                                Operation op,
-                               Address address)
+                               Address address,
+                               bool deserialized)
     {
        ELLE_TRACE("edit conflict on %s (%s %s)",
                   b.address(), op.type, op.target);
@@ -72,12 +73,20 @@ namespace infinit
        switch(op.type)
        {
        case OperationType::insert:
+       case OperationType::insert_exclusive:
          ELLE_ASSERT(!op.target.empty());
          if (d.files().find(op.target) != d.files().end())
          {
            ELLE_LOG("Conflict: the object %s was also created remotely,"
              " your changes will overwrite the previous content.",
              op.target);
+           if (op.type == OperationType::insert_exclusive)
+           {
+             if (deserialized)
+               ELLE_WARN("Ignoring 'exclusive' create flag in asynchronous mode");
+             else
+               THROW_EXIST;
+           }
          }
          ELLE_TRACE("insert: Overriding entry %s", op.target);
          d._files[op.target] = std::make_pair(op.entry_type, op.address);
@@ -143,6 +152,7 @@ namespace infinit
       elle::serialization::SerializerIn& s,
       elle::Version const& v)
       : _model(nullptr)
+      , _deserialized(true)
     {
       serialize(s, v);
     }
@@ -151,10 +161,12 @@ namespace infinit
       : _model(b._model)
       , _op(b._op)
       , _address(b._address)
+      , _deserialized(b._deserialized)
     {}
 
     DirectoryConflictResolver::DirectoryConflictResolver()
       : _model(nullptr)
+      , _deserialized(false)
     {}
 
     DirectoryConflictResolver::DirectoryConflictResolver(model::Model& model,
@@ -163,6 +175,7 @@ namespace infinit
       : _model(&model)
       , _op(op)
       , _address(address)
+      , _deserialized(false)
     {}
 
     DirectoryConflictResolver::~DirectoryConflictResolver()
@@ -175,13 +188,15 @@ namespace infinit
     {
       return resolve_directory_conflict(
         block, current, mode,
-        *this->_model, this->_op, this->_address);
+        *this->_model, this->_op, this->_address, this->_deserialized);
     }
 
     void
     DirectoryConflictResolver::serialize(elle::serialization::Serializer& s,
                                          elle::Version const& version)
     {
+      if (s.in())
+        this->_deserialized = true;
       std::string path;
       s.serialize("path", path); // for backward compatibility
       s.serialize("optype", _op.type, elle::serialization::as<int>());
@@ -394,6 +409,12 @@ namespace infinit
       {
         ELLE_TRACE("permission exception: %s", e.what());
         throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
+      }
+      catch(rfs::Error const& e)
+      {
+        ELLE_TRACE("filesystem error storing %x: %s",
+                  _address, e);
+        throw;
       }
       catch(elle::Error const& e)
       {
@@ -680,10 +701,19 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: list", *this);
       _data->_prefetch(_owner, _data);
       struct stat st;
+      st.st_size  = 0;
+      st.st_atime = 0;
+      st.st_mtime = 0;
+      st.st_ctime = 0;
+      st.st_mode = S_IFDIR | 00644;
+      cb(".", &st);
+      cb("..", &st);
       for (auto const& e: _data->_files)
       {
         switch(e.second.first)
         {
+        case EntryType::pending:
+          continue;
         case EntryType::file:
           st.st_mode = S_IFREG;
           break;
@@ -765,8 +795,13 @@ namespace infinit
     }
 
     model::blocks::ACLBlock*
-    Directory::_header_block()
+    Directory::_header_block(bool force)
     {
+      if (!_block && force)
+      {
+        this->_fetch();
+        ELLE_ASSERT(_block);
+      }
       return _block.get();
     }
 
@@ -791,27 +826,6 @@ namespace infinit
     /*--------------------.
     | Extended attributes |
     `--------------------*/
-
-    static
-    std::string
-    perms_to_json(model::Model& model, ACLBlock& block)
-    {
-      auto perms = block.list_permissions(model);
-      elle::json::Array v;
-      for (auto const& perm: perms)
-      {
-        elle::json::Object o;
-        o["admin"] = perm.admin;
-        o["name"] = perm.user->name();
-        o["owner"] = perm.owner;
-        o["read"] = perm.read;
-        o["write"] = perm.write;
-        v.push_back(o);
-      }
-      std::stringstream ss;
-      elle::json::write(ss, v, true);
-      return ss.str();
-    }
 
     std::vector<std::string>
     Directory::listxattr()
@@ -916,7 +930,7 @@ namespace infinit
             {
               auto block = elle::cast<ACLBlock>::runtime(
                 this->_owner.block_store()->fetch(this->_data->address()));
-              return perms_to_json(*this->_owner.block_store(), *block);
+              return this->perms_to_json(*block);
             }
             else if (*special == "auth.inherit")
             {
