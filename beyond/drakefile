@@ -239,7 +239,7 @@ def configure(
   debian_nodes = install_nodes('debian/opt/infinit/beyond',
                                how = drake.copy)
   git = drake.git.Git()
-  version = git.version()
+  version = git.description()
   debian_nodes = chain(
     debian_nodes,
     drake.copy(
