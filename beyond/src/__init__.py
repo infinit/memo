@@ -781,17 +781,27 @@ class Entity(type):
           if isinstance(v, dict):
             for k, v in v.items():
               if original.get(k) != v:
-                diff.setdefault(field, {})[k] = v
+                if isinstance(v, Optional):
+                  diff.setdefault(field, {})[k] = None
+                else:
+                  diff.setdefault(field, {})[k] = v
             setattr(self, original_field, deepcopy(v))
           elif original != v:
-            diff[field] = v
+            if isinstance(v, Optional):
+              diff[field] = None
+            else:
+              diff[field] = v
         updater = getattr(self.__beyond._Beyond__datastore, update)
         updater(self.id, diff)
       content['save'] = save
     def overwrite(self):
       diff = {
-        field: getattr(self, field) for field in fields
+        field: getattr(self, field) for field in fields \
+        if not isinstance(getattr(self, field), Optional)
       }
+      for field, v in diff.items():
+        if isinstance(v, Optional):
+          del diff[field]
       del diff['name']
       updater = getattr(self.__beyond._Beyond__datastore, update)
       updater(self.id, diff)
