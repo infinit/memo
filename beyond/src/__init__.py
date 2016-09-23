@@ -899,7 +899,8 @@ class Volume(metaclass = Entity,
              fields = fields('name', 'network',
                              owner = Optional(),
                              default_permissions = '',
-                             mount_options = dict())):
+                             mount_options = dict(),
+                             description = Optional())):
 
   @property
   def id(self):
