@@ -52,8 +52,6 @@ namespace infinit
               this->local()->broadcast<void>(
                 "kouncil_add_entries", std::move(entries));
             });
-        }
-        if (auto local = this->doughnut()->local())
           local->on_connect().connect(
             [this] (RPCServer& rpcs)
             {
@@ -69,6 +67,7 @@ namespace infinit
                     return std::move(res);
                   }));
             });
+        }
         this->doughnut()->dock().on_connect().connect(
           [this] (model::doughnut::Remote& r)
           {
