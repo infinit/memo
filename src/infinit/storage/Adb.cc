@@ -98,11 +98,10 @@ namespace infinit
       return res;
     }
 
-    AdbStorageConfig::AdbStorageConfig(elle::serialization::SerializerIn& input)
-    : StorageConfig()
-    {
-      this->serialize(input);
-    }
+    AdbStorageConfig::AdbStorageConfig(elle::serialization::SerializerIn& s)
+      : StorageConfig(s)
+      , root(s.deserialize<std::string>("root"))
+    {}
 
     void
     AdbStorageConfig::serialize(elle::serialization::Serializer& s)

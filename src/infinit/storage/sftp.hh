@@ -45,7 +45,8 @@ namespace infinit
       SFTPStorageConfig(std::string const& name,
                         std::string const& host,
                         std::string const& path,
-                        boost::optional<int64_t> capacity = {});
+                        boost::optional<int64_t> capacity,
+                        boost::optional<std::string> description);
       SFTPStorageConfig(elle::serialization::SerializerIn& in);
 
       virtual

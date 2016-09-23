@@ -131,16 +131,18 @@ namespace infinit
     S3StorageConfig::S3StorageConfig(std::string name,
                                     aws::Credentials credentials,
                                     aws::S3::StorageClass storage_class,
-                                    boost::optional<int64_t> capacity)
-      : StorageConfig(std::move(name), std::move(capacity))
+                                    boost::optional<int64_t> capacity,
+                                    boost::optional<std::string> description)
+      : StorageConfig(
+          std::move(name), std::move(capacity), std::move(description))
       , credentials(std::move(credentials))
       , storage_class(storage_class)
     {}
 
-    S3StorageConfig::S3StorageConfig(elle::serialization::SerializerIn& input)
-      : StorageConfig()
+    S3StorageConfig::S3StorageConfig(elle::serialization::SerializerIn& s)
+      : StorageConfig(s)
     {
-      this->serialize(input);
+      this->serialize(s);
     }
 
     void
