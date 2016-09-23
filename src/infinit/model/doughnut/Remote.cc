@@ -388,6 +388,7 @@ namespace infinit
       std::vector<cryptography::rsa::PublicKey>
       Remote::_resolve_keys(std::vector<int> ids)
       {
+        static elle::Bench bench("bench.remote_key_cache_hit", 1000_sec);
         {
           std::vector<int> missing;
           for (auto id: ids)
@@ -396,6 +397,7 @@ namespace infinit
               missing.emplace_back(id);
           if (missing.size())
           {
+            bench.add(0);
             ELLE_TRACE("%s: fetch %s keys by ids", this, missing.size());
             auto rpc = this->make_rpc<std::vector<cryptography::rsa::PublicKey>(
               std::vector<int> const&)>("resolve_keys");
@@ -408,6 +410,8 @@ namespace infinit
             for (; id_it != missing.end(); ++id_it, ++key_it)
               this->_key_hash_cache.emplace(*id_it, std::move(*key_it));
           }
+          else
+            bench.add(1);
         }
         std::vector<cryptography::rsa::PublicKey> res;
         for (auto id: ids)
