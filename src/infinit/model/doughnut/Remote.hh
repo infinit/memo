@@ -104,6 +104,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(EndpointsRefetcher, refetch_endpoints);
         ELLE_ATTRIBUTE_R(bool, fast_fail);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
+        ELLE_ATTRIBUTE(std::chrono::system_clock::time_point, connection_start_time);
 
       /*-------.
       | Blocks |

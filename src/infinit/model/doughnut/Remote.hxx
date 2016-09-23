@@ -79,8 +79,16 @@ namespace infinit
           {
             if (!reactor::wait(*this->_connection_thread, 0_sec))
             { // still connecting
-              ELLE_DEBUG("still connecting");
+              ELLE_DEBUG("%s is still connecting on attempt %s",
+                         this, _reconnection_id);
               connect_running = true;
+              if (std::chrono::system_clock::now() - this->_connection_start_time
+                > std::chrono::seconds(connect_timeout_sec))
+              {
+                this->_reconnecting = false;
+                connect_running = false;
+                ELLE_DEBUG("%s: scheduling reconnection attempts", this);
+              }
               throw reactor::network::ConnectionClosed("Connection pending");
             }
             // if we reach here, connection thread finished without exception,

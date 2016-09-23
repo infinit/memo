@@ -92,6 +92,9 @@ namespace infinit
             [this]
             {
               this->_connected = false;
+              this->_connection_start_time = std::chrono::system_clock::now();
+              ELLE_DEBUG("%s: connection attempt to %s endpoints",
+                         this, this->_endpoints.size());
               auto handshake = [&] (std::unique_ptr<std::iostream> socket)
                 {
                   auto serializer = elle::make_unique<protocol::Serializer>(
