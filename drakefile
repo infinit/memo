@@ -913,6 +913,7 @@ def configure(
     cxx_config_tests.library_add(elle.boost.filesystem_static)
     cxx_config_tests.library_add(elle.boost.program_options_static)
     cxx_config_tests.library_add(elle.boost.system_static)
+    cxx_config_tests.library_add(elle.boost.regex_static)
     cxx_config_tests.use_whole_archive()
     cxx_config_tests.define('ELLE_SERIALIZATION_USE_DLL')
     cxx_config_tests.define('ELLE_TEST_NO_MEMFRY') # does not cross DLL boundaries
