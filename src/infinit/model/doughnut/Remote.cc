@@ -63,6 +63,7 @@ namespace infinit
         , _endpoints(std::move(endpoints))
         , _utp_server(server)
         , _protocol(protocol)
+        , _refetch_endpoints(refetch? *refetch : EndpointsRefetcher())
         , _fast_fail(false)
         , _connection_thread()
       {
