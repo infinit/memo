@@ -2324,9 +2324,10 @@ namespace infinit
             auto contact_it = _state.contacts[fg].find(it->second.home_node);
             if (contact_it != _state.contacts[fg].end())
             {
-              ELLE_DEBUG("%s: found other", *this);
               endpoints =
                 endpoints_extract(contact_it->second.endpoints);
+              ELLE_DEBUG("%s: found other at %f:%s",
+                         *this, it->second.home_node, endpoints);
               found = true;
             }
             else
@@ -3264,17 +3265,23 @@ namespace infinit
       Node::_refetch_endpoints(model::Address id)
       {
         // Perform a lookup for the node
+        ELLE_LOG("%s: refetch endpoints for %s", this, id);
+        boost::optional<model::Endpoints> res;
         boost::optional<NodeLocation> result;
         kelipsGet(id, 1, false, -1, true, false,
                   [&] (NodeLocation p)
                   {
                     result = p;
-                  });
+                  },
+                  true);
         if (result)
-          return result->endpoints();
-        else
+        {
+          ELLE_LOG("%s: got endpoints from network: %s", this, result->endpoints());
+          res = result->endpoints();
+        }
+        if (!res || res->empty())
           return {};
-
+        return res;
       }
 
       reactor::Generator<std::pair<model::Address, Node::WeakMember>>
