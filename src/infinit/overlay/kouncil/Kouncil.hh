@@ -80,9 +80,8 @@ namespace infinit
         /// Check invariants.
         void
         _validate() const;
-        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, bootstrapper);
 
-     /*------.
+      /*------.
       | Peers |
       `------*/
       protected:

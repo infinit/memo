@@ -34,7 +34,6 @@ namespace infinit
         : Overlay(dht, local)
         , _address_book()
         , _peers()
-        , _bootstrapper()
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
         if (local)
