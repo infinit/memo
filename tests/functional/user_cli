@@ -9,14 +9,16 @@ with Beyond() as b, Infinit(beyond = b) as bob, Infinit(beyond = b) as alice:
            '--name', 'bob', '--email', 'bob@infinit.io'])
   alice.run(['infinit-user', '--signup', '--full',
              '--name', 'alice', '--email', 'alice@infinit.io',
-             '--password', 'loremipsword'])
+             '--password', 'loremipsword',
+             '--description', 'something about this person'])
   try:
     bob.run(['infinit-user', '--export', '--name', 'alice'])
     unreachable()
   except Exception as e:
     pass
   bob.run(['infinit-user', '--fetch', '--name', 'alice'])
-  bob.run(['infinit-user', '--export', '--name', 'alice'])
+  res = bob.run_json(['infinit-user', '--export', '--name', 'alice'])
+  assertEq(res['description'], 'something about this person')
 
 ## ----------------- ##
 ## Login / Push full ##
