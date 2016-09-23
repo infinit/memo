@@ -1579,7 +1579,7 @@ namespace infinit
   };
 
   struct Drive
-    : public elle::Printable
+    : public descriptor::TemplatedBaseDescriptor<Drive>
   {
     struct User
     {
@@ -1620,48 +1620,45 @@ namespace infinit
           std::string const& owner,
           std::string const& volume,
           std::string const& network,
-          std::string const& description,
+          boost::optional<std::string> description,
           Users const& users)
-      : name(name)
+      : descriptor::TemplatedBaseDescriptor<Drive>(name, std::move(description))
       , owner(owner)
       , volume(volume)
       , network(network)
-      , description(description)
       , users(users)
-    {
-      check_name(this->name);
-    }
+    {}
 
   public:
     Drive(std::string const& name,
           infinit::User const& owner,
           Volume const& volume,
           Network const& network,
-          std::string const& description,
+          boost::optional<std::string> description,
           Users const& users)
-      : Drive(name, owner.name, volume.name, network.name, description, users)
+      : Drive(name, owner.name, volume.name, network.name,
+              std::move(description), users)
     {
       if (this->users.find(owner.name) == this->users.end())
         this->users[owner.name] = User{"rw", "ok", false};
     }
 
     Drive(elle::serialization::SerializerIn& s)
-      : Drive(s.deserialize<std::string>("name"),
-              s.deserialize<std::string>("owner"),
-              s.deserialize<std::string>("volume"),
-              s.deserialize<std::string>("network"),
-              s.deserialize<std::string>("description"),
-              s.deserialize<Users>("users"))
+      : descriptor::TemplatedBaseDescriptor<Drive>(s)
+      , owner(s.deserialize<std::string>("owner"))
+      , volume(s.deserialize<std::string>("volume"))
+      , network(s.deserialize<std::string>("network"))
+      , users(s.deserialize<Users>("users"))
+      , icon_path(s.deserialize<boost::optional<std::string>>("icon_path"))
     {}
 
     void
-    serialize(elle::serialization::Serializer& s)
+    serialize(elle::serialization::Serializer& s) override
     {
-      s.serialize("name", this->name);
+      descriptor::TemplatedBaseDescriptor<Drive>::serialize(s);
       s.serialize("owner", this->owner);
       s.serialize("volume", this->volume);
       s.serialize("network", this->network);
-      s.serialize("description", this->description);
       s.serialize("users", this->users);
       s.serialize("icon_path", this->icon_path);
     }
@@ -1672,11 +1669,9 @@ namespace infinit
       out << "Drive(" << this->name << ")";
     }
 
-    std::string name;
     std::string owner;
     std::string volume;
     std::string network;
-    std::string description;
     Users users;
     boost::optional<std::string> icon_path;
   };
