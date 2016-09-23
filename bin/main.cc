@@ -5,6 +5,10 @@
 
 ELLE_LOG_COMPONENT("infinit");
 
+#ifndef INFINIT_WINDOWS
+# include <crash_reporting/CrashReporter.hh>
+#endif
+
 #include <main.hh>
 
 reactor::Thread::unique_ptr

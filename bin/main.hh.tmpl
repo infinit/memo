@@ -36,10 +36,6 @@
 #include <reactor/scheduler.hh>
 #include <reactor/thread.hh>
 
-#ifndef INFINIT_WINDOWS
-# include <crash_reporting/CrashReporter.hh>
-#endif
-
 #include <infinit/utility.hh>
 #include <infinit/credentials/AWSCredentials.hh>
 #include <infinit/credentials/OAuthCredentials.hh>
@@ -3372,16 +3368,17 @@ private:
 inline
 void
 beyond_fetch_endpoints(infinit::Network const& network,
-                       infinit::model::NodeLocations& hosts)
+                       infinit::model::NodeLocations& hosts,
+                       bool silent = false)
 {
-  reactor::http::Request r(
-    elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name));
+  auto url = elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name);
+  reactor::http::Request r(url);
   reactor::wait(r);
   if (r.status() != reactor::http::StatusCode::OK)
   {
     throw elle::Error(
-      elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\"",
-                    r.status(), network.name));
+      elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\" at \"%s\"",
+                    r.status(), network.name, url));
   }
   auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
   for (auto const& user: json)
@@ -3406,7 +3403,8 @@ beyond_fetch_endpoints(infinit::Network const& network,
       ELLE_WARN("Exception parsing peer endpoints: %s", e.what());
     }
   }
-  report_action("fetched", "endpoints for", network.name);
+  if (!silent)
+    report_action("fetched", "endpoints for", network.name);
 }
 
 namespace infinit
@@ -3432,11 +3430,6 @@ reactor::Thread::unique_ptr
 make_stat_update_thread(infinit::User const& self,
                         infinit::Network& network,
                         infinit::model::doughnut::Doughnut& model);
-#ifdef INFINIT_MACOSX
-# define SXA_EXTRA ,0
-#else
-# define SXA_EXTRA
-#endif
 
 static std::string _hub_salt = "@a.Fl$4'x!";
 
