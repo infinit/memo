@@ -3,7 +3,7 @@
 <%block name="content">
 
   <h1>Download Infinit CLI</h1>
-  <p class="subtitle">Available for Mac and Linux, Windows coming soon.</p>
+  <p class="subtitle">Available for Linux, Mac and Windows.</p>
 
   <section class="platforms">
     <div class="platform mac">
@@ -23,9 +23,11 @@
     <div class="platform windows">
       <img src="${url('images/icons/windows.png')}">
       <h2>Windows</h2>
-      <a class="button" target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee">Get Invitation</a>
+      <a class="open-popup button" href="#windows">Download</a><br>
     </div>
   </section>
+
+  <p class="legal"><em><strong>NOTE:</strong> By downloading the software, you accept the <a href="${route('legal')}">Terms and Conditions</a> of Infinit.</em></p>
 
   <div class="popup" id="mac-homebrew">
     <section class="doc">
@@ -33,7 +35,6 @@
       <%include file='docs/generated/get_started/mac_fuse_install.html'/>
       <br><h3>Download Infinit via Homebrew</h3>
       <%include file='docs/generated/get_started/mac_homebrew_install.html'/>
-      <p><em><strong>NOTE:</strong> By downloading the software, you accept the <a href="${route('legal')}">Terms and Conditions</a> of Infinit.</em></p>
     </section>
   </div>
 
@@ -43,7 +44,6 @@
       <%include file='docs/generated/get_started/mac_fuse_install.html'/>
       <br><h3>Download Infinit Tarball</h3>
       <%include file='docs/generated/get_started/mac_tarball_install.html'/>
-      <p><em><strong>NOTE:</strong> By downloading the software, you accept the <a href="${route('legal')}">Terms and Conditions</a> of Infinit.</em></p>
     </section>
   </div>
 
@@ -53,7 +53,6 @@
       <%include file='docs/generated/get_started/linux_fuse_install.html'/>
       <br><h3>Download Infinit with apt</h3>
       <%include file='docs/generated/get_started/linux_apt_install.html'/>
-      <p><em><strong>NOTE:</strong> By downloading the software, you accept the <a href="${route('legal')}">Terms and Conditions</a> of Infinit.</em></p>
     </section>
   </div>
 
@@ -63,7 +62,15 @@
       <%include file='docs/generated/get_started/linux_fuse_install.html'/>
       <br><h3>Download Infinit Tarball</h3>
       <%include file='docs/generated/get_started/linux_tarball_install.html'/>
-      <p><em><strong>NOTE:</strong> By downloading the software, you accept the <a href="${route('legal')}">Terms and Conditions</a> of Infinit.</em></p>
+    </section>
+  </div>
+
+  <div class="popup" id="windows">
+    <section class="doc">
+      <h3>Download Dokany</h3>
+      <%include file='docs/generated/get_started/windows_dokany_install.html'/>
+      <br><h3>Download Infinit Tarball</h3>
+      <%include file='docs/generated/get_started/windows_tarball_install.html'/>
     </section>
   </div>
 
