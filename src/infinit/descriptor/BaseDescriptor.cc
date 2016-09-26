@@ -18,8 +18,8 @@ namespace infinit
     {}
 
     static const std::string invalid_name(
-      "name (%s) must only contain lower case alphanumeric and - . _ "
-      "characters but not start with the . character");
+      "name (%s) must be shorter than 128 characters, only contain lower case "
+      "alphanumeric and - . _ characters and not start with the . character");
 
     DescriptorNameError::DescriptorNameError(std::string const& name)
       : DescriptorError(elle::sprintf(invalid_name, name))
