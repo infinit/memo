@@ -314,6 +314,8 @@ def configure(
     bin_cxx_config.library_add(
       drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
     bin_cxx_config.library_add(
+      drake.copy(elle.boost.regex_dynamic, 'lib', True))
+    bin_cxx_config.library_add(
       drake.copy(elle.boost.system_dynamic, 'lib', True))
     if cxx_toolkit.os is drake.os.macos:
       bin_cxx_config.framework_add('CoreServices')
