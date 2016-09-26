@@ -450,7 +450,7 @@ class User:
       ('public_key', None),
     ],
     'optional': [
-      ('description', None),
+      ('description', validation.Description('user', 'description')),
       ('dropbox_accounts', None),
       ('fullname', None),
       ('google_accounts', None),
@@ -721,6 +721,11 @@ class Entity(type):
         v = kwargs.pop(f, None)
         if v is None:
           v = default
+        if f == 'name' and not isinstance(v, Optional):
+          test_name = v.split('/')[-1]
+          validation.Name(name, 'name')(test_name)
+        if f == 'description' and not isinstance(v, Optional):
+          validation.Description(name, 'description')(v)
         setattr(self, '_%s__%s' % (name, f), v)
         setattr(self, '_%s__%s_original' % (name, f), deepcopy(v))
       if kwargs:
