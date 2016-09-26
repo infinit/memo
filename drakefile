@@ -25,6 +25,7 @@ rule_install = None
 rule_symbols = None
 rule_tests = None
 
+description_regex = '^.{0,2048}$'
 email_regex = '^[^@]+@[^@]+\.[^@]+$'
 name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$'
 
@@ -203,7 +204,10 @@ def configure(
                       git,
                       production_build = production_build)
 
-  with drake.templating.Context(content = {'name_regex': name_regex}):
+  with drake.templating.Context(content = {
+      'description_regex': description_regex,
+      'name_regex': name_regex,
+    }):
     drake.node('src/infinit/descriptor/TemplatedBaseDescriptor.hxx.tmpl')
 
   infinit_sources = drake.nodes(

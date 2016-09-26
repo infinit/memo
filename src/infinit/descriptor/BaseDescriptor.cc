@@ -25,6 +25,14 @@ namespace infinit
       : DescriptorError(elle::sprintf(invalid_name, name))
     {}
 
+    static const std::string invalid_description(
+      "description must be 2048 characters or less: %s");
+
+    DescriptorDescriptionError::DescriptorDescriptionError(
+      std::string const& description)
+      : DescriptorError(elle::sprintf(invalid_description, description))
+    {}
+
     /*-----.
     | Name |
     `-----*/

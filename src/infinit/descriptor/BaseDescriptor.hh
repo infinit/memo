@@ -31,6 +31,13 @@ namespace infinit
       DescriptorNameError(std::string const& name);
     };
 
+    class DescriptorDescriptionError
+      : public DescriptorError
+    {
+    public:
+      DescriptorDescriptionError(std::string const& description);
+    };
+
     struct BaseDescriptor
       : public elle::Printable
     {

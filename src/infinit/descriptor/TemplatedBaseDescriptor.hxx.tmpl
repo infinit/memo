@@ -26,10 +26,15 @@ namespace infinit
 
     template <typename T>
     void
-    TemplatedBaseDescriptor<T>::check_description(std::string const& desc)
+    TemplatedBaseDescriptor<T>::check_description(
+      boost::optional<std::string> const& description)
     {
-      if (desc.size() > 1024)
-        throw DescriptorError("description must be less than 1024 characters");
+      if (!description)
+        return;
+      static const boost::regex allowed("${description_regex}");
+      boost::smatch str_matches;
+      if (!boost::regex_match(description.get(), str_matches, allowed))
+        throw DescriptorDescriptionError(description.get());
     }
 
     /*-------------.
@@ -43,6 +48,7 @@ namespace infinit
       : BaseDescriptor(std::move(name), std::move(description))
     {
       check_name(this->name);
+      check_description(this->description);
     }
 
     template <typename T>
@@ -51,6 +57,7 @@ namespace infinit
       : BaseDescriptor(descriptor)
     {
       check_name(this->name);
+      check_description(this->description);
     }
 
     /*--------------.
@@ -63,6 +70,7 @@ namespace infinit
       : BaseDescriptor(s)
     {
       check_name(this->name);
+      check_description(this->description);
     }
   }
 }

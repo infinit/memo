@@ -36,7 +36,7 @@ namespace infinit
 
       static
       void
-      check_description(std::string const& description);
+      check_description(boost::optional<std::string> const& description);
 
       /*--------------.
       | Serialization |
