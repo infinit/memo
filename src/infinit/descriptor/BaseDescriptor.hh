@@ -1,6 +1,7 @@
 #ifndef INFINIT_DESCRIPTOR_BASE_DESCRIPTOR_HH
 # define INFINIT_DESCRIPTOR_BASE_DESCRIPTOR_HH
 
+# include <boost/filesystem/path_traits.hpp>
 # include <boost/optional.hpp>
 
 # include <das/model.hh>
@@ -86,5 +87,20 @@ namespace infinit
 }
 
 DAS_MODEL_FIELDS(infinit::descriptor::BaseDescriptor, (name, description));
+
+namespace boost
+{
+  namespace filesystem
+  {
+    namespace path_traits
+    {
+      template <>
+      struct is_pathable<infinit::descriptor::BaseDescriptor::Name>
+      {
+        static const bool value = true;
+      };
+    }
+  }
+}
 
 #endif // INFINIT_DESCRIPTOR_BASE_DESCRIPTOR_HH
