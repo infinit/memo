@@ -174,8 +174,12 @@ namespace infinit
               if (!this->_connected)
                 this->_connected.raise<elle::Error>(
                   elle::sprintf("connection to %f failed", this->_endpoints));
-              ELLE_TRACE("%s: serve RPCs", this)
-                this->_rpc_server.serve(*this->_channels);
+              else
+              {
+                ELLE_ASSERT(this->_channels);
+                ELLE_TRACE("%s: serve RPCs", this)
+                  this->_rpc_server.serve(*this->_channels);
+              }
             }));
       }
 

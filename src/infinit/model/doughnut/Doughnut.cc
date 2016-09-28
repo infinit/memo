@@ -171,7 +171,7 @@ namespace infinit
 
       Doughnut::~Doughnut()
       {
-        ELLE_TRACE_SCOPE("%s: destruct", *this);
+        ELLE_TRACE_SCOPE("%s: destruct", this);
         this->_terminating.open();
         if (this->_user_init)
         {
@@ -182,6 +182,7 @@ namespace infinit
         if (this->_local)
           this->_local->cleanup();
         this->_consensus.reset();
+        this->_dock.cleanup();
         this->_overlay.reset();
         this->_dock.cleanup();
         if (this->_local)
