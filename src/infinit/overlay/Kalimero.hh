@@ -34,7 +34,7 @@ namespace infinit
       _lookup(model::Address address, int n, Operation op) const override;
       virtual
       Overlay::WeakMember
-      _lookup_node(model::Address address) override;
+      _lookup_node(model::Address address) const override;
     };
 
     struct KalimeroConfiguration

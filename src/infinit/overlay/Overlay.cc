@@ -154,13 +154,13 @@ namespace infinit
     }
 
     Overlay::WeakMember
-    Overlay::lookup_node(model::Address address)
+    Overlay::lookup_node(model::Address address) const
     {
       return this->_lookup_node(address);
     }
 
     reactor::Generator<Overlay::WeakMember>
-    Overlay::lookup_nodes(std::unordered_set<model::Address> addresses)
+    Overlay::lookup_nodes(std::unordered_set<model::Address> addresses) const
     {
       ELLE_TRACE_SCOPE("%s: lookup nodes %f", this, addresses);
       return reactor::generator<Overlay::WeakMember>(

@@ -74,7 +74,7 @@ namespace kademlia
             infinit::overlay::Operation op) const override;
     virtual
     Overlay::WeakMember
-    _lookup_node(infinit::model::Address address) override;
+    _lookup_node(infinit::model::Address address) const override;
   public:
 
   private:

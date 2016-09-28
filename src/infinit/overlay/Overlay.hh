@@ -103,14 +103,14 @@ namespace infinit
        * @raise elle::Error if the node is not found.
        */
       WeakMember
-      lookup_node(model::Address id);
+      lookup_node(model::Address id) const;
       /** Lookup nodes from their ids.
        *
        * @arg ids ids of the nodes to lookup.
        * @raise elle::Error if the node is not found.
        */
       reactor::Generator<WeakMember>
-      lookup_nodes(std::unordered_set<model::Address> ids);
+      lookup_nodes(std::unordered_set<model::Address> ids) const;
     protected:
       virtual
       reactor::Generator<std::pair<model::Address, WeakMember>>
@@ -124,7 +124,7 @@ namespace infinit
        */
       virtual
       WeakMember
-      _lookup_node(model::Address address) = 0;
+      _lookup_node(model::Address address) const = 0;
 
     /*------.
     | Query |

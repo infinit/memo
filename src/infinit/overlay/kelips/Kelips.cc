@@ -3216,12 +3216,13 @@ namespace infinit
       }
 
       Overlay::WeakMember
-      Node::make_peer(NodeLocation hosts)
+      Node::make_peer(NodeLocation hosts) const
       {
         return this->doughnut()->dock().make_peer(
           hosts,
           model::EndpointsRefetcher(
-            std::bind(&Node::_refetch_endpoints, this, hosts.id())));
+            std::bind(&Node::_refetch_endpoints,
+                      elle::unconst(this), hosts.id())));
       }
 
       boost::optional<model::Endpoints>
@@ -3480,7 +3481,7 @@ namespace infinit
       }
 
       Overlay::WeakMember
-      Node::_lookup_node(Address address)
+      Node::_lookup_node(Address address) const
       {
         BENCH("lookup_node");
         if (address == _self)
@@ -3513,7 +3514,8 @@ namespace infinit
             throw elle::Error(elle::sprintf("Node %s not found", address));
         }
         boost::optional<NodeLocation> result;
-        kelipsGet(address, 1, false, -1, true, false, [&](NodeLocation p)
+        elle::unconst(this)->kelipsGet(
+          address, 1, false, -1, true, false, [&](NodeLocation p)
           {
             result = p;
           });

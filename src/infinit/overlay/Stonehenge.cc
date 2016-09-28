@@ -79,7 +79,7 @@ namespace infinit
     }
 
     Overlay::WeakMember
-    Stonehenge::_lookup_node(model::Address address)
+    Stonehenge::_lookup_node(model::Address address) const
     {
       for (auto const& peer: this->_peers)
         if (peer.id() == address)

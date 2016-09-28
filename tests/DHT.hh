@@ -154,7 +154,7 @@ protected:
 
   virtual
   WeakMember
-  _lookup_node(infinit::model::Address id) override
+  _lookup_node(infinit::model::Address id) const override
   {
     for (auto* peer: this->_peers)
       if (peer->local() && peer->local()->id() == id)

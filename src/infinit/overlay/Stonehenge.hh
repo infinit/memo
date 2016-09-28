@@ -39,7 +39,7 @@ namespace infinit
               Operation op) const override;
       virtual
       Overlay::WeakMember
-      _lookup_node(model::Address address) override;
+      _lookup_node(model::Address address) const override;
 
     private:
       Overlay::WeakMember

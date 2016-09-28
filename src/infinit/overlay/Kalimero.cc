@@ -49,7 +49,7 @@ namespace infinit
     }
 
     Overlay::WeakMember
-    Kalimero::_lookup_node(model::Address address)
+    Kalimero::_lookup_node(model::Address address) const
     {
       return this->local();
     }

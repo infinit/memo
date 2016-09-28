@@ -222,7 +222,7 @@ namespace infinit
         _lookup(std::vector<infinit::model::Address> const& address, int n) const override;
         virtual
         WeakMember
-        _lookup_node(Address address) override;
+        _lookup_node(Address address) const override;
       private:
         typedef infinit::model::doughnut::Local Local;
         typedef infinit::overlay::Overlay Overlay;
@@ -325,7 +325,7 @@ namespace infinit
         get_or_make(Address address, bool observer,
           std::vector<Endpoint> endpoints, bool make=true);
         Overlay::WeakMember
-        make_peer(NodeLocation pl);
+        make_peer(NodeLocation pl) const;
         packet::RequestKey make_key_request();
         Address _self;
         std::unordered_map<Address, Time> _ping_time;
@@ -362,6 +362,7 @@ namespace infinit
         ELLE_ATTRIBUTE(
           (std::unordered_map<Address, std::vector<Overlay::WeakMember>>),
           peer_cache);
+        mutable
         std::unordered_map<Address,
           std::pair<reactor::Thread::unique_ptr, bool>> _node_lookups;
         std::unordered_map<reactor::Thread*, reactor::Thread::unique_ptr>

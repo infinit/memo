@@ -542,7 +542,7 @@ namespace kademlia
   }
 
   infinit::overlay::Overlay::WeakMember
-  Kademlia::_lookup_node(infinit::model::Address address)
+  Kademlia::_lookup_node(infinit::model::Address address) const
   {
     return Overlay::WeakMember();
   }

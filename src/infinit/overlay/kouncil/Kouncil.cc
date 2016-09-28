@@ -215,7 +215,7 @@ namespace infinit
                         "kouncil_lookup");
                     for (auto node: lookup(address))
                     {
-                      yield(elle::unconst(this)->_lookup_node(node)); // FIXME
+                      yield(this->_lookup_node(node));
                       if (++count >= n)
                         break;
                     }
@@ -228,7 +228,7 @@ namespace infinit
       }
 
       Overlay::WeakMember
-      Kouncil::_lookup_node(model::Address address)
+      Kouncil::_lookup_node(model::Address address) const
       {
         auto it = this->_peers.find(address);
         if (it != this->_peers.end())
