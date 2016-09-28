@@ -3,10 +3,11 @@
 
 ## [0.7.0] - 2016-09-23
 
-Bandwidth and CPU usage optimization, bugfixes.
+Windows release, bandwidth and CPU usage optimization, bugfixes.
 
 ### Added
 
+- Windows release.
 - IPv6 support.
 - Add new `Koordinate` overlay that enables running several overlay
   algorithms on nodes.

@@ -36,7 +36,8 @@ public:
          infinit::model::StoreMode,
          std::unique_ptr<infinit::model::ConflictResolver>) override
   {
-    reactor::wait(sem);
+    while (!sem.acquire())
+      reactor::wait(sem);
     this->_stored.signal();
     ++nstore;
   }
