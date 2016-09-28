@@ -26,7 +26,12 @@ namespace infinit
               c->_channels,
               this->version(),
               c->_rpcs._key);
-            return rpc(std::forward<Args>(args)...);
+            // Workaround GCC 4.9 ICE: argument packs don't work through
+            // lambdas.
+            auto const f = std::bind(
+              &RPC<R (Args const& ...)>::operator (),
+              &rpc, std::ref(args)...);
+            return RPCServer::umbrella(f);
           },
           elle::sprintf("%s: broadcast RPC %s", this, name));
       }
