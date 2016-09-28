@@ -23,8 +23,17 @@ namespace infinit
         Peer(Doughnut& dht, Address id);
         virtual
         ~Peer();
+        /// Stop all activity requiring other components (e.g. RPC server).
+        void
+        cleanup();
+        /// Owner doughnut.
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut, protected);
+        /// Target peer id.
         ELLE_ATTRIBUTE_R(Address, id, protected);
+      protected:
+        virtual
+        void
+        _cleanup();
 
       /*-------.
       | Blocks |

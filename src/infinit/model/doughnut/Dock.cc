@@ -108,6 +108,8 @@ namespace infinit
         if (this->_rdv_connect_thread)
           this->_rdv_connect_thread->terminate_now();
         this->_rdv_connect_thread.reset();
+        for (auto peer: this->_peer_cache)
+          peer.second->cleanup();
       }
 
       /*-----.

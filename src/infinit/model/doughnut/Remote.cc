@@ -74,6 +74,12 @@ namespace infinit
       Remote::~Remote()
       {
         ELLE_TRACE_SCOPE("%s: destruct", this);
+        this->_cleanup();
+      }
+
+      void
+      Remote::_cleanup()
+      {
         if (this->_thread)
           this->_thread->terminate_now();
       }

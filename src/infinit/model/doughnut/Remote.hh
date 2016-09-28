@@ -61,6 +61,8 @@ namespace infinit
         virtual
         ~Remote();
       protected:
+        void
+        _cleanup() override;
         ELLE_ATTRIBUTE(std::unique_ptr<std::iostream>, socket);
         ELLE_ATTRIBUTE(std::unique_ptr<protocol::Serializer>, serializer);
         ELLE_ATTRIBUTE_R(std::unique_ptr<protocol::ChanneledStream>,
