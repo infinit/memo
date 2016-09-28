@@ -72,14 +72,26 @@ namespace infinit
         /// Destruct a Kouncil.
         virtual
         ~Kouncil();
+      private:
+        /// Check invariants.
+        void
+        _validate() const;
+        ELLE_ATTRIBUTE(std::vector<boost::signals2::scoped_connection>,
+                       connections);
+
+      /*-------------.
+      | Address book |
+      `-------------*/
+      public:
         /// Global address book.
         ELLE_ATTRIBUTE_R(AddressBook, address_book);
         /// All known peers.
         ELLE_ATTRIBUTE_R(Peers, peers);
       private:
-        /// Check invariants.
         void
-        _validate() const;
+        _broadcast();
+        ELLE_ATTRIBUTE(reactor::Channel<model::Address>, new_entries);
+        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, broadcast_thread);
 
       /*------.
       | Peers |

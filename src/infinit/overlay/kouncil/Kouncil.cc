@@ -34,7 +34,12 @@ namespace infinit
         : Overlay(dht, local)
         , _address_book()
         , _peers()
+        , _new_entries()
+        , _broadcast_thread(new reactor::Thread(
+                              elle::sprintf("%s: broadcast", this),
+                              std::bind(&Kouncil::_broadcast, this)))
       {
+        using model::Address;
         ELLE_TRACE_SCOPE("%s: construct", this);
         if (local)
         {
@@ -43,27 +48,41 @@ namespace infinit
             this->_address_book.emplace(this->id(), key);
           ELLE_DEBUG("loaded %s entries from storage",
                      this->_address_book.size());
-          local->on_store().connect(
+          this->_connections.emplace_back(local->on_store().connect(
             [this] (model::blocks::Block const& b)
             {
               this->_address_book.emplace(this->id(), b.address());
-              std::unordered_set<model::Address> entries;
+              std::unordered_set<Address> entries;
               entries.emplace(b.address());
-              this->local()->broadcast<void>(
-                "kouncil_add_entries", std::move(entries));
-            });
+              this->_new_entries.put(b.address());
+            }));
           local->on_connect().connect(
             [this] (RPCServer& rpcs)
             {
               rpcs.add(
                 "kouncil_fetch_entries",
-                std::function<std::unordered_set<model::Address> ()>(
+                std::function<std::unordered_set<Address> ()>(
                   [this] ()
                   {
-                    std::unordered_set<model::Address> res;
+                    std::unordered_set<Address> res;
                     auto range = this->_address_book.equal_range(this->id());
                     for (auto it = range.first; it != range.second; ++it)
                       res.emplace(it->block());
+                    return std::move(res);
+                  }));
+            });
+          local->on_connect().connect(
+            [this] (RPCServer& rpcs)
+            {
+              rpcs.add(
+                "kouncil_lookup",
+                std::function<std::unordered_set<Address>(Address)>(
+                  [this] (Address const& addr)
+                  {
+                    std::unordered_set<Address> res;
+                    auto range = this->_address_book.get<1>().equal_range(addr);
+                    for (auto it = range.first; it != range.second; ++it)
+                      res.emplace(it->node());
                     return std::move(res);
                   }));
             });
@@ -73,8 +92,8 @@ namespace infinit
           {
             r.rpc_server().add(
               "kouncil_add_entries",
-              std::function<void (std::unordered_set<model::Address> const&)>(
-                [this, &r] (std::unordered_set<model::Address> const& entries)
+              std::function<void (std::unordered_set<Address> const&)>(
+                [this, &r] (std::unordered_set<Address> const& entries)
                 {
                   for (auto const& addr: entries)
                     this->_address_book.emplace(r.id(), addr);
@@ -86,11 +105,32 @@ namespace infinit
       }
 
       Kouncil::~Kouncil()
-      {}
+      {
+        ELLE_TRACE("%s: destruct", this);
+        this->_connections.clear();
+      }
 
       void
       Kouncil::_validate() const
       {}
+
+      /*-------------.
+      | Address book |
+      `-------------*/
+
+      void
+      Kouncil::_broadcast()
+      {
+        while (true)
+        {
+          auto addr = this->_new_entries.get();
+          ELLE_TRACE("%s: broadcast new entry: %f", this, addr);
+          // FIXME: squash
+          std::unordered_set<model::Address> entries = {addr};
+          this->local()->broadcast<void>(
+            "kouncil_add_entries", std::move(entries));
+        }
+      }
 
       /*------.
       | Peers |
@@ -113,7 +153,7 @@ namespace infinit
       void
       Kouncil::_discover(Overlay::Member peer)
       {
-        // FIXME: avoid dynamic cast
+        // FIXME: handle local !
         if (auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(peer))
         {
           auto fetch = r->make_rpc<std::unordered_set<model::Address> ()>(
@@ -135,6 +175,7 @@ namespace infinit
       reactor::Generator<Overlay::WeakMember>
       Kouncil::_lookup(model::Address address, int n, Operation op) const
       {
+        using model::Address;
         if (op == Operation::OP_INSERT)
           return reactor::generator<Overlay::WeakMember>(
             [this, address, n]
@@ -159,6 +200,29 @@ namespace infinit
                 yield(this->_peers.at(it->node()));
                 if (++count >= n)
                   break;
+              }
+              if (count == 0)
+              {
+                ELLE_TRACE_SCOPE("%s: block %f not found, checking all peers",
+                                 this, address);
+                for (auto peer: this->doughnut()->dock().peer_cache())
+                {
+                  // FIXME: handle local !
+                  if (auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(peer.second))
+                  {
+                    auto lookup =
+                      r->make_rpc<std::unordered_set<Address> (Address)>(
+                        "kouncil_lookup");
+                    for (auto node: lookup(address))
+                    {
+                      yield(elle::unconst(this)->_lookup_node(node)); // FIXME
+                      if (++count >= n)
+                        break;
+                    }
+                    if (count > 0)
+                      return;
+                  }
+                }
               }
             });
       }
