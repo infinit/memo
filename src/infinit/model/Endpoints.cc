@@ -142,6 +142,11 @@ namespace infinit
         this->emplace_back(e);
     }
 
+    Endpoints::Endpoints(boost::asio::ip::udp::endpoint ep)
+    {
+      this->emplace_back(std::move(ep));
+    }
+
     void
     Endpoint::print(std::ostream& output) const
     {
