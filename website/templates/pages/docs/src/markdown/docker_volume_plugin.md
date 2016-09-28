@@ -13,6 +13,8 @@ Infinit's Docker volume plugin makes it easy to mount and manage Infinit volumes
 - Infinit 0.6.2 or later.
 - Docker 1.10.0 or later (1.12.0 or later preferred).
 
+<img src="${url('images/schema-docker-volume-plugin.png')}" alt="Schema of the Infinit Docker Volume Plugin">
+
 Running the daemon
 ------------------
 

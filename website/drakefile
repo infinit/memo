@@ -240,6 +240,8 @@ def configure(
     'resources/images/mesos@2x.png',
     'resources/images/social-village.png',
     'resources/images/social-village@2x.png',
+    'resources/images/schema-docker-volume-plugin.png',
+    'resources/images/schema-docker-volume-plugin@2x.png',
 
     'resources/images/docs/gcs/create-bucket.png',
     'resources/images/docs/gcs/oauth-permissions.png',
