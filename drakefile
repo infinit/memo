@@ -760,6 +760,7 @@ def configure(
         git = git,
         bottle = bottle,
         PatchAndInstall = PatchAndInstall,
+        description_regex = description_regex,
         email_regex = email_regex,
         name_regex = name_regex,
         backend = {
