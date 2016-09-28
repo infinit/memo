@@ -156,6 +156,18 @@ namespace infinit
       make(std::shared_ptr<model::doughnut::Local> local,
            model::doughnut::Doughnut* doughnut) = 0;
     };
+
+    /*-----------.
+    | Exceptions |
+    `-----------*/
+
+    class NodeNotFound
+      : public elle::Error
+    {
+    public:
+      NodeNotFound(model::Address id);
+      ELLE_ATTRIBUTE_R(model::Address, id);
+    };
   }
 }
 

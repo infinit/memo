@@ -234,7 +234,7 @@ namespace infinit
         if (it != this->_peers.end())
           return it->second;
         else
-          elle::err("node %f not found", address);
+          return Overlay::WeakMember();
       }
     }
   }

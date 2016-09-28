@@ -156,7 +156,10 @@ namespace infinit
     Overlay::WeakMember
     Overlay::lookup_node(model::Address address) const
     {
-      return this->_lookup_node(address);
+      if (auto res = this->_lookup_node(address))
+        return res;
+      else
+        throw NodeNotFound(address);
     }
 
     reactor::Generator<Overlay::WeakMember>
@@ -189,6 +192,15 @@ namespace infinit
 
     void
     Configuration::serialize(elle::serialization::Serializer& s)
+    {}
+
+    /*-----------.
+    | Exceptions |
+    `-----------*/
+
+    NodeNotFound::NodeNotFound(model::Address id)
+      : elle::Error(elle::sprintf("node not found: %f", id))
+      , _id(id)
     {}
   }
 }
