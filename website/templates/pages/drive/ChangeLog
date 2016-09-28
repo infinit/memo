@@ -1,3 +1,18 @@
+## [0.3.0] (backend 0.7.0) - 2016-09-23
+
+### Added
+
+- Windows Release.
+- Enable to create drive.
+
+### Changed
+
+- Optimize asynchronous calls.
+
+### Changed
+
+- Use backend 0.6.1.
+
 ## [0.2.6] (backend 0.6.1) - 2016-08-03
 
 ### Changed
