@@ -89,11 +89,8 @@ namespace infinit
 
       Local::~Local()
       {
-        ELLE_TRACE_SCOPE("%s: destruct", *this);
-        if (this->_server_thread)
-          this->_server_thread->terminate_now();
-        if (this->_utp_server_thread)
-          this->_utp_server_thread->terminate_now();
+        ELLE_TRACE_SCOPE("%s: destruct", this);
+        this->_cleanup();
       }
 
       void
@@ -101,8 +98,19 @@ namespace infinit
       {}
 
       void
-      Local::cleanup()
-      {}
+      Local::_cleanup()
+      {
+        if (this->_server_thread)
+        {
+          this->_server_thread->terminate_now();
+          this->_server_thread.reset();
+        }
+        if (this->_utp_server_thread)
+        {
+          this->_utp_server_thread->terminate_now();
+          this->_utp_server_thread.reset();
+        }
+      }
 
       elle::Version const&
       Local::version() const
@@ -476,8 +484,9 @@ namespace infinit
                   this->_peers.emplace_front(
                     std::make_shared<Connection>(*this, std::move(socket)));
                   auto it = this->_peers.begin();
+                  auto peer = *it;
                   elle::SafeFinally f([&] { this->_peers.erase(it); });
-                  (*it)->_run();
+                  peer->_run();
                 }
                 catch (infinit::protocol::Serializer::EOF const&)
                 {}

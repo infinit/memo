@@ -441,7 +441,7 @@ namespace infinit
         }
 
         void
-        Paxos::LocalPeer::cleanup()
+        Paxos::LocalPeer::_cleanup()
         {
           this->_rebalance_inspector.reset();
           this->_rebalance_thread.terminate_now();
