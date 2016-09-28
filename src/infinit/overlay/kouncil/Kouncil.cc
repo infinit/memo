@@ -215,9 +215,17 @@ namespace infinit
                         "kouncil_lookup");
                     for (auto node: lookup(address))
                     {
-                      yield(this->_lookup_node(node));
-                      if (++count >= n)
-                        break;
+                      try
+                      {
+                        yield(this->lookup_node(node));
+                        if (++count >= n)
+                          break;
+                      }
+                      catch (NodeNotFound const&)
+                      {
+                        ELLE_WARN("node %f is said to hold block %f "
+                                  "but is unknown to us", node, address);
+                      }
                     }
                     if (count > 0)
                       return;
