@@ -295,7 +295,10 @@ namespace reporting
       _print(std::ostream& out, bool verbose) const override
       {
         if (!this->linked)
+        {
+          out << "is ";
           warn(out, "not linked");
+        }
         if (this->storage_resources)
         {
           if (this->storage_resources->size() > 0)
@@ -1768,7 +1771,7 @@ main(int argc, char** argv)
     },
     {
       "networking",
-      "Perform networking speed test per protocol",
+      "Perform networking speed tests per protocol",
       &networking,
       "",
       {
