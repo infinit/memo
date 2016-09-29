@@ -608,8 +608,8 @@ Mode::OptionDescription option_disable_mac_utf8(
 static
 Mode::OptionDescription option_poll_beyond(
   "fetch-endpoints-interval",
-  boost::program_options::value<int>()->implicit_value(300),
-  "period for repolling endpoints from the hub in seconds\n(default: 300)");
+  boost::program_options::value<int>()->default_value(300),
+  "period for repolling endpoints from the hub in seconds\n(default: 300s)");
 
 class CommandLineSerializer
   : public elle::serialization::SerializerIn
@@ -1343,6 +1343,20 @@ namespace infinit
   }
 
   template<typename T>
+  void merge(boost::optional<T>& a,
+             boost::optional<T> const& b,
+             boost::program_options::option_description const& o)
+  {
+    if (b)
+    {
+      boost::any def;
+      o.semantic()->apply_default(def);
+      if (b.get() != boost::any_cast<T>(def))
+        a = b;
+    }
+  }
+
+  template<typename T>
   void merge(boost::optional<std::vector<T>>& a,
              boost::optional<std::vector<T>> const& b)
   {
@@ -1403,7 +1417,8 @@ namespace infinit
     infinit::merge(this->cache_disk_size,
                    optional<uint64_t>(args, option_cache_disk_size));
     infinit::merge(this->poll_beyond,
-                   optional<int>(args, option_poll_beyond));
+                   optional<int>(args, option_poll_beyond),
+                   option_poll_beyond);
   }
 
   inline
