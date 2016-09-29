@@ -133,28 +133,31 @@ ELLE_TEST_SCHEDULED(
   elle::With<UTPInstrument>(dht_a.dht->local()->server_endpoints()[0]) <<
     [&] (UTPInstrument& instrument)
     {
-    DHT dht_b(::keys = keys, make_overlay = builder, paxos = false);
-    infinit::model::Endpoints ep = {
-      Endpoint("127.0.0.1", instrument.server.local_endpoint().port()),
-    };
-    if (anonymous)
-      dht_b.dht->overlay()->discover(ep);
-    else
-      dht_b.dht->overlay()->discover(NodeLocation(dht_a.dht->id(), ep));
-    // {
-    //   auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
-    //   ELLE_LOG("store block")
-    //     dht_a.dht->store(*block, STORE_INSERT);
-    //   ELLE_LOG("lookup block")
-    //     BOOST_CHECK_EQUAL(
-    //       dht_b.dht->overlay()->lookup(block->address(), OP_FETCH).lock()->id(),
-    //       dht_a.dht->id());
-    // }
-    instrument.transmission().close();
-    {
-      auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
-      ELLE_LOG("store block")
-        dht_a.dht->store(*block, STORE_INSERT);
+      DHT dht_b(::keys = keys, make_overlay = builder, paxos = false);
+      infinit::model::Endpoints ep = {
+        Endpoint("127.0.0.1", instrument.server.local_endpoint().port()),
+      };
+      if (anonymous)
+        dht_b.dht->overlay()->discover(ep);
+      else
+        dht_b.dht->overlay()->discover(NodeLocation(dht_a.dht->id(), ep));
+      // Ensure one request can go through.
+      {
+        auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
+        ELLE_LOG("store block")
+          dht_a.dht->store(*block, STORE_INSERT);
+        ELLE_LOG("lookup block")
+          BOOST_CHECK_EQUAL(
+            dht_b.dht->overlay()->lookup(block->address(), OP_FETCH).lock()->id(),
+            dht_a.dht->id());
+      }
+      // Partition peer
+      instrument.transmission().close();
+      // Ensure we don't deadlock
+      {
+        auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
+        ELLE_LOG("store block")
+          dht_a.dht->store(*block, STORE_INSERT);
     }
   };
 }
