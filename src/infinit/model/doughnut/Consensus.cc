@@ -52,7 +52,7 @@ namespace infinit
               op = overlay::OP_UPDATE;
               break;
             default:
-              elle::unreachable();
+              ELLE_ABORT("unrecognized store mode: %s", mode);
           }
           auto owner =  this->_owner(block->address(), op);
           std::unique_ptr<blocks::Block> nb;
