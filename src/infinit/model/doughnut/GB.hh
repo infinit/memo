@@ -65,6 +65,10 @@ namespace infinit
         group_version() const;
         std::shared_ptr<cryptography::rsa::PrivateKey>
         control_key() const;
+        boost::optional<std::string>
+        description() const;
+        void
+        set_description(boost::optional<std::string> description);
       protected:
         class OwnerSignature
           : public Super::OwnerSignature
@@ -130,6 +134,8 @@ namespace infinit
           AdminKeys;
         /// The group admin keys ciphered for every admin.
         ELLE_ATTRIBUTE_R(AdminKeys, admin_keys);
+        /// Optional group description.
+        ELLE_ATTRIBUTE(boost::optional<std::string>, description);
 
       public:
         typedef infinit::serialization_tag serialization_tag;
