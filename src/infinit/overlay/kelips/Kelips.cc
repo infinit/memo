@@ -2094,6 +2094,22 @@ namespace infinit
       {
         ELLE_DUMP("%s: processing gossip from %s", *this, p->endpoint);
         int g = group_of(p->sender);
+        if (this->_observer)
+        {
+          ELLE_DEBUG("Observer got gossip from %s", p->sender);
+          auto& cs = this->_state.contacts.at(g);
+          auto it = cs.find(p->sender);
+          Contact* c = nullptr;
+          if (it == cs.end())
+            c = this->get_or_make(p->sender, false, {p->endpoint}, true);
+          else
+            c = &it->second;
+          if (!c->discovered)
+          {
+            c->discovered = true;
+            this->on_discover()(NodeLocation(p->sender, {p->endpoint}), false);
+          }
+        }
         if (g != _group && !p->files.empty())
           ELLE_WARN("%s: Received files from another group: %s at %s", *this, p->sender, p->endpoint);
         for (auto& c: p->contacts)
@@ -3348,6 +3364,8 @@ namespace infinit
       void
       Node::process_update(SerState const& s)
       {
+        if (this->_observer)
+          ELLE_WARN("Unexpected update received from observer");
         ELLE_DEBUG("register %s contacts and %s blocks",
                    s.first.size(), s.second.size());
         for (auto const& c: s.first)
