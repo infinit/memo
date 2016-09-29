@@ -607,8 +607,9 @@ Mode::OptionDescription option_disable_mac_utf8(
   "disable FUSE conversion of UTF-8 to native format");
 static
 Mode::OptionDescription option_poll_beyond(
-  "poll-hub", boost::program_options::value<int>()->implicit_value(300),
-  "Poll the Hub every N (default 300) seconds");
+  "fetch-endpoints-interval",
+  boost::program_options::value<int>()->implicit_value(300),
+  "period for repolling endpoints from the hub in seconds\n(default: 300)");
 
 class CommandLineSerializer
   : public elle::serialization::SerializerIn
