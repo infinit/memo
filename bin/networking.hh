@@ -206,7 +206,7 @@ namespace infinit
         ELLE_TRACE("create utp server (listening on port: %s) (xor: %s)",
                    port, xorit);
         reactor::network::UTPServer server;
-        server.xorify() = xorit;
+        server.xorify(xorit);
         server.listen(port);
         server.rdv_connect("connectivity-server:" + std::to_string(port),
                            "rdv.infinit.sh:7890");
@@ -242,7 +242,7 @@ namespace infinit
         ELLE_TRACE("open utp socket to %s:%s (xor: %s)", host, port, xorit);
         server.listen(0);
         auto s = elle::make_unique<reactor::network::UTPSocket>(server);
-        server.xorify() = xorit;
+        server.xorify(xorit);
         s->connect(host, port);
         return s;
       }
