@@ -9,10 +9,11 @@ import uwsgi
 
 datastore = infinit.beyond.couchdb.CouchDBDatastore(couchdb.Server())
 
-def getopt(name):
+def getopt(name, fallback = None):
   opt = uwsgi.opt.get(name)
   if opt is not None:
     return eval(opt.decode())
+  return fallback
 
 gcs_login = getopt('gcs-login')
 gcs_key = getopt('gcs-key')
@@ -35,5 +36,12 @@ beyond = infinit.beyond.Beyond(
   validate_email_address = False,
   sendwithus_api_key = getopt('sendwithus-api-key'),
   delegate_user = ${repr(delegate_user)},
+  keep_deleted_users = getopt('keep-deleted-users'),
 )
-application = infinit.beyond.bottle.Bottle(beyond, gcs = gcs)
+
+application = infinit.beyond.bottle.Bottle(
+  admin_users = getopt('admin-users', []),
+  beyond = beyond,
+  gcs = gcs,
+  ldap_server = getopt('ldap-server'),
+)
