@@ -1,5 +1,5 @@
-#ifndef INFINIT_OVERLAY_KOORDINATE_CONFIGURATION_HH
-# define INFINIT_OVERLAY_KOORDINATE_CONFIGURATION_HH
+#ifndef INFINIT_OVERLAY_KOUNCIL_CONFIGURATION_HH
+# define INFINIT_OVERLAY_KOUNCIL_CONFIGURATION_HH
 
 # include <infinit/overlay/Overlay.hh>
 
@@ -7,9 +7,9 @@ namespace infinit
 {
   namespace overlay
   {
-    namespace koordinate
+    namespace kouncil
     {
-      /// Serializable configuration for Koordinate.
+      /// Serializable configuration for Kouncil.
       struct Configuration
         : public overlay::Configuration
       {
@@ -21,21 +21,13 @@ namespace infinit
         typedef Configuration Self;
         /// Parent class.
         typedef overlay::Configuration Super;
-        /// Underlying overlays configurations.
-        using Backends = std::vector<std::unique_ptr<overlay::Configuration>>;
 
       /*-------------.
       | Construction |
       `-------------*/
       public:
-        /** Construct a configuration.
-         *
-         *  @arg   backends Underlying overlays.
-         *  @throw elle::Error if \a backends is empty.
-         */
-        Configuration(Backends backends);
-        /// Underlying overlays configurations.
-        ELLE_ATTRIBUTE_R(Backends, backends);
+        /// Construct a configuration.
+        Configuration();
       private:
         /// Check construction postconditions.
         void
@@ -45,9 +37,7 @@ namespace infinit
       | Clonable |
       `---------*/
       public:
-        virtual
-        std::unique_ptr<overlay::Configuration>
-        clone() const override;
+        ELLE_CLONABLE();
 
       /*--------------.
       | Serialization |
@@ -69,12 +59,12 @@ namespace infinit
       | Factory |
       `--------*/
       public:
-        /** Construct Koordinate from this configuration.
+        /** Construct Kouncil from this configuration.
          *
          *  @arg hosts Initial peer list.
          *  @arg local Local server, null if pure client.
          *  @arg dht   Owning Doughnut.
-         *  @return The built Koordinate.
+         *  @return The built Kouncil.
          */
         virtual
         std::unique_ptr<infinit::overlay::Overlay>

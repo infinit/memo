@@ -925,17 +925,18 @@ def configure(
     dokan_lib_tests_consensus = drake.copy(dokan_lib, 'tests/consensus',
                                              strip_prefix = True)
   tests_names = [
+    ('async-conflict', []),
     ('backward-compatibility', []),
+    ('bandwidth', []),
     ('consensus/async', []),
     ('consensus/cache', []),
-    ('bandwidth', []),
     ('doughnut', []),
     ('faith', []),
     ('filesystem', binaries),
+    ('kelips', []),
+    ('overlay', []),
     ('rpc', []),
     ('storage', [aws_lib]),
-    ('async-conflict', []),
-    ('kelips', []),
   ]
   if not windows:
     tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]

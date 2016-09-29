@@ -11,6 +11,10 @@ namespace infinit
   {
     namespace doughnut
     {
+      /*-------------.
+      | Construction |
+      `-------------*/
+
       Peer::Peer(Doughnut& dht, Address id)
         : _doughnut(dht)
         , _id(std::move(id))
@@ -18,6 +22,20 @@ namespace infinit
 
       Peer::~Peer()
       {}
+
+      void
+      Peer::cleanup()
+      {
+        this->_cleanup();
+      }
+
+      void
+      Peer::_cleanup()
+      {}
+
+      /*-------.
+      | Blocks |
+      `-------*/
 
       std::unique_ptr<blocks::Block>
       Peer::fetch(Address address,

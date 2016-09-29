@@ -79,7 +79,7 @@ namespace infinit
     }
 
     Overlay::WeakMember
-    Stonehenge::_lookup_node(model::Address address)
+    Stonehenge::_lookup_node(model::Address address) const
     {
       for (auto const& peer: this->_peers)
         if (peer.id() == address)
@@ -91,7 +91,10 @@ namespace infinit
     Overlay::WeakMember
     Stonehenge::_make_member(NodeLocation const& peer) const
     {
-      return this->doughnut()->dock().make_peer(peer, {});
+      if (peer.endpoints().empty())
+        throw elle::Error(elle::sprintf("missing endpoint for %f", peer.id()));
+      return this->doughnut()->dock().make_peer(
+        peer, model::EndpointsRefetcher());
     }
 
     StonehengeConfiguration::StonehengeConfiguration()
@@ -113,8 +116,7 @@ namespace infinit
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
-    StonehengeConfiguration::make(std::vector<Endpoints> const&,
-                                  std::shared_ptr<model::doughnut::Local> local,
+    StonehengeConfiguration::make(std::shared_ptr<model::doughnut::Local> local,
                                   model::doughnut::Doughnut* dht)
     {
       NodeLocations peers;

@@ -1112,7 +1112,6 @@ namespace infinit
 
     std::unique_ptr<model::doughnut::Doughnut>
     run(User const& user,
-        std::vector<infinit::model::Endpoints> const& hosts = {},
         bool client = false,
         bool cache = false,
         boost::optional<int> cache_size = {},
@@ -1124,9 +1123,7 @@ namespace infinit
         boost::optional<int> port = {})
     {
       ELLE_LOG("client version: %s", version_describe);
-      ELLE_LOG("network endpoints: %s", hosts);
       return this->dht()->make(
-        hosts,
         client,
         this->cache_dir(user),
         async_writes,

@@ -1015,13 +1015,12 @@ namespace infinit
 
       Node::~Node()
       {
-        ELLE_TRACE_SCOPE("%s: destroy", *this);
+        ELLE_TRACE_SCOPE("%s: destruct", this);
         if (this->local())
           this->local()->utp_server()->socket()->unregister_reader("KELIPSGS");
         _emitter_thread.reset();
         _pinger_thread.reset();
         this->_state.contacts.clear();
-        ELLE_DEBUG("%s: destroyed", *this);
       }
 
       SerState
@@ -1090,16 +1089,12 @@ namespace infinit
       }
 
       void
-      Node::bootstrap(bool use_bootstrap_nodes,
-                      bool use_contacts,
+      Node::bootstrap(bool use_contacts,
                       NodeLocations const& peers)
       {
         ELLE_TRACE_SCOPE("%s: bootstrap", this);
         std::unordered_set<Address> scanned;
         NodeLocations candidates;
-        if (use_bootstrap_nodes)
-          for (auto const& eps: _config.bootstrap_nodes)
-            candidates.emplace_back(Address::null, eps);
         if (use_contacts)
           for (auto const& c: this->_state.contacts[_group])
             candidates.emplace_back(
@@ -1145,7 +1140,7 @@ namespace infinit
       Node::_discover(NodeLocations const& peers)
       {
         if (!this->_observer)
-          this->bootstrap(false, false, peers);
+          this->bootstrap(false, peers);
         for (auto peer: peers)
           send_bootstrap(peer);
       }
@@ -1192,7 +1187,7 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: start serving", this);
         if (!_observer)
-          this->bootstrap(true);
+          this->bootstrap();
         this->doughnut()->dock().utp_server().socket()->register_reader(
           "KELIPSGS", std::bind(&Node::onPacket, this, std::placeholders::_1,
             std::placeholders::_2));
@@ -1207,11 +1202,6 @@ namespace infinit
             new reactor::Thread(
               "emitter", std::bind(&Node::gossipEmitter, this)));
         }
-        // Send a bootstrap request to bootstrap nodes and all
-        // nodes in group
-        ELLE_DEBUG("contact bootstrap nodes")
-          for (auto const& e: _config.bootstrap_nodes)
-            this->send_bootstrap(NodeLocation(model::Address::null, e));
         ELLE_DEBUG("contact group nodes")
           for (auto& c: _state.contacts[_group])
             this->send_bootstrap(
@@ -2918,19 +2908,10 @@ namespace infinit
               ELLE_TRACE("no suitable node found");
               return {};
             }
-            // Bootstraping only: Store locally.
-            if (_config.bootstrap_nodes.empty())
-            {
-              ELLE_TRACE("no peer, store locally");
-              this->_promised_files.push_back(p.fileAddress);
-              results.emplace_back(this->id(), model::Endpoints());
-              return results;
-            }
-            else
-            {
-              ELLE_TRACE("why the fuck not ...");
-              return results;
-            }
+            ELLE_TRACE("no peer, store locally");
+            this->_promised_files.push_back(p.fileAddress);
+            results.emplace_back(this->id(), model::Endpoints());
+            return results;
           }
           _pending_requests[req.request_id] = r;
           ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
@@ -3235,12 +3216,13 @@ namespace infinit
       }
 
       Overlay::WeakMember
-      Node::make_peer(NodeLocation hosts)
+      Node::make_peer(NodeLocation hosts) const
       {
         return this->doughnut()->dock().make_peer(
           hosts,
           model::EndpointsRefetcher(
-            std::bind(&Node::_refetch_endpoints, this, hosts.id())));
+            std::bind(&Node::_refetch_endpoints,
+                      elle::unconst(this), hosts.id())));
       }
 
       boost::optional<model::Endpoints>
@@ -3499,14 +3481,16 @@ namespace infinit
       }
 
       Overlay::WeakMember
-      Node::_lookup_node(Address address)
+      Node::_lookup_node(Address address) const
       {
         BENCH("lookup_node");
         if (address == _self)
           return this->local();
         auto async_lookup = [this, address]() {
           boost::optional<NodeLocation> result;
-          kelipsGet(address, 1, false, -1, true, false, [&](NodeLocation p)
+          elle::unconst(this)->kelipsGet(
+            address, 1, false, -1, true, false,
+            [&] (NodeLocation p)
             {
               result = p;
             });
@@ -3532,7 +3516,8 @@ namespace infinit
             throw elle::Error(elle::sprintf("Node %s not found", address));
         }
         boost::optional<NodeLocation> result;
-        kelipsGet(address, 1, false, -1, true, false, [&](NodeLocation p)
+        elle::unconst(this)->kelipsGet(
+          address, 1, false, -1, true, false, [&](NodeLocation p)
           {
             result = p;
           });
@@ -3779,7 +3764,6 @@ namespace infinit
         , file_timeout_ms(1200000)
         , ping_interval_ms(1000)
         , ping_timeout_ms(1000)
-        , bootstrap_nodes()
         , wait(0)
         , encrypt(false)
         , accept_plain(true)
@@ -3810,7 +3794,11 @@ namespace infinit
         s.serialize("ping_interval_ms", ping_interval_ms);
         s.serialize("ping_timeout_ms", ping_timeout_ms);
         s.serialize("gossip", gossip);
-        s.serialize("bootstrap_nodes", bootstrap_nodes);
+        {
+          // Backward
+          std::vector<Endpoints> bootstrap_nodes;
+          s.serialize("bootstrap_nodes", bootstrap_nodes);
+        }
         s.serialize("wait", wait);
         s.serialize("encrypt", encrypt);
         s.serialize("accept_plain", accept_plain);
@@ -3852,11 +3840,9 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make(std::vector<Endpoints> const& hosts,
-                          std::shared_ptr<model::doughnut::Local> local,
+      Configuration::make(std::shared_ptr<model::doughnut::Local> local,
                           model::doughnut::Doughnut* dht)
       {
-        this->bootstrap_nodes = hosts;
         return elle::make_unique<Node>(*this, std::move(local), dht);
       }
 

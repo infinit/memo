@@ -98,18 +98,20 @@ namespace infinit
 
       Dock::~Dock()
       {
-        if (this->_rdv_connect_thread)
-          this->_rdv_connect_thread->terminate_now();
-        this->_rdv_connect_thread.reset();
+        this->cleanup();
       }
 
       void
       Dock::cleanup()
       {
+        ELLE_TRACE_SCOPE("%s: destruct", this);
         if (this->_rdv_connect_thread)
           this->_rdv_connect_thread->terminate_now();
         this->_rdv_connect_thread.reset();
+        for (auto peer: this->_peer_cache)
+          peer.second->cleanup();
       }
+
       /*-----.
       | Peer |
       `-----*/
@@ -129,7 +131,7 @@ namespace infinit
         {
           auto it = this->_peer_cache.find(loc.id());
           if (it != _peer_cache.end())
-            return it->second;
+            return overlay::Overlay::WeakMember::own(it->second);
         }
         try
         {
@@ -141,9 +143,10 @@ namespace infinit
               this->_utp_server,
               refetcher,
               this->_protocol);
-          auto weak_res = overlay::Overlay::WeakMember::own(std::move(res));
           if (!disable_cache)
-            this->_peer_cache.emplace(loc.id(), weak_res);
+            this->_peer_cache.emplace(loc.id(), res);
+          this->_on_connect(*res);
+          auto weak_res = overlay::Overlay::WeakMember::own(std::move(res));
           return weak_res;
         }
         catch (elle::Error const& e)

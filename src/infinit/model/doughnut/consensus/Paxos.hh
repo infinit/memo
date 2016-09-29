@@ -237,9 +237,6 @@ namespace infinit
             virtual
             void
             initialize() override;
-            virtual
-            void
-            cleanup() override;
             ELLE_ATTRIBUTE_R(Paxos&, paxos);
             ELLE_ATTRIBUTE_R(int, factor);
             ELLE_ATTRIBUTE_RW(bool, rebalance_auto_expand);
@@ -248,6 +245,10 @@ namespace infinit
             ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
             ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>,
                            evict_threads);
+          protected:
+            void
+            _cleanup() override;
+
           /*------.
           | Paxos |
           `------*/

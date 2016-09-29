@@ -154,13 +154,16 @@ namespace infinit
     }
 
     Overlay::WeakMember
-    Overlay::lookup_node(model::Address address)
+    Overlay::lookup_node(model::Address address) const
     {
-      return this->_lookup_node(address);
+      if (auto res = this->_lookup_node(address))
+        return res;
+      else
+        throw NodeNotFound(address);
     }
 
     reactor::Generator<Overlay::WeakMember>
-    Overlay::lookup_nodes(std::unordered_set<model::Address> addresses)
+    Overlay::lookup_nodes(std::unordered_set<model::Address> addresses) const
     {
       ELLE_TRACE_SCOPE("%s: lookup nodes %f", this, addresses);
       return reactor::generator<Overlay::WeakMember>(
@@ -189,6 +192,15 @@ namespace infinit
 
     void
     Configuration::serialize(elle::serialization::Serializer& s)
+    {}
+
+    /*-----------.
+    | Exceptions |
+    `-----------*/
+
+    NodeNotFound::NodeNotFound(model::Address id)
+      : elle::Error(elle::sprintf("node not found: %f", id))
+      , _id(id)
     {}
   }
 }
