@@ -1,6 +1,8 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_LOCAL_HH
 # define INFINIT_MODEL_DOUGHNUT_LOCAL_HH
 
+# include <tuple>
+
 # include <boost/signals2.hpp>
 
 # include <reactor/Barrier.hh>
@@ -46,25 +48,11 @@ namespace infinit
         virtual
         void
         initialize();
-        /** Get ready for destrucion.
-         *
-         *  Release all shared self-reference.
-         */
-        virtual
-        void
-        cleanup();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
-
-      /*-----------.
-      | Networking |
-      `-----------*/
-      public:
-        virtual
+        ELLE_attribute_r(elle::Version, version);
+      protected:
         void
-        connect(elle::DurationOpt timeout) override;
-        virtual
-        void
-        reconnect(elle::DurationOpt timeout) override;
+        _cleanup() override;
 
       /*-------.
       | Blocks |
@@ -93,6 +81,14 @@ namespace infinit
         std::unordered_map<int, cryptography::rsa::PublicKey>
         _resolve_all_keys() override;
 
+      /*----.
+      | RPC |
+      `----*/
+      public:
+        template <typename R, typename ... Args>
+        R
+        broadcast(std::string const& name, Args&& ...);
+
       /*------.
       | Hooks |
       `------*/
@@ -120,6 +116,22 @@ namespace infinit
         ELLE_ATTRIBUTE_RX(std::unique_ptr<reactor::network::UTPServer>, utp_server);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, utp_server_thread);
         ELLE_ATTRIBUTE(reactor::Barrier, server_barrier);
+        class Connection
+        {
+        public:
+          Connection(Local& local, std::shared_ptr<std::iostream> stream);
+
+        private:
+          friend class doughnut::Local;
+          void
+          _run();
+          ELLE_ATTRIBUTE(Local&, local);
+          ELLE_ATTRIBUTE(std::shared_ptr<std::iostream>, stream);
+          ELLE_ATTRIBUTE(protocol::Serializer, serializer);
+          ELLE_ATTRIBUTE(protocol::ChanneledStream, channels);
+          ELLE_ATTRIBUTE(RPCServer, rpcs);
+        };
+        ELLE_ATTRIBUTE(std::list<std::shared_ptr<Connection>>, peers);
       protected:
         virtual
         void
@@ -137,5 +149,7 @@ namespace infinit
     }
   }
 }
+
+# include <infinit/model/doughnut/Local.hxx>
 
 #endif

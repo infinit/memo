@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+
+import mistune
+import slacker
+
+class SlackRenderer(mistune.Renderer):
+
+  def __init__(self):
+    self.__start = False
+    self.__stop = False
+    self.__version = False
+    self.__url = None
+
+  @property
+  def url(self):
+    return self.__url
+
+  def header(self, text, level, raw=None):
+    if level == 2:
+      if not self.__start:
+        import re
+        r = re.compile('\\[([0-9.]+)\\].*')
+        self.__version = r.match(text).group(1)
+        self.__start = True
+        nonalphanum = re.compile('[^0-9a-zA-Z]')
+        root = 'https://infinit.sh/documentation/changelog'
+        self.__url = '%s#%s' % (
+          root, re.sub(nonalphanum, '-', text))
+      else:
+        self.__stop = True
+    elif level == 3 and self.__start and not self.__stop:
+      return '\n*%s*\n\n' % text
+    return ''
+
+  def codespan(self, text):
+    return '`%s`' % text
+
+  def list(self, body, ordered=True):
+    return body
+
+  def list_item(self, text):
+    if self.__start and not self.__stop:
+      return '• %s\n' % ' '.join(text.split())
+    else:
+      return ''
+
+  def paragraph(self, text):
+    if self.__start and not self.__stop:
+      return '@channel: Release %s is out: %s\n\n' % (self.__version, text)
+    return ''
+
+slack = slacker.Slacker(sys.argv[1])
+renderer = SlackRenderer()
+markdown = mistune.Markdown(renderer = renderer)
+with open('ChangeLog', 'r') as f:
+  contents = markdown(f.read())
+channels = ['#announcements', '#release-notes']
+import sys
+print('Sending to %s:\n\n%s' % (', '.join(channels), contents))
+sys.stdin.read()
+for c in channels:
+  slack.chat.post_message(c, contents, as_user = True)
+print('Post on reddit: %s' % renderer.url)

@@ -12,7 +12,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
-#include <infinit/overlay/kademlia/kademlia.hh>
+#include <infinit/overlay/kouncil/Configuration.hh>
 #include <infinit/storage/Storage.hh>
 #include <infinit/storage/Strip.hh>
 
@@ -61,12 +61,17 @@ COMMAND(create)
   int overlays =
     + (args.count("kalimero") ? 1 : 0)
     + (args.count("kelips") ? 1 : 0)
+    + (args.count("kouncil") ? 1 : 0)
   ;
   if (overlays > 1)
     throw CommandLineError("Only one overlay type must be specified");
   if (args.count("kalimero"))
   {
     overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
+  }
+  if (args.count("kouncil"))
+  {
+    overlay_config.reset(new infinit::overlay::kouncil::Configuration());
   }
   else // default to Kelips
   {
@@ -665,18 +670,6 @@ COMMAND(run)
     }
   }
   network.ensure_allowed(self, "run");
-  std::vector<infinit::model::Endpoints> eps;
-  if (args.count("peer"))
-  {
-    auto peers = args["peer"].as<std::vector<std::string>>();
-    for (auto const& peer: peers)
-    {
-      if (boost::filesystem::exists(peer))
-        eps.emplace_back(endpoints_from_file(peer));
-      else
-        eps.emplace_back(infinit::model::Endpoints({peer}));
-    }
-  }
   bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
   auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
@@ -691,9 +684,22 @@ COMMAND(run)
   auto port = optional<int>(args, option_port);
   auto dht = network.run(
     self,
-    eps, false,
+    false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, infinit::compatibility_version, port);
+  if (args.count("peer"))
+  {
+    std::vector<infinit::model::Endpoints> eps;
+    auto peers = args["peer"].as<std::vector<std::string>>();
+    for (auto const& peer: peers)
+    {
+      if (boost::filesystem::exists(peer))
+        eps.emplace_back(endpoints_from_file(peer));
+      else
+        eps.emplace_back(infinit::model::Endpoints({peer}));
+    }
+    dht->overlay()->discover(eps);
+  }
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"}) &&
     dht->local() && dht->local()->storage();
@@ -848,6 +854,7 @@ main(int argc, char** argv)
   overlay_types_options.add_options()
     ("kelips", "use a Kelips overlay network (default)")
     ("kalimero", "use a Kalimero overlay network.\nUsed for local testing")
+    ("kouncil", "use a Kouncil overlay network")
     ;
   Mode::OptionsDescription consensus_types_options("Consensus types");
   consensus_types_options.add_options()

@@ -5,6 +5,7 @@
 
 # include <reactor/network/utp-socket.hh>
 
+# include <infinit/RPC.hh>
 # include <infinit/model/Address.hh>
 # include <infinit/model/doughnut/protocol.hh>
 # include <infinit/overlay/Overlay.hh>
@@ -34,6 +35,9 @@ namespace infinit
                        local_utp_server);
         ELLE_ATTRIBUTE_R(reactor::network::UTPServer&, utp_server);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, rdv_connect_thread);
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<void (Remote&)>,
+          on_connect);
 
       /*-----.
       | Peer |
@@ -42,8 +46,7 @@ namespace infinit
         overlay::Overlay::WeakMember
         make_peer(NodeLocation peer,
                   boost::optional<EndpointsRefetcher> refetcher);
-        typedef
-          std::unordered_map<Address, overlay::Overlay::WeakMember> PeerCache;
+        using PeerCache = std::unordered_map<Address, overlay::Overlay::Member>;
         ELLE_ATTRIBUTE_R(PeerCache, peer_cache);
       };
     }
