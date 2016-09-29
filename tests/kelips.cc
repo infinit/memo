@@ -795,6 +795,11 @@ void insist(std::function<void()> op, int max_retry_secs)
     {
       ELLE_LOG("%s", e);
     }
+    catch (...)
+    {
+      ELLE_WARN("%s", elle::exception_string());
+      throw;
+    }
     reactor::sleep(1_sec);
   }
 }
@@ -880,9 +885,11 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   beyond.push(*nodes[0].first);
   // If the nodes see each other they will route request to one other,
   // otherwise requests will fail (we set a low query_get_retries)
-  reactor::sleep(2_sec);
   for (int i=0; i<20; ++i)
+  {
+    insist([&]{readfile(*fs, "file" + std::to_string(i));}, 10);
     BOOST_CHECK_EQUAL(readfile(*fs, "file" + std::to_string(i)), "foo");
+  }
 
   // same operation, but push the other one on beyond
   // why does it work? node0 upon restart will find node1 from beyond
@@ -896,7 +903,7 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   for (int i=0; i<20; ++i)
   {
     insist([&]{readfile(*fs, "file" + std::to_string(i));}, 10);
-    BOOST_CHECK_EQUAL(readfile(*fs, "file" + std::to_string(i)), "foo");
+    BOOST_CHECK_NO_THROW(readfile(*fs, "file" + std::to_string(i)));
   }
 }
 
