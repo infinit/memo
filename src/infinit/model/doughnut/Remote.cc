@@ -57,7 +57,7 @@ namespace infinit
         , _socket(nullptr)
         , _serializer()
         , _channels()
-        , _connected(false)
+        , _connected()
         , _reconnecting(false)
         , _reconnection_id(0)
         , _endpoints(std::move(endpoints))
@@ -65,14 +65,25 @@ namespace infinit
         , _protocol(protocol)
         , _refetch_endpoints(refetch? *refetch : EndpointsRefetcher())
         , _fast_fail(false)
-        , _connection_thread()
+        , _thread()
       {
+        ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_ASSERT(server || protocol != Protocol::utp);
         this->_connect();
       }
 
       Remote::~Remote()
-      {}
+      {
+        ELLE_TRACE_SCOPE("%s: destruct", this);
+        this->_cleanup();
+      }
+
+      void
+      Remote::_cleanup()
+      {
+        if (this->_thread)
+          this->_thread->terminate_now();
+      }
 
       /*-----------.
       | Networking |
@@ -84,17 +95,17 @@ namespace infinit
         static bool disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
         ELLE_TRACE_SCOPE("%s: connect", *this);
         ++this->_reconnection_id;
-        if (this->_connection_thread)
-          this->_connection_thread->terminate_now();
-        this->_connection_thread.reset(
+        if (this->_thread)
+          this->_thread->terminate_now();
+        this->_thread.reset(
           new reactor::Thread(
-            elle::sprintf("%s connection", this),
+            elle::sprintf("%f worker", this),
             [this]
             {
-              this->_connected = false;
-              this->_connection_start_time = std::chrono::system_clock::now();
               ELLE_DEBUG("%s: connection attempt to %s endpoints",
                          this, this->_endpoints.size());
+              this->_connected.close();
+              this->_connection_start_time = std::chrono::system_clock::now();
               auto handshake = [&] (std::unique_ptr<std::iostream> socket)
                 {
                   auto serializer = elle::make_unique<protocol::Serializer>(
@@ -105,11 +116,11 @@ namespace infinit
                     elle::make_unique<protocol::ChanneledStream>(*serializer);
                   if (!disable_key)
                     this->_key_exchange(*channels);
-                  ELLE_TRACE("connected");
+                  ELLE_TRACE("%s: connected", this);
                   this->_socket = std::move(socket);
                   this->_serializer = std::move(serializer);
                   this->_channels = std::move(channels);
-                  this->_connected = true;
+                  this->_connected.open();
                 };
               auto umbrella = [&, this] (std::function<void ()> const& f)
                 {
@@ -135,7 +146,8 @@ namespace infinit
                     this->_protocol == Protocol::all)
                   for (auto const& e: this->_endpoints)
                     scope.run_background(
-                      elle::sprintf("%s: connect to tcp://%s", this, e),
+                      elle::sprintf("%s: connect to tcp://%s",
+                                    reactor::scheduler().current()->name(), e),
                       umbrella(
                         [&]
                         {
@@ -164,29 +176,22 @@ namespace infinit
                 reactor::wait(scope);
               };
               if (!this->_connected)
-                elle::err("connection to %f failed", this->_endpoints);
-            },
-            reactor::Thread::managed = true));
+                this->_connected.raise<elle::Error>(
+                  elle::sprintf("connection to %f failed", this->_endpoints));
+              else
+              {
+                ELLE_ASSERT(this->_channels);
+                ELLE_TRACE("%s: serve RPCs", this)
+                  this->_rpc_server.serve(*this->_channels);
+              }
+            }));
       }
 
       void
       Remote::connect(elle::DurationOpt timeout)
       {
-        do
-        {
-          auto start = boost::posix_time::microsec_clock::universal_time();
-          if (!reactor::wait(*this->_connection_thread, timeout))
-            throw reactor::network::TimeOut();
-          // Either connect succeeded, or it was restarted
-          if (timeout)
-          {
-            timeout = *timeout -
-              (boost::posix_time::microsec_clock::universal_time() - start);
-            if (timeout->is_negative() && !_connected)
-              throw reactor::network::TimeOut();
-          }
-        }
-        while (!this->_connected);
+        if (!reactor::wait(this->_connected, timeout))
+          throw reactor::network::TimeOut();
       }
 
       void
@@ -327,6 +332,7 @@ namespace infinit
             auth_ack(sealed_key,
                      challenge_passport.first.second,
                      signed_challenge);
+            this->_rpc_server._key.emplace(key);
             this->_credentials = std::move(password);
           }
         }

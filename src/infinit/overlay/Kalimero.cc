@@ -49,7 +49,7 @@ namespace infinit
     }
 
     Overlay::WeakMember
-    Kalimero::_lookup_node(model::Address address)
+    Kalimero::_lookup_node(model::Address address) const
     {
       return this->local();
     }
@@ -69,12 +69,9 @@ namespace infinit
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
-    KalimeroConfiguration::make(std::vector<Endpoints> const& hosts,
-                                std::shared_ptr<model::doughnut::Local> local,
+    KalimeroConfiguration::make(std::shared_ptr<model::doughnut::Local> local,
                                 model::doughnut::Doughnut* dht)
     {
-      if (!hosts.empty())
-        elle::err("kalimero cannot access other nodes: %s", hosts);
       return elle::make_unique<Kalimero>(dht, std::move(local));
     }
 

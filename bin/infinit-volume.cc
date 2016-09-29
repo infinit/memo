@@ -310,20 +310,6 @@ COMMAND(run)
   auto volume = ifnt.volume_get(name);
   volume.mount_options.merge(args);
   auto& mo = volume.mount_options;
-  std::vector<infinit::model::Endpoints> eps;
-  auto add_peers = [&] (std::vector<std::string> const& peers) {
-    for (auto const& obj: peers)
-      if (boost::filesystem::exists(obj))
-        for (auto const& peer: endpoints_from_file(obj))
-          eps.emplace_back(infinit::model::Endpoints({peer}));
-      else
-        eps.emplace_back(infinit::model::Endpoints({obj}));
-  };
-  if (mo.peers)
-    add_peers(*mo.peers);
-  if (args.count("peer"))
-    add_peers(args["peer"].as<std::vector<std::string>>());
-
 #ifdef INFINIT_MACOSX
   if (mo.mountpoint && !flag(args, option_disable_mac_utf8))
   {
@@ -385,9 +371,32 @@ COMMAND(run)
   auto port = optional<int>(args, option_port);
   auto model = network.run(
     self,
-    eps, true,
-    mo.cache && mo.cache.get(), mo.cache_ram_size, mo.cache_ram_ttl, mo.cache_ram_invalidation,
-    mo.async && mo.async.get(), mo.cache_disk_size, infinit::compatibility_version, port);
+    true,
+    mo.cache && mo.cache.get(),
+    mo.cache_ram_size,
+    mo.cache_ram_ttl,
+    mo.cache_ram_invalidation,
+    mo.async && mo.async.get(),
+    mo.cache_disk_size,
+    infinit::compatibility_version,
+    port);
+  {
+    std::vector<infinit::model::Endpoints> eps;
+    auto add_peers = [&] (std::vector<std::string> const& peers) {
+      for (auto const& obj: peers)
+        if (boost::filesystem::exists(obj))
+          for (auto const& peer: endpoints_from_file(obj))
+            eps.emplace_back(infinit::model::Endpoints({peer}));
+        else
+          eps.emplace_back(infinit::model::Endpoints({obj}));
+    };
+    if (mo.peers)
+      add_peers(*mo.peers);
+    if (args.count("peer"))
+      add_peers(args["peer"].as<std::vector<std::string>>());
+    if (!eps.empty())
+      model->overlay()->discover(eps);
+  }
   // Only push if we have are contributing storage.
   bool push = mo.push && model->local();
   boost::optional<infinit::model::Endpoint> local_endpoint;
