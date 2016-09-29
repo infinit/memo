@@ -37,6 +37,10 @@ namespace infinit
         list_members(bool ommit_names = false);
         std::vector<std::unique_ptr<model::User>>
         list_admins(bool ommit_names = false);
+        boost::optional<std::string>
+        description() const;
+        void
+        set_description(boost::optional<std::string> description);
         void
         add_member(model::User const& user);
         void
@@ -83,8 +87,11 @@ namespace infinit
           remove_member,
           add_admin,
           remove_admin,
+          set_description,
         };
         GroupConflictResolver(Action action, model::User const& user);
+        GroupConflictResolver(Action action,
+                              boost::optional<std::string> description);
         GroupConflictResolver(GroupConflictResolver&& b);
         GroupConflictResolver(elle::serialization::SerializerIn& s,
                               elle::Version const& v);
@@ -101,7 +108,8 @@ namespace infinit
 
         Action _action;
         std::unique_ptr<cryptography::rsa::PublicKey> _key;
-        std::string _name;
+        boost::optional<std::string> _name;
+        boost::optional<std::string> _description;
         typedef infinit::serialization_tag serialization_tag;
       };
     }

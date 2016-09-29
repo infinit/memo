@@ -397,6 +397,25 @@ namespace infinit
         });
       }
 
+      boost::optional<std::string>
+      Group::description() const
+      {
+        return infinit::filesystem::umbrella([&] {
+          return this->block().description();
+        });
+      }
+
+      void
+      Group::set_description(boost::optional<std::string> description)
+      {
+        infinit::filesystem::umbrella([&] {
+          this->block().set_description(description);
+          this->_dht.store(this->block(), STORE_UPDATE,
+            elle::make_unique<GroupConflictResolver>(
+              GroupConflictResolver::Action::set_description, description));
+        });
+      }
+
       void
       Group::print(std::ostream& o) const
       {
@@ -426,17 +445,31 @@ namespace infinit
         s.serialize("action", this->_action, elle::serialization::as<int>());
         s.serialize("key", this->_key);
         s.serialize("name", this->_name);
+        s.serialize("description", this->_description);
       }
 
       GroupConflictResolver::GroupConflictResolver(Action action,
                                                    model::User const& user)
       {
+        ELLE_ASSERT_NEQ(action, Action::set_description);
         auto duser = dynamic_cast<doughnut::User const*>(&user);
         if (!duser)
           throw elle::Error("User argument is not a doughnut user");
         this->_action = action;
         this->_key = elle::make_unique<cryptography::rsa::PublicKey>(duser->key());
         this->_name = duser->name();
+        this->_description = boost::none;
+      }
+
+      GroupConflictResolver::GroupConflictResolver(
+        Action action,
+        boost::optional<std::string> description)
+        : _action(action)
+        , _key(nullptr)
+        , _name()
+        , _description(std::move(description))
+      {
+        ELLE_ASSERT_EQ(this->_action, Action::set_description);
       }
 
       std::unique_ptr<blocks::Block>
@@ -448,20 +481,30 @@ namespace infinit
         auto res = elle::cast<GB>::runtime(current.clone());
         if (!res)
           throw elle::Error("GroupConflictResolver failed to access current block");
-        doughnut::User user(*this->_key, this->_name);
+        std::unique_ptr<doughnut::User> user(nullptr);
+        if (this->_name)
+          user.reset(new doughnut::User(*this->_key, this->_name.get()));
         switch (this->_action)
         {
         case Action::add_member:
-          res->add_member(user);
+          ELLE_ASSERT_NEQ(user, nullptr);
+          res->add_member(*user);
           break;
         case Action::remove_member:
-          res->remove_member(user);
+          ELLE_ASSERT_NEQ(user, nullptr);
+          res->remove_member(*user);
           break;
         case Action::add_admin:
-          res->add_admin(user);
+          ELLE_ASSERT_NEQ(user, nullptr);
+          res->add_admin(*user);
           break;
         case Action::remove_admin:
-          res->remove_admin(user);
+          ELLE_ASSERT_NEQ(user, nullptr);
+          res->remove_admin(*user);
+          break;
+        case Action::set_description:
+          ELLE_ASSERT_EQ(user, nullptr);
+          res->set_description(this->_description);
           break;
         }
         return std::move(res);
@@ -470,10 +513,17 @@ namespace infinit
       std::string
       GroupConflictResolver::description() const
       {
-        // User is not necessary a "User", it can be a Group.
-        doughnut::User user(*this->_key, this->_name);
-        return elle::sprintf("%s \"%s\" to/from group", this->_action,
-                             user.name());
+        if (this->_name)
+        {
+          // User is not necessary a "User", it can be a Group.
+          doughnut::User user(*this->_key, this->_name.get());
+          return elle::sprintf("%s \"%s\" to/from group", this->_action,
+                               user.name());
+        }
+        else
+        {
+          return elle::sprintf("%s to %s", this->_action, this->_description);
+        }
       }
 
       static const elle::serialization::Hierarchy<model::ConflictResolver>::
@@ -502,6 +552,9 @@ namespace std
         break;
       case GroupConflictResolver::Action::remove_admin:
         out << "remove admin";
+        break;
+      case GroupConflictResolver::Action::set_description:
+        out << "set description";
         break;
     }
     return out;
