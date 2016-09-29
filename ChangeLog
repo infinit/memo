@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.7.1]
+
+### Changed
+
+- Poll beyond periodically for endpoints changes.
+
 
 ## [0.7.0] - 2016-09-23
 
