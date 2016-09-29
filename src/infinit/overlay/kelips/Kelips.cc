@@ -3488,7 +3488,9 @@ namespace infinit
           return this->local();
         auto async_lookup = [this, address]() {
           boost::optional<NodeLocation> result;
-          kelipsGet(address, 1, false, -1, true, false, [&](NodeLocation p)
+          elle::unconst(this)->kelipsGet(
+            address, 1, false, -1, true, false,
+            [&] (NodeLocation p)
             {
               result = p;
             });
