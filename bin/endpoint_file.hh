@@ -28,7 +28,7 @@ port_to_file(uint16_t port, boost::filesystem::path const& path_)
 
 static
 void
-endpoints_to_file(std::vector<reactor::network::TCPServer::EndPoint> endpoints,
+endpoints_to_file(infinit::model::Endpoints endpoints,
                   boost::filesystem::path const& path_)
 {
   boost::filesystem::ofstream f;

@@ -35,6 +35,18 @@ namespace infinit
       public:
         typedef Remote Self;
         typedef Peer Super;
+        /// Challenge, token
+        using Challenge = std::pair<elle::Buffer, elle::Buffer>;
+        struct Auth
+        {
+          Auth(Address id,
+               Challenge challenge,
+               Passport passport);
+          Auth(elle::serialization::SerializerIn& input);
+          Address id;
+          Challenge challenge;
+          Passport passport;
+        };
 
       /*-------------.
       | Construction |
@@ -88,10 +100,11 @@ namespace infinit
         void
         _key_exchange(protocol::ChanneledStream& channels);
         ELLE_ATTRIBUTE(Protocol, protocol);
-        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
         ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
         ELLE_ATTRIBUTE_R(EndpointsRefetcher, refetch_endpoints);
         ELLE_ATTRIBUTE_R(bool, fast_fail);
+        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
+
       /*-------.
       | Blocks |
       `-------*/
@@ -107,6 +120,18 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
               boost::optional<int> local_version) const override;
+
+      /*-----.
+      | Keys |
+      `-----*/
+      protected:
+        virtual
+        std::vector<cryptography::rsa::PublicKey>
+        _resolve_keys(std::vector<int> ids) override;
+        virtual
+        std::unordered_map<int, cryptography::rsa::PublicKey>
+        _resolve_all_keys() override;
+        ELLE_ATTRIBUTE_R(Doughnut::KeyCache, key_hash_cache);
       };
 
       template<typename F>
@@ -120,7 +145,9 @@ namespace infinit
                   remote->doughnut().version(),
                   elle::unconst(&remote->credentials()))
           , _remote(remote)
-        {}
+        {
+          this->set_context(remote);
+        }
         template<typename ...Args>
         typename Super::result_type
         operator()(Args const& ... args);

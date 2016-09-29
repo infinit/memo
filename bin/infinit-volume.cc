@@ -340,6 +340,14 @@ COMMAND(run)
     if (mo.mountpoint.get().size() == 2 && mo.mountpoint.get()[1] == ':')
       ;
     else
+#elif defined(INFINIT_MACOSX)
+    // Do not try to create folder in /Volumes.
+    auto mount_path = boost::filesystem::path(mo.mountpoint.get());
+    auto mount_parent = mount_path.parent_path().string();
+    boost::algorithm::to_lower(mount_parent);
+    if (mount_parent.find("/volumes") == 0)
+      ;
+    else
 #endif
     try
     {
@@ -382,7 +390,7 @@ COMMAND(run)
     mo.async && mo.async.get(), mo.cache_disk_size, infinit::compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push = mo.push && model->local();
-  boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint;
+  boost::optional<infinit::model::Endpoint> local_endpoint;
   if (model->local())
   {
     local_endpoint = model->local()->server_endpoint();

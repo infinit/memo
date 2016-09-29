@@ -2,7 +2,6 @@
 #include <elle/log.hh>
 #include <elle/memory.hh>
 #include <elle/test.hh>
-#include <elle/Version.hh>
 
 #include <cryptography/rsa/KeyPair.hh>
 
@@ -14,13 +13,8 @@
 #include <infinit/model/doughnut/Consensus.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Passport.hh>
-#include <infinit/version.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Async.test");
-
-# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                            INFINIT_MINOR,   \
-                                            INFINIT_SUBMINOR)
 
 namespace dht = infinit::model::doughnut;
 
@@ -42,7 +36,8 @@ public:
          infinit::model::StoreMode,
          std::unique_ptr<infinit::model::ConflictResolver>) override
   {
-    reactor::wait(sem);
+    while (!sem.acquire())
+      reactor::wait(sem);
     this->_stored.signal();
     ++nstore;
   }
@@ -119,8 +114,7 @@ public:
       { return nullptr; },
       [] (dht::Doughnut&, std::shared_ptr<dht::Local>)
       { return nullptr; },
-      {}, nullptr,
-      INFINIT_ELLE_VERSION)
+      {}, nullptr)
   {}
 };
 

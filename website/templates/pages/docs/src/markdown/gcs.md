@@ -26,7 +26,7 @@ We can now add the GCS credentials to Infinit. This process uses [OAuth](https:/
 
 ```
 $> infinit-credentials --add --as alice --gcs
-Register your Google account with infinit by visiting https://beyond.infinit.io/users/alice/gcs-oauth
+Register your Google account with infinit by visiting https://beyond.infinit.sh/users/alice/gcs-oauth
 ```
 
 Navigate to this link with your Web browser and allow Infinit to access your account.

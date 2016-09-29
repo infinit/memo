@@ -259,7 +259,7 @@ with Beyond() as beyond, \
   assert path.exists('%s/b/d' % bob.drives_path)
   bob.run(['infinit-user', '--fetch', '--as', 'b', 'a'])
   bob.run(
-    ['infinit-passport', '--create', '--as', 'b', '-u', 'a', '-n', 'n', '-p'])
+    ['infinit-passport', '--create', '--as', 'b', '-u', 'a', '-N', 'n', '-p'])
   assert path.exists('%s/b/n/a' % bob.passports_path)
   # Create volume and drive with another owner on bob's network.
   alice.run(['infinit-network', '--fetch', '--as', 'a'])
@@ -273,12 +273,12 @@ with Beyond() as beyond, \
              '-N', 'b/n', '-V', 'v', '-p'])
   alice.run(['infinit-network', '--delete', '--as', 'a', 'b/n', '--unlink'])
   alice.run(
-    ['infinit-passport', '--delete', '--as', 'a', '-n', 'b/n', '-u', 'a'])
+    ['infinit-passport', '--delete', '--as', 'a', '-N', 'b/n', '-u', 'a'])
   # Create new network and invite bob.
   alice.run(['infinit-network', '--create', '--as', 'a', 'n', '-p'])
   alice.run(['infinit-user', '--fetch', 'b'])
   alice.run(['infinit-passport', '--create', '--as', 'a',
-             '-n', 'n', '-u', 'b', '-p'])
+             '-N', 'n', '-u', 'b', '-p'])
   bob.run(['infinit-passport', '--fetch', '--as', 'b'])
   assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'b'])), 2)
   assert path.exists('%s/a/n/b' % bob.passports_path)

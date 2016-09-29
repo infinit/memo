@@ -56,6 +56,7 @@ namespace infinit
         // thread performing a contact() call on this node
         reactor::Thread::unique_ptr contacter;
         std::vector<elle::Buffer> pending;
+        bool discovered; // was on_discover signal sent for this contact
       };
 
       std::ostream&

@@ -19,8 +19,10 @@ public:
   typedef infinit::overlay::Overlay Super;
 
   Overlay(infinit::model::doughnut::Doughnut* d,
-          std::shared_ptr< infinit::model::doughnut::Local> local)
+          std::shared_ptr< infinit::model::doughnut::Local> local,
+          bool yield = false)
     : Super(d, local)
+    , _yield(yield)
   {
     if (local)
     {
@@ -57,6 +59,14 @@ public:
        std::shared_ptr<infinit::model::doughnut::Local> local)
   {
     return elle::make_unique<Overlay>(&d, local);
+  }
+
+  static
+  std::unique_ptr<Overlay>
+  make_yield(infinit::model::doughnut::Doughnut& d,
+       std::shared_ptr<infinit::model::doughnut::Local> local)
+  {
+    return elle::make_unique<Overlay>(&d, local, true);
   }
 
   void
@@ -100,6 +110,8 @@ protected:
           int n,
           infinit::overlay::Operation op) const override
   {
+    if (_yield)
+      reactor::yield();
     ELLE_LOG_COMPONENT("Overlay");
     bool write = op == infinit::overlay::OP_INSERT;
     ELLE_TRACE_SCOPE("%s: lookup %s%s owners for %f",
@@ -150,6 +162,7 @@ protected:
     throw elle::Error(elle::sprintf("no such node: %f", id));
   }
 
+  ELLE_ATTRIBUTE_R(bool, yield);
   ELLE_ATTRIBUTE_RX(std::unordered_set<Overlay*>, peers);
   ELLE_ATTRIBUTE_R(std::unordered_set<infinit::model::Address>, blocks);
   ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(infinit::model::Address)>,
@@ -168,6 +181,8 @@ NAMED_ARGUMENT(make_overlay);
 NAMED_ARGUMENT(make_consensus);
 NAMED_ARGUMENT(version);
 NAMED_ARGUMENT(with_cache);
+NAMED_ARGUMENT(user_name);
+NAMED_ARGUMENT(yielding_overlay);
 
 std::unique_ptr<dht::consensus::Consensus>
 add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
@@ -177,7 +192,7 @@ add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
       infinit::model::doughnut::consensus::Cache>
         (std::move(c), 1000);
   else
-    return std::move(c);
+    return c;
 }
 
 class DHT
@@ -202,7 +217,9 @@ public:
       },
       dht::consensus::rebalance_auto_expand = true,
       dht::consensus::node_timeout = std::chrono::minutes(10),
-      with_cache = false
+      with_cache = false,
+      user_name = "",
+      yielding_overlay = false
       ).call([this] (bool paxos,
                      infinit::cryptography::rsa::KeyPair keys,
                      boost::optional<infinit::cryptography::rsa::KeyPair> owner,
@@ -220,7 +237,9 @@ public:
                        )> make_consensus,
                      bool rebalance_auto_expand,
                      std::chrono::system_clock::duration node_timeout,
-                     bool with_cache
+                     bool with_cache,
+                     std::string const& user_name,
+                     bool yielding_overlay
                      )
              {
                this-> init(paxos,
@@ -232,8 +251,10 @@ public:
                            std::move(make_consensus),
                            rebalance_auto_expand,
                            node_timeout,
-                           with_cache);
-             }, std::forward<Args>(args)...);
+                           with_cache,
+                           user_name,
+                           yielding_overlay);
+              }, std::forward<Args>(args)...);
   }
 
   std::shared_ptr<dht::Doughnut> dht;
@@ -252,7 +273,9 @@ private:
            std::unique_ptr<dht::consensus::Consensus>)> make_consensus,
        bool rebalance_auto_expand,
        std::chrono::system_clock::duration node_timeout,
-       bool with_cache)
+       bool with_cache,
+       std::string const& user_name,
+       bool yielding_overlay)
   {
     auto keys =
       std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_));
@@ -277,24 +300,39 @@ private:
         };
     dht::Passport passport(keys->K(), "network-name", owner);
     auto make_overlay =
-      [this] (
+      [this, yielding_overlay] (
         infinit::model::doughnut::Doughnut& d,
         std::shared_ptr<infinit::model::doughnut::Local> local)
       {
-        auto res = Overlay::make(d, std::move(local));
+        auto res = yielding_overlay ?
+          Overlay::make_yield(d, std::move(local))
+          : Overlay::make(d, std::move(local));
         this->overlay = res.get();
         return res;
       };
-    this->dht = std::make_shared<dht::Doughnut>(
-      id,
-      keys,
-      owner.public_key(),
-      passport,
-      consensus,
-      infinit::model::doughnut::Doughnut::OverlayBuilder(make_overlay),
-      boost::optional<int>(),
-      std::move(storage),
-      version);
+    if (user_name.empty())
+      this->dht = std::make_shared<dht::Doughnut>(
+        id,
+        keys,
+        owner.public_key(),
+        passport,
+        consensus,
+        infinit::model::doughnut::Doughnut::OverlayBuilder(make_overlay),
+        boost::optional<int>(),
+        std::move(storage),
+        version);
+    else
+      this->dht = std::make_shared<dht::Doughnut>(
+        id,
+        user_name,
+        keys,
+        owner.public_key(),
+        passport,
+        consensus,
+        infinit::model::doughnut::Doughnut::OverlayBuilder(make_overlay),
+        boost::optional<int>(),
+        std::move(storage),
+        version);
   }
 };
 

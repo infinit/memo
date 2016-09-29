@@ -7,11 +7,10 @@ import urllib.parse
 
 from utils import *
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond() as beyond:
       bob = User()
       bob.put(beyond, opt_out = False)
       b = beyond.get('users/%s' % bob['name']).json()
@@ -24,7 +23,8 @@ with Beyond() as beyond:
       assert 'public_key' in b
       assert 'private_key' in b
 
-    def test_opt_out(self):
+  def test_opt_out(self):
+    with Beyond() as beyond:
       bob = User()
       bob.put(beyond, opt_out = True)
       b = beyond.get('users/%s' % bob['name']).json()
@@ -41,7 +41,8 @@ with Beyond() as beyond:
                             json = {'password_hash': bob.password_hash}),
         404)
 
-    def test_passwords_mismatch(self):
+  def test_passwords_mismatch(self):
+    with Beyond() as beyond:
       bob = User()
       bob.put(beyond, opt_out = False)
       b = beyond.get('users/%s' % bob['name']).json()
@@ -49,5 +50,5 @@ with Beyond() as beyond:
                                  json = {'password_hash': 'bof'}),
              403)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

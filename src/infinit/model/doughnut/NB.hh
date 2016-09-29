@@ -29,20 +29,17 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        NB(Doughnut* doughnut,
+        NB(Doughnut& doughnut,
            std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
            std::string name,
            elle::Buffer data,
            elle::Buffer signature = {});
-        NB(Doughnut* doughnut,
-           infinit::cryptography::rsa::KeyPair keys,
+        NB(Doughnut& doughnut,
            std::string name,
            elle::Buffer data,
            elle::Buffer signature = {});
         NB(NB const& other);
-        ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
-        ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::KeyPair>,
-                       keys);
+        ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
         ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::cryptography::rsa::PublicKey>,
                          owner);
         ELLE_ATTRIBUTE_R(std::string, name);

@@ -63,29 +63,33 @@ x86_64-jessie-gcc4:
     - git submodule sync --recursive
     - git submodule update --init --recursive
     - git fetch origin --tags
-    - BUILD_DIR=_build
-    - INSTALL_DIR=_instal
+    - SOURCE_DIR="${CI_PROJECT_DIR}"
+    - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
+    - INSTALL_DIR="${SOURCE_DIR}/_install"
     - DESC=$(git describe)
-    - mkdir -p "$BUILD_DIR" "$INSTALL_DIR"
+    - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
+    - time ./buildenv --cache-download-build-tree --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID" --verbose
+    - mkdir -p "$INSTALL_DIR"
     - farm/configure --arch x86_64 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
-    - python3 drake --website=false --beyond=false -j $(nproc) //build
-    - python3 drake --website=false --beyond=false -j $(nproc) //check
-    - python3 drake --website=false --beyond=false -j $(nproc) //install
-    - python3 drake --website=false --beyond=false -j $(nproc) //debian
-    - scp "infinit_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
-    - if GIT_DIR=../.git git describe --exact-match HEAD; then scp "infinit-debug-symbols-debian-${DESC}_0_amd64.deb" buildslave@packages.infinit.sh:debian; fi
-    - ssh buildslave@packages.infinit.sh 'make debian'
+    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
+    - export DRAKE_EXPLAIN=1 # still testing the whole cache thing
+    - time python3 drake --website=false --beyond=false -j $(nproc) //build
+    - time python3 drake --website=false --beyond=false -j $(nproc) //check
+    - time python3 drake --website=false --beyond=false -j $(nproc) //install
+    - time python3 drake --website=false --beyond=false -j $(nproc) //debian
+    - time scp "infinit_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
+    - time if GIT_DIR="${SOURCE_DIR}/.git" git describe --exact-match HEAD; then scp "infinit-debug-symbols-debian-${DESC}_0_amd64.deb" buildslave@packages.infinit.sh:debian; fi
+    - time ssh buildslave@packages.infinit.sh 'make debian'
+    - time cd "${SOURCE_DIR}"
+    - time ./buildenv --cache-upload-build-tree --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID" --verbose
+    - time ./buildenv --cleanup-build-trees --build-trees-root "/cache/$CI_PROJECT_NAME"  --verbose
   tags:
     - x86_64
     - jessie
     - gcc4
   except:
     - feature/website
-  cache:
-    paths:
-      - _build
-    key: "$CI_BUILD_NAME/$CI_BUILD_REF_NAME"
 
 x86_64-windows-mingw4:
   stage: build

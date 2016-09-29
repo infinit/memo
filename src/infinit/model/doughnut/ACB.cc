@@ -60,6 +60,11 @@ namespace infinit
   {
     namespace doughnut
     {
+      // default OAEP padding is 336 bits long, which prevents us from using
+      // encrypt() with 256 bits secrets on 512 bits keys.
+      static const cryptography::rsa::Padding acb_padding
+        = infinit::cryptography::rsa::Padding::pkcs1;
+
       /*---------.
       | ACLEntry |
       `---------*/
@@ -81,15 +86,15 @@ namespace infinit
         , token{other.token}
       {}
 
-      ACLEntry::ACLEntry(elle::serialization::SerializerIn& s)
-        : ACLEntry(deserialize(s))
+      ACLEntry::ACLEntry(elle::serialization::SerializerIn& s, elle::Version const& v)
+        : ACLEntry(deserialize(s, v))
       {}
 
       ACLEntry
-      ACLEntry::deserialize(elle::serialization::SerializerIn& s)
+      ACLEntry::deserialize(elle::serialization::SerializerIn& s,
+                            elle::Version const& v)
       {
-
-        auto key = s.deserialize<cryptography::rsa::PublicKey>("key");
+        auto key = deserialize_key_hash(s, v, "key");
         auto read = s.deserialize<bool>("read");
         auto write = s.deserialize<bool>("write");
         auto token = s.deserialize<elle::Buffer>("token");
@@ -105,9 +110,10 @@ namespace infinit
       }
 
       void
-      ACLEntry::serialize(elle::serialization::Serializer& s)
+      ACLEntry::serialize(elle::serialization::Serializer& s,
+                          elle::Version const& v)
       {
-        s.serialize("key", key);
+        serialize_key_hash(s, v, key, "key");
         s.serialize("read", read);
         s.serialize("write", write);
         s.serialize("token", token);
@@ -145,6 +151,7 @@ namespace infinit
         , _world_readable(false)
         , _world_writable(false)
         , _deleted(false)
+        , _seal_version(owner->version())
       {}
 
       template <typename Block>
@@ -162,6 +169,7 @@ namespace infinit
         , _world_writable(other._world_writable)
         , _deleted(other._deleted)
         , _sign_key(other._sign_key)
+        , _seal_version(other._seal_version)
       {}
 
       /*--------.
@@ -177,9 +185,10 @@ namespace infinit
 
       static
       void
-      background_open(elle::Buffer& target,
+      background_open(elle::Buffer & target,
                       elle::Buffer const& src,
-                      cryptography::rsa::PrivateKey const& k)
+                      infinit::cryptography::rsa::PrivateKey const& k,
+                      bool use_encrypt)
       {
         static bool bg = elle::os::getenv("INFINIT_NO_BACKGROUND_DECODE", "").empty();
         if (bg)
@@ -187,12 +196,12 @@ namespace infinit
           elle::With<reactor::Thread::NonInterruptible>() << [&]
           {
             reactor::background([&] {
-                target = k.open(src);
+                target = use_encrypt ? k.decrypt(src, acb_padding) : k.open(src);
               });
           };
         }
         else
-          target = k.open(src);
+          target = use_encrypt ? k.decrypt(src, acb_padding) : k.open(src);
       }
 
       template <typename Block>
@@ -201,11 +210,13 @@ namespace infinit
       {
         if (this->world_readable())
           return this->_data;
+        bool use_encrypt = this->_seal_version >= elle::Version(0, 7, 0);
         elle::Buffer secret_buffer;
         if (this->owner_private_key())
         {
           ELLE_DEBUG("%s: we are owner", *this);
-          background_open(secret_buffer, this->_owner_token, *this->owner_private_key());
+          background_open(secret_buffer, this->_owner_token,
+                          *this->owner_private_key(), use_encrypt);
         }
         else if (!this->_acl_entries.empty())
         {
@@ -213,7 +224,8 @@ namespace infinit
           for (auto const& e: this->_acl_entries)
           {
             if (e.key == this->doughnut()->keys().K())
-              background_open(secret_buffer, e.token, this->doughnut()->keys().k());
+              background_open(secret_buffer, e.token,
+                              this->doughnut()->keys().k(), use_encrypt);
           }
         }
         if (secret_buffer.empty())
@@ -233,7 +245,7 @@ namespace infinit
                 ++idx;
                 continue;
               }
-              background_open(secret_buffer, e.token, keys[v].k());
+              background_open(secret_buffer, e.token, keys[v].k(), use_encrypt);
             }
             catch (elle::Error const& e)
             {
@@ -249,8 +261,13 @@ namespace infinit
         }
         static elle::Bench bench("bench.acb.decrypt_2", 10000_sec);
         elle::Bench::BenchScope bs(bench);
-        auto secret = elle::serialization::json::deserialize
-          <cryptography::SecretKey>(secret_buffer);
+        auto secret = [&]() {
+          if (use_encrypt)
+            return cryptography::SecretKey(secret_buffer.string());
+          else
+            return elle::serialization::json::deserialize
+               <cryptography::SecretKey>(secret_buffer);
+        }();
         ELLE_DUMP("%s: secret: %s", *this, secret);
         return secret.decipher(this->_data);
       }
@@ -332,14 +349,19 @@ namespace infinit
           // sealing will generate a new secret and update the token.
           // FIXME: the block will always be sealed anyway, why encrypt a token
           // now ?
+          bool use_encrypt = this->_seal_version >= elle::Version(0,7,0);
           elle::Buffer token;
           try
           {
             Group g(*this->doughnut(), key);
             if (this->_owner_token.size())
             {
-              auto secret = this->owner_private_key()->open(this->_owner_token);
-              token = g.current_public_key().seal(secret);
+              auto secret = use_encrypt?
+                this->owner_private_key()->decrypt(this->_owner_token, acb_padding)
+                : this->owner_private_key()->open(this->_owner_token);
+              token = use_encrypt ?
+                g.current_public_key().encrypt(secret, acb_padding)
+                : g.current_public_key().seal(secret);
             }
             acl_entries.emplace_back(ACLEntry(key, read, write, token));
             this->_group_version.push_back(g.version()-1);
@@ -387,6 +409,7 @@ namespace infinit
           throw elle::Error("Cannot set permissions for owner");
         auto& acl_entries = this->_acl_entries;
         ELLE_DUMP("%s: ACL entries: %s", *this, acl_entries);
+        bool use_encrypt = this->_seal_version >= elle::Version(0,7,0);
         auto it = std::find_if
           (acl_entries.begin(), acl_entries.end(),
            [&] (ACLEntry const& e) { return e.key == key; });
@@ -409,8 +432,9 @@ namespace infinit
             auto okey = this->owner_private_key();
             if (!okey)
               throw elle::Error("Owner key unavailable");
-            auto secret = okey->open(this->_owner_token);
-            token = key.seal(secret);
+            auto secret = use_encrypt ? okey->decrypt(this->_owner_token, acb_padding)
+                                      : okey->open(this->_owner_token);
+            token = use_encrypt ? key.encrypt(secret, acb_padding) : key.seal(secret);
           }
           acl_entries.emplace_back(ACLEntry(key, read, write, token));
           this->_acl_changed = true;
@@ -763,7 +787,7 @@ namespace infinit
         std::shared_ptr<infinit::cryptography::rsa::PrivateKey> sign_key;
 
         // enforce admin keys
-        auto const& aks = this->dht()->admin_keys();
+        auto const& aks = this->doughnut()->admin_keys();
         for (auto const& k: aks.r)
           if (k != *this->owner_key()) set_permissions(k, true, false);
         for (auto const& k: aks.w)
@@ -813,15 +837,27 @@ namespace infinit
             key = secret;
           }
           ELLE_DUMP("%s: new block secret: %s", *this, key.get());
-          auto version = elle_serialization_version(this->doughnut()->version());
-          auto secret_buffer =
-            elle::serialization::json::serialize(key.get(), version);
-          this->_owner_token = this->owner_key()->seal(secret_buffer);
+          auto seal_version = this->doughnut()->version();
+          static bool no_encrypt = elle::os::inenv("INFINIT_DISABLE_TOKEN_ENCRYPT");
+          if (no_encrypt)
+            seal_version = std::min(seal_version, elle::Version(0, 6, 0));
+          auto elle_version = elle_serialization_version(seal_version);
+          elle::Buffer secret_buffer;
+          if (seal_version < elle::Version(0, 7, 0))
+            secret_buffer =
+              elle::serialization::json::serialize(key.get(), elle_version);
+          else
+            secret_buffer = key.get().password().string();
+          this->_seal_version = seal_version;
+          bool use_encrypt = seal_version >= elle::Version(0, 7, 0);
+          this->_owner_token = use_encrypt ?
+            this->owner_key()->encrypt(secret_buffer, acb_padding)
+            : this->owner_key()->seal(secret_buffer);
           int idx = 0;
           for (auto& e: this->_acl_entries)
           {
             if (e.read)
-              e.token = e.key.seal(secret_buffer);
+              e.token = use_encrypt ? e.key.encrypt(secret_buffer, acb_padding) : e.key.seal(secret_buffer);
             if (!sign_key && e.key == this->doughnut()->keys().K())
             {
               ELLE_DEBUG("we are editor %s", idx);
@@ -837,7 +873,9 @@ namespace infinit
               Group g(*this->doughnut(), e.key);
               if (e.read)
               {
-                e.token = g.current_public_key().seal(secret_buffer);
+                e.token = use_encrypt ?
+                 g.current_public_key().encrypt(secret_buffer, acb_padding)
+                 : g.current_public_key().seal(secret_buffer);
                 this->_group_version[idx - this->_acl_entries.size()] =
                   g.version() - 1;
               }
@@ -1087,7 +1125,9 @@ namespace infinit
         ELLE_ASSERT(s_.out());
         auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
         s.serialize("salt", this->_block.salt());
-        s.serialize("key", *this->_block.owner_key());
+        ELLE_ASSERT(this->_block.doughnut());
+        serialize_key_hash(
+          s, v, *this->_block.owner_key(), "key", this->_block.doughnut());
         s.serialize("version", this->_block.data_version());
         s.serialize("data", this->_block.blocks::Block::data());
         s.serialize("owner_token", this->_block.owner_token());
@@ -1171,6 +1211,7 @@ namespace infinit
       {
         if (!this->_data_signature)
           this->_data_signature = std::make_shared<typename Super::SignFuture>();
+        ELLE_ASSERT(this->doughnut());
         s.serialize("editor", this->_editor);
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl_entries);
@@ -1243,6 +1284,19 @@ namespace infinit
           s.serialize("group_acl", this->_acl_group_entries);
           s.serialize("group_version", this->_group_version);
           s.serialize("deleted", this->_deleted);
+        }
+        if (version >= elle::Version(0, 7, 0))
+        {
+          s.serialize("seal_version", this->_seal_version);
+        }
+        else if (s.in())
+        {
+          this->_seal_version = elle::Version(0, 6, 0);
+        }
+        else if (s.out() && this->_seal_version > version)
+        {
+          ELLE_WARN("%s: seal version %s is above current version %s",
+                    this, this->_seal_version, version);
         }
       }
 

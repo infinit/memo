@@ -47,12 +47,6 @@ namespace infinit
       | Content |
       `--------*/
 
-      elle::Buffer const&
-      Block::data() const
-      {
-        return this->_data;
-      }
-
       elle::Buffer
       Block::take_data()
       {

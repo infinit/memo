@@ -1,44 +1,42 @@
 # Change Log
 
-<!--
-## [0.7.0]
+
+## [0.7.0] - 2016-09-23
+
+Windows release, bandwidth and CPU usage optimization, bugfixes.
 
 ### Added
 
+- Windows release.
 - IPv6 support.
+- Add new `Koordinate` overlay that enables running several overlay
+  algorithms on nodes.
+- Add `--script` mode to `infinit-acl --list`.
+- Support `O_EXCL` when opening files.
+- Support for S3 compatible storages.
 
 ### Changed
 
 - Optimize Kelips packet size.
-
-### Fixed
-
-- The 'creation time' shown when displaying file informations on MacOS
-  is now filled correctly.
--->
-
-
-## [0.6.3]
-
-### Added
-
-- Add new `Koordinate` overlay that enable to run several overlay
-  algorithms on nodes.
-- Add `--script` mode to `infinit-acl --list`.
-- Support `O_EXCL` when opening files.
-
-### Changed
-
+- Optimize blocks transmitted size.
 - Make `--filesystem` the default type for `infinit-storage --create`.
 - Use a single UDP socket for all UTP networking.
+- Resolve backtrace symbols lazily to save CPU.
+- Cache group blocks address resolution to save CPU.
+- Standardize `-n` to mean `--name` and `-N` to mean `--network`.
+- Reduce logs impact on CPU.
 
 ### Fixed
 
+- Fill creation time attributes macOS.
 - Refuse multiple storage types in `infinit-storage --create`.
 - Refuse relinking a linked network.
 - Return `ENOTEMPTY` instead of `EISDIR` when expected.
 - Yield `.` and `..` when listing directories.
 - Fix SEGV in `infinit-acl --set --others-mode`.
+- Fix UTF-8 characters serialization in configuration files.
+- Enable to read ACLs of a file with no read permissions on Linux.
+
 
 ## [0.6.2] - 2016-08-12
 

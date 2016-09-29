@@ -22,11 +22,10 @@ def setup(beyond, user = None):
   drive.put(beyond)
   return user, network, volume, drive
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond() as beyond:
       user, network, volume, drive = setup(beyond)
       assertEq(drive['volume'], volume['name'])
       assertEq(drive['network'], network['name'])
@@ -35,7 +34,8 @@ with Beyond() as beyond:
       for field in ['name', 'description', 'volume', 'network']:
         assertEq(drive[field], _drive[field])
 
-    def test_route(self):
+  def test_route(self):
+    with Beyond() as beyond:
       user, network, volume, drive = setup(beyond)
       invitees = [User() for _ in range(4)]
       for invitee in invitees:
@@ -43,12 +43,14 @@ with Beyond() as beyond:
         Passport(network, invitee).put(beyond)
         drive.invite(beyond, invitee['name'])
 
-    def test_remove(self):
+  def test_remove(self):
+    with Beyond() as beyond:
       user, network, volume, drive = setup(beyond)
       beyond.delete('drives/%s' % drive['name'],
-                    auth = user.private_key)
+                    auth = user)
 
-    def test_multiple_drives(self):
+  def test_multiple_drives(self):
+    with Beyond() as beyond:
       def create(Entity, *args, **kwargs):
         entity = Entity(*args, **kwargs)
         entity.put(beyond)
@@ -87,23 +89,23 @@ with Beyond() as beyond:
       drive3.invite_many(beyond, [alice])
       # Eve created drives.
       assertEq(len(beyond.get('users/%s/drives' % eve['name'],
-                              auth = eve.private_key).json()['drives']),
+                              auth = eve).json()['drives']),
                3)
       assertEq(len(beyond.get('users/%s/drives' % alice['name'],
-                              auth = alice.private_key).json()['drives']),
+                              auth = alice).json()['drives']),
                3)
       assertEq(len(beyond.get('users/%s/drives' % bob['name'],
-                              auth = bob.private_key).json()['drives']),
+                              auth = bob).json()['drives']),
                2)
       assertEq(len(beyond.get('users/%s/drives' % serge['name'],
-                              auth = serge.private_key).json()['drives']),
+                              auth = serge).json()['drives']),
                1)
       alice_network = create_network(owner = alice)
       drive = create_drive(volume = create_volume(alice_network))
       create_passport(alice_network, eve)
       drive.invite(beyond, eve['name'])
       assertEq(len(beyond.get('users/%s/drives' % eve['name'],
-                              auth = eve.private_key).json()['drives']),
+                              auth = eve).json()['drives']),
                4)
 
       # Validate.
@@ -112,5 +114,5 @@ with Beyond() as beyond:
       drive2.accept_many(beyond, [alice])
       drive.accept(beyond, eve)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

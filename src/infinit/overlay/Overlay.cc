@@ -72,9 +72,40 @@ namespace infinit
     `------*/
 
     void
-    Overlay::discover(NodeLocations const& peers)
+    Overlay::discover(Endpoints const& peer)
     {
-      ELLE_TRACE("%s: discover new peers: %f", this, peers);
+      this->discover(NodeLocation(model::Address::null, peer));
+    }
+
+    void
+    Overlay::discover(std::vector<Endpoints> const& peers)
+    {
+      NodeLocations locs;
+      for (auto const& eps: peers)
+        locs.emplace_back(model::Address::null, eps);
+      this->discover(std::move(locs));
+    }
+
+    void
+    Overlay::discover(NodeLocation const& peer)
+    {
+      this->discover(NodeLocations{peer});
+    }
+
+    void
+    Overlay::discover(NodeLocations const& peers_)
+    {
+      ELLE_TRACE("%s: discover %f", this, peers_);
+      NodeLocations peers(peers_);
+      auto it = std::remove_if(peers.begin(), peers.end(),
+        [this] (NodeLocation const& nl)
+        {
+          bool is_us = (nl.id() == this->doughnut()->id());
+          if (is_us)
+            ELLE_TRACE("%s: removeing ourself from peer list", this);
+          return is_us;
+        });
+      peers.erase(it, peers.end());
       this->_discover(peers);
     }
 
@@ -131,6 +162,7 @@ namespace infinit
     reactor::Generator<Overlay::WeakMember>
     Overlay::lookup_nodes(std::unordered_set<model::Address> addresses)
     {
+      ELLE_TRACE_SCOPE("%s: lookup nodes %f", this, addresses);
       return reactor::generator<Overlay::WeakMember>(
         [this, addresses]
         (reactor::Generator<Overlay::WeakMember>::yielder const& yield)

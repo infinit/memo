@@ -43,6 +43,7 @@ namespace infinit
       virtual
       void
       print(std::ostream& stream) const override;
+      std::unique_ptr<rfs::Handle> create_0_7(int flags, mode_t mode);
     private:
     };
   }

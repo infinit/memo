@@ -142,13 +142,14 @@ COMMAND(create)
     auto region = mandatory(args, "region", "AWS region");
     auto bucket = mandatory(args, "bucket", "S3 bucket");
     auto account_name = mandatory(args, "account", "AWS account");
+    auto endpoint = optional(args, "endpoint");
     auto root = optional(args, "path");
     if (!root)
       root = elle::sprintf("%s_blocks", name);
     auto account = ifnt.credentials_aws(account_name);
     aws::Credentials aws_credentials(account->access_key_id,
                                      account->secret_access_key,
-                                     region, bucket, root.get());
+                                     region, bucket, root.get(), endpoint);
     auto storage_class_str = optional(args, "storage-class");
     aws::S3::StorageClass storage_class = aws::S3::StorageClass::Default;
     if (storage_class_str)
@@ -398,6 +399,8 @@ main(int argc, char** argv)
     ("storage-class", value<std::string>(), "storage class to use: "
        "STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)")
     ("region", value<std::string>(), "AWS region to use")
+    ("endpoint", value<std::string>(),
+       "S3 compatible endpoint to use (default: amazonaws.com)")
   ;
   Mode::OptionsDescription ssh_storage_options("SSH storage options");
   ssh_storage_options.add_options()

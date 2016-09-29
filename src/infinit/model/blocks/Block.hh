@@ -65,15 +65,10 @@ namespace infinit
         virtual
         bool
         operator ==(Block const& rhs) const;
-        virtual
-        elle::Buffer const&
-        data() const;
-        ELLE_ATTRIBUTE_R(Address, address, protected);
         elle::Buffer
         take_data();
-
-      protected:
-        elle::Buffer _data;
+        ELLE_ATTRIBUTE_R(Address, address, protected);
+        ELLE_ATTRIBUTE_R(elle::Buffer, data, protected, virtual);
 
       /*-----------.
       | Validation |

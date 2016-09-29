@@ -81,7 +81,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as tmp:
   assert os.path.exists('%s/bob/bob/n' % tmp.linked_networks_path)
   assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 1)
   bob.run(['infinit-passport', '--create', '--as', 'bob',
-           '-u', 'alice', '-n', 'n'])
+           '-u', 'alice', '-N', 'n'])
   alice.run(['infinit-network', '--link', '--as', 'alice', 'bob/n', '-S', 's'])
   assert os.path.exists('%s/alice/bob/n' % tmp.linked_networks_path)
   bob.run(['infinit-network', '--run', '--name', 'n', '--as', 'bob',

@@ -258,7 +258,7 @@ main(int argc, char** argv)
       &create,
       "--network NETWORK --user USER",
       {
-        { "network,n", value<std::string>(),
+        { "network,N", value<std::string>(),
           "network to create the passport to" },
         { "user,u", value<std::string>(), "user to create the passport for" },
         { "push-passport", bool_switch(),
@@ -278,7 +278,7 @@ main(int argc, char** argv)
       &export_,
       "--network NETWORK --user USER",
       {
-        { "network,n", value<std::string>(), "network to export passport for" },
+        { "network,N", value<std::string>(), "network to export passport for" },
         { "user,u", value<std::string>(), "user to export passport for" },
         option_output("passport"),
       },
@@ -289,7 +289,7 @@ main(int argc, char** argv)
       &fetch,
       "[--network NETWORK --user USER]",
       {
-        { "network,n", value<std::string>(),
+        { "network,N", value<std::string>(),
           "network to fetch the passport for (optional)" },
         { "user,u", value<std::string>(),
           "user to fetch passports for (optional)" },
@@ -310,7 +310,7 @@ main(int argc, char** argv)
       &push,
       "--network NETWORK --user USER",
       {
-        { "network,n", value<std::string>(), "network name" },
+        { "network,N", value<std::string>(), "network name" },
         { "user,u", value<std::string>(), "user name" },
       },
     },
@@ -320,7 +320,7 @@ main(int argc, char** argv)
       &pull,
       "--network NETWORK --user USER",
       {
-        { "network,n", value<std::string>(), "network name" },
+        { "network,N", value<std::string>(), "network name" },
         { "user,u", value<std::string>(), "user name" },
       },
     },
@@ -330,7 +330,7 @@ main(int argc, char** argv)
       &list,
       "[--network NETWORK]",
       {
-        { "network,n", value<std::string>(),
+        { "network,N", value<std::string>(),
           "network to list passports for (optional)" },
       },
     },
@@ -340,7 +340,7 @@ main(int argc, char** argv)
       &delete_,
       "--network NETWORK --user USER",
       {
-        { "network,n", value<std::string>(), "network name" },
+        { "network,N", value<std::string>(), "network name" },
         { "user,u", value<std::string>(), "user name" },
         { "pull", bool_switch(),
           elle::sprintf("pull the passport if it is on %s", beyond(true)) },

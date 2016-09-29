@@ -92,7 +92,7 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Consensus::fetch(Address address, boost::optional<int> local_version)
         {
-          ELLE_TRACE_SCOPE("%s: fetch %f (local version: %s)",
+          ELLE_TRACE_SCOPE("%s: fetch %f if newer than %s",
                            *this, address, local_version);
           if (this->doughnut().version() < elle::Version(0, 5, 0))
             return this->_fetch(address, local_version);

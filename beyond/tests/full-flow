@@ -8,11 +8,10 @@ import urllib.parse
 
 from utils import *
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_flow(self):
+  def test_flow(self):
+    with Beyond() as beyond:
       # User
       r = beyond.put('users/mefyl', json = mefyl)
       self.assertEqual(r.status_code, 201)
@@ -29,7 +28,8 @@ with Beyond() as beyond:
       r = beyond.put('users/mefyl', json = mefyl)
       self.assertEqual(beyond.get('users/none', throws = False).status_code, 404)
       # Network
-      r = beyond.put('networks/mefyl/infinit', json = network, auth = mefyl_priv)
+      r = beyond.put('networks/mefyl/infinit', json = network,
+                     auth = {'private_key': mefyl_priv, 'name': 'mefyl'})
       self.assertEqual(r.status_code, 201)
       r = beyond.get('networks/mefyl/infinit')
       self.assertEqual(r.status_code, 200)
@@ -53,14 +53,14 @@ with Beyond() as beyond:
       r = beyond.put(
         'networks/mefyl/infinit/passports/bearclaw',
         json = passport,
-        auth = mefyl_priv)
+        auth = {'private_key': mefyl_priv, 'name': 'mefyl'})
       self.assertEqual(r.status_code, 201)
       r = beyond.get(
         'networks/mefyl/infinit/passports/bearclaw',
-        auth = bearclaw.private_key)
+        auth = bearclaw)
       self.assertEqual(r.status_code, 200)
       self.maxDiff = None
       self.assertEqual(r.json(), passport)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()
