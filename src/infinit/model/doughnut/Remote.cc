@@ -196,8 +196,13 @@ namespace infinit
       void
       Remote::connect(elle::DurationOpt timeout)
       {
-        if (!reactor::wait(this->_connected, timeout))
-          throw reactor::network::TimeOut();
+        if (!this->_connected)
+        {
+          ELLE_DEBUG_SCOPE(
+            "%s: wait for connection with timeout %s", this, timeout);
+          if (!reactor::wait(this->_connected, timeout))
+            throw reactor::network::TimeOut();
+        }
       }
 
       void
