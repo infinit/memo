@@ -1123,6 +1123,10 @@ namespace infinit
         boost::optional<int> port = {})
     {
       ELLE_LOG("client version: %s", version_describe);
+      auto rdv_env = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
+      boost::optional<std::string> rdv_host;
+      if (!rdv_env.empty())
+        rdv_host = std::move(rdv_env);
       return this->dht()->make(
         client,
         this->cache_dir(user),
@@ -1137,7 +1141,8 @@ namespace infinit
           : boost::optional<std::chrono::seconds>(),
         disk_cache_size,
         std::move(version),
-        std::move(port));
+        std::move(port),
+        std::move(rdv_host));
     }
 
     inline

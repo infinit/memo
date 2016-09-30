@@ -56,7 +56,8 @@ namespace infinit
                          boost::optional<int> port,
                          std::unique_ptr<storage::Storage> storage,
                          boost::optional<elle::Version> version,
-                         AdminKeys const& admin_keys)
+                         AdminKeys const& admin_keys,
+                         boost::optional<std::string> rdv_host)
         : Model(std::move(version))
         , _id(std::move(id))
         , _keys(keys)
@@ -69,7 +70,7 @@ namespace infinit
             ? this->_consensus->make_local(std::move(port), std::move(storage))
             : nullptr)
         // FIXME: move protocol configuration to doughnut
-        , _dock(*this, Protocol::all)
+        , _dock(*this, Protocol::all, std::move(rdv_host))
         , _overlay(overlay_builder(*this, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
         , _terminating()
@@ -130,7 +131,8 @@ namespace infinit
                          boost::optional<int> port,
                          std::unique_ptr<storage::Storage> storage,
                          boost::optional<elle::Version> version,
-                         AdminKeys const& admin_keys)
+                         AdminKeys const& admin_keys,
+                         boost::optional<std::string> rdv_host)
         : Doughnut(std::move(id),
                    std::move(keys),
                    std::move(owner),
@@ -140,7 +142,8 @@ namespace infinit
                    std::move(port),
                    std::move(storage),
                    std::move(version),
-                   admin_keys)
+                   admin_keys,
+                   std::move(rdv_host))
       {
         auto check_user_blocks = [name, this]
           {
@@ -483,7 +486,8 @@ namespace infinit
         boost::optional<std::chrono::seconds> cache_invalidation,
         boost::optional<uint64_t> disk_cache_size,
         boost::optional<elle::Version> version,
-        boost::optional<int> port_)
+        boost::optional<int> port_,
+        boost::optional<std::string> rdv_host)
       {
         Doughnut::ConsensusBuilder consensus =
           [&] (Doughnut& dht)
@@ -537,7 +541,8 @@ namespace infinit
             std::move(port),
             std::move(storage),
             version ? version.get() : this->version,
-            admin_keys);
+            admin_keys,
+            std::move(rdv_host));
         }
         else
         {
@@ -552,7 +557,8 @@ namespace infinit
             std::move(port),
             std::move(storage),
             version ? version.get() : this->version,
-            admin_keys);
+            admin_keys,
+            std::move(rdv_host));
         }
         return dht;
       }

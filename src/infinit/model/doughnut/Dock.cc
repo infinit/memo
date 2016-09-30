@@ -46,7 +46,9 @@ namespace infinit
       }
     }
 
-      Dock::Dock(Doughnut& doughnut, Protocol protocol)
+      Dock::Dock(Doughnut& doughnut,
+                 Protocol protocol,
+                 boost::optional<std::string> rdv_host)
         : _doughnut(doughnut)
         , _protocol(protocol)
         , _local_utp_server(
@@ -61,8 +63,7 @@ namespace infinit
             && doughnut.version() >= elle::Version(0, 7, 0);
           this->_local_utp_server->listen(0, v6);
         }
-        auto rdv_host = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
-        if (!rdv_host.empty())
+        if (rdv_host)
         {
           auto uid = elle::sprintf("%x", _doughnut.id());
           this->_rdv_connect_thread.reset(
@@ -72,11 +73,12 @@ namespace infinit
               {
                 // The remotes_server does not accept incoming connections,
                 // it is used to connect Remotes
-                retry_forever(10_sec, 120_sec, "Dock RDV connect",
-                              [&] {
-                                this->_utp_server.rdv_connect(
-                                    uid, rdv_host, 120_sec);
-                              });
+                retry_forever(
+                  10_sec, 120_sec, "Dock RDV connect",
+                  [&]
+                  {
+                    this->_utp_server.rdv_connect(uid, rdv_host.get(), 120_sec);
+                  });
               }));
         }
         for (auto const& interface: elle::network::Interface::get_map(
