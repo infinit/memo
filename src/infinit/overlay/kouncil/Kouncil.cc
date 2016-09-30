@@ -68,7 +68,7 @@ namespace infinit
                     auto range = this->_address_book.equal_range(this->id());
                     for (auto it = range.first; it != range.second; ++it)
                       res.emplace(it->block());
-                    return std::move(res);
+                    return res;
                   }));
             });
           local->on_connect().connect(
@@ -83,7 +83,7 @@ namespace infinit
                     auto range = this->_address_book.get<1>().equal_range(addr);
                     for (auto it = range.first; it != range.second; ++it)
                       res.emplace(it->node());
-                    return std::move(res);
+                    return res;
                   }));
             });
         }
