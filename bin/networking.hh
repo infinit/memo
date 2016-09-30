@@ -43,25 +43,27 @@ namespace infinit
       RPCs()
         : infinit::RPCServer() // ::version)
       {
-        this->add("download", std::function<size_t (elle::Buffer const&)>(
-                    [] (elle::Buffer const& body)
-                    {
-                      ELLE_TRACE("%s uploaded to server", body.size());
-                      return body.size();
-                    }));
+        this->add("download",
+                  std::function<elle::Buffer::Size (elle::Buffer const&)>(
+                  [] (elle::Buffer const& body)
+                  {
+                    ELLE_TRACE("%s uploaded to server", body.size());
+                    return body.size();
+                  }));
 
-        this->add("upload", std::function<elle::Buffer (size_t)>(
-                    [] (size_t size)
-                    {
-                      ELLE_TRACE("download %s from server", size);
-                      return elle::Buffer(size);
-                    }));
+        this->add("upload",
+                  std::function<elle::Buffer (elle::Buffer::Size)>(
+                  [] (elle::Buffer::Size size)
+                  {
+                    ELLE_TRACE("download %s from server", size);
+                    return elle::Buffer(size);
+                  }));
       }
     };
 
     static
     std::string
-    report(size_t size,
+    report(elle::Buffer::Size size,
            time_duration duration)
     {
       return elle::sprintf(
@@ -74,18 +76,18 @@ namespace infinit
     static
     time_duration
     upload(infinit::protocol::ChanneledStream& channels,
-           size_t packet_size,
-           size_t packets_count)
+           elle::Buffer::Size packet_size,
+           uint32_t packets_count)
     {
       ELLE_TRACE_SCOPE("upload %s %s times", packet_size, packets_count);
       std::cout << "  Upload:" << std::endl;
       // My download is the server upload.
-      infinit::RPC<size_t (elle::Buffer)> upload(
+      infinit::RPC<elle::Buffer::Size (elle::Buffer)> upload(
         "download", channels, ::version);
 
       elle::Buffer buff(packet_size);
       auto start = microsec_clock::universal_time();
-      for (size_t i = 0; i < packets_count; ++i)
+      for (uint32_t i = 0; i < packets_count; ++i)
         ELLE_DEBUG("upload...")
         {
           auto start_partial = microsec_clock::universal_time();
@@ -106,18 +108,18 @@ namespace infinit
     static
     time_duration
     download(infinit::protocol::ChanneledStream& channels,
-             size_t packet_size,
-             size_t packets_count)
+             elle::Buffer::Size packet_size,
+             uint32_t packets_count)
     {
       ELLE_TRACE_SCOPE("download %s %s times", packet_size, packets_count);
 
       // My upload is the server download.
-      infinit::RPC<elle::Buffer (size_t)> download(
+      infinit::RPC<elle::Buffer (elle::Buffer::Size)> download(
         "upload", channels, ::version);
 
       std::cout << "  Download:" << std::endl;
       auto start = microsec_clock::universal_time();
-      for (size_t i = 0; i < packets_count; ++i)
+      for (uint32_t i = 0; i < packets_count; ++i)
       {
         ELLE_DEBUG("download...")
         {
@@ -160,7 +162,7 @@ namespace infinit
     {
       static
       void
-      serve(uint64_t port)
+      serve(uint16_t port)
       {
         ELLE_TRACE("create tcp server (listening on port: %s)", port);
         auto server = elle::make_unique<reactor::network::TCPServer>();
@@ -200,7 +202,7 @@ namespace infinit
     {
       static
       void
-      serve(uint64_t port,
+      serve(uint16_t port,
             int xorit)
       {
         ELLE_TRACE("create utp server (listening on port: %s) (xor: %s)",
@@ -251,9 +253,9 @@ namespace infinit
     enum class Operations
     {
       all = 1,
-        upload = 2,
-        download = 3
-        };
+      upload = 2,
+      download = 3
+    };
 
     inline
     Operations
@@ -343,11 +345,11 @@ namespace infinit
     }
 
     inline
-    size_t
+    elle::Buffer::Size
     packet_size_get(boost::program_options::variables_map const& args)
     {
       auto packet_size = args.count("packet_size")
-        ? args["packet_size"].as<size_t>()
+        ? args["packet_size"].as<elle::Buffer::Size>()
         : 1024 * 1024;
       if (packet_size == 0)
         elle::err("--packets_count must be greater than 0");
@@ -355,11 +357,11 @@ namespace infinit
     }
 
     inline
-    size_t
+    uint32_t
     packets_count_get(boost::program_options::variables_map const& args)
     {
       auto packets_count = args.count("packets_count")
-        ? args["packets_count"].as<size_t>()
+        ? args["packets_count"].as<uint32_t>()
         : 5;
       if (packets_count == 0)
         elle::err("--packets_count must be greater than 0");
@@ -432,8 +434,8 @@ namespace infinit
       if (args.count("protocol"))
         protocol = protocol_get(args);
       auto mode = get_mode(args);
-      size_t packets_count = packets_count_get(args);
-      size_t packet_size = packet_size_get(args);
+      uint32_t packets_count = packets_count_get(args);
+      elle::Buffer::Size packet_size = packet_size_get(args);
 
       auto action = [&] (infinit::protocol::ChanneledStream& stream) {
         if (mode == Operations::all || mode == Operations::upload)

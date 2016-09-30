@@ -1705,10 +1705,10 @@ main(int argc, char** argv)
     "RPC protocol to use: tcp,utp,all (default: all)"
   };
   Mode::OptionDescription packet_size =
-    { "packet_size,s", value<size_t>(),
+    { "packet_size,s", value<elle::Buffer::Size>(),
       "size of the packet to send (client only)" };
   Mode::OptionDescription packets_count =
-    { "packets_count,n", value<size_t>(),
+    { "packets_count,n", value<uint32_t>(),
       "number of packets to exchange (client only)" };
   Mode::OptionDescription host =
     { "host,H", value<std::string>(),
