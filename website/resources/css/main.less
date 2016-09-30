@@ -298,20 +298,31 @@ footer nav > ul > li {
   img { width: 100%; }
   strong, p, ul { padding: 0 20px; }
   strong { padding-top: 20px; font-weight: bold; display: block; }
-  ul {
-    padding-bottom: 20px; width: 82%; margin-left: 10%; padding-top: 10px;
-    li { float: left; font-size: 15px; width: 44%; text-align: left; }
-    li:last-child { margin-bottom: 40px; }
-    li a {
-      .transition(); opacity: 1;
-      display: block; background: #f7f7f7;
-      padding: 8%; margin: 4%; border-radius: 5px;
-    }
-    li a:hover { opacity: 0.6; }
-    li a:before { margin-right: .4em; }
-    li a.icon-infinit:before { color: @infinitred; }
-    li a.icon-facebook:before { color: #3B5998; }
-    li a.icon-twitter:before { color: #1DA1F2; }
+}
+
+#social ul,
+body.doc_get_started section.doc ul.social {
+  padding-bottom: 20px; width: 82%; margin-left: 10%; padding-top: 10px;
+  li { float: left; font-size: 15px; width: 44%; text-align: left; }
+  li:last-child { margin-bottom: 40px; }
+  li a {
+    .transition(); opacity: 1;
+    display: block; background: #f7f7f7;
+    padding: 8%; margin: 4%; border-radius: 5px;
+  }
+  li a:hover { opacity: 0.6; }
+  li a:before { margin-right: .4em; }
+  li a.icon-infinit:before { color: @infinitred; }
+  li a.icon-facebook:before { color: #3B5998; }
+  li a.icon-twitter:before { color: #1DA1F2; }
+}
+
+body.doc_get_started section.doc ul.social {
+  list-style-type: none; margin:0; padding:0;
+  li { margin: 0; }
+  li a {
+    color: @infinitblack; margin-left: 0; margin-right: 8%;
+    &:after { opacity: 0; }
   }
 }
 
