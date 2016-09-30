@@ -200,7 +200,7 @@ namespace infinit
         if (!this->_reconnecting)
         {
           auto lock = elle::scoped_assignment(this->_reconnecting, true);
-          ELLE_TRACE("%s: reconnect", this);
+          ELLE_TRACE_SCOPE("%s: reconnect", this);
           this->_credentials = {};
           if (this->_refetch_endpoints)
             if (auto eps = this->_refetch_endpoints())
