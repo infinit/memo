@@ -2314,9 +2314,10 @@ namespace infinit
             auto contact_it = _state.contacts[fg].find(it->second.home_node);
             if (contact_it != _state.contacts[fg].end())
             {
-              ELLE_DEBUG("%s: found other", *this);
               endpoints =
                 endpoints_extract(contact_it->second.endpoints);
+              ELLE_DEBUG("%s: found other at %f:%s",
+                         *this, it->second.home_node, endpoints);
               found = true;
             }
             else
@@ -2751,13 +2752,14 @@ namespace infinit
       Node::kelipsGet(Address file, int n, bool local_override, int attempts,
                       bool query_node,
                       bool fast_mode,
-                      std::function <void(NodeLocation)> yield)
+                      std::function <void(NodeLocation)> yield,
+                      bool ignore_local_cache)
       {
         BENCH("kelipsGet");
         ELLE_TRACE_SCOPE("%s: get %s", *this, file);
         if (attempts == -1)
           attempts = _config.query_get_retries;
-        auto f = [this,file,n,local_override, attempts, yield, query_node, fast_mode]() {
+        auto f = [this,file,n,local_override, attempts, yield, query_node, fast_mode, ignore_local_cache]() {
           std::set<Address> result_set;
           packet::GetFileRequest r;
           r.sender = _self;
@@ -2772,7 +2774,7 @@ namespace infinit
           int fg = group_of(file);
           static elle::Bench bench_localresult("kelips.localresult", 10_sec);
           static elle::Bench bench_localbypass("kelips.localbypass", 10_sec);
-          if (!query_node && fg == _group)
+          if (!query_node && fg == _group && !ignore_local_cache)
           {
             // check if we have it locally
             auto its = _state.files.equal_range(file);
@@ -2797,7 +2799,7 @@ namespace infinit
               return;
             }
           }
-          if (query_node)
+          if (query_node && !ignore_local_cache)
           {
             auto& target = _state.contacts[fg];
             auto it = target.find(file);
@@ -2863,6 +2865,22 @@ namespace infinit
               }
               if (signed(result_set.size()) >= (fast_mode ? 1 : n))
                 break;
+            }
+          }
+          if (result_set.empty() && ignore_local_cache)
+          {
+            ELLE_DEBUG("%s: result set empty, using local cache", this);
+            if (query_node)
+            {
+              auto& target = _state.contacts[fg];
+              auto it = target.find(file);
+              if (it != target.end())
+              {
+                yield(
+                  NodeLocation(
+                    it->first,
+                    endpoints_extract(it->second.endpoints)));
+              }
             }
           }
         };
@@ -3229,17 +3247,23 @@ namespace infinit
       Node::_refetch_endpoints(model::Address id)
       {
         // Perform a lookup for the node
+        ELLE_LOG("%s: refetch endpoints for %s", this, id);
+        boost::optional<model::Endpoints> res;
         boost::optional<NodeLocation> result;
         kelipsGet(id, 1, false, -1, true, false,
                   [&] (NodeLocation p)
                   {
                     result = p;
-                  });
+                  },
+                  true);
         if (result)
-          return result->endpoints();
-        else
+        {
+          ELLE_LOG("%s: got endpoints from network: %s", this, result->endpoints());
+          res = result->endpoints();
+        }
+        if (!res || res->empty())
           return {};
-
+        return res;
       }
 
       reactor::Generator<std::pair<model::Address, Node::WeakMember>>
@@ -3477,6 +3501,11 @@ namespace infinit
         // for non-observers, only notify discovery after bootstrap completes
         if (inserted.second && observer)
           this->on_discover()(address, observer);
+        if (!inserted.second)
+        { // we still want the new endpoints
+          for (auto const& ep: endpoints)
+            endpoints_update(inserted.first->second.endpoints, ep);
+        }
         return &inserted.first->second;
       }
 

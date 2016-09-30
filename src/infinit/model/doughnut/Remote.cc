@@ -63,6 +63,7 @@ namespace infinit
         , _endpoints(std::move(endpoints))
         , _utp_server(server)
         , _protocol(protocol)
+        , _refetch_endpoints(refetch? *refetch : EndpointsRefetcher())
         , _fast_fail(false)
         , _thread()
       {
@@ -101,7 +102,10 @@ namespace infinit
             elle::sprintf("%f worker", this),
             [this]
             {
+              ELLE_DEBUG("%s: connection attempt to %s endpoints",
+                         this, this->_endpoints.size());
               this->_connected.close();
+              this->_connection_start_time = std::chrono::system_clock::now();
               auto handshake = [&] (std::unique_ptr<std::iostream> socket)
                 {
                   auto serializer = elle::make_unique<protocol::Serializer>(
@@ -390,6 +394,7 @@ namespace infinit
       std::vector<cryptography::rsa::PublicKey>
       Remote::_resolve_keys(std::vector<int> ids)
       {
+        static elle::Bench bench("bench.remote_key_cache_hit", 1000_sec);
         {
           std::vector<int> missing;
           for (auto id: ids)
@@ -398,6 +403,7 @@ namespace infinit
               missing.emplace_back(id);
           if (missing.size())
           {
+            bench.add(0);
             ELLE_TRACE("%s: fetch %s keys by ids", this, missing.size());
             auto rpc = this->make_rpc<std::vector<cryptography::rsa::PublicKey>(
               std::vector<int> const&)>("resolve_keys");
@@ -410,6 +416,8 @@ namespace infinit
             for (; id_it != missing.end(); ++id_it, ++key_it)
               this->_key_hash_cache.emplace(*id_it, std::move(*key_it));
           }
+          else
+            bench.add(1);
         }
         std::vector<cryptography::rsa::PublicKey> res;
         for (auto id: ids)

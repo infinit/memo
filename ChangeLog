@@ -1,5 +1,6 @@
 # Change Log
 
+
 ## [xxx version] - xxx date
 
 xxx summary
@@ -7,6 +8,13 @@ xxx summary
 ### Added
 
 - Descriptions to users, groups, storages, networks, volumes and drives.
+
+
+## [0.7.1]
+
+### Changed
+
+- Poll beyond periodically for endpoints changes.
 
 
 ## [0.7.0] - 2016-09-23

@@ -106,6 +106,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
         ELLE_ATTRIBUTE_R(EndpointsRefetcher, refetch_endpoints);
         ELLE_ATTRIBUTE_R(bool, fast_fail);
+        ELLE_ATTRIBUTE(std::chrono::system_clock::time_point, connection_start_time);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, thread);
 
       /*-------.
