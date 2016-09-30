@@ -74,6 +74,8 @@ namespace infinit
           /// Clear all cached blocks.
           void
           clear();
+          void
+          insert(std::unique_ptr<blocks::Block> b);
         private:
           void
           _cleanup();

@@ -33,6 +33,60 @@ namespace infinit
           return Cache::clock::now();
         }
 
+        class CacheConflictResolver: public ConflictResolver
+        {
+        public:
+          CacheConflictResolver(elle::serialization::SerializerIn& s,
+                                elle::Version const& v)
+          : _slot(nullptr)
+          {
+            this->serialize(s, v);
+          }
+          CacheConflictResolver(std::unique_ptr<blocks::Block>* slot,
+                                std::unique_ptr<ConflictResolver> backend)
+          : _slot(slot)
+          , _backend(std::move(backend))
+          {
+          }
+          std::unique_ptr<blocks::Block>
+          operator()(blocks::Block& b,
+                     blocks::Block& current,
+                     model::StoreMode store_mode)
+          {
+            auto res = (*_backend)(b, current, store_mode);
+            if (res && this->_slot)
+            {
+              res->validated(true); // block generated localy
+              res->seal();
+              ELLE_TRACE("cache intercept of conflict resolution: "
+                "our version: %s, current version: %s, resolved version: %s"
+                " resolver: %s",
+                dynamic_cast<blocks::MutableBlock&>(b).version(),
+                dynamic_cast<blocks::MutableBlock&>(current).version(),
+                dynamic_cast<blocks::MutableBlock&>(*res).version(),
+                _backend->description());
+              *this->_slot = res->clone();
+            }
+            return res;
+          }
+          void
+          serialize(elle::serialization::Serializer& s,
+                    elle::Version const& v)
+          {
+            s.serialize("backend", this->_backend);
+          }
+          std::string
+          description() const
+          {
+            return "cache wrapper for " + this->_backend->description();
+          }
+          std::unique_ptr<blocks::Block>* _slot;
+          std::unique_ptr<ConflictResolver> _backend;
+        };
+
+        static const elle::serialization::Hierarchy<infinit::model::ConflictResolver>::
+        Register<CacheConflictResolver> _register_ccr("CacheConflictResolver");
+
         Cache::Cache(std::unique_ptr<Consensus> backend,
                      boost::optional<int> cache_size,
                      boost::optional<std::chrono::seconds> cache_invalidation,
@@ -279,6 +333,24 @@ namespace infinit
         }
 
         void
+        Cache::insert(std::unique_ptr<blocks::Block> cloned)
+        {
+          auto hit = this->_cache.find(cloned->address());
+          if (hit != this->_cache.end())
+          {
+            this->_cache.modify(
+              hit, [&] (CachedBlock& b) {
+                b.block() = std::move(cloned);
+                b.last_used(now());
+                b.last_fetched(now());
+              });
+          }
+          else
+          {
+            this->_cache.emplace(std::move(cloned));
+          }
+        }
+        void
         Cache::_store(std::unique_ptr<blocks::Block> block,
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
@@ -297,29 +369,16 @@ namespace infinit
               mb->validated(true);
             cloned = block->clone();
           }
-          auto address = block->address();
           {
             static elle::Bench bench("bench.cache.store.store", 10000_sec);
             elle::Bench::BenchScope bs(bench);
             this->_backend->store(
-              std::move(block), mode, std::move(resolver));
+              std::move(block), mode,
+              elle::make_unique<CacheConflictResolver>(&cloned, std::move(resolver)));
           }
           if (mb)
           {
-            auto hit = this->_cache.find(address);
-            if (hit != this->_cache.end())
-            {
-              this->_cache.modify(
-                hit, [&] (CachedBlock& b) {
-                  b.block() = std::move(cloned);
-                  b.last_used(now());
-                  b.last_fetched(now());
-                });
-            }
-            else
-            {
-              this->_cache.emplace(std::move(cloned));
-            }
+            this->insert(std::move(cloned));
           }
           else
           {
