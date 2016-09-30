@@ -613,6 +613,16 @@ namespace infinit
           return this->full_path() == this->full_path().root_path() ? "true"
                                                                     : "false";
         }
+        else if (special->find("compatibility-version") == 0)
+        {
+          return umbrella(
+            [&]
+            {
+              auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+                this->_owner.block_store());
+              return elle::sprintf("%s", dht->version());
+            });
+        }
       }
       if (k.substr(0, strlen(overlay_info)) == overlay_info)
       {
