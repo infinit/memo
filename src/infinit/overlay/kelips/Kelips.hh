@@ -289,7 +289,8 @@ namespace infinit
         kelipsGet(Address file, int n, bool local_override, int attempts,
           bool query_node,
           bool fast_mode, // return as soon as we have a result
-          std::function<void(NodeLocation)> yield);
+          std::function<void(NodeLocation)> yield,
+          bool ignore_local_cache = false);
         std::vector<NodeLocation>
         kelipsPut(Address file, int n);
         std::unordered_multimap<Address, std::pair<Time, Address>>

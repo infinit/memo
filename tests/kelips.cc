@@ -1,5 +1,7 @@
 #include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/test.hh>
+#include <elle/os/environ.hh>
+#include <reactor/network/http-server.hh>
 
 #include <reactor/for-each.hh>
 
@@ -18,11 +20,13 @@
 #include <fcntl.h>
 #include <cstdlib>
 
+ELLE_LOG_COMPONENT("test");
+
+#include "main.hh"
+
 #ifdef INFINIT_WINDOWS
 # undef stat
 #endif
-
-ELLE_LOG_COMPONENT("test");
 
 namespace ifs = infinit::filesystem;
 namespace rfs = reactor::filesystem;
@@ -30,16 +34,81 @@ namespace bfs = boost::filesystem;
 namespace imd = infinit::model::doughnut;
 namespace iok = infinit::overlay::kelips;
 
-std::vector<infinit::model::Endpoints> endpoints;
 
-static std::vector<std::shared_ptr<imd::Doughnut>>
+class Beyond: public reactor::network::HttpServer
+{
+public:
+  Beyond()
+  {
+    register_route("/networks/bob/network/endpoints", reactor::http::Method::GET,
+      [&] (
+           Headers const&,
+           Cookies const&,
+           Parameters const&,
+           elle::Buffer const&) -> std::string
+      {
+        auto res = elle::serialization::json::serialize(_endpoints, false).string();
+        while (true)
+        {
+          auto p = res.find("null");
+          if (p == res.npos)
+            break;
+          res = res.substr(0, p) + "{}" + res.substr(p+4);
+        }
+        ELLE_LOG("endpoints: '%s'", res);
+        return res;
+      });
+    elle::os::setenv("INFINIT_BEYOND", elle::sprintf("127.0.0.1:%s", this->port()), true);
+  }
+  ~Beyond()
+  {
+  }
+  void push(infinit::model::Address id, Endpoints eps)
+  {
+    _endpoints["bob"][elle::sprintf("%s", id)] = eps;
+  }
+  void pull(infinit::model::Address id)
+  {
+    _endpoints["bob"].erase(elle::sprintf("%s", id));
+  }
+  void push(infinit::model::doughnut::Doughnut& d)
+  {
+    Endpoints eps{{"127.0.0.1"}, d.local()->server_endpoint().port()};
+    push(d.id(), eps);
+  }
+  void pull(infinit::model::doughnut::Doughnut& d)
+  {
+    pull(d.id());
+  }
+  void cleanup()
+  {
+    _endpoints.clear();
+  }
+private:
+  // username -> {node_id -> endpoints}
+  typedef std::unordered_map<std::string,
+    std::unordered_map<std::string, Endpoints>> NetEndpoints;
+  NetEndpoints _endpoints;
+};
+
+std::vector<infinit::model::Endpoints> endpoints;
+infinit::Network net("bob/network", nullptr);
+typedef std::vector<
+         std::pair<
+           std::shared_ptr<imd::Doughnut>,
+           reactor::Thread::unique_ptr
+           >> Nodes;
+
+static
+Nodes
 run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
           int count = 10, int groups = 1, int replication_factor = 3,
-          bool paxos_lenient = false)
+          bool paxos_lenient = false,
+          int beyond_port = 0, int base_id=0)
 {
   ELLE_LOG_SCOPE("building and running %s nodes", count);
   endpoints.clear();
-  std::vector<std::shared_ptr<imd::Doughnut>> res;
+  Nodes res;
   iok::Configuration config;
   config.k = groups;
   config.encrypt = true;
@@ -53,6 +122,7 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
   config.contact_timeout_ms = factor * valgrind(2000,20);
   config.ping_interval_ms = factor * valgrind(1000, 10) / count / 3;
   config.ping_timeout_ms = factor * valgrind(500, 20);
+  config.query_get_retries = 2;
   for (int n=0; n<count; ++n)
   {
     std::unique_ptr<infinit::storage::Storage> s;
@@ -75,7 +145,7 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
         };
     infinit::model::Address::Value v;
     memset(v, 0, sizeof(v));
-    v[0] = n+1;
+    v[0] = base_id + n + 1;
     auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
       infinit::model::Address(v),
       std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
@@ -85,7 +155,13 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
       overlay,
       boost::optional<int>(),
       std::move(s));
-    res.push_back(dn);
+    reactor::Thread::unique_ptr tptr;
+    if (beyond_port)
+    {
+      infinit::overlay::NodeLocations locs;
+      tptr = make_poll_beyond_thread(*dn, net, locs, 1);
+    }
+    res.push_back(std::make_pair(dn, std::move(tptr)));
     //if (res.size() == 1)
     {
       infinit::model::Endpoints eps;
@@ -95,23 +171,26 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
       endpoints.emplace_back(eps);
     }
   }
-  return res;
+  return std::move(res);
 }
 
-static std::unique_ptr<rfs::FileSystem>
+static std::pair<std::unique_ptr<rfs::FileSystem>, reactor::Thread::unique_ptr>
 make_observer(std::shared_ptr<imd::Doughnut>& root_node,
               bfs::path where,
               infinit::cryptography::rsa::KeyPair& kp,
               int groups,
               int replication_factor,
               bool cache, bool async,
-              bool paxos_lenient)
+              bool paxos_lenient,
+              int beyond_port = 0)
 {
   ELLE_LOG_SCOPE("building observer");
   iok::Configuration config;
   config.k = groups;
   config.encrypt = true;
   config.accept_plain = false;
+  config.query_get_retries = 3;
+  config.ping_timeout_ms = valgrind(500, 20);
   infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp);
   infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
   [&] (infinit::model::doughnut::Doughnut& dht)
@@ -155,18 +234,24 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
     "volume", dn, infinit::filesystem::allow_root_creation = true);
   auto fs = elle::make_unique<reactor::filesystem::FileSystem>(
     std::move(ops), true);
+  reactor::Thread::unique_ptr tptr;
+  if (beyond_port)
+  {
+    infinit::overlay::NodeLocations locs;
+    tptr = make_poll_beyond_thread(*dn, net, locs, 1);
+  }
   ELLE_LOG("Returning observer");
-  return fs;
+  return std::make_pair(std::move(fs), std::move(tptr));
 }
 
 static std::vector<std::unique_ptr<rfs::FileSystem>>
-node_to_fs(std::vector<std::shared_ptr<imd::Doughnut>> const& nodes)
+node_to_fs(Nodes const& nodes)
 {
   std::vector<std::unique_ptr<rfs::FileSystem>> res;
-  for (auto n: nodes)
+  for (auto& n: nodes)
   {
     auto ops = elle::make_unique<infinit::filesystem::FileSystem>(
-      "volume", n, infinit::filesystem::allow_root_creation = true);
+      "volume", n.first, infinit::filesystem::allow_root_creation = true);
     auto fs = elle::make_unique<reactor::filesystem::FileSystem>(
       std::move(ops), true);
     res.push_back(std::move(fs));
@@ -221,7 +306,8 @@ ELLE_TEST_SCHEDULED(basic)
   ELLE_LOG("write files")
   {
     auto nodes = run_nodes(tmp, kp, 10 / valgrind(1, 2));
-    auto fs = make_observer(nodes.front(), tmp, kp, 1, 3, false, false, false);
+    auto fsp = make_observer(nodes.front().first, tmp, kp, 1, 3, false, false, false);
+    auto& fs = fsp.first;
     writefile(*fs, "test1", "foo");
     writefile(*fs, "test2", std::string(32000, 'a'));
     BOOST_CHECK_EQUAL(readfile(*fs, "test1"), "foo");
@@ -230,9 +316,9 @@ ELLE_TEST_SCHEDULED(basic)
   ELLE_LOG("read files")
   {
     auto nodes = run_nodes(tmp, kp, 10 / valgrind(1, 2));
-    auto fs = make_observer(nodes.front(), tmp, kp, 1, 3, false, false, false);
-    BOOST_CHECK_EQUAL(readfile(*fs, "test1"), "foo");
-    BOOST_CHECK_EQUAL(readfile(*fs, "test2"), std::string(32000, 'a'));
+    auto fs = make_observer(nodes.front().first, tmp, kp, 1, 3, false, false, false);
+    BOOST_CHECK_EQUAL(readfile(*fs.first, "test1"), "foo");
+    BOOST_CHECK_EQUAL(readfile(*fs.first, "test2"), std::string(32000, 'a'));
   }
 }
 
@@ -265,24 +351,24 @@ ELLE_TEST_SCHEDULED(list_directory)
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
   auto kp = infinit::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 1);
-  auto fswrite = make_observer(nodes.front(), tmp, kp, 1, 1, true, false, false);
-  auto fsc = make_observer(nodes.front(), tmp, kp, 1, 1, true, false, false);
-  auto fsca = make_observer(nodes.front(), tmp, kp, 1, 1, true, true, false);
-  auto fsa = make_observer(nodes.front(), tmp, kp, 1, 1, false, true, false);
+  auto fswrite = make_observer(nodes.front().first, tmp, kp, 1, 1, true, false, false);
+  auto fsc = make_observer(nodes.front().first, tmp, kp, 1, 1, true, false, false);
+  auto fsca = make_observer(nodes.front().first, tmp, kp, 1, 1, true, true, false);
+  auto fsa = make_observer(nodes.front().first, tmp, kp, 1, 1, false, true, false);
   ELLE_TRACE("write");
-  make_files(*fswrite, "50", 50);
+  make_files(*fswrite.first, "50", 50);
   ELLE_TRACE("list fsc");
-  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsc.first,  "50"), 50);
   ELLE_TRACE("list fsca");
-  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsca.first, "50"), 50);
   ELLE_TRACE("list fsa");
-  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsa.first,  "50"), 50);
   ELLE_TRACE("list fsc");
-  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsc.first,  "50"), 50);
   ELLE_TRACE("list fsca");
-  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsca.first, "50"), 50);
   ELLE_TRACE("list fsa");
-  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsa.first,  "50"), 50);
   ELLE_TRACE("done");
 }
 
@@ -293,24 +379,24 @@ ELLE_TEST_SCHEDULED(list_directory_3)
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
   auto kp = infinit::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 3);
-  auto fswrite = make_observer(nodes.front(), tmp, kp, 1, 3, true, false, false);
-  auto fsc = make_observer(nodes.front(), tmp, kp, 1, 3, true, false, false);
-  auto fsca = make_observer(nodes.front(), tmp, kp, 1, 3, true, true, false);
-  auto fsa = make_observer(nodes.front(), tmp, kp, 1, 3, false, true, false);
+  auto fswrite = make_observer(nodes.front().first, tmp, kp, 1, 3, true, false, false);
+  auto fsc = make_observer(nodes.front().first, tmp, kp, 1, 3, true, false, false);
+  auto fsca = make_observer(nodes.front().first, tmp, kp, 1, 3, true, true, false);
+  auto fsa = make_observer(nodes.front().first, tmp, kp, 1, 3, false, true, false);
   ELLE_TRACE("write");
-  make_files(*fswrite, "50", 50);
+  make_files(*fswrite.first, "50", 50);
   ELLE_TRACE("list fsc");
-  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsc.first,  "50"), 50);
   ELLE_TRACE("list fsca");
-  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsca.first, "50"), 50);
   ELLE_TRACE("list fsa");
-  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsa.first,  "50"), 50);
   ELLE_TRACE("list fsc");
-  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsc.first,  "50"), 50);
   ELLE_TRACE("list fsca");
-  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsca.first, "50"), 50);
   ELLE_TRACE("list fsa");
-  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsa.first,  "50"), 50);
   ELLE_TRACE("done");
 }
 
@@ -321,24 +407,24 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
   auto kp = infinit::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 5, 1, 3);
-  auto fswrite = make_observer(nodes.front(), tmp, kp, 1, 3, true, false, false);
-  auto fsc = make_observer(nodes.front(), tmp, kp, 1, 3, true, false, false);
-  auto fsca = make_observer(nodes.front(), tmp, kp, 1, 3, true, true, false);
-  auto fsa = make_observer(nodes.front(), tmp, kp, 1, 3, false, true, false);
+  auto fswrite = make_observer(nodes.front().first, tmp, kp, 1, 3, true, false, false);
+  auto fsc = make_observer(nodes.front().first, tmp, kp, 1, 3, true, false, false);
+  auto fsca = make_observer(nodes.front().first, tmp, kp, 1, 3, true, true, false);
+  auto fsa = make_observer(nodes.front().first, tmp, kp, 1, 3, false, true, false);
   ELLE_TRACE("write");
-  make_files(*fswrite, "50", 50);
+  make_files(*fswrite.first, "50", 50);
   ELLE_TRACE("list fsc");
-  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsc.first,  "50"), 50);
   ELLE_TRACE("list fsca");
-  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsca.first, "50"), 50);
   ELLE_TRACE("list fsa");
-  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsa.first,  "50"), 50);
   ELLE_TRACE("list fsc");
-  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsc.first,  "50"), 50);
   ELLE_TRACE("list fsca");
-  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsca.first, "50"), 50);
   ELLE_TRACE("list fsa");
-  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_ASSERT_EQ(dir_size(*fsa.first,  "50"), 50);
   ELLE_TRACE("done");
 }
 // ELLE_TEST_SCHEDULED(conflictor)
@@ -475,8 +561,10 @@ ELLE_TEST_SCHEDULED(conflicts)
   ELLE_LOG("write files")
   {
     auto nodes = run_nodes(tmp, kp, 1);
-    auto fs1 = make_observer(nodes.front(), tmp, kp, 1, 1, true, false, false);
-    auto fs2 = make_observer(nodes.front(), tmp, kp, 1, 1, true, false, false);
+    auto fs1p = make_observer(nodes.front().first, tmp, kp, 1, 1, true, false, false);
+    auto fs2p = make_observer(nodes.front().first, tmp, kp, 1, 1, true, false, false);
+    auto& fs1 = fs1p.first;
+    auto& fs2 = fs2p.first;
     auto cache1 =
       dynamic_cast<infinit::model::doughnut::consensus::Cache*>(
         dynamic_cast<infinit::model::doughnut::Doughnut*>(
@@ -550,7 +638,8 @@ ELLE_TEST_SCHEDULED(times)
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
   auto kp = infinit::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 1);
-  auto fs = make_observer(nodes.front(), tmp, kp, 1, 1, false, false, false);
+  auto fsp = make_observer(nodes.front().first, tmp, kp, 1, 1, false, false, false);
+  auto& fs = fsp.first;
   struct stat st;
   // we only have second resolution, so test in batches to avoid too much sleeping
   fs->path("/dir")->mkdir(0600);
@@ -693,11 +782,139 @@ ELLE_TEST_SCHEDULED(remove_conflicts)
   }
 }
 
+void insist(std::function<void()> op, int max_retry_secs)
+{
+  for (int i=0; i<max_retry_secs; ++i)
+  {
+    try
+    {
+      op();
+      return;
+    }
+    catch (elle::Error const& e)
+    {
+      ELLE_LOG("%s", e);
+    }
+    catch (...)
+    {
+      ELLE_WARN("%s", elle::exception_string());
+      throw;
+    }
+    reactor::sleep(1_sec);
+  }
+}
+
+ELLE_TEST_SCHEDULED(beyond_observer_1)
+{
+  Beyond beyond;
+  elle::filesystem::TemporaryDirectory d;
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
+  auto fsp = make_observer(nodes.front().first, d.path(), kp, 1, 2, false, false, false, beyond.port());
+  auto& fs = fsp.first;
+  beyond.push(*nodes[0].first);
+  beyond.push(*nodes[1].first);
+  writefile(*fs, "file", "foo");
+  BOOST_CHECK_EQUAL(readfile(*fs, "file"), "foo");
+  // update
+  beyond.pull(*nodes[0].first);
+  beyond.pull(*nodes[1].first);
+  nodes.clear();
+  BOOST_CHECK_THROW(readfile(*fs, "file"), std::exception);
+  nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
+  beyond.push(*nodes[0].first);
+  beyond.push(*nodes[1].first);
+  insist([&] { readfile(*fs, "file");}, 10);
+  BOOST_CHECK_NO_THROW(readfile(*fs, "file"));
+
+  // remove then add
+  beyond.pull(*nodes[0].first);
+  beyond.pull(*nodes[1].first);
+  nodes.clear();
+  reactor::sleep(2_sec);
+  BOOST_CHECK_THROW(readfile(*fs, "file"), std::exception);
+  nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
+  beyond.push(*nodes[0].first);
+  beyond.push(*nodes[1].first);
+  insist([&] { readfile(*fs, "file");}, 10);
+  BOOST_CHECK_NO_THROW(readfile(*fs, "file"));
+}
+
+
+
+ELLE_TEST_SCHEDULED(beyond_observer_2)
+{
+  Beyond beyond;
+  elle::filesystem::TemporaryDirectory d;
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
+  auto fsp = make_observer(nodes.front().first, d.path(), kp, 1, 2, false, false, false, beyond.port());
+  auto& fs = fsp.first;
+  beyond.push(*nodes[0].first);
+  beyond.push(*nodes[1].first);
+  writefile(*fs, "file", "foo");
+  BOOST_CHECK_EQUAL(readfile(*fs, "file"), "foo");
+  beyond.pull(*nodes[0].first);
+  nodes[0].first.reset();
+  nodes[0].second.reset();
+  BOOST_CHECK_THROW(writefile(*fs, "file", "bar"), std::exception);
+  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 2, false, beyond.port(), 0)[0]);
+  beyond.push(*nodes[0].first);
+  reactor::sleep(4_sec);
+  insist([&] { writefile(*fs, "file", "bar");}, 10);
+  BOOST_CHECK_EQUAL(readfile(*fs, "file"), "bar");
+}
+
+ELLE_TEST_SCHEDULED(beyond_storage)
+{
+  // test reconnection between storages
+  Beyond beyond;
+  elle::filesystem::TemporaryDirectory d;
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(d.path(), kp, 2, 1, 1, false, beyond.port(), 0);
+  auto fsp = make_observer(nodes.front().first, d.path(), kp, 1, 1, false, false, false, beyond.port());
+  auto& fs = fsp.first;
+  for (int i=0; i<20; ++i)
+    writefile(*fs, "file" + std::to_string(i), "foo");
+  for (int i=0; i<20; ++i)
+    BOOST_CHECK_EQUAL(readfile(*fs, "file" + std::to_string(i)), "foo");
+
+  nodes[0].first.reset();
+  nodes[0].second.reset();
+  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port(), 0)[0]);
+  beyond.push(*nodes[0].first);
+  // If the nodes see each other they will route request to one other,
+  // otherwise requests will fail (we set a low query_get_retries)
+  for (int i=0; i<20; ++i)
+  {
+    insist([&]{readfile(*fs, "file" + std::to_string(i));}, 10);
+    BOOST_CHECK_EQUAL(readfile(*fs, "file" + std::to_string(i)), "foo");
+  }
+
+  // same operation, but push the other one on beyond
+  // why does it work? node0 upon restart will find node1 from beyond
+  // and bootstrap to it. Then node1 will be able to answer the observer
+  // when it will do a node lookup for node0
+  beyond.pull(*nodes[0].first);
+  nodes[0].first.reset();
+  nodes[0].second.reset();
+  nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 1, false, beyond.port(), 0)[0]);
+  beyond.push(*nodes[1].first);
+  for (int i=0; i<20; ++i)
+  {
+    insist([&]{readfile(*fs, "file" + std::to_string(i));}, 10);
+    BOOST_CHECK_NO_THROW(readfile(*fs, "file" + std::to_string(i)));
+  }
+}
+
+
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
-  elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
-  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "2", 1);
+  elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "2", 1);
+  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "5", 1);
+  // disable RDV so that nodes won't find each other that way
+  elle::os::setenv("INFINIT_RDV", "", 1);
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(basic), 0, valgrind(120));
   suite.add(BOOST_TEST_CASE(conflicts), 0, valgrind(120));
@@ -708,6 +925,9 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(clients_parallel), 0, valgrind(120));
   suite.add(BOOST_TEST_CASE(many_conflicts), 0, valgrind(120));
   suite.add(BOOST_TEST_CASE(remove_conflicts), 0, valgrind(120));
+  suite.add(BOOST_TEST_CASE(beyond_observer_1), 0, valgrind(120));
+  suite.add(BOOST_TEST_CASE(beyond_observer_2), 0, valgrind(120));
+  suite.add(BOOST_TEST_CASE(beyond_storage), 0, valgrind(120));
   // suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
   //suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
   // suite.add(BOOST_TEST_CASE(killed_nodes_k2), 0, 600);

@@ -707,13 +707,17 @@ COMMAND(run)
   if (flag(args, "daemon"))
     daemon_handle = infinit::daemon_hold(0, 1);
 #endif
+  auto poll_beyond = optional<int>(args, option_poll_beyond);
   auto run = [&]
     {
+      reactor::Thread::unique_ptr poll_thread;
       if (fetch)
       {
         infinit::model::NodeLocations eps;
         beyond_fetch_endpoints(network, eps);
         dht->overlay()->discover(eps);
+        if (poll_beyond && *poll_beyond > 0)
+          poll_thread = make_poll_beyond_thread(*dht, network, eps, *poll_beyond);
       }
       reactor::Thread::unique_ptr stat_thread;
       if (push)
@@ -1044,6 +1048,7 @@ main(int argc, char** argv)
         option_endpoint_file,
         option_port_file,
         option_port,
+        option_poll_beyond,
 #ifndef INFINIT_WINDOWS
         { "daemon,d", bool_switch(), "run as a background daemon"},
 #endif
