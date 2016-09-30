@@ -319,7 +319,8 @@ body.doc_get_started section.doc ul.social {
 
 body.doc_get_started section.doc ul.social {
   list-style-type: none; margin:0; padding:0;
-  li { margin: 0; }
+  li { margin: 0; min-width: 210px; }
+  li:nth-child(2n+1) { clear: both; }
   li a {
     color: @infinitblack; margin-left: 0; margin-right: 8%;
     &:after { opacity: 0; }
