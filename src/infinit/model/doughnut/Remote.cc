@@ -97,6 +97,7 @@ namespace infinit
         ++this->_reconnection_id;
         if (this->_thread)
           this->_thread->terminate_now();
+        this->_connected.close();
         this->_thread.reset(
           new reactor::Thread(
             elle::sprintf("%f worker", this),
@@ -104,7 +105,6 @@ namespace infinit
             {
               ELLE_DEBUG("%s: connection attempt to %s endpoints",
                          this, this->_endpoints.size());
-              this->_connected.close();
               this->_connection_start_time = std::chrono::system_clock::now();
               auto handshake = [&] (std::unique_ptr<std::iostream> socket)
                 {
