@@ -1211,7 +1211,6 @@ namespace infinit
       {
         if (!this->_data_signature)
           this->_data_signature = std::make_shared<typename Super::SignFuture>();
-        ELLE_ASSERT(this->doughnut());
         s.serialize("editor", this->_editor);
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl_entries);
@@ -1248,6 +1247,7 @@ namespace infinit
                 s.serialize("data_signature", this->_data_signature->value());
               else
               {
+                ELLE_ASSERT(this->doughnut());
                 bool is_doughnut_key =
                   *this->_sign_key == this->doughnut()->keys_shared()->k();
                 s.serialize("data_signature_is_doughnut_key", is_doughnut_key);
@@ -1268,7 +1268,10 @@ namespace infinit
                 if (!is_doughnut_key)
                   s.serialize("data_signature_key", this->_sign_key);
                 else
+                {
+                  ELLE_ASSERT(this->doughnut());
                   this->_sign_key = this->doughnut()->keys_shared()->private_key();
+                }
               }
             }
           }
