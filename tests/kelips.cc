@@ -154,6 +154,7 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
       consensus,
       overlay,
       boost::optional<int>(),
+      boost::optional<boost::asio::ip::address>(),
       std::move(s));
     reactor::Thread::unique_ptr tptr;
     if (beyond_port)
@@ -229,6 +230,7 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
     consensus,
     overlay,
     boost::optional<int>(),
+    boost::optional<boost::asio::ip::address>(),
     std::unique_ptr<infinit::storage::Storage>());
   auto ops = elle::make_unique<infinit::filesystem::FileSystem>(
     "volume", dn, infinit::filesystem::allow_root_creation = true);

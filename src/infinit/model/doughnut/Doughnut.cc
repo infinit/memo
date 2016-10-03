@@ -54,6 +54,7 @@ namespace infinit
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
+                         boost::optional<boost::asio::ip::address> listen_address,
                          std::unique_ptr<storage::Storage> storage,
                          boost::optional<elle::Version> version,
                          AdminKeys const& admin_keys,
@@ -67,10 +68,10 @@ namespace infinit
         , _consensus(consensus(*this))
         , _local(
           storage
-            ? this->_consensus->make_local(std::move(port), std::move(storage))
+            ? this->_consensus->make_local(port, listen_address, std::move(storage))
             : nullptr)
         // FIXME: move protocol configuration to doughnut
-        , _dock(*this, Protocol::all, std::move(rdv_host))
+        , _dock(*this, Protocol::all, port, listen_address, std::move(rdv_host))
         , _overlay(overlay_builder(*this, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
         , _terminating()
@@ -129,6 +130,7 @@ namespace infinit
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
+                         boost::optional<boost::asio::ip::address> listen_address,
                          std::unique_ptr<storage::Storage> storage,
                          boost::optional<elle::Version> version,
                          AdminKeys const& admin_keys,
@@ -140,6 +142,7 @@ namespace infinit
                    std::move(consensus),
                    std::move(overlay_builder),
                    std::move(port),
+                   std::move(listen_address),
                    std::move(storage),
                    std::move(version),
                    admin_keys,
@@ -487,6 +490,7 @@ namespace infinit
         boost::optional<uint64_t> disk_cache_size,
         boost::optional<elle::Version> version,
         boost::optional<int> port_,
+        boost::optional<boost::asio::ip::address> listen_address,
         boost::optional<std::string> rdv_host)
       {
         Doughnut::ConsensusBuilder consensus =
@@ -539,6 +543,7 @@ namespace infinit
             std::move(consensus),
             std::move(overlay),
             std::move(port),
+            std::move(listen_address),
             std::move(storage),
             version ? version.get() : this->version,
             admin_keys,
@@ -555,6 +560,7 @@ namespace infinit
             std::move(consensus),
             std::move(overlay),
             std::move(port),
+            std::move(listen_address),
             std::move(storage),
             version ? version.get() : this->version,
             admin_keys,

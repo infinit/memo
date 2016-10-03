@@ -100,9 +100,10 @@ protected:
   virtual
   std::unique_ptr<infinit::model::doughnut::Local>
   make_local(boost::optional<int> port,
+             boost::optional<boost::asio::ip::address> listen,
              std::unique_ptr<infinit::storage::Storage> storage) override
   {
-    return _backend->make_local(port, std::move(storage));
+    return _backend->make_local(port, listen, std::move(storage));
   }
   virtual
   std::unique_ptr<infinit::model::blocks::Block>

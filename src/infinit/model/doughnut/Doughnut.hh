@@ -63,6 +63,7 @@ namespace infinit
                  ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
                  boost::optional<int> port,
+                 boost::optional<boost::asio::ip::address> listen_address,
                  std::unique_ptr<storage::Storage> local,
                  boost::optional<elle::Version> version = {},
                  AdminKeys const& admin_keys = {},
@@ -75,6 +76,7 @@ namespace infinit
                  ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
                  boost::optional<int> port,
+                 boost::optional<boost::asio::ip::address> listen_address,
                  std::unique_ptr<storage::Storage> local,
                  boost::optional<elle::Version> version = {},
                  AdminKeys const& admin_keys = {},
@@ -231,6 +233,7 @@ namespace infinit
              boost::optional<uint64_t> disk_cache_size = {},
              boost::optional<elle::Version> version = {},
              boost::optional<int> port = {},
+             boost::optional<boost::asio::ip::address> listen_address = {},
              boost::optional<std::string> rdv_host = {});
       };
 

@@ -44,6 +44,7 @@ namespace infinit
           virtual
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
+                     boost::optional<boost::asio::ip::address> listen_address,
                      std::unique_ptr<storage::Storage> storage) override;
 
         /*----------.

@@ -671,11 +671,16 @@ COMMAND(run)
     cache = true;
   }
   auto port = optional<int>(args, option_port);
+  auto listen_address_str = optional<std::string>(args, option_listen_interface);
+  boost::optional<boost::asio::ip::address> listen_address;
+  if (listen_address_str)
+    listen_address = boost::asio::ip::address::from_string(*listen_address_str);
   auto dht = network.run(
     self,
     false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-    flag(args, "async"), disk_cache_size, infinit::compatibility_version, port);
+    flag(args, "async"), disk_cache_size, infinit::compatibility_version, port,
+    listen_address);
   if (args.count("peer"))
   {
     std::vector<infinit::model::Endpoints> eps;
@@ -1048,6 +1053,7 @@ main(int argc, char** argv)
         option_endpoint_file,
         option_port_file,
         option_port,
+        option_listen_interface,
         option_poll_beyond,
 #ifndef INFINIT_WINDOWS
         { "daemon,d", bool_switch(), "run as a background daemon"},

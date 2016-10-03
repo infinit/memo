@@ -23,7 +23,7 @@ public:
       [] (infinit::model::doughnut::Doughnut&,
           std::shared_ptr<infinit::model::doughnut::Local>)
       { return nullptr; },
-      {}, nullptr)
+      {}, {}, nullptr)
   {}
 };
 

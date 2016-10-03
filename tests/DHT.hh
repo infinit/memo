@@ -322,6 +322,7 @@ private:
         consensus,
         infinit::model::doughnut::Doughnut::OverlayBuilder(overlay_builder),
         boost::optional<int>(),
+        boost::optional<boost::asio::ip::address>(),
         std::move(storage),
         version);
     else
@@ -334,6 +335,7 @@ private:
         consensus,
         infinit::model::doughnut::Doughnut::OverlayBuilder(overlay_builder),
         boost::optional<int>(),
+        boost::optional<boost::asio::ip::address>(),
         std::move(storage),
         version);
   }

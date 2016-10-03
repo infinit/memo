@@ -48,6 +48,8 @@ namespace infinit
 
       Dock::Dock(Doughnut& doughnut,
                  Protocol protocol,
+                 boost::optional<int> port,
+                 boost::optional<boost::asio::ip::address> listen_address,
                  boost::optional<std::string> rdv_host)
         : _doughnut(doughnut)
         , _protocol(protocol)
@@ -61,7 +63,10 @@ namespace infinit
         {
           bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
             && doughnut.version() >= elle::Version(0, 7, 0);
-          this->_local_utp_server->listen(0, v6);
+          if (listen_address)
+            this->_local_utp_server->listen(*listen_address, port?*port:0, v6);
+          else
+            this->_local_utp_server->listen(port? *port:0, v6);
         }
         if (rdv_host)
         {
