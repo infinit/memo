@@ -64,6 +64,16 @@ private:
   ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, thread);
 };
 
+void
+discover(DHT& dht, DHT& target, bool anonymous)
+{
+  if (anonymous)
+    dht.dht->overlay()->discover(target.dht->local()->server_endpoints());
+  else
+    dht.dht->overlay()->discover(
+      NodeLocation(target.dht->id(), target.dht->local()->server_endpoints()));
+}
+
 ELLE_TEST_SCHEDULED(
   basics, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
 {
@@ -152,6 +162,52 @@ ELLE_TEST_SCHEDULED(
   };
 }
 
+ELLE_TEST_SCHEDULED(
+  discover_endpoints, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
+{
+  auto keys = infinit::cryptography::rsa::keypair::generate(512);
+  auto id_a = infinit::model::Address::random();
+  auto dht_a = elle::make_unique<DHT>(
+    ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false);
+  Address old_address;
+  ELLE_LOG("store first block")
+  {
+    auto block = dht_a->dht->make_block<MutableBlock>(std::string("block"));
+    dht_a->dht->store(*block, STORE_INSERT);
+    old_address = block->address();
+  }
+  DHT dht_b(
+    ::keys = keys, make_overlay = builder, ::storage = nullptr);
+  discover(dht_b, *dht_a, anonymous);
+  ELLE_LOG("lookup block")
+    BOOST_CHECK_EQUAL(
+      dht_b.dht->overlay()->lookup(old_address, OP_FETCH).lock()->id(),
+      id_a);
+  ELLE_LOG("restart first DHT")
+  {
+    dht_a.reset();
+    dht_a = elle::make_unique<DHT>(
+      ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false);
+  }
+  Address new_address;
+  ELLE_LOG("store second block")
+  {
+    auto block = dht_a->dht->make_block<MutableBlock>(std::string("nblock"));
+    dht_a->dht->store(*block, STORE_INSERT);
+    new_address = block->address();
+  }
+  ELLE_LOG("lookup second block")
+    BOOST_CHECK_THROW(
+      dht_b.dht->overlay()->lookup(new_address, OP_FETCH).lock()->id(),
+      MissingBlock);
+  ELLE_LOG("discover new endpoints")
+    discover(dht_b, *dht_a, anonymous);
+  ELLE_LOG("lookup second block")
+    BOOST_CHECK_EQUAL(
+      dht_b.dht->overlay()->lookup(new_address, OP_FETCH).lock()->id(),
+      id_a);
+}
+
 ELLE_TEST_SUITE()
 {
   auto& master = boost::unit_test::framework::master_test_suite();
@@ -179,6 +235,13 @@ ELLE_TEST_SUITE()
     auto dead_peer_anonymous = std::bind(::dead_peer,                   \
                                          Name##_builder, true);         \
     Name->add(BOOST_TEST_CASE(dead_peer_anonymous), 0, valgrind(5));    \
+    auto discover_endpoints =                                           \
+      std::bind(::discover_endpoints, Name##_builder, false);           \
+    Name->add(BOOST_TEST_CASE(discover_endpoints), 0, valgrind(5));     \
+    auto discover_endpoints_anonymous =                                 \
+      std::bind(::discover_endpoints, Name##_builder, true);            \
+    Name->add(BOOST_TEST_CASE(                                          \
+                discover_endpoints_anonymous), 0, valgrind(5));         \
   }
   OVERLAY(kelips);
   OVERLAY(kouncil);
