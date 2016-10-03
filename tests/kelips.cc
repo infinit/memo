@@ -172,7 +172,7 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
       endpoints.emplace_back(eps);
     }
   }
-  return std::move(res);
+  return res;
 }
 
 static std::pair<std::unique_ptr<rfs::FileSystem>, reactor::Thread::unique_ptr>
