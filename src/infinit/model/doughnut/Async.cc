@@ -381,7 +381,11 @@ namespace infinit
                             bool& hit)
         {
           hit = false;
-          auto it = this->_operations.find(address);
+          auto its = this->_operations.equal_range(address);
+          auto it = std::max_element(its.first, its.second,
+            [](auto const& e1, auto const& e2) {
+              return e1.index < e2.index;
+            });
           if (it != this->_operations.end())
           {
             hit = true;
