@@ -177,9 +177,10 @@ namespace infinit
 
         std::unique_ptr<Local>
         Async::make_local(boost::optional<int> port,
+                          boost::optional<boost::asio::ip::address> listen_address,
                           std::unique_ptr<storage::Storage> storage)
         {
-          return this->_backend->make_local(port, std::move(storage));
+          return this->_backend->make_local(port, listen_address, std::move(storage));
         }
 
         void
@@ -380,7 +381,11 @@ namespace infinit
                             bool& hit)
         {
           hit = false;
-          auto it = this->_operations.find(address);
+          auto its = this->_operations.equal_range(address);
+          auto it = std::max_element(its.first, its.second,
+            [](auto const& e1, auto const& e2) {
+              return e1.index < e2.index;
+            });
           if (it != this->_operations.end())
           {
             hit = true;

@@ -97,8 +97,7 @@ namespace infinit
 
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(std::vector<Endpoints> const&,
-             bool,
+        make(bool,
              boost::filesystem::path const&) override
         {
           return elle::make_unique<infinit::model::faith::Faith>(

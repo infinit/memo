@@ -16,6 +16,8 @@
 #include <infinit/filesystem/Unreachable.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/Async.hh>
+#include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Group.hh>
@@ -597,7 +599,7 @@ namespace infinit
             this->_owner.block_store());
           elle::json::Object res;
           for (auto wpeer: dht->dock().peer_cache())
-            if (auto peer = wpeer.second.lock())
+            if (auto peer = wpeer.second)
             {
               elle::json::Array keys;
               for (auto const& key: peer->resolve_all_keys())
@@ -612,6 +614,30 @@ namespace infinit
         {
           return this->full_path() == this->full_path().root_path() ? "true"
                                                                     : "false";
+        }
+        else if (special->find("compatibility-version") == 0)
+        {
+          return umbrella(
+            [&]
+            {
+              auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+                this->_owner.block_store());
+              return elle::sprintf("%s", dht->version());
+            });
+        }
+        else if (special->find("cache.clear") == 0)
+        {
+          auto c = dht->consensus().get();
+          if (auto a = dynamic_cast<model::doughnut::consensus::Async*>(c))
+            c = a->backend().get();
+          if (auto cc = dynamic_cast<model::doughnut::consensus::Cache*>(c))
+          {
+            ELLE_TRACE("Clearing cache");
+            cc->clear();
+            return "ok";
+          }
+          else
+            return "cache not found";
         }
       }
       if (k.substr(0, strlen(overlay_info)) == overlay_info)

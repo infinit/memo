@@ -12,7 +12,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
-#include <infinit/overlay/kademlia/kademlia.hh>
+#include <infinit/overlay/kouncil/Configuration.hh>
 #include <infinit/storage/Storage.hh>
 #include <infinit/storage/Strip.hh>
 
@@ -61,12 +61,17 @@ COMMAND(create)
   int overlays =
     + (args.count("kalimero") ? 1 : 0)
     + (args.count("kelips") ? 1 : 0)
+    + (args.count("kouncil") ? 1 : 0)
   ;
   if (overlays > 1)
     throw CommandLineError("Only one overlay type must be specified");
   if (args.count("kalimero"))
   {
     overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
+  }
+  if (args.count("kouncil"))
+  {
+    overlay_config.reset(new infinit::overlay::kouncil::Configuration());
   }
   else // default to Kelips
   {
@@ -654,18 +659,6 @@ COMMAND(run)
     }
   }
   network.ensure_allowed(self, "run");
-  std::vector<infinit::model::Endpoints> eps;
-  if (args.count("peer"))
-  {
-    auto peers = args["peer"].as<std::vector<std::string>>();
-    for (auto const& peer: peers)
-    {
-      if (boost::filesystem::exists(peer))
-        eps.emplace_back(endpoints_from_file(peer));
-      else
-        eps.emplace_back(infinit::model::Endpoints({peer}));
-    }
-  }
   bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
   auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
@@ -678,11 +671,16 @@ COMMAND(run)
     cache = true;
   }
   auto port = optional<int>(args, option_port);
+  auto listen_address_str = optional<std::string>(args, option_listen_interface);
+  boost::optional<boost::asio::ip::address> listen_address;
+  if (listen_address_str)
+    listen_address = boost::asio::ip::address::from_string(*listen_address_str);
   auto dht = network.run(
     self,
-    {}, false,
+    false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-    flag(args, "async"), disk_cache_size, infinit::compatibility_version, port);
+    flag(args, "async"), disk_cache_size, infinit::compatibility_version, port,
+    listen_address);
   if (auto plf = optional(args, "peer-list-file"))
   {
     auto more_peers = infinit::hook_peer_discovery(*dht, *plf);
@@ -690,7 +688,19 @@ COMMAND(run)
     if (!more_peers.empty())
       dht->overlay()->discover(more_peers);
   }
-  dht->overlay()->discover(eps);
+  if (args.count("peer"))
+  {
+    std::vector<infinit::model::Endpoints> eps;
+    auto peers = args["peer"].as<std::vector<std::string>>();
+    for (auto const& peer: peers)
+    {
+      if (boost::filesystem::exists(peer))
+        eps.emplace_back(endpoints_from_file(peer));
+      else
+        eps.emplace_back(infinit::model::Endpoints({peer}));
+    }
+    dht->overlay()->discover(eps);
+  }
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"}) &&
     dht->local() && dht->local()->storage();
@@ -709,13 +719,17 @@ COMMAND(run)
   if (flag(args, "daemon"))
     daemon_handle = infinit::daemon_hold(0, 1);
 #endif
-  auto run = [&]
+  auto poll_beyond = optional<int>(args, option_poll_beyond);
+  auto run = [&, push]
     {
+      reactor::Thread::unique_ptr poll_thread;
       if (fetch)
       {
         infinit::model::NodeLocations eps;
         beyond_fetch_endpoints(network, eps);
         dht->overlay()->discover(eps);
+        if (poll_beyond && *poll_beyond > 0)
+          poll_thread = make_poll_beyond_thread(*dht, network, eps, *poll_beyond);
       }
       reactor::Thread::unique_ptr stat_thread;
       if (push)
@@ -845,6 +859,7 @@ main(int argc, char** argv)
   overlay_types_options.add_options()
     ("kelips", "use a Kelips overlay network (default)")
     ("kalimero", "use a Kalimero overlay network.\nUsed for local testing")
+    ("kouncil", "use a Kouncil overlay network")
     ;
   Mode::OptionsDescription consensus_types_options("Consensus types");
   consensus_types_options.add_options()
@@ -1047,6 +1062,8 @@ main(int argc, char** argv)
         { "peer-list-file", value<std::string>(),
           "Periodically write list of known peers to given file"},
         option_port,
+        option_listen_interface,
+        option_poll_beyond,
 #ifndef INFINIT_WINDOWS
         { "daemon,d", bool_switch(), "run as a background daemon"},
 #endif

@@ -21,14 +21,6 @@ namespace infinit
         {}
 
         void
-        connect(elle::DurationOpt timeout = elle::DurationOpt()) override
-        {}
-
-        void
-        reconnect(elle::DurationOpt timeout = elle::DurationOpt()) override
-        {}
-
-        void
         store(blocks::Block const& block, StoreMode mode) override
         {
            throw reactor::network::Exception("Peer unavailable");

@@ -34,7 +34,7 @@ namespace infinit
       _lookup(model::Address address, int n, Operation op) const override;
       virtual
       Overlay::WeakMember
-      _lookup_node(model::Address address) override;
+      _lookup_node(model::Address address) const override;
     };
 
     struct KalimeroConfiguration
@@ -50,8 +50,7 @@ namespace infinit
       serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make(std::vector<Endpoints> const& hosts,
-           std::shared_ptr<model::doughnut::Local> local,
+      make(std::shared_ptr<model::doughnut::Local> local,
            model::doughnut::Doughnut* doughnut) override;
     };
   }

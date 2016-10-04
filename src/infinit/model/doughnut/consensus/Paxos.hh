@@ -131,6 +131,7 @@ namespace infinit
         public:
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
+                     boost::optional<boost::asio::ip::address> listen_address,
                      std::unique_ptr<storage::Storage> storage) override;
 
           typedef std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
@@ -237,9 +238,6 @@ namespace infinit
             virtual
             void
             initialize() override;
-            virtual
-            void
-            cleanup() override;
             ELLE_ATTRIBUTE_R(Paxos&, paxos);
             ELLE_ATTRIBUTE_R(int, factor);
             ELLE_ATTRIBUTE_RW(bool, rebalance_auto_expand);
@@ -248,6 +246,10 @@ namespace infinit
             ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
             ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>,
                            evict_threads);
+          protected:
+            void
+            _cleanup() override;
+
           /*------.
           | Paxos |
           `------*/

@@ -128,8 +128,9 @@ class Infinit(TemporaryDirectory):
     if self.__user is not None:
       env_['INFINIT_USER'] = self.__user
     env_['WINEDEBUG'] = os.environ.get('WINEDEBUG', '-all')
-    if 'ELLE_LOG_LEVEL' in os.environ:
-      env_['ELLE_LOG_LEVEL'] = os.environ['ELLE_LOG_LEVEL']
+    for k in ['ELLE_LOG_LEVEL', 'ELLE_LOG_FILE', 'ELLE_LOG_TIME']:
+      if k in os.environ:
+        env_[k] = os.environ[k]
     if self.__beyond is not None:
       env_['INFINIT_BEYOND'] = self.__beyond.domain
     env_.update(env)
