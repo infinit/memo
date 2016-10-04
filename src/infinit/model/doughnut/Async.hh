@@ -104,7 +104,7 @@ namespace infinit
           _load_op(int id, bool signature = true);
           void
           _load_operations();
-          ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, backend);
+          ELLE_ATTRIBUTE_R(std::unique_ptr<Consensus>, backend);
           typedef bmi::multi_index_container<
             Op,
             bmi::indexed_by<
