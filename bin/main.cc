@@ -428,3 +428,31 @@ namespace infinit
 std::string program;
 bool script_mode = false;
 boost::optional<std::string> _as_user = {};
+
+bool
+option_fetch(boost::program_options::variables_map const& args,
+             std::vector<std::string> const& aliases)
+{
+  std::vector<std::string> opts = {"fetch", "publish"};
+  for (auto const& o: aliases)
+    opts.push_back(o);
+  if (aliased_flag(args, opts))
+    return true;
+  if (elle::os::inenv("INFINIT_FETCH") || elle::os::inenv("INFINIT_PUBLISH"))
+    return true;
+  return false;
+}
+
+bool
+option_push(boost::program_options::variables_map const& args,
+            std::vector<std::string> const& aliases)
+{
+  std::vector<std::string> opts = {"push", "publish"};
+  for (auto const& o: aliases)
+    opts.push_back(o);
+  if (aliased_flag(args, opts))
+    return true;
+  if (elle::os::inenv("INFINIT_PUSH") || elle::os::inenv("INFINIT_PUBLISH"))
+    return true;
+  return false;
+}

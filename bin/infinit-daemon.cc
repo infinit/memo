@@ -341,11 +341,11 @@ class MountManager
 public:
   MountManager(boost::filesystem::path mount_root = boost::filesystem::temp_directory_path(),
                std::string mount_substitute = "")
-   : _mount_root(mount_root)
-   , _mount_substitute(mount_substitute)
-   , _fetch(false)
-   , _push(false)
-   {}
+    : _mount_root(mount_root)
+    , _mount_substitute(mount_substitute)
+    , _fetch(false)
+    , _push(false)
+  {}
   ~MountManager();
   void
   start(std::string const& name, infinit::MountOptions opts = {},
@@ -1277,8 +1277,8 @@ fill_manager_options(MountManager& manager,
   manager.log_level(loglevel);
   auto logpath = optional(args, "log-path");
   manager.log_path(logpath);
-  manager.fetch(aliased_flag(args, { "fetch", "publish" }));
-  manager.push(aliased_flag(args, { "push", "publish" }));
+  manager.fetch(option_fetch(args));
+  manager.push(option_push(args));
   manager.default_user(self_user_name(args));
   auto default_network = optional(args, "default-network");
   if (default_network)
@@ -1915,7 +1915,7 @@ main(int argc, char** argv)
     //   "mount given volumes on startup, keep trying on error" },
     { "fetch,f", bool_switch(), "Run volumes with --fetch" },
     { "push,p", bool_switch(), "Run volumes with --push" },
-    { "publish", bool_switch(), "Alias for --fetch --push" },
+    { "publish", bool_switch(), "Alias for --publish" },
 #if !defined(INFINIT_PRODUCTION_BUILD) || defined(INFINIT_LINUX)
     { "docker",
       value<bool>()->implicit_value(true, "true")->default_value(true, "true"),

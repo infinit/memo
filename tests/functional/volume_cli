@@ -132,7 +132,7 @@ with Infinit() as alice:
   alice.run(['infinit-volume', '--update', '--as', 'alice', 'v'])
   assertEq(vol()['mount_options'], None)
   alice.run(['infinit-volume', '--update', '--as', 'alice', 'v',
-             '--publish', '--cache'])
+             '--push-endpoints', '--fetch-endpoints', '--cache'])
   mount_opts = vol()['mount_options']
   assertEq(mount_opts['fetch'], True)
   assertEq(mount_opts['push'], True)

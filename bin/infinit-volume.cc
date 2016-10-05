@@ -73,7 +73,7 @@ COMMAND(create)
     ifnt.volume_save(volume);
     report_created("volume", name);
   }
-  if (flag(args, "push-volume") || flag(args, "push"))
+  if (option_push(args, {"push-volume"}))
     beyond_push("volume", name, volume, owner);
 }
 
@@ -965,7 +965,7 @@ COMMAND(update)
   auto volume = ifnt.volume_get(name);
   volume.mount_options.merge(args);
   ifnt.volume_save(volume, true);
-  if (flag(args, "push-volume") || flag(args, "push"))
+  if (option_push(args, {"push-volume"}))
     beyond_push("volume", name, volume, self);
 }
 

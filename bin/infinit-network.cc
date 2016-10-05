@@ -237,7 +237,7 @@ COMMAND(create)
       ifnt.network_save(*desc);
       report_created("network", desc->name);
     }
-    if (aliased_flag(args, {"push-network", "push"}))
+    if (option_push(args, {"push-network"}))
       beyond_push("network", desc->name, *desc, owner);
   }
 }
@@ -360,7 +360,7 @@ COMMAND(update)
     desc.reset(new infinit::NetworkDescriptor(std::move(network)));
     report_updated("network", desc->name);
   }
-  if (aliased_flag(args, {"push-network", "push"}))
+  if (option_push(args, {"push-network"}))
     beyond_push("network", desc->name, *desc, owner, true, false, true);
   if (changed_admins && !args.count("output"))
   {
@@ -684,9 +684,9 @@ COMMAND(run)
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, infinit::compatibility_version, port);
   // Only push if we have are contributing storage.
-  bool push = aliased_flag(args, {"push-endpoints", "push", "publish"}) &&
+  bool push = option_push(args, {"push-endpoints"}) &&
     dht->local() && dht->local()->storage();
-  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
+  bool fetch = option_fetch(args, {"fetch-endpoints"});
   if (!dht->local() && (!script_mode || push))
     elle::err("network %s is client only since no storage is attached", name);
   if (dht->local())

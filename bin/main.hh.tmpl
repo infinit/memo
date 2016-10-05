@@ -3476,3 +3476,11 @@ beyond_login(std::string const& name,
 
   return elle::json::read(r);
 }
+
+bool
+option_fetch(boost::program_options::variables_map const& args,
+             std::vector<std::string> const& aliases= {});
+
+bool
+option_push(boost::program_options::variables_map const& args,
+            std::vector<std::string> const& aliases = {});
