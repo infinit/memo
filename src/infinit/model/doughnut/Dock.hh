@@ -22,7 +22,11 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        Dock(Doughnut& dht, Protocol protocol = Protocol::all);
+        Dock(Doughnut& dht,
+             Protocol protocol = Protocol::all,
+             boost::optional<int> port = {},
+             boost::optional<boost::asio::ip::address> listen_address = {},
+             boost::optional<std::string> rdv_host = {});
         Dock(Dock const&) = delete;
         Dock(Dock&&);
         ~Dock();

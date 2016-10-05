@@ -97,92 +97,98 @@ namespace infinit
         ++this->_reconnection_id;
         if (this->_thread)
           this->_thread->terminate_now();
+        this->_connected.close();
         this->_thread.reset(
           new reactor::Thread(
             elle::sprintf("%f worker", this),
             [this]
             {
-              ELLE_DEBUG("%s: connection attempt to %s endpoints",
-                         this, this->_endpoints.size());
-              this->_connected.close();
-              this->_connection_start_time = std::chrono::system_clock::now();
-              auto handshake = [&] (std::unique_ptr<std::iostream> socket)
-                {
-                  auto serializer = elle::make_unique<protocol::Serializer>(
-                    *socket,
-                    elle_serialization_version(this->_doughnut.version()),
-                    false);
-                  auto channels =
-                    elle::make_unique<protocol::ChanneledStream>(*serializer);
-                  if (!disable_key)
-                    this->_key_exchange(*channels);
-                  ELLE_TRACE("%s: connected", this);
-                  this->_socket = std::move(socket);
-                  this->_serializer = std::move(serializer);
-                  this->_channels = std::move(channels);
-                  this->_connected.open();
-                };
-              auto umbrella = [&, this] (std::function<void ()> const& f)
-                {
-                  return [f, this]
-                  {
-                    try
-                    {
-                      f();
-                    }
-                    catch (reactor::network::Exception const&)
-                    {
-                      // ignored
-                    }
-                    catch (HandshakeFailed const& hs)
-                    {
-                      ELLE_WARN("%s: %s", this, hs);
-                    }
-                  };
-                };
-              elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+              while (true)
               {
-                if (this->_protocol == Protocol::tcp ||
-                    this->_protocol == Protocol::all)
-                  for (auto const& e: this->_endpoints)
+                ELLE_DEBUG("%s: connection attempt to %s endpoints",
+                           this, this->_endpoints.size());
+                this->_connection_start_time = std::chrono::system_clock::now();
+                auto handshake = [&] (std::unique_ptr<std::iostream> socket)
+                  {
+                    auto serializer = elle::make_unique<protocol::Serializer>(
+                      *socket,
+                      elle_serialization_version(this->_doughnut.version()),
+                      false);
+                    auto channels =
+                      elle::make_unique<protocol::ChanneledStream>(*serializer);
+                    if (!disable_key)
+                      this->_key_exchange(*channels);
+                    ELLE_TRACE("%s: connected", this);
+                    this->_socket = std::move(socket);
+                    this->_serializer = std::move(serializer);
+                    this->_channels = std::move(channels);
+                    this->_connected.open();
+                  };
+                auto umbrella = [&, this] (std::function<void ()> const& f)
+                  {
+                    return [f, this]
+                    {
+                      try
+                      {
+                        f();
+                      }
+                      catch (reactor::network::Exception const&)
+                      {
+                        // ignored
+                      }
+                      catch (HandshakeFailed const& hs)
+                      {
+                        ELLE_WARN("%s: %s", this, hs);
+                      }
+                    };
+                  };
+                elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+                {
+                  if (this->_protocol == Protocol::tcp ||
+                      this->_protocol == Protocol::all)
+                    for (auto const& e: this->_endpoints)
+                      scope.run_background(
+                        elle::sprintf("%s: connect to tcp://%s",
+                                      reactor::scheduler().current()->name(), e),
+                        umbrella(
+                          [&]
+                          {
+                            using reactor::network::TCPSocket;
+                            handshake(elle::make_unique<TCPSocket>(e.tcp()));
+                            scope.terminate_now();
+                          }));
+                  if (this->_protocol == Protocol::utp ||
+                      this->_protocol == Protocol::all)
                     scope.run_background(
-                      elle::sprintf("%s: connect to tcp://%s",
-                                    reactor::scheduler().current()->name(), e),
+                      elle::sprintf("%s: connect to utp://%s",
+                                    this, this->_endpoints),
                       umbrella(
                         [&]
                         {
-                          using reactor::network::TCPSocket;
-                          handshake(elle::make_unique<TCPSocket>(e.tcp()));
+                          std::string cid;
+                          if (this->id() != Address::null)
+                            cid = elle::sprintf("%x", this->id());
+                          auto socket =
+                            elle::make_unique<reactor::network::UTPSocket>(
+                              *this->_utp_server);
+                          socket->connect(cid, this->_endpoints.udp());
+                          handshake(std::move(socket));
                           scope.terminate_now();
                         }));
-                if (this->_protocol == Protocol::utp ||
-                    this->_protocol == Protocol::all)
-                  scope.run_background(
-                    elle::sprintf("%s: connect to utp://%s",
-                                  this, this->_endpoints),
-                    umbrella(
-                      [&]
-                      {
-                        std::string cid;
-                        if (this->id() != Address::null)
-                          cid = elle::sprintf("%x", this->id());
-                        auto socket =
-                          elle::make_unique<reactor::network::UTPSocket>(
-                            *this->_utp_server);
-                        socket->connect(cid, this->_endpoints.udp());
-                        handshake(std::move(socket));
-                        scope.terminate_now();
-                      }));
-                reactor::wait(scope);
-              };
-              if (!this->_connected)
-                this->_connected.raise<elle::Error>(
-                  elle::sprintf("connection to %f failed", this->_endpoints));
-              else
-              {
+                  reactor::wait(scope);
+                };
+                if (!this->_connected)
+                {
+                  this->_connected.raise<elle::Error>(
+                    elle::sprintf("connection to %f failed", this->_endpoints));
+                  break;
+                }
                 ELLE_ASSERT(this->_channels);
                 ELLE_TRACE("%s: serve RPCs", this)
                   this->_rpc_server.serve(*this->_channels);
+                ELLE_TRACE("%s: connection ended, reconnect", this);
+                ++this->_reconnection_id;
+                this->_connected.close();
               }
             }));
       }
@@ -190,8 +196,13 @@ namespace infinit
       void
       Remote::connect(elle::DurationOpt timeout)
       {
-        if (!reactor::wait(this->_connected, timeout))
-          throw reactor::network::TimeOut();
+        if (!this->_connected)
+        {
+          ELLE_DEBUG_SCOPE(
+            "%s: wait for connection with timeout %s", this, timeout);
+          if (!reactor::wait(this->_connected, timeout))
+            throw reactor::network::TimeOut();
+        }
       }
 
       void
@@ -200,7 +211,7 @@ namespace infinit
         if (!this->_reconnecting)
         {
           auto lock = elle::scoped_assignment(this->_reconnecting, true);
-          ELLE_TRACE("%s: reconnect", this);
+          ELLE_TRACE_SCOPE("%s: reconnect", this);
           this->_credentials = {};
           if (this->_refetch_endpoints)
             if (auto eps = this->_refetch_endpoints())

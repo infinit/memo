@@ -35,6 +35,7 @@ namespace infinit
           ~Async();
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
+                     boost::optional<boost::asio::ip::address> listen_address,
                      std::unique_ptr<storage::Storage> storage) override;
           void sync(); // wait until last pushed op gets processed
         protected:
@@ -103,7 +104,7 @@ namespace infinit
           _load_op(int id, bool signature = true);
           void
           _load_operations();
-          ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, backend);
+          ELLE_ATTRIBUTE_R(std::unique_ptr<Consensus>, backend);
           typedef bmi::multi_index_container<
             Op,
             bmi::indexed_by<

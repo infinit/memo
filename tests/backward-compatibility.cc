@@ -156,7 +156,7 @@ public:
       { return nullptr; },
       [] (dht::Doughnut&, std::shared_ptr<dht::Local>)
       { return nullptr; },
-      {}, nullptr, v)
+      {}, {}, nullptr, v)
   {}
 };
 

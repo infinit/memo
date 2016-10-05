@@ -43,6 +43,7 @@ namespace infinit
                    Address id,
                    std::unique_ptr<storage::Storage> storage,
                    int port,
+                   boost::optional<boost::asio::ip::address> listen_address,
                    Protocol p)
         : Super(dht, std::move(id))
         , _storage(std::move(storage))
@@ -55,7 +56,10 @@ namespace infinit
           if (p == Protocol::tcp || p == Protocol::all)
           {
             this->_server = elle::make_unique<reactor::network::TCPServer>();
-            this->_server->listen(port, v6);
+            if (listen_address)
+              this->_server->listen(*listen_address, port, v6);
+            else
+              this->_server->listen(port, v6);
             this->_server_thread = elle::make_unique<reactor::Thread>(
               elle::sprintf("%s server", *this),
               [this] { this->_serve_tcp(); });
@@ -68,7 +72,10 @@ namespace infinit
               elle::make_unique<reactor::network::UTPServer>();
             if (this->_server)
               port = this->_server->port();
-            this->_utp_server->listen(port, v6);
+            if (listen_address)
+              this->_utp_server->listen(*listen_address, port, v6);
+            else
+              this->_utp_server->listen(port, v6);
             this->_utp_server_thread = elle::make_unique<reactor::Thread>(
               elle::sprintf("%s utp server", *this),
               [this] { this->_serve_utp(); });

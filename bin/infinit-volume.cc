@@ -370,6 +370,10 @@ COMMAND(run)
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
+  auto listen_address_str = optional<std::string>(args, option_listen_interface);
+  boost::optional<boost::asio::ip::address> listen_address;
+  if (listen_address_str)
+    listen_address = boost::asio::ip::address::from_string(*listen_address_str);
   auto model = network.run(
     self,
     true,
@@ -380,7 +384,8 @@ COMMAND(run)
     mo.async && mo.async.get(),
     mo.cache_disk_size,
     infinit::compatibility_version,
-    port);
+    port,
+    listen_address);
   {
     std::vector<infinit::model::Endpoints> eps;
     auto add_peers = [&] (std::vector<std::string> const& peers) {
@@ -1156,6 +1161,7 @@ run_options(RunMode mode)
     option_endpoint_file,
     option_port_file,
     option_port,
+    option_listen_interface,
     option_poll_beyond,
     option_input("commands"),
   });

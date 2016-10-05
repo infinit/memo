@@ -565,6 +565,10 @@ Mode::OptionDescription option_poll_beyond(
   "fetch-endpoints-interval",
   boost::program_options::value<int>()->default_value(300),
   "period for repolling endpoints from the hub in seconds\n(default: 300s)");
+static
+Mode::OptionDescription option_listen_interface(
+  "listen", boost::program_options::value<std::string>(),
+  "specify which IP address to listen on (default: all)");
 
 class CommandLineSerializer
   : public elle::serialization::SerializerIn
@@ -1061,9 +1065,14 @@ namespace infinit
         bool async_writes = false,
         boost::optional<uint64_t> disk_cache_size = {},
         boost::optional<elle::Version> version = {},
-        boost::optional<int> port = {})
+        boost::optional<int> port = {},
+        boost::optional<boost::asio::ip::address> listen = {})
     {
       ELLE_LOG("client version: %s", version_describe);
+      auto rdv_env = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
+      boost::optional<std::string> rdv_host;
+      if (!rdv_env.empty())
+        rdv_host = std::move(rdv_env);
       return this->dht()->make(
         client,
         this->cache_dir(user),
@@ -1078,7 +1087,9 @@ namespace infinit
           : boost::optional<std::chrono::seconds>(),
         disk_cache_size,
         std::move(version),
-        std::move(port));
+        std::move(port),
+        std::move(listen),
+        std::move(rdv_host));
     }
 
     inline

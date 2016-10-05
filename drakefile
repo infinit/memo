@@ -997,5 +997,4 @@ def configure(
     else:
       runner = drake.Runner(exe = test, env = env)
     runner.reporting = drake.Runner.Reporting.on_failure
-    if not windows or test_name != 'filesystem':
-      rule_check << runner.status
+    rule_check << runner.status

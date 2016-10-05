@@ -217,6 +217,8 @@ namespace infinit
                     {
                       try
                       {
+                        ELLE_DEBUG("peer %f says node %f holds block %f",
+                                   r->id(), node, address);
                         yield(this->lookup_node(node));
                         if (++count >= n)
                           break;

@@ -39,6 +39,7 @@ namespace infinit
               Address id,
               std::unique_ptr<storage::Storage> storage,
               int port = 0,
+              boost::optional<boost::asio::ip::address> listen_address = {},
               Protocol p = Protocol::all);
         ~Local();
         /** Called after every element of the DHT has been initialized.
