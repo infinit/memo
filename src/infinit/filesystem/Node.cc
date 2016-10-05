@@ -294,7 +294,7 @@ namespace infinit
             this->_header().mode &= ~02;
           umbrella([&] {
               block->set_world_permissions(r, w);
-              _commit(WriteTarget::block);
+              _commit(WriteTarget::perms);
           }, EACCES);
           return;
         }
