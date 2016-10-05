@@ -67,7 +67,8 @@ namespace infinit
                  std::unique_ptr<storage::Storage> local,
                  boost::optional<elle::Version> version = {},
                  AdminKeys const& admin_keys = {},
-                 boost::optional<std::string> rdv_host = {});
+                 boost::optional<std::string> rdv_host = {},
+                 Protocol = Protocol::all);
         Doughnut(Address id,
                  std::string const& name,
                  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
@@ -80,7 +81,8 @@ namespace infinit
                  std::unique_ptr<storage::Storage> local,
                  boost::optional<elle::Version> version = {},
                  AdminKeys const& admin_keys = {},
-                 boost::optional<std::string> rdv_host = {});
+                 boost::optional<std::string> rdv_host = {},
+                 Protocol = Protocol::all);
         ~Doughnut();
 
       /*-----.

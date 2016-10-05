@@ -161,7 +161,8 @@ namespace infinit
         std::unique_ptr<Local>
         Paxos::make_local(boost::optional<int> port,
                           boost::optional<boost::asio::ip::address> listen_address,
-                          std::unique_ptr<storage::Storage> storage)
+                          std::unique_ptr<storage::Storage> storage,
+                          Protocol p)
         {
           return elle::make_unique<consensus::Paxos::LocalPeer>(
             *this,
@@ -173,7 +174,8 @@ namespace infinit
             this->doughnut().id(),
             std::move(storage),
             port ? port.get() : 0,
-            listen_address);
+            listen_address,
+            p);
         }
 
         /*-----.

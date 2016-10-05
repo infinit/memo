@@ -1187,9 +1187,11 @@ namespace rebalancing
     typedef dht::consensus::Paxos Super;
     using Super::Super;
     std::unique_ptr<dht::Local>
-    make_local(boost::optional<int> port,
-               boost::optional<boost::asio::ip::address> listen,
-               std::unique_ptr<infinit::storage::Storage> storage)
+    make_local(
+      boost::optional<int> port,
+      boost::optional<boost::asio::ip::address> listen,
+      std::unique_ptr<infinit::storage::Storage> storage,
+      dht::Protocol) override
     {
       return elle::make_unique<Local>(
         *this,

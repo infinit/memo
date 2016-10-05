@@ -58,7 +58,8 @@ namespace infinit
                          std::unique_ptr<storage::Storage> storage,
                          boost::optional<elle::Version> version,
                          AdminKeys const& admin_keys,
-                         boost::optional<std::string> rdv_host)
+                         boost::optional<std::string> rdv_host,
+                         Protocol protocol)
         : Model(std::move(version))
         , _id(std::move(id))
         , _keys(keys)
@@ -67,9 +68,10 @@ namespace infinit
         , _admin_keys(admin_keys)
         , _consensus(consensus(*this))
         , _local(
-          storage
-            ? this->_consensus->make_local(port, listen_address, std::move(storage))
-            : nullptr)
+          storage ?
+          this->_consensus->make_local(
+            port, listen_address, std::move(storage), protocol) :
+          nullptr)
         // FIXME: move protocol configuration to doughnut
         , _dock(*this, Protocol::all, port, listen_address, std::move(rdv_host))
         , _overlay(overlay_builder(*this, this->_local))
@@ -134,7 +136,8 @@ namespace infinit
                          std::unique_ptr<storage::Storage> storage,
                          boost::optional<elle::Version> version,
                          AdminKeys const& admin_keys,
-                         boost::optional<std::string> rdv_host)
+                         boost::optional<std::string> rdv_host,
+                         Protocol protocol)
         : Doughnut(std::move(id),
                    std::move(keys),
                    std::move(owner),
@@ -146,7 +149,8 @@ namespace infinit
                    std::move(storage),
                    std::move(version),
                    admin_keys,
-                   std::move(rdv_host))
+                   std::move(rdv_host),
+                   protocol)
       {
         auto check_user_blocks = [name, this]
           {
