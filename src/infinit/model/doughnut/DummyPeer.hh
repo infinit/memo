@@ -21,14 +21,6 @@ namespace infinit
         {}
 
         void
-        connect(elle::DurationOpt timeout = elle::DurationOpt()) override
-        {}
-
-        void
-        reconnect(elle::DurationOpt timeout = elle::DurationOpt()) override
-        {}
-
-        void
         store(blocks::Block const& block, StoreMode mode) override
         {
            throw reactor::network::Exception("Peer unavailable");
@@ -45,6 +37,18 @@ namespace infinit
                boost::optional<int> local_version) const override
         {
           throw reactor::network::Exception("Peer unavailable");
+        }
+
+        std::vector<cryptography::rsa::PublicKey>
+        _resolve_keys(std::vector<int> ids) override
+        {
+          elle::unreachable();
+        }
+
+        std::unordered_map<int, cryptography::rsa::PublicKey>
+        _resolve_all_keys() override
+        {
+          elle::unreachable();
         }
 
         virtual

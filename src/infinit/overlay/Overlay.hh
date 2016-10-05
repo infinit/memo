@@ -61,6 +61,12 @@ namespace infinit
     `------*/
     public:
       void
+      discover(Endpoints const& peer);
+      void
+      discover(std::vector<Endpoints> const& peers);
+      void
+      discover(NodeLocation const& peer);
+      void
       discover(NodeLocations const& peers);
     protected:
       virtual
@@ -97,14 +103,14 @@ namespace infinit
        * @raise elle::Error if the node is not found.
        */
       WeakMember
-      lookup_node(model::Address id);
+      lookup_node(model::Address id) const;
       /** Lookup nodes from their ids.
        *
        * @arg ids ids of the nodes to lookup.
        * @raise elle::Error if the node is not found.
        */
       reactor::Generator<WeakMember>
-      lookup_nodes(std::unordered_set<model::Address> ids);
+      lookup_nodes(std::unordered_set<model::Address> ids) const;
     protected:
       virtual
       reactor::Generator<std::pair<model::Address, WeakMember>>
@@ -112,9 +118,13 @@ namespace infinit
       virtual
       reactor::Generator<WeakMember>
       _lookup(model::Address address, int n, Operation op) const = 0;
+      /** Lookup a node by id
+       *
+       *  @raise elle::Error if the node cannot be found.
+       */
       virtual
       WeakMember
-      _lookup_node(model::Address address) = 0;
+      _lookup_node(model::Address address) const = 0;
 
     /*------.
     | Query |
@@ -143,9 +153,20 @@ namespace infinit
       typedef infinit::serialization_tag serialization_tag;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make(std::vector<Endpoints> const&,
-           std::shared_ptr<model::doughnut::Local> local,
+      make(std::shared_ptr<model::doughnut::Local> local,
            model::doughnut::Doughnut* doughnut) = 0;
+    };
+
+    /*-----------.
+    | Exceptions |
+    `-----------*/
+
+    class NodeNotFound
+      : public elle::Error
+    {
+    public:
+      NodeNotFound(model::Address id);
+      ELLE_ATTRIBUTE_R(model::Address, id);
     };
   }
 }

@@ -13,53 +13,57 @@ user = User()
 
 import requests
 
-with Beyond(force_admin = False) as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_authentication(self):
+  def test_authentication(self):
+    with Beyond(force_admin = False) as beyond:
       for i in range(0, 10):
         u = User()
         u.put(beyond)
         beyond.delete('users/%s' % u['name'],
-                      auth = u.private_key)
+                      auth = u)
 
-    def test_authentication_error(self):
+  def test_authentication_error(self):
+    with Beyond(force_admin = False) as beyond:
       evil = User()
       evil.put(beyond)
       for i in range(0, 10):
         u = User()
         u.put(beyond)
         throws(lambda: beyond.delete('users/%s' % u['name'],
-                                     auth = evil.private_key),
+                                     auth = evil),
                403, error = 'user/unauthorized')
 
-    def test_banned_user(self):
+  def test_banned_user(self):
+    with Beyond(force_admin = False) as beyond:
       demo = User(name = 'demo')
       demo.put(beyond)
       network = Network(owner = demo)
       throws(lambda: network.put(beyond), 403, error = 'user/forbidden')
 
-    def test_no_signature(self):
+  def test_no_signature(self):
+    with Beyond(force_admin = False) as beyond:
       user = User()
       user.put(beyond)
       network = Network(owner = user)
       throws(lambda: network.put(beyond, auth = False),
              401, error = 'user/unauthorized')
 
-    def test_no_timestamp(self):
+  def test_no_timestamp(self):
+    with Beyond(force_admin = False) as beyond:
       user = User()
       user.put(beyond)
       network = Network(owner = user)
       throws(lambda: network.put(beyond, timestamp = False),
              400, error = 'user/unauthorized')
 
-    def test_wrong_timestamp(self):
+  def test_wrong_timestamp(self):
+    with Beyond(force_admin = False) as beyond:
       user = User()
       user.put(beyond)
       network = Network(owner = user)
       throws(lambda: network.put(beyond, timestamp = 1),
              401, error = 'user/unauthorized')
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

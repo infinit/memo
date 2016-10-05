@@ -6,28 +6,26 @@
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/blocks/GroupBlock.hh>
-#include <infinit/version.hh>
+#include <infinit/utility.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.Model");
-
-static const elle::Version default_version(
-  INFINIT_MAJOR, INFINIT_MINOR, 0);
 
 namespace infinit
 {
   namespace model
   {
     Model::Model(boost::optional<elle::Version> version)
-      : _version(version ? *version : default_version)
+      : _version(
+        version ? *version :
+        elle::Version(
+          infinit::version().major(), infinit::version().minor(), 0))
     {
       ELLE_LOG("%s: compatibility version %s", *this, this->_version);
-      static elle::Version const current_version = elle::Version(
-        INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
-      if (this->_version > current_version)
+      if (this->_version > infinit::version())
         throw elle::Error(
           elle::sprintf(
             "compatibility version %s is too recent for infinit version %s",
-            this->_version, current_version));
+            this->_version, infinit::version()));
     }
 
     template <>
@@ -141,6 +139,8 @@ namespace infinit
     std::unique_ptr<blocks::Block>
     Model::fetch(Address address, boost::optional<int> local_version) const
     {
+      ELLE_TRACE_SCOPE("%s: fetch %f if newer than %s",
+                       this, address, local_version);
       if (auto res = this->_fetch(address, local_version))
       {
         auto val = res->validate(*this, false);
@@ -164,12 +164,14 @@ namespace infinit
             std::function<void(Address, std::unique_ptr<blocks::Block>,
                                std::exception_ptr)> res) const
     {
+      ELLE_TRACE_SCOPE("%s: fetch %s blocks", this, addresses.size());
       this->_fetch(addresses, [&](Address addr,
                                   std::unique_ptr<blocks::Block> block,
                                   std::exception_ptr exception)
         {
           if (block && !block->validate(*this, false))
-            res(addr, {}, std::make_exception_ptr(elle::Error("invalid block")));
+            res(addr, {},
+                std::make_exception_ptr(elle::Error("invalid block")));
           else
             res(addr, std::move(block), exception);
         });
@@ -236,8 +238,7 @@ namespace infinit
     }
 
     DummyConflictResolver::DummyConflictResolver()
-    {
-    }
+    {}
 
     DummyConflictResolver::DummyConflictResolver(
       elle::serialization::SerializerIn& s,
@@ -250,8 +251,7 @@ namespace infinit
     void
     DummyConflictResolver::serialize(elle::serialization::Serializer& s,
                                      elle::Version const& v)
-    {
-    }
+    {}
 
     std::unique_ptr<blocks::Block>
     DummyConflictResolver::operator() (blocks::Block& block,

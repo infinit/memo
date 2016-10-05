@@ -16,10 +16,11 @@
 #include <infinit/filesystem/Unreachable.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/Async.hh>
+#include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Group.hh>
-#include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
@@ -293,7 +294,7 @@ namespace infinit
             this->_header().mode &= ~02;
           umbrella([&] {
               block->set_world_permissions(r, w);
-              _commit(WriteTarget::block);
+              _commit(WriteTarget::perms);
           }, EACCES);
           return;
         }
@@ -592,10 +593,51 @@ namespace infinit
               return ss.str();
             });
         }
+        else if (*special == "resolve_all_keys")
+        {
+          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+            this->_owner.block_store());
+          elle::json::Object res;
+          for (auto wpeer: dht->dock().peer_cache())
+            if (auto peer = wpeer.second)
+            {
+              elle::json::Array keys;
+              for (auto const& key: peer->resolve_all_keys())
+                keys.emplace_back(model::doughnut::short_key_hash(key.second));
+              res[elle::sprintf("%s", peer->id())] =  std::move(keys);
+            }
+          std::stringstream ss;
+          elle::json::write(ss, res, true);
+          return ss.str();
+        }
         else if (special->find("root") == 0)
         {
           return this->full_path() == this->full_path().root_path() ? "true"
                                                                     : "false";
+        }
+        else if (special->find("compatibility-version") == 0)
+        {
+          return umbrella(
+            [&]
+            {
+              auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+                this->_owner.block_store());
+              return elle::sprintf("%s", dht->version());
+            });
+        }
+        else if (special->find("cache.clear") == 0)
+        {
+          auto c = dht->consensus().get();
+          if (auto a = dynamic_cast<model::doughnut::consensus::Async*>(c))
+            c = a->backend().get();
+          if (auto cc = dynamic_cast<model::doughnut::consensus::Cache*>(c))
+          {
+            ELLE_TRACE("Clearing cache");
+            cc->clear();
+            return "ok";
+          }
+          else
+            return "cache not found";
         }
       }
       if (k.substr(0, strlen(overlay_info)) == overlay_info)
@@ -707,6 +749,26 @@ namespace infinit
       else
         THROW_NODATA;
       return std::make_pair(r, w);
+    }
+
+    std::string
+    Node::perms_to_json(ACLBlock& block)
+    {
+      auto perms = block.list_permissions(*this->_owner.block_store());
+      elle::json::Array v;
+      for (auto const& perm: perms)
+      {
+        elle::json::Object o;
+        o["admin"] = perm.admin;
+        o["name"] = perm.user->name();
+        o["owner"] = perm.owner;
+        o["read"] = perm.read;
+        o["write"] = perm.write;
+        v.push_back(o);
+      }
+      std::stringstream ss;
+      elle::json::write(ss, v, true);
+      return ss.str();
     }
 
     void

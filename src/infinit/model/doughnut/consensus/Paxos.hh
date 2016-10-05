@@ -32,6 +32,7 @@ namespace infinit
         NAMED_ARGUMENT(replication_factor);
         NAMED_ARGUMENT(lenient_fetch);
         NAMED_ARGUMENT(rebalance_auto_expand);
+        NAMED_ARGUMENT(rebalance_inspect);
         NAMED_ARGUMENT(node_timeout);
 
         struct BlockOrPaxos;
@@ -64,12 +65,14 @@ namespace infinit
                 int factor,
                 bool lenient_fetch,
                 bool rebalance_auto_expand,
+                bool rebalance_inspect,
                 std::chrono::system_clock::duration node_timeout);
           template <typename ... Args>
           Paxos(Args&& ... args);
           ELLE_ATTRIBUTE_R(int, factor);
           ELLE_ATTRIBUTE_R(bool, lenient_fetch);
           ELLE_ATTRIBUTE_R(bool, rebalance_auto_expand);
+          ELLE_ATTRIBUTE_R(bool, rebalance_inspect);
           ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
         private:
           struct _Details;
@@ -128,6 +131,7 @@ namespace infinit
         public:
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
+                     boost::optional<boost::asio::ip::address> listen_address,
                      std::unique_ptr<storage::Storage> storage) override;
 
           typedef std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
@@ -224,6 +228,7 @@ namespace infinit
             LocalPeer(Paxos& paxos,
                       int factor,
                       bool rebalance_auto_expand,
+                      bool rebalance_inspect,
                       std::chrono::system_clock::duration node_timeout,
                       Doughnut& dht,
                       Address id,
@@ -233,16 +238,18 @@ namespace infinit
             virtual
             void
             initialize() override;
-            virtual
-            void
-            cleanup() override;
             ELLE_ATTRIBUTE_R(Paxos&, paxos);
             ELLE_ATTRIBUTE_R(int, factor);
-            ELLE_ATTRIBUTE_R(bool, rebalance_auto_expand);
+            ELLE_ATTRIBUTE_RW(bool, rebalance_auto_expand);
+            ELLE_ATTRIBUTE_RW(bool, rebalance_inspect);
             ELLE_ATTRIBUTE_R(reactor::Thread::unique_ptr, rebalance_inspector);
             ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
             ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>,
                            evict_threads);
+          protected:
+            void
+            _cleanup() override;
+
           /*------.
           | Paxos |
           `------*/
@@ -396,6 +403,8 @@ namespace infinit
             make(model::doughnut::Doughnut& dht) override;
             ELLE_ATTRIBUTE_RW(int, replication_factor);
             ELLE_ATTRIBUTE_RW(std::chrono::system_clock::duration, node_timeout);
+            ELLE_ATTRIBUTE_RW(bool, rebalance_auto_expand);
+            ELLE_ATTRIBUTE_RW(bool, rebalance_inspect);
           public:
             Configuration(elle::serialization::SerializerIn& s);
             virtual

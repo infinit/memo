@@ -44,7 +44,7 @@ namespace reporting
           std::string name)
   {
     boost::algorithm::to_upper(name);
-    out << std::endl <<  "[1m" << name << ":" << "[0m" << std::endl;
+    out << std::endl << "[1m" << name << ":" << "[0m" << std::endl;
   }
 
   template <typename C, typename ... Args>
@@ -111,16 +111,18 @@ namespace reporting
       container.begin(), container.end(),
       [&] (typename C::value_type const& r)
       {
-        return !r.second.sane();
+        return !r.second.sane() || r.second.warning();
       }) != container.end();
     if (verbose || broken)
       out << "* " << name << ":" << std::endl;
     for (auto const& item: container)
-      if (verbose || !item.second.sane())
+      if (verbose || !item.second.sane() || item.second.warning())
       {
         out << "  - ";
         if (item.second.sane())
           out << item.first;
+        else if (item.second.warning())
+          warn(out, item.first);
         else
           faulty(out, item.first);
         item.second.print(out << " ", verbose);
@@ -140,7 +142,7 @@ namespace reporting
 
     Result(bool sane,
            Reason const& reason = Reason{},
-           boost::optional<bool> warning = boost::none)
+           bool warning = false)
       : _sane(sane)
       , reason(reason)
       , _warning(warning)
@@ -156,10 +158,9 @@ namespace reporting
     {
     }
 
-    ELLE_ATTRIBUTE_RW(bool, sane);
+    ELLE_ATTRIBUTE_RW(bool, sane, virtual);
     Reason reason;
-    ELLE_ATTRIBUTE_RW(bool, warning);
-
+    ELLE_ATTRIBUTE_RW(bool, warning, virtual);
 
     virtual
     void
@@ -262,15 +263,15 @@ namespace reporting
     struct NetworkResult
       : public Result
     {
-      typedef
-      boost::optional<std::vector<std::string>>
-      FaultyStorageResources;
+      typedef boost::optional<std::vector<std::string>> FaultyStorageResources;
       NetworkResult(
         bool sane,
         FaultyStorageResources storage_resources = FaultyStorageResources{},
-        Result::Reason extra_reason = Result::Reason{})
-        : Result(sane, extra_reason)
-        , storage_resources(storage_resources)
+        Result::Reason extra_reason = Result::Reason{},
+        bool linked = true)
+          : Result(sane, extra_reason, !linked)
+          , linked(linked)
+          , storage_resources(storage_resources)
       {
       }
 
@@ -285,12 +286,15 @@ namespace reporting
       serialize(elle::serialization::Serializer& s)
       {
         Result::serialize(s);
+        s.serialize("linked", this->linked);
         s.serialize("storage_resources", this->storage_resources);
       }
 
       void
       _print(std::ostream& out, bool verbose) const override
       {
+        if (!this->linked)
+          warn(out, "not linked");
         if (this->storage_resources)
         {
           if (this->storage_resources->size() > 0)
@@ -302,6 +306,7 @@ namespace reporting
         }
       }
 
+      bool linked;
       FaultyStorageResources storage_resources;
     };
 
@@ -336,9 +341,7 @@ namespace reporting
       _print(std::ostream& out, bool) const override
       {
         if (this->faulty_network)
-        {
           faulty(out << "network ", *this->faulty_network) << " is faulty";
-        }
       }
 
       FaultyNetwork faulty_network;
@@ -393,7 +396,7 @@ namespace reporting
     }
 
     bool
-    sane() const
+    sane() const override
     {
       return reporting::sane(this->storage_resources)
         && reporting::sane(this->networks)
@@ -402,7 +405,7 @@ namespace reporting
     }
 
     bool
-    warning() const
+    warning() const override
     {
       return reporting::warning(this->storage_resources)
         || reporting::warning(this->networks)
@@ -427,7 +430,7 @@ namespace reporting
     void
     print(std::ostream& out, bool verbose) const
     {
-      if (!this->sane() || verbose)
+      if (this->show(verbose))
         section(out, "Infinit integrity");
       reporting::print(out, "Storage resources", storage_resources, verbose);
       reporting::print(out, "Networks", networks, verbose);
@@ -648,7 +651,7 @@ namespace reporting
     void
     print(std::ostream& out, bool verbose) const
     {
-      if (!this->sane() || this->warning() || verbose)
+      if (this->show(verbose))
         section(out, "System sanity");
       user.print(out, verbose);
       space_left.print(out, verbose);
@@ -657,7 +660,7 @@ namespace reporting
     }
 
     bool
-    sane() const
+    sane() const override
     {
       return this->user.sane()
         && this->space_left.sane()
@@ -666,7 +669,7 @@ namespace reporting
     }
 
     bool
-    warning() const
+    warning() const override
     {
       return this->user.warning()
         || this->space_left.warning()
@@ -1014,7 +1017,7 @@ namespace reporting
     }
 
     bool
-    sane() const
+    sane() const override
     {
       return this->beyond.sane()
         && this->interfaces.sane()
@@ -1024,7 +1027,7 @@ namespace reporting
     }
 
     bool
-    warning() const
+    warning() const override
     {
       return this->beyond.warning()
         || this->interfaces.warning()
@@ -1528,7 +1531,8 @@ _integrity(boost::program_options::variables_map const& args,
       auto const& network = elem.second.first;
       auto& status = elem.second.second;
       std::vector<std::string> storage_names;
-      if (network.model)
+      bool linked = network.model != nullptr;
+      if (linked)
       {
         if (network.model->storage)
         {
@@ -1553,9 +1557,15 @@ _integrity(boost::program_options::variables_map const& args,
           return res;
         });
       if (status)
-        reporting::store(results.networks, network.name, status);
+      {
+        reporting::store(results.networks, network.name, status, boost::none,
+                         boost::none, linked);
+      }
       else
-        reporting::store(results.networks, network.name, status, faulty);
+      {
+        reporting::store(results.networks, network.name, status, faulty,
+                         boost::none, linked);
+      }
     }
   ELLE_TRACE("verify volumes")
     for (auto& elems: volumes)
@@ -1601,6 +1611,7 @@ report_error(std::ostream& out, bool sane, bool warning = false)
   {
     if (warning)
     {
+      out << std::endl;
       out << "Doctor detected minor issues but nothing that should prevent ";
       out << "Infinit from working.";
     }

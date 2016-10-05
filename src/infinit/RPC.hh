@@ -26,13 +26,20 @@ namespace infinit
   class RPCHandler
   {
   public:
+    RPCHandler(std::string name)
+      : _name(std::move(name))
+    {}
     virtual
     ~RPCHandler() = default;
     virtual
     void
     handle(elle::serialization::SerializerIn& input,
            elle::serialization::SerializerOut& output) = 0;
+    ELLE_ATTRIBUTE_R(std::string, name);
   };
+
+  std::ostream&
+  operator <<(std::ostream& output, RPCHandler const& rpc);
 
 #ifdef __clang__
   // Clang fails on the other simpler list implementation by
@@ -84,8 +91,10 @@ namespace infinit
     : public RPCHandler
   {
   public:
-    ConcreteRPCHandler(std::function<R (Args...)> const& function)
-      : _function(function)
+    ConcreteRPCHandler(std::string name,
+                       std::function<R (Args...)> const& function)
+      : RPCHandler(std::move(name))
+      , _function(function)
     {}
     ELLE_ATTRIBUTE_R(std::function<R (Args...)>, function);
 
@@ -115,9 +124,8 @@ namespace infinit
           typename std::remove_reference<typename Remaining::Head>::type>::type
         Head;
       ELLE_LOG_COMPONENT("infinit.RPC");
-      ELLE_DEBUG("%s: get argument %s", *this, n);
       auto arg = input.deserialize<Head>(elle::sprintf("arg%s", n));
-      ELLE_DEBUG("%s: got argument: %s", *this, arg);
+      ELLE_DUMP("got argument: %s", arg);
       this->_handle<typename Remaining::Tail,
                     Parsed..., typename Remaining::Head>(
         n + 1, input, output, std::forward<Parsed>(parsed)..., std::move(arg));
@@ -139,10 +147,9 @@ namespace infinit
         typename std::remove_const<typename std::remove_reference<typename Remaining::Head>::type>::type
         Head;
       ELLE_LOG_COMPONENT("infinit.RPC");
-      ELLE_DEBUG("%s: get argument %s", *this, n);
       auto arg =
         input.deserialize<std::unique_ptr<Head>>(elle::sprintf("arg%s", n));
-      ELLE_DEBUG("%s: got argument: %s", *this, *arg);
+      ELLE_DUMP("got argument: %s", *arg);
       this->_handle<typename Remaining::Tail,
                     Parsed..., typename Remaining::Head>(
         n + 1, input, output, std::forward<Parsed>(parsed)..., std::move(*arg));
@@ -231,25 +238,23 @@ namespace infinit
     add(std::string const& name, std::function<R (Args...)> f)
     {
       this->_rpcs[name] =
-        elle::make_unique<ConcreteRPCHandler<R, Args...>>(f);
+        elle::make_unique<ConcreteRPCHandler<R, Args...>>(name, f);
     }
 
+    template <typename F, typename ... Args>
+    static
     void
-    serve(std::iostream& s)
+    umbrella(F const& f, Args&& ... args)
     {
       ELLE_LOG_COMPONENT("infinit.RPC");
       try
       {
-        protocol::Serializer serializer(
-          s, elle_serialization_version(this->_version), false);
-        _serve(serializer);
+        f(std::forward<Args>(args)...);
       }
       catch (infinit::protocol::Serializer::EOF const&)
       {}
       catch (reactor::network::ConnectionClosed const& e)
-      {
-        ELLE_TRACE("unexpected ConnectionClosed: %s", e.backtrace());
-      }
+      {}
       catch (reactor::network::SocketClosed const& e)
       {
         ELLE_TRACE("unexpected SocketClosed: %s", e.backtrace());
@@ -257,33 +262,64 @@ namespace infinit
     }
 
     void
+    serve(std::iostream& s)
+    {
+      umbrella(
+        [&]
+        {
+          protocol::Serializer serializer(
+            s, elle_serialization_version(this->_version), false);
+          this->_serve(serializer);
+        });
+    }
+
+    void
+    serve(protocol::Serializer& serializer)
+    {
+      umbrella([&] { this->_serve(serializer); });
+    }
+
+    void
     _serve(protocol::Serializer& serializer)
     {
-      ELLE_LOG_COMPONENT("infinit.RPC");
       protocol::ChanneledStream channels(serializer);
+      this->_serve(channels);
+    }
+
+    void
+    serve(protocol::ChanneledStream& channels)
+    {
+      umbrella([&] { this->_serve(channels); });
+    }
+
+    void
+    _serve(protocol::ChanneledStream& channels)
+    {
+      ELLE_LOG_COMPONENT("infinit.RPC");
       while (true)
       {
 	auto channel = channels.accept();
 	auto request = channel.read();
-	ELLE_DEBUG("Processing one request, key=%s, len=%s data=%x",
-	  !!this->_key, request.size(), request);
+	ELLE_TRACE_SCOPE("%s: process RPC", this);
 	bool had_key = !!_key;
 	if (had_key)
 	{
+          ELLE_DEBUG_SCOPE("decipher RPC");
 	  try
 	  {
 	    static elle::Bench bench("bench.rpcserve.decipher", 10000_sec);
 	    elle::Bench::BenchScope bs(bench);
 	    if (request.size() > 262144)
 	    {
-	      auto key = this->_key.get();
-	      reactor::background([&] {
-		  request = key->decipher(request);
-	      });
+	      auto& key = this->_key.get();
+	      elle::With<reactor::Thread::NonInterruptible>() << [&] {
+	        reactor::background([&] {
+	            request = key.decipher(request);
+	        });
+	      };
 	    }
 	    else
 	      request = this->_key->decipher(request);
-	    ELLE_DEBUG("Wrote %s plain bytes", request.size());
 	  }
 	  catch(std::exception const& e)
 	  {
@@ -328,11 +364,14 @@ namespace infinit
 	  elle::Bench::BenchScope bs(bench);
 	  if (response.size() >= 262144)
 	  {
-	    auto key = this->_key.get();
-	    reactor::background([&] {
-		response = key->encipher(
-		  elle::ConstWeakBuffer(response.contents(), response.size()));
-	    });
+	    auto& key = this->_key.get();
+	    elle::With<reactor::Thread::NonInterruptible>() << [&] {
+	      reactor::background([&] {
+	          response = key.encipher(
+	            elle::ConstWeakBuffer(response.contents(),
+                                          response.size()));
+	      });
+	    };
 	  }
 	  else
 	    response = _key->encipher(
@@ -351,7 +390,7 @@ namespace infinit
 
     std::unordered_map<std::string, std::unique_ptr<RPCHandler>> _rpcs;
     elle::serialization::Context _context;
-    std::unique_ptr<infinit::cryptography::SecretKey> _key;
+    boost::optional<infinit::cryptography::SecretKey> _key;
     boost::signals2::signal<void(RPCServer*)> _destroying;
     ELLE_ATTRIBUTE(elle::Version, version);
   };
@@ -364,17 +403,20 @@ namespace infinit
   {
   public:
     using Passport = infinit::model::doughnut::Passport;
-    BaseRPC(std::string name, protocol::ChanneledStream& channels,
+    BaseRPC(std::string name,
+            protocol::ChanneledStream& channels,
             elle::Version const& version,
-            elle::Buffer* credentials = nullptr);
+            boost::optional<cryptography::SecretKey> key = {});
 
-    elle::Buffer credentials()
+    elle::Buffer
+    credentials()
     {
       if (this->_key)
         return this->_key->password();
       else
         return {};
     }
+
     template <typename T>
     void
     set_context(T value)
@@ -388,7 +430,8 @@ namespace infinit
     elle::serialization::Context _context;
     ELLE_ATTRIBUTE_R(std::string, name);
     ELLE_ATTRIBUTE_R(protocol::ChanneledStream*, channels, protected);
-    ELLE_ATTRIBUTE_RX(std::unique_ptr<infinit::cryptography::SecretKey>, key, protected);
+    ELLE_ATTRIBUTE_RX(
+      boost::optional<infinit::cryptography::SecretKey>, key, protected);
     ELLE_ATTRIBUTE_R(elle::Version, version, protected);
   };
 
@@ -401,10 +444,24 @@ namespace infinit
     : public BaseRPC
   {
   public:
-    RPC(std::string name, protocol::ChanneledStream& channels,
+    RPC(std::string name,
+        protocol::ChanneledStream& channels,
         elle::Version const& version,
-        elle::Buffer* credentials = nullptr)
-      : BaseRPC(std::move(name), channels, version, credentials)
+        boost::optional<cryptography::SecretKey> key = {})
+      : BaseRPC(std::move(name), channels, version, std::move(key))
+    {}
+
+    RPC(std::string name,
+        protocol::ChanneledStream& channels,
+        elle::Version const& version,
+        elle::Buffer* credentials)
+      : RPC(
+        std::move(name),
+        channels,
+        version,
+        credentials && !credentials->empty() ?
+        boost::optional<cryptography::SecretKey>(elle::Buffer(*credentials)) :
+        boost::optional<cryptography::SecretKey>())
     {}
 
     void
@@ -417,10 +474,24 @@ namespace infinit
     : public BaseRPC
   {
   public:
-    RPC(std::string name, protocol::ChanneledStream& channels,
+    RPC(std::string name,
+        protocol::ChanneledStream& channels,
         elle::Version const& version,
-        elle::Buffer* credentials = nullptr)
-      : BaseRPC(std::move(name), channels, version, credentials)
+        boost::optional<cryptography::SecretKey> key = {})
+      : BaseRPC(std::move(name), channels, version, std::move(key))
+    {}
+
+    RPC(std::string name,
+        protocol::ChanneledStream& channels,
+        elle::Version const& version,
+        elle::Buffer* credentials)
+      : RPC(
+        std::move(name),
+        channels,
+        version,
+        credentials && !credentials->empty() ?
+        boost::optional<cryptography::SecretKey>(elle::Buffer(*credentials)) :
+        boost::optional<cryptography::SecretKey>())
     {}
 
     R
@@ -490,9 +561,7 @@ namespace infinit
     typename std::enable_if<!std::is_same<Res, void>::value, R>::type
     get_result(elle::serialization::SerializerIn& input)
     {
-      R result;
-      input.serialize("value", result);
-      return std::move(result);
+      return input.deserialize<R>("value");
     }
 
     static
@@ -522,16 +591,19 @@ namespace infinit
         {
           static elle::Bench bench("bench.rpcclient.encipher", 10000_sec);
           elle::Bench::BenchScope bs(bench);
-          if (call.size() > 262144)
-          {
-            reactor::background([&] {
-                call = self.key()->encipher(
-                  elle::ConstWeakBuffer(call.contents(), call.size()));
-            });
-          }
-          else
-            call = self.key()->encipher(
-              elle::ConstWeakBuffer(call.contents(), call.size()));
+          ELLE_DEBUG("encipher request")
+            if (call.size() > 262144)
+            {
+              elle::With<reactor::Thread::NonInterruptible>() << [&] {
+                reactor::background([&] {
+                    call = self.key()->encipher(
+                      elle::ConstWeakBuffer(call.contents(), call.size()));
+                  });
+              };
+            }
+            else
+              call = self.key()->encipher(
+                elle::ConstWeakBuffer(call.contents(), call.size()));
         }
         ELLE_DEBUG("send request")
           channel.write(call);
@@ -545,10 +617,12 @@ namespace infinit
           elle::Bench::BenchScope bs(bench);
           if (response.size() > 262144)
           {
-            reactor::background([&] {
-              response = self.key()->decipher(
-                elle::ConstWeakBuffer(response.contents(), response.size()));
-            });
+            elle::With<reactor::Thread::NonInterruptible>() << [&] {
+              reactor::background([&] {
+                  response = self.key()->decipher(
+                    elle::ConstWeakBuffer(response.contents(), response.size()));
+              });
+            };
           }
           else
             response = self.key()->decipher(
@@ -581,18 +655,12 @@ namespace infinit
   BaseRPC::BaseRPC(std::string name,
                    protocol::ChanneledStream& channels,
                    elle::Version const& version,
-                   elle::Buffer* credentials
-                   )
+                   boost::optional<cryptography::SecretKey> key)
     : _name(std::move(name))
     , _channels(&channels)
+    , _key(std::move(key))
     , _version(version)
-  {
-    if (credentials && !credentials->empty())
-    {
-      elle::Buffer creds(*credentials);
-      _key = elle::make_unique<cryptography::SecretKey>(std::move(creds));
-    }
-  }
+  {}
 
   std::ostream&
   operator <<(std::ostream& o, BaseRPC const& rpc);

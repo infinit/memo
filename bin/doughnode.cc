@@ -121,7 +121,7 @@ main(int argc, char** argv)
         parse_options(argc, argv, cfg, p);
         ELLE_ASSERT(cfg.model.get());
         auto model =
-          cfg.model->make(std::vector<infinit::model::Endpoints>(), false, p);
+          cfg.model->make(false, p);
         reactor::sleep();
       });
     sched.run();

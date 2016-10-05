@@ -7,16 +7,16 @@ import urllib.parse
 
 from utils import *
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_delete_unknown(self):
+  def test_delete_unknown(self):
+    with Beyond() as beyond:
       throws(lambda: beyond.delete('users/castor'),
              404,
              json = False)
 
-    def test_works(self):
+  def test_works(self):
+    with Beyond() as beyond:
       user = User()
       throws(lambda: beyond.get('users/%s' % user['name']),
              404,
@@ -28,22 +28,24 @@ with Beyond() as beyond:
              json = False)
       beyond.get('users/%s' % user['name'])
       beyond.delete('users/%s' % user['name'],
-                    auth = user.private_key)
+                    auth = user)
       throws(lambda: beyond.get('users/%s' % user['name']),
              404,
              json = False)
 
-    def test_deleting_another_user(self):
+  def test_deleting_another_user(self):
+    with Beyond() as beyond:
       alice = User()
       bob = User()
       beyond.put('users/%s' % alice['name'], json = alice)
       beyond.put('users/%s' % bob['name'], json = bob)
       throws(lambda: beyond.delete('users/%s' % bob['name'],
-                                   auth = alice.private_key),
+                                   auth = alice),
              403,
              json = False)
 
-    def test_purge(self):
+  def test_purge(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       network = Network(name = 'n', owner = user)
@@ -53,7 +55,7 @@ with Beyond() as beyond:
       drive = Drive(name = 'd', volume = volume)
       drive.put(beyond)
       beyond.delete('users/%s' % user['name'],
-                    auth = user.private_key,
+                    auth = user,
                     params = {'purge': 'true'})
       throws(lambda: beyond.get('users/%s' % user['name'], json = False),
              404)
@@ -64,8 +66,33 @@ with Beyond() as beyond:
       throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
              404)
 
-    # Ensure that only the user who does the purge has their objects removed.
-    def test_purge_multi_user(self):
+  def test_purge_with_a_volume_on_a_network_we_do_not_own(self):
+    with Beyond() as beyond:
+      user = User()
+      user.put(beyond)
+      user2 = User()
+      user2.put(beyond)
+      network = Network(name = 'n', owner = user2)
+      network.put(beyond)
+      volume = Volume(name = 'v', network = network, owner = user)
+      volume.put(beyond)
+      drive = Drive(name = 'd', volume = volume, owner = user)
+      drive.put(beyond)
+      beyond.delete('users/%s' % user['name'],
+                    auth = user,
+                    params = {'purge': 'true'})
+      throws(lambda: beyond.get('users/%s' % user['name'], json = False),
+             404)
+      # Network will not be deleted.
+      beyond.get('networks/%s' % network['name'])
+      throws(lambda: beyond.get('volumes/%s' % volume['name'], json = False),
+             404)
+      throws(lambda: beyond.get('drives/%s' % drive['name'], json = False),
+             404)
+
+  # Ensure that only the user who does the purge has their objects removed.
+  def test_purge_multi_user(self):
+    with Beyond() as beyond:
       user1 = User()
       user1.put(beyond)
       user2 = User()
@@ -81,7 +108,7 @@ with Beyond() as beyond:
       drive2 = Drive(name = 'd2', owner = user2, volume = volume2)
       drive2.put(beyond)
       beyond.delete('users/%s' % user1['name'],
-                    auth = user1.private_key,
+                    auth = user1,
                     params = {'purge': 'true'})
       throws(lambda: beyond.get('users/%s' % user1['name'], json = False),
              404)
@@ -94,11 +121,12 @@ with Beyond() as beyond:
       beyond.get('volumes/%s' % volume2['name'])
       beyond.get('drives/%s' % drive2['name'])
 
-    def test_admin(self):
+  def test_admin(self):
+    with Beyond() as beyond:
       with Beyond(force_admin = True) as admin_beyond:
         alice = User()
         admin_beyond.put('users/%s' % alice['name'], json = alice)
         admin_beyond.delete('users/%s' % alice['name'])
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

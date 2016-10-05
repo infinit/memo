@@ -4,6 +4,7 @@
 
 #include <cryptography/rsa/KeyPair.hh>
 #include <cryptography/rsa/PublicKey.hh>
+#include <cryptography/hash.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -126,7 +127,14 @@ namespace infinit
               *gb->owner_key());
             auto rub = elle::make_unique<UB>(&_dht, "@"+_name,
               *gb->owner_key(), true);
+            auto hub = elle::make_unique<UB>(
+              &_dht, ':' + UB::hash(*gb->owner_key()).string(), *gb->owner_key());
             // FIXME
+            _dht.store(
+              std::move(hub), STORE_INSERT,
+              elle::make_unique<UserBlockUpserter>(
+                elle::sprintf("@%s", this->_name))
+            );
             _dht.store(
               std::move(ub), STORE_INSERT,
               elle::make_unique<UserBlockUpserter>(
@@ -199,7 +207,19 @@ namespace infinit
         auto key = this->public_control_key();
         try
         {
-          auto addr = ACB::hash_address(this->_dht, key, group_block_key);
+          static
+          std::unordered_map<cryptography::rsa::PublicKey, Address>
+          address_cache;
+
+          Address addr;
+          auto it = address_cache.find(key);
+          if (it == address_cache.end())
+          {
+            addr = ACB::hash_address(this->_dht, key, group_block_key);
+            address_cache.insert(std::make_pair(key, addr));
+          }
+          else
+            addr = it->second;
           elle::unconst(this)->_block = elle::cast<GB>::runtime(
             this->_dht.fetch(addr));
           return *this->_block;

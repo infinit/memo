@@ -69,6 +69,7 @@ make(
     consensus,
     overlay,
     boost::optional<int>(),
+    boost::optional<boost::asio::ip::address>(),
     std::move(s));
   auto ops = elle::make_unique<infinit::filesystem::FileSystem>(
     "volume", dn, infinit::filesystem::allow_root_creation = true);

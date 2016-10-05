@@ -310,20 +310,6 @@ COMMAND(run)
   auto volume = ifnt.volume_get(name);
   volume.mount_options.merge(args);
   auto& mo = volume.mount_options;
-  std::vector<infinit::model::Endpoints> eps;
-  auto add_peers = [&] (std::vector<std::string> const& peers) {
-    for (auto const& obj: peers)
-      if (boost::filesystem::exists(obj))
-        for (auto const& peer: endpoints_from_file(obj))
-          eps.emplace_back(infinit::model::Endpoints({peer}));
-      else
-        eps.emplace_back(infinit::model::Endpoints({obj}));
-  };
-  if (mo.peers)
-    add_peers(*mo.peers);
-  if (args.count("peer"))
-    add_peers(args["peer"].as<std::vector<std::string>>());
-
 #ifdef INFINIT_MACOSX
   if (mo.mountpoint && !flag(args, option_disable_mac_utf8))
   {
@@ -338,6 +324,14 @@ COMMAND(run)
   {
 #ifdef INFINIT_WINDOWS
     if (mo.mountpoint.get().size() == 2 && mo.mountpoint.get()[1] == ':')
+      ;
+    else
+#elif defined(INFINIT_MACOSX)
+    // Do not try to create folder in /Volumes.
+    auto mount_path = boost::filesystem::path(mo.mountpoint.get());
+    auto mount_parent = mount_path.parent_path().string();
+    boost::algorithm::to_lower(mount_parent);
+    if (mount_parent.find("/volumes") == 0)
       ;
     else
 #endif
@@ -368,21 +362,49 @@ COMMAND(run)
   network.ensure_allowed(self, "run", "volume");
   ELLE_TRACE("run network");
 #ifndef INFINIT_WINDOWS
+  infinit::DaemonHandle daemon_handle;
   if (flag(args, "daemon"))
-    if (daemon(0, 1))
-      perror("daemon:");
+    daemon_handle = infinit::daemon_hold(0, 1);
 #endif
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
+  auto listen_address_str = optional<std::string>(args, option_listen_interface);
+  boost::optional<boost::asio::ip::address> listen_address;
+  if (listen_address_str)
+    listen_address = boost::asio::ip::address::from_string(*listen_address_str);
   auto model = network.run(
     self,
-    eps, true,
-    mo.cache && mo.cache.get(), mo.cache_ram_size, mo.cache_ram_ttl, mo.cache_ram_invalidation,
-    mo.async && mo.async.get(), mo.cache_disk_size, infinit::compatibility_version, port);
+    true,
+    mo.cache && mo.cache.get(),
+    mo.cache_ram_size,
+    mo.cache_ram_ttl,
+    mo.cache_ram_invalidation,
+    mo.async && mo.async.get(),
+    mo.cache_disk_size,
+    infinit::compatibility_version,
+    port,
+    listen_address);
+  {
+    std::vector<infinit::model::Endpoints> eps;
+    auto add_peers = [&] (std::vector<std::string> const& peers) {
+      for (auto const& obj: peers)
+        if (boost::filesystem::exists(obj))
+          for (auto const& peer: endpoints_from_file(obj))
+            eps.emplace_back(infinit::model::Endpoints({peer}));
+        else
+          eps.emplace_back(infinit::model::Endpoints({obj}));
+    };
+    if (mo.peers)
+      add_peers(*mo.peers);
+    if (args.count("peer"))
+      add_peers(args["peer"].as<std::vector<std::string>>());
+    if (!eps.empty())
+      model->overlay()->discover(eps);
+  }
   // Only push if we have are contributing storage.
   bool push = mo.push && model->local();
-  boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint;
+  boost::optional<infinit::model::Endpoint> local_endpoint;
   if (model->local())
   {
     local_endpoint = model->local()->server_endpoint();
@@ -396,11 +418,14 @@ COMMAND(run)
   }
   auto run = [&]
   {
+    reactor::Thread::unique_ptr poll_thread;
     if (mo.fetch && *mo.fetch)
     {
       infinit::overlay::NodeLocations eps;
       beyond_fetch_endpoints(network, eps);
       model->overlay()->discover(eps);
+      if (mo.poll_beyond && *mo.poll_beyond > 0)
+        poll_thread = make_poll_beyond_thread(*model, network, eps, *mo.poll_beyond);
     }
     reactor::Thread::unique_ptr stat_thread;
     if (push)
@@ -541,6 +566,13 @@ COMMAND(run)
         },
         true));
       reachability->start();
+    }
+#endif
+#ifndef INFINIT_WINDOWS
+    if (flag(args, "daemon"))
+    {
+      ELLE_TRACE("releasing daemon");
+      infinit::daemon_release(daemon_handle);
     }
 #endif
     if (script_mode)
@@ -1118,6 +1150,8 @@ run_options(RunMode mode)
     option_endpoint_file,
     option_port_file,
     option_port,
+    option_listen_interface,
+    option_poll_beyond,
     option_input("commands"),
   });
   if (mode == RunMode::update)

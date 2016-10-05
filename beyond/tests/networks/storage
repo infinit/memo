@@ -9,11 +9,10 @@ from utils import *
 
 from copy import deepcopy
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
-
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond() as beyond:
       alice = User()
       alice.put(beyond)
       network = Network(owner = alice)
@@ -24,7 +23,8 @@ with Beyond() as beyond:
       res = beyond.get('networks/%s/stat' % network['name']).json()
       assertEq(res, stat)
 
-    def test_overwrite(self):
+  def test_overwrite(self):
+    with Beyond() as beyond:
       alice = User()
       alice.put(beyond)
       network = Network(owner = alice)
@@ -38,7 +38,8 @@ with Beyond() as beyond:
       res = beyond.get('networks/%s/stat' % network['name']).json()
       assertEq(res, stat)
 
-    def test_capacity_none(self):
+  def test_capacity_none(self):
+    with Beyond() as beyond:
       alice = User()
       alice.put(beyond)
       network = Network(owner = alice)
@@ -47,7 +48,8 @@ with Beyond() as beyond:
       stat.put(beyond, alice)
       res = beyond.get('networks/%s/stat' % network['name']).json()
 
-    def test_unknown_network(self):
+  def test_unknown_network(self):
+    with Beyond() as beyond:
       alice = User()
       alice.put(beyond)
       network = Network(owner = alice)
@@ -56,7 +58,8 @@ with Beyond() as beyond:
       throws(lambda: beyond.get('networks/%s/stat' % network['name']),
              expected = 404)
 
-    def test_one_user_multiple_devices(self):
+  def test_one_user_multiple_devices(self):
+    with Beyond() as beyond:
       alice = User()
       alice.put(beyond)
       network = Network(owner = alice)
@@ -72,7 +75,8 @@ with Beyond() as beyond:
       }
       assertEq(res, stats)
 
-    def test_two_users_multiple_devices(self):
+  def test_two_users_multiple_devices(self):
+    with Beyond() as beyond:
       alice, bob = User(), User()
       alice.put(beyond), bob.put(beyond)
       network = Network(owner = alice)
@@ -94,5 +98,5 @@ with Beyond() as beyond:
       }
       assertEq(res, stats)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

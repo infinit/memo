@@ -1,11 +1,18 @@
 #include <elle/os/environ.hh>
 
+DAS_MODEL_FIELDS(infinit::model::doughnut::Remote::Auth,
+                 (id)(challenge)(passport));
+
 namespace infinit
 {
   namespace model
   {
     namespace doughnut
     {
+      DAS_MODEL_DEFINE(infinit::model::doughnut::Remote::Auth,
+                       (id)(challenge)(passport),
+                       DasAuth);
+
       template<typename F, typename ...Args>
       typename RPC<F>::result_type
       remote_call_next(RemoteRPC<F>* ptr, Args const& ... args)
@@ -28,7 +35,7 @@ namespace infinit
             if (!creds.empty())
             {
               elle::Buffer c(creds);
-              this->key() = elle::make_unique<cryptography::SecretKey>(std::move(c));
+              this->key().emplace(std::move(c));
             }
             return helper();
         });
@@ -70,10 +77,18 @@ namespace infinit
           bool connect_running = false;
           try
           {
-            if (!reactor::wait(*this->_connection_thread, 0_sec))
+            if (!this->_connected)
             { // still connecting
-              ELLE_DEBUG("still connecting");
+              ELLE_DEBUG("%s is still connecting on attempt %s",
+                         this, _reconnection_id);
               connect_running = true;
+              if (std::chrono::system_clock::now() - this->_connection_start_time
+                > std::chrono::seconds(connect_timeout_sec))
+              {
+                this->_reconnecting = false;
+                connect_running = false;
+                ELLE_DEBUG("%s: scheduling reconnection attempts", this);
+              }
               throw reactor::network::ConnectionClosed("Connection pending");
             }
             // if we reach here, connection thread finished without exception,
@@ -130,6 +145,17 @@ namespace infinit
         }
       }
 
+      template <typename F>
+      RemoteRPC<F>::RemoteRPC(std::string name, Remote* remote)
+        : Super(name,
+                *remote->channels(),
+                remote->doughnut().version(),
+                elle::unconst(&remote->credentials()))
+        , _remote(remote)
+      {
+        this->set_context(remote);
+      }
+
       template<typename F>
       RemoteRPC<F>
       Remote::make_rpc(std::string const& name)
@@ -139,3 +165,7 @@ namespace infinit
     }
   }
 }
+
+DAS_MODEL_DEFAULT(infinit::model::doughnut::Remote::Auth,
+                  infinit::model::doughnut::DasAuth);
+DAS_MODEL_SERIALIZE(infinit::model::doughnut::Remote::Auth);

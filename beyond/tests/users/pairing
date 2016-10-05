@@ -38,31 +38,31 @@ class PairData(dict):
 
   def put(self, hub, owner):
     return hub.put('users/%s/pairing' % self.__user['name'], json = self,
-                   auth = owner.private_key)
+                   auth = owner)
 
-with Beyond() as beyond:
+class Test(unittest.TestCase):
 
-  class Test(unittest.TestCase):
+  def decrypt(data, passphrase):
+    cipher = PairData.cipher(passphrase)
+    decoded = cipher.decrypt(base64.b64decode(data)).decode().strip()
+    import json
+    return json.loads(decoded)
 
-    def decrypt(data, passphrase):
-      cipher = PairData.cipher(passphrase)
-      decoded = cipher.decrypt(base64.b64decode(data)).decode().strip()
-      import json
-      return json.loads(decoded)
+  def compare(user, data):
+    for field in ['name', 'email', 'public_key']:
+      assertEq(data[field], user[field])
+    assertEq(data['private_key'], user.private_key)
 
-    def compare(user, data):
-      for field in ['name', 'email', 'public_key']:
-        assertEq(data[field], user[field])
-      assertEq(data['private_key'], user.private_key)
-
-    def test_logic(self):
+  def test_logic(self):
+    with Beyond() as beyond:
       user = User()
       passphrase = 'this is my passphrase'
       pairing = PairData(user, passphrase)
       data = Test.decrypt(pairing['data'], passphrase)
       Test.compare(user, data)
 
-    def test_normal(self):
+  def test_normal(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       passphrase = 'A strong passphrase'
@@ -83,7 +83,8 @@ with Beyond() as beyond:
         }),
              404)
 
-    def test_uploading_twice(self):
+  def test_uploading_twice(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       passphrase = 'A strong passphrase'
@@ -98,7 +99,8 @@ with Beyond() as beyond:
         extra_headers = {'infinit-pairing-passphrase-hash': password_hash(passphrase)}
       )
 
-    def test_not_found(self):
+  def test_not_found(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       beyond.advance(seconds = 0, set = True)
@@ -109,7 +111,8 @@ with Beyond() as beyond:
       ),
              404)
 
-    def test_expired(self):
+  def test_expired(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       beyond.advance(seconds = 0, set = True)
@@ -123,7 +126,8 @@ with Beyond() as beyond:
       ),
              410)
 
-    def test_invalid_passphrase(self):
+  def test_invalid_passphrase(self):
+    with Beyond() as beyond:
       user = User()
       user.put(beyond)
       beyond.advance(seconds = 0, set = True)
@@ -136,5 +140,5 @@ with Beyond() as beyond:
       ),
              403)
 
-  if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':
+  unittest.main()

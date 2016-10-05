@@ -28,7 +28,6 @@ namespace kademlia
     void
     serialize(elle::serialization::Serializer& s);
     int port;
-    std::vector<infinit::model::Endpoints> bootstrap_nodes;
     int wait;
     int wait_ms;
     int address_size; // in bits
@@ -75,7 +74,7 @@ namespace kademlia
             infinit::overlay::Operation op) const override;
     virtual
     Overlay::WeakMember
-    _lookup_node(infinit::model::Address address) override;
+    _lookup_node(infinit::model::Address address) const override;
   public:
 
   private:
@@ -169,8 +168,7 @@ namespace infinit
         serialize(elle::serialization::Serializer& s) override;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(std::vector<Endpoints> const& hosts,
-             std::shared_ptr<infinit::model::doughnut::Local> local,
+        make(std::shared_ptr<infinit::model::doughnut::Local> local,
              model::doughnut::Doughnut* doughnut) override;
         ::kademlia::Configuration config;
       };

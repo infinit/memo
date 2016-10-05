@@ -51,6 +51,7 @@ namespace infinit
       Endpoints();
       Endpoints(std::vector<Endpoint> const&);
       Endpoints(std::vector<boost::asio::ip::udp::endpoint> const&);
+      Endpoints(boost::asio::ip::udp::endpoint);
       std::vector<boost::asio::ip::tcp::endpoint>
       tcp() const;
       std::vector<boost::asio::ip::udp::endpoint>

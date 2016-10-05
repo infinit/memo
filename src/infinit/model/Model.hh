@@ -189,8 +189,7 @@ namespace infinit
       serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::model::Model>
-      make(std::vector<Endpoints> const& hosts,
-           bool client,
+      make(bool client,
            boost::filesystem::path const& dir) = 0;
       typedef infinit::serialization_tag serialization_tag;
     };

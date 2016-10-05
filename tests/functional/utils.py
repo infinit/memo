@@ -128,8 +128,9 @@ class Infinit(TemporaryDirectory):
     if self.__user is not None:
       env_['INFINIT_USER'] = self.__user
     env_['WINEDEBUG'] = os.environ.get('WINEDEBUG', '-all')
-    if 'ELLE_LOG_LEVEL' in os.environ:
-      env_['ELLE_LOG_LEVEL'] = os.environ['ELLE_LOG_LEVEL']
+    for k in ['ELLE_LOG_LEVEL', 'ELLE_LOG_FILE', 'ELLE_LOG_TIME']:
+      if k in os.environ:
+        env_[k] = os.environ[k]
     if self.__beyond is not None:
       env_['INFINIT_BEYOND'] = self.__beyond.domain
     env_.update(env)
@@ -166,9 +167,14 @@ class Infinit(TemporaryDirectory):
       process = self.spawn(args, input, return_code, env)
       out, err = process.communicate(timeout = 600)
       process.wait()
-    except KeyboardInterrupt:
+    except (subprocess.TimeoutExpired, KeyboardInterrupt):
       process.terminate()
-      out, err = process.communicate(timeout = 30)
+      try:
+        out, err = process.communicate(timeout = 30)
+      except ValueError:
+        # Python bug, throws ValueError. But in that case blocking read is fine
+        out = process.stdout.read()
+        err = process.stderr.read()
       print('STDOUT: %s' % out.decode('utf-8'))
       print('STDERR: %s' % err.decode('utf-8'))
       raise

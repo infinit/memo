@@ -1,14 +1,21 @@
 #include <infinit/RPC.hh>
 
-#include <infinit/version.hh>
+#include <infinit/utility.hh>
 
 namespace infinit
 {
   RPCServer::RPCServer()
-    : RPCServer(elle::Version(INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR))
+    : RPCServer(infinit::version())
   {}
 
   RPCServer::RPCServer(elle::Version version)
     : _version(version)
   {}
+
+  std::ostream&
+  operator <<(std::ostream& output, RPCHandler const& rpc)
+  {
+    elle::fprintf(output, "RPC(%s)", rpc.name());
+    return output;
+  }
 }
