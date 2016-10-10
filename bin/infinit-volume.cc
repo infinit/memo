@@ -311,19 +311,13 @@ COMMAND(run)
   volume.mount_options.merge(args);
   auto& mo = volume.mount_options;
   std::vector<infinit::model::Endpoints> eps;
-  auto add_peers = [&] (std::vector<std::string> const& peers) {
-    for (auto const& obj: peers)
+  if (mo.peers)
+    for (auto const& obj: mo.peers.get())
       if (boost::filesystem::exists(obj))
         for (auto const& peer: endpoints_from_file(obj))
           eps.emplace_back(infinit::model::Endpoints({peer}));
       else
         eps.emplace_back(infinit::model::Endpoints({obj}));
-  };
-  if (mo.peers)
-    add_peers(*mo.peers);
-  if (args.count("peer"))
-    add_peers(args["peer"].as<std::vector<std::string>>());
-
 #ifdef INFINIT_MACOSX
   if (mo.mountpoint && !flag(args, option_disable_mac_utf8))
   {
@@ -332,7 +326,6 @@ COMMAND(run)
     mo.fuse_options.get().push_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
   }
 #endif
-
   bool created_mountpoint = false;
   if (mo.mountpoint)
   {
