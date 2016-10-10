@@ -37,9 +37,11 @@ namespace infinit
       size_t sep = repr.find_last_of(':');
       if (sep == std::string::npos || sep == repr.length())
         elle::err("invalid endpoint: %s", repr);
-      this->_address =
-        boost::asio::ip::address::from_string(repr.substr(0, sep));
-      this->_port = std::stoi(repr.substr(sep + 1));
+      std::string saddr = repr.substr(0, sep);
+      std::string sport = repr.substr(sep + 1);
+      auto ep = reactor::network::resolve_udp(saddr, sport);
+      this->_address = ep.address();
+      this->_port = ep.port();
     }
 
     bool
