@@ -103,6 +103,11 @@ namespace infinit
         _discover(NodeLocations const& peers) override;
         void
         _discover(Overlay::Member peer);
+      public:
+        typedef std::unordered_map<model::Address, Endpoints> Pending;
+        ELLE_ATTRIBUTE(Pending, pending);
+        NodeLocations
+        peers_locations(Pending const& extras) const;
 
       /*-------.
       | Lookup |

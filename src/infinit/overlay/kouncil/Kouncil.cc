@@ -88,6 +88,25 @@ namespace infinit
                     return res;
                   }));
             });
+          local->on_connect().connect(
+            [this] (RPCServer& rpcs)
+            {
+              rpcs.add(
+                "kouncil_advertise",
+                std::function<NodeLocations(NodeLocations const&)>(
+                  [this](NodeLocations const& nls)
+                  {
+                    ELLE_DEBUG("%s: receive advertise of %s", this, nls);
+                    auto cp = this->_pending;
+                    for (auto const& nl: nls)
+                      this->_pending.insert(std::make_pair(nl.id(), nl.endpoints()));
+                    // Discover must be called asynchronously or deadlock
+                    for (auto const& nl: nls)
+                      if (this->peers().find(nl.id()) == this->peers().end())
+                        new reactor::Thread("discover", [this, nl] { this->_discover({nl});}, true);
+                    return this->peers_locations(cp);
+                  }));
+            });
         }
         this->doughnut()->dock().on_connect().connect(
           [this] (model::doughnut::Remote& r)
@@ -102,6 +121,15 @@ namespace infinit
                   ELLE_TRACE("%s: added %s entries from %f",
                              this, entries.size(), r.id());
                 }));
+
+            auto reg = r.make_rpc<NodeLocations(NodeLocations const&)>("kouncil_advertise");
+            auto nls = this->peers_locations(this->_pending);
+            ELLE_TRACE("%s: invoking advertise on %s with info on %s nodes", this, r, nls.size());
+            auto rnls = reg(nls);
+            ELLE_TRACE("%s: got info on %s nodes", this, rnls.size());
+            for (auto const& nl: rnls)
+              if (this->peers().find(nl.id()) == this->peers().end())
+                new reactor::Thread("discover", [this, nl] { this->_discover({nl});}, true);
           });
         this->_validate();
       }
@@ -110,6 +138,22 @@ namespace infinit
       {
         ELLE_TRACE("%s: destruct", this);
         this->_connections.clear();
+      }
+
+      NodeLocations
+      Kouncil::peers_locations(Pending const& extras) const
+      {
+        NodeLocations nls;
+        for (auto const& p: this->peers())
+        {
+          if (auto r = dynamic_cast<model::doughnut::Remote const*>(p.second.get()))
+            nls.emplace_back(r->id(), r->endpoints());
+          else if (auto l = dynamic_cast<model::doughnut::Local const*>(p.second.get()))
+            nls.emplace_back(p.second->id(), l->server_endpoints() );
+        }
+        for (auto const& p: extras)
+          nls.emplace_back(p.first, p.second);
+        return nls;
       }
 
       elle::json::Json
@@ -170,6 +214,7 @@ namespace infinit
       void
       Kouncil::_discover(Overlay::Member peer)
       {
+        ELLE_DEBUG("%s: discovered %s", this, peer->id());
         // FIXME: handle local !
         if (auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(peer))
         {
@@ -183,6 +228,7 @@ namespace infinit
         }
         ELLE_ASSERT_NEQ(peer->id(), model::Address::null);
         this->_peers.emplace(peer->id(), peer);
+        this->_pending.erase(peer->id());
       }
 
       template<typename E>
