@@ -181,6 +181,27 @@ namespace infinit
         void
         _remove(Address address, blocks::RemoveSignature rs) override;
         friend class Local;
+
+      /*------------------.
+      | Service discovery |
+      `------------------*/
+      public:
+        using Services = std::unordered_map<std::string, Address>;
+        using ServicesTypes = std::unordered_map<std::string, Services>;
+        ServicesTypes
+        services();
+        void
+        service_add(std::string const& type,
+                    std::string const& name,
+                    elle::Buffer value);
+        template <typename T>
+        void
+        service_add(std::string const& type,
+                    std::string const&
+                    name, T const& value);
+      private:
+        std::unique_ptr<blocks::MutableBlock>
+        _services_block(bool write);
       };
 
       struct Configuration:
@@ -245,5 +266,7 @@ DAS_MODEL_FIELDS(infinit::model::doughnut::Configuration,
 DAS_MODEL(infinit::model::doughnut::AdminKeys, (r, w, group_r, group_w), DasAdminKeys);
 DAS_MODEL_DEFAULT(infinit::model::doughnut::AdminKeys, DasAdminKeys);
 DAS_MODEL_SERIALIZE(infinit::model::doughnut::AdminKeys);
+
+# include <infinit/model/doughnut/Doughnut.hxx>
 
 #endif

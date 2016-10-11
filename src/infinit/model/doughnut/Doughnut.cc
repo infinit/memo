@@ -23,6 +23,7 @@
 #include <infinit/model/doughnut/CHB.hh>
 #include <infinit/model/doughnut/GB.hh>
 #include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/UB.hh>
@@ -325,6 +326,81 @@ namespace infinit
       Doughnut::_remove(Address address, blocks::RemoveSignature rs)
       {
         this->_consensus->remove(address, std::move(rs));
+      }
+
+      /*------------------.
+      | Service discovery |
+      `------------------*/
+
+      Doughnut::ServicesTypes
+      Doughnut::services()
+      {
+        auto block = this->_services_block(false);
+        if (block)
+          return elle::serialization::binary::deserialize
+            <ServicesTypes>(block->data());
+        else
+          return Doughnut::ServicesTypes();
+      }
+
+      void
+      Doughnut::service_add(std::string const& type,
+                            std::string const& name,
+                            elle::Buffer value)
+      {
+        if (this->keys().K() != *this->owner())
+          elle::err("only the network owner may register services");
+        auto block = this->_services_block(true);
+        auto discovery = elle::serialization::binary::deserialize
+          <ServicesTypes>(block->data());
+        auto services = discovery.find(type);
+        if (services == discovery.end())
+          services = discovery.emplace(type, Services()).first;
+        if (services->second.find(name) != services->second.end())
+          elle::err("%s already registered: %s", type, name);
+        auto vblock = this->make_block<blocks::ImmutableBlock>(
+          std::move(value));
+        auto vaddr = vblock->address();
+        this->store(std::move(vblock), STORE_INSERT);
+        services->second.emplace(name, vaddr);
+        block->data(elle::serialization::binary::serialize(discovery));
+        this->store(std::move(block), STORE_UPDATE);
+      }
+
+      std::unique_ptr<blocks::MutableBlock>
+      Doughnut::_services_block(bool write)
+      {
+        try
+        {
+          auto beacon = this->fetch(
+            NB::address(
+              *this->owner(), "infinit/services", elle::Version(0, 7, 0)));
+          auto addr = elle::serialization::binary::deserialize<Address>(
+            beacon->data());
+          try
+          {
+            return std::dynamic_pointer_cast<blocks::MutableBlock>(
+              this->fetch(addr));
+          }
+          catch (MissingBlock const&)
+          {
+            elle::err("missing services block at %f", addr);
+          }
+        }
+        catch (MissingBlock const&)
+        {
+          if (!write || this->keys().K() != *this->owner())
+            return nullptr;
+          auto block = this->make_block<blocks::MutableBlock>(
+            elle::serialization::binary::serialize(ServicesTypes()));
+          this->store(*block, STORE_INSERT);
+          auto beacon = elle::make_unique<NB>(
+            *this, this->owner(),
+            "infinit/services",
+            elle::serialization::binary::serialize(block->address()));
+          this->store(std::move(beacon), STORE_INSERT);
+          return block;
+        }
       }
 
       bool
