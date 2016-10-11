@@ -904,6 +904,7 @@ beyond_fetch(std::string const& type,
 
 namespace infinit
 {
+  class Infinit;
   extern boost::optional<elle::Version> compatibility_version;
   static const std::string invalid_name(
     "name (%s) must only contain lower case alphanumeric and - . _ "
@@ -949,6 +950,17 @@ namespace infinit
       elle::os::setenv("LC_ALL", "C", 1);
     }
   }
+
+  infinit::model::Endpoints
+  endpoints_from_file(boost::filesystem::path const& path);
+
+  void
+  port_to_file(uint16_t port,
+               boost::filesystem::path const& path_);
+
+  void
+  endpoints_to_file(infinit::model::Endpoints endpoints,
+                    boost::filesystem::path const& path_);
 
   int
   main(std::string desc,
@@ -2445,11 +2457,12 @@ namespace infinit
       return this->_volume_path() / name;
     }
 
+    static
     void
     _open_read(boost::filesystem::ifstream& f,
                boost::filesystem::path const& path,
                std::string const& name,
-               std::string const& type) const
+               std::string const& type)
     {
       ELLE_DEBUG("open %s \"%s\" (%s) for reading", type, name, path);
       f.open(path);
@@ -2460,13 +2473,14 @@ namespace infinit
       }
     }
 
+    static
     void
     _open_write(boost::filesystem::ofstream& f,
                 boost::filesystem::path const& path,
                 std::string const& name,
                 std::string const& type,
                 bool overwrite = false,
-                std::ios_base::openmode mode = std::ios_base::out) const
+                std::ios_base::openmode mode = std::ios_base::out)
     {
       ELLE_DEBUG("open %s \"%s\" (%s) for writing", type, name, path);
       create_directories(path.parent_path());

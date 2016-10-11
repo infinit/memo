@@ -34,8 +34,6 @@ ELLE_LOG_COMPONENT("infinit-volume");
 
 infinit::Infinit ifnt;
 
-#include <endpoint_file.hh>
-
 #if __APPLE__
 # undef daemon
 extern "C" int daemon(int, int);
@@ -388,11 +386,11 @@ COMMAND(run)
   {
     local_endpoint = model->local()->server_endpoint();
     if (auto port_file = optional(args, option_port_file))
-      port_to_file(local_endpoint.get().port(), port_file.get());
+      infinit::port_to_file(local_endpoint.get().port(), port_file.get());
     if (auto endpoint_file = optional(args, option_endpoint_file))
     {
-      endpoints_to_file(model->local()->server_endpoints(),
-                        endpoint_file.get());
+      infinit::endpoints_to_file(model->local()->server_endpoints(),
+                                 endpoint_file.get());
     }
   }
   auto run = [&]

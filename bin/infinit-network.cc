@@ -23,8 +23,6 @@ ELLE_LOG_COMPONENT("infinit-network");
 
 infinit::Infinit ifnt;
 
-#include <endpoint_file.hh>
-
 #if __APPLE__
 # undef daemon
 extern "C" int daemon(int, int);
@@ -661,7 +659,7 @@ COMMAND(run)
     for (auto const& peer: peers)
     {
       if (boost::filesystem::exists(peer))
-        eps.emplace_back(endpoints_from_file(peer));
+        eps.emplace_back(infinit::endpoints_from_file(peer));
       else
         eps.emplace_back(infinit::model::Endpoints({peer}));
     }
@@ -692,9 +690,10 @@ COMMAND(run)
   if (dht->local())
   {
     if (auto port_file = optional(args, option_port_file))
-      port_to_file(dht->local()->server_endpoint().port(), port_file.get());
+      infinit::port_to_file(dht->local()->server_endpoint().port(), port_file.get());
     if (auto endpoint_file = optional(args, option_endpoint_file))
-      endpoints_to_file(dht->local()->server_endpoints(), endpoint_file.get());
+      infinit::endpoints_to_file(
+        dht->local()->server_endpoints(), endpoint_file.get());
   }
 #ifndef INFINIT_WINDOWS
   if (flag(args, "daemon"))
