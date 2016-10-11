@@ -29,7 +29,12 @@ read_key(std::string const& prompt_text, boost::regex const& regex)
         first = false;
       std::cout << prompt_text << ": ";
       std::cout.flush();
-      std::getline(std::cin, res);
+      if (!std::getline(std::cin, res))
+      {
+        reactor::yield();
+        elle::err("Aborting...");
+      }
+      std::cin.clear();
     }
   }
   return res;
