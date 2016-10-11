@@ -1072,6 +1072,31 @@ namespace infinit
     boost::optional<std::string> ldap_dn;
   };
 
+  struct MountOptions
+  {
+    MountOptions();
+    void to_commandline(std::vector<std::string>& arguments,
+                        std::unordered_map<std::string, std::string>& env) const;
+    void merge(boost::program_options::variables_map const& args);
+    void merge(MountOptions const& other);
+    boost::optional<std::string> hub_url;
+    boost::optional<std::string> rdv;
+    boost::optional<std::vector<std::string>> fuse_options;
+    boost::optional<std::string> as;
+    boost::optional<bool> fetch;
+    boost::optional<bool> push;
+    boost::optional<bool> cache;
+    boost::optional<bool> async;
+    boost::optional<bool> readonly;
+    boost::optional<int> cache_ram_size;
+    boost::optional<int> cache_ram_ttl;
+    boost::optional<int> cache_ram_invalidation;
+    boost::optional<uint64_t> cache_disk_size;
+    boost::optional<std::string> mountpoint;
+    boost::optional<std::vector<std::string>> peers;
+    typedef infinit::serialization_tag serialization_tag;
+  };
+
   struct Network
     : public elle::Printable
   {
@@ -1121,6 +1146,34 @@ namespace infinit
                         action, resource, user.name));
     }
 
+    std::unique_ptr<model::doughnut::Doughnut>
+    run(User const& user,
+        MountOptions const& mo,
+        bool client = false,
+        boost::optional<elle::Version> version = {},
+        boost::optional<int> port = {})
+    {
+      std::vector<infinit::model::Endpoints> eps;
+      if (mo.peers)
+        for (auto const& obj: mo.peers.get())
+          if (boost::filesystem::exists(obj))
+            for (auto const& peer: endpoints_from_file(obj))
+              eps.emplace_back(infinit::model::Endpoints({peer}));
+          else
+            eps.emplace_back(infinit::model::Endpoints({obj}));
+      return this->run(
+        user,
+        eps,
+        client,
+        mo.cache && mo.cache.get(),
+        mo.cache_ram_size,
+        mo.cache_ram_ttl,
+        mo.cache_ram_invalidation,
+        mo.async && mo.async.get(),
+        mo.cache_disk_size,
+        version,
+        port);
+    }
 
     std::unique_ptr<model::doughnut::Doughnut>
     run(User const& user,
@@ -1317,32 +1370,6 @@ namespace infinit
     cryptography::rsa::PublicKey owner;
     elle::Version version;
     model::doughnut::AdminKeys admin_keys;
-  };
-
-
-  struct MountOptions
-  {
-    MountOptions();
-    void to_commandline(std::vector<std::string>& arguments,
-                        std::unordered_map<std::string, std::string>& env) const;
-    void merge(boost::program_options::variables_map const& args);
-    void merge(MountOptions const& other);
-    boost::optional<std::string> hub_url;
-    boost::optional<std::string> rdv;
-    boost::optional<std::vector<std::string>> fuse_options;
-    boost::optional<std::string> as;
-    boost::optional<bool> fetch;
-    boost::optional<bool> push;
-    boost::optional<bool> cache;
-    boost::optional<bool> async;
-    boost::optional<bool> readonly;
-    boost::optional<int> cache_ram_size;
-    boost::optional<int> cache_ram_ttl;
-    boost::optional<int> cache_ram_invalidation;
-    boost::optional<uint64_t> cache_disk_size;
-    boost::optional<std::string> mountpoint;
-    boost::optional<std::vector<std::string>> peers;
-    typedef infinit::serialization_tag serialization_tag;
   };
 
   inline

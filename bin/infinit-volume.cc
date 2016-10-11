@@ -308,14 +308,6 @@ COMMAND(run)
   auto volume = ifnt.volume_get(name);
   volume.mount_options.merge(args);
   auto& mo = volume.mount_options;
-  std::vector<infinit::model::Endpoints> eps;
-  if (mo.peers)
-    for (auto const& obj: mo.peers.get())
-      if (boost::filesystem::exists(obj))
-        for (auto const& peer: endpoints_from_file(obj))
-          eps.emplace_back(infinit::model::Endpoints({peer}));
-      else
-        eps.emplace_back(infinit::model::Endpoints({obj}));
 #ifdef INFINIT_MACOSX
   if (mo.mountpoint && !flag(args, option_disable_mac_utf8))
   {
@@ -375,10 +367,7 @@ COMMAND(run)
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
   auto model = network.run(
-    self,
-    eps, true,
-    mo.cache && mo.cache.get(), mo.cache_ram_size, mo.cache_ram_ttl, mo.cache_ram_invalidation,
-    mo.async && mo.async.get(), mo.cache_disk_size, infinit::compatibility_version, port);
+    self, mo, true, infinit::compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push = mo.push && model->local();
   boost::optional<infinit::model::Endpoint> local_endpoint;
