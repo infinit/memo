@@ -277,6 +277,7 @@ However, the procedure to follow differs with every cloud service. It is therefo
 
 <ul class="horizontal">
   <li><a href="${route('doc_storages_s3')}"><img src="${url('images/logos/aws-s3.png')}" alt="AWS S3 logo"> Amazon S3</a></li>
+  <li><a href="${route('doc_storages_s3_compatible')}"><img src="${url('images/logos/aws-s3.png')}" alt="AWS S3 logo"> S3 Compatible Service</a></li>
   <li><a href="${route('doc_storages_gcs')}"><img src="${url('images/logos/gcs.png')}" alt="Google Cloud Storage logo"> Google Cloud Storage</a></li>
 </ul>
 
@@ -324,6 +325,7 @@ However, the process differs depending on the nature of the storage resource. Pl
 <ul class="horizontal">
   <li><a href="${route('doc_storages_filesystem')}"><img src="${url('images/icons/hierarchy.png')}" alt="file system logo"> Local Filesystem</a></li>
   <li><a href="${route('doc_storages_s3')}"><img src="${url('images/logos/aws-s3.png')}" alt="AWS S3 logo"> Amazon S3</a></li>
+  <li><a href="${route('doc_storages_s3_compatible')}"><img src="${url('images/logos/aws-s3.png')}" alt="AWS S3 logo"> S3 Compatible Service</a></li>
   <li><a href="${route('doc_storages_gcs')}"><img src="${url('images/logos/gcs.png')}" alt="Google Cloud Storage logo"> Google Cloud Storage</a></li>
 </ul>
 
