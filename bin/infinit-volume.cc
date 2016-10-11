@@ -70,6 +70,17 @@ COMMAND(create)
   {
     ifnt.volume_save(volume);
     report_created("volume", name);
+    if (flag(args, "create-root"))
+    {
+      auto model = network.run(
+        owner, mo, false, infinit::compatibility_version);
+      auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
+        infinit::filesystem::model = std::move(model),
+        infinit::filesystem::volume_name = name,
+        infinit::filesystem::allow_root_creation = true);
+      struct stat s;
+      fs->path("/")->stat(&s);
+    }
   }
   if (option_push(args, {"push-volume"}))
     beyond_push("volume", name, volume, owner);
@@ -1046,6 +1057,7 @@ run_options(RunMode mode)
   if (mode == RunMode::create)
   {
     add_options({
+      { "create-root,R", BOOL_IMPLICIT, "create root directory"},
       { "network,N", value<std::string>(), "underlying network to use" },
       { "push-volume", BOOL_IMPLICIT,
         elle::sprintf("push the volume to %s", beyond(true)) },
