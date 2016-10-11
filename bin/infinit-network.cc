@@ -705,7 +705,7 @@ COMMAND(run)
       if (fetch)
       {
         infinit::model::NodeLocations eps;
-        beyond_fetch_endpoints(network, eps);
+        network.beyond_fetch_endpoints(eps);
         dht->overlay()->discover(eps);
       }
       reactor::Thread::unique_ptr stat_thread;

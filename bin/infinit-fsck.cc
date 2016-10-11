@@ -386,7 +386,7 @@ COMMAND(check)
   if (aliased_flag(args, {"fetch-endpoints", "fetch"}))
   {
     infinit::model::NodeLocations hosts;
-    beyond_fetch_endpoints(network, hosts);
+    network.beyond_fetch_endpoints(hosts);
     model->overlay()->discover(hosts);
   }
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(

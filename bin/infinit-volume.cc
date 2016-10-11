@@ -384,12 +384,6 @@ COMMAND(run)
   }
   auto run = [&]
   {
-    if (mo.fetch && *mo.fetch)
-    {
-      infinit::overlay::NodeLocations eps;
-      beyond_fetch_endpoints(network, eps);
-      model->overlay()->discover(eps);
-    }
     reactor::Thread::unique_ptr stat_thread;
     if (push)
       stat_thread = make_stat_update_thread(self, network, *model);

@@ -100,6 +100,14 @@ public:
   }
 };
 
+bool
+option_fetch(boost::program_options::variables_map const& args,
+             std::vector<std::string> const& aliases= {});
+
+bool
+option_push(boost::program_options::variables_map const& args,
+            std::vector<std::string> const& aliases = {});
+
 #define COMMAND(name)                                           \
   static                                                        \
   void                                                          \
@@ -1161,7 +1169,7 @@ namespace infinit
               eps.emplace_back(infinit::model::Endpoints({peer}));
           else
             eps.emplace_back(infinit::model::Endpoints({obj}));
-      return this->run(
+      auto dht = this->run(
         user,
         eps,
         client,
@@ -1173,6 +1181,13 @@ namespace infinit
         mo.cache_disk_size,
         version,
         port);
+      if (mo.fetch && *mo.fetch)
+      {
+        infinit::overlay::NodeLocations eps;
+        beyond_fetch_endpoints(eps);
+        dht->overlay()->discover(eps);
+      }
+      return dht;
     }
 
     std::unique_ptr<model::doughnut::Doughnut>
@@ -1262,6 +1277,9 @@ namespace infinit
       }
       return new_dir;
     }
+
+    void
+    beyond_fetch_endpoints(infinit::model::NodeLocations& hosts);
 
     void
     print(std::ostream& out) const override
@@ -1428,10 +1446,10 @@ namespace infinit
     infinit::merge(this->as, optional(args, "as"));
     infinit::merge(this->as, optional(args, "user"));
     infinit::merge(this->readonly, optional<bool>(args, "readonly"));
-    infinit::merge(this->fetch, optional_aliased_flag(args, {
-      "fetch-endpoints", "fetch", "publish"}));
-    infinit::merge(this->push, optional_aliased_flag(args, {
-      "push-endpoints", "push", "publish"}));
+    if (option_fetch(args, {"fetch-endpoints"}))
+      this->fetch = true;
+    if (option_push(args, {"push-endpoints"}))
+      this->push = true;
     infinit::merge(this->cache, optional<bool>(args, option_cache));
     infinit::merge(this->async, optional<bool>(args, "async"));
     infinit::merge(this->cache_ram_size,
@@ -3405,46 +3423,6 @@ private:
   ELLE_ATTRIBUTE(reactor::network::PortMapping, port_map_udp);
 };
 
-inline
-void
-beyond_fetch_endpoints(infinit::Network const& network,
-                       infinit::model::NodeLocations& hosts)
-{
-  reactor::http::Request r(
-    elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name));
-  reactor::wait(r);
-  if (r.status() != reactor::http::StatusCode::OK)
-  {
-    throw elle::Error(
-      elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\"",
-                    r.status(), network.name));
-  }
-  auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
-  for (auto const& user: json)
-  {
-    try
-    {
-      for (auto const& node: boost::any_cast<elle::json::Object>(user.second))
-      {
-        infinit::model::Address uuid =
-          infinit::model::Address::from_string(node.first.substr(2));
-        elle::serialization::json::SerializerIn s(node.second, false);
-        auto endpoints = s.deserialize<Endpoints>();
-        infinit::model::Endpoints eps;
-        for (auto const& addr: endpoints.addresses)
-          eps.emplace_back(boost::asio::ip::address::from_string(addr),
-                           endpoints.port);
-        hosts.emplace_back(uuid, std::move(eps));
-      }
-    }
-    catch (std::exception const& e)
-    {
-      ELLE_WARN("Exception parsing peer endpoints: %s", e.what());
-    }
-  }
-  report_action("fetched", "endpoints for", network.name);
-}
-
 namespace infinit
 {
   inline
@@ -3517,11 +3495,3 @@ beyond_login(std::string const& name,
 
   return elle::json::read(r);
 }
-
-bool
-option_fetch(boost::program_options::variables_map const& args,
-             std::vector<std::string> const& aliases= {});
-
-bool
-option_push(boost::program_options::variables_map const& args,
-            std::vector<std::string> const& aliases = {});

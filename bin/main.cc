@@ -463,6 +463,44 @@ namespace infinit
     }
     return 0;
   }
+
+  void
+  Network::beyond_fetch_endpoints(infinit::model::NodeLocations& hosts)
+  {
+    reactor::http::Request r(
+      elle::sprintf("%s/networks/%s/endpoints", beyond(), this->name));
+    reactor::wait(r);
+    if (r.status() != reactor::http::StatusCode::OK)
+    {
+      throw elle::Error(
+        elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\"",
+                      r.status(), this->name));
+    }
+    auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
+    for (auto const& user: json)
+    {
+      try
+      {
+        for (auto const& node: boost::any_cast<elle::json::Object>(user.second))
+        {
+          infinit::model::Address uuid =
+            infinit::model::Address::from_string(node.first.substr(2));
+          elle::serialization::json::SerializerIn s(node.second, false);
+          auto endpoints = s.deserialize<Endpoints>();
+          infinit::model::Endpoints eps;
+          for (auto const& addr: endpoints.addresses)
+            eps.emplace_back(boost::asio::ip::address::from_string(addr),
+                             endpoints.port);
+          hosts.emplace_back(uuid, std::move(eps));
+        }
+      }
+      catch (std::exception const& e)
+      {
+        ELLE_WARN("Exception parsing peer endpoints: %s", e.what());
+      }
+    }
+    report_action("fetched", "endpoints for", this->name);
+  }
 }
 
 std::string program;
