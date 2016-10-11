@@ -11,9 +11,11 @@
 #endif
 
 #include <infinit/filesystem/filesystem.hh>
+#include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/NB.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/storage/Storage.hh>
 
@@ -68,19 +70,26 @@ COMMAND(create)
   }
   else
   {
-    ifnt.volume_save(volume);
-    report_created("volume", name);
-    if (flag(args, "create-root"))
+    bool root = flag(args, "create-root");
+    bool discovery = flag(args, "register-service");
+    if (root || discovery)
     {
       auto model = network.run(
         owner, mo, false, infinit::compatibility_version);
-      auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
-        infinit::filesystem::model = std::move(model),
-        infinit::filesystem::volume_name = name,
-        infinit::filesystem::allow_root_creation = true);
-      struct stat s;
-      fs->path("/")->stat(&s);
+      if (discovery)
+        model->service_add("volumes", name, volume);
+      if (root)
+      {
+        auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
+          infinit::filesystem::model = std::move(model),
+          infinit::filesystem::volume_name = name,
+          infinit::filesystem::allow_root_creation = true);
+        struct stat s;
+        fs->path("/j")->stat(&s);
+      }
     }
+    ifnt.volume_save(volume);
+    report_created("volume", name);
   }
   if (option_push(args, {"push-volume"}))
     beyond_push("volume", name, volume, owner);
@@ -1063,7 +1072,8 @@ run_options(RunMode mode)
         elle::sprintf("push the volume to %s", beyond(true)) },
       option_output("volume"),
       { "default-permissions,d", value<std::string>(),
-        "default permissions (optional: r,rw)"}
+        "default permissions (optional: r,rw)"},
+      { "register-service,r", BOOL_IMPLICIT, "register volume in the network"},
     });
   }
   add_options({

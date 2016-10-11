@@ -1633,6 +1633,7 @@ namespace infinit
     std::string network;
     MountOptions mount_options;
     boost::optional<std::string> default_permissions;
+    using serialization_tag = infinit::serialization_tag;
   };
 
   struct Drive

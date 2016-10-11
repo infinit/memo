@@ -141,3 +141,24 @@ with Infinit() as alice:
   alice.run(['infinit-volume', '--update', '--as', 'alice', 'v', '--cache=no'])
   mount_opts = vol()['mount_options']
   assertEq(mount_opts['cache'], False)
+
+# Service discovery
+with Infinit() as alice:
+  alice.run(['infinit-user', '--create',  'alice'])
+  alice.run(['infinit-storage', '--create', 's'])
+  alice.run([
+    'infinit-network', '--create', '--name', 'network',
+    '--storage', 's', '--as', 'alice'])
+  assertEq(
+    alice.run_json([
+      'infinit-network', '--list-services', '--name', 'network',
+      '--script', '--as', 'alice']),
+    None)
+  alice.run([
+    'infinit-volume', '--create', '--name', 'alice-volume',
+    '--network', 'network', '--as', 'alice', '--register-service'])
+  assertEq(
+    alice.run_json([
+      'infinit-network', '--list-services', '--name', 'network',
+      '--script', '--as', 'alice']),
+    {'volumes': ['alice/alice-volume']})
