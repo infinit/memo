@@ -114,6 +114,9 @@ namespace infinit
         virtual
         WeakMember
         _lookup_node(model::Address address) const override;
+      public:
+        elle::json::Json
+        query(std::string const& k, boost::optional<std::string> const& v) override;
       };
     }
   }

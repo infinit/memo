@@ -104,12 +104,35 @@ namespace infinit
                 }));
           });
         this->_validate();
+#ifndef INFINIT_WINDOWS
+        reactor::scheduler().signal_handle(SIGUSR1, [this] {
+            auto json = this->query("stats", {});
+            std::cerr << elle::json::pretty_print(json);
+            //json = this->query("blockcount", {});
+            //std::cerr << elle::json::pretty_print(json);
+        });
+#endif
       }
 
       Kouncil::~Kouncil()
       {
         ELLE_TRACE("%s: destruct", this);
         this->_connections.clear();
+      }
+
+      elle::json::Json
+      Kouncil::query(std::string const& k, boost::optional<std::string> const& v)
+      {
+        elle::json::Object res;
+        if (k == "stats")
+        {
+          elle::json::Array jpeers;
+          for (auto const& p: peers())
+            jpeers.push_back(elle::sprintf("%s", p.first));
+          res["peers"] = jpeers;
+          res["id"] = elle::sprintf("%s", this->doughnut()->id());
+        }
+        return res;
       }
 
       void
