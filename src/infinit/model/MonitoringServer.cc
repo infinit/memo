@@ -39,6 +39,7 @@ namespace infinit
         case Query::Status:
           return "status";
       }
+      elle::unreachable();
     }
 
     static
