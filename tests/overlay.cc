@@ -123,7 +123,7 @@ ELLE_TEST_SCHEDULED(
   elle::With<UTPInstrument>(dht_a.dht->local()->server_endpoints()[0]) <<
     [&] (UTPInstrument& instrument)
     {
-      DHT dht_b(::keys = keys, make_overlay = builder, paxos = false);
+      DHT dht_b(::keys = keys, make_overlay = builder, paxos = false, ::storage=nullptr);
       infinit::model::Endpoints ep = {
         Endpoint("127.0.0.1", instrument.server.local_endpoint().port()),
       };
