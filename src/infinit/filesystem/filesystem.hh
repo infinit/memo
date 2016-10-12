@@ -180,9 +180,16 @@ namespace infinit
     class FileSystem
       : public reactor::filesystem::Operations
     {
+    /*------.
+    | Types |
+    `------*/
     public:
       using clock = std::chrono::high_resolution_clock;
-      static clock::time_point now();
+
+    /*-------------.
+    | Construction |
+    `-------------*/
+    public:
       template <typename ... Args>
       FileSystem(Args&& ... args);
       FileSystem(
@@ -192,6 +199,14 @@ namespace infinit
         boost::optional<boost::filesystem::path> root_block_cache_dir = {},
         boost::optional<boost::filesystem::path> mountpoint = {},
         bool allow_root_creation = false);
+    private:
+      struct Init;
+      FileSystem(Init);
+
+    public:
+      static
+      clock::time_point
+      now();
       void
       print_cache_stats();
       std::shared_ptr<reactor::filesystem::Path>
