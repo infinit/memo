@@ -15,7 +15,9 @@
 #include <reactor/Scope.hh>
 #include <reactor/exception.hh>
 #include <reactor/network/utp-server.hh>
-#include <reactor/network/unix-domain-server.hh>
+#ifndef INFINIT_WINDOWS
+# include <reactor/network/unix-domain-server.hh>
+#endif
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
@@ -82,6 +84,7 @@ namespace infinit
       {
         if (this->_local)
           this->_local->initialize();
+#ifndef INFINIT_WINDOWS
         if (monitoring_socket_path)
         {
           auto const& m_path = monitoring_socket_path.get();
@@ -102,6 +105,7 @@ namespace infinit
               "unable to monitor, socket already present at: %s", m_path);
           }
         }
+#endif
       }
 
       template<typename ConflictResolver, typename F, typename FF, typename... Args>

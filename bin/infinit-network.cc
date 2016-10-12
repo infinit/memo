@@ -9,7 +9,9 @@
 #include <elle/serialization/json.hh>
 #include <elle/json/exceptions.hh>
 
-#include <reactor/network/unix-domain-socket.hh>
+#ifndef INFINIT_WINDOWS
+# include <reactor/network/unix-domain-socket.hh>
+#endif
 
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/MonitoringServer.hh>
@@ -847,6 +849,7 @@ COMMAND(stats)
          << "}" << std::endl;
 }
 
+#ifndef INFINIT_WINDOWS
 COMMAND(monitor)
 {
   auto owner = self_user(ifnt, args);
@@ -886,6 +889,7 @@ COMMAND(monitor)
       "\"--consensus\"");
   }
 }
+#endif
 
 int
 main(int argc, char** argv)
@@ -1131,6 +1135,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "network name" },
       },
     },
+#ifndef INFINIT_WINDOWS
     {
       "monitor",
       "Get information about a running network",
@@ -1144,6 +1149,7 @@ main(int argc, char** argv)
         { "consensus", bool_switch(), "list consensus information" },
       }
     },
+#endif
   };
   return infinit::main("Infinit network management utility", modes, argc, argv);
 }
