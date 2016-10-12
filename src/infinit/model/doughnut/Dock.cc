@@ -161,7 +161,7 @@ namespace infinit
               this->_utp_server,
               refetcher,
               this->_protocol);
-          if (!disable_cache)
+          if (!disable_cache && loc.id() != Address::null)
             this->_peer_cache.emplace(loc.id(), res);
           this->_on_connect(*res);
           auto weak_res = overlay::Overlay::WeakMember::own(std::move(res));
