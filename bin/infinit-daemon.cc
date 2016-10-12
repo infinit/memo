@@ -1639,44 +1639,36 @@ DockerVolumePlugin::install(bool tcp,
     });
   _server->register_route("/VolumeDriver.Create", reactor::http::Method::POST,
     [this] ROUTE_SIG {
-      elle::err("use infinit-volume --create to create new volumes");
-      // auto lock = this->_user.enter(this->_mutex);
-      // auto stream = elle::IOStream(data.istreambuf());
-      // auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
-      // std::cerr << elle::json::pretty_print(json) << std::endl;
-      // std::string err;
-      // try
-      // {
-      //   elle::json::Object opts;
-      //   try
-      //   {
-      //     opts = boost::any_cast<elle::json::Object>(json.at("Opts"));
-      //   }
-      //   catch(...)
-      //   {}
-      //   auto name = optional(json, "Name");
-      //   if (!name)
-      //     throw elle::Error("Missing 'Name' argument");
-      //   // Hack to force docker to invoke our Create method on existing volume,
-      //   // which we want to do to update configuration
-      //   auto p = name->find('@');
-      //   if (p != std::string::npos)
-      //     name = name->substr(0, p);
-      //   this->_manager.create_volume(name.get(), opts);
-      // }
-      // catch (ResourceAlreadyFetched const&)
-      // { // this can happen, docker seems to be caching volume list:
-      //   // a mount request can trigger a create request without any list
-      // }
-      // catch (elle::Error const& e)
-      // {
-      //   err = elle::sprintf("%s", e);
-      //   ELLE_LOG("%s\n%s", e, e.backtrace());
-      // }
-      // boost::replace_all(err, "\"", "'");
-      // // Since we fetch on demand, we must let create pass
-      // return "{\"Err\": \"" + err + "\"}";
-      // //return "{\"Err\": \"Use 'infinit-volume --create'\"}";
+      auto lock = this->_user.enter(this->_mutex);
+      auto stream = elle::IOStream(data.istreambuf());
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+      std::string err;
+      try
+      {
+        elle::json::Object opts;
+        try
+        {
+          opts = boost::any_cast<elle::json::Object>(json.at("Opts"));
+        }
+        catch(...)
+        {}
+        auto name = optional(json, "Name");
+        if (!name)
+          elle::err("missing 'Name' argument");
+        this->_manager.create_volume(name.get(), opts);
+      }
+      catch (ResourceAlreadyFetched const&)
+      {
+        // This can happen, docker seems to be caching volume list:
+        // a mount request can trigger a create request without any list.
+      }
+      catch (elle::Error const& e)
+      {
+        err = elle::sprintf("%s", e);
+        ELLE_WARN("error creating volume: %s", e);
+      }
+      boost::replace_all(err, "\"", "'");
+      return "{\"Err\": \"" + err + "\"}";
     });
   _server->register_route("/VolumeDriver.Remove", reactor::http::Method::POST,
     [this] ROUTE_SIG {
