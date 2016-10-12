@@ -9,7 +9,10 @@
 #include <elle/serialization/json.hh>
 #include <elle/json/exceptions.hh>
 
+#include <reactor/network/unix-domain-socket.hh>
+
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/MonitoringServer.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Configuration.hh>
@@ -64,7 +67,7 @@ COMMAND(create)
     + (args.count("kouncil") ? 1 : 0)
   ;
   if (overlays > 1)
-    throw CommandLineError("Only one overlay type must be specified");
+    throw CommandLineError("only one overlay type must be specified");
   if (args.count("kalimero"))
   {
     overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
@@ -296,7 +299,7 @@ COMMAND(update)
       if (group && !args.count("mountpoint"))
       {
         throw CommandLineError(
-          "Must specify mountpoint of volume on "
+          "must specify mountpoint of volume on "
           "network \"%s\" to edit group admins", network.name);
       }
     };
@@ -844,6 +847,46 @@ COMMAND(stats)
          << "}" << std::endl;
 }
 
+COMMAND(monitor)
+{
+  auto owner = self_user(ifnt, args);
+  std::string network_name = mandatory(args, "name", "network_name");
+  auto network = ifnt.network_get(network_name, owner);
+  auto s_path = network.monitoring_socket_path(owner);
+  if (!boost::filesystem::exists(s_path))
+    elle::err("network not running or monitoring disabled");
+  reactor::network::UnixDomainSocket socket(s_path);
+  using Monitoring = infinit::model::MonitoringServer;
+  using Query = infinit::model::MonitoringServer::MonitorQuery::Query;
+  bool done_query = false;
+  auto do_query = [&] (Query query_val)
+    {
+      done_query = true;
+      auto query = Monitoring::MonitorQuery(query_val);
+      elle::serialization::json::serialize(query, socket, false, false);
+      auto res = elle::serialization::json::deserialize<std::unique_ptr<
+        Monitoring::MonitorResponse>>(socket, false);
+      if (script_mode)
+        elle::serialization::json::serialize(res, *get_output(args), false);
+      else
+        res->pretty_print(std::cout);
+    };
+  if (flag(args, "peers"))
+    do_query(Query::Peers);
+  if (flag(args, "redundancy"))
+    do_query(Query::Redundancy);
+  if (flag(args, "overlay"))
+    do_query(Query::Overlay);
+  if (flag(args, "consensus"))
+    do_query(Query::Consensus);
+  if (!done_query)
+  {
+    throw CommandLineError(
+      "specify either \"--peers\", \"--redundancy\", \"--overlay\" or "
+      "\"--consensus\"");
+  }
+}
+
 int
 main(int argc, char** argv)
 {
@@ -1087,6 +1130,19 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "network name" },
       },
+    },
+    {
+      "monitor",
+      "Get information about a running network",
+      &monitor,
+      "--name NETWORK",
+      {
+        { "name,n", value<std::string>(), "network name" },
+        { "peers", bool_switch(), "list connected peers" },
+        { "redundancy", bool_switch(), "describe data redundancy" },
+        { "overlay", bool_switch(), "list overlay network information" },
+        { "consensus", bool_switch(), "list consensus information" },
+      }
     },
   };
   return infinit::main("Infinit network management utility", modes, argc, argv);
