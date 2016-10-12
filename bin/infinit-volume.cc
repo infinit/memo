@@ -77,9 +77,13 @@ COMMAND(create)
       auto model = network.run(
         owner, mo, false, infinit::compatibility_version);
       if (discovery)
+      {
+        ELLE_LOG_SCOPE("register volume in the network");
         model->service_add("volumes", name, volume);
+      }
       if (root)
       {
+        ELLE_LOG_SCOPE("create root directory");
         auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
           infinit::filesystem::model = std::move(model),
           infinit::filesystem::volume_name = name,
