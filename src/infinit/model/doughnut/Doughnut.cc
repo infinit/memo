@@ -15,6 +15,7 @@
 #include <reactor/Scope.hh>
 #include <reactor/exception.hh>
 #include <reactor/network/utp-server.hh>
+#include <reactor/network/unix-domain-server.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
@@ -33,6 +34,7 @@
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/doughnut/conflict/UBUpserter.hh>
+#include <infinit/model/MonitoringServer.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
@@ -47,18 +49,20 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Doughnut::Doughnut(Address id,
-                         std::shared_ptr<cryptography::rsa::KeyPair> keys,
-                         std::shared_ptr<cryptography::rsa::PublicKey> owner,
-                         Passport passport,
-                         ConsensusBuilder consensus,
-                         OverlayBuilder overlay_builder,
-                         boost::optional<int> port,
-                         boost::optional<boost::asio::ip::address> listen_address,
-                         std::unique_ptr<storage::Storage> storage,
-                         boost::optional<elle::Version> version,
-                         AdminKeys const& admin_keys,
-                         boost::optional<std::string> rdv_host)
+      Doughnut::Doughnut(
+        Address id,
+        std::shared_ptr<cryptography::rsa::KeyPair> keys,
+        std::shared_ptr<cryptography::rsa::PublicKey> owner,
+        Passport passport,
+        ConsensusBuilder consensus,
+        OverlayBuilder overlay_builder,
+        boost::optional<int> port,
+        boost::optional<boost::asio::ip::address> listen_address,
+        std::unique_ptr<storage::Storage> storage,
+        boost::optional<elle::Version> version,
+        AdminKeys const& admin_keys,
+        boost::optional<std::string> rdv_host,
+        boost::optional<boost::filesystem::path> monitoring_socket_path)
         : Model(std::move(version))
         , _id(std::move(id))
         , _keys(keys)
@@ -78,6 +82,26 @@ namespace infinit
       {
         if (this->_local)
           this->_local->initialize();
+        if (monitoring_socket_path)
+        {
+          auto const& m_path = monitoring_socket_path.get();
+          if (!boost::filesystem::exists(m_path))
+          {
+            auto unix_domain_server =
+              elle::make_unique<reactor::network::UnixDomainServer>();
+            if (!boost::filesystem::exists(m_path.parent_path()))
+              boost::filesystem::create_directories(m_path.parent_path());
+            unix_domain_server->listen(m_path);
+            this->_monitoring_server.reset(
+              new MonitoringServer(std::move(unix_domain_server), *this));
+            ELLE_DEBUG("monitoring server listening on %s", m_path);
+          }
+          else
+          {
+            ELLE_WARN(
+              "unable to monitor, socket already present at: %s", m_path);
+          }
+        }
       }
 
       template<typename ConflictResolver, typename F, typename FF, typename... Args>
@@ -122,19 +146,21 @@ namespace infinit
           }
       }
 
-      Doughnut::Doughnut(Address id,
-                         std::string const& name,
-                         std::shared_ptr<cryptography::rsa::KeyPair> keys,
-                         std::shared_ptr<cryptography::rsa::PublicKey> owner,
-                         Passport passport,
-                         ConsensusBuilder consensus,
-                         OverlayBuilder overlay_builder,
-                         boost::optional<int> port,
-                         boost::optional<boost::asio::ip::address> listen_address,
-                         std::unique_ptr<storage::Storage> storage,
-                         boost::optional<elle::Version> version,
-                         AdminKeys const& admin_keys,
-                         boost::optional<std::string> rdv_host)
+      Doughnut::Doughnut(
+        Address id,
+        std::string const& name,
+        std::shared_ptr<cryptography::rsa::KeyPair> keys,
+        std::shared_ptr<cryptography::rsa::PublicKey> owner,
+        Passport passport,
+        ConsensusBuilder consensus,
+        OverlayBuilder overlay_builder,
+        boost::optional<int> port,
+        boost::optional<boost::asio::ip::address> listen_address,
+        std::unique_ptr<storage::Storage> storage,
+        boost::optional<elle::Version> version,
+        AdminKeys const& admin_keys,
+        boost::optional<std::string> rdv_host,
+        boost::optional<boost::filesystem::path> monitoring_socket_path)
         : Doughnut(std::move(id),
                    std::move(keys),
                    std::move(owner),
@@ -146,7 +172,8 @@ namespace infinit
                    std::move(storage),
                    std::move(version),
                    admin_keys,
-                   std::move(rdv_host))
+                   std::move(rdv_host),
+                   std::move(monitoring_socket_path))
       {
         auto check_user_blocks = [name, this]
           {
@@ -491,7 +518,8 @@ namespace infinit
         boost::optional<elle::Version> version,
         boost::optional<int> port_,
         boost::optional<boost::asio::ip::address> listen_address,
-        boost::optional<std::string> rdv_host)
+        boost::optional<std::string> rdv_host,
+        boost::optional<boost::filesystem::path> monitoring_socket_path)
       {
         Doughnut::ConsensusBuilder consensus =
           [&] (Doughnut& dht)
@@ -547,7 +575,8 @@ namespace infinit
             std::move(storage),
             version ? version.get() : this->version,
             admin_keys,
-            std::move(rdv_host));
+            std::move(rdv_host),
+            std::move(monitoring_socket_path));
         }
         else
         {
@@ -564,7 +593,8 @@ namespace infinit
             std::move(storage),
             version ? version.get() : this->version,
             admin_keys,
-            std::move(rdv_host));
+            std::move(rdv_host),
+            std::move(monitoring_socket_path));
         }
         return dht;
       }

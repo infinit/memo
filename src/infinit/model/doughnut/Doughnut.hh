@@ -26,6 +26,8 @@ namespace infinit
 {
   namespace model
   {
+    class MonitoringServer;
+
     namespace doughnut
     {
       namespace bmi = boost::multi_index;
@@ -56,31 +58,35 @@ namespace infinit
           OverlayBuilder;
         typedef std::function<
           std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;
-        Doughnut(Address id,
-                 std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
-                 std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
-                 Passport passport,
-                 ConsensusBuilder consensus,
-                 OverlayBuilder overlay_builder,
-                 boost::optional<int> port,
-                 boost::optional<boost::asio::ip::address> listen_address,
-                 std::unique_ptr<storage::Storage> local,
-                 boost::optional<elle::Version> version = {},
-                 AdminKeys const& admin_keys = {},
-                 boost::optional<std::string> rdv_host = {});
-        Doughnut(Address id,
-                 std::string const& name,
-                 std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
-                 std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
-                 Passport passport,
-                 ConsensusBuilder consensus,
-                 OverlayBuilder overlay_builder,
-                 boost::optional<int> port,
-                 boost::optional<boost::asio::ip::address> listen_address,
-                 std::unique_ptr<storage::Storage> local,
-                 boost::optional<elle::Version> version = {},
-                 AdminKeys const& admin_keys = {},
-                 boost::optional<std::string> rdv_host = {});
+        Doughnut(
+          Address id,
+          std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
+          std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
+          Passport passport,
+          ConsensusBuilder consensus,
+          OverlayBuilder overlay_builder,
+          boost::optional<int> port,
+          boost::optional<boost::asio::ip::address> listen_address,
+          std::unique_ptr<storage::Storage> local,
+          boost::optional<elle::Version> version = {},
+          AdminKeys const& admin_keys = {},
+          boost::optional<std::string> rdv_host = {},
+          boost::optional<boost::filesystem::path> monitoring_socket_path = {});
+        Doughnut(
+          Address id,
+          std::string const& name,
+          std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
+          std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
+          Passport passport,
+          ConsensusBuilder consensus,
+          OverlayBuilder overlay_builder,
+          boost::optional<int> port,
+          boost::optional<boost::asio::ip::address> listen_address,
+          std::unique_ptr<storage::Storage> local,
+          boost::optional<elle::Version> version = {},
+          AdminKeys const& admin_keys = {},
+          boost::optional<std::string> rdv_host = {},
+          boost::optional<boost::filesystem::path> monitoring_socket_path = {});
         ~Doughnut();
 
       /*-----.
@@ -110,7 +116,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PublicKey>, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
         ELLE_ATTRIBUTE_RX(AdminKeys, admin_keys);
-        ELLE_ATTRIBUTE_R(std::unique_ptr<consensus::Consensus>, consensus)
+        ELLE_ATTRIBUTE_RX(std::unique_ptr<consensus::Consensus>, consensus)
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
         ELLE_ATTRIBUTE_RX(Dock, dock);
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
@@ -185,6 +191,7 @@ namespace infinit
         void
         _remove(Address address, blocks::RemoveSignature rs) override;
         friend class Local;
+        ELLE_ATTRIBUTE(std::unique_ptr<MonitoringServer>, monitoring_server);
       };
 
       struct Configuration:
@@ -223,18 +230,20 @@ namespace infinit
         make(bool client,
              boost::filesystem::path const& p) override;
         std::unique_ptr<Doughnut>
-        make(bool client,
-             boost::filesystem::path const& p,
-             bool async = false,
-             bool cache = false,
-             boost::optional<int> cach_size = {},
-             boost::optional<std::chrono::seconds> cache_ttl = {},
-             boost::optional<std::chrono::seconds> cache_invalidation = {},
-             boost::optional<uint64_t> disk_cache_size = {},
-             boost::optional<elle::Version> version = {},
-             boost::optional<int> port = {},
-             boost::optional<boost::asio::ip::address> listen_address = {},
-             boost::optional<std::string> rdv_host = {});
+        make(
+          bool client,
+          boost::filesystem::path const& p,
+          bool async = false,
+          bool cache = false,
+          boost::optional<int> cach_size = {},
+          boost::optional<std::chrono::seconds> cache_ttl = {},
+          boost::optional<std::chrono::seconds> cache_invalidation = {},
+          boost::optional<uint64_t> disk_cache_size = {},
+          boost::optional<elle::Version> version = {},
+          boost::optional<int> port = {},
+          boost::optional<boost::asio::ip::address> listen_address = {},
+          boost::optional<std::string> rdv_host = {},
+          boost::optional<boost::filesystem::path> monitoring_socket_path = {});
       };
 
       std::string
