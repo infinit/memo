@@ -123,6 +123,17 @@ namespace infinit
       | Peer |
       `-----*/
 
+      overlay::Overlay::Member
+      Dock::evict_peer(Address id)
+      {
+        auto it = this->_peer_cache.find(id);
+        if (it == this->_peer_cache.end())
+          elle::err("no such peer in cache: %f", id);
+        auto res = it->second;
+        this->_peer_cache.erase(id);
+        return res;
+      }
+
       overlay::Overlay::WeakMember
       Dock::make_peer(NodeLocation loc,
                       boost::optional<EndpointsRefetcher> refetcher)
