@@ -210,12 +210,17 @@ ELLE_TEST_SCHEDULED(
 
 ELLE_TEST_SUITE()
 {
+  elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
+  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "3", 1);
   auto& master = boost::unit_test::framework::master_test_suite();
   auto const kelips_builder =
     [] (Doughnut& dht, std::shared_ptr<Local> local)
     {
+      auto conf = kelips::Configuration();
+      conf.query_get_retries = 4;
+      conf.query_timeout_ms = 500;
       return elle::make_unique<kelips::Node>(
-        kelips::Configuration(), local, &dht);
+        conf, local, &dht);
     };
   auto const kouncil_builder =
     [] (Doughnut& dht, std::shared_ptr<Local> local)
@@ -237,11 +242,11 @@ ELLE_TEST_SUITE()
     Name->add(BOOST_TEST_CASE(dead_peer_anonymous), 0, valgrind(5));    \
     auto discover_endpoints =                                           \
       std::bind(::discover_endpoints, Name##_builder, false);           \
-    Name->add(BOOST_TEST_CASE(discover_endpoints), 0, valgrind(5));     \
+    Name->add(BOOST_TEST_CASE(discover_endpoints), 0, valgrind(10));     \
     auto discover_endpoints_anonymous =                                 \
       std::bind(::discover_endpoints, Name##_builder, true);            \
     Name->add(BOOST_TEST_CASE(                                          \
-                discover_endpoints_anonymous), 0, valgrind(5));         \
+                discover_endpoints_anonymous), 0, valgrind(10));         \
   }
   OVERLAY(kelips);
   OVERLAY(kouncil);
