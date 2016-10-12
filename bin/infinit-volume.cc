@@ -174,40 +174,66 @@ COMMAND(delete_)
 COMMAND(fetch)
 {
   auto owner = self_user(ifnt, args);
-  auto network_name_ = optional(args, "network");
-  if (optional(args, "name"))
+  auto name = optional(args, "name");
+  auto service = flag(args, "service");
+  if (service)
   {
-    auto name = volume_name(args, owner);
-    auto desc = beyond_fetch<infinit::Volume>("volume", name);
-    ifnt.volume_save(std::move(desc));
-  }
-  else if (network_name_) // Fetch all networks for network.
-  {
-    std::string network_name = ifnt.qualified_name(network_name_.get(), owner);
-    auto res = beyond_fetch<
-      std::unordered_map<std::string, std::vector<infinit::Volume>>>(
-        elle::sprintf("networks/%s/volumes", network_name),
-        "volumes for network",
-        network_name);
-    for (auto const& volume: res["volumes"])
-      ifnt.volume_save(std::move(volume));
-  }
-  else // Fetch all networks for owner.
-  {
-    auto res = beyond_fetch<
-      std::unordered_map<std::string, std::vector<infinit::Volume>>>(
-        elle::sprintf("users/%s/volumes", owner.name),
-        "volumes for user",
-        owner.name,
-        owner);
-    for (auto const& volume: res["volumes"])
-    {
-      try
+    std::string network_name =
+      ifnt.qualified_name(mandatory(args, "network"), owner);
+    auto net = ifnt.network_get(network_name, owner, true);
+    auto dht = net.run(owner);
+    auto services = dht->services();
+    auto volumes = services.find("volumes");
+    if (volumes != services.end())
+      for (auto volume: volumes->second)
       {
-        ifnt.volume_save(std::move(volume));
+        if (name && ifnt.qualified_name(name.get(), owner) != volume.first)
+          continue;
+        else if (ifnt.volume_has(volume.first))
+          continue;
+        auto v = elle::serialization::binary::deserialize<infinit::Volume>(
+          dht->fetch(volume.second)->data());
+        ifnt.volume_save(v);
+        report_saved("volume", v.name);
       }
-      catch (ResourceAlreadyFetched const& error)
+  }
+  else
+  {
+    auto network_name_ = optional(args, "network");
+    if (name)
+    {
+      auto name = volume_name(args, owner);
+      auto desc = beyond_fetch<infinit::Volume>("volume", name);
+      ifnt.volume_save(std::move(desc));
+    }
+    else if (network_name_) // Fetch all networks for network.
+    {
+      std::string network_name = ifnt.qualified_name(network_name_.get(), owner);
+      auto res = beyond_fetch<
+        std::unordered_map<std::string, std::vector<infinit::Volume>>>(
+          elle::sprintf("networks/%s/volumes", network_name),
+          "volumes for network",
+          network_name);
+      for (auto const& volume: res["volumes"])
+        ifnt.volume_save(std::move(volume));
+    }
+    else // Fetch all networks for owner.
+    {
+      auto res = beyond_fetch<
+        std::unordered_map<std::string, std::vector<infinit::Volume>>>(
+          elle::sprintf("users/%s/volumes", owner.name),
+          "volumes for user",
+          owner.name,
+          owner);
+      for (auto const& volume: res["volumes"])
       {
+        try
+        {
+          ifnt.volume_save(std::move(volume));
+        }
+        catch (ResourceAlreadyFetched const& error)
+        {
+        }
       }
     }
   }
@@ -1172,6 +1198,8 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "volume to fetch (optional)" },
         { "network", value<std::string>(),
           "network to fetch all volumes for (optional)" },
+        { "service", value<bool>()->implicit_value(true, "true"),
+          "fetch volume from the network, not beyond" },
       },
     },
     {

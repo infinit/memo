@@ -325,6 +325,13 @@ report_imported(std::string const& type, std::string const& name)
 
 inline
 void
+report_saved(std::string const& type, std::string const& name)
+{
+  report_action("saved", type, name);
+}
+
+inline
+void
 report_action_output(std::ostream& output,
                      std::string const& action,
                      std::string const& type,
@@ -1464,8 +1471,9 @@ namespace infinit
 
   inline
   void
-  MountOptions::to_commandline(std::vector<std::string>& arguments,
-                               std::unordered_map<std::string, std::string>& env) const
+  MountOptions::to_commandline(
+    std::vector<std::string>& arguments,
+    std::unordered_map<std::string, std::string>& env) const
   {
     if (rdv)
       env.insert(std::make_pair("INFINIT_RDV", rdv.get()));
@@ -2214,6 +2222,13 @@ namespace infinit
         throw elle::Error(
           elle::sprintf("storage \"%s\" does not exist", name));
       }
+    }
+
+    bool
+    volume_has(std::string const& name)
+    {
+      boost::filesystem::ifstream f;
+      return exists(this->_volume_path(name));
     }
 
     Volume
