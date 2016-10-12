@@ -3,8 +3,8 @@
 # include <elle/json/json.hh>
 # include <elle/Printable.hh>
 
-# include <reactor/network/Server.hh>
-# include <reactor/network/Socket.hh>
+# include <reactor/network/server.hh>
+# include <reactor/network/socket.hh>
 
 # include <infinit/model/doughnut/fwd.hh>
 # include <infinit/serialization.hh>
