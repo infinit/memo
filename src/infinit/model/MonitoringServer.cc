@@ -225,7 +225,7 @@ namespace infinit
 #ifdef __clang__
 # define CL(a) std::string((a).name())
 #else
-# define CL(a) (a)
+# define CL(a) (a)
 #endif
 #define RET(a) return elle::sprintf("%s", a)
       if (CL(any.type()) == CL(typeid(std::string)))
