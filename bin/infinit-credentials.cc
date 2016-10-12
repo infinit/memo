@@ -261,7 +261,7 @@ main(int argc, char** argv)
   using boost::program_options::value;
   Mode::OptionsDescription services_options("Services");
   services_options.add_options()
-    ("aws", "Amazon Web Services account credentials")
+    ("aws", "Amazon Web Services (or S3 compatible) credentials")
     ("gcs", "Google Cloud Storage credentials")
     ;
   Mode::OptionsDescription hidden_service_options("Hidden credential types");
