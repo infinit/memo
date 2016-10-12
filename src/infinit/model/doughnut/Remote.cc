@@ -89,6 +89,9 @@ namespace infinit
       | Networking |
       `-----------*/
 
+      static void hold_remote(overlay::Overlay::Member)
+      {}
+
       void
       Remote::_connect()
       {
@@ -188,9 +191,12 @@ namespace infinit
                 ELLE_ASSERT(this->_channels);
                 ELLE_TRACE("%s: serve RPCs", this)
                   this->_rpc_server.serve(*this->_channels);
-                ELLE_TRACE("%s: connection ended, reconnect", this);
+                ELLE_TRACE("%s: connection ended, evicting", this);
+                auto self = this->doughnut().dock().evict_peer(this->id());
                 ++this->_reconnection_id;
                 this->_connected.close();
+                reactor::run_later("remote holder", std::bind(hold_remote, self));
+                return;
               }
             }));
       }
