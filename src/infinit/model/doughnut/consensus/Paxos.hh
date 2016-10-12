@@ -384,6 +384,15 @@ namespace infinit
           std::unique_ptr<Consensus::Stat>
           stat(Address const& address) override;
 
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+        public:
+          std::string
+          redundancy() override;
+          elle::json::Object
+          information() override;
+
         /*--------------.
         | Configuration |
         `--------------*/

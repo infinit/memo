@@ -1897,6 +1897,25 @@ namespace infinit
           return Super::stat(address);
         }
 
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+
+        std::string
+        Paxos::redundancy()
+        {
+          return elle::sprintf("replication factor: %s", this->factor());
+        }
+
+        elle::json::Object
+        Paxos::information()
+        {
+          elle::json::Object res;
+          res["type"] = "paxos";
+          res["node_timeout"] = elle::sprintf("%s", this->node_timeout());
+          return res;
+        }
+
         /*--------------.
         | Configuration |
         `--------------*/

@@ -354,6 +354,22 @@ namespace infinit
                                           listen_address);
         }
 
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+
+        std::string
+        Consensus::redundancy()
+        {
+          return "none";
+        }
+
+        elle::json::Object
+        Consensus::information()
+        {
+          return {};
+        }
+
         /*----------.
         | Printable |
         `----------*/

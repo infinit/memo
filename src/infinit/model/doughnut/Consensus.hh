@@ -104,6 +104,18 @@ namespace infinit
                      boost::optional<boost::asio::ip::address> listen_address,
                      std::unique_ptr<storage::Storage> storage);
 
+
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+        public:
+          virtual
+          std::string
+          redundancy();
+          virtual
+          elle::json::Object
+          information();
+
         /*----------.
         | Printable |
         `----------*/
