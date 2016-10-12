@@ -398,7 +398,7 @@ public:
   ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_level);
   ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_path);
   ELLE_ATTRIBUTE_RW(std::string, default_user);
-  ELLE_ATTRIBUTE_RW(std::string, default_network);
+  ELLE_ATTRIBUTE_RW(boost::optional<std::string>, default_network);
   ELLE_ATTRIBUTE_RW(std::vector<std::string>, advertise_host);
   ELLE_ATTRIBUTE_RW(bool, fetch);
   ELLE_ATTRIBUTE_RW(bool, push);
@@ -748,7 +748,7 @@ MountManager::create_network(elle::json::Object const& options,
 {
   auto netname = optional(options, "network");
   if (!netname)
-    netname = _default_network;
+    netname = this->_default_network;
   ELLE_LOG("Creating network %s", netname);
   int rf = 1;
   auto rfstring = optional(options, "replication-factor");
@@ -1297,9 +1297,7 @@ fill_manager_options(MountManager& manager,
   manager.fetch(option_fetch(args));
   manager.push(option_push(args));
   manager.default_user(self_user_name(args));
-  auto default_network = optional(args, "default-network");
-  if (default_network)
-    manager.default_network(*default_network);
+  manager.default_network(optional(args, "default-network"));
   auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
   if (advertise)
     manager.advertise_host(*advertise);
@@ -1927,8 +1925,8 @@ main(int argc, char** argv)
       "Default root path for all mounts\n(default: %s/infinit/filesystem/mnt)",
       elle::os::getenv("XDG_RUNTIME_DIR",
                        elle::sprintf("/run/user/%s", getuid()))) },
-    // { "default-network", value<std::string>(),
-    //   "Default network for volume creation" },
+    { "default-network", value<std::string>(),
+      "Default network for volume creation" },
     { "advertise-host", value<std::vector<std::string>>()->multitoken(),
       "Advertise given hostname as an extra endpoint when running volumes" },
     // { "mount,m", value<std::vector<std::string>>()->multitoken(),
