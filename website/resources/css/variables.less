@@ -45,7 +45,42 @@
   }
 }
 
- [class^="icon-"]:before, [class*=" icon-"]:before {
+.animation(@animation, @curve, @repeat) {
+    -webkit-animation: @arguments;
+    -moz-animation: @arguments;
+    animation: @arguments;
+}
+
+.animationFillMode(@mode) {
+  -webkit-animation-fill-mode: @mode;
+  -moz-animation-fill-mode: @mode;
+  animation-fill-mode: @mode;
+}
+
+.animationDuration(@duration) {
+  -webkit-animation-duration: @duration;
+  -moz-animation-duration: @duration;
+  animation-duration: @duration;
+}
+
+.animationDelay(@delay) {
+  -webkit-animation-delay: @delay;
+  -moz-animation-delay: @delay;
+  animation-delay: @delay;
+}
+
+.grayScaleOn() {
+  filter: grayscale(100%);
+  -webkit-filter: grayscale(1);
+}
+
+.grayScaleOff() {
+  filter: grayscale(0%);
+  -webkit-filter: grayscale(0);
+}
+
+
+[class^="icon-"]:before, [class*=" icon-"]:before {
   font-family: "icons";
   font-style: normal;
   font-weight: normal;
