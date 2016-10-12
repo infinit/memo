@@ -1,5 +1,8 @@
 #include <elle/test.hh>
 
+#include <reactor/network/udp-socket.hh>
+#include <reactor/network/buffer.hh>
+
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/overlay/kouncil/Kouncil.hh>
@@ -23,52 +26,39 @@ public:
     , _thread(new reactor::Thread(elle::sprintf("%s server", this),
                                   std::bind(&UTPInstrument::_serve, this)))
   {
-    this->server.listen(0);
+    this->server.bind({});
     this->_transmission.open();
   }
 
-  reactor::network::UTPServer server;
+  reactor::network::UDPSocket server;
   ELLE_ATTRIBUTE_RX(reactor::Barrier, transmission);
 
 private:
   ELLE_ATTRIBUTE(infinit::model::Endpoint, endpoint);
+  ELLE_ATTRIBUTE(infinit::model::Endpoint, client_endpoint);
   void
   _serve()
   {
-    elle::With<reactor::Scope>() << [this] (reactor::Scope& s)
+    char buf[10000];
+    while (true)
     {
-      while (true)
+      try
       {
-        auto socket = std::shared_ptr<reactor::network::UTPSocket>(
-          this->server.accept().release());
-        auto target = std::make_shared<reactor::network::UTPSocket>(
-          server, "127.0.0.1", this->_endpoint.port());
-        auto transmit =
-          [this] (std::shared_ptr<reactor::network::UTPSocket> from,
-                  std::shared_ptr<reactor::network::UTPSocket> to)
-          {
-            try
-            {
-              while (true)
-              {
-                auto b = from->read_some(256);
-                reactor::wait(this->_transmission);
-                to->write(b);
-              }
-            }
-            catch (reactor::network::Exception const&)
-            {
-              // FIXME: stop listening
-            }
-          };
-        s.run_background(
-          elle::sprintf("%s: forward", this),
-          std::bind(transmit, socket, target));
-        s.run_background(
-          elle::sprintf("%s: backward", this),
-          std::bind(transmit, target, socket));
+        reactor::network::UDPSocket::EndPoint ep;
+        auto sz = server.receive_from(reactor::network::Buffer(buf, 10000), ep);
+        reactor::wait(_transmission);
+        if (ep.port() != _endpoint.port())
+        {
+          _client_endpoint = ep;
+          server.send_to(reactor::network::Buffer(buf, sz), _endpoint.udp());
+        }
+        else
+          server.send_to(reactor::network::Buffer(buf, sz), _client_endpoint.udp());
       }
-    };
+      catch (reactor::network::Exception const& e)
+      {
+      }
+    }
   }
 
   ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, thread);
