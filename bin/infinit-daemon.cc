@@ -49,15 +49,19 @@ infinit::Infinit ifnt;
 
 struct SystemUser
 {
-  SystemUser(unsigned int uid, unsigned int gid, std::string name, std::string home)
-  : uid(uid)
-  , gid(gid)
-  , name(name)
-  , home(home)
+  SystemUser(unsigned int uid,
+             unsigned int gid,
+             std::string name,
+             std::string home)
+    : uid(uid)
+    , gid(gid)
+    , name(name)
+    , home(home)
   {}
+
   SystemUser(unsigned int uid, boost::optional<std::string> home_ = {})
-  : uid(uid)
-  , gid(0)
+    : uid(uid)
+    , gid(0)
   {
     struct passwd * pwd = getpwuid(uid);
     if (!pwd)
@@ -69,6 +73,7 @@ struct SystemUser
       home = pwd->pw_dir;
     gid = pwd->pw_gid;
   }
+
   SystemUser(std::string const& name, boost::optional<std::string> home_ = {})
   {
     struct passwd * pwd = getpwnam(name.c_str());
@@ -86,10 +91,12 @@ struct SystemUser
   unsigned int gid;
   std::string name;
   std::string home;
-  struct Lock: public reactor::Lock
+
+  struct Lock
+    : public reactor::Lock
   {
     Lock(SystemUser const& su, reactor::Lockable& l)
-    : reactor::Lock(l)
+      : reactor::Lock(l)
     {
       prev_home = elle::os::getenv("INFINIT_HOME", "");
       prev_data_home = elle::os::getenv("INFINIT_DATA_HOME", "");
@@ -103,8 +110,11 @@ struct SystemUser
       elle::setegid(su.gid);
       elle::seteuid(su.uid);
     }
+
     Lock(Lock const& b) = delete;
+
     Lock(Lock && b) = default;
+
     ~Lock()
     {
       if (prev_home.empty())
@@ -116,10 +126,13 @@ struct SystemUser
       elle::seteuid(prev_euid);
       elle::setegid(prev_egid);
     }
+
     std::string prev_home, prev_data_home;
     int prev_euid, prev_egid;
   };
-  Lock enter(reactor::Lockable& l) const
+
+  Lock
+  enter(reactor::Lockable& l) const
   {
     return {*this, l};
   }
@@ -208,8 +221,9 @@ void link_network(std::string const& name,
     boost::replace_all(storagename, "/", "_");
     ELLE_LOG("Creating local storage %s", storagename);
     auto path = infinit::xdg_data_home() / "blocks" / storagename;
-    storage_config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
-      storagename, path.string(), boost::optional<int64_t>());
+    storage_config =
+      elle::make_unique<infinit::storage::FilesystemStorageConfig>(
+        storagename, path.string(), boost::optional<int64_t>());
   }
   else if (storagedesc)
   {
@@ -219,7 +233,7 @@ void link_network(std::string const& name,
     }
     catch (MissingLocalResource const&)
     {
-      throw elle::Error("Storage specification for new storage not implemented");
+      elle::err("storage specification for new storage not implemented");
     }
   }
 
@@ -241,9 +255,11 @@ void link_network(std::string const& name,
   ifnt.network_save(std::move(network), true);
 }
 
-void acquire_network(std::string const& name)
+void
+acquire_network(std::string const& name)
 {
-  infinit::NetworkDescriptor desc = beyond_fetch<infinit::NetworkDescriptor>("network", name);
+  infinit::NetworkDescriptor desc =
+    beyond_fetch<infinit::NetworkDescriptor>("network", name);
   ifnt.network_save(desc);
   try
   {
@@ -256,7 +272,8 @@ void acquire_network(std::string const& name)
   }
 }
 
-void acquire_volume(std::string const& name)
+void
+acquire_volume(std::string const& name)
 {
   auto desc = beyond_fetch<infinit::Volume>("volume", name);
   ifnt.volume_save(desc, true);
@@ -275,7 +292,8 @@ void acquire_volume(std::string const& name)
   }
 }
 
-void acquire_volumes()
+void
+acquire_volumes()
 {
   auto users = ifnt.users_get();
   for (auto const& u: users)
@@ -304,7 +322,6 @@ void acquire_volumes()
     }
   }
 }
-
 
 struct Mount
 {
@@ -339,7 +356,8 @@ struct MountInfo
 class MountManager
 {
 public:
-  MountManager(boost::filesystem::path mount_root = boost::filesystem::temp_directory_path(),
+  MountManager(boost::filesystem::path mount_root =
+                 boost::filesystem::temp_directory_path(),
                std::string mount_substitute = "")
     : _mount_root(mount_root)
     , _mount_substitute(mount_substitute)
@@ -480,7 +498,8 @@ is_mounted(std::string const& path)
   int res = statfs(path.c_str(), &sfs);
   if (res)
     return false;
-  return boost::filesystem::path(path) == boost::filesystem::path(sfs.f_mntonname);
+  return boost::filesystem::path(path) ==
+    boost::filesystem::path(sfs.f_mntonname);
 #else
   throw elle::Error("is_mounted is not implemented");
 #endif
@@ -731,7 +750,6 @@ MountManager::create_network(elle::json::Object const& options,
   if (!netname)
     netname = _default_network;
   ELLE_LOG("Creating network %s", netname);
-
   int rf = 1;
   auto rfstring = optional(options, "replication-factor");
   if (rfstring)
@@ -801,11 +819,11 @@ MountManager::create_volume(std::string const& name,
   }
   auto username = optional(options, "user");
   if (!username)
-    username = _default_user;
+    username = this->_default_user;
   auto user = ifnt.user_get(*username);
   auto netname = optional(options, "network");
   if (!netname)
-    netname = _default_network;
+    netname = this->_default_network;
   auto nname = *netname;
   if (nname.find("/") == nname.npos)
     nname = *username + "/" + nname;
@@ -826,7 +844,6 @@ MountManager::create_volume(std::string const& name,
         return ifnt.network_get(*netname, user, true);
       }
   }());
-
   infinit::MountOptions mo;
   bool fetch = !optional(options, "no-beyond") && this->_fetch;
   bool push = !optional(options, "no-beyond") && this->_push;
@@ -1405,7 +1422,6 @@ _run(boost::program_options::variables_map const& args, bool detach)
   boost::filesystem::remove(sockaddr);
   srv.listen(sockaddr);
   chmod(sockaddr.string().c_str(), 0666);
-
   elle::SafeFinally terminator([&] {
     if (mounter)
       mounter->terminate_now();
@@ -1755,7 +1771,9 @@ DockerVolumePlugin::install(bool tcp,
       res += "]}";
       return res;
     });
-   _server->register_route("/VolumeDriver.Capabilities", reactor::http::Method::POST,
+   _server->register_route(
+     "/VolumeDriver.Capabilities",
+     reactor::http::Method::POST,
      [this] ROUTE_SIG {
        return "{}";
    });
@@ -1885,14 +1903,16 @@ COMMAND(enable_storage)
 {
   auto name = mandatory(args, "name");
   auto hold = flag(args, "hold");
-  std::cout << daemon_command("{\"operation\": \"enable-storage\", \"volume\": \"" + name +  "\""
+  std::cout << daemon_command(
+    "{\"operation\": \"enable-storage\", \"volume\": \"" + name +  "\""
     +",\"hold\": "  + (hold ? "true": "false")   + "}", hold);
 }
 
 COMMAND(disable_storage)
 {
   auto name = mandatory(args, "name");
-  std::cout << daemon_command("{\"operation\": \"disable-storage\", \"volume\": \"" + name +  "\"}");
+  std::cout << daemon_command(
+    "{\"operation\": \"disable-storage\", \"volume\": \"" + name +  "\"}");
 }
 
 int
