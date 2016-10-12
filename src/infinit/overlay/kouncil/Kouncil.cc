@@ -207,7 +207,7 @@ namespace infinit
               {
                 ELLE_TRACE_SCOPE("%s: block %f not found, checking all peers",
                                  this, address);
-                for (auto peer: this->doughnut()->dock().peer_cache())
+                for (auto peer: this->peers())
                 {
                   // FIXME: handle local !
                   if (auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(peer.second))
