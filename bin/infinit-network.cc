@@ -31,6 +31,30 @@ extern "C" int daemon(int, int);
 namespace dht = infinit::model::doughnut;
 
 static
+std::vector<infinit::model::Endpoints>
+parse_peers(std::vector<std::string> const& speers)
+{
+  std::vector<infinit::model::Endpoints> peers;
+  for (auto const& s: speers)
+  {
+    std::vector<std::string> comps;
+    boost::algorithm::split(comps, s, boost::is_any_of(","));
+    infinit::model::Endpoints eps;
+    try
+    {
+      for (auto const& s: comps)
+        eps.emplace_back(s);
+    }
+    catch (elle::Error const& e)
+    {
+      elle::err("Malformed endpoints '%s': %s", s, e);
+    }
+    peers.push_back(eps);
+  }
+  return peers;
+}
+
+static
 std::unique_ptr<infinit::storage::StorageConfig>
 storage_configuration(boost::program_options::variables_map const& args)
 {
@@ -204,6 +228,12 @@ COMMAND(create)
   boost::optional<int> port;
   if (args.count("port"))
     port = args["port"].as<int>();
+  std::vector<infinit::model::Endpoints> peers;
+  if (args.count("peer"))
+  {
+    auto speers = args["peer"].as<std::vector<std::string>>();
+    peers = parse_peers(speers);
+  }
   auto dht =
     elle::make_unique<infinit::model::doughnut::Configuration>(
       infinit::model::Address::random(0), // FIXME
@@ -220,7 +250,8 @@ COMMAND(create)
       owner.name,
       std::move(port),
       version,
-      admin_keys);
+      admin_keys,
+      peers);
   {
     infinit::Network network(ifnt.qualified_name(name, owner), std::move(dht));
     std::unique_ptr<infinit::NetworkDescriptor> desc;
@@ -346,6 +377,12 @@ COMMAND(update)
     }
     changed_admins = true;
   }
+  if (args.count("peer"))
+  {
+    auto speers = args["peer"].as<std::vector<std::string>>();
+    auto peers = parse_peers(speers);
+    dht.peers = peers;
+  }
   std::unique_ptr<infinit::NetworkDescriptor> desc;
   if (args.count("output"))
   {
@@ -415,7 +452,8 @@ COMMAND(fetch)
             u.name,
             d->port,
             desc.version,
-            desc.admin_keys));
+            desc.admin_keys,
+            desc.peers));
         // Update linked network for user.
         ifnt.network_save(u, updated_network, true);
       }
@@ -501,7 +539,8 @@ COMMAND(link_)
       self.name,
       boost::optional<int>(),
       desc.version,
-      desc.admin_keys));
+      desc.admin_keys,
+      desc.peers));
   auto has_output = optional(args, "output");
   auto output = has_output ? get_output(args) : nullptr;
   if (output)
@@ -961,6 +1000,8 @@ main(int argc, char** argv)
           "Set admin users that can read all data" },
         { "admin-rw", value<std::vector<std::string>>()->multitoken(),
           "Set admin users that can read and write all data" },
+        { "peer", value<std::vector<std::string>>()->multitoken(),
+          "List of known node endpoints"}
       },
       {
         consensus_types_options,
@@ -992,6 +1033,8 @@ main(int argc, char** argv)
         { "mountpoint,m", value<std::string>(),
           "Mountpoint of a volume using this network, "
           "required to add admin groups" },
+        { "peer", value<std::vector<std::string>>()->multitoken(),
+          "List of known node endpoints"}
       },
       {},
     },

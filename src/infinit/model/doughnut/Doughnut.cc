@@ -489,7 +489,8 @@ namespace infinit
         boost::optional<std::string> name_,
         boost::optional<int> port_,
         elle::Version version,
-        AdminKeys admin_keys)
+        AdminKeys admin_keys,
+        std::vector<Endpoints> peers)
         : ModelConfig(std::move(storage), std::move(version))
         , id(std::move(id_))
         , consensus(std::move(consensus_))
@@ -500,6 +501,7 @@ namespace infinit
         , name(std::move(name_))
         , port(std::move(port_))
         , admin_keys(std::move(admin_keys))
+        , peers(std::move(peers))
       {}
 
       Configuration::Configuration(elle::serialization::SerializerIn& s)
@@ -523,6 +525,13 @@ namespace infinit
         catch (elle::serialization::Error const&)
         {
         }
+        try
+        {
+          s.serialize("peers", this->peers);
+        }
+        catch (elle::serialization::Error const&)
+        {
+        }
       }
 
       void
@@ -538,6 +547,12 @@ namespace infinit
         s.serialize("name", this->name);
         s.serialize("port", this->port);
         s.serialize("admin_keys", this->admin_keys);
+        try
+        {
+          s.serialize("peers", this->peers);
+        }
+        catch (elle::serialization::Error const&)
+        {}
       }
 
       std::unique_ptr<infinit::model::Model>
@@ -550,7 +565,7 @@ namespace infinit
 
       std::unique_ptr<Doughnut>
       Configuration::make(
-        std::vector<Endpoints> const& hosts,
+        std::vector<Endpoints> const& hosts_,
         bool client,
         boost::filesystem::path const& p,
         bool async,
@@ -562,6 +577,8 @@ namespace infinit
         boost::optional<elle::Version> version,
         boost::optional<int> port_)
       {
+        std::vector<Endpoints> hosts(hosts_);
+        hosts.insert(hosts.end(), this->peers.begin(), this->peers.end());
         Doughnut::ConsensusBuilder consensus =
           [&] (Doughnut& dht)
           {

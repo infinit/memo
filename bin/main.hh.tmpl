@@ -1306,13 +1306,15 @@ namespace infinit
       std::unique_ptr<overlay::Configuration> overlay_,
       cryptography::rsa::PublicKey owner_,
       elle::Version version_,
-      model::doughnut::AdminKeys admin_keys_)
+      model::doughnut::AdminKeys admin_keys_,
+      std::vector<model::Endpoints> peers_)
       : name(std::move(name_))
       , consensus(std::move(consensus_))
       , overlay(std::move(overlay_))
       , owner(std::move(owner_))
       , version(std::move(version_))
       , admin_keys(std::move(admin_keys_))
+      , peers(std::move(peers_))
     {
       check_name(this->name);
     }
@@ -1341,6 +1343,13 @@ namespace infinit
       catch (elle::serialization::Error const&)
       {
       }
+      try
+      {
+        s.serialize("peers", this->peers);
+      }
+      catch (elle::serialization::Error const&)
+      {
+      }
       check_name(this->name);
     }
 
@@ -1351,6 +1360,7 @@ namespace infinit
       , owner(std::move(*network.dht()->owner))
       , version(std::move(network.dht()->version))
       , admin_keys(std::move(network.dht()->admin_keys))
+      , peers(std::move(network.dht()->peers))
     {
       check_name(this->name);
     }
@@ -1362,6 +1372,7 @@ namespace infinit
       , owner(desc.owner)
       , version(desc.version)
       , admin_keys(desc.admin_keys)
+      , peers(desc.peers)
     {}
 
     void
@@ -1387,6 +1398,13 @@ namespace infinit
       catch (elle::serialization::Error const&)
       {
       }
+      try
+      {
+        s.serialize("peers", this->peers);
+      }
+      catch (elle::serialization::Error const&)
+      {
+      }
     }
 
     std::string name;
@@ -1395,6 +1413,7 @@ namespace infinit
     cryptography::rsa::PublicKey owner;
     elle::Version version;
     model::doughnut::AdminKeys admin_keys;
+    std::vector<model::Endpoints> peers;
   };
 
   inline

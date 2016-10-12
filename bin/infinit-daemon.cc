@@ -250,7 +250,8 @@ void link_network(std::string const& name,
       user->name,
       boost::optional<int>(),
       desc.version,
-      desc.admin_keys));
+      desc.admin_keys,
+      std::vector<infinit::model::Endpoints>()));
   ifnt.network_save(*user, network, true);
   ifnt.network_save(std::move(network), true);
 }
@@ -818,7 +819,8 @@ MountManager::create_network(elle::json::Object const& options,
       owner.name,
       port,
       version,
-      infinit::model::doughnut::AdminKeys());
+      infinit::model::doughnut::AdminKeys(),
+      std::vector<infinit::model::Endpoints>());
   auto fullname = ifnt.qualified_name(*netname, owner);
   infinit::Network network(fullname, std::move(dht));
   ifnt.network_save(std::move(network));

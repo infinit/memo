@@ -217,6 +217,7 @@ namespace infinit
         boost::optional<std::string> name;
         boost::optional<int> port;
         AdminKeys admin_keys;
+        std::vector<Endpoints> peers;
 
         Configuration(
           Address id,
@@ -229,7 +230,8 @@ namespace infinit
           boost::optional<std::string> name,
           boost::optional<int> port,
           elle::Version version,
-          AdminKeys admin_keys);
+          AdminKeys admin_keys,
+          std::vector<Endpoints> peers);
         Configuration(Configuration&&) = default;
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
