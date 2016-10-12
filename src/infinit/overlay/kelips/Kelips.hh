@@ -223,6 +223,16 @@ namespace infinit
         virtual
         WeakMember
         _lookup_node(Address address) const override;
+
+      /*-----------.
+      | Monitoring |
+      `-----------*/
+      public:
+        std::vector<std::pair<std::string, std::string>>
+        peer_list() override;
+        elle::json::Object
+        information() override;
+
       private:
         typedef infinit::model::doughnut::Local Local;
         typedef infinit::overlay::Overlay Overlay;

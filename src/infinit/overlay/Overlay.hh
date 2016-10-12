@@ -134,6 +134,17 @@ namespace infinit
       virtual
       elle::json::Json
       query(std::string const& k, boost::optional<std::string> const& v);
+
+    /*-----------.
+    | Monitoring |
+    `-----------*/
+    public:
+      virtual
+      std::vector<std::pair<std::string, std::string>>
+      peer_list();
+      virtual
+      elle::json::Object
+      information();
     };
 
     struct Configuration

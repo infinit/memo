@@ -195,6 +195,22 @@ namespace infinit
     {}
 
     /*-----------.
+    | Monitoring |
+    `-----------*/
+
+    std::vector<std::pair<std::string, std::string>>
+    Overlay::peer_list()
+    {
+      return {};
+    }
+
+    elle::json::Object
+    Overlay::information()
+    {
+      return {};
+    }
+
+    /*-----------.
     | Exceptions |
     `-----------*/
 

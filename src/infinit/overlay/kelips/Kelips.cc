@@ -3772,6 +3772,42 @@ namespace infinit
         return res;
       }
 
+      std::vector<std::pair<std::string, std::string>>
+      Node::peer_list()
+      {
+        std::vector<std::pair<std::string, std::string>> res;
+        for (int i = 0; i < signed(this->_state.contacts.size()); ++i)
+        {
+          auto const& group = this->_state.contacts[i];
+          for (auto const& contact: group)
+          {
+            res.push_back({
+              elle::sprintf("%x", contact.second.address),
+              elle::sprintf("%s", contact.second.validated_endpoint->first)});
+          }
+        }
+        return res;
+      }
+
+      elle::json::Object
+      Node::information()
+      {
+        elle::json::Object res;
+        res["type"] = "kelips";
+        using Protocol = infinit::model::doughnut::Protocol;
+        res["protocol"] =
+          this->_config.rpc_protocol == Protocol::utp ? "utp"
+          : (this->_config.rpc_protocol == Protocol::tcp ? "tcp" : "all");
+        res["group"] = this->_group;
+        elle::json::Object stats;
+        stats["files"] = this->_state.files.size();
+        stats["dropped_puts"] = this->_dropped_puts;
+        stats["dropped_gets"] = this->_dropped_gets;
+        stats["failed_puts"] = this->_failed_puts;
+        res["statistics"] = stats;
+        return res;
+      }
+
       std::ostream&
       operator << (std::ostream& output, Contact const& contact)
       {
