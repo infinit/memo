@@ -2117,14 +2117,17 @@ namespace infinit
     User
     user_get(std::string const& user, bool beyond_fallback = false) const
     {
+      auto const path = this->_user_path(user);
       try
       {
         boost::filesystem::ifstream f;
-        this->_open_read(f, this->_user_path(user), user, "user");
+        this->_open_read(f, path, user, "user");
         return load<User>(f);
       }
       catch (MissingLocalResource const& e)
       {
+        ELLE_TRACE("%s: unable to load user %s from %s",
+                   this, user, this->_user_path(user));
         if (!beyond_fallback)
           throw;
         ELLE_LOG("User %s not found locally, trying on %s", user, beyond(true));
