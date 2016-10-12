@@ -1153,7 +1153,7 @@ namespace infinit
         if (l.id() != Address::null)
         {
           Contact& c = *get_or_make(l.id(), false, l.endpoints());
-          ELLE_DEBUG_SCOPE("send bootstrap to %f", l);
+          ELLE_DEBUG_SCOPE("send bootstrap to %f at %s", l.id(), l.endpoints());
           if (!_config.encrypt || _config.accept_plain)
             send(req, c);
           else
@@ -1165,7 +1165,7 @@ namespace infinit
         }
         else
         {
-          ELLE_DEBUG_SCOPE("send bootstrap to %f", l.endpoints());
+          ELLE_DEBUG_SCOPE("send bootstrap to %s", l.endpoints());
           if (!_config.encrypt || _config.accept_plain)
           {
             for (auto const& ep: l.endpoints())
@@ -1324,7 +1324,7 @@ namespace infinit
             e = c->validated_endpoint->first;
           else
           {
-            if (!c->contacter)
+            if (!c->contacter || c->contacter->done())
             {
               ELLE_DEBUG("Running contacter on %s", address);
               c->contacter.reset(
@@ -3526,6 +3526,9 @@ namespace infinit
         { // we still want the new endpoints
           for (auto const& ep: endpoints)
             endpoints_update(inserted.first->second.endpoints, ep);
+          // Reset validated endpoint so that contacter is re-run
+          if (!endpoints.empty())
+            inserted.first->second.validated_endpoint.reset();
         }
         return &inserted.first->second;
       }
