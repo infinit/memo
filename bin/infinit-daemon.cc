@@ -292,37 +292,6 @@ acquire_volume(std::string const& name)
   }
 }
 
-void
-acquire_volumes()
-{
-  auto users = ifnt.users_get();
-  for (auto const& u: users)
-  {
-    if (!u.private_key)
-      continue;
-    auto res = beyond_fetch<
-      std::unordered_map<std::string, std::vector<infinit::Volume>>>(
-        elle::sprintf("users/%s/volumes", u.name),
-        "volumes for user",
-        u.name,
-        u);
-    for (auto const& volume: res["volumes"])
-    {
-      try
-      {
-        acquire_volume(volume.name);
-      }
-      catch (ResourceAlreadyFetched const& error)
-      {
-      }
-      catch (elle::Error const& e)
-      {
-        ELLE_LOG("failed to acquire %s: %s", volume.name, e);
-      }
-    }
-  }
-}
-
 struct Mount
 {
   std::unique_ptr<elle::system::Process> process;
@@ -393,6 +362,8 @@ public:
   void
   update_network(infinit::Network& network,
                  elle::json::Object const& options);
+  void
+  acquire_volumes();
   ELLE_ATTRIBUTE_RW(boost::filesystem::path, mount_root);
   ELLE_ATTRIBUTE_RW(std::string, mount_substitute);
   ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_level);
@@ -412,17 +383,80 @@ MountManager::~MountManager()
     this->stop(this->_mounts.begin()->first);
 }
 
+void
+MountManager::acquire_volumes()
+{
+  if (this->_fetch)
+  {
+    auto users = ifnt.users_get();
+    for (auto const& u: users)
+    {
+      if (!u.private_key)
+        continue;
+      try
+      {
+        auto res = beyond_fetch<
+          std::unordered_map<std::string, std::vector<infinit::Volume>>>(
+            elle::sprintf("users/%s/volumes", u.name),
+            "volumes for user",
+            u.name,
+            u);
+        for (auto const& volume: res["volumes"])
+        {
+          try
+          {
+            acquire_volume(volume.name);
+          }
+          catch (ResourceAlreadyFetched const& error)
+          {
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN("failed to acquire %s: %s", volume.name, e);
+          }
+        }
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_WARN("failed to acquire volumes from beyond: %s", e);
+      }
+
+    }
+  }
+  if (this->_default_network)
+  {
+    ELLE_TRACE_SCOPE("%s: list volumes from network %s",
+                     this, this->_default_network.get());
+    auto owner = ifnt.user_get(this->default_user());
+    auto net = ifnt.network_get(this->_default_network.get(), owner, true);
+    auto process = [&]
+    {
+      std::vector<std::string> arguments;
+      static const auto root = elle::system::self_path().parent_path();
+      arguments.push_back((root / "infinit-volume").string());
+      arguments.push_back("--fetch");
+      arguments.push_back("--network");
+      arguments.push_back(net.name);
+      arguments.push_back("--service");
+      arguments.push_back("--as");
+      arguments.push_back(this->default_user());
+      infinit::MountOptions mo;
+      if (this->_fetch)
+        mo.fetch = true;
+      if (this->_push)
+        mo.push = true;
+      std::unordered_map<std::string, std::string> env;
+      mo.to_commandline(arguments, env);
+      return elle::make_unique<elle::system::Process>(arguments, true);
+    }();
+    process->wait();
+  }
+}
+
 std::vector<QName>
 MountManager::list()
 {
-  try
-  {
-    acquire_volumes();
-  }
-  catch (elle::Error const& e)
-  {
-    ELLE_TRACE("Failed to acquire volumes from beyond: %s", e);
-  }
+  this->acquire_volumes();
   std::vector<QName> res;
   for (auto const& volume: ifnt.volumes_get())
     res.emplace_back(volume.name);
@@ -809,14 +843,7 @@ void
 MountManager::create_volume(std::string const& name,
                             elle::json::Object const& options)
 {
-  try
-  {
-    acquire_volumes();
-  }
-  catch (elle::Error const& e)
-  {
-    ELLE_TRACE("Failed to acquire volumes from beyond: %s", e);
-  }
+  this->acquire_volumes();
   auto username = optional(options, "user");
   if (!username)
     username = this->_default_user;
@@ -844,41 +871,42 @@ MountManager::create_volume(std::string const& name,
         return ifnt.network_get(*netname, user, true);
       }
   }());
-  infinit::MountOptions mo;
-  bool fetch = this->_fetch;
-  bool push = this->_push;
-  if (fetch)
-    mo.fetch = true;
-  if (push)
-    mo.push = true;
-  mo.as = username;
-  mo.cache = !optional(options, "no-cache");
-  mo.async = !optional(options, "no-async");
-  std::string qname(name);
-  if (qname.find("/") == qname.npos)
-    qname = *username + "/" + qname;
-  infinit::Volume volume(qname, network.name, mo, {});
-  ifnt.volume_save(volume, true);
-  report_created("volume", qname);
-  if (push)
+  auto process = [&]
+    {
+      std::vector<std::string> arguments;
+      static const auto root = elle::system::self_path().parent_path();
+      arguments.push_back((root / "infinit-volume").string());
+      arguments.push_back("--create");
+      arguments.push_back(name);
+      arguments.push_back("--network");
+      arguments.push_back(network.name);
+      arguments.push_back("--create-root");
+      arguments.push_back("--register-service");
+      infinit::MountOptions mo;
+      if (this->_fetch)
+        mo.fetch = true;
+      if (this->_push)
+        mo.push = true;
+      mo.as = username;
+      std::unordered_map<std::string, std::string> env;
+      mo.to_commandline(arguments, env);
+      return elle::make_unique<elle::system::Process>(arguments, true);
+    }();
+  if (process->wait())
+    elle::err("volume creation failed");
+  auto qname = elle::sprintf("%s/%s", this->_default_user, name);
+  auto volume = ifnt.volume_get(qname);
+  report_created("volume", volume.name);
+  if (this->_push)
   {
     try
     {
-      beyond_push("volume", qname, volume, user);
+      beyond_push("volume", volume.name, volume, user);
     }
     catch (elle::Error const& e)
     {
-      ELLE_WARN("Failed to push %s to beyond: %s", qname, e);
+      ELLE_WARN("failed to push %s to beyond: %s", volume.name, e);
     }
-  }
-  // Create the root block
-  if (elle::os::getenv("INFINIT_NO_ROOT_CREATION", "").empty())
-  {
-    start(qname, mo, true, true, {"--allow-root-creation"});
-    auto mp = mountpoint(qname, true);
-    struct stat st;
-    stat(mp.c_str(), &st);
-    stop(qname);
   }
 }
 
