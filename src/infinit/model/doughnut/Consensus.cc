@@ -367,7 +367,7 @@ namespace infinit
         elle::json::Object
         Consensus::information()
         {
-          return {};
+          return elle::json::Object();
         }
 
         /*----------.

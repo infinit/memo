@@ -207,7 +207,7 @@ namespace infinit
     elle::json::Object
     Overlay::information()
     {
-      return {};
+      return elle::json::Object();
     }
 
     /*-----------.
