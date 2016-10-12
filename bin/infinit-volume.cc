@@ -85,7 +85,7 @@ COMMAND(create)
           infinit::filesystem::volume_name = name,
           infinit::filesystem::allow_root_creation = true);
         struct stat s;
-        fs->path("/j")->stat(&s);
+        fs->path("/")->stat(&s);
       }
     }
     ifnt.volume_save(volume);
