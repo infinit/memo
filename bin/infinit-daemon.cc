@@ -791,7 +791,7 @@ MountManager::create_network(elle::json::Object const& options,
   report_created("network", *netname);
   link_network(fullname, options);
   infinit::NetworkDescriptor desc(ifnt.network_get(*netname, owner, true));
-  if (!optional(options, "no-beyond") && this->_push)
+  if (this->_push)
   {
     try
     {
@@ -845,8 +845,8 @@ MountManager::create_volume(std::string const& name,
       }
   }());
   infinit::MountOptions mo;
-  bool fetch = !optional(options, "no-beyond") && this->_fetch;
-  bool push = !optional(options, "no-beyond") && this->_push;
+  bool fetch = this->_fetch;
+  bool push = this->_push;
   if (fetch)
     mo.fetch = true;
   if (push)
