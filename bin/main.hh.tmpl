@@ -537,12 +537,12 @@ Mode::OptionDescription option_cache_ram_ttl(
 static
 Mode::OptionDescription option_cache_ram_invalidation(
   "cache-ram-invalidation", boost::program_options::value<int>(),
-  "RAM block cache invalidation time in seconds\n(default: 15 seconds)",
+  "RAM block cache invalidation time in\nseconds (default: 15 seconds)",
   {{"cache-invalidation", boost::program_options::value<int>()}});
 static
 Mode::OptionDescription option_cache_disk_size(
   "cache-disk-size", boost::program_options::value<uint64_t>(),
-  "size of disk cache for immutable data in bytes\n(default: 512 MB)",
+  "size of disk cache for immutable data\nin bytes (default: 512 MB)",
   {{"disk-cache-size", boost::program_options::value<uint64_t>()}});
 static
 Mode::OptionDescription option_port_file(
@@ -564,7 +564,7 @@ static
 Mode::OptionDescription option_poll_beyond(
   "fetch-endpoints-interval",
   boost::program_options::value<int>()->default_value(300),
-  "period for repolling endpoints from the hub in seconds\n(default: 300s)");
+  "period for repolling endpoints from the\nHub in seconds (default: 300s)");
 static
 Mode::OptionDescription option_listen_interface(
   "listen", boost::program_options::value<std::string>(),

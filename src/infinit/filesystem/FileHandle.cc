@@ -441,7 +441,8 @@ namespace infinit
                      model::flags::immutable_block, false);
         auto secret = _file._fat[index].second;
         ELLE_TRACE("Fetching %s at %f", index, addr);
-        auto block = fetch_or_die(_model, addr);
+        auto block = fetch_or_die(_model, addr, {},
+                                  this->_file.path() / elle::sprintf("<%f>", addr));
         auto crypted = block->take_data();
         cryptography::SecretKey sk(secret);
         b = std::make_shared<elle::Buffer>(sk.decipher(crypted));
@@ -488,7 +489,7 @@ namespace infinit
           std::unique_ptr<model::blocks::Block> bl;
           try
           {
-            bl = fetch_or_die(_model, addr);
+            bl = fetch_or_die(_model, addr, {}, this->_file.path() / elle::sprintf("<%f>", addr));
           }
           catch (elle::Error const& e)
           {

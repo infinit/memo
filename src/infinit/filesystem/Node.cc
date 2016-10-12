@@ -832,7 +832,7 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: set_permissions(%s)", *this, flags);
       std::pair<bool, bool> perms = parse_flags(flags);
       auto acl = std::dynamic_pointer_cast<model::blocks::ACLBlock>(
-        this->_owner.fetch_or_die(self_address));
+        this->_owner.fetch_or_die(self_address, {}, this->full_path()));
       if (!acl)
         throw rfs::Error(EIO, "Block is not an ACL block");
       // permission check
