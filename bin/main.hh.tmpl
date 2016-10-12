@@ -614,6 +614,11 @@ static
 Mode::OptionDescription option_listen_interface(
   "listen", boost::program_options::value<std::string>(),
   "specify which IP address to listen on (default: all)");
+static
+Mode::OptionDescription option_monitoring(
+  "monitoring",
+  boost::program_options::value<bool>()->default_value(true, "true")->implicit_value(true, "true"),
+  "enable monitoring (default: true)");
 
 class CommandLineSerializer
   : public elle::serialization::SerializerIn
@@ -1125,7 +1130,8 @@ namespace infinit
         boost::optional<uint64_t> disk_cache_size = {},
         boost::optional<elle::Version> version = {},
         boost::optional<int> port = {},
-        boost::optional<boost::asio::ip::address> listen = {})
+        boost::optional<boost::asio::ip::address> listen = {},
+        bool enable_monitoring = true)
     {
       ELLE_LOG("client version: %s", version_describe);
       auto rdv_env = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
@@ -1148,7 +1154,11 @@ namespace infinit
         std::move(version),
         std::move(port),
         std::move(listen),
-        std::move(rdv_host));
+        std::move(rdv_host)
+#ifndef INFINIT_WINDOWS
+        , enable_monitoring ? this->monitoring_socket_path(user) : boost::optional<boost::filesystem::path>()
+#endif
+        );
     }
 
     inline
@@ -1204,6 +1214,18 @@ namespace infinit
         boost::filesystem::remove_all(old_dir / "cache");
       }
       return new_dir;
+    }
+
+    boost::filesystem::path
+    monitoring_socket_path(User const& user) const
+    {
+#ifdef INFINIT_WINDOWS
+      elle::unreachable();
+#else
+      return infinit::xdg_runtime_dir(std::string("/var/tmp")) /
+        "infinit" / "filesystem" / "monitoring" /
+        user.name / elle::sprintf("%s.sock", this->name);
+#endif
     }
 
     void

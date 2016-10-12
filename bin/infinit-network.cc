@@ -680,7 +680,8 @@ COMMAND(run)
     false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, infinit::compatibility_version, port,
-    listen_address);
+    listen_address,
+    flag(args, "monitoring"));
   if (args.count("peer"))
   {
     std::vector<infinit::model::Endpoints> eps;
@@ -1057,6 +1058,7 @@ main(int argc, char** argv)
         option_poll_beyond,
 #ifndef INFINIT_WINDOWS
         { "daemon,d", bool_switch(), "run as a background daemon"},
+        option_monitoring,
 #endif
       },
       {},

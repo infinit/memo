@@ -384,7 +384,8 @@ COMMAND(run)
     mo.cache_disk_size,
     infinit::compatibility_version,
     port,
-    listen_address);
+    listen_address,
+    flag(args, "monitoring"));
   {
     std::vector<infinit::model::Endpoints> eps;
     auto add_peers = [&] (std::vector<std::string> const& peers) {
@@ -1120,6 +1121,7 @@ run_options(RunMode mode)
     { "async", BOOL_IMPLICIT, "use asynchronous write operations" },
 #ifndef INFINIT_WINDOWS
     { "daemon,d", BOOL_IMPLICIT, "run as a background daemon" },
+    option_monitoring,
     { "fuse-option", value<std::vector<std::string>>()->multitoken(),
       "option to pass directly to FUSE" },
 #endif
