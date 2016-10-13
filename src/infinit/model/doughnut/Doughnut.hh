@@ -63,9 +63,11 @@ namespace infinit
                  ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
                  boost::optional<int> port,
+                 boost::optional<boost::asio::ip::address> listen_address,
                  std::unique_ptr<storage::Storage> local,
                  boost::optional<elle::Version> version = {},
-                 AdminKeys const& admin_keys = {});
+                 AdminKeys const& admin_keys = {},
+                 boost::optional<std::string> rdv_host = {});
         Doughnut(Address id,
                  std::string const& name,
                  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
@@ -74,9 +76,11 @@ namespace infinit
                  ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
                  boost::optional<int> port,
+                 boost::optional<boost::asio::ip::address> listen_address,
                  std::unique_ptr<storage::Storage> local,
                  boost::optional<elle::Version> version = {},
-                 AdminKeys const& admin_keys = {});
+                 AdminKeys const& admin_keys = {},
+                 boost::optional<std::string> rdv_host = {});
         ~Doughnut();
 
       /*-----.
@@ -216,12 +220,10 @@ namespace infinit
         serialize(elle::serialization::Serializer& s) override;
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(std::vector<Endpoints> const& hosts,
-             bool client,
+        make(bool client,
              boost::filesystem::path const& p) override;
         std::unique_ptr<Doughnut>
-        make(std::vector<Endpoints> const& hosts,
-             bool client,
+        make(bool client,
              boost::filesystem::path const& p,
              bool async = false,
              bool cache = false,
@@ -230,7 +232,9 @@ namespace infinit
              boost::optional<std::chrono::seconds> cache_invalidation = {},
              boost::optional<uint64_t> disk_cache_size = {},
              boost::optional<elle::Version> version = {},
-             boost::optional<int> port = {});
+             boost::optional<int> port = {},
+             boost::optional<boost::asio::ip::address> listen_address = {},
+             boost::optional<std::string> rdv_host = {});
       };
 
       std::string

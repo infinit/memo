@@ -36,10 +36,6 @@
 #include <reactor/scheduler.hh>
 #include <reactor/thread.hh>
 
-#ifndef INFINIT_WINDOWS
-# include <crash_reporting/CrashReporter.hh>
-#endif
-
 #include <infinit/utility.hh>
 #include <infinit/credentials/AWSCredentials.hh>
 #include <infinit/credentials/OAuthCredentials.hh>
@@ -125,7 +121,7 @@ beyond(bool help = false)
   if (help && !elle::os::inenv("INFINIT_BEYOND"))
     return "the Hub";
 
-  auto static const res = elle::os::getenv("INFINIT_BEYOND", "${beyond_host}");
+  auto res = elle::os::getenv("INFINIT_BEYOND", "${beyond_host}");
   return res;
 }
 
@@ -586,12 +582,12 @@ Mode::OptionDescription option_cache_ram_ttl(
 static
 Mode::OptionDescription option_cache_ram_invalidation(
   "cache-ram-invalidation", boost::program_options::value<int>(),
-  "RAM block cache invalidation time in seconds\n(default: 15 seconds)",
+  "RAM block cache invalidation time in\nseconds (default: 15 seconds)",
   {{"cache-invalidation", boost::program_options::value<int>()}});
 static
 Mode::OptionDescription option_cache_disk_size(
   "cache-disk-size", boost::program_options::value<uint64_t>(),
-  "size of disk cache for immutable data in bytes\n(default: 512 MB)",
+  "size of disk cache for immutable data\nin bytes (default: 512 MB)",
   {{"disk-cache-size", boost::program_options::value<uint64_t>()}});
 static
 Mode::OptionDescription option_port_file(
@@ -609,7 +605,15 @@ static
 Mode::OptionDescription option_disable_mac_utf8(
   "disable-utf-8-conversion", boost::program_options::bool_switch(),
   "disable FUSE conversion of UTF-8 to native format");
-
+static
+Mode::OptionDescription option_poll_beyond(
+  "fetch-endpoints-interval",
+  boost::program_options::value<int>()->default_value(300),
+  "period for repolling endpoints from the\nHub in seconds (default: 300s)");
+static
+Mode::OptionDescription option_listen_interface(
+  "listen", boost::program_options::value<std::string>(),
+  "specify which IP address to listen on (default: all)");
 
 class CommandLineSerializer
   : public elle::serialization::SerializerIn
@@ -1112,7 +1116,6 @@ namespace infinit
 
     std::unique_ptr<model::doughnut::Doughnut>
     run(User const& user,
-        std::vector<infinit::model::Endpoints> const& hosts = {},
         bool client = false,
         bool cache = false,
         boost::optional<int> cache_size = {},
@@ -1121,12 +1124,15 @@ namespace infinit
         bool async_writes = false,
         boost::optional<uint64_t> disk_cache_size = {},
         boost::optional<elle::Version> version = {},
-        boost::optional<int> port = {})
+        boost::optional<int> port = {},
+        boost::optional<boost::asio::ip::address> listen = {})
     {
       ELLE_LOG("client version: %s", version_describe);
-      ELLE_LOG("network endpoints: %s", hosts);
+      auto rdv_env = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
+      boost::optional<std::string> rdv_host;
+      if (!rdv_env.empty())
+        rdv_host = std::move(rdv_env);
       return this->dht()->make(
-        hosts,
         client,
         this->cache_dir(user),
         async_writes,
@@ -1140,7 +1146,9 @@ namespace infinit
           : boost::optional<std::chrono::seconds>(),
         disk_cache_size,
         std::move(version),
-        std::move(port));
+        std::move(port),
+        std::move(listen),
+        std::move(rdv_host));
     }
 
     inline
@@ -1330,6 +1338,7 @@ namespace infinit
     boost::optional<uint64_t> cache_disk_size;
     boost::optional<std::string> mountpoint;
     boost::optional<std::vector<std::string>> peers;
+    boost::optional<int> poll_beyond;
     typedef infinit::serialization_tag serialization_tag;
   };
 
@@ -1342,6 +1351,20 @@ namespace infinit
   {
     if (b)
       a = b.get();
+  }
+
+  template<typename T>
+  void merge(boost::optional<T>& a,
+             boost::optional<T> const& b,
+             boost::program_options::option_description const& o)
+  {
+    if (b)
+    {
+      boost::any def;
+      o.semantic()->apply_default(def);
+      if (b.get() != boost::any_cast<T>(def))
+        a = b;
+    }
   }
 
   template<typename T>
@@ -1374,6 +1397,7 @@ namespace infinit
     infinit::merge(cache_disk_size, b.cache_disk_size);
     infinit::merge(mountpoint, b.mountpoint);
     infinit::merge(peers, b.peers);
+    infinit::merge(poll_beyond, b.poll_beyond);
   }
 
   inline
@@ -1403,6 +1427,9 @@ namespace infinit
                    optional<int>(args, option_cache_ram_invalidation));
     infinit::merge(this->cache_disk_size,
                    optional<uint64_t>(args, option_cache_disk_size));
+    infinit::merge(this->poll_beyond,
+                   optional<int>(args, option_poll_beyond),
+                   option_poll_beyond);
   }
 
   inline
@@ -1435,6 +1462,7 @@ namespace infinit
     if (cache_ram_ttl) {arguments.push_back("--cache-ram-ttl"); arguments.push_back(std::to_string(cache_ram_ttl.get()));}
     if (cache_ram_invalidation) {arguments.push_back("--cache-ram-invalidation"); arguments.push_back(std::to_string(cache_ram_invalidation.get()));}
     if (cache_disk_size) {arguments.push_back("--cache-disk-size"); arguments.push_back(std::to_string(cache_disk_size.get()));}
+    if (poll_beyond && *poll_beyond >0) {arguments.push_back("--poll-hub"); arguments.push_back(std::to_string(poll_beyond.get()));}
     if (mountpoint)
     {
       arguments.push_back("--mountpoint");
@@ -2751,7 +2779,8 @@ DAS_MODEL(
   ,cache_disk_size
   ,mountpoint
   ,as
-  ,peers), DasMountOptions);
+  ,peers
+  ,poll_beyond), DasMountOptions);
 DAS_MODEL_DEFAULT(infinit::MountOptions, DasMountOptions);
 DAS_MODEL_SERIALIZE(infinit::MountOptions);
 
@@ -3375,16 +3404,17 @@ private:
 inline
 void
 beyond_fetch_endpoints(infinit::Network const& network,
-                       infinit::model::NodeLocations& hosts)
+                       infinit::model::NodeLocations& hosts,
+                       bool silent = false)
 {
-  reactor::http::Request r(
-    elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name));
+  auto url = elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name);
+  reactor::http::Request r(url);
   reactor::wait(r);
   if (r.status() != reactor::http::StatusCode::OK)
   {
     throw elle::Error(
-      elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\"",
-                    r.status(), network.name));
+      elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\" at \"%s\"",
+                    r.status(), network.name, url));
   }
   auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
   for (auto const& user: json)
@@ -3409,7 +3439,8 @@ beyond_fetch_endpoints(infinit::Network const& network,
       ELLE_WARN("Exception parsing peer endpoints: %s", e.what());
     }
   }
-  report_action("fetched", "endpoints for", network.name);
+  if (!silent)
+    report_action("fetched", "endpoints for", network.name);
 }
 
 namespace infinit
@@ -3435,11 +3466,11 @@ reactor::Thread::unique_ptr
 make_stat_update_thread(infinit::User const& self,
                         infinit::Network& network,
                         infinit::model::doughnut::Doughnut& model);
-#ifdef INFINIT_MACOSX
-# define SXA_EXTRA ,0
-#else
-# define SXA_EXTRA
-#endif
+reactor::Thread::unique_ptr
+make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
+                        infinit::Network& network,
+                        infinit::overlay::NodeLocations const& locs,
+                        int interval);
 
 static std::string _hub_salt = "@a.Fl$4'x!";
 

@@ -129,6 +129,17 @@ namespace kademlia
   void
   Kademlia::_discover(infinit::model::NodeLocations const&)
   {
+    // Old bootstrap procedure to be adapted:
+    //
+    // for (auto const& ep: this->_config.bootstrap_nodes)
+    // {
+    //   packet::Ping p;
+    //   p.sender = _self;
+    //   // FIXME: handle bootsrap nodes with several endpoints.
+    //   auto first = *ep.begin();
+    //   p.remote_endpoint = Endpoint(first.address(), first.port());
+    //   send(elle::serialization::json::serialize(&p), first.udp());
+    // }
     ELLE_ABORT("unimplemented");
   }
 
@@ -287,15 +298,6 @@ namespace kademlia
       [this] { this->_cleanup();});
     _republisher = elle::make_unique<reactor::Thread>("republisher",
       [this] { this->_republish();});
-    for (auto const& ep: this->_config.bootstrap_nodes)
-    {
-      packet::Ping p;
-      p.sender = _self;
-      // FIXME: handle bootsrap nodes with several endpoints.
-      auto first = *ep.begin();
-      p.remote_endpoint = Endpoint(first.address(), first.port());
-      send(elle::serialization::json::serialize(&p), first.udp());
-    }
     if (_config.wait)
     {
       while (true)
@@ -540,7 +542,7 @@ namespace kademlia
   }
 
   infinit::overlay::Overlay::WeakMember
-  Kademlia::_lookup_node(infinit::model::Address address)
+  Kademlia::_lookup_node(infinit::model::Address address) const
   {
     return Overlay::WeakMember();
   }
@@ -605,7 +607,6 @@ namespace kademlia
   void Configuration::serialize(elle::serialization::Serializer& s)
   {
     s.serialize("port", port);
-    s.serialize("bootstrap_nodes", bootstrap_nodes);
     s.serialize("wait", wait);
     s.serialize("address_size", address_size);
     s.serialize("k", k);
@@ -995,11 +996,9 @@ namespace infinit
 
       std::unique_ptr<infinit::overlay::Overlay>
       Configuration::make(
-        std::vector<Endpoints> const& hosts,
         std::shared_ptr<infinit::model::doughnut::Local> local,
         model::doughnut::Doughnut* doughnut)
       {
-        config.bootstrap_nodes = hosts;
         return elle::make_unique< ::kademlia::Kademlia>(
           config, std::move(local), doughnut);
       }

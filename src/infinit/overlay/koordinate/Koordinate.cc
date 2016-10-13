@@ -60,7 +60,7 @@ namespace infinit
       }
 
       Overlay::WeakMember
-      Koordinate::_lookup_node(model::Address address)
+      Koordinate::_lookup_node(model::Address address) const
       {
         this->_validate();
         return (*begin(this->_backends))->lookup_node(address);

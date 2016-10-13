@@ -884,6 +884,7 @@ def configure(
   cxx_config_tests.lib_path_runtime('../../lib') # For consensus/async test.
   cxx_config_tests += elle.boost.config_test(link = False)
   cxx_config_tests += elle.boost.config_timer(link = False)
+  cxx_config_tests.add_local_include_path('bin')
   if not windows:
     cxx_config_tests.library_add(
       drake.copy(elle.boost.test_dynamic, 'lib', True))
@@ -899,6 +900,8 @@ def configure(
       link = False)
     cxx_config_tests.library_add(
       drake.copy(elle.boost.program_options_dynamic, 'lib', True))
+    cxx_config_tests.library_add(
+      drake.copy(elle.boost.regex_dynamic, 'lib', True))
     cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
     infinit_lib_tests = infinit_lib
     infinit_lib_tests_consensus = infinit_lib
@@ -913,6 +916,7 @@ def configure(
     cxx_config_tests.library_add(elle.boost.filesystem_static)
     cxx_config_tests.library_add(elle.boost.program_options_static)
     cxx_config_tests.library_add(elle.boost.system_static)
+    cxx_config_tests.library_add(elle.boost.regex_static)
     cxx_config_tests.use_whole_archive()
     cxx_config_tests.define('ELLE_SERIALIZATION_USE_DLL')
     cxx_config_tests.define('ELLE_TEST_NO_MEMFRY') # does not cross DLL boundaries
@@ -928,17 +932,18 @@ def configure(
     dokan_lib_tests_consensus = drake.copy(dokan_lib, 'tests/consensus',
                                              strip_prefix = True)
   tests_names = [
+    ('async-conflict', []),
     ('backward-compatibility', []),
+    ('bandwidth', []),
     ('consensus/async', []),
     ('consensus/cache', []),
-    ('bandwidth', []),
     ('doughnut', []),
     ('faith', []),
     ('filesystem', binaries),
+    ('kelips', []),
+    ('overlay', []),
     ('rpc', []),
     ('storage', [aws_lib]),
-    ('async-conflict', []),
-    ('kelips', []),
   ]
   if not windows:
     tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
@@ -951,6 +956,10 @@ def configure(
         tests_extra_libs += [dokan_lib_tests_consensus]
       else:
         tests_extra_libs += [dokan_lib_tests]
+    if test_name == 'kelips':
+      tests_extra_libs += [drake.node('bin/main.cc'), drake.node('bin/version.cc')]
+      if not windows:
+        tests_extra_libs.append(crash_reporter_lib)
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
       [
@@ -980,5 +989,4 @@ def configure(
     else:
       runner = drake.Runner(exe = test, env = env)
     runner.reporting = drake.Runner.Reporting.on_failure
-    if not windows or test_name != 'filesystem':
-      rule_check << runner.status
+    rule_check << runner.status
