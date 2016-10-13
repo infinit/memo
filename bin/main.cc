@@ -1,4 +1,5 @@
 #include <elle/log.hh>
+#include <elle/string/algorithm.hh>
 #include <elle/system/unistd.hh>
 
 #include <reactor/FDStream.hh>
@@ -226,8 +227,25 @@ namespace infinit
               store(parsed, vm);
               notify(vm);
               if (vm.count("compatibility-version"))
+              {
                 compatibility_version = elle::Version::from_string(
                   vm["compatibility-version"].as<std::string>());
+                auto const& deps = infinit::serialization_tag::dependencies;
+                if (deps.find(*compatibility_version) == deps.end())
+                {
+                  std::vector<elle::Version> supported_versions(deps.size());
+                  std::transform(
+                    deps.begin(), deps.end(), supported_versions.begin(),
+                    [] (auto const& kv) { return kv.first; });
+                  std::sort(supported_versions.begin(),
+                            supported_versions.end());
+                  elle::err(
+                    "Unknown compatibility version, possible values are %s.",
+                    elle::join(supported_versions.begin(),
+                               supported_versions.end(), ", "));
+                }
+              }
+
               if (vm.count("version"))
               {
                 std::cout << version_describe << std::endl;
