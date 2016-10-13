@@ -1665,21 +1665,19 @@ COMMAND(sanity)
 COMMAND(networking)
 {
   bool server = args.count("host") == 0;
-  // if (solo)
-  // {
-  //   infinit::networking::Servers servers(args);
-  //   infinit::networking::perfom("127.0.0.1", args);
-  // }
+  auto v = ::version;
+  if (infinit::compatibility_version)
+    v = *infinit::compatibility_version;
   if (server)
   {
-    std::cout << "[Server mode]" << std::endl;
-    infinit::networking::Servers servers(args);
+    elle::fprintf(std::cout, "[Server mode (version: %s)]", v) << std::endl;
+    infinit::networking::Servers servers(args, v);
     reactor::sleep();
   }
   else
   {
-    std::cout << "[Client mode]" << std::endl;
-    infinit::networking::perfom(mandatory<std::string>(args, "host"), args);
+    elle::fprintf(std::cout, "[Client mode (version: %s)]", v) << std::endl;
+    infinit::networking::perfom(mandatory<std::string>(args, "host"), args, v);
   }
 }
 

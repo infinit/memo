@@ -4,6 +4,7 @@
 using namespace boost::posix_time;
 
 # include <version.hh>
+# include <protocol/exceptions.hh>
 
 namespace bytes
 {
@@ -40,25 +41,44 @@ namespace infinit
     struct RPCs
       : public infinit::RPCServer
     {
-      RPCs()
-        : infinit::RPCServer() // ::version)
+      RPCs(elle::Version const& version = ::version)
+        : infinit::RPCServer(version)
+        , _version(version)
       {
+        this->add("match_versions",
+                  std::function<elle::Version (elle::Version)>(
+                  [this, version] (elle::Version const& client_version)
+                  {
+                    ELLE_TRACE("version (%s) asked by client (%s)",
+                               version, client_version);
+                    if (client_version < this->_version)
+                    {
+                      ELLE_WARN("Behave as the remote version (%s)", client_version);
+                      this->_version = client_version;
+                    }
+                    return version;
+                  }));
+
         this->add("download",
                   std::function<elle::Buffer::Size (elle::Buffer const&)>(
-                  [] (elle::Buffer const& body)
+                  [this] (elle::Buffer const& body)
                   {
-                    ELLE_TRACE("%s uploaded to server", body.size());
+                    ELLE_TRACE("%s uploaded to server (version: %s)",
+                               body.size(), this->_version);
                     return body.size();
                   }));
 
         this->add("upload",
                   std::function<elle::Buffer (elle::Buffer::Size)>(
-                  [] (elle::Buffer::Size size)
+                  [this] (elle::Buffer::Size size)
                   {
-                    ELLE_TRACE("download %s from server", size);
+                    ELLE_TRACE("download %s from server (version: %s)",
+                               size, this->_version);
                     return elle::Buffer(size);
                   }));
       }
+
+      ELLE_ATTRIBUTE_R(elle::Version, version);
     };
 
     static
@@ -140,11 +160,12 @@ namespace infinit
 
     static
     void
-    serve(elle::IOStream& socket)
+    serve(elle::Version const& version,
+          elle::IOStream& socket)
     {
       try
       {
-        RPCs rpc_server;
+        RPCs rpc_server(version);
         ELLE_TRACE("serve rpcs")
           rpc_server.serve(socket);
       }
@@ -162,7 +183,9 @@ namespace infinit
     {
       static
       void
-      serve(uint16_t port)
+      serve(uint16_t port,
+            elle::Version const& version)
+
       {
         ELLE_TRACE("create tcp server (listening on port: %s)", port);
         auto server = elle::make_unique<reactor::network::TCPServer>();
@@ -178,9 +201,9 @@ namespace infinit
                 auto socket = elle::utility::move_on_copy(server->accept());
                 s.run_background(
                   elle::sprintf("socket %s", socket),
-                  [socket]
+                  [version, socket]
                   {
-                    infinit::networking::serve(**socket);
+                    infinit::networking::serve(version, **socket);
                   });
               }
             });
@@ -203,7 +226,8 @@ namespace infinit
       static
       void
       serve(uint16_t port,
-            int xorit)
+            int xorit,
+            elle::Version const& version)
       {
         ELLE_TRACE("create utp server (listening on port: %s) (xor: %s)",
                    port, xorit);
@@ -223,9 +247,9 @@ namespace infinit
                 auto socket = elle::utility::move_on_copy(server.accept());
                 s.run_background(
                   elle::sprintf("socket %s", socket),
-                  [socket]
+                  [version, socket]
                   {
-                    infinit::networking::serve(**socket);
+                    infinit::networking::serve(version, **socket);
                   });
               }
             });
@@ -370,10 +394,12 @@ namespace infinit
 
     struct Servers
     {
-      Servers(boost::program_options::variables_map const& args)
-        : tcp()
-        , utp()
-        , xored_utp()
+      Servers(boost::program_options::variables_map const& args,
+              elle::Version const& v = ::version)
+        : _version(v)
+        , _tcp()
+        , _utp()
+        , _xored_utp()
       {
         auto protocol = infinit::model::doughnut::Protocol::all;
         if (args.count("protocol"))
@@ -381,55 +407,73 @@ namespace infinit
         if (tcp_enabled(protocol))
         {
           uint16_t port = tcp_port(args);
-          tcp.reset(new reactor::Thread("tcp", [&,port] { tcp::serve(port); }));
+          this->_tcp.reset(
+            new reactor::Thread(
+              "tcp",
+              [&,port]
+              {
+                tcp::serve(port, this->_version);
+              }));
         }
         if (utp_enabled(protocol))
         {
           if (non_xored_enabled(args))
           {
             uint16_t port = utp_port(args);
-            this->utp.reset(
-              new reactor::Thread("utp", [&, port] { utp::serve(port, 0);}));
+            this->_utp.reset(
+              new reactor::Thread(
+                "utp",
+                [&, port]
+                {
+                  utp::serve(port, 0, this->_version);
+                }));
           }
           if (xored_enabled(args))
           {
             uint16_t port = xored_utp_port(args);
-            this->xored_utp.reset(
-              new reactor::Thread("utp", [&, port] { utp::serve(port, 255);}));
+            this->_xored_utp.reset(
+              new reactor::Thread(
+                "utp", [&, port]
+                {
+                  utp::serve(port, 255, this->_version);
+                }));
           }
         }
         reactor::sleep(200_ms);
       }
 
       Servers(Servers&& servers)
-        : tcp(servers.tcp.release())
-        , utp(servers.utp.release())
-        , xored_utp(servers.xored_utp.release())
+        : _version(servers._version)
+        , _tcp(servers._tcp.release())
+        , _utp(servers._utp.release())
+        , _xored_utp(servers._xored_utp.release())
       {
       }
 
       ~Servers()
       {
-        if (xored_utp)
-          xored_utp->terminate_now();
-        if (utp)
-          utp->terminate_now();
-        if (tcp)
-          tcp->terminate_now();
+        if (this->_xored_utp)
+          this->_xored_utp->terminate_now();
+        if (this->_utp)
+          this->_utp->terminate_now();
+        if (this->_tcp)
+          this->_tcp->terminate_now();
       }
 
-      std::unique_ptr<reactor::Thread> tcp;
-
-      std::unique_ptr<reactor::Thread> utp;
-      std::unique_ptr<reactor::Thread> xored_utp;
+      ELLE_ATTRIBUTE_R(elle::Version, version);
+      ELLE_ATTRIBUTE_R(std::unique_ptr<reactor::Thread>, tcp);
+      ELLE_ATTRIBUTE_R(std::unique_ptr<reactor::Thread>, utp);
+      ELLE_ATTRIBUTE_R(std::unique_ptr<reactor::Thread>, xored_utp);
     };
 
 
     static
     void
     perfom(std::string const& host,
-           boost::program_options::variables_map const& args)
+           boost::program_options::variables_map const& args,
+           elle::Version const& _version = ::version)
     {
+      elle::Version v = _version;
       auto protocol = infinit::model::doughnut::Protocol::all;
       if (args.count("protocol"))
         protocol = protocol_get(args);
@@ -466,6 +510,29 @@ namespace infinit
         }
       };
 
+      auto match_versions = [&] (infinit::protocol::ChanneledStream& stream) {
+        infinit::RPC<elle::Version (elle::Version const&)> get_version{
+          "match_versions", stream, v
+        };
+        try
+        {
+          auto remote_version = get_version(_version);
+          if (v > remote_version)
+          {
+            ELLE_WARN("Behave as the remote version (%s)", remote_version);
+            v = remote_version;
+          }
+        }
+        // If protocol aren't compatible, it might just stall...
+        // XXX: Add a timeout.
+        catch (infinit::protocol::Error const& error)
+        {
+          elle::err("Protocol error establishing connection with the remote.\n"
+                    "Make sure it uses the same version or use "
+                    "--compatibility-version");
+        }
+      };
+
       if (tcp_enabled(protocol))
       {
         auto tcp = [&]
@@ -485,8 +552,9 @@ namespace infinit
             return;
           }
           infinit::protocol::Serializer serializer(
-            *socket, ::version, false);
+            *socket, infinit::elle_serialization_version(v), false);
           infinit::protocol::ChanneledStream stream(serializer);
+          match_versions(stream);
           action(stream);
         };
         tcp();
@@ -514,8 +582,9 @@ namespace infinit
               return;
             }
             infinit::protocol::Serializer serializer(
-              *socket, ::version, false);
+              *socket, infinit::elle_serialization_version(v), false);
             infinit::protocol::ChanneledStream stream(serializer);
+            match_versions(stream);
             action(stream);
           };
         if (non_xored_enabled(args))
