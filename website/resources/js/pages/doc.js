@@ -4,10 +4,18 @@ function showPopupMenu(element) {
   $li = $('li.comparisons');
   $popup = $('li.comparisons ul');
 
-  $(window).on("click", function(event){
+  $(document).keyup(function(e) {
+     if (e.keyCode === 27) {
+      $li.removeClass('clicked');
+      $('#full').fadeOut('fast');
+    }
+  });
+
+  $(window).on("click", function(event) {
     if ($li.has(event.target).length === 0 && !$li.is(event.target)) {
       $li.removeClass('clicked');
       $('#full').fadeOut('fast');
+      $(document).unbind('keyup');
     }
   });
 }
