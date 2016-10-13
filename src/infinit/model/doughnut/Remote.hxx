@@ -128,18 +128,24 @@ namespace infinit
           catch(reactor::network::Exception const& e)
           {
             ELLE_TRACE("network exception when invoking %s (attempt %s/%s): %s",
-                       name, attempt+1, max_attempts, e);
+                       name, attempt + 1, max_attempts, e);
           }
           catch(infinit::protocol::Serializer::EOF const& e)
           {
             ELLE_TRACE("EOF when invoking %s (attempt %s/%s): %s",
                        name, attempt+1, max_attempts, e);
           }
+          catch (elle::Error const& e)
+          {
+            ELLE_TRACE("%s: connection error: %s", this, e);
+            throw;
+          }
           if (max_attempts && ++attempt >= max_attempts)
           {
             _fast_fail = true;
-            throw reactor::network::ConnectionClosed(elle::sprintf("could not establish channel for operation '%s'",
-                                            name));
+            throw reactor::network::ConnectionClosed(
+              elle::sprintf("could not establish channel for operation '%s'",
+                            name));
           }
           reactor::sleep(boost::posix_time::milliseconds(
             200 * std::min(10, attempt)));

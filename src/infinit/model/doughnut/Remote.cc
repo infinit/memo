@@ -179,7 +179,9 @@ namespace infinit
                 };
                 if (!this->_connected)
                 {
-                  this->_connected.raise<elle::Error>(
+                  ELLE_TRACE("%s: connection to %f failed",
+                             this, this->_endpoints);
+                  this->_connected.raise<reactor::network::ConnectionClosed>(
                     elle::sprintf("connection to %f failed", this->_endpoints));
                   break;
                 }
