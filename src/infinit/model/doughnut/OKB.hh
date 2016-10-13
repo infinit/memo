@@ -32,7 +32,6 @@ namespace infinit
                   cryptography::rsa::KeyPair const& keys,
                   boost::optional<elle::Buffer> salt);
         OKBHeader(OKBHeader const& other);
-        ELLE_ATTRIBUTE_R(Doughnut*, dht);
 
       /*---------.
       | Contents |
@@ -40,7 +39,7 @@ namespace infinit
       public:
         blocks::ValidationResult
         validate(Address const& address) const;
-        ELLE_ATTRIBUTE_R(elle::Buffer, salt);
+        ELLE_ATTRIBUTE_R(elle::Buffer, salt, protected);
         ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PublicKey>,
                          owner_key);
         ELLE_ATTRIBUTE_R(elle::Buffer, signature);
@@ -59,7 +58,7 @@ namespace infinit
         OKBHeader(elle::serialization::SerializerIn& input,
                   elle::Version const& version);
         void
-        serialize(elle::serialization::Serializer& s);
+        serialize(elle::serialization::Serializer& s, elle::Version const& v);
         static
         Address
         hash_address(Doughnut const& dht,
@@ -97,7 +96,7 @@ namespace infinit
                 boost::optional<elle::Buffer> salt,
                 cryptography::rsa::KeyPair const& owner_keys);
         BaseOKB(BaseOKB const& other);
-        ELLE_ATTRIBUTE(int, version);
+        ELLE_ATTRIBUTE_R(int, version, virtual, override);
       protected:
         typedef reactor::BackgroundFuture<elle::Buffer> SignFuture;
         ELLE_ATTRIBUTE(std::shared_ptr<SignFuture>, signature, protected);
@@ -111,12 +110,7 @@ namespace infinit
       | Content |
       `--------*/
       public:
-        virtual
-        int
-        version() const override;
-        virtual
-        elle::Buffer const&
-        data() const override;
+        ELLE_attribute_r(elle::Buffer, data, override);
         virtual
         void
         data(elle::Buffer data) override;

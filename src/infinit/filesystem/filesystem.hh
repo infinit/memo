@@ -31,7 +31,8 @@ namespace infinit
     {
       file,
       directory,
-      symlink
+      symlink,
+      pending
     };
     enum class OperationType
     {
@@ -161,7 +162,7 @@ namespace infinit
     fetch_or_die(model::Model& model,
                  model::Address address,
                  boost::optional<int> local_version = {},
-                 Node* node = nullptr);
+                 boost::filesystem::path const& path = {});
     std::pair<bool, bool>
     get_permissions(model::Model& model,
                     model::blocks::Block const& block);
@@ -205,7 +206,7 @@ namespace infinit
       std::unique_ptr<model::blocks::Block>
       fetch_or_die(model::Address address,
                    boost::optional<int> local_version = {},
-                   Node* node = nullptr);
+                   boost::filesystem::path const& path = {});
 
       void
       store_or_die(std::unique_ptr<model::blocks::Block> block,

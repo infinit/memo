@@ -156,7 +156,7 @@ public:
       { return nullptr; },
       [] (dht::Doughnut&, std::shared_ptr<dht::Local>)
       { return nullptr; },
-      {}, nullptr, v)
+      {}, {}, nullptr, v)
   {}
 };
 
@@ -168,8 +168,7 @@ struct TestSet
     , chb(new dht::CHB(&dht, std::string("CHB contents"), salt))
     , acb(new dht::ACB(&dht, std::string("ACB contents"), salt))
     , okb(new dht::OKB(&dht, std::string("OKB contents"), salt))
-    , nb(new dht::NB(&dht, keys->public_key(),
-                     "NB name", std::string("NB contents")))
+    , nb(new dht::NB(dht, "NB name", std::string("NB contents")))
     , ub(new dht::UB(&dht, "USERNAME", keys->K(), false))
     , rub(new dht::UB(&dht, "USERNAME", keys->K(), true))
   {
@@ -179,8 +178,6 @@ struct TestSet
     nb->seal();
     ub->seal();
     rub->seal();
-    elle::unconst(dht.key_hash_cache()).insert(std::make_pair(
-      dht::UB::hash(keys->K()), keys->public_key()));
   }
 
   void apply(std::string const& action,

@@ -492,7 +492,8 @@ namespace infinit
         elle::SafeFinally open_ready([&] {
             this->_blocks.at(index).ready.open();
         });
-        auto block = fetch_or_die(_model, addr);
+        auto block = fetch_or_die(_model, addr, {},
+                                  this->_file.path() / elle::sprintf("<%f>", addr));
         auto crypted = block->take_data();
         cryptography::SecretKey sk(secret);
         b = std::make_shared<elle::Buffer>(sk.decipher(crypted));
@@ -539,7 +540,7 @@ namespace infinit
           std::unique_ptr<model::blocks::Block> bl;
           try
           {
-            bl = fetch_or_die(_model, addr);
+            bl = fetch_or_die(_model, addr, {}, this->_file.path() / elle::sprintf("<%f>", addr));
           }
           catch (elle::Error const& e)
           {

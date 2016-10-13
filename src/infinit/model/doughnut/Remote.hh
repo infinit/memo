@@ -61,10 +61,13 @@ namespace infinit
         virtual
         ~Remote();
       protected:
+        void
+        _cleanup() override;
         ELLE_ATTRIBUTE(std::unique_ptr<std::iostream>, socket);
         ELLE_ATTRIBUTE(std::unique_ptr<protocol::Serializer>, serializer);
         ELLE_ATTRIBUTE_R(std::unique_ptr<protocol::ChanneledStream>,
                          channels, protected);
+        ELLE_ATTRIBUTE_RX(RPCServer, rpc_server);
 
       /*-----------.
       | Connection |
@@ -72,14 +75,14 @@ namespace infinit
       public:
         virtual
         void
-        connect(elle::DurationOpt timeout = elle::DurationOpt()) override;
+        connect(elle::DurationOpt timeout = elle::DurationOpt());
         virtual
         void
-        reconnect(elle::DurationOpt timeout = elle::DurationOpt()) override;
+        reconnect(elle::DurationOpt timeout = elle::DurationOpt());
       private:
         void
         _connect();
-        ELLE_ATTRIBUTE(bool, connected);
+        ELLE_ATTRIBUTE(reactor::Barrier, connected);
         ELLE_ATTRIBUTE(bool, reconnecting);
         ELLE_ATTRIBUTE_R(int, reconnection_id);
         ELLE_ATTRIBUTE_R(Endpoints, endpoints);
@@ -103,7 +106,9 @@ namespace infinit
         ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
         ELLE_ATTRIBUTE_R(EndpointsRefetcher, refetch_endpoints);
         ELLE_ATTRIBUTE_R(bool, fast_fail);
-        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
+        ELLE_ATTRIBUTE(std::chrono::system_clock::time_point, connection_start_time);
+        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, thread);
+
       /*-------.
       | Blocks |
       `-------*/
@@ -119,20 +124,27 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
               boost::optional<int> local_version) const override;
+
+      /*-----.
+      | Keys |
+      `-----*/
+      protected:
+        virtual
+        std::vector<cryptography::rsa::PublicKey>
+        _resolve_keys(std::vector<int> ids) override;
+        virtual
+        std::unordered_map<int, cryptography::rsa::PublicKey>
+        _resolve_all_keys() override;
+        ELLE_ATTRIBUTE_R(Doughnut::KeyCache, key_hash_cache);
       };
 
-      template<typename F>
+      template <typename F>
       class RemoteRPC
         : public RPC<F>
       {
       public:
-        typedef RPC<F> Super;
-        RemoteRPC(std::string name, Remote* remote)
-          : Super(name, *remote->channels(),
-                  remote->doughnut().version(),
-                  elle::unconst(&remote->credentials()))
-          , _remote(remote)
-        {}
+        using Super = RPC<F>;
+        RemoteRPC(std::string name, Remote* remote);
         template<typename ...Args>
         typename Super::result_type
         operator()(Args const& ... args);

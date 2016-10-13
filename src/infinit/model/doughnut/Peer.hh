@@ -23,19 +23,17 @@ namespace infinit
         Peer(Doughnut& dht, Address id);
         virtual
         ~Peer();
+        /// Stop all activity requiring other components (e.g. RPC server).
+        void
+        cleanup();
+        /// Owner doughnut.
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut, protected);
+        /// Target peer id.
         ELLE_ATTRIBUTE_R(Address, id, protected);
-
-      /*-----------.
-      | Networking |
-      `-----------*/
-      public:
+      protected:
         virtual
         void
-        connect(elle::DurationOpt timeout = elle::DurationOpt()) = 0;
-        virtual
-        void
-        reconnect(elle::DurationOpt timeout = elle::DurationOpt()) = 0;
+        _cleanup();
 
       /*-------.
       | Blocks |
@@ -55,6 +53,24 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
                boost::optional<int> local_version) const = 0;
+
+      /*-----.
+      | Keys |
+      `-----*/
+      public:
+        cryptography::rsa::PublicKey
+        resolve_key(int);
+        std::vector<cryptography::rsa::PublicKey>
+        resolve_keys(std::vector<int> const& ids);
+        std::unordered_map<int, cryptography::rsa::PublicKey>
+        resolve_all_keys();
+      protected:
+        virtual
+        std::vector<cryptography::rsa::PublicKey>
+        _resolve_keys(std::vector<int>) = 0;
+        virtual
+        std::unordered_map<int, cryptography::rsa::PublicKey>
+        _resolve_all_keys() = 0;
 
       /*----------.
       | Printable |

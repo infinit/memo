@@ -165,7 +165,7 @@ namespace infinit
     fetch_or_die(model::Model& model,
                  model::Address address,
                  boost::optional<int> local_version,
-                 Node* node)
+                 boost::filesystem::path const& path)
     {
       try
       {
@@ -177,28 +177,28 @@ namespace infinit
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
-        ELLE_TRACE("perm exception %s", e);
+        ELLE_TRACE("perm exception fetching %f(%s): %s", address, path, e);
         throw rfs::Error(EACCES, elle::sprintf("%s", e));
       }
       catch (model::MissingBlock const& mb)
       {
-        ELLE_WARN("data not found fetching \"/%s\": %s",
-                  "", mb);
+        ELLE_WARN("data not found fetching %f(%s): %s",
+                  address, path, mb);
         throw rfs::Error(EIO, elle::sprintf("%s", mb));
       }
       catch (elle::serialization::Error const& se)
       {
-        ELLE_WARN("serialization error fetching %f: %s", address, se);
+        ELLE_WARN("serialization error fetching %f(%s): %s", address, path, se);
         throw rfs::Error(EIO, elle::sprintf("%s", se));
       }
       catch(elle::Exception const& e)
       {
-        ELLE_WARN("unexpected exception fetching %f: %s", address, e);
+        ELLE_WARN("unexpected exception fetching %f(%s): %s", address, path, e);
         throw rfs::Error(EIO, elle::sprintf("%s", e));
       }
       catch(std::exception const& e)
       {
-        ELLE_WARN("unexpected exception on fetching %f: %s", address, e.what());
+        ELLE_WARN("unexpected exception on fetching %f(%s): %s", address, path, e.what());
         throw rfs::Error(EIO, e.what());
       }
     }
@@ -206,9 +206,10 @@ namespace infinit
     std::unique_ptr<model::blocks::Block>
     FileSystem::fetch_or_die(model::Address address,
                              boost::optional<int> local_version,
-                             Node* node)
+                             boost::filesystem::path const& path)
     {
-      return filesystem::fetch_or_die(*this->block_store(), address, local_version, node);
+      return filesystem::fetch_or_die(*this->block_store(), address,
+                                      local_version, path);
     }
 
     std::unique_ptr<model::blocks::MutableBlock>
@@ -388,7 +389,7 @@ namespace infinit
                 "migrate old bootstrap block from %s to %s",
                 old_addr, bootstrap_addr);
               auto nb = elle::make_unique<dht::NB>(
-                dn.get(), dn->owner(), bootstrap_name,
+                *dn, dn->owner(), bootstrap_name,
                 old->data(), old->signature());
               this->store_or_die(
                 std::move(nb), model::STORE_INSERT,
@@ -425,12 +426,15 @@ namespace infinit
                 auto saddr = elle::sprintf("%x", this->_root_address);
                 elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
                 auto k =
-                  std::make_shared<infinit::cryptography::rsa::PublicKey>(this->owner());
+                  std::make_shared<infinit::cryptography::rsa::PublicKey>(
+                    this->owner());
                 auto nb = elle::make_unique<dht::NB>(
-                  dn.get(), k, bootstrap_name, baddr);
+                  *dn, k, bootstrap_name, baddr);
                 auto address = nb->address();
-                this->store_or_die(std::move(nb), model::STORE_INSERT,
-                                   elle::make_unique<InsertRootBootstrapBlock>(address));
+                this->store_or_die(
+                  std::move(nb),
+                  model::STORE_INSERT,
+                  elle::make_unique<InsertRootBootstrapBlock>(address));
                 if (root_cache)
                   boost::filesystem::ofstream(*root_cache) << saddr;
               }
@@ -593,6 +597,8 @@ namespace infinit
       auto address = Address(it->second.second.value(), model::flags::mutable_block, false);
       switch(it->second.first)
       {
+      case EntryType::pending:
+        return std::shared_ptr<rfs::Path>(new Unknown(*this, d, name));
       case EntryType::symlink:
         return std::shared_ptr<rfs::Path>(new Symlink(*this, address, d, name));
       case EntryType::file:
@@ -606,22 +612,22 @@ namespace infinit
           std::unique_ptr<model::blocks::Block> block;
           try
           {
-            block = fetch_or_die(address, version);
+            block = fetch_or_die(address, version, current_path);
             if (block)
               block->data();
           }
           catch (infinit::model::doughnut::ValidationFailed const& e)
           {
             ELLE_TRACE("perm exception %s", e);
-            return std::make_shared<Unreachable>(*this, d, name,
-              address, EntryType::file);
+            return std::make_shared<Unreachable>(*this, std::move(block), d,
+              name, address, EntryType::file);
           }
           catch (reactor::filesystem::Error const& e)
           {
             if (e.error_code() == EACCES)
             {
-              return std::make_shared<Unreachable>(*this, d, name,
-                address, EntryType::file);
+              return std::make_shared<Unreachable>(*this, std::move(block), d,
+                name, address, EntryType::file);
             }
             else
               throw e;
@@ -663,8 +669,13 @@ namespace infinit
           {
             if (e.error_code() == EACCES)
             {
-              return std::make_shared<Unreachable>(*this, d, name,
-                address, EntryType::directory);
+              auto fit = _file_cache.find(address);
+              boost::optional<int> version;
+              if (fit != _file_cache.end())
+                version = (*fit)->block_version();
+              auto block = fetch_or_die(address, version, current_path);
+              return std::make_shared<Unreachable>(*this, std::move(block), d,
+                name, address, EntryType::directory);
             }
             else
               throw e;
@@ -683,7 +694,7 @@ namespace infinit
       auto it = _directory_cache.find(address);
       if (it != _directory_cache.end())
         version = (*it)->block_version();
-      auto block = fetch_or_die(address, version); //invalidates 'it'
+      auto block = fetch_or_die(address, version, path); //invalidates 'it'
       it = _directory_cache.find(address);
       std::pair<bool, bool> perms;
       if (block)
@@ -722,6 +733,9 @@ namespace std
   {
     switch (entry)
     {
+      case infinit::filesystem::EntryType::pending:
+        out << "pending";
+        break;
       case infinit::filesystem::EntryType::file:
         out << "file";
         break;

@@ -787,7 +787,7 @@ namespace infinit
         std::shared_ptr<infinit::cryptography::rsa::PrivateKey> sign_key;
 
         // enforce admin keys
-        auto const& aks = this->dht()->admin_keys();
+        auto const& aks = this->doughnut()->admin_keys();
         for (auto const& k: aks.r)
           if (k != *this->owner_key()) set_permissions(k, true, false);
         for (auto const& k: aks.w)
@@ -1125,8 +1125,9 @@ namespace infinit
         ELLE_ASSERT(s_.out());
         auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
         s.serialize("salt", this->_block.salt());
-        serialize_key_hash(s, v, *this->_block.owner_key(), "key", this->_block.dht());
-        s.set_context<Doughnut*>(this->_block.dht()); // for acl entries
+        ELLE_ASSERT(this->_block.doughnut());
+        serialize_key_hash(
+          s, v, *this->_block.owner_key(), "key", this->_block.doughnut());
         s.serialize("version", this->_block.data_version());
         s.serialize("data", this->_block.blocks::Block::data());
         s.serialize("owner_token", this->_block.owner_token());
@@ -1210,7 +1211,6 @@ namespace infinit
       {
         if (!this->_data_signature)
           this->_data_signature = std::make_shared<typename Super::SignFuture>();
-        s.set_context<Doughnut*>(this->dht());
         s.serialize("editor", this->_editor);
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl_entries);
@@ -1247,6 +1247,7 @@ namespace infinit
                 s.serialize("data_signature", this->_data_signature->value());
               else
               {
+                ELLE_ASSERT(this->doughnut());
                 bool is_doughnut_key =
                   *this->_sign_key == this->doughnut()->keys_shared()->k();
                 s.serialize("data_signature_is_doughnut_key", is_doughnut_key);
@@ -1267,7 +1268,10 @@ namespace infinit
                 if (!is_doughnut_key)
                   s.serialize("data_signature_key", this->_sign_key);
                 else
+                {
+                  ELLE_ASSERT(this->doughnut());
                   this->_sign_key = this->doughnut()->keys_shared()->private_key();
+                }
               }
             }
           }

@@ -77,9 +77,7 @@ with TemporaryDirectory() as tmp, \
   def peer():
     while not os.path.exists(peerfile):
       time.sleep(0.1)
-    with open(peerfile, 'r') as f:
-      x = f.readline().split("\n")[0]
-      return x
+    return peerfile
   try:
     volume_process = infinit_1.spawn([
       'infinit-volume', '--run', '--as', 'user', 'volume',

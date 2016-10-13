@@ -227,6 +227,7 @@ private:
           return make_overlay(0, members, std::move(local), d);
         }),
       boost::optional<int>(),
+      boost::optional<boost::asio::ip::address>(),
       std::move(storage_a),
       version_a);
     this->dht_b = std::make_shared<dht::Doughnut>(
@@ -242,6 +243,7 @@ private:
           return make_overlay(1, members, std::move(local), d);
         }),
       boost::optional<int>(),
+      boost::optional<boost::asio::ip::address>(),
       std::move(storage_b),
       version_b);
     this->dht_c = std::make_shared<dht::Doughnut>(
@@ -257,6 +259,7 @@ private:
           return make_overlay(2, members, std::move(local), d);
         }),
       boost::optional<int>(),
+      boost::optional<boost::asio::ip::address>(),
       std::move(storage_c),
       version_c);
     for (auto* stonehenge: stonehenges)
@@ -271,7 +274,8 @@ private:
           port = this->dht_c->local()->server_endpoint().port();
         else
           ELLE_ABORT("unknown doughnut id: %f", peer.id());
-        elle::unconst(peer.endpoints()).emplace_back("127.0.0.1", port);
+        elle::unconst(peer.endpoints()).emplace_back(
+          boost::asio::ip::address::from_string("127.0.0.1"), port);
       }
   }
 };
@@ -431,8 +435,7 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
 {
   DHTs dhts(paxos);
   auto block = elle::make_unique<dht::NB>(
-    dhts.dht_a.get(), dhts.keys_a->public_key(), "blockname",
-    elle::Buffer("blockdata", 9));
+    *dhts.dht_a, "blockname", elle::Buffer("blockdata", 9));
   ELLE_LOG("owner: store NB")
     dhts.dht_a->store(*block, infinit::model::STORE_INSERT);
   {
@@ -445,8 +448,7 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
   }
   { // overwrite
     auto block = elle::make_unique<dht::NB>(
-      dhts.dht_a.get(), dhts.keys_a->public_key(), "blockname",
-      elle::Buffer("blockdatb", 9));
+      *dhts.dht_a, "blockname", elle::Buffer("blockdatb", 9));
     BOOST_CHECK_THROW(dhts.dht_a->store(*block, infinit::model::STORE_UPDATE),
                       std::exception);
   }
@@ -1097,6 +1099,7 @@ namespace rebalancing
       , Super(paxos,
               factor,
               rebalance_auto_expand,
+              true,
               node_timeout,
               dht,
               id,
@@ -1185,6 +1188,7 @@ namespace rebalancing
     using Super::Super;
     std::unique_ptr<dht::Local>
     make_local(boost::optional<int> port,
+               boost::optional<boost::asio::ip::address> listen,
                std::unique_ptr<infinit::storage::Storage> storage)
     {
       return elle::make_unique<Local>(

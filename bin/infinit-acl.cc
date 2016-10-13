@@ -176,7 +176,7 @@ struct PermissionsResult
   struct Directory
   {
     Directory()
-      : inherit(false)
+      : inherit(boost::none)
     {}
 
     Directory(Directory const&) = default;
@@ -192,7 +192,7 @@ struct PermissionsResult
       s.serialize("inherit", this->inherit);
     }
 
-    bool inherit;
+    boost::optional<bool> inherit;
   };
 
   struct World
@@ -248,7 +248,6 @@ get_acl(std::string const& path, bool fallback_xattrs)
   PermissionsResult res;
   res.path = path;
   char buf[4096];
-  bool dir = boost::filesystem::is_directory(path);
   int sz = port_getxattr(
     path.c_str(), "user.infinit.auth", buf, 4095, fallback_xattrs);
   if (sz < 0)
@@ -261,7 +260,15 @@ get_acl(std::string const& path, bool fallback_xattrs)
     buf[sz] = 0;
     std::stringstream ss;
     ss.str(buf);
+#ifndef __clang__
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
     boost::optional<bool> dir_inherit;
+#ifndef __clang__
+# pragma GCC diagnostic pop
+#endif
+    bool dir = boost::filesystem::is_directory(path);
     if (dir)
     {
       int sz = port_getxattr(
@@ -271,7 +278,10 @@ get_acl(std::string const& path, bool fallback_xattrs)
       else
       {
         buf[sz] = 0;
-        dir_inherit = (buf == std::string("true"));
+        if (buf == std::string("true"))
+          dir_inherit = true;
+        else if (buf == std::string("false"))
+          dir_inherit = false;
       }
     }
 
@@ -343,8 +353,9 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
     output << path << ":" << std::endl;
     if (res.directory)
     {
+      auto dir = *res.directory;
       output << "  inherit: "
-             << ((*res.directory).inherit ? "yes" : "no")
+             << (dir.inherit ? dir.inherit.get() ? "true" : "false" : "unknown")
              << std::endl;
     }
     if (res.world)
@@ -779,7 +790,8 @@ main(int argc, char** argv)
         { "path,p", value<std::vector<std::string>>(), "paths" },
         { "user,u", value<std::vector<std::string>>()->multitoken(),
           elle::sprintf("users and groups (prefix: %s<group>)", group_prefix) },
-        { "group,g", value<std::vector<std::string>>(), "groups" },
+        { "group,g", value<std::vector<std::string>>()->multitoken(),
+          "groups" },
         { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
         { "others-mode,o", value<std::string>(),
           "access mode for other network users: r,w,rw,none" },
@@ -843,7 +855,7 @@ main(int argc, char** argv)
       {
         { "user,u", value<std::string>(), "user to register"},
         { "path,p", value<std::string>(), "path to mountpoint" },
-        { "network,n", value<std::string>(), "name of the network"},
+        { "network,N", value<std::string>(), "name of the network"},
         fetch_option,
       },
       {},

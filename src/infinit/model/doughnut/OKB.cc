@@ -1,6 +1,7 @@
 #include <infinit/model/doughnut/OKB.hh>
 
 #include <elle/bench.hh>
+#include <elle/cast.hh>
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
@@ -14,6 +15,9 @@
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/blocks/GroupBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/UB.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.OKB");
 
@@ -23,7 +27,10 @@ namespace infinit
   {
     namespace doughnut
     {
-      typedef elle::Option<cryptography::rsa::PublicKey, elle::Buffer>
+      /* Maintain backward compatibility with a short-livel 0.7.0 using
+       * key hashes instead of ids
+      */
+      typedef elle::Option<cryptography::rsa::PublicKey, elle::Buffer, int>
       KeyOrHash;
 
       cryptography::rsa::PublicKey
@@ -41,8 +48,30 @@ namespace infinit
             elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
           ELLE_ASSERT(dn);
           auto buf = koh.get<elle::Buffer>();
-          auto k = dn->resolve_key(buf);
-          return *k; // Dont move me I'm cached in doughnut!
+          ELLE_WARN("Key hash spotted in block: %x, resolving...", buf);
+          auto const addr = UB::hash_address(':' + buf.string(), *dn);
+          try
+          {
+            auto block = dn->fetch(addr);
+            auto ub = elle::cast<UB>::runtime(block);
+            return ub->key();
+          }
+          catch (elle::Error const& e)
+          {
+            elle::err("Failed to retreive key hash block at %f: %s", addr, e);
+          }
+        }
+        if (koh.is<int>())
+        {
+          uint64_t index = koh.get<int>();
+          Remote* remote = nullptr;
+          elle::unconst(s.context()).get(remote, (Remote*)nullptr);
+          Local* local = nullptr;
+          elle::unconst(s.context()).get(local, (Local*)nullptr);
+          ELLE_ASSERT(remote || local);
+          auto peer =
+            remote ? static_cast<Peer*>(remote) : static_cast<Peer*>(local);
+          return peer->resolve_key(index);
         }
         else
         {
@@ -64,35 +93,59 @@ namespace infinit
         {
           if (s.in())
           {
-            key = std::move(deserialize_key_hash(
+            key = deserialize_key_hash(
               dynamic_cast<elle::serialization::SerializerIn&>(s),
-              v, field_name, dn));
+              v, field_name, dn);
           }
           else
           {
-            static bool disable_hash = elle::os::inenv("INFINIT_DISABLE_KEY_HASH");
-            if (disable_hash)
-            {
-              KeyOrHash koh(key);
-              s.serialize(field_name + "_koh", koh);
-            }
-            else
+            static bool disable_hash =
+              elle::os::inenv("INFINIT_DISABLE_KEY_HASH");
+            Local* local = nullptr;
+            elle::unconst(s.context()).get(local, (Local*)nullptr);
+            Remote* remote = nullptr;
+            elle::unconst(s.context()).get(remote, (Remote*)nullptr);
+            if (local && !disable_hash)
             {
               if (!dn)
                 elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
               ELLE_ASSERT(dn);
-              auto hash = dn->ensure_key(key);
+              auto hash = dn->ensure_key(
+                std::make_shared<cryptography::rsa::PublicKey>(key));
+              ELLE_DUMP("serialize key hash for %s: %s", key, hash);
               KeyOrHash koh(hash);
+              s.serialize(field_name + "_koh", koh);
+            }
+            else if (remote && !disable_hash)
+            {
+              auto const& key_hash_cache = remote->key_hash_cache();
+              auto it = key_hash_cache.get<0>().find(key);
+              if (it != key_hash_cache.get<0>().end())
+              {
+                ELLE_DUMP("serialize key hash for %s: %s", key, it->hash);
+                KeyOrHash koh(it->hash);
+                s.serialize(field_name + "_koh", koh);
+              }
+              else
+              { // Local peer never sent us that key: no hash
+                ELLE_TRACE("No hash available for %f", key);
+                KeyOrHash koh(key);
+                s.serialize(field_name + "_koh", koh);
+              }
+            }
+            else
+            {
+              KeyOrHash koh(key);
               s.serialize(field_name + "_koh", koh);
             }
           }
         }
       }
+
       OKBHeader::OKBHeader(Doughnut* dht,
                            cryptography::rsa::KeyPair const& keys,
                            boost::optional<elle::Buffer> salt)
-        : _dht(dht)
-        , _owner_key(keys.public_key())
+        : _owner_key(keys.public_key())
         , _signature()
         , _doughnut(dht)
       {
@@ -106,16 +159,18 @@ namespace infinit
             .total_milliseconds();
           _salt.append(&now, 8);
         }
-        auto owner_key_buffer =
-          elle::serialization::json::serialize(
-            *this->_owner_key, elle::Version(0,0,0));
-        owner_key_buffer.append(_salt.contents(), _salt.size());
-        this->_signature = keys.k().sign(owner_key_buffer);
+        if (this->doughnut()->version() < elle::Version(0, 8, 0))
+        {
+          auto owner_key_buffer =
+            elle::serialization::json::serialize(
+              *this->_owner_key, elle::Version(0, 0, 0));
+          owner_key_buffer.append(_salt.contents(), _salt.size());
+          this->_signature = keys.k().sign(owner_key_buffer);
+        }
       }
 
       OKBHeader::OKBHeader(OKBHeader const& other)
-        : _dht(other._dht)
-        , _salt(other._salt)
+        : _salt(other._salt)
         , _owner_key(other._owner_key)
         , _signature(other._signature)
         , _doughnut(other._doughnut)
@@ -135,7 +190,7 @@ namespace infinit
                               elle::Version const& compatibility_version)
       {
         auto key_buffer = elle::serialization::json::serialize(
-          key, elle::Version(0,0,0));
+          key, elle::Version(0, 0, 0));
         key_buffer.append(salt.contents(), salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
@@ -146,7 +201,7 @@ namespace infinit
       Address
       OKBHeader::_hash_address() const
       {
-        return hash_address(*this->_dht, *this->_owner_key, this->_salt);
+        return hash_address(*this->_doughnut, *this->_owner_key, this->_salt);
       }
 
       blocks::ValidationResult
@@ -166,18 +221,6 @@ namespace infinit
             return blocks::ValidationResult::failure(reason);
           }
         }
-        ELLE_DEBUG("%s: check owner key", *this)
-        {
-          auto owner_key_buffer = elle::serialization::json::serialize(
-            *this->_owner_key, elle::Version(0, 0, 0));
-          owner_key_buffer.append(_salt.contents(), _salt.size());
-          if (!this->_owner_key->verify(
-                this->OKBHeader::_signature, owner_key_buffer))
-          {
-            ELLE_DEBUG("%s: invalid owner key", *this);
-            return blocks::ValidationResult::failure("invalid owner key");
-          }
-        }
         return blocks::ValidationResult::success();
       }
 
@@ -188,15 +231,20 @@ namespace infinit
             deserialize_key_hash(s, v, "key")))
         , _signature()
       {
-        s.serialize_context<Doughnut*>(this->_dht);
-        s.serialize("owner", *this);
+        s.serialize_context<Doughnut*>(this->_doughnut);
+        if (v < elle::Version(0, 8, 0))
+          s.serialize("owner", *this);
+        else
+          this->serialize(s, v);
       }
 
       void
-      OKBHeader::serialize(elle::serialization::Serializer& input)
+      OKBHeader::serialize(elle::serialization::Serializer& input,
+                           elle::Version const& v)
       {
         input.serialize("salt", this->_salt);
-        input.serialize("signature", this->_signature);
+        if (v < elle::Version(0, 8, 0))
+          input.serialize("signature", this->_signature);
       }
 
       /*-------------.
@@ -264,13 +312,6 @@ namespace infinit
         //if (this->_signature->value() != other_okb->_signature->value())
         //  return false;
         return this->Super::operator ==(other);
-      }
-
-      template <typename Block>
-      int
-      BaseOKB<Block>::version() const
-      {
-        return this->_version;
       }
 
       template <typename Block>
@@ -355,7 +396,8 @@ namespace infinit
         ELLE_ASSERT(s_.out());
         auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
         s.serialize("salt", this->_block.salt());
-        serialize_key_hash(s, v, *this->_block.owner_key(), "owner_key", _block.dht());
+        serialize_key_hash(s, v, *this->_block.owner_key(),
+                           "owner_key", this->_block.doughnut());
         s.serialize("version", this->_block._version);
         this->_serialize(s, v);
       }
@@ -494,8 +536,12 @@ namespace infinit
                                 elle::Version const& version)
       {
         this->Super::serialize(s, version);
-        serialize_key_hash(s, version, *this->_owner_key, "key", this->dht());
-        s.serialize("owner", static_cast<OKBHeader&>(*this));
+        serialize_key_hash(
+          s, version, *this->_owner_key, "key", this->doughnut());
+        if (version < elle::Version(0, 8, 0))
+          s.serialize("owner", static_cast<OKBHeader&>(*this));
+        else
+          s.serialize("salt", this->_salt);
         this->_serialize(s, version);
       }
 
@@ -504,7 +550,6 @@ namespace infinit
       BaseOKB<Block>::_serialize(elle::serialization::Serializer& s,
                                  elle::Version const& version)
       {
-        s.serialize_context<Doughnut*>(this->_doughnut);
         s.serialize("version", this->_version);
         if (!this->_signature)
           this->_signature = std::make_shared<SignFuture>();

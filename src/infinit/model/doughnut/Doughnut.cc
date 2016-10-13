@@ -54,9 +54,11 @@ namespace infinit
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
+                         boost::optional<boost::asio::ip::address> listen_address,
                          std::unique_ptr<storage::Storage> storage,
                          boost::optional<elle::Version> version,
-                         AdminKeys const& admin_keys)
+                         AdminKeys const& admin_keys,
+                         boost::optional<std::string> rdv_host)
         : Model(std::move(version))
         , _id(std::move(id))
         , _keys(keys)
@@ -66,10 +68,10 @@ namespace infinit
         , _consensus(consensus(*this))
         , _local(
           storage
-            ? this->_consensus->make_local(std::move(port), std::move(storage))
+            ? this->_consensus->make_local(port, listen_address, std::move(storage))
             : nullptr)
         // FIXME: move protocol configuration to doughnut
-        , _dock(*this, Protocol::all)
+        , _dock(*this, Protocol::all, port, listen_address, std::move(rdv_host))
         , _overlay(overlay_builder(*this, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
         , _terminating()
@@ -128,9 +130,11 @@ namespace infinit
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
+                         boost::optional<boost::asio::ip::address> listen_address,
                          std::unique_ptr<storage::Storage> storage,
                          boost::optional<elle::Version> version,
-                         AdminKeys const& admin_keys)
+                         AdminKeys const& admin_keys,
+                         boost::optional<std::string> rdv_host)
         : Doughnut(std::move(id),
                    std::move(keys),
                    std::move(owner),
@@ -138,9 +142,11 @@ namespace infinit
                    std::move(consensus),
                    std::move(overlay_builder),
                    std::move(port),
+                   std::move(listen_address),
                    std::move(storage),
                    std::move(version),
-                   admin_keys)
+                   admin_keys,
+                   std::move(rdv_host))
       {
         auto check_user_blocks = [name, this]
           {
@@ -171,7 +177,7 @@ namespace infinit
 
       Doughnut::~Doughnut()
       {
-        ELLE_TRACE_SCOPE("%s: destruct", *this);
+        ELLE_TRACE_SCOPE("%s: destruct", this);
         this->_terminating.open();
         if (this->_user_init)
         {
@@ -182,6 +188,7 @@ namespace infinit
         if (this->_local)
           this->_local->cleanup();
         this->_consensus.reset();
+        this->_dock.cleanup();
         this->_overlay.reset();
         this->_dock.cleanup();
         if (this->_local)
@@ -374,61 +381,29 @@ namespace infinit
         }
       }
 
-      elle::Buffer
-      Doughnut::ensure_key(cryptography::rsa::PublicKey const& k)
+      int
+      Doughnut::ensure_key(std::shared_ptr<cryptography::rsa::PublicKey> const& k)
       {
-        auto hash = UB::hash(k);
-        if (!this->_consensus)
-          return hash; // assume test mode
-        auto it = this->_key_hash_cache.find(hash);
-        if (it != this->_key_hash_cache.end())
-          return hash;
-        auto hub = elle::make_unique<UB>(this, ':' + hash.string(), k);
-        try
-        {
-          this->_key_hash_cache[hash].reset(new cryptography::rsa::PublicKey(k));
-          store(std::move(hub), STORE_INSERT,
-            elle::make_unique<UserBlockUpserter>(':' + hash.string()));
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_TRACE("Error storing key hash block: %s", e);
-        }
-        return hash;
+        auto it = this->_key_cache.get<0>().find(*k);
+        if (it != this->_key_cache.get<0>().end())
+          return it->hash;
+
+        int index = this->_key_cache.get<0>().size();
+        this->_key_cache.insert(KeyHash(index, k));
+        return index;
       }
 
       std::shared_ptr<cryptography::rsa::PublicKey>
-      Doughnut::resolve_key(elle::Buffer const& hash)
+      Doughnut::resolve_key(uint64_t hash)
       {
-        ELLE_DEBUG("%s: Resolving key from %x", this, hash);
-        auto it = this->_key_hash_cache.find(hash);
-        if (it != this->_key_hash_cache.end())
-          return it->second;
-
-        auto const addr = UB::hash_address(':' + hash.string(), *this);
-        try
+        ELLE_DUMP("%s: resolve key from %x", this, hash);
+        auto it = this->_key_cache.get<1>().find(hash);
+        if (it != this->_key_cache.get<1>().end())
         {
-          auto block = this->fetch(addr);
-          auto ub = elle::cast<UB>::runtime(block);
-          if (!ub)
-            elle::err("%s: block at %s is not an UB", this, addr);
-          // validate
-          auto ubhash = UB::hash(ub->key());
-          if (hash != ubhash)
-          {
-            ELLE_WARN("Key hash do not match fetching key hash block: %x vs %x",
-              hash, ubhash);
-            elle::err("Key hash do not match");
-          }
-          auto skey = std::make_shared<cryptography::rsa::PublicKey>(ub->key());
-          this->_key_hash_cache.insert(std::make_pair(hash, skey));
-          return skey;
+          ELLE_DUMP("%s: resolved from cache: %x", this, hash);
+          return it->key;
         }
-        catch (MissingBlock const& b)
-        {
-          ELLE_WARN("Missing key hash block at %f: %s", addr, b);
-          throw;
-        }
+        elle::err("%s: failed to resolve key hash locally: %x", this, hash);
       }
 
       Configuration::~Configuration()
@@ -497,16 +472,14 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::model::Model>
-      Configuration::make(std::vector<Endpoints> const& hosts,
-                          bool client,
+      Configuration::make(bool client,
                           boost::filesystem::path const& dir)
       {
-        return this->make(hosts, client, dir, false, false);
+        return this->make(client, dir, false, false);
       }
 
       std::unique_ptr<Doughnut>
       Configuration::make(
-        std::vector<Endpoints> const& hosts,
         bool client,
         boost::filesystem::path const& p,
         bool async,
@@ -516,7 +489,9 @@ namespace infinit
         boost::optional<std::chrono::seconds> cache_invalidation,
         boost::optional<uint64_t> disk_cache_size,
         boost::optional<elle::Version> version,
-        boost::optional<int> port_)
+        boost::optional<int> port_,
+        boost::optional<boost::asio::ip::address> listen_address,
+        boost::optional<std::string> rdv_host)
       {
         Doughnut::ConsensusBuilder consensus =
           [&] (Doughnut& dht)
@@ -551,7 +526,7 @@ namespace infinit
             if (!this->overlay)
               elle::err(
                 "invalid network configuration, missing field \"overlay\"");
-            return this->overlay->make(hosts, std::move(local), &dht);
+            return this->overlay->make(std::move(local), &dht);
           };
         auto port = port_ ? port_.get() : this->port ? this->port.get() : 0;
         std::unique_ptr<storage::Storage> storage;
@@ -568,9 +543,11 @@ namespace infinit
             std::move(consensus),
             std::move(overlay),
             std::move(port),
+            std::move(listen_address),
             std::move(storage),
             version ? version.get() : this->version,
-            admin_keys);
+            admin_keys,
+            std::move(rdv_host));
         }
         else
         {
@@ -583,9 +560,11 @@ namespace infinit
             std::move(consensus),
             std::move(overlay),
             std::move(port),
+            std::move(listen_address),
             std::move(storage),
             version ? version.get() : this->version,
-            admin_keys);
+            admin_keys,
+            std::move(rdv_host));
         }
         return dht;
       }

@@ -56,6 +56,7 @@ namespace infinit
         // thread performing a contact() call on this node
         reactor::Thread::unique_ptr contacter;
         std::vector<elle::Buffer> pending;
+        bool discovered; // was on_discover signal sent for this contact
       };
 
       std::ostream&
@@ -156,7 +157,6 @@ namespace infinit
         int file_timeout_ms;
         int ping_interval_ms;
         int ping_timeout_ms;
-        std::vector<Endpoints> bootstrap_nodes;
         /// wait for 'wait' nodes before starting
         int wait;
         bool encrypt;
@@ -165,8 +165,7 @@ namespace infinit
         GossipConfiguration gossip;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(std::vector<Endpoints> const& hosts,
-             std::shared_ptr<model::doughnut::Local> server,
+        make(std::shared_ptr<model::doughnut::Local> server,
              model::doughnut::Doughnut* doughnut) override;
       };
 
@@ -223,7 +222,7 @@ namespace infinit
         _lookup(std::vector<infinit::model::Address> const& address, int n) const override;
         virtual
         WeakMember
-        _lookup_node(Address address) override;
+        _lookup_node(Address address) const override;
       private:
         typedef infinit::model::doughnut::Local Local;
         typedef infinit::overlay::Overlay Overlay;
@@ -290,7 +289,8 @@ namespace infinit
         kelipsGet(Address file, int n, bool local_override, int attempts,
           bool query_node,
           bool fast_mode, // return as soon as we have a result
-          std::function<void(NodeLocation)> yield);
+          std::function<void(NodeLocation)> yield,
+          bool ignore_local_cache = false);
         std::vector<NodeLocation>
         kelipsPut(Address file, int n);
         std::unordered_multimap<Address, std::pair<Time, Address>>
@@ -310,8 +310,7 @@ namespace infinit
         void
         process_update(SerState const& s);
         void
-        bootstrap(bool use_bootstrap_nodes,
-                  bool use_contacts = true,
+        bootstrap(bool use_contacts = true,
                   NodeLocations const& peers = {});
         void
         _discover(NodeLocations const& peers) override;
@@ -327,7 +326,7 @@ namespace infinit
         get_or_make(Address address, bool observer,
           std::vector<Endpoint> endpoints, bool make=true);
         Overlay::WeakMember
-        make_peer(NodeLocation pl);
+        make_peer(NodeLocation pl) const;
         packet::RequestKey make_key_request();
         Address _self;
         std::unordered_map<Address, Time> _ping_time;
@@ -364,6 +363,7 @@ namespace infinit
         ELLE_ATTRIBUTE(
           (std::unordered_map<Address, std::vector<Overlay::WeakMember>>),
           peer_cache);
+        mutable
         std::unordered_map<Address,
           std::pair<reactor::Thread::unique_ptr, bool>> _node_lookups;
         std::unordered_map<reactor::Thread*, reactor::Thread::unique_ptr>

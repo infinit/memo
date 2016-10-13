@@ -132,27 +132,6 @@ namespace infinit
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<FileConflictResolver> _register_fcr("fcr");
 
-    static
-    std::string
-    perms_to_json(model::Model& model, ACLBlock& block)
-    {
-      auto perms = block.list_permissions(model);
-      elle::json::Array v;
-      for (auto const& perm: perms)
-      {
-        elle::json::Object o;
-        o["admin"] = perm.admin;
-        o["name"] = perm.user->name();
-        o["owner"] = perm.owner;
-        o["read"] = perm.read;
-        o["write"] = perm.write;
-        v.push_back(o);
-      }
-      std::stringstream ss;
-      elle::json::write(ss, v, true);
-      return ss.str();
-    }
-
     void
     File::chmod(mode_t mode)
     {
@@ -210,7 +189,7 @@ namespace infinit
       if (this->_filedata)
         return;
       this->_first_block = std::dynamic_pointer_cast<ACLBlock>(
-        this->_owner.fetch_or_die(_address, {}, this));
+        this->_owner.fetch_or_die(_address, {}, this->full_path()));
 
       elle::SafeFinally remove_undecoded_first_block([&] {
           this->_first_block.reset();
@@ -222,19 +201,20 @@ namespace infinit
 
     FileData::FileData(boost::filesystem::path path,
                        Block& block, std::pair<bool, bool> perms)
-    : _address(block.address())
-    , _path(path)
+      : _address(block.address())
+      , _path(path)
     {
       update(block, perms);
       _last_used = FileSystem::now();
     }
+
     void
     FileData::update(Block& block, std::pair<bool, bool> perms)
     {
-      ELLE_DEBUG("%s: updating from %f ver=%s, worldperm=%s",
-                 this, block.address(),
-                 dynamic_cast<ACLBlock&>(block).version(),
-                 dynamic_cast<ACLBlock&>(block).get_world_permissions());
+      ELLE_TRACE_SCOPE("%s: update from %f (version: %s, worldperm: %s)",
+                       this, block.address(),
+                       dynamic_cast<ACLBlock&>(block).version(),
+                       dynamic_cast<ACLBlock&>(block).get_world_permissions());
       bool empty;
       elle::IOStream is(
         umbrella([&] {
@@ -630,7 +610,7 @@ namespace infinit
             continue;
           auto targetsize = new_size - offset;
           cryptography::SecretKey sk(_filedata->_fat[i].second);
-          auto block = _owner.fetch_or_die(_filedata->_fat[i].first);
+          auto block = _owner.fetch_or_die(_filedata->_fat[i].first, {}, this->full_path());
           elle::Buffer buf(sk.decipher(block->data()));
           if (buf.size() > targetsize)
           {
@@ -775,8 +755,8 @@ namespace infinit
             else if (*special == "auth")
             {
               this->_ensure_first_block();
-              return perms_to_json(*this->_owner.block_store(),
-                                   dynamic_cast<ACLBlock&>(*this->_first_block));
+              return this->perms_to_json(
+                dynamic_cast<ACLBlock&>(*this->_first_block));
             }
           }
           return this->Node::getxattr(key);

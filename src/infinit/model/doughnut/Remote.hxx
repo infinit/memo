@@ -35,7 +35,7 @@ namespace infinit
             if (!creds.empty())
             {
               elle::Buffer c(creds);
-              this->key() = elle::make_unique<cryptography::SecretKey>(std::move(c));
+              this->key().emplace(std::move(c));
             }
             return helper();
         });
@@ -77,10 +77,18 @@ namespace infinit
           bool connect_running = false;
           try
           {
-            if (!reactor::wait(*this->_connection_thread, 0_sec))
+            if (!this->_connected)
             { // still connecting
-              ELLE_DEBUG("still connecting");
+              ELLE_DEBUG("%s is still connecting on attempt %s",
+                         this, _reconnection_id);
               connect_running = true;
+              if (std::chrono::system_clock::now() - this->_connection_start_time
+                > std::chrono::seconds(connect_timeout_sec))
+              {
+                this->_reconnecting = false;
+                connect_running = false;
+                ELLE_DEBUG("%s: scheduling reconnection attempts", this);
+              }
               throw reactor::network::ConnectionClosed("Connection pending");
             }
             // if we reach here, connection thread finished without exception,
@@ -135,6 +143,17 @@ namespace infinit
             200 * std::min(10, attempt)));
           need_reconnect = (_reconnection_id == prev_reconnection_id);
         }
+      }
+
+      template <typename F>
+      RemoteRPC<F>::RemoteRPC(std::string name, Remote* remote)
+        : Super(name,
+                *remote->channels(),
+                remote->doughnut().version(),
+                elle::unconst(&remote->credentials()))
+        , _remote(remote)
+      {
+        this->set_context(remote);
       }
 
       template<typename F>

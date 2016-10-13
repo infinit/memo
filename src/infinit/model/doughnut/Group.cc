@@ -207,7 +207,19 @@ namespace infinit
         auto key = this->public_control_key();
         try
         {
-          auto addr = ACB::hash_address(this->_dht, key, group_block_key);
+          static
+          std::unordered_map<cryptography::rsa::PublicKey, Address>
+          address_cache;
+
+          Address addr;
+          auto it = address_cache.find(key);
+          if (it == address_cache.end())
+          {
+            addr = ACB::hash_address(this->_dht, key, group_block_key);
+            address_cache.insert(std::make_pair(key, addr));
+          }
+          else
+            addr = it->second;
           elle::unconst(this)->_block = elle::cast<GB>::runtime(
             this->_dht.fetch(addr));
           return *this->_block;

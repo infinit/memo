@@ -53,10 +53,9 @@ class SymbolsGenerator(drake.Builder):
 
 class SymbolsPackager(drake.debian.Packager):
 
-  def __init__(self, basename, sources, path, destination = '.',
-               preload = None):
-    super().__init__(basename, sources, path, destination, preload,
-                     cleanup_source_directory = False)
+  def __init__(self, *args, **kwargs):
+    kwargs.setdefault('cleanup_source_directory', False)
+    super().__init__(*args, **kwargs)
 
   def _sym_output_path(self, sym_file):
     res = None

@@ -11,6 +11,10 @@ namespace infinit
   {
     namespace doughnut
     {
+      /*-------------.
+      | Construction |
+      `-------------*/
+
       Peer::Peer(Doughnut& dht, Address id)
         : _doughnut(dht)
         , _id(std::move(id))
@@ -18,6 +22,20 @@ namespace infinit
 
       Peer::~Peer()
       {}
+
+      void
+      Peer::cleanup()
+      {
+        this->_cleanup();
+      }
+
+      void
+      Peer::_cleanup()
+      {}
+
+      /*-------.
+      | Blocks |
+      `-------*/
 
       std::unique_ptr<blocks::Block>
       Peer::fetch(Address address,
@@ -31,6 +49,29 @@ namespace infinit
               return nullptr;
         return res;
       }
+
+      /*-----.
+      | Keys |
+      `-----*/
+
+      cryptography::rsa::PublicKey
+      Peer::resolve_key(int id)
+      {
+        return this->resolve_keys({id})[0];
+      }
+
+      std::vector<cryptography::rsa::PublicKey>
+      Peer::resolve_keys(std::vector<int> const& ids)
+      {
+        return this->_resolve_keys(ids);
+      }
+
+      std::unordered_map<int, cryptography::rsa::PublicKey>
+      Peer::resolve_all_keys()
+      {
+        return this->_resolve_all_keys();
+      }
+
 
       /*----------.
       | Printable |

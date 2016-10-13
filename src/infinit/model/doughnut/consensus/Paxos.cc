@@ -141,11 +141,13 @@ namespace infinit
                      int factor,
                      bool lenient_fetch,
                      bool rebalance_auto_expand,
+                     bool rebalance_inspect,
                      std::chrono::system_clock::duration node_timeout)
           : Super(doughnut)
           , _factor(factor)
           , _lenient_fetch(lenient_fetch)
           , _rebalance_auto_expand(rebalance_auto_expand)
+          , _rebalance_inspect(rebalance_inspect)
           , _node_timeout(node_timeout)
         {
           if (getenv("INFINIT_PAXOS_LENIENT_FETCH"))
@@ -158,17 +160,20 @@ namespace infinit
 
         std::unique_ptr<Local>
         Paxos::make_local(boost::optional<int> port,
+                          boost::optional<boost::asio::ip::address> listen_address,
                           std::unique_ptr<storage::Storage> storage)
         {
           return elle::make_unique<consensus::Paxos::LocalPeer>(
             *this,
             this->factor(),
             this->_rebalance_auto_expand,
+            this->_rebalance_inspect,
             this->_node_timeout,
             this->doughnut(),
             this->doughnut().id(),
             std::move(storage),
-            port ? port.get() : 0);
+            port ? port.get() : 0,
+            listen_address);
         }
 
         /*-----.
@@ -399,7 +404,7 @@ namespace infinit
               if (!observer)
                 this->_disappeared(id);
             });
-          if (this->_factor > 1)
+          if (this->_rebalance_inspect && this->_factor > 1)
             this->_rebalance_inspector.reset(
               new reactor::Thread(
                 elle::sprintf("%s: rebalancing inspector", this),
@@ -438,7 +443,7 @@ namespace infinit
         }
 
         void
-        Paxos::LocalPeer::cleanup()
+        Paxos::LocalPeer::_cleanup()
         {
           this->_rebalance_inspector.reset();
           this->_rebalance_thread.terminate_now();
@@ -451,6 +456,7 @@ namespace infinit
           if (decision != this->_addresses.end())
             return BlockOrPaxos(&decision->second);
           else
+          {
             ELLE_TRACE_SCOPE("%s: load %f from storage", *this, address);
             auto buffer = this->storage()->get(address);
             elle::serialization::Context context;
@@ -464,7 +470,8 @@ namespace infinit
             {
               if (this->_rebalance_auto_expand)
               {
-                ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.rebalance");
+                ELLE_LOG_COMPONENT(
+                  "infinit.model.doughnut.consensus.Paxos.rebalance");
                 static auto const op = overlay::OP_FETCH;
                 PaxosServer::Quorum q;
                 if (this->_quorums.find(address) == this->_quorums.end())
@@ -494,6 +501,7 @@ namespace infinit
                 &this->_load_paxos(address, std::move(*stored.paxos)));
             else
               ELLE_ABORT("no block and no paxos ?");
+          }
         }
 
         Paxos::LocalPeer::Decision&
@@ -884,7 +892,7 @@ namespace infinit
           BlockOrPaxos data(&decision);
           this->storage()->set(
             address,
-            elle::serialization::binary::serialize(data),
+            elle::serialization::binary::serialize(data, this->doughnut().version()),
             true, true);
           return res;
         }
@@ -1899,6 +1907,8 @@ namespace infinit
           : consensus::Configuration()
           , _replication_factor(replication_factor)
           , _node_timeout(node_timeout)
+          , _rebalance_auto_expand(true)
+          , _rebalance_inspect(true)
         {}
 
         std::unique_ptr<Consensus>
@@ -1907,7 +1917,9 @@ namespace infinit
           return elle::make_unique<Paxos>(
             dht,
             consensus::replication_factor = this->_replication_factor,
-            consensus::node_timeout = this->_node_timeout);
+            consensus::node_timeout = this->_node_timeout,
+            consensus::rebalance_auto_expand = this->_rebalance_auto_expand,
+            consensus::rebalance_inspect = this->_rebalance_inspect);
         }
 
         Paxos::Configuration::Configuration(
