@@ -238,14 +238,6 @@ class Website(bottle.Bottle):
       'description': 'Create a storage resource that uses an Amazon S3 bucket.',
     }
 
-  @route('/documentation/storages/s3-compatible', name = 'doc_storages_s3_compatible')
-  @view('pages/docs/s3_compatible.html')
-  def root(self):
-    return {
-      'title': 'S3 Compatible Storage Service',
-      'description': 'Create a storage resource that uses an S3 compatible storage service.',
-    }
-
   @route('/documentation/docker/volume-plugin', name = 'doc_docker_plugin')
   @view('pages/docs/docker_volume_plugin.html')
   def root(self):

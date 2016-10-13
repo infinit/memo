@@ -1,10 +1,6 @@
-Creating a storage using an S3 compatible service
-=================================================
+<br>
 
-This will guide you through setting up an Infinit storage resource that uses an S3 compatible API such as [Minio](https://www.minio.io).
-
-Prerequisites
--------------
+#### Prerequisites
 
 - Have configured your S3 compatible service.
 - Have the *region*, *bucket*, *endpoint*, *Access Key ID* and *Secret Access Key* for the service accessible.
