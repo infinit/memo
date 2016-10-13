@@ -193,7 +193,7 @@ namespace infinit
       template <typename ... Args>
       FileSystem(Args&& ... args);
       FileSystem(
-        std::string const& volume_name,
+        std::string volume_name,
         std::shared_ptr<infinit::model::Model> model,
         boost::optional<infinit::cryptography::rsa::PublicKey> owner = {},
         boost::optional<boost::filesystem::path> root_block_cache_dir = {},

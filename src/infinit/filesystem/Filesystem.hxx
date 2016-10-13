@@ -7,7 +7,7 @@ namespace infinit
   {
     struct FileSystem::Init
     {
-      std::string const& volume_name;
+      std::string volume_name;
       std::shared_ptr<model::Model> model;
       boost::optional<cryptography::rsa::PublicKey> owner;
       boost::optional<boost::filesystem::path> root_block_cache_dir;
