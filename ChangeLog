@@ -1,6 +1,32 @@
 # Change Log
 
 
+## [0.7.1]
+
+Docker volume plugin improvements.
+
+### Added
+
+- The docker volume plugin now supports volume creation.
+- The docker volume plugin now lists volumes from the default network,
+  if any.
+- Option `--create-root` to `infinit-volume --create` to push the root
+  directory upon creation.
+- Option `--peer` to `infinit-network --create` to systematically
+  connect to a fixed set of peers.
+- Option `--register-service` to `infinit-volume --create` to register
+  the volume descriptor inside the network.
+- Option `--service` to `infinit-volume --fetch` to fetch volumes
+  descriptor from the network.
+- Option `--list-services` to `infinit-network` to list all registered
+  volumes from a network.
+
+### Fixed
+
+- Restore domain name resolution for `--peer` options.
+- Do not connect twice to hosts passed via `--peer`.
+
+
 ## [0.7.0] - 2016-09-23
 
 Bandwidth and CPU usage optimization, bugfixes.
