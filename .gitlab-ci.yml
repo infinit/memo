@@ -64,6 +64,7 @@ x86_64-ubuntu-gcc4:
 x86_64-jessie-gcc4:
   stage: build
   script:
+    - time ./buildenv --cleanup-build-trees --build-trees-root "/cache/$CI_PROJECT_NAME"  --verbose
     - git submodule sync --recursive
     - git submodule update --init --recursive
     - git fetch origin --tags
@@ -88,7 +89,6 @@ x86_64-jessie-gcc4:
     - time ssh buildslave@packages.infinit.sh 'make debian'
     - time cd "${SOURCE_DIR}"
     - time ./buildenv --cache-upload-build-tree --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID" --verbose
-    - time ./buildenv --cleanup-build-trees --build-trees-root "/cache/$CI_PROJECT_NAME"  --verbose
   tags:
     - x86_64
     - jessie
