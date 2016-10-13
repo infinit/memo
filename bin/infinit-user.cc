@@ -130,12 +130,6 @@ _push(variables_map const& args, infinit::User& user, bool atomic)
   if (email && !valid_email(email.get()))
     throw CommandLineError("invalid email address");
   bool user_updated = false;
-  if (!user.email && !email)
-  {
-    throw CommandLineError(elle::sprintf(
-      "users pushed to %s must have an email address (use --email)",
-      beyond(true)));
-  }
   if (email) // Overwrite existing email.
   {
     user.email = email;
@@ -381,8 +375,8 @@ COMMAND(delete_)
 COMMAND(signup_)
 {
   auto name = get_name(args);
-  auto email = mandatory(args, "email");
-  if (!valid_email(email))
+  auto email = optional(args, "email");
+  if (email && !valid_email(email.get()))
     throw CommandLineError("invalid email address");
   infinit::User user = create_(name,
                                optional(args, "key"),
@@ -568,8 +562,7 @@ main(int argc, char** argv)
         { "push-user", bool_switch(),
           elle::sprintf("push the user to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-user" },
-        { "email", value<std::string>(),
-          "valid email address\n(mandatory when using --push-user)" },
+        { "email", value<std::string>(), "optional email address" },
         option_fullname,
         option_push_full,
         option_push_password,
@@ -643,7 +636,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user to push (default: system user)" },
-        { "email", value<std::string>(), "valid email address" },
+        { "email", value<std::string>(), "optional email address" },
         option_fullname,
         option_avatar,
         option_push_full,
@@ -654,11 +647,11 @@ main(int argc, char** argv)
       "signup",
       elle::sprintf("Create and push a user to %s", beyond(true)),
       &signup_,
-      "--email EMAIL",
+      {},
       {
         { "name,n", value<std::string>(), "user name (default: system user)" },
         option_description("user"),
-        { "email", value<std::string>(), "valid email address" },
+        { "email", value<std::string>(), "optional email address" },
         option_fullname,
         option_avatar,
         option_key,

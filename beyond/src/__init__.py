@@ -85,7 +85,6 @@ class Beyond:
       gcs_app_key,
       gcs_app_secret,
       sendwithus_api_key = None,
-      validate_email_address = True,
       limits = {},
       delegate_user = 'hub',
       keep_deleted_users = False,
@@ -99,7 +98,6 @@ class Beyond:
     self.__gcs_app_key    = gcs_app_key
     self.__gcs_app_secret = gcs_app_secret
     self.__limits = limits
-    self.__validate_email_address = validate_email_address
     if sendwithus_api_key is not None:
       self.__emailer = emailer.SendWithUs(sendwithus_api_key)
     else:
@@ -155,10 +153,6 @@ class Beyond:
   @property
   def gcs_app_secret(self):
     return self.__gcs_app_secret
-
-  @property
-  def validate_email_address(self):
-    return self.__validate_email_address
 
   def is_email(self, email):
     try:
@@ -446,12 +440,12 @@ class User:
   fields = {
     'mandatory': [
       ('name', validation.Name('user', 'name')),
-      ('email', validation.Email('user', 'email')),
       ('public_key', None),
     ],
     'optional': [
       ('description', validation.Description('user', 'description')),
       ('dropbox_accounts', None),
+      ('email', validation.Email('user', 'email')),
       ('fullname', None),
       ('google_accounts', None),
       ('gcs_accounts', None),
@@ -507,8 +501,6 @@ class User:
   def from_json(self, beyond, json, check_integrity = False):
     if check_integrity:
       for (key, validator) in User.fields['mandatory']:
-        if key == 'email' and not beyond.validate_email_address:
-          continue
         if key not in json:
           raise exceptions.MissingField('user', key)
         validator and validator(json[key])

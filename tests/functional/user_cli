@@ -110,24 +110,16 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
   alice2.run(['infinit-user', '--login', '--name', 'alice'],
              input = 'loremipsword')
 
-# Missing and invalid email.
+# Check invalid emails, allow pushing without email.
 with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
-  try:
-    alice.run(['infinit-user', '--signup', '--name', 'alice'])
-    unreachable()
-  except Exception as e:
-    assertIn('(use --email)', e.args[0])
   try:
     alice.run(['infinit-user', '--signup', '--name', 'alice', '--email', 'foo@'])
     unreachable()
   except Exception as e:
     assertIn('invalid email address', e.args[0])
-  # Create is not atomic, so 'alice' will be created after that.
-  try:
-    alice.run(['infinit-user', '--create', '--name', 'alice', '--push'])
-    unreachable()
-  except Exception as e:
-    assertIn('(use --email)', e.args[0])
+  # Ensure user can be pushed without email address.
+  alice.run(['infinit-user', '--signup', '--name', 'alice'])
+  alice.run(['infinit-user', '--create', '--name', 'alice2', '--push'])
 
 # Password missmatch.
 with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
