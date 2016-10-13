@@ -44,6 +44,7 @@ namespace infinit
       std::shared_ptr<FileBuffer> _buffer;
       ELLE_ATTRIBUTE(bool, writable);
       FileSystem& _owner;
+      bool _close_failure;
     };
 
     class FileBuffer

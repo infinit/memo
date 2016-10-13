@@ -39,6 +39,7 @@ namespace infinit
                            bool dirty)
     : _writable(writable)
     , _owner(owner)
+    , _close_failure(false)
     {
       auto it = owner.file_buffers().find(data.address());
       if (it != owner.file_buffers().end())
@@ -70,12 +71,21 @@ namespace infinit
 
     FileHandle::~FileHandle()
     {
-      auto addr = this->_buffer->_file.address();
-      this->_buffer->close(this);
-      std::weak_ptr<FileBuffer> fb = this->_buffer;
-      this->_buffer.reset();
-      if (!fb.lock())
-        this->_owner.file_buffers().erase(addr);
+      try
+      {
+        auto addr = this->_buffer->_file.address();
+        if (!this->_close_failure)
+          this->_buffer->close(this);
+        std::weak_ptr<FileBuffer> fb = this->_buffer;
+        this->_buffer.reset();
+        if (!fb.lock())
+          this->_owner.file_buffers().erase(addr);
+      }
+      catch (elle::Error const& e)
+      {
+       ELLE_ERR("fatal error: exception escaping ~FileHandle: %s\n%s", elle::exception_string(), e.backtrace());
+       throw;
+      }
     }
 
     FileBuffer::~FileBuffer()
@@ -87,7 +97,9 @@ namespace infinit
     void
     FileHandle::close()
     {
+      this->_close_failure = true;
       this->_buffer->close(this);
+      this->_close_failure = false;
     }
 
     void
