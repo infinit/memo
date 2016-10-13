@@ -56,34 +56,12 @@ namespace infinit
           OverlayBuilder;
         typedef std::function<
           std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;
-        Doughnut(Address id,
-                 std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
-                 std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
-                 Passport passport,
-                 ConsensusBuilder consensus,
-                 OverlayBuilder overlay_builder,
-                 boost::optional<int> port,
-                 boost::optional<boost::asio::ip::address> listen_address,
-                 std::unique_ptr<storage::Storage> local,
-                 boost::optional<elle::Version> version = {},
-                 AdminKeys const& admin_keys = {},
-                 boost::optional<std::string> rdv_host = {},
-                 Protocol = Protocol::all);
-        Doughnut(Address id,
-                 std::string const& name,
-                 std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
-                 std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
-                 Passport passport,
-                 ConsensusBuilder consensus,
-                 OverlayBuilder overlay_builder,
-                 boost::optional<int> port,
-                 boost::optional<boost::asio::ip::address> listen_address,
-                 std::unique_ptr<storage::Storage> local,
-                 boost::optional<elle::Version> version = {},
-                 AdminKeys const& admin_keys = {},
-                 boost::optional<std::string> rdv_host = {},
-                 Protocol = Protocol::all);
+        template <typename ... Args>
+        Doughnut(Args&& ... args);
         ~Doughnut();
+      private:
+        struct Init;
+        Doughnut(Init init);
 
       /*-----.
       | Time |
@@ -251,5 +229,7 @@ DAS_MODEL_FIELDS(infinit::model::doughnut::Configuration,
 DAS_MODEL(infinit::model::doughnut::AdminKeys, (r, w, group_r, group_w), DasAdminKeys);
 DAS_MODEL_DEFAULT(infinit::model::doughnut::AdminKeys, DasAdminKeys);
 DAS_MODEL_SERIALIZE(infinit::model::doughnut::AdminKeys);
+
+# include <infinit/model/doughnut/Doughnut.hxx>
 
 #endif

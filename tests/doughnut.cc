@@ -229,7 +229,7 @@ private:
       boost::optional<int>(),
       boost::optional<boost::asio::ip::address>(),
       std::move(storage_a),
-      version_a);
+      dht::version = version_a);
     this->dht_b = std::make_shared<dht::Doughnut>(
       id_b,
       this->keys_b,
@@ -245,7 +245,7 @@ private:
       boost::optional<int>(),
       boost::optional<boost::asio::ip::address>(),
       std::move(storage_b),
-      version_b);
+      dht::version = version_b);
     this->dht_c = std::make_shared<dht::Doughnut>(
       id_c,
       this->keys_c,
@@ -261,7 +261,7 @@ private:
       boost::optional<int>(),
       boost::optional<boost::asio::ip::address>(),
       std::move(storage_c),
-      version_c);
+      dht::version = version_c);
     for (auto* stonehenge: stonehenges)
       for (auto& peer: stonehenge->peers())
       {
@@ -1191,7 +1191,7 @@ namespace rebalancing
       boost::optional<int> port,
       boost::optional<boost::asio::ip::address> listen,
       std::unique_ptr<infinit::storage::Storage> storage,
-      dht::Protocol) override
+      dht::Protocol p) override
     {
       return elle::make_unique<Local>(
         *this,
