@@ -40,6 +40,59 @@ protocol_get(boost::program_options::variables_map const& args)
   }
 }
 
+bool
+is_version_supported(elle::Version const& version)
+{
+  auto const& deps = infinit::serialization_tag::dependencies;
+  return std::find_if(deps.begin(), deps.end(),
+                      [version] (auto const& kv) -> bool
+                      {
+                        return kv.first.major() == version.major() &&
+                          kv.first.minor() == version.minor();
+                      }) != deps.end();
+}
+
+void
+ensure_version_is_supported(elle::Version const& version)
+{
+  if (!is_version_supported(version))
+  {
+    auto const& deps = infinit::serialization_tag::dependencies;
+    std::vector<elle::Version> supported_versions(deps.size());
+    std::transform(
+      deps.begin(), deps.end(), supported_versions.begin(),
+      [] (auto const& kv)
+      {
+        return elle::Version{kv.first.major(), kv.first.minor(), 0};
+      });
+    std::sort(supported_versions.begin(), supported_versions.end());
+    supported_versions.erase(
+      std::unique(supported_versions.begin(), supported_versions.end()),
+      supported_versions.end());
+    // Find the max value for the major.
+    std::vector<elle::Version> versions_for_major;
+    std::copy_if(supported_versions.begin(), supported_versions.end(),
+                 std::back_inserter(versions_for_major),
+                 [&] (elle::Version const& c)
+                 {
+                   return c.major() == version.major();
+                 });
+    if (versions_for_major.size() > 0)
+    {
+      if (version < versions_for_major.front())
+        elle::err("Minimum compatibility version for major version %s is %s",
+                  (int) version.major(), supported_versions.front());
+      else if (version > versions_for_major.back())
+        elle::err("Maximum compatibility version for major version %s is %s",
+                  (int) version.major(), versions_for_major.back());
+    }
+    elle::err("Unknown compatibility version, try one of %s",
+              elle::join(supported_versions.begin(),
+                         supported_versions.end(),
+                         ", "));
+  }
+}
+
 reactor::Thread::unique_ptr
 make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
                         infinit::Network& network,
@@ -302,22 +355,8 @@ namespace infinit
               {
                 compatibility_version = elle::Version::from_string(
                   vm["compatibility-version"].as<std::string>());
-                auto const& deps = infinit::serialization_tag::dependencies;
-                if (deps.find(*compatibility_version) == deps.end())
-                {
-                  std::vector<elle::Version> supported_versions(deps.size());
-                  std::transform(
-                    deps.begin(), deps.end(), supported_versions.begin(),
-                    [] (auto const& kv) { return kv.first; });
-                  std::sort(supported_versions.begin(),
-                            supported_versions.end());
-                  elle::err(
-                    "Unknown compatibility version, possible values are %s.",
-                    elle::join(supported_versions.begin(),
-                               supported_versions.end(), ", "));
-                }
+                ensure_version_is_supported(*compatibility_version);
               }
-
               if (vm.count("version"))
               {
                 std::cout << version_describe << std::endl;

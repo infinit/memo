@@ -906,6 +906,12 @@ T
 beyond_fetch(std::string const& type,
              std::string const& name);
 
+bool
+is_version_supported(elle::Version const& version);
+
+void
+ensure_version_is_supported(elle::Version const& version);
+
 namespace infinit
 {
   extern boost::optional<elle::Version> compatibility_version;
