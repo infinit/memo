@@ -1,5 +1,7 @@
 #include <elle/log.hh>
 
+#include <reactor/network/exception.hh>
+
 // FIXME: can be avoided with a `Dock` accessor in `Overlay`
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
@@ -213,21 +215,29 @@ namespace infinit
                     auto lookup =
                       r->make_rpc<std::unordered_set<Address> (Address)>(
                         "kouncil_lookup");
-                    for (auto node: lookup(address))
+                    try
                     {
-                      try
+                      for (auto node: lookup(address))
                       {
-                        ELLE_DEBUG("peer %f says node %f holds block %f",
-                                   r->id(), node, address);
-                        yield(this->lookup_node(node));
-                        if (++count >= n)
-                          break;
+                        try
+                        {
+                          ELLE_DEBUG("peer %f says node %f holds block %f",
+                                     r->id(), node, address);
+                          yield(this->lookup_node(node));
+                          if (++count >= n)
+                            break;
+                        }
+                        catch (NodeNotFound const&)
+                        {
+                          ELLE_WARN("node %f is said to hold block %f "
+                                    "but is unknown to us", node, address);
+                        }
                       }
-                      catch (NodeNotFound const&)
-                      {
-                        ELLE_WARN("node %f is said to hold block %f "
-                                  "but is unknown to us", node, address);
-                      }
+                    }
+                    catch (reactor::network::Exception const&)
+                    {
+                      ELLE_DEBUG("skipping peer with network issue: %s", peer);
+                      continue;
                     }
                     if (count > 0)
                       return;
