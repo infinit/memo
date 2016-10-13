@@ -21,6 +21,21 @@ make_stat_update_thread(infinit::User const& self,
   return reactor::every(60_min, "periodic storage stat updater", notify);
 }
 
+infinit::model::doughnut::Protocol
+protocol_get(boost::program_options::variables_map const& args)
+{
+  std::string proto = args["protocol"].as<std::string>();
+  try
+  {
+    return elle::serialization::Serialize<
+      infinit::model::doughnut::Protocol>::convert(proto);
+  }
+  catch (elle::serialization::Error const& e)
+  {
+    throw CommandLineError("'protocol' must be 'utp', 'tcp' or 'all'");
+  }
+}
+
 // Return arguments for mode in the correct order.
 // Note: just using "collect_unrecognized" is insufficient as this changes
 // the order and does not handle the case where the binary has a mode and
