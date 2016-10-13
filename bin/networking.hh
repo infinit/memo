@@ -97,7 +97,7 @@ namespace infinit
     time_duration
     upload(infinit::protocol::ChanneledStream& channels,
            elle::Buffer::Size packet_size,
-           uint32_t packets_count)
+           int64_t packets_count)
     {
       ELLE_TRACE_SCOPE("upload %s %s times", packet_size, packets_count);
       std::cout << "  Upload:" << std::endl;
@@ -107,7 +107,7 @@ namespace infinit
 
       elle::Buffer buff(packet_size);
       auto start = microsec_clock::universal_time();
-      for (uint32_t i = 0; i < packets_count; ++i)
+      for (int64_t i = 0; i < packets_count; ++i)
         ELLE_DEBUG("upload...")
         {
           auto start_partial = microsec_clock::universal_time();
@@ -129,7 +129,7 @@ namespace infinit
     time_duration
     download(infinit::protocol::ChanneledStream& channels,
              elle::Buffer::Size packet_size,
-             uint32_t packets_count)
+             int64_t packets_count)
     {
       ELLE_TRACE_SCOPE("download %s %s times", packet_size, packets_count);
 
@@ -139,7 +139,7 @@ namespace infinit
 
       std::cout << "  Download:" << std::endl;
       auto start = microsec_clock::universal_time();
-      for (uint32_t i = 0; i < packets_count; ++i)
+      for (int64_t i = 0; i < packets_count; ++i)
       {
         ELLE_DEBUG("download...")
         {
@@ -381,11 +381,11 @@ namespace infinit
     }
 
     inline
-    uint32_t
+    int64_t
     packets_count_get(boost::program_options::variables_map const& args)
     {
       auto packets_count = args.count("packets_count")
-        ? args["packets_count"].as<uint32_t>()
+        ? args["packets_count"].as<int64_t>()
         : 5;
       if (packets_count == 0)
         elle::err("--packets_count must be greater than 0");
@@ -478,7 +478,7 @@ namespace infinit
       if (args.count("protocol"))
         protocol = protocol_get(args);
       auto mode = get_mode(args);
-      uint32_t packets_count = packets_count_get(args);
+      int64_t packets_count = packets_count_get(args);
       elle::Buffer::Size packet_size = packet_size_get(args);
 
       auto action = [&] (infinit::protocol::ChanneledStream& stream) {
