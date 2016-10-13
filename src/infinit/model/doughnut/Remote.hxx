@@ -28,8 +28,10 @@ namespace infinit
         // GCC bug, argument packs dont work in lambdas
         auto helper = std::bind(&remote_call_next<F, Args...>,
           this, std::ref(args)...);
-        return _remote->safe_perform<typename RPC<F>::result_type>("RPC",
-          [&] {
+        return _remote->safe_perform<typename RPC<F>::result_type>(
+          this->name(),
+          [&]
+          {
             this->_channels = _remote->channels().get();
             auto creds = _remote->credentials();
             if (!creds.empty())
