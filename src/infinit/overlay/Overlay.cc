@@ -95,7 +95,7 @@ namespace infinit
     void
     Overlay::discover(NodeLocations const& peers_)
     {
-      ELLE_TRACE("%s: discover %f", this, peers_);
+      ELLE_TRACE_SCOPE("%s: discover %f", this, peers_);
       NodeLocations peers(peers_);
       auto it = std::remove_if(peers.begin(), peers.end(),
         [this] (NodeLocation const& nl)
