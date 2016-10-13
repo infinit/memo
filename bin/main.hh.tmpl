@@ -1361,6 +1361,9 @@ namespace infinit
     boost::optional<std::string> mountpoint;
     boost::optional<std::vector<std::string>> peers;
     boost::optional<int> poll_beyond;
+#ifndef INFINIT_WINDOWS
+    boost::optional<bool> enable_monitoring;
+#endif
     typedef infinit::serialization_tag serialization_tag;
   };
 
@@ -1420,6 +1423,9 @@ namespace infinit
     infinit::merge(mountpoint, b.mountpoint);
     infinit::merge(peers, b.peers);
     infinit::merge(poll_beyond, b.poll_beyond);
+#ifndef INFINIT_WINDOWS
+    infinit::merge(enable_monitoring, b.enable_monitoring);
+#endif
   }
 
   inline
@@ -1452,6 +1458,11 @@ namespace infinit
     infinit::merge(this->poll_beyond,
                    optional<int>(args, option_poll_beyond),
                    option_poll_beyond);
+#ifndef INFINIT_WINDOWS
+    infinit::merge(this->enable_monitoring,
+                   optional<bool>(args, option_monitoring),
+                   option_monitoring);
+#endif
   }
 
   inline
@@ -1485,6 +1496,9 @@ namespace infinit
     if (cache_ram_invalidation) {arguments.push_back("--cache-ram-invalidation"); arguments.push_back(std::to_string(cache_ram_invalidation.get()));}
     if (cache_disk_size) {arguments.push_back("--cache-disk-size"); arguments.push_back(std::to_string(cache_disk_size.get()));}
     if (poll_beyond && *poll_beyond >0) {arguments.push_back("--poll-hub"); arguments.push_back(std::to_string(poll_beyond.get()));}
+#ifndef INFINIT_WINDOWS
+    if (enable_monitoring && !*enable_monitoring) {arguments.push_back("--monitoring=false");}
+#endif
     if (mountpoint)
     {
       arguments.push_back("--mountpoint");
