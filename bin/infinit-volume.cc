@@ -84,8 +84,11 @@ COMMAND(create)
       if (root)
       {
         ELLE_LOG_SCOPE("create root directory");
+        // Work around clang 7.0.2 bug.
+        std::shared_ptr<infinit::model::Model> clang_model(
+          static_cast<infinit::model::Model*>(model.release()));
         auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
-          infinit::filesystem::model = std::move(model),
+          infinit::filesystem::model = std::move(clang_model),
           infinit::filesystem::volume_name = name,
           infinit::filesystem::allow_root_creation = true);
         struct stat s;
