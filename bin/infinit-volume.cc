@@ -385,6 +385,13 @@ COMMAND(run)
     infinit::compatibility_version,
     port,
     listen_address);
+  if (auto plf = optional(args, "peers-file"))
+  {
+    auto more_peers = infinit::hook_peer_discovery(*model, *plf);
+    ELLE_TRACE("Peer list file got %s peers", more_peers.size());
+    if (!more_peers.empty())
+      model->overlay()->discover(more_peers);
+  }
   {
     std::vector<infinit::model::Endpoints> eps;
     auto add_peers = [&] (std::vector<std::string> const& peers) {
@@ -416,7 +423,7 @@ COMMAND(run)
                         endpoint_file.get());
     }
   }
-  auto run = [&]
+  auto run = [&, push]
   {
     reactor::Thread::unique_ptr poll_thread;
     if (mo.fetch && *mo.fetch)
@@ -1133,6 +1140,8 @@ run_options(RunMode mode)
     { "fetch,f", BOOL_IMPLICIT, "alias for --fetch-endpoints" },
     { "peer", value<std::vector<std::string>>()->multitoken(),
       "peer address or file with list of peer addresses (host:port)" },
+    { "peers-file", value<std::string>(),
+      "Periodically write list of known peers to given file"},
     { "push-endpoints", BOOL_IMPLICIT,
       elle::sprintf("push endpoints to %s", beyond(true)) },
   });

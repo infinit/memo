@@ -395,10 +395,10 @@ namespace infinit
         Paxos::LocalPeer::initialize()
         {
           this->doughnut().overlay()->on_discover().connect(
-            [this] (Address id, bool observer)
+            [this] (NodeLocation node, bool observer)
             {
               if (!observer)
-                this->_discovered(id);
+                this->_discovered(node.id());
             });
           this->doughnut().overlay()->on_disappear().connect(
             [this] (Address id, bool observer)

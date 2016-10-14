@@ -73,9 +73,13 @@ public:
   connect(Overlay& other)
   {
     if (this->_peers.emplace(&other).second)
-      this->on_discover()(other.doughnut()->id(), !other.doughnut()->local());
+      this->on_discover()(
+        infinit::model::NodeLocation(other.doughnut()->id(), {}),
+        !other.doughnut()->local());
     if (other._peers.emplace(this).second)
-      other.on_discover()(this->doughnut()->id(), !this->doughnut()->local());
+      other.on_discover()(
+        infinit::model::NodeLocation(this->doughnut()->id(), {}),
+        !this->doughnut()->local());
   }
 
   void

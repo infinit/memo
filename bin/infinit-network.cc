@@ -681,6 +681,13 @@ COMMAND(run)
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, infinit::compatibility_version, port,
     listen_address);
+  if (auto plf = optional(args, "peers-file"))
+  {
+    auto more_peers = infinit::hook_peer_discovery(*dht, *plf);
+    ELLE_TRACE("Peer list file got %s peers", more_peers.size());
+    if (!more_peers.empty())
+      dht->overlay()->discover(more_peers);
+  }
   if (args.count("peer"))
   {
     std::vector<infinit::model::Endpoints> eps;
@@ -713,7 +720,7 @@ COMMAND(run)
     daemon_handle = infinit::daemon_hold(0, 1);
 #endif
   auto poll_beyond = optional<int>(args, option_poll_beyond);
-  auto run = [&]
+  auto run = [&, push]
     {
       reactor::Thread::unique_ptr poll_thread;
       if (fetch)
@@ -1052,6 +1059,8 @@ main(int argc, char** argv)
           "alias for --fetch-endpoints --push-endpoints" },
         option_endpoint_file,
         option_port_file,
+        { "peers-file", value<std::string>(),
+          "Periodically write list of known peers to given file"},
         option_port,
         option_listen_interface,
         option_poll_beyond,

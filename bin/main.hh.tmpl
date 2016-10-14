@@ -3451,6 +3451,9 @@ namespace infinit
 
   std::unique_ptr<std::istream>
   commands_input(boost::program_options::variables_map const& args);
+
+  model::NodeLocations
+  hook_peer_discovery(model::doughnut::Doughnut& model, std::string file);
 }
 
 #ifdef INFINIT_MACOSX

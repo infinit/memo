@@ -2084,6 +2084,22 @@ namespace infinit
       {
         ELLE_DUMP("%s: processing gossip from %s", *this, p->endpoint);
         int g = group_of(p->sender);
+        if (this->_observer)
+        {
+          ELLE_DEBUG("Observer got gossip from %s", p->sender);
+          auto& cs = this->_state.contacts.at(g);
+          auto it = cs.find(p->sender);
+          Contact* c = nullptr;
+          if (it == cs.end())
+            c = this->get_or_make(p->sender, false, {p->endpoint}, true);
+          else
+            c = &it->second;
+          if (!c->discovered)
+          {
+            c->discovered = true;
+            this->on_discover()(NodeLocation(p->sender, {p->endpoint}), false);
+          }
+        }
         if (g != _group && !p->files.empty())
           ELLE_WARN("%s: Received files from another group: %s at %s", *this, p->sender, p->endpoint);
         for (auto& c: p->contacts)
@@ -3354,6 +3370,8 @@ namespace infinit
       void
       Node::process_update(SerState const& s)
       {
+        if (this->_observer)
+          ELLE_WARN("Unexpected update received from observer");
         ELLE_DEBUG("register %s contacts and %s blocks",
                    s.first.size(), s.second.size());
         for (auto const& c: s.first)
@@ -3371,9 +3389,10 @@ namespace infinit
               Contact contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
               for (auto const& ep: c.second)
                 contact.endpoints.push_back(TimedEndpoint(ep, now()));
+              NodeLocation nl(c.first, c.second);
               ELLE_LOG("%s: register %f", this, contact);
               target[c.first] = std::move(contact);
-              this->on_discover()(c.first, false);
+              this->on_discover()(nl, false);
             }
           }
           else
@@ -3383,7 +3402,8 @@ namespace infinit
             if (!it->second.discovered)
             {
               it->second.discovered = true;
-              this->on_discover()(it->first, false);
+              NodeLocation nl(it->first, endpoints_extract(it->second.endpoints));
+              this->on_discover()(nl, false);
             }
           }
         }
@@ -3497,10 +3517,11 @@ namespace infinit
         Contact c {{},  {}, address, Duration(), Time(), 0, {}, {}, observer};
         for (auto const& ep: endpoints)
           c.endpoints.push_back(TimedEndpoint(ep, now()));
+        NodeLocation nl(address, endpoints);
         auto inserted = target->insert(std::make_pair(address, std::move(c)));
         // for non-observers, only notify discovery after bootstrap completes
         if (inserted.second && observer)
-          this->on_discover()(address, observer);
+          this->on_discover()(nl, observer);
         if (!inserted.second)
         { // we still want the new endpoints
           for (auto const& ep: endpoints)
