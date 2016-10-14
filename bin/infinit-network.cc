@@ -681,7 +681,7 @@ COMMAND(run)
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, infinit::compatibility_version, port,
     listen_address);
-  if (auto plf = optional(args, "peer-list-file"))
+  if (auto plf = optional(args, "peers-file"))
   {
     auto more_peers = infinit::hook_peer_discovery(*dht, *plf);
     ELLE_TRACE("Peer list file got %s peers", more_peers.size());
@@ -1059,7 +1059,7 @@ main(int argc, char** argv)
           "alias for --fetch-endpoints --push-endpoints" },
         option_endpoint_file,
         option_port_file,
-        { "peer-list-file", value<std::string>(),
+        { "peers-file", value<std::string>(),
           "Periodically write list of known peers to given file"},
         option_port,
         option_listen_interface,

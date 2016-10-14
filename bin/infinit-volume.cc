@@ -385,7 +385,7 @@ COMMAND(run)
     infinit::compatibility_version,
     port,
     listen_address);
-  if (auto plf = optional(args, "peer-list-file"))
+  if (auto plf = optional(args, "peers-file"))
   {
     auto more_peers = infinit::hook_peer_discovery(*model, *plf);
     ELLE_TRACE("Peer list file got %s peers", more_peers.size());
@@ -1140,7 +1140,7 @@ run_options(RunMode mode)
     { "fetch,f", BOOL_IMPLICIT, "alias for --fetch-endpoints" },
     { "peer", value<std::vector<std::string>>()->multitoken(),
       "peer address or file with list of peer addresses (host:port)" },
-    { "peer-list-file", value<std::string>(),
+    { "peers-file", value<std::string>(),
       "Periodically write list of known peers to given file"},
     { "push-endpoints", BOOL_IMPLICIT,
       elle::sprintf("push endpoints to %s", beyond(true)) },
