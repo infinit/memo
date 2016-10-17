@@ -25,8 +25,10 @@ namespace infinit
         create();
         cryptography::rsa::PublicKey
         public_control_key() const;
-        GB&
+        GB const&
         block() const;
+        GB&
+        block();
         cryptography::rsa::PublicKey
         current_public_key() const;
         cryptography::rsa::KeyPair
@@ -37,10 +39,6 @@ namespace infinit
         list_members(bool ommit_names = false);
         std::vector<std::unique_ptr<model::User>>
         list_admins(bool ommit_names = false);
-        boost::optional<std::string>
-        description() const;
-        void
-        set_description(boost::optional<std::string> description);
         void
         add_member(model::User const& user);
         void
@@ -65,6 +63,7 @@ namespace infinit
         destroy();
         void
         print(std::ostream& o) const;
+        ELLE_ATTRIBUTE_rw(boost::optional<std::string>, description);
       private:
         void _stack_push();
         cryptography::rsa::KeyPair _control_key();

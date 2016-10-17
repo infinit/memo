@@ -245,7 +245,7 @@ namespace infinit
         return _owner_private_key;
       }
 
-      boost::optional<std::string>
+      boost::optional<std::string> const&
       GB::description() const
       {
         if (this->doughnut()->version() < group_description_version)
@@ -254,11 +254,11 @@ namespace infinit
       }
 
       void
-      GB::set_description(boost::optional<std::string> description)
+      GB::description(boost::optional<std::string> const& description)
       {
         if (this->doughnut()->version() < group_description_version)
           elle::err("description is only supported in version 0.8.0 or later");
-        this->_description = std::move(description);
+        this->_description = description;
         this->_acl_changed = true;
       }
 

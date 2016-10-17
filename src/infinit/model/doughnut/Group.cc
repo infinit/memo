@@ -198,7 +198,7 @@ namespace infinit
         return *this->_public_control_key;
       }
 
-      GB&
+      GB const&
       Group::block() const
       {
         if (this->_block)
@@ -247,6 +247,13 @@ namespace infinit
           ELLE_TRACE("exception fetching GB: %s", e.what());
           throw;
         }
+      }
+
+      GB&
+      Group::block()
+      {
+        GB const& res = static_cast<const Group*>(this)->block();
+        return elle::unconst(res);
       }
 
       cryptography::rsa::KeyPair
@@ -397,19 +404,23 @@ namespace infinit
         });
       }
 
-      boost::optional<std::string>
+      boost::optional<std::string> const&
       Group::description() const
       {
-        return infinit::filesystem::umbrella([&] {
-          return this->block().description();
-        });
+        // WORKAROUND: Force the lambda return type or else umbrella breaks it.
+        // This is at least the case with clang.
+        return infinit::filesystem::umbrella(
+          [&] () -> boost::optional<std::string> const&
+          {
+            return this->block().description();
+          });
       }
 
       void
-      Group::set_description(boost::optional<std::string> description)
+      Group::description(boost::optional<std::string> const& description)
       {
         infinit::filesystem::umbrella([&] {
-          this->block().set_description(description);
+          this->block().description(description);
           this->_dht.store(this->block(), STORE_UPDATE,
             elle::make_unique<GroupConflictResolver>(
               GroupConflictResolver::Action::set_description, description));
@@ -504,7 +515,7 @@ namespace infinit
           break;
         case Action::set_description:
           ELLE_ASSERT_EQ(user, nullptr);
-          res->set_description(this->_description);
+          res->description(this->_description);
           break;
         }
         return std::move(res);
