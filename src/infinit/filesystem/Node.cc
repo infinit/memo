@@ -414,9 +414,9 @@ namespace infinit
           {
             umbrella([&] {
               if (v.size())
-                group.set_description(v);
+                group.description(v);
               else
-                group.set_description(boost::none);
+                group.description(boost::none);
             });
             return;
           }
