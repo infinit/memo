@@ -298,7 +298,10 @@ namespace infinit
             {
               auto res = _auth_0_7(*this, channels);
               if (this->_id == model::Address::null)
+              {
                 this->_id = res.id;
+                this->_id_discovered();
+              }
               else if (this->_id != res.id)
                 elle::err("peer id mismatch: expected %f, got %f",
                           this->_id, res.id);

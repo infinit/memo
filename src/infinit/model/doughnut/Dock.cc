@@ -153,16 +153,28 @@ namespace infinit
         }
         try
         {
+          using RemotePeer = consensus::Paxos::RemotePeer;
           auto res =
-            std::make_shared<model::doughnut::consensus::Paxos::RemotePeer>(
+            std::make_shared<RemotePeer>(
               this->doughnut(),
               loc.id(),
               loc.endpoints(),
               this->_utp_server,
               refetcher,
               this->_protocol);
-          if (!disable_cache && loc.id() != Address::null)
-            this->_peer_cache.emplace(loc.id(), res);
+          if (!disable_cache)
+            if (loc.id() != Address::null)
+              this->_peer_cache.emplace(loc.id(), res);
+            else
+              res->id_discovered().connect(
+                [this, remote = std::weak_ptr<RemotePeer>(res)]
+                {
+                  if (auto r = remote.lock())
+                  {
+                    ELLE_ASSERT_NEQ(r->id(), Address::null);
+                    this->_peer_cache.emplace(r->id(), r);
+                  }
+                });
           this->_on_connect(*res);
           auto weak_res = overlay::Overlay::WeakMember::own(std::move(res));
           return weak_res;
