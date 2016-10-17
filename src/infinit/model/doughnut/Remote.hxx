@@ -28,8 +28,10 @@ namespace infinit
         // GCC bug, argument packs dont work in lambdas
         auto helper = std::bind(&remote_call_next<F, Args...>,
           this, std::ref(args)...);
-        return _remote->safe_perform<typename RPC<F>::result_type>("RPC",
-          [&] {
+        return _remote->safe_perform<typename RPC<F>::result_type>(
+          this->name(),
+          [&]
+          {
             this->_channels = _remote->channels().get();
             auto creds = _remote->credentials();
             if (!creds.empty())
@@ -126,18 +128,24 @@ namespace infinit
           catch(reactor::network::Exception const& e)
           {
             ELLE_TRACE("network exception when invoking %s (attempt %s/%s): %s",
-                       name, attempt+1, max_attempts, e);
+                       name, attempt + 1, max_attempts, e);
           }
           catch(infinit::protocol::Serializer::EOF const& e)
           {
             ELLE_TRACE("EOF when invoking %s (attempt %s/%s): %s",
                        name, attempt+1, max_attempts, e);
           }
+          catch (elle::Error const& e)
+          {
+            ELLE_TRACE("%s: connection error: %s", this, e);
+            throw;
+          }
           if (max_attempts && ++attempt >= max_attempts)
           {
             _fast_fail = true;
-            throw reactor::network::ConnectionClosed(elle::sprintf("could not establish channel for operation '%s'",
-                                            name));
+            throw reactor::network::ConnectionClosed(
+              elle::sprintf("could not establish channel for operation '%s'",
+                            name));
           }
           reactor::sleep(boost::posix_time::milliseconds(
             200 * std::min(10, attempt)));

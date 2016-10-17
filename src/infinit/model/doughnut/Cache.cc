@@ -133,12 +133,11 @@ namespace infinit
         std::unique_ptr<Local>
         Cache::make_local(boost::optional<int> port,
                           boost::optional<boost::asio::ip::address> listen_address,
-                          std::unique_ptr<storage::Storage> storage)
+                          std::unique_ptr<storage::Storage> storage,
+                          Protocol p)
         {
-          return
-            this->_backend->make_local(std::move(port),
-                                       std::move(listen_address),
-                                       std::move(storage));
+          return this->_backend->make_local(
+            std::move(port), std::move(listen_address), std::move(storage), p);
         }
 
         /*----------.
