@@ -1445,32 +1445,41 @@ ELLE_TEST_SCHEDULED(group_description)
       std::stringstream ss(str);
       return boost::any_cast<elle::json::Object>(elle::json::read(ss));
     };
-  // Check there is no description.
-  BOOST_CHECK(group_list(owner).find("description") == group_list(owner).end());
-  // Admin adds a description.
-  std::string description = "some generic description";
   auto set_description = [&] (auto const& c, std::string const& desc)
     {
       c.fs->path("/")->setxattr("infinit.groups.grp.description", desc, 0);
     };
-  set_description(owner, description);
-  auto get_description = [&] (auto const& c) -> std::string
-    {
-      return c.fs->path("/")->getxattr("infinit.groups.grp.description");
-    };
-  // Check group members can see it.
-  BOOST_CHECK_EQUAL(get_description(owner), description);
-  BOOST_CHECK_EQUAL(get_description(member), description);
-  BOOST_CHECK_EQUAL(get_description(admin), description);
-  // Normal member can't change the description.
-  BOOST_CHECK_THROW(set_description(member, "blerg"), elle::Exception);
-  // Admin user can change the description.
-  description = "42";
-  set_description(admin, description);
-  BOOST_CHECK_EQUAL(get_description(owner), description);
-  // Unset the description.
-  set_description(owner, "");
-  BOOST_CHECK(group_list(admin).find("description") == group_list(admin).end());
+  if (owner.dht.dht->version() < elle::Version(0, 8, 0))
+  {
+    BOOST_CHECK_THROW(set_description(owner, "blerg"), elle::Error);
+  }
+  else
+  {
+    // Check there is no description.
+    BOOST_CHECK(
+      group_list(owner).find("description") == group_list(owner).end());
+    // Admin adds a description.
+    std::string description = "some generic description";
+    set_description(owner, description);
+    auto get_description = [&] (auto const& c) -> std::string
+      {
+        return c.fs->path("/")->getxattr("infinit.groups.grp.description");
+      };
+    // Check group members can see it.
+    BOOST_CHECK_EQUAL(get_description(owner), description);
+    BOOST_CHECK_EQUAL(get_description(member), description);
+    BOOST_CHECK_EQUAL(get_description(admin), description);
+    // Normal member can't change the description.
+    BOOST_CHECK_THROW(set_description(member, "blerg"), elle::Exception);
+    // Admin user can change the description.
+    description = "42";
+    set_description(admin, description);
+    BOOST_CHECK_EQUAL(get_description(owner), description);
+    // Unset the description.
+    set_description(owner, "");
+    BOOST_CHECK(
+      group_list(admin).find("description") == group_list(admin).end());
+  }
 }
 
 ELLE_TEST_SCHEDULED(world_perm_conflict)
