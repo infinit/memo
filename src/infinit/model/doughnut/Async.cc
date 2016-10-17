@@ -64,7 +64,7 @@ namespace infinit
               version = mb->version();
             else if (auto mb = dynamic_cast<blocks::MutableBlock*>(
               remove_signature.block.get()))
-            version = mb->version();
+              version = mb->version();
           }
         }
 
@@ -88,6 +88,7 @@ namespace infinit
                                   this->_process_loop();
                                 }))
           , _in_push(false)
+          , _processed_op_count(0)
         {
           if (!this->_journal_dir.empty())
           {
@@ -277,46 +278,76 @@ namespace infinit
           // squash check
           static bool squash_enabled = elle::os::getenv("INFINIT_ASYNC_DISABLE_SQUASH", "").empty();
           auto its = this->_operations.get<0>().equal_range(op.address);
-          if (squash_enabled && its.second != its.first)
+          if (squash_enabled && its.second != its.first && op.resolver)
           {
-            auto most_recent_it = std::max_element(its.first, its.second,
-              [](Op const& a, Op const& b)
-              {
-                return a.index < b.index;
-              });
+            int last_candidate_index = -1;
+            SquashOperation last_candidate_order = std::make_pair(
+              Squash::stop, SquashConflictResolverOptions(0));
             // Check for squashability: we need resolvers, and we can't touch
             // the head of the queue since it's currently being processed
-            if (op.resolver && most_recent_it->resolver
-              && most_recent_it->index != this->_operations.get<1>().begin()->index)
+            int current = this->_operations.get<1>().begin()->index;
+            std::vector<int> candidates;
+            for (auto it = its.first; it != its.second; ++it)
+              if (it->index != current)
+                candidates.push_back(it->index);
+            std::sort(candidates.begin(), candidates.end(),
+              [](int x, int y) { return x > y;});
+            for(int c: candidates)
             {
-              auto squash =
-                most_recent_it->resolver->squashable(*op.resolver);
-              if (squash.first != Squash::none)
+              auto& cop = *this->_operations.get<1>().find(c);
+              if (!cop.resolver)
+                continue;
+              auto squash = op.resolver->squashable(*cop.resolver);
+              bool keep_searching = true;
+              switch (squash.first)
               {
-                ELLE_DEBUG("%s: squashing %s on %s", this, op,
-                           *most_recent_it);
-                auto cr = make_merge_conflict_resolver(
-                    std::move(elle::unconst(most_recent_it->resolver)),
+              case Squash::stop:
+                keep_searching = false;
+                break;
+              case Squash::skip:
+                break;
+              case Squash::at_first_position_stop:
+              case Squash::at_last_position_stop:
+                keep_searching = false;
+                last_candidate_order = squash;
+                last_candidate_index = c;
+                break;
+              case Squash::at_last_position_continue:
+              case Squash::at_first_position_continue:
+                last_candidate_order = squash;
+                last_candidate_index = c;
+                break;
+              }
+              if (!keep_searching)
+                break;
+            }
+            if (last_candidate_index != -1)
+            {
+              auto copit = this->_operations.get<1>().find(last_candidate_index);
+              auto& cop = *copit;
+              auto cr = make_merge_conflict_resolver(
+                    std::move(elle::unconst(cop.resolver)),
                     std::move(op.resolver),
-                    squash.second);
-                // We will use the last block and the merged conflict resolver
-                // for our new squashed operation.
-                // But we must also set version to the first operation's version
-                // or we will miss some conflicts.
-                ACB* acb = dynamic_cast<ACB*>(op.block.get());
-                if (!acb)
-                  acb = dynamic_cast<ACB*>(op.remove_signature.block.get());
-                ELLE_DEBUG("Changing %s version to %s", acb, most_recent_it->version);
-                if (acb)
-                  acb->seal(most_recent_it->version);
-                else
-                  ELLE_WARN("Unable to reset block version (got %s (from %s)",
-                    acb, op);
-                if (squash.first == Squash::at_first_position)
-                {
-                  ELLE_DEBUG("overwriting op at %s", most_recent_it->index);
-                  this->_operations.get<0>().modify(
-                    most_recent_it, [&](Op& o) {
+                    last_candidate_order.second);
+              // We will use the last block and the merged conflict resolver
+              // for our new squashed operation.
+              // But we must also set version to the first operation's version
+              // or we will miss some conflicts.
+              ACB* acb = dynamic_cast<ACB*>(op.block.get());
+              if (!acb)
+                acb = dynamic_cast<ACB*>(op.remove_signature.block.get());
+              ELLE_DEBUG("Changing %s version to %s", acb, cop.version);
+              if (acb)
+                acb->seal(cop.version);
+              else
+                ELLE_WARN("Unable to reset block version (got %s (from %s)",
+                          acb, op);
+              if (last_candidate_order.first == Squash::at_first_position_stop
+                || last_candidate_order.first == Squash::at_first_position_continue)
+              {
+                ELLE_DEBUG("overwriting op at %s", cop.index);
+                  this->_operations.get<1>().modify(
+                    copit, [&](Op& o) {
                       o.block = std::move(op.block);
                       o.mode = std::move(op.mode);
                       o.remove_signature = std::move(op.remove_signature);
@@ -325,37 +356,35 @@ namespace infinit
                   if (!this->_journal_dir.empty())
                   {
                     auto path =
-                      boost::filesystem::path(_journal_dir) / std::to_string(most_recent_it->index);
+                      boost::filesystem::path(_journal_dir) / std::to_string(last_candidate_index);
                     boost::filesystem::ofstream os(path, std::ios::binary);
                     elle::serialization::binary::SerializerOut sout(os);
                     sout.set_context(ACBDontWaitForSignature{});
                     sout.set_context(OKBDontWaitForSignature{});
-                    sout.serialize_forward(*most_recent_it);
+                    sout.serialize_forward(*copit);
                   }
                   return;
+              }
+              else
+              { // at_last_position
+                op.resolver = std::move(cr);
+                int idx = last_candidate_index;
+                int lastidx = this->_operations.get<1>().rbegin()->index;
+                ELLE_DEBUG("Erasing op at %s", last_candidate_index);
+                this->_operations.get<1>().erase(last_candidate_index);
+                if (!this->_journal_dir.empty())
+                {
+                  auto path = boost::filesystem::path(this->_journal_dir) /
+                  std::to_string(idx);
+                  boost::filesystem::remove(path);
                 }
-                else
-                { // Squash::at_last_position
-                  op.resolver = std::move(cr);
-                  int idx = most_recent_it->index;
-                  int lastidx = this->_operations.get<1>().rbegin()->index;
-                  ELLE_DEBUG("Erasing op at %s", most_recent_it->index);
-                  this->_operations.get<0>().erase(most_recent_it);
-                  if (!this->_journal_dir.empty())
-                  {
-                    auto path = boost::filesystem::path(this->_journal_dir) /
-                      std::to_string(idx);
-                    boost::filesystem::remove(path);
-                  }
-                  if (this->_first_disk_index
-                    && this->_first_disk_index.get() == idx)
-                  {
-                    if (++*this->_first_disk_index > lastidx)
-                      this->_first_disk_index.reset();
-                  }
-                  // go on to regular push_op
+                if (this->_first_disk_index
+                  && this->_first_disk_index.get() == idx)
+                {
+                  if (++*this->_first_disk_index > lastidx)
+                    this->_first_disk_index.reset();
                 }
-
+                // go on to regular push_op
               }
             }
           }
@@ -556,6 +585,7 @@ namespace infinit
         void
         Async::_process_operation(elle::generic_unique_ptr<Op const> op)
         {
+          ++_processed_op_count;
           static const int delay = std::stoi(elle::os::getenv("INFINIT_ASYNC_POP_DELAY", "0"));
           if (delay)
             reactor::sleep(boost::posix_time::milliseconds(delay));
@@ -684,7 +714,16 @@ namespace infinit
             version = mb->version();
           else if (auto mb = dynamic_cast<blocks::MutableBlock*>(
             remove_signature.block.get()))
-          version = mb->version();
+            version = mb->version();
+        }
+        void
+        Async::print_queue()
+        {
+          auto& indexed = this->_operations.get<1>();
+          for (auto const& op: indexed)
+          {
+            ELLE_LOG("%s: %s", op.index, op.resolver->description());
+          }
         }
       }
     }

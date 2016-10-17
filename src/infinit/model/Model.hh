@@ -27,9 +27,12 @@ namespace infinit
 
     enum class Squash
     {
-      none,
-      at_first_position,
-      at_last_position,
+      stop, // Stop searching, do not squash
+      skip, // keep searching, do not squash
+      at_first_position_stop, // Stop searching, squash at first block
+      at_last_position_stop,  // Stop searching, squash at second block
+      at_first_position_continue, // Remember candidate, but keep searching
+      at_last_position_continue,  // Remember candidate, but keep searching
     };
 
     struct SquashConflictResolverOptions
@@ -48,6 +51,7 @@ namespace infinit
     {
     public:
       typedef infinit::serialization_tag serialization_tag;
+      using SquashStack = std::vector<std::unique_ptr<ConflictResolver>>;
       virtual
       std::unique_ptr<blocks::Block>
       operator () (blocks::Block& failed,
@@ -55,8 +59,8 @@ namespace infinit
                    StoreMode mode) = 0;
       virtual
       SquashOperation
-      squashable(ConflictResolver const& b)
-      { return {Squash::none, {}};}
+      squashable(SquashStack const& others)
+      { return {Squash::stop, {}};}
       virtual
       void
       serialize(elle::serialization::Serializer& s,
@@ -65,12 +69,17 @@ namespace infinit
       virtual
       std::string
       description() const = 0;
+
+      SquashOperation
+      squashable(ConflictResolver& prev);
     };
 
     std::unique_ptr<ConflictResolver>
     make_merge_conflict_resolver(std::unique_ptr<ConflictResolver> a,
                                  std::unique_ptr<ConflictResolver> b,
                                  SquashConflictResolverOptions const& opts);
+    std::vector<std::unique_ptr<ConflictResolver>>&
+    get_merge_conflict_resolver_content(ConflictResolver& cr);
 
     // A resolver that just override the previous version.
     class DummyConflictResolver

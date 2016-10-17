@@ -37,7 +37,8 @@ namespace infinit
           make_local(boost::optional<int> port,
                      boost::optional<boost::asio::ip::address> listen_address,
                      std::unique_ptr<storage::Storage> storage) override;
-          void sync(); // wait until last pushed op gets processed
+          void
+          sync(); // wait until last pushed op gets processed
         protected:
           virtual
           void
@@ -131,6 +132,9 @@ namespace infinit
           ELLE_ATTRIBUTE(reactor::Barrier, init_barrier);
           ELLE_ATTRIBUTE(bool, in_push);
           ELLE_ATTRIBUTE(std::vector<Op>, reentered_ops);
+          ELLE_ATTRIBUTE_R(unsigned long, processed_op_count);
+          void
+          print_queue();
         };
       }
     }

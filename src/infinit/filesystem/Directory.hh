@@ -121,14 +121,13 @@ namespace infinit
       std::string
       description() const override;
       model::SquashOperation
-      squashable(ConflictResolver const& b) override;
+      squashable(SquashStack const& others) override;
 
       model::Model* _model;
       Operation _op;
       Address _address;
       bool _deserialized;
       typedef infinit::serialization_tag serialization_tag;
-      static bool squash_at_first;
     };
 
     std::unique_ptr<Block>

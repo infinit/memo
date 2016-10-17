@@ -291,6 +291,14 @@ namespace infinit
       {
         _resolvers.push_back(std::move(a));
       }
+      void add_front(std::unique_ptr<ConflictResolver> a)
+      {
+        std::vector<std::unique_ptr<ConflictResolver>> nr;
+        nr.push_back(std::move(a));
+        for (auto& cr: _resolvers)
+          nr.push_back(std::move(cr));
+        _resolvers = std::move(nr);
+      }
       std::unique_ptr<blocks::Block>
       operator() (blocks::Block& block,
                   blocks::Block& current,
@@ -308,11 +316,9 @@ namespace infinit
         s.serialize("resolvers", _resolvers);
       }
       SquashOperation
-      squashable(ConflictResolver const& b)
+      squashable(SquashStack const& b)
       {
-        if (_config.max_size && unsigned(_config.max_size) <= _resolvers.size())
-          return {Squash::none, {}};
-        return _resolvers.back()->squashable(b);
+        elle::unreachable();
       }
       std::string
       description() const override
@@ -325,8 +331,15 @@ namespace infinit
       }
     private:
       SquashConflictResolverOptions _config;
-      std::vector<std::unique_ptr<ConflictResolver>> _resolvers;
+      ELLE_ATTRIBUTE_RX(std::vector<std::unique_ptr<ConflictResolver>>,
+                        resolvers);
     };
+
+    std::vector<std::unique_ptr<ConflictResolver>>&
+    get_merge_conflict_resolver_content(ConflictResolver& cr)
+    {
+      return dynamic_cast<MergeConflictResolver&>(cr).resolvers();
+    }
 
     std::unique_ptr<ConflictResolver>
     make_merge_conflict_resolver(std::unique_ptr<ConflictResolver> a,
@@ -338,11 +351,31 @@ namespace infinit
         m->add(std::move(b));
         return std::move(a);
       }
+      else if (auto m = dynamic_cast<MergeConflictResolver*>(b.get()))
+      {
+        m->add_front(std::move(a));
+        return std::move(b);
+      }
       else
         return elle::make_unique<MergeConflictResolver>(std::move(a), std::move(b), config);
     }
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<MergeConflictResolver> _register_mcr("merge");
+
+    SquashOperation
+    ConflictResolver::squashable(ConflictResolver& prev)
+    {
+      // FIXME: check mcr max size
+      if (auto mcr = dynamic_cast<MergeConflictResolver*>(&prev))
+        return this->squashable(mcr->resolvers());
+      else
+      {
+        SquashStack stack;
+        stack.emplace_back(&prev);
+        elle::SafeFinally releaser([&] { stack.front().release();});
+        return this->squashable(stack);
+      }
+    }
 
     std::string
     DummyConflictResolver::description() const
