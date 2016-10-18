@@ -183,8 +183,8 @@ namespace infinit
 
     std::unique_ptr<Block>
     DirectoryConflictResolver::operator() (Block& block,
-                Block& current,
-                model::StoreMode mode)
+                                           Block& current,
+                                           model::StoreMode mode)
     {
       return resolve_directory_conflict(
         block, current, mode,
@@ -213,6 +213,7 @@ namespace infinit
       bool other_op;
       bool error;
     };
+
     static
     ConflictContent
     extract_stack_content(model::ConflictResolver::SquashStack const& stack,
@@ -242,19 +243,22 @@ namespace infinit
       }
       return res;
     }
+
     model::SquashOperation
     DirectoryConflictResolver::squashable(SquashStack const& newops)
     {
+      static const unsigned int max_size
+        = std::stoi(elle::os::getenv("INFINIT_MAX_SQUASH_SIZE", "20"));
+      if (newops.size() >= max_size)
+        return {model::Squash::stop, {}};
       if (this->_op.type != OperationType::insert
         && this->_op.type != OperationType::insert_exclusive)
         return {model::Squash::stop, {}};
       ConflictContent content = extract_stack_content(newops, this->_op.target);
       bool self_pre = this->_op.entry_type == EntryType::pending
         ||this->_op.entry_type == EntryType::directory;
-
       if (content.other_op || content.same_file || content.error)
         return {model::Squash::stop, {}};
-
       if (self_pre)
       { // at_first is allowed
         return {model::Squash::at_first_position_continue, {}};
@@ -281,7 +285,6 @@ namespace infinit
 
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<DirectoryConflictResolver> _register_dcr("dcr");
-
 
     Directory::Directory(FileSystem& owner,
                          std::shared_ptr<DirectoryData> self,
