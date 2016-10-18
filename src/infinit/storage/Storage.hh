@@ -128,8 +128,8 @@ namespace infinit
       boost::optional<int64_t> capacity;
 
       static
-      void
-      check_name(std::string const& name);
+      std::string
+      name_regex() ;
     };
   }
 }
