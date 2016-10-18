@@ -1,21 +1,25 @@
 # Change Log
 
 
-## [0.8.0] - xxx date
+<!-- ## [0.8.0] -->
 
-xxx summary
+<!-- xxx summary -->
 
-### Added
+<!-- ### Added -->
 
-- Descriptions for users, groups, storages, networks, volumes and drives.
+<!-- - Add groups description. -->
 
 
 ## [0.7.1]
 
+New overlay implementation, bug fixes and performances improvements.
+
 ### Added
 
-- Add `--peers-file` option to `infinit-volume` and `infinit-network`: stores
-  all known peers to disk.
+- Add `--peers-file` option to `infinit-volume` and `infinit-network`
+  to store known peers to disk.
+- Enable to pick listen inferface with `--listen`.
+- Add descriptions for users, storages, networks, volumes and drives.
 
 ### Changed
 
@@ -24,7 +28,15 @@ xxx summary
 
 ### Fixed
 
-- Unable to interrupt adding credentials with infinit-credentials.
+- Enable to interrupt adding credentials with `infinit-credentials`.
+- Cache peer connections.
+- Daemonize `infinit-network` and `infinit-volume` as late as possible
+  to catch more errors syncronously.
+
+### Fixed
+
+- Fix some shutdown assertions.
+- Fix deadlock in Kelips overlay implementation.
 
 
 ## [0.7.0] - 2016-09-23
