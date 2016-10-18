@@ -20,6 +20,8 @@ New overlay implementation, bug fixes and performances improvements.
   to store known peers to disk.
 - Enable to pick listen inferface with `--listen`.
 - Add descriptions for users, storages, networks, volumes and drives.
+- Add support for merging successive block updates into one operation in
+  `async` consensus.
 
 ### Changed
 
@@ -37,7 +39,6 @@ New overlay implementation, bug fixes and performances improvements.
 
 - Fix some shutdown assertions.
 - Fix deadlock in Kelips overlay implementation.
-
 
 ## [0.7.0] - 2016-09-23
 

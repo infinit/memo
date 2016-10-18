@@ -93,14 +93,14 @@ namespace infinit
       `-------*/
       public:
         ELLE_CLONABLE();
-
+        virtual
+        int
+        version() const override;
       /*--------.
       | Content |
       `--------*/
       protected:
-        virtual
-        int
-        version() const override;
+
         virtual
         elle::Buffer
         _decrypt_data(elle::Buffer const& data) const override;
@@ -160,6 +160,8 @@ namespace infinit
         // Seal with a specific secret key.
         void
         seal(boost::optional<int> version, cryptography::SecretKey const& key);
+        // Seal with a specific version
+        void seal(int version);
       protected:
         virtual
         blocks::ValidationResult
