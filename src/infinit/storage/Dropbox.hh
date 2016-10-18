@@ -49,7 +49,8 @@ namespace infinit
       DropboxStorageConfig(std::string name,
                            std::string token,
                            boost::optional<std::string> root,
-                           boost::optional<int64_t> capacity = {});
+                           boost::optional<int64_t> capacity,
+                           boost::optional<std::string> description);
       DropboxStorageConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;

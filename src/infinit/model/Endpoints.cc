@@ -147,6 +147,11 @@ namespace infinit
         this->emplace_back(e);
     }
 
+    Endpoints::Endpoints(boost::asio::ip::udp::endpoint ep)
+    {
+      this->emplace_back(std::move(ep));
+    }
+
     void
     Endpoint::print(std::ostream& output) const
     {
@@ -181,7 +186,7 @@ namespace infinit
     {
       if (loc.id() != Address::null)
         if (is_fixed(output))
-          elle::fprintf(output, "peer %f (%s)", loc.id(), loc.endpoints());
+          elle::fprintf(output, "peer %f", loc.id());
         else
           elle::fprintf(output, "peer %s (%s)", loc.id(), loc.endpoints());
       else

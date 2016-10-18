@@ -35,8 +35,11 @@ namespace infinit
           ~Async();
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
-                     std::unique_ptr<storage::Storage> storage) override;
-          void sync(); // wait until last pushed op gets processed
+                     boost::optional<boost::asio::ip::address> listen_address,
+                     std::unique_ptr<storage::Storage> storage,
+                     Protocol p) override;
+          void
+          sync(); // wait until last pushed op gets processed
         protected:
           virtual
           void
@@ -76,6 +79,8 @@ namespace infinit
                );
             explicit
             Op(elle::serialization::SerializerIn& ser);
+            Op(Op && b);
+            void operator = (Op && b);
             void serialize(elle::serialization::Serializer& ser);
             Address address;
             std::unique_ptr<blocks::Block> block;
@@ -83,6 +88,7 @@ namespace infinit
             std::unique_ptr<ConflictResolver> resolver;
             blocks::RemoveSignature remove_signature;
             int index;
+            int version;
           };
 
         private:
@@ -103,7 +109,7 @@ namespace infinit
           _load_op(int id, bool signature = true);
           void
           _load_operations();
-          ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, backend);
+          ELLE_ATTRIBUTE_R(std::unique_ptr<Consensus>, backend);
           typedef bmi::multi_index_container<
             Op,
             bmi::indexed_by<
@@ -127,6 +133,9 @@ namespace infinit
           ELLE_ATTRIBUTE(reactor::Barrier, init_barrier);
           ELLE_ATTRIBUTE(bool, in_push);
           ELLE_ATTRIBUTE(std::vector<Op>, reentered_ops);
+          ELLE_ATTRIBUTE_R(unsigned long, processed_op_count);
+          void
+          print_queue();
         };
       }
     }

@@ -27,7 +27,6 @@ COMMAND(run)
   report_action("running", "network", network.name);
   auto model = network.run(
     self,
-    {},
     true,
     cache,
     cache_ram_size, cache_ram_ttl, cache_ram_invalidation, flag(args, "async"));

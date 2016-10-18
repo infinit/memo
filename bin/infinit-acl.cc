@@ -680,6 +680,7 @@ COMMAND(group)
   bool delete_ = flag(args, "delete");
   bool list = flag(args, "show");
   auto group = mandatory<std::string>(args, "name", "group name");
+  auto description = optional<std::string>(args, "description");
   auto add_user = optional<std::vector<std::string>>(args, "add-user");
   auto add_admin = optional<std::vector<std::string>>(args, "add-admin");
   auto add_group = optional<std::vector<std::string>>(args, "add-group");
@@ -691,7 +692,7 @@ COMMAND(group)
   auto rem = optional<std::vector<std::string>>(args, "remove");
   rem = collate_users(rem, rem_user, rem_admin, rem_group);
   int action_count = (create ? 1 : 0) + (delete_ ? 1 : 0) + (list ? 1 : 0)
-                   + (add ? 1 : 0) + (rem ? 1 : 0);
+                   + (add ? 1 : 0) + (rem ? 1 : 0) + (description ? 1 : 0);
   if (action_count == 0)
     throw CommandLineError("no action specified");
   if (action_count > 1)
@@ -716,6 +717,12 @@ COMMAND(group)
   {
     for (auto const& obj: rem.get())
       group_add_remove(path, group, obj, "remove", fallback, fetch);
+  }
+  if (description)
+  {
+    check(port_setxattr, path,
+          elle::sprintf("infinit.groups.%s.description", group),
+          description.get(), fallback);
   }
   if (list)
   {
@@ -790,7 +797,8 @@ main(int argc, char** argv)
         { "path,p", value<std::vector<std::string>>(), "paths" },
         { "user,u", value<std::vector<std::string>>()->multitoken(),
           elle::sprintf("users and groups (prefix: %s<group>)", group_prefix) },
-        { "group,g", value<std::vector<std::string>>(), "groups" },
+        { "group,g", value<std::vector<std::string>>()->multitoken(),
+          "groups" },
         { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
         { "others-mode,o", value<std::string>(),
           "access mode for other network users: r,w,rw,none" },
@@ -817,7 +825,9 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "group name" },
         { "create,c", bool_switch(), "create the group" },
-        { "show", bool_switch(), "list group users and administrators" },
+        option_description("group"),
+        { "show", bool_switch(),
+          "list group users, administrators and description" },
         // { "delete,d", bool_switch(), "delete an existing group" },
         { "add-user", value<std::vector<std::string>>(), "add user to group" },
         { "add-admin", value<std::vector<std::string>>(),

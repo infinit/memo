@@ -12,7 +12,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
-#include <infinit/overlay/kademlia/kademlia.hh>
+#include <infinit/overlay/kouncil/Configuration.hh>
 #include <infinit/storage/Storage.hh>
 #include <infinit/storage/Strip.hh>
 
@@ -71,7 +71,7 @@ storage_configuration(boost::program_options::variables_map const& args)
     else
     {
       storage.reset(
-        new infinit::storage::StripStorageConfig(std::move(backends)));
+        new infinit::storage::StripStorageConfig(std::move(backends), {}, {}));
     }
   }
   return storage;
@@ -85,12 +85,17 @@ COMMAND(create)
   int overlays =
     + (args.count("kalimero") ? 1 : 0)
     + (args.count("kelips") ? 1 : 0)
+    + (args.count("kouncil") ? 1 : 0)
   ;
   if (overlays > 1)
     throw CommandLineError("Only one overlay type must be specified");
   if (args.count("kalimero"))
   {
     overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
+  }
+  if (args.count("kouncil"))
+  {
+    overlay_config.reset(new infinit::overlay::kouncil::Configuration());
   }
   else // default to Kelips
   {
@@ -253,7 +258,9 @@ COMMAND(create)
       admin_keys,
       peers);
   {
-    infinit::Network network(ifnt.qualified_name(name, owner), std::move(dht));
+    infinit::Network network(ifnt.qualified_name(name, owner),
+                             std::move(dht),
+                             optional(args, "description"));
     std::unique_ptr<infinit::NetworkDescriptor> desc;
     if (args.count("output"))
     {
@@ -308,8 +315,11 @@ user_key(std::string name, boost::optional<std::string> mountpoint)
 COMMAND(update)
 {
   auto name = mandatory(args, "name", "network name");
+  auto description = optional(args, "description");
   auto owner = self_user(ifnt, args);
   auto network = ifnt.network_get(name, owner);
+  if (description)
+    network.description = description;
   network.ensure_allowed(owner, "update");
   auto& dht = *network.dht();
   if (auto port = optional<int>(args, "port"))
@@ -453,7 +463,8 @@ COMMAND(fetch)
             d->port,
             desc.version,
             desc.admin_keys,
-            desc.peers));
+            desc.peers),
+          desc.description);
         // Update linked network for user.
         ifnt.network_save(u, updated_network, true);
       }
@@ -540,7 +551,8 @@ COMMAND(link_)
       boost::optional<int>(),
       desc.version,
       desc.admin_keys,
-      desc.peers));
+      desc.peers),
+    desc.description);
   auto has_output = optional(args, "output");
   auto output = has_output ? get_output(args) : nullptr;
   if (output)
@@ -563,8 +575,10 @@ COMMAND(list)
     for (auto const& network: ifnt.networks_get(self))
     {
       elle::json::Object o;
-      o["name"] = network.name;
+      o["name"] = static_cast<std::string>(network.name);
       o["linked"] = bool(network.model) && network.user_linked(self);
+      if (network.description)
+        o["description"] = network.description.get();
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
@@ -574,6 +588,8 @@ COMMAND(list)
     for (auto const& network: ifnt.networks_get(self))
     {
       std::cout << network.name;
+      if (network.description)
+        std::cout << " \"" << network.description.get() << "\"";
       if (network.model && network.user_linked(self))
         std::cout << ": linked";
       else
@@ -700,18 +716,6 @@ network_run(boost::program_options::variables_map const& args,
     }
   }
   network.ensure_allowed(self, "run");
-  std::vector<infinit::model::Endpoints> eps;
-  if (args.count("peer"))
-  {
-    auto peers = args["peer"].as<std::vector<std::string>>();
-    for (auto const& peer: peers)
-    {
-      if (boost::filesystem::exists(peer))
-        eps.emplace_back(infinit::endpoints_from_file(peer));
-      else
-        eps.emplace_back(infinit::model::Endpoints({peer}));
-    }
-  }
   bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
   auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
@@ -724,11 +728,36 @@ network_run(boost::program_options::variables_map const& args,
     cache = true;
   }
   auto port = optional<int>(args, option_port);
+  auto listen_address_str = optional<std::string>(args, option_listen_interface);
+  boost::optional<boost::asio::ip::address> listen_address;
+  if (listen_address_str)
+    listen_address = boost::asio::ip::address::from_string(*listen_address_str);
   auto dht = network.run(
     self,
-    eps, false,
+    false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-    flag(args, "async"), disk_cache_size, infinit::compatibility_version, port);
+    flag(args, "async"), disk_cache_size, infinit::compatibility_version, port,
+    listen_address);
+  if (auto plf = optional(args, "peers-file"))
+  {
+    auto more_peers = infinit::hook_peer_discovery(*dht, *plf);
+    ELLE_TRACE("Peer list file got %s peers", more_peers.size());
+    if (!more_peers.empty())
+      dht->overlay()->discover(more_peers);
+  }
+  if (args.count("peer"))
+  {
+    std::vector<infinit::model::Endpoints> eps;
+    auto peers = args["peer"].as<std::vector<std::string>>();
+    for (auto const& peer: peers)
+    {
+      if (boost::filesystem::exists(peer))
+        eps.emplace_back(infinit::endpoints_from_file(peer));
+      else
+        eps.emplace_back(infinit::model::Endpoints({peer}));
+    }
+    dht->overlay()->discover(eps);
+  }
   // Only push if we have are contributing storage.
   bool push = option_push(args, {"push-endpoints"}) &&
     dht->local() && dht->local()->storage();
@@ -744,18 +773,30 @@ network_run(boost::program_options::variables_map const& args,
         dht->local()->server_endpoints(), endpoint_file.get());
   }
 #ifndef INFINIT_WINDOWS
+  infinit::DaemonHandle daemon_handle;
   if (flag(args, "daemon"))
-    if (daemon(0, 1))
-      perror("daemon:");
+    daemon_handle = infinit::daemon_hold(0, 1);
 #endif
-  auto run = [&]
+  auto poll_beyond = optional<int>(args, option_poll_beyond);
+  auto run = [&, push]
     {
+      reactor::Thread::unique_ptr poll_thread;
       if (fetch)
       {
         infinit::model::NodeLocations eps;
         network.beyond_fetch_endpoints(eps);
         dht->overlay()->discover(eps);
+        if (poll_beyond && *poll_beyond > 0)
+          poll_thread =
+            network.make_poll_beyond_thread(*dht, eps, *poll_beyond);
       }
+#ifndef INFINIT_WINDOWS
+      if (flag(args, "daemon"))
+      {
+        ELLE_TRACE("releasing daemon");
+        infinit::daemon_release(daemon_handle);
+      }
+#endif
       action(self, network, *dht, push, script_mode);
     };
   if (push)
@@ -783,7 +824,7 @@ COMMAND(run)
     {
       reactor::Thread::unique_ptr stat_thread;
       if (push)
-        stat_thread = make_stat_update_thread(self, network, dht);
+        stat_thread = network.make_stat_update_thread(self, dht);
       report_action("running", "network", network.name);
       if (script_mode)
       {
@@ -945,6 +986,10 @@ run_options(std::vector<Mode::OptionDescription> opts = {})
   opts.emplace_back(option_endpoint_file);
   opts.emplace_back(option_port_file);
   opts.emplace_back(option_port);
+  opts.emplace_back("peers-file", value<std::string>(),
+                    "file to write peers to periodically");
+  opts.emplace_back(option_listen_interface);
+  opts.emplace_back(option_poll_beyond);
   return opts;
 }
 
@@ -957,6 +1002,7 @@ main(int argc, char** argv)
   overlay_types_options.add_options()
     ("kelips", "use a Kelips overlay network (default)")
     ("kalimero", "use a Kalimero overlay network.\nUsed for local testing")
+    ("kouncil", "use a Kouncil overlay network")
     ;
   Mode::OptionsDescription consensus_types_options("Consensus types");
   consensus_types_options.add_options()
@@ -985,6 +1031,7 @@ main(int argc, char** argv)
         "[--storage STORAGE...]",
       {
         { "name,n", value<std::string>(), "created network name" },
+        option_description("network"),
         { "storage,S", value<std::vector<std::string>>()->multitoken(),
           "storage to contribute (optional, data striped over multiple)" },
         { "port", value<int>(), "port to listen on (default: random)" },
@@ -1016,6 +1063,7 @@ main(int argc, char** argv)
       "--name NAME",
       {
         { "name,n", value<std::string>(), "network to update" },
+        option_description("network"),
         { "port", value<int>(), "port to listen on (default: random)" },
         option_output("network"),
         { "push-network", bool_switch(),

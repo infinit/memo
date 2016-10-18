@@ -10,7 +10,7 @@ BUILD = '%s/_build/linux64' % ROOT
 import multiprocessing
 JOBS = multiprocessing.cpu_count()
 
-def repor(msg):
+def report(msg):
   print(msg, file = sys.stderr)
 
 git = sh.git.bake(_cwd = ROOT)

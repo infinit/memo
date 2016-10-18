@@ -67,12 +67,12 @@ COMMAND(create)
   ELLE_TRACE_SCOPE("create");
   auto owner = self_user(ifnt, args);
   auto name = drive_name(args, owner);
-  auto desc = optional(args, "description");
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
   infinit::Volume volume(
     ifnt.volume_get(ifnt.qualified_name(mandatory(args, "volume"), owner)));
   infinit::Drive::Users users;
-  infinit::Drive drive{name, owner, volume, network, desc ? *desc : "", users};
+  infinit::Drive drive{
+    name, owner, volume, network, optional(args, "description"), users};
   ifnt.drive_save(drive);
   report_action("created", "drive", drive.name, std::string("locally"));
 
@@ -381,9 +381,11 @@ COMMAND(list)
     for (auto& drive: ifnt.drives_get())
     {
       elle::json::Object o;
-      o["name"] = drive.name;
+      o["name"] = static_cast<std::string>(drive.name);
       if (drive.users.find(self.name) != drive.users.end())
         o["status"] = drive.users[self.name].status;
+      if (drive.description)
+        o["description"] = drive.description.get();
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
@@ -392,6 +394,8 @@ COMMAND(list)
     for (auto& drive: ifnt.drives_get())
     {
       std::cout << drive.name;
+      if (drive.description)
+        std::cout << " \"" << drive.description.get() << "\"";
       if (drive.users.find(self.name) != drive.users.end())
         std::cout << ": " << drive.users[self.name].status;
       std::cout << std::endl;
@@ -500,8 +504,6 @@ main(int argc, char** argv)
 {
   using boost::program_options::value;
   using boost::program_options::bool_switch;
-  Mode::OptionDescription option_description =
-    { "description,d", value<std::string>(), "created drive description" };
   Mode::OptionDescription option_icon =
     { "icon,i", value<std::string>(), "path to an image to use as icon"};
   Modes modes {
@@ -513,9 +515,9 @@ main(int argc, char** argv)
       "[--description DESCRIPTION]",
       {
         { "name,n", value<std::string>(), "created drive name" },
+        option_description("drive"),
         { "network,N", value<std::string>(), "associated network name" },
         { "volume,V", value<std::string>(), "associated volume name" },
-        option_description,
         option_icon,
         { "push-drive", bool_switch(),
           elle::sprintf("push the created drive to %s", beyond(true)) },

@@ -28,3 +28,12 @@ class Email(Validator):
     import re
     if re.compile(${repr(email_regex)}).match(email) is None:
       raise InvalidFormat(self.field.object, self.field.name)
+
+class Description(Validator):
+
+  def __call__(self, description):
+    if description is None:
+      return;
+    import re
+    if re.compile(${repr(description_regex)}).match(description) is None:
+      raise InvalidFormat(self.field.object, self.field.name)

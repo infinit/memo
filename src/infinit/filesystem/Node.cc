@@ -16,6 +16,8 @@
 #include <infinit/filesystem/Unreachable.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/Async.hh>
+#include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/conflict/UBUpserter.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Group.hh>
@@ -292,7 +294,7 @@ namespace infinit
             this->_header().mode &= ~02;
           umbrella([&] {
               block->set_world_permissions(r, w);
-              _commit(WriteTarget::block);
+              _commit(WriteTarget::perms);
           }, EACCES);
           return;
         }
@@ -397,6 +399,30 @@ namespace infinit
             model::doughnut::Group g(*dht, gn);
             g.remove_admin(elle::Buffer(userdata.data(), userdata.size()));
             return;
+          }
+        }
+        // New naming for group attributes:
+        // infinit.groups.<group_name>.<attribute>
+        else if (special->find("groups.") == 0)
+        {
+          auto name_start = strlen("groups.");
+          auto name_end = special->find_last_of('.');
+          auto group_name = special->substr(name_start, name_end - name_start);
+          model::doughnut::Group group(*dht, group_name);
+          auto attribute = special->substr(name_end + 1);
+          if (attribute == "description")
+          {
+            umbrella([&] {
+              if (v.size())
+                group.description(v);
+              else
+                group.description(boost::none);
+            });
+            return;
+          }
+          else
+          {
+            elle::err("unknown group attribute: %s", attribute);
           }
         }
         throw rfs::Error(ENOATTR, "no such attribute", elle::Backtrace());
@@ -539,10 +565,39 @@ namespace infinit
                 for (auto const& m: members)
                   va.push_back(m->name());
                 o["admins"] = va;
+                try
+                {
+                  if (g.description())
+                    o["description"] = g.description().get();
+                }
+                catch (elle::Error const&)
+                {}
                 std::stringstream ss;
                 elle::json::write(ss, o, true);
                 return ss.str();
               });
+          }
+        }
+        // New naming for group attributes:
+        // infinit.groups.<group_name>.<attribute>
+        else if (special->find("groups.") == 0)
+        {
+          auto name_start = strlen("groups.");
+          auto name_end = special->find_last_of('.');
+          auto group_name = special->substr(name_start, name_end - name_start);
+          model::doughnut::Group group(*dht, group_name);
+          auto attribute = special->substr(name_end + 1);
+          if (attribute == "description")
+          {
+            return umbrella(
+              [&]
+              {
+                return group.description() ? group.description().get() : "";
+              });
+          }
+          else
+          {
+            elle::err("unknown group attribute: %s", attribute);
           }
         }
         else if (special->find("mountpoint") == 0)
@@ -597,7 +652,7 @@ namespace infinit
             this->_owner.block_store());
           elle::json::Object res;
           for (auto wpeer: dht->dock().peer_cache())
-            if (auto peer = wpeer.second.lock())
+            if (auto peer = wpeer.second)
             {
               elle::json::Array keys;
               for (auto const& key: peer->resolve_all_keys())
@@ -612,6 +667,30 @@ namespace infinit
         {
           return this->full_path() == this->full_path().root_path() ? "true"
                                                                     : "false";
+        }
+        else if (special->find("compatibility-version") == 0)
+        {
+          return umbrella(
+            [&]
+            {
+              auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+                this->_owner.block_store());
+              return elle::sprintf("%s", dht->version());
+            });
+        }
+        else if (special->find("cache.clear") == 0)
+        {
+          auto c = dht->consensus().get();
+          if (auto a = dynamic_cast<model::doughnut::consensus::Async*>(c))
+            c = a->backend().get();
+          if (auto cc = dynamic_cast<model::doughnut::consensus::Cache*>(c))
+          {
+            ELLE_TRACE("Clearing cache");
+            cc->clear();
+            return "ok";
+          }
+          else
+            return "cache not found";
         }
       }
       if (k.substr(0, strlen(overlay_info)) == overlay_info)
@@ -753,7 +832,7 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: set_permissions(%s)", *this, flags);
       std::pair<bool, bool> perms = parse_flags(flags);
       auto acl = std::dynamic_pointer_cast<model::blocks::ACLBlock>(
-        this->_owner.fetch_or_die(self_address));
+        this->_owner.fetch_or_die(self_address, {}, this->full_path()));
       if (!acl)
         throw rfs::Error(EIO, "Block is not an ACL block");
       // permission check

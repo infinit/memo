@@ -52,7 +52,7 @@ namespace infinit
               op = overlay::OP_UPDATE;
               break;
             default:
-              elle::unreachable();
+              ELLE_ABORT("unrecognized store mode: %s", mode);
           }
           auto owner =  this->_owner(block->address(), op);
           std::unique_ptr<blocks::Block> nb;
@@ -94,8 +94,6 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: fetch %f if newer than %s",
                            *this, address, local_version);
-          if (this->doughnut().version() < elle::Version(0, 5, 0))
-            return this->_fetch(address, local_version);
           return this->_fetch(address, local_version);
         }
 
@@ -189,34 +187,67 @@ namespace infinit
                                blocks::RemoveSignature rs,
                                int factor)
         {
+          // NonInterruptible blocks ensure we don't stack exceptions in Remote
+          // destructor.
           auto peers = this->_owners(address, factor, overlay::OP_REMOVE);
           int count = 0;
           elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
           {
-            for (auto const& p: peers)
+            for (auto p: peers)
             {
-              s.run_background("remove", [this, p, address,&count, &rs]
+              s.run_background("remove", [this, p, address, &count, &rs]
               {
-                try
+                if (auto lock = p.lock())
                 {
-                  if (auto lock = p.lock())
+                  auto const cleanup = [&]
+                    {
+                      elle::With<reactor::Thread::NonInterruptible>() << [&]
+                      {
+                        lock.reset();
+                        elle::unconst(p).reset();
+                      };
+                    };
+                  try
+                  {
                     lock->remove(address, rs);
-                  else
-                    ELLE_TRACE("peer was destroyed while removing");
+                    cleanup();
+                  }
+                  catch (reactor::network::Exception const& e)
+                  {
+                    ELLE_TRACE("network exception removing %f: %s",
+                               address, e.what());
+                    cleanup();
+                  }
+                  catch (infinit::protocol::Serializer::EOF const&)
+                  {
+                    ELLE_TRACE("EOF while removing %f", address);
+                    cleanup();
+                  }
+                  catch (...)
+                  {
+                    cleanup();
+                    throw;
+                  }
                   ++count;
                 }
-                catch (reactor::network::Exception const& e)
+                else
                 {
-                  ELLE_TRACE("network exception removing %f: %s",
-                             address, e.what());
-                }
-                catch (infinit::protocol::Serializer::EOF const&)
-                {
-                  ELLE_TRACE("EOF while removing %f", address);
+                  ELLE_TRACE("peer was destroyed while removing");
+                  elle::With<reactor::Thread::NonInterruptible>() << [&]
+                  {
+                    elle::unconst(p).reset();
+                  };
                 }
               });
             }
-            reactor::wait(s);
+            try
+            {
+              reactor::wait(s);
+            }
+            catch (...)
+            {
+              throw;
+            }
           };
           if (!count)
             throw MissingBlock(address);
@@ -313,12 +344,16 @@ namespace infinit
 
         std::unique_ptr<Local>
         Consensus::make_local(boost::optional<int> port,
-                              std::unique_ptr<storage::Storage> storage)
+                              boost::optional<boost::asio::ip::address> listen_address,
+                              std::unique_ptr<storage::Storage> storage,
+                              Protocol p)
         {
           return elle::make_unique<Local>(this->doughnut(),
                                           this->doughnut().id(),
                                           std::move(storage),
-                                          port ? port.get() : 0);
+                                          port ? port.get() : 0,
+                                          listen_address,
+                                          p);
         }
 
         /*----------.

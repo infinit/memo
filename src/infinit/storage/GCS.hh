@@ -58,7 +58,8 @@ namespace infinit
                 std::string const& root,
                 std::string const& user_name,
                 std::string const& refresh_token,
-                boost::optional<int64_t> capacity);
+                boost::optional<int64_t> capacity,
+                boost::optional<std::string> description);
       GCSConfig(elle::serialization::SerializerIn& input);
       void serialize(elle::serialization::Serializer& s) override;
       virtual std::unique_ptr<infinit::storage::Storage> make() override;

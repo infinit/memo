@@ -103,7 +103,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   # Create.
   l = bob.run_json(['infinit-network', '--list', '--as', 'bob', '--script'])
   assertEq(len(l), 0)
-  bob.run(['infinit-network', '--create', '--name', 'a', '--as', 'bob', '--push'])
+  bob.run(['infinit-network', '--create', '--name', 'a', '--as', 'bob', '--push',
+          '--description', 'some network'])
   try:
     bob.run(['infinit-network', '--push', '--name', 'a', '--as', 'not_bob'])
     unreachable()
@@ -111,6 +112,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
     pass
   l = bob.run_json(['infinit-network', '--list', '--script', '--as', 'bob'])
   assertEq(len(l), 1)
+  n = bob.run_json(['infinit-network', '--export', '--as', 'bob', 'a'])
+  assertEq(n['description'], 'some network')
   bob.run(['infinit-network', '--create', '--name', 'b', '--as', 'bob', '--push'])
   l = bob.run_json(['infinit-network', '--list', '--script', '--as', 'bob'])
   assertEq(len(l), 2)
@@ -120,6 +123,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   alice.run(['infinit-network', '--fetch', '--name', 'bob/a', '--as', 'alice'])
   l = alice.run_json(['infinit-network', '--list', '--script', '--as', 'alice'])
   assertEq(len(l), 1)
+  n = alice.run_json(['infinit-network', '--export', '--as', 'alice', 'bob/a'])
+  assertEq(n['description'], 'some network')
   alice.run(['infinit-network', '--fetch', '--as', 'alice'])
   # Still one, alice hasn't been invited to the 2nd network.
   l = alice.run_json(['infinit-network', '--list', '--script', '--as', 'alice'])
@@ -151,14 +156,17 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   # Make sure you can only link once.
   throws(lambda: alice.run(['infinit-network', '--link', '--name', 'bob/n', '--as', 'alice']))
   e0 = alice.run_json(['infinit-network', '--export', '--name', 'bob/n', '--as', 'alice'])
+  assertEq(e0.get('description'), None)
   new_version = '9.9.9'
-  bob.run(['infinit-network', '--update', '--name', 'n', '--compatibility-version', new_version, '--as', 'bob', '--push'])
+  bob.run(['infinit-network', '--update', '--name', 'n', '--compatibility-version', new_version, '--as', 'bob', '--push', '--description', 'some network'])
   alice.run(['infinit-network', '--fetch', '--name', 'bob/n', '--as', 'alice'])
   e1 = alice.run_json(['infinit-network', '--export', '--name', 'bob/n', '--as', 'alice'])
+  assertEq(e1['description'], 'some network')
   assertNeq(e0['version'], e1['version'])
   assertEq(e1['version'], new_version)
   del e0['version']
   del e1['version']
+  del e1['description']
   assertEq(e0, e1)
 
 def setup(beyond, bob, alice):

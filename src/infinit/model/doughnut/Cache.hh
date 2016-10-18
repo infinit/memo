@@ -44,7 +44,9 @@ namespace infinit
           virtual
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
-                     std::unique_ptr<storage::Storage> storage) override;
+                     boost::optional<boost::asio::ip::address> listen_address,
+                     std::unique_ptr<storage::Storage> storage,
+                     Protocol p) override;
 
         /*----------.
         | Consensus |
@@ -74,6 +76,8 @@ namespace infinit
           /// Clear all cached blocks.
           void
           clear();
+          void
+          insert(std::unique_ptr<blocks::Block> b);
         private:
           void
           _cleanup();

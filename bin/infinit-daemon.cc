@@ -223,7 +223,7 @@ void link_network(std::string const& name,
     auto path = infinit::xdg_data_home() / "blocks" / storagename;
     storage_config =
       elle::make_unique<infinit::storage::FilesystemStorageConfig>(
-        storagename, path.string(), boost::optional<int64_t>());
+        storagename, path.string(), boost::none, boost::none);
   }
   else if (storagedesc)
   {
@@ -251,7 +251,8 @@ void link_network(std::string const& name,
       boost::optional<int>(),
       desc.version,
       desc.admin_keys,
-      std::vector<infinit::model::Endpoints>()));
+      std::vector<infinit::model::Endpoints>()),
+    boost::none);
   ifnt.network_save(*user, network, true);
   ifnt.network_save(std::move(network), true);
 }
@@ -348,7 +349,7 @@ public:
   exists(std::string const& name);
   std::string
   mountpoint(std::string const& name, bool ignore_subst=false);
-  std::vector<QName>
+  std::vector<infinit::descriptor::BaseDescriptor::Name>
   list();
   std::vector<MountInfo>
   status();
@@ -421,7 +422,6 @@ MountManager::acquire_volumes()
       {
         ELLE_WARN("failed to acquire volumes from beyond: %s", e);
       }
-
     }
   }
   if (this->_default_network)
@@ -454,11 +454,11 @@ MountManager::acquire_volumes()
   }
 }
 
-std::vector<QName>
+std::vector<infinit::descriptor::BaseDescriptor::Name>
 MountManager::list()
 {
   this->acquire_volumes();
-  std::vector<QName> res;
+  std::vector<infinit::descriptor::BaseDescriptor::Name> res;
   for (auto const& volume: ifnt.volumes_get())
     res.emplace_back(volume.name);
   return res;
@@ -731,7 +731,7 @@ MountManager::update_network(infinit::Network& network,
       ELLE_LOG("Creating local storage %s", storagename);
       auto path = infinit::xdg_data_home() / "blocks" / storagename;
       storage_config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
-        storagename, path.string(), boost::optional<int64_t>());
+        storagename, path.string(), boost::none, boost::none);
     }
     else
     {
@@ -822,7 +822,7 @@ MountManager::create_network(elle::json::Object const& options,
       infinit::model::doughnut::AdminKeys(),
       std::vector<infinit::model::Endpoints>());
   auto fullname = ifnt.qualified_name(*netname, owner);
-  infinit::Network network(fullname, std::move(dht));
+  infinit::Network network(fullname, std::move(dht), boost::none);
   ifnt.network_save(std::move(network));
   report_created("network", *netname);
   link_network(fullname, options);

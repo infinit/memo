@@ -3,6 +3,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
+#include <elle/os/environ.hh>
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/json.hh>
 #include <elle/bench.hh>
@@ -57,6 +58,14 @@ namespace infinit
           s.serialize("mode", mode);
           s.serialize("resolver", resolver);
           s.serialize("remove_signature", remove_signature);
+          if (s.in())
+          {
+            if (auto mb = dynamic_cast<blocks::MutableBlock*>(block.get()))
+              version = mb->version();
+            else if (auto mb = dynamic_cast<blocks::MutableBlock*>(
+              remove_signature.block.get()))
+              version = mb->version();
+          }
         }
 
         Async::Async(std::unique_ptr<Consensus> backend,
@@ -79,6 +88,7 @@ namespace infinit
                                   this->_process_loop();
                                 }))
           , _in_push(false)
+          , _processed_op_count(0)
         {
           if (!this->_journal_dir.empty())
           {
@@ -176,10 +186,14 @@ namespace infinit
         }
 
         std::unique_ptr<Local>
-        Async::make_local(boost::optional<int> port,
-                          std::unique_ptr<storage::Storage> storage)
+        Async::make_local(
+          boost::optional<int> port,
+          boost::optional<boost::asio::ip::address> listen_address,
+          std::unique_ptr<storage::Storage> storage,
+          Protocol p)
         {
-          return this->_backend->make_local(port, std::move(storage));
+          return this->_backend->make_local(
+            port, std::move(listen_address), std::move(storage), p);
         }
 
         void
@@ -263,6 +277,120 @@ namespace infinit
         void
         Async::_push_op(Op op)
         {
+          op.index = -1; // for nice debug prints, we will set that later
+          // squash check
+          static bool squash_enabled = elle::os::getenv("INFINIT_ASYNC_DISABLE_SQUASH", "").empty();
+          auto its = this->_operations.get<0>().equal_range(op.address);
+          if (squash_enabled && its.second != its.first && op.resolver)
+          {
+            int last_candidate_index = -1;
+            SquashOperation last_candidate_order = std::make_pair(
+              Squash::stop, SquashConflictResolverOptions(0));
+            // Check for squashability: we need resolvers, and we can't touch
+            // the head of the queue since it's currently being processed
+            int current = this->_operations.get<1>().begin()->index;
+            std::vector<int> candidates;
+            for (auto it = its.first; it != its.second; ++it)
+              if (it->index != current)
+                candidates.push_back(it->index);
+            std::sort(candidates.begin(), candidates.end(),
+              [](int x, int y) { return x > y;});
+            for(int c: candidates)
+            {
+              auto& cop = *this->_operations.get<1>().find(c);
+              if (!cop.resolver)
+                continue;
+              auto squash = op.resolver->squashable(*cop.resolver);
+              bool keep_searching = true;
+              switch (squash.first)
+              {
+              case Squash::stop:
+                keep_searching = false;
+                break;
+              case Squash::skip:
+                break;
+              case Squash::at_first_position_stop:
+              case Squash::at_last_position_stop:
+                keep_searching = false;
+                last_candidate_order = squash;
+                last_candidate_index = c;
+                break;
+              case Squash::at_last_position_continue:
+              case Squash::at_first_position_continue:
+                last_candidate_order = squash;
+                last_candidate_index = c;
+                break;
+              }
+              if (!keep_searching)
+                break;
+            }
+            if (last_candidate_index != -1)
+            {
+              auto copit = this->_operations.get<1>().find(last_candidate_index);
+              auto& cop = *copit;
+              auto cr = make_merge_conflict_resolver(
+                    std::move(elle::unconst(cop.resolver)),
+                    std::move(op.resolver),
+                    last_candidate_order.second);
+              // We will use the last block and the merged conflict resolver
+              // for our new squashed operation.
+              // But we must also set version to the first operation's version
+              // or we will miss some conflicts.
+              ACB* acb = dynamic_cast<ACB*>(op.block.get());
+              if (!acb)
+                acb = dynamic_cast<ACB*>(op.remove_signature.block.get());
+              ELLE_DEBUG("Changing %s version to %s", acb, cop.version);
+              if (acb)
+                acb->seal(cop.version);
+              else
+                ELLE_WARN("Unable to reset block version (got %s (from %s)",
+                          acb, op);
+              if (last_candidate_order.first == Squash::at_first_position_stop
+                || last_candidate_order.first == Squash::at_first_position_continue)
+              {
+                ELLE_DEBUG("overwriting op at %s", cop.index);
+                  this->_operations.get<1>().modify(
+                    copit, [&](Op& o) {
+                      o.block = std::move(op.block);
+                      o.mode = std::move(op.mode);
+                      o.remove_signature = std::move(op.remove_signature);
+                      o.resolver = std::move(cr);
+                    });
+                  if (!this->_journal_dir.empty())
+                  {
+                    auto path =
+                      boost::filesystem::path(_journal_dir) / std::to_string(last_candidate_index);
+                    boost::filesystem::ofstream os(path, std::ios::binary);
+                    elle::serialization::binary::SerializerOut sout(os);
+                    sout.set_context(ACBDontWaitForSignature{});
+                    sout.set_context(OKBDontWaitForSignature{});
+                    sout.serialize_forward(*copit);
+                  }
+                  return;
+              }
+              else
+              { // at_last_position
+                op.resolver = std::move(cr);
+                int idx = last_candidate_index;
+                int lastidx = this->_operations.get<1>().rbegin()->index;
+                ELLE_DEBUG("Erasing op at %s", last_candidate_index);
+                this->_operations.get<1>().erase(last_candidate_index);
+                if (!this->_journal_dir.empty())
+                {
+                  auto path = boost::filesystem::path(this->_journal_dir) /
+                  std::to_string(idx);
+                  boost::filesystem::remove(path);
+                }
+                if (this->_first_disk_index
+                  && this->_first_disk_index.get() == idx)
+                {
+                  if (++*this->_first_disk_index > lastidx)
+                    this->_first_disk_index.reset();
+                }
+                // go on to regular push_op
+              }
+            }
+          }
           bool reentered = this->_in_push;
           auto in_push = elle::scoped_assignment(this->_in_push, true);
           op.index = ++this->_next_index;
@@ -380,7 +508,11 @@ namespace infinit
                             bool& hit)
         {
           hit = false;
-          auto it = this->_operations.find(address);
+          auto its = this->_operations.equal_range(address);
+          auto it = std::max_element(its.first, its.second,
+            [](auto const& e1, auto const& e2) {
+              return e1.index < e2.index;
+            });
           if (it != this->_operations.end())
           {
             hit = true;
@@ -424,6 +556,14 @@ namespace infinit
               if (this->_exit_requested)
                 break;
               auto it = this->_operations.get<1>().begin();
+              while (it == this->_operations.get<1>().end() || it->index > index)
+              {
+                ELLE_DEBUG("index %s in queue not in ops (have %s)", index,
+                           it->index);
+                index = this->_queue.get();
+                it = this->_operations.get<1>().begin();
+              }
+
               elle::generic_unique_ptr<Op const> op(&*it, [] (Op const*) {});
               ELLE_ASSERT_EQ(op->index, index);
               this->_process_operation(std::move(op));
@@ -448,6 +588,10 @@ namespace infinit
         void
         Async::_process_operation(elle::generic_unique_ptr<Op const> op)
         {
+          ++_processed_op_count;
+          static const int delay = std::stoi(elle::os::getenv("INFINIT_ASYNC_POP_DELAY", "0"));
+          if (delay)
+            reactor::sleep(boost::posix_time::milliseconds(delay));
           Address addr = op->address;
           boost::optional<StoreMode> mode = op->mode;
           int attempt = 0;
@@ -547,7 +691,43 @@ namespace infinit
           , mode(std::move(mode_))
           , resolver(std::move(resolver_))
           , remove_signature(remove_signature_)
-        {}
+          , version(-1)
+        {
+          if (auto mb = dynamic_cast<blocks::MutableBlock*>(block.get()))
+            version = mb->version();
+          else if (auto mb = dynamic_cast<blocks::MutableBlock*>(
+            remove_signature.block.get()))
+            version = mb->version();
+        }
+        Async::Op::Op(Op&& b)
+        : address(b.address)
+        {
+          *this = std::move(b);
+        }
+        void
+        Async::Op::operator=(Op&& b)
+        {
+          address = b.address;
+          block = std::move(b.block);
+          mode = b.mode;
+          resolver = std::move(b.resolver);
+          remove_signature = std::move(b.remove_signature);
+          index = b.index;
+          if (auto mb = dynamic_cast<blocks::MutableBlock*>(block.get()))
+            version = mb->version();
+          else if (auto mb = dynamic_cast<blocks::MutableBlock*>(
+            remove_signature.block.get()))
+            version = mb->version();
+        }
+        void
+        Async::print_queue()
+        {
+          auto& indexed = this->_operations.get<1>();
+          for (auto const& op: indexed)
+          {
+            ELLE_LOG("%s: %s", op.index, op.resolver->description());
+          }
+        }
       }
     }
   }
@@ -560,7 +740,7 @@ namespace std
               infinit::model::doughnut::consensus::Async::Op const& op)
   {
     if (op.mode)
-      elle::fprintf(o, "Op::store(%s, %s)", op.index, *op.block);
+      elle::fprintf(o, "Op::store(%s, %s)", op.index, op.block);
     else
       elle::fprintf(o, "Op::remove(%s)", op.index);
     return o;

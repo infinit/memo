@@ -18,16 +18,20 @@ with Infinit() as bob:
   assertEq(len(os.listdir('%s/bob/network/bob' % state_dir)), 0)
 
 # Push to the hub.
-with Beyond() as beyond, Infinit(beyond = beyond) as bob:
+with Beyond() as beyond, \
+    Infinit(beyond = beyond) as bob, Infinit(beyond) as alice:
   bob.run(['infinit-user', '--signup',  '--name', 'bob', '--email', 'bob@infinit.io'])
   bob.run(['infinit-network', '--create', '--name', 'network', '--as', 'bob', '--push'])
-  bob.run(['infinit-volume', '--create', '--name', 'volume', '--network', 'bob/network', '--as', 'bob', '--push'])
+  bob.run(['infinit-volume', '--create', '--name', 'volume', '--network', 'bob/network', '--description', 'something', '--as', 'bob', '--push'])
   try:
     bob.run(['infinit-volume', '--push', '--name', 'volume'])
     unreachable()
   except Exception as e:
     pass
-  bob.run(['infinit-volume', '--export', '--name', 'bob/volume', '--as', 'bob'])
+  alice.run(['infinit-user', '--signup', '--name', 'alice', '--email', 'alice@infinit.sh'])
+  alice.run(['infinit-volume', '--fetch', 'bob/volume', '--as', 'alice'])
+  v = alice.run_json(['infinit-volume', '--export', 'bob/volume', '--as', 'alice'])
+  assertEq(v['description'], 'something')
 
 # Pull and delete.
 with Beyond() as beyond, Infinit(beyond = beyond) as bob:

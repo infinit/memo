@@ -61,7 +61,8 @@ COMMAND(create)
   if (default_permissions && *default_permissions!= "r"
       && *default_permissions!= "rw")
     throw elle::Error("default-permissions must be 'r' or 'rw'");
-  infinit::Volume volume(name, network.name, mo, default_permissions);
+  infinit::Volume volume(
+    name, network.name, mo, default_permissions, optional(args, "description"));
   if (args.count("output"))
   {
     auto output = get_output(args);
@@ -79,14 +80,14 @@ COMMAND(create)
       if (discovery)
       {
         ELLE_LOG_SCOPE("register volume in the network");
-        model->service_add("volumes", name, volume);
+        model.first->service_add("volumes", name, volume);
       }
       if (root)
       {
         ELLE_LOG_SCOPE("create root directory");
         // Work around clang 7.0.2 bug.
         std::shared_ptr<infinit::model::Model> clang_model(
-          static_cast<infinit::model::Model*>(model.release()));
+          static_cast<infinit::model::Model*>(model.first.release()));
         auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
           infinit::filesystem::model = std::move(clang_model),
           infinit::filesystem::volume_name = name,
@@ -412,15 +413,23 @@ COMMAND(run)
   network.ensure_allowed(self, "run", "volume");
   ELLE_TRACE("run network");
 #ifndef INFINIT_WINDOWS
+  infinit::DaemonHandle daemon_handle;
   if (flag(args, "daemon"))
-    if (daemon(0, 1))
-      perror("daemon:");
+    daemon_handle = infinit::daemon_hold(0, 1);
 #endif
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
-  auto model = network.run(
+  auto model_and_threads = network.run(
     self, mo, true, infinit::compatibility_version, port);
+  auto model = std::move(model_and_threads.first);
+  if (auto plf = optional(args, "peers-file"))
+  {
+    auto more_peers = infinit::hook_peer_discovery(*model, *plf);
+    ELLE_TRACE("Peer list file got %s peers", more_peers.size());
+    if (!more_peers.empty())
+      model->overlay()->discover(more_peers);
+  }
   // Only push if we have are contributing storage.
   bool push = mo.push && model->local();
   boost::optional<infinit::model::Endpoint> local_endpoint;
@@ -435,11 +444,11 @@ COMMAND(run)
                                  endpoint_file.get());
     }
   }
-  auto run = [&]
+  auto run = [&, push]
   {
     reactor::Thread::unique_ptr stat_thread;
     if (push)
-      stat_thread = make_stat_update_thread(self, network, *model);
+      stat_thread = network.make_stat_update_thread(self, *model);
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
     auto fs = volume.run(std::move(model),
@@ -576,6 +585,13 @@ COMMAND(run)
         },
         true));
       reachability->start();
+    }
+#endif
+#ifndef INFINIT_WINDOWS
+    if (flag(args, "daemon"))
+    {
+      ELLE_TRACE("releasing daemon");
+      infinit::daemon_release(daemon_handle);
     }
 #endif
     if (script_mode)
@@ -967,10 +983,12 @@ COMMAND(list)
     for (auto const& volume: ifnt.volumes_get())
     {
       elle::json::Object o;
-      o["name"] = std::string(volume.name);
+      o["name"] = static_cast<std::string>(volume.name);
       o["network"] = volume.network;
       if (volume.mount_options.mountpoint)
         o["mountpoint"] = volume.mount_options.mountpoint.get();
+      if (volume.description)
+        o["description"] = volume.description.get();
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
@@ -978,7 +996,10 @@ COMMAND(list)
   else
     for (auto const& volume: ifnt.volumes_get())
     {
-      std::cout << volume.name << ": network " << volume.network;
+      std::cout << volume.name;
+      if (volume.description)
+        std::cout << " \"" << volume.description.get() << "\"";
+      std::cout << ": network " << volume.network;
       if (volume.mount_options.mountpoint)
         std::cout << " on " << volume.mount_options.mountpoint.get();
       std::cout << std::endl;
@@ -991,6 +1012,9 @@ COMMAND(update)
   auto name = volume_name(args, self);
   auto volume = ifnt.volume_get(name);
   volume.mount_options.merge(args);
+  auto description = optional(args, "description");
+  if (description)
+    volume.description = description;
   ifnt.volume_save(volume, true);
   if (option_push(args, {"push-volume"}))
     beyond_push("volume", name, volume, self);
@@ -1096,6 +1120,8 @@ run_options(RunMode mode)
       res.push_back(opt);
   };
   add_option({ "name", value<std::string>(), "volume name" });
+  if (mode == RunMode::create || mode == RunMode::update)
+    add_option(option_description("volume"));
   if (mode == RunMode::create)
   {
     add_options({
@@ -1138,6 +1164,8 @@ run_options(RunMode mode)
     { "fetch,f", BOOL_IMPLICIT, "alias for --fetch-endpoints" },
     { "peer", value<std::vector<std::string>>()->multitoken(),
       "peer address or file with list of peer addresses (host:port)" },
+    { "peers-file", value<std::string>(),
+      "Periodically write list of known peers to given file"},
     { "push-endpoints", BOOL_IMPLICIT,
       elle::sprintf("push endpoints to %s", beyond(true)) },
   });
@@ -1155,6 +1183,8 @@ run_options(RunMode mode)
     option_endpoint_file,
     option_port_file,
     option_port,
+    option_listen_interface,
+    option_poll_beyond,
     option_input("commands"),
   });
   if (mode == RunMode::update)

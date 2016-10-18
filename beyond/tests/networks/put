@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import infinit.beyond.bottle
+from infinit.beyond.exceptions import *
 
 import unittest
 import urllib.parse
@@ -153,6 +154,21 @@ class Test(unittest.TestCase):
         auth = invitee).json()
       assertEq(endpoints_3[invitee['name']]['node_id'], endpoint)
       assertEq(endpoints_3[invitee['name']]['node_id_2'], endpoint)
+
+  def test_invalid_name(self):
+    with Beyond() as beyond:
+      user = User()
+      user.put(beyond)
+      network = Network(name = 'invalid+name', owner = user)
+      throws(lambda: network.put(beyond, owner = user), 422)
+
+  def test_invalid_description(self):
+    with Beyond() as beyond:
+      user = User()
+      user.put(beyond)
+      network = Network(
+        name = 'n', owner = user, description = 'bootsncatsn' * 187)
+      throws(lambda: network.put(beyond, owner = user), 422)
 
 if __name__ == '__main__':
   unittest.main()

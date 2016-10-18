@@ -3,9 +3,11 @@
 
 # include <elle/Clonable.hh>
 
-# include <infinit/model/doughnut/fwd.hh>
 # include <infinit/model/doughnut/Peer.hh>
+# include <infinit/model/doughnut/fwd.hh>
+# include <infinit/model/doughnut/protocol.hh>
 # include <infinit/overlay/Overlay.hh>
+
 # ifdef stat
 #  undef stat
 # endif
@@ -101,7 +103,9 @@ namespace infinit
           virtual
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
-                     std::unique_ptr<storage::Storage> storage);
+                     boost::optional<boost::asio::ip::address> listen_address,
+                     std::unique_ptr<storage::Storage> storage,
+                     Protocol p);
 
         /*----------.
         | Printable |

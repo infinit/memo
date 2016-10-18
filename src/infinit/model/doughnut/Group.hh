@@ -25,8 +25,10 @@ namespace infinit
         create();
         cryptography::rsa::PublicKey
         public_control_key() const;
-        GB&
+        GB const&
         block() const;
+        GB&
+        block();
         cryptography::rsa::PublicKey
         current_public_key() const;
         cryptography::rsa::KeyPair
@@ -61,6 +63,7 @@ namespace infinit
         destroy();
         void
         print(std::ostream& o) const;
+        ELLE_ATTRIBUTE_rw(boost::optional<std::string>, description);
       private:
         void _stack_push();
         cryptography::rsa::KeyPair _control_key();
@@ -83,8 +86,11 @@ namespace infinit
           remove_member,
           add_admin,
           remove_admin,
+          set_description,
         };
         GroupConflictResolver(Action action, model::User const& user);
+        GroupConflictResolver(Action action,
+                              boost::optional<std::string> description);
         GroupConflictResolver(GroupConflictResolver&& b);
         GroupConflictResolver(elle::serialization::SerializerIn& s,
                               elle::Version const& v);
@@ -101,7 +107,8 @@ namespace infinit
 
         Action _action;
         std::unique_ptr<cryptography::rsa::PublicKey> _key;
-        std::string _name;
+        boost::optional<std::string> _name;
+        boost::optional<std::string> _description;
         typedef infinit::serialization_tag serialization_tag;
       };
     }

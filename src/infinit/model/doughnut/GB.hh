@@ -130,6 +130,9 @@ namespace infinit
           AdminKeys;
         /// The group admin keys ciphered for every admin.
         ELLE_ATTRIBUTE_R(AdminKeys, admin_keys);
+      public:
+        /// Optional group description.
+        ELLE_ATTRIBUTE_rw(boost::optional<std::string>, description);
 
       public:
         typedef infinit::serialization_tag serialization_tag;

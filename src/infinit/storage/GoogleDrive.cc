@@ -390,22 +390,25 @@ namespace infinit
 
     GoogleDriveStorageConfig::GoogleDriveStorageConfig(
         std::string name,
-        boost::optional<std::string> root_,
-        std::string refresh_token_,
-        std::string user_name_,
-        boost::optional<int64_t> capacity)
-      : StorageConfig(std::move(name), std::move(capacity))
-      , root{std::move(root_)}
-      , refresh_token{std::move(refresh_token_)}
-      , user_name{std::move(user_name_)}
+        boost::optional<std::string> root,
+        std::string refresh_token,
+        std::string user_name,
+        boost::optional<int64_t> capacity,
+        boost::optional<std::string> description)
+      : StorageConfig(
+          std::move(name), std::move(capacity), std::move(description))
+      , root{std::move(root)}
+      , refresh_token{std::move(refresh_token)}
+      , user_name{std::move(user_name)}
     {}
 
     GoogleDriveStorageConfig::GoogleDriveStorageConfig(
-        elle::serialization::SerializerIn& input)
-      : StorageConfig()
-    {
-      this->serialize(input);
-    }
+        elle::serialization::SerializerIn& s)
+      : StorageConfig(s)
+      , root(s.deserialize<std::string>("root"))
+      , refresh_token(s.deserialize<std::string>("refresh_token"))
+      , user_name(s.deserialize<std::string>("user_name"))
+    {}
 
     void
     GoogleDriveStorageConfig::serialize(elle::serialization::Serializer& s)
