@@ -209,7 +209,7 @@ void link_network(std::string const& name,
     ELLE_LOG("Creating local storage %s", storagename);
     auto path = infinit::xdg_data_home() / "blocks" / storagename;
     storage_config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
-      storagename, path.string(), boost::optional<int64_t>());
+      storagename, path.string(), boost::none, boost::none);
   }
   else if (storagedesc)
   {
@@ -236,7 +236,8 @@ void link_network(std::string const& name,
       user->name,
       boost::optional<int>(),
       desc.version,
-      desc.admin_keys));
+      desc.admin_keys),
+    boost::none);
   ifnt.network_save(*user, network, true);
   ifnt.network_save(std::move(network), true);
 }
@@ -360,7 +361,7 @@ public:
   exists(std::string const& name);
   std::string
   mountpoint(std::string const& name, bool ignore_subst=false);
-  std::vector<QName>
+  std::vector<infinit::descriptor::BaseDescriptor::Name>
   list();
   std::vector<MountInfo>
   status();
@@ -394,7 +395,7 @@ MountManager::~MountManager()
     this->stop(this->_mounts.begin()->first);
 }
 
-std::vector<QName>
+std::vector<infinit::descriptor::BaseDescriptor::Name>
 MountManager::list()
 {
   try
@@ -405,7 +406,7 @@ MountManager::list()
   {
     ELLE_TRACE("Failed to acquire volumes from beyond: %s", e);
   }
-  std::vector<QName> res;
+  std::vector<infinit::descriptor::BaseDescriptor::Name> res;
   for (auto const& volume: ifnt.volumes_get())
     res.emplace_back(volume.name);
   return res;
@@ -677,7 +678,7 @@ MountManager::update_network(infinit::Network& network,
       ELLE_LOG("Creating local storage %s", storagename);
       auto path = infinit::xdg_data_home() / "blocks" / storagename;
       storage_config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
-        storagename, path.string(), boost::optional<int64_t>());
+        storagename, path.string(), boost::none, boost::none);
     }
     else
     {
@@ -768,7 +769,7 @@ MountManager::create_network(elle::json::Object const& options,
       version,
       infinit::model::doughnut::AdminKeys());
   auto fullname = ifnt.qualified_name(*netname, owner);
-  infinit::Network network(fullname, std::move(dht));
+  infinit::Network network(fullname, std::move(dht), boost::none);
   ifnt.network_save(std::move(network));
   report_created("network", *netname);
   link_network(fullname, options);
@@ -840,7 +841,7 @@ MountManager::create_volume(std::string const& name,
   std::string qname(name);
   if (qname.find("/") == qname.npos)
     qname = *username + "/" + qname;
-  infinit::Volume volume(qname, network.name, mo, {});
+  infinit::Volume volume(qname, network.name, mo, {}, {});
   ifnt.volume_save(volume, true);
   report_created("volume", qname);
   if (push)

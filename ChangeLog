@@ -1,10 +1,42 @@
 # Change Log
 
+
+<!-- ## [0.8.0] -->
+
+<!-- xxx summary -->
+
+<!-- ### Added -->
+
+<!-- - Add groups description. -->
+
+
 ## [0.7.1]
+
+New overlay implementation, bug fixes and performances improvements.
+
+### Added
+
+- Add `--peers-file` option to `infinit-volume` and `infinit-network`
+  to store known peers to disk.
+- Enable to pick listen inferface with `--listen`.
+- Add descriptions for users, storages, networks, volumes and drives.
 
 ### Changed
 
 - Poll beyond periodically for endpoints changes.
+- No longer require an email address to push a user to the Hub.
+
+### Fixed
+
+- Enable to interrupt adding credentials with `infinit-credentials`.
+- Cache peer connections.
+- Daemonize `infinit-network` and `infinit-volume` as late as possible
+  to catch more errors syncronously.
+
+### Fixed
+
+- Fix some shutdown assertions.
+- Fix deadlock in Kelips overlay implementation.
 
 
 ## [0.7.0] - 2016-09-23
@@ -15,7 +47,7 @@ Windows release, bandwidth and CPU usage optimization, bugfixes.
 
 - Windows release.
 - IPv6 support.
-- Add new `Koordinate` overlay that enables running several overlay
+- Add new `Koordinate` overlay that enables running several overlay.
   algorithms on nodes.
 - Add `--script` mode to `infinit-acl --list`.
 - Support `O_EXCL` when opening files.

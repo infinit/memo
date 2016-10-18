@@ -475,7 +475,6 @@ namespace reporting
       {
         try
         {
-          infinit::check_name(name);
           return std::make_tuple(true, Result::Reason{});
         }
         catch (...)

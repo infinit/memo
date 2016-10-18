@@ -59,7 +59,9 @@ namespace infinit
       return res;
     }
 
-    static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
+    static
+    std::unique_ptr<Storage>
+    make(std::vector<std::string> const& args)
     {
       std::vector<std::unique_ptr<Storage>> backends;
       for (unsigned int i = 0; i < args.size(); i += 2)
@@ -77,19 +79,19 @@ namespace infinit
     }
 
 
-    StripStorageConfig::StripStorageConfig(Storages storages_,
-                                           int64_t capacity)
-      : StorageConfig("Multiple Storage", capacity)
-      , storage(std::move(storages_))
+    StripStorageConfig::StripStorageConfig(
+      Storages storages,
+      boost::optional<int64_t> capacity,
+      boost::optional<std::string> description)
+      : StorageConfig(
+          "multi-storage", std::move(capacity), std::move(description))
+      , storage(std::move(storages))
     {}
 
-    StripStorageConfig::StripStorageConfig(
-      elle::serialization::SerializerIn& input)
-      : StorageConfig()
-      , storage()
-    {
-      this->serialize(input);
-    }
+    StripStorageConfig::StripStorageConfig(elle::serialization::SerializerIn& s)
+      : StorageConfig(s)
+      , storage(s.deserialize<Storages>("backend"))
+    {}
 
     void
     StripStorageConfig::serialize(elle::serialization::Serializer& s)

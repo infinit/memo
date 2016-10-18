@@ -50,5 +50,17 @@ class Test(unittest.TestCase):
                                  json = {'password_hash': 'bof'}),
              403)
 
+  def test_invalid_name(self):
+    with Beyond() as beyond:
+      bob = User()
+      bob['name'] = '.invalid-name'
+      throws(lambda: bob.put(beyond), 422)
+
+  def test_invalid_description(self):
+    with Beyond() as beyond:
+      bob = User()
+      bob['description'] = 'bootsncatsn' * 197
+      throws(lambda: bob.put(beyond), 422)
+
 if __name__ == '__main__':
   unittest.main()

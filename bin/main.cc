@@ -600,6 +600,50 @@ namespace infinit
       perror("daemon_release");
   }
 #endif
+
+  model::NodeLocations
+  hook_peer_discovery(model::doughnut::Doughnut& model, std::string file)
+  {
+    ELLE_TRACE("Hooking discovery on %s, to %s", model, file);
+    auto nls = std::make_shared<model::NodeLocations>();
+    model.overlay()->on_discover().connect(
+      [nls, file] (model::NodeLocation nl, bool observer) {
+        if (observer)
+          return;
+        auto it = std::find_if(nls->begin(), nls->end(),
+          [id=nl.id()] (model::NodeLocation n) {
+            return n.id() == id;
+          });
+        if (it == nls->end())
+          nls->push_back(nl);
+        else
+          it->endpoints() = nl.endpoints();
+        ELLE_DEBUG("Storing updated endpoint list: %s", *nls);
+        std::ofstream ofs(file);
+        elle::serialization::json::serialize(*nls, ofs, false);
+      });
+    model.overlay()->on_disappear().connect(
+      [nls, file] (model::Address id, bool observer) {
+        if (observer)
+          return;
+        auto it = std::find_if(nls->begin(), nls->end(),
+          [id] (model::NodeLocation n) {
+            return n.id() == id;
+          });
+        if (it != nls->end())
+          nls->erase(it);
+        ELLE_DEBUG("Storing updated endpoint list: %s", *nls);
+        std::ofstream ofs(file);
+        elle::serialization::json::serialize(*nls, ofs, false);
+      });
+    if (boost::filesystem::exists(file) && !boost::filesystem::is_empty(file))
+    {
+      ELLE_DEBUG("Reloading endpoint list file from %s", file);
+      std::ifstream ifs(file);
+      return elle::serialization::json::deserialize<model::NodeLocations>(ifs, false);
+    }
+    return model::NodeLocations();
+  }
 }
 
 std::string program;

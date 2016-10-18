@@ -443,6 +443,7 @@ class User:
       ('public_key', None),
     ],
     'optional': [
+      ('description', validation.Description('user', 'description')),
       ('dropbox_accounts', None),
       ('email', validation.Email('user', 'email')),
       ('fullname', None),
@@ -472,6 +473,7 @@ class User:
                gcs_accounts = None,
                emails = {},
                ldap_dn = None,
+               description = None,
   ):
     self.__beyond = beyond
     self.__id = id
@@ -493,6 +495,7 @@ class User:
         self.__emails[self.__email] = True
     self.__emails_original = deepcopy(self.emails)
     self.__ldap_dn = ldap_dn
+    self.__description = description
 
   @classmethod
   def from_json(self, beyond, json, check_integrity = False):
@@ -516,7 +519,8 @@ class User:
       google_accounts = json.get('google_accounts', []),
       gcs_accounts = json.get('gcs_accounts', []),
       emails = json.get('emails', {}),
-      ldap_dn = json.get('ldap_dn', None)
+      ldap_dn = json.get('ldap_dn', None),
+      description = json.get('description', None),
     )
 
   def json(self,
@@ -525,6 +529,7 @@ class User:
     res = {
       'name': self.name,
       'public_key': self.public_key,
+      'description': self.description,
     }
     if private:
       # Turn confirmations code into 'False'.
@@ -679,6 +684,10 @@ class User:
   def ldap_dn(self):
     return self.__ldap_dn
 
+  @property
+  def description(self):
+    return self.__description
+
   def __eq__(self, other):
     if self.name != other.name or self.public_key != other.public_key:
       return False
@@ -704,6 +713,11 @@ class Entity(type):
         v = kwargs.pop(f, None)
         if v is None:
           v = default
+        if f == 'name' and not isinstance(v, Optional):
+          test_name = v.split('/')[-1]
+          validation.Name(name, 'name')(test_name)
+        if f == 'description' and not isinstance(v, Optional):
+          validation.Description(name, 'description')(v)
         setattr(self, '_%s__%s' % (name, f), v)
         setattr(self, '_%s__%s_original' % (name, f), deepcopy(v))
       if kwargs:
@@ -764,17 +778,27 @@ class Entity(type):
           if isinstance(v, dict):
             for k, v in v.items():
               if original.get(k) != v:
-                diff.setdefault(field, {})[k] = v
+                if isinstance(v, Optional):
+                  diff.setdefault(field, {})[k] = None
+                else:
+                  diff.setdefault(field, {})[k] = v
             setattr(self, original_field, deepcopy(v))
           elif original != v:
-            diff[field] = v
+            if isinstance(v, Optional):
+              diff[field] = None
+            else:
+              diff[field] = v
         updater = getattr(self.__beyond._Beyond__datastore, update)
         updater(self.id, diff)
       content['save'] = save
     def overwrite(self):
       diff = {
-        field: getattr(self, field) for field in fields
+        field: getattr(self, field) for field in fields \
+        if not isinstance(getattr(self, field), Optional)
       }
+      for field, v in diff.items():
+        if isinstance(v, Optional):
+          del diff[field]
       del diff['name']
       updater = getattr(self.__beyond._Beyond__datastore, update)
       updater(self.id, diff)
@@ -830,7 +854,8 @@ class Network(metaclass = Entity,
                 passports = {},
                 endpoints = {},
                 storages = {},
-                admin_keys = {})):
+                admin_keys = {},
+                description = Optional())):
 
   @property
   def id(self):
@@ -871,7 +896,8 @@ class Volume(metaclass = Entity,
              fields = fields('name', 'network',
                              owner = Optional(),
                              default_permissions = '',
-                             mount_options = dict())):
+                             mount_options = dict(),
+                             description = Optional())):
 
   @property
   def id(self):
@@ -894,8 +920,8 @@ class Drive(
     metaclass = Entity,
     insert = 'drive_insert',
     update = 'drive_update',
-    fields = fields('name', 'owner', 'network',
-                    'volume', 'description', users = {})):
+    fields = fields('name', 'owner', 'network','volume', 'description',
+                    users = {}, description = Optional())):
 
   @property
   def id(self):

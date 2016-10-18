@@ -61,7 +61,8 @@ COMMAND(create)
   if (default_permissions && *default_permissions!= "r"
       && *default_permissions!= "rw")
     throw elle::Error("default-permissions must be 'r' or 'rw'");
-  infinit::Volume volume(name, network.name, mo, default_permissions);
+  infinit::Volume volume(
+    name, network.name, mo, default_permissions, optional(args, "description"));
   if (args.count("output"))
   {
     auto output = get_output(args);
@@ -385,6 +386,13 @@ COMMAND(run)
     infinit::compatibility_version,
     port,
     listen_address);
+  if (auto plf = optional(args, "peers-file"))
+  {
+    auto more_peers = infinit::hook_peer_discovery(*model, *plf);
+    ELLE_TRACE("Peer list file got %s peers", more_peers.size());
+    if (!more_peers.empty())
+      model->overlay()->discover(more_peers);
+  }
   {
     std::vector<infinit::model::Endpoints> eps;
     auto add_peers = [&] (std::vector<std::string> const& peers) {
@@ -416,7 +424,7 @@ COMMAND(run)
                         endpoint_file.get());
     }
   }
-  auto run = [&]
+  auto run = [&, push]
   {
     reactor::Thread::unique_ptr poll_thread;
     if (mo.fetch && *mo.fetch)
@@ -964,10 +972,12 @@ COMMAND(list)
     for (auto const& volume: ifnt.volumes_get())
     {
       elle::json::Object o;
-      o["name"] = std::string(volume.name);
+      o["name"] = static_cast<std::string>(volume.name);
       o["network"] = volume.network;
       if (volume.mount_options.mountpoint)
         o["mountpoint"] = volume.mount_options.mountpoint.get();
+      if (volume.description)
+        o["description"] = volume.description.get();
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
@@ -975,7 +985,10 @@ COMMAND(list)
   else
     for (auto const& volume: ifnt.volumes_get())
     {
-      std::cout << volume.name << ": network " << volume.network;
+      std::cout << volume.name;
+      if (volume.description)
+        std::cout << " \"" << volume.description.get() << "\"";
+      std::cout << ": network " << volume.network;
       if (volume.mount_options.mountpoint)
         std::cout << " on " << volume.mount_options.mountpoint.get();
       std::cout << std::endl;
@@ -988,6 +1001,9 @@ COMMAND(update)
   auto name = volume_name(args, self);
   auto volume = ifnt.volume_get(name);
   volume.mount_options.merge(args);
+  auto description = optional(args, "description");
+  if (description)
+    volume.description = description;
   ifnt.volume_save(volume, true);
   if (flag(args, "push-volume") || flag(args, "push"))
     beyond_push("volume", name, volume, self);
@@ -1093,6 +1109,8 @@ run_options(RunMode mode)
       res.push_back(opt);
   };
   add_option({ "name", value<std::string>(), "volume name" });
+  if (mode == RunMode::create || mode == RunMode::update)
+    add_option(option_description("volume"));
   if (mode == RunMode::create)
   {
     add_options({
@@ -1133,6 +1151,8 @@ run_options(RunMode mode)
     { "fetch,f", BOOL_IMPLICIT, "alias for --fetch-endpoints" },
     { "peer", value<std::vector<std::string>>()->multitoken(),
       "peer address or file with list of peer addresses (host:port)" },
+    { "peers-file", value<std::string>(),
+      "Periodically write list of known peers to given file"},
     { "push-endpoints", BOOL_IMPLICIT,
       elle::sprintf("push endpoints to %s", beyond(true)) },
   });

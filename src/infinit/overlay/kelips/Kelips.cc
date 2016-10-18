@@ -1153,7 +1153,7 @@ namespace infinit
         if (l.id() != Address::null)
         {
           Contact& c = *get_or_make(l.id(), false, l.endpoints());
-          ELLE_DEBUG_SCOPE("send bootstrap to %f", l);
+          ELLE_DEBUG_SCOPE("send bootstrap to %f at %s", l.id(), l.endpoints());
           if (!_config.encrypt || _config.accept_plain)
             send(req, c);
           else
@@ -1165,7 +1165,7 @@ namespace infinit
         }
         else
         {
-          ELLE_DEBUG_SCOPE("send bootstrap to %f", l.endpoints());
+          ELLE_DEBUG_SCOPE("send bootstrap to %s", l.endpoints());
           if (!_config.encrypt || _config.accept_plain)
           {
             for (auto const& ep: l.endpoints())
@@ -1324,7 +1324,7 @@ namespace infinit
             e = c->validated_endpoint->first;
           else
           {
-            if (!c->contacter)
+            if (!c->contacter || c->contacter->done())
             {
               ELLE_DEBUG("Running contacter on %s", address);
               c->contacter.reset(
@@ -2084,6 +2084,22 @@ namespace infinit
       {
         ELLE_DUMP("%s: processing gossip from %s", *this, p->endpoint);
         int g = group_of(p->sender);
+        if (this->_observer)
+        {
+          ELLE_DEBUG("Observer got gossip from %s", p->sender);
+          auto& cs = this->_state.contacts.at(g);
+          auto it = cs.find(p->sender);
+          Contact* c = nullptr;
+          if (it == cs.end())
+            c = this->get_or_make(p->sender, false, {p->endpoint}, true);
+          else
+            c = &it->second;
+          if (!c->discovered)
+          {
+            c->discovered = true;
+            this->on_discover()(NodeLocation(p->sender, {p->endpoint}), false);
+          }
+        }
         if (g != _group && !p->files.empty())
           ELLE_WARN("%s: Received files from another group: %s at %s", *this, p->sender, p->endpoint);
         for (auto& c: p->contacts)
@@ -3354,6 +3370,8 @@ namespace infinit
       void
       Node::process_update(SerState const& s)
       {
+        if (this->_observer)
+          ELLE_WARN("Unexpected update received from observer");
         ELLE_DEBUG("register %s contacts and %s blocks",
                    s.first.size(), s.second.size());
         for (auto const& c: s.first)
@@ -3371,9 +3389,10 @@ namespace infinit
               Contact contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
               for (auto const& ep: c.second)
                 contact.endpoints.push_back(TimedEndpoint(ep, now()));
+              NodeLocation nl(c.first, c.second);
               ELLE_LOG("%s: register %f", this, contact);
               target[c.first] = std::move(contact);
-              this->on_discover()(c.first, false);
+              this->on_discover()(nl, false);
             }
           }
           else
@@ -3383,7 +3402,8 @@ namespace infinit
             if (!it->second.discovered)
             {
               it->second.discovered = true;
-              this->on_discover()(it->first, false);
+              NodeLocation nl(it->first, endpoints_extract(it->second.endpoints));
+              this->on_discover()(nl, false);
             }
           }
         }
@@ -3497,14 +3517,18 @@ namespace infinit
         Contact c {{},  {}, address, Duration(), Time(), 0, {}, {}, observer};
         for (auto const& ep: endpoints)
           c.endpoints.push_back(TimedEndpoint(ep, now()));
+        NodeLocation nl(address, endpoints);
         auto inserted = target->insert(std::make_pair(address, std::move(c)));
         // for non-observers, only notify discovery after bootstrap completes
         if (inserted.second && observer)
-          this->on_discover()(address, observer);
+          this->on_discover()(nl, observer);
         if (!inserted.second)
         { // we still want the new endpoints
           for (auto const& ep: endpoints)
             endpoints_update(inserted.first->second.endpoints, ep);
+          // Reset validated endpoint so that contacter is re-run
+          if (!endpoints.empty())
+            inserted.first->second.validated_endpoint.reset();
         }
         return &inserted.first->second;
       }

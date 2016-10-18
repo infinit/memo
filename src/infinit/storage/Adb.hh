@@ -32,7 +32,9 @@ namespace infinit
     struct AdbStorageConfig
       : public StorageConfig
     {
-      AdbStorageConfig(std::string name, int64_t capacity = 0);
+      AdbStorageConfig(std::string name,
+                       boost::optional<int64_t> capacity,
+                       boost::optional<std::string> description);
       AdbStorageConfig(elle::serialization::SerializerIn& input);
 
       virtual

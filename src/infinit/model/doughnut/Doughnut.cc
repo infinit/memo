@@ -47,40 +47,10 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Doughnut::Doughnut(Address id,
-                         std::shared_ptr<cryptography::rsa::KeyPair> keys,
-                         std::shared_ptr<cryptography::rsa::PublicKey> owner,
-                         Passport passport,
-                         ConsensusBuilder consensus,
-                         OverlayBuilder overlay_builder,
-                         boost::optional<int> port,
-                         boost::optional<boost::asio::ip::address> listen_address,
-                         std::unique_ptr<storage::Storage> storage,
-                         boost::optional<elle::Version> version,
-                         AdminKeys const& admin_keys,
-                         boost::optional<std::string> rdv_host)
-        : Model(std::move(version))
-        , _id(std::move(id))
-        , _keys(keys)
-        , _owner(std::move(owner))
-        , _passport(std::move(passport))
-        , _admin_keys(admin_keys)
-        , _consensus(consensus(*this))
-        , _local(
-          storage
-            ? this->_consensus->make_local(port, listen_address, std::move(storage))
-            : nullptr)
-        // FIXME: move protocol configuration to doughnut
-        , _dock(*this, Protocol::all, port, listen_address, std::move(rdv_host))
-        , _overlay(overlay_builder(*this, this->_local))
-        , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
-        , _terminating()
-      {
-        if (this->_local)
-          this->_local->initialize();
-      }
-
-      template<typename ConflictResolver, typename F, typename FF, typename... Args>
+      template <typename ConflictResolver,
+                typename F,
+                typename FF,
+                typename... Args>
       void check_push(Doughnut& d,
                       std::string const& what,
                       Address where,
@@ -122,57 +92,62 @@ namespace infinit
           }
       }
 
-      Doughnut::Doughnut(Address id,
-                         std::string const& name,
-                         std::shared_ptr<cryptography::rsa::KeyPair> keys,
-                         std::shared_ptr<cryptography::rsa::PublicKey> owner,
-                         Passport passport,
-                         ConsensusBuilder consensus,
-                         OverlayBuilder overlay_builder,
-                         boost::optional<int> port,
-                         boost::optional<boost::asio::ip::address> listen_address,
-                         std::unique_ptr<storage::Storage> storage,
-                         boost::optional<elle::Version> version,
-                         AdminKeys const& admin_keys,
-                         boost::optional<std::string> rdv_host)
-        : Doughnut(std::move(id),
-                   std::move(keys),
-                   std::move(owner),
-                   std::move(passport),
-                   std::move(consensus),
-                   std::move(overlay_builder),
-                   std::move(port),
-                   std::move(listen_address),
-                   std::move(storage),
-                   std::move(version),
-                   admin_keys,
-                   std::move(rdv_host))
+      Doughnut::Doughnut(Init init)
+        : Model(std::move(init.version))
+        , _id(std::move(init.id))
+        , _keys(std::move(init.keys))
+        , _owner(std::move(init.owner))
+        , _passport(std::move(init.passport))
+        , _admin_keys(std::move(init.admin_keys))
+        , _consensus(init.consensus(*this))
+        , _local(
+          init.storage ?
+          this->_consensus->make_local(
+            init.port,
+            init.listen_address,
+            std::move(init.storage),
+            init.protocol) :
+          nullptr)
+        , _dock(*this,
+                init.protocol,
+                init.port,
+                init.listen_address,
+                std::move(init.rdv_host))
+        , _overlay(init.overlay_builder(*this, this->_local))
+        , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
+        , _terminating()
       {
-        auto check_user_blocks = [name, this]
-          {
-            check_push<UserBlockUpserter>(*this,
-              elle::sprintf("user block for %s", name),
-              UB::hash_address(name, *this),
-              &UB::key,
-              this->keys().K(),
-              this, name, this->passport());
-            check_push<ReverseUserBlockUpserter>(*this,
-              elle::sprintf("reverse user block for %s", name),
-              UB::hash_address(this->keys().K(), *this),
-              &UB::name,
-              name,
-              this, name, this->passport(), true);
-            auto hash = UB::hash(this->keys().K());
-            check_push<UserBlockUpserter>(*this,
-              elle::sprintf("key hash block for %s", name),
-              UB::hash_address(':' + hash.string(), *this),
-              &UB::key,
-              this->keys().K(),
-              this, ':' + hash.string(), this->keys().K());
-          };
-        this->_user_init.reset(new reactor::Thread(
-          elle::sprintf("%s: user blocks checker", *this),
-          check_user_blocks));
+        if (this->_local)
+          this->_local->initialize();
+        if (init.name)
+        {
+          auto check_user_blocks = [name = init.name.get(), this]
+            {
+              check_push<UserBlockUpserter>(*this,
+                elle::sprintf("user block for %s", name),
+                UB::hash_address(name, *this),
+                &UB::key,
+                this->keys().K(),
+                this, name, this->passport());
+              check_push<ReverseUserBlockUpserter>(*this,
+                elle::sprintf("reverse user block for %s", name),
+                UB::hash_address(this->keys().K(), *this),
+                &UB::name,
+                name,
+                this, name, this->passport(), true);
+              auto hash = UB::hash(this->keys().K());
+              check_push<UserBlockUpserter>(*this,
+                elle::sprintf("key hash block for %s", name),
+                UB::hash_address(':' + hash.string(), *this),
+                &UB::key,
+                this->keys().K(),
+                this, ':' + hash.string(), this->keys().K());
+            };
+          this->_user_init.reset(
+            new reactor::Thread(
+              elle::sprintf("%s: user blocks checker", *this),
+              check_user_blocks));
+        }
       }
 
       Doughnut::~Doughnut()
@@ -533,40 +508,21 @@ namespace infinit
         if (this->storage)
           storage = this->storage->make();
         std::unique_ptr<Doughnut> dht;
-        if (!client || !this->name)
-        {
-          dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
-            this->id,
-            std::make_shared<cryptography::rsa::KeyPair>(keys),
-            owner,
-            passport,
-            std::move(consensus),
-            std::move(overlay),
-            std::move(port),
-            std::move(listen_address),
-            std::move(storage),
-            version ? version.get() : this->version,
-            admin_keys,
-            std::move(rdv_host));
-        }
-        else
-        {
-          dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
-            this->id,
-            this->name.get(),
-            std::make_shared<cryptography::rsa::KeyPair>(keys),
-            owner,
-            passport,
-            std::move(consensus),
-            std::move(overlay),
-            std::move(port),
-            std::move(listen_address),
-            std::move(storage),
-            version ? version.get() : this->version,
-            admin_keys,
-            std::move(rdv_host));
-        }
-        return dht;
+        boost::optional<std::string> name;
+        return elle::make_unique<infinit::model::doughnut::Doughnut>(
+          this->id,
+          std::make_shared<cryptography::rsa::KeyPair>(keys),
+          owner,
+          passport,
+          std::move(consensus),
+          std::move(overlay),
+          std::move(port),
+          std::move(listen_address),
+          std::move(storage),
+          client ? this->name : boost::optional<std::string>(),
+          version ? version.get() : this->version,
+          admin_keys,
+          std::move(rdv_host));
       }
 
       std::string
