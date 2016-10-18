@@ -307,14 +307,6 @@ class Website(bottle.Bottle):
       'description': 'Infinit provides a free community version and an entreprise license with additional features.',
     }
 
-  @route('/solutions', name = 'solutions')
-  @view('pages/solutions.html')
-  def root(self):
-    return {
-      'title': 'Business solutions',
-      'description': 'Infinit is used by device manufacturers, network operators and other businesses throughout the world to provide value to their customers.',
-    }
-
   @route('/press', name = 'press')
   @route('/press/tech', name = 'press')
   @view('pages/press/pr_tech.html')
