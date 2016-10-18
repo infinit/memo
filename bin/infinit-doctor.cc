@@ -7,6 +7,7 @@
 #include <elle/log/TextLogger.hh>
 #include <elle/string/algorithm.hh>
 #include <elle/system/Process.hh>
+#include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/os/environ.hh>
 
 #include <infinit/storage/Dropbox.hh>
@@ -20,6 +21,7 @@
 #include <infinit/storage/S3.hh>
 
 #include <reactor/connectivity/connectivity.hh>
+#include <reactor/filesystem.hh>
 #include <reactor/network/upnp.hh>
 #include <reactor/scheduler.hh>
 
@@ -643,6 +645,41 @@ namespace reporting
     };
     typedef std::unordered_map<std::string, PermissionResult> PermissionResults;
 
+    struct FuseResult
+      : public reporting::Result
+    {
+      FuseResult(bool sane)
+        : Result(true,
+                 std::string("FUSE not installed, you won't be able to mount "
+                             "(visit https://infinit.sh/get-started for more "
+                             "details)"), true)
+      {
+      }
+
+      FuseResult(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
+
+      FuseResult() = default;
+
+      void
+      print(std::ostream& out, bool verbose) const
+      {
+        if (this->show(verbose))
+        {
+          out << "Fuse: ";
+          if (this->warning())
+            warn(out, "bite");
+        }
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+      }
+    };
 
     SanityResults() = default;
 
@@ -656,10 +693,11 @@ namespace reporting
     {
       if (this->show(verbose))
         section(out, "System sanity");
-      user.print(out, verbose);
-      space_left.print(out, verbose);
-      environment.print(out, verbose, false);
-      reporting::print(out, "Permissions", permissions, verbose);
+      this->user.print(out, verbose);
+      this->space_left.print(out, verbose);
+      this->environment.print(out, verbose, false);
+      reporting::print(out, "Permissions", this->permissions, verbose);
+      this->fuse.print(out, verbose);
     }
 
     bool
@@ -668,6 +706,7 @@ namespace reporting
       return this->user.sane()
         && this->space_left.sane()
         && this->environment.sane()
+        && this->fuse.sane()
         && reporting::sane(this->permissions);
     }
 
@@ -677,6 +716,7 @@ namespace reporting
       return this->user.warning()
         || this->space_left.warning()
         || this->environment.warning()
+        || this->fuse.warning()
         || reporting::warning(this->permissions);
     }
 
@@ -687,6 +727,7 @@ namespace reporting
       s.serialize("space left", this->space_left);
       s.serialize("environment", this->environment);
       s.serialize("permissions", this->permissions);
+      s.serialize("fuse", this->fuse);
       if (s.out())
       {
         bool sane = this->sane();
@@ -698,6 +739,7 @@ namespace reporting
     SpaceLeft space_left;
     EnvironmentResult environment;
     PermissionResults permissions;
+    FuseResult fuse;
   };
 
   struct ConnectivityResults
@@ -1353,34 +1395,41 @@ has_permission(boost::filesystem::path const& path,
   return std::make_pair(sane, res);
 }
 
-#if false
 static
 bool
 fuse(bool /*verbose*/)
 {
-#if 0
   try
   {
-    elle::system::Process p({"fusermount", "-V"});
-    if (verbose)
-      std::cout << "fuse: ok" << std::endl;
+    struct NoOp:
+      public reactor::filesystem::Operations
+    {
+      std::shared_ptr<reactor::filesystem::Path>
+      path(std::string const& path) override
+      {
+        return nullptr;
+      }
+    };
+
+    reactor::filesystem::FileSystem f(elle::make_unique<NoOp>(), false);
+    elle::filesystem::TemporaryDirectory d;
+    f.mount(d.path(), {});
+    f.unmount();
+    f.kill();
     return true;
   }
   catch (...)
   {
     return false;
   }
-#else
-  return true;
-#endif
 }
-#endif
 
 static
 void
 _sanity(boost::program_options::variables_map const& args,
         reporting::SanityResults& result)
 {
+  result.fuse = {fuse(false)};
   ELLE_TRACE("user name")
     try
     {
