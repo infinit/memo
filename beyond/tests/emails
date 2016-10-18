@@ -27,7 +27,7 @@ class Test(unittest.TestCase):
     n.put(beyond)
     v = Volume(name = 'volume', network = n)
     v.put(beyond)
-    d = Drive(name = 'Coucou', volume = v, description = "Lorem")
+    d = Drive(name = 'coucou', volume = v, description = 'Lorem')
     d.put(beyond)
     return n, v, d
 

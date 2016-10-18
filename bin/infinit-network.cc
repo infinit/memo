@@ -47,7 +47,7 @@ storage_configuration(boost::program_options::variables_map const& args)
     else
     {
       storage.reset(
-        new infinit::storage::StripStorageConfig(std::move(backends)));
+        new infinit::storage::StripStorageConfig(std::move(backends), {}, {}));
     }
   }
   return storage;
@@ -227,7 +227,9 @@ COMMAND(create)
       version,
       admin_keys);
   {
-    infinit::Network network(ifnt.qualified_name(name, owner), std::move(dht));
+    infinit::Network network(ifnt.qualified_name(name, owner),
+                             std::move(dht),
+                             optional(args, "description"));
     std::unique_ptr<infinit::NetworkDescriptor> desc;
     if (args.count("output"))
     {
@@ -282,8 +284,11 @@ user_key(std::string name, boost::optional<std::string> mountpoint)
 COMMAND(update)
 {
   auto name = mandatory(args, "name", "network name");
+  auto description = optional(args, "description");
   auto owner = self_user(ifnt, args);
   auto network = ifnt.network_get(name, owner);
+  if (description)
+    network.description = description;
   network.ensure_allowed(owner, "update");
   auto& dht = *network.dht();
   if (auto port = optional<int>(args, "port"))
@@ -420,7 +425,8 @@ COMMAND(fetch)
             u.name,
             d->port,
             desc.version,
-            desc.admin_keys));
+            desc.admin_keys),
+          desc.description);
         // Update linked network for user.
         ifnt.network_save(u, updated_network, true);
       }
@@ -506,7 +512,8 @@ COMMAND(link_)
       self.name,
       boost::optional<int>(),
       desc.version,
-      desc.admin_keys));
+      desc.admin_keys),
+    desc.description);
   auto has_output = optional(args, "output");
   auto output = has_output ? get_output(args) : nullptr;
   if (output)
@@ -529,8 +536,10 @@ COMMAND(list)
     for (auto const& network: ifnt.networks_get(self))
     {
       elle::json::Object o;
-      o["name"] = network.name;
+      o["name"] = static_cast<std::string>(network.name);
       o["linked"] = bool(network.model) && network.user_linked(self);
+      if (network.description)
+        o["description"] = network.description.get();
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
@@ -540,6 +549,8 @@ COMMAND(list)
     for (auto const& network: ifnt.networks_get(self))
     {
       std::cout << network.name;
+      if (network.description)
+        std::cout << " \"" << network.description.get() << "\"";
       if (network.model && network.user_linked(self))
         std::cout << ": linked";
       else
@@ -681,6 +692,13 @@ COMMAND(run)
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, infinit::compatibility_version, port,
     listen_address);
+  if (auto plf = optional(args, "peers-file"))
+  {
+    auto more_peers = infinit::hook_peer_discovery(*dht, *plf);
+    ELLE_TRACE("Peer list file got %s peers", more_peers.size());
+    if (!more_peers.empty())
+      dht->overlay()->discover(more_peers);
+  }
   if (args.count("peer"))
   {
     std::vector<infinit::model::Endpoints> eps;
@@ -713,7 +731,7 @@ COMMAND(run)
     daemon_handle = infinit::daemon_hold(0, 1);
 #endif
   auto poll_beyond = optional<int>(args, option_poll_beyond);
-  auto run = [&]
+  auto run = [&, push]
     {
       reactor::Thread::unique_ptr poll_thread;
       if (fetch)
@@ -881,6 +899,7 @@ main(int argc, char** argv)
         "[--storage STORAGE...]",
       {
         { "name,n", value<std::string>(), "created network name" },
+        option_description("network"),
         { "storage,S", value<std::vector<std::string>>()->multitoken(),
           "storage to contribute (optional, data striped over multiple)" },
         { "port", value<int>(), "port to listen on (default: random)" },
@@ -910,6 +929,7 @@ main(int argc, char** argv)
       "--name NAME",
       {
         { "name,n", value<std::string>(), "network to update" },
+        option_description("network"),
         { "port", value<int>(), "port to listen on (default: random)" },
         option_output("network"),
         { "push-network", bool_switch(),
@@ -1052,6 +1072,8 @@ main(int argc, char** argv)
           "alias for --fetch-endpoints --push-endpoints" },
         option_endpoint_file,
         option_port_file,
+        { "peers-file", value<std::string>(),
+          "Periodically write list of known peers to given file"},
         option_port,
         option_listen_interface,
         option_poll_beyond,

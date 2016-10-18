@@ -370,10 +370,10 @@ namespace infinit
       boost::optional<bool> merge;
       boost::optional<std::string> journal_dir;
       std::shared_ptr<StorageConfig> storage;
-      AsyncStorageConfig(elle::serialization::SerializerIn& input)
-      : StorageConfig()
+      AsyncStorageConfig(elle::serialization::SerializerIn& s)
+        : StorageConfig(s)
       {
-        this->serialize(input);
+        this->serialize(s);
       }
 
       void

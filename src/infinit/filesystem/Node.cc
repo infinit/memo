@@ -401,6 +401,30 @@ namespace infinit
             return;
           }
         }
+        // New naming for group attributes:
+        // infinit.groups.<group_name>.<attribute>
+        else if (special->find("groups.") == 0)
+        {
+          auto name_start = strlen("groups.");
+          auto name_end = special->find_last_of('.');
+          auto group_name = special->substr(name_start, name_end - name_start);
+          model::doughnut::Group group(*dht, group_name);
+          auto attribute = special->substr(name_end + 1);
+          if (attribute == "description")
+          {
+            umbrella([&] {
+              if (v.size())
+                group.description(v);
+              else
+                group.description(boost::none);
+            });
+            return;
+          }
+          else
+          {
+            elle::err("unknown group attribute: %s", attribute);
+          }
+        }
         throw rfs::Error(ENOATTR, "no such attribute", elle::Backtrace());
       }
       /* Drop quarantine flags, preventing the files from being opened.
@@ -541,10 +565,39 @@ namespace infinit
                 for (auto const& m: members)
                   va.push_back(m->name());
                 o["admins"] = va;
+                try
+                {
+                  if (g.description())
+                    o["description"] = g.description().get();
+                }
+                catch (elle::Error const&)
+                {}
                 std::stringstream ss;
                 elle::json::write(ss, o, true);
                 return ss.str();
               });
+          }
+        }
+        // New naming for group attributes:
+        // infinit.groups.<group_name>.<attribute>
+        else if (special->find("groups.") == 0)
+        {
+          auto name_start = strlen("groups.");
+          auto name_end = special->find_last_of('.');
+          auto group_name = special->substr(name_start, name_end - name_start);
+          model::doughnut::Group group(*dht, group_name);
+          auto attribute = special->substr(name_end + 1);
+          if (attribute == "description")
+          {
+            return umbrella(
+              [&]
+              {
+                return group.description() ? group.description().get() : "";
+              });
+          }
+          else
+          {
+            elle::err("unknown group attribute: %s", attribute);
           }
         }
         else if (special->find("mountpoint") == 0)
@@ -779,7 +832,7 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: set_permissions(%s)", *this, flags);
       std::pair<bool, bool> perms = parse_flags(flags);
       auto acl = std::dynamic_pointer_cast<model::blocks::ACLBlock>(
-        this->_owner.fetch_or_die(self_address));
+        this->_owner.fetch_or_die(self_address, {}, this->full_path()));
       if (!acl)
         throw rfs::Error(EIO, "Block is not an ACL block");
       // permission check

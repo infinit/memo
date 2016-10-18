@@ -88,6 +88,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(Endpoints, endpoints);
         ELLE_ATTRIBUTE(boost::optional<reactor::network::UTPServer&>,
                        utp_server);
+        ELLE_ATTRIBUTE_RX(boost::signals2::signal<void()>, id_discovered);
 
       /*-----------.
       | Networking |

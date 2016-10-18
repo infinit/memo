@@ -189,7 +189,7 @@ namespace infinit
       if (this->_filedata)
         return;
       this->_first_block = std::dynamic_pointer_cast<ACLBlock>(
-        this->_owner.fetch_or_die(_address, {}, this));
+        this->_owner.fetch_or_die(_address, {}, this->full_path()));
 
       elle::SafeFinally remove_undecoded_first_block([&] {
           this->_first_block.reset();
@@ -613,7 +613,7 @@ namespace infinit
             continue;
           auto targetsize = new_size - offset;
           cryptography::SecretKey sk(_filedata->_fat[i].second);
-          auto block = _owner.fetch_or_die(_filedata->_fat[i].first);
+          auto block = _owner.fetch_or_die(_filedata->_fat[i].first, {}, this->full_path());
           elle::Buffer buf(sk.decipher(block->data()));
           if (buf.size() > targetsize)
           {

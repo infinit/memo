@@ -1,0 +1,6 @@
+sources = drake.nodes(
+  'BaseDescriptor.cc',
+  'BaseDescriptor.hh',
+  'TemplatedBaseDescriptor.hh',
+  'TemplatedBaseDescriptor.hxx',
+)

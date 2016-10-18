@@ -615,18 +615,19 @@ namespace infinit
       SFTPStorageConfig(std::string const& name,
                         std::string const& host,
                         std::string const& path,
-                        boost::optional<int64_t> capacity)
-      : StorageConfig(std::move(name), std::move(capacity))
+                        boost::optional<int64_t> capacity,
+                        boost::optional<std::string> description)
+      : StorageConfig(
+          std::move(name), std::move(capacity), std::move(description))
       , host(host)
       , path(path)
     {}
 
-    SFTPStorageConfig::
-      SFTPStorageConfig(elle::serialization::SerializerIn& input)
-      : StorageConfig()
-    {
-      this->serialize(input);
-    }
+    SFTPStorageConfig::SFTPStorageConfig(elle::serialization::SerializerIn& s)
+      : StorageConfig(s)
+      , host(s.deserialize<std::string>("host"))
+      , path(s.deserialize<std::string>("path"))
+    {}
 
     void
     SFTPStorageConfig::serialize(elle::serialization::Serializer& s)

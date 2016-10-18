@@ -15,7 +15,7 @@ class Test(unittest.TestCase):
     with Beyond() as beyond:
       user = User()
       user.put(beyond)
-      network = Network(name = 'server1,server2', owner = user)
+      network = Network(name = 'server1-server2', owner = user)
       network.put(beyond)
       volume = Volume(name = 'business', network = network)
       volume.put(beyond)

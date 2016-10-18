@@ -142,20 +142,22 @@ namespace infinit
 
     DropboxStorageConfig::DropboxStorageConfig(
       std::string name,
-      std::string token_,
-      boost::optional<std::string> root_,
-      boost::optional<int64_t> capacity)
-      : StorageConfig(std::move(name), std::move(capacity))
-      , token(std::move(token_))
-      , root(std::move(root_))
+      std::string token,
+      boost::optional<std::string> root,
+      boost::optional<int64_t> capacity,
+      boost::optional<std::string> description)
+      : StorageConfig(
+          std::move(name), std::move(capacity), std::move(description))
+      , token(std::move(token))
+      , root(std::move(root))
     {}
 
     DropboxStorageConfig::DropboxStorageConfig(
-      elle::serialization::SerializerIn& input)
-      : StorageConfig()
-    {
-      this->serialize(input);
-    }
+      elle::serialization::SerializerIn& s)
+      : StorageConfig(s)
+      , token(s.deserialize<std::string>("token"))
+      , root(s.deserialize<std::string>("root"))
+    {}
 
     void
     DropboxStorageConfig::serialize(elle::serialization::Serializer& s)

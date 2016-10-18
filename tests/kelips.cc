@@ -92,7 +92,7 @@ private:
 };
 
 std::vector<infinit::model::Endpoints> endpoints;
-infinit::Network net("bob/network", nullptr);
+infinit::Network net("bob/network", nullptr, boost::none);
 typedef std::vector<
          std::pair<
            std::shared_ptr<imd::Doughnut>,
@@ -172,7 +172,7 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
       endpoints.emplace_back(eps);
     }
   }
-  return std::move(res);
+  return res;
 }
 
 static std::pair<std::unique_ptr<rfs::FileSystem>, reactor::Thread::unique_ptr>
