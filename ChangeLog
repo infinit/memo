@@ -1,13 +1,13 @@
 # Change Log
 
 
-## [xxx version] - xxx date
+## [0.8.0] - xxx date
 
 xxx summary
 
 ### Added
 
-- Descriptions to users, groups, storages, networks, volumes and drives.
+- Descriptions for users, groups, storages, networks, volumes and drives.
 
 
 ## [0.7.1]
@@ -20,6 +20,11 @@ xxx summary
 ### Changed
 
 - Poll beyond periodically for endpoints changes.
+- No longer require an email address to push a user to the Hub.
+
+### Fixed
+
+- Unable to interrupt adding credentials with infinit-credentials.
 
 
 ## [0.7.0] - 2016-09-23
