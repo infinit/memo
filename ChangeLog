@@ -20,6 +20,8 @@ New overlay implementation, bug fixes and performances improvements.
   to store known peers to disk.
 - Enable to pick listen inferface with `--listen`.
 - Add descriptions for users, storages, networks, volumes and drives.
+- Add `--networking` to `infinit-doctor` to test connection speed between
+  machines.
 
 ### Changed
 
