@@ -16,11 +16,12 @@ xxx summary
 
 - Add `--peers-file` option to `infinit-volume` and `infinit-network`: stores
   all known peers to disk.
+- Add support for merging successive block updates into one operation in
+  `async` consensus.
 
 ### Changed
 
 - Poll beyond periodically for endpoints changes.
-
 
 ## [0.7.0] - 2016-09-23
 
