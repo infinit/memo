@@ -430,6 +430,11 @@ COMMAND(run)
     if (!more_peers.empty())
       model->overlay()->discover(more_peers);
   }
+  if (flag(args, "register-service"))
+  {
+    ELLE_LOG_SCOPE("register volume in the network");
+    model->service_add("volumes", name, volume);
+  }
   // Only push if we have are contributing storage.
   bool push = mo.push && model->local();
   boost::optional<infinit::model::Endpoint> local_endpoint;
@@ -1169,6 +1174,9 @@ run_options(RunMode mode)
     { "push-endpoints", BOOL_IMPLICIT,
       elle::sprintf("push endpoints to %s", beyond(true)) },
   });
+  if (mode == RunMode::run)
+    add_option(
+      { "register-service,r", BOOL_IMPLICIT, "register volume in the network"});
   if (mode == RunMode::create)
     add_option(
       { "push,p", BOOL_IMPLICIT, "alias for --push-endpoints --push-volume" });
