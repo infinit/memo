@@ -14,7 +14,7 @@ class Test(unittest.TestCase):
     with Beyond() as beyond:
       user = User()
       user.put(beyond)
-      network = Network(name = 'server1,server2', owner = user)
+      network = Network(name = 'server1-server2', owner = user)
       throws(lambda: beyond.get('networks/%s' % network['name']),
              404,
              json = False)
@@ -29,7 +29,7 @@ class Test(unittest.TestCase):
       user.put(beyond)
       network = Network(name = 'all_infinit', owner = user)
       network.put(beyond)
-      network2 = Network(name = 'server1,server2', owner = user)
+      network2 = Network(name = 'server1-server2', owner = user)
       network2.put(beyond)
       res = beyond.get('users/%s/networks' % user['name'],
                        auth = user).json()

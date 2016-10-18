@@ -89,20 +89,25 @@ namespace infinit
       return res;
     }
 
-    static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
+    static
+    std::unique_ptr<Storage>
+    make(std::vector<std::string> const& args)
     {
       return elle::make_unique<infinit::storage::Memory>();
     }
 
-    MemoryStorageConfig::MemoryStorageConfig(std::string name, int64_t capacity)
-      : StorageConfig(std::move(name), std::move(capacity))
+    MemoryStorageConfig::MemoryStorageConfig(
+      std::string name,
+      int64_t capacity,
+      boost::optional<std::string> description)
+      : StorageConfig(
+          std::move(name), std::move(capacity), std::move(description))
     {}
 
-    MemoryStorageConfig::MemoryStorageConfig(elle::serialization::SerializerIn& input)
-      : StorageConfig()
-    {
-      this->serialize(input);
-    }
+    MemoryStorageConfig::MemoryStorageConfig(
+      elle::serialization::SerializerIn& input)
+      : StorageConfig(input)
+    {}
 
     void
     MemoryStorageConfig::serialize(elle::serialization::Serializer& s)

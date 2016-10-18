@@ -1,5 +1,15 @@
 # Change Log
 
+
+## [xxx version] - xxx date
+
+xxx summary
+
+### Added
+
+- Descriptions to users, groups, storages, networks, volumes and drives.
+
+
 ## [0.7.1]
 
 ### Added
@@ -20,7 +30,7 @@ Windows release, bandwidth and CPU usage optimization, bugfixes.
 
 - Windows release.
 - IPv6 support.
-- Add new `Koordinate` overlay that enables running several overlay
+- Add new `Koordinate` overlay that enables running several overlay.
   algorithms on nodes.
 - Add `--script` mode to `infinit-acl --list`.
 - Support `O_EXCL` when opening files.

@@ -92,7 +92,7 @@ private:
 };
 
 std::vector<infinit::model::Endpoints> endpoints;
-infinit::Network net("bob/network", nullptr);
+infinit::Network net("bob/network", nullptr, boost::none);
 typedef std::vector<
          std::pair<
            std::shared_ptr<imd::Doughnut>,

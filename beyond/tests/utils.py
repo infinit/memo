@@ -44,6 +44,14 @@ bottle.Bottle.__enter__ = __enter__
 bottle.Bottle.__exit__ = __exit__
 bottle.Bottle.host = host
 
+class Unreachable(BaseException):
+
+  def __init__(self):
+    super().__init__('Unreachable code reached')
+
+def unreachable():
+  raise Unreachable()
+
 class Beyond:
 
   def __init__(self,
@@ -336,7 +344,7 @@ class Network(dict):
     'replication-factor': 3,
   }
 
-  def __init__(self, owner, name = None):
+  def __init__(self, owner, name = None, description = None):
     name = name or 'network_' + random_sequence()
     self.__owner = owner
     self['overlay'] = Network.kelips
@@ -345,6 +353,8 @@ class Network(dict):
     self.__short_name = name
     self['name'] = owner['name'] + '/' + self.__short_name
     self['version'] = '0.3.7'
+    if description:
+      self['description'] = description
 
   @property
   def shortname(self):
@@ -457,7 +467,7 @@ class Drive(dict):
   def __init__(self,
                volume,
                owner = None,
-               description = "Lorem ipsum",
+               description = 'Lorem ipsum',
                members = {},
                name = None):
     name = name or 'drive_' + random_sequence()

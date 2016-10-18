@@ -109,6 +109,7 @@ convert_capacity(std::string value)
 COMMAND(create)
 {
   auto name = mandatory(args, "name", "storage name");
+  auto description = optional(args, "description");
   auto capacity_repr = optional(args, "capacity");
   boost::optional<int64_t> capacity;
   if (capacity_repr)
@@ -135,7 +136,7 @@ COMMAND(create)
     config =
       elle::make_unique<infinit::storage::GCSConfig>
       (name, bucket, *root, self_user(ifnt, {}).name, account->refresh_token,
-       std::move(capacity));
+       std::move(capacity), std::move(description));
   }
   else if (args.count("s3"))
   {
@@ -175,7 +176,8 @@ COMMAND(create)
       name,
       std::move(aws_credentials),
       storage_class,
-      std::move(capacity));
+      std::move(capacity),
+      std::move(description));
   }
   else if (args.count("dropbox"))
   {
@@ -184,9 +186,9 @@ COMMAND(create)
       root = elle::sprintf("storage_%s", name);
     auto account_name = mandatory(args, "account", "Dropbox account");
     auto account = ifnt.credentials_dropbox(account_name);
-    config =
-      elle::make_unique<infinit::storage::DropboxStorageConfig>
-      (name, account->token, std::move(root), std::move(capacity));
+    config = elle::make_unique<infinit::storage::DropboxStorageConfig>(
+      name, account->token, std::move(root), std::move(capacity),
+      std::move(description));
   }
   else if (args.count("google-drive"))
   {
@@ -201,7 +203,8 @@ COMMAND(create)
        std::move(root),
        account->refresh_token,
        self_user(ifnt, {}).name,
-       std::move(capacity));
+       std::move(capacity),
+       std::move(description));
   }
 #ifndef INFINIT_WINDOWS
   else if (args.count("ssh"))
@@ -209,7 +212,7 @@ COMMAND(create)
     auto host = mandatory(args, "host", "SSH remote host");
     auto path = mandatory(args, "path", "Remote path to store into");
     config = elle::make_unique<infinit::storage::SFTPStorageConfig>(
-      name, host, path, capacity);
+      name, host, path, capacity, std::move(description));
   }
 #endif
   else // filesystem by default
@@ -233,9 +236,9 @@ COMMAND(create)
                   << std::endl;
       }
     }
-    config =
-      elle::make_unique<infinit::storage::FilesystemStorageConfig>
-        (name, std::move(path.string()), std::move(capacity));
+    config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
+      name, std::move(path.string()), std::move(capacity),
+      std::move(description));
   }
   if (args.count("output"))
   {
@@ -260,9 +263,11 @@ COMMAND(list)
     for (auto const& storage: storages)
     {
       elle::json::Object o;
-      o["name"] = storage->name;
+      o["name"] = static_cast<std::string>(storage->name);
       o["capacity"] = (storage->capacity ? pretty_print(storage->capacity.get())
                                          : "unlimited");
+      if (storage->description)
+        o["description"] = storage->description.get();
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
@@ -271,7 +276,10 @@ COMMAND(list)
   {
     for (auto const& storage: storages)
     {
-      std::cout << storage->name << ": "
+      std::cout << storage->name;
+      if (storage->description)
+        std::cout << " \"" << storage->description.get() << "\"";
+      std::cout << ": "
                 << (storage->capacity ? pretty_print(storage->capacity.get())
                                       : "unlimited")
                 << std::endl;
@@ -422,6 +430,7 @@ main(int argc, char** argv)
       "--name STORAGE STORAGE-TYPE [STORAGE-OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created storage name" },
+        option_description("storage"),
         { "capacity,c", value<std::string>(), "limit the storage capacity\n"
           "use: B,kB,kiB,GB,GiB,TB,TiB (optional)" },
         option_output("storage"),

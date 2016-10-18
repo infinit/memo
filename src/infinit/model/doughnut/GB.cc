@@ -14,6 +14,8 @@ namespace infinit
   {
     namespace doughnut
     {
+      static elle::Version group_description_version(0, 8, 0);
+
       GB::GB(Doughnut* owner,
              cryptography::rsa::KeyPair master)
         : Super(owner, {}, elle::Buffer("group", 5), master)
@@ -68,10 +70,12 @@ namespace infinit
 
       void
       GB::_serialize(elle::serialization::Serializer& s,
-                    elle::Version const&)
+                     elle::Version const& version)
       {
         s.serialize("public_keys", this->_public_keys);
         s.serialize("admin_keys", this->_admin_keys);
+        if (version >= group_description_version)
+          s.serialize("description", this->_description);
       }
 
       GB::OwnerSignature::OwnerSignature(GB const& b)
@@ -108,6 +112,8 @@ namespace infinit
         auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
         GB::Super::DataSignature::serialize(s, v);
         s.serialize("public_keys", this->_block.public_keys());
+        if (v >= group_description_version)
+          s.serialize("description", this->_block._description);
       }
 
       std::unique_ptr<GB::Super::DataSignature>
@@ -239,6 +245,23 @@ namespace infinit
         return _owner_private_key;
       }
 
+      boost::optional<std::string> const&
+      GB::description() const
+      {
+        if (this->doughnut()->version() < group_description_version)
+          elle::err("description is only supported in version 0.8.0 or later");
+        return this->_description;
+      }
+
+      void
+      GB::description(boost::optional<std::string> const& description)
+      {
+        if (this->doughnut()->version() < group_description_version)
+          elle::err("description is only supported in version 0.8.0 or later");
+        this->_description = description;
+        this->_acl_changed = true;
+      }
+
       std::unique_ptr<blocks::Block>
       GB::clone() const
       {
@@ -249,6 +272,7 @@ namespace infinit
         : Super(other)
         , _public_keys(other._public_keys)
         , _admin_keys(other._admin_keys)
+        , _description(other._description)
       {}
 
       static const elle::serialization::Hierarchy<blocks::Block>::

@@ -219,6 +219,8 @@ class State:
     clone = None
     clone_branch = None
     for b, tree in build_trees.items():
+      if not os.path.exists(tree['path']):
+        continue
       rev = tree['rev']
       base = self.git('merge-base', rev, current_rev).strip()
       def distance(r):
