@@ -382,7 +382,13 @@ namespace infinit
     {
       // FIXME: check mcr max size
       if (auto mcr = dynamic_cast<MergeConflictResolver*>(&prev))
+      {
+        static const unsigned int max_size
+          = std::stoi(elle::os::getenv("INFINIT_MAX_SQUASH_SIZE", "20"));
+        if (mcr->resolvers().size() >= max_size)
+          return {model::Squash::stop, {}};
         return this->squashable(mcr->resolvers());
+      }
       else
       {
         SquashStack stack;

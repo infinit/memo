@@ -247,10 +247,6 @@ namespace infinit
     model::SquashOperation
     DirectoryConflictResolver::squashable(SquashStack const& newops)
     {
-      static const unsigned int max_size
-        = std::stoi(elle::os::getenv("INFINIT_MAX_SQUASH_SIZE", "20"));
-      if (newops.size() >= max_size)
-        return {model::Squash::stop, {}};
       if (this->_op.type != OperationType::insert
         && this->_op.type != OperationType::insert_exclusive)
         return {model::Squash::stop, {}};
