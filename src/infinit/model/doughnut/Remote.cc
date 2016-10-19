@@ -106,6 +106,7 @@ namespace infinit
             elle::sprintf("%f worker", this),
             [this]
             {
+              this->_key_hash_cache.clear();
               while (true)
               {
                 ELLE_DEBUG("%s: connection attempt to %s endpoints",
