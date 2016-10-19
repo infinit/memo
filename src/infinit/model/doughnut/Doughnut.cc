@@ -522,7 +522,9 @@ namespace infinit
           client ? this->name : boost::optional<std::string>(),
           version ? version.get() : this->version,
           admin_keys,
-          std::move(rdv_host));
+          std::move(rdv_host),
+          this->overlay->rpc_protocol
+          );
       }
 
       std::string
