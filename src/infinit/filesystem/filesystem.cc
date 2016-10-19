@@ -58,7 +58,7 @@ namespace infinit
   namespace filesystem
   {
     FileSystem::FileSystem(
-        std::string const& volume_name,
+        std::string volume_name,
         std::shared_ptr<model::Model> model,
         boost::optional<infinit::cryptography::rsa::PublicKey> owner,
         boost::optional<boost::filesystem::path> root_block_cache_dir,
@@ -67,7 +67,7 @@ namespace infinit
       : _block_store(std::move(model))
       , _single_mount(false)
       , _owner(owner)
-      , _volume_name(volume_name)
+      , _volume_name(std::move(volume_name))
       , _root_block_cache_dir(root_block_cache_dir)
       , _mountpoint(mountpoint)
       , _root_address(Address::null)

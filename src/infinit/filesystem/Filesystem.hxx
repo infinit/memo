@@ -5,23 +5,34 @@ namespace infinit
 {
   namespace filesystem
   {
-    inline
-    FileSystem
-    _init(std::string const& volume_name,
-          std::shared_ptr<model::Model> model,
-          boost::optional<cryptography::rsa::PublicKey> owner,
-          boost::optional<boost::filesystem::path> root_block_cache_dir,
-          boost::optional<boost::filesystem::path> mountpoint,
-          bool allow_root_creation)
+    struct FileSystem::Init
     {
-      return FileSystem(
-        volume_name,
-        std::move(model),
-        std::move(owner),
-        std::move(root_block_cache_dir),
-        std::move(mountpoint),
-        allow_root_creation);
-    }
+      std::string volume_name;
+      std::shared_ptr<model::Model> model;
+      boost::optional<cryptography::rsa::PublicKey> owner;
+      boost::optional<boost::filesystem::path> root_block_cache_dir;
+      boost::optional<boost::filesystem::path> mountpoint;
+      bool allow_root_creation;
+
+      static
+      Init
+      init(std::string const& volume_name,
+           std::shared_ptr<model::Model> model,
+           boost::optional<cryptography::rsa::PublicKey> owner,
+           boost::optional<boost::filesystem::path> root_block_cache_dir,
+           boost::optional<boost::filesystem::path> mountpoint,
+           bool allow_root_creation)
+      {
+        return Init{
+          std::move(volume_name),
+          std::move(model),
+          std::move(owner),
+          std::move(root_block_cache_dir),
+          std::move(mountpoint),
+          std::move(allow_root_creation),
+        };
+      }
+    };
 
     template <typename ... Args>
     FileSystem::FileSystem(Args&& ... args)
@@ -32,7 +43,17 @@ namespace infinit
                      filesystem::root_block_cache_dir = boost::none,
                      filesystem::mountpoint = boost::none,
                      filesystem::allow_root_creation = false)
-                   .call(_init, std::forward<Args>(args)...))
+                   .call(&Init::init, std::forward<Args>(args)...))
+    {}
+
+    inline
+    FileSystem::FileSystem(Init init)
+      : FileSystem(std::move(init.volume_name),
+                   std::move(init.model),
+                   std::move(init.owner),
+                   std::move(init.root_block_cache_dir),
+                   std::move(init.mountpoint),
+                   std::move(init.allow_root_creation))
     {}
   }
 }

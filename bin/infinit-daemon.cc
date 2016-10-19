@@ -49,15 +49,19 @@ infinit::Infinit ifnt;
 
 struct SystemUser
 {
-  SystemUser(unsigned int uid, unsigned int gid, std::string name, std::string home)
-  : uid(uid)
-  , gid(gid)
-  , name(name)
-  , home(home)
+  SystemUser(unsigned int uid,
+             unsigned int gid,
+             std::string name,
+             std::string home)
+    : uid(uid)
+    , gid(gid)
+    , name(name)
+    , home(home)
   {}
+
   SystemUser(unsigned int uid, boost::optional<std::string> home_ = {})
-  : uid(uid)
-  , gid(0)
+    : uid(uid)
+    , gid(0)
   {
     struct passwd * pwd = getpwuid(uid);
     if (!pwd)
@@ -69,6 +73,7 @@ struct SystemUser
       home = pwd->pw_dir;
     gid = pwd->pw_gid;
   }
+
   SystemUser(std::string const& name, boost::optional<std::string> home_ = {})
   {
     struct passwd * pwd = getpwnam(name.c_str());
@@ -86,10 +91,12 @@ struct SystemUser
   unsigned int gid;
   std::string name;
   std::string home;
-  struct Lock: public reactor::Lock
+
+  struct Lock
+    : public reactor::Lock
   {
     Lock(SystemUser const& su, reactor::Lockable& l)
-    : reactor::Lock(l)
+      : reactor::Lock(l)
     {
       prev_home = elle::os::getenv("INFINIT_HOME", "");
       prev_data_home = elle::os::getenv("INFINIT_DATA_HOME", "");
@@ -103,8 +110,11 @@ struct SystemUser
       elle::setegid(su.gid);
       elle::seteuid(su.uid);
     }
+
     Lock(Lock const& b) = delete;
+
     Lock(Lock && b) = default;
+
     ~Lock()
     {
       if (prev_home.empty())
@@ -116,10 +126,13 @@ struct SystemUser
       elle::seteuid(prev_euid);
       elle::setegid(prev_egid);
     }
+
     std::string prev_home, prev_data_home;
     int prev_euid, prev_egid;
   };
-  Lock enter(reactor::Lockable& l) const
+
+  Lock
+  enter(reactor::Lockable& l) const
   {
     return {*this, l};
   }
@@ -208,8 +221,9 @@ void link_network(std::string const& name,
     boost::replace_all(storagename, "/", "_");
     ELLE_LOG("Creating local storage %s", storagename);
     auto path = infinit::xdg_data_home() / "blocks" / storagename;
-    storage_config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
-      storagename, path.string(), boost::none, boost::none);
+    storage_config =
+      elle::make_unique<infinit::storage::FilesystemStorageConfig>(
+        storagename, path.string(), boost::none, boost::none);
   }
   else if (storagedesc)
   {
@@ -219,7 +233,7 @@ void link_network(std::string const& name,
     }
     catch (MissingLocalResource const&)
     {
-      throw elle::Error("Storage specification for new storage not implemented");
+      elle::err("storage specification for new storage not implemented");
     }
   }
 
@@ -236,15 +250,18 @@ void link_network(std::string const& name,
       user->name,
       boost::optional<int>(),
       desc.version,
-      desc.admin_keys),
+      desc.admin_keys,
+      std::vector<infinit::model::Endpoints>()),
     boost::none);
   ifnt.network_save(*user, network, true);
   ifnt.network_save(std::move(network), true);
 }
 
-void acquire_network(std::string const& name)
+void
+acquire_network(std::string const& name)
 {
-  infinit::NetworkDescriptor desc = beyond_fetch<infinit::NetworkDescriptor>("network", name);
+  infinit::NetworkDescriptor desc =
+    beyond_fetch<infinit::NetworkDescriptor>("network", name);
   ifnt.network_save(desc);
   try
   {
@@ -257,7 +274,8 @@ void acquire_network(std::string const& name)
   }
 }
 
-void acquire_volume(std::string const& name)
+void
+acquire_volume(std::string const& name)
 {
   auto desc = beyond_fetch<infinit::Volume>("volume", name);
   ifnt.volume_save(desc, true);
@@ -275,37 +293,6 @@ void acquire_volume(std::string const& name)
     link_network(desc.network);
   }
 }
-
-void acquire_volumes()
-{
-  auto users = ifnt.users_get();
-  for (auto const& u: users)
-  {
-    if (!u.private_key)
-      continue;
-    auto res = beyond_fetch<
-      std::unordered_map<std::string, std::vector<infinit::Volume>>>(
-        elle::sprintf("users/%s/volumes", u.name),
-        "volumes for user",
-        u.name,
-        u);
-    for (auto const& volume: res["volumes"])
-    {
-      try
-      {
-        acquire_volume(volume.name);
-      }
-      catch (ResourceAlreadyFetched const& error)
-      {
-      }
-      catch (elle::Error const& e)
-      {
-        ELLE_LOG("failed to acquire %s: %s", volume.name, e);
-      }
-    }
-  }
-}
-
 
 struct Mount
 {
@@ -340,13 +327,14 @@ struct MountInfo
 class MountManager
 {
 public:
-  MountManager(boost::filesystem::path mount_root = boost::filesystem::temp_directory_path(),
+  MountManager(boost::filesystem::path mount_root =
+                 boost::filesystem::temp_directory_path(),
                std::string mount_substitute = "")
-   : _mount_root(mount_root)
-   , _mount_substitute(mount_substitute)
-   , _fetch(false)
-   , _push(false)
-   {}
+    : _mount_root(mount_root)
+    , _mount_substitute(mount_substitute)
+    , _fetch(false)
+    , _push(false)
+  {}
   ~MountManager();
   void
   start(std::string const& name, infinit::MountOptions opts = {},
@@ -376,12 +364,14 @@ public:
   void
   update_network(infinit::Network& network,
                  elle::json::Object const& options);
+  void
+  acquire_volumes();
   ELLE_ATTRIBUTE_RW(boost::filesystem::path, mount_root);
   ELLE_ATTRIBUTE_RW(std::string, mount_substitute);
   ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_level);
   ELLE_ATTRIBUTE_RW(boost::optional<std::string>, log_path);
   ELLE_ATTRIBUTE_RW(std::string, default_user);
-  ELLE_ATTRIBUTE_RW(std::string, default_network);
+  ELLE_ATTRIBUTE_RW(boost::optional<std::string>, default_network);
   ELLE_ATTRIBUTE_RW(std::vector<std::string>, advertise_host);
   ELLE_ATTRIBUTE_RW(bool, fetch);
   ELLE_ATTRIBUTE_RW(bool, push);
@@ -395,17 +385,79 @@ MountManager::~MountManager()
     this->stop(this->_mounts.begin()->first);
 }
 
+void
+MountManager::acquire_volumes()
+{
+  if (this->_fetch)
+  {
+    auto users = ifnt.users_get();
+    for (auto const& u: users)
+    {
+      if (!u.private_key)
+        continue;
+      try
+      {
+        auto res = beyond_fetch<
+          std::unordered_map<std::string, std::vector<infinit::Volume>>>(
+            elle::sprintf("users/%s/volumes", u.name),
+            "volumes for user",
+            u.name,
+            u);
+        for (auto const& volume: res["volumes"])
+        {
+          try
+          {
+            acquire_volume(volume.name);
+          }
+          catch (ResourceAlreadyFetched const& error)
+          {
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN("failed to acquire %s: %s", volume.name, e);
+          }
+        }
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_WARN("failed to acquire volumes from beyond: %s", e);
+      }
+    }
+  }
+  if (this->_default_network)
+  {
+    ELLE_TRACE_SCOPE("%s: list volumes from network %s",
+                     this, this->_default_network.get());
+    auto owner = ifnt.user_get(this->default_user());
+    auto net = ifnt.network_get(this->_default_network.get(), owner, true);
+    auto process = [&]
+    {
+      std::vector<std::string> arguments;
+      static const auto root = elle::system::self_path().parent_path();
+      arguments.push_back((root / "infinit-volume").string());
+      arguments.push_back("--fetch");
+      arguments.push_back("--network");
+      arguments.push_back(net.name);
+      arguments.push_back("--service");
+      arguments.push_back("--as");
+      arguments.push_back(this->default_user());
+      infinit::MountOptions mo;
+      if (this->_fetch)
+        mo.fetch = true;
+      if (this->_push)
+        mo.push = true;
+      std::unordered_map<std::string, std::string> env;
+      mo.to_commandline(arguments, env);
+      return elle::make_unique<elle::system::Process>(arguments, true);
+    }();
+    process->wait();
+  }
+}
+
 std::vector<infinit::descriptor::BaseDescriptor::Name>
 MountManager::list()
 {
-  try
-  {
-    acquire_volumes();
-  }
-  catch (elle::Error const& e)
-  {
-    ELLE_TRACE("Failed to acquire volumes from beyond: %s", e);
-  }
+  this->acquire_volumes();
   std::vector<infinit::descriptor::BaseDescriptor::Name> res;
   for (auto const& volume: ifnt.volumes_get())
     res.emplace_back(volume.name);
@@ -481,7 +533,8 @@ is_mounted(std::string const& path)
   int res = statfs(path.c_str(), &sfs);
   if (res)
     return false;
-  return boost::filesystem::path(path) == boost::filesystem::path(sfs.f_mntonname);
+  return boost::filesystem::path(path) ==
+    boost::filesystem::path(sfs.f_mntonname);
 #else
   throw elle::Error("is_mounted is not implemented");
 #endif
@@ -730,9 +783,8 @@ MountManager::create_network(elle::json::Object const& options,
 {
   auto netname = optional(options, "network");
   if (!netname)
-    netname = _default_network;
+    netname = this->_default_network;
   ELLE_LOG("Creating network %s", netname);
-
   int rf = 1;
   auto rfstring = optional(options, "replication-factor");
   if (rfstring)
@@ -767,14 +819,15 @@ MountManager::create_network(elle::json::Object const& options,
       owner.name,
       port,
       version,
-      infinit::model::doughnut::AdminKeys());
+      infinit::model::doughnut::AdminKeys(),
+      std::vector<infinit::model::Endpoints>());
   auto fullname = ifnt.qualified_name(*netname, owner);
   infinit::Network network(fullname, std::move(dht), boost::none);
   ifnt.network_save(std::move(network));
   report_created("network", *netname);
   link_network(fullname, options);
   infinit::NetworkDescriptor desc(ifnt.network_get(*netname, owner, true));
-  if (!optional(options, "no-beyond") && this->_push)
+  if (this->_push)
   {
     try
     {
@@ -792,21 +845,14 @@ void
 MountManager::create_volume(std::string const& name,
                             elle::json::Object const& options)
 {
-  try
-  {
-    acquire_volumes();
-  }
-  catch (elle::Error const& e)
-  {
-    ELLE_TRACE("Failed to acquire volumes from beyond: %s", e);
-  }
+  this->acquire_volumes();
   auto username = optional(options, "user");
   if (!username)
-    username = _default_user;
+    username = this->_default_user;
   auto user = ifnt.user_get(*username);
   auto netname = optional(options, "network");
   if (!netname)
-    netname = _default_network;
+    netname = this->_default_network;
   auto nname = *netname;
   if (nname.find("/") == nname.npos)
     nname = *username + "/" + nname;
@@ -827,42 +873,42 @@ MountManager::create_volume(std::string const& name,
         return ifnt.network_get(*netname, user, true);
       }
   }());
-
-  infinit::MountOptions mo;
-  bool fetch = !optional(options, "no-beyond") && this->_fetch;
-  bool push = !optional(options, "no-beyond") && this->_push;
-  if (fetch)
-    mo.fetch = true;
-  if (push)
-    mo.push = true;
-  mo.as = username;
-  mo.cache = !optional(options, "no-cache");
-  mo.async = !optional(options, "no-async");
-  std::string qname(name);
-  if (qname.find("/") == qname.npos)
-    qname = *username + "/" + qname;
-  infinit::Volume volume(qname, network.name, mo, {}, {});
-  ifnt.volume_save(volume, true);
-  report_created("volume", qname);
-  if (push)
+  auto process = [&]
+    {
+      std::vector<std::string> arguments;
+      static const auto root = elle::system::self_path().parent_path();
+      arguments.push_back((root / "infinit-volume").string());
+      arguments.push_back("--create");
+      arguments.push_back(name);
+      arguments.push_back("--network");
+      arguments.push_back(network.name);
+      arguments.push_back("--create-root");
+      arguments.push_back("--register-service");
+      infinit::MountOptions mo;
+      if (this->_fetch)
+        mo.fetch = true;
+      if (this->_push)
+        mo.push = true;
+      mo.as = username;
+      std::unordered_map<std::string, std::string> env;
+      mo.to_commandline(arguments, env);
+      return elle::make_unique<elle::system::Process>(arguments, true);
+    }();
+  if (process->wait())
+    elle::err("volume creation failed");
+  auto qname = elle::sprintf("%s/%s", this->_default_user, name);
+  auto volume = ifnt.volume_get(qname);
+  report_created("volume", volume.name);
+  if (this->_push)
   {
     try
     {
-      beyond_push("volume", qname, volume, user);
+      beyond_push("volume", volume.name, volume, user);
     }
     catch (elle::Error const& e)
     {
-      ELLE_WARN("Failed to push %s to beyond: %s", qname, e);
+      ELLE_WARN("failed to push %s to beyond: %s", volume.name, e);
     }
-  }
-  // Create the root block
-  if (elle::os::getenv("INFINIT_NO_ROOT_CREATION", "").empty())
-  {
-    start(qname, mo, true, true, {"--allow-root-creation"});
-    auto mp = mountpoint(qname, true);
-    struct stat st;
-    stat(mp.c_str(), &st);
-    stop(qname);
   }
 }
 
@@ -1278,12 +1324,10 @@ fill_manager_options(MountManager& manager,
   manager.log_level(loglevel);
   auto logpath = optional(args, "log-path");
   manager.log_path(logpath);
-  manager.fetch(aliased_flag(args, { "fetch", "publish" }));
-  manager.push(aliased_flag(args, { "push", "publish" }));
+  manager.fetch(option_fetch(args));
+  manager.push(option_push(args));
   manager.default_user(self_user_name(args));
-  auto default_network = optional(args, "default-network");
-  if (default_network)
-    manager.default_network(*default_network);
+  manager.default_network(optional(args, "default-network"));
   auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
   if (advertise)
     manager.advertise_host(*advertise);
@@ -1406,7 +1450,6 @@ _run(boost::program_options::variables_map const& args, bool detach)
   boost::filesystem::remove(sockaddr);
   srv.listen(sockaddr);
   chmod(sockaddr.string().c_str(), 0666);
-
   elle::SafeFinally terminator([&] {
     if (mounter)
       mounter->terminate_now();
@@ -1626,44 +1669,36 @@ DockerVolumePlugin::install(bool tcp,
     });
   _server->register_route("/VolumeDriver.Create", reactor::http::Method::POST,
     [this] ROUTE_SIG {
-      elle::err("use infinit-volume --create to create new volumes");
-      // auto lock = this->_user.enter(this->_mutex);
-      // auto stream = elle::IOStream(data.istreambuf());
-      // auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
-      // std::cerr << elle::json::pretty_print(json) << std::endl;
-      // std::string err;
-      // try
-      // {
-      //   elle::json::Object opts;
-      //   try
-      //   {
-      //     opts = boost::any_cast<elle::json::Object>(json.at("Opts"));
-      //   }
-      //   catch(...)
-      //   {}
-      //   auto name = optional(json, "Name");
-      //   if (!name)
-      //     throw elle::Error("Missing 'Name' argument");
-      //   // Hack to force docker to invoke our Create method on existing volume,
-      //   // which we want to do to update configuration
-      //   auto p = name->find('@');
-      //   if (p != std::string::npos)
-      //     name = name->substr(0, p);
-      //   this->_manager.create_volume(name.get(), opts);
-      // }
-      // catch (ResourceAlreadyFetched const&)
-      // { // this can happen, docker seems to be caching volume list:
-      //   // a mount request can trigger a create request without any list
-      // }
-      // catch (elle::Error const& e)
-      // {
-      //   err = elle::sprintf("%s", e);
-      //   ELLE_LOG("%s\n%s", e, e.backtrace());
-      // }
-      // boost::replace_all(err, "\"", "'");
-      // // Since we fetch on demand, we must let create pass
-      // return "{\"Err\": \"" + err + "\"}";
-      // //return "{\"Err\": \"Use 'infinit-volume --create'\"}";
+      auto lock = this->_user.enter(this->_mutex);
+      auto stream = elle::IOStream(data.istreambuf());
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+      std::string err;
+      try
+      {
+        elle::json::Object opts;
+        try
+        {
+          opts = boost::any_cast<elle::json::Object>(json.at("Opts"));
+        }
+        catch(...)
+        {}
+        auto name = optional(json, "Name");
+        if (!name)
+          elle::err("missing 'Name' argument");
+        this->_manager.create_volume(name.get(), opts);
+      }
+      catch (ResourceAlreadyFetched const&)
+      {
+        // This can happen, docker seems to be caching volume list:
+        // a mount request can trigger a create request without any list.
+      }
+      catch (elle::Error const& e)
+      {
+        err = elle::sprintf("%s", e);
+        ELLE_WARN("error creating volume: %s", e);
+      }
+      boost::replace_all(err, "\"", "'");
+      return "{\"Err\": \"" + err + "\"}";
     });
   _server->register_route("/VolumeDriver.Remove", reactor::http::Method::POST,
     [this] ROUTE_SIG {
@@ -1756,7 +1791,9 @@ DockerVolumePlugin::install(bool tcp,
       res += "]}";
       return res;
     });
-   _server->register_route("/VolumeDriver.Capabilities", reactor::http::Method::POST,
+   _server->register_route(
+     "/VolumeDriver.Capabilities",
+     reactor::http::Method::POST,
      [this] ROUTE_SIG {
        return "{}";
    });
@@ -1886,14 +1923,16 @@ COMMAND(enable_storage)
 {
   auto name = mandatory(args, "name");
   auto hold = flag(args, "hold");
-  std::cout << daemon_command("{\"operation\": \"enable-storage\", \"volume\": \"" + name +  "\""
+  std::cout << daemon_command(
+    "{\"operation\": \"enable-storage\", \"volume\": \"" + name +  "\""
     +",\"hold\": "  + (hold ? "true": "false")   + "}", hold);
 }
 
 COMMAND(disable_storage)
 {
   auto name = mandatory(args, "name");
-  std::cout << daemon_command("{\"operation\": \"disable-storage\", \"volume\": \"" + name +  "\"}");
+  std::cout << daemon_command(
+    "{\"operation\": \"disable-storage\", \"volume\": \"" + name +  "\"}");
 }
 
 int
@@ -1908,15 +1947,15 @@ main(int argc, char** argv)
       "Default root path for all mounts\n(default: %s/infinit/filesystem/mnt)",
       elle::os::getenv("XDG_RUNTIME_DIR",
                        elle::sprintf("/run/user/%s", getuid()))) },
-    // { "default-network", value<std::string>(),
-    //   "Default network for volume creation" },
+    { "default-network", value<std::string>(),
+      "Default network for volume creation" },
     { "advertise-host", value<std::vector<std::string>>()->multitoken(),
       "Advertise given hostname as an extra endpoint when running volumes" },
     // { "mount,m", value<std::vector<std::string>>()->multitoken(),
     //   "mount given volumes on startup, keep trying on error" },
     { "fetch,f", bool_switch(), "Run volumes with --fetch" },
     { "push,p", bool_switch(), "Run volumes with --push" },
-    { "publish", bool_switch(), "Alias for --fetch --push" },
+    { "publish", bool_switch(), "Alias for --publish" },
 #if !defined(INFINIT_PRODUCTION_BUILD) || defined(INFINIT_LINUX)
     { "docker",
       value<bool>()->implicit_value(true, "true")->default_value(true, "true"),
