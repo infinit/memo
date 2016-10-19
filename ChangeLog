@@ -40,6 +40,7 @@ fixes and performance improvements.
 
 - Poll beyond periodically for endpoints changes.
 - No longer require an email address to push a user to the Hub.
+- Improved cryptography performance.
 
 ### Fixed
 
