@@ -12,7 +12,7 @@
 ## [0.7.1]
 
 New overlay implementation, Docker volume plugin improvements, bug
-fixes and performances improvements.
+fixes and performance improvements.
 
 ### Added
 
@@ -108,7 +108,7 @@ Docker volume plugin and shutdown behavior fixes.
 ## [0.6.1] - 2016-08-01
 
 Diagnostic utilities, ability to link networks with several users, bug
-fixes and performances improvements.
+fixes and performance improvements.
 
 ### Added
 
@@ -127,8 +127,8 @@ fixes and performances improvements.
 - Prevent changing network admin permissions.
 - Push endpoints to beyond before fetching them, to ensure nodes
   always see each other.
-- Reduce Kelips packet size, improving network banddith
-  performances.
+- Reduce Kelips packet size, improving network bandwidth
+  performance.
 
 ### Fixed
 
@@ -166,7 +166,7 @@ performance improvement.
 - Support `--pull` in combination with `--delete` to also remove
   entities from the hub in `infinit-drive`, `infinit-network`,
   `infinit-passport`, `infinit-user` and `infinit-volume`.
-- Add Kelips batch requests, greatly improving performances for large
+- Add Kelips batch requests, greatly improving performance for large
   set of files.
 - Push storage stats to the hub in `infinit-network` if `--push` is
   passed.
@@ -226,7 +226,7 @@ usage improvement.
 
 ## [0.5.4] - 2016-03-01
 
-Hotfix for disk performances, persistent disk cache for file contents.
+Hotfix for disk performance, persistent disk cache for file contents.
 
 ### Added
 
@@ -439,7 +439,7 @@ Bugfix release to correct conflict errors, plus minor improvements.
 ### Changed
 - Always try using a public key in inifinit-acl if the user does not
   exist in the network. Remove --try-with-public-key as a consequence.
-- Improve directory creation performances.
+- Improve directory creation performance.
 - Remove --as option from infinit-user --fetch.
 - Improve network error reporting in the CLI.
 - Add a timeout when pairing devices.
