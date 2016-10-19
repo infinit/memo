@@ -188,6 +188,7 @@ NAMED_ARGUMENT(with_cache);
 NAMED_ARGUMENT(user_name);
 NAMED_ARGUMENT(yielding_overlay);
 NAMED_ARGUMENT(protocol);
+NAMED_ARGUMENT(port);
 
 std::unique_ptr<dht::consensus::Consensus>
 add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
@@ -225,7 +226,8 @@ public:
       with_cache = false,
       user_name = "",
       yielding_overlay = false,
-      protocol = dht::Protocol::all
+      protocol = dht::Protocol::all,
+      port = boost::optional<int>()
       ).call([this] (bool paxos,
                      infinit::cryptography::rsa::KeyPair keys,
                      boost::optional<infinit::cryptography::rsa::KeyPair> owner,
@@ -246,7 +248,8 @@ public:
                      bool with_cache,
                      std::string const& user_name,
                      bool yielding_overlay,
-                     dht::Protocol p)
+                     dht::Protocol p,
+                     boost::optional<int> port)
              {
                this-> init(paxos,
                            keys,
@@ -261,7 +264,8 @@ public:
                            with_cache,
                            user_name,
                            yielding_overlay,
-                           p);
+                           p,
+                           port);
               }, std::forward<Args>(args)...);
   }
 
@@ -288,7 +292,8 @@ private:
        bool with_cache,
        std::string const& user_name,
        bool yielding_overlay,
-       dht::Protocol p)
+       dht::Protocol p,
+       boost::optional<int> port)
   {
     auto keys =
       std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_));
@@ -329,7 +334,7 @@ private:
         dht::passport = passport,
         dht::consensus_builder = consensus,
         dht::overlay_builder = infinit::model::doughnut::Doughnut::OverlayBuilder(overlay_builder),
-        dht::port = boost::optional<int>(),
+        dht::port = port,
         dht::storage = std::move(storage),
         dht::version = version,
         dht::protocol = p));
@@ -341,7 +346,7 @@ private:
         dht::passport = passport,
         dht::consensus_builder = consensus,
         dht::overlay_builder = infinit::model::doughnut::Doughnut::OverlayBuilder(overlay_builder),
-        dht::port = boost::optional<int>(),
+        dht::port = port,
         dht::storage = std::move(storage),
         dht::name = user_name,
         dht::version = version,
