@@ -34,9 +34,8 @@ New overlay implementation, bug fixes and performances improvements.
 - Cache peer connections.
 - Daemonize `infinit-network` and `infinit-volume` as late as possible
   to catch more errors syncronously.
-
-### Fixed
-
+- Fix a bug in key hash cache that caused RPC connection to fail upon
+  reconnection
 - Fix some shutdown assertions.
 - Fix deadlock in Kelips overlay implementation.
 
