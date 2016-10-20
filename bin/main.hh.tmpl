@@ -1891,10 +1891,10 @@ namespace infinit
       if (self)
       {
         // Start by linked networks first.
-        extract(this->_network_path(*self), false);
+        extract(this->_networks_path(*self), false);
       }
       // Then network descriptors and possibly old linked networks.
-      extract(this->_network_descriptor_path(), true);
+      extract(this->_network_descriptors_path(), true);
       return res;
     }
 
@@ -1986,7 +1986,7 @@ namespace infinit
     {
       namespace boost_fs = boost::filesystem;
       std::vector<Drive> res;
-      for (boost_fs::recursive_directory_iterator it(this->_drive_path());
+      for (boost_fs::recursive_directory_iterator it(this->_drives_path());
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
@@ -2071,9 +2071,9 @@ namespace infinit
       std::vector<std::pair<Passport, std::string>> res;
       boost_fs::path path;
       if (network)
-        path = this->_passport_path() / network.get();
+        path = this->_passports_path() / network.get();
       else
-        path = this->_passport_path();
+        path = this->_passports_path();
       if (!boost::filesystem::exists(path))
         return res;
       for (boost_fs::recursive_directory_iterator it(path);
@@ -2159,7 +2159,7 @@ namespace infinit
     {
       namespace boost_fs = boost::filesystem;
       std::vector<User> res;
-      for (boost_fs::recursive_directory_iterator it(this->_user_path());
+      for (boost_fs::recursive_directory_iterator it(this->_users_path());
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
@@ -2201,7 +2201,7 @@ namespace infinit
     {
       namespace boost_fs = boost::filesystem;
       std::vector<std::unique_ptr<storage::StorageConfig>> res;
-      for (boost_fs::recursive_directory_iterator it(this->_storage_path());
+      for (boost_fs::recursive_directory_iterator it(this->_storages_path());
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
@@ -2263,7 +2263,7 @@ namespace infinit
     {
       namespace boost_fs = boost::filesystem;
       std::vector<Volume> res;
-      for (boost_fs::recursive_directory_iterator it(this->_volume_path());
+      for (boost_fs::recursive_directory_iterator it(this->_volumes_path());
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
@@ -2430,9 +2430,17 @@ namespace infinit
     }
 
     boost::filesystem::path
+    _credentials_path() const
+    {
+      auto root = xdg_data_home() / "credentials";
+      create_directories(root);
+      return root;
+    }
+
+    boost::filesystem::path
     _credentials_path(std::string const& service) const
     {
-      auto root = xdg_data_home() / "credentials" / service;
+      auto root = this->_credentials_path() / service;
       create_directories(root);
       return root;
     }
@@ -2444,7 +2452,7 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _network_descriptor_path() const
+    _network_descriptors_path() const
     {
       auto root = xdg_data_home() / "networks";
       create_directories(root);
@@ -2454,13 +2462,22 @@ namespace infinit
     boost::filesystem::path
     _network_descriptor_path(std::string const& name) const
     {
-      return this->_network_descriptor_path() / name;
+      return this->_network_descriptors_path() / name;
     }
 
     boost::filesystem::path
-    _network_path(User const& user, bool create_dir = true) const
+    _networks_path(bool create_dir = true) const
     {
-      auto root = xdg_data_home() / "linked_networks" / user.name;
+      auto root = xdg_data_home() / "linked_networks";
+      if (create_dir)
+        create_directories(root);
+      return root;
+    }
+
+    boost::filesystem::path
+    _networks_path(User const& user, bool create_dir = true) const
+    {
+      auto root = _networks_path(create_dir) / user.name;
       if (create_dir)
         create_directories(root);
       return root;
@@ -2472,11 +2489,11 @@ namespace infinit
                   bool create_dir = true) const
     {
       auto network_name = this->qualified_name(name, user);
-      return this->_network_path(user, create_dir) / network_name;
+      return this->_networks_path(user, create_dir) / network_name;
     }
 
     boost::filesystem::path
-    _passport_path() const
+    _passports_path() const
     {
       auto root = xdg_data_home() / "passports";
       create_directories(root);
@@ -2486,11 +2503,11 @@ namespace infinit
     boost::filesystem::path
     _passport_path(std::string const& network, std::string const& user) const
     {
-      return this->_passport_path() / network / user;
+      return this->_passports_path() / network / user;
     }
 
     boost::filesystem::path
-    _storage_path() const
+    _storages_path() const
     {
       auto root = xdg_data_home() / "storages";
       create_directories(root);
@@ -2500,11 +2517,11 @@ namespace infinit
     boost::filesystem::path
     _storage_path(std::string const& name) const
     {
-      return _storage_path() / name;
+      return _storages_path() / name;
     }
 
     boost::filesystem::path
-    _user_path() const
+    _users_path() const
     {
       auto root = xdg_data_home() / "users";
       create_directories(root);
@@ -2514,11 +2531,11 @@ namespace infinit
     boost::filesystem::path
     _user_path(std::string const& name) const
     {
-      return this->_user_path() / name;
+      return this->_users_path() / name;
     }
 
     boost::filesystem::path
-    _volume_path() const
+    _volumes_path() const
     {
       auto root = xdg_data_home() / "volumes";
       create_directories(root);
@@ -2528,7 +2545,7 @@ namespace infinit
     boost::filesystem::path
     _volume_path(std::string const& name) const
     {
-      return this->_volume_path() / name;
+      return this->_volumes_path() / name;
     }
 
     static
@@ -2572,7 +2589,7 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _drive_path() const
+    _drives_path() const
     {
       auto root = xdg_data_home() / "drives";
       create_directories(root);
@@ -2582,7 +2599,7 @@ namespace infinit
     boost::filesystem::path
     _drive_path(std::string const& name) const
     {
-      return this->_drive_path() / name;
+      return this->_drives_path() / name;
     }
 
     void
