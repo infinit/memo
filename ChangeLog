@@ -20,6 +20,8 @@ fixes and performance improvements.
   to store known peers to disk.
 - Enable to pick listen inferface with `--listen`.
 - Add descriptions for users, storages, networks, volumes and drives.
+- Add `--networking` to `infinit-doctor` to test connection speed between
+  machines.
 - Add support for merging successive block updates into one operation in
   `async` consensus.
 - The docker volume plugin now supports volume creation.
