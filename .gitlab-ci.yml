@@ -61,6 +61,44 @@ x86_64-ubuntu-gcc4:
   except:
     - feature/website
 
+x86_64-alpine-gcc:
+  stage: build
+  script:
+    - time ./buildenv --cleanup-build-trees --build-trees-root "/cache/$CI_PROJECT_NAME"  --verbose
+    - git submodule sync --recursive
+    - git submodule update --init --recursive
+    - git fetch origin --tags
+    - SOURCE_DIR="${CI_PROJECT_DIR}"
+    - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
+    - INSTALL_DIR="${SOURCE_DIR}/_install"
+    - DESC=$(git describe)
+    - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
+    - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID" --verbose
+    - mkdir -p "$INSTALL_DIR"
+    - farm/configure --arch x86_64 --os alpine --compiler gcc4 --project Filesystem --source-dir . --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
+    - cd "$BUILD_DIR"
+    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
+    - export DRAKE_EXPLAIN=1 # still testing the whole cache thing
+    - time python3 drake --website=false --beyond=false -j $(nproc) //build
+    - time python3 drake --website=false --beyond=false -j $(nproc) //check
+    - time python3 drake --website=false --beyond=false -j $(nproc) //install
+    - TARBALL=infinit-x86_64-alpine-gcc-$DESC.tbz
+    - tar -cvjf /tmp/$TARBALL -C $INSTALL_DIR . --show-transformed-names --transform "s,^\\./,infinit-$DESC/,"
+    - scp /tmp/$TARBALL buildslave@packages.infinit.sh:tmp
+    - rm /tmp/$TARBALL
+    - python3 drake --website=false //docker-alpine
+    - docker tag infinit-alpine:$DESC mefyl/infinit-alpine:$DESC
+    - docker push mefyl/infinit-alpine:$DESC
+    - docker rmi {,mefyl/}infinit-alpine:$DESC
+    - time cd "${SOURCE_DIR}"
+    - time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID" --verbose
+  tags:
+    - x86_64
+    - alpine
+    - gcc
+  except:
+    - feature/website
+
 x86_64-jessie-gcc4:
   stage: build
   script:
