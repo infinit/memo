@@ -103,6 +103,19 @@ namespace reporting
     return out << "[33;01;33m[" << name << "][0m";
   }
 
+  template <typename T>
+  void
+  print_entry(std::ostream& out, T const& entry, bool sane, bool warning)
+  {
+    out << "  - ";
+    if (sane)
+      out << entry;
+    else if (warning)
+      warn(out, entry);
+    else
+      faulty(out, entry);
+  }
+
   template <typename C>
   void
   print(std::ostream& out,
@@ -121,13 +134,7 @@ namespace reporting
     for (auto const& item: container)
       if (verbose || !item.second.sane() || item.second.warning())
       {
-        out << "  - ";
-        if (item.second.sane())
-          out << item.first;
-        else if (item.second.warning())
-          warn(out, item.first);
-        else
-          faulty(out, item.first);
+        print_entry(out, item.first, item.second.sane(), item.second.warning());
         item.second.print(out << " ", verbose);
         out << std::endl;
       }
