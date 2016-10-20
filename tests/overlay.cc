@@ -254,8 +254,10 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("reconnect to A");
   auto& peer = dht_b.dht->dock().peer_cache().begin()->second;
   ELLE_LOG("peer is %s", *peer);
+  // force a reconnect
   dynamic_cast<infinit::model::doughnut::Remote&>(*peer).reconnect();
-  reactor::sleep(10_ms);
+  // wait for it
+  dynamic_cast<infinit::model::doughnut::Remote&>(*peer).connect();
   ELLE_LOG("re-store block");
   dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
   BOOST_CHECK_NO_THROW(dht_b.dht->store(*b2, STORE_UPDATE));
