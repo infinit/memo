@@ -3820,7 +3820,6 @@ namespace infinit
         , wait(0)
         , encrypt(false)
         , accept_plain(true)
-        , rpc_protocol(infinit::model::doughnut::Protocol::all)
         , gossip()
       {}
 
@@ -3855,7 +3854,6 @@ namespace infinit
         s.serialize("wait", wait);
         s.serialize("encrypt", encrypt);
         s.serialize("accept_plain", accept_plain);
-        s.serialize("rpc_protocol", rpc_protocol);
       }
 
       GossipConfiguration::GossipConfiguration()

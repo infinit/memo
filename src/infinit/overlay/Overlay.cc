@@ -148,7 +148,12 @@ namespace infinit
         });
     }
 
+    Configuration::Configuration()
+      : rpc_protocol(infinit::model::doughnut::Protocol::all)
+    {}
+
     Configuration::Configuration(elle::serialization::SerializerIn& input)
+      : rpc_protocol(infinit::model::doughnut::Protocol::all)
     {
       this->serialize(input);
     }
@@ -192,7 +197,14 @@ namespace infinit
 
     void
     Configuration::serialize(elle::serialization::Serializer& s)
-    {}
+    {
+      try
+      {
+        s.serialize("rpc_protocol", this->rpc_protocol);
+      }
+      catch (elle::serialization::Error const&)
+      {}
+    }
 
     /*-----------.
     | Exceptions |

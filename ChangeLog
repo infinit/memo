@@ -48,6 +48,8 @@ fixes and performance improvements.
 - Cache peer connections.
 - Daemonize `infinit-network` and `infinit-volume` as late as possible
   to catch more errors syncronously.
+- Fix a bug in key hash cache that caused RPC connection to fail upon
+  reconnection
 - Restore domain name resolution for `--peer` options.
 - Do not connect twice to hosts passed via `--peer`.
 - Fix some shutdown assertions.

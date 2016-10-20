@@ -13,6 +13,7 @@
 # include <infinit/model/Address.hh>
 # include <infinit/model/Endpoints.hh>
 # include <infinit/model/doughnut/fwd.hh>
+# include <infinit/model/doughnut/protocol.hh>
 # include <infinit/serialization.hh>
 
 namespace infinit
@@ -140,7 +141,9 @@ namespace infinit
       : public elle::serialization::VirtuallySerializable<false>
       , public elle::Clonable<Configuration>
     {
-      Configuration() = default;
+      model::doughnut::Protocol rpc_protocol;
+
+      Configuration();
       Configuration(elle::serialization::SerializerIn& input);
       static constexpr char const* virtually_serializable_key = "type";
       /// Perform any initialization required at join time.
