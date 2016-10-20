@@ -227,7 +227,7 @@ public:
       user_name = "",
       yielding_overlay = false,
       protocol = dht::Protocol::all,
-      port = boost::optional<int>()
+      port = boost::none
       ).call([this] (bool paxos,
                      infinit::cryptography::rsa::KeyPair keys,
                      boost::optional<infinit::cryptography::rsa::KeyPair> owner,
