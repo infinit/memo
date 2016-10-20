@@ -9,6 +9,7 @@
 #include <elle/system/Process.hh>
 #include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/os/environ.hh>
+#include <elle/filesystem/path.hh>
 
 #include <infinit/storage/Dropbox.hh>
 #include <infinit/storage/Filesystem.hh>
@@ -363,8 +364,8 @@ namespace reporting
     struct DriveResult
       : public Result
     {
-      typedef boost::optional<std::string> FaultyVolume
-      ;
+      typedef boost::optional<std::string> FaultyVolume;
+
       DriveResult(bool sane,
                   FaultyVolume faulty_volume = FaultyVolume{},
                   Result::Reason extra_reason = Result::Reason{})
@@ -398,6 +399,7 @@ namespace reporting
 
       FaultyVolume faulty_volume;
     };
+    using LeftoversResult = std::map<boost::filesystem::path, std::string>;
 
     IntegrityResults()
     {
@@ -423,7 +425,8 @@ namespace reporting
       return reporting::warning(this->storage_resources)
         || reporting::warning(this->networks)
         || reporting::warning(this->volumes)
-        || reporting::warning(this->drives);
+        || reporting::warning(this->drives)
+        || !this->leftovers.empty();
     }
 
     void
@@ -433,6 +436,7 @@ namespace reporting
       s.serialize("networks", this->networks);
       s.serialize("volumes", this->volumes);
       s.serialize("drives", this->drives);
+      s.serialize("leftovers", this->leftovers);
       if (s.out())
       {
         bool sane = this->sane();
@@ -449,12 +453,22 @@ namespace reporting
       reporting::print(out, "Networks", networks, verbose);
       reporting::print(out, "Volumes", volumes, verbose);
       reporting::print(out, "Drives", drives, verbose);
+      if (verbose || !this->leftovers.empty())
+      {
+        out << "* " << "Leftovers" << ":" << std::endl;
+        for (auto const& entry: this->leftovers)
+        {
+          print_entry(out, entry.first.generic_string(), true, true);
+          warn(out << " ", entry.second) << std::endl;
+        }
+      }
     }
 
     std::unordered_map<std::string, StorageResoucesResult> storage_resources;
     std::unordered_map<std::string, NetworkResult> networks;
     std::unordered_map<std::string, VolumeResult> volumes;
     std::unordered_map<std::string, DriveResult> drives;
+    LeftoversResult leftovers;
   };
 
   struct SanityResults
@@ -1511,6 +1525,15 @@ std::map<std::string, std::pair<std::unique_ptr<T>, bool>>
   return output;
 }
 
+template <typename ExpectedType>
+void
+load(boost::filesystem::path const& path, std::string const& type)
+{
+  boost::filesystem::ifstream i;
+  ifnt._open_read(i, path, type, path.filename().string());
+  infinit::load<ExpectedType>(i);
+}
+
 static
 void
 _integrity(boost::program_options::variables_map const& args,
@@ -1656,7 +1679,115 @@ _integrity(boost::program_options::variables_map const& args,
       else
         reporting::store(results.drives, drive.name, status, drive.volume);
     }
+
+  namespace bf = boost::filesystem;
+  auto& leftovers = results.leftovers;
+  auto path_contains_file = [](bf::path dir, bf::path file) -> bool
+    {
+      file.remove_filename();
+      auto dir_len = std::distance(dir.begin(), dir.end());
+      auto file_len = std::distance(file.begin(), file.end());
+      if (dir_len > file_len)
+        return false;
+      return std::equal(dir.begin(), dir.end(), file.begin());
+    };
+  for (bf::recursive_directory_iterator it(infinit::xdg_data_home());
+       it != boost::filesystem::recursive_directory_iterator();
+       ++it)
+  {
+    if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+    {
+      try
+      {
+        // Share.
+        if (path_contains_file(ifnt._network_descriptors_path(), it->path()))
+          load<infinit::NetworkDescriptor>(it->path(), "network_descriptor");
+        else if (path_contains_file(ifnt._networks_path(), it->path()))
+          load<infinit::Network>(it->path(), "network");
+        else if (path_contains_file(ifnt._volumes_path(), it->path()))
+          load<infinit::Volume>(it->path(), "volume");
+        else if (path_contains_file(ifnt._drives_path(), it->path()))
+          load<infinit::Drive>(it->path(), "drive");
+        else if (path_contains_file(ifnt._passports_path(), it->path()))
+          load<infinit::Passport>(it->path(), "passport");
+        else if (path_contains_file(ifnt._users_path(), it->path()))
+          load<infinit::User>(it->path(), "users");
+        else if (path_contains_file(ifnt._storages_path(), it->path()))
+          load<std::unique_ptr<infinit::storage::StorageConfig>>(it->path(), "storage");
+        else if (path_contains_file(ifnt._credentials_path(), it->path()))
+          load<std::unique_ptr<infinit::Credentials>>(it->path(), "credentials");
+        else if (path_contains_file(infinit::xdg_data_home() / "blocks", it->path()));
+        else if (path_contains_file(infinit::xdg_data_home() / "ui", it->path()));
+        else
+          leftovers.emplace(it->path(), "shouldn't be there");
+      }
+      catch (...)
+      {
+        leftovers.emplace(it->path(), elle::exception_string());
+      }
+    }
+  }
+  for (bf::recursive_directory_iterator it(infinit::xdg_cache_home());
+       it != boost::filesystem::recursive_directory_iterator();
+       ++it)
+  {
+    if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+    {
+      try
+      {
+        if (path_contains_file(ifnt._user_avatar_path(), it->path()));
+        else if (path_contains_file(ifnt._drive_icon_path(), it->path()));
+        else
+          leftovers.emplace(it->path(), "shouldn't be there");
+      }
+      catch (...)
+      {
+        leftovers.emplace(it->path(), elle::exception_string());
+      }
+    }
+  }
+  for (bf::recursive_directory_iterator it(infinit::xdg_state_home());
+       it != boost::filesystem::recursive_directory_iterator();
+       ++it)
+  {
+    if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+    {
+      try
+      {
+        if (path_contains_file(infinit::xdg_state_home() / "cache", it->path()));
+        else if (it->path() == infinit::xdg_state_home() / "critical.log");
+        else if (it->path().filename() == "root_block")
+        {
+          // The root block path is:
+          // <qualified_network_name>/<qualified_volume_name>/root_block
+          auto network_volume = it->path().parent_path().lexically_relative(
+            infinit::xdg_state_home());
+          auto name = network_volume.begin();
+          std::advance(name, 1); // <network_name>
+          auto network = *network_volume.begin() / *name;
+          std::advance(name, 1);
+          auto volume_owner = name;
+          std::advance(name, 1); // <volume_name>
+          auto volume = *volume_owner / *name;
+          if (volumes.find(volume.string()) == volumes.end())
+            leftovers.emplace(it->path(), "volume is gone");
+          if (networks.find(network.string()) == networks.end())
+            leftovers.emplace(it->path(), "network is gone");
+        }
+        else
+        {
+          leftovers.emplace(it->path(), "shouldn't be there");
+        }
+      }
+      catch (...)
+      {
+        leftovers.emplace(it->path(), elle::exception_string());
+      }
+    }
+  }
+
 }
+
 
 static
 void
