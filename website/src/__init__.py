@@ -308,20 +308,11 @@ class Website(bottle.Bottle):
     }
 
   @route('/press', name = 'press')
-  @route('/press/tech', name = 'press')
-  @view('pages/press/pr_tech.html')
+  @view('pages/press/pr_docker.html')
   def root(self):
     return {
       'title': 'Press Releases',
       'description': 'See all our tech related press releases and download our press kit.',
-    }
-
-  @route('/press/storage', name = 'press')
-  @view('pages/press/pr_storage.html')
-  def root(self):
-    return {
-      'title': 'Press Releases',
-      'description': 'See all our storage related press releases and download our press kit.',
     }
 
   @route('/contact', name = 'contact')
