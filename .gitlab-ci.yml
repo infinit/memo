@@ -57,7 +57,7 @@ x86_64-ubuntu-gcc4:
     - docker rmi {,mefyl/}infinit-beyond:$(GIT_DIR=../fs/.git git describe)
     - python3 drake --website=false //bench
     - GIT_DIR=../fs/.git python3 ../fs/note-bench-stats ./bench
-    - GIT_DIR=../fs/.git git push origin refs/notes/bench
+    - GIT_DIR=../fs/.git git push git@git.infinit.io:fs refs/notes/bench
   tags:
     - x86_64
     - ubuntu
