@@ -327,7 +327,7 @@ namespace infinit
       }
 
       SquashOperation
-      squashable(SquashStack const& b)
+      squashable(SquashStack const& b) override
       {
         elle::unreachable();
       }
@@ -362,12 +362,12 @@ namespace infinit
       if (auto m = dynamic_cast<MergeConflictResolver*>(a.get()))
       {
         m->add(std::move(b));
-        return std::move(a);
+        return a;
       }
       else if (auto m = dynamic_cast<MergeConflictResolver*>(b.get()))
       {
         m->add_front(std::move(a));
-        return std::move(b);
+        return b;
       }
       else
         return elle::make_unique<MergeConflictResolver>(
