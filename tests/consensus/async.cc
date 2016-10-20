@@ -53,7 +53,8 @@ public:
   void
   _remove(infinit::model::Address, infinit::model::blocks::RemoveSignature) override
   {
-    reactor::wait(sem);
+    while (!sem.acquire())
+      reactor::wait(sem);
     ++nremove;
   }
 

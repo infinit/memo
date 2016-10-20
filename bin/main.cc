@@ -11,70 +11,108 @@ ELLE_LOG_COMPONENT("infinit");
 
 #include <main.hh>
 
-reactor::Thread::unique_ptr
-make_stat_update_thread(infinit::User const& self,
-                        infinit::Network& network,
-                        infinit::model::doughnut::Doughnut& model)
+namespace infinit
 {
-  auto notify = [&]
-    {
-      network.notify_storage(self, model.id());
-    };
-  model.local()->storage()->register_notifier(notify);
-  return reactor::every(60_min, "periodic storage stat updater", notify);
-}
+  infinit::model::Endpoints
+  endpoints_from_file(boost::filesystem::path const& path)
+  {
+    boost::filesystem::ifstream f;
+    infinit::Infinit::_open_read(f, path, "", "port file");
+    if (!f.good())
+      elle::err("unable to open for reading: %s", path);
+    infinit::model::Endpoints res;
+    for (std::string line; std::getline(f, line); )
+      if (line.length())
+        res.emplace_back(infinit::model::Endpoint(line));
+    return res;
+  }
 
-reactor::Thread::unique_ptr
-make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
-                        infinit::Network& network,
-                        infinit::overlay::NodeLocations const& locs_,
-                        int interval)
-{
-  auto poll = [&, locs_, interval]
-    {
-      infinit::overlay::NodeLocations locs = locs_;
-      while (true)
+  void
+  port_to_file(uint16_t port,
+               boost::filesystem::path const& path_)
+  {
+    boost::filesystem::ofstream f;
+    boost::filesystem::path path(
+      path_ == path_.filename() ? boost::filesystem::absolute(path_) : path_);
+    Infinit::_open_write(f, path, "", "port file", true);
+    f << port << std::endl;
+  }
+
+  void
+  endpoints_to_file(infinit::model::Endpoints endpoints,
+                    boost::filesystem::path const& path_)
+  {
+    boost::filesystem::ofstream f;
+    boost::filesystem::path path(
+      path_ == path_.filename() ? boost::filesystem::absolute(path_) : path_);
+    Infinit::_open_write(f, path, "", "endpoint file", true);
+    for (auto const& ep: endpoints)
+      f << ep << std::endl;
+  }
+
+  reactor::Thread::unique_ptr
+  Network::make_stat_update_thread(infinit::User const& self,
+                                   infinit::model::doughnut::Doughnut& model)
+  {
+    auto notify = [&]
       {
-        reactor::sleep(boost::posix_time::seconds(interval));
-        infinit::overlay::NodeLocations news;
-        try
+        this->notify_storage(self, model.id());
+      };
+    model.local()->storage()->register_notifier(notify);
+    return reactor::every(60_min, "periodic storage stat updater", notify);
+  }
+
+  reactor::Thread::unique_ptr
+  Network::make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
+                                   infinit::overlay::NodeLocations const& locs_,
+                                   int interval)
+  {
+    auto poll = [&, locs_, interval]
+      {
+        infinit::overlay::NodeLocations locs = locs_;
+        while (true)
         {
-          beyond_fetch_endpoints(network, news, true);
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_WARN("exception fetching endpoints: %s", e);
-          continue;
-        }
-        std::unordered_set<infinit::model::Address> new_addresses;
-        for (auto const& n: news)
-        {
-          new_addresses.insert(n.id());
-          auto uid = n.id();
-          auto it = std::find_if(locs.begin(), locs.end(),
-            [&](infinit::model::NodeLocation const& nl) { return nl.id() == uid;});
-          if (it == locs.end())
+          reactor::sleep(boost::posix_time::seconds(interval));
+          infinit::overlay::NodeLocations news;
+          try
           {
-            ELLE_TRACE("calling discover() on new peer %s", n);
-            locs.emplace_back(n);
-            model.overlay()->discover({n});
+            this->beyond_fetch_endpoints(news, true);
           }
-          else if (it->endpoints() != n.endpoints())
+          catch (elle::Error const& e)
           {
-            ELLE_TRACE("calling discover() on updated peer %s", n);
-            it->endpoints() = n.endpoints();
-            model.overlay()->discover({n});
+            ELLE_WARN("exception fetching endpoints: %s", e);
+            continue;
           }
-        }
-        auto it = std::remove_if(locs.begin(), locs.end(),
-          [&](infinit::model::NodeLocation const& nl)
+          std::unordered_set<infinit::model::Address> new_addresses;
+          for (auto const& n: news)
           {
-            return new_addresses.find(nl.id()) == new_addresses.end();
-          });
-        locs.erase(it, locs.end());
-      }
-    };
-  return reactor::Thread::unique_ptr(new reactor::Thread("beyond poller", poll));
+            new_addresses.insert(n.id());
+            auto uid = n.id();
+            auto it = std::find_if(locs.begin(), locs.end(),
+              [&](infinit::model::NodeLocation const& nl) { return nl.id() == uid;});
+            if (it == locs.end())
+            {
+              ELLE_TRACE("calling discover() on new peer %s", n);
+              locs.emplace_back(n);
+              model.overlay()->discover({n});
+            }
+            else if (it->endpoints() != n.endpoints())
+            {
+              ELLE_TRACE("calling discover() on updated peer %s", n);
+              it->endpoints() = n.endpoints();
+              model.overlay()->discover({n});
+            }
+          }
+          auto it = std::remove_if(locs.begin(), locs.end(),
+            [&](infinit::model::NodeLocation const& nl)
+            {
+              return new_addresses.find(nl.id()) == new_addresses.end();
+            });
+          locs.erase(it, locs.end());
+        }
+      };
+    return reactor::Thread::unique_ptr(new reactor::Thread("beyond poller", poll));
+  }
 }
 
 // Return arguments for mode in the correct order.
@@ -482,6 +520,46 @@ namespace infinit
     return 0;
   }
 
+  void
+  Network::beyond_fetch_endpoints(infinit::model::NodeLocations& hosts,
+                                  bool silent)
+  {
+    auto url = elle::sprintf("%s/networks/%s/endpoints", beyond(), this->name);
+    reactor::http::Request r(url);
+    reactor::wait(r);
+    if (r.status() != reactor::http::StatusCode::OK)
+    {
+      throw elle::Error(
+        elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\"",
+                      r.status(), this->name));
+    }
+    auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
+    for (auto const& user: json)
+    {
+      try
+      {
+        for (auto const& node: boost::any_cast<elle::json::Object>(user.second))
+        {
+          infinit::model::Address uuid =
+            infinit::model::Address::from_string(node.first.substr(2));
+          elle::serialization::json::SerializerIn s(node.second, false);
+          auto endpoints = s.deserialize<Endpoints>();
+          infinit::model::Endpoints eps;
+          for (auto const& addr: endpoints.addresses)
+            eps.emplace_back(boost::asio::ip::address::from_string(addr),
+                             endpoints.port);
+          hosts.emplace_back(uuid, std::move(eps));
+        }
+      }
+      catch (std::exception const& e)
+      {
+        ELLE_WARN("Exception parsing peer endpoints: %s", e.what());
+      }
+    }
+    if (!silent)
+      report_action("fetched", "endpoints for", this->name);
+  }
+
 #ifndef INFINIT_WINDOWS
   DaemonHandle
   daemon_hold(int nochdir, int noclose)
@@ -577,3 +655,31 @@ namespace infinit
 std::string program;
 bool script_mode = false;
 boost::optional<std::string> _as_user = {};
+
+bool
+option_fetch(boost::program_options::variables_map const& args,
+             std::vector<std::string> const& aliases)
+{
+  std::vector<std::string> opts = {"fetch", "publish"};
+  for (auto const& o: aliases)
+    opts.push_back(o);
+  if (aliased_flag(args, opts))
+    return true;
+  if (elle::os::inenv("INFINIT_FETCH") || elle::os::inenv("INFINIT_PUBLISH"))
+    return true;
+  return false;
+}
+
+bool
+option_push(boost::program_options::variables_map const& args,
+            std::vector<std::string> const& aliases)
+{
+  std::vector<std::string> opts = {"push", "publish"};
+  for (auto const& o: aliases)
+    opts.push_back(o);
+  if (aliased_flag(args, opts))
+    return true;
+  if (elle::os::inenv("INFINIT_PUSH") || elle::os::inenv("INFINIT_PUBLISH"))
+    return true;
+  return false;
+}

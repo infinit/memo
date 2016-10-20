@@ -855,6 +855,7 @@ class Network(metaclass = Entity,
                 endpoints = {},
                 storages = {},
                 admin_keys = {},
+                peers = [],
                 description = Optional())):
 
   @property

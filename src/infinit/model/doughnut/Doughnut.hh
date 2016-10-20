@@ -165,6 +165,27 @@ namespace infinit
         void
         _remove(Address address, blocks::RemoveSignature rs) override;
         friend class Local;
+
+      /*------------------.
+      | Service discovery |
+      `------------------*/
+      public:
+        using Services = std::unordered_map<std::string, Address>;
+        using ServicesTypes = std::unordered_map<std::string, Services>;
+        ServicesTypes
+        services();
+        void
+        service_add(std::string const& type,
+                    std::string const& name,
+                    elle::Buffer value);
+        template <typename T>
+        void
+        service_add(std::string const& type,
+                    std::string const&
+                    name, T const& value);
+      private:
+        std::unique_ptr<blocks::MutableBlock>
+        _services_block(bool write);
       };
 
       struct Configuration:
@@ -180,6 +201,7 @@ namespace infinit
         boost::optional<std::string> name;
         boost::optional<int> port;
         AdminKeys admin_keys;
+        std::vector<Endpoints> peers;
 
         Configuration(
           Address id,
@@ -192,7 +214,8 @@ namespace infinit
           boost::optional<std::string> name,
           boost::optional<int> port,
           elle::Version version,
-          AdminKeys admin_keys);
+          AdminKeys admin_keys,
+          std::vector<Endpoints> peers);
         Configuration(Configuration&&) = default;
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
