@@ -36,6 +36,7 @@ x86_64-ubuntu-gcc4:
     - git submodule sync --recursive
     - git submodule update --init --recursive
     - git fetch origin --tags
+    - git fetch origin refs/notes/*:refs/notes/*
     - mkdir -p ../fs-build ../fs-install
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
     - cd ../fs-build
@@ -54,6 +55,9 @@ x86_64-ubuntu-gcc4:
     - docker tag infinit-beyond:$(GIT_DIR=../fs/.git git describe) mefyl/infinit-beyond:$(GIT_DIR=../fs/.git git describe)
     - docker push mefyl/infinit-beyond:$(GIT_DIR=../fs/.git git describe)
     - docker rmi {,mefyl/}infinit-beyond:$(GIT_DIR=../fs/.git git describe)
+    - python3 drake --website=false //bench
+    - GIT_DIR=../fs/.git python3 ../fs/note-bench-stats ./bench
+    - GIT_DIR=../fs/.git git push origin refs/notes/bench
   tags:
     - x86_64
     - ubuntu
