@@ -51,11 +51,16 @@
 
 extern std::string program;
 
-#define COMMAND(name)                                           \
-  static                                                        \
-  void                                                          \
-  name(boost::program_options::variables_map const& args,       \
-       boost::signals2::signal<void()>& killed)                 \
+bool
+option_fetch(boost::program_options::variables_map const& args,
+             std::vector<std::string> const& aliases= {});
+
+bool
+option_push(boost::program_options::variables_map const& args,
+            std::vector<std::string> const& aliases = {});
+
+// One-lined because mako fucks-up line numbering otherwise
+#define COMMAND(name) static void name(boost::program_options::variables_map const& args, boost::signals2::signal<void()>& killed)
 
 #define NO_PRIVATE_KEY "user \"%s\" has no private key"
 
@@ -264,6 +269,13 @@ void
 report_imported(std::string const& type, std::string const& name)
 {
   report_action("imported", type, name);
+}
+
+inline
+void
+report_saved(std::string const& type, std::string const& name)
+{
+  report_action("saved", type, name);
 }
 
 inline
@@ -869,6 +881,7 @@ ensure_version_is_supported(elle::Version const& version);
 
 namespace infinit
 {
+  class Infinit;
   extern boost::optional<elle::Version> compatibility_version;
   static const std::string invalid_name(
     "name (%s) must only contain lower case alphanumeric and - . _ "
@@ -896,6 +909,20 @@ namespace infinit
       elle::os::setenv("LC_ALL", "C", 1);
     }
   }
+
+  infinit::model::doughnut::Protocol
+  protocol_get(boost::program_options::variables_map const& args);
+
+  infinit::model::Endpoints
+  endpoints_from_file(boost::filesystem::path const& path);
+
+  void
+  port_to_file(uint16_t port,
+               boost::filesystem::path const& path_);
+
+  void
+  endpoints_to_file(infinit::model::Endpoints endpoints,
+                    boost::filesystem::path const& path_);
 
   int
   main(std::string desc,
@@ -1010,6 +1037,33 @@ namespace infinit
     boost::optional<std::string> ldap_dn;
   };
 
+  struct MountOptions
+  {
+    MountOptions();
+    void to_commandline(std::vector<std::string>& arguments,
+                        std::unordered_map<std::string, std::string>& env) const;
+    void merge(boost::program_options::variables_map const& args);
+    void merge(MountOptions const& other);
+    boost::optional<std::string> hub_url;
+    boost::optional<std::string> rdv;
+    boost::optional<std::vector<std::string>> fuse_options;
+    boost::optional<std::string> as;
+    boost::optional<bool> fetch;
+    boost::optional<bool> push;
+    boost::optional<bool> cache;
+    boost::optional<bool> async;
+    boost::optional<bool> readonly;
+    boost::optional<int> cache_ram_size;
+    boost::optional<int> cache_ram_ttl;
+    boost::optional<int> cache_ram_invalidation;
+    boost::optional<uint64_t> cache_disk_size;
+    boost::optional<std::string> mountpoint;
+    boost::optional<std::vector<std::string>> peers;
+    boost::optional<int> poll_beyond;
+    boost::optional<boost::asio::ip::address> listen_address;
+    typedef infinit::serialization_tag serialization_tag;
+  };
+
   struct Network
     : public descriptor::TemplatedBaseDescriptor<Network>
   {
@@ -1060,6 +1114,57 @@ namespace infinit
                         action, resource, user.name));
     }
 
+    std::pair<
+      std::unique_ptr<model::doughnut::Doughnut>, reactor::Thread::unique_ptr>
+    run(User const& user,
+        MountOptions const& mo,
+        bool client = false,
+        boost::optional<elle::Version> version = {},
+        boost::optional<int> port = {})
+    {
+      auto dht = this->run(
+        user,
+        client,
+        mo.cache && mo.cache.get(),
+        mo.cache_ram_size,
+        mo.cache_ram_ttl,
+        mo.cache_ram_invalidation,
+        mo.async && mo.async.get(),
+        mo.cache_disk_size,
+        version,
+        port,
+        mo.listen_address);
+      model::NodeLocations eps;
+      if (mo.peers)
+      {
+        for (auto const& obj: mo.peers.get())
+          if (boost::filesystem::exists(obj))
+            for (auto const& peer: endpoints_from_file(obj))
+              eps.emplace_back(model::Address::null, model::Endpoints({peer}));
+          else
+            eps.emplace_back(model::Address::null, model::Endpoints({obj}));
+
+      }
+      reactor::Thread::unique_ptr poll_thread;
+      if (mo.fetch && *mo.fetch)
+      {
+        beyond_fetch_endpoints(eps);
+        if (mo.poll_beyond && *mo.poll_beyond > 0)
+          poll_thread =
+            this->make_poll_beyond_thread(*dht, eps, *mo.poll_beyond);
+      }
+      dht->overlay()->discover(eps);
+      return {std::move(dht), std::move(poll_thread)};
+    }
+
+    reactor::Thread::unique_ptr
+    make_stat_update_thread(infinit::User const& self,
+                            infinit::model::doughnut::Doughnut& model);
+
+    reactor::Thread::unique_ptr
+    make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
+                            infinit::overlay::NodeLocations const& locs,
+                            int interval);
 
     std::unique_ptr<model::doughnut::Doughnut>
     run(User const& user,
@@ -1154,6 +1259,10 @@ namespace infinit
     }
 
     void
+    beyond_fetch_endpoints(infinit::model::NodeLocations& hosts,
+                           bool silent = false);
+
+    void
     print(std::ostream& out) const override
     {
       out << "Network(" << this->name << ")";
@@ -1172,6 +1281,7 @@ namespace infinit
       cryptography::rsa::PublicKey owner,
       elle::Version version,
       model::doughnut::AdminKeys admin_keys,
+      std::vector<model::Endpoints> peers,
       boost::optional<std::string> description)
       : descriptor::TemplatedBaseDescriptor<NetworkDescriptor>(
           std::move(name), std::move(description))
@@ -1180,6 +1290,7 @@ namespace infinit
       , owner(std::move(owner))
       , version(std::move(version))
       , admin_keys(std::move(admin_keys))
+      , peers(std::move(peers))
     {}
 
     NetworkDescriptor(elle::serialization::SerializerIn& s)
@@ -1206,6 +1317,12 @@ namespace infinit
       catch (elle::serialization::Error const&)
       {
       }
+      try
+      {
+        s.serialize("peers", this->peers);
+      }
+      catch (elle::serialization::Error const&)
+      {}
     }
 
     NetworkDescriptor(Network&& network)
@@ -1216,6 +1333,7 @@ namespace infinit
       , owner(std::move(*network.dht()->owner))
       , version(std::move(network.dht()->version))
       , admin_keys(std::move(network.dht()->admin_keys))
+      , peers(std::move(network.dht()->peers))
     {}
 
     NetworkDescriptor(NetworkDescriptor const& desc)
@@ -1225,6 +1343,7 @@ namespace infinit
       , owner(desc.owner)
       , version(desc.version)
       , admin_keys(desc.admin_keys)
+      , peers(desc.peers)
     {}
 
     void
@@ -1249,6 +1368,12 @@ namespace infinit
       }
       catch (elle::serialization::Error const&)
       {}
+      try
+      {
+        s.serialize("peers", this->peers);
+      }
+      catch (elle::serialization::Error const&)
+      {}
     }
 
     std::unique_ptr<model::doughnut::consensus::Configuration> consensus;
@@ -1256,33 +1381,7 @@ namespace infinit
     cryptography::rsa::PublicKey owner;
     elle::Version version;
     model::doughnut::AdminKeys admin_keys;
-  };
-
-
-  struct MountOptions
-  {
-    MountOptions();
-    void to_commandline(std::vector<std::string>& arguments,
-                        std::unordered_map<std::string, std::string>& env) const;
-    void merge(boost::program_options::variables_map const& args);
-    void merge(MountOptions const& other);
-    boost::optional<std::string> hub_url;
-    boost::optional<std::string> rdv;
-    boost::optional<std::vector<std::string>> fuse_options;
-    boost::optional<std::string> as;
-    boost::optional<bool> fetch;
-    boost::optional<bool> push;
-    boost::optional<bool> cache;
-    boost::optional<bool> async;
-    boost::optional<bool> readonly;
-    boost::optional<int> cache_ram_size;
-    boost::optional<int> cache_ram_ttl;
-    boost::optional<int> cache_ram_invalidation;
-    boost::optional<uint64_t> cache_disk_size;
-    boost::optional<std::string> mountpoint;
-    boost::optional<std::vector<std::string>> peers;
-    boost::optional<int> poll_beyond;
-    typedef infinit::serialization_tag serialization_tag;
+    std::vector<model::Endpoints> peers;
   };
 
   inline
@@ -1298,16 +1397,22 @@ namespace infinit
 
   template<typename T>
   void merge(boost::optional<T>& a,
+             T const& b,
+             boost::program_options::option_description const& o)
+  {
+    boost::any def;
+    o.semantic()->apply_default(def);
+    if (b != boost::any_cast<T>(def))
+      a = b;
+  }
+
+  template<typename T>
+  void merge(boost::optional<T>& a,
              boost::optional<T> const& b,
              boost::program_options::option_description const& o)
   {
     if (b)
-    {
-      boost::any def;
-      o.semantic()->apply_default(def);
-      if (b.get() != boost::any_cast<T>(def))
-        a = b;
-    }
+      merge(a, b.get(), o);
   }
 
   template<typename T>
@@ -1356,10 +1461,10 @@ namespace infinit
     infinit::merge(this->as, optional(args, "as"));
     infinit::merge(this->as, optional(args, "user"));
     infinit::merge(this->readonly, optional<bool>(args, "readonly"));
-    infinit::merge(this->fetch, optional_aliased_flag(args, {
-      "fetch-endpoints", "fetch", "publish"}));
-    infinit::merge(this->push, optional_aliased_flag(args, {
-      "push-endpoints", "push", "publish"}));
+    if (option_fetch(args, {"fetch-endpoints"}))
+      this->fetch = true;
+    if (option_push(args, {"push-endpoints"}))
+      this->push = true;
     infinit::merge(this->cache, optional<bool>(args, option_cache));
     infinit::merge(this->async, optional<bool>(args, "async"));
     infinit::merge(this->cache_ram_size,
@@ -1373,12 +1478,17 @@ namespace infinit
     infinit::merge(this->poll_beyond,
                    optional<int>(args, option_poll_beyond),
                    option_poll_beyond);
+    if (auto str = optional<std::string>(args, option_listen_interface))
+      infinit::merge(this->listen_address,
+                     boost::asio::ip::address::from_string(*str),
+                     option_listen_interface);
   }
 
   inline
   void
-  MountOptions::to_commandline(std::vector<std::string>& arguments,
-                               std::unordered_map<std::string, std::string>& env) const
+  MountOptions::to_commandline(
+    std::vector<std::string>& arguments,
+    std::unordered_map<std::string, std::string>& env) const
   {
     if (rdv)
       env.insert(std::make_pair("INFINIT_RDV", rdv.get()));
@@ -1546,6 +1656,7 @@ namespace infinit
     std::string network;
     MountOptions mount_options;
     boost::optional<std::string> default_permissions;
+    using serialization_tag = infinit::serialization_tag;
   };
 
   struct Drive
@@ -2024,14 +2135,17 @@ namespace infinit
     User
     user_get(std::string const& user, bool beyond_fallback = false) const
     {
+      auto const path = this->_user_path(user);
       try
       {
         boost::filesystem::ifstream f;
-        this->_open_read(f, this->_user_path(user), user, "user");
+        this->_open_read(f, path, user, "user");
         return load<User>(f);
       }
       catch (MissingLocalResource const& e)
       {
+        ELLE_TRACE("%s: unable to load user %s from %s",
+                   this, user, this->_user_path(user));
         if (!beyond_fallback)
           throw;
         ELLE_LOG("User %s not found locally, trying on %s", user, beyond(true));
@@ -2118,6 +2232,13 @@ namespace infinit
         throw elle::Error(
           elle::sprintf("storage \"%s\" does not exist", name));
       }
+    }
+
+    bool
+    volume_has(std::string const& name)
+    {
+      boost::filesystem::ifstream f;
+      return exists(this->_volume_path(name));
     }
 
     Volume
@@ -2410,11 +2531,12 @@ namespace infinit
       return this->_volume_path() / name;
     }
 
+    static
     void
     _open_read(boost::filesystem::ifstream& f,
                boost::filesystem::path const& path,
                std::string const& name,
-               std::string const& type) const
+               std::string const& type)
     {
       ELLE_DEBUG("open %s \"%s\" (%s) for reading", type, name, path);
       f.open(path);
@@ -2425,13 +2547,14 @@ namespace infinit
       }
     }
 
+    static
     void
     _open_write(boost::filesystem::ofstream& f,
                 boost::filesystem::path const& path,
                 std::string const& name,
                 std::string const& type,
                 bool overwrite = false,
-                std::ios_base::openmode mode = std::ios_base::out) const
+                std::ios_base::openmode mode = std::ios_base::out)
     {
       ELLE_DEBUG("open %s \"%s\" (%s) for writing", type, name, path);
       create_directories(path.parent_path());
@@ -2604,9 +2727,6 @@ all(Args&& ... args)
 {
   return true;
 }
-
-infinit::model::doughnut::Protocol
-protocol_get(boost::program_options::variables_map const& args);
 
 inline
 Mode::OptionDescription
@@ -3364,48 +3484,6 @@ private:
   ELLE_ATTRIBUTE(reactor::network::PortMapping, port_map_udp);
 };
 
-inline
-void
-beyond_fetch_endpoints(infinit::Network const& network,
-                       infinit::model::NodeLocations& hosts,
-                       bool silent = false)
-{
-  auto url = elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name);
-  reactor::http::Request r(url);
-  reactor::wait(r);
-  if (r.status() != reactor::http::StatusCode::OK)
-  {
-    throw elle::Error(
-      elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\" at \"%s\"",
-                    r.status(), network.name, url));
-  }
-  auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
-  for (auto const& user: json)
-  {
-    try
-    {
-      for (auto const& node: boost::any_cast<elle::json::Object>(user.second))
-      {
-        infinit::model::Address uuid =
-          infinit::model::Address::from_string(node.first.substr(2));
-        elle::serialization::json::SerializerIn s(node.second, false);
-        auto endpoints = s.deserialize<Endpoints>();
-        infinit::model::Endpoints eps;
-        for (auto const& addr: endpoints.addresses)
-          eps.emplace_back(boost::asio::ip::address::from_string(addr),
-                           endpoints.port);
-        hosts.emplace_back(uuid, std::move(eps));
-      }
-    }
-    catch (std::exception const& e)
-    {
-      ELLE_WARN("Exception parsing peer endpoints: %s", e.what());
-    }
-  }
-  if (!silent)
-    report_action("fetched", "endpoints for", network.name);
-}
-
 namespace infinit
 {
   inline
@@ -3427,16 +3505,6 @@ namespace infinit
 #else
 # define SXA_EXTRA
 #endif
-
-reactor::Thread::unique_ptr
-make_stat_update_thread(infinit::User const& self,
-                        infinit::Network& network,
-                        infinit::model::doughnut::Doughnut& model);
-reactor::Thread::unique_ptr
-make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
-                        infinit::Network& network,
-                        infinit::overlay::NodeLocations const& locs,
-                        int interval);
 
 static std::string _hub_salt = "@a.Fl$4'x!";
 

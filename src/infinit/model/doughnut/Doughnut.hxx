@@ -9,6 +9,16 @@ namespace infinit
   {
     namespace doughnut
     {
+      template <typename T>
+      void
+      Doughnut::service_add(std::string const& type,
+                            std::string const& name,
+                            T const& value)
+      {
+        this->service_add(
+          type, name, elle::serialization::binary::serialize(value));
+      }
+
       NAMED_ARGUMENT(id);
       NAMED_ARGUMENT(name);
       NAMED_ARGUMENT(keys);

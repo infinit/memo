@@ -948,6 +948,7 @@ def configure(
     ('bandwidth', []),
     ('consensus/async', []),
     ('consensus/cache', []),
+    ('consensus/paxos', []),
     ('doughnut', []),
     ('faith', []),
     ('filesystem', binaries),

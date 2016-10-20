@@ -262,6 +262,142 @@ namespace infinit
       return current.clone();
     }
 
+    SquashConflictResolverOptions::SquashConflictResolverOptions()
+    : max_size(0)
+    {}
+
+    SquashConflictResolverOptions::SquashConflictResolverOptions(int max_size)
+    : max_size(max_size)
+    {}
+
+    class MergeConflictResolver
+      : public ConflictResolver
+    {
+    public:
+      MergeConflictResolver()
+      {}
+
+      MergeConflictResolver(elle::serialization::SerializerIn& s,
+                            elle::Version const& v)
+      {
+        serialize(s, v);
+      }
+
+      MergeConflictResolver(std::unique_ptr<ConflictResolver> a,
+                            std::unique_ptr<ConflictResolver> b,
+                            SquashConflictResolverOptions const& config)
+      : _config(config)
+      {
+        this->_resolvers.push_back(std::move(a));
+        this->_resolvers.push_back(std::move(b));
+      }
+
+      void
+      add(std::unique_ptr<ConflictResolver> a)
+      {
+        this->_resolvers.push_back(std::move(a));
+      }
+
+      void
+      add_front(std::unique_ptr<ConflictResolver> a)
+      {
+        std::vector<std::unique_ptr<ConflictResolver>> nr;
+        nr.push_back(std::move(a));
+        for (auto& cr: this->_resolvers)
+          nr.push_back(std::move(cr));
+        this->_resolvers = std::move(nr);
+      }
+
+      std::unique_ptr<blocks::Block>
+      operator() (blocks::Block& block,
+                  blocks::Block& current,
+                  model::StoreMode mode) override
+      {
+        auto res = (*this->_resolvers.front())(block, current, mode);
+        for (unsigned int i=1; i< _resolvers.size(); ++i)
+          res = (*this->_resolvers[i])(block, *res, mode);
+        return res;
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& v) override
+      {
+        s.serialize("resolvers", this->_resolvers);
+      }
+
+      SquashOperation
+      squashable(SquashStack const& b) override
+      {
+        elle::unreachable();
+      }
+
+      std::string
+      description() const override
+      {
+        std::string res("Squash(");
+        for (auto const& c: this->_resolvers)
+          res += c->description() + ",";
+        res += ')';
+        return res;
+      }
+
+    private:
+      SquashConflictResolverOptions _config;
+      ELLE_ATTRIBUTE_RX(std::vector<std::unique_ptr<ConflictResolver>>,
+                        resolvers);
+    };
+
+    std::vector<std::unique_ptr<ConflictResolver>>&
+    get_merge_conflict_resolver_content(ConflictResolver& cr)
+    {
+      return dynamic_cast<MergeConflictResolver&>(cr).resolvers();
+    }
+
+    std::unique_ptr<ConflictResolver>
+    make_merge_conflict_resolver(std::unique_ptr<ConflictResolver> a,
+                                 std::unique_ptr<ConflictResolver> b,
+                                 SquashConflictResolverOptions const& config)
+    {
+      if (auto m = dynamic_cast<MergeConflictResolver*>(a.get()))
+      {
+        m->add(std::move(b));
+        return a;
+      }
+      else if (auto m = dynamic_cast<MergeConflictResolver*>(b.get()))
+      {
+        m->add_front(std::move(a));
+        return b;
+      }
+      else
+        return elle::make_unique<MergeConflictResolver>(
+          std::move(a), std::move(b), config);
+    }
+
+    static const elle::serialization::Hierarchy<model::ConflictResolver>::
+    Register<MergeConflictResolver> _register_mcr("merge");
+
+    SquashOperation
+    ConflictResolver::squashable(ConflictResolver& prev)
+    {
+      // FIXME: check mcr max size
+      if (auto mcr = dynamic_cast<MergeConflictResolver*>(&prev))
+      {
+        static const unsigned int max_size
+          = std::stoi(elle::os::getenv("INFINIT_MAX_SQUASH_SIZE", "20"));
+        if (mcr->resolvers().size() >= max_size)
+          return {model::Squash::stop, {}};
+        return this->squashable(mcr->resolvers());
+      }
+      else
+      {
+        SquashStack stack;
+        stack.emplace_back(&prev);
+        elle::SafeFinally releaser([&] { stack.front().release();});
+        return this->squashable(stack);
+      }
+    }
+
     std::string
     DummyConflictResolver::description() const
     {

@@ -403,7 +403,7 @@ namespace infinit
       {
         auto protocol = infinit::model::doughnut::Protocol::all;
         if (args.count("protocol"))
-          protocol = protocol_get(args);
+          protocol = infinit::protocol_get(args);
         if (tcp_enabled(protocol))
         {
           uint16_t port = tcp_port(args);
@@ -476,7 +476,7 @@ namespace infinit
       elle::Version v = _version;
       auto protocol = infinit::model::doughnut::Protocol::all;
       if (args.count("protocol"))
-        protocol = protocol_get(args);
+        protocol = infinit::protocol_get(args);
       auto mode = get_mode(args);
       int64_t packets_count = packets_count_get(args);
       elle::Buffer::Size packet_size = packet_size_get(args);

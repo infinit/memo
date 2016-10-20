@@ -118,9 +118,10 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s,
                 elle::Version const& v) override;
-
       std::string
       description() const override;
+      model::SquashOperation
+      squashable(SquashStack const& others) override;
 
       model::Model* _model;
       Operation _op;
