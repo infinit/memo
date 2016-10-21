@@ -158,6 +158,7 @@ def configure(
     'templates/pages/press/pr_tech.html',
     'templates/pages/press/pr_docker.html',
     'templates/pages/press/resources.html',
+    'templates/pages/press/resources_docker.html',
 
     'templates/pages/users/confirm_email.html',
   ) + generated
