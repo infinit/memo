@@ -22,21 +22,21 @@
 
     <p>As such, containers are in desperate need of a natively elastic and distributed storage system that adapts to the behavior of a Docker application. A <a href="http://siliconangle.com/blog/2016/10/18/inadequate-storage-tools-hold-back-container-adoption-survey-finds/">recent survey</a> among IT specialists found out that these storage issues are holding back the fast and growing adoption of container technology in the enterprise. </p>
 
-    <p>The team behind the startup Infinit (<a href="https://infinit.sh">https://infinit.sh</a>) has been working hard this past year to provide a storage platform, with scalability and resilience in mind.</p>
+    <p>The team behind the startup Infinit (<a href="https://infinit.sh">https://infinit.sh</a>) has been working hard this past year to provide a storage platform with scalability and resilience in mind.</p>
 
-    <p>One specificity of the Infinit Storage Platform is its decentralised architecture i.e peer-to-peer (unlike the master slave model) that does away with single points of failure and bottlenecks while allowing for a better scalability.</p>
+    <p>One specificity of the Infinit Storage Platform is its decentralized architecture (unlike most distributed systems that rely on a master/slave model) that does away with single points of failure and bottlenecks while allowing for a better scalability.</p>
 
-    <p>Infinit is also highly programmatic allowing developers to customize the behavior of the storage infrastructure through a set of properties: encryption, deduplication, compression, redundancy, versioning, etc.. The storage platform is accessible through a set of interfaces from block device, object store and POSIX-compliant filesystems. </p>
+    <p>Infinit is also highly programmatic allowing developers to customize the behavior of the storage infrastructure through a set of properties: encryption, deduplication, compression, redundancy, versioning, etc. The storage platform is accessible through a set of interfaces from block devices, object stores and POSIX-compliant file systems. </p>
 
-    <p>This architecture allows Infinit to match exactly the behaviour of containerized applications. For instance, a web application could be split into multiple micro-services. Each of these services could rely on a specifically customised Infinit storage backend: a block interface without encryption and compression for a database container like mongodb, a S3 compatible object store for storing images of a Wordpress frontend and more.</p>
+    <p>This architecture allows Infinit to match the behavior of containerized applications. For instance, a Web application could be split into multiple micro-services. Each of these services could rely on a specifically customized Infinit storage backend: a block device with encryption and compression disabled for a database container like MongoDB, an S3-compatible object store for storing images of a Wordpress frontend and more.</p>
 
-    <p>Infinit provides two ways to scale the storage component: (i) by scaling along with the application cluster e.g Docker Swarm, offering simplicity over control, essentially providing an hyper-converged system (scaling both storage, network and compute together), or (ii) by letting the administrator control the scalability of the components independently, leading to an hyper-scaled architecture.</p>
+    <p>Infinit provides two ways to scale this flexible storage component: (i) by scaling along with the application cluster, e.g Docker Swarm, offering simplicity over control, essentially providing an hyper-converged system (scaling both storage, network and compute together) or (ii) by letting the administrator control the scalability of the components independently, leading to an hyper-scaled architecture.</p>
 
-    <p>No matter your configuration, thanks to the new Infinit Docker Volume Plugin, the storage platform will always be accessible to Docker containers.</p>
+    <p>No matter the scalability deployment you choose, Infinit’s new Docker Volume Plugin will provide your containers with persistent storage that will be made accessible through a POSIX-compliant file system.</p>
 
-    <p>This new and more modern wave of software-defined storage products like Infinit is making its way to the entreprise market, in particular because well adapted to more dynamic container environments. While providing a free community edition for developers, Infinit also provides entreprise licences with advanced functionalities.</p>
+    <p>This new wave of software-defined storage products is making its way to the entreprise market, in particular because well adapted to more dynamic container environments. While providing a free community edition for developers, Infinit also provides entreprise licences with advanced functionalities.</p>
 
-    <p>Enterprises have learned that expensive appliances, non-scalable protocols, monolithic setups and non-programmable components are just too far off to keep pace with ever-changing business requirements. Infinit can now help them build or transform their storage infrastructure in a more durable, secure and evolving way.</p>
+    <p>Enterprises have learned that expensive appliances, non-scalable protocols, monolithic setups and non-programmable components are just too far off to keep pace with ever-changing business requirements. This is why Docker is already penetrating the enterprise market. However, storage remains the biggest challenge to allowing for more complicated applications.</p>
 
     <h3>About Infinit</h3>
     <p>Infinit International Inc. (<a href="https://infinit.sh">infinit.sh</a>) is a company with offices in New York City and Paris providing medium and large businesses with modern and secure file management products. For more information, please visit <a href="https://infinit.sh">infinit.sh</a> or email <a href="mailto:press@infinit.sh">press@infinit.sh</a>.</p>
