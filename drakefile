@@ -232,7 +232,7 @@ def configure(
     infinit_sources += drake.nodes(
       'src/infinit/storage/sftp.cc',
       'src/infinit/storage/sftp.hh',
-      )
+    )
   outguess_lib = drake.cxx.StaticLib('src/infinit/model/steg/outguess-0.2/outguess.a')
   jpeg_lib = drake.cxx.StaticLib('src/infinit/model/steg/outguess-0.2/jpeg-6b-steg/libjpeg.a')
 

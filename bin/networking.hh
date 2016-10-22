@@ -34,7 +34,7 @@ namespace bytes
       if ((double) bytes / pow((si ? 1024 : 1000), i) < 1 || i == (capacities.size()))
         return elle::sprintf("%.1f %s",
                              bytes / pow((si ? 1024 : 1000), i - 1),
-                             (si ? capacities[i].second : capacities[i].first));
+                             (si ? capacities[i - 1].second : capacities[i - 1].first));
     }
     elle::unreachable();
   }
