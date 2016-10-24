@@ -98,5 +98,9 @@ for f in os.listdir(dir):
     b = process_bench_file(os.path.join(dir, f))
     bench_note.update(b.dict())
 
-git_note = GitNote()
-git_note.add(bench_note)
+print('Benchmark results:')
+print(json.dumps(bench_note, indent = 2, sort_keys = True))
+
+# XXX: Add results to note when buildfarm can push to git.
+# git_note = GitNote()
+# git_note.add(bench_note)
