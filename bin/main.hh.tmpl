@@ -873,6 +873,12 @@ T
 beyond_fetch(std::string const& type,
              std::string const& name);
 
+bool
+is_version_supported(elle::Version const& version);
+
+void
+ensure_version_is_supported(elle::Version const& version);
+
 namespace infinit
 {
   class Infinit;
@@ -903,6 +909,9 @@ namespace infinit
       elle::os::setenv("LC_ALL", "C", 1);
     }
   }
+
+  infinit::model::doughnut::Protocol
+  protocol_get(boost::program_options::variables_map const& args);
 
   infinit::model::Endpoints
   endpoints_from_file(boost::filesystem::path const& path);

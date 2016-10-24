@@ -5,6 +5,7 @@
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/doughnut/ACB.hh>
 #include <infinit/overlay/kouncil/Kouncil.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 
@@ -208,6 +209,61 @@ ELLE_TEST_SCHEDULED(
       id_a);
 }
 
+ELLE_TEST_SCHEDULED(
+  key_cache_invalidation, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
+{
+  infinit::storage::Memory::Blocks blocks;
+  std::unique_ptr<infinit::storage::Storage> s(new infinit::storage::Memory(blocks));
+  auto keys = infinit::cryptography::rsa::keypair::generate(512);
+  auto id_a = infinit::model::Address::random();
+  auto dht_a = elle::make_unique<DHT>(
+    ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false,
+    ::protocol = infinit::model::doughnut::Protocol::utp,
+    ::storage = std::move(s));
+  int port = dht_a->dht->local()->server_endpoints()[0].port();
+  DHT dht_b(
+    ::keys = keys, make_overlay = builder, ::storage = nullptr,
+    ::paxos = false,
+    ::protocol = infinit::model::doughnut::Protocol::utp);
+  discover(dht_b, *dht_a, anonymous);
+  auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
+  auto& acb = dynamic_cast<infinit::model::doughnut::ACB&>(*block);
+  acb.set_permissions(infinit::cryptography::rsa::keypair::generate(512).K(),
+    true, true);
+  acb.set_permissions(infinit::cryptography::rsa::keypair::generate(512).K(),
+    true, true);
+  dht_a->dht->store(*block, STORE_INSERT);
+  auto b2 = dht_b.dht->fetch(block->address());
+  dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
+  dht_b.dht->store(*b2, STORE_UPDATE);
+  // brutal restart of a
+  ELLE_LOG("disconnect A");
+  dht_a->dht->local()->utp_server()->socket()->close();
+  s.reset(new infinit::storage::Memory(blocks));
+  ELLE_LOG("recreate A");
+  auto dht_aa = elle::make_unique<DHT>(
+    ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false,
+    ::protocol = infinit::model::doughnut::Protocol::utp,
+    ::storage = std::move(s),
+    ::port = port);
+  // rebind local somewhere else or we get EBADF from local_endpoint
+  dht_a->dht->local()->utp_server()->socket()->bind(
+    boost::asio::ip::udp::endpoint(
+      boost::asio::ip::address::from_string("127.0.0.1"), 0));
+  // reconnect the Remote
+  ELLE_LOG("reconnect to A");
+  auto& peer = dht_b.dht->dock().peer_cache().begin()->second;
+  ELLE_LOG("peer is %s", *peer);
+  // force a reconnect
+  dynamic_cast<infinit::model::doughnut::Remote&>(*peer).reconnect();
+  // wait for it
+  dynamic_cast<infinit::model::doughnut::Remote&>(*peer).connect();
+  ELLE_LOG("re-store block");
+  dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
+  BOOST_CHECK_NO_THROW(dht_b.dht->store(*b2, STORE_UPDATE));
+  ELLE_LOG("test end");
+}
+
 ELLE_TEST_SUITE()
 {
   elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
@@ -247,6 +303,13 @@ ELLE_TEST_SUITE()
       std::bind(::discover_endpoints, Name##_builder, true);            \
     Name->add(BOOST_TEST_CASE(                                          \
                 discover_endpoints_anonymous), 0, valgrind(10));         \
+    auto key_cache_invalidation =                                           \
+      std::bind(::key_cache_invalidation, Name##_builder, false);           \
+    Name->add(BOOST_TEST_CASE(key_cache_invalidation), 0, valgrind(10));     \
+    auto key_cache_invalidation_anonymous =                                 \
+      std::bind(::key_cache_invalidation, Name##_builder, true);            \
+    Name->add(BOOST_TEST_CASE(                                          \
+                key_cache_invalidation_anonymous), 0, valgrind(10));         \
   }
   OVERLAY(kelips);
   OVERLAY(kouncil);

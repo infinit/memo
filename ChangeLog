@@ -20,6 +20,8 @@ fixes and performance improvements.
   to store known peers to disk.
 - Enable to pick listen inferface with `--listen`.
 - Add descriptions for users, storages, networks, volumes and drives.
+- Add `--networking` to `infinit-doctor` to test connection speed between
+  machines.
 - Add support for merging successive block updates into one operation in
   `async` consensus.
 - The docker volume plugin now supports volume creation.
@@ -48,6 +50,8 @@ fixes and performance improvements.
 - Cache peer connections.
 - Daemonize `infinit-network` and `infinit-volume` as late as possible
   to catch more errors syncronously.
+- Fix a bug in key hash cache that caused RPC connection to fail upon
+  reconnection
 - Restore domain name resolution for `--peer` options.
 - Do not connect twice to hosts passed via `--peer`.
 - Fix some shutdown assertions.

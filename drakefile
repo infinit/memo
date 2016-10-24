@@ -373,7 +373,10 @@ def configure(
     ('infinit-block', [], [], True),
     ('infinit-credentials', [], [], True),
     ('infinit-device', [], [], True),
-    ('infinit-doctor', [], [], True),
+    ('infinit-doctor',
+     [
+       drake.nodes('bin/networking.hh')
+     ], [protocol_lib], True),
     ('infinit-drive', [], [], True),
     ('infinit-journal', [], [], True),
     ('infinit-network', [xattr_sources], [], True),

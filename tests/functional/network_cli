@@ -156,8 +156,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   # Make sure you can only link once.
   throws(lambda: alice.run(['infinit-network', '--link', '--name', 'bob/n', '--as', 'alice']))
   e0 = alice.run_json(['infinit-network', '--export', '--name', 'bob/n', '--as', 'alice'])
+  new_version = '0.3.0'
   assertEq(e0.get('description'), None)
-  new_version = '9.9.9'
   bob.run(['infinit-network', '--update', '--name', 'n', '--compatibility-version', new_version, '--as', 'bob', '--push', '--description', 'some network'])
   alice.run(['infinit-network', '--fetch', '--name', 'bob/n', '--as', 'alice'])
   e1 = alice.run_json(['infinit-network', '--export', '--name', 'bob/n', '--as', 'alice'])
@@ -190,7 +190,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   alice.run(['infinit-passport', '--delete', '--user', 'alice', '--network', 'bob/n', '--as', 'alice'])
   assertEq(len(alice.run_json(['infinit-passport', '--list', '--as', 'alice', '--script'])),
            0)
-  bob.run(['infinit-network', '--update', '--name', 'n', '--compatibility-version', '9.9.9', '--as', 'bob', '--push'])
+  bob.run(['infinit-network', '--update', '--name', 'n', '--compatibility-version', '0.3.0', '--as', 'bob', '--push'])
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
   assertEq(len(alice.run_json(['infinit-passport', '--list',
                                '--as', 'alice', '--script'])),
@@ -224,7 +224,7 @@ for field, body in [
       assertIn('capacity', initial_res)
     bob.run(['infinit-network', '--update',
              '--name', 'n',
-             '--compatibility-version', '9.9.9',
+             '--compatibility-version', '0.5.2',
              '--as', 'bob',
              '--push'])
     res = requests.get(
