@@ -12,6 +12,7 @@ x86_64-centos6-gcc4:
     - git submodule sync
     - git submodule update --init --recursive
     - git fetch origin --tags
+    # - git fetch origin refs/notes/*:refs/notes/*
     - mkdir -p ../fs-build ../fs-install
     - scl enable devtoolset-4 rh-python34 "farm/configure --arch x86_64 --os centos6 --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install"
     - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //build"
@@ -23,6 +24,9 @@ x86_64-centos6-gcc4:
     - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then scp ../fs-build/infinit-debug-symbols-centos-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
     - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
     - rm ../fs-build/infinit-$(GIT_DIR=../fs/.git git describe | sed -e 's:-:_:g' )-1.el6.x86_64.rpm
+    - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j 1 //bench"
+    - GIT_DIR=../fs/.git python3 ../fs/note-bench-stats ./bench
+    # - GIT_DIR=../fs/.git git push git@git.infinit.io:fs refs/notes/bench
   tags:
     - x86_64
     - centos6
@@ -36,7 +40,6 @@ x86_64-ubuntu-gcc4:
     - git submodule sync --recursive
     - git submodule update --init --recursive
     - git fetch origin --tags
-    - git fetch origin refs/notes/*:refs/notes/*
     - mkdir -p ../fs-build ../fs-install
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
     - cd ../fs-build
@@ -55,9 +58,6 @@ x86_64-ubuntu-gcc4:
     - docker tag infinit-beyond:$(GIT_DIR=../fs/.git git describe) mefyl/infinit-beyond:$(GIT_DIR=../fs/.git git describe)
     - docker push mefyl/infinit-beyond:$(GIT_DIR=../fs/.git git describe)
     - docker rmi {,mefyl/}infinit-beyond:$(GIT_DIR=../fs/.git git describe)
-    - python3 drake --website=false //bench
-    - GIT_DIR=../fs/.git python3 ../fs/note-bench-stats ./bench
-    - GIT_DIR=../fs/.git git push git@git.infinit.io:fs refs/notes/bench
   tags:
     - x86_64
     - ubuntu
