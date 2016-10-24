@@ -198,6 +198,8 @@
         <hr>
         <div class="desc">
           <h2 id="docker-volume-plugin">Docker volume plugin</h2>
+          <span>0.6.2 release</span>
+          <a href="${route('doc_docker_plugin')}">&raquo; see docs</a>
           <p>Allow Infinit volumes to be accessed directly from within Docker containers through the Docker volume plugin API.</p>
         </div>
       </div>
@@ -225,6 +227,7 @@
         </div>
         <div class="desc">
           <h2 id="ipv6">IPv6</h2>
+          <span>0.7.0 release</span>
           <p>Add support for IPv6-based network interfaces.</p>
         </div>
       </div>
@@ -232,6 +235,8 @@
         <hr>
         <div class="desc">
           <h2 id="infinit-doctor">infinit-doctor</h2>
+          <span>0.6.1 release</span>
+          <a href="${route('doc_reference')}#doctor">&raquo; see docs</a>
           <p>Provide a binary to allow one to easily check the health of its local configuration, network capability and more.</p>
         </div>
       </div>
@@ -242,6 +247,7 @@
         </div>
         <div class="desc">
           <h2 id="scale-out-in">Scale out/in</h2>
+          <span>0.6.0 release</span>
           <p>Allow to add/remove storage servers, manually or following a fault: the system adapts by possibly creating new replicas in order to maintain the redundancy policy e.g replication factor.</p>
         </div>
       </div>
@@ -249,6 +255,7 @@
         <hr>
         <div class="desc">
           <h2 id="scale-up-down">Scale up/down</h2>
+          <span>0.6.0 release</span>
           <p>Allow to attach additional/detach storage resources and/or increase/decrease the storage capacity contributions from a device to an existing network, without incurring any interruption of service.</p>
         </div>
       </div>
@@ -256,6 +263,8 @@
         <hr>
         <div class="desc">
           <h2 id="infinit-journal">infinit-journal</h2>
+          <span>0.5.5 release</span>
+          <a href="${route('doc_reference')}#journal">&raquo; see docs</a>
           <p>Provide a binary to consult the state of the asynchronous cache, also known as journal.</p>
         </div>
       </div>
@@ -266,6 +275,7 @@
         </div>
         <div class="desc">
           <h2 id="dynamic-rebalancing">Dynamic rebalancing</h2>
+          <span>0.6.0 release</span>
           <p>Dynamically rebalancing some blocks to another nodes following the fault of a storage node in order to maintain the replication factor defined by the network administrator.</p>
         </div>
       </div>
@@ -276,6 +286,8 @@
         </div>
         <div class="desc">
           <h2 id="gcs-storage">Google Cloud Storage storage resource</h2>
+          <span>0.5.2 release</span>
+          <a href="${route('doc_storages_gcs')}">&raquo; see docs</a>
           <p>Allow Google Cloud Storage to be used as a block storage resource.</p>
         </div>
       </div>
@@ -283,6 +295,8 @@
         <hr>
         <div class="desc">
           <h2 id="aws-s3-storage">AWS S3 storage resource</h2>
+          <span>0.3.5 release</span>
+          <a href="${route('doc_storages_s3')}">&raquo; see docs</a>
           <p>Allow AWS S3 to be used as a block storage resource.</p>
         </div>
       </div>
@@ -293,6 +307,8 @@
         </div>
         <div class="desc">
           <h2 id="storage-limit">Storage contribution limit</h2>
+          <span>0.3.0 release</span>
+          <a href="${route('doc_reference')}#storage">&raquo; see docs</a>
           <p>Allow one to specify the storage capacity to allocate when creating a storage.</p>
         </div>
       </div>
@@ -300,6 +316,8 @@
         <hr>
         <div class="desc">
           <h2 id="acl-groups">Group-based access control</h2>
+          <span>0.4.0 release</span>
+          <a href="${route('doc_reference')}#create-a-group">&raquo; see docs</a>
           <p>Allow users to organize themselves into groups and control access to files/directories to those groups.</p>
         </div>
       </div>
@@ -307,6 +325,7 @@
         <hr>
         <div class="desc">
           <h2 id="fine-grained-passports">Fine-grained passports</h2>
+          <span>0.3.0 release</span>
           <p>Allow the administrator to issue passport for a user to act either as a client and/or server (preventing a user from attaching additional storage resources) but also to control whether a user can put and/or get blocks in the network.</p>
         </div>
       </div>
@@ -314,6 +333,7 @@
         <hr>
         <div class="desc">
           <h2 id="storage-distribution">Storage load network-wide balancing</h2>
+          <span>0.3.0 release</span>
           <p>Support distributing the blocks across several storage nodes that contribute storage capacity through one or more storage resources.</p>
         </div>
       </div>
@@ -324,6 +344,7 @@
         </div>
         <div class="desc">
           <h2 id="nat-traversal">NAT traversal</h2>
+          <span>0.3.0 release</span>
           <p>Improve the probability of connection by relying on NAT traversal if directly connection and uPnP failed.</p>
         </div>
       </div>
@@ -331,6 +352,7 @@
         <hr>
         <div class="desc">
           <h2 id="upnp">UPnP</h2>
+          <span>0.3.0 release</span>
           <p>Offer nodes to configure, if available, their router to open a port to connect to other nodes in peer-to-peer.</p>
         </div>
       </div>
@@ -338,6 +360,7 @@
         <hr>
         <div class="desc">
           <h2 id="fault-tolerance">Fault tolerance</h2>
+          <span>0.3.0 release</span>
           <p>Detect failures (crash, disconnection etc.) and rely on the other replicas for the service to operate as usual without the users noticing something went wrong.</p>
         </div>
       </div>
@@ -345,6 +368,7 @@
         <hr>
         <div class="desc">
           <h2 id="multi-device-user">Multi-device user</h2>
+          <span>0.3.0 release</span>
           <p>Provide users ways to transfer their user identities to another device.</p>
         </div>
       </div>
@@ -354,6 +378,7 @@
         </div>
         <div class="desc">
           <h2 id="paxos-consensus">Paxos consensus</h2>
+          <span>0.3.0 release</span>
           <p>Introduce Paxos to reach consensus among the storage nodes responsible for the replicas of a specific piece of data.</p>
         </div>
       </div>
@@ -361,6 +386,7 @@
         <hr>
         <div class="desc">
           <h2 id="replication">Replication</h2>
+          <span>0.3.0 release</span>
           <p>Define the replication factor for every block of every file system object (file, directory etc.) to be stored multiple times to ensure the durability and availability of the data.</p>
         </div>
       </div>
@@ -369,6 +395,7 @@
         <hr>
         <div class="desc">
           <h2 id="caching">Caching</h2>
+          <span>0.3.0 release</span>
           <p>Introduce a caching mechanism to speed up operations.</p>
         </div>
       </div>
@@ -376,6 +403,7 @@
         <hr>
         <div class="desc">
           <h2 id="asynchronous-operations">Asynchronous operations</h2>
+          <span>0.3.0 release</span>
           <p>Support operations being performed asynchronously meaning that system calls return once the operation is committed in the journal with the data modifications being later published throughout the storage network.</p>
         </div>
       </div>
@@ -386,6 +414,7 @@
         </div>
         <div class="desc">
           <h2 id="utp">uTP</h2>
+          <span>0.3.0 release</span>
           <p>Support for high-throughput data transmission through UDP-based network protocols.</p>
         </div>
       </div>
@@ -393,6 +422,8 @@
         <hr>
         <div class="desc">
           <h2 id="ssh-key-import">Import SSH RSA key</h2>
+          <span>0.3.0 release</span>
+          <a href="${route('doc_reference')}#create-a-user">&raquo; see docs</a>
           <p>Allow users to import their existing SSH RSA key to work with Infinit.</p>
         </div>
       </div>
@@ -400,6 +431,8 @@
         <hr>
         <div class="desc">
           <h2 id="credentials-management">Cloud storage services management</h2>
+          <span>0.3.0 release</span>
+          <a href="${route('doc_reference')}#hub">&raquo; see docs</a>
           <p>Offer an easy way to manage credentials to cloud storage services, possibly by relying on the Infinit Hub.</p>
         </div>
       </div>
@@ -407,6 +440,7 @@
         <hr>
         <div class="desc">
           <h2 id="hub">Hub</h2>
+          <span>0.3.0 release</span>
           <p>Introduce the Hub to ease the process of connecting cloud storage services, share networks/volumes/etc. with friends etc.</p>
         </div>
       </div>
@@ -414,6 +448,7 @@
         <hr>
         <div class="desc">
           <h2 id="passports">Passports</h2>
+          <span>0.3.0 release</span>
           <p>Allow the network administrator to authorize other users to connect and possibly contribute additional storage capacity.</p>
         </div>
       </div>
@@ -421,6 +456,7 @@
         <hr>
         <div class="desc">
           <h2 id="acl">Access control list</h2>
+          <span>0.3.0 release</span>
           <p>Allow users to control the permissions on their file system objects: files, directories etc.</p>
         </div>
       </div>
@@ -431,6 +467,7 @@
         </div>
         <div class="desc">
           <h2 id="kelips">Kelips overlay network</h2>
+          <span>0.3.0 release</span>
           <p>Introduce the Kelips gossip-based overlay network.</p>
         </div>
       </div>
@@ -438,6 +475,7 @@
         <hr>
         <div class="desc">
           <h2 id="osx">macOS native file system integration</h2>
+          <span>0.3.0 release</span>
           <p>Support for a native integration through the FUSE kernel module on macOS.</p>
         </div>
       </div>
@@ -448,6 +486,7 @@
         </div>
         <div class="desc">
           <h2 id="cli">Command-line tools</h2>
+          <span>0.3.0 release</span>
           <p>Provide basic command-line tools to create users, storages, networks and volumes.</p>
         </div>
       </div>
@@ -455,6 +494,7 @@
         <hr>
         <div class="desc">
           <h2 id="linux">Linux native file system integration</h2>
+          <span>0.3.0 release</span>
           <p>Support for a native integration through the FUSE Linux kernel module.</p>
         </div>
       </div>
@@ -462,6 +502,7 @@
         <hr>
         <div class="desc">
           <h2 id="multi-storage">Multiple storage resources per server</h2>
+          <span>0.3.0 release</span>
           <p>Allow nodes to attach several storage nodes and distribute blocks among those storages.</p>
         </div>
       </div>
@@ -469,6 +510,7 @@
         <hr>
         <div class="desc">
           <h2 id="block-encryption">Block encryption</h2>
+          <span>0.3.0 release</span>
           <p>Encrypt the data blocks with a key unique to the block.</p>
         </div>
       </div>
@@ -476,6 +518,7 @@
         <hr>
         <div class="desc">
           <h2 id="file-system">File system logic</h2>
+          <span>0.3.0 release</span>
           <p>Represent files into a collection of mutable and immutable blocks.</p>
         </div>
       </div>
@@ -483,6 +526,7 @@
         <hr>
         <div class="desc">
           <h2 id="local-storage">Local storage resource</h2>
+          <span>0.3.0 release</span>
           <p>Allow a local file system to act as a storage resource by storing blocks of encrypted data as local files.</p>
         </div>
       </div>

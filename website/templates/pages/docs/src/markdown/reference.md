@@ -92,7 +92,8 @@ $> infinit-volume --push --name personal
 $> infinit-volume --push personal
 ```
 
-### Hub ###
+Hub
+---
 
 All objects (users, storages, networks, volumes etc.) are created locally by default with no server involved. The creation process may generate one or more files and store them in the `$INFINIT_HOME` directory, more specifically in the subdirectory `$INFINIT_DATA_HOME`.
 
