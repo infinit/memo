@@ -24,6 +24,7 @@ x86_64-centos6-gcc4:
     - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then scp ../fs-build/infinit-debug-symbols-centos-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
     - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
     - rm ../fs-build/infinit-$(GIT_DIR=../fs/.git git describe | sed -e 's:-:_:g' )-1.el6.x86_64.rpm
+    - rm ../fs-build/infinit-debug-symbols-centos-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb
     - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j 1 //bench"
     - GIT_DIR=../fs/.git scl enable rh-python34 "python3 ../fs/note-bench-stats ./bench"
     # - GIT_DIR=../fs/.git git push git@git.infinit.io:fs refs/notes/bench
