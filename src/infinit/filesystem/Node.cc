@@ -204,10 +204,14 @@ namespace infinit
     {
       this->_fetch();
       auto acl = _header_block();
-      this->_header().mode = mode;
-      ELLE_DEBUG("chmod setting mode to %x", mode & 0777);
+      unsigned int settable =
+        this->_owner.map_mode_to_world_permissions() ? 0117 : 0111;
+      this->_header().mode &= ~settable;
+      this->_header().mode |= (mode & settable);
+      ELLE_DEBUG("chmod setting mode with %x: %x",
+        mode & 0777, this->_header().mode);
       this->_header().ctime = time(nullptr);
-      if (acl)
+      if (acl && this->_owner.map_mode_to_world_permissions())
       {
         auto wm = acl->get_world_permissions();
         wm.first = mode & 4;
@@ -443,6 +447,7 @@ namespace infinit
       }
       if (k == "system.posix_acl_access")
       {
+        bool allow_rw = this->_owner.map_mode_to_world_permissions();
         if (v.size() != 28)
         {
           ELLE_TRACE("Unexpected length %s for posix_acl_access", v.size());
@@ -456,12 +461,14 @@ namespace infinit
           return;
         }
         auto block = this->_header_block(true);
-        this->_header().mode &=~07;
-        this->_header().mode |= others_mode;
+        unsigned int mask = allow_rw ? 7 : 1;
+        this->_header().mode &= ~mask;
+        this->_header().mode |= (others_mode&mask);
         bool r = others_mode & 4;
         bool w = others_mode & 2;
         umbrella([&] {
-            block->set_world_permissions(r, w);
+            if (allow_rw)
+              block->set_world_permissions(r, w);
             _commit(WriteTarget::perms);
         }, EACCES);
         return;

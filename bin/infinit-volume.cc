@@ -459,7 +459,8 @@ COMMAND(run)
     auto fs = volume.run(std::move(model),
                          mo.mountpoint,
                          mo.readonly,
-                         flag(args, "allow-root-creation")
+                         flag(args, "allow-root-creation"),
+                         flag(args, "map_mode_to_world_permissions")
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
                          , optional(args, "mount-name")
 #endif
@@ -1181,7 +1182,14 @@ run_options(RunMode mode)
     add_option(
       { "push,p", BOOL_IMPLICIT, "alias for --push-endpoints --push-volume" });
   if (mode == RunMode::run || mode == RunMode::update)
-    add_option({ "push,p", BOOL_IMPLICIT, "alias for --push-endpoints" });
+    add_options({
+      { "push,p", BOOL_IMPLICIT, "alias for --push-endpoints" },
+      { "map_mode_to_world_permissions",
+        boost::program_options::value<bool>()
+          ->implicit_value(true, "true")
+          ->default_value(true, "true"),
+        "allow chmod to set world permissions"}
+    });
   add_options({
     { "publish", BOOL_IMPLICIT,
       "alias for --fetch-endpoints --push-endpoints" },
