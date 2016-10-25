@@ -441,6 +441,31 @@ namespace infinit
         }, EINVAL);
         return;
       }
+      if (k == "system.posix_acl_access")
+      {
+        if (v.size() != 28)
+        {
+          ELLE_TRACE("Unexpected length %s for posix_acl_access", v.size());
+          return;
+        }
+        unsigned char others_mode = (unsigned char) v[22];
+        if (others_mode > 7)
+        {
+          ELLE_TRACE("Unexpected mode in posix_acl_access: %s",
+            (unsigned int)others_mode);
+          return;
+        }
+        auto block = this->_header_block(true);
+        this->_header().mode &=~07;
+        this->_header().mode |= others_mode;
+        bool r = others_mode & 4;
+        bool w = others_mode & 2;
+        umbrella([&] {
+            block->set_world_permissions(r, w);
+            _commit(WriteTarget::perms);
+        }, EACCES);
+        return;
+      }
       this->_header().xattrs[k] = elle::Buffer(v.data(), v.size());
       this->_header().ctime = time(nullptr);
       this->_commit(WriteTarget::xattrs);
