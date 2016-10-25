@@ -278,6 +278,8 @@ def configure(
     'resources/images/logos/egnyte@2x.png',
     'resources/images/logos/aerofs.png',
     'resources/images/logos/aerofs@2x.png',
+    'resources/images/logos/openafs.png',
+    'resources/images/logos/openafs@2x.png',
     'resources/images/logos/slack-big.png',
     'resources/images/logos/slack-big@2x.png',
     'resources/images/logos/google-drive-big.png',

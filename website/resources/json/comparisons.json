@@ -34,6 +34,25 @@
     },
     "similar_to": ["bsync"]
   },
+  "afs": {
+    "name": "Andrew File System",
+    "description": "Andrew File System is a distributed file system originally developed at Carnegie Mellon University as part of the Andrew Project.",
+    "properties": {
+      "architecture": "File",
+      "interface": "File System",
+      "model": "Distributed",
+      "environment": "Controlled",
+      "redundancy": "Replication (mirroring)",
+      "fault_tolerance": "Standard",
+      "security": "In-Transit",
+      "scalability": "Homogeneous",
+      "interoperability": "Applications (Windows, MacOS X, Linux)"
+    },
+    "links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/Andrew_File_System"
+    },
+    "similar_to": ["nfs"]
+  },
   "amazon-cloud-drive": {
     "name": "Amazon Cloud Drive",
     "description": "Amazon Cloud Drive is a cloud-based file sync application that works in a similar fashion to <a href='/documentation/comparison/dropbox'>Dropbox</a>, allowing users to sync their files between their devices.",
