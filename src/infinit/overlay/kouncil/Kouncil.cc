@@ -104,14 +104,6 @@ namespace infinit
                 }));
           });
         this->_validate();
-#ifndef INFINIT_WINDOWS
-        reactor::scheduler().signal_handle(SIGUSR1, [this] {
-            auto json = this->query("stats", {});
-            std::cerr << elle::json::pretty_print(json);
-            //json = this->query("blockcount", {});
-            //std::cerr << elle::json::pretty_print(json);
-        });
-#endif
       }
 
       Kouncil::~Kouncil()

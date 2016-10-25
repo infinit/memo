@@ -423,6 +423,7 @@ COMMAND(run)
   auto model_and_threads = network.run(
     self, mo, true, infinit::compatibility_version, port);
   auto model = std::move(model_and_threads.first);
+  hook_stats_signals(*model);
   if (auto plf = optional(args, "peers-file"))
   {
     auto more_peers = infinit::hook_peer_discovery(*model, *plf);

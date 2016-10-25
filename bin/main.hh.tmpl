@@ -59,6 +59,10 @@ bool
 option_push(boost::program_options::variables_map const& args,
             std::vector<std::string> const& aliases = {});
 
+// Hook USR1 and display some statistics
+void
+hook_stats_signals(infinit::model::doughnut::Doughnut& dht);
+
 // One-lined because mako fucks-up line numbering otherwise
 #define COMMAND(name) static void name(boost::program_options::variables_map const& args, boost::signals2::signal<void()>& killed)
 
