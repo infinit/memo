@@ -15,7 +15,7 @@
     "category": "comparisons",
     "popularity": 0,
     "question": "How does Infinit differ from IPFS?",
-    "answer" : "<p>The goals of the two projects are quite different. IPFS aims to be used to build a peer-to-peer worldwide content platform rather than be a file system. As such it lacks several fundamental file system features such as user permissions. The goal of Infinit is to be a POSIX-compliant file system.</p>"
+    "answer" : "<p>The goals of the two projects are quite different. IPFS aims to be used to build a peer-to-peer worldwide content platform rather than be an agnostic and programmatic storage platform. Check out our full comparison guide for <a href='/documentation/comparison/ipfs?from=faq'>IPFS</a></p>"
   },
   {
     "category": "comparisons",
@@ -51,7 +51,7 @@
     "category": ["general", "security"],
     "popularity": 8,
     "question": "Where is the open source code?",
-    "answer" : "<p>You can find the code that we have open sourced <a href=\"/open-source\">here</a>. We plan to open source all the client code for the file system but we would like to do so responsibly. We want to ensure that the code is of high quality and modular enough to be used in other projects.</p>"
+    "answer" : "<p>You can find the code that we have open sourced <a href=\"/open-source\">here</a>. We plan to open source all the client code for the storage platform but we would like to do so responsibly. We want to ensure that the code is of high quality and modular enough to be used in other projects.</p>"
   },
   {
     "category": "security",

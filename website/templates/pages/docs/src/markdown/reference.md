@@ -826,7 +826,7 @@ Device
 
 ### Log in on another device ###
 
-You may wish to access your file systems from another machine. The critical nature of the user's identity (which is similar to an SSH key) makes this operation more complex than the others.
+You may wish to access your infrastructure from another machine. The critical nature of the user's identity (which is similar to an SSH key) makes this operation more complex than the others.
 
 In a nutshell, one needs to re-create his/her Infinit environment with all the resources (users, networks, volumes, drives etc.) on the other computer. If you are using Infinit in a completely decentralized manner, then the operation of exporting all the objects manually and re-importing them on the other device will be familiar. If you have gotten used to the ease-of-use of the Hub, then we offer you two methods to transmit your user identity to another device.
 

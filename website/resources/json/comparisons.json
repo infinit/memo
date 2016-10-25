@@ -3,7 +3,7 @@
     "name": "Infinit",
     "description": "Infinit is a peer-to-peer file system that allows for the creation of secure, reliable and scalable storage infrastructure by aggregating both on-premise and cloud resources.",
     "properties": {
-      "architecture": "File",
+      "architecture": "File, Object & Block",
       "interface": "File System",
       "model": "Decentralized",
       "environment": "Controlled & Worldwide",
