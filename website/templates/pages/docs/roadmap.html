@@ -15,6 +15,15 @@
     <div class="roadmap">
 
       <div class="step">
+        <div class="date">
+          <span>2018</span>
+        </div>
+        <div class="desc">
+          <h2 id="notifications">Notifications</h2>
+          <p>Provide a complete notification system in order for one to automatically react to changes in the underlying storage infrastructure: too many I/Os, a server failure, a new node joining etc.</p>
+        </div>
+      </div>
+      <div class="step">
         <hr>
         <div class="desc">
           <h2 id="byzantine-fault-tolerance">Byzantine fault tolerance</h2>
@@ -24,8 +33,56 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="backblaze-b2-storage">Backblaze B2 storage resource</h2>
-          <p>Allow Backblaze B2 service to be used as a block storage resource.</p>
+          <h2 id="heterogeneous-storage-contributions">Heterogeneous storage contributions</h2>
+          <p>Balance the data while taking into account that some storage resources have more capacity than others.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="storage-reliability-level">Storage reliability level</h2>
+          <p>Allow the administrator to define the reliability of storage resources/providers. For instance, S3 already replicates data internally while a standalone server does not.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="openstack-swift">Openstack Swift interface</h2>
+          <p>Provide an Openstack Swift object/block interface.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="date">
+          Q4 <br><span>2017</span>
+        </div>
+        <div class="desc">
+          <h2 id="file-locking">File locking</h2>
+          <p>Allow applications to lock file system objects to prevent other user/applications to use them.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="erasure-coding">Erasure coding</h2>
+          <p>Provide erasure coding as an alternative to bare replication to halve the storage capacity required to ensure data durability.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="compression">Compression</h2>
+          <p>Allow compression to be activated to reduce storage consumption depending on the nature of the data to be stored.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="date">
+          Q3 <br><span>2017</span>
+        </div>
+        <div class="desc">
+          <h2 id="deduplication">Deduplication</h2>
+          <p>Provide a policy to activate deduplication in order to reduce storage consumption when storing identical pieces of data.</p>
         </div>
       </div>
       <div class="step">
@@ -45,33 +102,15 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="windows-smb">Mobile apps</h2>
-          <p>Native applications for iOS and Android.</p>
+          <h2 id="versioning">Versioning</h2>
+          <p>Allow users to explore and roll-back to a previous version of a file.</p>
         </div>
       </div>
+
       <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="deduplication">Deduplication</h2>
-          <p>Provide a policy to activate deduplication in order to reduce storage consumption when storing identical pieces of data.</p>
+        <div class="date">
+          Q2 <br><span>2017</span>
         </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="notifications">Notifications</h2>
-          <p>Provide a complete notification system in order for one to automatically react to changes in the underlying storage infrastructure: too many I/Os, a server failure, a new node joining etc.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="heterogeneous-storage-contributions">Heterogeneous storage contributions</h2>
-          <p>Balance the data while taking into account that some storage resources have more capacity than others.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
         <div class="desc">
           <h2 id="nfs">NFS interface</h2>
           <p>Allow volumes to be mounted through the NFS protocol.</p>
@@ -80,50 +119,8 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="storage-reliability-level">Storage reliability level</h2>
-          <p>Allow the administrator to define the reliability of storage resources/providers. For instance, S3 already replicates data internally while a standalone server does not.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="erasure-coding">Erasure coding</h2>
-          <p>Provide erasure coding as an alternative to bare replication to halve the storage capacity required to ensure data durability.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="compression">Compression</h2>
-          <p>Allow compression to be activated to reduce storage consumption depending on the nature of the data to be stored.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="dropbox-storage">Dropbox storage resource</h2>
-          <p>Allow Dropbox to be used as a block storage resource.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="file-locking">File locking</h2>
-          <p>Allow applications to lock file system objects to prevent other user/applications to use them.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="gdrive-storage">Google Drive storage resource</h2>
-          <p>Allow Google Drive to be used as a block storage resource.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="encryption">Encryption</h2>
-          <p>Provide encryption policies that can be activated/deactivated and customized.</p>
+          <h2 id="iscsi">iSCSI interface</h2>
+          <p>Allow the underlying storage to be accessed through a block device.</p>
         </div>
       </div>
       <div class="step">
@@ -133,21 +130,21 @@
           <p>Control the placement of the redundant pieces of data through data placement policies: rack-aware, region-aware etc.</p>
         </div>
       </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="versioning">Versioning</h2>
-          <p>Allow users to explore and roll-back to a previous version of a file.</p>
-        </div>
-      </div>
 
       <div class="step">
         <div class="date">
-          Jan <br><span>2017</span>
+          Q1 <br><span>2017</span>
         </div>
         <div class="desc">
-          <h2 id="iscsi">iSCSI interface</h2>
-          <p>Allow the underlying storage to be accessed through a block device.</p>
+          <h2 id="encryption">Encryption</h2>
+          <p>Provide encryption policies that can be activated/deactivated and customized.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="nbd">NBD interface</h2>
+          <p>Provide an network block device interface.</p>
         </div>
       </div>
       <div class="step">
@@ -160,7 +157,7 @@
 
       <div class="step">
         <div class="date">
-          Nov <br><span>2016</span>
+          Dec <br><span>2016</span>
         </div>
         <div class="desc">
           <h2 id="monitoring">Clustering</h2>
