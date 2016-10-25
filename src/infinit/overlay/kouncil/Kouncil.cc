@@ -170,6 +170,22 @@ namespace infinit
         this->_peers.emplace(peer->id(), peer);
       }
 
+      template<typename E>
+      std::vector<int>
+      pick_n(E& gen, int size, int count)
+      {
+        std::vector<int> res;
+        std::uniform_int_distribution<> random(0, size-1);
+        while (res.size() < static_cast<unsigned int>(count))
+        {
+          int v = random(gen);
+          if (std::find(res.begin(), res.end(), v) != res.end())
+            continue;
+          res.push_back(v);
+        }
+        return res;
+      }
+
       /*-------.
       | Lookup |
       `-------*/
@@ -183,12 +199,53 @@ namespace infinit
             [this, address, n]
             (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
             {
-              // FIXME: randomize
               int count = 0;
-              for (auto it = this->_peers.begin();
-                   it != this->_peers.end() && count < n;
-                   ++it, ++count)
-                yield(it->second);
+              if (static_cast<unsigned int>(n) >= this->_peers.size())
+                for (auto it = this->_peers.begin();
+                     it != this->_peers.end() && count < n;
+                     ++it, ++count)
+                  yield(it->second);
+              else if (this->_peers.size() >= static_cast<unsigned int>(n) * 2)
+              { // picking a 'small' subset: retry on collision
+                std::vector<int> indexes = pick_n(
+                  elle::unconst(this)->_gen,
+                  static_cast<int>(this->_peers.size()),
+                  n);
+                std::sort(indexes.begin(), indexes.end());
+                unsigned int ii=0;
+                int ip=0;
+                for (auto& p: this->_peers)
+                {
+                  if (indexes[ii] == ip)
+                  {
+                    yield(p.second);
+                    ++ii;
+                    if (ii >= indexes.size())
+                      break;
+                  }
+                  ++ip;
+                }
+              }
+              else
+              { // picking a large subset: take all and remove
+                std::vector<int> indexes = pick_n(
+                  elle::unconst(this)->_gen,
+                  this->_peers.size(),
+                  this->_peers.size()-n);
+                std::sort(indexes.begin(), indexes.end());
+                unsigned int ii=0;
+                int ip=0;
+                for (auto& p: this->_peers)
+                {
+                  if (ii < indexes.size() && indexes[ii] == ip)
+                  { // skip it
+                    ++ii;
+                    continue;
+                  }
+                  yield(p.second);
+                  ++ip;
+                }
+              }
             });
         else
           return reactor::generator<Overlay::WeakMember>(
