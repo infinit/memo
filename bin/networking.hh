@@ -8,7 +8,8 @@ using namespace boost::posix_time;
 
 namespace bytes
 {
-  // XXX: Move that somewher on elle.
+  // XXX: Move that somewhere to elle/elle/src/elle/bytes/conversion.hh or
+  // something like that.
   static std::vector<std::pair<std::string, std::string>> capacities{
     { "B",  "B"   },
     { "kB", "KiB" },
@@ -17,15 +18,15 @@ namespace bytes
     { "TB", "TiB" },
     { "EB", "EiB" },
     { "ZB", "ZiB" },
-      };
+  };
 
   std::string
   to_human(uint64_t bytes,
            bool si = true)
   {
-    for (uint64_t i = 1; i < capacities.size(); ++i)
+    for (uint64_t i = 1; i < capacities.size() + 1; ++i)
     {
-      if ((double) bytes / pow((si ? 1024 : 1000), i) < 1 || i == (capacities.size() - 1))
+      if ((double) bytes / pow((si ? 1024 : 1000), i) < 1 || i == (capacities.size()))
         return elle::sprintf("%.1f %s",
                              bytes / pow((si ? 1024 : 1000), i - 1),
                              (si ? capacities[i].second : capacities[i].first));
@@ -89,8 +90,8 @@ namespace infinit
       return elle::sprintf(
         "%sms for %s (%s/sec)",
         duration.total_milliseconds(),
-        bytes::to_human(size / 1000, false),
-        bytes::to_human((double) size / duration.total_milliseconds(), false));
+        bytes::to_human(size, false),
+        bytes::to_human((double) 1000 * size / duration.total_milliseconds(), false));
     }
 
     static
