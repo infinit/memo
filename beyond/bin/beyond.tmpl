@@ -123,11 +123,6 @@ def parse_options():
     default = 'us-east-1',
     help = 'DynamoDB AWS region')
   parser.add_argument(
-    '--email-validation',
-    type = bool,
-    default = True,
-    help = 'Enable email validation (default: true)')
-  parser.add_argument(
     '--port-file',
     type = str,
     help = 'File to write effective listen port to')
@@ -171,7 +166,6 @@ try:
       google_app_secret = args.google_app_secret,
       gcs_app_key = args.gcs_app_key,
       gcs_app_secret = args.gcs_app_secret,
-      validate_email_address = args.email_validation,
       sendwithus_api_key = args.sendwithus_app_key,
       keep_deleted_users = args.keep_deleted_users)
     admin_users = []

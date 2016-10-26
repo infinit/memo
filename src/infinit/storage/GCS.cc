@@ -152,19 +152,22 @@ namespace infinit
                          std::string const& root,
                          std::string const& user_name,
                          std::string const& refresh_token,
-                         boost::optional<int64_t> capacity)
-      : StorageConfig(name, capacity)
+                         boost::optional<int64_t> capacity,
+                         boost::optional<std::string> description)
+      : StorageConfig(name, std::move(capacity), std::move(description))
       , bucket(bucket)
       , root(root)
       , refresh_token(refresh_token)
       , user_name(user_name)
     {}
 
-    GCSConfig::GCSConfig(elle::serialization::SerializerIn& input)
-      : StorageConfig()
-    {
-      this->serialize(input);
-    }
+    GCSConfig::GCSConfig(elle::serialization::SerializerIn& s)
+      : StorageConfig(s)
+      , bucket(s.deserialize<std::string>("bucket"))
+      , root(s.deserialize<std::string>("root"))
+      , refresh_token(s.deserialize<std::string>("refresh_token"))
+      , user_name(s.deserialize<std::string>("user_name"))
+    {}
 
     void
     GCSConfig::serialize(elle::serialization::Serializer& s)

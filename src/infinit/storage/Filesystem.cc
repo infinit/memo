@@ -156,17 +156,20 @@ namespace infinit
     }
 
     FilesystemStorageConfig::FilesystemStorageConfig(
-        std::string name, std::string path_, boost::optional<int64_t> capacity)
-      : StorageConfig(std::move(name), std::move(capacity))
-      , path(std::move(path_))
+        std::string name,
+        std::string path,
+        boost::optional<int64_t> capacity,
+        boost::optional<std::string> description)
+      : StorageConfig(
+          std::move(name), std::move(capacity), std::move(description))
+      , path(std::move(path))
     {}
 
     FilesystemStorageConfig::FilesystemStorageConfig(
-      elle::serialization::SerializerIn& input)
-      : StorageConfig()
-    {
-      this->serialize(input);
-    }
+      elle::serialization::SerializerIn& s)
+      : StorageConfig(s)
+      , path(s.deserialize<std::string>("path"))
+    {}
 
     void
     FilesystemStorageConfig::serialize(elle::serialization::Serializer& s)

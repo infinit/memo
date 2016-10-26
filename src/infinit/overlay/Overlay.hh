@@ -13,6 +13,7 @@
 # include <infinit/model/Address.hh>
 # include <infinit/model/Endpoints.hh>
 # include <infinit/model/doughnut/fwd.hh>
+# include <infinit/model/doughnut/protocol.hh>
 # include <infinit/serialization.hh>
 
 namespace infinit
@@ -78,7 +79,7 @@ namespace infinit
     `------*/
     public:
       ELLE_ATTRIBUTE_RX(
-        boost::signals2::signal<void (model::Address id,
+        boost::signals2::signal<void (NodeLocation id,
                                       bool observer)>, on_discover);
       ELLE_ATTRIBUTE_RX(
         boost::signals2::signal<void (model::Address id,
@@ -151,7 +152,9 @@ namespace infinit
       : public elle::serialization::VirtuallySerializable<false>
       , public elle::Clonable<Configuration>
     {
-      Configuration() = default;
+      model::doughnut::Protocol rpc_protocol;
+
+      Configuration();
       Configuration(elle::serialization::SerializerIn& input);
       static constexpr char const* virtually_serializable_key = "type";
       /// Perform any initialization required at join time.

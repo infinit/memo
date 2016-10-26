@@ -32,7 +32,7 @@ class Test(unittest.TestCase):
       beyond.get('users/by_email/%s' % u['email'])
 
   def test_emails_no_emails(self):
-    with Beyond(validate_email_address = False) as beyond:
+    with Beyond() as beyond:
       h1 = User()
       n1 = User()
       del n1['email']

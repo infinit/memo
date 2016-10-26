@@ -92,7 +92,7 @@ private:
 };
 
 std::vector<infinit::model::Endpoints> endpoints;
-infinit::Network net("bob/network", nullptr);
+infinit::Network net("bob/network", nullptr, boost::none);
 typedef std::vector<
          std::pair<
            std::shared_ptr<imd::Doughnut>,
@@ -160,7 +160,7 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
     if (beyond_port)
     {
       infinit::overlay::NodeLocations locs;
-      tptr = make_poll_beyond_thread(*dn, net, locs, 1);
+      tptr = net.make_poll_beyond_thread(*dn, locs, 1);
     }
     res.push_back(std::make_pair(dn, std::move(tptr)));
     //if (res.size() == 1)
@@ -240,7 +240,7 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   if (beyond_port)
   {
     infinit::overlay::NodeLocations locs;
-    tptr = make_poll_beyond_thread(*dn, net, locs, 1);
+    tptr = net.make_poll_beyond_thread(*dn, locs, 1);
   }
   ELLE_LOG("Returning observer");
   return std::make_pair(std::move(fs), std::move(tptr));

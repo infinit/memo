@@ -53,7 +53,8 @@ public:
   void
   _remove(infinit::model::Address, infinit::model::blocks::RemoveSignature) override
   {
-    reactor::wait(sem);
+    while (!sem.acquire())
+      reactor::wait(sem);
     ++nremove;
   }
 
@@ -107,14 +108,14 @@ public:
   DummyDoughnut(infinit::model::Address id,
                 infinit::cryptography::rsa::KeyPair keys)
     : dht::Doughnut(
-      id, std::make_shared<infinit::cryptography::rsa::KeyPair>(keys),
+      id,
+      std::make_shared<infinit::cryptography::rsa::KeyPair>(keys),
       keys.public_key(),
       infinit::model::doughnut::Passport(keys.K(), "network", keys),
       [] (dht::Doughnut&)
       { return nullptr; },
       [] (dht::Doughnut&, std::shared_ptr<dht::Local>)
-      { return nullptr; },
-      {}, {}, nullptr)
+      { return nullptr; })
   {}
 };
 

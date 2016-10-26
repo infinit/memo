@@ -65,16 +65,19 @@ namespace infinit
       return this->_backend->list();
     }
 
-    CryptStorageConfig::
-      CryptStorageConfig(std::string name, int64_t capacity)
-      : StorageConfig(name, capacity)
-      {}
-    CryptStorageConfig::
-      CryptStorageConfig(elle::serialization::SerializerIn& input)
-      : StorageConfig()
-    {
-      this->serialize(input);
-    }
+    CryptStorageConfig::CryptStorageConfig(
+      std::string name,
+      boost::optional<int64_t> capacity,
+      boost::optional<std::string> description)
+      : StorageConfig(name, std::move(capacity), std::move(description))
+    {}
+
+    CryptStorageConfig::CryptStorageConfig(elle::serialization::SerializerIn& s)
+      : StorageConfig(s)
+      , password(s.deserialize<std::string>("password"))
+      , salt(s.deserialize<bool>("salt"))
+      , storage(s.deserialize<std::shared_ptr<StorageConfig>>("backend"))
+    {}
 
     void
     CryptStorageConfig::serialize(elle::serialization::Serializer& s)

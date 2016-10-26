@@ -132,8 +132,8 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
     drives = user('infinit-drive', '--list')
     print(drives)
     assertEq(drives, [
-      { 'name': 'owner/drive0', 'status': 'ok'},
-      { 'name': 'owner/drive1', 'status': 'pending'},
+      { 'name': 'owner/drive0', 'status': 'ok', 'description': '' },
+      { 'name': 'owner/drive1', 'status': 'pending', 'description': '' },
     ])
     for drive in map(
         lambda name: user('infinit-drive', '--export', '--name', name),

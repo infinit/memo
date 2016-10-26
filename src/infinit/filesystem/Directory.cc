@@ -183,8 +183,8 @@ namespace infinit
 
     std::unique_ptr<Block>
     DirectoryConflictResolver::operator() (Block& block,
-                Block& current,
-                model::StoreMode mode)
+                                           Block& current,
+                                           model::StoreMode mode)
     {
       return resolve_directory_conflict(
         block, current, mode,
@@ -205,6 +205,71 @@ namespace infinit
       s.serialize("opetype", _op.entry_type, elle::serialization::as<int>());
     }
 
+    struct ConflictContent
+    {
+      bool pre_addfile;
+      bool post_addfile;
+      bool same_file;
+      bool other_op;
+      bool error;
+    };
+
+    static
+    ConflictContent
+    extract_stack_content(model::ConflictResolver::SquashStack const& stack,
+                          std::string const& tgt)
+    {
+      ConflictContent res{false, false, false, false, false};
+      for (auto const& c: stack)
+      {
+        auto const* d = dynamic_cast<DirectoryConflictResolver*>(c.get());
+        if (!d)
+        {
+          res.error = true;
+          return res;
+        }
+        if (d->_op.type != OperationType::insert
+          && d->_op.type != OperationType::insert_exclusive)
+        {
+          res.other_op = true;
+          continue;
+        }
+        if (d->_op.target == tgt)
+          res.same_file = true;
+        if (d->_op.entry_type == EntryType::pending)
+          res.pre_addfile = true;
+        else
+          res.post_addfile = true;
+      }
+      return res;
+    }
+
+    model::SquashOperation
+    DirectoryConflictResolver::squashable(SquashStack const& newops)
+    {
+      if (this->_op.type != OperationType::insert
+        && this->_op.type != OperationType::insert_exclusive)
+        return {model::Squash::stop, {}};
+      ConflictContent content = extract_stack_content(newops, this->_op.target);
+      bool self_pre = this->_op.entry_type == EntryType::pending
+        ||this->_op.entry_type == EntryType::directory;
+      if (content.other_op || content.same_file || content.error)
+        return {model::Squash::stop, {}};
+      if (self_pre)
+      { // at_first is allowed
+        return {model::Squash::at_first_position_continue, {}};
+      }
+      else
+      { // at_first forbiden or we might cross our associated file update block
+        if (content.pre_addfile)
+        { // we cant't move that block up
+          return {model::Squash::skip, {}};
+        }
+        else
+          return {model::Squash::at_last_position_stop, {}};
+      }
+    }
+
     std::string
     DirectoryConflictResolver::description() const
     {
@@ -216,7 +281,6 @@ namespace infinit
 
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<DirectoryConflictResolver> _register_dcr("dcr");
-
 
     Directory::Directory(FileSystem& owner,
                          std::shared_ptr<DirectoryData> self,

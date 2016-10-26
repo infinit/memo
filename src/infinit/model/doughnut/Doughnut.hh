@@ -58,36 +58,12 @@ namespace infinit
           OverlayBuilder;
         typedef std::function<
           std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;
-        Doughnut(
-          Address id,
-          std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
-          std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
-          Passport passport,
-          ConsensusBuilder consensus,
-          OverlayBuilder overlay_builder,
-          boost::optional<int> port,
-          boost::optional<boost::asio::ip::address> listen_address,
-          std::unique_ptr<storage::Storage> local,
-          boost::optional<elle::Version> version = {},
-          AdminKeys const& admin_keys = {},
-          boost::optional<std::string> rdv_host = {},
-          boost::optional<boost::filesystem::path> monitoring_socket_path = {});
-        Doughnut(
-          Address id,
-          std::string const& name,
-          std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
-          std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
-          Passport passport,
-          ConsensusBuilder consensus,
-          OverlayBuilder overlay_builder,
-          boost::optional<int> port,
-          boost::optional<boost::asio::ip::address> listen_address,
-          std::unique_ptr<storage::Storage> local,
-          boost::optional<elle::Version> version = {},
-          AdminKeys const& admin_keys = {},
-          boost::optional<std::string> rdv_host = {},
-          boost::optional<boost::filesystem::path> monitoring_socket_path = {});
+        template <typename ... Args>
+        Doughnut(Args&& ... args);
         ~Doughnut();
+      private:
+        struct Init;
+        Doughnut(Init init);
 
       /*-----.
       | Time |
@@ -192,6 +168,27 @@ namespace infinit
         _remove(Address address, blocks::RemoveSignature rs) override;
         friend class Local;
         ELLE_ATTRIBUTE(std::unique_ptr<MonitoringServer>, monitoring_server);
+
+      /*------------------.
+      | Service discovery |
+      `------------------*/
+      public:
+        using Services = std::unordered_map<std::string, Address>;
+        using ServicesTypes = std::unordered_map<std::string, Services>;
+        ServicesTypes
+        services();
+        void
+        service_add(std::string const& type,
+                    std::string const& name,
+                    elle::Buffer value);
+        template <typename T>
+        void
+        service_add(std::string const& type,
+                    std::string const&
+                    name, T const& value);
+      private:
+        std::unique_ptr<blocks::MutableBlock>
+        _services_block(bool write);
       };
 
       struct Configuration:
@@ -207,6 +204,7 @@ namespace infinit
         boost::optional<std::string> name;
         boost::optional<int> port;
         AdminKeys admin_keys;
+        std::vector<Endpoints> peers;
 
         Configuration(
           Address id,
@@ -219,7 +217,8 @@ namespace infinit
           boost::optional<std::string> name,
           boost::optional<int> port,
           elle::Version version,
-          AdminKeys admin_keys);
+          AdminKeys admin_keys,
+          std::vector<Endpoints> peers);
         Configuration(Configuration&&) = default;
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
@@ -258,5 +257,7 @@ DAS_MODEL_FIELDS(infinit::model::doughnut::Configuration,
 DAS_MODEL(infinit::model::doughnut::AdminKeys, (r, w, group_r, group_w), DasAdminKeys);
 DAS_MODEL_DEFAULT(infinit::model::doughnut::AdminKeys, DasAdminKeys);
 DAS_MODEL_SERIALIZE(infinit::model::doughnut::AdminKeys);
+
+# include <infinit/model/doughnut/Doughnut.hxx>
 
 #endif

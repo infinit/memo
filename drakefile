@@ -25,6 +25,7 @@ rule_install = None
 rule_symbols = None
 rule_tests = None
 
+description_regex = '^.{0,2048}$'
 email_regex = '^[^@]+@[^@]+\.[^@]+$'
 name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$'
 
@@ -203,6 +204,12 @@ def configure(
                       git,
                       production_build = production_build)
 
+  with drake.templating.Context(content = {
+      'description_regex': description_regex,
+      'name_regex': name_regex,
+    }):
+    drake.node('src/infinit/descriptor/TemplatedBaseDescriptor.hxx.tmpl')
+
   infinit_sources = drake.nodes(
     'src/infinit/RPC.cc',
     'src/infinit/RPC.hh',
@@ -216,6 +223,7 @@ def configure(
     'src/infinit/version.hh',
   )
   infinit_sources += drake.include('src/infinit/credentials').sources
+  infinit_sources += drake.include('src/infinit/descriptor').sources
   infinit_sources += drake.include('src/infinit/filesystem').sources
   infinit_sources += drake.include('src/infinit/model').sources
   infinit_sources += drake.include('src/infinit/overlay').sources
@@ -239,10 +247,13 @@ def configure(
     cxx_config_infinit.lib('dbghelp')
     cxx_config_infinit.lib('iphlpapi')
     cxx_config_infinit.lib('crypt32')
+    cxx_config_infinit.library_add(elle.boost.regex_static)
     libtype = drake.cxx.DynLib
     extra_libs = [drake.copy(dokan_lib, 'bin', strip_prefix = True)]
     cxx_config_infinit.use_whole_archive()
   else:
+    cxx_config_infinit.library_add(
+      drake.copy(elle.boost.regex_dynamic, 'lib', True))
     extra_libs = []
     libtype = drake.cxx.DynLib
   infinit_lib = libtype(
@@ -324,7 +335,6 @@ def configure(
     bin_cxx_config.library_add(
       drake.copy(dokan_lib, 'bin', True))
     bin_cxx_config.library_add(elle.boost.program_options_static)
-    bin_cxx_config.library_add(elle.boost.regex_static)
     bin_cxx_config.define('ELLE_SERIALIZATION_USE_DLL')
     #bin_cxx_config.use_whole_archive()
   # Ship libstdc++
@@ -363,7 +373,10 @@ def configure(
     ('infinit-block', [], [], True),
     ('infinit-credentials', [], [], True),
     ('infinit-device', [], [], True),
-    ('infinit-doctor', [], [], True),
+    ('infinit-doctor',
+     [
+       drake.nodes('bin/networking.hh')
+     ], [protocol_lib], True),
     ('infinit-drive', [], [], True),
     ('infinit-journal', [], [], True),
     ('infinit-network', [xattr_sources], [], True),
@@ -750,6 +763,7 @@ def configure(
         git = git,
         bottle = bottle,
         PatchAndInstall = PatchAndInstall,
+        description_regex = description_regex,
         email_regex = email_regex,
         name_regex = name_regex,
         backend = {
@@ -934,6 +948,7 @@ def configure(
     ('bandwidth', []),
     ('consensus/async', []),
     ('consensus/cache', []),
+    ('consensus/paxos', []),
     ('doughnut', []),
     ('faith', []),
     ('filesystem', binaries),

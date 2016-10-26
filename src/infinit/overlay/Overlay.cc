@@ -95,7 +95,7 @@ namespace infinit
     void
     Overlay::discover(NodeLocations const& peers_)
     {
-      ELLE_TRACE("%s: discover %f", this, peers_);
+      ELLE_TRACE_SCOPE("%s: discover %f", this, peers_);
       NodeLocations peers(peers_);
       auto it = std::remove_if(peers.begin(), peers.end(),
         [this] (NodeLocation const& nl)
@@ -148,7 +148,12 @@ namespace infinit
         });
     }
 
+    Configuration::Configuration()
+      : rpc_protocol(infinit::model::doughnut::Protocol::all)
+    {}
+
     Configuration::Configuration(elle::serialization::SerializerIn& input)
+      : rpc_protocol(infinit::model::doughnut::Protocol::all)
     {
       this->serialize(input);
     }
@@ -192,7 +197,14 @@ namespace infinit
 
     void
     Configuration::serialize(elle::serialization::Serializer& s)
-    {}
+    {
+      try
+      {
+        s.serialize("rpc_protocol", this->rpc_protocol);
+      }
+      catch (elle::serialization::Error const&)
+      {}
+    }
 
     /*-----------.
     | Monitoring |

@@ -127,21 +127,23 @@ namespace infinit
     | Storage Config |
     `---------------*/
 
-    StorageConfig::StorageConfig(std::string name_,
-                                 boost::optional<int64_t> capacity_)
-      : name(std::move(name_))
-      , capacity(std::move(capacity_))
+    StorageConfig::StorageConfig(std::string name,
+                                 boost::optional<int64_t> capacity,
+                                 boost::optional<std::string> description)
+      : descriptor::TemplatedBaseDescriptor<StorageConfig>(
+          std::move(name), std::move(description))
+      , capacity(std::move(capacity))
     {}
 
     StorageConfig::StorageConfig(elle::serialization::SerializerIn& s)
-    {
-      this->serialize(s);
-    }
+      : descriptor::TemplatedBaseDescriptor<StorageConfig>(s)
+      , capacity(s.deserialize<boost::optional<int64_t>>("capacity"))
+    {}
 
     void
     StorageConfig::serialize(elle::serialization::Serializer& s)
     {
-      s.serialize("name", this->name);
+      descriptor::TemplatedBaseDescriptor<StorageConfig>::serialize(s);
       s.serialize("capacity", this->capacity);
     }
   }
