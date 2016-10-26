@@ -16,6 +16,8 @@ fixes and performance improvements.
 
 ### Added
 
+- Add new `Kouncil` overlay that stores all block search space in main
+  memory on startup.
 - Add `--peers-file` option to `infinit-volume` and `infinit-network`
   to store known peers to disk.
 - Enable to pick listen inferface with `--listen`.
@@ -57,6 +59,7 @@ fixes and performance improvements.
 - Fix some shutdown assertions.
 - Fix deadlock in Kelips overlay implementation.
 - Fix issue with dokany 1.0.0.5000 on Windows.
+
 
 ## [0.7.0] - 2016-09-23
 
