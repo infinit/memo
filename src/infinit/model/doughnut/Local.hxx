@@ -34,7 +34,16 @@ namespace infinit
             auto const f = std::bind(
               &RPC<R (Args const& ...)>::operator (),
               &rpc, std::ref(args)...);
-            return RPCServer::umbrella(f);
+            try
+            {
+              return RPCServer::umbrella(f);
+            }
+            catch (UnknownRPC const& e)
+            {
+              // FIXME: Ignore ? Evict ? Should probably be configurable. So far
+              // only Kouncil uses this, and it's definitely an ignore.
+              ELLE_WARN("error contacting %s: %s", c, e);
+            }
           },
           elle::sprintf("%s: broadcast RPC %s", this, name));
       }
