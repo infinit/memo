@@ -35,3 +35,14 @@ namespace elle
     }
   }
 }
+
+namespace std
+{
+  std::ostream&
+  operator <<(std::ostream& out,
+              infinit::model::doughnut::Protocol protocol)
+  {
+    return out << elle::serialization::Serialize<
+                    infinit::model::doughnut::Protocol>::convert(protocol);
+  }
+}

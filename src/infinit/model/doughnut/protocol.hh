@@ -37,4 +37,10 @@ namespace elle
   }
 }
 
+namespace std
+{
+  std::ostream&
+  operator <<(std::ostream&, infinit::model::doughnut::Protocol);
+}
+
 #endif
