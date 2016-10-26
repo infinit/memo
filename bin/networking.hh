@@ -3,7 +3,8 @@
 
 using namespace boost::posix_time;
 
-# include <version.hh>
+# include <reactor/Barrier.hh>
+
 # include <protocol/exceptions.hh>
 
 namespace bytes
@@ -184,13 +185,16 @@ namespace infinit
     {
       static
       void
-      serve(uint16_t port,
-            elle::Version const& version)
+      serve(uint16_t& port,
+            elle::Version const& version,
+            reactor::Barrier& listening)
 
       {
         ELLE_TRACE("create tcp server (listening on port: %s)", port);
         auto server = elle::make_unique<reactor::network::TCPServer>();
         server->listen(port);
+        port = server->port();
+        listening.open();
         elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
         {
           s.run_background(
@@ -226,17 +230,20 @@ namespace infinit
     {
       static
       void
-      serve(uint16_t port,
+      serve(uint16_t& port,
             int xorit,
-            elle::Version const& version)
+            elle::Version const& version,
+            reactor::Barrier& listening)
       {
         ELLE_TRACE("create utp server (listening on port: %s) (xor: %s)",
                    port, xorit);
         reactor::network::UTPServer server;
         server.xorify(xorit);
         server.listen(port);
+        port = server.local_endpoint().port();
         server.rdv_connect("connectivity-server:" + std::to_string(port),
                            "rdv.infinit.sh:7890");
+        listening.open();
         elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
         {
           s.run_background(
@@ -314,34 +321,61 @@ namespace infinit
 
     inline
     uint16_t
+    get_port(boost::program_options::variables_map const& args)
+    {
+      auto port = optional<uint16_t>(args, "port");
+      if (port)
+        return *port;
+      return 0;
+    }
+
+    inline
+    uint16_t
     get_port(boost::program_options::variables_map const& args,
              std::string const& key,
              uint16_t offset)
     {
+      ELLE_DEBUG("get port for key %s", key);
       if (args.count(key))
         return args[key].as<uint16_t>();
-      return mandatory<uint16_t>(args, "port") + offset;
+      return get_port(args) + offset;
     }
 
     inline
     uint16_t
-    tcp_port(boost::program_options::variables_map const& args)
+    get_tcp_port(boost::program_options::variables_map const& args)
     {
-      return get_port(args, "tcp_port", 0);
+      auto port = get_port(args, "tcp_port", 0);
+      ELLE_DEBUG("utp port: %s", port);
+      return port;
     }
 
     inline
     uint16_t
-    utp_port(boost::program_options::variables_map const& args)
+    get_utp_port(boost::program_options::variables_map const& args)
     {
-      return get_port(args, "utp_port", 1);
+      auto port = get_port(args, "utp_port", 1);
+      if (port == 1)
+        return 0;
+      ELLE_DEBUG("utp port: %s", port);
+      return port;
     }
 
     inline
     uint16_t
-    xored_utp_port(boost::program_options::variables_map const& args)
+    get_xored_utp_port(boost::program_options::variables_map const& args)
     {
-      return get_port(args, "xored_utp_port", 2);
+      auto port = get_port(args, "xored_utp_port", 2);
+      if (port == 2) // Random port.
+      {
+        auto uport = get_utp_port(args);
+        if (uport == 0)
+          ELLE_DEBUG("xored utp port: 0", port)
+            return 0;
+        port = uport + 1;
+      }
+      ELLE_DEBUG("xored utp port: %s", port);
+      return port;
     }
 
     inline
@@ -405,39 +439,50 @@ namespace infinit
         auto protocol = infinit::model::doughnut::Protocol::all;
         if (args.count("protocol"))
           protocol = infinit::protocol_get(args);
+        reactor::Barrier listening;
+        auto base_port = get_port(args);
+        uint16_t tcp_port = 0;
+        uint16_t utp_port = 0;
+        uint16_t xored_utp_port = 0;
         if (tcp_enabled(protocol))
         {
-          uint16_t port = tcp_port(args);
+          tcp_port = get_tcp_port(args);
           this->_tcp.reset(
             new reactor::Thread(
               "tcp",
-              [&,port]
+              [&]
               {
-                tcp::serve(port, this->_version);
+                tcp::serve(tcp_port, this->_version, listening);
               }));
+          listening.wait();
+          listening.close();
         }
         if (utp_enabled(protocol))
         {
           if (non_xored_enabled(args))
           {
-            uint16_t port = utp_port(args);
+            utp_port = get_utp_port(args);
             this->_utp.reset(
               new reactor::Thread(
                 "utp",
-                [&, port]
+                [&]
                 {
-                  utp::serve(port, 0, this->_version);
+                  utp::serve(utp_port, 0, this->_version, listening);
                 }));
+            listening.wait();
+            listening.close();
           }
           if (xored_enabled(args))
           {
-            uint16_t port = xored_utp_port(args);
+            xored_utp_port = get_xored_utp_port(args);
             this->_xored_utp.reset(
               new reactor::Thread(
-                "utp", [&, port]
+                "utp", [&]
                 {
-                  utp::serve(port, 255, this->_version);
+                  utp::serve(xored_utp_port, 255, this->_version, listening);
                 }));
+            listening.wait();
+            listening.close();
           }
         }
         reactor::sleep(200_ms);
@@ -543,7 +588,7 @@ namespace infinit
           std::unique_ptr<reactor::network::TCPSocket> socket;
           try
           {
-            socket.reset(tcp::socket(host, tcp_port(args)).release());
+            socket.reset(tcp::socket(host, get_tcp_port(args)).release());
           }
           catch (reactor::network::Exception const&)
           {
@@ -572,7 +617,7 @@ namespace infinit
                 utp::socket(
                   server,
                   host,
-                  xored ? xored_utp_port(args) : utp_port(args),
+                  xored ? get_xored_utp_port(args) : get_utp_port(args),
                   xored ? 0xFF : 0).release());
             }
             catch (reactor::network::Exception const&)
