@@ -7,6 +7,10 @@ using namespace boost::posix_time;
 
 # include <protocol/exceptions.hh>
 
+# include <infinit/model/doughnut/protocol.hh>
+
+# include <version.hh>
+
 namespace bytes
 {
   // XXX: Move that somewhere to elle/elle/src/elle/bytes/conversion.hh or
@@ -99,7 +103,8 @@ namespace infinit
     time_duration
     upload(infinit::protocol::ChanneledStream& channels,
            elle::Buffer::Size packet_size,
-           int64_t packets_count)
+           int64_t packets_count,
+           bool verbose)
     {
       ELLE_TRACE_SCOPE("upload %s %s times", packet_size, packets_count);
       std::cout << "  Upload:" << std::endl;
@@ -114,11 +119,14 @@ namespace infinit
         {
           auto start_partial = microsec_clock::universal_time();
           upload(buff);
-          std::cout
-            << "    - [" << i << "] "
-            << report(packet_size,
-                      microsec_clock::universal_time() - start_partial)
-            << std::endl;
+          if (verbose)
+          {
+            std::cout
+              << "    - [" << i << "] "
+              << report(packet_size,
+                        microsec_clock::universal_time() - start_partial)
+              << std::endl;
+          }
         }
       auto diff = microsec_clock::universal_time() - start;
       std::cout << "    "
@@ -131,7 +139,8 @@ namespace infinit
     time_duration
     download(infinit::protocol::ChanneledStream& channels,
              elle::Buffer::Size packet_size,
-             int64_t packets_count)
+             int64_t packets_count,
+             bool verbose)
     {
       ELLE_TRACE_SCOPE("download %s %s times", packet_size, packets_count);
 
@@ -147,10 +156,13 @@ namespace infinit
         {
           auto start_partial = microsec_clock::universal_time();
           download(packet_size);
-          std::cout << "    - [" << i << "] "
-                    << report(packet_size,
-                              microsec_clock::universal_time() - start_partial)
-                    << std::endl;
+          if (verbose)
+          {
+            std::cout << "    - [" << i << "] "
+                      << report(packet_size,
+                                microsec_clock::universal_time() - start_partial)
+                      << std::endl;
+          }
         }
       }
       auto diff = microsec_clock::universal_time() - start;
@@ -163,10 +175,13 @@ namespace infinit
     static
     void
     serve(elle::Version const& version,
-          elle::IOStream& socket)
+          elle::IOStream& socket,
+          bool verbose)
     {
       try
       {
+        if (verbose)
+          std::cout << "New connection" << std::endl;
         RPCs rpc_server(version);
         ELLE_TRACE("serve rpcs")
           rpc_server.serve(socket);
@@ -187,13 +202,17 @@ namespace infinit
       void
       serve(uint16_t& port,
             elle::Version const& version,
-            reactor::Barrier& listening)
+            reactor::Barrier& listening,
+            bool verbose)
 
       {
         ELLE_TRACE("create tcp server (listening on port: %s)", port);
         auto server = elle::make_unique<reactor::network::TCPServer>();
         server->listen(port);
         port = server->port();
+        if (verbose)
+          std::cout << "  Listen to tcp connections on port " << port
+                    << std::endl;
         listening.open();
         elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
         {
@@ -206,9 +225,9 @@ namespace infinit
                 auto socket = elle::utility::move_on_copy(server->accept());
                 s.run_background(
                   elle::sprintf("socket %s", socket),
-                  [version, socket]
+                  [version, socket, verbose]
                   {
-                    infinit::networking::serve(version, **socket);
+                    infinit::networking::serve(version, **socket, verbose);
                   });
               }
             });
@@ -233,7 +252,8 @@ namespace infinit
       serve(uint16_t& port,
             int xorit,
             elle::Version const& version,
-            reactor::Barrier& listening)
+            reactor::Barrier& listening,
+            bool verbose)
       {
         ELLE_TRACE("create utp server (listening on port: %s) (xor: %s)",
                    port, xorit);
@@ -241,6 +261,13 @@ namespace infinit
         server.xorify(xorit);
         server.listen(port);
         port = server.local_endpoint().port();
+        if (verbose)
+        {
+          std::cout << "  Listen to ";
+          if (xorit)
+            std::cout << "xored ";
+          std::cout << "utp connections on port " << port << std::endl;
+        }
         server.rdv_connect("connectivity-server:" + std::to_string(port),
                            "rdv.infinit.sh:7890");
         listening.open();
@@ -255,9 +282,9 @@ namespace infinit
                 auto socket = elle::utility::move_on_copy(server.accept());
                 s.run_background(
                   elle::sprintf("socket %s", socket),
-                  [version, socket]
+                  [version, socket, verbose]
                   {
-                    infinit::networking::serve(version, **socket);
+                    infinit::networking::serve(version, **socket, verbose);
                   });
               }
             });
@@ -452,7 +479,8 @@ namespace infinit
               "tcp",
               [&]
               {
-                tcp::serve(tcp_port, this->_version, listening);
+                tcp::serve(tcp_port, this->_version, listening,
+                           flag(args, "verbose"));
               }));
           listening.wait();
           listening.close();
@@ -467,7 +495,8 @@ namespace infinit
                 "utp",
                 [&]
                 {
-                  utp::serve(utp_port, 0, this->_version, listening);
+                  utp::serve(utp_port, 0, this->_version, listening,
+                             flag(args, "verbose"));
                 }));
             listening.wait();
             listening.close();
@@ -479,13 +508,33 @@ namespace infinit
               new reactor::Thread(
                 "utp", [&]
                 {
-                  utp::serve(xored_utp_port, 255, this->_version, listening);
+                  utp::serve(xored_utp_port, 255, this->_version, listening,
+                             flag(args, "verbose"));
                 }));
             listening.wait();
             listening.close();
           }
         }
-        reactor::sleep(200_ms);
+
+        std::cout
+          << std::endl
+          << "To perform tests, run the following command from another node:"
+          << std::endl;
+        std::cout << "> infinit-doctor --networking";
+        if (protocol != infinit::model::doughnut::Protocol::all)
+          std::cout << " --protocol " << protocol;
+        if (base_port != 0)
+          std::cout << " --port " << get_port(args);
+        else
+        {
+          if (tcp_port)
+            std::cout << " --tcp_port " << tcp_port;
+          if (utp_port)
+            std::cout << " --utp_port " << utp_port;
+          if (xored_utp_port)
+            std::cout << " --xored_utp_port " << xored_utp_port;
+        }
+        std::cout << " --host <address_of_this_machine>" <<std::endl;
       }
 
       Servers(Servers&& servers)
@@ -532,7 +581,7 @@ namespace infinit
         {
           try
           {
-            upload(stream, packet_size, packets_count);
+            upload(stream, packet_size, packets_count, flag(args, "verbose"));
           }
           catch (reactor::network::Exception const&)
           {
@@ -545,7 +594,7 @@ namespace infinit
         {
           try
           {
-            download(stream, packet_size, packets_count);
+            download(stream, packet_size, packets_count, flag(args, "verbose"));
           }
           catch (reactor::network::Exception const&)
           {
