@@ -19,6 +19,39 @@
 
 namespace infinit
 {
+  class UnknownRPC
+    : public elle::Error
+  {
+  public:
+    UnknownRPC(std::string name)
+      : elle::Error(elle::sprintf("unknown RPC: %s", name))
+      , _name(std::move(name))
+    {}
+
+    UnknownRPC(elle::serialization::SerializerIn& s)
+      : elle::Error(s)
+      , _name()
+    {
+      this->_serialize(s);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s,
+              elle::Version const& version) override
+    {
+      this->elle::Error::serialize(s, version);
+      this->_serialize(s);
+    }
+
+    void
+    _serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("name", this->_name);
+    }
+
+    ELLE_ATTRIBUTE_R(std::string, name);
+  };
+
   /*-------.
   | Server |
   `-------*/
@@ -334,30 +367,37 @@ namespace infinit
 	input.set_context(this->_context);
 	std::string name;
 	input.serialize("procedure", name);
-	auto it = this->_rpcs.find(name);
-	if (it == this->_rpcs.end())
-	{
-	  ELLE_WARN("%s: unknown RPC: %s", *this, name);
-	  throw elle::Error(elle::sprintf("unknown RPC: %s", name));
-	}
-	ELLE_TRACE_SCOPE("%s: run procedure %s", *this, name);
-	elle::Buffer response;
-	elle::IOStream outs(response.ostreambuf());
-	{
-	  elle::serialization::binary::SerializerOut output(outs, versions, false);
-	  output.set_context(this->_context);
-	  try
-	  {
-	    it->second->handle(input, output);
-	  }
-	  catch (elle::Error const& e)
-	  {
-	    ELLE_WARN("%s: deserialization error: %s",
-		      *this, e);
-	    throw;
-	  }
-	}
-	outs.flush();
+        elle::Buffer response;
+        {
+          auto it = this->_rpcs.find(name);
+          elle::IOStream outs(response.ostreambuf());
+          elle::serialization::binary::SerializerOut output(
+            outs, versions, false);
+          if (it == this->_rpcs.end())
+          {
+            ELLE_WARN("%s: unknown RPC: %s", *this, name);
+            output.serialize("success", false);
+            output.serialize(
+              "exception", std::make_exception_ptr<UnknownRPC>(name));
+          }
+          else
+          {
+            ELLE_TRACE_SCOPE("%s: run procedure %s", *this, name);
+            {
+              output.set_context(this->_context);
+              try
+              {
+                it->second->handle(input, output);
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_WARN("%s: deserialization error: %s",
+                          *this, e);
+                throw;
+              }
+            }
+          }
+        }
 	if (had_key)
 	{
 	  static elle::Bench bench("bench.rpcserve.encipher", 10000_sec);

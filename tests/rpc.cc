@@ -14,7 +14,7 @@ ELLE_LOG_COMPONENT("RPC");
 
 struct Server
 {
-  Server(std::function<void (infinit::RPCServer&)> rpcs)
+  Server(std::function<void (infinit::RPCServer&)> rpcs = {})
     : server()
     , server_thread(
       new reactor::Thread("server", std::bind(&Server::serve, this)))
@@ -30,6 +30,7 @@ struct Server
     infinit::RPCServer s;
     if (this->rpcs)
       this->rpcs(s);
+    s.add("succ", std::function<int (int)>([] (int x) { return x + 1; }));
     s.serve(*socket);
   }
 
@@ -69,8 +70,21 @@ ELLE_TEST_SCHEDULED(move)
   }
 }
 
+ELLE_TEST_SCHEDULED(unknown)
+{
+  Server s;
+  auto stream = s.connect();
+  infinit::protocol::Serializer serializer(stream, infinit::version(), false);
+  infinit::protocol::ChanneledStream channels(serializer);
+  infinit::RPC<int (int)> unknown("unknown", channels, infinit::version());
+  BOOST_CHECK_THROW(unknown(0), infinit::UnknownRPC);
+  infinit::RPC<int (int)> succ("succ", channels, infinit::version());
+  BOOST_CHECK_EQUAL(succ(0), 1);
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(move));
+  suite.add(BOOST_TEST_CASE(unknown));
 }
