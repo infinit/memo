@@ -12,24 +12,49 @@
 
 ELLE_LOG_COMPONENT("RPC");
 
+struct Server
+{
+  Server(std::function<void (infinit::RPCServer&)> rpcs)
+    : server()
+    , server_thread(
+      new reactor::Thread("server", std::bind(&Server::serve, this)))
+    , rpcs(rpcs)
+  {
+    server.listen();
+  }
+
+  void
+  serve()
+  {
+    auto socket = server.accept();
+    infinit::RPCServer s;
+    if (this->rpcs)
+      this->rpcs(s);
+    s.serve(*socket);
+  }
+
+  reactor::network::TCPSocket
+  connect()
+  {
+    return reactor::network::TCPSocket("127.0.0.1", this->server.port());
+  }
+
+  reactor::network::TCPServer server;
+  reactor::Thread::unique_ptr server_thread;
+  std::function<void (infinit::RPCServer&)> rpcs;
+};
+
 ELLE_TEST_SCHEDULED(move)
 {
-  reactor::network::TCPServer server;
-  server.listen();
-
-  reactor::Thread::unique_ptr server_thread(new reactor::Thread(
-    "server",
-    [&]
+  Server s(
+    [] (infinit::RPCServer& s)
     {
-      auto socket = server.accept();
-      infinit::RPCServer s;
       s.add("coin",
             std::function<std::unique_ptr<int>(int, std::unique_ptr<int>)>(
               [] (int a, std::unique_ptr<int> b)
               { return elle::make_unique<int>(a + *b); }));
-      s.serve(*socket);
-    }));
-  reactor::network::TCPSocket stream("127.0.0.1", server.port());
+    });
+  auto stream = s.connect();
   infinit::protocol::Serializer serializer(stream, infinit::version(), false);
   infinit::protocol::ChanneledStream channels(serializer);
   infinit::RPC<std::unique_ptr<int> (int, std::unique_ptr<int>)>
