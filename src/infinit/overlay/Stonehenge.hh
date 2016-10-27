@@ -44,6 +44,15 @@ namespace infinit
     private:
       Overlay::WeakMember
       _make_member(NodeLocation const& p) const;
+
+    /*-----------.
+    | Monitoring |
+    `-----------*/
+    public:
+      std::vector<std::pair<std::string, std::string>>
+      peer_list() override;
+      elle::json::Object
+      information() override;
     };
 
     struct StonehengeConfiguration

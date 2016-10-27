@@ -97,6 +97,26 @@ namespace infinit
         peer, model::EndpointsRefetcher());
     }
 
+    std::vector<std::pair<std::string, std::string>>
+    Stonehenge::peer_list()
+    {
+      std::vector<std::pair<std::string, std::string>> res;
+      for (auto const& peer: this->_peers)
+        res.push_back({
+          elle::sprintf("%x", peer.id()),
+          elle::sprintf("%s", peer.endpoints())
+        });
+      return res;
+    }
+
+    elle::json::Object
+    Stonehenge::information()
+    {
+      elle::json::Object res;
+      res["type"] = "stonehenge";
+      return res;
+    }
+
     StonehengeConfiguration::StonehengeConfiguration()
       : overlay::Configuration()
     {}
