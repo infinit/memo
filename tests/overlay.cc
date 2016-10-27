@@ -339,9 +339,7 @@ ELLE_TEST_SCHEDULED(
     ::paxos = pax,
     ::storage = nullptr);
   discover(*client, *dht_a, anonymous);
-  //reactor::sleep(500_ms);
   discover(*dht_a, *dht_b, anonymous);
-  //reactor::sleep(2_sec); // I won't commit that line I swear, just a test
   std::vector<infinit::model::Address> addrs;
   for (int i=0; i<50; ++i)
   {
@@ -405,18 +403,18 @@ ELLE_TEST_SUITE()
                 key_cache_invalidation_anonymous), 0, valgrind(10));        \
     auto data_spread =                                           \
       std::bind(::data_spread, Name##_builder, false, false);      \
-    Name->add(BOOST_TEST_CASE(data_spread), 0, valgrind(10));    \
+    Name->add(BOOST_TEST_CASE(data_spread), 0, valgrind(30));    \
     auto data_spread_anonymous =                                 \
       std::bind(::data_spread, Name##_builder, true, false);            \
     Name->add(BOOST_TEST_CASE(                                              \
-                data_spread_anonymous), 0, valgrind(10));        \
+                data_spread_anonymous), 0, valgrind(30));        \
     auto data_spread2 =                                           \
       std::bind(::data_spread2, Name##_builder, false, false);      \
-    Name->add(BOOST_TEST_CASE(data_spread2), 0, valgrind(10));    \
+    Name->add(BOOST_TEST_CASE(data_spread2), 0, valgrind(30));    \
     auto data_spread2_anonymous =                                 \
       std::bind(::data_spread2, Name##_builder, true, false);            \
     Name->add(BOOST_TEST_CASE(                                              \
-                data_spread2_anonymous), 0, valgrind(10));        \
+                data_spread2_anonymous), 0, valgrind(30));        \
   }
   OVERLAY(kelips);
   OVERLAY(kouncil);
