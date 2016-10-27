@@ -129,10 +129,10 @@ namespace infinit
           ELLE_ATTRIBUTE(Local&, local);
           ELLE_ATTRIBUTE(std::shared_ptr<std::iostream>, stream);
           ELLE_ATTRIBUTE(protocol::Serializer, serializer);
-          ELLE_ATTRIBUTE(protocol::ChanneledStream, channels);
-          ELLE_ATTRIBUTE(RPCServer, rpcs);
+          ELLE_ATTRIBUTE_R(protocol::ChanneledStream, channels);
+          ELLE_ATTRIBUTE_R(RPCServer, rpcs);
         };
-        ELLE_ATTRIBUTE(std::list<std::shared_ptr<Connection>>, peers);
+        ELLE_ATTRIBUTE_R(std::list<std::shared_ptr<Connection>>, peers);
       protected:
         virtual
         void

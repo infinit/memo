@@ -315,6 +315,48 @@ ELLE_TEST_SCHEDULED(
     client->dht->fetch(a);
 }
 
+
+ELLE_TEST_SCHEDULED(
+  data_spread2, (Doughnut::OverlayBuilder, builder), (bool, anonymous), (bool, pax))
+{
+  infinit::storage::Memory::Blocks b1, b2;
+  std::unique_ptr<infinit::storage::Storage> s1(new infinit::storage::Memory(b1));
+  std::unique_ptr<infinit::storage::Storage> s2(new infinit::storage::Memory(b2));
+  auto keys = infinit::cryptography::rsa::keypair::generate(512);
+  auto id_a = infinit::model::Address::random();
+  auto dht_a = elle::make_unique<DHT>(
+    ::id = id_a, ::keys = keys, make_overlay = builder, paxos = pax,
+    dht::consensus::rebalance_auto_expand = false,
+    ::storage = std::move(s1));
+  auto dht_b = elle::make_unique<DHT>(
+    ::keys = keys, make_overlay = builder,
+    dht::consensus::rebalance_auto_expand = false,
+    ::paxos = pax,
+    ::storage = std::move(s2));
+
+  auto client = elle::make_unique<DHT>(
+    ::keys = keys, make_overlay = builder,
+    ::paxos = pax,
+    ::storage = nullptr);
+  discover(*client, *dht_a, anonymous);
+  //reactor::sleep(500_ms);
+  discover(*dht_a, *dht_b, anonymous);
+  //reactor::sleep(2_sec); // I won't commit that line I swear, just a test
+  std::vector<infinit::model::Address> addrs;
+  for (int i=0; i<50; ++i)
+  {
+    auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
+    addrs.push_back(block->address());
+    client->dht->store(std::move(block), STORE_INSERT, tcr());
+  }
+  ELLE_LOG("stores: %s %s", b1.size(), b2.size());
+  BOOST_CHECK_GE(b1.size(), 5);
+  BOOST_CHECK_GE(b2.size(), 5);
+  for (auto const& a: addrs)
+    client->dht->fetch(a);
+  ELLE_LOG("teardown");
+}
+
 ELLE_TEST_SUITE()
 {
   elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
@@ -368,6 +410,13 @@ ELLE_TEST_SUITE()
       std::bind(::data_spread, Name##_builder, true, false);            \
     Name->add(BOOST_TEST_CASE(                                              \
                 data_spread_anonymous), 0, valgrind(10));        \
+    auto data_spread2 =                                           \
+      std::bind(::data_spread2, Name##_builder, false, false);      \
+    Name->add(BOOST_TEST_CASE(data_spread2), 0, valgrind(10));    \
+    auto data_spread2_anonymous =                                 \
+      std::bind(::data_spread2, Name##_builder, true, false);            \
+    Name->add(BOOST_TEST_CASE(                                              \
+                data_spread2_anonymous), 0, valgrind(10));        \
   }
   OVERLAY(kelips);
   OVERLAY(kouncil);

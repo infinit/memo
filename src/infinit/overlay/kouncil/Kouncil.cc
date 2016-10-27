@@ -111,6 +111,22 @@ namespace infinit
         this->doughnut()->dock().on_connect().connect(
           [this] (model::doughnut::Remote& r)
           {
+            // back-channel used by nodes to notify their connected observers
+            // of new peers
+            r.rpc_server().add(
+                "kouncil_discover",
+                std::function<void(NodeLocations const&)>(
+                  [this](NodeLocations const& nls)
+                  {
+                    ELLE_DEBUG("%s: receive discover of %s", this, nls);
+                    if (this->local())
+                      return; // only observers need that back-channel
+                    // Discover must be called asynchronously or deadlock
+                    for (auto const& nl: nls)
+                      if (this->peers().find(nl.id()) == this->peers().end())
+                        new reactor::Thread("discover", [this, nl] { this->_discover({nl});}, true);
+                  }));
+
             r.rpc_server().add(
               "kouncil_add_entries",
               std::function<void (std::unordered_set<Address> const&)>(
@@ -149,7 +165,7 @@ namespace infinit
           if (auto r = dynamic_cast<model::doughnut::Remote const*>(p.second.get()))
             nls.emplace_back(r->id(), r->endpoints());
           else if (auto l = dynamic_cast<model::doughnut::Local const*>(p.second.get()))
-            nls.emplace_back(p.second->id(), l->server_endpoints() );
+            nls.emplace_back(p.second->id(), elle::unconst(l)->server_endpoints() );
         }
         for (auto const& p: extras)
           nls.emplace_back(p.first, p.second);
@@ -203,7 +219,18 @@ namespace infinit
         // FIXME: parallelize
         for (auto const& loc: peers)
         {
-          // FIXME: don't lookup if already connected
+          auto it = this->_peers.find(loc.id());
+          // skip if no new information
+          if (it != this->_peers.end())
+          {
+            if (loc.endpoints().empty())
+              continue;
+            auto r = dynamic_cast<model::doughnut::Remote*>(it->second.get());
+            if (!r)
+              continue; // discover on an already Local o_O
+            if (loc.endpoints().front().port() == r->endpoints().front().port())
+              continue;
+          }
           auto peer = this->doughnut()->dock().make_peer(
             loc, model::EndpointsRefetcher()).lock();
           ELLE_ASSERT(peer);
@@ -214,6 +241,11 @@ namespace infinit
       void
       Kouncil::_discover(Overlay::Member peer)
       {
+        if (peer->id() == this->doughnut()->id())
+        {
+          ELLE_DEBUG("%s: _discover on known peer %s", this, peer->id());
+          return;
+        }
         ELLE_DEBUG("%s: discovered %s", this, peer->id());
         // FIXME: handle local !
         if (auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(peer))
@@ -229,6 +261,35 @@ namespace infinit
         ELLE_ASSERT_NEQ(peer->id(), model::Address::null);
         this->_peers.emplace(peer->id(), peer);
         this->_pending.erase(peer->id());
+        ELLE_DEBUG("%s: notifying connections", this);
+        if (this->local())
+        {
+          // we need to notify observers who are connected to us, as they
+          // are not part of the _peer list
+          if (auto r = dynamic_cast<model::doughnut::Remote const*>(peer.get()))
+          {
+            auto cpeers = this->local()->peers();
+            for (auto cc: cpeers)
+            {
+              try
+              {
+                auto& c = elle::unconst(cc);
+                RPC<void(NodeLocations const&)>rpc(
+                  "kouncil_discover",
+                  elle::unconst(c->channels()),
+                  this->doughnut()->version(),
+                  c->rpcs()._key);
+                NodeLocation nl(peer->id(), r->endpoints());
+                rpc(NodeLocations{nl});
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_TRACE("Exception invoking discover: %s", e);
+              }
+            }
+          }
+        }
+        ELLE_DEBUG("%s: exiting discover", this);
       }
 
       template<typename E>
@@ -260,6 +321,8 @@ namespace infinit
             [this, address, n]
             (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
             {
+              ELLE_DEBUG("%s: selecting %s nodes from %s peers",
+                         this, n, this->_peers.size());
               int count = 0;
               if (static_cast<unsigned int>(n) >= this->_peers.size())
                 for (auto it = this->_peers.begin();
@@ -352,9 +415,9 @@ namespace infinit
                         }
                       }
                     }
-                    catch (reactor::network::Exception const&)
+                    catch (reactor::network::Exception const& e)
                     {
-                      ELLE_DEBUG("skipping peer with network issue: %s", peer);
+                      ELLE_DEBUG("skipping peer with network issue: %s (%s)", peer, e);
                       continue;
                     }
                     if (count > 0)
