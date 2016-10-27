@@ -1376,8 +1376,30 @@ permissions(boost::filesystem::path const& path)
   if (!boost::filesystem::exists(path))
     throw elle::Error(elle::sprintf("%s doesn't exist", path));
   auto s = boost::filesystem::status(path);
-  bool read = s.permissions() & boost::filesystem::perms::owner_read;
-  bool write = s.permissions() & boost::filesystem::perms::owner_write;
+  bool read = (s.permissions() & boost::filesystem::perms::owner_read)
+    && (s.permissions() & boost::filesystem::perms::others_read);
+  bool write = (s.permissions() & boost::filesystem::perms::owner_write)
+    && (s.permissions() & boost::filesystem::perms::others_write);
+  if (!read)
+  {
+    boost::system::error_code code;
+    boost::filesystem::recursive_directory_iterator it(path, code);
+    if (!code)
+      read = true;
+  }
+  if (!write)
+  {
+    auto p = path / ".tmp";
+    boost::system::error_code code;
+    elle::SafeFinally remove([&] { boost::filesystem::remove(p, code); });
+    boost::filesystem::ofstream f;
+    {
+      f.open(p, std::ios_base::out);
+      f << "test";
+      f.flush();
+    }
+    write = f.good();
+  }
   return std::make_pair(read, write);
 }
 
@@ -1482,10 +1504,9 @@ _system_sanity(boost::program_options::variables_map const& args,
             result.permissions, path.string(), false, false, false);
         else
         {
-          auto s = boost::filesystem::status(path);
-          bool read = s.permissions() & boost::filesystem::perms::owner_read;
-          bool write = s.permissions() & boost::filesystem::perms::owner_write;
-          reporting::store(result.permissions, path.string(), true, read, write);
+          auto perms = permissions(path);
+          reporting::store(result.permissions, path.string(), true, perms.first,
+                           perms.second);
         }
       };
     test_permissions(elle::system::home_directory());
