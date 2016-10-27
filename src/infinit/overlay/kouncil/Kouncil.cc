@@ -45,7 +45,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: construct", this);
         if (local)
         {
-          this->_peers.emplace(this->id(), local);
+          this->_peers.emplace(local);
           for (auto const& key: local->storage()->list())
             this->_address_book.emplace(this->id(), key);
           ELLE_DEBUG("loaded %s entries from storage",
@@ -119,8 +119,8 @@ namespace infinit
         if (k == "stats")
         {
           elle::json::Array jpeers;
-          for (auto const& p: peers())
-            jpeers.push_back(elle::sprintf("%s", p.first));
+          for (auto const& p: peers().get<1>())
+            jpeers.push_back(elle::sprintf("%s", p->id()));
           res["peers"] = jpeers;
           res["id"] = elle::sprintf("%s", this->doughnut()->id());
         }
@@ -182,7 +182,7 @@ namespace infinit
           ELLE_DEBUG("added %s entries from %f", entries.size(), peer);
         }
         ELLE_ASSERT_NEQ(peer->id(), model::Address::null);
-        this->_peers.emplace(peer->id(), peer);
+        this->_peers.emplace(peer);
       }
 
       template<typename E>
@@ -215,33 +215,17 @@ namespace infinit
             [this, address, n]
             (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
             {
-              int count = 0;
               if (static_cast<unsigned int>(n) >= this->_peers.size())
-                for (auto it = this->_peers.begin();
-                     it != this->_peers.end() && count < n;
-                     ++it, ++count)
-                  yield(it->second);
+                for (auto p: this->_peers)
+                  yield(p);
               else
               {
                 std::vector<int> indexes = pick_n(
                   this->_gen,
                   static_cast<int>(this->_peers.size()),
                   n);
-                std::sort(indexes.begin(), indexes.end());
-                // FIXME: improve this linear complexity
-                unsigned int ii = 0;
-                int ip = 0;
-                for (auto& p: this->_peers)
-                {
-                  if (indexes[ii] == ip)
-                  {
-                    yield(p.second);
-                    ++ii;
-                    if (ii >= indexes.size())
-                      break;
-                  }
-                  ++ip;
-                }
+                for (auto r: indexes)
+                  yield(this->peers().get<1>()[r]);
               }
             });
         else
@@ -253,7 +237,9 @@ namespace infinit
               int count = 0;
               for (auto it = range.first; it != range.second; ++it)
               {
-                yield(this->_peers.at(it->node()));
+                auto p = this->peers().find(it->node());
+                ELLE_ASSERT(p != this->peers().end());
+                yield(*p);
                 if (++count >= n)
                   break;
               }
@@ -264,7 +250,8 @@ namespace infinit
                 for (auto peer: this->peers())
                 {
                   // FIXME: handle local !
-                  if (auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(peer.second))
+                  if (auto r = std::dynamic_pointer_cast<
+                      model::doughnut::Remote>(peer))
                   {
                     auto lookup =
                       r->make_rpc<std::unordered_set<Address> (Address)>(
@@ -306,7 +293,7 @@ namespace infinit
       {
         auto it = this->_peers.find(address);
         if (it != this->_peers.end())
-          return it->second;
+          return *it;
         else
           return Overlay::WeakMember();
       }
