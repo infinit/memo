@@ -190,12 +190,13 @@ namespace infinit
       pick_n(E& gen, int size, int count)
       {
         std::vector<int> res;
-        std::uniform_int_distribution<> random(0, size-1);
         while (res.size() < static_cast<unsigned int>(count))
         {
+          std::uniform_int_distribution<> random(0, size - 1 - res.size());
           int v = random(gen);
-          if (std::find(res.begin(), res.end(), v) != res.end())
-            continue;
+          for (auto r: res)
+            if (v >= r)
+              ++v;
           res.push_back(v);
         }
         return res;
@@ -220,15 +221,16 @@ namespace infinit
                      it != this->_peers.end() && count < n;
                      ++it, ++count)
                   yield(it->second);
-              else if (this->_peers.size() >= static_cast<unsigned int>(n) * 2)
-              { // picking a 'small' subset: retry on collision
+              else
+              {
                 std::vector<int> indexes = pick_n(
                   this->_gen,
                   static_cast<int>(this->_peers.size()),
                   n);
                 std::sort(indexes.begin(), indexes.end());
-                unsigned int ii=0;
-                int ip=0;
+                // FIXME: improve this linear complexity
+                unsigned int ii = 0;
+                int ip = 0;
                 for (auto& p: this->_peers)
                 {
                   if (indexes[ii] == ip)
@@ -238,26 +240,6 @@ namespace infinit
                     if (ii >= indexes.size())
                       break;
                   }
-                  ++ip;
-                }
-              }
-              else
-              { // picking a large subset: take all and remove
-                std::vector<int> indexes = pick_n(
-                  elle::unconst(this)->_gen,
-                  this->_peers.size(),
-                  this->_peers.size()-n);
-                std::sort(indexes.begin(), indexes.end());
-                unsigned int ii=0;
-                int ip=0;
-                for (auto& p: this->_peers)
-                {
-                  if (ii < indexes.size() && indexes[ii] == ip)
-                  { // skip it
-                    ++ii;
-                    continue;
-                  }
-                  yield(p.second);
                   ++ip;
                 }
               }
