@@ -223,7 +223,7 @@ namespace infinit
               else if (this->_peers.size() >= static_cast<unsigned int>(n) * 2)
               { // picking a 'small' subset: retry on collision
                 std::vector<int> indexes = pick_n(
-                  elle::unconst(this)->_gen,
+                  this->_gen,
                   static_cast<int>(this->_peers.size()),
                   n);
                 std::sort(indexes.begin(), indexes.end());

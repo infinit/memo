@@ -87,7 +87,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(AddressBook, address_book);
         /// All known peers.
         ELLE_ATTRIBUTE_R(Peers, peers);
-        ELLE_ATTRIBUTE(std::default_random_engine, gen);
+        ELLE_ATTRIBUTE(std::default_random_engine, gen, mutable);
       private:
         void
         _broadcast();
