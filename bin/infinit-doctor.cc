@@ -38,6 +38,8 @@ static bool no_color = false;
 
 infinit::Infinit ifnt;
 
+static std::string banished_log_level("reactor.network.UTPSocket:NONE");
+
 namespace reporting
 {
   static
@@ -1137,8 +1139,9 @@ infinit_related_environment()
   // Remove non INFINIT_ or ELLE_ prefixed entries.
   for (auto it = environ.begin(); it != environ.end();)
   {
-    if (it->first.find("INFINIT_") != 0 &&
-        it->first.find("ELLE_") != 0)
+    if ((it->first.find("INFINIT_") != 0 &&
+         it->first.find("ELLE_") != 0) ||
+        it->second == banished_log_level)
       environ.erase(it++);
     else
       ++it;
@@ -1972,6 +1975,13 @@ main(int argc, char** argv)
       }
     }
   };
+  // Disable reactor.network.UTPSocket annoying log.
+  auto env = banished_log_level;
+  if (elle::os::inenv("ELLE_LOG_LEVEL"))
+    env += ",";
+  elle::os::setenv(
+    "ELLE_LOG_LEVEL",
+    elle::sprintf("%s%s", env, elle::os::getenv("ELLE_LOG_LEVEL", "")), true);
   return infinit::main("Infinit diagnostic utility", modes, argc, argv,
                        std::string("path"), boost::none);
 }
