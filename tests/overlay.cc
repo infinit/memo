@@ -18,6 +18,17 @@ using namespace infinit::model::blocks;
 using namespace infinit::model::doughnut;
 using namespace infinit::overlay;
 
+class TestConflictResolver
+  : public DummyConflictResolver
+  {
+  };
+
+inline std::unique_ptr<ConflictResolver>
+tcr()
+{
+  return elle::make_unique<TestConflictResolver>();
+}
+
 class UTPInstrument
 {
 public:
@@ -93,12 +104,12 @@ ELLE_TEST_SCHEDULED(
     {
       auto dht = make_dht_a();
       auto b = dht.dht->make_block<MutableBlock>(std::string("disk"));
-      dht.dht->store(*b, STORE_INSERT);
+      dht.dht->store(*b, STORE_INSERT, tcr());
       return b;
     }();
   auto dht_a = make_dht_a();
   auto before = dht_a.dht->make_block<MutableBlock>(std::string("before"));
-  dht_a.dht->store(*before, STORE_INSERT);
+  dht_a.dht->store(*before, STORE_INSERT, tcr());
   DHT dht_b(
     ::keys = keys, make_overlay = builder, ::storage = nullptr);
   if (anonymous)
@@ -107,7 +118,7 @@ ELLE_TEST_SCHEDULED(
     dht_b.dht->overlay()->discover(
       NodeLocation(dht_a.dht->id(), dht_a.dht->local()->server_endpoints()));
   auto after = dht_a.dht->make_block<MutableBlock>(std::string("after"));
-  dht_a.dht->store(*after, STORE_INSERT);
+  dht_a.dht->store(*after, STORE_INSERT, tcr());
   ELLE_LOG("check non-existent block")
     BOOST_CHECK_THROW(
       dht_b.dht->overlay()->lookup(Address::random(), OP_FETCH),
@@ -146,7 +157,7 @@ ELLE_TEST_SCHEDULED(
       {
         auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
         ELLE_LOG("store block")
-          dht_a.dht->store(*block, STORE_INSERT);
+          dht_a.dht->store(*block, STORE_INSERT, tcr());
         ELLE_LOG("lookup block")
           BOOST_CHECK_EQUAL(
             dht_b.dht->overlay()->lookup(block->address(), OP_FETCH).lock()->id(),
@@ -158,7 +169,7 @@ ELLE_TEST_SCHEDULED(
       {
         auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
         ELLE_LOG("store block")
-          dht_a.dht->store(*block, STORE_INSERT);
+          dht_a.dht->store(*block, STORE_INSERT, tcr());
     }
   };
 }
@@ -174,7 +185,7 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("store first block")
   {
     auto block = dht_a->dht->make_block<MutableBlock>(std::string("block"));
-    dht_a->dht->store(*block, STORE_INSERT);
+    dht_a->dht->store(*block, STORE_INSERT, tcr());
     old_address = block->address();
   }
   DHT dht_b(
@@ -194,7 +205,7 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("store second block")
   {
     auto block = dht_a->dht->make_block<MutableBlock>(std::string("nblock"));
-    dht_a->dht->store(*block, STORE_INSERT);
+    dht_a->dht->store(*block, STORE_INSERT, tcr());
     new_address = block->address();
   }
   ELLE_LOG("lookup second block")
@@ -232,10 +243,10 @@ ELLE_TEST_SCHEDULED(
     true, true);
   acb.set_permissions(infinit::cryptography::rsa::keypair::generate(512).K(),
     true, true);
-  dht_a->dht->store(*block, STORE_INSERT);
+  dht_a->dht->store(*block, STORE_INSERT, tcr());
   auto b2 = dht_b.dht->fetch(block->address());
   dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
-  dht_b.dht->store(*b2, STORE_UPDATE);
+  dht_b.dht->store(*b2, STORE_UPDATE, tcr());
   // brutal restart of a
   ELLE_LOG("disconnect A");
   dht_a->dht->local()->utp_server()->socket()->close();
@@ -260,7 +271,7 @@ ELLE_TEST_SCHEDULED(
   dynamic_cast<infinit::model::doughnut::Remote&>(*peer).connect();
   ELLE_LOG("re-store block");
   dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
-  BOOST_CHECK_NO_THROW(dht_b.dht->store(*b2, STORE_UPDATE));
+  BOOST_CHECK_NO_THROW(dht_b.dht->store(*b2, STORE_UPDATE, tcr()));
   ELLE_LOG("test end");
 }
 
@@ -295,7 +306,7 @@ ELLE_TEST_SCHEDULED(
   {
     auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
     addrs.push_back(block->address());
-    client->dht->store(std::move(block), STORE_INSERT);
+    client->dht->store(std::move(block), STORE_INSERT, tcr());
   }
   ELLE_LOG("stores: %s %s", b1.size(), b2.size());
   BOOST_CHECK_GE(b1.size(), 5);
