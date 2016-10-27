@@ -7,98 +7,99 @@
   <section class="doc">
     <h1>Overview</h1>
 
-    <p>The Infinit Storage Platform allows for the creation of scalable, resilient and secure storage infrastructure for modern and container environments.</p>
-
-    <img src="${url('images/schema-global2.png')}" alt="Schema of Infinit"><br>
-
-    <p>Infinit benefits from several advantages over the centralized and distributed systems commonly used.</p>
+    <p class="note">The Infinit Storage Platform allows for the creation of scalable, resilient and secure storage infrastructure for modern and container environments. This software-defined storage platform beneficing from several advantages over the centralized and distributed systems commonly used.</p>
 
     <div class="features">
-        <h3><img src="${url('images/icons/control.png')}"> Control</h3>
+      <h2 id="resilient">A resilient and self-healing architecture.</h2>
+
+      <div class="resilient">
+        <div class="decentralized">
+          <img src="${url('images/schema-decentralized-4-devices.png')}" alt="Infinit Decentralized Platform">
+          <h3 id="decentralized">Decentralized</h3>
+          <p>Unlike most distributed systems with a master/slave model, Infinit benefits from a truly peer-to-peer architecture protecting from single points of failure or bottlenecks.</p>
+        </div>
+
+        <div class="reliable">
+          <img src="${url('images/schema-replication.png')}" alt="Infinit Replication Schema">
+          <h3 id="reliable">Reliable and fault tolerant</h3>
+          <p>Every block of every file is dynamically replicated several times (configurable by the administrator) in order to ensure durability and availability of the data.</p>
+
+          <p>In case of failures, Infinit will automatically adapt the number of replicas in order to guarantee the reliability of the data.</p>
+        </div>
+      </div>
+
+
+      <div class="scalable">
+        <h2>Scalable to peta bytes.</h2>
+        <p>Manage your needs in terms of storage capacity by increasing/decreasing (<strong>scale up/down</strong>) contributions from existing providers and/or adding/removing (<strong>scale out/in</strong>) storage resources without interrupting the service.</p>
+
+        <img src="${url('images/schema-decentralized-s3.png')}" alt="Infinit Sclable Schema">
 
         <div>
-        <h2 id="secure">Secure</h2>
+        <h3 id="adaptability">Hyperconvergent vs hyperscalable</h3>
+        <p>Scale your storage along with your application cluster to create a hyperconvergent architecture or keep a hyperscalable infrastrcture by dissociating your storage ressources from the rest of your cluster.</p>
+        </div>
+      </div>
+
+      <div class="programmatic">
+        <h2>Programmatic.</h2>
+
+        <div>
+        <img src="${url('images/icons/redundancy-small.png')}">
+        <h3 id="secure">Redundancy</h3>
+        <p>Define the replication factor for every block of every file system object (file, directory etc.) to be stored multiple times.</p>
+        </div>
+
+        <div>
+        <img src="${url('images/icons/lock-small.png')}">
+        <h3 id="secure">Encryption</h3>
         <p>All the files stored are cut into chunk and every chunk is encrypted (RSA/AES-256) with a unique key.</p>
         </div>
 
         <div>
-        <h2 id="control">Control</h2>
-        <p>Control the localisation of your data by selecting the storage resources/providers involved in the infrastructure.</p>
+        <img src="${url('images/icons/compression.png')}">
+        <h3 id="secure">Compression</h3>
+        <p>Allow compression to be activated to reduce storage consumption depending on the nature of the data to be stored.</p>
         </div>
 
         <div>
-        <h2 id="reliable">Reliable</h2>
-        <p>Every block of every file is dynamically replicated several times (configurable by the administrator) in order to ensure durability and availability of the data.</p>
+        <img src="${url('images/icons/fault_tolerance-small.png')}">
+        <h3 id="secure">Data Placement</h3>
+        <p>Control the placement of the redundant pieces of data through data placement policies: rack-aware, region-aware etc.</p>
         </div>
 
         <div>
-        <h2 id="fault-tolerant">Fault Tolerant</h2>
-        <p>Detects failures and automatically adapts the number of replicas in order to guarantee the reliability of the data.</p>
-        </div>
-
-
-        <h3><img src="${url('images/icons/scalable.png')}"> Scalability</h3>
-
-        <div>
-        <h2 id="flexible">Flexible</h2>
-        <p>Manage your needs in terms of storage capacity by increasing/decreasing (scale up/down) contributions from existing providers and/or adding/removing (scale out/in) storage resources without interrupting the service.</p>
+        <img src="${url('images/icons/deduplication.png')}">
+        <h3 id="secure">Deduplication</h3>
+        <p>Provide a policy to activate deduplication in order to reduce storage consumption when storing identical pieces of data.</p>
         </div>
 
         <div>
-        <h2 id="scalable">Scalable</h2>
-        <p>With a peer-to-peer foundation, Infinit does not suffer single points of failure or bottlenecks.</p>
-        </div>
-
-        <div class="clear">
-        <h2 id="high-performance">High Performance</h2>
-        <p>Benefit from a high-throughput UDP-based network protocol for faster data retrieval.</p>
-        </div>
-
-        <div>
-        <h2 id="adaptability">Adaptability</h2>
-        <p>In the event of a failure, the system heals itself by automatically adjusting the number of replicas.</p>
-        </div>
-
-
-        <h3><img src="${url('images/icons/keyboard.png')}"> Administration</h3>
-
-        <div>
-        <h2 id="migration">Migration</h2>
-        <p>Easily migrate your data from one provider to another whenever you need without any service interruption.</p>
-        </div>
-
-        <div>
-        <h2 id="access-control">Access Control</h2>
-        <p>Decide who can read/edit files and folders through fine-grained access control capabilities.</p>
-        </div>
-
-        <div>
-        <h2 id="affordable">Affordable</h2>
-        <p>No need to acquire specific hardware/appliance or setup/maintain a complicated server-side installation.</p>
-        </div>
-
-        <div>
-        <h2 id="versioning">Versioning</h2>
+        <img src="${url('images/icons/versioning.png')}">
+        <h3 id="versioning">Versioning</h3>
         <p>Browse through the different versions of a file and rollback if necessary.</p>
         </div>
+      </div>
 
+      <div class="multi">
+        <h2>Adapt to your needs.</h2>
 
-        <h3><img src="${url('images/icons/infinit-cloud-apps.png')}"> Interface</h3>
-
-        <div>
-        <h2 id="natural">Natural</h2>
-        <p>Access your files on any device, from anywhere at any time through a native file system interface.</p>
+        <div class="fs">
+          <img src="${url('images/schema-file-system.png')}">
+          <h3 id="versioning">File System</h3>
+          <p>Builds a low-level virtual disk interface on top of the DHT in order to provide a hierarchical organization of files, access-control, versioning for storing your entreprise documents, logs, and more.</p>
         </div>
 
-        <div>
-        <h2 id="interoperability">Interoperability</h2>
-        <p>Runs on your dearest operating system: macOS, Windows, Linux, iOS and Android</p>
+        <div class="object">
+          <h3 id="versioning">Object Storage</h3>
+          <p>Use an S3, GCS or OpenStack compatible object store to store your Wordpress media files.</p>
         </div>
 
-        <div>
-        <h2 id="on-demand">On Demand</h2>
-        <p>Access/stream the files on-demand without the need to store the files locally or download them before.</p>
+        <div class="block">
+          <h3 id="versioning">Block Device</h3>
+          <p>Deploy block device backends for your MongoDB database.</p>
         </div>
+      </div>
     </div>
 
     <div class="cta">

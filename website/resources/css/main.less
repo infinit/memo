@@ -1351,28 +1351,65 @@ body.faq {
 body.doc_overview {
 
   section.doc {
-    img { margin: 30px 0; }
-    .features {
-      &:after { display: table; content: ''; clear: both; }
-      div {
-        float: left; width: 40%; margin: 0 5%; min-height: 120px;
-
-        h2 { font-size: 15px; text-transform: uppercase; margin: 25px 0 5px 0;}
-        p { font-size: 14px; color: #959595; line-height: 19px; margin-top: 0;}
-        &.clear { clear: both;}
-      }
-    }
-
-    h3 {
+    h2 {
       font-family: @helvetica; text-align: center; font-weight: 300;
       font-size: 28px; clear: both; padding-top: 80px; padding-bottom: 15px;
       letter-spacing: -0.2px;
-     }
-    h3:first-child { padding-top: 0; }
-    h3 img {
+    }
+    h2:first-child { padding-top: 0; }
+    h2 img {
       margin: 0; margin-right: 7px;
       max-height: 38px; vertical-align: bottom; margin-top: 0px; width: auto;
     }
+
+    .features {
+      &:after { display: table; content: ''; clear: both; }
+      div h3 { display: inline-block; margin-top: 0; }
+
+      div.resilient {
+        div.decentralized {
+          img { float: left; margin-right: 25px; }
+          h3 { margin-bottom: 10px; margin-top: 15px; }
+        }
+
+        div.reliable {
+          clear: both; padding-top: 35px;
+          img { float: right; margin-left: 25px; }
+        }
+      }
+
+      div.scalable {
+        padding-top: 30px; text-align: center;
+        h2 { margin-bottom: 15px; }
+        p { max-width: 85%; margin: auto; }
+        img { margin: 20px auto 40px auto; }
+        div { text-align: left;}
+        div p { max-width: 100%; }
+      }
+
+      div.programmatic {
+        div {
+          float: left; width: 45%; margin: 0 5%; min-height: 120px;
+          img { max-height: 20px; margin-right: 4px; }
+          &:nth-child(2n) { clear: both; margin-left: 0;}
+          &:nth-child(2n+1) { margin-right: 0; }
+          h3 {
+            font-size: 16px; padding: 25px 0 0 0; vertical-align: super;
+          }
+          p { color: #959595; line-height: 19px; margin-top: 0;}
+        }
+      }
+
+      div.multi {
+        padding-top: 30px; clear: both;
+        div { margin: 25px 0 35px 0;}
+        div.fs {
+          img { float: left; margin-right: 30px;}
+          h3 { display: inline-block; margin-bottom: 0; margin-top: 7px;}
+        }
+      }
+    }
+
     .button { clear:both; margin-top: 30px; }
     .cta { text-align: center; }
   }
