@@ -189,6 +189,7 @@ NAMED_ARGUMENT(user_name);
 NAMED_ARGUMENT(yielding_overlay);
 NAMED_ARGUMENT(protocol);
 NAMED_ARGUMENT(port);
+NAMED_ARGUMENT(monitoring_socket_path_a);
 
 std::unique_ptr<dht::consensus::Consensus>
 add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
