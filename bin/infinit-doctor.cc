@@ -1170,6 +1170,17 @@ get_upnp_udt_port(boost::program_options::variables_map const& args)
 }
 
 static
+std::string
+get_connectivity_server_address(
+  boost::program_options::variables_map const& args)
+{
+  auto address = optional<std::string>(args, "server");
+  if (address)
+    return *address;
+  return "192.241.139.66";
+}
+
+static
 void
 _connectivity(boost::program_options::variables_map const& args,
               reporting::ConnectivityResults& results)
@@ -1210,7 +1221,7 @@ _connectivity(boost::program_options::variables_map const& args,
     results.interfaces = {public_ips};
   }
   // XXX: This should be nat.infinit.sh or something.
-  std::string host = "192.241.139.66";
+  std::string host = get_connectivity_server_address(args);
   uint16_t port = 5456;
   auto run = [&] (std::string const& name,
                   std::function<reactor::connectivity::Result (
@@ -1874,6 +1885,9 @@ main(int argc, char** argv)
   Mode::OptionDescription upnp_udt_port =
     { "upnp_udt_port", value<uint16_t>(),
       "port to try to get an udt upnp connection on" };
+  Mode::OptionDescription connectivity_server =
+    { "server", value<std::string>(),
+      "connectivity server address (default = 192.241.139.66)"};
   Mode::OptionDescription verbose =
     { "verbose,v", bool_switch(), "output everything" };
   Mode::OptionDescription do_not_use_color =
@@ -1924,18 +1938,6 @@ main(int argc, char** argv)
       }
     },
     {
-      "connectivity",
-      "Perform connectivity checks",
-      &connectivity,
-      "",
-      {
-        do_not_use_color,
-        upnp_tcp_port,
-        upnp_udt_port,
-        verbose,
-      }
-    },
-    {
       "system",
       "Perform sanity checks on your system",
       &system_sanity,
@@ -1956,8 +1958,21 @@ main(int argc, char** argv)
       }
     },
     {
+      "connectivity",
+      "Perform connectivity checks",
+      &connectivity,
+      "",
+      {
+        do_not_use_color,
+        upnp_tcp_port,
+        upnp_udt_port,
+        connectivity_server,
+        verbose,
+      }
+    },
+    {
       "networking",
-      "Perform networking speed tests per protocol",
+      "Perform networking speed tests between nodes",
       &networking,
       "",
       {
