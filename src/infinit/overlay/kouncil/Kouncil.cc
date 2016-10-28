@@ -246,6 +246,16 @@ namespace infinit
           ELLE_DEBUG("%s: _discover on known peer %s", this, peer->id());
           return;
         }
+        // Don't process twice the same id at the same time
+        if (this->_discovering.find(peer->id()) != this->_discovering.end())
+        {
+          ELLE_DEBUG("%s: already processing %s", this, peer->id());
+          return;
+        }
+        this->_discovering.insert(peer->id());
+        elle::SafeFinally remove_from_discovering([this, id=peer->id()] {
+            this->_discovering.erase(id);
+        });
         ELLE_DEBUG("%s: discovered %s", this, peer->id());
         // FIXME: handle local !
         if (auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(peer))
