@@ -315,6 +315,71 @@ ELLE_TEST_SCHEDULED(
     client->dht->fetch(a);
 }
 
+ELLE_TEST_SCHEDULED(
+  chain_connect, (Doughnut::OverlayBuilder, builder), (bool, anonymous), (bool, pax))
+{
+  infinit::storage::Memory::Blocks b1, b2, b3;
+  std::unique_ptr<infinit::storage::Storage> s1(new infinit::storage::Memory(b1));
+  std::unique_ptr<infinit::storage::Storage> s2(new infinit::storage::Memory(b2));
+  std::unique_ptr<infinit::storage::Storage> s3(new infinit::storage::Memory(b3));
+  auto keys = infinit::cryptography::rsa::keypair::generate(512);
+  auto id_a = infinit::model::Address::random();
+  auto dht_a = elle::make_unique<DHT>(
+    ::id = id_a, ::keys = keys, make_overlay = builder, paxos = pax,
+    dht::consensus::rebalance_auto_expand = false,
+    ::storage = std::move(s1));
+  auto dht_b = elle::make_unique<DHT>(
+    ::keys = keys, make_overlay = builder,
+    dht::consensus::rebalance_auto_expand = false,
+    ::paxos = pax,
+    ::storage = std::move(s2));
+  auto dht_c = elle::make_unique<DHT>(
+    ::keys = keys, make_overlay = builder,
+    dht::consensus::rebalance_auto_expand = false,
+    ::paxos = pax,
+    ::storage = std::move(s3));
+  discover(*dht_b, *dht_a, anonymous);
+  discover(*dht_c, *dht_b, anonymous);
+  unsigned int pa=0, pb=0, pc=0;
+  for (auto tgt: std::vector<DHT*>{dht_a.get(), dht_b.get(), dht_c.get()})
+  {
+    auto client = elle::make_unique<DHT>(
+      ::keys = keys, make_overlay = builder,
+      ::paxos = pax,
+      ::storage = nullptr);
+    discover(*client, *tgt, anonymous);
+    // Give it some time to connect
+    for (int i=0; i<10; ++i)
+      reactor::yield();
+    std::vector<infinit::model::Address> addrs;
+    try
+    {
+      for (int i=0; i<50; ++i)
+      {
+        auto block = client->dht->make_block<ACLBlock>(std::string("block"));
+        addrs.push_back(block->address());
+        client->dht->store(std::move(block), STORE_INSERT, tcr());
+      }
+    }
+    catch (elle::Error const& e)
+    {
+      ELLE_ERR("EXception storing blocks: %s", e);
+      throw;
+    }
+    ELLE_LOG("stores: %s %s %s", b1.size(), b2.size(), b3.size());
+    BOOST_CHECK_GE(b1.size()-pa, 5);
+    BOOST_CHECK_GE(b2.size()-pb, 5);
+    BOOST_CHECK_GE(b3.size()-pc, 5);
+    pa = b1.size();
+    pb = b2.size();
+    pc = b3.size();
+    for (auto const& a: addrs)
+      client->dht->fetch(a);
+    ELLE_LOG("teardown client");
+  }
+  ELLE_LOG("teardown");
+}
+
 
 ELLE_TEST_SCHEDULED(
   data_spread2, (Doughnut::OverlayBuilder, builder), (bool, anonymous), (bool, pax))
@@ -374,48 +439,29 @@ ELLE_TEST_SUITE()
     {
       return elle::make_unique<kouncil::Kouncil>(&dht, local);
     };
-#define OVERLAY(Name)                                                   \
-  auto Name = BOOST_TEST_SUITE(#Name);                                  \
-  master.add(Name);                                                     \
-  {                                                                     \
-    auto basics = std::bind(::basics, Name##_builder, false);           \
-    Name->add(BOOST_TEST_CASE(basics), 0, valgrind(5));                 \
-    auto basics_anonymous = std::bind(::basics, Name##_builder, true);  \
-    Name->add(BOOST_TEST_CASE(basics_anonymous), 0, valgrind(5));       \
-    auto dead_peer = std::bind(::dead_peer, Name##_builder, false);     \
-    Name->add(BOOST_TEST_CASE(dead_peer), 0, valgrind(5));              \
-    auto dead_peer_anonymous = std::bind(::dead_peer,                   \
-                                         Name##_builder, true);         \
-    Name->add(BOOST_TEST_CASE(dead_peer_anonymous), 0, valgrind(5));    \
-    auto discover_endpoints =                                           \
-      std::bind(::discover_endpoints, Name##_builder, false);           \
-    Name->add(BOOST_TEST_CASE(discover_endpoints), 0, valgrind(10));     \
-    auto discover_endpoints_anonymous =                                 \
-      std::bind(::discover_endpoints, Name##_builder, true);            \
-    Name->add(BOOST_TEST_CASE(                                          \
-                discover_endpoints_anonymous), 0, valgrind(10));         \
-    auto key_cache_invalidation =                                           \
-      std::bind(::key_cache_invalidation, Name##_builder, false);           \
-    Name->add(BOOST_TEST_CASE(key_cache_invalidation), 0, valgrind(10));    \
-    auto key_cache_invalidation_anonymous =                                 \
-      std::bind(::key_cache_invalidation, Name##_builder, true);            \
-    Name->add(BOOST_TEST_CASE(                                              \
-                key_cache_invalidation_anonymous), 0, valgrind(10));        \
-    auto data_spread =                                           \
-      std::bind(::data_spread, Name##_builder, false, false);      \
-    Name->add(BOOST_TEST_CASE(data_spread), 0, valgrind(30));    \
-    auto data_spread_anonymous =                                 \
-      std::bind(::data_spread, Name##_builder, true, false);            \
-    Name->add(BOOST_TEST_CASE(                                              \
-                data_spread_anonymous), 0, valgrind(30));        \
-    auto data_spread2 =                                           \
-      std::bind(::data_spread2, Name##_builder, false, false);      \
-    Name->add(BOOST_TEST_CASE(data_spread2), 0, valgrind(30));    \
-    auto data_spread2_anonymous =                                 \
-      std::bind(::data_spread2, Name##_builder, true, false);            \
-    Name->add(BOOST_TEST_CASE(                                              \
-                data_spread2_anonymous), 0, valgrind(30));        \
-  }
+#define BOOST_NAMED_TEST_CASE(name,  test_function )                       \
+boost::unit_test::make_test_case( boost::function<void ()>(test_function), \
+                                  name,                                    \
+                                  __FILE__, __LINE__ )
+
+
+#define TEST_ANON(overlay, tname, timeout, ...)                           \
+  overlay->add(BOOST_NAMED_TEST_CASE(#overlay "_" #tname "_named",      \
+    std::bind(::tname, BOOST_PP_CAT(overlay, _builder), false, ##__VA_ARGS__)), 0, valgrind(timeout)); \
+  overlay->add(BOOST_NAMED_TEST_CASE(#overlay "_" #tname "_anon",      \
+    std::bind(::tname, BOOST_PP_CAT(overlay, _builder), true, ##__VA_ARGS__)), 0, valgrind(timeout))
+
+#define OVERLAY(Name)                           \
+  auto Name = BOOST_TEST_SUITE(#Name);          \
+  master.add(Name);                             \
+  TEST_ANON(Name, basics, 5);                   \
+  TEST_ANON(Name, dead_peer, 5);                \
+  TEST_ANON(Name, discover_endpoints, 10);      \
+  TEST_ANON(Name, key_cache_invalidation, 10);  \
+  TEST_ANON(Name, data_spread, 30, false);      \
+  TEST_ANON(Name, data_spread2, 30, false);     \
+  TEST_ANON(Name, chain_connect, 30, false);
+
   OVERLAY(kelips);
   OVERLAY(kouncil);
 #undef OVERLAY
