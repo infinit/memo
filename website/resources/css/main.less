@@ -1388,11 +1388,14 @@ body.doc_overview {
       }
 
       div.programmatic {
+        padding-top: 30px;
+        h2 { margin-bottom: 0px;}
+        > p { margin-top: 0px; text-align: center;}
         div {
           float: left; width: 45%; margin: 0 5%; min-height: 120px;
           img { max-height: 20px; margin-right: 4px; }
-          &:nth-child(2n) { clear: both; margin-left: 0;}
-          &:nth-child(2n+1) { margin-right: 0; }
+          &:nth-child(2n+1) { clear: both; margin-left: 0;}
+          &:nth-child(2n+2) { margin-right: 0; }
           h3 {
             font-size: 16px; padding: 25px 0 0 0; vertical-align: super;
           }
@@ -1402,16 +1405,14 @@ body.doc_overview {
 
       div.multi {
         padding-top: 30px; clear: both;
-        div { margin: 25px 0 35px 0;}
-        div.fs {
+        div { margin: 25px 0 55px 0; clear: both; }
+        div.fs, div.object, div.block {
           img { float: left; margin-right: 30px;}
           h3 { display: inline-block; margin-bottom: 0; margin-top: 7px;}
         }
+        div.object h3 { margin-top: 20px; }
       }
     }
-
-    .button { clear:both; margin-top: 30px; }
-    .cta { text-align: center; }
   }
 }
 

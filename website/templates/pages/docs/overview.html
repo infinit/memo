@@ -7,12 +7,11 @@
   <section class="doc">
     <h1>Overview</h1>
 
-    <p class="note">The Infinit Storage Platform allows for the creation of scalable, resilient and secure storage infrastructure for modern and container environments. This software-defined storage platform beneficing from several advantages over the centralized and distributed systems commonly used.</p>
+    <!-- <p class="note">The Infinit Storage Platform allows for the creation of scalable, resilient and secure storage infrastructure for modern and container environments. This software-defined storage platform beneficing from several advantages over the centralized and distributed systems commonly used.</p> -->
 
     <div class="features">
-      <h2 id="resilient">A resilient and self-healing architecture.</h2>
-
       <div class="resilient">
+        <h2 id="resilient">A resilient self-healing architecture.</h2>
         <div class="decentralized">
           <img src="${url('images/schema-decentralized-4-devices.png')}" alt="Infinit Decentralized Platform">
           <h3 id="decentralized">Decentralized</h3>
@@ -33,16 +32,17 @@
         <h2>Scalable to peta bytes.</h2>
         <p>Manage your needs in terms of storage capacity by increasing/decreasing (<strong>scale up/down</strong>) contributions from existing providers and/or adding/removing (<strong>scale out/in</strong>) storage resources without interrupting the service.</p>
 
-        <img src="${url('images/schema-decentralized-s3.png')}" alt="Infinit Sclable Schema">
+        <img src="${url('images/schema-decentralized-scalable.png')}" alt="Infinit Sclable Schema">
 
         <div>
-        <h3 id="adaptability">Hyperconvergent vs hyperscalable</h3>
-        <p>Scale your storage along with your application cluster to create a hyperconvergent architecture or keep a hyperscalable infrastrcture by dissociating your storage ressources from the rest of your cluster.</p>
+          <h3 id="adaptability">Hyperconvergent vs hyperscalable</h3>
+          <p>Scale your storage along with your application cluster to create a hyperconvergent architecture or keep a hyperscalable infrastrcture by dissociating your storage ressources from the rest of your cluster.</p>
         </div>
       </div>
 
       <div class="programmatic">
         <h2>Programmatic.</h2>
+        <p class="note">Easily enable and configure key features for your needs.</p>
 
         <div>
         <img src="${url('images/icons/redundancy-small.png')}">
@@ -91,19 +91,17 @@
         </div>
 
         <div class="object">
+          <img src="${url('images/logos/object-storages.png')}">
           <h3 id="versioning">Object Storage</h3>
           <p>Use an S3, GCS or OpenStack compatible object store to store your Wordpress media files.</p>
         </div>
 
         <div class="block">
+          <img src="${url('images/icons/block-device.png')}">
           <h3 id="versioning">Block Device</h3>
           <p>Deploy block device backends for your MongoDB database.</p>
         </div>
       </div>
-    </div>
-
-    <div class="cta">
-        <a href="${route('doc_get_started')}" class="button">Give it a try!</a>
     </div>
   <section>
 
