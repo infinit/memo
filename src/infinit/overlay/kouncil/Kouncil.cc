@@ -103,7 +103,8 @@ namespace infinit
                     // Discover must be called asynchronously or deadlock
                     for (auto const& nl: nls)
                       if (this->peers().find(nl.id()) == this->peers().end())
-                        new reactor::Thread("discover", [this, nl] { this->_discover({nl});}, true);
+                        this->_perform("discover",
+                          [this, nl] { this->_discover({nl});});
                     return this->peers_locations(cp);
                   }));
             });
@@ -124,7 +125,8 @@ namespace infinit
                     // Discover must be called asynchronously or deadlock
                     for (auto const& nl: nls)
                       if (this->peers().find(nl.id()) == this->peers().end())
-                        new reactor::Thread("discover", [this, nl] { this->_discover({nl});}, true);
+                        this->_perform("discover",
+                          [this, nl] { this->_discover({nl});});
                   }));
 
             r.rpc_server().add(
@@ -145,7 +147,8 @@ namespace infinit
             ELLE_TRACE("%s: got info on %s nodes", this, rnls.size());
             for (auto const& nl: rnls)
               if (this->peers().find(nl.id()) == this->peers().end())
-                new reactor::Thread("discover", [this, nl] { this->_discover({nl});}, true);
+                this->_perform("discover",
+                  [this, nl] { this->_discover({nl});});
           });
         this->_validate();
       }
@@ -446,6 +449,21 @@ namespace infinit
           return it->second;
         else
           return Overlay::WeakMember();
+      }
+
+      void
+      Kouncil::_perform(std::string const& name, std::function<void()> job)
+      {
+        this->_tasks.emplace_back(new reactor::Thread(name, job));
+        for (unsigned i=0; i<this->_tasks.size(); ++i)
+        {
+          if (this->_tasks[i]->done())
+          {
+            std::swap(this->_tasks[i], this->_tasks[this->_tasks.size()-1]);
+            this->_tasks.pop_back();
+            --i;
+          }
+        }
       }
     }
   }

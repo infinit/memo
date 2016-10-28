@@ -111,7 +111,9 @@ namespace infinit
         ELLE_ATTRIBUTE(Discovering, discovering);
         NodeLocations
         peers_locations(Pending const& extras) const;
-
+      private:
+        ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>, tasks);
+        void _perform(std::string const& name, std::function<void()> job);
       /*-------.
       | Lookup |
       `-------*/
