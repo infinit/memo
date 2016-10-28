@@ -202,11 +202,13 @@ public:
 
   struct Client
   {
-    Client(std::string const& name, DHT dht)
+    template<typename... Args>
+    Client(std::string const& name, DHT dht, Args...args)
       : dht(std::move(dht))
       , fs(elle::make_unique<reactor::filesystem::FileSystem>(
              elle::make_unique<infinit::filesystem::FileSystem>(
-               name, this->dht.dht, ifs::allow_root_creation = true),
+               name, this->dht.dht, ifs::allow_root_creation = true,
+               std::forward<Args>(args)...),
              true))
     {}
 
@@ -215,13 +217,13 @@ public:
   };
 
   template<typename... Args>
-  Client
-  client(bool new_key,
+  DHT
+  dht(bool new_key,
          boost::optional<infinit::cryptography::rsa::KeyPair> kp,
          Args... args)
   {
     auto k = kp ? *kp
-        : new_key ? infinit::cryptography::rsa::keypair::generate(512)
+    : new_key ? infinit::cryptography::rsa::keypair::generate(512)
           : this->owner_keys;
     ELLE_LOG("new client with owner=%f key=%f", this->owner_keys.K(), k.K());
     DHT client(owner = this->owner_keys,
@@ -233,6 +235,15 @@ public:
                );
     for (auto& dht: this->dhts)
       dht.overlay->connect(*client.overlay);
+    return std::move(client);
+  }
+  template<typename... Args>
+  Client
+  client(bool new_key,
+         boost::optional<infinit::cryptography::rsa::KeyPair> kp,
+         Args... args)
+  {
+    DHT client = dht(new_key, kp, std::forward<Args>(args)...);
     return Client("volume", std::move(client));
   }
 
@@ -1526,6 +1537,44 @@ ELLE_TEST_SCHEDULED(world_perm_conflict)
   BOOST_CHECK_THROW(directory_count(client3.fs->path("/dir")), std::exception);
 }
 
+ELLE_TEST_SCHEDULED(world_perm_mode)
+{
+  DHTs servers(1);
+  auto client1 = servers.client(false, {});
+  auto client2 = servers.client(true);
+  auto client3 = DHTs::Client("volume", servers.dht(false, {}),
+    ifs::map_other_permissions = false);
+  client1.fs->path("/");
+  client1.fs->path("/")->chmod(0755);
+  write_file(client1.fs->path("/foo"), "bar");
+  struct stat st;
+  client1.fs->path("/foo")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_mode & 7, 0);
+  client3.fs->path("/foo")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_mode & 7, 0);
+
+  client3.fs->path("/foo")->chmod(0644); // denied
+  client1.fs->path("/foo")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_mode & 7, 0);
+  client3.fs->path("/foo")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_mode & 7, 0);
+  BOOST_CHECK_THROW(read_file(client2.fs->path("/foo")), std::exception);
+
+  client3.fs->path("/foo")->chmod(0647);
+  client1.fs->path("/foo")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_mode & 7, 1);
+  client3.fs->path("/foo")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_mode & 7, 1);
+
+  client1.fs->path("/foo")->chmod(0645);
+  client1.fs->path("/foo")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_mode & 7, 5);
+  client3.fs->path("/foo")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_mode & 7, 5);
+  BOOST_CHECK_NO_THROW(directory_count(client2.fs->path("/")));
+  BOOST_CHECK_NO_THROW(read_file(client2.fs->path("/foo")));
+}
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -1556,4 +1605,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(conflicts), 0, valgrind(10));
   suite.add(BOOST_TEST_CASE(group_description), 0, valgrind(5));
   suite.add(BOOST_TEST_CASE(world_perm_conflict), 0, valgrind(10));
+  suite.add(BOOST_TEST_CASE(world_perm_mode), 0, valgrind(5));
 }
