@@ -13,7 +13,7 @@ namespace infinit
       boost::optional<boost::filesystem::path> root_block_cache_dir;
       boost::optional<boost::filesystem::path> mountpoint;
       bool allow_root_creation;
-      bool map_mode_to_world_permissions;
+      bool map_other_permissions;
 
       static
       Init
@@ -23,7 +23,7 @@ namespace infinit
            boost::optional<boost::filesystem::path> root_block_cache_dir,
            boost::optional<boost::filesystem::path> mountpoint,
            bool allow_root_creation,
-           bool map_mode_to_world_permissions)
+           bool map_other_permissions)
       {
         return Init{
           std::move(volume_name),
@@ -32,7 +32,7 @@ namespace infinit
           std::move(root_block_cache_dir),
           std::move(mountpoint),
           std::move(allow_root_creation),
-          std::move(map_mode_to_world_permissions)
+          std::move(map_other_permissions)
         };
       }
     };
@@ -46,7 +46,7 @@ namespace infinit
                      filesystem::root_block_cache_dir = boost::none,
                      filesystem::mountpoint = boost::none,
                      filesystem::allow_root_creation = false,
-                     filesystem::map_mode_to_world_permissions = true)
+                     filesystem::map_other_permissions = true)
                    .call(&Init::init, std::forward<Args>(args)...))
     {}
 
@@ -58,7 +58,7 @@ namespace infinit
                    std::move(init.root_block_cache_dir),
                    std::move(init.mountpoint),
                    std::move(init.allow_root_creation),
-                   std::move(init.map_mode_to_world_permissions))
+                   std::move(init.map_other_permissions))
     {}
   }
 }

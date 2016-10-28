@@ -1543,7 +1543,7 @@ ELLE_TEST_SCHEDULED(world_perm_mode)
   auto client1 = servers.client(false, {});
   auto client2 = servers.client(true);
   auto client3 = DHTs::Client("volume", servers.dht(false, {}),
-    ifs::map_mode_to_world_permissions = false);
+    ifs::map_other_permissions = false);
   client1.fs->path("/");
   client1.fs->path("/")->chmod(0755);
   write_file(client1.fs->path("/foo"), "bar");

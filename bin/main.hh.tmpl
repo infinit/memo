@@ -1570,7 +1570,7 @@ namespace infinit
         boost::optional<std::string> mountpoint_ = {},
         boost::optional<bool> readonly = {},
         bool allow_root_creation = false,
-        bool map_mode_to_world_permissions = true
+        bool map_other_permissions = true
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         , boost::optional<std::string> volname_ = {}
 #endif
@@ -1598,7 +1598,7 @@ namespace infinit
         infinit::filesystem::volume_name = this->name,
         infinit::filesystem::root_block_cache_dir = this->root_block_cache_dir(),
         infinit::filesystem::mountpoint = mountpoint,
-        infinit::filesystem::map_mode_to_world_permissions = map_mode_to_world_permissions);
+        infinit::filesystem::map_other_permissions = map_other_permissions);
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       if (mountpoint)

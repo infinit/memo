@@ -460,7 +460,7 @@ COMMAND(run)
                          mo.mountpoint,
                          mo.readonly,
                          flag(args, "allow-root-creation"),
-                         flag(args, "map_mode_to_world_permissions")
+                         flag(args, "map-other-permissions")
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
                          , optional(args, "mount-name")
 #endif
@@ -1184,7 +1184,7 @@ run_options(RunMode mode)
   if (mode == RunMode::run || mode == RunMode::update)
     add_options({
       { "push,p", BOOL_IMPLICIT, "alias for --push-endpoints" },
-      { "map_mode_to_world_permissions",
+      { "map-other-permissions",
         boost::program_options::value<bool>()
           ->implicit_value(true, "true")
           ->default_value(true, "true"),

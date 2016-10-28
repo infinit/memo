@@ -170,7 +170,7 @@ namespace infinit
     NAMED_ARGUMENT(owner);
     NAMED_ARGUMENT(root_block_cache_dir);
     NAMED_ARGUMENT(volume_name);
-    NAMED_ARGUMENT(map_mode_to_world_permissions);
+    NAMED_ARGUMENT(map_other_permissions);
     /** Filesystem using a Block Storage as backend.
     * Directory: nodes are serialized, and contains name, stat() and block
     *            address of the directory content
@@ -200,7 +200,7 @@ namespace infinit
         boost::optional<boost::filesystem::path> root_block_cache_dir = {},
         boost::optional<boost::filesystem::path> mountpoint = {},
         bool allow_root_creation = false,
-        bool map_mode_to_world_permissions = true);
+        bool map_other_permissions = true);
     private:
       struct Init;
       FileSystem(Init);
@@ -257,7 +257,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(boost::optional<boost::filesystem::path>, mountpoint);
       ELLE_ATTRIBUTE_R(model::Address, root_address);
       ELLE_ATTRIBUTE_R(bool, allow_root_creation);
-      ELLE_ATTRIBUTE_R(bool, map_mode_to_world_permissions);
+      ELLE_ATTRIBUTE_R(bool, map_other_permissions);
 
       typedef bmi::multi_index_container<
         std::shared_ptr<DirectoryData>,

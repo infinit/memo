@@ -205,13 +205,13 @@ namespace infinit
       this->_fetch();
       auto acl = _header_block();
       unsigned int settable =
-        this->_owner.map_mode_to_world_permissions() ? 0117 : 0111;
+        this->_owner.map_other_permissions() ? 0117 : 0111;
       this->_header().mode &= ~settable;
       this->_header().mode |= (mode & settable);
       ELLE_DEBUG("chmod setting mode with %x: %x",
         mode & 0777, this->_header().mode);
       this->_header().ctime = time(nullptr);
-      if (acl && this->_owner.map_mode_to_world_permissions())
+      if (acl && this->_owner.map_other_permissions())
       {
         auto wm = acl->get_world_permissions();
         wm.first = mode & 4;
@@ -447,7 +447,7 @@ namespace infinit
       }
       if (k == "system.posix_acl_access")
       {
-        bool allow_rw = this->_owner.map_mode_to_world_permissions();
+        bool allow_rw = this->_owner.map_other_permissions();
         if (v.size() != 28)
         {
           ELLE_TRACE("Unexpected length %s for posix_acl_access", v.size());
