@@ -432,8 +432,10 @@ ELLE_TEST_SCHEDULED(
 
 ELLE_TEST_SUITE()
 {
-  elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
-  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "3", 1);
+  elle::os::setenv("INFINIT_CONNECT_TIMEOUT",
+                   std::to_string(valgrind(1)).c_str(), 1);
+  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT",
+                   std::to_string(valgrind(3)).c_str(), 1);
   auto& master = boost::unit_test::framework::master_test_suite();
   auto const kelips_builder =
     [] (Doughnut& dht, std::shared_ptr<Local> local)
