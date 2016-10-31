@@ -15,8 +15,11 @@ namespace infinit
       {
         ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
         ELLE_TRACE_SCOPE("%s: broadcast %s", this, name);
+        // We need to make a copy, since for_each_parallel passes
+        // arguments by reference.
+        auto peers = this->_peers;
         reactor::for_each_parallel(
-          this->_peers,
+          peers,
           [&] (std::shared_ptr<Connection> c)
           {
             // Arguments taken by reference as they will be passed multiple
