@@ -348,9 +348,19 @@ ELLE_TEST_SCHEDULED(
       ::paxos = pax,
       ::storage = nullptr);
     discover(*client, *tgt, anonymous);
-    // Give it some time to connect
-    for (int i=0; i<10; ++i)
-      reactor::yield();
+    // writes will fail until it connects
+    while (true)
+    {
+      try
+      {
+         auto block = client->dht->make_block<ACLBlock>(std::string("block"));
+        client->dht->store(std::move(block), STORE_INSERT, tcr());
+        break;
+      }
+      catch (elle::Error const& e)
+      {}
+      reactor::sleep(100_ms);
+    }
     std::vector<infinit::model::Address> addrs;
     try
     {
@@ -363,7 +373,7 @@ ELLE_TEST_SCHEDULED(
     }
     catch (elle::Error const& e)
     {
-      ELLE_ERR("EXception storing blocks: %s", e);
+      ELLE_ERR("Exception storing blocks: %s", e);
       throw;
     }
     ELLE_LOG("stores: %s %s %s", b1.size(), b2.size(), b3.size());
