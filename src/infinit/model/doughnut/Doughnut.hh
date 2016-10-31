@@ -56,28 +56,12 @@ namespace infinit
           OverlayBuilder;
         typedef std::function<
           std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;
-        Doughnut(Address id,
-                 std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
-                 std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
-                 Passport passport,
-                 ConsensusBuilder consensus,
-                 OverlayBuilder overlay_builder,
-                 boost::optional<int> port,
-                 std::unique_ptr<storage::Storage> local,
-                 boost::optional<elle::Version> version = {},
-                 AdminKeys const& admin_keys = {});
-        Doughnut(Address id,
-                 std::string const& name,
-                 std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
-                 std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
-                 Passport passport,
-                 ConsensusBuilder consensus,
-                 OverlayBuilder overlay_builder,
-                 boost::optional<int> port,
-                 std::unique_ptr<storage::Storage> local,
-                 boost::optional<elle::Version> version = {},
-                 AdminKeys const& admin_keys = {});
+        template <typename ... Args>
+        Doughnut(Args&& ... args);
         ~Doughnut();
+      private:
+        struct Init;
+        Doughnut(Init init);
 
       /*-----.
       | Time |
@@ -181,6 +165,27 @@ namespace infinit
         void
         _remove(Address address, blocks::RemoveSignature rs) override;
         friend class Local;
+
+      /*------------------.
+      | Service discovery |
+      `------------------*/
+      public:
+        using Services = std::unordered_map<std::string, Address>;
+        using ServicesTypes = std::unordered_map<std::string, Services>;
+        ServicesTypes
+        services();
+        void
+        service_add(std::string const& type,
+                    std::string const& name,
+                    elle::Buffer value);
+        template <typename T>
+        void
+        service_add(std::string const& type,
+                    std::string const&
+                    name, T const& value);
+      private:
+        std::unique_ptr<blocks::MutableBlock>
+        _services_block(bool write);
       };
 
       struct Configuration:
@@ -196,6 +201,7 @@ namespace infinit
         boost::optional<std::string> name;
         boost::optional<int> port;
         AdminKeys admin_keys;
+        std::vector<Endpoints> peers;
 
         Configuration(
           Address id,
@@ -208,7 +214,8 @@ namespace infinit
           boost::optional<std::string> name,
           boost::optional<int> port,
           elle::Version version,
-          AdminKeys admin_keys);
+          AdminKeys admin_keys,
+          std::vector<Endpoints> peers);
         Configuration(Configuration&&) = default;
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
@@ -216,12 +223,10 @@ namespace infinit
         serialize(elle::serialization::Serializer& s) override;
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(std::vector<Endpoints> const& hosts,
-             bool client,
+        make(bool client,
              boost::filesystem::path const& p) override;
         std::unique_ptr<Doughnut>
-        make(std::vector<Endpoints> const& hosts,
-             bool client,
+        make(bool client,
              boost::filesystem::path const& p,
              bool async = false,
              bool cache = false,
@@ -230,7 +235,9 @@ namespace infinit
              boost::optional<std::chrono::seconds> cache_invalidation = {},
              boost::optional<uint64_t> disk_cache_size = {},
              boost::optional<elle::Version> version = {},
-             boost::optional<int> port = {});
+             boost::optional<int> port = {},
+             boost::optional<boost::asio::ip::address> listen_address = {},
+             boost::optional<std::string> rdv_host = {});
       };
 
       std::string
@@ -245,5 +252,7 @@ DAS_MODEL_FIELDS(infinit::model::doughnut::Configuration,
 DAS_MODEL(infinit::model::doughnut::AdminKeys, (r, w, group_r, group_w), DasAdminKeys);
 DAS_MODEL_DEFAULT(infinit::model::doughnut::AdminKeys, DasAdminKeys);
 DAS_MODEL_SERIALIZE(infinit::model::doughnut::AdminKeys);
+
+# include <infinit/model/doughnut/Doughnut.hxx>
 
 #endif

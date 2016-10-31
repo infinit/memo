@@ -95,7 +95,7 @@ namespace infinit
     void
     Overlay::discover(NodeLocations const& peers_)
     {
-      ELLE_TRACE("%s: discover %f", this, peers_);
+      ELLE_TRACE_SCOPE("%s: discover %f", this, peers_);
       NodeLocations peers(peers_);
       auto it = std::remove_if(peers.begin(), peers.end(),
         [this] (NodeLocation const& nl)
@@ -148,19 +148,27 @@ namespace infinit
         });
     }
 
+    Configuration::Configuration()
+      : rpc_protocol(infinit::model::doughnut::Protocol::all)
+    {}
+
     Configuration::Configuration(elle::serialization::SerializerIn& input)
+      : rpc_protocol(infinit::model::doughnut::Protocol::all)
     {
       this->serialize(input);
     }
 
     Overlay::WeakMember
-    Overlay::lookup_node(model::Address address)
+    Overlay::lookup_node(model::Address address) const
     {
-      return this->_lookup_node(address);
+      if (auto res = this->_lookup_node(address))
+        return res;
+      else
+        throw NodeNotFound(address);
     }
 
     reactor::Generator<Overlay::WeakMember>
-    Overlay::lookup_nodes(std::unordered_set<model::Address> addresses)
+    Overlay::lookup_nodes(std::unordered_set<model::Address> addresses) const
     {
       ELLE_TRACE_SCOPE("%s: lookup nodes %f", this, addresses);
       return reactor::generator<Overlay::WeakMember>(
@@ -189,6 +197,22 @@ namespace infinit
 
     void
     Configuration::serialize(elle::serialization::Serializer& s)
+    {
+      try
+      {
+        s.serialize("rpc_protocol", this->rpc_protocol);
+      }
+      catch (elle::serialization::Error const&)
+      {}
+    }
+
+    /*-----------.
+    | Exceptions |
+    `-----------*/
+
+    NodeNotFound::NodeNotFound(model::Address id)
+      : elle::Error(elle::sprintf("node not found: %f", id))
+      , _id(id)
     {}
   }
 }

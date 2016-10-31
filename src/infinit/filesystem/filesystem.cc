@@ -58,7 +58,7 @@ namespace infinit
   namespace filesystem
   {
     FileSystem::FileSystem(
-        std::string const& volume_name,
+        std::string volume_name,
         std::shared_ptr<model::Model> model,
         boost::optional<infinit::cryptography::rsa::PublicKey> owner,
         boost::optional<boost::filesystem::path> root_block_cache_dir,
@@ -67,7 +67,7 @@ namespace infinit
       : _block_store(std::move(model))
       , _single_mount(false)
       , _owner(owner)
-      , _volume_name(volume_name)
+      , _volume_name(std::move(volume_name))
       , _root_block_cache_dir(root_block_cache_dir)
       , _mountpoint(mountpoint)
       , _root_address(Address::null)
@@ -165,7 +165,7 @@ namespace infinit
     fetch_or_die(model::Model& model,
                  model::Address address,
                  boost::optional<int> local_version,
-                 Node* node)
+                 boost::filesystem::path const& path)
     {
       try
       {
@@ -177,28 +177,28 @@ namespace infinit
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
-        ELLE_TRACE("perm exception %s", e);
+        ELLE_TRACE("perm exception fetching %f(%s): %s", address, path, e);
         throw rfs::Error(EACCES, elle::sprintf("%s", e));
       }
       catch (model::MissingBlock const& mb)
       {
-        ELLE_WARN("data not found fetching \"/%s\": %s",
-                  "", mb);
+        ELLE_WARN("data not found fetching %f(%s): %s",
+                  address, path, mb);
         throw rfs::Error(EIO, elle::sprintf("%s", mb));
       }
       catch (elle::serialization::Error const& se)
       {
-        ELLE_WARN("serialization error fetching %f: %s", address, se);
+        ELLE_WARN("serialization error fetching %f(%s): %s", address, path, se);
         throw rfs::Error(EIO, elle::sprintf("%s", se));
       }
       catch(elle::Exception const& e)
       {
-        ELLE_WARN("unexpected exception fetching %f: %s", address, e);
+        ELLE_WARN("unexpected exception fetching %f(%s): %s", address, path, e);
         throw rfs::Error(EIO, elle::sprintf("%s", e));
       }
       catch(std::exception const& e)
       {
-        ELLE_WARN("unexpected exception on fetching %f: %s", address, e.what());
+        ELLE_WARN("unexpected exception on fetching %f(%s): %s", address, path, e.what());
         throw rfs::Error(EIO, e.what());
       }
     }
@@ -206,9 +206,10 @@ namespace infinit
     std::unique_ptr<model::blocks::Block>
     FileSystem::fetch_or_die(model::Address address,
                              boost::optional<int> local_version,
-                             Node* node)
+                             boost::filesystem::path const& path)
     {
-      return filesystem::fetch_or_die(*this->block_store(), address, local_version, node);
+      return filesystem::fetch_or_die(*this->block_store(), address,
+                                      local_version, path);
     }
 
     std::unique_ptr<model::blocks::MutableBlock>
@@ -611,7 +612,7 @@ namespace infinit
           std::unique_ptr<model::blocks::Block> block;
           try
           {
-            block = fetch_or_die(address, version);
+            block = fetch_or_die(address, version, current_path);
             if (block)
               block->data();
           }
@@ -672,7 +673,7 @@ namespace infinit
               boost::optional<int> version;
               if (fit != _file_cache.end())
                 version = (*fit)->block_version();
-              auto block = fetch_or_die(address, version);
+              auto block = fetch_or_die(address, version, current_path);
               return std::make_shared<Unreachable>(*this, std::move(block), d,
                 name, address, EntryType::directory);
             }
@@ -693,7 +694,7 @@ namespace infinit
       auto it = _directory_cache.find(address);
       if (it != _directory_cache.end())
         version = (*it)->block_version();
-      auto block = fetch_or_die(address, version); //invalidates 'it'
+      auto block = fetch_or_die(address, version, path); //invalidates 'it'
       it = _directory_cache.find(address);
       std::pair<bool, bool> perms;
       if (block)

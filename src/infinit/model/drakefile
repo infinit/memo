@@ -46,6 +46,7 @@ sources = drake.nodes(
   'doughnut/HandshakeFailed.hh',
   'doughnut/Local.cc',
   'doughnut/Local.hh',
+  'doughnut/Local.hxx',
   'doughnut/NB.cc',
   'doughnut/NB.hh',
   'doughnut/OKB.cc',

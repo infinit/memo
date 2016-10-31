@@ -11,9 +11,11 @@
 #endif
 
 #include <infinit/filesystem/filesystem.hh>
+#include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/NB.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/storage/Storage.hh>
 
@@ -33,8 +35,6 @@ ELLE_LOG_COMPONENT("infinit-volume");
 #endif
 
 infinit::Infinit ifnt;
-
-#include <endpoint_file.hh>
 
 #if __APPLE__
 # undef daemon
@@ -61,7 +61,8 @@ COMMAND(create)
   if (default_permissions && *default_permissions!= "r"
       && *default_permissions!= "rw")
     throw elle::Error("default-permissions must be 'r' or 'rw'");
-  infinit::Volume volume(name, network.name, mo, default_permissions);
+  infinit::Volume volume(
+    name, network.name, mo, default_permissions, optional(args, "description"));
   if (args.count("output"))
   {
     auto output = get_output(args);
@@ -70,10 +71,35 @@ COMMAND(create)
   }
   else
   {
+    bool root = flag(args, "create-root");
+    bool discovery = flag(args, "register-service");
+    if (root || discovery)
+    {
+      auto model = network.run(
+        owner, mo, false, infinit::compatibility_version);
+      if (discovery)
+      {
+        ELLE_LOG_SCOPE("register volume in the network");
+        model.first->service_add("volumes", name, volume);
+      }
+      if (root)
+      {
+        ELLE_LOG_SCOPE("create root directory");
+        // Work around clang 7.0.2 bug.
+        std::shared_ptr<infinit::model::Model> clang_model(
+          static_cast<infinit::model::Model*>(model.first.release()));
+        auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
+          infinit::filesystem::model = std::move(clang_model),
+          infinit::filesystem::volume_name = name,
+          infinit::filesystem::allow_root_creation = true);
+        struct stat s;
+        fs->path("/")->stat(&s);
+      }
+    }
     ifnt.volume_save(volume);
     report_created("volume", name);
   }
-  if (flag(args, "push-volume") || flag(args, "push"))
+  if (option_push(args, {"push-volume"}))
     beyond_push("volume", name, volume, owner);
 }
 
@@ -152,40 +178,66 @@ COMMAND(delete_)
 COMMAND(fetch)
 {
   auto owner = self_user(ifnt, args);
-  auto network_name_ = optional(args, "network");
-  if (optional(args, "name"))
+  auto name = optional(args, "name");
+  auto service = flag(args, "service");
+  if (service)
   {
-    auto name = volume_name(args, owner);
-    auto desc = beyond_fetch<infinit::Volume>("volume", name);
-    ifnt.volume_save(std::move(desc));
-  }
-  else if (network_name_) // Fetch all networks for network.
-  {
-    std::string network_name = ifnt.qualified_name(network_name_.get(), owner);
-    auto res = beyond_fetch<
-      std::unordered_map<std::string, std::vector<infinit::Volume>>>(
-        elle::sprintf("networks/%s/volumes", network_name),
-        "volumes for network",
-        network_name);
-    for (auto const& volume: res["volumes"])
-      ifnt.volume_save(std::move(volume));
-  }
-  else // Fetch all networks for owner.
-  {
-    auto res = beyond_fetch<
-      std::unordered_map<std::string, std::vector<infinit::Volume>>>(
-        elle::sprintf("users/%s/volumes", owner.name),
-        "volumes for user",
-        owner.name,
-        owner);
-    for (auto const& volume: res["volumes"])
-    {
-      try
+    std::string network_name =
+      ifnt.qualified_name(mandatory(args, "network"), owner);
+    auto net = ifnt.network_get(network_name, owner, true);
+    auto dht = net.run(owner);
+    auto services = dht->services();
+    auto volumes = services.find("volumes");
+    if (volumes != services.end())
+      for (auto volume: volumes->second)
       {
-        ifnt.volume_save(std::move(volume));
+        if (name && ifnt.qualified_name(name.get(), owner) != volume.first)
+          continue;
+        else if (ifnt.volume_has(volume.first))
+          continue;
+        auto v = elle::serialization::binary::deserialize<infinit::Volume>(
+          dht->fetch(volume.second)->data());
+        ifnt.volume_save(v);
+        report_saved("volume", v.name);
       }
-      catch (ResourceAlreadyFetched const& error)
+  }
+  else
+  {
+    auto network_name_ = optional(args, "network");
+    if (name)
+    {
+      auto name = volume_name(args, owner);
+      auto desc = beyond_fetch<infinit::Volume>("volume", name);
+      ifnt.volume_save(std::move(desc));
+    }
+    else if (network_name_) // Fetch all networks for network.
+    {
+      std::string network_name = ifnt.qualified_name(network_name_.get(), owner);
+      auto res = beyond_fetch<
+        std::unordered_map<std::string, std::vector<infinit::Volume>>>(
+          elle::sprintf("networks/%s/volumes", network_name),
+          "volumes for network",
+          network_name);
+      for (auto const& volume: res["volumes"])
+        ifnt.volume_save(std::move(volume));
+    }
+    else // Fetch all networks for owner.
+    {
+      auto res = beyond_fetch<
+        std::unordered_map<std::string, std::vector<infinit::Volume>>>(
+          elle::sprintf("users/%s/volumes", owner.name),
+          "volumes for user",
+          owner.name,
+          owner);
+      for (auto const& volume: res["volumes"])
       {
+        try
+        {
+          ifnt.volume_save(std::move(volume));
+        }
+        catch (ResourceAlreadyFetched const& error)
+        {
+        }
       }
     }
   }
@@ -310,20 +362,6 @@ COMMAND(run)
   auto volume = ifnt.volume_get(name);
   volume.mount_options.merge(args);
   auto& mo = volume.mount_options;
-  std::vector<infinit::model::Endpoints> eps;
-  auto add_peers = [&] (std::vector<std::string> const& peers) {
-    for (auto const& obj: peers)
-      if (boost::filesystem::exists(obj))
-        for (auto const& peer: endpoints_from_file(obj))
-          eps.emplace_back(infinit::model::Endpoints({peer}));
-      else
-        eps.emplace_back(infinit::model::Endpoints({obj}));
-  };
-  if (mo.peers)
-    add_peers(*mo.peers);
-  if (args.count("peer"))
-    add_peers(args["peer"].as<std::vector<std::string>>());
-
 #ifdef INFINIT_MACOSX
   if (mo.mountpoint && !flag(args, option_disable_mac_utf8))
   {
@@ -332,7 +370,6 @@ COMMAND(run)
     mo.fuse_options.get().push_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
   }
 #endif
-
   bool created_mountpoint = false;
   if (mo.mountpoint)
   {
@@ -383,11 +420,21 @@ COMMAND(run)
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
-  auto model = network.run(
-    self,
-    eps, true,
-    mo.cache && mo.cache.get(), mo.cache_ram_size, mo.cache_ram_ttl, mo.cache_ram_invalidation,
-    mo.async && mo.async.get(), mo.cache_disk_size, infinit::compatibility_version, port);
+  auto model_and_threads = network.run(
+    self, mo, true, infinit::compatibility_version, port);
+  auto model = std::move(model_and_threads.first);
+  if (auto plf = optional(args, "peers-file"))
+  {
+    auto more_peers = infinit::hook_peer_discovery(*model, *plf);
+    ELLE_TRACE("Peer list file got %s peers", more_peers.size());
+    if (!more_peers.empty())
+      model->overlay()->discover(more_peers);
+  }
+  if (flag(args, "register-service"))
+  {
+    ELLE_LOG_SCOPE("register volume in the network");
+    model->service_add("volumes", name, volume);
+  }
   // Only push if we have are contributing storage.
   bool push = mo.push && model->local();
   boost::optional<infinit::model::Endpoint> local_endpoint;
@@ -395,24 +442,18 @@ COMMAND(run)
   {
     local_endpoint = model->local()->server_endpoint();
     if (auto port_file = optional(args, option_port_file))
-      port_to_file(local_endpoint.get().port(), port_file.get());
+      infinit::port_to_file(local_endpoint.get().port(), port_file.get());
     if (auto endpoint_file = optional(args, option_endpoint_file))
     {
-      endpoints_to_file(model->local()->server_endpoints(),
-                        endpoint_file.get());
+      infinit::endpoints_to_file(model->local()->server_endpoints(),
+                                 endpoint_file.get());
     }
   }
-  auto run = [&]
+  auto run = [&, push]
   {
-    if (mo.fetch && *mo.fetch)
-    {
-      infinit::overlay::NodeLocations eps;
-      beyond_fetch_endpoints(network, eps);
-      model->overlay()->discover(eps);
-    }
     reactor::Thread::unique_ptr stat_thread;
     if (push)
-      stat_thread = make_stat_update_thread(self, network, *model);
+      stat_thread = network.make_stat_update_thread(self, *model);
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
     auto fs = volume.run(std::move(model),
@@ -947,10 +988,12 @@ COMMAND(list)
     for (auto const& volume: ifnt.volumes_get())
     {
       elle::json::Object o;
-      o["name"] = std::string(volume.name);
+      o["name"] = static_cast<std::string>(volume.name);
       o["network"] = volume.network;
       if (volume.mount_options.mountpoint)
         o["mountpoint"] = volume.mount_options.mountpoint.get();
+      if (volume.description)
+        o["description"] = volume.description.get();
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
@@ -958,7 +1001,10 @@ COMMAND(list)
   else
     for (auto const& volume: ifnt.volumes_get())
     {
-      std::cout << volume.name << ": network " << volume.network;
+      std::cout << volume.name;
+      if (volume.description)
+        std::cout << " \"" << volume.description.get() << "\"";
+      std::cout << ": network " << volume.network;
       if (volume.mount_options.mountpoint)
         std::cout << " on " << volume.mount_options.mountpoint.get();
       std::cout << std::endl;
@@ -971,8 +1017,11 @@ COMMAND(update)
   auto name = volume_name(args, self);
   auto volume = ifnt.volume_get(name);
   volume.mount_options.merge(args);
+  auto description = optional(args, "description");
+  if (description)
+    volume.description = description;
   ifnt.volume_save(volume, true);
-  if (flag(args, "push-volume") || flag(args, "push"))
+  if (option_push(args, {"push-volume"}))
     beyond_push("volume", name, volume, self);
 }
 
@@ -1076,15 +1125,19 @@ run_options(RunMode mode)
       res.push_back(opt);
   };
   add_option({ "name", value<std::string>(), "volume name" });
+  if (mode == RunMode::create || mode == RunMode::update)
+    add_option(option_description("volume"));
   if (mode == RunMode::create)
   {
     add_options({
+      { "create-root,R", BOOL_IMPLICIT, "create root directory"},
       { "network,N", value<std::string>(), "underlying network to use" },
       { "push-volume", BOOL_IMPLICIT,
         elle::sprintf("push the volume to %s", beyond(true)) },
       option_output("volume"),
       { "default-permissions,d", value<std::string>(),
-        "default permissions (optional: r,rw)"}
+        "default permissions (optional: r,rw)"},
+      { "register-service,r", BOOL_IMPLICIT, "register volume in the network"},
     });
   }
   add_options({
@@ -1116,9 +1169,14 @@ run_options(RunMode mode)
     { "fetch,f", BOOL_IMPLICIT, "alias for --fetch-endpoints" },
     { "peer", value<std::vector<std::string>>()->multitoken(),
       "peer address or file with list of peer addresses (host:port)" },
+    { "peers-file", value<std::string>(),
+      "Periodically write list of known peers to given file"},
     { "push-endpoints", BOOL_IMPLICIT,
       elle::sprintf("push endpoints to %s", beyond(true)) },
   });
+  if (mode == RunMode::run)
+    add_option(
+      { "register-service,r", BOOL_IMPLICIT, "register volume in the network"});
   if (mode == RunMode::create)
     add_option(
       { "push,p", BOOL_IMPLICIT, "alias for --push-endpoints --push-volume" });
@@ -1133,6 +1191,8 @@ run_options(RunMode mode)
     option_endpoint_file,
     option_port_file,
     option_port,
+    option_listen_interface,
+    option_poll_beyond,
     option_input("commands"),
   });
   if (mode == RunMode::update)
@@ -1179,6 +1239,8 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "volume to fetch (optional)" },
         { "network", value<std::string>(),
           "network to fetch all volumes for (optional)" },
+        { "service", value<bool>()->implicit_value(true, "true"),
+          "fetch volume from the network, not beyond" },
       },
     },
     {

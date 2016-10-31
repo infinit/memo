@@ -160,7 +160,7 @@ namespace infinit
     fetch_or_die(model::Model& model,
                  model::Address address,
                  boost::optional<int> local_version = {},
-                 Node* node = nullptr);
+                 boost::filesystem::path const& path = {});
     std::pair<bool, bool>
     get_permissions(model::Model& model,
                     model::blocks::Block const& block);
@@ -180,18 +180,33 @@ namespace infinit
     class FileSystem
       : public reactor::filesystem::Operations
     {
+    /*------.
+    | Types |
+    `------*/
     public:
       using clock = std::chrono::high_resolution_clock;
-      static clock::time_point now();
+
+    /*-------------.
+    | Construction |
+    `-------------*/
+    public:
       template <typename ... Args>
       FileSystem(Args&& ... args);
       FileSystem(
-        std::string const& volume_name,
+        std::string volume_name,
         std::shared_ptr<infinit::model::Model> model,
         boost::optional<infinit::cryptography::rsa::PublicKey> owner = {},
         boost::optional<boost::filesystem::path> root_block_cache_dir = {},
         boost::optional<boost::filesystem::path> mountpoint = {},
         bool allow_root_creation = false);
+    private:
+      struct Init;
+      FileSystem(Init);
+
+    public:
+      static
+      clock::time_point
+      now();
       void
       print_cache_stats();
       std::shared_ptr<reactor::filesystem::Path>
@@ -204,7 +219,7 @@ namespace infinit
       std::unique_ptr<model::blocks::Block>
       fetch_or_die(model::Address address,
                    boost::optional<int> local_version = {},
-                   Node* node = nullptr);
+                   boost::filesystem::path const& path = {});
 
       void
       store_or_die(std::unique_ptr<model::blocks::Block> block,

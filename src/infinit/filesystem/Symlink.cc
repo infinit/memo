@@ -29,7 +29,7 @@ namespace infinit
     Symlink::_fetch()
     {
       this->_block = std::dynamic_pointer_cast<MutableBlock>(
-        this->_owner.fetch_or_die(this->_address));
+        this->_owner.fetch_or_die(this->_address, {}, this->full_path()));
       umbrella([&] {
           this->_h = elle::serialization::binary::deserialize<FileHeader>(
             this->_block->data());

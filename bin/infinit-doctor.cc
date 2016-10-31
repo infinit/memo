@@ -26,6 +26,7 @@
 ELLE_LOG_COMPONENT("infinit-doctor");
 
 #include <main.hh>
+#include <networking.hh>
 
 infinit::Infinit ifnt;
 typedef std::unordered_map<std::string, std::string> Environment;
@@ -294,7 +295,10 @@ namespace reporting
       _print(std::ostream& out, bool verbose) const override
       {
         if (!this->linked)
+        {
+          out << "is ";
           warn(out, "not linked");
+        }
         if (this->storage_resources)
         {
           if (this->storage_resources->size() > 0)
@@ -471,7 +475,6 @@ namespace reporting
       {
         try
         {
-          infinit::check_name(name);
           return std::make_tuple(true, Result::Reason{});
         }
         catch (...)
@@ -697,7 +700,7 @@ namespace reporting
     PermissionResults permissions;
   };
 
-  struct NetworkingResults
+  struct ConnectivityResults
     : public reporting::Result
   {
     struct BeyondResult
@@ -994,12 +997,12 @@ namespace reporting
       std::unordered_map<std::string, RedirectionResult> redirections;
     };
 
-    NetworkingResults()
+    ConnectivityResults()
       : Result(false)
     {
     }
 
-    NetworkingResults(elle::serialization::SerializerIn& s)
+    ConnectivityResults(elle::serialization::SerializerIn& s)
     {
       this->serialize(s);
     }
@@ -1008,7 +1011,7 @@ namespace reporting
     print(std::ostream& out, bool verbose) const
     {
       if (!this->sane() | verbose)
-        section(out, "Networking capabilities");
+        section(out, "Connectivity capabilities");
       this->beyond.print(out, verbose);
       this->interfaces.print(out, verbose, false);
       this->nat.print(out, verbose);
@@ -1067,20 +1070,20 @@ namespace reporting
     All(elle::serialization::SerializerIn& s)
       : integrity(s.deserialize<IntegrityResults>("integrity"))
       , sanity(s.deserialize<SanityResults>("sanity"))
-      , networking(s.deserialize<NetworkingResults>("networking"))
+      , connectivity(s.deserialize<ConnectivityResults>("connectivity"))
     {
     }
 
     IntegrityResults integrity;
     SanityResults sanity;
-    NetworkingResults networking;
+    ConnectivityResults connectivity;
 
     void
     print(std::ostream& out, bool verbose) const
     {
       integrity.print(out, verbose);
       sanity.print(out, verbose);
-      networking.print(out, verbose);
+      connectivity.print(out, verbose);
     }
 
     bool
@@ -1088,7 +1091,7 @@ namespace reporting
     {
       return this->integrity.sane()
         && this->sanity.sane()
-        && this->networking.sane();
+        && this->connectivity.sane();
     }
 
     bool
@@ -1096,7 +1099,7 @@ namespace reporting
     {
       return this->integrity.warning()
         || this->sanity.warning()
-        || this->networking.warning();
+        || this->connectivity.warning();
     }
 
     void
@@ -1104,7 +1107,7 @@ namespace reporting
     {
       s.serialize("integrity", this->integrity);
       s.serialize("sanity", this->sanity);
-      s.serialize("networking", this->networking);
+      s.serialize("connectivity", this->connectivity);
       if (s.out())
       {
         bool sane = this->sane();
@@ -1134,8 +1137,8 @@ infinit_related_environment()
 
 static
 void
-_networking(boost::program_options::variables_map const& args,
-            reporting::NetworkingResults& results)
+_connectivity(boost::program_options::variables_map const& args,
+            reporting::ConnectivityResults& results)
 {
   ELLE_TRACE("contact beyond")
   {
@@ -1253,7 +1256,7 @@ _networking(boost::program_options::variables_map const& args,
       results.upnp.warning(true);
       results.upnp.external = upnp->external_ip();
       results.upnp.warning(false);
-      typedef reporting::NetworkingResults::UPNPResult::RedirectionResult::Address
+      typedef reporting::ConnectivityResults::UPNPResult::RedirectionResult::Address
         Address;
       auto redirect = [&] (std::string type,
                            reactor::network::Protocol protocol,
@@ -1642,10 +1645,10 @@ COMMAND(integrity)
   report_error(std::cout, results.sane(), results.warning());
 }
 
-COMMAND(networking)
+COMMAND(connectivity)
 {
-  reporting::NetworkingResults results;
-  _networking(args, results);
+  reporting::ConnectivityResults results;
+  _connectivity(args, results);
   output(std::cout, results, flag(args, "verbose"));
   report_error(std::cout, results.sane(), results.warning());
 }
@@ -1658,12 +1661,31 @@ COMMAND(sanity)
   report_error(std::cout, results.sane(), results.warning());
 }
 
+COMMAND(networking)
+{
+  bool server = args.count("host") == 0;
+  auto v = ::version;
+  if (infinit::compatibility_version)
+    v = *infinit::compatibility_version;
+  if (server)
+  {
+    elle::fprintf(std::cout, "[Server mode (version: %s)]", v) << std::endl;
+    infinit::networking::Servers servers(args, v);
+    reactor::sleep();
+  }
+  else
+  {
+    elle::fprintf(std::cout, "[Client mode (version: %s)]", v) << std::endl;
+    infinit::networking::perfom(mandatory<std::string>(args, "host"), args, v);
+  }
+}
+
 COMMAND(run_all)
 {
   reporting::All a;
   _sanity(args, a.sanity);
   _integrity(args, a.integrity);
-  _networking(args, a.networking);
+  _connectivity(args, a.connectivity);
   output(std::cout, a, flag(args, "verbose"));
   report_error(std::cout, a.sane(), a.warning());
 }
@@ -1675,6 +1697,37 @@ main(int argc, char** argv)
   using boost::program_options::bool_switch;
   Mode::OptionDescription verbose =
     { "verbose,v", bool_switch(), "output everything" };
+  Mode::OptionDescription protocol = {
+    "protocol", value<std::string>(),
+    "RPC protocol to use: tcp,utp,all (default: all)"
+  };
+  Mode::OptionDescription packet_size =
+    { "packet_size,s", value<elle::Buffer::Size>(),
+      "size of the packet to send (client only)" };
+  Mode::OptionDescription packets_count =
+    { "packets_count,n", value<int64_t>(),
+      "number of packets to exchange (client only)" };
+  Mode::OptionDescription host =
+    { "host,H", value<std::string>(),
+      "the host to connect to (if not specified, you are considered server)" };
+  Mode::OptionDescription port =
+    { "port,p", value<uint16_t>(),
+      "port to perform tests on (if unspecified,"
+      "\n  --tcp_port = port,"
+      "\n  --utp_port = port + 1,"
+      "\n  --xored_utp_port = port + 2)" };
+  Mode::OptionDescription tcp_port =
+    { "tcp_port,t", value<uint16_t>(), "port to perform tcp tests on"};
+  Mode::OptionDescription utp_port =
+    { "utp_port,u", value<uint16_t>(), "port to perform utp tests on"};
+  Mode::OptionDescription xored_utp_port =
+    { "xored_utp_port,x", value<uint16_t>(), "port to perform xored utp tests on"};
+  Mode::OptionDescription xored =
+    { "xored,X", value<std::string>(),
+      "performs test applying a 0xFF xor on the utp traffic, value=yes,no,both"};
+  Mode::OptionDescription mode =
+    { "mode,m", value<std::string>(),
+      "mode to use: upload,download,all (default: all) (client only)" };
 
   Modes modes {
     {
@@ -1687,13 +1740,13 @@ main(int argc, char** argv)
         }
     },
     {
-      "networking",
-        "Perform networking checks",
-        &networking,
-        "",
-        {
-          verbose
-        }
+      "connectivity",
+      "Perform connectivity checks",
+      &connectivity,
+      "",
+      {
+        verbose
+      }
     },
     {
       "sanity",
@@ -1712,6 +1765,23 @@ main(int argc, char** argv)
         {
           verbose
         }
+    },
+    {
+      "networking",
+      "Perform networking speed tests per protocol",
+      &networking,
+      "",
+      {
+        mode,
+        protocol,
+        packet_size,
+        packets_count,
+        host,
+        port,
+        tcp_port,
+        utp_port,
+        xored_utp_port
+      }
     }
   };
   return infinit::main("Infinit diagnostic utility", modes, argc, argv,

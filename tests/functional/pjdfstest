@@ -2,7 +2,11 @@
 
 import sys
 import os
+import threading
 from utils import *
+
+def comm(p):
+  out, err = p.communicate()
 
 with Infinit() as user:
   # Signup without sending private key.
@@ -37,8 +41,11 @@ with Infinit() as user:
           if 'Running volume' in line.decode('utf-8'):
             ready = True
             break
+      t = threading.Thread(target = comm, args=(p,))
+      t.start()
       subprocess.check_call(
         ['prove', '-rof', '--jobs', '9',  os.environ['PJDFSTESTS']],
         cwd = '%s/%s' % (user.dir, 'mountpoint'))
     finally:
       p.send_signal(2)
+      t.join()

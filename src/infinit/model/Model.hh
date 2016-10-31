@@ -25,6 +25,25 @@ namespace infinit
       STORE_UPDATE
     };
 
+    enum class Squash
+    {
+      stop, // Stop searching, do not squash
+      skip, // keep searching, do not squash
+      at_first_position_stop, // Stop searching, squash at first block
+      at_last_position_stop,  // Stop searching, squash at second block
+      at_first_position_continue, // Remember candidate, but keep searching
+      at_last_position_continue,  // Remember candidate, but keep searching
+    };
+
+    struct SquashConflictResolverOptions
+    {
+      SquashConflictResolverOptions();
+      SquashConflictResolverOptions(int max_size);
+      int max_size;
+    };
+
+    typedef std::pair<Squash, SquashConflictResolverOptions> SquashOperation;
+
     // Called in case of conflict error. Returns the new block to retry with
     // or null to abort
     class ConflictResolver
@@ -32,11 +51,16 @@ namespace infinit
     {
     public:
       typedef infinit::serialization_tag serialization_tag;
+      using SquashStack = std::vector<std::unique_ptr<ConflictResolver>>;
       virtual
       std::unique_ptr<blocks::Block>
       operator () (blocks::Block& failed,
                    blocks::Block& current,
                    StoreMode mode) = 0;
+      virtual
+      SquashOperation
+      squashable(SquashStack const& others)
+      { return {Squash::stop, {}};}
       virtual
       void
       serialize(elle::serialization::Serializer& s,
@@ -45,7 +69,17 @@ namespace infinit
       virtual
       std::string
       description() const = 0;
+
+      SquashOperation
+      squashable(ConflictResolver& prev);
     };
+
+    std::unique_ptr<ConflictResolver>
+    make_merge_conflict_resolver(std::unique_ptr<ConflictResolver> a,
+                                 std::unique_ptr<ConflictResolver> b,
+                                 SquashConflictResolverOptions const& opts);
+    std::vector<std::unique_ptr<ConflictResolver>>&
+    get_merge_conflict_resolver_content(ConflictResolver& cr);
 
     // A resolver that just override the previous version.
     class DummyConflictResolver
@@ -164,8 +198,7 @@ namespace infinit
       serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::model::Model>
-      make(std::vector<Endpoints> const& hosts,
-           bool client,
+      make(bool client,
            boost::filesystem::path const& dir) = 0;
       typedef infinit::serialization_tag serialization_tag;
     };

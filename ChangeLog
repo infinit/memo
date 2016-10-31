@@ -1,5 +1,61 @@
 # Change Log
 
+<!-- ## [0.8.0] -->
+
+<!-- xxx summary -->
+
+<!-- ### Added -->
+
+<!-- - Add groups description. -->
+
+
+## [0.7.1]
+
+New overlay implementation, Docker volume plugin improvements, bug
+fixes and performance improvements.
+
+### Added
+
+- Add `--peers-file` option to `infinit-volume` and `infinit-network`
+  to store known peers to disk.
+- Enable to pick listen inferface with `--listen`.
+- Add descriptions for users, storages, networks, volumes and drives.
+- Add `--networking` to `infinit-doctor` to test connection speed between
+  machines.
+- Add support for merging successive block updates into one operation in
+  `async` consensus.
+- The docker volume plugin now supports volume creation.
+- The docker volume plugin now lists volumes from the default network,
+  if any.
+- Option `--create-root` to `infinit-volume --create` to push the root
+  directory upon creation.
+- Option `--peer` to `infinit-network --create` to systematically
+  connect to a fixed set of peers.
+- Option `--register-service` to `infinit-volume --create` to register
+  the volume descriptor inside the network.
+- Option `--service` to `infinit-volume --fetch` to fetch volumes
+  descriptor from the network.
+- Option `--list-services` to `infinit-network` to list all registered
+  volumes from a network.
+
+### Changed
+
+- Poll beyond periodically for endpoints changes.
+- No longer require an email address to push a user to the Hub.
+- Improved cryptography performance.
+
+### Fixed
+
+- Enable to interrupt adding credentials with `infinit-credentials`.
+- Cache peer connections.
+- Daemonize `infinit-network` and `infinit-volume` as late as possible
+  to catch more errors syncronously.
+- Fix a bug in key hash cache that caused RPC connection to fail upon
+  reconnection
+- Restore domain name resolution for `--peer` options.
+- Do not connect twice to hosts passed via `--peer`.
+- Fix some shutdown assertions.
+- Fix deadlock in Kelips overlay implementation.
 
 ## [0.7.0] - 2016-09-23
 
@@ -9,7 +65,7 @@ Windows release, bandwidth and CPU usage optimization, bugfixes.
 
 - Windows release.
 - IPv6 support.
-- Add new `Koordinate` overlay that enables running several overlay
+- Add new `Koordinate` overlay that enables running several overlay.
   algorithms on nodes.
 - Add `--script` mode to `infinit-acl --list`.
 - Support `O_EXCL` when opening files.
@@ -57,7 +113,7 @@ Docker volume plugin and shutdown behavior fixes.
 ## [0.6.1] - 2016-08-01
 
 Diagnostic utilities, ability to link networks with several users, bug
-fixes and performances improvements.
+fixes and performance improvements.
 
 ### Added
 
@@ -76,8 +132,7 @@ fixes and performances improvements.
 - Prevent changing network admin permissions.
 - Push endpoints to beyond before fetching them, to ensure nodes
   always see each other.
-- Reduce Kelips packet size, improving network bandwidth
-  performances.
+- Reduce Kelips packet size, improving network bandwidth performance.
 
 ### Fixed
 
@@ -115,7 +170,7 @@ performance improvement.
 - Support `--pull` in combination with `--delete` to also remove
   entities from the hub in `infinit-drive`, `infinit-network`,
   `infinit-passport`, `infinit-user` and `infinit-volume`.
-- Add Kelips batch requests, greatly improving performances for large
+- Add Kelips batch requests, greatly improving performance for large
   set of files.
 - Push storage stats to the hub in `infinit-network` if `--push` is
   passed.
@@ -175,7 +230,7 @@ usage improvement.
 
 ## [0.5.4] - 2016-03-01
 
-Hotfix for disk performances, persistent disk cache for file contents.
+Hotfix for disk performance, persistent disk cache for file contents.
 
 ### Added
 
@@ -388,7 +443,7 @@ Bugfix release to correct conflict errors, plus minor improvements.
 ### Changed
 - Always try using a public key in inifinit-acl if the user does not
   exist in the network. Remove --try-with-public-key as a consequence.
-- Improve directory creation performances.
+- Improve directory creation performance.
 - Remove --as option from infinit-user --fetch.
 - Improve network error reporting in the CLI.
 - Add a timeout when pairing devices.

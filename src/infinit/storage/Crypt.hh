@@ -40,7 +40,9 @@ namespace infinit
     struct CryptStorageConfig
       : public StorageConfig
     {
-      CryptStorageConfig(std::string name, int64_t capacity = 0);
+      CryptStorageConfig(std::string name,
+                         boost::optional<int64_t> capacity,
+                         boost::optional<std::string> description);
       CryptStorageConfig(elle::serialization::SerializerIn& in);
 
       void

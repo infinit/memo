@@ -3,6 +3,7 @@
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
 
+#include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -68,6 +69,7 @@ make(
     consensus,
     overlay,
     boost::optional<int>(),
+    boost::optional<boost::asio::ip::address>(),
     std::move(s));
   auto ops = elle::make_unique<infinit::filesystem::FileSystem>(
     "volume", dn, infinit::filesystem::allow_root_creation = true);
@@ -330,9 +332,159 @@ ELLE_TEST_SCHEDULED(async_groups)
   BOOST_CHECK(true);
 }
 
+infinit::model::doughnut::consensus::Async*
+async(std::unique_ptr<reactor::filesystem::FileSystem>& fs)
+{
+  auto dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
+    dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+    ->block_store().get());
+  return dynamic_cast<infinit::model::doughnut::consensus::Async*>(dn->consensus().get());
+}
+
+ELLE_TEST_SCHEDULED(async_squash2)
+{
+  auto node_id = infinit::model::Address::random(0);
+  auto path = bfs::temp_directory_path() / bfs::unique_path();
+  auto kp = infinit::cryptography::rsa::keypair::generate(1024);
+  ELLE_LOG("root path: %s", path);
+  elle::os::setenv("INFINIT_HOME", path.string(), true);
+  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
+  elle::SafeFinally cleanup_path([&] {
+      boost::filesystem::remove_all(path);
+  });
+
+  // squash creating directories
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  auto fs = make(path, node_id, true, 100, kp);
+  for (int i=0; i<10; ++i)
+    fs->path(elle::sprintf("/f%s", i))->mkdir(0600);
+  auto a = async(fs);
+  a->print_queue();
+  fs.reset();
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  fs = make(path, node_id, true, 100, kp);
+  BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
+  a = async(fs);
+  BOOST_CHECK_LE(a->processed_op_count(), 14); // one write per dir
+  fs.reset();
+
+  // squash creating files
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  fs = make(path, node_id, true, 100, kp);
+  for (int i=0; i<10; ++i)
+    writefile(fs, elle::sprintf("file%s", i), "foo");
+  a = async(fs);
+  a->print_queue();
+  fs.reset();
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  fs = make(path, node_id, true, 100, kp);
+  BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
+  a = async(fs);
+  BOOST_CHECK_LE(a->processed_op_count(), 24); // 2 writes per file
+  fs.reset();
+
+  // squash other op barrier
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  fs = make(path, node_id, true, 100, kp);
+  for (int i=0; i<10; ++i)
+  {
+    fs->path(elle::sprintf("/filefile%s", i))->create(O_CREAT|O_RDWR, 0600);
+    if (i%2)
+      fs->path("/")->chmod(0600);
+  }
+  a = async(fs);
+  a->print_queue();
+  fs.reset();
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  fs = make(path, node_id, true, 100, kp);
+  BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
+  a = async(fs);
+  BOOST_CHECK_LE(a->processed_op_count(), 30);
+  BOOST_CHECK_GE(a->processed_op_count(), 25);
+  fs.reset();
+}
+
+ELLE_TEST_SCHEDULED(async_squash)
+{
+  auto node_id = infinit::model::Address::random(0);
+  auto path = bfs::temp_directory_path() / bfs::unique_path();
+  auto kp = infinit::cryptography::rsa::keypair::generate(1024);
+  ELLE_LOG("root path: %s", path);
+  elle::os::setenv("INFINIT_HOME", path.string(), true);
+  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
+  elle::SafeFinally cleanup_path([&] {
+      boost::filesystem::remove_all(path);
+  });
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  auto fs = make(path, node_id, true, 100, kp);
+  fs->path("/d1")->mkdir(0600);
+  fs->path("/d2")->mkdir(0600);
+  writefile(fs, "f3", "foo");
+  writefile(fs, "f4", "foo");
+  BOOST_CHECK_EQUAL(root_count(fs), 6);
+
+  fs.reset();
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  fs = make(path, node_id, true, 100, kp);
+  BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
+  BOOST_CHECK_EQUAL(root_count(fs), 6);
+
+  fs.reset();
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  fs = make(path, node_id, false, 0, kp);
+  BOOST_CHECK_EQUAL(root_count(fs), 6);
+}
+
+ELLE_TEST_SCHEDULED(async_squash_conflict)
+{
+  auto node_id = infinit::model::Address::random(0);
+  auto path = bfs::temp_directory_path() / bfs::unique_path();
+  auto kp = infinit::cryptography::rsa::keypair::generate(1024);
+  ELLE_LOG("root path: %s", path);
+  elle::os::setenv("INFINIT_HOME", path.string(), true);
+  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
+  elle::SafeFinally cleanup_path([&] {
+      boost::filesystem::remove_all(path);
+  });
+
+  auto fs = make(path, node_id, false, 0, kp);
+  BOOST_CHECK_EQUAL(root_count(fs), 2);
+  fs.reset();
+
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  fs = make(path, node_id, true, 100, kp);
+  fs->path("/d1")->mkdir(0600);
+  fs->path("/d2")->mkdir(0600);
+  fs->path("/dr")->mkdir(0600);
+  writefile(fs, "f3", "foo");
+  writefile(fs, "fr", "foo");
+  writefile(fs, "f4", "foo");
+  fs->path("/dr")->rmdir();
+  fs->path("/fr")->unlink();
+  BOOST_CHECK_EQUAL(root_count(fs), 6);
+
+  fs.reset();
+  fs = make(path, node_id, false, 0, kp);
+  writefile(fs, "fc", "foo");
+  BOOST_CHECK_EQUAL(root_count(fs), 3);
+
+  fs.reset();
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  fs = make(path, node_id, true, 100, kp);
+  BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
+  BOOST_CHECK_EQUAL(root_count(fs), 7);
+
+  fs.reset();
+  fs = make(path, node_id, false, 0, kp);
+  BOOST_CHECK_EQUAL(root_count(fs), 7);
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(async_cache), 0, valgrind(10));
   suite.add(BOOST_TEST_CASE(async_groups), 0, valgrind(10));
+  suite.add(BOOST_TEST_CASE(async_squash), 0, valgrind(10));
+  suite.add(BOOST_TEST_CASE(async_squash2), 0, valgrind(10));
+  suite.add(BOOST_TEST_CASE(async_squash_conflict), 0, valgrind(10));
 }

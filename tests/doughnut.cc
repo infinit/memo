@@ -227,8 +227,9 @@ private:
           return make_overlay(0, members, std::move(local), d);
         }),
       boost::optional<int>(),
+      boost::optional<boost::asio::ip::address>(),
       std::move(storage_a),
-      version_a);
+      dht::version = version_a);
     this->dht_b = std::make_shared<dht::Doughnut>(
       id_b,
       this->keys_b,
@@ -242,8 +243,9 @@ private:
           return make_overlay(1, members, std::move(local), d);
         }),
       boost::optional<int>(),
+      boost::optional<boost::asio::ip::address>(),
       std::move(storage_b),
-      version_b);
+      dht::version = version_b);
     this->dht_c = std::make_shared<dht::Doughnut>(
       id_c,
       this->keys_c,
@@ -257,8 +259,9 @@ private:
           return make_overlay(2, members, std::move(local), d);
         }),
       boost::optional<int>(),
+      boost::optional<boost::asio::ip::address>(),
       std::move(storage_c),
-      version_c);
+      dht::version = version_c);
     for (auto* stonehenge: stonehenges)
       for (auto& peer: stonehenge->peers())
       {
@@ -1184,8 +1187,11 @@ namespace rebalancing
     typedef dht::consensus::Paxos Super;
     using Super::Super;
     std::unique_ptr<dht::Local>
-    make_local(boost::optional<int> port,
-               std::unique_ptr<infinit::storage::Storage> storage)
+    make_local(
+      boost::optional<int> port,
+      boost::optional<boost::asio::ip::address> listen,
+      std::unique_ptr<infinit::storage::Storage> storage,
+      dht::Protocol p) override
     {
       return elle::make_unique<Local>(
         *this,

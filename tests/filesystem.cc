@@ -100,10 +100,13 @@ protected:
   virtual
   std::unique_ptr<infinit::model::doughnut::Local>
   make_local(boost::optional<int> port,
-             std::unique_ptr<infinit::storage::Storage> storage) override
+             boost::optional<boost::asio::ip::address> listen,
+             std::unique_ptr<infinit::storage::Storage> storage,
+             dht::Protocol p) override
   {
-    return _backend->make_local(port, std::move(storage));
+    return _backend->make_local(port, listen, std::move(storage), p);
   }
+
   virtual
   std::unique_ptr<infinit::model::blocks::Block>
   _fetch(infinit::model::Address address, boost::optional<int> local_version) override
@@ -1420,6 +1423,109 @@ ELLE_TEST_SCHEDULED(conflicts)
   h0->close();
 }
 
+ELLE_TEST_SCHEDULED(group_description)
+{
+  DHTs servers(-1);
+  auto owner = servers.client();
+  auto member = servers.client(true);
+  auto admin = servers.client(true);
+  owner.fs->path("/");
+  owner.fs->path("/")->setxattr("infinit.group.create", "grp", 0);
+  auto member_key =
+    elle::serialization::json::serialize(member.dht.dht->keys().K()).string();
+  owner.fs->path("/")->setxattr("infinit.group.add", "grp:" + member_key, 0);
+  auto admin_key =
+    elle::serialization::json::serialize(admin.dht.dht->keys().K()).string();
+  owner.fs->path("/")->setxattr(
+    "infinit.group.addadmin", "grp:" + admin_key, 0);
+  owner.fs->path("/")->setxattr("infinit.auth.setr", "@grp", 0);
+  auto group_list = [&] (auto const& c) -> elle::json::Object
+    {
+      std::string str = c.fs->path("/")->getxattr("infinit.group.list.grp");
+      std::stringstream ss(str);
+      return boost::any_cast<elle::json::Object>(elle::json::read(ss));
+    };
+  auto set_description = [&] (auto const& c, std::string const& desc)
+    {
+      c.fs->path("/")->setxattr("infinit.groups.grp.description", desc, 0);
+    };
+  if (owner.dht.dht->version() < elle::Version(0, 8, 0))
+  {
+    BOOST_CHECK_THROW(set_description(owner, "blerg"), elle::Error);
+  }
+  else
+  {
+    // Check there is no description.
+    BOOST_CHECK(
+      group_list(owner).find("description") == group_list(owner).end());
+    // Admin adds a description.
+    std::string description = "some generic description";
+    set_description(owner, description);
+    auto get_description = [&] (auto const& c) -> std::string
+      {
+        return c.fs->path("/")->getxattr("infinit.groups.grp.description");
+      };
+    // Check group members can see it.
+    BOOST_CHECK_EQUAL(get_description(owner), description);
+    BOOST_CHECK_EQUAL(get_description(member), description);
+    BOOST_CHECK_EQUAL(get_description(admin), description);
+    // Normal member can't change the description.
+    BOOST_CHECK_THROW(set_description(member, "blerg"), elle::Exception);
+    // Admin user can change the description.
+    description = "42";
+    set_description(admin, description);
+    BOOST_CHECK_EQUAL(get_description(owner), description);
+    // Unset the description.
+    set_description(owner, "");
+    BOOST_CHECK(
+      group_list(admin).find("description") == group_list(admin).end());
+  }
+}
+
+ELLE_TEST_SCHEDULED(world_perm_conflict)
+{
+  DHTs servers(1);
+  auto client1 = servers.client(false, {}, with_cache = true);
+  auto client2 = servers.client(false);
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto skey = serialize(kp.K());
+  write_file(client1.fs->path("/file"), "foo");
+  client1.fs->path("/file")->setxattr("infinit.auth_others", "r", 0);
+  struct stat st;
+  client2.fs->path("/file")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_mode & 07, 4);
+  // make one change with client2 to trigger conflict
+  write_file(client2.fs->path("/file"), "foo", O_RDWR|O_TRUNC);
+  client1.fs->path("/file")->setxattr("infinit.auth_others", "none", 0);
+  client2.fs->path("/file")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_mode & 07, 0);
+
+  // Test with a directory
+  client1.fs->path("/dir")->mkdir(0666);
+  client1.fs->path("/dir")->setxattr("infinit.auth_others", "r", 0);
+  client2.fs->path("/dir")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_mode & 07, 4);
+  // make change to trigger conflict
+  write_file(client2.fs->path("/dir/foo"), "bar");
+  client1.fs->path("/dir")->setxattr("infinit.auth_others", "none", 0);
+  client2.fs->path("/dir")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_mode & 07, 0);
+
+  // test with permissions on keys
+  auto client3 = servers.client(true, kp);
+  client1.fs->path("/")->setxattr("infinit.auth.setrw", skey, 0);
+  client1.fs->path("/file")->setxattr("infinit.auth.setrw", skey, 0);
+  client1.fs->path("/dir")->setxattr("infinit.auth.setrw", skey, 0);
+  BOOST_CHECK_NO_THROW(read_file(client3.fs->path("/file")));
+  BOOST_CHECK_NO_THROW(directory_count(client3.fs->path("/dir")));
+  write_file(client2.fs->path("/file"), "bam", O_RDWR|O_TRUNC);
+  client1.fs->path("/file")->setxattr("infinit.auth.clear", skey, 0);
+  BOOST_CHECK_THROW(read_file(client3.fs->path("/file")), std::exception);
+  write_file(client2.fs->path("/dir/foo2"), "bar");
+  client1.fs->path("/dir")->setxattr("infinit.auth.clear", skey, 0);
+  BOOST_CHECK_THROW(directory_count(client3.fs->path("/dir")), std::exception);
+}
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -1448,4 +1554,6 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(upgrade_06_07),0, valgrind(5));
   suite.add(BOOST_TEST_CASE(create_race),0, valgrind(5));
   suite.add(BOOST_TEST_CASE(conflicts), 0, valgrind(10));
+  suite.add(BOOST_TEST_CASE(group_description), 0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(world_perm_conflict), 0, valgrind(10));
 }

@@ -58,6 +58,7 @@ Miscellaneous:
   -s [ --script ]              Silence all extraneous human friendly messages
   --compatibility-version arg  Force compatibility version
   -v [ --version ]             Display version
+  --critical-log               Path to critical log file, none to disable
   -a [ --as ] arg              User to run commands as (default: system user)
 ```
 
@@ -70,17 +71,21 @@ Usage: infinit-user --create [OPTIONS...]
 Create a user:
 
 Create options:
-  -n [ --name ] arg      User name (default: system user)
-  -k [ --key ] arg       RSA key pair in PEM format - e.g. your SSH key
-                         (default: generate key pair)
-  --push-user            Push the user to the Hub
-  -p [ --push ]          Alias for --push-user
-  --email arg            Valid email address (mandatory when using --push-user)
-  --fullname arg         Fullname of the user (optional)
-  --full                 Include private key in order to facilitate device
-                         pairing and fetching lost keys
-  --password arg         Password to authenticate with the Hub. Used with
-                         --full (default: prompt for password)
+  -n [ --name ] arg       User name (default: system user)
+  -k [ --key ] arg        RSA key pair in PEM format - e.g. your SSH key
+                          (default: generate key pair)
+  --push-user             Push the user to the Hub
+  -p [ --push ]           Alias for --push-user
+  --email arg             Optional email address
+  --fullname arg          Fullname of user (optional)
+  --full                  Include private key in order to facilitate device
+                          pairing and fetching lost keys
+  --password arg          Password to authenticate with the Hub. Used with
+                          --full (default: prompt for password)
+  -l [ --ldap-name ] arg  LDAP distinguished name of the user, enables
+                          authentication through LDAP
+  -o [ --output ] arg     File to write the user to
+                          (default: stdout)
 ```
 
 Every binary follows the same semantic with the first option representing the mode of operation (a verb): `--create`, `--pull`, `--list`, `--delete`, `--export`, etc.
@@ -169,7 +174,7 @@ To register on the Hub, you can either use the `--push` option <a href="#create-
 
 #### Push an existing user to the Hub ####
 
-To push an existing user, simply invoke _infinit-user_ with the `--push` mode and `--email` option to specify a valid email address. Needless to say that this email address will *never* be shared with third parties and will solely be used for Infinit to communicate news of its file storage platform.
+To push an existing user, simply invoke _infinit-user_ with the `--push` mode. You can also specify an optional email address using `--email` but needless to say that this email address will *never* be shared with third parties and will solely be used for Infinit to communicate news of its file storage platform.
 
 **IMPORTANT**: Given the critical nature of the user identity, we strongly advise you to read the <a href="#log-in-on-another-device">Log in on another device</a> section in order to completely understand the ramifications of the options used when pushing your user.
 

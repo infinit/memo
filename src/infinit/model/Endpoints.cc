@@ -1,3 +1,5 @@
+#include <elle/os/environ.hh>
+
 #include <reactor/network/resolve.hh>
 
 #include <infinit/model/Endpoints.hh>
@@ -34,12 +36,15 @@ namespace infinit
 
     Endpoint::Endpoint(std::string const& repr)
     {
+      static bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty();
       size_t sep = repr.find_last_of(':');
       if (sep == std::string::npos || sep == repr.length())
         elle::err("invalid endpoint: %s", repr);
-      this->_address =
-        boost::asio::ip::address::from_string(repr.substr(0, sep));
-      this->_port = std::stoi(repr.substr(sep + 1));
+      std::string saddr = repr.substr(0, sep);
+      std::string sport = repr.substr(sep + 1);
+      auto ep = reactor::network::resolve_udp(saddr, sport, !v6);
+      this->_address = ep.address();
+      this->_port = ep.port();
     }
 
     bool
@@ -142,6 +147,11 @@ namespace infinit
         this->emplace_back(e);
     }
 
+    Endpoints::Endpoints(boost::asio::ip::udp::endpoint ep)
+    {
+      this->emplace_back(std::move(ep));
+    }
+
     void
     Endpoint::print(std::ostream& output) const
     {
@@ -176,7 +186,7 @@ namespace infinit
     {
       if (loc.id() != Address::null)
         if (is_fixed(output))
-          elle::fprintf(output, "peer %f (%s)", loc.id(), loc.endpoints());
+          elle::fprintf(output, "peer %f", loc.id());
         else
           elle::fprintf(output, "peer %s (%s)", loc.id(), loc.endpoints());
       else

@@ -160,7 +160,9 @@ namespace infinit
 
         std::unique_ptr<Local>
         Paxos::make_local(boost::optional<int> port,
-                          std::unique_ptr<storage::Storage> storage)
+                          boost::optional<boost::asio::ip::address> listen_address,
+                          std::unique_ptr<storage::Storage> storage,
+                          Protocol p)
         {
           return elle::make_unique<consensus::Paxos::LocalPeer>(
             *this,
@@ -171,7 +173,9 @@ namespace infinit
             this->doughnut(),
             this->doughnut().id(),
             std::move(storage),
-            port ? port.get() : 0);
+            port ? port.get() : 0,
+            listen_address,
+            p);
         }
 
         /*-----.
@@ -391,10 +395,10 @@ namespace infinit
         Paxos::LocalPeer::initialize()
         {
           this->doughnut().overlay()->on_discover().connect(
-            [this] (Address id, bool observer)
+            [this] (NodeLocation node, bool observer)
             {
               if (!observer)
-                this->_discovered(id);
+                this->_discovered(node.id());
             });
           this->doughnut().overlay()->on_disappear().connect(
             [this] (Address id, bool observer)
@@ -441,7 +445,7 @@ namespace infinit
         }
 
         void
-        Paxos::LocalPeer::cleanup()
+        Paxos::LocalPeer::_cleanup()
         {
           this->_rebalance_inspector.reset();
           this->_rebalance_thread.terminate_now();
