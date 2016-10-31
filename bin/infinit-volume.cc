@@ -423,6 +423,7 @@ COMMAND(run)
   auto model_and_threads = network.run(
     self, mo, true, infinit::compatibility_version, port);
   auto model = std::move(model_and_threads.first);
+  hook_stats_signals(*model);
   if (auto plf = optional(args, "peers-file"))
   {
     auto more_peers = infinit::hook_peer_discovery(*model, *plf);
@@ -459,7 +460,8 @@ COMMAND(run)
     auto fs = volume.run(std::move(model),
                          mo.mountpoint,
                          mo.readonly,
-                         flag(args, "allow-root-creation")
+                         flag(args, "allow-root-creation"),
+                         flag(args, "map-other-permissions")
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
                          , optional(args, "mount-name")
 #endif
@@ -1181,7 +1183,14 @@ run_options(RunMode mode)
     add_option(
       { "push,p", BOOL_IMPLICIT, "alias for --push-endpoints --push-volume" });
   if (mode == RunMode::run || mode == RunMode::update)
-    add_option({ "push,p", BOOL_IMPLICIT, "alias for --push-endpoints" });
+    add_options({
+      { "push,p", BOOL_IMPLICIT, "alias for --push-endpoints" },
+      { "map-other-permissions",
+        boost::program_options::value<bool>()
+          ->implicit_value(true, "true")
+          ->default_value(true, "true"),
+        "allow chmod to set world permissions"}
+    });
   add_options({
     { "publish", BOOL_IMPLICIT,
       "alias for --fetch-endpoints --push-endpoints" },

@@ -1,16 +1,19 @@
 #ifndef INFINIT_OVERLAY_KOUNCIL_HH
 # define INFINIT_OVERLAY_KOUNCIL_HH
 
+# include <random>
+
+# include <boost/multi_index/global_fun.hpp>
 # include <boost/multi_index/hashed_index.hpp>
 # include <boost/multi_index/mem_fun.hpp>
+# include <boost/multi_index/random_access_index.hpp>
 # include <boost/multi_index/sequenced_index.hpp>
 # include <boost/multi_index_container.hpp>
 
 # include <elle/unordered_map.hh>
 
+# include <infinit/model/doughnut/Peer.hh>
 # include <infinit/overlay/Overlay.hh>
-# include <infinit/overlay/Overlay.hh>
-
 
 namespace infinit
 {
@@ -18,11 +21,19 @@ namespace infinit
   {
     namespace kouncil
     {
-      /** An overlay that aggregates several underlying overlays.
-       *
-       *  Kouncils lets a node serve several overlays for other to query,
-       *  and forwards local requets to the first one. Future evolution may
-       *  enable to leverage several backend overlays depending on policies.
+      /// BMI helpers
+      namespace bmi = boost::multi_index;
+      namespace _details
+      {
+        inline
+        model::Address
+        peer_id(Overlay::Member const& p)
+        {
+          return p->id();
+        }
+      }
+
+      /** An overlay that keeps global knowledge locally.
        */
       class Kouncil
         : public Overlay
@@ -56,7 +67,15 @@ namespace infinit
             boost::multi_index::sequenced<>
           >>;
         /// Peers by id
-        using Peers = elle::unordered_map<model::Address, Overlay::Member>;
+        using Peer = Overlay::Member;
+        using Peers =
+          bmi::multi_index_container<
+          Peer,
+          bmi::indexed_by<
+            bmi::hashed_unique<
+              bmi::global_fun<
+                Peer const&, model::Address, &_details::peer_id> >,
+            bmi::random_access<> > >;
 
       /*-------------.
       | Construction |
@@ -87,6 +106,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(AddressBook, address_book);
         /// All known peers.
         ELLE_ATTRIBUTE_R(Peers, peers);
+        ELLE_ATTRIBUTE(std::default_random_engine, gen, mutable);
       private:
         void
         _broadcast();
@@ -113,6 +133,9 @@ namespace infinit
         virtual
         WeakMember
         _lookup_node(model::Address address) const override;
+      public:
+        elle::json::Json
+        query(std::string const& k, boost::optional<std::string> const& v) override;
       };
     }
   }

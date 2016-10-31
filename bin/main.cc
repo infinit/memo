@@ -755,3 +755,31 @@ option_push(boost::program_options::variables_map const& args,
     return true;
   return false;
 }
+
+void
+hook_stats_signals(infinit::model::doughnut::Doughnut& dht)
+{
+  #ifndef INFINIT_WINDOWS
+  reactor::scheduler().signal_handle(SIGUSR1, [&dht] {
+      auto& o = dht.overlay();
+      try
+      {
+        auto json = o->query("stats", {});
+        std::cerr << elle::json::pretty_print(json);
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_TRACE("overlay stats query error: %s", e);
+      }
+      try
+      {
+        auto json = o->query("blockcount", {});
+        std::cerr << elle::json::pretty_print(json);
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_TRACE("overlay blockcount query error: %s", e);
+      }
+  });
+  #endif
+}
