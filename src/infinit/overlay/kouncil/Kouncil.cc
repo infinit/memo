@@ -281,25 +281,9 @@ namespace infinit
           // are not part of the _peer list
           if (auto r = dynamic_cast<model::doughnut::Remote const*>(peer.get()))
           {
-            auto cpeers = this->local()->peers();
-            for (auto cc: cpeers)
-            {
-              try
-              {
-                auto& c = elle::unconst(cc);
-                RPC<void(NodeLocations const&)>rpc(
-                  "kouncil_discover",
-                  elle::unconst(c->channels()),
-                  this->doughnut()->version(),
-                  c->rpcs()._key);
-                NodeLocation nl(peer->id(), r->endpoints());
-                rpc(NodeLocations{nl});
-              }
-              catch (elle::Error const& e)
-              {
-                ELLE_TRACE("Exception invoking discover: %s", e);
-              }
-            }
+            NodeLocation nl(peer->id(), r->endpoints());
+            this->local()->broadcast<void>("kouncil_discover",
+                                           NodeLocations{nl});
           }
         }
         ELLE_DEBUG("%s: exiting discover", this);
