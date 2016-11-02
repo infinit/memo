@@ -99,6 +99,12 @@
     "category": "technology",
     "popularity": 0,
     "question": "How to emulate one or more virtual nodes on a single device?",
-    "answer": "<p>You can simulate another device by opening another terminal and setting  the environment variable INFINIT_HOME to a different directory. <a href='/documentation/environment-variables#infinit_home'>Full details here.</a></p>",
+    "answer": "<p>You can simulate another device by opening another terminal and setting  the environment variable INFINIT_HOME to a different directory. <a href='/documentation/environment-variables#infinit_home'>Full details here.</a></p>"
+  },
+  {
+    "category": "general",
+    "popularity": 2,
+    "question": "Is it production ready?",
+    "answer": "<p>No. Infinit is still in beta and will be considered production ready for its 1.0 release.</p>"
   }
 ]
