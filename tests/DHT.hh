@@ -107,6 +107,26 @@ public:
         this->disconnect(*peer);
   }
 
+  std::string
+  type_name() override
+  {
+    return "test";
+  }
+
+  elle::json::Array
+  peer_list() override
+  {
+    return elle::json::Array();
+  }
+
+  elle::json::Object
+  stats() override
+  {
+    elle::json::Object res;
+    res["type"] = this->type_name();
+    return res;
+  }
+
 protected:
   virtual
   reactor::Generator<WeakMember>
@@ -189,7 +209,6 @@ NAMED_ARGUMENT(user_name);
 NAMED_ARGUMENT(yielding_overlay);
 NAMED_ARGUMENT(protocol);
 NAMED_ARGUMENT(port);
-NAMED_ARGUMENT(monitoring_socket_path_a);
 
 std::unique_ptr<dht::consensus::Consensus>
 add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)

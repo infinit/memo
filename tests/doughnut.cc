@@ -53,6 +53,7 @@ NAMED_ARGUMENT(storage_c);
 NAMED_ARGUMENT(version_a);
 NAMED_ARGUMENT(version_b);
 NAMED_ARGUMENT(version_c);
+NAMED_ARGUMENT(monitoring_socket_path_a);
 
 static
 int
@@ -926,43 +927,40 @@ ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
   reactor::network::UnixDomainSocket socket(monitoring_path);
   using Monitoring = infinit::model::MonitoringServer;
   using Query = infinit::model::MonitoringServer::MonitorQuery::Query;
-  auto do_query = [&] (Query query_val)
+  auto do_query = [&] (Query query_val) -> elle::json::Object
     {
       auto query = Monitoring::MonitorQuery(query_val);
       elle::serialization::json::serialize(query, socket, false, false);
-      auto res = elle::serialization::json::deserialize<std::unique_ptr<
-        Monitoring::MonitorResponse>>(socket, false);
-      return res;
+      return boost::any_cast<elle::json::Object>(elle::json::read(socket));
     };
-  std::unique_ptr<Monitoring::MonitorResponse> res;
-  res.reset(do_query(Query::Overlay).release());
-  if (auto json = dynamic_cast<Monitoring::MonitorResponseGeneric*>(res.get()))
   {
-    auto obj = boost::any_cast<elle::json::Object>(json->result);
-    BOOST_CHECK_EQUAL(boost::any_cast<std::string>(obj["type"]), "stonehenge");
+    Monitoring::MonitorResponse res(do_query(Query::Status));
+    BOOST_CHECK(res.success);
   }
-  else
-    elle::unreachable();
-  res.reset(do_query(Query::Consensus).release());
-  if (auto json = dynamic_cast<Monitoring::MonitorResponseGeneric*>(res.get()))
   {
-    auto obj = boost::any_cast<elle::json::Object>(json->result);
+    Monitoring::MonitorResponse res(do_query(Query::Stats));
+    auto obj = res.result.get();
+    BOOST_CHECK_EQUAL(obj.count("consensus"), 1);
+    BOOST_CHECK_EQUAL(obj.count("overlay"), 1);
+    BOOST_CHECK_EQUAL(boost::any_cast<std::string>(obj["protocol"]), "all");
+    BOOST_CHECK_EQUAL(
+      boost::any_cast<elle::json::Array>(obj["peers"]).size(), 3);
+    auto redundancy = boost::any_cast<elle::json::Object>(obj["redundancy"]);
     if (paxos)
     {
-      BOOST_CHECK_EQUAL(boost::any_cast<std::string>(obj["type"]), "paxos");
-      BOOST_CHECK_EQUAL(boost::any_cast<std::string>(obj["node_timeout"]),
-                        "600s");
+      BOOST_CHECK_EQUAL(boost::any_cast<int64_t>(redundancy["desired_factor"]),
+                        3);
+      BOOST_CHECK_EQUAL(boost::any_cast<std::string>(redundancy["type"]),
+                        "replication");
     }
     else
-      BOOST_CHECK_EQUAL(obj.size(), 0);
+    {
+      BOOST_CHECK_EQUAL(boost::any_cast<int64_t>(redundancy["desired_factor"]),
+                        1);
+      BOOST_CHECK_EQUAL(boost::any_cast<std::string>(redundancy["type"]),
+                        "none");
+    }
   }
-  else
-    elle::unreachable();
-  res.reset(do_query(Query::Peers).release());
-  if (auto obj = dynamic_cast<Monitoring::MonitorResponsePeers*>(res.get()))
-    BOOST_CHECK_EQUAL(obj->peers.size(), 3);
-  else
-    elle::unreachable();
 }
 #endif
 
