@@ -18,4 +18,7 @@ namespace infinit
     elle::fprintf(output, "RPC(%s)", rpc.name());
     return output;
   }
+
+  static const elle::serialization::Hierarchy<elle::Exception>::
+  Register<UnknownRPC> _register_serialization;
 }

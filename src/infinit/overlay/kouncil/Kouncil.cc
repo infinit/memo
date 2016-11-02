@@ -45,7 +45,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: construct", this);
         if (local)
         {
-          this->_peers.emplace(this->id(), local);
+          this->_peers.emplace(local);
           for (auto const& key: local->storage()->list())
             this->_address_book.emplace(this->id(), key);
           ELLE_DEBUG("loaded %s entries from storage",
@@ -112,6 +112,21 @@ namespace infinit
         this->_connections.clear();
       }
 
+      elle::json::Json
+      Kouncil::query(std::string const& k, boost::optional<std::string> const& v)
+      {
+        elle::json::Object res;
+        if (k == "stats")
+        {
+          elle::json::Array jpeers;
+          for (auto const& p: peers().get<1>())
+            jpeers.push_back(elle::sprintf("%s", p->id()));
+          res["peers"] = jpeers;
+          res["id"] = elle::sprintf("%s", this->doughnut()->id());
+        }
+        return res;
+      }
+
       void
       Kouncil::_validate() const
       {}
@@ -167,7 +182,24 @@ namespace infinit
           ELLE_DEBUG("added %s entries from %f", entries.size(), peer);
         }
         ELLE_ASSERT_NEQ(peer->id(), model::Address::null);
-        this->_peers.emplace(peer->id(), peer);
+        this->_peers.emplace(peer);
+      }
+
+      template<typename E>
+      std::vector<int>
+      pick_n(E& gen, int size, int count)
+      {
+        std::vector<int> res;
+        while (res.size() < static_cast<unsigned int>(count))
+        {
+          std::uniform_int_distribution<> random(0, size - 1 - res.size());
+          int v = random(gen);
+          for (auto r: res)
+            if (v >= r)
+              ++v;
+          res.push_back(v);
+        }
+        return res;
       }
 
       /*-------.
@@ -183,12 +215,18 @@ namespace infinit
             [this, address, n]
             (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
             {
-              // FIXME: randomize
-              int count = 0;
-              for (auto it = this->_peers.begin();
-                   it != this->_peers.end() && count < n;
-                   ++it, ++count)
-                yield(it->second);
+              if (static_cast<unsigned int>(n) >= this->_peers.size())
+                for (auto p: this->_peers)
+                  yield(p);
+              else
+              {
+                std::vector<int> indexes = pick_n(
+                  this->_gen,
+                  static_cast<int>(this->_peers.size()),
+                  n);
+                for (auto r: indexes)
+                  yield(this->peers().get<1>()[r]);
+              }
             });
         else
           return reactor::generator<Overlay::WeakMember>(
@@ -199,7 +237,9 @@ namespace infinit
               int count = 0;
               for (auto it = range.first; it != range.second; ++it)
               {
-                yield(this->_peers.at(it->node()));
+                auto p = this->peers().find(it->node());
+                ELLE_ASSERT(p != this->peers().end());
+                yield(*p);
                 if (++count >= n)
                   break;
               }
@@ -210,7 +250,8 @@ namespace infinit
                 for (auto peer: this->peers())
                 {
                   // FIXME: handle local !
-                  if (auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(peer.second))
+                  if (auto r = std::dynamic_pointer_cast<
+                      model::doughnut::Remote>(peer))
                   {
                     auto lookup =
                       r->make_rpc<std::unordered_set<Address> (Address)>(
@@ -252,7 +293,7 @@ namespace infinit
       {
         auto it = this->_peers.find(address);
         if (it != this->_peers.end())
-          return it->second;
+          return *it;
         else
           return Overlay::WeakMember();
       }
@@ -271,11 +312,9 @@ namespace infinit
       Kouncil::peer_list()
       {
         elle::json::Array res;
-        for (auto const& peer: this->_peers)
+        for (auto const& peer: this->peers().get<1>())
           res.push_back(elle::json::Object{
-            { "id", elle::sprintf("%x", peer.first) },
-            { "endpoints",
-              std::vector<std::string>{elle::sprintf("%s", peer.second)} },
+            { "id", elle::sprintf("%x", peer->id()) },
           });
         return res;
       }
@@ -285,6 +324,7 @@ namespace infinit
       {
         elle::json::Object res;
         res["type"] = this->type_name();
+        res["id"] = elle::sprintf("%s", this->doughnut()->id());
         return res;
       }
     }

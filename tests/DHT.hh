@@ -289,6 +289,13 @@ public:
               }, std::forward<Args>(args)...);
   }
 
+  reactor::network::TCPSocket
+  connect_tcp()
+  {
+    return reactor::network::TCPSocket(
+      this->dht->local()->server_endpoint().tcp());
+  }
+
   std::shared_ptr<dht::Doughnut> dht;
   Overlay* overlay;
 

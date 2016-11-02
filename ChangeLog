@@ -8,11 +8,19 @@
 
 <!-- - Add groups description. -->
 
+<!-- ## [0.7.1] -->
 
-## [0.7.1]
+<!-- New overlay implementation, -->
 
-New overlay implementation, Docker volume plugin improvements, bug
-fixes and performance improvements.
+<!-- ### Added -->
+
+<!-- - Add new `Kouncil` overlay that stores all block search space in main -->
+<!--   memory on startup. -->
+
+
+## [0.7.1] - 2016-10-31
+
+Docker volume plugin improvements, bug fixes and performance improvements.
 
 ### Added
 
@@ -56,6 +64,8 @@ fixes and performance improvements.
 - Do not connect twice to hosts passed via `--peer`.
 - Fix some shutdown assertions.
 - Fix deadlock in Kelips overlay implementation.
+- Fix issue with dokany 1.0.0.5000 on Windows.
+
 
 ## [0.7.0] - 2016-09-23
 

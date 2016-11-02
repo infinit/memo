@@ -31,6 +31,14 @@ namespace infinit
       }
 
       static
+      std::string
+      name_regex();
+
+      static
+      std::string
+      description_regex();
+
+      static
       void
       check_name(std::string const& name);
 

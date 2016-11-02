@@ -12,24 +12,50 @@
 
 ELLE_LOG_COMPONENT("RPC");
 
+struct Server
+{
+  Server(std::function<void (infinit::RPCServer&)> rpcs = {})
+    : server()
+    , server_thread(
+      new reactor::Thread("server", std::bind(&Server::serve, this)))
+    , rpcs(rpcs)
+  {
+    server.listen();
+  }
+
+  void
+  serve()
+  {
+    auto socket = server.accept();
+    infinit::RPCServer s;
+    if (this->rpcs)
+      this->rpcs(s);
+    s.add("succ", std::function<int (int)>([] (int x) { return x + 1; }));
+    s.serve(*socket);
+  }
+
+  reactor::network::TCPSocket
+  connect()
+  {
+    return reactor::network::TCPSocket("127.0.0.1", this->server.port());
+  }
+
+  reactor::network::TCPServer server;
+  reactor::Thread::unique_ptr server_thread;
+  std::function<void (infinit::RPCServer&)> rpcs;
+};
+
 ELLE_TEST_SCHEDULED(move)
 {
-  reactor::network::TCPServer server;
-  server.listen();
-
-  reactor::Thread::unique_ptr server_thread(new reactor::Thread(
-    "server",
-    [&]
+  Server s(
+    [] (infinit::RPCServer& s)
     {
-      auto socket = server.accept();
-      infinit::RPCServer s;
       s.add("coin",
             std::function<std::unique_ptr<int>(int, std::unique_ptr<int>)>(
               [] (int a, std::unique_ptr<int> b)
               { return elle::make_unique<int>(a + *b); }));
-      s.serve(*socket);
-    }));
-  reactor::network::TCPSocket stream("127.0.0.1", server.port());
+    });
+  auto stream = s.connect();
   infinit::protocol::Serializer serializer(stream, infinit::version(), false);
   infinit::protocol::ChanneledStream channels(serializer);
   infinit::RPC<std::unique_ptr<int> (int, std::unique_ptr<int>)>
@@ -44,8 +70,21 @@ ELLE_TEST_SCHEDULED(move)
   }
 }
 
+ELLE_TEST_SCHEDULED(unknown)
+{
+  Server s;
+  auto stream = s.connect();
+  infinit::protocol::Serializer serializer(stream, infinit::version(), false);
+  infinit::protocol::ChanneledStream channels(serializer);
+  infinit::RPC<int (int)> unknown("unknown", channels, infinit::version());
+  BOOST_CHECK_THROW(unknown(0), infinit::UnknownRPC);
+  infinit::RPC<int (int)> succ("succ", channels, infinit::version());
+  BOOST_CHECK_EQUAL(succ(0), 1);
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(move));
+  suite.add(BOOST_TEST_CASE(unknown));
 }

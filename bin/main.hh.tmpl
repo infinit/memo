@@ -59,6 +59,10 @@ bool
 option_push(boost::program_options::variables_map const& args,
             std::vector<std::string> const& aliases = {});
 
+// Hook USR1 and display some statistics
+void
+hook_stats_signals(infinit::model::doughnut::Doughnut& dht);
+
 // One-lined because mako fucks-up line numbering otherwise
 #define COMMAND(name) static void name(boost::program_options::variables_map const& args, boost::signals2::signal<void()>& killed)
 
@@ -1612,7 +1616,8 @@ namespace infinit
     run(std::shared_ptr<model::doughnut::Doughnut> dht,
         boost::optional<std::string> mountpoint_ = {},
         boost::optional<bool> readonly = {},
-        bool allow_root_creation = false
+        bool allow_root_creation = false,
+        bool map_other_permissions = true
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         , boost::optional<std::string> volname_ = {}
 #endif
@@ -1639,7 +1644,8 @@ namespace infinit
         infinit::filesystem::allow_root_creation = allow_root_creation,
         infinit::filesystem::volume_name = this->name,
         infinit::filesystem::root_block_cache_dir = this->root_block_cache_dir(),
-        infinit::filesystem::mountpoint = mountpoint);
+        infinit::filesystem::mountpoint = mountpoint,
+        infinit::filesystem::map_other_permissions = map_other_permissions);
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       if (mountpoint)

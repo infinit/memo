@@ -146,5 +146,11 @@ namespace infinit
       descriptor::TemplatedBaseDescriptor<StorageConfig>::serialize(s);
       s.serialize("capacity", this->capacity);
     }
+
+    std::string
+    StorageConfig::name_regex()
+    {
+      return "^[-a-zA-Z0-9._]{0,127}$";
+    }
   }
 }
