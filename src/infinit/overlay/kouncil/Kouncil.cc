@@ -118,10 +118,7 @@ namespace infinit
         elle::json::Object res;
         if (k == "stats")
         {
-          elle::json::Array jpeers;
-          for (auto const& p: peers().get<1>())
-            jpeers.push_back(elle::sprintf("%s", p->id()));
-          res["peers"] = jpeers;
+          res["peers"] = this->peer_list();
           res["id"] = elle::sprintf("%s", this->doughnut()->id());
         }
         return res;
