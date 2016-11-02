@@ -946,6 +946,7 @@ def configure(
     ('async-conflict', []),
     ('backward-compatibility', []),
     ('bandwidth', []),
+    ('byzantine', []),
     ('consensus/async', []),
     ('consensus/cache', []),
     ('consensus/paxos', []),
@@ -970,7 +971,7 @@ def configure(
         tests_extra_libs += [dokan_lib_tests]
     if test_name == 'kelips':
       tests_extra_libs += [drake.node('bin/main.cc'), drake.node('bin/version.cc')]
-      if not windows:
+      if not windows and enable_crash_reporting:
         tests_extra_libs.append(crash_reporter_lib)
     test = drake.cxx.Executable(
       'tests/%s' % test_name,

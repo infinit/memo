@@ -874,14 +874,6 @@ namespace infinit
         , _dropped_gets(0)
         , _failed_puts(0)
       {
-#ifndef INFINIT_WINDOWS
-        reactor::scheduler().signal_handle(SIGUSR1, [this] {
-            auto json = this->query("stats", {});
-            std::cerr << elle::json::pretty_print(json);
-            json = this->query("blockcount", {});
-            std::cerr << elle::json::pretty_print(json);
-        });
-#endif
         bool v4 = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
         bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
           && doughnut->version() >= elle::Version(0, 7, 0);
