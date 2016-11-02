@@ -951,7 +951,16 @@ namespace infinit
           BENCH("confirm.local");
           ELLE_TRACE_SCOPE("%s: confirm %f at proposal %s",
                            *this, address, p);
-          auto block = this->_load(address);
+          BlockOrPaxos block = [&] {
+            try
+            {
+              return this->_load(address);
+            }
+            catch (storage::MissingKey const& k)
+            {
+              throw MissingBlock(k.key());
+            }
+          }();
           if (block.paxos)
           {
             auto& decision = *block.paxos;
