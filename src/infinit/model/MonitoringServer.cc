@@ -203,6 +203,7 @@ namespace infinit
         case doughnut::Protocol::utp:
           return "utp";
       }
+      elle::unreachable();
     }
 
     void
