@@ -956,9 +956,8 @@ COMMAND(stats)
          << "}" << std::endl;
 }
 
-
 #ifndef INFINIT_WINDOWS
-COMMAND(monitor)
+COMMAND(inspect)
 {
   auto owner = self_user(ifnt, args);
   std::string network_name = mandatory(args, "name", "network_name");
@@ -1318,9 +1317,9 @@ main(int argc, char** argv)
     },
 #ifndef INFINIT_WINDOWS
     {
-      "monitor",
+      "inspect",
       "Get information about a running network",
-      &monitor,
+      &inspect,
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network name" },
