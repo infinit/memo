@@ -15,6 +15,9 @@ namespace infinit
         utp = 2,
         all = 3
       };
+
+      std::ostream&
+      operator <<(std::ostream&, Protocol);
     }
   }
 }
@@ -35,12 +38,6 @@ namespace elle
       convert(std::string const& repr);
     };
   }
-}
-
-namespace std
-{
-  std::ostream&
-  operator <<(std::ostream&, infinit::model::doughnut::Protocol);
 }
 
 #endif

@@ -1,5 +1,21 @@
 #include <infinit/model/doughnut/protocol.hh>
 
+namespace infinit
+{
+  namespace model
+  {
+    namespace doughnut
+    {
+      using namespace elle::serialization;
+      std::ostream&
+      operator <<(std::ostream& out, Protocol protocol)
+      {
+        return out << Serialize<Protocol>::convert(protocol);
+      }
+    }
+  }
+}
+
 namespace elle
 {
   namespace serialization
@@ -38,11 +54,4 @@ namespace elle
 
 namespace std
 {
-  std::ostream&
-  operator <<(std::ostream& out,
-              infinit::model::doughnut::Protocol protocol)
-  {
-    return out << elle::serialization::Serialize<
-                    infinit::model::doughnut::Protocol>::convert(protocol);
-  }
 }
