@@ -86,6 +86,24 @@ discover(DHT& dht, DHT& target, bool anonymous)
       NodeLocation(target.dht->id(), target.dht->local()->server_endpoints()));
 }
 
+static
+void
+wait_until_ready(DHT& client)
+{
+  while (true)
+  {
+    try
+    {
+      auto block = client.dht->make_block<ACLBlock>(std::string("block"));
+      client.dht->store(std::move(block), STORE_INSERT, tcr());
+      break;
+    }
+    catch (elle::Error const& e)
+    {}
+    reactor::sleep(100_ms);
+  }
+}
+
 ELLE_TEST_SCHEDULED(
   basics, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
 {
@@ -349,18 +367,7 @@ ELLE_TEST_SCHEDULED(
       ::storage = nullptr);
     discover(*client, *tgt, anonymous);
     // writes will fail until it connects
-    while (true)
-    {
-      try
-      {
-         auto block = client->dht->make_block<ACLBlock>(std::string("block"));
-        client->dht->store(std::move(block), STORE_INSERT, tcr());
-        break;
-      }
-      catch (elle::Error const& e)
-      {}
-      reactor::sleep(100_ms);
-    }
+    wait_until_ready(*client);
     std::vector<infinit::model::Address> addrs;
     try
     {
@@ -430,6 +437,155 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("teardown");
 }
 
+ELLE_TEST_SCHEDULED(
+  storm, (Doughnut::OverlayBuilder, builder),
+  (bool, pax), (int, nservers), (int, nclients), (int, nactions))
+{
+  auto keys = infinit::cryptography::rsa::keypair::generate(512);
+  std::vector<std::unique_ptr<DHT>> servers;
+  std::vector<std::unique_ptr<DHT>> clients;
+  for (int i=0; i<nservers; ++i)
+  {
+    auto dht = elle::make_unique<DHT>(
+    ::keys = keys, make_overlay = builder, paxos = pax);
+    servers.emplace_back(std::move(dht));
+  }
+  for (int i=0; i<nservers; ++i)
+    discover(*servers[i], *servers[0], false);
+  for (int i=0; i<nclients; ++i)
+  {
+    auto dht = elle::make_unique<DHT>(
+    ::keys = keys, make_overlay = builder, paxos = pax, ::storage = nullptr);
+    clients.emplace_back(std::move(dht));
+  }
+  for (int i=0; i<nclients; ++i)
+  {
+    for (int j=0; j<nservers; ++j)
+      discover(*clients[i], *servers[j], false);
+    wait_until_ready(*clients[i]);
+  }
+
+  std::vector<infinit::model::Address> addrs;
+  elle::With<reactor::Scope>() << [&](reactor::Scope& s)
+  {
+    for (auto& c: clients)
+      s.run_background(elle::sprintf("storm %s", c), [&] {
+        try
+        {
+          for (int i=0; i<nactions; ++i)
+          {
+            int r = rand()%100;
+            ELLE_TRACE("action %s: %s, with %s addrs", i, r, addrs.size());
+            if (r < 20 && !addrs.empty())
+            { // delete
+              int p = rand()%addrs.size();
+              auto addr = addrs[p];
+              ELLE_DEBUG("deleting %f", addr);
+              std::swap(addrs[p], addrs[addrs.size()-1]);
+              addrs.pop_back();
+              try
+              {
+                c->dht->remove(addr);
+              }
+              catch (infinit::model::MissingBlock const& mb)
+              {
+              }
+            }
+            else if (r < 50 || addrs.empty())
+            { // create
+              auto block = c->dht->make_block<ACLBlock>(std::string("block"));
+              auto a = block->address();
+              c->dht->store(std::move(block), STORE_INSERT, tcr());
+              addrs.push_back(a);
+            }
+            else
+            { // read
+              int p = rand()%addrs.size();
+              auto addr = addrs[p];
+              ELLE_DEBUG("reading %f", addr);
+              try
+              {
+                auto block = c->dht->fetch(addr);
+                if (r < 80)
+                { //update
+                  dynamic_cast<infinit::model::blocks::ACLBlock*>(block.get())->data(
+                    elle::Buffer("coincoin"));
+                  c->dht->store(std::move(block), STORE_UPDATE, tcr());
+                }
+              }
+              catch (infinit::model::MissingBlock const& mb)
+              {
+                // This can be legit if a delete crossed our path
+                if (std::find(addrs.begin(), addrs.end(), mb.address())
+                  != addrs.end())
+                {
+                  ELLE_ERR("exception on supposedly live block %f: %s",
+                           mb.address(), mb);
+                  throw;
+                }
+              }
+            }
+          }
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_ERR("%s: exception %s at %s", c, e, e.backtrace());
+          throw;
+        }
+      });
+    reactor::wait(s);
+  };
+  ELLE_TRACE("teardown");
+}
+
+
+ELLE_TEST_SCHEDULED(
+  paxos_3_1, (Doughnut::OverlayBuilder, builder))
+{
+  auto keys = infinit::cryptography::rsa::keypair::generate(512);
+  auto dht_a = elle::make_unique<DHT>(
+    ::keys = keys, make_overlay = builder, paxos = true);
+  auto dht_b = elle::make_unique<DHT>(
+    ::keys = keys, make_overlay = builder, paxos = true);
+  auto dht_c = elle::make_unique<DHT>(
+    ::keys = keys, make_overlay = builder, paxos = true);
+  discover(*dht_a, *dht_b, false);
+  discover(*dht_a, *dht_c, false);
+  auto client = elle::make_unique<DHT>(
+    ::keys = keys, make_overlay = builder,
+    ::paxos = true,
+    ::storage = nullptr);
+  discover(*client, *dht_a, false);
+  wait_until_ready(*client);
+  std::vector<infinit::model::Address> addrs;
+  for (int i=0; i<10; ++i)
+  {
+    auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
+    addrs.push_back(block->address());
+    client->dht->store(std::move(block), STORE_INSERT, tcr());
+  }
+  dht_c.reset();
+  wait_until_ready(*client);
+  // can we read blocks?
+  for (auto const& a: addrs)
+  {
+    client->dht->fetch(a);
+  }
+  addrs.clear();
+  // can we write blocks?
+  for (int i=0; i<10; ++i)
+  {
+    auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
+    addrs.push_back(block->address());
+    client->dht->store(std::move(block), STORE_INSERT, tcr());
+  }
+  // can we read those?
+  for (auto const& a: addrs)
+  {
+    client->dht->fetch(a);
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   elle::os::setenv("INFINIT_CONNECT_TIMEOUT",
@@ -441,8 +597,18 @@ ELLE_TEST_SUITE()
     [] (Doughnut& dht, std::shared_ptr<Local> local)
     {
       auto conf = kelips::Configuration();
+      int factor =
+#ifdef INFINIT_WINDOWS
+        5;
+#else
+        1;
+#endif
       conf.query_get_retries = 4;
+      conf.query_put_retries = 4;
       conf.query_timeout_ms = 500;
+      conf.contact_timeout_ms = factor * valgrind(2000,20);
+      conf.ping_interval_ms = factor * valgrind(200, 10);
+      conf.ping_timeout_ms = factor * valgrind(500, 20);
       return elle::make_unique<kelips::Node>(
         conf, local, &dht);
     };
@@ -463,6 +629,14 @@ boost::unit_test::make_test_case( boost::function<void ()>(test_function), \
   overlay->add(BOOST_NAMED_TEST_CASE(#overlay "_" #tname "_anon",      \
     std::bind(::tname, BOOST_PP_CAT(overlay, _builder), true, ##__VA_ARGS__)), 0, valgrind(timeout))
 
+#define TEST(overlay, tname, timeout, ...)                  \
+  overlay->add(BOOST_NAMED_TEST_CASE(#overlay "_" #tname,   \
+    std::bind(::tname, BOOST_PP_CAT(overlay, _builder), ##__VA_ARGS__)), 0, valgrind(timeout))
+
+#define TEST_NAMED(overlay, tname, tfunc, timeout, ...)                  \
+  overlay->add(BOOST_NAMED_TEST_CASE(#overlay "_" tname,   \
+    std::bind(::tfunc, BOOST_PP_CAT(overlay, _builder), ##__VA_ARGS__)), 0, valgrind(timeout))
+
 #define OVERLAY(Name)                           \
   auto Name = BOOST_TEST_SUITE(#Name);          \
   master.add(Name);                             \
@@ -472,7 +646,10 @@ boost::unit_test::make_test_case( boost::function<void ()>(test_function), \
   TEST_ANON(Name, key_cache_invalidation, 10);  \
   TEST_ANON(Name, data_spread, 30, false);      \
   TEST_ANON(Name, data_spread2, 30, false);     \
-  TEST_ANON(Name, chain_connect, 30, false);
+  TEST_ANON(Name, chain_connect, 30, false);    \
+  /* too slow TEST(Name, paxos_3_1, 30);*/                     \
+  TEST_NAMED(Name, "storm_paxos", storm, 60, true, 5, 5, 200); \
+  TEST_NAMED(Name, "storm",       storm, 60, false, 5, 5, 200);
 
   OVERLAY(kelips);
   OVERLAY(kouncil);
