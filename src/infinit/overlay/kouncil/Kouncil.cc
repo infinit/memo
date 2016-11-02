@@ -256,6 +256,37 @@ namespace infinit
         else
           return Overlay::WeakMember();
       }
+
+      /*-----------.
+      | Monitoring |
+      `-----------*/
+
+      std::string
+      Kouncil::type_name()
+      {
+        return "kouncil";
+      }
+
+      elle::json::Array
+      Kouncil::peer_list()
+      {
+        elle::json::Array res;
+        for (auto const& peer: this->_peers)
+          res.push_back(elle::json::Object{
+            { "id", elle::sprintf("%x", peer.first) },
+            { "endpoints",
+              std::vector<std::string>{elle::sprintf("%s", peer.second)} },
+          });
+        return res;
+      }
+
+      elle::json::Object
+      Kouncil::stats()
+      {
+        elle::json::Object res;
+        res["type"] = this->type_name();
+        return res;
+      }
     }
   }
 }

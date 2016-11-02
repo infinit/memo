@@ -227,10 +227,12 @@ namespace infinit
       | Monitoring |
       `-----------*/
       public:
-        std::vector<std::pair<std::string, std::string>>
+        std::string
+        type_name() override;
+        elle::json::Array
         peer_list() override;
         elle::json::Object
-        information() override;
+        stats() override;
 
       private:
         typedef infinit::model::doughnut::Local Local;

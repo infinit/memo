@@ -141,11 +141,14 @@ namespace infinit
     `-----------*/
     public:
       virtual
-      std::vector<std::pair<std::string, std::string>>
-      peer_list();
+      std::string
+      type_name() = 0;
+      virtual
+      elle::json::Array
+      peer_list() = 0;
       virtual
       elle::json::Object
-      information();
+      stats() = 0;
     };
 
     struct Configuration
