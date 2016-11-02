@@ -92,7 +92,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PublicKey>, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
         ELLE_ATTRIBUTE_RX(AdminKeys, admin_keys);
-        ELLE_ATTRIBUTE_RX(std::unique_ptr<consensus::Consensus>, consensus)
+        ELLE_ATTRIBUTE_R(std::unique_ptr<consensus::Consensus>, consensus)
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
         ELLE_ATTRIBUTE_RX(Dock, dock);
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
