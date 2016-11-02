@@ -492,7 +492,11 @@ namespace infinit
                     std::make_shared<Connection>(*this, std::move(socket)));
                   auto it = this->_peers.begin();
                   auto peer = *it;
-                  elle::SafeFinally f([&] { this->_peers.erase(it); });
+                  elle::SafeFinally f([&] {
+                      this->_peers.erase(std::find(this->_peers.begin(),
+                                                   this->_peers.end(),
+                                                   peer));
+                  });
                   peer->_run();
                 }
                 catch (infinit::protocol::Serializer::EOF const&)
