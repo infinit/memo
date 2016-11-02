@@ -9,7 +9,12 @@
 #include <elle/serialization/json.hh>
 #include <elle/json/exceptions.hh>
 
+#ifndef INFINIT_WINDOWS
+# include <reactor/network/unix-domain-socket.hh>
+#endif
+
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/MonitoringServer.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Configuration.hh>
@@ -88,7 +93,7 @@ COMMAND(create)
     + (args.count("kouncil") ? 1 : 0)
   ;
   if (overlays > 1)
-    throw CommandLineError("Only one overlay type must be specified");
+    throw CommandLineError("only one overlay type must be specified");
   if (args.count("kalimero"))
   {
     overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
@@ -323,7 +328,7 @@ COMMAND(update)
       if (group && !args.count("mountpoint"))
       {
         throw CommandLineError(
-          "Must specify mountpoint of volume on "
+          "must specify mountpoint of volume on "
           "network \"%s\" to edit group admins", network.name);
       }
     };
@@ -728,7 +733,8 @@ network_run(boost::program_options::variables_map const& args,
     false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, infinit::compatibility_version, port,
-    listen_address);
+    listen_address,
+    flag(args, "monitoring"));
   hook_stats_signals(*dht);
   if (auto plf = optional(args, "peers-file"))
   {
@@ -950,6 +956,95 @@ COMMAND(stats)
          << ", \"capacity\": " << res.capacity
          << "}" << std::endl;
 }
+
+#ifndef INFINIT_WINDOWS
+COMMAND(inspect)
+{
+  auto owner = self_user(ifnt, args);
+  std::string network_name = mandatory(args, "name", "network_name");
+  auto network = ifnt.network_get(network_name, owner);
+  auto s_path = network.monitoring_socket_path(owner);
+  if (!boost::filesystem::exists(s_path))
+    elle::err("network not running or monitoring disabled");
+  reactor::network::UnixDomainSocket socket(s_path);
+  using Monitoring = infinit::model::MonitoringServer;
+  using Query = infinit::model::MonitoringServer::MonitorQuery::Query;
+  auto do_query = [&] (Query query_val)
+    {
+      auto query = Monitoring::MonitorQuery(query_val);
+      elle::serialization::json::serialize(query, socket, false, false);
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(socket));
+      return Monitoring::MonitorResponse(std::move(json));
+    };
+  auto print_response = [&] (Monitoring::MonitorResponse const& response)
+    {
+      if (script_mode)
+        elle::json::write(*get_output(args), response.as_object());
+      else
+      {
+        if (response.error)
+          std::cout << "Error: " << response.error.get() << std::endl;
+        if (response.result)
+        {
+          std::cout << elle::json::pretty_print(response.result.get())
+                    << std::endl;
+        }
+      }
+    };
+  if (flag(args, "status"))
+  {
+    print_response(do_query(Query::Status));
+    return;
+  }
+  if (flag(args, "all"))
+  {
+    print_response(do_query(Query::Stats));
+    return;
+  }
+  if (flag(args, "redundancy"))
+  {
+    auto res = do_query(Query::Stats);
+    if (res.result)
+    {
+      auto redundancy =
+        boost::any_cast<elle::json::Object>(res.result.get()["redundancy"]);
+      if (script_mode)
+        elle::json::write(*get_output(args), redundancy);
+      else
+        std::cout << elle::json::pretty_print(redundancy) << std::endl;
+    }
+    return;
+  }
+  if (flag(args, "peers"))
+  {
+    auto res = do_query(Query::Stats);
+    if (res.result)
+    {
+      auto peer_list =
+        boost::any_cast<elle::json::Array>(res.result.get()["peers"]);
+      if (script_mode)
+        elle::json::write(*get_output(args), peer_list);
+      else
+      {
+        if (peer_list.size() == 0)
+          std::cout << "No peers" << std::endl;
+        else
+          for (auto obj: peer_list)
+          {
+            auto json = boost::any_cast<elle::json::Object>(obj);
+            std::cout << boost::any_cast<std::string>(json["id"]);
+            json.erase("id");
+            if (json.size())
+              std::cout << ": " << elle::json::pretty_print(json) << std::endl;
+          }
+      }
+    }
+    return;
+  }
+  throw CommandLineError(
+    "specify either \"--status\", \"--peers\", \"--redundancy\", or \"--all\"");
+}
+#endif
 
 static
 std::vector<Mode::OptionDescription>
@@ -1183,6 +1278,7 @@ main(int argc, char** argv)
         option_input("commands"),
 #ifndef INFINIT_WINDOWS
         { "daemon,d", bool_switch(), "run as a background daemon"},
+        option_monitoring,
 #endif
         }),
       {},
@@ -1220,6 +1316,21 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "network name" },
       },
     },
+#ifndef INFINIT_WINDOWS
+    {
+      "inspect",
+      "Get information about a running network",
+      &inspect,
+      "--name NETWORK",
+      {
+        { "name,n", value<std::string>(), "network name" },
+        { "status", bool_switch(), "check if network is running" },
+        { "peers", bool_switch(), "list connected peers" },
+        { "all", bool_switch(), "all informtation" },
+        { "redundancy", bool_switch(), "describe data redundancy" },
+      }
+    },
+#endif
   };
   return infinit::main("Infinit network management utility", modes, argc, argv);
 }

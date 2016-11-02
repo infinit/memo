@@ -8,6 +8,8 @@ sources = drake.nodes(
   'Model.cc',
   'Model.hh',
   'Model.hxx',
+  'MonitoringServer.cc',
+  'MonitoringServer.hh',
   'User.hh',
   'blocks/ACLBlock.cc',
   'blocks/ACLBlock.hh',

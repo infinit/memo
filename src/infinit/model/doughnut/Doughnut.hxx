@@ -32,6 +32,7 @@ namespace infinit
       NAMED_ARGUMENT(version);
       NAMED_ARGUMENT(admin_keys);
       NAMED_ARGUMENT(rdv_host);
+      NAMED_ARGUMENT(monitoring_socket_path);
       NAMED_ARGUMENT(protocol);
 
       struct Doughnut::Init
@@ -49,6 +50,7 @@ namespace infinit
         boost::optional<elle::Version> version;
         AdminKeys const& admin_keys;
         boost::optional<std::string> rdv_host;
+        boost::optional<boost::filesystem::path> monitoring_socket_path;
         Protocol protocol;
       };
 
@@ -69,6 +71,8 @@ namespace infinit
             doughnut::version = boost::optional<elle::Version>(),
             doughnut::admin_keys = AdminKeys(),
             doughnut::rdv_host = boost::optional<std::string>(),
+            doughnut::monitoring_socket_path =
+              boost::optional<boost::filesystem::path>(),
             doughnut::protocol = Protocol::all
             ).call(
               [] (Address id,
@@ -84,6 +88,7 @@ namespace infinit
                   boost::optional<elle::Version> version,
                   AdminKeys const& admin_keys,
                   boost::optional<std::string> rdv_host,
+                  boost::optional<boost::filesystem::path> monitoring_socket_path,
                   Protocol p)
               -> Init
               {
@@ -101,6 +106,7 @@ namespace infinit
                   std::move(version),
                   std::move(admin_keys),
                   std::move(rdv_host),
+                  std::move(monitoring_socket_path),
                   std::move(p),
                 };
               },

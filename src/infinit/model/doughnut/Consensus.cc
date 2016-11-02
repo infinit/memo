@@ -356,6 +356,27 @@ namespace infinit
                                           p);
         }
 
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+
+        elle::json::Object
+        Consensus::redundancy()
+        {
+          return {
+            { "desired_factor", 1.0 },
+            { "type", "none" },
+          };
+        }
+
+        elle::json::Object
+        Consensus::stats()
+        {
+          return {
+            { "type", "none" },
+          };
+        }
+
         /*----------.
         | Printable |
         `----------*/

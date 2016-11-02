@@ -75,7 +75,17 @@ namespace kademlia
     virtual
     Overlay::WeakMember
     _lookup_node(infinit::model::Address address) const override;
+
+  /*-----------.
+  | Monitoring |
+  `-----------*/
   public:
+    std::string
+    type_name() override;
+    elle::json::Array
+    peer_list() override;
+    elle::json::Object
+    stats() override;
 
   private:
     void _loop();
