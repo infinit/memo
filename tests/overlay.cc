@@ -648,7 +648,7 @@ boost::unit_test::make_test_case( boost::function<void ()>(test_function), \
   TEST_ANON(Name, data_spread2, 30, false);     \
   TEST_ANON(Name, chain_connect, 30, false);    \
   /* too slow TEST(Name, paxos_3_1, 30);*/                     \
-  TEST_NAMED(Name, "storm_paxos", storm, 60, true, 5, 5, 200); \
+  TEST_NAMED(Name, "storm_paxos", storm, 60, true, 5, 5, 100); \
   TEST_NAMED(Name, "storm",       storm, 60, false, 5, 5, 200);
 
   OVERLAY(kelips);
