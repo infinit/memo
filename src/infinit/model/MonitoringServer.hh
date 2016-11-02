@@ -22,11 +22,8 @@ namespace infinit
         enum class Query
           : std::int8_t
         {
-          Consensus = 1,  // Consensus information.
-          Overlay,        // Overlay information.
-          Peers,          // Peer information.
-          Redundancy,     // Data redundancy information.
-          Status,         // Check if the network is running.
+          Stats = 1, // Information about the overlay and consensus algorithm.
+          Status,    // Check if the network is running.
         };
 
         MonitorQuery(Query query);
@@ -42,76 +39,21 @@ namespace infinit
 
     public:
       struct MonitorResponse
-        : public elle::serialization::VirtuallySerializable<false>
-        , public elle::Printable
+        : public elle::Printable
       {
         MonitorResponse(bool success,
-                        boost::optional<std::string> error = {});
-        MonitorResponse(elle::serialization::SerializerIn& s);
+                        boost::optional<std::string> error = {},
+                        boost::optional<elle::json::Object> result = {});
+        MonitorResponse(elle::json::Object response);
 
         bool success;
         boost::optional<std::string> error;
+        boost::optional<elle::json::Object> result;
 
-        typedef infinit::serialization_tag serialization_tag;
-        static constexpr char const* virtually_serializable_key = "type";
-
-        virtual
+        elle::json::Object
+        as_object() const;
         void
-        serialize(elle::serialization::Serializer& s) override;
-        void
-        print(std::ostream& stream) const override;
-        virtual
-        void
-        pretty_print(std::ostream& stream) const;
-      };
-
-    public:
-      struct MonitorResponseGeneric
-        : public MonitorResponse
-      {
-        MonitorResponseGeneric(elle::json::Json result);
-        MonitorResponseGeneric(elle::serialization::SerializerIn& s);
-
-        elle::json::Json result;
-
-        void
-        serialize(elle::serialization::Serializer& s) override;
-        void
-        pretty_print(std::ostream& stream) const override;
-      };
-
-    public:
-      struct MonitorResponsePeers
-        : public MonitorResponse
-      {
-        /// {identifier, endpoint}
-        typedef std::pair<std::string, std::string> Peer;
-        typedef std::vector<Peer> Peers;
-
-        MonitorResponsePeers(Peers peers);
-        MonitorResponsePeers(elle::serialization::SerializerIn& s);
-
-        Peers peers;
-
-        void
-        serialize(elle::serialization::Serializer& s) override;
-        void
-        pretty_print(std::ostream& stream) const override;
-      };
-
-    public:
-      struct MonitorResponseRedundancy
-        : public MonitorResponse
-      {
-        MonitorResponseRedundancy(std::string description);
-        MonitorResponseRedundancy(elle::serialization::SerializerIn& s);
-
-        std::string description;
-
-        void
-        serialize(elle::serialization::Serializer& s) override;
-        void
-        pretty_print(std::ostream& stream) const override;
+        print(std::ostream& stream) const;
       };
 
       /*-------------.
