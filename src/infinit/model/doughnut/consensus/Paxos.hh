@@ -389,10 +389,10 @@ namespace infinit
         | Monitoring |
         `-----------*/
         public:
-          std::string
+          elle::json::Object
           redundancy() override;
           elle::json::Object
-          information() override;
+          stats() override;
 
         /*--------------.
         | Configuration |

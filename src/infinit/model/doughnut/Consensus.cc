@@ -360,16 +360,21 @@ namespace infinit
         | Monitoring |
         `-----------*/
 
-        std::string
+        elle::json::Object
         Consensus::redundancy()
         {
-          return "none";
+          return {
+            { "desired_factor", 1.0 },
+            { "type", "none" },
+          };
         }
 
         elle::json::Object
-        Consensus::information()
+        Consensus::stats()
         {
-          return elle::json::Object();
+          return {
+            { "type", "none" },
+          };
         }
 
         /*----------.

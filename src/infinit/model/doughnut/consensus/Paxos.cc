@@ -1903,14 +1903,17 @@ namespace infinit
         | Monitoring |
         `-----------*/
 
-        std::string
+        elle::json::Object
         Paxos::redundancy()
         {
-          return elle::sprintf("replication factor: %s", this->factor());
+          return {
+            { "desired_factor", static_cast<float>(this->factor()) },
+            { "type", "replication" },
+          };
         }
 
         elle::json::Object
-        Paxos::information()
+        Paxos::stats()
         {
           elle::json::Object res;
           res["type"] = "paxos";

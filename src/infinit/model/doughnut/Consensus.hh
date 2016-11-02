@@ -113,11 +113,11 @@ namespace infinit
         `-----------*/
         public:
           virtual
-          std::string
+          elle::json::Object
           redundancy();
           virtual
           elle::json::Object
-          information();
+          stats();
 
         /*----------.
         | Printable |
