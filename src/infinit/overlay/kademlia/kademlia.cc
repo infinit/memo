@@ -972,6 +972,30 @@ namespace kademlia
       reactor::sleep(boost::posix_time::milliseconds(_config.refresh_interval_ms));
     }
   }
+
+  /*-----------.
+  | Monitoring |
+  `-----------*/
+
+  std::string
+  Kademlia::type_name()
+  {
+    return "kademlia";
+  }
+
+  elle::json::Array
+  Kademlia::peer_list()
+  {
+    return elle::json::Array();
+  }
+
+  elle::json::Object
+  Kademlia::stats()
+  {
+    elle::json::Object res;
+    res["type"] = this->type_name();
+    return res;
+  }
 }
 
 namespace infinit

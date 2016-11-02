@@ -3612,30 +3612,7 @@ namespace infinit
         if (k == "stats")
         {
           res["group"] = this->_group;
-          for (int i = 0; i < signed(this->_state.contacts.size()); ++i)
-          {
-            auto const& group = this->_state.contacts[i];
-            elle::json::Array contacts;
-            for (auto const& contact: group)
-            {
-              auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
-              (std::chrono::system_clock::now() - endpoints_max(contact.second.endpoints));
-              contacts.push_back(elle::json::Object{
-                  {"address", elle::sprintf("%x", contact.second.address)},
-                  {"validated_endpoint",
-                    elle::sprintf("%s", (contact.second.validated_endpoint?
-                    PrettyEndpoint(contact.second.validated_endpoint->first)
-                  : PrettyEndpoint(Endpoint())).repr())},
-                  {"endpoints", elle::sprintf("%s", contact.second.endpoints.size())},
-                  {"last_seen",
-                  elle::sprintf("%ss", last_seen.count())},
-                  {"discovered", contact.second.discovered},
-              });
-            }
-            res[elle::sprintf("%s", i)] = elle::json::Object{
-              {"contacts", std::move(contacts)}
-            };
-          }
+          res["contacts"] = this->peer_list();
           res["files"] = this->_state.files.size();
           res["dropped_puts"] = this->_dropped_puts;
           res["dropped_gets"] = this->_dropped_gets;
@@ -3785,6 +3762,68 @@ namespace infinit
             res["status"] = std::string("failed: ") + e.what();
           }
         }
+        return res;
+      }
+
+      /*-----------.
+      | Monitoring |
+      `-----------*/
+
+      std::string
+      Node::type_name()
+      {
+        return "kelips";
+      }
+
+      elle::json::Array
+      Node::peer_list()
+      {
+        elle::json::Array res;
+        for (int i = 0; i < signed(this->_state.contacts.size()); ++i)
+        {
+          auto const& group = this->_state.contacts[i];
+          for (auto const& contact: group)
+          {
+            auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
+              (std::chrono::system_clock::now() -
+               endpoints_max(contact.second.endpoints));
+            elle::json::Array endpoints;
+            for (auto const pair: contact.second.endpoints)
+              endpoints.push_back(PrettyEndpoint(pair.first).repr());
+            elle::json::Object peer_info{
+              { "id", elle::sprintf("%x", contact.second.address) },
+              { "validated_endpoint",
+                elle::sprintf("%s", (contact.second.validated_endpoint
+                  ? PrettyEndpoint(contact.second.validated_endpoint->first)
+                  : PrettyEndpoint(Endpoint())).repr()) },
+              { "endpoints", endpoints },
+              { "last_seen", elle::sprintf("%ss", last_seen.count()) },
+              { "discovered", contact.second.discovered },
+              { "group", i },
+            };
+            res.push_back(peer_info);
+          }
+        }
+        return res;
+      }
+
+      elle::json::Object
+      Node::stats()
+      {
+        elle::json::Object res;
+        res["type"] = this->type_name();
+        using Protocol = infinit::model::doughnut::Protocol;
+        res["protocol"] =
+          this->_config.rpc_protocol == Protocol::utp ? "utp"
+          : (this->_config.rpc_protocol == Protocol::tcp ? "tcp" : "all");
+        res["group"] = this->_group;
+        elle::json::Object stats{
+          { "files", this->_state.files.size() },
+          { "dropped_puts", this->_dropped_puts },
+          { "dropped_gets", this->_dropped_gets },
+          { "failed_puts", this->_failed_puts },
+        };
+        res["statistics"] = stats;
         return res;
       }
 

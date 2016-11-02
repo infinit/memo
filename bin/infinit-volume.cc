@@ -76,7 +76,8 @@ COMMAND(create)
     if (root || discovery)
     {
       auto model = network.run(
-        owner, mo, false, infinit::compatibility_version);
+        owner, mo, false, flag(args, "monitoring"),
+        infinit::compatibility_version);
       if (discovery)
       {
         ELLE_LOG_SCOPE("register volume in the network");
@@ -421,7 +422,8 @@ COMMAND(run)
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
   auto model_and_threads = network.run(
-    self, mo, true, infinit::compatibility_version, port);
+    self, mo, true, flag(args, "monitoring"),
+    infinit::compatibility_version, port);
   auto model = std::move(model_and_threads.first);
   hook_stats_signals(*model);
   if (auto plf = optional(args, "peers-file"))
@@ -1158,6 +1160,7 @@ run_options(RunMode mode)
     { "async", BOOL_IMPLICIT, "use asynchronous write operations" },
 #ifndef INFINIT_WINDOWS
     { "daemon,d", BOOL_IMPLICIT, "run as a background daemon" },
+    option_monitoring,
     { "fuse-option", value<std::vector<std::string>>()->multitoken(),
       "option to pass directly to FUSE" },
 #endif

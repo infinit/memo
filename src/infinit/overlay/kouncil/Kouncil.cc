@@ -118,10 +118,7 @@ namespace infinit
         elle::json::Object res;
         if (k == "stats")
         {
-          elle::json::Array jpeers;
-          for (auto const& p: peers().get<1>())
-            jpeers.push_back(elle::sprintf("%s", p->id()));
-          res["peers"] = jpeers;
+          res["peers"] = this->peer_list();
           res["id"] = elle::sprintf("%s", this->doughnut()->id());
         }
         return res;
@@ -296,6 +293,36 @@ namespace infinit
           return *it;
         else
           return Overlay::WeakMember();
+      }
+
+      /*-----------.
+      | Monitoring |
+      `-----------*/
+
+      std::string
+      Kouncil::type_name()
+      {
+        return "kouncil";
+      }
+
+      elle::json::Array
+      Kouncil::peer_list()
+      {
+        elle::json::Array res;
+        for (auto const& peer: this->peers().get<1>())
+          res.push_back(elle::json::Object{
+            { "id", elle::sprintf("%x", peer->id()) },
+          });
+        return res;
+      }
+
+      elle::json::Object
+      Kouncil::stats()
+      {
+        elle::json::Object res;
+        res["type"] = this->type_name();
+        res["id"] = elle::sprintf("%s", this->doughnut()->id());
+        return res;
       }
     }
   }

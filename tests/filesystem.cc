@@ -235,7 +235,7 @@ public:
                );
     for (auto& dht: this->dhts)
       dht.overlay->connect(*client.overlay);
-    return std::move(client);
+    return client;
   }
   template<typename... Args>
   Client

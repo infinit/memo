@@ -54,6 +54,30 @@ namespace infinit
       return this->local();
     }
 
+    /*-----------.
+    | Monitoring |
+    `-----------*/
+
+    std::string
+    Kalimero::type_name()
+    {
+      return "kalimero";
+    }
+
+    elle::json::Array
+    Kalimero::peer_list()
+    {
+      return elle::json::Array();
+    }
+
+    elle::json::Object
+    Kalimero::stats()
+    {
+      elle::json::Object res;
+      res["type"] = this->type_name();
+      return res;
+    }
+
     KalimeroConfiguration::KalimeroConfiguration()
     {}
 

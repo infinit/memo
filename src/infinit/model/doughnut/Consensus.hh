@@ -107,6 +107,18 @@ namespace infinit
                      std::unique_ptr<storage::Storage> storage,
                      Protocol p);
 
+
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+        public:
+          virtual
+          elle::json::Object
+          redundancy();
+          virtual
+          elle::json::Object
+          stats();
+
         /*----------.
         | Printable |
         `----------*/

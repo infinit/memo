@@ -65,6 +65,40 @@ namespace infinit
         this->_validate();
         return (*begin(this->_backends))->lookup_node(address);
       }
+
+      /*-----------.
+      | Monitoring |
+      `-----------*/
+
+      std::string
+      Koordinate::type_name()
+      {
+        return "koordinate";
+      }
+
+      elle::json::Array
+      Koordinate::peer_list()
+      {
+        elle::json::Array res;
+        for (auto const& backend: this->_backends)
+        {
+          auto const& peer_list = backend->peer_list();
+          res.insert(res.begin(), peer_list.begin(), peer_list.end());
+        }
+        return res;
+      }
+
+      elle::json::Object
+      Koordinate::stats()
+      {
+        elle::json::Object res;
+        res["type"] = this->type_name();
+        std::vector<std::string> types;
+        for (auto const& backend: this->_backends)
+          types.push_back(backend->type_name());
+        res["types"] = types;
+        return res;
+      }
     }
   }
 }
