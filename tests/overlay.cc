@@ -450,8 +450,8 @@ ELLE_TEST_SCHEDULED(
     ::keys = keys, make_overlay = builder, paxos = pax);
     servers.emplace_back(std::move(dht));
   }
-  for (int i=0; i<nservers; ++i)
-    discover(*servers[i], *servers[0], false);
+  for (int i=1; i<nservers; ++i)
+    discover(*servers[i], *servers[0], true);
   for (int i=0; i<nclients; ++i)
   {
     auto dht = elle::make_unique<DHT>(
@@ -461,7 +461,7 @@ ELLE_TEST_SCHEDULED(
   for (int i=0; i<nclients; ++i)
   {
     for (int j=0; j<nservers; ++j)
-      discover(*clients[i], *servers[j], false);
+      discover(*clients[i], *servers[j], true);
     wait_until_ready(*clients[i]);
   }
 
@@ -605,7 +605,7 @@ ELLE_TEST_SUITE()
 #endif
       conf.query_get_retries = 4;
       conf.query_put_retries = 4;
-      conf.query_timeout_ms = 500;
+      conf.query_timeout_ms = valgrind(500, 4);
       conf.contact_timeout_ms = factor * valgrind(2000,20);
       conf.ping_interval_ms = factor * valgrind(200, 10);
       conf.ping_timeout_ms = factor * valgrind(500, 20);
