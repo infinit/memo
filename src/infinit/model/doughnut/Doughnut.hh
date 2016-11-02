@@ -100,6 +100,7 @@ namespace infinit
         ELLE_ATTRIBUTE(
           elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
         ELLE_ATTRIBUTE_RX(reactor::Barrier, terminating);
+        ELLE_ATTRIBUTE_r(Protocol, protocol);
 
       public:
         struct KeyHash

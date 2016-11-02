@@ -336,6 +336,12 @@ namespace infinit
         this->_consensus->remove(address, std::move(rs));
       }
 
+      Protocol
+      Doughnut::protocol() const
+      {
+        return this->_dock.protocol();
+      }
+
       /*------------------.
       | Service discovery |
       `------------------*/
