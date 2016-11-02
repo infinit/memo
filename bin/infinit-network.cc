@@ -969,33 +969,80 @@ COMMAND(monitor)
   reactor::network::UnixDomainSocket socket(s_path);
   using Monitoring = infinit::model::MonitoringServer;
   using Query = infinit::model::MonitoringServer::MonitorQuery::Query;
-  bool done_query = false;
   auto do_query = [&] (Query query_val)
     {
-      done_query = true;
       auto query = Monitoring::MonitorQuery(query_val);
       elle::serialization::json::serialize(query, socket, false, false);
-      auto res = elle::serialization::json::deserialize<std::unique_ptr<
-        Monitoring::MonitorResponse>>(socket, false);
-      if (script_mode)
-        elle::serialization::json::serialize(res, *get_output(args), false);
-      else
-        res->pretty_print(std::cout);
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(socket));
+      return Monitoring::MonitorResponse(std::move(json));
     };
-  if (flag(args, "peers"))
-    do_query(Query::Peers);
-  if (flag(args, "redundancy"))
-    do_query(Query::Redundancy);
-  if (flag(args, "overlay"))
-    do_query(Query::Overlay);
-  if (flag(args, "consensus"))
-    do_query(Query::Consensus);
-  if (!done_query)
+  auto print_response = [&] (Monitoring::MonitorResponse const& response)
+    {
+      if (script_mode)
+        elle::json::write(*get_output(args), response.as_object());
+      else
+      {
+        if (response.error)
+          std::cout << "Error: " << response.error.get() << std::endl;
+        if (response.result)
+        {
+          std::cout << elle::json::pretty_print(response.result.get())
+                    << std::endl;
+        }
+      }
+    };
+  if (flag(args, "status"))
   {
-    throw CommandLineError(
-      "specify either \"--peers\", \"--redundancy\", \"--overlay\" or "
-      "\"--consensus\"");
+    print_response(do_query(Query::Status));
+    return;
   }
+  if (flag(args, "all"))
+  {
+    print_response(do_query(Query::Stats));
+    return;
+  }
+  if (flag(args, "redundancy"))
+  {
+    auto res = do_query(Query::Stats);
+    if (res.result)
+    {
+      auto redundancy =
+        boost::any_cast<elle::json::Object>(res.result.get()["redundancy"]);
+      if (script_mode)
+        elle::json::write(*get_output(args), redundancy);
+      else
+        std::cout << elle::json::pretty_print(redundancy) << std::endl;
+    }
+    return;
+  }
+  if (flag(args, "peers"))
+  {
+    auto res = do_query(Query::Stats);
+    if (res.result)
+    {
+      auto peer_list =
+        boost::any_cast<elle::json::Array>(res.result.get()["peers"]);
+      if (script_mode)
+        elle::json::write(*get_output(args), peer_list);
+      else
+      {
+        if (peer_list.size() == 0)
+          std::cout << "No peers" << std::endl;
+        else
+          for (auto obj: peer_list)
+          {
+            auto json = boost::any_cast<elle::json::Object>(obj);
+            std::cout << boost::any_cast<std::string>(json["id"]);
+            json.erase("id");
+            if (json.size())
+              std::cout << ": " << elle::json::pretty_print(json) << std::endl;
+          }
+      }
+    }
+    return;
+  }
+  throw CommandLineError(
+    "specify either \"--status\", \"--peers\", \"--redundancy\", or \"--all\"");
 }
 #endif
 
@@ -1277,10 +1324,10 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network name" },
+        { "status", bool_switch(), "check if network is running" },
         { "peers", bool_switch(), "list connected peers" },
+        { "all", bool_switch(), "all informtation" },
         { "redundancy", bool_switch(), "describe data redundancy" },
-        { "overlay", bool_switch(), "list overlay network information" },
-        { "consensus", bool_switch(), "list consensus information" },
       }
     },
 #endif
