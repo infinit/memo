@@ -729,6 +729,7 @@ network_run(boost::program_options::variables_map const& args,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, infinit::compatibility_version, port,
     listen_address);
+  hook_stats_signals(*dht);
   if (auto plf = optional(args, "peers-file"))
   {
     auto more_peers = infinit::hook_peer_discovery(*dht, *plf);

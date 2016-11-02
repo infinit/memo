@@ -18,7 +18,7 @@ namespace infinit
         test_name = name;
       else
         test_name = name.substr(slash_pos + 1);
-      static const boost::regex allowed("${name_regex}");
+      static const boost::regex allowed(T::name_regex());
       boost::smatch str_matches;
       if (!boost::regex_match(test_name, str_matches, allowed))
         throw DescriptorNameError(name);
@@ -31,7 +31,7 @@ namespace infinit
     {
       if (!description)
         return;
-      static const boost::regex allowed("${description_regex}");
+      static const boost::regex allowed(T::description_regex());
       boost::smatch str_matches;
       if (!boost::regex_match(description.get(), str_matches, allowed))
         throw DescriptorDescriptionError(description.get());
@@ -72,5 +72,20 @@ namespace infinit
       check_name(this->name);
       check_description(this->description);
     }
+
+    template <typename T>
+    std::string
+    TemplatedBaseDescriptor<T>::name_regex()
+    {
+        return "${name_regex}";
+    }
+
+    template <typename T>
+    std::string
+    TemplatedBaseDescriptor<T>::description_regex()
+    {
+    return "${description_regex}";
+    }
+
   }
 }
