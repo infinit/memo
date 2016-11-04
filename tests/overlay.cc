@@ -586,6 +586,47 @@ ELLE_TEST_SCHEDULED(
   }
 }
 
+ELLE_TEST_SCHEDULED(
+  parallel_discover, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
+{
+  static const int nservers = 5;
+  auto keys = infinit::cryptography::rsa::keypair::generate(512);
+  std::vector<std::unique_ptr<DHT>> servers;
+  for (int i=0; i<nservers; ++i)
+  {
+    auto dht = elle::make_unique<DHT>(
+      ::keys = keys, make_overlay = builder, paxos = false);
+    servers.emplace_back(std::move(dht));
+  }
+  elle::With<reactor::Scope>() << [&](reactor::Scope& s)
+  {
+    for (int i=1; i<nservers; ++i)
+      s.run_background("discover", [&,i] {
+          discover(*servers[i], *servers[0], anonymous);
+      });
+    reactor::wait(s);
+  };
+  for (int i=0; i<nservers; ++i)
+    wait_until_ready(*servers[i]);
+  std::vector<infinit::model::Address> addrs;
+  for (int j=0; j<20; ++j)
+  {
+    for (int i=0; i<nservers; ++i)
+    {
+      auto block = servers[i]->dht->make_block<ACLBlock>(std::string("block"));
+      addrs.push_back(block->address());
+      servers[i]->dht->store(std::move(block), STORE_INSERT, tcr());
+    }
+  }
+  for (auto const& a: addrs)
+  {
+    for (int i=0; i<nservers; ++i)
+    {
+      servers[i]->dht->fetch(a);
+    }
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   elle::os::setenv("INFINIT_CONNECT_TIMEOUT",
@@ -647,7 +688,8 @@ boost::unit_test::make_test_case( boost::function<void ()>(test_function), \
   TEST_ANON(Name, data_spread, 30, false);      \
   TEST_ANON(Name, data_spread2, 30, false);     \
   TEST_ANON(Name, chain_connect, 30, false);    \
-  /* too slow TEST(Name, paxos_3_1, 30);*/                     \
+  /* too slow TEST(Name, paxos_3_1, 30);*/      \
+  TEST_ANON(Name, parallel_discover, 20);       \
   TEST_NAMED(Name, "storm_paxos", storm, 60, true, 5, 5, 100); \
   TEST_NAMED(Name, "storm",       storm, 60, false, 5, 5, 200);
 
