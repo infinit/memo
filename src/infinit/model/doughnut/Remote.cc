@@ -101,6 +101,7 @@ namespace infinit
         if (this->_thread)
           this->_thread->terminate_now();
         this->_connected.close();
+        this->_credentials = {};
         this->_thread.reset(
           new reactor::Thread(
             elle::sprintf("%f worker", this),
@@ -221,7 +222,6 @@ namespace infinit
         {
           auto lock = elle::scoped_assignment(this->_reconnecting, true);
           ELLE_TRACE_SCOPE("%s: reconnect", this);
-          this->_credentials = {};
           if (this->_refetch_endpoints)
             if (auto eps = this->_refetch_endpoints())
               this->_endpoints = std::move(eps.get());
