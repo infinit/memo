@@ -3,12 +3,18 @@
 #include <boost/signals2/connection.hpp>
 
 #include <elle/cast.hh>
+#include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/log.hh>
 #include <elle/test.hh>
 #include <elle/utils.hh>
 #include <elle/Version.hh>
 
+#ifndef INFINIT_WINDOWS
+# include <reactor/network/unix-domain-socket.hh>
+#endif
+
 #include <infinit/model/MissingBlock.hh>
+#include <infinit/model/MonitoringServer.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
@@ -47,6 +53,7 @@ NAMED_ARGUMENT(storage_c);
 NAMED_ARGUMENT(version_a);
 NAMED_ARGUMENT(version_b);
 NAMED_ARGUMENT(version_c);
+NAMED_ARGUMENT(monitoring_socket_path_a);
 
 static
 int
@@ -76,6 +83,7 @@ public:
       version_a = boost::optional<elle::Version>(),
       version_b = boost::optional<elle::Version>(),
       version_c = boost::optional<elle::Version>(),
+      monitoring_socket_path_a = boost::optional<boost::filesystem::path>(),
       make_overlay =
       [] (int,
           infinit::model::NodeLocations peers,
@@ -91,44 +99,45 @@ public:
       {
         return c;
       }
-      ).call([this] (bool paxos,
-                      infinit::cryptography::rsa::KeyPair keys_a,
-                      infinit::cryptography::rsa::KeyPair keys_b,
-                      infinit::cryptography::rsa::KeyPair keys_c,
-                      infinit::model::Address id_a,
-                      infinit::model::Address id_b,
-                      infinit::model::Address id_c,
-                      std::unique_ptr<Storage> storage_a,
-                      std::unique_ptr<Storage> storage_b,
-                      std::unique_ptr<Storage> storage_c,
-                      boost::optional<elle::Version> version_a,
-                      boost::optional<elle::Version> version_b,
-                      boost::optional<elle::Version> version_c,
-                      std::function<
-                        std::unique_ptr<infinit::overlay::Stonehenge>(
-                          int,
-                          infinit::model::NodeLocations peers,
-                          std::shared_ptr<
-                            infinit::model::doughnut::Local> local,
-                          infinit::model::doughnut::Doughnut& d)> make_overlay,
-                      std::function<
-                        std::unique_ptr<dht::consensus::Consensus>(
-                          std::unique_ptr<dht::consensus::Consensus>
-                          )> make_consensus)
+      ).call([this] (
+        bool paxos,
+        infinit::cryptography::rsa::KeyPair keys_a,
+        infinit::cryptography::rsa::KeyPair keys_b,
+        infinit::cryptography::rsa::KeyPair keys_c,
+        infinit::model::Address id_a,
+        infinit::model::Address id_b,
+        infinit::model::Address id_c,
+        std::unique_ptr<Storage> storage_a,
+        std::unique_ptr<Storage> storage_b,
+        std::unique_ptr<Storage> storage_c,
+        boost::optional<elle::Version> version_a,
+        boost::optional<elle::Version> version_b,
+        boost::optional<elle::Version> version_c,
+        boost::optional<boost::filesystem::path> monitoring_socket_path_a,
+        std::function<
+          std::unique_ptr<infinit::overlay::Stonehenge>(
+            int,
+            infinit::model::NodeLocations peers,
+            std::shared_ptr<
+              infinit::model::doughnut::Local> local,
+            infinit::model::doughnut::Doughnut& d)> make_overlay,
+        std::function<
+          std::unique_ptr<dht::consensus::Consensus>(
+            std::unique_ptr<dht::consensus::Consensus>
+            )> make_consensus)
               {
-                this-> init(paxos,
-                            std::move(keys_a),
-                            std::move(keys_b),
-                            std::move(keys_c),
-                            id_a, id_b, id_c,
-                            std::move(storage_a),
-                            std::move(storage_b),
-                            std::move(storage_c) ,
-                            version_a,
-                            version_b,
-                            version_c,
-                            std::move(make_overlay),
-                            std::move(make_consensus));
+                this->init(paxos,
+                           std::move(keys_a),
+                           std::move(keys_b),
+                           std::move(keys_c),
+                           id_a, id_b, id_c,
+                           std::move(storage_a),
+                           std::move(storage_b),
+                           std::move(storage_c) ,
+                           version_a, version_b, version_c,
+                           std::move(monitoring_socket_path_a),
+                           std::move(make_overlay),
+                           std::move(make_consensus));
               }, std::forward<Args>(args)...);
   }
 
@@ -154,6 +163,7 @@ private:
        boost::optional<elle::Version> version_a,
        boost::optional<elle::Version> version_b,
        boost::optional<elle::Version> version_c,
+       boost::optional<boost::filesystem::path> monitoring_socket_path_a,
        std::function<
          std::unique_ptr<infinit::overlay::Stonehenge>(
            int,
@@ -229,7 +239,8 @@ private:
       boost::optional<int>(),
       boost::optional<boost::asio::ip::address>(),
       std::move(storage_a),
-      dht::version = version_a);
+      dht::version = version_a,
+      infinit::model::doughnut::monitoring_socket_path = monitoring_socket_path_a);
     this->dht_b = std::make_shared<dht::Doughnut>(
       id_b,
       this->keys_b,
@@ -881,6 +892,77 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
     BOOST_CHECK_EQUAL(block_bob->data(), elle::Buffer("bob_1"));
   }
 }
+
+#ifndef INFINIT_WINDOWS
+ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
+{
+  auto keys_a = infinit::cryptography::rsa::keypair::generate(key_size());
+  auto keys_b = infinit::cryptography::rsa::keypair::generate(key_size());
+  auto keys_c = infinit::cryptography::rsa::keypair::generate(key_size());
+  auto id_a = infinit::model::Address::random(0); // FIXME
+  auto id_b = infinit::model::Address::random(0); // FIXME
+  auto id_c = infinit::model::Address::random(0); // FIXME
+  Memory::Blocks storage_a;
+  Memory::Blocks storage_b;
+  Memory::Blocks storage_c;
+  elle::filesystem::TemporaryDirectory d;
+  auto monitoring_path = d.path() / "monitoring.sock";
+  DHTs dhts(
+    paxos,
+    keys_a,
+    keys_b,
+    keys_c,
+    id_a,
+    id_b,
+    id_c,
+    elle::make_unique<Memory>(storage_a),
+    elle::make_unique<Memory>(storage_b),
+    elle::make_unique<Memory>(storage_c),
+    boost::optional<elle::Version>(),
+    boost::optional<elle::Version>(),
+    boost::optional<elle::Version>(),
+    monitoring_path
+  );
+  BOOST_CHECK(boost::filesystem::exists(monitoring_path));
+  reactor::network::UnixDomainSocket socket(monitoring_path);
+  using Monitoring = infinit::model::MonitoringServer;
+  using Query = infinit::model::MonitoringServer::MonitorQuery::Query;
+  auto do_query = [&] (Query query_val) -> elle::json::Object
+    {
+      auto query = Monitoring::MonitorQuery(query_val);
+      elle::serialization::json::serialize(query, socket, false, false);
+      return boost::any_cast<elle::json::Object>(elle::json::read(socket));
+    };
+  {
+    Monitoring::MonitorResponse res(do_query(Query::Status));
+    BOOST_CHECK(res.success);
+  }
+  {
+    Monitoring::MonitorResponse res(do_query(Query::Stats));
+    auto obj = res.result.get();
+    BOOST_CHECK_EQUAL(obj.count("consensus"), 1);
+    BOOST_CHECK_EQUAL(obj.count("overlay"), 1);
+    BOOST_CHECK_EQUAL(boost::any_cast<std::string>(obj["protocol"]), "all");
+    BOOST_CHECK_EQUAL(
+      boost::any_cast<elle::json::Array>(obj["peers"]).size(), 3);
+    auto redundancy = boost::any_cast<elle::json::Object>(obj["redundancy"]);
+    if (paxos)
+    {
+      BOOST_CHECK_EQUAL(boost::any_cast<int64_t>(redundancy["desired_factor"]),
+                        3);
+      BOOST_CHECK_EQUAL(boost::any_cast<std::string>(redundancy["type"]),
+                        "replication");
+    }
+    else
+    {
+      BOOST_CHECK_EQUAL(boost::any_cast<int64_t>(redundancy["desired_factor"]),
+                        1);
+      BOOST_CHECK_EQUAL(boost::any_cast<std::string>(redundancy["type"]),
+                        "none");
+    }
+  }
+}
+#endif
 
 template <typename T>
 int
@@ -1641,6 +1723,9 @@ ELLE_TEST_SUITE()
   TEST(restart);
   TEST(cache);
   TEST(serialize);
+#ifndef INFINIT_WINDOWS
+  TEST(monitoring);
+#endif
   {
     boost::unit_test::test_suite* remove_plain = BOOST_TEST_SUITE("removal");
     plain->add(remove_plain);

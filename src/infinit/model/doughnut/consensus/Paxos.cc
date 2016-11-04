@@ -1908,6 +1908,28 @@ namespace infinit
           return Super::stat(address);
         }
 
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+
+        elle::json::Object
+        Paxos::redundancy()
+        {
+          return {
+            { "desired_factor", static_cast<float>(this->factor()) },
+            { "type", "replication" },
+          };
+        }
+
+        elle::json::Object
+        Paxos::stats()
+        {
+          elle::json::Object res;
+          res["type"] = "paxos";
+          res["node_timeout"] = elle::sprintf("%s", this->node_timeout());
+          return res;
+        }
+
         /*--------------.
         | Configuration |
         `--------------*/

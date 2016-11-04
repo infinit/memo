@@ -45,7 +45,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: construct", this);
         if (local)
         {
-          this->_peers.emplace(this->id(), local);
+          this->_peers.emplace(local);
           for (auto const& key: local->storage()->list())
             this->_address_book.emplace(this->id(), key);
           ELLE_DEBUG("loaded %s entries from storage",
@@ -165,10 +165,10 @@ namespace infinit
         NodeLocations nls;
         for (auto const& p: this->peers())
         {
-          if (auto r = dynamic_cast<model::doughnut::Remote const*>(p.second.get()))
+          if (auto r = dynamic_cast<model::doughnut::Remote const*>(p.get()))
             nls.emplace_back(r->id(), r->endpoints());
-          else if (auto l = dynamic_cast<model::doughnut::Local const*>(p.second.get()))
-            nls.emplace_back(p.second->id(), elle::unconst(l)->server_endpoints() );
+          else if (auto l = dynamic_cast<model::doughnut::Local const*>(p.get()))
+            nls.emplace_back(p->id(), elle::unconst(l)->server_endpoints() );
         }
         for (auto const& p: extras)
           nls.emplace_back(p.first, p.second);
@@ -181,10 +181,7 @@ namespace infinit
         elle::json::Object res;
         if (k == "stats")
         {
-          elle::json::Array jpeers;
-          for (auto const& p: peers())
-            jpeers.push_back(elle::sprintf("%s", p.first));
-          res["peers"] = jpeers;
+          res["peers"] = this->peer_list();
           res["id"] = elle::sprintf("%s", this->doughnut()->id());
         }
         return res;
@@ -228,7 +225,7 @@ namespace infinit
           {
             if (loc.endpoints().empty())
               continue;
-            auto r = dynamic_cast<model::doughnut::Remote*>(it->second.get());
+            auto r = dynamic_cast<model::doughnut::Remote*>(it->get());
             if (!r)
               continue; // discover on an already Local o_O
             if (loc.endpoints().front().port() == r->endpoints().front().port())
@@ -272,7 +269,7 @@ namespace infinit
           ELLE_DEBUG("added %s entries from %f", entries.size(), peer);
         }
         ELLE_ASSERT_NEQ(peer->id(), model::Address::null);
-        this->_peers.emplace(peer->id(), peer);
+        this->_peers.emplace(peer);
         this->_pending.erase(peer->id());
         ELLE_DEBUG("%s: notifying connections", this);
         if (this->local())
@@ -294,12 +291,13 @@ namespace infinit
       pick_n(E& gen, int size, int count)
       {
         std::vector<int> res;
-        std::uniform_int_distribution<> random(0, size-1);
         while (res.size() < static_cast<unsigned int>(count))
         {
+          std::uniform_int_distribution<> random(0, size - 1 - res.size());
           int v = random(gen);
-          if (std::find(res.begin(), res.end(), v) != res.end())
-            continue;
+          for (auto r: res)
+            if (v >= r)
+              ++v;
           res.push_back(v);
         }
         return res;
@@ -320,52 +318,17 @@ namespace infinit
             {
               ELLE_DEBUG("%s: selecting %s nodes from %s peers",
                          this, n, this->_peers.size());
-              int count = 0;
               if (static_cast<unsigned int>(n) >= this->_peers.size())
-                for (auto it = this->_peers.begin();
-                     it != this->_peers.end() && count < n;
-                     ++it, ++count)
-                  yield(it->second);
-              else if (this->_peers.size() >= static_cast<unsigned int>(n) * 2)
-              { // picking a 'small' subset: retry on collision
+                for (auto p: this->_peers)
+                  yield(p);
+              else
+              {
                 std::vector<int> indexes = pick_n(
-                  elle::unconst(this)->_gen,
+                  this->_gen,
                   static_cast<int>(this->_peers.size()),
                   n);
-                std::sort(indexes.begin(), indexes.end());
-                unsigned int ii=0;
-                int ip=0;
-                for (auto& p: this->_peers)
-                {
-                  if (indexes[ii] == ip)
-                  {
-                    yield(p.second);
-                    ++ii;
-                    if (ii >= indexes.size())
-                      break;
-                  }
-                  ++ip;
-                }
-              }
-              else
-              { // picking a large subset: take all and remove
-                std::vector<int> indexes = pick_n(
-                  elle::unconst(this)->_gen,
-                  this->_peers.size(),
-                  this->_peers.size()-n);
-                std::sort(indexes.begin(), indexes.end());
-                unsigned int ii=0;
-                int ip=0;
-                for (auto& p: this->_peers)
-                {
-                  if (ii < indexes.size() && indexes[ii] == ip)
-                  { // skip it
-                    ++ii;
-                    continue;
-                  }
-                  yield(p.second);
-                  ++ip;
-                }
+                for (auto r: indexes)
+                  yield(this->peers().get<1>()[r]);
               }
             });
         else
@@ -377,7 +340,9 @@ namespace infinit
               int count = 0;
               for (auto it = range.first; it != range.second; ++it)
               {
-                yield(this->_peers.at(it->node()));
+                auto p = this->peers().find(it->node());
+                ELLE_ASSERT(p != this->peers().end());
+                yield(*p);
                 if (++count >= n)
                   break;
               }
@@ -388,7 +353,8 @@ namespace infinit
                 for (auto peer: this->peers())
                 {
                   // FIXME: handle local !
-                  if (auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(peer.second))
+                  if (auto r = std::dynamic_pointer_cast<
+                      model::doughnut::Remote>(peer))
                   {
                     auto lookup =
                       r->make_rpc<std::unordered_set<Address> (Address)>(
@@ -430,7 +396,7 @@ namespace infinit
       {
         auto it = this->_peers.find(address);
         if (it != this->_peers.end())
-          return it->second;
+          return *it;
         else
           return Overlay::WeakMember();
       }
@@ -448,6 +414,36 @@ namespace infinit
             --i;
           }
         }
+      }
+
+      /*-----------.
+      | Monitoring |
+      `-----------*/
+
+      std::string
+      Kouncil::type_name()
+      {
+        return "kouncil";
+      }
+
+      elle::json::Array
+      Kouncil::peer_list()
+      {
+        elle::json::Array res;
+        for (auto const& peer: this->peers().get<1>())
+          res.push_back(elle::json::Object{
+            { "id", elle::sprintf("%x", peer->id()) },
+          });
+        return res;
+      }
+
+      elle::json::Object
+      Kouncil::stats()
+      {
+        elle::json::Object res;
+        res["type"] = this->type_name();
+        res["id"] = elle::sprintf("%s", this->doughnut()->id());
+        return res;
       }
     }
   }

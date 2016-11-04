@@ -15,12 +15,12 @@ namespace infinit
       {
         ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
         ELLE_TRACE_SCOPE("%s: broadcast %s", this, name);
-        // We need to make a copy, since for_each_parallel passes
-        // arguments by reference.
+        // Copy peers to hold connections refcount, as for_each_parallel
+        // captures values by ref.
         auto peers = this->_peers;
         reactor::for_each_parallel(
           peers,
-          [&] (std::shared_ptr<Connection> c)
+          [&] (std::shared_ptr<Connection> const& c)
           {
             // Arguments taken by reference as they will be passed multiple
             // times.
@@ -34,7 +34,16 @@ namespace infinit
             auto const f = std::bind(
               &RPC<R (Args const& ...)>::operator (),
               &rpc, std::ref(args)...);
-            return RPCServer::umbrella(f);
+            try
+            {
+              return RPCServer::umbrella(f);
+            }
+            catch (UnknownRPC const& e)
+            {
+              // FIXME: Ignore ? Evict ? Should probably be configurable. So far
+              // only Kouncil uses this, and it's definitely an ignore.
+              ELLE_WARN("error contacting %s: %s", c, e);
+            }
           },
           elle::sprintf("%s: broadcast RPC %s", this, name));
       }

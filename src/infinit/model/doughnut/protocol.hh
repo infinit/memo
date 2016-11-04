@@ -15,6 +15,9 @@ namespace infinit
         utp = 2,
         all = 3
       };
+
+      std::ostream&
+      operator <<(std::ostream&, Protocol);
     }
   }
 }

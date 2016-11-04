@@ -15,6 +15,9 @@
 #include <reactor/Scope.hh>
 #include <reactor/exception.hh>
 #include <reactor/network/utp-server.hh>
+#ifndef INFINIT_WINDOWS
+# include <reactor/network/unix-domain-server.hh>
+#endif
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
@@ -34,6 +37,7 @@
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/doughnut/conflict/UBUpserter.hh>
+#include <infinit/model/MonitoringServer.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
@@ -149,6 +153,28 @@ namespace infinit
               elle::sprintf("%s: user blocks checker", *this),
               check_user_blocks));
         }
+#ifndef INFINIT_WINDOWS
+        if (init.monitoring_socket_path)
+        {
+          auto const& m_path = init.monitoring_socket_path.get();
+          if (!boost::filesystem::exists(m_path))
+          {
+            auto unix_domain_server =
+              elle::make_unique<reactor::network::UnixDomainServer>();
+            if (!boost::filesystem::exists(m_path.parent_path()))
+              boost::filesystem::create_directories(m_path.parent_path());
+            unix_domain_server->listen(m_path);
+            this->_monitoring_server.reset(
+              new MonitoringServer(std::move(unix_domain_server), *this));
+            ELLE_DEBUG("monitoring server listening on %s", m_path);
+          }
+          else
+          {
+            ELLE_WARN(
+              "unable to monitor, socket already present at: %s", m_path);
+          }
+        }
+#endif
       }
 
       Doughnut::~Doughnut()
@@ -308,6 +334,12 @@ namespace infinit
       Doughnut::_remove(Address address, blocks::RemoveSignature rs)
       {
         this->_consensus->remove(address, std::move(rs));
+      }
+
+      Protocol
+      Doughnut::protocol() const
+      {
+        return this->_dock.protocol();
       }
 
       /*------------------.
@@ -557,7 +589,8 @@ namespace infinit
         boost::optional<elle::Version> version,
         boost::optional<int> port_,
         boost::optional<boost::asio::ip::address> listen_address,
-        boost::optional<std::string> rdv_host)
+        boost::optional<std::string> rdv_host,
+        boost::optional<boost::filesystem::path> monitoring_socket_path)
       {
         Doughnut::ConsensusBuilder consensus =
           [&] (Doughnut& dht)
@@ -598,8 +631,6 @@ namespace infinit
         std::unique_ptr<storage::Storage> storage;
         if (this->storage)
           storage = this->storage->make();
-        std::unique_ptr<Doughnut> dht;
-        boost::optional<std::string> name;
         return elle::make_unique<infinit::model::doughnut::Doughnut>(
           this->id,
           std::make_shared<cryptography::rsa::KeyPair>(keys),
@@ -614,6 +645,7 @@ namespace infinit
           version ? version.get() : this->version,
           admin_keys,
           std::move(rdv_host),
+          std::move(monitoring_socket_path),
           this->overlay->rpc_protocol
           );
       }

@@ -76,7 +76,8 @@ COMMAND(create)
     if (root || discovery)
     {
       auto model = network.run(
-        owner, mo, false, infinit::compatibility_version);
+        owner, mo, false, flag(args, "monitoring"),
+        infinit::compatibility_version);
       if (discovery)
       {
         ELLE_LOG_SCOPE("register volume in the network");
@@ -421,7 +422,8 @@ COMMAND(run)
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
   auto model_and_threads = network.run(
-    self, mo, true, infinit::compatibility_version, port);
+    self, mo, true, flag(args, "monitoring"),
+    infinit::compatibility_version, port);
   auto model = std::move(model_and_threads.first);
   hook_stats_signals(*model);
   if (auto plf = optional(args, "peers-file"))
@@ -460,7 +462,8 @@ COMMAND(run)
     auto fs = volume.run(std::move(model),
                          mo.mountpoint,
                          mo.readonly,
-                         flag(args, "allow-root-creation")
+                         flag(args, "allow-root-creation"),
+                         flag(args, "map-other-permissions")
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
                          , optional(args, "mount-name")
 #endif
@@ -1157,6 +1160,7 @@ run_options(RunMode mode)
     { "async", BOOL_IMPLICIT, "use asynchronous write operations" },
 #ifndef INFINIT_WINDOWS
     { "daemon,d", BOOL_IMPLICIT, "run as a background daemon" },
+    option_monitoring,
     { "fuse-option", value<std::vector<std::string>>()->multitoken(),
       "option to pass directly to FUSE" },
 #endif
@@ -1182,7 +1186,14 @@ run_options(RunMode mode)
     add_option(
       { "push,p", BOOL_IMPLICIT, "alias for --push-endpoints --push-volume" });
   if (mode == RunMode::run || mode == RunMode::update)
-    add_option({ "push,p", BOOL_IMPLICIT, "alias for --push-endpoints" });
+    add_options({
+      { "push,p", BOOL_IMPLICIT, "alias for --push-endpoints" },
+      { "map-other-permissions",
+        boost::program_options::value<bool>()
+          ->implicit_value(true, "true")
+          ->default_value(true, "true"),
+        "allow chmod to set world permissions"}
+    });
   add_options({
     { "publish", BOOL_IMPLICIT,
       "alias for --fetch-endpoints --push-endpoints" },

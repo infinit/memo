@@ -26,6 +26,8 @@ namespace infinit
 {
   namespace model
   {
+    class MonitoringServer;
+
     namespace doughnut
     {
       namespace bmi = boost::multi_index;
@@ -98,6 +100,7 @@ namespace infinit
         ELLE_ATTRIBUTE(
           elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
         ELLE_ATTRIBUTE_RX(reactor::Barrier, terminating);
+        ELLE_ATTRIBUTE_r(Protocol, protocol);
 
       public:
         struct KeyHash
@@ -165,6 +168,7 @@ namespace infinit
         void
         _remove(Address address, blocks::RemoveSignature rs) override;
         friend class Local;
+        ELLE_ATTRIBUTE(std::unique_ptr<MonitoringServer>, monitoring_server);
 
       /*------------------.
       | Service discovery |
@@ -226,18 +230,20 @@ namespace infinit
         make(bool client,
              boost::filesystem::path const& p) override;
         std::unique_ptr<Doughnut>
-        make(bool client,
-             boost::filesystem::path const& p,
-             bool async = false,
-             bool cache = false,
-             boost::optional<int> cach_size = {},
-             boost::optional<std::chrono::seconds> cache_ttl = {},
-             boost::optional<std::chrono::seconds> cache_invalidation = {},
-             boost::optional<uint64_t> disk_cache_size = {},
-             boost::optional<elle::Version> version = {},
-             boost::optional<int> port = {},
-             boost::optional<boost::asio::ip::address> listen_address = {},
-             boost::optional<std::string> rdv_host = {});
+        make(
+          bool client,
+          boost::filesystem::path const& p,
+          bool async = false,
+          bool cache = false,
+          boost::optional<int> cach_size = {},
+          boost::optional<std::chrono::seconds> cache_ttl = {},
+          boost::optional<std::chrono::seconds> cache_invalidation = {},
+          boost::optional<uint64_t> disk_cache_size = {},
+          boost::optional<elle::Version> version = {},
+          boost::optional<int> port = {},
+          boost::optional<boost::asio::ip::address> listen_address = {},
+          boost::optional<std::string> rdv_host = {},
+          boost::optional<boost::filesystem::path> monitoring_socket_path = {});
       };
 
       std::string

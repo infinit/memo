@@ -585,6 +585,11 @@ static
 Mode::OptionDescription option_listen_interface(
   "listen", boost::program_options::value<std::string>(),
   "specify which IP address to listen on (default: all)");
+static
+Mode::OptionDescription option_monitoring(
+  "monitoring",
+  boost::program_options::value<bool>()->default_value(true, "true")->implicit_value(true, "true"),
+  "enable monitoring (default: true)");
 
 class CommandLineSerializer
   : public elle::serialization::SerializerIn
@@ -1065,6 +1070,9 @@ namespace infinit
     boost::optional<std::vector<std::string>> peers;
     boost::optional<int> poll_beyond;
     boost::optional<boost::asio::ip::address> listen_address;
+#ifndef INFINIT_WINDOWS
+    boost::optional<bool> enable_monitoring;
+#endif
     typedef infinit::serialization_tag serialization_tag;
   };
 
@@ -1123,6 +1131,7 @@ namespace infinit
     run(User const& user,
         MountOptions const& mo,
         bool client = false,
+        bool enable_monitoring = true,
         boost::optional<elle::Version> version = {},
         boost::optional<int> port = {})
     {
@@ -1137,7 +1146,12 @@ namespace infinit
         mo.cache_disk_size,
         version,
         port,
-        mo.listen_address);
+        mo.listen_address
+#ifndef INFINIT_WINDOWS
+        , ((mo.enable_monitoring && mo.enable_monitoring.get())
+            || enable_monitoring)
+#endif
+        );
       model::NodeLocations eps;
       if (mo.peers)
       {
@@ -1181,7 +1195,8 @@ namespace infinit
         boost::optional<uint64_t> disk_cache_size = {},
         boost::optional<elle::Version> version = {},
         boost::optional<int> port = {},
-        boost::optional<boost::asio::ip::address> listen = {})
+        boost::optional<boost::asio::ip::address> listen = {},
+        bool enable_monitoring = true)
     {
       ELLE_LOG("client version: %s", version_describe);
       auto rdv_env = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
@@ -1204,7 +1219,12 @@ namespace infinit
         std::move(version),
         std::move(port),
         std::move(listen),
-        std::move(rdv_host));
+        std::move(rdv_host)
+#ifndef INFINIT_WINDOWS
+        , enable_monitoring ? this->monitoring_socket_path(user)
+                            : boost::optional<boost::filesystem::path>()
+#endif
+        );
     }
 
     inline
@@ -1260,6 +1280,18 @@ namespace infinit
         boost::filesystem::remove_all(old_dir / "cache");
       }
       return new_dir;
+    }
+
+    boost::filesystem::path
+    monitoring_socket_path(User const& user) const
+    {
+#ifdef INFINIT_WINDOWS
+      elle::unreachable();
+#else
+      return infinit::xdg_runtime_dir(std::string("/var/tmp")) /
+        "infinit" / "filesystem" / "monitoring" /
+        user.name / elle::sprintf("%s.sock", this->name);
+#endif
     }
 
     void
@@ -1450,6 +1482,9 @@ namespace infinit
     infinit::merge(mountpoint, b.mountpoint);
     infinit::merge(peers, b.peers);
     infinit::merge(poll_beyond, b.poll_beyond);
+#ifndef INFINIT_WINDOWS
+    infinit::merge(enable_monitoring, b.enable_monitoring);
+#endif
   }
 
   inline
@@ -1486,6 +1521,11 @@ namespace infinit
       infinit::merge(this->listen_address,
                      boost::asio::ip::address::from_string(*str),
                      option_listen_interface);
+#ifndef INFINIT_WINDOWS
+    infinit::merge(this->enable_monitoring,
+                   optional<bool>(args, option_monitoring),
+                   option_monitoring);
+#endif
   }
 
   inline
@@ -1520,6 +1560,9 @@ namespace infinit
     if (cache_ram_invalidation) {arguments.push_back("--cache-ram-invalidation"); arguments.push_back(std::to_string(cache_ram_invalidation.get()));}
     if (cache_disk_size) {arguments.push_back("--cache-disk-size"); arguments.push_back(std::to_string(cache_disk_size.get()));}
     if (poll_beyond && *poll_beyond >0) {arguments.push_back("--poll-hub"); arguments.push_back(std::to_string(poll_beyond.get()));}
+#ifndef INFINIT_WINDOWS
+    if (enable_monitoring && !*enable_monitoring) {arguments.push_back("--monitoring=false");}
+#endif
     if (mountpoint)
     {
       arguments.push_back("--mountpoint");
@@ -1573,7 +1616,8 @@ namespace infinit
     run(std::shared_ptr<model::doughnut::Doughnut> dht,
         boost::optional<std::string> mountpoint_ = {},
         boost::optional<bool> readonly = {},
-        bool allow_root_creation = false
+        bool allow_root_creation = false,
+        bool map_other_permissions = true
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         , boost::optional<std::string> volname_ = {}
 #endif
@@ -1600,7 +1644,8 @@ namespace infinit
         infinit::filesystem::allow_root_creation = allow_root_creation,
         infinit::filesystem::volume_name = this->name,
         infinit::filesystem::root_block_cache_dir = this->root_block_cache_dir(),
-        infinit::filesystem::mountpoint = mountpoint);
+        infinit::filesystem::mountpoint = mountpoint,
+        infinit::filesystem::map_other_permissions = map_other_permissions);
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       if (mountpoint)
@@ -1895,10 +1940,10 @@ namespace infinit
       if (self)
       {
         // Start by linked networks first.
-        extract(this->_network_path(*self), false);
+        extract(this->_networks_path(*self), false);
       }
       // Then network descriptors and possibly old linked networks.
-      extract(this->_network_descriptor_path(), true);
+      extract(this->_network_descriptors_path(), true);
       return res;
     }
 
@@ -1990,7 +2035,7 @@ namespace infinit
     {
       namespace boost_fs = boost::filesystem;
       std::vector<Drive> res;
-      for (boost_fs::recursive_directory_iterator it(this->_drive_path());
+      for (boost_fs::recursive_directory_iterator it(this->_drives_path());
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
@@ -2075,9 +2120,9 @@ namespace infinit
       std::vector<std::pair<Passport, std::string>> res;
       boost_fs::path path;
       if (network)
-        path = this->_passport_path() / network.get();
+        path = this->_passports_path() / network.get();
       else
-        path = this->_passport_path();
+        path = this->_passports_path();
       if (!boost::filesystem::exists(path))
         return res;
       for (boost_fs::recursive_directory_iterator it(path);
@@ -2163,7 +2208,7 @@ namespace infinit
     {
       namespace boost_fs = boost::filesystem;
       std::vector<User> res;
-      for (boost_fs::recursive_directory_iterator it(this->_user_path());
+      for (boost_fs::recursive_directory_iterator it(this->_users_path());
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
@@ -2205,7 +2250,7 @@ namespace infinit
     {
       namespace boost_fs = boost::filesystem;
       std::vector<std::unique_ptr<storage::StorageConfig>> res;
-      for (boost_fs::recursive_directory_iterator it(this->_storage_path());
+      for (boost_fs::recursive_directory_iterator it(this->_storages_path());
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
@@ -2267,7 +2312,7 @@ namespace infinit
     {
       namespace boost_fs = boost::filesystem;
       std::vector<Volume> res;
-      for (boost_fs::recursive_directory_iterator it(this->_volume_path());
+      for (boost_fs::recursive_directory_iterator it(this->_volumes_path());
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
@@ -2434,9 +2479,17 @@ namespace infinit
     }
 
     boost::filesystem::path
+    _credentials_path() const
+    {
+      auto root = xdg_data_home() / "credentials";
+      create_directories(root);
+      return root;
+    }
+
+    boost::filesystem::path
     _credentials_path(std::string const& service) const
     {
-      auto root = xdg_data_home() / "credentials" / service;
+      auto root = this->_credentials_path() / service;
       create_directories(root);
       return root;
     }
@@ -2448,7 +2501,7 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _network_descriptor_path() const
+    _network_descriptors_path() const
     {
       auto root = xdg_data_home() / "networks";
       create_directories(root);
@@ -2458,13 +2511,22 @@ namespace infinit
     boost::filesystem::path
     _network_descriptor_path(std::string const& name) const
     {
-      return this->_network_descriptor_path() / name;
+      return this->_network_descriptors_path() / name;
     }
 
     boost::filesystem::path
-    _network_path(User const& user, bool create_dir = true) const
+    _networks_path(bool create_dir = true) const
     {
-      auto root = xdg_data_home() / "linked_networks" / user.name;
+      auto root = xdg_data_home() / "linked_networks";
+      if (create_dir)
+        create_directories(root);
+      return root;
+    }
+
+    boost::filesystem::path
+    _networks_path(User const& user, bool create_dir = true) const
+    {
+      auto root = _networks_path(create_dir) / user.name;
       if (create_dir)
         create_directories(root);
       return root;
@@ -2476,11 +2538,11 @@ namespace infinit
                   bool create_dir = true) const
     {
       auto network_name = this->qualified_name(name, user);
-      return this->_network_path(user, create_dir) / network_name;
+      return this->_networks_path(user, create_dir) / network_name;
     }
 
     boost::filesystem::path
-    _passport_path() const
+    _passports_path() const
     {
       auto root = xdg_data_home() / "passports";
       create_directories(root);
@@ -2490,11 +2552,11 @@ namespace infinit
     boost::filesystem::path
     _passport_path(std::string const& network, std::string const& user) const
     {
-      return this->_passport_path() / network / user;
+      return this->_passports_path() / network / user;
     }
 
     boost::filesystem::path
-    _storage_path() const
+    _storages_path() const
     {
       auto root = xdg_data_home() / "storages";
       create_directories(root);
@@ -2504,11 +2566,11 @@ namespace infinit
     boost::filesystem::path
     _storage_path(std::string const& name) const
     {
-      return _storage_path() / name;
+      return _storages_path() / name;
     }
 
     boost::filesystem::path
-    _user_path() const
+    _users_path() const
     {
       auto root = xdg_data_home() / "users";
       create_directories(root);
@@ -2518,11 +2580,11 @@ namespace infinit
     boost::filesystem::path
     _user_path(std::string const& name) const
     {
-      return this->_user_path() / name;
+      return this->_users_path() / name;
     }
 
     boost::filesystem::path
-    _volume_path() const
+    _volumes_path() const
     {
       auto root = xdg_data_home() / "volumes";
       create_directories(root);
@@ -2532,7 +2594,7 @@ namespace infinit
     boost::filesystem::path
     _volume_path(std::string const& name) const
     {
-      return this->_volume_path() / name;
+      return this->_volumes_path() / name;
     }
 
     static
@@ -2576,7 +2638,7 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _drive_path() const
+    _drives_path() const
     {
       auto root = xdg_data_home() / "drives";
       create_directories(root);
@@ -2586,7 +2648,7 @@ namespace infinit
     boost::filesystem::path
     _drive_path(std::string const& name) const
     {
-      return this->_drive_path() / name;
+      return this->_drives_path() / name;
     }
 
     void
