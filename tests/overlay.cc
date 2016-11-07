@@ -104,6 +104,26 @@ wait_until_ready(DHT& client)
   }
 }
 
+static
+int
+peer_count(DHT& client)
+{
+  auto stats = client.dht->overlay()->query("stats", {});
+  int res = -1;
+  try
+  {
+    res = boost::any_cast<elle::json::Array>(
+      boost::any_cast<elle::json::Object>(stats)["contacts"]).size();
+  }
+  catch (boost::bad_any_cast const&)
+  {
+    res = boost::any_cast<elle::json::Array>(
+      boost::any_cast<elle::json::Object>(stats)["peers"]).size() - 1;
+  }
+  ELLE_TRACE("counted %s peers for %s", res, client.dht);
+  return res;
+}
+
 ELLE_TEST_SCHEDULED(
   basics, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
 {
@@ -589,7 +609,7 @@ ELLE_TEST_SCHEDULED(
 ELLE_TEST_SCHEDULED(
   parallel_discover, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
 {
-  static const int nservers = 5;
+  static const int nservers = 10;
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   std::vector<std::unique_ptr<DHT>> servers;
   for (int i=0; i<nservers; ++i)
@@ -600,31 +620,29 @@ ELLE_TEST_SCHEDULED(
   }
   elle::With<reactor::Scope>() << [&](reactor::Scope& s)
   {
+    for (int i=0; i<rand()%5; ++i)
+      reactor::yield();
     for (int i=1; i<nservers; ++i)
       s.run_background("discover", [&,i] {
           discover(*servers[i], *servers[0], anonymous);
       });
     reactor::wait(s);
   };
-  for (int i=0; i<nservers; ++i)
-    wait_until_ready(*servers[i]);
-  std::vector<infinit::model::Address> addrs;
-  for (int j=0; j<20; ++j)
+  bool success = false;
+  for (int i=0; i<10; ++i)
   {
-    for (int i=0; i<nservers; ++i)
-    {
-      auto block = servers[i]->dht->make_block<ACLBlock>(std::string("block"));
-      addrs.push_back(block->address());
-      servers[i]->dht->store(std::move(block), STORE_INSERT, tcr());
-    }
+    success = true;
+    reactor::sleep(100_ms);
+    for (auto& s: servers)
+      if (peer_count(*s) != signed(servers.size())-1)
+      {
+        success = false;
+        break;
+      }
+    if (success)
+      break;
   }
-  for (auto const& a: addrs)
-  {
-    for (int i=0; i<nservers; ++i)
-    {
-      servers[i]->dht->fetch(a);
-    }
-  }
+  BOOST_CHECK(success);
 }
 
 ELLE_TEST_SUITE()
