@@ -31,7 +31,11 @@ struct Server
     if (this->rpcs)
       this->rpcs(s);
     s.add("succ", std::function<int (int)>([] (int x) { return x + 1; }));
-    s.serve(*socket);
+    infinit::protocol::Serializer serializer(*socket, infinit::version(), false);
+    infinit::protocol::ChanneledStream channels(serializer);
+    this->channels = &channels;
+    s.serve(channels);
+    this->channels = nullptr;
   }
 
   reactor::network::TCPSocket
@@ -43,6 +47,7 @@ struct Server
   reactor::network::TCPServer server;
   reactor::Thread::unique_ptr server_thread;
   std::function<void (infinit::RPCServer&)> rpcs;
+  infinit::protocol::ChanneledStream* channels;
 };
 
 ELLE_TEST_SCHEDULED(move)
@@ -82,9 +87,56 @@ ELLE_TEST_SCHEDULED(unknown)
   BOOST_CHECK_EQUAL(succ(0), 1);
 }
 
+ELLE_TEST_SCHEDULED(bidirectional)
+{
+  Server s(
+    [] (infinit::RPCServer& s)
+    {
+      s.add("ping",
+        std::function<int(int)>(
+          [] (int a) {
+            for (int i=0; i<rand()%5; ++i)
+              reactor::yield();
+            return a+1;
+          }));
+    });
+  auto stream = s.connect();
+  infinit::protocol::Serializer serializer(stream, infinit::version(), false);
+  infinit::protocol::ChanneledStream channels(serializer);
+  infinit::RPCServer rev;
+  rev.add("ping",
+        std::function<int(int)>(
+          [] (int a) {
+            for (int i=0; i<rand()%5; ++i)
+              reactor::yield();
+            return a+2;
+          }));
+  auto t = elle::make_unique<reactor::Thread>("rev serve", [&] {
+      rev.serve(channels);
+  });
+  infinit::RPC<int (int)> ping("ping", channels, infinit::version());
+  BOOST_CHECK_EQUAL(ping(1), 2);
+  infinit::RPC<int (int)> pingrev("ping", *s.channels, infinit::version());
+  BOOST_CHECK_EQUAL(pingrev(1), 3);
+  auto pinger = [](infinit::RPC<int (int)>& p, int delta) {
+    for (int i=0; i<100; ++i)
+      BOOST_CHECK_EQUAL(p(i), i+delta);
+  };
+  auto tfwd = elle::make_unique<reactor::Thread>("ping", [&] {
+      pinger(ping, 1);
+  });
+  auto trev = elle::make_unique<reactor::Thread>("ping", [&] {
+      pinger(pingrev, 2);
+  });
+  reactor::wait(*tfwd);
+  reactor::wait(*trev);
+  t->terminate_now();
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(move));
   suite.add(BOOST_TEST_CASE(unknown));
+  suite.add(BOOST_TEST_CASE(bidirectional));
 }
