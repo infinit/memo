@@ -467,7 +467,9 @@ ELLE_TEST_SCHEDULED(
   for (int i=0; i<nservers; ++i)
   {
     auto dht = elle::make_unique<DHT>(
-    ::keys = keys, make_overlay = builder, paxos = pax);
+      ::keys = keys, make_overlay = builder, paxos = pax,
+      dht::consensus::rebalance_auto_expand = false
+    );
     servers.emplace_back(std::move(dht));
   }
   for (int i=1; i<nservers; ++i)
@@ -475,7 +477,9 @@ ELLE_TEST_SCHEDULED(
   for (int i=0; i<nclients; ++i)
   {
     auto dht = elle::make_unique<DHT>(
-    ::keys = keys, make_overlay = builder, paxos = pax, ::storage = nullptr);
+      ::keys = keys, make_overlay = builder, paxos = pax, ::storage = nullptr,
+      dht::consensus::rebalance_auto_expand = false
+    );
     clients.emplace_back(std::move(dht));
   }
   for (int i=0; i<nclients; ++i)
@@ -516,6 +520,7 @@ ELLE_TEST_SCHEDULED(
               auto block = c->dht->make_block<ACLBlock>(std::string("block"));
               auto a = block->address();
               c->dht->store(std::move(block), STORE_INSERT, tcr());
+              ELLE_DEBUG("creating %f", a);
               addrs.push_back(a);
             }
             else
