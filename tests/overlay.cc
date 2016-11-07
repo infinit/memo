@@ -614,7 +614,7 @@ ELLE_TEST_SCHEDULED(
 ELLE_TEST_SCHEDULED(
   parallel_discover, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
 {
-  static const int nservers = 10;
+  static const int nservers = 5;
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   std::vector<std::unique_ptr<DHT>> servers;
   for (int i=0; i<nservers; ++i)
@@ -634,7 +634,7 @@ ELLE_TEST_SCHEDULED(
     reactor::wait(s);
   };
   bool success = false;
-  for (int i=0; i<10; ++i)
+  for (int i=0; i<50; ++i)
   {
     success = true;
     reactor::sleep(100_ms);
