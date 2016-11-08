@@ -499,7 +499,8 @@ ELLE_TEST_SCHEDULED(
           for (int i=0; i<nactions; ++i)
           {
             int r = rand()%100;
-            ELLE_TRACE("action %s: %s, with %s addrs", i, r, addrs.size());
+            ELLE_TRACE("action %s: %s, with %s addrs",
+              i, r, addrs.size());
             if (r < 20 && !addrs.empty())
             { // delete
               int p = rand()%addrs.size();
@@ -514,13 +515,14 @@ ELLE_TEST_SCHEDULED(
               catch (infinit::model::MissingBlock const& mb)
               {
               }
+              ELLE_DEBUG("deleted %f", addr);
             }
             else if (r < 50 || addrs.empty())
             { // create
               auto block = c->dht->make_block<ACLBlock>(std::string("block"));
               auto a = block->address();
               c->dht->store(std::move(block), STORE_INSERT, tcr());
-              ELLE_DEBUG("creating %f", a);
+              ELLE_DEBUG("created %f", a);
               addrs.push_back(a);
             }
             else
@@ -533,9 +535,11 @@ ELLE_TEST_SCHEDULED(
                 auto block = c->dht->fetch(addr);
                 if (r < 80)
                 { //update
+                  ELLE_DEBUG("updating %f", addr);
                   dynamic_cast<infinit::model::blocks::ACLBlock*>(block.get())->data(
                     elle::Buffer("coincoin"));
                   c->dht->store(std::move(block), STORE_UPDATE, tcr());
+                  ELLE_DEBUG("updated %f", addr);
                 }
               }
               catch (infinit::model::MissingBlock const& mb)
@@ -549,6 +553,7 @@ ELLE_TEST_SCHEDULED(
                   throw;
                 }
               }
+              ELLE_DEBUG("read %f", addr);
             }
           }
         }
@@ -559,6 +564,7 @@ ELLE_TEST_SCHEDULED(
         }
       });
     reactor::wait(s);
+    ELLE_TRACE("exiting scope");
   };
   ELLE_TRACE("teardown");
 }
