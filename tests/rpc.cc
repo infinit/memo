@@ -87,6 +87,37 @@ ELLE_TEST_SCHEDULED(unknown)
   BOOST_CHECK_EQUAL(succ(0), 1);
 }
 
+ELLE_TEST_SCHEDULED(simultaneous)
+{
+  Server s(
+    [] (infinit::RPCServer& s)
+    {
+      s.add("ping",
+        std::function<int(int)>(
+          [] (int a) {
+            return a+1;
+          }));
+    });
+  auto stream = s.connect();
+  infinit::protocol::Serializer serializer(stream, infinit::version(), false);
+  infinit::protocol::ChanneledStream channels(serializer);
+  infinit::RPC<int (int)> ping("ping", channels, infinit::version());
+  elle::With<reactor::Scope>() << [&](reactor::Scope& s)
+  {
+    for (int i=0; i<5; ++i)
+      s.run_background("ping", [&] {
+          BOOST_CHECK_EQUAL(ping(10), 11);
+      });
+    for (int i=0; i<5; ++i)
+      s.run_background("ping", [&,i] {
+          for (int y=0; y<i; ++y)
+            reactor::yield();
+          BOOST_CHECK_EQUAL(ping(10), 11);
+      });
+    reactor::wait(s);
+  };
+}
+
 ELLE_TEST_SCHEDULED(bidirectional)
 {
   Server s(
@@ -139,4 +170,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(move));
   suite.add(BOOST_TEST_CASE(unknown));
   suite.add(BOOST_TEST_CASE(bidirectional));
+  suite.add(BOOST_TEST_CASE(simultaneous));
 }
