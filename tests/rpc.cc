@@ -1,6 +1,7 @@
 #include <elle/test.hh>
 
 #include <reactor/scheduler.hh>
+#include <reactor/Scope.hh>
 #include <reactor/network/tcp-server.hh>
 #include <reactor/network/tcp-socket.hh>
 
