@@ -299,6 +299,7 @@ namespace infinit
             if (v >= r)
               ++v;
           res.push_back(v);
+          std::sort(res.begin(), res.end());
         }
         return res;
       }
