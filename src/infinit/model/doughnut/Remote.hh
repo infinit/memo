@@ -52,12 +52,13 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        Remote(Doughnut& doughnut,
-               Address id,
-               Endpoints endpoints,
-               boost::optional<reactor::network::UTPServer&> server,
-               boost::optional<EndpointsRefetcher> const& refetch = {},
-               Protocol protocol = Protocol::all);
+        Remote(
+          Doughnut& doughnut,
+          Address id,
+          Endpoints endpoints,
+          boost::optional<reactor::network::UTPServer&> server = boost::none,
+          boost::optional<EndpointsRefetcher> const& refetch = boost::none,
+          Protocol protocol = Protocol::all);
         virtual
         ~Remote();
       protected:
@@ -88,6 +89,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(Endpoints, endpoints);
         ELLE_ATTRIBUTE(boost::optional<reactor::network::UTPServer&>,
                        utp_server);
+        ELLE_ATTRIBUTE_RX(boost::signals2::signal<void()>, id_discovered);
 
       /*-----------.
       | Networking |

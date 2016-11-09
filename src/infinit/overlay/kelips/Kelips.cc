@@ -874,14 +874,6 @@ namespace infinit
         , _dropped_gets(0)
         , _failed_puts(0)
       {
-#ifndef INFINIT_WINDOWS
-        reactor::scheduler().signal_handle(SIGUSR1, [this] {
-            auto json = this->query("stats", {});
-            std::cerr << elle::json::pretty_print(json);
-            json = this->query("blockcount", {});
-            std::cerr << elle::json::pretty_print(json);
-        });
-#endif
         bool v4 = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
         bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
           && doughnut->version() >= elle::Version(0, 7, 0);
@@ -1153,7 +1145,7 @@ namespace infinit
         if (l.id() != Address::null)
         {
           Contact& c = *get_or_make(l.id(), false, l.endpoints());
-          ELLE_DEBUG_SCOPE("send bootstrap to %f", l);
+          ELLE_DEBUG_SCOPE("send bootstrap to %f at %s", l.id(), l.endpoints());
           if (!_config.encrypt || _config.accept_plain)
             send(req, c);
           else
@@ -1165,7 +1157,7 @@ namespace infinit
         }
         else
         {
-          ELLE_DEBUG_SCOPE("send bootstrap to %f", l.endpoints());
+          ELLE_DEBUG_SCOPE("send bootstrap to %s", l.endpoints());
           if (!_config.encrypt || _config.accept_plain)
           {
             for (auto const& ep: l.endpoints())
@@ -1324,7 +1316,7 @@ namespace infinit
             e = c->validated_endpoint->first;
           else
           {
-            if (!c->contacter)
+            if (!c->contacter || c->contacter->done())
             {
               ELLE_DEBUG("Running contacter on %s", address);
               c->contacter.reset(
@@ -2084,6 +2076,22 @@ namespace infinit
       {
         ELLE_DUMP("%s: processing gossip from %s", *this, p->endpoint);
         int g = group_of(p->sender);
+        if (this->_observer)
+        {
+          ELLE_DEBUG("Observer got gossip from %s", p->sender);
+          auto& cs = this->_state.contacts.at(g);
+          auto it = cs.find(p->sender);
+          Contact* c = nullptr;
+          if (it == cs.end())
+            c = this->get_or_make(p->sender, false, {p->endpoint}, true);
+          else
+            c = &it->second;
+          if (!c->discovered)
+          {
+            c->discovered = true;
+            this->on_discover()(NodeLocation(p->sender, {p->endpoint}), false);
+          }
+        }
         if (g != _group && !p->files.empty())
           ELLE_WARN("%s: Received files from another group: %s at %s", *this, p->sender, p->endpoint);
         for (auto& c: p->contacts)
@@ -3354,6 +3362,8 @@ namespace infinit
       void
       Node::process_update(SerState const& s)
       {
+        if (this->_observer)
+          ELLE_WARN("Unexpected update received from observer");
         ELLE_DEBUG("register %s contacts and %s blocks",
                    s.first.size(), s.second.size());
         for (auto const& c: s.first)
@@ -3371,9 +3381,10 @@ namespace infinit
               Contact contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
               for (auto const& ep: c.second)
                 contact.endpoints.push_back(TimedEndpoint(ep, now()));
+              NodeLocation nl(c.first, c.second);
               ELLE_LOG("%s: register %f", this, contact);
               target[c.first] = std::move(contact);
-              this->on_discover()(c.first, false);
+              this->on_discover()(nl, false);
             }
           }
           else
@@ -3383,7 +3394,8 @@ namespace infinit
             if (!it->second.discovered)
             {
               it->second.discovered = true;
-              this->on_discover()(it->first, false);
+              NodeLocation nl(it->first, endpoints_extract(it->second.endpoints));
+              this->on_discover()(nl, false);
             }
           }
         }
@@ -3497,14 +3509,18 @@ namespace infinit
         Contact c {{},  {}, address, Duration(), Time(), 0, {}, {}, observer};
         for (auto const& ep: endpoints)
           c.endpoints.push_back(TimedEndpoint(ep, now()));
+        NodeLocation nl(address, endpoints);
         auto inserted = target->insert(std::make_pair(address, std::move(c)));
         // for non-observers, only notify discovery after bootstrap completes
         if (inserted.second && observer)
-          this->on_discover()(address, observer);
+          this->on_discover()(nl, observer);
         if (!inserted.second)
         { // we still want the new endpoints
           for (auto const& ep: endpoints)
             endpoints_update(inserted.first->second.endpoints, ep);
+          // Reset validated endpoint so that contacter is re-run
+          if (!endpoints.empty())
+            inserted.first->second.validated_endpoint.reset();
         }
         return &inserted.first->second;
       }
@@ -3596,30 +3612,7 @@ namespace infinit
         if (k == "stats")
         {
           res["group"] = this->_group;
-          for (int i = 0; i < signed(this->_state.contacts.size()); ++i)
-          {
-            auto const& group = this->_state.contacts[i];
-            elle::json::Array contacts;
-            for (auto const& contact: group)
-            {
-              auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
-              (std::chrono::system_clock::now() - endpoints_max(contact.second.endpoints));
-              contacts.push_back(elle::json::Object{
-                  {"address", elle::sprintf("%x", contact.second.address)},
-                  {"validated_endpoint",
-                    elle::sprintf("%s", (contact.second.validated_endpoint?
-                    PrettyEndpoint(contact.second.validated_endpoint->first)
-                  : PrettyEndpoint(Endpoint())).repr())},
-                  {"endpoints", elle::sprintf("%s", contact.second.endpoints.size())},
-                  {"last_seen",
-                  elle::sprintf("%ss", last_seen.count())},
-                  {"discovered", contact.second.discovered},
-              });
-            }
-            res[elle::sprintf("%s", i)] = elle::json::Object{
-              {"contacts", std::move(contacts)}
-            };
-          }
+          res["contacts"] = this->peer_list();
           res["files"] = this->_state.files.size();
           res["dropped_puts"] = this->_dropped_puts;
           res["dropped_gets"] = this->_dropped_gets;
@@ -3772,6 +3765,68 @@ namespace infinit
         return res;
       }
 
+      /*-----------.
+      | Monitoring |
+      `-----------*/
+
+      std::string
+      Node::type_name()
+      {
+        return "kelips";
+      }
+
+      elle::json::Array
+      Node::peer_list()
+      {
+        elle::json::Array res;
+        for (int i = 0; i < signed(this->_state.contacts.size()); ++i)
+        {
+          auto const& group = this->_state.contacts[i];
+          for (auto const& contact: group)
+          {
+            auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
+              (std::chrono::system_clock::now() -
+               endpoints_max(contact.second.endpoints));
+            elle::json::Array endpoints;
+            for (auto const pair: contact.second.endpoints)
+              endpoints.push_back(PrettyEndpoint(pair.first).repr());
+            elle::json::Object peer_info{
+              { "id", elle::sprintf("%x", contact.second.address) },
+              { "validated_endpoint",
+                elle::sprintf("%s", (contact.second.validated_endpoint
+                  ? PrettyEndpoint(contact.second.validated_endpoint->first)
+                  : PrettyEndpoint(Endpoint())).repr()) },
+              { "endpoints", endpoints },
+              { "last_seen", elle::sprintf("%ss", last_seen.count()) },
+              { "discovered", contact.second.discovered },
+              { "group", i },
+            };
+            res.push_back(peer_info);
+          }
+        }
+        return res;
+      }
+
+      elle::json::Object
+      Node::stats()
+      {
+        elle::json::Object res;
+        res["type"] = this->type_name();
+        using Protocol = infinit::model::doughnut::Protocol;
+        res["protocol"] =
+          this->_config.rpc_protocol == Protocol::utp ? "utp"
+          : (this->_config.rpc_protocol == Protocol::tcp ? "tcp" : "all");
+        res["group"] = this->_group;
+        elle::json::Object stats{
+          { "files", this->_state.files.size() },
+          { "dropped_puts", this->_dropped_puts },
+          { "dropped_gets", this->_dropped_gets },
+          { "failed_puts", this->_failed_puts },
+        };
+        res["statistics"] = stats;
+        return res;
+      }
+
       std::ostream&
       operator << (std::ostream& output, Contact const& contact)
       {
@@ -3796,7 +3851,6 @@ namespace infinit
         , wait(0)
         , encrypt(false)
         , accept_plain(true)
-        , rpc_protocol(infinit::model::doughnut::Protocol::all)
         , gossip()
       {}
 
@@ -3831,7 +3885,6 @@ namespace infinit
         s.serialize("wait", wait);
         s.serialize("encrypt", encrypt);
         s.serialize("accept_plain", accept_plain);
-        s.serialize("rpc_protocol", rpc_protocol);
       }
 
       GossipConfiguration::GossipConfiguration()

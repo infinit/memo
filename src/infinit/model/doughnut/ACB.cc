@@ -772,6 +772,13 @@ namespace infinit
 
       template <typename Block>
       void
+      BaseACB<Block>::seal(int version)
+      {
+        this->_seal(version);
+      }
+
+      template <typename Block>
+      void
       BaseACB<Block>::_seal(boost::optional<int> version)
       {
         this->_seal(version, {});

@@ -97,6 +97,36 @@ namespace infinit
         peer, model::EndpointsRefetcher());
     }
 
+    /*-----------.
+    | Monitoring |
+    `-----------*/
+
+    std::string
+    Stonehenge::type_name()
+    {
+      return "stonehenge";
+    }
+
+    elle::json::Array
+    Stonehenge::peer_list()
+    {
+      elle::json::Array res;
+      for (auto const& peer: this->_peers)
+        res.push_back(elle::json::Object{
+          { "id", elle::sprintf("%x", peer.id()) },
+          { "endpoints", elle::sprintf("%s", peer.endpoints()) }
+        });
+      return res;
+    }
+
+    elle::json::Object
+    Stonehenge::stats()
+    {
+      elle::json::Object res;
+      res["type"] = this->type_name();
+      return res;
+    }
+
     StonehengeConfiguration::StonehengeConfiguration()
       : overlay::Configuration()
     {}

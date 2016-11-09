@@ -45,7 +45,8 @@ namespace infinit
       S3StorageConfig(std::string name,
                       aws::Credentials credentials,
                       aws::S3::StorageClass storage_class,
-                      boost::optional<int64_t> capacity);
+                      boost::optional<int64_t> capacity,
+                      boost::optional<std::string> description);
       S3StorageConfig(elle::serialization::SerializerIn& input);
 
       virtual

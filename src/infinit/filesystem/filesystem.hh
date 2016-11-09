@@ -172,6 +172,7 @@ namespace infinit
     NAMED_ARGUMENT(owner);
     NAMED_ARGUMENT(root_block_cache_dir);
     NAMED_ARGUMENT(volume_name);
+    NAMED_ARGUMENT(map_other_permissions);
     /** Filesystem using a Block Storage as backend.
     * Directory: nodes are serialized, and contains name, stat() and block
     *            address of the directory content
@@ -182,18 +183,34 @@ namespace infinit
     class FileSystem
       : public reactor::filesystem::Operations
     {
+    /*------.
+    | Types |
+    `------*/
     public:
       using clock = std::chrono::high_resolution_clock;
-      static clock::time_point now();
+
+    /*-------------.
+    | Construction |
+    `-------------*/
+    public:
       template <typename ... Args>
       FileSystem(Args&& ... args);
       FileSystem(
-        std::string const& volume_name,
+        std::string volume_name,
         std::shared_ptr<infinit::model::Model> model,
         boost::optional<infinit::cryptography::rsa::PublicKey> owner = {},
         boost::optional<boost::filesystem::path> root_block_cache_dir = {},
         boost::optional<boost::filesystem::path> mountpoint = {},
-        bool allow_root_creation = false);
+        bool allow_root_creation = false,
+        bool map_other_permissions = true);
+    private:
+      struct Init;
+      FileSystem(Init);
+
+    public:
+      static
+      clock::time_point
+      now();
       void
       print_cache_stats();
       std::shared_ptr<reactor::filesystem::Path>
@@ -242,6 +259,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(boost::optional<boost::filesystem::path>, mountpoint);
       ELLE_ATTRIBUTE_R(model::Address, root_address);
       ELLE_ATTRIBUTE_R(bool, allow_root_creation);
+      ELLE_ATTRIBUTE_R(bool, map_other_permissions);
 
       typedef bmi::multi_index_container<
         std::shared_ptr<DirectoryData>,

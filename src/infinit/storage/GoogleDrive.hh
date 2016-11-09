@@ -85,7 +85,8 @@ namespace infinit
                                boost::optional<std::string> root,
                                std::string refresh_token,
                                std::string user_name,
-                               boost::optional<int64_t> capacity);
+                               boost::optional<int64_t> capacity,
+                               boost::optional<std::string> description);
       GoogleDriveStorageConfig(elle::serialization::SerializerIn& input);
       void serialize(elle::serialization::Serializer& s) override;
       virtual std::unique_ptr<infinit::storage::Storage> make() override;

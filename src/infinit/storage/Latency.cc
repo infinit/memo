@@ -103,14 +103,17 @@ namespace infinit
       reactor::DurationOpt latency_erase;
       std::shared_ptr<StorageConfig> storage;
 
-      LatencyStorageConfig(std::string name, int64_t capacity = 0)
-        : StorageConfig(std::move(name), std::move(capacity))
+      LatencyStorageConfig(std::string name,
+                           boost::optional<int64_t> capacity,
+                           boost::optional<std::string> description)
+        : StorageConfig(
+            std::move(name), std::move(capacity), std::move(description))
       {}
 
-      LatencyStorageConfig(elle::serialization::SerializerIn& input)
-      : StorageConfig()
+      LatencyStorageConfig(elle::serialization::SerializerIn& s)
+        : StorageConfig(s)
       {
-        this->serialize(input);
+        this->serialize(s);
       }
 
       void

@@ -204,10 +204,14 @@ namespace infinit
     {
       this->_fetch();
       auto acl = _header_block();
-      this->_header().mode = mode;
-      ELLE_DEBUG("chmod setting mode to %x", mode & 0777);
+      unsigned int settable =
+        this->_owner.map_other_permissions() ? 0117 : 0111;
+      this->_header().mode &= ~settable;
+      this->_header().mode |= (mode & settable);
+      ELLE_DEBUG("chmod setting mode with %x: %x",
+        mode & 0777, this->_header().mode);
       this->_header().ctime = time(nullptr);
-      if (acl)
+      if (acl && this->_owner.map_other_permissions())
       {
         auto wm = acl->get_world_permissions();
         wm.first = mode & 4;
@@ -401,6 +405,30 @@ namespace infinit
             return;
           }
         }
+        // New naming for group attributes:
+        // infinit.groups.<group_name>.<attribute>
+        else if (special->find("groups.") == 0)
+        {
+          auto name_start = strlen("groups.");
+          auto name_end = special->find_last_of('.');
+          auto group_name = special->substr(name_start, name_end - name_start);
+          model::doughnut::Group group(*dht, group_name);
+          auto attribute = special->substr(name_end + 1);
+          if (attribute == "description")
+          {
+            umbrella([&] {
+              if (v.size())
+                group.description(v);
+              else
+                group.description(boost::none);
+            });
+            return;
+          }
+          else
+          {
+            elle::err("unknown group attribute: %s", attribute);
+          }
+        }
         throw rfs::Error(ENOATTR, "no such attribute", elle::Backtrace());
       }
       /* Drop quarantine flags, preventing the files from being opened.
@@ -415,6 +443,34 @@ namespace infinit
           dynamic_cast<model::doughnut::Doughnut*>(
             this->_owner.block_store().get())->overlay()->query(okey, v);
         }, EINVAL);
+        return;
+      }
+      if (k == "system.posix_acl_access")
+      {
+        bool allow_rw = this->_owner.map_other_permissions();
+        if (v.size() != 28)
+        {
+          ELLE_TRACE("Unexpected length %s for posix_acl_access", v.size());
+          return;
+        }
+        unsigned char others_mode = (unsigned char) v[22];
+        if (others_mode > 7)
+        {
+          ELLE_TRACE("Unexpected mode in posix_acl_access: %s",
+            (unsigned int)others_mode);
+          return;
+        }
+        auto block = this->_header_block(true);
+        unsigned int mask = allow_rw ? 7 : 1;
+        this->_header().mode &= ~mask;
+        this->_header().mode |= (others_mode&mask);
+        bool r = others_mode & 4;
+        bool w = others_mode & 2;
+        umbrella([&] {
+            if (allow_rw)
+              block->set_world_permissions(r, w);
+            _commit(WriteTarget::perms);
+        }, EACCES);
         return;
       }
       this->_header().xattrs[k] = elle::Buffer(v.data(), v.size());
@@ -541,10 +597,39 @@ namespace infinit
                 for (auto const& m: members)
                   va.push_back(m->name());
                 o["admins"] = va;
+                try
+                {
+                  if (g.description())
+                    o["description"] = g.description().get();
+                }
+                catch (elle::Error const&)
+                {}
                 std::stringstream ss;
                 elle::json::write(ss, o, true);
                 return ss.str();
               });
+          }
+        }
+        // New naming for group attributes:
+        // infinit.groups.<group_name>.<attribute>
+        else if (special->find("groups.") == 0)
+        {
+          auto name_start = strlen("groups.");
+          auto name_end = special->find_last_of('.');
+          auto group_name = special->substr(name_start, name_end - name_start);
+          model::doughnut::Group group(*dht, group_name);
+          auto attribute = special->substr(name_end + 1);
+          if (attribute == "description")
+          {
+            return umbrella(
+              [&]
+              {
+                return group.description() ? group.description().get() : "";
+              });
+          }
+          else
+          {
+            elle::err("unknown group attribute: %s", attribute);
           }
         }
         else if (special->find("mountpoint") == 0)

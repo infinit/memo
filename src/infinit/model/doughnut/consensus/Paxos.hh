@@ -132,7 +132,8 @@ namespace infinit
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
                      boost::optional<boost::asio::ip::address> listen_address,
-                     std::unique_ptr<storage::Storage> storage) override;
+                     std::unique_ptr<storage::Storage> storage,
+                     Protocol p) override;
 
           typedef std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
                             std::shared_ptr<elle::Error>>
@@ -383,6 +384,15 @@ namespace infinit
           virtual
           std::unique_ptr<Consensus::Stat>
           stat(Address const& address) override;
+
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+        public:
+          elle::json::Object
+          redundancy() override;
+          elle::json::Object
+          stats() override;
 
         /*--------------.
         | Configuration |

@@ -345,13 +345,36 @@ namespace infinit
         std::unique_ptr<Local>
         Consensus::make_local(boost::optional<int> port,
                               boost::optional<boost::asio::ip::address> listen_address,
-                              std::unique_ptr<storage::Storage> storage)
+                              std::unique_ptr<storage::Storage> storage,
+                              Protocol p)
         {
           return elle::make_unique<Local>(this->doughnut(),
                                           this->doughnut().id(),
                                           std::move(storage),
                                           port ? port.get() : 0,
-                                          listen_address);
+                                          listen_address,
+                                          p);
+        }
+
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+
+        elle::json::Object
+        Consensus::redundancy()
+        {
+          return {
+            { "desired_factor", 1.0 },
+            { "type", "none" },
+          };
+        }
+
+        elle::json::Object
+        Consensus::stats()
+        {
+          return {
+            { "type", "none" },
+          };
         }
 
         /*----------.

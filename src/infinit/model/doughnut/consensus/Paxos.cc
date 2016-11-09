@@ -161,7 +161,8 @@ namespace infinit
         std::unique_ptr<Local>
         Paxos::make_local(boost::optional<int> port,
                           boost::optional<boost::asio::ip::address> listen_address,
-                          std::unique_ptr<storage::Storage> storage)
+                          std::unique_ptr<storage::Storage> storage,
+                          Protocol p)
         {
           return elle::make_unique<consensus::Paxos::LocalPeer>(
             *this,
@@ -173,7 +174,8 @@ namespace infinit
             this->doughnut().id(),
             std::move(storage),
             port ? port.get() : 0,
-            listen_address);
+            listen_address,
+            p);
         }
 
         /*-----.
@@ -393,10 +395,10 @@ namespace infinit
         Paxos::LocalPeer::initialize()
         {
           this->doughnut().overlay()->on_discover().connect(
-            [this] (Address id, bool observer)
+            [this] (NodeLocation node, bool observer)
             {
               if (!observer)
-                this->_discovered(id);
+                this->_discovered(node.id());
             });
           this->doughnut().overlay()->on_disappear().connect(
             [this] (Address id, bool observer)
@@ -1895,6 +1897,28 @@ namespace infinit
           // }
           // return elle::make_unique<PaxosStat>(std::move(stat_hits));
           return Super::stat(address);
+        }
+
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+
+        elle::json::Object
+        Paxos::redundancy()
+        {
+          return {
+            { "desired_factor", static_cast<float>(this->factor()) },
+            { "type", "replication" },
+          };
+        }
+
+        elle::json::Object
+        Paxos::stats()
+        {
+          elle::json::Object res;
+          res["type"] = "paxos";
+          res["node_timeout"] = elle::sprintf("%s", this->node_timeout());
+          return res;
         }
 
         /*--------------.

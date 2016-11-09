@@ -1,5 +1,21 @@
 #include <infinit/model/doughnut/protocol.hh>
 
+namespace infinit
+{
+  namespace model
+  {
+    namespace doughnut
+    {
+      using namespace elle::serialization;
+      std::ostream&
+      operator <<(std::ostream& out, Protocol protocol)
+      {
+        return out << Serialize<Protocol>::convert(protocol);
+      }
+    }
+  }
+}
+
 namespace elle
 {
   namespace serialization
@@ -34,4 +50,8 @@ namespace elle
         throw Error("Expected one of tcp, utp, all,  got '" + repr + "'");
     }
   }
+}
+
+namespace std
+{
 }

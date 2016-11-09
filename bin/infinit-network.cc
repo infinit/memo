@@ -9,7 +9,12 @@
 #include <elle/serialization/json.hh>
 #include <elle/json/exceptions.hh>
 
+#ifndef INFINIT_WINDOWS
+# include <reactor/network/unix-domain-socket.hh>
+#endif
+
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/MonitoringServer.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Configuration.hh>
@@ -23,12 +28,36 @@ ELLE_LOG_COMPONENT("infinit-network");
 
 infinit::Infinit ifnt;
 
-#include <endpoint_file.hh>
-
 #if __APPLE__
 # undef daemon
 extern "C" int daemon(int, int);
 #endif
+
+namespace dht = infinit::model::doughnut;
+
+static
+std::vector<infinit::model::Endpoints>
+parse_peers(std::vector<std::string> const& speers)
+{
+  std::vector<infinit::model::Endpoints> peers;
+  for (auto const& s: speers)
+  {
+    std::vector<std::string> comps;
+    boost::algorithm::split(comps, s, boost::is_any_of(","));
+    infinit::model::Endpoints eps;
+    try
+    {
+      for (auto const& s: comps)
+        eps.emplace_back(s);
+    }
+    catch (elle::Error const& e)
+    {
+      elle::err("Malformed endpoints '%s': %s", s, e);
+    }
+    peers.push_back(eps);
+  }
+  return peers;
+}
 
 static
 std::unique_ptr<infinit::storage::StorageConfig>
@@ -47,7 +76,7 @@ storage_configuration(boost::program_options::variables_map const& args)
     else
     {
       storage.reset(
-        new infinit::storage::StripStorageConfig(std::move(backends)));
+        new infinit::storage::StripStorageConfig(std::move(backends), {}, {}));
     }
   }
   return storage;
@@ -64,7 +93,7 @@ COMMAND(create)
     + (args.count("kouncil") ? 1 : 0)
   ;
   if (overlays > 1)
-    throw CommandLineError("Only one overlay type must be specified");
+    throw CommandLineError("only one overlay type must be specified");
   if (args.count("kalimero"))
   {
     overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
@@ -126,16 +155,7 @@ COMMAND(create)
     }
     if (args.count("protocol"))
     {
-      std::string proto = args["protocol"].as<std::string>();
-      try
-      {
-        kelips->rpc_protocol = elle::serialization::Serialize<
-          infinit::model::doughnut::Protocol>::convert(proto);
-      }
-      catch (elle::serialization::Error const& e)
-      {
-        throw CommandLineError("'protocol' must be 'utp', 'tcp' or 'all'");
-      }
+      kelips->rpc_protocol = infinit::protocol_get(args);
     }
     overlay_config = std::move(kelips);
   }
@@ -209,6 +229,12 @@ COMMAND(create)
   boost::optional<int> port;
   if (args.count("port"))
     port = args["port"].as<int>();
+  std::vector<infinit::model::Endpoints> peers;
+  if (args.count("peer"))
+  {
+    auto speers = args["peer"].as<std::vector<std::string>>();
+    peers = parse_peers(speers);
+  }
   auto dht =
     elle::make_unique<infinit::model::doughnut::Configuration>(
       infinit::model::Address::random(0), // FIXME
@@ -225,9 +251,12 @@ COMMAND(create)
       owner.name,
       std::move(port),
       version,
-      admin_keys);
+      admin_keys,
+      peers);
   {
-    infinit::Network network(ifnt.qualified_name(name, owner), std::move(dht));
+    infinit::Network network(ifnt.qualified_name(name, owner),
+                             std::move(dht),
+                             optional(args, "description"));
     std::unique_ptr<infinit::NetworkDescriptor> desc;
     if (args.count("output"))
     {
@@ -242,7 +271,7 @@ COMMAND(create)
       ifnt.network_save(*desc);
       report_created("network", desc->name);
     }
-    if (aliased_flag(args, {"push-network", "push"}))
+    if (option_push(args, {"push-network"}))
       beyond_push("network", desc->name, *desc, owner);
   }
 }
@@ -282,8 +311,11 @@ user_key(std::string name, boost::optional<std::string> mountpoint)
 COMMAND(update)
 {
   auto name = mandatory(args, "name", "network name");
+  auto description = optional(args, "description");
   auto owner = self_user(ifnt, args);
   auto network = ifnt.network_get(name, owner);
+  if (description)
+    network.description = description;
   network.ensure_allowed(owner, "update");
   auto& dht = *network.dht();
   if (auto port = optional<int>(args, "port"))
@@ -296,7 +328,7 @@ COMMAND(update)
       if (group && !args.count("mountpoint"))
       {
         throw CommandLineError(
-          "Must specify mountpoint of volume on "
+          "must specify mountpoint of volume on "
           "network \"%s\" to edit group admins", network.name);
       }
     };
@@ -351,6 +383,12 @@ COMMAND(update)
     }
     changed_admins = true;
   }
+  if (args.count("peer"))
+  {
+    auto speers = args["peer"].as<std::vector<std::string>>();
+    auto peers = parse_peers(speers);
+    dht.peers = peers;
+  }
   std::unique_ptr<infinit::NetworkDescriptor> desc;
   if (args.count("output"))
   {
@@ -365,7 +403,7 @@ COMMAND(update)
     desc.reset(new infinit::NetworkDescriptor(std::move(network)));
     report_updated("network", desc->name);
   }
-  if (aliased_flag(args, {"push-network", "push"}))
+  if (option_push(args, {"push-network"}))
     beyond_push("network", desc->name, *desc, owner, true, false, true);
   if (changed_admins && !args.count("output"))
   {
@@ -420,7 +458,9 @@ COMMAND(fetch)
             u.name,
             d->port,
             desc.version,
-            desc.admin_keys));
+            desc.admin_keys,
+            desc.peers),
+          desc.description);
         // Update linked network for user.
         ifnt.network_save(u, updated_network, true);
       }
@@ -506,7 +546,9 @@ COMMAND(link_)
       self.name,
       boost::optional<int>(),
       desc.version,
-      desc.admin_keys));
+      desc.admin_keys,
+      desc.peers),
+    desc.description);
   auto has_output = optional(args, "output");
   auto output = has_output ? get_output(args) : nullptr;
   if (output)
@@ -529,8 +571,10 @@ COMMAND(list)
     for (auto const& network: ifnt.networks_get(self))
     {
       elle::json::Object o;
-      o["name"] = network.name;
+      o["name"] = static_cast<std::string>(network.name);
       o["linked"] = bool(network.model) && network.user_linked(self);
+      if (network.description)
+        o["description"] = network.description.get();
       l.push_back(std::move(o));
     }
     elle::json::write(std::cout, l);
@@ -540,6 +584,8 @@ COMMAND(list)
     for (auto const& network: ifnt.networks_get(self))
     {
       std::cout << network.name;
+      if (network.description)
+        std::cout << " \"" << network.description.get() << "\"";
       if (network.model && network.user_linked(self))
         std::cout << ": linked";
       else
@@ -635,7 +681,14 @@ COMMAND(delete_)
   ifnt.network_delete(name, owner, unlink, true);
 }
 
-COMMAND(run)
+static
+void
+network_run(boost::program_options::variables_map const& args,
+            std::function<void (infinit::User& self,
+                                infinit::Network& network,
+                                dht::Doughnut&,
+                                bool,
+                                bool)> const& action)
 {
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
@@ -680,7 +733,16 @@ COMMAND(run)
     false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, infinit::compatibility_version, port,
-    listen_address);
+    listen_address,
+    flag(args, "monitoring"));
+  hook_stats_signals(*dht);
+  if (auto plf = optional(args, "peers-file"))
+  {
+    auto more_peers = infinit::hook_peer_discovery(*dht, *plf);
+    ELLE_TRACE("Peer list file got %s peers", more_peers.size());
+    if (!more_peers.empty())
+      dht->overlay()->discover(more_peers);
+  }
   if (args.count("peer"))
   {
     std::vector<infinit::model::Endpoints> eps;
@@ -688,24 +750,25 @@ COMMAND(run)
     for (auto const& peer: peers)
     {
       if (boost::filesystem::exists(peer))
-        eps.emplace_back(endpoints_from_file(peer));
+        eps.emplace_back(infinit::endpoints_from_file(peer));
       else
         eps.emplace_back(infinit::model::Endpoints({peer}));
     }
     dht->overlay()->discover(eps);
   }
   // Only push if we have are contributing storage.
-  bool push = aliased_flag(args, {"push-endpoints", "push", "publish"}) &&
+  bool push = option_push(args, {"push-endpoints"}) &&
     dht->local() && dht->local()->storage();
-  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
+  bool fetch = option_fetch(args, {"fetch-endpoints"});
   if (!dht->local() && (!script_mode || push))
     elle::err("network %s is client only since no storage is attached", name);
   if (dht->local())
   {
     if (auto port_file = optional(args, option_port_file))
-      port_to_file(dht->local()->server_endpoint().port(), port_file.get());
+      infinit::port_to_file(dht->local()->server_endpoint().port(), port_file.get());
     if (auto endpoint_file = optional(args, option_endpoint_file))
-      endpoints_to_file(dht->local()->server_endpoints(), endpoint_file.get());
+      infinit::endpoints_to_file(
+        dht->local()->server_endpoints(), endpoint_file.get());
   }
 #ifndef INFINIT_WINDOWS
   infinit::DaemonHandle daemon_handle;
@@ -713,21 +776,18 @@ COMMAND(run)
     daemon_handle = infinit::daemon_hold(0, 1);
 #endif
   auto poll_beyond = optional<int>(args, option_poll_beyond);
-  auto run = [&]
+  auto run = [&, push]
     {
       reactor::Thread::unique_ptr poll_thread;
       if (fetch)
       {
         infinit::model::NodeLocations eps;
-        beyond_fetch_endpoints(network, eps);
+        network.beyond_fetch_endpoints(eps);
         dht->overlay()->discover(eps);
         if (poll_beyond && *poll_beyond > 0)
-          poll_thread = make_poll_beyond_thread(*dht, network, eps, *poll_beyond);
+          poll_thread =
+            network.make_poll_beyond_thread(*dht, eps, *poll_beyond);
       }
-      reactor::Thread::unique_ptr stat_thread;
-      if (push)
-        stat_thread = make_stat_update_thread(self, network, *dht);
-      report_action("running", "network", network.name);
 #ifndef INFINIT_WINDOWS
       if (flag(args, "daemon"))
       {
@@ -735,6 +795,35 @@ COMMAND(run)
         infinit::daemon_release(daemon_handle);
       }
 #endif
+      action(self, network, *dht, push, script_mode);
+    };
+  if (push)
+  {
+    elle::With<InterfacePublisher>(
+      network, self, dht->id(),
+      dht->local()->server_endpoint().port()) << [&]
+    {
+      run();
+    };
+  }
+  else
+    run();
+}
+
+COMMAND(run)
+{
+  network_run(
+    args,
+    [&] (infinit::User& self,
+         infinit::Network& network,
+         dht::Doughnut& dht,
+         bool push,
+         bool script_mode)
+    {
+      reactor::Thread::unique_ptr stat_thread;
+      if (push)
+        stat_thread = network.make_stat_update_thread(self, dht);
+      report_action("running", "network", network.name);
       if (script_mode)
       {
         auto input = infinit::commands_input(args);
@@ -745,13 +834,13 @@ COMMAND(run)
             auto json = boost::any_cast<elle::json::Object>(
               elle::json::read(*input));
             elle::serialization::json::SerializerIn command(json, false);
-            command.set_context<infinit::model::doughnut::Doughnut*>(dht.get());
+            command.set_context<infinit::model::doughnut::Doughnut*>(&dht);
             auto op = command.deserialize<std::string>("operation");
             if (op == "fetch")
             {
               auto address =
                 command.deserialize<infinit::model::Address>("address");
-              auto block = dht->fetch(address);
+              auto block = dht.fetch(address);
               ELLE_ASSERT(block);
               elle::serialization::json::SerializerOut response(
                 std::cout, false, true);
@@ -764,7 +853,7 @@ COMMAND(run)
                 std::unique_ptr<infinit::model::blocks::Block>>("value");
               if (!block)
                 elle::err("missing field: value");
-              dht->store(
+              dht.store(
                 std::move(block),
                 op == "insert" ?
                 infinit::model::STORE_INSERT : infinit::model::STORE_UPDATE);
@@ -788,18 +877,43 @@ COMMAND(run)
       }
       else
         reactor::sleep();
-    };
-  if (push)
-  {
-    elle::With<InterfacePublisher>(
-      network, self, dht->id(),
-      dht->local()->server_endpoint().port()) << [&]
+    });
+}
+
+COMMAND(list_services)
+{
+  network_run(
+    args,
+    [&] (infinit::User& self,
+         infinit::Network& network,
+         dht::Doughnut& dht,
+         bool /*push*/,
+         bool script_mode)
     {
-      run();
-    };
-  }
-  else
-    run();
+      auto services = dht.services();
+      auto output = get_output(args);
+      if (script_mode)
+      {
+        std::unordered_map<std::string, std::vector<std::string>> res;
+        for (auto const& type: services)
+        {
+          std::vector<std::string> services;
+          for (auto const& service: type.second)
+            services.emplace_back(service.first);
+          res.emplace(type.first, std::move(services));
+        }
+        elle::serialization::json::serialize(res, *output, false);
+      }
+      else
+      {
+        for (auto const& type: services)
+        {
+          *output << type.first << ":" << std::endl;
+          for (auto const& service: type.second)
+            *output << "  " << service.first << std::endl;
+        }
+      }
+    });
 }
 
 COMMAND(list_storage)
@@ -843,6 +957,129 @@ COMMAND(stats)
          << "}" << std::endl;
 }
 
+#ifndef INFINIT_WINDOWS
+COMMAND(inspect)
+{
+  auto owner = self_user(ifnt, args);
+  std::string network_name = mandatory(args, "name", "network_name");
+  auto network = ifnt.network_get(network_name, owner);
+  auto s_path = network.monitoring_socket_path(owner);
+  if (!boost::filesystem::exists(s_path))
+    elle::err("network not running or monitoring disabled");
+  reactor::network::UnixDomainSocket socket(s_path);
+  using Monitoring = infinit::model::MonitoringServer;
+  using Query = infinit::model::MonitoringServer::MonitorQuery::Query;
+  auto do_query = [&] (Query query_val)
+    {
+      auto query = Monitoring::MonitorQuery(query_val);
+      elle::serialization::json::serialize(query, socket, false, false);
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(socket));
+      return Monitoring::MonitorResponse(std::move(json));
+    };
+  auto print_response = [&] (Monitoring::MonitorResponse const& response)
+    {
+      if (script_mode)
+        elle::json::write(*get_output(args), response.as_object());
+      else
+      {
+        if (response.error)
+          std::cout << "Error: " << response.error.get() << std::endl;
+        if (response.result)
+        {
+          std::cout << elle::json::pretty_print(response.result.get())
+                    << std::endl;
+        }
+      }
+    };
+  if (flag(args, "status"))
+  {
+    print_response(do_query(Query::Status));
+    return;
+  }
+  if (flag(args, "all"))
+  {
+    print_response(do_query(Query::Stats));
+    return;
+  }
+  if (flag(args, "redundancy"))
+  {
+    auto res = do_query(Query::Stats);
+    if (res.result)
+    {
+      auto redundancy =
+        boost::any_cast<elle::json::Object>(res.result.get()["redundancy"]);
+      if (script_mode)
+        elle::json::write(*get_output(args), redundancy);
+      else
+        std::cout << elle::json::pretty_print(redundancy) << std::endl;
+    }
+    return;
+  }
+  if (flag(args, "peers"))
+  {
+    auto res = do_query(Query::Stats);
+    if (res.result)
+    {
+      auto peer_list =
+        boost::any_cast<elle::json::Array>(res.result.get()["peers"]);
+      if (script_mode)
+        elle::json::write(*get_output(args), peer_list);
+      else
+      {
+        if (peer_list.size() == 0)
+          std::cout << "No peers" << std::endl;
+        else
+          for (auto obj: peer_list)
+          {
+            auto json = boost::any_cast<elle::json::Object>(obj);
+            std::cout << boost::any_cast<std::string>(json["id"]);
+            json.erase("id");
+            if (json.size())
+              std::cout << ": " << elle::json::pretty_print(json) << std::endl;
+          }
+      }
+    }
+    return;
+  }
+  throw CommandLineError(
+    "specify either \"--status\", \"--peers\", \"--redundancy\", or \"--all\"");
+}
+#endif
+
+static
+std::vector<Mode::OptionDescription>
+run_options(std::vector<Mode::OptionDescription> opts = {})
+{
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
+  opts.emplace_back("name,n", value<std::string>(), "network to run" );
+  opts.emplace_back(
+    "peer", value<std::vector<std::string>>()->multitoken(),
+    "peer address or file with list of peer addresses (host:port)");
+  opts.emplace_back("async", bool_switch(), "use asynchronous operations");
+  opts.emplace_back(option_cache);
+  opts.emplace_back(option_cache_ram_size);
+  opts.emplace_back(option_cache_ram_ttl);
+  opts.emplace_back(option_cache_ram_invalidation);
+  opts.emplace_back(option_cache_disk_size);
+  opts.emplace_back("fetch-endpoints", bool_switch(),
+                    elle::sprintf("fetch endpoints from %s", beyond(true)));
+  opts.emplace_back("fetch,f", bool_switch(), "alias for --fetch-endpoints");
+  opts.emplace_back("push-endpoints", bool_switch(),
+                    elle::sprintf("push endpoints to %s", beyond(true)));
+  opts.emplace_back("push,p", bool_switch(), "alias for --push-endpoints");
+  opts.emplace_back("publish", bool_switch(),
+                    "alias for --fetch-endpoints --push-endpoints");
+  opts.emplace_back(option_endpoint_file);
+  opts.emplace_back(option_port_file);
+  opts.emplace_back(option_port);
+  opts.emplace_back("peers-file", value<std::string>(),
+                    "file to write peers to periodically");
+  opts.emplace_back(option_listen_interface);
+  opts.emplace_back(option_poll_beyond);
+  return opts;
+}
+
 int
 main(int argc, char** argv)
 {
@@ -881,6 +1118,7 @@ main(int argc, char** argv)
         "[--storage STORAGE...]",
       {
         { "name,n", value<std::string>(), "created network name" },
+        option_description("network"),
         { "storage,S", value<std::vector<std::string>>()->multitoken(),
           "storage to contribute (optional, data striped over multiple)" },
         { "port", value<int>(), "port to listen on (default: random)" },
@@ -896,6 +1134,8 @@ main(int argc, char** argv)
           "Set admin users that can read all data" },
         { "admin-rw", value<std::vector<std::string>>()->multitoken(),
           "Set admin users that can read and write all data" },
+        { "peer", value<std::vector<std::string>>()->multitoken(),
+          "List of known node endpoints"}
       },
       {
         consensus_types_options,
@@ -910,6 +1150,7 @@ main(int argc, char** argv)
       "--name NAME",
       {
         { "name,n", value<std::string>(), "network to update" },
+        option_description("network"),
         { "port", value<int>(), "port to listen on (default: random)" },
         option_output("network"),
         { "push-network", bool_switch(),
@@ -927,6 +1168,8 @@ main(int argc, char** argv)
         { "mountpoint,m", value<std::string>(),
           "Mountpoint of a volume using this network, "
           "required to add admin groups" },
+        { "peer", value<std::vector<std::string>>()->multitoken(),
+          "List of known node endpoints"}
       },
       {},
     },
@@ -1031,42 +1274,29 @@ main(int argc, char** argv)
       "Run a network",
       &run,
       "--name NETWORK",
-      {
+      run_options({
         option_input("commands"),
-        { "name,n", value<std::string>(), "network to run" },
-        { "peer", value<std::vector<std::string>>()->multitoken(),
-          "peer address or file with list of peer addresses (host:port)" },
-        { "async", bool_switch(), "use asynchronous operations" },
-        option_cache,
-        option_cache_ram_size,
-        option_cache_ram_ttl,
-        option_cache_ram_invalidation,
-        option_cache_disk_size,
-        { "fetch-endpoints", bool_switch(),
-          elle::sprintf("fetch endpoints from %s", beyond(true)) },
-        { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
-        { "push-endpoints", bool_switch(),
-          elle::sprintf("push endpoints to %s", beyond(true)) },
-        { "push,p", bool_switch(), "alias for --push-endpoints" },
-        { "publish", bool_switch(),
-          "alias for --fetch-endpoints --push-endpoints" },
-        option_endpoint_file,
-        option_port_file,
-        option_port,
-        option_listen_interface,
-        option_poll_beyond,
 #ifndef INFINIT_WINDOWS
         { "daemon,d", bool_switch(), "run as a background daemon"},
+        option_monitoring,
 #endif
-      },
+        }),
       {},
-      // Hidden options
+        // Hidden options
       {
         { "paxos-rebalancing-auto-expand", value<bool>(),
             "whether to automatically rebalance under-replicated blocks"},
         { "paxos-rebalancing-inspect", value<bool>(),
             "whether to inspect all blocks on startup and trigger rebalancing"},
       }
+    },
+    {
+      "list-services",
+      "List network registered services",
+      &list_services,
+      "--name NETWORK",
+      run_options(),
+      {},
     },
     {
       "list-storage",
@@ -1086,6 +1316,21 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "network name" },
       },
     },
+#ifndef INFINIT_WINDOWS
+    {
+      "inspect",
+      "Get information about a running network",
+      &inspect,
+      "--name NETWORK",
+      {
+        { "name,n", value<std::string>(), "network name" },
+        { "status", bool_switch(), "check if network is running" },
+        { "peers", bool_switch(), "list connected peers" },
+        { "all", bool_switch(), "all informtation" },
+        { "redundancy", bool_switch(), "describe data redundancy" },
+      }
+    },
+#endif
   };
   return infinit::main("Infinit network management utility", modes, argc, argv);
 }

@@ -11,6 +11,7 @@
 # include <elle/optional.hh>
 # include <elle/serialization/Serializer.hh>
 
+# include <infinit/descriptor/TemplatedBaseDescriptor.hh>
 # include <infinit/model/Address.hh>
 # include <infinit/serialization.hh>
 # include <infinit/storage/fwd.hh>
@@ -107,10 +108,13 @@ namespace infinit
                 std::string const& args);
 
     struct StorageConfig
-      : public elle::serialization::VirtuallySerializable<false>
+      : public descriptor::TemplatedBaseDescriptor<StorageConfig>
+      , public elle::serialization::VirtuallySerializable<false>
     {
       StorageConfig() = default;
-      StorageConfig(std::string name, boost::optional<int64_t> capacity = {});
+      StorageConfig(std::string name,
+                    boost::optional<int64_t> capacity,
+                    boost::optional<std::string> description);
       StorageConfig(elle::serialization::SerializerIn& input);
       virtual
       void
@@ -121,8 +125,11 @@ namespace infinit
       std::unique_ptr<infinit::storage::Storage>
       make() = 0;
 
-      std::string name;
       boost::optional<int64_t> capacity;
+
+      static
+      std::string
+      name_regex() ;
     };
   }
 }

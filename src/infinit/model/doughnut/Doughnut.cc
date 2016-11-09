@@ -15,6 +15,9 @@
 #include <reactor/Scope.hh>
 #include <reactor/exception.hh>
 #include <reactor/network/utp-server.hh>
+#ifndef INFINIT_WINDOWS
+# include <reactor/network/unix-domain-server.hh>
+#endif
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
@@ -23,6 +26,7 @@
 #include <infinit/model/doughnut/CHB.hh>
 #include <infinit/model/doughnut/GB.hh>
 #include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/UB.hh>
@@ -33,6 +37,7 @@
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/doughnut/conflict/UBUpserter.hh>
+#include <infinit/model/MonitoringServer.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
@@ -47,40 +52,10 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Doughnut::Doughnut(Address id,
-                         std::shared_ptr<cryptography::rsa::KeyPair> keys,
-                         std::shared_ptr<cryptography::rsa::PublicKey> owner,
-                         Passport passport,
-                         ConsensusBuilder consensus,
-                         OverlayBuilder overlay_builder,
-                         boost::optional<int> port,
-                         boost::optional<boost::asio::ip::address> listen_address,
-                         std::unique_ptr<storage::Storage> storage,
-                         boost::optional<elle::Version> version,
-                         AdminKeys const& admin_keys,
-                         boost::optional<std::string> rdv_host)
-        : Model(std::move(version))
-        , _id(std::move(id))
-        , _keys(keys)
-        , _owner(std::move(owner))
-        , _passport(std::move(passport))
-        , _admin_keys(admin_keys)
-        , _consensus(consensus(*this))
-        , _local(
-          storage
-            ? this->_consensus->make_local(port, listen_address, std::move(storage))
-            : nullptr)
-        // FIXME: move protocol configuration to doughnut
-        , _dock(*this, Protocol::all, port, listen_address, std::move(rdv_host))
-        , _overlay(overlay_builder(*this, this->_local))
-        , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
-        , _terminating()
-      {
-        if (this->_local)
-          this->_local->initialize();
-      }
-
-      template<typename ConflictResolver, typename F, typename FF, typename... Args>
+      template <typename ConflictResolver,
+                typename F,
+                typename FF,
+                typename... Args>
       void check_push(Doughnut& d,
                       std::string const& what,
                       Address where,
@@ -122,57 +97,84 @@ namespace infinit
           }
       }
 
-      Doughnut::Doughnut(Address id,
-                         std::string const& name,
-                         std::shared_ptr<cryptography::rsa::KeyPair> keys,
-                         std::shared_ptr<cryptography::rsa::PublicKey> owner,
-                         Passport passport,
-                         ConsensusBuilder consensus,
-                         OverlayBuilder overlay_builder,
-                         boost::optional<int> port,
-                         boost::optional<boost::asio::ip::address> listen_address,
-                         std::unique_ptr<storage::Storage> storage,
-                         boost::optional<elle::Version> version,
-                         AdminKeys const& admin_keys,
-                         boost::optional<std::string> rdv_host)
-        : Doughnut(std::move(id),
-                   std::move(keys),
-                   std::move(owner),
-                   std::move(passport),
-                   std::move(consensus),
-                   std::move(overlay_builder),
-                   std::move(port),
-                   std::move(listen_address),
-                   std::move(storage),
-                   std::move(version),
-                   admin_keys,
-                   std::move(rdv_host))
+      Doughnut::Doughnut(Init init)
+        : Model(std::move(init.version))
+        , _id(std::move(init.id))
+        , _keys(std::move(init.keys))
+        , _owner(std::move(init.owner))
+        , _passport(std::move(init.passport))
+        , _admin_keys(std::move(init.admin_keys))
+        , _consensus(init.consensus(*this))
+        , _local(
+          init.storage ?
+          this->_consensus->make_local(
+            init.port,
+            init.listen_address,
+            std::move(init.storage),
+            init.protocol) :
+          nullptr)
+        , _dock(*this,
+                init.protocol,
+                init.port,
+                init.listen_address,
+                std::move(init.rdv_host))
+        , _overlay(init.overlay_builder(*this, this->_local))
+        , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
+        , _terminating()
       {
-        auto check_user_blocks = [name, this]
+        if (this->_local)
+          this->_local->initialize();
+        if (init.name)
+        {
+          auto check_user_blocks = [name = init.name.get(), this]
+            {
+              check_push<UserBlockUpserter>(*this,
+                elle::sprintf("user block for %s", name),
+                UB::hash_address(name, *this),
+                &UB::key,
+                this->keys().K(),
+                this, name, this->passport());
+              check_push<ReverseUserBlockUpserter>(*this,
+                elle::sprintf("reverse user block for %s", name),
+                UB::hash_address(this->keys().K(), *this),
+                &UB::name,
+                name,
+                this, name, this->passport(), true);
+              auto hash = UB::hash(this->keys().K());
+              check_push<UserBlockUpserter>(*this,
+                elle::sprintf("key hash block for %s", name),
+                UB::hash_address(':' + hash.string(), *this),
+                &UB::key,
+                this->keys().K(),
+                this, ':' + hash.string(), this->keys().K());
+            };
+          this->_user_init.reset(
+            new reactor::Thread(
+              elle::sprintf("%s: user blocks checker", *this),
+              check_user_blocks));
+        }
+#ifndef INFINIT_WINDOWS
+        if (init.monitoring_socket_path)
+        {
+          auto const& m_path = init.monitoring_socket_path.get();
+          if (!boost::filesystem::exists(m_path))
           {
-            check_push<UserBlockUpserter>(*this,
-              elle::sprintf("user block for %s", name),
-              UB::hash_address(name, *this),
-              &UB::key,
-              this->keys().K(),
-              this, name, this->passport());
-            check_push<ReverseUserBlockUpserter>(*this,
-              elle::sprintf("reverse user block for %s", name),
-              UB::hash_address(this->keys().K(), *this),
-              &UB::name,
-              name,
-              this, name, this->passport(), true);
-            auto hash = UB::hash(this->keys().K());
-            check_push<UserBlockUpserter>(*this,
-              elle::sprintf("key hash block for %s", name),
-              UB::hash_address(':' + hash.string(), *this),
-              &UB::key,
-              this->keys().K(),
-              this, ':' + hash.string(), this->keys().K());
-          };
-        this->_user_init.reset(new reactor::Thread(
-          elle::sprintf("%s: user blocks checker", *this),
-          check_user_blocks));
+            auto unix_domain_server =
+              elle::make_unique<reactor::network::UnixDomainServer>();
+            if (!boost::filesystem::exists(m_path.parent_path()))
+              boost::filesystem::create_directories(m_path.parent_path());
+            unix_domain_server->listen(m_path);
+            this->_monitoring_server.reset(
+              new MonitoringServer(std::move(unix_domain_server), *this));
+            ELLE_DEBUG("monitoring server listening on %s", m_path);
+          }
+          else
+          {
+            ELLE_WARN(
+              "unable to monitor, socket already present at: %s", m_path);
+          }
+        }
+#endif
       }
 
       Doughnut::~Doughnut()
@@ -334,6 +336,87 @@ namespace infinit
         this->_consensus->remove(address, std::move(rs));
       }
 
+      Protocol
+      Doughnut::protocol() const
+      {
+        return this->_dock.protocol();
+      }
+
+      /*------------------.
+      | Service discovery |
+      `------------------*/
+
+      Doughnut::ServicesTypes
+      Doughnut::services()
+      {
+        auto block = this->_services_block(false);
+        if (block)
+          return elle::serialization::binary::deserialize
+            <ServicesTypes>(block->data());
+        else
+          return Doughnut::ServicesTypes();
+      }
+
+      void
+      Doughnut::service_add(std::string const& type,
+                            std::string const& name,
+                            elle::Buffer value)
+      {
+        if (this->keys().K() != *this->owner())
+          elle::err("only the network owner may register services");
+        auto block = this->_services_block(true);
+        auto discovery = elle::serialization::binary::deserialize
+          <ServicesTypes>(block->data());
+        auto services = discovery.find(type);
+        if (services == discovery.end())
+          services = discovery.emplace(type, Services()).first;
+        if (services->second.find(name) != services->second.end())
+          elle::err("%s already registered: %s", type, name);
+        auto vblock = this->make_block<blocks::ImmutableBlock>(
+          std::move(value));
+        auto vaddr = vblock->address();
+        this->store(std::move(vblock), STORE_INSERT);
+        services->second.emplace(name, vaddr);
+        block->data(elle::serialization::binary::serialize(discovery));
+        this->store(std::move(block), STORE_UPDATE);
+      }
+
+      std::unique_ptr<blocks::MutableBlock>
+      Doughnut::_services_block(bool write)
+      {
+        try
+        {
+          auto beacon = this->fetch(
+            NB::address(
+              *this->owner(), "infinit/services", elle::Version(0, 7, 0)));
+          auto addr = elle::serialization::binary::deserialize<Address>(
+            beacon->data());
+          try
+          {
+            return std::dynamic_pointer_cast<blocks::MutableBlock>(
+              this->fetch(addr));
+          }
+          catch (MissingBlock const&)
+          {
+            elle::err("missing services block at %f", addr);
+          }
+        }
+        catch (MissingBlock const&)
+        {
+          if (!write || this->keys().K() != *this->owner())
+            return nullptr;
+          auto block = this->make_block<blocks::MutableBlock>(
+            elle::serialization::binary::serialize(ServicesTypes()));
+          this->store(*block, STORE_INSERT);
+          auto beacon = elle::make_unique<NB>(
+            *this, this->owner(),
+            "infinit/services",
+            elle::serialization::binary::serialize(block->address()));
+          this->store(std::move(beacon), STORE_INSERT);
+          return block;
+        }
+      }
+
       bool
       Doughnut::verify(Passport const& passport,
                          bool require_write,
@@ -420,7 +503,8 @@ namespace infinit
         boost::optional<std::string> name_,
         boost::optional<int> port_,
         elle::Version version,
-        AdminKeys admin_keys)
+        AdminKeys admin_keys,
+        std::vector<Endpoints> peers)
         : ModelConfig(std::move(storage), std::move(version))
         , id(std::move(id_))
         , consensus(std::move(consensus_))
@@ -431,6 +515,7 @@ namespace infinit
         , name(std::move(name_))
         , port(std::move(port_))
         , admin_keys(std::move(admin_keys))
+        , peers(std::move(peers))
       {}
 
       Configuration::Configuration(elle::serialization::SerializerIn& s)
@@ -454,6 +539,13 @@ namespace infinit
         catch (elle::serialization::Error const&)
         {
         }
+        try
+        {
+          s.serialize("peers", this->peers);
+        }
+        catch (elle::serialization::Error const&)
+        {
+        }
       }
 
       void
@@ -469,6 +561,12 @@ namespace infinit
         s.serialize("name", this->name);
         s.serialize("port", this->port);
         s.serialize("admin_keys", this->admin_keys);
+        try
+        {
+          s.serialize("peers", this->peers);
+        }
+        catch (elle::serialization::Error const&)
+        {}
       }
 
       std::unique_ptr<infinit::model::Model>
@@ -491,7 +589,8 @@ namespace infinit
         boost::optional<elle::Version> version,
         boost::optional<int> port_,
         boost::optional<boost::asio::ip::address> listen_address,
-        boost::optional<std::string> rdv_host)
+        boost::optional<std::string> rdv_host,
+        boost::optional<boost::filesystem::path> monitoring_socket_path)
       {
         Doughnut::ConsensusBuilder consensus =
           [&] (Doughnut& dht)
@@ -532,41 +631,23 @@ namespace infinit
         std::unique_ptr<storage::Storage> storage;
         if (this->storage)
           storage = this->storage->make();
-        std::unique_ptr<Doughnut> dht;
-        if (!client || !this->name)
-        {
-          dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
-            this->id,
-            std::make_shared<cryptography::rsa::KeyPair>(keys),
-            owner,
-            passport,
-            std::move(consensus),
-            std::move(overlay),
-            std::move(port),
-            std::move(listen_address),
-            std::move(storage),
-            version ? version.get() : this->version,
-            admin_keys,
-            std::move(rdv_host));
-        }
-        else
-        {
-          dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
-            this->id,
-            this->name.get(),
-            std::make_shared<cryptography::rsa::KeyPair>(keys),
-            owner,
-            passport,
-            std::move(consensus),
-            std::move(overlay),
-            std::move(port),
-            std::move(listen_address),
-            std::move(storage),
-            version ? version.get() : this->version,
-            admin_keys,
-            std::move(rdv_host));
-        }
-        return dht;
+        return elle::make_unique<infinit::model::doughnut::Doughnut>(
+          this->id,
+          std::make_shared<cryptography::rsa::KeyPair>(keys),
+          owner,
+          passport,
+          std::move(consensus),
+          std::move(overlay),
+          std::move(port),
+          std::move(listen_address),
+          std::move(storage),
+          client ? this->name : boost::optional<std::string>(),
+          version ? version.get() : this->version,
+          admin_keys,
+          std::move(rdv_host),
+          std::move(monitoring_socket_path),
+          this->overlay->rpc_protocol
+          );
       }
 
       std::string

@@ -40,7 +40,8 @@ namespace infinit
     {
       FilesystemStorageConfig(std::string name,
                               std::string path,
-                              boost::optional<int64_t> capacity);
+                              boost::optional<int64_t> capacity,
+                              boost::optional<std::string> description);
       FilesystemStorageConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;

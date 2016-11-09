@@ -1,4 +1,5 @@
 #include <elle/log.hh>
+#include <elle/string/algorithm.hh>
 #include <elle/system/unistd.hh>
 
 #include <reactor/FDStream.hh>
@@ -11,70 +12,176 @@ ELLE_LOG_COMPONENT("infinit");
 
 #include <main.hh>
 
-reactor::Thread::unique_ptr
-make_stat_update_thread(infinit::User const& self,
-                        infinit::Network& network,
-                        infinit::model::doughnut::Doughnut& model)
+namespace infinit
 {
-  auto notify = [&]
-    {
-      network.notify_storage(self, model.id());
-    };
-  model.local()->storage()->register_notifier(notify);
-  return reactor::every(60_min, "periodic storage stat updater", notify);
-}
+  infinit::model::Endpoints
+  endpoints_from_file(boost::filesystem::path const& path)
+  {
+    boost::filesystem::ifstream f;
+    infinit::Infinit::_open_read(f, path, "", "port file");
+    if (!f.good())
+      elle::err("unable to open for reading: %s", path);
+    infinit::model::Endpoints res;
+    for (std::string line; std::getline(f, line); )
+      if (line.length())
+        res.emplace_back(infinit::model::Endpoint(line));
+    return res;
+  }
 
-reactor::Thread::unique_ptr
-make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
-                        infinit::Network& network,
-                        infinit::overlay::NodeLocations const& locs_,
-                        int interval)
-{
-  auto poll = [&, locs_, interval]
+  void
+  port_to_file(uint16_t port,
+               boost::filesystem::path const& path_)
+  {
+    boost::filesystem::ofstream f;
+    boost::filesystem::path path(
+      path_ == path_.filename() ? boost::filesystem::absolute(path_) : path_);
+    Infinit::_open_write(f, path, "", "port file", true);
+    f << port << std::endl;
+  }
+
+  void
+  endpoints_to_file(infinit::model::Endpoints endpoints,
+                    boost::filesystem::path const& path_)
+  {
+    boost::filesystem::ofstream f;
+    boost::filesystem::path path(
+      path_ == path_.filename() ? boost::filesystem::absolute(path_) : path_);
+    Infinit::_open_write(f, path, "", "endpoint file", true);
+    for (auto const& ep: endpoints)
+      f << ep << std::endl;
+  }
+
+  infinit::model::doughnut::Protocol
+  protocol_get(boost::program_options::variables_map const& args)
+  {
+    std::string proto = args["protocol"].as<std::string>();
+    try
     {
-      infinit::overlay::NodeLocations locs = locs_;
-      while (true)
+      return elle::serialization::Serialize<
+        infinit::model::doughnut::Protocol>::convert(proto);
+    }
+    catch (elle::serialization::Error const& e)
+    {
+      throw CommandLineError("'protocol' must be 'utp', 'tcp' or 'all'");
+    }
+  }
+
+  bool
+  is_version_supported(elle::Version const& version)
+  {
+    auto const& deps = infinit::serialization_tag::dependencies;
+    return std::find_if(deps.begin(), deps.end(),
+                        [version] (auto const& kv) -> bool
+                        {
+                          return kv.first.major() == version.major() &&
+                            kv.first.minor() == version.minor();
+                        }) != deps.end();
+  }
+
+  void
+  ensure_version_is_supported(elle::Version const& version)
+  {
+    if (!is_version_supported(version))
+    {
+      auto const& deps = infinit::serialization_tag::dependencies;
+      std::vector<elle::Version> supported_versions(deps.size());
+      std::transform(
+        deps.begin(), deps.end(), supported_versions.begin(),
+        [] (auto const& kv)
+        {
+          return elle::Version{kv.first.major(), kv.first.minor(), 0};
+        });
+      std::sort(supported_versions.begin(), supported_versions.end());
+      supported_versions.erase(
+        std::unique(supported_versions.begin(), supported_versions.end()),
+        supported_versions.end());
+      // Find the max value for the major.
+      std::vector<elle::Version> versions_for_major;
+      std::copy_if(supported_versions.begin(), supported_versions.end(),
+                   std::back_inserter(versions_for_major),
+                   [&] (elle::Version const& c)
+                   {
+                     return c.major() == version.major();
+                   });
+      if (versions_for_major.size() > 0)
       {
-        reactor::sleep(boost::posix_time::seconds(interval));
-        infinit::overlay::NodeLocations news;
-        try
-        {
-          beyond_fetch_endpoints(network, news, true);
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_WARN("exception fetching endpoints: %s", e);
-          continue;
-        }
-        std::unordered_set<infinit::model::Address> new_addresses;
-        for (auto const& n: news)
-        {
-          new_addresses.insert(n.id());
-          auto uid = n.id();
-          auto it = std::find_if(locs.begin(), locs.end(),
-            [&](infinit::model::NodeLocation const& nl) { return nl.id() == uid;});
-          if (it == locs.end())
-          {
-            ELLE_TRACE("calling discover() on new peer %s", n);
-            locs.emplace_back(n);
-            model.overlay()->discover({n});
-          }
-          else if (it->endpoints() != n.endpoints())
-          {
-            ELLE_TRACE("calling discover() on updated peer %s", n);
-            it->endpoints() = n.endpoints();
-            model.overlay()->discover({n});
-          }
-        }
-        auto it = std::remove_if(locs.begin(), locs.end(),
-          [&](infinit::model::NodeLocation const& nl)
-          {
-            return new_addresses.find(nl.id()) == new_addresses.end();
-          });
-        locs.erase(it, locs.end());
+        if (version < versions_for_major.front())
+          elle::err("Minimum compatibility version for major version %s is %s",
+                    (int) version.major(), supported_versions.front());
+        else if (version > versions_for_major.back())
+          elle::err("Maximum compatibility version for major version %s is %s",
+                    (int) version.major(), versions_for_major.back());
       }
-    };
-  return reactor::Thread::unique_ptr(new reactor::Thread("beyond poller", poll));
+      elle::err("Unknown compatibility version, try one of %s",
+                elle::join(supported_versions.begin(),
+                           supported_versions.end(),
+                           ", "));
+    }
+  }
+
+  reactor::Thread::unique_ptr
+  Network::make_stat_update_thread(infinit::User const& self,
+                                   infinit::model::doughnut::Doughnut& model)
+  {
+    auto notify = [&]
+      {
+        this->notify_storage(self, model.id());
+      };
+    model.local()->storage()->register_notifier(notify);
+    return reactor::every(60_min, "periodic storage stat updater", notify);
+  }
+
+  reactor::Thread::unique_ptr
+  Network::make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
+                                   infinit::overlay::NodeLocations const& locs_,
+                                   int interval)
+  {
+    auto poll = [&, locs_, interval]
+      {
+        infinit::overlay::NodeLocations locs = locs_;
+        while (true)
+        {
+          reactor::sleep(boost::posix_time::seconds(interval));
+          infinit::overlay::NodeLocations news;
+          try
+          {
+            this->beyond_fetch_endpoints(news, true);
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN("exception fetching endpoints: %s", e);
+            continue;
+          }
+          std::unordered_set<infinit::model::Address> new_addresses;
+          for (auto const& n: news)
+          {
+            new_addresses.insert(n.id());
+            auto uid = n.id();
+            auto it = std::find_if(locs.begin(), locs.end(),
+              [&](infinit::model::NodeLocation const& nl) { return nl.id() == uid;});
+            if (it == locs.end())
+            {
+              ELLE_TRACE("calling discover() on new peer %s", n);
+              locs.emplace_back(n);
+              model.overlay()->discover({n});
+            }
+            else if (it->endpoints() != n.endpoints())
+            {
+              ELLE_TRACE("calling discover() on updated peer %s", n);
+              it->endpoints() = n.endpoints();
+              model.overlay()->discover({n});
+            }
+          }
+          auto it = std::remove_if(locs.begin(), locs.end(),
+            [&](infinit::model::NodeLocation const& nl)
+            {
+              return new_addresses.find(nl.id()) == new_addresses.end();
+            });
+          locs.erase(it, locs.end());
+        }
+      };
+    return reactor::Thread::unique_ptr(new reactor::Thread("beyond poller", poll));
+  }
 }
 
 // Return arguments for mode in the correct order.
@@ -283,8 +390,11 @@ namespace infinit
               store(parsed, vm);
               notify(vm);
               if (vm.count("compatibility-version"))
+              {
                 compatibility_version = elle::Version::from_string(
                   vm["compatibility-version"].as<std::string>());
+                ensure_version_is_supported(*compatibility_version);
+              }
               if (vm.count("version"))
               {
                 std::cout << version_describe << std::endl;
@@ -482,6 +592,46 @@ namespace infinit
     return 0;
   }
 
+  void
+  Network::beyond_fetch_endpoints(infinit::model::NodeLocations& hosts,
+                                  bool silent)
+  {
+    auto url = elle::sprintf("%s/networks/%s/endpoints", beyond(), this->name);
+    reactor::http::Request r(url);
+    reactor::wait(r);
+    if (r.status() != reactor::http::StatusCode::OK)
+    {
+      throw elle::Error(
+        elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\"",
+                      r.status(), this->name));
+    }
+    auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
+    for (auto const& user: json)
+    {
+      try
+      {
+        for (auto const& node: boost::any_cast<elle::json::Object>(user.second))
+        {
+          infinit::model::Address uuid =
+            infinit::model::Address::from_string(node.first.substr(2));
+          elle::serialization::json::SerializerIn s(node.second, false);
+          auto endpoints = s.deserialize<Endpoints>();
+          infinit::model::Endpoints eps;
+          for (auto const& addr: endpoints.addresses)
+            eps.emplace_back(boost::asio::ip::address::from_string(addr),
+                             endpoints.port);
+          hosts.emplace_back(uuid, std::move(eps));
+        }
+      }
+      catch (std::exception const& e)
+      {
+        ELLE_WARN("Exception parsing peer endpoints: %s", e.what());
+      }
+    }
+    if (!silent)
+      report_action("fetched", "endpoints for", this->name);
+  }
+
 #ifndef INFINIT_WINDOWS
   DaemonHandle
   daemon_hold(int nochdir, int noclose)
@@ -528,8 +678,108 @@ namespace infinit
       perror("daemon_release");
   }
 #endif
+
+  model::NodeLocations
+  hook_peer_discovery(model::doughnut::Doughnut& model, std::string file)
+  {
+    ELLE_TRACE("Hooking discovery on %s, to %s", model, file);
+    auto nls = std::make_shared<model::NodeLocations>();
+    model.overlay()->on_discover().connect(
+      [nls, file] (model::NodeLocation nl, bool observer) {
+        if (observer)
+          return;
+        auto it = std::find_if(nls->begin(), nls->end(),
+          [id=nl.id()] (model::NodeLocation n) {
+            return n.id() == id;
+          });
+        if (it == nls->end())
+          nls->push_back(nl);
+        else
+          it->endpoints() = nl.endpoints();
+        ELLE_DEBUG("Storing updated endpoint list: %s", *nls);
+        std::ofstream ofs(file);
+        elle::serialization::json::serialize(*nls, ofs, false);
+      });
+    model.overlay()->on_disappear().connect(
+      [nls, file] (model::Address id, bool observer) {
+        if (observer)
+          return;
+        auto it = std::find_if(nls->begin(), nls->end(),
+          [id] (model::NodeLocation n) {
+            return n.id() == id;
+          });
+        if (it != nls->end())
+          nls->erase(it);
+        ELLE_DEBUG("Storing updated endpoint list: %s", *nls);
+        std::ofstream ofs(file);
+        elle::serialization::json::serialize(*nls, ofs, false);
+      });
+    if (boost::filesystem::exists(file) && !boost::filesystem::is_empty(file))
+    {
+      ELLE_DEBUG("Reloading endpoint list file from %s", file);
+      std::ifstream ifs(file);
+      return elle::serialization::json::deserialize<model::NodeLocations>(ifs, false);
+    }
+    return model::NodeLocations();
+  }
 }
 
 std::string program;
 bool script_mode = false;
 boost::optional<std::string> _as_user = {};
+
+bool
+option_fetch(boost::program_options::variables_map const& args,
+             std::vector<std::string> const& aliases)
+{
+  std::vector<std::string> opts = {"fetch", "publish"};
+  for (auto const& o: aliases)
+    opts.push_back(o);
+  if (aliased_flag(args, opts))
+    return true;
+  if (elle::os::inenv("INFINIT_FETCH") || elle::os::inenv("INFINIT_PUBLISH"))
+    return true;
+  return false;
+}
+
+bool
+option_push(boost::program_options::variables_map const& args,
+            std::vector<std::string> const& aliases)
+{
+  std::vector<std::string> opts = {"push", "publish"};
+  for (auto const& o: aliases)
+    opts.push_back(o);
+  if (aliased_flag(args, opts))
+    return true;
+  if (elle::os::inenv("INFINIT_PUSH") || elle::os::inenv("INFINIT_PUBLISH"))
+    return true;
+  return false;
+}
+
+void
+hook_stats_signals(infinit::model::doughnut::Doughnut& dht)
+{
+  #ifndef INFINIT_WINDOWS
+  reactor::scheduler().signal_handle(SIGUSR1, [&dht] {
+      auto& o = dht.overlay();
+      try
+      {
+        auto json = o->query("stats", {});
+        std::cerr << elle::json::pretty_print(json);
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_TRACE("overlay stats query error: %s", e);
+      }
+      try
+      {
+        auto json = o->query("blockcount", {});
+        std::cerr << elle::json::pretty_print(json);
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_TRACE("overlay blockcount query error: %s", e);
+      }
+  });
+  #endif
+}

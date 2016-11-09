@@ -89,6 +89,9 @@ namespace infinit
       | Networking |
       `-----------*/
 
+      static void hold_remote(overlay::Overlay::Member)
+      {}
+
       void
       Remote::_connect()
       {
@@ -103,6 +106,7 @@ namespace infinit
             elle::sprintf("%f worker", this),
             [this]
             {
+              this->_key_hash_cache.clear();
               while (true)
               {
                 ELLE_DEBUG("%s: connection attempt to %s endpoints",
@@ -179,16 +183,21 @@ namespace infinit
                 };
                 if (!this->_connected)
                 {
-                  this->_connected.raise<elle::Error>(
+                  ELLE_TRACE("%s: connection to %f failed",
+                             this, this->_endpoints);
+                  this->_connected.raise<reactor::network::ConnectionClosed>(
                     elle::sprintf("connection to %f failed", this->_endpoints));
                   break;
                 }
                 ELLE_ASSERT(this->_channels);
                 ELLE_TRACE("%s: serve RPCs", this)
                   this->_rpc_server.serve(*this->_channels);
-                ELLE_TRACE("%s: connection ended, reconnect", this);
+                ELLE_TRACE("%s: connection ended, evicting", this);
+                auto self = this->doughnut().dock().evict_peer(this->id());
                 ++this->_reconnection_id;
                 this->_connected.close();
+                reactor::run_later("remote holder", std::bind(hold_remote, self));
+                return;
               }
             }));
       }
@@ -290,7 +299,10 @@ namespace infinit
             {
               auto res = _auth_0_7(*this, channels);
               if (this->_id == model::Address::null)
+              {
                 this->_id = res.id;
+                this->_id_discovered();
+              }
               else if (this->_id != res.id)
                 elle::err("peer id mismatch: expected %f, got %f",
                           this->_id, res.id);
