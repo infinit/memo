@@ -396,6 +396,7 @@ namespace infinit
       {
         this->_file._header.size = new_size;
         _dirty = true;
+        _fat_changed = true;
         return;
       }
       uint64_t first_block_size = _file._data.size();
