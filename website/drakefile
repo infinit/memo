@@ -245,6 +245,8 @@ def configure(
     'resources/images/schema-docker-volume-plugin@2x.png',
     'resources/images/schema-decentralized-4-devices.png',
     'resources/images/schema-decentralized-4-devices@2x.png',
+    'resources/images/bg-worldmap.png',
+    'resources/images/bg-worldmap@2x.png',
 
     'resources/images/docs/gcs/create-bucket.png',
     'resources/images/docs/gcs/oauth-permissions.png',
