@@ -16,7 +16,6 @@ namespace infinit
     public:
       FileHandle(FileSystem& owner,
                  FileData data,
-                 bool writable,
                  bool mark_dirty = false);
       ~FileHandle();
       virtual
@@ -42,7 +41,6 @@ namespace infinit
       print(std::ostream& stream) const override;
     private:
       std::shared_ptr<FileBuffer> _buffer;
-      ELLE_ATTRIBUTE(bool, writable);
       FileSystem& _owner;
       bool _close_failure;
     };

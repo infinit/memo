@@ -35,10 +35,8 @@ namespace infinit
 
     FileHandle::FileHandle(FileSystem& owner,
                            FileData data,
-                           bool writable,
                            bool dirty)
-    : _writable(writable)
-    , _owner(owner)
+    : _owner(owner)
     , _close_failure(false)
     {
       auto it = owner.file_buffers().find(data.address());

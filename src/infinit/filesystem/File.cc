@@ -694,7 +694,7 @@ namespace infinit
       }
       return umbrella([&] {
         return std::unique_ptr<rfs::Handle>(
-          new FileHandle(_owner, *_filedata, needw, false));
+          new FileHandle(_owner, *_filedata, false));
       });
     }
 
