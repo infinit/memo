@@ -586,15 +586,7 @@ namespace infinit
     FileBuffer::_commit_all(FileHandle* src)
     {
       ELLE_TRACE_SCOPE("%s: commit all", this);
-      if (!check_cache(src, 0))
-      {
-        ELLE_DEBUG_SCOPE(
-          "store first block with payload %s, fat %s, total_size %s",
-          this->_file._data.size(),
-          this->_file._fat,
-          this->_file._header.size);
-        this->_commit_first(src);
-      }
+      check_cache(src, 0);
     }
 
     struct InsertBlockResolver
