@@ -989,6 +989,8 @@ COMMAND(inspect)
           std::cout << elle::json::pretty_print(response.result.get())
                     << std::endl;
         }
+        else
+          std::cout << "Running" << std::endl;
       }
     };
   if (flag(args, "status"))
