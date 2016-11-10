@@ -1703,6 +1703,48 @@ ELLE_TEST_SCHEDULED(world_perm_mode)
   BOOST_CHECK_NO_THROW(read_file(client2.fs->path("/foo")));
 }
 
+void
+read_unlink_test(int64_t size)
+{
+  DHTs servers(1);
+  auto client = servers.client();
+  auto file = [&client]
+    {
+      ELLE_LOG_SCOPE("fetch file");
+      return client.fs->path("/")->child("file");
+    };
+  ELLE_LOG("write test file");
+  auto handle_w = file()->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  std::string data(size, 'a');
+  BOOST_CHECK_EQUAL(
+    handle_w->write(elle::ConstWeakBuffer(data), size, 0), size);
+  handle_w->close();
+  handle_w.reset();
+  // Open file handle twice, unlink and check that file is still accessible.
+  ELLE_LOG("first open");
+  auto handle_1 = file()->open(O_RDONLY, 0);
+  ELLE_LOG("second open");
+  auto handle_2 = file()->open(O_RDWR, 0);
+  ELLE_LOG("unlink");
+  file()->unlink();
+  elle::Buffer buffer(size);
+  ELLE_LOG("read");
+  BOOST_CHECK_EQUAL(handle_1->read(buffer, size, 0), size);
+  BOOST_CHECK_EQUAL(buffer, data);
+}
+
+ELLE_TEST_SCHEDULED(read_unlink_small)
+{
+  ELLE_LOG("read_unlink_small");
+  read_unlink_test(8);
+}
+
+ELLE_TEST_SCHEDULED(read_unlink_large)
+{
+  ELLE_LOG("read_unlink_large");
+  read_unlink_test(10 * 1024);
+}
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -1734,4 +1776,6 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(group_description), 0, valgrind(5));
   suite.add(BOOST_TEST_CASE(world_perm_conflict), 0, valgrind(10));
   suite.add(BOOST_TEST_CASE(world_perm_mode), 0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(read_unlink_small), 0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(read_unlink_large), 0, valgrind(5));
 }
