@@ -707,6 +707,131 @@ ELLE_TEST_SCHEDULED(create_excl)
     reactor::filesystem::Error);
 }
 
+ELLE_TEST_SCHEDULED(multiple_writers)
+{
+  infinit::storage::Memory::Blocks blocks;
+  struct stat st;
+  DHTs servers(1, {},
+               with_cache = true,
+               storage = elle::make_unique<infinit::storage::Memory>(blocks));
+  auto client = servers.client(false);
+  char buffer[1024], buffer2[1024];
+  for (int i=0; i<1024; ++i)
+    buffer[i] = i % 391;
+  auto b = elle::WeakBuffer(buffer, 1024);
+  auto b2 = elle::WeakBuffer(buffer2, 1024);
+  {
+    auto h1 = client.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644);
+    auto h2 = client.fs->path("/file")->open(O_RDWR, 0644);
+    h1->write(b, 1024, 0);
+    auto sz = h2->read(b2, 1024, 0);
+    BOOST_CHECK_EQUAL(sz, 1024);
+    BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+    h2->write(b, 1024, 512);
+    sz = h1->read(b2, 1024, 512);
+    BOOST_CHECK_EQUAL(sz, 1024);
+    BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+  }
+  bool do_yield = true;
+  auto seq_write = [&] {
+      for (int i=0; i<5; ++i)
+      {
+        auto h = client.fs->path("/file")->open(O_RDWR, 0644);
+        for (int o = 0; o < 1024*30; ++o)
+        {
+          h->write(b, 1024, o*1024);
+          if (do_yield)
+            reactor::yield();
+        }
+      }
+  };
+  {
+    do_yield = true;
+    reactor::Thread t1("writer 1", seq_write);
+    reactor::Thread t2("writer 2", seq_write);
+    reactor::Thread t3("writer 3", seq_write);
+    reactor::Thread t4("writer 4", seq_write);
+    reactor::wait({t1, t2, t3, t4});
+    client.fs->path("/file")->stat(&st);
+    BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
+    auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
+    for (int o = 0; o < 1024*30; ++o)
+    {
+      h->read(b2, 1024, o * 1024);
+      BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+    }
+    BOOST_CHECK_LE(blocks.size(), 50);
+  }
+  {
+    do_yield = true;
+    reactor::Thread t1("writer 1", seq_write);
+    for (int i=0; i<1024 * 10; ++i)
+      reactor::yield();
+    reactor::Thread t2("writer 2", seq_write);
+    for (int i=0; i<1024 * 10; ++i)
+      reactor::yield();
+    reactor::Thread t3("writer 3", seq_write);
+    for (int i=0; i<1024 * 10; ++i)
+      reactor::yield();
+    reactor::Thread t4("writer 4", seq_write);
+    reactor::wait({t1, t2, t3, t4});
+    client.fs->path("/file")->stat(&st);
+    BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
+    auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
+    for (int o = 0; o < 1024*30; ++o)
+    {
+      h->read(b2, 1024, o * 1024);
+      BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+    }
+    BOOST_CHECK_LE(blocks.size(), 50);
+  }
+  {
+    do_yield = false;
+    reactor::Thread t1("writer 1", seq_write);
+    reactor::Thread t2("writer 2", seq_write);
+    reactor::Thread t3("writer 3", seq_write);
+    reactor::Thread t4("writer 4", seq_write);
+    reactor::wait({t1, t2, t3, t4});
+    client.fs->path("/file")->stat(&st);
+    BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
+    auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
+    for (int o = 0; o < 1024*30; ++o)
+    {
+      h->read(b2, 1024, o * 1024);
+      BOOST_CHECK(!memcmp(buffer, buffer2, 1024));
+    }
+    BOOST_CHECK_LE(blocks.size(), 50);
+  }
+
+  client.fs->path("/file2")->create(O_RDWR|O_CREAT, 0644);
+  auto random_write = [&] {
+    for (int i=0; i<100; ++i)
+    {
+      auto h = client.fs->path("/file2")->open(O_RDWR, 0644);
+      auto o = (rand()%30)*1024 * 1024 +  (rand()%1024) * 1024 + (rand()%1024);
+      h->write(b, 1024, o);
+      if (do_yield)
+        reactor::yield();
+    }
+  };
+  {
+    do_yield = true;
+    reactor::Thread t1("writer 1", random_write);
+    reactor::Thread t2("writer 2", random_write);
+    reactor::Thread t3("writer 3", random_write);
+    reactor::Thread t4("writer 4", random_write);
+    reactor::wait({t1, t2, t3, t4});
+    client.fs->path("/file2")->stat(&st);
+    ELLE_TRACE("resulting file: %s bytes", st.st_size);
+    auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
+    for (int o=0; o < st.st_size; o+= 1024)
+    {
+      auto len = std::min(off_t(1024), off_t(st.st_size-o));
+      h->read(elle::WeakBuffer(buffer, len), len, o);
+    }
+  }
+}
+
 ELLE_TEST_SCHEDULED(sparse_file)
 {
   // Under windows, a 'cp' causes a ftruncate(target_size), so check that it
@@ -1014,6 +1139,7 @@ ELLE_TEST_SCHEDULED(acls)
   for (int i=0; i<100; ++i)
     f->write(elle::ConstWeakBuffer(buffer, 16384), 16384, 16384*i);
   f->close();
+  f.reset();
   auto sfat = fs0->path("/dirrm/rm3")->getxattr("infinit.fat");
   auto fat = get_fat(sfat);
   BOOST_CHECK_THROW(fs1->path("/dirrm")->setxattr("infinit.fsck.rmblock",
@@ -1404,6 +1530,8 @@ ELLE_TEST_SCHEDULED(conflicts)
   h1->write(elle::ConstWeakBuffer("bar", 3), 3, 0);
   h0->close();
   h1->close();
+  h0.reset();
+  h1.reset();
   BOOST_CHECK_EQUAL(read_file(fs0->path("/file")), "bar");
   BOOST_CHECK_EQUAL(read_file(fs1->path("/file")), "bar");
 

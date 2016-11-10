@@ -26,6 +26,7 @@ namespace infinit
     typedef model::blocks::Block Block;
     typedef model::blocks::ACLBlock ACLBlock;
     class FileSystem;
+    class FileBuffer;
     enum class EntryType
     {
       file,
@@ -151,6 +152,7 @@ namespace infinit
       friend class FileSystem;
       friend class File;
       friend class FileHandle;
+      friend class FileBuffer;
       friend class FileConflictResolver;
     };
     class Node;
@@ -287,6 +289,10 @@ namespace infinit
       ELLE_ATTRIBUTE_R(FileCache, file_cache);
       ELLE_ATTRIBUTE_RX(std::vector<reactor::Thread::unique_ptr>, running);
       ELLE_ATTRIBUTE_RX(std::vector<reactor::Thread::unique_ptr>, pending);
+      typedef
+      std::unordered_map<Address, std::weak_ptr<FileBuffer>>
+      FileBuffers;
+      ELLE_ATTRIBUTE_RX(FileBuffers, file_buffers);
       static const int max_cache_size = 10000;
     };
   }
