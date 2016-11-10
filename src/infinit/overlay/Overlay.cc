@@ -102,7 +102,7 @@ namespace infinit
         {
           bool is_us = (nl.id() == this->doughnut()->id());
           if (is_us)
-            ELLE_TRACE("%s: removeing ourself from peer list", this);
+            ELLE_TRACE("%s: removing ourself from peer list", this);
           return is_us;
         });
       peers.erase(it, peers.end());

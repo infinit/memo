@@ -19,14 +19,6 @@ namespace infinit
       memset(this->_value, 0, sizeof(Address::Value));
     }
 
-    Address::Address(Value const v)
-      : _value()
-      , _mutable_block(
-        (v[flag_byte] & flags::block_kind) == flags::mutable_block)
-    {
-      ::memcpy(this->_value, v, sizeof(Value));
-    }
-
     Address::Address(Value const value, Flags flags, bool combine)
       : _value()
       , _mutable_block((flags & flags::block_kind) == flags::mutable_block)
@@ -36,28 +28,38 @@ namespace infinit
         this->_value[flag_byte] = flags;
     }
 
+    Address::Address(Value const value)
+      : Address{value, value[flag_byte], false}
+    {}
+
     Address::Address(elle::UUID const& id)
       : Address(infinit::cryptography::hash(
                   elle::ConstWeakBuffer(id.data, id.static_size()),
                   infinit::cryptography::Oneway::sha256).contents())
     {}
 
+    int
+    Address::cmp(Address const& rhs) const
+    {
+      return memcmp(this->_value, rhs._value, sizeof(Value));
+    }
+
     bool
     Address::operator ==(Address const& rhs) const
     {
-      return memcmp(this->_value, rhs._value, sizeof(Value)) == 0;
+      return cmp(rhs) == 0;
     }
 
     bool
     Address::operator !=(Address const& rhs) const
     {
-      return memcmp(this->_value, rhs._value, sizeof(Value)) != 0;
+      return cmp(rhs) != 0;
     }
 
     bool
     Address::operator <(Address const& rhs) const
     {
-      return memcmp(this->_value, rhs._value, sizeof(Value)) < 0;
+      return cmp(rhs) < 0;
     }
 
     std::ostream&
