@@ -64,6 +64,7 @@ namespace infinit
       , _fat_changed(false)
       , _prefetchers_count(0)
       , _last_read_block(0)
+      , _remove_data(false)
     {
     }
 
@@ -90,6 +91,17 @@ namespace infinit
     {
       while (_prefetchers_count)
         reactor::sleep(20_ms);
+      if (this->_remove_data)
+      {
+        // FIXME optimize pass removal data
+        for (unsigned i = 0; i < this->_file._fat.size(); ++i)
+        {
+          ELLE_DEBUG_SCOPE("removing %s: %f", i, this->_file._fat[i].first);
+          unchecked_remove(this->_model, this->_file._fat[i].first);
+        }
+        ELLE_DEBUG_SCOPE("removing first block at %f", this->_file.address());
+        unchecked_remove(this->_model, this->_file.address());
+      }
     }
 
     void

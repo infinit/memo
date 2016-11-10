@@ -97,6 +97,7 @@ namespace infinit
       bool _fat_changed;
       int _prefetchers_count; // number of running prefetchers
       int _last_read_block; // block hit by last read operation
+      bool _remove_data; // there are no more links, remove data.
       static const uint64_t default_first_block_size;
       static const unsigned long max_cache_size = 20; // in blocks    };
       friend class File;

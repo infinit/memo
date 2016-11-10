@@ -461,17 +461,17 @@ namespace infinit
         _filedata->_header.links--;
         _commit(WriteTarget::links);
       }
+      // FIXME: Improves POSIX compatibility but adds window for a data leak.
       else
       {
-        ELLE_DEBUG_SCOPE("No remaining links");
-        // FIXME optimize pass removal data
-        for (unsigned i=0; i<_filedata->_fat.size(); ++i)
+        ELLE_DEBUG("No remaining links");
+        auto it = this->_owner.file_buffers().find(this->_filedata->address());
+        if (it != this->_owner.file_buffers().end())
         {
-          ELLE_DEBUG_SCOPE("removing %s: %f", i, _filedata->_fat[i].first);
-          _owner.unchecked_remove(_filedata->_fat[i].first);
+          auto file_buffer = it->second.lock();
+          if (file_buffer)
+            file_buffer->_remove_data = true;
         }
-        ELLE_DEBUG_SCOPE("removing first block at %f", _first_block->address());
-        _owner.unchecked_remove(_first_block->address());
       }
     }
 
