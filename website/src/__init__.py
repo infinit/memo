@@ -70,8 +70,8 @@ class Website(bottle.Bottle):
   @view('pages/docs/overview.html')
   def root(self):
     return {
-      'title': 'An Overview of the Infinit File System',
-      'description': 'Discover the benefits of the Infinit file system through its innovative technology.',
+      'title': 'An Overview of the Infinit Storage Platform',
+      'description': 'Discover the benefits of the Infinit storage platform through its innovative technology.',
     }
 
   @route('/drive', name = 'drive')
@@ -127,7 +127,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'FAQ',
-      'description': 'Frequently Asked Questions about how to use our file system, how it compares to others and more.',
+      'description': 'Frequently Asked Questions about how to use our storage platform, how it compares to others and more.',
     }
 
   @route('/get-started', name = 'doc_get_started')
@@ -135,7 +135,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Get Started with Infinit',
-      'description': 'A step by step guide to getting started with the Infinit file system platform.',
+      'description': 'A step by step guide to getting started with the Infinit storage platform.',
     }
 
   @route('/get-started/mac', name = 'doc_get_started_mac')
@@ -143,7 +143,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Get Started with Infinit - Mac Guide',
-      'description': 'A step by step guide to getting started with the Infinit file system platform.',
+      'description': 'A step by step guide to getting started with the Infinit storage platform.',
     }
 
   @route('/get-started/windows', name = 'doc_get_started_windows')
@@ -151,7 +151,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Get Started with Infinit - Windows Guide',
-      'description': 'A step by step guide for Windows to getting started with the Infinit file system platform.',
+      'description': 'A step by step guide for Windows to getting started with the Infinit storage platform.',
     }
 
   @route('/get-started/linux', name = 'doc_get_started_linux')
@@ -159,7 +159,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Get Started with Infinit - Linux Guide',
-      'description': 'A step by step guide for linux to getting started with the Infinit file system platform.',
+      'description': 'A step by step guide for linux to getting started with the Infinit storage platform.',
     }
 
   @route('/documentation/technology', name = 'doc_technology')
@@ -259,7 +259,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Environment Variables',
-      'description': 'List of the environment variables that can be set to alter the behavior of the Infinit file system.',
+      'description': 'List of the environment variables that can be set to alter the behavior of the Infinit storage platform.',
     }
 
   @route('/documentation/best-practices', name = 'doc_best_practices')
@@ -295,7 +295,7 @@ class Website(bottle.Bottle):
   @view('pages/opensource.html')
   def root(self):
     return {
-      'title': 'Contribute to the Infinit File System',
+      'title': 'Contribute to the Infinit Storage Platform',
       'description': 'Check out our open source projects and join a growing community of developers.',
     }
 
