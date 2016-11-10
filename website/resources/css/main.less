@@ -42,8 +42,10 @@ a.button, button.button, input.button, body.documentation section.doc p a.button
   &.border.black {
     border: 1px solid @infinitblack;
     box-shadow: 0px 3px 0px 0px @infinitblack; color: @infinitblack !important;
+    border-bottom: none;
   }
   &.border.black:hover { background: lighten(@black, 20%); color: white !important;}
+  &.border.black.disabled { background: none; color: @infinitblack !important }
 
   &.big { font-size: 16px; text-align: center; padding: 13px 20px; }
 
