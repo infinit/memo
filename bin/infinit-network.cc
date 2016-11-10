@@ -662,6 +662,8 @@ COMMAND(delete_)
     for (auto const& volume: volumes)
     {
       auto vol_path = ifnt._volume_path(volume);
+      auto v = ifnt.volume_get(volume);
+      boost::filesystem::remove_all(v.root_block_cache_dir());
       if (boost::filesystem::remove(vol_path))
         report_action("deleted", "volume", volume, std::string("locally"));
     }
