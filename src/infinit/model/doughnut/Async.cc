@@ -27,12 +27,6 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Async");
 
-DAS_MODEL(infinit::model::doughnut::consensus::Async::Op,
-          (address, block, mode, resolver, remove_signature),
-          DasOp);
-DAS_MODEL_DEFAULT(infinit::model::doughnut::consensus::Async::Op, DasOp)
-//DAS_MODEL_SERIALIZE(infinit::model::doughnut::consensus::Async::Op);
-
 namespace infinit
 {
   namespace model

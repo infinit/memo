@@ -4,6 +4,7 @@
 
 #include <elle/assert.hh>
 #include <elle/serialization/Serializer.hh>
+#include <elle/serialization/SerializerIn.hh>
 
 namespace infinit
 {

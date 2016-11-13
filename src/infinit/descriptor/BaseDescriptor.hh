@@ -4,10 +4,12 @@
 # include <boost/filesystem/path_traits.hpp>
 # include <boost/optional.hpp>
 
+# include <elle/Printable.hh>
+
 # include <das/model.hh>
 # include <das/serializer.hh>
 
-# include <elle/Printable.hh>
+# include <infinit/symbols.hh>
 
 namespace infinit
 {
@@ -61,39 +63,39 @@ namespace infinit
         unqualified(std::string const& qualifier) const;
       };
 
-      /*-------------.
-      | Construction |
-      `-------------*/
-
+    /*-------------.
+    | Construction |
+    `-------------*/
+    public:
       BaseDescriptor(std::string name,
                      boost::optional<std::string> description = {});
       BaseDescriptor(BaseDescriptor const& descriptor);
-
       Name name;
       boost::optional<std::string> description;
+      using Model = das::Model<
+        BaseDescriptor,
+        elle::meta::List<symbols::Symbol_name, symbols::Symbol_description>>;
 
-      /*--------------.
-      | Serialization |
-      `--------------*/
-
+    /*--------------.
+    | Serialization |
+    `--------------*/
+    public:
       BaseDescriptor(elle::serialization::SerializerIn& s);
 
       virtual
       void
       serialize(elle::serialization::Serializer& s);
 
-      /*----------.
-      | Printable |
-      `----------*/
-
+    /*----------.
+    | Printable |
+    `----------*/
+    public:
       virtual
       void
       print(std::ostream& out) const override;
     };
   }
 }
-
-DAS_MODEL_FIELDS(infinit::descriptor::BaseDescriptor, (name, description));
 
 namespace boost
 {

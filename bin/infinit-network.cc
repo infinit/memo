@@ -950,7 +950,7 @@ COMMAND(stats)
       "stat",
       "stat",
       boost::none,
-      Headers{},
+      infinit::Headers(),
       false);
 
   // FIXME: write Storages::operator(std::ostream&)

@@ -108,8 +108,13 @@ class Infinit(TemporaryDirectory):
   def drives_path(self):
     return '%s/drives' % self.data_home
 
-  def spawn(self, args, input = None, return_code = 0, env = {},
-            noscript = False):
+  def spawn(self,
+            args,
+            input = None,
+            return_code = 0,
+            env = {},
+            noscript = False,
+            gdb = False):
     if isinstance(args, str):
       args = args.split(' ')
     if args[0][0] != '/':
@@ -119,6 +124,11 @@ class Infinit(TemporaryDirectory):
       if build_dir:
         args[0] = '%s/%s' % (build_dir, args[0])
     args[0] += os.environ.get('EXE_EXT', '')
+    if gdb:
+      args = ['/usr/bin/gdb', '--args'] + args
+      if input is not None:
+        print('GDB input: %r' % input)
+        input = None
     env_ = {
       'INFINIT_RDV': '',
       'INFINIT_BACKTRACE': '1',
@@ -152,9 +162,9 @@ class Infinit(TemporaryDirectory):
     process = subprocess.Popen(
       args,
       env = env_,
-      stdin =  subprocess.PIPE,
-      stdout =  subprocess.PIPE,
-      stderr =  subprocess.PIPE,
+      stdin =  subprocess.PIPE if not gdb else None,
+      stdout =  subprocess.PIPE if not gdb else None,
+      stderr =  subprocess.PIPE if not gdb else None,
     )
     self.process = process
     if input is not None:
@@ -162,9 +172,9 @@ class Infinit(TemporaryDirectory):
     process.pretty = pretty
     return process
 
-  def run(self, args, input = None, return_code = 0, env = {}):
+  def run(self, args, input = None, return_code = 0, env = {}, gdb = False):
     try:
-      process = self.spawn(args, input, return_code, env)
+      process = self.spawn(args, input, return_code, env, gdb = gdb)
       out, err = process.communicate(timeout = 600)
       process.wait()
     except (subprocess.TimeoutExpired, KeyboardInterrupt):
@@ -188,8 +198,8 @@ class Infinit(TemporaryDirectory):
     self.last_err = err
     return out, err
 
-  def run_json(self, *args, **kwargs):
-    out, err = self.run(*args, **kwargs)
+  def run_json(self, args, gdb = False, *largs, **kwargs):
+    out, err = self.run(args, gdb = gdb, *largs, **kwargs)
     try:
       res = [json.loads(l) for l in out.split(cr) if l]
       if len(res) == 0:
@@ -206,13 +216,14 @@ class Infinit(TemporaryDirectory):
                  volume = 'volume',
                  seq = None,
                  peer = None,
+                 gdb = False,
                  **kwargs):
     cmd = ['infinit-volume', '--run', volume, '--allow-root-creation']
     if user is not None:
       cmd += ['--as', user]
     if peer is not None:
       cmd += ['--peer', peer]
-    response = self.run_json(cmd, input = seq or kwargs)
+    response = self.run_json(cmd, gdb = gdb, input = seq or kwargs)
     return response
 
 def assertEq(a, b):

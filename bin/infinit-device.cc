@@ -50,28 +50,28 @@ public:
 
   boost::optional<elle::Buffer> data;
   boost::optional<std::string> passphrase_hash;
-};
 
-DAS_MODEL(PairingInformation, (data, passphrase_hash), DasPairingInformation)
+  using Model =
+    das::Model<PairingInformation,
+               decltype(elle::meta::list(
+                          infinit::symbols::data,
+                          infinit::symbols::passphrase_hash))>;
+};
 
 COMMAND(transmit_user)
 {
   auto user = self_user(ifnt, args);
   auto passphrase = pairing_passphrase(args);
   std::stringstream serialized_user;
-  {
-    das::Serializer<infinit::DasUser> view{user};
-    elle::serialization::json::serialize(view, serialized_user, false);
-  }
+  elle::serialization::json::serialize(user, serialized_user, false);
   infinit::cryptography::SecretKey key{passphrase};
   PairingInformation p(
     key.encipher(serialized_user.str(),
                  infinit::cryptography::Cipher::aes256),
     hash_password(passphrase, _pair_salt));
-  das::Serializer<DasPairingInformation> view{p};
   beyond_push(
     elle::sprintf("users/%s/pairing", user.name),
-    "user identity for", user.name, view, user, false);
+    "user identity for", user.name, p, user, false);
   report_action("transmitted", "user identity for", user.name);
   if (!script_mode && !flag(args, "no-countdown"))
   {
@@ -109,7 +109,7 @@ COMMAND(transmit_user)
           }
           else if (r.status() == reactor::http::StatusCode::Forbidden)
           {
-            read_error<ResourceProtected>(r, "user identity", user.name);
+            infinit::read_error<ResourceProtected>(r, "user identity", user.name);
           }
           else
           {

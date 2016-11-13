@@ -66,7 +66,7 @@ namespace infinit
       void
       Block::seal(boost::optional<int> version)
       {
-        ELLE_DEBUG_SCOPE("%s: seal", *this);
+        ELLE_TRACE_SCOPE("%s: seal at version %s", this, version);
         this->_seal(version);
       }
 
