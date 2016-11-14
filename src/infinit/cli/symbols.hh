@@ -49,7 +49,10 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(deny_write, '\0', "deny user write access to the network", false);
     ELLE_DAS_CLI_SYMBOL(description, '\0', "{object} description", false);
     ELLE_DAS_CLI_SYMBOL(disable_UTF_8_conversion, 0, "disable FUSE conversion of UTF-8 to native format", false);
+    ELLE_DAS_CLI_SYMBOL(disable_encrypt_at_rest, 0, "disable at-rest encryption", false);
+    ELLE_DAS_CLI_SYMBOL(disable_encrypt_rpc, 0, "disable RPC encryption", false);
     ELLE_DAS_CLI_SYMBOL(disable_inherit, '\0', "make new files and directories not inherit permissions", false);
+    ELLE_DAS_CLI_SYMBOL(disable_signature, 0, "disable all block signature computation and validation", false);
     ELLE_DAS_CLI_SYMBOL(docker, 0, "Enable the Docker plugin", false);
     ELLE_DAS_CLI_SYMBOL(docker_descriptor_path, 0, "Path to add plugin descriptor", false);
     ELLE_DAS_CLI_SYMBOL(docker_home, 0, "Home directory to use for Docker user (default: /home/<docker-user>)", false);

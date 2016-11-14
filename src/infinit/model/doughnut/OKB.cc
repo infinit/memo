@@ -443,10 +443,11 @@ namespace infinit
             ++this->_version; // FIXME: idempotence in case the write fails?
         if (!this->_owner_private_key)
           elle::err("attempting to seal an unowned OKB");
-        this->_signature =
-          std::make_shared<SignFuture>(
-            this->_owner_private_key->sign_async(*this->_sign(),
-              this->doughnut()->version()));
+        if (this->doughnut()->encrypt_options().validate_signatures)
+          this->_signature =
+            std::make_shared<SignFuture>(
+              this->_owner_private_key->sign_async(*this->_sign(),
+                this->doughnut()->version()));
       }
 
       template <typename Block>
@@ -468,6 +469,8 @@ namespace infinit
         else
           return res;
         ELLE_DEBUG("check signature")
+        if (!this->doughnut()->encrypt_options().validate_signatures)
+          return blocks::ValidationResult::success();
         {
           ELLE_ASSERT(this->signature() != elle::Buffer());
           auto sign = this->_sign();

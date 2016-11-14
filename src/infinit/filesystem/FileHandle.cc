@@ -523,8 +523,13 @@ namespace infinit
         auto block = fetch_or_die(*_fs.block_store(), addr, {},
                                   this->_file.path() / elle::sprintf("<%f>", addr));
         auto crypted = block->take_data();
-        auto const sk = elle::cryptography::SecretKey(secret);
-        c.block = std::make_shared<elle::Buffer>(sk.decipher(crypted));
+        if (secret.empty())
+          c.block = std::make_shared<elle::Buffer>(std::move(crypted));
+        else
+        {
+          auto const sk = elle::cryptography::SecretKey(secret);
+          c.block = std::make_shared<elle::Buffer>(sk.decipher(crypted));
+        }
       }
       c.last_use = now();
       c.dirty = false; // we just fetched or inserted it
@@ -576,8 +581,12 @@ namespace infinit
           }
           ELLE_TRACE("Prefetcher inserting value at %s", idx);
           auto crypted = bl->take_data();
-          auto b = std::make_shared<elle::Buffer>(
-            elle::cryptography::SecretKey(key).decipher(crypted));
+          std::shared_ptr<elle::Buffer> b;
+          if (key.empty())
+            b = std::make_shared<elle::Buffer>(std::move(crypted));
+          else
+            b = std::make_shared<elle::Buffer>(
+              elle::cryptography::SecretKey(key).decipher(crypted));
           this->_blocks[idx].last_use = now();
           this->_blocks[idx].block = b;
           this->_blocks[idx].ready.open();
@@ -673,23 +682,24 @@ namespace infinit
               if (ent)
                 ent->ready.open();
           });
-          auto const key
-            = elle::cryptography::random::generate<elle::Buffer>(32).string();
-          auto block = std::unique_ptr<ImmutableBlock>{};
-          if (data_.size() >= 262144)
+          bool encrypt = dynamic_cast<model::doughnut::Doughnut const&>(*this->_fs.block_store())
+            .encrypt_options().encrypt_at_rest;
+          std::string key;
+          elle::Buffer cdata;
+          if (encrypt)
           {
-            elle::reactor::background([&] {
-              auto cdata = elle::cryptography::SecretKey(key).encipher(data_);
-              block = this->_fs.block_store()->make_block<ImmutableBlock>(
-                std::move(cdata), this->_file._address);
-            });
+            key = elle::cryptography::random::generate<elle::Buffer>(32).string();
+            if (data_.size() >= 262144)
+              elle::reactor::background([&] {
+                cdata = elle::cryptography::SecretKey(key).encipher(data_);
+              });
+            else
+              cdata = elle::cryptography::SecretKey(key).encipher(data_);
           }
           else
-          {
-            auto cdata = elle::cryptography::SecretKey(key).encipher(data_);
-            block = this->_fs.block_store()->make_block<ImmutableBlock>(
-              std::move(cdata), this->_file._address);
-          }
+            cdata = elle::Buffer(data_.contents(), data_.size());
+          auto block = this->_fs.block_store()->make_block<ImmutableBlock>(
+            std::move(cdata), this->_file._address);
           auto baddr = block->address();
           this->_fs.block_store()->insert(
             std::move(block),

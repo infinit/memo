@@ -55,6 +55,7 @@ ELLE_DAS_SYMBOL(version_a);
 ELLE_DAS_SYMBOL(version_b);
 ELLE_DAS_SYMBOL(version_c);
 ELLE_DAS_SYMBOL(monitoring_socket_path_a);
+ELLE_DAS_SYMBOL(encrypt_options);
 
 static
 int
@@ -84,6 +85,7 @@ public:
       version_b = boost::optional<elle::Version>(),
       version_c = boost::optional<elle::Version>(),
       monitoring_socket_path_a = boost::optional<boost::filesystem::path>(),
+      encrypt_options = infinit::model::doughnut::EncryptOptions(),
       make_overlay =
       [] (int,
           infinit::model::NodeLocations peers,
@@ -114,6 +116,7 @@ public:
         boost::optional<elle::Version> version_b,
         boost::optional<elle::Version> version_c,
         boost::optional<boost::filesystem::path> monitoring_socket_path_a,
+        infinit::model::doughnut::EncryptOptions encrypt_options,
         std::function<
           std::unique_ptr<infinit::overlay::Stonehenge>(
             int,
@@ -136,6 +139,7 @@ public:
                            std::move(storage_c) ,
                            version_a, version_b, version_c,
                            std::move(monitoring_socket_path_a),
+                           std::move(encrypt_options),
                            std::move(make_overlay),
                            std::move(make_consensus));
               }, std::forward<Args>(args)...);
@@ -164,6 +168,7 @@ private:
        boost::optional<elle::Version> version_b,
        boost::optional<elle::Version> version_c,
        boost::optional<boost::filesystem::path> monitoring_socket_path_a,
+       infinit::model::doughnut::EncryptOptions encrypt_options,
        std::function<
          std::unique_ptr<infinit::overlay::Stonehenge>(
            int,
@@ -235,7 +240,8 @@ private:
         std::move(storage_a),
         dht::version = version_a,
         infinit::model::doughnut::monitoring_socket_path =
-          monitoring_socket_path_a);
+          monitoring_socket_path_a,
+        infinit::model::doughnut::encrypt_options = encrypt_options);
     }
     // dht_b.
     {
@@ -260,7 +266,8 @@ private:
         boost::optional<int>(),
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_b),
-        dht::version = version_b);
+        dht::version = version_b,
+        infinit::model::doughnut::encrypt_options = encrypt_options);
     }
     // dht_c.
     {
@@ -285,7 +292,8 @@ private:
         boost::optional<int>(),
         boost::optional<boost::asio::ip::address>(),
         std::move(storage_c),
-        dht::version = version_c);
+        dht::version = version_c,
+        infinit::model::doughnut::encrypt_options = encrypt_options);
     }
     for (auto* stonehenge: stonehenges)
       for (auto& peer: stonehenge->peers())
@@ -1772,6 +1780,24 @@ ELLE_TEST_SCHEDULED(admin_keys)
     false, false), elle::Error);
 }
 
+
+ELLE_TEST_SCHEDULED(disabled_crypto)
+{
+  auto key = elle::cryptography::rsa::keypair::generate(key_size());
+  infinit::model::doughnut::EncryptOptions eopts(false, false, false);
+  DHTs dhts(true, encrypt_options = eopts, keys_a = key, keys_b=key, keys_c = key);
+  auto b = dhts.dht_a->make_block<blocks::ACLBlock>(elle::Buffer("canard", 6));
+  auto baddr = b->address();
+  dhts.dht_a->insert(std::move(b));
+  auto bc = dhts.dht_b->fetch(baddr);
+  BOOST_CHECK_EQUAL(bc->data(), "canard");
+  auto bi = dhts.dht_a->make_block<blocks::ImmutableBlock>(elle::Buffer("canard", 6));
+  auto biaddr = bi->address();
+  dhts.dht_a->insert(std::move(bi));
+  auto bic = dhts.dht_b->fetch(biaddr);
+  BOOST_CHECK_EQUAL(bic->data(), "canard");
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
@@ -1817,6 +1843,7 @@ ELLE_TEST_SUITE()
   paxos->add(BOOST_TEST_CASE(admin_keys));
   paxos->add(BOOST_TEST_CASE(batch_quorum));
   paxos->add(BOOST_TEST_CASE(wrong_quorum));
+  paxos->add(BOOST_TEST_CASE(disabled_crypto));
   {
     using namespace tests_paxos;
     paxos->add(BOOST_TEST_CASE(CHB_no_peer));
