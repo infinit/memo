@@ -471,14 +471,14 @@ namespace infinit
         if (auto res = static_cast<OKBHeader const*>
             (this)->validate(this->address())); else
           return res;
-        ELLE_DEBUG("%s: check signature", *this)
+        ELLE_DEBUG("check signature")
         {
           ELLE_ASSERT(this->signature() != elle::Buffer());
           auto sign = this->_sign();
           if (!this->_owner_key->verify(this->signature(), *sign))
           {
-            ELLE_TRACE("%s: invalid signature for version %s: '%x'",
-              *this, this->_version, this->signature());
+            ELLE_TRACE("invalid signature for version %s: %x",
+              this->_version, this->signature());
             return blocks::ValidationResult::failure("invalid signature");
           }
         }

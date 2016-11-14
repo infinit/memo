@@ -37,11 +37,18 @@ namespace infinit
         AdminKeys() {}
         AdminKeys(AdminKeys&& b) = default;
         AdminKeys(AdminKeys const& b) = default;
-        //AdminKeys& operator = (AdminKeys const& b) = default;
+        AdminKeys&
+        operator = (AdminKeys&& b) = default;
         std::vector<infinit::cryptography::rsa::PublicKey> r;
         std::vector<infinit::cryptography::rsa::PublicKey> w;
         std::vector<infinit::cryptography::rsa::PublicKey> group_r;
         std::vector<infinit::cryptography::rsa::PublicKey> group_w;
+        using Model = das::Model<
+          AdminKeys,
+          elle::meta::List<symbols::Symbol_r,
+                           symbols::Symbol_w,
+                           symbols::Symbol_group_r,
+                           symbols::Symbol_group_w>>;
       };
 
       class Doughnut // Doughnut. DougHnuT. Get it ?
@@ -206,6 +213,14 @@ namespace infinit
         boost::optional<int> port;
         AdminKeys admin_keys;
         std::vector<Endpoints> peers;
+        using Model = das::Model<
+          Configuration,
+          elle::meta::List<symbols::Symbol_overlay,
+                           symbols::Symbol_keys,
+                           symbols::Symbol_owner,
+                           symbols::Symbol_passport,
+                           symbols::Symbol_name>>;
+
 
         Configuration(
           Address id,
@@ -251,13 +266,6 @@ namespace infinit
     }
   }
 }
-
-DAS_MODEL_FIELDS(infinit::model::doughnut::Configuration,
-                 (overlay, keys, owner, passport, name));
-
-DAS_MODEL(infinit::model::doughnut::AdminKeys, (r, w, group_r, group_w), DasAdminKeys);
-DAS_MODEL_DEFAULT(infinit::model::doughnut::AdminKeys, DasAdminKeys);
-DAS_MODEL_SERIALIZE(infinit::model::doughnut::AdminKeys);
 
 # include <infinit/model/doughnut/Doughnut.hxx>
 

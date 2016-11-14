@@ -42,10 +42,15 @@ namespace infinit
           Auth(Address id,
                Challenge challenge,
                Passport passport);
-          Auth(elle::serialization::SerializerIn& input);
           Address id;
           Challenge challenge;
           Passport passport;
+          using Model = das::Model<
+            Auth,
+            decltype(elle::meta::list(
+                       symbols::id,
+                       symbols::challenge,
+                       symbols::passport))>;
         };
 
       /*-------------.
@@ -155,6 +160,8 @@ namespace infinit
     }
   }
 }
+
+DAS_SERIALIZE(infinit::model::doughnut::Remote::Auth);
 
 #include <infinit/model/doughnut/Remote.hxx>
 

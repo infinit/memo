@@ -17,6 +17,7 @@
 #include <reactor/network/utp-server.hh>
 #ifndef INFINIT_WINDOWS
 # include <reactor/network/unix-domain-server.hh>
+# include <reactor/network/unix-domain-socket.hh>
 #endif
 
 #include <infinit/model/MissingBlock.hh>
@@ -157,6 +158,19 @@ namespace infinit
         if (init.monitoring_socket_path)
         {
           auto const& m_path = init.monitoring_socket_path.get();
+          if (boost::filesystem::exists(m_path))
+          {
+            try
+            {
+              reactor::network::UnixDomainSocket socket(m_path);
+              ELLE_WARN(
+                "unable to monitor, socket already present at: %s", m_path);
+            }
+            catch (elle::Exception const&)
+            {
+              boost::filesystem::remove(m_path);
+            }
+          }
           if (!boost::filesystem::exists(m_path))
           {
             auto unix_domain_server =
@@ -167,11 +181,6 @@ namespace infinit
             this->_monitoring_server.reset(
               new MonitoringServer(std::move(unix_domain_server), *this));
             ELLE_DEBUG("monitoring server listening on %s", m_path);
-          }
-          else
-          {
-            ELLE_WARN(
-              "unable to monitor, socket already present at: %s", m_path);
           }
         }
 #endif

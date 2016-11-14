@@ -66,10 +66,6 @@ namespace infinit
         std::unique_ptr<ACLBlock> _first_block;
         ELLE_ATTRIBUTE_R(std::shared_ptr<FileData>, filedata);
 
-        //(size, open_handles)
-        typedef std::pair<uint64_t, std::vector<FileHandle*>> SizeHandles;
-        typedef std::unordered_map<Address, SizeHandles> SizeMap;
-        static SizeMap _size_map;
         void _ensure_first_block();
         void _fetch() override;
         void _commit(WriteTarget target) override;

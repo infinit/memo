@@ -111,11 +111,6 @@ namespace infinit
                  std::unique_ptr<ConflictResolver> resolver)
     {
       ELLE_TRACE_SCOPE("%s: store %f", *this, *block);
-      if (!resolver)
-      {
-        ELLE_WARN("%s: store() called without resolver from %s",
-                  this, elle::Backtrace::current());
-      }
       block->seal();
       return this->_store(std::move(block), mode, std::move(resolver));
     }
@@ -126,11 +121,6 @@ namespace infinit
                  std::unique_ptr<ConflictResolver> resolver)
     {
       ELLE_TRACE_SCOPE("%s: store %f", *this, block);
-      if (!resolver)
-      {
-        ELLE_WARN("%s: store() called without resolver from %s",
-                  this, elle::Backtrace::current());
-      }
       block.seal();
       auto copy = block.clone();
       return this->_store(std::move(copy), mode, std::move(resolver));

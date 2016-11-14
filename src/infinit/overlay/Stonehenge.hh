@@ -2,6 +2,7 @@
 # define INFINIT_OVERLAY_STONEHENGE_HH
 
 # include <infinit/overlay/Overlay.hh>
+# include <infinit/symbols.hh>
 
 namespace infinit
 {
@@ -67,6 +68,10 @@ namespace infinit
         std::string host;
         int port;
         model::Address id;
+        using Model = das::Model<Peer,
+                                 decltype(elle::meta::list(symbols::host,
+                                                           symbols::port,
+                                                           symbols::id))>;
       };
 
       std::vector<Peer> peers;

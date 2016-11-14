@@ -1,55 +1,69 @@
-#include <das/model.hh>
-#include <das/serializer.hh>
+#include <sstream>
+#include <string>
 
 #include <elle/bench.hh>
+#include <elle/json/json.hh>
 #include <elle/log.hh>
+#include <elle/meta.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
-#include <elle/json/json.hh>
+
+#include <das/Symbol.hh>
+#include <das/model.hh>
+#include <das/serializer.hh>
 
 #include <infinit/storage/Collision.hh>
 #include <infinit/storage/GoogleDrive.hh>
 #include <infinit/storage/MissingKey.hh>
-
-#include <sstream>
-#include <string>
+#include <infinit/symbols.hh>
 
 ELLE_LOG_COMPONENT("infinit.storage.GoogleDrive");
 
-#define BENCH(name)                                      \
+#define BENCH(name)                                          \
   static elle::Bench bench("bench.gdrive." name, 10000_sec); \
   elle::Bench::BenchScope bs(bench)
 
-struct Parent
+namespace infinit
 {
-  std::string id;
-};
+  namespace storage
+  {
+    struct Parent
+    {
+      std::string id;
+      using Model = das::Model<Parent,
+                               decltype(elle::meta::list(symbols::id))>;
+    };
 
-DAS_MODEL(Parent, (id), DasParent);
-DAS_MODEL_DEFAULT(Parent, DasParent);
-DAS_MODEL_SERIALIZE(Parent);
+    struct Directory
+    {
+      std::string title;
+      std::vector<Parent> parents;
+      std::string mimeType;
 
-struct Directory
-{
-  std::string title;
-  std::vector<Parent> parents;
-  std::string mimeType;
-};
+      using Model = das::Model<
+        Directory,
+        decltype(elle::meta::list(
+                   symbols::title,
+                   symbols::parents,
+                   symbols::mimeType))>;
+    };
 
-DAS_MODEL(Directory, (title, parents, mimeType), DasDirectory);
-DAS_MODEL_DEFAULT(Directory, DasDirectory);
-DAS_MODEL_SERIALIZE(Directory);
+    struct Metadata
+    {
+      std::string title;
+      std::vector<Parent> parents;
+      using Model = das::Model<
+        Metadata,
+        decltype(elle::meta::list(
+                   symbols::title,
+                   symbols::parents))>;
+    };
+  }
+}
 
-struct Metadata
-{
-  std::string title;
-  std::vector<Parent> parents;
-};
-
-DAS_MODEL(Metadata, (title, parents), DasMetadata);
-DAS_MODEL_DEFAULT(Metadata, DasMetadata);
-DAS_MODEL_SERIALIZE(Metadata);
-
+DAS_SERIALIZE(infinit::storage::Parent);
+DAS_SERIALIZE(infinit::storage::Directory);
+DAS_SERIALIZE(infinit::storage::Metadata);
 
 namespace infinit
 {

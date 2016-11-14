@@ -36,13 +36,6 @@ namespace infinit
         , passport(std::move(passport))
       {}
 
-      Remote::Auth::Auth(elle::serialization::SerializerIn& input)
-        : id(input.deserialize<Address>("id"))
-        , challenge(input.deserialize<Challenge>("challenge"))
-        , passport(input.deserialize<Passport>("passport"))
-      {}
-
-
       /*-------------.
       | Construction |
       `-------------*/

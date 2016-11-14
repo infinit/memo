@@ -1003,3 +1003,68 @@ def configure(
       runner = drake.Runner(exe = test, env = env)
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
+
+  ## ----- ##
+  ## Bench ##
+  ## ----- ##
+
+  rule_bench = drake.Rule('bench')
+  cxx_config_bench = drake.cxx.Config(cxx_config)
+  cxx_config_bench += elle.das.config
+  cxx_config_bench.lib_path_runtime('../lib')
+  cxx_config_bench.add_local_include_path('tests')
+  bench_nodes = drake.nodes(
+    'tests/DHT.hh',
+  )
+  bench_names = [
+    'write_500',
+  ]
+  if not windows:
+    cxx_config_bench += elle.boost.config_system(link = False)
+    cxx_config_bench.library_add(
+      drake.copy(elle.boost.system_dynamic, 'lib', True))
+    cxx_config_bench += elle.boost.config_filesystem(link = False)
+    cxx_config_bench.library_add(
+      drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
+    cxx_config_bench += elle.boost.config_program_options(
+      link = False)
+    cxx_config_bench.library_add(
+      drake.copy(elle.boost.program_options_dynamic, 'lib', True))
+    cxx_config_bench.library_add(
+      drake.copy(elle.boost.regex_dynamic, 'lib', True))
+    infinit_lib_bench = infinit_lib
+  else:
+    cxx_config_bench.lib('shlwapi')
+    cxx_config_bench.lib('ws2_32')
+    cxx_config_bench.lib('gdi32')
+    cxx_config_bench.lib('mswsock')
+    cxx_config_bench.lib('dbghelp')
+    cxx_config_bench.lib('iphlpapi')
+    cxx_config_bench.lib('crypt32')
+    cxx_config_bench.library_add(elle.boost.filesystem_static)
+    cxx_config_bench.library_add(elle.boost.program_options_static)
+    cxx_config_bench.library_add(elle.boost.system_static)
+    cxx_config_bench.library_add(elle.boost.regex_static)
+    cxx_config_bench.use_whole_archive()
+    cxx_config_bench.define('ELLE_SERIALIZATION_USE_DLL')
+    cxx_config_bench.define('ELLE_TEST_NO_MEMFRY') # does not cross DLL boundaries
+    cxx_config_bench.library_add(elle.boost.test_static)
+    cxx_config_bench.library_add(elle.boost.timer_static)
+    infinit_lib_bench = drake.copy(infinit_lib, 'bench', strip_prefix = True)
+    dokan_lib_bench = drake.copy(dokan_lib, 'bench', strip_prefix = True)
+  if not windows:
+    bench_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
+  else:
+    bench_extra_libs = []
+  for n in bench_names:
+    bench = drake.cxx.Executable(
+      'bench/%s' % n,
+      [
+        drake.node('bench/%s.cc' % n),
+        infinit_lib_bench,
+      ] + bench_nodes + bench_extra_libs,
+      cxx_toolkit,
+      cxx_config_bench)
+    runner = drake.Runner(exe = bench, runs = 10)
+    runner.reporting = drake.Runner.Reporting.on_failure
+    rule_bench << runner.status

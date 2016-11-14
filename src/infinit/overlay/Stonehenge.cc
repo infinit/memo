@@ -17,10 +17,7 @@
 
 ELLE_LOG_COMPONENT("infinit.overlay.Stonehenge");
 
-DAS_MODEL(infinit::overlay::StonehengeConfiguration::Peer,
-          (host, port, id), DasPeer);
-DAS_MODEL_DEFAULT(infinit::overlay::StonehengeConfiguration::Peer, DasPeer);
-DAS_MODEL_SERIALIZE(infinit::overlay::StonehengeConfiguration::Peer);
+DAS_SERIALIZE(infinit::overlay::StonehengeConfiguration::Peer);
 
 namespace infinit
 {

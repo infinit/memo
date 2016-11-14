@@ -2,6 +2,7 @@
 
 #include <boost/iterator/zip_iterator.hpp>
 
+#include <elle/Lazy.hh>
 #include <elle/bench.hh>
 #include <elle/cast.hh>
 #include <elle/log.hh>
@@ -32,19 +33,23 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.ACB");
 
-DAS_MODEL_FIELDS(infinit::model::doughnut::ACLEntry,
-                 (key, read, write, token));
-
 namespace infinit
 {
   namespace model
   {
     namespace doughnut
     {
-      DAS_MODEL_DEFINE(ACLEntry, (key, read, write, token),
-                       DasACLEntry);
-      DAS_MODEL_DEFINE(ACLEntry, (key, read, write),
-                       DasACLEntryPermissions);
+      using DasACLEntry = das::Model<
+        ACLEntry,
+        decltype(elle::meta::list(symbols::key,
+                                  symbols::read,
+                                  symbols::write,
+                                  symbols::token))>;
+      using DasACLEntryPermissions = das::Model<
+        ACLEntry,
+        decltype(elle::meta::list(symbols::key,
+                                  symbols::read,
+                                  symbols::write))>;
     }
   }
 }
@@ -669,7 +674,7 @@ namespace infinit
               if (!key.verify(this->data_signature(), *this->_data_sign()))
               {
                 ELLE_DEBUG("%s: group author signature invalid", *this);
-                return blocks::ValidationResult::failure("Incorrect group key signature");
+                return blocks::ValidationResult::failure("invalid group key signature");
               }
             }
             catch (elle::Error const& e)
@@ -811,7 +816,7 @@ namespace infinit
         {
           static elle::Bench bench("bench.acb.seal.aclchange", 10000_sec);
           elle::Bench::BenchScope scope(bench);
-          ELLE_DEBUG_SCOPE("%s: ACL changed, seal", *this);
+          ELLE_TRACE_SCOPE("ACL changed, seal");
           this->_acl_changed = false;
           if (this->owner_private_key())
           {
@@ -823,14 +828,15 @@ namespace infinit
             ++this->_data_version;
         }
         else
-          ELLE_DEBUG("%s: ACL didn't change", *this);
+          ELLE_DEBUG("ACL didn't change")
+            ELLE_DUMP("signature: %x", this->signature());
         if (data_changed)
         {
           static elle::Bench bench("bench.acb.seal.datachange", 10000_sec);
           elle::Bench::BenchScope scope(bench);
           ++this->_data_version;
-          ELLE_TRACE_SCOPE("%s: data changed, seal version %s",
-                           *this, this->_data_version);
+          ELLE_TRACE_SCOPE(
+            "data changed, seal version %s", this->_data_version);
           if (this->owner_private_key())
           {
             ELLE_DEBUG("we are owner");
@@ -843,7 +849,7 @@ namespace infinit
             secret = cryptography::secretkey::generate(256);
             key = secret;
           }
-          ELLE_DUMP("%s: new block secret: %s", *this, key.get());
+          ELLE_DUMP("new block secret: %s", key.get());
           auto seal_version = this->doughnut()->version();
           static bool no_encrypt = elle::os::inenv("INFINIT_DISABLE_TOKEN_ENCRYPT");
           if (no_encrypt)
@@ -920,7 +926,7 @@ namespace infinit
           this->_data_changed = false;
         }
         else
-          ELLE_DEBUG("%s: data didn't change", *this);
+          ELLE_DEBUG("data didn't change");
         // Even if only the ACL was changed, we need to re-sign because the ACL
         // address is part of the signature.
         if (acl_changed || data_changed || version)
@@ -974,11 +980,14 @@ namespace infinit
           }
           if (!sign_key)
             throw ValidationFailed("not owner and no write permissions");
-          ELLE_DEBUG_SCOPE("%s: sign data", *this);
+          ELLE_DEBUG_SCOPE("sign data");
           this->_data_signature = std::make_shared<typename Super::SignFuture>(
               sign_key->sign_async(
                 *this->_data_sign(), this->doughnut()->version()));
+          ELLE_DUMP("signature: %s",
+                    elle::lazy([&] { return this->_data_signature->value(); }));
           this->_sign_key = sign_key;
+
         }
         // restart signature process in case we were restored from storage
         if (!this->_data_signature->running()
@@ -1017,16 +1026,12 @@ namespace infinit
         elle::serialization::SerializerOut& s,
         elle::Version const& v)
       {
-        s.serialize(
-          // FIXME: no non-const overload for that version
-          "acls", elle::unconst(this->_block.acl_entries()),
-          elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
+        s.serialize<das::Serializer<ACLEntry, DasACLEntryPermissions>>(
+          "acls", this->_block.acl_entries());
         if (v >= elle::Version(0, 4, 0))
         {
-          s.serialize(
-            // FIXME: no non-const overload for that version
-            "group_acls", elle::unconst(this->_block.acl_group_entries()),
-            elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
+          s.serialize<das::Serializer<ACLEntry, DasACLEntryPermissions>>(
+            "group_acls", this->_block.acl_group_entries());
           s.serialize("world_readable", this->_block.world_readable());
           s.serialize("world_writable", this->_block.world_writable());
         }

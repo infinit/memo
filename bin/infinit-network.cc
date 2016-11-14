@@ -662,6 +662,8 @@ COMMAND(delete_)
     for (auto const& volume: volumes)
     {
       auto vol_path = ifnt._volume_path(volume);
+      auto v = ifnt.volume_get(volume);
+      boost::filesystem::remove_all(v.root_block_cache_dir());
       if (boost::filesystem::remove(vol_path))
         report_action("deleted", "volume", volume, std::string("locally"));
     }
@@ -948,7 +950,7 @@ COMMAND(stats)
       "stat",
       "stat",
       boost::none,
-      Headers{},
+      infinit::Headers(),
       false);
 
   // FIXME: write Storages::operator(std::ostream&)
@@ -989,6 +991,8 @@ COMMAND(inspect)
           std::cout << elle::json::pretty_print(response.result.get())
                     << std::endl;
         }
+        else
+          std::cout << "Running" << std::endl;
       }
     };
   if (flag(args, "status"))

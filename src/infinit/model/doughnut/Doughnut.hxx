@@ -116,4 +116,6 @@ namespace infinit
   }
 }
 
+DAS_SERIALIZE(infinit::model::doughnut::AdminKeys);
+
 #endif
