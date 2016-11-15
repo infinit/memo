@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+
+from utils import *
+
+with Infinit(user = 'bob') as bob:
+  bob.run(['infinit-user', '--create'])
+  bob.run(['infinit-storage', '--create', 's', '--filesystem'])
+  bob.run(['infinit-network', '--create', 'n', '--storage', 's'])
+  bob.run(['infinit-volume', '--create', 'v', '--network', 'n'])
+  suites_path = os.environ['SIBYLFS_SUITE_PATH']
+  sibylfs_bin = os.environ['SIBYLFS_BIN_PATH']
+  fails_expected = int(os.environ['EXPECTED_FAILS'])
+  vol_proc = None
+  try:
+    mountpoint = '%s/mnt' % bob
+    peer_file = '%s/peerfile' % bob
+    vol_proc = bob.spawn([
+      'infinit-volume', '--run', 'v',
+      '-m', mountpoint,
+      '--endpoints-file', peer_file,
+      '--allow-root-creation',
+    ])
+    # Wait for volume to be mounted.
+    while not os.path.exists(peer_file):
+      from time import sleep
+      sleep(1)
+    out_dir = '%s/results' % bob
+    os.makedirs(out_dir, exist_ok = True)
+    bob.run([
+      sibylfs_bin, 'exec',
+      '--suites=%s' % suites_path,
+      '--model=path=%s' % mountpoint,
+      '--out-dir=%s' % out_dir,
+    ], timeout = 7200)
+    check_dir = '%s/%s' % (out_dir, os.listdir(out_dir)[0])
+    bob.run([sibylfs_bin, 'check', 'posix_spec', check_dir])
+    # Check that .err files generated while checking the traces are empty.
+    res = {}
+    fail_count = 0
+    prefix = 'check_exec_' # prefix of output files from checking traces.
+    results_dir = '%s/path=%s' % (check_dir, mountpoint)
+    for dir_path, _, file_names in os.walk(results_dir):
+      if dir_path.split('/')[-1] == 'results':
+        for name in file_names:
+          if name.split('.')[-1] == 'err' and name.startswith(prefix):
+            suite = dir_path.split('/')[-2]
+            if not res.get(suite):
+              res[suite] = {'total': 0, 'passed': 0}
+            res[suite]['total'] += 1
+            if os.path.getsize('%s/%s' % (dir_path, name)) > 0:
+              fail_count += 1
+              print('failed: %s -- %s' % (suite,
+                                          name.split('.')[0][len(prefix):]))
+            else:
+              res[suite]['passed'] += 1
+    import json
+    print('failed %s tests' % fail_count)
+    print(json.dumps(res, indent = 2, sort_keys = True))
+    if fail_count > fails_expected:
+      raise AssertionError('More tests failed than expected: %s > %s' % \
+                           (fail_count, fails_expected))
+  finally:
+    if vol_proc:
+      vol_proc.terminate()
+      out, err = vol_proc.communicate(timeout = 30)
+      try:
+        assertEq(vol_proc.wait(), 0)
+      except:
+        print('STDOUT: %s' % out)
+        print('STDERR: %s' % err)
+        raise
