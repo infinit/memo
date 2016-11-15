@@ -918,10 +918,7 @@ ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
     elle::make_unique<Memory>(storage_a),
     elle::make_unique<Memory>(storage_b),
     elle::make_unique<Memory>(storage_c),
-    boost::optional<elle::Version>(),
-    boost::optional<elle::Version>(),
-    boost::optional<elle::Version>(),
-    monitoring_path
+    monitoring_socket_path_a = monitoring_path
   );
   BOOST_CHECK(boost::filesystem::exists(monitoring_path));
   reactor::network::UnixDomainSocket socket(monitoring_path);
