@@ -56,9 +56,7 @@ with Infinit(user = 'bob') as bob:
     import json
     print('failed %s tests' % fail_count)
     print(json.dumps(res, indent = 2, sort_keys = True))
-    if fail_count > fails_expected:
-      raise AssertionError('More tests failed than expected: %s > %s' % \
-                           (fail_count, fails_expected))
+    assertEq(fail_count, fails_expected)
   finally:
     if vol_proc:
       vol_proc.terminate()
