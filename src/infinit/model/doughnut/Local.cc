@@ -490,24 +490,32 @@ namespace infinit
               {
                 try
                 {
-                  auto conn = std::make_shared<Connection>(*this,
-                                                           std::move(socket));
+                  auto conn = std::make_shared<Connection>(
+                    *this, std::move(socket));
+                  elle::SafeFinally remove;
                   // Don't make this connection visible until auth is done.
                   if (disable_key)
+                  {
                     this->_peers.emplace_front(conn);
+                    remove.action(
+                      [this, it = this->_peers.begin()] ()
+                      {
+                        this->_peers.erase(it);
+                      });
+                  }
                   else
                     elle::unconst(conn->rpcs()._ready).connect(
-                      [this, conn] (RPCServer*) {
+                      [this, conn, &remove] (RPCServer*)
+                      {
                         this->_peers.emplace_front(conn);
+                        remove.action(
+                          [this, conn, it = this->_peers.begin()] ()
+                          {
+                            elle::unconst(conn->rpcs()._ready).
+                              disconnect_all_slots();
+                            this->_peers.erase(it);
+                          });
                       });
-                  elle::SafeFinally f([&] {
-                      elle::unconst(conn->rpcs()._ready).disconnect_all_slots();
-                      auto it = std::find(this->_peers.begin(),
-                                          this->_peers.end(),
-                                          conn);
-                      if (it != this->_peers.end())
-                        this->_peers.erase(it);
-                  });
                   conn->_run();
                 }
                 catch (infinit::protocol::Serializer::EOF const&)
