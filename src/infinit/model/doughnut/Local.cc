@@ -505,11 +505,11 @@ namespace infinit
                   }
                   else
                     elle::unconst(conn->rpcs()._ready).connect(
-                      [this, conn, &remove] (RPCServer*)
+                      [this, &conn, &remove] (RPCServer*)
                       {
                         this->_peers.emplace_front(conn);
                         remove.action(
-                          [this, conn, it = this->_peers.begin()] ()
+                          [this, &conn, it = this->_peers.begin()] ()
                           {
                             elle::unconst(conn->rpcs()._ready).
                               disconnect_all_slots();
