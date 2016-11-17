@@ -249,6 +249,12 @@ namespace infinit
                                        model::StoreMode mode)
     {
       ELLE_WARN("Conflict editing %f, dropping changes", block.address());
+      if (auto mb = dynamic_cast<blocks::MutableBlock*>(&current))
+      {
+        auto v = mb->version();
+        mb->seal(v + 1);
+        ELLE_ASSERT_GT(mb->version(), v);
+      }
       return current.clone();
     }
 

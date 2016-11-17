@@ -432,6 +432,7 @@ namespace infinit
     elle::serialization::Context _context;
     boost::optional<infinit::cryptography::SecretKey> _key;
     boost::signals2::signal<void(RPCServer*)> _destroying;
+    boost::signals2::signal<void(RPCServer*)> _ready;
     ELLE_ATTRIBUTE(elle::Version, version);
   };
 

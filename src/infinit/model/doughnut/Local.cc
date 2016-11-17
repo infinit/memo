@@ -460,6 +460,7 @@ namespace infinit
               infinit::cryptography::Cipher::aes256,
               infinit::cryptography::Mode::cbc);
             rpcs._key.emplace(std::move(password));
+            rpcs._ready(&rpcs);
             return true;
           }));
         using Keys = std::vector<cryptography::rsa::PublicKey>;
@@ -476,6 +477,7 @@ namespace infinit
       void
       Local::_serve(std::function<std::unique_ptr<std::iostream> ()> accept)
       {
+        static bool disable_key = elle::os::inenv("INFINIT_RPC_DISABLE_CRYPTO");
         elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
         {
           while (true)
@@ -488,12 +490,33 @@ namespace infinit
               {
                 try
                 {
-                  this->_peers.emplace_front(
-                    std::make_shared<Connection>(*this, std::move(socket)));
-                  auto it = this->_peers.begin();
-                  auto peer = *it;
-                  elle::SafeFinally f([&] { this->_peers.erase(it); });
-                  peer->_run();
+                  auto conn = std::make_shared<Connection>(
+                    *this, std::move(socket));
+                  elle::SafeFinally remove;
+                  // Don't make this connection visible until auth is done.
+                  if (disable_key)
+                  {
+                    this->_peers.emplace_front(conn);
+                    remove.action(
+                      [this, it = this->_peers.begin()] ()
+                      {
+                        this->_peers.erase(it);
+                      });
+                  }
+                  else
+                    elle::unconst(conn->rpcs()._ready).connect(
+                      [this, &conn, &remove] (RPCServer*)
+                      {
+                        this->_peers.emplace_front(conn);
+                        remove.action(
+                          [this, &conn, it = this->_peers.begin()] ()
+                          {
+                            elle::unconst(conn->rpcs()._ready).
+                              disconnect_all_slots();
+                            this->_peers.erase(it);
+                          });
+                      });
+                  conn->_run();
                 }
                 catch (infinit::protocol::Serializer::EOF const&)
                 {}
