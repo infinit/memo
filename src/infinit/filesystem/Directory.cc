@@ -137,12 +137,14 @@ namespace infinit
          d._files.erase(op.target);
          break;
        }
-       elle::Buffer data;
-       {
-         elle::IOStream os(data.ostreambuf());
-         elle::serialization::binary::SerializerOut output(os);
-         output.serialize_forward(d);
-       }
+       elle::Buffer data = [&d]
+         {
+           elle::Buffer res;
+           elle::IOStream os(res.ostreambuf());
+           elle::serialization::binary::SerializerOut output(os);
+           output.serialize_forward(d);
+           return res;
+         }();
        auto res = elle::cast<ACLBlock>::runtime(current.clone());
        res->data(data);
        return std::move(res);
@@ -294,25 +296,26 @@ namespace infinit
 
     std::unique_ptr<model::blocks::ACLBlock> DirectoryData::null_block;
 
-    DirectoryData::DirectoryData(boost::filesystem::path path, model::blocks::Block& block, std::pair<bool, bool> perms)
+    DirectoryData::DirectoryData(boost::filesystem::path path,
+                                 model::blocks::Block& block,
+                                 std::pair<bool, bool> perms)
+      : _path{path}
+      , _address{block.address().value(), model::flags::mutable_block, false}
+      , _last_used{FileSystem::now()}
+      , _block_version{-1}
+      , _prefetching{false}
     {
-      _path = path;
-      _address = Address(block.address().value(), model::flags::mutable_block, false);
-      _last_used = FileSystem::now();
-      _block_version = -1;
-      _prefetching = false;
       update(block, perms);
     }
 
     DirectoryData::DirectoryData(boost::filesystem::path path, Address address)
-    {
-      _path = path;
-      _address = address;
-      _last_used = FileSystem::now();
-      _block_version = -1;
-      _prefetching = false;
-      _inherit_auth = false;
-    }
+      : _path{path}
+      , _address{address}
+      , _last_used{FileSystem::now()}
+      , _block_version{-1}
+      , _prefetching{false}
+      , _inherit_auth{false}
+    {}
 
     DirectoryData::DirectoryData(elle::serialization::Serializer& s,
                                  elle::Version const& v)
@@ -346,7 +349,8 @@ namespace infinit
     void
     DirectoryData::update(Block& block, std::pair<bool, bool> perms)
     {
-      auto new_version =  dynamic_cast<model::blocks::MutableBlock&>(block).version();
+      auto new_version =
+        dynamic_cast<model::blocks::MutableBlock&>(block).version();
       if (_block_version >= new_version)
       {
         ELLE_WARN("%s: ignoring update at %f from obsolete block %s since we have %s",
@@ -514,15 +518,12 @@ namespace infinit
       auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
         this->_owner.block_store());
       if (dht->local())
-      {
-        auto& storage = dht->local()->storage();
-        if (storage)
-        {
-          if (storage->capacity())
-            st->f_blocks = *storage->capacity() / 32768;
-          st->f_bavail = st->f_bfree = st->f_blocks - storage->usage() / 32768;
-        }
-      }
+        if (auto& storage = dht->local()->storage())
+          {
+            if (storage->capacity())
+              st->f_blocks = *storage->capacity() / 32768;
+            st->f_bavail = st->f_bfree = st->f_blocks - storage->usage() / 32768;
+          }
     }
 
     void
@@ -573,7 +574,7 @@ namespace infinit
         if (it != fs.file_cache().end())
           return (*it)->block_version();
       }
-      return boost::optional<int>();
+      return {};
     }
 
     void
@@ -922,7 +923,9 @@ namespace infinit
         else if (*special == "fsck.deref")
         {
           this->_data->_files.erase(value);
-          this->_data->write(*_owner.block_store(), {OperationType::remove, value}, DirectoryData::null_block,
+          this->_data->write(*_owner.block_store(),
+                             {OperationType::remove, value},
+                             DirectoryData::null_block,
                              true);
           return;
         }
@@ -942,8 +945,10 @@ namespace infinit
           std::string ename = value.substr(p1+1, p2 - p1 - 1);
           Address eaddr = Address::from_string(value.substr(p2+1));
           this->_data->_files[ename] = std::make_pair(type, eaddr);
-          this->_data->write(*_owner.block_store(), {OperationType::insert, ename}, DirectoryData::null_block,
-                      true);
+          this->_data->write(*_owner.block_store(),
+                             {OperationType::insert, ename},
+                             DirectoryData::null_block,
+                             true);
           return;
         }
         else if (*special == "fsck.rmblock")
