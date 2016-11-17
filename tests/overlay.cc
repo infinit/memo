@@ -18,6 +18,24 @@ using namespace infinit::model::blocks;
 using namespace infinit::model::doughnut;
 using namespace infinit::overlay;
 
+static
+void
+persist(std::function<void()> f)
+{
+  for (int i=0; i<20; ++i)
+  {
+    try
+    {
+      f();
+      break;
+    }
+    catch (elle::Error const&)
+    {
+      reactor::sleep(100_ms);
+    }
+  }
+}
+
 class TestConflictResolver
   : public DummyConflictResolver
   {
@@ -197,9 +215,14 @@ ELLE_TEST_SCHEDULED(
         ELLE_LOG("store block")
           dht_a.dht->store(*block, STORE_INSERT, tcr());
         ELLE_LOG("lookup block")
+        {
+          persist([&] {
+            dht_b.dht->overlay()->lookup(block->address(), OP_FETCH).lock();
+          });
           BOOST_CHECK_EQUAL(
             dht_b.dht->overlay()->lookup(block->address(), OP_FETCH).lock()->id(),
             dht_a.dht->id());
+        }
       }
       // Partition peer
       instrument.transmission().close();
@@ -231,21 +254,12 @@ ELLE_TEST_SCHEDULED(
   discover(dht_b, *dht_a, anonymous);
   ELLE_LOG("lookup block")
   {
-    for (int i=0; i<20; ++i)
-    {
-      try
-      {
+    persist([&] { 
         dht_b.dht->overlay()->lookup(old_address, OP_FETCH).lock();
-        break;
-      }
-      catch (elle::Error const&)
-      {
-        reactor::sleep(100_ms);
-      }
-    }
+    });
     BOOST_CHECK_EQUAL(
-      dht_b.dht->overlay()->lookup(old_address, OP_FETCH).lock()->id(),
-      id_a);
+        dht_b.dht->overlay()->lookup(old_address, OP_FETCH).lock()->id(),
+        id_a);
   }
   ELLE_LOG("restart first DHT")
   {
@@ -269,18 +283,9 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("lookup second block")
   ELLE_LOG("lookup block")
   {
-    for (int i=0; i<20; ++i)
-    {
-      try
-      {
+    persist([&] {
         dht_b.dht->overlay()->lookup(new_address, OP_FETCH).lock();
-        break;
-      }
-      catch (elle::Error const&)
-      {
-        reactor::sleep(100_ms);
-      }
-    }
+    });
     BOOST_CHECK_EQUAL(
       dht_b.dht->overlay()->lookup(new_address, OP_FETCH).lock()->id(),
       id_a);
