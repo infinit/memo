@@ -150,17 +150,24 @@ x86_64-windows-mingw4:
     - git submodule sync --recursive
     - git submodule update --init --recursive
     - git fetch origin --tags
-    - mkdir -p ../fs-build ../fs-install
-    - farm/configure --arch x86_64 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-    - cd ../fs-build && python3 drake --website=false -j $(nproc) //build
-    - cd ../fs-build && WINEDEBUG=-all python3 drake --website=false -j $(($(nproc) / 4)) //check
-    - rm -rf ../fs-install && mkdir -p ../fs-install
+    - SOURCE_DIR="${CI_PROJECT_DIR}"
+    - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
+    - INSTALL_DIR="${SOURCE_DIR}/_install"
+    - DESC=$(git describe)
+    - time ./buildenv --pick-build-tree --branch "$CI_BUILD_REF_NAME" --link-build-tree "$BUILD_DIR" --build-trees-root "/cache/$CI_PROJECT_NAME"
+    - time ./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID" --verbose
+    - mkdir -p "$INSTALL_DIR"
+    - farm/configure --arch x86_64 --os windows --compiler mingw4 --project Filesystem --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
+    - cd "$BUILD_DIR"
+    - python3 drake --website=false -j $(nproc) //build
+    - WINEDEBUG=-all python3 drake --website=false -j $(($(nproc) / 4)) //check
+    - rm -rf "$INSTALL_DIR" && mkdir -p "$INSTALL_DIR"
     - python3 drake -j $(nproc) //install
-    - mv ../fs-install "../infinit-$(GIT_DIR=../fs/.git git describe)"
-    - cd .. && zip -r "infinit-$(GIT_DIR=fs/.git git describe).zip" "infinit-$(GIT_DIR=fs/.git git describe)" && cd fs-build
-    - mv "../infinit-$(GIT_DIR=../fs/.git git describe)" ../fs-install
-    - scp "../infinit-$(GIT_DIR=../fs/.git git describe).zip" buildslave@packages.infinit.sh:tmp
-    - rm "../infinit-$(GIT_DIR=../fs/.git git describe).zip"
+    - mv "$INSTALL_DIR" "../infinit-${DESC}"
+    - cd .. && zip -r "infinit-${DESC}.zip" "infinit-$(GIT_DIR=fs/.git git describe)" && cd "$BUILD_DIR"
+    - mv "../infinit-${DESC}" "$INSTALL_DIR"
+    - scp "$INSTALL_DIR/infinit-${DESC}.zip" buildslave@packages.infinit.sh:tmp
+    - rm "$INSTALL_DIR/infinit-${DESC}.zip"
   tags:
     - x86_64
     - windows
