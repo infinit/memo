@@ -340,11 +340,16 @@ ELLE_TEST_SCHEDULED(
   discover(*client, *dht_a, anonymous);
   discover(*client, *dht_b, anonymous);
   std::vector<infinit::model::Address> addrs;
-  for (int i=0; i<50; ++i)
+  for (int a=0; a<10; ++a)
   {
-    auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
-    addrs.push_back(block->address());
+    for (int i=0; i<50; ++i)
+    {
+      auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
+      addrs.push_back(block->address());
     client->dht->store(std::move(block), STORE_INSERT, tcr());
+    }
+    if (b1.size() >=5 && b2.size() >=5)
+      break;
   }
   ELLE_LOG("stores: %s %s", b1.size(), b2.size());
   BOOST_CHECK_GE(b1.size(), 5);
@@ -389,19 +394,24 @@ ELLE_TEST_SCHEDULED(
     // writes will fail until it connects
     wait_until_ready(*client);
     std::vector<infinit::model::Address> addrs;
-    try
+    for (int a=0; a<10; ++a)
     {
-      for (int i=0; i<50; ++i)
+      try
       {
-        auto block = client->dht->make_block<ACLBlock>(std::string("block"));
-        addrs.push_back(block->address());
-        client->dht->store(std::move(block), STORE_INSERT, tcr());
+        for (int i=0; i<50; ++i)
+        {
+          auto block = client->dht->make_block<ACLBlock>(std::string("block"));
+          addrs.push_back(block->address());
+          client->dht->store(std::move(block), STORE_INSERT, tcr());
+        }
       }
-    }
-    catch (elle::Error const& e)
-    {
-      ELLE_ERR("Exception storing blocks: %s", e);
-      throw;
+      catch (elle::Error const& e)
+      {
+        ELLE_ERR("Exception storing blocks: %s", e);
+        throw;
+      }
+      if (b1.size()-pa >= 5 && b2.size()-pb >=5 && b3.size()-pc >=5)
+        break;
     }
     ELLE_LOG("stores: %s %s %s", b1.size(), b2.size(), b3.size());
     BOOST_CHECK_GE(b1.size()-pa, 5);
@@ -443,11 +453,16 @@ ELLE_TEST_SCHEDULED(
   discover(*client, *dht_a, anonymous);
   discover(*dht_a, *dht_b, anonymous);
   std::vector<infinit::model::Address> addrs;
-  for (int i=0; i<50; ++i)
+  for (int a=0; a<10; ++a)
   {
-    auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
-    addrs.push_back(block->address());
+    for (int i=0; i<50; ++i)
+    {
+      auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
+      addrs.push_back(block->address());
     client->dht->store(std::move(block), STORE_INSERT, tcr());
+    }
+    if (b1.size() >= 5 && b2.size() >= 5)
+      break;
   }
   ELLE_LOG("stores: %s %s", b1.size(), b2.size());
   BOOST_CHECK_GE(b1.size(), 5);
