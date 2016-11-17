@@ -230,9 +230,23 @@ ELLE_TEST_SCHEDULED(
     ::keys = keys, make_overlay = builder, ::storage = nullptr);
   discover(dht_b, *dht_a, anonymous);
   ELLE_LOG("lookup block")
+  {
+    for (int i=0; i<20; ++i)
+    {
+      try
+      {
+        dht_b.dht->overlay()->lookup(old_address, OP_FETCH).lock();
+        break;
+      }
+      catch (elle::Error const&)
+      {
+        reactor::sleep(100_ms);
+      }
+    }
     BOOST_CHECK_EQUAL(
       dht_b.dht->overlay()->lookup(old_address, OP_FETCH).lock()->id(),
       id_a);
+  }
   ELLE_LOG("restart first DHT")
   {
     dht_a.reset();
@@ -253,9 +267,24 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("discover new endpoints")
     discover(dht_b, *dht_a, anonymous);
   ELLE_LOG("lookup second block")
+  ELLE_LOG("lookup block")
+  {
+    for (int i=0; i<20; ++i)
+    {
+      try
+      {
+        dht_b.dht->overlay()->lookup(new_address, OP_FETCH).lock();
+        break;
+      }
+      catch (elle::Error const&)
+      {
+        reactor::sleep(100_ms);
+      }
+    }
     BOOST_CHECK_EQUAL(
       dht_b.dht->overlay()->lookup(new_address, OP_FETCH).lock()->id(),
       id_a);
+  }
 }
 
 ELLE_TEST_SCHEDULED(
