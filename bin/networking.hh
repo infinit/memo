@@ -648,8 +648,7 @@ namespace infinit
           }
           infinit::protocol::Serializer serializer{
             *socket, infinit::elle_serialization_version(v), false};
-          auto stream =
-            infinit::protocol::ChanneledStream{serializer, serializer.version()};
+          auto stream = infinit::protocol::ChanneledStream{serializer};
           match_versions(stream);
           action(stream);
         };
@@ -679,8 +678,7 @@ namespace infinit
             }
             infinit::protocol::Serializer serializer{
               *socket, infinit::elle_serialization_version(v), false};
-            auto stream =
-              infinit::protocol::ChanneledStream{serializer, serializer.version()};
+            auto stream = infinit::protocol::ChanneledStream{serializer};
             match_versions(stream);
             action(stream);
           };

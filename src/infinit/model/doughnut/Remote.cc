@@ -112,7 +112,7 @@ namespace infinit
                     auto serializer = elle::make_unique<protocol::Serializer>(
                       *socket, sv, false);
                     auto channels =
-                    elle::make_unique<protocol::ChanneledStream>(*serializer, sv);
+                    elle::make_unique<protocol::ChanneledStream>(*serializer);
                     if (!disable_key)
                       this->_key_exchange(*channels);
                     ELLE_TRACE("%s: connected", this);
