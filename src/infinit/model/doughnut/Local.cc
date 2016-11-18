@@ -564,7 +564,8 @@ namespace infinit
         , _serializer(*this->_stream,
                       elle_serialization_version(local.doughnut().version()),
                       false)
-        , _channels(this->_serializer)
+        , _channels(this->_serializer,
+                    elle_serialization_version(local.doughnut().version()))
         , _rpcs(this->_local.doughnut().version())
       {
         this->_local._register_rpcs(this->_rpcs);

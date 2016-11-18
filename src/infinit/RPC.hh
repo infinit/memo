@@ -315,8 +315,8 @@ namespace infinit
     void
     _serve(protocol::Serializer& serializer)
     {
-      protocol::ChanneledStream channels(serializer);
-      this->_serve(channels);
+      auto chans = protocol::ChanneledStream{serializer, this->_version};
+      this->_serve(chans);
     }
 
     void

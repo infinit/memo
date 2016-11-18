@@ -13,6 +13,12 @@
 
 ELLE_LOG_COMPONENT("RPC");
 
+infinit::protocol::ChanneledStream
+make_channels(const infinit::protocol::Serializer& serializer)
+{
+  return {serializer, serializer.version()};
+}
+
 struct Server
 {
   Server(std::function<void (infinit::RPCServer&)> rpcs = {})
@@ -33,7 +39,7 @@ struct Server
       this->rpcs(s);
     s.add("succ", std::function<int (int)>([] (int x) { return x + 1; }));
     infinit::protocol::Serializer serializer(*socket, infinit::version(), false);
-    infinit::protocol::ChanneledStream channels(serializer);
+    auto channels = make_channels(serializer};
     this->channels = &channels;
     s.serve(channels);
     this->channels = nullptr;
@@ -63,7 +69,7 @@ ELLE_TEST_SCHEDULED(move)
     });
   auto stream = s.connect();
   infinit::protocol::Serializer serializer(stream, infinit::version(), false);
-  infinit::protocol::ChanneledStream channels(serializer);
+  auto channels = make_channels(serializer);
   infinit::RPC<std::unique_ptr<int> (int, std::unique_ptr<int>)>
     rpc("coin", channels, infinit::version());
   try
@@ -81,7 +87,7 @@ ELLE_TEST_SCHEDULED(unknown)
   Server s;
   auto stream = s.connect();
   infinit::protocol::Serializer serializer(stream, infinit::version(), false);
-  infinit::protocol::ChanneledStream channels(serializer);
+  auto channels = make_channels(serializer);
   infinit::RPC<int (int)> unknown("unknown", channels, infinit::version());
   BOOST_CHECK_THROW(unknown(0), infinit::UnknownRPC);
   infinit::RPC<int (int)> succ("succ", channels, infinit::version());
@@ -101,7 +107,8 @@ ELLE_TEST_SCHEDULED(simultaneous)
     });
   auto stream = s.connect();
   infinit::protocol::Serializer serializer(stream, infinit::version(), false);
-  infinit::protocol::ChanneledStream channels(serializer);
+  auto channels
+    = infinit::protocol::ChanneledStream{serializer, serializer.version()};
   infinit::RPC<int (int)> ping("ping", channels, infinit::version());
   elle::With<reactor::Scope>() << [&](reactor::Scope& s)
   {
@@ -134,7 +141,7 @@ ELLE_TEST_SCHEDULED(bidirectional)
     });
   auto stream = s.connect();
   infinit::protocol::Serializer serializer(stream, infinit::version(), false);
-  infinit::protocol::ChanneledStream channels(serializer);
+  auto channels = make_channels(serializer);
   infinit::RPCServer rev;
   rev.add("ping",
         std::function<int(int)>(
