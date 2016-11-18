@@ -165,7 +165,7 @@ x86_64-windows-mingw4:
     - rm -rf "$INSTALL_DIR" && mkdir -p "$INSTALL_DIR"
     - python3 drake -j $(nproc) //install
     - mv "$INSTALL_DIR" "../infinit-${DESC}"
-    - cd .. && zip -r "infinit-${DESC}.zip" "infinit-$(GIT_DIR=fs/.git git describe)" && cd "$BUILD_DIR"
+    - cd .. && zip -r "infinit-${DESC}.zip" "infinit-${DESC}" && cd "$BUILD_DIR"
     - mv "../infinit-${DESC}" "$INSTALL_DIR"
     - scp "$INSTALL_DIR/infinit-${DESC}.zip" buildslave@packages.infinit.sh:tmp
     - rm "$INSTALL_DIR/infinit-${DESC}.zip"
