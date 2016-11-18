@@ -299,22 +299,22 @@ namespace infinit
     DirectoryData::DirectoryData(boost::filesystem::path path,
                                  model::blocks::Block& block,
                                  std::pair<bool, bool> perms)
-      : _path{path}
-      , _address{block.address().value(), model::flags::mutable_block, false}
+      : _address{block.address().value(), model::flags::mutable_block, false}
+      , _prefetching{false}
       , _last_used{FileSystem::now()}
       , _block_version{-1}
-      , _prefetching{false}
+      , _path{path}
     {
       update(block, perms);
     }
 
     DirectoryData::DirectoryData(boost::filesystem::path path, Address address)
-      : _path{path}
-      , _address{address}
+      : _address{address}
+      , _inherit_auth{false}
+      , _prefetching{false}
       , _last_used{FileSystem::now()}
       , _block_version{-1}
-      , _prefetching{false}
-      , _inherit_auth{false}
+      , _path{path}
     {}
 
     DirectoryData::DirectoryData(elle::serialization::Serializer& s,
