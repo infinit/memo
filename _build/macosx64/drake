@@ -7,6 +7,19 @@ sys.path.insert(0, '%s/../../elle/drake/src' % os.path.dirname(__file__))
 import drake
 import drake.cxx
 
+def find_python3():
+  python3 = None
+  for minor in range(9, 0, -1):
+    # /opt/local is MacPorts.
+    # /usr/local/Cellar/ is Brew.
+    for dir in ['/usr/local', '/opt/local/Library', '/usr/local/Cellar/python3/3.5.1']:
+      p = '{}/Frameworks/Python.framework/Versions/3.{}'.format(dir, minor)
+      if os.path.isdir(p):
+        return p
+
+python3 = find_python3()
+print("using python3 =", python3)
+
 tk = drake.cxx.GccToolkit('clang++')
 
 cfg = drake.cxx.Config()
@@ -15,7 +28,7 @@ cfg.enable_optimization()
 
 with drake.Drake('../..') as d:
   d.run(
-    python = '/usr/local/Cellar/python3/3.5.1/Frameworks/Python.framework/Versions/3.5/',
+    python3 = python3,
     cxx_toolkit = tk,
     cxx_config = cfg,
   )
