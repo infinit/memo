@@ -48,6 +48,7 @@ namespace infinit
       EntryType entry_type;
       Address address;
     };
+
     class DirectoryData
     {
     public:
@@ -96,6 +97,7 @@ namespace infinit
                                  Address address,
                                  bool deserialized);
     };
+
     enum class WriteTarget
     {
       none = 0,
