@@ -1,10 +1,10 @@
 #include <xattrs.hh>
 
-# ifdef INFINIT_LINUX
-#  include <attr/xattr.h>
-# elif defined(INFINIT_MACOSX)
-#  include <sys/xattr.h>
-# endif
+#if defined INFINIT_LINUX
+# include <attr/xattr.h>
+#elif defined INFINIT_MACOSX
+# include <sys/xattr.h>
+#endif
 
 #include <boost/filesystem.hpp>
 
