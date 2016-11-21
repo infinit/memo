@@ -1,5 +1,7 @@
 #include <elle/test.hh>
 
+#include <elle/err.hh>
+
 #include <reactor/network/udp-socket.hh>
 #include <reactor/network/buffer.hh>
 
@@ -18,33 +20,34 @@ using namespace infinit::model::blocks;
 using namespace infinit::model::doughnut;
 using namespace infinit::overlay;
 
-static
-void
-persist(std::function<void()> f)
+/// Make several attempts to run `f` before giving up.
+template <typename Fun>
+auto
+persist(Fun f)
 {
-  for (int i=0; i<20; ++i)
+  auto num = 20;
+  for (int i=0; i<num; ++i)
   {
     try
     {
-      f();
-      break;
+      return f();
     }
     catch (elle::Error const&)
     {
       reactor::sleep(100_ms);
     }
   }
+  elle::err("persist: failed after %s attempts", num);
 }
 
 class TestConflictResolver
   : public DummyConflictResolver
-  {
-  };
+{};
 
 inline std::unique_ptr<ConflictResolver>
 tcr()
 {
-  return elle::make_unique<TestConflictResolver>();
+  return std::make_unique<TestConflictResolver>();
 }
 
 class UTPInstrument
@@ -75,7 +78,7 @@ private:
       try
       {
         reactor::network::UDPSocket::EndPoint ep;
-        auto sz = server.receive_from(reactor::network::Buffer(buf, 10000), ep);
+        auto sz = server.receive_from(reactor::network::Buffer(buf, sizeof buf), ep);
         reactor::wait(_transmission);
         if (ep.port() != _endpoint.port())
         {
@@ -85,7 +88,7 @@ private:
         else
           server.send_to(reactor::network::Buffer(buf, sz), _client_endpoint.udp());
       }
-      catch (reactor::network::Exception const& e)
+      catch (reactor::network::Exception const&)
       {
       }
     }
@@ -108,18 +111,11 @@ static
 void
 wait_until_ready(DHT& client)
 {
-  while (true)
-  {
-    try
-    {
-      auto block = client.dht->make_block<ACLBlock>(std::string("block"));
-      client.dht->store(std::move(block), STORE_INSERT, tcr());
-      break;
-    }
-    catch (elle::Error const& e)
-    {}
-    reactor::sleep(100_ms);
-  }
+  persist([&client]
+          {
+            auto block = client.dht->make_block<ACLBlock>(std::string("block"));
+            client.dht->store(std::move(block), STORE_INSERT, tcr());
+          });
 }
 
 static
@@ -153,7 +149,7 @@ ELLE_TEST_SCHEDULED(
       return DHT(
         ::id = id,
         ::keys = keys,
-        ::storage = elle::make_unique<infinit::storage::Memory>(storage),
+        ::storage = std::make_unique<infinit::storage::Memory>(storage),
         make_overlay = builder);
     };
   auto disk = [&]
@@ -245,7 +241,7 @@ ELLE_TEST_SCHEDULED(
 {
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
-  auto dht_a = elle::make_unique<DHT>(
+  auto dht_a = std::make_unique<DHT>(
     ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false);
   Address old_address;
   ELLE_LOG("store first block")
@@ -269,7 +265,7 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("restart first DHT")
   {
     dht_a.reset();
-    dht_a = elle::make_unique<DHT>(
+    dht_a = std::make_unique<DHT>(
       ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false);
   }
   Address new_address;
@@ -304,7 +300,7 @@ ELLE_TEST_SCHEDULED(
   std::unique_ptr<infinit::storage::Storage> s(new infinit::storage::Memory(blocks));
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
-  auto dht_a = elle::make_unique<DHT>(
+  auto dht_a = std::make_unique<DHT>(
     ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp,
     ::storage = std::move(s));
@@ -329,7 +325,7 @@ ELLE_TEST_SCHEDULED(
   dht_a->dht->local()->utp_server()->socket()->close();
   s.reset(new infinit::storage::Memory(blocks));
   ELLE_LOG("recreate A");
-  auto dht_aa = elle::make_unique<DHT>(
+  auto dht_aa = std::make_unique<DHT>(
     ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp,
     ::storage = std::move(s),
@@ -360,11 +356,11 @@ ELLE_TEST_SCHEDULED(
   std::unique_ptr<infinit::storage::Storage> s2(new infinit::storage::Memory(b2));
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
-  auto dht_a = elle::make_unique<DHT>(
+  auto dht_a = std::make_unique<DHT>(
     ::id = id_a, ::keys = keys, make_overlay = builder, paxos = pax,
     dht::consensus::rebalance_auto_expand = false,
     ::storage = std::move(s1));
-  auto dht_b = elle::make_unique<DHT>(
+  auto dht_b = std::make_unique<DHT>(
     ::keys = keys, make_overlay = builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = pax,
@@ -372,7 +368,7 @@ ELLE_TEST_SCHEDULED(
   discover(*dht_b, *dht_a, anonymous);
 
   // client. Hard-coded replication_factor=3 if paxos is enabled
-  auto client = elle::make_unique<DHT>(
+  auto client = std::make_unique<DHT>(
     ::keys = keys, make_overlay = builder,
     ::paxos = pax,
     ::storage = nullptr);
@@ -406,16 +402,16 @@ ELLE_TEST_SCHEDULED(
   std::unique_ptr<infinit::storage::Storage> s3(new infinit::storage::Memory(b3));
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
-  auto dht_a = elle::make_unique<DHT>(
+  auto dht_a = std::make_unique<DHT>(
     ::id = id_a, ::keys = keys, make_overlay = builder, paxos = pax,
     dht::consensus::rebalance_auto_expand = false,
     ::storage = std::move(s1));
-  auto dht_b = elle::make_unique<DHT>(
+  auto dht_b = std::make_unique<DHT>(
     ::keys = keys, make_overlay = builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = pax,
     ::storage = std::move(s2));
-  auto dht_c = elle::make_unique<DHT>(
+  auto dht_c = std::make_unique<DHT>(
     ::keys = keys, make_overlay = builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = pax,
@@ -425,7 +421,7 @@ ELLE_TEST_SCHEDULED(
   unsigned int pa=0, pb=0, pc=0;
   for (auto tgt: std::vector<DHT*>{dht_a.get(), dht_b.get(), dht_c.get()})
   {
-    auto client = elle::make_unique<DHT>(
+    auto client = std::make_unique<DHT>(
       ::keys = keys, make_overlay = builder,
       ::paxos = pax,
       ::storage = nullptr);
@@ -475,17 +471,17 @@ ELLE_TEST_SCHEDULED(
   std::unique_ptr<infinit::storage::Storage> s2(new infinit::storage::Memory(b2));
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
-  auto dht_a = elle::make_unique<DHT>(
+  auto dht_a = std::make_unique<DHT>(
     ::id = id_a, ::keys = keys, make_overlay = builder, paxos = pax,
     dht::consensus::rebalance_auto_expand = false,
     ::storage = std::move(s1));
-  auto dht_b = elle::make_unique<DHT>(
+  auto dht_b = std::make_unique<DHT>(
     ::keys = keys, make_overlay = builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = pax,
     ::storage = std::move(s2));
 
-  auto client = elle::make_unique<DHT>(
+  auto client = std::make_unique<DHT>(
     ::keys = keys, make_overlay = builder,
     ::paxos = pax,
     ::storage = nullptr);
@@ -520,7 +516,7 @@ ELLE_TEST_SCHEDULED(
   std::vector<std::unique_ptr<DHT>> clients;
   for (int i=0; i<nservers; ++i)
   {
-    auto dht = elle::make_unique<DHT>(
+    auto dht = std::make_unique<DHT>(
       ::keys = keys, make_overlay = builder, paxos = pax,
       dht::consensus::rebalance_auto_expand = false
     );
@@ -530,7 +526,7 @@ ELLE_TEST_SCHEDULED(
     discover(*servers[i], *servers[0], true);
   for (int i=0; i<nclients; ++i)
   {
-    auto dht = elle::make_unique<DHT>(
+    auto dht = std::make_unique<DHT>(
       ::keys = keys, make_overlay = builder, paxos = pax, ::storage = nullptr,
       dht::consensus::rebalance_auto_expand = false
     );
@@ -628,15 +624,15 @@ ELLE_TEST_SCHEDULED(
   paxos_3_1, (Doughnut::OverlayBuilder, builder))
 {
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
-  auto dht_a = elle::make_unique<DHT>(
+  auto dht_a = std::make_unique<DHT>(
     ::keys = keys, make_overlay = builder, paxos = true);
-  auto dht_b = elle::make_unique<DHT>(
+  auto dht_b = std::make_unique<DHT>(
     ::keys = keys, make_overlay = builder, paxos = true);
-  auto dht_c = elle::make_unique<DHT>(
+  auto dht_c = std::make_unique<DHT>(
     ::keys = keys, make_overlay = builder, paxos = true);
   discover(*dht_a, *dht_b, false);
   discover(*dht_a, *dht_c, false);
-  auto client = elle::make_unique<DHT>(
+  auto client = std::make_unique<DHT>(
     ::keys = keys, make_overlay = builder,
     ::paxos = true,
     ::storage = nullptr);
@@ -676,10 +672,10 @@ ELLE_TEST_SCHEDULED(
 {
   static const int nservers = 5;
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
-  std::vector<std::unique_ptr<DHT>> servers;
+  auto servers = std::vector<std::unique_ptr<DHT>>{};
   for (int i=0; i<nservers; ++i)
   {
-    auto dht = elle::make_unique<DHT>(
+    auto dht = std::make_unique<DHT>(
       ::keys = keys, make_overlay = builder, paxos = false);
     servers.emplace_back(std::move(dht));
   }
@@ -733,13 +729,13 @@ ELLE_TEST_SUITE()
       conf.contact_timeout_ms = factor * valgrind(2000,20);
       conf.ping_interval_ms = factor * valgrind(200, 10);
       conf.ping_timeout_ms = factor * valgrind(500, 20);
-      return elle::make_unique<kelips::Node>(
+      return std::make_unique<kelips::Node>(
         conf, local, &dht);
     };
   auto const kouncil_builder =
     [] (Doughnut& dht, std::shared_ptr<Local> local)
     {
-      return elle::make_unique<kouncil::Kouncil>(&dht, local);
+      return std::make_unique<kouncil::Kouncil>(&dht, local);
     };
 #define BOOST_NAMED_TEST_CASE(name,  test_function )                       \
 boost::unit_test::make_test_case( boost::function<void ()>(test_function), \
@@ -786,7 +782,7 @@ boost::unit_test::make_test_case( boost::function<void ()>(test_function), \
 //   auto const kelips_builder =
 //     [] (Doughnut& dht, std::shared_ptr<Local> local)
 //     {
-//       return elle::make_unique<kelips::Node>(
+//       return std::make_unique<kelips::Node>(
 //         kelips::Configuration(), local, &dht);
 //     };
 //   dead_peer(kelips_builder, false);
