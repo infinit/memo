@@ -192,7 +192,7 @@ write_test(int64_t total_size)
   for (int64_t i = 0; i < total_size / block_size; i++)
   {
     handle->write(
-      elle::ConstWeakBuffer(std::string(block_size, 'a').data(), block_size),
+      elle::ConstWeakBuffer(std::string(block_size, 'a')),
       block_size, block_size * i);
   }
   handle->fsync(true);

@@ -77,7 +77,7 @@ private:
       try
       {
         reactor::network::UDPSocket::EndPoint ep;
-        auto sz = server.receive_from(elle::WeakBuffer(buf, sizeof buf), ep);
+        auto sz = server.receive_from(elle::WeakBuffer(buf), ep);
         reactor::wait(_transmission);
         if (ep.port() != _endpoint.port())
         {

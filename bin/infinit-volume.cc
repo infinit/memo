@@ -822,12 +822,12 @@ COMMAND(run)
             struct stat st;
             path->stat(&st);
             auto handle = path->open(O_RDONLY, 0666);
-            std::string content(st.st_size, char(0));
+            auto content = std::string(st.st_size, char(0));
             handle->read(elle::WeakBuffer(elle::unconst(content.data()),
                                           content.size()),
                          st.st_size, 0);
             handle->close();
-            elle::serialization::json::SerializerOut response(std::cout);
+            auto response = elle::serialization::json::SerializerOut(std::cout);
             response.serialize("content", content);
             response.serialize("success", true);
             response.serialize("operation", op);
@@ -877,7 +877,7 @@ COMMAND(run)
             elle::Buffer buf;
             buf.size(size);
             int nread = handles.at(handlename)->read(
-              elle::WeakBuffer(buf.contents(), buf.size()),
+              elle::WeakBuffer(buf),
               size, offset);
             buf.size(nread);
             elle::serialization::json::SerializerOut response(std::cout);
@@ -892,9 +892,7 @@ COMMAND(run)
             uint64_t offset = command.deserialize<uint64_t>("offset");
             uint64_t size = command.deserialize<uint64_t>("size");
             elle::Buffer content = command.deserialize<elle::Buffer>("content");
-            handles.at(handlename)->write(
-              elle::WeakBuffer(content.mutable_contents(), content.size()),
-              size, offset);
+            handles.at(handlename)->write(elle::WeakBuffer(content), size, offset);
           }
           else if (op == "ftruncate")
           {
@@ -1044,7 +1042,7 @@ COMMAND(start)
     cmd.serialize("volume", name);
     cmd.serialize("options", mo);
   }
-  sock.write(elle::ConstWeakBuffer(ss.str().data(), ss.str().size()));
+  sock.write(elle::ConstWeakBuffer(ss.str()));
   auto reply = sock.read_until("\n").string();
   std::stringstream replystream(reply);
   auto json = elle::json::read(replystream);
@@ -1068,7 +1066,7 @@ COMMAND(stop)
     cmd.serialize("operation", "volume-stop");
     cmd.serialize("volume", name);
   }
-  sock.write(elle::ConstWeakBuffer(ss.str().data(), ss.str().size()));
+  sock.write(elle::ConstWeakBuffer(ss.str()));
   auto reply = sock.read_until("\n").string();
   std::stringstream replystream(reply);
   auto json = elle::json::read(replystream);
@@ -1092,7 +1090,7 @@ COMMAND(status)
     cmd.serialize("operation", "volume-status");
     cmd.serialize("volume", name);
   }
-  sock.write(elle::ConstWeakBuffer(ss.str().data(), ss.str().size()));
+  sock.write(elle::ConstWeakBuffer(ss.str()));
   auto reply = sock.read_until("\n").string();
   std::stringstream replystream(reply);
   auto json = elle::json::read(replystream);
