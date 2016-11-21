@@ -166,13 +166,13 @@ namespace infinit
     std::pair<bool, bool>
     get_permissions(model::Model& model,
                     model::blocks::Block const& block);
-    NAMED_ARGUMENT(allow_root_creation);
-    NAMED_ARGUMENT(model);
-    NAMED_ARGUMENT(mountpoint);
-    NAMED_ARGUMENT(owner);
-    NAMED_ARGUMENT(root_block_cache_dir);
-    NAMED_ARGUMENT(volume_name);
-    NAMED_ARGUMENT(map_other_permissions);
+    DAS_SYMBOL(allow_root_creation);
+    DAS_SYMBOL(model);
+    DAS_SYMBOL(mountpoint);
+    DAS_SYMBOL(owner);
+    DAS_SYMBOL(root_block_cache_dir);
+    DAS_SYMBOL(volume_name);
+    DAS_SYMBOL(map_other_permissions);
     /** Filesystem using a Block Storage as backend.
     * Directory: nodes are serialized, and contains name, stat() and block
     *            address of the directory content
