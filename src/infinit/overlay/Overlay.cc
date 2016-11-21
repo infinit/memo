@@ -181,15 +181,19 @@ namespace infinit
             {
               try
               {
-                yield(this->_lookup_node(address));
+                if (auto res = this->_lookup_node(address))
+                {
+                  yield(std::move(res));
+                  return;
+                }
               }
               catch (elle::Error const& e)
               {
                 ELLE_TRACE("%s: failed to lookup node %f: %s",
                            this, address, e);
-                yield(WeakMember(new model::doughnut::DummyPeer(
-                                   *this->doughnut(), address)));
               }
+              yield(WeakMember(new model::doughnut::DummyPeer(
+                                 *this->doughnut(), address)));
             },
             "fetch node by address");
         });
