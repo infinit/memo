@@ -803,7 +803,9 @@ network_run(boost::program_options::variables_map const& args,
   {
     elle::With<InterfacePublisher>(
       network, self, dht->id(),
-      dht->local()->server_endpoint().port()) << [&]
+      dht->local()->server_endpoint().port(),
+      boost::none, flag(args, "no-local-endpoints"),
+      flag(args, "no-public-endpoints")) << [&]
     {
       run();
     };
@@ -1081,6 +1083,8 @@ run_options(std::vector<Mode::OptionDescription> opts = {})
                     "file to write peers to periodically");
   opts.emplace_back(option_listen_interface);
   opts.emplace_back(option_poll_beyond);
+  opts.emplace_back(option_no_local_endpoints);
+  opts.emplace_back(option_no_public_endpoints);
   return opts;
 }
 

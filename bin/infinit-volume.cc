@@ -959,7 +959,9 @@ COMMAND(run)
   {
     auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
     elle::With<InterfacePublisher>(
-      network, self, model->id(), local_endpoint.get().port(), advertise) << [&]
+      network, self, model->id(), local_endpoint.get().port(), advertise,
+      flag(args, "no-local-endpoints"),
+      flag(args, "no-public-endpoints")) << [&]
     {
       run();
     };
@@ -1180,8 +1182,11 @@ run_options(RunMode mode)
       elle::sprintf("push endpoints to %s", beyond(true)) },
   });
   if (mode == RunMode::run)
-    add_option(
-      { "register-service,r", BOOL_IMPLICIT, "register volume in the network"});
+    add_options({
+      { "register-service,r", BOOL_IMPLICIT, "register volume in the network"},
+        option_no_local_endpoints,
+        option_no_public_endpoints
+      });
   if (mode == RunMode::create)
     add_option(
       { "push,p", BOOL_IMPLICIT, "alias for --push-endpoints --push-volume" });
