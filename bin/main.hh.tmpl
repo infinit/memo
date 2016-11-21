@@ -3446,7 +3446,8 @@ private:
       {
         try
         {
-          auto host = reactor::network::resolve_tcp(a, std::to_string(port));
+          auto host = reactor::network::resolve_tcp(a, std::to_string(port),
+            elle::os::inenv("INFINIT_NO_IPV6"));
           endpoints.addresses.push_back(host.address().to_string());
         }
         catch (reactor::network::ResolutionError const& e)
