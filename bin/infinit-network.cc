@@ -801,10 +801,12 @@ network_run(boost::program_options::variables_map const& args,
     };
   if (push)
   {
+    auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
     elle::With<InterfacePublisher>(
       network, self, dht->id(),
       dht->local()->server_endpoint().port(),
-      boost::none, flag(args, "no-local-endpoints"),
+      advertise,
+      flag(args, "no-local-endpoints"),
       flag(args, "no-public-endpoints")) << [&]
     {
       run();
@@ -1085,6 +1087,7 @@ run_options(std::vector<Mode::OptionDescription> opts = {})
   opts.emplace_back(option_poll_beyond);
   opts.emplace_back(option_no_local_endpoints);
   opts.emplace_back(option_no_public_endpoints);
+  opts.emplace_back(option_advertise_host);
   return opts;
 }
 

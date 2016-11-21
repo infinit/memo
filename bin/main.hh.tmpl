@@ -593,6 +593,11 @@ Mode::OptionDescription option_no_public_endpoints(
   "no-public-endpoints",
   boost::program_options::value<bool>()->implicit_value(true, "true"),
   "Disable automatic detection of public endpoints");
+static
+Mode::OptionDescription option_advertise_host(
+  "advertise-host",
+  boost::program_options::value<std::vector<std::string>>()->multitoken(),
+  "advertise extra endpoint using given host");
 
 class CommandLineSerializer
   : public elle::serialization::SerializerIn

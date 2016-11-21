@@ -1202,9 +1202,7 @@ run_options(RunMode mode)
   add_options({
     { "publish", BOOL_IMPLICIT,
       "alias for --fetch-endpoints --push-endpoints" },
-    { "advertise-host", value<std::vector<std::string>>()->multitoken(),
-      "advertise extra endpoint using given host"
-    },
+    option_advertise_host,
     option_endpoint_file,
     option_port_file,
     option_port,
