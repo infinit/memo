@@ -188,6 +188,8 @@ namespace infinit
             else
               missing.push_back(a);
           }
+          if (missing.empty())
+            return;
           // Don't pass local_version to fetch, prioritizing cache feed over
           // this optimization.
           for (auto& av: missing)
