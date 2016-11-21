@@ -203,6 +203,7 @@ namespace infinit
         boost::optional<boost::filesystem::path> mountpoint = {},
         bool allow_root_creation = false,
         bool map_other_permissions = true);
+      ~FileSystem();
     private:
       struct Init;
       FileSystem(Init);
