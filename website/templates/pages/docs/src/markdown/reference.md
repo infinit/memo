@@ -750,6 +750,8 @@ $> infinit-acl --list --path /mnt/shared/awesome.txt
      bob: r
 ```
 
+_**NOTE:** To list permissions of files and folders on macOS to which you do not have access, you will need to execute the command with `sudo`. This will be fixed in a later release of Infinit._
+
 #### POSIX mode ####
 
 Since the Infinit access model is ACL based, the POSIX file mode as displayed by _ls -l_ differs from what you might expect:
