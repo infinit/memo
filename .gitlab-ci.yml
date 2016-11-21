@@ -164,11 +164,12 @@ x86_64-windows-mingw4:
     - WINEDEBUG=-all python3 drake --website=false -j $(($(nproc) / 4)) //check
     - rm -rf "$INSTALL_DIR" && mkdir -p "$INSTALL_DIR"
     - python3 drake -j $(nproc) //install
-    - mv "$INSTALL_DIR" "../infinit-${DESC}"
-    - cd .. && zip -r "infinit-${DESC}.zip" "infinit-${DESC}" && cd "$BUILD_DIR"
-    - mv "../infinit-${DESC}" "$INSTALL_DIR"
-    - scp "$INSTALL_DIR/infinit-${DESC}.zip" buildslave@packages.infinit.sh:tmp
-    - rm "$INSTALL_DIR/infinit-${DESC}.zip"
+    - cd "$SOURCE_DIR"
+    - mv "$INSTALL_DIR" "infinit-${DESC}"
+    - zip -r "infinit-${DESC}.zip" "infinit-${DESC}"
+    - mv "infinit-${DESC}" "$INSTALL_DIR"
+    - scp "infinit-${DESC}.zip" buildslave@packages.infinit.sh:tmp
+    - rm "infinit-${DESC}.zip"
   tags:
     - x86_64
     - windows
