@@ -198,10 +198,15 @@ ELLE_TEST_SCHEDULED(
 {
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   DHT dht_a(::keys = keys, make_overlay = builder, paxos = false);
-  elle::With<UTPInstrument>(dht_a.dht->local()->server_endpoints()[0]) <<
+  elle::With<UTPInstrument>(
+    Endpoint("127.0.0.1",
+             dht_a.dht->local()->server_endpoints()[0].port())) <<
     [&] (UTPInstrument& instrument)
     {
-      DHT dht_b(::keys = keys, make_overlay = builder, paxos = false, ::storage=nullptr);
+      DHT dht_b(::keys = keys,
+                make_overlay = builder,
+                paxos = false,
+                ::storage = nullptr);
       infinit::model::Endpoints ep = {
         Endpoint("127.0.0.1", instrument.server.local_endpoint().port()),
       };
@@ -254,7 +259,7 @@ ELLE_TEST_SCHEDULED(
   discover(dht_b, *dht_a, anonymous);
   ELLE_LOG("lookup block")
   {
-    persist([&] { 
+    persist([&] {
         dht_b.dht->overlay()->lookup(old_address, OP_FETCH).lock();
     });
     BOOST_CHECK_EQUAL(

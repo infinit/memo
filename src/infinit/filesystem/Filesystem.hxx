@@ -39,7 +39,7 @@ namespace infinit
 
     template <typename ... Args>
     FileSystem::FileSystem(Args&& ... args)
-      : FileSystem(elle::named::prototype(
+      : FileSystem(das::named::prototype(
                      filesystem::volume_name,
                      filesystem::model,
                      filesystem::owner = boost::none,

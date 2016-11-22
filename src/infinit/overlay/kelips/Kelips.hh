@@ -51,12 +51,13 @@ namespace infinit
         std::vector<TimedEndpoint> endpoints;
         Address address;
         Duration rtt;
-        Time last_gossip;
-        int gossip_count;
+        Time last_gossip; // Last time we gossiped about this contact
+        int gossip_count; // Number of times we gossiped about this contact
         // thread performing a contact() call on this node
         reactor::Thread::unique_ptr contacter;
         std::vector<elle::Buffer> pending;
         bool discovered; // was on_discover signal sent for this contact
+        int ping_timeouts; //Number of ping timeouts, resets on any incoming msg
       };
 
       std::ostream&

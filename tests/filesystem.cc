@@ -1452,7 +1452,8 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
   }
   {
     BOOST_CHECK(blocks.size());
-    DHTs dhts(1, owner_key,
+    DHTs dhts(1,
+              owner_key,
               keys = owner_key,
               storage = elle::make_unique<infinit::storage::Memory>(blocks),
               version = elle::Version(0,7,0),

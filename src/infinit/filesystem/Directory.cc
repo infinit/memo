@@ -755,7 +755,7 @@ namespace infinit
       for (int i = 0; i < nthreads; ++i)
         fs.running().emplace_back(
           new reactor::Thread(
-            elle::sprintf("prefetcher %x-%s", (void*)parked.get(), i),
+            elle::sprintf("prefetcher %x-%x-%s", (void*)&fs, (void*)parked.get(), i),
             prefetch_task
             ));
     }
