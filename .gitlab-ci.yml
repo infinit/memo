@@ -13,21 +13,30 @@ x86_64-centos6-gcc4:
     - git submodule update --init --recursive
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
-    - mkdir -p ../fs-build ../fs-install
-    - scl enable devtoolset-4 rh-python34 "farm/configure --arch x86_64 --os centos6 --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install"
-    - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //build"
-    - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //check"
-    - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //install"
-    - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //redhat"
-    - scp ../fs-build/infinit-$(GIT_DIR=../fs/.git git describe | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh:tmp
-    - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //debian-debug"
-    - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then scp ../fs-build/infinit-debug-symbols-centos-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
-    - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
-    - rm ../fs-build/infinit-$(GIT_DIR=../fs/.git git describe | sed -e 's:-:_:g' )-1.el6.x86_64.rpm
-    - rm ../fs-build/infinit-debug-symbols-centos-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb
-    - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j 1 //bench"
-    - GIT_DIR=../fs/.git scl enable rh-python34 "python3 ../fs/note-bench-stats ./bench"
-    - GIT_DIR=../fs/.git git push --force git@git.infinit.io:fs refs/notes/bench
+    - SOURCE_DIR="${CI_PROJECT_DIR}"
+    - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
+    - INSTALL_DIR="${SOURCE_DIR}/_install"
+    - DESC=$(git describe)
+    - time scl enable devtoolset-4 rh-python34 "./buildenv --pick-build-tree --branch $CI_BUILD_REF_NAME --link-build-tree $BUILD_DIR --build-trees-root /cache/$CI_PROJECT_NAME"
+    - time scl enable devtoolset-4 rh-python34 "./buildenv --cache-download-build-tree --exclude='*.deb,*.rpm' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION --cache-id $CI_RUNNER_ID --verbose"
+    - mkdir -p "$INSTALL_DIR"
+    - scl enable devtoolset-4 rh-python34 "farm/configure --arch x86_64 --os centos6 --compiler gcc4 --project Filesystem --source-dir $SOURCE_DIR --build-dir $BUILD_DIR --install-dir $INSTALL_DIR"
+    - cd "$BUILD_DIR"
+    - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //build"
+    - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //check"
+    - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //install"
+    - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //redhat"
+    - scp infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh:tmp
+    - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //debian-debug"
+    - if GIT_DIR="$SOURCE_DIR"/.git git describe --exact-match HEAD; then scp infinit-debug-symbols-centos-$DESC_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
+    - if GIT_DIR="$SOURCE_DIR"/.git git describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
+    - rm infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm
+    - rm infinit-debug-symbols-centos-${DESC}_0_amd64.deb
+    - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j 1 //bench"
+    - GIT_DIR="$SOURCE_DIR"/.git scl enable rh-python34 "python3 ${SOURCE_DIR}/note-bench-stats ./bench"
+    - GIT_DIR="$SOURCE_DIR"/.git git push --force git@git.infinit.io:fs refs/notes/bench
+    - cd "$SOURCE_DIR"
+    - time scl enable devtoolset-4 rh-python34 "./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch $CI_BUILD_REF_NAME --build-trees-root /cache/$CI_PROJECT_NAME --cache-namespace $CI_RUNNER_DESCRIPTION --cache-id $CI_RUNNER_ID --verbose"
   tags:
     - x86_64
     - centos6
@@ -50,22 +59,22 @@ x86_64-ubuntu-gcc4:
     - mkdir -p "$INSTALL_DIR"
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
-    - python3 drake --website=false -j $(nproc) //build //beyond/build
-    - python3 drake --website=false -j $(($(nproc) / 4)) //check //beyond/check
-    - python3 drake --website=false -j $(nproc) //install //beyond/install
-    - python3 drake -j $(nproc) //beyond/debian
+    - time python3 drake --website=false -j $(nproc) //build //beyond/build
+    - time python3 drake --website=false -j $(($(nproc) / 4)) //check //beyond/check
+    - time python3 drake --website=false -j $(nproc) //install //beyond/install
+    - time python3 drake -j $(nproc) //beyond/debian
     - scp "beyond/infinit-beyond_${DESC}_amd64.deb" buildslave@packages.infinit.sh:debian
     - ssh buildslave@packages.infinit.sh 'make debian'
     - rm "beyond/infinit-beyond_${DESC}_amd64.deb"
-    - python3 drake --website=false //docker
+    - time python3 drake --website=false //docker
     - docker tag infinit:${DESC} mefyl/infinit:${DESC}
-    - docker push mefyl/infinit:${DESC}
+    - time docker push mefyl/infinit:${DESC}
     - docker rmi {,mefyl/}infinit:${DESC}
-    - python3 drake --website=false //beyond/docker
+    - time python3 drake --website=false //beyond/docker
     - docker tag infinit-beyond:${DESC} mefyl/infinit-beyond:${DESC}
-    - docker push mefyl/infinit-beyond:${DESC}
+    - time docker push mefyl/infinit-beyond:${DESC}
     - docker rmi {,mefyl/}infinit-beyond:${DESC}
-    - time cd "${SOURCE_DIR}"
+    - cd "${SOURCE_DIR}"
     - time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID" --verbose
   tags:
     - x86_64
@@ -170,6 +179,7 @@ x86_64-windows-mingw4:
     - mv "infinit-${DESC}" "$INSTALL_DIR"
     - scp "infinit-${DESC}.zip" buildslave@packages.infinit.sh:tmp
     - rm "infinit-${DESC}.zip"
+    - time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.zip' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID" --verbose
   tags:
     - x86_64
     - windows

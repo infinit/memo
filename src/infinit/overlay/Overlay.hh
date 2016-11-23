@@ -164,7 +164,6 @@ namespace infinit
       // virtual
       // void
       // join();
-      virtual
       void
       serialize(elle::serialization::Serializer& s) override;
       typedef infinit::serialization_tag serialization_tag;

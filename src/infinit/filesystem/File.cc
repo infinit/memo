@@ -322,11 +322,13 @@ namespace infinit
     void
     FileData::write(model::Model& model,
                     WriteTarget target,
-                    std::unique_ptr<ACLBlock>& block, bool first_write)
+                    std::unique_ptr<ACLBlock>& block_, bool first_write)
     {
       ELLE_DEBUG("%s: write at %f: sz=%s, links=%s, mode=%s, fatsize=%s, firstblocksize=%s",
                  this, _address,
                  _header.size, _header.links, print_mode(_header.mode), _fat.size(), _data.size());
+      std::unique_ptr<ACLBlock> myblock_;
+      auto& block = (&block_ == &DirectoryData::null_block) ? myblock_ : block_;
       bool block_allocated = !block;
       if (!block)
       {
@@ -340,6 +342,7 @@ namespace infinit
           return;
         }
       }
+      ELLE_ASSERT(block);
       if (!block->data().empty())
       {
         FileData previous(_path, *block, {true, true});
@@ -366,6 +369,7 @@ namespace infinit
       }
       try
       {
+        ELLE_ASSERT(block);
         block->data(serdata);
         if (!block_allocated)
         {

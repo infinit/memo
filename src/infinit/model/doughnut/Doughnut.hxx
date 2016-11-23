@@ -1,7 +1,7 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_DOUGHNUT_HXX
 # define INFINIT_MODEL_DOUGHNUT_DOUGHNUT_HXX
 
-# include <elle/named.hh>
+# include <das/named.hh>
 
 namespace infinit
 {
@@ -19,21 +19,21 @@ namespace infinit
           type, name, elle::serialization::binary::serialize(value));
       }
 
-      NAMED_ARGUMENT(id);
-      NAMED_ARGUMENT(name);
-      NAMED_ARGUMENT(keys);
-      NAMED_ARGUMENT(owner);
-      NAMED_ARGUMENT(passport);
-      NAMED_ARGUMENT(consensus_builder);
-      NAMED_ARGUMENT(overlay_builder);
-      NAMED_ARGUMENT(port);
-      NAMED_ARGUMENT(listen_address);
-      NAMED_ARGUMENT(storage);
-      NAMED_ARGUMENT(version);
-      NAMED_ARGUMENT(admin_keys);
-      NAMED_ARGUMENT(rdv_host);
-      NAMED_ARGUMENT(monitoring_socket_path);
-      NAMED_ARGUMENT(protocol);
+      DAS_SYMBOL(id);
+      DAS_SYMBOL(name);
+      DAS_SYMBOL(keys);
+      DAS_SYMBOL(owner);
+      DAS_SYMBOL(passport);
+      DAS_SYMBOL(consensus_builder);
+      DAS_SYMBOL(overlay_builder);
+      DAS_SYMBOL(port);
+      DAS_SYMBOL(listen_address);
+      DAS_SYMBOL(storage);
+      DAS_SYMBOL(version);
+      DAS_SYMBOL(admin_keys);
+      DAS_SYMBOL(rdv_host);
+      DAS_SYMBOL(monitoring_socket_path);
+      DAS_SYMBOL(protocol);
 
       struct Doughnut::Init
       {
@@ -57,7 +57,7 @@ namespace infinit
       template <typename ... Args>
       Doughnut::Doughnut(Args&& ... args)
         : Doughnut(
-          elle::named::prototype(
+          das::named::prototype(
             doughnut::id,
             doughnut::keys,
             doughnut::owner,

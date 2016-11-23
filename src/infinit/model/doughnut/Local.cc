@@ -165,13 +165,15 @@ namespace infinit
         }
         catch (storage::MissingKey const&)
         {}
-        elle::Buffer data;
-        {
-          elle::IOStream s(data.ostreambuf());
-          Serializer::SerializerOut output(s);
-          auto ptr = &block;
-          output.serialize_forward(ptr);
-        }
+        elle::Buffer data = [&block]
+          {
+            elle::Buffer res;
+            elle::IOStream s(res.ostreambuf());
+            Serializer::SerializerOut output(s);
+            auto ptr = &block;
+            output.serialize_forward(ptr);
+            return res;
+          }();
         try
         {
           this->_storage->set(block.address(), data,
@@ -564,7 +566,7 @@ namespace infinit
         , _serializer(*this->_stream,
                       elle_serialization_version(local.doughnut().version()),
                       false)
-        , _channels(this->_serializer)
+        , _channels{this->_serializer}
         , _rpcs(this->_local.doughnut().version())
       {
         this->_local._register_rpcs(this->_rpcs);

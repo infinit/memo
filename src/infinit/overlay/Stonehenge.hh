@@ -25,7 +25,6 @@ namespace infinit
     | Peers |
     `------*/
     protected:
-      virtual
       void
       _discover(NodeLocations const& peers) override;
 
@@ -33,12 +32,10 @@ namespace infinit
     | Lookup |
     `-------*/
     protected:
-      virtual
       reactor::Generator<std::ambivalent_ptr<model::doughnut::Peer>>
       _lookup(model::Address address,
               int n,
               Operation op) const override;
-      virtual
       Overlay::WeakMember
       _lookup_node(model::Address address) const override;
 
@@ -80,7 +77,6 @@ namespace infinit
       ELLE_CLONABLE();
       void
       serialize(elle::serialization::Serializer& s) override;
-      virtual
       std::unique_ptr<infinit::overlay::Overlay>
       make(std::shared_ptr<model::doughnut::Local> local,
            model::doughnut::Doughnut* doughnut) override;

@@ -646,9 +646,9 @@ namespace infinit
                       << std::endl;
             return;
           }
-          infinit::protocol::Serializer serializer(
-            *socket, infinit::elle_serialization_version(v), false);
-          infinit::protocol::ChanneledStream stream(serializer);
+          infinit::protocol::Serializer serializer{
+            *socket, infinit::elle_serialization_version(v), false};
+          auto stream = infinit::protocol::ChanneledStream{serializer};
           match_versions(stream);
           action(stream);
         };
@@ -676,9 +676,9 @@ namespace infinit
                         << std::endl;
               return;
             }
-            infinit::protocol::Serializer serializer(
-              *socket, infinit::elle_serialization_version(v), false);
-            infinit::protocol::ChanneledStream stream(serializer);
+            infinit::protocol::Serializer serializer{
+              *socket, infinit::elle_serialization_version(v), false};
+            auto stream = infinit::protocol::ChanneledStream{serializer};
             match_versions(stream);
             action(stream);
           };

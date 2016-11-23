@@ -26,13 +26,16 @@ namespace infinit
     class Address
     {
     public:
-      typedef uint8_t Value[32];
-      typedef uint8_t Flags;
-      static const int flag_byte = 31;
+      using Value = uint8_t[32];
+      using Flags = uint8_t;
+      static constexpr int flag_byte = 31;
       Address();
-      Address(Value const bytes);
-      Address(Value const bytes, Flags flags, bool combine);
+      Address(Value const value);
+      Address(Value const value, Flags flags, bool combine);
       Address(elle::UUID const& id);
+      /// Ternary comparison, as with memcmp.
+      int
+      cmp(Address const& rhs) const;
       bool
       operator ==(Address const& rhs) const;
       bool

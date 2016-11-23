@@ -16,7 +16,7 @@ ELLE_TEST_SCHEDULED(unknown_rpc)
     auto s = dht.connect_tcp();
     auto elle_version = infinit::elle_serialization_version(dht.dht->version());
     infinit::protocol::Serializer ser(s, elle_version, false);
-    infinit::protocol::ChanneledStream channels(ser);
+    auto channels = infinit::protocol::ChanneledStream{ser};
     infinit::RPC<void()> rpc("doom_is_coming", channels, dht.dht->version());
     BOOST_CHECK_THROW(rpc(), infinit::UnknownRPC);
   }

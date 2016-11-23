@@ -41,19 +41,19 @@ namespace blocks = infinit::model::blocks;
 namespace dht = infinit::model::doughnut;
 using namespace infinit::storage;
 
-NAMED_ARGUMENT(keys_a);
-NAMED_ARGUMENT(keys_b);
-NAMED_ARGUMENT(keys_c);
-NAMED_ARGUMENT(id_a);
-NAMED_ARGUMENT(id_b);
-NAMED_ARGUMENT(id_c);
-NAMED_ARGUMENT(storage_a);
-NAMED_ARGUMENT(storage_b);
-NAMED_ARGUMENT(storage_c);
-NAMED_ARGUMENT(version_a);
-NAMED_ARGUMENT(version_b);
-NAMED_ARGUMENT(version_c);
-NAMED_ARGUMENT(monitoring_socket_path_a);
+DAS_SYMBOL(keys_a);
+DAS_SYMBOL(keys_b);
+DAS_SYMBOL(keys_c);
+DAS_SYMBOL(id_a);
+DAS_SYMBOL(id_b);
+DAS_SYMBOL(id_c);
+DAS_SYMBOL(storage_a);
+DAS_SYMBOL(storage_b);
+DAS_SYMBOL(storage_c);
+DAS_SYMBOL(version_a);
+DAS_SYMBOL(version_b);
+DAS_SYMBOL(version_c);
+DAS_SYMBOL(monitoring_socket_path_a);
 
 static
 int
@@ -69,7 +69,7 @@ public:
   DHTs(Args&& ... args)
   {
     namespace ph = std::placeholders;
-    elle::named::prototype(
+    das::named::prototype(
       paxos = true,
       ::keys_a = infinit::cryptography::rsa::keypair::generate(key_size()),
       ::keys_b = infinit::cryptography::rsa::keypair::generate(key_size()),
