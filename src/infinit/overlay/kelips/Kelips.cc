@@ -27,7 +27,6 @@
 #include <reactor/Barrier.hh>
 #include <reactor/Scope.hh>
 #include <reactor/exception.hh>
-#include <reactor/network/buffer.hh>
 #include <reactor/network/resolve.hh>
 #include <reactor/scheduler.hh>
 #include <reactor/thread.hh>
@@ -1105,14 +1104,14 @@ namespace infinit
       }
 
       void
-      Node::onPacket(reactor::network::Buffer nbuf, Endpoint source)
+      Node::onPacket(elle::ConstWeakBuffer nbuf, Endpoint source)
       {
         ELLE_DUMP("Received %s bytes packet from %s", nbuf.size(), source);
-        elle::Buffer buf(nbuf.data()+8, nbuf.size()-8);
+        elle::Buffer buf(nbuf.contents()+8, nbuf.size()-8);
         static bool async = getenv("INFINIT_KELIPS_ASYNC");
         if (async)
-        new reactor::Thread(elle::sprintf("process"),
-          [=] { this->process(buf, source);}, true);
+          new reactor::Thread(elle::sprintf("process"),
+                              [=] { this->process(buf, source);}, true);
         else
           process(buf, source);
       }
@@ -1122,7 +1121,7 @@ namespace infinit
                       NodeLocations const& peers)
       {
         ELLE_TRACE_SCOPE("%s: bootstrap", this);
-        std::unordered_set<Address> scanned;
+        auto  scanned = std::unordered_set<Address>{};
         NodeLocations candidates;
         if (use_contacts)
           for (auto const& c: this->_state.contacts[_group])
@@ -1282,12 +1281,14 @@ namespace infinit
         ELLE_DUMP("send to contact %x", c.address);
         send(p, &c, nullptr, nullptr);
       }
+      
       void
       Node::send(packet::Packet& p, Endpoint ep, Address addr)
       {
         ELLE_DUMP("send to endpoint %s : %s", addr, ep);
         send(p, nullptr, &ep, &addr);
       }
+      
       void
       Node::send(packet::Packet& p, Contact* c, Endpoint* ep,
                  Address* addr)
@@ -1298,15 +1299,15 @@ namespace infinit
         ELLE_ASSERT(c || addr);
         auto address = c ? c->address : *addr;
         p.observer = this->_observer;
-        bool is_crypto = dynamic_cast<const packet::EncryptedPayload*>(&p)
-        || dynamic_cast<const packet::RequestKey*>(&p)
-        || dynamic_cast<const packet::KeyReply*>(&p);
+        bool is_crypto = (dynamic_cast<const packet::EncryptedPayload*>(&p)
+                          || dynamic_cast<const packet::RequestKey*>(&p)
+                          || dynamic_cast<const packet::KeyReply*>(&p));
         elle::Buffer b;
         bool send_key_request = false;
         auto key = getKey(address);
         if (is_crypto
-          || !_config.encrypt
-          || (!key.first && _config.accept_plain)
+            || !_config.encrypt
+            || (!key.first && _config.accept_plain)
           )
         {
           b = packet::serialize(p, *this->doughnut());
@@ -1381,7 +1382,7 @@ namespace infinit
         static bool async = getenv("INFINIT_KELIPS_ASYNC_SEND");
         if (async)
         {
-          std::shared_ptr<elle::Buffer> sbuf = std::make_shared<elle::Buffer>(std::move(b));
+          auto sbuf = std::make_shared<elle::Buffer>(std::move(b));
           sock->socket()->async_send_to(
             boost::asio::buffer(sbuf->contents(), sbuf->size()),
             e.udp(),
@@ -1393,7 +1394,7 @@ namespace infinit
         {
           try
           {
-            sock->send_to(reactor::network::Buffer(b.contents(), b.size()), e.udp());
+            sock->send_to(elle::ConstWeakBuffer(b), e.udp());
           }
           catch (reactor::network::Exception const&)
           { // FIXME: do something
@@ -3518,7 +3519,7 @@ namespace infinit
           memcpy(b.mutable_contents(), "KELIPSGS", 8);
           try
           {
-            rsock->send_to(reactor::network::Buffer(b.contents(), b.size()), res);
+            rsock->send_to(elle::ConstWeakBuffer(b), res);
           }
           catch (reactor::network::Exception const& e)
           { // FIXME: do something

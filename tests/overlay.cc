@@ -3,7 +3,6 @@
 #include <elle/err.hh>
 
 #include <reactor/network/udp-socket.hh>
-#include <reactor/network/buffer.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
@@ -78,15 +77,15 @@ private:
       try
       {
         reactor::network::UDPSocket::EndPoint ep;
-        auto sz = server.receive_from(reactor::network::Buffer(buf, sizeof buf), ep);
+        auto sz = server.receive_from(elle::WeakBuffer(buf, sizeof buf), ep);
         reactor::wait(_transmission);
         if (ep.port() != _endpoint.port())
         {
           _client_endpoint = ep;
-          server.send_to(reactor::network::Buffer(buf, sz), _endpoint.udp());
+          server.send_to(elle::ConstWeakBuffer(buf, sz), _endpoint.udp());
         }
         else
-          server.send_to(reactor::network::Buffer(buf, sz), _client_endpoint.udp());
+          server.send_to(elle::ConstWeakBuffer(buf, sz), _client_endpoint.udp());
       }
       catch (reactor::network::Exception const&)
       {
@@ -584,10 +583,12 @@ ELLE_TEST_SCHEDULED(
               {
                 auto block = c->dht->fetch(addr);
                 if (r < 80)
-                { //update
+                {
+                  // Update.
                   ELLE_DEBUG("updating %f", addr);
-                  dynamic_cast<infinit::model::blocks::ACLBlock*>(block.get())->data(
-                    elle::Buffer("coincoin"));
+                  auto aclb
+                    = dynamic_cast<infinit::model::blocks::ACLBlock*>(block.get());
+                  aclb->data(elle::Buffer("coincoin"));
                   c->dht->store(std::move(block), STORE_UPDATE, tcr());
                   ELLE_DEBUG("updated %f", addr);
                 }
@@ -596,7 +597,7 @@ ELLE_TEST_SCHEDULED(
               {
                 // This can be legit if a delete crossed our path
                 if (std::find(addrs.begin(), addrs.end(), mb.address())
-                  != addrs.end())
+                    != addrs.end())
                 {
                   ELLE_ERR("exception on supposedly live block %f: %s",
                            mb.address(), mb);
@@ -619,7 +620,7 @@ ELLE_TEST_SCHEDULED(
   ELLE_TRACE("teardown");
 }
 
-
+ELLE_COMPILER_ATTRIBUTE_MAYBE_UNUSED
 ELLE_TEST_SCHEDULED(
   paxos_3_1, (Doughnut::OverlayBuilder, builder))
 {

@@ -163,21 +163,20 @@ namespace infinit
         bool encrypt;
         bool accept_plain;
         GossipConfiguration gossip;
-        virtual
         std::unique_ptr<infinit::overlay::Overlay>
         make(std::shared_ptr<model::doughnut::Local> server,
              model::doughnut::Doughnut* doughnut) override;
       };
 
-      typedef std::pair<
+      using SerState = std::pair<
         std::unordered_map<Address, Endpoints>, // contacts
         std::vector<std::pair<Address, Address>> // address, home_node
-      > SerState;
+      >;
 
-      typedef std::pair<
+      using SerState2 = std::pair<
         std::vector<std::pair<Address, Endpoints>>, // contacts
         std::vector<std::pair<std::string, int>> // delta-blockaddr, owner_index
-      > SerState2;
+      >;
 
       class Node
         : public infinit::overlay::Overlay
@@ -332,7 +331,7 @@ namespace infinit
         get_serstate(NodeLocation const& peer);
         void
         contact(Address address); // establish contact with peer and flush buffer
-        void onPacket(reactor::network::Buffer buf, Endpoint source);
+        void onPacket(elle::ConstWeakBuffer buf, Endpoint source);
         void process(elle::Buffer const& buf, Endpoint source);
         Contact*
         get_or_make(Address address, bool observer,
