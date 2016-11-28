@@ -42,8 +42,7 @@ namespace infinit
       void
       ACLBlock::set_permissions(User const& user,
                                 bool read,
-                                bool write
-                                )
+                                bool write)
       {
         ELLE_TRACE_SCOPE("%s: set permissions for %f: read = %s, write = %s",
                          *this, user, read, write);
@@ -53,12 +52,13 @@ namespace infinit
       void
       ACLBlock::set_world_permissions(bool read, bool write)
       {
-        ELLE_TRACE_SCOPE("%s: set world perms to r=%s w=%s", *this, read, write);
+        ELLE_TRACE_SCOPE("%s: set world perms to r=%s w=%s",
+                         *this, read, write);
         this->_set_world_permissions(read, write);
       }
 
       std::pair<bool,bool>
-      ACLBlock::get_world_permissions()
+      ACLBlock::get_world_permissions() const
       {
         return this->_get_world_permissions();
       }
@@ -89,9 +89,9 @@ namespace infinit
       }
 
       std::pair<bool, bool>
-      ACLBlock::_get_world_permissions()
+      ACLBlock::_get_world_permissions() const
       {
-        return std::make_pair(false, false);
+        return {false, false};
       }
 
       void

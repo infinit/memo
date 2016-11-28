@@ -51,7 +51,7 @@ namespace infinit
         void
         set_world_permissions(bool read, bool write);
         std::pair<bool, bool>
-        get_world_permissions();
+        get_world_permissions() const;
         void
         copy_permissions(ACLBlock& to);
 
@@ -85,7 +85,7 @@ namespace infinit
         _set_world_permissions(bool read, bool write);
         virtual
         std::pair<bool, bool>
-        _get_world_permissions();
+        _get_world_permissions() const;
         virtual
         void
         _copy_permissions(ACLBlock& to);
