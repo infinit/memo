@@ -136,7 +136,7 @@ peer_count(DHT& client)
   catch (boost::bad_any_cast const&)
   {
     res = boost::any_cast<elle::json::Array>(
-      boost::any_cast<elle::json::Object>(stats)["peers"]).size() - 1;
+      boost::any_cast<elle::json::Object>(stats)["peers"]).size();
   }
   ELLE_TRACE("counted %s peers for %s", res, client.dht);
   return res;
