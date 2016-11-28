@@ -28,12 +28,12 @@ namespace infinit
       {
         namespace bmi = boost::multi_index;
 
-        NAMED_ARGUMENT(doughnut);
-        NAMED_ARGUMENT(replication_factor);
-        NAMED_ARGUMENT(lenient_fetch);
-        NAMED_ARGUMENT(rebalance_auto_expand);
-        NAMED_ARGUMENT(rebalance_inspect);
-        NAMED_ARGUMENT(node_timeout);
+        DAS_SYMBOL(doughnut);
+        DAS_SYMBOL(replication_factor);
+        DAS_SYMBOL(lenient_fetch);
+        DAS_SYMBOL(rebalance_auto_expand);
+        DAS_SYMBOL(rebalance_inspect);
+        DAS_SYMBOL(node_timeout);
 
         struct BlockOrPaxos;
 

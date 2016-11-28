@@ -108,12 +108,11 @@ namespace infinit
                 this->_connection_start_time = std::chrono::system_clock::now();
                 auto handshake = [&] (std::unique_ptr<std::iostream> socket)
                   {
+                    auto sv = elle_serialization_version(this->_doughnut.version());
                     auto serializer = elle::make_unique<protocol::Serializer>(
-                      *socket,
-                      elle_serialization_version(this->_doughnut.version()),
-                      false);
+                      *socket, sv, false);
                     auto channels =
-                      elle::make_unique<protocol::ChanneledStream>(*serializer);
+                    elle::make_unique<protocol::ChanneledStream>(*serializer);
                     if (!disable_key)
                       this->_key_exchange(*channels);
                     ELLE_TRACE("%s: connected", this);

@@ -19,21 +19,21 @@ valid_block(boost::filesystem::path const& path)
 
 static
 std::string
-human_readable_data_size(int64_t value)
+human_readable_data_size(double value)
 {
-  static const int64_t kilo = 1000;
-  static const int64_t mega = pow(1000, 2);
-  static const int64_t giga = pow(1000, 3);
-  static const int64_t tera = pow(1000, 4);
+  static const double kilo = 1000;
+  static const double mega = pow(1000, 2);
+  static const double giga = pow(1000, 3);
+  static const double tera = pow(1000, 4);
   if (value >= tera)
-    return elle::sprintf("%s TB", value / tera);
+    return elle::sprintf("%.2f TB", value / tera);
   if (value >= giga)
-    return elle::sprintf("%s GB", value / giga);
+    return elle::sprintf("%.2f GB", value / giga);
   if (value >= mega)
-    return elle::sprintf("%s MB", value / mega);
+    return elle::sprintf("%.1f MB", value / mega);
   if (value >= kilo)
-    return elle::sprintf("%s kB", value / kilo);
-  return elle::sprintf("%s B", value);
+    return elle::sprintf("%.f kB", value / kilo);
+  return elle::sprintf("%.f B", value);
 }
 
 COMMAND(stats)
