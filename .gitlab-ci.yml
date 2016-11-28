@@ -1,3 +1,18 @@
+# To update the repository, we go through several steps.
+#
+# git submodule sync --recursive || git submodule sync
+#   Some old gits, e.g. on CentOS, does not support --recursive here.
+#
+# git submodule update --force --init --recursive
+#   Pass --force in order to avoid problems when a former submodule
+#   is replaced with actual contents.  Otherwise we get:
+#
+#      error: The following untracked working tree files would be
+#             overwritten by checkout:
+#          cryptography/LICENSE
+#          cryptography/README.md
+#
+#   But --force is not supported on old versions of git.
 stages:
   - build
 
@@ -9,8 +24,8 @@ x86_64-centos6-gcc4:
   stage: build
   script:
     - export LC_ALL=en_US.utf8
-    - git submodule sync
-    - git submodule update --init --recursive
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
@@ -47,9 +62,10 @@ x86_64-centos6-gcc4:
 x86_64-ubuntu-gcc4:
   stage: build
   script:
-    - git submodule sync --recursive
-    - git submodule update --init --recursive
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
+    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -86,9 +102,10 @@ x86_64-ubuntu-gcc4:
 x86_64-alpine-gcc:
   stage: build
   script:
-    - git submodule sync --recursive
-    - git submodule update --init --recursive
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
+    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -123,9 +140,10 @@ x86_64-alpine-gcc:
 x86_64-jessie-gcc4:
   stage: build
   script:
-    - git submodule sync --recursive
-    - git submodule update --init --recursive
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
+    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -157,9 +175,10 @@ x86_64-jessie-gcc4:
 x86_64-windows-mingw4:
   stage: build
   script:
-    - git submodule sync --recursive
-    - git submodule update --init --recursive
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
+    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -191,9 +210,10 @@ x86_64-osx-clang:
   stage: build
   script:
     - export LC_ALL=en_US.UTF-8
-    - git submodule sync --recursive
-    - git submodule update --init --recursive
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
+    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - mkdir -p ../fs-build
     - farm/configure --arch x86_64 --os osx --compiler clang --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
     - cd ../fs-build
@@ -220,10 +240,11 @@ x86_64-osx-clang:
 website:
   stage: build
   script:
-    - git submodule sync --recursive
-    - pip3 install mistune
-    - git submodule update --init --recursive
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
+    - git fetch origin --force "refs/notes/*:refs/notes/*"
+    - pip3 install mistune
     - mkdir -p ../fs-build ../fs-website
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
     - cd ../fs-build && python3 drake -j $(nproc) //website/build
