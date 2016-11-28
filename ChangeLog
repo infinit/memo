@@ -17,6 +17,35 @@
 <!-- - Add new `Kouncil` overlay that stores all block search space in main -->
 <!--   memory on startup. -->
 
+## [0.7.2] - 2016-11-28
+
+### Added
+
+  - Add new `Kouncil` overlay. `Kouncil` is a fully connected overlay that
+    stores the whole block address book in memory, and broadcast updates
+    to all nodes when a new block is created. To use `Kouncil` instead of
+    `Kelips` (the default overlay), use the `--kouncil` option to
+    `infinit-network --create`.
+  - Add `infinit-network --inspect` command to query a running networks about its
+    status and configuration.
+  - Provide `Alpine Linux` builds.
+
+### Changed
+
+  - Better output and clearer options for `infinit-doctor`.
+  - Better handling of removed nodes in `Kelips`: the network should now
+    recover in seconds instead of minutes.
+  - Retry binding instead of aborting when a network bind() error occurs and no
+    port was specified.
+  - Show more digits when reporting size in `infinit-journal`.
+
+### Fixed
+
+  - Better POSIX compliance when multiple file handles on the same file are used.
+  - Remove the root block marker when `infinit-network --purge` is called.
+  - Preserve a deleted file's data until all handles are closed.
+  - Fixed multiple race conditions in filesystem layer that could cause crashes.
+
 
 ## [0.7.1] - 2016-10-31
 
