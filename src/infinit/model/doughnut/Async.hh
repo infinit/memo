@@ -58,6 +58,15 @@ namespace infinit
           void
           _remove(Address address, blocks::RemoveSignature rs) override;
 
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+        public:
+          elle::json::Object
+          redundancy() override;
+          elle::json::Object
+          stats() override;
+
         public:
           static
           std::vector<boost::filesystem::path>
