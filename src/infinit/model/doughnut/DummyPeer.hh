@@ -57,7 +57,7 @@ namespace infinit
                 Address address,
                 consensus::Paxos::PaxosClient::Proposal const& p) override
         {
-          throw consensus::Paxos::PaxosClient::Peer::Unavailable();
+          throw athena::paxos::Unavailable();
         }
 
         virtual
@@ -67,7 +67,7 @@ namespace infinit
                consensus::Paxos::PaxosClient::Proposal const& p,
                consensus::Paxos::Value const& value) override
         {
-          throw consensus::Paxos::PaxosClient::Peer::Unavailable();
+          throw athena::paxos::Unavailable();
         }
 
         virtual
@@ -85,7 +85,7 @@ namespace infinit
             Address address,
             boost::optional<int> local_version) override
         {
-          throw consensus::Paxos::PaxosClient::Peer::Unavailable();
+          throw athena::paxos::Unavailable();
         }
 
         void
