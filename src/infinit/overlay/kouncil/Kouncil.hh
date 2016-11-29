@@ -17,10 +17,20 @@
 
 namespace infinit
 {
+  namespace symbols
+  {
+    DAS_SYMBOL(endpoints_stamped);
+    DAS_SYMBOL(endpoints_unstamped);
+    DAS_SYMBOL(stamp);
+  }
+}
+namespace infinit
+{
   namespace overlay
   {
     namespace kouncil
     {
+      using Time = std::chrono::time_point<std::chrono::system_clock>;
       /// BMI helpers
       namespace bmi = boost::multi_index;
       namespace _details
@@ -30,6 +40,13 @@ namespace infinit
         peer_id(Overlay::Member const& p)
         {
           return p->id();
+        }
+
+        inline
+        model::doughnut::Peer*
+        peer_ptr(Overlay::Member const& p)
+        {
+          return p.get();
         }
       }
 
@@ -77,6 +94,16 @@ namespace infinit
                 Peer const&, model::Address, &_details::peer_id> >,
             bmi::random_access<> > >;
 
+        using DisconectedPeers =
+          bmi::multi_index_container<
+          Peer,
+          bmi::indexed_by<
+            bmi::hashed_unique<
+              bmi::global_fun<
+                Peer const&, model::Address, &_details::peer_id> >,
+            bmi::hashed_unique<
+              bmi::global_fun<
+                Peer const&, model::doughnut::Peer*, &_details::peer_ptr> >>>;
       /*-------------.
       | Construction |
       `-------------*/
@@ -106,6 +133,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(AddressBook, address_book);
         /// All known peers.
         ELLE_ATTRIBUTE_R(Peers, peers);
+        ELLE_ATTRIBUTE(DisconectedPeers, disconnected_peers);
         ELLE_ATTRIBUTE(std::default_random_engine, gen, mutable);
       private:
         void
@@ -116,22 +144,47 @@ namespace infinit
       /*------.
       | Peers |
       `------*/
+      public:
+        struct PeerInfo
+        {
+          Endpoints endpoints_stamped;
+          Endpoints endpoints_unstamped;
+          int64_t stamp;
+          bool merge(PeerInfo const& from);
+
+          // local info
+          Time last_seen;
+          using Model = das::Model<
+            PeerInfo,
+            elle::meta::List<symbols::Symbol_endpoints_stamped,
+                             symbols::Symbol_endpoints_unstamped,
+                             symbols::Symbol_stamp>>;
+        };
+        using PeerInfos = std::unordered_map<model::Address, PeerInfo>;
+        NodeLocations
+        peers_locations() const;
+        ELLE_ATTRIBUTE_R(PeerInfos, infos);
       protected:
         virtual
         void
         _discover(NodeLocations const& peers) override;
+      private:
         void
         _discover(Overlay::Member peer);
         void
-        _discover_rpc(NodeLocations const& peers);
-      public:
-        using Discovering = std::unordered_set<model::Address>;
-        ELLE_ATTRIBUTE(Discovering, discovering);
-        NodeLocations
-        peers_locations() const;
-      private:
+        _discover(PeerInfos::value_type const& peer);
+        void
+        _discover(PeerInfos const& pis);
+        void
+        _notify_observers(PeerInfos::value_type const& pi);
+        boost::optional<Endpoints>
+        _endpoints_refetch(model::Address id);
+        void
+        _perform(std::string const& name, std::function<void()> job);
+        void
+        _peer_disconnected(model::doughnut::Peer* peer);
         ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>, tasks);
-        void _perform(std::string const& name, std::function<void()> job);
+
       /*-------.
       | Lookup |
       `-------*/
@@ -162,5 +215,7 @@ namespace infinit
     }
   }
 }
+
+DAS_SERIALIZE(infinit::overlay::kouncil::Kouncil::PeerInfo);
 
 #endif
