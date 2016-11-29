@@ -120,6 +120,7 @@ namespace infinit
                     this->_serializer = std::move(serializer);
                     this->_channels = std::move(channels);
                     this->_connected.open();
+                    this->Peer::connected()();
                   };
                 auto umbrella = [&, this] (std::function<void ()> const& f)
                   {
@@ -187,6 +188,7 @@ namespace infinit
                   this->_rpc_server.serve(*this->_channels);
                 ELLE_TRACE("%s: connection ended, evicting", this);
                 auto self = this->doughnut().dock().evict_peer(this->id());
+                this->disconnected()();
                 ++this->_reconnection_id;
                 this->_connected.close();
                 reactor::run_later("remote holder", std::bind(hold_remote, self));

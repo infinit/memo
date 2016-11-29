@@ -1,6 +1,8 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_PEER_HH
 # define INFINIT_MODEL_DOUGHNUT_PEER_HH
 
+# include <boost/signals2.hpp>
+
 # include <elle/Duration.hh>
 
 # include <infinit/model/blocks/Block.hh>
@@ -30,6 +32,8 @@ namespace infinit
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut, protected);
         /// Target peer id.
         ELLE_ATTRIBUTE_R(Address, id, protected);
+        ELLE_ATTRIBUTE_RX(boost::signals2::signal<void()>, connected);
+        ELLE_ATTRIBUTE_RX(boost::signals2::signal<void()>, disconnected);
       protected:
         virtual
         void
