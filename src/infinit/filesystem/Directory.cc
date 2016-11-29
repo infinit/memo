@@ -300,9 +300,9 @@ namespace infinit
                                  model::blocks::Block& block,
                                  std::pair<bool, bool> perms)
       : _address{block.address().value(), model::flags::mutable_block, false}
+      , _block_version{-1}
       , _prefetching{false}
       , _last_used{FileSystem::now()}
-      , _block_version{-1}
       , _path{path}
     {
       update(block, perms);
@@ -310,10 +310,10 @@ namespace infinit
 
     DirectoryData::DirectoryData(boost::filesystem::path path, Address address)
       : _address{address}
+      , _block_version{-1}
       , _inherit_auth{false}
       , _prefetching{false}
       , _last_used{FileSystem::now()}
-      , _block_version{-1}
       , _path{path}
     {}
 
