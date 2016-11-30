@@ -224,13 +224,19 @@ website:
     - pip3 install mistune
     - git submodule update --init --recursive --force
     - git fetch origin --tags
-    - mkdir -p ../fs-build ../fs-website
+    - SOURCE_DIR="${CI_PROJECT_DIR}"
+    - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
+    - INSTALL_DIR="${SOURCE_DIR}/_install"
+    - mkdir -p "$BUILD_DIR" "$INSTALL_DIR"
     - DESC=$(git describe)
-    - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-    - cd ../fs-build && python3 drake -j $(nproc) //website/build
-    - cd ../fs-build && python3 drake -j $(nproc) //website/install --prefix=$(realpath ../fs-website)
-    - cd ../fs-build && python3 drake -j $(nproc) //website/debian
-    - scp ../fs-build/website/infinit-sh_${DESC}_amd64.deb buildslave@packages.infinit.sh:debian
+    - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
+    - cd "$BUILD_DIR"
+    - python3 drake -j $(nproc) //website/build
+    - python3 drake -j $(nproc) //website/install
+    - python3 drake -j $(nproc) //website/debian
+    - PACKAGE="website/infinit-sh_${DESC}_amd64.deb"
+    - scp $PACKAGE buildslave@packages.infinit.sh:debian
+    - rm $PACKAGE
     - ssh buildslave@packages.infinit.sh 'make debian'
   tags:
     - x86_64
