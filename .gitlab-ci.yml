@@ -225,11 +225,12 @@ website:
     - git submodule update --init --recursive --force
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-website
+    - DESC=$(git describe)
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
     - cd ../fs-build && python3 drake -j $(nproc) //website/build
     - cd ../fs-build && python3 drake -j $(nproc) //website/install --prefix=$(realpath ../fs-website)
     - cd ../fs-build && python3 drake -j $(nproc) //website/debian
-    - scp ../fs-build/website/infinit-sh_$(GIT_DIR=../fs/.git git describe)_amd64.deb buildslave@packages.infinit.sh:debian
+    - scp ../fs-build/website/infinit-sh_${DESC}_amd64.deb buildslave@packages.infinit.sh:debian
     - ssh buildslave@packages.infinit.sh 'make debian'
   tags:
     - x86_64
