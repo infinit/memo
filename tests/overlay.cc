@@ -1,3 +1,5 @@
+#include <boost/range/algorithm/count_if.hpp>
+
 #include <elle/test.hh>
 
 #include <elle/err.hh>
@@ -7,8 +9,8 @@
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
-#include <infinit/overlay/kouncil/Kouncil.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
+#include <infinit/overlay/kouncil/Kouncil.hh>
 
 #include "DHT.hh"
 
@@ -677,7 +679,9 @@ ELLE_TEST_SCHEDULED(
 ELLE_TEST_SCHEDULED(
   parallel_discover, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
 {
-  static const int nservers = 5;
+  constexpr auto nservers = 5;
+  constexpr auto npeers = nservers - 1;
+
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   auto servers = std::vector<std::unique_ptr<DHT>>{};
   for (int i=0; i<nservers; ++i)
@@ -696,21 +700,20 @@ ELLE_TEST_SCHEDULED(
       });
     reactor::wait(s);
   };
-  bool success = false;
-  for (int i=0; i<50; ++i)
+
+  // Number of servers that know all their peers.
+  auto c = 0;
+  // Previously we limit ourselves to 50 attempts.  When run
+  // repeatedly, it did happen to fail for lack of time.  Raise the
+  // limit to 100 attempts.
+  for (auto i = 0; i < 100 && c != nservers; ++i)
   {
-    success = true;
     reactor::sleep(100_ms);
-    for (auto& s: servers)
-      if (peer_count(*s) != signed(servers.size())-1)
-      {
-        success = false;
-        break;
-      }
-    if (success)
-      break;
+    using boost::range::count_if;
+    c = count_if(servers,
+                 [npeers](auto&& s) { return peer_count(*s) == npeers; });
   }
-  BOOST_CHECK(success);
+  BOOST_CHECK_EQUAL(c, nservers);
 }
 
 ELLE_TEST_SUITE()
@@ -749,9 +752,9 @@ ELLE_TEST_SUITE()
                                    name,                                \
                                    __FILE__, __LINE__ )
 
-#define TEST_(Overlay, Name, Timeout, Function, ...)                     \
+#define TEST_(Overlay, Name, Timeout, Function, ...)                    \
   Overlay                                                               \
-    ->add(BOOST_NAMED_TEST_CASE(#Overlay "_" Name,                      \
+    ->add(BOOST_NAMED_TEST_CASE(Name,                                   \
                                 std::bind(::Function,                   \
                                           BOOST_PP_CAT(Overlay, _builder), \
                                           ##__VA_ARGS__)),              \
