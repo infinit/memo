@@ -573,13 +573,24 @@ ELLE_TEST_SCHEDULED(
               catch (infinit::model::MissingBlock const& mb)
               {
               }
+              catch (athena::paxos::TooFewPeers const& tfp)
+              {
+              }
               ELLE_DEBUG("deleted %f", addr);
             }
             else if (r < 50 || addrs.empty())
             { // create
               auto block = c->dht->make_block<ACLBlock>(std::string("block"));
               auto a = block->address();
-              c->dht->store(std::move(block), STORE_INSERT, tcr());
+              try
+              {
+                c->dht->store(std::move(block), STORE_INSERT, tcr());
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_ERR("insertiong of %s failed with %s", a, e);
+                throw;
+              }
               ELLE_DEBUG("created %f", a);
               addrs.push_back(a);
             }
@@ -588,6 +599,7 @@ ELLE_TEST_SCHEDULED(
               int p = rand()%addrs.size();
               auto addr = addrs[p];
               ELLE_DEBUG("reading %f", addr);
+              std::exception_ptr except;
               try
               {
                 auto block = c->dht->fetch(addr);
@@ -598,19 +610,35 @@ ELLE_TEST_SCHEDULED(
                   auto aclb
                     = dynamic_cast<infinit::model::blocks::ACLBlock*>(block.get());
                   aclb->data(elle::Buffer("coincoin"));
-                  c->dht->store(std::move(block), STORE_UPDATE, tcr());
+                  try
+                  {
+                    c->dht->store(std::move(block), STORE_UPDATE, tcr());
+                  }
+                  catch (elle::Error const& e)
+                  {
+                    ELLE_ERR("update of %s failed with %s", addr, e);
+                    throw;
+                  }
                   ELLE_DEBUG("updated %f", addr);
                 }
               }
               catch (infinit::model::MissingBlock const& mb)
               {
+                except = std::current_exception();
+              }
+              catch (athena::paxos::TooFewPeers const& tfp)
+              {
+                except = std::current_exception();
+              }
+              if (except)
+              {
                 // This can be legit if a delete crossed our path
-                if (std::find(addrs.begin(), addrs.end(), mb.address())
+                if (std::find(addrs.begin(), addrs.end(), addr)
                     != addrs.end())
                 {
                   ELLE_ERR("exception on supposedly live block %f: %s",
-                           mb.address(), mb);
-                  throw;
+                           addr, elle::exception_string(except));
+                  std::rethrow_exception(except);
                 }
               }
               ELLE_DEBUG("read %f", addr);
