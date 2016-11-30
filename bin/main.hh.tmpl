@@ -24,7 +24,6 @@
 #include <reactor/http/Request.hh>
 #include <reactor/network/rdv-socket.hh>
 #include <reactor/network/rdv-socket.hh>
-#include <reactor/network/buffer.hh>
 #include <reactor/network/resolve.hh>
 
 #include <cryptography/hash.hh>
@@ -3477,8 +3476,7 @@ private:
           elle::Buffer buf;
           buf.size(5000);
           boost::asio::ip::udp::endpoint ep;
-          socket.receive_from(reactor::network::Buffer(buf.mutable_contents(),
-                                                       buf.size()), ep);
+          socket.receive_from(elle::WeakBuffer(buf), ep);
         }
       });
       elle::SafeFinally spoll([&] {

@@ -10,7 +10,6 @@
 
 #include <cryptography/hash.hh>
 
-#include <reactor/network/buffer.hh>
 #include <reactor/network/exception.hh>
 
 #include <infinit/model/MissingBlock.hh>
@@ -326,9 +325,7 @@ namespace kademlia
         n += e.size();
       ELLE_TRACE("%s: knows %s nodes and %s hashes,", *this, n, _storage.size());
       Endpoint ep;
-      size_t sz = _socket.receive_from(
-          reactor::network::Buffer(buf.mutable_contents(), buf.size()),
-          ep);
+      size_t sz = _socket.receive_from(elle::WeakBuffer(buf), ep);
       if (sz == 0)
       {
         ELLE_WARN("%s: empty packet received", *this);
@@ -391,7 +388,7 @@ namespace kademlia
   {
     reactor::Lock l(_udp_send_mutex);
     ELLE_DUMP("%s: sending packet to %s\n%s", *this, e, b.string());
-    _socket.send_to(reactor::network::Buffer(b.contents(), b.size()), e);
+    _socket.send_to(elle::ConstWeakBuffer(b), e);
   }
   bool Kademlia::more(Address const& a, Address const& b)
   {
