@@ -222,7 +222,7 @@ website:
   script:
     - git submodule sync --recursive
     - pip3 install mistune
-    - git submodule update --init --recursive
+    - git submodule update --init --recursive --force
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-website
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
