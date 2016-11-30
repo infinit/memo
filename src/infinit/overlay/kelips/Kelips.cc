@@ -73,9 +73,9 @@ namespace elle
 
 struct PrettyEndpoint
 {
-  PrettyEndpoint(
-    infinit::overlay::kelips::Endpoint const& e)
-    : _repr(e.address().to_string() + ":" + std::to_string(e.port()))
+  using Endpoint = infinit::overlay::kelips::Endpoint;
+  PrettyEndpoint(Endpoint const& e)
+    : _repr(elle::sprintf("%s:%s", e.address(), e.port()))
   {}
 
   PrettyEndpoint(elle::serialization::Serializer& input)
@@ -93,12 +93,12 @@ struct PrettyEndpoint
     s.serialize_forward(this->_repr);
   }
 
-  operator infinit::overlay::kelips::Endpoint()
+  operator Endpoint()
   {
     size_t sep = this->_repr.find_last_of(':');
     auto a = boost::asio::ip::address::from_string(this->_repr.substr(0, sep));
     int p = std::stoi(this->_repr.substr(sep + 1));
-    return infinit::overlay::kelips::Endpoint(a, p);
+    return {a, p};
   }
 
   ELLE_ATTRIBUTE_R(std::string, repr);
@@ -140,7 +140,7 @@ namespace infinit
         auto hit = std::find_if(endpoints.begin(), endpoints.end(),
             [&](TimedEndpoint const& e) { return e.first == entry;});
         if (hit == endpoints.end())
-          endpoints.push_back(TimedEndpoint(entry, now()));
+          endpoints.emplace_back(entry, now());
         else
           hit->second = std::max(t, hit->second);
       }
@@ -214,7 +214,7 @@ namespace infinit
         for (auto const& r: src)
         {
           auto it = std::find_if(dst.begin(), dst.end(),
-            [&]( const NodeLocation& a)
+            [&](const NodeLocation& a)
             {
               return a.id() == r.id();
             });
@@ -223,11 +223,13 @@ namespace infinit
           else
           {
             for (auto const& ep: r.endpoints())
-              if (std::find(it->endpoints().begin(), it->endpoints().end(), ep) == it->endpoints().end())
+              if (std::find(it->endpoints().begin(), it->endpoints().end(), ep)
+                  == it->endpoints().end())
                 it->endpoints().push_back(ep);
           }
         }
       }
+
       namespace packet
       {
         static bool disable_compression = elle::os::inenv("KELIPS_DISABLE_COMPRESSION");
@@ -249,7 +251,7 @@ namespace infinit
           return buf;
         }
 
-#define REGISTER(classname, type) \
+#define REGISTER(classname, type)                               \
         static const elle::serialization::Hierarchy<Packet>::   \
         Register<classname>                                     \
         _registerPacket##classname(type)
@@ -295,10 +297,9 @@ namespace infinit
             if (dn.version() >= elle::Version(0, 7, 0) && !disable_compression)
               input.set_context(CompressPeerLocations{});
             input.set_context(&dn);
-            std::unique_ptr<packet::Packet> packet;
-            input.serialize_forward(packet);
-            return packet;
-
+            auto res = std::unique_ptr<packet::Packet>{};
+            input.serialize_forward(res);
+            return res;
           }
 
           void encrypt(infinit::cryptography::SecretKey const& k,
@@ -382,9 +383,7 @@ namespace infinit
 
         struct Ping: public Packet
         {
-          Ping()
-          {}
-
+          Ping() = default;
           Ping(elle::serialization::SerializerIn& input)
           {
             serialize(input);
@@ -404,19 +403,14 @@ namespace infinit
 
         struct Pong: public Ping
         {
-          Pong()
-          {}
-          Pong(elle::serialization::SerializerIn& input)
-            : Ping(input)
-          {}
+          using Super = Ping;
+          using Super::Super;
         };
         REGISTER(Pong, "pong");
 
         struct BootstrapRequest: public Packet
         {
-          BootstrapRequest()
-          {}
-
+          BootstrapRequest() = default;
           BootstrapRequest(elle::serialization::SerializerIn& input)
           {
             serialize(input);
@@ -433,9 +427,7 @@ namespace infinit
 
         struct FileBootstrapRequest: public Packet
         {
-          FileBootstrapRequest()
-          {}
-
+          FileBootstrapRequest() = default;
           FileBootstrapRequest(elle::serialization::SerializerIn& input)
           {
             serialize(input);
@@ -457,9 +449,7 @@ namespace infinit
 
         struct Gossip: public Packet
         {
-          Gossip()
-          {}
-
+          Gossip() = default;
           Gossip(elle::serialization::SerializerIn& input)
           {
             serialize(input);
@@ -468,6 +458,8 @@ namespace infinit
           void
           serialize(elle::serialization::Serializer& s)
           {
+            using Cfiles
+              = std::unordered_multimap<Address, std::pair<Time, int>>;
             s.serialize("sender", sender);
             s.serialize("observer", observer);
             s.serialize("contacts", contacts);
@@ -477,7 +469,7 @@ namespace infinit
             { // out
               std::vector<Address> addresses;
               std::unordered_map<Address, int> index;
-              std::unordered_multimap<Address, std::pair<Time, int>> cfiles;
+              auto cfiles = Cfiles{};
               for (auto f: files)
               {
                 auto addr = f.second.second;
@@ -505,9 +497,9 @@ namespace infinit
               s.serialize("file_files", cfiles);
               files.clear();
               for (auto c: cfiles)
-                files.insert(std::make_pair(
-                  c.first,
-                  std::make_pair(c.second.first, addresses.at(c.second.second))));
+                files.emplace(c.first,
+                              std::make_pair(c.second.first,
+                                             addresses.at(c.second.second)));
             }
           }
           // address -> (last_seen, val)
@@ -1257,7 +1249,7 @@ namespace infinit
         }
         else
         {
-          _keys.insert(std::make_pair(a, std::make_pair(std::move(sk), observer)));
+          _keys.emplace(a, std::make_pair(std::move(sk), observer));
         }
       }
 
