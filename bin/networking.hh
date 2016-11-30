@@ -3,12 +3,18 @@
 
 using namespace boost::posix_time;
 
-# include <version.hh>
+# include <reactor/Barrier.hh>
+
 # include <protocol/exceptions.hh>
+
+# include <infinit/model/doughnut/protocol.hh>
+
+# include <version.hh>
 
 namespace bytes
 {
-  // XXX: Move that somewher on elle.
+  // XXX: Move that somewhere to elle/elle/src/elle/bytes/conversion.hh or
+  // something like that.
   static std::vector<std::pair<std::string, std::string>> capacities{
     { "B",  "B"   },
     { "kB", "KiB" },
@@ -17,18 +23,18 @@ namespace bytes
     { "TB", "TiB" },
     { "EB", "EiB" },
     { "ZB", "ZiB" },
-      };
+  };
 
   std::string
   to_human(uint64_t bytes,
            bool si = true)
   {
-    for (uint64_t i = 1; i < capacities.size(); ++i)
+    for (uint64_t i = 1; i < capacities.size() + 1; ++i)
     {
-      if ((double) bytes / pow((si ? 1024 : 1000), i) < 1 || i == (capacities.size() - 1))
+      if ((double) bytes / pow((si ? 1024 : 1000), i) < 1 || i == (capacities.size()))
         return elle::sprintf("%.1f %s",
                              bytes / pow((si ? 1024 : 1000), i - 1),
-                             (si ? capacities[i].second : capacities[i].first));
+                             (si ? capacities[i - 1].second : capacities[i - 1].first));
     }
     elle::unreachable();
   }
@@ -89,15 +95,16 @@ namespace infinit
       return elle::sprintf(
         "%sms for %s (%s/sec)",
         duration.total_milliseconds(),
-        bytes::to_human(size / 1000, false),
-        bytes::to_human((double) size / duration.total_milliseconds(), false));
+        bytes::to_human(size, false),
+        bytes::to_human((double) 1000 * size / duration.total_milliseconds(), false));
     }
 
     static
     time_duration
     upload(infinit::protocol::ChanneledStream& channels,
            elle::Buffer::Size packet_size,
-           int64_t packets_count)
+           int64_t packets_count,
+           bool verbose)
     {
       ELLE_TRACE_SCOPE("upload %s %s times", packet_size, packets_count);
       std::cout << "  Upload:" << std::endl;
@@ -112,11 +119,14 @@ namespace infinit
         {
           auto start_partial = microsec_clock::universal_time();
           upload(buff);
-          std::cout
-            << "    - [" << i << "] "
-            << report(packet_size,
-                      microsec_clock::universal_time() - start_partial)
-            << std::endl;
+          if (verbose)
+          {
+            std::cout
+              << "    - [" << i << "] "
+              << report(packet_size,
+                        microsec_clock::universal_time() - start_partial)
+              << std::endl;
+          }
         }
       auto diff = microsec_clock::universal_time() - start;
       std::cout << "    "
@@ -129,7 +139,8 @@ namespace infinit
     time_duration
     download(infinit::protocol::ChanneledStream& channels,
              elle::Buffer::Size packet_size,
-             int64_t packets_count)
+             int64_t packets_count,
+             bool verbose)
     {
       ELLE_TRACE_SCOPE("download %s %s times", packet_size, packets_count);
 
@@ -145,10 +156,13 @@ namespace infinit
         {
           auto start_partial = microsec_clock::universal_time();
           download(packet_size);
-          std::cout << "    - [" << i << "] "
-                    << report(packet_size,
-                              microsec_clock::universal_time() - start_partial)
-                    << std::endl;
+          if (verbose)
+          {
+            std::cout << "    - [" << i << "] "
+                      << report(packet_size,
+                                microsec_clock::universal_time() - start_partial)
+                      << std::endl;
+          }
         }
       }
       auto diff = microsec_clock::universal_time() - start;
@@ -161,10 +175,13 @@ namespace infinit
     static
     void
     serve(elle::Version const& version,
-          elle::IOStream& socket)
+          elle::IOStream& socket,
+          bool verbose)
     {
       try
       {
+        if (verbose)
+          std::cout << "New connection" << std::endl;
         RPCs rpc_server(version);
         ELLE_TRACE("serve rpcs")
           rpc_server.serve(socket);
@@ -183,13 +200,20 @@ namespace infinit
     {
       static
       void
-      serve(uint16_t port,
-            elle::Version const& version)
+      serve(uint16_t& port,
+            elle::Version const& version,
+            reactor::Barrier& listening,
+            bool verbose)
 
       {
         ELLE_TRACE("create tcp server (listening on port: %s)", port);
         auto server = elle::make_unique<reactor::network::TCPServer>();
         server->listen(port);
+        port = server->port();
+        if (verbose)
+          std::cout << "  Listen to tcp connections on port " << port
+                    << std::endl;
+        listening.open();
         elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
         {
           s.run_background(
@@ -201,9 +225,9 @@ namespace infinit
                 auto socket = elle::utility::move_on_copy(server->accept());
                 s.run_background(
                   elle::sprintf("socket %s", socket),
-                  [version, socket]
+                  [version, socket, verbose]
                   {
-                    infinit::networking::serve(version, **socket);
+                    infinit::networking::serve(version, **socket, verbose);
                   });
               }
             });
@@ -225,17 +249,28 @@ namespace infinit
     {
       static
       void
-      serve(uint16_t port,
+      serve(uint16_t& port,
             int xorit,
-            elle::Version const& version)
+            elle::Version const& version,
+            reactor::Barrier& listening,
+            bool verbose)
       {
         ELLE_TRACE("create utp server (listening on port: %s) (xor: %s)",
                    port, xorit);
         reactor::network::UTPServer server;
         server.xorify(xorit);
         server.listen(port);
+        port = server.local_endpoint().port();
+        if (verbose)
+        {
+          std::cout << "  Listen to ";
+          if (xorit)
+            std::cout << "xored ";
+          std::cout << "utp connections on port " << port << std::endl;
+        }
         server.rdv_connect("connectivity-server:" + std::to_string(port),
                            "rdv.infinit.sh:7890");
+        listening.open();
         elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
         {
           s.run_background(
@@ -247,9 +282,9 @@ namespace infinit
                 auto socket = elle::utility::move_on_copy(server.accept());
                 s.run_background(
                   elle::sprintf("socket %s", socket),
-                  [version, socket]
+                  [version, socket, verbose]
                   {
-                    infinit::networking::serve(version, **socket);
+                    infinit::networking::serve(version, **socket, verbose);
                   });
               }
             });
@@ -313,34 +348,61 @@ namespace infinit
 
     inline
     uint16_t
+    get_port(boost::program_options::variables_map const& args)
+    {
+      auto port = optional<uint16_t>(args, "port");
+      if (port)
+        return *port;
+      return 0;
+    }
+
+    inline
+    uint16_t
     get_port(boost::program_options::variables_map const& args,
              std::string const& key,
              uint16_t offset)
     {
+      ELLE_DEBUG("get port for key %s", key);
       if (args.count(key))
         return args[key].as<uint16_t>();
-      return mandatory<uint16_t>(args, "port") + offset;
+      return get_port(args) + offset;
     }
 
     inline
     uint16_t
-    tcp_port(boost::program_options::variables_map const& args)
+    get_tcp_port(boost::program_options::variables_map const& args)
     {
-      return get_port(args, "tcp_port", 0);
+      auto port = get_port(args, "tcp_port", 0);
+      ELLE_DEBUG("utp port: %s", port);
+      return port;
     }
 
     inline
     uint16_t
-    utp_port(boost::program_options::variables_map const& args)
+    get_utp_port(boost::program_options::variables_map const& args)
     {
-      return get_port(args, "utp_port", 1);
+      auto port = get_port(args, "utp_port", 1);
+      if (port == 1)
+        return 0;
+      ELLE_DEBUG("utp port: %s", port);
+      return port;
     }
 
     inline
     uint16_t
-    xored_utp_port(boost::program_options::variables_map const& args)
+    get_xored_utp_port(boost::program_options::variables_map const& args)
     {
-      return get_port(args, "xored_utp_port", 2);
+      auto port = get_port(args, "xored_utp_port", 2);
+      if (port == 2) // Random port.
+      {
+        auto uport = get_utp_port(args);
+        if (uport == 0)
+          ELLE_DEBUG("xored utp port: 0", port)
+            return 0;
+        port = uport + 1;
+      }
+      ELLE_DEBUG("xored utp port: %s", port);
+      return port;
     }
 
     inline
@@ -404,42 +466,75 @@ namespace infinit
         auto protocol = infinit::model::doughnut::Protocol::all;
         if (args.count("protocol"))
           protocol = infinit::protocol_get(args);
+        reactor::Barrier listening;
+        auto base_port = get_port(args);
+        uint16_t tcp_port = 0;
+        uint16_t utp_port = 0;
+        uint16_t xored_utp_port = 0;
         if (tcp_enabled(protocol))
         {
-          uint16_t port = tcp_port(args);
+          tcp_port = get_tcp_port(args);
           this->_tcp.reset(
             new reactor::Thread(
               "tcp",
-              [&,port]
+              [&]
               {
-                tcp::serve(port, this->_version);
+                tcp::serve(tcp_port, this->_version, listening,
+                           flag(args, "verbose"));
               }));
+          listening.wait();
+          listening.close();
         }
         if (utp_enabled(protocol))
         {
           if (non_xored_enabled(args))
           {
-            uint16_t port = utp_port(args);
+            utp_port = get_utp_port(args);
             this->_utp.reset(
               new reactor::Thread(
                 "utp",
-                [&, port]
+                [&]
                 {
-                  utp::serve(port, 0, this->_version);
+                  utp::serve(utp_port, 0, this->_version, listening,
+                             flag(args, "verbose"));
                 }));
+            listening.wait();
+            listening.close();
           }
           if (xored_enabled(args))
           {
-            uint16_t port = xored_utp_port(args);
+            xored_utp_port = get_xored_utp_port(args);
             this->_xored_utp.reset(
               new reactor::Thread(
-                "utp", [&, port]
+                "utp", [&]
                 {
-                  utp::serve(port, 255, this->_version);
+                  utp::serve(xored_utp_port, 255, this->_version, listening,
+                             flag(args, "verbose"));
                 }));
+            listening.wait();
+            listening.close();
           }
         }
-        reactor::sleep(200_ms);
+
+        std::cout
+          << std::endl
+          << "To perform tests, run the following command from another node:"
+          << std::endl;
+        std::cout << "> infinit-doctor --networking";
+        if (protocol != infinit::model::doughnut::Protocol::all)
+          std::cout << " --protocol " << protocol;
+        if (base_port != 0)
+          std::cout << " --port " << get_port(args);
+        else
+        {
+          if (tcp_port)
+            std::cout << " --tcp_port " << tcp_port;
+          if (utp_port)
+            std::cout << " --utp_port " << utp_port;
+          if (xored_utp_port)
+            std::cout << " --xored_utp_port " << xored_utp_port;
+        }
+        std::cout << " --host <address_of_this_machine>" <<std::endl;
       }
 
       Servers(Servers&& servers)
@@ -486,7 +581,7 @@ namespace infinit
         {
           try
           {
-            upload(stream, packet_size, packets_count);
+            upload(stream, packet_size, packets_count, flag(args, "verbose"));
           }
           catch (reactor::network::Exception const&)
           {
@@ -499,7 +594,7 @@ namespace infinit
         {
           try
           {
-            download(stream, packet_size, packets_count);
+            download(stream, packet_size, packets_count, flag(args, "verbose"));
           }
           catch (reactor::network::Exception const&)
           {
@@ -542,7 +637,7 @@ namespace infinit
           std::unique_ptr<reactor::network::TCPSocket> socket;
           try
           {
-            socket.reset(tcp::socket(host, tcp_port(args)).release());
+            socket.reset(tcp::socket(host, get_tcp_port(args)).release());
           }
           catch (reactor::network::Exception const&)
           {
@@ -551,9 +646,9 @@ namespace infinit
                       << std::endl;
             return;
           }
-          infinit::protocol::Serializer serializer(
-            *socket, infinit::elle_serialization_version(v), false);
-          infinit::protocol::ChanneledStream stream(serializer);
+          infinit::protocol::Serializer serializer{
+            *socket, infinit::elle_serialization_version(v), false};
+          auto stream = infinit::protocol::ChanneledStream{serializer};
           match_versions(stream);
           action(stream);
         };
@@ -571,7 +666,7 @@ namespace infinit
                 utp::socket(
                   server,
                   host,
-                  xored ? xored_utp_port(args) : utp_port(args),
+                  xored ? get_xored_utp_port(args) : get_utp_port(args),
                   xored ? 0xFF : 0).release());
             }
             catch (reactor::network::Exception const&)
@@ -581,9 +676,9 @@ namespace infinit
                         << std::endl;
               return;
             }
-            infinit::protocol::Serializer serializer(
-              *socket, infinit::elle_serialization_version(v), false);
-            infinit::protocol::ChanneledStream stream(serializer);
+            infinit::protocol::Serializer serializer{
+              *socket, infinit::elle_serialization_version(v), false};
+            auto stream = infinit::protocol::ChanneledStream{serializer};
             match_versions(stream);
             action(stream);
           };

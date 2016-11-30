@@ -94,6 +94,20 @@ namespace infinit
     {
       return _filesystem;
     }
+
+    FileSystem::~FileSystem()
+    {
+      ELLE_DEBUG("%s: destroy", this);
+      while (!this->_running.empty())
+      {
+        auto t = std::move(this->_running.back());
+        this->_running.pop_back();
+        ELLE_DEBUG("terminating %s", *t)
+        t->terminate_now();
+      }
+      ELLE_DEBUG("%s: destroyed", this);
+    }
+
     void
     unchecked_remove(model::Model& model, model::Address address)
     {

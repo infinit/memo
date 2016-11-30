@@ -135,6 +135,20 @@ namespace infinit
       virtual
       elle::json::Json
       query(std::string const& k, boost::optional<std::string> const& v);
+
+    /*-----------.
+    | Monitoring |
+    `-----------*/
+    public:
+      virtual
+      std::string
+      type_name() = 0;
+      virtual
+      elle::json::Array
+      peer_list() = 0;
+      virtual
+      elle::json::Object
+      stats() = 0;
     };
 
     struct Configuration
@@ -150,7 +164,6 @@ namespace infinit
       // virtual
       // void
       // join();
-      virtual
       void
       serialize(elle::serialization::Serializer& s) override;
       typedef infinit::serialization_tag serialization_tag;

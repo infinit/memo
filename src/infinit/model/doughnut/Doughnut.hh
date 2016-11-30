@@ -26,6 +26,8 @@ namespace infinit
 {
   namespace model
   {
+    class MonitoringServer;
+
     namespace doughnut
     {
       namespace bmi = boost::multi_index;
@@ -35,11 +37,18 @@ namespace infinit
         AdminKeys() {}
         AdminKeys(AdminKeys&& b) = default;
         AdminKeys(AdminKeys const& b) = default;
-        //AdminKeys& operator = (AdminKeys const& b) = default;
+        AdminKeys&
+        operator = (AdminKeys&& b) = default;
         std::vector<infinit::cryptography::rsa::PublicKey> r;
         std::vector<infinit::cryptography::rsa::PublicKey> w;
         std::vector<infinit::cryptography::rsa::PublicKey> group_r;
         std::vector<infinit::cryptography::rsa::PublicKey> group_w;
+        using Model = das::Model<
+          AdminKeys,
+          elle::meta::List<symbols::Symbol_r,
+                           symbols::Symbol_w,
+                           symbols::Symbol_group_r,
+                           symbols::Symbol_group_w>>;
       };
 
       class Doughnut // Doughnut. DougHnuT. Get it ?
@@ -98,6 +107,7 @@ namespace infinit
         ELLE_ATTRIBUTE(
           elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
         ELLE_ATTRIBUTE_RX(reactor::Barrier, terminating);
+        ELLE_ATTRIBUTE_r(Protocol, protocol);
 
       public:
         struct KeyHash
@@ -165,6 +175,7 @@ namespace infinit
         void
         _remove(Address address, blocks::RemoveSignature rs) override;
         friend class Local;
+        ELLE_ATTRIBUTE(std::unique_ptr<MonitoringServer>, monitoring_server);
 
       /*------------------.
       | Service discovery |
@@ -202,6 +213,14 @@ namespace infinit
         boost::optional<int> port;
         AdminKeys admin_keys;
         std::vector<Endpoints> peers;
+        using Model = das::Model<
+          Configuration,
+          elle::meta::List<symbols::Symbol_overlay,
+                           symbols::Symbol_keys,
+                           symbols::Symbol_owner,
+                           symbols::Symbol_passport,
+                           symbols::Symbol_name>>;
+
 
         Configuration(
           Address id,
@@ -226,18 +245,20 @@ namespace infinit
         make(bool client,
              boost::filesystem::path const& p) override;
         std::unique_ptr<Doughnut>
-        make(bool client,
-             boost::filesystem::path const& p,
-             bool async = false,
-             bool cache = false,
-             boost::optional<int> cach_size = {},
-             boost::optional<std::chrono::seconds> cache_ttl = {},
-             boost::optional<std::chrono::seconds> cache_invalidation = {},
-             boost::optional<uint64_t> disk_cache_size = {},
-             boost::optional<elle::Version> version = {},
-             boost::optional<int> port = {},
-             boost::optional<boost::asio::ip::address> listen_address = {},
-             boost::optional<std::string> rdv_host = {});
+        make(
+          bool client,
+          boost::filesystem::path const& p,
+          bool async = false,
+          bool cache = false,
+          boost::optional<int> cach_size = {},
+          boost::optional<std::chrono::seconds> cache_ttl = {},
+          boost::optional<std::chrono::seconds> cache_invalidation = {},
+          boost::optional<uint64_t> disk_cache_size = {},
+          boost::optional<elle::Version> version = {},
+          boost::optional<int> port = {},
+          boost::optional<boost::asio::ip::address> listen_address = {},
+          boost::optional<std::string> rdv_host = {},
+          boost::optional<boost::filesystem::path> monitoring_socket_path = {});
       };
 
       std::string
@@ -245,13 +266,6 @@ namespace infinit
     }
   }
 }
-
-DAS_MODEL_FIELDS(infinit::model::doughnut::Configuration,
-                 (overlay, keys, owner, passport, name));
-
-DAS_MODEL(infinit::model::doughnut::AdminKeys, (r, w, group_r, group_w), DasAdminKeys);
-DAS_MODEL_DEFAULT(infinit::model::doughnut::AdminKeys, DasAdminKeys);
-DAS_MODEL_SERIALIZE(infinit::model::doughnut::AdminKeys);
 
 # include <infinit/model/doughnut/Doughnut.hxx>
 

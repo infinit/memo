@@ -131,10 +131,10 @@ with Infinit() as alice:
              '--network', 'n'])
   def vol():
     return alice.run_json(['infinit-volume', '--export', '--as', 'alice', 'v'])
-  assertEq(vol()['mount_options'], None)
+  assertEq(vol()['mount_options'], {})
   # Ensure update with no options does not set anything.
   alice.run(['infinit-volume', '--update', '--as', 'alice', 'v'])
-  assertEq(vol()['mount_options'], None)
+  assertEq(vol()['mount_options'], {})
   alice.run(['infinit-volume', '--update', '--as', 'alice', 'v',
              '--push-endpoints', '--fetch-endpoints', '--cache'])
   mount_opts = vol()['mount_options']

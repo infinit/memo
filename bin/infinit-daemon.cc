@@ -1403,8 +1403,7 @@ _run(boost::program_options::variables_map const& args, bool detach)
       std::string name = u.substr(0, sep);
       std::string pass = u.substr(sep+1);
       LoginCredentials c {name, hash_password(pass, _hub_salt)};
-      das::Serializer<DasLoginCredentials> credentials{c};
-      auto json = beyond_login(name, credentials);
+      auto json = beyond_login(name, c);
       elle::serialization::json::SerializerIn input(json, false);
       auto user = input.deserialize<infinit::User>();
       ifnt.user_save(user, true);

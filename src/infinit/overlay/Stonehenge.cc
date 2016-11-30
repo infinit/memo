@@ -17,10 +17,7 @@
 
 ELLE_LOG_COMPONENT("infinit.overlay.Stonehenge");
 
-DAS_MODEL(infinit::overlay::StonehengeConfiguration::Peer,
-          (host, port, id), DasPeer);
-DAS_MODEL_DEFAULT(infinit::overlay::StonehengeConfiguration::Peer, DasPeer);
-DAS_MODEL_SERIALIZE(infinit::overlay::StonehengeConfiguration::Peer);
+DAS_SERIALIZE(infinit::overlay::StonehengeConfiguration::Peer);
 
 namespace infinit
 {
@@ -95,6 +92,36 @@ namespace infinit
         throw elle::Error(elle::sprintf("missing endpoint for %f", peer.id()));
       return this->doughnut()->dock().make_peer(
         peer, model::EndpointsRefetcher());
+    }
+
+    /*-----------.
+    | Monitoring |
+    `-----------*/
+
+    std::string
+    Stonehenge::type_name()
+    {
+      return "stonehenge";
+    }
+
+    elle::json::Array
+    Stonehenge::peer_list()
+    {
+      elle::json::Array res;
+      for (auto const& peer: this->_peers)
+        res.push_back(elle::json::Object{
+          { "id", elle::sprintf("%x", peer.id()) },
+          { "endpoints", elle::sprintf("%s", peer.endpoints()) }
+        });
+      return res;
+    }
+
+    elle::json::Object
+    Stonehenge::stats()
+    {
+      elle::json::Object res;
+      res["type"] = this->type_name();
+      return res;
     }
 
     StonehengeConfiguration::StonehengeConfiguration()

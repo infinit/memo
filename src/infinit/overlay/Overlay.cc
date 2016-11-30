@@ -102,7 +102,7 @@ namespace infinit
         {
           bool is_us = (nl.id() == this->doughnut()->id());
           if (is_us)
-            ELLE_TRACE("%s: removeing ourself from peer list", this);
+            ELLE_TRACE("%s: removing ourself from peer list", this);
           return is_us;
         });
       peers.erase(it, peers.end());
@@ -181,15 +181,19 @@ namespace infinit
             {
               try
               {
-                yield(this->_lookup_node(address));
+                if (auto res = this->_lookup_node(address))
+                {
+                  yield(std::move(res));
+                  return;
+                }
               }
               catch (elle::Error const& e)
               {
                 ELLE_TRACE("%s: failed to lookup node %f: %s",
                            this, address, e);
-                yield(WeakMember(new model::doughnut::DummyPeer(
-                                   *this->doughnut(), address)));
               }
+              yield(WeakMember(new model::doughnut::DummyPeer(
+                                 *this->doughnut(), address)));
             },
             "fetch node by address");
         });

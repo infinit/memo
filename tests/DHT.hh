@@ -107,6 +107,26 @@ public:
         this->disconnect(*peer);
   }
 
+  std::string
+  type_name() override
+  {
+    return "test";
+  }
+
+  elle::json::Array
+  peer_list() override
+  {
+    return elle::json::Array();
+  }
+
+  elle::json::Object
+  stats() override
+  {
+    elle::json::Object res;
+    res["type"] = this->type_name();
+    return res;
+  }
+
 protected:
   virtual
   reactor::Generator<WeakMember>
@@ -175,20 +195,20 @@ protected:
   ELLE_ATTRIBUTE_RX((std::unordered_map<infinit::model::Address, int>), partial_addresses);
 };
 
-NAMED_ARGUMENT(paxos);
-NAMED_ARGUMENT(keys);
-NAMED_ARGUMENT(owner);
-NAMED_ARGUMENT(id);
-NAMED_ARGUMENT(node_timeout);
-NAMED_ARGUMENT(storage);
-NAMED_ARGUMENT(make_overlay);
-NAMED_ARGUMENT(make_consensus);
-NAMED_ARGUMENT(version);
-NAMED_ARGUMENT(with_cache);
-NAMED_ARGUMENT(user_name);
-NAMED_ARGUMENT(yielding_overlay);
-NAMED_ARGUMENT(protocol);
-NAMED_ARGUMENT(port);
+DAS_SYMBOL(paxos);
+DAS_SYMBOL(keys);
+DAS_SYMBOL(owner);
+DAS_SYMBOL(id);
+DAS_SYMBOL(node_timeout);
+DAS_SYMBOL(storage);
+DAS_SYMBOL(make_overlay);
+DAS_SYMBOL(make_consensus);
+DAS_SYMBOL(version);
+DAS_SYMBOL(with_cache);
+DAS_SYMBOL(user_name);
+DAS_SYMBOL(yielding_overlay);
+DAS_SYMBOL(protocol);
+DAS_SYMBOL(port);
 
 std::unique_ptr<dht::consensus::Consensus>
 add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
@@ -208,7 +228,7 @@ public:
   DHT(Args&& ... args)
   {
     namespace ph = std::placeholders;
-    elle::named::prototype(
+    das::named::prototype(
       paxos = true,
       keys = infinit::cryptography::rsa::keypair::generate(512),
       owner = boost::optional<infinit::cryptography::rsa::KeyPair>(),

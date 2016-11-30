@@ -441,9 +441,8 @@ COMMAND(populate_hub)
     infinit::User u(m.first,
                     infinit::cryptography::rsa::keypair::generate(2048),
                     m.second.email, m.second.fullname, m.second.dn);
-    das::Serializer<infinit::DasPrivateUserPublish> view{u};
     ELLE_TRACE("pushing %s", u.name);
-    beyond_push("user", u.name, view, u);
+    infinit::beyond_push<infinit::PrivateUserPublish>("user", u.name, u, u);
   }
 }
 

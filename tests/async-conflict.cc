@@ -472,7 +472,18 @@ ELLE_TEST_SCHEDULED(async_squash_conflict)
   elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
   fs = make(path, node_id, true, 100, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
-  BOOST_CHECK_EQUAL(root_count(fs), 7);
+  // Async operation so check multiple times to avoid timing issues.
+  bool are_7 = false;
+  for (int i = 0; i < 10; i++)
+  {
+    if (root_count(fs) == 7)
+    {
+      are_7 = true;
+      break;
+    }
+    reactor::sleep(100_ms);
+  }
+  BOOST_CHECK(are_7);
 
   fs.reset();
   fs = make(path, node_id, false, 0, kp);

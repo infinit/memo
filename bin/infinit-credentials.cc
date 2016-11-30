@@ -115,7 +115,7 @@ fetch_credentials(infinit::User const& user,
   // Remove when serialization does not require copy.
   auto res = beyond_fetch_json(
     where, elle::sprintf("\"%s\" credentials for", pretty), user.name, user,
-    Headers{}, false);
+    infinit::Headers{}, false);
   auto root = boost::any_cast<elle::json::Object>(res);
   auto credentials_vec =
       boost::any_cast<std::vector<elle::json::Json>>(root["credentials"]);

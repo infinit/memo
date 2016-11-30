@@ -829,6 +829,43 @@ namespace infinit
         return it;
       }
 
+      /* Pick one item at random that matches filter.
+       * Fallback to unfiltered pick if no element matches.
+       */
+      template<typename C, typename F>
+      typename C::iterator
+      random_from(C& container, F filter, std::default_random_engine& gen)
+      {
+        if (container.empty())
+          return container.end();
+        int ncandidates = std::count_if(container.begin(), container.end(),
+          [&filter](auto const& v) { return filter(v.second);});
+        if (!ncandidates)
+          return random_from(container, gen);
+        std::uniform_int_distribution<> random(0, ncandidates-1);
+        int v = random(gen);
+        auto it = container.begin();
+        while (!filter(it->second)) ++it;
+        while (v--)
+        {
+          ++it;
+          while (!filter(it->second))
+            ++it;
+        }
+        return it;
+      }
+
+      static
+      bool
+      contact_without_timeouts(Contact const& c)
+      {
+        static bool disable = elle::os::inenv("INFINIT_KELIPS_NO_SNUB");
+        if (disable)
+          return true;
+        else
+          return c.ping_timeouts == 0;
+      }
+
       template<typename C, typename G>
       C
       pick_n(C const& src, int count, G& generator)
@@ -2041,6 +2078,7 @@ namespace infinit
         c->validated_endpoint = TimedEndpoint(endpoint, now());
         // add/update to endpoint list
         endpoints_update(c->endpoints, endpoint);
+        c->ping_timeouts = 0;
       }
 
       void
@@ -2049,7 +2087,7 @@ namespace infinit
         auto tit = _ping_time.find(p->sender);
         if (tit == _ping_time.end())
         {
-          ELLE_LOG("%s: Unexpected pong from %f", *this, p->sender);
+          ELLE_TRACE("%s: Unexpected or late pong from %f", *this, p->sender);
           return;
         }
         ELLE_DUMP("%s: got pong reply from %f", *this, p->sender);
@@ -2392,14 +2430,9 @@ namespace infinit
         ELLE_TRACE("%s: route %s", *this, p->ttl);
         p->ttl--;
         p->sender = _self;
-        int count = _state.contacts[fg].size();
-        if (count == 0)
-          return;
-        std::uniform_int_distribution<> random(0, count-1);
-        int idx = random(_gen);
-        auto it = _state.contacts[fg].begin();
-        while (idx--) ++it;
-        send(*p, it->second);
+        auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
+        if (it != _state.contacts[fg].end())
+          send(*p, it->second);
       }
 
       void
@@ -2472,14 +2505,9 @@ namespace infinit
         }
         p->ttl--;
         p->sender = _self;
-        int count = _state.contacts[fg].size();
-        if (count == 0)
-          return;
-        std::uniform_int_distribution<> random(0, count-1);
-        int idx = random(_gen);
-        auto it = _state.contacts[fg].begin();
-        while (idx--) ++it;
-        send(*p, it->second);
+        auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
+        if (it != _state.contacts[fg].end())
+          send(*p, it->second);
       }
 
       void
@@ -2614,9 +2642,9 @@ namespace infinit
           return;
         }
         // Forward the packet to an other node
-        auto it = random_from(_state.contacts[fg], _gen);
+        auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
         if (it == _state.contacts[fg].end())
-          it = random_from(_state.contacts[_group], _gen);
+          it = random_from(_state.contacts[_group], contact_without_timeouts, _gen);
         if (it == _state.contacts[_group].end())
         {
           ELLE_ERR("%s: No contact founds", *this);
@@ -2710,9 +2738,9 @@ namespace infinit
           r->startTime = now();
           r->barrier.close();
           // Select target node
-          auto it = random_from(_state.contacts[fg], _gen);
+          auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
           if (it == _state.contacts[fg].end())
-            it = random_from(_state.contacts[_group], _gen);
+            it = random_from(_state.contacts[_group], contact_without_timeouts, _gen);
           if (it == _state.contacts[_group].end())
           {
             ELLE_TRACE("no contact to forward GET to");
@@ -2830,9 +2858,11 @@ namespace infinit
             r->startTime = now();
             r->barrier.close();
             // Select target node
-            auto it = random_from(_state.contacts[fg], _gen);
+            auto it = random_from(_state.contacts[fg], contact_without_timeouts,
+                                  _gen);
             if (it == _state.contacts[fg].end())
-              it = random_from(_state.contacts[_group], _gen);
+              it = random_from(_state.contacts[_group], contact_without_timeouts,
+                               _gen);
             if (it == _state.contacts[_group].end())
             {
               ELLE_TRACE("no contact to forward GET to");
@@ -2924,9 +2954,9 @@ namespace infinit
           r->barrier.close();
           elle::Buffer buf = serialize(req, *this->doughnut());
           // Select target node
-          auto it = random_from(_state.contacts[fg], _gen);
+          auto it = random_from(_state.contacts[fg], contact_without_timeouts, _gen);
           if (it == _state.contacts[fg].end())
-            it = random_from(_state.contacts[_group], _gen);
+            it = random_from(_state.contacts[_group], contact_without_timeouts, _gen);
           if (it == _state.contacts[_group].end())
           {
             if (fg != this->_group || this->_observer)
@@ -3119,6 +3149,12 @@ namespace infinit
               reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
               continue;
             }
+            else
+            {
+              it->second.ping_timeouts++;
+              ELLE_TRACE("%s: ping timeout on %s (%s)", this, it->first,
+                         it->second.ping_timeouts);
+            }
             target = &it->second;
             break;
           }
@@ -3173,7 +3209,23 @@ namespace infinit
           }
           ++idx;
         }
-
+        // Check ping timeouts
+        auto today = now();
+        for (auto it = this->_ping_time.begin(); it != this->_ping_time.end();)
+        {
+          if (today - it->second > std::chrono::milliseconds(_config.ping_timeout_ms))
+          {
+            auto g = this->group_of(it->first);
+            auto cit = this->_state.contacts[g].find(it->first);
+            if (cit != this->_state.contacts[g].end())
+            {
+              cit->second.ping_timeouts++;
+            }
+            it = this->_ping_time.erase(it);
+          }
+          else
+            ++it;
+        }
         int time_send_all = _state.files.size() / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
         ELLE_DUMP("time_send_all is %s", time_send_all);
         if (time_send_all >= _config.file_timeout_ms / 4)
@@ -3612,30 +3664,7 @@ namespace infinit
         if (k == "stats")
         {
           res["group"] = this->_group;
-          for (int i = 0; i < signed(this->_state.contacts.size()); ++i)
-          {
-            auto const& group = this->_state.contacts[i];
-            elle::json::Array contacts;
-            for (auto const& contact: group)
-            {
-              auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
-              (std::chrono::system_clock::now() - endpoints_max(contact.second.endpoints));
-              contacts.push_back(elle::json::Object{
-                  {"address", elle::sprintf("%x", contact.second.address)},
-                  {"validated_endpoint",
-                    elle::sprintf("%s", (contact.second.validated_endpoint?
-                    PrettyEndpoint(contact.second.validated_endpoint->first)
-                  : PrettyEndpoint(Endpoint())).repr())},
-                  {"endpoints", elle::sprintf("%s", contact.second.endpoints.size())},
-                  {"last_seen",
-                  elle::sprintf("%ss", last_seen.count())},
-                  {"discovered", contact.second.discovered},
-              });
-            }
-            res[elle::sprintf("%s", i)] = elle::json::Object{
-              {"contacts", std::move(contacts)}
-            };
-          }
+          res["contacts"] = this->peer_list();
           res["files"] = this->_state.files.size();
           res["dropped_puts"] = this->_dropped_puts;
           res["dropped_gets"] = this->_dropped_gets;
@@ -3785,6 +3814,69 @@ namespace infinit
             res["status"] = std::string("failed: ") + e.what();
           }
         }
+        return res;
+      }
+
+      /*-----------.
+      | Monitoring |
+      `-----------*/
+
+      std::string
+      Node::type_name()
+      {
+        return "kelips";
+      }
+
+      elle::json::Array
+      Node::peer_list()
+      {
+        elle::json::Array res;
+        for (int i = 0; i < signed(this->_state.contacts.size()); ++i)
+        {
+          auto const& group = this->_state.contacts[i];
+          for (auto const& contact: group)
+          {
+            auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
+              (std::chrono::system_clock::now() -
+               endpoints_max(contact.second.endpoints));
+            elle::json::Array endpoints;
+            for (auto const pair: contact.second.endpoints)
+              endpoints.push_back(PrettyEndpoint(pair.first).repr());
+            elle::json::Object peer_info{
+              { "id", elle::sprintf("%x", contact.second.address) },
+              { "validated_endpoint",
+                elle::sprintf("%s", (contact.second.validated_endpoint
+                  ? PrettyEndpoint(contact.second.validated_endpoint->first)
+                  : PrettyEndpoint(Endpoint())).repr()) },
+              { "endpoints", endpoints },
+              { "last_seen", elle::sprintf("%ss", last_seen.count()) },
+              { "discovered", contact.second.discovered },
+              { "group", i },
+              { "ping_timeouts", contact.second.ping_timeouts},
+            };
+            res.push_back(peer_info);
+          }
+        }
+        return res;
+      }
+
+      elle::json::Object
+      Node::stats()
+      {
+        elle::json::Object res;
+        res["type"] = this->type_name();
+        using Protocol = infinit::model::doughnut::Protocol;
+        res["protocol"] =
+          this->_config.rpc_protocol == Protocol::utp ? "utp"
+          : (this->_config.rpc_protocol == Protocol::tcp ? "tcp" : "all");
+        res["group"] = this->_group;
+        elle::json::Object stats{
+          { "files", this->_state.files.size() },
+          { "dropped_puts", this->_dropped_puts },
+          { "dropped_gets", this->_dropped_gets },
+          { "failed_puts", this->_failed_puts },
+        };
+        res["statistics"] = stats;
         return res;
       }
 

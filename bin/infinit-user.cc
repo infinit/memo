@@ -53,6 +53,25 @@ pull_avatar(infinit::User& self);
 boost::optional<boost::filesystem::path>
 avatar_path(std::string const& name);
 
+using PublicUser = das::Model<
+  infinit::User,
+  decltype(elle::meta::list(
+             infinit::symbols::name,
+             infinit::symbols::description,
+             infinit::symbols::fullname,
+             infinit::symbols::public_key,
+             infinit::symbols::ldap_dn))>;
+
+using PublicUserPublish = das::Model<
+  infinit::User,
+  decltype(elle::meta::list(
+             infinit::symbols::name,
+             infinit::symbols::description,
+             infinit::symbols::email,
+             infinit::symbols::fullname,
+             infinit::symbols::public_key,
+             infinit::symbols::ldap_dn))>;
+
 COMMAND(export_)
 {
   auto name = get_name(args);
@@ -72,13 +91,12 @@ COMMAND(export_)
       elle::fprintf(std::cerr, "WARNING: if you mean to export your user for "
                     "someone else, remove the --full flag\n");
     }
-    UserView<das::Serializer<infinit::DasUser>> view(user);
-    elle::serialization::json::serialize(view, *output, false);
+    elle::serialization::json::serialize(user, *output, false);
   }
   else
   {
-    UserView<das::Serializer<infinit::DasPublicUser>> view(user);
-    elle::serialization::json::serialize(view, *output, false);
+    elle::serialization::json::serialize<
+      das::Serializer<infinit::User, PublicUser>>(user, *output, false);
   }
   report_exported(*output, "user", user.name);
 }
@@ -155,8 +173,8 @@ _push(variables_map const& args, infinit::User& user, bool atomic)
   {
     if (!ldap_dn)
       user.password_hash = hub_password_hash(args);
-    das::Serializer<infinit::DasPrivateUserPublish> view{user};
-    beyond_push("user", user.name, view, user);
+    infinit::beyond_push<infinit::PrivateUserPublish>(
+      "user", user.name, user, user);
   }
   else
   {
@@ -165,8 +183,7 @@ _push(variables_map const& args, infinit::User& user, bool atomic)
       throw CommandLineError(
         "Password is only used when pushing a full user");
     }
-    das::Serializer<infinit::DasPublicUserPublish> view{user};
-    beyond_push("user", user.name, view, user);
+    infinit::beyond_push<PublicUserPublish>("user", user.name, user, user);
   }
   if (user_updated && !atomic)
     ifnt.user_save(user, true);
@@ -403,8 +420,7 @@ COMMAND(login)
   auto pass = _password(args, "password", "Password");
   auto hashed_pass = hash_password(pass, _hub_salt);
   LoginCredentials c{ name, hashed_pass, pass };
-  das::Serializer<DasLoginCredentials> credentials{c};
-  auto json = beyond_login(name, credentials);
+  auto json = beyond_login(name, c);
   elle::serialization::json::SerializerIn input(json, false);
   auto user = input.deserialize<infinit::User>();
   ifnt.user_save(user, true);

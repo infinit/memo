@@ -387,6 +387,9 @@ with Beyond() as beyond, \
   assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'bob'])), 2)
   bob.run(['infinit-volume', '--create', '--as', 'bob', 'v', '-N', 'n', '-p'])
   assertEq(len(bob.run_json(['infinit-volume', '--list', '-s', '--as', 'bob'])), 1)
+  bob.run_script(user = 'bob', volume = 'bob/v',
+                 operation = 'write_file', path = '/some_file')
+  assertEq(len(os.listdir('%s/bob/n/bob/v' % bob.state_path)), 1)
   bob.run(['infinit-drive', '--create', '--as', 'bob', 'd',
            '-V', 'v', '-N', 'n', '-p'])
   assertEq(
@@ -399,6 +402,7 @@ with Beyond() as beyond, \
   assertEq(
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)
   assertEq(len(os.listdir('%s/cache/bob' % bob.state_path)), 0)
+  assertEq(len(os.listdir('%s/bob/n/bob' % bob.state_path)), 0)
   bob.run(['infinit-network', '--fetch', '--as', 'bob', 'n'], return_code = 1)
   alice.run(['infinit-passport', '--fetch', '--as', 'alice', '-N' 'bob/n'],
             return_code = 1)

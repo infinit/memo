@@ -58,6 +58,15 @@ namespace infinit
           void
           _remove(Address address, blocks::RemoveSignature rs) override;
 
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+        public:
+          elle::json::Object
+          redundancy() override;
+          elle::json::Object
+          stats() override;
+
         public:
           static
           std::vector<boost::filesystem::path>
@@ -89,6 +98,14 @@ namespace infinit
             blocks::RemoveSignature remove_signature;
             int index;
             int version;
+            using Model = das::Model<
+              Op,
+              elle::meta::List<
+                symbols::Symbol_address,
+                symbols::Symbol_block,
+                symbols::Symbol_mode,
+                symbols::Symbol_resolver,
+                symbols::Symbol_remove_signature>>;
           };
 
         private:

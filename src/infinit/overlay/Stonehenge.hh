@@ -2,6 +2,7 @@
 # define INFINIT_OVERLAY_STONEHENGE_HH
 
 # include <infinit/overlay/Overlay.hh>
+# include <infinit/symbols.hh>
 
 namespace infinit
 {
@@ -24,7 +25,6 @@ namespace infinit
     | Peers |
     `------*/
     protected:
-      virtual
       void
       _discover(NodeLocations const& peers) override;
 
@@ -32,18 +32,27 @@ namespace infinit
     | Lookup |
     `-------*/
     protected:
-      virtual
       reactor::Generator<std::ambivalent_ptr<model::doughnut::Peer>>
       _lookup(model::Address address,
               int n,
               Operation op) const override;
-      virtual
       Overlay::WeakMember
       _lookup_node(model::Address address) const override;
 
     private:
       Overlay::WeakMember
       _make_member(NodeLocation const& p) const;
+
+    /*-----------.
+    | Monitoring |
+    `-----------*/
+    public:
+      std::string
+      type_name() override;
+      elle::json::Array
+      peer_list() override;
+      elle::json::Object
+      stats() override;
     };
 
     struct StonehengeConfiguration
@@ -56,6 +65,10 @@ namespace infinit
         std::string host;
         int port;
         model::Address id;
+        using Model = das::Model<Peer,
+                                 decltype(elle::meta::list(symbols::host,
+                                                           symbols::port,
+                                                           symbols::id))>;
       };
 
       std::vector<Peer> peers;
@@ -64,7 +77,6 @@ namespace infinit
       ELLE_CLONABLE();
       void
       serialize(elle::serialization::Serializer& s) override;
-      virtual
       std::unique_ptr<infinit::overlay::Overlay>
       make(std::shared_ptr<model::doughnut::Local> local,
            model::doughnut::Doughnut* doughnut) override;

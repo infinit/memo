@@ -26,6 +26,7 @@ namespace infinit
     typedef model::blocks::Block Block;
     typedef model::blocks::ACLBlock ACLBlock;
     class FileSystem;
+    class FileBuffer;
     enum class EntryType
     {
       file,
@@ -47,6 +48,7 @@ namespace infinit
       EntryType entry_type;
       Address address;
     };
+
     class DirectoryData
     {
     public:
@@ -95,6 +97,7 @@ namespace infinit
                                  Address address,
                                  bool deserialized);
     };
+
     enum class WriteTarget
     {
       none = 0,
@@ -151,6 +154,7 @@ namespace infinit
       friend class FileSystem;
       friend class File;
       friend class FileHandle;
+      friend class FileBuffer;
       friend class FileConflictResolver;
     };
     class Node;
@@ -164,13 +168,13 @@ namespace infinit
     std::pair<bool, bool>
     get_permissions(model::Model& model,
                     model::blocks::Block const& block);
-    NAMED_ARGUMENT(allow_root_creation);
-    NAMED_ARGUMENT(model);
-    NAMED_ARGUMENT(mountpoint);
-    NAMED_ARGUMENT(owner);
-    NAMED_ARGUMENT(root_block_cache_dir);
-    NAMED_ARGUMENT(volume_name);
-    NAMED_ARGUMENT(map_other_permissions);
+    DAS_SYMBOL(allow_root_creation);
+    DAS_SYMBOL(model);
+    DAS_SYMBOL(mountpoint);
+    DAS_SYMBOL(owner);
+    DAS_SYMBOL(root_block_cache_dir);
+    DAS_SYMBOL(volume_name);
+    DAS_SYMBOL(map_other_permissions);
     /** Filesystem using a Block Storage as backend.
     * Directory: nodes are serialized, and contains name, stat() and block
     *            address of the directory content
@@ -201,6 +205,7 @@ namespace infinit
         boost::optional<boost::filesystem::path> mountpoint = {},
         bool allow_root_creation = false,
         bool map_other_permissions = true);
+      ~FileSystem();
     private:
       struct Init;
       FileSystem(Init);
@@ -287,6 +292,10 @@ namespace infinit
       ELLE_ATTRIBUTE_R(FileCache, file_cache);
       ELLE_ATTRIBUTE_RX(std::vector<reactor::Thread::unique_ptr>, running);
       ELLE_ATTRIBUTE_RX(std::vector<reactor::Thread::unique_ptr>, pending);
+      typedef
+      std::unordered_map<Address, std::weak_ptr<FileBuffer>>
+      FileBuffers;
+      ELLE_ATTRIBUTE_RX(FileBuffers, file_buffers);
       static const int max_cache_size = 10000;
     };
   }

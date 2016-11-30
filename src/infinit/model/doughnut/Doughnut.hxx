@@ -1,7 +1,7 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_DOUGHNUT_HXX
 # define INFINIT_MODEL_DOUGHNUT_DOUGHNUT_HXX
 
-# include <elle/named.hh>
+# include <das/named.hh>
 
 namespace infinit
 {
@@ -19,20 +19,21 @@ namespace infinit
           type, name, elle::serialization::binary::serialize(value));
       }
 
-      NAMED_ARGUMENT(id);
-      NAMED_ARGUMENT(name);
-      NAMED_ARGUMENT(keys);
-      NAMED_ARGUMENT(owner);
-      NAMED_ARGUMENT(passport);
-      NAMED_ARGUMENT(consensus_builder);
-      NAMED_ARGUMENT(overlay_builder);
-      NAMED_ARGUMENT(port);
-      NAMED_ARGUMENT(listen_address);
-      NAMED_ARGUMENT(storage);
-      NAMED_ARGUMENT(version);
-      NAMED_ARGUMENT(admin_keys);
-      NAMED_ARGUMENT(rdv_host);
-      NAMED_ARGUMENT(protocol);
+      DAS_SYMBOL(id);
+      DAS_SYMBOL(name);
+      DAS_SYMBOL(keys);
+      DAS_SYMBOL(owner);
+      DAS_SYMBOL(passport);
+      DAS_SYMBOL(consensus_builder);
+      DAS_SYMBOL(overlay_builder);
+      DAS_SYMBOL(port);
+      DAS_SYMBOL(listen_address);
+      DAS_SYMBOL(storage);
+      DAS_SYMBOL(version);
+      DAS_SYMBOL(admin_keys);
+      DAS_SYMBOL(rdv_host);
+      DAS_SYMBOL(monitoring_socket_path);
+      DAS_SYMBOL(protocol);
 
       struct Doughnut::Init
       {
@@ -49,13 +50,14 @@ namespace infinit
         boost::optional<elle::Version> version;
         AdminKeys const& admin_keys;
         boost::optional<std::string> rdv_host;
+        boost::optional<boost::filesystem::path> monitoring_socket_path;
         Protocol protocol;
       };
 
       template <typename ... Args>
       Doughnut::Doughnut(Args&& ... args)
         : Doughnut(
-          elle::named::prototype(
+          das::named::prototype(
             doughnut::id,
             doughnut::keys,
             doughnut::owner,
@@ -69,6 +71,8 @@ namespace infinit
             doughnut::version = boost::optional<elle::Version>(),
             doughnut::admin_keys = AdminKeys(),
             doughnut::rdv_host = boost::optional<std::string>(),
+            doughnut::monitoring_socket_path =
+              boost::optional<boost::filesystem::path>(),
             doughnut::protocol = Protocol::all
             ).call(
               [] (Address id,
@@ -84,6 +88,7 @@ namespace infinit
                   boost::optional<elle::Version> version,
                   AdminKeys const& admin_keys,
                   boost::optional<std::string> rdv_host,
+                  boost::optional<boost::filesystem::path> monitoring_socket_path,
                   Protocol p)
               -> Init
               {
@@ -101,6 +106,7 @@ namespace infinit
                   std::move(version),
                   std::move(admin_keys),
                   std::move(rdv_host),
+                  std::move(monitoring_socket_path),
                   std::move(p),
                 };
               },
@@ -109,5 +115,7 @@ namespace infinit
     }
   }
 }
+
+DAS_SERIALIZE(infinit::model::doughnut::AdminKeys);
 
 #endif

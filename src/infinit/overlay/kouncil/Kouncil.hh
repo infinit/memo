@@ -122,7 +122,16 @@ namespace infinit
         _discover(NodeLocations const& peers) override;
         void
         _discover(Overlay::Member peer);
-
+      public:
+        typedef std::unordered_map<model::Address, Endpoints> Pending;
+        typedef std::unordered_set<model::Address> Discovering;
+        ELLE_ATTRIBUTE(Pending, pending);
+        ELLE_ATTRIBUTE(Discovering, discovering);
+        NodeLocations
+        peers_locations(Pending const& extras) const;
+      private:
+        ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>, tasks);
+        void _perform(std::string const& name, std::function<void()> job);
       /*-------.
       | Lookup |
       `-------*/
@@ -133,9 +142,22 @@ namespace infinit
         virtual
         WeakMember
         _lookup_node(model::Address address) const override;
+
+      /*-----------.
+      | Monitoring |
+      `-----------*/
+      public:
+        std::string
+        type_name() override;
+        elle::json::Array
+        peer_list() override;
+        elle::json::Object
+        stats() override;
+
       public:
         elle::json::Json
-        query(std::string const& k, boost::optional<std::string> const& v) override;
+        query(std::string const& k,
+              boost::optional<std::string> const& v) override;
       };
     }
   }

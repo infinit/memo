@@ -315,8 +315,8 @@ namespace infinit
     void
     _serve(protocol::Serializer& serializer)
     {
-      protocol::ChanneledStream channels(serializer);
-      this->_serve(channels);
+      auto chans = protocol::ChanneledStream{serializer};
+      this->_serve(chans);
     }
 
     void
@@ -432,6 +432,7 @@ namespace infinit
     elle::serialization::Context _context;
     boost::optional<infinit::cryptography::SecretKey> _key;
     boost::signals2::signal<void(RPCServer*)> _destroying;
+    boost::signals2::signal<void(RPCServer*)> _ready;
     ELLE_ATTRIBUTE(elle::Version, version);
   };
 

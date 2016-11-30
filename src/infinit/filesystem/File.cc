@@ -322,11 +322,13 @@ namespace infinit
     void
     FileData::write(model::Model& model,
                     WriteTarget target,
-                    std::unique_ptr<ACLBlock>& block, bool first_write)
+                    std::unique_ptr<ACLBlock>& block_, bool first_write)
     {
       ELLE_DEBUG("%s: write at %f: sz=%s, links=%s, mode=%s, fatsize=%s, firstblocksize=%s",
                  this, _address,
                  _header.size, _header.links, print_mode(_header.mode), _fat.size(), _data.size());
+      std::unique_ptr<ACLBlock> myblock_;
+      auto& block = (&block_ == &DirectoryData::null_block) ? myblock_ : block_;
       bool block_allocated = !block;
       if (!block)
       {
@@ -340,6 +342,7 @@ namespace infinit
           return;
         }
       }
+      ELLE_ASSERT(block);
       if (!block->data().empty())
       {
         FileData previous(_path, *block, {true, true});
@@ -366,6 +369,7 @@ namespace infinit
       }
       try
       {
+        ELLE_ASSERT(block);
         block->data(serdata);
         if (!block_allocated)
         {
@@ -461,17 +465,17 @@ namespace infinit
         _filedata->_header.links--;
         _commit(WriteTarget::links);
       }
+      // FIXME: Improves POSIX compatibility but adds window for a data leak.
       else
       {
-        ELLE_DEBUG_SCOPE("No remaining links");
-        // FIXME optimize pass removal data
-        for (unsigned i=0; i<_filedata->_fat.size(); ++i)
+        ELLE_DEBUG("No remaining links");
+        auto it = this->_owner.file_buffers().find(this->_filedata->address());
+        if (it != this->_owner.file_buffers().end())
         {
-          ELLE_DEBUG_SCOPE("removing %s: %f", i, _filedata->_fat[i].first);
-          _owner.unchecked_remove(_filedata->_fat[i].first);
+          auto file_buffer = it->second.lock();
+          if (file_buffer)
+            file_buffer->_remove_data = true;
         }
-        ELLE_DEBUG_SCOPE("removing first block at %f", _first_block->address());
-        _owner.unchecked_remove(_first_block->address());
       }
     }
 
@@ -515,15 +519,17 @@ namespace infinit
         ELLE_WARN("unexpected exception on stat: %s", e);
         throw rfs::Error(EIO, elle::sprintf("%s", e));
       }
-      auto it = this->_size_map.find(_filedata->address());
-      if (it != this->_size_map.end())
+      auto it = _owner.file_buffers().find(_filedata->address());
+      if (it != _owner.file_buffers().end())
       {
-        ELLE_DEBUG("open file size overwrite: %s -> %s",
-                   st->st_size, it->second.first);
-        st->st_size = it->second.first;
+        auto fh = it->second.lock();
+        if (fh)
+        {
+          ELLE_DEBUG("open file size overwrite: %s -> %s",
+                     st->st_size, fh->_file._header.size);
+          st->st_size = fh->_file._header.size;
+        }
       }
-      else
-        ELLE_DEBUG("stat size: %s", st->st_size);
     }
 
     void
@@ -577,11 +583,6 @@ namespace infinit
     File::truncate(off_t new_size)
     {
       _fetch();
-      elle::SafeFinally write_cache_size([&] {
-          auto it = _size_map.find(this->_address);
-          if (it != _size_map.end())
-            it->second.first = new_size;
-      });
       ELLE_TRACE("%s: truncate %s -> %s", *this, _filedata->_header.size, new_size);
       if (new_size == signed(_filedata->_header.size))
         return;
@@ -634,11 +635,12 @@ namespace infinit
       this->_filedata->_header.size = new_size;
       this->_commit(WriteTarget::data);
 
-      // propagate to all write-opened file handles
-      auto it = _size_map.find(_filedata->address());
-      if (it != _size_map.end())
+      // propagate to all opened file handles
+      auto it = _owner.file_buffers().find(_filedata->address());
+      if (it != _owner.file_buffers().end())
       {
-        for (auto fh: it->second.second)
+        auto fh = it->second.lock();
+        if (fh)
         {
           bool dirty = fh->_fat_changed;
           if (!dirty)
@@ -656,14 +658,14 @@ namespace infinit
           {
 #ifdef INFINIT_WINDOWS
             // Propagating to dirty open files breaks saving of office documents.
-            continue;
+            return;
 #else
             ELLE_WARN("Propagating truncate(%s) of %s to open dirty file handle with size %s",
                       new_size, _name, fh->_file._header.size);
 #endif
           }
           if (dirty || new_size)
-            fh->ftruncate(new_size);
+            fh->ftruncate(nullptr, new_size);
           else
           { // No need to go through block removal again
             fh->_file._fat.clear();
@@ -696,7 +698,7 @@ namespace infinit
       }
       return umbrella([&] {
         return std::unique_ptr<rfs::Handle>(
-          new FileHandle(*_owner.block_store(), *_filedata, needw, false, true));
+          new FileHandle(_owner, *_filedata, false));
       });
     }
 
@@ -710,7 +712,7 @@ namespace infinit
       _fetch();
       //ELLE_DEBUG("Forcing entry %s", full_path());
       return std::unique_ptr<rfs::Handle>(
-        new FileHandle(*_owner.block_store(), *_filedata, true));
+        new FileHandle(_owner, *_filedata, true));
     }
 
     model::blocks::ACLBlock*
@@ -804,7 +806,5 @@ namespace infinit
     {
       elle::fprintf(stream, "File(\"%s\")", this->_name);
     }
-
-    File::SizeMap File::_size_map;
   }
 }

@@ -36,13 +36,6 @@ namespace infinit
         , passport(std::move(passport))
       {}
 
-      Remote::Auth::Auth(elle::serialization::SerializerIn& input)
-        : id(input.deserialize<Address>("id"))
-        , challenge(input.deserialize<Challenge>("challenge"))
-        , passport(input.deserialize<Passport>("passport"))
-      {}
-
-
       /*-------------.
       | Construction |
       `-------------*/
@@ -101,6 +94,7 @@ namespace infinit
         if (this->_thread)
           this->_thread->terminate_now();
         this->_connected.close();
+        this->_credentials = {};
         this->_thread.reset(
           new reactor::Thread(
             elle::sprintf("%f worker", this),
@@ -114,12 +108,11 @@ namespace infinit
                 this->_connection_start_time = std::chrono::system_clock::now();
                 auto handshake = [&] (std::unique_ptr<std::iostream> socket)
                   {
+                    auto sv = elle_serialization_version(this->_doughnut.version());
                     auto serializer = elle::make_unique<protocol::Serializer>(
-                      *socket,
-                      elle_serialization_version(this->_doughnut.version()),
-                      false);
+                      *socket, sv, false);
                     auto channels =
-                      elle::make_unique<protocol::ChanneledStream>(*serializer);
+                    elle::make_unique<protocol::ChanneledStream>(*serializer);
                     if (!disable_key)
                       this->_key_exchange(*channels);
                     ELLE_TRACE("%s: connected", this);
@@ -221,7 +214,6 @@ namespace infinit
         {
           auto lock = elle::scoped_assignment(this->_reconnecting, true);
           ELLE_TRACE_SCOPE("%s: reconnect", this);
-          this->_credentials = {};
           if (this->_refetch_endpoints)
             if (auto eps = this->_refetch_endpoints())
               this->_endpoints = std::move(eps.get());

@@ -928,7 +928,17 @@ namespace infinit
               if (!valres)
                 throw Conflict("peer validation failed", block->clone());
             }
-          auto res = paxos.accept(std::move(peers), p, value);
+          auto res = [&] {
+            try
+            {
+              return paxos.accept(std::move(peers), p, value);
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_TRACE("%s: paxos accept failed with %s", this, e);
+              throw MissingBlock(address);
+            }
+          }();
           {
             ELLE_DEBUG_SCOPE("store accepted paxos");
             BlockOrPaxos data(&decision);
@@ -951,12 +961,29 @@ namespace infinit
           BENCH("confirm.local");
           ELLE_TRACE_SCOPE("%s: confirm %f at proposal %s",
                            *this, address, p);
-          auto block = this->_load(address);
+          BlockOrPaxos block = [&] {
+            try
+            {
+              return this->_load(address);
+            }
+            catch (storage::MissingKey const& k)
+            {
+              throw MissingBlock(k.key());
+            }
+          }();
           if (block.paxos)
           {
             auto& decision = *block.paxos;
             bool had_value = bool(decision.paxos.current_value());
-            decision.paxos.confirm(peers, p);
+            try
+            {
+              decision.paxos.confirm(peers, p);
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_TRACE("%s: paxos confirm failed with %s", this, e);
+              throw MissingBlock(address);
+            }
             ELLE_DEBUG("store confirmed paxos")
             {
               BlockOrPaxos data(&decision);
@@ -1897,6 +1924,28 @@ namespace infinit
           // }
           // return elle::make_unique<PaxosStat>(std::move(stat_hits));
           return Super::stat(address);
+        }
+
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+
+        elle::json::Object
+        Paxos::redundancy()
+        {
+          return {
+            { "desired_factor", static_cast<float>(this->factor()) },
+            { "type", "replication" },
+          };
+        }
+
+        elle::json::Object
+        Paxos::stats()
+        {
+          elle::json::Object res;
+          res["type"] = "paxos";
+          res["node_timeout"] = elle::sprintf("%s", this->node_timeout());
+          return res;
         }
 
         /*--------------.

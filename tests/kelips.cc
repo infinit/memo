@@ -296,6 +296,8 @@ readfile(rfs::FileSystem& fs,
   int sz = handle->read(elle::WeakBuffer(elle::unconst(res.data()), 32768), 32768, 0);
   res.resize(sz);
   ELLE_TRACE("got %s bytes", sz);
+  handle->close();
+  handle.reset();
   return res;
 }
 
@@ -428,6 +430,17 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
   ELLE_TRACE("list fsa");
   ELLE_ASSERT_EQ(dir_size(*fsa.first,  "50"), 50);
   ELLE_TRACE("done");
+  ELLE_TRACE("kill fsa");
+  fsa.first.reset();
+  ELLE_TRACE("kill fsca");
+  fsca.first.reset();
+  ELLE_TRACE("kill fsc");
+  fsc.first.reset();
+  ELLE_TRACE("kill fswrite");
+  fswrite.first.reset();
+  ELLE_TRACE("kill nodes");
+  nodes.clear();
+  ELLE_TRACE("kill the rest");
 }
 // ELLE_TEST_SCHEDULED(conflictor)
 // {
@@ -862,7 +875,6 @@ ELLE_TEST_SCHEDULED(beyond_observer_2)
   BOOST_CHECK_THROW(writefile(*fs, "file", "bar"), std::exception);
   nodes[0] = std::move(run_nodes(d.path(), kp, 1, 1, 2, false, beyond.port(), 0)[0]);
   beyond.push(*nodes[0].first);
-  reactor::sleep(4_sec);
   insist([&] { writefile(*fs, "file", "bar");}, 10);
   BOOST_CHECK_EQUAL(readfile(*fs, "file"), "bar");
 }

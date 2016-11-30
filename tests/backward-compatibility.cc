@@ -89,7 +89,7 @@ public:
 
   virtual
   bool
-  verify(elle::ConstWeakBuffer const& signature,
+  _verify(elle::ConstWeakBuffer const& signature,
          elle::ConstWeakBuffer const& plain,
          infinit::cryptography::rsa::Padding const,
          infinit::cryptography::Oneway const) const override
@@ -184,18 +184,18 @@ struct TestSet
              std::function<void(std::string const&,
                                 infinit::model::blocks::Block*)> const& f)
   {
-    std::cout << "  " << action << " CHB" << std::endl;
-    f("CHB", chb.get());
-    std::cout << "  " << action << " OKB" << std::endl;
-    f("OKB", okb.get());
-    std::cout << "  " << action << " ACB" << std::endl;
-    f("ACB", acb.get());
-    std::cout << "  " << action << " NB" << std::endl;
-    f("NB",  nb.get());
-    std::cout << "  " << action << " UB" << std::endl;
-    f("UB",  ub.get());
-    std::cout << "  " << action << " RUB" << std::endl;
-    f("RUB",  rub.get());
+    ELLE_LOG("%s CHB", action)
+      f("CHB", chb.get());
+    ELLE_LOG("%s OKB", action)
+      f("OKB", okb.get());
+    ELLE_LOG("%s ACB", action)
+      f("ACB", acb.get());
+    ELLE_LOG("%s NB" , action)
+      f("NB",  nb.get());
+    ELLE_LOG("%s UB" , action)
+      f("UB",  ub.get());
+    ELLE_LOG("%s RUB", action)
+      f("RUB",  rub.get());
   };
 
   DummyDoughnut dht;
@@ -339,8 +339,8 @@ main(int argc, char** argv)
                                               root(), filename));
             }
           }();
-          std::cout << "check backward compatibility with version "
-                    << version << std::endl;
+          ELLE_LOG_SCOPE(
+            "check backward compatibility with version %s", version);
           TestSet set(keys, version);
           set.apply(
             "check",
@@ -364,8 +364,10 @@ main(int argc, char** argv)
                   std::unique_ptr<infinit::model::blocks::Block>>(
                     contents, version, false, ctx);
                 // Replace OKB owner keys with deterministic ones
+                std::cerr << "CAST" << std::endl;
                 if (auto okb = std::dynamic_pointer_cast<dht::OKB>(loaded))
                 {
+                  std::cerr << "A" << std::endl;
                   elle::unconst(okb->owner_key()) =
                     std::make_shared<DeterministicPublicKey>(
                       *std::move(okb->owner_key()));
@@ -373,6 +375,7 @@ main(int argc, char** argv)
                 }
                 else if (auto acb = std::dynamic_pointer_cast<dht::ACB>(loaded))
                 {
+                  std::cerr << "B" << std::endl;
                   elle::unconst(acb->owner_key()) =
                     std::make_shared<DeterministicPublicKey>(
                       *std::move(acb->owner_key()));
@@ -380,6 +383,7 @@ main(int argc, char** argv)
                 }
                 else if (auto nb = std::dynamic_pointer_cast<dht::NB>(loaded))
                 {
+                  std::cerr << "C" << std::endl;
                   elle::unconst(nb->owner()) =
                     std::make_shared<DeterministicPublicKey>(
                       *std::move(nb->owner()));

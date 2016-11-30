@@ -41,7 +41,7 @@ namespace infinit
         template <typename ... Args>
         Paxos::Paxos(Args&& ... args)
           : Paxos(
-            elle::named::prototype(
+            das::named::prototype(
               consensus::doughnut,
               consensus::replication_factor,
               consensus::lenient_fetch = false,
