@@ -1110,7 +1110,7 @@ namespace infinit
         elle::Buffer buf(nbuf.contents()+8, nbuf.size()-8);
         static bool async = getenv("INFINIT_KELIPS_ASYNC");
         if (async)
-          new reactor::Thread(elle::sprintf("process"),
+          new reactor::Thread("process",
                               [=] { this->process(buf, source);}, true);
         else
           process(buf, source);
@@ -1121,7 +1121,7 @@ namespace infinit
                       NodeLocations const& peers)
       {
         ELLE_TRACE_SCOPE("%s: bootstrap", this);
-        auto  scanned = std::unordered_set<Address>{};
+        auto scanned = std::unordered_set<Address>{};
         NodeLocations candidates;
         if (use_contacts)
           for (auto const& c: this->_state.contacts[_group])
@@ -1281,14 +1281,14 @@ namespace infinit
         ELLE_DUMP("send to contact %x", c.address);
         send(p, &c, nullptr, nullptr);
       }
-      
+
       void
       Node::send(packet::Packet& p, Endpoint ep, Address addr)
       {
         ELLE_DUMP("send to endpoint %s : %s", addr, ep);
         send(p, nullptr, &ep, &addr);
       }
-      
+
       void
       Node::send(packet::Packet& p, Contact* c, Endpoint* ep,
                  Address* addr)

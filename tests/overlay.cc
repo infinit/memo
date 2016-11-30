@@ -511,8 +511,9 @@ ELLE_TEST_SCHEDULED(
   (bool, pax), (int, nservers), (int, nclients), (int, nactions))
 {
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
-  std::vector<std::unique_ptr<DHT>> servers;
-  std::vector<std::unique_ptr<DHT>> clients;
+
+  // Set servers up.
+  auto servers = std::vector<std::unique_ptr<DHT>>{};
   for (int i=0; i<nservers; ++i)
   {
     auto dht = std::make_unique<DHT>(
@@ -523,6 +524,9 @@ ELLE_TEST_SCHEDULED(
   }
   for (int i=1; i<nservers; ++i)
     discover(*servers[i], *servers[0], true);
+
+  // Set clients up.
+  auto clients = std::vector<std::unique_ptr<DHT>>{};
   for (int i=0; i<nclients; ++i)
   {
     auto dht = std::make_unique<DHT>(
@@ -538,7 +542,7 @@ ELLE_TEST_SCHEDULED(
     wait_until_ready(*clients[i]);
   }
 
-  std::vector<infinit::model::Address> addrs;
+  auto addrs = std::vector<infinit::model::Address>{};
   elle::With<reactor::Scope>() << [&](reactor::Scope& s)
   {
     for (auto& c: clients)
@@ -755,7 +759,7 @@ boost::unit_test::make_test_case( boost::function<void ()>(test_function), \
     std::bind(::tname, BOOST_PP_CAT(overlay, _builder), ##__VA_ARGS__)), 0, valgrind(timeout))
 
 #define TEST_NAMED(overlay, tname, tfunc, timeout, ...)                  \
-  overlay->add(BOOST_NAMED_TEST_CASE(#overlay "_" tname,   \
+  overlay->add(BOOST_NAMED_TEST_CASE(#overlay "_" #tname,   \
     std::bind(::tfunc, BOOST_PP_CAT(overlay, _builder), ##__VA_ARGS__)), 0, valgrind(timeout))
 
 #define OVERLAY(Name)                           \
@@ -770,8 +774,8 @@ boost::unit_test::make_test_case( boost::function<void ()>(test_function), \
   TEST_ANON(Name, chain_connect, 30, false);    \
   /* too slow TEST(Name, paxos_3_1, 30);*/      \
   TEST_ANON(Name, parallel_discover, 20);       \
-  TEST_NAMED(Name, "storm_paxos", storm, 60, true, 5, 5, 100); \
-  TEST_NAMED(Name, "storm",       storm, 60, false, 5, 5, 200);
+  TEST_NAMED(Name, storm_paxos, storm, 60, true, 5, 5, 100); \
+  TEST_NAMED(Name, storm,       storm, 60, false, 5, 5, 200);
 
   OVERLAY(kelips);
   OVERLAY(kouncil);
