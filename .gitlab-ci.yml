@@ -44,7 +44,7 @@ x86_64-centos6-gcc4:
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //redhat"
     - scp infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh:tmp
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //debian-debug"
-    - if GIT_DIR="$SOURCE_DIR"/.git git describe --exact-match HEAD; then scp infinit-debug-symbols-centos-$DESC_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
+    - if GIT_DIR="$SOURCE_DIR"/.git git describe --exact-match HEAD; then scp infinit-debug-symbols-centos-${DESC}_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
     - if GIT_DIR="$SOURCE_DIR"/.git git describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
     - rm infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm
     - rm infinit-debug-symbols-centos-${DESC}_0_amd64.deb

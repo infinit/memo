@@ -431,10 +431,17 @@ namespace infinit
       Kouncil::peer_list()
       {
         elle::json::Array res;
-        for (auto const& peer: this->peers().get<1>())
-          res.push_back(elle::json::Object{
-            { "id", elle::sprintf("%x", peer->id()) },
-          });
+        for (auto const& p: this->peers())
+          if (auto r = dynamic_cast<model::doughnut::Remote const*>(p.get()))
+          {
+            elle::json::Array endpoints;
+            for (auto const& e: r->endpoints())
+              endpoints.push_back(elle::sprintf("%s", e));
+            res.push_back(elle::json::Object{
+              { "id", elle::sprintf("%x", r->id()) },
+              { "endpoints",  endpoints },
+            });
+          }
         return res;
       }
 

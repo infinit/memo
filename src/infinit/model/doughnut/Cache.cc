@@ -565,6 +565,22 @@ namespace infinit
           return this->_block->address();
         }
 
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+
+        elle::json::Object
+        Cache::redundancy()
+        {
+          return this->_backend->redundancy();
+        }
+
+        elle::json::Object
+        Cache::stats()
+        {
+          return this->_backend->stats();
+        }
+
       }
     }
   }
