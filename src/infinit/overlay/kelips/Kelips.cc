@@ -1044,8 +1044,7 @@ namespace infinit
       Node::~Node()
       {
         ELLE_TRACE_SCOPE("%s: destruct", this);
-        if (this->local())
-          this->local()->utp_server()->socket()->unregister_reader("KELIPSGS");
+        this->doughnut()->dock().utp_server().socket()->unregister_reader("KELIPSGS");
         _emitter_thread.reset();
         _pinger_thread.reset();
         this->_state.contacts.clear();
