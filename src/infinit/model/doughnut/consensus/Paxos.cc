@@ -50,7 +50,7 @@ namespace infinit
           catch(reactor::network::Exception const& e)
           {
             ELLE_TRACE("network exception in paxos: %s", e);
-            throw Paxos::PaxosClient::Peer::Unavailable();
+            throw athena::paxos::Unavailable();
           }
         }
 
@@ -206,7 +206,7 @@ namespace infinit
             if (!member)
             {
               ELLE_WARN("%s: peer %f was deleted", this, this->id());
-              throw Paxos::PaxosClient::Peer::Unavailable();
+              throw athena::paxos::Unavailable();
             }
             return member;
           }
@@ -2011,5 +2011,7 @@ namespace athena
   {
     static const elle::serialization::Hierarchy<elle::Exception>::
     Register<TooFewPeers> _register_serialization;
+    static const elle::serialization::Hierarchy<elle::Exception>::
+    Register<Unavailable> _register_serialization_unavailable;
   }
 }

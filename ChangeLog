@@ -19,16 +19,14 @@
 
 ## [0.7.2] - 2016-11-28
 
+New Kouncil overlay, network inspection and bugfixes.
+
 ### Added
 
-  - Add new `Kouncil` overlay. `Kouncil` is a fully connected overlay that
-    stores the whole block address book in memory, and broadcast updates
-    to all nodes when a new block is created. To use `Kouncil` instead of
-    `Kelips` (the default overlay), use the `--kouncil` option to
-    `infinit-network --create`.
+  - Add new `Kouncil` overlay.
   - Add `infinit-network --inspect` command to query a running networks about its
     status and configuration.
-  - Provide `Alpine Linux` builds.
+  - Provide Alpine Linux builds.
 
 ### Changed
 

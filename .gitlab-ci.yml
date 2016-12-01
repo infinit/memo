@@ -1,3 +1,18 @@
+# To update the repository, we go through several steps.
+#
+# git submodule sync --recursive || git submodule sync
+#   Some old gits, e.g. on CentOS, does not support --recursive here.
+#
+# git submodule update --force --init --recursive
+#   Pass --force in order to avoid problems when a former submodule
+#   is replaced with actual contents.  Otherwise we get:
+#
+#      error: The following untracked working tree files would be
+#             overwritten by checkout:
+#          cryptography/LICENSE
+#          cryptography/README.md
+#
+#   But --force is not supported on old versions of git.
 stages:
   - build
 
@@ -9,8 +24,9 @@ x86_64-centos6-gcc4:
   stage: build
   script:
     - export LC_ALL=en_US.utf8
-    - git submodule sync
-    - git submodule update --init --recursive
+    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
@@ -47,9 +63,11 @@ x86_64-centos6-gcc4:
 x86_64-ubuntu-gcc4:
   stage: build
   script:
-    - git submodule sync --recursive
-    - git submodule update --init --recursive
+    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
+    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -74,6 +92,7 @@ x86_64-ubuntu-gcc4:
     - docker tag infinit-beyond:${DESC} mefyl/infinit-beyond:${DESC}
     - time docker push mefyl/infinit-beyond:${DESC}
     - docker rmi {,mefyl/}infinit-beyond:${DESC}
+    - if [ -n "$SIBYLFS" ]; then time python3 drake --website=false //sibylfs; fi
     - cd "${SOURCE_DIR}"
     - time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION" --cache-id "$CI_RUNNER_ID" --verbose
   tags:
@@ -86,9 +105,11 @@ x86_64-ubuntu-gcc4:
 x86_64-alpine-gcc:
   stage: build
   script:
-    - git submodule sync --recursive
-    - git submodule update --init --recursive
+    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
+    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -98,7 +119,6 @@ x86_64-alpine-gcc:
     - mkdir -p "$INSTALL_DIR"
     - farm/configure --arch x86_64 --os alpine --compiler gcc4 --project Filesystem --source-dir . --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
-    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - export DRAKE_EXPLAIN=1 # still testing the whole cache thing
     - time python3 drake --website=false --beyond=false -j $(nproc) //build
     - time python3 drake --website=false --beyond=false -j $(nproc) //check
@@ -123,9 +143,11 @@ x86_64-alpine-gcc:
 x86_64-jessie-gcc4:
   stage: build
   script:
-    - git submodule sync --recursive
-    - git submodule update --init --recursive
+    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
+    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -135,7 +157,6 @@ x86_64-jessie-gcc4:
     - mkdir -p "$INSTALL_DIR"
     - farm/configure --arch x86_64 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
     - cd "$BUILD_DIR"
-    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - export DRAKE_EXPLAIN=1 # still testing the whole cache thing
     - time python3 drake --website=false --beyond=false -j $(nproc) //build
     - time python3 drake --website=false --beyond=false -j $(nproc) //check
@@ -157,9 +178,11 @@ x86_64-jessie-gcc4:
 x86_64-windows-mingw4:
   stage: build
   script:
-    - git submodule sync --recursive
-    - git submodule update --init --recursive
+    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
+    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -191,9 +214,11 @@ x86_64-osx-clang:
   stage: build
   script:
     - export LC_ALL=en_US.UTF-8
-    - git submodule sync --recursive
-    - git submodule update --init --recursive
+    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
+    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - mkdir -p ../fs-build
     - farm/configure --arch x86_64 --os osx --compiler clang --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
     - cd ../fs-build
@@ -220,10 +245,11 @@ x86_64-osx-clang:
 website:
   stage: build
   script:
-    - git submodule sync --recursive
-    - pip3 install mistune
-    - git submodule update --init --recursive --force
+    - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
+    - git submodule sync --recursive || git submodule sync
+    - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
+    - git fetch origin --force "refs/notes/*:refs/notes/*"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
