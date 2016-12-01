@@ -141,7 +141,7 @@ peers(DHT& client)
 
 static
 int
-peer_count(DHT& client)
+peer_count(DHT& client, bool discovered = false)
 {
   auto stats = client.dht->overlay()->query("stats", {});
   int res = -1;
@@ -154,7 +154,7 @@ peer_count(DHT& client)
     ELLE_TRACE("checking %s candidates", cts.size());
     for (auto& c: cts)
     {
-      if (boost::any_cast<bool>(
+      if (!discovered || boost::any_cast<bool>(
         boost::any_cast<elle::json::Object>(c).at("discovered")))
         ++count;
     }
