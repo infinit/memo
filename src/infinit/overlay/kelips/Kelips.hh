@@ -338,7 +338,7 @@ namespace infinit
         std::vector<TimedEndpoint> _local_endpoints;
         /// group we are in
         int _group;
-        Configuration _config;
+        ELLE_ATTRIBUTE_RX(Configuration, config);
         State _state;
         reactor::network::RDVSocket _gossip;
         reactor::Mutex _udp_send_mutex;
