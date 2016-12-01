@@ -97,7 +97,8 @@ $> infinit-volume --push --name personal
 $> infinit-volume --push personal
 ```
 
-### Hub ###
+Hub
+---
 
 All objects (users, storages, networks, volumes etc.) are created locally by default with no server involved. The creation process may generate one or more files and store them in the `$INFINIT_HOME` directory, more specifically in the subdirectory `$INFINIT_DATA_HOME`.
 
@@ -114,9 +115,29 @@ Note that some binaries operate in hub mode by default. For instance the _infini
 Doctor
 ------
 
-The _infinit-doctor_ binary provides an easy way to check the health of your local environment: configuration files, version of the software, networking capabilities etc.
+The _infinit-doctor_ binary provides an easy way to check the health of your local environment: configuration files, version of the software, networking capabilities etc. To run all available tests, the `--all` option can be used.
 
-This binary is _not yet available_.
+```
+$> infinit-doctor --all
+All good, everything should work.
+```
+
+### Networking ###
+
+To ensure that a client has the required networking access to use Infinit, the `--networking` option runs several tests:
+
+- Ensure HTTPS access to the Hub.
+- Check connectivity with a remote server using TCP and UDP.
+- Check for UPnP availability.
+- Check if the host is behind a NAT.
+
+### Sanity ###
+
+A system sanity check can be run using the `--sanity` option. This will check things like folder permissions, amount of free space and if there are any Infinit environment variables set.
+
+### Integrity ###
+
+To ensure that the local infrastructure descriptors are valid, the `--integrity` option can be used. This will do things like check that networks used by volumes have been fetched and linked to, that the compatibility version of the networks work with the current binaries, etc.
 
 User
 ----
@@ -340,10 +361,11 @@ Locally created network "alice/cluster".
 
 The following overlay types are currently available:
 
-- Kalimero: Simple test overlay supporting only one node.
-- Kelips: Overlay with support for node churn. The _k_ argument specifies the
+- **Kalimero**: Simple test overlay supporting only one node.
+- **Kelips**: Overlay with support for node churn. The _k_ argument specifies the
 number of groups to use, each group being responsible for _1/kth_ of the files.
 See the reference paper _<a href="http://iptps03.cs.berkeley.edu/final-papers/kelips.pdf" target="_blank">"Kelips: Building an Efficient and Stable P2P DHT through Increased Memory and Background Overhead"</a>_ for more information.
+- **Kouncil**: Fully connected overlay that stores the whole block address book in memory, and broadcast updates to all nodes when a new block is created.
 
 An administrator can be set for the network. This allows the given user either read or read/write permissions for all files in all volumes on the created network. To enable this feature, the `--admin-r USER` or `--admin-rw USER` arguments respectively.
 
@@ -729,6 +751,8 @@ $> infinit-acl --list --path /mnt/shared/awesome.txt
      bob: r
 ```
 
+_**NOTE:** To list permissions of files and folders on macOS to which you do not have access, you will need to execute the command with `sudo`. This will be fixed in a later release of Infinit._
+
 #### POSIX mode ####
 
 Since the Infinit access model is ACL based, the POSIX file mode as displayed by _ls -l_ differs from what you might expect:
@@ -810,7 +834,7 @@ Device
 
 ### Log in on another device ###
 
-You may wish to access your file systems from another machine. The critical nature of the user's identity (which is similar to an SSH key) makes this operation more complex than the others.
+You may wish to access your infrastructure from another machine. The critical nature of the user's identity (which is similar to an SSH key) makes this operation more complex than the others.
 
 In a nutshell, one needs to re-create his/her Infinit environment with all the resources (users, networks, volumes, drives etc.) on the other computer. If you are using Infinit in a completely decentralized manner, then the operation of exporting all the objects manually and re-importing them on the other device will be familiar. If you have gotten used to the ease-of-use of the Hub, then we offer you two methods to transmit your user identity to another device.
 

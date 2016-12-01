@@ -1,4 +1,4 @@
-if ($('body').hasClass('notfound')) {
+if ($("#notfound").length) {
 
   //// 1. Define Space and Form
   var colors = {
@@ -49,7 +49,7 @@ function connect() {
 
 
 $(document).ready(function() {
-  if ($('body').hasClass('notfound')) {
+  if ($("#notfound").length) {
 
     //// 3. Visualize, Animate, Interact
     space.add({

@@ -24,7 +24,7 @@ New Kouncil overlay, network inspection and bugfixes.
 ### Added
 
   - Add new `Kouncil` overlay.
-  - Add `infinit-network --inspect` command to query a running networks about its
+  - Add `infinit-network --inspect` command to query a running network about its
     status and configuration.
   - Provide Alpine Linux builds.
 
@@ -169,8 +169,7 @@ fixes and performance improvements.
 - Prevent changing network admin permissions.
 - Push endpoints to beyond before fetching them, to ensure nodes
   always see each other.
-- Reduce Kelips packet size, improving network bandwidth
-  performance.
+- Reduce Kelips packet size, improving network bandwidth performance.
 
 ### Fixed
 

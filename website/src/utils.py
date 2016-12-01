@@ -75,3 +75,20 @@ class Routes:
     for f, args, kwargs in self.__routes:
       bottle.route(*args, **kwargs)(functools.partial(f, self = bottle))
 route = Routes()
+
+
+class Errors:
+
+  def __init__(self):
+    self.__errors = []
+
+  def __call__(self, *args, **kwargs):
+    def res(f):
+      self.__errors.append((f, args, kwargs))
+      return f
+    return res
+
+  def apply(self, bottle):
+    for f, args, kwargs in self.__errors:
+      bottle.error(*args, **kwargs)(f)
+error_page = Errors()

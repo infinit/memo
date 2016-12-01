@@ -12,7 +12,110 @@
     <h1>Infinit Storage Platform</h1>
     <h2>An open-source decentralized software-based storage platform for modern environments.</h2>
 
-    <img src="${url('images/schema-global2.png')}" alt="Schema of Infinit">
+    <div class="schema">
+      <div class="pool">
+        <div class="servers">
+          <dl class="legend total">
+            <h4>Storage Pool</h4>
+            <span class="storage">160 TB</span>
+          </dl>
+          <dl class="legend api">
+            <h4>APIs</h4>
+          </dl>
+
+          <div>
+            <img src="${url('images/icons/server.png')}" alt="Infinit Server">
+            <p>Server</p>
+            <strong class="note">(bare metal)</strong><br>
+            <span class="storage">15 TB</span>
+          </div>
+          <div>
+            <img src="${url('images/icons/server.png')}" alt="Infinit Server">
+            <p>Server</p>
+            <strong class="note">(vm)</strong><br>
+            <span class="storage">70 TB</span>
+          </div>
+          <div>
+            <img src="${url('images/icons/server.png')}" alt="Infinit Server">
+            <p>Server</p>
+            <strong class="note">(container)</strong><br>
+            <span class="storage">60 TB</span>
+          </div>
+          <div>
+            <img src="${url('images/icons/server.png')}" alt="Infinit Server">
+            <p>NAS</p>
+            <strong class="note">(bare metal)</strong><br>
+            <span class="storage">15 TB</span>
+          </div>
+          <hr class="spacer" />
+        </div>
+
+        <div class="functionalities">
+          <ul>
+            <li>
+              <img src="${url('images/icons/fault_tolerance-small.png')}" alt="Data Placement">
+              <strong>Data Placement</strong> <br>
+              Agnostic
+            </li>
+            <li>
+              <img src="${url('images/icons/lock-small.png')}" alt="Data Placement">
+              <strong>Encryption</strong> <br>
+              RSA 2048/AES-256
+            </li>
+            <li>
+              <img src="${url('images/icons/versioning.png')}" alt="Data Placement">
+              <strong>Versioning</strong> <br>
+              Deactivated
+            </li>
+            <li>
+              <img src="${url('images/icons/redundancy-small.png')}" alt="Data Placement">
+              <strong>Redundancy</strong> <br>
+              Replication F=3
+            </li>
+            <li>
+              <img src="${url('images/icons/compression.png')}" alt="Data Placement">
+              <strong>Compression</strong> <br>
+              Activated
+            </li>
+            <li>
+              <img src="${url('images/icons/deduplication.png')}" alt="Data Placement">
+              <strong>Deduplication</strong> <br>
+              Deactivated
+            </li>
+          </ul>
+        </div>
+        <div class="spacer"></div>
+      </div>
+
+      <div class="apis">
+        <div class="block">
+          <strong>Block</strong>
+          <ul>
+            <li>iSCSI</li>
+            <li>NBD</li>
+            <li>FCOE</li>
+          </ul>
+        </div>
+
+        <div class="object">
+          <strong>Object</strong>
+          <ul>
+            <li>AWS S3</li>
+            <li>OpenStack Swift</li>
+          </ul>
+        </div>
+
+        <div class="file">
+          <strong>File</strong>
+          <ul>
+            <li>FUSE</li>
+            <li>NFS</li>
+            <li>SMB</li>
+          </ul>
+        </div>
+        <div class="spacer"></div>
+      </div>
+    </div>
   </section>
 
 
@@ -98,7 +201,7 @@
       <img src="${url('images/logos/docker-big.png')}" alt="docker logo">
       <h2>Infinit + Docker = ❤</h2>
       <p>The Infinit platform comes with several Docker integrations, from a Docker volume plugin to more cluster-based integrations at the Docker Swarm level, allowing for container migration and stateful application scaling.</p>
-      <!--<a class="button white" href="#">Learn More</a>-->
+      <a class="button white" href="${route('doc_docker_plugin')}">See Docs</a>
     </div>
   </section>
 
@@ -108,7 +211,7 @@
 
     <div class="tutorial">
       <strong>Tutorial</strong>
-      <p>Follow the guide and deploy your first large-scale Infinit storage platform in less than 5 minutes.</p>
+      <p>Follow the guide and deploy your first large-scale Infinit storage platform in less than 10 minutes.</p>
       <a class="button" href="${route('doc_get_started')}">Get Started</a>
 
       <div class="faq">
@@ -136,27 +239,33 @@
   <section class="news">
     <div class="blog">
       <strong class="title">Latest blogposts</strong>
+
       <div class="article">
-        <h3><a href="http://blog.infinit.sh/how-to-set-up-a-decentralized-storage-infrastrcture-with-infinit-and-digital-ocean/" target="_blank">How to set up a decentralized storage infrastructure with Infinit and Digital Ocean</a></h3>
-        <span class="date">— 28 June 2016</span>
-        <p>With this tutorial, our goal is to create a simple NFS-like infrastructure with only two machines. One... <a href="http://blog.infinit.sh/how-to-set-up-a-decentralized-storage-infrastrcture-with-infinit-and-digital-ocean/">Read More</a></p>
+        <h3><a href="http://blog.infinit.sh/our-presentation-at-docker-distributed-systems-summit/" target="_blank">Our Presentation at the Docker Distributed Systems Summit</a></h3>
+        <span class="date">— 07 October 2016</span>
+        <p>Our CTO, Quentin Hocquet, was invited to speak at the Docker Distributed Systems Summit in Berlin this week... <a href="http://blog.infinit.sh/our-presentation-at-docker-distributed-systems-summit/">Read More</a></p>
       </div>
 
       <div class="article">
-        <h3><a href="http://blog.infinit.sh/release-0-6-0-automatic-rebalancing-and-performance-improvements/" target="_blank">Release 0.6.0 — Automatic rebalancing and performance improvements</a></h3>
-        <span class="date">— 08 June 2016</span>
-        <p>With this tutorial, our goal is to create a simple NFS-like infrastructure with only two machines. One... <a href="http://blog.infinit.sh/release-0-6-0-automatic-rebalancing-and-performance-improvements/">Read More</a></p>
+        <h3><a href="http://blog.infinit.sh/release-0-7-0-infinit-for-windows-ipv6-more/" target="_blank">Release 0.7.0 — Infinit for Windows, IPv6 & more...</a></h3>
+        <span class="date">— 28 September 2016</span>
+        <p>We just released our 0.7 version of our filesystem! A lot of things have been integrated into this release, including... <a href="http://blog.infinit.sh/release-0-7-0-infinit-for-windows-ipv6-more/">Read More</a></p>
       </div>
 
       <div class="article">
-        <h3><a href="http://blog.infinit.sh/infinit-meetup-1-distributed-storage-systems-live-demo/" target="_blank">Infinit Meetup #1 — Distributed Storage Systems & Live Demo</a></h3>
-        <span class="date">— 26 May 2016</span>
-        <p>Last week, we organized our very first meetup in our offices in Paris. Julien (CEO) talked about the different distributed storage... <a href="http://blog.infinit.sh/infinit-meetup-1-distributed-storage-systems-live-demo/">Read More</a></p>
+        <h3><a href="http://blog.infinit.sh/announcing-the-infinit-docker-volume-plugin/" target="_blank">Announcing the Infinit Docker volume plugin</a></h3>
+        <span class="date">— 27 September 2016</span>
+        <p>Docker's lightweight virtualization, portable container format and orchestration tools are driving a revolution in software engineering... <a href="http://blog.infinit.sh/announcing-the-infinit-docker-volume-plugin/">Read More</a></p>
       </div>
     </div>
 
     <div class="news">
       <strong class="title">Latest news</strong>
+
+      <div class="tweet">
+        <img src="${url('images/logos/twitter-infinit.png')}" alt="twitter infinit logo">
+        <p><a href="https://twitter.com/infinit/status/784332986598567938">@infinit_sh</a>: Live demo of our filesystem 🙏 #dockersummit <span class="date">— 7 Oct 2016</span></p>
+      </div>
 
       <div class="tweet">
         <img src="${url('images/logos/twitter-infinit.png')}" alt="twitter infinit logo">
@@ -169,14 +278,8 @@
         <span class="date">05 July 2016 - Paris</span>
         <a target="_blank" href="http://www.meetup.com/Infinit-Paris/events/231333549/">Learn More</a>
       </div>
-
-      <div class="tweet">
-        <img src="${url('images/logos/twitter-infinit.png')}" alt="twitter infinit logo">
-        <p><a href="https://twitter.com/infinit/status/744899795538616320">@infinit_sh</a>: On our way to @dockercon :) Don’t hesitate to contact us if you want to have a chat! <span>#DockerCon</span> <span class="date">— 20 June 2016</span></p>
-      </div>
     </div>
   </section>
   <div class="spacer"><br><br><br><br><br><br></div>
-
 
 </%block>
