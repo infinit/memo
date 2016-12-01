@@ -24,7 +24,7 @@ New Kouncil overlay, network inspection and bugfixes.
 ### Added
 
   - Add new `Kouncil` overlay.
-  - Add `infinit-network --inspect` command to query a running networks about its
+  - Add `infinit-network --inspect` command to query a running network about its
     status and configuration.
   - Provide Alpine Linux builds.
 
