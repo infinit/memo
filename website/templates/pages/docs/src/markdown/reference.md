@@ -450,6 +450,43 @@ Remotely pushed endpoints for "alice/cluster".
 ...
 ```
 
+### Inspect a running network ###
+
+Once a network is running, you can easily get information about it using the `--inspect` option. This information includes things such as which peers are connected to, data redundancy information and the type of consensus used.
+
+```
+$> infinit-network --inspect --name alice/company --all
+{
+    "consensus" : {
+        "node_timeout" : "600s",
+        "type" : "paxos"
+    },
+    "overlay" : {
+        "id" : "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "type" : "kouncil"
+    },
+    "peers" : [
+        {
+            "endpoints" : [
+                "10.0.0.1:45602",
+            ],
+            "id" : "0x0000000000000000000000000000000000000000000000000000000000000001"
+        },
+        {
+            "endpoints" : [
+                "10.0.0.2:34458",
+            ],
+            "id" : "0x0000000000000000000000000000000000000000000000000000000000000002"
+        }
+    ],
+    "protocol" : "all",
+    "redundancy" : {
+        "desired_factor" : 3,
+        "type" : "replication"
+    }
+}
+```
+
 ### Upgrade a network ###
 
 Every node, no matter the version of its Infinit software, will always run in a compatibility mode defined by the version of the network. As such, assuming all the clients and servers are operating in version _0.5.4_ while the network is configured in _0.3.0_, all the nodes would behave as if running the version _0.3.0_.
