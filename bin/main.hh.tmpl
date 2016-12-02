@@ -78,17 +78,6 @@ show_hidden_options()
   return !elle::os::getenv("INFINIT_SHOW_HIDDEN_OPTIONS", "").empty();
 }
 
-inline
-std::string
-beyond(bool help = false)
-{
-  if (help && !elle::os::inenv("INFINIT_BEYOND"))
-    return "the Hub";
-
-  auto res = elle::os::getenv("INFINIT_BEYOND", "${beyond_host}");
-  return res;
-}
-
 static std::unique_ptr<std::ofstream> critical_log_stream;
 
 class CommandLineError
@@ -98,85 +87,6 @@ public:
   template <typename ... Args>
   CommandLineError(Args&& ... args)
     : elle::Error(elle::sprintf(std::forward<Args>(args)...))
-  {}
-};
-
-struct BeyondError
-  : public elle::Error
-{
-  BeyondError(std::string const& error,
-              std::string const& reason,
-              boost::optional<std::string> const& name = boost::none)
-    : elle::Error(reason)
-    , _error(error)
-    , _name(name)
-  {
-    ELLE_TRACE("error: %s", *this);
-  }
-
-  BeyondError(elle::serialization::SerializerIn& s)
-    : BeyondError(s.deserialize<std::string>("error"),
-                  s.deserialize<std::string>("reason"),
-                  s.deserialize<boost::optional<std::string>>("name"))
-  {}
-
-  std::string
-  name_opt() const
-  {
-    return _name ? *_name : "NAME";
-  }
-
-  ELLE_ATTRIBUTE_R(std::string, error);
-  ELLE_ATTRIBUTE_R(boost::optional<std::string>, name);
-};
-
-class MissingResource
-  : public elle::Error
-{
-public:
-  template <typename ... Args>
-  MissingResource(Args&& ... args)
-    : elle::Error(std::forward<Args>(args)...)
-  {}
-};
-
-class MissingLocalResource
-  : public MissingResource
-{
-public:
-  template <typename ... Args>
-  MissingLocalResource(Args&& ... args)
-    : MissingResource(std::forward<Args>(args)...)
-  {}
-};
-
-class ResourceGone
-  : public MissingResource
-{
-public:
-  template <typename ... Args>
-  ResourceGone(Args&& ... args)
-    : MissingResource(std::forward<Args>(args)...)
-  {}
-};
-
-class ResourceProtected
-  : public elle::Error
-{
-public:
-  template <typename ... Args>
-  ResourceProtected(Args&& ... args)
-    : elle::Error(std::forward<Args>(args)...)
-  {}
-};
-
-class ResourceAlreadyFetched
-  : public elle::Error
-{
-public:
-  template <typename ... Args>
-  ResourceAlreadyFetched(Args&& ... args)
-    : elle::Error(std::forward<Args>(args)...)
   {}
 };
 
@@ -196,7 +106,7 @@ not_found(std::string const& name,
           std::string const& type)
 {
   std::cerr << elle::sprintf("%s %s not found on %s, ensure it has been pushed",
-                             type, name, beyond(true))
+                             type, name, infinit::beyond(true))
             << std::endl;
 }
 
@@ -206,7 +116,7 @@ forbidden(std::string const& name,
           std::string const& type)
 {
   std::cerr << elle::sprintf("access to %s %s forbidden on %s", type,
-                             name, beyond(true))
+                             name, infinit::beyond(true))
             << std::endl;
 }
 
@@ -215,9 +125,12 @@ void
 gone(std::string const& type)
 {
   std::cerr << elle::sprintf("%s is no longer available on %s", type,
-                             beyond(true))
+                             infinit::beyond(true))
             << std::endl;
 }
+
+DAS_SYMBOL(capacity);
+DAS_SYMBOL(usage);
 
 struct Storages
 {
@@ -226,8 +139,8 @@ struct Storages
 
   using Model = das::Model<
     Storages,
-    decltype(elle::meta::list(infinit::symbols::usage,
-                              infinit::symbols::capacity))>;
+    decltype(elle::meta::list(::usage,
+                              ::capacity))>;
 };
 
 DAS_SERIALIZE(Storages);
@@ -509,18 +422,6 @@ parse_args(boost::program_options::options_description const& options,
   po::store(parsed, res);
   po::notify(res);
   return res;
-}
-
-static
-bool
-is_hidden_file(boost::filesystem::path const& path)
-{
-  if (path.filename().string().front() == '.' ||
-      path.filename().string().back() == '~')
-  {
-    return true;
-  }
-  return false;
 }
 
 namespace infinit
@@ -869,71 +770,173 @@ exclusive_flag(boost::program_options::variables_map const& vm,
   return (count == 1);
 }
 
-template<typename T>
-T
-beyond_fetch(std::string const& type,
-             std::string const& name);
-
 bool
 is_version_supported(elle::Version const& version);
 
 void
 ensure_version_is_supported(elle::Version const& version);
 
-namespace infinit
-{
-  namespace _details
-  {
-    template <typename Exception>
-    void
-    _read_error(elle::json::Object& request)
-    {
-      auto error = boost::any_cast<std::string>(request["error"]);
-      throw Exception(error);
-    }
 
-    template <>
-    inline
-    void
-    _read_error<BeyondError>(elle::json::Object& request)
+static
+std::unique_ptr<reactor::http::Request>
+fetch_data(std::string const& url,
+           std::string const& type,
+           std::string const& name,
+           infinit::Headers const& extra_headers = {},
+           bool output_report_action = true)
+{
+  infinit::Headers headers;
+  for (auto const& header: extra_headers)
+    headers[header.first] = header.second;
+  reactor::http::Request::Configuration c;
+  for (auto const& header: headers)
+    c.header_add(header.first, header.second);
+  auto r = elle::make_unique<reactor::http::Request>(
+    url, reactor::http::Method::GET, std::move(c));
+  reactor::wait(*r);
+  if (r->status() == reactor::http::StatusCode::OK)
+  {
+    if (output_report_action)
+      report_action("fetched", type, name);
+  }
+  else if (r->status() == reactor::http::StatusCode::Not_Found)
+  {
+    infinit::read_error<infinit::MissingResource>(*r, type, name);
+  }
+  else if (r->status() == reactor::http::StatusCode::Gone)
+  {
+    infinit::read_error<infinit::ResourceGone>(*r, type, name);
+  }
+  else if (r->status() == reactor::http::StatusCode::Forbidden)
+  {
+    infinit::read_error<infinit::ResourceProtected>(*r, type, name);
+  }
+  else if (r->status() == reactor::http::StatusCode::See_Other ||
+           r->status() == reactor::http::StatusCode::Temporary_Redirect)
+  {
+    auto redirection = r->headers().find("Location");
+    if (redirection != r->headers().end())
     {
-      auto error = boost::any_cast<std::string>(request["error"]);
-      auto reason = boost::any_cast<std::string>(request["reason"]);
-      boost::optional<std::string> name = boost::none;
-      if (request.find("name") != request.end())
-        name = boost::any_cast<std::string>(request["name"]);
-      throw BeyondError(error, reason, name);
+      auto new_url = redirection->second;
+      if (!new_url.empty() && new_url != url)
+      {
+        return fetch_data(new_url, type, name);
+      }
     }
   }
-
-  template <typename Exception>
-  void
-  read_error(reactor::http::Request& r,
-             std::string const& type,
-             std::string const& name)
+  else if (r->status() == reactor::http::StatusCode::Unauthorized)
   {
-    ELLE_DEBUG("read_error");
-    elle::json::Object json;
-    try
+    throw elle::Error(
+      elle::sprintf("Unauthorized fetching %s \"%s\", check the system clock",
+                    type, name));
+  }
+  else
+  {
+    throw elle::Error(
+      elle::sprintf("unexpected HTTP error %s fetching %s",
+                    r->status(), type));
+  }
+  return r;
+}
+
+namespace infinit
+{
+  inline
+  std::unique_ptr<reactor::http::Request>
+  beyond_fetch_data(std::string const& where,
+                    std::string const& type,
+                    std::string const& name,
+                    boost::optional<User const&> self = boost::none,
+                    Headers const& extra_headers = {},
+                    bool output_report_action = true)
+  {
+    Headers headers;
+    if (self)
     {
-      json = boost::any_cast<elle::json::Object>(elle::json::read(r));
+      headers = signature_headers(reactor::http::Method::GET, where, self.get());
     }
-    catch (boost::bad_any_cast const& e)
-    {
-      ELLE_DEBUG("Not json. html ?");
-      throw elle::Error(e.what());
-    }
-    catch (elle::json::ParseError const& e)
-    {
-      ELLE_DEBUG("ParseError: %s", e.what());
-      throw elle::Error(
-        elle::sprintf("unexpected HTTP error %s while performing %s for %s %s",
-                      r.status(), r.method(), type, name));
-    }
-    _details::_read_error<Exception>(json);
+    for (auto const& header: extra_headers)
+      headers[header.first] = header.second;
+    return fetch_data(elle::sprintf("%s/%s", beyond(), where),
+                      type,
+                      name,
+                      headers,
+                      output_report_action);
   }
 
   inline
+  void
+  beyond_delete(std::string const& where,
+                std::string const& type,
+                std::string const& name,
+                User const& self,
+                bool ignore_missing = false,
+                bool purge = false)
+  {
+    reactor::http::Request::Configuration c;
+    auto headers = signature_headers(reactor::http::Method::DELETE,
+                                     where,
+                                     self);
+    for (auto const& header: headers)
+      c.header_add(header.first, header.second);
+    auto url = elle::sprintf("%s/%s", beyond(), where);
+    reactor::http::Request::QueryDict query;
+    if (purge)
+      query["purge"] = "true";
+    reactor::http::Request r(url, reactor::http::Method::DELETE, std::move(c));
+    r.query_string(query);
+    r.finalize();
+    reactor::wait(r);
+    if (r.status() == reactor::http::StatusCode::OK)
+    {
+      report_action(elle::sprintf("deleted%s", purge ? " and purged" : ""),
+                    type, name, std::string("remotely"));
+    }
+    else if (r.status() == reactor::http::StatusCode::Not_Found)
+    {
+      if (!ignore_missing)
+        read_error<MissingResource>(r, type, name);
+    }
+    else if (r.status() == reactor::http::StatusCode::See_Other ||
+             r.status() == reactor::http::StatusCode::Temporary_Redirect)
+    {
+      throw Redirected(url);
+    }
+    else if (r.status() == reactor::http::StatusCode::Unauthorized)
+    {
+      throw elle::Error(
+        elle::sprintf("Unauthorized deleting %s \"%s\", check the system clock",
+                      type, name));
+    }
+    else if (r.status() == reactor::http::StatusCode::Forbidden)
+    {
+      throw elle::Error(
+        elle::sprintf("Forbidden deleting %s \"%s\", "
+                      "ensure the user has been set using --as or INFINIT_USER",
+                      type, name));
+    }
+    else
+    {
+      ELLE_LOG("HTTP response: %s", r.response());
+      throw elle::Error(
+        elle::sprintf("unexpected HTTP error %s deleting %s \"%s\"",
+                      r.status(), type, name));
+    }
+  }
+
+  inline
+  void
+  beyond_delete(std::string const& type,
+                std::string const& name,
+                User const& self,
+                bool ignore_missing = false,
+                bool purge = false)
+  {
+    beyond_delete(elle::sprintf("%ss/%s", type, name), type, name, self,
+                  ignore_missing, purge);
+  }
+
+  static
   void
   _beyond_push(reactor::http::Request& r,
                std::string const& type,
@@ -1020,165 +1023,6 @@ namespace infinit
     }
   }
 
-  using Headers = elle::unordered_map<std::string, std::string>;
-
-  struct User
-    : public descriptor::TemplatedBaseDescriptor<User>
-  {
-    User(std::string const& name,
-         cryptography::rsa::KeyPair const& keys,
-         boost::optional<std::string> email = {},
-         boost::optional<std::string> fullname = {},
-         boost::optional<std::string> ldap_dn = {},
-         boost::optional<std::string> description = {})
-      : descriptor::TemplatedBaseDescriptor<User>(name, std::move(description))
-      , public_key(keys.K())
-      , private_key(keys.k())
-      , email(email)
-      , fullname(fullname)
-      , password_hash()
-      , ldap_dn(ldap_dn)
-    {}
-
-    static
-    bool
-    permit_name_slash()
-    {
-      return false;
-    }
-
-    User(elle::serialization::SerializerIn& s)
-      : descriptor::TemplatedBaseDescriptor<User>(s)
-      , public_key(s.deserialize<cryptography::rsa::PublicKey>("public_key"))
-      , private_key(s.deserialize<boost::optional<
-                      cryptography::rsa::PrivateKey>>("private_key"))
-      , email(s.deserialize<boost::optional<std::string>>("email"))
-      , fullname(s.deserialize<boost::optional<std::string>>("fullname"))
-      , password_hash()
-      , ldap_dn(s.deserialize<boost::optional<std::string>>("ldap_dn"))
-    {}
-
-    infinit::cryptography::rsa::KeyPair
-    keypair() const
-    {
-      if (!this->private_key)
-      {
-        throw elle::Error(elle::sprintf(NO_PRIVATE_KEY, this->name));
-      }
-      return infinit::cryptography::rsa::KeyPair(this->public_key,
-                                                 this->private_key.get());
-    }
-
-    void
-    serialize(elle::serialization::Serializer& s) override
-    {
-      descriptor::TemplatedBaseDescriptor<User>::serialize(s);
-      s.serialize("email", this->email);
-      s.serialize("fullname", this->fullname);
-      s.serialize("avatar", this->avatar_path);
-      s.serialize("password_hash", this->password_hash);
-      s.serialize("private_key", this->private_key);
-      s.serialize("public_key", this->public_key);
-      s.serialize("ldap_dn", this->ldap_dn);
-    }
-
-    static
-    std::string
-    uid(cryptography::rsa::PublicKey const& key)
-    {
-      auto serial = cryptography::rsa::publickey::der::encode(key);
-      auto hash = cryptography::hash(serial, cryptography::Oneway::sha256);
-      return elle::format::base64url::encode(hash).string().substr(0, 8);
-    }
-
-    std::string
-    uid() const
-    {
-      return uid(this->public_key);
-    }
-
-    bool
-    operator ==(User const& user) const
-    {
-      return this->name == user.name &&
-        this->public_key == user.public_key;
-    }
-
-    void
-    print(std::ostream& out) const override
-    {
-      out << "User(" << this->name << ": public";
-      if (this->private_key)
-        out << "/private keys";
-      else
-        out << " key only";
-      out << ")";
-    }
-
-    cryptography::rsa::PublicKey public_key;
-    boost::optional<cryptography::rsa::PrivateKey> private_key;
-    // Hub.
-    boost::optional<std::string> email;
-    boost::optional<std::string> fullname;
-    boost::optional<std::string> avatar_path;
-    boost::optional<std::string> password_hash;
-    boost::optional<std::string> password;
-    boost::optional<std::string> ldap_dn;
-
-    using Model = das::Model<
-      User,
-      decltype(elle::meta::list(
-                 infinit::symbols::name,
-                 infinit::symbols::description,
-                 infinit::symbols::email,
-                 infinit::symbols::avatar_path,
-                 infinit::symbols::fullname,
-                 infinit::symbols::public_key,
-                 infinit::symbols::ldap_dn,
-                 infinit::symbols::private_key))>;
-  };
-
-  static
-  Headers
-  signature_headers(
-    reactor::http::Method method,
-    std::string const& where,
-    infinit::User const& self,
-    boost::optional<elle::ConstWeakBuffer> payload = {})
-  {
-    if (!self.private_key)
-      elle::err("no private key for %s, unable to sign request", self.name);
-    using namespace infinit::cryptography;
-    auto semi_colon_append = [](elle::Buffer& buffer, std::string const& str)
-      {
-        std::string res = elle::sprintf("%s;", str);
-        return buffer.append(res.data(), res.size());
-      };
-    elle::Buffer string_to_sign = elle::Buffer();
-    semi_colon_append(string_to_sign, elle::sprintf("%s", method));
-    semi_colon_append(string_to_sign, where);
-    elle::Buffer payload_hash;
-    if (payload)
-      payload_hash = hash(payload.get(), Oneway::sha256);
-    else
-      payload_hash = hash(elle::ConstWeakBuffer(), Oneway::sha256);
-    auto encoded_hash = elle::format::base64::encode(payload_hash);
-    semi_colon_append(string_to_sign, encoded_hash.string());
-    auto now = std::to_string(time(0));
-    string_to_sign.append(now.data(), now.size());
-    auto signature = self.private_key->sign(
-      string_to_sign,
-      infinit::cryptography::rsa::Padding::pkcs1,
-      infinit::cryptography::Oneway::sha256);
-    auto encoded_signature = elle::format::base64::encode(signature);
-    std::unordered_map<std::string, std::string> res = {
-      { "infinit-signature", encoded_signature.string() },
-      { "infinit-time", now },
-      { "infinit-user", self.name },
-    };
-    return res;
-  }
-
   inline
   void
   beyond_push_data(std::string const& where,
@@ -1186,7 +1030,7 @@ namespace infinit
                    std::string const& name,
                    elle::ConstWeakBuffer const& object,
                    std::string const& content_type,
-                   infinit::User const& self,
+                   User const& self,
                    bool report = true,
                    bool beyond_error = false,
                    bool update = false)
@@ -1204,7 +1048,47 @@ namespace infinit
     _beyond_push(r, type, name, report, beyond_error, update);
   }
 
+  inline
+  elle::json::Json
+  beyond_fetch_json(std::string const& where,
+                    std::string const& type,
+                    std::string const& name,
+                    boost::optional<User const&> self = boost::none,
+                    Headers const& extra_headers = {},
+                    bool output_report_action = true)
+  {
+    auto r = beyond_fetch_data(
+      where, type, name, self, extra_headers, output_report_action);
+    return elle::json::read(*r);
+  }
+
+  template <typename T>
+  static
+  T
+  beyond_fetch(std::string const& where,
+               std::string const& type,
+               std::string const& name,
+               boost::optional<infinit::User const&> self = boost::none,
+               infinit::Headers const& extra_headers = infinit::Headers{},
+               bool output_report_action = true)
+  {
+    auto json = beyond_fetch_json(
+      where, type, name, self, extra_headers, output_report_action);
+    elle::serialization::json::SerializerIn input(json, false);
+    return input.deserialize<T>();
+  }
+
+  template <typename T>
+  static
+  T
+  beyond_fetch(std::string const& type,
+               std::string const& name)
+  {
+    return beyond_fetch<T>(elle::sprintf("%ss/%s", type, name), type, name);
+  }
+
   template <typename Serializer = void, typename T>
+  static
   void
   beyond_push(std::string const& where,
               std::string const& type,
@@ -1215,6 +1099,7 @@ namespace infinit
               bool beyond_error = false,
               bool update = false)
   {
+    ELLE_LOG_COMPONENT("infinit");
     auto payload_ = [&] {
       std::stringstream stream;
       elle::serialization::json::serialize<Serializer>(o, stream, false);
@@ -1228,6 +1113,7 @@ namespace infinit
   }
 
   template <typename Serializer = void, typename T>
+  static
   void
   beyond_push(std::string const& type,
               std::string const& name,
@@ -1241,6 +1127,11 @@ namespace infinit
       elle::sprintf("%ss/%s", type, name),
       type, name, o, self, report, beyond_error, update);
   }
+}
+
+namespace infinit
+{
+  using Headers = elle::unordered_map<std::string, std::string>;
 
   class Infinit;
   extern boost::optional<elle::Version> compatibility_version;
@@ -1305,6 +1196,26 @@ namespace infinit
                infinit::symbols::private_key,
                infinit::symbols::ldap_dn))>;
 
+  namespace mount_options
+  {
+    DAS_SYMBOL(as);
+    DAS_SYMBOL(async);
+    DAS_SYMBOL(cache);
+    DAS_SYMBOL(cache_disk_size);
+    DAS_SYMBOL(cache_ram_invalidation);
+    DAS_SYMBOL(cache_ram_size);
+    DAS_SYMBOL(cache_ram_ttl);
+    DAS_SYMBOL(fetch);
+    DAS_SYMBOL(fuse_options);
+    DAS_SYMBOL(hub_url);
+    DAS_SYMBOL(mountpoint);
+    DAS_SYMBOL(peers);
+    DAS_SYMBOL(poll_beyond);
+    DAS_SYMBOL(push);
+    DAS_SYMBOL(rdv);
+    DAS_SYMBOL(readonly);
+  }
+
   struct MountOptions
   {
     MountOptions();
@@ -1337,22 +1248,22 @@ namespace infinit
     using Model = das::Model<
       MountOptions,
       decltype(elle::meta::list(
-                 symbols::hub_url,
-                 symbols::rdv,
-                 symbols::fuse_options,
-                 symbols::fetch,
-                 symbols::push,
-                 symbols::cache,
-                 symbols::async,
-                 symbols::readonly,
-                 symbols::cache_ram_size,
-                 symbols::cache_ram_ttl,
-                 symbols::cache_ram_invalidation,
-                 symbols::cache_disk_size,
-                 symbols::mountpoint,
-                 symbols::as,
-                 symbols::peers,
-                 symbols::poll_beyond))>;
+                 mount_options::hub_url,
+                 mount_options::rdv,
+                 mount_options::fuse_options,
+                 mount_options::fetch,
+                 mount_options::push,
+                 mount_options::cache,
+                 mount_options::async,
+                 mount_options::readonly,
+                 mount_options::cache_ram_size,
+                 mount_options::cache_ram_ttl,
+                 mount_options::cache_ram_invalidation,
+                 mount_options::cache_disk_size,
+                 mount_options::mountpoint,
+                 mount_options::as,
+                 mount_options::peers,
+                 mount_options::poll_beyond))>;
   };
 
   struct Network
@@ -1477,7 +1388,7 @@ namespace infinit
         boost::optional<boost::asio::ip::address> listen = {},
         bool enable_monitoring = true)
     {
-      ELLE_LOG("client version: %s", version_describe);
+      ELLE_LOG("client version: %s", infinit::version_describe());
       auto rdv_env = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
       boost::optional<std::string> rdv_host;
       if (!rdv_env.empty())
@@ -1511,7 +1422,7 @@ namespace infinit
     notify_storage(infinit::User const& user,
                    infinit::model::Address const& node_id)
     {
-      ELLE_TRACE_SCOPE("push storage stats to %s", beyond());
+      ELLE_TRACE_SCOPE("push storage stats to %s", infinit::beyond());
       try
       {
         auto url = elle::sprintf(
@@ -2476,7 +2387,7 @@ namespace infinit
                    this, user, this->_user_path(user));
         if (!beyond_fallback)
           throw;
-        ELLE_LOG("User %s not found locally, trying on %s", user, beyond(true));
+        ELLE_LOG("User %s not found locally, trying on %s", user, infinit::beyond(true));
         auto u = beyond_fetch<User>("user", user);
         return u;
       }
@@ -3172,200 +3083,6 @@ get_username(boost::program_options::variables_map const& args,
 
 DAS_SERIALIZE(infinit::MountOptions);
 
-static
-std::unique_ptr<reactor::http::Request>
-fetch_data(std::string const& url,
-           std::string const& type,
-           std::string const& name,
-           infinit::Headers const& extra_headers = {},
-           bool output_report_action = true)
-{
-  infinit::Headers headers;
-  for (auto const& header: extra_headers)
-    headers[header.first] = header.second;
-  reactor::http::Request::Configuration c;
-  for (auto const& header: headers)
-    c.header_add(header.first, header.second);
-  auto r = elle::make_unique<reactor::http::Request>(
-    url, reactor::http::Method::GET, std::move(c));
-  reactor::wait(*r);
-  if (r->status() == reactor::http::StatusCode::OK)
-  {
-    if (output_report_action)
-      report_action("fetched", type, name);
-  }
-  else if (r->status() == reactor::http::StatusCode::Not_Found)
-  {
-    infinit::read_error<MissingResource>(*r, type, name);
-  }
-  else if (r->status() == reactor::http::StatusCode::Gone)
-  {
-    infinit::read_error<ResourceGone>(*r, type, name);
-  }
-  else if (r->status() == reactor::http::StatusCode::Forbidden)
-  {
-    infinit::read_error<ResourceProtected>(*r, type, name);
-  }
-  else if (r->status() == reactor::http::StatusCode::See_Other ||
-           r->status() == reactor::http::StatusCode::Temporary_Redirect)
-  {
-    auto redirection = r->headers().find("Location");
-    if (redirection != r->headers().end())
-    {
-      auto new_url = redirection->second;
-      if (!new_url.empty() && new_url != url)
-      {
-        return fetch_data(new_url, type, name);
-      }
-    }
-  }
-  else if (r->status() == reactor::http::StatusCode::Unauthorized)
-  {
-    throw elle::Error(
-      elle::sprintf("Unauthorized fetching %s \"%s\", check the system clock",
-                    type, name));
-  }
-  else
-  {
-    throw elle::Error(
-      elle::sprintf("unexpected HTTP error %s fetching %s",
-                    r->status(), type));
-  }
-  return r;
-}
-
-static
-std::unique_ptr<reactor::http::Request>
-beyond_fetch_data(std::string const& where,
-                  std::string const& type,
-                  std::string const& name,
-                  boost::optional<infinit::User const&> self = boost::none,
-                  infinit::Headers const& extra_headers = {},
-                  bool output_report_action = true)
-{
-  infinit::Headers headers;
-  if (self)
-  {
-    headers = signature_headers(reactor::http::Method::GET, where, self.get());
-  }
-  for (auto const& header: extra_headers)
-    headers[header.first] = header.second;
-  return fetch_data(elle::sprintf("%s/%s", beyond(), where),
-                    type,
-                    name,
-                    headers,
-                    output_report_action);
-}
-
-inline
-elle::json::Json
-beyond_fetch_json(std::string const& where,
-                  std::string const& type,
-                  std::string const& name,
-                  boost::optional<infinit::User const&> self = boost::none,
-                  infinit::Headers const& extra_headers = infinit::Headers{},
-                  bool output_report_action = true)
-{
-  auto r = beyond_fetch_data(
-    where, type, name, self, extra_headers, output_report_action);
-  return elle::json::read(*r);
-}
-
-template <typename T>
-T
-beyond_fetch(std::string const& where,
-             std::string const& type,
-             std::string const& name,
-             boost::optional<infinit::User const&> self = boost::none,
-             infinit::Headers const& extra_headers = infinit::Headers{},
-             bool output_report_action = true)
-{
-  auto json = beyond_fetch_json(
-    where, type, name, self, extra_headers, output_report_action);
-  elle::serialization::json::SerializerIn input(json, false);
-  return input.deserialize<T>();
-}
-
-template <typename T>
-T
-beyond_fetch(std::string const& type,
-             std::string const& name)
-{
-  return beyond_fetch<T>(elle::sprintf("%ss/%s", type, name), type, name);
-}
-
-inline
-void
-beyond_delete(std::string const& where,
-              std::string const& type,
-              std::string const& name,
-              infinit::User const& self,
-              bool ignore_missing = false,
-              bool purge = false)
-{
-  reactor::http::Request::Configuration c;
-  auto headers = signature_headers(reactor::http::Method::DELETE,
-                                   where,
-                                   self);
-  for (auto const& header: headers)
-    c.header_add(header.first, header.second);
-  auto url = elle::sprintf("%s/%s", beyond(), where);
-  reactor::http::Request::QueryDict query;
-  if (purge)
-    query["purge"] = "true";
-  reactor::http::Request r(url, reactor::http::Method::DELETE, std::move(c));
-  r.query_string(query);
-  r.finalize();
-  reactor::wait(r);
-  if (r.status() == reactor::http::StatusCode::OK)
-  {
-    report_action(elle::sprintf("deleted%s", purge ? " and purged" : ""),
-                  type, name, std::string("remotely"));
-  }
-  else if (r.status() == reactor::http::StatusCode::Not_Found)
-  {
-    if (!ignore_missing)
-      infinit::read_error<MissingResource>(r, type, name);
-  }
-  else if (r.status() == reactor::http::StatusCode::See_Other ||
-           r.status() == reactor::http::StatusCode::Temporary_Redirect)
-  {
-    throw Redirected(url);
-  }
-  else if (r.status() == reactor::http::StatusCode::Unauthorized)
-  {
-    throw elle::Error(
-      elle::sprintf("Unauthorized deleting %s \"%s\", check the system clock",
-                    type, name));
-  }
-  else if (r.status() == reactor::http::StatusCode::Forbidden)
-  {
-    throw elle::Error(
-      elle::sprintf("Forbidden deleting %s \"%s\", "
-                    "ensure the user has been set using --as or INFINIT_USER",
-                    type, name));
-  }
-  else
-  {
-    ELLE_LOG("HTTP response: %s", r.response());
-    throw elle::Error(
-      elle::sprintf("unexpected HTTP error %s deleting %s \"%s\"",
-                    r.status(), type, name));
-  }
-}
-
-inline
-void
-beyond_delete(std::string const& type,
-              std::string const& name,
-              infinit::User const& self,
-              bool ignore_missing = false,
-              bool purge = false)
-{
-  beyond_delete(elle::sprintf("%ss/%s", type, name), type, name, self,
-                ignore_missing, purge);
-}
-
 inline
 static
 std::string
@@ -3516,7 +3233,8 @@ private:
 
   ~InterfacePublisher()
   {
-    beyond_delete(this->_url, "endpoints for", this->_network.name, _self);
+    infinit::beyond_delete(
+      this->_url, "endpoints for", this->_network.name, _self);
   }
 
   ELLE_ATTRIBUTE(std::string, url);
@@ -3588,13 +3306,13 @@ beyond_login(std::string const& name,
 {
   reactor::http::Request::Configuration c;
   c.header_add("Content-Type", "application/json");
-  reactor::http::Request r(elle::sprintf("%s/users/%s/login", beyond(), name),
+  reactor::http::Request r(elle::sprintf("%s/users/%s/login", infinit::beyond(), name),
                            reactor::http::Method::POST, std::move(c));
   elle::serialization::json::serialize(o, r, false);
   r.finalize();
   if (r.status() != reactor::http::StatusCode::OK)
   {
-    infinit::read_error<BeyondError>(r, "login", name);
+    infinit::read_error<infinit::BeyondError>(r, "login", name);
   }
 
   return elle::json::read(r);

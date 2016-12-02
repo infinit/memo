@@ -768,7 +768,8 @@ main(int argc, char** argv)
     "if system xattrs are not suppported"
   };
   Mode::OptionDescription fetch_option = {
-    "fetch", bool_switch(), "fetch users from " + beyond(true) +" if needed"
+    "fetch", bool_switch(), "fetch users from " +
+    infinit::beyond(true) +" if needed"
   };
   Mode::OptionDescription verbose_option = {
     "verbose", bool_switch(), "verbose output" };

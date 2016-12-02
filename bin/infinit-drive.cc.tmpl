@@ -110,7 +110,7 @@ create_passport(infinit::User const& user,
     if (push)
       push_passport(network, passport, user, owner);
   }
-  catch (MissingResource const& e)
+  catch (infinit::MissingResource const& e)
   {
     auto passport = infinit::Passport(
       user.public_key,
@@ -181,7 +181,7 @@ COMMAND(invite)
       auto drive = ifnt.drive_fetch(name);
       ifnt.drive_save(drive, true);
     }
-    catch (MissingResource const& e)
+    catch (infinit::MissingResource const& e)
     {
       if (e.what() != std::string("drive/not_found"))
         throw e;
@@ -226,7 +226,7 @@ COMMAND(invite)
                         beyond_user_name));
       }
     }
-    catch (MissingResource const& e)
+    catch (infinit::MissingResource const& e)
     {
       elle::fprintf(std::cerr, error_msg);
       throw;
@@ -273,7 +273,7 @@ COMMAND(invite)
           true,
           true);
       }
-      catch (BeyondError const& e)
+      catch (infinit::BeyondError const& e)
       {
         if (e.error() == std::string("user/not_found"))
           not_found(e.name_opt(), "User");
@@ -310,7 +310,7 @@ COMMAND(join)
     beyond_push(url, "invitation", drive.name, invitation, self, false);
     report_action("joined", "drive", drive.name);
   }
-  catch (MissingResource const& e)
+  catch (infinit::MissingResource const& e)
   {
     if (e.what() == std::string("user/not_found"))
       not_found(self.name, "User"); // XXX: It might be the owner or you.
@@ -359,7 +359,7 @@ COMMAND(delete_)
   if (boost::filesystem::remove(path))
     report_action("deleted", "drive", name, std::string("locally"));
   else
-    throw MissingLocalResource(
+    throw infinit::MissingLocalResource(
       elle::sprintf("File for drive could not be deleted: %s", path));
 }
 
@@ -425,7 +425,7 @@ COMMAND(fetch)
   else
   {
     ELLE_DEBUG("fetch all drives");
-    auto res = beyond_fetch<
+    auto res = infinit::beyond_fetch<
       std::unordered_map<std::string, std::vector<infinit::Drive>>>(
         elle::sprintf("users/%s/drives", self.name),
         "drives for user",
@@ -470,14 +470,15 @@ void
 fetch_icon(std::string const& name)
 {
   auto url = elle::sprintf("drives/%s/icon", name);
-  auto request= beyond_fetch_data(url, "icon", name);
+  auto request = infinit::beyond_fetch_data(url, "icon", name);
   if (request->status() == reactor::http::StatusCode::OK)
   {
     auto response = request->response();
     // XXX: Deserialize XML.
     if (response.size() == 0 || response[0] == '<')
-      throw MissingResource(
-        elle::sprintf("icon for %s not found on %s", name, beyond(true)));
+      throw infinit::MissingResource(
+        elle::sprintf(
+          "icon for %s not found on %s", name, infinit::beyond(true)));
     _save_icon(name, response);
   }
 }
@@ -520,7 +521,7 @@ main(int argc, char** argv)
         { "volume,V", value<std::string>(), "associated volume name" },
         option_icon,
         { "push-drive", bool_switch(),
-          elle::sprintf("push the created drive to %s", beyond(true)) },
+          elle::sprintf("push the created drive to %s", infinit::beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-drive" },
       },
     },
@@ -571,18 +572,18 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a drive to %s", beyond(true)),
+      elle::sprintf("Push a drive to %s", infinit::beyond(true)),
       &push,
       "--name NAME",
       {
         { "name,n", value<std::string>(),
-          elle::sprintf("drive to push to %s", beyond(true)) },
+          elle::sprintf("drive to push to %s", infinit::beyond(true)) },
         option_icon,
       }
     },
     {
       "fetch",
-      elle::sprintf("fetch drive from %s", beyond(true)),
+      elle::sprintf("fetch drive from %s", infinit::beyond(true)),
       &fetch,
       "",
       {
@@ -603,13 +604,13 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "drive to delete" },
         { "pull", bool_switch(),
-          elle::sprintf("pull the drive if it is on %s", beyond(true)) },
+          elle::sprintf("pull the drive if it is on %s", infinit::beyond(true)) },
         { "purge", bool_switch(), "remove objects that depend on the drive" },
       },
     },
     {
       "pull",
-      elle::sprintf("Remove a drive from %s", beyond(true)),
+      elle::sprintf("Remove a drive from %s", infinit::beyond(true)),
       &pull,
       "--name NAME",
       {

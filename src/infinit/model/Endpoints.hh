@@ -2,6 +2,7 @@
 # define INFINIT_MODEL_DOUGHNUT_ENDPOINTS
 
 # include <boost/asio.hpp>
+# include <boost/filesystem.hpp>
 
 # include <elle/attribute.hh>
 
@@ -72,6 +73,10 @@ namespace infinit
 
     typedef std::vector<NodeLocation> NodeLocations;
     typedef std::function<boost::optional<Endpoints> ()> EndpointsRefetcher;
+
+
+    Endpoints
+    endpoints_from_file(boost::filesystem::path const& path);
   }
 }
 

@@ -78,7 +78,7 @@ COMMAND(fetch)
   auto user_name = optional(args, "user");
   if (network_name && user_name)
   {
-    auto passport = beyond_fetch<infinit::Passport>(
+    auto passport = infinit::beyond_fetch<infinit::Passport>(
       elle::sprintf("networks/%s/passports/%s",
                     network_name.get(), user_name.get()),
       "passport for",
@@ -108,7 +108,7 @@ COMMAND(fetch)
     }
     else
     {
-      auto passport = beyond_fetch<infinit::Passport>(elle::sprintf(
+      auto passport = infinit::beyond_fetch<infinit::Passport>(elle::sprintf(
         "networks/%s/passports/%s", network_name.get(), self.name),
         "passport for",
         network_name.get(),
@@ -123,7 +123,7 @@ COMMAND(fetch)
   // Fetch self passports.
   else
   {
-    auto res = beyond_fetch<
+    auto res = infinit::beyond_fetch<
       std::unordered_map<std::string, std::vector<infinit::Passport>>>(
         elle::sprintf("users/%s/passports", self.name),
         "passports for user",
@@ -262,7 +262,7 @@ main(int argc, char** argv)
           "network to create the passport to" },
         { "user,u", value<std::string>(), "user to create the passport for" },
         { "push-passport", bool_switch(),
-          elle::sprintf("push the passport to %s", beyond(true)) },
+          elle::sprintf("push the passport to %s", infinit::beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-passport" },
         { "deny-write", bool_switch(), "deny user write access to the network"},
         { "deny-storage", bool_switch(),
@@ -285,7 +285,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("Fetch a user's network passport from %s", beyond(true)),
+      elle::sprintf("Fetch a user's network passport from %s", infinit::beyond(true)),
       &fetch,
       "[--network NETWORK --user USER]",
       {
@@ -306,7 +306,7 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a user's network passport to %s", beyond(true)),
+      elle::sprintf("Push a user's network passport to %s", infinit::beyond(true)),
       &push,
       "--network NETWORK --user USER",
       {
@@ -316,7 +316,7 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      elle::sprintf("Remove a user's network passport from %s", beyond(true)),
+      elle::sprintf("Remove a user's network passport from %s", infinit::beyond(true)),
       &pull,
       "--network NETWORK --user USER",
       {
@@ -343,7 +343,7 @@ main(int argc, char** argv)
         { "network,N", value<std::string>(), "network name" },
         { "user,u", value<std::string>(), "user name" },
         { "pull", bool_switch(),
-          elle::sprintf("pull the passport if it is on %s", beyond(true)) },
+          elle::sprintf("pull the passport if it is on %s", infinit::beyond(true)) },
       },
     },
   };

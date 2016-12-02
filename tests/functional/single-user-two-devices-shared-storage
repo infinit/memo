@@ -6,9 +6,8 @@ from utils import *
 with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2:
   # Device 1
   infinit_1.run(['infinit-user', '--create',  'user'])
-  user = infinit_1.run_json([
-    'infinit-user', '--export', '--full',  'user'
-  ])
+  user = infinit_1.run_json(
+    ['infinit-user', '--export', 'user', '--full'])
   infinit_1.run([
     'infinit-storage', '--create',
      'storage',

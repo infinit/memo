@@ -211,14 +211,28 @@ def configure(
     drake.node('src/infinit/descriptor/TemplatedBaseDescriptor.hxx.tmpl')
 
   infinit_sources = drake.nodes(
+    'src/infinit/Drive.cc',
+    'src/infinit/Drive.hh',
+    'src/infinit/Infinit.cc',
+    'src/infinit/Infinit.hh',
+    'src/infinit/Infinit.hxx',
+    'src/infinit/LoginCredentials.cc',
+    'src/infinit/LoginCredentials.hh',
+    'src/infinit/MountOptions.cc',
+    'src/infinit/MountOptions.hh',
+    'src/infinit/Network.cc',
+    'src/infinit/Network.hh',
     'src/infinit/RPC.cc',
     'src/infinit/RPC.hh',
     'src/infinit/RPC.hxx',
+    'src/infinit/User.cc',
+    'src/infinit/User.hh',
     'src/infinit/Version.hh',
+    'src/infinit/Volume.cc',
+    'src/infinit/Volume.hh',
     'src/infinit/serialization.cc',
     'src/infinit/serialization.hh',
     'src/infinit/smb/smb.cc',
-    'src/infinit/utility.cc',
     'src/infinit/utility.hh',
     'src/infinit/version.hh',
   )
@@ -228,6 +242,15 @@ def configure(
   infinit_sources += drake.include('src/infinit/model').sources
   infinit_sources += drake.include('src/infinit/overlay').sources
   infinit_sources += drake.include('src/infinit/storage').sources
+  infinit_utility_config = drake.cxx.Config(cxx_config_infinit)
+  infinit_utility_config.define('BEYOND_HOST', '"%s"' % beyond_host)
+  infinit_utility_config.define(
+    'EMAIL_REGEX', '"%s"' % email_regex.replace('\\', '\\\\'))
+  infinit_sources.append(
+    drake.cxx.Object(
+      drake.node('src/infinit/utility.cc'),
+      cxx_toolkit,
+      infinit_utility_config))
   if not windows:
     infinit_sources += drake.nodes(
       'src/infinit/storage/sftp.cc',
@@ -343,7 +366,7 @@ def configure(
     searched_for = {'libstdc++', 'libgcc_s'}
     need_64 = cxx_toolkit.architecture == drake.architecture.x86_64
     try:
-      output = subprocess.check_output(['ldconfig', '-p'])
+      output = subprocess.check_output(['/sbin/ldconfig', '-p'])
     except Exception:
       output = ''.join([ (need_64 and 'x86-64 ' or '') + '/usr/lib/'+x+'.so\n' for x in searched_for]).encode('utf-8')
     path = None
@@ -368,7 +391,6 @@ def configure(
   binaries_config = [
     ('doughnode', [], [], False),
     ('generatekeys', [], [], False),
-    ('infinit', [], [], False),
     ('infinit-acl', [xattr_sources], [], True),
     ('infinit-block', [], [], True),
     ('infinit-credentials', [], [], True),
@@ -383,7 +405,7 @@ def configure(
     ('infinit-passport', [], [], True),
     ('infinit-smb', [], [], False),
     ('infinit-storage', [], (not windows) and [aws_lib] or [], True),
-    ('infinit-user', [], [], True),
+    # ('infinit-user', [], [], True),
     ('infinit-volume', [], [], True),
     ('infinit-webdav', [], [], False),
     ('infinit-fsck', [], [], False),
@@ -441,6 +463,36 @@ def configure(
         for lib in binary.dynamic_libraries:
           add_libraries(lib)
       add_libraries(bin)
+  # CLI
+  infinit_cli_sources = drake.nodes(
+    'src/infinit/cli/Entity.cc',
+    'src/infinit/cli/Entity.hh',
+    'src/infinit/cli/Infinit.cc',
+    'src/infinit/cli/Infinit.hh',
+    'src/infinit/cli/Silo.cc',
+    'src/infinit/cli/Silo.hh',
+    'src/infinit/cli/User.cc',
+    'src/infinit/cli/User.hh',
+  )
+  infinit_cli = drake.cxx.Executable(
+    'bin/infinit',
+    infinit_cli_sources + [
+      cryptography_lib,
+      elle_lib,
+      infinit_lib,
+      reactor_lib,
+    ],
+    cxx_toolkit,
+    bin_cxx_config,
+    strip = windows)
+  binaries.append(infinit_cli)
+  # FIXME: symlinks
+  for b in [
+      'infinit-user'
+  ]:
+    b = drake.Copy(infinit_cli, 'bin/%s' % b).target()
+    binaries.append(b)
+    installed_binaries.append(b)
   if not windows and enable_crash_reporting:
     for lib in set(installed_libraries):
       lib_sym = drake.node('lib/symbols/%s.sym' % lib.path().basename())

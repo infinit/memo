@@ -149,7 +149,7 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as bob:
     alice.run(['infinit-user', '--pull', '--as', 'bob'])
     unreachable()
   except Exception as e:
-    assertIn('has no private key', e.args[0])
+    assertIn('no private key', e.args[0])
 
 # Invalid user name.
 with Beyond() as b, Infinit(beyond = b) as bob, Infinit(beyond = b) as alice:
@@ -181,17 +181,19 @@ with Beyond() as b, Infinit(beyond = b) as alice:
   # Test prompt for deleting a user.
   alice.run(['infinit-user', '--create', '--name', 'bob'])
   try:
-    alice.run(['infinit-user', '--delete', '--name', 'bob'], input = 'alice')
+    alice.run(['infinit-user', '--delete', '--name', 'bob'],
+              input = 'alice', noscript = True)
     unreachable()
   except Exception as e:
     pass
-  alice.run(['infinit-user', '--delete', '--name', 'bob'], input = 'bob')
+  alice.run(['infinit-user', '--delete', '--name', 'bob'],
+            input = 'bob', noscript = True)
   # Test deleting user with --force and then deleting a user with only a public
   # key.
   alice.run(
     ['infinit-user', '--create', '--name', 'eve', '--email', 'eve@infinit.io'])
   alice.run(['infinit-user', '--push', '--name', 'eve'])
-  alice.run(['infinit-user', '--delete', '--force', 'eve'])
+  alice.run(['infinit-user', '--delete', 'eve', '--script'])
   alice.run(['infinit-user', '--fetch', '--name', 'eve'])
   alice.run(['infinit-user', '--delete', 'eve'])
 

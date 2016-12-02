@@ -32,6 +32,10 @@ namespace infinit
     {
       namespace bmi = boost::multi_index;
       struct ACLEntry;
+      DAS_SYMBOL(w);
+      DAS_SYMBOL(r);
+      DAS_SYMBOL(group_r);
+      DAS_SYMBOL(group_w);
       struct AdminKeys
       {
         AdminKeys() {}
@@ -43,12 +47,12 @@ namespace infinit
         std::vector<infinit::cryptography::rsa::PublicKey> w;
         std::vector<infinit::cryptography::rsa::PublicKey> group_r;
         std::vector<infinit::cryptography::rsa::PublicKey> group_w;
-        using Model = das::Model<
-          AdminKeys,
-          elle::meta::List<symbols::Symbol_r,
-                           symbols::Symbol_w,
-                           symbols::Symbol_group_r,
-                           symbols::Symbol_group_w>>;
+        using Model =
+          das::Model<AdminKeys,
+                     decltype(elle::meta::list(doughnut::r,
+                                               doughnut::w,
+                                               doughnut::group_r,
+                                               doughnut::group_w))>;
       };
 
       class Doughnut // Doughnut. DougHnuT. Get it ?

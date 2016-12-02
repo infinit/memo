@@ -760,12 +760,12 @@ namespace reporting
   ConnectivityResults::BeyondResult::BeyondResult(
     bool sane, reporting::Result::Reason const& r)
     : reporting::Result(
-      elle::sprintf("Connection to %s", ::beyond()), sane, r)
+      elle::sprintf("Connection to %s", infinit::beyond()), sane, r)
   {
   }
 
   ConnectivityResults::BeyondResult::BeyondResult()
-    : reporting::Result(elle::sprintf("Connection to %s", ::beyond()))
+    : reporting::Result(elle::sprintf("Connection to %s", infinit::beyond()))
   {
   }
 
@@ -1189,7 +1189,7 @@ _connectivity(boost::program_options::variables_map const& args,
   {
     try
     {
-      reactor::http::Request r(beyond(), reactor::http::Method::GET, {10_sec});
+      reactor::http::Request r(infinit::beyond(), reactor::http::Method::GET, {10_sec});
       reactor::wait(r);
       auto status = (r.status() == reactor::http::StatusCode::OK);
       if (status)
@@ -1200,7 +1200,7 @@ _connectivity(boost::program_options::variables_map const& args,
     catch (reactor::http::RequestError const&)
     {
       results.beyond =
-        {false, elle::sprintf("Couldn't connecto to %s", ::beyond())};
+        {false, elle::sprintf("Couldn't connecto to %s", infinit::beyond())};
     }
     catch (elle::Error const&)
     {
@@ -1714,7 +1714,7 @@ _configuration_integrity(boost::program_options::variables_map const& args,
        it != boost::filesystem::recursive_directory_iterator();
        ++it)
   {
-    if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+    if (is_regular_file(it->status()) && !infinit::is_hidden_file(it->path()))
     {
       try
       {
@@ -1750,7 +1750,7 @@ _configuration_integrity(boost::program_options::variables_map const& args,
        it != boost::filesystem::recursive_directory_iterator();
        ++it)
   {
-    if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+    if (is_regular_file(it->status()) && !infinit::is_hidden_file(it->path()))
     {
       try
       {
@@ -1769,7 +1769,7 @@ _configuration_integrity(boost::program_options::variables_map const& args,
        it != boost::filesystem::recursive_directory_iterator();
        ++it)
   {
-    if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+    if (is_regular_file(it->status()) && !infinit::is_hidden_file(it->path()))
     {
       try
       {

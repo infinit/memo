@@ -469,17 +469,17 @@ COMMAND(fetch)
   if (network_name_)
   {
     std::string network_name = ifnt.qualified_name(network_name_.get(), self);
-    save(beyond_fetch<infinit::NetworkDescriptor>("network", network_name));
+    save(infinit::beyond_fetch<infinit::NetworkDescriptor>("network", network_name));
   }
   else // Fetch all networks for self.
   {
     auto res =
-      beyond_fetch<std::unordered_map<std::string,
-                                      std::vector<infinit::NetworkDescriptor>>>(
-      elle::sprintf("users/%s/networks", self.name),
-      "networks for user",
-      self.name,
-      self);
+      infinit::beyond_fetch<
+      std::unordered_map<std::string, std::vector<infinit::NetworkDescriptor>>>(
+        elle::sprintf("users/%s/networks", self.name),
+        "networks for user",
+        self.name,
+        self);
     for (auto const& n: res["networks"])
       save(n);
   }
@@ -519,7 +519,7 @@ COMMAND(link_)
     {
       return ifnt.passport_get(desc.name, self.name);
     }
-    catch (MissingLocalResource const&)
+    catch (infinit::MissingLocalResource const&)
     {
       throw elle::Error(
         elle::sprintf("missing passport (%s: %s), "
@@ -945,7 +945,7 @@ COMMAND(stats)
   std::string network_name = mandatory(args, "name", "network_name");
   std::string name = ifnt.qualified_name(network_name, owner);
   Storages res =
-    beyond_fetch<Storages>(
+    infinit::beyond_fetch<Storages>(
       elle::sprintf("networks/%s/stat", name),
       "stat",
       "stat",
@@ -1067,10 +1067,10 @@ run_options(std::vector<Mode::OptionDescription> opts = {})
   opts.emplace_back(option_cache_ram_invalidation);
   opts.emplace_back(option_cache_disk_size);
   opts.emplace_back("fetch-endpoints", bool_switch(),
-                    elle::sprintf("fetch endpoints from %s", beyond(true)));
+                    elle::sprintf("fetch endpoints from %s", infinit::beyond(true)));
   opts.emplace_back("fetch,f", bool_switch(), "alias for --fetch-endpoints");
   opts.emplace_back("push-endpoints", bool_switch(),
-                    elle::sprintf("push endpoints to %s", beyond(true)));
+                    elle::sprintf("push endpoints to %s", infinit::beyond(true)));
   opts.emplace_back("push,p", bool_switch(), "alias for --push-endpoints");
   opts.emplace_back("publish", bool_switch(),
                     "alias for --fetch-endpoints --push-endpoints");
@@ -1132,7 +1132,7 @@ main(int argc, char** argv)
           "missing servers eviction delay\n(default: 10 min)" },
         option_output("network"),
         { "push-network", bool_switch(),
-          elle::sprintf("push the network to %s", beyond(true)) },
+          elle::sprintf("push the network to %s", infinit::beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-network" },
         { "admin-r", value<std::vector<std::string>>()->multitoken(),
           "Set admin users that can read all data" },
@@ -1158,7 +1158,7 @@ main(int argc, char** argv)
         { "port", value<int>(), "port to listen on (default: random)" },
         option_output("network"),
         { "push-network", bool_switch(),
-          elle::sprintf("push the updated network to %s", beyond(true)) },
+          elle::sprintf("push the updated network to %s", infinit::beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-network" },
         { "admin-r", value<std::vector<std::string>>()->multitoken(),
           "Add an admin user that can read all data\n"
@@ -1189,7 +1189,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("Fetch a network from %s", beyond(true)),
+      elle::sprintf("Fetch a network from %s", infinit::beyond(true)),
       &fetch,
       {},
       {
@@ -1243,7 +1243,7 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a network to %s", beyond(true)),
+      elle::sprintf("Push a network to %s", infinit::beyond(true)),
       &push,
       "--name NETWORK",
       {
@@ -1258,14 +1258,14 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "network to delete" },
         { "pull", bool_switch(),
-          elle::sprintf("pull the network if it is on %s", beyond(true)) },
+          elle::sprintf("pull the network if it is on %s", infinit::beyond(true)) },
         { "purge", bool_switch(), "remove objects that depend on the network" },
         { "unlink", bool_switch(), "automatically unlink network if linked" },
       },
     },
     {
       "pull",
-      elle::sprintf("Remove a network from %s", beyond(true)),
+      elle::sprintf("Remove a network from %s", infinit::beyond(true)),
       &pull,
       "--name NETWORK",
       {
@@ -1313,7 +1313,7 @@ main(int argc, char** argv)
     },
     {
       "stats",
-      elle::sprintf("Fetch stats of a network on %s", beyond(true)),
+      elle::sprintf("Fetch stats of a network on %s", infinit::beyond(true)),
       &stats,
       "--name NETWORK",
       {

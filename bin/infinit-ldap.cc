@@ -132,7 +132,7 @@ _populate_network(boost::program_options::variables_map const& args,
   {
     try
     {
-      auto u = beyond_fetch<infinit::User>(
+      auto u = infinit::beyond_fetch<infinit::User>(
         elle::sprintf("ldap_users/%s", reactor::http::url_encode(m.second)),
         "LDAP user",
         m.second);
@@ -140,7 +140,7 @@ _populate_network(boost::program_options::variables_map const& args,
     }
     catch (elle::Error const& e)
     {
-      ELLE_WARN("Failed to fetch user %s from %s", m.second, beyond(true));
+      ELLE_WARN("Failed to fetch user %s from %s", m.second, infinit::beyond(true));
     }
   }
 
@@ -377,21 +377,21 @@ COMMAND(populate_hub)
     auto dn = r.at("dn")[0];
     try
     {
-      auto u = beyond_fetch<infinit::User>(
+      auto u = infinit::beyond_fetch<infinit::User>(
         elle::sprintf("ldap_users/%s", reactor::http::url_encode(dn)),
         "LDAP user",
         dn);
       ELLE_TRACE("got %s -> %s", dn, u.name);
     }
-    catch (MissingResource const& e)
+    catch (infinit::MissingResource const& e)
     {
-      ELLE_TRACE("%s not on %s: %s", dn, beyond(true), e);
+      ELLE_TRACE("%s not on %s: %s", dn, infinit::beyond(true), e);
       for (int i=0; ; ++i)
       {
         auto username = make_field(*pattern, r, i);
         try
         {
-          auto u = beyond_fetch<infinit::User>(
+          auto u = infinit::beyond_fetch<infinit::User>(
             "user",
             reactor::http::url_encode(username));
           ELLE_TRACE("username %s taken", username);
@@ -402,7 +402,7 @@ COMMAND(populate_hub)
           }
           continue;
         }
-        catch (MissingResource const& e)
+        catch (infinit::MissingResource const& e)
         {
           // all good
           missing[username] = UserData{dn,

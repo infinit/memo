@@ -85,11 +85,11 @@ COMMAND(transmit_user)
         {
           reactor::http::Request::Configuration c;
           auto headers =
-            signature_headers(reactor::http::Method::GET, where, user);
+            infinit::signature_headers(reactor::http::Method::GET, where, user);
           for (auto const& header: headers)
             c.header_add(header.first, header.second);
           reactor::http::Request r(
-            elle::sprintf("%s/%s", beyond(), where),
+            elle::sprintf("%s/%s", infinit::beyond(), where),
             reactor::http::Method::GET,
             std::move(c));
           reactor::wait(r);
@@ -109,7 +109,8 @@ COMMAND(transmit_user)
           }
           else if (r.status() == reactor::http::StatusCode::Forbidden)
           {
-            infinit::read_error<ResourceProtected>(r, "user identity", user.name);
+            infinit::read_error<infinit::ResourceProtected>(
+              r, "user identity", user.name);
           }
           else
           {
@@ -122,7 +123,7 @@ COMMAND(transmit_user)
       });
     for (; timeout > 0; timeout--)
     {
-      std::cout << elle::sprintf("User identity on %s for: ", beyond(true))
+      std::cout << elle::sprintf("User identity on %s for: ", infinit::beyond(true))
                 << timeout << " seconds" << std::flush;
       reactor::sleep(1_sec);
       std::cout << "\r" << std::string(80, ' ') << "\r";
@@ -136,7 +137,7 @@ COMMAND(transmit_user)
     }
     beyond_poller.terminate_now();
     std::cout << elle::sprintf(
-      "Timed out, user identity no longer available on %s", beyond(true))
+      "Timed out, user identity no longer available on %s", infinit::beyond(true))
               << std::endl;
   }
 }
@@ -157,7 +158,7 @@ COMMAND(receive_user)
   {
     try
     {
-      auto pairing = beyond_fetch<PairingInformation>(
+      auto pairing = infinit::beyond_fetch<PairingInformation>(
         elle::sprintf("users/%s/pairing", name), "pairing",
         name, boost::none,
         {{"infinit-pairing-passphrase-hash", hashed_passphrase}},
@@ -171,15 +172,15 @@ COMMAND(receive_user)
       auto user = input.deserialize<infinit::User>();
       ifnt.user_save(user, true);
     }
-    catch (ResourceGone const& e)
+    catch (infinit::ResourceGone const& e)
     {
       std::cerr << elle::sprintf("User identity no longer available on %s, "
                                  "retransmit from the original device",
-                                 beyond(true))
+                                 infinit::beyond(true))
                 << std::endl;
       throw;
     }
-    catch (MissingResource const& e)
+    catch (infinit::MissingResource const& e)
     {
       if (e.what() == std::string("user/not_found"))
         not_found(name, "User");
@@ -212,13 +213,13 @@ main(int argc, char** argv)
     {
       "transmit",
       elle::sprintf("transmit object to another device using %s",
-                    beyond(true)).c_str(),
+                    infinit::beyond(true)).c_str(),
       &transmit,
       {},
       {
         { "user,u", bool_switch(),
           elle::sprintf("Transmit the user identity to another device using %s",
-                        beyond(true)).c_str(), },
+                        infinit::beyond(true)).c_str(), },
         option_passphrase,
         { "no-countdown", bool_switch(), "do not show countdown timer" },
       },
@@ -226,14 +227,14 @@ main(int argc, char** argv)
     {
       "receive",
       elle::sprintf("Receive an object from another device using %s",
-                    beyond(true)).c_str(),
+                    infinit::beyond(true)).c_str(),
       &receive,
       {},
       {
         { "name,n", value<std::string>(), "name of object to receive" },
         { "user,u", bool_switch(),
           elle::sprintf("receive a user identity from another device using %s",
-                        beyond(true)).c_str() },
+                        infinit::beyond(true)).c_str() },
         option_passphrase,
       },
     },

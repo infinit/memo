@@ -46,19 +46,19 @@ COMMAND(add)
   if (args.count("dropbox"))
   {
     std::cout << "Register your Dropbox account with infinit by visiting "
-              << beyond() << "/users/" << user.name
+              << infinit::beyond() << "/users/" << user.name
               << "/dropbox-oauth" << std::endl;
   }
   else if (args.count("google"))
   {
     std::cout << "Register your Google account with infinit by visiting "
-              << beyond() << "/users/" << user.name
+              << infinit::beyond() << "/users/" << user.name
               << "/google-oauth" << std::endl;
   }
   else if (args.count("gcs"))
   {
     std::cout << "Register your Google account with infinit by visiting "
-              << beyond() << "/users/" << user.name
+              << infinit::beyond() << "/users/" << user.name
               << "/gcs-oauth" << std::endl;
   }
   else if (args.count("aws"))
@@ -138,7 +138,7 @@ COMMAND(fetch)
   if (e.aws && !fetch_all)
   {
     throw CommandLineError(elle::sprintf("AWS credentials are not stored on %s",
-                           beyond(true)));
+                                         infinit::beyond(true)));
   }
   auto user = self_user(ifnt, args);
   if (e.dropbox)
@@ -158,7 +158,7 @@ COMMAND(fetch)
       { ifnt.credentials_google_add(std::move(a)); });
   if (!script_mode && fetch_all)
   {
-    std::cout << "INFO: AWS credentials are not stored on " << beyond(true)
+    std::cout << "INFO: AWS credentials are not stored on " << infinit::beyond(true)
               << " and so were not fetched" << std::endl;
   }
   // FIXME: remove deleted ones
@@ -286,7 +286,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("Fetch credentials from %s", beyond(true)),
+      elle::sprintf("Fetch credentials from %s", infinit::beyond(true)),
       &fetch,
       "[SERVICE]",
       {},

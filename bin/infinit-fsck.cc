@@ -417,7 +417,7 @@ main(int argc, char** argv)
         option_cache_ram_ttl,
         option_cache_ram_invalidation,
         { "fetch-endpoints", bool_switch(),
-          elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+            elle::sprintf("fetch endpoints from %s", infinit::beyond()).c_str() },
         { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
         { "blocklist,b", value<std::string>(),
           "file containing the list of block addresses" },

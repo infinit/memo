@@ -312,7 +312,7 @@ namespace infinit
                         crash_host.length() ? crash_host : beyond());
         auto dumps_path = canonical_folder(xdg_cache_home() / "crashes");
         crash_reporter = elle::make_unique<crash_reporting::CrashReporter>(
-          crash_url, dumps_path, version_describe);
+          crash_url, dumps_path, version_describe());
       }
 #endif
       reactor::Scheduler sched;
@@ -397,7 +397,7 @@ namespace infinit
               }
               if (vm.count("version"))
               {
-                std::cout << version_describe << std::endl;
+                std::cout << version_describe() << std::endl;
                 throw elle::Exit(0);
               }
               auto critical_log_file = xdg_state_home() / "critical.log";

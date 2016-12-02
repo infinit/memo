@@ -208,13 +208,13 @@ COMMAND(fetch)
     if (name)
     {
       auto name = volume_name(args, owner);
-      auto desc = beyond_fetch<infinit::Volume>("volume", name);
+      auto desc = infinit::beyond_fetch<infinit::Volume>("volume", name);
       ifnt.volume_save(std::move(desc));
     }
     else if (network_name_) // Fetch all networks for network.
     {
       std::string network_name = ifnt.qualified_name(network_name_.get(), owner);
-      auto res = beyond_fetch<
+      auto res = infinit::beyond_fetch<
         std::unordered_map<std::string, std::vector<infinit::Volume>>>(
           elle::sprintf("networks/%s/volumes", network_name),
           "volumes for network",
@@ -224,7 +224,7 @@ COMMAND(fetch)
     }
     else // Fetch all networks for owner.
     {
-      auto res = beyond_fetch<
+      auto res = infinit::beyond_fetch<
         std::unordered_map<std::string, std::vector<infinit::Volume>>>(
           elle::sprintf("users/%s/volumes", owner.name),
           "volumes for user",
@@ -236,7 +236,7 @@ COMMAND(fetch)
         {
           ifnt.volume_save(std::move(volume));
         }
-        catch (ResourceAlreadyFetched const& error)
+        catch (infinit::ResourceAlreadyFetched const& error)
         {
         }
       }
@@ -1137,7 +1137,7 @@ run_options(RunMode mode)
       { "create-root,R", BOOL_IMPLICIT, "create root directory"},
       { "network,N", value<std::string>(), "underlying network to use" },
       { "push-volume", BOOL_IMPLICIT,
-        elle::sprintf("push the volume to %s", beyond(true)) },
+        elle::sprintf("push the volume to %s", infinit::beyond(true)) },
       option_output("volume"),
       { "default-permissions,d", value<std::string>(),
         "default permissions (optional: r,rw)"},
@@ -1170,14 +1170,14 @@ run_options(RunMode mode)
     option_cache_ram_invalidation,
     option_cache_disk_size,
     { "fetch-endpoints", BOOL_IMPLICIT,
-      elle::sprintf("fetch endpoints from %s", beyond(true)) },
+      elle::sprintf("fetch endpoints from %s", infinit::beyond(true)) },
     { "fetch,f", BOOL_IMPLICIT, "alias for --fetch-endpoints" },
     { "peer", value<std::vector<std::string>>()->multitoken(),
       "peer address or file with list of peer addresses (host:port)" },
     { "peers-file", value<std::string>(),
       "Periodically write list of known peers to given file"},
     { "push-endpoints", BOOL_IMPLICIT,
-      elle::sprintf("push endpoints to %s", beyond(true)) },
+      elle::sprintf("push endpoints to %s", infinit::beyond(true)) },
   });
   if (mode == RunMode::run)
     add_option(
@@ -1244,7 +1244,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("Fetch a volume from %s", beyond(true)),
+      elle::sprintf("Fetch a volume from %s", infinit::beyond(true)),
       &fetch,
       "",
       {
@@ -1268,7 +1268,7 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a volume to %s", beyond(true)),
+      elle::sprintf("Push a volume to %s", infinit::beyond(true)),
       &push,
       "--name VOLUME",
       {
@@ -1301,13 +1301,13 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "volume to delete" },
         { "pull", bool_switch(),
-          elle::sprintf("pull the volume if it is on %s", beyond(true)) },
+          elle::sprintf("pull the volume if it is on %s", infinit::beyond(true)) },
         { "purge", bool_switch(), "remove objects that depend on the volume" },
       },
     },
     {
       "pull",
-      elle::sprintf("Remove a volume from %s", beyond(true)),
+      elle::sprintf("Remove a volume from %s", infinit::beyond(true)),
       &pull,
       "--name VOLUME",
       {

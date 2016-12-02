@@ -192,11 +192,11 @@ void link_network(std::string const& name,
         user.emplace(u);
         break;
       }
-      catch (MissingLocalResource const&)
+      catch (infinit::MissingLocalResource const&)
       {
         try
         {
-          passport.emplace(beyond_fetch<infinit::Passport>(elle::sprintf(
+          passport.emplace(infinit::beyond_fetch<infinit::Passport>(elle::sprintf(
             "networks/%s/passports/%s", name, u.name),
               "passport for",
               name,
@@ -231,7 +231,7 @@ void link_network(std::string const& name,
     {
       storage_config = ifnt.storage_get(*storagedesc);
     }
-    catch (MissingLocalResource const&)
+    catch (infinit::MissingLocalResource const&)
     {
       elle::err("storage specification for new storage not implemented");
     }
@@ -261,7 +261,7 @@ void
 acquire_network(std::string const& name)
 {
   infinit::NetworkDescriptor desc =
-    beyond_fetch<infinit::NetworkDescriptor>("network", name);
+    infinit::beyond_fetch<infinit::NetworkDescriptor>("network", name);
   ifnt.network_save(desc);
   try
   {
@@ -277,14 +277,14 @@ acquire_network(std::string const& name)
 void
 acquire_volume(std::string const& name)
 {
-  auto desc = beyond_fetch<infinit::Volume>("volume", name);
+  auto desc = infinit::beyond_fetch<infinit::Volume>("volume", name);
   ifnt.volume_save(desc, true);
   try
   {
     auto nname = split(desc.network);
     auto net = ifnt.network_get(nname.first, nname.second, true);
   }
-  catch (MissingLocalResource const&)
+  catch (infinit::MissingLocalResource const&)
   {
     acquire_network(desc.network);
   }
@@ -397,7 +397,7 @@ MountManager::acquire_volumes()
         continue;
       try
       {
-        auto res = beyond_fetch<
+        auto res = infinit::beyond_fetch<
           std::unordered_map<std::string, std::vector<infinit::Volume>>>(
             elle::sprintf("users/%s/volumes", u.name),
             "volumes for user",
@@ -409,7 +409,7 @@ MountManager::acquire_volumes()
           {
             acquire_volume(volume.name);
           }
-          catch (ResourceAlreadyFetched const& error)
+          catch (infinit::ResourceAlreadyFetched const& error)
           {
           }
           catch (elle::Error const& e)
@@ -553,7 +553,7 @@ MountManager::start(std::string const& name,
     {
       return ifnt.volume_get(name);
     }
-    catch (MissingLocalResource const&)
+    catch (infinit::MissingLocalResource const&)
     {
       acquire_volume(name);
       return ifnt.volume_get(name);
@@ -566,7 +566,7 @@ MountManager::start(std::string const& name,
     auto nname = split(volume.network);
     auto net = ifnt.network_get(nname.first, nname.second, true);
   }
-  catch (MissingLocalResource const&)
+  catch (infinit::MissingLocalResource const&)
   {
     acquire_network(volume.network);
   }
@@ -739,7 +739,7 @@ MountManager::update_network(infinit::Network& network,
       {
         storage_config = ifnt.storage_get(*storagedesc);
       }
-      catch (MissingLocalResource const&)
+      catch (infinit::MissingLocalResource const&)
       {
         throw elle::Error("Storage specification for new storage not implemented");
       }
@@ -863,7 +863,7 @@ MountManager::create_volume(std::string const& name,
         update_network(net, options);
         return net;
       }
-      catch (MissingLocalResource const&)
+      catch (infinit::MissingLocalResource const&)
       {
         return create_network(options, user);
       }
@@ -1686,7 +1686,7 @@ DockerVolumePlugin::install(bool tcp,
           elle::err("missing 'Name' argument");
         this->_manager.create_volume(name.get(), opts);
       }
-      catch (ResourceAlreadyFetched const&)
+      catch (infinit::ResourceAlreadyFetched const&)
       {
         // This can happen, docker seems to be caching volume list:
         // a mount request can trigger a create request without any list.
@@ -2012,7 +2012,7 @@ main(int argc, char** argv)
   Modes hidden_modes {
     {
       "fetch",
-      elle::sprintf("Fetch volume and its dependencies from %s", beyond(true)),
+      elle::sprintf("Fetch volume and its dependencies from %s", infinit::beyond(true)),
       &fetch,
       "--name VOLUME",
       {

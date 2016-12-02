@@ -555,7 +555,7 @@ int main(int argc, char** argv)
       "--name NETWORK",
       {
         { "fetch", bool_switch(),
-            elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+            elle::sprintf("fetch endpoints from %s", infinit::beyond()).c_str() },
         { "peer", value<std::vector<std::string>>()->multitoken(),
             "peer to connect to (host:port)" },
         { "name", value<std::string>(), "created network name" },

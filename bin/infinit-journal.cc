@@ -14,7 +14,8 @@ static
 bool
 valid_block(boost::filesystem::path const& path)
 {
-  return boost::filesystem::is_regular_file(path) && !is_hidden_file(path);
+  return boost::filesystem::is_regular_file(path) &&
+    !infinit::is_hidden_file(path);
 }
 
 static
