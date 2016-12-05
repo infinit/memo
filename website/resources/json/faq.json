@@ -105,6 +105,6 @@
     "category": "general",
     "popularity": 2,
     "question": "Is it production ready?",
-    "answer": "<p>No. Infinit is still in beta and will be considered production ready for its 1.0 release.</p>"
+    "answer": "<p>No. Infinit is still in alpha and will be considered production ready for its 1.0 release.</p>"
   }
 ]

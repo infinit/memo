@@ -3,23 +3,6 @@
 
   <ul class="menu">
     <li><input type="text" id="docsearch"></li>
-    <li ${'class="active"' if request.route.name == 'doc_overview' else ''}>
-      <a href="${route('doc_overview')}">Overview</a>
-    </li>
-
-    <li ${'class="active"' if request.route.name == 'doc_technology' else ''}>
-      <a href="${route('doc_technology')}">Technology</a>
-    </li>
-
-    <li class="scroll_menu examples ${'active clicked' if request.route.name == 'doc_deployments' else ''}">
-      <a href="${route('doc_deployments')}">Examples </a>
-
-      <ul>
-        <li class="centralized"><a href="${route('doc_deployments')}#centralized">Centralized (single server)</a></li>
-        <li class="distributed"><a href="${route('doc_deployments')}#distributed">Distributed (several servers)</a></li>
-        <li class="decentralized"><a href="${route('doc_deployments')}#decentralized">Decentralized (all servers)</a></li>
-      </ul>
-    </li>
 
     <li class="scroll_menu reference ${'active clicked' if request.route.name == 'doc_reference' else ''}">
       <a href="${route('doc_reference')}">Reference </a>
@@ -40,6 +23,20 @@
         <li class="ldap"><a href="${route('doc_reference')}#ldap">LDAP</a></li>
         <li class="monitor"><a href="${route('doc_reference')}#monitor">Monitor</a></li>
         <li class="journal"><a href="${route('doc_reference')}#journal">Journal</a></li>
+      </ul>
+    </li>
+
+    <li ${'class="active"' if request.route.name == 'doc_technology' else ''}>
+      <a href="${route('doc_technology')}">Technology</a>
+    </li>
+
+    <li class="scroll_menu examples ${'active clicked' if request.route.name == 'doc_deployments' else ''}">
+      <a href="${route('doc_deployments')}">Examples </a>
+
+      <ul>
+        <li class="centralized"><a href="${route('doc_deployments')}#centralized">Centralized (single server)</a></li>
+        <li class="distributed"><a href="${route('doc_deployments')}#distributed">Distributed (several servers)</a></li>
+        <li class="decentralized"><a href="${route('doc_deployments')}#decentralized">Decentralized (all servers)</a></li>
       </ul>
     </li>
 

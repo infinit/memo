@@ -76,15 +76,33 @@
     }
   }
 
-
-
-
   body.faq {
     main { margin: 0 5%;}
     .filters { width: 100%; margin:0; }
     #search-input input { width: 86%; margin: 0 5%; padding: 14px 2%; }
   }
 }
+
+
+@media (max-width:870px) {
+  body.product {
+    section.doc .features {
+      section.resilient {
+        .schema {
+          width: 100%;
+          .steps { margin-top: 60px; }
+        }
+      }
+      section.decentralized {
+        div { width: 90%; padding-top: 50px;  }
+      }
+      section.programmatic {
+        .wrapper > div { width: 95%; margin-left: 0; }
+      }
+    }
+  }
+}
+
 
 @media (max-width:800px) {
   body.home {
@@ -132,6 +150,43 @@
 }
 
 @media (max-width:720px) {
+
+  body.docker {
+    section.presentation {
+      .schema {
+        width: 100%; margin-left: 3%; margin-right: 3%;
+        .figure {
+          > img { margin-bottom: 150px; }
+          img { width: 100%; }
+        }
+        .steps { margin-top: 0; margin-bottom: 60px; }
+      }
+    }
+    section.projects {
+      .wrapper { width: 90%; }
+      .project {
+        width: auto; margin-left: 0; margin-right: 0; margin-bottom: 30px;
+        h3 { margin-top: 5px; }
+        &.volume { width: auto; }
+        &.soon { width: 33%; margin-right: 5%; }
+      }
+    }
+    section.scale {
+      padding-top: 30px; padding-bottom: 0;
+      .wrapper {
+        width: 92%;
+        div.hyperscalable {
+          padding-left: 0; border-right: 0;
+          img { margin-left: 0;}
+        }
+        p { max-width: 87%; }
+        div { width: 100%; padding: 0; }
+        div img { margin-bottom: 40px; max-width: 100%; height: auto;}
+      }
+    }
+  }
+
+
   body.pricing {
     section.doc {
       > p { width: 80%;}

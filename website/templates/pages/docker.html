@@ -1,0 +1,98 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+  <section class="presentation">
+    <h1>Bringing Persistent Storage to Docker</h1>
+    <!-- <p class="subtitle">Make your containerized apps stateful using a scalable and resilient storage platform.</p>-->
+
+    <!-- <a href="#projects" class="button blue">See our projects</a> <br> -->
+    <div class="schema">
+      <div class="figure">
+        <img src="${url('images/schema-persistent-storage-docker.png')}" alt="Docker Persistent Storage">
+        <span class="arrow" id="arrow1"></span>
+        <span class="arrow" id="arrow2"></span>
+
+        <span class="node" id="node1"></span>
+        <span class="node" id="node2"></span>
+        <span class="node" id="node3"></span>
+        <span id="deleteNode3"></span>
+        <span class="node" id="node4"></span>
+        <span class="node" id="node5"></span>
+
+        <span class="container" id="container1"></span>
+        <span class="container" id="container2"></span>
+      </div>
+
+      <div class="steps">
+        <p class="controls">
+          <a id="play" href="#">
+            <img src="${url('images/icons/play.png')}" alt="Play">Launch animation
+          </a>
+          <a id="replay" href="#">
+            <img src="${url('images/icons/replay.png')}" alt="Replay">Replay
+          </a>
+        </p>
+
+        <p id="step1"><strong>1</strong> Your container access a replicated Infinit storage pool.</p>
+        <p id="step2"><strong>2</strong> A node crashes.</p>
+        <p id="step3"><strong>3</strong> A newly instanced container can still access your storage as before.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="projects">
+    <hr>
+    <h2>Our Docker Projects</h2>
+  </div>
+
+  <section class="projects" id="projects">
+
+    <div class="wrapper">
+      <div class="project volume">
+        <img src="${url('images/icons/docker-volume-plugin.png')}" alt="Infinit Docker Volume Plugin">
+        <h3>Docker Volume Plugin</h3>
+        <p>Infinit's Docker volume plugin makes it easy to mount and manage Infinit volumes using Docker.</p>
+        <a class="button blue" href="${route('doc_docker_plugin')}">Read more</a>
+        <hr>
+        <img class="moby" src="${url('images/icons/docker-cut.png')}" alt="">
+      </div>
+
+      <div class="project cluster disabled">
+        <img src="${url('images/icons/infinit-cluster.png')}" alt="Infinit Docker Volume Plugin"><br>
+        <h3>Hyperscalable Swarm</h3><span>Soon</span>
+        <p>Aggregates the local storage of each Docker Swarm node and provides a shared volume that can be mounted by any Docker service.</p>
+        <hr>
+        <img class="moby" src="${url('images/icons/docker-cut.png')}" alt="">
+      </div>
+
+      <div class="project soon disabled">
+        <p>More projects to come...</p>
+      </div>
+      <div class="project soon disabled">
+        <p>More projects to come...</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="scale">
+    <h2>Scale your storage according to your needs</h2>
+
+    <div class="wrapper">
+
+      <div class="hyperscalable">
+        <h3>Hyper-scalable architecture</h3>
+        <span>Best for Operators</span>
+        <p>Gives the administrator complete control to scale components independently as needed.</p>
+        <img src="${url('images/schema-hyperscalable.png')}" alt="Hyper-convergent architecture Docker">
+      </div>
+
+      <div class="hyperconvergent">
+        <h3>Hyper-convergent architecture</h3>
+        <span>Best for Developers</span>
+        <p>Storage is scaled with networking and compute resources in the application cluster (e.g. Docker Swarm) offering simplicity over control.</p>
+        <img src="${url('images/schema-hyperconvergent.png')}" alt="Hyper-convergent architecture Docker">
+      </div>
+    </div>
+  </section>
+
+</%block>

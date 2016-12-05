@@ -85,6 +85,49 @@ $(document).ready(function() {
     $(window).scroll(a);
   }
 
+
+  /*----------------.
+  | Product         |
+  `----------------*/
+
+  if ($('body').hasClass('product') || $('body').hasClass('docker')) {
+
+    $('#play').click(function(e) {
+      e.preventDefault();
+      $('.schema').addClass('play');
+      $('#play').hide();
+      $('#replay').show();
+    });
+
+    $("#replay").click(function(e) {
+      e.preventDefault();
+      var el = $('.schema');
+      var newone = el.clone(true);
+
+      el.before(newone);
+      $(".schema" + ":last").remove();
+    });
+  }
+
+
+
+  /*----------------.
+  | Reference       |
+  `----------------*/
+
+  if ($('body').hasClass('opensource')) {
+    // Gets the full repo name from the data attribute and
+    // fetches the data from the api.
+    $('[data-gh-project]').each(function() {
+      var $proj = $(this);
+      var repo = $proj.data('gh-project');
+      $.get('https://api.github.com/repos/' + repo).success(function(data) {
+        $proj.find('.forks span').text(data.forks_count);
+        $proj.find('.stars span').text(data.stargazers_count);
+      });
+    });
+  }
+
   /*----------------.
   | Reference       |
   `----------------*/

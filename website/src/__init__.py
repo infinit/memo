@@ -65,13 +65,20 @@ class Website(bottle.Bottle):
       'description': 'The page you were looking for isn\'t here.',
     }
 
-  @route('/documentation', name = 'doc_overview')
-  @route('/documentation/overview', name = 'doc_overview')
-  @view('pages/docs/overview.html')
+  @route('/product', name = 'product')
+  @view('pages/product.html')
   def root(self):
     return {
       'title': 'An Overview of the Infinit Storage Platform',
       'description': 'Discover the benefits of the Infinit storage platform through its innovative technology.',
+    }
+
+  @route('/docker', name = 'docker')
+  @view('pages/docker.html')
+  def root(self):
+    return {
+      'title': 'Persistent Storage Solutions for Docker',
+      'description': 'Infinit provdides many persistent storage solutions to make your containerized Docker applications stateful.',
     }
 
   @route('/drive', name = 'drive')
@@ -178,6 +185,7 @@ class Website(bottle.Bottle):
       'description': 'Discover how Infinit can be used to deploy various types of storage infrastructure.',
     }
 
+  @route('/documentation', name = 'doc_reference')
   @route('/documentation/reference', name = 'doc_reference')
   @view('pages/docs/reference.html')
   def root(self):

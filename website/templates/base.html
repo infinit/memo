@@ -68,12 +68,13 @@
       <nav>
         <a href="#">☰ &nbsp; MENU</a>
         <ul>
+          <li><a href="${route('product')}"><span>Product</span></a></li>
           <li><a href="${route('faq')}"><span>FAQ</span></a></li>
-          <li><a href="${route('doc_technology')}"><span>Technology</span></a></li>
-          <li><a href="${route('doc_get_started')}"><span>Get Started</span></a></li>
-          <li><a href="${route('doc_deployments')}"><span>Examples</span></a></li>
-          <li><a href="${route('doc_reference')}"><span>Reference</span></a></li>
           <li><a href="${route('pricing')}"><span>Pricing</span></a></li>
+          <li><a href="${route('doc_get_started')}"><span>Get Started</span></a></li>
+          <li><a href="${route('doc_technology')}"><span>Technology</span></a></li>
+          <li><a href="${route('docker')}"><span>Docker Integrations</span></a></li>
+          <li><a href="${route('doc_deployments')}"><span>Examples</span></a></li>
           <li><a href="${route('doc_roadmap')}"><span>Roadmap</span></a></li>
           <li><a href="${route('doc_changelog')}"><span>Change Log</span></a></li>
         </ul>
@@ -81,7 +82,10 @@
 
       <ul>
         <li>
-          <a ${'class="active"' if route_name[:4] == 'doc_' and route_name[:15] != 'doc_get_started' and route_name != 'doc_faq' else ''} href="${route('doc_overview')}">Documentation</a>
+          <a ${'class="active"' if route_name == 'product' else ''} href="${route('product')}">Product</a>
+        </li>
+        <li>
+          <a ${'class="active"' if route_name[:4] == 'doc_' and route_name[:15] != 'doc_get_started' and route_name != 'doc_faq' else ''} href="${route('doc_reference')}">Documentation</a>
         </li>
         <li>
           <a ${'class="active"' if route_name == 'faq' else ''} href="${route('faq')}">FAQ</a>

@@ -14,6 +14,13 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'sf_ui_textbold';
+  src: url('../fonts/sf-bold-webfont.woff2') format('woff2'),
+       url('../fonts/sf-bold-webfont.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
 
 body {
   font-family: @sourcesans;
@@ -25,11 +32,13 @@ a { text-decoration: none; color: @infinitblack; }
 ul { list-style-type: none; }
 
 a.button, button.button, input.button, body.documentation section.doc p a.button {
-  background: @infinitred; border-radius: 3px; font-size: 15px; font-weight: 600;
-  box-shadow: 0px 3px 0px 0px darken(#C73F3C, 10%); padding: 6px 10px;
+  background: @infinitred; border-radius: 3px; font-size: 13px; font-weight: 600;
+  box-shadow: 0px 3px 0px 0px darken(#C73F3C, 10%); padding: 5px 10px;
   color: white !important; text-transform: uppercase; border: none; outline: none;
   display: inline-block; overflow: hidden; .transition();
-  font-family: @sourcesans;
+  font-family: @sf;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 
   &:hover, &:active {
     background: darken(@infinitred, 10%); color: white;
@@ -53,6 +62,12 @@ a.button, button.button, input.button, body.documentation section.doc p a.button
     background: #D2D2D2;
     box-shadow: 0 3px 0 0 #9A9A9A;
   }
+
+  &.blue {
+    background-color: #414F66; color: white !important;
+    box-shadow: 0px 3px 0px 0px black;
+  }
+  &.blue:hover { background: @infinitblack;}
 
   &.white {
     background-color: white; color: #07A0B6 !important;
@@ -247,7 +262,9 @@ footer nav > ul > li {
 
     &.category {
       font-family: @sourcesans; text-transform: uppercase;
-      margin-bottom: 20px; font-weight: 600;
+      margin-bottom: 20px; font-weight: 600; font-family: @sf; font-size: 12px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     a {
       color: @infinitgrey; margin-top: 8px;
@@ -403,8 +420,11 @@ body.home {
       .animationDelay(0.2s);
 
       .legend {
-        position: absolute; left: -108px; top: 87px;
-        h4 { font-size: 18px; max-width: 70px; margin: 0;}
+        position: absolute; left: -116px; top: 87px;
+        h4 {
+          font-size: 18px; max-width: 80px; margin: 0; font-family: @sf;
+          font-size: 13px; text-transform: uppercase;
+        }
         span, h4 { text-align: right; }
         span { display: inline-block; float: right;}
 
@@ -440,8 +460,8 @@ body.home {
         max-width: 580px; margin-left: 46px;
 
         span.storage {
-          background: #F6EB57; border-radius: 3px; color: #6A6B19;
-          padding: 3px 9px;  font-size: 12px; font-weight: bold; margin-top: 5px;
+          background: #FFF088; border-radius: 3px; color: #6A6B19; font-family: @sf;
+          padding: 3px 9px;  font-size: 11px; font-weight: bold; margin-top: 5px;
         }
 
         div.servers {
@@ -513,9 +533,8 @@ body.home {
 
         div.block, div.object, div.file {
           background: white; border: 2px solid #E9E9E9; padding: 15px 21px; margin: 0 12px;
-          float: left; min-width: 135px; min-height: 50px; position: relative;
-          font-size: 14px;
-          opacity: 0; margin-top: 85px;
+          float: left; min-width: 122px; min-height: 50px; position: relative;
+          opacity: 0; margin-top: 85px; font-size: 14px;
           .animation(apisFade, cubic-bezier(0.07, 0.88, 0.09, 0.95), 1);
           .animationFillMode(forwards);
           .animationDuration(0.7s);
@@ -550,6 +569,7 @@ body.home {
       float: left; width: 33%; text-align: center; padding: 20px 0 0 0;
       min-height: 180px; margin-bottom: 30px;
 
+      h3 { font-family: @sf; font-size: 15px; text-transform: uppercase; }
       &.scalable { margin-top: -7px;}
       &.modern { margin-top: -5px; }
       &:nth-child(3n) { clear: both; }
@@ -567,8 +587,8 @@ body.home {
     div.developers, div.operators {
       width: 44%; padding: 0 3%; float: left; text-align: center;
       strong {
-        text-transform: uppercase; font-weight: bold;
-        border-bottom: 2px solid @infinitblack;
+        text-transform: uppercase; font-family: @sf; font-size: 15px;
+        border-bottom: 2px solid @infinitblack; padding-bottom: 2px;
       }
       p { line-height: 23px; max-width: 70%; margin-left: auto; margin-right: auto; }
       a { margin: 10px 0 20px 0;}
@@ -609,15 +629,18 @@ body.home {
 
     p.title {
       max-width: 510px; margin: 15px auto 0 auto;
-
       a { color: @infinitblue; .transition(); }
       a:hover { color: darken(@infinitblue, 10%); }
     }
 
     div.tutorial, div.contact {
       width: 40%; margin: 70px 5% 40px 5%; float: left;
-      strong { text-transform: uppercase; font-size: 16px; }
       p { line-height: 23px; }
+
+      strong {
+        text-transform: uppercase; font-size: 14px; font-family: @sf;
+        border-bottom: 2px solid @infinitblack; padding-bottom: 2px;
+      }
 
       input, textarea {
         border: 1px solid #CCCCCC; border-radius: 4px; font-size: 14px;
@@ -644,8 +667,8 @@ body.home {
 
       div.faq {
         width: 70%; margin: 0 auto;
-        p { margin-top: 10px;}
-        strong { display: block; margin-top: 70px; }
+        p { margin-top: 15px;}
+        strong { display: inline-block; margin-top: 60px; }
         input[type=text] { width: 100%; }
       }
     }
@@ -677,7 +700,10 @@ body.home {
     div.blog, div.news {
       width: 40%; margin: 0 5%; float: left;
       strong.title { font-size: 26px; display: inline-block; margin-bottom: 20px;}
-      p a, .event a { color: @infinitblue; text-transform: uppercase; font-weight: bold;}
+      p a, .event a {
+        color: @infinitblue; text-transform: uppercase; font-weight: bold;
+        font-size: 13px; font-family: @sf;
+      }
 
       .article {
         h3 { font-size: 17px; font-weight: 600; line-height: 24px; display: inline;}
@@ -1350,70 +1376,541 @@ body.faq {
   #stats, #pagination { display: none; }
 }
 
+body.product,
+body.docker {
+  .schema .steps p strong {
+    background: @infinitblack; display: inline-block; padding: 0px 8px;
+    font-size: 12px; line-height: 19px;
+    margin-right: 3px; border-radius: 8px; color: white;
+  }
+}
 
-body.doc_overview {
-
+body.product {
   section.doc {
     h2 {
-      font-family: @helvetica; text-align: center; font-weight: 300;
-      font-size: 28px; clear: both; padding-top: 80px; padding-bottom: 15px;
-      letter-spacing: -0.2px;
+      text-align: center; letter-spacing: -0.2px;
+      font-size: 28px; clear: both; padding-top: 80px; padding-bottom: 0px;
     }
+
     h2:first-child { padding-top: 0; }
-    h2 img {
-      margin: 0; margin-right: 7px;
-      max-height: 38px; vertical-align: bottom; margin-top: 0px; width: auto;
-    }
 
     .features {
       &:after { display: table; content: ''; clear: both; }
       div h3 { display: inline-block; margin-top: 0; }
 
-      div.resilient {
-        div.decentralized {
-          img { float: left; margin-right: 25px; }
-          h3 { margin-bottom: 10px; margin-top: 15px; }
-        }
+      section.resilient {
+        text-align: center;
+        h2 { margin-bottom: 10px;}
+        > p { max-width: 60%; margin:auto; margin-top: 0; clear: both; font-style: italic;}
 
-        div.reliable {
-          clear: both; padding-top: 35px;
-          img { float: right; margin-left: 25px; }
-        }
-      }
+        .schema {
+          width: 810px; margin: 0 auto;
 
-      div.scalable {
-        padding-top: 30px; text-align: center;
-        h2 { margin-bottom: 15px; }
-        p { max-width: 85%; margin: auto; }
-        img { margin: 20px auto 40px auto; }
-        div { text-align: left;}
-        div p { max-width: 100%; }
-      }
+          .figure {
+            position: relative; margin-bottom: 60px;
 
-      div.programmatic {
-        padding-top: 30px;
-        h2 { margin-bottom: 0px;}
-        > p { margin-top: 0px; text-align: center;}
-        div {
-          float: left; width: 45%; margin: 0 5%; min-height: 120px;
-          img { max-height: 20px; margin-right: 4px; }
-          &:nth-child(2n+1) { clear: both; margin-left: 0;}
-          &:nth-child(2n+2) { margin-right: 0; }
-          h3 {
-            font-size: 16px; padding: 25px 0 0 0; vertical-align: super;
+            img { float: left; margin-top: 30px; margin-bottom: 30px; }
+
+            .node {
+              width: 93px; min-height: 64px; background: white;
+              .at2x('../images/icons/imac.png', 60px, 54px);
+              background-repeat: no-repeat; background-position: top center;
+              position: absolute;
+
+              span.name {
+                display: inline-block; margin-top: 63px; font-size: 13px;
+                font-weight: 500;
+              }
+
+              span.block {
+                background: #FFF088; border: 2px solid #252D3B; border-radius: 4px;
+                width: 12px; height: 12px; display: inline-block; margin-top: 6px;
+              }
+            }
+
+            #nodeA { left: 180px; }
+            #nodeC { top: 340px; left: 68px;}
+            #nodeE,
+            #nodeG { top: 340px; left: 270px;}
+            #nodeF { left: 270px;}
+            #nodeF, #nodeG { opacity: 0;}
+
+            #nodeE {
+              span.name { margin-top: 24px }
+              span.screenAlert {
+                .at2x('../images/icons/screen-red.png', 56px, 32px);
+                width: 56px; height: 32px; display: inline-block;
+                margin-top: 2px; margin-left: 2px; opacity: 0;
+              }
+            }
+
+            #nodeC .block { opacity: 0; }
           }
-          p { color: #959595; line-height: 19px; margin-top: 0;}
+
+          .steps {
+            margin-left: 60px; float: left; margin-top: 10px;
+            max-width: 300px; text-align: left;
+
+            p { font-size: 17px; margin: 22px 0; }
+
+            #step2, #step3, #step4, #step5, #step6 { opacity: 0.1; }
+
+            .controls {
+              margin-top: 0;
+
+              #replay { display: none; }
+              #replay, #play {
+                text-transform: uppercase; font-weight: 600; font-size: 14px;
+                font-family: @sf;
+              }
+
+              a:hover img { opacity: 1; }
+              a:hover:after { opacity: 0; }
+
+              a img { margin-right: 6px; opacity: 0.75; .transition(); }
+              #play img { vertical-align: text-top;}
+              #replay img { width: 12px; height: 15px; }
+            }
+          }
+
+          // Animations
+          // Sorted by timeline
+          &.play {
+
+            #step1 {
+              animation: stepFadeOut 0.3s 1.5s ease-out 1;
+              .animationFillMode(forwards);
+            }
+
+            #step2 {
+              animation: stepFadeIn 0.3s 2s ease-in 1,
+                         stepFadeOut 0.3s 5.5s ease-out 1;
+              .animationFillMode(forwards);
+            }
+
+            #nodeE .screenAlert {
+              .animation(blink, ease-in-out, infinite);
+              .animationDelay(3s);
+              .animationFillMode(forwards);
+              .animationDuration(0.7s);
+            }
+
+            #step3 {
+              animation: stepFadeIn 0.3s 6s ease-in 1,
+                         stepFadeOut 0.3s 10s ease-out 1;
+              .animationFillMode(forwards);
+            }
+
+            #nodeE {
+              .animation(nodeEExit, ease-out, 1);
+              .animationDelay(8.5s);
+              .animationFillMode(forwards);
+              .animationDuration(0.5s);
+            }
+
+            #step4 {
+              animation: stepFadeIn 0.5s 10.5s ease-in 1,
+                         stepFadeOut 0.5s 15s ease-in 1;
+              .animationFillMode(forwards);
+            }
+
+            #nodeC {
+              animation: nodeCSlideRight 0.5s 11s ease-out 1,
+                         nodeCSlideLeft 0.5s 17s ease-out 1;
+              .animationFillMode(forwards);
+            }
+
+            #nodeC .block {
+              .animation(blockCEnter, ease-out, 1);
+              animation: blockCEnter 0.5s 12s ease-out 1,
+                         blockCSlide 0.5s 21.5s ease-out 1;
+              .animationFillMode(forwards);
+            }
+
+            #step5 {
+              animation: stepFadeIn 0.5s 15.5s ease-in 1,
+                         stepFadeOut 0.5s 20s ease-in 1;
+              .animationFillMode(forwards);
+            }
+
+            #nodeA {
+              .animation(nodeCSlideLeft, ease-out, 1);
+              .animationDelay(17s);
+              .animationFillMode(forwards);
+              .animationDuration(0.5s);
+            }
+
+            #nodeF {
+              .animation(nodeFEnter, ease-out, 1);
+              .animationDelay(18s);
+              .animationFillMode(forwards);
+              .animationDuration(0.5s);
+            }
+
+            #nodeG {
+              .animation(nodeGEnter, ease-out, 1);
+              .animationDelay(18.3s);
+              .animationFillMode(forwards);
+              .animationDuration(0.5s);
+            }
+
+            #step6 {
+              .animation(stepFadeIn, ease-out, 1);
+              .animationDelay(20.5s);
+              .animationFillMode(forwards);
+              .animationDuration(0.5s);
+            }
+          }
         }
       }
 
-      div.multi {
-        padding-top: 30px; clear: both;
-        div { margin: 25px 0 55px 0; clear: both; }
-        div.fs, div.object, div.block {
-          img { float: left; margin-right: 30px;}
-          h3 { display: inline-block; margin-bottom: 0; margin-top: 7px;}
+      section.decentralized {
+        &:after { display: table; content: ''; clear: both; }
+
+        div {
+          float: left; width: 40%; margin: 0 5%; padding-top: 140px;
+
+          h3 { font-family: @sf; font-size: 15px; text-transform: uppercase;}
+          img { margin-bottom: 15px; }
+          p { max-width: 90%; }
         }
-        div.object h3 { margin-top: 20px; }
+        div:last-child img { margin-bottom: 28px; }
+      }
+
+      section.programmatic {
+        padding-top: 30px;
+        &:after { display: table; content: ''; clear: both; }
+
+        .wrapper {
+          max-width: 950px; margin: auto;
+
+          h2 { margin-bottom: 0px;}
+          > p { margin-top: 7px; text-align: center;}
+          > div {
+            float: left; width: 45%; margin: 0 5%; min-height: 120px; margin-bottom: 15px;
+
+            > div { width: 100%;}
+            img { margin: 28px 18px 45px 0; float: left; max-width: 20%; }
+            &:nth-child(2n+1) { clear: both; margin-left: 0;}
+            &:nth-child(2n+2) { margin-right: 0; }
+            h3 {
+              font-size: 14px; padding: 25px 0 0 0; vertical-align: super;
+              font-family: @sf; text-transform: uppercase;
+            }
+            p { line-height: 23px; font-size: 16px;  margin-top: 0;}
+          }
+        }
+      }
+
+      section.interfaces.programmatic {
+        padding-top: 0; padding-bottom: 20px;
+        &:after { display: table; content: ''; clear: both; }
+        h2 { margin-bottom: 50px;}
+
+        .wrapper {
+          > div:nth-child(2n+1) { clear: none;}
+          > div:nth-child(2n+2) { }
+          > div {
+            text-align: center;
+            img { float: none; margin: 0;}
+            p { max-width: 85%; margin: auto; margin-bottom: 35px; }
+            h3 { display: block; padding: 9px 0 8px 0; }
+          }
+          > div:nth-child(4) {
+            float: none; width: 100%; margin:0;
+            p { max-width: 40%;}
+          }
+        }
+      }
+
+      div.cta {
+        text-align: center; padding-bottom: 70px;
+      }
+    }
+  }
+}
+
+
+// Animations for Docker & Product pages
+@-webkit-keyframes nodeFadeOut { from { opacity: 1; border: 2px solid @infinitblack; } to { opacity: 0.2; border: 2px solid @infinitred; } }
+@-moz-keyframes nodeFadeOut { from { opacity: 1; border: 2px solid @infinitblack; } to { opacity: 0.2; border: 2px solid @infinitred; } }
+@keyframes nodeFadeOut { from { opacity: 1; border: 2px solid @infinitblack; } to { opacity: 0.2; border: 2px solid @infinitred; } }
+
+@-webkit-keyframes crossFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@-moz-keyframes crossFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes crossFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+@-webkit-keyframes stepFadeIn { from { opacity: 0.1; } to { opacity: 1; } }
+@-moz-keyframes crossFadeIn { from { opacity: 0.1; } to { opacity: 1; } }
+@keyframes crossFadeIn { from { opacity: 0.1; } to { opacity: 1; } }
+
+@-webkit-keyframes stepFadeOut { from { opacity: 1; } to { opacity: 0.1; } }
+@-moz-keyframes stepFadeOut { from { opacity: 1; } to { opacity: 0.1; } }
+@keyframes stepFadeOut { from { opacity: 1; } to { opacity: 0.1; } }
+
+@-webkit-keyframes containerFadeOut { from { opacity: 1; } to { opacity: 0; } }
+@-moz-keyframes containerFadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes containerFadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+// Node C
+@-webkit-keyframes nodeCSlideRight { from { left: 68px; } to { left: 180px; } }
+@-moz-keyframes nodeCSlideRight { from { left: 68px; } to { left: 180px; } }
+@keyframes nodeCSlideRight { from { left: 68px; } to { left: 180px; } }
+
+@-webkit-keyframes nodeCSlideLeft { from { left: 180px; } to { left: 68px; } }
+@-moz-keyframes nodeCSlideLeft { from { left: 180px; } to { left: 68px; } }
+@keyframes nodeCSlideLeft { from { left: 180px; } to { left: 68px; } }
+
+@-webkit-keyframes blockCEnter { from { opacity: 0; margin-top: 30px; } to { opacity: 1; margin-top: 6px; } }
+@-moz-keyframes blockCEnter { from { opacity: 0; margin-top: 30px; } to { opacity: 1; margin-top: 6px; } }
+@keyframes blockCEnter { from { opacity: 0; margin-top: 30px; } to { opacity: 1; margin-top: 6px; } }
+
+
+// Node E
+@-webkit-keyframes nodeEExit { from { opacity: 1; top: 340px } to { opacity: 0; top: 390px } }
+@-moz-keyframes nodeEExit { from { opacity: 1; top: 340px } to { opacity: 0; top: 390px } }
+@keyframes nodeEExit { from { opacity: 1; top: 340px } to { opacity: 0; top: 390px } }
+
+// Node F
+@-webkit-keyframes nodeFEnter { from { opacity: 0; top: -50px; left: 320px; } to { opacity: 1; top: 0; left: 270px; } }
+@-moz-keyframes nodeFEnter { from { opacity: 0; top: -50px; left: 320px; } to { opacity: 1; top: 0; left: 270px; } }
+@keyframes nodeFEnter { from { opacity: 0; top: -50px; left: 320px; } to { opacity: 1; top: 0; left: 270px; } }
+
+// Node G
+@-webkit-keyframes nodeGEnter { from { opacity: 0; top: 390px; left: 320px; } to { opacity: 1; top: 340px; left: 270px; } }
+@-moz-keyframes nodeGEnter { from { opacity: 0; top: 390px; left: 320px; } to { opacity: 1; top: 340px; left: 270px; } }
+@keyframes nodeGEnter { from { opacity: 0; top: 390px; left: 320px; } to { opacity: 1; top: 340px; left: 270px; } }
+
+@-webkit-keyframes blockCSlide { from { margin-left: 0px; } to { margin-left: 241px; } }
+@-moz-keyframes blockCSlide { from { margin-left: 0px; } to { margin-left: 241px; } }
+@keyframes blockCSlide { from { margin-left: 0px; } to { margin-left: 241px; } }
+
+@-webkit-keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1 } }
+@-moz-keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1 } }
+@keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1 } }
+
+
+
+
+body.docker {
+
+  section.presentation {
+    text-align: center;
+
+    h1 { font-size: 36px; margin: 50px 5% 20px 5%; }
+
+    p.subtitle {
+      font-size: 20px; font-style: italic;
+      color: darken(@infinitgray, 10%); max-width: 45%;
+      margin-left: auto; margin-right: auto;
+    }
+
+    .schema {
+      position: relative; width: 720px; margin: auto; margin-top: 40px;
+
+      .figure {
+        > img { margin: 10px 0 230px 0; float: left; }
+
+        // Nodes
+        .node {
+          width: 22px; height: 22px; border-radius: 32px; display: block;
+          background: #F3F3F3; border: 2px solid @infinitblack;
+          position: absolute; top: 266px;
+        }
+
+        #node1 { left: 125px; }
+
+        #deleteNode3 {
+          opacity: 0; display: block; position: absolute; top: 267px; left: 217px;
+          .at2x('../images/icons/cross-red.png', 22px, 26px); width: 22px; height: 26px;
+        }
+
+        #node2 { left: 170px; }
+        #node3 { left: 215px; .animationDelay(5s); }
+        #node4 { left: 260px; }
+        #node5 { left: 305px; }
+
+        // Containers
+        .container {
+          .at2x('../images/icons/container.png', 31px, 31px); width: 31px; height: 31px;
+          display: block; position: absolute; top: 301px;
+        }
+
+        #container1 { left: 210px; }
+        #container2 { left: 255px; opacity: 0; }
+
+        // Arrows
+        .arrow {
+          .at2x('../images/arrow-schema-docker.png', 12px, 74px); width: 12px; height: 74px;
+          display: block; position: absolute; top: 178px;
+        }
+
+        #arrow1 { left: 221px; }
+        #arrow2 { left: 266px; opacity: 0; }
+      }
+
+      // Texts
+      .steps {
+        float:left; max-width: 270px; text-align: left; margin-left: 50px;
+        margin-top: 80px;
+
+        p { font-size: 17px; margin: 22px 0; line-height: 23px; }
+
+        .controls {
+          margin-top: 0;
+
+          #replay { display: none; }
+          a { color: @infinitblue; }
+          a:hover:after { opacity: 0; }
+
+          a img { margin-right: 6px; }
+          #play img { vertical-align: sub;}
+          #replay img { width: 12px; height: 15px; }
+        }
+
+        #step2,
+        #step3 { opacity: 0.2; }
+      }
+
+      // Animations
+      &.play {
+        #deleteNode3 {
+          .animation(crossFadeIn, ease-in, 1);
+          .animationFillMode(forwards);
+          .animationDuration(1s);
+          .animationDelay(2s);
+        }
+
+        #node3 {
+          .animation(nodeFadeOut, cubic-bezier(0.07, 0.88, 0.09, 0.95), 1);
+          .animationFillMode(forwards);
+          .animationDuration(1s);
+          .animationDelay(2s);
+        }
+
+        #container1 {
+          .animation(containerFadeOut, cubic-bezier(0.22, 0.61, 0.36, 1), 1);
+          .animationDelay(2s);
+          .animationFillMode(forwards);
+          .animationDuration(1s);
+        }
+
+        #container2 {
+          .animation(crossFadeIn, cubic-bezier(0.22, 0.61, 0.36, 1), 1);
+          .animationDelay(6s);
+          .animationFillMode(forwards);
+          .animationDuration(1s);
+        }
+
+        #arrow1 {
+          .animation(containerFadeOut, cubic-bezier(0.22, 0.61, 0.36, 1), 1);
+          .animationFillMode(forwards);
+          .animationDuration(1s);
+          .animationDelay(2s);
+        }
+
+        #arrow2 {
+          .animation(crossFadeIn, cubic-bezier(0.22, 0.61, 0.36, 1), 1);
+          .animationFillMode(forwards);
+          .animationDuration(1s);
+          .animationDelay(7s);
+        }
+
+        #step1 {
+          animation: stepFadeOut 0.3s 0.2s ease-out 1;
+          .animationFillMode(forwards);
+        }
+
+        #step2 {
+          animation: stepFadeIn 0.3s 0.7s ease-in 1,
+                     stepFadeOut 0.3s 6.5s ease-out 1;
+          .animationFillMode(forwards);
+        }
+
+        #step3 {
+          animation: stepFadeIn 0.3s 7s ease-in 1;
+          .animationFillMode(forwards);
+        }
+      }
+    }
+  }
+
+  div.projects,
+  section.scale {
+    h2 { font-size: 30px; font-family: @helvetica; font-weight: 300; text-align: center; }
+  }
+
+  div.projects {
+    text-align: center; position: relative; clear: both;
+    hr {
+      background: #23b2db; height: 2px; border: none;
+      margin-bottom: 50px; margin-top: 30px;
+    }
+    h2 {
+      margin-top: -17px; margin-bottom: 40px; background: white;
+      display: inline-block; position: absolute; top: 0; left: 50%; margin-left: -172px;
+      padding: 0 40px;
+    }
+  }
+
+  section.projects {
+    overflow: auto; zoom: 1; padding-top: 10px;
+    .wrapper { width: 80%;}
+
+    .project {
+      float:left; width: 25%; margin-left:2%; margin-right: 2%; min-height: 271px;
+      box-shadow: 0 0 4px 0 rgba(0,0,0,0.30); padding: 20px 20px 0 20px;
+      border-radius: 3px; position: relative; overflow: hidden;
+      margin-bottom: 70px;
+
+      h3, p { font-size: 17px; }
+      h3 { margin-bottom: 8px;  }
+      p { line-height: 25px; margin-top: 8px;  }
+      a { position: absolute; bottom: 52px; }
+      &.volume { margin-left: 0; width: 40%; }
+      &.disabled {
+        background: #F6F6F6;
+        a { top: 20px; right:20px; bottom: initial; }
+        h3, p { font-size: 15px; line-height: 21px;}
+        h3 { display: inline-block; }
+        span {
+          padding: 3px 5px; border:2px solid #A2A5AB; text-transform: uppercase;
+          border-radius: 3px; display: inline-block; font-size: 10px; font-weight: bold;
+          color: #A2A5AB; margin-left: 8px;
+        }
+      }
+      &.soon {
+        font-weight: bold; color:@infinitgray; font-style: italic;
+        margin-right: 0; width: 10%; min-height: 115px; margin-bottom: 20px;
+      }
+      hr {
+        background: #029BC6; position: absolute;  bottom: 0; left: 0;
+        height: 23px; width: 100%; border:none; margin: 0;
+      }
+      .moby { position: absolute; bottom:0; right: 0;}
+    }
+  }
+
+  section.scale {
+    padding: 70px 0; overflow: auto; zoom: 1; padding-bottom: 100px;
+
+    h2 { margin-bottom: 40px;}
+
+    .wrapper {
+      width: 80%; margin: 0 auto;
+
+      h3 { font-size: 20px; margin-top: 6px; margin-bottom: 10px; }
+      p { font-size: 15px; line-height: 23px; max-width: 75%; margin: 20px auto 0 auto; }
+      img { margin-top: 20px; }
+      div {
+        float: left; width: 40%; padding: 0 5% 0 5%;
+        text-align: center;
+        &.hyperscalable { border-right: 1px solid #E5E5E5; padding-left: 4.8% }
+        &.hyperscalable img { margin-left: -15px; }
+      }
+      span {
+        display: inline-block; background: #F3F3F3; font-weight: bold;
+        border-radius: 3px; padding: 6px 9px; color: #79818E;
       }
     }
   }
@@ -1446,10 +1943,6 @@ body.doc_status {
     .green { background: #D9F1C9; color: #558C3F; }
     .yellow { background: #FDF5BF; color: #877D5B; }
     .red { background: #F0B8B8; color: #8D4D4D; }
-
-    blockquote.green {
-
-    }
 
     blockquote { font-weight: 600; font-family: @sourcesans; }
     blockquote img { float: left; margin-top: -10px;  margin-right: 8px;}
