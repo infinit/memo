@@ -205,10 +205,13 @@ namespace infinit
       {
         while (true)
         {
+          std::unordered_set<model::Address> entries;
           auto addr = this->_new_entries.get();
-          ELLE_TRACE("%s: broadcast new entry: %f", this, addr);
-          // FIXME: squash
-          std::unordered_set<model::Address> entries = {addr};
+          entries.insert(addr);
+          while (!this->_new_entries.empty())
+            entries.insert(this->_new_entries.get());
+          ELLE_TRACE("%s: broadcast new entry: %f", this, entries);
+
           this->local()->broadcast<void>(
             "kouncil_add_entries", std::move(entries));
         }
