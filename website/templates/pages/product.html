@@ -51,10 +51,10 @@
 
               <p id="step1"><strong>1</strong> An Infinit network is composed of 5 nodes with 3 redundant copies.</p>
               <p id="step2"><strong>2</strong> Node E crashes with one of the 3 copies.</p>
-              <p id="step3"><strong>3</strong> Infinit ejects the failing node.</p>
-              <p id="step4"><strong>4</strong> Infinit automatically replicates the missing copy on another node.</p>
-              <p id="step5"><strong>5</strong> Two new nodes are joining the network.</p>
-              <p id="step6"><strong>6</strong> A copy is rebalanced on the new node.</p>
+              <p id="step3"><strong>3</strong> Infinit ejects the failed node.</p>
+              <p id="step4"><strong>4</strong> Infinit automatically replicates the missing copy onto another node.</p>
+              <p id="step5"><strong>5</strong> Two new nodes join the network.</p>
+              <p id="step6"><strong>6</strong> A copy is rebalanced to one of the new nodes.</p>
             </div>
           </div>
         </section>
@@ -64,15 +64,15 @@
             <img src="${url('images/schema-decentralized-theory.png')}" alt="Infinit Decentralized Schema"><br>
             <h3>Decentralized</h3>
             <p>Unlike most distributed systems relying on a master/slave model, Infinit benefits from a truly decentralized architecture (peer to peer).</p>
-            <p>This model protects Infinit from single points of failure or bottlenecks.</p>
+            <p>This model protects Infinit from single points of failure and bottlenecks.</p>
           </div>
 
           <div class="reliable">
             <img src="${url('images/schema-replication.png')}" alt="Infinit Replication Schema"><br>
             <h3>Fault tolerant and self-healing</h3>
-            <p>Every data item is stored several times (configurable by the administrator) in order to ensure durability. <!--Choose between replication or erasure coding depending on your architecture. --></p>
+            <p>Every data item is stored several times (configurable by the administrator) in order to ensure durability.</p>
 
-            <p>Should a failure occur, Infinit will automatically adapt the number of redundant copies to come back to an healthy state.</p>
+            <p>Should a failure occur, Infinit will automatically adapt the number of redundant copies to return to a healthy state.</p>
           </div>
         </section>
       </div>
@@ -102,7 +102,7 @@
             <img src="${url('images/icons/compression-yellow-big.png')}">
             <div>
               <h3 id="secure">Compression</h3>
-              <p>Allow compression to be activated to reduce storage consumption depending on the nature of the data to be stored.</p>
+              <p>Activate compression to reduce storage consumption depending on the nature of the data being stored.</p>
             </div>
           </div>
 
@@ -110,7 +110,7 @@
             <img src="${url('images/icons/fault-tolerance-yellow-big.png')}">
             <div>
               <h3 id="secure">Data Placement</h3>
-              <p>Control the placement of the redundant pieces of data through several policies: rack-aware, region-aware (different data centers) etc.</p>
+              <p>Control the placement of the redundant pieces of data through several policies: rack-aware, region-aware (different data centers), etc.</p>
             </div>
           </div>
 
@@ -145,13 +145,13 @@
           <div>
             <img src="${url('images/icons/file.png')}">
             <h3 id="secure">File System</h3>
-            <p>Access an hierarchocal organization of files through POSIX-compliant file system interfaces that provide advanced functionalities such as access control, versioning, etc.</p>
+            <p>Access a hierarchical organization of files through POSIX-compliant file system interfaces that provide advanced functionalities such as access control, versioning, etc.</p>
           </div>
 
           <div>
             <img src="${url('images/icons/object-storage.png')}">
             <h3 id="secure">Object Storage</h3>
-            <p>Use an object storage interface (Amazon S3, OpenStack Swift) to access and store unstrctured data items aka blobs..</p>
+            <p>Use an object storage interface (Amazon S3, OpenStack Swift) to access and store unstructured data items aka blobs.</p>
           </div>
         </div>
       </section>
