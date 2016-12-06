@@ -1479,12 +1479,18 @@ body.product {
 
             #step1 {
               animation: stepFadeOut 0.3s 1.5s ease-out 1;
+              -webkit-animation: stepFadeOut 0.3s 1.5s ease-out 1;
+              -moz-animation: stepFadeOut 0.3s 1.5s ease-out 1;
               .animationFillMode(forwards);
             }
 
             #step2 {
               animation: stepFadeIn 0.3s 2s ease-in 1,
                          stepFadeOut 0.3s 5.5s ease-out 1;
+              -webkit-animation: stepFadeIn 0.3s 2s ease-in 1,
+                                 stepFadeOut 0.3s 5.5s ease-out 1;
+              -moz-animation: stepFadeIn 0.3s 2s ease-in 1,
+                              stepFadeOut 0.3s 5.5s ease-out 1;
               .animationFillMode(forwards);
             }
 
@@ -1497,6 +1503,10 @@ body.product {
 
             #step3 {
               animation: stepFadeIn 0.3s 6s ease-in 1,
+                         stepFadeOut 0.3s 10s ease-out 1;
+              -webkit-animation: stepFadeIn 0.3s 6s ease-in 1,
+                         stepFadeOut 0.3s 10s ease-out 1;
+              -moz-animation: stepFadeIn 0.3s 6s ease-in 1,
                          stepFadeOut 0.3s 10s ease-out 1;
               .animationFillMode(forwards);
             }
@@ -1511,11 +1521,19 @@ body.product {
             #step4 {
               animation: stepFadeIn 0.5s 10.5s ease-in 1,
                          stepFadeOut 0.5s 15s ease-in 1;
+              -webkit-animation: stepFadeIn 0.5s 10.5s ease-in 1,
+                         stepFadeOut 0.5s 15s ease-in 1;
+              -moz-animation: stepFadeIn 0.5s 10.5s ease-in 1,
+                         stepFadeOut 0.5s 15s ease-in 1;
               .animationFillMode(forwards);
             }
 
             #nodeC {
               animation: nodeCSlideRight 0.5s 11s ease-out 1,
+                         nodeCSlideLeft 0.5s 17s ease-out 1;
+              -webkit-animation: nodeCSlideRight 0.5s 11s ease-out 1,
+                         nodeCSlideLeft 0.5s 17s ease-out 1;
+              -moz-animation: nodeCSlideRight 0.5s 11s ease-out 1,
                          nodeCSlideLeft 0.5s 17s ease-out 1;
               .animationFillMode(forwards);
             }
@@ -1524,11 +1542,19 @@ body.product {
               .animation(blockCEnter, ease-out, 1);
               animation: blockCEnter 0.5s 12s ease-out 1,
                          blockCSlide 0.5s 21.5s ease-out 1;
+              -webkit-animation: blockCEnter 0.5s 12s ease-out 1,
+                         blockCSlide 0.5s 21.5s ease-out 1;
+              -moz-animation: blockCEnter 0.5s 12s ease-out 1,
+                         blockCSlide 0.5s 21.5s ease-out 1;
               .animationFillMode(forwards);
             }
 
             #step5 {
               animation: stepFadeIn 0.5s 15.5s ease-in 1,
+                         stepFadeOut 0.5s 20s ease-in 1;
+               -webkit-animation: stepFadeIn 0.5s 15.5s ease-in 1,
+                         stepFadeOut 0.5s 20s ease-in 1;
+              -moz-animation: stepFadeIn 0.5s 15.5s ease-in 1,
                          stepFadeOut 0.5s 20s ease-in 1;
               .animationFillMode(forwards);
             }
@@ -1817,19 +1843,27 @@ body.docker {
         }
 
         #step1 {
-          animation: stepFadeOut 0.3s 0.2s ease-out 1;
+          .animation(stepFadeOut, ease-out, 1);
           .animationFillMode(forwards);
+          .animationDuration(0.3s);
+          .animationDelay(1.2s);
         }
 
         #step2 {
           animation: stepFadeIn 0.3s 0.7s ease-in 1,
                      stepFadeOut 0.3s 6.5s ease-out 1;
+          -webkit-animation: stepFadeIn 0.3s 0.7s ease-in 1,
+                     stepFadeOut 0.3s 6.5s ease-out 1;
+              -moz-animation: stepFadeIn 0.3s 0.7s ease-in 1,
+                     stepFadeOut 0.3s 6.5s ease-out 1;
           .animationFillMode(forwards);
         }
 
         #step3 {
-          animation: stepFadeIn 0.3s 7s ease-in 1;
+          .animation(stepFadeIn, ease-in, 1);
           .animationFillMode(forwards);
+          .animationDuration(0.3s);
+          .animationDelay(7s);
         }
       }
     }
