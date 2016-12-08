@@ -488,7 +488,7 @@ class CommandLineSerializer
   : public elle::serialization::SerializerIn
 {
 public:
-  typedef elle::serialization::SerializerIn Super;
+  using Super = elle::serialization::SerializerIn;
   CommandLineSerializer(boost::program_options::variables_map const& vm)
     : Super(ELLE_SFINAE_INSTANCE(std::istream), false)
     , _variables(vm)
@@ -497,67 +497,57 @@ public:
 protected:
   boost::program_options::variables_map const& _variables;
 
-  virtual
   void
-  _serialize_array(std::string const& name,
-                   int size, // -1 for in(), array size for out()
-                   std::function<void ()> const& f)
+  _serialize_array(int size, // -1 for in(), array size for out()
+                   std::function<void ()> const& f) override
   {
     ELLE_ABORT("not handled");
   }
 
-  virtual
   void
-  _serialize(std::string const& name, int64_t& v)
+  _serialize(int64_t& v) override
   {
     ELLE_ABORT("not handled");
   }
 
-  virtual
   void
-  _serialize(std::string const& name, uint64_t& v)
+  _serialize(uint64_t& v) override
   {
     ELLE_ABORT("not handled");
   }
 
-  virtual
   void
-  _serialize(std::string const& name, int32_t& v)
+  _serialize(int32_t& v) override
   {
     ELLE_ABORT("not handled");
   }
 
-  virtual
   void
-  _serialize(std::string const& name, uint32_t& v)
+  _serialize(uint32_t& v) override
   {
     ELLE_ABORT("not handled");
   }
 
-  virtual
   void
-  _serialize(std::string const& name, int8_t& v)
+  _serialize(int8_t& v) override
   {
     ELLE_ABORT("not handled");
   }
 
-  virtual
   void
-  _serialize(std::string const& name, uint8_t& v)
+  _serialize(uint8_t& v) override
   {
     ELLE_ABORT("not handled");
   }
 
-  virtual
   void
-  _serialize(std::string const& name, double& v)
+  _serialize(double& v) override
   {
     ELLE_ABORT("not handled");
   }
 
-  virtual
   void
-  _serialize(std::string const& name, bool& v)
+  _serialize(bool& v) override
   {
     ELLE_ABORT("not handled");
   }
@@ -569,16 +559,14 @@ protected:
     v = this->_get(name).as<std::string>();
   }
 
-  virtual
   void
-  _serialize(std::string const& name, elle::Buffer& v)
+  _serialize(elle::Buffer& v) override
   {
     ELLE_ABORT("not handled");
   }
 
-  virtual
   void
-  _serialize(std::string const& name, boost::posix_time::ptime& v)
+  _serialize(boost::posix_time::ptime& v) override
   {
     ELLE_ABORT("not handled");
   }
