@@ -294,7 +294,7 @@ namespace infinit
       if (auto output = this->cli().get_output(path, false))
       {
         infinit::Infinit::save(*output, user);
-        this->cli().report_exported(*output, "user", user.name);
+        this->cli().report_exported(std::cout, "user", user.name);
       }
       else
       {
@@ -437,7 +437,7 @@ namespace infinit
         elle::serialization::json::serialize<
           das::Serializer<infinit::User, PublicUser>>(user, *output, false);
       }
-      this->cli().report_exported(*output, "user", user.name);
+      this->cli().report_exported(std::cout, "user", user.name);
     }
 
     void

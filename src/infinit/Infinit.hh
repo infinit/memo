@@ -79,6 +79,8 @@ namespace infinit
                  std::unique_ptr<storage::StorageConfig> const& storage);
     void
     storage_remove(std::string const& name);
+    std::unordered_map<std::string, std::vector<std::string>>
+    storage_networks(std::string const& storage_name);
     bool
     volume_has(std::string const& name);
     Volume

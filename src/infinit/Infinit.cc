@@ -463,6 +463,33 @@ namespace infinit
     }
   }
 
+  std::unordered_map<std::string, std::vector<std::string>>
+  Infinit::storage_networks(std::string const& storage_name)
+  {
+    std::unordered_map<std::string, std::vector<std::string>> res;
+    for (auto const& u: this->users_get())
+    {
+      if (!u.private_key)
+        continue;
+      for (auto const& n: this->networks_get(u, true))
+      {
+        auto* d =
+          dynamic_cast<infinit::model::doughnut::Configuration*>(n.model.get());
+        if (d && d->storage && d->storage->name == storage_name)
+        {
+          if (res.count(n.name))
+          {
+            auto& users = res.at(n.name);
+            users.emplace_back(u.name);
+          }
+          else
+            res[n.name] = {u.name};
+        }
+      }
+    }
+    return res;
+  }
+
   bool
   Infinit::volume_has(std::string const& name)
   {

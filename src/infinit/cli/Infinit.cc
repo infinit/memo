@@ -351,6 +351,8 @@ namespace infinit
         if (prev.substr(0, prefix.size()) != prefix)
           elle::err("unrecognized infinit executable name: %s", prev);
         args[0] = prev.substr(prefix.size());
+        if (args[0] == "storage")
+          args[0] = "silo";
         if (args.size() > 1 && das::cli::is_option(args[1]))
           if (args[1] == "-v" || args[1] == "--version")
             args.erase(args.begin());

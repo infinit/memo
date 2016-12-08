@@ -255,8 +255,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
 
   alice.run(['infinit-network', '--fetch', '--name', 'bob/n', '--as', 'alice'])
-  alice.run(['infinit-storage', '--create', '--filesystem', 'alice_storage_1'])
-  alice.run(['infinit-storage', '--create', '--filesystem', 'alice_storage_2'])
+  alice.run(['infinit-storage', '--create', 'alice_storage_1', '--filesystem'])
+  alice.run(['infinit-storage', '--create', 'alice_storage_2', '--filesystem'])
   alice.run(['infinit-network', '--link', '--name', 'bob/n', '--as', 'alice',
              '--storage', 'alice_storage_1', '--storage', 'alice_storage_2'])
   s2 = alice.run(['infinit-network', '--list-storage', '--name', 'bob/n',

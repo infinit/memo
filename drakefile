@@ -404,7 +404,6 @@ def configure(
     ('infinit-network', [xattr_sources], [], True),
     ('infinit-passport', [], [], True),
     ('infinit-smb', [], [], False),
-    ('infinit-storage', [], (not windows) and [aws_lib] or [], True),
     # ('infinit-user', [], [], True),
     ('infinit-volume', [], [], True),
     ('infinit-webdav', [], [], False),
@@ -477,6 +476,7 @@ def configure(
   infinit_cli = drake.cxx.Executable(
     'bin/infinit',
     infinit_cli_sources + [
+      aws_lib,
       cryptography_lib,
       elle_lib,
       infinit_lib,
@@ -488,7 +488,8 @@ def configure(
   binaries.append(infinit_cli)
   # FIXME: symlinks
   for b in [
-      'infinit-user'
+      'infinit-storage',
+      'infinit-user',
   ]:
     b = drake.Copy(infinit_cli, 'bin/%s' % b).target()
     binaries.append(b)
