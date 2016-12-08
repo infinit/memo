@@ -491,10 +491,9 @@ namespace infinit
             }
             else
             { // in
-              std::vector<Address> addresses;
-              std::unordered_multimap<Address, std::pair<Time, int>> cfiles;
-              s.serialize("file_addresses", addresses);
-              s.serialize("file_files", cfiles);
+              auto& sin = static_cast<elle::serialization::SerializerIn&>(s);
+              auto addresses = sin.deserialize<std::vector<Address>>("file_addresses");
+              auto cfiles = sin.deserialize<Cfiles>("file_files");
               files.clear();
               for (auto c: cfiles)
                 files.emplace(c.first,
@@ -557,13 +556,11 @@ namespace infinit
 
         static
         void
-        result_in(elle::serialization::Serializer& s,
+        result_in(elle::serialization::SerializerIn& s,
                   std::vector<NodeLocations> & results)
         {
-          NodeLocations locs;
-          std::vector<std::vector<int>> input;
-          s.serialize("result_endpoints", locs);
-          s.serialize("result_indexes", input);
+          auto locs = s.deserialize<NodeLocations>("result_endpoints");
+          auto input = s.deserialize<std::vector<std::vector<int>>>("result_indexes");
           results.clear();
           for (auto const& o: input)
           {
@@ -603,15 +600,16 @@ namespace infinit
             s.serialize("address", fileAddresses);
             s.serialize("ttl", ttl);
             s.serialize("count", count);
-            if (!serialize_compress(s))
-               s.serialize("result", results);
-            else
+            if (serialize_compress(s))
             {
-               if (s.in())
-                 result_in(s, results);
-               else
-                 result_out(s, results);
+              if (s.in())
+                result_in(static_cast<elle::serialization::SerializerIn&>(s),
+                          results);
+              else
+                result_out(s, results);
             }
+            else
+              s.serialize("result", results);
           }
 
           int request_id;
@@ -643,15 +641,16 @@ namespace infinit
             s.serialize("id", request_id);
             s.serialize("origin", origin);
             s.serialize("address", fileAddresses);
-            if (!serialize_compress(s))
-               s.serialize("result", results);
-            else
+            if (serialize_compress(s))
             {
-               if (s.in())
-                 result_in(s, results);
-               else
-                 result_out(s, results);
+              if (s.in())
+                result_in(static_cast<elle::serialization::SerializerIn&>(s),
+                          results);
+              else
+                result_out(s, results);
             }
+            else
+              s.serialize("result", results);
             s.serialize("ttl", ttl);
           }
 
