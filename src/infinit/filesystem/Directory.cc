@@ -608,6 +608,17 @@ namespace infinit
         elle::os::getenv("INFINIT_PREFETCH_GROUP", "5"));
       static int prefetch_tasks = std::stoi(
         elle::os::getenv("INFINIT_PREFETCH_TASKS", "5"));
+      // Disable prefetching if we have no cache
+      static bool have_cache =
+        model::doughnut::consensus::StackedConsensus::find<
+          model::doughnut::consensus::Cache>(
+            dynamic_cast<model::doughnut::Doughnut&>(
+              *fs.block_store()).consensus().get());
+      if (prefetch_threads && !have_cache)
+      {
+        ELLE_TRACE("Disabling directory prefetching since cache is disabled.");
+        prefetch_threads = 0;
+      }
       int group_size = prefetch_group;
       int nthreads = prefetch_threads;
       if (this->_prefetching ||
