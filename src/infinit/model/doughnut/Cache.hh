@@ -23,7 +23,7 @@ namespace infinit
       {
         namespace bmi = boost::multi_index;
         class Cache
-          : public Consensus
+          : public StackedConsensus
         {
         public:
           using clock = std::chrono::high_resolution_clock;
@@ -90,7 +90,6 @@ namespace infinit
           _insert_cache(blocks::Block& b);
           std::unique_ptr<blocks::Block>
           _copy(blocks::Block& block);
-          ELLE_ATTRIBUTE_R(std::unique_ptr<Consensus>, backend);
           ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_invalidation);
           ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_ttl);
           ELLE_ATTRIBUTE_R(int, cache_size);

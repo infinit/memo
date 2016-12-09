@@ -97,8 +97,7 @@ namespace infinit
                      boost::optional<std::chrono::seconds> cache_ttl,
                      boost::optional<boost::filesystem::path> disk_cache_path,
                      boost::optional<uint64_t> disk_cache_size)
-          : Consensus(backend->doughnut())
-          , _backend(std::move(backend))
+          : StackedConsensus(std::move(backend))
           , _cache_invalidation(
             cache_invalidation ?
             cache_invalidation.get() : std::chrono::seconds(15))
