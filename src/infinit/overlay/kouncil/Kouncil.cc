@@ -162,16 +162,21 @@ namespace infinit
       NodeLocations
       Kouncil::peers_locations(Pending const& extras) const
       {
-        NodeLocations nls;
+        Pending merge;
         for (auto const& p: this->peers())
         {
           if (auto r = dynamic_cast<model::doughnut::Remote const*>(p.get()))
-            nls.emplace_back(r->id(), r->endpoints());
+            merge[r->id()].merge(r->endpoints());
           else if (auto l = dynamic_cast<model::doughnut::Local const*>(p.get()))
-            nls.emplace_back(p->id(), elle::unconst(l)->server_endpoints() );
+            merge[p->id()].merge(elle::unconst(l)->server_endpoints());
         }
         for (auto const& p: extras)
+          merge[p.first].merge(p.second);
+        NodeLocations nls;
+        for (auto const& p: merge)
+        {
           nls.emplace_back(p.first, p.second);
+        }
         return nls;
       }
 
@@ -200,10 +205,13 @@ namespace infinit
       {
         while (true)
         {
+          std::unordered_set<model::Address> entries;
           auto addr = this->_new_entries.get();
-          ELLE_TRACE("%s: broadcast new entry: %f", this, addr);
-          // FIXME: squash
-          std::unordered_set<model::Address> entries = {addr};
+          entries.insert(addr);
+          while (!this->_new_entries.empty())
+            entries.insert(this->_new_entries.get());
+          ELLE_TRACE("%s: broadcast new entry: %f", this, entries);
+
           this->local()->broadcast<void>(
             "kouncil_add_entries", std::move(entries));
         }

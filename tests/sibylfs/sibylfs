@@ -31,7 +31,7 @@ with Infinit(user = 'bob') as bob:
       '--suites=%s' % suites_path,
       '--model=path=%s' % mountpoint,
       '--out-dir=%s' % out_dir,
-    ], timeout = 7200)
+    ], timeout = 10800)
     check_dir = '%s/%s' % (out_dir, os.listdir(out_dir)[0])
     bob.run([sibylfs_bin, 'check', 'posix_spec', check_dir])
     # Check that .err files generated while checking the traces are empty.
