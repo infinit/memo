@@ -23,9 +23,9 @@ namespace infinit
         typedef infinit::serialization_tag serialization_tag;
         RemoveSignature();
         RemoveSignature(RemoveSignature const& other);
-        RemoveSignature(RemoveSignature && other);
+        RemoveSignature(RemoveSignature && other) = default;
         RemoveSignature(elle::serialization::Serializer& input);
-        RemoveSignature& operator = (RemoveSignature && other);
+        RemoveSignature& operator = (RemoveSignature && other) = default;
         void serialize(elle::serialization::Serializer& s);
         std::unique_ptr<Block> block;
         boost::optional<cryptography::rsa::PublicKey> group_key;
@@ -45,7 +45,7 @@ namespace infinit
       public:
         Block(Address address);
         Block(Address address, elle::Buffer data);
-        Block(Block const& other);
+        Block(Block const& other) = default;
         friend class infinit::model::Model;
         virtual
         ~Block() = default;

@@ -125,7 +125,7 @@ namespace infinit
           return blocks::RemoveSignature();
         blocks::RemoveSignature res;
         // we need to figure out which key to use, the one giving us access to the owner
-        elle::Buffer to_sign(this->address().value(), sizeof(Address::Value));
+        elle::Buffer to_sign(this->address().value());
         elle::Buffer signature;
         auto& keys = dht.keys();
         auto block = dht.fetch(this->_owner);
@@ -196,7 +196,7 @@ namespace infinit
           return blocks::ValidationResult::failure("Missing field in signature");
         auto& key = *sig.signature_key;
         bool ok = key.verify(*sig.signature,
-          elle::ConstWeakBuffer(this->address().value(), sizeof(Address::Value)));
+          elle::ConstWeakBuffer(this->address().value()));
         if (!ok)
           return blocks::ValidationResult::failure("Invalid signature");
         // now verify that this key has access to owner

@@ -58,6 +58,7 @@ namespace infinit
     {
       return FileSystem::clock::now();
     }
+
     std::unique_ptr<Block>
     resolve_directory_conflict(Block& b,
                                Block& current,
@@ -91,28 +92,26 @@ namespace infinit
          ELLE_TRACE("insert: Overriding entry %s", op.target);
          d._files[op.target] = std::make_pair(op.entry_type, op.address);
          break;
+
        case OperationType::update:
          if (op.target == "")
          {
            ELLE_LOG("Conflict: the directory %s was updated remotely, your"
                     " changes will be dropped.", "");
-           break;
          }
          else if (op.target == "/perms")
          {
            auto wp = dynamic_cast<ACLBlock&>(b).get_world_permissions();
-           dynamic_cast<ACLBlock&>(current).set_world_permissions(wp.first, wp.second);
-           break;
+           auto& aclb = dynamic_cast<ACLBlock&>(current);
+           aclb.set_world_permissions(wp.first, wp.second);
          }
          else if (op.target == "/inherit")
          {
            d._inherit_auth = true;
-           break;
          }
          else if (op.target == "/disinherit")
          {
            d._inherit_auth = false;
-           break;
          }
          else if (d._files.find(op.target) == d._files.end())
          {
@@ -120,7 +119,6 @@ namespace infinit
              " your changes will be dropped.",
              op.target, "", op.target);
            // FIXME update cached entry
-           break;
          }
          else if (d._files[op.target].second != op.address)
          {
@@ -128,11 +126,14 @@ namespace infinit
              " your changes will be dropped.",
              op.target);
            // FIXME update cached entry
-           break;
          }
-         ELLE_TRACE("update: Overriding entry %s", op.target);
-         d._files[op.target] = std::make_pair(op.entry_type, op.address);
+         else
+         {
+           ELLE_TRACE("update: Overriding entry %s", op.target);
+           d._files[op.target] = std::make_pair(op.entry_type, op.address);
+         }
          break;
+
        case OperationType::remove:
          d._files.erase(op.target);
          break;
@@ -296,18 +297,6 @@ namespace infinit
 
     std::unique_ptr<model::blocks::ACLBlock> DirectoryData::null_block;
 
-    DirectoryData::DirectoryData(boost::filesystem::path path,
-                                 model::blocks::Block& block,
-                                 std::pair<bool, bool> perms)
-      : _address{block.address().value(), model::flags::mutable_block, false}
-      , _block_version{-1}
-      , _prefetching{false}
-      , _last_used{FileSystem::now()}
-      , _path{path}
-    {
-      update(block, perms);
-    }
-
     DirectoryData::DirectoryData(boost::filesystem::path path, Address address)
       : _address{address}
       , _block_version{-1}
@@ -316,6 +305,17 @@ namespace infinit
       , _last_used{FileSystem::now()}
       , _path{path}
     {}
+
+    DirectoryData::DirectoryData(boost::filesystem::path path,
+                                 model::blocks::Block& block,
+                                 std::pair<bool, bool> perms)
+      : DirectoryData{path,
+                      Address{block.address().value(),
+                              model::flags::mutable_block,
+                              false}}
+    {
+      update(block, perms);
+    }
 
     DirectoryData::DirectoryData(elle::serialization::Serializer& s,
                                  elle::Version const& v)

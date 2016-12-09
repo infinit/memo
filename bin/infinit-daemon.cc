@@ -1119,7 +1119,7 @@ daemon_command(std::string const& s, bool hold)
       }
       std::string cmd = s + "\n";
       ELLE_TRACE("writing query: %s", s);
-      sock->write(elle::ConstWeakBuffer(cmd.data(), cmd.size()));
+      sock->write(elle::ConstWeakBuffer(cmd));
       ELLE_TRACE("reading result");
       auto buffer = sock->read_until("\n");
       auto stream = elle::IOStream(buffer.istreambuf());

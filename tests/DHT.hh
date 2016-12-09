@@ -64,7 +64,7 @@ public:
   static
   std::unique_ptr<Overlay>
   make_yield(infinit::model::doughnut::Doughnut& d,
-       std::shared_ptr<infinit::model::doughnut::Local> local)
+             std::shared_ptr<infinit::model::doughnut::Local> local)
   {
     return elle::make_unique<Overlay>(&d, local, true);
   }
@@ -224,10 +224,18 @@ add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
 class DHT
 {
 public:
+  using make_consensus_t
+    = std::function<std::unique_ptr<dht::consensus::Consensus>
+                    (std::unique_ptr<dht::consensus::Consensus>)>;
+
+  using make_overlay_t
+    = std::function<std::unique_ptr<infinit::overlay::Overlay>
+                    (infinit::model::doughnut::Doughnut& d,
+                     std::shared_ptr< infinit::model::doughnut::Local> local)>;
+
   template <typename ... Args>
   DHT(Args&& ... args)
   {
-    namespace ph = std::placeholders;
     das::named::prototype(
       paxos = true,
       keys = infinit::cryptography::rsa::keypair::generate(512),
@@ -254,15 +262,8 @@ public:
                      infinit::model::Address id,
                      std::unique_ptr<infinit::storage::Storage> storage,
                      boost::optional<elle::Version> version,
-                     std::function<
-                     std::unique_ptr<infinit::overlay::Overlay>(
-                       infinit::model::doughnut::Doughnut& d,
-                       std::shared_ptr< infinit::model::doughnut::Local> local)>
-                       make_overlay,
-                     std::function<
-                     std::unique_ptr<dht::consensus::Consensus>(
-                       std::unique_ptr<dht::consensus::Consensus>
-                       )> make_consensus,
+                     make_overlay_t make_overlay,
+                     make_consensus_t make_consensus,
                      bool rebalance_auto_expand,
                      std::chrono::system_clock::duration node_timeout,
                      bool with_cache,
@@ -307,13 +308,8 @@ private:
        infinit::model::Address id,
        std::unique_ptr<infinit::storage::Storage> storage,
        boost::optional<elle::Version> version,
-       std::function<
-         std::unique_ptr<dht::consensus::Consensus>(
-           std::unique_ptr<dht::consensus::Consensus>)> make_consensus,
-       std::function<std::unique_ptr<infinit::overlay::Overlay>(
-         infinit::model::doughnut::Doughnut& d,
-         std::shared_ptr<infinit::model::doughnut::Local> local)>
-         make_overlay,
+       make_consensus_t make_consensus,
+       make_overlay_t make_overlay,
        bool rebalance_auto_expand,
        std::chrono::system_clock::duration node_timeout,
        bool with_cache,

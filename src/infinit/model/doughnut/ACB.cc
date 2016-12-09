@@ -322,9 +322,9 @@ namespace infinit
 
       template <typename Block>
       std::pair<bool, bool>
-      BaseACB<Block>::_get_world_permissions()
+      BaseACB<Block>::_get_world_permissions() const
       {
-        return std::make_pair(this->_world_readable, this->_world_writable);
+        return {this->_world_readable, this->_world_writable};
       }
 
       template <typename Block>
@@ -374,7 +374,7 @@ namespace infinit
           }
           catch (elle::Error const& e)
           {
-            throw elle::Error(elle::sprintf("Failed to access group block: %s", e));
+            elle::err("Failed to access group block: %s", e);
           }
         }
         else
@@ -411,7 +411,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: set permisions for %s: %s, %s",
                          *this, key, read, write);
         if (key == *this->owner_key())
-          throw elle::Error("Cannot set permissions for owner");
+          elle::err("Cannot set permissions for owner");
         auto& acl_entries = this->_acl_entries;
         ELLE_DUMP("%s: ACL entries: %s", *this, acl_entries);
         bool use_encrypt = this->_seal_version >= elle::Version(0,7,0);
@@ -436,7 +436,7 @@ namespace infinit
           {
             auto okey = this->owner_private_key();
             if (!okey)
-              throw elle::Error("Owner key unavailable");
+              elle::err("Owner key unavailable");
             auto secret = use_encrypt ? okey->decrypt(this->_owner_token, acb_padding)
                                       : okey->open(this->_owner_token);
             token = use_encrypt ? key.encrypt(secret, acb_padding) : key.seal(secret);
@@ -476,10 +476,9 @@ namespace infinit
         {
           auto& user = dynamic_cast<User const&>(user_);
           if (this->_admin_user(user.key()))
-            throw elle::Error("Cannot change permissions of network admin");
+            elle::err("Cannot change permissions of network admin");
           if (this->_admin_group(user.key()))
-            throw elle::Error(
-              "Cannot change permissions of network admin group");
+            elle::err("Cannot change permissions of network admin group");
           if (user.name()[0] == '#')
           {
             if (!read && !write)
@@ -510,7 +509,7 @@ namespace infinit
       {
         Self* other = dynamic_cast<Self*>(&to);
         if (!other)
-          throw elle::Error("Other block is not an ACB");
+          elle::err("Other block is not an ACB");
         // FIXME: better implementation
         for (auto const& e: this->_acl_entries)
         {

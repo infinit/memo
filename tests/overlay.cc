@@ -1,3 +1,5 @@
+#include <boost/range/algorithm/count_if.hpp>
+
 #include <elle/test.hh>
 
 #include <elle/err.hh>
@@ -7,8 +9,8 @@
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
-#include <infinit/overlay/kouncil/Kouncil.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
+#include <infinit/overlay/kouncil/Kouncil.hh>
 
 #include "DHT.hh"
 
@@ -52,7 +54,7 @@ tcr()
 class UTPInstrument
 {
 public:
-  UTPInstrument(infinit::model::Endpoint endpoint)
+  UTPInstrument(Endpoint endpoint)
     : server()
     , _endpoint(std::move(endpoint))
     , _thread(new reactor::Thread(elle::sprintf("%s server", this),
@@ -66,8 +68,10 @@ public:
   ELLE_ATTRIBUTE_RX(reactor::Barrier, transmission);
 
 private:
-  ELLE_ATTRIBUTE(infinit::model::Endpoint, endpoint);
-  ELLE_ATTRIBUTE(infinit::model::Endpoint, client_endpoint);
+  ELLE_LOG_COMPONENT("infinit.overlay.test.UTPInstrument");
+
+  ELLE_ATTRIBUTE(Endpoint, endpoint);
+  ELLE_ATTRIBUTE(Endpoint, client_endpoint);
   void
   _serve()
   {
@@ -77,7 +81,7 @@ private:
       try
       {
         reactor::network::UDPSocket::EndPoint ep;
-        auto sz = server.receive_from(elle::WeakBuffer(buf, sizeof buf), ep);
+        auto sz = server.receive_from(elle::WeakBuffer(buf), ep);
         reactor::wait(_transmission);
         if (ep.port() != _endpoint.port())
         {
@@ -87,8 +91,9 @@ private:
         else
           server.send_to(elle::ConstWeakBuffer(buf, sz), _client_endpoint.udp());
       }
-      catch (reactor::network::Exception const&)
+      catch (reactor::network::Exception const& e)
       {
+        ELLE_LOG("ignoring exception %s", e);
       }
     }
   }
@@ -192,16 +197,16 @@ ELLE_TEST_SCHEDULED(
   dead_peer, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
 {
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
-  DHT dht_a(::keys = keys, make_overlay = builder, paxos = false);
+  auto dht_a = DHT(::keys = keys, make_overlay = builder, paxos = false);
   elle::With<UTPInstrument>(
     Endpoint("127.0.0.1",
              dht_a.dht->local()->server_endpoints()[0].port())) <<
     [&] (UTPInstrument& instrument)
     {
-      DHT dht_b(::keys = keys,
-                make_overlay = builder,
-                paxos = false,
-                ::storage = nullptr);
+      auto dht_b = DHT(::keys = keys,
+                       make_overlay = builder,
+                       paxos = false,
+                       ::storage = nullptr);
       infinit::model::Endpoints ep = {
         Endpoint("127.0.0.1", instrument.server.local_endpoint().port()),
       };
@@ -624,7 +629,6 @@ ELLE_TEST_SCHEDULED(
   ELLE_TRACE("teardown");
 }
 
-ELLE_COMPILER_ATTRIBUTE_MAYBE_UNUSED
 ELLE_TEST_SCHEDULED(
   paxos_3_1, (Doughnut::OverlayBuilder, builder))
 {
@@ -675,7 +679,9 @@ ELLE_TEST_SCHEDULED(
 ELLE_TEST_SCHEDULED(
   parallel_discover, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
 {
-  static const int nservers = 5;
+  constexpr auto nservers = 5;
+  constexpr auto npeers = nservers - 1;
+
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   auto servers = std::vector<std::unique_ptr<DHT>>{};
   for (int i=0; i<nservers; ++i)
@@ -694,21 +700,20 @@ ELLE_TEST_SCHEDULED(
       });
     reactor::wait(s);
   };
-  bool success = false;
-  for (int i=0; i<50; ++i)
+
+  // Number of servers that know all their peers.
+  auto c = 0;
+  // Previously we limit ourselves to 50 attempts.  When run
+  // repeatedly, it did happen to fail for lack of time.  Raise the
+  // limit to 100 attempts.
+  for (auto i = 0; i < 100 && c != nservers; ++i)
   {
-    success = true;
     reactor::sleep(100_ms);
-    for (auto& s: servers)
-      if (peer_count(*s) != signed(servers.size())-1)
-      {
-        success = false;
-        break;
-      }
-    if (success)
-      break;
+    using boost::range::count_if;
+    c = count_if(servers,
+                 [npeers](auto&& s) { return peer_count(*s) == npeers; });
   }
-  BOOST_CHECK(success);
+  BOOST_CHECK_EQUAL(c, nservers);
 }
 
 ELLE_TEST_SUITE()
@@ -742,25 +747,28 @@ ELLE_TEST_SUITE()
     {
       return std::make_unique<kouncil::Kouncil>(&dht, local);
     };
-#define BOOST_NAMED_TEST_CASE(name,  test_function )                       \
-boost::unit_test::make_test_case( boost::function<void ()>(test_function), \
-                                  name,                                    \
-                                  __FILE__, __LINE__ )
+#define BOOST_NAMED_TEST_CASE(name,  test_function)                     \
+  boost::unit_test::make_test_case(boost::function<void ()>(test_function), \
+                                   name,                                \
+                                   __FILE__, __LINE__ )
 
+#define TEST_(Overlay, Name, Timeout, Function, ...)                    \
+  Overlay                                                               \
+    ->add(BOOST_NAMED_TEST_CASE(Name,                                   \
+                                std::bind(::Function,                   \
+                                          BOOST_PP_CAT(Overlay, _builder), \
+                                          ##__VA_ARGS__)),              \
+          0, valgrind(Timeout));
 
-#define TEST_ANON(overlay, tname, timeout, ...)                           \
-  overlay->add(BOOST_NAMED_TEST_CASE(#overlay "_" #tname "_named",      \
-    std::bind(::tname, BOOST_PP_CAT(overlay, _builder), false, ##__VA_ARGS__)), 0, valgrind(timeout)); \
-  overlay->add(BOOST_NAMED_TEST_CASE(#overlay "_" #tname "_anon",      \
-    std::bind(::tname, BOOST_PP_CAT(overlay, _builder), true, ##__VA_ARGS__)), 0, valgrind(timeout))
+#define TEST_ANON(overlay, tname, timeout, ...)                         \
+  TEST_(overlay, #tname "_named", timeout, tname, false, ##__VA_ARGS__); \
+  TEST_(overlay, #tname "_anon",  timeout, tname, true, ##__VA_ARGS__)
 
-#define TEST(overlay, tname, timeout, ...)                  \
-  overlay->add(BOOST_NAMED_TEST_CASE(#overlay "_" #tname,   \
-    std::bind(::tname, BOOST_PP_CAT(overlay, _builder), ##__VA_ARGS__)), 0, valgrind(timeout))
+#define TEST(overlay, tname, timeout, ...)              \
+  TEST_(overlay, #tname, timeout, tname, ##__VA_ARGS__)
 
-#define TEST_NAMED(overlay, tname, tfunc, timeout, ...)                  \
-  overlay->add(BOOST_NAMED_TEST_CASE(#overlay "_" #tname,   \
-    std::bind(::tfunc, BOOST_PP_CAT(overlay, _builder), ##__VA_ARGS__)), 0, valgrind(timeout))
+#define TEST_NAMED(overlay, tname, tfunc, timeout, ...) \
+  TEST_(overlay, #tname, timeout, tfunc, ##__VA_ARGS__)
 
 #define OVERLAY(Name)                           \
   auto Name = BOOST_TEST_SUITE(#Name);          \
