@@ -21,6 +21,7 @@ namespace infinit
       Credentials(Infinit& infinit);
       using Modes
         = decltype(elle::meta::list(cli::add,
+                                    cli::delete_,
                                     cli::list));
 
       // Add.
@@ -34,6 +35,18 @@ namespace infinit
       void
       mode_add(boost::optional<std::string> account,
                bool aws, bool dropbox, bool gcs, bool google_drive);
+
+      // Delete.
+      Mode<decltype(binding(modes::mode_delete,
+                            account = boost::none,
+                            aws = false,
+                            dropbox = false,
+                            gcs = false,
+                            google_drive = false))>
+      delete_;
+      void
+      mode_delete(boost::optional<std::string> account,
+                  bool aws, bool dropbox, bool gcs, bool google_drive);
 
       // List.
       Mode<decltype(binding(modes::mode_list,

@@ -237,14 +237,9 @@ COMMAND(delete_)
     throw CommandLineError("specify a service");
   auto path = ifnt._credentials_path(service, account);
   if (boost::filesystem::remove(path))
-  {
     report_action("deleted", "credentials", account, std::string("locally"));
-  }
   else
-  {
-    throw elle::Error(
-      elle::sprintf("File for credentials could not be deleted: %s", path));
-  }
+    err("File for credentials could not be deleted: %s", path);
 }
 
 int

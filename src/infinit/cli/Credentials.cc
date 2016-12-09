@@ -2,9 +2,9 @@
 
 #include <iostream>
 
-#include <infinit/cli/Infinit.hh>
+#include <elle/err.hh>
 
-ELLE_LOG_COMPONENT("infinit-credentials");
+#include <infinit/cli/Infinit.hh>
 
 namespace infinit
 {
@@ -23,6 +23,15 @@ namespace infinit
                    dropbox = false,
                    gcs = false,
                    google_drive = false))
+      , delete_(
+        "Delete locally credentials for a third-party service",
+        das::cli::Options(),
+        this->bind(modes::mode_delete,
+                   account = boost::none,
+                   aws = false,
+                   dropbox = false,
+                   gcs = false,
+                   google_drive = false))
       , list(
         "List local credentials",
         das::cli::Options(),
@@ -33,10 +42,54 @@ namespace infinit
                    google_drive = false))
     {}
 
+    namespace
+    {
+      /// A structure easy to query using das symbols.
+      ///
+      /// E.g., `google.attr_get(enabled)` -> true/false, where
+      /// `google` is a das::Symbol.
+      struct Enabled
+      {
+        bool all() const
+        {
+          return aws && dropbox && gcs && google_drive;
+        }
 
-    /*------.
-    | Modes |
-    `------*/
+        bool none() const
+        {
+          return !aws && !dropbox && !gcs && !google_drive;
+        }
+
+        bool several() const
+        {
+          return 1 < aws + dropbox + gcs + google_drive;
+        }
+
+        void all_if_none()
+        {
+          if (none())
+            aws = dropbox = gcs = google_drive = true;
+        }
+
+        bool aws;
+        bool dropbox;
+        bool gcs;
+        bool google_drive;
+      };
+
+      template <typename Symbol>
+      auto mandatory(Symbol const& o, std::string const& name)
+      {
+        if (o)
+          return o.get();
+        else
+          throw das::cli::MissingOption(name);
+      };
+    }
+
+    /*----------.
+    | Mode: add |
+    `----------*/
 
     /// Point to the web documentation to register a user on a given
     /// service provider.
@@ -58,14 +111,15 @@ namespace infinit
                 << "-oauth" << '\n';
     }
 
-    static
-    std::string
-    read_key(std::string const& prompt_text, boost::regex const& regex)
+    namespace
     {
-      auto res = std::string{};
-      bool first = true;
-      boost::smatch matches;
-      while (!boost::regex_match(res, matches, regex))
+      std::string
+      read_key(std::string const& prompt_text, boost::regex const& regex)
+      {
+        auto res = std::string{};
+        bool first = true;
+        boost::smatch matches;
+        while (!boost::regex_match(res, matches, regex))
         {
           if (!first)
             std::cout << "Invalid \"" << prompt_text << "\", try again...\n";
@@ -80,7 +134,8 @@ namespace infinit
             }
           std::cin.clear();
         }
-      return res;
+        return res;
+      }
     }
 
     void
@@ -90,14 +145,6 @@ namespace infinit
                           bool gcs,
                           bool google_drive)
     {
-      static auto const mandatory =
-        [] (auto o, std::string const& name)
-        {
-          if (o)
-            return o.get();
-          else
-            throw das::cli::MissingOption(name);
-        };
       auto account_name = mandatory(account, "account");
       auto& ifnt = this->cli().infinit();
       if (aws)
@@ -128,57 +175,56 @@ namespace infinit
         elle::err<Error>("service type not specified");
     }
 
-#if 0
+    /*---------------.
+    | Mode: delete.  |
+    `---------------*/
+
+    template <typename Service>
     void
-    Credentials::mode_delete(std::string const& name,
-                             bool pull,
-                             bool purge)
+    do_delete_(Credentials& cred,
+               Enabled const& enabled,
+               Service service,
+               std::string const& service_name,
+               std::string const& account_name)
     {
+      if (service.attr_get(enabled))
+      {
+        auto& ifnt = cred.cli().infinit();
+        auto path = ifnt._credentials_path(service_name, account_name);
+        if (boost::filesystem::remove(path))
+          cred.cli().report_action("deleted", "credentials",
+                                   account_name, std::string("locally"));
+        else
+          elle::err("File for credentials could not be deleted: %s", path);
+      }
     }
 
     void
-    Credentials::mode_fetch(std::vector<std::string> const& user_names,
-                            bool no_avatar)
+    Credentials::mode_delete(boost::optional<std::string> account,
+                             bool aws,
+                             bool dropbox,
+                             bool gcs,
+                             bool google_drive)
     {
+      auto e = Enabled{aws, dropbox, gcs, google_drive};
+      if (e.none())
+        elle::err("delete: specify a service");
+      auto a = mandatory(account, "account");
+      do_delete_(*this, e, cli::aws,          "aws", a);
+      do_delete_(*this, e, cli::dropbox,      "dropbox", a);
+      do_delete_(*this, e, cli::google_drive, "google", a);
+      do_delete_(*this, e, cli::gcs,          "gcs", a);
     }
-#endif
 
-    struct Enabled
-    {
-      bool all() const
-      {
-        return aws && dropbox && gcs && google_drive;
-      }
 
-      bool none() const
-      {
-        return !aws && !dropbox && !gcs && !google_drive;
-      }
+    /*-------------.
+    | Mode: list.  |
+    `-------------*/
 
-      bool multi() const
-      {
-        return 1 < aws + dropbox + gcs + google_drive;
-      }
-
-      void all_if_none()
-      {
-        if (none())
-          aws = dropbox = gcs = google_drive = true;
-      }
-
-      bool aws;
-      bool dropbox;
-      bool gcs;
-      bool google_drive;
-    };
-
-    /// \param multi   whether there are several services to list.
-    /// \param fetch   function that returns the credentials.
-    /// \param service_name  the displayed name.
     template <typename Service, typename Fetch>
     void
-    list_(Enabled const& enabled,
-          infinit::Infinit& ifnt,
+    list_(infinit::Infinit& ifnt,
+          Enabled const& enabled,
           Service service,
           Fetch fetch,
           std::string const& service_name)
@@ -188,9 +234,9 @@ namespace infinit
         bool first = true;
         for (auto const& credentials: fetch.method_call(ifnt))
         {
-          if (enabled.multi() && first)
+          if (enabled.several() && first)
             std::cout << service_name << ":\n";
-          if (enabled.multi())
+          if (enabled.several())
             std::cout << "  ";
           std::cout << credentials->uid() << ": "
                     << credentials->display_name() << '\n';
@@ -213,10 +259,10 @@ namespace infinit
       auto e = Enabled{aws, dropbox, gcs, google_drive};
       e.all_if_none();
       auto& ifnt = this->cli().infinit();
-      list_(e, ifnt, cli::aws,          s::credentials_aws, "AWS");
-      list_(e, ifnt, cli::dropbox,      s::credentials_dropbox, "Dropbox");
-      list_(e, ifnt, cli::google_drive, s::credentials_google, "Google");
-      list_(e, ifnt, cli::gcs,          s::credentials_gcs, "GCS");
+      list_(ifnt, e, cli::aws,          s::credentials_aws, "AWS");
+      list_(ifnt, e, cli::dropbox,      s::credentials_dropbox, "Dropbox");
+      list_(ifnt, e, cli::google_drive, s::credentials_google, "Google");
+      list_(ifnt, e, cli::gcs,          s::credentials_gcs, "GCS");
     }
   }
 }
