@@ -578,7 +578,7 @@ main(int argc, char** argv)
         { "push-user", bool_switch(),
           elle::sprintf("push the user to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-user" },
-        { "email", value<std::string>(), "optional email address" },
+        { "email", value<std::string>(), "user email address (optional)" },
         option_fullname,
         option_push_full,
         option_push_password,
