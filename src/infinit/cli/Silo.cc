@@ -1,3 +1,5 @@
+#include <boost/algorithm/string/case_conv.hpp>
+
 #include <elle/print.hh>
 
 #include <infinit/cli/Silo.hh>
@@ -22,7 +24,7 @@ namespace infinit
 
     static
     int64_t
-    convert_capacity(int64_t value, std::string quantifier)
+    convert_capacity(int64_t value, std::string const& quantifier)
     {
       if (quantifier == "b" || quantifier == "")
         return value;
@@ -50,19 +52,16 @@ namespace infinit
     convert_capacity(std::string value)
     {
       std::string quantifier = [&] {
-        std::transform(value.begin(), value.end(), value.begin(), ::tolower);
-        std::vector<std::string> to_find = {
+        boost::algorithm::to_lower(value);
+        auto to_find = std::vector<std::string>{
           // "b" MUST be the last element.
           "kb", "mb", "gb", "tb", "kib", "mib", "gib", "tib", "b"
         };
         const char* res = nullptr;
         for (auto const& t: to_find)
-        {
-          res = std::strstr(value.c_str(), t.c_str());
-          if (res != nullptr)
+          if (res = std::strstr(value.c_str(), t.c_str()))
             break;
-        }
-        return res != nullptr ? std::string(res) : std::string("");
+        return res ? res : "";
       }();
       auto intval =
         std::stoll(value.substr(0, value.size() - quantifier.size()));
@@ -269,17 +268,10 @@ namespace infinit
         if (boost::filesystem::exists(path))
         {
           if (!boost::filesystem::is_directory(path))
-          {
-            throw elle::Error(
-              elle::sprintf("path is not directory: %s", path));
-          }
+            elle::err("path is not directory: %s", path);
           if (!boost::filesystem::is_empty(path))
-          {
-            std::cout << "WARNING: Path is not empty: " << path
-                      << std::endl
-                      << "WARNING: You may encounter unexpected behavior."
-                      << std::endl;
-          }
+            std::cout << "WARNING: Path is not empty: " << path << '\n'
+                      << "WARNING: You may encounter unexpected behavior.\n";
         }
         config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
           name, std::move(path.string()), std::move(capacity),
