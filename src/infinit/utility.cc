@@ -91,7 +91,9 @@ namespace infinit
   std::string
   beyond(bool help)
   {
-    static auto const beyond =
+    // FIXME: no static here, tests/kelips.cc change this environment
+    // variable. We should change the test and fix this.
+    auto const beyond =
       elle::os::getenv("INFINIT_BEYOND", BEYOND_HOST);
     if (help && beyond != BEYOND_HOST)
       return "the Hub";
