@@ -39,6 +39,15 @@ namespace infinit
       | Construction |
       `-------------*/
 
+      class BindException
+        : public std::runtime_error
+      {
+      public:
+        BindException(const std::string& s)
+        : std::runtime_error(s)
+        {}
+      };
+
       Local::Local(Doughnut& dht,
                    Address id,
                    std::unique_ptr<storage::Storage> storage,
@@ -48,49 +57,79 @@ namespace infinit
         : Super(dht, std::move(id))
         , _storage(std::move(storage))
       {
-        try
+        std::unique_ptr<reactor::network::TCPServer> old_server;
+        int num_run = 0;
+        while (true)
         {
-          ELLE_TRACE_SCOPE("%s: construct", this);
-          bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
-              && dht.version() >= elle::Version(0, 7, 0);
-          if (p == Protocol::tcp || p == Protocol::all)
-          {
-            this->_server = elle::make_unique<reactor::network::TCPServer>();
-            if (listen_address)
-              this->_server->listen(*listen_address, port, v6);
-            else
-              this->_server->listen(port, v6);
-            this->_server_thread = elle::make_unique<reactor::Thread>(
-              elle::sprintf("%s server", *this),
-              [this] { this->_serve_tcp(); });
-            ELLE_LOG("%s: listen on tcp://%s",
-                     this, this->_server->local_endpoint());
+          if (++num_run > 3)
+          { // we are looping on the same ports, try one at random instead
+            port = 1025 + (rand()%(65536 - 1025));
           }
-          if (p == Protocol::utp || p == Protocol::all)
+          try
           {
-            this->_utp_server =
-              elle::make_unique<reactor::network::UTPServer>();
-            if (this->_server)
-              port = this->_server->port();
-            if (listen_address)
-              this->_utp_server->listen(*listen_address, port, v6);
-            else
-              this->_utp_server->listen(port, v6);
-            this->_utp_server_thread = elle::make_unique<reactor::Thread>(
-              elle::sprintf("%s utp server", *this),
-              [this] { this->_serve_utp(); });
-            ELLE_LOG("%s: listen on utp://%s",
-                     this, this->_utp_server->local_endpoint());
+            ELLE_TRACE_SCOPE("%s: construct", this);
+            bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+                && dht.version() >= elle::Version(0, 7, 0);
+            if (p == Protocol::tcp || p == Protocol::all)
+            {
+              this->_server = elle::make_unique<reactor::network::TCPServer>();
+              if (listen_address)
+                this->_server->listen(*listen_address, port, v6);
+              else
+                this->_server->listen(port, v6);
+              this->_server_thread = elle::make_unique<reactor::Thread>(
+                elle::sprintf("%s server", *this),
+                [this] { this->_serve_tcp(); });
+              ELLE_LOG("%s: listen on tcp://%s",
+                       this, this->_server->local_endpoint());
+            }
+            if (p == Protocol::utp || p == Protocol::all)
+            {
+              int udp_port = port;
+              this->_utp_server =
+                elle::make_unique<reactor::network::UTPServer>();
+              if (this->_server)
+                udp_port = this->_server->port();
+              try
+              {
+                if (listen_address)
+                  this->_utp_server->listen(*listen_address, udp_port, v6);
+                else
+                  this->_utp_server->listen(udp_port, v6);
+              }
+              catch (std::exception const& e)
+              {
+                if (!port)
+                  throw BindException(e.what());
+                else
+                  throw; // port was specified in args, no retry
+              }
+              this->_utp_server_thread = elle::make_unique<reactor::Thread>(
+                elle::sprintf("%s utp server", *this),
+                [this] { this->_serve_utp(); });
+              ELLE_LOG("%s: listen on utp://%s",
+                       this, this->_utp_server->local_endpoint());
+            }
+            break;
           }
-        }
-        catch (std::exception const& e)
-        {
-          ELLE_WARN("%s: initialization failed with: %s", this, e.what());
-          if (this->_server_thread)
-            this->_server_thread->terminate_now();
-          if (this->_utp_server_thread)
-            this->_utp_server_thread->terminate_now();
-          throw;
+          catch (BindException const& e)
+          {
+            ELLE_WARN("%s: bind failed with: %s, retrying", this, e.what());
+            if (this->_server_thread)
+              this->_server_thread->terminate_now();
+            // Keep the TCPServer alive so that our next attempts will pick
+            // a different port.
+            old_server = std::move(this->_server);
+          }
+          catch (std::exception const& e)
+          {
+            ELLE_WARN("%s: initialization failed with: %s", this, e.what());
+            if (this->_server_thread)
+              this->_server_thread->terminate_now();
+            if (this->_utp_server_thread)
+              this->_utp_server_thread->terminate_now();
+            throw;
+          }
         }
       }
 

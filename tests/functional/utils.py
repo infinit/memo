@@ -172,10 +172,16 @@ class Infinit(TemporaryDirectory):
     process.pretty = pretty
     return process
 
-  def run(self, args, input = None, return_code = 0, env = {}, gdb = False):
+  def run(self,
+          args,
+          input = None,
+          return_code = 0,
+          env = {},
+          gdb = False,
+          timeout = 600):
     try:
       process = self.spawn(args, input, return_code, env, gdb = gdb)
-      out, err = process.communicate(timeout = 600)
+      out, err = process.communicate(timeout = timeout)
       process.wait()
     except (subprocess.TimeoutExpired, KeyboardInterrupt):
       process.terminate()

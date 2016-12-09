@@ -15,7 +15,7 @@
     "category": "comparisons",
     "popularity": 0,
     "question": "How does Infinit differ from IPFS?",
-    "answer" : "<p>The goals of the two projects are quite different. IPFS aims to be used to build a peer-to-peer worldwide content platform rather than be a file system. As such it lacks several fundamental file system features such as user permissions. The goal of Infinit is to be a POSIX-compliant file system.</p>"
+    "answer" : "<p>The goals of the two projects are quite different. IPFS aims to be used to build a peer-to-peer worldwide content platform rather than be an agnostic and programmatic storage platform. Check out our full comparison guide for <a href='/documentation/comparison/ipfs?from=faq'>IPFS</a></p>"
   },
   {
     "category": "comparisons",
@@ -51,7 +51,7 @@
     "category": ["general", "security"],
     "popularity": 8,
     "question": "Where is the open source code?",
-    "answer" : "<p>You can find the code that we have open sourced <a href=\"/open-source\">here</a>. We plan to open source all the client code for the file system but we would like to do so responsibly. We want to ensure that the code is of high quality and modular enough to be used in other projects.</p>"
+    "answer" : "<p>You can find the code that we have open sourced <a href=\"/open-source\">here</a>. We plan to open source all the client code for the storage platform but we would like to do so responsibly. We want to ensure that the code is of high quality and modular enough to be used in other projects.</p>"
   },
   {
     "category": "security",
@@ -87,7 +87,7 @@
     "category": "technology",
     "popularity": 0,
     "question": "Which cloud storage providers does Infinit support?",
-    "answer" : "<p>Currently Infinit supports Amazon S3 and Google Cloud Storage. We have plan to support Dropbox, Google Drive and Backblaze as storage resource — see our <a href=\"/documentation/roadmap\">roadmap</a>.</p> <p>Some users also asked us to support Amazon Cloud Drive or IPFS, please <a href=\"http://help.infinit.sh\">upvote/tell us here</a> what else you would like us to support.</p>"
+    "answer" : "<p>Currently Infinit supports Amazon S3, S3 compatible storage services and Google Cloud Storage. We have plan to support Dropbox, Google Drive and Backblaze as storage resource — see our <a href=\"/documentation/roadmap\">roadmap</a>.</p> <p>Some users also asked us to support Amazon Cloud Drive or IPFS, please <a href=\"http://help.infinit.sh\">upvote/tell us here</a> what else you would like us to support.</p>"
   }
   {
     "category": "comparisons",
@@ -99,6 +99,12 @@
     "category": "technology",
     "popularity": 0,
     "question": "How to emulate one or more virtual nodes on a single device?",
-    "answer": "<p>You can simulate another device by opening another terminal and setting  the environment variable INFINIT_HOME to a different directory. <a href='/documentation/environment-variables#infinit_home'>Full details here.</a></p>",
+    "answer": "<p>You can simulate another device by opening another terminal and setting  the environment variable INFINIT_HOME to a different directory. <a href='/documentation/environment-variables#infinit_home'>Full details here.</a></p>"
+  },
+  {
+    "category": "general",
+    "popularity": 2,
+    "question": "Is it production ready?",
+    "answer": "<p>No. Infinit is still in beta and will be considered production ready for its 1.0 release.</p>"
   }
 ]

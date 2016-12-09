@@ -26,6 +26,7 @@
 
       <ul>
         <li class="introduction"><a href="${route('doc_reference')}#introduction">Introduction</a></li>
+        <li class="hub"><a href="${route('doc_reference')}#hub">Hub</a></li>
         <li class="doctor"><a href="${route('doc_reference')}#doctor">Doctor</a></li>
         <li class="user"><a href="${route('doc_reference')}#user">User</a></li>
         <li class="credentials"><a href="${route('doc_reference')}#credentials">Credentials</a></li>
@@ -57,6 +58,14 @@
       </ul>
     </li>
 
+    <li class="dropdown ${'active clicked' if 'doc_docker' in request.route.name else ''}">
+      <a href="${route('doc_storages_s3')}">Docker Integrations <img src="${url('images/icons/caret-down.png')}" alt=""></a>
+
+      <ul>
+        <li ${'class="active"' if request.route.name == 'doc_docker_plugin' else ''}><a href="${route('doc_docker_plugin')}">Volume Plugin</a></li>
+      </ul>
+    </li>
+
     <li ${'class="active"' if request.route.name == 'doc_environment_variables' else ''}>
       <a href="${route('doc_environment_variables')}">Environment Variables</a>
     </li>
@@ -72,6 +81,7 @@
 
       <ul>
         <li><a href="${route('doc_comparisons')}aerofs"><img src="${url('images/logos/aerofs.png')}" alt="AeroFS logo">AeroFS</a></li>
+        <li><a href="${route('doc_comparisons')}afs"><img src="${url('images/logos/afs.png')}" alt="OpenAFS logo">AFS</a></li>
         <li><a href="${route('doc_comparisons')}amazon-cloud-drive"><img src="${url('images/logos/amazon-cloud-drive.png')}" alt="Amazon Cloud Drive logo">Amazon Cloud Drive</a></li>
         <li><a href="${route('doc_comparisons')}aws-s3"><img src="${url('images/logos/aws-s3.png')}" alt="AWS S3 logo"> AWS S3</a></li>
         <li><a href="${route('doc_comparisons')}backblaze"><img src="${url('images/logos/backblaze.png')}" alt="Backblaze logo"> Backblaze B2</a></li>

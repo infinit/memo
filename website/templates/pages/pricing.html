@@ -4,10 +4,12 @@
 
   <section class="doc">
     <h1>Pricing</h1>
-    <p>Infinit provides a free community version and an entreprise license with additional features.</p><br>
+    <p class="subtitle">Infinit provides a free community version and an enterprise license with additional features.</p><br>
 
     <div class="version community">
-      <h2>Community</h2>
+      <img src="${url('images/icons/community.png')}" alt="Community version"><br>
+      <h2>Community</h2><br>
+      <a href="${route('doc_get_started')}" class="button">Get Started</a>
       <ul>
         <li>
           <img src="${url('images/icons/users.png')}" alt="Infinit Users">
@@ -29,11 +31,12 @@
       <p>Desktop apps (Windows, Mac, Linux)</p>
       <p>Mobile apps (iOS, Android) <span>soon</span></p>
       <p>Versioning <span>soon</span></p>
-      <a href="${route('doc_get_started')}" class="button">Get Started</a>
     </div>
 
     <div class="version enterprise">
-      <h2>Enterprise</h2>
+      <img src="${url('images/icons/enterprise.png')}" alt="Enterprise version"><br>
+      <h2>Enterprise</h2><br>
+      <a class="button border black disabled">Coming Soon</a>
       <ul>
         <li>
           <img src="${url('images/icons/address-book.png')}" alt="LDAP/Active Directory">
@@ -77,7 +80,6 @@
           <span>Quotas</span>
         </li>
       </ul>
-      <a href="${route('contact')}" class="button">Request Quote</a>
     </div>
 
     <em>* Storage capacity fees are not included.</em>

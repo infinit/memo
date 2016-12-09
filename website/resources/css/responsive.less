@@ -4,6 +4,7 @@
       min-height: 0px;
       h1 { font-size: 27px; line-height: 33px; padding-top: 30px; }
       h2 { font-size: 22px; line-height: 29px;}
+      .schema img { margin-left: 0;}
     }
 
     .btn-contact { display: none; }
@@ -67,10 +68,66 @@
     }
   }
 
+  body.documentation, body.press, body.opensource, body.contact, body.legal {
+    section.doc {
+      width: 60%;
+      padding: 0 4% 100px 18%;
+      margin-left: 15%;
+    }
+  }
+
+
+
+
   body.faq {
     main { margin: 0 5%;}
     .filters { width: 100%; margin:0; }
     #search-input input { width: 86%; margin: 0 5%; padding: 14px 2%; }
+  }
+}
+
+@media (max-width:800px) {
+  body.home {
+    section.presentation {
+      .schema {
+        margin-left: 4%; margin-right: 4%; margin-top: 70px;
+        .servers {
+          .legend {
+            &.total {
+              left: 18%;top: -67px;
+              h4 { max-width: 500px; float: left;}
+              span { float: left; margin-left: 9px; margin-top: 2px;}
+            }
+            &.api { display: none; }
+          }
+        }
+        .pool {
+          margin: auto; max-width: 309px;
+
+          div.servers div {
+            &:nth-child(5) { clear: both ;}
+          }
+
+          div.functionalities {
+            ul li {
+              margin-left: 0px; margin-right: 10px;
+              &:nth-child(2n+1) { margin-left: 0px; clear: both; }
+              &:nth-child(2n) { margin-right: 0;}
+              &:nth-child(3n+1) { margin-left: 0px; }
+              &:nth-child(3n+1) { margin-left: 5px; }
+            }
+          }
+        }
+        .apis {
+          margin-left: 0;
+          div.block, div.object, div.file {
+            max-width: 60%; min-width: 50%; float: none;
+            margin: 0 auto;
+          }
+          div.object, div.file { position: static; }
+        }
+      }
+    }
   }
 }
 

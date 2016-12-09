@@ -1,7 +1,7 @@
 Technology
 =========
 
-At the highest level, Infinit is a file system platform that allows for creating storage infrastructure that are flexible, controlled, secure and natural to use.
+At the highest level, Infinit is a storage platform that allows for creating storage infrastructure that are flexible, controlled, secure and natural to use.
 
 However, at the technology level, Infinit is a set of independent layers that can be used to develop powerful applications, create block-level data stores and more.
 

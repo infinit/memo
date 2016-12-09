@@ -671,6 +671,22 @@ namespace infinit
           }
         }
 
+        /*-----------.
+        | Monitoring |
+        `-----------*/
+
+        elle::json::Object
+        Async::redundancy()
+        {
+          return this->_backend->redundancy();
+        }
+
+        elle::json::Object
+        Async::stats()
+        {
+          return this->_backend->stats();
+        }
+
         /*----------.
         | Operation |
         `----------*/

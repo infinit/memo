@@ -3,7 +3,7 @@
     "name": "Infinit",
     "description": "Infinit is a peer-to-peer file system that allows for the creation of secure, reliable and scalable storage infrastructure by aggregating both on-premise and cloud resources.",
     "properties": {
-      "architecture": "File",
+      "architecture": "File, Object & Block",
       "interface": "File System",
       "model": "Decentralized",
       "environment": "Controlled & Worldwide",
@@ -33,6 +33,25 @@
       "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
     "similar_to": ["bsync"]
+  },
+  "afs": {
+    "name": "Andrew File System",
+    "description": "Andrew File System is a distributed file system originally developed at Carnegie Mellon University as part of the Andrew Project.",
+    "properties": {
+      "architecture": "File",
+      "interface": "File System",
+      "model": "Distributed",
+      "environment": "Controlled",
+      "redundancy": "Replication (mirroring)",
+      "fault_tolerance": "Standard",
+      "security": "In-Transit",
+      "scalability": "Homogeneous",
+      "interoperability": "Applications (Windows, MacOS X, Linux)"
+    },
+    "links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/Andrew_File_System"
+    },
+    "similar_to": ["nfs"]
   },
   "amazon-cloud-drive": {
     "name": "Amazon Cloud Drive",

@@ -23,6 +23,7 @@
     <div class="platform windows">
       <img src="${url('images/icons/windows.png')}">
       <h2>Windows</h2>
+      <a class="open-popup" href="#windows">Update via tarball</a>
     </div>
   </section>
 
@@ -57,6 +58,14 @@ Unpacking infinit (${tarball_version})...</code></pre>
     <section class="doc">
       <br><h3>Upgrade to Infinit ${tarball_version}</h3>
       <%include file='docs/generated/get_started/linux_tarball_install.html'/>
+      <p>Then, extract the Infinit tarball and simply replace your old installation with the new content.</p>
+    </section>
+  </div>
+
+  <div class="popup" id="windows">
+    <section class="doc">
+      <br><h3>Upgrade to Infinit ${tarball_version}</h3>
+      <%include file='docs/generated/get_started/windows_tarball_install.html'/>
       <p>Then, extract the Infinit tarball and simply replace your old installation with the new content.</p>
     </section>
   </div>

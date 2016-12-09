@@ -6,7 +6,12 @@ import re
 import json
 
 from bottle import redirect
-from infinit.website.utils import resources_path, route, static_file, view
+from infinit.website.utils import \
+  error_page, \
+  resources_path, \
+  route, \
+  static_file, \
+  view
 
 def error(code, reason = ''):
   bottle.response.status = code
@@ -16,23 +21,15 @@ def error(code, reason = ''):
     'reason': reason
   }
 
-# @route('/404')
-# @view('pages/404.html')
-# def custom404(error):
-#   return bottle.TEMPLATE_PATH
-  # return {}
-
 class Website(bottle.Bottle):
 
   def __init__(self):
     super().__init__()
     self.install(bottle.CertificationPlugin())
     route.apply(self)
+    error_page.apply(self)
     self.__swu = sendwithus.api(api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d')
     self.__hub = os.environ.get('INFINIT_BEYOND', 'https://beyond.infinit.sh')
-    # self.error_handler = {
-    #   404: custom404,
-    # }
 
   def __call__(self, e, h):
     e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')
@@ -60,7 +57,7 @@ class Website(bottle.Bottle):
       'description': 'Infinit allows for the creation of flexible, secure and controlled file storage infrastructure on top of public, private or hybrid cloud resources.',
     }
 
-  @route('/404', name = 'notfound')
+  @error_page(404)
   @view('pages/404')
   def root(self):
     return {
@@ -73,8 +70,8 @@ class Website(bottle.Bottle):
   @view('pages/docs/overview.html')
   def root(self):
     return {
-      'title': 'An Overview of the Infinit File System',
-      'description': 'Discover the benefits of the Infinit file system through its innovative technology.',
+      'title': 'An Overview of the Infinit Storage Platform',
+      'description': 'Discover the benefits of the Infinit storage platform through its innovative technology.',
     }
 
   @route('/drive', name = 'drive')
@@ -130,7 +127,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'FAQ',
-      'description': 'Frequently Asked Questions about how to use our file system, how it compares to others and more.',
+      'description': 'Frequently Asked Questions about how to use our storage platform, how it compares to others and more.',
     }
 
   @route('/get-started', name = 'doc_get_started')
@@ -138,7 +135,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Get Started with Infinit',
-      'description': 'A step by step guide to getting started with the Infinit file system platform.',
+      'description': 'A step by step guide to getting started with the Infinit storage platform.',
     }
 
   @route('/get-started/mac', name = 'doc_get_started_mac')
@@ -146,7 +143,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Get Started with Infinit - Mac Guide',
-      'description': 'A step by step guide to getting started with the Infinit file system platform.',
+      'description': 'A step by step guide to getting started with the Infinit storage platform.',
     }
 
   @route('/get-started/windows', name = 'doc_get_started_windows')
@@ -154,7 +151,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Get Started with Infinit - Windows Guide',
-      'description': 'A step by step guide for Windows to getting started with the Infinit file system platform.',
+      'description': 'A step by step guide for Windows to getting started with the Infinit storage platform.',
     }
 
   @route('/get-started/linux', name = 'doc_get_started_linux')
@@ -162,7 +159,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Get Started with Infinit - Linux Guide',
-      'description': 'A step by step guide for linux to getting started with the Infinit file system platform.',
+      'description': 'A step by step guide for linux to getting started with the Infinit storage platform.',
     }
 
   @route('/documentation/technology', name = 'doc_technology')
@@ -241,6 +238,14 @@ class Website(bottle.Bottle):
       'description': 'Create a storage resource that uses an Amazon S3 bucket.',
     }
 
+  @route('/documentation/docker/volume-plugin', name = 'doc_docker_plugin')
+  @view('pages/docs/docker_volume_plugin.html')
+  def root(self):
+    return {
+      'title': 'Docker Volume Plugin',
+      'description': 'The Infinit Docker volume plugins enable Engine deployments to be integrated with Infinit volumes and enable data volumes to persist beyond the lifetime of a single Engine host. ',
+    }
+
   @route('/documentation/upgrading', name = 'doc_upgrading')
   @view('pages/docs/upgrading.html')
   def root(self):
@@ -254,7 +259,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Environment Variables',
-      'description': 'List of the environment variables that can be set to alter the behavior of the Infinit file system.',
+      'description': 'List of the environment variables that can be set to alter the behavior of the Infinit storage platform.',
     }
 
   @route('/documentation/best-practices', name = 'doc_best_practices')
@@ -290,7 +295,7 @@ class Website(bottle.Bottle):
   @view('pages/opensource.html')
   def root(self):
     return {
-      'title': 'Contribute to the Infinit File System',
+      'title': 'Contribute to the Infinit Storage Platform',
       'description': 'Check out our open source projects and join a growing community of developers.',
     }
 
@@ -302,29 +307,12 @@ class Website(bottle.Bottle):
       'description': 'Infinit provides a free community version and an entreprise license with additional features.',
     }
 
-  @route('/solutions', name = 'solutions')
-  @view('pages/solutions.html')
-  def root(self):
-    return {
-      'title': 'Business solutions',
-      'description': 'Infinit is used by device manufacturers, network operators and other businesses throughout the world to provide value to their customers.',
-    }
-
   @route('/press', name = 'press')
-  @route('/press/tech', name = 'press')
-  @view('pages/press/pr_tech.html')
+  @view('pages/press/pr_docker.html')
   def root(self):
     return {
       'title': 'Press Releases',
       'description': 'See all our tech related press releases and download our press kit.',
-    }
-
-  @route('/press/storage', name = 'press')
-  @view('pages/press/pr_storage.html')
-  def root(self):
-    return {
-      'title': 'Press Releases',
-      'description': 'See all our storage related press releases and download our press kit.',
     }
 
   @route('/contact', name = 'contact')
