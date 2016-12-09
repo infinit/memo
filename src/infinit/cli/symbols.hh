@@ -12,6 +12,7 @@ namespace infinit
     DAS_CLI_SYMBOL(as, 'a', "user to run commands as", false);
     DAS_CLI_SYMBOL(avatar, '\0', "path to an image to use as avatar", false);
     DAS_CLI_SYMBOL(bucket, '\0', "bucket name", false);
+    DAS_CLI_SYMBOL(aws, 0, "Amazon Web Services (or S3 compatible) credentials", false);
     DAS_CLI_SYMBOL(capacity, 'c', "limit storage capacity (use: B,kB,kiB,GB,GiB,TB,TiB)", false);
     DAS_CLI_SYMBOL(clear_content, '\0', "remove all blocks from disk (filesystem storage only)", false);
     DAS_CLI_SYMBOL(compatibility_version, '\0', "compatibility version to force", false);
@@ -43,8 +44,10 @@ namespace infinit
     DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output", false);
     DAS_CLI_SYMBOL(ssh, '\0', "store blocks via SSH", false);
     DAS_CLI_SYMBOL(storage_class, '\0', "storage class to use: STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)", false);
+    DAS_SYMBOL(add);
     DAS_SYMBOL(call);
     DAS_SYMBOL(create);
+    DAS_SYMBOL(credentials);
     DAS_SYMBOL(fetch);
     DAS_SYMBOL(hash);
     DAS_SYMBOL(import);
@@ -58,6 +61,7 @@ namespace infinit
     DAS_SYMBOL_NAMED(export, export_);
     namespace modes
     {
+      DAS_SYMBOL(mode_add);
       DAS_SYMBOL(mode_create);
       DAS_SYMBOL(mode_delete);
       DAS_SYMBOL(mode_export);

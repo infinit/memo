@@ -8,6 +8,7 @@
 #include <das/named.hh>
 
 #include <infinit/Infinit.hh>
+#include <infinit/cli/Credentials.hh>
 #include <infinit/cli/Silo.hh>
 #include <infinit/cli/User.hh>
 #include <infinit/symbols.hh>
@@ -91,9 +92,11 @@ namespace infinit
       hub_password_hash(std::string const& password);
 
       // Modes
+      Credentials credentials;
       Silo silo;
       User user;
       using Entities = decltype(elle::meta::list(
+                                  cli::credentials,
                                   cli::silo,
                                   cli::user));
       void
@@ -117,7 +120,7 @@ namespace infinit
       bool
       value(std::ostream& s)
       {
-        s << "  " << Symbol::name() << "\n";
+        s << "  " << Symbol::name() << '\n';
         return true;
       }
     };

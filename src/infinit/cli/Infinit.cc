@@ -64,6 +64,7 @@ namespace infinit
         das::bind_method(*this, cli::call),
         cli::help = false,
         cli::version = false)
+      , credentials(*this)
       , silo(*this)
       , user(*this)
       , _infinit(infinit)
@@ -361,8 +362,8 @@ namespace infinit
         ELLE_WARN("%s is deprecated, please use: infinit %s",
                   prev, boost::algorithm::join(args, " "));
       }
-      infinit::Infinit infinit;
-      Infinit cli(infinit);
+      auto infinit = infinit::Infinit{};
+      auto cli = Infinit(infinit);
       if (args.empty() || das::cli::is_option(args[0], options))
         das::cli::call(cli, args, options);
       else

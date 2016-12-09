@@ -71,6 +71,8 @@ namespace infinit
     }
 
     template
+    class Entity<Credentials>;
+    template
     class Entity<User>;
     template
     class Entity<Silo>;

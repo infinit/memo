@@ -464,6 +464,8 @@ def configure(
       add_libraries(bin)
   # CLI
   infinit_cli_sources = drake.nodes(
+    'src/infinit/cli/Credentials.cc',
+    'src/infinit/cli/Credentials.hh',
     'src/infinit/cli/Entity.cc',
     'src/infinit/cli/Entity.hh',
     'src/infinit/cli/Infinit.cc',
