@@ -13,8 +13,13 @@
 # include <reactor/network/unix-domain-socket.hh>
 #endif
 
+#include <infinit/model/blocks/ImmutableBlock.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/MonitoringServer.hh>
+#include <infinit/model/MissingBlock.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Configuration.hh>
@@ -863,6 +868,83 @@ COMMAND(run)
                 std::move(block),
                 op == "insert" ?
                 infinit::model::STORE_INSERT : infinit::model::STORE_UPDATE);
+              elle::serialization::json::SerializerOut response(
+                std::cout, false, true);
+              response.serialize("success", true);
+            }
+             else if (op == "write_immutable")
+            {
+              auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(
+                elle::Buffer(command.deserialize<std::string>("data")));
+              auto addr = block->address();
+              dht.store(std::move(block), infinit::model::STORE_INSERT);
+              elle::serialization::json::SerializerOut response(
+                std::cout, false, true);
+              response.serialize("success", true);
+              response.serialize("address", addr);
+            }
+            else if (op == "read")
+            {
+              auto block = dht.fetch(
+                  command.deserialize<infinit::model::Address>("address"));
+              elle::serialization::json::SerializerOut response(
+                std::cout, false, true);
+              response.serialize("success", true);
+              response.serialize("data", block->data().string());
+              int version = -1;
+              if (auto mb = dynamic_cast<infinit::model::blocks::MutableBlock*>(block.get()))
+                version = mb->version();
+              response.serialize("version", version);
+            }
+            else if (op == "update_mutable")
+            {
+              auto addr = command.deserialize<infinit::model::Address>("address");
+              auto version = command.deserialize<int>("version");
+              auto data = command.deserialize<std::string>("data");
+              auto block = dht.fetch(addr);
+              auto& mb = dynamic_cast<infinit::model::blocks::MutableBlock&>(*block);
+              if (mb.version() >= version)
+                elle::err("Current version is %s", mb.version());
+              mb.data(elle::Buffer(data));
+              dht.store(std::move(block), infinit::model::STORE_UPDATE);
+              elle::serialization::json::SerializerOut response(
+                std::cout, false, true);
+              response.serialize("success", true);
+            }
+            else if (op == "resolve_named")
+            {
+              auto name = command.deserialize<std::string>("name");
+              bool create = command.deserialize<bool>("create_if_missing");
+              auto addr = infinit::model::doughnut::NB::address(*dht.owner(),
+                name, dht.version());
+              infinit::model::Address res;
+              try
+              {
+                auto block = dht.fetch(addr);
+                auto& nb = dynamic_cast<infinit::model::doughnut::NB&>(*block);
+                res = infinit::model::Address::from_string(nb.data().string());
+              }
+              catch (infinit::model::MissingBlock const& mb)
+              {
+                if (!create)
+                  elle::err("NB %s does not exist", name);
+                auto ab = dht.make_block<infinit::model::blocks::ACLBlock>();
+                auto addr = ab->address();
+                dht.store(std::move(ab), infinit::model::STORE_INSERT);
+                infinit::model::doughnut::NB nb(dht, name,
+                  elle::sprintf("%s", addr));
+                dht.store(nb, infinit::model::STORE_INSERT);
+                res = addr;
+              }
+              elle::serialization::json::SerializerOut response(
+                std::cout, false, true);
+              response.serialize("success", true);
+              response.serialize("address", res);
+            }
+            else if (op == "remove")
+            {
+              auto addr = command.deserialize<infinit::model::Address>("address");
+              dht.remove(addr);
               elle::serialization::json::SerializerOut response(
                 std::cout, false, true);
               response.serialize("success", true);
