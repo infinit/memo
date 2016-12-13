@@ -961,8 +961,8 @@ namespace infinit
     {
       infinit::read_error<ResourceProtected>(*r, type, name);
     }
-    else if (r->status() == reactor::http::StatusCode::See_Other ||
-             r->status() == reactor::http::StatusCode::Temporary_Redirect)
+    else if (r->status() == reactor::http::StatusCode::See_Other
+             || r->status() == reactor::http::StatusCode::Temporary_Redirect)
     {
       auto redirection = r->headers().find("Location");
       if (redirection != r->headers().end())
@@ -976,15 +976,13 @@ namespace infinit
     }
     else if (r->status() == reactor::http::StatusCode::Unauthorized)
     {
-      throw elle::Error(
-        elle::sprintf("Unauthorized fetching %s \"%s\", check the system clock",
-                      type, name));
+      elle::err("Unauthorized fetching %s \"%s\", check the system clock",
+                type, name);
     }
     else
     {
-      throw elle::Error(
-        elle::sprintf("unexpected HTTP error %s fetching %s",
-                      r->status(), type));
+      elle::err("unexpected HTTP error %s fetching %s",
+                r->status(), type);
     }
     return r;
   }
@@ -1064,23 +1062,20 @@ namespace infinit
     }
     else if (r.status() == reactor::http::StatusCode::Unauthorized)
     {
-      throw elle::Error(
-        elle::sprintf("Unauthorized deleting %s \"%s\", check the system clock",
-                      type, name));
+      elle::err("Unauthorized deleting %s \"%s\", check the system clock",
+                type, name);
     }
     else if (r.status() == reactor::http::StatusCode::Forbidden)
     {
-      throw elle::Error(
-        elle::sprintf("Forbidden deleting %s \"%s\", "
-                      "ensure the user has been set using --as or INFINIT_USER",
-                      type, name));
+      elle::err("Forbidden deleting %s \"%s\", "
+                "ensure the user has been set using --as or INFINIT_USER",
+                type, name);
     }
     else
     {
       ELLE_LOG("HTTP response: %s", r.response());
-      throw elle::Error(
-        elle::sprintf("unexpected HTTP error %s deleting %s \"%s\"",
-                      r.status(), type, name));
+      elle::err("unexpected HTTP error %s deleting %s \"%s\"",
+                r.status(), type, name);
     }
   }
 
