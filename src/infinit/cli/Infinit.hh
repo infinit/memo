@@ -81,6 +81,14 @@ namespace infinit
                       std::string const& name);
 
       // Password utilities
+
+      /// Read some secret on stdin.
+      ///
+      /// \param prompt   the invitation string given to the user
+      /// \param regex    if non empty, read until it matches the result.
+      static
+      std::string read_secret(std::string const& prompt,
+                              std::string const& regex = {});
       static
       std::string
       read_passphrase();

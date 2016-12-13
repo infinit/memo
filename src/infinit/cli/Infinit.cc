@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <iterator>
+#include <regex>
 #include <type_traits>
 #include <vector>
 
@@ -522,44 +523,61 @@ namespace infinit
     | Password |
     `---------*/
 
-    static
-    void
-    echo_mode(bool enable)
+    namespace
     {
+      void
+      echo_mode(bool enable)
+      {
 #if defined(INFINIT_WINDOWS)
-      HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
-      DWORD mode;
-      GetConsoleMode(hStdin, &mode);
-      if (!enable)
-        mode &= ~ENABLE_ECHO_INPUT;
-      else
-        mode |= ENABLE_ECHO_INPUT;
-      SetConsoleMode(hStdin, mode );
+        HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+        DWORD mode;
+        GetConsoleMode(hStdin, &mode);
+        if (!enable)
+          mode &= ~ENABLE_ECHO_INPUT;
+        else
+          mode |= ENABLE_ECHO_INPUT;
+        SetConsoleMode(hStdin, mode );
 #else
-      struct termios tty;
-      tcgetattr(STDIN_FILENO, &tty);
-      if(!enable)
-        tty.c_lflag &= ~ECHO;
-      else
-        tty.c_lflag |= ECHO;
-      (void)tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+        struct termios tty;
+        tcgetattr(STDIN_FILENO, &tty);
+        if(!enable)
+          tty.c_lflag &= ~ECHO;
+        else
+          tty.c_lflag |= ECHO;
+        (void)tcsetattr(STDIN_FILENO, TCSANOW, &tty);
 #endif
+      }
+
+      /// Read something secret on std::in.
+      std::string
+      _read_secret(std::string const& prompt)
+      {
+        std::string res;
+        {
+          elle::SafeFinally restore_echo([] { echo_mode(true); });
+          echo_mode(false);
+          std::cout << prompt << ": ";
+          std::cout.flush();
+          std::getline(std::cin, res);
+        }
+        std::cout << std::endl;
+        return res;
+      }
+
     }
 
-    static
     std::string
-    _read_secret(std::string const& prompt_text)
+    Infinit::read_secret(std::string const& prompt,
+                         std::string const& regex)
     {
-      std::string res;
+      auto re = std::regex{regex.empty() ? ".*" : regex};
+      while (true)
       {
-        elle::SafeFinally restore_echo([] { echo_mode(true); });
-        echo_mode(false);
-        std::cout << prompt_text << ": ";
-        std::cout.flush();
-        std::getline(std::cin, res);
+        auto res = _read_secret(prompt);
+        if (std::regex_match(res, re))
+          return res;
+        std::cerr << "Invalid \"" << prompt << "\", try again...\n";
       }
-      std::cout << std::endl;
-      return res;
     }
 
     std::string

@@ -120,30 +120,6 @@ namespace infinit
                   << page
                   << "-oauth" << '\n';
       }
-
-      std::string
-      read_key(std::string const& prompt_text, boost::regex const& regex)
-      {
-        auto res = std::string{};
-        bool first = true;
-        boost::smatch matches;
-        while (!boost::regex_match(res, matches, regex))
-        {
-          if (!first)
-            std::cout << "Invalid \"" << prompt_text << "\", try again...\n";
-          else
-            first = false;
-          std::cout << prompt_text << ": ";
-          std::cout.flush();
-          if (!std::getline(std::cin, res))
-            {
-              reactor::yield();
-              elle::err("Aborting...");
-            }
-          std::cin.clear();
-        }
-        return res;
-      }
     }
 
     void
@@ -157,14 +133,11 @@ namespace infinit
       auto& ifnt = this->cli().infinit();
       if (aws)
       {
-        static auto const access_key_re = boost::regex("[A-Z0-9]{20}");
-        static auto const secret_key_re = boost::regex("[A-Za-z0-9/+=]{40}");
-
         std::cout << "Please enter your AWS credentials\n";
-        std::string access_key_id = read_key("Access Key ID",
-                                             access_key_re);
-        std::string secret_access_key = read_key("Secret Access Key",
-                                                 secret_key_re);
+        auto access_key_id
+          = this->cli().read_secret("Access Key ID", "[A-Z0-9]{20}");
+        auto secret_access_key
+          = this->cli().read_secret("Secret Access Key", "[A-Za-z0-9/+=]{40}");
         auto aws_credentials =
           std::make_unique<infinit::AWSCredentials>(account_name,
                                                     access_key_id,
