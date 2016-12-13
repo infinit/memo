@@ -822,12 +822,12 @@ COMMAND(run)
             struct stat st;
             path->stat(&st);
             auto handle = path->open(O_RDONLY, 0666);
-            std::string content(st.st_size, char(0));
+            auto content = std::string(st.st_size, char(0));
             handle->read(elle::WeakBuffer(elle::unconst(content.data()),
                                           content.size()),
                          st.st_size, 0);
             handle->close();
-            elle::serialization::json::SerializerOut response(std::cout);
+            auto response = elle::serialization::json::SerializerOut(std::cout);
             response.serialize("content", content);
             response.serialize("success", true);
             response.serialize("operation", op);
@@ -877,7 +877,7 @@ COMMAND(run)
             elle::Buffer buf;
             buf.size(size);
             int nread = handles.at(handlename)->read(
-              elle::WeakBuffer(buf.contents(), buf.size()),
+              elle::WeakBuffer(buf),
               size, offset);
             buf.size(nread);
             elle::serialization::json::SerializerOut response(std::cout);
@@ -892,9 +892,7 @@ COMMAND(run)
             uint64_t offset = command.deserialize<uint64_t>("offset");
             uint64_t size = command.deserialize<uint64_t>("size");
             elle::Buffer content = command.deserialize<elle::Buffer>("content");
-            handles.at(handlename)->write(
-              elle::WeakBuffer(content.mutable_contents(), content.size()),
-              size, offset);
+            handles.at(handlename)->write(elle::WeakBuffer(content), size, offset);
           }
           else if (op == "ftruncate")
           {
@@ -959,7 +957,9 @@ COMMAND(run)
   {
     auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
     elle::With<InterfacePublisher>(
-      network, self, model->id(), local_endpoint.get().port(), advertise) << [&]
+      network, self, model->id(), local_endpoint.get().port(), advertise,
+      flag(args, "no-local-endpoints"),
+      flag(args, "no-public-endpoints")) << [&]
     {
       run();
     };
@@ -1044,7 +1044,7 @@ COMMAND(start)
     cmd.serialize("volume", name);
     cmd.serialize("options", mo);
   }
-  sock.write(elle::ConstWeakBuffer(ss.str().data(), ss.str().size()));
+  sock.write(elle::ConstWeakBuffer(ss.str()));
   auto reply = sock.read_until("\n").string();
   std::stringstream replystream(reply);
   auto json = elle::json::read(replystream);
@@ -1068,7 +1068,7 @@ COMMAND(stop)
     cmd.serialize("operation", "volume-stop");
     cmd.serialize("volume", name);
   }
-  sock.write(elle::ConstWeakBuffer(ss.str().data(), ss.str().size()));
+  sock.write(elle::ConstWeakBuffer(ss.str()));
   auto reply = sock.read_until("\n").string();
   std::stringstream replystream(reply);
   auto json = elle::json::read(replystream);
@@ -1092,7 +1092,7 @@ COMMAND(status)
     cmd.serialize("operation", "volume-status");
     cmd.serialize("volume", name);
   }
-  sock.write(elle::ConstWeakBuffer(ss.str().data(), ss.str().size()));
+  sock.write(elle::ConstWeakBuffer(ss.str()));
   auto reply = sock.read_until("\n").string();
   std::stringstream replystream(reply);
   auto json = elle::json::read(replystream);
@@ -1180,8 +1180,11 @@ run_options(RunMode mode)
       elle::sprintf("push endpoints to %s", infinit::beyond(true)) },
   });
   if (mode == RunMode::run)
-    add_option(
-      { "register-service,r", BOOL_IMPLICIT, "register volume in the network"});
+    add_options({
+      { "register-service,r", BOOL_IMPLICIT, "register volume in the network"},
+        option_no_local_endpoints,
+        option_no_public_endpoints
+      });
   if (mode == RunMode::create)
     add_option(
       { "push,p", BOOL_IMPLICIT, "alias for --push-endpoints --push-volume" });
@@ -1197,9 +1200,7 @@ run_options(RunMode mode)
   add_options({
     { "publish", BOOL_IMPLICIT,
       "alias for --fetch-endpoints --push-endpoints" },
-    { "advertise-host", value<std::vector<std::string>>()->multitoken(),
-      "advertise extra endpoint using given host"
-    },
+    option_advertise_host,
     option_endpoint_file,
     option_port_file,
     option_port,

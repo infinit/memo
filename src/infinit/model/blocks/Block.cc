@@ -27,12 +27,6 @@ namespace infinit
         , _validated(false)
       {}
 
-      Block::Block(Block const& other)
-        : _address(other._address)
-        , _data(other._data)
-        , _validated(other._validated)
-      {}
-
       /*---------.
       | Clonable |
       `---------*/
@@ -114,6 +108,7 @@ namespace infinit
       {
         _stored();
       }
+
       void
       Block::_stored()
       {}
@@ -150,7 +145,7 @@ namespace infinit
 
       Block::Block(elle::serialization::Serializer& input,
                    elle::Version const& version)
-      : _validated(false)
+        : _validated(false)
       {
         this->serialize(input, version);
       }
@@ -184,35 +179,16 @@ namespace infinit
         this->serialize(s);
       }
 
-      RemoveSignature::RemoveSignature(RemoveSignature && other)
-      : block(std::move(other.block))
-      , group_key(std::move(other.group_key))
-      , group_index(std::move(other.group_index))
-      , signature_key(std::move(other.signature_key))
-      , signature(std::move(other.signature))
-      {
-      }
-
-      RemoveSignature&
-      RemoveSignature::operator = (RemoveSignature && other)
-      {
-        this->block = std::move(other.block);
-        this->group_key = std::move(other.group_key);
-        this->group_index = std::move(other.group_index);
-        this->signature_key = std::move(other.signature_key);
-        this->signature = std::move(other.signature);
-        return *this;
-      }
-
       RemoveSignature::RemoveSignature(RemoveSignature const& other)
-      : group_key(other.group_key)
-      , group_index(other.group_index)
-      , signature_key(other.signature_key)
-      , signature(other.signature)
+        : group_key(other.group_key)
+        , group_index(other.group_index)
+        , signature_key(other.signature_key)
+        , signature(other.signature)
       {
         if (other.block)
           block = other.block->clone();
       }
+
       void
       RemoveSignature::serialize(elle::serialization::Serializer& s)
       {

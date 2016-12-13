@@ -1,3 +1,41 @@
+## [0.3.0] (backend 0.7.0) - 2016-09-23
+
+### Added
+
+- Windows release.
+- Enable to create drive.
+- Add in-app notifications.
+
+### Changed
+
+- Use backend 0.7.0.
+- Optimize asynchronous calls.
+
+### Fixed
+
+- Pass private inputs through a stream.
+- Make sure the permission window only spawn once.
+- Behave nicely if a part of a drive is missing (network or volume).
+
+## [0.2.7] (backend 0.6.2) - 2016-08-16
+
+### Changed
+
+- Use backend 0.6.2.
+
+## [0.2.6] (backend 0.6.1) - 2016-08-03
+
+### Changed
+
+- Use backend 0.6.1.
+
+## [0.2.5] (backend 0.6.0) - 2016-06-08
+
+### Changed
+
+- Use backend 0.6.0.
+- Change mountpoint name to be the drive name.
+
 ## [0.2.4] (backend 0.5.5) - 2016-05-02
 
 ### Fixed

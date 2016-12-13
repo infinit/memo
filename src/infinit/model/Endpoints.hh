@@ -57,6 +57,8 @@ namespace infinit
       tcp() const;
       std::vector<boost::asio::ip::udp::endpoint>
       udp() const;
+      void
+      merge(Endpoints const&);
     };
 
     class NodeLocation

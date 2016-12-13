@@ -93,7 +93,6 @@ namespace infinit
       `-------*/
       public:
         ELLE_CLONABLE();
-        virtual
         int
         version() const override;
       /*--------.
@@ -101,12 +100,10 @@ namespace infinit
       `--------*/
       protected:
 
-        virtual
         elle::Buffer
         _decrypt_data(elle::Buffer const& data) const override;
         void
         _stored() override;
-        virtual
         bool
         operator ==(blocks::Block const& rhs) const override;
 
@@ -127,24 +124,18 @@ namespace infinit
                         bool write
                         );
       protected:
-        virtual
         void
         _set_permissions(model::User const& key,
                          bool read,
-                         bool write
-                         ) override;
-        virtual
+                         bool write) override;
         void
         _copy_permissions(blocks::ACLBlock& to) override;
-        virtual
         std::vector<blocks::ACLBlock::Entry>
         _list_permissions(boost::optional<Model const&> model) const override;
-        virtual
         void
         _set_world_permissions(bool read, bool write) override;
-        virtual
         std::pair<bool, bool>
-        _get_world_permissions() override;
+        _get_world_permissions() const override;
 
       private:
         bool
@@ -163,14 +154,11 @@ namespace infinit
         // Seal with a specific version
         void seal(int version);
       protected:
-        virtual
         blocks::ValidationResult
         _validate(Model const& model, bool writing) const override;
-        virtual
         blocks::ValidationResult
         _validate(Model const& model,
                   blocks::Block const& new_block) const override;
-        virtual
         void
         _seal(boost::optional<int> version) override;
         void
@@ -188,13 +176,10 @@ namespace infinit
                      elle::Version const& v);
           ELLE_ATTRIBUTE_R(BaseACB<Block> const&, block);
         };
-        virtual
         std::unique_ptr<typename Super::OwnerSignature>
         _sign() const override;
-        virtual
         model::blocks::RemoveSignature
         _sign_remove(Model& model) const override;
-        virtual
         blocks::ValidationResult
         _validate_remove(Model& model,
                          blocks::RemoveSignature const& rs) const override;
@@ -222,7 +207,6 @@ namespace infinit
       public:
         BaseACB(elle::serialization::SerializerIn& input,
                 elle::Version const& version);
-        virtual
         void
         serialize(elle::serialization::Serializer& s,
                   elle::Version const& version) override;

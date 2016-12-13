@@ -4,10 +4,18 @@ function showPopupMenu(element) {
   $li = $('li.comparisons');
   $popup = $('li.comparisons ul');
 
-  $(window).on("click", function(event){
+  $(document).keyup(function(e) {
+     if (e.keyCode === 27) {
+      $li.removeClass('clicked');
+      $('#full').fadeOut('fast');
+    }
+  });
+
+  $(window).on("click", function(event) {
     if ($li.has(event.target).length === 0 && !$li.is(event.target)) {
       $li.removeClass('clicked');
       $('#full').fadeOut('fast');
+      $(document).unbind('keyup');
     }
   });
 }
@@ -167,7 +175,7 @@ $(document).ready(function() {
        value = $(window).scrollTop();
        porcent = value / max * 100;
 
-      if (porcent > 1 && porcent < 96) {
+      if (porcent > 1 && porcent < 98) {
         tooltip.text(Math.round(porcent) + '%');
         tooltip.css('left', (porcent - 1) + '%');
         tooltip.show();
@@ -177,7 +185,9 @@ $(document).ready(function() {
         tooltip.text('👍');
       }
 
-      progressBar.attr('value', value);
+      if (porcent < 96) {
+        progressBar.attr('value', value);
+      }
 
       if (porcent < 1) {
         tooltip.hide();
@@ -185,7 +195,7 @@ $(document).ready(function() {
     });
   }
 
-  if ($('body').hasClass('doc_deployments') || $('body').hasClass('doc_changelog') || $('body').hasClass('doc_get_started')) {
+  if ($('body').hasClass('doc_deployments') || $('body').hasClass('doc_get_started') || $('body').hasClass('doc_storages_s3')) {
     tabby.init();
   }
 

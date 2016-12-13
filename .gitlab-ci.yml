@@ -44,7 +44,7 @@ x86_64-centos6-gcc4:
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //redhat"
     - scp infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh:tmp
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //debian-debug"
-    - if GIT_DIR="$SOURCE_DIR"/.git git describe --exact-match HEAD; then scp infinit-debug-symbols-centos-$DESC_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
+    - if GIT_DIR="$SOURCE_DIR"/.git git describe --exact-match HEAD; then scp infinit-debug-symbols-centos-${DESC}_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
     - if GIT_DIR="$SOURCE_DIR"/.git git describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
     - rm infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm
     - rm infinit-debug-symbols-centos-${DESC}_0_amd64.deb
@@ -250,17 +250,23 @@ website:
     - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
-    - pip3 install mistune
-    - mkdir -p ../fs-build ../fs-website
-    - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-    - cd ../fs-build && python3 drake -j $(nproc) //website/build
-    - cd ../fs-build && python3 drake -j $(nproc) //website/install --prefix=$(realpath ../fs-website)
-    - cd ../fs-build && python3 drake -j $(nproc) //website/debian
-    - scp ../fs-build/website/infinit-sh_$(GIT_DIR=../fs/.git git describe)_amd64.deb buildslave@packages.infinit.sh:debian
+    - SOURCE_DIR="${CI_PROJECT_DIR}"
+    - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
+    - INSTALL_DIR="${SOURCE_DIR}/_install"
+    - mkdir -p "$BUILD_DIR" "$INSTALL_DIR"
+    - DESC=$(git describe)
+    - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir "$SOURCE_DIR" --build-dir "$BUILD_DIR" --install-dir "$INSTALL_DIR"
+    - cd "$BUILD_DIR"
+    - python3 drake -j $(nproc) //website/build
+    - python3 drake -j $(nproc) //website/install
+    - python3 drake -j $(nproc) //website/debian
+    - PACKAGE="website/infinit-sh_${DESC}_amd64.deb"
+    - scp $PACKAGE buildslave@packages.infinit.sh:debian
+    - rm $PACKAGE
     - ssh buildslave@packages.infinit.sh 'make debian'
   tags:
     - x86_64
-    - trusty
+    - ubuntu
     - gcc4
   only:
     - feature/website

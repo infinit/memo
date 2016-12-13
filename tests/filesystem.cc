@@ -325,23 +325,22 @@ ELLE_TEST_SCHEDULED(write_unlink)
   }
   ELLE_LOG("remove file on client 2")
     root_2->child("file")->unlink();
-  // Ability to read removed files not implemented yet, but it should
-  // ELLE_LOG("read on client 1")
-  // {
-  //   elle::Buffer b(5);
-  //   BOOST_CHECK_EQUAL(handle->read(b, 5, 0), 5);
-  //   BOOST_CHECK_EQUAL(b, "data1");
-  // }
+  ELLE_LOG("read on client 1")
+  {
+    elle::Buffer b(5);
+    BOOST_CHECK_EQUAL(handle->read(b, 5, 0), 5);
+    BOOST_CHECK_EQUAL(b, "data1");
+  }
   ELLE_LOG("write on client 1")
     BOOST_CHECK_EQUAL(handle->write(elle::ConstWeakBuffer("data2"), 5, 0), 5);
   ELLE_LOG("sync on client 1")
     handle->fsync(true);
-  // ELLE_LOG("read on client 1")
-  // {
-  //   elle::Buffer b(5);
-  //   BOOST_CHECK_EQUAL(handle->read(b, 5, 0), 5);
-  //   BOOST_CHECK_EQUAL(b, "data2");
-  // }
+  ELLE_LOG("read on client 1")
+  {
+    elle::Buffer b(5);
+    BOOST_CHECK_EQUAL(handle->read(b, 5, 0), 5);
+    BOOST_CHECK_EQUAL(b, "data2");
+  }
   ELLE_LOG("close file on client 1")
     BOOST_CHECK_NO_THROW(handle->close());
   ELLE_LOG("check file does not exist on client 2")

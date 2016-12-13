@@ -67,7 +67,7 @@ namespace infinit
     {
       bool fixed = out.flags() & std::ios::fixed;
       if (!fixed)
-        out << elle::ConstWeakBuffer(k._value, sizeof(k._value));
+        out << elle::ConstWeakBuffer(k._value);
       else
       {
         out << "0x";
