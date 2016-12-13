@@ -67,12 +67,14 @@ namespace infinit
       | Lookup |
       `-------*/
       protected:
+        reactor::Generator<WeakMember>
+        _allocate(model::Address address, int n) const override;
         virtual
         reactor::Generator<std::pair<model::Address, WeakMember>>
         _lookup(std::vector<model::Address> const& addrs, int n) const override;
         virtual
         reactor::Generator<WeakMember>
-        _lookup(model::Address address, int n, Operation op) const override;
+        _lookup(model::Address address, int n, bool fast) const override;
         virtual
         WeakMember
         _lookup_node(model::Address address) const override;

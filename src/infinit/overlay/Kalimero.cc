@@ -31,8 +31,14 @@ namespace infinit
     | Lookup |
     `-------*/
 
+    reactor::Generator<Overlay::WeakMember>
+    Kalimero::_allocate(model::Address address, int n) const
+    {
+      return this->_lookup(address, n, false);
+    }
+
     reactor::Generator<Kalimero::WeakMember>
-    Kalimero::_lookup(model::Address address, int n, Operation op) const
+    Kalimero::_lookup(model::Address address, int n, bool) const
     {
       if (n != 1)
       {

@@ -474,12 +474,11 @@ namespace infinit
               {
                 ELLE_LOG_COMPONENT(
                   "infinit.model.doughnut.consensus.Paxos.rebalance");
-                static auto const op = overlay::OP_FETCH;
                 PaxosServer::Quorum q;
                 if (this->_quorums.find(address) == this->_quorums.end())
                 {
                   for (auto wpeer: this->doughnut().overlay()->lookup(
-                         address, this->_factor, op))
+                         address, this->_factor))
                   {
                     if (auto peer = wpeer.lock())
                       q.insert(peer->id());
@@ -1382,19 +1381,20 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: store %f", *this, *inblock);
           std::shared_ptr<blocks::Block> b(inblock.release());
           ELLE_ASSERT(b);
-          overlay::Operation op;
-          switch (mode)
+          auto owners = [&]
           {
-            case STORE_INSERT:
-              op = overlay::OP_INSERT;
-              break;
-            case STORE_UPDATE:
-              op = overlay::OP_FETCH;
-              break;
-            default:
+            switch (mode)
+            {
+              case STORE_INSERT:
+                return this->doughnut().overlay()->allocate(
+                  b->address(), this->_factor);
+              case STORE_UPDATE:
+                return this->doughnut().overlay()->lookup(
+                  b->address(), this->_factor, false);
+              default:
               elle::unreachable();
-          }
-          auto owners = this->_owners(b->address(), this->_factor, op);
+            }
+          }();
           if (dynamic_cast<blocks::MutableBlock*>(b.get()))
           {
             Paxos::PaxosClient::Peers peers;
@@ -1415,7 +1415,7 @@ namespace infinit
             }
             if (peers.empty())
               elle::err("no peer available for %s of %f",
-                        op == overlay::OP_INSERT ? "insertion" : "update",
+                        mode == STORE_INSERT ? "insertion" : "update",
                         b->address());
             ELLE_DEBUG("owners: %f", peers);
             // FIXME: client is persisted on conflict resolution, hence the
@@ -1492,7 +1492,7 @@ namespace infinit
             };
             if (reached.size() == 0u)
               elle::err("no peer available for %s of %f",
-                        op == overlay::OP_INSERT ? "insertion" : "update",
+                        mode == STORE_INSERT ? "insertion" : "update",
                         b->address());
             if (this->doughnut().version() >= elle::Version(0, 6, 0))
               for (auto peer: reached)
@@ -1604,7 +1604,7 @@ namespace infinit
           if (this->doughnut().version() < elle::Version(0, 5, 0))
           {
             auto peers =
-              this->_owners(address, this->_factor, overlay::OP_FETCH);
+              this->doughnut().overlay()->lookup(address, this->_factor);
             return fetch_from_members(peers, address, std::move(local_version));
           }
           auto peers = this->_peers(address, local_version);
@@ -1681,11 +1681,8 @@ namespace infinit
         Paxos::_peers(Address const& address,
                       boost::optional<int> local_version)
         {
-          auto owners =
-            this->_owners(address,
-                          this->_factor,
-                          address.mutable_block() ?
-                            overlay::OP_FETCH_FAST : overlay::OP_FETCH);
+          auto owners = this->doughnut().overlay()->lookup(
+            address, this->_factor, address.mutable_block());
           PaxosClient::Peers peers;
           for (auto peer: owners)
             peers.push_back(
@@ -1739,8 +1736,8 @@ namespace infinit
           // Make sure we didn't lose a previous owner because of the overlay
           // failing to look it up.
           PaxosServer::Quorum new_q(q);
-          for (auto const& wowner: this->_owners(
-                 address, this->_factor, overlay::OP_INSERT))
+          for (auto const& wowner:
+                 this->doughnut().overlay()->allocate(address, this->_factor))
           {
             if (signed(new_q.size()) >= this->_factor)
               break;

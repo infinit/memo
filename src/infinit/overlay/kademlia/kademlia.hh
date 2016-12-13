@@ -64,15 +64,15 @@ namespace kademlia
   | Peers |
   `------*/
   protected:
-    virtual
     void
     _discover(infinit::overlay::NodeLocations const& peers) override;
-  protected:
-    virtual reactor::Generator<WeakMember>
+    reactor::Generator<WeakMember>
+    _allocate(infinit::model::Address address,
+            int n) const override;
+    reactor::Generator<WeakMember>
     _lookup(infinit::model::Address address,
             int n,
-            infinit::overlay::Operation op) const override;
-    virtual
+            bool fast) const override;
     Overlay::WeakMember
     _lookup_node(infinit::model::Address address) const override;
 

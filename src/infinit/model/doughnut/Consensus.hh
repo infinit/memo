@@ -73,13 +73,6 @@ namespace infinit
           virtual
           void
           _remove(Address address, blocks::RemoveSignature rs);
-          overlay::Overlay::WeakMember
-          _owner(Address const& address,
-                 overlay::Operation op) const;
-          reactor::Generator<overlay::Overlay::WeakMember>
-          _owners(Address const& address,
-                  int factor,
-                  overlay::Operation op) const;
 
         /*-----.
         | Stat |

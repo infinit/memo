@@ -470,48 +470,53 @@ namespace kademlia
   }
 
   reactor::Generator<Kademlia::WeakMember>
-  Kademlia::_lookup(infinit::model::Address address,
-                    int n, infinit::overlay::Operation op) const
+  Kademlia::_allocate(infinit::model::Address address,
+                      int n) const
   {
-    ELLE_TRACE("%s: lookup %s with mode %s", *this, address, op);
+    ELLE_TRACE("%s: allocate %f on %s nodes", this, address, n);
     auto self = const_cast<Kademlia*>(this);
-    if (op == infinit::overlay::OP_INSERT)
-    { // Lets try an insert policy of 'closest nodes'
-      std::shared_ptr<Query> q =
-      self->startQuery(address, false);
-      ELLE_TRACE("%s: waiting for insert query", *this);
-      q->barrier.wait();
-      ELLE_TRACE("%s: insert query finished", *this);
-      // pick the closest node found to store
-      packet::Store s;
-      s.sender = _self;
-      s.key = address;
-      s.value = {q->endpoints.at(q->res[0])};
-      auto buf = elle::serialization::json::serialize(&s);
-      // store the mapping in the k closest nodes
-      for (unsigned int i=0; i<q->res.size() && i<unsigned(_config.k); ++i)
-      {
-        self->send(buf, q->endpoints.at(q->res[i]));
-      }
-      infinit::overlay::Overlay::Members res;
-      ELLE_TRACE("%s: Connecting remote %s", *this, s.value[0]);
-      res.emplace_back(
-        new infinit::model::doughnut::Remote(
-          const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-          /* FIXME BEARCLAW */ infinit::model::Address(),
-          infinit::model::Endpoints(s.value),
-          boost::optional<reactor::network::UTPServer&>(),
-          boost::optional<infinit::model::EndpointsRefetcher>(),
-          infinit::model::doughnut::Protocol::tcp));
-      ELLE_TRACE("%s: returning", *this);
-      return reactor::generator<WeakMember>(
-        [res] (reactor::yielder<WeakMember>::type const& yield)
-        {
-          for (auto r: res)
-            yield(r);
-        });
+    // Lets try an insert policy of 'closest nodes'
+    std::shared_ptr<Query> q =
+    self->startQuery(address, false);
+    ELLE_TRACE("%s: waiting for insert query", *this);
+    q->barrier.wait();
+    ELLE_TRACE("%s: insert query finished", *this);
+    // pick the closest node found to store
+    packet::Store s;
+    s.sender = _self;
+    s.key = address;
+    s.value = {q->endpoints.at(q->res[0])};
+    auto buf = elle::serialization::json::serialize(&s);
+    // store the mapping in the k closest nodes
+    for (unsigned int i=0; i<q->res.size() && i<unsigned(_config.k); ++i)
+    {
+      self->send(buf, q->endpoints.at(q->res[i]));
     }
+    infinit::overlay::Overlay::Members res;
+    ELLE_TRACE("%s: Connecting remote %s", *this, s.value[0]);
+    res.emplace_back(
+      new infinit::model::doughnut::Remote(
+        const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+        /* FIXME BEARCLAW */ infinit::model::Address(),
+        infinit::model::Endpoints(s.value),
+        boost::optional<reactor::network::UTPServer&>(),
+        boost::optional<infinit::model::EndpointsRefetcher>(),
+        infinit::model::doughnut::Protocol::tcp));
+    ELLE_TRACE("%s: returning", *this);
+    return reactor::generator<WeakMember>(
+      [res] (reactor::yielder<WeakMember>::type const& yield)
+      {
+        for (auto r: res)
+          yield(r);
+      });
+  }
 
+  reactor::Generator<Kademlia::WeakMember>
+  Kademlia::_lookup(infinit::model::Address address,
+                    int n,
+                    bool) const
+  {
+    auto self = const_cast<Kademlia*>(this);
     std::shared_ptr<Query> q = self->startQuery(address, true);
     ELLE_TRACE("%s: waiting for value query", *this);
     q->barrier.wait();

@@ -49,9 +49,13 @@ namespace infinit
     `-------*/
 
     reactor::Generator<Overlay::WeakMember>
-    Stonehenge::_lookup(model::Address address,
-                        int n,
-                        Operation) const
+    Stonehenge::_allocate(model::Address address, int n) const
+    {
+      return this->_lookup(address, n, false);
+    }
+
+    reactor::Generator<Overlay::WeakMember>
+    Stonehenge::_lookup(model::Address address, int n, bool) const
     {
       // Use modulo on the address to determine the owner and yield the n
       // following nodes.

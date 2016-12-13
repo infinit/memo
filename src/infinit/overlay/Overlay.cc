@@ -12,28 +12,6 @@ namespace infinit
 {
   namespace overlay
   {
-    /*----------.
-    | Operation |
-    `----------*/
-
-    std::ostream&
-    operator <<(std::ostream& output, Operation op)
-    {
-      switch (op)
-      {
-        case OP_FETCH:
-          output << "fetch";
-          break;
-        case OP_INSERT:
-          output << "insert";
-          break;
-        case OP_FETCH_FAST:
-          output << "fetch_fast";
-          break;
-      }
-      return output;
-    }
-
     /*-------------.
     | Construction |
     `-------------*/
@@ -107,6 +85,13 @@ namespace infinit
     | Lookup |
     `-------*/
 
+    reactor::Generator<Overlay::WeakMember>
+    Overlay::allocate(model::Address address, int n) const
+    {
+      ELLE_TRACE_SCOPE("%s: allocate %s nodes for %f", this, n, address);
+      return this->_allocate(address, n);
+    }
+
     reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
     Overlay::lookup(std::vector<model::Address> const& addresses, int n) const
     {
@@ -115,17 +100,18 @@ namespace infinit
     }
 
     reactor::Generator<Overlay::WeakMember>
-    Overlay::lookup(model::Address address, int n, Operation op) const
+    Overlay::lookup(model::Address address, int n, bool fast) const
     {
-      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %f (%s)", this, n, address, op);
-      return this->_lookup(address, n, op);
+      ELLE_TRACE_SCOPE("%s: lookup%s %s nodes for %f",
+                       this, fast ? " (fast)" : "", n, address);
+      return this->_lookup(address, n, fast);
     }
 
     Overlay::WeakMember
-    Overlay::lookup(model::Address address, Operation op) const
+    Overlay::lookup(model::Address address) const
     {
       ELLE_TRACE_SCOPE("%s: lookup 1 node for %f", this, address);
-      for (auto res: this->_lookup(address, 1, op))
+      for (auto res: this->_lookup(address, 1, false))
         return res;
       throw model::MissingBlock(address);
     }
@@ -134,10 +120,11 @@ namespace infinit
     Overlay::_lookup(std::vector<model::Address> const& addresses, int n) const
     {
       return reactor::Generator<std::pair<model::Address, WeakMember>>(
-        [this, addresses, n] (reactor::Generator<std::pair<model::Address, WeakMember>>::yielder const& yield)
+        [this, addresses, n]
+        (reactor::Generator<std::pair<model::Address, WeakMember>>::yielder const& yield)
         {
           for (auto const& a: addresses)
-            for (auto res: lookup(a, n, OP_FETCH))
+            for (auto res: this->_lookup(a, n, false))
               yield(std::make_pair(a, res));
         });
     }

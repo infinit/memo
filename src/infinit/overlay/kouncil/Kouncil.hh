@@ -136,10 +136,10 @@ namespace infinit
       | Lookup |
       `-------*/
       protected:
-        virtual
         reactor::Generator<WeakMember>
-        _lookup(model::Address address, int n, Operation op) const override;
-        virtual
+        _allocate(model::Address address, int n) const override;
+        reactor::Generator<WeakMember>
+        _lookup(model::Address address, int n, bool fast) const override;
         WeakMember
         _lookup_node(model::Address address) const override;
 
