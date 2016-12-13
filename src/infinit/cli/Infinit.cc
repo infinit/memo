@@ -468,22 +468,24 @@ namespace infinit
     Infinit::report_action(std::string const& action,
                            std::string const& type,
                            std::string const& name,
-                           boost::optional<std::string> where_)
+                           std::string const& where)
     {
-      std::string where = where_ ? elle::sprintf("%s ", where_.get()) : "";
-      report("%s%s %s \"\%s\"", where, action, type, name);
+      if (where.empty())
+        report("%s %s \"\%s\"", action, type, name);
+      else
+        report("%s %s %s \"\%s\"", where, action, type, name);
     }
 
     void
     Infinit::report_created(std::string const& type, std::string const& name)
     {
-      report_action("created", type, name, std::string("locally"));
+      report_action("created", type, name, "locally");
     }
 
     void
     Infinit::report_updated(std::string const& type, std::string const& name)
     {
-      report_action("updated", type, name, std::string("locally"));
+      report_action("updated", type, name, "locally");
     }
 
     void

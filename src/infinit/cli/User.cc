@@ -132,7 +132,7 @@ namespace infinit
         f, api.cli().infinit()._user_avatar_path(name),
         name, "avatar", true, std::ios::out | std::ios::binary);
       f.write(reinterpret_cast<char const*>(buffer.contents()), buffer.size());
-      api.cli().report_action("saved", "avatar", name, std::string("locally"));
+      api.cli().report_action("saved", "avatar", name, "locally");
     }
 
     static
@@ -152,16 +152,13 @@ namespace infinit
                 url, "avatar", self.name, data, "image/jpeg", self))
       {
         case infinit::Infinit::PushResult::pushed:
-          api.cli().report_action(
-            "saved", "avatar", self.name, std::string("remotely"));
+          api.cli().report_action("saved", "avatar", self.name, "remotely");
           break;
         case infinit::Infinit::PushResult::updated:
-          api.cli().report_action(
-            "updated", "avatar", self.name, std::string("remotely"));
+          api.cli().report_action("updated", "avatar", self.name, "remotely");
           break;
         case infinit::Infinit::PushResult::alreadyPushed:
-          api.cli().report_action(
-            "already pushed", "avatar", self.name);
+          api.cli().report_action("already pushed", "avatar", self.name);
       }
       save_avatar(api, self.name, data);
     }
@@ -299,8 +296,7 @@ namespace infinit
       else
       {
         this->cli().infinit().user_save(user);
-        this->cli().report_action(
-          "generated", "user", name, std::string("locally"));
+        this->cli().report_action("generated", "user", name, "locally");
       }
       if (push)
         user_push(*this, user, password, full);
@@ -355,7 +351,7 @@ namespace infinit
             continue;
           auto drive_path = ifnt._drive_path(drive);
           if (boost::filesystem::remove(drive_path))
-            this->cli().report_action("deleted", "drive", drive, std::string("locally"));
+            this->cli().report_action("deleted", "drive", drive, "locally");
         }
         for (auto const& volume_: ifnt.volumes_get())
         {
@@ -364,8 +360,7 @@ namespace infinit
             continue;
           auto volume_path = ifnt._volume_path(volume);
           if (boost::filesystem::remove(volume_path))
-            this->cli().report_action(
-              "deleted", "volume", volume, std::string("locally"));
+            this->cli().report_action("deleted", "volume", volume, "locally");
         }
         for (auto const& pair: ifnt.passports_get())
         {
@@ -377,10 +372,9 @@ namespace infinit
           }
           auto passport_path = ifnt._passport_path(network, pair.second);
           if (boost::filesystem::remove(passport_path))
-            this->cli().report_action(
-              "deleted", "passport",
-              elle::sprintf("%s: %s", network, pair.second),
-              std::string("locally"));
+            this->cli().report_action("deleted", "passport",
+                                      elle::sprintf("%s: %s", network, pair.second),
+                                      "locally");
         }
         for (auto const& network_: ifnt.networks_get(user))
         {
@@ -399,8 +393,7 @@ namespace infinit
       auto path = ifnt._user_path(user.name);
       if (boost::filesystem::remove(path))
       {
-        this->cli().report_action(
-            "deleted", "user", user.name, std::string("locally"));
+        this->cli().report_action("deleted", "user", user.name, "locally");
       }
       else
       {
@@ -551,7 +544,7 @@ namespace infinit
       elle::serialization::json::SerializerIn input(json, false);
       auto user = input.deserialize<infinit::User>();
       this->cli().infinit().user_save(user, true);
-      this->cli().report_action("saved", "user", name, std::string("locally"));
+      this->cli().report_action("saved", "user", name, "locally");
     }
 
     void

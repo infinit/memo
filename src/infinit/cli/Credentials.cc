@@ -163,7 +163,7 @@ namespace infinit
                                                     secret_access_key);
         ifnt.credentials_aws_add(std::move(aws_credentials));
         this->cli().report_action("stored", "AWS credentials",
-                                  account.get(), std::string("locally"));
+                                  account.get(), "locally");
       }
       else if (dropbox)
         web_doc(account_name, "Dropbox", "dropbox");
@@ -195,7 +195,7 @@ namespace infinit
           auto path = ifnt._credentials_path(service_name, account_name);
           if (boost::filesystem::remove(path))
             cred.cli().report_action("deleted", "credentials",
-                                     account_name, std::string("locally"));
+                                     account_name, "locally");
           else
             elle::err("File for credentials could not be deleted: %s", path);
         }

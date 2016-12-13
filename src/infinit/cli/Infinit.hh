@@ -61,7 +61,7 @@ namespace infinit
       report_action(std::string const& action,
                     std::string const& type,
                     std::string const& name,
-                    boost::optional<std::string> where_ = {});
+                    std::string const& where = {});
       void
       report_created(std::string const& type, std::string const& name);
       void
