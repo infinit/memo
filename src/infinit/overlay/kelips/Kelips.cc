@@ -2679,26 +2679,6 @@ namespace infinit
         _pending_requests.erase(it);
       }
 
-      // void
-      // Node::address(Address file,
-      //               infinit::overlay::Operation op,
-      //               int n,
-      //               std::function<void (NodeLocation)> yield)
-      // {
-      //   if (op == infinit::overlay::OP_INSERT)
-      //   {
-      //     NodeLocations res = kelipsPut(file, n);
-      //     for (auto r: res)
-      //       yield(r);
-      //   }
-      //   else
-      //   {
-      //     kelipsGet(file, n, false, -1, false,
-      //               op == infinit::overlay::OP_FETCH_FAST,
-      //               yield);
-      //   }
-      // }
-
       void
       Node::kelipsMGet(std::vector<Address> files, int n,
                        std::function<void (std::pair<Address, NodeLocation>)> yield)

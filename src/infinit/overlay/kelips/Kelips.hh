@@ -192,11 +192,6 @@ namespace infinit
         void
         engage();
         void
-        address(Address file,
-                int n,
-                std::function<void(NodeLocation)> yield,
-                bool fast);
-        void
         print(std::ostream& stream) const override;
         /// local hooks interface
         void
