@@ -124,19 +124,6 @@ namespace infinit
       template <typename Symbol, typename ObjectSymbol>
       friend struct mode;
     };
-
-    template <typename Symbol>
-    struct help_list
-    {
-      using type = bool;
-      static
-      bool
-      value(std::ostream& s)
-      {
-        s << "  " << Symbol::name() << '\n';
-        return true;
-      }
-    };
   }
 }
 

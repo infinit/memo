@@ -38,6 +38,23 @@ namespace infinit
       : public _find_name<T, Infinit::Entities>
     {};
 
+    namespace
+    {
+      template <typename Symbol, typename Entity>
+      struct help_modes
+      {
+        using type = bool;
+        static
+        bool
+        value(std::ostream& s, Entity const& entity)
+        {
+          elle::fprintf(s, "  %-10s %s\n",
+                        Symbol::name(), Symbol::attr_get(entity).help);
+          return true;
+        }
+      };
+    }
+
     template <typename Self>
     void
     Entity<Self>::help(std::ostream& s)
@@ -50,7 +67,8 @@ namespace infinit
                     "\n"
                     "Modes:\n",
                     Symbol::name());
-      Self::Modes::template map<help_list>::value(s);
+      Self::Modes::template map<help_modes, Self>
+        ::value(s, static_cast<Self&>(*this));
       elle::fprintf(s,
                     "\n"
                     "Options:\n");

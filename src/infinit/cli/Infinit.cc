@@ -96,6 +96,22 @@ namespace infinit
         return this->_infinit.user_get(this->_as.get());
     }
 
+    namespace
+    {
+      template <typename Symbol>
+      struct help_object
+      {
+        using type = bool;
+        static
+        bool
+        value(std::ostream& s)
+        {
+          elle::fprintf(s, "  %s\n", Symbol::name());
+          return true;
+        }
+      };
+    }
+
     void
     Infinit::help(std::ostream& s) const
     {
@@ -103,7 +119,7 @@ namespace infinit
       s << "Infinit decentralized storage platform.\n"
         << "\n"
         << "Object types:\n";
-      infinit::cli::Infinit::Entities::map<help_list>::value(s);
+      infinit::cli::Infinit::Entities::map<help_object>::value(s);
       s << "\n"
         << "Options:\n";
       das::cli::help(*this, s, options);
