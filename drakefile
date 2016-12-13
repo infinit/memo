@@ -492,7 +492,10 @@ def configure(
       'infinit-storage',
       'infinit-user',
   ]:
-    b = drake.Symlink('bin/%s' % b, infinit_cli)
+    if windows:
+      b = drake.Copy(infinit_cli, 'bin/%s' % b).target()
+    else:
+      b = drake.Symlink('bin/%s' % b, infinit_cli)
     binaries.append(b)
     installed_binaries.append(b)
   if not windows and enable_crash_reporting:
@@ -1185,3 +1188,7 @@ def configure(
       sources = [utils],
     )
     sibylfs_rule << sibylfs_runner.status
+
+# Local Variables:
+# mode: python
+# End:
