@@ -471,7 +471,7 @@ namespace infinit
                            boost::optional<std::string> where_)
     {
       std::string where = where_ ? elle::sprintf("%s ", where_.get()) : "";
-      report(elle::sprintf("%s%s %s \"\%s\"", where, action, type, name));
+      report("%s%s %s \"\%s\"", where, action, type, name);
     }
 
     void

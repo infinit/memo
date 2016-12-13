@@ -53,6 +53,10 @@ namespace infinit
       // Report
       void
       report(std::string const& msg);
+      template <typename... Args>
+      /// Report using a printf-format.
+      void
+      report(std::string const& format, Args&&... args);
       void
       report_action(std::string const& action,
                     std::string const& type,
@@ -106,6 +110,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(infinit::Infinit&, infinit);
       ELLE_ATTRIBUTE_R(boost::optional<std::string>, as);
       ELLE_ATTRIBUTE_R(boost::optional<elle::Version>, compatibility_version);
+      /// Whether in script mode.
       ELLE_ATTRIBUTE_R(bool, script);
     private:
       template <typename Symbol, typename ObjectSymbol>
@@ -126,3 +131,5 @@ namespace infinit
     };
   }
 }
+
+#include <infinit/cli/Infinit.hxx>
