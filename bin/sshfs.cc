@@ -25,12 +25,12 @@ void main_scheduled(int argc, char** argv)
     exit(1);
   }
   std::unique_ptr<infinit::storage::Storage> storage =
-    elle::make_unique<infinit::storage::SFTP>(argv[1], argv[2]);
+    std::make_unique<infinit::storage::SFTP>(argv[1], argv[2]);
   if (argc > 5)
-    storage = elle::make_unique<infinit::storage::Crypt>
+    storage = std::make_unique<infinit::storage::Crypt>
       (std::move(storage), argv[5], true);
   auto faith =
-    elle::make_unique<infinit::model::faith::Faith>(
+    std::make_unique<infinit::model::faith::Faith>(
       std::move(storage), version);
   auto fsops = elle:: make_unique<infinit::filesystem::FileSystem>
     ("default-volume", std::move(faith));

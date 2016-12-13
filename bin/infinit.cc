@@ -166,7 +166,7 @@ main(int argc, char** argv)
           std::unique_ptr<infinit::filesystem::FileSystem> fs;
           ELLE_TRACE("initialize filesystem")
             {
-              fs = elle::make_unique<infinit::filesystem::FileSystem>
+              fs = std::make_unique<infinit::filesystem::FileSystem>
                 ("default-volume", std::move(model),
                  infinit::filesystem::allow_root_creation = true);
             }

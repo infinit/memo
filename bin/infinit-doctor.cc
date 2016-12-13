@@ -1454,7 +1454,7 @@ fuse(bool /*verbose*/)
       }
     };
 
-    reactor::filesystem::FileSystem f(elle::make_unique<NoOp>(), false);
+    reactor::filesystem::FileSystem f(std::make_unique<NoOp>(), false);
     elle::filesystem::TemporaryDirectory d;
     f.mount(d.path(), {});
     f.unmount();

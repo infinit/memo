@@ -795,7 +795,7 @@ fetch_data(std::string const& url,
   reactor::http::Request::Configuration c;
   for (auto const& header: headers)
     c.header_add(header.first, header.second);
-  auto r = elle::make_unique<reactor::http::Request>(
+  auto r = std::make_unique<reactor::http::Request>(
     url, reactor::http::Method::GET, std::move(c));
   reactor::wait(*r);
   if (r->status() == reactor::http::StatusCode::OK)
@@ -1818,7 +1818,7 @@ namespace infinit
       boost::optional<boost::filesystem::path> mountpoint;
       if (this->mount_options.mountpoint)
         mountpoint = boost::filesystem::path(this->mount_options.mountpoint.get());
-      auto fs = elle::make_unique<filesystem::FileSystem>(
+      auto fs = std::make_unique<filesystem::FileSystem>(
         infinit::filesystem::model = dht,
         infinit::filesystem::allow_root_creation = allow_root_creation,
         infinit::filesystem::volume_name = this->name,
@@ -1826,7 +1826,7 @@ namespace infinit
         infinit::filesystem::mountpoint = mountpoint,
         infinit::filesystem::map_other_permissions = map_other_permissions);
       auto driver =
-        elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
+        std::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       if (mountpoint)
       {
         std::vector<std::string> fuse_options = {

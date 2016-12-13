@@ -30,10 +30,10 @@ void main_scheduled(int argc, char** argv)
   elle::serialization::json::SerializerIn input(is);
   aws::Credentials creds(input);
   creds.skew(boost::posix_time::time_duration());
-  auto s3 = elle::make_unique<aws::S3>(creds);
-  auto faith = elle::make_unique<infinit::model::faith::Faith>
-    (elle::make_unique<infinit::storage::S3>(std::move(s3)));
-  auto fsops = elle::make_unique<infinit::filesystem::FileSystem>
+  auto s3 = std::make_unique<aws::S3>(creds);
+  auto faith = std::make_unique<infinit::model::faith::Faith>
+    (std::make_unique<infinit::storage::S3>(std::move(s3)));
+  auto fsops = std::make_unique<infinit::filesystem::FileSystem>
     ("default-volume", std::move(faith));
   fs = new reactor::filesystem::FileSystem(std::move(fsops), true);
   fs->mount(argv[2], {});

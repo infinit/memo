@@ -258,17 +258,17 @@ namespace infinit
       auto path = args["input"].as<std::string>();
       if (path != "-")
       {
-        auto file = elle::make_unique<boost::filesystem::ifstream>(path);
+        auto file = std::make_unique<boost::filesystem::ifstream>(path);
         if (!file->good())
           elle::err("unable to open \"%s\" for reading", path);
         return std::move(file);
       }
     }
 #ifndef INFINIT_WINDOWS
-    return elle::make_unique<reactor::FDStream>(0);
+    return std::make_unique<reactor::FDStream>(0);
 #else
     // Windows does not support async io on stdin
-    auto res = elle::make_unique<std::stringstream>();
+    auto res = std::make_unique<std::stringstream>();
     while (true)
     {
       char buf[4096];
@@ -311,7 +311,7 @@ namespace infinit
           elle::sprintf("%s/crash/report",
                         crash_host.length() ? crash_host : beyond());
         auto dumps_path = canonical_folder(xdg_cache_home() / "crashes");
-        crash_reporter = elle::make_unique<crash_reporting::CrashReporter>(
+        crash_reporter = std::make_unique<crash_reporting::CrashReporter>(
           crash_url, dumps_path, version_describe());
       }
 #endif
@@ -415,7 +415,7 @@ namespace infinit
                 boost::filesystem::create_directories(
                   critical_log_file.parent_path());
                 std::unique_ptr<elle::log::CompositeLogger> cl
-                  = elle::make_unique<elle::log::CompositeLogger>();
+                  = std::make_unique<elle::log::CompositeLogger>();
                 auto clptr = cl.get();
                 auto prev_logger = elle::log::logger(std::move(cl));
                 critical_log_stream.reset(new std::ofstream(
@@ -426,7 +426,7 @@ namespace infinit
                   env_log_level = elle::os::getenv("ELLE_LOG_LEVEL");
                 elle::os::unsetenv("ELLE_LOG_LEVEL");
                 std::unique_ptr<elle::log::Logger> crit
-                  = elle::make_unique<elle::log::TextLogger>(
+                  = std::make_unique<elle::log::TextLogger>(
                     *critical_log_stream, "LOG", false, true,
                     false, true, false, true, true);
                 if (env_log_level)

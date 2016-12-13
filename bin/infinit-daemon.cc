@@ -222,7 +222,7 @@ void link_network(std::string const& name,
     ELLE_LOG("Creating local storage %s", storagename);
     auto path = infinit::xdg_data_home() / "blocks" / storagename;
     storage_config =
-      elle::make_unique<infinit::storage::FilesystemStorageConfig>(
+      std::make_unique<infinit::storage::FilesystemStorageConfig>(
         storagename, path.string(), boost::none, boost::none);
   }
   else if (storagedesc)
@@ -239,7 +239,7 @@ void link_network(std::string const& name,
 
   infinit::Network network(
     desc.name,
-    elle::make_unique<infinit::model::doughnut::Configuration>(
+    std::make_unique<infinit::model::doughnut::Configuration>(
       infinit::model::Address::random(0), // FIXME
       std::move(desc.consensus),
       std::move(desc.overlay),
@@ -448,7 +448,7 @@ MountManager::acquire_volumes()
         mo.push = true;
       std::unordered_map<std::string, std::string> env;
       mo.to_commandline(arguments, env);
-      return elle::make_unique<elle::system::Process>(arguments, true);
+      return std::make_unique<elle::system::Process>(arguments, true);
     }();
     process->wait();
   }
@@ -635,7 +635,7 @@ MountManager::start(std::string const& name,
   // FIXME upgrade Process to accept env
   for (auto const& e: env)
     elle::os::setenv(e.first, e.second, true);
-  m.process = elle::make_unique<elle::system::Process>(arguments, true);
+  m.process = std::make_unique<elle::system::Process>(arguments, true);
   int pid = m.process->pid();
   std::thread t([pid] {
       int status = 0;
@@ -730,7 +730,7 @@ MountManager::update_network(infinit::Network& network,
       boost::replace_all(storagename, "/", "_");
       ELLE_LOG("Creating local storage %s", storagename);
       auto path = infinit::xdg_data_home() / "blocks" / storagename;
-      storage_config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
+      storage_config = std::make_unique<infinit::storage::FilesystemStorageConfig>(
         storagename, path.string(), boost::none, boost::none);
     }
     else
@@ -791,11 +791,11 @@ MountManager::create_network(elle::json::Object const& options,
     rf = std::stoi(*rfstring);
   // create the network
    auto kelips =
-    elle::make_unique<infinit::overlay::kelips::Configuration>();
+    std::make_unique<infinit::overlay::kelips::Configuration>();
    kelips->k = 1;
    kelips->rpc_protocol = infinit::model::doughnut::Protocol::all;
    std::unique_ptr<infinit::model::doughnut::consensus::Configuration> consensus_config;
-   consensus_config = elle::make_unique<
+   consensus_config = std::make_unique<
       infinit::model::doughnut::consensus::Paxos::Configuration>(
         rf,
         std::chrono::seconds(10 * 60));
@@ -804,7 +804,7 @@ MountManager::create_network(elle::json::Object const& options,
   if (portstring)
     port = std::stoi(*portstring);
   auto dht =
-    elle::make_unique<infinit::model::doughnut::Configuration>(
+    std::make_unique<infinit::model::doughnut::Configuration>(
       infinit::model::Address::random(0), // FIXME
       std::move(consensus_config),
       std::move(kelips),
@@ -892,7 +892,7 @@ MountManager::create_volume(std::string const& name,
       mo.as = username;
       std::unordered_map<std::string, std::string> env;
       mo.to_commandline(arguments, env);
-      return elle::make_unique<elle::system::Process>(arguments, true);
+      return std::make_unique<elle::system::Process>(arguments, true);
     }();
   if (process->wait())
     elle::err("volume creation failed");
@@ -1414,11 +1414,11 @@ _run(boost::program_options::variables_map const& args, bool detach)
                                               docker_mount_sub));
     MountManager& root_manager = *managers[getuid()];
     fill_manager_options(root_manager, args);
-    docker = elle::make_unique<DockerVolumePlugin>(
+    docker = std::make_unique<DockerVolumePlugin>(
       root_manager, system_user, mutex);
     auto mount = optional<std::vector<std::string>>(args, "mount");
     if (mount)
-      mounter = elle::make_unique<reactor::Thread>("mounter",
+      mounter = std::make_unique<reactor::Thread>("mounter",
         [&] {auto_mounter(*mount, *docker);});
   }
   if (flag(args, "docker"))
@@ -1630,7 +1630,7 @@ DockerVolumePlugin::install(bool tcp,
   boost::filesystem::remove(this->_spec_url_path, erc);
   if (tcp)
   {
-    this->_server = elle::make_unique<reactor::network::HttpServer>(tcp_port);
+    this->_server = std::make_unique<reactor::network::HttpServer>(tcp_port);
     int port = this->_server->port();
     std::string url = elle::sprintf("tcp://localhost:%s", port);
     boost::filesystem::ofstream ofs(this->_spec_url_path);
@@ -1640,10 +1640,10 @@ DockerVolumePlugin::install(bool tcp,
   }
   else
   {
-    auto us = elle::make_unique<reactor::network::UnixDomainServer>();
+    auto us = std::make_unique<reactor::network::UnixDomainServer>();
     us->listen(this->_socket_path);
     this->_server =
-      elle::make_unique<reactor::network::HttpServer>(std::move(us));
+      std::make_unique<reactor::network::HttpServer>(std::move(us));
   }
   {
     elle::json::Object json;

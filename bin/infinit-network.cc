@@ -110,7 +110,7 @@ COMMAND(create)
   else // default to Kelips
   {
     auto kelips =
-      elle::make_unique<infinit::overlay::kelips::Configuration>();
+      std::make_unique<infinit::overlay::kelips::Configuration>();
     if (args.count("k"))
       kelips->k = args["k"].as<int>();
     else if (args.count("nodes"))
@@ -183,7 +183,7 @@ COMMAND(create)
       throw CommandLineError("more than one consensus specified");
     if (paxos)
     {
-      consensus_config = elle::make_unique<
+      consensus_config = std::make_unique<
         infinit::model::doughnut::consensus::Paxos::Configuration>(
           replication_factor,
           eviction ?
@@ -197,7 +197,7 @@ COMMAND(create)
         throw elle::Error(
           "without consensus, replication factor must be 1");
       }
-      consensus_config = elle::make_unique<
+      consensus_config = std::make_unique<
         infinit::model::doughnut::consensus::Configuration>();
     }
   }
@@ -241,7 +241,7 @@ COMMAND(create)
     peers = parse_peers(speers);
   }
   auto dht =
-    elle::make_unique<infinit::model::doughnut::Configuration>(
+    std::make_unique<infinit::model::doughnut::Configuration>(
       infinit::model::Address::random(0), // FIXME
       std::move(consensus_config),
       std::move(overlay_config),
@@ -451,7 +451,7 @@ COMMAND(fetch)
         );
         infinit::Network updated_network(
           desc.name,
-          elle::make_unique<infinit::model::doughnut::Configuration>(
+          std::make_unique<infinit::model::doughnut::Configuration>(
             d->id,
             std::move(desc.consensus),
             std::move(desc.overlay),
@@ -540,7 +540,7 @@ COMMAND(link_)
     throw elle::Error("passport does not allow storage");
   infinit::Network network(
     desc.name,
-    elle::make_unique<infinit::model::doughnut::Configuration>(
+    std::make_unique<infinit::model::doughnut::Configuration>(
       infinit::model::Address::random(0), // FIXME
       std::move(desc.consensus),
       std::move(desc.overlay),

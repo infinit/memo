@@ -70,7 +70,7 @@ COMMAND(add)
       read_key("Access Key ID", _aws_access_key_regex);
     std::string secret_access_key =
       read_key("Secret Access Key", _aws_secrect_key_regex);
-    auto aws_credentials = elle::make_unique<infinit::AWSCredentials>(
+    auto aws_credentials = std::make_unique<infinit::AWSCredentials>(
       account, access_key_id, secret_access_key);
     ifnt.credentials_aws_add(std::move(aws_credentials));
     report_action(
@@ -136,7 +136,7 @@ fetch_credentials(infinit::User const& user,
   for (auto const& a_json: credentials_vec)
   {
     elle::serialization::json::SerializerIn input(a_json, false);
-    auto a = elle::make_unique<T>(input.deserialize<T>());
+    auto a = std::make_unique<T>(input.deserialize<T>());
     elle::printf("Fetched %s credentials %s (%s)\n",
                  pretty, a->uid(), a->display_name());
     add(std::move(a));

@@ -36,7 +36,7 @@ COMMAND(run)
     network.beyond_fetch_endpoints(hosts);
     model->overlay()->discover(hosts);
   }
-  auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
+  auto fs = std::make_unique<infinit::filesystem::FileSystem>(
     args["volume"].as<std::string>(),
     std::shared_ptr<infinit::model::doughnut::Doughnut>(model.release()));
   new infinit::smb::SMBServer(std::move(fs));

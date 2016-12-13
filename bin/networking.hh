@@ -207,7 +207,7 @@ namespace infinit
 
       {
         ELLE_TRACE("create tcp server (listening on port: %s)", port);
-        auto server = elle::make_unique<reactor::network::TCPServer>();
+        auto server = std::make_unique<reactor::network::TCPServer>();
         server->listen(port);
         port = server->port();
         if (verbose)
@@ -302,7 +302,7 @@ namespace infinit
       {
         ELLE_TRACE("open utp socket to %s:%s (xor: %s)", host, port, xorit);
         server.listen(0);
-        auto s = elle::make_unique<reactor::network::UTPSocket>(server);
+        auto s = std::make_unique<reactor::network::UTPSocket>(server);
         server.xorify(xorit);
         s->connect(host, port);
         return s;
