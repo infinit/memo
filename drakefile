@@ -488,12 +488,11 @@ def configure(
     bin_cxx_config,
     strip = windows)
   binaries.append(infinit_cli)
-  # FIXME: symlinks
   for b in [
       'infinit-storage',
       'infinit-user',
   ]:
-    b = drake.Copy(infinit_cli, 'bin/%s' % b).target()
+    b = drake.Symlink('bin/%s' % b, infinit_cli)
     binaries.append(b)
     installed_binaries.append(b)
   if not windows and enable_crash_reporting:
