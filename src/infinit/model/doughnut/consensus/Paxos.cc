@@ -1389,7 +1389,7 @@ namespace infinit
               op = overlay::OP_INSERT;
               break;
             case STORE_UPDATE:
-              op = overlay::OP_UPDATE;
+              op = overlay::OP_FETCH;
               break;
             default:
               elle::unreachable();

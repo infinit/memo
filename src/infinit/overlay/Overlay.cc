@@ -27,12 +27,6 @@ namespace infinit
         case OP_INSERT:
           output << "insert";
           break;
-        case OP_UPDATE:
-          output << "update";
-          break;
-        case OP_REMOVE:
-          output << "remove";
-          break;
         case OP_FETCH_FAST:
           output << "fetch_fast";
           break;

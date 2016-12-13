@@ -28,9 +28,8 @@ namespace infinit
     {
       OP_FETCH,
       OP_INSERT,
-      OP_UPDATE,
-      OP_REMOVE,
-      OP_FETCH_FAST, ///< Fetch faster but can return a subset of requested nodes
+      /// Fetch faster but can return a subset of requested nodes
+      OP_FETCH_FAST,
     };
     std::ostream&
     operator <<(std::ostream& output, Operation op);

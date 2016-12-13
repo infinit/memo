@@ -49,7 +49,7 @@ namespace infinit
               op = overlay::OP_INSERT;
               break;
             case STORE_UPDATE:
-              op = overlay::OP_UPDATE;
+              op = overlay::OP_FETCH;
               break;
             default:
               ELLE_ABORT("unrecognized store mode: %s", mode);
@@ -189,7 +189,7 @@ namespace infinit
         {
           // NonInterruptible blocks ensure we don't stack exceptions in Remote
           // destructor.
-          auto peers = this->_owners(address, factor, overlay::OP_REMOVE);
+          auto peers = this->_owners(address, factor, overlay::OP_FETCH);
           int count = 0;
           elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
           {
