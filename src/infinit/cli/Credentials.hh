@@ -22,6 +22,7 @@ namespace infinit
       using Modes
         = decltype(elle::meta::list(cli::add,
                                     cli::delete_,
+                                    cli::fetch,
                                     cli::list));
 
       // Add.
@@ -47,6 +48,18 @@ namespace infinit
       void
       mode_delete(boost::optional<std::string> account,
                   bool aws, bool dropbox, bool gcs, bool google_drive);
+
+      // Fetch.
+      Mode<decltype(binding(modes::mode_fetch,
+                            account = boost::none,
+                            aws = false,
+                            dropbox = false,
+                            gcs = false,
+                            google_drive = false))>
+      fetch;
+      void
+      mode_fetch(boost::optional<std::string> account,
+                 bool aws, bool dropbox, bool gcs, bool google_drive);
 
       // List.
       Mode<decltype(binding(modes::mode_list,

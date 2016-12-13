@@ -32,6 +32,15 @@ namespace infinit
                    dropbox = false,
                    gcs = false,
                    google_drive = false))
+      , fetch(
+        "List local credentials",
+        das::cli::Options(),
+        this->bind(modes::mode_fetch,
+                   account = boost::none,
+                   aws = false,
+                   dropbox = false,
+                   gcs = false,
+                   google_drive = false))
       , list(
         "List local credentials",
         das::cli::Options(),
@@ -91,28 +100,27 @@ namespace infinit
     | Mode: add.  |
     `------------*/
 
-    /// Point to the web documentation to register a user on a given
-    /// service provider.
-    ///
-    /// \param account  user name
-    /// \param service  service name in clear (e.g., "Google Drive")
-    /// \param page     name used on our web page (e.g., "google")
-    static
-    void
-    web_doc(std::string const& account,
-            std::string const& service, std::string const& page)
-    {
-      std::cout << "Register your "
-                << service
-                << " account with infinit by visiting "
-                << infinit::beyond() << "/users/" << account
-                << "/"
-                << page
-                << "-oauth" << '\n';
-    }
-
     namespace
     {
+      /// Point to the web documentation to register a user on a given
+      /// service provider.
+      ///
+      /// \param account  user name
+      /// \param service  service name in clear (e.g., "Google Drive")
+      /// \param page     name used on our web page (e.g., "google")
+      void
+      web_doc(std::string const& account,
+              std::string const& service, std::string const& page)
+      {
+        std::cout << "Register your "
+                  << service
+                  << " account with infinit by visiting "
+                  << infinit::beyond() << "/users/" << account
+                  << "/"
+                  << page
+                  << "-oauth" << '\n';
+      }
+
       std::string
       read_key(std::string const& prompt_text, boost::regex const& regex)
       {
@@ -217,6 +225,88 @@ namespace infinit
       do_delete_(*this, e, cli::dropbox,      "dropbox", a);
       do_delete_(*this, e, cli::google_drive, "google", a);
       do_delete_(*this, e, cli::gcs,          "gcs", a);
+    }
+
+
+    /*--------------.
+    | Mode: fetch.  |
+    `--------------*/
+
+    namespace
+    {
+      /// Fetch credentials.
+      ///
+      /// \param user     the user
+      /// \param name     name of the service (e.g., "google_drive").
+      /// \param pretty   pretty name of the service (e.g., "Google Drive")
+      /// \param add      function to call to add the fetched credentials
+      template <typename T>
+      void
+      fetch_(infinit::User const& user,
+             std::string const& name,
+             std::string const& pretty,
+             std::function<void (std::unique_ptr<T>)> add)
+      {
+        auto where = elle::sprintf("users/%s/credentials/%s", user.name, name);
+        // FIXME: Workaround for using std::unique_ptr.
+        // Remove when serialization does not require copy.
+        auto res =
+          infinit::Infinit::beyond_fetch_json
+          (where,
+           elle::sprintf("\"%s\" credentials for", pretty),
+           user.name, user);
+        auto root = boost::any_cast<elle::json::Object>(res);
+        auto credentials_vec =
+          boost::any_cast<std::vector<elle::json::Json>>(root["credentials"]);
+        for (auto const& a_json: credentials_vec)
+        {
+          auto input = elle::serialization::json::SerializerIn(a_json, false);
+          auto a = elle::make_unique<T>(input.deserialize<T>());
+          elle::printf("Fetched %s credentials %s (%s)\n",
+                       pretty, a->uid(), a->display_name());
+          add(std::move(a));
+        }
+      }
+    }
+
+    void
+    Credentials::mode_fetch(boost::optional<std::string> account,
+                            bool aws, bool dropbox,
+                            bool gcs, bool google_drive)
+    {
+      auto e = Enabled{aws, dropbox, gcs, google_drive};
+      e.all_if_none();
+      bool fetch_all = e.all();
+      auto account_name = mandatory(account, "account");
+      auto& ifnt = this->cli().infinit();
+      auto self = this->cli().as_user();
+      // FIXME: Use Symbols instead.
+      if (e.aws)
+      {
+        if (fetch_all)
+          this->cli().report("INFO: AWS credentials are not stored on %s"
+                             " and so were not fetched\n",
+                             infinit::beyond(true));
+        else
+          elle::err<Error>("AWS credentials are not stored on %s",
+                           infinit::beyond(true));
+      }
+      if (e.dropbox)
+        fetch_<infinit::OAuthCredentials>
+          (self, "dropbox", "Dropbox",
+           [&ifnt] (std::unique_ptr<infinit::OAuthCredentials> a)
+           { ifnt.credentials_dropbox_add(std::move(a)); });
+      if (e.gcs)
+        fetch_<infinit::OAuthCredentials>
+          (self, "gcs", "Google Cloud Storage",
+           [&ifnt] (std::unique_ptr<infinit::OAuthCredentials> a)
+           { ifnt.credentials_gcs_add(std::move(a)); });
+      if (e.google_drive)
+        fetch_<infinit::OAuthCredentials>
+          (self, "google", "Google Drive",
+           [&ifnt] (std::unique_ptr<infinit::OAuthCredentials> a)
+           { ifnt.credentials_google_add(std::move(a)); });
+      // FIXME: remove deleted ones
     }
 
 
