@@ -73,7 +73,7 @@ namespace infinit
     operator <<(std::ostream& output, NodeLocation const& loc);
 
     typedef std::vector<NodeLocation> NodeLocations;
-    typedef std::function<boost::optional<Endpoints> ()> EndpointsRefetcher;
+    typedef std::function<boost::optional<Endpoints> (Address)> EndpointsRefetcher;
   }
 }
 
