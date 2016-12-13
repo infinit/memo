@@ -87,9 +87,9 @@ namespace infinit
       };
     }
 
-    /*----------.
-    | Mode: add |
-    `----------*/
+    /*------------.
+    | Mode: add.  |
+    `------------*/
 
     /// Point to the web documentation to register a user on a given
     /// service provider.
@@ -179,23 +179,26 @@ namespace infinit
     | Mode: delete.  |
     `---------------*/
 
-    template <typename Service>
-    void
-    do_delete_(Credentials& cred,
-               Enabled const& enabled,
-               Service service,
-               std::string const& service_name,
-               std::string const& account_name)
+    namespace
     {
-      if (service.attr_get(enabled))
+      template <typename Service>
+      void
+      do_delete_(Credentials& cred,
+                 Enabled const& enabled,
+                 Service service,
+                 std::string const& service_name,
+                 std::string const& account_name)
       {
-        auto& ifnt = cred.cli().infinit();
-        auto path = ifnt._credentials_path(service_name, account_name);
-        if (boost::filesystem::remove(path))
-          cred.cli().report_action("deleted", "credentials",
-                                   account_name, std::string("locally"));
-        else
-          elle::err("File for credentials could not be deleted: %s", path);
+        if (service.attr_get(enabled))
+        {
+          auto& ifnt = cred.cli().infinit();
+          auto path = ifnt._credentials_path(service_name, account_name);
+          if (boost::filesystem::remove(path))
+            cred.cli().report_action("deleted", "credentials",
+                                     account_name, std::string("locally"));
+          else
+            elle::err("File for credentials could not be deleted: %s", path);
+        }
       }
     }
 
@@ -221,26 +224,29 @@ namespace infinit
     | Mode: list.  |
     `-------------*/
 
-    template <typename Service, typename Fetch>
-    void
-    list_(infinit::Infinit& ifnt,
-          Enabled const& enabled,
-          Service service,
-          Fetch fetch,
-          std::string const& service_name)
+    namespace
     {
-      if (service.attr_get(enabled))
+      template <typename Service, typename Fetch>
+      void
+      list_(infinit::Infinit& ifnt,
+            Enabled const& enabled,
+            Service service,
+            Fetch fetch,
+            std::string const& service_name)
       {
-        bool first = true;
-        for (auto const& credentials: fetch.method_call(ifnt))
+        if (service.attr_get(enabled))
         {
-          if (enabled.several() && first)
-            std::cout << service_name << ":\n";
-          if (enabled.several())
-            std::cout << "  ";
-          std::cout << credentials->uid() << ": "
-                    << credentials->display_name() << '\n';
-          first = false;
+          bool first = true;
+          for (auto const& credentials: fetch.method_call(ifnt))
+          {
+            if (enabled.several() && first)
+              std::cout << service_name << ":\n";
+            if (enabled.several())
+              std::cout << "  ";
+            std::cout << credentials->uid() << ": "
+                      << credentials->display_name() << '\n';
+            first = false;
+          }
         }
       }
     }
