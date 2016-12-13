@@ -1,7 +1,6 @@
-#ifndef INFINIT_BIN_INFINIT_DOCTOR_HH
-# define INFINIT_BIN_INFINIT_DOCTOR_HH
+#pragma once
 
-# include <unordered_map>
+#include <unordered_map>
 
 namespace reporting
 {
@@ -771,8 +770,5 @@ namespace reporting
     SystemSanityResults system_sanity;
     ConnectivityResults connectivity;
   };
-
-
 }
 
-#endif

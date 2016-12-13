@@ -1,3 +1,4 @@
+#include <regex>
 #include <unordered_map>
 #include <utility>
 
@@ -169,7 +170,7 @@ namespace reporting
     if (verbose || broken)
     {
       if (container.size() > 0)
-        out << ":" << std::endl;
+        out << ":\n";
       {
         for (auto const& item: container)
           if (verbose || !item.sane() || item.warning())
@@ -207,13 +208,11 @@ namespace reporting
   }
 
   Result::~Result()
-  {
-  }
+  {}
 
   void
   Result::_print(std::ostream& out, bool verbose) const
-  {
-  }
+  {}
 
   bool
   Result::show(bool verbose) const
@@ -245,7 +244,6 @@ namespace reporting
   void
   Result::serialize(elle::serialization::Serializer& s)
   {
-
     s.serialize("name", this->_name);
     s.serialize("sane", this->_sane);
     s.serialize("reason", this->reason);
@@ -502,16 +500,16 @@ namespace reporting
   std::tuple<bool, Result::Reason>
   SystemSanityResults::UserResult::valid(std::string const& name) const
   {
-    static const boost::regex allowed(infinit::User::name_regex());
-    boost::smatch str_matches;
-    if (!boost::regex_match(name, str_matches, allowed))
+    static const auto allowed = std::regex(infinit::User::name_regex());
+    if (std::regex_match(name, allowed))
+      return std::make_tuple(true, Result::Reason{});
+    else
       return std::make_tuple(
         false,
         Result::Reason{
           elle::sprintf(
             "default system user name \"%s\" is not compatible with Infinit "
             "naming policies, you'll need to use --as <other_name>", name)});
-    return std::make_tuple(true, Result::Reason{});
   }
 
   void
@@ -669,7 +667,7 @@ namespace reporting
              (sane
               ? reporting::Result::Reason{}
               : reporting::Result::Reason{
-               "Unable to find or interract with the driver. You won't be able "
+               "Unable to find or interact with the driver. You won't be able "
                "to mount a filesystem interface through FUSE "
                "(visit https://infinit.sh/get-started for more details)"}),
              !sane)
@@ -1207,17 +1205,14 @@ _connectivity(boost::program_options::variables_map const& args,
       results.beyond = {false, elle::exception_string()};
     }
   }
-  std::vector<std::string> public_ips;
+  auto public_ips = std::vector<std::string>{};
   ELLE_TRACE("list interfaces")
   {
     auto interfaces = elle::network::Interface::get_map(
       elle::network::Interface::Filter::no_loopback);
     for (auto i: interfaces)
-    {
-      if (i.second.ipv4_address.empty())
-        continue;
-      public_ips.push_back(i.second.ipv4_address);
-    }
+      if (!i.second.ipv4_address.empty())
+        public_ips.emplace_back(i.second.ipv4_address);
     results.interfaces = {public_ips};
   }
   // XXX: This should be nat.infinit.sh or something.
@@ -1374,7 +1369,7 @@ std::pair<bool, bool>
 permissions(boost::filesystem::path const& path)
 {
   if (!boost::filesystem::exists(path))
-    throw elle::Error(elle::sprintf("%s doesn't exist", path));
+    elle::err("%s doesn't exist", path);
   auto s = boost::filesystem::status(path);
   bool read = (s.permissions() & boost::filesystem::perms::owner_read)
     && (s.permissions() & boost::filesystem::perms::others_read);
@@ -1567,7 +1562,7 @@ _configuration_integrity(boost::program_options::variables_map const& args,
   auto storage_resources = parse(ifnt.storages_get());
   auto drives = parse(ifnt.drives_get());
   auto volumes = parse(ifnt.volumes_get());
-  boost::optional<infinit::User> user;
+  auto user = boost::optional<infinit::User>{};
   try
   {
     user = self_user(ifnt, args);
@@ -1635,7 +1630,7 @@ _configuration_integrity(boost::program_options::variables_map const& args,
     {
       auto const& network = elem.second.first;
       auto& status = elem.second.second;
-      std::vector<std::string> storage_names;
+      auto storage_names = std::vector<std::string>{};
       bool linked = network.model != nullptr;
       if (linked)
       {
@@ -1644,12 +1639,12 @@ _configuration_integrity(boost::program_options::variables_map const& args,
           if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
                 network.model->storage.get()))
             for (auto const& s: strip->storage)
-              storage_names.push_back(s->name);
+              storage_names.emplace_back(s->name);
           else
-            storage_names.push_back(network.model->storage->name);
+            storage_names.emplace_back(network.model->storage->name);
         }
       }
-      std::vector<std::string> faulty;
+      auto faulty = std::vector<std::string>{};
       status = storage_names.size() == 0 || std::all_of(
         storage_names.begin(),
         storage_names.end(),
@@ -1658,7 +1653,7 @@ _configuration_integrity(boost::program_options::variables_map const& args,
           auto it = storage_resources.find(name);
           auto res = (it != storage_resources.end() && it->second.second);
           if (!res)
-            faulty.push_back(name);
+            faulty.emplace_back(name);
           return res;
         });
       if (status)
@@ -1735,8 +1730,10 @@ _configuration_integrity(boost::program_options::variables_map const& args,
           load<std::unique_ptr<infinit::storage::StorageConfig>>(it->path(), "storage");
         else if (path_contains_file(ifnt._credentials_path(), it->path()))
           load<std::unique_ptr<infinit::Credentials>>(it->path(), "credentials");
-        else if (path_contains_file(infinit::xdg_data_home() / "blocks", it->path()));
-        else if (path_contains_file(infinit::xdg_data_home() / "ui", it->path()));
+        else if (path_contains_file(infinit::xdg_data_home() / "blocks", it->path()))
+          {}
+        else if (path_contains_file(infinit::xdg_data_home() / "ui", it->path()))
+          {}
         else
           reporting::store(leftovers, it->path().string());
       }
@@ -1754,9 +1751,8 @@ _configuration_integrity(boost::program_options::variables_map const& args,
     {
       try
       {
-        if (path_contains_file(ifnt._user_avatar_path(), it->path()));
-        else if (path_contains_file(ifnt._drive_icon_path(), it->path()));
-        else
+        if (!path_contains_file(ifnt._user_avatar_path(), it->path())
+            && !path_contains_file(ifnt._drive_icon_path(), it->path()))
           reporting::store(leftovers, it->path().string());
       }
       catch (...)
@@ -1812,17 +1808,15 @@ void
 report_error(std::ostream& out, bool sane, bool warning = false)
 {
   if (!sane)
-    throw elle::Error("Please refer to each individual error message. "
-                      "If you cannot figure out how to fix your issues, "
-                      "please visit https://infinit.sh/faq.");
+    elle::err("Please refer to each individual error message. "
+              "If you cannot figure out how to fix your issues, "
+              "please visit https://infinit.sh/faq.");
   else if (!script_mode)
   {
     if (warning)
-    {
       out <<
         "Doctor has detected minor issues but nothing that should prevent "
         "Infinit from working.";
-    }
     else
       out << "All good, everything should work.";
     out  << std::endl;
