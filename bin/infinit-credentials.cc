@@ -1,3 +1,4 @@
+#include <elle/err.hh>
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
@@ -239,7 +240,7 @@ COMMAND(delete_)
   if (boost::filesystem::remove(path))
     report_action("deleted", "credentials", account, std::string("locally"));
   else
-    err("File for credentials could not be deleted: %s", path);
+    elle::err("File for credentials could not be deleted: %s", path);
 }
 
 int
