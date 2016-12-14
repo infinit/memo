@@ -34,7 +34,8 @@ namespace infinit
 
       Kouncil::Kouncil(
         model::doughnut::Doughnut* dht,
-        std::shared_ptr<infinit::model::doughnut::Local> local)
+        std::shared_ptr<infinit::model::doughnut::Local> local,
+        boost::optional<int> eviction_delay)
         : Overlay(dht, local)
         , _address_book()
         , _peers()
@@ -45,6 +46,7 @@ namespace infinit
         , _watcher_thread(new reactor::Thread(
                           elle::sprintf("%s: watch", this),
                           std::bind(&Kouncil::_watcher, this)))
+        , _eviction_delay(eviction_delay ? *eviction_delay : 12000)
       {
         using model::Address;
         ELLE_TRACE_SCOPE("%s: construct", this);
@@ -321,6 +323,13 @@ namespace infinit
             ELLE_DEBUG("added %s entries from %f", entries.size(), r);
         });
         this->_peers.emplace(peer);
+        // invoke on_discover
+        Endpoints eps;
+        auto& pi = this->_infos.at(peer->id());
+        eps.merge(pi.endpoints_stamped);
+        eps.merge(pi.endpoints_unstamped);
+        NodeLocation nl(peer->id(), eps);
+        this->on_discover()(nl, false);
         ELLE_DEBUG("%s: notifying connections", this);
         // Broadcast this peer existence
         if (this->local())
@@ -720,6 +729,14 @@ namespace infinit
             ++it2;
             auto id = (*it)->id();
             auto& info = this->_infos.at(id);
+            if (now - info.last_seen > std::chrono::seconds(this->_eviction_delay))
+            {
+              ELLE_TRACE("%s: evicting %s", this, *it);
+              this->_disconnected_peers.erase(it);
+              this->_infos.erase(id);
+              this->on_disappear()(id, false);
+              it = it2; continue;
+            }
             if ((now - info.last_seen) / 2 < now - info.last_contact_attempt
               || now - info.last_contact_attempt > std::chrono::seconds(60))
             {

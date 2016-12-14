@@ -70,6 +70,8 @@ namespace infinit
         std::unique_ptr<infinit::overlay::Overlay>
         make(std::shared_ptr<model::doughnut::Local> local,
              model::doughnut::Doughnut* doughnut) override;
+
+        ELLE_ATTRIBUTE_R(boost::optional<int>, eviction_delay)
       };
     }
   }

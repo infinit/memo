@@ -114,7 +114,8 @@ namespace infinit
          *  @arg   local    The local server, null if pure client.
          */
         Kouncil(model::doughnut::Doughnut* dht,
-                std::shared_ptr<infinit::model::doughnut::Local> local);
+                std::shared_ptr<infinit::model::doughnut::Local> local,
+                boost::optional<int> eviction_delay = boost::none);
         /// Destruct a Kouncil.
         virtual
         ~Kouncil();
@@ -188,6 +189,7 @@ namespace infinit
         _watcher();
         reactor::Thread::unique_ptr _watcher_thread;
         ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>, tasks);
+        int _eviction_delay;
 
       /*-------.
       | Lookup |
