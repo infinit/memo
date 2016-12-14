@@ -30,7 +30,7 @@ namespace infinit
   {
     namespace kouncil
     {
-      using Time = std::chrono::time_point<std::chrono::system_clock>;
+      using Time = std::chrono::time_point<std::chrono::high_resolution_clock>;
       /// BMI helpers
       namespace bmi = boost::multi_index;
       namespace _details
@@ -154,6 +154,7 @@ namespace infinit
 
           // local info
           Time last_seen;
+          Time last_contact_attempt;
           using Model = das::Model<
             PeerInfo,
             elle::meta::List<symbols::Symbol_endpoints_stamped,
@@ -183,6 +184,9 @@ namespace infinit
         _perform(std::string const& name, std::function<void()> job);
         void
         _peer_disconnected(model::doughnut::Peer* peer);
+        void
+        _watcher();
+        reactor::Thread::unique_ptr _watcher_thread;
         ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>, tasks);
 
       /*-------.

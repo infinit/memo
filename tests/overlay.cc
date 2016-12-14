@@ -169,6 +169,33 @@ peer_count(DHT& client, bool discovered = false)
   return res;
 }
 
+static
+void
+kouncil_wait_pasv(DHT& s, int n_servers)
+{
+  while (true)
+  {
+    std::vector<infinit::model::Address> res;
+    auto stats = s.dht->overlay()->query("stats", {});
+    auto ostats = boost::any_cast<elle::json::Object>(stats);
+    auto cts = boost::any_cast<elle::json::Array>(ostats["peers"]);
+    ELLE_DEBUG("%s", elle::json::pretty_print(ostats["peers"]));
+    for (auto& c: cts)
+    {
+      if (boost::any_cast<bool>(
+          boost::any_cast<elle::json::Object>(c).at("connected")))
+        res.push_back(infinit::model::Address::from_string(
+          boost::any_cast<std::string>(
+            boost::any_cast<elle::json::Object>(c).at("id"))));
+    }
+
+    if (res.size() >= unsigned(n_servers))
+      return;
+    ELLE_TRACE("%s/%s", res.size(), n_servers);
+    reactor::sleep(50_ms);
+  }
+}
+
 // Wait until s sees n_servers and can make RPC calls to all of them
 // If or_more is true, accept extra non-working peers
 static
@@ -980,7 +1007,8 @@ get_n(C& c, int idx)
   return *it;
 }
 
-ELLE_TEST_SCHEDULED(churn_socket, (Doughnut::OverlayBuilder, builder))
+
+void test_churn_socket(Doughnut::OverlayBuilder builder, bool pasv)
 {
   static const int n = 5;
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
@@ -1047,17 +1075,44 @@ ELLE_TEST_SCHEDULED(churn_socket, (Doughnut::OverlayBuilder, builder))
             elle::sprintf("could not obtain socket pointer for %s", peer));
       }
     }
-    ELLE_TRACE("hard_wait servers");
-    for (auto& s: servers)
-      hard_wait(*s, n-1);
-    ELLE_TRACE("hard_wait client");
-    hard_wait(*client, n, client->dht->id());
+    if (!pasv)
+    {
+      ELLE_TRACE("hard_wait servers");
+      for (auto& s: servers)
+        hard_wait(*s, n-1);
+      ELLE_TRACE("hard_wait client");
+      hard_wait(*client, n, client->dht->id());
+    }
+    else
+    {
+      ELLE_TRACE("hard_wait servers");
+      for (auto& s: servers)
+        kouncil_wait_pasv(*s, n-1);
+      ELLE_TRACE("hard_wait client");
+      kouncil_wait_pasv(*client, n);
+    }
     ELLE_TRACE("checking");
     for (auto const& a: addrs)
       client->dht->fetch(a);
    }
    BOOST_CHECK(true);
 }
+
+ELLE_TEST_SCHEDULED(churn_socket, (Doughnut::OverlayBuilder, builder))
+{
+  test_churn_socket(builder, false);
+}
+
+ELLE_TEST_SCHEDULED(churn_socket_pasv)
+{
+  auto const builder =
+    [] (Doughnut& dht, std::shared_ptr<Local> local)
+    {
+      return std::make_unique<kouncil::Kouncil>(&dht, local);
+    };
+  test_churn_socket(builder, true);
+}
+
 
 ELLE_TEST_SUITE()
 {
@@ -1128,10 +1183,12 @@ ELLE_TEST_SUITE()
   TEST_NAMED(Name, storm_paxos, storm, 60, true, 5, 5, 100);  \
   TEST_NAMED(Name, storm,       storm, 60, false, 5, 5, 200); \
   TEST_NAMED(Name, churn, churn, 600, false, true, true);     \
-  TEST_NAMED(Name, churn_socket, churn_socket, 600);          \
+  TEST_NAMED(Name, churn_socket, churn_socket, 600);
 
   OVERLAY(kelips);
   OVERLAY(kouncil);
+
+  kouncil->add(BOOST_TEST_CASE(churn_socket_pasv), 0, valgrind(120));
 #undef OVERLAY
 }
 

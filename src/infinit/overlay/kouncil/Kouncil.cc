@@ -42,6 +42,9 @@ namespace infinit
         , _broadcast_thread(new reactor::Thread(
                               elle::sprintf("%s: broadcast", this),
                               std::bind(&Kouncil::_broadcast, this)))
+        , _watcher_thread(new reactor::Thread(
+                          elle::sprintf("%s: watch", this),
+                          std::bind(&Kouncil::_watcher, this)))
       {
         using model::Address;
         ELLE_TRACE_SCOPE("%s: construct", this);
@@ -54,6 +57,7 @@ namespace infinit
               {},
               std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::high_resolution_clock::now().time_since_epoch()).count(),
+              std::chrono::high_resolution_clock::now(),
               std::chrono::high_resolution_clock::now()
             }));
           for (auto const& key: local->storage()->list())
@@ -566,6 +570,7 @@ namespace infinit
         ELLE_ASSERT_EQ(it->get(), peer);
         auto& pi = this->_infos.at(peer->id());
         pi.last_seen = std::chrono::high_resolution_clock::now();
+        pi.last_contact_attempt = pi.last_seen;
         this->_disconnected_peers.insert(*it);
         ELLE_TRACE("removing %s from peers", peer);
         auto its = this->_address_book.equal_range(peer->id());
@@ -639,6 +644,38 @@ namespace infinit
           });
       }
 
+      void
+      Kouncil::_advertise(model::doughnut::Remote& r)
+      {
+        ELLE_TRACE_SCOPE("fetch know peers of %s", r);
+        try
+        {
+          if (this->doughnut()->version() < elle::Version(0, 8, 0))
+          {
+            auto advertise = r.make_rpc<NodeLocations (NodeLocations const&)>(
+              "kouncil_advertise");
+            auto peers = advertise(this->peers_locations());
+            ELLE_TRACE("fetched %s peers", peers.size());
+            ELLE_DUMP("peers: %s", peers);
+            // FIXME: might be useless to broadcast these peers
+            this->_discover_rpc(peers);
+          }
+          else
+          {
+            auto reg = r.make_rpc<PeerInfos(PeerInfos const&)>("kouncil_advertise");
+            auto npi = reg(this->_infos);
+            ELLE_TRACE("fetched %s peers", npi.size());
+            ELLE_DUMP("peers: %s", npi);
+            this->_discover(npi);
+          }
+        }
+        catch (reactor::network::Exception const& e)
+        {
+          ELLE_TRACE("%s: network exception advertising %s: %s", this, r, e);
+          // nothing to do, disconnected() will be emited and handled
+        }
+      }
+
       boost::optional<Endpoints>
       Kouncil::_endpoints_refetch(model::Address id)
       {
@@ -667,6 +704,42 @@ namespace infinit
         if (this->endpoints_unstamped.merge(from.endpoints_unstamped))
           changed = true;
         return changed;
+      }
+
+      void
+      Kouncil::_watcher()
+      {
+        while (true)
+        {
+          auto now = std::chrono::high_resolution_clock::now();
+          auto it = this->_disconnected_peers.begin();
+          auto it2 = it;
+          while (it != this->_disconnected_peers.end())
+          {
+            it2 = it;
+            ++it2;
+            auto id = (*it)->id();
+            auto& info = this->_infos.at(id);
+            if ((now - info.last_seen) / 2 < now - info.last_contact_attempt
+              || now - info.last_contact_attempt > std::chrono::seconds(60))
+            {
+              ELLE_TRACE("%s: attempting to contact %s", this, *it);
+              info.last_contact_attempt = now;
+              // try contacting this node again
+              this->_perform("ping", [peer=*it] {
+                  try
+                  {
+                    peer->fetch(model::Address::random(), boost::none);
+                  }
+                  catch (elle::Error const& e)
+                  {
+                  }
+              });
+            }
+            it = it2;
+          }
+          reactor::sleep(10_sec);
+        }
       }
     }
   }
