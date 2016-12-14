@@ -307,6 +307,14 @@ namespace infinit
             }
             this->_peers.insert(*it);
             this->_disconnected_peers.get<1>().erase(it);
+            auto r = dynamic_cast<model::doughnut::Remote*>(ptr);
+            auto fetch = r->make_rpc<std::unordered_set<model::Address> ()>(
+              "kouncil_fetch_entries");
+            auto entries = fetch();
+            ELLE_ASSERT_NEQ(r->id(), model::Address::null);
+            for (auto const& b: entries)
+              this->_address_book.emplace(r->id(), b);
+            ELLE_DEBUG("added %s entries from %f", entries.size(), r);
         });
         this->_peers.emplace(peer);
         ELLE_DEBUG("%s: notifying connections", this);
