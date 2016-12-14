@@ -314,6 +314,8 @@ namespace infinit
             this->_peers.insert(*it);
             this->_disconnected_peers.get<1>().erase(it);
             auto r = dynamic_cast<model::doughnut::Remote*>(ptr);
+            ELLE_ASSERT(r);
+            this->_advertise(*r);
             auto fetch = r->make_rpc<std::unordered_set<model::Address> ()>(
               "kouncil_fetch_entries");
             auto entries = fetch();
@@ -353,25 +355,7 @@ namespace infinit
         // Send the peer all known hosts and retrieve its known hosts
         // FIXME: handle local !
         if (auto r = dynamic_cast<model::doughnut::Remote*>(peer.get()))
-        {
-          ELLE_TRACE_SCOPE("fetch know peers of %s", r);
-          if (this->doughnut()->version() < elle::Version(0, 8, 0))
-          {
-            auto advertise = r->make_rpc<NodeLocations (NodeLocations const&)>(
-              "kouncil_advertise");
-            auto peers = advertise(this->peers_locations());
-            ELLE_TRACE("fetched %s peers", peers.size());
-            ELLE_DUMP("peers: %s", peers);
-            // FIXME: might be useless to broadcast these peers
-            this->_discover(peers);
-          }
-          else
-          {
-            auto reg = r->make_rpc<PeerInfos(PeerInfos const&)>("kouncil_advertise");
-            auto npi = reg(this->_infos);
-            this->_discover(npi);
-          }
-        }
+          this->_advertise(*r);
         else
           ELLE_ERR(
             "%s: not sending advertise to non-remote peer %s", this, peer);
