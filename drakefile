@@ -52,6 +52,7 @@ def configure(
     beyond: bool = True,
     website: bool = True,
     enable_crash_reporting: bool = True,
+    cxx_toolkit_host = None
 ):
 
   if python3 is not None:
@@ -131,6 +132,7 @@ def configure(
   elle = drake.include('elle',
                        production_build = production_build,
                        cxx_toolkit = cxx_toolkit,
+                       cxx_toolkit_host = cxx_toolkit_host,
                        cxx_config = cxx_config,
                        python3 = python,
                        fuse = fuse,
@@ -339,7 +341,7 @@ def configure(
     #bin_cxx_config.use_whole_archive()
   # Ship libstdc++
   additional_libs = []
-  if linux:
+  if linux and cxx_toolkit.architecture is not drake.architecture.arm:
     searched_for = {'libstdc++', 'libgcc_s'}
     need_64 = cxx_toolkit.architecture == drake.architecture.x86_64
     try:
