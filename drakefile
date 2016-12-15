@@ -464,6 +464,8 @@ def configure(
       add_libraries(bin)
   # CLI
   infinit_cli_sources = drake.nodes(
+    'src/infinit/cli/Block.cc',
+    'src/infinit/cli/Block.hh',
     'src/infinit/cli/Credentials.cc',
     'src/infinit/cli/Credentials.hh',
     'src/infinit/cli/Entity.cc',
@@ -920,7 +922,7 @@ def configure(
           'INFINIT_BINARIES': str(binaries_path)
         }
         env.update(t.get('env', {}))
-        if cxx_toolkit.os == drake.os.windows:
+        if windows:
           env['EXE_EXT'] = '.exe'
         runner = drake.Runner(
           exe = test,

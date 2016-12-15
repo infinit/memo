@@ -8,6 +8,7 @@
 #include <das/named.hh>
 
 #include <infinit/Infinit.hh>
+#include <infinit/cli/Block.hh>
 #include <infinit/cli/Credentials.hh>
 #include <infinit/cli/Silo.hh>
 #include <infinit/cli/User.hh>
@@ -104,13 +105,15 @@ namespace infinit
       hub_password_hash(std::string const& password);
 
       // Modes
+      Block block;
       Credentials credentials;
       Silo silo;
       User user;
-      using Entities = decltype(elle::meta::list(
-                                  cli::credentials,
-                                  cli::silo,
-                                  cli::user));
+      using Entities
+        = decltype(elle::meta::list(cli::block,
+                                    cli::credentials,
+                                    cli::silo,
+                                    cli::user));
       void
       help(std::ostream& s) const;
       void

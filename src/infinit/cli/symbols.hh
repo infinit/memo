@@ -8,6 +8,7 @@ namespace infinit
 {
   namespace cli
   {
+    // Symbol, short option, help string, whether positional argument.
     DAS_CLI_SYMBOL(account, '\0', "cloud service account name", false);
     DAS_CLI_SYMBOL(as, 'a', "user to run commands as", false);
     DAS_CLI_SYMBOL(avatar, '\0', "path to an image to use as avatar", false);
@@ -27,7 +28,8 @@ namespace infinit
     DAS_CLI_SYMBOL(google_drive, '\0', "store blocks on Google Drive", false);
     DAS_CLI_SYMBOL(help, 'h', "show this help message", false);
     DAS_CLI_SYMBOL(host, '\0', "SSH host", false);
-    DAS_CLI_SYMBOL(path, '\0', "folder to blocks store blocks into", false);
+    DAS_CLI_SYMBOL(path, '\0', "directory where to store blocks", false);
+    DAS_CLI_SYMBOL(paths, 'p', "paths to blocks", false);
     DAS_CLI_SYMBOL(input, 'i', "file to read {type} from", false);
     DAS_CLI_SYMBOL(key, 'k', "RSA key pair in PEM format - e.g. your SSH key", false);
     DAS_CLI_SYMBOL(ldap_name, 'l', "user LDAP distinguished name", false);
@@ -44,10 +46,13 @@ namespace infinit
     DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output", false);
     DAS_CLI_SYMBOL(ssh, '\0', "store blocks via SSH", false);
     DAS_CLI_SYMBOL(storage_class, '\0', "storage class to use: STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)", false);
+
     DAS_SYMBOL(add);
+    DAS_SYMBOL(block);
     DAS_SYMBOL(call);
     DAS_SYMBOL(create);
     DAS_SYMBOL(credentials);
+    DAS_SYMBOL(deserialize);
     DAS_SYMBOL(fetch);
     DAS_SYMBOL(hash);
     DAS_SYMBOL(import);
@@ -57,21 +62,24 @@ namespace infinit
     DAS_SYMBOL(silo);
     DAS_SYMBOL(user);
     DAS_SYMBOL(version);
+
     DAS_SYMBOL_NAMED(delete, delete_);
     DAS_SYMBOL_NAMED(export, export_);
+
     namespace modes
     {
       DAS_SYMBOL(mode_add);
       DAS_SYMBOL(mode_create);
       DAS_SYMBOL(mode_delete);
+      DAS_SYMBOL(mode_deserialize);
       DAS_SYMBOL(mode_export);
       DAS_SYMBOL(mode_fetch);
       DAS_SYMBOL(mode_hash);
       DAS_SYMBOL(mode_import);
       DAS_SYMBOL(mode_list);
       DAS_SYMBOL(mode_login);
-      DAS_SYMBOL(mode_push);
       DAS_SYMBOL(mode_pull);
+      DAS_SYMBOL(mode_push);
       DAS_SYMBOL(mode_signup);
     }
   }

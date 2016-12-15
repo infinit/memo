@@ -88,6 +88,12 @@ namespace infinit
       }
     }
 
+    /*-----------------------.
+    | Instantiate entities.  |
+    `-----------------------*/
+
+    template
+    class Entity<Block>;
     template
     class Entity<Credentials>;
     template

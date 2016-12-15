@@ -4,11 +4,13 @@ namespace infinit
 {
   namespace cli
   {
+    class Block;
+    class Credentials;
     class Infinit;
-    struct Network;
-    struct Passport;
     class Silo;
     class User;
+    struct Network;
+    struct Passport;
     struct Volume;
   }
 }

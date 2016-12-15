@@ -65,6 +65,7 @@ namespace infinit
         das::bind_method(*this, cli::call),
         cli::help = false,
         cli::version = false)
+      , block(*this)
       , credentials(*this)
       , silo(*this)
       , user(*this)
