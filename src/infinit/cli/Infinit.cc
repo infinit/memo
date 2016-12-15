@@ -228,7 +228,7 @@ namespace infinit
             help = false,
             cli::compatibility_version = boost::none,
             script = false,
-            as = default_user_name());
+            as = infinit.default_user_name());
           auto show_help = [&] (std::ostream& s)
             {
               Infinit::usage(s, elle::sprintf("%s %s [OPTIONS]",
@@ -355,12 +355,12 @@ namespace infinit
     void
     main(std::vector<std::string>& args)
     {
-      // Backward compatibility with infinit-* binaries
       if (boost::filesystem::path(args[0]).filename() == "infinit")
         args.erase(args.begin());
       else
       {
-        static std::string const prefix = "infinit-";
+        // Backward compatibility with infinit-* binaries.
+        static auto const prefix = std::string("infinit-");
         auto prev = boost::filesystem::path(args[0]).filename().string();
         if (prev.substr(0, prefix.size()) != prefix)
           elle::err("unrecognized infinit executable name: %s", prev);
@@ -371,8 +371,9 @@ namespace infinit
           if (args[1] == "-v" || args[1] == "--version")
             args.erase(args.begin());
           else if (args[1] != "-h" && args[1] != "--help")
+            // This is the mode.  We no longer require a leading `--`.
             args[1] = args[1].substr(2);
-        ELLE_WARN("%s is deprecated, please use: infinit %s",
+        ELLE_WARN("%s is deprecated, please run: infinit %s",
                   prev, boost::algorithm::join(args, " "));
       }
       auto infinit = infinit::Infinit{};
@@ -415,13 +416,15 @@ namespace infinit
     {
       if (path && path.get() != "-")
       {
-        Input file(
-          new std::ifstream(path.get()), [] (std::istream* p) { delete p; });
-        if (!file->good())
+        auto res = Input(new std::ifstream(path.get()),
+                         [] (std::istream* p) { delete p; });
+        if (!res->good())
           elle::err("unable to open \"%s\" for reading", path.get());
-        return file;
+        return res;
       }
-      return Input(&std::cin, [] (std::istream*) {});
+      else
+        return Input(&std::cin,
+                     [] (std::istream*) {});
     }
 
     using Output =
@@ -432,11 +435,11 @@ namespace infinit
       if (path)
         if (path.get() != "-")
         {
-          Output file(new std::ofstream(path.get()),
-                      [] (std::ostream* p) { delete p; });
-          if (!file->good())
+          auto res = Output(new std::ofstream(path.get()),
+                            [] (std::ostream* p) { delete p; });
+          if (!res->good())
             elle::err("unable to open \"%s\" for writing", path.get());
-          return file;
+          return res;
         }
         else
           return Output(&std::cout, [] (std::ostream*) {});
