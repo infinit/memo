@@ -6,6 +6,7 @@ namespace infinit
   {
     class Block;
     class Credentials;
+    class Device;
     class Infinit;
     class Silo;
     class User;

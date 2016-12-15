@@ -40,6 +40,16 @@ read_passphrase(std::string const& prompt_text = "Passphrase")
   return res;
 }
 
+
+/// Replace
+///
+///  auto pass = _password(args, "password", "Password");
+///  auto hashed_pass = hash_password(pass, _hub_salt);
+///
+/// by
+///
+///  auto pass = password ? password.get() : Infinit::read_password();
+///  auto hashed_pass = Infinit::hub_password_hash(pass);
 inline
 std::string
 _password(boost::program_options::variables_map const& args,

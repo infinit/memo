@@ -67,6 +67,7 @@ namespace infinit
         cli::version = false)
       , block(*this)
       , credentials(*this)
+      , device(*this)
       , silo(*this)
       , user(*this)
       , _infinit(infinit)

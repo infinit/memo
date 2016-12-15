@@ -97,6 +97,8 @@ namespace infinit
     template
     class Entity<Credentials>;
     template
+    class Entity<Device>;
+    template
     class Entity<User>;
     template
     class Entity<Silo>;

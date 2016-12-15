@@ -9,6 +9,7 @@
 
 #include <infinit/Infinit.hh>
 #include <infinit/cli/Block.hh>
+#include <infinit/cli/Device.hh>
 #include <infinit/cli/Credentials.hh>
 #include <infinit/cli/Silo.hh>
 #include <infinit/cli/User.hh>
@@ -108,11 +109,13 @@ namespace infinit
       // Modes
       Block block;
       Credentials credentials;
+      Device device;
       Silo silo;
       User user;
       using Entities
         = decltype(elle::meta::list(cli::block,
                                     cli::credentials,
+                                    cli::device,
                                     cli::silo,
                                     cli::user));
       void

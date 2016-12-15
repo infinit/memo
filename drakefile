@@ -467,6 +467,8 @@ def configure(
     'src/infinit/cli/Block.hh',
     'src/infinit/cli/Credentials.cc',
     'src/infinit/cli/Credentials.hh',
+    'src/infinit/cli/Device.cc',
+    'src/infinit/cli/Device.hh',
     'src/infinit/cli/Entity.cc',
     'src/infinit/cli/Entity.hh',
     'src/infinit/cli/Infinit.cc',

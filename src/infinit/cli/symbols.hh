@@ -33,7 +33,9 @@ namespace infinit
     DAS_CLI_SYMBOL(ldap_name, 'l', "user LDAP distinguished name", false);
     DAS_CLI_SYMBOL(name, 'n', "name of the {type} {action}", true);
     DAS_CLI_SYMBOL(no_avatar, '\0', "do not {action} avatars", false);
+    DAS_CLI_SYMBOL(no_countdown, 0, "do not show countdown timer", false);
     DAS_CLI_SYMBOL(output, 'o', "file to write the {type} to", false);
+    DAS_CLI_SYMBOL(passphrase, 0, "passphrase to secure identity (default: prompt for passphrase)", false);
     DAS_CLI_SYMBOL(password, 'P', "password to authenticate with {hub}", false);
     DAS_CLI_SYMBOL(path, '\0', "directory where to store blocks", false);
     DAS_CLI_SYMBOL(paths, 'p', "paths to blocks", false);
@@ -41,11 +43,13 @@ namespace infinit
     DAS_CLI_SYMBOL(purge, '\0', "purge objects owned by the {type}", false);
     DAS_CLI_SYMBOL(push, 'p', "push {type} to {hub}", false);
     DAS_CLI_SYMBOL(push_user, '\0', "push user to {hub}", false);
+    DAS_CLI_SYMBOL(receive, 0, "Receive an object from another device using {hub}", false);
     DAS_CLI_SYMBOL(region, '\0', "AWS region", false);
     DAS_CLI_SYMBOL(s3, '\0', "store blocks on AWS S3", false);
     DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output", false);
     DAS_CLI_SYMBOL(ssh, '\0', "store blocks via SSH", false);
     DAS_CLI_SYMBOL(storage_class, '\0', "storage class to use: STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)", false);
+    DAS_CLI_SYMBOL(user, 'u', "{action} user identity to another device using {hub}", false);
 
     DAS_SYMBOL(add);
     DAS_SYMBOL(block);
@@ -53,6 +57,7 @@ namespace infinit
     DAS_SYMBOL(create);
     DAS_SYMBOL(credentials);
     DAS_SYMBOL(deserialize);
+    DAS_SYMBOL(device);
     DAS_SYMBOL(fetch);
     DAS_SYMBOL(hash);
     DAS_SYMBOL(import);
@@ -60,7 +65,7 @@ namespace infinit
     DAS_SYMBOL(login);
     DAS_SYMBOL(signup);
     DAS_SYMBOL(silo);
-    DAS_SYMBOL(user);
+    DAS_SYMBOL(transmit);
     DAS_SYMBOL(version);
 
     DAS_SYMBOL_NAMED(delete, delete_);
@@ -81,6 +86,7 @@ namespace infinit
       DAS_SYMBOL(mode_pull);
       DAS_SYMBOL(mode_push);
       DAS_SYMBOL(mode_signup);
+      DAS_SYMBOL(mode_transmit);
     }
   }
 }
