@@ -77,7 +77,7 @@ namespace infinit
     std::string
     Infinit::default_user_name()
     {
-      static std::string const res =
+      static auto const res =
         elle::os::getenv("INFINIT_USER", elle::system::username());
       return res;
     }
@@ -91,10 +91,7 @@ namespace infinit
     infinit::User
     Infinit::as_user()
     {
-      if (this->_as)
-        return this->_infinit.user_get(this->_as.get());
-      else
-        return this->_infinit.user_get(this->_as.get());
+      return this->infinit().user_get(this->_as.get());
     }
 
     namespace
@@ -226,14 +223,12 @@ namespace infinit
           args.erase(args.begin());
           auto& mode = Symbol::attr_get(o);
           auto options = mode.options;
-          std::string const default_user_name =
-            elle::os::getenv("INFINIT_USER", elle::system::username());
           auto f = das::named::extend(
             mode.prototype(),
             help = false,
             cli::compatibility_version = boost::none,
             script = false,
-            as = default_user_name);
+            as = default_user_name());
           auto show_help = [&] (std::ostream& s)
             {
               Infinit::usage(s, elle::sprintf("%s %s [OPTIONS]",
