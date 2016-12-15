@@ -1,6 +1,6 @@
 #include <elle/log.hh>
 
-#include <das/serializer.hh>
+#include <elle/serialization/Serializer.hh>
 
 ELLE_LOG_COMPONENT("infinit-device");
 
@@ -24,6 +24,21 @@ std::string
 get_name(variables_map const& args, std::string const& name = "name")
 {
   return get_username(args, name);
+}
+
+namespace
+{
+  /// Add custom headers to be sent to the server.
+  ///
+  /// \param headers   a map of name -> content.
+  template <typename Map>
+  void
+  headers_add(reactor::http::Request::Configuration& c,
+              Map const& headers)
+  {
+    for (auto const& header: headers)
+      c.header_add(header.first, header.second);
+  }
 }
 
 struct PairingInformation
@@ -64,8 +79,8 @@ COMMAND(transmit_user)
   auto passphrase = pairing_passphrase(args);
   std::stringstream serialized_user;
   elle::serialization::json::serialize(user, serialized_user, false);
-  infinit::cryptography::SecretKey key{passphrase};
-  PairingInformation p(
+  auto key = infinit::cryptography::SecretKey{passphrase};
+  auto p = PairingInformation(
     key.encipher(serialized_user.str(),
                  infinit::cryptography::Cipher::aes256),
     hash_password(passphrase, _pair_salt));
@@ -83,62 +98,59 @@ COMMAND(transmit_user)
         auto where = elle::sprintf("users/%s/pairing/status", user.name);
         while (timeout > 0)
         {
-          reactor::http::Request::Configuration c;
+          auto c = reactor::http::Request::Configuration{};
           auto headers =
             infinit::signature_headers(reactor::http::Method::GET, where, user);
-          for (auto const& header: headers)
-            c.header_add(header.first, header.second);
-          reactor::http::Request r(
+          headers_add(c, headers);
+          auto r = reactor::http::Request(
             elle::sprintf("%s/%s", infinit::beyond(), where),
             reactor::http::Method::GET,
             std::move(c));
           reactor::wait(r);
-          if (r.status() == reactor::http::StatusCode::OK)
+          switch (r.status())
           {
+          case reactor::http::StatusCode::OK:
             // Do nothing.
-          }
-          else if (r.status() == reactor::http::StatusCode::Not_Found)
-          {
+            break;
+
+          case reactor::http::StatusCode::Not_Found:
             done = true;
             return;
-          }
-          else if (r.status() == reactor::http::StatusCode::Gone)
-          {
+
+          case reactor::http::StatusCode::Gone:
             timed_out = true;
             return;
-          }
-          else if (r.status() == reactor::http::StatusCode::Forbidden)
-          {
+
+          case reactor::http::StatusCode::Forbidden:
             infinit::read_error<infinit::ResourceProtected>(
               r, "user identity", user.name);
-          }
-          else
-          {
-            throw elle::Error(
-              elle::sprintf("unexpected HTTP error %s fetching user identity",
-                            r.status()));
+            break;
+
+          default:
+            elle::err("unexpected HTTP error %s fetching user identity",
+                      r.status());
           }
           reactor::sleep(10_sec);
         }
       });
     for (; timeout > 0; timeout--)
     {
-      std::cout << elle::sprintf("User identity on %s for: ", infinit::beyond(true))
-                << timeout << " seconds" << std::flush;
+      elle::printf("User identity on %s for %s seconds",
+                   infinit::beyond(true), timeout);
+      std::cout.flush();
       reactor::sleep(1_sec);
-      std::cout << "\r" << std::string(80, ' ') << "\r";
+      std::cout << '\r' << std::string(80, ' ') << '\r';
       if (done)
       {
-        std::cout << "User identity received on another device" << std::endl;
+        std::cout << "User identity received on another device\n";
         return;
       }
-      if (timed_out)
+      else if (timed_out)
         break;
     }
     beyond_poller.terminate_now();
-    std::cout << elle::sprintf(
-      "Timed out, user identity no longer available on %s", infinit::beyond(true))
-              << std::endl;
+    elle::printf("Timed out, user identity no longer available on %s\n",
+                 infinit::beyond(true));
   }
 }
 
@@ -148,6 +160,21 @@ COMMAND(transmit)
     transmit_user(args, killed);
   else
     throw CommandLineError("Must specify type of object to transmit");
+}
+
+namespace
+{
+  /// Deserialize \a s as a \a T.
+  template <typename T>
+  auto
+  from_json(std::string const& s)
+    -> T
+  {
+    std::stringstream stream;
+    stream << s;
+    auto input = elle::serialization::json::SerializerIn(stream, false);
+    return input.deserialize<T>();
+  }
 }
 
 COMMAND(receive_user)
@@ -163,28 +190,25 @@ COMMAND(receive_user)
         name, boost::none,
         {{"infinit-pairing-passphrase-hash", hashed_passphrase}},
         false);
-      infinit::cryptography::SecretKey key{passphrase};
+      auto key = infinit::cryptography::SecretKey{passphrase};
       auto data = key.decipher(*pairing.data,
                                infinit::cryptography::Cipher::aes256);
-      std::stringstream stream;
-      stream << data.string();
-      elle::serialization::json::SerializerIn input(stream, false);
-      auto user = input.deserialize<infinit::User>();
+      auto user = from_json<infinit::User>(data.string());
       ifnt.user_save(user, true);
     }
     catch (infinit::ResourceGone const& e)
     {
-      std::cerr << elle::sprintf("User identity no longer available on %s, "
-                                 "retransmit from the original device",
-                                 infinit::beyond(true))
-                << std::endl;
+      elle::fprintf(std::cerr,
+                    "User identity no longer available on %s, "
+                    "retransmit from the original device\n",
+                    infinit::beyond(true));
       throw;
     }
     catch (infinit::MissingResource const& e)
     {
       if (e.what() == std::string("user/not_found"))
         not_found(name, "User");
-      if (e.what() == std::string("pairing/not_found"))
+      else if (e.what() == std::string("pairing/not_found"))
         not_found(name, "Pairing");
       throw;
     }
