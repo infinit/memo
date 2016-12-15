@@ -39,6 +39,29 @@ namespace
     for (auto const& header: headers)
       c.header_add(header.first, header.second);
   }
+
+  /// Deserialize \a s as a \a T.
+  template <typename T>
+  auto
+  from_json(std::string const& s)
+    -> T
+  {
+    std::stringstream stream;
+    stream << s;
+    auto input = elle::serialization::json::SerializerIn(stream, false);
+    return input.deserialize<T>();
+  }
+
+  /// Serialize \a t as Json.
+  template <typename T>
+  auto
+  to_json(T const& t)
+    -> std::string
+  {
+    std::stringstream stream;
+    elle::serialization::json::serialize(t, stream, false);
+    return stream.str();
+  }
 }
 
 struct PairingInformation
@@ -65,23 +88,16 @@ public:
 
   boost::optional<elle::Buffer> data;
   boost::optional<std::string> passphrase_hash;
-
-  using Model =
-    das::Model<PairingInformation,
-               decltype(elle::meta::list(
-                          infinit::symbols::data,
-                          infinit::symbols::passphrase_hash))>;
 };
+
 
 COMMAND(transmit_user)
 {
   auto user = self_user(ifnt, args);
   auto passphrase = pairing_passphrase(args);
-  std::stringstream serialized_user;
-  elle::serialization::json::serialize(user, serialized_user, false);
   auto key = infinit::cryptography::SecretKey{passphrase};
   auto p = PairingInformation(
-    key.encipher(serialized_user.str(),
+    key.encipher(to_json(user),
                  infinit::cryptography::Cipher::aes256),
     hash_password(passphrase, _pair_salt));
   beyond_push(
@@ -160,21 +176,6 @@ COMMAND(transmit)
     transmit_user(args, killed);
   else
     throw CommandLineError("Must specify type of object to transmit");
-}
-
-namespace
-{
-  /// Deserialize \a s as a \a T.
-  template <typename T>
-  auto
-  from_json(std::string const& s)
-    -> T
-  {
-    std::stringstream stream;
-    stream << s;
-    auto input = elle::serialization::json::SerializerIn(stream, false);
-    return input.deserialize<T>();
-  }
 }
 
 COMMAND(receive_user)
