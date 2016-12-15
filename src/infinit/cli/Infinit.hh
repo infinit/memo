@@ -6,6 +6,7 @@
 #include <das/named.hh>
 
 #include <infinit/Infinit.hh>
+#include <infinit/cli/ACL.hh>
 #include <infinit/cli/Block.hh>
 #include <infinit/cli/Credentials.hh>
 #include <infinit/cli/Device.hh>
@@ -107,6 +108,7 @@ namespace infinit
       hub_password_hash(std::string const& password);
 
       // Modes
+      ACL acl = *this;
       Block block = *this;
       Credentials credentials = *this;
       Device device = *this;
@@ -116,7 +118,8 @@ namespace infinit
       Silo silo = *this;
       User user = *this;
       using Entities
-        = decltype(elle::meta::list(cli::block,
+        = decltype(elle::meta::list(cli::acl,
+                                    cli::block,
                                     cli::credentials,
                                     cli::device,
                                     cli::drive,
@@ -135,7 +138,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(bool, script);
     private:
       template <typename Symbol, typename ObjectSymbol>
-      friend struct mode;
+      friend struct mode_call;
     };
   }
 }

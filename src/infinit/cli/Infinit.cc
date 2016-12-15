@@ -103,7 +103,8 @@ namespace infinit
         bool
         value(std::ostream& s)
         {
-          elle::fprintf(s, "  %s\n", Symbol::name());
+          elle::fprintf(
+            s, "  %s\n", das::cli::option_name_from_c(Symbol::name()));
           return true;
         }
       };
@@ -190,7 +191,7 @@ namespace infinit
     }
 
     template <typename Symbol, typename ObjectSymbol>
-    struct mode
+    struct mode_call
     {
       using Object = typename ObjectSymbol::template attr_type<Infinit>::type;
       using type = bool;
@@ -201,7 +202,7 @@ namespace infinit
             std::vector<std::string>& args,
             bool& found)
       {
-        if (!found && Symbol::name() == args[0])
+        if (!found && das::cli::option_name_from_c(Symbol::name()) == args[0])
         {
           found = true;
           args.erase(args.begin());
@@ -216,13 +217,16 @@ namespace infinit
           auto show_help = [&] (std::ostream& s)
             {
               auto vars = VarMap{
-                {"action", elle::sprintf("to %s", Symbol::name())},
+                {"action", elle::sprintf("to %s", action)},
                 {"hub", beyond(true)},
                 {"type", ObjectSymbol::name()},
+                {"verb", action},
               };
-              Infinit::usage(s, elle::sprintf("%s %s [OPTIONS]",
-                                              ObjectSymbol::name(),
-                                              Symbol::name()));
+              Infinit::usage(
+                s, elle::sprintf(
+                  "%s %s [OPTIONS]",
+                  das::cli::option_name_from_c(ObjectSymbol::name()),
+                  das::cli::option_name_from_c(Symbol::name())));
               s << vars.expand(mode.help) << "\n\nOptions:\n";
               {
                 std::stringstream buffer;
@@ -287,7 +291,7 @@ namespace infinit
         using Object =
           typename Symbol::template attr_type<infinit::cli::Infinit>::type;
         auto& object = Symbol::attr_get(infinit);
-        if (!found && Symbol::name() == args[0])
+        if (!found && das::cli::option_name_from_c(Symbol::name()) == args[0])
         {
           found = true;
           args.erase(args.begin());
@@ -298,7 +302,7 @@ namespace infinit
             else
             {
               bool found = false;
-              Object::Modes::template map<mode, Symbol>::value(
+              Object::Modes::template map<mode_call, Symbol>::value(
                 infinit, object, args, found);
               if (!found)
                 throw das::cli::Error(

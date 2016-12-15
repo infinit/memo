@@ -150,7 +150,7 @@ namespace infinit
           user_name,
           owner,
           true);
-      if (remove(path))
+      if (boost::filesystem::remove(path))
         cli.report_action("deleted", "passport",
                           elle::sprintf("%s: %s", network_name, user_name),
                           "locally");

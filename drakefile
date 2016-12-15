@@ -396,7 +396,7 @@ def configure(
   binaries_config = [
     ('doughnode', [], [], False),
     ('generatekeys', [], [], False),
-    ('infinit-acl', [xattr_sources], [], True),
+#    ('infinit-acl', [xattr_sources], [], True),
 #    ('infinit-block', [], [], True),
 #    ('infinit-credentials', [], [], True),
 #    ('infinit-device', [], [], True),
@@ -467,6 +467,8 @@ def configure(
       add_libraries(bin)
   # CLI
   infinit_cli_sources = drake.nodes(
+    'src/infinit/cli/ACL.cc',
+    'src/infinit/cli/ACL.hh',
     'src/infinit/cli/Block.cc',
     'src/infinit/cli/Block.hh',
     'src/infinit/cli/Credentials.cc',
@@ -489,6 +491,8 @@ def configure(
     'src/infinit/cli/User.hh',
     'src/infinit/cli/utility.cc',
     'src/infinit/cli/utility.hh',
+    'src/infinit/cli/xattrs.cc',
+    'src/infinit/cli/xattrs.hh',
   )
   infinit_cli = drake.cxx.Executable(
     'bin/infinit',
@@ -504,6 +508,7 @@ def configure(
     strip = windows)
   binaries.append(infinit_cli)
   for b in [
+      'infinit-acl',
       'infinit-block',
       'infinit-credentials',
       'infinit-device',

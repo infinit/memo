@@ -3,6 +3,7 @@
 #include <elle/Exit.hh>
 #include <elle/printf.hh>
 
+#include <infinit/cli/Entity.hh>
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/utility.hh>
 
@@ -53,7 +54,7 @@ namespace infinit
             {"hub", beyond(true)},
           };
           elle::fprintf(s, "  %-10s %s\n",
-                        Symbol::name(),
+                        das::cli::option_name_from_c(Symbol::name()),
                         vars.expand(Symbol::attr_get(entity).help));
           return true;
         }
@@ -97,6 +98,7 @@ namespace infinit
     | Instantiate entities.  |
     `-----------------------*/
 
+    template class Entity<ACL>;
     template class Entity<Block>;
     template class Entity<Credentials>;
     template class Entity<Device>;

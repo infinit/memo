@@ -98,14 +98,18 @@ namespace infinit
       : Entity(infinit)
       , receive(
         "receive an object from another device using {hub}",
-        das::cli::Options(),
+        das::cli::Options{
+          {"user", {'u', "{action} user identity to another device using {hub}", false}}
+        },
         this->bind(modes::mode_receive,
                    cli::user = false,
                    cli::name = Infinit::default_user_name(),
                    cli::passphrase = boost::none))
       , transmit(
         "transmit an object to another device using {hub}",
-        das::cli::Options(),
+        das::cli::Options{
+          {"user", {'u', "{action} user identity to another device using {hub}", false}}
+        },
         this->bind(modes::mode_transmit,
                    cli::user = false,
                    cli::passphrase = boost::none,
