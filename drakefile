@@ -394,7 +394,7 @@ def configure(
     ('infinit-acl', [xattr_sources], [], True),
     ('infinit-block', [], [], True),
     ('infinit-credentials', [], [], True),
-    ('infinit-device', [], [], True),
+#    ('infinit-device', [], [], True),
     ('infinit-doctor',
      [
        drake.nodes('bin/networking.hh')
@@ -495,6 +495,7 @@ def configure(
     strip = windows)
   binaries.append(infinit_cli)
   for b in [
+      'infinit-device',
       'infinit-storage',
       'infinit-user',
   ]:
