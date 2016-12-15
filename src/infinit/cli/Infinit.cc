@@ -239,11 +239,10 @@ namespace infinit
                 std::stringstream buffer;
                 das::cli::help(f, buffer, options);
                 auto res = buffer.str();
-                std::ostream_iterator<char, char> out(s);
-                elle::unordered_map<std::string, std::string> fmt{
+                auto fmt = elle::unordered_map<std::string, std::string>{
+                  {"action", elle::sprintf("to %s", Symbol::name())},
                   {"hub", beyond(true)},
                   {"type", ObjectSymbol::name()},
-                  {"action", elle::sprintf("to %s", Symbol::name())},
                 };
                 s << boost::regex_replace(
                   buffer.str(),

@@ -34,7 +34,7 @@ namespace infinit
                                cli::signup));
       // Create
       Mode<decltype(binding(modes::mode_create,
-                            name = std::string(),
+                            name = std::string{},
                             description = boost::none,
                             key = boost::none,
                             cli::email = boost::none,
@@ -60,7 +60,7 @@ namespace infinit
                   bool full);
       // Delete
       Mode<decltype(binding(modes::mode_delete,
-                            name = std::string(),
+                            name = std::string{},
                             cli::pull = false,
                             purge = false))>
       delete_;
@@ -70,7 +70,7 @@ namespace infinit
                   bool purge);
       // Export
       Mode<decltype(binding(modes::mode_export,
-                            name = std::string(),
+                            name = std::string{},
                             full = false,
                             output = boost::none))>
       export_;
@@ -80,7 +80,7 @@ namespace infinit
                   boost::optional<std::string> path);
       // Fetch
       Mode<decltype(binding(modes::mode_fetch,
-                            name = std::string(),
+                            name = std::string{},
                             cli::no_avatar = false))>
       fetch;
       void
@@ -88,7 +88,7 @@ namespace infinit
                  bool no_avatar);
       // Hash
       Mode<decltype(binding(modes::mode_hash,
-                            name = std::string()))>
+                            name = std::string{}))>
       hash;
       void
       mode_hash(std::string const& name);
@@ -105,7 +105,7 @@ namespace infinit
       mode_list();
       // Login
       Mode<decltype(binding(modes::mode_login,
-                            name = std::string(),
+                            name = std::string{},
                             password = boost::none))>
       login;
       void
@@ -113,14 +113,14 @@ namespace infinit
                  boost::optional<std::string> const& password);
       // Pull
       Mode<decltype(binding(modes::mode_pull,
-                            name = std::string(),
+                            name = std::string{},
                             purge = false))>
       pull;
       void
       mode_pull(std::string const& name, bool purge);
       // Push
       Mode<decltype(binding(modes::mode_push,
-                            name  = std::string(),
+                            name  = std::string{},
                             cli::email = boost::none,
                             fullname = boost::none,
                             password = boost::none,
@@ -136,7 +136,7 @@ namespace infinit
                 bool full);
       // Signup
       Mode<decltype(binding(modes::mode_signup,
-                            name = std::string(),
+                            name = std::string{},
                             description = boost::none,
                             key = boost::none,
                             cli::email = boost::none,

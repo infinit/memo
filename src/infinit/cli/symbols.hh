@@ -8,12 +8,12 @@ namespace infinit
 {
   namespace cli
   {
-    // Symbol, short option, help string, whether positional argument.
+    // Symbol, short option char (or 0), help string, whether positional argument.
     DAS_CLI_SYMBOL(account, '\0', "cloud service account name", false);
     DAS_CLI_SYMBOL(as, 'a', "user to run commands as", false);
     DAS_CLI_SYMBOL(avatar, '\0', "path to an image to use as avatar", false);
-    DAS_CLI_SYMBOL(bucket, '\0', "bucket name", false);
     DAS_CLI_SYMBOL(aws, 0, "Amazon Web Services (or S3 compatible) credentials", false);
+    DAS_CLI_SYMBOL(bucket, '\0', "bucket name", false);
     DAS_CLI_SYMBOL(capacity, 'c', "limit storage capacity (use: B,kB,kiB,GB,GiB,TB,TiB)", false);
     DAS_CLI_SYMBOL(clear_content, '\0', "remove all blocks from disk (filesystem storage only)", false);
     DAS_CLI_SYMBOL(compatibility_version, '\0', "compatibility version to force", false);
@@ -28,8 +28,6 @@ namespace infinit
     DAS_CLI_SYMBOL(google_drive, '\0', "store blocks on Google Drive", false);
     DAS_CLI_SYMBOL(help, 'h', "show this help message", false);
     DAS_CLI_SYMBOL(host, '\0', "SSH host", false);
-    DAS_CLI_SYMBOL(path, '\0', "directory where to store blocks", false);
-    DAS_CLI_SYMBOL(paths, 'p', "paths to blocks", false);
     DAS_CLI_SYMBOL(input, 'i', "file to read {type} from", false);
     DAS_CLI_SYMBOL(key, 'k', "RSA key pair in PEM format - e.g. your SSH key", false);
     DAS_CLI_SYMBOL(ldap_name, 'l', "user LDAP distinguished name", false);
@@ -37,6 +35,8 @@ namespace infinit
     DAS_CLI_SYMBOL(no_avatar, '\0', "do not {action} avatars", false);
     DAS_CLI_SYMBOL(output, 'o', "file to write the {type} to", false);
     DAS_CLI_SYMBOL(password, 'P', "password to authenticate with {hub}", false);
+    DAS_CLI_SYMBOL(path, '\0', "directory where to store blocks", false);
+    DAS_CLI_SYMBOL(paths, 'p', "paths to blocks", false);
     DAS_CLI_SYMBOL(pull, '\0', "pull {type} from {hub}", false);
     DAS_CLI_SYMBOL(purge, '\0', "purge objects owned by the {type}", false);
     DAS_CLI_SYMBOL(push, 'p', "push {type} to {hub}", false);

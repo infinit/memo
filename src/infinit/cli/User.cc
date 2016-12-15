@@ -537,9 +537,9 @@ namespace infinit
     User::mode_login(std::string const& name,
                      boost::optional<std::string> const& password)
     {
-      std::string pass = password ? password.get() : Infinit::read_password();
+      auto pass = password.value_or(Infinit::read_password());
       auto hashed_pass = Infinit::hub_password_hash(pass);
-      LoginCredentials c{ name, hashed_pass, pass };
+      auto c = LoginCredentials{ name, hashed_pass, pass };
       auto json = this->cli().infinit().beyond_login(name, c);
       elle::serialization::json::SerializerIn input(json, false);
       auto user = input.deserialize<infinit::User>();

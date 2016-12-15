@@ -183,36 +183,34 @@ COMMAND(receive_user)
   auto name = get_name(args);
   auto passphrase = pairing_passphrase(args);
   auto hashed_passphrase = hash_password(passphrase, _pair_salt);
+  try
   {
-    try
-    {
-      auto pairing = infinit::beyond_fetch<PairingInformation>(
-        elle::sprintf("users/%s/pairing", name), "pairing",
-        name, boost::none,
-        {{"infinit-pairing-passphrase-hash", hashed_passphrase}},
-        false);
-      auto key = infinit::cryptography::SecretKey{passphrase};
-      auto data = key.decipher(*pairing.data,
-                               infinit::cryptography::Cipher::aes256);
-      auto user = from_json<infinit::User>(data.string());
-      ifnt.user_save(user, true);
-    }
-    catch (infinit::ResourceGone const& e)
-    {
-      elle::fprintf(std::cerr,
-                    "User identity no longer available on %s, "
-                    "retransmit from the original device\n",
-                    infinit::beyond(true));
-      throw;
-    }
-    catch (infinit::MissingResource const& e)
-    {
-      if (e.what() == std::string("user/not_found"))
-        not_found(name, "User");
-      else if (e.what() == std::string("pairing/not_found"))
-        not_found(name, "Pairing");
-      throw;
-    }
+    auto pairing = infinit::beyond_fetch<PairingInformation>(
+      elle::sprintf("users/%s/pairing", name), "pairing",
+      name, boost::none,
+      {{"infinit-pairing-passphrase-hash", hashed_passphrase}},
+      false);
+    auto key = infinit::cryptography::SecretKey{passphrase};
+    auto data = key.decipher(*pairing.data,
+                             infinit::cryptography::Cipher::aes256);
+    auto user = from_json<infinit::User>(data.string());
+    ifnt.user_save(user, true);
+  }
+  catch (infinit::ResourceGone const& e)
+  {
+    elle::fprintf(std::cerr,
+                  "User identity no longer available on %s, "
+                  "retransmit from the original device\n",
+                  infinit::beyond(true));
+    throw;
+  }
+  catch (infinit::MissingResource const& e)
+  {
+    if (e.what() == std::string("user/not_found"))
+      not_found(name, "User");
+    else if (e.what() == std::string("pairing/not_found"))
+      not_found(name, "Pairing");
+    throw;
   }
   report_action("received", "user identity for", name);
 }
