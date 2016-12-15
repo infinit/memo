@@ -1,0 +1,70 @@
+{
+    "drives": [
+        {
+            "name": "bob/aws_drive",
+            "sane": true,
+            "warning": false
+        },
+        {
+            "name": "bob/fs_drive",
+            "sane": true,
+            "warning": false
+        }
+    ],
+    "leftovers": [
+        {
+            "name": "foo",
+            "reason": "should not be there",
+            "sane": true,
+            "warning": true
+        },
+        {
+            "name": "linked_networks/bar",
+            "reason": "json parse error",
+            "sane": true,
+            "warning": true
+        }
+    ],
+    "networks": [
+        {
+            "linked": true,
+            "name": "bob/aws_network",
+            "sane": true,
+            "warning": false
+        },
+        {
+            "linked": true,
+            "name": "bob/fs_network",
+            "sane": true,
+            "warning": false
+        }
+    ],
+    "sane": true,
+    "storage resources": [
+        {
+            "name": "aws_storage",
+            "sane": true,
+            "type": "S3",
+            "warning": false
+        },
+        {
+            "name": "fs_storage",
+            "reason": "\"/tmp/\" is readable and writable",
+            "sane": true,
+            "type": "filesystem",
+            "warning": false
+        }
+    ],
+    "volumes": [
+        {
+            "name": "bob/aws_volume",
+            "sane": true,
+            "warning": false
+        },
+        {
+            "name": "bob/fs_volume",
+            "sane": true,
+            "warning": false
+        }
+    ]
+}

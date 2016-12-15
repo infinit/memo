@@ -1,0 +1,8 @@
+[OK] User
+[OK] Storage resources
+[OK] Networks
+[OK] Volumes
+[OK] Drives
+[WARNING] Leftovers:
+  [WARNING] foo
+  [WARNING] linked_networks/bar

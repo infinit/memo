@@ -1,0 +1,85 @@
+{
+    "model" : {
+        "admin_keys" : {
+            "group_r" : [
+            ],
+            "group_w" : [
+            ],
+            "r" : [
+            ],
+            "w" : [
+            ]
+        },
+        "consensus" : {
+            "eviction-delay" : "10min",
+            "replication-factor" : 1,
+            "type" : "paxos"
+        },
+        "id" : "uBPWOfkJQqmWGyguKhG5NecIlTK+z/nNEYFpIIY+CgA=",
+        "keys" : {
+            "private key" : {
+                "rsa" : "MIIEpAIBAAKCAQEA4tMXYySvxkGgzhKyTTwLVFbAVU4K8ELfgQnyAJoL1VDGVGajBPJXdc2qJ8REcOJRQ+Pnty16YyZLPxqtpWwt5BS47LYtEcMsxZaM9yrv8d3csacaAt5Nb5Rhv+vDG2R7YE1R2fnJRlWgAMiZEXNgf012EFkvDeYOvU2zLceJQlG44aYvt2a2Y1U2Lt0kRDMtNj/afE856eTb0uHS2WRoFswbZK6vXipza24f+O2R2688OQeoqNXovXHiFdVShoemWjH0WsKgVxH9CYhgIQrxaYoAUoJ1ZVKKXJ753ocrqOBEKkDG0DksQKjEfKlCxMhWRf/oCsSXtkC5qvIxVsldRQIDAQABAoIBACEeUz7dn3CiKnmMT05povnYhNKvx3cXPI0Zx6UA2RN3bM3sAod5Xv3LXrnZtWiKEvWHtFCRqloJwFjha1NI/VZdFDczzlbWmZXsCn8YXNqC23NxA6JBlSrijnc4VE+Ol1kTUQ0zpIjJfcg/geIDZ6aOx9tROkacPbC0RKI9jTQKdka5qTHc6hqhI00PU+44uvvbOm8KG7IVA8CAj7vUCzrDH5l+xRyQ79lZetARuWEeo4XosPWUVBSjB77hK4BjK8thjdY4l/x/GqKbxJWb8LpM+Ffb3IpnsLPPZwzYz8eckxrAMo9oxaK7Od9BJON1XWi8mLnfCSNuVdMFLRePHqECgYEA8R5dUDz1Aqd8tPE6iV31ZLijPWzZ/OlAutwUq+0na/GCRHOKz34+rEuvDSkqslVxmDXbI0vGZZj8oK3nQ8IfqpJM10Q3e/BKgJ5vLwtk77vW+L2uTQEfaGtBUb3M3qH+rGECuvSW3a6sx0Kn2cu9ZizC+pDqcGdtdR4NSDO+jK0CgYEA8NLiJLOBaDIB66HjiPXLP3IhCIwITpL89A8BJ1cmPkjOmvjIGGUYr2LqHWQeizrL8yIfGC1TUEkpBprsamGrXp5dapIoavk/85WLcunrgIIgbrE1UG8AdZzuLjUeBP8PUky5vn+l6tkf2U+l9trbxpoUoApFg2f8umoyCWh8zfkCgYEAurJxPGTGrdRz6kLyuVSIYwHYXAKB06PkXAt28hzCLoGlBU2VyM4OxygfFgivJ8CjIWFqGa1dpGNOETg2Xq/cBx4a43/NmmjXtzl2C6497Ka8cIOmh7d700VhIWLeU/CJGn5PN+WVP3c2D1/cSfbI42l7W7qD3J8pEMtBK4vtWk0CgYAGXj02pTyFydS9K2G97Gn8eoMfG7zYfxCLT55DMQ3E1d4IwQ1hf8LgWGhCcLRSEDL2ce+KjyBF3jlkgFJCGeUTMnLb75N8CK1FPq4aUs80bbx30N3NC7Jiaczukd8CWNBJ59d9jxiPFkC+WVnVJkJrhQWImdzutaA8ObSrBQVP2QKBgQDpw0lHgbT6UNfFH5i8X7v5lbuU2+/aeV3y/k/Y0fDnz+FCoVHe7ztlHDb3iGQSX46IgiRPHUoWz4mj72CZUQjMV3VH15xJ4RxfNrVpypc9ef9aGerhYaHPuScEQb3P6qCAPYFMtgSfohRGCB6yiHS8xXZFNrL8FE2XrvgSQ1n0Ig=="
+            },
+            "public key" : {
+                "rsa" : "MIIBCgKCAQEA4tMXYySvxkGgzhKyTTwLVFbAVU4K8ELfgQnyAJoL1VDGVGajBPJXdc2qJ8REcOJRQ+Pnty16YyZLPxqtpWwt5BS47LYtEcMsxZaM9yrv8d3csacaAt5Nb5Rhv+vDG2R7YE1R2fnJRlWgAMiZEXNgf012EFkvDeYOvU2zLceJQlG44aYvt2a2Y1U2Lt0kRDMtNj/afE856eTb0uHS2WRoFswbZK6vXipza24f+O2R2688OQeoqNXovXHiFdVShoemWjH0WsKgVxH9CYhgIQrxaYoAUoJ1ZVKKXJ753ocrqOBEKkDG0DksQKjEfKlCxMhWRf/oCsSXtkC5qvIxVsldRQIDAQAB"
+            }
+        },
+        "name" : "bob",
+        "overlay" : {
+            "accept_plain" : false,
+            "bootstrap_nodes" : [
+            ],
+            "contact_timeout_ms" : 120000,
+            "encrypt" : true,
+            "file_timeout_ms" : 1200000,
+            "gossip" : {
+                "bootstrap_group_target" : 12,
+                "bootstrap_other_target" : 12,
+                "contacts_group" : 3,
+                "contacts_other" : 3,
+                "files" : 6,
+                "group_target" : 3,
+                "interval_ms" : 2000,
+                "new_threshold" : 5,
+                "old_threshold_ms" : 40000,
+                "other_target" : 3
+            },
+            "k" : 1,
+            "max_other_contacts" : 6,
+            "ping_interval_ms" : 1000,
+            "ping_timeout_ms" : 1000,
+            "query_get_retries" : 30,
+            "query_get_ttl" : 10,
+            "query_put_insert_ttl" : 3,
+            "query_put_retries" : 12,
+            "query_put_ttl" : 10,
+            "query_timeout_ms" : 1000,
+            "rpc_protocol" : "all",
+            "type" : "kelips",
+            "wait" : 0
+        },
+        "owner" : {
+            "rsa" : "MIIBCgKCAQEA4tMXYySvxkGgzhKyTTwLVFbAVU4K8ELfgQnyAJoL1VDGVGajBPJXdc2qJ8REcOJRQ+Pnty16YyZLPxqtpWwt5BS47LYtEcMsxZaM9yrv8d3csacaAt5Nb5Rhv+vDG2R7YE1R2fnJRlWgAMiZEXNgf012EFkvDeYOvU2zLceJQlG44aYvt2a2Y1U2Lt0kRDMtNj/afE856eTb0uHS2WRoFswbZK6vXipza24f+O2R2688OQeoqNXovXHiFdVShoemWjH0WsKgVxH9CYhgIQrxaYoAUoJ1ZVKKXJ753ocrqOBEKkDG0DksQKjEfKlCxMhWRf/oCsSXtkC5qvIxVsldRQIDAQAB"
+        },
+        "passport" : {
+            "allow_sign" : false,
+            "allow_storage" : true,
+            "allow_write" : true,
+            "network" : "bob/fs_network",
+            "signature" : "SpZbJVwY40r+H1rDml+LErzcnLjxlOWMeaSJsV0dBDGbkaVcGwV1cT9oli1AnPJMJViaatnHfEdrijRvBVhh6q3b8AoKJSAX9Vh3s5EWr+lmKq8+v4DJKv4N+2h0Qrnvm30PxsHkx6Os3tANHI/nINK43RRPXryhAlys5k/+AFM9k3lO8lJxMoOeEVEzeCOo05JiBeOnNgcRE6PnnjPNdEAU+UelXp9AzIG9ly/AVauGPV1CCUelmmT9Zx5pz8ssb1CPyhunHk9gqsHKpPweoS2wMDdVqKw2/fGfO9a7dPmiUdHdM8w469Ori+9NXuOtn+RWBRklQWcFWurD+5VY4A==",
+            "user" : {
+                "rsa" : "MIIBCgKCAQEA4tMXYySvxkGgzhKyTTwLVFbAVU4K8ELfgQnyAJoL1VDGVGajBPJXdc2qJ8REcOJRQ+Pnty16YyZLPxqtpWwt5BS47LYtEcMsxZaM9yrv8d3csacaAt5Nb5Rhv+vDG2R7YE1R2fnJRlWgAMiZEXNgf012EFkvDeYOvU2zLceJQlG44aYvt2a2Y1U2Lt0kRDMtNj/afE856eTb0uHS2WRoFswbZK6vXipza24f+O2R2688OQeoqNXovXHiFdVShoemWjH0WsKgVxH9CYhgIQrxaYoAUoJ1ZVKKXJ753ocrqOBEKkDG0DksQKjEfKlCxMhWRf/oCsSXtkC5qvIxVsldRQIDAQAB"
+            }
+        },
+        "peers" : [
+        ],
+        "storage" : {
+            "name" : "fs_storage",
+            "path" : "/tmp",
+            "type" : "filesystem"
+        },
+        "type" : "doughnut",
+        "version" : "0.7.2"
+    },
+    "name" : "bob/fs_network"
+}

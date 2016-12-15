@@ -1,0 +1,95 @@
+{
+    "drives": [
+        {
+            "name": "bob/aws_drive",
+            "sane": false,
+            "volume": {
+                "name": "bob/aws_volume",
+                "network": {
+                    "linked": true,
+                    "name": "bob/aws_network",
+                    "sane": false,
+                    "storage_resources": [
+                        {
+                            "name": "aws_storage",
+                            "reason": "missing",
+                            "sane": false,
+                            "type": "unknown",
+                            "warning": false
+                        }
+                    ],
+                    "warning": false
+                },
+                "sane": false,
+                "warning": false
+            },
+            "warning": false
+        },
+        {
+            "name": "bob/fs_drive",
+            "sane": true,
+            "warning": false
+        }
+    ],
+    "leftovers": [],
+    "networks": [
+        {
+            "linked": true,
+            "name": "bob/aws_network",
+            "sane": false,
+            "storage_resources": [
+                {
+                    "name": "aws_storage",
+                    "reason": "missing",
+                    "sane": false,
+                    "type": "unknown",
+                    "warning": false
+                }
+            ],
+            "warning": false
+        },
+        {
+            "linked": true,
+            "name": "bob/fs_network",
+            "sane": true,
+            "warning": false
+        }
+    ],
+    "sane": false,
+    "storage resources": [
+        {
+            "name": "fs_storage",
+            "reason": "\"/tmp/\" is readable and writable",
+            "sane": true,
+            "type": "filesystem",
+            "warning": false
+        }
+    ],
+    "volumes": [
+        {
+            "name": "bob/aws_volume",
+            "network": {
+                "linked": true,
+                "name": "bob/aws_network",
+                "sane": false,
+                "storage_resources": [
+                    {
+                        "name": "aws_storage",
+                        "reason": "missing",
+                        "sane": false,
+                        "type": "unknown",
+                        "warning": false
+                    }
+                ],
+                "warning": false
+            },
+            "sane": false,
+            "warning": false
+        },
+        {
+            "name": "bob/fs_volume",
+            "sane": true,
+            "warning": false
+        }
+    ]
+}

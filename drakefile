@@ -913,6 +913,7 @@ def configure(
         t = {
           'name': name
         }
+        t['dependencies'] = []
         if env:
           t['env'] = env
         if binaries:
@@ -939,6 +940,21 @@ def configure(
               'user_cli',
               'volume_cli',
             ]))
+      doctor_configuration_test = functional_test(
+        'doctor/configuration',
+        env= {
+          'INFINIT_HOME_ROOT': str(
+            drake.path_source('tests/functional/doctor/homes')
+          )
+        })
+      doctor_configuration_test['dependencies'] += drake.nodes(
+        *list(map(lambda x: "tests/functional/doctor/results/%s" % x,
+                  os.listdir(
+                    str(drake.node(
+                      'tests/functional/doctor/results/ok.script'
+                    ).path().dirname())
+                  ))))
+      tests.append(doctor_configuration_test)
       if not windows and enable_crash_reporting:
         tests.append(functional_test('crash-reporter'))
       if linux:
@@ -974,8 +990,10 @@ def configure(
                                                  absolute = True)))
         extra_path.append(os.environ.get('PATH', ''))
         env = {
-          'PYTHONPATH':
+          'PYTHONPATH': ':'.join([
             str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
+            str(drake.path_source('tests/functional')),
+          ]),
           'SOURCE_DIR': drake.path_source(),
           'BUILD_DIR': drake.path_build(),
           'OS': 'windows' if windows else 'unix',

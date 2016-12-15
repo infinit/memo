@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+
+import os
+from utils import *
+import re
+
+home = os.path.abspath(os.environ['INFINIT_HOME_ROOT'])
+leftovers = os.path.join(home, 'leftovers')
+
+def read_result(name, formatting = {}):
+  with open(os.path.join(os.path.dirname(home), 'results', '%s.script' % name), 'r') as f:
+    script = f.read() % formatting
+  script = json.loads(script)
+  with open(os.path.join(os.path.dirname(home), 'results', '%s.out' % name), 'r') as f:
+    output = f.read() % formatting
+    output = output.strip().replace('\r', '').split('\n')
+  return script, output
+
+expectations = {
+  # Unknown user (user doesn't exist).
+  'unknown_user': (1, read_result('unknown_user')),
+  # Public user (user has no private key)
+  'public_user': (1, read_result('public_user')),
+  # Credentials for aws_storage missing.
+  'missing_credentials': (1, read_result('missing_credentials')),
+  # Check leftovers in the home.
+  'leftovers': (0, read_result('leftovers', {'leftovers': leftovers})),
+  # Storage aws_storage deleted.
+  'missing_storage': (1, read_result('missing_storage')),
+  # Network bob/aws_network missing.
+  'missing_network': (1, read_result('missing_network')),
+  # Everything ok.
+  'ok': (0, read_result('ok')),
+  # Volume bob/aws_volume missing.
+  'missing_volume': (1, read_result('missing_volume'))
+}
+
+# Path are hard to manage with wine. Just check if the important elements are
+# present in the output.
+def leftovers_json(res):
+  assertIn('leftovers', res['leftovers'][0]['name'])
+  assertIn('foo', res['leftovers'][0]['name'])
+  res['leftovers'][0]['name'] = 'foo'
+  assertIn('leftovers', res['leftovers'][1]['name'])
+  assertIn('linked_networks', res['leftovers'][1]['name'])
+  assertIn('bar', res['leftovers'][1]['name'])
+  res['leftovers'][1]['name'] = 'linked_networks/bar'
+  return res
+
+def leftovers_text(res):
+  assertIn('leftovers', res[6])
+  assertIn('foo', res[6])
+  res[6] = '  [WARNING] foo'
+  assertIn('leftovers', res[7])
+  assertIn('linked_networks', res[7])
+  assertIn('bar', res[7])
+  res[7] = '  [WARNING] linked_networks/bar'
+  return res
+
+import subprocess
+for home, (i, (json_output, text_output)) in expectations.items():
+  infinit = Infinit(home = os.path.join(os.environ['INFINIT_HOME_ROOT'], home))
+  res = infinit.run_json(['infinit-doctor', '--configuration',  '--script', '--as', 'bob'],
+                         return_code = i)
+  if home == 'leftovers':
+    res = leftovers_json(res)
+  assertEq(res, json_output)
+  output = infinit.run(['infinit-doctor', '--configuration',  '--as', 'bob', '--no-color'],
+                         return_code = i)[0].strip().split('\n')
+  if i == 0:
+    output = output[:-2]
+  output = list(map(lambda x: re.sub(r' +$', '', x), output))
+  if home == 'leftovers':
+    output = leftovers_text(output)
+  assertEq(output, text_output)
