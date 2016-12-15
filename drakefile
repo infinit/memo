@@ -477,6 +477,8 @@ def configure(
     'src/infinit/cli/Silo.hh',
     'src/infinit/cli/User.cc',
     'src/infinit/cli/User.hh',
+    'src/infinit/cli/utility.cc',
+    'src/infinit/cli/utility.hh',
   )
   infinit_cli = drake.cxx.Executable(
     'bin/infinit',

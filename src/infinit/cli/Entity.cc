@@ -5,6 +5,7 @@
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/Silo.hh>
 #include <infinit/cli/User.hh>
+#include <infinit/cli/utility.hh>
 
 namespace infinit
 {
@@ -48,8 +49,13 @@ namespace infinit
         bool
         value(std::ostream& s, Entity const& entity)
         {
+          auto vars = VarMap{
+            {"action", elle::sprintf("to %s", Symbol::name())},
+            {"hub", beyond(true)},
+          };
           elle::fprintf(s, "  %-10s %s\n",
-                        Symbol::name(), Symbol::attr_get(entity).help);
+                        Symbol::name(),
+                        vars.expand(Symbol::attr_get(entity).help));
           return true;
         }
       };

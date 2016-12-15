@@ -20,6 +20,8 @@
 
 #include <infinit/utility.hh>
 
+#include <infinit/cli/utility.hh>
+
 ELLE_LOG_COMPONENT("infinit");
 
 static
@@ -191,21 +193,6 @@ namespace infinit
       }
     }
 
-    struct Coupaing
-    {
-      std::string
-      operator ()(boost::cmatch const& in) const
-      {
-        return "<" + in.str() + ">";
-      }
-    };
-
-    std::string
-    fmt(boost::smatch in)
-    {
-      return "<" + in.str() + ">";
-    }
-
     template <typename Symbol, typename ObjectSymbol>
     struct mode
     {
@@ -232,27 +219,19 @@ namespace infinit
             as = infinit.default_user_name());
           auto show_help = [&] (std::ostream& s)
             {
+              auto vars = VarMap{
+                {"action", elle::sprintf("to %s", Symbol::name())},
+                {"hub", beyond(true)},
+                {"type", ObjectSymbol::name()},
+              };
               Infinit::usage(s, elle::sprintf("%s %s [OPTIONS]",
                                               ObjectSymbol::name(),
                                               Symbol::name()));
-              s << mode.help << "\n\nOptions:\n";
+              s << vars.expand(mode.help) << "\n\nOptions:\n";
               {
                 std::stringstream buffer;
                 das::cli::help(f, buffer, options);
-                auto res = buffer.str();
-                auto fmt = elle::unordered_map<std::string, std::string>{
-                  {"action", elle::sprintf("to %s", Symbol::name())},
-                  {"hub", beyond(true)},
-                  {"type", ObjectSymbol::name()},
-                };
-                s << boost::regex_replace(
-                  buffer.str(),
-                  boost::regex("\\{\\w+\\}"),
-                  [&] (boost::smatch in)
-                  {
-                    auto k = in.str();
-                    return fmt.at(k.substr(1, k.size() - 2));
-                  });
+                s << vars.expand(buffer.str());
               }
             };
           try

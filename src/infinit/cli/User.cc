@@ -65,7 +65,7 @@ namespace infinit
                    full = false,
                    output = boost::none))
       , fetch(
-        elle::sprintf("Fetch users from %s", beyond()),
+        "Fetch users from {hub}",
         das::cli::Options(),
         this->bind(modes::mode_fetch,
                    name = Infinit::default_user_name(),
@@ -85,19 +85,19 @@ namespace infinit
         das::cli::Options(),
         this->bind(modes::mode_list))
       , login(
-        elle::sprintf("Login user to %s", beyond()),
+        "Login user to {hub}",
         das::cli::Options(),
         this->bind(modes::mode_login,
                    name = Infinit::default_user_name(),
                    password = boost::none))
       , pull(
-        elle::sprintf("Pull a user from %s", beyond()),
+        "Pull a user from {hub}",
         das::cli::Options(),
         this->bind(modes::mode_pull,
                    name = Infinit::default_user_name(),
                    purge = false))
       , push(
-        elle::sprintf("Push a user from %s", beyond()),
+        "Push a user from {hub}",
         das::cli::Options(),
         this->bind(modes::mode_push,
                    name = Infinit::default_user_name(),
@@ -107,7 +107,7 @@ namespace infinit
                    cli::avatar = boost::none,
                    full = false))
       , signup(
-        elle::sprintf("Create and push a user to %s", beyond()),
+        "Create and push a user to {hub}",
         das::cli::Options(),
         this->bind(modes::mode_signup,
                    name = Infinit::default_user_name(),

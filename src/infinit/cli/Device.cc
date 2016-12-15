@@ -95,16 +95,14 @@ namespace infinit
     Device::Device(Infinit& infinit)
       : Entity(infinit)
       , receive(
-        elle::sprintf("receive an object from another device using %s",
-                      infinit::beyond(true)),
+        "receive an object from another device using {hub}",
         das::cli::Options(),
         this->bind(modes::mode_receive,
                    cli::user = false,
                    cli::name = std::string{},
                    cli::passphrase = boost::none))
       , transmit(
-        elle::sprintf("transmit an object to another device using %s",
-                      infinit::beyond(true)),
+        "transmit an object to another device using {hub}",
         das::cli::Options(),
         this->bind(modes::mode_transmit,
                    cli::user = false,
