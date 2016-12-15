@@ -457,9 +457,10 @@ def configure(
                                          bin_sym)
         installed_symbols.append(bin_sym)
       def add_libraries(binary):
-        installed_libraries.extend(binary.dynamic_libraries)
         for lib in binary.dynamic_libraries:
-          add_libraries(lib)
+          if lib not in installed_libraries:
+            installed_libraries.append(lib)
+            add_libraries(lib)
       add_libraries(bin)
   # CLI
   infinit_cli_sources = drake.nodes(
@@ -504,7 +505,7 @@ def configure(
     binaries.append(b)
     installed_binaries.append(b)
   if not windows and enable_crash_reporting:
-    for lib in set(installed_libraries):
+    for lib in installed_libraries:
       lib_sym = drake.node('lib/symbols/%s.sym' % lib.path().basename())
       crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
                                        lib,
