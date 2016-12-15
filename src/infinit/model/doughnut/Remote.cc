@@ -185,6 +185,7 @@ namespace infinit
                     elle::sprintf("connection to %f failed", this->_endpoints));
                   break;
                 }
+                this->Peer::connected()();
                 ELLE_ASSERT(this->_channels);
                 ELLE_TRACE("%s: serve RPCs", this)
                   this->_rpc_server.serve(*this->_channels);
