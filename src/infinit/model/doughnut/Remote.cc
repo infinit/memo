@@ -93,6 +93,8 @@ namespace infinit
         ++this->_reconnection_id;
         if (this->_thread)
           this->_thread->terminate_now();
+        if (this->_connected)
+          this->disconnected()();
         this->_connected.close();
         this->_credentials = {};
         this->_thread.reset(
