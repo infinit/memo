@@ -43,7 +43,7 @@ namespace infinit
     DAS_CLI_SYMBOL(purge, '\0', "purge objects owned by the {type}", false);
     DAS_CLI_SYMBOL(push, 'p', "push {type} to {hub}", false);
     DAS_CLI_SYMBOL(push_user, '\0', "push user to {hub}", false);
-    DAS_CLI_SYMBOL(receive, 0, "Receive an object from another device using {hub}", false);
+    DAS_CLI_SYMBOL(receive, 0, "receive an object from another device using {hub}", false);
     DAS_CLI_SYMBOL(region, '\0', "AWS region", false);
     DAS_CLI_SYMBOL(s3, '\0', "store blocks on AWS S3", false);
     DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output", false);
@@ -85,6 +85,7 @@ namespace infinit
       DAS_SYMBOL(mode_login);
       DAS_SYMBOL(mode_pull);
       DAS_SYMBOL(mode_push);
+      DAS_SYMBOL(mode_receive);
       DAS_SYMBOL(mode_signup);
       DAS_SYMBOL(mode_transmit);
     }

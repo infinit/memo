@@ -50,6 +50,15 @@ namespace infinit
         return stream.str();
       }
 
+      void
+      not_found(std::string const& name,
+                std::string const& type)
+      {
+        elle::fprintf(std::cerr,
+                      "%s %s not found on %s, ensure it has been pushed\n",
+                      type, name, infinit::beyond(true));
+      }
+
       struct PairingInformation
       {
       public:
@@ -78,8 +87,21 @@ namespace infinit
       };
     }
 
+
+    /*---------.
+    | Device.  |
+    `---------*/
+
     Device::Device(Infinit& infinit)
       : Entity(infinit)
+      , receive(
+        elle::sprintf("receive an object from another device using %s",
+                      infinit::beyond(true)),
+        das::cli::Options(),
+        this->bind(modes::mode_receive,
+                   cli::user = false,
+                   cli::name = std::string{},
+                   cli::passphrase = boost::none))
       , transmit(
         elle::sprintf("transmit an object to another device using %s",
                       infinit::beyond(true)),
@@ -90,6 +112,66 @@ namespace infinit
                    cli::passphrase = boost::none,
                    cli::no_countdown = false))
     {}
+
+    /*----------------.
+    | Mode: receive.  |
+    `----------------*/
+
+    namespace
+    {
+      void
+      receive_user(cli::Infinit& cli,
+                   std::string const& name,
+                   boost::optional<std::string> const& passphrase)
+      {
+        auto& ifnt = cli.infinit();
+        auto user = ifnt.user_get(name);
+        auto pass = passphrase.value_or(Infinit::read_passphrase());
+        auto hashed_pass = cli.hash_password(pass, _pair_salt);
+        try
+        {
+          auto pairing = ifnt.beyond_fetch<PairingInformation>(
+            elle::sprintf("users/%s/pairing", name), "pairing",
+            name, boost::none,
+            {{"infinit-pairing-passphrase-hash", hashed_pass}});
+          auto key = infinit::cryptography::SecretKey{pass};
+          auto data = key.decipher(*pairing.data,
+                                   infinit::cryptography::Cipher::aes256);
+          auto user = from_json<infinit::User>(data.string());
+          ifnt.user_save(user, true);
+        }
+        catch (infinit::ResourceGone const& e)
+        {
+          elle::fprintf(std::cerr,
+                        "User identity no longer available on %s, "
+                        "retransmit from the original device\n",
+                        infinit::beyond(true));
+          throw;
+        }
+        catch (infinit::MissingResource const& e)
+        {
+          if (e.what() == std::string("user/not_found"))
+            not_found(name, "User");
+          else if (e.what() == std::string("pairing/not_found"))
+            not_found(name, "Pairing");
+          throw;
+        }
+        cli.report_action("received", "user identity for", name);
+      }
+
+    }
+
+    void
+    Device::mode_receive(bool user,
+                         boost::optional<std::string> const& name,
+                         boost::optional<std::string> const& passphrase)
+    {
+      if (user)
+        receive_user(this->cli(), name.value(), passphrase);
+      else
+        elle::err<Error>("Must specify type of object to receive");
+    }
+
 
     /*-----------------.
     | Mode: transmit.  |

@@ -18,7 +18,19 @@ namespace infinit
     public:
       Device(Infinit& infinit);
       using Modes
-        = decltype(elle::meta::list(cli::transmit));
+        = decltype(elle::meta::list(cli::receive,
+                                    cli::transmit));
+
+      // Mode: receive.
+      Mode<decltype(binding(modes::mode_receive,
+                            cli::user = false,
+                            cli::name = std::string{},
+                            cli::passphrase = boost::none))>
+      receive;
+      void
+      mode_receive(bool user,
+                   boost::optional<std::string> const& name,
+                   boost::optional<std::string> const& passphrase);
 
       // Mode: transmit.
       Mode<decltype(binding(modes::mode_transmit,
