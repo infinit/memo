@@ -447,7 +447,6 @@ def configure(
       cxx_toolkit,
       bin_cxx_config,
       strip = windows)
-    rule_build << bin
     binaries.append(bin)
     if install:
       installed_binaries.append(bin)
@@ -507,7 +506,6 @@ def configure(
                                        lib,
                                        lib_sym)
       installed_symbols.append(lib_sym)
-
     if prefix:
       symbols_dir = '%s/%s' % (prefix, git.version())
       for s in installed_symbols:
@@ -517,6 +515,9 @@ def configure(
     for f in elle.reactor.fnetusermount_binaries:
       t = drake.copy(f, '.', strip_prefix = 'elle/reactor')
       installed_binaries.append(t)
+
+  rule_build << binaries
+
 
   ## ----- ##
   ## Share ##
