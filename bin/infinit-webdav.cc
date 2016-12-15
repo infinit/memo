@@ -51,7 +51,7 @@ struct HTTPReply
   elle::Buffer body;
 };
 
-typedef std::function<HTTPReply (HTTPQuery const&)> Handler;
+using Handler = std::function<HTTPReply (HTTPQuery const&)>;
 class WebServer: public rn::TCPServer
 {
 public:
@@ -78,8 +78,8 @@ void WebServer::listen(int port)
 }
 
 void WebServer::process(rn::Socket* rsock)
+try
 {
-  try {
   std::unique_ptr<rn::Socket> sock(rsock);
   while (true)
   {
@@ -133,18 +133,19 @@ void WebServer::process(rn::Socket* rsock)
     if (!r.body.empty())
       sock->write(r.body);
   }
-  } catch(std::exception const& e)
-  {
-    ELLE_WARN("%s", e.what());
-  }
+}
+catch(std::exception const& e)
+{
+  ELLE_WARN("%s", e.what());
 }
 
-typedef std::pair<struct stat, std::unordered_map<std::string, std::string>> Infos;
+using Infos = std::pair<struct stat, std::unordered_map<std::string, std::string>>;
 
-pt::ptree write_xml_stat(std::vector<std::string> const& props,
-                         std::string const& name,
-                         Infos info,
-                         bool silentmissing)
+pt::ptree
+write_xml_stat(std::vector<std::string> const& props,
+               std::string const& name,
+               Infos info,
+               bool silentmissing)
 {
   struct stat st = info.first;
   pt::ptree res;
@@ -213,23 +214,24 @@ pt::ptree write_xml_stat(std::vector<std::string> const& props,
 }
 
 // FIXME: use proper xmlns support!
-HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
+HTTPReply
+webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
 {
   ELLE_LOG("query %s %s", q.query, q.url);
-  HTTPReply r;
-  r.code = 501;
+  HTTPReply res;
+  res.code = 501;
   if (q.query == "OPTIONS")
   {
-    r.code = 200;
-    r.headers["DAV"] = "1,2";
+    res.code = 200;
+    res.headers["DAV"] = "1,2";
     // PROPPATCH COPY
-    r.headers["Allow"] = "PROPFIND, DELETE, MKCOL, PUT, MOVE,"
+    res.headers["Allow"] = "PROPFIND, DELETE, MKCOL, PUT, MOVE,"
       "OPTIONS, GET, HEAD, POST, LOCK, UNLOCK, PROPPATCH";
-    r.headers["MS-Author-Via"] = "DAV"; // lighttpd mod_dav sets that
+    res.headers["MS-Author-Via"] = "DAV"; // lighttpd mod_dav sets that
   }
-  if (q.query == "PROPFIND")
+  else if (q.query == "PROPFIND")
   {
-    r.code = 200;
+    res.code = 200;
     int depth = 0;
     try {
       depth = std::stoi(q.headers.at("depth"));
@@ -237,15 +239,13 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
     pt::ptree tree;
     elle::IOStream is(q.body.istreambuf());
     pt::read_xml(is, tree);
-    std::vector<std::string> props;
+    auto props = std::vector<std::string>{};
     bool silentmissing = false;
     try
     {
       auto el = tree.get_child("propfind.prop");
       for (auto const& p: el)
-      {
         props.push_back(p.first);
-      }
     }
     catch(std::exception const& e)
     {
@@ -262,16 +262,18 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
     }
     catch(...)
     {
-      r.code = 404;
-      return r;
+      res.code = 404;
+      return res;
     }
-    std::unordered_map<std::string, Infos> stats;
+    auto stats = std::unordered_map<std::string, Infos>{};
     if (depth > 0 && S_ISDIR(stroot.st_mode))
     {
       ELLE_LOG("listing dir");
-      path->list_directory([&](std::string const&n, struct stat*) {
+      path->list_directory([&](std::string const&n, struct stat*)
+        {
           ELLE_LOG("processing %s", n);
-          try {
+          try
+          {
             auto c = path->child(n);
             struct stat st;
             c->stat(&st);
@@ -279,9 +281,7 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
             infos.first = st;
             ELLE_DEBUG("got size %s", st.st_size);
             for (auto const& a: c->listxattr())
-            {
               infos.second[a] = c->getxattr(a);
-            }
             stats[n] = infos;
           }
           catch(std::exception const& e)
@@ -290,7 +290,7 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
           }
       });
     }
-    std::string base = "http://" + q.headers.at("host") + slashstrip(q.url) + "/";
+    auto base = "http://" + q.headers.at("host") + slashstrip(q.url) + "/";
     Infos iroot;
     iroot.first = stroot;
     for (auto const& a: path->listxattr())
@@ -306,13 +306,13 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
     reply.add("DAV:multistatus.<xmlattr>.xmlns:ns0",
       "urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/");
     reply.add("DAV:multistatus.<xmlattr>.xmlns:DAV", "DAV:");
-    r.code = 207;
-    elle::IOStream os(r.body.ostreambuf());
+    res.code = 207;
+    elle::IOStream os(res.body.ostreambuf());
     pt::write_xml(os, reply, pt::xml_writer_make_settings<std::string>(' ', 1));
     os.flush();
-    r.headers["Content-Type"] = "application/xml; charset=\"utf-8\"";
+    res.headers["Content-Type"] = "application/xml; charset=\"utf-8\"";
   }
-  if (q.query == "PUT")
+  else if (q.query == "PUT")
   {
     auto path = fs.path(slashstrip(q.url));
     auto handle = path->create(O_RDWR | O_CREAT | O_TRUNC, 0666 | S_IFREG);
@@ -331,9 +331,9 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
     else
       handle->write(q.body, q.body.size(), 0);
     handle->close();
-    r.code = 201;
+    res.code = 201;
   }
-  if (q.query == "GET" || q.query == "HEAD")
+  else if (q.query == "GET" || q.query == "HEAD")
   {
     auto path = fs.path(q.url);
     struct stat stroot;
@@ -345,15 +345,15 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
     }
     catch(...)
     {
-      r.code = 404; // FIXME could be a 403 too
-      return r;
+      res.code = 404; // FIXME could be a 403 too
+      return res;
     }
-    r.code = 200;
-    r.headers["content-type"] = "application/octet-stream";
+    res.code = 200;
+    res.headers["content-type"] = "application/octet-stream";
     if (q.query == "HEAD")
     {
-      r.headers["content-length"] = std::to_string(stroot.st_size);
-      return r;
+      res.headers["content-length"] = std::to_string(stroot.st_size);
+      return res;
     }
     elle::Buffer b;
     b.size(stroot.st_size + 4096);
@@ -368,23 +368,23 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
     }
     b.size(p);
     handle->close();
-    r.body = std::move(b);
+    res.body = std::move(b);
   }
-  if (q.query == "MKCOL")
+  else if (q.query == "MKCOL")
   {
     try
     {
       auto path = fs.path(slashstrip(q.url));
       path->mkdir(0666);
-      r.code = 201;
+      res.code = 201;
     }
     catch (std::exception const& e)
     {
       ELLE_TRACE("mkdir failed with %s", e.what());
-      r.code = 403;
+      res.code = 403;
     }
   }
-  if (q.query == "DELETE")
+  else if (q.query == "DELETE")
   {
     try
     {
@@ -395,15 +395,15 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
         path->rmdir();
       else
         path->unlink();
-      r.code = 204;
+      res.code = 204;
     }
     catch (std::exception const& e)
     {
       ELLE_TRACE("DELETE failed with %s", e.what());
-      r.code = 403;
+      res.code = 403;
     }
   }
-  if (q.query == "MOVE")
+  else if (q.query == "MOVE")
   {
     try
     {
@@ -416,15 +416,15 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
       dest = dest.substr(p);
       ELLE_DEBUG("move dest changed to: %s", dest);
       path->rename(dest);
-      r.code = 201;
+      res.code = 201;
     }
-    catch(std::exception const& e)
+    catch (std::exception const& e)
     {
       ELLE_TRACE("rename failed with %s", e.what());
-      r.code = 403;
+      res.code = 403;
     }
   }
-  if (q.query == "LOCK")
+  else if (q.query == "LOCK")
   { // FIXME: dummy implem
     pt::ptree tree;
     elle::IOStream is(q.body.istreambuf());
@@ -441,18 +441,18 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
       "urn:uuid:e71d4fae-5dec-22d6-fea5-00a0c91e6be4");
     reply.add("D:prop.D:lockdiscovery.D:activelock.D:timeout",
       "Second-604800");
-    r.headers["lock-token"] = "urn:uuid:e71d4fae-5dec-22d6-fea5-00a0c91e6be4";
-    r.code = 200;
-    elle::IOStream os(r.body.ostreambuf());
+    res.headers["lock-token"] = "urn:uuid:e71d4fae-5dec-22d6-fea5-00a0c91e6be4";
+    res.code = 200;
+    elle::IOStream os(res.body.ostreambuf());
     pt::write_xml(os, reply, pt::xml_writer_make_settings<std::string>(' ', 1));
     os.flush();
-    r.headers["Content-Type"] = "application/xml; charset=\"utf-8\"";
+    res.headers["Content-Type"] = "application/xml; charset=\"utf-8\"";
   }
-  if (q.query == "UNLOCK")
+  else if (q.query == "UNLOCK")
   {
-    r.code = 204;
+    res.code = 204;
   }
-  if (q.query == "PROPPATCH")
+  else if (q.query == "PROPPATCH")
   {
     auto path = fs.path(slashstrip(q.url));
     pt::ptree tree;
@@ -462,7 +462,7 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
     pt::read_xml(is, tree);
     auto root = *tree.begin();
     ELLE_ASSERT(root.first == "D:propertyupdate");
-    std::unordered_map<std::string, std::string> xmlns;
+    auto xmlns = std::unordered_map<std::string, std::string>{};
     // collect used xmlns
     for (auto const& attr: root.second.get_child("<xmlattr>"))
     {
@@ -499,13 +499,13 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
       ELLE_TRACE("%s -> %s", setter.first, name);
       path->setxattr(name, setter.second.data(), 0);
     }
-    elle::IOStream os(r.body.ostreambuf());
+    elle::IOStream os(res.body.ostreambuf());
     pt::write_xml(os, reply, pt::xml_writer_make_settings<std::string>(' ', 1));
     os.flush();
-    r.headers["Content-Type"] = "application/xml; charset=\"utf-8\"";
-    r.code = 207;
+    res.headers["Content-Type"] = "application/xml; charset=\"utf-8\"";
+    res.code = 207;
   }
-  return r;
+  return res;
 }
 
 
@@ -539,7 +539,7 @@ COMMAND(run)
     args["volume"].as<std::string>(),
     std::shared_ptr<infinit::model::doughnut::Doughnut>(model.release()));
   reactor::filesystem::FileSystem rfs(std::move(fs), true);
-  WebServer ws([&](HTTPQuery const& q) {return webdav(q, rfs);});
+  auto ws = WebServer([&](HTTPQuery const& q) {return webdav(q, rfs);});
   ws.listen(8080);
 }
 
@@ -547,7 +547,8 @@ int main(int argc, char** argv)
 {
   using boost::program_options::value;
   using boost::program_options::bool_switch;
-  Modes modes {
+  auto modes = Modes
+  {
     {
       "run",
       "Run",
