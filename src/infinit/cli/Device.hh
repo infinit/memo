@@ -29,19 +29,17 @@ namespace infinit
       receive;
       void
       mode_receive(bool user,
-                   boost::optional<std::string> const& name,
+                   std::string const& name,
                    boost::optional<std::string> const& passphrase);
 
       // Mode: transmit.
       Mode<decltype(binding(modes::mode_transmit,
                             cli::user = false,
-                            cli::name = std::string{},
                             cli::passphrase = boost::none,
                             cli::no_countdown = false))>
       transmit;
       void
       mode_transmit(bool user,
-                    boost::optional<std::string> const& name,
                     boost::optional<std::string> const& passphrase,
                     bool no_countdown);
     };

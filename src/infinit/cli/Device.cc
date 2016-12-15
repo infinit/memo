@@ -99,14 +99,13 @@ namespace infinit
         das::cli::Options(),
         this->bind(modes::mode_receive,
                    cli::user = false,
-                   cli::name = std::string{},
+                   cli::name = Infinit::default_user_name(),
                    cli::passphrase = boost::none))
       , transmit(
         "transmit an object to another device using {hub}",
         das::cli::Options(),
         this->bind(modes::mode_transmit,
                    cli::user = false,
-                   cli::name = std::string{},
                    cli::passphrase = boost::none,
                    cli::no_countdown = false))
     {}
@@ -123,8 +122,7 @@ namespace infinit
                    boost::optional<std::string> const& passphrase)
       {
         auto& ifnt = cli.infinit();
-        auto user = ifnt.user_get(name);
-        auto pass = passphrase.value_or(Infinit::read_passphrase());
+        auto pass = passphrase ? *passphrase : Infinit::read_passphrase();
         auto hashed_pass = cli.hash_password(pass, _pair_salt);
         try
         {
@@ -161,11 +159,11 @@ namespace infinit
 
     void
     Device::mode_receive(bool user,
-                         boost::optional<std::string> const& name,
+                         std::string const& name,
                          boost::optional<std::string> const& passphrase)
     {
       if (user)
-        receive_user(this->cli(), name.value(), passphrase);
+        receive_user(this->cli(), name, passphrase);
       else
         elle::err<Error>("Must specify type of object to receive");
     }
@@ -179,13 +177,12 @@ namespace infinit
     {
       void
       transmit_user(cli::Infinit& cli,
-                    std::string const& name,
                     boost::optional<std::string> const& passphrase,
                     bool countdown)
       {
         auto& ifnt = cli.infinit();
-        auto user = ifnt.user_get(name);
-        auto pass = passphrase.value_or(Infinit::read_passphrase());
+        auto user = cli.as_user();
+        auto pass = passphrase ? *passphrase : Infinit::read_passphrase();
         auto key = infinit::cryptography::SecretKey{pass};
         auto p = PairingInformation(
           key.encipher(to_json(user),
@@ -264,12 +261,11 @@ namespace infinit
 
     void
     Device::mode_transmit(bool user,
-                          boost::optional<std::string> const& name,
                           boost::optional<std::string> const& passphrase,
                           bool no_countdown)
     {
       if (user)
-        transmit_user(this->cli(), name.value(), passphrase, !no_countdown);
+        transmit_user(this->cli(), passphrase, !no_countdown);
       else
         elle::err<Error>("Must specify type of object to receive");
     }
