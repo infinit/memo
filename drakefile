@@ -10,6 +10,7 @@ import drake.valgrind
 
 import os
 import oset
+import re
 import shutil
 
 from itertools import chain
@@ -200,6 +201,9 @@ def configure(
       except:
         return '#define INFINIT_%s "%s"' % (name.upper(), value)
 
+  def stringify(s):
+    return '"%s"' % re.sub(r'([\\"])', r'\\\1', s)
+
   CxxVersionGenerator(drake.node('src/infinit/version.hh'),
                       git,
                       production_build = production_build)
@@ -242,9 +246,10 @@ def configure(
   infinit_sources += drake.include('src/infinit/overlay').sources
   infinit_sources += drake.include('src/infinit/storage').sources
   infinit_utility_config = drake.cxx.Config(cxx_config_infinit)
-  infinit_utility_config.define('BEYOND_HOST', '"%s"' % beyond_host)
-  infinit_utility_config.define(
-    'EMAIL_REGEX', '"%s"' % email_regex.replace('\\', '\\\\'))
+  infinit_utility_config.define('BEYOND_HOST', stringify(beyond_host))
+  infinit_utility_config.define('BEYOND_DELEGATE_USER',
+                                stringify(beyond_delegate_user))
+  infinit_utility_config.define('EMAIL_REGEX', stringify(email_regex))
   infinit_sources.append(
     drake.cxx.Object(
       drake.node('src/infinit/utility.cc'),
@@ -316,7 +321,6 @@ def configure(
   }):
     drake.node('bin/main.hh.tmpl')
     drake.node('bin/email.hh.tmpl')
-    drake.node('bin/infinit-drive.cc.tmpl')
 
   drake.nodes(
     'bin/endpoint_file.hh',

@@ -1,5 +1,7 @@
 #include <infinit/utility.hh>
 
+#include <regex>
+
 #include <elle/format/base64.hh>
 #include <elle/json/exceptions.hh>
 
@@ -91,14 +93,20 @@ namespace infinit
   std::string
   beyond(bool help)
   {
-    // FIXME: no static here, tests/kelips.cc change this environment
+    // FIXME: no static here, tests/kelips.cc changes this environment
     // variable. We should change the test and fix this.
-    auto const beyond =
-      elle::os::getenv("INFINIT_BEYOND", BEYOND_HOST);
-    if (help && beyond != BEYOND_HOST)
+    auto const res = elle::os::getenv("INFINIT_BEYOND", BEYOND_HOST);
+    if (help && res != BEYOND_HOST)
       return "the Hub";
     else
-      return beyond;
+      return res;
+  }
+
+  std::string
+  beyond_delegate_user()
+  {
+    static auto const res = std::string{BEYOND_DELEGATE_USER};
+    return res;
   }
 
   bool
@@ -112,8 +120,7 @@ namespace infinit
   bool
   validate_email(std::string const& candidate)
   {
-    static const boost::regex email_regex(EMAIL_REGEX);
-    boost::smatch str_matches;
-    return boost::regex_match(candidate, str_matches, email_regex);
+    static const auto email_regex = std::regex(EMAIL_REGEX);
+    return std::regex_match(candidate, email_regex);
   }
 }

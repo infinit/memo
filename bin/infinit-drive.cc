@@ -209,21 +209,20 @@ COMMAND(invite)
   if (emails)
   {
     // Ensure that the user has the passport for Beyond.
-    static const std::string beyond_user_name = "${beyond_delegate_user}";
     static const std::string error_msg = elle::sprintf(
       "ERROR: In order to invite users by email, you must create a passport "
       "for \"%s\"\nwith the --allow-create-passport option.\nYou must then add "
-      "the user to the DHT using infinit-acl --register\n\n", beyond_user_name);
+      "the user to the DHT using infinit-acl --register\n\n",
+      infinit::beyond_delegate_user());
     try
     {
       auto delegate_passport =
-        ifnt.passport_get(network.name, beyond_user_name);
+        ifnt.passport_get(network.name, infinit::beyond_delegate_user());
       if (!delegate_passport.allow_sign())
       {
         elle::fprintf(std::cerr, error_msg);
-        throw elle::Error(
-          elle::sprintf("Missing --allow-create-passport flag for %s",
-                        beyond_user_name));
+        elle::err("Missing --allow-create-passport flag for %s",
+                  infinit::beyond_delegate_user());
       }
     }
     catch (infinit::MissingResource const& e)
@@ -297,11 +296,10 @@ COMMAND(join)
   auto self = self_user(ifnt, args);
   auto drive = ifnt.drive_get(drive_name(args, self));
   if (self.name == boost::filesystem::path(drive.name).parent_path().string())
-    throw elle::Error("The owner is automatically invited to its drives");
+    elle::err("The owner is automatically invited to its drives");
   auto it = drive.users.find(self.name);
   if (it == drive.users.end())
-    throw elle::Error(
-      elle::sprintf("You haven't been invited to join %s", drive.name));
+    elle::err("You haven't been invited to join %s", drive.name);
   auto invitation = it->second;
   invitation.status = "ok";
   auto url = elle::sprintf("drives/%s/invitations/%s", drive.name, self.name);

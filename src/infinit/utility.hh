@@ -25,6 +25,10 @@ namespace infinit
   std::string
   beyond(bool help = false);
 
+  /// Typically "hub".
+  std::string
+  beyond_delegate_user();
+
   class MissingResource
     : public elle::Error
   {
