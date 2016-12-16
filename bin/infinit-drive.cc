@@ -440,6 +440,23 @@ namespace
     ELLE_DEBUG("save drive %s", remote_drive)
       ifnt.drive_save(remote_drive);
   }
+
+  void
+  fetch_icon(std::string const& name)
+  {
+    auto url = elle::sprintf("drives/%s/icon", name);
+    auto request = infinit::beyond_fetch_data(url, "icon", name);
+    if (request->status() == reactor::http::StatusCode::OK)
+    {
+      auto response = request->response();
+      // XXX: Deserialize XML.
+      if (response.size() == 0 || response[0] == '<')
+        throw infinit::MissingResource(
+          elle::sprintf(
+            "icon for %s not found on %s", name, infinit::beyond(true)));
+      _save_icon(name, response);
+    }
+  }
 }
 
 COMMAND(fetch)
@@ -466,26 +483,15 @@ COMMAND(fetch)
       ifnt.drive_save(drive);
     }
   }
+  if (auto name = optional(args, "icon"))
+  {
+    ELLE_DEBUG("fetch specific icon");
+    fetch_icon(*name);
+  }
 }
 
 namespace
 {
-  void
-  fetch_icon(std::string const& name)
-  {
-    auto url = elle::sprintf("drives/%s/icon", name);
-    auto request = infinit::beyond_fetch_data(url, "icon", name);
-    if (request->status() == reactor::http::StatusCode::OK)
-    {
-      auto response = request->response();
-      // XXX: Deserialize XML.
-      if (response.size() == 0 || response[0] == '<')
-        throw infinit::MissingResource(
-          elle::sprintf(
-            "icon for %s not found on %s", name, infinit::beyond(true)));
-      _save_icon(name, response);
-    }
-  }
 }
 
 int
@@ -576,6 +582,7 @@ main(int argc, char** argv)
       "",
       {
         { "name,n", value<std::string>(), "drive to fetch (optional)" },
+        { "icon,i", value<std::string>(), "icon to fetch (optional)" },
       },
     },
     {
