@@ -8,57 +8,87 @@
 ELLE_LOG_COMPONENT("infinit-drive");
 
 #include <main.hh>
-
 #include <email.hh>
 
 infinit::Infinit ifnt;
 
 using boost::program_options::variables_map;
 
-static
-void
-fetch_(std::string const& drive_name);
-
-static
-std::string
-drive_name(variables_map const& args, infinit::User const& owner)
+namespace
 {
-  return ifnt.qualified_name(mandatory(args, "name"), owner);
-}
-
-void
-upload_icon(infinit::User& self,
-            infinit::Drive& drive,
-            boost::filesystem::path const& icon_path);
-void
-fetch_icon(std::string const& name);
-void
-pull_icon(infinit::User& self,
-          infinit::Drive& drive);
-boost::optional<boost::filesystem::path>
-icon_path(std::string const& name);
-
-static
-void
-_push(variables_map const& args,
-      infinit::User& user,
-      infinit::Drive& drive)
-{
-  auto icon_path = optional(args, "icon");
-  if (icon_path && icon_path.get().length() > 0)
+  std::string
+  drive_name(variables_map const& args, infinit::User const& owner)
   {
-    if (!boost::filesystem::exists(icon_path.get()))
-      throw CommandLineError(
-        elle::sprintf("%s doesn't exist", icon_path.get()));
+    return ifnt.qualified_name(mandatory(args, "name"), owner);
   }
-  auto url = elle::sprintf("drives/%s", drive.name);
-  beyond_push(url, "drive", drive.name, drive, user);
-  if (icon_path)
+
+  boost::optional<boost::filesystem::path>
+  icon_path(std::string const& name)
   {
-    if (icon_path.get().length() > 0)
-      upload_icon(user, drive, icon_path.get());
+    auto path = ifnt._drive_icon_path(name);
+    if (boost::filesystem::exists(path))
+      return path;
     else
-      pull_icon(user, drive);
+      return {};
+  }
+
+  template <typename Buffer>
+  void
+  _save_icon(std::string const& name,
+             Buffer const& buffer)
+  {
+    boost::filesystem::ofstream f;
+    ifnt._open_write(f, ifnt._drive_icon_path(name),
+                     name, "icon", true, std::ios::out | std::ios::binary);
+    f.write(reinterpret_cast<char const*>(buffer.contents()), buffer.size());
+    report_action("fetched", "icon", name, std::string("locally"));
+  }
+
+  void
+  upload_icon(infinit::User& self,
+              infinit::Drive& drive,
+              boost::filesystem::path const& icon_path)
+  {
+    boost::filesystem::ifstream icon;
+    ifnt._open_read(icon, icon_path, self.name, "icon");
+    std::string s(
+      std::istreambuf_iterator<char>{icon},
+      std::istreambuf_iterator<char>{});
+    elle::ConstWeakBuffer data(s.data(), s.size());
+    auto url = elle::sprintf("drives/%s/icon", drive.name);
+    beyond_push_data(url, "icon", drive.name, data, "image/jpeg", self);
+    _save_icon(drive.name, data);
+  }
+
+  void
+  pull_icon(infinit::User& self,
+            infinit::Drive& drive)
+  {
+    auto url = elle::sprintf("drives/%s/icon", drive.name);
+    beyond_delete(url, "icon", drive.name, self);
+  }
+
+  void
+  _push(variables_map const& args,
+        infinit::User& user,
+        infinit::Drive& drive)
+  {
+    auto icon_path = optional(args, "icon");
+    if (icon_path && icon_path.get().length() > 0)
+    {
+      if (!boost::filesystem::exists(icon_path.get()))
+        throw CommandLineError(
+          elle::sprintf("%s doesn't exist", icon_path.get()));
+    }
+    auto url = elle::sprintf("drives/%s", drive.name);
+    beyond_push(url, "drive", drive.name, drive, user);
+    if (icon_path)
+    {
+      if (icon_path.get().length() > 0)
+        upload_icon(user, drive, icon_path.get());
+      else
+        pull_icon(user, drive);
+    }
   }
 }
 
@@ -80,77 +110,77 @@ COMMAND(create)
     _push(args, owner, drive);
 }
 
-static
-void
-push_passport(infinit::Network const& network,
-              infinit::Passport const& passport,
-              infinit::User const& user,
-              infinit::User const& owner)
+namespace
 {
-  auto url = elle::sprintf("networks/%s/passports/%s", network.name, user.name);
-  beyond_push(url,
-              "passport",
-              elle::sprintf("%s: %s", network.name, user.name),
-              passport,
-              owner);
-}
-
-static
-void
-create_passport(infinit::User const& user,
-                infinit::Network const& network,
-                infinit::User const& owner,
-                bool push)
-{
-  ELLE_TRACE_SCOPE("create_passport");
-  try
+  void
+  push_passport(infinit::Network const& network,
+                infinit::Passport const& passport,
+                infinit::User const& user,
+                infinit::User const& owner)
   {
-    auto passport = ifnt.passport_get(network.name, user.name);
-    ELLE_DEBUG("passport (%s: %s) found", network.name, user.name);
-    if (push)
-      push_passport(network, passport, user, owner);
+    auto url = elle::sprintf("networks/%s/passports/%s", network.name, user.name);
+    beyond_push(url,
+                "passport",
+                elle::sprintf("%s: %s", network.name, user.name),
+                passport,
+                owner);
   }
-  catch (infinit::MissingResource const& e)
+
+  void
+  create_passport(infinit::User const& user,
+                  infinit::Network const& network,
+                  infinit::User const& owner,
+                  bool push)
   {
-    auto passport = infinit::Passport(
-      user.public_key,
-      network.name,
-      infinit::cryptography::rsa::KeyPair(owner.public_key,
-                                          owner.private_key.get()));
-    ELLE_DEBUG("passport (%s: %s) created", network.name, user.name);
-    ifnt.passport_save(passport);
-    report_created("passport",
-                   elle::sprintf("%s: %s", network.name, user.name));
-    if (push)
-      push_passport(network, passport, user, owner);
+    ELLE_TRACE_SCOPE("create_passport");
+    try
+    {
+      auto passport = ifnt.passport_get(network.name, user.name);
+      ELLE_DEBUG("passport (%s: %s) found", network.name, user.name);
+      if (push)
+        push_passport(network, passport, user, owner);
+    }
+    catch (infinit::MissingResource const& e)
+    {
+      auto passport = infinit::Passport(
+        user.public_key,
+        network.name,
+        infinit::cryptography::rsa::KeyPair(owner.public_key,
+                                            owner.private_key.get()));
+      ELLE_DEBUG("passport (%s: %s) created", network.name, user.name);
+      ifnt.passport_save(passport);
+      report_created("passport",
+                     elle::sprintf("%s: %s", network.name, user.name));
+      if (push)
+        push_passport(network, passport, user, owner);
+    }
   }
-}
 
-/*
- *  Compare the current drive json's invitee node with argument invitations.
- *  Add non-existing users.
- */
-static
-void
-_update_local_json(
-  infinit::Drive& drive,
-  std::unordered_map<std::string, infinit::Drive::User> const& invitations)
-{
-  for (auto const& invitation: invitations)
+  /*
+   *  Compare the current drive json's invitee node with argument invitations.
+   *  Add non-existing users.
+   */
+  void
+  _update_local_json(
+    infinit::Drive& drive,
+    std::unordered_map<std::string, infinit::Drive::User> const& invitations)
   {
-    if (drive.owner == invitation.first)
-      continue;
+    for (auto const& invitation: invitations)
+    {
+      if (drive.owner == invitation.first)
+        continue;
 
-    auto it = drive.users.find(invitation.first);
-    if (it != drive.users.end())
-      continue;
+      auto it = drive.users.find(invitation.first);
+      if (it != drive.users.end())
+        continue;
 
-    drive.users[invitation.first] = invitation.second;
-    report_action("created", "invitation",
-                  elle::sprintf("%s: %s", drive.name, invitation.first),
-                  std::string("locally"));
+      drive.users[invitation.first] = invitation.second;
+      report_action("created", "invitation",
+                    elle::sprintf("%s: %s", drive.name, invitation.first),
+                    std::string("locally"));
+    }
+    ifnt.drive_save(drive);
   }
-  ifnt.drive_save(drive);
 }
 
 COMMAND(invite)
@@ -400,14 +430,16 @@ COMMAND(list)
     }
 }
 
-static
-void
-fetch_(std::string const& drive_name)
+namespace
 {
-  ELLE_TRACE_SCOPE("fetch %s", drive_name);
-  auto remote_drive = ifnt.drive_fetch(drive_name);
-  ELLE_DEBUG("save drive %s", remote_drive)
-    ifnt.drive_save(remote_drive);
+  void
+  fetch_(std::string const& drive_name)
+  {
+    ELLE_TRACE_SCOPE("fetch %s", drive_name);
+    auto remote_drive = ifnt.drive_fetch(drive_name);
+    ELLE_DEBUG("save drive %s", remote_drive)
+      ifnt.drive_save(remote_drive);
+  }
 }
 
 COMMAND(fetch)
@@ -436,66 +468,24 @@ COMMAND(fetch)
   }
 }
 
-template <typename Buffer>
-void
-_save_icon(std::string const& name,
-           Buffer const& buffer)
+namespace
 {
-  boost::filesystem::ofstream f;
-  ifnt._open_write(f, ifnt._drive_icon_path(name),
-                   name, "icon", true, std::ios::out | std::ios::binary);
-  f.write(reinterpret_cast<char const*>(buffer.contents()), buffer.size());
-  report_action("fetched", "icon", name, std::string("locally"));
-}
-
-void
-upload_icon(infinit::User& self,
-            infinit::Drive& drive,
-            boost::filesystem::path const& icon_path)
-{
-  boost::filesystem::ifstream icon;
-  ifnt._open_read(icon, icon_path, self.name, "icon");
-  std::string s(
-    std::istreambuf_iterator<char>{icon},
-    std::istreambuf_iterator<char>{});
-  elle::ConstWeakBuffer data(s.data(), s.size());
-  auto url = elle::sprintf("drives/%s/icon", drive.name);
-  beyond_push_data(url, "icon", drive.name, data, "image/jpeg", self);
-  _save_icon(drive.name, data);
-}
-
-void
-fetch_icon(std::string const& name)
-{
-  auto url = elle::sprintf("drives/%s/icon", name);
-  auto request = infinit::beyond_fetch_data(url, "icon", name);
-  if (request->status() == reactor::http::StatusCode::OK)
+  void
+  fetch_icon(std::string const& name)
   {
-    auto response = request->response();
-    // XXX: Deserialize XML.
-    if (response.size() == 0 || response[0] == '<')
-      throw infinit::MissingResource(
-        elle::sprintf(
-          "icon for %s not found on %s", name, infinit::beyond(true)));
-    _save_icon(name, response);
+    auto url = elle::sprintf("drives/%s/icon", name);
+    auto request = infinit::beyond_fetch_data(url, "icon", name);
+    if (request->status() == reactor::http::StatusCode::OK)
+    {
+      auto response = request->response();
+      // XXX: Deserialize XML.
+      if (response.size() == 0 || response[0] == '<')
+        throw infinit::MissingResource(
+          elle::sprintf(
+            "icon for %s not found on %s", name, infinit::beyond(true)));
+      _save_icon(name, response);
+    }
   }
-}
-
-void
-pull_icon(infinit::User& self,
-          infinit::Drive& drive)
-{
-  auto url = elle::sprintf("drives/%s/icon", drive.name);
-  beyond_delete(url, "icon", drive.name, self);
-}
-
-boost::optional<boost::filesystem::path>
-icon_path(std::string const& name)
-{
-  auto path = ifnt._drive_icon_path(name);
-  if (!boost::filesystem::exists(path))
-    return boost::optional<boost::filesystem::path>{};
-  return path;
 }
 
 int
