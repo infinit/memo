@@ -1,8 +1,8 @@
-#ifndef INFINIT_SMB_HH
-# define INFINIT_SMB_HH
-# include <reactor/network/tcp-server.hh>
-# include <reactor/filesystem.hh>
-# include <infinit/filesystem/filesystem.hh>
+#pragma once
+
+#include <reactor/network/tcp-server.hh>
+#include <reactor/filesystem.hh>
+#include <infinit/filesystem/filesystem.hh>
 
 namespace infinit
 {
@@ -19,7 +19,5 @@ namespace infinit
       std::set<std::unique_ptr<SMBConnection>> _connections;
       std::unique_ptr<reactor::filesystem::FileSystem> _fs;
     };
-    
   }
 }
-#endif

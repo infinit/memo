@@ -1,8 +1,4 @@
-# include <infinit/smb/smb.hh>
-# include <reactor/network/tcp-socket.hh>
-# include <reactor/Scope.hh>
-#include <elle/utility/Move.hh>
-#include <elle/log.hh>
+#include <infinit/smb/smb.hh>
 
 #include <cstdint>
 
@@ -15,36 +11,42 @@ ELLE_LOG_COMPONENT("infinit.smb");
 #undef stat
 #endif
 
-
+#include <elle/log.hh>
+#include <elle/utility/Move.hh>
+#include <reactor/Scope.hh>
+#include <reactor/network/tcp-socket.hh>
 
 namespace infinit
 {
   namespace smb
   {
-
-    static uint64_t time_to_filetime(time_t v)
+    namespace
     {
-      uint64_t fnow = (uint64_t)v * 10000000ULL;
-      fnow += 116444736000000000ULL;
-      return fnow;
-    }
-    static std::string to_utf16(std::string const& s)
-    {
-      std::string res;
-      for (int i=0; i<signed(s.size()); ++i)
+      uint64_t time_to_filetime(time_t v)
       {
-        res += s[i];
-        res += (char)0;
+        uint64_t res = (uint64_t)v * 10000000ULL;
+        res += 116444736000000000ULL;
+        return res;
       }
-      return res;
+
+      std::string to_utf16(std::string const& s)
+      {
+        std::string res;
+        for (int i=0; i<signed(s.size()); ++i)
+          {
+            res += s[i];
+            res += (char)0;
+          }
+        return res;
+      }
     }
 
     class Writer
     {
     public:
       Writer(std::ostream& os)
-      : os(os)
-      , _off(0)
+        : os(os)
+        , _off(0)
       {}
       Writer& w8(uint8_t v)   { _off += 1;os.write((const char*)&v, 1); return *this; }
       Writer& w16(uint16_t v) { _off += 2;os.write((const char*)&v, 2); return *this; }
@@ -64,13 +66,14 @@ namespace infinit
           char v[3] = {hex[p], hex[p+1], 0};
           unsigned char val = strtoul(v, 0, 16);
           w8(val);
-          p+= 2;
+          p += 2;
         }
         return *this;
       }
       std::ostream& os;
       uint64_t _off;
     };
+
     enum SMBCommand
     {
       SMB2_NEGOTIATE = 0x0000,
@@ -93,6 +96,7 @@ namespace infinit
       SMB2_SET_INFO = 0x0011,
       SMB2_OPLOCK_BREAK = 0x0012
     };
+
 #ifndef INFINIT_WINDOWS
     enum CreateOptions
     {
@@ -100,6 +104,7 @@ namespace infinit
       FILE_NON_DIRECTORY_FILE = 0x40,
       FILE_DELETE_ON_CLOSE = 0x00001000,
     };
+
     enum CreateDisposition
     {
       FILE_SUPERSEDE = 0,
@@ -128,6 +133,7 @@ namespace infinit
       STATUS_DIRECTORY_NOT_EMPTY = 0xC0000101,
     };
 #endif
+
     enum FileInformationClass
     {
       FileDirectoryInformation = 0x1,
@@ -144,6 +150,7 @@ namespace infinit
       FileModeInformation = 16,
       FileAllocationInformation = 19,
     };
+
     struct SMB2Header
     {
       uint8_t protocolId[4];
@@ -184,11 +191,10 @@ namespace infinit
     {
     public:
       Reader(SMB2Header const& h)
-      : _d((const unsigned char*)(const void*)&(&h)[1])
-      {
-      }
+        : _d((const unsigned char*)(const void*)&(&h)[1])
+      {}
       Reader(const char* d)
-      : _d((const unsigned char*)d)
+        : _d((const unsigned char*)d)
       {}
       Reader& skip(int amount)
       {
@@ -209,11 +215,11 @@ namespace infinit
     public:
       SMBConnection(SMBServer& server,
                     std::unique_ptr<reactor::network::Socket> socket)
-      : _server(server)
-      , _socket(std::move(socket))
-      , _next_file_id(1)
-      , _next_directory_id(_directory_start+1)
-      , _sstate(0)
+        : _server(server)
+        , _socket(std::move(socket))
+        , _next_file_id(1)
+        , _next_directory_id(_directory_start+1)
+        , _sstate(0)
       {
         this->_serve_thread = elle::make_unique<reactor::Thread>(
           elle::sprintf("%s server", *this),
@@ -300,7 +306,7 @@ namespace infinit
     }
 
     SMBServer::SMBServer(std::unique_ptr<infinit::filesystem::FileSystem> fs)
-    : _fs(new reactor::filesystem::FileSystem(std::move(fs), true))
+      : _fs(new reactor::filesystem::FileSystem(std::move(fs), true))
     {
       this->_server = elle::make_unique<reactor::network::TCPServer>();
       this->_server->listen(445);
@@ -308,6 +314,7 @@ namespace infinit
         elle::sprintf("%s server", *this),
         [this] { this->_serve(); });
     }
+
     void SMBServer::_serve()
     {
       ELLE_LOG("serving");
@@ -321,6 +328,7 @@ namespace infinit
           }
         };
     }
+
     void SMBConnection::send_session_setup_reply(SMB2Header* hin)
     {
       uint16_t secBufOffset;
@@ -383,6 +391,7 @@ namespace infinit
       ELLE_LOG("session %s", buf.size());
       _socket->write(buf);
     }
+
     void SMBConnection::send_negotiate_reply()
     {
       SMB2Header h;
@@ -417,6 +426,7 @@ namespace infinit
       ELLE_LOG("negotiate %s", buf.size());
       _socket->write(buf);
     }
+
     void SMBConnection::_serve()
     {
       auto& s = *_socket;
@@ -507,7 +517,6 @@ namespace infinit
         break;
       case SMB2_FLUSH:
       case SMB2_LOCK:
-
       case SMB2_OPLOCK_BREAK:
         error(h, STATUS_NOT_IMPLEMENTED);
         break;
@@ -536,6 +545,7 @@ namespace infinit
         res += data[i];
       return res;
     }
+
     void SMBConnection::tree_connect(SMB2Header* hin)
     {
       unsigned char* d = (unsigned char*) hin;
@@ -587,6 +597,7 @@ namespace infinit
       ELLE_LOG("connect %s", buf.size());
       _socket->write(buf);
     }
+
     void SMBConnection::tree_disconnect(SMB2Header* hin)
     {
       SMB2Header h;
@@ -620,6 +631,7 @@ namespace infinit
       ELLE_LOG("disconnect %s", buf.size());
       _socket->write(buf);
     }
+
     void SMBConnection::echo(SMB2Header* hin)
     {
       SMB2Header h;
@@ -850,6 +862,7 @@ namespace infinit
       ELLE_LOG("close %s", buf.size());
       _socket->write(buf);
     }
+
     void SMBConnection::query_directory(SMB2Header* hin)
     {
       // FIXME: honor index
@@ -1014,14 +1027,15 @@ namespace infinit
       ELLE_LOG("querydict %s", buf.size());
       _socket->write(buf);
     }
+
     void SMBConnection::query_info(SMB2Header* hin)
     {
       uint8_t infotype, infoclass;
       uint32_t eaflags, additionalinfo;
       uint64_t guid;
       Reader(*hin).skip(2).r8(infotype).r8(infoclass)
-      .skip(12).r32(additionalinfo).r32(eaflags)
-      .skip(8).r64(guid);
+        .skip(12).r32(additionalinfo).r32(eaflags)
+        .skip(8).r64(guid);
       ELLE_LOG("query_info guid %s  type %s  class %s", guid, (int)infotype, (int)infoclass);
       elle::Buffer payload;
       elle::IOStream stream(payload.ostreambuf());
@@ -1130,6 +1144,7 @@ namespace infinit
       ELLE_LOG("queryinfo %s", buf.size());
       _socket->write(buf);
     }
+
     void SMBConnection::read(SMB2Header* hin)
     {
       uint64_t offset;
@@ -1153,6 +1168,7 @@ namespace infinit
       ELLE_LOG("read %s", buf.size());
       _socket->write(buf);
     }
+
     void SMBConnection::write(SMB2Header* hin)
     {
       // FIXME: validate size
@@ -1173,6 +1189,7 @@ namespace infinit
       ELLE_LOG("write %s", buf.size());
       _socket->write(buf);
     }
+
     void SMBConnection::logoff(SMB2Header* hin)
     {
       elle::Buffer buf = make_reply(*hin, [&](Writer& w) {
@@ -1181,6 +1198,7 @@ namespace infinit
       ELLE_LOG("logoff %s", buf.size());
       _socket->write(buf);
     }
+
     void SMBConnection::notify(SMB2Header* hin)
     {
       elle::Buffer buf = make_reply(*hin, [&](Writer& w) {
@@ -1193,6 +1211,7 @@ namespace infinit
       hout->reserved1 = hin->messageId;
       _socket->write(buf);
     }
+
     void SMBConnection::set_info(SMB2Header* hin)
     {
       uint8_t infotype, infoclass;
