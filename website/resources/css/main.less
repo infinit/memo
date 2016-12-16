@@ -222,7 +222,7 @@ p.title, h2.title {
 }
 
 footer {
-   background: darken(#515149, 7%); clear: both;
+   background: @infinitblack; clear: both;
    padding: 80px 0 110px; min-height: 155px;
    font-size: 13px;
 
@@ -240,21 +240,21 @@ footer nav > ul > li {
   &.made {
     margin-right:0; width: 18%; padding-left: 3%; margin-top: -15px;
 
-    p { margin: 0; padding: 0; margin-bottom: 7px; font-weight: 300; }
+    p { margin: 0; padding: 0; margin-bottom: 7px;  }
 
-    .icon-infinit {
-      color: @infinitgrey; font-size: 2.4em; display: block; margin-bottom: 10px;
+    .icon-infinit, a {
+      color: #dae0ec; font-size: 2.4em; margin-bottom: 10px;
       transition: color 0.3s; outline: none; display: inline-block;
       -webkit-transition: color 0.3s;
       -moz-transition: color 0.3s;
       &:hover { color: white; }
     }
+    p a { font-size: 1em; }
     .paris {
-      font-family: @sourcesans; margin-top: 30px; font-weight: 600;
-      font-size: 1.2em; text-transform: uppercase;
+      font-family: @sourcesans;  font-weight: 600;
+      font-size: 1em; text-transform: uppercase;
       span { color: @infinitred; }
     }
-    .nyc { font-weight: 300; padding: 0px 0 10px 0;display: block; }
   }
 
   ul > li {
@@ -267,7 +267,7 @@ footer nav > ul > li {
       -moz-osx-font-smoothing: grayscale;
     }
     a {
-      color: @infinitgrey; margin-top: 8px;
+      color: #dae0ec; margin-top: 8px;
       display: block; outline: none;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
@@ -280,13 +280,13 @@ footer nav > ul > li {
 
     form input[type="submit"] { display: none; }
     form input[type="email"] {
-      background: #45453A; border: 2px solid #696961;
+      background: rgba(255, 255, 255, 0.9); border: 2px solid #6c778a;
       height: 30px; min-width: 200px; border-radius: 3px;
       padding: 3px 7px; font-family: @sourcesans;
-      color: @infinitgrey; outline: none;
-      .placeholder(lighten(@infinitgrey, 10%));
+      color: @infinitblack; outline: none;
+      .placeholder(lighten(@infinitblack, 20%));
 
-      &:focus { border: 2px solid lighten(#696961, 10%); }
+      &:focus { border: 2px solid lighten(#6c778a, 10%); }
     }
 
     ul.social { margin-top: 13px; }
@@ -294,7 +294,7 @@ footer nav > ul > li {
 
     a.icon-reddit:before { margin-right: 5px; }
     a {
-      color: @infinitgrey;
+      color: #dae0ec;
       transition: color 0.3s; outline: none;
       -webkit-transition: color 0.3s;
       -moz-transition: color 0.3s;
@@ -533,7 +533,7 @@ body.home {
 
         div.block, div.object, div.file {
           background: white; border: 2px solid #E9E9E9; padding: 15px 21px; margin: 0 12px;
-          float: left; min-width: 122px; min-height: 50px; position: relative;
+          float: left; min-width: 137px; min-height: 54px; position: relative;
           opacity: 0; margin-top: 85px; font-size: 14px;
           .animation(apisFade, cubic-bezier(0.07, 0.88, 0.09, 0.95), 1);
           .animationFillMode(forwards);
@@ -725,7 +725,7 @@ body.home {
       }
 
       .tweet {
-        img { margin: 13px 20px 10px 5px; }
+        img { margin: 13px 20px 40px 5px; max-width: 42px; height: auto;  }
         a { text-transform: none; }
         p span, span.date { color: @infinitgray; }
         span.date { font-weight: 300; }
@@ -1036,8 +1036,8 @@ section.doc {
   }
 }
 
-body.documentation, body.legal, body.contact, body.opensource, body.solutions,
-body.pricing, body.press {
+body.documentation, body.legal, body.contact, body.solutions,
+body.pricing, body.press { 
 
   // header { position: fixed; width: 100%;}
   // .content { padding-top: 80px; }
@@ -1198,17 +1198,6 @@ body.pricing, body.press {
   }
 }
 
-
-body.opensource {
-  nav#sidebar {
-    a {
-      font-family: @sourcesans; margin-top: 5px; display: block; margin-top: 7px;
-      display: inline-block; font-weight: normal; font-size: 14px;
-
-      &.icon-email:before { width: 1.2em; margin-top: 0.2em; margin-left: 0.1em; }
-    }
-  }
-}
 
 body.doc_get_started section.doc, .popup section.doc {
   img.fuse, img.infinitcli {
@@ -2322,44 +2311,225 @@ body.contact, body.solutions {
 `--------------*/
 
 body.opensource {
+  
+  h1, h2 { font-size: 36px; margin: 45px 0 10px 0; }
+  p.subtitle { 
+    font-size: 22px; color: @infinitblack; max-width: 500px; margin: auto; 
+    padding-bottom: 70px;
+  }
 
-  #sidebar ul.menu a.icon-reddit:before { margin-right: 6px; margin-left: 0px;}
-  section.doc {
-
-    .projects { width: 120%; }
-    .projects:after { content: ''; display: table; clear: both; }
-    .card { float: left; margin: 0 10px 10px 0  }
-    .card:nth-child(2n+1) { clear: both; }
-    .repo-card .content p { font-size: 13px; font-family: @sourcesans; }
-
-    .card.user footer { display: none; }
-    .card.soon .github-card {
-      border-radius: 5px; padding: 8px 11px 0; position: relative;
-      min-height: 143px; border: 1px solid #D6D6D6; width: 325px;
-      background: #f7f7f7;
-
-      img { float: left; margin-top: 4px; margin-right: 12px; }
-
-      strong {
-        font-size: 18px; font-family: @helvetica; margin-top: 7px;
-        display: block; padding-top: 3px; float: left;
-      }
-      p {
-        font: 18px/24px Georgia,"Times New Roman",Palatino,serif; color: #555;
-        margin-top: 56px;
+  section.projects {
+    text-align: center; 
+    &:after { content:''; clear: both; display: table;}
+    
+    .row { clear: both;}
+    
+    // 3 columns layout
+    .project { 
+      position: relative;
+      max-width: 31%; margin: 0 1% 1% 1%;   min-height: 315px;
+      .tagline { font-size: 15px; line-height: 21px; }
+      .stage {
+        .next_status { width: 73px; margin-left: 10px; } 
+        progress { width: ~"calc(100% - 83px)"; }
       }
     }
 
-    table { width: 80%; }
-    table tr td, table tr th { text-align: left; padding-left: 20px; }
-    table tr:nth-child(1) th:nth-child(1) { text-align: left; }
-    table tr td:nth-child(1) { border: none;}
-    table tr:nth-child(2n) { background: #f9f9f9; }
-    table tr td:nth-child(1), table tr th:nth-child(1) { padding-left: 20px; }
+    // 2 columns layout
+    .project.pinned { 
+      max-width: 45.5%; margin: 0 2% 2% 2%; min-height: 284px; 
+      .tagline { font-size: 17px; line-height: 23px;}
+    }
+
+    .project {
+      float: left; text-align: left; border-radius: 3px;
+      border: 1px solid #E2E2E2; box-shadow: 0 4px 7px 0 rgba(0,0,0,0.05);
+
+      .title, .tagline, .description, .stage, .stats, .date { 
+        padding-left: 25px; padding-right: 25px;
+      }
+
+      .title {
+        padding-top: 30px; 
+        img, h3, .star { float: left; }
+        img { margin-right: 6px; max-width: 32px; height: auto;  }
+        h3 { font-size: 21px; margin: 5px 10px 15px 0; }
+        h3 a { .transition(); }
+        h3 a:hover { color: lighten(@infinitblack, 25%); .transition(); }
+
+        .star a, .star span, .soon { 
+          font-size: 11px; font-family: @sf; padding: 5px 8px; 
+          border: 1px solid #DEDEDE;
+        }
+
+        .star {
+          margin-top: 5px; margin-left: 8px; 
+          a { 
+            background: -webkit-linear-gradient(#FFFFFF 0%, #F2F2F2 100%);
+            background: -o-linear-gradient(#FFFFFF 0%, #F2F2F2 100%);
+            background: linear-gradient(#FFFFFF 0%, #F2F2F2 100%);
+            border-radius: 3px 0 0 3px;
+            text-transform: uppercase; color: #787878;
+
+            &:hover { background: white; }
+            svg { vertical-align: -4px; margin-right: 2px; fill: #787878 }
+          }  
+          span {     
+            display: inline-block; margin-left: -4px; background: white; 
+          } 
+        }
+
+        .soon {
+          color: white; border-radius: 3px; border: none; display: inline-block;
+          text-transform: uppercase;  margin-top: 9px; padding: 3px 6px;
+        }
+      }
+
+      .tagline { clear: both; }
+      .description, .date { font-size: 15px; color: #797E8B; line-height: 21px;}
+
+      .stats {
+        position: absolute; bottom: 75px; border-top: 1px solid #e2e2e2;
+        max-width: 86%; width: 100%; min-height: 40px;
+        
+        > div { 
+          float: left; margin-right: 20px; padding-top: 12px;
+          font-family: @sf; text-transform: uppercase; font-size: 11px;
+
+          svg { margin-right: 5px; vertical-align: -4px; fill: @infinitblack; }
+          &.stars svg { margin-right: 2px; }
+        }
+      }
+
+      .stage {
+        background: white; padding: 17px 5% 4px 5%; position: absolute; bottom: 0;
+        border-top: 1px solid #DEDEDE; margin-top: 30px;
+        width: 90%;
+
+        .next_status, progress { float: right; }
+        .next_status { 
+          strong {  font-family: @sf; font-size: 11px; text-transform: uppercase; }
+          a { 
+            color: white; font-size: 10px;  margin-left: 3px;
+            display: inline-block; padding: 1px 5px; border-radius: 50px;
+          }
+        }
+
+        progress[value] {
+          -webkit-appearance: none; appearance: none; 
+          -moz-appearance: none; border: none; margin-top: 7px; 
+        }
+        progress[value]::-webkit-progress-bar {
+          background: #E9E9E9; border-radius: 3px; height: 6px;
+        }
+        progress[value]::-webkit-progress-value {
+          border-radius: 3px;
+        }
+
+        p { clear: both; }
+      }
+      
+      &.access {
+        background: url('../images/bg-project-opensource.png') repeat;
+      
+        .stage .next_status strong, .stage p { color: #4BA9FF; }
+
+        .stage .next_status a, 
+        .title .soon,
+        .stage progress[value]::-webkit-progress-value { 
+          .openSourceAccessGradient();
+        }
+      }
+
+      &.develop {        
+        .stage .next_status strong, .stage p { color: #01BDAE; }
+
+        .stage .next_status a, 
+        .title .soon,
+        .stage progress[value]::-webkit-progress-value { 
+          .openSourceDevelopGradient();
+        }
+      }
+
+      &.contribute {        
+        .stage .next_status strong, .stage p { color: #F87624; }
+
+        .stage .next_status a, 
+        .title .soon,
+        .stage progress[value]::-webkit-progress-value { 
+          .openSourceContributeGradient();
+        }
+      }
+    }
+  }
+
+  section.methodology {
+    text-align: center; padding: 60px 0;
+    
+    p.subtitle { padding-bottom: 20px; max-width: 70% }
+    p.explain { 
+      max-width: 60%; margin: auto; font-size: 17px; line-height: 24px; 
+      color: @infinitgray; font-style: italic;
+    }
+    
+    .progress {
+      width: 90%; margin: 60px auto; 
+      
+      .access, .develop, .contribute { 
+        float: left; width: 33%; text-align: right;
+        span { height: 12px; display: block; width: 104%; border-radius: 40px; }
+        strong, p { float: right }
+        p { clear: both; }
+      }
+
+      .access {
+        strong { color: #4BA9FF; }
+        span { .openSourceAccessGradient(); }
+      }
+      .develop {
+        strong { color: #01BDAE; }
+        span { .openSourceDevelopGradient(); }
+      }
+      .contribute { 
+        strong { color: #F87624; } 
+        span { .openSourceContributeGradient(); width: 100%; } 
+      }
+        
+      p { line-height: 23px; font-size: 17px; max-width: 80%; padding-bottom: 80px; }
+      strong { 
+        text-transform: uppercase; font-family: @sf; font-size: 15px;
+        margin-top: 25px; display: inline-block;
+      }
+    }
+  }
+
+  section.licenses {
+    clear: both; text-align: center; padding-top: 20px; background: #F7F7F7;
+    margin-top: 50px; padding-bottom: 100px; 
+    &:after { content:''; clear: both; display: table;}
+    
+    p.subtitle { max-width: 75%;}
+    .wrapper { max-width: 85%; }
+    .libraries {
+      .library {
+        float: left; background: white; padding: 12px 15px; border-radius: 3px;
+        margin-right: 15px; min-width: 100px; margin-bottom: 15px;  text-align: left;
+        display: block; .transition(); 
+
+        &:hover { 
+          box-shadow: 0 0 4px 0 rgba(196,196,196,0.80); color: lighten(@infinitblack, 25%);
+          background: darken(white, 2%); .transition(); 
+        }
+        strong { font-size: 17px; font-weight: 600; }
+        span { 
+          display: block; margin-top: 5px; text-transform: uppercase;
+          font-family: @sf; color: #9E9E9E; font-size: 11px;
+        }
+      }
+    }
   }
 }
 
-body.opensource section.doc .card.soon .github-card a,
 body.doc_technology section.doc p.github a {
   width: 100%; color: #707070; text-shadow: 0 1px 0 #fff; outline: none;
 
@@ -2376,7 +2546,6 @@ body.doc_technology section.doc p.github a {
   }
 }
 
-body.opensource section.doc .card.soon .github-card,
 body.doc_technology section.doc p.github a {
   span {
     display: block; float: right; margin-top: 8px; background: #6D6D6D;

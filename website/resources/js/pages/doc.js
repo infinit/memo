@@ -45,7 +45,7 @@ $(document).ready(function() {
     }
   }
 
-  if ($('body').hasClass('documentation') || $('body').hasClass('opensource')) {
+  if ($('body').hasClass('documentation')) {
     var a = function () {
       var height = $(window).scrollTop();
       var menu_anchor = $("#menu-anchor").offset().top - 13;
@@ -122,8 +122,13 @@ $(document).ready(function() {
       var $proj = $(this);
       var repo = $proj.data('gh-project');
       $.get('https://api.github.com/repos/' + repo).success(function(data) {
-        $proj.find('.forks span').text(data.forks_count);
-        $proj.find('.stars span').text(data.stargazers_count);
+        //$proj.find('.star span').text(data.forks_count);
+        $proj.find('.star span').text(data.stargazers_count);
+
+        $proj.find('.stats .stars span').text(data.stargazers_count);
+        $proj.find('.stats .forks span').text(data.forks);
+        $proj.find('.stats .issues span').text(data.open_issues);
+        $proj.find('.date span').text(moment(data.pushed_at).fromNow());
       });
     });
   }

@@ -247,6 +247,7 @@ def configure(
     'resources/images/schema-decentralized-4-devices@2x.png',
     'resources/images/bg-worldmap.png',
     'resources/images/bg-worldmap@2x.png',
+    'resources/images/bg-project-opensource.png',
     'resources/images/schema-persistent-storage-docker.png',
     'resources/images/schema-persistent-storage-docker@2x.png',
     'resources/images/schema-hyperscalable.png',
@@ -389,6 +390,7 @@ def configure(
     'resources/fonts/sf-bold-webfont.woff2',
 
     'resources/json/comparisons.json',
+    'resources/json/opensource.json',
 
     'resources/css/normalize.css',
     'resources/css/main.min.css',

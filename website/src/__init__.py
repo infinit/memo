@@ -302,9 +302,14 @@ class Website(bottle.Bottle):
   @route('/open-source', name = 'opensource')
   @view('pages/opensource.html')
   def root(self):
+    file = resources_path() + '/json/opensource.json'
+    with open(file, encoding = 'utf-8') as json_file:
+      json_data = json.load(json_file)
+
     return {
       'title': 'Contribute to the Infinit Storage Platform',
       'description': 'Check out our open source projects and join a growing community of developers.',
+      'projects': json_data['projects']
     }
 
   @route('/pricing', name = 'pricing')
