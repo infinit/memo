@@ -1,10 +1,9 @@
+#include <infinit/cli/Entity.hh>
+
 #include <elle/Exit.hh>
 #include <elle/printf.hh>
 
-#include <infinit/cli/Entity.hh>
 #include <infinit/cli/Infinit.hh>
-#include <infinit/cli/Silo.hh>
-#include <infinit/cli/User.hh>
 #include <infinit/cli/utility.hh>
 
 namespace infinit
@@ -104,6 +103,8 @@ namespace infinit
     class Entity<Credentials>;
     template
     class Entity<Device>;
+    template
+    class Entity<Drive>;
     template
     class Entity<User>;
     template

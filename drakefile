@@ -471,6 +471,8 @@ def configure(
     'src/infinit/cli/Credentials.hh',
     'src/infinit/cli/Device.cc',
     'src/infinit/cli/Device.hh',
+    'src/infinit/cli/Drive.cc',
+    'src/infinit/cli/Drive.hh',
     'src/infinit/cli/Entity.cc',
     'src/infinit/cli/Entity.hh',
     'src/infinit/cli/Infinit.cc',

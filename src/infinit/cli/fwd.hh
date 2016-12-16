@@ -7,6 +7,7 @@ namespace infinit
     class Block;
     class Credentials;
     class Device;
+    class Drive;
     class Infinit;
     class Silo;
     class User;

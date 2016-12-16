@@ -120,7 +120,7 @@ namespace infinit
       mode_pull(std::string const& name, bool purge);
       // Push
       Mode<decltype(binding(modes::mode_push,
-                            name  = std::string{},
+                            name = std::string{},
                             cli::email = boost::none,
                             fullname = boost::none,
                             password = boost::none,

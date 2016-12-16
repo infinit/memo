@@ -1,7 +1,5 @@
 #pragma once
 
-#include <functional>
-
 #include <elle/meta.hh>
 
 #include <das/bound-method.hh>
@@ -9,8 +7,9 @@
 
 #include <infinit/Infinit.hh>
 #include <infinit/cli/Block.hh>
-#include <infinit/cli/Device.hh>
 #include <infinit/cli/Credentials.hh>
+#include <infinit/cli/Device.hh>
+#include <infinit/cli/Drive.hh>
 #include <infinit/cli/Silo.hh>
 #include <infinit/cli/User.hh>
 #include <infinit/symbols.hh>
@@ -107,15 +106,17 @@ namespace infinit
       hub_password_hash(std::string const& password);
 
       // Modes
-      Block block;
-      Credentials credentials;
-      Device device;
-      Silo silo;
-      User user;
+      Block block = *this;
+      Credentials credentials = *this;
+      Device device = *this;
+      Drive drive = *this;
+      Silo silo = *this;
+      User user = *this;
       using Entities
         = decltype(elle::meta::list(cli::block,
                                     cli::credentials,
                                     cli::device,
+                                    cli::drive,
                                     cli::silo,
                                     cli::user));
       void

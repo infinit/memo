@@ -1,7 +1,6 @@
-#ifndef INFINIT_SYMBOLS_HH
-# define INFINIT_SYMBOLS_HH
+#pragma once
 
-# include <das/Symbol.hh>
+#include <das/Symbol.hh>
 
 namespace infinit
 {
@@ -42,5 +41,3 @@ namespace infinit
     DAS_SYMBOL(write);
   }
 }
-
-#endif
