@@ -539,7 +539,7 @@ COMMAND(run)
     args["volume"].as<std::string>(),
     std::shared_ptr<infinit::model::doughnut::Doughnut>(model.release()));
   reactor::filesystem::FileSystem rfs(std::move(fs), true);
-  auto ws = WebServer([&](HTTPQuery const& q) {return webdav(q, rfs);});
+  WebServer ws([&](HTTPQuery const& q) {return webdav(q, rfs);});
   ws.listen(8080);
 }
 
