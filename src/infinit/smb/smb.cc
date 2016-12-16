@@ -161,20 +161,20 @@ namespace infinit
 
     struct SMB2Header
     {
-      uint8_t protocolId[4];
-      uint16_t structSize;
-      uint16_t creditCharge;
-      uint32_t ntstatus;
-      uint16_t command;
-      uint16_t credit;
-      uint32_t flags;
-      uint32_t nextCommand; // offset of next header in compound
-      uint64_t messageId;   // uid on the connection
-      uint32_t reserved1;
-      uint32_t treeId;
-      uint64_t sessionId;
-      uint8_t  signature[16];
-    }__attribute__((packed)) ;
+      uint8_t protocolId[4] = { 0xFE, 'S', 'M', 'B' };
+      uint16_t structSize = 64;
+      uint16_t creditCharge = 0;
+      uint32_t ntstatus = 0;
+      uint16_t command = 0;
+      uint16_t credit = 1;
+      uint32_t flags = 1;
+      uint32_t nextCommand = 0; // offset of next header in compound
+      uint64_t messageId = 0;   // uid on the connection
+      uint32_t reserved1 = 0;
+      uint32_t treeId = 0;
+      uint64_t sessionId = 0;
+      uint8_t  signature[16] = { 0 };
+    } __attribute__((packed));
 
     struct SMB2Create
     {
@@ -193,7 +193,7 @@ namespace infinit
       uint16_t nameLength;
       uint32_t createContextOffset;
       uint32_t createContextLength;
-    } __attribute__((packed)) ;
+    } __attribute__((packed));
 
     class Reader
     {
@@ -293,14 +293,6 @@ namespace infinit
                             std::function<void (Writer& w)> f)
     {
       SMB2Header h;
-      memset(&h, 0, sizeof(h));
-      h.protocolId[0] = 0xFE;
-      h.protocolId[1] = 'S';
-      h.protocolId[2] = 'M';
-      h.protocolId[3] = 'B';
-      h.structSize = 64;
-      h.flags = 1;
-      h.credit = 1;
       h.messageId = hin.messageId;
       h.sessionId = (uint64_t)hin.sessionId;
       h.command = hin.command;
@@ -354,14 +346,6 @@ namespace infinit
       bool raw = !memcmp("NTLMSSP", secBuf, 7);
 
       SMB2Header h;
-      memset(&h, 0, sizeof(h));
-      h.protocolId[0] = 0xFE;
-      h.protocolId[1] = 'S';
-      h.protocolId[2] = 'M';
-      h.protocolId[3] = 'B';
-      h.structSize = 64;
-      h.flags = 1;
-      h.credit = 1;
       h.messageId = hin->messageId;
       h.sessionId = (uint64_t)this;
       h.command = SMB2_SESSION_SETUP;
@@ -412,14 +396,6 @@ namespace infinit
     void SMBConnection::send_negotiate_reply()
     {
       SMB2Header h;
-      memset(&h, 0, sizeof(h));
-      h.protocolId[0] = 0xFE;
-      h.protocolId[1] = 'S';
-      h.protocolId[2] = 'M';
-      h.protocolId[3] = 'B';
-      h.structSize = 64;
-      h.flags = 1;
-      h.credit = 1;
       elle::Buffer buf;
       {
         uint64_t fnow = time_to_filetime(time(0));
@@ -578,14 +554,6 @@ namespace infinit
       else
         share_type = 1; // physical disk
       SMB2Header h;
-      memset(&h, 0, sizeof(h));
-      h.protocolId[0] = 0xFE;
-      h.protocolId[1] = 'S';
-      h.protocolId[2] = 'M';
-      h.protocolId[3] = 'B';
-      h.structSize = 64;
-      h.flags = 1;
-      h.credit = 1;
       h.messageId = hin->messageId;
       h.sessionId = (uint64_t)this;
       h.command = SMB2_TREE_CONNECT;
@@ -618,14 +586,6 @@ namespace infinit
     void SMBConnection::tree_disconnect(SMB2Header* hin)
     {
       SMB2Header h;
-      memset(&h, 0, sizeof(h));
-      h.protocolId[0] = 0xFE;
-      h.protocolId[1] = 'S';
-      h.protocolId[2] = 'M';
-      h.protocolId[3] = 'B';
-      h.structSize = 64;
-      h.flags = 1;
-      h.credit = 1;
       h.messageId = hin->messageId;
       h.sessionId = (uint64_t)this;
       h.command = SMB2_TREE_DISCONNECT;
@@ -652,14 +612,6 @@ namespace infinit
     void SMBConnection::echo(SMB2Header* hin)
     {
       SMB2Header h;
-      memset(&h, 0, sizeof(h));
-      h.protocolId[0] = 0xFE;
-      h.protocolId[1] = 'S';
-      h.protocolId[2] = 'M';
-      h.protocolId[3] = 'B';
-      h.structSize = 64;
-      h.flags = 1;
-      h.credit = 1;
       h.messageId = hin->messageId;
       h.sessionId = (uint64_t)this;
       h.command = SMB2_ECHO;
@@ -806,14 +758,6 @@ namespace infinit
     void SMBConnection::error(SMB2Header* hin, int erc, int payloadlen)
     {
       SMB2Header h;
-      memset(&h, 0, sizeof(h));
-      h.protocolId[0] = 0xFE;
-      h.protocolId[1] = 'S';
-      h.protocolId[2] = 'M';
-      h.protocolId[3] = 'B';
-      h.structSize = 64;
-      h.flags = 1;
-      h.credit = 1;
       h.messageId = hin->messageId;
       h.sessionId = (uint64_t)this;
       h.command = hin->command;
