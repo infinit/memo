@@ -404,7 +404,6 @@ def configure(
     ('infinit-passport', [], [], True),
     # ('infinit-user', [], [], True),
     ('infinit-volume', [], [], True),
-    ('infinit-webdav', [], [], False),
     ('infinit-fsck', [], [], False),
     ('reactor-example', [], [], False),
     # ('s3fs', [], [aws_lib], False),
