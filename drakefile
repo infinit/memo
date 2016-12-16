@@ -232,7 +232,6 @@ def configure(
     'src/infinit/Volume.hh',
     'src/infinit/serialization.cc',
     'src/infinit/serialization.hh',
-    'src/infinit/smb/smb.cc',
     'src/infinit/utility.hh',
     'src/infinit/version.hh',
   )
@@ -403,7 +402,6 @@ def configure(
     ('infinit-journal', [], [], True),
     ('infinit-network', [xattr_sources], [], True),
     ('infinit-passport', [], [], True),
-    ('infinit-smb', [], [], False),
     # ('infinit-user', [], [], True),
     ('infinit-volume', [], [], True),
     ('infinit-webdav', [], [], False),
