@@ -20,6 +20,24 @@ namespace infinit
                    cli::icon = boost::none,
                    cli::push_drive = false,
                    cli::push = false))
+      , delete_(
+        "Delete a drive locally",
+        das::cli::Options(),
+        this->bind(modes::mode_delete,
+                   cli::name,
+                   cli::pull = false,
+                   cli::purge = false))
+      , export_(
+        "Export a drive",
+        das::cli::Options(),
+        this->bind(modes::mode_export,
+                   cli::name))
+      , fetch(
+        "Fetch drive from {hub}",
+        das::cli::Options(),
+        this->bind(modes::mode_fetch,
+                   cli::name = boost::none,
+                   cli::icon = boost::none))
       , invite(
         "Invite a user to join the drive",
         das::cli::Options(),
@@ -35,6 +53,26 @@ namespace infinit
                    // FIXME: should be hidden.
                    cli::permissions = boost::none,
                    cli::home = false))
+      , join(
+        "Join a drive you were invited to (Hub operation)",
+        das::cli::Options(),
+        this->bind(modes::mode_join,
+                   cli::name))
+      , list(
+        "List drives",
+        das::cli::Options(),
+        this->bind(modes::mode_list))
+      , pull(
+        "Remove a drive from {hub}",
+        das::cli::Options(),
+        this->bind(modes::mode_pull,
+                   cli::name,
+                   cli::purge = false))
+      , push(
+        "Push a drive to {hub}",
+        das::cli::Options(),
+        this->bind(modes::mode_push,
+                   cli::name))
     {}
 
     /*---------------.
@@ -53,6 +91,35 @@ namespace infinit
     }
 
     /*---------------.
+    | Mode: delete.  |
+    `---------------*/
+    void
+    Drive::mode_delete(std::string const& name,
+                       bool pull,
+                       bool purge)
+    {
+    }
+
+
+    /*---------------.
+    | Mode: export.  |
+    `---------------*/
+    void
+    Drive::mode_export(std::string const& name)
+    {
+    }
+
+
+    /*--------------.
+    | Mode: fetch.  |
+    `--------------*/
+    void
+    Drive::mode_fetch(boost::optional<std::string> const& name,
+                      boost::optional<std::string> const& icon)
+    {
+    }
+
+    /*---------------.
     | Mode: invite.  |
     `---------------*/
 
@@ -67,6 +134,44 @@ namespace infinit
                        bool passport,
                        boost::optional<std::string> const& permissions,
                        bool home)
+    {
+    }
+
+
+    /*-------------.
+    | Mode: join.  |
+    `-------------*/
+    void
+    Drive::mode_join(std::string const& name)
+    {
+    }
+
+
+    /*-------------.
+    | Mode: list.  |
+    `-------------*/
+    void
+    Drive::mode_list()
+    {
+    }
+
+
+
+    /*-------------.
+    | Mode: pull.  |
+    `-------------*/
+    void
+    Drive::mode_pull(std::string const& name,
+                     bool purge)
+    {
+    }
+
+
+    /*-------------.
+    | Mode: push.  |
+    `-------------*/
+    void
+    Drive::mode_push(std::string const& name)
     {
     }
   }

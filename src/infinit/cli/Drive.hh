@@ -19,7 +19,14 @@ namespace infinit
       Drive(Infinit& infinit);
       using Modes
         = decltype(elle::meta::list(cli::create,
-                                    cli::invite));
+                                    cli::delete_,
+                                    cli::export_,
+                                    cli::fetch,
+                                    cli::invite,
+                                    cli::join,
+                                    cli::list,
+                                    cli::pull,
+                                    cli::push));
 
       /*---------------.
       | Mode: create.  |
@@ -42,6 +49,46 @@ namespace infinit
                   boost::optional<std::string> const& icon,
                   bool push_drive,
                   bool push);
+
+
+      /*---------------.
+      | Mode: delete.  |
+      `---------------*/
+      using ModeDelete =
+        Mode<decltype(binding(modes::mode_delete,
+                              cli::name,
+                              cli::pull = false,
+                              cli::purge = false))>;
+      ModeDelete delete_;
+      void
+      mode_delete(std::string const& name,
+                  bool pull,
+                  bool purge);
+
+
+      /*---------------.
+      | Mode: export.  |
+      `---------------*/
+      using ModeExport =
+        Mode<decltype(binding(modes::mode_export,
+                              cli::name))>;
+      ModeExport export_;
+      void
+      mode_export(std::string const& name);
+
+
+      /*--------------.
+      | Mode: fetch.  |
+      `--------------*/
+      using ModeFetch =
+        Mode<decltype(binding(modes::mode_fetch,
+                              cli::name = boost::none,
+                              cli::icon = boost::none))>;
+      ModeFetch fetch;
+      void
+      mode_fetch(boost::optional<std::string> const& name,
+                 boost::optional<std::string> const& icon);
+
 
       /*---------------.
       | Mode: invite.  |
@@ -69,8 +116,54 @@ namespace infinit
                   bool push_invitations,
                   bool push,
                   bool passport,
-                  boost::optional<std::string> const& permissions = {},
+                  boost::optional<std::string> const& permissions,
                   bool home = false);
+
+
+      /*-------------.
+      | Mode: join.  |
+      `-------------*/
+      using ModeJoin =
+        Mode<decltype(binding(modes::mode_join,
+                              cli::name))>;
+      ModeJoin join;
+      void
+      mode_join(std::string const& name);
+
+
+      /*-------------.
+      | Mode: list.  |
+      `-------------*/
+      using ModeList =
+        Mode<decltype(binding(modes::mode_list))>;
+      ModeList list;
+      void
+      mode_list();
+
+
+
+      /*-------------.
+      | Mode: pull.  |
+      `-------------*/
+      using ModePull =
+        Mode<decltype(binding(modes::mode_pull,
+                              cli::name,
+                              cli::purge = false))>;
+      ModePull pull;
+      void
+      mode_pull(std::string const& name,
+                bool purge);
+
+
+      /*-------------.
+      | Mode: push.  |
+      `-------------*/
+      using ModePush =
+        Mode<decltype(binding(modes::mode_push,
+                              cli::name))>;
+      ModePush push;
+      void
+      mode_push(std::string const& name);
     };
   }
 }
