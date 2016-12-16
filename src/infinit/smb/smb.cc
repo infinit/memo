@@ -837,6 +837,7 @@ namespace infinit
       ELLE_LOG("error %s", buf.size());
       _socket->write(buf);
     }
+
     void SMBConnection::close(SMB2Header* hin)
     {
       uint64_t guid;
@@ -950,8 +951,8 @@ namespace infinit
         adder(".", &st);
         adder("..", &st);
         std::sort(di.content.begin(), di.content.end(),
-          [] (std::pair<std::string, struct stat> a,
-             std::pair<std::string, struct stat> b) -> bool
+          [] (std::pair<std::string, struct stat> const& a,
+              std::pair<std::string, struct stat> const& b)
           {
             return a.first < b.first;
           });
@@ -1078,7 +1079,7 @@ namespace infinit
           .w32(6).w("f\0o\0o\0", 6);
         }
       }
-      if (infotype == 0x01) // FILE_INFO
+      else if (infotype == 0x01) // FILE_INFO
       {
         struct stat st;
         std::string name;
@@ -1106,11 +1107,11 @@ namespace infinit
         {
           w.w64(0);
         }
-        if (infoclass == 0x14) // EOF
+        else if (infoclass == 0x14) // EOF
         {
           w.w64(st.st_size);
         }
-        if (infoclass == 13) // FILE_DISPOSITION_INFO
+        else if (infoclass == 13) // FILE_DISPOSITION_INFO
         {
           bool doc;
           if (guid >= _directory_start)
@@ -1119,12 +1120,12 @@ namespace infinit
             doc = _file_handles.at(guid).deleteOnClose;
           w.w8(doc);
         }
-        if (infoclass == 0x05) // STANDARD_INFO
+        else if (infoclass == 0x05) // STANDARD_INFO
         {
           w.w64(st.st_size).w64(st.st_size);
           w.w32(st.st_nlink).w8(0).w8(S_ISDIR(st.st_mode)).w16(0);
         }
-        if (infoclass == 0x12) // ALL_INFO
+        else if (infoclass == 0x12) // ALL_INFO
         {
           uint64_t atime = time_to_filetime(st.st_atime);
           uint64_t mtime = time_to_filetime(st.st_mtime);
@@ -1248,7 +1249,7 @@ namespace infinit
           _file_handles.at(guid).file->truncate(eof);
           handled = true;
         }
-        if (infoclass == 13) // fileDispositionInformation
+        else if (infoclass == 13) // fileDispositionInformation
         {
           uint8_t doc;
           payload.r8(doc);
@@ -1271,7 +1272,7 @@ namespace infinit
             _file_handles.at(guid).deleteOnClose = doc;
           handled = true;
         }
-        if (infoclass == FileRenameInformation)
+        else if (infoclass == FileRenameInformation)
         {
           uint8_t replace;
           uint32_t path_length;

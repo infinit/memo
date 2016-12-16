@@ -32,7 +32,7 @@ COMMAND(run)
     cache_ram_size, cache_ram_ttl, cache_ram_invalidation, flag(args, "async"));
   if (aliased_flag(args, {"fetch-endpoints", "fetch"}))
   {
-    infinit::model::NodeLocations hosts;
+    auto hosts = infinit::model::NodeLocations{};
     network.beyond_fetch_endpoints(hosts);
     model->overlay()->discover(hosts);
   }
