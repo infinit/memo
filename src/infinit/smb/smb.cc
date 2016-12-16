@@ -48,15 +48,23 @@ namespace infinit
         : os(os)
         , _off(0)
       {}
-      Writer& w8(uint8_t v)   { _off += 1;os.write((const char*)&v, 1); return *this; }
-      Writer& w16(uint16_t v) { _off += 2;os.write((const char*)&v, 2); return *this; }
-      Writer& w32(uint32_t v) { _off += 4;os.write((const char*)&v, 4); return *this; }
-      Writer& w64(uint64_t v) { _off += 8;os.write((const char*)&v, 8); return *this; }
-      Writer& w(const char* data, int sz) { _off+=sz; os.write(data, sz); return *this;}
       uint64_t offset() { return _off;}
-      template<typename T> Writer& ws(const T& t)
+
+      Writer& w8(uint8_t v)   { return ws(v); }
+      Writer& w16(uint16_t v) { return ws(v); }
+      Writer& w32(uint32_t v) { return ws(v); }
+      Writer& w64(uint64_t v) { return ws(v); }
+      Writer& w(const char* data, int sz)
       {
-        return w((const char*)(const void*)&t, sizeof(t));
+        _off+=sz;
+        os.write(data, sz);
+        return *this;
+      }
+      template<typename T>
+      Writer& ws(const T& t)
+      {
+        return w(static_cast<const char*>(static_cast<const void*>(&t)),
+                 sizeof t);
       }
       Writer& whex(const char* hex)
       {
@@ -201,12 +209,21 @@ namespace infinit
         _d += amount;
         return *this;
       }
-      Reader& r8(uint8_t& v) { v = _d[0]; ++_d; return *this;}
-      Reader& r16(uint16_t& v) { v =*(uint16_t*)_d; _d += 2; return *this;}
-      Reader& r32(uint32_t& v) { v =*(uint32_t*)_d; _d += 4; return *this;}
-      Reader& r64(uint64_t& v) { v =*(uint64_t*)_d; _d += 8; return *this;}
+      Reader& r8(uint8_t& v)   { return _rs(v); }
+      Reader& r16(uint16_t& v) { return _rs(v); }
+      Reader& r32(uint32_t& v) { return _rs(v); }
+      Reader& r64(uint64_t& v) { return _rs(v); }
 
+      // Not actually private.
       const unsigned char* _d;
+    private:
+      template <typename T>
+      Reader& _rs(T& t)
+      {
+        static_assert(std::is_unsigned<T>::value, "type must be unsigned");
+        t = *static_cast<const T*>(static_cast<const void*>(_d));
+        return skip(sizeof t);
+      }
     };
 
     class SMBServer;
