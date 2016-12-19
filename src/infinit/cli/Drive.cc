@@ -596,9 +596,39 @@ namespace infinit
     /*-------------.
     | Mode: list.  |
     `-------------*/
+
     void
     Drive::mode_list()
     {
+      ELLE_TRACE_SCOPE("list");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      if (cli.script())
+      {
+        auto l = elle::json::Array{};
+        for (auto& drive: ifnt.drives_get())
+        {
+          auto o = elle::json::Object{};
+          o["name"] = static_cast<std::string>(drive.name);
+          if (drive.users.find(owner.name) != drive.users.end())
+            o["status"] = drive.users[owner.name].status;
+          if (drive.description)
+            o["description"] = drive.description.get();
+          l.emplace_back(std::move(o));
+        }
+        elle::json::write(std::cout, l);
+      }
+      else
+        for (auto& drive: ifnt.drives_get())
+        {
+          std::cout << drive.name;
+          if (drive.description)
+            std::cout << " \"" << drive.description.get() << "\"";
+          if (drive.users.find(owner.name) != drive.users.end())
+            std::cout << ": " << drive.users[owner.name].status;
+          std::cout << std::endl;
+        }
     }
 
 
