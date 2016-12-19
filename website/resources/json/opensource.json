@@ -4,20 +4,20 @@
       "name": "infinit",
       "repo": "infinit/infinit",
       "pinned": true,
-      "title": "The Infinit Storage Platform.",
-      "description": "Infinit is designed with scalability and resilience in mind for modern environments such as containers that require the storage component to be highly customizable.",
-      "next_step": "Access",
-      "progress": 0.1,
-      "state": "Started"
+      "title": "Software-defined decentralized storage platform",
+      "description": "Infinit is a next generation scalable and resilient storage platform that has been designed for modern environments like containers.",
+      "next_step": "access",
+      "progress": 0,
+      "state": ""
     },
 
     {
       "name": "elle",
       "repo": "",
       "pinned": true,
-      "title": "The coroutine-based asynchronous C++ development framework.",
-      "description": "Elle is a collection of libraries, written in modern C++ (C++14). It contains a rich set of highly reusable concepts, algorithms, API wrappers, ...",
-      "next_step": "Access",
+      "title": "The coroutine-based C++ development framework",
+      "description": "Elle is a collection of libraries, written in modern C++ (C++14). It contains a rich set of highly reusable concepts, algorithms, API wrappers and more.",
+      "next_step": "access",
       "progress": 0.9,
       "state": "Finishing documentation"
     },
@@ -26,9 +26,9 @@
       "name": "drake",
       "repo": "infinit/drake",
       "pinned": false,
-      "title": "Build system written in Python3 that transforms a list of source nodes into a list of target nodes.",
+      "title": "Modern and highly-customizable build system written in Python3",
       "description": "",
-      "next_step": "Develop",
+      "next_step": "develop",
       "progress": 0.9,
       "state": "Testing against CentOS distributions"
     },
@@ -37,20 +37,20 @@
       "name": "dopenssl",
       "repo": "infinit/dopenssl",
       "pinned": false,
-      "title": "A deterministic implementation of some of the OpenSSL functionalities.",
+      "title": "A deterministic implementation of some OpenSSL functionalities",
       "description": "",
-      "next_step": "Develop",
-      "progress": 0,
-      "state": "Paused"
+      "next_step": "",
+      "progress": 1,
+      "state": ""
     },
 
     {
-      "name": "Key/Value Store",
+      "name": "[unnamed]",
       "repo": "",
       "pinned": false,
-      "title": "DHT layer providing a key-value store similar to hash tables, with the difference that the information is distributed across the network.",
-      "description": "",
-      "next_step": "Access",
+      "title": "Decentralized policy-based key-value store",
+      "description": "Policy-based key-value store that has the particularity of being decentralized, doing away with the master/slave model that can incur bottlenecks and single points of failure.",
+      "next_step": "access",
       "progress": 0,
       "state": ""
     }
