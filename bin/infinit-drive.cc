@@ -405,16 +405,16 @@ COMMAND(list)
   auto owner = self_user(ifnt, args);
   if (script_mode)
   {
-    elle::json::Array l;
+    auto l = elle::json::Array{};
     for (auto& drive: ifnt.drives_get())
     {
-      elle::json::Object o;
+      auto o = elle::json::Object{};
       o["name"] = static_cast<std::string>(drive.name);
       if (drive.users.find(owner.name) != drive.users.end())
         o["status"] = drive.users[owner.name].status;
       if (drive.description)
         o["description"] = drive.description.get();
-      l.push_back(std::move(o));
+      l.emplace_back(std::move(o));
     }
     elle::json::write(std::cout, l);
   }
