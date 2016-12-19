@@ -181,8 +181,7 @@ namespace infinit
       std::vector<std::string> user_names;
       for (auto const& u: linked_users)
         user_names.emplace_back(u.name);
-      throw elle::Error(elle::sprintf(
-                          "Network is still linked with this device by %s.", user_names));
+      elle::err("Network is still linked with this device by %s.", user_names);
     }
     boost::system::error_code erc;
     for (auto const& u: linked_users)
@@ -341,9 +340,8 @@ namespace infinit
         return;
       }
     }
-    throw elle::Error(elle::sprintf(
-                        "unable to save passport, user not found locally: %s",
-                        passport.user()));
+    elle::err("unable to save passport, user not found locally: %s",
+              passport.user());
   }
 
   void
@@ -457,10 +455,7 @@ namespace infinit
   {
     auto path = this->_storage_path(name);
     if (!remove(path))
-    {
-      throw elle::Error(
-        elle::sprintf("storage \"%s\" does not exist", name));
-    }
+      elle::err("storage \"%s\" does not exist", name);
   }
 
   std::unordered_map<std::string, std::vector<std::string>>
@@ -554,8 +549,7 @@ namespace infinit
         return std::move(account);
       }
     }
-    throw elle::Error(
-      elle::sprintf("no such %s account: %s", name, identifier));
+    elle::err("no such %s account: %s", name, identifier);
   }
 
   void
@@ -782,10 +776,8 @@ namespace infinit
     ELLE_DEBUG("open %s \"%s\" (%s) for reading", type, name, path);
     f.open(path);
     if (!f.good())
-    {
-      throw MissingLocalResource(
-        elle::sprintf("%s \"%s\" does not exist", type, name));
-    }
+      elle::err<MissingLocalResource>("%s \"%s\" does not exist",
+                                      type, name);
   }
 
   void
@@ -799,16 +791,11 @@ namespace infinit
     ELLE_DEBUG("open %s \"%s\" (%s) for writing", type, name, path);
     create_directories(path.parent_path());
     if (!overwrite && exists(path))
-    {
-      throw ResourceAlreadyFetched(
-        elle::sprintf("%s \"%s\" already exists", type, name));
-    }
+      elle::err<ResourceAlreadyFetched>("%s \"%s\" already exists",
+                                        type, name);
     f.open(path, mode);
     if (!f.good())
-    {
-      throw elle::Error(
-        elle::sprintf("unable to open \"%s\" for writing", path));
-    }
+      elle::err("unable to open \"%s\" for writing", path);
   }
 
   boost::filesystem::path
@@ -1124,16 +1111,13 @@ namespace infinit
     }
     else if (r.status() == reactor::http::StatusCode::Conflict)
     {
-      throw elle::Error(
-        elle::sprintf(
-          "%s \"%s\" already exists with a different key", type, name));
+      elle::err("%s \"%s\" already exists with a different key", type, name);
     }
     else if (r.status() == reactor::http::StatusCode::Payment_Required)
     {
-      throw elle::Error(
-        elle::sprintf(
-          "Pushing %s failed (limit reached): Please contact sales@infinit.sh.",
-          type));
+      elle::err("Pushing %s failed (limit reached):"
+                " Please contact sales@infinit.sh.",
+                type);
     }
     else if (r.status() == reactor::http::StatusCode::Not_Found)
     {
@@ -1153,16 +1137,14 @@ namespace infinit
     }
     else if (r.status() == reactor::http::StatusCode::Unauthorized)
     {
-      throw elle::Error(
-        elle::sprintf("Unauthorized pushing %s \"%s\", check the system clock",
-                      type, name));
+      elle::err("Unauthorized pushing %s \"%s\", check the system clock",
+                type, name);
     }
     else if (r.status() == reactor::http::StatusCode::Forbidden)
     {
-      throw elle::Error(
-        elle::sprintf("Forbidden pushing %s \"%s\", "
-                      "ensure the user has been set using --as or INFINIT_USER",
-                      type, name));
+      elle::err("Forbidden pushing %s \"%s\", "
+                "ensure the user has been set using --as or INFINIT_USER",
+                type, name);
     }
     else
     {
@@ -1177,12 +1159,12 @@ namespace infinit
         return BeyondError("unknown", "Unknown error");
       }();
       if (error.error() == std::string("user/missing_field/email"))
-        throw elle::Error("email unspecified (use --email)");
-      if (error.error() == std::string("user/invalid_format/email"))
-        throw elle::Error("email address is invalid");
-      throw elle::Error(
-        elle::sprintf("unexpected HTTP error %s pushing %s:\n%s",
-                      r.status(), type, error));
+        elle::err("email unspecified (use --email)");
+      else if (error.error() == std::string("user/invalid_format/email"))
+        elle::err("email address is invalid");
+      else
+        elle::err("unexpected HTTP error %s pushing %s:\n%s",
+                  r.status(), type, error);
     }
   }
 }
