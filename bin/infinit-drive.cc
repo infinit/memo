@@ -51,10 +51,10 @@ namespace
   {
     boost::filesystem::ifstream icon;
     ifnt._open_read(icon, icon_path, self.name, "icon");
-    std::string s(
+    auto s = std::string(
       std::istreambuf_iterator<char>{icon},
       std::istreambuf_iterator<char>{});
-    elle::ConstWeakBuffer data(s.data(), s.size());
+    auto data = elle::ConstWeakBuffer(s.data(), s.size());
     auto url = elle::sprintf("drives/%s/icon", drive.name);
     beyond_push_data(url, "icon", drive.name, data, "image/jpeg", self);
     _save_icon(drive.name, data);
@@ -74,11 +74,10 @@ namespace
         infinit::Drive& drive)
   {
     auto icon_path = optional(args, "icon");
-    if (icon_path && icon_path.get().length() > 0)
+    if (icon_path && !icon_path.get().empty())
     {
       if (!boost::filesystem::exists(icon_path.get()))
-        throw CommandLineError(
-          elle::sprintf("%s doesn't exist", icon_path.get()));
+        elle::err<CommandLineError>("%s doesn't exist", icon_path.get());
     }
     auto url = elle::sprintf("drives/%s", drive.name);
     beyond_push(url, "drive", drive.name, drive, user);
@@ -98,10 +97,10 @@ COMMAND(create)
   auto owner = self_user(ifnt, args);
   auto name = drive_name(args, owner);
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
-  infinit::Volume volume(
+  auto volume = infinit::Volume(
     ifnt.volume_get(ifnt.qualified_name(mandatory(args, "volume"), owner)));
-  infinit::Drive::Users users;
-  infinit::Drive drive{
+  auto users = infinit::Drive::Users{};
+  auto drive = infinit::Drive{
     name, owner, volume, network, optional(args, "description"), users};
   ifnt.drive_save(drive);
   report_action("created", "drive", drive.name, std::string("locally"));
@@ -118,7 +117,8 @@ namespace
                 infinit::User const& user,
                 infinit::User const& owner)
   {
-    auto url = elle::sprintf("networks/%s/passports/%s", network.name, user.name);
+    auto url = elle::sprintf("networks/%s/passports/%s",
+                             network.name, user.name);
     beyond_push(url,
                 "passport",
                 elle::sprintf("%s: %s", network.name, user.name),
@@ -194,7 +194,7 @@ COMMAND(invite)
   bool push = aliased_flag(args, { "push-invitations", "push" });
   ELLE_DEBUG("push: %s", push);
   if (!emails && !users && !push)
-    throw CommandLineError("specify users using --user and/or --email");
+    elle::err<CommandLineError>("specify users using --user and/or --email");
   bool generate_passports = flag(args, "passport");
   ELLE_DEBUG("generate passports: %s", generate_passports);
   if (emails)
@@ -387,8 +387,8 @@ COMMAND(delete_)
   if (boost::filesystem::remove(path))
     report_action("deleted", "drive", name, std::string("locally"));
   else
-    throw infinit::MissingLocalResource(
-      elle::sprintf("File for drive could not be deleted: %s", path));
+    elle::err<infinit::MissingLocalResource>(
+      "File for drive could not be deleted: %s", path);
 }
 
 COMMAND(pull)
@@ -451,9 +451,8 @@ namespace
       auto response = request->response();
       // XXX: Deserialize XML.
       if (response.size() == 0 || response[0] == '<')
-        throw infinit::MissingResource(
-          elle::sprintf(
-            "icon for %s not found on %s", name, infinit::beyond(true)));
+        elle::err<infinit::MissingResource>(
+            "icon for %s not found on %s", name, infinit::beyond(true));
       _save_icon(name, response);
     }
   }
@@ -479,9 +478,7 @@ COMMAND(fetch)
         self.name,
         self);
     for (auto const& drive: res["drives"])
-    {
       ifnt.drive_save(drive);
-    }
   }
   if (auto name = optional(args, "icon"))
   {
