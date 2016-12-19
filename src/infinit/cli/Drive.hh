@@ -161,10 +161,12 @@ namespace infinit
       `-------------*/
       using ModePush =
         Mode<decltype(binding(modes::mode_push,
-                              cli::name))>;
+                              cli::name,
+                              cli::icon = boost::none))>;
       ModePush push;
       void
-      mode_push(std::string const& name);
+      mode_push(std::string const& name,
+                boost::optional<std::string> const& icon);
     };
   }
 }

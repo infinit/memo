@@ -76,7 +76,8 @@ namespace infinit
         "Push a drive to {hub}",
         das::cli::Options(),
         this->bind(modes::mode_push,
-                   cli::name))
+                   cli::name,
+                   cli::icon = boost::none))
     {}
 
     namespace
@@ -652,9 +653,18 @@ namespace infinit
     /*-------------.
     | Mode: push.  |
     `-------------*/
+
     void
-    Drive::mode_push(std::string const& name)
+    Drive::mode_push(std::string const& name,
+                     boost::optional<std::string> const& icon)
     {
+      ELLE_TRACE_SCOPE("push");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto drive_name = ifnt.qualified_name(name, owner);
+      auto drive = ifnt.drive_get(name);
+      do_push(cli, owner, drive, icon);
     }
   }
 }
