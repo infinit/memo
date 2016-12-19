@@ -1,6 +1,7 @@
 #include <infinit/cli/Drive.hh>
 
 #include <infinit/cli/Infinit.hh>
+#include <infinit/cli/utility.hh> // infinit::beyond_delegate_user
 
 ELLE_LOG_COMPONENT("infinit-drive");
 
@@ -55,7 +56,6 @@ namespace infinit
                    cli::push = false,
                    cli::passport = false,
                    // FIXME: should be hidden.
-                   cli::permissions = boost::none,
                    cli::home = false))
       , join(
         "Join a drive you were invited to (Hub operation)",
@@ -312,18 +312,235 @@ namespace infinit
     | Mode: invite.  |
     `---------------*/
 
+    namespace
+    {
+      using Passport = Drive::Passport;
+
+      void
+      push_passport(infinit::cli::Infinit& cli,
+                    infinit::Network const& network,
+                    Passport const& passport,
+                    infinit::User const& user,
+                    infinit::User const& owner)
+      {
+        auto url = elle::sprintf("networks/%s/passports/%s",
+                                 network.name, user.name);
+        cli.infinit()
+          .beyond_push(url,
+                       "passport",
+                       elle::sprintf("%s: %s", network.name, user.name),
+                       passport,
+                       owner);
+      }
+
+      void
+      create_passport(infinit::cli::Infinit& cli,
+                      infinit::User const& user,
+                      infinit::Network const& network,
+                      infinit::User const& owner,
+                      bool push)
+      {
+        ELLE_TRACE_SCOPE("create_passport");
+        try
+        {
+          auto passport = cli.infinit().passport_get(network.name, user.name);
+          ELLE_DEBUG("passport (%s: %s) found", network.name, user.name);
+          if (push)
+            push_passport(cli, network, passport, user, owner);
+        }
+        catch (infinit::MissingResource const& e)
+        {
+          auto passport = Passport(
+            user.public_key,
+            network.name,
+            infinit::cryptography::rsa::KeyPair(owner.public_key,
+                                                owner.private_key.get()));
+          ELLE_DEBUG("passport (%s: %s) created", network.name, user.name);
+          cli.infinit().passport_save(passport);
+          cli.report_created("passport",
+                         elle::sprintf("%s: %s", network.name, user.name));
+          if (push)
+            push_passport(cli, network, passport, user, owner);
+        }
+      }
+
+      using Invitations
+        = std::unordered_map<std::string, infinit::Drive::User>;
+
+      /// Compare the current drive json's invitee node with argument
+      /// invitations.  Add non-existing users.
+      void
+      update_local_json(infinit::cli::Infinit& cli,
+                        infinit::Drive& drive,
+                        Invitations const& invitations)
+      {
+        for (auto const& invitation: invitations)
+        {
+          if (drive.owner == invitation.first)
+            continue;
+
+          auto it = drive.users.find(invitation.first);
+          if (it != drive.users.end())
+            continue;
+
+          drive.users[invitation.first] = invitation.second;
+          cli.report_action("created", "invitation",
+                        elle::sprintf("%s: %s", drive.name, invitation.first),
+                        "locally");
+        }
+        cli.infinit().drive_save(drive);
+      }
+    }
+
     void
     Drive::mode_invite(std::string const& name,
-                       std::vector<std::string> const& user,
-                       std::vector<std::string> const& email,
+                       std::vector<std::string> const& users,
+                       std::vector<std::string> const& emails,
                        bool fetch_drive,
                        bool fetch,
                        bool push_invitations,
                        bool push,
-                       bool passport,
-                       boost::optional<std::string> const& permissions,
+                       bool generate_passports,
                        bool home)
     {
+      ELLE_TRACE_SCOPE("invite");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto drive_name = ifnt.qualified_name(name, owner);
+      fetch |= fetch_drive;
+      push |= push_invitations;
+      ELLE_DEBUG("push: %s", push);
+      if (emails.empty() && users.empty() && !push)
+        elle::err<Error>("specify users using --user and/or --email");
+      ELLE_DEBUG("generate passports: %s", generate_passports);
+      for (auto const& email: emails)
+        validate_email(email);
+
+      if (fetch)
+      {
+        try
+        {
+          auto drive = ifnt.drive_fetch(drive_name);
+          ifnt.drive_save(drive, true);
+        }
+        catch (infinit::MissingResource const& e)
+        {
+          if (e.what() != std::string("drive/not_found"))
+            throw;
+          // The drive has not been pushed yet. No need to sync.
+        }
+      }
+
+      auto drive = ifnt.drive_get(drive_name);
+      auto volume = ifnt.volume_get(drive.volume);
+      auto network = ifnt.network_get(drive.network, owner);
+      auto permissions =
+        volume.default_permissions ? volume.default_permissions.get() : "none";
+
+      auto invitees = Invitations{};
+      if (users.empty() && emails.empty())
+        for (auto const& u: drive.users)
+          invitees[u.first] = u.second;
+      for (auto const& user_name: users)
+        invitees[user_name] = {permissions, "pending", home};
+      if (!emails.empty())
+      {
+        // Ensure that the user has the passport for Beyond.
+        static const std::string error_msg = elle::sprintf(
+          "ERROR: In order to invite users by email, you must create"
+          " a passport for \"%s\"\n"
+          "with the --allow-create-passport option.\n"
+          "You must then add the user to the DHT using"
+          " infinit-acl --register\n\n",
+          infinit::beyond_delegate_user());
+        try
+        {
+          auto delegate_passport =
+            ifnt.passport_get(network.name, infinit::beyond_delegate_user());
+          if (!delegate_passport.allow_sign())
+          {
+            elle::fprintf(std::cerr, error_msg);
+            elle::err("Missing --allow-create-passport flag for %s",
+                      infinit::beyond_delegate_user());
+          }
+        }
+        catch (infinit::MissingResource const& e)
+        {
+          elle::fprintf(std::cerr, error_msg);
+          throw;
+        }
+        for (auto const& email: emails)
+          invitees[email] = {permissions, "pending", home};
+      }
+
+      for (auto const& invitee: invitees)
+      {
+        // Email invitees do not need passports.
+        if (validate_email(invitee.first))
+          continue;
+        auto user = ifnt.user_get(invitee.first);
+        if (generate_passports)
+          create_passport(cli, user, network, owner, push);
+        else
+        {
+          // Ensure that the user has a passport.
+          auto passport = ifnt.passport_get(network.name, user.name);
+          if (push)
+            push_passport(cli, network, passport, user, owner);
+        }
+      }
+
+      if (!users.empty() || !emails.empty())
+        update_local_json(cli, drive, invitees);
+
+      if (push)
+      {
+        auto url = elle::sprintf("drives/%s/invitations", drive.name);
+        for (auto const& invitee: invitees)
+        {
+          try
+          {
+            cli.infinit()
+              .beyond_push(
+              elle::sprintf("drives/%s/invitations/%s",drive.name,
+                            invitee.first),
+              "invitation",
+              elle::sprintf("%s: %s", drive.name, invitee.first),
+              drive.users[invitee.first],
+              owner,
+              true,
+              true);
+          }
+          catch (infinit::BeyondError const& e)
+          {
+            auto type = [] (std::string const& err) -> std::string
+              {
+                static const auto map
+                = std::unordered_map<std::string, std::string>
+                {
+                  {"drive/not_found", "Drive"},
+                  {"network/not_found", "Network"},
+                  {"passport/not_found", "Passport"},
+                  {"user/not_found", "User"},
+                  {"volume/not_found", "Volume"},
+                };
+                auto i = map.find(err);
+                if (i == map.cend())
+                  return "";
+                else
+                  return i->second;
+              }(e.error());
+            if (!type.empty())
+              elle::fprintf
+                (std::cerr,
+                 "%s %s not found on %s, ensure it has been pushed\n",
+                 type, e.name_opt(), infinit::beyond(true));
+
+            throw;
+          }
+        }
+      }
     }
 
 

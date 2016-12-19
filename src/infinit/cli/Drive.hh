@@ -6,6 +6,7 @@
 #include <infinit/cli/Mode.hh>
 #include <infinit/cli/fwd.hh>
 #include <infinit/cli/symbols.hh>
+#include <infinit/model/doughnut/Passport.hh>
 #include <infinit/symbols.hh>
 
 namespace infinit
@@ -16,6 +17,8 @@ namespace infinit
       : public Entity<Drive>
     {
     public:
+      using Passport = infinit::model::doughnut::Passport;
+
       Drive(Infinit& infinit);
       using Modes
         = decltype(elle::meta::list(cli::create,
@@ -104,7 +107,6 @@ namespace infinit
                               cli::push = false,
                               cli::passport = false,
                               // FIXME: should be hidden.
-                              cli::permissions = boost::none,
                               cli::home = false))>;
       ModeInvite invite;
       void
@@ -116,7 +118,6 @@ namespace infinit
                   bool push_invitations,
                   bool push,
                   bool passport,
-                  boost::optional<std::string> const& permissions,
                   bool home = false);
 
 

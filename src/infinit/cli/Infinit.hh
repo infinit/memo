@@ -44,9 +44,6 @@ namespace infinit
       boost::optional<boost::filesystem::path>
       avatar_path(std::string const& name) const;
       static
-      bool
-      valid_email(std::string const& email);
-      static
       std::string
       default_user_name();
       infinit::User
