@@ -207,7 +207,6 @@ COMMAND(invite)
   {
     try
     {
-      auto url = elle::sprintf("/drives/%s", name);
       auto drive = ifnt.drive_fetch(name);
       ifnt.drive_save(drive, true);
     }
@@ -304,16 +303,17 @@ COMMAND(invite)
       }
       catch (infinit::BeyondError const& e)
       {
-        if (e.error() == std::string("user/not_found"))
+        if (e.error() == "user/not_found")
           not_found(e.name_opt(), "User");
-        else if (e.error() == std::string("network/not_found"))
+        else if (e.error() == "network/not_found")
           not_found(e.name_opt(), "Network");
-        else if (e.error() == std::string("volume/not_found"))
+        else if (e.error() == "volume/not_found")
           not_found(e.name_opt(), "Volume");
-        else if (e.error() == std::string("drive/not_found"))
+        else if (e.error() == "drive/not_found")
           not_found(e.name_opt(), "Drive");
-        else if (e.error() == std::string("passport/not_found"))
+        else if (e.error() == "passport/not_found")
           not_found(e.name_opt(), "Passport");
+
         throw;
       }
     }
