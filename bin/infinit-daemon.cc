@@ -921,7 +921,7 @@ MountManager::delete_volume(std::string const& name)
   auto volume = ifnt.volume_get(qname);
   beyond_delete("volume", qname, owner, true);
   if (boost::filesystem::remove(path))
-    report_action("deleted", "volume", name, std::string("locally"));
+    report_action("deleted", "volume", name, "locally");
   else
   {
     throw elle::Error(
@@ -1407,7 +1407,7 @@ _run(boost::program_options::variables_map const& args, bool detach)
       elle::serialization::json::SerializerIn input(json, false);
       auto user = input.deserialize<infinit::User>();
       ifnt.user_save(user, true);
-      report_action("saved", "user", name, std::string("locally"));
+      report_action("saved", "user", name, "locally");
     }
     ELLE_TRACE("starting initial manager");
     managers[getuid()].reset(new MountManager(user_mount_root,

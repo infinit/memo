@@ -161,14 +161,14 @@ COMMAND(delete_)
     {
       auto drive_path = ifnt._drive_path(drive);
       if (boost::filesystem::remove(drive_path))
-        report_action("deleted", "drive", drive, std::string("locally"));
+        report_action("deleted", "drive", drive, "locally");
     }
   }
   if (pull)
     beyond_delete("volume", name, owner, true, purge);
   boost::filesystem::remove_all(volume.root_block_cache_dir());
   if (boost::filesystem::remove(path))
-    report_action("deleted", "volume", name, std::string("locally"));
+    report_action("deleted", "volume", name, "locally");
   else
   {
     throw elle::Error(

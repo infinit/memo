@@ -662,7 +662,7 @@ COMMAND(delete_)
     {
       auto drive_path = ifnt._drive_path(drive);
       if (boost::filesystem::remove(drive_path))
-        report_action("deleted", "drive", drive, std::string("locally"));
+        report_action("deleted", "drive", drive, "locally");
     }
     for (auto const& volume: volumes)
     {
@@ -670,7 +670,7 @@ COMMAND(delete_)
       auto v = ifnt.volume_get(volume);
       boost::filesystem::remove_all(v.root_block_cache_dir());
       if (boost::filesystem::remove(vol_path))
-        report_action("deleted", "volume", volume, std::string("locally"));
+        report_action("deleted", "volume", volume, "locally");
     }
     for (auto const& user: ifnt.user_passports_for_network(network.name))
     {
@@ -679,7 +679,7 @@ COMMAND(delete_)
       {
         report_action("deleted", "passport",
                       elle::sprintf("%s: %s", network.name, user),
-                      std::string("locally"));
+                      "locally");
       }
     }
   }

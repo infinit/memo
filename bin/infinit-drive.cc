@@ -41,7 +41,7 @@ namespace
     ifnt._open_write(f, ifnt._drive_icon_path(name),
                      name, "icon", true, std::ios::out | std::ios::binary);
     f.write(reinterpret_cast<char const*>(buffer.contents()), buffer.size());
-    report_action("fetched", "icon", name, std::string("locally"));
+    report_action("fetched", "icon", name, "locally");
   }
 
   void
@@ -103,7 +103,7 @@ COMMAND(create)
   auto drive = infinit::Drive{
     name, owner, volume, network, optional(args, "description"), users};
   ifnt.drive_save(drive);
-  report_action("created", "drive", drive.name, std::string("locally"));
+  report_action("created", "drive", drive.name, "locally");
 
   if (aliased_flag(args, {"push-drive", "push"}))
     _push(args, owner, drive);
@@ -177,7 +177,7 @@ namespace
       drive.users[invitation.first] = invitation.second;
       report_action("created", "invitation",
                     elle::sprintf("%s: %s", drive.name, invitation.first),
-                    std::string("locally"));
+                    "locally");
     }
     ifnt.drive_save(drive);
   }
@@ -385,7 +385,7 @@ COMMAND(delete_)
   if (flag(args, "purge"))
   { /* Nothing depends on a drive. */ }
   if (boost::filesystem::remove(path))
-    report_action("deleted", "drive", name, std::string("locally"));
+    report_action("deleted", "drive", name, "locally");
   else
     elle::err<infinit::MissingLocalResource>(
       "File for drive could not be deleted: %s", path);

@@ -73,8 +73,7 @@ COMMAND(add)
     auto aws_credentials = std::make_unique<infinit::AWSCredentials>(
       account, access_key_id, secret_access_key);
     ifnt.credentials_aws_add(std::move(aws_credentials));
-    report_action(
-      "stored", "AWS credentials", account, std::string("locally"));
+    report_action("stored", "AWS credentials", account, "locally");
   }
   else
     throw CommandLineError("service type not specified");
@@ -238,7 +237,7 @@ COMMAND(delete_)
     throw CommandLineError("specify a service");
   auto path = ifnt._credentials_path(service, account);
   if (boost::filesystem::remove(path))
-    report_action("deleted", "credentials", account, std::string("locally"));
+    report_action("deleted", "credentials", account, "locally");
   else
     elle::err("File for credentials could not be deleted: %s", path);
 }

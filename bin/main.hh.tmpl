@@ -165,24 +165,26 @@ void
 report_action(std::string const& action,
               std::string const& type,
               std::string const& name,
-              boost::optional<std::string> where_ = {})
+              std::string const& where = {})
 {
-  std::string where = where_ ? elle::sprintf("%s ", where_.get()) : "";
-  report(elle::sprintf("%s%s %s \"\%s\"", where, action, type, name));
+  if (where.empty())
+    report(elle::sprintf("%s %s \"\%s\"", action, type, name));
+  else
+    report(elle::sprintf("%s %s %s \"\%s\"", where, action, type, name));
 }
 
 inline
 void
 report_created(std::string const& type, std::string const& name)
 {
-  report_action("created", type, name, std::string("locally"));
+  report_action("created", type, name, "locally");
 }
 
 inline
 void
 report_updated(std::string const& type, std::string const& name)
 {
-  report_action("updated", type, name, std::string("locally"));
+  report_action("updated", type, name, "locally");
 }
 
 inline
@@ -891,7 +893,7 @@ namespace infinit
     if (r.status() == reactor::http::StatusCode::OK)
     {
       report_action(elle::sprintf("deleted%s", purge ? " and purged" : ""),
-                    type, name, std::string("remotely"));
+                    type, name, "remotely");
     }
     else if (r.status() == reactor::http::StatusCode::Not_Found)
     {
@@ -948,12 +950,12 @@ namespace infinit
     if (r.status() == reactor::http::StatusCode::Created)
     {
       if (report)
-        report_action("saved", type, name, std::string("remotely"));
+        report_action("saved", type, name, "remotely");
     }
     else if (r.status() == reactor::http::StatusCode::OK)
     {
       if (report && update)
-        report_action("updated", type, name, std::string("remotely"));
+        report_action("updated", type, name, "remotely");
       else
         report_action("already pushed", type, name);
     }
