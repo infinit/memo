@@ -2988,6 +2988,9 @@ option_description(std::string const& item)
     elle::sprintf("description of %s", item));
 }
 
+//   auto output = get_output(args);
+// becomes
+//   auto output = this->cli().get_output(path);
 inline
 std::unique_ptr<std::ostream, std::function<void (std::ostream*)>>
 get_output(boost::program_options::variables_map const& args)

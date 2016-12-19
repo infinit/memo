@@ -207,9 +207,36 @@ namespace infinit
     /*---------------.
     | Mode: export.  |
     `---------------*/
+
+    namespace
+    {
+      boost::optional<boost::filesystem::path>
+      icon_path(infinit::cli::Infinit& cli,
+                std::string const& name)
+      {
+        auto path = cli.infinit()._drive_icon_path(name);
+        if (boost::filesystem::exists(path))
+          return path;
+        else
+          return {};
+      }
+    }
+
     void
     Drive::mode_export(std::string const& name)
     {
+      ELLE_TRACE_SCOPE("export");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      // FIXME: there is no explicit path to pass to get_output?
+      auto output = cli.get_output();
+      auto drive_name = ifnt.qualified_name(name, owner);
+      auto drive = ifnt.drive_get(drive_name);
+      if (auto icon = icon_path(cli, name))
+        drive.icon_path = icon->string();
+      elle::serialization::json::serialize(drive, *output, false);
+      cli.report_exported(*output, "drive", drive.name);
     }
 
 

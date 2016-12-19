@@ -37,7 +37,8 @@ namespace infinit
       std::unique_ptr<std::istream, std::function<void (std::istream*)>>
       get_input(boost::optional<std::string> const& path);
       std::unique_ptr<std::ostream, std::function<void (std::ostream*)>>
-      get_output(boost::optional<std::string> path, bool stdout_def = true);
+      get_output(boost::optional<std::string> path = {},
+                 bool stdout_def = true);
       boost::filesystem::path
       avatar_path() const;
       boost::optional<boost::filesystem::path>
@@ -85,7 +86,7 @@ namespace infinit
 
       /// Read some secret on stdin.
       ///
-      /// \param prompt   the invitation string given to the user
+      /// \param prompt   the invitation string given to the user.
       /// \param regex    if non empty, read until it matches the result.
       static
       std::string
