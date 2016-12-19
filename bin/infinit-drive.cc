@@ -323,30 +323,30 @@ COMMAND(invite)
 COMMAND(join)
 {
   ELLE_TRACE_SCOPE("join");
-  auto self = self_user(ifnt, args);
-  auto drive = ifnt.drive_get(drive_name(args, self));
-  if (self.name == boost::filesystem::path(drive.name).parent_path().string())
+  auto owner = self_user(ifnt, args);
+  auto drive = ifnt.drive_get(drive_name(args, owner));
+  if (owner.name == boost::filesystem::path(drive.name).parent_path().string())
     elle::err("The owner is automatically invited to its drives");
-  auto it = drive.users.find(self.name);
+  auto it = drive.users.find(owner.name);
   if (it == drive.users.end())
     elle::err("You haven't been invited to join %s", drive.name);
   auto invitation = it->second;
   invitation.status = "ok";
-  auto url = elle::sprintf("drives/%s/invitations/%s", drive.name, self.name);
+  auto url = elle::sprintf("drives/%s/invitations/%s", drive.name, owner.name);
   try
   {
-    beyond_push(url, "invitation", drive.name, invitation, self, false);
+    beyond_push(url, "invitation", drive.name, invitation, owner, false);
     report_action("joined", "drive", drive.name);
   }
   catch (infinit::MissingResource const& e)
   {
     if (e.what() == std::string("user/not_found"))
-      not_found(self.name, "User"); // XXX: It might be the owner or you.
+      not_found(owner.name, "User"); // XXX: It might be the owner or you.
     else if (e.what() == std::string("drive/not_found"))
       not_found(drive.name, "Drive");
     throw;
   }
-  drive.users[self.name] = invitation;
+  drive.users[owner.name] = invitation;
   ELLE_DEBUG("save drive %s", drive)
     ifnt.drive_save(drive);
 }
@@ -402,7 +402,7 @@ COMMAND(pull)
 COMMAND(list)
 {
   ELLE_TRACE_SCOPE("list");
-  auto self = self_user(ifnt, args);
+  auto owner = self_user(ifnt, args);
   if (script_mode)
   {
     elle::json::Array l;
@@ -410,8 +410,8 @@ COMMAND(list)
     {
       elle::json::Object o;
       o["name"] = static_cast<std::string>(drive.name);
-      if (drive.users.find(self.name) != drive.users.end())
-        o["status"] = drive.users[self.name].status;
+      if (drive.users.find(owner.name) != drive.users.end())
+        o["status"] = drive.users[owner.name].status;
       if (drive.description)
         o["description"] = drive.description.get();
       l.push_back(std::move(o));
@@ -424,8 +424,8 @@ COMMAND(list)
       std::cout << drive.name;
       if (drive.description)
         std::cout << " \"" << drive.description.get() << "\"";
-      if (drive.users.find(self.name) != drive.users.end())
-        std::cout << ": " << drive.users[self.name].status;
+      if (drive.users.find(owner.name) != drive.users.end())
+        std::cout << ": " << drive.users[owner.name].status;
       std::cout << std::endl;
     }
 }
@@ -461,11 +461,11 @@ namespace
 COMMAND(fetch)
 {
   ELLE_TRACE_SCOPE("fetch");
-  auto self = self_user(ifnt, args);
+  auto owner = self_user(ifnt, args);
   if (optional(args, "name"))
   {
     ELLE_DEBUG("fetch specific drive");
-    auto name = drive_name(args, self);
+    auto name = drive_name(args, owner);
     fetch_(name);
   }
   else
@@ -473,10 +473,10 @@ COMMAND(fetch)
     ELLE_DEBUG("fetch all drives");
     auto res = infinit::beyond_fetch<
       std::unordered_map<std::string, std::vector<infinit::Drive>>>(
-        elle::sprintf("users/%s/drives", self.name),
+        elle::sprintf("users/%s/drives", owner.name),
         "drives for user",
-        self.name,
-        self);
+        owner.name,
+        owner);
     for (auto const& drive: res["drives"])
       ifnt.drive_save(drive);
   }
@@ -485,10 +485,6 @@ COMMAND(fetch)
     ELLE_DEBUG("fetch specific icon");
     fetch_icon(*name);
   }
-}
-
-namespace
-{
 }
 
 int
