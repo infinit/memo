@@ -7,7 +7,7 @@
       <p class="subtitle">From our most basic development libraries up to the storage platform, Infinit is dedicated to the open source philosophy.</p>
 
       % for i, project in enumerate(projects):
-        <div ${'data-gh-project="' + project['repo'] + '"' if project['repo'] else ''} class="project ${project['next_step'].lower()} ${'pinned' if project['pinned'] else ''}">
+        <div ${'data-gh-project="' + project['repo'] + '"' if project['repo'] else ''} class="project ${project['next_stage'].lower()} ${'pinned' if project['pinned'] else ''}">
           <div class="title">
             % if project['name'] == 'infinit':
               <img src="${url('images/logos/infinit.png')}">
@@ -26,7 +26,7 @@
           </div>
           <p class="tagline">${project['title']}</p>
 
-          % if project['next_step'].lower() == 'access':
+          % if project['next_stage'].lower() == 'access':
             <p class="description">${project['description']}</p>
           % else:
             <p class="date">Last commit: <span></span></p>
@@ -38,13 +38,15 @@
           % endif
 
           <div class="stage">
-            <div class="next_status">
-              <strong>${project['next_step']}</strong>
-              <a href="#methodology">?</a>
+            % if project['next_stage']:
+              <div class="next_status">
+                <strong>${project['next_stage']}</strong>
+                <a href="#methodology">?</a>
+              </div>
+              <progress value="${project['progress']}"></progress>
+              <p>${project['state']} &nbsp;</p>
             </div>
-            <progress value="${project['progress']}"></progress>
-            <p>${project['state']} &nbsp;</p>
-          </div>
+          % endif
         </div>
       % endfor
     </section>
