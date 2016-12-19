@@ -8,6 +8,24 @@
   }
 }
 
+@media (max-width:1155px) {
+  body.opensource {
+    section.projects.wrapper {
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width:1010px) {
+  body.opensource {
+    section.projects.wrapper {
+      .project {
+        .pinnedProject;
+      }
+    }
+  }
+}
+
 @media (max-width:950px) {
   body.home {
     section.presentation {
@@ -153,6 +171,28 @@
             margin: 0 auto;
           }
           div.object, div.file { position: static; }
+        }
+      }
+    }
+  }
+
+  body.opensource {
+    section.projects.wrapper {
+      p { max-width: 90%;}
+      .project {
+        max-width: 96%; margin: 0 2% 2% 2%; min-height: 284px;
+        .date { padding-bottom: 120px; }
+        &.access {
+          min-height: 0px;
+          .stage { position: relative; }
+        }
+      }
+    }
+    section.methodology {
+      p.explain { max-width: 100%; }
+      .progress {
+        .access, .develop, .contribute {
+          width: 100%;
         }
       }
     }
