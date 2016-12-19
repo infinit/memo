@@ -632,14 +632,20 @@ namespace infinit
     }
 
 
-
     /*-------------.
     | Mode: pull.  |
     `-------------*/
+
     void
     Drive::mode_pull(std::string const& name,
                      bool purge)
     {
+      ELLE_TRACE_SCOPE("pull");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto drive_name = ifnt.qualified_name(name, owner);
+      ifnt.beyond_delete("drive", drive_name, owner, false, purge);
     }
 
 
