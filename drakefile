@@ -402,7 +402,7 @@ def configure(
      [
        drake.nodes('bin/networking.hh')
      ], [protocol_lib], True),
-    ('infinit-drive', [], [], True),
+#    ('infinit-drive', [], [], True),
     ('infinit-journal', [], [], True),
     ('infinit-network', [xattr_sources], [], True),
     ('infinit-passport', [], [], True),
@@ -499,6 +499,7 @@ def configure(
   binaries.append(infinit_cli)
   for b in [
       'infinit-device',
+      'infinit-drive',
       'infinit-storage',
       'infinit-user',
   ]:
