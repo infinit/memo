@@ -3,8 +3,8 @@
 namespace infinit
 {
   Drive::User::User(std::string const& permissions,
-             std::string const& status,
-             bool create_home)
+                    std::string const& status,
+                    bool create_home)
     : permissions(permissions)
     , status(status)
     , create_home(create_home)
@@ -77,5 +77,4 @@ namespace infinit
   {
     out << "Drive(" << this->name << ")";
   }
-
 }

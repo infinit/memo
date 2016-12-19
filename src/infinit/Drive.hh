@@ -26,7 +26,8 @@ namespace infinit
       bool create_home;
     };
 
-    typedef std::unordered_map<std::string, User> Users;
+    using Users = std::unordered_map<std::string, User>;
+
   private:
     Drive(std::string const& name,
           std::string const& owner,
