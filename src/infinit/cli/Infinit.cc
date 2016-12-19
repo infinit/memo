@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include <elle/Exit.hh>
 #include <elle/format/hexadecimal.hh>
@@ -331,6 +332,26 @@ namespace infinit
       }
     };
 
+    /// From an old executable name (e.g. `infinit-users` or
+    /// `infinit-users.exe`), extract the entity (e.g., `users`).
+    std::string
+    entity(std::string const& argv0)
+    {
+      // Mandatory prefix.
+      static auto const prefix = std::string("infinit-");
+      if (!boost::algorithm::starts_with(argv0, prefix))
+        elle::err("unrecognized infinit executable name: %s", argv0);
+      auto res = argv0.substr(prefix.size());
+      // Possible suffix.
+      static auto const suffix = std::string(".exe");
+      if (boost::algorithm::ends_with(res, suffix))
+        res.resize(res.size() - suffix.size());
+      // Renamed entities.
+      if (res == "storage")
+        res = "silo";
+      return res;
+    }
+
     void
     main(std::vector<std::string>& args)
     {
@@ -338,14 +359,10 @@ namespace infinit
         args.erase(args.begin());
       else
       {
-        // Backward compatibility with infinit-* binaries.
-        static auto const prefix = std::string("infinit-");
+        // The name of the command typed by the user, say `infinit-users`.
         auto prev = boost::filesystem::path(args[0]).filename().string();
-        if (prev.substr(0, prefix.size()) != prefix)
-          elle::err("unrecognized infinit executable name: %s", prev);
-        args[0] = prev.substr(prefix.size());
-        if (args[0] == "storage")
-          args[0] = "silo";
+        // The corresponding entity, say `users`
+        args[0] = entity(prev);
         if (args.size() > 1 && das::cli::is_option(args[1]))
           if (args[1] == "-v" || args[1] == "--version")
             args.erase(args.begin());
