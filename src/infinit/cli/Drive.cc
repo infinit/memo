@@ -390,6 +390,15 @@ namespace infinit
         }
         cli.infinit().drive_save(drive);
       }
+
+      void
+      not_found(std::string const& name,
+                std::string const& type)
+      {
+        elle::fprintf(std::cerr,
+                      "%s %s not found on %s, ensure it has been pushed\n",
+                      type, name, infinit::beyond(true));
+      }
     }
 
     void
@@ -532,10 +541,7 @@ namespace infinit
                   return i->second;
               }(e.error());
             if (!type.empty())
-              elle::fprintf
-                (std::cerr,
-                 "%s %s not found on %s, ensure it has been pushed\n",
-                 type, e.name_opt(), infinit::beyond(true));
+              not_found(e.name_opt(), type);
 
             throw;
           }
@@ -550,6 +556,40 @@ namespace infinit
     void
     Drive::mode_join(std::string const& name)
     {
+      ELLE_TRACE_SCOPE("join");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto drive_name = ifnt.qualified_name(name, owner);
+      auto drive = ifnt.drive_get(drive_name);
+      if (owner.name == boost::filesystem::path(drive.name).parent_path().string())
+        elle::err("The owner is automatically invited to its drives");
+      auto it = drive.users.find(owner.name);
+      if (it == drive.users.end())
+        elle::err("You haven't been invited to join %s", drive.name);
+      auto invitation = it->second;
+      invitation.status = "ok";
+      auto url = elle::sprintf("drives/%s/invitations/%s",
+                               drive.name, owner.name);
+      try
+      {
+        cli.infinit()
+          .beyond_push(url, "invitation", drive.name, invitation, owner, false);
+        cli.report_action("joined", "drive", drive.name);
+      }
+      catch (infinit::MissingResource const& e)
+      {
+        auto err = std::string{e.what()};
+        if (err == "user/not_found")
+          not_found(owner.name, "User"); // XXX: It might be the owner or you.
+        else if (err == "drive/not_found")
+          not_found(drive.name, "Drive");
+
+        throw;
+      }
+      drive.users[owner.name] = invitation;
+      ELLE_DEBUG("save drive %s", drive)
+        ifnt.drive_save(drive);
     }
 
 
