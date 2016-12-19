@@ -263,8 +263,8 @@ namespace infinit
     beyond_delete(std::string const& type,
                   std::string const& name,
                   User const& self,
-                  bool ignore_missing,
-                  bool purge,
+                  bool ignore_missing = false,
+                  bool purge = false,
                   Reporter report = {});
     static
     PushResult

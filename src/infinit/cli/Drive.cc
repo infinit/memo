@@ -180,11 +180,27 @@ namespace infinit
     /*---------------.
     | Mode: delete.  |
     `---------------*/
+
     void
     Drive::mode_delete(std::string const& name,
                        bool pull,
                        bool purge)
     {
+      ELLE_TRACE_SCOPE("delete");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto drive_name = ifnt.qualified_name(name, owner);
+      auto path = ifnt._drive_path(drive_name);
+      if (pull)
+        ifnt.beyond_delete("drive", drive_name, owner, true);
+      if (purge)
+        { /* Nothing depends on a drive. */ }
+      if (boost::filesystem::remove(path))
+        cli.report_action("deleted", "drive", name, "locally");
+      else
+        elle::err<infinit::MissingLocalResource>
+          ("File for drive could not be deleted: %s", path);
     }
 
 
