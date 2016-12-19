@@ -318,7 +318,7 @@ Aosta Valley${dir_end}         Brannenburg${dir_end}          Cape Town${dir_end
 
     <p>All the commands that follow use the user name <code>alice</code> but you should <strong>pick your own unique user name</strong>:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-user --signup --name alice --email alice@company.com --fullname "Alice"
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-user --signup --name alice --fullname "Alice"
 Generating RSA keypair.
 Remotely saved user "alice".
 </code></pre>
@@ -439,7 +439,7 @@ everything is
 
     <p>First, let us create another user, unconventially named Bob, on a completely new device C. As mentioned earlier, if you don't have another device available, you can simulate one through the use of the <a href="${route('doc_environment_variables')}#infinit_home">INFINIT_HOME</a> environment variable.</em></p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit-user --signup --name bob --email bob@company.com --fullname "Bob"
+    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit-user --signup --name bob --fullname "Bob"
 Generating RSA keypair.
 Remotely saved user "bob".
 </code></pre>

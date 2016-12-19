@@ -773,7 +773,7 @@ echo "[Device C] Home location: ${infinit_home_C}"
 # create user
 set_home "${infinit_home_A}"
 echo "[Device A] Create user: ${USER_NAME_A}"
-create_user "${USER_NAME_A}" "--email nobody+${USER_NAME_A}@infinit.sh --push"
+create_user "${USER_NAME_A}" "--push"
 track_user "${infinit_home_A}" "${USER_NAME_A}"
 
 # create storage
@@ -856,7 +856,7 @@ set_home "${infinit_home_C}"
 
 # create user
 echo "[Device C] Create user: ${USER_NAME_B}"
-create_user "${USER_NAME_B}" "--email nobody+${USER_NAME_B}@infinit.sh --push"
+create_user "${USER_NAME_B}" "--push"
 track_user "${infinit_home_C}" "${USER_NAME_B}"
 
 # ---------- device A --------------------------------------------------------

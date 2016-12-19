@@ -179,7 +179,7 @@ To push an existing user, simply invoke _infinit-user_ with the `--push` mode. Y
 **IMPORTANT**: Given the critical nature of the user identity, we strongly advise you to read the <a href="#log-in-on-another-device">Log in on another device</a> section in order to completely understand the ramifications of the options used when pushing your user.
 
 ```
-$> infinit-user --push --name alice --fullname "Alice" --email alice@company.com
+$> infinit-user --push --name alice --fullname "Alice"
 Remotely saved user "alice".
 ```
 
@@ -190,7 +190,7 @@ Unfortunately, since names are unique, your user name may already be taken on th
 We advise users to sign up to the Hub before performing other operations to avoid complications:
 
 ```
-$> infinit-user --signup --name alice --fullname "Alice" --email alice@company.com
+$> infinit-user --signup --name alice --fullname "Alice"
 Generating RSA keypair.
 Remotely saved user "alice".
 ```
@@ -595,7 +595,7 @@ Remotely saved passport "alice/cluster: bob".
 
 If you are using the pure decentralized environment i.e. without the Hub, you will need to manually export the passport and transmit it to the invited user in which case you should refer to the `--export` and `--import` options.
 
-**IMPORTANT**: Be aware that the invited user will not be notified that there is a new passport for him/her to join your network. The invited user could detect this by fetching his/her passports and noticing a new one but that's about it. In order to speed things up, you should probably inform him/her through the medium of your choice: chat, email, carrier pigeon or else.
+**IMPORTANT**: Be aware that the invited user will _not_ be notified that there is a new passport for him/her to join your network. The invited user could detect this by fetching his/her passports and noticing a new one but that's about it. In order to speed things up, you should probably inform him/her through the medium of your choice: chat, email, carrier pigeon or else.
 
 ### Receive a passport ###
 
@@ -883,7 +883,7 @@ The easiest (but least secure) way to retrieve your user identity on another dev
 
 To activate this mode, you need to specify the `--full` option when signing up on the Hub, along with a password, as shown below. Note that the password can be provided in-line using the `--password` option or entered when prompted:
 
-<pre><div><span>Device A</span></div><code>$> infinit-user --signup --name alice --email alice@company.com --fullname Alice --full
+<pre><div><span>Device A</span></div><code>$> infinit-user --signup --name alice --fullname Alice --full
 Password: ********
 Remotely saved user "alice".
 </code>
@@ -948,7 +948,7 @@ WARNING: anyone in possession of this information can impersonate that user
 WARNING: if you mean to export your user for someone else, remove the --full flag
 Exported user "alice".
 $> cat alice.user
-{"email":"alice@company.com","fullname":"Alice","id":"2J8reEAY","name":"alice","private_key":{"rsa":"MIIEp...M/w=="},"public_key":{"rsa":"MIIBC...DAQAB"}}
+{"fullname":"Alice","id":"2J8reEAY","name":"alice","private_key":{"rsa":"MIIEp...M/w=="},"public_key":{"rsa":"MIIBC...DAQAB"}}
 </code>
 </pre>
 
