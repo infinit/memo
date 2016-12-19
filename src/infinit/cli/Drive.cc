@@ -1,10 +1,14 @@
 #include <infinit/cli/Drive.hh>
 
+#include <infinit/cli/Infinit.hh>
+
+ELLE_LOG_COMPONENT("infinit-drive");
 
 namespace infinit
 {
   namespace cli
   {
+    /// Command line errors.
     using Error = das::cli::Error;
 
     Drive::Drive(Infinit& infinit)
@@ -75,6 +79,74 @@ namespace infinit
                    cli::name))
     {}
 
+    namespace
+    {
+      template <typename Buffer>
+      void
+      save_icon(infinit::cli::Infinit& cli,
+                std::string const& name,
+                Buffer const& buffer)
+      {
+        boost::filesystem::ofstream f;
+        cli.infinit()._open_write
+          (f, cli.infinit()._drive_icon_path(name),
+           name, "icon", true, std::ios::out | std::ios::binary);
+        f.write(reinterpret_cast<char const*>(buffer.contents()),
+                buffer.size());
+        cli.report_action("fetched", "icon", name, "locally");
+      }
+
+      void
+      upload_icon(infinit::cli::Infinit& cli,
+                  infinit::User& self,
+                  infinit::Drive& drive,
+                  boost::filesystem::path const& icon_path)
+      {
+        auto icon = [&]
+          {
+            boost::filesystem::ifstream icon;
+            cli.infinit()._open_read(icon, icon_path, self.name, "icon");
+            return std::string(std::istreambuf_iterator<char>{icon},
+                               std::istreambuf_iterator<char>{});
+          }();
+        auto data = elle::ConstWeakBuffer(icon);
+        auto url = elle::sprintf("drives/%s/icon", drive.name);
+        cli.infinit()
+          .beyond_push_data(url, "icon", drive.name, data, "image/jpeg", self);
+        save_icon(cli, drive.name, data);
+      }
+
+      void
+      pull_icon(infinit::cli::Infinit& cli,
+                infinit::User& self,
+                infinit::Drive& drive)
+      {
+        auto url = elle::sprintf("drives/%s/icon", drive.name);
+        cli.infinit().beyond_delete(url, "icon", drive.name, self);
+      }
+
+      void
+      do_push(infinit::cli::Infinit& cli,
+              infinit::User& user,
+              infinit::Drive& drive,
+              boost::optional<std::string> const& icon_path)
+      {
+        if (icon_path
+            && !icon_path->empty()
+            && !boost::filesystem::exists(*icon_path))
+          elle::err<Error>("%s doesn't exist", *icon_path);
+        auto url = elle::sprintf("drives/%s", drive.name);
+        cli.infinit().beyond_push(url, "drive", drive.name, drive, user);
+        if (icon_path)
+        {
+          if (!icon_path->empty())
+            upload_icon(cli, user, drive, *icon_path);
+          else
+            pull_icon(cli, user, drive);
+        }
+      }
+    }
+
     /*---------------.
     | Mode: create.  |
     `---------------*/
@@ -82,12 +154,27 @@ namespace infinit
     void
     Drive::mode_create(std::string const& name,
                        boost::optional<std::string> const& description,
-                       std::string const& network,
-                       std::string const& volume,
+                       std::string const& network_,
+                       std::string const& volume_,
                        boost::optional<std::string> const& icon,
                        bool push_drive,
                        bool push)
     {
+      ELLE_TRACE_SCOPE("create");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto drive_name = ifnt.qualified_name(name, owner);
+      auto network = ifnt.network_get(network_, owner);
+      auto volume_name = ifnt.qualified_name(volume_, owner);
+      auto volume = infinit::Volume(ifnt.volume_get(volume_name));
+      auto users = infinit::Drive::Users{};
+      auto drive = infinit::Drive{drive_name, owner, volume, network,
+                                  description, users};
+      ifnt.drive_save(drive);
+      cli.report_action("created", "drive", drive.name, "locally");
+      if (push || push_drive)
+        do_push(cli, owner, drive, icon);
     }
 
     /*---------------.

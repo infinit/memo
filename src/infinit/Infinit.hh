@@ -18,10 +18,14 @@ namespace infinit
   public:
     using Reporter = std::function<void (std::string const&)>;
   public:
+    /// Whether has a `/`.
     bool
     is_qualified_name(std::string const& object_name) const;
+    /// "<owner.name>/<object_name>" unless object_name is already
+    /// qualified.
     std::string
     qualified_name(std::string const& object_name, User const& owner) const;
+    /// Takes care of the `qualified_name` part.
     Network
     network_get(std::string const& name_,
                 User const& user,
