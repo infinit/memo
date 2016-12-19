@@ -4,7 +4,7 @@
 
     <section class="projects wrapper">
       <h1>Open Source Projects</h1>
-      <p class="subtitle">From our development frameworks to our key/value store, Infinit is dedicated to the open source.</p>
+      <p class="subtitle">From our development frameworks to our key/value store, Infinit is dedicated to open source.</p>
 
       % for i, project in enumerate(projects):
         <div ${'data-gh-project="' + project['repo'] + '"' if project['repo'] else ''} class="project ${project['next_step'].lower()} ${'pinned' if project['pinned'] else ''}">
@@ -52,7 +52,7 @@
     <section class="methodology wrapper">
       <h2 id="methodology">Our Methodology</h2>
       <p class="subtitle">Access the sources → Develop on top of it → Contribute.</p>
-      <p class="explain">We will be open-sourcing our projects over time to make sure every project is in a good state for the community to take over them. Feel free to come back or subscribe to our <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">mailing-list</a> to get notified.</p>
+      <p class="explain">We will be open-sourcing each component over time to ensure the quality of the source and its documentation so that it is accessible to the community. Subscribe to our <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">mailing-list</a> to get news.</p>
 
       <div class="progress">
         <div class="access">
@@ -63,7 +63,7 @@
         <div class="develop">
           <span></span>
           <strong>Develop</strong>
-          <p>All the tools (documentations, examples, comments, ...) are available for people to develop  their own projects on top of our.</p>
+          <p>All the tools (documentation, examples, comments, ...) are available for people to develop their own projects on top of our software.</p>
         </div>
         <div class="contribute">
           <span></span>
@@ -77,7 +77,7 @@
 
     <section class="licenses">
       <h2>Licenses</h2>
-      <p class="subtitle">Infinit is proud to contribute to the open source ecosystem as nothing would have been made possible without the open source tools it relied upon for years.</p>
+      <p class="subtitle">Infinit is proud to contribute to the open source ecosystem as the project would not have been possible without the open source tools and libraries we use.</p>
 
       <div class="libraries wrapper">
         <a class="library" href="http://www.boost.org/" target="_blank"><strong>Boost</strong><span>MIT Style</span></a>
