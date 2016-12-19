@@ -498,7 +498,7 @@ def configure(
       'infinit-user',
   ]:
     if windows:
-      b = drake.Copy(infinit_cli, 'bin/%s' % b).target()
+      b = drake.Copy(infinit_cli, 'bin/%s.exe' % b).target()
     else:
       b = drake.Symlink('bin/%s' % b, infinit_cli)
     binaries.append(b)
