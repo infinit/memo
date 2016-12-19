@@ -243,10 +243,69 @@ namespace infinit
     /*--------------.
     | Mode: fetch.  |
     `--------------*/
+
+    namespace
+    {
+      void
+      fetch_(infinit::cli::Infinit& cli,
+             std::string const& drive_name)
+      {
+        ELLE_TRACE_SCOPE("fetch %s", drive_name);
+        auto remote_drive = cli.infinit().drive_fetch(drive_name);
+        ELLE_DEBUG("save drive %s", remote_drive)
+          cli.infinit().drive_save(remote_drive);
+      }
+
+      void
+      fetch_icon(infinit::cli::Infinit& cli,
+                 std::string const& name)
+      {
+        auto url = elle::sprintf("drives/%s/icon", name);
+        auto request = cli.infinit().beyond_fetch_data(url, "icon", name);
+        if (request->status() == reactor::http::StatusCode::OK)
+        {
+          auto response = request->response();
+          // XXX: Deserialize XML.
+          if (response.size() == 0 || response[0] == '<')
+            elle::err<infinit::MissingResource>(
+                "icon for %s not found on %s", name, infinit::beyond(true));
+          save_icon(cli, name, response);
+        }
+      }
+    }
+
     void
     Drive::mode_fetch(boost::optional<std::string> const& name,
                       boost::optional<std::string> const& icon)
     {
+      ELLE_TRACE_SCOPE("fetch");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      if (name)
+      {
+        ELLE_DEBUG("fetch specific drive");
+        auto drive_name = ifnt.qualified_name(*name, owner);
+        fetch_(cli, drive_name);
+      }
+      else
+      {
+        ELLE_DEBUG("fetch all drives");
+        using Drives
+          = std::unordered_map<std::string, std::vector<infinit::Drive>>;
+        auto res = ifnt.beyond_fetch<Drives>
+          (elle::sprintf("users/%s/drives", owner.name),
+           "drives for user",
+           owner.name,
+           owner);
+        for (auto const& drive: res["drives"])
+          ifnt.drive_save(drive);
+      }
+      if (icon)
+      {
+        ELLE_DEBUG("fetch specific icon");
+        fetch_icon(cli, *name);
+      }
     }
 
     /*---------------.
