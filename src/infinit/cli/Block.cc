@@ -35,9 +35,11 @@ namespace infinit
         boost::filesystem::ifstream f(path);
         if (!f.good())
           elle::err("unable to open for reading: %s", path);
-        auto ctx = elle::serialization::Context{};
-        ctx.set<infinit::model::doughnut::Doughnut*>(nullptr);
-        ctx.set<elle::Version>(elle::serialization_tag::version);
+        auto ctx = elle::serialization::Context
+          {
+            static_cast<infinit::model::doughnut::Doughnut*>(nullptr),
+            elle::serialization_tag::version,
+          };
         using BlockOrPaxos = infinit::model::doughnut::consensus::BlockOrPaxos;
         auto block
           = elle::serialization::binary::deserialize<BlockOrPaxos>(f, true, ctx);

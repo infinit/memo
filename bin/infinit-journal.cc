@@ -69,14 +69,14 @@ COMMAND(stats)
 namespace
 {
    elle::serialization::Context
-   context(infinit::User const& owner,
-           std::unique_ptr<infinit::model::doughnut::Doughnut> const& dht)
+   context(std::unique_ptr<infinit::model::doughnut::Doughnut> const& dht)
    {
-     auto ctx = elle::serialization::Context{};
-     ctx.set<infinit::model::doughnut::Doughnut*>(dht.get());
-     ctx.set(infinit::model::doughnut::ACBDontWaitForSignature{});
-     ctx.set(infinit::model::doughnut::OKBDontWaitForSignature{});
-     return ctx;
+     return
+       {
+         dht.get(),
+         infinit::model::doughnut::ACBDontWaitForSignature{},
+         infinit::model::doughnut::OKBDontWaitForSignature{}
+       };
    }
 }
 
@@ -91,7 +91,7 @@ COMMAND(export_)
   fs::ifstream f;
   ifnt._open_read(f, path, id, "operation");
   auto dht = network.run(owner);
-  auto ctx = context(owner, dht);
+  auto ctx = context(dht);
   auto op = elle::serialization::binary::deserialize<
     infinit::model::doughnut::consensus::Async::Op>(f, true, ctx);
   elle::serialization::json::serialize(op, std::cout);
@@ -104,7 +104,7 @@ COMMAND(describe)
     ifnt.qualified_name(mandatory(args, "network", "Network"), owner),
     owner);
   auto dht = network.run(owner);
-  auto ctx = context(owner, dht);
+  auto ctx = context(dht);
   fs::path async_path = network.cache_dir(owner) / "async";
   auto operation = optional<int>(args, "operation");
   auto report = [&] (fs::path const& path)
