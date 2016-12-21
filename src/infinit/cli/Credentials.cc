@@ -18,7 +18,7 @@ namespace infinit
         "Add credentials for a third-party service",
         das::cli::Options(),
         this->bind(modes::mode_add,
-                   account = boost::none,
+                   name = boost::none,
                    aws = false,
                    dropbox = false,
                    gcs = false,
@@ -27,7 +27,7 @@ namespace infinit
         "Delete locally credentials for a third-party service",
         das::cli::Options(),
         this->bind(modes::mode_delete,
-                   account = boost::none,
+                   name,
                    aws = false,
                    dropbox = false,
                    gcs = false,
@@ -36,7 +36,7 @@ namespace infinit
         "List local credentials",
         das::cli::Options(),
         this->bind(modes::mode_fetch,
-                   account = boost::none,
+                   name = boost::none,
                    aws = false,
                    dropbox = false,
                    gcs = false,
@@ -123,16 +123,18 @@ namespace infinit
     }
 
     void
-    Credentials::mode_add(boost::optional<std::string> account,
+    Credentials::mode_add(boost::optional<std::string> const& account,
                           bool aws,
                           bool dropbox,
                           bool gcs,
                           bool google_drive)
     {
-      auto account_name = mandatory(account, "account");
-      auto& ifnt = this->cli().infinit();
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
       if (aws)
       {
+        auto account_name = mandatory(account, "account");
         std::cout << "Please enter your AWS credentials\n";
         auto access_key_id
           = this->cli().read_secret("Access Key ID", "[A-Z0-9]{20}");
@@ -147,11 +149,11 @@ namespace infinit
                                   account.get(), "locally");
       }
       else if (dropbox)
-        web_doc(account_name, "Dropbox", "dropbox");
+        web_doc(owner.name, "Dropbox", "dropbox");
       else if (gcs)
-        web_doc(account_name, "Google", "gcs");
+        web_doc(owner.name, "Google", "gcs");
       else if (google_drive)
-        web_doc(account_name, "Google", "google");
+        web_doc(owner.name, "Google", "google");
       else
         elle::err<Error>("service type not specified");
     }
@@ -184,7 +186,7 @@ namespace infinit
     }
 
     void
-    Credentials::mode_delete(boost::optional<std::string> account,
+    Credentials::mode_delete(std::string const& account,
                              bool aws,
                              bool dropbox,
                              bool gcs,
@@ -193,11 +195,10 @@ namespace infinit
       auto e = Enabled{aws, dropbox, gcs, google_drive};
       if (e.none())
         elle::err("delete: specify a service");
-      auto a = mandatory(account, "account");
-      do_delete_(*this, e, cli::aws,          "aws", a);
-      do_delete_(*this, e, cli::dropbox,      "dropbox", a);
-      do_delete_(*this, e, cli::google_drive, "google", a);
-      do_delete_(*this, e, cli::gcs,          "gcs", a);
+      do_delete_(*this, e, cli::aws,          "aws",     account);
+      do_delete_(*this, e, cli::dropbox,      "dropbox", account);
+      do_delete_(*this, e, cli::google_drive, "google",  account);
+      do_delete_(*this, e, cli::gcs,          "gcs",     account);
     }
 
 
@@ -207,18 +208,20 @@ namespace infinit
 
     namespace
     {
+      using Cred = infinit::OAuthCredentials;
+      using UCred = std::unique_ptr<Cred>;
+
       /// Fetch credentials.
       ///
       /// \param user     the user
       /// \param name     name of the service (e.g., "google_drive").
       /// \param pretty   pretty name of the service (e.g., "Google Drive")
       /// \param add      function to call to add the fetched credentials
-      template <typename T>
       void
       fetch_(infinit::User const& user,
              std::string const& name,
              std::string const& pretty,
-             std::function<void (std::unique_ptr<T>)> add)
+             std::function<void (UCred)> add)
       {
         auto where = elle::sprintf("users/%s/credentials/%s", user.name, name);
         // FIXME: Workaround for using std::unique_ptr.
@@ -234,7 +237,7 @@ namespace infinit
         for (auto const& a_json: credentials_vec)
         {
           auto input = elle::serialization::json::SerializerIn(a_json, false);
-          auto a = elle::make_unique<T>(input.deserialize<T>());
+          auto a = elle::make_unique<Cred>(input.deserialize<Cred>());
           elle::printf("Fetched %s credentials %s (%s)\n",
                        pretty, a->uid(), a->display_name());
           add(std::move(a));
@@ -243,16 +246,17 @@ namespace infinit
     }
 
     void
-    Credentials::mode_fetch(boost::optional<std::string> account,
+    Credentials::mode_fetch(boost::optional<std::string> const& account,
                             bool aws, bool dropbox,
                             bool gcs, bool google_drive)
     {
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
       auto e = Enabled{aws, dropbox, gcs, google_drive};
       e.all_if_none();
       bool fetch_all = e.all();
       auto account_name = mandatory(account, "account");
-      auto& ifnt = this->cli().infinit();
-      auto self = this->cli().as_user();
       // FIXME: Use Symbols instead.
       if (e.aws)
       {
@@ -265,19 +269,19 @@ namespace infinit
                            infinit::beyond(true));
       }
       if (e.dropbox)
-        fetch_<infinit::OAuthCredentials>
-          (self, "dropbox", "Dropbox",
-           [&ifnt] (std::unique_ptr<infinit::OAuthCredentials> a)
+        fetch_
+          (owner, "dropbox", "Dropbox",
+           [&ifnt] (UCred a)
            { ifnt.credentials_dropbox_add(std::move(a)); });
       if (e.gcs)
-        fetch_<infinit::OAuthCredentials>
-          (self, "gcs", "Google Cloud Storage",
-           [&ifnt] (std::unique_ptr<infinit::OAuthCredentials> a)
+        fetch_
+          (owner, "gcs", "Google Cloud Storage",
+           [&ifnt] (UCred a)
            { ifnt.credentials_gcs_add(std::move(a)); });
       if (e.google_drive)
-        fetch_<infinit::OAuthCredentials>
-          (self, "google", "Google Drive",
-           [&ifnt] (std::unique_ptr<infinit::OAuthCredentials> a)
+        fetch_
+          (owner, "google", "Google Drive",
+           [&ifnt] (UCred a)
            { ifnt.credentials_google_add(std::move(a)); });
       // FIXME: remove deleted ones
     }
