@@ -521,7 +521,7 @@ class CouchDBDatastore:
       raise infinit.beyond.Volume.Duplicate()
 
   def __volume_update(volume, req):
-    if network is None:
+    if volume is None:
       return [
         None,
         {
