@@ -1,5 +1,7 @@
 #include <infinit/cli/Journal.hh>
 
+#include <elle/bytes.hh>
+
 #include <infinit/cli/Infinit.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Async.hh>
@@ -67,6 +69,7 @@ namespace infinit
     Journal::mode_describe(std::string const& network_name,
                            boost::optional<int> operation)
     {
+      ELLE_TRACE_SCOPE("describe");
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
@@ -106,6 +109,7 @@ namespace infinit
     Journal::mode_export(std::string const& network_name,
                          int operation)
     {
+      ELLE_TRACE_SCOPE("export");
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
@@ -120,8 +124,55 @@ namespace infinit
     | Mode: stats.  |
     `--------------*/
 
+    namespace
+    {
+      bool
+      valid_block(fs::path const& path)
+      {
+        return fs::is_regular_file(path) && !infinit::is_hidden_file(path);
+      }
+    }
+
     void
-    Journal::mode_stat(boost::optional<std::string> const& network)
-    {}
+    Journal::mode_stat(boost::optional<std::string> const& network_name)
+    {
+      ELLE_TRACE_SCOPE("stat");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto networks = std::vector<infinit::Network>{};
+      if (network_name)
+        networks.emplace_back(ifnt.network_get(*network_name, owner));
+      else
+        networks = ifnt.networks_get(owner);
+      auto res = elle::json::Object{};
+      for (auto const& network: networks)
+      {
+        fs::path async_path = network.cache_dir(owner) / "async";
+        int operation_count = 0;
+        int64_t data_size = 0;
+        if (fs::exists(async_path))
+          for (auto it = fs::directory_iterator(async_path);
+               it != fs::directory_iterator();
+               ++it)
+            if (valid_block(it->path()))
+            {
+              operation_count++;
+              data_size += fs::file_size(*it);
+            }
+        if (cli.script())
+          res[network.name] = elle::json::Object
+            {
+              {"operations", operation_count},
+              {"size", data_size},
+            };
+        else
+          elle::printf("%s: %s operations, %s\n",
+                       network.name, operation_count,
+                       elle::human_data_size(data_size));
+      }
+      if (cli.script())
+        elle::json::write(std::cout, res);
+    }
   }
 }
