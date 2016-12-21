@@ -317,6 +317,7 @@ def configure(
       'drives/invitations',
       # Higher level.
       'users/register_login',
+      'credentials/oauth',
   ]:
     test = drake.node('tests/%s' % test_name)
     test.dependencies_add(built)
