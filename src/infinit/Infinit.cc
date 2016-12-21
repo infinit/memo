@@ -6,18 +6,18 @@ ELLE_LOG_COMPONENT("infinit");
 namespace infinit
 {
   bool
-  Infinit::is_qualified_name(std::string const& object_name) const
+  Infinit::is_qualified_name(std::string const& name) const
   {
-    return (object_name.find("/") != std::string::npos);
+    return name.find('/') != std::string::npos;
   }
 
   std::string
-  Infinit::qualified_name(std::string const& object_name, User const& owner) const
+  Infinit::qualified_name(std::string const& name, User const& owner) const
   {
-    if (object_name.find("/") != std::string::npos)
-      return object_name;
+    if (is_qualified_name(name))
+      return name;
     else
-      return elle::sprintf("%s/%s", owner.name, object_name);
+      return elle::sprintf("%s/%s", owner.name, name);
   }
 
   Network
@@ -908,9 +908,7 @@ namespace infinit
     elle::serialization::json::serialize(o, r, false);
     r.finalize();
     if (r.status() != reactor::http::StatusCode::OK)
-    {
       infinit::read_error<BeyondError>(r, "login", name);
-    }
     return elle::json::read(r);
   }
 
@@ -1158,9 +1156,9 @@ namespace infinit
         {}
         return BeyondError("unknown", "Unknown error");
       }();
-      if (error.error() == std::string("user/missing_field/email"))
+      if (error.error() == "user/missing_field/email")
         elle::err("email unspecified (use --email)");
-      else if (error.error() == std::string("user/invalid_format/email"))
+      else if (error.error() == "user/invalid_format/email")
         elle::err("email address is invalid");
       else
         elle::err("unexpected HTTP error %s pushing %s:\n%s",
