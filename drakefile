@@ -395,15 +395,15 @@ def configure(
     ('doughnode', [], [], False),
     ('generatekeys', [], [], False),
     ('infinit-acl', [xattr_sources], [], True),
-    ('infinit-block', [], [], True),
-    ('infinit-credentials', [], [], True),
+#    ('infinit-block', [], [], True),
+#    ('infinit-credentials', [], [], True),
 #    ('infinit-device', [], [], True),
     ('infinit-doctor',
      [
        drake.nodes('bin/networking.hh')
      ], [protocol_lib], True),
 #    ('infinit-drive', [], [], True),
-    ('infinit-journal', [], [], True),
+#    ('infinit-journal', [], [], True),
     ('infinit-network', [xattr_sources], [], True),
     ('infinit-passport', [], [], True),
     # ('infinit-user', [], [], True),
@@ -500,8 +500,11 @@ def configure(
     strip = windows)
   binaries.append(infinit_cli)
   for b in [
+      'infinit-block',
+      'infinit-credentials',
       'infinit-device',
       'infinit-drive',
+      'infinit-journal',
       'infinit-storage',
       'infinit-user',
   ]:
