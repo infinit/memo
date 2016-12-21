@@ -61,8 +61,7 @@ namespace infinit
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
-      auto network = ifnt.network_get(ifnt.qualified_name(network_name, owner),
-                                      owner);
+      auto network = ifnt.network_get(network_name, owner);
       auto dht = network.run(owner);
       auto ctx = context(dht);
       fs::path async_path = network.cache_dir(owner) / "async";

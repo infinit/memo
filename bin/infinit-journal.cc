@@ -25,17 +25,11 @@ namespace
 COMMAND(stats)
 {
   auto owner = self_user(ifnt, args);
-  auto network_name_ = optional(args, "network");
   auto networks = std::vector<infinit::Network>{};
-  if (network_name_)
-  {
-    auto network_name = ifnt.qualified_name(network_name_.get(), owner);
-    networks.emplace_back(ifnt.network_get(network_name, owner));
-  }
+  if (auto network_name = optional(args, "network"))
+    networks.emplace_back(ifnt.network_get(*network_name, owner));
   else
-  {
     networks = ifnt.networks_get(owner);
-  }
   auto res = elle::json::Object{};
   for (auto const& network: networks)
   {
@@ -83,9 +77,7 @@ namespace
 COMMAND(export_)
 {
   auto owner = self_user(ifnt, args);
-  auto network = ifnt.network_get(
-    ifnt.qualified_name(mandatory(args, "network", "Network"), owner),
-    owner);
+  auto network = ifnt.network_get(mandatory(args, "network", "Network"), owner);
   auto id = elle::sprintf("%s", mandatory<int>(args, "operation"));
   auto path = network.cache_dir(owner) / "async" / id;
   fs::ifstream f;
@@ -100,9 +92,7 @@ COMMAND(export_)
 COMMAND(describe)
 {
   auto owner = self_user(ifnt, args);
-  auto network = ifnt.network_get(
-    ifnt.qualified_name(mandatory(args, "network", "Network"), owner),
-    owner);
+  auto network = ifnt.network_get(mandatory(args, "network", "Network"), owner);
   auto dht = network.run(owner);
   auto ctx = context(dht);
   fs::path async_path = network.cache_dir(owner) / "async";
