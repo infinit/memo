@@ -322,11 +322,11 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
 with Beyond() as beyond, Infinit(beyond = beyond) as b:
   b.run(['infinit-user', '--signup', 'bob', '--email', 'bob@infinit.io'])
   # Local and Beyond.
-  b.run(['infinit-network', '--create', '--as', 'bob', '--push', 'n'])
-  b.run(['infinit-volume', '--create', '--as', 'bob',
-         '--network', 'n', '--push', 'v'])
-  b.run(['infinit-drive', '--create', '--as', 'bob',
-         '--network', 'n', '--volume', 'v', '--push', 'd'])
+  b.run(['infinit-network', '--create', 'n', '--as', 'bob', '--push'])
+  b.run(['infinit-volume', '--create', 'v', '--as', 'bob',
+         '--network', 'n', '--push'])
+  b.run(['infinit-drive', '--create', 'd', '--as', 'bob',
+         '--network', 'n', '--volume', 'v', '--push'])
   assertEq(len(b.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 1)
   b.run(['infinit-drive', '--delete', '--as', 'bob', 'd', '--pull'])
   assertEq(len(b.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)
