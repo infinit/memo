@@ -10,38 +10,41 @@ ELLE_LOG_COMPONENT("infinit-journal");
 
 infinit::Infinit ifnt;
 
-static
-bool
-valid_block(boost::filesystem::path const& path)
-{
-  return boost::filesystem::is_regular_file(path) &&
-    !infinit::is_hidden_file(path);
-}
+namespace fs = boost::filesystem;
 
-static
-std::string
-human_readable_data_size(double value)
+namespace
 {
-  static const double kilo = 1000;
-  static const double mega = pow(1000, 2);
-  static const double giga = pow(1000, 3);
-  static const double tera = pow(1000, 4);
-  if (value >= tera)
-    return elle::sprintf("%.2f TB", value / tera);
-  if (value >= giga)
-    return elle::sprintf("%.2f GB", value / giga);
-  if (value >= mega)
-    return elle::sprintf("%.1f MB", value / mega);
-  if (value >= kilo)
-    return elle::sprintf("%.f kB", value / kilo);
-  return elle::sprintf("%.f B", value);
+  bool
+  valid_block(fs::path const& path)
+  {
+    return fs::is_regular_file(path) && !infinit::is_hidden_file(path);
+  }
+
+  std::string
+  human_readable_data_size(double value)
+  {
+    constexpr double kilo = 1000;
+    constexpr double mega = 1000 * kilo;
+    constexpr double giga = 1000 * mega;
+    constexpr double tera = 1000 * giga;
+    if (value >= tera)
+      return elle::sprintf("%.2f TB", value / tera);
+    else if (value >= giga)
+      return elle::sprintf("%.2f GB", value / giga);
+    else if (value >= mega)
+      return elle::sprintf("%.1f MB", value / mega);
+    else if (value >= kilo)
+      return elle::sprintf("%.f kB", value / kilo);
+    else
+      return elle::sprintf("%.f B", value);
+  }
 }
 
 COMMAND(stats)
 {
   auto owner = self_user(ifnt, args);
   auto network_name_ = optional(args, "network");
-  std::vector<infinit::Network> networks;
+  auto networks = std::vector<infinit::Network>{};
   if (network_name_)
   {
     auto network_name = ifnt.qualified_name(network_name_.get(), owner);
@@ -51,53 +54,48 @@ COMMAND(stats)
   {
     networks = ifnt.networks_get(owner);
   }
-  elle::json::Object res;
+  auto res = elle::json::Object{};
   for (auto const& network: networks)
   {
-    boost::filesystem::path async_path = network.cache_dir(owner) / "async";
+    fs::path async_path = network.cache_dir(owner) / "async";
     int operation_count = 0;
     int64_t data_size = 0;
-    if (boost::filesystem::exists(async_path))
-    {
-      for (boost::filesystem::directory_iterator it(async_path);
-           it != boost::filesystem::directory_iterator();
+    if (fs::exists(async_path))
+      for (auto it = fs::directory_iterator(async_path);
+           it != fs::directory_iterator();
            ++it)
-      {
         if (valid_block(it->path()))
         {
           operation_count++;
-          data_size += boost::filesystem::file_size(*it);
+          data_size += fs::file_size(*it);
         }
-      }
-    }
     if (script_mode)
-    {
-      elle::json::Object stats;
-      stats["operations"] = operation_count;
-      stats["size"] = data_size;
-      res[network.name] = stats;
-    }
+      res[network.name] = elle::json::Object
+        {
+          {"operations", operation_count},
+          {"size", data_size},
+        };
     else
-    {
-      std::cout << network.name << ": "
-                << operation_count << " operations, "
-                << human_readable_data_size(data_size) << "\n";
-    }
+      elle::printf("%s: %s operations, %s\n",
+                   network.name, operation_count,
+                   human_readable_data_size(data_size));
   }
   if (script_mode)
     elle::json::write(std::cout, res);
 }
 
-static
-elle::serialization::Context
-context(infinit::User const& owner,
-        std::unique_ptr<infinit::model::doughnut::Doughnut> const& dht)
+namespace
 {
-  elle::serialization::Context ctx;
-  ctx.set<infinit::model::doughnut::Doughnut*>(dht.get());
-  ctx.set(infinit::model::doughnut::ACBDontWaitForSignature{});
-  ctx.set(infinit::model::doughnut::OKBDontWaitForSignature{});
-  return ctx;
+   elle::serialization::Context
+   context(infinit::User const& owner,
+           std::unique_ptr<infinit::model::doughnut::Doughnut> const& dht)
+   {
+     auto ctx = elle::serialization::Context{};
+     ctx.set<infinit::model::doughnut::Doughnut*>(dht.get());
+     ctx.set(infinit::model::doughnut::ACBDontWaitForSignature{});
+     ctx.set(infinit::model::doughnut::OKBDontWaitForSignature{});
+     return ctx;
+   }
 }
 
 COMMAND(export_)
@@ -108,7 +106,7 @@ COMMAND(export_)
     owner);
   auto id = elle::sprintf("%s", mandatory<int>(args, "operation"));
   auto path = network.cache_dir(owner) / "async" / id;
-  boost::filesystem::ifstream f;
+  fs::ifstream f;
   ifnt._open_read(f, path, id, "operation");
   auto dht = network.run(owner);
   auto ctx = context(owner, dht);
@@ -125,11 +123,11 @@ COMMAND(describe)
     owner);
   auto dht = network.run(owner);
   auto ctx = context(owner, dht);
-  boost::filesystem::path async_path = network.cache_dir(owner) / "async";
+  fs::path async_path = network.cache_dir(owner) / "async";
   auto operation = optional<int>(args, "operation");
-  auto report = [&] (boost::filesystem::path const& path)
+  auto report = [&] (fs::path const& path)
     {
-      boost::filesystem::ifstream f;
+      fs::ifstream f;
       ifnt._open_read(f, path, path.filename().string(), "operation");
       auto name = path.filename().string();
       std::cout << name << ": ";
@@ -138,7 +136,7 @@ COMMAND(describe)
         auto op = elle::serialization::binary::deserialize<
           infinit::model::doughnut::consensus::Async::Op>(
             f, true, ctx);
-        if (op.resolver != nullptr)
+        if (op.resolver)
           std::cout << op.resolver->description();
         else
           std::cout << "no description for this operation";
@@ -154,9 +152,7 @@ COMMAND(describe)
   else
     for (auto const& path:
          infinit::model::doughnut::consensus::Async::entries(async_path))
-    {
       report(path);
-    }
 }
 
 int

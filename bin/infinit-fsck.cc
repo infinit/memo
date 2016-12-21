@@ -1,4 +1,3 @@
-
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/filesystem/filesystem.hh>
