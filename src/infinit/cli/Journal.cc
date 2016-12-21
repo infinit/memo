@@ -1,8 +1,13 @@
 #include <infinit/cli/Journal.hh>
 
 #include <infinit/cli/Infinit.hh>
+#include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/Async.hh>
+#include <infinit/model/doughnut/OKB.hh>
 
 ELLE_LOG_COMPONENT("cli.journal");
+
+namespace fs = boost::filesystem;
 
 namespace infinit
 {
@@ -35,10 +40,61 @@ namespace infinit
     | Mode: describe.  |
     `-----------------*/
 
+    namespace
+    {
+      elle::serialization::Context
+      context(std::unique_ptr<infinit::model::doughnut::Doughnut> const& dht)
+      {
+        return
+        {
+          dht.get(),
+          infinit::model::doughnut::ACBDontWaitForSignature{},
+          infinit::model::doughnut::OKBDontWaitForSignature{}
+        };
+      }
+    }
+
     void
-    Journal::mode_describe(std::string const& network,
+    Journal::mode_describe(std::string const& network_name,
                            boost::optional<int> operation)
-    {}
+    {
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto network = ifnt.network_get(ifnt.qualified_name(network_name, owner),
+                                      owner);
+      auto dht = network.run(owner);
+      auto ctx = context(dht);
+      fs::path async_path = network.cache_dir(owner) / "async";
+      auto report = [&] (fs::path const& path)
+        {
+          fs::ifstream f;
+          ifnt._open_read(f, path, path.filename().string(), "operation");
+          auto name = path.filename().string();
+          std::cout << name << ": ";
+          try
+          {
+            auto op = elle::serialization::binary::deserialize<
+              infinit::model::doughnut::consensus::Async::Op>(
+                f, true, ctx);
+            if (op.resolver)
+              std::cout << op.resolver->description();
+            else
+              std::cout << "no description for this operation";
+          }
+          catch (elle::serialization::Error const&)
+          {
+            std::cerr << "error: " << elle::exception_string();
+          }
+          std::cout << std::endl;
+        };
+      if (operation)
+        report(async_path / elle::sprintf("%s", *operation));
+      else
+        for (auto const& path:
+             infinit::model::doughnut::consensus::Async::entries(async_path))
+          report(path);
+    }
 
     /*---------------.
     | Mode: export.  |
