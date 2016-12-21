@@ -15,6 +15,8 @@ namespace infinit
   {
     using Error = das::cli::Error;
 
+    using Async = infinit::model::doughnut::consensus::Async;
+
     Journal::Journal(Infinit& infinit)
       : Entity(infinit)
       , describe(
@@ -73,9 +75,8 @@ namespace infinit
           std::cout << name << ": ";
           try
           {
-            auto op = elle::serialization::binary::deserialize<
-              infinit::model::doughnut::consensus::Async::Op>(
-                f, true, ctx);
+            auto op
+              = elle::serialization::binary::deserialize<Async::Op>(f, true, ctx);
             if (op.resolver)
               std::cout << op.resolver->description();
             else
@@ -90,8 +91,7 @@ namespace infinit
       if (operation)
         report(async_path / elle::sprintf("%s", *operation));
       else
-        for (auto const& path:
-             infinit::model::doughnut::consensus::Async::entries(async_path))
+        for (auto const& path: Async::entries(async_path))
           report(path);
     }
 
@@ -100,9 +100,25 @@ namespace infinit
     `---------------*/
 
     void
-    Journal::mode_export(std::string const& network,
+    Journal::mode_export(std::string const& network_name,
                          int operation)
-    {}
+    {
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto network = ifnt.network_get(network_name, owner);
+      auto id = std::to_string(operation);
+      auto path = network.cache_dir(owner) / "async" / id;
+      auto op = []
+        {
+          fs::ifstream f;
+          ifnt._open_read(f, path, id, "operation");
+          auto dht = network.run(owner);
+          auto ctx = context(dht);
+          return elle::serialization::binary::deserialize<Async::Op>(f, true, ctx);
+        }
+      elle::serialization::json::serialize(op, std::cout);
+    }
 
     /*--------------.
     | Mode: stats.  |
