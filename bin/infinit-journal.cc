@@ -1,3 +1,4 @@
+#include <elle/bytes.hh> // human_data_size
 #include <elle/log.hh>
 
 #include <infinit/model/doughnut/ACB.hh>
@@ -18,25 +19,6 @@ namespace
   valid_block(fs::path const& path)
   {
     return fs::is_regular_file(path) && !infinit::is_hidden_file(path);
-  }
-
-  std::string
-  human_readable_data_size(double value)
-  {
-    constexpr double kilo = 1000;
-    constexpr double mega = 1000 * kilo;
-    constexpr double giga = 1000 * mega;
-    constexpr double tera = 1000 * giga;
-    if (value >= tera)
-      return elle::sprintf("%.2f TB", value / tera);
-    else if (value >= giga)
-      return elle::sprintf("%.2f GB", value / giga);
-    else if (value >= mega)
-      return elle::sprintf("%.1f MB", value / mega);
-    else if (value >= kilo)
-      return elle::sprintf("%.f kB", value / kilo);
-    else
-      return elle::sprintf("%.f B", value);
   }
 }
 
@@ -78,7 +60,7 @@ COMMAND(stats)
     else
       elle::printf("%s: %s operations, %s\n",
                    network.name, operation_count,
-                   human_readable_data_size(data_size));
+                   elle::human_data_size(data_size));
   }
   if (script_mode)
     elle::json::write(std::cout, res);

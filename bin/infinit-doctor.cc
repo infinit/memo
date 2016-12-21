@@ -2,14 +2,15 @@
 #include <unordered_map>
 #include <utility>
 
+#include <elle/bytes.hh>
+#include <elle/filesystem/TemporaryDirectory.hh>
+#include <elle/filesystem/path.hh>
 #include <elle/log.hh>
-#include <elle/string/algorithm.hh>
 #include <elle/log/TextLogger.hh>
+#include <elle/os/environ.hh>
+#include <elle/string/algorithm.hh>
 #include <elle/string/algorithm.hh>
 #include <elle/system/Process.hh>
-#include <elle/filesystem/TemporaryDirectory.hh>
-#include <elle/os/environ.hh>
-#include <elle/filesystem/path.hh>
 
 #include <infinit/storage/Dropbox.hh>
 #include <infinit/storage/Filesystem.hh>
@@ -561,7 +562,7 @@ namespace reporting
         out << std::endl << "  - " << "low";
       elle::fprintf(
         out, " %s available (~%s%%)",
-        bytes::to_human(this->available, false),
+        elle::human_data_size(this->available, false),
         (int) (100 * this->available / (double) this->capacity));
     }
   }

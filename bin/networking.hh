@@ -1,44 +1,16 @@
-#ifndef INFINIT_BIN_NETWORKING_HH
-# define INFINIT_BIN_NETWORKING_HH
+#pragma once
 
 using namespace boost::posix_time;
 
-# include <reactor/Barrier.hh>
+#include <elle/bytes.hh>
 
-# include <protocol/exceptions.hh>
+#include <reactor/Barrier.hh>
 
-# include <infinit/model/doughnut/protocol.hh>
+#include <protocol/exceptions.hh>
 
-# include <version.hh>
+#include <infinit/model/doughnut/protocol.hh>
 
-namespace bytes
-{
-  // XXX: Move that somewhere to elle/elle/src/elle/bytes/conversion.hh or
-  // something like that.
-  static std::vector<std::pair<std::string, std::string>> capacities{
-    { "B",  "B"   },
-    { "kB", "KiB" },
-    { "MB", "MiB" },
-    { "GB", "GiB" },
-    { "TB", "TiB" },
-    { "EB", "EiB" },
-    { "ZB", "ZiB" },
-  };
-
-  std::string
-  to_human(uint64_t bytes,
-           bool si = true)
-  {
-    for (uint64_t i = 1; i < capacities.size() + 1; ++i)
-    {
-      if ((double) bytes / pow((si ? 1024 : 1000), i) < 1 || i == (capacities.size()))
-        return elle::sprintf("%.1f %s",
-                             bytes / pow((si ? 1024 : 1000), i - 1),
-                             (si ? capacities[i - 1].second : capacities[i - 1].first));
-    }
-    elle::unreachable();
-  }
-}
+#include <version.hh>
 
 namespace infinit
 {
@@ -95,8 +67,8 @@ namespace infinit
       return elle::sprintf(
         "%sms for %s (%s/sec)",
         duration.total_milliseconds(),
-        bytes::to_human(size, false),
-        bytes::to_human((double) 1000 * size / duration.total_milliseconds(), false));
+        elle::human_data_size(size, false),
+        elle::human_data_size(1000. * size / duration.total_milliseconds(), false));
     }
 
     static
@@ -697,5 +669,3 @@ namespace infinit
   }
 }
 
-
-#endif
