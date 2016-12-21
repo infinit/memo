@@ -630,7 +630,7 @@ class User:
     self.__dropbox_accounts_original = dict(self.__dropbox_accounts)
     self.__google_accounts_original = dict(self.__google_accounts)
     self.__gcs_accounts_original = dict(self.__gcs_accounts)
-    self.__emails_original = dict(self.__gcs_accounts)
+    self.__emails_original = dict(self.__emails)
 
   @property
   def id(self):
