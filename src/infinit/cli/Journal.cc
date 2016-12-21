@@ -44,15 +44,22 @@ namespace infinit
 
     namespace
     {
-      elle::serialization::Context
-      context(std::unique_ptr<infinit::model::doughnut::Doughnut> const& dht)
+      Async::Op
+      get_operation(infinit::Infinit& ifnt,
+                    infinit::User const& owner,
+                    infinit::Network& network,
+                    fs::path const& path, std::string const& id)
       {
-        return
-        {
-          dht.get(),
-          infinit::model::doughnut::ACBDontWaitForSignature{},
-          infinit::model::doughnut::OKBDontWaitForSignature{}
-        };
+        fs::ifstream f;
+        ifnt._open_read(f, path, id, "operation");
+        auto dht = network.run(owner);
+        auto ctx = elle::serialization::Context
+          {
+            dht.get(),
+            infinit::model::doughnut::ACBDontWaitForSignature{},
+            infinit::model::doughnut::OKBDontWaitForSignature{}
+          };
+        return elle::serialization::binary::deserialize<Async::Op>(f, true, ctx);
       }
     }
 
@@ -65,18 +72,14 @@ namespace infinit
       auto owner = cli.as_user();
       auto network = ifnt.network_get(network_name, owner);
       auto dht = network.run(owner);
-      auto ctx = context(dht);
       fs::path async_path = network.cache_dir(owner) / "async";
       auto report = [&] (fs::path const& path)
         {
-          fs::ifstream f;
-          ifnt._open_read(f, path, path.filename().string(), "operation");
           auto name = path.filename().string();
           std::cout << name << ": ";
           try
           {
-            auto op
-              = elle::serialization::binary::deserialize<Async::Op>(f, true, ctx);
+            auto op = get_operation(ifnt, owner, network, path, name);
             if (op.resolver)
               std::cout << op.resolver->description();
             else
@@ -109,14 +112,7 @@ namespace infinit
       auto network = ifnt.network_get(network_name, owner);
       auto id = std::to_string(operation);
       auto path = network.cache_dir(owner) / "async" / id;
-      auto op = []
-        {
-          fs::ifstream f;
-          ifnt._open_read(f, path, id, "operation");
-          auto dht = network.run(owner);
-          auto ctx = context(dht);
-          return elle::serialization::binary::deserialize<Async::Op>(f, true, ctx);
-        }
+      auto op = get_operation(ifnt, owner, network, path, id);
       elle::serialization::json::serialize(op, std::cout);
     }
 
