@@ -1276,7 +1276,7 @@ def user_credentials_google_refresh(self, username):
         # https://developers.google.com/identity/protocols/OAuth2InstalledApp
         # The associate google account.
         if account['refresh_token'] == refresh_token:
-          google_url = "https://www.googleapis.com/oauth2/v3/token"
+          google_url = Bottle._Bottle__oauth_services["google"]["exchange_url"]
           # Get a new token and update the db and the client
           query = {
             'client_id':     getattr(beyond, '%s_app_key' % kind),
