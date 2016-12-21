@@ -2,6 +2,8 @@
 
 #include <infinit/cli/Infinit.hh>
 
+ELLE_LOG_COMPONENT("cli.journal");
+
 namespace infinit
 {
   namespace cli

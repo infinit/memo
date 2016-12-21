@@ -1,8 +1,11 @@
+#include <infinit/cli/Silo.hh>
+
+#include <iostream>
+
 #include <boost/algorithm/string/case_conv.hpp>
 
 #include <elle/print.hh>
 
-#include <infinit/cli/Silo.hh>
 #include <infinit/storage/Dropbox.hh>
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/GCS.hh>
@@ -12,9 +15,9 @@
 # include <infinit/storage/sftp.hh>
 #endif
 
-#include <iostream>
-
 #include <infinit/cli/Infinit.hh>
+
+ELLE_LOG_COMPONENT("cli.block");
 
 namespace infinit
 {

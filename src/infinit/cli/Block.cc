@@ -3,6 +3,8 @@
 #include <infinit/cli/Infinit.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
+ELLE_LOG_COMPONENT("cli.block");
+
 namespace infinit
 {
   namespace cli

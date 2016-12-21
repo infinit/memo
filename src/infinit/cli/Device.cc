@@ -5,6 +5,8 @@
 #include <infinit/cli/Infinit.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
+ELLE_LOG_COMPONENT("cli.device");
+
 namespace infinit
 {
   namespace cli

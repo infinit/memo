@@ -9,6 +9,8 @@
 #include <infinit/LoginCredentials.hh>
 #include <infinit/cli/Infinit.hh>
 
+ELLE_LOG_COMPONENT("cli.user");
+
 namespace infinit
 {
   namespace cli
