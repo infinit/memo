@@ -568,6 +568,8 @@ def configure(
     'resources/images/icons/versioning-yellow-big@2x.png',
     'resources/images/icons/server.png',
     'resources/images/icons/server@2x.png',
+    'resources/images/icons/server-yellow.png',
+    'resources/images/icons/server-yellow@2x.png',
     'resources/images/icons/docker-volume-plugin.png',
     'resources/images/icons/docker-volume-plugin@2x.png',
     'resources/images/icons/infinit-cluster.png',

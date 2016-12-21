@@ -2220,7 +2220,7 @@ body.confirm_email {
 
 body.pricing {
   section.doc  {
-    padding-bottom: 10px; padding-left: 7%; padding-right: 7%; width: 86%;
+    padding-bottom: 10px; padding-left: 4%; padding-right: 4%; width: 92%;
     &:after { content: ''; display: table; clear: both; }
 
     h1 {
@@ -2231,24 +2231,28 @@ body.pricing {
       line-height: 30px;}
 
     .version {
-      width: 35%; margin: 40px 0 100px 0; float: left; text-align: center;
-      padding-bottom: 50px;
+      width: 40%; margin: 40px 0 100px 0; float: left; text-align: center;
       background: #FFFFFF; box-shadow: 0px 0px 3px 0px rgba(0,0,0,0.17);
-      border-radius: 3px;
+      border-radius: 3px; padding-bottom: 50px;
 
       ul { list-style-type: none;}
       ul:after { display: table; clear: both; content: '';}
-      ul li { float: left; text-align: center; width: 40%; margin:10px 5% 20px 5%; }
+      ul li { 
+        float: left; text-align: center; width: 40%; margin:10px 5% 20px 5%; 
+        font-size: 17px; 
+      }
       ul li:nth-child(2n+1) { clear: both; }
       ul li span { display: block; clear: both; margin-top: 5px; }
       ul li img {
         max-height: 35px; max-width: 35px; width: auto; display: block;
         margin: auto;
       }
+
       ul li.key img { margin-top: 10px;}
       ul li.key span { margin-top: 9px;}
 
-      ul li.connectors img { max-width: none; max-height: none; height: 35px; width: auto;}
+      ul li.connectors img,
+      ul li.hub img { max-width: none; max-height: none; height: 35px; width: auto;}
       ul li.key span { margin-top: 9px;}
 
       ul li.cluster img { margin-top: 6px;}
@@ -2256,15 +2260,17 @@ body.pricing {
 
       > img { margin-top: 45px; }
       h2 {
-        font-size: 16px; text-transform: uppercase; padding-bottom: 5px; margin-top: 10px;
+        font-size: 15px; text-transform: uppercase; padding-bottom: 5px; margin-top: 10px;
         border-bottom: 2px solid @infinitblack; display: inline-block;
+        font-family: @sf;
       }
 
       hr {
         background: #E6E6E6; height: 1px; border: none; display: block; clear: both;
-        margin: 0px auto 20px auto; width: 50%;
+        margin: 0px auto 20px auto; width: 60%;
       }
-      p { margin: 5px 0; }
+      p { margin: 10px 0; padding-left:2%; padding-right: 2%; }
+      strong, p { font-size: 17px; }
       p span {
         color: #718287;background: #dbebf0; border-radius: 3px; padding: 4px 6px;
         text-transform: uppercase; font-size: 10px; margin-left: 3px; font-weight: bold;
@@ -2274,11 +2280,11 @@ body.pricing {
 
     em { clear: both; display: block;  text-align: center; margin-bottom: 60px;}
 
-    .version.community { margin-left: 15%; }
+    .version.community { margin-left: 10%; }
     .version.community ul { width: 80%; margin-left: auto; margin-right: auto; }
     .version.community ul li { width: 38%; margin-left: 6%; margin-right: 6%;}
 
-    .version.enterprise { margin-right: 15%; background: #FAFAFA; }
+    .version.enterprise { margin-right: 10%; background: #FAFAFA; }
     .version.enterprise > img { margin-top: 37px; }
     .version.enterprise ul { width: 90%; margin-left: auto; margin-right: auto; }
   }
