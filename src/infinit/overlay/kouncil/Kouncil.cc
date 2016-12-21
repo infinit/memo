@@ -746,7 +746,8 @@ namespace infinit
             }
             it = it2;
           }
-          reactor::sleep(10_sec);
+          static const int sleep_time = std::stoi(elle::os::getenv("INFINIT_KOUNCIL_WATCHER_INTERVAL", "10"));
+          reactor::sleep(boost::posix_time::seconds(sleep_time));
         }
       }
     }
