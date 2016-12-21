@@ -44,7 +44,15 @@
                 <a href="#methodology">?</a>
               </div>
               <progress value="${project['progress']}"></progress>
-              <p>${project['state']} &nbsp;</p>
+              % if project['state']:
+                <ul>
+                  % for point in project['state']:
+                    <li>${point}</li>
+                  % endfor
+                </ul>
+              % else:
+                <p>&nbsp;</p>
+              % endif
             </div>
           % endif
         </div>
