@@ -9,6 +9,7 @@ namespace infinit
     class Device;
     class Drive;
     class Infinit;
+    class Journal;
     class Silo;
     class User;
     struct Network;

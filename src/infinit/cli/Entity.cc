@@ -97,17 +97,12 @@ namespace infinit
     | Instantiate entities.  |
     `-----------------------*/
 
-    template
-    class Entity<Block>;
-    template
-    class Entity<Credentials>;
-    template
-    class Entity<Device>;
-    template
-    class Entity<Drive>;
-    template
-    class Entity<User>;
-    template
-    class Entity<Silo>;
+    template class Entity<Block>;
+    template class Entity<Credentials>;
+    template class Entity<Device>;
+    template class Entity<Drive>;
+    template class Entity<Journal>;
+    template class Entity<Silo>;
+    template class Entity<User>;
   }
 }

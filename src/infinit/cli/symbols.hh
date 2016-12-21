@@ -39,6 +39,7 @@ namespace infinit
     DAS_CLI_SYMBOL(network, 'N', "associated network name", false);
     DAS_CLI_SYMBOL(no_avatar, '\0', "do not {action} avatars", false);
     DAS_CLI_SYMBOL(no_countdown, 0, "do not show countdown timer", false);
+    DAS_CLI_SYMBOL(operation, 'O', "operation to {action}", false);
     DAS_CLI_SYMBOL(output, 'o', "file to write the {type} to", false);
     DAS_CLI_SYMBOL(passphrase, 0, "passphrase to secure identity (default: prompt for passphrase)", false);
     DAS_CLI_SYMBOL(passport, 0, "create passports for each invitee", false);
@@ -57,6 +58,7 @@ namespace infinit
     DAS_CLI_SYMBOL(s3, '\0', "store blocks on AWS S3", false);
     DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output", false);
     DAS_CLI_SYMBOL(ssh, '\0', "store blocks via SSH", false);
+    DAS_CLI_SYMBOL(stat, '\0', "show the remaining asynchronous operations count and size", false);
     DAS_CLI_SYMBOL(storage_class, '\0', "storage class to use: STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)", false);
     DAS_CLI_SYMBOL(user, 'u', "{action} user identity to another device using {hub}", false);
     DAS_CLI_SYMBOL(volume, 'V', "associated volume name", false);
@@ -66,6 +68,7 @@ namespace infinit
     DAS_SYMBOL(call);
     DAS_SYMBOL(create);
     DAS_SYMBOL(credentials);
+    DAS_SYMBOL(describe);
     DAS_SYMBOL(deserialize);
     DAS_SYMBOL(device);
     DAS_SYMBOL(drive);
@@ -73,6 +76,7 @@ namespace infinit
     DAS_SYMBOL(import);
     DAS_SYMBOL(invite);
     DAS_SYMBOL(join);
+    DAS_SYMBOL(journal);
     DAS_SYMBOL(list);
     DAS_SYMBOL(login);
     DAS_SYMBOL(signup);
@@ -90,6 +94,7 @@ namespace infinit
       DAS_SYMBOL(mode_add);
       DAS_SYMBOL(mode_create);
       DAS_SYMBOL(mode_delete);
+      DAS_SYMBOL(mode_describe);
       DAS_SYMBOL(mode_deserialize);
       DAS_SYMBOL(mode_export);
       DAS_SYMBOL(mode_fetch);
@@ -103,6 +108,7 @@ namespace infinit
       DAS_SYMBOL(mode_push);
       DAS_SYMBOL(mode_receive);
       DAS_SYMBOL(mode_signup);
+      DAS_SYMBOL(mode_stat);
       DAS_SYMBOL(mode_transmit);
     }
   }

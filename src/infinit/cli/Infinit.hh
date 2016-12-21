@@ -10,6 +10,7 @@
 #include <infinit/cli/Credentials.hh>
 #include <infinit/cli/Device.hh>
 #include <infinit/cli/Drive.hh>
+#include <infinit/cli/Journal.hh>
 #include <infinit/cli/Silo.hh>
 #include <infinit/cli/User.hh>
 #include <infinit/symbols.hh>
@@ -22,6 +23,7 @@ namespace infinit
       decltype(das::named::function(
                  das::bind_method(std::declval<Infinit&>(), cli::call),
                  help = false, version = false));
+
     class Infinit
       : public InfinitCallable
     {
@@ -108,6 +110,7 @@ namespace infinit
       Credentials credentials = *this;
       Device device = *this;
       Drive drive = *this;
+      Journal journal = *this;
       Silo silo = *this;
       User user = *this;
       using Entities
@@ -115,6 +118,7 @@ namespace infinit
                                     cli::credentials,
                                     cli::device,
                                     cli::drive,
+                                    cli::journal,
                                     cli::silo,
                                     cli::user));
       void
