@@ -17,14 +17,23 @@ namespace infinit
   {
   public:
     using Reporter = std::function<void (std::string const&)>;
+
   public:
     /// Whether has a `/`.
-    bool
-    is_qualified_name(std::string const& object_name) const;
+    static bool
+    is_qualified_name(std::string const& object_name);
     /// "<owner.name>/<object_name>" unless object_name is already
     /// qualified.
-    std::string
-    qualified_name(std::string const& object_name, User const& owner) const;
+    static std::string
+    qualified_name(std::string const& object_name, User const& owner);
+    /// Return "<owner>" from "<owner>/<object>".
+    static std::string
+    owner_name(std::string const& qualified_name);
+
+    /*----------.
+    | Network.  |
+    `----------*/
+
     /// Takes care of the `qualified_name` part.
     Network
     network_get(std::string const& name_,
@@ -56,6 +65,11 @@ namespace infinit
     void
     network_save(infinit::User const& self,
                  Network const& network, bool overwrite = false) const;
+
+    /*-----------.
+    | Passport.  |
+    `-----------*/
+
     model::doughnut::Passport
     passport_get(std::string const& network, std::string const& user);
     std::vector<std::pair<model::doughnut::Passport, std::string>>
@@ -63,6 +77,11 @@ namespace infinit
     void
     passport_save(model::doughnut::Passport const& passport,
                   bool overwrite = false);
+
+    /*-------.
+    | User.  |
+    `-------*/
+
     void
     user_save(User const& user,
               bool overwrite = false);
@@ -74,6 +93,12 @@ namespace infinit
     _user_avatar_path() const;
     boost::filesystem::path
     _user_avatar_path(std::string const& name) const;
+
+
+    /*----------.
+    | Storage.  |
+    `----------*/
+
     std::unique_ptr<storage::StorageConfig>
     storage_get(std::string const& name);
     std::vector<std::unique_ptr<storage::StorageConfig>>
@@ -85,6 +110,12 @@ namespace infinit
     storage_remove(std::string const& name);
     std::unordered_map<std::string, std::vector<std::string>>
     storage_networks(std::string const& storage_name);
+
+
+    /*---------.
+    | Volume.  |
+    `---------*/
+
     bool
     volume_has(std::string const& name);
     Volume
@@ -93,6 +124,12 @@ namespace infinit
     volume_save(Volume const& volume, bool overwrite = false);
     std::vector<Volume>
     volumes_get() const;
+
+
+    /*--------------.
+    | Credentials.  |
+    `--------------*/
+
     void
     credentials_add(std::string const& name, std::unique_ptr<Credentials> a);
     template <typename T = infinit::Credentials>

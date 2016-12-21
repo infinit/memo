@@ -343,13 +343,10 @@ namespace infinit
       {
         // XXX Remove volumes and drives that are on network owned by this user.
         // Currently only the owner of a network can create volumes/drives.
-        auto owner = [] (std::string const& qualified_name) {
-          return qualified_name.substr(0, qualified_name.find("/"));
-        };
         for (auto const& drive_: ifnt.drives_get())
         {
           auto drive = drive_.name;
-          if (owner(drive) != user.name)
+          if (ifnt.owner_name(drive) != user.name)
             continue;
           auto drive_path = ifnt._drive_path(drive);
           if (boost::filesystem::remove(drive_path))
@@ -358,7 +355,7 @@ namespace infinit
         for (auto const& volume_: ifnt.volumes_get())
         {
           auto volume = volume_.name;
-          if (owner(volume) != user.name)
+          if (ifnt.owner_name(volume) != user.name)
             continue;
           auto volume_path = ifnt._volume_path(volume);
           if (boost::filesystem::remove(volume_path))
@@ -367,8 +364,8 @@ namespace infinit
         for (auto const& pair: ifnt.passports_get())
         {
           auto network = pair.first.network();
-          if (owner(network) != user.name &&
-              pair.second != user.name)
+          if (ifnt.owner_name(network) != user.name
+              && pair.second != user.name)
           {
             continue;
           }
@@ -381,7 +378,7 @@ namespace infinit
         for (auto const& network_: ifnt.networks_get(user))
         {
           auto network = network_.name;
-          if (owner(network) == user.name)
+          if (ifnt.owner_name(network) == user.name)
             ifnt.network_delete(network, user, true);
           else
           {

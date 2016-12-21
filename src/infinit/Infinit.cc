@@ -6,18 +6,25 @@ ELLE_LOG_COMPONENT("infinit");
 namespace infinit
 {
   bool
-  Infinit::is_qualified_name(std::string const& name) const
+  Infinit::is_qualified_name(std::string const& name)
   {
     return name.find('/') != std::string::npos;
   }
 
   std::string
-  Infinit::qualified_name(std::string const& name, User const& owner) const
+  Infinit::qualified_name(std::string const& name, User const& owner)
   {
     if (is_qualified_name(name))
       return name;
     else
       return elle::sprintf("%s/%s", owner.name, name);
+  }
+
+  std::string
+  Infinit::owner_name(std::string const& name)
+  {
+    assert(is_qualified_name(name));
+    return name.substr(0, name.find('/'));
   }
 
   Network
