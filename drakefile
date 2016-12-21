@@ -479,6 +479,8 @@ def configure(
     'src/infinit/cli/Infinit.hh',
     'src/infinit/cli/Journal.cc',
     'src/infinit/cli/Journal.hh',
+    'src/infinit/cli/Passport.cc',
+    'src/infinit/cli/Passport.hh',
     'src/infinit/cli/Silo.cc',
     'src/infinit/cli/Silo.hh',
     'src/infinit/cli/User.cc',

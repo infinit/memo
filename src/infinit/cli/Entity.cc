@@ -102,6 +102,7 @@ namespace infinit
     template class Entity<Device>;
     template class Entity<Drive>;
     template class Entity<Journal>;
+    template class Entity<Passport>;
     template class Entity<Silo>;
     template class Entity<User>;
   }

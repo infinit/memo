@@ -10,6 +10,7 @@ namespace infinit
   {
     // Symbol, short option char (or 0), help string, whether positional argument.
     DAS_CLI_SYMBOL(account, '\0', "cloud service account name", false);
+    DAS_CLI_SYMBOL(allow_create_passport, 0, "allow user to create passports for network", false);
     DAS_CLI_SYMBOL(as, 'a', "user to run commands as", false);
     DAS_CLI_SYMBOL(avatar, '\0', "path to an image to use as avatar", false);
     DAS_CLI_SYMBOL(aws, 0, "Amazon Web Services (or S3 compatible) credentials", false);
@@ -17,6 +18,8 @@ namespace infinit
     DAS_CLI_SYMBOL(capacity, 'c', "limit storage capacity (use: B,kB,kiB,MB,MiB,GB,GiB,TB,TiB)", false);
     DAS_CLI_SYMBOL(clear_content, '\0', "remove all blocks from disk (filesystem storage only)", false);
     DAS_CLI_SYMBOL(compatibility_version, '\0', "compatibility version to force", false);
+    DAS_CLI_SYMBOL(deny_storage, '\0', "deny user ability to contribute storage to the network", false);
+    DAS_CLI_SYMBOL(deny_write, '\0', "deny user write access to the network", false);
     DAS_CLI_SYMBOL(description, '\0', "{type} description", false);
     DAS_CLI_SYMBOL(dropbox, '\0', "store blocks on Dropbox", false);
     DAS_CLI_SYMBOL(email, 'e', "user email", false);
@@ -52,6 +55,7 @@ namespace infinit
     DAS_CLI_SYMBOL(push, 'p', "push {type} to {hub}", false);
     DAS_CLI_SYMBOL(push_drive, '\0', "push drive to {hub}", false);
     DAS_CLI_SYMBOL(push_invitations, '\0', "update remote drive descriptor and send invitations to {hub}", false);
+    DAS_CLI_SYMBOL(push_passport, 0, "push passport to {hub}", false);
     DAS_CLI_SYMBOL(push_user, '\0', "push user to {hub}", false);
     DAS_CLI_SYMBOL(receive, 0, "receive an object from another device using {hub}", false);
     DAS_CLI_SYMBOL(region, '\0', "AWS region", false);

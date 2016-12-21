@@ -318,11 +318,11 @@ namespace infinit
       using Passport = Drive::Passport;
 
       void
-      push_passport(infinit::cli::Infinit& cli,
-                    infinit::Network const& network,
-                    Passport const& passport,
-                    infinit::User const& user,
-                    infinit::User const& owner)
+      do_push_passport(infinit::cli::Infinit& cli,
+                       infinit::Network const& network,
+                       Passport const& passport,
+                       infinit::User const& user,
+                       infinit::User const& owner)
       {
         auto url = elle::sprintf("networks/%s/passports/%s",
                                  network.name, user.name);
@@ -347,7 +347,7 @@ namespace infinit
           auto passport = cli.infinit().passport_get(network.name, user.name);
           ELLE_DEBUG("passport (%s: %s) found", network.name, user.name);
           if (push)
-            push_passport(cli, network, passport, user, owner);
+            do_push_passport(cli, network, passport, user, owner);
         }
         catch (infinit::MissingResource const& e)
         {
@@ -361,7 +361,7 @@ namespace infinit
           cli.report_created("passport",
                          elle::sprintf("%s: %s", network.name, user.name));
           if (push)
-            push_passport(cli, network, passport, user, owner);
+            do_push_passport(cli, network, passport, user, owner);
         }
       }
 
@@ -497,7 +497,7 @@ namespace infinit
           // Ensure that the user has a passport.
           auto passport = ifnt.passport_get(network.name, user.name);
           if (push)
-            push_passport(cli, network, passport, user, owner);
+            do_push_passport(cli, network, passport, user, owner);
         }
       }
 
