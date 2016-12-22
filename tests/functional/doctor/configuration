@@ -66,7 +66,7 @@ for home, (i, (json_output, text_output)) in expectations.items():
     res = leftovers_json(res)
   assertEq(res, json_output)
   output = infinit.run(['infinit-doctor', '--configuration',  '--as', 'bob', '--no-color'],
-                         return_code = i)[0].strip().split('\n')
+                         return_code = i)[0].strip().replace('\r', '').split('\n')
   if i == 0:
     output = output[:-2]
   output = list(map(lambda x: re.sub(r' +$', '', x), output))
