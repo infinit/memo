@@ -22,8 +22,10 @@ infinit::Infinit ifnt;
 
 namespace
 {
-  const char admin_prefix = '^';
-  const char group_prefix = '@';
+  namespace bfs = boost::filesystem;
+
+  constexpr char admin_prefix = '^';
+  constexpr char group_prefix = '@';
 
   bool
   fallback_enabled(boost::program_options::variables_map const& args)
@@ -38,56 +40,42 @@ namespace
   bool
   is_admin(std::string const& obj)
   {
-    return obj.length() > 0 && obj[0] == admin_prefix;
+    return !obj.empty() && obj[0] == admin_prefix;
   }
 
   bool
   is_group(std::string const& obj)
   {
-    return obj.length() > 0 && obj[0] == group_prefix;
+    return !obj.empty() && obj[0] == group_prefix;
   }
 
-  using OptVecStr = boost::optional<std::vector<std::string>>;
 
-  OptVecStr
-  collate_users(OptVecStr const& combined,
-                OptVecStr const& users,
-                OptVecStr const& admins,
-                OptVecStr const& groups)
+  using Strings = std::vector<std::string>;
+  using OptStrings = boost::optional<Strings>;
+
+  Strings
+  collate_users(OptStrings&& combined,
+                OptStrings&& users,
+                OptStrings&& admins,
+                OptStrings&& groups)
   {
-    if (!combined && !users && !admins && !groups)
-      return boost::none;
-    std::vector<std::string> res;
+    auto res = Strings{};
     if (combined)
-    {
-      for (auto c: combined.get())
-        res.push_back(c);
-    }
+      std::move(combined->begin(), combined->end(), std::back_inserter(res));
     if (users)
-    {
-      for (auto u: users.get())
-        res.push_back(u);
-    }
+      std::move(users->begin(), users->end(), std::back_inserter(res));
     if (admins)
-    {
       for (auto a: admins.get())
-      {
         if (a[0] == admin_prefix)
-          res.push_back(a);
+          res.emplace_back(std::move(a));
         else
-          res.push_back(elle::sprintf("%s%s", admin_prefix, a));
-      }
-    }
+          res.emplace_back(elle::sprintf("%s%s", admin_prefix, a));
     if (groups)
-    {
       for (auto g: groups.get())
-      {
         if (g[0] == group_prefix)
-          res.push_back(g);
+          res.emplace_back(std::move(g));
         else
-          res.push_back(elle::sprintf("%s%s", group_prefix, g));
-      }
-    }
+          res.emplace_back(elle::sprintf("%s%s", group_prefix, g));
     return res;
   }
 
@@ -108,15 +96,14 @@ namespace
   void
   recursive_action(A action, std::string const& path, Args ... args)
   {
-    namespace bfs = boost::filesystem;
     boost::system::error_code erc;
-    bfs::recursive_directory_iterator it(path, erc);
+    auto it = bfs::recursive_directory_iterator(path, erc);
     if (erc)
       elle::err("%s : %s", path, erc.message());
     for (; it != bfs::recursive_directory_iterator(); it.increment(erc))
     {
       // Ensure that we have permission on the file.
-      boost::filesystem::exists(it->path(), erc);
+      bfs::exists(it->path(), erc);
       if (erc == boost::system::errc::permission_denied)
       {
         std::cout << "permission denied, skipping " << it->path().string()
@@ -264,7 +251,7 @@ namespace
 #ifndef __clang__
 # pragma GCC diagnostic pop
 #endif
-      bool dir = boost::filesystem::is_directory(path);
+      bool dir = bfs::is_directory(path);
       if (dir)
       {
         int sz = port_getxattr(
@@ -384,7 +371,7 @@ namespace
 
   void
   set_action(std::string const& path,
-             std::vector<std::string> users,
+             Strings users,
              std::string const& mode,
              std::string const& omode,
              bool inherit,
@@ -396,8 +383,7 @@ namespace
   {
     if (verbose)
       std::cout << "processing " << path << std::endl;
-    using namespace boost::filesystem;
-    bool dir = is_directory(path);
+    bool dir = bfs::is_directory(path);
     if (inherit || disinherit)
     {
       if (dir)
@@ -512,7 +498,7 @@ COMMAND(get_xattr)
 
 COMMAND(list)
 {
-  auto paths = mandatory<std::vector<std::string>>(args, "path", "file/folder");
+  auto paths = mandatory<Strings>(args, "path", "file/folder");
   if (paths.empty())
     elle::err<CommandLineError>("missing path argument");
   bool recursive = flag(args, "recursive");
@@ -538,27 +524,40 @@ COMMAND(list)
   }
 }
 
+namespace
+{
+  std::string
+  get_mode(boost::optional<std::string> const& mode)
+  {
+    static auto const modes = std::map<std::string, std::string>
+      {
+        {"r", "setr"},
+        {"w", "setw"},
+        {"rw", "setrw"},
+        {"none", "clear"},
+        {"", ""},
+      };
+    auto i = modes.find(mode ? boost::algorithm::to_lower_copy(*mode) : "");
+    if (i == modes.end())
+      elle::err<CommandLineError>("invalid mode %s, must be one of: %s",
+                                  mode, elle::keys(modes));
+    else
+      return i->second;
+  }
+}
+
 COMMAND(set)
 {
-  auto paths = mandatory<std::vector<std::string>>(args, "path", "file/folder");
+  auto paths = mandatory<Strings>(args, "path", "file/folder");
   if (paths.empty())
     elle::err<CommandLineError>("missing path argument");
-  std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
-  auto omode_ = optional(args, "others-mode");
-  auto omode = omode_? omode_.get() : "";
-  std::transform(omode.begin(), omode.end(), omode.begin(), ::tolower);
-  auto it = std::find(allowed_modes.begin(), allowed_modes.end(), omode);
-  if (it == allowed_modes.end())
-    elle::err<CommandLineError>("mode must be one of: %s", allowed_modes);
-  auto users_ = optional<std::vector<std::string>>(args, "user");
-  auto groups = optional<std::vector<std::string>>(args, "group");
-  auto combined = collate_users(users_, boost::none, boost::none, groups);
-  auto users = combined ? combined.get() : std::vector<std::string>();
-  auto mode_ = optional(args, "mode");
-  auto mode = mode_ ? mode_.get() : "";
-  it = std::find(allowed_modes.begin(), allowed_modes.end(), mode);
-  if (it == allowed_modes.end())
-    elle::err<CommandLineError>("mode must be one of: %s", allowed_modes);
+  auto allowed_modes = Strings{"r", "w", "rw", "none", ""};
+  auto omode = get_mode(optional(args, "others-mode"));
+  auto users = collate_users(optional<Strings>(args, "user"),
+                             boost::none,
+                             boost::none,
+                             optional<Strings>(args, "group"));
+  auto mode = get_mode(optional(args, "mode"));
   if (!mode.empty() && users.empty())
     elle::err<CommandLineError>("must specify user when setting mode");
   if (!users.empty() && mode.empty())
@@ -569,11 +568,9 @@ COMMAND(set)
     elle::err<CommandLineError>("inherit and disable-inherit are exclusive");
   if (!inherit && !disinherit && mode.empty() && omode.empty())
     elle::err<CommandLineError>("no operation specified");
-  std::vector<std::string> modes_map = {"setr", "setw", "setrw", "clear", ""};
-  mode = modes_map[it - allowed_modes.begin()];
   bool recursive = flag(args, "recursive");
   bool traverse = flag(args, "traverse");
-  if (traverse && mode.find("setr") != 0)
+  if (traverse && mode.find("setr"))
     elle::err("--traverse can only be used with mode 'r', 'rw'");
   bool verbose = flag(args, "verbose");
   bool fallback = fallback_enabled(args);
@@ -584,7 +581,7 @@ COMMAND(set)
     enforce_in_mountpoint(path, fallback);
     if ((inherit || disinherit)
         && !recursive
-        && !boost::filesystem::is_directory(path))
+        && !bfs::is_directory(path))
       elle::err<CommandLineError>("%s is not a directory, cannot %s inherit",
                                   path, inherit ? "enable" : "disable");
   }
@@ -595,7 +592,7 @@ COMMAND(set)
                fallback, fetch, multi);
     if (traverse)
     {
-      boost::filesystem::path working_path = boost::filesystem::absolute(path);
+      bfs::path working_path = bfs::absolute(path);
       while (!path_is_root(working_path.string(), fallback))
       {
         working_path = working_path.parent_path();
@@ -663,18 +660,16 @@ COMMAND(group)
   bool list = flag(args, "show");
   auto group = mandatory<std::string>(args, "name", "group name");
   auto description = optional<std::string>(args, "description");
-  auto add_user = optional<std::vector<std::string>>(args, "add-user");
-  auto add_admin = optional<std::vector<std::string>>(args, "add-admin");
-  auto add_group = optional<std::vector<std::string>>(args, "add-group");
-  auto add = optional<std::vector<std::string>>(args, "add");
-  add = collate_users(add, add_user, add_admin, add_group);
-  auto rem_user = optional<std::vector<std::string>>(args, "remove-user");
-  auto rem_admin = optional<std::vector<std::string>>(args, "remove-admin");
-  auto rem_group = optional<std::vector<std::string>>(args, "remove-group");
-  auto rem = optional<std::vector<std::string>>(args, "remove");
-  rem = collate_users(rem, rem_user, rem_admin, rem_group);
-  int action_count = (create ? 1 : 0) + (delete_ ? 1 : 0) + (list ? 1 : 0)
-                   + (add ? 1 : 0) + (rem ? 1 : 0) + (description ? 1 : 0);
+  auto add = collate_users(optional<Strings>(args, "add"),
+                           optional<Strings>(args, "add-user"),
+                           optional<Strings>(args, "add-admin"),
+                           optional<Strings>(args, "add-group"));
+  auto rem = collate_users(optional<Strings>(args, "remove"),
+                           optional<Strings>(args, "remove-user"),
+                           optional<Strings>(args, "remove-admin"),
+                           optional<Strings>(args, "remove-group"));
+  int action_count = (create + delete_ + list
+                      + !add.empty() + !rem.empty() + !!description);
   if (action_count == 0)
     elle::err<CommandLineError>("no action specified");
   if (action_count > 1)
@@ -684,28 +679,20 @@ COMMAND(group)
   enforce_in_mountpoint(path, fallback);
   bool fetch = flag(args, "fetch");
   // Need to perform group actions on a directory in the volume.
-  if (!boost::filesystem::is_directory(path))
-    path = boost::filesystem::path(path).parent_path().string();
+  if (!bfs::is_directory(path))
+    path = bfs::path(path).parent_path().string();
   if (create)
     check(port_setxattr, path, "user.infinit.group.create", group, fallback);
   if (delete_)
     check(port_setxattr, path, "user.infinit.group.delete", group, fallback);
-  if (add)
-  {
-    for (auto const& obj: add.get())
-      group_add_remove(path, group, obj, "add", fallback, fetch);
-  }
-  if (rem)
-  {
-    for (auto const& obj: rem.get())
+  for (auto const& obj: add)
+    group_add_remove(path, group, obj, "add", fallback, fetch);
+  for (auto const& obj: rem)
       group_add_remove(path, group, obj, "remove", fallback, fetch);
-  }
   if (description)
-  {
     check(port_setxattr, path,
           elle::sprintf("infinit.groups.%s.description", group),
           description.get(), fallback);
-  }
   if (list)
   {
     char res[16384];
@@ -760,7 +747,7 @@ main(int argc, char** argv)
       &list,
       "--path PATHS",
       {
-        { "path,p", value<std::vector<std::string>>(), "paths" },
+        { "path,p", value<Strings>(), "paths" },
         { "recursive,R", bool_switch(), "list recursively" },
         verbose_option,
       },
@@ -775,10 +762,10 @@ main(int argc, char** argv)
       &set,
       "--path PATHS [--user USERS]",
       {
-        { "path,p", value<std::vector<std::string>>(), "paths" },
-        { "user,u", value<std::vector<std::string>>()->multitoken(),
+        { "path,p", value<Strings>(), "paths" },
+        { "user,u", value<Strings>()->multitoken(),
           elle::sprintf("users and groups (prefix: %s<group>)", group_prefix) },
-        { "group,g", value<std::vector<std::string>>()->multitoken(),
+        { "group,g", value<Strings>()->multitoken(),
           "groups" },
         { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
         { "others-mode,o", value<std::string>(),
@@ -810,21 +797,21 @@ main(int argc, char** argv)
         { "show", bool_switch(),
           "list group users, administrators and description" },
         // { "delete,d", bool_switch(), "delete an existing group" },
-        { "add-user", value<std::vector<std::string>>(), "add user to group" },
-        { "add-admin", value<std::vector<std::string>>(),
+        { "add-user", value<Strings>(), "add user to group" },
+        { "add-admin", value<Strings>(),
           "add administrator to group" },
-        { "add-group", value<std::vector<std::string>>(),
+        { "add-group", value<Strings>(),
           "add group to group" },
-        { "add", value<std::vector<std::string>>()->multitoken(),
+        { "add", value<Strings>()->multitoken(),
           elle::sprintf("add users, administrators and groups to group "
           "(prefix: %s<group>, %s<admin>)", group_prefix, admin_prefix) },
-        { "remove-user", value<std::vector<std::string>>(),
+        { "remove-user", value<Strings>(),
           "remove user from group" },
-        { "remove-admin", value<std::vector<std::string>>(),
+        { "remove-admin", value<Strings>(),
           "remove administrator from group" },
-        { "remove-group", value<std::vector<std::string>>(),
+        { "remove-group", value<Strings>(),
           "remove group from group" },
-        { "remove", value<std::vector<std::string>>()->multitoken(),
+        { "remove", value<Strings>()->multitoken(),
           elle::sprintf("remove users, administrators and groups from group "
                         "(prefix: %s<group>, %s<admin>)",
                         group_prefix, admin_prefix) },
