@@ -493,7 +493,7 @@ namespace infinit
       {
         std::vector<std::string> nodes;
         // FIXME: hardcoded 3
-        for (auto n: dht.overlay()->lookup(addr, 3, overlay::OP_FETCH))
+        for (auto n: dht.overlay()->lookup(addr, 3))
         {
           if (auto locked = n.lock())
             nodes.push_back(elle::sprintf("%f", locked->id()));

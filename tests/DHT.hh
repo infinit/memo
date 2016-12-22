@@ -128,16 +128,24 @@ public:
   }
 
 protected:
-  virtual
   reactor::Generator<WeakMember>
-  _lookup(infinit::model::Address address,
-          int n,
-          infinit::overlay::Operation op) const override
+  _allocate(infinit::model::Address address, int n) const override
+  {
+    return this->_find(address, n, true);
+  }
+
+  reactor::Generator<WeakMember>
+  _lookup(infinit::model::Address address, int n, bool) const override
+  {
+    return this->_find(address, n, false);
+  }
+
+  reactor::Generator<WeakMember>
+  _find(infinit::model::Address address, int n, bool write) const
   {
     if (_yield)
       reactor::yield();
     ELLE_LOG_COMPONENT("Overlay");
-    bool write = op == infinit::overlay::OP_INSERT;
     ELLE_TRACE_SCOPE("%s: lookup %s%s owners for %f",
                      this, n, write ? " new" : "", address);
     return reactor::generator<Overlay::WeakMember>(

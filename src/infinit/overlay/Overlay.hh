@@ -24,17 +24,6 @@ namespace infinit
     using model::NodeLocation;
     using model::NodeLocations;
 
-    enum Operation
-    {
-      OP_FETCH,
-      OP_INSERT,
-      OP_UPDATE,
-      OP_REMOVE,
-      OP_FETCH_FAST, ///< Fetch faster but can return a subset of requested nodes
-    };
-    std::ostream&
-    operator <<(std::ostream& output, Operation op);
-
     class Overlay
     {
     /*------.
@@ -89,15 +78,28 @@ namespace infinit
     | Lookup |
     `-------*/
     public:
+      /** Find owner for a new block
+       *
+       *  @arg address  Address of the blocks to place
+       *  @arg n        How many owners to look for
+       *  @arg fast     Whether to prefer a faster, partial answer.
+       */
+      reactor::Generator<WeakMember>
+      allocate(model::Address address, int n) const;
       /// Lookup multiple addresses (OP_FETCH/UPDATE only)
       reactor::Generator<std::pair<model::Address, WeakMember>>
       lookup(std::vector<model::Address> const& addresses, int n) const;
-      /// Lookup a list of nodes
+      /** Lookup blocks
+       *
+       *  @arg address  Address of the blocks to search
+       *  @arg n        How many owners to look for
+       *  @arg fast     Whether to prefer a faster, partial answer.
+       */
       reactor::Generator<WeakMember>
-      lookup(model::Address address, int n, Operation op) const;
-      /// Lookup a single node
+      lookup(model::Address address, int n, bool fast = false) const;
+      /// Lookup a single block owner
       WeakMember
-      lookup(model::Address address, Operation op) const;
+      lookup(model::Address address) const;
       /** Lookup a node from its id.
        *
        * @arg id Id of the node to lookup.
@@ -114,11 +116,14 @@ namespace infinit
       lookup_nodes(std::unordered_set<model::Address> ids) const;
     protected:
       virtual
+      reactor::Generator<WeakMember>
+      _allocate(model::Address address, int n) const = 0;
+      virtual
       reactor::Generator<std::pair<model::Address, WeakMember>>
       _lookup(std::vector<model::Address> const& addresses, int n) const;
       virtual
       reactor::Generator<WeakMember>
-      _lookup(model::Address address, int n, Operation op) const = 0;
+      _lookup(model::Address address, int n, bool fast) const = 0;
       /** Lookup a node by id
        *
        *  @raise elle::Error if the node cannot be found.

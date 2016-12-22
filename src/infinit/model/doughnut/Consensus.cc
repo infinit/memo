@@ -42,19 +42,19 @@ namespace infinit
                           StoreMode mode,
                           std::unique_ptr<ConflictResolver> resolver)
         {
-          overlay::Operation op;
-          switch (mode)
+          auto owner = [&]
           {
-            case STORE_INSERT:
-              op = overlay::OP_INSERT;
-              break;
-            case STORE_UPDATE:
-              op = overlay::OP_UPDATE;
-              break;
-            default:
-              ELLE_ABORT("unrecognized store mode: %s", mode);
-          }
-          auto owner =  this->_owner(block->address(), op);
+            switch (mode)
+            {
+              case STORE_INSERT:
+                for (auto owner: this->doughnut().overlay()->allocate(block->address(), 1))
+                  return owner;
+              case STORE_UPDATE:
+                return this->doughnut().overlay()->lookup(block->address());
+              default:
+                ELLE_ABORT("unrecognized store mode: %s", mode);
+            }
+          }();
           std::unique_ptr<blocks::Block> nb;
           while (true)
           {
@@ -128,7 +128,7 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Consensus::_fetch(Address address, boost::optional<int> last_version)
         {
-          if (auto owner = this->_owner(address, overlay::OP_FETCH).lock())
+          if (auto owner = this->doughnut().overlay()->lookup(address).lock())
             return owner->fetch(address, std::move(last_version));
           else
             throw model::MissingBlock(address);
@@ -160,26 +160,10 @@ namespace infinit
         void
         Consensus::_remove(Address address, blocks::RemoveSignature rs)
         {
-          if (auto owner = this->_owner(address, overlay::OP_FETCH).lock())
+          if (auto owner = this->doughnut().overlay()->lookup(address).lock())
             owner->remove(address, std::move(rs));
           else
             throw model::MissingBlock(address);
-        }
-
-        overlay::Overlay::WeakMember
-        Consensus::_owner(Address const& address,
-                          overlay::Operation op) const
-        {
-          return this->doughnut().overlay()->lookup(address, op);
-        }
-
-        reactor::Generator<overlay::Overlay::WeakMember>
-        Consensus::_owners(Address const& address,
-                           int factor,
-                           overlay::Operation op) const
-        {
-          ELLE_DEBUG_SCOPE("search %s nodes for %f", factor, address);
-          return this->doughnut().overlay()->lookup(address, factor, op);
         }
 
         void
@@ -189,7 +173,7 @@ namespace infinit
         {
           // NonInterruptible blocks ensure we don't stack exceptions in Remote
           // destructor.
-          auto peers = this->_owners(address, factor, overlay::OP_REMOVE);
+          auto peers = this->doughnut().overlay()->lookup(address, factor);
           int count = 0;
           elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
           {

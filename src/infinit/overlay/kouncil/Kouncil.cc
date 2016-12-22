@@ -317,87 +317,91 @@ namespace infinit
       `-------*/
 
       reactor::Generator<Overlay::WeakMember>
-      Kouncil::_lookup(model::Address address, int n, Operation op) const
+      Kouncil::_allocate(model::Address address, int n) const
       {
         using model::Address;
-        if (op == Operation::OP_INSERT)
-          return reactor::generator<Overlay::WeakMember>(
-            [this, address, n]
-            (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+        return reactor::generator<Overlay::WeakMember>(
+          [this, address, n]
+          (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+          {
+            ELLE_DEBUG("%s: selecting %s nodes from %s peers",
+                       this, n, this->_peers.size());
+            if (static_cast<unsigned int>(n) >= this->_peers.size())
+              for (auto p: this->_peers)
+                yield(p);
+            else
             {
-              ELLE_DEBUG("%s: selecting %s nodes from %s peers",
-                         this, n, this->_peers.size());
-              if (static_cast<unsigned int>(n) >= this->_peers.size())
-                for (auto p: this->_peers)
-                  yield(p);
-              else
-              {
-                std::vector<int> indexes = pick_n(
-                  this->_gen,
-                  static_cast<int>(this->_peers.size()),
-                  n);
-                for (auto r: indexes)
-                  yield(this->peers().get<1>()[r]);
-              }
-            });
-        else
-          return reactor::generator<Overlay::WeakMember>(
-            [this, address, n]
-            (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+              std::vector<int> indexes = pick_n(
+                this->_gen,
+                static_cast<int>(this->_peers.size()),
+                n);
+              for (auto r: indexes)
+                yield(this->peers().get<1>()[r]);
+            }
+          });
+      }
+
+      reactor::Generator<Overlay::WeakMember>
+      Kouncil::_lookup(model::Address address, int n, bool) const
+      {
+        using model::Address;
+        return reactor::generator<Overlay::WeakMember>(
+          [this, address, n]
+          (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+          {
+            auto range = this->_address_book.get<1>().equal_range(address);
+            int count = 0;
+            for (auto it = range.first; it != range.second; ++it)
             {
-              auto range = this->_address_book.get<1>().equal_range(address);
-              int count = 0;
-              for (auto it = range.first; it != range.second; ++it)
+              auto p = this->peers().find(it->node());
+              ELLE_ASSERT(p != this->peers().end());
+              yield(*p);
+              if (++count >= n)
+                break;
+            }
+            if (count == 0)
+            {
+              ELLE_TRACE_SCOPE("%s: block %f not found, checking all peers",
+                               this, address);
+              for (auto peer: this->peers())
               {
-                auto p = this->peers().find(it->node());
-                ELLE_ASSERT(p != this->peers().end());
-                yield(*p);
-                if (++count >= n)
-                  break;
-              }
-              if (count == 0)
-              {
-                ELLE_TRACE_SCOPE("%s: block %f not found, checking all peers",
-                                 this, address);
-                for (auto peer: this->peers())
+                // FIXME: handle local !
+                if (auto r = std::dynamic_pointer_cast<
+                    model::doughnut::Remote>(peer))
                 {
-                  // FIXME: handle local !
-                  if (auto r = std::dynamic_pointer_cast<
-                      model::doughnut::Remote>(peer))
+                  auto lookup =
+                    r->make_rpc<std::unordered_set<Address> (Address)>(
+                      "kouncil_lookup");
+                  try
                   {
-                    auto lookup =
-                      r->make_rpc<std::unordered_set<Address> (Address)>(
-                        "kouncil_lookup");
-                    try
+                    for (auto node: lookup(address))
                     {
-                      for (auto node: lookup(address))
+                      try
                       {
-                        try
-                        {
-                          ELLE_DEBUG("peer %f says node %f holds block %f",
-                                     r->id(), node, address);
-                          yield(this->lookup_node(node));
-                          if (++count >= n)
-                            break;
-                        }
-                        catch (NodeNotFound const&)
-                        {
-                          ELLE_WARN("node %f is said to hold block %f "
-                                    "but is unknown to us", node, address);
-                        }
+                        ELLE_DEBUG("peer %f says node %f holds block %f",
+                                   r->id(), node, address);
+                        yield(this->lookup_node(node));
+                        if (++count >= n)
+                          break;
+                      }
+                      catch (NodeNotFound const&)
+                      {
+                        ELLE_WARN("node %f is said to hold block %f "
+                                  "but is unknown to us", node, address);
                       }
                     }
-                    catch (reactor::network::Exception const& e)
-                    {
-                      ELLE_DEBUG("skipping peer with network issue: %s (%s)", peer, e);
-                      continue;
-                    }
-                    if (count > 0)
-                      return;
                   }
+                  catch (reactor::network::Exception const& e)
+                  {
+                    ELLE_DEBUG("skipping peer with network issue: %s (%s)", peer, e);
+                    continue;
+                  }
+                  if (count > 0)
+                    return;
                 }
               }
-            });
+            }
+          });
       }
 
       Overlay::WeakMember

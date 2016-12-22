@@ -192,10 +192,6 @@ namespace infinit
         void
         engage();
         void
-        address(Address file,
-                infinit::overlay::Operation op,
-                int n, std::function<void(NodeLocation)> yield);
-        void
         print(std::ostream& stream) const override;
         /// local hooks interface
         void
@@ -212,14 +208,12 @@ namespace infinit
       | Overlay |
       `--------*/
       protected:
-        virtual
         reactor::Generator<Overlay::WeakMember>
-        _lookup(infinit::model::Address address, int n,
-                infinit::overlay::Operation op) const override;
-        virtual
+        _allocate(infinit::model::Address address, int n) const override;
+        reactor::Generator<Overlay::WeakMember>
+        _lookup(infinit::model::Address address, int n, bool f) const override;
         reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
         _lookup(std::vector<infinit::model::Address> const& address, int n) const override;
-        virtual
         WeakMember
         _lookup_node(Address address) const override;
 

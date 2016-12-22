@@ -2680,26 +2680,6 @@ namespace infinit
       }
 
       void
-      Node::address(Address file,
-                    infinit::overlay::Operation op,
-                    int n,
-                    std::function<void (NodeLocation)> yield)
-      {
-        if (op == infinit::overlay::OP_INSERT)
-        {
-          NodeLocations res = kelipsPut(file, n);
-          for (auto r: res)
-            yield(r);
-        }
-        else
-        {
-          kelipsGet(file, n, false, -1, false,
-                    op == infinit::overlay::OP_FETCH_FAST,
-                    yield);
-        }
-      }
-
-      void
       Node::kelipsMGet(std::vector<Address> files, int n,
                        std::function<void (std::pair<Address, NodeLocation>)> yield)
       {
@@ -3358,20 +3338,35 @@ namespace infinit
       }
 
       reactor::Generator<Overlay::WeakMember>
+      Node::_allocate(infinit::model::Address address,
+                      int n) const
+      {
+        BENCH("allocate");
+        return reactor::generator<Overlay::WeakMember>(
+          [this, address, n]
+          (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+          {
+            for (auto r: elle::unconst(this)->kelipsPut(address, n))
+              yield(elle::unconst(this)->make_peer(r));
+          });
+      }
+
+      reactor::Generator<Overlay::WeakMember>
       Node::_lookup(infinit::model::Address address,
                     int n,
-                    infinit::overlay::Operation op) const
+                    bool fast) const
       {
         BENCH("lookup");
         return reactor::generator<Overlay::WeakMember>(
-          [this, address, n, op]
+          [this, address, n, fast]
           (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
           {
             std::function<void(NodeLocation)> handle = [&](NodeLocation hosts)
               {
                 yield(elle::unconst(this)->make_peer(hosts));
               };
-            elle::unconst(this)->address(address, op, n, handle);
+            elle::unconst(this)->kelipsGet(
+              address, n, false, -1, false, fast, handle);
           });
       }
 

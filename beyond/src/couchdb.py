@@ -279,12 +279,14 @@ class CouchDBDatastore:
       name: json.loads(value)
       for name, value in req['query'].items()
     }
-    for id, account in update.get('dropbox_accounts', {}).items():
-      user.setdefault('dropbox_accounts', {})[id] = account
-    for id, account in update.get('google_accounts', {}).items():
-      user.setdefault('google_accounts', {})[id] = account
-    for id, account in update.get('gcs_accounts', {}).items():
-      user.setdefault('gcs_accounts', {})[id] = account
+    for type in ['dropbox', 'google', 'gcs']:
+      for id, account in update.get('%s_accounts' % type, {}).items():
+        accounts = user.setdefault('%s_accounts' % type, {})
+        if account is None:
+          if id in accounts:
+            del accounts[id]
+        else:
+          user.setdefault('%s_accounts' % type, {})[id] = account
     for email, confirmation in update.get('emails', {}).items():
       user.setdefault('emails', {})[email] = confirmation
     return [user, {'json': json.dumps(update)}]
@@ -521,7 +523,7 @@ class CouchDBDatastore:
       raise infinit.beyond.Volume.Duplicate()
 
   def __volume_update(volume, req):
-    if network is None:
+    if volume is None:
       return [
         None,
         {

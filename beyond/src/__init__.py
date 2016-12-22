@@ -614,15 +614,17 @@ class User:
 
   def save(self):
     diff = {}
-    for id, account in self.dropbox_accounts.items():
-      if self.__dropbox_accounts_original.get(id) != account:
-        diff.setdefault('dropbox_accounts', {})[id] = account
-    for id, account in self.google_accounts.items():
-      if self.__google_accounts_original.get(id) != account:
-        diff.setdefault('google_accounts', {})[id] = account
-    for id, account in self.gcs_accounts.items():
-      if self.__gcs_accounts_original.get(id) != account:
-        diff.setdefault('gcs_accounts', {})[id] = account
+    for type in ['dropbox', 'google', 'gcs']:
+      original = getattr(self, '_User__%s_accounts_original' % type)
+      accounts = getattr(self, '%s_accounts' % type)
+      if accounts == {}:
+        diff.setdefault('%s_accounts' % type, {}).update({
+          k: None for k in original.keys()
+        })
+      else:
+        for id, account in accounts.items():
+          if original.get(id) != account:
+            diff.setdefault('%s_accounts' % type, {})[id] = account
     for email, confirmation in self.emails.items():
       if self.__emails_original.get(email) != confirmation:
         diff.setdefault('emails', {})[email] = confirmation
@@ -630,7 +632,7 @@ class User:
     self.__dropbox_accounts_original = dict(self.__dropbox_accounts)
     self.__google_accounts_original = dict(self.__google_accounts)
     self.__gcs_accounts_original = dict(self.__gcs_accounts)
-    self.__emails_original = dict(self.__gcs_accounts)
+    self.__emails_original = dict(self.__emails)
 
   @property
   def id(self):

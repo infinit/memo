@@ -106,6 +106,11 @@ class Bottle(bottle.Bottle):
         getattr(self, 'oauth_%s_get' % s))
       self.route('/users/<username>/credentials/%s' % s) \
         (getattr(self, 'user_%s_credentials_get' % s))
+      self.route('/users/<username>/credentials/%s' % s, method = 'DELETE') \
+        (getattr(self, 'user_%s_credentials_delete' % s))
+      self.route('/users/<username>/credentials/%s/<id>' % s,
+                 method = 'DELETE') \
+        (getattr(self, 'user_%s_credentials_delete' % s))
     self.route('/users/<username>/credentials/google/refresh') \
       (self.user_credentials_google_refresh)
 
@@ -1261,6 +1266,31 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       raise self._Bottle__user_not_found(username)
   user_credentials_get.__name__ = 'user_%s_credentials_get' % name
   setattr(Bottle, user_credentials_get.__name__, user_credentials_get)
+  def user_credentials_delete(self, username, name = name, id = None):
+    beyond = self._Bottle__beyond
+    try:
+      user = beyond.user_get(name = username)
+      self.authenticate(user)
+      if getattr(user, '%s_accounts' % name, {}):
+        accounts = getattr(user, '%s_accounts' % name)
+        if id is not None:
+          if id not in accounts.keys():
+            raise self._Bottle__not_found("%s credentials %s" % (name, id),
+                                          name)
+          getattr(user, '%s_accounts' % name)[id] = None
+        else:
+          getattr(user, '%s_accounts' % name).clear()
+        user.save()
+      else:
+        raise self._Bottle__not_found("%s credentials",  name)
+      return {
+        'credentials':
+          list(getattr(user, '%s_accounts' % name).values()),
+      }
+    except User.NotFound:
+      raise self._Bottle__user_not_found(username)
+  user_credentials_delete.__name__ = 'user_%s_credentials_delete' % name
+  setattr(Bottle, user_credentials_delete.__name__, user_credentials_delete)
 
 # This function first checks if the google account `token` field is
 # valid.  If not it asks google for another access_token and updates
@@ -1276,7 +1306,7 @@ def user_credentials_google_refresh(self, username):
         # https://developers.google.com/identity/protocols/OAuth2InstalledApp
         # The associate google account.
         if account['refresh_token'] == refresh_token:
-          google_url = "https://www.googleapis.com/oauth2/v3/token"
+          google_url = Bottle._Bottle__oauth_services["google"]["exchange_url"]
           # Get a new token and update the db and the client
           query = {
             'client_id':     getattr(beyond, '%s_app_key' % kind),

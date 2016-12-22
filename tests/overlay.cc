@@ -177,19 +177,19 @@ ELLE_TEST_SCHEDULED(
   dht_a.dht->store(*after, STORE_INSERT, tcr());
   ELLE_LOG("check non-existent block")
     BOOST_CHECK_THROW(
-      dht_b.dht->overlay()->lookup(Address::random(), OP_FETCH),
+      dht_b.dht->overlay()->lookup(Address::random()),
       MissingBlock);
   ELLE_LOG("check block loaded from disk")
     BOOST_CHECK_EQUAL(
-      dht_b.dht->overlay()->lookup(disk->address(), OP_FETCH).lock()->id(),
+      dht_b.dht->overlay()->lookup(disk->address()).lock()->id(),
       dht_a.dht->id());
   ELLE_LOG("check block present before connection")
     BOOST_CHECK_EQUAL(
-      dht_b.dht->overlay()->lookup(before->address(), OP_FETCH).lock()->id(),
+      dht_b.dht->overlay()->lookup(before->address()).lock()->id(),
       dht_a.dht->id());
   ELLE_LOG("check block inserted after connection")
     BOOST_CHECK_EQUAL(
-      dht_b.dht->overlay()->lookup(after->address(), OP_FETCH).lock()->id(),
+      dht_b.dht->overlay()->lookup(after->address()).lock()->id(),
       dht_a.dht->id());
 }
 
@@ -222,10 +222,10 @@ ELLE_TEST_SCHEDULED(
         ELLE_LOG("lookup block")
         {
           persist([&] {
-            dht_b.dht->overlay()->lookup(block->address(), OP_FETCH).lock();
+            dht_b.dht->overlay()->lookup(block->address()).lock();
           });
           BOOST_CHECK_EQUAL(
-            dht_b.dht->overlay()->lookup(block->address(), OP_FETCH).lock()->id(),
+            dht_b.dht->overlay()->lookup(block->address()).lock()->id(),
             dht_a.dht->id());
         }
       }
@@ -260,10 +260,10 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("lookup block")
   {
     persist([&] {
-        dht_b.dht->overlay()->lookup(old_address, OP_FETCH).lock();
+        dht_b.dht->overlay()->lookup(old_address).lock();
     });
     BOOST_CHECK_EQUAL(
-        dht_b.dht->overlay()->lookup(old_address, OP_FETCH).lock()->id(),
+        dht_b.dht->overlay()->lookup(old_address).lock()->id(),
         id_a);
   }
   ELLE_LOG("restart first DHT")
@@ -281,7 +281,7 @@ ELLE_TEST_SCHEDULED(
   }
   ELLE_LOG("lookup second block")
     BOOST_CHECK_THROW(
-      dht_b.dht->overlay()->lookup(new_address, OP_FETCH).lock()->id(),
+      dht_b.dht->overlay()->lookup(new_address).lock()->id(),
       MissingBlock);
   ELLE_LOG("discover new endpoints")
     discover(dht_b, *dht_a, anonymous);
@@ -289,10 +289,10 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("lookup block")
   {
     persist([&] {
-        dht_b.dht->overlay()->lookup(new_address, OP_FETCH).lock();
+        dht_b.dht->overlay()->lookup(new_address).lock();
     });
     BOOST_CHECK_EQUAL(
-      dht_b.dht->overlay()->lookup(new_address, OP_FETCH).lock()->id(),
+      dht_b.dht->overlay()->lookup(new_address).lock()->id(),
       id_a);
   }
 }

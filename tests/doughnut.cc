@@ -710,14 +710,12 @@ public:
 
   virtual
   reactor::Generator<infinit::overlay::Overlay::WeakMember>
-  _lookup(infinit::model::Address address,
-          int n,
-          infinit::overlay::Operation op) const
+  _lookup(infinit::model::Address address, int n, bool fast) const override
   {
     if (fail)
-      return infinit::overlay::Stonehenge::_lookup(address, n - 1, op);
+      return infinit::overlay::Stonehenge::_lookup(address, n - 1, fast);
     else
-      return infinit::overlay::Stonehenge::_lookup(address, n, op);
+      return infinit::overlay::Stonehenge::_lookup(address, n, fast);
   }
 
   bool fail;
@@ -989,9 +987,8 @@ namespace rebalancing
       dht_a.dht->store(*b1, infinit::model::STORE_INSERT);
     }
     dht_b.overlay->connect(*dht_a.overlay);
-    auto op = infinit::overlay::OP_FETCH;
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3, op)), 1u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3, op)), 1u);
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 1u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 1u);
     auto& paxos_a =
       dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
     ELLE_LOG("rebalance block to quorum of 2")
@@ -1001,8 +998,8 @@ namespace rebalancing
       b1->data(std::string("extend_and_write 1 bis"));
       dht_a.dht->store(*b1, infinit::model::STORE_UPDATE);
     }
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3, op)), 2u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3, op)), 2u);
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 2u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 2u);
   }
 
   ELLE_TEST_SCHEDULED(shrink_and_write)
@@ -1326,13 +1323,12 @@ namespace rebalancing
     auto b = make_block(client, immutable, "expand_new_block");
     ELLE_LOG("write block to one DHT")
       client.dht->store(*b, infinit::model::STORE_INSERT);
-    auto op = infinit::overlay::OP_FETCH;
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 2, op)), 1u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 2, op)), 1u);
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 2)), 1u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 2)), 1u);
     ELLE_LOG("wait for rebalancing")
       reactor::wait(local_a.rebalanced(), b->address());
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 2, op)), 2u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 2, op)), 2u);
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 2)), 2u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 2)), 2u);
     ELLE_LOG("disconnect second DHT")
       dht_b.overlay->disconnect(*dht_a.overlay);
     ELLE_LOG("read block from second DHT")
@@ -1356,12 +1352,11 @@ namespace rebalancing
     reactor::wait(dht_a.overlay->looked_up(), b->address());
     ELLE_LOG("connect second DHT")
       dht_b.overlay->connect(*dht_a.overlay);
-    static auto const op = infinit::overlay::OP_FETCH;
     if (!immutable)
     {
       reactor::wait(local_a.proposing(), b->address());
-      BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 1u);
-      BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 1u);
+      BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3)), 1u);
+      BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3)), 1u);
       // Insert another block, to check iterator invalidation while balancing.
       ELLE_LOG("write other block to first DHT")
       {
@@ -1374,8 +1369,8 @@ namespace rebalancing
     }
     ELLE_LOG("wait for rebalancing")
       reactor::wait(local_a.rebalanced(), b->address());
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 2u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 2u);
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3)), 2u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3)), 2u);
     if (!immutable)
     {
       auto& mb = dynamic_cast<blocks::MutableBlock&>(*b);
@@ -1423,10 +1418,9 @@ namespace rebalancing
         local_b.rebalanced().connect(rebalanced);
       reactor::wait(rebalanced, b->address());
     }
-    auto op = infinit::overlay::OP_FETCH;
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 3u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 3u);
-    BOOST_CHECK_EQUAL(size(dht_c.overlay->lookup(b->address(), 3, op)), 3u);
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3)), 3u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3)), 3u);
+    BOOST_CHECK_EQUAL(size(dht_c.overlay->lookup(b->address(), 3)), 3u);
   }
 
   ELLE_TEST_SCHEDULED(expand_from_disk, (bool, immutable))
