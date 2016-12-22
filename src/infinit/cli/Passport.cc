@@ -7,7 +7,7 @@ ELLE_LOG_COMPONENT("cli.passport");
 
 namespace infinit
 {
-  using Passport = infinit::model::doughnut::Passport;
+  using Passport = Infinit::Passport;
 
   namespace cli
   {
@@ -216,7 +216,7 @@ namespace infinit
       network_name = qualified_name(cli, network_name, owner);
       if (network_name && user_name)
       {
-        auto passport = ifnt.beyond_fetch<infinit::Passport>(
+        auto passport = ifnt.beyond_fetch<infinit::Infinit::Passport>(
           elle::sprintf("networks/%s/passports/%s",
                         network_name.get(), user_name.get()),
           "passport for",
@@ -239,13 +239,13 @@ namespace infinit
           for (auto const& user_passport: json)
           {
             auto s = elle::serialization::json::SerializerIn(user_passport.second, false);
-            auto passport = s.deserialize<infinit::Passport>();
+            auto passport = s.deserialize<infinit::Infinit::Passport>();
             ifnt.passport_save(passport, true);
           }
         }
         else
         {
-          auto passport = ifnt.beyond_fetch<infinit::Passport>(elle::sprintf(
+          auto passport = ifnt.beyond_fetch<infinit::Infinit::Passport>(elle::sprintf(
             "networks/%s/passports/%s", network_name.get(), owner.name),
             "passport for",
             network_name.get(),
@@ -261,7 +261,7 @@ namespace infinit
       else
       {
         using Passports
-          = std::unordered_map<std::string, std::vector<infinit::Passport>>;
+          = std::unordered_map<std::string, std::vector<infinit::Infinit::Passport>>;
         auto res = ifnt.beyond_fetch<Passports>(
             elle::sprintf("users/%s/passports", owner.name),
             "passports for user",
@@ -278,11 +278,11 @@ namespace infinit
     void
     Passport::mode_import(boost::optional<std::string> const& input_name)
     {
-      ELLE_TRACE_SCOPE("export");
+      ELLE_TRACE_SCOPE("import");
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto input = cli.get_input(input_name);
-      auto passport = elle::serialization::json::deserialize<infinit::Passport>
+      auto passport = elle::serialization::json::deserialize<infinit::Infinit::Passport>
         (*input, false);
       ifnt.passport_save(passport);
       auto user_name = [&] () -> std::string
@@ -300,8 +300,28 @@ namespace infinit
     | List.  |
     `-------*/
     void
-    Passport::mode_list(boost::optional<std::string> const& network_name)
-    {}
+    Passport::mode_list(boost::optional<std::string> network_name)
+    {
+      ELLE_TRACE_SCOPE("list");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      network_name = qualified_name(cli, network_name);
+      auto passports = ifnt.passports_get(network_name);
+      if (cli.script())
+      {
+        auto l = elle::json::Array{};
+        for (auto const& pair: passports)
+          l.emplace_back(elle::json::Object
+                         {
+                           {"network", pair.first.network()},
+                           {"user", pair.second},
+                         });
+        elle::json::write(std::cout, l);
+      }
+      else
+        for (auto const& pair: passports)
+          std::cout << pair.first.network() << ": " << pair.second << std::endl;
+    }
 
     /*-------.
     | Pull.  |

@@ -91,7 +91,7 @@ namespace infinit
                             cli::network = boost::none))>
       list;
       void
-      mode_list(boost::optional<std::string> const& network_name = {});
+      mode_list(boost::optional<std::string> network_name = {});
 
       // Pull.
       Mode<decltype(binding(modes::mode_pull,
