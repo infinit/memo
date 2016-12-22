@@ -46,7 +46,7 @@ namespace infinit
                   bool deny_write = false,
                   bool deny_storage = false,
                   bool allow_create_passport = false,
-                  boost::optional<std::string> output = {});
+                  boost::optional<std::string> const& output = {});
 
       // Delete.
       Mode<decltype(binding(modes::mode_delete,
@@ -68,7 +68,7 @@ namespace infinit
       void
       mode_export(std::string const& network_name,
                   std::string const& user_name,
-                  boost::optional<std::string> output = {});
+                  boost::optional<std::string> const& output = {});
 
       // Fetch.
       Mode<decltype(binding(modes::mode_fetch,
@@ -84,14 +84,14 @@ namespace infinit
                             cli::input = boost::none))>
       import;
       void
-      mode_import(boost::optional<std::string> input = {});
+      mode_import(boost::optional<std::string> const& input = {});
 
       // List.
       Mode<decltype(binding(modes::mode_list,
                             cli::network = boost::none))>
       list;
       void
-      mode_list(boost::optional<std::string> network_name = {});
+      mode_list(boost::optional<std::string> const& network_name = {});
 
       // Pull.
       Mode<decltype(binding(modes::mode_pull,
