@@ -40,8 +40,8 @@ namespace infinit
                 User const& user,
                 bool require_model = true);
     std::vector<Network>
-    networks_get(
-      boost::optional<infinit::User> self, bool require_linked = false) const;
+    networks_get(boost::optional<infinit::User> self,
+                 bool require_linked = false) const;
     std::vector<User>
     network_linked_users(std::string const& name_,
                          boost::optional<User> user = boost::none);
@@ -70,13 +70,15 @@ namespace infinit
     | Passport.  |
     `-----------*/
 
-    model::doughnut::Passport
+    using Passport = model::doughnut::Passport;
+    Passport
     passport_get(std::string const& network, std::string const& user);
-    std::vector<std::pair<model::doughnut::Passport, std::string>>
-      passports_get(boost::optional<std::string> network = boost::none);
+
+    std::vector<std::pair<Passport, std::string>>
+    passports_get(boost::optional<std::string> network = boost::none);
+
     void
-    passport_save(model::doughnut::Passport const& passport,
-                  bool overwrite = false);
+    passport_save(Passport const& passport, bool overwrite = false);
 
     /*-------.
     | User.  |

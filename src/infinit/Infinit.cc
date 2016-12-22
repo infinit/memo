@@ -3,6 +3,8 @@
 
 ELLE_LOG_COMPONENT("infinit");
 
+namespace fs = boost::filesystem;
+
 namespace infinit
 {
   bool
@@ -33,7 +35,7 @@ namespace infinit
                        bool require_model)
   {
     auto name = qualified_name(name_, user);
-    boost::filesystem::ifstream f;
+    fs::ifstream f;
     // Move linked networks found in the descriptor folder to the correct
     // place.
     bool move = false;
@@ -58,7 +60,7 @@ namespace infinit
       // Ensure that passed user is same as that linked to network.
       if (!res.user_linked(user))
         elle::err(not_linked_msg);
-      boost::filesystem::ifstream temp_f;
+      fs::ifstream temp_f;
       this->_open_read(
         temp_f, this->_network_descriptor_path(name), name, "network");
       auto temp_net =
@@ -67,7 +69,7 @@ namespace infinit
       auto old_path = this->_network_descriptor_path(res.name);
       auto path = this->_network_path(res.name, user);
       create_directories(path.parent_path());
-      boost::filesystem::rename(old_path, path);
+      fs::rename(old_path, path);
       this->network_save(desc);
     }
     return res;
@@ -78,17 +80,16 @@ namespace infinit
     boost::optional<User> self,
     bool require_linked) const
   {
-    namespace boost_fs = boost::filesystem;
     std::vector<Network> res;
     auto extract =
-      [&] (boost::filesystem::path const& path, bool move) {
-      for (boost_fs::recursive_directory_iterator it(path);
-           it != boost_fs::recursive_directory_iterator();
+      [&] (fs::path const& path, bool move) {
+      for (fs::recursive_directory_iterator it(path);
+           it != fs::recursive_directory_iterator();
            ++it)
       {
         if (!is_regular_file(it->status()) || is_hidden_file(it->path()))
           continue;
-        boost_fs::ifstream f;
+        fs::ifstream f;
         this->_open_read(
           f, it->path(), "network", it->path().filename().string());
         auto network =
@@ -97,7 +98,7 @@ namespace infinit
           continue;
         if (move && network.model && self && network.user_linked(*self))
         {
-          boost::filesystem::ifstream temp_f;
+          fs::ifstream temp_f;
           this->_open_read(
             temp_f, it->path(), "network", it->path().filename().string());
           auto temp_net =
@@ -105,7 +106,7 @@ namespace infinit
           NetworkDescriptor desc(std::move(temp_net));
           auto path = this->_network_path(network.name, *self);
           create_directories(path.parent_path());
-          boost::filesystem::rename(it->path(), path);
+          fs::rename(it->path(), path);
           this->network_save(desc);
         }
         // Ignore duplicates.
@@ -141,7 +142,7 @@ namespace infinit
       std::remove_if(res.begin(), res.end(),
                      [&] (User const& u)
                      {
-                       return !boost::filesystem::exists(this->_network_path(name, u, false));
+                       return !fs::exists(this->_network_path(name, u, false));
                      }),
       res.end());
     return res;
@@ -156,11 +157,11 @@ namespace infinit
     auto network = this->network_get(name, user, true);
     auto path = this->_network_path(network.name, user);
     // XXX Should check async cache to make sure that it's empty.
-    boost::filesystem::remove_all(network.cache_dir(user).parent_path());
-    if (boost::filesystem::exists(path))
+    fs::remove_all(network.cache_dir(user).parent_path());
+    if (fs::exists(path))
     {
       boost::system::error_code erc;
-      boost::filesystem::remove(path, erc);
+      fs::remove(path, erc);
       if (!erc)
       {
         if (report)
@@ -194,8 +195,8 @@ namespace infinit
     for (auto const& u: linked_users)
     {
       auto linked_path = this->_network_path(name, u);
-      boost::filesystem::remove(linked_path, erc);
-      boost::filesystem::remove_all(network.cache_dir(u).parent_path());
+      fs::remove(linked_path, erc);
+      fs::remove_all(network.cache_dir(u).parent_path());
       if (erc)
       {
         ELLE_WARN("Unable to unlink network \"%s\" for \"%s\": %s",
@@ -205,7 +206,7 @@ namespace infinit
         report(name);
     }
     auto desc_path = this->_network_descriptor_path(name);
-    boost::filesystem::remove(desc_path, erc);
+    fs::remove(desc_path, erc);
     if (erc)
     {
       ELLE_WARN("Unable to remove network descriptor \"%s\": %s",
@@ -218,15 +219,14 @@ namespace infinit
   std::vector<Drive>
   Infinit::drives_get() const
   {
-    namespace boost_fs = boost::filesystem;
     std::vector<Drive> res;
-    for (boost_fs::recursive_directory_iterator it(this->_drives_path());
-         it != boost_fs::recursive_directory_iterator();
+    for (fs::recursive_directory_iterator it(this->_drives_path());
+         it != fs::recursive_directory_iterator();
          ++it)
     {
       if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
       {
-        boost_fs::ifstream f;
+        fs::ifstream f;
         this->_open_read(
           f, it->path(), it->path().filename().string(), "drive");
         res.push_back(load<Drive>(f));
@@ -243,7 +243,7 @@ namespace infinit
     auto name = qualified_name(name_, owner);
     try
     {
-      boost::filesystem::ifstream f;
+      fs::ifstream f;
       try
       {
         this->_open_read(f, this->_network_path(name, owner), name, "network");
@@ -273,7 +273,7 @@ namespace infinit
   void
   Infinit::network_save(NetworkDescriptor const& network, bool overwrite) const
   {
-    boost::filesystem::ofstream f;
+    fs::ofstream f;
     this->_open_write(f, this->_network_descriptor_path(network.name),
                       network.name, "network", overwrite);
     save(f, network);
@@ -283,47 +283,46 @@ namespace infinit
   Infinit::network_save(User const& self,
                         Network const& network, bool overwrite) const
   {
-    boost::filesystem::ofstream f;
+    fs::ofstream f;
     this->_open_write(f, this->_network_path(network.name, self),
                       network.name, "network", overwrite);
     save(f, network);
   }
 
-  model::doughnut::Passport
+  auto
   Infinit::passport_get(std::string const& network, std::string const& user)
+    -> Passport
   {
-    boost::filesystem::ifstream f;
+    fs::ifstream f;
     this->_open_read(f, this->_passport_path(network, user),
                      elle::sprintf("%s: %s", network, user), "passport");
-    return load<model::doughnut::Passport>(f);
+    return load<Passport>(f);
   }
 
-  std::vector<std::pair<model::doughnut::Passport, std::string>>
-    Infinit::passports_get(boost::optional<std::string> network)
+  auto
+  Infinit::passports_get(boost::optional<std::string> network)
+    -> std::vector<std::pair<Passport, std::string>>
   {
-    namespace boost_fs = boost::filesystem;
-    std::vector<std::pair<model::doughnut::Passport, std::string>> res;
-    boost_fs::path path;
+    auto res = std::vector<std::pair<Passport, std::string>>{};
+    fs::path path;
     if (network)
       path = this->_passports_path() / network.get();
     else
       path = this->_passports_path();
-    if (!boost::filesystem::exists(path))
+    if (!fs::exists(path))
       return res;
-    for (boost_fs::recursive_directory_iterator it(path);
-         it != boost_fs::recursive_directory_iterator();
+    for (auto it = fs::recursive_directory_iterator(path);
+         it != fs::recursive_directory_iterator();
          ++it)
-    {
       if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
       {
         auto user_name = it->path().filename().string();
-        boost_fs::ifstream f;
+        fs::ifstream f;
         this->_open_read(f, it->path(), user_name, "passport");
         auto passport =
           elle::serialization::json::deserialize<model::doughnut::Passport>(f, false);
-        res.push_back(std::pair<model::doughnut::Passport, std::string>(passport, user_name));
+        res.emplace_back(passport, user_name);
       }
-    }
     return res;
   }
 
@@ -331,7 +330,7 @@ namespace infinit
   Infinit::passport_save(model::doughnut::Passport const& passport,
                          bool overwrite)
   {
-    boost::filesystem::ofstream f;
+    fs::ofstream f;
     auto users = this->users_get();
     for (auto const& user: users)
     {
@@ -356,13 +355,13 @@ namespace infinit
                      bool overwrite)
   {
     auto path = this->_user_path(user.name);
-    boost::filesystem::ofstream f;
+    fs::ofstream f;
     this->_open_write(f, path, user.name, "user", overwrite);
     save(f, user);
 #ifndef INFINIT_WINDOWS
-    boost::filesystem::permissions(path,
-                                   boost::filesystem::remove_perms
-                                   | boost::filesystem::others_all | boost::filesystem::group_all);
+    fs::permissions(path,
+                                   fs::remove_perms
+                                   | fs::others_all | fs::group_all);
 #endif
   }
 
@@ -372,7 +371,7 @@ namespace infinit
     auto const path = this->_user_path(user);
     try
     {
-      boost::filesystem::ifstream f;
+      fs::ifstream f;
       this->_open_read(f, path, user, "user");
       return load<User>(f);
     }
@@ -391,15 +390,14 @@ namespace infinit
   std::vector<User>
   Infinit::users_get() const
   {
-    namespace boost_fs = boost::filesystem;
     std::vector<User> res;
-    for (boost_fs::recursive_directory_iterator it(this->_users_path());
-         it != boost_fs::recursive_directory_iterator();
+    for (fs::recursive_directory_iterator it(this->_users_path());
+         it != fs::recursive_directory_iterator();
          ++it)
     {
       if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
       {
-        boost_fs::ifstream f;
+        fs::ifstream f;
         this->_open_read(
           f, it->path(), it->path().filename().string(), "user");
         res.push_back(load<User>(f));
@@ -408,7 +406,7 @@ namespace infinit
     return res;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_user_avatar_path() const
   {
     auto root = xdg_cache_home() / "avatars";
@@ -416,7 +414,7 @@ namespace infinit
     return root;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_user_avatar_path(std::string const& name) const
   {
     return this->_user_avatar_path() / name;
@@ -425,7 +423,7 @@ namespace infinit
   std::unique_ptr<storage::StorageConfig>
   Infinit::storage_get(std::string const& name)
   {
-    boost::filesystem::ifstream f;
+    fs::ifstream f;
     this->_open_read(f, this->_storage_path(name), name, "storage");
     return load<std::unique_ptr<storage::StorageConfig>>(f);
   }
@@ -433,10 +431,9 @@ namespace infinit
   std::vector<std::unique_ptr<storage::StorageConfig>>
   Infinit::storages_get()
   {
-    namespace boost_fs = boost::filesystem;
     std::vector<std::unique_ptr<storage::StorageConfig>> res;
-    for (boost_fs::recursive_directory_iterator it(this->_storages_path());
-         it != boost_fs::recursive_directory_iterator();
+    for (fs::recursive_directory_iterator it(this->_storages_path());
+         it != fs::recursive_directory_iterator();
          ++it)
     {
       if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
@@ -451,7 +448,7 @@ namespace infinit
   Infinit::storage_save(std::string const& name,
                         std::unique_ptr<storage::StorageConfig> const& storage)
   {
-    boost::filesystem::ofstream f;
+    fs::ofstream f;
     this->_open_write(f, this->_storage_path(name), name, "storage", false);
     elle::serialization::json::SerializerOut s(f, false, true);
     s.serialize_forward(storage);
@@ -495,14 +492,14 @@ namespace infinit
   bool
   Infinit::volume_has(std::string const& name)
   {
-    boost::filesystem::ifstream f;
+    fs::ifstream f;
     return exists(this->_volume_path(name));
   }
 
   Volume
   Infinit::volume_get(std::string const& name)
   {
-    boost::filesystem::ifstream f;
+    fs::ifstream f;
     this->_open_read(f, this->_volume_path(name), name, "volume");
     return load<Volume>(f);
   }
@@ -510,7 +507,7 @@ namespace infinit
   void
   Infinit::volume_save(Volume const& volume, bool overwrite)
   {
-    boost::filesystem::ofstream f;
+    fs::ofstream f;
     this->_open_write(
       f, this->_volume_path(volume.name), volume.name, "volume", overwrite);
     save(f, volume);
@@ -519,15 +516,14 @@ namespace infinit
   std::vector<Volume>
   Infinit::volumes_get() const
   {
-    namespace boost_fs = boost::filesystem;
     std::vector<Volume> res;
-    for (boost_fs::recursive_directory_iterator it(this->_volumes_path());
-         it != boost_fs::recursive_directory_iterator();
+    for (fs::recursive_directory_iterator it(this->_volumes_path());
+         it != fs::recursive_directory_iterator();
          ++it)
     {
       if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
       {
-        boost_fs::ifstream f;
+        fs::ifstream f;
         this->_open_read(
           f, it->path(), it->path().filename().string(), "volume");
         res.push_back(load<Volume>(f));
@@ -540,7 +536,7 @@ namespace infinit
   Infinit::credentials_add(std::string const& name, std::unique_ptr<Credentials> a)
   {
     auto path = this->_credentials_path(name, elle::sprintf("%s", a->uid()));
-    boost::filesystem::ofstream f;
+    fs::ofstream f;
     this->_open_write(f, path, name, "credential");
     save(f, a);
   }
@@ -655,7 +651,7 @@ namespace infinit
     return std::dynamic_pointer_cast<OAuthCredentials>(res);
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_credentials_path() const
   {
     auto root = xdg_data_home() / "credentials";
@@ -663,7 +659,7 @@ namespace infinit
     return root;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_credentials_path(std::string const& service) const
   {
     auto root = this->_credentials_path() / service;
@@ -671,13 +667,13 @@ namespace infinit
     return root;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_credentials_path(std::string const& service, std::string const& name) const
   {
     return this->_credentials_path(service) / name;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_network_descriptors_path() const
   {
     auto root = xdg_data_home() / "networks";
@@ -685,13 +681,13 @@ namespace infinit
     return root;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_network_descriptor_path(std::string const& name) const
   {
     return this->_network_descriptors_path() / name;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_networks_path(bool create_dir) const
   {
     auto root = xdg_data_home() / "linked_networks";
@@ -700,7 +696,7 @@ namespace infinit
     return root;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_networks_path(User const& user, bool create_dir) const
   {
     auto root = _networks_path(create_dir) / user.name;
@@ -709,7 +705,7 @@ namespace infinit
     return root;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_network_path(std::string const& name,
                          User const& user,
                          bool create_dir) const
@@ -718,7 +714,7 @@ namespace infinit
     return this->_networks_path(user, create_dir) / network_name;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_passports_path() const
   {
     auto root = xdg_data_home() / "passports";
@@ -726,13 +722,13 @@ namespace infinit
     return root;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_passport_path(std::string const& network, std::string const& user) const
   {
     return this->_passports_path() / network / user;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_storages_path() const
   {
     auto root = xdg_data_home() / "storages";
@@ -740,13 +736,13 @@ namespace infinit
     return root;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_storage_path(std::string const& name) const
   {
     return _storages_path() / name;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_users_path() const
   {
     auto root = xdg_data_home() / "users";
@@ -754,13 +750,13 @@ namespace infinit
     return root;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_user_path(std::string const& name) const
   {
     return this->_users_path() / name;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_volumes_path() const
   {
     auto root = xdg_data_home() / "volumes";
@@ -768,15 +764,15 @@ namespace infinit
     return root;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_volume_path(std::string const& name) const
   {
     return this->_volumes_path() / name;
   }
 
   void
-  Infinit::_open_read(boost::filesystem::ifstream& f,
-                    boost::filesystem::path const& path,
+  Infinit::_open_read(fs::ifstream& f,
+                    fs::path const& path,
                     std::string const& name,
                     std::string const& type)
   {
@@ -788,8 +784,8 @@ namespace infinit
   }
 
   void
-  Infinit::_open_write(boost::filesystem::ofstream& f,
-                       boost::filesystem::path const& path,
+  Infinit::_open_write(fs::ofstream& f,
+                       fs::path const& path,
                        std::string const& name,
                        std::string const& type,
                        bool overwrite,
@@ -805,7 +801,7 @@ namespace infinit
       elle::err("unable to open \"%s\" for writing", path);
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_drives_path() const
   {
     auto root = xdg_data_home() / "drives";
@@ -813,7 +809,7 @@ namespace infinit
     return root;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_drive_path(std::string const& name) const
   {
     return this->_drives_path() / name;
@@ -823,7 +819,7 @@ namespace infinit
   Infinit::drive_save(Drive const& drive,
                       bool overwrite)
   {
-    boost::filesystem::ofstream f;
+    fs::ofstream f;
     this->_open_write(f, this->_drive_path(drive.name), drive.name, "drive",
                       overwrite);
     save(f, drive);
@@ -832,7 +828,7 @@ namespace infinit
   Drive
   Infinit::drive_get(std::string const& name)
   {
-    boost::filesystem::ifstream f;
+    fs::ifstream f;
     this->_open_read(f, this->_drive_path(name), name, "drive");
     return load<Drive>(f);
   }
@@ -840,13 +836,13 @@ namespace infinit
   bool
   Infinit::drive_delete(std::string const& name)
   {
-    boost::filesystem::path drive_path = this->_drive_path(name);
-    if (boost::filesystem::exists(drive_path))
-      return boost::filesystem::remove(drive_path);
+    fs::path drive_path = this->_drive_path(name);
+    if (fs::exists(drive_path))
+      return fs::remove(drive_path);
     return false;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_drive_icon_path() const
   {
     auto root = xdg_cache_home() / "icons";
@@ -854,7 +850,7 @@ namespace infinit
     return root;
   }
 
-  boost::filesystem::path
+  fs::path
   Infinit::_drive_icon_path(std::string const& name) const
   {
     return this->_drive_icon_path() / name;
