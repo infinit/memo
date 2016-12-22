@@ -276,8 +276,25 @@ namespace infinit
     | Import.  |
     `---------*/
     void
-    Passport::mode_import(boost::optional<std::string> const& input)
-    {}
+    Passport::mode_import(boost::optional<std::string> const& input_name)
+    {
+      ELLE_TRACE_SCOPE("export");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto input = cli.get_input(input_name);
+      auto passport = elle::serialization::json::deserialize<infinit::Passport>
+        (*input, false);
+      ifnt.passport_save(passport);
+      auto user_name = [&] () -> std::string
+        {
+          for (auto const& user: ifnt.users_get())
+            if (user.public_key == passport.user())
+              return user.name;
+          return {};
+        }();
+      cli.report_imported("passport",
+                          elle::sprintf("%s: %s", passport.network(), user_name));
+    }
 
     /*-------.
     | List.  |

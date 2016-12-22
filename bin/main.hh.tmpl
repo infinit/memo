@@ -3020,6 +3020,9 @@ option_input(std::string const& item)
     elle::sprintf("file to read the %s from (default: stdin)", item).c_str());
 }
 
+//   auto input = get_input(args);
+// becomes
+//   auto input = this->cli().get_input(input_name);
 inline
 std::unique_ptr<std::istream, std::function<void (std::istream*)>>
 get_input(boost::program_options::variables_map const& args)
