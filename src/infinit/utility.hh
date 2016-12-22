@@ -113,7 +113,7 @@ namespace infinit
   inline
   boost::filesystem::path
   _xdg(std::string const& type,
-            boost::filesystem::path const& def)
+       boost::filesystem::path const& def)
   {
     auto const infinit = elle::os::getenv("INFINIT_" + type, "");
     auto const xdg = elle::os::getenv("XDG_" + type, "");

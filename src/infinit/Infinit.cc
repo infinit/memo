@@ -725,6 +725,7 @@ namespace infinit
   fs::path
   Infinit::_passport_path(std::string const& network, std::string const& user) const
   {
+    assert(is_qualified_name(network));
     return this->_passports_path() / network / user;
   }
 
