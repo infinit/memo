@@ -42,12 +42,15 @@ extern "C" int daemon(int, int);
 #endif
 
 using boost::program_options::variables_map;
+namespace bfs = boost::filesystem;
 
-static
-std::string
-volume_name(variables_map const& args, infinit::User const& owner)
+namespace
 {
-  return ifnt.qualified_name(mandatory(args, "name", "volume name"), owner);
+  std::string
+  volume_name(variables_map const& args, infinit::User const& owner)
+  {
+    return ifnt.qualified_name(mandatory(args, "name", "volume name"), owner);
+  }
 }
 
 COMMAND(create)
@@ -56,12 +59,12 @@ COMMAND(create)
   auto name = volume_name(args, owner);
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
   auto default_permissions = optional(args, "default-permissions");
-  infinit::MountOptions mo;
+  auto mo = infinit::MountOptions{};
   mo.merge(args);
   if (default_permissions && *default_permissions!= "r"
       && *default_permissions!= "rw")
-    throw elle::Error("default-permissions must be 'r' or 'rw'");
-  infinit::Volume volume(
+    elle::err("default-permissions must be 'r' or 'rw'");
+  auto volume = infinit::Volume(
     name, network.name, mo, default_permissions, optional(args, "description"));
   if (args.count("output"))
   {
@@ -87,7 +90,7 @@ COMMAND(create)
       {
         ELLE_LOG_SCOPE("create root directory");
         // Work around clang 7.0.2 bug.
-        std::shared_ptr<infinit::model::Model> clang_model(
+        auto clang_model = std::shared_ptr<infinit::model::Model>(
           static_cast<infinit::model::Model*>(model.first.release()));
         auto fs = std::make_unique<infinit::filesystem::FileSystem>(
           infinit::filesystem::model = std::move(clang_model),
@@ -112,7 +115,7 @@ COMMAND(export_)
   auto volume = ifnt.volume_get(name);
   volume.mount_options.mountpoint.reset();
   {
-    elle::serialization::json::SerializerOut s(*output, false);
+    auto s = elle::serialization::json::SerializerOut(*output, false);
     s.serialize_forward(volume);
   }
   report_exported(*output, "volume", volume.name);
@@ -121,8 +124,8 @@ COMMAND(export_)
 COMMAND(import)
 {
   auto input = get_input(args);
-  elle::serialization::json::SerializerIn s(*input, false);
-  infinit::Volume volume(s);
+  auto s = elle::serialization::json::SerializerIn(*input, false);
+  auto volume = infinit::Volume(s);
   volume.mount_options.mountpoint = optional(args, "mountpoint");
   ifnt.volume_save(volume);
   report_imported("volume", volume.name);
@@ -156,34 +159,31 @@ COMMAND(delete_)
   bool purge = flag(args, "purge");
   bool pull = flag(args, "pull");
   if (purge)
-  {
     for (auto const& drive: ifnt.drives_for_volume(name))
     {
       auto drive_path = ifnt._drive_path(drive);
-      if (boost::filesystem::remove(drive_path))
+      if (bfs::remove(drive_path))
         report_action("deleted", "drive", drive, "locally");
     }
-  }
   if (pull)
     beyond_delete("volume", name, owner, true, purge);
-  boost::filesystem::remove_all(volume.root_block_cache_dir());
-  if (boost::filesystem::remove(path))
+  bfs::remove_all(volume.root_block_cache_dir());
+  if (bfs::remove(path))
     report_action("deleted", "volume", name, "locally");
   else
-  {
-    throw elle::Error(
-      elle::sprintf("File for volume could not be deleted: %s", path));
-  }
+    elle::err("File for volume could not be deleted: %s", path);
 }
 
 COMMAND(fetch)
 {
+  using VolumesMap
+    = std::unordered_map<std::string, std::vector<infinit::Volume>>;
   auto owner = self_user(ifnt, args);
   auto name = optional(args, "name");
   auto service = flag(args, "service");
   if (service)
   {
-    std::string network_name =
+    auto network_name =
       ifnt.qualified_name(mandatory(args, "network"), owner);
     auto net = ifnt.network_get(network_name, owner, true);
     auto dht = net.run(owner);
@@ -192,9 +192,8 @@ COMMAND(fetch)
     if (volumes != services.end())
       for (auto volume: volumes->second)
       {
-        if (name && ifnt.qualified_name(name.get(), owner) != volume.first)
-          continue;
-        else if (ifnt.volume_has(volume.first))
+        if (name && ifnt.qualified_name(name.get(), owner) != volume.first
+            || ifnt.volume_has(volume.first))
           continue;
         auto v = elle::serialization::binary::deserialize<infinit::Volume>(
           dht->fetch(volume.second)->data());
@@ -202,157 +201,146 @@ COMMAND(fetch)
         report_saved("volume", v.name);
       }
   }
-  else
+  else if (name)
   {
-    auto network_name_ = optional(args, "network");
-    if (name)
-    {
-      auto name = volume_name(args, owner);
-      auto desc = infinit::beyond_fetch<infinit::Volume>("volume", name);
-      ifnt.volume_save(std::move(desc));
-    }
-    else if (network_name_) // Fetch all networks for network.
-    {
-      std::string network_name = ifnt.qualified_name(network_name_.get(), owner);
-      auto res = infinit::beyond_fetch<
-        std::unordered_map<std::string, std::vector<infinit::Volume>>>(
-          elle::sprintf("networks/%s/volumes", network_name),
-          "volumes for network",
-          network_name);
-      for (auto const& volume: res["volumes"])
-        ifnt.volume_save(std::move(volume));
-    }
-    else // Fetch all networks for owner.
-    {
-      auto res = infinit::beyond_fetch<
-        std::unordered_map<std::string, std::vector<infinit::Volume>>>(
-          elle::sprintf("users/%s/volumes", owner.name),
-          "volumes for user",
-          owner.name,
-          owner);
-      for (auto const& volume: res["volumes"])
+    auto name = volume_name(args, owner);
+    auto desc = infinit::beyond_fetch<infinit::Volume>("volume", name);
+    ifnt.volume_save(std::move(desc));
+  }
+  else if (auto network_name_ = optional(args, "network")) // Fetch all networks for network.
+  {
+    auto network_name = ifnt.qualified_name(network_name_.get(), owner);
+    auto res = infinit::beyond_fetch<VolumesMap>(
+        elle::sprintf("networks/%s/volumes", network_name),
+        "volumes for network",
+        network_name);
+    for (auto const& volume: res["volumes"])
+      ifnt.volume_save(std::move(volume));
+  }
+  else // Fetch all networks for owner.
+  {
+    auto res = infinit::beyond_fetch<VolumesMap>(
+        elle::sprintf("users/%s/volumes", owner.name),
+        "volumes for user",
+        owner.name,
+        owner);
+    for (auto const& volume: res["volumes"])
+      try
       {
-        try
-        {
-          ifnt.volume_save(std::move(volume));
-        }
-        catch (infinit::ResourceAlreadyFetched const& error)
-        {
-        }
+        ifnt.volume_save(std::move(volume));
       }
-    }
+      catch (infinit::ResourceAlreadyFetched const& error)
+      {
+      }
   }
 }
 
 #ifdef INFINIT_MACOSX
-static
-void
-add_path_to_finder_sidebar(std::string const& path)
+namespace
 {
-  ELLE_DUMP("add to sidebar: %s", path);
-  LSSharedFileListRef favorite_items =
-    LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
-  if (!favorite_items)
-    return;
-  CFStringRef path_str = CFStringCreateWithCString(
-    kCFAllocatorDefault, path.c_str(), kCFStringEncodingUTF8);
-  CFArrayRef items_array = LSSharedFileListCopySnapshot(favorite_items, NULL);
-  CFIndex count = CFArrayGetCount(items_array);
-  LSSharedFileListItemRef item_ref;
-  bool in_list = false;
-  for (CFIndex i = 0; i < count; i++)
+  void
+  add_path_to_finder_sidebar(std::string const& path)
   {
-    item_ref =
-      (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
-    CFURLRef item_url;
-    OSStatus err = LSSharedFileListItemResolve(
-      item_ref,
-      kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
-      &item_url,
-      NULL);
-    if (err == noErr && item_url)
+    ELLE_DUMP("add to sidebar: %s", path);
+    LSSharedFileListRef favorite_items =
+      LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
+    if (!favorite_items)
+      return;
+    CFStringRef path_str = CFStringCreateWithCString(
+      kCFAllocatorDefault, path.c_str(), kCFStringEncodingUTF8);
+    CFArrayRef items_array = LSSharedFileListCopySnapshot(favorite_items, NULL);
+    CFIndex count = CFArrayGetCount(items_array);
+    bool in_list = false;
+    for (CFIndex i = 0; i < count; i++)
     {
-      CFStringRef item_path = CFURLCopyPath(item_url);
-      if (item_path)
+      LSSharedFileListItemRef item_ref
+        = (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
+      CFURLRef item_url;
+      OSStatus err = LSSharedFileListItemResolve(
+        item_ref,
+        kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+        &item_url,
+        NULL);
+      if (err == noErr && item_url)
       {
-        if (CFStringHasPrefix(item_path, path_str))
+        if (CFStringRef item_path = CFURLCopyPath(item_url))
         {
-          ELLE_DEBUG("already in sidebar favorites: %s", path);
-          in_list = true;
+          if (CFStringHasPrefix(item_path, path_str))
+          {
+            ELLE_DEBUG("already in sidebar favorites: %s", path);
+            in_list = true;
+          }
+          CFRelease(item_path);
         }
-        CFRelease(item_path);
+        CFRelease(item_url);
       }
-      CFRelease(item_url);
     }
+    if (items_array)
+      CFRelease(items_array);
+    if (path_str)
+      CFRelease(path_str);
+    if (!in_list)
+    {
+      CFURLRef url = CFURLCreateFromFileSystemRepresentation(
+        kCFAllocatorDefault,
+        reinterpret_cast<const unsigned char*>(path.data()),
+        path.size(),
+        true);
+      LSSharedFileListItemRef item = LSSharedFileListInsertItemURL(
+        favorite_items, kLSSharedFileListItemLast, NULL, NULL, url, NULL, NULL);
+      ELLE_DEBUG("added to sidebar favorites: %s", path);
+      if (url)
+        CFRelease(url);
+      if (item)
+        CFRelease(item);
+    }
+    if (favorite_items)
+      CFRelease(favorite_items);
   }
-  if (items_array)
-    CFRelease(items_array);
-  if (path_str)
-    CFRelease(path_str);
-  if (!in_list)
-  {
-    CFURLRef url = CFURLCreateFromFileSystemRepresentation(
-      kCFAllocatorDefault,
-      reinterpret_cast<const unsigned char*>(path.data()),
-      path.size(),
-      true);
-    LSSharedFileListItemRef item = LSSharedFileListInsertItemURL(
-      favorite_items, kLSSharedFileListItemLast, NULL, NULL, url, NULL, NULL);
-    ELLE_DEBUG("added to sidebar favorites: %s", path);
-    if (url)
-      CFRelease(url);
-    if (item)
-      CFRelease(item);
-  }
-  if (favorite_items)
-    CFRelease(favorite_items);
-}
 
-static
-void
-remove_path_from_finder_sidebar(std::string const& path)
-{
-  ELLE_DUMP("remove from sidebar: %s", path);
-  LSSharedFileListRef favorite_items =
-    LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
-  if (!favorite_items)
-    return;
-  CFStringRef path_str = CFStringCreateWithCString(
-    kCFAllocatorDefault, path.c_str(), kCFStringEncodingUTF8);
-  CFArrayRef items_array = LSSharedFileListCopySnapshot(favorite_items, NULL);
-  CFIndex count = CFArrayGetCount(items_array);
-  LSSharedFileListItemRef item_ref;
-  for (CFIndex i = 0; i < count; i++)
+  void
+  remove_path_from_finder_sidebar(std::string const& path)
   {
-    item_ref =
-      (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
-    CFURLRef item_url;
-    OSStatus err = LSSharedFileListItemResolve(
-      item_ref,
-      kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
-      &item_url,
-      NULL);
-    if (err == noErr && item_url)
+    ELLE_DUMP("remove from sidebar: %s", path);
+    LSSharedFileListRef favorite_items =
+      LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
+    if (!favorite_items)
+      return;
+    CFStringRef path_str = CFStringCreateWithCString(
+      kCFAllocatorDefault, path.c_str(), kCFStringEncodingUTF8);
+    CFArrayRef items_array = LSSharedFileListCopySnapshot(favorite_items, NULL);
+    CFIndex count = CFArrayGetCount(items_array);
+    for (CFIndex i = 0; i < count; i++)
     {
-      CFStringRef item_path = CFURLCopyPath(item_url);
-      if (item_path)
+      LSSharedFileListItemRef item_ref =
+        (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
+      CFURLRef item_url;
+      OSStatus err = LSSharedFileListItemResolve(
+        item_ref,
+        kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+        &item_url,
+        NULL);
+      if (err == noErr && item_url)
       {
-        if (CFStringHasPrefix(item_path, path_str))
+        if (CFStringRef item_path = CFURLCopyPath(item_url))
         {
-          LSSharedFileListItemRemove(favorite_items, item_ref);
-          ELLE_DEBUG("found and removed item from sidebar: %s", path);
+          if (CFStringHasPrefix(item_path, path_str))
+          {
+            LSSharedFileListItemRemove(favorite_items, item_ref);
+            ELLE_DEBUG("found and removed item from sidebar: %s", path);
+          }
+          CFRelease(item_path);
         }
-        CFRelease(item_path);
+        CFRelease(item_url);
       }
-      CFRelease(item_url);
     }
+    if (items_array)
+      CFRelease(items_array);
+    if (path_str)
+      CFRelease(path_str);
+    if (favorite_items)
+      CFRelease(favorite_items);
   }
-  if (items_array)
-    CFRelease(items_array);
-  if (path_str)
-    CFRelease(path_str);
-  if (favorite_items)
-    CFRelease(favorite_items);
 }
 #endif
 
@@ -367,8 +355,8 @@ COMMAND(run)
   if (mo.mountpoint && !flag(args, option_disable_mac_utf8))
   {
     if (!mo.fuse_options)
-      mo.fuse_options = std::vector<std::string>();
-    mo.fuse_options.get().push_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
+      mo.fuse_options = std::vector<std::string>{};
+    mo.fuse_options.get().emplace_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
   }
 #endif
   bool created_mountpoint = false;
@@ -380,7 +368,7 @@ COMMAND(run)
     else
 #elif defined(INFINIT_MACOSX)
     // Do not try to create folder in /Volumes.
-    auto mount_path = boost::filesystem::path(mo.mountpoint.get());
+    auto mount_path = bfs::path(mo.mountpoint.get());
     auto mount_parent = mount_path.parent_path().string();
     boost::algorithm::to_lower(mount_parent);
     if (mount_parent.find("/volumes") == 0)
@@ -389,26 +377,25 @@ COMMAND(run)
 #endif
     try
     {
-      if (boost::filesystem::exists(mo.mountpoint.get()))
+      if (bfs::exists(mo.mountpoint.get()))
       {
-        if (!boost::filesystem::is_directory(mo.mountpoint.get()))
-          throw (elle::Error("mountpoint is not a directory"));
-        if (!boost::filesystem::is_empty(mo.mountpoint.get()))
-          throw elle::Error("mountpoint is not empty");
+        if (!bfs::is_directory(mo.mountpoint.get()))
+          elle::err("mountpoint is not a directory");
+        if (!bfs::is_empty(mo.mountpoint.get()))
+          elle::err("mountpoint is not empty");
       }
       created_mountpoint =
-        boost::filesystem::create_directories(mo.mountpoint.get());
+        bfs::create_directories(mo.mountpoint.get());
     }
-    catch (boost::filesystem::filesystem_error const& e)
+    catch (bfs::filesystem_error const& e)
     {
-      throw elle::Error(elle::sprintf("unable to access mountpoint: %s",
-                                      e.what()));
+      elle::err("unable to access mountpoint: %s", e.what());
     }
   }
   if (mo.fuse_options)
   {
     if (!mo.mountpoint)
-      throw CommandLineError("FUSE options require the volume to be mounted");
+      elle::err<CommandLineError>("FUSE options require the volume to be mounted");
   }
   auto network = ifnt.network_get(volume.network, self);
   network.ensure_allowed(self, "run", "volume");
@@ -440,17 +427,15 @@ COMMAND(run)
   }
   // Only push if we have are contributing storage.
   bool push = mo.push && model->local();
-  boost::optional<infinit::model::Endpoint> local_endpoint;
+  auto local_endpoint = boost::optional<infinit::model::Endpoint>{};
   if (model->local())
   {
     local_endpoint = model->local()->server_endpoint();
     if (auto port_file = optional(args, option_port_file))
       infinit::port_to_file(local_endpoint.get().port(), port_file.get());
     if (auto endpoint_file = optional(args, option_endpoint_file))
-    {
       infinit::endpoints_to_file(model->local()->server_endpoints(),
                                  endpoint_file.get());
-    }
   }
   auto run = [&, push]
   {
@@ -464,7 +449,7 @@ COMMAND(run)
                          mo.readonly,
                          flag(args, "allow-root-creation"),
                          flag(args, "map-other-permissions")
-#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
+#if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
                          , optional(args, "mount-name")
 #endif
 #ifdef INFINIT_MACOSX
@@ -494,20 +479,20 @@ COMMAND(run)
       });
     // Experimental: poll root on mount to trigger caching.
 #   if 0
-    boost::optional<std::thread> root_poller;
+    auto root_poller = boost::optional<std::thread>;
     if (mo.mountpoint && mo.cache && mo.cache.get())
       root_poller.emplace(
         [root = mo.mountpoint.get()]
         {
           try
           {
-            boost::filesystem::status(root);
-            for (auto it = boost::filesystem::directory_iterator(root);
-                 it != boost::filesystem::directory_iterator();
+            bfs::status(root);
+            for (auto it = bfs::directory_iterator(root);
+                 it != bfs::directory_iterator();
                  ++it)
               ;
           }
-          catch (boost::filesystem::filesystem_error const& e)
+          catch (bfs::filesystem_error const& e)
           {
             ELLE_WARN("error polling root: %s", e);
           }
@@ -551,7 +536,7 @@ COMMAND(run)
           add_path_to_finder_sidebar(mountpoint.get());
         });
     }
-    std::unique_ptr<reactor::network::Reachability> reachability;
+    auto reachability = std::unique_ptr<reactor::network::Reachability>{};
 #endif
     elle::SafeFinally unmount([&]
     {
@@ -573,9 +558,9 @@ COMMAND(run)
       {
         try
         {
-          boost::filesystem::remove(mo.mountpoint.get());
+          bfs::remove(mo.mountpoint.get());
         }
-        catch (boost::filesystem::filesystem_error const&)
+        catch (bfs::filesystem_error const&)
         {}
       }
     });
@@ -910,8 +895,8 @@ COMMAND(run)
             handles.at(handlename)->fsyncdir(datasync);
           }
           else
-            throw elle::Error(elle::sprintf("operation %s does not exist", op));
-          elle::serialization::json::SerializerOut response(std::cout);
+            elle::err("operation %s does not exist", op);
+          auto response = elle::serialization::json::SerializerOut(std::cout);
           response.serialize("success", true);
           response.serialize("operation", op);
           if (!handlename.empty())
@@ -921,7 +906,7 @@ COMMAND(run)
         }
         catch (reactor::filesystem::Error const& e)
         {
-          elle::serialization::json::SerializerOut response(std::cout);
+          auto response = elle::serialization::json::SerializerOut(std::cout);
           response.serialize("success", false);
           response.serialize("message", e.what());
           response.serialize("code", e.error_code());
@@ -936,7 +921,7 @@ COMMAND(run)
           if (input->eof())
             return;
           ELLE_LOG("bronk on op %s: %s", op, e);
-          elle::serialization::json::SerializerOut response(std::cout);
+          auto response = elle::serialization::json::SerializerOut(std::cout);
           response.serialize("success", false);
           response.serialize("message", e.what());
           response.serialize("operation", op);
@@ -977,9 +962,7 @@ COMMAND(mount)
     auto name = volume_name(args, self);
     auto volume = ifnt.volume_get(name);
     if (!volume.mount_options.mountpoint)
-    {
       mandatory(args, "mountpoint", "mountpoint");
-    }
   }
   run(args, killed);
 }
@@ -991,14 +974,16 @@ COMMAND(list)
     elle::json::Array l;
     for (auto const& volume: ifnt.volumes_get())
     {
-      elle::json::Object o;
-      o["name"] = static_cast<std::string>(volume.name);
-      o["network"] = volume.network;
+      auto o = elle::json::Object
+        {
+          {"name", static_cast<std::string>(volume.name)},
+          {"network", volume.network},
+        };
       if (volume.mount_options.mountpoint)
         o["mountpoint"] = volume.mount_options.mountpoint.get();
       if (volume.description)
         o["description"] = volume.description.get();
-      l.push_back(std::move(o));
+      l.emplace_back(std::move(o));
     }
     elle::json::write(std::cout, l);
   }
@@ -1034,17 +1019,19 @@ COMMAND(start)
 {
   auto self = self_user(ifnt, args);
   auto name = volume_name(args, self);
-  infinit::MountOptions mo;
+  auto mo = infinit::MountOptions{};
   mo.merge(args);
   reactor::network::UnixDomainSocket sock(daemon_sock_path());
-  std::stringstream ss;
-  {
-    elle::serialization::json::SerializerOut cmd(ss, false);
-    cmd.serialize("operation", "volume-start");
-    cmd.serialize("volume", name);
-    cmd.serialize("options", mo);
-  }
-  sock.write(elle::ConstWeakBuffer(ss.str()));
+  auto cmd = [&]
+    {
+      std::stringstream ss;
+      auto cmd = elle::serialization::json::SerializerOut(ss, false);
+      cmd.serialize("operation", "volume-start");
+      cmd.serialize("volume", name);
+      cmd.serialize("options", mo);
+      return ss.str();
+    }();
+  sock.write(elle::ConstWeakBuffer(cmd));
   auto reply = sock.read_until("\n").string();
   std::stringstream replystream(reply);
   auto json = elle::json::read(replystream);
@@ -1054,7 +1041,8 @@ COMMAND(start)
     std::cout << elle::json::pretty_print(json) << std::endl;
     throw elle::Exit(1);
   }
-  std::cout << "Ok" << std::endl;
+  else
+    std::cout << "Ok" << std::endl;
 }
 
 COMMAND(stop)
@@ -1062,13 +1050,15 @@ COMMAND(stop)
   auto self = self_user(ifnt, args);
   auto name = volume_name(args, self);
   reactor::network::UnixDomainSocket sock(daemon_sock_path());
-  std::stringstream ss;
-  {
-    elle::serialization::json::SerializerOut cmd(ss, false);
-    cmd.serialize("operation", "volume-stop");
-    cmd.serialize("volume", name);
-  }
-  sock.write(elle::ConstWeakBuffer(ss.str()));
+  auto cmd = [&]
+    {
+      std::stringstream ss;
+      auto cmd = elle::serialization::json::SerializerOut(ss, false);
+      cmd.serialize("operation", "volume-stop");
+      cmd.serialize("volume", name);
+      return ss.str();
+    }();
+  sock.write(elle::ConstWeakBuffer(cmd));
   auto reply = sock.read_until("\n").string();
   std::stringstream replystream(reply);
   auto json = elle::json::read(replystream);
@@ -1078,7 +1068,8 @@ COMMAND(stop)
     std::cout << elle::json::pretty_print(json) << std::endl;
     throw elle::Exit(1);
   }
-  std::cout << "Ok" << std::endl;
+  else
+    std::cout << "Ok" << std::endl;
 }
 
 COMMAND(status)
@@ -1086,13 +1077,15 @@ COMMAND(status)
   auto self = self_user(ifnt, args);
   auto name = volume_name(args, self);
   reactor::network::UnixDomainSocket sock(daemon_sock_path());
-  std::stringstream ss;
-  {
-    elle::serialization::json::SerializerOut cmd(ss, false);
-    cmd.serialize("operation", "volume-status");
-    cmd.serialize("volume", name);
-  }
-  sock.write(elle::ConstWeakBuffer(ss.str()));
+  auto cmd = [&]
+    {
+      std::stringstream ss;
+      auto cmd = elle::serialization::json::SerializerOut(ss, false);
+      cmd.serialize("operation", "volume-status");
+      cmd.serialize("volume", name);
+      return ss.str();
+    }();
+  sock.write(elle::ConstWeakBuffer(cmd));
   auto reply = sock.read_until("\n").string();
   std::stringstream replystream(reply);
   auto json = elle::json::read(replystream);
@@ -1103,7 +1096,8 @@ COMMAND(status)
     std::cout << elle::json::pretty_print(json) << std::endl;
     throw elle::Exit(1);
   }
-  std::cout << "Ok" << std::endl;
+  else
+    std::cout << "Ok" << std::endl;
 }
 #endif
 
@@ -1120,13 +1114,13 @@ run_options(RunMode mode)
   using boost::program_options::value;
 #define BOOL_IMPLICIT \
   boost::program_options::value<bool>()->implicit_value(true, "true")
-  std::vector<Mode::OptionDescription> res;
+  auto res = std::vector<Mode::OptionDescription>{};
   auto add_option = [&res] (Mode::OptionDescription const& opt) {
-    res.push_back(opt);
+    res.emplace_back(opt);
   };
   auto add_options = [&res] (std::vector<Mode::OptionDescription> const& opts) {
     for (auto const& opt: opts)
-      res.push_back(opt);
+      res.emplace_back(opt);
   };
   add_option({ "name", value<std::string>(), "volume name" });
   if (mode == RunMode::create || mode == RunMode::update)
