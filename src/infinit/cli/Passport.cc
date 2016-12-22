@@ -129,10 +129,32 @@ namespace infinit
     | Delete.  |
     `---------*/
     void
-    Passport::mode_delete(std::string const& network_name,
+    Passport::mode_delete(std::string const& network_name_,
                           std::string const& user_name,
                           bool pull)
-    {}
+    {
+      ELLE_TRACE_SCOPE("delete");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto network_name = ifnt.qualified_name(network_name_, owner);
+      auto path = ifnt._passport_path(network_name, user_name);
+      if (!exists(path))
+        elle::err("Passport for %s in %s not found", user_name, network_name);
+      if (pull)
+        ifnt.beyond_delete(
+          elle::sprintf("networks/%s/passports/%s", network_name, user_name),
+          "passport for",
+          user_name,
+          owner,
+          true);
+      if (remove(path))
+        cli.report_action("deleted", "passport",
+                          elle::sprintf("%s: %s", network_name, user_name),
+                          "locally");
+      else
+        elle::err("File for passport could not be deleted: %s", path);
+    }
 
     /*---------------.
     | Mode: export.  |

@@ -236,7 +236,7 @@ COMMAND(delete_)
   if (remove(path))
     report_action("deleted", "passport",
                   elle::sprintf("%s: %s", network_name, user_name),
-                  std::string("locally"));
+                  "locally");
   else
     elle::err("File for passport could not be deleted: %s", path);
 }
