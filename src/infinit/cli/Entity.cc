@@ -107,5 +107,6 @@ namespace infinit
     template class Entity<Passport>;
     template class Entity<Silo>;
     template class Entity<User>;
+    template class Entity<Volume>;
   }
 }

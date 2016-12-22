@@ -15,6 +15,7 @@
 #include <infinit/cli/Passport.hh>
 #include <infinit/cli/Silo.hh>
 #include <infinit/cli/User.hh>
+#include <infinit/cli/Volume.hh>
 #include <infinit/symbols.hh>
 
 namespace infinit
@@ -123,6 +124,7 @@ namespace infinit
       Passport passport = *this;
       Silo silo = *this;
       User user = *this;
+      Volume volume = *this;
       using Entities
         = decltype(elle::meta::list(cli::acl,
                                     cli::block,
@@ -132,7 +134,8 @@ namespace infinit
                                     cli::journal,
                                     cli::passport,
                                     cli::silo,
-                                    cli::user));
+                                    cli::user,
+                                    cli::volume));
       void
       help(std::ostream& s) const;
       void

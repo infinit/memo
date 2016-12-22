@@ -1140,7 +1140,7 @@ run_options(RunMode mode)
       "create the filesystem root if not found" },
     { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
     { "readonly", BOOL_IMPLICIT, "mount as readonly" },
-#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
+#if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
     { "mount-name", value<std::string>(), "name of mounted volume" },
 #endif
 #ifdef INFINIT_MACOSX

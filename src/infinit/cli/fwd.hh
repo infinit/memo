@@ -10,10 +10,10 @@ namespace infinit
     class Drive;
     class Infinit;
     class Journal;
+    class Network;
     class Passport;
     class Silo;
     class User;
-    struct Network;
-    struct Volume;
+    class Volume;
   }
 }

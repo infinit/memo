@@ -489,6 +489,8 @@ def configure(
     'src/infinit/cli/Silo.hh',
     'src/infinit/cli/User.cc',
     'src/infinit/cli/User.hh',
+    'src/infinit/cli/Volume.cc',
+    'src/infinit/cli/Volume.hh',
     'src/infinit/cli/utility.cc',
     'src/infinit/cli/utility.hh',
     'src/infinit/cli/xattrs.cc',
@@ -506,6 +508,7 @@ def configure(
       'passport',
       'silo',
       'user',
+      'volume',
   ]:
     o = drake.cxx.Object(
       'src/infinit/cli/Infinit-instantiate-%s.o' % b)
