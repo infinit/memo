@@ -327,16 +327,40 @@ namespace infinit
     | Pull.  |
     `-------*/
     void
-    Passport::mode_pull(std::string const& network_name,
+    Passport::mode_pull(std::string const& network_name_,
                         std::string const& user_name)
-    {}
+    {
+      ELLE_TRACE_SCOPE("pull");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto network_name = ifnt.qualified_name(network_name_, owner);
+      ifnt.beyond_delete(
+          elle::sprintf("networks/%s/passports/%s", network_name, user_name),
+          "passport for",
+          user_name,
+          owner);
+    }
 
     /*-------.
     | Push.  |
     `-------*/
     void
-    Passport::mode_push(std::string const& network_name,
+    Passport::mode_push(std::string const& network_name_,
                         std::string const& user_name)
-    {}
+    {
+      ELLE_TRACE_SCOPE("push");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto network_name = ifnt.qualified_name(network_name_, owner);
+      auto passport = ifnt.passport_get(network_name, user_name);
+      ifnt.beyond_push(
+          elle::sprintf("networks/%s/passports/%s", network_name, user_name),
+          "passport",
+          elle::sprintf("%s: %s", network_name, user_name),
+          passport,
+          owner);
+    }
   }
 }
