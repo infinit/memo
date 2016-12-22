@@ -356,7 +356,7 @@ namespace infinit
       {
         // The name of the command typed by the user, say `infinit-users`.
         auto prev = boost::filesystem::path(args[0]).filename().string();
-        // The corresponding entity, say `users`
+        // The corresponding entity, say `users`.
         args[0] = entity(prev);
         if (args.size() > 1 && das::cli::is_option(args[1]))
           if (args[1] == "-v" || args[1] == "--version")

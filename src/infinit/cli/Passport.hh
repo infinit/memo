@@ -18,7 +18,14 @@ namespace infinit
     public:
       Passport(Infinit& infinit);
       using Modes
-        = decltype(elle::meta::list(cli::create));
+        = decltype(elle::meta::list(cli::create,
+                                    cli::delete_,
+                                    cli::export_,
+                                    cli::fetch,
+                                    cli::import,
+                                    cli::list,
+                                    cli::pull,
+                                    cli::push));
 
       // Create.
       Mode<decltype(binding(modes::mode_create,
@@ -39,7 +46,70 @@ namespace infinit
                   bool deny_write = false,
                   bool deny_storage = false,
                   bool allow_create_passport = false,
-                  boost::optional<std::string> const& output = {});
+                  boost::optional<std::string> output = {});
+
+      // Delete.
+      Mode<decltype(binding(modes::mode_delete,
+                            cli::network,
+                            cli::user,
+                            cli::pull = false))>
+      delete_;
+      void
+      mode_delete(std::string const& network_name,
+                  std::string const& user_name,
+                  bool pull = false);
+
+      // Export.
+      Mode<decltype(binding(modes::mode_export,
+                            cli::network,
+                            cli::user,
+                            cli::output = boost::none))>
+      export_;
+      void
+      mode_export(std::string const& network_name,
+                  std::string const& user_name,
+                  boost::optional<std::string> output = {});
+
+      // Fetch.
+      Mode<decltype(binding(modes::mode_fetch,
+                            cli::network,
+                            cli::user))>
+      fetch;
+      void
+      mode_fetch(std::string const& network_name,
+                 std::string const& user_name);
+
+      // Import.
+      Mode<decltype(binding(modes::mode_import,
+                            cli::input = boost::none))>
+      import;
+      void
+      mode_import(boost::optional<std::string> input = {});
+
+      // List.
+      Mode<decltype(binding(modes::mode_list,
+                            cli::network = boost::none))>
+      list;
+      void
+      mode_list(boost::optional<std::string> network_name = {});
+
+      // Pull.
+      Mode<decltype(binding(modes::mode_pull,
+                            cli::network,
+                            cli::user))>
+      pull;
+      void
+      mode_pull(std::string const& network_name,
+                std::string const& user_name);
+
+      // Push.
+      Mode<decltype(binding(modes::mode_push,
+                            cli::network,
+                            cli::user))>
+      push;
+      void
+      mode_push(std::string const& network_name,
+                std::string const& user_name);
     };
   }
 }
