@@ -428,7 +428,7 @@ ${ls_command}: ${guide_mountpoint}: Permission denied
 
     <p>As you can see, Bob cannot access Alice's volume because he has not been granted the permission to browse the root directory of <code>alice/my-volume</code>. Indeed, Infinit provides two layers of protections: passports prevent unauthorized computers to communicate with the servers of your storage infrastructure while an access control mechanism is provided to authorize other users to access/modify specific files and directories within a volume.</p>
 
-    <p>This lack of permission can be verified on Alice's device A, through the <code>infinit-acl</code> binary which can be used for access control purposes:</p>
+    <p>This lack of permission can be verified on Alice's device A, through the <em>infinit-acl</em> binary which can be used for access control purposes:</p>
 
     <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-acl --list --path ${guide_mountpoint_abs}
 ${guide_mountpoint_abs}:
@@ -472,10 +472,28 @@ zsh: permission denied: ${guide_mountpoint}${dir}awesome.txt
 
     <h2 id="doctor">3. Diagnose Problems</h2>
 
-    <p>The <code>infinit-doctor</code> binary is provided to automatically debug common issues. You can run all its tests using the <code>--all</code> option.</p>
+    <p>The <em>infinit-doctor</em> binary is provided to automatically analyze your environment and detect common issues for you to quickly understand why Infinit may not be behaving as expected. Issues may range from incorrect permissions on some files/directories, to a router blocking UDP packets and more. The easiest way to run <em>infinit-doctor</em> is to use the <code>--all</code> so as to analyze the operarting system, environment variables, networking capabilities, configuration files etc.</p>
 
     <pre><code>$> infinit-doctor --all
-All good, everything should work.
+CONFIGURATION INTEGRITY:
+[OK] Storage resources
+[OK] Networks
+[OK] Volumes
+[OK] Drives
+[OK] Leftovers
+
+SYSTEM SANITY:
+[OK] Username
+[OK] Space left
+[OK] Environment
+[OK] Permissions
+[OK] FUSE
+
+CONNECTIVITY:
+[OK] Connection to https://beyond.infinit.sh
+[OK] Local interfaces
+[OK] NAT
+[OK] Protocols
 </code></pre>
 
     <div class="next">
