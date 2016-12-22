@@ -112,7 +112,7 @@ namespace
     boost::system::error_code erc;
     bfs::recursive_directory_iterator it(path, erc);
     if (erc)
-      throw elle::Error(elle::sprintf("%s : %s", path, erc.message()));
+      elle::err("%s : %s", path, erc.message());
     for (; it != bfs::recursive_directory_iterator(); it.increment(erc))
     {
       // Ensure that we have permission on the file.
@@ -514,7 +514,7 @@ COMMAND(list)
 {
   auto paths = mandatory<std::vector<std::string>>(args, "path", "file/folder");
   if (paths.empty())
-    throw CommandLineError("missing path argument");
+    elle::err<CommandLineError>("missing path argument");
   bool recursive = flag(args, "recursive");
   bool verbose = flag(args, "verbose");
   bool fallback = fallback_enabled(args);
@@ -542,17 +542,14 @@ COMMAND(set)
 {
   auto paths = mandatory<std::vector<std::string>>(args, "path", "file/folder");
   if (paths.empty())
-    throw CommandLineError("missing path argument");
+    elle::err<CommandLineError>("missing path argument");
   std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
   auto omode_ = optional(args, "others-mode");
   auto omode = omode_? omode_.get() : "";
   std::transform(omode.begin(), omode.end(), omode.begin(), ::tolower);
   auto it = std::find(allowed_modes.begin(), allowed_modes.end(), omode);
   if (it == allowed_modes.end())
-  {
-    throw CommandLineError(
-      elle::sprintf("mode must be one of: %s", allowed_modes));
-  }
+    elle::err<CommandLineError>("mode must be one of: %s", allowed_modes);
   auto users_ = optional<std::vector<std::string>>(args, "user");
   auto groups = optional<std::vector<std::string>>(args, "group");
   auto combined = collate_users(users_, boost::none, boost::none, groups);
@@ -561,29 +558,23 @@ COMMAND(set)
   auto mode = mode_ ? mode_.get() : "";
   it = std::find(allowed_modes.begin(), allowed_modes.end(), mode);
   if (it == allowed_modes.end())
-  {
-    throw CommandLineError(
-      elle::sprintf("mode must be one of: %s", allowed_modes));
-  }
+    elle::err<CommandLineError>("mode must be one of: %s", allowed_modes);
   if (!mode.empty() && users.empty())
-    throw CommandLineError("must specify user when setting mode");
+    elle::err<CommandLineError>("must specify user when setting mode");
   if (!users.empty() && mode.empty())
-    throw CommandLineError("must specify a mode for users");
+    elle::err<CommandLineError>("must specify a mode for users");
   bool inherit = flag(args, "enable-inherit");
   bool disinherit = flag(args, "disable-inherit");
   if (inherit && disinherit)
-  {
-    throw CommandLineError(
-      "inherit and disable-inherit are exclusive");
-  }
+    elle::err<CommandLineError>("inherit and disable-inherit are exclusive");
   if (!inherit && !disinherit && mode.empty() && omode.empty())
-    throw CommandLineError("no operation specified");
+    elle::err<CommandLineError>("no operation specified");
   std::vector<std::string> modes_map = {"setr", "setw", "setrw", "clear", ""};
   mode = modes_map[it - allowed_modes.begin()];
   bool recursive = flag(args, "recursive");
   bool traverse = flag(args, "traverse");
   if (traverse && mode.find("setr") != 0)
-    throw elle::Error("--traverse can only be used with mode 'r', 'rw'");
+    elle::err("--traverse can only be used with mode 'r', 'rw'");
   bool verbose = flag(args, "verbose");
   bool fallback = fallback_enabled(args);
   bool fetch = flag(args, "fetch");
@@ -594,11 +585,8 @@ COMMAND(set)
     if ((inherit || disinherit)
         && !recursive
         && !boost::filesystem::is_directory(path))
-    {
-      throw CommandLineError(elle::sprintf(
-        "%s is not a directory, cannot %s inherit",
-        path, inherit ? "enable" : "disable"));
-    }
+      elle::err<CommandLineError>("%s is not a directory, cannot %s inherit",
+                                  path, inherit ? "enable" : "disable");
   }
   bool multi = paths.size() > 1 || recursive;
   for (auto const& path: paths)
@@ -635,7 +623,7 @@ namespace
                    bool fetch)
   {
     if (!object.length())
-      throw CommandLineError("empty user or group name");
+      elle::err<CommandLineError>("empty user or group name");
     static const std::string base = "user.infinit.group.";
     std::string action_detail = is_admin(object) ? "admin" : "";
     std::string attr = elle::sprintf("%s%s%s", base, action, action_detail);
@@ -651,10 +639,8 @@ namespace
     catch (elle::Error const& e)
     {
       if (is_group(name))
-      {
-        throw elle::Error(elle::sprintf(
-          "ensure group \"%s\" exists and path is in a volume", name.substr(1)));
-      }
+        elle::err("ensure group \"%s\" exists and path is in a volume",
+                  name.substr(1));
       else
       {
         try
@@ -663,8 +649,7 @@ namespace
         }
         catch (elle::Error const& e)
         {
-          throw elle::Error(elle::sprintf(
-            "ensure user \"%s\" exists and path is in a volume", name));
+          elle::err("ensure user \"%s\" exists and path is in a volume", name);
         }
       }
     }
@@ -691,9 +676,9 @@ COMMAND(group)
   int action_count = (create ? 1 : 0) + (delete_ ? 1 : 0) + (list ? 1 : 0)
                    + (add ? 1 : 0) + (rem ? 1 : 0) + (description ? 1 : 0);
   if (action_count == 0)
-    throw CommandLineError("no action specified");
+    elle::err<CommandLineError>("no action specified");
   if (action_count > 1)
-    throw CommandLineError("specify only one action at a time");
+    elle::err<CommandLineError>("specify only one action at a time");
   bool fallback = fallback_enabled(args);
   std::string path = mandatory<std::string>(args, "path", "path in volume");
   enforce_in_mountpoint(path, fallback);
@@ -732,9 +717,7 @@ COMMAND(group)
       std::cout << res << std::endl;
     }
     else
-    {
-      throw elle::Error(elle::sprintf("unable to list group: %s", group));
-    }
+      elle::err("unable to list group: %s", group);
   }
 }
 
