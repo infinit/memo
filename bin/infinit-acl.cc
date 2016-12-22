@@ -20,398 +20,413 @@ ELLE_LOG_COMPONENT("infinit-acl");
 
 infinit::Infinit ifnt;
 
-static const char admin_prefix = '^';
-static const char group_prefix = '@';
-
-static
-bool
-fallback_enabled(boost::program_options::variables_map const& args)
+namespace
 {
+  const char admin_prefix = '^';
+  const char group_prefix = '@';
+
+  bool
+  fallback_enabled(boost::program_options::variables_map const& args)
+  {
 #ifdef INFINIT_WINDOWS
-  return true;
+    return true;
 #else
-  return flag(args, "fallback-xattrs");
+    return flag(args, "fallback-xattrs");
 #endif
-}
-
-static
-bool
-is_admin(std::string const& obj)
-{
-  return obj.length() > 0 && obj[0] == admin_prefix;
-}
-
-static
-bool
-is_group(std::string const& obj)
-{
-  return obj.length() > 0 && obj[0] == group_prefix;
-}
-
-typedef boost::optional<std::vector<std::string>> OptVecStr;
-
-static
-OptVecStr
-collate_users(OptVecStr const& combined,
-              OptVecStr const& users,
-              OptVecStr const& admins,
-              OptVecStr const& groups)
-{
-  if (!combined && !users && !admins && !groups)
-    return boost::none;
-  std::vector<std::string> res;
-  if (combined)
-  {
-    for (auto c: combined.get())
-      res.push_back(c);
-  }
-  if (users)
-  {
-    for (auto u: users.get())
-      res.push_back(u);
-  }
-  if (admins)
-  {
-    for (auto a: admins.get())
-    {
-      if (a[0] == admin_prefix)
-        res.push_back(a);
-      else
-        res.push_back(elle::sprintf("%s%s", admin_prefix, a));
-    }
-  }
-  if (groups)
-  {
-    for (auto g: groups.get())
-    {
-      if (g[0] == group_prefix)
-        res.push_back(g);
-      else
-        res.push_back(elle::sprintf("%s%s", group_prefix, g));
-    }
-  }
-  return res;
-}
-
-static
-std::string
-public_key_from_username(std::string const& username, bool fetch)
-{
-  auto user = ifnt.user_get(username, fetch);
-  elle::Buffer buf;
-  {
-    elle::IOStream ios(buf.ostreambuf());
-    elle::serialization::json::SerializerOut so(ios, false);
-    so.serialize_forward(user.public_key);
-  }
-  return buf.string();
-}
-
-template<typename A, typename ... Args>
-void
-recursive_action(A action, std::string const& path, Args ... args)
-{
-  namespace bfs = boost::filesystem;
-  boost::system::error_code erc;
-  bfs::recursive_directory_iterator it(path, erc);
-  if (erc)
-    throw elle::Error(elle::sprintf("%s : %s", path, erc.message()));
-  for (; it != bfs::recursive_directory_iterator(); it.increment(erc))
-  {
-    // Ensure that we have permission on the file.
-    boost::filesystem::exists(it->path(), erc);
-    if (erc == boost::system::errc::permission_denied)
-    {
-      std::cout << "permission denied, skipping " << it->path().string()
-                << std::endl;
-      continue;
-    }
-    action(it->path().string(), args...);
-    reactor::yield();
-  }
-}
-
-template<typename A, typename Res, typename ... Args>
-void
-recursive_action(std::vector<Res>& output,
-                 A action,
-                 std::string const& path, Args ... args)
-{
-  recursive_action(
-    [&] (std::string const& path) {
-      output.push_back(action(path, args...));
-    }, path);
-}
-
-struct PermissionsResult
-{
-  // Factor this class.
-  struct Permissions
-  {
-    Permissions() = default;
-    Permissions(Permissions const&) = default;
-
-    Permissions(elle::serialization::Serializer& s)
-    {
-      this->serialize(s);
-    }
-
-    void
-    serialize(elle::serialization::Serializer& s)
-    {
-      s.serialize("read", this->read);
-      s.serialize("write", this->write);
-      s.serialize("owner", this->owner);
-      s.serialize("admin", this->admin);
-      s.serialize("name", this->name);
-    }
-
-    bool read;
-    bool write;
-    bool owner;
-    bool admin;
-    std::string name;
-  };
-
-  struct Directory
-  {
-    Directory()
-      : inherit(boost::none)
-    {}
-
-    Directory(Directory const&) = default;
-
-    Directory(elle::serialization::Serializer& s)
-    {
-      this->serialize(s);
-    }
-
-    void
-    serialize(elle::serialization::Serializer& s)
-    {
-      s.serialize("inherit", this->inherit);
-    }
-
-    boost::optional<bool> inherit;
-  };
-
-  struct World
-  {
-    World() = default;
-    World(World const&) = default;
-
-    World(elle::serialization::Serializer& s)
-    {
-      this->serialize(s);
-    }
-
-    void
-    serialize(elle::serialization::Serializer& s)
-    {
-      s.serialize("read", this->read);
-      s.serialize("write", this->write);
-    }
-
-    bool read;
-    bool write;
-  };
-
-  PermissionsResult() = default;
-  PermissionsResult(PermissionsResult const&) = default;
-
-  PermissionsResult(elle::serialization::Serializer& s)
-  {
-    this->serialize(s);
   }
 
+  bool
+  is_admin(std::string const& obj)
+  {
+    return obj.length() > 0 && obj[0] == admin_prefix;
+  }
+
+  bool
+  is_group(std::string const& obj)
+  {
+    return obj.length() > 0 && obj[0] == group_prefix;
+  }
+
+  using OptVecStr = boost::optional<std::vector<std::string>>;
+
+  OptVecStr
+  collate_users(OptVecStr const& combined,
+                OptVecStr const& users,
+                OptVecStr const& admins,
+                OptVecStr const& groups)
+  {
+    if (!combined && !users && !admins && !groups)
+      return boost::none;
+    std::vector<std::string> res;
+    if (combined)
+    {
+      for (auto c: combined.get())
+        res.push_back(c);
+    }
+    if (users)
+    {
+      for (auto u: users.get())
+        res.push_back(u);
+    }
+    if (admins)
+    {
+      for (auto a: admins.get())
+      {
+        if (a[0] == admin_prefix)
+          res.push_back(a);
+        else
+          res.push_back(elle::sprintf("%s%s", admin_prefix, a));
+      }
+    }
+    if (groups)
+    {
+      for (auto g: groups.get())
+      {
+        if (g[0] == group_prefix)
+          res.push_back(g);
+        else
+          res.push_back(elle::sprintf("%s%s", group_prefix, g));
+      }
+    }
+    return res;
+  }
+
+  std::string
+  public_key_from_username(std::string const& username, bool fetch)
+  {
+    auto user = ifnt.user_get(username, fetch);
+    elle::Buffer buf;
+    {
+      elle::IOStream ios(buf.ostreambuf());
+      elle::serialization::json::SerializerOut so(ios, false);
+      so.serialize_forward(user.public_key);
+    }
+    return buf.string();
+  }
+
+  template<typename A, typename ... Args>
   void
-  serialize(elle::serialization::Serializer& s)
+  recursive_action(A action, std::string const& path, Args ... args)
   {
-    s.serialize("path", this->path);
-    s.serialize("error", this->error);
-    s.serialize("permissions", this->permissions);
-    s.serialize("directory", this->directory);
-    s.serialize("world", this->world);
+    namespace bfs = boost::filesystem;
+    boost::system::error_code erc;
+    bfs::recursive_directory_iterator it(path, erc);
+    if (erc)
+      throw elle::Error(elle::sprintf("%s : %s", path, erc.message()));
+    for (; it != bfs::recursive_directory_iterator(); it.increment(erc))
+    {
+      // Ensure that we have permission on the file.
+      boost::filesystem::exists(it->path(), erc);
+      if (erc == boost::system::errc::permission_denied)
+      {
+        std::cout << "permission denied, skipping " << it->path().string()
+                  << std::endl;
+        continue;
+      }
+      action(it->path().string(), args...);
+      reactor::yield();
+    }
   }
 
-  std::string path;
-  boost::optional<std::string> error;
-  std::vector<Permissions> permissions;
-  boost::optional<Directory> directory;
-  boost::optional<World> world;
-};
-
-static
-PermissionsResult
-get_acl(std::string const& path, bool fallback_xattrs)
-{
-  PermissionsResult res;
-  res.path = path;
-  char buf[4096];
-  int sz = port_getxattr(
-    path.c_str(), "user.infinit.auth", buf, 4095, fallback_xattrs);
-  if (sz < 0)
+  template<typename A, typename Res, typename ... Args>
+  void
+  recursive_action(std::vector<Res>& output,
+                   A action,
+                   std::string const& path, Args ... args)
   {
-    auto err = errno;
-    res.error = std::string{std::strerror(err)};
+    recursive_action(
+      [&] (std::string const& path) {
+        output.push_back(action(path, args...));
+      }, path);
   }
-  else
+
+  struct PermissionsResult
   {
-    buf[sz] = 0;
-    std::stringstream ss;
-    ss.str(buf);
+    // Factor this class.
+    struct Permissions
+    {
+      Permissions() = default;
+      Permissions(Permissions const&) = default;
+
+      Permissions(elle::serialization::Serializer& s)
+      {
+        this->serialize(s);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("read", this->read);
+        s.serialize("write", this->write);
+        s.serialize("owner", this->owner);
+        s.serialize("admin", this->admin);
+        s.serialize("name", this->name);
+      }
+
+      bool read;
+      bool write;
+      bool owner;
+      bool admin;
+      std::string name;
+    };
+
+    struct Directory
+    {
+      Directory()
+        : inherit(boost::none)
+      {}
+
+      Directory(Directory const&) = default;
+
+      Directory(elle::serialization::Serializer& s)
+      {
+        this->serialize(s);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("inherit", this->inherit);
+      }
+
+      boost::optional<bool> inherit;
+    };
+
+    struct World
+    {
+      World() = default;
+      World(World const&) = default;
+
+      World(elle::serialization::Serializer& s)
+      {
+        this->serialize(s);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("read", this->read);
+        s.serialize("write", this->write);
+      }
+
+      bool read;
+      bool write;
+    };
+
+    PermissionsResult() = default;
+    PermissionsResult(PermissionsResult const&) = default;
+
+    PermissionsResult(elle::serialization::Serializer& s)
+    {
+      this->serialize(s);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("path", this->path);
+      s.serialize("error", this->error);
+      s.serialize("permissions", this->permissions);
+      s.serialize("directory", this->directory);
+      s.serialize("world", this->world);
+    }
+
+    std::string path;
+    boost::optional<std::string> error;
+    std::vector<Permissions> permissions;
+    boost::optional<Directory> directory;
+    boost::optional<World> world;
+  };
+
+  PermissionsResult
+  get_acl(std::string const& path, bool fallback_xattrs)
+  {
+    PermissionsResult res;
+    res.path = path;
+    char buf[4096];
+    int sz = port_getxattr(
+      path.c_str(), "user.infinit.auth", buf, 4095, fallback_xattrs);
+    if (sz < 0)
+    {
+      auto err = errno;
+      res.error = std::string{std::strerror(err)};
+    }
+    else
+    {
+      buf[sz] = 0;
+      std::stringstream ss;
+      ss.str(buf);
 #ifndef __clang__
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
-    boost::optional<bool> dir_inherit;
+      boost::optional<bool> dir_inherit;
 #ifndef __clang__
 # pragma GCC diagnostic pop
 #endif
-    bool dir = boost::filesystem::is_directory(path);
-    if (dir)
-    {
-      int sz = port_getxattr(
-        path.c_str(), "user.infinit.auth.inherit", buf, 4095, fallback_xattrs);
-      if (sz < 0)
-        perror(path.c_str());
-      else
-      {
-        buf[sz] = 0;
-        if (buf == std::string("true"))
-          dir_inherit = true;
-        else if (buf == std::string("false"))
-          dir_inherit = false;
-      }
-    }
-
-    try
-    {
-      elle::json::Json j = elle::json::read(ss);
-      auto a = boost::any_cast<elle::json::Array>(j);
-      for (auto const& _entry: a)
-      {
-        auto const& entry = boost::any_cast<elle::json::Object>(_entry);
-        PermissionsResult::Permissions perms;
-        perms.read = boost::any_cast<bool>(entry.at("read"));
-        perms.write = boost::any_cast<bool>(entry.at("write"));
-        perms.admin = boost::any_cast<bool>(entry.at("admin"));
-        perms.owner = boost::any_cast<bool>(entry.at("owner"));
-        perms.name = boost::any_cast<std::string>(entry.at("name"));
-        res.permissions.push_back(perms);
-      }
+      bool dir = boost::filesystem::is_directory(path);
       if (dir)
       {
-        PermissionsResult::Directory dir;
-        if (dir_inherit)
-          dir.inherit = *dir_inherit;
-        res.directory = dir;
-      }
-      {
-        struct stat st;
-        int stat_result = ::stat(path.c_str(),&st);
-        if (stat_result != 0)
+        int sz = port_getxattr(
+          path.c_str(), "user.infinit.auth.inherit", buf, 4095, fallback_xattrs);
+        if (sz < 0)
           perror(path.c_str());
         else
         {
-          if (st.st_mode & 06)
-          {
-            PermissionsResult::World world;
-            world.read = true;
-            world.write = st.st_mode & 02;
-            res.world = world;
-          }
+          buf[sz] = 0;
+          if (buf == std::string("true"))
+            dir_inherit = true;
+          else if (buf == std::string("false"))
+            dir_inherit = false;
         }
       }
-      return res;
-    }
-    catch (reactor::Terminate const&)
-    {
-      throw;
-    }
-    catch (...)
-    {
-      res.error = elle::exception_string();
-    }
-  }
-  return res;
-}
 
-static
-void
-list_action(std::string const& path, bool verbose, bool fallback_xattrs)
-{
-  if (verbose)
-    std::cout << "processing " << path << std::endl;
-  auto res = get_acl(path, fallback_xattrs);
-  if (res.error)
-    std::cerr << path << ": " << *res.error
-              << std::endl;
-  else
-  {
-    std::stringstream output;
-    output << path << ":" << std::endl;
-    if (res.directory)
-    {
-      auto dir = *res.directory;
-      output << "  inherit: "
-             << (dir.inherit ? dir.inherit.get() ? "true" : "false" : "unknown")
-             << std::endl;
-    }
-    if (res.world)
-    {
-      output << "  world: "
-             << ((*res.world).write ? "rw" : "r")
-             << std::endl;
-    }
-    for (auto& perm: res.permissions)
-    {
-      const char* mode = perm.write
-        ? (perm.read ? "rw" : "w")
-        : (perm.read ? "r" : "none");
-      output << "    " << perm.name;
-      if (perm.admin || perm.owner)
+      try
       {
-        output << " (";
-        if (perm.admin)
-          output << "admin";
-        if (perm.admin && perm.owner)
-          output << ", ";
-        if (perm.owner)
-          output << "owner";
-        output << ")";
+        elle::json::Json j = elle::json::read(ss);
+        auto a = boost::any_cast<elle::json::Array>(j);
+        for (auto const& _entry: a)
+        {
+          auto const& entry = boost::any_cast<elle::json::Object>(_entry);
+          PermissionsResult::Permissions perms;
+          perms.read = boost::any_cast<bool>(entry.at("read"));
+          perms.write = boost::any_cast<bool>(entry.at("write"));
+          perms.admin = boost::any_cast<bool>(entry.at("admin"));
+          perms.owner = boost::any_cast<bool>(entry.at("owner"));
+          perms.name = boost::any_cast<std::string>(entry.at("name"));
+          res.permissions.push_back(perms);
+        }
+        if (dir)
+        {
+          PermissionsResult::Directory dir;
+          if (dir_inherit)
+            dir.inherit = *dir_inherit;
+          res.directory = dir;
+        }
+        {
+          struct stat st;
+          int stat_result = ::stat(path.c_str(),&st);
+          if (stat_result != 0)
+            perror(path.c_str());
+          else
+          {
+            if (st.st_mode & 06)
+            {
+              PermissionsResult::World world;
+              world.read = true;
+              world.write = st.st_mode & 02;
+              res.world = world;
+            }
+          }
+        }
+        return res;
       }
-      output << ": " << mode << std::endl;
+      catch (reactor::Terminate const&)
+      {
+        throw;
+      }
+      catch (...)
+      {
+        res.error = elle::exception_string();
+      }
     }
-    std::cout << output.str();
+    return res;
   }
-}
 
-static
-void
-set_action(std::string const& path,
-           std::vector<std::string> users,
-           std::string const& mode,
-           std::string const& omode,
-           bool inherit,
-           bool disinherit,
-           bool verbose,
-           bool fallback_xattrs,
-           bool fetch,
-           bool multi = false)
-{
-  if (verbose)
-    std::cout << "processing " << path << std::endl;
-  using namespace boost::filesystem;
-  bool dir = is_directory(path);
-  if (inherit || disinherit)
+  void
+  list_action(std::string const& path, bool verbose, bool fallback_xattrs)
   {
-    if (dir)
+    if (verbose)
+      std::cout << "processing " << path << std::endl;
+    auto res = get_acl(path, fallback_xattrs);
+    if (res.error)
+      std::cerr << path << ": " << *res.error
+                << std::endl;
+    else
+    {
+      std::stringstream output;
+      output << path << ":" << std::endl;
+      if (res.directory)
+      {
+        auto dir = *res.directory;
+        output << "  inherit: "
+               << (dir.inherit ? dir.inherit.get() ? "true" : "false" : "unknown")
+               << std::endl;
+      }
+      if (res.world)
+      {
+        output << "  world: "
+               << ((*res.world).write ? "rw" : "r")
+               << std::endl;
+      }
+      for (auto& perm: res.permissions)
+      {
+        const char* mode = perm.write
+          ? (perm.read ? "rw" : "w")
+          : (perm.read ? "r" : "none");
+        output << "    " << perm.name;
+        if (perm.admin || perm.owner)
+        {
+          output << " (";
+          if (perm.admin)
+            output << "admin";
+          if (perm.admin && perm.owner)
+            output << ", ";
+          if (perm.owner)
+            output << "owner";
+          output << ")";
+        }
+        output << ": " << mode << std::endl;
+      }
+      std::cout << output.str();
+    }
+  }
+
+  void
+  set_action(std::string const& path,
+             std::vector<std::string> users,
+             std::string const& mode,
+             std::string const& omode,
+             bool inherit,
+             bool disinherit,
+             bool verbose,
+             bool fallback_xattrs,
+             bool fetch,
+             bool multi = false)
+  {
+    if (verbose)
+      std::cout << "processing " << path << std::endl;
+    using namespace boost::filesystem;
+    bool dir = is_directory(path);
+    if (inherit || disinherit)
+    {
+      if (dir)
+      {
+        try
+        {
+          std::string value = inherit ? "true" : "false";
+          check(port_setxattr, path, "user.infinit.auth.inherit", value,
+                fallback_xattrs);
+        }
+        catch (PermissionDenied const&)
+        {
+          if (multi)
+            std::cout << "permission denied, skipping " << path << std::endl;
+          else
+            std::cout << "permission denied " << path << std::endl;
+        }
+        catch (elle::Error const& error)
+        {
+          ELLE_ERR("setattr (inherit) on %s failed: %s", path,
+                   elle::exception_string());
+        }
+      }
+    }
+    if (!omode.empty())
     {
       try
       {
-        std::string value = inherit ? "true" : "false";
-        check(port_setxattr, path, "user.infinit.auth.inherit", value,
+        check(port_setxattr, path, "user.infinit.auth_others", omode,
               fallback_xattrs);
       }
       catch (PermissionDenied const&)
@@ -421,71 +436,51 @@ set_action(std::string const& path,
         else
           std::cout << "permission denied " << path << std::endl;
       }
-      catch (elle::Error const& error)
+      catch (InvalidArgument const&)
       {
-        ELLE_ERR("setattr (inherit) on %s failed: %s", path,
+        ELLE_ERR("setattr (omode: %s) on %s failed: %s", omode, path,
                  elle::exception_string());
+        throw;
       }
     }
-  }
-  if (!omode.empty())
-  {
-    try
+    if (!mode.empty())
     {
-      check(port_setxattr, path, "user.infinit.auth_others", omode,
-            fallback_xattrs);
-    }
-    catch (PermissionDenied const&)
-    {
-      if (multi)
-        std::cout << "permission denied, skipping " << path << std::endl;
-      else
-        std::cout << "permission denied " << path << std::endl;
-    }
-    catch (InvalidArgument const&)
-    {
-      ELLE_ERR("setattr (omode: %s) on %s failed: %s", omode, path,
-               elle::exception_string());
-      throw;
-    }
-  }
-  if (!mode.empty())
-  {
-    for (auto& username: users)
-    {
-      auto set_attribute =
-        [path, mode, fallback_xattrs, multi] (std::string const& value)
+      for (auto& username: users)
+      {
+        auto set_attribute =
+          [path, mode, fallback_xattrs, multi] (std::string const& value)
+          {
+            try
+            {
+              check(port_setxattr, path, ("user.infinit.auth." + mode), value,
+                    fallback_xattrs);
+            }
+            catch (PermissionDenied const&)
+            {
+              if (multi)
+                std::cout << "permission denied, skipping " << path << std::endl;
+              else
+                std::cout << "permission denied " << path << std::endl;
+            }
+          };
+        try
+        {
+          set_attribute(username);
+        }
+        // XXX: Invalid argument could be something else... Find a way to
+        // distinguish the different errors.
+        catch (InvalidArgument const&)
         {
           try
           {
-            check(port_setxattr, path, ("user.infinit.auth." + mode), value,
-                  fallback_xattrs);
+            set_attribute(public_key_from_username(username, fetch));
           }
-          catch (PermissionDenied const&)
+          catch (InvalidArgument const&)
           {
-            if (multi)
-              std::cout << "permission denied, skipping " << path << std::endl;
-            else
-              std::cout << "permission denied " << path << std::endl;
+            ELLE_ERR("setattr (mode: %s) on %s failed: %s", mode, path,
+                     elle::exception_string());
+            throw;
           }
-        };
-      try
-      {
-        set_attribute(username);
-      }
-      // XXX: Invalid argument could be something else... Find a way to
-      // distinguish the different errors.
-      catch (InvalidArgument const&)
-      {
-        try
-        {
-          set_attribute(public_key_from_username(username, fetch));
-        }
-        catch (InvalidArgument const&)
-        {
-          ELLE_ERR("setattr (mode: %s) on %s failed: %s", mode, path,
-                   elle::exception_string());
-          throw;
         }
       }
     }
@@ -629,46 +624,48 @@ COMMAND(set)
   }
 }
 
-static
-void
-group_add_remove(std::string const& path,
-                 std::string const& group,
-                 std::string const& object,
-                 std::string const& action,
-                 bool fallback,
-                 bool fetch)
+namespace
 {
-  if (!object.length())
-    throw CommandLineError("empty user or group name");
-  static const std::string base = "user.infinit.group.";
-  std::string action_detail = is_admin(object) ? "admin" : "";
-  std::string attr = elle::sprintf("%s%s%s", base, action, action_detail);
-  auto set_attr = [&] (std::string const& identifier)
-    {
-      check(port_setxattr, path, attr, group + ":" + identifier, fallback);
-    };
-  std::string name = is_admin(object) ? object.substr(1) : object;
-  try
+  void
+  group_add_remove(std::string const& path,
+                   std::string const& group,
+                   std::string const& object,
+                   std::string const& action,
+                   bool fallback,
+                   bool fetch)
   {
-    set_attr(name);
-  }
-  catch (elle::Error const& e)
-  {
-    if (is_group(name))
-    {
-      throw elle::Error(elle::sprintf(
-        "ensure group \"%s\" exists and path is in a volume", name.substr(1)));
-    }
-    else
-    {
-      try
+    if (!object.length())
+      throw CommandLineError("empty user or group name");
+    static const std::string base = "user.infinit.group.";
+    std::string action_detail = is_admin(object) ? "admin" : "";
+    std::string attr = elle::sprintf("%s%s%s", base, action, action_detail);
+    auto set_attr = [&] (std::string const& identifier)
       {
-        set_attr(public_key_from_username(name, fetch));
-      }
-      catch (elle::Error const& e)
+        check(port_setxattr, path, attr, group + ":" + identifier, fallback);
+      };
+    std::string name = is_admin(object) ? object.substr(1) : object;
+    try
+    {
+      set_attr(name);
+    }
+    catch (elle::Error const& e)
+    {
+      if (is_group(name))
       {
         throw elle::Error(elle::sprintf(
-          "ensure user \"%s\" exists and path is in a volume", name));
+          "ensure group \"%s\" exists and path is in a volume", name.substr(1)));
+      }
+      else
+      {
+        try
+        {
+          set_attr(public_key_from_username(name, fetch));
+        }
+        catch (elle::Error const& e)
+        {
+          throw elle::Error(elle::sprintf(
+            "ensure user \"%s\" exists and path is in a volume", name));
+        }
       }
     }
   }
