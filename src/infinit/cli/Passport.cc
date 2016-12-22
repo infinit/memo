@@ -1,12 +1,14 @@
 #include <infinit/cli/Passport.hh>
 
 #include <infinit/cli/Infinit.hh>
-#include <infinit/model/doughnut/consensus/Paxos.hh>
+#include <infinit/model/doughnut/Passport.hh>
 
 ELLE_LOG_COMPONENT("cli.passport");
 
 namespace infinit
 {
+  using Passport = infinit::model::doughnut::Passport;
+
   namespace cli
   {
     using Error = das::cli::Error;
@@ -43,8 +45,8 @@ namespace infinit
         "Fetch a user's network passport from {hub}",
         das::cli::Options(),
         this->bind(modes::mode_fetch,
-                   cli::network,
-                   cli::user))
+                   cli::network = boost::none,
+                   cli::user = boost::none))
       , import(
         "Import a passport for a user to a network",
         das::cli::Options(),
@@ -179,10 +181,96 @@ namespace infinit
     /*--------.
     | Fetch.  |
     `--------*/
+
+    namespace
+    {
+      boost::optional<std::string>
+      qualified_name(infinit::cli::Infinit& cli,
+                     boost::optional<std::string> const& name,
+                     boost::optional<infinit::User const&> owner = {})
+      {
+        auto& ifnt = cli.infinit();
+        if (name)
+        {
+          // Avoid calling self_user, unless really needed.  That avoids
+          // that the current user need to exist.
+          if (ifnt.is_qualified_name(*name))
+            return *name;
+          else
+            return ifnt.qualified_name(*name,
+                                       owner ? *owner : cli.as_user());
+        }
+        else
+          return boost::none;
+      }
+    }
+
     void
-    Passport::mode_fetch(std::string const& network_name,
-                         std::string const& user_name)
-    {}
+    Passport::mode_fetch(boost::optional<std::string> network_name,
+                         boost::optional<std::string> const& user_name)
+    {
+      ELLE_TRACE_SCOPE("export");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      network_name = qualified_name(cli, network_name, owner);
+      if (network_name && user_name)
+      {
+        auto passport = ifnt.beyond_fetch<infinit::Passport>(
+          elle::sprintf("networks/%s/passports/%s",
+                        network_name.get(), user_name.get()),
+          "passport for",
+          user_name.get(),
+          owner);
+        ifnt.passport_save(passport, true);
+      }
+      // Fetch all network passports if owner else fetch just the user's passport.
+      else if (network_name)
+      {
+        auto owner_name = ifnt.owner_name(*network_name);
+        if (owner_name == owner.name)
+        {
+          auto res = ifnt.beyond_fetch_json(
+            elle::sprintf("networks/%s/passports", network_name.get()),
+            "passports for",
+            network_name.get(),
+            owner);
+          auto json = boost::any_cast<elle::json::Object>(res);
+          for (auto const& user_passport: json)
+          {
+            auto s = elle::serialization::json::SerializerIn(user_passport.second, false);
+            auto passport = s.deserialize<infinit::Passport>();
+            ifnt.passport_save(passport, true);
+          }
+        }
+        else
+        {
+          auto passport = ifnt.beyond_fetch<infinit::Passport>(elle::sprintf(
+            "networks/%s/passports/%s", network_name.get(), owner.name),
+            "passport for",
+            network_name.get(),
+            owner);
+          ifnt.passport_save(passport, true);
+        }
+      }
+      else if (user_name && user_name.get() != owner.name)
+      {
+        elle::err<Error>("use the --as to fetch passports for another user");
+      }
+      // Fetch owner passports.
+      else
+      {
+        using Passports
+          = std::unordered_map<std::string, std::vector<infinit::Passport>>;
+        auto res = ifnt.beyond_fetch<Passports>(
+            elle::sprintf("users/%s/passports", owner.name),
+            "passports for user",
+            owner.name,
+            owner);
+        for (auto const& passport: res["passports"])
+          ifnt.passport_save(passport, true);
+      }
+    }
 
     /*---------.
     | Import.  |

@@ -72,12 +72,12 @@ namespace infinit
 
       // Fetch.
       Mode<decltype(binding(modes::mode_fetch,
-                            cli::network,
-                            cli::user))>
+                            cli::network = boost::none,
+                            cli::user = boost::none))>
       fetch;
       void
-      mode_fetch(std::string const& network_name,
-                 std::string const& user_name);
+      mode_fetch(boost::optional<std::string> network_name = {},
+                 boost::optional<std::string> const& user_name = {});
 
       // Import.
       Mode<decltype(binding(modes::mode_import,
