@@ -160,10 +160,21 @@ namespace infinit
     | Mode: export.  |
     `---------------*/
     void
-    Passport::mode_export(std::string const& network_name,
+    Passport::mode_export(std::string const& network_name_,
                           std::string const& user_name,
                           boost::optional<std::string> const& output)
-    {}
+    {
+      ELLE_TRACE_SCOPE("export");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto network_name = ifnt.qualified_name(network_name_, owner);
+      auto out = cli.get_output(output);
+      auto passport = ifnt.passport_get(network_name, user_name);
+      elle::serialization::json::serialize(passport, *out, false);
+      cli.report_exported(*out, "passport",
+                          elle::sprintf("%s: %s", network_name, user_name));
+    }
 
     /*--------.
     | Fetch.  |
