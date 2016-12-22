@@ -4,7 +4,7 @@
 
     <section class="projects wrapper">
       <h1>Open Source Projects</h1>
-      <p class="subtitle">From our most basic development libraries up to the storage platform, Infinit is dedicated to the open source philosophy.</p>
+      <p class="subtitle">From the most basic development libraries up to the storage platform, Infinit is dedicated to giving back to the community.</p>
 
       % for i, project in enumerate(projects):
         <div ${'data-gh-project="' + project['repo'] + '"' if project['repo'] else ''} class="project ${project['next_stage'].lower()} ${'pinned' if project['pinned'] else ''}">
