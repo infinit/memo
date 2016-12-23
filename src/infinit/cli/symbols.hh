@@ -37,7 +37,7 @@ namespace infinit
     DAS_CLI_SYMBOL(deny_write, '\0', "deny user write access to the network", false);
     DAS_CLI_SYMBOL(description, '\0', "{type} description", false);
     DAS_CLI_SYMBOL(disable_inherit, '\0', "make new files and directories not inherit permissions", false);
-    DAS_CLI_SYMBOL(disable_utf_8_conversion, 0, "disable FUSE conversion of UTF-8 to native format", false);
+    DAS_CLI_SYMBOL(disable_UTF_8_conversion, 0, "disable FUSE conversion of UTF-8 to native format", false);
     DAS_CLI_SYMBOL(dropbox, '\0', "store blocks on Dropbox", false);
     DAS_CLI_SYMBOL(email, 'e', "user email", false);
     DAS_CLI_SYMBOL(enable_inherit, 'i', "make new files and directories inherit permissions", false);
@@ -64,6 +64,7 @@ namespace infinit
     DAS_CLI_SYMBOL(key, 'k', "RSA key pair in PEM format - e.g. your SSH key", false);
     DAS_CLI_SYMBOL(ldap_name, 'l', "user LDAP distinguished name", false);
     DAS_CLI_SYMBOL(listen, 0, "specify which IP address to listen on (default: all)", false);
+    DAS_CLI_SYMBOL(map_other_permissions, 0, "allow chmod to set world permissions", false);
     DAS_CLI_SYMBOL(mode, 'm', "access mode {action}: r, w, rw, none", false);
     DAS_CLI_SYMBOL(monitoring, 0, "enable monitoring (default: true)", false);
     DAS_CLI_SYMBOL(mount_icon, 0, "path to an icon for mounted volume" , false);
@@ -136,6 +137,7 @@ namespace infinit
     DAS_SYMBOL(journal);
     DAS_SYMBOL(list);
     DAS_SYMBOL(login);
+    DAS_SYMBOL(run);
     DAS_SYMBOL(set);
     DAS_SYMBOL(set_xattr);
     DAS_SYMBOL(signup);
@@ -170,6 +172,7 @@ namespace infinit
       DAS_SYMBOL(mode_push);
       DAS_SYMBOL(mode_receive);
       DAS_SYMBOL(mode_register);
+      DAS_SYMBOL(mode_run);
       DAS_SYMBOL(mode_set);
       DAS_SYMBOL(mode_set_xattr);
       DAS_SYMBOL(mode_signup);
