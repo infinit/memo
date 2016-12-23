@@ -311,5 +311,4 @@ namespace std
               infinit::filesystem::OperationType operation);
 }
 
-#include <infinit/filesystem/Filesystem.hxx>
-
+#include <infinit/filesystem/filesystem.hxx>
