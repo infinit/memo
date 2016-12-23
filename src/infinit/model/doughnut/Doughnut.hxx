@@ -1,7 +1,4 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_DOUGHNUT_HXX
-# define INFINIT_MODEL_DOUGHNUT_DOUGHNUT_HXX
-
-# include <das/named.hh>
+#include <das/named.hh>
 
 namespace infinit
 {
@@ -118,4 +115,3 @@ namespace infinit
 
 DAS_SERIALIZE(infinit::model::doughnut::AdminKeys);
 
-#endif

@@ -1,26 +1,26 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_DOUGHNUT_HH
-# define INFINIT_MODEL_DOUGHNUT_DOUGHNUT_HH
+#pragma once
 
-# include <memory>
-# include <boost/filesystem.hpp>
-# include <boost/multi_index/hashed_index.hpp>
-# include <boost/multi_index/identity.hpp>
-# include <boost/multi_index/mem_fun.hpp>
-# include <boost/multi_index/member.hpp>
-# include <boost/multi_index/ordered_index.hpp>
-# include <boost/multi_index/sequenced_index.hpp>
-# include <boost/multi_index_container.hpp>
+#include <memory>
 
-# include <das/model.hh>
-# include <das/serializer.hh>
-# include <elle/ProducerPool.hh>
-# include <cryptography/rsa/KeyPair.hh>
+#include <boost/filesystem.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/identity.hpp>
+#include <boost/multi_index/mem_fun.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/sequenced_index.hpp>
+#include <boost/multi_index_container.hpp>
 
-# include <infinit/model/Model.hh>
-# include <infinit/model/doughnut/Consensus.hh>
-# include <infinit/model/doughnut/Dock.hh>
-# include <infinit/model/doughnut/Passport.hh>
-# include <infinit/overlay/Overlay.hh>
+#include <das/model.hh>
+#include <das/serializer.hh>
+#include <elle/ProducerPool.hh>
+#include <cryptography/rsa/KeyPair.hh>
+
+#include <infinit/model/Model.hh>
+#include <infinit/model/doughnut/Consensus.hh>
+#include <infinit/model/doughnut/Dock.hh>
+#include <infinit/model/doughnut/Passport.hh>
+#include <infinit/overlay/Overlay.hh>
 
 namespace infinit
 {
@@ -271,6 +271,5 @@ namespace infinit
   }
 }
 
-# include <infinit/model/doughnut/Doughnut.hxx>
+#include <infinit/model/doughnut/Doughnut.hxx>
 
-#endif
