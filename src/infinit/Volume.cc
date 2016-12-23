@@ -89,13 +89,10 @@ namespace infinit
         fuse_options.push_back("ro");
       }
 #ifndef INFINIT_WINDOWS
-      if (mount_options.fuse_options)
+      for (auto const& opt: mount_options.fuse_options)
       {
-        for (auto const& opt: mount_options.fuse_options.get())
-        {
-          fuse_options.push_back("-o");
-          fuse_options.push_back(opt);
-        }
+        fuse_options.push_back("-o");
+        fuse_options.push_back(opt);
       }
 #endif
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)

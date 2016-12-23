@@ -23,13 +23,15 @@ namespace infinit
     DAS_SYMBOL(cache_ram_invalidation);
     DAS_SYMBOL(cache_ram_size);
     DAS_SYMBOL(cache_ram_ttl);
-    DAS_SYMBOL(fetch);
-    DAS_SYMBOL(fuse_options);
+    DAS_SYMBOL(enable_monitoring); // aka monitoring.
+    DAS_SYMBOL(fetch);             // aka fetch_endpoints_interval.
+    DAS_SYMBOL(fuse_options);      // aka fuse_option.
     DAS_SYMBOL(hub_url);
+    DAS_SYMBOL(listen_address);    // aka listen
     DAS_SYMBOL(mountpoint);
-    DAS_SYMBOL(peers);
-    DAS_SYMBOL(poll_beyond);
-    DAS_SYMBOL(push);
+    DAS_SYMBOL(peers);             // aka peer.
+    DAS_SYMBOL(poll_beyond);       // aka fetch_endpoints_interval.
+    DAS_SYMBOL(push);              // aka push_endpoints.
     DAS_SYMBOL(rdv);
     DAS_SYMBOL(readonly);
   }
@@ -43,7 +45,7 @@ namespace infinit
     void merge(MountOptions const& other);
     boost::optional<std::string> hub_url;
     boost::optional<std::string> rdv;
-    boost::optional<std::vector<std::string>> fuse_options;
+    std::vector<std::string> fuse_options;
     boost::optional<std::string> as;
     boost::optional<bool> fetch;
     boost::optional<bool> push;
@@ -55,13 +57,13 @@ namespace infinit
     boost::optional<int> cache_ram_invalidation;
     boost::optional<uint64_t> cache_disk_size;
     boost::optional<std::string> mountpoint;
-    boost::optional<std::vector<std::string>> peers;
+    std::vector<std::string> peers;
     boost::optional<int> poll_beyond;
     boost::optional<boost::asio::ip::address> listen_address;
 #ifndef INFINIT_WINDOWS
     boost::optional<bool> enable_monitoring;
 #endif
-    typedef infinit::serialization_tag serialization_tag;
+    using serialization_tag = infinit::serialization_tag;
     using Model = das::Model<
       MountOptions,
       decltype(elle::meta::list(
@@ -80,7 +82,9 @@ namespace infinit
                  mount_options::mountpoint,
                  mount_options::as,
                  mount_options::peers,
-                 mount_options::poll_beyond))>;
+                 mount_options::poll_beyond,
+                 // mount_options::listen_address,
+                 mount_options::enable_monitoring))>;
   };
 }
 

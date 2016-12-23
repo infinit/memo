@@ -33,15 +33,10 @@ namespace infinit
   // }
 
   template <typename T>
-  void merge(boost::optional<std::vector<T>>& a,
-             boost::optional<std::vector<T>> const& b)
+  void merge(std::vector<T>& a,
+             std::vector<T> const& b)
   {
-    if (b)
-    {
-      if (!a)
-        a = std::vector<T>();
-      a.get().insert(a.get().end(), b.get().begin(), b.get().end());
-    }
+    a.insert(a.end(), b.begin(), b.end());
   }
 
   void
@@ -66,6 +61,7 @@ namespace infinit
 #ifndef INFINIT_WINDOWS
     infinit::merge(enable_monitoring, b.enable_monitoring);
 #endif
+    infinit::merge(listen_address, b.listen_address);
   }
 
 //   void
@@ -117,18 +113,16 @@ namespace infinit
       env.insert(std::make_pair("INFINIT_RDV", rdv.get()));
     if (hub_url)
       env.insert(std::make_pair("INFINIT_BEYOND", hub_url.get()));
-    if (fuse_options)
-      for (auto const& fo: fuse_options.get())
-      {
-        arguments.push_back("--fuse-option");
-        arguments.push_back(fo);
-      }
-    if (peers)
-      for (auto const& fo: peers.get())
-      {
-        arguments.push_back("--peer");
-        arguments.push_back(fo);
-      }
+    for (auto const& fo: fuse_options)
+    {
+      arguments.push_back("--fuse-option");
+      arguments.push_back(fo);
+    }
+    for (auto const& fo: peers)
+    {
+      arguments.push_back("--peer");
+      arguments.push_back(fo);
+    }
     if (fetch && *fetch) arguments.push_back("--fetch");
     if (push && *push) arguments.push_back("--push");
     if (cache && *cache) arguments.push_back("--cache");

@@ -109,7 +109,7 @@ namespace infinit
                   Strings advertise_host = {},
                   boost::optional<std::string> endpoints_file = {},
                   boost::optional<std::string> port_file = {},
-                  boost::optional<std::string> port = {},
+                  boost::optional<int> port = {},
                   boost::optional<std::string> listen = {},
                   int fetch_endpoints_interval = 300,
                   boost::optional<std::string> input = {});
