@@ -5,7 +5,7 @@ namespace infinit
   MountOptions::MountOptions()
   {}
 
-  template<typename T>
+  template <typename T>
   void merge(T& a, const T& b)
   {
     if (b)
@@ -32,7 +32,7 @@ namespace infinit
   //     merge(a, b.get(), o);
   // }
 
-  template<typename T>
+  template <typename T>
   void merge(boost::optional<std::vector<T>>& a,
              boost::optional<std::vector<T>> const& b)
   {
@@ -43,7 +43,7 @@ namespace infinit
       a.get().insert(a.get().end(), b.get().begin(), b.get().end());
     }
   }
-  inline
+
   void
   MountOptions::merge(MountOptions const& b)
   {
@@ -68,7 +68,6 @@ namespace infinit
 #endif
   }
 
-//   inline
 //   void
 //   MountOptions::merge(boost::program_options::variables_map const& args)
 //   {
