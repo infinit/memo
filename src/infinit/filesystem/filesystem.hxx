@@ -1,6 +1,3 @@
-#ifndef INFINIT_FILESYSTEM_FILESYSTEM_HXX
-# define INFINIT_FILESYSTEM_FILESYSTEM_HXX
-
 namespace infinit
 {
   namespace filesystem
@@ -63,4 +60,3 @@ namespace infinit
   }
 }
 
-#endif
