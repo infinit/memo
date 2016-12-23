@@ -1,19 +1,18 @@
-#ifndef INFINIT_MODEL_MODEL_HH
-# define INFINIT_MODEL_MODEL_HH
+#pragma once
 
-# include <memory>
+#include <memory>
 
-# include <boost/filesystem.hpp>
+#include <boost/filesystem.hpp>
 
-# include <elle/UUID.hh>
-# include <elle/Version.hh>
+#include <elle/UUID.hh>
+#include <elle/Version.hh>
 
-# include <infinit/model/Address.hh>
-# include <infinit/model/Endpoints.hh>
-# include <infinit/model/User.hh>
-# include <infinit/model/blocks/fwd.hh>
-# include <infinit/serialization.hh>
-# include <infinit/storage/Storage.hh>
+#include <infinit/model/Address.hh>
+#include <infinit/model/Endpoints.hh>
+#include <infinit/model/User.hh>
+#include <infinit/model/blocks/fwd.hh>
+#include <infinit/serialization.hh>
+#include <infinit/storage/Storage.hh>
 
 namespace infinit
 {
@@ -42,7 +41,7 @@ namespace infinit
       int max_size;
     };
 
-    typedef std::pair<Squash, SquashConflictResolverOptions> SquashOperation;
+    using SquashOperation = std::pair<Squash, SquashConflictResolverOptions>;
 
     // Called in case of conflict error. Returns the new block to retry with
     // or null to abort
@@ -61,7 +60,6 @@ namespace infinit
       SquashOperation
       squashable(SquashStack const& others)
       { return {Squash::stop, {}};}
-      virtual
       void
       serialize(elle::serialization::Serializer& s,
                 elle::Version const& v) override = 0;
@@ -85,7 +83,7 @@ namespace infinit
     class DummyConflictResolver
       : public ConflictResolver
     {
-      typedef ConflictResolver Super;
+       using Super = ConflictResolver;
     protected:
       DummyConflictResolver();
     public:
@@ -108,7 +106,7 @@ namespace infinit
     class Model
     {
     public:
-      typedef std::pair<Address, boost::optional<int>> AddressVersion;
+      using AddressVersion = std::pair<Address, boost::optional<int>>;
       Model(boost::optional<elle::Version> version = {});
       ELLE_ATTRIBUTE_R(elle::Version, version);
       template <typename Block>
@@ -185,8 +183,8 @@ namespace infinit
       _remove(Address address, blocks::RemoveSignature sig) = 0;
     };
 
-    struct ModelConfig:
-      public elle::serialization::VirtuallySerializable<false>
+    struct ModelConfig
+      : public elle::serialization::VirtuallySerializable<false>
     {
       static constexpr char const* virtually_serializable_key = "type";
       std::unique_ptr<infinit::storage::StorageConfig> storage;
@@ -205,6 +203,5 @@ namespace infinit
   }
 }
 
-# include <infinit/model/Model.hxx>
+#include <infinit/model/Model.hxx>
 
-#endif
