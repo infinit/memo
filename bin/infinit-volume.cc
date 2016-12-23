@@ -392,11 +392,8 @@ COMMAND(run)
       elle::err("unable to access mountpoint: %s", e.what());
     }
   }
-  if (mo.fuse_options)
-  {
-    if (!mo.mountpoint)
-      elle::err<CommandLineError>("FUSE options require the volume to be mounted");
-  }
+  if (mo.fuse_options && !mo.mountpoint)
+    elle::err<CommandLineError>("FUSE options require the volume to be mounted");
   auto network = ifnt.network_get(volume.network, self);
   network.ensure_allowed(self, "run", "volume");
   ELLE_TRACE("run network");

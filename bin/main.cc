@@ -759,7 +759,7 @@ option_push(boost::program_options::variables_map const& args,
 void
 hook_stats_signals(infinit::model::doughnut::Doughnut& dht)
 {
-  #ifndef INFINIT_WINDOWS
+#ifndef INFINIT_WINDOWS
   reactor::scheduler().signal_handle(SIGUSR1, [&dht] {
       auto& o = dht.overlay();
       try
@@ -781,5 +781,5 @@ hook_stats_signals(infinit::model::doughnut::Doughnut& dht)
         ELLE_TRACE("overlay blockcount query error: %s", e);
       }
   });
-  #endif
+#endif
 }
