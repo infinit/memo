@@ -596,7 +596,7 @@ namespace reporting
              capacity != 0,
              reason,
              ((available / (double) capacity) < minimum_ratio)
-             && available < minimum)
+             || available < minimum)
     , minimum(minimum)
     , minimum_ratio(minimum_ratio)
     , available(available)
@@ -617,9 +617,9 @@ namespace reporting
       if (!this->sane() || this->warning())
         out << std::endl << "  - " << "low";
       elle::fprintf(
-        out, " %s available (~%s%%)",
+        out, " %s available (~%.1f%%)",
         elle::human_data_size(this->available, false),
-        (int) (100 * this->available / (double) this->capacity));
+        100 * this->available / (double) this->capacity);
     }
   }
 
