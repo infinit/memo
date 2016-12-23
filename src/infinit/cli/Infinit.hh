@@ -145,6 +145,9 @@ namespace infinit
       ELLE_ATTRIBUTE_R(boost::optional<elle::Version>, compatibility_version);
       /// Whether in script mode.
       ELLE_ATTRIBUTE_R(bool, script);
+      /// Signal handler for termination.
+      boost::signals2::signal<void ()> killed;
+
     private:
       template <typename Symbol, typename ObjectSymbol>
       friend struct mode_call;

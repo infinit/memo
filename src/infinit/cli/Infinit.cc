@@ -131,6 +131,41 @@ namespace infinit
       return res;
     }
 
+    /// Return true if we found (and run) the command.
+    bool
+    run_command(Infinit& cli, std::vector<std::string>& args)
+    {
+      bool res = false;
+      infinit::cli::Infinit::Entities::map<object>::value(cli, args, res);
+      if (res)
+      {
+        auto main_thread = reactor::scheduler().current();
+        if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
+        {
+          static const auto signals = {SIGINT, SIGTERM
+#ifndef INFINIT_WINDOWS
+                                       , SIGQUIT
+#endif
+          };
+          for (auto signal: signals)
+          {
+#ifndef INFINIT_WINDOWS
+            ELLE_DEBUG("set signal handler for %s", strsignal(signal));
+#endif
+            reactor::scheduler().signal_handle(
+                signal,
+                [&]
+                {
+                  main_thread->terminate();
+                  cli.killed();
+                });
+          }
+        }
+      }
+      return res;
+    }
+
+
     void
     main(std::vector<std::string>& args)
     {
@@ -157,8 +192,7 @@ namespace infinit
         das::cli::call(cli, args, options);
       else
       {
-        bool found = false;
-        infinit::cli::Infinit::Entities::map<object>::value(cli, args, found);
+        bool found = run_command(cli, args);
         if (!found)
         {
           std::stringstream s;

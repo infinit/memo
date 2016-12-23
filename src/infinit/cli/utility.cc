@@ -4,7 +4,15 @@
 
 #include <elle/log.hh>
 #include <elle/system/unistd.hh> // chdir
+#include <elle/network/Interface.hh>
 
+#include <reactor/FDStream.hh>
+#include <reactor/http/Request.hh>
+#include <reactor/network/rdv-socket.hh>
+#include <reactor/network/rdv-socket.hh>
+#include <reactor/network/resolve.hh>
+
+#include <infinit/Infinit.hh>
 #include <infinit/utility.hh>
 
 ELLE_LOG_COMPONENT("ifnt.cli.utility");
@@ -13,6 +21,162 @@ namespace infinit
 {
   namespace cli
   {
+    InterfacePublisher::InterfacePublisher(infinit::Network const& network,
+                       infinit::User const& self,
+                       infinit::model::Address const& node_id,
+                       int port,
+                       boost::optional<std::vector<std::string>> advertise,
+                       bool no_local_endpoints,
+                       bool no_public_endpoints)
+      : _url(elle::sprintf("networks/%s/endpoints/%s/%x",
+                           network.name, self.name, node_id))
+      , _network(network)
+      , _self(self)
+    {
+      bool v4 = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
+      bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+       && network.dht()->version >= elle::Version(0, 7, 0);
+      Endpoints endpoints;
+      if (advertise)
+      {
+        ELLE_TRACE("Adding hosts from advertise list");
+        for (auto const& a: *advertise)
+        {
+          try
+          {
+            auto host = reactor::network::resolve_tcp(a, std::to_string(port),
+              elle::os::inenv("INFINIT_NO_IPV6"));
+            endpoints.addresses.push_back(host.address().to_string());
+          }
+          catch (reactor::network::ResolutionError const& e)
+          {
+            ELLE_LOG("failed to resolve %s: %s", a, e);
+          }
+        }
+      }
+      ELLE_TRACE("Establishing UPNP mapping");
+      if (!no_public_endpoints)
+      {
+        try
+        {
+          _upnp = reactor::network::UPNP::make();
+          _upnp->initialize();
+          _port_map_udp = _upnp->setup_redirect(reactor::network::Protocol::udt, port);
+          _port_map_tcp = _upnp->setup_redirect(reactor::network::Protocol::tcp, port);
+          ELLE_TRACE("got mappings: %s, %s", _port_map_udp, _port_map_tcp);
+          if ( (v4 && _port_map_udp.external_host.find_first_of(':') == std::string::npos)
+            || (v6 && _port_map_udp.external_host.find_first_of(':') != std::string::npos))
+            endpoints.addresses.push_back(_port_map_udp.external_host);
+        }
+        catch (std::exception const& e)
+        {
+          ELLE_TRACE("UPNP eror: %s", e.what());
+        }
+      }
+      ELLE_TRACE("Obtaining public address from RDV");
+      if (!no_public_endpoints)
+      {
+        try
+        {
+          auto host = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
+          if (host.empty())
+            throw std::runtime_error("RDV disabled");
+          int port = 7890;
+          auto p = host.find_last_of(':');
+          if (p != host.npos)
+          {
+            port = std::stoi(host.substr(p+1));
+            host = host.substr(0, p);
+          }
+          reactor::network::RDVSocket socket;
+          socket.close();
+          socket.bind(boost::asio::ip::udp::endpoint(
+            boost::asio::ip::udp::v4(), 0));
+          reactor::Thread poller("poll", [&]
+          {
+            while (true)
+            {
+              elle::Buffer buf;
+              buf.size(5000);
+              boost::asio::ip::udp::endpoint ep;
+              socket.receive_from(elle::WeakBuffer(buf), ep);
+            }
+          });
+          elle::SafeFinally spoll([&] {
+              poller.terminate_now();
+          });
+          socket.rdv_connect("ip-fetcher", host, port, 5_sec);
+          poller.terminate_now();
+          spoll.abort();
+          ELLE_TRACE("RDV gave endpoint %s", socket.public_endpoint());
+          if (socket.public_endpoint().port())
+          {
+            auto addr = socket.public_endpoint().address();
+            if ( (addr.is_v4() && v4) || (addr.is_v6() && v6))
+              endpoints.addresses.push_back(addr.to_string());
+          }
+        }
+        catch (std::exception const& e)
+        {
+          ELLE_TRACE("RDV error: %s", e.what());
+        }
+      }
+      ELLE_TRACE("Obtaining local endpoints");
+      if (!no_local_endpoints)
+        for (auto const& itf: elle::network::Interface::get_map(
+               elle::network::Interface::Filter::only_up |
+               elle::network::Interface::Filter::no_loopback |
+               elle::network::Interface::Filter::no_autoip))
+        {
+          if (itf.second.ipv4_address.size() > 0 && v4)
+            endpoints.addresses.push_back(itf.second.ipv4_address);
+          if (v6) for (auto const& addr: itf.second.ipv6_address)
+            endpoints.addresses.push_back(addr);
+        }
+      endpoints.port = port;
+      ELLE_TRACE("Pushing endpoints");
+      Infinit::beyond_push(this->_url, std::string("endpoints for"),
+                           network.name, endpoints, self, false);
+    }
+
+    InterfacePublisher::~InterfacePublisher()
+    {
+      Infinit::beyond_delete(
+        this->_url, "endpoints for", this->_network.name, _self);
+    }
+
+    std::unique_ptr<std::istream>
+    commands_input(boost::optional<std::string> input_name)
+    {
+      if (input_name)
+      {
+        auto path = *input_name;
+        if (path != "-")
+        {
+          auto file = std::make_unique<boost::filesystem::ifstream>(path);
+          if (!file->good())
+            elle::err("unable to open \"%s\" for reading", path);
+          return std::move(file);
+        }
+      }
+#ifndef INFINIT_WINDOWS
+      return std::make_unique<reactor::FDStream>(0);
+#else
+      // Windows does not support async io on stdin
+      auto res = std::make_unique<std::stringstream>();
+      while (true)
+      {
+        char buf[4096];
+        std::cin.read(buf, 4096);
+        if (int count = std::cin.gcount())
+          res->write(buf, count);
+        else
+          break;
+      }
+      return res;
+  #endif
+    }
+
     /// Perform metavariable substitution.
     std::string
     VarMap::expand(std::string const& s) const
@@ -118,7 +282,6 @@ namespace infinit
     model::NodeLocations
     hook_peer_discovery(model::doughnut::Doughnut& model, std::string file)
     {
-      namespace bfs = boost::filesystem;
       ELLE_TRACE("Hooking discovery on %s, to %s", model, file);
       auto nls = std::make_shared<model::NodeLocations>();
       model.overlay()->on_discover().connect(
@@ -158,6 +321,29 @@ namespace infinit
         return elle::serialization::json::deserialize<model::NodeLocations>(ifs, false);
       }
       return model::NodeLocations();
+    }
+
+    void
+    port_to_file(uint16_t port,
+                 bfs::path const& path_)
+    {
+      bfs::ofstream f;
+      auto path = bfs::path(
+        path_ == path_.filename() ? bfs::absolute(path_) : path_);
+      Infinit::_open_write(f, path, "", "port file", true);
+      f << port << std::endl;
+    }
+
+    void
+    endpoints_to_file(infinit::model::Endpoints endpoints,
+                      bfs::path const& path_)
+    {
+      bfs::ofstream f;
+      auto path = bfs::path(
+        path_ == path_.filename() ? bfs::absolute(path_) : path_);
+      Infinit::_open_write(f, path, "", "endpoint file", true);
+      for (auto const& ep: endpoints)
+        f << ep << std::endl;
     }
   }
 }

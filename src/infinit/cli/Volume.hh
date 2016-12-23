@@ -18,7 +18,8 @@ namespace infinit
     public:
       Volume(Infinit& infinit);
       using Modes
-        = decltype(elle::meta::list(cli::create));
+        = decltype(elle::meta::list(cli::create,
+                                    cli::run));
 
       using Strings = std::vector<std::string>;
 

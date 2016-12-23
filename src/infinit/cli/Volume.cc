@@ -2,6 +2,7 @@
 
 #include <infinit/MountOptions.hh>
 #include <infinit/cli/Infinit.hh>
+#include <infinit/cli/utility.hh>
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/Model.hh>
 #include <infinit/model/doughnut/Local.hh>
@@ -28,6 +29,7 @@ namespace infinit
   namespace cli
   {
     using Error = das::cli::Error;
+    namespace bfs = boost::filesystem;
 
     Volume::Volume(Infinit& infinit)
       : Entity(infinit)
@@ -298,6 +300,115 @@ namespace infinit
     | Mode: run.  |
     `------------*/
 
+#ifdef INFINIT_MACOSX
+    namespace
+    {
+      void
+      add_path_to_finder_sidebar(std::string const& path)
+      {
+        ELLE_DUMP("add to sidebar: %s", path);
+        LSSharedFileListRef favorite_items =
+          LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
+        if (!favorite_items)
+          return;
+        CFStringRef path_str = CFStringCreateWithCString(
+          kCFAllocatorDefault, path.c_str(), kCFStringEncodingUTF8);
+        CFArrayRef items_array = LSSharedFileListCopySnapshot(favorite_items, NULL);
+        CFIndex count = CFArrayGetCount(items_array);
+        bool in_list = false;
+        for (CFIndex i = 0; i < count; i++)
+        {
+          LSSharedFileListItemRef item_ref
+            = (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
+          CFURLRef item_url;
+          OSStatus err = LSSharedFileListItemResolve(
+            item_ref,
+            kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+            &item_url,
+            NULL);
+          if (err == noErr && item_url)
+          {
+            if (CFStringRef item_path = CFURLCopyPath(item_url))
+            {
+              if (CFStringHasPrefix(item_path, path_str))
+              {
+                ELLE_DEBUG("already in sidebar favorites: %s", path);
+                in_list = true;
+              }
+              CFRelease(item_path);
+            }
+            CFRelease(item_url);
+          }
+        }
+        if (items_array)
+          CFRelease(items_array);
+        if (path_str)
+          CFRelease(path_str);
+        if (!in_list)
+        {
+          CFURLRef url = CFURLCreateFromFileSystemRepresentation(
+            kCFAllocatorDefault,
+            reinterpret_cast<const unsigned char*>(path.data()),
+            path.size(),
+            true);
+          LSSharedFileListItemRef item = LSSharedFileListInsertItemURL(
+            favorite_items, kLSSharedFileListItemLast, NULL, NULL, url, NULL, NULL);
+          ELLE_DEBUG("added to sidebar favorites: %s", path);
+          if (url)
+            CFRelease(url);
+          if (item)
+            CFRelease(item);
+        }
+        if (favorite_items)
+          CFRelease(favorite_items);
+      }
+
+      void
+      remove_path_from_finder_sidebar(std::string const& path)
+      {
+        ELLE_DUMP("remove from sidebar: %s", path);
+        LSSharedFileListRef favorite_items =
+          LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
+        if (!favorite_items)
+          return;
+        CFStringRef path_str = CFStringCreateWithCString(
+          kCFAllocatorDefault, path.c_str(), kCFStringEncodingUTF8);
+        CFArrayRef items_array = LSSharedFileListCopySnapshot(favorite_items, NULL);
+        CFIndex count = CFArrayGetCount(items_array);
+        for (CFIndex i = 0; i < count; i++)
+        {
+          LSSharedFileListItemRef item_ref =
+            (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
+          CFURLRef item_url;
+          OSStatus err = LSSharedFileListItemResolve(
+            item_ref,
+            kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+            &item_url,
+            NULL);
+          if (err == noErr && item_url)
+          {
+            if (CFStringRef item_path = CFURLCopyPath(item_url))
+            {
+              if (CFStringHasPrefix(item_path, path_str))
+              {
+                LSSharedFileListItemRemove(favorite_items, item_ref);
+                ELLE_DEBUG("found and removed item from sidebar: %s", path);
+              }
+              CFRelease(item_path);
+            }
+            CFRelease(item_url);
+          }
+        }
+        if (items_array)
+          CFRelease(items_array);
+        if (path_str)
+          CFRelease(path_str);
+        if (favorite_items)
+          CFRelease(favorite_items);
+      }
+    }
+#endif
+
     void
     Volume::mode_run(std::string const& volume_name,
                      bool allow_root_creation,
@@ -338,10 +449,605 @@ namespace infinit
                      boost::optional<int> port,
                      boost::optional<std::string> listen,
                      int fetch_endpoints_interval,
-                     boost::optional<std::string> input,
+                     boost::optional<std::string> input_name,
                      bool disable_UTF_8_conversion)
     {
       ELLE_TRACE_SCOPE("run");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+
+      // Normalize options *before* merging them into MountOptions.
+      fetch |= fetch_endpoints;
+      push |= push_endpoints;
+
+      auto name = ifnt.qualified_name(volume_name, owner);
+      auto volume = ifnt.volume_get(name);
+      auto& mo = volume.mount_options;
+      MOUNT_OPTIONS_MERGE(mo);
+#ifdef INFINIT_MACOSX
+      if (mo.mountpoint && !disable_UTF_8_conversion)
+        mo.fuse_options.emplace_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
+#endif
+      bool created_mountpoint = false;
+      if (mo.mountpoint)
+      {
+#ifdef INFINIT_WINDOWS
+        if (mo.mountpoint.get().size() == 2 && mo.mountpoint.get()[1] == ':')
+          ;
+        else
+#elif defined(INFINIT_MACOSX)
+        // Do not try to create folder in /Volumes.
+        auto mount_path = bfs::path(mo.mountpoint.get());
+        auto mount_parent = mount_path.parent_path().string();
+        boost::algorithm::to_lower(mount_parent);
+        if (mount_parent.find("/volumes") == 0)
+          ;
+        else
+#endif
+        try
+        {
+          if (bfs::exists(mo.mountpoint.get()))
+          {
+            if (!bfs::is_directory(mo.mountpoint.get()))
+              elle::err("mountpoint is not a directory");
+            if (!bfs::is_empty(mo.mountpoint.get()))
+              elle::err("mountpoint is not empty");
+          }
+          created_mountpoint =
+            bfs::create_directories(mo.mountpoint.get());
+        }
+        catch (bfs::filesystem_error const& e)
+        {
+          elle::err("unable to access mountpoint: %s", e.what());
+        }
+      }
+      if (!mo.fuse_options.empty() && !mo.mountpoint)
+        elle::err<Error>("FUSE options require the volume to be mounted");
+      auto network = ifnt.network_get(volume.network, owner);
+      network.ensure_allowed(owner, "run", "volume");
+      ELLE_TRACE("run network");
+#ifndef INFINIT_WINDOWS
+      auto daemon_handle = daemon ? daemon_hold(0, 1) : daemon_invalid;
+#endif
+      cli.report_action("running", "network", network.name);
+      auto model_and_threads = network.run(
+        owner, mo, true, monitoring,
+        cli.compatibility_version(), port);
+      auto model = std::move(model_and_threads.first);
+      hook_stats_signals(*model);
+      if (peers_file)
+      {
+        auto more_peers = hook_peer_discovery(*model, *peers_file);
+        ELLE_TRACE("Peer list file got %s peers", more_peers.size());
+        if (!more_peers.empty())
+          model->overlay()->discover(more_peers);
+      }
+      if (register_service)
+      {
+        ELLE_LOG_SCOPE("register volume in the network");
+        model->service_add("volumes", name, volume);
+      }
+      // Only push if we have are contributing storage.
+      bool push_p = mo.push && model->local();
+      auto local_endpoint = boost::optional<infinit::model::Endpoint>{};
+      if (model->local())
+      {
+        local_endpoint = model->local()->server_endpoint();
+        if (port_file)
+          port_to_file(local_endpoint.get().port(), *port_file);
+        if (endpoints_file)
+          endpoints_to_file(model->local()->server_endpoints(),
+                            *endpoints_file);
+      }
+      auto run = [&, push_p]
+      {
+        reactor::Thread::unique_ptr stat_thread;
+        if (push_p)
+          stat_thread = network.make_stat_update_thread(owner, *model);
+        ELLE_TRACE_SCOPE("run volume");
+        cli.report_action("running", "volume", volume.name);
+        auto fs = volume.run(std::move(model),
+                             mo.mountpoint,
+                             mo.readonly,
+                             allow_root_creation,
+                             map_other_permissions
+#if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
+                             , mount_name
+#endif
+#ifdef INFINIT_MACOSX
+                             , mount_icon
+#endif
+                             );
+        auto killer = cli.killed.connect([&, count = std::make_shared<int>(0)]
+          {
+            switch ((*count)++)
+              {
+              case 0:
+                break;
+              case 1:
+                ELLE_LOG("already shutting down gracefully, "
+                         "repeat to force filesystem operations termination");
+                break;
+              case 2:
+                ELLE_LOG("force termination");
+                fs->kill();
+                break;
+              default:
+                ELLE_LOG("already forcing termination as hard as possible");
+              }
+          });
+        // Experimental: poll root on mount to trigger caching.
+#   if 0
+        auto root_poller = boost::optional<std::thread>;
+        if (mo.mountpoint && mo.cache && mo.cache.get())
+          root_poller.emplace(
+            [root = mo.mountpoint.get()]
+            {
+              try
+              {
+                bfs::status(root);
+                for (auto it = bfs::directory_iterator(root);
+                     it != bfs::directory_iterator();
+                     ++it)
+                  ;
+              }
+              catch (bfs::filesystem_error const& e)
+              {
+                ELLE_WARN("error polling root: %s", e);
+              }
+            });
+        elle::SafeFinally root_poller_join(
+          [&]
+          {
+            if (root_poller)
+              root_poller->join();
+          });
+#   endif
+        if (volume.default_permissions && !volume.default_permissions->empty())
+        {
+          auto ops =
+            dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get());
+          ops->on_root_block_create.connect([&] {
+            ELLE_DEBUG("root_block hook triggered");
+            auto path = fs->path("/");
+            int mode = 0700;
+            if (*volume.default_permissions == "rw")
+              mode |= 06;
+            else if (*volume.default_permissions == "r")
+              mode |= 04;
+            else
+            {
+              ELLE_WARN("Unexpected default permissions %s",
+                        *volume.default_permissions);
+              return;
+            }
+            path->chmod(mode);
+            path->setxattr("infinit.auth.inherit", "1", 0);
+          });
+        }
+#ifdef INFINIT_MACOSX
+        if (finder_sidebar && mo.mountpoint)
+        {
+          auto mountpoint = mo.mountpoint;
+          reactor::background([mountpoint]
+            {
+              add_path_to_finder_sidebar(mountpoint.get());
+            });
+        }
+        auto reachability = std::unique_ptr<reactor::network::Reachability>{};
+#endif
+        elle::SafeFinally unmount([&]
+        {
+#ifdef INFINIT_MACOSX
+          if (reachability)
+            reachability->stop();
+          if (finder_sidebar && mo.mountpoint)
+          {
+            auto mountpoint = mo.mountpoint;
+            reactor::background([mountpoint]
+              {
+                remove_path_from_finder_sidebar(mountpoint.get());
+              });
+          }
+#endif
+          ELLE_TRACE("unmounting")
+            fs->unmount();
+          if (created_mountpoint)
+          {
+            try
+            {
+              bfs::remove(mo.mountpoint.get());
+            }
+            catch (bfs::filesystem_error const&)
+            {}
+          }
+        });
+#ifdef INFINIT_MACOSX
+        if (elle::os::getenv("INFINIT_LOG_REACHABILITY", "") != "0")
+        {
+          reachability.reset(new reactor::network::Reachability(
+            {},
+            [&] (reactor::network::Reachability::NetworkStatus status)
+            {
+              using NetworkStatus = reactor::network::Reachability::NetworkStatus;
+              if (status == NetworkStatus::Unreachable)
+                ELLE_LOG("lost network connection");
+              else
+                ELLE_LOG("got network connection");
+            },
+            true));
+          reachability->start();
+        }
+#endif
+#ifndef INFINIT_WINDOWS
+        if (daemon)
+        {
+          ELLE_TRACE("releasing daemon");
+          daemon_release(daemon_handle);
+        }
+#endif
+        if (cli.script())
+        {
+          auto input = commands_input(input_name);
+          auto handles =
+            std::unordered_map<std::string,
+                               std::unique_ptr<reactor::filesystem::Handle>>{};
+          while (true)
+          {
+            std::string op;
+            std::string pathname;
+            std::string handlename;
+            try
+            {
+              auto json =
+                boost::any_cast<elle::json::Object>(elle::json::read(*input));
+              ELLE_TRACE("got command: %s", json);
+              elle::serialization::json::SerializerIn command(json, false);
+              op = command.deserialize<std::string>("operation");
+              std::shared_ptr<reactor::filesystem::Path> path;
+              try
+              {
+                pathname = command.deserialize<std::string>("path");
+                path = fs->path(pathname);
+              }
+              catch (...)
+              {}
+              try
+              {
+                handlename = command.deserialize<std::string>("handle");
+              }
+              catch (...)
+              {}
+              auto require_path = [&]
+                {
+                  if (!path)
+                    throw reactor::filesystem::Error(
+                      ENOENT,
+                      elle::sprintf("no such file or directory: %s", pathname));
+                };
+              if (op == "list_directory")
+              {
+                require_path();
+                std::vector<std::string> entries;
+                path->list_directory(
+                  [&] (std::string const& path, struct stat*)
+                  {
+                    entries.push_back(path);
+                  });
+                elle::serialization::json::SerializerOut response(std::cout);
+                response.serialize("entries", entries);
+                response.serialize("success", true);
+                response.serialize("operation", op);
+                response.serialize("path", pathname);
+                continue;
+              }
+              else if (op == "mkdir")
+              {
+                require_path();
+                path->mkdir(0777);
+              }
+              else if (op == "stat")
+              {
+                require_path();
+                struct stat st;
+                path->stat(&st);
+                elle::serialization::json::SerializerOut response(std::cout);
+                response.serialize("success", true);
+                response.serialize("operation", op);
+                response.serialize("path", pathname);
+                response.serialize("st_dev"    , st.st_dev            );
+                response.serialize("st_ino"    , st.st_ino            );
+                response.serialize("st_mode"   , st.st_mode           );
+                response.serialize("st_nlink"  , st.st_nlink          );
+                response.serialize("st_uid"    , st.st_uid            );
+                response.serialize("st_gid"    , st.st_gid            );
+                response.serialize("st_rdev"   , st.st_rdev           );
+                response.serialize("st_size"   , uint64_t(st.st_size) );
+#ifndef INFINIT_WINDOWS
+                response.serialize("st_blksize", int64_t(st.st_blksize));
+                response.serialize("st_blocks" , st.st_blocks);
+#endif
+                response.serialize("st_atime"  , uint64_t(st.st_atime));
+                response.serialize("st_mtime"  , uint64_t(st.st_mtime));
+                response.serialize("st_ctime"  , uint64_t(st.st_ctime));
+                continue;
+              }
+              else if (op == "setxattr")
+              {
+                require_path();
+                auto name = command.deserialize<std::string>("name");
+                auto value = command.deserialize<std::string>("value");
+                path->setxattr(name, value, 0);
+              }
+              else if (op == "getxattr")
+              {
+                require_path();
+                auto name = command.deserialize<std::string>("name");
+                auto value = path->getxattr(name);
+                elle::serialization::json::SerializerOut response(std::cout);
+                response.serialize("value", value);
+                response.serialize("success", true);
+                response.serialize("operation", op);
+                response.serialize("path", pathname);
+                continue;
+              }
+              else if (op == "listxattr")
+              {
+                require_path();
+                auto attrs = path->listxattr();
+                elle::serialization::json::SerializerOut response(std::cout);
+                response.serialize("entries", attrs);
+                response.serialize("success", true);
+                response.serialize("operation", op);
+                response.serialize("path", pathname);
+                continue;
+              }
+              else if (op == "removexattr")
+              {
+                require_path();
+                auto name = command.deserialize<std::string>("name");
+                path->removexattr(name);
+              }
+              else if (op == "link")
+              {
+                require_path();
+                auto target = command.deserialize<std::string>("target");
+                path->link(target);
+              }
+              else if (op == "symlink")
+              {
+                require_path();
+                auto target = command.deserialize<std::string>("target");
+                path->symlink(target);
+              }
+              else if (op == "readlink")
+              {
+                require_path();
+                auto res = path->readlink();
+                elle::serialization::json::SerializerOut response(std::cout);
+                response.serialize("target", res.string());
+                response.serialize("success", true);
+                response.serialize("operation", op);
+                response.serialize("path", pathname);
+                continue;
+              }
+              else if (op == "rename")
+              {
+                require_path();
+                auto target = command.deserialize<std::string>("target");
+                path->rename(target);
+              }
+              else if (op == "truncate")
+              {
+                require_path();
+                auto sz = command.deserialize<uint64_t>("size");
+                path->truncate(sz);
+              }
+              else if (op == "utimens")
+              {
+                require_path();
+                auto last_access = command.deserialize<uint64_t>("access");
+                auto last_change = command.deserialize<uint64_t>("change");
+                timespec ts[2];
+                ts[0].tv_sec = last_access / 1000000000ULL;
+                ts[0].tv_nsec = last_access % 1000000000Ull;
+                ts[1].tv_sec = last_change / 1000000000ULL;
+                ts[1].tv_nsec = last_change % 1000000000Ull;
+                path->utimens(ts);
+              }
+              else if (op == "statfs")
+              {
+                require_path();
+                struct statvfs sv;
+                path->statfs(&sv);
+                elle::serialization::json::SerializerOut response(std::cout);
+                response.serialize("success", true);
+                response.serialize("operation", op);
+                response.serialize("path", pathname);
+                response.serialize("f_bsize"  , uint64_t(sv.f_bsize)  );
+                response.serialize("f_frsize" , uint64_t(sv.f_frsize) );
+                response.serialize("f_blocks" , uint64_t(sv.f_blocks) );
+                response.serialize("f_bfree"  , uint64_t(sv.f_bfree)  );
+                response.serialize("f_bavail" , uint64_t(sv.f_bavail) );
+                response.serialize("f_files"  , uint64_t(sv.f_files)  );
+                response.serialize("f_ffree"  , uint64_t(sv.f_ffree)  );
+                response.serialize("f_favail" , uint64_t(sv.f_favail) );
+                response.serialize("f_fsid"   , uint64_t(sv.f_fsid)   );
+                response.serialize("f_flag"   , uint64_t(sv.f_flag)   );
+                response.serialize("f_namemax", uint64_t(sv.f_namemax));
+                continue;
+              }
+              else if (op == "chown")
+              {
+                require_path();
+                auto uid = command.deserialize<int>("uid");
+                auto gid = command.deserialize<int>("gid");
+                path->chown(uid, gid);
+              }
+              else if (op == "chmod")
+              {
+                require_path();
+                auto mode = command.deserialize<int>("mode");
+                path->chmod(mode);
+              }
+              else if (op == "write_file")
+              {
+                require_path();
+                auto content = command.deserialize<std::string>("content");
+                auto handle = path->create(O_TRUNC|O_CREAT, 0100666);
+                handle->write(elle::WeakBuffer(elle::unconst(content.data()),
+                                               content.size()),
+                              content.size(), 0);
+                handle->close();
+              }
+              else if (op == "read_file")
+              {
+                require_path();
+                struct stat st;
+                path->stat(&st);
+                auto handle = path->open(O_RDONLY, 0666);
+                auto content = std::string(st.st_size, char(0));
+                handle->read(elle::WeakBuffer(elle::unconst(content.data()),
+                                              content.size()),
+                             st.st_size, 0);
+                handle->close();
+                auto response = elle::serialization::json::SerializerOut(std::cout);
+                response.serialize("content", content);
+                response.serialize("success", true);
+                response.serialize("operation", op);
+                response.serialize("path", pathname);
+                continue;
+              }
+              else if (op == "unlink")
+              {
+                require_path();
+                path->unlink();
+              }
+              else if (op == "rmdir")
+              {
+                require_path();
+                path->rmdir();
+              }
+              else if (op == "create")
+              {
+                require_path();
+                int flags = command.deserialize<int>("flags");
+                int mode = command.deserialize<int>("mode");
+                auto handle = path->create(flags, mode);
+                handles[handlename] = std::move(handle);
+                handlename = "";
+              }
+              else if (op == "open")
+              {
+                require_path();
+                int flags = command.deserialize<int>("flags");
+                int mode = command.deserialize<int>("mode");
+                auto handle = path->open(flags, mode);
+                handles[handlename] = std::move(handle);
+                handlename = "";
+              }
+              else if (op == "close")
+              {
+                handles.at(handlename)->close();
+              }
+              else if (op == "dispose")
+              {
+                handles.erase(handlename);
+              }
+              else if (op == "read")
+              {
+                uint64_t offset = command.deserialize<uint64_t>("offset");
+                uint64_t size = command.deserialize<uint64_t>("size");
+                elle::Buffer buf;
+                buf.size(size);
+                int nread = handles.at(handlename)->read(
+                  elle::WeakBuffer(buf),
+                  size, offset);
+                buf.size(nread);
+                elle::serialization::json::SerializerOut response(std::cout);
+                response.serialize("content", buf);
+                response.serialize("success", true);
+                response.serialize("operation", op);
+                response.serialize("handle", handlename);
+                continue;
+              }
+              else if (op == "write")
+              {
+                uint64_t offset = command.deserialize<uint64_t>("offset");
+                uint64_t size = command.deserialize<uint64_t>("size");
+                elle::Buffer content = command.deserialize<elle::Buffer>("content");
+                handles.at(handlename)->write(elle::WeakBuffer(content), size, offset);
+              }
+              else if (op == "ftruncate")
+              {
+                uint64_t size = command.deserialize<uint64_t>("size");
+                handles.at(handlename)->ftruncate(size);
+              }
+              else if (op == "fsync")
+              {
+                auto datasync = command.deserialize<int>("datasync");
+                handles.at(handlename)->fsync(datasync);
+              }
+              else if (op == "fsyncdir")
+              {
+                auto datasync = command.deserialize<int>("datasync");
+                handles.at(handlename)->fsyncdir(datasync);
+              }
+              else
+                elle::err("operation %s does not exist", op);
+              auto response = elle::serialization::json::SerializerOut(std::cout);
+              response.serialize("success", true);
+              response.serialize("operation", op);
+              if (!handlename.empty())
+                response.serialize("handle", handlename);
+              if (!pathname.empty())
+                response.serialize("path", pathname);
+            }
+            catch (reactor::filesystem::Error const& e)
+            {
+              auto response = elle::serialization::json::SerializerOut(std::cout);
+              response.serialize("success", false);
+              response.serialize("message", e.what());
+              response.serialize("code", e.error_code());
+              response.serialize("operation", op);
+              if (!handlename.empty())
+                response.serialize("handle", handlename);
+              if (!pathname.empty())
+                response.serialize("path", pathname);
+            }
+            catch (elle::Error const& e)
+            {
+              if (input->eof())
+                return;
+              ELLE_LOG("bronk on op %s: %s", op, e);
+              auto response = elle::serialization::json::SerializerOut(std::cout);
+              response.serialize("success", false);
+              response.serialize("message", e.what());
+              response.serialize("operation", op);
+              if (!handlename.empty())
+                response.serialize("handle", handlename);
+              if (!pathname.empty())
+                response.serialize("path", pathname);
+            }
+          }
+        }
+        else
+        {
+          ELLE_TRACE("wait filesystem");
+          reactor::wait(*fs);
+        }
+      };
+      if (local_endpoint && push_p)
+        elle::With<InterfacePublisher>(
+          network, owner, model->id(), local_endpoint.get().port(), advertise_host,
+          no_local_endpoints,
+          no_public_endpoints) << [&]
+        {
+          run();
+        };
+      else
+        run();
     }
   }
 }
