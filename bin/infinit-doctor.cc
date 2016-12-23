@@ -48,6 +48,8 @@ namespace
 
   std::string banished_log_level("reactor.network.UTPSocket:NONE");
 
+  std::string username;
+
   std::string
   result(bool value)
   {
@@ -254,11 +256,30 @@ namespace reporting
     std::ostream& out, bool verbose) const
   {
     if (!this->sane())
-      out << "is faulty because";
+      out << " is faulty because";
     this->_print(out, verbose);
     if (!this->sane() && this->reason)
       out << " " << *this->reason;
     return out;
+  }
+
+  ConfigurationIntegrityResults::UserResult::UserResult(std::string const& name,
+                                                        bool sane,
+                                                        Reason const& reason)
+    : Result("User", sane, reason)
+    , _user_name(name)
+  {
+  }
+
+  void
+  ConfigurationIntegrityResults::UserResult::_print(std::ostream& out,
+                                                    bool verbose) const
+  {
+    if (this->show(verbose))
+    {
+      if (this->sane())
+        out << " '" << this->user_name() << "' exists and has a private key";
+    }
   }
 
   ConfigurationIntegrityResults::StorageResoucesResult::StorageResoucesResult(
@@ -432,7 +453,8 @@ namespace reporting
   bool
   ConfigurationIntegrityResults::sane() const
   {
-    return ::sane(this->storage_resources)
+    return this->user.sane()
+      && ::sane(this->storage_resources)
       && ::sane(this->networks)
       && ::sane(this->volumes)
       && ::sane(this->drives);
@@ -442,7 +464,8 @@ namespace reporting
   bool
   ConfigurationIntegrityResults::warning() const
   {
-    return ::warning(this->storage_resources)
+    return this->user.warning()
+      || ::warning(this->storage_resources)
       || ::warning(this->networks)
       || ::warning(this->volumes)
       || ::warning(this->drives)
@@ -469,6 +492,7 @@ namespace reporting
   {
     if (!this->only())
       section(out, "Configuration integrity");
+    this->user.print(out, verbose);
     ::print(out, "Storage resources", storage_resources, verbose);
     ::print(out, "Networks", networks, verbose);
     ::print(out, "Volumes", volumes, verbose);
@@ -1506,12 +1530,22 @@ namespace
     auto drives = parse(ifnt.drives_get());
     auto volumes = parse(ifnt.volumes_get());
     auto user = boost::optional<infinit::User>{};
+    username = self_user_name(args);
     try
     {
-      user = self_user(ifnt, args);
+      user = self_user(ifnt, args, false);
+      if (!user->private_key)
+        results.user = {
+          username,
+          false, elle::sprintf("user \"%s\" has no private key", username)};
+      else
+        results.user = {username, true};
     }
     catch (...)
     {
+      results.user = {
+        username,
+        false, elle::sprintf("user \"%s\" is not an Infinit user", username)};
     }
     auto networks = parse(ifnt.networks_get(user));
     ELLE_TRACE("verify storage resources")

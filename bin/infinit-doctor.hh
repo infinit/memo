@@ -79,7 +79,30 @@ namespace reporting
       print(std::ostream& out, bool verbose) const;
     };
 
-    // Use inheritance maybe?
+    struct UserResult
+      : public reporting::Result::Result
+    {
+      /*-------------.
+      | Construction |
+      `-------------*/
+      UserResult() = default;
+      UserResult(std::string const& name,
+                 bool sane,
+                 Reason const& reason = Reason{});
+
+      /*---------.
+      | Printing |
+      `---------*/
+      void
+      _print(std::ostream& out, bool verbose) const override;
+
+      /*-----------.
+      | Attributes |
+      `-----------*/
+      ELLE_ATTRIBUTE_RW(std::string, user_name);
+    };
+
+    // Use inheritance maybe ?
     struct StorageResoucesResult
       : public Result
     {
@@ -271,6 +294,7 @@ namespace reporting
     | Attributes |
     `-----------*/
     ELLE_ATTRIBUTE_R(bool, only);
+    UserResult user;
     std::vector<StorageResoucesResult> storage_resources;
     std::vector<NetworkResult> networks;
     std::vector<VolumeResult> volumes;
