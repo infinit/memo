@@ -494,6 +494,27 @@ def configure(
     'src/infinit/cli/xattrs.cc',
     'src/infinit/cli/xattrs.hh',
   )
+  infinit_cli_instantiate = drake.node(
+    'src/infinit/cli/Infinit-instantiate.cc')
+  for b in [
+      'acl',
+      'block',
+      'credentials',
+      'device',
+      'drive',
+      'journal',
+      'passport',
+      'silo',
+      'user',
+  ]:
+    o = drake.cxx.Object(
+      'src/infinit/cli/Infinit-instantiate-%s.o' % b)
+    infinit_cli_instantiate_config = drake.cxx.Config(bin_cxx_config)
+    infinit_cli_instantiate_config.define('INFINIT_CLI_OBJECT', b)
+    drake.cxx.Compiler(infinit_cli_instantiate, o,
+                       cxx_toolkit,
+                       infinit_cli_instantiate_config)
+    infinit_cli_sources.append(o)
   infinit_cli = drake.cxx.Executable(
     'bin/infinit',
     infinit_cli_sources + [

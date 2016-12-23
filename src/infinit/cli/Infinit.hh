@@ -21,6 +21,12 @@ namespace infinit
 {
   namespace cli
   {
+    class CLIError
+      : public das::cli::Error
+    {
+      using das::cli::Error::Error;
+    };
+
     using InfinitCallable =
       decltype(das::named::function(
                  das::bind_method(std::declval<Infinit&>(), cli::call),
