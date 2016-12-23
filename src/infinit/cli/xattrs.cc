@@ -74,7 +74,7 @@ namespace infinit
 #ifndef INFINIT_WINDOWS
       int res = -1;
 # ifdef INFINIT_MACOSX
-      res = getxattr(file.c_str(), key.c_str(), val, val_size, 0, XATTR_NOFOLLOW);
+      res = ::getxattr(file.c_str(), key.c_str(), val, val_size, 0, XATTR_NOFOLLOW);
 # else
       res = lgetxattr(file.c_str(), key.c_str(), val, val_size);
 # endif

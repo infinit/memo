@@ -296,24 +296,30 @@ namespace infinit
     {
       program = argv[0];
       std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
-#if  !defined(INFINIT_WINDOWS) && !defined(NO_EXECINFO)
-      std::unique_ptr<crash_reporting::CrashReporter> crash_reporter;
+#if  !defined INFINIT_WINDOWS && !defined NO_EXECINFO
+
+      auto crash_reporter = [&] () -> std::unique_ptr<crash_reporting::CrashReporter>
+        {
+          bool const production_build
 #ifdef INFINIT_PRODUCTION_BUILD
-      bool const production_build = true;
+          = true;
 #else
-      bool const production_build = false;
+          = false;
 #endif
-      if (production_build &&
-          elle::os::getenv("INFINIT_CRASH_REPORTER", "") != "0" ||
-          elle::os::getenv("INFINIT_CRASH_REPORTER", "") == "1")
-      {
-        std::string crash_url =
-          elle::sprintf("%s/crash/report",
-                        crash_host.length() ? crash_host : beyond());
-        auto dumps_path = canonical_folder(xdg_cache_home() / "crashes");
-        crash_reporter = std::make_unique<crash_reporting::CrashReporter>(
-          crash_url, dumps_path, version_describe());
-      }
+          auto request = elle::os::getenv("INFINIT_CRASH_REPORTER", "");
+          if (production_build && request != "0"
+              || request == "1")
+            {
+              auto crash_url =
+                elle::sprintf("%s/crash/report",
+                              crash_host.length() ? crash_host : beyond());
+              auto dumps_path = canonical_folder(xdg_cache_home() / "crashes");
+              return std::make_unique<crash_reporting::CrashReporter>
+                (crash_url, dumps_path, version_describe());
+            }
+          else
+            return {};
+        }();
 #endif
       reactor::Scheduler sched;
       reactor::Thread main_thread(
@@ -470,7 +476,8 @@ namespace infinit
                 get_mode(hidden_modes.get());
               if (misplaced_mode)
               {
-                (help ? std::cout : std::cerr) << "MODE must be the first argument." << std::endl;
+                (help ? std::cout : std::cerr)
+                  << "MODE must be the first argument." << std::endl;
                 mode = nullptr;
               }
               if (!mode)
@@ -492,7 +499,7 @@ namespace infinit
                 return;
               }
               std::unique_ptr<reactor::Thread> crash_upload_thread;
-#if !defined(INFINIT_WINDOWS) && !defined(NO_EXECINFO)
+#if !defined INFINIT_WINDOWS && !defined NO_EXECINFO
               if (crash_reporter && crash_reporter->crashes_pending_upload())
               {
                 crash_upload_thread.reset(new reactor::Thread("upload crashes",
@@ -558,8 +565,7 @@ namespace infinit
             }
             catch (boost::program_options::error_with_option_name const& e)
             {
-              throw elle::Error(
-                elle::sprintf("command line error: %s", e.what()));
+              elle::err("command line error: %s", e.what());
             }
           }
         });
@@ -573,14 +579,10 @@ namespace infinit
     {
       ELLE_TRACE("fatal error: %s\n%s", e.what(), e.backtrace());
       if (!elle::os::getenv("INFINIT_BACKTRACE", "").empty())
-      {
         elle::fprintf(std::cerr, "%s: fatal error: %s\n%s\n", argv[0],
                       e.what(), e.backtrace());
-      }
       else
-      {
         elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
-      }
       return 1;
     }
     catch (std::exception const& e)
@@ -600,11 +602,8 @@ namespace infinit
     reactor::http::Request r(url);
     reactor::wait(r);
     if (r.status() != reactor::http::StatusCode::OK)
-    {
-      throw elle::Error(
-        elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\"",
-                      r.status(), this->name));
-    }
+      elle::err("unexpected HTTP error %s fetching endpoints for \"%s\"",
+                r.status(), this->name);
     auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
     for (auto const& user: json)
     {

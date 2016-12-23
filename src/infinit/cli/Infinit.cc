@@ -412,8 +412,7 @@ main(int argc, char** argv)
   argv_0 = argv[0];
   try
   {
-    std::vector<std::string> args;
-    std::copy(argv, argv + argc, std::back_inserter(args));
+    auto args = std::vector<std::string>(argv, argv + argc);
     reactor::Scheduler s;
     reactor::Thread main(s, "main", [&] { infinit::cli::main(args); });
     s.run();
