@@ -23,6 +23,7 @@ namespace infinit
         = decltype(elle::meta::list(cli::add,
                                     cli::delete_,
                                     cli::fetch,
+                                    cli::pull,
                                     cli::list));
 
       // Add.
@@ -60,6 +61,18 @@ namespace infinit
       void
       mode_fetch(boost::optional<std::string> const& account,
                  bool aws, bool dropbox, bool gcs, bool google_drive);
+
+      // Pull.
+      Mode<decltype(binding(modes::mode_pull,
+                            account = boost::none,
+                            aws = false,
+                            dropbox = false,
+                            gcs = false,
+                            google_drive = false))>
+      pull;
+      void
+      mode_pull(boost::optional<std::string> const& account,
+                bool aws, bool dropbox, bool gcs, bool google_drive);
 
       // List.
       Mode<decltype(binding(modes::mode_list,

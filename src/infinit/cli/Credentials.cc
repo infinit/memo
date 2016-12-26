@@ -42,6 +42,15 @@ namespace infinit
                    dropbox = false,
                    gcs = false,
                    google_drive = false))
+      , pull(
+        "Pull credentials from {hub}",
+        das::cli::Options(),
+        this->bind(modes::mode_pull,
+                   account = boost::none,
+                   aws = false,
+                   dropbox = false,
+                   gcs = false,
+                   google_drive = false))
       , list(
         "List local credentials",
         das::cli::Options(),
@@ -296,6 +305,74 @@ namespace infinit
       // FIXME: remove deleted ones
     }
 
+    /*------------.
+    | Mode: Pull. |
+    `-------------*/
+
+    namespace
+    {
+      using Cred = infinit::OAuthCredentials;
+      using UCred = std::unique_ptr<Cred>;
+
+      /// Pull credentials.
+      ///
+      /// \param user          the user
+      /// \param service       name of the service (e.g., "google_drive").
+      /// \param pretty        pretty name of the service (e.g., "Google Drive")
+      /// \param account       name of a specific credentials to remove (
+      ///                      otherwise all the credentials for the service are
+      ///                      pulled).
+      /// \param allow_missing Do not xxx.
+      void
+      pull_(infinit::cli::Infinit& cli,
+            std::string const& service,
+            std::string const& pretty,
+            boost::optional<std::string> const& account,
+            bool allow_missing)
+      {
+        auto owner = cli.as_user();
+        auto where = elle::sprintf("users/%s/credentials/%s", owner.name,
+                                   service);
+        if (account)
+          where += elle::sprintf("/%s", *account);
+        if (cli.infinit().beyond_delete(
+              where, elle::sprintf("%s credentials", pretty),
+              service, owner, allow_missing))
+          cli.report_action("deleted", elle::sprintf("%s credentials", pretty),
+                            (account ? *account : std::string{"*"}),
+                            "remotely");
+      }
+    }
+
+    void
+    Credentials::mode_pull(boost::optional<std::string> const& account,
+                           bool aws,
+                           bool dropbox,
+                           bool gcs,
+                           bool google_drive)
+    {
+      auto e = Enabled{aws, dropbox, gcs, google_drive};
+      e.ensure_at_least_one("pull");
+      bool pull_all = e.all();
+      // FIXME: Use Symbols instead.
+      auto& cli = this->cli();
+      if (e.aws)
+      {
+        if (pull_all)
+          cli.report("INFO: AWS credentials are not stored on %s"
+                     " (nothing to pull)\n",
+                     infinit::beyond(true));
+        else
+          elle::err<Error>("AWS credentials are not stored on %s",
+                           infinit::beyond(true));
+      }
+      if (e.dropbox)
+        pull_(cli, "dropbox", "Dropbox", account, false);
+      if (e.gcs)
+        pull_(cli, "gcs", "Google Cloud Storage", account, false);
+      if (e.google_drive)
+        pull_(cli, "google", "Google Drive", account, false);
+    }
 
     /*-------------.
     | Mode: list.  |
