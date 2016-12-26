@@ -122,13 +122,13 @@ namespace infinit
         _discover(NodeLocations const& peers) override;
         void
         _discover(Overlay::Member peer);
+        void
+        _discover_rpc(NodeLocations const& peers);
       public:
-        typedef std::unordered_map<model::Address, Endpoints> Pending;
-        typedef std::unordered_set<model::Address> Discovering;
-        ELLE_ATTRIBUTE(Pending, pending);
+        using Discovering = std::unordered_set<model::Address>;
         ELLE_ATTRIBUTE(Discovering, discovering);
         NodeLocations
-        peers_locations(Pending const& extras) const;
+        peers_locations() const;
       private:
         ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>, tasks);
         void _perform(std::string const& name, std::function<void()> job);
