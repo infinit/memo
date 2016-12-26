@@ -537,7 +537,7 @@ namespace infinit
   {
     auto path = this->_credentials_path(name, elle::sprintf("%s", a->uid()));
     fs::ofstream f;
-    this->_open_write(f, path, name, "credential");
+    this->_open_write(f, path, name, "credential", true);
     save(f, a);
   }
 
