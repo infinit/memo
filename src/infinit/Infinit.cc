@@ -1009,7 +1009,7 @@ namespace infinit
     return elle::json::read(*r);
   }
 
-  void
+  bool
   Infinit::beyond_delete(std::string const& where,
                          std::string const& type,
                          std::string const& name,
@@ -1036,11 +1036,13 @@ namespace infinit
     {
       if (report)
         report(name);
+      return true;
     }
     else if (r.status() == reactor::http::StatusCode::Not_Found)
     {
       if (!ignore_missing)
         read_error<MissingResource>(r, type, name);
+      return false;
     }
     else if (r.status() == reactor::http::StatusCode::See_Other ||
              r.status() == reactor::http::StatusCode::Temporary_Redirect)
@@ -1066,7 +1068,7 @@ namespace infinit
     }
   }
 
-  void
+  bool
   Infinit::beyond_delete(std::string const& type,
                          std::string const& name,
                          User const& self,
@@ -1074,8 +1076,8 @@ namespace infinit
                          bool purge,
                          Reporter report)
   {
-    beyond_delete(elle::sprintf("%ss/%s", type, name), type, name, self,
-                  ignore_missing, purge, report);
+    return beyond_delete(elle::sprintf("%ss/%s", type, name), type, name, self,
+                         ignore_missing, purge, report);
   }
 
   Infinit::PushResult

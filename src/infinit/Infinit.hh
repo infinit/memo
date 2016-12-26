@@ -289,7 +289,7 @@ namespace infinit
                       Headers const& extra_headers = {},
                       Reporter report = {});
     static
-    void
+    bool
     beyond_delete(std::string const& where,
                   std::string const& type,
                   std::string const& name,
@@ -298,7 +298,7 @@ namespace infinit
                   bool purge = false,
                   Reporter report = {});
     static
-    void
+    bool
     beyond_delete(std::string const& type,
                   std::string const& name,
                   User const& self,
