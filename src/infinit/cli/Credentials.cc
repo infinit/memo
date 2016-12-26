@@ -34,7 +34,7 @@ namespace infinit
                    gcs = false,
                    google_drive = false))
       , fetch(
-        "List local credentials",
+        "Fetch credentials from {hub}",
         das::cli::Options(),
         this->bind(modes::mode_fetch,
                    name = boost::none,
