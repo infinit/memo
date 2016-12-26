@@ -37,6 +37,7 @@
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/CHB.hh>
 #include <infinit/serialization.hh>
 
 #include <infinit/filesystem/Node.hh>
@@ -157,6 +158,31 @@ namespace infinit
       catch (model::MissingBlock const&)
       {
         ELLE_DEBUG("%s: block %f was not published", model, address);
+      }
+      catch (elle::Exception const& e)
+      {
+        ELLE_ERR("%s: unexpected exception: %s\n%s", model, e.what(), e.backtrace());
+        throw;
+      }
+      catch (...)
+      {
+        ELLE_ERR("%s: unknown exception", model);
+        throw;
+      }
+    }
+
+    void
+    unchecked_remove_chb(model::Model& model,
+                         model::Address chb,
+                         model::Address owner)
+    {
+      try
+      {
+        model.remove(chb, model::doughnut::CHB::sign_remove(model, chb, owner));
+      }
+      catch (model::MissingBlock const&)
+      {
+        ELLE_DEBUG("%s: block %f was not published", model, chb);
       }
       catch (elle::Exception const& e)
       {

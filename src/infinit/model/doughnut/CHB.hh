@@ -55,7 +55,9 @@ namespace infinit
             elle::Version const& v);
         void serialize(elle::serialization::Serializer& s,
                        elle::Version const& v) override;
-
+        static
+        blocks::RemoveSignature
+        sign_remove(Model& model, Address chb, Address owner);
       protected:
         blocks::RemoveSignature
         _sign_remove(Model& model) const override;

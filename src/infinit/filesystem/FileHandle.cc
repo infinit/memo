@@ -99,7 +99,7 @@ namespace infinit
         for (unsigned i = 0; i < this->_file._fat.size(); ++i)
         {
           ELLE_DEBUG_SCOPE("removing %s: %f", i, this->_file._fat[i].first);
-          unchecked_remove(*this->_fs.block_store(), this->_file._fat[i].first);
+          unchecked_remove_chb(*this->_fs.block_store(), this->_file._fat[i].first, this->_file.address());
         }
         ELLE_DEBUG_SCOPE("removing first block at %f", this->_file.address());
         unchecked_remove(*this->_fs.block_store(), this->_file.address());
@@ -426,7 +426,7 @@ namespace infinit
         // Kick the block
         {
           ELLE_DEBUG("removing from fat at %s", i);
-          unchecked_remove(*this->_fs.block_store(), _file._fat[i].first);
+          unchecked_remove_chb(*this->_fs.block_store(), _file._fat[i].first, _file._address);
           _file._fat.pop_back();
           _blocks.erase(i);
         }
