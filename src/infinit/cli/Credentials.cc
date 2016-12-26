@@ -5,6 +5,7 @@
 #include <elle/err.hh>
 
 #include <infinit/cli/Infinit.hh>
+#include <infinit/cli/utility.hh>
 
 namespace infinit
 {
@@ -84,15 +85,6 @@ namespace infinit
         bool dropbox;
         bool gcs;
         bool google_drive;
-      };
-
-      template <typename Symbol>
-      auto mandatory(Symbol const& o, std::string const& name)
-      {
-        if (o)
-          return o.get();
-        else
-          throw das::cli::MissingOption(name);
       };
     }
 

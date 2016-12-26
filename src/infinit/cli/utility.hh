@@ -5,6 +5,7 @@
 #include <boost/filesystem/path.hpp>
 
 #include <elle/unordered_map.hh>
+#include <das/cli.hh>
 
 #include <reactor/network/upnp.hh>
 
@@ -47,6 +48,15 @@ namespace infinit
         Endpoints,
         decltype(elle::meta::list(infinit::symbols::addresses,
                                   infinit::symbols::port))>;
+    };
+
+    static
+    auto const
+    mandatory = [] (auto optional, std::string const& name)
+    {
+      if (!optional)
+        throw das::cli::MissingOption(name);
+      return optional.get();
     };
   }
 }
@@ -114,6 +124,5 @@ namespace infinit
     void
     endpoints_to_file(infinit::model::Endpoints endpoints,
                       boost::filesystem::path const& path_);
-
   }
 }

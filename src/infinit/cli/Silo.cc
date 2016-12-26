@@ -16,6 +16,7 @@
 #endif
 
 #include <infinit/cli/Infinit.hh>
+#include <infinit/cli/utility.hh>
 
 ELLE_LOG_COMPONENT("cli.block");
 
@@ -160,13 +161,6 @@ namespace infinit
                       boost::optional<std::string> root,
                       boost::optional<std::string> storage_class_str)
     {
-      static auto const mandatory =
-        [] (auto o, std::string const& name)
-        {
-          if (!o)
-            throw das::cli::MissingOption(name);
-          return o.get();
-        };
       boost::optional<int64_t> capacity;
       if (capacity_repr)
         capacity = convert_capacity(*capacity_repr);
