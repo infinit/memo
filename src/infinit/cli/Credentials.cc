@@ -217,16 +217,21 @@ namespace infinit
       /// Fetch credentials.
       ///
       /// \param user     the user
-      /// \param name     name of the service (e.g., "google_drive").
+      /// \param service  name of the service (e.g., "google_drive").
       /// \param pretty   pretty name of the service (e.g., "Google Drive")
       /// \param add      function to call to add the fetched credentials
+      /// \param account  name of a specific credentials to fetch
       void
       fetch_(infinit::User const& user,
-             std::string const& name,
+             std::string const& service,
              std::string const& pretty,
-             std::function<void (UCred)> add)
+             std::function<void (UCred)> add,
+             boost::optional<std::string> const& account)
       {
-        auto where = elle::sprintf("users/%s/credentials/%s", user.name, name);
+        auto where = elle::sprintf("users/%s/credentials/%s", user.name,
+                                   service);
+        if (account)
+          where += elle::sprintf("/%s", *account);
         // FIXME: Workaround for using std::unique_ptr.
         // Remove when serialization does not require copy.
         auto res =
@@ -259,7 +264,6 @@ namespace infinit
       auto e = Enabled{aws, dropbox, gcs, google_drive};
       e.all_if_none();
       bool fetch_all = e.all();
-      auto account_name = mandatory(account, "account");
       // FIXME: Use Symbols instead.
       if (e.aws)
       {
@@ -275,17 +279,20 @@ namespace infinit
         fetch_
           (owner, "dropbox", "Dropbox",
            [&ifnt] (UCred a)
-           { ifnt.credentials_dropbox_add(std::move(a)); });
+           { ifnt.credentials_dropbox_add(std::move(a)); },
+           account);
       if (e.gcs)
         fetch_
           (owner, "gcs", "Google Cloud Storage",
            [&ifnt] (UCred a)
-           { ifnt.credentials_gcs_add(std::move(a)); });
+           { ifnt.credentials_gcs_add(std::move(a)); },
+           account);
       if (e.google_drive)
         fetch_
           (owner, "google", "Google Drive",
            [&ifnt] (UCred a)
-           { ifnt.credentials_google_add(std::move(a)); });
+           { ifnt.credentials_google_add(std::move(a)); },
+           account);
       // FIXME: remove deleted ones
     }
 
