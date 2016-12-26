@@ -58,9 +58,11 @@ namespace infinit
               entries.emplace(b.address());
               this->_new_entries.put(b.address());
             }));
+          // Add server-side kouncil RPCs.
           local->on_connect().connect(
             [this] (RPCServer& rpcs)
             {
+              // List all blocks owned by this node.
               rpcs.add(
                 "kouncil_fetch_entries",
                 std::function<std::unordered_set<Address> ()>(
@@ -72,10 +74,7 @@ namespace infinit
                       res.emplace(it->block());
                     return res;
                   }));
-            });
-          local->on_connect().connect(
-            [this] (RPCServer& rpcs)
-            {
+              // Lookup owners of a block on this node.
               rpcs.add(
                 "kouncil_lookup",
                 std::function<std::unordered_set<Address>(Address)>(
@@ -87,10 +86,7 @@ namespace infinit
                       res.emplace(it->node());
                     return res;
                   }));
-            });
-          local->on_connect().connect(
-            [this] (RPCServer& rpcs)
-            {
+              // Send known peers to this node and retrieve its known peers.
               rpcs.add(
                 "kouncil_advertise",
                 std::function<NodeLocations(NodeLocations const&)>(
@@ -104,16 +100,16 @@ namespace infinit
                     for (auto const& nl: nls)
                       if (this->peers().find(nl.id()) == this->peers().end())
                         this->_perform("discover",
-                          [this, nl] { this->_discover({nl});});
+                                       [this, nl] { this->_discover({nl}); });
                     return this->peers_locations(cp);
                   }));
             });
         }
+        // Add client-side Kouncil RPCs.
         this->doughnut()->dock().on_connect().connect(
           [this] (model::doughnut::Remote& r)
           {
-            // back-channel used by nodes to notify their connected observers
-            // of new peers
+            // Notify this node of a new peer.
             r.rpc_server().add(
                 "kouncil_discover",
                 std::function<void(NodeLocations const&)>(
@@ -128,7 +124,7 @@ namespace infinit
                         this->_perform("discover",
                           [this, nl] { this->_discover({nl});});
                   }));
-
+            // Notify this node of new blocks owned by the peer.
             r.rpc_server().add(
               "kouncil_add_entries",
               std::function<void (std::unordered_set<Address> const&)>(
@@ -139,7 +135,6 @@ namespace infinit
                   ELLE_TRACE("%s: added %s entries from %f",
                              this, entries.size(), r.id());
                 }));
-
             auto reg = r.make_rpc<NodeLocations(NodeLocations const&)>("kouncil_advertise");
             auto nls = this->peers_locations(this->_pending);
             ELLE_TRACE("%s: invoking advertise on %s with info on %s nodes", this, r, nls.size());
