@@ -44,11 +44,13 @@ namespace infinit
                             aws = false,
                             dropbox = false,
                             gcs = false,
-                            google_drive = false))>
+                            google_drive = false,
+                            cli::pull = false))>
       delete_;
       void
       mode_delete(std::string const& account,
-                  bool aws, bool dropbox, bool gcs, bool google_drive);
+                  bool aws, bool dropbox, bool gcs, bool google_drive,
+                  bool pull);
 
       // Fetch.
       Mode<decltype(binding(modes::mode_fetch,

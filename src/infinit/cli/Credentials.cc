@@ -32,7 +32,8 @@ namespace infinit
                    aws = false,
                    dropbox = false,
                    gcs = false,
-                   google_drive = false))
+                   google_drive = false,
+                   cli::pull = false))
       , fetch(
         "Fetch credentials from {hub}",
         das::cli::Options(),
@@ -176,13 +177,21 @@ namespace infinit
 
     namespace
     {
+      void
+      pull_(infinit::cli::Infinit& cli,
+            std::string const& service,
+            std::string const& pretty,
+            boost::optional<std::string> const& name,
+            bool allow_missing);
+
       template <typename Service>
       void
       do_delete_(Credentials& cred,
                  Enabled const& enabled,
                  Service service,
                  std::string const& service_name,
-                 std::string const& account_name)
+                 std::string const& account_name,
+                 bool pull = false)
       {
         if (service.attr_get(enabled))
         {
@@ -194,6 +203,8 @@ namespace infinit
               account_name, "locally");
           else
             elle::err("File for credentials could not be deleted: %s", path);
+          if (pull)
+            pull_(cred.cli(), service_name, service_name, account_name, true);
         }
       }
     }
@@ -203,7 +214,8 @@ namespace infinit
                              bool aws,
                              bool dropbox,
                              bool gcs,
-                             bool google_drive)
+                             bool google_drive,
+                             bool pull)
     {
       auto e = Enabled{aws, dropbox, gcs, google_drive};
       e.ensure_at_least_one("delete");
@@ -212,7 +224,6 @@ namespace infinit
       do_delete_(*this, e, cli::google_drive, "google",  account);
       do_delete_(*this, e, cli::gcs,          "gcs",     account);
     }
-
 
     /*--------------.
     | Mode: fetch.  |
