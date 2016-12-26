@@ -1275,14 +1275,14 @@ for name, conf in Bottle._Bottle__oauth_services.items():
         accounts = getattr(user, '%s_accounts' % name)
         if id is not None:
           if id not in accounts.keys():
-            raise self._Bottle__not_found("%s credentials %s" % (name, id),
+            raise self._Bottle__not_found("%s_credentials_%s" % (name, id),
                                           name)
           getattr(user, '%s_accounts' % name)[id] = None
         else:
           getattr(user, '%s_accounts' % name).clear()
         user.save()
       else:
-        raise self._Bottle__not_found("%s credentials",  name)
+        raise self._Bottle__not_found("%s_credentials" % name,  name)
       return {
         'credentials':
           list(getattr(user, '%s_accounts' % name).values()),
