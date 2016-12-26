@@ -198,8 +198,7 @@ namespace infinit
             if (loc.endpoints().empty())
               continue;
             auto r = dynamic_cast<model::doughnut::Remote*>(it->get());
-            if (!r)
-              continue; // discover on an already Local o_O
+            ELLE_ASSERT(r);
             if (loc.endpoints().front().port() == r->endpoints().front().port())
               continue;
           }
