@@ -269,7 +269,7 @@ namespace infinit
       {
         if (fetch_all)
           this->cli().report("INFO: AWS credentials are not stored on %s"
-                             " and so were not fetched\n",
+                             " and so were not fetched",
                              infinit::beyond(true));
         else
           elle::err<Error>("AWS credentials are not stored on %s",
