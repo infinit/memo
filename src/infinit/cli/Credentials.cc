@@ -60,25 +60,36 @@ namespace infinit
       /// `google` is a das::Symbol.
       struct Enabled
       {
-        bool all() const
+        bool
+        all() const
         {
           return aws && dropbox && gcs && google_drive;
         }
 
-        bool none() const
+        bool
+        none() const
         {
           return !aws && !dropbox && !gcs && !google_drive;
         }
 
-        bool several() const
+        bool
+        several() const
         {
           return 1 < aws + dropbox + gcs + google_drive;
         }
 
-        void all_if_none()
+        void
+        all_if_none()
         {
           if (none())
             aws = dropbox = gcs = google_drive = true;
+        }
+
+        void
+        ensure_at_least_one(std::string const& mode)
+        {
+          if (this->none())
+            elle::err("%s: specify a service", mode);
         }
 
         bool aws;
@@ -124,6 +135,8 @@ namespace infinit
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
+      auto e = Enabled{aws, dropbox, gcs, google_drive};
+      e.ensure_at_least_one("add");
       if (aws)
       {
         auto account_name = mandatory(account, "account");
@@ -146,8 +159,6 @@ namespace infinit
         web_doc(owner.name, "Google", "gcs");
       else if (google_drive)
         web_doc(owner.name, "Google", "google");
-      else
-        elle::err<Error>("service type not specified");
     }
 
     /*---------------.
@@ -169,8 +180,9 @@ namespace infinit
           auto& ifnt = cred.cli().infinit();
           auto path = ifnt._credentials_path(service_name, account_name);
           if (boost::filesystem::remove(path))
-            cred.cli().report_action("deleted", "credentials",
-                                     account_name, "locally");
+            cred.cli().report_action(
+              "deleted", elle::sprintf("%s credentials", service_name),
+              account_name, "locally");
           else
             elle::err("File for credentials could not be deleted: %s", path);
         }
@@ -185,8 +197,7 @@ namespace infinit
                              bool google_drive)
     {
       auto e = Enabled{aws, dropbox, gcs, google_drive};
-      if (e.none())
-        elle::err("delete: specify a service");
+      e.ensure_at_least_one("delete");
       do_delete_(*this, e, cli::aws,          "aws",     account);
       do_delete_(*this, e, cli::dropbox,      "dropbox", account);
       do_delete_(*this, e, cli::google_drive, "google",  account);
