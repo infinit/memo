@@ -11,6 +11,43 @@ namespace infinit
 {
   namespace cli
   {
+    namespace
+    {
+      template <typename T>
+      struct ServicePrint
+      {
+        static const std::string name;
+        static const std::string pretty;
+      };
+      using GCSPrint = ServicePrint<
+        std::remove_const_t<decltype(cli::gcs)>
+      >;
+      template<>
+      const std::string GCSPrint::name{"gcs"};
+      template<>
+      const std::string GCSPrint::pretty{"Google Cloud Storage"};
+      using AWSPrint = ServicePrint<
+        std::remove_const_t<decltype(cli::aws)>
+      >;
+      template<>
+      const std::string AWSPrint::name{"aws"};
+      template<>
+      const std::string AWSPrint::pretty{"Amazon Web Services"};
+      using DropboxPrint = ServicePrint<
+        std::remove_const_t<decltype(cli::dropbox)>
+      >;
+      template<>
+      const std::string DropboxPrint::name{"dropbox"};
+      template<>
+      const std::string DropboxPrint::pretty{"Dropbox"};
+      using GoogleDrivePrint = ServicePrint<
+        std::remove_const_t<decltype(cli::google_drive)>
+      >;
+      template<>
+      const std::string GoogleDrivePrint::name{"google"};
+      template<>
+      const std::string GoogleDrivePrint::pretty{"Google Drive"};
+    }
     using Error = das::cli::Error;
 
     Credentials::Credentials(Infinit& infinit)
@@ -118,19 +155,19 @@ namespace infinit
       /// Point to the web documentation to register a user on a given
       /// service provider.
       ///
-      /// \param account  user name
-      /// \param service  service name in clear (e.g., "Google Drive")
-      /// \param page     name used on our web page (e.g., "google")
+      /// \param username user name
+      /// \param service  service (e.g., "cli::google_drive")
+      template <typename Service>
       void
-      web_doc(std::string const& account,
-              std::string const& service, std::string const& page)
+      web_doc(std::string const& username,
+              Service service)
       {
         std::cout << "Register your "
-                  << service
+                  << ServicePrint<Service>::pretty
                   << " account with infinit by visiting "
-                  << infinit::beyond() << "/users/" << account
+                  << infinit::beyond() << "/users/" << username
                   << "/"
-                  << page
+                  << ServicePrint<Service>::name
                   << "-oauth" << '\n';
       }
     }
@@ -150,7 +187,8 @@ namespace infinit
       if (aws)
       {
         auto account_name = mandatory(account, "account");
-        std::cout << "Please enter your AWS credentials\n";
+        std::cout << "Please enter your " << AWSPrint::pretty
+                  << "  credentials\n";
         auto access_key_id
           = this->cli().read_secret("Access Key ID", "[A-Z0-9]{20}");
         auto secret_access_key
@@ -160,15 +198,17 @@ namespace infinit
                                                     access_key_id,
                                                     secret_access_key);
         ifnt.credentials_aws_add(std::move(aws_credentials));
-        this->cli().report_action("stored", "AWS credentials",
-                                  account.get(), "locally");
+        this->cli().report_action(
+          "stored",
+          elle::sprintf("%s credentials", AWSPrint::pretty),
+          account.get(), "locally");
       }
       else if (dropbox)
-        web_doc(owner.name, "Dropbox", "dropbox");
+        web_doc(owner.name, cli::dropbox);
       else if (gcs)
-        web_doc(owner.name, "Google", "gcs");
+        web_doc(owner.name, cli::gcs);
       else if (google_drive)
-        web_doc(owner.name, "Google", "google");
+        web_doc(owner.name, cli::google_drive);
     }
 
     /*---------------.
@@ -177,10 +217,10 @@ namespace infinit
 
     namespace
     {
+      template <typename Service>
       void
       pull_(infinit::cli::Infinit& cli,
-            std::string const& service,
-            std::string const& pretty,
+            Service service,
             boost::optional<std::string> const& name,
             bool allow_missing);
 
@@ -189,22 +229,23 @@ namespace infinit
       do_delete_(Credentials& cred,
                  Enabled const& enabled,
                  Service service,
-                 std::string const& service_name,
                  std::string const& account_name,
                  bool pull = false)
       {
         if (service.attr_get(enabled))
         {
           auto& ifnt = cred.cli().infinit();
-          auto path = ifnt._credentials_path(service_name, account_name);
+          auto path = ifnt._credentials_path(ServicePrint<Service>::name,
+                                             account_name);
           if (boost::filesystem::remove(path))
             cred.cli().report_action(
-              "deleted", elle::sprintf("%s credentials", service_name),
+              "deleted",
+              elle::sprintf("%s credentials", ServicePrint<Service>::pretty),
               account_name, "locally");
           else
             elle::err("File for credentials could not be deleted: %s", path);
           if (pull)
-            pull_(cred.cli(), service_name, service_name, account_name, true);
+            pull_(cred.cli(), service, account_name, true);
         }
       }
     }
@@ -219,10 +260,10 @@ namespace infinit
     {
       auto e = Enabled{aws, dropbox, gcs, google_drive};
       e.ensure_at_least_one("delete");
-      do_delete_(*this, e, cli::aws,          "aws",     account);
-      do_delete_(*this, e, cli::dropbox,      "dropbox", account);
-      do_delete_(*this, e, cli::google_drive, "google",  account);
-      do_delete_(*this, e, cli::gcs,          "gcs",     account);
+      do_delete_(*this, e, cli::aws,          account, pull);
+      do_delete_(*this, e, cli::dropbox,      account, pull);
+      do_delete_(*this, e, cli::google_drive, account, pull);
+      do_delete_(*this, e, cli::gcs,          account, pull);
     }
 
     /*--------------.
@@ -237,19 +278,18 @@ namespace infinit
       /// Fetch credentials.
       ///
       /// \param user     the user
-      /// \param service  name of the service (e.g., "google_drive").
-      /// \param pretty   pretty name of the service (e.g., "Google Drive")
+      /// \param service  the service (e.g., "cli::google_drive").
       /// \param add      function to call to add the fetched credentials
       /// \param account  name of a specific credentials to fetch
+      template <typename Service>
       void
       fetch_(infinit::User const& user,
-             std::string const& service,
-             std::string const& pretty,
+             Service service,
              std::function<void (UCred)> add,
              boost::optional<std::string> const& account)
       {
         auto where = elle::sprintf("users/%s/credentials/%s", user.name,
-                                   service);
+                                   ServicePrint<Service>::name);
         if (account)
           where += elle::sprintf("/%s", *account);
         // FIXME: Workaround for using std::unique_ptr.
@@ -257,7 +297,7 @@ namespace infinit
         auto res =
           infinit::Infinit::beyond_fetch_json
           (where,
-           elle::sprintf("\"%s\" credentials for", pretty),
+           elle::sprintf("\"%s\" credentials", ServicePrint<Service>::pretty),
            user.name, user);
         auto root = boost::any_cast<elle::json::Object>(res);
         auto credentials_vec =
@@ -266,8 +306,9 @@ namespace infinit
         {
           auto input = elle::serialization::json::SerializerIn(a_json, false);
           auto a = elle::make_unique<Cred>(input.deserialize<Cred>());
-          elle::printf("Fetched %s credentials %s (%s)\n",
-                       pretty, a->uid(), a->display_name());
+          elle::printf(
+            "Fetched %s credentials \"%s\" (%s)\n",
+            ServicePrint<Service>::pretty, a->uid(), a->display_name());
           add(std::move(a));
         }
       }
@@ -288,32 +329,33 @@ namespace infinit
       if (e.aws)
       {
         if (fetch_all)
-          this->cli().report("INFO: AWS credentials are not stored on %s"
+          this->cli().report("INFO: %s credentials are not stored on %s"
                              " and so were not fetched",
+                             AWSPrint::pretty,
                              infinit::beyond(true));
         else
-          elle::err<Error>("AWS credentials are not stored on %s",
-                           infinit::beyond(true));
+          elle::err<Error>("%s credentials are not stored on %s",
+                           AWSPrint::pretty, infinit::beyond(true));
       }
       if (e.dropbox)
         fetch_
-          (owner, "dropbox", "Dropbox",
+          (owner, cli::dropbox,
            [&ifnt] (UCred a)
            { ifnt.credentials_dropbox_add(std::move(a)); },
            account);
       if (e.gcs)
         fetch_
-          (owner, "gcs", "Google Cloud Storage",
+          (owner, cli::gcs,
            [&ifnt] (UCred a)
            { ifnt.credentials_gcs_add(std::move(a)); },
            account);
       if (e.google_drive)
         fetch_
-          (owner, "google", "Google Drive",
+          (owner, cli::google_drive,
            [&ifnt] (UCred a)
            { ifnt.credentials_google_add(std::move(a)); },
            account);
-      // FIXME: remove deleted ones
+      // XXX: remove deleted ones
     }
 
     /*------------.
@@ -328,30 +370,32 @@ namespace infinit
       /// Pull credentials.
       ///
       /// \param user          the user
-      /// \param service       name of the service (e.g., "google_drive").
-      /// \param pretty        pretty name of the service (e.g., "Google Drive")
+      /// \param service       the service (e.g., "cli::google_drive").
       /// \param account       name of a specific credentials to remove (
       ///                      otherwise all the credentials for the service are
       ///                      pulled).
       /// \param allow_missing Do not xxx.
+      template <typename Service>
       void
       pull_(infinit::cli::Infinit& cli,
-            std::string const& service,
-            std::string const& pretty,
+            Service service,
             boost::optional<std::string> const& account,
             bool allow_missing)
       {
         auto owner = cli.as_user();
         auto where = elle::sprintf("users/%s/credentials/%s", owner.name,
-                                   service);
+                                   ServicePrint<Service>::name);
         if (account)
           where += elle::sprintf("/%s", *account);
         if (cli.infinit().beyond_delete(
-              where, elle::sprintf("%s credentials", pretty),
-              service, owner, allow_missing))
-          cli.report_action("deleted", elle::sprintf("%s credentials", pretty),
-                            (account ? *account : std::string{"*"}),
-                            "remotely");
+              where,
+              elle::sprintf("%s credentials", ServicePrint<Service>::pretty),
+              ServicePrint<Service>::name, owner, allow_missing))
+          cli.report_action(
+            "deleted",
+            elle::sprintf("%s credentials", ServicePrint<Service>::pretty),
+            (account ? *account : std::string{"*"}),
+            "remotely");
       }
     }
 
@@ -365,24 +409,24 @@ namespace infinit
       auto e = Enabled{aws, dropbox, gcs, google_drive};
       e.ensure_at_least_one("pull");
       bool pull_all = e.all();
-      // FIXME: Use Symbols instead.
       auto& cli = this->cli();
       if (e.aws)
       {
         if (pull_all)
-          cli.report("INFO: AWS credentials are not stored on %s"
-                     " (nothing to pull)\n",
+          cli.report("INFO: %s credentials are not stored on %s"
+                     " (nothing to pull)",
+                     AWSPrint::pretty,
                      infinit::beyond(true));
         else
-          elle::err<Error>("AWS credentials are not stored on %s",
-                           infinit::beyond(true));
+          elle::err<Error>("%s credentials are not stored on %s",
+                           AWSPrint::pretty, infinit::beyond(true));
       }
       if (e.dropbox)
-        pull_(cli, "dropbox", "Dropbox", account, false);
+        pull_(cli, cli::dropbox, account, false);
       if (e.gcs)
-        pull_(cli, "gcs", "Google Cloud Storage", account, false);
+        pull_(cli, cli::gcs, account, false);
       if (e.google_drive)
-        pull_(cli, "google", "Google Drive", account, false);
+        pull_(cli, cli::google_drive, account, false);
     }
 
     /*-------------.
@@ -396,8 +440,7 @@ namespace infinit
       list_(infinit::Infinit& ifnt,
             Enabled const& enabled,
             Service service,
-            Fetch fetch,
-            std::string const& service_name)
+            Fetch fetch)
       {
         if (service.attr_get(enabled))
         {
@@ -405,7 +448,7 @@ namespace infinit
           for (auto const& credentials: fetch.method_call(ifnt))
           {
             if (enabled.several() && first)
-              std::cout << service_name << ":\n";
+              std::cout << ServicePrint<Service>::pretty << ":\n";
             if (enabled.several())
               std::cout << "  ";
             std::cout << credentials->uid() << ": "
@@ -430,10 +473,10 @@ namespace infinit
       auto e = Enabled{aws, dropbox, gcs, google_drive};
       e.all_if_none();
       auto& ifnt = this->cli().infinit();
-      list_(ifnt, e, cli::aws,          s::credentials_aws, "AWS");
-      list_(ifnt, e, cli::dropbox,      s::credentials_dropbox, "Dropbox");
-      list_(ifnt, e, cli::google_drive, s::credentials_google, "Google");
-      list_(ifnt, e, cli::gcs,          s::credentials_gcs, "GCS");
+      list_(ifnt, e, cli::aws,          s::credentials_aws);
+      list_(ifnt, e, cli::dropbox,      s::credentials_dropbox);
+      list_(ifnt, e, cli::google_drive, s::credentials_google);
+      list_(ifnt, e, cli::gcs,          s::credentials_gcs);
     }
   }
 }
