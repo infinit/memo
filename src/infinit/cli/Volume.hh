@@ -23,6 +23,7 @@ namespace infinit
                                     cli::export_,
                                     cli::fetch,
                                     cli::import,
+                                    cli::list,
                                     cli::mount,
                                     cli::pull,
                                     cli::push,
@@ -178,6 +179,16 @@ namespace infinit
       void
       mode_import(boost::optional<std::string> input_name = {},
                  boost::optional<std::string> mountpoint_name = {});
+
+
+      /*-------------.
+      | Mode: list.  |
+      `-------------*/
+      using ModeList =
+        Mode<decltype(binding(modes::mode_list))>;
+      ModeList list;
+      void
+      mode_list();
 
 
       /*--------------.

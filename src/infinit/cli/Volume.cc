@@ -106,6 +106,10 @@ namespace infinit
         this->bind(modes::mode_import,
                    cli::input = boost::none,
                    cli::mountpoint = boost::none))
+      , list(
+        "List volumes",
+        das::cli::Options(),
+        this->bind(modes::mode_list))
         // FIXME: Same options as run, large duplication.
       , mount(
         "Mount a volume",
@@ -529,6 +533,48 @@ namespace infinit
       cli.report_imported("volume", volume.name);
     }
 
+
+    /*-------------.
+    | Mode: list.  |
+    `-------------*/
+
+    void
+    Volume::mode_list()
+    {
+      ELLE_TRACE_SCOPE("mount");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+
+      if (cli.script())
+      {
+        auto l = elle::json::Array{};
+        for (auto const& volume: ifnt.volumes_get())
+        {
+          auto o = elle::json::Object
+            {
+              {"name", static_cast<std::string>(volume.name)},
+              {"network", volume.network},
+            };
+          if (volume.mount_options.mountpoint)
+            o["mountpoint"] = volume.mount_options.mountpoint.get();
+          if (volume.description)
+            o["description"] = volume.description.get();
+          l.emplace_back(std::move(o));
+        }
+        elle::json::write(std::cout, l);
+      }
+      else
+        for (auto const& volume: ifnt.volumes_get())
+        {
+          std::cout << volume.name;
+          if (volume.description)
+            std::cout << " \"" << volume.description.get() << "\"";
+          std::cout << ": network " << volume.network;
+          if (volume.mount_options.mountpoint)
+            std::cout << " on " << volume.mount_options.mountpoint.get();
+          std::cout << std::endl;
+        }
+    }
 
     /*--------------.
     | Mode: mount.  |
