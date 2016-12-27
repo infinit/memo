@@ -9,7 +9,6 @@
 #include <reactor/FDStream.hh>
 #include <reactor/http/Request.hh>
 #include <reactor/network/rdv-socket.hh>
-#include <reactor/network/rdv-socket.hh>
 #include <reactor/network/resolve.hh>
 
 #include <infinit/Infinit.hh>

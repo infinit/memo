@@ -1,11 +1,17 @@
 #include <infinit/cli/Volume.hh>
 
+#include <elle/Exit.hh>
+
 #include <infinit/MountOptions.hh>
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/utility.hh>
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/Model.hh>
 #include <infinit/model/doughnut/Local.hh>
+
+#ifndef INFINIT_WINDOWS
+# include <reactor/network/unix-domain-socket.hh>
+#endif
 
 #ifdef INFINIT_MACOSX
 # include <reactor/network/reachability.hh>
@@ -212,6 +218,62 @@ namespace infinit
                    cli::fetch_endpoints_interval = 300,
                    cli::input = boost::none,
                    cli::disable_UTF_8_conversion = false))
+#if !defined INFINIT_WINDOWS
+      , start(
+        "Start a volume through the daemon",
+        das::cli::Options(),
+        this->bind(modes::mode_start,
+                   cli::name,
+                   cli::allow_root_creation = false,
+                   cli::mountpoint = boost::none,
+                   cli::readonly = false,
+# if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
+                   cli::mount_name = boost::none,
+# endif
+# ifdef INFINIT_MACOSX
+                   cli::mount_icon = boost::none,
+                   cli::finder_sidebar = false,
+# endif
+                   cli::async = false,
+# ifndef INFINIT_WINDOWS
+                   cli::daemon = false,
+# endif
+                   cli::monitoring = true,
+                   cli::fuse_option = Strings{},
+                   cli::cache = false,
+                   cli::cache_ram_size = boost::none,
+                   cli::cache_ram_ttl = boost::none,
+                   cli::cache_ram_invalidation = boost::none,
+                   cli::cache_disk_size = boost::none,
+                   cli::fetch_endpoints = false,
+                   cli::fetch = false,
+                   cli::peer = Strings{},
+                   cli::peers_file = boost::none,
+                   cli::push_endpoints = false,
+                   cli::register_service = false,
+                   cli::no_local_endpoints = false,
+                   cli::no_public_endpoints = false,
+                   cli::push = false,
+                   cli::map_other_permissions = true,
+                   cli::publish = false,
+                   cli::advertise_host = Strings{},
+                   cli::endpoints_file = boost::none,
+                   cli::port_file = boost::none,
+                   cli::port = boost::none,
+                   cli::listen = boost::none,
+                   cli::fetch_endpoints_interval = 300,
+                   cli::input = boost::none))
+      , status(
+        "Delete a volume locally",
+        das::cli::Options(),
+        this->bind(modes::mode_status,
+                   cli::name))
+      , stop(
+        "Delete a volume locally",
+        das::cli::Options(),
+        this->bind(modes::mode_stop,
+                   cli::name))
+#endif
       , update(
         "Update a volume with default run options",
         das::cli::Options(),
@@ -1513,6 +1575,164 @@ namespace infinit
       else
         run();
     }
+
+
+    /*--------------.
+    | Mode: start.  |
+    `--------------*/
+
+#ifndef INFINIT_WINDOWS
+    void
+    Volume::mode_start(std::string const& volume_name,
+                       bool allow_root_creation,
+                       boost::optional<std::string> mountpoint,
+                       bool readonly,
+#if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
+                       boost::optional<std::string> mount_name,
+#endif
+#ifdef INFINIT_MACOSX
+                       boost::optional<std::string> mount_icon,
+                       bool finder_sidebar,
+#endif
+                       bool async,
+#ifndef INFINIT_WINDOWS
+                       bool daemon,
+#endif
+                       bool monitoring,
+                       Strings fuse_option,
+                       bool cache,
+                       boost::optional<int> cache_ram_size,
+                       boost::optional<int> cache_ram_ttl,
+                       boost::optional<int> cache_ram_invalidation,
+                       boost::optional<int> cache_disk_size,
+                       bool fetch_endpoints,
+                       bool fetch,
+                       Strings peer,
+                       boost::optional<std::string> peers_file,
+                       bool push_endpoints,
+                       bool register_service,
+                       bool no_local_endpoints,
+                       bool no_public_endpoints,
+                       bool push,
+                       bool map_other_permissions,
+                       bool publish,
+                       Strings advertise_host,
+                       boost::optional<std::string> endpoints_file,
+                       boost::optional<std::string> port_file,
+                       boost::optional<int> port,
+                       boost::optional<std::string> listen,
+                       int fetch_endpoints_interval,
+                       boost::optional<std::string> input)
+    {
+      ELLE_TRACE_SCOPE("start");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto name = ifnt.qualified_name(volume_name, owner);
+
+      auto mo = infinit::MountOptions{};
+      MOUNT_OPTIONS_MERGE(mo);
+      reactor::network::UnixDomainSocket sock(daemon_sock_path());
+      auto cmd = [&]
+        {
+          std::stringstream ss;
+          auto cmd = elle::serialization::json::SerializerOut(ss, false);
+          cmd.serialize("operation", "volume-start");
+          cmd.serialize("volume", name);
+          cmd.serialize("options", mo);
+          return ss.str();
+        }();
+      sock.write(elle::ConstWeakBuffer(cmd));
+      auto reply = sock.read_until("\n").string();
+      std::stringstream replystream(reply);
+      auto json = elle::json::read(replystream);
+      auto jsono = boost::any_cast<elle::json::Object>(json);
+      if (boost::any_cast<std::string>(jsono.at("result")) != "Ok")
+      {
+        std::cout << elle::json::pretty_print(json) << std::endl;
+        throw elle::Exit(1);
+      }
+      else
+        std::cout << "Ok" << std::endl;
+    }
+#endif
+
+    /*---------------.
+    | Mode: status.  |
+    `---------------*/
+
+#ifndef INFINIT_WINDOWS
+    void
+    Volume::mode_status(std::string const& volume_name)
+    {
+      ELLE_TRACE_SCOPE("status");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto name = ifnt.qualified_name(volume_name, owner);
+
+      reactor::network::UnixDomainSocket sock(daemon_sock_path());
+      auto cmd = [&]
+        {
+          std::stringstream ss;
+          auto cmd = elle::serialization::json::SerializerOut(ss, false);
+          cmd.serialize("operation", "volume-status");
+          cmd.serialize("volume", name);
+          return ss.str();
+        }();
+      sock.write(elle::ConstWeakBuffer(cmd));
+      auto reply = sock.read_until("\n").string();
+      std::stringstream replystream(reply);
+      auto json = elle::json::read(replystream);
+      auto jsono = boost::any_cast<elle::json::Object>(json);
+      if (boost::any_cast<std::string>(jsono.at("result")) != "Ok"
+        || !boost::any_cast<bool>(jsono.at("live")))
+      {
+        std::cout << elle::json::pretty_print(json) << std::endl;
+        throw elle::Exit(1);
+      }
+      else
+        std::cout << "Ok" << std::endl;
+    }
+#endif
+
+    /*-------------.
+    | Mode: stop.  |
+    `-------------*/
+
+#ifndef INFINIT_WINDOWS
+    void
+    Volume::mode_stop(std::string const& volume_name)
+    {
+      ELLE_TRACE_SCOPE("stop");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto name = ifnt.qualified_name(volume_name, owner);
+      reactor::network::UnixDomainSocket sock(daemon_sock_path());
+      auto cmd = [&]
+        {
+          std::stringstream ss;
+          auto cmd = elle::serialization::json::SerializerOut(ss, false);
+          cmd.serialize("operation", "volume-stop");
+          cmd.serialize("volume", name);
+          return ss.str();
+        }();
+      sock.write(elle::ConstWeakBuffer(cmd));
+      auto reply = sock.read_until("\n").string();
+      std::stringstream replystream(reply);
+      auto json = elle::json::read(replystream);
+      auto jsono = boost::any_cast<elle::json::Object>(json);
+      if (boost::any_cast<std::string>(jsono.at("result")) != "Ok")
+      {
+        std::cout << elle::json::pretty_print(json) << std::endl;
+        throw elle::Exit(1);
+      }
+      else
+        std::cout << "Ok" << std::endl;
+    }
+#endif
+
 
     /*---------------.
     | Mode: update.  |

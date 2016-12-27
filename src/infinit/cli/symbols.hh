@@ -144,6 +144,9 @@ namespace infinit
     DAS_SYMBOL(set_xattr);
     DAS_SYMBOL(signup);
     DAS_SYMBOL(silo);
+    DAS_SYMBOL(start);
+    DAS_SYMBOL(status);
+    DAS_SYMBOL(stop);
     DAS_SYMBOL(transmit);
     DAS_SYMBOL(update);
     DAS_SYMBOL(version);
@@ -180,7 +183,10 @@ namespace infinit
       DAS_SYMBOL(mode_set);
       DAS_SYMBOL(mode_set_xattr);
       DAS_SYMBOL(mode_signup);
+      DAS_SYMBOL(mode_start);
       DAS_SYMBOL(mode_stat);
+      DAS_SYMBOL(mode_status);
+      DAS_SYMBOL(mode_stop);
       DAS_SYMBOL(mode_transmit);
       DAS_SYMBOL(mode_update);
     }
