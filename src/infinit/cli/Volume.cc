@@ -86,6 +86,13 @@ namespace infinit
         this->bind(modes::mode_export,
                    cli::name,
                    cli::output = boost::none))
+      , fetch(
+        "Fetch a volume from {hub}",
+        das::cli::Options(),
+        this->bind(modes::mode_fetch,
+                   cli::name = boost::none,
+                   cli::network = boost::none,
+                   cli::service = false))
       , run(
         "Run a volume",
         das::cli::Options(),
@@ -324,6 +331,79 @@ namespace infinit
       }
       cli.report_exported(*output, "volume", volume.name);
     }
+
+    /*--------------.
+    | Mode: fetch.  |
+    `--------------*/
+
+    void
+    Volume::mode_fetch(boost::optional<std::string> volume_name,
+                       boost::optional<std::string> network_name,
+                       bool service)
+    {
+      ELLE_TRACE_SCOPE("fetch");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      using VolumesMap
+        = std::unordered_map<std::string, std::vector<infinit::Volume>>;
+      if (service)
+      {
+        if (!network_name)
+          elle::err<Error>("--network is mandatory with --service");
+        auto net_name = ifnt.qualified_name(*network_name, owner);
+        auto network = ifnt.network_get(net_name, owner);
+        auto dht = network.run(owner);
+        auto services = dht->services();
+        auto volumes = services.find("volumes");
+        if (volumes != services.end())
+          for (auto volume: volumes->second)
+            if ((!volume_name
+                 || ifnt.qualified_name(*volume_name, owner) == volume.first)
+                && !ifnt.volume_has(volume.first))
+            {
+              auto v = elle::serialization::binary::deserialize<infinit::Volume>
+                (dht->fetch(volume.second)->data());
+              ifnt.volume_save(v);
+              cli.report_saved("volume", v.name);
+            }
+      }
+      else if (volume_name)
+      {
+        auto name = ifnt.qualified_name(*volume_name, owner);
+        auto desc = ifnt.beyond_fetch<infinit::Volume>("volume", name);
+        ifnt.volume_save(std::move(desc));
+      }
+      else if (network_name)
+      {
+        // Fetch all networks for network.
+        auto net_name = ifnt.qualified_name(*network_name, owner);
+        auto res = ifnt.beyond_fetch<VolumesMap>(
+            elle::sprintf("networks/%s/volumes", net_name),
+            "volumes for network",
+            net_name);
+        for (auto const& volume: res["volumes"])
+          ifnt.volume_save(std::move(volume));
+      }
+      else
+      {
+        // Fetch all networks for owner.
+        auto res = ifnt.beyond_fetch<VolumesMap>(
+            elle::sprintf("users/%s/volumes", owner.name),
+            "volumes for user",
+            owner.name,
+            owner);
+        for (auto const& volume: res["volumes"])
+          try
+          {
+            ifnt.volume_save(std::move(volume));
+          }
+          catch (infinit::ResourceAlreadyFetched const& error)
+          {
+          }
+      }
+    }
+
 
     /*------------.
     | Mode: run.  |

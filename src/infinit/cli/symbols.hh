@@ -36,8 +36,8 @@ namespace infinit
     DAS_CLI_SYMBOL(deny_storage, '\0', "deny user ability to contribute storage to the network", false);
     DAS_CLI_SYMBOL(deny_write, '\0', "deny user write access to the network", false);
     DAS_CLI_SYMBOL(description, '\0', "{type} description", false);
-    DAS_CLI_SYMBOL(disable_inherit, '\0', "make new files and directories not inherit permissions", false);
     DAS_CLI_SYMBOL(disable_UTF_8_conversion, 0, "disable FUSE conversion of UTF-8 to native format", false);
+    DAS_CLI_SYMBOL(disable_inherit, '\0', "make new files and directories not inherit permissions", false);
     DAS_CLI_SYMBOL(dropbox, '\0', "store blocks on Dropbox", false);
     DAS_CLI_SYMBOL(email, 'e', "user email", false);
     DAS_CLI_SYMBOL(enable_inherit, 'i', "make new files and directories inherit permissions", false);
@@ -110,6 +110,7 @@ namespace infinit
     DAS_CLI_SYMBOL(remove_user, '\0', "remove user from group", false);
     DAS_CLI_SYMBOL(s3, '\0', "store blocks on AWS S3", false);
     DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output", false);
+    DAS_CLI_SYMBOL(service, 0, "fetch {type} from the network, not beyond", false);
     DAS_CLI_SYMBOL(show, '\0', "list group users, administrators and description", false);
     DAS_CLI_SYMBOL(ssh, '\0', "store blocks via SSH", false);
     DAS_CLI_SYMBOL(stat, '\0', "show the remaining asynchronous operations count and size", false);
