@@ -21,6 +21,9 @@ namespace infinit
         = decltype(elle::meta::list(cli::create,
                                     cli::export_,
                                     cli::fetch,
+                                    cli::import,
+                                    cli::pull,
+                                    cli::push,
                                     cli::run));
 
       using Strings = std::vector<std::string>;
@@ -133,6 +136,19 @@ namespace infinit
                   boost::optional<std::string> const& output_name = {});
 
 
+      /*---------------.
+      | Mode: import.  |
+      `---------------*/
+      using ModeImport =
+        Mode<decltype(binding(modes::mode_import,
+                              cli::input = boost::none,
+                              cli::mountpoint = boost::none))>;
+      ModeImport import;
+      void
+      mode_import(boost::optional<std::string> input_name = {},
+                 boost::optional<std::string> mountpoint_name = {});
+
+
       /*--------------.
       | Mode: fetch.  |
       `--------------*/
@@ -147,9 +163,34 @@ namespace infinit
                  boost::optional<std::string> network_name = {},
                  bool service = false);
 
-      /*------.
-      | Run.  |
-      `------*/
+
+      /*-------------.
+      | Mode: pull.  |
+      `-------------*/
+      using ModePull =
+        Mode<decltype(binding(modes::mode_pull,
+                              cli::name,
+                              cli::purge = false))>;
+      ModePull pull;
+      void
+      mode_pull(std::string const& name,
+                bool purge);
+
+
+      /*-------------.
+      | Mode: push.  |
+      `-------------*/
+      using ModePush =
+        Mode<decltype(binding(modes::mode_push,
+                              cli::name))>;
+      ModePush push;
+      void
+      mode_push(std::string const& name);
+
+
+      /*------------.
+      | Mode: run.  |
+      `------------*/
       Mode<decltype(binding(modes::mode_run,
                             cli::name,
                             cli::allow_root_creation = false,

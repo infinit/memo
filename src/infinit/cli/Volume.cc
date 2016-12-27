@@ -93,6 +93,23 @@ namespace infinit
                    cli::name = boost::none,
                    cli::network = boost::none,
                    cli::service = false))
+      , import(
+        "Import a volume",
+        das::cli::Options(),
+        this->bind(modes::mode_import,
+                   cli::input = boost::none,
+                   cli::mountpoint = boost::none))
+      , pull(
+        "Remove a volume from {hub}",
+        das::cli::Options(),
+        this->bind(modes::mode_pull,
+                   cli::name,
+                   cli::purge = false))
+      , push(
+        "Push a volume to {hub}",
+        das::cli::Options(),
+        this->bind(modes::mode_push,
+                   cli::name))
       , run(
         "Run a volume",
         das::cli::Options(),
@@ -402,6 +419,62 @@ namespace infinit
           {
           }
       }
+    }
+
+    /*---------------.
+    | Mode: import.  |
+    `---------------*/
+
+    void
+    Volume::mode_import(boost::optional<std::string> input_name,
+                        boost::optional<std::string> mountpoint)
+    {
+      ELLE_TRACE_SCOPE("import");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto input = this->cli().get_input(input_name);
+      auto s = elle::serialization::json::SerializerIn(*input, false);
+      auto volume = infinit::Volume(s);
+      volume.mount_options.mountpoint = mountpoint;
+      ifnt.volume_save(volume);
+      cli.report_imported("volume", volume.name);
+    }
+
+    /*-------------.
+    | Mode: pull.  |
+    `-------------*/
+
+    void
+    Volume::mode_pull(std::string const& volume_name,
+                     bool purge)
+    {
+      ELLE_TRACE_SCOPE("pull");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto name = ifnt.qualified_name(volume_name, owner);
+      ifnt.beyond_delete("volume", name, owner, false, purge);
+    }
+
+
+    /*-------------.
+    | Mode: push.  |
+    `-------------*/
+
+    void
+    Volume::mode_push(std::string const& volume_name)
+    {
+      ELLE_TRACE_SCOPE("push");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto name = ifnt.qualified_name(volume_name, owner);
+      auto volume = ifnt.volume_get(name);
+      // Don't push the mountpoint to beyond.
+      volume.mount_options.mountpoint = boost::none;
+      auto network = ifnt.network_get(volume.network, owner);
+      auto owner_uid = infinit::User::uid(*network.dht()->owner);
+      ifnt.beyond_push("volume", name, volume, owner);
     }
 
 
