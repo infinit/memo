@@ -275,6 +275,7 @@ namespace infinit
             it->second.merge(p.second);
             return;
           }
+          ELLE_DEBUG("%s: anon connect suceeded on %s", this, peer->id());
           this->_infos.insert(std::make_pair(peer->id(), p.second));
         }
         this->_discover(peer);
@@ -577,23 +578,29 @@ namespace infinit
         for (auto const& pi: pis)
         {
           if (pi.first == model::Address::null)
+          {
+            ELLE_DEBUG("discovering anonymous peer %s", pi);
             this->_perform("connect",
               [this, pi = pi] {
               this->_discover(pi);});
+          }
           else
           {
             bool should_discover = false;
             auto it = this->_infos.find(pi.first);
             if (it == this->_infos.end())
             {
+              ELLE_DEBUG("discovering named peer %s", pi);
               this->_infos.insert(pi);
               should_discover = true;
             }
             else
             {
+              ELLE_DEBUG("discovering on known peer %s", pi);
               if (it->second.merge(pi.second))
               { // New data on a connected peer, we need to notify observers
                 // FIXME: maybe notify on reconnection instead?
+                ELLE_DEBUG("new data on peer %s", pi);
                 this->_notify_observers(*it);
               }
             }
