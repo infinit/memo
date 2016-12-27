@@ -80,6 +80,13 @@ namespace infinit
                    cli::listen = boost::none,
                    cli::fetch_endpoints_interval = 300,
                    cli::input = boost::none))
+      , delete_(
+        "Delete a volume locally",
+        das::cli::Options(),
+        this->bind(modes::mode_delete,
+                   cli::name,
+                   cli::pull = false,
+                   cli::purge = false))
       , export_(
         "Export a volume for someone else to import",
         das::cli::Options(),
@@ -325,6 +332,42 @@ namespace infinit
       if (push || push_volume)
         ifnt.beyond_push("volume", name, volume, owner);
     }
+
+
+
+    /*---------------.
+    | Mode: delete.  |
+    `---------------*/
+
+    void
+    Volume::mode_delete(std::string const& volume_name,
+                        bool pull,
+                        bool purge)
+    {
+      ELLE_TRACE_SCOPE("delete");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto name = ifnt.qualified_name(volume_name, owner);
+      auto path = ifnt._volume_path(name);
+      auto volume = ifnt.volume_get(name);
+      if (purge)
+        for (auto const& drive: ifnt.drives_for_volume(name))
+        {
+          auto drive_path = ifnt._drive_path(drive);
+          if (bfs::remove(drive_path))
+            cli.report_action("deleted", "drive", drive, "locally");
+        }
+      if (pull)
+        ifnt.beyond_delete("volume", name, owner, true, purge);
+      bfs::remove_all(volume.root_block_cache_dir());
+      if (bfs::remove(path))
+        cli.report_action("deleted", "volume", name, "locally");
+      else
+        elle::err("File for volume could not be deleted: %s", path);
+    }
+
+
 
     /*---------------.
     | Mode: export.  |

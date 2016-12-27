@@ -19,6 +19,7 @@ namespace infinit
       Volume(Infinit& infinit);
       using Modes
         = decltype(elle::meta::list(cli::create,
+                                    cli::delete_,
                                     cli::export_,
                                     cli::fetch,
                                     cli::import,
@@ -121,6 +122,21 @@ namespace infinit
                   boost::optional<std::string> listen = {},
                   int fetch_endpoints_interval = 300,
                   boost::optional<std::string> input = {});
+
+
+      /*---------------.
+      | Mode: delete.  |
+      `---------------*/
+      using ModeDelete =
+        Mode<decltype(binding(modes::mode_delete,
+                              cli::name,
+                              cli::pull = false,
+                              cli::purge = false))>;
+      ModeDelete delete_;
+      void
+      mode_delete(std::string const& name,
+                  bool pull,
+                  bool purge);
 
 
       /*---------------.
