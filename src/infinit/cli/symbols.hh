@@ -145,6 +145,7 @@ namespace infinit
     DAS_SYMBOL(signup);
     DAS_SYMBOL(silo);
     DAS_SYMBOL(transmit);
+    DAS_SYMBOL(update);
     DAS_SYMBOL(version);
 
     DAS_SYMBOL_NAMED(delete, delete_);
@@ -181,6 +182,7 @@ namespace infinit
       DAS_SYMBOL(mode_signup);
       DAS_SYMBOL(mode_stat);
       DAS_SYMBOL(mode_transmit);
+      DAS_SYMBOL(mode_update);
     }
   }
 }

@@ -8,6 +8,11 @@
 #include <infinit/cli/symbols.hh>
 #include <infinit/symbols.hh>
 
+// There is a lot of code duplication in these files because we have a
+// huge body of options that go together, e.g., those for
+// MountOptions.  A means to factor them between modes is dearly
+// needed.
+
 namespace infinit
 {
   namespace cli
@@ -393,6 +398,92 @@ namespace infinit
                int fetch_endpoints_interval = 300,
                boost::optional<std::string> input = {},
                bool disable_UTF_8_conversion = false);
+
+
+      /*---------------.
+      | Mode: update.  |
+      `---------------*/
+      Mode<decltype(binding(modes::mode_update,
+                            cli::name,
+                            cli::description = boost::none,
+                            cli::allow_root_creation = false,
+                            cli::mountpoint = boost::none,
+                            cli::readonly = false,
+#if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
+                            cli::mount_name = boost::none,
+#endif
+#ifdef INFINIT_MACOSX
+                            cli::mount_icon = boost::none,
+                            cli::finder_sidebar = false,
+#endif
+                            cli::async = false,
+#ifndef INFINIT_WINDOWS
+                            cli::daemon = false,
+#endif
+                            cli::monitoring = true,
+                            cli::fuse_option = Strings{},
+                            cli::cache = false,
+                            cli::cache_ram_size = boost::none,
+                            cli::cache_ram_ttl = boost::none,
+                            cli::cache_ram_invalidation = boost::none,
+                            cli::cache_disk_size = boost::none,
+                            cli::fetch_endpoints = false,
+                            cli::fetch = false,
+                            cli::peer = Strings{},
+                            cli::peers_file = boost::none,
+                            cli::push_endpoints = false,
+                            cli::push = false,
+                            cli::map_other_permissions = true,
+                            cli::publish = false,
+                            cli::advertise_host = Strings{},
+                            cli::endpoints_file = boost::none,
+                            cli::port_file = boost::none,
+                            cli::port = boost::none,
+                            cli::listen = boost::none,
+                            cli::fetch_endpoints_interval = 300,
+                            cli::input = boost::none,
+                            cli::user = boost::none))>
+      update;
+      void
+      mode_update(std::string const& name,
+                  boost::optional<std::string> description = {},
+                  bool allow_root_creation = false,
+                  boost::optional<std::string> mountpoint = {},
+                  bool readonly = false,
+#if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
+                  boost::optional<std::string> mount_name = {},
+#endif
+#ifdef INFINIT_MACOSX
+                  boost::optional<std::string> mount_icon = {},
+                  bool finder_sidebar = false,
+#endif
+                  bool async = false,
+#ifndef INFINIT_WINDOWS
+                  bool daemon = false,
+#endif
+                  bool monitoring = true,
+                  Strings fuse_option = {},
+                  bool cache = false,
+                  boost::optional<int> cache_ram_size = {},
+                  boost::optional<int> cache_ram_ttl = {},
+                  boost::optional<int> cache_ram_invalidation = {},
+                  boost::optional<int> cache_disk_size = {},
+                  bool fetch_endpoints = false,
+                  bool fetch = false,
+                  Strings peer = {},
+                  boost::optional<std::string> peers_file = {},
+                  bool push_endpoints = false,
+                  bool push = false,
+                  bool map_other_permissions = true,
+                  bool publish = false,
+                  Strings advertise_host = {},
+                  boost::optional<std::string> endpoints_file = {},
+                  boost::optional<std::string> port_file = {},
+                  boost::optional<int> port = {},
+                  boost::optional<std::string> listen = {},
+                  int fetch_endpoints_interval = 300,
+                  boost::optional<std::string> input = {},
+                  boost::optional<std::string> user = {});
     };
   }
 }

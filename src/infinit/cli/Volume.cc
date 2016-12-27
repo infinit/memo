@@ -212,6 +212,49 @@ namespace infinit
                    cli::fetch_endpoints_interval = 300,
                    cli::input = boost::none,
                    cli::disable_UTF_8_conversion = false))
+      , update(
+        "Update a volume with default run options",
+        das::cli::Options(),
+        this->bind(modes::mode_update,
+                   cli::name,
+                   cli::description = boost::none,
+                   cli::allow_root_creation = false,
+                   cli::mountpoint = boost::none,
+                   cli::readonly = false,
+#if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
+                   cli::mount_name = boost::none,
+#endif
+#ifdef INFINIT_MACOSX
+                   cli::mount_icon = boost::none,
+                   cli::finder_sidebar = false,
+#endif
+                   cli::async = false,
+#ifndef INFINIT_WINDOWS
+                   cli::daemon = false,
+#endif
+                   cli::monitoring = true,
+                   cli::fuse_option = Strings{},
+                   cli::cache = false,
+                   cli::cache_ram_size = boost::none,
+                   cli::cache_ram_ttl = boost::none,
+                   cli::cache_ram_invalidation = boost::none,
+                   cli::cache_disk_size = boost::none,
+                   cli::fetch_endpoints = false,
+                   cli::fetch = false,
+                   cli::peer = Strings{},
+                   cli::peers_file = boost::none,
+                   cli::push_endpoints = false,
+                   cli::push = false,
+                   cli::map_other_permissions = true,
+                   cli::publish = false,
+                   cli::advertise_host = Strings{},
+                   cli::endpoints_file = boost::none,
+                   cli::port_file = boost::none,
+                   cli::port = boost::none,
+                   cli::listen = boost::none,
+                   cli::fetch_endpoints_interval = 300,
+                   cli::input = boost::none,
+                   cli::user = boost::none))
     {}
 
     /*---------------.
@@ -1469,6 +1512,66 @@ namespace infinit
         };
       else
         run();
+    }
+
+    /*---------------.
+    | Mode: update.  |
+    `---------------*/
+
+    void
+    Volume::mode_update(std::string const& volume_name,
+                        boost::optional<std::string> description,
+                        bool allow_root_creation,
+                        boost::optional<std::string> mountpoint,
+                        bool readonly,
+#if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
+                        boost::optional<std::string> mount_name,
+#endif
+#ifdef INFINIT_MACOSX
+                        boost::optional<std::string> mount_icon,
+                        bool finder_sidebar,
+#endif
+                        bool async,
+#ifndef INFINIT_WINDOWS
+                        bool daemon,
+#endif
+                        bool monitoring,
+                        Strings fuse_option,
+                        bool cache,
+                        boost::optional<int> cache_ram_size,
+                        boost::optional<int> cache_ram_ttl,
+                        boost::optional<int> cache_ram_invalidation,
+                        boost::optional<int> cache_disk_size,
+                        bool fetch_endpoints,
+                        bool fetch,
+                        Strings peer,
+                        boost::optional<std::string> peers_file,
+                        bool push_endpoints,
+                        bool push,
+                        bool map_other_permissions,
+                        bool publish,
+                        Strings advertise_host,
+                        boost::optional<std::string> endpoints_file,
+                        boost::optional<std::string> port_file,
+                        boost::optional<int> port,
+                        boost::optional<std::string> listen,
+                        int fetch_endpoints_interval,
+                        boost::optional<std::string> input,
+                        boost::optional<std::string> user)
+    {
+      ELLE_TRACE_SCOPE("update");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto name = ifnt.qualified_name(volume_name, owner);
+      auto volume = ifnt.volume_get(name);
+
+      MOUNT_OPTIONS_MERGE(volume.mount_options);
+      if (description)
+        volume.description = description;
+      ifnt.volume_save(volume, true);
+      if (push)
+        ifnt.beyond_push("volume", name, volume, owner);
     }
   }
 }
