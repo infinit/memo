@@ -80,6 +80,12 @@ namespace infinit
                    cli::listen = boost::none,
                    cli::fetch_endpoints_interval = 300,
                    cli::input = boost::none))
+      , export_(
+        "Export a volume for someone else to import",
+        das::cli::Options(),
+        this->bind(modes::mode_export,
+                   cli::name,
+                   cli::output = boost::none))
       , run(
         "Run a volume",
         das::cli::Options(),
@@ -294,6 +300,29 @@ namespace infinit
       }
       if (push || push_volume)
         ifnt.beyond_push("volume", name, volume, owner);
+    }
+
+    /*---------------.
+    | Mode: export.  |
+    `---------------*/
+
+    void
+    Volume::mode_export(std::string const& volume_name,
+                        boost::optional<std::string> const& output_name)
+    {
+      ELLE_TRACE_SCOPE("export");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto name = ifnt.qualified_name(volume_name, owner);
+      auto volume = ifnt.volume_get(name);
+      auto output = cli.get_output(output_name);
+      volume.mount_options.mountpoint.reset();
+      {
+        auto s = elle::serialization::json::SerializerOut(*output, false);
+        s.serialize_forward(volume);
+      }
+      cli.report_exported(*output, "volume", volume.name);
     }
 
     /*------------.

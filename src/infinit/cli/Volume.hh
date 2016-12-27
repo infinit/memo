@@ -19,6 +19,7 @@ namespace infinit
       Volume(Infinit& infinit);
       using Modes
         = decltype(elle::meta::list(cli::create,
+                                    cli::export_,
                                     cli::run));
 
       using Strings = std::vector<std::string>;
@@ -116,6 +117,21 @@ namespace infinit
                   boost::optional<std::string> listen = {},
                   int fetch_endpoints_interval = 300,
                   boost::optional<std::string> input = {});
+
+
+      /*---------------.
+      | Mode: export.  |
+      `---------------*/
+      using ModeExport =
+        Mode<decltype(binding(modes::mode_export,
+                              cli::name,
+                              cli::output = boost::none))>;
+      ModeExport export_;
+      void
+      mode_export(std::string const& volume_name,
+                  boost::optional<std::string> const& output_name = {});
+
+
 
       /*------.
       | Run.  |
