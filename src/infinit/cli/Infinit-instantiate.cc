@@ -240,6 +240,6 @@ namespace infinit
   namespace cli
   {
     template
-    class object<std::decay<decltype(cli::INFINIT_CLI_OBJECT)>::type>;
+    struct object<std::decay<decltype(cli::INFINIT_CLI_OBJECT)>::type>;
   }
 }
