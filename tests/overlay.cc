@@ -103,13 +103,18 @@ private:
 };
 
 void
-discover(DHT& dht, DHT& target, bool anonymous)
+discover(DHT& dht, DHT& target, bool anonymous, bool onlyfirst=false)
 {
+  Endpoints eps;
+  if (onlyfirst)
+    eps = Endpoints {target.dht->local()->server_endpoints()[0]};
+  else
+    eps = target.dht->local()->server_endpoints();
   if (anonymous)
-    dht.dht->overlay()->discover(target.dht->local()->server_endpoints());
+    dht.dht->overlay()->discover(eps);
   else
     dht.dht->overlay()->discover(
-      NodeLocation(target.dht->id(), target.dht->local()->server_endpoints()));
+      NodeLocation(target.dht->id(), eps));
 }
 
 static
@@ -202,7 +207,8 @@ static
 void
 hard_wait(DHT& s, int n_servers,
   infinit::model::Address client = infinit::model::Address::null,
-  bool or_more = false)
+  bool or_more = false,
+  infinit::model::Address blacklist = infinit::model::Address::null)
 {
   int attempts = 0;
   while (true)
@@ -219,7 +225,7 @@ hard_wait(DHT& s, int n_servers,
     {
       for (auto const& pa: peers)
       {
-        if (pa == client)
+        if (pa == client || pa == blacklist)
           continue;
         try
         {
@@ -653,7 +659,7 @@ ELLE_TEST_SCHEDULED(
   (bool, pax), (int, nservers), (int, nclients), (int, nactions))
 {
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
-
+  bool is_kelips = false;
   // Set servers up.
   auto servers = std::vector<std::unique_ptr<DHT>>{};
   for (int i=0; i<nservers; ++i)
@@ -662,11 +668,34 @@ ELLE_TEST_SCHEDULED(
       ::keys = keys, make_overlay = builder, paxos = pax,
       dht::consensus::rebalance_auto_expand = false
     );
+    if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
+      dht->dht->overlay().get()))
+    {
+      is_kelips = true;
+      kelips->config().query_put_retries = 6;
+      kelips->config().query_timeout_ms = valgrind(2000, 4);
+      kelips->config().contact_timeout_ms = valgrind(100000,20);
+      kelips->config().ping_interval_ms = valgrind(500, 10);
+      kelips->config().ping_timeout_ms = valgrind(2000, 20);
+    }
     servers.emplace_back(std::move(dht));
   }
-  for (int i=1; i<nservers; ++i)
-    discover(*servers[i], *servers[0], true);
-
+  if (is_kelips)
+  {
+    for (int i=1; i<nservers; ++i)
+      discover(*servers[i], *servers[0], false, true);
+  }
+  else
+    for (int i=1; i<nservers; ++i)
+    {
+      for (int j=0; j<i; ++j)
+        discover(*servers[i], *servers[j], false, true);
+      hard_wait(*servers[i], i);
+    }
+  ELLE_LOG("waiting for servers");
+  for (int i=0; i<nservers; ++i)
+    hard_wait(*servers[i], nservers-1);
+  ELLE_LOG("clients");
   // Set clients up.
   auto clients = std::vector<std::unique_ptr<DHT>>{};
   for (int i=0; i<nclients; ++i)
@@ -675,14 +704,28 @@ ELLE_TEST_SCHEDULED(
       ::keys = keys, make_overlay = builder, paxos = pax, ::storage = nullptr,
       dht::consensus::rebalance_auto_expand = false
     );
+    if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
+      dht->dht->overlay().get()))
+    {
+      kelips->config().query_put_retries = 6;
+      kelips->config().query_get_retries = 20;
+      kelips->config().query_timeout_ms = valgrind(2000, 4);
+      kelips->config().contact_timeout_ms = valgrind(100000,20);
+      kelips->config().ping_interval_ms = valgrind(500, 10);
+      kelips->config().ping_timeout_ms = valgrind(2000, 20);
+    }
     clients.emplace_back(std::move(dht));
   }
-  for (int i=0; i<nclients; ++i)
+  for (int i=0; i<nservers; ++i)
   {
-    for (int j=0; j<nservers; ++j)
-      discover(*clients[i], *servers[j], true);
-    wait_until_ready(*clients[i], nservers);
+    for (int j=0; j<nclients; ++j)
+    {
+      discover(*clients[j], *servers[i], false, true);
+      reactor::yield(); reactor::yield(); reactor::yield();
+    }
   }
+  for (int i=0; i<nclients; ++i)
+    hard_wait(*clients[i], nservers);
 
   auto addrs = std::vector<infinit::model::Address>{};
   elle::With<reactor::Scope>() << [&](reactor::Scope& s)
@@ -967,9 +1010,9 @@ ELLE_TEST_SCHEDULED(churn, (Doughnut::OverlayBuilder, builder),
       {
         for (auto& s: servers)
           if (s)
-            hard_wait(*s, n-2, client->dht->id(), true);
+            hard_wait(*s, n-2, client->dht->id(), true, ids[down]);
           //spawn_client();
-          hard_wait(*client, n-1, client->dht->id(), true);
+          hard_wait(*client, n-1, client->dht->id(), true, ids[down]);
       }
       ELLE_LOG("resuming");
     }
@@ -1085,6 +1128,9 @@ void test_churn_socket(Doughnut::OverlayBuilder builder, bool pasv)
     }
     else
     {
+      // give it time to notice sockets went down
+      for (int i = 0; i < 10; ++i)
+        reactor::yield();
       ELLE_TRACE("hard_wait servers");
       for (auto& s: servers)
         kouncil_wait_pasv(*s, n-1);
@@ -1116,10 +1162,9 @@ ELLE_TEST_SCHEDULED(churn_socket_pasv)
 
 ELLE_TEST_SUITE()
 {
-  elle::os::setenv("INFINIT_CONNECT_TIMEOUT",
-                   std::to_string(valgrind(1,10)).c_str(), 1);
-  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT",
-                   std::to_string(valgrind(3,10)).c_str(), 1);
+  elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
+  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "1", 1);
+  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_INTERVAL", "1", 1);
   auto& master = boost::unit_test::framework::master_test_suite();
   auto const kelips_builder =
     [] (Doughnut& dht, std::shared_ptr<Local> local)
