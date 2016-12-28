@@ -61,8 +61,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
            '-V', 'v', '-N', 'n', '-p'])
   assertEq(
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 1)
-  bob.run(['infinit-volume', '--delete', '--as', 'bob',
-           '--purge', '--pull', 'v'])
+  bob.run(['infinit-volume', '--delete', '--name', 'v', '--as', 'bob',
+           '--purge', '--pull'])
   assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
   assertEq(
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)

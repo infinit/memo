@@ -330,31 +330,27 @@ namespace infinit
       template <typename Symbol, typename T>
       void
       merge_(MountOptions& mo,
-             Symbol sym, boost::optional<T> const& val,
-             int = 0)
+             Symbol sym, const T& val)
       {
-        if (val)
-          sym.attr_get(mo) = *val;
+        sym.attr_get(mo) = val;
       }
 
       template <typename Symbol>
       void
       merge_(MountOptions& mo,
-                 Symbol sym, Volume::Strings const& val,
-                 int = 0)
+             Symbol sym, Volume::Strings const& val)
       {
-        if (!val.empty())
-          Symbol::attr_get(mo).insert(Symbol::attr_get(mo).end(),
-                                      val.begin(), val.end());
+        Symbol::attr_get(mo).insert(Symbol::attr_get(mo).end(),
+                                    val.begin(), val.end());
       }
 
       template <typename Symbol, typename T>
       void
       merge_(MountOptions& mo,
-                 Symbol sym, const T& val,
-                 int = 0)
+             Symbol sym, boost::optional<T> const& val)
       {
-        sym.attr_get(mo) = val;
+        if (val)
+          merge_(mo, sym, *val);
       }
     }
 
@@ -661,9 +657,9 @@ namespace infinit
               {"network", volume.network},
             };
           if (volume.mount_options.mountpoint)
-            o["mountpoint"] = volume.mount_options.mountpoint.get();
+            o["mountpoint"] = *volume.mount_options.mountpoint;
           if (volume.description)
-            o["description"] = volume.description.get();
+            o["description"] = *volume.description;
           l.emplace_back(std::move(o));
         }
         elle::json::write(std::cout, l);
@@ -993,7 +989,8 @@ namespace infinit
       MOUNT_OPTIONS_MERGE(mo);
 #ifdef INFINIT_MACOSX
       if (mo.mountpoint && !disable_UTF_8_conversion)
-        mo.fuse_options.emplace_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
+        mo.fuse_options
+          .emplace_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
 #endif
       bool created_mountpoint = false;
       if (mo.mountpoint)
@@ -1002,26 +999,25 @@ namespace infinit
         if (mo.mountpoint.get().size() == 2 && mo.mountpoint.get()[1] == ':')
           ;
         else
-#elif defined(INFINIT_MACOSX)
+#elif defined INFINIT_MACOSX
         // Do not try to create folder in /Volumes.
         auto mount_path = bfs::path(mo.mountpoint.get());
-        auto mount_parent = mount_path.parent_path().string();
-        boost::algorithm::to_lower(mount_parent);
+        auto mount_parent
+          = boost::algorithm::to_lower_copy(mount_path.parent_path().string());
         if (mount_parent.find("/volumes") == 0)
           ;
         else
 #endif
         try
         {
-          if (bfs::exists(mo.mountpoint.get()))
+          if (bfs::exists(*mo.mountpoint))
           {
-            if (!bfs::is_directory(mo.mountpoint.get()))
+            if (!bfs::is_directory(*mo.mountpoint))
               elle::err("mountpoint is not a directory");
-            if (!bfs::is_empty(mo.mountpoint.get()))
+            if (!bfs::is_empty(*mo.mountpoint))
               elle::err("mountpoint is not empty");
           }
-          created_mountpoint =
-            bfs::create_directories(mo.mountpoint.get());
+          created_mountpoint = bfs::create_directories(*mo.mountpoint);
         }
         catch (bfs::filesystem_error const& e)
         {
@@ -1105,7 +1101,7 @@ namespace infinit
           });
         // Experimental: poll root on mount to trigger caching.
 #   if 0
-        auto root_poller = boost::optional<std::thread>;
+        auto root_poller = boost::optional<std::thread>{};
         if (mo.mountpoint && mo.cache && mo.cache.get())
           root_poller.emplace(
             [root = mo.mountpoint.get()]
@@ -1229,9 +1225,9 @@ namespace infinit
               auto json =
                 boost::any_cast<elle::json::Object>(elle::json::read(*input));
               ELLE_TRACE("got command: %s", json);
-              elle::serialization::json::SerializerIn command(json, false);
+              auto command = elle::serialization::json::SerializerIn(json, false);
               op = command.deserialize<std::string>("operation");
-              std::shared_ptr<reactor::filesystem::Path> path;
+              auto path = std::shared_ptr<reactor::filesystem::Path>{};
               try
               {
                 pathname = command.deserialize<std::string>("path");
@@ -1255,13 +1251,13 @@ namespace infinit
               if (op == "list_directory")
               {
                 require_path();
-                std::vector<std::string> entries;
+                auto entries = std::vector<std::string>{};
                 path->list_directory(
                   [&] (std::string const& path, struct stat*)
                   {
                     entries.push_back(path);
                   });
-                elle::serialization::json::SerializerOut response(std::cout);
+                auto response = elle::serialization::json::SerializerOut(std::cout);
                 response.serialize("entries", entries);
                 response.serialize("success", true);
                 response.serialize("operation", op);
@@ -1278,7 +1274,7 @@ namespace infinit
                 require_path();
                 struct stat st;
                 path->stat(&st);
-                elle::serialization::json::SerializerOut response(std::cout);
+                auto response = elle::serialization::json::SerializerOut(std::cout);
                 response.serialize("success", true);
                 response.serialize("operation", op);
                 response.serialize("path", pathname);
@@ -1311,7 +1307,7 @@ namespace infinit
                 require_path();
                 auto name = command.deserialize<std::string>("name");
                 auto value = path->getxattr(name);
-                elle::serialization::json::SerializerOut response(std::cout);
+                auto response = elle::serialization::json::SerializerOut(std::cout);
                 response.serialize("value", value);
                 response.serialize("success", true);
                 response.serialize("operation", op);
@@ -1322,7 +1318,7 @@ namespace infinit
               {
                 require_path();
                 auto attrs = path->listxattr();
-                elle::serialization::json::SerializerOut response(std::cout);
+                auto response = elle::serialization::json::SerializerOut(std::cout);
                 response.serialize("entries", attrs);
                 response.serialize("success", true);
                 response.serialize("operation", op);
@@ -1351,7 +1347,7 @@ namespace infinit
               {
                 require_path();
                 auto res = path->readlink();
-                elle::serialization::json::SerializerOut response(std::cout);
+                auto response = elle::serialization::json::SerializerOut(std::cout);
                 response.serialize("target", res.string());
                 response.serialize("success", true);
                 response.serialize("operation", op);
@@ -1387,7 +1383,7 @@ namespace infinit
                 require_path();
                 struct statvfs sv;
                 path->statfs(&sv);
-                elle::serialization::json::SerializerOut response(std::cout);
+                auto response = elle::serialization::json::SerializerOut(std::cout);
                 response.serialize("success", true);
                 response.serialize("operation", op);
                 response.serialize("path", pathname);
@@ -1483,15 +1479,15 @@ namespace infinit
               }
               else if (op == "read")
               {
-                uint64_t offset = command.deserialize<uint64_t>("offset");
-                uint64_t size = command.deserialize<uint64_t>("size");
+                auto offset = command.deserialize<uint64_t>("offset");
+                auto size = command.deserialize<uint64_t>("size");
                 elle::Buffer buf;
                 buf.size(size);
                 int nread = handles.at(handlename)->read(
                   elle::WeakBuffer(buf),
                   size, offset);
                 buf.size(nread);
-                elle::serialization::json::SerializerOut response(std::cout);
+                auto response = elle::serialization::json::SerializerOut(std::cout);
                 response.serialize("content", buf);
                 response.serialize("success", true);
                 response.serialize("operation", op);
@@ -1500,14 +1496,14 @@ namespace infinit
               }
               else if (op == "write")
               {
-                uint64_t offset = command.deserialize<uint64_t>("offset");
-                uint64_t size = command.deserialize<uint64_t>("size");
+                auto offset = command.deserialize<uint64_t>("offset");
+                auto size = command.deserialize<uint64_t>("size");
                 elle::Buffer content = command.deserialize<elle::Buffer>("content");
                 handles.at(handlename)->write(elle::WeakBuffer(content), size, offset);
               }
               else if (op == "ftruncate")
               {
-                uint64_t size = command.deserialize<uint64_t>("size");
+                auto size = command.deserialize<uint64_t>("size");
                 handles.at(handlename)->ftruncate(size);
               }
               else if (op == "fsync")

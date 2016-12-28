@@ -471,7 +471,7 @@ COMMAND(run)
       });
     // Experimental: poll root on mount to trigger caching.
 #   if 0
-    auto root_poller = boost::optional<std::thread>;
+    auto root_poller = boost::optional<std::thread>{};
     if (mo.mountpoint && mo.cache && mo.cache.get())
       root_poller.emplace(
         [root = mo.mountpoint.get()]
@@ -583,8 +583,9 @@ COMMAND(run)
     if (script_mode)
     {
       auto input = infinit::commands_input(args);
-      std::unordered_map<std::string,
-        std::unique_ptr<reactor::filesystem::Handle>> handles;
+      auto handles =
+        std::unordered_map<std::string,
+                           std::unique_ptr<reactor::filesystem::Handle>>{};
       while (true)
       {
         std::string op;
@@ -595,9 +596,9 @@ COMMAND(run)
           auto json =
             boost::any_cast<elle::json::Object>(elle::json::read(*input));
           ELLE_TRACE("got command: %s", json);
-          elle::serialization::json::SerializerIn command(json, false);
+          auto command = elle::serialization::json::SerializerIn(json, false);
           op = command.deserialize<std::string>("operation");
-          std::shared_ptr<reactor::filesystem::Path> path;
+          auto path = std::shared_ptr<reactor::filesystem::Path>{};
           try
           {
             pathname = command.deserialize<std::string>("path");
@@ -621,13 +622,13 @@ COMMAND(run)
           if (op == "list_directory")
           {
             require_path();
-            std::vector<std::string> entries;
+            auto entries = std::vector<std::string>{};
             path->list_directory(
               [&] (std::string const& path, struct stat*)
               {
                 entries.push_back(path);
               });
-            elle::serialization::json::SerializerOut response(std::cout);
+            auto response = elle::serialization::json::SerializerOut(std::cout);
             response.serialize("entries", entries);
             response.serialize("success", true);
             response.serialize("operation", op);
@@ -644,7 +645,7 @@ COMMAND(run)
             require_path();
             struct stat st;
             path->stat(&st);
-            elle::serialization::json::SerializerOut response(std::cout);
+            auto response = elle::serialization::json::SerializerOut(std::cout);
             response.serialize("success", true);
             response.serialize("operation", op);
             response.serialize("path", pathname);
@@ -677,7 +678,7 @@ COMMAND(run)
             require_path();
             auto name = command.deserialize<std::string>("name");
             auto value = path->getxattr(name);
-            elle::serialization::json::SerializerOut response(std::cout);
+            auto response = elle::serialization::json::SerializerOut(std::cout);
             response.serialize("value", value);
             response.serialize("success", true);
             response.serialize("operation", op);
@@ -688,7 +689,7 @@ COMMAND(run)
           {
             require_path();
             auto attrs = path->listxattr();
-            elle::serialization::json::SerializerOut response(std::cout);
+            auto response = elle::serialization::json::SerializerOut(std::cout);
             response.serialize("entries", attrs);
             response.serialize("success", true);
             response.serialize("operation", op);
@@ -717,7 +718,7 @@ COMMAND(run)
           {
             require_path();
             auto res = path->readlink();
-            elle::serialization::json::SerializerOut response(std::cout);
+            auto response = elle::serialization::json::SerializerOut(std::cout);
             response.serialize("target", res.string());
             response.serialize("success", true);
             response.serialize("operation", op);
@@ -753,7 +754,7 @@ COMMAND(run)
             require_path();
             struct statvfs sv;
             path->statfs(&sv);
-            elle::serialization::json::SerializerOut response(std::cout);
+            auto response = elle::serialization::json::SerializerOut(std::cout);
             response.serialize("success", true);
             response.serialize("operation", op);
             response.serialize("path", pathname);
@@ -849,15 +850,15 @@ COMMAND(run)
           }
           else if (op == "read")
           {
-            uint64_t offset = command.deserialize<uint64_t>("offset");
-            uint64_t size = command.deserialize<uint64_t>("size");
+            auto offset = command.deserialize<uint64_t>("offset");
+            auto size = command.deserialize<uint64_t>("size");
             elle::Buffer buf;
             buf.size(size);
             int nread = handles.at(handlename)->read(
               elle::WeakBuffer(buf),
               size, offset);
             buf.size(nread);
-            elle::serialization::json::SerializerOut response(std::cout);
+            auto response = elle::serialization::json::SerializerOut(std::cout);
             response.serialize("content", buf);
             response.serialize("success", true);
             response.serialize("operation", op);
@@ -866,14 +867,14 @@ COMMAND(run)
           }
           else if (op == "write")
           {
-            uint64_t offset = command.deserialize<uint64_t>("offset");
-            uint64_t size = command.deserialize<uint64_t>("size");
+            auto offset = command.deserialize<uint64_t>("offset");
+            auto size = command.deserialize<uint64_t>("size");
             elle::Buffer content = command.deserialize<elle::Buffer>("content");
             handles.at(handlename)->write(elle::WeakBuffer(content), size, offset);
           }
           else if (op == "ftruncate")
           {
-            uint64_t size = command.deserialize<uint64_t>("size");
+            auto size = command.deserialize<uint64_t>("size");
             handles.at(handlename)->ftruncate(size);
           }
           else if (op == "fsync")
@@ -963,7 +964,7 @@ COMMAND(list)
 {
   if (script_mode)
   {
-    elle::json::Array l;
+    auto l = elle::json::Array{};
     for (auto const& volume: ifnt.volumes_get())
     {
       auto o = elle::json::Object
@@ -972,9 +973,9 @@ COMMAND(list)
           {"network", volume.network},
         };
       if (volume.mount_options.mountpoint)
-        o["mountpoint"] = volume.mount_options.mountpoint.get();
+        o["mountpoint"] = *volume.mount_options.mountpoint;
       if (volume.description)
-        o["description"] = volume.description.get();
+        o["description"] = *volume.description;
       l.emplace_back(std::move(o));
     }
     elle::json::write(std::cout, l);
