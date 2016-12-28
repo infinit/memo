@@ -34,6 +34,7 @@ namespace infinit
       void
       Configuration::serialize(elle::serialization::Serializer& s)
       {
+        Super::serialize(s);
         s.serialize("eviction_delay", _eviction_delay);
       }
 
