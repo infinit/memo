@@ -21,9 +21,10 @@ ELLE_TEST_SCHEDULED(unknown_rpc)
     BOOST_CHECK_THROW(rpc(), infinit::UnknownRPC);
   }
   DHT dht_b(keys = dht.dht->keys());
-  infinit::model::doughnut::Remote r(
-    *dht_b.dht, dht.dht->id(), dht.dht->local()->server_endpoints(),
-    boost::none, boost::none, infinit::model::doughnut::Protocol::tcp);
+  auto peer = dht_b.dht->dock().make_peer(
+    infinit::model::NodeLocation(dht.dht->id(), dht.dht->local()->server_endpoints()),
+      boost::none).lock();
+  auto& r = dynamic_cast<infinit::model::doughnut::Remote&>(*peer);
   r.connect();
   // By default Local::broadcast ignores unknown RPCs.
   dht.dht->local()->broadcast<void>("doom_is_backfiring");
