@@ -134,6 +134,12 @@ namespace infinit
         return res;
       }
 
+      void
+      Dock::insert_peer(overlay::Overlay::Member m)
+      {
+        this->_peer_cache.emplace(m->id(), m);
+      }
+
       overlay::Overlay::WeakMember
       Dock::make_peer(NodeLocation loc,
                       boost::optional<EndpointsRefetcher> refetcher)

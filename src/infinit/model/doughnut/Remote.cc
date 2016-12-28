@@ -122,6 +122,7 @@ namespace infinit
                     this->_serializer = std::move(serializer);
                     this->_channels = std::move(channels);
                     this->_connected.open();
+                    this->doughnut().dock().insert_peer(shared_from_this());
                     this->Peer::connected()();
                   };
                 auto umbrella = [&, this] (std::function<void ()> const& f)
