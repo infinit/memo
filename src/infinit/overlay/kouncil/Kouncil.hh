@@ -181,6 +181,8 @@ namespace infinit
         _notify_observers(PeerInfos::value_type const& pi);
         void
         _advertise(model::doughnut::Remote& r);
+        void
+        _fetch_entries(model::doughnut::Remote& r);
         boost::optional<Endpoints>
         _endpoints_refetch(model::Address id);
         void

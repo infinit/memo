@@ -288,15 +288,7 @@ namespace infinit
         ELLE_DEBUG("%s: discovered %s", this, peer->id());
         // FIXME: handle local !
         if (auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(peer))
-        {
-          auto fetch = r->make_rpc<std::unordered_set<model::Address> ()>(
-            "kouncil_fetch_entries");
-          auto entries = fetch();
-          ELLE_ASSERT_NEQ(peer->id(), model::Address::null);
-          for (auto const& b: entries)
-            this->_address_book.emplace(peer->id(), b);
-          ELLE_DEBUG("added %s entries from %f", entries.size(), peer);
-        }
+          this->_fetch_entries(*r);
         ELLE_ASSERT_NEQ(peer->id(), model::Address::null);
         peer->disconnected().connect([this, ptr=peer.get()] {
             ELLE_TRACE("peer %s disconnected", ptr);
@@ -317,13 +309,7 @@ namespace infinit
             auto r = dynamic_cast<model::doughnut::Remote*>(ptr);
             ELLE_ASSERT(r);
             this->_advertise(*r);
-            auto fetch = r->make_rpc<std::unordered_set<model::Address> ()>(
-              "kouncil_fetch_entries");
-            auto entries = fetch();
-            ELLE_ASSERT_NEQ(r->id(), model::Address::null);
-            for (auto const& b: entries)
-              this->_address_book.emplace(r->id(), b);
-            ELLE_DEBUG("added %s entries from %f", entries.size(), r);
+            this->_fetch_entries(*r);
         });
         this->_peers.emplace(peer);
         // invoke on_discover
@@ -658,7 +644,7 @@ namespace infinit
             ELLE_TRACE("fetched %s peers", peers.size());
             ELLE_DUMP("peers: %s", peers);
             // FIXME: might be useless to broadcast these peers
-            this->_discover_rpc(peers);
+            this->_discover(peers);
           }
           else
           {
@@ -674,6 +660,18 @@ namespace infinit
           ELLE_TRACE("%s: network exception advertising %s: %s", this, r, e);
           // nothing to do, disconnected() will be emited and handled
         }
+      }
+
+      void
+      Kouncil::_fetch_entries(model::doughnut::Remote& r)
+      {
+        auto fetch = r.make_rpc<std::unordered_set<model::Address> ()>(
+          "kouncil_fetch_entries");
+        auto entries = fetch();
+        ELLE_ASSERT_NEQ(r.id(), model::Address::null);
+        for (auto const& b: entries)
+          this->_address_book.emplace(r.id(), b);
+        ELLE_DEBUG("added %s entries from %f", entries.size(), r);
       }
 
       boost::optional<Endpoints>
