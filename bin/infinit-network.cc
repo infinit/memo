@@ -5,9 +5,10 @@
 
 #include <memory>
 
-#include <elle/log.hh>
-#include <elle/serialization/json.hh>
 #include <elle/json/exceptions.hh>
+#include <elle/log.hh>
+#include <elle/make-vector.hh>
+#include <elle/serialization/json.hh>
 
 #ifndef INFINIT_WINDOWS
 # include <reactor/network/unix-domain-socket.hh>
@@ -45,24 +46,22 @@ namespace
   std::vector<infinit::model::Endpoints>
   parse_peers(std::vector<std::string> const& speers)
   {
-    std::vector<infinit::model::Endpoints> peers;
-    for (auto const& s: speers)
-    {
-      std::vector<std::string> comps;
-      boost::algorithm::split(comps, s, boost::is_any_of(","));
-      infinit::model::Endpoints eps;
-      try
+    return elle::make_vector(speers, [&](auto const& s)
       {
-        for (auto const& s: comps)
-          eps.emplace_back(s);
-      }
-      catch (elle::Error const& e)
-      {
-        elle::err("Malformed endpoints '%s': %s", s, e);
-      }
-      peers.push_back(eps);
-    }
-    return peers;
+        auto comps = std::vector<std::string>{};
+        boost::algorithm::split(comps, s, boost::is_any_of(","));
+        infinit::model::Endpoints eps;
+        try
+        {
+          for (auto const& s: comps)
+            eps.emplace_back(s);
+        }
+        catch (elle::Error const& e)
+        {
+          elle::err("Malformed endpoints '%s': %s", s, e);
+        }
+        return eps;
+      });
   }
 
   std::unique_ptr<infinit::storage::StorageConfig>
@@ -625,9 +624,8 @@ COMMAND(delete_)
   auto linked_users = ifnt.network_linked_users(network.name);
   if (linked_users.size() && !unlink)
   {
-    auto user_names = std::vector<std::string>{};
-    for (auto const& u: linked_users)
-      user_names.emplace_back(u.name);
+    auto user_names = elle::make_vector(linked_users,
+                                        [](auto const& u) { return u.name; });
     elle::err("Network is still linked with this device by %s. "
               "Please unlink it first or add the --unlink flag",
               user_names);
@@ -635,7 +633,7 @@ COMMAND(delete_)
   if (purge)
   {
     auto volumes = ifnt.volumes_for_network(network.name);
-    std::vector<std::string> drives;
+    auto drives = std::vector<std::string>{};
     for (auto const& volume: volumes)
     {
       auto vol_drives = ifnt.drives_for_volume(volume);
@@ -737,15 +735,16 @@ namespace
     }
     if (args.count("peer"))
     {
-      std::vector<infinit::model::Endpoints> eps;
       auto peers = args["peer"].as<std::vector<std::string>>();
-      for (auto const& peer: peers)
-      {
-        if (boost::filesystem::exists(peer))
-          eps.emplace_back(infinit::endpoints_from_file(peer));
-        else
-          eps.emplace_back(infinit::model::Endpoints({peer}));
-      }
+      auto eps
+        = elle::make_vector(peers,
+                            [](auto const& peer)
+                            {
+                              if (boost::filesystem::exists(peer))
+                                return infinit::endpoints_from_file(peer);
+                              else
+                                return infinit::model::Endpoints({peer});
+                            });
       dht->overlay()->discover(eps);
     }
     // Only push if we have are contributing storage.
@@ -972,9 +971,11 @@ COMMAND(list_services)
         auto res = std::unordered_map<std::string, std::vector<std::string>>{};
         for (auto const& type: services)
         {
-          auto services = std::vector<std::string>{};
-          for (auto const& service: type.second)
-            services.emplace_back(service.first);
+          auto services = elle::make_vector(type.second,
+                                            [](auto const& service)
+                                            {
+                                              return service.first;
+                                            });
           res.emplace(type.first, std::move(services));
         }
         elle::serialization::json::serialize(res, *output, false);
