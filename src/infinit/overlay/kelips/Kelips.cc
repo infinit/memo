@@ -1058,23 +1058,19 @@ namespace infinit
         try
         {
           ELLE_DEBUG_SCOPE("establish UTP connection");
-          infinit::model::doughnut::Remote peer(
-            elle::unconst(*this->doughnut()),
-            location.id(),
-            location.endpoints(),
-            elle::unconst(this)->doughnut()->dock().utp_server(),
+          auto peer = this->doughnut()->dock().make_peer(location,
             model::EndpointsRefetcher(
-              std::bind(&Node::_refetch_endpoints, this, location.id())),
-            this->_config.rpc_protocol);
-          peer.connect(5_sec);
+              std::bind(&Node::_refetch_endpoints, this, location.id()))).lock();
+          auto& remote = dynamic_cast<model::doughnut::Remote&>(*peer);
+          remote.connect(5_sec);
           if (this->doughnut()->version() < elle::Version(0, 7, 0) || packet::disable_compression)
           {
-            auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
+            auto rpc = remote.make_rpc<SerState()>("kelips_fetch_state");
             return rpc();
           }
           else
           {
-            auto rpc = peer.make_rpc<SerState2()>("kelips_fetch_state2");
+            auto rpc = remote.make_rpc<SerState2()>("kelips_fetch_state2");
             SerState2 state = rpc();
             SerState res;
             for (auto const& c: state.first)
