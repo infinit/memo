@@ -1,12 +1,11 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_ENDPOINTS
-# define INFINIT_MODEL_DOUGHNUT_ENDPOINTS
+#pragma once
 
-# include <boost/asio.hpp>
-# include <boost/filesystem.hpp>
+#include <boost/asio.hpp>
+#include <boost/filesystem.hpp>
 
-# include <elle/attribute.hh>
+#include <elle/attribute.hh>
 
-# include <infinit/model/Address.hh>
+#include <infinit/model/Address.hh>
 
 namespace infinit
 {
@@ -39,7 +38,6 @@ namespace infinit
     | Printable |
     `----------*/
     public:
-      virtual
       void
       print(std::ostream& stream) const override;
     };
@@ -73,8 +71,8 @@ namespace infinit
     std::ostream&
     operator <<(std::ostream& output, NodeLocation const& loc);
 
-    typedef std::vector<NodeLocation> NodeLocations;
-    typedef std::function<boost::optional<Endpoints> ()> EndpointsRefetcher;
+    using NodeLocations = std::vector<NodeLocation>;
+    using EndpointsRefetcher = std::function<boost::optional<Endpoints> ()>;
 
 
     Endpoints
@@ -90,8 +88,8 @@ namespace elle
     template<>
     struct Serialize<infinit::model::NodeLocation>
     {
-      typedef std::pair<infinit::model::Address,
-                        std::vector<infinit::model::Endpoint>> Type;
+      using Type = std::pair<infinit::model::Address,
+                             std::vector<infinit::model::Endpoint>>;
       static
       Type
       convert(infinit::model::NodeLocation const& nl);
@@ -100,5 +98,3 @@ namespace elle
     };
   }
 }
-
-#endif
