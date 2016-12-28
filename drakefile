@@ -409,7 +409,7 @@ def configure(
     ('infinit-network', [xattr_sources], [], True),
 #    ('infinit-passport', [], [], True),
     # ('infinit-user', [], [], True),
-    ('infinit-volume', [], [], True),
+#    ('infinit-volume', [], [], True),
     ('infinit-fsck', [], [], False),
     ('reactor-example', [], [], False),
     # ('s3fs', [], [aws_lib], False),
@@ -541,6 +541,7 @@ def configure(
       'infinit-passport',
       'infinit-storage',
       'infinit-user',
+      'infinit-volume',
   ]:
     if windows:
       b = drake.Copy(infinit_cli, 'bin/%s.exe' % b).target()
