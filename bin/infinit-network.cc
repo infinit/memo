@@ -424,9 +424,9 @@ COMMAND(export_)
 
 COMMAND(fetch)
 {
-  auto self = self_user(ifnt, args);
+  auto owner = self_user(ifnt, args);
   auto network_name_ = optional(args, "name");
-  auto save = [&self] (infinit::NetworkDescriptor desc_) {
+  auto save = [&owner] (infinit::NetworkDescriptor desc_) {
     // Save or update network descriptor.
     ifnt.network_save(desc_, true);
     for (auto const& u: ifnt.network_linked_users(desc_.name))
@@ -463,18 +463,18 @@ COMMAND(fetch)
   };
   if (network_name_)
   {
-    auto network_name = ifnt.qualified_name(network_name_.get(), self);
+    auto network_name = ifnt.qualified_name(network_name_.get(), owner);
     save(infinit::beyond_fetch<infinit::NetworkDescriptor>("network", network_name));
   }
-  else // Fetch all networks for self.
+  else // Fetch all networks for owner.
   {
     auto res =
       infinit::beyond_fetch<
       std::unordered_map<std::string, std::vector<infinit::NetworkDescriptor>>>(
-        elle::sprintf("users/%s/networks", self.name),
+        elle::sprintf("users/%s/networks", owner.name),
         "networks for user",
-        self.name,
-        self);
+        owner.name,
+        owner);
     for (auto const& n: res["networks"])
       save(n);
   }
@@ -492,30 +492,30 @@ COMMAND(import)
 
 COMMAND(link_)
 {
-  auto self = self_user(ifnt, args);
+  auto owner = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
   {
-    auto network = ifnt.network_get(network_name, self, false);
+    auto network = ifnt.network_get(network_name, owner, false);
     if (network.model)
-      elle::err("%s is already linked with %s", network.name, self.name);
+      elle::err("%s is already linked with %s", network.name, owner.name);
   }
   auto storage = storage_configuration(args);
-  auto desc = ifnt.network_descriptor_get(network_name, self);
+  auto desc = ifnt.network_descriptor_get(network_name, owner);
   auto passport = [&] () -> infinit::Passport
     {
-      if (self.public_key == desc.owner)
-        return {self.public_key, desc.name,
-                infinit::cryptography::rsa::KeyPair(self.public_key,
-                                                    self.private_key.get())};
+      if (owner.public_key == desc.owner)
+        return {owner.public_key, desc.name,
+                infinit::cryptography::rsa::KeyPair(owner.public_key,
+                                                    owner.private_key.get())};
       try
       {
-        return ifnt.passport_get(desc.name, self.name);
+        return ifnt.passport_get(desc.name, owner.name);
       }
       catch (infinit::MissingLocalResource const&)
       {
         elle::err("missing passport (%s: %s), "
                   "use infinit-passport to fetch or import",
-                  desc.name, self.name);
+                  desc.name, owner.name);
       }
     }();
   bool ok = passport.verify(
@@ -531,10 +531,10 @@ COMMAND(link_)
       std::move(desc.consensus),
       std::move(desc.overlay),
       std::move(storage),
-      self.keypair(),
+      owner.keypair(),
       std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
       std::move(passport),
-      self.name,
+      owner.name,
       boost::optional<int>(),
       desc.version,
       desc.admin_keys,
@@ -546,23 +546,23 @@ COMMAND(link_)
     infinit::save(*output, network, false);
   else
   {
-    ifnt.network_save(self, network, true);
+    ifnt.network_save(owner, network, true);
     report_action("linked", "device to network", network.name);
   }
 }
 
 COMMAND(list)
 {
-  auto self = self_user(ifnt, args);
+  auto owner = self_user(ifnt, args);
   if (script_mode)
   {
     elle::json::Array l;
-    for (auto const& network: ifnt.networks_get(self))
+    for (auto const& network: ifnt.networks_get(owner))
     {
       auto o = elle::json::Object
         {
           {"name", static_cast<std::string>(network.name)},
-          {"linked", bool(network.model) && network.user_linked(self)},
+          {"linked", bool(network.model) && network.user_linked(owner)},
         };
       if (network.description)
         o["description"] = network.description.get();
@@ -572,12 +572,12 @@ COMMAND(list)
   }
   else
   {
-    for (auto const& network: ifnt.networks_get(self))
+    for (auto const& network: ifnt.networks_get(owner))
     {
       std::cout << network.name;
       if (network.description)
         std::cout << " \"" << network.description.get() << "\"";
-      if (network.model && network.user_linked(self))
+      if (network.model && network.user_linked(owner))
         std::cout << ": linked";
       else
         std::cout << ": not linked";
@@ -588,22 +588,22 @@ COMMAND(list)
 
 COMMAND(unlink_)
 {
-  auto self = self_user(ifnt, args);
+  auto owner = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
-  auto network = ifnt.network_get(network_name, self, true);
-  ifnt.network_unlink(network.name, self, true);
+  auto network = ifnt.network_get(network_name, owner, true);
+  ifnt.network_unlink(network.name, owner, true);
 }
 
 COMMAND(push)
 {
   auto network_name = mandatory(args, "name", "network name");
-  auto self = self_user(ifnt, args);
-  auto network = ifnt.network_get(network_name, self);
+  auto owner = self_user(ifnt, args);
+  auto network = ifnt.network_get(network_name, owner);
   {
     auto& dht = *network.dht();
     auto owner_uid = infinit::User::uid(*dht.owner);
     infinit::NetworkDescriptor desc(std::move(network));
-    beyond_push("network", desc.name, desc, self, true, false, true);
+    beyond_push("network", desc.name, desc, owner, true, false, true);
   }
 }
 
@@ -676,15 +676,15 @@ namespace
 {
   void
   network_run(boost::program_options::variables_map const& args,
-              std::function<void (infinit::User& self,
+              std::function<void (infinit::User& owner,
                                   infinit::Network& network,
                                   dht::Doughnut&,
                                   bool,
                                   bool)> const& action)
   {
     auto name = mandatory(args, "name", "network name");
-    auto self = self_user(ifnt, args);
-    auto network = ifnt.network_get(name, self);
+    auto owner = self_user(ifnt, args);
+    auto network = ifnt.network_get(name, owner);
     {
       auto rebalancing_auto_expand = optional<bool>(
         args, "paxos-rebalancing-auto-expand");
@@ -703,7 +703,7 @@ namespace
           paxos->rebalance_inspect(rebalancing_inspect.get());
       }
     }
-    network.ensure_allowed(self, "run");
+    network.ensure_allowed(owner, "run");
     bool cache = flag(args, option_cache);
     auto cache_ram_size = optional<int>(args, option_cache_ram_size);
     auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
@@ -722,7 +722,7 @@ namespace
       ? boost::asio::ip::address::from_string(*listen_address_str)
       : boost::optional<boost::asio::ip::address>{};
     auto dht = network.run(
-      self,
+      owner,
       false,
       cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
       flag(args, "async"), disk_cache_size, infinit::compatibility_version, port,
@@ -789,13 +789,13 @@ namespace
           infinit::daemon_release(daemon_handle);
         }
 #endif
-        action(self, network, *dht, push, script_mode);
+        action(owner, network, *dht, push, script_mode);
       };
     if (push)
     {
       auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
       elle::With<InterfacePublisher>(
-        network, self, dht->id(),
+        network, owner, dht->id(),
         dht->local()->server_endpoint().port(),
         advertise,
         flag(args, "no-local-endpoints"),
@@ -813,7 +813,7 @@ COMMAND(run)
 {
   network_run(
     args,
-    [&] (infinit::User& self,
+    [&] (infinit::User& owner,
          infinit::Network& network,
          dht::Doughnut& dht,
          bool push,
@@ -821,7 +821,7 @@ COMMAND(run)
     {
       reactor::Thread::unique_ptr stat_thread;
       if (push)
-        stat_thread = network.make_stat_update_thread(self, dht);
+        stat_thread = network.make_stat_update_thread(owner, dht);
       report_action("running", "network", network.name);
       if (script_mode)
       {
@@ -961,7 +961,7 @@ COMMAND(list_services)
 {
   network_run(
     args,
-    [&] (infinit::User& self,
+    [&] (infinit::User& owner,
          infinit::Network& network,
          dht::Doughnut& dht,
          bool /*push*/,
