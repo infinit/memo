@@ -9,10 +9,6 @@
 #include <infinit/model/Model.hh>
 #include <infinit/model/doughnut/Local.hh>
 
-#ifndef INFINIT_WINDOWS
-# include <reactor/network/unix-domain-socket.hh>
-#endif
-
 #ifdef INFINIT_MACOSX
 # include <reactor/network/reachability.hh>
 # define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
@@ -20,12 +16,12 @@
 # include <CoreServices/CoreServices.h>
 #endif
 
-#ifdef INFINIT_WINDOWS
-# include <fcntl.h>
+#ifndef INFINIT_WINDOWS
 # include <reactor/network/unix-domain-socket.hh>
-# define IF_WINDOWS(Action) Action
+# define IF_NOT_WINDOWS(Action) Action
 #else
-# define IF_WINDOWS(Action)
+# include <fcntl.h>
+# define IF_NOT_WINDOWS(Action)
 #endif
 
 ELLE_LOG_COMPONENT("cli.volume");
@@ -377,7 +373,7 @@ namespace infinit
       if (listen)                                                       \
         merge_(Options, imo::listen_address,                            \
                boost::asio::ip::address::from_string(*listen));         \
-      IF_WINDOWS(merge_(Options, imo::enable_monitoring, monitoring));  \
+      IF_NOT_WINDOWS(merge_(Options, imo::enable_monitoring, monitoring));  \
     } while (false)
 
     void

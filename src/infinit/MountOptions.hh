@@ -23,7 +23,9 @@ namespace infinit
     DAS_SYMBOL(cache_ram_invalidation);
     DAS_SYMBOL(cache_ram_size);
     DAS_SYMBOL(cache_ram_ttl);
+#ifndef INFINIT_WINDOWS
     DAS_SYMBOL(enable_monitoring); // aka monitoring.
+#endif
     DAS_SYMBOL(fetch);             // aka fetch_endpoints_interval.
     DAS_SYMBOL(fuse_options);      // aka fuse_option.
     DAS_SYMBOL(hub_url);
@@ -82,9 +84,12 @@ namespace infinit
                  mount_options::mountpoint,
                  mount_options::as,
                  mount_options::peers,
-                 mount_options::poll_beyond,
+                 mount_options::poll_beyond
                  // mount_options::listen_address,
-                 mount_options::enable_monitoring))>;
+#ifndef INFINIT_WINDOWS
+                 , mount_options::enable_monitoring
+#endif
+                 ))>;
   };
 }
 
