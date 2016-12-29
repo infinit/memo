@@ -707,20 +707,17 @@ namespace infinit
         {
           auto now = std::chrono::high_resolution_clock::now();
           auto it = this->_disconnected_peers.begin();
-          auto it2 = it;
           while (it != this->_disconnected_peers.end())
           {
-            it2 = it;
-            ++it2;
             auto id = (*it)->id();
             auto& info = this->_infos.at(id);
             if (now - info.last_seen > std::chrono::seconds(this->_eviction_delay))
             {
               ELLE_TRACE("%s: evicting %s", this, *it);
-              this->_disconnected_peers.erase(it);
+              it = this->_disconnected_peers.erase(it);
               this->_infos.erase(id);
               this->on_disappear()(id, false);
-              it = it2; continue;
+              continue;
             }
             if ((now - info.last_seen) / 2 < now - info.last_contact_attempt
               || now - info.last_contact_attempt > std::chrono::seconds(60))
@@ -738,7 +735,7 @@ namespace infinit
                   }
               });
             }
-            it = it2;
+            ++it;
           }
           static const int sleep_time = std::stoi(elle::os::getenv("INFINIT_KOUNCIL_WATCHER_INTERVAL", "10"));
           reactor::sleep(boost::posix_time::seconds(sleep_time));
