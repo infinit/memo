@@ -308,13 +308,15 @@ namespace infinit
             this->_fetch_entries(*r);
         });
         this->_peers.emplace(peer);
-        // invoke on_discover
-        Endpoints eps;
-        auto& pi = this->_infos.at(peer->id());
-        eps.merge(pi.endpoints_stamped);
-        eps.merge(pi.endpoints_unstamped);
-        NodeLocation nl(peer->id(), eps);
-        this->on_discover()(nl, false);
+        // Invoke on_discover
+        {
+          Endpoints eps;
+          auto& pi = this->_infos.at(peer->id());
+          eps.merge(pi.endpoints_stamped);
+          eps.merge(pi.endpoints_unstamped);
+          NodeLocation nl(peer->id(), eps);
+          this->on_discover()(nl, false);
+        }
         ELLE_DEBUG("%s: notifying connections", this);
         // Broadcast this peer existence
         if (this->local())
