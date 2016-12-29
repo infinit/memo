@@ -1,3 +1,5 @@
+#include <sys/stat.h>
+
 #include <infinit/cli/ACL.hh>
 
 #include <elle/print.hh>
