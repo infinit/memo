@@ -18,6 +18,8 @@ namespace infinit
     DAS_CLI_SYMBOL(add_admin, '\0', "add administrator to group", false);
     DAS_CLI_SYMBOL(add_group, '\0', "add group to group", false);
     DAS_CLI_SYMBOL(add_user, '\0', "add user to group", false);
+    DAS_CLI_SYMBOL(admin_r, 0, "Set admin users that can read all data", false);
+    DAS_CLI_SYMBOL(admin_rw, 0, "Set admin users that can read and write all data", false);
     DAS_CLI_SYMBOL(advertise_host, 0, "advertise extra endpoint using given host", false);
     DAS_CLI_SYMBOL(allow_create_passport, 0, "allow user to create passports for network", false);
     DAS_CLI_SYMBOL(allow_root_creation, 0, "create the filesystem root if not found" , false);
@@ -45,8 +47,10 @@ namespace infinit
     DAS_CLI_SYMBOL(dropbox, '\0', "store blocks on Dropbox", false);
     DAS_CLI_SYMBOL(email, 'e', "user email", false);
     DAS_CLI_SYMBOL(enable_inherit, 'i', "make new files and directories inherit permissions", false);
+    DAS_CLI_SYMBOL(encrypt, 0,  "use encryption: no, lazy, yes (default: yes)", false);
     DAS_CLI_SYMBOL(endpoint, '\0', "S3 endpoint", false);
     DAS_CLI_SYMBOL(endpoints_file, 0, "write node listening endpoints to file (format: host:port)", false);
+    DAS_CLI_SYMBOL(eviction_delay, 'e', "missing servers eviction delay\n(default: 10 min)", false);
     DAS_CLI_SYMBOL(fallback_xattrs, '\0', "use fallback special file if extended attributes are not supported", false);
     DAS_CLI_SYMBOL(fetch, 'f', "fetch {type} from {hub}", false);
     DAS_CLI_SYMBOL(fetch_drive, 0, "update local drive descriptor from {hub}", false);
@@ -65,7 +69,12 @@ namespace infinit
     DAS_CLI_SYMBOL(host, '\0', "SSH host", false);
     DAS_CLI_SYMBOL(icon, 'i', "path to an image to use as icon", false);
     DAS_CLI_SYMBOL(input, 'i', "file to read {type} from", false);
+    DAS_CLI_SYMBOL(k, 0, "number of groups (default: 1)", false);
+    DAS_CLI_SYMBOL(kalimero, 0, "use a Kalimero overlay network. Used for local testing", false);
+    DAS_CLI_SYMBOL(kelips, 0, "use a Kelips overlay network (default)", false);
+    DAS_CLI_SYMBOL(kelips_contact_timeout, 0, "ping timeout before considering a peer lost (default: 2min)", false);
     DAS_CLI_SYMBOL(key, 'k', "RSA key pair in PEM format - e.g. your SSH key", false);
+    DAS_CLI_SYMBOL(kouncil, 0, "use a Kouncil overlay network", false);
     DAS_CLI_SYMBOL(ldap_name, 'l', "user LDAP distinguished name", false);
     DAS_CLI_SYMBOL(listen, 0, "specify which IP address to listen on (default: all)", false);
     DAS_CLI_SYMBOL(map_other_permissions, 0, "allow chmod to set world permissions", false);
@@ -77,9 +86,11 @@ namespace infinit
     DAS_CLI_SYMBOL(name, 'n', "name of the {type} {action}", true);
     DAS_CLI_SYMBOL(network, 'N', "network {action} {type} for", false);
     DAS_CLI_SYMBOL(no_avatar, '\0', "do not {action} avatars", false);
+    DAS_CLI_SYMBOL(no_consensus, 0, "use no consensus algorithm", false);
     DAS_CLI_SYMBOL(no_countdown, 0, "do not show countdown timer", false);
     DAS_CLI_SYMBOL(no_local_endpoints, 0, "Disable automatic detection of local endpoints", false);
     DAS_CLI_SYMBOL(no_public_endpoints, 0, "Disable automatic detection of public endpoints", false);
+    DAS_CLI_SYMBOL(nodes, 0, "estimate of the total number of nodes", false);
     DAS_CLI_SYMBOL(operation, 'O', "operation to {action}", false);
     DAS_CLI_SYMBOL(others_mode, 'o', "access mode {action} for other users: r, w, rw, none", false);
     DAS_CLI_SYMBOL(output, 'o', "file to write the {type} to", false);
@@ -88,11 +99,13 @@ namespace infinit
     DAS_CLI_SYMBOL(password, 'P', "password to authenticate with {hub}", false);
     DAS_CLI_SYMBOL(path, '\0', "file whose {type} {action}", false);
     DAS_CLI_SYMBOL(paths, 'p', "paths to blocks", false);
+    DAS_CLI_SYMBOL(paxos, 0, "use Paxos consensus algorithm (default)", false);
     DAS_CLI_SYMBOL(peer, 0, "peer address or file with list of peer addresses (host:port)" , false);
     DAS_CLI_SYMBOL(peers_file, 0, "Periodically write list of known peers to given file", false);
     DAS_CLI_SYMBOL(permissions, 0, "set default user permissions to XXX", false);
     DAS_CLI_SYMBOL(port, 0, "outbound port to use", false);
     DAS_CLI_SYMBOL(port_file, 0, "write node listening port to file", false);
+    DAS_CLI_SYMBOL(protocol, 0, "RPC protocol to use: tcp, utp, all (default: all)", false);
     DAS_CLI_SYMBOL(publish, 0, "alias for --fetch-endpoints --push-endpoints" , false);
     DAS_CLI_SYMBOL(pull, '\0', "pull {type} from {hub}", false);
     DAS_CLI_SYMBOL(purge, '\0', "purge objects owned by the {type}", false);
@@ -100,8 +113,9 @@ namespace infinit
     DAS_CLI_SYMBOL(push_drive, '\0', "push drive to {hub}", false);
     DAS_CLI_SYMBOL(push_endpoints, 0, "push endpoints to {hub}" , false);
     DAS_CLI_SYMBOL(push_invitations, '\0', "update remote drive descriptor and send invitations to {hub}", false);
+    DAS_CLI_SYMBOL(push_network, 0, "push the network to {hub}", false);
     DAS_CLI_SYMBOL(push_passport, 0, "push passport to {hub}", false);
-    DAS_CLI_SYMBOL(push_user, '\0', "push user to {hub}", false);
+    DAS_CLI_SYMBOL(push_user, 0, "push user to {hub}", false);
     DAS_CLI_SYMBOL(push_volume, 0, "push the volume to {hub}" , false);
     DAS_CLI_SYMBOL(readonly, 0, "mount as readonly" , false);
     DAS_CLI_SYMBOL(receive, 0, "receive an object from another device using {hub}", false);
@@ -112,12 +126,14 @@ namespace infinit
     DAS_CLI_SYMBOL(remove_admin, '\0', "remove administrator from group", false);
     DAS_CLI_SYMBOL(remove_group, '\0', "remove group from group", false);
     DAS_CLI_SYMBOL(remove_user, '\0', "remove user from group", false);
+    DAS_CLI_SYMBOL(replication_factor, 'r', "data replication factor (default: 1)", false);
     DAS_CLI_SYMBOL(s3, '\0', "store blocks on AWS S3", false);
     DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output", false);
     DAS_CLI_SYMBOL(service, 0, "fetch {type} from the network, not beyond", false);
     DAS_CLI_SYMBOL(show, '\0', "list group users, administrators and description", false);
     DAS_CLI_SYMBOL(ssh, '\0', "store blocks via SSH", false);
     DAS_CLI_SYMBOL(stat, '\0', "show the remaining asynchronous operations count and size", false);
+    DAS_CLI_SYMBOL(storage, 'S', "storage to contribute (optional, data striped over multiple)", false);
     DAS_CLI_SYMBOL(storage_class, '\0', "storage class to use: STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)", false);
     DAS_CLI_SYMBOL(traverse, 't', "set read permission on parent directories", false);
     DAS_CLI_SYMBOL(user, 'u', "user {action} {type} for", false);
@@ -125,6 +141,7 @@ namespace infinit
     DAS_CLI_SYMBOL(verbose, '\0', "use verbose output", false);
     DAS_CLI_SYMBOL(volume, 'V', "associated volume name", false);
 
+    
     DAS_SYMBOL(acl);
     DAS_SYMBOL(block);
     DAS_SYMBOL(call);

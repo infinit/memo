@@ -18,7 +18,69 @@ namespace infinit
     public:
       Network(Infinit& infinit);
       using Modes
-        = decltype(elle::meta::list(cli::export_));
+        = decltype(elle::meta::list(cli::create,
+                                    cli::export_));
+
+      using Strings = std::vector<std::string>;
+
+      /*---------------.
+      | Mode: create.  |
+      `---------------*/
+      using ModeCreate =
+        Mode<decltype(binding(modes::mode_create,
+                              cli::name,
+                              cli::description = boost::none,
+                              cli::storage = Strings{},
+                              cli::port = boost::none,
+                              cli::replication_factor = 1,
+                              cli::eviction_delay = boost::none,
+                              cli::output = boost::none,
+                              cli::push_network = false,
+                              cli::push = false,
+                              cli::admin_r = Strings{},
+                              cli::admin_rw = Strings{},
+                              cli::peer = Strings{},
+                              // Consensus types.
+                              cli::paxos = false,
+                              cli::no_consensus = false,
+                              // Overlay types.
+                              cli::kelips = false,
+                              cli::kalimero = false,
+                              cli::kouncil = false,
+                              // Kelips options,
+                              cli::nodes = boost::none,
+                              cli::k = boost::none,
+                              cli::kelips_contact_timeout = boost::none,
+                              cli::encrypt = boost::none,
+                              cli::protocol = boost::none))>;
+      ModeCreate create;
+      void
+      mode_create(std::string const& network_name,
+                  boost::optional<std::string> description = {},
+                  Strings const& storage = {},
+                  boost::optional<int> port = boost::none,
+                  int replication_factor = 1,
+                  boost::optional<std::string> eviction_delay = boost::none,
+                  boost::optional<std::string> const& output_name = boost::none,
+                  bool push_network = false,
+                  bool push = false,
+                  Strings const& admin_r = {},
+                  Strings const& admin_rw = {},
+                  Strings const& peer = {},
+                  // Consensus types.
+                  bool paxos = false,
+                  bool no_consensus = false,
+                  // Overlay types.
+                  bool kelips = false,
+                  bool kalimero = false,
+                  bool kouncil = false,
+                  // Kelips options,
+                  boost::optional<int> nodes = boost::none,
+                  boost::optional<int> k = boost::none,
+                  boost::optional<std::string> kelips_contact_timeout = boost::none,
+                  boost::optional<std::string> encrypt = boost::none,
+                  boost::optional<std::string> protocol = boost::none);
+
 
       /*---------------.
       | Mode: export.  |

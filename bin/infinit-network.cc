@@ -172,7 +172,7 @@ COMMAND(create)
     bool paxos = args.count("paxos");
     if (!no_consensus)
       paxos = true;
-    if (!one(no_consensus, paxos))
+    if (1 < no_consensus + paxos)
       elle::err<CommandLineError>("more than one consensus specified");
     if (paxos)
     {
