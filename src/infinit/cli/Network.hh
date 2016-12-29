@@ -20,6 +20,7 @@ namespace infinit
       using Modes
         = decltype(elle::meta::list(cli::create,
                                     cli::export_,
+                                    cli::fetch,
                                     cli::update));
 
       using Strings = std::vector<std::string>;
@@ -94,6 +95,18 @@ namespace infinit
       void
       mode_export(std::string const& volume_name,
                   boost::optional<std::string> const& output_name = {});
+
+      /*--------------.
+      | Mode: fetch.  |
+      `--------------*/
+
+      using ModeFetch =
+        Mode<decltype(binding(modes::mode_fetch,
+                              cli::name = boost::none))>;
+      ModeFetch fetch;
+      void
+      mode_fetch(boost::optional<std::string> const& network_name = {});
+
 
       /*---------------.
       | Mode: update.  |

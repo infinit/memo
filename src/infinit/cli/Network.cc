@@ -66,6 +66,11 @@ namespace infinit
         this->bind(modes::mode_export,
                    cli::name,
                    cli::output = boost::none))
+      , fetch(
+        "Fetch a network from {hub}",
+        das::cli::Options(),
+        this->bind(modes::mode_fetch,
+                   cli::name = boost::none))
       , update(
         "Update a network",
         das::cli::Options(),
@@ -376,6 +381,74 @@ namespace infinit
       name = desc.name;
       elle::serialization::json::serialize(desc, *output, false);
       cli.report_exported(*output, "network", desc.name);
+    }
+
+
+    /*--------------.
+    | Mode: fetch.  |
+    `--------------*/
+
+    void
+    Network::mode_fetch(boost::optional<std::string> const& network_name)
+    {
+      ELLE_TRACE_SCOPE("export");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+
+      auto save = [&ifnt,&owner] (infinit::NetworkDescriptor desc_) {
+        // Save or update network descriptor.
+        ifnt.network_save(desc_, true);
+        for (auto const& u: ifnt.network_linked_users(desc_.name))
+        {
+          // Copy network descriptor.
+          auto desc = desc_;
+          auto network = ifnt.network_get(desc.name, u, false);
+          if (network.model)
+          {
+            auto* d = dynamic_cast<infinit::model::doughnut::Configuration*>(
+              network.model.get()
+            );
+            auto updated_network = infinit::Network(
+              desc.name,
+              std::make_unique<infinit::model::doughnut::Configuration>(
+                d->id,
+                std::move(desc.consensus),
+                std::move(desc.overlay),
+                std::move(d->storage),
+                u.keypair(),
+                std::make_shared<infinit::cryptography::rsa::PublicKey>(
+                  desc.owner),
+                d->passport,
+                u.name,
+                d->port,
+                desc.version,
+                desc.admin_keys,
+                desc.peers),
+              desc.description);
+            // Update linked network for user.
+            ifnt.network_save(u, updated_network, true);
+          }
+        }
+      };
+      if (network_name)
+      {
+        auto name = ifnt.qualified_name(*network_name, owner);
+        save(ifnt.beyond_fetch<infinit::NetworkDescriptor>("network", name));
+      }
+      else // Fetch all networks for owner.
+      {
+        using Networks
+          = std::unordered_map<std::string, std::vector<infinit::NetworkDescriptor>>;
+        auto res =
+          ifnt.beyond_fetch<Networks>(
+            elle::sprintf("users/%s/networks", owner.name),
+            "networks for user",
+            owner.name,
+            owner);
+        for (auto const& n: res["networks"])
+          save(n);
+      }
     }
 
 
