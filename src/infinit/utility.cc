@@ -19,7 +19,7 @@ namespace infinit
   elle::Version
   version()
   {
-    return elle::Version(INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
+    return {INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR};
   }
 
   std::string
@@ -51,11 +51,10 @@ namespace infinit
   }
 
   Headers
-  signature_headers(
-    reactor::http::Method method,
-    std::string const& where,
-    User const& self,
-    boost::optional<elle::ConstWeakBuffer> payload)
+  signature_headers(reactor::http::Method method,
+                    std::string const& where,
+                    User const& self,
+                    boost::optional<elle::ConstWeakBuffer> payload)
   {
     if (!self.private_key)
       elle::err("no private key for %s, unable to sign request", self.name);
@@ -68,11 +67,10 @@ namespace infinit
     elle::Buffer string_to_sign = elle::Buffer();
     semi_colon_append(string_to_sign, elle::sprintf("%s", method));
     semi_colon_append(string_to_sign, where);
-    elle::Buffer payload_hash;
-    if (payload)
-      payload_hash = hash(payload.get(), Oneway::sha256);
-    else
-      payload_hash = hash(elle::ConstWeakBuffer(), Oneway::sha256);
+    auto payload_hash
+      = payload
+      ? hash(payload.get(), Oneway::sha256)
+      : hash(elle::ConstWeakBuffer(), Oneway::sha256);
     auto encoded_hash = elle::format::base64::encode(payload_hash);
     semi_colon_append(string_to_sign, encoded_hash.string());
     auto now = std::to_string(time(0));
@@ -82,7 +80,7 @@ namespace infinit
       cryptography::rsa::Padding::pkcs1,
       cryptography::Oneway::sha256);
     auto encoded_signature = elle::format::base64::encode(signature);
-    std::unordered_map<std::string, std::string> res = {
+    auto res = std::unordered_map<std::string, std::string>{
       { "infinit-signature", encoded_signature.string() },
       { "infinit-time", now },
       { "infinit-user", self.name },
@@ -113,8 +111,8 @@ namespace infinit
   is_hidden_file(boost::filesystem::path const& path)
   {
     return
-      path.filename().string().front() == '.' ||
-      path.filename().string().back() == '~';
+      path.filename().string().front() == '.'
+      || path.filename().string().back() == '~';
   }
 
   bool
