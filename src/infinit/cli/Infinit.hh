@@ -12,6 +12,7 @@
 #include <infinit/cli/Device.hh>
 #include <infinit/cli/Drive.hh>
 #include <infinit/cli/Journal.hh>
+#include <infinit/cli/Network.hh>
 #include <infinit/cli/Passport.hh>
 #include <infinit/cli/Silo.hh>
 #include <infinit/cli/User.hh>
@@ -121,6 +122,7 @@ namespace infinit
       Device device = *this;
       Drive drive = *this;
       Journal journal = *this;
+      Network network = *this;
       Passport passport = *this;
       Silo silo = *this;
       User user = *this;
@@ -132,6 +134,7 @@ namespace infinit
                                     cli::device,
                                     cli::drive,
                                     cli::journal,
+                                    cli::network,
                                     cli::passport,
                                     cli::silo,
                                     cli::user,
