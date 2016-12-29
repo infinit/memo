@@ -19,6 +19,7 @@ namespace infinit
     DAS_CLI_SYMBOL(add_group, '\0', "add group to group", false);
     DAS_CLI_SYMBOL(add_user, '\0', "add user to group", false);
     DAS_CLI_SYMBOL(admin_r, 0, "Set admin users that can read all data", false);
+    DAS_CLI_SYMBOL(admin_remove, 0, "Remove given users from all admin lists (prefix: @<group>, requires mountpoint)", false);
     DAS_CLI_SYMBOL(admin_rw, 0, "Set admin users that can read and write all data", false);
     DAS_CLI_SYMBOL(advertise_host, 0, "advertise extra endpoint using given host", false);
     DAS_CLI_SYMBOL(allow_create_passport, 0, "allow user to create passports for network", false);

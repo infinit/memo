@@ -6,6 +6,7 @@
 
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/utility.hh>
+#include <infinit/cli/xattrs.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/MonitoringServer.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
@@ -65,6 +66,21 @@ namespace infinit
         this->bind(modes::mode_export,
                    cli::name,
                    cli::output = boost::none))
+      , update(
+        "Update a network",
+        das::cli::Options(),
+        this->bind(modes::mode_update,
+                   cli::name,
+                   cli::description = boost::none,
+                   cli::port = boost::none,
+                   cli::output = boost::none,
+                   cli::push_network = false,
+                   cli::push = false,
+                   cli::admin_r = Strings{},
+                   cli::admin_rw = Strings{},
+                   cli::admin_remove = Strings{},
+                   cli::mountpoint = boost::none,
+                   cli::peer = Strings{}))
     {}
 
 
@@ -300,7 +316,7 @@ namespace infinit
 
       auto dht =
         std::make_unique<infinit::model::doughnut::Configuration>(
-          infinit::model::Address::random(0), // FIXME
+          infinit::model::Address::random(0),
           std::move(consensus_config),
           std::move(overlay_config),
           std::move(storage),
@@ -360,6 +376,154 @@ namespace infinit
       name = desc.name;
       elle::serialization::json::serialize(desc, *output, false);
       cli.report_exported(*output, "network", desc.name);
+    }
+
+
+    /*---------------.
+    | Mode: update.  |
+    `---------------*/
+
+    namespace
+    {
+      std::pair<infinit::cryptography::rsa::PublicKey, bool>
+      user_key(infinit::Infinit& ifnt,
+               std::string name,
+               boost::optional<std::string> mountpoint)
+      {
+        bool is_group = false;
+        if (!name.empty() && name[0] == '@')
+        {
+          is_group = true;
+          name = name.substr(1);
+        }
+        if (!name.empty() && name[0] == '{')
+        {
+          elle::Buffer buf(name);
+          elle::IOStream is(buf.istreambuf());
+          auto key = elle::serialization::json::deserialize
+            <infinit::cryptography::rsa::PublicKey>(is);
+          return std::make_pair(key, is_group);
+        }
+        if (!is_group)
+          return std::make_pair(ifnt.user_get(name).public_key, false);
+        if (!mountpoint)
+          elle::err("A mountpoint is required to fetch groups.");
+        char buf[32768];
+        int res = getxattr(*mountpoint,
+                           "infinit.group.control_key." + name,
+                           buf, 16384, true);
+        if (res <= 0)
+          elle::err("Unable to fetch group %s", name);
+        elle::Buffer b(buf, res);
+        elle::IOStream is(b.istreambuf());
+        auto key = elle::serialization::json::deserialize
+          <infinit::cryptography::rsa::PublicKey>(is);
+        return std::make_pair(key, is_group);
+      }
+    }
+
+    void
+    Network::mode_update(std::string const& network_name,
+                         boost::optional<std::string> description,
+                         boost::optional<int> port,
+                         boost::optional<std::string> const& output_name,
+                         bool push_network,
+                         bool push,
+                         std::vector<std::string> const& admin_r,
+                         std::vector<std::string> const& admin_rw,
+                         std::vector<std::string> const& admin_remove,
+                         boost::optional<std::string> mountpoint,
+                         std::vector<std::string> const& peer)
+    {
+      ELLE_TRACE_SCOPE("create");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+
+      auto network = ifnt.network_get(network_name, owner);
+      if (description)
+        network.description = description;
+      network.ensure_allowed(owner, "update");
+      auto& dht = *network.dht();
+      if (port)
+        dht.port = *port;
+      if (cli.compatibility_version())
+        dht.version = *cli.compatibility_version();
+      bool changed_admins = false;
+      auto check_group_mount = [&] (bool group)
+        {
+          if (group && !mountpoint)
+            elle::err<Error>("must specify mountpoint of volume on "
+                             "network \"%s\" to edit group admins",
+                             network.name);
+        };
+      auto add_admin = [&] (infinit::cryptography::rsa::PublicKey const& key,
+                            bool group, bool read, bool write)
+        {
+          if (read && !write)
+            push_back_if_missing(group ? dht.admin_keys.group_r : dht.admin_keys.r,
+                                 key);
+          if (write) // Implies RW.
+            push_back_if_missing(group ? dht.admin_keys.group_w : dht.admin_keys.w,
+                                 key);
+          changed_admins = true;
+        };
+      for (auto u: admin_r)
+      {
+        auto r = user_key(ifnt, u, mountpoint);
+        check_group_mount(r.second);
+        add_admin(r.first, r.second, true, false);
+      }
+      for (auto u: admin_rw)
+      {
+        auto r = user_key(ifnt, u, mountpoint);
+        check_group_mount(r.second);
+        add_admin(r.first, r.second, true, true);
+      }
+      for (auto u: admin_remove)
+      {
+        auto r = user_key(ifnt, u, mountpoint);
+        check_group_mount(r.second);
+        auto del = [&r](auto& cont)
+          {
+            cont.erase(std::remove(cont.begin(), cont.end(), r.first),
+                       cont.end());
+          };
+        del(dht.admin_keys.r);
+        del(dht.admin_keys.w);
+        del(dht.admin_keys.group_r);
+        del(dht.admin_keys.group_w);
+        changed_admins = true;
+      }
+      if (!peer.empty())
+        dht.peers = parse_peers(peer);
+      auto desc = [&]
+        {
+          if (output_name)
+          {
+            auto output = cli.get_output(output_name);
+            elle::serialization::json::serialize(network, *output, false);
+            return std::make_unique<infinit::NetworkDescriptor>(std::move(network));
+          }
+          else
+          {
+            ifnt.network_save(owner, network, true);
+            cli.report_updated("linked network", network.name);
+            auto res
+              = std::make_unique<infinit::NetworkDescriptor>(std::move(network));
+            cli.report_updated("network", res->name);
+            return res;
+          }
+        }();
+      if (push || push_network)
+        {
+          ifnt.beyond_push("network", desc->name, *desc, owner, false, true);
+          // FIXME: report.
+        }
+      if (changed_admins && !output_name)
+        std::cout << "INFO: Changes to network admins do not affect existing data:\n"
+                  << "INFO: Admin access will be updated on the next write to each\n"
+                  << "INFO: file or folder.\n";
     }
   }
 }

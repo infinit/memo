@@ -19,7 +19,8 @@ namespace infinit
       Network(Infinit& infinit);
       using Modes
         = decltype(elle::meta::list(cli::create,
-                                    cli::export_));
+                                    cli::export_,
+                                    cli::update));
 
       using Strings = std::vector<std::string>;
 
@@ -93,6 +94,37 @@ namespace infinit
       void
       mode_export(std::string const& volume_name,
                   boost::optional<std::string> const& output_name = {});
+
+      /*---------------.
+      | Mode: update.  |
+      `---------------*/
+
+      using ModeUpdate =
+        Mode<decltype(binding(modes::mode_update,
+                              cli::name,
+                              cli::description = boost::none,
+                              cli::port = boost::none,
+                              cli::output = boost::none,
+                              cli::push_network = false,
+                              cli::push = false,
+                              cli::admin_r = Strings{},
+                              cli::admin_rw = Strings{},
+                              cli::admin_remove = Strings{},
+                              cli::mountpoint = boost::none,
+                              cli::peer = Strings{}))>;
+      ModeUpdate update;
+      void
+      mode_update(std::string const& network_name,
+                  boost::optional<std::string> description = {},
+                  boost::optional<int> port = {},
+                  boost::optional<std::string> const& output_name = {},
+                  bool push_network = false,
+                  bool push = false,
+                  std::vector<std::string> const& admin_r = Strings{},
+                  std::vector<std::string> const& admin_rw = Strings{},
+                  std::vector<std::string> const& admin_remove = Strings{},
+                  boost::optional<std::string> mountpoint = {},
+                  std::vector<std::string> const& peer = Strings{});
     };
   }
 }
