@@ -259,13 +259,9 @@ namespace infinit
           ELLE_TRACE("%s: network exception connecting to %s: %s", this, p, e);
           return;
         }
-        if (peer->id() == model::Address::null)
-          if (auto r = dynamic_cast<model::doughnut::Remote*>(peer.get()))
-          {
-            reactor::Barrier b;
-            r->id_discovered().connect([&] { b.open();});
-            reactor::wait(b);
-          }
+        if (auto r = dynamic_cast<model::doughnut::Remote*>(peer.get()))
+          r->connect();
+        ELLE_ASSERT_NEQ(peer->id(), model::Address::null);
         if (p.first == model::Address::null)
         {
           auto it = this->_infos.find(peer->id());
