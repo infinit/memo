@@ -168,8 +168,8 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::storage::StorageConfig>
-      storage_configuration(infinit::Infinit& ifnt,
-                            std::vector<std::string> const& storage)
+      make_storage_config(infinit::Infinit& ifnt,
+                          std::vector<std::string> const& storage)
       {
         auto res = std::unique_ptr<infinit::storage::StorageConfig>{};
         if (storage.empty())
@@ -185,6 +185,60 @@ namespace infinit
             return std::make_unique<infinit::storage::StripStorageConfig>
               (std::move(backends));
         }
+      }
+
+      // Consensus
+      auto
+      make_consensus_config(bool paxos,
+                            bool no_consensus,
+                            int replication_factor,
+                            boost::optional<std::string> eviction_delay)
+        -> std::unique_ptr<infinit::model::doughnut::consensus::Configuration>
+      {
+        if (replication_factor < 1)
+          elle::err<Error>("replication factor must be greater than 0");
+        if (!no_consensus)
+          paxos = true;
+        if (1 < no_consensus + paxos)
+          elle::err<Error>("more than one consensus specified");
+        if (paxos)
+          return std::make_unique<
+            infinit::model::doughnut::consensus::Paxos::Configuration>(
+              replication_factor,
+              eviction_delay ?
+              std::chrono::duration_from_string<std::chrono::seconds>(*eviction_delay) :
+              std::chrono::seconds(10 * 60));
+        else
+        {
+          if (replication_factor != 1)
+            elle::err("without consensus, replication factor must be 1");
+          return std::make_unique<
+            infinit::model::doughnut::consensus::Configuration>();
+        }
+      }
+
+      auto
+      make_admin_keys(infinit::Infinit& ifnt,
+                      std::vector<std::string> const& admin_r,
+                      std::vector<std::string> const& admin_rw)
+        -> infinit::model::doughnut::AdminKeys
+      {
+        auto res = infinit::model::doughnut::AdminKeys{};
+        auto add =
+          [&res] (infinit::cryptography::rsa::PublicKey const& key,
+                  bool read, bool write)
+          {
+            if (read && !write)
+              push_back_if_missing(res.r, key);
+            // write implies rw.
+            if (write)
+              push_back_if_missing(res.w, key);
+          };
+        for (auto const& a: admin_r)
+          add(ifnt.user_get(a).public_key, true, false);
+        for (auto const& a: admin_rw)
+          add(ifnt.user_get(a).public_key, true, true);
+        return res;
       }
     }
 
@@ -233,56 +287,12 @@ namespace infinit
                                       encrypt, protocol);
         }();
 
-      auto storage = storage_configuration(ifnt, storage_names);
-      // Consensus
-      auto consensus_config =
-        std::unique_ptr<infinit::model::doughnut::consensus::Configuration>{};
-      {
-        if (replication_factor < 1)
-          elle::err<Error>("replication factor must be greater than 0");
-        if (!no_consensus)
-          paxos = true;
-        if (1 < no_consensus + paxos)
-          elle::err<Error>("more than one consensus specified");
-        if (paxos)
-        {
-          consensus_config = std::make_unique<
-            infinit::model::doughnut::consensus::Paxos::Configuration>(
-              replication_factor,
-              eviction_delay ?
-              std::chrono::duration_from_string<std::chrono::seconds>(*eviction_delay) :
-              std::chrono::seconds(10 * 60));
-        }
-        else
-        {
-          if (replication_factor != 1)
-            elle::err("without consensus, replication factor must be 1");
-          consensus_config = std::make_unique<
-            infinit::model::doughnut::consensus::Configuration>();
-        }
-      }
-      infinit::model::doughnut::AdminKeys admin_keys;
-      auto add_admin =
-        [&admin_keys] (infinit::cryptography::rsa::PublicKey const& key,
-                       bool read, bool write)
-        {
-          if (read && !write)
-          {
-            auto& target = admin_keys.r;
-            if (std::find(target.begin(), target.end(), key) == target.end())
-              target.push_back(key);
-          }
-          if (write) // Implies RW.
-          {
-            auto& target = admin_keys.w;
-            if (std::find(target.begin(), target.end(), key) == target.end())
-              target.push_back(key);
-          }
-        };
-      for (auto const& a: admin_r)
-        add_admin(ifnt.user_get(a).public_key, true, false);
-      for (auto const& a: admin_rw)
-        add_admin(ifnt.user_get(a).public_key, true, true);
+      auto storage = make_storage_config(ifnt, storage_names);
+      auto consensus_config = make_consensus_config(paxos,
+                                                    no_consensus,
+                                                    replication_factor,
+                                                    eviction_delay);
+      auto admin_keys = make_admin_keys(ifnt, admin_r, admin_rw);
 
       auto peers = std::vector<infinit::model::Endpoints>{};
       if (!peer.empty())
@@ -310,20 +320,22 @@ namespace infinit
         auto network = infinit::Network(ifnt.qualified_name(network_name, owner),
                                         std::move(dht),
                                         description);
-        auto desc = std::unique_ptr<infinit::NetworkDescriptor>{};
-        if (output_name)
-        {
-          auto output = cli.get_output(output_name);
-          elle::serialization::json::serialize(network, *output, false);
-          desc.reset(new infinit::NetworkDescriptor(std::move(network)));
-        }
-        else
-        {
-          ifnt.network_save(owner, network);
-          desc.reset(new infinit::NetworkDescriptor(std::move(network)));
-          ifnt.network_save(*desc);
-          cli.report_created("network", desc->name);
-        }
+        auto desc = [&] {
+            if (output_name)
+            {
+              auto output = cli.get_output(output_name);
+              elle::serialization::json::serialize(network, *output, false);
+              return std::make_unique<infinit::NetworkDescriptor>(std::move(network));
+            }
+            else
+            {
+              ifnt.network_save(owner, network);
+              auto res = std::make_unique<infinit::NetworkDescriptor>(std::move(network));
+              ifnt.network_save(*res);
+              cli.report_created("network", res->name);
+              return res;
+            }
+          }();
         if (push || push_network)
           ifnt.beyond_push("network", desc->name, *desc, owner);
       }
