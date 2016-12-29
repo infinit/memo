@@ -4,6 +4,10 @@
 
 #include <infinit/utility.hh>
 
+#ifdef INFINIT_WINDOWS
+#  undef stat
+#endif
+
 namespace infinit
 {
   namespace cli
