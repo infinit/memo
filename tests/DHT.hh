@@ -1,6 +1,7 @@
 #ifndef DHT_HH
 # define DHT_HH
 
+# include <elle/factory.hh>
 # include <elle/named.hh>
 
 # include <infinit/model/doughnut/Doughnut.hh>
@@ -249,7 +250,8 @@ public:
       keys = infinit::cryptography::rsa::keypair::generate(512),
       owner = boost::optional<infinit::cryptography::rsa::KeyPair>(),
       id = infinit::model::Address::random(0), // FIXME
-      storage = elle::make_unique<infinit::storage::Memory>(),
+      storage = elle::factory(
+        [] { return elle::make_unique<infinit::storage::Memory>(); }),
       version = boost::optional<elle::Version>(),
       make_overlay = &Overlay::make,
       make_consensus = [] (std::unique_ptr<dht::consensus::Consensus> c)
