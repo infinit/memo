@@ -368,12 +368,15 @@ COMMAND(update)
     {
       auto r = user_key(u, optional(args, "mountpoint"));
       check_group_mount(r.second);
-#define DEL(cont) cont.erase(std::remove(cont.begin(), cont.end(), r.first), cont.end())
-      DEL(dht.admin_keys.r);
-      DEL(dht.admin_keys.w);
-      DEL(dht.admin_keys.group_r);
-      DEL(dht.admin_keys.group_w);
-#undef DEL
+      auto del = [&r](auto& cont)
+        {
+          cont.erase(std::remove(cont.begin(), cont.end(), r.first),
+                     cont.end());
+        };
+      del(dht.admin_keys.r);
+      del(dht.admin_keys.w);
+      del(dht.admin_keys.group_r);
+      del(dht.admin_keys.group_w);
     }
     changed_admins = true;
   }
@@ -761,11 +764,11 @@ namespace
         infinit::endpoints_to_file(
           dht->local()->server_endpoints(), endpoint_file.get());
     }
-  #ifndef INFINIT_WINDOWS
+#ifndef INFINIT_WINDOWS
     infinit::DaemonHandle daemon_handle;
     if (flag(args, "daemon"))
       daemon_handle = infinit::daemon_hold(0, 1);
-  #endif
+#endif
     auto poll_beyond = optional<int>(args, option_poll_beyond);
     auto run = [&, push]
       {
@@ -779,13 +782,13 @@ namespace
             poll_thread =
               network.make_poll_beyond_thread(*dht, eps, *poll_beyond);
         }
-  #ifndef INFINIT_WINDOWS
+#ifndef INFINIT_WINDOWS
         if (flag(args, "daemon"))
         {
           ELLE_TRACE("releasing daemon");
           infinit::daemon_release(daemon_handle);
         }
-  #endif
+#endif
         action(self, network, *dht, push, script_mode);
       };
     if (push)
