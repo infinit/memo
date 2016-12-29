@@ -1,14 +1,13 @@
-#ifndef INFINIT_MODEL_ADDRESS_HH
-# define INFINIT_MODEL_ADDRESS_HH
+#pragma once
 
-# include <cstdint>
-# include <cstring>
-# include <functional>
-# include <utility>
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <utility>
 
-# include <elle/UUID.hh>
-# include <elle/attribute.hh>
-# include <elle/serialization/Serializer.hh>
+#include <elle/UUID.hh>
+#include <elle/attribute.hh>
+#include <elle/serialization/Serializer.hh>
 
 namespace infinit
 {
@@ -91,7 +90,7 @@ namespace elle
     template <>
     struct Serialize<infinit::model::Address>
     {
-      typedef elle::Buffer Type;
+      using Type = elle::Buffer;
       static
       Type
       convert(infinit::model::Address& address);
@@ -102,4 +101,3 @@ namespace elle
   }
 }
 
-#endif
