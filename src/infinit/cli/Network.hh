@@ -28,6 +28,7 @@ namespace infinit
                                     cli::unlink,
                                     cli::pull,
                                     cli::push,
+                                    cli::run,
                                     cli::update));
 
       using Strings = std::vector<std::string>;
@@ -190,6 +191,76 @@ namespace infinit
       ModePush push;
       void
       mode_push(std::string const& network_name);
+
+
+      /*------------.
+      | Mode: run.  |
+      `------------*/
+      using ModeRun =
+        Mode<decltype(binding(modes::mode_run,
+                              cli::name,
+                              cli::input = boost::none,
+#ifndef INFINIT_WINDOWS
+                              cli::daemon = false,
+                              cli::monitoring = true,
+#endif
+                              cli::peer = Strings{},
+                              cli::async = false,
+                              cli::cache = false,
+                              cli::cache_ram_size = boost::none,
+                              cli::cache_ram_ttl = boost::none,
+                              cli::cache_ram_invalidation = boost::none,
+                              cli::cache_disk_size = boost::none,
+                              cli::fetch_endpoints = false,
+                              cli::fetch = false,
+                              cli::push_endpoints = false,
+                              cli::push = false,
+                              cli::publish = false,
+                              cli::endpoints_file = boost::none,
+                              cli::port_file = boost::none,
+                              cli::port = boost::none,
+                              cli::peers_file = boost::none,
+                              cli::listen = boost::none,
+                              cli::fetch_endpoints_interval = boost::none,
+                              cli::no_local_endpoints = false,
+                              cli::no_public_endpoints = false,
+                              cli::advertise_host = Strings{},
+                              // Hisymdden options.
+                              cli::paxos_rebalancing_auto_expand = boost::none,
+                              cli::paxos_rebalancing_inspect = boost::none))>;
+      ModeRun run;
+
+      void
+      mode_run(std::string const& network_name,
+               boost::optional<std::string> const& commands,
+#ifndef INFINIT_WINDOWS
+               bool daemon = false,
+               bool monitoring = true,
+#endif
+               Strings peer = {},
+               bool async = false,
+               bool cache = false,
+               boost::optional<int> cache_ram_size = {},
+               boost::optional<int> cache_ram_ttl = {},
+               boost::optional<int> cache_ram_invalidation = {},
+               boost::optional<uint64_t> cache_disk_size = {},
+               bool fetch_endpoints = false,
+               bool fetch = false,
+               bool push_endpoints = false,
+               bool push = false,
+               bool publish = false,
+               boost::optional<std::string> const& endpoint_file = {},
+               boost::optional<std::string> const& port_file = {},
+               boost::optional<int> port = {},
+               boost::optional<std::string> const& peers_file = {},
+               boost::optional<std::string> listen = {},
+               boost::optional<int> fetch_endpoints_interval = {},
+               bool no_local_endpoints = false,
+               bool no_public_endpoints = false,
+               Strings advertise_host = {},
+               // Hidden options.
+               boost::optional<bool> paxos_rebalancing_auto_expand = {},
+               boost::optional<bool> paxos_rebalancing_inspect = {});
 
 
       /*---------------.

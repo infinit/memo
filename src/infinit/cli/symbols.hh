@@ -5,7 +5,7 @@
 #include <infinit/utility.hh>
 
 #ifdef INFINIT_WINDOWS
-#  undef stat
+# undef stat
 #endif
 
 namespace infinit
@@ -101,6 +101,8 @@ namespace infinit
     DAS_CLI_SYMBOL(path, '\0', "file whose {type} {action}", false);
     DAS_CLI_SYMBOL(paths, 'p', "paths to blocks", false);
     DAS_CLI_SYMBOL(paxos, 0, "use Paxos consensus algorithm (default)", false);
+    DAS_CLI_SYMBOL(paxos_rebalancing_auto_expand, 0, "whether to automatically rebalance under-replicated blocks", false);
+    DAS_CLI_SYMBOL(paxos_rebalancing_inspect, 0, "whether to inspect all blocks on startup and trigger rebalancing", false);
     DAS_CLI_SYMBOL(peer, 0, "peer address or file with list of peer addresses (host:port)" , false);
     DAS_CLI_SYMBOL(peers_file, 0, "Periodically write list of known peers to given file", false);
     DAS_CLI_SYMBOL(permissions, 0, "set default user permissions to XXX", false);

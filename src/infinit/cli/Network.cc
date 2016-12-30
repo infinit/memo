@@ -109,6 +109,39 @@ namespace infinit
         das::cli::Options(),
         this->bind(modes::mode_push,
                    cli::name))
+      , run(
+        "Run a network",
+        das::cli::Options(),
+        this->bind(modes::mode_run,
+                   cli::name,
+                   cli::input = boost::none,
+#ifndef INFINIT_WINDOWS
+                   cli::daemon = false,
+                   cli::monitoring = true,
+#endif
+                   cli::peer = Strings{},
+                   cli::async = false,
+                   cli::cache = false,
+                   cli::cache_ram_size = boost::none,
+                   cli::cache_ram_ttl = boost::none,
+                   cli::cache_ram_invalidation = boost::none,
+                   cli::cache_disk_size = boost::none,
+                   cli::fetch_endpoints = false,
+                   cli::fetch = false,
+                   cli::push_endpoints = false,
+                   cli::push = false,
+                   cli::publish = false,
+                   cli::endpoints_file = boost::none,
+                   cli::port_file = boost::none,
+                   cli::port = boost::none,
+                   cli::peers_file = boost::none,
+                   cli::listen = boost::none,
+                   cli::fetch_endpoints_interval = boost::none,
+                   cli::no_local_endpoints = false,
+                   cli::no_public_endpoints = false,
+                   cli::advertise_host = Strings{},
+                   cli::paxos_rebalancing_auto_expand = boost::none,
+                   cli::paxos_rebalancing_inspect = boost::none))
       , unlink(
         "Unlink this device from a network",
         das::cli::Options(),
@@ -686,6 +719,153 @@ namespace infinit
       }
     }
 
+
+    /*----------------------.
+    | Mode: list_services.  |
+    `----------------------*/
+
+    namespace
+    {
+      using Action =
+        std::function<void (infinit::User& owner,
+                            infinit::Network& network,
+                            dnut::Doughnut& dht,
+                            bool push,
+                            bool script_mode)>;
+      void
+      network_run(Infinit& cli,
+                  std::string const& network_name,
+#ifndef INFINIT_WINDOWS
+                  bool daemon = false,
+                  bool monitoring = true,
+#endif
+                  Strings peer = {},
+                  bool async = false,
+                  bool cache = false,
+                  boost::optional<int> cache_ram_size = {},
+                  boost::optional<int> cache_ram_ttl = {},
+                  boost::optional<int> cache_ram_invalidation = {},
+                  boost::optional<uint64_t> cache_disk_size = {},
+                  bool fetch = false,
+                  bool push = false,
+                  bool publish = false,
+                  boost::optional<std::string> const& endpoints_file = {},
+                  boost::optional<std::string> const& port_file = {},
+                  boost::optional<int> port = {},
+                  boost::optional<std::string> const& peers_file = {},
+                  boost::optional<std::string> listen = {},
+                  boost::optional<int> fetch_endpoints_interval = {},
+                  bool no_local_endpoints = false,
+                  bool no_public_endpoints = false,
+                  Strings advertise_host = {},
+                  boost::optional<bool> paxos_rebalancing_auto_expand = {},
+                  boost::optional<bool> paxos_rebalancing_inspect = {},
+                  Action const& action = {})
+      {
+        auto& ifnt = cli.infinit();
+        auto owner = cli.as_user();
+        auto network = ifnt.network_get(network_name, owner);
+        if (paxos_rebalancing_auto_expand || paxos_rebalancing_inspect)
+        {
+          auto paxos = dynamic_cast<
+            dnut::consensus::Paxos::Configuration*>(
+              network.dht()->consensus.get());
+          if (!paxos)
+            elle::err<Error>("paxos options on non-paxos consensus");
+          if (paxos_rebalancing_auto_expand)
+            paxos->rebalance_auto_expand(*paxos_rebalancing_auto_expand);
+          if (paxos_rebalancing_inspect)
+            paxos->rebalance_inspect(*paxos_rebalancing_inspect);
+        }
+        network.ensure_allowed(owner, "run");
+        cache |= (cache_ram_size || cache_ram_ttl
+                  || cache_ram_invalidation || cache_disk_size);
+        auto listen_address
+          = listen
+          ? boost::asio::ip::address::from_string(*listen)
+          : boost::optional<boost::asio::ip::address>{};
+        auto dht = network.run(
+          owner,
+          false,
+          cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
+          async, cache_disk_size, cli.compatibility_version(), port,
+          listen_address,
+          monitoring);
+        hook_stats_signals(*dht);
+        if (peers_file)
+        {
+          auto more_peers = hook_peer_discovery(*dht, *peers_file);
+          ELLE_TRACE("Peer list file got %s peers", more_peers.size());
+          if (!more_peers.empty())
+            dht->overlay()->discover(more_peers);
+        }
+        if (!peer.empty())
+        {
+          auto eps
+            = elle::make_vector(peer,
+                                [](auto const& peer)
+                                {
+                                  if (bfs::exists(peer))
+                                    return infinit::model::endpoints_from_file(peer);
+                                  else
+                                    return infinit::model::Endpoints({peer});
+                                });
+          dht->overlay()->discover(eps);
+        }
+        // Only push if we have are contributing storage.
+        bool push_p = push && dht->local() && dht->local()->storage();
+        if (!dht->local() && (!cli.script() || push_p))
+          elle::err("network %s is client only since no storage is attached", name);
+        if (dht->local())
+        {
+          if (port_file)
+            port_to_file(dht->local()->server_endpoint().port(), *port_file);
+          if (endpoints_file)
+            endpoints_to_file(dht->local()->server_endpoints(), *endpoints_file);
+        }
+#ifndef INFINIT_WINDOWS
+        auto daemon_handle = daemon ? daemon_hold(0, 1) : daemon_invalid;
+#endif
+        auto run = [&, push_p]
+          {
+            reactor::Thread::unique_ptr poll_thread;
+            if (fetch)
+            {
+              infinit::model::NodeLocations eps;
+              network.beyond_fetch_endpoints(eps);
+              dht->overlay()->discover(eps);
+              if (fetch_endpoints_interval && *fetch_endpoints_interval > 0)
+                poll_thread =
+                  network.make_poll_beyond_thread(*dht, eps,
+                                                  *fetch_endpoints_interval);
+            }
+#ifndef INFINIT_WINDOWS
+            if (daemon)
+            {
+              ELLE_TRACE("releasing daemon");
+              daemon_release(daemon_handle);
+            }
+#endif
+            action(owner, network, *dht, push, cli.script());
+          };
+        if (push_p)
+        {
+          elle::With<InterfacePublisher>(
+            network, owner, dht->id(),
+            dht->local()->server_endpoint().port(),
+            advertise_host,
+            no_local_endpoints,
+            no_public_endpoints) << [&]
+          {
+            run();
+          };
+        }
+        else
+          run();
+      }
+    }
+
+
     /*---------------.
     | Mode: unlink.  |
     `---------------*/
@@ -740,6 +920,215 @@ namespace infinit
         ifnt.beyond_push("network", desc.name, desc, owner, false, true);
         cli.report_action("pushed", "network", network_name);
       }
+    }
+
+    /*------------.
+    | Mode: run.  |
+    `------------*/
+
+    void
+    Network::mode_run(std::string const& network_name,
+                      boost::optional<std::string> const& commands,
+#ifndef INFINIT_WINDOWS
+                      bool daemon,
+                      bool monitoring,
+#endif
+                      Strings peer,
+                      bool async,
+                      bool cache,
+                      boost::optional<int> cache_ram_size,
+                      boost::optional<int> cache_ram_ttl,
+                      boost::optional<int> cache_ram_invalidation,
+                      boost::optional<uint64_t> cache_disk_size,
+                      bool fetch_endpoints,
+                      bool fetch,
+                      bool push_endpoints,
+                      bool push,
+                      bool publish,
+                      boost::optional<std::string> const& endpoints_file,
+                      boost::optional<std::string> const& port_file,
+                      boost::optional<int> port,
+                      boost::optional<std::string> const& peers_file,
+                      boost::optional<std::string> listen,
+                      boost::optional<int> fetch_endpoints_interval,
+                      bool no_local_endpoints,
+                      bool no_public_endpoints,
+                      Strings advertise_host,
+                      boost::optional<bool> paxos_rebalancing_auto_expand,
+                      boost::optional<bool> paxos_rebalancing_inspect)
+    {
+      ELLE_TRACE_SCOPE("run");
+      auto& cli = this->cli();
+      network_run
+        (
+         cli,
+         network_name,
+#ifndef INFINIT_WINDOWS
+         daemon,
+         monitoring,
+#endif
+         peer,
+         async,
+         cache,
+         cache_ram_size,
+         cache_ram_ttl,
+         cache_ram_invalidation,
+         cache_disk_size,
+         fetch || fetch_endpoints,
+         push || push_endpoints,
+         publish,
+         endpoints_file,
+         port_file,
+         port,
+         peers_file,
+         listen,
+         fetch_endpoints_interval,
+         no_local_endpoints,
+         no_public_endpoints,
+         advertise_host,
+         paxos_rebalancing_auto_expand,
+         paxos_rebalancing_inspect,
+         [&] (infinit::User& owner,
+              infinit::Network& network,
+              dnut::Doughnut& dht,
+              bool push,
+              bool script_mode)
+         {
+          reactor::Thread::unique_ptr stat_thread;
+          if (push)
+            stat_thread = network.make_stat_update_thread(owner, dht);
+          cli.report_action("running", "network", network.name);
+          if (script_mode)
+          {
+            auto input = commands_input(commands);
+            while (true)
+            {
+              try
+              {
+                auto json = boost::any_cast<elle::json::Object>(
+                  elle::json::read(*input));
+                elle::serialization::json::SerializerIn command(json, false);
+                command.set_context<dnut::Doughnut*>(&dht);
+                auto op = command.deserialize<std::string>("operation");
+                if (op == "fetch")
+                {
+                  auto address =
+                    command.deserialize<infinit::model::Address>("address");
+                  auto block = dht.fetch(address);
+                  ELLE_ASSERT(block);
+                  auto response = elle::serialization::json::SerializerOut(
+                    std::cout, false, true);
+                  response.serialize("success", true);
+                  response.serialize("value", block);
+                }
+                else if (op == "insert" || op == "update")
+                {
+                  auto block = command.deserialize<
+                    std::unique_ptr<infinit::model::blocks::Block>>("value");
+                  if (!block)
+                    elle::err("missing field: value");
+                  dht.store(
+                    std::move(block),
+                    op == "insert" ?
+                    infinit::model::STORE_INSERT : infinit::model::STORE_UPDATE);
+                  auto response = elle::serialization::json::SerializerOut(
+                    std::cout, false, true);
+                  response.serialize("success", true);
+                }
+                 else if (op == "write_immutable")
+                {
+                  auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(
+                    elle::Buffer(command.deserialize<std::string>("data")));
+                  auto addr = block->address();
+                  dht.store(std::move(block), infinit::model::STORE_INSERT);
+                  auto response = elle::serialization::json::SerializerOut(
+                    std::cout, false, true);
+                  response.serialize("success", true);
+                  response.serialize("address", addr);
+                }
+                else if (op == "read")
+                {
+                  auto block = dht.fetch(
+                      command.deserialize<infinit::model::Address>("address"));
+                  auto response = elle::serialization::json::SerializerOut(
+                    std::cout, false, true);
+                  response.serialize("success", true);
+                  response.serialize("data", block->data().string());
+                  int version = -1;
+                  if (auto mb = dynamic_cast<infinit::model::blocks::MutableBlock*>(block.get()))
+                    version = mb->version();
+                  response.serialize("version", version);
+                }
+                else if (op == "update_mutable")
+                {
+                  auto addr = command.deserialize<infinit::model::Address>("address");
+                  auto version = command.deserialize<int>("version");
+                  auto data = command.deserialize<std::string>("data");
+                  auto block = dht.fetch(addr);
+                  auto& mb = dynamic_cast<infinit::model::blocks::MutableBlock&>(*block);
+                  if (mb.version() >= version)
+                    elle::err("Current version is %s", mb.version());
+                  mb.data(elle::Buffer(data));
+                  dht.store(std::move(block), infinit::model::STORE_UPDATE);
+                  auto response = elle::serialization::json::SerializerOut(
+                    std::cout, false, true);
+                  response.serialize("success", true);
+                }
+                else if (op == "resolve_named")
+                {
+                  auto name = command.deserialize<std::string>("name");
+                  bool create = command.deserialize<bool>("create_if_missing");
+                  auto addr = dnut::NB::address(*dht.owner(),
+                    name, dht.version());
+                  auto res = [&] {
+                    try
+                    {
+                      auto block = dht.fetch(addr);
+                      auto& nb = dynamic_cast<dnut::NB&>(*block);
+                      return infinit::model::Address::from_string(nb.data().string());
+                    }
+                    catch (infinit::model::MissingBlock const& mb)
+                    {
+                      if (!create)
+                        elle::err("NB %s does not exist", name);
+                      auto ab = dht.make_block<infinit::model::blocks::ACLBlock>();
+                      auto addr = ab->address();
+                      dht.store(std::move(ab), infinit::model::STORE_INSERT);
+                      auto nb = dnut::NB(dht, name, elle::sprintf("%s", addr));
+                      dht.store(nb, infinit::model::STORE_INSERT);
+                      return addr;
+                    }
+                  }();
+                  auto response = elle::serialization::json::SerializerOut(
+                    std::cout, false, true);
+                  response.serialize("success", true);
+                  response.serialize("address", res);
+                }
+                else if (op == "remove")
+                {
+                  auto addr = command.deserialize<infinit::model::Address>("address");
+                  dht.remove(addr);
+                  auto response = elle::serialization::json::SerializerOut(
+                    std::cout, false, true);
+                  response.serialize("success", true);
+                }
+                else
+                  elle::err("invalide operation: %s", op);
+              }
+              catch (elle::Error const& e)
+              {
+                if (input->eof())
+                  return;
+                auto response =elle::serialization::json::SerializerOut(
+                  std::cout, false, true);
+                response.serialize("success", false);
+                response.serialize("message", e.what());
+              }
+            }
+          }
+          else
+            reactor::sleep();
+        });
     }
 
 
