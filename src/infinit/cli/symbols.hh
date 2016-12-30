@@ -171,6 +171,7 @@ namespace infinit
     DAS_SYMBOL(status);
     DAS_SYMBOL(stop);
     DAS_SYMBOL(transmit);
+    DAS_SYMBOL(unlink);
     DAS_SYMBOL(update);
     DAS_SYMBOL(version);
 
@@ -212,6 +213,7 @@ namespace infinit
       DAS_SYMBOL(mode_status);
       DAS_SYMBOL(mode_stop);
       DAS_SYMBOL(mode_transmit);
+      DAS_SYMBOL(mode_unlink);
       DAS_SYMBOL(mode_update);
     }
   }

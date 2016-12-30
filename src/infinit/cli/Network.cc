@@ -84,6 +84,15 @@ namespace infinit
                    cli::name,
                    cli::storage = Strings{},
                    cli::output = boost::none))
+      , list(
+        "List networks",
+        das::cli::Options(),
+        this->bind(modes::mode_list))
+      , unlink(
+        "Unlink this device from a network",
+        das::cli::Options(),
+        this->bind(modes::mode_unlink,
+                   cli::name))
       , update(
         "Update a network",
         das::cli::Options(),
@@ -549,6 +558,67 @@ namespace infinit
         ifnt.network_save(owner, network, true);
         cli.report_action("linked", "device to network", desc.name);
       }
+    }
+
+
+    /*-------------.
+    | Mode: list.  |
+    `-------------*/
+
+    void
+    Network::mode_list()
+    {
+      ELLE_TRACE_SCOPE("list");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+
+      if (cli.script())
+      {
+        auto l = elle::json::Array{};
+        for (auto const& network: ifnt.networks_get(owner))
+        {
+          auto o = elle::json::Object
+            {
+              {"name", static_cast<std::string>(network.name)},
+              {"linked", bool(network.model) && network.user_linked(owner)},
+            };
+          if (network.description)
+            o["description"] = network.description.get();
+          l.emplace_back(std::move(o));
+        }
+        elle::json::write(std::cout, l);
+      }
+      else
+      {
+        for (auto const& network: ifnt.networks_get(owner))
+        {
+          std::cout << network.name;
+          if (network.description)
+            std::cout << " \"" << network.description.get() << "\"";
+          if (network.model && network.user_linked(owner))
+            std::cout << ": linked";
+          else
+            std::cout << ": not linked";
+          std::cout << std::endl;
+        }
+      }
+    }
+
+    /*---------------.
+    | Mode: unlink.  |
+    `---------------*/
+
+    void
+    Network::mode_unlink(std::string const& network_name)
+    {
+      ELLE_TRACE_SCOPE("unlink");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto network = ifnt.network_get(network_name, owner, true);
+      ifnt.network_unlink(network.name, owner);
+      this->cli().report_action("unlinked", "network", network_name);
     }
 
 
