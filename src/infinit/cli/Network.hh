@@ -19,6 +19,7 @@ namespace infinit
       Network(Infinit& infinit);
       using Modes
         = decltype(elle::meta::list(cli::create,
+                                    cli::delete_,
                                     cli::export_,
                                     cli::fetch,
                                     cli::import,
@@ -89,6 +90,23 @@ namespace infinit
                   boost::optional<std::string> const& encrypt = boost::none,
                   boost::optional<std::string> const& protocol = boost::none);
 
+
+      /*---------------.
+      | Mode: delete.  |
+      `---------------*/
+
+      using ModeDelete =
+        Mode<decltype(binding(modes::mode_delete,
+                              cli::name,
+                              cli::pull = false,
+                              cli::purge = false,
+                              cli::unlink = false))>;
+      ModeDelete delete_;
+      void
+      mode_delete(std::string const& network_name,
+                  bool pull = false,
+                  bool purge = false,
+                  bool unlink = false);
 
       /*---------------.
       | Mode: export.  |

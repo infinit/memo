@@ -29,6 +29,7 @@ namespace infinit
   {
     using Error = das::cli::Error;
     using Strings = Network::Strings;
+    namespace bfs = boost::filesystem;
 
     Network::Network(Infinit& infinit)
       : Entity(infinit)
@@ -61,6 +62,14 @@ namespace infinit
                    cli::kelips_contact_timeout = boost::none,
                    cli::encrypt = boost::none,
                    cli::protocol = boost::none))
+      , delete_(
+        "Delete a network locally",
+        das::cli::Options(),
+        this->bind(modes::mode_delete,
+                   cli::name,
+                   cli::pull = false,
+                   cli::purge = false,
+                   cli::unlink = false))
       , export_(
         "Export a network",
         das::cli::Options(),
@@ -393,6 +402,67 @@ namespace infinit
         if (push || push_network)
           ifnt.beyond_push("network", desc->name, *desc, owner);
       }
+    }
+
+    /*---------------.
+    | Mode: delete.  |
+    `---------------*/
+
+    void
+    Network::mode_delete(std::string const& network_name,
+                         bool pull,
+                         bool purge,
+                         bool unlink)
+    {
+      ELLE_TRACE_SCOPE("delete");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+
+      auto network = ifnt.network_get(network_name, owner, false);
+      auto linked_users = ifnt.network_linked_users(network.name);
+      if (linked_users.size() && !unlink)
+      {
+        auto user_names = elle::make_vector(linked_users,
+                                            [](auto const& u) { return u.name; });
+        elle::err("Network is still linked with this device by %s. "
+                  "Please unlink it first or add the --unlink flag",
+                  user_names);
+      }
+      if (purge)
+      {
+        auto volumes = ifnt.volumes_for_network(network.name);
+        // FIXME: wouldn't a simple loop suffice?  With a
+        // delete_volume function.  Actually, that's quite some
+        // duplication with Volument::mode_delete, no?
+        for (auto const& volume: volumes)
+          for (auto const& drive: ifnt.drives_for_volume(volume))
+          {
+            auto drive_path = ifnt._drive_path(drive);
+            if (bfs::remove(drive_path))
+              cli.report_action("deleted", "drive", drive, "locally");
+          }
+        for (auto const& volume: volumes)
+        {
+          auto vol_path = ifnt._volume_path(volume);
+          auto v = ifnt.volume_get(volume);
+          bfs::remove_all(v.root_block_cache_dir());
+          if (bfs::remove(vol_path))
+            cli.report_action("deleted", "volume", volume, "locally");
+        }
+        for (auto const& user: ifnt.user_passports_for_network(network.name))
+        {
+          auto passport_path = ifnt._passport_path(network.name, user);
+          if (bfs::remove(passport_path))
+            cli.report_action("deleted", "passport",
+                              elle::sprintf("%s: %s", network.name, user),
+                              "locally");
+        }
+      }
+      if (pull)
+        ifnt.beyond_delete("network", network.name, owner, true, purge);
+      ifnt.network_delete(network_name, owner, unlink);
+      cli.report_action("deleted", "network", network_name, "locally");
     }
 
 
