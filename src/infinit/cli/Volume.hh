@@ -190,7 +190,7 @@ namespace infinit
       ModeImport import;
       void
       mode_import(boost::optional<std::string> input_name = {},
-                 boost::optional<std::string> mountpoint_name = {});
+                  boost::optional<std::string> mountpoint_name = {});
 
 
       /*-------------.

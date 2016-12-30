@@ -71,6 +71,11 @@ namespace infinit
         das::cli::Options(),
         this->bind(modes::mode_fetch,
                    cli::name = boost::none))
+      , import(
+        "Fetch a network",
+        das::cli::Options(),
+        this->bind(modes::mode_import,
+                   cli::input = boost::none))
       , update(
         "Update a network",
         das::cli::Options(),
@@ -449,6 +454,24 @@ namespace infinit
         for (auto const& n: res["networks"])
           save(n);
       }
+    }
+
+
+    /*---------------.
+    | Mode: import.  |
+    `---------------*/
+    void
+    Network::mode_import(boost::optional<std::string> const& input_name)
+    {
+      ELLE_TRACE_SCOPE("import");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto input = this->cli().get_input(input_name);
+      auto desc =
+        elle::serialization::json::deserialize<infinit::NetworkDescriptor>
+        (*input, false);
+      ifnt.network_save(desc);
+      cli.report_imported("network", desc.name);
     }
 
 
