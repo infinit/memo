@@ -39,7 +39,7 @@ infinit::Infinit ifnt;
 extern "C" int daemon(int, int);
 #endif
 
-namespace dht = infinit::model::doughnut;
+namespace dnut = infinit::model::doughnut;
 
 namespace
 {
@@ -160,7 +160,7 @@ COMMAND(create)
   auto storage = storage_configuration(args);
   // Consensus
   auto consensus_config =
-    std::unique_ptr<infinit::model::doughnut::consensus::Configuration>{};
+    std::unique_ptr<dnut::consensus::Configuration>{};
   {
     int replication_factor = 1;
     if (args.count("replication-factor"))
@@ -177,7 +177,7 @@ COMMAND(create)
     if (paxos)
     {
       consensus_config = std::make_unique<
-        infinit::model::doughnut::consensus::Paxos::Configuration>(
+        dnut::consensus::Paxos::Configuration>(
           replication_factor,
           eviction ?
           std::chrono::duration_from_string<std::chrono::seconds>(*eviction) :
@@ -188,10 +188,10 @@ COMMAND(create)
       if (replication_factor != 1)
         elle::err("without consensus, replication factor must be 1");
       consensus_config = std::make_unique<
-        infinit::model::doughnut::consensus::Configuration>();
+        dnut::consensus::Configuration>();
     }
   }
-  infinit::model::doughnut::AdminKeys admin_keys;
+  dnut::AdminKeys admin_keys;
   auto add_admin =
     [&admin_keys] (infinit::cryptography::rsa::PublicKey const& key,
                    bool read, bool write)
@@ -229,14 +229,14 @@ COMMAND(create)
     peers = parse_peers(speers);
   }
   auto dht =
-    std::make_unique<infinit::model::doughnut::Configuration>(
+    std::make_unique<dnut::Configuration>(
       infinit::model::Address::random(0), // FIXME
       std::move(consensus_config),
       std::move(overlay_config),
       std::move(storage),
       owner.keypair(),
       std::make_shared<infinit::cryptography::rsa::PublicKey>(owner.public_key),
-      infinit::model::doughnut::Passport(
+      dnut::Passport(
         owner.public_key,
         ifnt.qualified_name(name, owner),
         infinit::cryptography::rsa::KeyPair(owner.public_key,
@@ -436,12 +436,12 @@ COMMAND(fetch)
       auto network = ifnt.network_get(desc.name, u, false);
       if (network.model)
       {
-        auto* d = dynamic_cast<infinit::model::doughnut::Configuration*>(
+        auto* d = dynamic_cast<dnut::Configuration*>(
           network.model.get()
         );
         infinit::Network updated_network(
           desc.name,
-          std::make_unique<infinit::model::doughnut::Configuration>(
+          std::make_unique<dnut::Configuration>(
             d->id,
             std::move(desc.consensus),
             std::move(desc.overlay),
@@ -526,7 +526,7 @@ COMMAND(link_)
     elle::err("passport does not allow storage");
   auto network = infinit::Network(
     desc.name,
-    std::make_unique<infinit::model::doughnut::Configuration>(
+    std::make_unique<dnut::Configuration>(
       infinit::model::Address::random(0), // FIXME
       std::move(desc.consensus),
       std::move(desc.overlay),
@@ -678,7 +678,7 @@ namespace
   network_run(boost::program_options::variables_map const& args,
               std::function<void (infinit::User& owner,
                                   infinit::Network& network,
-                                  dht::Doughnut&,
+                                  dnut::Doughnut&,
                                   bool,
                                   bool)> const& action)
   {
@@ -693,7 +693,7 @@ namespace
       if (rebalancing_auto_expand || rebalancing_inspect)
       {
         auto paxos = dynamic_cast<
-          infinit::model::doughnut::consensus::Paxos::Configuration*>(
+          dnut::consensus::Paxos::Configuration*>(
             network.dht()->consensus.get());
         if (!paxos)
           throw CommandLineError("paxos options on non-paxos consensus");
@@ -815,7 +815,7 @@ COMMAND(run)
     args,
     [&] (infinit::User& owner,
          infinit::Network& network,
-         dht::Doughnut& dht,
+         dnut::Doughnut& dht,
          bool push,
          bool script_mode)
     {
@@ -833,7 +833,7 @@ COMMAND(run)
             auto json = boost::any_cast<elle::json::Object>(
               elle::json::read(*input));
             elle::serialization::json::SerializerIn command(json, false);
-            command.set_context<infinit::model::doughnut::Doughnut*>(&dht);
+            command.set_context<dnut::Doughnut*>(&dht);
             auto op = command.deserialize<std::string>("operation");
             if (op == "fetch")
             {
@@ -903,13 +903,13 @@ COMMAND(run)
             {
               auto name = command.deserialize<std::string>("name");
               bool create = command.deserialize<bool>("create_if_missing");
-              auto addr = infinit::model::doughnut::NB::address(*dht.owner(),
+              auto addr = dnut::NB::address(*dht.owner(),
                 name, dht.version());
               auto res = [&] {
                 try
                 {
                   auto block = dht.fetch(addr);
-                  auto& nb = dynamic_cast<infinit::model::doughnut::NB&>(*block);
+                  auto& nb = dynamic_cast<dnut::NB&>(*block);
                   return infinit::model::Address::from_string(nb.data().string());
                 }
                 catch (infinit::model::MissingBlock const& mb)
@@ -919,8 +919,7 @@ COMMAND(run)
                   auto ab = dht.make_block<infinit::model::blocks::ACLBlock>();
                   auto addr = ab->address();
                   dht.store(std::move(ab), infinit::model::STORE_INSERT);
-                  infinit::model::doughnut::NB nb(dht, name,
-                    elle::sprintf("%s", addr));
+                  auto nb = dnut::NB(dht, name, elle::sprintf("%s", addr));
                   dht.store(nb, infinit::model::STORE_INSERT);
                   return addr;
                 }
@@ -963,7 +962,7 @@ COMMAND(list_services)
     args,
     [&] (infinit::User& owner,
          infinit::Network& network,
-         dht::Doughnut& dht,
+         dnut::Doughnut& dht,
          bool /*push*/,
          bool script_mode)
     {

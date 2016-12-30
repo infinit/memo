@@ -30,6 +30,7 @@ namespace infinit
     using Error = das::cli::Error;
     using Strings = Network::Strings;
     namespace bfs = boost::filesystem;
+    namespace dnut = infinit::model::doughnut;
 
     Network::Network(Infinit& infinit)
       : Entity(infinit)
@@ -137,13 +138,12 @@ namespace infinit
 
     namespace
     {
-      infinit::model::doughnut::Protocol
+      dnut::Protocol
       protocol_get(std::string const& proto)
       {
         try
         {
-          return elle::serialization::Serialize<
-            infinit::model::doughnut::Protocol>::convert(proto);
+          return elle::serialization::Serialize<dnut::Protocol>::convert(proto);
         }
         catch (elle::serialization::Error const& e)
         {
@@ -256,7 +256,7 @@ namespace infinit
                             bool no_consensus,
                             int replication_factor,
                             boost::optional<std::string> const& eviction_delay)
-        -> std::unique_ptr<infinit::model::doughnut::consensus::Configuration>
+        -> std::unique_ptr<dnut::consensus::Configuration>
       {
         if (replication_factor < 1)
           elle::err<Error>("replication factor must be greater than 0");
@@ -266,7 +266,7 @@ namespace infinit
           elle::err<Error>("more than one consensus specified");
         if (paxos)
           return std::make_unique<
-            infinit::model::doughnut::consensus::Paxos::Configuration>(
+            dnut::consensus::Paxos::Configuration>(
               replication_factor,
               eviction_delay ?
               std::chrono::duration_from_string<std::chrono::seconds>(*eviction_delay) :
@@ -276,7 +276,7 @@ namespace infinit
           if (replication_factor != 1)
             elle::err("without consensus, replication factor must be 1");
           return std::make_unique<
-            infinit::model::doughnut::consensus::Configuration>();
+            dnut::consensus::Configuration>();
         }
       }
 
@@ -284,9 +284,9 @@ namespace infinit
       make_admin_keys(infinit::Infinit& ifnt,
                       Strings const& admin_r,
                       Strings const& admin_rw)
-        -> infinit::model::doughnut::AdminKeys
+        -> dnut::AdminKeys
       {
-        auto res = infinit::model::doughnut::AdminKeys{};
+        auto res = dnut::AdminKeys{};
         auto add =
           [&res] (infinit::cryptography::rsa::PublicKey const& key,
                   bool read, bool write)
@@ -362,14 +362,14 @@ namespace infinit
         peers = parse_peers(peer);
 
       auto dht =
-        std::make_unique<infinit::model::doughnut::Configuration>(
+        std::make_unique<dnut::Configuration>(
           infinit::model::Address::random(0),
           std::move(consensus_config),
           std::move(overlay_config),
           std::move(storage),
           owner.keypair(),
           std::make_shared<infinit::cryptography::rsa::PublicKey>(owner.public_key),
-          infinit::model::doughnut::Passport(
+          dnut::Passport(
             owner.public_key,
             ifnt.qualified_name(network_name, owner),
             infinit::cryptography::rsa::KeyPair(owner.public_key,
@@ -509,12 +509,12 @@ namespace infinit
           auto network = ifnt.network_get(desc.name, u, false);
           if (network.model)
           {
-            auto* d = dynamic_cast<infinit::model::doughnut::Configuration*>(
+            auto* d = dynamic_cast<dnut::Configuration*>(
               network.model.get()
             );
             auto updated_network = infinit::Network(
               desc.name,
-              std::make_unique<infinit::model::doughnut::Configuration>(
+              std::make_unique<dnut::Configuration>(
                 d->id,
                 std::move(desc.consensus),
                 std::move(desc.overlay),
@@ -618,7 +618,7 @@ namespace infinit
         elle::err("passport does not allow storage");
       auto network = infinit::Network(
         desc.name,
-        std::make_unique<infinit::model::doughnut::Configuration>(
+        std::make_unique<dnut::Configuration>(
           infinit::model::Address::random(0), // FIXME
           std::move(desc.consensus),
           std::move(desc.overlay),
