@@ -98,6 +98,32 @@ namespace infinit
         "List networks",
         das::cli::Options(),
         this->bind(modes::mode_list))
+      , list_services(
+        "List network registered services",
+        das::cli::Options(),
+        this->bind(modes::mode_list_services,
+                   cli::name,
+                   cli::peer = boost::none,
+                   cli::async = false,
+                   cli::cache = false,
+                   cli::cache_ram_size = boost::none,
+                   cli::cache_ram_ttl = boost::none,
+                   cli::cache_ram_invalidation = boost::none,
+                   cli::cache_disk_size = boost::none,
+                   cli::fetch_endpoints = false,
+                   cli::fetch = false,
+                   cli::push_endpoints = false,
+                   cli::push = false,
+                   cli::publish = false,
+                   cli::endpoints_file = boost::none,
+                   cli::port_file = boost::none,
+                   cli::port = boost::none,
+                   cli::peers_file = boost::none,
+                   cli::listen = boost::none,
+                   cli::fetch_endpoints_interval = boost::none,
+                   cli::no_local_endpoints = false,
+                   cli::no_public_endpoints = false,
+                   cli::advertise_host = boost::none))
       , pull(
         "Remove a network from {hub}",
         das::cli::Options(),
@@ -863,6 +889,96 @@ namespace infinit
         else
           run();
       }
+    }
+
+
+    void
+    Network::mode_list_services(std::string const& network_name,
+                                Strings peer,
+                                bool async,
+                                bool cache,
+                                boost::optional<int> cache_ram_size,
+                                boost::optional<int> cache_ram_ttl,
+                                boost::optional<int> cache_ram_invalidation,
+                                boost::optional<uint64_t> cache_disk_size,
+                                bool fetch_endpoints,
+                                bool fetch,
+                                bool push_endpoints,
+                                bool push,
+                                bool publish,
+                                boost::optional<std::string> const& endpoints_file,
+                                boost::optional<std::string> const& port_file,
+                                boost::optional<int> port,
+                                boost::optional<std::string> const& peers_file,
+                                boost::optional<std::string> listen,
+                                boost::optional<int> fetch_endpoints_interval,
+                                bool no_local_endpoints,
+                                bool no_public_endpoints,
+                                Strings advertise_host)
+    {
+      ELLE_TRACE_SCOPE("list_services");
+      auto& cli = this->cli();
+      network_run
+        (
+         cli,
+         network_name,
+#ifndef INFINIT_WINDOWS
+         // Passing explicitly the default values.  This is not nice.
+         false,
+         true,
+#endif
+         peer,
+         async,
+         cache,
+         cache_ram_size,
+         cache_ram_ttl,
+         cache_ram_invalidation,
+         cache_disk_size,
+         fetch || fetch_endpoints,
+         push || push_endpoints,
+         publish,
+         endpoints_file,
+         port_file,
+         port,
+         peers_file,
+         listen,
+         fetch_endpoints_interval,
+         no_local_endpoints,
+         no_public_endpoints,
+         advertise_host,
+         {},
+         {},
+         [&] (infinit::User& owner,
+              infinit::Network& network,
+              dnut::Doughnut& dht,
+              bool /*push*/,
+              bool script_mode)
+        {
+          auto services = dht.services();
+          if (script_mode)
+          {
+            auto res = std::unordered_map<std::string, Strings>{};
+            for (auto const& type: services)
+            {
+              auto services = elle::make_vector(type.second,
+                                                [](auto const& service)
+                                                {
+                                                  return service.first;
+                                                });
+              res.emplace(type.first, std::move(services));
+            }
+            elle::serialization::json::serialize(res, std::cout, false);
+          }
+          else
+          {
+            for (auto const& type: services)
+            {
+              std::cout << type.first << ":" << std::endl;
+              for (auto const& service: type.second)
+                std::cout << "  " << service.first << std::endl;
+            }
+          }
+        });
     }
 
 
