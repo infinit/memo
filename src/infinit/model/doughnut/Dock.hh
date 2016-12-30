@@ -49,6 +49,8 @@ namespace infinit
       public:
         overlay::Overlay::Member
         evict_peer(Address id);
+        void
+        insert_peer(overlay::Overlay::Member peer);
         overlay::Overlay::WeakMember
         make_peer(NodeLocation peer,
                   boost::optional<EndpointsRefetcher> refetcher);

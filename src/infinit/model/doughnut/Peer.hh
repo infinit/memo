@@ -1,6 +1,8 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_PEER_HH
 # define INFINIT_MODEL_DOUGHNUT_PEER_HH
 
+# include <memory>
+
 # include <boost/signals2.hpp>
 
 # include <elle/Duration.hh>
@@ -17,6 +19,7 @@ namespace infinit
     {
       class Peer
         : public elle::Printable
+        , public std::enable_shared_from_this<Peer>
       {
       /*-------------.
       | Construction |

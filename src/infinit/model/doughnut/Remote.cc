@@ -93,6 +93,8 @@ namespace infinit
         ++this->_reconnection_id;
         if (this->_thread)
           this->_thread->terminate_now();
+        if (this->_connected)
+          this->disconnected()();
         this->_connected.close();
         this->_credentials = {};
         this->_thread.reset(
@@ -120,7 +122,7 @@ namespace infinit
                     this->_serializer = std::move(serializer);
                     this->_channels = std::move(channels);
                     this->_connected.open();
-                    this->Peer::connected()();
+                    this->doughnut().dock().insert_peer(shared_from_this());
                   };
                 auto umbrella = [&, this] (std::function<void ()> const& f)
                   {
@@ -183,6 +185,7 @@ namespace infinit
                     elle::sprintf("connection to %f failed", this->_endpoints));
                   break;
                 }
+                this->Peer::connected()();
                 ELLE_ASSERT(this->_channels);
                 ELLE_TRACE("%s: serve RPCs", this)
                   this->_rpc_server.serve(*this->_channels);

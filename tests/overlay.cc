@@ -11,6 +11,7 @@
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Kouncil.hh>
+#include <infinit/storage/MissingKey.hh>
 
 #include "DHT.hh"
 
@@ -102,44 +103,180 @@ private:
 };
 
 void
-discover(DHT& dht, DHT& target, bool anonymous)
+discover(DHT& dht, DHT& target, bool anonymous, bool onlyfirst=false)
 {
+  Endpoints eps;
+  if (onlyfirst)
+    eps = Endpoints {target.dht->local()->server_endpoints()[0]};
+  else
+    eps = target.dht->local()->server_endpoints();
   if (anonymous)
-    dht.dht->overlay()->discover(target.dht->local()->server_endpoints());
+    dht.dht->overlay()->discover(eps);
   else
     dht.dht->overlay()->discover(
-      NodeLocation(target.dht->id(), target.dht->local()->server_endpoints()));
+      NodeLocation(target.dht->id(), eps));
 }
 
 static
-void
-wait_until_ready(DHT& client)
+std::vector<infinit::model::Address>
+peers(DHT& client)
 {
-  persist([&client]
-          {
-            auto block = client.dht->make_block<ACLBlock>(std::string("block"));
-            client.dht->store(std::move(block), STORE_INSERT, tcr());
-          });
+  std::vector<infinit::model::Address> res;
+  auto stats = client.dht->overlay()->query("stats", {});
+  auto ostats = boost::any_cast<elle::json::Object>(stats);
+  try
+  {
+    auto cts = boost::any_cast<elle::json::Array>(ostats["contacts"]);
+    ELLE_DEBUG("%s", elle::json::pretty_print(ostats["contacts"]));
+    for (auto& c: cts)
+      res.push_back(infinit::model::Address::from_string(
+        boost::any_cast<std::string>(
+          boost::any_cast<elle::json::Object>(c).at("id"))));
+  }
+  catch (boost::bad_any_cast const&)
+  {
+    auto cts = boost::any_cast<elle::json::Array>(ostats["peers"]);
+    ELLE_DEBUG("%s", elle::json::pretty_print(ostats["peers"]));
+    for (auto& c: cts)
+      res.push_back(infinit::model::Address::from_string(
+        boost::any_cast<std::string>(
+          boost::any_cast<elle::json::Object>(c).at("id"))));
+  }
+  return res;
 }
 
 static
 int
-peer_count(DHT& client)
+peer_count(DHT& client, bool discovered = false)
 {
   auto stats = client.dht->overlay()->query("stats", {});
   int res = -1;
+  auto ostats = boost::any_cast<elle::json::Object>(stats);
   try
   {
-    res = boost::any_cast<elle::json::Array>(
-      boost::any_cast<elle::json::Object>(stats)["contacts"]).size();
+    auto cts = boost::any_cast<elle::json::Array>(ostats["contacts"]);
+    ELLE_DEBUG("%s", elle::json::pretty_print(ostats["contacts"]));
+    int count = 0;
+    ELLE_TRACE("checking %s candidates", cts.size());
+    for (auto& c: cts)
+    {
+      if (!discovered || boost::any_cast<bool>(
+        boost::any_cast<elle::json::Object>(c).at("discovered")))
+        ++count;
+    }
+    res = count;
   }
   catch (boost::bad_any_cast const&)
   {
-    res = boost::any_cast<elle::json::Array>(
-      boost::any_cast<elle::json::Object>(stats)["peers"]).size();
+    res = boost::any_cast<elle::json::Array>(ostats["peers"]).size();
   }
   ELLE_TRACE("counted %s peers for %s", res, client.dht);
   return res;
+}
+
+static
+void
+kouncil_wait_pasv(DHT& s, int n_servers)
+{
+  while (true)
+  {
+    std::vector<infinit::model::Address> res;
+    auto stats = s.dht->overlay()->query("stats", {});
+    auto ostats = boost::any_cast<elle::json::Object>(stats);
+    auto cts = boost::any_cast<elle::json::Array>(ostats["peers"]);
+    ELLE_DEBUG("%s", elle::json::pretty_print(ostats["peers"]));
+    for (auto& c: cts)
+    {
+      if (boost::any_cast<bool>(
+          boost::any_cast<elle::json::Object>(c).at("connected")))
+        res.push_back(infinit::model::Address::from_string(
+          boost::any_cast<std::string>(
+            boost::any_cast<elle::json::Object>(c).at("id"))));
+    }
+
+    if (res.size() >= unsigned(n_servers))
+      return;
+    ELLE_TRACE("%s/%s", res.size(), n_servers);
+    reactor::sleep(50_ms);
+  }
+}
+
+// Wait until s sees n_servers and can make RPC calls to all of them
+// If or_more is true, accept extra non-working peers
+static
+void
+hard_wait(DHT& s, int n_servers,
+  infinit::model::Address client = infinit::model::Address::null,
+  bool or_more = false,
+  infinit::model::Address blacklist = infinit::model::Address::null)
+{
+  int attempts = 0;
+  while (true)
+  {
+    if (++attempts > 50 && !(attempts % 40))
+    {
+      auto stats = s.dht->overlay()->query("stats", boost::none);
+      std::cerr << elle::json::pretty_print(stats) << std::endl;
+    }
+    bool ok = true;
+    auto peers = ::peers(s);
+    int hit = 0;
+    if (peers.size() >= unsigned(n_servers))
+    {
+      for (auto const& pa: peers)
+      {
+        if (pa == client || pa == blacklist)
+          continue;
+        try
+        {
+          auto p = s.dht->overlay()->lookup_node(pa);
+          p.lock()->fetch(infinit::model::Address::random(), boost::none);
+        }
+        catch (infinit::storage::MissingKey const& mb)
+        { // FIXME why do we need this?
+          ++hit;
+        }
+        catch (infinit::model::MissingBlock const& mb)
+        {
+          ++hit;
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_TRACE("hard_wait %f: %s", pa, e);
+          if (!or_more)
+            ok = false;
+        }
+      }
+    }
+    if ( (hit == n_servers || (or_more && hit >n_servers)) && ok)
+      break;
+    reactor::sleep(50_ms);
+  }
+  ELLE_DEBUG("hard_wait exiting");
+}
+
+static
+void
+wait_until_ready(DHT& client, int n_servers = 0)
+{
+  persist([&client]
+    {
+      auto block = client.dht->make_block<ACLBlock>(std::string("block"));
+      client.dht->store(std::move(block), STORE_INSERT, tcr());
+    });
+
+  if (n_servers)
+  {
+    while (true)
+    {
+      int pc = peer_count(client);
+      if (pc == n_servers)
+        break;
+      else
+        ELLE_LOG("%s/%s", pc, n_servers);
+      reactor::sleep(100_ms);
+    }
+  }
 }
 
 ELLE_TEST_SCHEDULED(
@@ -173,6 +310,7 @@ ELLE_TEST_SCHEDULED(
   else
     dht_b.dht->overlay()->discover(
       NodeLocation(dht_a.dht->id(), dht_a.dht->local()->server_endpoints()));
+  hard_wait(dht_b, 1);
   auto after = dht_a.dht->make_block<MutableBlock>(std::string("after"));
   dht_a.dht->store(*after, STORE_INSERT, tcr());
   ELLE_LOG("check non-existent block")
@@ -257,6 +395,7 @@ ELLE_TEST_SCHEDULED(
   DHT dht_b(
     ::keys = keys, make_overlay = builder, ::storage = nullptr);
   discover(dht_b, *dht_a, anonymous);
+  hard_wait(dht_b, 1, dht_b.dht->id());
   ELLE_LOG("lookup block")
   {
     persist([&] {
@@ -285,6 +424,7 @@ ELLE_TEST_SCHEDULED(
       MissingBlock);
   ELLE_LOG("discover new endpoints")
     discover(dht_b, *dht_a, anonymous);
+  hard_wait(dht_b, 1, dht_b.dht->id());
   ELLE_LOG("lookup second block")
   ELLE_LOG("lookup block")
   {
@@ -314,6 +454,7 @@ ELLE_TEST_SCHEDULED(
     ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp);
   discover(dht_b, *dht_a, anonymous);
+  hard_wait(dht_b, 1, dht_b.dht->id());
   auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
   auto& acb = dynamic_cast<infinit::model::doughnut::ACB&>(*block);
   acb.set_permissions(infinit::cryptography::rsa::keypair::generate(512).K(),
@@ -378,6 +519,7 @@ ELLE_TEST_SCHEDULED(
     ::storage = nullptr);
   discover(*client, *dht_a, anonymous);
   discover(*client, *dht_b, anonymous);
+  hard_wait(*client, 2, client->dht->id());
   std::vector<infinit::model::Address> addrs;
   for (int a=0; a<10; ++a)
   {
@@ -491,6 +633,7 @@ ELLE_TEST_SCHEDULED(
     ::storage = nullptr);
   discover(*client, *dht_a, anonymous);
   discover(*dht_a, *dht_b, anonymous);
+  hard_wait(*client, 2, client->dht->id());
   std::vector<infinit::model::Address> addrs;
   for (int a=0; a<10; ++a)
   {
@@ -516,7 +659,7 @@ ELLE_TEST_SCHEDULED(
   (bool, pax), (int, nservers), (int, nclients), (int, nactions))
 {
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
-
+  bool is_kelips = false;
   // Set servers up.
   auto servers = std::vector<std::unique_ptr<DHT>>{};
   for (int i=0; i<nservers; ++i)
@@ -525,11 +668,34 @@ ELLE_TEST_SCHEDULED(
       ::keys = keys, make_overlay = builder, paxos = pax,
       dht::consensus::rebalance_auto_expand = false
     );
+    if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
+      dht->dht->overlay().get()))
+    {
+      is_kelips = true;
+      kelips->config().query_put_retries = 6;
+      kelips->config().query_timeout_ms = valgrind(2000, 4);
+      kelips->config().contact_timeout_ms = valgrind(100000,20);
+      kelips->config().ping_interval_ms = valgrind(500, 10);
+      kelips->config().ping_timeout_ms = valgrind(2000, 20);
+    }
     servers.emplace_back(std::move(dht));
   }
-  for (int i=1; i<nservers; ++i)
-    discover(*servers[i], *servers[0], true);
-
+  if (is_kelips)
+  {
+    for (int i=1; i<nservers; ++i)
+      discover(*servers[i], *servers[0], false, true);
+  }
+  else
+    for (int i=1; i<nservers; ++i)
+    {
+      for (int j=0; j<i; ++j)
+        discover(*servers[i], *servers[j], false, true);
+      hard_wait(*servers[i], i);
+    }
+  ELLE_LOG("waiting for servers");
+  for (int i=0; i<nservers; ++i)
+    hard_wait(*servers[i], nservers-1);
+  ELLE_LOG("clients");
   // Set clients up.
   auto clients = std::vector<std::unique_ptr<DHT>>{};
   for (int i=0; i<nclients; ++i)
@@ -538,14 +704,28 @@ ELLE_TEST_SCHEDULED(
       ::keys = keys, make_overlay = builder, paxos = pax, ::storage = nullptr,
       dht::consensus::rebalance_auto_expand = false
     );
+    if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
+      dht->dht->overlay().get()))
+    {
+      kelips->config().query_put_retries = 6;
+      kelips->config().query_get_retries = 20;
+      kelips->config().query_timeout_ms = valgrind(2000, 4);
+      kelips->config().contact_timeout_ms = valgrind(100000,20);
+      kelips->config().ping_interval_ms = valgrind(500, 10);
+      kelips->config().ping_timeout_ms = valgrind(2000, 20);
+    }
     clients.emplace_back(std::move(dht));
   }
-  for (int i=0; i<nclients; ++i)
+  for (int i=0; i<nservers; ++i)
   {
-    for (int j=0; j<nservers; ++j)
-      discover(*clients[i], *servers[j], true);
-    wait_until_ready(*clients[i]);
+    for (int j=0; j<nclients; ++j)
+    {
+      discover(*clients[j], *servers[i], false, true);
+      reactor::yield(); reactor::yield(); reactor::yield();
+    }
   }
+  for (int i=0; i<nclients; ++i)
+    hard_wait(*clients[i], nservers);
 
   auto addrs = std::vector<infinit::model::Address>{};
   elle::With<reactor::Scope>() << [&](reactor::Scope& s)
@@ -557,7 +737,7 @@ ELLE_TEST_SCHEDULED(
           for (int i=0; i<nactions; ++i)
           {
             int r = rand()%100;
-            ELLE_TRACE("action %s: %s, with %s addrs",
+            ELLE_TRACE_SCOPE("action %s: %s, with %s addrs",
               i, r, addrs.size());
             if (r < 20 && !addrs.empty())
             { // delete
@@ -580,6 +760,7 @@ ELLE_TEST_SCHEDULED(
             }
             else if (r < 50 || addrs.empty())
             { // create
+              ELLE_DEBUG("creating");
               auto block = c->dht->make_block<ACLBlock>(std::string("block"));
               auto a = block->address();
               try
@@ -598,7 +779,7 @@ ELLE_TEST_SCHEDULED(
             { // read
               int p = rand()%addrs.size();
               auto addr = addrs[p];
-              ELLE_DEBUG("reading %f", addr);
+              ELLE_DEBUG_SCOPE("reading %f", addr);
               std::exception_ptr except;
               try
               {
@@ -643,6 +824,7 @@ ELLE_TEST_SCHEDULED(
               }
               ELLE_DEBUG("read %f", addr);
             }
+            ELLE_TRACE("terminated action %s", i);
           }
         }
         catch (elle::Error const& e)
@@ -744,12 +926,245 @@ ELLE_TEST_SCHEDULED(
   BOOST_CHECK_EQUAL(c, nservers);
 }
 
+ELLE_TEST_SCHEDULED(churn, (Doughnut::OverlayBuilder, builder),
+  (bool, keep_port), (bool, wait_disconnect), (bool, wait_connect))
+{
+  static const int n = 5;
+  auto keys = infinit::cryptography::rsa::keypair::generate(512);
+  infinit::model::Address ids[n];
+  unsigned short ports[n];
+  infinit::storage::Memory::Blocks blocks[n];
+  std::vector<std::unique_ptr<DHT>> servers;
+  for (int i=0; i<n; ++i)
+  {
+    ids[i] = infinit::model::Address::random();
+    auto dht = elle::make_unique<DHT>(
+      ::id = ids[i],
+      ::keys = keys, make_overlay = builder, paxos = true,
+      ::storage = elle::make_unique<infinit::storage::Memory>(blocks[i])
+    );
+    ports[i] = dht->dht->dock().utp_server().local_endpoint().port();
+    servers.emplace_back(std::move(dht));
+  }
+  for (int i=0; i<n; ++i)
+    for (int j=i+1; j<n; ++j)
+      discover(*servers[i], *servers[j], false);
+  std::unique_ptr<DHT> client;
+  auto spawn_client = [&] {
+    client = elle::make_unique<DHT>(
+      ::keys = keys, make_overlay = builder, paxos = true, ::storage = nullptr);
+    if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
+      client->dht->overlay().get()))
+    {
+      kelips->config().query_put_retries = 6;
+      kelips->config().query_timeout_ms = valgrind(1000, 4);
+    }
+    discover(*client, servers[0] ? *servers[0] : *servers[1], false);
+  };
+  spawn_client();
+  for (auto& s: servers)
+    hard_wait(*s, n-1, client->dht->id());
+  hard_wait(*client, n, client->dht->id());
+
+  std::vector<infinit::model::Address> addrs;
+  int down = -1;
+  try
+  {
+  for (int i=1; i < 500 / valgrind(1, 2); ++i)
+  {
+    if (!(i%100))
+    {
+      ELLE_LOG("bringing node %s up with %s/%s block",
+               down, blocks[down].size(), addrs.size());
+      servers[down].reset(new DHT(
+        ::keys = keys, make_overlay = builder,
+        paxos = true,
+        ::id = ids[down],
+        ::port = keep_port ? ports[down] : 0,
+        ::storage = elle::make_unique<infinit::storage::Memory>(blocks[down])));
+      for (int s=0; s< n; ++s)
+        if (s != down)
+        {
+          discover(*servers[down], *servers[s], false);
+          // cheating a bit...
+          discover(*servers[s], *servers[down], false);
+        }
+      if (wait_connect)
+      {
+        for (auto& s: servers)
+          hard_wait(*s, n-1, client->dht->id());
+        //spawn_client();
+        hard_wait(*client, n, client->dht->id());
+        ELLE_LOG("resuming");
+      }
+      down = -1;
+    }
+    else if (!(i%50))
+    {
+      ELLE_ASSERT(down == -1);
+      down = rand()%n;
+      ELLE_LOG("bringing node %s down with %s/%s blocks",
+               down, blocks[down].size(), addrs.size());
+      servers[down].reset();
+      if (wait_disconnect)
+      {
+        for (auto& s: servers)
+          if (s)
+            hard_wait(*s, n-2, client->dht->id(), true, ids[down]);
+          //spawn_client();
+          hard_wait(*client, n-1, client->dht->id(), true, ids[down]);
+      }
+      ELLE_LOG("resuming");
+    }
+    if (addrs.empty() || !(i%5))
+    {
+      auto block = client->dht->make_block<ACLBlock>(std::string("block"));
+      auto a = block->address();
+      client->dht->store(std::move(block), STORE_INSERT, tcr());
+      ELLE_DEBUG("created %f", a);
+      addrs.push_back(a);
+    }
+    auto a = addrs[rand()%addrs.size()];
+    auto block = client->dht->fetch(a);
+    if (i%2)
+    {
+      dynamic_cast<infinit::model::blocks::ACLBlock*>(block.get())->data(
+        elle::Buffer("coincoin"));
+      client->dht->store(std::move(block), STORE_UPDATE, tcr());
+    }
+  }
+  }
+  catch (...)
+  {
+    ELLE_ERR("Exception from test: %s", elle::exception_string());
+    throw;
+  }
+}
+
+template<typename C>
+typename C::value_type
+get_n(C& c, int idx)
+{
+  auto it = c.begin();
+  while (idx--) ++it;
+  return *it;
+}
+
+
+void test_churn_socket(Doughnut::OverlayBuilder builder, bool pasv)
+{
+  static const int n = 5;
+  auto keys = infinit::cryptography::rsa::keypair::generate(512);
+  infinit::model::Address ids[n];
+  unsigned short ports[n];
+  infinit::storage::Memory::Blocks blocks[n];
+  std::vector<std::unique_ptr<DHT>> servers;
+  for (int i=0; i<n; ++i)
+  {
+    ids[i] = infinit::model::Address::random();
+    auto dht = elle::make_unique<DHT>(
+      ::id = ids[i],
+      ::keys = keys, make_overlay = builder, paxos = true,
+      ::storage = elle::make_unique<infinit::storage::Memory>(blocks[i])
+    );
+    ports[i] = dht->dht->dock().utp_server().local_endpoint().port();
+    servers.emplace_back(std::move(dht));
+  }
+  for (int i=0; i<n; ++i)
+    for (int j=i+1; j<n; ++j)
+      discover(*servers[i], *servers[j], false);
+  for (auto& s: servers)
+    hard_wait(*s, n-1);
+  std::unique_ptr<DHT> client = elle::make_unique<DHT>(
+      ::keys = keys, make_overlay = builder, paxos = true, ::storage = nullptr);
+  if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
+    client->dht->overlay().get()))
+  {
+    kelips->config().query_put_retries = 6;
+    kelips->config().query_timeout_ms = valgrind(1000, 4);
+  }
+  discover(*client, *servers[0], false);
+  hard_wait(*client, n, client->dht->id());
+
+  // write some blocks
+  std::vector<infinit::model::Address> addrs;
+  for (int i=0; i<50; ++i)
+  {
+    auto block = client->dht->make_block<ACLBlock>(std::string("block"));
+    auto a = block->address();
+    client->dht->store(std::move(block), STORE_INSERT, tcr());
+    ELLE_DEBUG("created %f", a);
+    addrs.push_back(a);
+  }
+
+  for (int k=0; k < 3 / valgrind(1, 3); ++k)
+  {
+    ELLE_TRACE("shooting connections");
+    // shoot some connections
+    for (int i = 0; i < 5; ++i)
+    {
+      auto& peers = servers[i]->dht->local()->peers();
+      for (int l = 0; l < 3; ++l)
+      {
+        auto peer = get_n(peers, rand() % peers.size());
+        if (auto* s = dynamic_cast<reactor::network::TCPSocket*>(
+              peer->stream().get()))
+          s->close();
+        else if (auto* s = dynamic_cast<reactor::network::UTPSocket*>(
+                   peer->stream().get()))
+          s->close();
+        else
+          BOOST_FAIL(
+            elle::sprintf("could not obtain socket pointer for %s", peer));
+      }
+    }
+    if (!pasv)
+    {
+      ELLE_TRACE("hard_wait servers");
+      for (auto& s: servers)
+        hard_wait(*s, n-1);
+      ELLE_TRACE("hard_wait client");
+      hard_wait(*client, n, client->dht->id());
+    }
+    else
+    {
+      // give it time to notice sockets went down
+      for (int i = 0; i < 10; ++i)
+        reactor::yield();
+      ELLE_TRACE("hard_wait servers");
+      for (auto& s: servers)
+        kouncil_wait_pasv(*s, n-1);
+      ELLE_TRACE("hard_wait client");
+      kouncil_wait_pasv(*client, n);
+    }
+    ELLE_TRACE("checking");
+    for (auto const& a: addrs)
+      client->dht->fetch(a);
+   }
+   BOOST_CHECK(true);
+}
+
+ELLE_TEST_SCHEDULED(churn_socket, (Doughnut::OverlayBuilder, builder))
+{
+  test_churn_socket(builder, false);
+}
+
+ELLE_TEST_SCHEDULED(churn_socket_pasv)
+{
+  auto const builder =
+    [] (Doughnut& dht, std::shared_ptr<Local> local)
+    {
+      return std::make_unique<kouncil::Kouncil>(&dht, local);
+    };
+  test_churn_socket(builder, true);
+}
+
+
 ELLE_TEST_SUITE()
 {
-  elle::os::setenv("INFINIT_CONNECT_TIMEOUT",
-                   std::to_string(valgrind(1)).c_str(), 1);
-  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT",
-                   std::to_string(valgrind(3)).c_str(), 1);
+  elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
+  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "1", 1);
+  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_INTERVAL", "1", 1);
   auto& master = boost::unit_test::framework::master_test_suite();
   auto const kelips_builder =
     [] (Doughnut& dht, std::shared_ptr<Local> local)
@@ -763,10 +1178,10 @@ ELLE_TEST_SUITE()
 #endif
       conf.query_get_retries = 4;
       conf.query_put_retries = 4;
-      conf.query_timeout_ms = valgrind(500, 4);
+      conf.query_timeout_ms = valgrind(1000, 4);
       conf.contact_timeout_ms = factor * valgrind(2000,20);
-      conf.ping_interval_ms = factor * valgrind(200, 10);
-      conf.ping_timeout_ms = factor * valgrind(500, 20);
+      conf.ping_interval_ms = factor * valgrind(100, 10);
+      conf.ping_timeout_ms = factor * valgrind(1000, 20);
       return std::make_unique<kelips::Node>(
         conf, local, &dht);
     };
@@ -810,11 +1225,15 @@ ELLE_TEST_SUITE()
   TEST_ANON(Name, chain_connect, 30, false);    \
   /* too slow TEST(Name, paxos_3_1, 30);*/      \
   TEST_ANON(Name, parallel_discover, 20);       \
-  TEST_NAMED(Name, storm_paxos, storm, 60, true, 5, 5, 100); \
-  TEST_NAMED(Name, storm,       storm, 60, false, 5, 5, 200);
+  TEST_NAMED(Name, storm_paxos, storm, 60, true, 5, 5, 100);  \
+  TEST_NAMED(Name, storm,       storm, 60, false, 5, 5, 200); \
+  TEST_NAMED(Name, churn, churn, 600, false, true, true);     \
+  TEST_NAMED(Name, churn_socket, churn_socket, 600);
 
   OVERLAY(kelips);
   OVERLAY(kouncil);
+
+  kouncil->add(BOOST_TEST_CASE(churn_socket_pasv), 0, valgrind(120));
 #undef OVERLAY
 }
 
