@@ -22,6 +22,7 @@ namespace infinit
                                     cli::export_,
                                     cli::fetch,
                                     cli::import,
+                                    cli::link,
                                     cli::update));
 
       using Strings = std::vector<std::string>;
@@ -118,6 +119,21 @@ namespace infinit
       ModeImport import;
       void
       mode_import(boost::optional<std::string> const& input_name = {});
+
+
+      /*-------------.
+      | Mode: link.  |
+      `-------------*/
+      using ModeLink =
+        Mode<decltype(binding(modes::mode_link,
+                              cli::name,
+                              cli::storage = Strings{},
+                              cli::output = boost::none))>;
+      ModeLink link;
+      void
+      mode_link(std::string const& network_name,
+                Strings const& storage_names = {},
+                boost::optional<std::string> const& output_name = {});
 
 
       /*---------------.

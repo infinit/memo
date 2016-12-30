@@ -158,6 +158,7 @@ namespace infinit
     DAS_SYMBOL(invite);
     DAS_SYMBOL(join);
     DAS_SYMBOL(journal);
+    DAS_SYMBOL(link);
     DAS_SYMBOL(list);
     DAS_SYMBOL(login);
     DAS_SYMBOL(mount);
@@ -194,6 +195,7 @@ namespace infinit
       DAS_SYMBOL(mode_import);
       DAS_SYMBOL(mode_invite);
       DAS_SYMBOL(mode_join);
+      DAS_SYMBOL(mode_link);
       DAS_SYMBOL(mode_list);
       DAS_SYMBOL(mode_login);
       DAS_SYMBOL(mode_mount);

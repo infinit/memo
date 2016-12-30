@@ -77,6 +77,13 @@ namespace infinit
         das::cli::Options(),
         this->bind(modes::mode_import,
                    cli::input = boost::none))
+      , link(
+        "Link this device to a network",
+        das::cli::Options(),
+        this->bind(modes::mode_link,
+                   cli::name,
+                   cli::storage = Strings{},
+                   cli::output = boost::none))
       , update(
         "Update a network",
         das::cli::Options(),
@@ -473,6 +480,75 @@ namespace infinit
         (*input, false);
       ifnt.network_save(desc);
       cli.report_imported("network", desc.name);
+    }
+
+
+    /*-------------.
+    | Mode: link.  |
+    `-------------*/
+
+    void
+    Network::mode_link(std::string const& network_name,
+                       Strings const& storage_names,
+                       boost::optional<std::string> const& output_name)
+    {
+      ELLE_TRACE_SCOPE("link");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+
+      {
+        auto network = ifnt.network_get(network_name, owner, false);
+        if (network.model)
+          elle::err("%s is already linked with %s", network.name, owner.name);
+      }
+
+      auto storage = make_storage_config(ifnt, storage_names);
+      auto desc = ifnt.network_descriptor_get(network_name, owner);
+      auto passport = [&] () -> infinit::Infinit::Passport
+        {
+          if (owner.public_key == desc.owner)
+            return {owner.public_key, desc.name,
+                    infinit::cryptography::rsa::KeyPair(owner.public_key,
+                                                        owner.private_key.get())};
+          try
+          {
+            return ifnt.passport_get(desc.name, owner.name);
+          }
+          catch (infinit::MissingLocalResource const&)
+          {
+            elle::err("missing passport (%s: %s), "
+                      "use infinit-passport to fetch or import",
+                      desc.name, owner.name);
+          }
+        }();
+      if (!passport.verify(passport.certifier() ? *passport.certifier() : desc.owner))
+        elle::err("passport signature is invalid");
+      if (storage && !passport.allow_storage())
+        elle::err("passport does not allow storage");
+      auto network = infinit::Network(
+        desc.name,
+        std::make_unique<infinit::model::doughnut::Configuration>(
+          infinit::model::Address::random(0), // FIXME
+          std::move(desc.consensus),
+          std::move(desc.overlay),
+          std::move(storage),
+          owner.keypair(),
+          std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
+          std::move(passport),
+          owner.name,
+          boost::optional<int>(),
+          desc.version,
+          desc.admin_keys,
+          desc.peers),
+        desc.description);
+      if (output_name)
+        ifnt.save(*cli.get_output(output_name), network, false);
+      else
+      {
+        ifnt.network_save(owner, network, true);
+        cli.report_action("linked", "device to network", desc.name);
+      }
     }
 
 
