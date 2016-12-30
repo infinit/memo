@@ -303,7 +303,7 @@ namespace infinit
       ModePull pull;
       void
       mode_pull(std::string const& name,
-                bool purge);
+                bool purge = false);
 
 
       /*-------------.

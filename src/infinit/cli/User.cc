@@ -383,7 +383,7 @@ namespace infinit
           else
           {
             ifnt.network_unlink(network, user);
-            this->cli().report_action("Unlinked", "network", network.name());
+            this->cli().report_action("unlinked", "network", network.name());
           }
         }
       }

@@ -28,6 +28,7 @@ namespace infinit
   namespace cli
   {
     using Error = das::cli::Error;
+    using Strings = Network::Strings;
 
     Network::Network(Infinit& infinit)
       : Entity(infinit)
@@ -118,9 +119,9 @@ namespace infinit
       auto
       make_kelips_config(boost::optional<int> nodes,
                          boost::optional<int> k,
-                         boost::optional<std::string> timeout,
-                         boost::optional<std::string> encrypt,
-                         boost::optional<std::string> protocol)
+                         boost::optional<std::string> const& timeout,
+                         boost::optional<std::string> const& encrypt,
+                         boost::optional<std::string> const& protocol)
       {
         auto res = std::make_unique<infinit::overlay::kelips::Configuration>();
         // k.
@@ -173,7 +174,7 @@ namespace infinit
       }
 
       std::vector<infinit::model::Endpoints>
-      parse_peers(std::vector<std::string> const& speers)
+      parse_peers(Strings const& speers)
       {
         using tokenizer = boost::tokenizer<boost::char_separator<char>>;
         return elle::make_vector(speers, [&](auto const& s)
@@ -195,7 +196,7 @@ namespace infinit
 
       std::unique_ptr<infinit::storage::StorageConfig>
       make_storage_config(infinit::Infinit& ifnt,
-                          std::vector<std::string> const& storage)
+                          Strings const& storage)
       {
         auto res = std::unique_ptr<infinit::storage::StorageConfig>{};
         if (storage.empty())
@@ -218,7 +219,7 @@ namespace infinit
       make_consensus_config(bool paxos,
                             bool no_consensus,
                             int replication_factor,
-                            boost::optional<std::string> eviction_delay)
+                            boost::optional<std::string> const& eviction_delay)
         -> std::unique_ptr<infinit::model::doughnut::consensus::Configuration>
       {
         if (replication_factor < 1)
@@ -245,8 +246,8 @@ namespace infinit
 
       auto
       make_admin_keys(infinit::Infinit& ifnt,
-                      std::vector<std::string> const& admin_r,
-                      std::vector<std::string> const& admin_rw)
+                      Strings const& admin_r,
+                      Strings const& admin_rw)
         -> infinit::model::doughnut::AdminKeys
       {
         auto res = infinit::model::doughnut::AdminKeys{};
@@ -270,17 +271,17 @@ namespace infinit
 
     void
     Network::mode_create(std::string const& network_name,
-                         boost::optional<std::string> description,
-                         std::vector<std::string> const& storage_names,
+                         boost::optional<std::string> const& description,
+                         Strings const& storage_names,
                          boost::optional<int> port,
                          int replication_factor,
-                         boost::optional<std::string> eviction_delay,
+                         boost::optional<std::string> const& eviction_delay,
                          boost::optional<std::string> const& output_name,
                          bool push_network,
                          bool push,
-                         std::vector<std::string> const& admin_r,
-                         std::vector<std::string> const& admin_rw,
-                         std::vector<std::string> const& peer,
+                         Strings const& admin_r,
+                         Strings const& admin_rw,
+                         Strings const& peer,
                          // Consensus types.
                          bool paxos,
                          bool no_consensus,
@@ -291,9 +292,9 @@ namespace infinit
                          // Kelips options,
                          boost::optional<int> nodes,
                          boost::optional<int> k,
-                         boost::optional<std::string> kelips_contact_timeout,
-                         boost::optional<std::string> encrypt,
-                         boost::optional<std::string> protocol)
+                         boost::optional<std::string> const& kelips_contact_timeout,
+                         boost::optional<std::string> const& encrypt,
+                         boost::optional<std::string> const& protocol)
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
@@ -484,7 +485,7 @@ namespace infinit
       std::pair<infinit::cryptography::rsa::PublicKey, bool>
       user_key(infinit::Infinit& ifnt,
                std::string name,
-               boost::optional<std::string> mountpoint)
+               boost::optional<std::string> const& mountpoint)
       {
         bool is_group = false;
         if (!name.empty() && name[0] == '@')
@@ -520,16 +521,16 @@ namespace infinit
 
     void
     Network::mode_update(std::string const& network_name,
-                         boost::optional<std::string> description,
+                         boost::optional<std::string> const& description,
                          boost::optional<int> port,
                          boost::optional<std::string> const& output_name,
                          bool push_network,
                          bool push,
-                         std::vector<std::string> const& admin_r,
-                         std::vector<std::string> const& admin_rw,
-                         std::vector<std::string> const& admin_remove,
-                         boost::optional<std::string> mountpoint,
-                         std::vector<std::string> const& peer)
+                         Strings const& admin_r,
+                         Strings const& admin_rw,
+                         Strings const& admin_remove,
+                         boost::optional<std::string> const& mountpoint,
+                         Strings const& peer)
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
@@ -614,6 +615,7 @@ namespace infinit
       if (push || push_network)
         {
           ifnt.beyond_push("network", desc->name, *desc, owner, false, true);
+          this->cli().report_action("pushed", "network", desc->name);
           // FIXME: report.
         }
       if (changed_admins && !output_name)

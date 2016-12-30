@@ -59,11 +59,11 @@ namespace infinit
       ModeCreate create;
       void
       mode_create(std::string const& network_name,
-                  boost::optional<std::string> description = {},
+                  boost::optional<std::string> const& description = {},
                   Strings const& storage = {},
                   boost::optional<int> port = boost::none,
                   int replication_factor = 1,
-                  boost::optional<std::string> eviction_delay = boost::none,
+                  boost::optional<std::string> const& eviction_delay = boost::none,
                   boost::optional<std::string> const& output_name = boost::none,
                   bool push_network = false,
                   bool push = false,
@@ -80,9 +80,9 @@ namespace infinit
                   // Kelips options,
                   boost::optional<int> nodes = boost::none,
                   boost::optional<int> k = boost::none,
-                  boost::optional<std::string> kelips_contact_timeout = boost::none,
-                  boost::optional<std::string> encrypt = boost::none,
-                  boost::optional<std::string> protocol = boost::none);
+                  boost::optional<std::string> const& kelips_contact_timeout = boost::none,
+                  boost::optional<std::string> const& encrypt = boost::none,
+                  boost::optional<std::string> const& protocol = boost::none);
 
 
       /*---------------.
@@ -140,16 +140,16 @@ namespace infinit
       ModeUpdate update;
       void
       mode_update(std::string const& network_name,
-                  boost::optional<std::string> description = {},
+                  boost::optional<std::string> const& description = {},
                   boost::optional<int> port = {},
                   boost::optional<std::string> const& output_name = {},
                   bool push_network = false,
                   bool push = false,
-                  std::vector<std::string> const& admin_r = Strings{},
-                  std::vector<std::string> const& admin_rw = Strings{},
-                  std::vector<std::string> const& admin_remove = Strings{},
-                  boost::optional<std::string> mountpoint = {},
-                  std::vector<std::string> const& peer = Strings{});
+                  Strings const& admin_r = Strings{},
+                  Strings const& admin_rw = Strings{},
+                  Strings const& admin_remove = Strings{},
+                  boost::optional<std::string> const& mountpoint = {},
+                  Strings const& peer = Strings{});
     };
   }
 }
