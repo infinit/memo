@@ -46,6 +46,7 @@ namespace infinit
         Block(Address address);
         Block(Address address, elle::Buffer data);
         Block(Block const& other) = default;
+        Block(Block&& other) = default;
         friend class infinit::model::Model;
         virtual
         ~Block() = default;
