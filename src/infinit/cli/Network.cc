@@ -88,6 +88,17 @@ namespace infinit
         "List networks",
         das::cli::Options(),
         this->bind(modes::mode_list))
+      , pull(
+        "Remove a network from {hub}",
+        das::cli::Options(),
+        this->bind(modes::mode_pull,
+                   cli::name,
+                   cli::purge = false))
+      , push(
+        "Push a network to {hub}",
+        das::cli::Options(),
+        this->bind(modes::mode_push,
+                   cli::name))
       , unlink(
         "Unlink this device from a network",
         das::cli::Options(),
@@ -619,6 +630,46 @@ namespace infinit
       auto network = ifnt.network_get(network_name, owner, true);
       ifnt.network_unlink(network.name, owner);
       this->cli().report_action("unlinked", "network", network_name);
+    }
+
+
+    /*-------------.
+    | Mode: pull.  |
+    `-------------*/
+
+    void
+    Network::mode_pull(std::string const& network_name,
+                       bool purge)
+    {
+      ELLE_TRACE_SCOPE("pull");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+
+      auto name = ifnt.qualified_name(network_name, owner);
+      ifnt.beyond_delete("network", network_name, owner, false, purge);
+    }
+
+    /*-------------.
+    | Mode: push.  |
+    `-------------*/
+
+    void
+    Network::mode_push(std::string const& network_name)
+    {
+      ELLE_TRACE_SCOPE("push");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+
+      auto network = ifnt.network_get(network_name, owner);
+      {
+        auto& dht = *network.dht();
+        auto owner_uid = infinit::User::uid(*dht.owner);
+        auto desc = infinit::NetworkDescriptor(std::move(network));
+        ifnt.beyond_push("network", desc.name, desc, owner, false, true);
+        cli.report_action("pushed", "network", network_name);
+      }
     }
 
 

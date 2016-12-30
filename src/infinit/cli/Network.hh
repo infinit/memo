@@ -25,6 +25,8 @@ namespace infinit
                                     cli::link,
                                     cli::list,
                                     cli::unlink,
+                                    cli::pull,
+                                    cli::push,
                                     cli::update));
 
       using Strings = std::vector<std::string>;
@@ -146,6 +148,30 @@ namespace infinit
       ModeList list;
       void
       mode_list();
+
+
+      /*-------------.
+      | Mode: pull.  |
+      `-------------*/
+      using ModePull =
+        Mode<decltype(binding(modes::mode_pull,
+                              cli::name,
+                              cli::purge = false))>;
+      ModePull pull;
+      void
+      mode_pull(std::string const& network_name,
+                bool purge = false);
+
+
+      /*-------------.
+      | Mode: push.  |
+      `-------------*/
+      using ModePush =
+        Mode<decltype(binding(modes::mode_push,
+                              cli::name))>;
+      ModePush push;
+      void
+      mode_push(std::string const& network_name);
 
 
       /*---------------.
