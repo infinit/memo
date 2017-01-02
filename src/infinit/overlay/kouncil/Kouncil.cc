@@ -162,6 +162,7 @@ namespace infinit
       Kouncil::~Kouncil()
       {
         ELLE_TRACE("%s: destruct", this);
+        this->_watcher_thread->terminate_now();
         this->_connections.clear();
       }
 
