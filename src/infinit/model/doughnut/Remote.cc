@@ -156,7 +156,7 @@ namespace infinit
                         elle::sprintf("%s: connect to tcp://%s",
                                       reactor::scheduler().current()->name(), e),
                         umbrella(
-                          [&]
+                          [&, e = e]
                           {
                             using reactor::network::TCPSocket;
                             handshake(elle::make_unique<TCPSocket>(e.tcp()));
@@ -168,7 +168,7 @@ namespace infinit
                       elle::sprintf("%s: connect to utp://%s",
                                     this, this->_endpoints),
                       umbrella(
-                        [&]
+                        [&, eps = this->_endpoints.udp()]
                         {
                           std::string cid;
                           if (this->id() != Address::null)
@@ -176,7 +176,7 @@ namespace infinit
                           auto socket =
                             elle::make_unique<reactor::network::UTPSocket>(
                               *this->_utp_server);
-                          socket->connect(cid, this->_endpoints.udp());
+                          socket->connect(cid, eps);
                           handshake(std::move(socket));
                           scope.terminate_now();
                         }));
