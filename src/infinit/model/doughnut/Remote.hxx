@@ -45,25 +45,25 @@ namespace infinit
         // We use one timeout for each connect attempt (in order to maybe
         // refresh endpoints), and a second timeout for the overall operation
         // setting INFINIT_SOFTFAIL_TIMEOUT to 0 will retry forever
-        static const int connect_timeout_sec =
-          std::stoi(elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "10"));
-        static const int softfail_timeout_sec =
-          std::stoi(elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT", "50"));
+        static const int connect_timeout_ms =
+          std::stoi(elle::os::getenv("INFINIT_CONNECT_TIMEOUT_MS", "10000"));
+        static const int softfail_timeout_ms =
+          std::stoi(elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT_MS", "50000"));
         static const bool enable_fast_fail =
           !elle::os::getenv("INFINIT_SOFTFAIL_FAST", "true").empty();
         elle::DurationOpt connect_timeout;
         int max_attempts = 0;
-        if (connect_timeout_sec > 0)
-          connect_timeout = boost::posix_time::seconds(connect_timeout_sec);
-        else if (connect_timeout_sec < 0)
+        if (connect_timeout_ms > 0)
+          connect_timeout = boost::posix_time::milliseconds(connect_timeout_ms);
+        else if (connect_timeout_ms < 0)
         {
           connect_timeout = boost::posix_time::seconds(0);
           max_attempts = 1;
         }
-        if (softfail_timeout_sec && connect_timeout_sec>0)
+        if (softfail_timeout_ms && connect_timeout_ms>0)
         {
-          int sts = std::max(softfail_timeout_sec, connect_timeout_sec);
-          max_attempts = sts / connect_timeout_sec;
+          int sts = std::max(softfail_timeout_ms, connect_timeout_ms);
+          max_attempts = sts / connect_timeout_ms;
         }
         int attempt = 0;
         bool need_reconnect = false;
@@ -83,7 +83,7 @@ namespace infinit
                          this, _reconnection_id);
               connect_running = true;
               if (std::chrono::system_clock::now() - this->_connection_start_time
-                > std::chrono::seconds(connect_timeout_sec))
+                > std::chrono::milliseconds(connect_timeout_ms))
               {
                 this->_reconnecting = false;
                 connect_running = false;

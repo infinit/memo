@@ -961,7 +961,6 @@ ELLE_TEST_SCHEDULED(churn, (Doughnut::OverlayBuilder, builder),
       client->dht->overlay().get()))
     {
       kelips->config().query_put_retries = 6;
-      kelips->config().query_timeout_ms = valgrind(1000, 4);
     }
     discover(*client, servers[0] ? *servers[0] : *servers[1], false);
   };
@@ -1166,9 +1165,12 @@ ELLE_TEST_SCHEDULED(churn_socket_pasv)
 
 ELLE_TEST_SUITE()
 {
-  elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
-  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "1", 1);
-  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_INTERVAL", "1", 1);
+  elle::os::setenv("INFINIT_CONNECT_TIMEOUT_MS",
+    std::to_string(valgrind(100, 10)), 1);
+  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT_MS",
+    std::to_string(valgrind(100, 10)), 1);
+  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_INTERVAL_MS", "20", 1);
+  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_MAX_RETRY_MS", "20", 1);
   auto& master = boost::unit_test::framework::master_test_suite();
   auto const kelips_builder =
     [] (Doughnut& dht, std::shared_ptr<Local> local)
@@ -1182,10 +1184,10 @@ ELLE_TEST_SUITE()
 #endif
       conf.query_get_retries = 4;
       conf.query_put_retries = 4;
-      conf.query_timeout_ms = valgrind(1000, 4);
-      conf.contact_timeout_ms = factor * valgrind(2000,20);
-      conf.ping_interval_ms = factor * valgrind(100, 10);
-      conf.ping_timeout_ms = factor * valgrind(1000, 20);
+      conf.query_timeout_ms = valgrind(100, 20);
+      conf.contact_timeout_ms = factor * valgrind(500, 20);
+      conf.ping_interval_ms = factor * valgrind(50, 10);
+      conf.ping_timeout_ms = factor * valgrind(1000, 2);
       return std::make_unique<kelips::Node>(
         conf, local, &dht);
     };
