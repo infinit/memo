@@ -290,7 +290,9 @@ namespace infinit
             ELLE_TRACE("peer %s disconnected", ptr);
             this->_peer_disconnected(ptr);
         });
-        peer->connected().connect([this, ptr=peer.get()] {
+        peer->connected().connect([this, peer = Overlay::WeakMember(peer)] {
+            auto ptr = peer.lock().get();
+            ELLE_ASSERT(ptr);
             ELLE_TRACE("peer %s connected", ptr);
             auto it = this->_disconnected_peers.get<1>().find(ptr);
             if (it == this->_disconnected_peers.get<1>().end())
@@ -302,10 +304,18 @@ namespace infinit
             }
             this->_peers.insert(*it);
             this->_disconnected_peers.get<1>().erase(it);
-            auto r = dynamic_cast<model::doughnut::Remote*>(ptr);
-            ELLE_ASSERT(r);
-            this->_advertise(*r);
-            this->_fetch_entries(*r);
+            this->_perform(
+              "bootstrap",
+              [this, peer]
+              {
+                if (auto p = peer.lock())
+                {
+                  auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(p);
+                  ELLE_ASSERT(r);
+                  this->_advertise(*r);
+                  this->_fetch_entries(*r);
+                }
+              });
         });
         this->_peers.emplace(peer);
         // Invoke on_discover
