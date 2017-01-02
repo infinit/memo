@@ -63,6 +63,14 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_ASSERT(server || protocol != Protocol::utp);
         this->_connect();
+        this->_connected.changed().connect(
+          [this] (bool opened)
+          {
+            if (opened)
+              this->Peer::connected()();
+            else
+              this->Peer::disconnected()();
+          });
       }
 
       Remote::~Remote()
@@ -93,8 +101,6 @@ namespace infinit
         ++this->_reconnection_id;
         if (this->_thread)
           this->_thread->terminate_now();
-        if (this->_connected)
-          this->disconnected()();
         this->_connected.close();
         this->_credentials = {};
         this->_thread.reset(
@@ -121,8 +127,8 @@ namespace infinit
                     this->_socket = std::move(socket);
                     this->_serializer = std::move(serializer);
                     this->_channels = std::move(channels);
-                    this->_connected.open();
                     this->doughnut().dock().insert_peer(shared_from_this());
+                    this->_connected.open();
                   };
                 auto umbrella = [&, this] (std::function<void ()> const& f)
                   {
@@ -185,15 +191,13 @@ namespace infinit
                     elle::sprintf("connection to %f failed", this->_endpoints));
                   break;
                 }
-                this->Peer::connected()();
                 ELLE_ASSERT(this->_channels);
                 ELLE_TRACE("%s: serve RPCs", this)
                   this->_rpc_server.serve(*this->_channels);
                 ELLE_TRACE("%s: connection ended, evicting", this);
                 auto self = this->doughnut().dock().evict_peer(this->id());
-                this->disconnected()();
-                ++this->_reconnection_id;
                 this->_connected.close();
+                ++this->_reconnection_id;
                 reactor::run_later("remote holder", std::bind(hold_remote, self));
                 return;
               }
