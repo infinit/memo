@@ -93,6 +93,7 @@ namespace infinit
       void
       Remote::_connect()
       {
+        reactor::Lock lock(this->_connect_mutex);
         static bool disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
         ELLE_TRACE_SCOPE("%s: connect", *this);
         ++this->_reconnection_id;
