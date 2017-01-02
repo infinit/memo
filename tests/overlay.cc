@@ -578,7 +578,7 @@ ELLE_TEST_SCHEDULED(
       ::storage = nullptr);
     discover(*client, *tgt, anonymous);
     // writes will fail until it connects
-    wait_until_ready(*client);
+    hard_wait(*client, 3, client->dht->id());
     std::vector<infinit::model::Address> addrs;
     for (int a=0; a<10; ++a)
     {
