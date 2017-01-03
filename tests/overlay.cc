@@ -1184,7 +1184,8 @@ ELLE_TEST_SUITE()
 #endif
       conf.query_get_retries = 4;
       conf.query_put_retries = 4;
-      conf.query_timeout_ms = valgrind(100, 20);
+      conf.query_put_insert_ttl = 0;
+      conf.query_timeout_ms = valgrind(100 * factor, 20);
       conf.contact_timeout_ms = factor * valgrind(500, 20);
       conf.ping_interval_ms = factor * valgrind(50, 10);
       conf.ping_timeout_ms = factor * valgrind(1000, 2);
