@@ -1200,8 +1200,12 @@ namespace infinit
             for (auto const& ep: l.endpoints())
               send(req, ep.udp(), Address::null);
           }
-          for (auto const& ep: l.endpoints())
+          for (auto ep: l.endpoints())
+          {
+            if (ep.address().is_v6() && ep.address().to_v6().is_v4_mapped())
+              ep = Endpoint(ep.address().to_v6().to_v4(), ep.port());
             this->_pending_bootstrap_endpoints.push_back(ep.udp());
+          }
         }
       }
 
@@ -1576,12 +1580,15 @@ namespace infinit
           // Flush operations waiting on crypto ready
           bool bootstrap_requested = false;
           {
+            auto nsource = source;
+            if (source.address().is_v6() && source.address().to_v6().is_v4_mapped())
+              nsource = Endpoint(source.address().to_v6().to_v4(), source.port());
             auto it = std::find(_pending_bootstrap_endpoints.begin(),
               _pending_bootstrap_endpoints.end(),
-              source);
+              nsource);
             if (it != _pending_bootstrap_endpoints.end())
             {
-              ELLE_DEBUG("%s: processing queued operation to %s", *this, source);
+              ELLE_DEBUG("%s: processing queued operation to %s", *this, nsource);
               *it = _pending_bootstrap_endpoints[_pending_bootstrap_endpoints.size() - 1];
               _pending_bootstrap_endpoints.pop_back();
               bootstrap_requested = true;
