@@ -90,9 +90,6 @@ namespace infinit
       | Networking |
       `-----------*/
 
-      static void hold_remote(overlay::Overlay::Member)
-      {}
-
       void
       Remote::_connect()
       {
@@ -106,7 +103,7 @@ namespace infinit
         this->_thread.reset(
           new reactor::Thread(
             elle::sprintf("%f worker", this),
-            [this]
+            [this, holder = overlay::Overlay::Member()]
             {
               bool connected = false;
               this->_key_hash_cache.clear();
@@ -200,7 +197,7 @@ namespace infinit
                 auto self = this->doughnut().dock().evict_peer(this->id());
                 this->_connected.close();
                 ++this->_reconnection_id;
-                reactor::run_later("remote holder", std::bind(hold_remote, self));
+                elle::unconst(holder) = self;
                 return;
               }
             }));
