@@ -108,6 +108,7 @@ namespace infinit
             elle::sprintf("%f worker", this),
             [this]
             {
+              bool connected = false;
               this->_key_hash_cache.clear();
               while (true)
               {
@@ -128,7 +129,7 @@ namespace infinit
                     this->_serializer = std::move(serializer);
                     this->_channels = std::move(channels);
                     this->doughnut().dock().insert_peer(shared_from_this());
-                    this->_connected.open();
+                    connected = true;
                   };
                 auto umbrella = [&, this] (std::function<void ()> const& f)
                   {
@@ -183,7 +184,7 @@ namespace infinit
                         }));
                   reactor::wait(scope);
                 };
-                if (!this->_connected)
+                if (!connected)
                 {
                   ELLE_TRACE("%s: connection to %f failed",
                              this, this->_endpoints);
@@ -191,6 +192,7 @@ namespace infinit
                     elle::sprintf("connection to %f failed", this->_endpoints));
                   break;
                 }
+                this->_connected.open();
                 ELLE_ASSERT(this->_channels);
                 ELLE_TRACE("%s: serve RPCs", this)
                   this->_rpc_server.serve(*this->_channels);
