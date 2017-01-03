@@ -580,13 +580,14 @@ namespace infinit
           }
           else
           {
-            bool should_discover = false;
             auto it = this->_infos.find(pi.first);
             if (it == this->_infos.end())
             {
               ELLE_DEBUG("discovering named peer %s", pi);
               this->_infos.insert(pi);
-              should_discover = true;
+              this->_perform("connect",
+                [this, pi = *this->_infos.find(pi.first)] {
+                this->_discover(pi);});
             }
             else
             {
@@ -598,10 +599,6 @@ namespace infinit
                 this->_notify_observers(*it);
               }
             }
-            if (should_discover)
-              this->_perform("connect",
-                [this, pi = *this->_infos.find(pi.first)] {
-                this->_discover(pi);});
           }
         }
       }
