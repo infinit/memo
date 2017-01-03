@@ -1166,11 +1166,14 @@ ELLE_TEST_SCHEDULED(churn_socket_pasv)
 ELLE_TEST_SUITE()
 {
   elle::os::setenv("INFINIT_CONNECT_TIMEOUT_MS",
-    std::to_string(valgrind(100, 10)), 1);
+    std::to_string(valgrind(100, 20)), 1);
   elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT_MS",
-    std::to_string(valgrind(100, 10)), 1);
-  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_INTERVAL_MS", "20", 1);
-  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_MAX_RETRY_MS", "20", 1);
+    std::to_string(valgrind(100, 20)), 1);
+  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_INTERVAL_MS",
+    std::to_string(valgrind(20, 50)), 1);
+  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_MAX_RETRY_MS",
+    std::to_string(valgrind(20, 50)), 1);
+
   auto& master = boost::unit_test::framework::master_test_suite();
   auto const kelips_builder =
     [] (Doughnut& dht, std::shared_ptr<Local> local)
