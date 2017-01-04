@@ -22,6 +22,7 @@ namespace infinit
     DAS_CLI_SYMBOL(admin_remove, 0, "Remove given users from all admin lists (prefix: @<group>, requires mountpoint)", false);
     DAS_CLI_SYMBOL(admin_rw, 0, "Set admin users that can read and write all data", false);
     DAS_CLI_SYMBOL(advertise_host, 0, "advertise extra endpoint using given host", false);
+    DAS_CLI_SYMBOL(all, 0, "all information", false);
     DAS_CLI_SYMBOL(allow_create_passport, 0, "allow user to create passports for network", false);
     DAS_CLI_SYMBOL(allow_root_creation, 0, "create the filesystem root if not found" , false);
     DAS_CLI_SYMBOL(as, 'a', "user to run commands as", false);
@@ -104,6 +105,7 @@ namespace infinit
     DAS_CLI_SYMBOL(paxos_rebalancing_auto_expand, 0, "whether to automatically rebalance under-replicated blocks", false);
     DAS_CLI_SYMBOL(paxos_rebalancing_inspect, 0, "whether to inspect all blocks on startup and trigger rebalancing", false);
     DAS_CLI_SYMBOL(peer, 0, "peer address or file with list of peer addresses (host:port)" , false);
+    DAS_CLI_SYMBOL(peers, 0, "list connected peers", false);
     DAS_CLI_SYMBOL(peers_file, 0, "Periodically write list of known peers to given file", false);
     DAS_CLI_SYMBOL(permissions, 0, "set default user permissions to XXX", false);
     DAS_CLI_SYMBOL(port, 0, "outbound port to use", false);
@@ -123,6 +125,7 @@ namespace infinit
     DAS_CLI_SYMBOL(readonly, 0, "mount as readonly" , false);
     DAS_CLI_SYMBOL(receive, 0, "receive an object from another device using {hub}", false);
     DAS_CLI_SYMBOL(recursive, 'R', "{verb} {type} recursively", false);
+    DAS_CLI_SYMBOL(redundancy, 0, "describe data redundancy", false);
     DAS_CLI_SYMBOL(region, '\0', "AWS region", false);
     DAS_CLI_SYMBOL(register_service, 'r', "register volume in the network", false);
     DAS_CLI_SYMBOL(remove, '\0', "remove users, administrators and groups from group (prefix: @<group>, ^<admin>", false);
@@ -157,6 +160,7 @@ namespace infinit
     DAS_SYMBOL(get_xattr);
     DAS_SYMBOL(hash);
     DAS_SYMBOL(import);
+    DAS_SYMBOL(inspect);
     DAS_SYMBOL(invite);
     DAS_SYMBOL(join);
     DAS_SYMBOL(journal);
@@ -199,6 +203,7 @@ namespace infinit
       DAS_SYMBOL(mode_group);
       DAS_SYMBOL(mode_hash);
       DAS_SYMBOL(mode_import);
+      DAS_SYMBOL(mode_inspect);
       DAS_SYMBOL(mode_invite);
       DAS_SYMBOL(mode_join);
       DAS_SYMBOL(mode_link);

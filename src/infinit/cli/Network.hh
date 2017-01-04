@@ -23,6 +23,9 @@ namespace infinit
                                     cli::export_,
                                     cli::fetch,
                                     cli::import,
+#ifndef INFINIT_WINDOWS
+                                    cli::inspect,
+#endif
                                     cli::link,
                                     cli::list,
                                     cli::unlink,
@@ -144,6 +147,29 @@ namespace infinit
       ModeImport import;
       void
       mode_import(boost::optional<std::string> const& input_name = {});
+
+
+      /*----------------.
+      | Mode: inspect.  |
+      `----------------*/
+#ifndef INFINIT_WINDOWS
+      using ModeInspect =
+        Mode<decltype(binding(modes::mode_inspect,
+                              cli::name,
+                              cli::output = boost::none,
+                              cli::status = false,
+                              cli::peers = false,
+                              cli::all = false,
+                              cli::redundancy = false))>;
+      ModeInspect inspect;
+      void
+      mode_inspect(std::string const& network_name,
+                   boost::optional<std::string> const& output_name = {},
+                   bool status = false,
+                   bool peers = false,
+                   bool all = false,
+                   bool redundancy = false);
+#endif
 
 
       /*-------------.

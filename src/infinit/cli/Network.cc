@@ -4,6 +4,7 @@
 
 #include <elle/make-vector.hh>
 
+#include <infinit/Network.hh> // Storages
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/utility.hh>
 #include <infinit/cli/xattrs.hh>
@@ -20,6 +21,10 @@
 #include <infinit/overlay/kouncil/Configuration.hh>
 #include <infinit/storage/Storage.hh>
 #include <infinit/storage/Strip.hh>
+
+#ifndef INFINIT_WINDOWS
+# include <reactor/network/unix-domain-socket.hh>
+#endif
 
 ELLE_LOG_COMPONENT("cli.network");
 
@@ -87,6 +92,18 @@ namespace infinit
         das::cli::Options(),
         this->bind(modes::mode_import,
                    cli::input = boost::none))
+#ifndef INFINIT_WINDOWS
+      , inspect(
+        "Get information about a running network",
+        das::cli::Options(),
+        this->bind(modes::mode_inspect,
+                   cli::name,
+                   cli::output = boost::none,
+                   cli::status = false,
+                   cli::peers = false,
+                   cli::all = false,
+                   cli::redundancy = false))
+#endif
       , link(
         "Link this device to a network",
         das::cli::Options(),
@@ -640,6 +657,102 @@ namespace infinit
       ifnt.network_save(desc);
       cli.report_imported("network", desc.name);
     }
+
+
+#ifndef INFINIT_WINDOWS
+    /*----------------.
+    | Mode: inspect.  |
+    `----------------*/
+
+    void
+    Network::mode_inspect(std::string const& network_name,
+                          boost::optional<std::string> const& output_name,
+                          bool status,
+                          bool peers,
+                          bool all,
+                          bool redundancy)
+    {
+      ELLE_TRACE_SCOPE("inspect");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto network = ifnt.network_get(network_name, owner, false);
+      auto s_path = network.monitoring_socket_path(owner);
+      if (!bfs::exists(s_path))
+        elle::err("network not running or monitoring disabled");
+      reactor::network::UnixDomainSocket socket(s_path);
+      using Monitoring = infinit::model::MonitoringServer;
+      using Query = infinit::model::MonitoringServer::MonitorQuery::Query;
+      auto do_query = [&] (Query query_val)
+        {
+          auto query = Monitoring::MonitorQuery(query_val);
+          elle::serialization::json::serialize(query, socket, false, false);
+          auto json = boost::any_cast<elle::json::Object>(elle::json::read(socket));
+          return Monitoring::MonitorResponse(std::move(json));
+        };
+      auto print_response = [&] (Monitoring::MonitorResponse const& response)
+        {
+          if (cli.script())
+            elle::json::write(*cli.get_output(output_name), response.as_object());
+          else
+          {
+            if (response.error)
+              std::cout << "Error: " << response.error.get() << std::endl;
+            if (response.result)
+              std::cout << elle::json::pretty_print(response.result.get())
+                        << std::endl;
+            else
+              std::cout << "Running" << std::endl;
+          }
+        };
+
+      if (status)
+        print_response(do_query(Query::Status));
+      else if (all)
+        print_response(do_query(Query::Stats));
+      else if (redundancy)
+      {
+        auto res = do_query(Query::Stats);
+        if (res.result)
+        {
+          auto redundancy =
+            boost::any_cast<elle::json::Object>(res.result.get()["redundancy"]);
+          if (cli.script())
+            elle::json::write(*cli.get_output(output_name), redundancy);
+          else
+            std::cout << elle::json::pretty_print(redundancy) << std::endl;
+        }
+      }
+      else if (peers)
+      {
+        auto res = do_query(Query::Stats);
+        if (res.result)
+        {
+          auto peer_list =
+            boost::any_cast<elle::json::Array>(res.result.get()["peers"]);
+          if (cli.script())
+            elle::json::write(*cli.get_output(output_name), peer_list);
+          else
+          {
+            if (peer_list.empty())
+              std::cout << "No peers" << std::endl;
+            else
+              for (auto obj: peer_list)
+              {
+                auto json = boost::any_cast<elle::json::Object>(obj);
+                std::cout << boost::any_cast<std::string>(json["id"]);
+                json.erase("id");
+                if (json.size())
+                  std::cout << ": " << elle::json::pretty_print(json) << std::endl;
+              }
+          }
+        }
+      }
+      else
+        elle::err<Error>("specify either \"--status\", \"--peers\","
+                         " \"--redundancy\", or \"--all\"");
+    }
+#endif
 
 
     /*-------------.
@@ -1279,13 +1392,12 @@ namespace infinit
       auto owner = cli.as_user();
       auto name = ifnt.qualified_name(network_name, owner);
       auto res =
-        infinit::beyond_fetch<Storages>(
+        ifnt.beyond_fetch<infinit::Storages>(
           elle::sprintf("networks/%s/stat", name),
           "stat",
           "stat",
           boost::none,
-          infinit::Headers(),
-          false);
+          infinit::Headers());
 
       // FIXME: write Storages::operator(std::ostream&)
       elle::printf("{\"usage\": %s, \"capacity\": %s}",
