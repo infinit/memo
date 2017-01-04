@@ -2,8 +2,6 @@
 
 #include <boost/filesystem.hpp>
 
-#include <das/serializer.hh>
-
 #include <reactor/http/Request.hh>
 
 #include <infinit/Infinit.hh>
@@ -14,23 +12,6 @@
 
 ELLE_LOG_COMPONENT("infinit.Network");
 
-namespace infinit
-{
-  DAS_SYMBOL(capacity);
-  DAS_SYMBOL(usage);
-
-  struct Storages
-  {
-    int64_t usage;
-    boost::optional<int64_t> capacity;
-
-    using Model = das::Model<
-      Storages,
-      decltype(elle::meta::list(infinit::usage,
-                                infinit::capacity))>;
-  };
-}
-DAS_SERIALIZE(infinit::Storages);
 
 // FIXME: use model endpoints
 struct Endpoints

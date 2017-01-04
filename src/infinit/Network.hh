@@ -1,10 +1,31 @@
 #pragma once
 
+#include <das/serializer.hh>
+
 #include <infinit/User.hh>
 #include <infinit/fwd.hh>
 #include <infinit/descriptor/TemplatedBaseDescriptor.hh>
 #include <infinit/model/Model.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+
+namespace infinit
+{
+  DAS_SYMBOL(capacity);
+  DAS_SYMBOL(usage);
+
+  struct Storages
+  {
+    int64_t usage;
+    boost::optional<int64_t> capacity;
+
+    using Model = das::Model<
+      Storages,
+      decltype(elle::meta::list(infinit::usage,
+                                infinit::capacity))>;
+  };
+}
+DAS_SERIALIZE(infinit::Storages);
+
 
 namespace infinit
 {
