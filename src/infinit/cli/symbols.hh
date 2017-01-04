@@ -173,6 +173,7 @@ namespace infinit
     DAS_SYMBOL(silo);
     DAS_SYMBOL(start);
     DAS_SYMBOL(status);
+    DAS_SYMBOL(stats);
     DAS_SYMBOL(stop);
     DAS_SYMBOL(transmit);
     DAS_SYMBOL(unlink);
@@ -216,6 +217,7 @@ namespace infinit
       DAS_SYMBOL(mode_signup);
       DAS_SYMBOL(mode_start);
       DAS_SYMBOL(mode_stat);
+      DAS_SYMBOL(mode_stats);
       DAS_SYMBOL(mode_status);
       DAS_SYMBOL(mode_stop);
       DAS_SYMBOL(mode_transmit);

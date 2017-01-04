@@ -173,6 +173,11 @@ namespace infinit
                    cli::advertise_host = Strings{},
                    cli::paxos_rebalancing_auto_expand = boost::none,
                    cli::paxos_rebalancing_inspect = boost::none))
+      , stats(
+        "Fetch stats of a network on {hub}",
+        das::cli::Options(),
+        this->bind(modes::mode_stats,
+                   cli::name))
       , unlink(
         "Unlink this device from a network",
         das::cli::Options(),
@@ -1258,6 +1263,33 @@ namespace infinit
           else
             reactor::sleep();
         });
+    }
+
+
+    /*--------------.
+    | Mode: stats.  |
+    `--------------*/
+
+    void
+    Network::mode_stats(std::string const& network_name)
+    {
+      ELLE_TRACE_SCOPE("stats");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto name = ifnt.qualified_name(network_name, owner);
+      auto res =
+        infinit::beyond_fetch<Storages>(
+          elle::sprintf("networks/%s/stat", name),
+          "stat",
+          "stat",
+          boost::none,
+          infinit::Headers(),
+          false);
+
+      // FIXME: write Storages::operator(std::ostream&)
+      elle::printf("{\"usage\": %s, \"capacity\": %s}",
+                   res.usage, res.capacity);
     }
 
 

@@ -329,6 +329,17 @@ namespace infinit
                boost::optional<bool> paxos_rebalancing_inspect = {});
 
 
+      /*--------------.
+      | Mode: stats.  |
+      `--------------*/
+      using ModeStats =
+        Mode<decltype(binding(modes::mode_stats,
+                              cli::name))>;
+      ModeStats stats;
+      void
+      mode_stats(std::string const& network_name);
+
+
       /*---------------.
       | Mode: unlink.  |
       `---------------*/
