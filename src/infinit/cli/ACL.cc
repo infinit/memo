@@ -356,45 +356,29 @@ namespace infinit
         return !obj.empty() && obj[0] == group_prefix;
       }
 
-      boost::optional<std::vector<std::string>>
-      collate_users(boost::optional<std::vector<std::string>> const& combined,
-                    boost::optional<std::vector<std::string>> const& users,
-                    boost::optional<std::vector<std::string>> const& admins,
-                    boost::optional<std::vector<std::string>> const& groups)
+      std::vector<std::string>
+      collate_users(boost::optional<std::vector<std::string>>&& combined,
+                    boost::optional<std::vector<std::string>>&& users,
+                    boost::optional<std::vector<std::string>>&& admins,
+                    boost::optional<std::vector<std::string>>&& groups)
       {
-        if (!combined && !users && !admins && !groups)
-          return boost::none;
-        std::vector<std::string> res;
+        auto res = std::vector<std::string>{};
         if (combined)
-        {
-          for (auto c: combined.get())
-            res.push_back(c);
-        }
+          std::move(combined->begin(), combined->end(), std::back_inserter(res));
         if (users)
-        {
-          for (auto u: users.get())
-            res.push_back(u);
-        }
+          std::move(users->begin(), users->end(), std::back_inserter(res));
         if (admins)
-        {
           for (auto a: admins.get())
-          {
             if (a[0] == admin_prefix)
-              res.push_back(a);
+              res.emplace_back(std::move(a));
             else
-              res.push_back(elle::sprintf("%s%s", admin_prefix, a));
-          }
-        }
+              res.emplace_back(elle::sprintf("%s%s", admin_prefix, a));
         if (groups)
-        {
           for (auto g: groups.get())
-          {
             if (g[0] == group_prefix)
-              res.push_back(g);
+              res.emplace_back(std::move(g));
             else
-              res.push_back(elle::sprintf("%s%s", group_prefix, g));
-          }
-        }
+              res.emplace_back(elle::sprintf("%s%s", group_prefix, g));
         return res;
       }
 
@@ -585,53 +569,49 @@ namespace infinit
       boost::filesystem::path path(path_str);
       auto add = collate_users(add_, add_user, add_admin, add_group);
       auto rem = collate_users(rem_, rem_user, rem_admin, rem_group);
-      int action_count = (create ? 1 : 0) + (delete_ ? 1 : 0) + (show ? 1 : 0)
-        + (add ? 1 : 0) + (rem ? 1 : 0) + (description ? 1 : 0);
-      if (action_count == 0)
-        elle::err<CLIError>("no action specified");
-      if (action_count > 1)
-        elle::err<CLIError>("specify only one action at a time");
+      {
+        int action_count = (create + delete_ + show + !!description
+                            + !add.empty() + !rem.empty());
+        if (action_count == 0)
+          elle::err<CLIError>("no action specified");
+        else if (action_count > 1)
+          elle::err<CLIError>("specify only one action at a time");
+      }
       enforce_in_mountpoint(path.string(), fallback);
       // Need to perform group actions on a directory in the volume.
       if (!is_directory(path))
         path = path.parent_path();
       if (create)
         setxattr(path.string(), "user.infinit.group.create", group, fallback);
-      if (delete_)
+      else if (delete_)
         setxattr(path.string(), "user.infinit.group.delete", group, fallback);
-      if (add)
-      {
-        for (auto const& obj: add.get())
-          group_add_remove(this->cli().infinit(),
-                           path, group, obj, "add", fallback, fetch);
-      }
-      if (rem)
-      {
-        for (auto const& obj: rem.get())
-          group_add_remove(this->cli().infinit(),
-                           path, group, obj, "remove", fallback, fetch);
-      }
-      if (description)
+      else if (description)
       {
         setxattr(path.string(),
                  elle::sprintf("infinit.groups.%s.description", group),
                  description.get(), fallback);
       }
+      else
+      {
+        for (auto const& obj: add)
+          group_add_remove(this->cli().infinit(),
+                           path, group, obj, "add", fallback, fetch);
+        for (auto const& obj: rem)
+          group_add_remove(this->cli().infinit(),
+                           path, group, obj, "remove", fallback, fetch);
+      }
       if (show)
       {
         char res[16384];
-        int sz = getxattr(
-          path.string(), "user.infinit.group.list." + group,
-          res, 16384, fallback);
+        int sz = getxattr(path.string(), "user.infinit.group.list." + group,
+                          res, sizeof res, fallback);
         if (sz >= 0)
         {
           res[sz] = 0;
           std::cout << res << std::endl;
         }
         else
-        {
           elle::err("unable to list group: %s", group);
-        }
       }
     }
 
@@ -866,9 +846,9 @@ namespace infinit
       check_mode(others_mode);
       auto combined = collate_users(users, boost::none, boost::none, groups);
       // auto users = combined ? combined.get() : std::vector<std::string>();
-      if (mode && !combined)
+      if (mode && combined.empty())
         elle::err<das::cli::Error>("must specify user when setting mode");
-      if (!mode && combined)
+      if (!mode && !combined.empty())
         throw das::cli::MissingOption("mode");
       if (inherit && disinherit)
         elle::err<das::cli::Error>("inherit and disable-inherit are exclusive");
