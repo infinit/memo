@@ -172,8 +172,6 @@ namespace infinit
         _discover(NodeLocations const& peers) override;
       private:
         void
-        _discover(Overlay::Member peer);
-        void
         _discover(PeerInfos::value_type const& peer);
         void
         _discover(PeerInfos const& pis);

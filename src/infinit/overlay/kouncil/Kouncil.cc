@@ -241,93 +241,90 @@ namespace infinit
       void
       Kouncil::_discover(PeerInfos::value_type const& p)
       {
-        ELLE_ASSERT_NEQ(p.first, this->doughnut()->id());
-        NodeLocation nl(p.first, p.second.endpoints_stamped);
-        nl.endpoints().merge(p.second.endpoints_unstamped);
         overlay::Overlay::Member peer;
-        try
+        ELLE_DEBUG("connect to %f", p)
         {
-          peer = this->doughnut()->dock().make_peer(
-            nl,
-            model::EndpointsRefetcher([this] (model::Address id)
-                                      {
-                                        return this->_endpoints_refetch(id);
-                                      })).lock();
-        }
-        catch (reactor::network::Exception const& e)
-        {
-          ELLE_TRACE("%s: network exception connecting to %s: %s", this, p, e);
-          return;
-        }
-        if (auto r = dynamic_cast<model::doughnut::Remote*>(peer.get()))
-          r->connect();
-        ELLE_ASSERT_NEQ(peer->id(), model::Address::null);
-        if (p.first == model::Address::null)
-        {
-          auto it = this->_infos.find(peer->id());
-          if (it != this->_infos.end())
+          ELLE_ASSERT_NEQ(p.first, this->doughnut()->id());
+          NodeLocation nl(p.first, p.second.endpoints_stamped);
+          nl.endpoints().merge(p.second.endpoints_unstamped);
+          try
           {
-            ELLE_DEBUG("%s: anon connect gave us a known peer %f", this, peer->id());
-            it->second.merge(p.second);
+            peer = this->doughnut()->dock().make_peer(
+              nl,
+              model::EndpointsRefetcher([this] (model::Address id)
+                                        {
+                                          return this->_endpoints_refetch(id);
+                                        })).lock();
+          }
+          catch (reactor::network::Exception const& e)
+          {
+            ELLE_TRACE("%s: network exception connecting to %s: %s", this, p, e);
             return;
           }
-          ELLE_DEBUG("%s: anon connect suceeded on %s", this, peer->id());
-          this->_infos.insert(std::make_pair(peer->id(), p.second));
-        }
-        this->_discover(peer);
-      }
-
-      void
-      Kouncil::_discover(Overlay::Member peer)
-      {
-        ELLE_ASSERT_NEQ(peer->id(), this->doughnut()->id());
-        ELLE_DEBUG("%s: discovered %s", this, peer->id());
-        // FIXME: handle local !
-        if (auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(peer))
-          this->_fetch_entries(*r);
-        ELLE_ASSERT_NEQ(peer->id(), model::Address::null);
-        peer->disconnected().connect([this, ptr=peer.get()] {
-            ELLE_TRACE("peer %s disconnected", ptr);
-            this->_peer_disconnected(ptr);
-        });
-        peer->connected().connect([this, peer = Overlay::WeakMember(peer)] {
-            auto ptr = peer.lock().get();
-            ELLE_ASSERT(ptr);
-            ELLE_TRACE("peer %s connected", ptr);
-            auto it = this->_disconnected_peers.get<1>().find(ptr);
-            if (it == this->_disconnected_peers.get<1>().end())
+          peer->disconnected().connect([this, ptr=peer.get()] {
+              ELLE_TRACE("peer %s disconnected", ptr);
+              this->_peer_disconnected(ptr);
+          });
+          peer->connected().connect(
+            [this,
+             peer = std::ambivalent_ptr<model::doughnut::Peer>::own(peer),
+             pi = std::make_pair(p.first, p.second)]
             {
-              // This can happen at initial connection time, if we registered
-              // this function to connected() before it triggered
-              ELLE_ASSERT_NEQ(this->_peers.find(ptr->id()), this->_peers.end());
-              return;
-            }
-            this->_peers.insert(*it);
-            this->_disconnected_peers.get<1>().erase(it);
-            this->_perform(
-              "bootstrap",
-              [this, peer]
+              auto p = peer.lock();
+              elle::unconst(peer).payload().reset();
+              ELLE_ASSERT(p);
+              auto ptr = p.get();
+              ELLE_ASSERT_NEQ(p->id(), model::Address::null);
+              // If this was an anonymous peer, check it's not a duplicate.
+              if (pi.first == model::Address::null)
               {
-                if (auto p = peer.lock())
+                auto it = this->_infos.find(p->id());
+                if (it != this->_infos.end())
                 {
-                  auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(p);
-                  ELLE_ASSERT(r);
-                  this->_advertise(*r);
-                  this->_fetch_entries(*r);
+                  ELLE_DEBUG(
+                    "anonymous connection to known peer %f, merge endpoints",
+                    peer);
+                  it->second.merge(pi.second);
+                  return;
                 }
-              });
-        });
-        this->_peers.emplace(peer);
-        // Invoke on_discover
-        {
-          Endpoints eps;
-          auto& pi = this->_infos.at(peer->id());
-          eps.merge(pi.endpoints_stamped);
-          eps.merge(pi.endpoints_unstamped);
-          NodeLocation nl(peer->id(), eps);
-          this->on_discover()(nl, false);
+                else
+                {
+                  ELLE_DEBUG(
+                    "register anonymous connection to %f endpoints", peer);
+                  this->_infos.insert(std::make_pair(p->id(), pi.second));
+                  // FIXME: is modifying captures defined ?
+                  elle::unconst(pi).first = p->id();
+                }
+              }
+              ELLE_ASSERT(ptr);
+              ELLE_TRACE("%f connected", p);
+              auto it = this->_disconnected_peers.get<1>().find(ptr);
+              if (it != this->_disconnected_peers.get<1>().end())
+              {
+                // This is a reconnection
+                ELLE_ASSERT(this->_peers.find(ptr->id()) == this->_peers.end());
+                this->_peers.insert(*it);
+                this->_disconnected_peers.get<1>().erase(it);
+              }
+              else
+                // This is the initial connection
+                this->_peers.emplace(p);
+              auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(p);
+              ELLE_ASSERT(r);
+              this->_advertise(*r);
+              this->_fetch_entries(*r);
+              // Invoke on_discover
+              {
+                Endpoints eps;
+                auto& pi = this->_infos.at(p->id());
+                eps.merge(pi.endpoints_stamped);
+                eps.merge(pi.endpoints_unstamped);
+                NodeLocation nl(p->id(), eps);
+                this->on_discover()(nl, false);
+              }
+            });
         }
-        ELLE_DEBUG("%s: notifying connections", this);
+        ELLE_DEBUG_SCOPE("broadcast new peer informations");
         // Broadcast this peer existence
         if (this->local())
         {
@@ -347,13 +344,6 @@ namespace infinit
             }
           }
         }
-        // Send the peer all known hosts and retrieve its known hosts
-        // FIXME: handle local !
-        if (auto r = dynamic_cast<model::doughnut::Remote*>(peer.get()))
-          this->_advertise(*r);
-        else
-          ELLE_ERR(
-            "%s: not sending advertise to non-remote peer %s", this, peer);
       }
 
       template<typename E>
@@ -553,6 +543,7 @@ namespace infinit
       void
       Kouncil::_peer_disconnected(model::doughnut::Peer* peer)
       {
+        ELLE_TRACE_SCOPE("%s: %s disconnected", this, peer);
         auto it = this->_peers.find(peer->id());
         ELLE_ASSERT_NEQ(it, this->_peers.end());
         ELLE_ASSERT_EQ(it->get(), peer);
@@ -560,7 +551,6 @@ namespace infinit
         pi.last_seen = std::chrono::high_resolution_clock::now();
         pi.last_contact_attempt = pi.last_seen;
         this->_disconnected_peers.insert(*it);
-        ELLE_TRACE("removing %s from peers", peer);
         auto its = this->_address_book.equal_range(peer->id());
         this->_address_book.erase(its.first, its.second);
         this->_peers.erase(it);
@@ -585,17 +575,21 @@ namespace infinit
             {
               ELLE_DEBUG("discovering named peer %s", pi);
               this->_infos.insert(pi);
-              this->_perform("connect",
-                [this, pi = *this->_infos.find(pi.first)] {
-                this->_discover(pi);});
+              this->_perform(
+                "connect",
+                [this, pi = *this->_infos.find(pi.first) /* FIXME: that's just pi ?? */]
+                {
+                  this->_discover(pi);
+                });
             }
             else
             {
-              ELLE_DEBUG("discovering on known peer %s", pi);
+              ELLE_DEBUG("discovering known peer %s", pi);
               if (it->second.merge(pi.second))
-              { // New data on a connected peer, we need to notify observers
+              {
+                // New data on a connected peer, we need to notify observers
                 // FIXME: maybe notify on reconnection instead?
-                ELLE_DEBUG("new data on peer %s", pi);
+                ELLE_DEBUG("broadcast new endpoints for peer %s", pi);
                 this->_notify_observers(*it);
               }
             }
@@ -682,6 +676,7 @@ namespace infinit
       boost::optional<Endpoints>
       Kouncil::_endpoints_refetch(model::Address id)
       {
+
         auto it = this->_infos.find(id);
         if (it != this->_infos.end())
         {
@@ -689,6 +684,7 @@ namespace infinit
           res.merge(it->second.endpoints_stamped);
           res.merge(it->second.endpoints_unstamped);
           ELLE_DEBUG("updating endpoints for %s with %s entries", id, res.size());
+          ELLE_ERR("refetch endpoints %f: %s", id, res);
           return res;
         }
         return boost::none;
@@ -734,15 +730,19 @@ namespace infinit
               ELLE_TRACE("%s: attempting to contact %s", this, *it);
               info.last_contact_attempt = now;
               // try contacting this node again
-              this->_perform("ping", [peer=*it] {
+              this->_perform(
+                "ping",
+                [peer = *it]
+                {
                   try
                   {
                     peer->fetch(model::Address::random(), boost::none);
                   }
                   catch (elle::Error const& e)
                   {
+                    ELLE_ERR("RES: %s", e);
                   }
-              });
+                });
             }
             ++it;
           }
