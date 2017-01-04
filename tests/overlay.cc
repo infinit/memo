@@ -113,15 +113,22 @@ discover(DHT& dht, DHT& target,
     eps = Endpoints {target.dht->local()->server_endpoints()[0]};
   else
     eps = target.dht->local()->server_endpoints();
+  reactor::Barrier b;
+  if (wait)
+    new reactor::Thread("wait", [&] {
+      reactor::wait(
+      dht.dht->overlay()->on_discover(),
+      [&] (NodeLocation const& l, bool) { return l.id() == target.dht->id(); });
+      b.open();
+    }, true);
+  else
+    b.open();
   if (anonymous)
     dht.dht->overlay()->discover(eps);
   else
     dht.dht->overlay()->discover(
       NodeLocation(target.dht->id(), eps));
-  if (wait)
-    reactor::wait(
-      dht.dht->overlay()->on_discover(),
-      [&] (NodeLocation const& l, bool) { return l.id() == target.dht->id(); });
+  reactor::wait(b);
 }
 
 static
@@ -403,7 +410,15 @@ ELLE_TEST_SCHEDULED(
       dht_b.dht->overlay()->lookup(old_address).lock()->id(),
       id_a);
   }
+  // We need to wait for eviction, otherwise the overlay can legitimately
+  // call neither on_disappear() nor on_discover().
+  reactor::Barrier b;
   ELLE_LOG("restart first DHT")
+  new reactor::Thread("wait_disappear", [&] {
+      reactor::wait(dht_b.dht->overlay()->on_disappear(),
+        [&](infinit::model::Address a, bool) { return a == id_a;});
+      b.open();
+    }, true);
   {
     dht_a.reset();
     dht_a = std::make_unique<DHT>(
@@ -418,11 +433,9 @@ ELLE_TEST_SCHEDULED(
   }
   ELLE_LOG("lookup second block")
     BOOST_CHECK_THROW(dht_b.dht->overlay()->lookup(new_address), MissingBlock);
+  reactor::wait(b);
   ELLE_LOG("discover new endpoints")
-    discover(dht_b, *dht_a, anonymous);
-  reactor::wait(
-    dht_b.dht->overlay()->on_discover(),
-    [&] (NodeLocation const& l, bool) { return l.id() == dht_a->dht->id(); });
+    discover(dht_b, *dht_a, anonymous, false, true);
   ELLE_LOG("lookup second block")
   {
     BOOST_CHECK_EQUAL(
@@ -1179,7 +1192,7 @@ ELLE_TEST_SUITE()
   auto const kouncil_builder =
     [] (Doughnut& dht, std::shared_ptr<Local> local)
     {
-      return std::make_unique<kouncil::Kouncil>(&dht, local);
+      return std::make_unique<kouncil::Kouncil>(&dht, local, 1);
     };
 #define BOOST_NAMED_TEST_CASE(name,  test_function)                     \
   boost::unit_test::make_test_case(boost::function<void ()>(test_function), \
