@@ -153,7 +153,7 @@ namespace infinit
             std::cout << "No key specified, generating fresh ones:" << std::endl;
             this->keys->serialize(output);
           }
-          return elle::make_unique<infinit::model::paranoid::Paranoid>(
+          return std::make_unique<infinit::model::paranoid::Paranoid>(
             std::move(*this->keys), this->storage->make(), this->version);
         }
       };

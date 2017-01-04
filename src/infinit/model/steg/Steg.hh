@@ -1,10 +1,9 @@
+#pragma once
+
 #include <boost/random.hpp>
 #include <boost/filesystem.hpp>
 #include <infinit/model/Model.hh>
 #include <infinit/model/blocks/Block.hh>
-
-
-
 
 namespace infinit
 {
@@ -17,16 +16,12 @@ namespace infinit
       public:
         Steg(boost::filesystem::path const& storage, std::string const& pass);
       protected:
-        virtual
         std::unique_ptr<blocks::MutableBlock>
         _make_mutable_block() const override;
-        virtual
         void
         _store(blocks::Block& block) override;
-        virtual
         std::unique_ptr<blocks::Block>
         _fetch(Address address) const override;
-        virtual
         void
         _remove(Address address) override;
       private:

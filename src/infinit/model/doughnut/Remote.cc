@@ -115,10 +115,10 @@ namespace infinit
                 auto handshake = [&] (std::unique_ptr<std::iostream> socket)
                   {
                     auto sv = elle_serialization_version(this->_doughnut.version());
-                    auto serializer = elle::make_unique<protocol::Serializer>(
+                    auto serializer = std::make_unique<protocol::Serializer>(
                       *socket, sv, false);
                     auto channels =
-                    elle::make_unique<protocol::ChanneledStream>(*serializer);
+                    std::make_unique<protocol::ChanneledStream>(*serializer);
                     if (!disable_key)
                       this->_key_exchange(*channels);
                     ELLE_TRACE("%s: connected", this);
@@ -158,7 +158,7 @@ namespace infinit
                           [&]
                           {
                             using reactor::network::TCPSocket;
-                            handshake(elle::make_unique<TCPSocket>(e.tcp()));
+                            handshake(std::make_unique<TCPSocket>(e.tcp()));
                             scope.terminate_now();
                           }));
                   if (this->_protocol == Protocol::utp ||
@@ -173,7 +173,7 @@ namespace infinit
                           if (this->id() != Address::null)
                             cid = elle::sprintf("%x", this->id());
                           auto socket =
-                            elle::make_unique<reactor::network::UTPSocket>(
+                            std::make_unique<reactor::network::UTPSocket>(
                               *this->_utp_server);
                           socket->connect(cid, this->_endpoints.udp());
                           handshake(std::move(socket));
@@ -308,7 +308,7 @@ namespace infinit
                           this->_id, res.id);
               return std::make_pair(
                 res.challenge,
-                elle::make_unique<Passport>(std::move(res.passport)));
+                std::make_unique<Passport>(std::move(res.passport)));
             }
             else if (this->_doughnut.version() >= elle::Version(0, 4, 0))
               return _auth_0_4(*this, channels);

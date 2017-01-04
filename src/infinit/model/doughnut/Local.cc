@@ -72,12 +72,12 @@ namespace infinit
                 && dht.version() >= elle::Version(0, 7, 0);
             if (p == Protocol::tcp || p == Protocol::all)
             {
-              this->_server = elle::make_unique<reactor::network::TCPServer>();
+              this->_server = std::make_unique<reactor::network::TCPServer>();
               if (listen_address)
                 this->_server->listen(*listen_address, port, v6);
               else
                 this->_server->listen(port, v6);
-              this->_server_thread = elle::make_unique<reactor::Thread>(
+              this->_server_thread = std::make_unique<reactor::Thread>(
                 elle::sprintf("%s server", *this),
                 [this] { this->_serve_tcp(); });
               ELLE_LOG("%s: listen on tcp://%s",
@@ -87,7 +87,7 @@ namespace infinit
             {
               int udp_port = port;
               this->_utp_server =
-                elle::make_unique<reactor::network::UTPServer>();
+                std::make_unique<reactor::network::UTPServer>();
               if (this->_server)
                 udp_port = this->_server->port();
               try
@@ -104,7 +104,7 @@ namespace infinit
                 else
                   throw; // port was specified in args, no retry
               }
-              this->_utp_server_thread = elle::make_unique<reactor::Thread>(
+              this->_utp_server_thread = std::make_unique<reactor::Thread>(
                 elle::sprintf("%s utp server", *this),
                 [this] { this->_serve_utp(); });
               ELLE_LOG("%s: listen on utp://%s",

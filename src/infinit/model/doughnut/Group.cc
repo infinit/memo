@@ -123,31 +123,31 @@ namespace infinit
             auto gb = elle::cast<GB>::runtime(block);
             ELLE_TRACE("New group block address: %x, key %s",
                        gb->address(), gb->owner_key());
-            auto ub = elle::make_unique<UB>(&_dht, _name,
+            auto ub = std::make_unique<UB>(&_dht, _name,
               *gb->owner_key());
-            auto rub = elle::make_unique<UB>(&_dht, "@"+_name,
+            auto rub = std::make_unique<UB>(&_dht, "@"+_name,
               *gb->owner_key(), true);
-            auto hub = elle::make_unique<UB>(
+            auto hub = std::make_unique<UB>(
               &_dht, ':' + UB::hash(*gb->owner_key()).string(), *gb->owner_key());
             // FIXME
             _dht.store(
               std::move(hub), STORE_INSERT,
-              elle::make_unique<UserBlockUpserter>(
+              std::make_unique<UserBlockUpserter>(
                 elle::sprintf("@%s", this->_name))
             );
             _dht.store(
               std::move(ub), STORE_INSERT,
-              elle::make_unique<UserBlockUpserter>(
+              std::make_unique<UserBlockUpserter>(
                 elle::sprintf("@%s", this->_name))
             );
             _dht.store(
               std::move(rub), STORE_INSERT,
-              elle::make_unique<ReverseUserBlockUpserter>(
+              std::make_unique<ReverseUserBlockUpserter>(
                 elle::sprintf("@%s", this->_name))
             );
             _dht.store(
               std::move(gb), STORE_INSERT,
-              elle::make_unique<GroupBlockInserter>(
+              std::make_unique<GroupBlockInserter>(
                 elle::sprintf("@%s", this->_name))
             );
             ELLE_DEBUG("...done");
@@ -305,7 +305,7 @@ namespace infinit
       {
         this->block().add_member(user);
         this->_dht.store(this->block(), STORE_UPDATE,
-          elle::make_unique<GroupConflictResolver>(
+          std::make_unique<GroupConflictResolver>(
             GroupConflictResolver::Action::add_member,
             user
         ));
@@ -327,7 +327,7 @@ namespace infinit
       {
         this->block().add_admin(user);
         this->_dht.store(this->block(), STORE_UPDATE,
-          elle::make_unique<GroupConflictResolver>(
+          std::make_unique<GroupConflictResolver>(
             GroupConflictResolver::Action::add_admin,
             user
         ));
@@ -349,7 +349,7 @@ namespace infinit
       {
         this->block().remove_member(user);
         this->_dht.store(this->block(), STORE_UPDATE,
-          elle::make_unique<GroupConflictResolver>(
+          std::make_unique<GroupConflictResolver>(
             GroupConflictResolver::Action::remove_member,
             user
         ));
@@ -371,7 +371,7 @@ namespace infinit
       {
         this->block().remove_admin(user);
         this->_dht.store(this->block(), STORE_UPDATE,
-          elle::make_unique<GroupConflictResolver>(
+          std::make_unique<GroupConflictResolver>(
             GroupConflictResolver::Action::remove_admin,
             user
         ));
@@ -422,7 +422,7 @@ namespace infinit
         infinit::filesystem::umbrella([&] {
           this->block().description(description);
           this->_dht.store(this->block(), STORE_UPDATE,
-            elle::make_unique<GroupConflictResolver>(
+            std::make_unique<GroupConflictResolver>(
               GroupConflictResolver::Action::set_description, description));
         });
       }
@@ -467,7 +467,7 @@ namespace infinit
         if (!duser)
           throw elle::Error("User argument is not a doughnut user");
         this->_action = action;
-        this->_key = elle::make_unique<cryptography::rsa::PublicKey>(duser->key());
+        this->_key = std::make_unique<cryptography::rsa::PublicKey>(duser->key());
         this->_name = duser->name();
         this->_description = boost::none;
       }

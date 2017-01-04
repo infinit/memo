@@ -95,7 +95,7 @@ namespace infinit
       std::unique_ptr<typename BaseOKB<blocks::GroupBlock>::OwnerSignature>
       GB::_sign() const
       {
-        return elle::make_unique<OwnerSignature>(*this);
+        return std::make_unique<OwnerSignature>(*this);
       }
 
       GB::DataSignature::DataSignature(GB const& block)
@@ -119,7 +119,7 @@ namespace infinit
       std::unique_ptr<GB::Super::DataSignature>
       GB::_data_sign() const
       {
-        return elle::make_unique<DataSignature>(*this);
+        return std::make_unique<DataSignature>(*this);
       }
 
       cryptography::rsa::PublicKey
