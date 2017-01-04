@@ -14,15 +14,16 @@
 
 #include "DHT.hh"
 
+namespace bfs = boost::filesystem;
+
 ELLE_LOG_COMPONENT("infinit.model.doughnut.bandwidth-test");
 
 ELLE_TEST_SCHEDULED(bazillion_small_files)
 {
-  auto path = boost::filesystem::temp_directory_path()
-    / boost::filesystem::unique_path();
+  auto path = bfs::temp_directory_path() / bfs::unique_path();
   elle::os::setenv("INFINIT_HOME", path.string(), true);
   elle::SafeFinally cleanup_path([&] {
-      boost::filesystem::remove_all(path);
+      bfs::remove_all(path);
   });
   auto k = infinit::cryptography::rsa::keypair::generate(512);
   DHT server_a(owner = k);
@@ -36,13 +37,13 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
   int const max = std::stoi(elle::os::getenv("ITERATIONS", "100"));
   auto& storage =
     dynamic_cast<infinit::storage::Memory&>(*server_a.dht->local()->storage());
-  boost::optional<double> resident;
+  auto resident = boost::optional<double>{};
   for (int i = 0; i < max; ++i)
   {
     ELLE_LOG_SCOPE("%4s / %s\n", i, max);
     auto file = root->child(elle::sprintf("%04s", i));
     auto handle = file->create(O_RDWR, 0666 | S_IFREG);
-    elle::Buffer contents(100 * 1024);
+    auto contents = elle::Buffer(100 * 1024);
     memset(contents.mutable_contents(), 0xfd, contents.size());
     handle->write(contents, contents.size(), 0);
     handle->close();
