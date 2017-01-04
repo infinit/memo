@@ -1012,23 +1012,6 @@ namespace infinit
       }
     }
 
-    /*---------------.
-    | Mode: unlink.  |
-    `---------------*/
-
-    void
-    Network::mode_unlink(std::string const& network_name)
-    {
-      ELLE_TRACE_SCOPE("unlink");
-      auto& cli = this->cli();
-      auto& ifnt = cli.infinit();
-      auto owner = cli.as_user();
-      auto network = ifnt.network_get(network_name, owner, true);
-      ifnt.network_unlink(network.name, owner);
-      this->cli().report_action("unlinked", "network", network_name);
-    }
-
-
     /*-------------.
     | Mode: pull.  |
     `-------------*/
@@ -1275,6 +1258,23 @@ namespace infinit
           else
             reactor::sleep();
         });
+    }
+
+
+    /*---------------.
+    | Mode: unlink.  |
+    `---------------*/
+
+    void
+    Network::mode_unlink(std::string const& network_name)
+    {
+      ELLE_TRACE_SCOPE("unlink");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+      auto network = ifnt.network_get(network_name, owner, true);
+      ifnt.network_unlink(network.name, owner);
+      this->cli().report_action("unlinked", "network", network_name);
     }
 
 
