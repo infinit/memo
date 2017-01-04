@@ -12,6 +12,7 @@
 
 ELLE_LOG_COMPONENT("infinit.Network");
 
+namespace bfs = boost::filesystem;
 
 // FIXME: use model endpoints
 struct Endpoints
@@ -57,10 +58,9 @@ namespace infinit
   bool
   Network::user_linked(infinit::User const& user) const
   {
-    if (this->model == nullptr)
-      return false;
-    // Compare passport's public key and user public key.
-    return this->dht()->passport.user() == user.public_key;
+    return this->model
+      // Compare passport's public key and user public key.
+      && this->dht()->passport.user() == user.public_key;
   }
 
   void
@@ -69,9 +69,8 @@ namespace infinit
                           std::string const& resource) const
   {
     if (!this->user_linked(user))
-      throw elle::Error(
-        elle::sprintf("You cannot %s this %s as %s",
-                      action, resource, user.name));
+      elle::err("You cannot %s this %s as %s",
+                action, resource, user.name);
   }
 
   std::pair<
@@ -104,7 +103,7 @@ namespace infinit
     if (mo.peers)
     {
       for (auto const& obj: *mo.peers)
-        if (boost::filesystem::exists(obj))
+        if (bfs::exists(obj))
           for (auto const& peer: model::endpoints_from_file(obj))
             eps.emplace_back(model::Address::null, model::Endpoints({peer}));
         else
@@ -225,7 +224,7 @@ namespace infinit
       std::move(rdv_host)
 #ifndef INFINIT_WINDOWS
       , enable_monitoring ? this->monitoring_socket_path(user)
-      : boost::optional<boost::filesystem::path>()
+      : boost::optional<bfs::path>()
 #endif
       );
   }
@@ -240,7 +239,7 @@ namespace infinit
       auto url = elle::sprintf(
         "networks/%s/stat/%s/%s", name, user.name, node_id);
       auto storage = this->dht()->storage->make();
-      Storages s{storage->usage(), storage->capacity()};
+      auto s = Storages{storage->usage(), storage->capacity()};
       Infinit::beyond_push(
         url, "storage usage", name, std::move(s), user, false);
     }
@@ -250,41 +249,38 @@ namespace infinit
     }
   }
 
-  boost::filesystem::path
+  bfs::path
   Network::cache_dir(User const& user) const
   {
     // "/cache" and "/async" are added by Doughnut.
     auto old_dir = xdg_state_home() / "cache" / this->name;
     auto new_dir = xdg_state_home() / "cache" / user.name / this->name;
     create_directories(new_dir / "async");
-    if (boost::filesystem::exists(old_dir / "async") &&
-        !boost::filesystem::is_empty(old_dir / "async"))
+    if (bfs::exists(old_dir / "async") && !bfs::is_empty(old_dir / "async"))
     {
-      for (boost::filesystem::recursive_directory_iterator it(old_dir / "async");
-           it != boost::filesystem::recursive_directory_iterator();
+      for (auto it = bfs::recursive_directory_iterator(old_dir / "async");
+           it != bfs::recursive_directory_iterator();
            ++it)
       {
         if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
         {
-          boost::filesystem::copy_file(
-            it->path(),
-            new_dir / "async" / it->path().filename());
+          bfs::copy_file(it->path(),
+                         new_dir / "async" / it->path().filename());
         }
       }
-      boost::filesystem::remove_all(old_dir / "async");
+      bfs::remove_all(old_dir / "async");
     }
-    if (boost::filesystem::exists(old_dir / "cache") &&
-        !boost::filesystem::is_empty(old_dir / "cache"))
+    if (bfs::exists(old_dir / "cache") && !bfs::is_empty(old_dir / "cache"))
     {
       ELLE_WARN("old cache location (\"%s/cache\") is being emptied in favor "
                 "of the new cache location (\"%s/cache\")",
                 old_dir.string(), new_dir.string());
-      boost::filesystem::remove_all(old_dir / "cache");
+      bfs::remove_all(old_dir / "cache");
     }
     return new_dir;
   }
 
-  boost::filesystem::path
+  bfs::path
   Network::monitoring_socket_path(User const& user) const
   {
 #ifdef INFINIT_WINDOWS
@@ -304,11 +300,8 @@ namespace infinit
     reactor::http::Request r(url);
     reactor::wait(r);
     if (r.status() != reactor::http::StatusCode::OK)
-    {
-      throw elle::Error(
-        elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\"",
-                      r.status(), this->name));
-    }
+      elle::err("unexpected HTTP error %s fetching endpoints for \"%s\"",
+                r.status(), this->name);
     auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
     for (auto const& user: json)
     {
@@ -320,7 +313,7 @@ namespace infinit
             infinit::model::Address::from_string(node.first.substr(2));
           elle::serialization::json::SerializerIn s(node.second, false);
           auto endpoints = s.deserialize<Endpoints>();
-          infinit::model::Endpoints eps;
+          auto eps = infinit::model::Endpoints{};
           for (auto const& addr: endpoints.addresses)
             eps.emplace_back(boost::asio::ip::address::from_string(addr),
                              endpoints.port);
