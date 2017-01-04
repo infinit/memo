@@ -27,6 +27,7 @@ namespace infinit
                                     cli::list,
                                     cli::unlink,
                                     cli::list_services,
+                                    cli::list_storage,
                                     cli::pull,
                                     cli::push,
                                     cli::run,
@@ -221,6 +222,17 @@ namespace infinit
                          bool no_local_endpoints = false,
                          bool no_public_endpoints = false,
                          Strings advertise_host = {});
+
+
+      /*---------------------.
+      | Mode: list_storage.  |
+      `---------------------*/
+      using ModeListStorage =
+        Mode<decltype(binding(modes::mode_list_storage,
+                              cli::name))>;
+      ModeListStorage list_storage;
+      void
+      mode_list_storage(std::string const& network_name);
 
 
       /*-------------.

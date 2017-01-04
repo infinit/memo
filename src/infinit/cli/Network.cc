@@ -124,6 +124,11 @@ namespace infinit
                    cli::no_local_endpoints = false,
                    cli::no_public_endpoints = false,
                    cli::advertise_host = boost::none))
+      , list_storage(
+        "List all storage contributed by this device to a network",
+        das::cli::Options(),
+        this->bind(modes::mode_list_storage,
+                   cli::name))
       , pull(
         "Remove a network from {hub}",
         das::cli::Options(),
@@ -981,6 +986,31 @@ namespace infinit
         });
     }
 
+
+    /*---------------------.
+    | Mode: list_storage.  |
+    `---------------------*/
+
+    void
+    Network::mode_list_storage(std::string const& network_name)
+    {
+      ELLE_TRACE_SCOPE("list_storage");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+
+      auto network = ifnt.network_get(network_name, owner, true);
+      if (network.model->storage)
+      {
+        if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
+            network.model->storage.get()))
+          for (auto const& s: strip->storage)
+            std::cout << s->name << "\n";
+        else
+          std::cout << network.model->storage->name;
+        std::cout << std::endl;
+      }
+    }
 
     /*---------------.
     | Mode: unlink.  |

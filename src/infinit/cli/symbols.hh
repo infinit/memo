@@ -163,6 +163,7 @@ namespace infinit
     DAS_SYMBOL(link);
     DAS_SYMBOL(list);
     DAS_SYMBOL(list_services);
+    DAS_SYMBOL(list_storage);
     DAS_SYMBOL(login);
     DAS_SYMBOL(mount);
     DAS_SYMBOL(run);
@@ -202,6 +203,7 @@ namespace infinit
       DAS_SYMBOL(mode_link);
       DAS_SYMBOL(mode_list);
       DAS_SYMBOL(mode_list_services);
+      DAS_SYMBOL(mode_list_storage);
       DAS_SYMBOL(mode_login);
       DAS_SYMBOL(mode_mount);
       DAS_SYMBOL(mode_pull);
