@@ -355,9 +355,9 @@ namespace infinit
         if (disable)
           return;
         if (!rpcs._key)
-          throw elle::Error("Authentication required");
+          elle::err("Authentication required");
         if (write_op && !this->_passports.at(&rpcs).allow_write())
-          throw elle::Error("Write permission denied.");
+          elle::err("Write permission denied");
       }
 
       void
@@ -417,7 +417,7 @@ namespace infinit
             if (!verify)
             {
               ELLE_LOG("Passport validation failed");
-              throw elle::Error("Passport validation failed");
+              elle::err("Passport validation failed");
             }
             // generate and store a challenge to ensure remote owns the passport
             auto challenge = infinit::cryptography::random::generate<elle::Buffer>(128);
@@ -484,7 +484,7 @@ namespace infinit
           {
             ELLE_TRACE("%s: authentication ack", this);
             if (stored_challenge->empty())
-              throw elle::Error("auth_syn must be called before auth_ack");
+              elle::err("auth_syn must be called before auth_ack");
             auto& passport = this->_passports.at(&rpcs);
             bool ok = passport.user().verify(
               signed_challenge,
@@ -494,7 +494,7 @@ namespace infinit
             if (!ok)
             {
               ELLE_LOG("Challenge verification failed");
-              throw elle::Error("Challenge verification failed");
+              elle::err("Challenge verification failed");
             }
             elle::Buffer password = this->_doughnut.keys().k().open(
               enc_key,

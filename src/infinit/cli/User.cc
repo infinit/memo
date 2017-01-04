@@ -324,7 +324,7 @@ namespace infinit
           std::getline(std::cin, res);
         }
         if (res != user.name)
-          throw elle::Error("Aborting...");
+          elle::err("Aborting...");
       }
       if (pull)
       {
@@ -335,8 +335,8 @@ namespace infinit
         }
         catch (MissingLocalResource const& e)
         {
-          throw elle::Error("unable to pull user, ensure the user has been set "
-                            "using --as or INFINIT_USER");
+          elle::err("unable to pull user, ensure the user has been set "
+                    "using --as or INFINIT_USER");
         }
       }
       if (purge)
@@ -396,8 +396,7 @@ namespace infinit
       }
       else
       {
-        throw elle::Error(
-          elle::sprintf("File for user could not be deleted: %s", path));
+        elle::err("File for user could not be deleted: %s", path);
       }
     }
 

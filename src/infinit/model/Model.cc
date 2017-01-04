@@ -22,10 +22,8 @@ namespace infinit
     {
       ELLE_LOG("%s: compatibility version %s", *this, this->_version);
       if (this->_version > infinit::version())
-        throw elle::Error(
-          elle::sprintf(
-            "compatibility version %s is too recent for infinit version %s",
-            this->_version, infinit::version()));
+        elle::err("compatibility version %s is too recent for infinit version %s",
+                  this->_version, infinit::version());
     }
 
     template <>
@@ -138,7 +136,7 @@ namespace infinit
         {
           ELLE_WARN("%s: invalid block received for %s:%s", *this, address,
                     val.reason());
-          throw elle::Error("invalid block: " + val.reason());
+          elle::err("invalid block: %s", val.reason());
         }
         return res;
       }

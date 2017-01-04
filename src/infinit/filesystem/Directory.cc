@@ -25,7 +25,7 @@
 
 
 #ifdef INFINIT_WINDOWS
-#undef stat
+# undef stat
 #endif
 
 ELLE_LOG_COMPONENT("infinit.filesystem.Directory");
@@ -389,7 +389,7 @@ namespace infinit
           _header.xattrs.clear();
           input.serialize_forward(*this);
         }
-        catch(elle::serialization::Error const& e)
+        catch (elle::serialization::Error const& e)
         {
           ELLE_WARN("Directory deserialization error: %s", e);
           ELLE_TRACE("%s", elle::Backtrace::current());
@@ -478,13 +478,13 @@ namespace infinit
         ELLE_TRACE("permission exception: %s", e.what());
         throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
       }
-      catch(rfs::Error const& e)
+      catch (rfs::Error const& e)
       {
         ELLE_TRACE("filesystem error storing %x: %s",
                   _address, e);
         throw;
       }
-      catch(elle::Error const& e)
+      catch (elle::Error const& e)
       {
         ELLE_WARN("unexpected elle error storing %x: %s",
                   _address, e);
@@ -681,11 +681,11 @@ namespace infinit
                   }
                 }
               }
-              catch(elle::Error const& e)
+              catch (elle::Error const& e)
               {
                 ELLE_TRACE("Exception while prefeching: %s", e.what());
               }
-              catch(std::out_of_range const& e)
+              catch (std::out_of_range const& e)
               {
                 ELLE_TRACE("Entry vanished from cache: %s", e.what());
               }
@@ -711,8 +711,7 @@ namespace infinit
                         {
                           auto it = fs->directory_cache().find(addr);
                           if (it == fs->directory_cache().end())
-                            throw elle::Error(
-                              elle::sprintf("directory at %f vanished from cache", addr));
+                            elle::err("directory at %f vanished from cache", addr);
                           d = *it;
                         }
                         for (auto const& f: d->_files)
@@ -968,7 +967,7 @@ namespace infinit
           {
             f.unlink();
           }
-          catch(std::exception const& e)
+          catch (std::exception const& e)
           {
             ELLE_WARN(
               "%s: unlink of %s failed with %s, forcibly remove from parent",
