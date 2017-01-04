@@ -262,68 +262,70 @@ namespace infinit
             ELLE_TRACE("%s: network exception connecting to %s: %s", this, p, e);
             return;
           }
-          peer->disconnected().connect([this, ptr=peer.get()] {
+          this->_connections.emplace_back(
+            peer->disconnected().connect([this, ptr=peer.get()] {
               ELLE_TRACE("peer %s disconnected", ptr);
               this->_peer_disconnected(ptr);
-          });
-          peer->connected().connect(
-            [this,
-             peer = std::ambivalent_ptr<model::doughnut::Peer>::own(peer),
-             pi = std::make_pair(p.first, p.second)]
-            {
-              auto p = peer.lock();
-              elle::unconst(peer).payload().reset();
-              ELLE_ASSERT(p);
-              auto ptr = p.get();
-              ELLE_ASSERT_NEQ(p->id(), model::Address::null);
-              // If this was an anonymous peer, check it's not a duplicate.
-              if (pi.first == model::Address::null)
+          }));
+          this->_connections.emplace_back(
+            peer->connected().connect(
+              [this,
+               peer = std::ambivalent_ptr<model::doughnut::Peer>::own(peer),
+               pi = std::make_pair(p.first, p.second)]
               {
-                auto it = this->_infos.find(p->id());
-                if (it != this->_infos.end())
+                auto p = peer.lock();
+                elle::unconst(peer).payload().reset();
+                ELLE_ASSERT(p);
+                auto ptr = p.get();
+                ELLE_ASSERT_NEQ(p->id(), model::Address::null);
+                // If this was an anonymous peer, check it's not a duplicate.
+                if (pi.first == model::Address::null)
                 {
-                  ELLE_DEBUG(
-                    "anonymous connection to known peer %f, merge endpoints",
-                    peer);
-                  it->second.merge(pi.second);
-                  return;
+                  auto it = this->_infos.find(p->id());
+                  if (it != this->_infos.end())
+                  {
+                    ELLE_DEBUG(
+                      "anonymous connection to known peer %f, merge endpoints",
+                      peer);
+                    it->second.merge(pi.second);
+                    return;
+                  }
+                  else
+                  {
+                    ELLE_DEBUG(
+                      "register anonymous connection to %f endpoints", peer);
+                    this->_infos.insert(std::make_pair(p->id(), pi.second));
+                    // FIXME: is modifying captures defined ?
+                    elle::unconst(pi).first = p->id();
+                  }
+                }
+                ELLE_ASSERT(ptr);
+                ELLE_TRACE("%f connected", p);
+                auto it = this->_disconnected_peers.get<1>().find(ptr);
+                if (it != this->_disconnected_peers.get<1>().end())
+                {
+                  // This is a reconnection
+                  ELLE_ASSERT(this->_peers.find(ptr->id()) == this->_peers.end());
+                  this->_peers.insert(*it);
+                  this->_disconnected_peers.get<1>().erase(it);
                 }
                 else
+                  // This is the initial connection
+                  this->_peers.emplace(p);
+                auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(p);
+                ELLE_ASSERT(r);
+                this->_advertise(*r);
+                this->_fetch_entries(*r);
+                // Invoke on_discover
                 {
-                  ELLE_DEBUG(
-                    "register anonymous connection to %f endpoints", peer);
-                  this->_infos.insert(std::make_pair(p->id(), pi.second));
-                  // FIXME: is modifying captures defined ?
-                  elle::unconst(pi).first = p->id();
+                  Endpoints eps;
+                  auto& pi = this->_infos.at(p->id());
+                  eps.merge(pi.endpoints_stamped);
+                  eps.merge(pi.endpoints_unstamped);
+                  NodeLocation nl(p->id(), eps);
+                  this->on_discover()(nl, false);
                 }
-              }
-              ELLE_ASSERT(ptr);
-              ELLE_TRACE("%f connected", p);
-              auto it = this->_disconnected_peers.get<1>().find(ptr);
-              if (it != this->_disconnected_peers.get<1>().end())
-              {
-                // This is a reconnection
-                ELLE_ASSERT(this->_peers.find(ptr->id()) == this->_peers.end());
-                this->_peers.insert(*it);
-                this->_disconnected_peers.get<1>().erase(it);
-              }
-              else
-                // This is the initial connection
-                this->_peers.emplace(p);
-              auto r = std::dynamic_pointer_cast<model::doughnut::Remote>(p);
-              ELLE_ASSERT(r);
-              this->_advertise(*r);
-              this->_fetch_entries(*r);
-              // Invoke on_discover
-              {
-                Endpoints eps;
-                auto& pi = this->_infos.at(p->id());
-                eps.merge(pi.endpoints_stamped);
-                eps.merge(pi.endpoints_unstamped);
-                NodeLocation nl(p->id(), eps);
-                this->on_discover()(nl, false);
-              }
-            });
+              }));
         }
         ELLE_DEBUG_SCOPE("broadcast new peer informations");
         // Broadcast this peer existence
