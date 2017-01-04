@@ -103,7 +103,10 @@ private:
 };
 
 void
-discover(DHT& dht, DHT& target, bool anonymous, bool onlyfirst=false)
+discover(DHT& dht, DHT& target,
+         bool anonymous,
+         bool onlyfirst = false,
+         bool wait = false)
 {
   Endpoints eps;
   if (onlyfirst)
@@ -115,6 +118,10 @@ discover(DHT& dht, DHT& target, bool anonymous, bool onlyfirst=false)
   else
     dht.dht->overlay()->discover(
       NodeLocation(target.dht->id(), eps));
+  if (wait)
+    reactor::wait(
+      dht.dht->overlay()->on_discover(),
+      [&] (NodeLocation const& l, bool) { return l.id() == target.dht->id(); });
 }
 
 static
@@ -305,12 +312,7 @@ ELLE_TEST_SCHEDULED(
   dht_a.dht->store(*before, STORE_INSERT, tcr());
   DHT dht_b(
     ::keys = keys, make_overlay = builder, ::storage = nullptr);
-  if (anonymous)
-    dht_b.dht->overlay()->discover(dht_a.dht->local()->server_endpoints());
-  else
-    dht_b.dht->overlay()->discover(
-      NodeLocation(dht_a.dht->id(), dht_a.dht->local()->server_endpoints()));
-  hard_wait(dht_b, 1);
+  discover(dht_b, dht_a, anonymous, false, true);
   auto after = dht_a.dht->make_block<MutableBlock>(std::string("after"));
   dht_a.dht->store(*after, STORE_INSERT, tcr());
   ELLE_LOG("check non-existent block")
@@ -394,16 +396,12 @@ ELLE_TEST_SCHEDULED(
   }
   DHT dht_b(
     ::keys = keys, make_overlay = builder, ::storage = nullptr);
-  discover(dht_b, *dht_a, anonymous);
-  hard_wait(dht_b, 1, dht_b.dht->id());
+  discover(dht_b, *dht_a, anonymous, false, true);
   ELLE_LOG("lookup block")
   {
-    persist([&] {
-        dht_b.dht->overlay()->lookup(old_address).lock();
-    });
     BOOST_CHECK_EQUAL(
-        dht_b.dht->overlay()->lookup(old_address).lock()->id(),
-        id_a);
+      dht_b.dht->overlay()->lookup(old_address).lock()->id(),
+      id_a);
   }
   ELLE_LOG("restart first DHT")
   {
@@ -419,18 +417,14 @@ ELLE_TEST_SCHEDULED(
     new_address = block->address();
   }
   ELLE_LOG("lookup second block")
-    BOOST_CHECK_THROW(
-      dht_b.dht->overlay()->lookup(new_address).lock()->id(),
-      MissingBlock);
+    BOOST_CHECK_THROW(dht_b.dht->overlay()->lookup(new_address), MissingBlock);
   ELLE_LOG("discover new endpoints")
     discover(dht_b, *dht_a, anonymous);
-  hard_wait(dht_b, 1, dht_b.dht->id());
+  reactor::wait(
+    dht_b.dht->overlay()->on_discover(),
+    [&] (NodeLocation const& l, bool) { return l.id() == dht_a->dht->id(); });
   ELLE_LOG("lookup second block")
-  ELLE_LOG("lookup block")
   {
-    persist([&] {
-        dht_b.dht->overlay()->lookup(new_address).lock();
-    });
     BOOST_CHECK_EQUAL(
       dht_b.dht->overlay()->lookup(new_address).lock()->id(),
       id_a);
@@ -453,8 +447,7 @@ ELLE_TEST_SCHEDULED(
     ::keys = keys, make_overlay = builder, ::storage = nullptr,
     ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp);
-  discover(dht_b, *dht_a, anonymous);
-  hard_wait(dht_b, 1, dht_b.dht->id());
+  discover(dht_b, *dht_a, anonymous, false, true);
   auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
   auto& acb = dynamic_cast<infinit::model::doughnut::ACB&>(*block);
   acb.set_permissions(infinit::cryptography::rsa::keypair::generate(512).K(),
@@ -517,9 +510,8 @@ ELLE_TEST_SCHEDULED(
     ::keys = keys, make_overlay = builder,
     ::paxos = pax,
     ::storage = nullptr);
-  discover(*client, *dht_a, anonymous);
-  discover(*client, *dht_b, anonymous);
-  hard_wait(*client, 2, client->dht->id());
+  discover(*client, *dht_a, anonymous, false, true);
+  discover(*client, *dht_b, anonymous, false, true);
   std::vector<infinit::model::Address> addrs;
   for (int a=0; a<10; ++a)
   {
@@ -631,9 +623,8 @@ ELLE_TEST_SCHEDULED(
     ::keys = keys, make_overlay = builder,
     ::paxos = pax,
     ::storage = nullptr);
-  discover(*client, *dht_a, anonymous);
-  discover(*dht_a, *dht_b, anonymous);
-  hard_wait(*client, 2, client->dht->id());
+  discover(*client, *dht_a, anonymous, false, true);
+  discover(*dht_a, *dht_b, anonymous, false, true);
   std::vector<infinit::model::Address> addrs;
   for (int a=0; a<10; ++a)
   {
