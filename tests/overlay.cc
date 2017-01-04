@@ -127,7 +127,7 @@ peers(DHT& client)
   try
   {
     auto cts = boost::any_cast<elle::json::Array>(ostats["contacts"]);
-    ELLE_DEBUG("%s", elle::json::pretty_print(ostats["contacts"]));
+    ELLE_DUMP("%s", elle::json::pretty_print(ostats["contacts"]));
     for (auto& c: cts)
       res.push_back(infinit::model::Address::from_string(
         boost::any_cast<std::string>(
@@ -136,7 +136,7 @@ peers(DHT& client)
   catch (boost::bad_any_cast const&)
   {
     auto cts = boost::any_cast<elle::json::Array>(ostats["peers"]);
-    ELLE_DEBUG("%s", elle::json::pretty_print(ostats["peers"]));
+    ELLE_DUMP("%s", elle::json::pretty_print(ostats["peers"]));
     for (auto& c: cts)
       res.push_back(infinit::model::Address::from_string(
         boost::any_cast<std::string>(
