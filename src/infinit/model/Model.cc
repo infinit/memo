@@ -100,7 +100,7 @@ namespace infinit
     std::unique_ptr<User>
     Model::_make_user(elle::Buffer const&) const
     {
-      return elle::make_unique<User>(); // FIXME
+      return std::make_unique<User>(); // FIXME
     }
 
     void
@@ -364,7 +364,7 @@ namespace infinit
         return b;
       }
       else
-        return elle::make_unique<MergeConflictResolver>(
+        return std::make_unique<MergeConflictResolver>(
           std::move(a), std::move(b), config);
     }
 

@@ -364,7 +364,7 @@ namespace infinit
       std::unique_ptr<typename BaseOKB<Block>::OwnerSignature>
       BaseOKB<Block>::_sign() const
       {
-        return elle::make_unique<OwnerSignature>(*this);
+        return std::make_unique<OwnerSignature>(*this);
       }
 
       template <typename Block>
