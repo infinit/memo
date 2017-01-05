@@ -103,7 +103,7 @@ namespace infinit
         this->_thread.reset(
           new reactor::Thread(
             elle::sprintf("%f worker", this),
-            [this, holder = overlay::Overlay::Member()]
+            [this, holder = overlay::Overlay::Member()] () mutable
             {
               bool connected = false;
               this->_key_hash_cache.clear();
@@ -197,7 +197,7 @@ namespace infinit
                 auto self = this->doughnut().dock().evict_peer(this->id());
                 this->_connected.close();
                 ++this->_reconnection_id;
-                elle::unconst(holder) = self;
+                holder = self;
                 return;
               }
             }));
