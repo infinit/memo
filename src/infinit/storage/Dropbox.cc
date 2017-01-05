@@ -171,10 +171,10 @@ namespace infinit
     DropboxStorageConfig::make()
     {
       if (this->root)
-        return elle::make_unique<infinit::storage::Dropbox>(
+        return std::make_unique<infinit::storage::Dropbox>(
           this->token, this->root.get());
       else
-        return elle::make_unique<infinit::storage::Dropbox>(this->token);
+        return std::make_unique<infinit::storage::Dropbox>(this->token);
     }
 
     static const elle::serialization::Hierarchy<StorageConfig>::

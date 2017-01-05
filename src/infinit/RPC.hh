@@ -271,7 +271,7 @@ namespace infinit
     add(std::string const& name, std::function<R (Args...)> f)
     {
       this->_rpcs[name] =
-        elle::make_unique<ConcreteRPCHandler<R, Args...>>(name, f);
+        std::make_unique<ConcreteRPCHandler<R, Args...>>(name, f);
     }
 
     template <typename F, typename ... Args>

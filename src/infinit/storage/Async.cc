@@ -56,7 +56,7 @@ namespace infinit
       _queueing.open();
       for (int i=0; i< n_threads; ++i)
       {
-        auto t = elle::make_unique<reactor::Thread>("async deque " + std::to_string(i),
+        auto t = std::make_unique<reactor::Thread>("async deque " + std::to_string(i),
           [&]
           {
             try {
@@ -358,7 +358,7 @@ namespace infinit
         max_bytes = std::stol(args[3]);
       if (args.size() > 4)
         merge = std::stol(args[4]);
-      return elle::make_unique<Async>(std::move(backend), max_blocks, max_bytes, merge);
+      return std::make_unique<Async>(std::move(backend), max_blocks, max_bytes, merge);
     }
 
     struct AsyncStorageConfig:
@@ -391,7 +391,7 @@ namespace infinit
       std::unique_ptr<infinit::storage::Storage>
       make() override
       {
-        return elle::make_unique<infinit::storage::Async>(
+        return std::make_unique<infinit::storage::Async>(
           storage->make(), max_blocks, max_size,
           merge ? *merge : true, journal_dir? *journal_dir: "");
       }

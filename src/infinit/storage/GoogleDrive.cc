@@ -437,10 +437,10 @@ namespace infinit
     GoogleDriveStorageConfig::make()
     {
       if (this->root)
-        return elle::make_unique<infinit::storage::GoogleDrive>(
+        return std::make_unique<infinit::storage::GoogleDrive>(
             this->root.get(), this->refresh_token, this->user_name);
       else
-        return elle::make_unique<infinit::storage::GoogleDrive>(
+        return std::make_unique<infinit::storage::GoogleDrive>(
             this->refresh_token, this->user_name);
     }
 

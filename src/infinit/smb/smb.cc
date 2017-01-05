@@ -215,7 +215,7 @@ namespace infinit
       , _next_directory_id(_directory_start+1)
       , _sstate(0)
       {
-        this->_serve_thread = elle::make_unique<reactor::Thread>(
+        this->_serve_thread = std::make_unique<reactor::Thread>(
           elle::sprintf("%s server", *this),
           [this] { this->_serve(); });
       }
@@ -302,9 +302,9 @@ namespace infinit
     SMBServer::SMBServer(std::unique_ptr<infinit::filesystem::FileSystem> fs)
     : _fs(new reactor::filesystem::FileSystem(std::move(fs), true))
     {
-      this->_server = elle::make_unique<reactor::network::TCPServer>();
+      this->_server = std::make_unique<reactor::network::TCPServer>();
       this->_server->listen(445);
-      this->_server_thread = elle::make_unique<reactor::Thread>(
+      this->_server_thread = std::make_unique<reactor::Thread>(
         elle::sprintf("%s server", *this),
         [this] { this->_serve(); });
     }
@@ -316,7 +316,7 @@ namespace infinit
           while (true)
           {
             auto socket = elle::utility::move_on_copy(this->_server->accept());
-            _connections.insert(elle::make_unique<SMBConnection>(*this, std::move(*socket)));
+            _connections.insert(std::make_unique<SMBConnection>(*this, std::move(*socket)));
 
           }
         };

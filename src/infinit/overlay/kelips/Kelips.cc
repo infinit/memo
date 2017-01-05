@@ -4033,7 +4033,7 @@ namespace infinit
       Configuration::make(std::shared_ptr<model::doughnut::Local> local,
                           model::doughnut::Doughnut* dht)
       {
-        return elle::make_unique<Node>(*this, std::move(local), dht);
+        return std::make_unique<Node>(*this, std::move(local), dht);
       }
 
       static const

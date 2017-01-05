@@ -181,7 +181,7 @@ namespace infinit
     std::unique_ptr<infinit::storage::Storage>
     FilesystemStorageConfig::make()
     {
-      return elle::make_unique<infinit::storage::Filesystem>(this->path,
+      return std::make_unique<infinit::storage::Filesystem>(this->path,
                                                              this->capacity);
     }
 

@@ -203,8 +203,8 @@ namespace infinit
     std::unique_ptr<infinit::storage::Storage>
     S3StorageConfig::make()
     {
-      auto s3 = elle::make_unique<aws::S3>(credentials);
-      return elle::make_unique<infinit::storage::S3>(std::move(s3),
+      auto s3 = std::make_unique<aws::S3>(credentials);
+      return std::make_unique<infinit::storage::S3>(std::move(s3),
                                                      this->storage_class,
                                                      this->capacity);
     }

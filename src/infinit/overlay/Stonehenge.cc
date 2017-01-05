@@ -157,7 +157,7 @@ namespace infinit
           peer.id,
           Endpoints({model::Endpoint(peer.host, peer.port)}));
       }
-      return elle::make_unique<infinit::overlay::Stonehenge>(
+      return std::make_unique<infinit::overlay::Stonehenge>(
         peers, std::move(local), dht);
     }
 

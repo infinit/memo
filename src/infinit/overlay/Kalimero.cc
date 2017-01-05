@@ -102,7 +102,7 @@ namespace infinit
     KalimeroConfiguration::make(std::shared_ptr<model::doughnut::Local> local,
                                 model::doughnut::Doughnut* dht)
     {
-      return elle::make_unique<Kalimero>(dht, std::move(local));
+      return std::make_unique<Kalimero>(dht, std::move(local));
     }
 
     static const

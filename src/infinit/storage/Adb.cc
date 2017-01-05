@@ -113,7 +113,7 @@ namespace infinit
     std::unique_ptr<infinit::storage::Storage>
     AdbStorageConfig::make()
     {
-      return elle::make_unique<infinit::storage::Adb>(root);
+      return std::make_unique<infinit::storage::Adb>(root);
     }
 
     static const elle::serialization::Hierarchy<StorageConfig>::

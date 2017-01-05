@@ -182,7 +182,7 @@ namespace infinit
     std::unique_ptr<infinit::storage::Storage>
     GCSConfig::make()
     {
-      return elle::make_unique<infinit::storage::GCS>(
+      return std::make_unique<infinit::storage::GCS>(
         this->user_name, this->bucket, this->root, this->refresh_token);
     }
 
