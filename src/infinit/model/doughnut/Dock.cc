@@ -142,7 +142,8 @@ namespace infinit
 
       overlay::Overlay::WeakMember
       Dock::make_peer(NodeLocation loc,
-                      boost::optional<EndpointsRefetcher> refetcher)
+                      boost::optional<EndpointsRefetcher> refetcher,
+                      OnPeerCreate on_create)
       {
         ELLE_TRACE_SCOPE("%s: get %f", this, loc);
         static bool disable_cache = getenv("INFINIT_DISABLE_PEER_CACHE");
@@ -168,6 +169,8 @@ namespace infinit
               this->_utp_server,
               refetcher,
               this->_protocol);
+          if (on_create)
+            on_create(res);
           if (!disable_cache)
             if (loc.id() != Address::null)
               this->_peer_cache.emplace(loc.id(), res);

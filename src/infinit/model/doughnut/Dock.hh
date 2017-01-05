@@ -51,9 +51,11 @@ namespace infinit
         evict_peer(Address id);
         void
         insert_peer(overlay::Overlay::Member peer);
+        using OnPeerCreate = std::function<void(overlay::Overlay::Member)>;
         overlay::Overlay::WeakMember
         make_peer(NodeLocation peer,
-                  boost::optional<EndpointsRefetcher> refetcher);
+                  boost::optional<EndpointsRefetcher> refetcher,
+                  OnPeerCreate on_create = OnPeerCreate());
         using PeerCache = std::unordered_map<Address, overlay::Overlay::Member>;
         ELLE_ATTRIBUTE_R(PeerCache, peer_cache);
       };
