@@ -1,4 +1,4 @@
-#include "infinit/storage/Async.hh"
+#include <infinit/storage/Async.hh>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -19,19 +19,22 @@ namespace infinit
 {
   namespace storage
   {
-    static int _max_entry_hop()
+    namespace
     {
-      return std::stoi(elle::os::getenv("INFINIT_ASYNC_MAX_ENTRY_HOPS", "4"));
+      int _max_entry_hop()
+      {
+        return std::stoi(elle::os::getenv("INFINIT_ASYNC_MAX_ENTRY_HOPS", "4"));
+      }
+
+      int max_entry_hop = _max_entry_hop();
+
+      int _n_threads()
+      {
+        return std::stoi(elle::os::getenv("INFINIT_ASYNC_THREADS", "4"));
+      }
+
+      int n_threads = _n_threads();
     }
-
-    static int max_entry_hop = _max_entry_hop();
-
-    static int _n_threads()
-    {
-      return std::stoi(elle::os::getenv("INFINIT_ASYNC_THREADS", "4"));
-    }
-
-    static int n_threads = _n_threads();
 
     Async::Async(std::unique_ptr<Storage> backend,
                  int max_blocks,
@@ -72,6 +75,7 @@ namespace infinit
         _threads.push_back(std::move(t));
       }
     }
+
     Async::~Async()
     {
       ELLE_TRACE("~Async...");
@@ -93,35 +97,37 @@ namespace infinit
     Async::_restore_journal()
     {
       ELLE_TRACE("Restoring journal from %s", _journal_dir);
-      bfs::path p(_journal_dir);
-      bfs::directory_iterator it(p);
-      unsigned int min_id = -1;
-      while (it != bfs::directory_iterator())
-      {
-        min_id = std::min(min_id, (unsigned int)std::stoi(it->path().filename().string()));
-        ++it;
-      }
+      auto p = bfs::path(_journal_dir);
+      unsigned int min_id = [&]
+        {
+          unsigned res = -1;
+          for (auto it = bfs::directory_iterator(p);
+               it != bfs::directory_iterator();
+               ++it)
+          {
+            auto id = std::stoi(it->path().filename().string());
+            res = std::min(res, unsigned(id));
+          }
+          return res;
+        }();
+
       _op_offset = signed(min_id) == -1 ? 0 : min_id;
-      it = bfs::directory_iterator(p);
-      while (it != bfs::directory_iterator())
+      for (auto it = bfs::directory_iterator(p);
+           it != bfs::directory_iterator();
+           ++it)
       {
-        int id = std::stoi(it->path().filename().string());
-        bfs::ifstream is(*it);
-        elle::serialization::binary::SerializerIn sin(is);
-        int c;
-        Key k;
-        elle::Buffer buf;
-        sin.serialize("operation", c);
-        sin.serialize("key", k);
-        sin.serialize("data", buf);
-        Operation op = (Operation)c;
+        auto id = std::stoi(it->path().filename().string());
         while (signed(_op_cache.size() + _op_offset) <= id)
-          _op_cache.push_back(Entry{Key(), Operation::none, elle::Buffer(), 0});
+          _op_cache.emplace_back(Key(), Operation::none, elle::Buffer(), 0);
+        bfs::ifstream is(*it);
+        auto sin = elle::serialization::binary::SerializerIn(is);
+        auto op = Operation(sin.deserialize<int>("operation"));
+        auto k = sin.deserialize<Key>("key");
+        auto buf = sin.deserialize<elle::Buffer>("data");
         _inc(buf.size());
         _op_cache[id - _op_offset] = Entry{k, op, std::move(buf), 0};
         if (_merge)
           _op_index[k] = _op_offset;
-        ++it;
       }
     }
 
@@ -218,7 +224,8 @@ namespace infinit
     Async::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
       _wait();
-      ELLE_DEBUG("queueing set on %x . Cache blocks=%s  bytes=%s", k, _blocks, _bytes);
+      ELLE_DEBUG("queueing set on %x . Cache blocks=%s  bytes=%s",
+                 k, _blocks, _bytes);
       _push_op(k, value, Operation::set);
 
       //FIXME: impl.
@@ -305,20 +312,22 @@ namespace infinit
         }
       }
     }
+
     void
     Async::_inc(int64_t size)
     {
       ++_blocks;
       _bytes += size;
       _dequeueing.open();
-      if ( (_max_size != -1 && _max_size < _bytes)
-        || _max_blocks != -1 && _max_blocks < _blocks)
+      if (_max_size != -1 && _max_size < _bytes
+          || _max_blocks != -1 && _max_blocks < _blocks)
       {
         ELLE_DEBUG("async limit reached: %s/%s > %s/%s, closing queue.",
           _blocks, _bytes, _max_blocks, _max_size);
         _queueing.close();
       }
     }
+
     void
     Async::_dec(int64_t size)
     {
@@ -331,9 +340,10 @@ namespace infinit
         _dequeueing.close();
       }
       if ( (_max_size == -1 || _max_size >= _bytes)
-        && (_max_blocks == -1 || _max_blocks >= _blocks))
+           && (_max_blocks == -1 || _max_blocks >= _blocks))
         _queueing.open();
     }
+
     void
     Async::_wait()
     {
@@ -341,28 +351,33 @@ namespace infinit
       {
         reactor::wait(_queueing);
         if ( (_max_size == -1 || _max_size >= _bytes)
-          && (_max_blocks == -1 || _max_blocks >= _blocks))
+             && (_max_blocks == -1 || _max_blocks >= _blocks))
           break;
       }
     }
-    static std::unique_ptr<infinit::storage::Storage>
-    make(std::vector<std::string> const& args)
+
+    namespace
     {
-      std::unique_ptr<Storage> backend = instantiate(args[0], args[1]);
-      int max_blocks = 100;
-      int64_t max_bytes = -1;
-      bool merge = true;
-      if (args.size() > 2)
-        max_blocks = std::stoi(args[2]);
-      if (args.size() > 3)
-        max_bytes = std::stol(args[3]);
-      if (args.size() > 4)
-        merge = std::stol(args[4]);
-      return std::make_unique<Async>(std::move(backend), max_blocks, max_bytes, merge);
+      std::unique_ptr<infinit::storage::Storage>
+      make(std::vector<std::string> const& args)
+      {
+        std::unique_ptr<Storage> backend = instantiate(args[0], args[1]);
+        int max_blocks = 100;
+        int64_t max_bytes = -1;
+        bool merge = true;
+        if (args.size() > 2)
+          max_blocks = std::stoi(args[2]);
+        if (args.size() > 3)
+          max_bytes = std::stol(args[3]);
+        if (args.size() > 4)
+          merge = std::stol(args[4]);
+        return std::make_unique<Async>(std::move(backend),
+                                       max_blocks, max_bytes, merge);
+      }
     }
 
-    struct AsyncStorageConfig:
-    public StorageConfig
+    struct AsyncStorageConfig
+      : public StorageConfig
     {
     public:
       int64_t max_blocks;
@@ -387,19 +402,22 @@ namespace infinit
         s.serialize("journal_dir", this->journal_dir);
       }
 
-      virtual
       std::unique_ptr<infinit::storage::Storage>
       make() override
       {
         return std::make_unique<infinit::storage::Async>(
           storage->make(), max_blocks, max_size,
-          merge ? *merge : true, journal_dir? *journal_dir: "");
+          merge.value_or(true),
+          journal_dir.value_or(""));
       }
     };
 
-    static const elle::serialization::Hierarchy<StorageConfig>::
-    Register<AsyncStorageConfig>
-    _register_AsyncStorageConfig("async");
+    namespace
+    {
+      const elle::serialization::Hierarchy<StorageConfig>::
+      Register<AsyncStorageConfig>
+      _register_AsyncStorageConfig("async");
+    }
   }
 }
 

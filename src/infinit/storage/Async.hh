@@ -1,7 +1,7 @@
-#ifndef INFINIT_STORAGE_ASYNC_HH
-#define INFINIT_STORAGE_ASYNC_HH
+#pragma once
 
 #include <deque>
+
 #include <reactor/scheduler.hh>
 #include <reactor/Barrier.hh>
 #include <infinit/storage/Storage.hh>
@@ -21,19 +21,14 @@ namespace infinit
       void
       flush();
     protected:
-      virtual
       elle::Buffer
       _get(Key k) const override;
-      virtual
       int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
-      virtual
       int
       _erase(Key k) override;
-      virtual
       std::vector<Key>
       _list() override;
-      virtual
       BlockStatus
       _status(Key k) override;
     private:
@@ -58,10 +53,17 @@ namespace infinit
       std::vector<std::unique_ptr<reactor::Thread>> _threads;
       struct Entry
       {
+        Entry(Key k, Operation op, elle::Buffer d, unsigned h)
+          : key{k}
+          , operation{op}
+          , data{d}
+          , hop{h}
+        {}
         Key key;
         Operation operation;
         elle::Buffer data;
-        unsigned int hop; // number of times entry was invalidated and pushed back
+        /// Number of times entry was invalidated and pushed back.
+        unsigned int hop;
       };
 
       std::deque<Entry> _op_cache;
@@ -75,6 +77,3 @@ namespace infinit
     };
   }
 }
-
-
-#endif
