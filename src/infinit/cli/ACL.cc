@@ -14,6 +14,8 @@ namespace infinit
 {
   namespace cli
   {
+    namespace bfs = boost::filesystem;
+
     /*--------.
     | Helpers |
     `--------*/
@@ -42,15 +44,14 @@ namespace infinit
       void
       recursive_action(A action, std::string const& path, Args ... args)
       {
-        namespace bfs = boost::filesystem;
         boost::system::error_code erc;
-        bfs::recursive_directory_iterator it(path, erc);
+        auto it = bfs::recursive_directory_iterator(path, erc);
         if (erc)
           elle::err("%s : %s", path, erc.message());
         for (; it != bfs::recursive_directory_iterator(); it.increment(erc))
         {
           // Ensure that we have permission on the file.
-          boost::filesystem::exists(it->path(), erc);
+          bfs::exists(it->path(), erc);
           if (erc == boost::system::errc::permission_denied)
           {
             std::cout << "permission denied, skipping " << it->path().string()
@@ -87,8 +88,8 @@ namespace infinit
       void
       enforce_in_mountpoint(std::string const& path_, bool fallback)
       {
-        auto path = boost::filesystem::absolute(path_);
-        if (!boost::filesystem::exists(path))
+        auto path = bfs::absolute(path_);
+        if (!bfs::exists(path))
           elle::err(elle::sprintf("path does not exist: %s", path_));
         for (auto const& p: {path, path.parent_path()})
         {
@@ -223,7 +224,7 @@ namespace infinit
 #ifndef __clang__
 # pragma GCC diagnostic pop
 #endif
-          bool dir = boost::filesystem::is_directory(path);
+          bool dir = bfs::is_directory(path);
           if (dir)
           {
             int sz = getxattr(
@@ -398,7 +399,7 @@ namespace infinit
 
       void
       group_add_remove(infinit::Infinit& infinit,
-                       boost::filesystem::path const& path,
+                       bfs::path const& path,
                        std::string const& group,
                        std::string const& object,
                        std::string const& action,
@@ -566,7 +567,7 @@ namespace infinit
                     bool fetch,
                     bool fallback)
     {
-      boost::filesystem::path path(path_str);
+      bfs::path path(path_str);
       auto add = collate_users(add_, add_user, add_admin, add_group);
       auto rem = collate_users(rem_, rem_user, rem_admin, rem_group);
       {
@@ -723,8 +724,7 @@ namespace infinit
       {
         if (verbose)
           elle::print(std::cout, "processing {}\n", path);
-        using namespace boost::filesystem;
-        bool dir = is_directory(path);
+        bool dir = bfs::is_directory(path);
         if (inherit || disinherit)
         {
           if (dir)
@@ -863,7 +863,7 @@ namespace infinit
         enforce_in_mountpoint(path, fallback);
         if ((inherit || disinherit)
             && !recursive
-            && !boost::filesystem::is_directory(path))
+            && !bfs::is_directory(path))
         {
           elle::err("%s is not a directory, cannot %s inheritance",
                     path, inherit ? "enable" : "disable");
@@ -876,7 +876,7 @@ namespace infinit
                    inherit, disinherit, verbose, fallback, fetch, multi);
         if (traverse)
         {
-          boost::filesystem::path working_path = boost::filesystem::absolute(path);
+          bfs::path working_path = bfs::absolute(path);
           while (!path_is_root(working_path.string(), fallback))
           {
             working_path = working_path.parent_path();
