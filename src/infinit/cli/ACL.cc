@@ -691,13 +691,24 @@ namespace infinit
 
     namespace
     {
-      std::unordered_map<std::string, std::string> const modes_map = {
-        {"r",    "setr"},
-        {"w",    "setw"},
-        {"rw",   "setrw"},
-        {"none", "clear"},
-        {"",     ""},
-      };
+      std::string
+      get_mode(boost::optional<std::string> const& mode)
+      {
+        static auto const modes = std::map<std::string, std::string>
+          {
+            {"r", "setr"},
+            {"w", "setw"},
+            {"rw", "setrw"},
+            {"none", "clear"},
+            {"", ""},
+          };
+        auto i = modes.find(mode ? boost::algorithm::to_lower_copy(*mode) : "");
+        if (i == modes.end())
+          elle::err<das::cli::Error>("invalid mode %s, must be one of: %s",
+                                     mode, elle::keys(modes));
+        else
+          return i->second;
+      }
 
       bool
       path_is_root(std::string const& path, bool fallback)
@@ -709,12 +720,14 @@ namespace infinit
         return std::string(buffer, sz) == std::string("true");
       }
 
+      /// \param mode   one of ["setr", "setw", "setrw", "clear", ""].
+      /// \param omode  likewise.
       void
       set_action(std::string const& path,
                  infinit::Infinit& infinit,
-                 std::vector<std::string> users,
-                 boost::optional<std::string> mode,
-                 boost::optional<std::string> omode,
+                 std::vector<std::string> const& users,
+                 std::string const& mode,
+                 std::string const& omode,
                  bool inherit,
                  bool disinherit,
                  bool verbose,
@@ -748,12 +761,12 @@ namespace infinit
             }
           }
         }
-        if (omode)
+        if (!omode.empty())
         {
           try
           {
             setxattr(path, "user.infinit.auth_others",
-                     modes_map.at(omode.get()), fallback_xattrs);
+                     omode, fallback_xattrs);
           }
           catch (PermissionDenied const&)
           {
@@ -769,7 +782,7 @@ namespace infinit
             throw;
           }
         }
-        if (mode)
+        if (!mode.empty())
         {
           for (auto& username: users)
           {
@@ -778,7 +791,7 @@ namespace infinit
               {
                 try
                 {
-                  setxattr(path, "user.infinit.auth." + modes_map.at(mode.get()),
+                  setxattr(path, "user.infinit.auth." + mode,
                            value, fallback_xattrs);
                 }
                 catch (PermissionDenied const&)
@@ -820,8 +833,8 @@ namespace infinit
     ACL::mode_set(std::vector<std::string> const& paths,
                   std::vector<std::string> const& users,
                   std::vector<std::string> const& groups,
-                  boost::optional<std::string> mode,
-                  boost::optional<std::string> others_mode,
+                  boost::optional<std::string> mode_name,
+                  boost::optional<std::string> others_mode_name,
                   bool inherit,
                   bool disinherit,
                   bool recursive,
@@ -830,33 +843,26 @@ namespace infinit
                   bool fetch,
                   bool fallback)
     {
-      if (paths.empty())
-        throw das::cli::MissingOption("path");
-      static auto const check_mode = [] (boost::optional<std::string> const& m)
-        {
-          if (m)
-          {
-            auto mode = m.get();
-            std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
-            if (modes_map.find(mode) == modes_map.end())
-              elle::err<das::cli::Error>("invalide mode: %s", m);
-          }
-        };
-      check_mode(mode);
-      check_mode(others_mode);
-      auto combined = collate_users(users, boost::none, boost::none, groups);
-      // auto users = combined ? combined.get() : std::vector<std::string>();
-      if (mode && combined.empty())
-        elle::err<das::cli::Error>("must specify user when setting mode");
-      if (!mode && !combined.empty())
-        throw das::cli::MissingOption("mode");
-      if (inherit && disinherit)
-        elle::err<das::cli::Error>("inherit and disable-inherit are exclusive");
-      if (!inherit && !disinherit && !mode && !others_mode)
-        elle::err<das::cli::Error>("no operation specified");
-      if (traverse && mode && mode->find("r") == std::string::npos)
-        elle::err<das::cli::Error>(
-          "--traverse can only be used with mode 'r' or 'rw'");
+      // Validate arguments.
+      auto mode = get_mode(mode_name);
+      auto omode = get_mode(others_mode_name);
+      {
+        if (paths.empty())
+          throw das::cli::MissingOption("path");
+        auto combined = collate_users(users, boost::none, boost::none, groups);
+        // auto users = combined ? combined.get() : std::vector<std::string>();
+        if (mode_name && combined.empty())
+          elle::err<das::cli::Error>("must specify user when setting mode");
+        if (!mode_name && !combined.empty())
+          throw das::cli::MissingOption("mode");
+        if (inherit && disinherit)
+          elle::err<das::cli::Error>("inherit and disable-inherit are exclusive");
+        if (!inherit && !disinherit && !mode_name && !others_mode_name)
+          elle::err<das::cli::Error>("no operation specified");
+        if (traverse && mode_name && mode_name->find("r") == std::string::npos)
+          elle::err<das::cli::Error>(
+            "--traverse can only be used with mode 'r' or 'rw'");
+      }
       // Don't do any operations before checking paths.
       for (auto const& path: paths)
       {
@@ -872,7 +878,7 @@ namespace infinit
       bool multi = paths.size() > 1 || recursive;
       for (auto const& path: paths)
       {
-        set_action(path, this->cli().infinit(), users, mode, others_mode,
+        set_action(path, this->cli().infinit(), users, mode, omode,
                    inherit, disinherit, verbose, fallback, fetch, multi);
         if (traverse)
         {
@@ -881,14 +887,14 @@ namespace infinit
           {
             working_path = working_path.parent_path();
             set_action(working_path.string(), this->cli().infinit(), users,
-                       std::string("r"), boost::none, false, false,
+                       "setr", "", false, false,
                        verbose, fallback, fetch, multi);
           }
         }
         if (recursive)
         {
           recursive_action(
-            set_action, path, this->cli().infinit(), users, mode, others_mode,
+            set_action, path, this->cli().infinit(), users, mode, omode,
             inherit, disinherit, verbose, fallback, fetch, multi);
         }
       }
