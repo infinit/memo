@@ -1198,7 +1198,7 @@ ELLE_TEST_SUITE()
   auto const kouncil_builder =
     [] (Doughnut& dht, std::shared_ptr<Local> local)
     {
-      return std::make_unique<kouncil::Kouncil>(&dht, local, 1);
+      return std::make_unique<kouncil::Kouncil>(&dht, local, valgrind(1, 5));
     };
 #define BOOST_NAMED_TEST_CASE(name,  test_function)                     \
   boost::unit_test::make_test_case(boost::function<void ()>(test_function), \
