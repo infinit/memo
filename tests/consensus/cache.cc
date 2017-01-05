@@ -16,7 +16,7 @@ struct Recipe
 {
   template <typename ... Args>
   Recipe(Args&& ... args)
-    : Recipe(elle::make_unique<InstrumentedConsensus>(dht),
+    : Recipe(std::make_unique<InstrumentedConsensus>(dht),
              std::forward<Args>(args)...)
   {}
 

@@ -133,7 +133,7 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
     [&] (infinit::model::doughnut::Doughnut& dht)
         -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
         {
-          return elle::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient);
+          return std::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient);
         };
     infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
         [&] (infinit::model::doughnut::Doughnut& dht,
@@ -198,17 +198,17 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   -> std::unique_ptr<imd::consensus::Consensus>
   {
     std::unique_ptr<imd::consensus::Consensus> backend =
-      elle::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient);
+      std::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient);
     if (async)
     {
-      auto async = elle::make_unique<
+      auto async = std::make_unique<
         infinit::model::doughnut::consensus::Async>(std::move(backend),
           where / boost::filesystem::unique_path());
         backend = std::move(async);
     }
     if (cache)
     {
-      auto cache = elle::make_unique<imd::consensus::Cache>(
+      auto cache = std::make_unique<imd::consensus::Cache>(
         std::move(backend));
       backend = std::move(cache);
     }
@@ -232,9 +232,9 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
     boost::optional<int>(),
     boost::optional<boost::asio::ip::address>(),
     std::unique_ptr<infinit::storage::Storage>());
-  auto ops = elle::make_unique<infinit::filesystem::FileSystem>(
+  auto ops = std::make_unique<infinit::filesystem::FileSystem>(
     "volume", dn, infinit::filesystem::allow_root_creation = true);
-  auto fs = elle::make_unique<reactor::filesystem::FileSystem>(
+  auto fs = std::make_unique<reactor::filesystem::FileSystem>(
     std::move(ops), true);
   reactor::Thread::unique_ptr tptr;
   if (beyond_port)
@@ -252,9 +252,9 @@ node_to_fs(Nodes const& nodes)
   std::vector<std::unique_ptr<rfs::FileSystem>> res;
   for (auto& n: nodes)
   {
-    auto ops = elle::make_unique<infinit::filesystem::FileSystem>(
+    auto ops = std::make_unique<infinit::filesystem::FileSystem>(
       "volume", n.first, infinit::filesystem::allow_root_creation = true);
-    auto fs = elle::make_unique<reactor::filesystem::FileSystem>(
+    auto fs = std::make_unique<reactor::filesystem::FileSystem>(
       std::move(ops), true);
     res.push_back(std::move(fs));
   }

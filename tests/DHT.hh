@@ -58,7 +58,7 @@ public:
   make(infinit::model::doughnut::Doughnut& d,
        std::shared_ptr<infinit::model::doughnut::Local> local)
   {
-    return elle::make_unique<Overlay>(&d, local);
+    return std::make_unique<Overlay>(&d, local);
   }
 
   static
@@ -66,7 +66,7 @@ public:
   make_yield(infinit::model::doughnut::Doughnut& d,
              std::shared_ptr<infinit::model::doughnut::Local> local)
   {
-    return elle::make_unique<Overlay>(&d, local, true);
+    return std::make_unique<Overlay>(&d, local, true);
   }
 
   void
@@ -221,7 +221,7 @@ std::unique_ptr<dht::consensus::Consensus>
 add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
 {
   if (enable)
-    return elle::make_unique<
+    return std::make_unique<
       infinit::model::doughnut::consensus::Cache>
         (std::move(c), 1000);
   else
@@ -249,7 +249,7 @@ public:
       owner = boost::optional<infinit::cryptography::rsa::KeyPair>(),
       id = infinit::model::Address::random(0), // FIXME
       storage = elle::factory(
-        [] { return elle::make_unique<infinit::storage::Memory>(); }),
+        [] { return std::make_unique<infinit::storage::Memory>(); }),
       version = boost::optional<elle::Version>(),
       make_overlay = &Overlay::make,
       make_consensus = [] (std::unique_ptr<dht::consensus::Consensus> c)
@@ -335,7 +335,7 @@ private:
             [&] (dht::Doughnut& dht)
             {
               return add_cache(with_cache, make_consensus(
-                elle::make_unique<dht::consensus::Paxos>(
+                std::make_unique<dht::consensus::Paxos>(
                   dht::consensus::doughnut = dht,
                   dht::consensus::replication_factor = 3,
                   dht::consensus::rebalance_auto_expand = rebalance_auto_expand,
@@ -346,7 +346,7 @@ private:
             [&] (dht::Doughnut& dht)
             {
               return add_cache(with_cache, make_consensus(
-                elle::make_unique<dht::consensus::Consensus>(dht)));
+                std::make_unique<dht::consensus::Consensus>(dht)));
             };
       }();
     auto passport = dht::Passport(keys->K(), "network-name", owner);

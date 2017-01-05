@@ -160,7 +160,7 @@ protected:
 std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
 no_cheat_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
 {
-  return elle::make_unique<NoCheatConsensus>(std::move(c));
+  return std::make_unique<NoCheatConsensus>(std::move(c));
 }
 
 std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
@@ -205,8 +205,8 @@ public:
     template<typename... Args>
     Client(std::string const& name, DHT dht, Args...args)
       : dht(std::move(dht))
-      , fs(elle::make_unique<reactor::filesystem::FileSystem>(
-             elle::make_unique<infinit::filesystem::FileSystem>(
+      , fs(std::make_unique<reactor::filesystem::FileSystem>(
+             std::make_unique<infinit::filesystem::FileSystem>(
                name, this->dht.dht, ifs::allow_root_creation = true,
                std::forward<Args>(args)...),
              true))
@@ -712,7 +712,7 @@ ELLE_TEST_SCHEDULED(multiple_writers)
   struct stat st;
   DHTs servers(1, {},
                with_cache = true,
-               storage = elle::make_unique<infinit::storage::Memory>(blocks));
+               storage = std::make_unique<infinit::storage::Memory>(blocks));
   auto client = servers.client(false);
   char buffer[1024], buffer2[1024];
   for (int i=0; i<1024; ++i)
@@ -1431,7 +1431,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
   {
     DHTs dhts(1, owner_key,
               keys = owner_key,
-              storage = elle::make_unique<infinit::storage::Memory>(blocks),
+              storage = std::make_unique<infinit::storage::Memory>(blocks),
               version = elle::Version(0,6,0),
               id = nid);
     auto client = dhts.client(false, {}, version = elle::Version(0, 6, 0));
@@ -1454,7 +1454,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
     DHTs dhts(1,
               owner_key,
               keys = owner_key,
-              storage = elle::make_unique<infinit::storage::Memory>(blocks),
+              storage = std::make_unique<infinit::storage::Memory>(blocks),
               version = elle::Version(0,7,0),
               dht::consensus::rebalance_auto_expand = false,
               id = nid
@@ -1488,7 +1488,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
     BOOST_CHECK(blocks.size());
     DHTs dhts(1, owner_key,
               keys = owner_key,
-              storage = elle::make_unique<infinit::storage::Memory>(blocks),
+              storage = std::make_unique<infinit::storage::Memory>(blocks),
               version = elle::Version(0,7,0),
               dht::consensus::rebalance_auto_expand = false,
               id = nid

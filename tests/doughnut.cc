@@ -90,7 +90,7 @@ public:
           std::shared_ptr<infinit::model::doughnut::Local> local,
           infinit::model::doughnut::Doughnut& d)
       {
-        return elle::make_unique<infinit::overlay::Stonehenge>(
+        return std::make_unique<infinit::overlay::Stonehenge>(
           peers, std::move(local), &d);
       },
       make_consensus =
@@ -181,25 +181,25 @@ private:
     this->keys_c =
       std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_c));
     if (!storage_a)
-      storage_a = elle::make_unique<Memory>();
+      storage_a = std::make_unique<Memory>();
     if (!storage_b)
-      storage_b = elle::make_unique<Memory>();
+      storage_b = std::make_unique<Memory>();
     if (!storage_c)
-      storage_c = elle::make_unique<Memory>();
+      storage_c = std::make_unique<Memory>();
     dht::Doughnut::ConsensusBuilder consensus;
     if (paxos)
       consensus =
         [&] (dht::Doughnut& dht)
         {
           return make_consensus(
-            elle::make_unique<dht::consensus::Paxos>(dht, 3));
+            std::make_unique<dht::consensus::Paxos>(dht, 3));
         };
     else
       consensus =
         [&] (dht::Doughnut& dht)
         {
           return make_consensus(
-            elle::make_unique<dht::consensus::Consensus>(dht));
+            std::make_unique<dht::consensus::Consensus>(dht));
         };
     dht::Passport passport_a(
       this->keys_a->K(), "network-name", *this->keys_a);
@@ -445,7 +445,7 @@ ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
 ELLE_TEST_SCHEDULED(NB, (bool, paxos))
 {
   DHTs dhts(paxos);
-  auto block = elle::make_unique<dht::NB>(
+  auto block = std::make_unique<dht::NB>(
     *dhts.dht_a, "blockname", elle::Buffer("blockdata", 9));
   ELLE_LOG("owner: store NB")
     dhts.dht_a->store(*block, infinit::model::STORE_INSERT);
@@ -458,7 +458,7 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
     BOOST_CHECK(nb);
   }
   { // overwrite
-    auto block = elle::make_unique<dht::NB>(
+    auto block = std::make_unique<dht::NB>(
       *dhts.dht_a, "blockname", elle::Buffer("blockdatb", 9));
     BOOST_CHECK_THROW(dhts.dht_a->store(*block, infinit::model::STORE_UPDATE),
                       std::exception);
@@ -522,7 +522,7 @@ namespace removal
     ELLE_LOG("store block")
     {
       DHT dht(id = dht_id,
-              storage = elle::make_unique<Memory>(dht_storage));
+              storage = std::make_unique<Memory>(dht_storage));
       auto b = dht.dht->make_block<blocks::ACLBlock>();
       address = b->address();
       b->data(std::string("removal/serialize_ACB_remove"));
@@ -537,7 +537,7 @@ namespace removal
     ELLE_LOG("fail removing block")
     {
       DHT dht(id = dht_id,
-              storage = elle::make_unique<Memory>(dht_storage));
+              storage = std::make_unique<Memory>(dht_storage));
       elle::serialization::Context ctx;
       ctx.set<infinit::model::doughnut::Doughnut*>(dht.dht.get());
       auto sig = elle::serialization::binary::deserialize<
@@ -550,7 +550,7 @@ namespace removal
     ELLE_LOG("remove block")
     {
       DHT dht(id = dht_id,
-              storage = elle::make_unique<Memory>(dht_storage));
+              storage = std::make_unique<Memory>(dht_storage));
       elle::serialization::Context ctx;
       ctx.set<infinit::model::doughnut::Doughnut*>(dht.dht.get());
       auto sig = elle::serialization::binary::deserialize<
@@ -621,7 +621,7 @@ ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
       dhts.dht_b->store(*block_bob, infinit::model::STORE_UPDATE),
       infinit::model::doughnut::Conflict);
     dhts.dht_b->store(*block_bob, infinit::model::STORE_UPDATE,
-                      elle::make_unique<AppendConflictResolver>());
+                      std::make_unique<AppendConflictResolver>());
   }
   ELLE_LOG("alice: fetch block")
   {
@@ -657,9 +657,9 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
       id_a,
       id_b,
       id_c,
-      elle::make_unique<Memory>(storage_a),
-      elle::make_unique<Memory>(storage_b),
-      elle::make_unique<Memory>(storage_c)
+      std::make_unique<Memory>(storage_a),
+      std::make_unique<Memory>(storage_b),
+      std::make_unique<Memory>(storage_c)
       );
     // iblock =
     //   dhts.dht_a->make_block<blocks::ImmutableBlock>(
@@ -680,9 +680,9 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
       id_a,
       id_b,
       id_c,
-      elle::make_unique<Memory>(storage_a),
-      elle::make_unique<Memory>(storage_b),
-      elle::make_unique<Memory>(storage_c)
+      std::make_unique<Memory>(storage_a),
+      std::make_unique<Memory>(storage_b),
+      std::make_unique<Memory>(storage_c)
       );
     // auto ifetched = dhts.dht_a->fetch(iblock->address());
     // BOOST_CHECK_EQUAL(iblock->data(), ifetched->data());
@@ -737,7 +737,7 @@ ELLE_TEST_SCHEDULED(wrong_quorum)
         return std::unique_ptr<infinit::overlay::Stonehenge>(stonehenge);
       }
       else
-        return elle::make_unique<infinit::overlay::Stonehenge>(
+        return std::make_unique<infinit::overlay::Stonehenge>(
           peers, std::move(local), &d);
     });
   auto block = dhts.dht_a->make_block<blocks::MutableBlock>();
@@ -773,7 +773,7 @@ ELLE_TEST_SCHEDULED(cache, (bool, paxos))
     make_consensus =
       [&] (std::unique_ptr<dht::consensus::Consensus> c)
       {
-        auto res = elle::make_unique<dht::consensus::Cache>(std::move(c));
+        auto res = std::make_unique<dht::consensus::Cache>(std::move(c));
         if (!cache)
           cache = res.get();
         return res;
@@ -913,9 +913,9 @@ ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
     id_a,
     id_b,
     id_c,
-    elle::make_unique<Memory>(storage_a),
-    elle::make_unique<Memory>(storage_b),
-    elle::make_unique<Memory>(storage_c),
+    std::make_unique<Memory>(storage_a),
+    std::make_unique<Memory>(storage_b),
+    std::make_unique<Memory>(storage_c),
     monitoring_socket_path_a = monitoring_path
   );
   BOOST_CHECK(boost::filesystem::exists(monitoring_path));
@@ -1269,7 +1269,7 @@ namespace rebalancing
       std::unique_ptr<infinit::storage::Storage> storage,
       dht::Protocol p) override
     {
-      return elle::make_unique<Local>(
+      return std::make_unique<Local>(
         *this,
         this->factor(),
         this->rebalance_auto_expand(),
@@ -1289,7 +1289,7 @@ namespace rebalancing
     return [factor] (std::unique_ptr<dht::consensus::Consensus> c)
       -> std::unique_ptr<dht::consensus::Consensus>
     {
-      return elle::make_unique<InstrumentedPaxos>(
+      return std::make_unique<InstrumentedPaxos>(
         dht::consensus::doughnut = c->doughnut(),
         dht::consensus::replication_factor = factor);
     };
@@ -1376,7 +1376,7 @@ namespace rebalancing
       auto& mb = dynamic_cast<blocks::MutableBlock&>(*b);
       ELLE_LOG("write block to both DHTs")
       {
-        auto resolver = elle::make_unique<VersionHop>(mb);
+        auto resolver = std::make_unique<VersionHop>(mb);
         mb.data(std::string("expand'"));
         dht_b.dht->store(mb, infinit::model::STORE_UPDATE, std::move(resolver));
       }
@@ -1432,7 +1432,7 @@ namespace rebalancing
     {
       DHT dht_a(id = id_a,
                 make_consensus = instrument(3),
-                storage = elle::make_unique<Memory>(storage_a));
+                storage = std::make_unique<Memory>(storage_a));
       auto block = make_block(dht_a, immutable, "expand_from_disk");
       address = block->address();
       dht_a.dht->store(std::move(block), infinit::model::STORE_INSERT);
@@ -1442,7 +1442,7 @@ namespace rebalancing
     {
       DHT dht_a(id = id_a,
                 make_consensus = instrument(3),
-                storage = elle::make_unique<Memory>(storage_a));
+                storage = std::make_unique<Memory>(storage_a));
       auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
       DHT dht_b(make_consensus = instrument(3));
       dht_b.overlay->connect(*dht_a.overlay);

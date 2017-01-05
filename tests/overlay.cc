@@ -938,10 +938,10 @@ ELLE_TEST_SCHEDULED(churn, (Doughnut::OverlayBuilder, builder),
   for (int i=0; i<n; ++i)
   {
     ids[i] = infinit::model::Address::random();
-    auto dht = elle::make_unique<DHT>(
+    auto dht = std::make_unique<DHT>(
       ::id = ids[i],
       ::keys = keys, make_overlay = builder, paxos = true,
-      ::storage = elle::make_unique<infinit::storage::Memory>(blocks[i])
+      ::storage = std::make_unique<infinit::storage::Memory>(blocks[i])
     );
     ports[i] = dht->dht->dock().utp_server().local_endpoint().port();
     servers.emplace_back(std::move(dht));
@@ -951,7 +951,7 @@ ELLE_TEST_SCHEDULED(churn, (Doughnut::OverlayBuilder, builder),
       discover(*servers[i], *servers[j], false);
   std::unique_ptr<DHT> client;
   auto spawn_client = [&] {
-    client = elle::make_unique<DHT>(
+    client = std::make_unique<DHT>(
       ::keys = keys, make_overlay = builder, paxos = true, ::storage = nullptr);
     if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
       client->dht->overlay().get()))
@@ -981,7 +981,7 @@ ELLE_TEST_SCHEDULED(churn, (Doughnut::OverlayBuilder, builder),
         paxos = true,
         ::id = ids[down],
         ::port = keep_port ? ports[down] : 0,
-        ::storage = elle::make_unique<infinit::storage::Memory>(blocks[down])));
+        ::storage = std::make_unique<infinit::storage::Memory>(blocks[down])));
       for (int s=0; s< n; ++s)
         if (s != down)
         {
@@ -1062,10 +1062,10 @@ void test_churn_socket(Doughnut::OverlayBuilder builder, bool pasv)
   for (int i=0; i<n; ++i)
   {
     ids[i] = infinit::model::Address::random();
-    auto dht = elle::make_unique<DHT>(
+    auto dht = std::make_unique<DHT>(
       ::id = ids[i],
       ::keys = keys, make_overlay = builder, paxos = true,
-      ::storage = elle::make_unique<infinit::storage::Memory>(blocks[i])
+      ::storage = std::make_unique<infinit::storage::Memory>(blocks[i])
     );
     ports[i] = dht->dht->dock().utp_server().local_endpoint().port();
     servers.emplace_back(std::move(dht));
@@ -1075,7 +1075,7 @@ void test_churn_socket(Doughnut::OverlayBuilder builder, bool pasv)
       discover(*servers[i], *servers[j], false);
   for (auto& s: servers)
     hard_wait(*s, n-1);
-  std::unique_ptr<DHT> client = elle::make_unique<DHT>(
+  std::unique_ptr<DHT> client = std::make_unique<DHT>(
       ::keys = keys, make_overlay = builder, paxos = true, ::storage = nullptr);
   if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
     client->dht->overlay().get()))

@@ -29,7 +29,7 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
   DHT server_a(owner = k);
   DHT client(keys = k, storage = nullptr);
   client.overlay->connect(*server_a.overlay);
-  auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
+  auto fs = std::make_unique<infinit::filesystem::FileSystem>(
     "test/bandwidth", client.dht,
     infinit::filesystem::allow_root_creation = true);
   reactor::filesystem::FileSystem driver(std::move(fs), true);
