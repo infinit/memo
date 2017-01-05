@@ -1,5 +1,4 @@
-#ifndef INFINIT_FILESYSTEM_DIRECTORY_HH
-# define INFINIT_FILESYSTEM_DIRECTORY_HH
+#pragma once
 
 #include <reactor/filesystem.hh>
 #include <infinit/filesystem/Node.hh>
@@ -12,11 +11,11 @@ namespace infinit
   namespace filesystem
   {
     namespace rfs = reactor::filesystem;
-    typedef std::shared_ptr<Directory> DirectoryPtr;
-    typedef infinit::model::blocks::ACLBlock ACLBlock;
+    using DirectoryPtr = std::shared_ptr<Directory>;
+    using ACLBlock = infinit::model::blocks::ACLBlock;
 
-    static const int DIRECTORY_MASK = 0040000;
-    static const int SYMLINK_MASK = 0120000;
+    constexpr int DIRECTORY_MASK = 0040000;
+    constexpr int SYMLINK_MASK = 0120000;
     static const boost::posix_time::time_duration directory_cache_time
       = boost::posix_time::seconds(2);
 
@@ -51,18 +50,14 @@ namespace infinit
     | Extended attributes |
     `--------------------*/
     public:
-      virtual
       std::string
       getxattr(std::string const& key) override;
-      virtual
       void
       setxattr(std::string const& name,
                std::string const& value,
                int flags) override;
-      virtual
       std::vector<std::string>
       listxattr() override;
-      virtual
       void
       removexattr(std::string const& name) override;
 
@@ -74,7 +69,6 @@ namespace infinit
     | Printable |
     `----------*/
     public:
-      virtual
       void
       print(std::ostream& stream) const override;
 
@@ -141,5 +135,3 @@ namespace infinit
                                bool deserialized);
   }
 }
-
-#endif

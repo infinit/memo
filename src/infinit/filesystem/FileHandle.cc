@@ -685,7 +685,7 @@ namespace infinit
         auto baddr = block->address();
         this->_model.store(
           std::move(block), model::STORE_INSERT,
-          elle::make_unique<InsertBlockResolver>(this->_file.path(), baddr));
+          std::make_unique<InsertBlockResolver>(this->_file.path(), baddr));
         Address prev = Address::null;
         if (signed(this->_file._fat.size()) > id)
           prev = _file._fat.at(id).first;

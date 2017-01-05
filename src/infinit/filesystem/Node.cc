@@ -337,10 +337,10 @@ namespace infinit
           model::doughnut::UB rub(dht.get(), name, p, true);
           this->_owner.block_store()->store(
             ub, model::STORE_INSERT,
-            elle::make_unique<model::doughnut::UserBlockUpserter>(name));
+            std::make_unique<model::doughnut::UserBlockUpserter>(name));
           this->_owner.block_store()->store(
             rub, model::STORE_INSERT,
-            elle::make_unique<model::doughnut::ReverseUserBlockUpserter>(name));
+            std::make_unique<model::doughnut::ReverseUserBlockUpserter>(name));
           return;
         }
         else if (special->find("group.") == 0)
@@ -917,7 +917,7 @@ namespace infinit
       this->_owner.store_or_die(
         std::move(acl),
         model::STORE_UPDATE,
-        elle::make_unique<ACLConflictResolver>(
+        std::make_unique<ACLConflictResolver>(
           this->_owner.block_store().get(), perms.first, perms.second, userkey
         ));
     }

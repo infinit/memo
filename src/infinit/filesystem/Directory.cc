@@ -448,7 +448,7 @@ namespace infinit
           version = block->version();
           model.store(*block,
             first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-            elle::make_unique<DirectoryConflictResolver>(model, op, _address));
+            std::make_unique<DirectoryConflictResolver>(model, op, _address));
         }
         else
         {
@@ -468,7 +468,7 @@ namespace infinit
           version = b->version();
           model.store(std::move(b),
             first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-            elle::make_unique<DirectoryConflictResolver>(model, op, _address));
+            std::make_unique<DirectoryConflictResolver>(model, op, _address));
         }
         ELLE_TRACE("stored version %s of %f", version, _address);
         _block_version = version + 1;

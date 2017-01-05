@@ -39,20 +39,22 @@ namespace infinit
 {
   namespace filesystem
   {
-
-    static std::string print_mode(int m)
+    namespace
     {
-      std::string res;
-      res += (m & 0400) ? 'r' : '-';
-      res += (m & 0200) ? 'w' : '-';
-      res += (m & 0100) ? 'x' : '-';
-      res += (m & 0040) ? 'r' : '-';
-      res += (m & 0020) ? 'w' : '-';
-      res += (m & 0010) ? 'x' : '-';
-      res += (m & 0004) ? 'r' : '-';
-      res += (m & 0002) ? 'w' : '-';
-      res += (m & 0001) ? 'x' : '-';
-      return res;
+      std::string print_mode(int m)
+      {
+        auto res = std::string{};
+        res += (m & 0400) ? 'r' : '-';
+        res += (m & 0200) ? 'w' : '-';
+        res += (m & 0100) ? 'x' : '-';
+        res += (m & 0040) ? 'r' : '-';
+        res += (m & 0020) ? 'w' : '-';
+        res += (m & 0010) ? 'x' : '-';
+        res += (m & 0004) ? 'r' : '-';
+        res += (m & 0002) ? 'w' : '-';
+        res += (m & 0001) ? 'x' : '-';
+        return res;
+      }
     }
 
     FileConflictResolver::FileConflictResolver(elle::serialization::SerializerIn& s,
@@ -80,8 +82,8 @@ namespace infinit
       ELLE_LOG_SCOPE(
         "conflict: the file \"%s\" was modified since last read. Your"
         " changes will overwrite previous modifications", this->_path);
-      FileData cd(_path, current, {true, true});
-      FileData od(_path, b, {true, true});
+      auto cd = FileData(_path, current, {true, true});
+      auto od = FileData(_path, b, {true, true});
       od.merge(cd, _target);
       // write od data into current block
       elle::Buffer serdata;
@@ -94,9 +96,11 @@ namespace infinit
       }
       auto block = elle::cast<MutableBlock>::runtime(current.clone());
       if (_target & WriteTarget::perms)
-      { // acl permission changes are handled by a different resolver
+      {
+        // acl permission changes are handled by a different resolver
         auto perms = dynamic_cast<ACLBlock&>(b).get_world_permissions();
-        dynamic_cast<ACLBlock&>(*block).set_world_permissions(perms.first, perms.second);
+        dynamic_cast<ACLBlock&>(*block)
+          .set_world_permissions(perms.first, perms.second);
       }
       block->data(serdata);
       return elle::cast<Block>::runtime(block);
@@ -129,8 +133,15 @@ namespace infinit
       return elle::sprintf("edit file %s", this->_path);
     }
 
-    static const elle::serialization::Hierarchy<model::ConflictResolver>::
-    Register<FileConflictResolver> _register_fcr("fcr");
+    namespace
+    {
+      template <typename T>
+      using SerializationRegister =
+        elle::serialization::Hierarchy<model::ConflictResolver>::
+        Register<T>;
+
+      const SerializationRegister<FileConflictResolver> _register_fcr("fcr");
+    }
 
     void
     File::chmod(mode_t mode)
@@ -375,14 +386,14 @@ namespace infinit
         {
           model.store(*block,
                       first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-                      elle::make_unique<FileConflictResolver>(
+                      std::make_unique<FileConflictResolver>(
                         _path, &model, target));
         }
         else
         {
           model.store(std::move(block),
                       first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-                      elle::make_unique<FileConflictResolver>(
+                      std::make_unique<FileConflictResolver>(
                         _path, &model, target));
         }
       }
@@ -576,8 +587,11 @@ namespace infinit
       ELLE_ATTRIBUTE(Address, address);
     };
 
-    static const elle::serialization::Hierarchy<infinit::model::ConflictResolver>::
-    Register<NewBlockResolver> _register_nbr("NewBlockResolver");
+    namespace
+    {
+      const SerializationRegister<NewBlockResolver>
+      _register_nbr("NewBlockResolver");
+    }
 
     void
     File::truncate(off_t new_size)
@@ -626,7 +640,7 @@ namespace infinit
           _filedata->_fat[i].first = newblock->address();
           this->_owner.store_or_die(
             std::move(newblock), model::STORE_INSERT,
-            elle::make_unique<NewBlockResolver>(this->_name, this->_address));
+            std::make_unique<NewBlockResolver>(this->_name, this->_address));
         }
       }
       // check first block data
