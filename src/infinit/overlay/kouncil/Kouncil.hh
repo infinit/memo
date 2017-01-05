@@ -188,6 +188,10 @@ namespace infinit
         void
         _peer_disconnected(model::doughnut::Peer* peer);
         void
+        _peer_connected(overlay::Overlay::Member peer,
+                        bool anonymous,
+                        PeerInfo const& pi);
+        void
         _watcher();
         reactor::Thread::unique_ptr _watcher_thread;
         ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>, tasks);

@@ -14,7 +14,7 @@ namespace infinit
       Local::broadcast(std::string const& name, Args&& ... args)
       {
         ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
-        ELLE_TRACE_SCOPE("%s: broadcast %s", this, name);
+        ELLE_TRACE_SCOPE("%s: broadcast %s to %s peers", this, name, this->_peers.size());
         // Copy peers to hold connections refcount, as for_each_parallel
         // captures values by ref.
         auto peers = this->_peers;
