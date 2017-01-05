@@ -85,6 +85,8 @@ namespace infinit
         virtual
         void
         reconnect(elle::DurationOpt timeout = elle::DurationOpt());
+        void
+        disconnect();
       private:
         void
         _connect();

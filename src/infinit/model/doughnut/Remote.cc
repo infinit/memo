@@ -242,6 +242,12 @@ namespace infinit
         connect(timeout);
       }
 
+      void
+      Remote::disconnect()
+      {
+        this->_socket.reset();
+      }
+
       /*-------.
       | Blocks |
       `-------*/
