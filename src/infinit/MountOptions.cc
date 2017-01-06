@@ -123,28 +123,28 @@ namespace infinit
       arguments.push_back("--peer");
       arguments.push_back(fo);
     }
-    if (fetch && *fetch) arguments.push_back("--fetch");
-    if (push && *push) arguments.push_back("--push");
-    if (cache && *cache) arguments.push_back("--cache");
-    if (async && *async) arguments.push_back("--async");
-    if (readonly && *readonly) arguments.push_back("--readonly");
-    if (cache_ram_size) {arguments.push_back("--cache-ram-size"); arguments.push_back(std::to_string(cache_ram_size.get()));}
-    if (cache_ram_ttl) {arguments.push_back("--cache-ram-ttl"); arguments.push_back(std::to_string(cache_ram_ttl.get()));}
-    if (cache_ram_invalidation) {arguments.push_back("--cache-ram-invalidation"); arguments.push_back(std::to_string(cache_ram_invalidation.get()));}
-    if (cache_disk_size) {arguments.push_back("--cache-disk-size"); arguments.push_back(std::to_string(cache_disk_size.get()));}
-    if (poll_beyond && *poll_beyond >0) {arguments.push_back("--poll-hub"); arguments.push_back(std::to_string(poll_beyond.get()));}
+    if (fetch && *fetch) arguments.emplace_back("--fetch");
+    if (push && *push) arguments.emplace_back("--push");
+    if (cache && *cache) arguments.emplace_back("--cache");
+    if (async && *async) arguments.emplace_back("--async");
+    if (readonly && *readonly) arguments.emplace_back("--readonly");
+    if (cache_ram_size) {arguments.emplace_back("--cache-ram-size"); arguments.emplace_back(std::to_string(cache_ram_size.get()));}
+    if (cache_ram_ttl) {arguments.emplace_back("--cache-ram-ttl"); arguments.emplace_back(std::to_string(cache_ram_ttl.get()));}
+    if (cache_ram_invalidation) {arguments.emplace_back("--cache-ram-invalidation"); arguments.emplace_back(std::to_string(cache_ram_invalidation.get()));}
+    if (cache_disk_size) {arguments.emplace_back("--cache-disk-size"); arguments.emplace_back(std::to_string(cache_disk_size.get()));}
+    if (poll_beyond && *poll_beyond >0) {arguments.emplace_back("--poll-hub"); arguments.emplace_back(std::to_string(poll_beyond.get()));}
 #ifndef INFINIT_WINDOWS
-    if (enable_monitoring && !*enable_monitoring) {arguments.push_back("--monitoring=false");}
+    if (enable_monitoring && !*enable_monitoring) {arguments.emplace_back("--monitoring=false");}
 #endif
     if (mountpoint)
     {
-      arguments.push_back("--mountpoint");
-      arguments.push_back(mountpoint.get());
+      arguments.emplace_back("--mountpoint");
+      arguments.emplace_back(mountpoint.get());
     }
     if (as)
     {
-      arguments.push_back("--as");
-      arguments.push_back(as.get());
+      arguments.emplace_back("--as");
+      arguments.emplace_back(as.get());
     }
   }
 }

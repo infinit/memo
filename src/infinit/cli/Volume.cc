@@ -260,12 +260,12 @@ namespace infinit
                    cli::fetch_endpoints_interval = 300,
                    cli::input = boost::none))
       , status(
-        "Delete a volume locally",
+        "Get volume status",
         das::cli::Options(),
         this->bind(modes::mode_status,
                    cli::name))
       , stop(
-        "Delete a volume locally",
+        "Stop a volume",
         das::cli::Options(),
         this->bind(modes::mode_stop,
                    cli::name))
