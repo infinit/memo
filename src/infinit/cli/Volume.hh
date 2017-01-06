@@ -40,6 +40,8 @@ namespace infinit
                                     cli::run));
 
       using Strings = std::vector<std::string>;
+      template <typename T>
+      using Defaulted = das::cli::Defaulted<T>;
 
       /*---------.
       | Create.  |
@@ -95,13 +97,13 @@ namespace infinit
                   std::string const& network,
                   boost::optional<std::string> description = {},
                   bool create_root = false,
-                  bool push_volume = false,
+                  Defaulted<bool> push_volume = false,
                   boost::optional<std::string> output = {},
                   boost::optional<std::string> default_permissions = {},
                   bool register_service = false,
                   bool allow_root_creation = false,
                   boost::optional<std::string> mountpoint = {},
-                  bool readonly = false,
+                  Defaulted<bool> readonly = false,
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
                   boost::optional<std::string> mount_name = {},
 #endif
@@ -109,30 +111,30 @@ namespace infinit
                   boost::optional<std::string> mount_icon = {},
                   bool finder_sidebar = false,
 #endif
-                  bool async = false,
+                  Defaulted<bool> async = false,
 #ifndef INFINIT_WINDOWS
                   bool daemon = false,
 #endif
-                  bool monitoring = true,
-                  Strings fuse_option = {},
-                  bool cache = false,
+                  Defaulted<bool> monitoring = true,
+                  Defaulted<Strings> fuse_option = Strings{},
+                  Defaulted<bool> cache = false,
                   boost::optional<int> cache_ram_size = {},
                   boost::optional<int> cache_ram_ttl = {},
                   boost::optional<int> cache_ram_invalidation = {},
                   boost::optional<int> cache_disk_size = {},
-                  bool fetch_endpoints = false,
-                  bool fetch = false,
-                  Strings peer = {},
+                  Defaulted<bool> fetch_endpoints = false,
+                  Defaulted<bool> fetch = false,
+                  Defaulted<Strings> peer = Strings{},
                   boost::optional<std::string> peers_file = {},
-                  bool push_endpoints = false,
-                  bool push = false,
+                  Defaulted<bool> push_endpoints = false,
+                  Defaulted<bool> push = false,
                   bool publish = false,
                   Strings advertise_host = {},
                   boost::optional<std::string> endpoints_file = {},
                   boost::optional<std::string> port_file = {},
                   boost::optional<int> port = {},
                   boost::optional<std::string> listen = {},
-                  int fetch_endpoints_interval = 300,
+                  Defaulted<int> fetch_endpoints_interval = 300,
                   boost::optional<std::string> input = {});
 
 
@@ -251,7 +253,7 @@ namespace infinit
       mode_mount(std::string const& name,
                  bool allow_root_creation = false,
                  boost::optional<std::string> mountpoint = {},
-                 bool readonly = false,
+                 Defaulted<bool> readonly = false,
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
                  boost::optional<std::string> mount_name = {},
 #endif
@@ -259,26 +261,26 @@ namespace infinit
                  boost::optional<std::string> mount_icon = {},
                  bool finder_sidebar = false,
 #endif
-                 bool async = false,
+                 Defaulted<bool> async = false,
 #ifndef INFINIT_WINDOWS
                  bool daemon = false,
 #endif
-                 bool monitoring = true,
-                 Strings fuse_option = {},
-                 bool cache = false,
+                 Defaulted<bool> monitoring = true,
+                 Defaulted<Strings> fuse_option = Strings{},
+                 Defaulted<bool> cache = false,
                  boost::optional<int> cache_ram_size = {},
                  boost::optional<int> cache_ram_ttl = {},
                  boost::optional<int> cache_ram_invalidation = {},
                  boost::optional<int> cache_disk_size = {},
-                 bool fetch_endpoints = false,
-                 bool fetch = false,
-                 Strings peer = {},
+                 Defaulted<bool> fetch_endpoints = false,
+                 Defaulted<bool> fetch = false,
+                 Defaulted<Strings> peer = Strings{},
                  boost::optional<std::string> peers_file = {},
-                 bool push_endpoints = false,
+                 Defaulted<bool> push_endpoints = false,
                  bool register_service = false,
                  bool no_local_endpoints = false,
                  bool no_public_endpoints = false,
-                 bool push = false,
+                 Defaulted<bool> push = false,
                  bool map_other_permissions = true,
                  bool publish = false,
                  Strings advertise_host = {},
@@ -286,7 +288,7 @@ namespace infinit
                  boost::optional<std::string> port_file = {},
                  boost::optional<int> port = {},
                  boost::optional<std::string> listen = {},
-                 int fetch_endpoints_interval = 300,
+                 Defaulted<int> fetch_endpoints_interval = 300,
                  boost::optional<std::string> input = {},
                  bool disable_UTF_8_conversion = false);
 
@@ -365,7 +367,7 @@ namespace infinit
       mode_run(std::string const& name,
                bool allow_root_creation = false,
                boost::optional<std::string> mountpoint = {},
-               bool readonly = false,
+               Defaulted<bool> readonly = false,
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
                boost::optional<std::string> mount_name = {},
 #endif
@@ -373,26 +375,26 @@ namespace infinit
                boost::optional<std::string> mount_icon = {},
                bool finder_sidebar = false,
 #endif
-               bool async = false,
+               Defaulted<bool> async = false,
 #ifndef INFINIT_WINDOWS
                bool daemon = false,
 #endif
-               bool monitoring = true,
-               Strings fuse_option = {},
-               bool cache = false,
+               Defaulted<bool> monitoring = true,
+               Defaulted<Strings> fuse_option = Strings{},
+               Defaulted<bool> cache = false,
                boost::optional<int> cache_ram_size = {},
                boost::optional<int> cache_ram_ttl = {},
                boost::optional<int> cache_ram_invalidation = {},
                boost::optional<int> cache_disk_size = {},
-               bool fetch_endpoints = false,
-               bool fetch = false,
-               Strings peer = {},
+               Defaulted<bool> fetch_endpoints = false,
+               Defaulted<bool> fetch = false,
+               Defaulted<Strings> peer = Strings{},
                boost::optional<std::string> peers_file = {},
-               bool push_endpoints = false,
+               Defaulted<bool> push_endpoints = false,
                bool register_service = false,
                bool no_local_endpoints = false,
                bool no_public_endpoints = false,
-               bool push = false,
+               Defaulted<bool> push = false,
                bool map_other_permissions = true,
                bool publish = false,
                Strings advertise_host = {},
@@ -400,7 +402,7 @@ namespace infinit
                boost::optional<std::string> port_file = {},
                boost::optional<int> port = {},
                boost::optional<std::string> listen = {},
-               int fetch_endpoints_interval = 300,
+               Defaulted<int> fetch_endpoints_interval = 300,
                boost::optional<std::string> input = {},
                bool disable_UTF_8_conversion = false);
 
@@ -455,7 +457,7 @@ namespace infinit
       mode_start(std::string const& name,
                  bool allow_root_creation = false,
                  boost::optional<std::string> mountpoint = {},
-                 bool readonly = false,
+                 Defaulted<bool> readonly = false,
 # if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
                  boost::optional<std::string> mount_name = {},
 # endif
@@ -463,26 +465,26 @@ namespace infinit
                  boost::optional<std::string> mount_icon = {},
                  bool finder_sidebar = false,
 # endif
-                 bool async = false,
+                 Defaulted<bool> async = false,
 # ifndef INFINIT_WINDOWS
                  bool daemon = false,
 # endif
-                 bool monitoring = true,
-                 Strings fuse_option = {},
-                 bool cache = false,
+                 Defaulted<bool> monitoring = true,
+                 Defaulted<Strings> fuse_option = Strings{},
+                 Defaulted<bool> cache = false,
                  boost::optional<int> cache_ram_size = {},
                  boost::optional<int> cache_ram_ttl = {},
                  boost::optional<int> cache_ram_invalidation = {},
                  boost::optional<int> cache_disk_size = {},
-                 bool fetch_endpoints = false,
-                 bool fetch = false,
-                 Strings peer = {},
+                 Defaulted<bool> fetch_endpoints = false,
+                 Defaulted<bool> fetch = false,
+                 Defaulted<Strings> peer = Strings{},
                  boost::optional<std::string> peers_file = {},
-                 bool push_endpoints = false,
+                 Defaulted<bool> push_endpoints = false,
                  bool register_service = false,
                  bool no_local_endpoints = false,
                  bool no_public_endpoints = false,
-                 bool push = false,
+                 Defaulted<bool> push = false,
                  bool map_other_permissions = true,
                  bool publish = false,
                  Strings advertise_host = {},
@@ -490,7 +492,7 @@ namespace infinit
                  boost::optional<std::string> port_file = {},
                  boost::optional<int> port = {},
                  boost::optional<std::string> listen = {},
-                 int fetch_endpoints_interval = 300,
+                 Defaulted<int> fetch_endpoints_interval = 300,
                  boost::optional<std::string> input = {});
 
 
@@ -565,7 +567,7 @@ namespace infinit
                   boost::optional<std::string> description = {},
                   bool allow_root_creation = false,
                   boost::optional<std::string> mountpoint = {},
-                  bool readonly = false,
+                  Defaulted<bool> readonly = false,
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
                   boost::optional<std::string> mount_name = {},
 #endif
@@ -573,23 +575,23 @@ namespace infinit
                   boost::optional<std::string> mount_icon = {},
                   bool finder_sidebar = false,
 #endif
-                  bool async = false,
+                  Defaulted<bool> async = false,
 #ifndef INFINIT_WINDOWS
                   bool daemon = false,
 #endif
-                  bool monitoring = true,
-                  Strings fuse_option = {},
-                  bool cache = false,
+                  Defaulted<bool> monitoring = true,
+                  Defaulted<Strings> fuse_option = Strings{},
+                  Defaulted<bool> cache = false,
                   boost::optional<int> cache_ram_size = {},
                   boost::optional<int> cache_ram_ttl = {},
                   boost::optional<int> cache_ram_invalidation = {},
                   boost::optional<int> cache_disk_size = {},
-                  bool fetch_endpoints = false,
-                  bool fetch = false,
-                  Strings peer = {},
+                  Defaulted<bool> fetch_endpoints = false,
+                  Defaulted<bool> fetch = false,
+                  Defaulted<Strings> peer = Strings{},
                   boost::optional<std::string> peers_file = {},
-                  bool push_endpoints = false,
-                  bool push = false,
+                  Defaulted<bool> push_endpoints = false,
+                  Defaulted<bool> push = false,
                   bool map_other_permissions = true,
                   bool publish = false,
                   Strings advertise_host = {},
@@ -597,7 +599,7 @@ namespace infinit
                   boost::optional<std::string> port_file = {},
                   boost::optional<int> port = {},
                   boost::optional<std::string> listen = {},
-                  int fetch_endpoints_interval = 300,
+                  Defaulted<int> fetch_endpoints_interval = 300,
                   boost::optional<std::string> input = {},
                   boost::optional<std::string> user = {});
     };

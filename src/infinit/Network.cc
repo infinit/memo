@@ -119,10 +119,10 @@ namespace infinit
          || enable_monitoring)
 #endif
       );
-    model::NodeLocations eps;
-    if (!mo.peers.empty())
+    auto eps = model::NodeLocations{};
+    if (mo.peers)
     {
-      for (auto const& obj: mo.peers)
+      for (auto const& obj: *mo.peers)
         if (boost::filesystem::exists(obj))
           for (auto const& peer: model::endpoints_from_file(obj))
             eps.emplace_back(model::Address::null, model::Endpoints({peer}));

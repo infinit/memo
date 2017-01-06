@@ -47,7 +47,7 @@ namespace infinit
     void merge(MountOptions const& other);
     boost::optional<std::string> hub_url;
     boost::optional<std::string> rdv;
-    std::vector<std::string> fuse_options;
+    boost::optional<std::vector<std::string>> fuse_options;
     boost::optional<std::string> as;
     boost::optional<bool> fetch;
     boost::optional<bool> push;
@@ -59,7 +59,7 @@ namespace infinit
     boost::optional<int> cache_ram_invalidation;
     boost::optional<uint64_t> cache_disk_size;
     boost::optional<std::string> mountpoint;
-    std::vector<std::string> peers;
+    boost::optional<std::vector<std::string>> peers;
     boost::optional<int> poll_beyond;
     boost::optional<boost::asio::ip::address> listen_address;
 #ifndef INFINIT_WINDOWS

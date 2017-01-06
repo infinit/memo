@@ -113,16 +113,18 @@ namespace infinit
       env.insert(std::make_pair("INFINIT_RDV", rdv.get()));
     if (hub_url)
       env.insert(std::make_pair("INFINIT_BEYOND", hub_url.get()));
-    for (auto const& fo: fuse_options)
-    {
-      arguments.push_back("--fuse-option");
-      arguments.push_back(fo);
-    }
-    for (auto const& fo: peers)
-    {
-      arguments.push_back("--peer");
-      arguments.push_back(fo);
-    }
+    if (fuse_options)
+      for (auto const& fo: *fuse_options)
+      {
+        arguments.emplace_back("--fuse-option");
+        arguments.emplace_back(fo);
+      }
+    if (peers)
+      for (auto const& fo: *peers)
+      {
+        arguments.emplace_back("--peer");
+        arguments.emplace_back(fo);
+      }
     if (fetch && *fetch) arguments.emplace_back("--fetch");
     if (push && *push) arguments.emplace_back("--push");
     if (cache && *cache) arguments.emplace_back("--cache");
