@@ -56,7 +56,7 @@ namespace infinit
     DAS_CLI_SYMBOL(fetch, 'f', "fetch {type} from {hub}", false);
     DAS_CLI_SYMBOL(fetch_drive, 0, "update local drive descriptor from {hub}", false);
     DAS_CLI_SYMBOL(fetch_endpoints, 0, "fetch endpoints from {hub}" , false);
-    DAS_CLI_SYMBOL(fetch_endpoints_interval, 0, "period for repolling endpoints from the Hub in seconds (default: 300s)", false);
+    DAS_CLI_SYMBOL(fetch_endpoints_interval, 0, "period for repolling endpoints from the Hub in seconds", false);
     DAS_CLI_SYMBOL(filesystem, '\0', "store blocks on local filesystem (default)", false);
     DAS_CLI_SYMBOL(finder_sidebar, 0, "show volume in Finder sidebar" , false);
     DAS_CLI_SYMBOL(full, '\0', "include private key (do not use unless you understand the implications", false);
@@ -80,7 +80,7 @@ namespace infinit
     DAS_CLI_SYMBOL(listen, 0, "specify which IP address to listen on (default: all)", false);
     DAS_CLI_SYMBOL(map_other_permissions, 0, "allow chmod to set world permissions", false);
     DAS_CLI_SYMBOL(mode, 'm', "access mode {action}: r, w, rw, none", false);
-    DAS_CLI_SYMBOL(monitoring, 0, "enable monitoring (default: true)", false);
+    DAS_CLI_SYMBOL(monitoring, 0, "enable monitoring", false);
     DAS_CLI_SYMBOL(mount_icon, 0, "path to an icon for mounted volume" , false);
     DAS_CLI_SYMBOL(mount_name, 0, "name of mounted volume" , false);
     DAS_CLI_SYMBOL(mountpoint, 'm', "where to mount the filesystem" , false);
