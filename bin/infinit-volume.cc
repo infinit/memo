@@ -341,8 +341,8 @@ namespace
 
 COMMAND(run)
 {
-  auto self = self_user(ifnt, args);
-  auto name = volume_name(args, self);
+  auto owner = self_user(ifnt, args);
+  auto name = volume_name(args, owner);
   auto volume = ifnt.volume_get(name);
   volume.mount_options.merge(args);
   auto& mo = volume.mount_options;
@@ -389,8 +389,8 @@ COMMAND(run)
   }
   if (mo.fuse_options && !mo.mountpoint)
     elle::err<CommandLineError>("FUSE options require the volume to be mounted");
-  auto network = ifnt.network_get(volume.network, self);
-  network.ensure_allowed(self, "run", "volume");
+  auto network = ifnt.network_get(volume.network, owner);
+  network.ensure_allowed(owner, "run", "volume");
   ELLE_TRACE("run network");
 #ifndef INFINIT_WINDOWS
   infinit::DaemonHandle daemon_handle;
@@ -401,7 +401,7 @@ COMMAND(run)
   auto compatibility = optional(args, "compatibility-version");
   auto port = optional<int>(args, option_port);
   auto model_and_threads = network.run(
-    self, mo, true, flag(args, "monitoring"),
+    owner, mo, true, flag(args, "monitoring"),
     infinit::compatibility_version, port);
   auto model = std::move(model_and_threads.first);
   hook_stats_signals(*model);
@@ -433,7 +433,7 @@ COMMAND(run)
   {
     reactor::Thread::unique_ptr stat_thread;
     if (push)
-      stat_thread = network.make_stat_update_thread(self, *model);
+      stat_thread = network.make_stat_update_thread(owner, *model);
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
     auto fs = volume.run(std::move(model),
@@ -935,7 +935,7 @@ COMMAND(run)
   {
     auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
     elle::With<InterfacePublisher>(
-      network, self, model->id(), local_endpoint.get().port(), advertise,
+      network, owner, model->id(), local_endpoint.get().port(), advertise,
       flag(args, "no-local-endpoints"),
       flag(args, "no-public-endpoints")) << [&]
     {
@@ -951,8 +951,8 @@ COMMAND(mount)
   auto mountpoint = optional(args, "mountpoint");
   if (!mountpoint)
   {
-    auto self = self_user(ifnt, args);
-    auto name = volume_name(args, self);
+    auto owner = self_user(ifnt, args);
+    auto name = volume_name(args, owner);
     auto volume = ifnt.volume_get(name);
     if (!volume.mount_options.mountpoint)
       mandatory(args, "mountpoint", "mountpoint");
@@ -995,8 +995,8 @@ COMMAND(list)
 
 COMMAND(update)
 {
-  auto self = self_user(ifnt, args);
-  auto name = volume_name(args, self);
+  auto owner = self_user(ifnt, args);
+  auto name = volume_name(args, owner);
   auto volume = ifnt.volume_get(name);
   volume.mount_options.merge(args);
   auto description = optional(args, "description");
@@ -1004,14 +1004,14 @@ COMMAND(update)
     volume.description = description;
   ifnt.volume_save(volume, true);
   if (option_push(args, {"push-volume"}))
-    beyond_push("volume", name, volume, self);
+    beyond_push("volume", name, volume, owner);
 }
 
 #ifndef INFINIT_WINDOWS
 COMMAND(start)
 {
-  auto self = self_user(ifnt, args);
-  auto name = volume_name(args, self);
+  auto owner = self_user(ifnt, args);
+  auto name = volume_name(args, owner);
   auto mo = infinit::MountOptions{};
   mo.merge(args);
   reactor::network::UnixDomainSocket sock(daemon_sock_path());
@@ -1040,8 +1040,8 @@ COMMAND(start)
 
 COMMAND(stop)
 {
-  auto self = self_user(ifnt, args);
-  auto name = volume_name(args, self);
+  auto owner = self_user(ifnt, args);
+  auto name = volume_name(args, owner);
   reactor::network::UnixDomainSocket sock(daemon_sock_path());
   auto cmd = [&]
     {
@@ -1067,8 +1067,8 @@ COMMAND(stop)
 
 COMMAND(status)
 {
-  auto self = self_user(ifnt, args);
-  auto name = volume_name(args, self);
+  auto owner = self_user(ifnt, args);
+  auto name = volume_name(args, owner);
   reactor::network::UnixDomainSocket sock(daemon_sock_path());
   auto cmd = [&]
     {
