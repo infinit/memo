@@ -488,7 +488,7 @@ namespace infinit
         this->_tasks.emplace_back(new reactor::Thread(name, job));
         for (unsigned i=0; i<this->_tasks.size(); ++i)
         {
-          if (this->_tasks[i]->done())
+          if (!this->_tasks[i] || this->_tasks[i]->done())
           {
             std::swap(this->_tasks[i], this->_tasks[this->_tasks.size()-1]);
             this->_tasks.pop_back();
