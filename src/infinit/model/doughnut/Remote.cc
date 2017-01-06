@@ -103,7 +103,7 @@ namespace infinit
         this->_thread.reset(
           new reactor::Thread(
             elle::sprintf("%f worker", this),
-            [this, holder = overlay::Overlay::Member()] () mutable
+            [this]
             {
               bool connected = false;
               this->_key_hash_cache.clear();
@@ -189,7 +189,18 @@ namespace infinit
                     elle::sprintf("connection to %f failed", this->_endpoints));
                   break;
                 }
-                this->_connected.open();
+                // This allows the connected() signal to lose the last reference
+                // on this, by holding the refcount manually.
+                {
+                  auto holder = this->shared_from_this();
+                  this->_connected.open();
+                  if (holder.use_count() == 1)
+                  {
+                    this->_thread->dispose(true);
+                    this->_thread.release();
+                    return;
+                  }
+                }
                 ELLE_ASSERT(this->_channels);
                 ELLE_TRACE("%s: serve RPCs", this)
                   this->_rpc_server.serve(*this->_channels);
@@ -197,7 +208,8 @@ namespace infinit
                 auto self = this->doughnut().dock().evict_peer(this->id());
                 this->_connected.close();
                 ++this->_reconnection_id;
-                holder = self;
+                this->_thread->dispose(true);
+                this->_thread.release();
                 return;
               }
             }));
