@@ -437,6 +437,18 @@ namespace infinit
     {
       return Infinit::hash_password(password, _hub_salt);
     }
+
+    // This overload is required, otherwise Infinit is printed as a
+    // das::Function, which then prints its function, which is a
+    // BoundMethod<Infinit, call>, which prints its object, that is the Infinit,
+    // which recurses indefinitely.
+    void
+    Infinit::print(std::ostream& o) const
+    {
+      elle::fprintf(
+        o, "%s(%s)", elle::type_info(*this), this->_infinit);
+    }
+
   }
 }
 

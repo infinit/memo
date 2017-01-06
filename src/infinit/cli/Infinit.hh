@@ -35,7 +35,8 @@ namespace infinit
                  help = false, version = false));
 
     class Infinit
-      : public InfinitCallable
+      : public elle::Printable::as<Infinit>
+      , public InfinitCallable
     {
     public:
       Infinit(infinit::Infinit& infinit);
@@ -143,6 +144,8 @@ namespace infinit
       help(std::ostream& s) const;
       void
       call(bool help, bool version) const;
+      void
+      print(std::ostream& o) const;
       ELLE_ATTRIBUTE_R(infinit::Infinit&, infinit);
       ELLE_ATTRIBUTE_R(boost::optional<std::string>, as);
       ELLE_ATTRIBUTE_R(boost::optional<elle::Version>, compatibility_version);
