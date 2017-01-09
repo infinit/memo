@@ -1678,7 +1678,9 @@ namespace infinit
                    optional<std::vector<std::string>>(args, "peer"));
     infinit::merge(this->mountpoint, optional(args, "mountpoint"));
     // FIXME: Why user and as?
+    assert(!optional(args, "as"));
     infinit::merge(this->as, optional(args, "as"));
+    assert(!optional(args, "user"));
     infinit::merge(this->as, optional(args, "user"));
     infinit::merge(this->readonly, optional<bool>(args, "readonly"));
     if (option_fetch(args, {"fetch-endpoints"}))
