@@ -9,7 +9,7 @@ namespace infinit
   void merge(T& a, const T& b)
   {
     if (b)
-      a = b.get();
+      a = *b;
   }
 
   // template<typename T>
@@ -29,7 +29,7 @@ namespace infinit
   //            boost::program_options::option_description const& o)
   // {
   //   if (b)
-  //     merge(a, b.get(), o);
+  //     merge(a, *b, o);
   // }
 
   template <typename T>
@@ -68,9 +68,9 @@ namespace infinit
 //   MountOptions::merge(boost::program_options::variables_map const& args)
 //   {
 //     infinit::merge(this->fuse_options,
-//                    optional<std::vector<std::string>>(args, "fuse-option"));
+//                    optional<Strings>(args, "fuse-option"));
 //     infinit::merge(this->peers,
-//                    optional<std::vector<std::string>>(args, "peer"));
+//                    optional<Strings>(args, "peer"));
 //     infinit::merge(this->mountpoint, optional(args, "mountpoint"));
 //     // FIXME: Why user and as?
 //     infinit::merge(this->as, optional(args, "as"));
@@ -105,48 +105,42 @@ namespace infinit
 //   }
 
   void
-  MountOptions::to_commandline(
-    std::vector<std::string>& arguments,
-    std::unordered_map<std::string, std::string>& env) const
+  MountOptions::to_commandline(Strings& arguments, Environ& env) const
   {
     if (rdv)
-      env.insert(std::make_pair("INFINIT_RDV", rdv.get()));
+      env.emplace("INFINIT_RDV", *rdv);
     if (hub_url)
-      env.insert(std::make_pair("INFINIT_BEYOND", hub_url.get()));
+      env.emplace("INFINIT_BEYOND", *hub_url);
+
+    // Append to `arguments`.
+    auto args = [&arguments](auto&&... as)
+      {
+        using swallow = int[];
+        (void) swallow{(arguments.emplace_back(as), 0)...};
+      };
+
     if (fuse_options)
       for (auto const& fo: *fuse_options)
-      {
-        arguments.emplace_back("--fuse-option");
-        arguments.emplace_back(fo);
-      }
+        args("--fuse-option", fo);
     if (peers)
       for (auto const& fo: *peers)
-      {
-        arguments.emplace_back("--peer");
-        arguments.emplace_back(fo);
-      }
-    if (fetch && *fetch) arguments.emplace_back("--fetch");
-    if (push && *push) arguments.emplace_back("--push");
-    if (cache && *cache) arguments.emplace_back("--cache");
-    if (async && *async) arguments.emplace_back("--async");
-    if (readonly && *readonly) arguments.emplace_back("--readonly");
-    if (cache_ram_size) {arguments.emplace_back("--cache-ram-size"); arguments.emplace_back(std::to_string(cache_ram_size.get()));}
-    if (cache_ram_ttl) {arguments.emplace_back("--cache-ram-ttl"); arguments.emplace_back(std::to_string(cache_ram_ttl.get()));}
-    if (cache_ram_invalidation) {arguments.emplace_back("--cache-ram-invalidation"); arguments.emplace_back(std::to_string(cache_ram_invalidation.get()));}
-    if (cache_disk_size) {arguments.emplace_back("--cache-disk-size"); arguments.emplace_back(std::to_string(cache_disk_size.get()));}
-    if (poll_beyond && *poll_beyond >0) {arguments.emplace_back("--poll-hub"); arguments.emplace_back(std::to_string(poll_beyond.get()));}
+        args("--peer", fo);
+    if (fetch && *fetch) args("--fetch");
+    if (push && *push) args("--push");
+    if (cache && *cache) args("--cache");
+    if (async && *async) args("--async");
+    if (readonly && *readonly) args("--readonly");
+    if (cache_ram_size) args("--cache-ram-size", std::to_string(*cache_ram_size));
+    if (cache_ram_ttl) args("--cache-ram-ttl", std::to_string(*cache_ram_ttl));
+    if (cache_ram_invalidation) args("--cache-ram-invalidation", std::to_string(*cache_ram_invalidation));
+    if (cache_disk_size) args("--cache-disk-size", std::to_string(*cache_disk_size));
+    if (poll_beyond && *poll_beyond >0) args("--poll-hub", std::to_string(*poll_beyond));
 #ifndef INFINIT_WINDOWS
-    if (enable_monitoring && !*enable_monitoring) {arguments.emplace_back("--monitoring=false");}
+    if (enable_monitoring && !*enable_monitoring) args("--monitoring=false");
 #endif
     if (mountpoint)
-    {
-      arguments.emplace_back("--mountpoint");
-      arguments.emplace_back(mountpoint.get());
-    }
+      args("--mountpoint", *mountpoint);
     if (as)
-    {
-      arguments.emplace_back("--as");
-      arguments.emplace_back(as.get());
-    }
+      args("--as", *as);
   }
 }

@@ -40,14 +40,16 @@ namespace infinit
 
   struct MountOptions
   {
+    using Strings = std::vector<std::string>;
+    using Environ = std::unordered_map<std::string, std::string>;
+
     MountOptions();
-    void to_commandline(std::vector<std::string>& arguments,
-                        std::unordered_map<std::string, std::string>& env) const;
+    void to_commandline(Strings& arguments, Environ& env) const;
     // void merge(boost::program_options::variables_map const& args);
     void merge(MountOptions const& other);
     boost::optional<std::string> hub_url;
     boost::optional<std::string> rdv;
-    boost::optional<std::vector<std::string>> fuse_options;
+    boost::optional<Strings> fuse_options;
     boost::optional<std::string> as;
     boost::optional<bool> fetch;
     boost::optional<bool> push;
@@ -59,7 +61,7 @@ namespace infinit
     boost::optional<int> cache_ram_invalidation;
     boost::optional<uint64_t> cache_disk_size;
     boost::optional<std::string> mountpoint;
-    boost::optional<std::vector<std::string>> peers;
+    boost::optional<Strings> peers;
     boost::optional<int> poll_beyond;
     boost::optional<boost::asio::ip::address> listen_address;
 #ifndef INFINIT_WINDOWS
