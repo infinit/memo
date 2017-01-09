@@ -114,21 +114,16 @@ discover(DHT& dht, DHT& target,
   else
     eps = target.dht->local()->server_endpoints();
   reactor::Barrier b;
-  if (wait)
-    new reactor::Thread("wait", [&] {
-      reactor::wait(
-      dht.dht->overlay()->on_discover(),
-      [&] (NodeLocation const& l, bool) { return l.id() == target.dht->id(); });
-      b.open();
-    }, true);
-  else
-    b.open();
+  auto discovered = reactor::waiter(
+    dht.dht->overlay()->on_discover(),
+    [&] (NodeLocation const& l, bool) { return l.id() == target.dht->id(); });
   if (anonymous)
     dht.dht->overlay()->discover(eps);
   else
     dht.dht->overlay()->discover(
       NodeLocation(target.dht->id(), eps));
-  reactor::wait(b);
+  if (wait)
+    reactor::wait(discovered);
 }
 
 static
