@@ -147,7 +147,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   alice.run(['infinit-user', '--signup',  'alice', '--email', 'alice@infinit.io'])
   bob.run(['infinit-user', '--fetch', '--name', 'alice'])
 
-  bob.run(['infinit-network', '--create', '--name', 'n', '--as', 'bob', '--kelips', '--push', '--port', '8181'])
+  bob.run(['infinit-network', '--create', '--name', 'n',
+           '--as', 'bob', '--kelips', '--push', '--port', '8181'])
   bob.run(['infinit-passport', '--create', '--push', '--network', 'n', '--user', 'alice', '--as', 'bob'])
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
 
@@ -158,7 +159,11 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   e0 = alice.run_json(['infinit-network', '--export', '--name', 'bob/n', '--as', 'alice'])
   new_version = '0.3.0'
   assertEq(e0.get('description'), None)
-  bob.run(['infinit-network', '--update', '--name', 'n', '--compatibility-version', new_version, '--as', 'bob', '--push', '--description', 'some network'])
+  bob.run(['infinit-network', '--update', '--name', 'n',
+           '--compatibility-version', new_version,
+           '--as', 'bob',
+           '--push',
+           '--description', 'some network'])
   alice.run(['infinit-network', '--fetch', '--name', 'bob/n', '--as', 'alice'])
   e1 = alice.run_json(['infinit-network', '--export', '--name', 'bob/n', '--as', 'alice'])
   assertEq(e1['description'], 'some network')
@@ -394,8 +399,8 @@ with Beyond() as beyond, \
            '-V', 'v', '-N', 'n', '-p'])
   assertEq(
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 1)
-  bob.run(['infinit-network', '--delete', '--as', 'bob',
-           '--purge', '--pull', 'n', '--unlink'])
+  bob.run(['infinit-network', '--delete', 'n', '--as', 'bob',
+           '--purge', '--pull', '--unlink'])
   assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 0)
   assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'bob'])), 1)
   assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
