@@ -66,10 +66,13 @@ namespace infinit
         this->_connected.changed().connect(
           [this] (bool opened)
           {
-            if (opened)
-              this->Peer::connected()();
-            else
-              this->Peer::disconnected()();
+            if (!this->_connected.exception())
+            {
+              if (opened)
+                this->Peer::connected()();
+              else
+                this->Peer::disconnected()();
+            }
           });
       }
 
@@ -126,6 +129,7 @@ namespace infinit
                     this->_socket = std::move(socket);
                     this->_serializer = std::move(serializer);
                     this->_channels = std::move(channels);
+                    ELLE_ASSERT(this->_channels);
                     this->doughnut().dock().insert_peer(shared_from_this());
                     connected = true;
                   };
