@@ -66,13 +66,13 @@ namespace infinit
         this->_connected.changed().connect(
           [this] (bool opened)
           {
-            if (!this->_connected.exception())
+            if (opened)
             {
-              if (opened)
+              if (!this->_connected.exception())
                 this->Peer::connected()();
-              else
-                this->Peer::disconnected()();
             }
+            else
+              this->Peer::disconnected()();
           });
       }
 
