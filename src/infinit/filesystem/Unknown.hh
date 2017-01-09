@@ -1,9 +1,8 @@
-#ifndef INFINIT_FILESYSTEM_UNKNOWN_HH
-# define INFINIT_FILESYSTEM_UNKNOWN_HH
+#pragma once
 
-# include <infinit/filesystem/umbrella.hh>
-# include <infinit/filesystem/Node.hh>
-# include <infinit/filesystem/Directory.hh>
+#include <infinit/filesystem/umbrella.hh>
+#include <infinit/filesystem/Node.hh>
+#include <infinit/filesystem/Directory.hh>
 
 namespace infinit
 {
@@ -49,4 +48,3 @@ namespace infinit
   }
 }
 
-#endif

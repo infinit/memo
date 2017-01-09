@@ -1,11 +1,10 @@
-#ifndef INFINIT_FILESYSTEM_FILE_HH
-# define INFINIT_FILESYSTEM_FILE_HH
+#pragma once
 
-# include <reactor/filesystem.hh>
-# include <reactor/Barrier.hh>
-# include <reactor/thread.hh>
-# include <infinit/filesystem/Node.hh>
-# include <infinit/filesystem/umbrella.hh>
+#include <reactor/filesystem.hh>
+#include <reactor/Barrier.hh>
+#include <reactor/thread.hh>
+#include <infinit/filesystem/Node.hh>
+#include <infinit/filesystem/umbrella.hh>
 
 namespace infinit
 {
@@ -95,9 +94,7 @@ namespace infinit
       boost::filesystem::path _path;
       model::Model* _model;
       WriteTarget _target;
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
     };
   }
 }
-
-#endif

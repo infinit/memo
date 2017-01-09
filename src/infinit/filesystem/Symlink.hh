@@ -1,11 +1,10 @@
-#ifndef INIFNIT_FILESYSTEM_SYMLINK_HH
-# define INIFNIT_FILESYSTEM_SYMLINK_HH
+#pragma once
 
-# include <infinit/filesystem/Node.hh>
-# include <infinit/filesystem/Directory.hh>
-# include <infinit/filesystem/Symlink.hh>
-# include <infinit/filesystem/umbrella.hh>
-# include <reactor/filesystem.hh>
+#include <infinit/filesystem/Node.hh>
+#include <infinit/filesystem/Directory.hh>
+#include <infinit/filesystem/Symlink.hh>
+#include <infinit/filesystem/umbrella.hh>
+#include <reactor/filesystem.hh>
 
 namespace infinit
 {
@@ -54,5 +53,3 @@ namespace infinit
     };
   }
 }
-
-#endif

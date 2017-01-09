@@ -1,8 +1,7 @@
-#ifndef INFINIT_FILESYSTEM_XATTRIBUTE_HH
-# define INFINIT_FILESYSTEM_XATTRIBUTE_HH
+#pragma once
 
-# include <reactor/filesystem.hh>
-# include <infinit/filesystem/File.hh>
+#include <reactor/filesystem.hh>
+#include <infinit/filesystem/File.hh>
 
 namespace infinit
 {
@@ -92,4 +91,3 @@ namespace infinit
   }
 }
 
-#endif

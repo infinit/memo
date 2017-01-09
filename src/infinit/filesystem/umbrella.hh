@@ -1,5 +1,4 @@
-#ifndef INFINIT_FILESYSTEM_UMBRELLA_HH
-# define INFINIT_FILESYSTEM_UMBRELLA_HH
+#pragma once
 
 #include <reactor/exception.hh>
 #include <reactor/filesystem.hh>
@@ -11,11 +10,11 @@
 #include <infinit/storage/InsufficientSpace.hh>
 
 #ifdef INFINIT_LINUX
-  #include <attr/xattr.h>
+# include <attr/xattr.h>
 #endif
 
 #ifdef INFINIT_WINDOWS
-  #define ENOATTR ENODATA
+# define ENOATTR ENODATA
 #endif
 
 namespace infinit
@@ -24,15 +23,15 @@ namespace infinit
   {
     namespace rfs = reactor::filesystem;
 
-    typedef infinit::model::blocks::Block Block;
-    typedef infinit::model::blocks::MutableBlock MutableBlock;
-    typedef infinit::model::blocks::ImmutableBlock ImmutableBlock;
-    typedef infinit::model::blocks::ACLBlock ACLBlock;
-    typedef infinit::model::Address Address;
+    using Block = infinit::model::blocks::Block;
+    using MutableBlock = infinit::model::blocks::MutableBlock;
+    using ImmutableBlock = infinit::model::blocks::ImmutableBlock;
+    using ACLBlock = infinit::model::blocks::ACLBlock;
+    using Address = infinit::model::Address;
 
-
-    template<typename F>
-    auto umbrella(F f, int err = EIO) -> decltype(f())
+    template <typename F>
+    auto umbrella(F f, int err = EIO)
+      -> decltype(f())
     {
       ELLE_LOG_COMPONENT("infinit.fs");
       try {
@@ -81,4 +80,3 @@ namespace infinit
     #define THROW_ENOSPC { throw rfs::Error(ENOSPC, "No space left on device");}
   }
 }
-#endif

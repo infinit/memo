@@ -1,8 +1,7 @@
-#ifndef INFINIT_FILESYSTEM_UNREACHABLE_HH
-# define INFINIT_FILESYSTEM_UNREACHABLE_HH
+#pragma once
 
-# include <infinit/filesystem/Node.hh>
-# include <infinit/filesystem/umbrella.hh>
+#include <infinit/filesystem/Node.hh>
+#include <infinit/filesystem/umbrella.hh>
 
 namespace infinit
 {
@@ -99,4 +98,3 @@ namespace infinit
   }
 }
 
-# endif
