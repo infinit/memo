@@ -111,112 +111,109 @@ namespace infinit
             {
               bool connected = false;
               this->_key_hash_cache.clear();
-              while (true)
-              {
-                ELLE_DEBUG("%s: connection attempt to %s endpoints",
-                           this, this->_endpoints.size());
-                this->_connection_start_time = std::chrono::system_clock::now();
-                auto handshake = [&] (std::unique_ptr<std::iostream> socket)
-                  {
-                    auto sv = elle_serialization_version(this->_doughnut.version());
-                    auto serializer = elle::make_unique<protocol::Serializer>(
-                      *socket, sv, false);
-                    auto channels =
-                    elle::make_unique<protocol::ChanneledStream>(*serializer);
-                    if (!disable_key)
-                      this->_key_exchange(*channels);
-                    ELLE_TRACE("%s: connected", this);
-                    this->_socket = std::move(socket);
-                    this->_serializer = std::move(serializer);
-                    this->_channels = std::move(channels);
-                    ELLE_ASSERT(this->_channels);
-                    this->doughnut().dock().insert_peer(shared_from_this());
-                    connected = true;
-                  };
-                auto umbrella = [&, this] (std::function<void ()> const& f)
-                  {
-                    return [f, this]
-                    {
-                      try
-                      {
-                        f();
-                      }
-                      catch (reactor::network::Exception const&)
-                      {
-                        // ignored
-                      }
-                      catch (HandshakeFailed const& hs)
-                      {
-                        ELLE_WARN("%s: %s", this, hs);
-                      }
-                    };
-                  };
-                elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+              ELLE_DEBUG("%s: connection attempt to %s endpoints",
+                         this, this->_endpoints.size());
+              this->_connection_start_time = std::chrono::system_clock::now();
+              auto handshake = [&] (std::unique_ptr<std::iostream> socket)
                 {
-                  if (this->_protocol == Protocol::tcp ||
-                      this->_protocol == Protocol::all)
-                    for (auto const& e: this->_endpoints)
-                      scope.run_background(
-                        elle::sprintf("%s: connect to tcp://%s",
-                                      reactor::scheduler().current()->name(), e),
-                        umbrella(
-                          [&, e = e]
-                          {
-                            using reactor::network::TCPSocket;
-                            handshake(elle::make_unique<TCPSocket>(e.tcp()));
-                            scope.terminate_now();
-                          }));
-                  if (this->_protocol == Protocol::utp ||
-                      this->_protocol == Protocol::all)
+                  auto sv = elle_serialization_version(this->_doughnut.version());
+                  auto serializer = elle::make_unique<protocol::Serializer>(
+                    *socket, sv, false);
+                  auto channels =
+                  elle::make_unique<protocol::ChanneledStream>(*serializer);
+                  if (!disable_key)
+                    this->_key_exchange(*channels);
+                  ELLE_TRACE("%s: connected", this);
+                  this->_socket = std::move(socket);
+                  this->_serializer = std::move(serializer);
+                  this->_channels = std::move(channels);
+                  ELLE_ASSERT(this->_channels);
+                  this->doughnut().dock().insert_peer(shared_from_this());
+                  connected = true;
+                };
+              auto umbrella = [&, this] (std::function<void ()> const& f)
+                {
+                  return [f, this]
+                  {
+                    try
+                    {
+                      f();
+                    }
+                    catch (reactor::network::Exception const&)
+                    {
+                      // ignored
+                    }
+                    catch (HandshakeFailed const& hs)
+                    {
+                      ELLE_WARN("%s: %s", this, hs);
+                    }
+                  };
+                };
+              elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+              {
+                if (this->_protocol == Protocol::tcp ||
+                    this->_protocol == Protocol::all)
+                  for (auto const& e: this->_endpoints)
                     scope.run_background(
-                      elle::sprintf("%s: connect to utp://%s",
-                                    this, this->_endpoints),
+                      elle::sprintf("%s: connect to tcp://%s",
+                                    reactor::scheduler().current()->name(), e),
                       umbrella(
-                        [&, eps = this->_endpoints.udp()]
+                        [&, e = e]
                         {
-                          std::string cid;
-                          if (this->id() != Address::null)
-                            cid = elle::sprintf("%x", this->id());
-                          auto socket =
-                            elle::make_unique<reactor::network::UTPSocket>(
-                              *this->_utp_server);
-                          socket->connect(cid, eps);
-                          handshake(std::move(socket));
+                          using reactor::network::TCPSocket;
+                          handshake(elle::make_unique<TCPSocket>(e.tcp()));
                           scope.terminate_now();
                         }));
-                  reactor::wait(scope);
-                };
-                if (!connected)
-                {
-                  ELLE_TRACE("%s: connection to %f failed",
-                             this, this->_endpoints);
-                  this->_connected.raise<reactor::network::ConnectionClosed>(
-                    elle::sprintf("connection to %f failed", this->_endpoints));
-                  break;
-                }
-                // This allows the connected() signal to lose the last reference
-                // on this, by holding the refcount manually.
-                {
-                  auto holder = this->shared_from_this();
-                  this->_connected.open();
-                  if (holder.use_count() == 1)
-                  {
-                    this->_thread->dispose(true);
-                    this->_thread.release();
-                    return;
-                  }
-                }
-                ELLE_ASSERT(this->_channels);
-                ELLE_TRACE("%s: serve RPCs", this)
-                  this->_rpc_server.serve(*this->_channels);
-                ELLE_TRACE("%s: connection ended, evicting", this);
-                auto self = this->doughnut().dock().evict_peer(this->id());
-                this->_connected.close();
-                ++this->_reconnection_id;
-                this->_thread->dispose(true);
-                this->_thread.release();
+                if (this->_protocol == Protocol::utp ||
+                    this->_protocol == Protocol::all)
+                  scope.run_background(
+                    elle::sprintf("%s: connect to utp://%s",
+                                  this, this->_endpoints),
+                    umbrella(
+                      [&, eps = this->_endpoints.udp()]
+                      {
+                        std::string cid;
+                        if (this->id() != Address::null)
+                          cid = elle::sprintf("%x", this->id());
+                        auto socket =
+                          elle::make_unique<reactor::network::UTPSocket>(
+                            *this->_utp_server);
+                        socket->connect(cid, eps);
+                        handshake(std::move(socket));
+                        scope.terminate_now();
+                      }));
+                reactor::wait(scope);
+              };
+              if (!connected)
+              {
+                ELLE_TRACE("%s: connection to %f failed",
+                           this, this->_endpoints);
+                this->_connected.raise<reactor::network::ConnectionClosed>(
+                  elle::sprintf("connection to %f failed", this->_endpoints));
                 return;
               }
+              // This allows the connected() signal to lose the last reference
+              // on this, by holding the refcount manually.
+              {
+                auto holder = this->shared_from_this();
+                this->_connected.open();
+                if (holder.use_count() == 1)
+                {
+                  this->_thread->dispose(true);
+                  this->_thread.release();
+                  return;
+                }
+              }
+              ELLE_ASSERT(this->_channels);
+              ELLE_TRACE("%s: serve RPCs", this)
+                this->_rpc_server.serve(*this->_channels);
+              ELLE_TRACE("%s: connection ended, evicting", this);
+              auto self = this->doughnut().dock().evict_peer(this->id());
+              this->_connected.close();
+              ++this->_reconnection_id;
+              this->_thread->dispose(true);
+              this->_thread.release();
+              return;
             }));
       }
 
