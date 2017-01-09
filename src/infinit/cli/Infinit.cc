@@ -26,7 +26,7 @@
 ELLE_LOG_COMPONENT("infinit");
 
 static
-char const* argv_0 = nullptr;
+char const* argv_0 = "infinit";
 
 namespace infinit
 {
@@ -106,7 +106,9 @@ namespace infinit
         std::cout << infinit::version_describe() << std::endl;
       else
       {
-        this->help(std::cerr);
+        elle::fprintf(std::cerr,
+                      "Try '%s --help' for more information.\n",
+                      argv_0);
         throw elle::Exit(1);
       }
     }
@@ -190,16 +192,14 @@ namespace infinit
       auto cli = Infinit(infinit);
       if (args.empty() || das::cli::is_option(args[0], options))
         das::cli::call(cli, args, options);
-      else
+      else if (!run_command(cli, args))
       {
-        bool found = run_command(cli, args);
-        if (!found)
-        {
-          std::stringstream s;
-          elle::fprintf(s, "unknown object type: %s\n\n", args[0]);
-          cli.help(s);
-          throw das::cli::Error(s.str());
-        }
+        std::stringstream s;
+        elle::fprintf(s, "unknown object type: %s\n", args[0]);
+        elle::fprintf(s,
+                      "Try '%s --help' for more information.",
+                      argv_0);
+        throw das::cli::Error(s.str());
       }
     }
 
@@ -210,12 +210,7 @@ namespace infinit
     void
     Infinit::usage(std::ostream& s, std::string const& usage)
     {
-      s << "Usage: ";
-      if (argv_0)
-        s << argv_0 << " ";
-      else
-        s << "infinit ";
-      s << usage << std::endl;
+      s << "Usage: " << argv_0 << " " << usage << std::endl;
     }
 
     using Input =
