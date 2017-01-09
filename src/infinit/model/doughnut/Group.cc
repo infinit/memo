@@ -317,7 +317,7 @@ namespace infinit
         infinit::filesystem::umbrella([&] {
             auto user = _dht.make_user(userdata);
             if (!user)
-              THROW_NOENT;
+              THROW_NOENT();
             this->add_member(*user);
         });
       }
@@ -339,7 +339,7 @@ namespace infinit
         infinit::filesystem::umbrella([&] {
             auto user = _dht.make_user(userdata);
             if (!user)
-              THROW_NOENT;
+              THROW_NOENT();
             add_admin(*user);
         });
       }
@@ -361,7 +361,7 @@ namespace infinit
         infinit::filesystem::umbrella([&] {
             auto user = _dht.make_user(userdata);
             if (!user)
-              THROW_NOENT;
+              THROW_NOENT();
             this->remove_member(*user);
         });
       }
@@ -383,7 +383,7 @@ namespace infinit
         infinit::filesystem::umbrella([&] {
             auto user = _dht.make_user(userdata);
             if (!user)
-              THROW_NOENT;
+              THROW_NOENT();
             this->remove_admin(*user);
         });
       }

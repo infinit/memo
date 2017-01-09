@@ -17,6 +17,17 @@
 # define ENOATTR ENODATA
 #endif
 
+#define THROW_ACCES()  throw rfs::Error(EACCES,  "Access denied")
+#define THROW_ENOSPC() throw rfs::Error(ENOSPC,  "No space left on device")
+#define THROW_EXIST()  throw rfs::Error(EEXIST,  "File exists")
+#define THROW_INVAL()  throw rfs::Error(EINVAL,  "Invalid argument")
+#define THROW_ISDIR()  throw rfs::Error(EISDIR,  "Is a directory")
+#define THROW_NOATTR() throw rfs::Error(ENOATTR, "No attribute")
+#define THROW_NODATA() throw rfs::Error(ENODATA, "No data")
+#define THROW_NOENT()  throw rfs::Error(ENOENT,  "No such file or directory")
+#define THROW_NOSYS()  throw rfs::Error(ENOSYS,  "Not implemented")
+#define THROW_NOTDIR() throw rfs::Error(ENOTDIR, "Is not a directory")
+
 namespace infinit
 {
   namespace filesystem
@@ -49,7 +60,7 @@ namespace infinit
       catch (infinit::storage::InsufficientSpace const& e)
       {
         ELLE_TRACE("umbrella: %s", e);
-        throw rfs::Error(ENOSPC, "No space left on device.");
+        THROW_ENOSPC();
       }
       catch (rfs::Error const& e)
       {
@@ -67,16 +78,5 @@ namespace infinit
         throw rfs::Error(err, e.what());
       }
     }
-
-    #define THROW_NOENT { throw rfs::Error(ENOENT, "No such file or directory");}
-    #define THROW_NOSYS { throw rfs::Error(ENOSYS, "Not implemented");}
-    #define THROW_EXIST { throw rfs::Error(EEXIST, "File exists");}
-    #define THROW_ISDIR { throw rfs::Error(EISDIR, "Is a directory");}
-    #define THROW_NOTDIR { throw rfs::Error(ENOTDIR, "Is not a directory");}
-    #define THROW_NODATA { throw rfs::Error(ENODATA, "No data");}
-    #define THROW_NOATTR { throw rfs::Error(ENOATTR, "No attribute");}
-    #define THROW_INVAL { throw rfs::Error(EINVAL, "Invalid argument");}
-    #define THROW_ACCES { throw rfs::Error(EACCES, "Access denied");}
-    #define THROW_ENOSPC { throw rfs::Error(ENOSPC, "No space left on device");}
   }
 }

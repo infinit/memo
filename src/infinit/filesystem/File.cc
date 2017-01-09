@@ -459,7 +459,7 @@ namespace infinit
       _ensure_first_block();
       if ( !(_filedata->_header.mode & 0200)
         || !(_parent->_header.mode & 0200))
-        THROW_ACCES;
+        THROW_ACCES();
       auto info = _parent->_files.at(_name);
       elle::SafeFinally revert([&] { _parent->_files[_name] = info;});
       _parent->_files.erase(_name);
@@ -720,7 +720,7 @@ namespace infinit
     File::create(int flags, mode_t mode)
     {
       if (flags & O_EXCL)
-        THROW_EXIST;
+        THROW_EXIST();
       if (flags & O_TRUNC)
         truncate(0);
       _fetch();
@@ -806,13 +806,11 @@ namespace infinit
       // FIXME remove
       static const char* attr_key = "$xattr.";
       if (name.size() > strlen(attr_key)
-        && name.substr(0, strlen(attr_key)) == attr_key)
-      {
+          && name.substr(0, strlen(attr_key)) == attr_key)
         return std::make_shared<XAttributeFile>(shared_from_this(),
           name.substr(strlen(attr_key)));
-      }
       else
-        THROW_NOTDIR;
+        THROW_NOTDIR();
     }
 
     void

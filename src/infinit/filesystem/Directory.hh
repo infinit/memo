@@ -30,20 +30,20 @@ namespace infinit
                 std::string const& name);
       void stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) override;
-      std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override THROW_ISDIR;
-      std::unique_ptr<rfs::Handle> create(int flags, mode_t mode) override THROW_ISDIR;
-      void unlink() override THROW_ISDIR;
-      void mkdir(mode_t mode) override THROW_EXIST;
+      std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override { THROW_ISDIR(); }
+      std::unique_ptr<rfs::Handle> create(int flags, mode_t mode) override { THROW_ISDIR(); }
+      void unlink() override { THROW_ISDIR(); }
+      void mkdir(mode_t mode) override { THROW_EXIST(); }
       void rmdir() override;
       void rename(boost::filesystem::path const& where) override;
-      boost::filesystem::path readlink() override  THROW_ISDIR;
-      void symlink(boost::filesystem::path const& where) override THROW_EXIST;
-      void link(boost::filesystem::path const& where) override THROW_EXIST;
+      boost::filesystem::path readlink() override  { THROW_ISDIR(); }
+      void symlink(boost::filesystem::path const& where) override { THROW_EXIST(); }
+      void link(boost::filesystem::path const& where) override { THROW_EXIST(); }
       void chmod(mode_t mode) override;
       void chown(int uid, int gid) override;
       void statfs(struct statvfs *) override;
       void utimens(const struct timespec tv[2]) override;
-      void truncate(off_t new_size) override THROW_ISDIR;
+      void truncate(off_t new_size) override { THROW_ISDIR(); }
       std::shared_ptr<rfs::Path> child(std::string const& name) override;
 
     /*--------------------.

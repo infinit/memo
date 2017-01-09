@@ -200,7 +200,7 @@ namespace infinit
       if (_parent->_files.find(_name) != _parent->_files.end())
       {
         if (flags & O_EXCL)
-          THROW_EXIST;
+          THROW_EXIST();
         ELLE_WARN("File %s exists where it should not", _name);
         File f(_owner, _parent->_files.at(_name).second, {}, _parent, _name);
         return f.open(flags, mode);

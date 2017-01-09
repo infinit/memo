@@ -165,9 +165,8 @@ namespace infinit
       }
       catch (infinit::storage::InsufficientSpace const& e)
       {
-
         ELLE_TRACE("store_or_die: %s", e.what());
-        THROW_ENOSPC;
+        THROW_ENOSPC();
       }
       catch(elle::Error const& e)
       {
@@ -575,7 +574,7 @@ namespace infinit
         if (it == files.end() || it->second.first != EntryType::directory)
         {
           ELLE_DEBUG("%s: component '%s' is not a directory", this, name);
-          THROW_NOTDIR;
+          THROW_NOTDIR();
         }
         dp = d;
         current_path /= name;

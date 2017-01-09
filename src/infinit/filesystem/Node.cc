@@ -154,13 +154,9 @@ namespace infinit
       if (!dir)
       {
         if (std::dynamic_pointer_cast<Unreachable>(destparent))
-        {
-          THROW_ACCES
-        }
+          THROW_ACCES();
         else
-        {
-          THROW_NOTDIR
-        }
+          THROW_NOTDIR();
       }
       dir->_fetch();
       if (dir->_data->_files.find(newname) != dir->_data->_files.end())
@@ -316,7 +312,7 @@ namespace infinit
         else if (*special == "block.rebalance")
         {
           if (this->_owner.block_store()->version() < elle::Version(0, 5, 0))
-            THROW_NOSYS;
+            THROW_NOSYS();
           if (auto paxos = dynamic_cast<model::doughnut::consensus::Paxos*>(
                 dht->consensus().get()))
           {
@@ -353,7 +349,7 @@ namespace infinit
               "drop group operation as network version %s is too old "
               "(groups are available from 0.4.0)",
               dht->version());
-            THROW_NOSYS;
+            THROW_NOSYS();
           }
           auto operation = special->substr(6);
           if (operation == "create")
@@ -510,7 +506,7 @@ namespace infinit
         return s.str();
       }
       else
-        THROW_INVAL;
+        THROW_INVAL();
     }
 
     std::string
@@ -645,7 +641,7 @@ namespace infinit
             {
               std::string what = special->substr(strlen("resolve."));
               if (what.empty())
-                THROW_NODATA
+                THROW_NODATA();
               std::unique_ptr<model::doughnut::User> user;
               user = std::dynamic_pointer_cast<model::doughnut::User>
                 (dht->make_user(what));
@@ -666,7 +662,7 @@ namespace infinit
                 }
               }
               if (!user)
-                THROW_INVAL;
+                THROW_INVAL();
               elle::json::Object o;
               o["name"] = std::string(user->name());
               auto serkey = elle::serialization::json::serialize(user->key());
@@ -809,7 +805,7 @@ namespace infinit
     Node::_get_user(std::string const& value)
     {
       if (value.empty())
-        THROW_INVAL;
+        THROW_INVAL();
       ELLE_TRACE("setxattr raw key");
       elle::Buffer userkey = elle::Buffer(value.data(), value.size());
       auto user = this->_owner.block_store()->make_user(userkey);
@@ -832,7 +828,7 @@ namespace infinit
         w = true;
       }
       else
-        THROW_NODATA;
+        THROW_NODATA();
       return std::make_pair(r, w);
     }
 
@@ -885,7 +881,7 @@ namespace infinit
         this->_owner.block_store());
       auto keys = dn->keys();
       if (keys.K() != *acb->owner_key())
-        THROW_ACCES;
+        THROW_ACCES();
       std::unique_ptr<infinit::model::User> user =
         umbrella([&] {return this->_get_user(userkey);}, EINVAL);
       if (!user)
@@ -907,7 +903,7 @@ namespace infinit
         if (!user)
         {
           ELLE_WARN("user %s does not exist", userkey);
-          THROW_INVAL;
+          THROW_INVAL();
         }
       }
       ELLE_TRACE("Setting permission at %s for %s",

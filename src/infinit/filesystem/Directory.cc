@@ -86,7 +86,7 @@ namespace infinit
              if (deserialized)
                ELLE_WARN("Ignoring 'exclusive' create flag in asynchronous mode");
              else
-               THROW_EXIST;
+               THROW_EXIST();
            }
          }
          ELLE_TRACE("insert: Overriding entry %s", op.target);
@@ -808,7 +808,7 @@ namespace infinit
         throw rfs::Error(EINVAL, "Cannot delete root node");
       if ( !(_data->_header.mode & 0200)
         || !(_parent->_header.mode & 0200))
-        THROW_ACCES;
+        THROW_ACCES();
       _parent->_files.erase(_name);
       _parent->write(*_owner.block_store(), {OperationType::remove, _name});
       umbrella([&] {_owner.block_store()->remove(_data->address());});
@@ -934,7 +934,7 @@ namespace infinit
           auto p1 = value.find_first_of(':');
           auto p2 = value.find_last_of(':');
           if (p1 == p2 || p1 != 1)
-            THROW_INVAL;
+            THROW_INVAL();
           EntryType type;
           if (value[0] == 'd')
             type = EntryType::directory;
@@ -962,7 +962,7 @@ namespace infinit
         {
           auto it = _data->_files.find(value);
           if (it == _data->_files.end())
-            THROW_NOENT;
+            THROW_NOENT();
           File f(_owner, it->second.second, {}, _data, value);
           try
           {
