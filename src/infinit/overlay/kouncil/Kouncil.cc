@@ -226,19 +226,17 @@ namespace infinit
       void
       Kouncil::_discover(NodeLocations const& peers)
       {
-        PeerInfos infos;
         for (auto const& peer: peers)
         {
-          infos.emplace(
+          this->_discover(std::make_pair(
             peer.id(),
             PeerInfo{
               {},
               peer.endpoints(),
               0,
               std::chrono::high_resolution_clock::now(),
-            });
+            }));
         }
-        this->_discover(std::move(infos));
       }
 
       void
