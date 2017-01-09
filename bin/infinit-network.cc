@@ -674,13 +674,15 @@ COMMAND(delete_)
 
 namespace
 {
+  using Action =
+    std::function<void (infinit::User& owner,
+                        infinit::Network& network,
+                        dnut::Doughnut& dht,
+                        bool push,
+                        bool script_mode)>;
   void
   network_run(boost::program_options::variables_map const& args,
-              std::function<void (infinit::User& owner,
-                                  infinit::Network& network,
-                                  dnut::Doughnut&,
-                                  bool,
-                                  bool)> const& action)
+              Action const& action)
   {
     auto name = mandatory(args, "name", "network name");
     auto owner = self_user(ifnt, args);
@@ -710,11 +712,8 @@ namespace
     auto cache_ram_invalidation =
       optional<int>(args, option_cache_ram_invalidation);
     auto disk_cache_size = optional<uint64_t>(args, option_cache_disk_size);
-    if (cache_ram_size || cache_ram_ttl || cache_ram_invalidation
-        || disk_cache_size)
-    {
-      cache = true;
-    }
+    cache |= (cache_ram_size || cache_ram_ttl || cache_ram_invalidation
+              || disk_cache_size);
     auto port = optional<int>(args, option_port);
     auto listen_address_str = optional<std::string>(args, option_listen_interface);
     auto listen_address
@@ -860,7 +859,7 @@ COMMAND(run)
                 std::cout, false, true);
               response.serialize("success", true);
             }
-             else if (op == "write_immutable")
+            else if (op == "write_immutable")
             {
               auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(
                 elle::Buffer(command.deserialize<std::string>("data")));
@@ -938,7 +937,7 @@ COMMAND(run)
               response.serialize("success", true);
             }
             else
-              elle::err("invalide operation: %s", op);
+              elle::err("invalid operation: %s", op);
           }
           catch (elle::Error const& e)
           {

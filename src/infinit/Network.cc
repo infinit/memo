@@ -85,17 +85,17 @@ namespace infinit
     auto dht = this->run(
       user,
       client,
-      mo.cache && mo.cache.get(),
+      mo.cache && *mo.cache,
       mo.cache_ram_size,
       mo.cache_ram_ttl,
       mo.cache_ram_invalidation,
-      mo.async && mo.async.get(),
+      mo.async && *mo.async,
       mo.cache_disk_size,
       version,
       port,
       mo.listen_address
 #ifndef INFINIT_WINDOWS
-      , ((mo.enable_monitoring && mo.enable_monitoring.get())
+      , ((mo.enable_monitoring && *mo.enable_monitoring)
          || enable_monitoring)
 #endif
       );

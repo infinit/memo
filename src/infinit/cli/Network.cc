@@ -879,8 +879,7 @@ namespace infinit
         std::function<void (infinit::User& owner,
                             infinit::Network& network,
                             dnut::Doughnut& dht,
-                            bool push,
-                            bool script_mode)>;
+                            bool push)>;
       void
       network_run(Infinit& cli,
                   std::string const& network_name,
@@ -995,20 +994,18 @@ namespace infinit
               daemon_release(daemon_handle);
             }
 #endif
-            action(owner, network, *dht, push, cli.script());
+            action(owner, network, *dht, push_p);
           };
         if (push_p)
-        {
           elle::With<InterfacePublisher>(
             network, owner, dht->id(),
             dht->local()->server_endpoint().port(),
             advertise_host,
             no_local_endpoints,
             no_public_endpoints) << [&]
-          {
-            run();
-          };
-        }
+            {
+              run();
+            };
         else
           run();
       }
@@ -1074,11 +1071,10 @@ namespace infinit
          [&] (infinit::User& owner,
               infinit::Network& network,
               dnut::Doughnut& dht,
-              bool /*push*/,
-              bool script_mode)
+              bool /*push*/)
         {
           auto services = dht.services();
-          if (script_mode)
+          if (cli.script())
           {
             auto res = std::unordered_map<std::string, Strings>{};
             for (auto const& type: services)
@@ -1238,14 +1234,13 @@ namespace infinit
          [&] (infinit::User& owner,
               infinit::Network& network,
               dnut::Doughnut& dht,
-              bool push,
-              bool script_mode)
+              bool push)
          {
           reactor::Thread::unique_ptr stat_thread;
           if (push)
             stat_thread = network.make_stat_update_thread(owner, dht);
           cli.report_action("running", "network", network.name);
-          if (script_mode)
+          if (cli.script())
           {
             auto input = commands_input(commands);
             while (true)
@@ -1282,7 +1277,7 @@ namespace infinit
                     std::cout, false, true);
                   response.serialize("success", true);
                 }
-                 else if (op == "write_immutable")
+                else if (op == "write_immutable")
                 {
                   auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(
                     elle::Buffer(command.deserialize<std::string>("data")));
@@ -1360,7 +1355,7 @@ namespace infinit
                   response.serialize("success", true);
                 }
                 else
-                  elle::err("invalide operation: %s", op);
+                  elle::err("invalid operation: %s", op);
               }
               catch (elle::Error const& e)
               {
