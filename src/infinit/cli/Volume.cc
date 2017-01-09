@@ -315,6 +315,21 @@ namespace infinit
                    cli::user = boost::none))
     {}
 
+
+    namespace
+    {
+      /// These two arguments are aliases.  Make them consistent.
+      void resolve_aliases(das::cli::Defaulted<bool>& arg1,
+                           das::cli::Defaulted<bool>& arg2)
+      {
+        if (arg1 && !arg2)
+          arg2 = *arg1;
+        else if (!arg1 && arg2)
+          arg1 = *arg2;
+        assert(*arg1 == *arg2);
+      }
+    }
+
     /*---------------.
     | Mode: create.  |
     `---------------*/
@@ -373,16 +388,22 @@ namespace infinit
 #define MERGE(Options, Symbol)                  \
     merge_(Options, cli::Symbol, Symbol)
 
+    // FIXME: We do not merge 'as' nor 'user', although we used to do
+    // it in the legacy CLI.  However, this appears to have been dead
+    // code in the legacy version: the 'args' that were passed did not
+    // include --as's argument, neither --user's one.  Observation
+    // based on the reading the code, and on running the test-suite.
+    //
+    // merge_(Options, imo::as, cli.as());
 #define MOUNT_OPTIONS_MERGE(Options)                                    \
     do {                                                                \
       namespace imo = infinit::mount_options;                           \
       merge_(Options, imo::fuse_options, fuse_option);                  \
       merge_(Options, imo::peers, peer);                                \
       MERGE(Options, mountpoint);                                       \
-      merge_(Options, imo::as, cli.as());                               \
       MERGE(Options, readonly);                                         \
       MERGE(Options, fetch);                                            \
-      merge_(Options, imo::push, push_endpoints);                       \
+      MERGE(Options, push);                                             \
       MERGE(Options, cache);                                            \
       MERGE(Options, async);                                            \
       MERGE(Options, cache_ram_size);                                   \
@@ -450,8 +471,8 @@ namespace infinit
       auto network = ifnt.network_get(network_name, owner);
 
       // Normalize options *before* merging them into MountOptions.
-      if (*fetch_endpoints)
-        fetch = true;
+      resolve_aliases(fetch, fetch_endpoints);
+      resolve_aliases(push, push_endpoints);
 
       auto mo = infinit::MountOptions{};
       MOUNT_OPTIONS_MERGE(mo);
@@ -473,7 +494,7 @@ namespace infinit
       {
         if (create_root || register_service)
         {
-          auto model = network.run(owner, mo, false, monitoring,
+          auto model = network.run(owner, mo, false, *monitoring,
                                    cli.compatibility_version());
           if (register_service)
           {
@@ -497,7 +518,7 @@ namespace infinit
         ifnt.volume_save(volume);
         cli.report_created("volume", name);
       }
-      if (push || push_volume)
+      if (*push || *push_volume)
         ifnt.beyond_push("volume", name, volume, owner);
     }
 
@@ -659,7 +680,7 @@ namespace infinit
     void
     Volume::mode_list()
     {
-      ELLE_TRACE_SCOPE("mount");
+      ELLE_TRACE_SCOPE("list");
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
 
@@ -689,7 +710,7 @@ namespace infinit
             std::cout << " \"" << volume.description.get() << "\"";
           std::cout << ": network " << volume.network;
           if (volume.mount_options.mountpoint)
-            std::cout << " on " << volume.mount_options.mountpoint.get();
+            std::cout << " on " << *volume.mount_options.mountpoint;
           std::cout << std::endl;
         }
     }
@@ -916,8 +937,8 @@ namespace infinit
         CFIndex count = CFArrayGetCount(items_array);
         for (CFIndex i = 0; i < count; i++)
         {
-          LSSharedFileListItemRef item_ref =
-            (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
+          LSSharedFileListItemRef item_ref
+            = (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
           CFURLRef item_url;
           OSStatus err = LSSharedFileListItemResolve(
             item_ref,
@@ -997,10 +1018,8 @@ namespace infinit
       auto owner = cli.as_user();
 
       // Normalize options *before* merging them into MountOptions.
-      if (*fetch_endpoints)
-        fetch = true;
-      if (*push_endpoints)
-        push = true;
+      resolve_aliases(fetch, fetch_endpoints);
+      resolve_aliases(push, push_endpoints);
 
       auto name = ifnt.qualified_name(volume_name, owner);
       auto volume = ifnt.volume_get(name);
@@ -1053,7 +1072,7 @@ namespace infinit
 #endif
       cli.report_action("running", "network", network.name);
       auto model_and_threads = network.run(
-        owner, mo, true, monitoring,
+        owner, mo, true, *monitoring,
         cli.compatibility_version(), port);
       auto model = std::move(model_and_threads.first);
       hook_stats_signals(*model);
@@ -1069,7 +1088,10 @@ namespace infinit
         ELLE_LOG_SCOPE("register volume in the network");
         model->service_add("volumes", name, volume);
       }
-      // Only push if we have are contributing storage.
+      // Only push if we are contributing storage.
+      //
+      // FIXME: mo.push checks whether it has value, not whether the
+      // value is true.
       bool push_p = mo.push && model->local();
       auto local_endpoint = boost::optional<infinit::model::Endpoint>{};
       if (model->local())
@@ -1798,6 +1820,15 @@ namespace infinit
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
+
+      // In update mode, push is an alias for push_endpoint, not
+      // push_volume.  So keep push_volume's original value to decide
+      // whether to push the volume.
+      auto push_volume = *push;
+      // Normalize options *before* merging them into MountOptions.
+      resolve_aliases(fetch, fetch_endpoints);
+      resolve_aliases(push, push_endpoints);
+
       auto name = ifnt.qualified_name(volume_name, owner);
       auto volume = ifnt.volume_get(name);
 
@@ -1805,7 +1836,7 @@ namespace infinit
       if (description)
         volume.description = description;
       ifnt.volume_save(volume, true);
-      if (push)
+      if (push_volume)
         ifnt.beyond_push("volume", name, volume, owner);
     }
   }

@@ -32,12 +32,13 @@ namespace infinit
                                     cli::mount,
                                     cli::pull,
                                     cli::push,
+                                    cli::run,
 #if !defined INFINIT_WINDOWS
                                     cli::start,
                                     cli::status,
                                     cli::stop,
 #endif
-                                    cli::run));
+                                    cli::update));
 
       using Strings = std::vector<std::string>;
       template <typename T>
