@@ -228,14 +228,14 @@ namespace infinit
       {
         for (auto const& peer: peers)
         {
-          this->_discover(std::make_pair(
+          this->_discover(PeerInfos{{
             peer.id(),
             PeerInfo{
               {},
               peer.endpoints(),
               0,
               std::chrono::high_resolution_clock::now(),
-            }));
+          }}});
         }
       }
 
