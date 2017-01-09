@@ -62,7 +62,7 @@ namespace infinit
       {
         auto& s = this->_stack.Get();
         if (std::find(s.begin(), s.end(), this->_public_control_key) != s.end())
-          throw elle::Error("Group loop");
+          elle::err("Group loop");
         s.push_back(*this->_public_control_key);
       }
 
@@ -115,7 +115,7 @@ namespace infinit
               auto block =
                 this->_dht.fetch(UB::hash_address(_name, this->_dht));
               if (block)
-                throw elle::Error(elle::sprintf("Group %s already exists", _name));
+                elle::err("Group %s already exists", _name);
             }
             catch (MissingBlock const&)
             {}
@@ -159,7 +159,7 @@ namespace infinit
       {
         infinit::filesystem::umbrella([&] {
           if (_name.empty())
-            throw elle::Error("Group destruction needs group name as input");
+            elle::err("Group destruction needs group name as input");
           public_control_key();
           block();
           auto ctrl = _control_key();
@@ -261,7 +261,7 @@ namespace infinit
       {
         auto priv = this->block().control_key();
         if (!priv)
-          throw elle::Error("You are not a group admin");
+          elle::err("You are not a group admin");
         return cryptography::rsa::KeyPair(public_control_key(), *priv);
       }
 
@@ -465,7 +465,7 @@ namespace infinit
         ELLE_ASSERT_NEQ(action, Action::set_description);
         auto duser = dynamic_cast<doughnut::User const*>(&user);
         if (!duser)
-          throw elle::Error("User argument is not a doughnut user");
+          elle::err("User argument is not a doughnut user");
         this->_action = action;
         this->_key = std::make_unique<cryptography::rsa::PublicKey>(duser->key());
         this->_name = duser->name();
@@ -491,7 +491,7 @@ namespace infinit
         ELLE_TRACE("Conflict editing group, replaying action on %s", this->_name);
         auto res = elle::cast<GB>::runtime(current.clone());
         if (!res)
-          throw elle::Error("GroupConflictResolver failed to access current block");
+          elle::err("GroupConflictResolver failed to access current block");
         std::unique_ptr<doughnut::User> user(nullptr);
         if (this->_name)
           user.reset(new doughnut::User(*this->_key, this->_name.get()));
