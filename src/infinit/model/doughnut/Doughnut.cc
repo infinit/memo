@@ -270,7 +270,7 @@ namespace infinit
       Doughnut::_make_user(elle::Buffer const& data) const
       {
         if (data.size() == 0)
-          throw elle::Error("invalid empty user");
+          elle::err("invalid empty user");
         if (data[0] == '{')
         {
           ELLE_TRACE_SCOPE("%s: fetch user from public key", *this);

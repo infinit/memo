@@ -514,10 +514,8 @@ namespace infinit
           {
             auto res = this->_load(address);
             if (res.block)
-              throw elle::Error(
-                elle::sprintf(
-                  "immutable block found when paxos was expected: %s",
-                  address));
+              elle::err("immutable block found when paxos was expected: %s",
+                        address);
             else
               return *res.paxos;
           }

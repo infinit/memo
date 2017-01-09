@@ -372,7 +372,7 @@ namespace infinit
       BaseOKB<Block>::_decrypt_data(elle::Buffer const& data) const
       {
         if (!this->_owner_private_key)
-          throw elle::Error("attempting to decrypt an unowned OKB");
+          elle::err("attempting to decrypt an unowned OKB");
         return this->_owner_private_key->open(data);
       }
 
@@ -448,7 +448,7 @@ namespace infinit
           if (bump_version)
             ++this->_version; // FIXME: idempotence in case the write fails ?
         if (!this->_owner_private_key)
-          throw elle::Error("attempting to seal an unowned OKB");
+          elle::err("attempting to seal an unowned OKB");
         this->_signature =
           std::make_shared<SignFuture>(
             this->_owner_private_key->sign_async(*this->_sign(),

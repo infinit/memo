@@ -6,6 +6,11 @@
 
 #include <boost/asio.hpp>
 
+#include <elle/bench.hh>
+#include <elle/err.hh>
+#include <elle/log.hh>
+#include <elle/factory.hh>
+
 #include <reactor/scheduler.hh>
 #include <reactor/Barrier.hh>
 #include <reactor/lockable.hh>
@@ -13,10 +18,6 @@
 #include <infinit/storage/sftp.hh>
 #include <infinit/storage/MissingKey.hh>
 #include <infinit/model/Address.hh>
-
-#include <elle/bench.hh>
-#include <elle/log.hh>
-#include <elle/factory.hh>
 
 enum PacketType {
   SSH_FXP_INIT          =      1 ,
@@ -351,8 +352,7 @@ namespace infinit
     pipe(int pipefd[2])
     {
       if (::pipe(pipefd))
-        throw elle::Error(elle::sprintf(
-                            "unable to create pipe: %s", strerror(errno)));
+        elle::err("unable to create pipe: %s", strerror(errno));
     }
 
     void SFTP::_connect()

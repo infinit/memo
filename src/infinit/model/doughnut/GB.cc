@@ -197,7 +197,7 @@ namespace infinit
         }
         catch (std::bad_cast const&)
         {
-          throw elle::Error("doughnut was passed a non-doughnut user.");
+          elle::err("doughnut was passed a non-doughnut user.");
         }
       }
 
@@ -209,13 +209,13 @@ namespace infinit
           auto& user = dynamic_cast<doughnut::User const&>(user_);
           auto it = this->_admin_keys.find(user.key());
           if (it == this->_admin_keys.end())
-            throw elle::Error(elle::sprintf("no such admin: %s", user.key()));
+            elle::err("no such admin: %s", user.key());
           this->_admin_keys.erase(it);
           this->_acl_changed = true;
         }
         catch (std::bad_cast const&)
         {
-          throw elle::Error("doughnut was passed a non-doughnut user.");
+          elle::err("doughnut was passed a non-doughnut user.");
         }
       }
 

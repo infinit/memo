@@ -711,8 +711,7 @@ namespace infinit
                         {
                           auto it = fs->directory_cache().find(addr);
                           if (it == fs->directory_cache().end())
-                            throw elle::Error(
-                              elle::sprintf("directory at %f vanished from cache", addr));
+                            elle::err("directory at %f vanished from cache", addr);
                           d = *it;
                         }
                         for (auto const& f: d->_files)

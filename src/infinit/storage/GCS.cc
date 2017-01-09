@@ -78,7 +78,7 @@ namespace infinit
       BENCH("set");
       ELLE_DEBUG("set %x", key);
       if (!insert && !update)
-        throw elle::Error("neither inserting nor updating");
+        elle::err("neither inserting nor updating");
       std::string url = this->_url(key);
       auto r = this->_request(url,
                               reactor::http::Method::PUT,

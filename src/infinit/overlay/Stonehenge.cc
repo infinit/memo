@@ -93,7 +93,7 @@ namespace infinit
     Stonehenge::_make_member(NodeLocation const& peer) const
     {
       if (peer.endpoints().empty())
-        throw elle::Error(elle::sprintf("missing endpoint for %f", peer.id()));
+        elle::err("missing endpoint for %f", peer.id());
       return this->doughnut()->dock().make_peer(
         peer, model::EndpointsRefetcher());
     }

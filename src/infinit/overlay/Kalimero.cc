@@ -41,12 +41,9 @@ namespace infinit
     Kalimero::_lookup(model::Address address, int n, bool) const
     {
       if (n != 1)
-      {
-        throw elle::Error(
-          elle::sprintf("kalimero cannot fetch several (%s) nodes", n));
-      }
+        elle::err("kalimero cannot fetch several (%s) nodes", n);
       if (!this->local())
-        throw elle::Error("kalimero can only be a server");
+        elle::err("kalimero can only be a server");
       return reactor::generator<Kalimero::WeakMember>(
         [this] (std::function<void (Kalimero::WeakMember)> yield)
         {

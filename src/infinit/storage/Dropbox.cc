@@ -71,7 +71,7 @@ namespace infinit
         ELLE_ABORT("not implemented (can dropbox handle it?)");
       }
       else
-        throw elle::Error("neither inserting neither updating");
+        elle::err("neither inserting neither updating");
 
       // FIXME: impl.
       return 0;
@@ -102,10 +102,7 @@ namespace infinit
         auto metadata = this->_dropbox.metadata("/" + this->_root.string());
         std::vector<Key> res;
         if (!metadata.is_dir)
-        {
-          throw elle::Error(
-            elle::sprintf("%s is not a directory", this->_root.string()));
-        }
+          elle::err("%s is not a directory", this->_root.string());
         if  (!metadata.contents)
           return res;
         for (auto const& entry: metadata.contents.get())

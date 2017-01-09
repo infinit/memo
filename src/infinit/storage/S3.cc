@@ -70,7 +70,7 @@ namespace infinit
       BENCH("set");
       ELLE_DEBUG("set %x", key);
       if (!insert && !update)
-        throw elle::Error("neither inserting nor updating");
+        elle::err("neither inserting nor updating");
       // FIXME: Use multipart upload for blocks bigger than 5 MiB.
       this->_storage->put_object(value,
                                  elle::sprintf("%x", key),

@@ -3632,10 +3632,10 @@ namespace infinit
             it->second.first.reset(new reactor::Thread("async_lookup",
               async_lookup));
             // and fast fail
-            throw elle::Error(elle::sprintf("Node %s not found", address));
+            elle::err("Node %s not found", address);
           }
           else // thread still running
-            throw elle::Error(elle::sprintf("Node %s not found", address));
+            elle::err("Node %s not found", address);
         }
         boost::optional<NodeLocation> result;
         elle::unconst(this)->kelipsGet(
@@ -3647,7 +3647,7 @@ namespace infinit
         { // mark for future fast fail
           _node_lookups.insert(std::make_pair(address, std::make_pair(
             reactor::Thread::unique_ptr(), false)));
-          throw elle::Error(elle::sprintf("Node %s not found", address));
+          elle::err("Node %s not found", address);
         }
         return make_peer(*result);
       }
@@ -3683,7 +3683,7 @@ namespace infinit
             else if (*v == "all")
               _config.rpc_protocol = Protocol::all;
             else
-              throw elle::Error("Invalid protocol");
+              elle::err("Invalid protocol");
           }
         }
         if (k == "stats")

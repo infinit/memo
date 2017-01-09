@@ -175,7 +175,7 @@ namespace infinit
         // Non-sense. If a file exists->remove it first then write.
       }
       else
-        throw elle::Error("neither inserting, nor updating");
+        elle::err("neither inserting, nor updating");
 
       // FIXME: impl.
       return 0;
@@ -206,7 +206,7 @@ namespace infinit
                                                       StatusCode::No_Content});
 
       if (r.status() == StatusCode::Not_Found)
-        throw elle::Error(elle::sprintf("File %s not found", id));
+        elle::err("File %s not found", id);
 
       // FIXME: impl.
       return 0;
@@ -216,7 +216,7 @@ namespace infinit
     GoogleDrive::_list()
     {
       ELLE_DUMP("_list (Not used)");
-      throw elle::Error("Not implemented yet.");
+      elle::err("Not implemented yet.");
     }
 
     BlockStatus

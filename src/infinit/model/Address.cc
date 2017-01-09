@@ -90,15 +90,15 @@ namespace infinit
       for (int i = 0; i < 32; ++i)
       {
         if (it == repr.end())
-          throw elle::Error(elle::sprintf("invalid address: %s", repr));
+          elle::err("invalid address: %s", repr);
         c[0] = *(it++);
         if (it == repr.end())
-          throw elle::Error(elle::sprintf("invalid address: %s", repr));
+          elle::err("invalid address: %s", repr);
         c[1] = *(it++);
         v[i] = strtol(c, nullptr, 16);
       }
       if (it != repr.end())
-        throw elle::Error(elle::sprintf("invalid address: %s", repr));
+        elle::err("invalid address: %s", repr);
       return Address(v);
     }
 
@@ -177,7 +177,7 @@ namespace elle
       if (buffer.size() == 0)
         return Address();
       if (buffer.size() != sizeof(Address::Value))
-        throw elle::Error(elle::sprintf("invalid address: %x", buffer));
+        elle::err("invalid address: %x", buffer);
       Address::Value value;
       memcpy(value, buffer.contents(), sizeof(value));
       return Address(value);
