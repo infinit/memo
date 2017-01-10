@@ -1,3 +1,4 @@
+#include <elle/chrono.hh>
 #include <elle/os/environ.hh>
 
 namespace infinit
@@ -41,11 +42,13 @@ namespace infinit
       Remote::safe_perform(std::string const& name,
                            std::function<R()> op)
       {
-        ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote")
-        static auto const rpc_timeout = std::chrono::milliseconds(
-          std::stoi(elle::os::getenv("INFINIT_CONNECT_TIMEOUT_MS", "5000")));
-        static auto const soft_fail = std::chrono::milliseconds(
-          std::stoi(elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT_MS", "20000")));
+        ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote");
+        static auto const rpc_timeout =
+          elle::chrono::duration_parse<std::milli>(
+            elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "5"));
+        static auto const soft_fail =
+          elle::chrono::duration_parse<std::milli>(
+            elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT", "20"));
         auto const rpc_start = std::chrono::system_clock::now();
         // No matter what, if we are disconnected and not even trying, retry.
         if (!this->_connected && !this->_connecting)
