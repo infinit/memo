@@ -1197,45 +1197,48 @@ ELLE_TEST_SUITE()
     {
       return std::make_unique<kouncil::Kouncil>(&dht, local, valgrind(1, 5));
     };
-#define BOOST_NAMED_TEST_CASE(name,  test_function)                     \
-  boost::unit_test::make_test_case(boost::function<void ()>(test_function), \
-                                   name,                                \
-                                   __FILE__, __LINE__ )
 
-#define TEST_(Overlay, Name, Timeout, Function, ...)                    \
-  Overlay                                                               \
-    ->add(BOOST_NAMED_TEST_CASE(Name,                                   \
-                                std::bind(::Function,                   \
-                                          BOOST_PP_CAT(Overlay, _builder), \
-                                          ##__VA_ARGS__)),              \
-          0, valgrind(Timeout));
+#define BOOST_NAMED_TEST_CASE(name, test_function)                      \
+  boost::unit_test::make_test_case(                                     \
+    boost::function<void ()>(test_function), name, __FILE__, __LINE__ ) \
 
-#define TEST_ANON(overlay, tname, timeout, ...)                         \
-  TEST_(overlay, #tname "_named", timeout, tname, false, ##__VA_ARGS__); \
-  TEST_(overlay, #tname "_anon",  timeout, tname, true, ##__VA_ARGS__)
+#define TEST(Suite, Overlay, Name, Timeout, Function, ...)              \
+  Suite->add(BOOST_NAMED_TEST_CASE(                                     \
+                 Name,                                                  \
+                 std::bind(::Function,                                  \
+                           BOOST_PP_CAT(Overlay, _builder),             \
+                           ##__VA_ARGS__)),                             \
+               0, valgrind(Timeout));                                   \
 
-#define TEST(overlay, tname, timeout, ...)              \
-  TEST_(overlay, #tname, timeout, tname, ##__VA_ARGS__)
+#define TEST_ANON(Overlay, Name, Timeout, ...)                          \
+  {                                                                     \
+    auto suite = BOOST_TEST_SUITE(#Name);                               \
+    Overlay->add(suite);                                                \
+    TEST(suite, Overlay, "named", Timeout, Name, false,                 \
+          ##__VA_ARGS__);                                               \
+    TEST(suite, Overlay, "anonymous",  Timeout, Name, true,             \
+          ##__VA_ARGS__);                                               \
+  }                                                                     \
 
-#define TEST_NAMED(overlay, tname, tfunc, timeout, ...) \
-  TEST_(overlay, #tname, timeout, tfunc, ##__VA_ARGS__)
+#define TEST_NAMED(Overlay, Name, Func, Timeout, ...)                   \
+  TEST(Overlay, Overlay, #Name, Timeout, Func, ##__VA_ARGS__)           \
 
-#define OVERLAY(Name)                           \
-  auto Name = BOOST_TEST_SUITE(#Name);          \
-  master.add(Name);                             \
-  TEST_ANON(Name, basics, 5);                   \
-  TEST_ANON(Name, dead_peer, 5);                \
-  TEST_ANON(Name, discover_endpoints, 10);      \
-  TEST_ANON(Name, key_cache_invalidation, 10);  \
-  TEST_ANON(Name, data_spread, 30, false);      \
-  TEST_ANON(Name, data_spread2, 30, false);     \
-  TEST_ANON(Name, chain_connect, 30, false);    \
-  /* too slow TEST(Name, paxos_3_1, 30);*/      \
-  TEST_ANON(Name, parallel_discover, 20);       \
-  TEST_NAMED(Name, storm_paxos, storm, 60, true, 5, 5, 100);  \
-  TEST_NAMED(Name, storm,       storm, 60, false, 5, 5, 200); \
-  TEST_NAMED(Name, churn, churn, 600, false, true, true);     \
-  TEST_NAMED(Name, churn_socket, churn_socket, 600);
+#define OVERLAY(Name)                                                   \
+  auto Name = BOOST_TEST_SUITE(#Name);                                  \
+  master.add(Name);                                                     \
+  TEST_ANON(Name, basics, 5);                                           \
+  TEST_ANON(Name, dead_peer, 5);                                        \
+  TEST_ANON(Name, discover_endpoints, 10);                              \
+  TEST_ANON(Name, key_cache_invalidation, 10);                          \
+  TEST_ANON(Name, data_spread, 30, false);                              \
+  TEST_ANON(Name, data_spread2, 30, false);                             \
+  TEST_ANON(Name, chain_connect, 30, false);                            \
+  /* too slow TEST(Name, paxos_3_1, 30);*/                              \
+  TEST_ANON(Name, parallel_discover, 20);                               \
+  TEST_NAMED(Name, storm_paxos, storm, 60, true, 5, 5, 100);            \
+  TEST_NAMED(Name, storm,       storm, 60, false, 5, 5, 200);           \
+  TEST_NAMED(Name, churn, churn, 600, false, true, true);               \
+  TEST_NAMED(Name, churn_socket, churn_socket, 600);                    \
 
   OVERLAY(kelips);
   OVERLAY(kouncil);
@@ -1243,14 +1246,3 @@ ELLE_TEST_SUITE()
   kouncil->add(BOOST_TEST_CASE(churn_socket_pasv), 0, valgrind(120));
 #undef OVERLAY
 }
-
-// int main()
-// {
-//   auto const kelips_builder =
-//     [] (Doughnut& dht, std::shared_ptr<Local> local)
-//     {
-//       return std::make_unique<kelips::Node>(
-//         kelips::Configuration(), local, &dht);
-//     };
-//   dead_peer(kelips_builder, false);
-// }
