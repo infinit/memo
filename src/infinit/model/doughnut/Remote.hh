@@ -82,17 +82,19 @@ namespace infinit
         virtual
         void
         connect(elle::DurationOpt timeout = elle::DurationOpt());
-        virtual
-        void
-        reconnect(elle::DurationOpt timeout = elle::DurationOpt());
         void
         disconnect();
+        void
+        reconnect();
       private:
         void
         _connect();
         ELLE_ATTRIBUTE(reactor::Barrier, connected);
-        ELLE_ATTRIBUTE(bool, reconnecting);
-        ELLE_ATTRIBUTE_R(int, reconnection_id);
+        ELLE_ATTRIBUTE(bool, connecting);
+        ELLE_ATTRIBUTE_R(int, connection_id);
+        ELLE_ATTRIBUTE(
+          std::chrono::system_clock::time_point, disconnected_since);
+        ELLE_ATTRIBUTE(std::exception_ptr, disconnected_exception);
         ELLE_ATTRIBUTE_R(Endpoints, endpoints);
         ELLE_ATTRIBUTE(boost::optional<reactor::network::UTPServer&>,
                        utp_server);
@@ -114,10 +116,7 @@ namespace infinit
         ELLE_ATTRIBUTE(Protocol, protocol);
         ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
         ELLE_ATTRIBUTE_R(EndpointsRefetcher, refetch_endpoints);
-        ELLE_ATTRIBUTE_R(bool, fast_fail);
-        ELLE_ATTRIBUTE(std::chrono::system_clock::time_point, connection_start_time);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, thread);
-        ELLE_ATTRIBUTE(reactor::Mutex, connect_mutex);
 
       /*-------.
       | Blocks |

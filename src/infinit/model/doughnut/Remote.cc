@@ -51,13 +51,15 @@ namespace infinit
         , _serializer()
         , _channels()
         , _connected()
-        , _reconnecting(false)
-        , _reconnection_id(0)
+        , _connecting(false)
+        , _connection_id(0)
+        , _disconnected_since(std::chrono::system_clock::now())
+        , _disconnected_exception(
+          std::make_exception_ptr(reactor::network::TimeOut()))
         , _endpoints(std::move(endpoints))
         , _utp_server(server)
         , _protocol(protocol)
         , _refetch_endpoints(refetch? *refetch : EndpointsRefetcher())
-        , _fast_fail(false)
         , _thread()
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
@@ -68,11 +70,15 @@ namespace infinit
           {
             if (opened)
             {
+              this->_disconnected_exception = {};
               if (!this->_connected.exception())
                 this->Peer::connected()();
             }
             else
+            {
+              this->_disconnected_since = std::chrono::system_clock::now();
               this->Peer::disconnected()();
+            }
           });
       }
 
@@ -86,7 +92,10 @@ namespace infinit
       Remote::_cleanup()
       {
         if (this->_thread)
+        {
           this->_thread->terminate_now();
+          this->_connecting = false;
+        }
       }
 
       /*-----------.
@@ -96,24 +105,31 @@ namespace infinit
       void
       Remote::_connect()
       {
-        reactor::Lock lock(this->_connect_mutex);
         static bool disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
         ELLE_TRACE_SCOPE("%s: connect", *this);
-        ++this->_reconnection_id;
         if (this->_thread)
-          this->_thread->terminate_now();
+        {
+          if (!this->_thread->done())
+          {
+            ELLE_TRACE("kill previous connection");
+            this->_thread->terminate_now();
+          }
+          this->_connecting = false;
+        }
         this->_connected.close();
         this->_credentials = {};
+        this->_connecting = true;
         this->_thread.reset(
           new reactor::Thread(
             elle::sprintf("%f worker", this),
             [this]
             {
+              elle::SafeFinally not_connecting(
+                [this] { this->_connecting = false; });
               bool connected = false;
               this->_key_hash_cache.clear();
               ELLE_DEBUG("%s: connection attempt to %s endpoints",
                          this, this->_endpoints.size());
-              this->_connection_start_time = std::chrono::system_clock::now();
               auto handshake = [&] (std::unique_ptr<std::iostream> socket)
                 {
                   auto sv = elle_serialization_version(this->_doughnut.version());
@@ -196,6 +212,7 @@ namespace infinit
               // on this, by holding the refcount manually.
               {
                 auto holder = this->shared_from_this();
+                this->_connecting = false;
                 this->_connected.open();
                 if (holder.use_count() == 1)
                 {
@@ -209,8 +226,9 @@ namespace infinit
                 this->_rpc_server.serve(*this->_channels);
               ELLE_TRACE("%s: connection ended, evicting", this);
               auto self = this->doughnut().dock().evict_peer(this->id());
+              this->_disconnected_exception =
+                std::make_exception_ptr(reactor::network::ConnectionClosed());
               this->_connected.close();
-              ++this->_reconnection_id;
               this->_thread->dispose(true);
               this->_thread.release();
               return;
@@ -230,20 +248,18 @@ namespace infinit
       }
 
       void
-      Remote::reconnect(elle::DurationOpt timeout)
+      Remote::reconnect()
       {
-        if (!this->_reconnecting)
-        {
-          auto lock = elle::scoped_assignment(this->_reconnecting, true);
-          ELLE_TRACE_SCOPE("%s: reconnect", this);
-          if (this->_refetch_endpoints)
-            if (auto eps = this->_refetch_endpoints(this->id()))
-              this->_endpoints = std::move(eps.get());
-          this->_connect();
-        }
+        ELLE_TRACE_SCOPE("%s: reconnect", this);
+        if (this->_connection_id <
+            std::numeric_limits<decltype(this->_connection_id)>::max())
+          ++this->_connection_id;
         else
-          ELLE_DEBUG("skip overlapped reconnect");
-        connect(timeout);
+          this->_connection_id = 0;
+        if (this->_refetch_endpoints)
+          if (auto eps = this->_refetch_endpoints(this->id()))
+            this->_endpoints = std::move(eps.get());
+        this->_connect();
       }
 
       void

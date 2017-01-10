@@ -41,113 +41,71 @@ namespace infinit
       Remote::safe_perform(std::string const& name,
                            std::function<R()> op)
       {
-        ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote");
-        // We use one timeout for each connect attempt (in order to maybe
-        // refresh endpoints), and a second timeout for the overall operation
-        // setting INFINIT_SOFTFAIL_TIMEOUT to 0 will retry forever
-        static const int connect_timeout_ms =
-          std::stoi(elle::os::getenv("INFINIT_CONNECT_TIMEOUT_MS", "10000"));
-        static const int softfail_timeout_ms =
-          std::stoi(elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT_MS", "50000"));
-        static const bool enable_fast_fail =
-          !elle::os::getenv("INFINIT_SOFTFAIL_FAST", "true").empty();
-        elle::DurationOpt connect_timeout;
-        int max_attempts = 0;
-        if (connect_timeout_ms > 0)
-          connect_timeout = boost::posix_time::milliseconds(connect_timeout_ms);
-        else if (connect_timeout_ms < 0)
-        {
-          connect_timeout = boost::posix_time::seconds(0);
-          max_attempts = 1;
-        }
-        if (softfail_timeout_ms && connect_timeout_ms>0)
-        {
-          int sts = std::max(softfail_timeout_ms, connect_timeout_ms);
-          max_attempts = sts / connect_timeout_ms;
-        }
-        int attempt = 0;
-        bool need_reconnect = false;
-        /* Fast-fail mode: The idea is that the first failed operation
-        * will retry for the full INFINIT_SOFTFAIL_TIMEOUT, but subsequent
-        * operations will fail 'instantly', while trying to reconnect in
-        * the background.
-        */
-        if (_fast_fail && enable_fast_fail)
-        {
-          bool connect_running = false;
-          try
-          {
-            if (!this->_connected)
-            { // still connecting
-              ELLE_DEBUG("%s is still connecting on attempt %s",
-                         this, _reconnection_id);
-              connect_running = true;
-              if (std::chrono::system_clock::now() - this->_connection_start_time
-                > std::chrono::milliseconds(connect_timeout_ms))
-              {
-                this->_reconnecting = false;
-                connect_running = false;
-                ELLE_DEBUG("%s: scheduling reconnection attempts", this);
-              }
-              throw reactor::network::ConnectionClosed("Connection pending");
-            }
-            // if we reach here, connection thread finished without exception,
-            // go on
-            _fast_fail = false;
-          }
-          catch (reactor::network::Exception const& e)
-          {
-            if (connect_running)
-              throw;
-            ELLE_DEBUG("connection attempt failed, restarting");
-            try
-            {
-              reconnect(0_sec);
-            }
-            catch (reactor::network::Exception const& e)
-            {}
-            throw reactor::network::ConnectionClosed("Connection attempt restarted");
-          }
-        }
+        ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote")
+        static auto const rpc_timeout = std::chrono::milliseconds(
+          std::stoi(elle::os::getenv("INFINIT_CONNECT_TIMEOUT_MS", "5000")));
+        static auto const soft_fail = std::chrono::milliseconds(
+          std::stoi(elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT_MS", "20000")));
+        auto const rpc_start = std::chrono::system_clock::now();
+        // No matter what, if we are disconnected and not even trying, retry.
+        if (!this->_connected && !this->_connecting)
+          this->reconnect();
+        bool give_up = false;
         while (true)
         {
-          // We need to know if someone else made a reconnection attempt
-          // while we were waiting, and if so try this new connection
-          // without making a reconnect of our own
-          int prev_reconnection_id = _reconnection_id;
+          auto const rpc_timeout_delay =
+            std::chrono::system_clock::now() - rpc_start;
+          auto const disconnected_for =
+            std::chrono::system_clock::now() - this->_disconnected_since;
+          auto const soft_fail_delay = soft_fail - disconnected_for;
+          auto const connection_id = this->_connection_id;
           try
           {
-            if (need_reconnect)
-              reconnect(connect_timeout);
+            // Try connecting until we reach the RPC timeout or the Remote
+            // softfail.
+            reactor::Duration const delay =
+              boost::posix_time::millisec(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::min(rpc_timeout_delay, soft_fail_delay)).count());
+            if (reactor::wait(this->_connected, delay))
+              return op();
             else
-              connect(connect_timeout);
-            return op();
+              give_up = true;
           }
           catch(reactor::network::Exception const& e)
           {
-            ELLE_TRACE("network exception when invoking %s (attempt %s/%s): %s",
-                       name, attempt + 1, max_attempts, e);
+            ELLE_TRACE("%s: network exception when invoking %s: %s",
+                       this, name, e);
+            this->_disconnected_exception = std::current_exception();
           }
           catch(infinit::protocol::Serializer::EOF const& e)
           {
-            ELLE_TRACE("EOF when invoking %s (attempt %s/%s): %s",
-                       name, attempt+1, max_attempts, e);
+            ELLE_TRACE("%s: EOF when invoking %s: %s", this, name, e);
+            this->_disconnected_exception = std::current_exception();
           }
           catch (elle::Error const& e)
           {
             ELLE_TRACE("%s: connection error: %s", this, e);
+            this->_disconnected_exception = std::current_exception();
             throw;
           }
-          if (max_attempts && ++attempt >= max_attempts)
-          {
-            _fast_fail = true;
-            throw reactor::network::ConnectionClosed(
-              elle::sprintf("could not establish channel for operation '%s'",
-                            name));
-          }
-          reactor::sleep(boost::posix_time::milliseconds(
-            200 * std::min(10, attempt)));
-          need_reconnect = (_reconnection_id == prev_reconnection_id);
+          if (give_up)
+            if (rpc_timeout_delay < soft_fail_delay)
+            {
+              ELLE_TRACE("%s: give up rpc %s after %s",
+                         this, name, rpc_timeout);
+              throw reactor::network::TimeOut();
+            }
+            else
+            {
+              ELLE_TRACE(
+                "%s: soft-fail rpc %s after remote was disconnected for %s",
+                this, name, disconnected_for);
+              ELLE_ASSERT(this->_disconnected_exception);
+              std::rethrow_exception(this->_disconnected_exception);
+            }
+          else if (this->_connection_id == connection_id)
+            this->reconnect();
         }
       }
 
