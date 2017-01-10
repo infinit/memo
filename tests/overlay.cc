@@ -405,15 +405,14 @@ ELLE_TEST_SCHEDULED(
       dht_b.dht->overlay()->lookup(old_address).lock()->id(),
       id_a);
   }
-  // We need to wait for eviction, otherwise the overlay can legitimately
-  // call neither on_disappear() nor on_discover().
-  reactor::Barrier b;
+  auto disappeared = reactor::waiter(
+    dht_b.dht->overlay()->on_disappear(),
+    [&] (Address id, bool)
+    {
+      BOOST_CHECK_EQUAL(id, id_a);
+      return true;
+    });
   ELLE_LOG("restart first DHT")
-  new reactor::Thread("wait_disappear", [&] {
-      reactor::wait(dht_b.dht->overlay()->on_disappear(),
-        [&](infinit::model::Address a, bool) { return a == id_a;});
-      b.open();
-    }, true);
   {
     dht_a.reset();
     dht_a = std::make_unique<DHT>(
@@ -428,7 +427,8 @@ ELLE_TEST_SCHEDULED(
   }
   ELLE_LOG("lookup second block")
     BOOST_CHECK_THROW(dht_b.dht->overlay()->lookup(new_address), MissingBlock);
-  reactor::wait(b);
+  // If the peer does not disappear first, we can't wait for on_discover.
+  reactor::wait(disappeared);
   ELLE_LOG("discover new endpoints")
     discover(dht_b, *dht_a, anonymous, false, true);
   ELLE_LOG("lookup second block")
