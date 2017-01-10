@@ -1172,11 +1172,10 @@ ELLE_TEST_SUITE()
     std::to_string(valgrind(100, 20)), 1);
   elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT_MS",
     std::to_string(valgrind(100, 20)), 1);
-  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_INTERVAL_MS",
-    std::to_string(windows_factor * valgrind(20, 50)), 1);
-  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_MAX_RETRY_MS",
-    std::to_string(valgrind(20, 50)), 1);
-
+  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_INTERVAL",
+                   elle::sprintf("%sms", windows_factor * valgrind(20, 50)), 1);
+  elle::os::setenv("INFINIT_KOUNCIL_WATCHER_MAX_RETRY",
+                   elle::sprintf("%sms", valgrind(20, 50)), 1);
   auto& master = boost::unit_test::framework::master_test_suite();
   auto const kelips_builder =
     [] (Doughnut& dht, std::shared_ptr<Local> local)

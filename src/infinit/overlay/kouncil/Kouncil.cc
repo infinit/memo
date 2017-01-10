@@ -716,8 +716,9 @@ namespace infinit
       void
       Kouncil::_watcher()
       {
-        static const int retry_max_interval_ms =
-          std::stoi(elle::os::getenv("INFINIT_KOUNCIL_WATCHER_MAX_RETRY_MS", "60000"));
+        static auto const retry_max_interval =
+          elle::chrono::duration_parse<std::milli>(
+            elle::os::getenv("INFINIT_KOUNCIL_WATCHER_MAX_RETRY", "60"));
         while (true)
         {
           auto now = std::chrono::high_resolution_clock::now();
@@ -735,8 +736,7 @@ namespace infinit
               continue;
             }
             if ((now - info.last_seen) / 2 < now - info.last_contact_attempt
-              || now - info.last_contact_attempt
-                  > std::chrono::milliseconds(retry_max_interval_ms))
+                || now - info.last_contact_attempt > retry_max_interval)
             {
               ELLE_TRACE("%s: attempting to contact %s", this, *it);
               info.last_contact_attempt = now;
@@ -755,8 +755,10 @@ namespace infinit
             }
             ++it;
           }
-          static const int sleep_time = std::stoi(elle::os::getenv("INFINIT_KOUNCIL_WATCHER_INTERVAL_MS", "10000"));
-          reactor::sleep(boost::posix_time::milliseconds(sleep_time));
+          static auto const sleep_time =
+            elle::chrono::duration_parse<std::milli>(
+              elle::os::getenv("INFINIT_KOUNCIL_WATCHER_INTERVAL", "10"));
+          reactor::sleep(boost::posix_time::milliseconds(sleep_time.count()));
         }
       }
     }
