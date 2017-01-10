@@ -672,16 +672,21 @@ namespace infinit
         });
         auto key = cryptography::random::generate<elle::Buffer>(32).string();
         elle::Buffer cdata;
+        std::unique_ptr<ImmutableBlock> block;
         if (data_.size() >= 262144)
         {
           reactor::background([&] {
-              cdata = cryptography::SecretKey(key).encipher(data_);
+            cdata = cryptography::SecretKey(key).encipher(data_);
+            block = this->_model.make_block<ImmutableBlock>(
+              std::move(cdata), this->_file._address);
           });
         }
         else
+        {
           cdata = cryptography::SecretKey(key).encipher(data_);
-        auto block = this->_model.make_block<ImmutableBlock>(
-          std::move(cdata), this->_file._address);
+          block = this->_model.make_block<ImmutableBlock>(
+            std::move(cdata), this->_file._address);
+        }
         auto baddr = block->address();
         this->_model.store(
           std::move(block), model::STORE_INSERT,

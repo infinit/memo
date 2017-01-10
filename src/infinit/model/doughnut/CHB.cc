@@ -259,7 +259,7 @@ namespace infinit
           saltowner.append(owner.value(), sizeof(Address::Value));
         elle::IOStream stream(saltowner.istreambuf_combine(content));
         elle::Buffer hash;
-        if (content.size() > 262144)
+        if (content.size() > 262144 && reactor::Scheduler::scheduler())
         {
           reactor::background([&] {
               hash = cryptography::hash(stream, cryptography::Oneway::sha256);
