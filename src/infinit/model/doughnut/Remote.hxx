@@ -57,7 +57,7 @@ namespace infinit
         while (true)
         {
           auto const rpc_timeout_delay =
-            std::chrono::system_clock::now() - rpc_start;
+            rpc_timeout - (std::chrono::system_clock::now() - rpc_start);
           auto const disconnected_for =
             std::chrono::system_clock::now() - this->_disconnected_since;
           auto const soft_fail_delay = soft_fail - disconnected_for;
