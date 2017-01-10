@@ -487,6 +487,16 @@ namespace infinit
           if (file_buffer)
             file_buffer->_remove_data = true;
         }
+        else
+        {
+          for (unsigned i=0; i<_filedata->_fat.size(); ++i)
+          {
+            ELLE_DEBUG_SCOPE("removing %s: %f", i, _filedata->_fat[i].first);
+            _owner.unchecked_remove(_filedata->_fat[i].first);
+          }
+          ELLE_DEBUG_SCOPE("removing first block at %f", _first_block->address());
+          _owner.unchecked_remove(_first_block->address());
+        }
       }
     }
 
