@@ -937,8 +937,11 @@ namespace infinit
           false,
           cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
           async, cache_disk_size, cli.compatibility_version(), port,
-          listen_address,
-          monitoring);
+          listen_address
+#ifndef INFINIT_WINDOWS
+          , monitoring
+#endif
+        );
         hook_stats_signals(*dht);
         if (peers_file)
         {
