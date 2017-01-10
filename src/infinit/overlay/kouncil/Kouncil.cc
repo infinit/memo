@@ -691,8 +691,8 @@ namespace infinit
           Endpoints res;
           res.merge(it->second.endpoints_stamped);
           res.merge(it->second.endpoints_unstamped);
-          ELLE_DEBUG("updating endpoints for %s with %s entries", id, res.size());
-          ELLE_ERR("refetch endpoints %f: %s", id, res);
+          ELLE_DEBUG("updating endpoints for %s with %s entries",
+                     id, res.size());
           return res;
         }
         return boost::none;
@@ -750,9 +750,7 @@ namespace infinit
                     peer->fetch(model::Address::random(), boost::none);
                   }
                   catch (elle::Error const& e)
-                  {
-                    ELLE_ERR("RES: %s", e);
-                  }
+                  {}
                 });
             }
             ++it;
