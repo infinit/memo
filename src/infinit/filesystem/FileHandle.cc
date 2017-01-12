@@ -818,7 +818,7 @@ namespace infinit
                 this->_flushers.emplace_back(
                   new reactor::Thread("flusher",
                                       [f] { f(); },
-                                      reactor::Thread::managed = true),
+                                      reactor::managed = true),
                   writers);
           }
         }
