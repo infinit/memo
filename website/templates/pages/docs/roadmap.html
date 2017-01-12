@@ -26,6 +26,20 @@
       <div class="step">
         <hr>
         <div class="desc">
+          <h2 id="on-premise-hub">On-premise Hub</h2>
+          <p>Allow the Hub to be deployed on premise to allow it to act as a gateway for mobility, to support both LDAP-based and standalone accounts (for external collaborators), to manage keys and more.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="ldap">LDAP</h2>
+          <p>Integrate with LDAP to retrieve the users, groups and permissions in an existing organization.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
           <h2 id="byzantine-fault-tolerance">Byzantine fault tolerance</h2>
           <p>Allow for the creation of untrustworthy networks (in which data is stored on storage resources that users may not trust) while ensuring reliability and security.</p>
         </div>
@@ -88,6 +102,13 @@
       <div class="step">
         <hr>
         <div class="desc">
+          <h2 id="iscsi">iSCSI interface</h2>
+          <p>Allow the underlying storage to be accessed through a block device.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
           <h2 id="windows-smb">SMB interface</h2>
           <p>Provide an SMB integration server to easily integrate in existing production environments.</p>
         </div>
@@ -119,8 +140,8 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="iscsi">iSCSI interface</h2>
-          <p>Allow the underlying storage to be accessed through a block device.</p>
+          <h2 id="nbd">NBD interface</h2>
+          <p>Provide an network block device interface.</p>
         </div>
       </div>
       <div class="step">
@@ -128,13 +149,6 @@
         <div class="desc">
           <h2 id="data-placement">Data placement</h2>
           <p>Control the placement of the redundant pieces of data through data placement policies: rack-aware, region-aware etc.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="s3">S3 interface</h2>
-          <p>Provide an AWS S3-compatible interface for storing objects.</p>
         </div>
       </div>
       <div class="step">
@@ -157,8 +171,22 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="nbd">NBD interface</h2>
-          <p>Provide an network block device interface.</p>
+          <h2 id="object-storage">Object storage logic</h2>
+          <p>Provide an object storage logic to store blobs of unstructured data.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="s3">S3 interface</h2>
+          <p>Provide an AWS S3-compatible interface for storing objects.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="block-size">Block size</h2>
+          <p>Allow for the definition of the block size when it comes to some logics such as file storage for content to be split into multiple maximum-sized blocks.</p>
         </div>
       </div>
 
@@ -208,23 +236,6 @@
           <span>0.6.2 release</span>
           <a href="${route('doc_docker_plugin')}">&raquo; read more</a>
           <p>Allow Infinit volumes to be accessed directly from within Docker containers through the Docker volume plugin API.</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="date">
-          Jun <br><span>2016</span>
-        </div>
-        <div class="desc">
-          <h2 id="on-premise-hub">On-premise Hub</h2>
-          <p>Allow the Hub to be deployed on premise to allow it to act as a gateway for mobility, to support both LDAP-based and standalone accounts (for external collaborators), to manage keys and more.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="ldap">LDAP</h2>
-          <p>Integrate with LDAP to retrieve the users, groups and permissions in an existing organization.</p>
         </div>
       </div>
 
@@ -525,7 +536,7 @@
       <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="file-system">File system logic</h2>
+          <h2 id="file-system">File storage logic</h2>
           <span>0.3.0 release</span>
           <p>Represent files into a collection of mutable and immutable blocks.</p>
         </div>
