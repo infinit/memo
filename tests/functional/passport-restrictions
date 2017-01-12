@@ -6,36 +6,32 @@ with TemporaryDirectory() as tmp, \
     Infinit() as infinit_1, Infinit() as infinit_2:
   infinit_1.run(['infinit-user', '--create',  'user'])
   infinit_1.run([
-    'infinit-storage', '--create',
-     'storage',
+    'infinit-storage', '--create', 'storage',
     '--filesystem', '--path', tmp.dir,
   ])
   network_name = infinit_1.run([
-    'infinit-network', '--create',
-     'network', '--storage', 'storage',
-     '--kelips', '--k', '1',
+    'infinit-network', '--create', 'network',
+    '--storage', 'storage',
+    '--kelips', '--k', '1',
     '--as', 'user',
   ])
   network = infinit_1.run_json([
-    'infinit-network', '--export',
-     'network',
+    'infinit-network', '--export', 'network',
     '--as', 'user',
   ])
   infinit_1.run([
-    'infinit-volume', '--create',
-     'volume', '--network', 'network',
+    'infinit-volume', '--create', 'volume',
+    '--network', 'network',
     '--as', 'user',
   ])
   volume = infinit_1.run_json([
-    'infinit-volume', '--export',
-     'volume',
+    'infinit-volume', '--export', 'volume',
     '--as', 'user',
   ])
   # Device 2
   infinit_2.run(['infinit-user', '--create', 'user2'])
   infinit_2.run([
-    'infinit-storage', '--create',
-     'storage',
+    'infinit-storage', '--create', 'storage',
     '--filesystem', '--path', tmp.dir,
   ])
   infinit_2.run(['infinit-network', '--import'], input = network)

@@ -417,7 +417,7 @@ COMMAND(run)
     ELLE_LOG_SCOPE("register volume in the network");
     model->service_add("volumes", name, volume);
   }
-  // Only push if we have are contributing storage.
+  // Only push if we are contributing storage.
   bool push = mo.push && model->local();
   auto local_endpoint = boost::optional<infinit::model::Endpoint>{};
   if (model->local())
@@ -448,8 +448,7 @@ COMMAND(run)
                          , optional(args, "mount-icon")
 #endif
                          );
-    boost::signals2::scoped_connection killer = killed.connect(
-      [&, count = std::make_shared<int>(0)] ()
+    auto killer = killed.connect([&, count = std::make_shared<int>(0)] ()
       {
         if (*count == 0)
           ++*count;
@@ -935,7 +934,7 @@ COMMAND(run)
   {
     auto advertise = optional<std::vector<std::string>>(args, "advertise-host");
     elle::With<InterfacePublisher>(
-      network, owner, model->id(), local_endpoint.get().port(), advertise,
+      network, owner, model->id(), local_endpoint->port(), advertise,
       flag(args, "no-local-endpoints"),
       flag(args, "no-public-endpoints")) << [&]
     {

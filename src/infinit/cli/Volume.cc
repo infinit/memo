@@ -1603,7 +1603,7 @@ namespace infinit
       };
       if (local_endpoint && push_p)
         elle::With<InterfacePublisher>(
-          network, owner, model->id(), local_endpoint.get().port(), advertise_host,
+          network, owner, model->id(), local_endpoint->port(), advertise_host,
           no_local_endpoints,
           no_public_endpoints) << [&]
         {
