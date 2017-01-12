@@ -32,10 +32,38 @@ namespace infinit
 {
   namespace cli
   {
-    static das::cli::Options options = {
-      {"help", {'h', "show this help message"}},
-      {"version", {'v', "show software version"}},
-    };
+    namespace
+    {
+      void
+      install_signal_handlers(Infinit& cli)
+      {
+        auto main_thread = reactor::scheduler().current();
+        assert(main_thread);
+        if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
+        {
+          static const auto signals = {SIGINT, SIGTERM
+#ifndef INFINIT_WINDOWS
+                                       , SIGQUIT
+#endif
+          };
+          for (auto signal: signals)
+          {
+#ifndef INFINIT_WINDOWS
+            ELLE_DEBUG("set signal handler for %s", strsignal(signal));
+#endif
+            reactor::scheduler().signal_handle(
+              signal,
+              [main_thread, &cli]
+              {
+                main_thread->terminate();
+                cli.killed();
+              });
+          }
+        }
+      }
+    }
+
+
 
     Infinit::Infinit(infinit::Infinit& infinit)
       : InfinitCallable(
@@ -45,7 +73,9 @@ namespace infinit
       , _infinit(infinit)
       , _as()
       , _script(false)
-    {}
+    {
+      install_signal_handlers(*this);
+    }
 
     std::string
     Infinit::default_user_name()
@@ -69,6 +99,11 @@ namespace infinit
 
     namespace
     {
+      das::cli::Options options = {
+        {"help", {'h', "show this help message"}},
+        {"version", {'v', "show software version"}},
+      };
+
       template <typename Symbol>
       struct help_object
       {
@@ -113,93 +148,67 @@ namespace infinit
       }
     }
 
-    /// From an old executable name (e.g. `infinit-users` or
-    /// `infinit-users.exe`), extract the entity (e.g., `users`).
-    std::string
-    entity(std::string const& argv0)
+    namespace
     {
-      // Mandatory prefix.
-      static auto const prefix = std::string("infinit-");
-      if (!boost::algorithm::starts_with(argv0, prefix))
-        elle::err("unrecognized infinit executable name: %s", argv0);
-      auto res = argv0.substr(prefix.size());
-      // Possible suffix.
-      static auto const suffix = std::string(".exe");
-      if (boost::algorithm::ends_with(res, suffix))
-        res.resize(res.size() - suffix.size());
-      // Renamed entities.
-      if (res == "storage")
-        res = "silo";
-      return res;
-    }
-
-    /// Return true if we found (and run) the command.
-    bool
-    run_command(Infinit& cli, std::vector<std::string>& args)
-    {
-      bool res = false;
-      infinit::cli::Infinit::Entities::map<object>::value(cli, args, res);
-      if (res)
+      /// From an old executable name (e.g. `infinit-users` or
+      /// `infinit-users.exe`), extract the entity (e.g., `users`).
+      std::string
+      entity(std::string const& argv0)
       {
-        auto main_thread = reactor::scheduler().current();
-        if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
+        // Mandatory prefix.
+        static auto const prefix = std::string("infinit-");
+        if (!boost::algorithm::starts_with(argv0, prefix))
+          elle::err("unrecognized infinit executable name: %s", argv0);
+        auto res = argv0.substr(prefix.size());
+        // Possible suffix.
+        static auto const suffix = std::string(".exe");
+        if (boost::algorithm::ends_with(res, suffix))
+          res.resize(res.size() - suffix.size());
+        // Renamed entities.
+        if (res == "storage")
+          res = "silo";
+        return res;
+      }
+
+      /// Return true if we found (and ran) the command.
+      bool
+      run_command(Infinit& cli, std::vector<std::string>& args)
+      {
+        bool res = false;
+        infinit::cli::Infinit::Entities::map<object>::value(cli, args, res);
+        return res;
+      }
+
+
+      void
+      main(std::vector<std::string>& args)
+      {
+        if (boost::filesystem::path(args[0]).filename() == "infinit")
+          args.erase(args.begin());
+        else
         {
-          static const auto signals = {SIGINT, SIGTERM
-#ifndef INFINIT_WINDOWS
-                                       , SIGQUIT
-#endif
-          };
-          for (auto signal: signals)
-          {
-#ifndef INFINIT_WINDOWS
-            ELLE_DEBUG("set signal handler for %s", strsignal(signal));
-#endif
-            reactor::scheduler().signal_handle(
-                signal,
-                [&]
-                {
-                  main_thread->terminate();
-                  cli.killed();
-                });
-          }
+          // The name of the command typed by the user, say `infinit-users`.
+          auto prev = boost::filesystem::path(args[0]).filename().string();
+          // The corresponding entity, say `users`.
+          args[0] = entity(prev);
+          if (args.size() > 1 && das::cli::is_option(args[1]))
+            if (args[1] == "-v" || args[1] == "--version")
+              args.erase(args.begin());
+            else if (args[1] != "-h" && args[1] != "--help")
+              // This is the mode.  We no longer require a leading `--`.
+              args[1] = args[1].substr(2);
+          ELLE_WARN("%s is deprecated, please run: infinit %s",
+                    prev, boost::algorithm::join(args, " "));
         }
-      }
-      return res;
-    }
-
-
-    void
-    main(std::vector<std::string>& args)
-    {
-      if (boost::filesystem::path(args[0]).filename() == "infinit")
-        args.erase(args.begin());
-      else
-      {
-        // The name of the command typed by the user, say `infinit-users`.
-        auto prev = boost::filesystem::path(args[0]).filename().string();
-        // The corresponding entity, say `users`.
-        args[0] = entity(prev);
-        if (args.size() > 1 && das::cli::is_option(args[1]))
-          if (args[1] == "-v" || args[1] == "--version")
-            args.erase(args.begin());
-          else if (args[1] != "-h" && args[1] != "--help")
-            // This is the mode.  We no longer require a leading `--`.
-            args[1] = args[1].substr(2);
-        ELLE_WARN("%s is deprecated, please run: infinit %s",
-                  prev, boost::algorithm::join(args, " "));
-      }
-      auto infinit = infinit::Infinit{};
-      auto cli = Infinit(infinit);
-      if (args.empty() || das::cli::is_option(args[0], options))
-        das::cli::call(cli, args, options);
-      else if (!run_command(cli, args))
-      {
-        std::stringstream s;
-        elle::fprintf(s, "unknown object type: %s\n", args[0]);
-        elle::fprintf(s,
-                      "Try '%s --help' for more information.",
-                      argv_0);
-        throw das::cli::Error(s.str());
+        auto infinit = infinit::Infinit{};
+        auto cli = Infinit(infinit);
+        if (args.empty() || das::cli::is_option(args[0], options))
+          das::cli::call(cli, args, options);
+        else if (!run_command(cli, args))
+          throw das::cli::Error
+            (elle::sprintf("unknown object type: %s\n"
+                           "Try '%s --help' for more information.",
+                           args[0], argv_0));
       }
     }
 
@@ -423,14 +432,11 @@ namespace infinit
       return password;
     };
 
-    static
-    std::string const
-    _hub_salt = "@a.Fl$4'x!";
-
     std::string
     Infinit::hub_password_hash(std::string const& password)
     {
-      return Infinit::hash_password(password, _hub_salt);
+      static auto const salt = std::string{"@a.Fl$4'x!"};
+      return Infinit::hash_password(password, salt);
     }
 
     // This overload is required, otherwise Infinit is printed as a
