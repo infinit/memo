@@ -1739,37 +1739,37 @@ ELLE_TEST_SUITE()
     boost::unit_test::test_suite* rebalancing = BOOST_TEST_SUITE("rebalancing");
     paxos->add(rebalancing);
     using namespace rebalancing;
-    rebalancing->add(BOOST_TEST_CASE(extend_and_write), 0, valgrind(1));
-    rebalancing->add(BOOST_TEST_CASE(shrink_and_write), 0, valgrind(1));
-    rebalancing->add(BOOST_TEST_CASE(shrink_kill_and_write), 0, valgrind(1));
-    rebalancing->add(BOOST_TEST_CASE(quorum_duel_1), 0, valgrind(1));
-    rebalancing->add(BOOST_TEST_CASE(quorum_duel_2), 0, valgrind(1));
+    rebalancing->add(BOOST_TEST_CASE(extend_and_write), 0, valgrind(3));
+    rebalancing->add(BOOST_TEST_CASE(shrink_and_write), 0, valgrind(3));
+    rebalancing->add(BOOST_TEST_CASE(shrink_kill_and_write), 0, valgrind(3));
+    rebalancing->add(BOOST_TEST_CASE(quorum_duel_1), 0, valgrind(3));
+    rebalancing->add(BOOST_TEST_CASE(quorum_duel_2), 0, valgrind(3));
     {
       auto expand_new_CHB = [] () { expand_new_block(true); };
       auto expand_new_OKB = [] () { expand_new_block(false); };
-      rebalancing->add(BOOST_TEST_CASE(expand_new_CHB), 0, valgrind(1));
-      rebalancing->add(BOOST_TEST_CASE(expand_new_OKB), 0, valgrind(1));
+      rebalancing->add(BOOST_TEST_CASE(expand_new_CHB), 0, valgrind(3));
+      rebalancing->add(BOOST_TEST_CASE(expand_new_OKB), 0, valgrind(3));
     }
     {
       auto expand_newcomer_CHB = [] () { expand_newcomer(true); };
       auto expand_newcomer_OKB = [] () { expand_newcomer(false); };
-      rebalancing->add(BOOST_TEST_CASE(expand_newcomer_CHB), 0, valgrind(1));
-      rebalancing->add(BOOST_TEST_CASE(expand_newcomer_OKB), 0, valgrind(1));
+      rebalancing->add(BOOST_TEST_CASE(expand_newcomer_CHB), 0, valgrind(3));
+      rebalancing->add(BOOST_TEST_CASE(expand_newcomer_OKB), 0, valgrind(3));
     }
     rebalancing->add(BOOST_TEST_CASE(expand_concurrent), 0, valgrind(5));
     {
       auto expand_CHB_from_disk = [] () { expand_from_disk(true); };
       auto expand_OKB_from_disk = [] () { expand_from_disk(false); };
-      rebalancing->add(BOOST_TEST_CASE(expand_CHB_from_disk), 0, valgrind(1));
-      rebalancing->add(BOOST_TEST_CASE(expand_OKB_from_disk), 0, valgrind(1));
+      rebalancing->add(BOOST_TEST_CASE(expand_CHB_from_disk), 0, valgrind(3));
+      rebalancing->add(BOOST_TEST_CASE(expand_OKB_from_disk), 0, valgrind(3));
     }
     rebalancing->add(
-      BOOST_TEST_CASE(rebalancing_while_destroyed), 0, valgrind(1));
+      BOOST_TEST_CASE(rebalancing_while_destroyed), 0, valgrind(3));
     {
       auto evict_faulty_CHB = [] () { evict_faulty(true); };
       auto evict_faulty_OKB = [] () { evict_faulty(false); };
-      rebalancing->add(BOOST_TEST_CASE(evict_faulty_CHB), 0, valgrind(1));
-      rebalancing->add(BOOST_TEST_CASE(evict_faulty_OKB), 0, valgrind(1));
+      rebalancing->add(BOOST_TEST_CASE(evict_faulty_CHB), 0, valgrind(3));
+      rebalancing->add(BOOST_TEST_CASE(evict_faulty_OKB), 0, valgrind(3));
     }
   }
 }
