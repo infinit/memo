@@ -74,6 +74,7 @@ namespace infinit
       , _root_address(Address::null)
       , _allow_root_creation(allow_root_creation)
       , _map_other_permissions(map_other_permissions)
+      , _prefetching(0)
     {
       auto& dht = dynamic_cast<model::doughnut::Doughnut&>(
         *this->_block_store.get());

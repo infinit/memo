@@ -291,6 +291,7 @@ namespace infinit
               > > FileCache;
       ELLE_ATTRIBUTE_R(FileCache, file_cache);
       ELLE_ATTRIBUTE_RX(std::vector<reactor::Thread::unique_ptr>, running);
+      ELLE_ATTRIBUTE_RX(int, prefetching);
       typedef
       std::unordered_map<Address, std::weak_ptr<FileBuffer>>
       FileBuffers;

@@ -588,13 +588,17 @@ namespace infinit
         elle::os::getenv("INFINIT_PREFETCH_DEPTH", "2"));
       static int prefetch_group = std::stoi(
         elle::os::getenv("INFINIT_PREFETCH_GROUP", "5"));
+      static int prefetch_tasks = std::stoi(
+        elle::os::getenv("INFINIT_PREFETCH_TASKS", "5"));
       int group_size = prefetch_group;
       int nthreads = prefetch_threads;
       if (this->_prefetching ||
           nthreads == 0 ||
-          (FileSystem::now() - this->_last_prefetch) < std::chrono::seconds(15))
+          (FileSystem::now() - this->_last_prefetch) < std::chrono::seconds(15) ||
+          fs.prefetching() >= prefetch_tasks)
         return;
       this->_last_prefetch = FileSystem::now();
+      fs.prefetching()++;
       auto files = std::make_shared<std::vector<PrefetchEntry>>();
       for (auto const& f: this->_files)
         files->push_back(
@@ -735,7 +739,10 @@ namespace infinit
                    (boost::posix_time::microsec_clock::universal_time() - start_time)
                      .total_microseconds());
           if (!(--(*running)))
+          {
             self->_prefetching = false;
+            fs->prefetching()--;
+          }
           auto* self = reactor::scheduler().current();
           auto& running = fs->running();
           auto it = std::find_if(running.begin(), running.end(),
