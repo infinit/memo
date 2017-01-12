@@ -736,7 +736,6 @@ namespace infinit
                      .total_microseconds());
           if (!(--(*running)))
             self->_prefetching = false;
-          fs->pending().clear();
           auto* self = reactor::scheduler().current();
           auto& running = fs->running();
           auto it = std::find_if(running.begin(), running.end(),
@@ -746,10 +745,13 @@ namespace infinit
             });
           if (it != running.end())
           {
-            fs->pending().emplace_back(std::move(*it));
+            (*it)->dispose(true);
+            it->release();
             std::swap(running.back(), *it);
             running.pop_back();
           }
+          else
+            ELLE_WARN("Thread %s not found in running list", self);
       };
       for (int i = 0; i < nthreads; ++i)
         fs.running().emplace_back(
