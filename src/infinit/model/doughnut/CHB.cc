@@ -140,7 +140,7 @@ namespace infinit
           auto* acb = dynamic_cast<ACB*>(block.get());
           if (!acb)
           {
-            ELLE_WARN("CHB owner %x is not an ACB, cannot signe remove request",
+            ELLE_WARN("CHB owner %x is not an ACB, cannot sign remove request",
               this->_owner);
           }
           else
