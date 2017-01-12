@@ -26,76 +26,74 @@ namespace infinit
   {
     using Error = das::cli::Error;
 
-    static
-    int64_t
-    convert_capacity(int64_t value, std::string const& quantifier)
+    namespace
     {
-      if (quantifier == "b" || quantifier == "")
-        return value;
-      if (quantifier == "kb")
-        return value * 1000;
-      if (quantifier == "kib")
-        return value << 10;
-      if (quantifier == "mb")
-        return value * 1000000;
-      if (quantifier == "mib")
-        return value << 20;
-      if (quantifier == "gb")
-        return value * 1000000000;
-      if (quantifier == "gib")
-        return value << 30;
-      if (quantifier == "tb")
-        return value * 1000000000000;
-      if (quantifier == "tib")
-        return value << 40;
-      elle::err("invalid capacity: %s", quantifier);
-    }
+      int64_t
+      convert_capacity(int64_t value, std::string const& quantifier)
+      {
+        if (quantifier == "b" || quantifier == "")
+          return value;
+        if (quantifier == "kb")
+          return value * 1000;
+        if (quantifier == "kib")
+          return value << 10;
+        if (quantifier == "mb")
+          return value * 1000000;
+        if (quantifier == "mib")
+          return value << 20;
+        if (quantifier == "gb")
+          return value * 1000000000;
+        if (quantifier == "gib")
+          return value << 30;
+        if (quantifier == "tb")
+          return value * 1000000000000;
+        if (quantifier == "tib")
+          return value << 40;
+        elle::err("invalid capacity: %s", quantifier);
+      }
 
-    static
-    int64_t
-    convert_capacity(std::string value)
-    {
-      std::string quantifier = [&] {
-        boost::algorithm::to_lower(value);
-        auto to_find = std::vector<std::string>{
-          // "b" MUST be the last element.
-          "kb", "mb", "gb", "tb", "kib", "mib", "gib", "tib", "b"
-        };
-        const char* res = nullptr;
-        for (auto const& t: to_find)
-          if (res = std::strstr(value.c_str(), t.c_str()))
-            break;
-        return res ? res : "";
-      }();
-      auto intval =
-        std::stoll(value.substr(0, value.size() - quantifier.size()));
-      return convert_capacity(intval, quantifier);
-    }
+      int64_t
+      convert_capacity(std::string value)
+      {
+        std::string quantifier = [&] {
+          boost::algorithm::to_lower(value);
+          auto to_find = std::vector<std::string>{
+            // "b" MUST be the last element.
+            "kb", "mb", "gb", "tb", "kib", "mib", "gib", "tib", "b"
+          };
+          const char* res = nullptr;
+          for (auto const& t: to_find)
+            if (res = std::strstr(value.c_str(), t.c_str()))
+              break;
+          return res ? res : "";
+        }();
+        auto intval =
+          std::stoll(value.substr(0, value.size() - quantifier.size()));
+        return convert_capacity(intval, quantifier);
+      }
 
-    static
-    std::string
-    pretty_print(int64_t bytes, int64_t zeros)
-    {
-      std::string str = std::to_string(bytes);
-      std::string integer = std::to_string(bytes / zeros);
-      return integer + "." + str.substr(integer.size(), 2);
-    }
+      std::string
+      pretty_print(int64_t bytes, int64_t zeros)
+      {
+        std::string str = std::to_string(bytes);
+        std::string integer = std::to_string(bytes / zeros);
+        return integer + "." + str.substr(integer.size(), 2);
+      }
 
-    static
-    std::string
-    pretty_print(int64_t bytes)
-    {
-      if (bytes / 1000 == 0)
-        return std::to_string(bytes) + "B";
-      if (bytes / 1000000 == 0) // Under 1 Mio and higher than 1 Kio
-        return pretty_print(bytes, 1000) + "KB";
-      if (bytes / 1000000000 == 0)
-        return pretty_print(bytes, 1000000) + "MB";
-      if (bytes / 1000000000000 == 0)
-        return pretty_print(bytes, 1000000000) + "GB";
-      return pretty_print(bytes, 1000000000000) + "TB";
+      std::string
+      pretty_print(int64_t bytes)
+      {
+        if (bytes / 1000 == 0)
+          return std::to_string(bytes) + "B";
+        if (bytes / 1000000 == 0) // Under 1 Mio and higher than 1 Kio
+          return pretty_print(bytes, 1000) + "KB";
+        if (bytes / 1000000000 == 0)
+          return pretty_print(bytes, 1000000) + "MB";
+        if (bytes / 1000000000000 == 0)
+          return pretty_print(bytes, 1000000000) + "GB";
+        return pretty_print(bytes, 1000000000000) + "TB";
+      }
     }
-
 
     Silo::Silo(Infinit& infinit)
       : Entity(infinit)
@@ -194,7 +192,7 @@ namespace infinit
           root = elle::sprintf("%s_blocks", name);
         auto account = this->cli().infinit().credentials_aws(
           mandatory(account_name, "account"));
-        aws::Credentials aws_credentials(
+        auto aws_credentials = aws::Credentials(
           account->access_key_id,
           account->secret_access_key,
           mandatory(region, "region"),
@@ -204,16 +202,12 @@ namespace infinit
         aws::S3::StorageClass storage_class = aws::S3::StorageClass::Default;
         if (storage_class_str)
         {
-          std::string storage_class_parse = storage_class_str.get();
-          std::transform(storage_class_parse.begin(),
-                         storage_class_parse.end(),
-                         storage_class_parse.begin(),
-                         ::tolower);
-          if (storage_class_parse == "standard")
+          auto sc = boost::algorithm::to_lower_copy(*storage_class_str);
+          if (sc == "standard")
             storage_class = aws::S3::StorageClass::Standard;
-          else if (storage_class_parse == "standard_ia")
+          else if (sc == "standard_ia")
             storage_class = aws::S3::StorageClass::StandardIA;
-          else if (storage_class_parse == "reduced_redundancy")
+          else if (sc == "reduced_redundancy")
             storage_class = aws::S3::StorageClass::ReducedRedundancy;
           else
             elle::err<Error>("unrecognized storage class: %s",
@@ -321,31 +315,28 @@ namespace infinit
       auto storages = this->cli().infinit().storages_get();
       if (this->cli().script())
       {
-        elle::json::Array l;
+        auto l = elle::json::Array{};
         for (auto const& storage: storages)
         {
-          elle::json::Object o;
-          o["name"] = static_cast<std::string>(storage->name);
-          o["capacity"] = (storage->capacity ? pretty_print(storage->capacity.get())
-                                         : "unlimited");
+          auto o = elle::json::Object{
+            {"name", static_cast<std::string>(storage->name)},
+            {"capacity", (storage->capacity ? pretty_print(storage->capacity.get())
+                          : "unlimited")},
+          };
           if (storage->description)
             o["description"] = storage->description.get();
-          l.push_back(std::move(o));
+          l.emplace_back(std::move(o));
         }
         elle::json::write(std::cout, l);
       }
       else
-      {
         for (auto const& storage: storages)
-        {
           elle::print(
             std::cout, "{0}{1? \"{1}\"}: {2}\n",
             storage->name, storage->description,
             storage->capacity ?
             pretty_print(storage->capacity.get()) :
             "unlimited");
-        }
-      }
     }
 
     void
