@@ -47,7 +47,7 @@ namespace infinit
   std::string
   BeyondError::name_opt() const
   {
-    return _name ? *_name : "NAME";
+    return _name.value_or("NAME");
   }
 
   Headers
@@ -80,12 +80,11 @@ namespace infinit
       cryptography::rsa::Padding::pkcs1,
       cryptography::Oneway::sha256);
     auto encoded_signature = elle::format::base64::encode(signature);
-    auto res = std::unordered_map<std::string, std::string>{
+    return {
       { "infinit-signature", encoded_signature.string() },
       { "infinit-time", now },
       { "infinit-user", self.name },
     };
-    return res;
   }
 
   std::string

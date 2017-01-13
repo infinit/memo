@@ -2,6 +2,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include <elle/bytes.hh>
 #include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/filesystem/path.hh>
@@ -11,6 +13,13 @@
 #include <elle/string/algorithm.hh>
 #include <elle/string/algorithm.hh>
 #include <elle/system/Process.hh>
+
+#include <reactor/connectivity/connectivity.hh>
+#include <reactor/filesystem.hh>
+#include <reactor/network/upnp.hh>
+#include <reactor/scheduler.hh>
+#include <reactor/TimeoutGuard.hh>
+#include <reactor/http/exceptions.hh>
 
 #include <infinit/storage/Dropbox.hh>
 #include <infinit/storage/Filesystem.hh>
@@ -22,13 +31,6 @@
 # include <infinit/storage/sftp.hh>
 #endif
 #include <infinit/storage/S3.hh>
-
-#include <reactor/connectivity/connectivity.hh>
-#include <reactor/filesystem.hh>
-#include <reactor/network/upnp.hh>
-#include <reactor/scheduler.hh>
-#include <reactor/TimeoutGuard.hh>
-#include <reactor/http/exceptions.hh>
 
 ELLE_LOG_COMPONENT("infinit-doctor");
 
@@ -168,7 +170,7 @@ namespace
     status(out, sane, warning) << " " << name;
     if (verbose || broken)
     {
-      if (container.size() > 0)
+      if (!container.empty())
         out << ":\n";
       for (auto const& item: container)
         if (verbose || !item.sane() || item.warning())
@@ -325,12 +327,13 @@ namespace reporting
     }
     if (this->storage_resources)
     {
-      if (this->storage_resources->size() > 0)
+      auto s = this->storage_resources->size();
+      if (s > 0)
         out << elle::join(storage_resources->begin(),
                           storage_resources->end(), "], [");
-      if (this->storage_resources->size() == 1)
+      if (s == 1)
         out << " storage resource is faulty";
-      else if (this->storage_resources->size() > 1)
+      else if (s > 1)
         out << " storage resources are faulty";
     }
   }
@@ -562,49 +565,49 @@ namespace reporting
     s.serialize("capacity", this->capacity);
   }
 
-  SystemSanityResults::EnvironmentResult::EnvironmentResult(
-    Environment const& environment)
-    : Result("Environment",
+  SystemSanityResults::EnvironResult::EnvironResult(
+    Environ const& environ)
+    : Result("Environ",
              true,
-             (environment.size() == 0
+             (environ.empty()
               ? reporting::Result::Reason{}
               : reporting::Result::Reason{
-               "your environment contains variables that will modify "
+               "your environ contains variables that will modify "
                "Infinit default behavior. For more details visit "
                "https://infinit.sh/documentation/environment-variables"}),
-             environment.size() != 0)
-    , environment(environment)
+             !environ.empty())
+    , environ(environ)
   {}
 
-  SystemSanityResults::EnvironmentResult::EnvironmentResult(
+  SystemSanityResults::EnvironResult::EnvironResult(
     elle::serialization::SerializerIn& s)
   {
     this->serialize(s);
   }
 
   bool
-  SystemSanityResults::EnvironmentResult::_show(bool verbose) const
+  SystemSanityResults::EnvironResult::_show(bool verbose) const
   {
-    return this->environment.size() > 0;
+    return !this->environ.empty();
   }
 
   void
-  SystemSanityResults::EnvironmentResult::_print(
+  SystemSanityResults::EnvironResult::_print(
     std::ostream& out, bool verbose) const
   {
     if (this->show(verbose))
     {
-      for (auto const& entry: this->environment)
+      for (auto const& entry: this->environ)
         out << std::endl << "  " << entry.first << ": " << entry.second;
     }
   }
 
   void
-  SystemSanityResults::EnvironmentResult::serialize(
+  SystemSanityResults::EnvironResult::serialize(
     elle::serialization::Serializer& s)
   {
     Result::serialize(s);
-    s.serialize("entries", this->environment);
+    s.serialize("entries", this->environ);
   }
 
   SystemSanityResults::PermissionResult::PermissionResult(
@@ -696,7 +699,7 @@ namespace reporting
       section(out, "System sanity");
     this->user.print(out, verbose);
     this->space_left.print(out, verbose);
-    this->environment.print(out, verbose, false);
+    this->environ.print(out, verbose, false);
     ::print(out, "Permissions", this->permissions, verbose);
     this->fuse.print(out, verbose);
     out << std::endl;
@@ -707,7 +710,7 @@ namespace reporting
   {
     return this->user.sane()
       && this->space_left.sane()
-      && this->environment.sane()
+      && this->environ.sane()
       && this->fuse.sane()
       && ::sane(this->permissions);
   }
@@ -717,7 +720,7 @@ namespace reporting
   {
     return this->user.warning()
       || this->space_left.warning()
-      || this->environment.warning()
+      || this->environ.warning()
       || this->fuse.warning()
       || ::warning(this->permissions);
   }
@@ -727,7 +730,7 @@ namespace reporting
   {
     s.serialize("user name", this->user);
     s.serialize("space left", this->space_left);
-    s.serialize("environment", this->environment);
+    s.serialize("environment", this->environ);
     s.serialize("permissions", this->permissions);
     s.serialize("fuse", this->fuse);
     if (s.out())
@@ -755,7 +758,7 @@ namespace reporting
   }
 
   ConnectivityResults::InterfaceResults::InterfaceResults(IPs const& ips)
-    : Result("Local interfaces", ips.size() > 0)
+    : Result("Local interfaces", !ips.empty())
     , entries(ips)
   {}
 
@@ -1093,20 +1096,14 @@ namespace reporting
 namespace
 {
   // Return the infinit related environment.
-  reporting::Environment
-  infinit_related_environment()
+  reporting::Environ
+  infinit_related_environ()
   {
-    auto environ = elle::os::environ();
-    // Remove non INFINIT_ or ELLE_ prefixed entries.
-    for (auto it = environ.begin(); it != environ.end();)
-    {
-      if ((it->first.find("INFINIT_") != 0 && it->first.find("ELLE_") != 0)
-          || it->second == banished_log_level)
-        environ.erase(it++);
-      else
-        ++it;
-    }
-    return environ;
+    using boost::algorithm::starts_with;
+    return elle::os::environ([](auto const& k, auto const& v) {
+        return ((starts_with(k, "INFINIT_") || starts_with(k, "ELLE_"))
+                && v != banished_log_level);
+      });
   }
 
   uint16_t
@@ -1437,8 +1434,8 @@ namespace
     }
     ELLE_TRACE("look for Infinit related environment")
     {
-      auto env = infinit_related_environment();
-      result.environment = {env};
+      auto env = infinit_related_environ();
+      result.environ = {env};
     }
     ELLE_TRACE("check permissions")
     {
@@ -1590,7 +1587,7 @@ namespace
             storage_names.emplace_back(network.model->storage->name);
         }
         auto faulty = std::vector<std::string>{};
-        status = storage_names.size() == 0 || std::all_of(
+        status = storage_names.empty() || std::all_of(
           storage_names.begin(),
           storage_names.end(),
           [&] (std::string const& name) -> bool

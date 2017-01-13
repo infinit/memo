@@ -4,7 +4,7 @@
 
 namespace reporting
 {
-  using Environment = std::unordered_map<std::string, std::string>;
+  using Environ = elle::os::Environ;
 
   struct Result
   {
@@ -356,15 +356,15 @@ namespace reporting
       uint64_t capacity;
     };
 
-    struct EnvironmentResult
+    struct EnvironResult
       : public reporting::Result
     {
       /*-------------.
       | Construction |
       `-------------*/
-      EnvironmentResult() = default;
-      EnvironmentResult(Environment const& environment);
-      EnvironmentResult(elle::serialization::SerializerIn& s);
+      EnvironResult() = default;
+      EnvironResult(Environ const& environ);
+      EnvironResult(elle::serialization::SerializerIn& s);
 
       /*---------.
       | Printing |
@@ -383,7 +383,7 @@ namespace reporting
       /*-----------.
       | Attributes |
       `-----------*/
-      Environment environment;
+      Environ environ;
     };
 
     struct PermissionResult
@@ -473,7 +473,7 @@ namespace reporting
     ELLE_ATTRIBUTE_R(bool, only);
     UserResult user;
     SpaceLeft space_left;
-    EnvironmentResult environment;
+    EnvironResult environ;
     PermissionResults permissions;
     FuseResult fuse;
   };
