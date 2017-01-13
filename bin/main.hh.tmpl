@@ -2080,17 +2080,17 @@ namespace infinit
     networks_get(
       boost::optional<infinit::User> self, bool require_linked = false) const
     {
-      namespace boost_fs = boost::filesystem;
+      namespace bfs = boost::filesystem;
       std::vector<Network> res;
       auto extract =
         [&] (boost::filesystem::path const& path, bool move) {
-          for (boost_fs::recursive_directory_iterator it(path);
-               it != boost_fs::recursive_directory_iterator();
+          for (bfs::recursive_directory_iterator it(path);
+               it != bfs::recursive_directory_iterator();
                ++it)
           {
             if (!is_regular_file(it->status()) || is_hidden_file(it->path()))
               continue;
-            boost_fs::ifstream f;
+            bfs::ifstream f;
             this->_open_read(
               f, it->path(), "network", it->path().filename().string());
             auto network =
@@ -2216,15 +2216,15 @@ namespace infinit
     std::vector<Drive>
     drives_get() const
     {
-      namespace boost_fs = boost::filesystem;
+      namespace bfs = boost::filesystem;
       std::vector<Drive> res;
-      for (boost_fs::recursive_directory_iterator it(this->_drives_path());
-           it != boost_fs::recursive_directory_iterator();
+      for (bfs::recursive_directory_iterator it(this->_drives_path());
+           it != bfs::recursive_directory_iterator();
            ++it)
       {
         if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
         {
-          boost_fs::ifstream f;
+          bfs::ifstream f;
           this->_open_read(
             f, it->path(), it->path().filename().string(), "drive");
           res.push_back(load<Drive>(f));
@@ -2299,23 +2299,23 @@ namespace infinit
     std::vector<std::pair<Passport, std::string>>
     passports_get(boost::optional<std::string> network = boost::none)
     {
-      namespace boost_fs = boost::filesystem;
+      namespace bfs = boost::filesystem;
       std::vector<std::pair<Passport, std::string>> res;
-      boost_fs::path path;
+      bfs::path path;
       if (network)
         path = this->_passports_path() / network.get();
       else
         path = this->_passports_path();
       if (!boost::filesystem::exists(path))
         return res;
-      for (boost_fs::recursive_directory_iterator it(path);
-           it != boost_fs::recursive_directory_iterator();
+      for (bfs::recursive_directory_iterator it(path);
+           it != bfs::recursive_directory_iterator();
            ++it)
       {
         if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
         {
           auto user_name = it->path().filename().string();
-          boost_fs::ifstream f;
+          bfs::ifstream f;
           this->_open_read(f, it->path(), user_name, "passport");
           auto passport =
             elle::serialization::json::deserialize<infinit::Passport>(f, false);
@@ -2389,15 +2389,15 @@ namespace infinit
     std::vector<User>
     users_get() const
     {
-      namespace boost_fs = boost::filesystem;
+      namespace bfs = boost::filesystem;
       std::vector<User> res;
-      for (boost_fs::recursive_directory_iterator it(this->_users_path());
-           it != boost_fs::recursive_directory_iterator();
+      for (bfs::recursive_directory_iterator it(this->_users_path());
+           it != bfs::recursive_directory_iterator();
            ++it)
       {
         if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
         {
-          boost_fs::ifstream f;
+          bfs::ifstream f;
           this->_open_read(
             f, it->path(), it->path().filename().string(), "user");
           res.push_back(load<User>(f));
@@ -2431,10 +2431,10 @@ namespace infinit
     std::vector<std::unique_ptr<storage::StorageConfig>>
     storages_get()
     {
-      namespace boost_fs = boost::filesystem;
+      namespace bfs = boost::filesystem;
       std::vector<std::unique_ptr<storage::StorageConfig>> res;
-      for (boost_fs::recursive_directory_iterator it(this->_storages_path());
-           it != boost_fs::recursive_directory_iterator();
+      for (bfs::recursive_directory_iterator it(this->_storages_path());
+           it != bfs::recursive_directory_iterator();
            ++it)
       {
         if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
@@ -2492,15 +2492,15 @@ namespace infinit
     std::vector<Volume>
     volumes_get() const
     {
-      namespace boost_fs = boost::filesystem;
+      namespace bfs = boost::filesystem;
       std::vector<Volume> res;
-      for (boost_fs::recursive_directory_iterator it(this->_volumes_path());
-           it != boost_fs::recursive_directory_iterator();
+      for (bfs::recursive_directory_iterator it(this->_volumes_path());
+           it != bfs::recursive_directory_iterator();
            ++it)
       {
         if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
         {
-          boost_fs::ifstream f;
+          bfs::ifstream f;
           this->_open_read(
             f, it->path(), it->path().filename().string(), "volume");
           res.push_back(load<Volume>(f));
