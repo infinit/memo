@@ -326,7 +326,8 @@ namespace infinit
         Endpoints res;
         auto filter = (elle::network::Interface::Filter::only_up |
                        elle::network::Interface::Filter::no_loopback |
-                       elle::network::Interface::Filter::no_autoip);
+                       elle::network::Interface::Filter::no_autoip |
+                       elle::network::Interface::Filter::no_awdl);
         for (auto const& itf: elle::network::Interface::get_map(filter))
         {
           if (!itf.second.ipv4_address.empty()
