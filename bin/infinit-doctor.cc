@@ -36,6 +36,8 @@ ELLE_LOG_COMPONENT("infinit-doctor");
 #include <main.hh>
 #include <networking.hh>
 
+namespace bfs = boost::filesystem;
+
 namespace
 {
   bool no_color = false;
@@ -371,8 +373,7 @@ namespace reporting
     Result::Reason extra_reason)
     : Result(name, sane, extra_reason)
     , faulty_volume(faulty_volume)
-  {
-  }
+  {}
 
   ConfigurationIntegrityResults::DriveResult::DriveResult(
     elle::serialization::SerializerIn& s)
@@ -402,8 +403,7 @@ namespace reporting
     std::string const& name,
     Result::Reason r)
     : Result(name, true, r)
-  {
-  }
+  {}
 
   ConfigurationIntegrityResults::LeftoversResult::LeftoversResult(
     elle::serialization::SerializerIn& s)
@@ -420,8 +420,7 @@ namespace reporting
 
   ConfigurationIntegrityResults::ConfigurationIntegrityResults(bool only)
     : _only(only)
-  {
-  }
+  {}
 
   ConfigurationIntegrityResults::ConfigurationIntegrityResults(
     elle::serialization::SerializerIn& s)
@@ -531,8 +530,7 @@ namespace reporting
     , minimum_ratio(minimum_ratio)
     , available(available)
     , capacity(capacity)
-  {
-  }
+  {}
 
   SystemSanityResults::SpaceLeft::SpaceLeft(
     elle::serialization::SerializerIn& s)
@@ -576,8 +574,7 @@ namespace reporting
                "https://infinit.sh/documentation/environment-variables"}),
              environment.size() != 0)
     , environment(environment)
-  {
-  }
+  {}
 
   SystemSanityResults::EnvironmentResult::EnvironmentResult(
     elle::serialization::SerializerIn& s)
@@ -617,8 +614,7 @@ namespace reporting
     , exists(exists)
     , read(read)
     , write(write)
-  {
-  }
+  {}
 
   SystemSanityResults::PermissionResult::PermissionResult(
     elle::serialization::SerializerIn& s)
@@ -659,8 +655,7 @@ namespace reporting
                "to mount a filesystem interface through FUSE "
                "(visit https://infinit.sh/get-started for more details)"}),
              !sane)
-  {
-  }
+  {}
 
   SystemSanityResults::FuseResult::FuseResult(
     elle::serialization::SerializerIn& s)
@@ -687,8 +682,7 @@ namespace reporting
 
   SystemSanityResults::SystemSanityResults(bool only)
     : _only(only)
-  {
-  }
+  {}
 
   SystemSanityResults::SystemSanityResults(elle::serialization::SerializerIn& s)
   {
@@ -763,8 +757,7 @@ namespace reporting
   ConnectivityResults::InterfaceResults::InterfaceResults(IPs const& ips)
     : Result("Local interfaces", ips.size() > 0)
     , entries(ips)
-  {
-  }
+  {}
 
   ConnectivityResults::InterfaceResults::InterfaceResults(
     elle::serialization::SerializerIn& s)
@@ -777,12 +770,8 @@ namespace reporting
     std::ostream& out, bool verbose) const
   {
     if (this->show(verbose))
-    {
       for (auto const& entry: this->entries)
-      {
         out << std::endl << "  " << entry;
-      }
-    }
   }
 
   void
@@ -803,14 +792,12 @@ namespace reporting
     , local_port(local_port)
     , remote_port(remote_port)
     , internal(internal)
-  {
-  }
+  {}
 
   ConnectivityResults::ProtocolResult::ProtocolResult(std::string const& name,
                                                       std::string const& error)
     : Result(name, false, error)
-  {
-  }
+  {}
 
   void
   ConnectivityResults::ProtocolResult::serialize(
@@ -848,13 +835,11 @@ namespace reporting
   ConnectivityResults::NatResult::NatResult(bool cone)
     : Result("Nat", true)
     , cone(cone)
-  {
-  }
+  {}
 
   ConnectivityResults::NatResult::NatResult(std::string const& error)
     : Result("Nat", false, error)
-  {
-  }
+  {}
 
   ConnectivityResults::NatResult::NatResult(elle::serialization::SerializerIn& s)
   {
@@ -865,11 +850,8 @@ namespace reporting
   ConnectivityResults::NatResult::_print(
     std::ostream& out, bool verbose) const
   {
-    if (this->show(verbose))
-    {
-      if (this->sane())
-        out << " OK (" << (this->cone ? "CONE" : "NOT CONE") << ")";
-    }
+    if (this->show(verbose) && this->sane())
+      out << " OK (" << (this->cone ? "CONE" : "NOT CONE") << ")";
   }
 
   void
@@ -884,8 +866,7 @@ namespace reporting
     uint16_t port)
     : host(host)
     , port(port)
-  {
-  }
+  {}
 
   ConnectivityResults::UPNPResult::RedirectionResult::Address::Address(
     elle::serialization::SerializerIn& s)
@@ -913,8 +894,7 @@ namespace reporting
     bool sane,
     Result::Reason const& reason)
     : Result(name, true, reason, !sane)
-  {
-  }
+  {}
 
   ConnectivityResults::UPNPResult::RedirectionResult::RedirectionResult(
     elle::serialization::SerializerIn& s)
@@ -950,8 +930,7 @@ namespace reporting
   ConnectivityResults::UPNPResult::UPNPResult(bool available)
     : Result("UPNP", available)
     , available(available)
-  {
-  }
+  {}
 
   ConnectivityResults::UPNPResult::UPNPResult(elle::serialization::SerializerIn& s)
   {
@@ -1005,8 +984,7 @@ namespace reporting
 
   ConnectivityResults::ConnectivityResults(bool only)
     : _only(only)
-  {
-  }
+  {}
 
   ConnectivityResults::ConnectivityResults(elle::serialization::SerializerIn& s)
   {
@@ -1065,16 +1043,14 @@ namespace reporting
     : configuration_integrity(false)
     , system_sanity(false)
     , connectivity(false)
-  {
-  }
+  {}
 
   All::All(elle::serialization::SerializerIn& s)
     : configuration_integrity(
       s.deserialize<ConfigurationIntegrityResults>("configuration_integrity"))
     , system_sanity(s.deserialize<SystemSanityResults>("system_sanity"))
     , connectivity(s.deserialize<ConnectivityResults>("connectivity"))
-  {
-  }
+  {}
 
   void
   All::print(std::ostream& out, bool verbose) const
@@ -1124,9 +1100,8 @@ namespace
     // Remove non INFINIT_ or ELLE_ prefixed entries.
     for (auto it = environ.begin(); it != environ.end();)
     {
-      if ((it->first.find("INFINIT_") != 0 &&
-           it->first.find("ELLE_") != 0) ||
-          it->second == banished_log_level)
+      if ((it->first.find("INFINIT_") != 0 && it->first.find("ELLE_") != 0)
+          || it->second == banished_log_level)
         environ.erase(it++);
       else
         ++it;
@@ -1137,29 +1112,29 @@ namespace
   uint16_t
   get_upnp_tcp_port(boost::program_options::variables_map const& args)
   {
-    auto port = optional<uint16_t>(args, "upnp_tcp_port");
-    if (port)
+    if (auto port = optional<uint16_t>(args, "upnp_tcp_port"))
       return *port;
-    return infinit::cryptography::random::generate<uint16_t>(10000, 65535);
+    else
+      return infinit::cryptography::random::generate<uint16_t>(10000, 65535);
   }
 
   uint16_t
   get_upnp_udt_port(boost::program_options::variables_map const& args)
   {
-    auto port = optional<uint16_t>(args, "upnp_udt_port");
-    if (port)
+    if (auto port = optional<uint16_t>(args, "upnp_udt_port"))
       return *port;
-    return infinit::cryptography::random::generate<uint16_t>(10000, 65535);
+    else
+      return infinit::cryptography::random::generate<uint16_t>(10000, 65535);
   }
 
   std::string
   get_connectivity_server_address(
     boost::program_options::variables_map const& args)
   {
-    auto address = optional<std::string>(args, "server");
-    if (address)
+    if (auto address = optional<std::string>(args, "server"))
       return *address;
-    return "192.241.139.66";
+    else
+      return "192.241.139.66";
   }
 
   void
@@ -1346,19 +1321,19 @@ namespace
 
   // Return the current user permissions on a given path.
   std::pair<bool, bool>
-  permissions(boost::filesystem::path const& path)
+  permissions(bfs::path const& path)
   {
-    if (!boost::filesystem::exists(path))
+    if (!bfs::exists(path))
       elle::err("%s doesn't exist", path);
-    auto s = boost::filesystem::status(path);
-    bool read = (s.permissions() & boost::filesystem::perms::owner_read)
-      && (s.permissions() & boost::filesystem::perms::others_read);
-    bool write = (s.permissions() & boost::filesystem::perms::owner_write)
-      && (s.permissions() & boost::filesystem::perms::others_write);
+    auto s = bfs::status(path);
+    bool read = (s.permissions() & bfs::perms::owner_read)
+      && (s.permissions() & bfs::perms::others_read);
+    bool write = (s.permissions() & bfs::perms::owner_write)
+      && (s.permissions() & bfs::perms::others_write);
     if (!read)
     {
       boost::system::error_code code;
-      boost::filesystem::recursive_directory_iterator it(path, code);
+      bfs::recursive_directory_iterator it(path, code);
       if (!code)
         read = true;
     }
@@ -1366,8 +1341,8 @@ namespace
     {
       auto p = path / ".tmp";
       boost::system::error_code code;
-      elle::SafeFinally remove([&] { boost::filesystem::remove(p, code); });
-      boost::filesystem::ofstream f;
+      elle::SafeFinally remove([&] { bfs::remove(p, code); });
+      bfs::ofstream f;
       {
         f.open(p, std::ios_base::out);
         f << "test";
@@ -1381,7 +1356,7 @@ namespace
   // Return the permissions as a string:
   // r, w, rw, None, ...
   std::string
-  permissions_string(boost::filesystem::path const& path)
+  permissions_string(bfs::path const& path)
   {
     try
     {
@@ -1391,7 +1366,7 @@ namespace
         res += "r";
       if (perms.second)
         res += "w";
-      if (res.length() == 0)
+      if (res.empty())
         res = "None";
       return res;
     }
@@ -1402,7 +1377,7 @@ namespace
   }
 
   std::pair<bool, std::string>
-  has_permission(boost::filesystem::path const& path,
+  has_permission(bfs::path const& path,
                  bool mandatory = true)
   {
     auto res = permissions_string(path);
@@ -1457,7 +1432,7 @@ namespace
     {
       size_t min = 50 * 1024 * 1024;
       double min_ratio = 0.02;
-      auto f = boost::filesystem::space(infinit::xdg_data_home());
+      auto f = bfs::space(infinit::xdg_data_home());
       result.space_left = {min, min_ratio, f.available, f.capacity};
     }
     ELLE_TRACE("look for Infinit related environment")
@@ -1467,9 +1442,9 @@ namespace
     }
     ELLE_TRACE("check permissions")
     {
-      auto test_permissions = [&] (boost::filesystem::path const& path)
+      auto test_permissions = [&] (bfs::path const& path)
         {
-          if (boost::filesystem::exists(path))
+          if (bfs::exists(path))
           {
             auto perms = permissions(path);
             store(result.permissions, path.string(), true, perms.first,
@@ -1518,9 +1493,9 @@ namespace
 
   template <typename ExpectedType>
   void
-  load(boost::filesystem::path const& path, std::string const& type)
+  load(bfs::path const& path, std::string const& type)
   {
-    boost::filesystem::ifstream i;
+    bfs::ifstream i;
     ifnt._open_read(i, path, type, path.filename().string());
     infinit::load<ExpectedType>(i);
   }
@@ -1605,17 +1580,14 @@ namespace
         auto& status = elem.second.second;
         auto storage_names = std::vector<std::string>{};
         bool linked = network.model != nullptr;
-        if (linked)
+        if (linked && network.model->storage)
         {
-          if (network.model->storage)
-          {
-            if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
-                  network.model->storage.get()))
-              for (auto const& s: strip->storage)
-                storage_names.emplace_back(s->name);
-            else
-              storage_names.emplace_back(network.model->storage->name);
-          }
+          if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
+                network.model->storage.get()))
+            for (auto const& s: strip->storage)
+              storage_names.emplace_back(s->name);
+          else
+            storage_names.emplace_back(network.model->storage->name);
         }
         auto faulty = std::vector<std::string>{};
         status = storage_names.size() == 0 || std::all_of(
@@ -1667,9 +1639,9 @@ namespace
           store(results.drives, drive.name, status, drive.volume);
       }
 
-    namespace bf = boost::filesystem;
+    namespace bf = bfs;
     auto& leftovers = results.leftovers;
-    auto path_contains_file = [](bf::path dir, bf::path file) -> bool
+    auto path_contains_file = [](bfs::path dir, bfs::path file) -> bool
       {
         file.remove_filename();
         auto dir_len = std::distance(dir.begin(), dir.end());
@@ -1678,10 +1650,9 @@ namespace
           return false;
         return std::equal(dir.begin(), dir.end(), file.begin());
       };
-    for (bf::recursive_directory_iterator it(infinit::xdg_data_home());
-         it != boost::filesystem::recursive_directory_iterator();
+    for (auto it = bfs::recursive_directory_iterator(infinit::xdg_data_home());
+         it != bfs::recursive_directory_iterator();
          ++it)
-    {
       if (is_regular_file(it->status()) && !infinit::is_hidden_file(it->path()))
       {
         try
@@ -1715,11 +1686,9 @@ namespace
           store(leftovers, it->path().string(), elle::exception_string());
         }
       }
-    }
-    for (auto it = bf::recursive_directory_iterator(infinit::xdg_cache_home());
-         it != boost::filesystem::recursive_directory_iterator();
+    for (auto it = bfs::recursive_directory_iterator(infinit::xdg_cache_home());
+         it != bfs::recursive_directory_iterator();
          ++it)
-    {
       if (is_regular_file(it->status()) && !infinit::is_hidden_file(it->path()))
       {
         try
@@ -1733,9 +1702,8 @@ namespace
           store(leftovers, it->path().string(), elle::exception_string());
         }
       }
-    }
-    for (auto it = bf::recursive_directory_iterator(infinit::xdg_state_home());
-         it != boost::filesystem::recursive_directory_iterator();
+    for (auto it = bfs::recursive_directory_iterator(infinit::xdg_state_home());
+         it != bfs::recursive_directory_iterator();
          ++it)
       if (is_regular_file(it->status()) && !infinit::is_hidden_file(it->path()))
       {
