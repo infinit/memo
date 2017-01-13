@@ -350,8 +350,8 @@ main(int argc, char** argv)
                 auto path = it->path() / elle::sprintf("%s.json", name);
                 boost::filesystem::ifstream input(path);
                 if (!input.good())
-                  throw elle::Error(elle::sprintf("unable to open %s", path));
-                elle::Buffer contents(
+                  elle::err("unable to open %s", path);
+                auto contents = elle::Buffer(
                   std::string((std::istreambuf_iterator<char>(input)),
                               std::istreambuf_iterator<char>()));
                 ELLE_ASSERT_EQ(
@@ -395,8 +395,8 @@ main(int argc, char** argv)
                 auto path = it->path() / elle::sprintf("%s.bin", name);
                 boost::filesystem::ifstream input(path, std::ios::binary);
                 if (!input.good())
-                  throw elle::Error(elle::sprintf("unable to open %s", path));
-                elle::Buffer contents(
+                  elle::err("unable to open %s", path);
+                auto contents = elle::Buffer(
                   std::string((std::istreambuf_iterator<char>(input)),
                               std::istreambuf_iterator<char>()));
                 ELLE_ASSERT_EQ(

@@ -74,6 +74,7 @@ namespace infinit
       , _root_address(Address::null)
       , _allow_root_creation(allow_root_creation)
       , _map_other_permissions(map_other_permissions)
+      , _prefetching(0)
     {
       auto& dht = dynamic_cast<model::doughnut::Doughnut&>(
         *this->_block_store.get());
@@ -165,9 +166,8 @@ namespace infinit
       }
       catch (infinit::storage::InsufficientSpace const& e)
       {
-
         ELLE_TRACE("store_or_die: %s", e.what());
-        THROW_ENOSPC;
+        THROW_ENOSPC();
       }
       catch(elle::Error const& e)
       {
@@ -404,12 +404,12 @@ namespace infinit
               ELLE_LOG_SCOPE(
                 "migrate old bootstrap block from %s to %s",
                 old_addr, bootstrap_addr);
-              auto nb = elle::make_unique<dht::NB>(
+              auto nb = std::make_unique<dht::NB>(
                 *dn, dn->owner(), bootstrap_name,
                 old->data(), old->signature());
               this->store_or_die(
                 std::move(nb), model::STORE_INSERT,
-                elle::make_unique<BlockMigration>(old_addr, bootstrap_addr));
+                std::make_unique<BlockMigration>(old_addr, bootstrap_addr));
               continue;
             }
             catch (model::MissingBlock const&)
@@ -434,7 +434,7 @@ namespace infinit
                 auto root = dn->make_block<ACLBlock>();
                 auto address = root->address();
                 this->store_or_die(move(root), model::STORE_INSERT,
-                                   elle::make_unique<InsertRootBlock>(address));
+                                   std::make_unique<InsertRootBlock>(address));
                 this->_root_address = address;
               }
               ELLE_TRACE("create missing root bootstrap block")
@@ -444,13 +444,13 @@ namespace infinit
                 auto k =
                   std::make_shared<infinit::cryptography::rsa::PublicKey>(
                     this->owner());
-                auto nb = elle::make_unique<dht::NB>(
+                auto nb = std::make_unique<dht::NB>(
                   *dn, k, bootstrap_name, baddr);
                 auto address = nb->address();
                 this->store_or_die(
                   std::move(nb),
                   model::STORE_INSERT,
-                  elle::make_unique<InsertRootBootstrapBlock>(address));
+                  std::make_unique<InsertRootBootstrapBlock>(address));
                 if (root_cache)
                   boost::filesystem::ofstream(*root_cache) << saddr;
               }
@@ -575,7 +575,7 @@ namespace infinit
         if (it == files.end() || it->second.first != EntryType::directory)
         {
           ELLE_DEBUG("%s: component '%s' is not a directory", this, name);
-          THROW_NOTDIR;
+          THROW_NOTDIR();
         }
         dp = d;
         current_path /= name;

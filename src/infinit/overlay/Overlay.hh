@@ -1,20 +1,19 @@
-#ifndef INFINIT_OVERLAY_OVERLAY_HH
-# define INFINIT_OVERLAY_OVERLAY_HH
+#pragma once
 
-# include <unordered_map>
+#include <unordered_map>
 
-# include <elle/Clonable.hh>
-# include <elle/json/json.hh>
-# include <elle/log.hh>
+#include <elle/Clonable.hh>
+#include <elle/json/json.hh>
+#include <elle/log.hh>
 
-# include <reactor/network/tcp-socket.hh>
-# include <reactor/Generator.hh>
+#include <reactor/network/tcp-socket.hh>
+#include <reactor/Generator.hh>
 
-# include <infinit/model/Address.hh>
-# include <infinit/model/Endpoints.hh>
-# include <infinit/model/doughnut/fwd.hh>
-# include <infinit/model/doughnut/protocol.hh>
-# include <infinit/serialization.hh>
+#include <infinit/model/Address.hh>
+#include <infinit/model/Endpoints.hh>
+#include <infinit/model/doughnut/fwd.hh>
+#include <infinit/model/doughnut/protocol.hh>
+#include <infinit/serialization.hh>
 
 namespace infinit
 {
@@ -30,9 +29,9 @@ namespace infinit
     | Types |
     `------*/
     public:
-      typedef std::shared_ptr<model::doughnut::Peer> Member;
-      typedef std::ambivalent_ptr<model::doughnut::Peer> WeakMember;
-      typedef std::vector<Member> Members;
+      using Member = std::shared_ptr<model::doughnut::Peer>;
+      using WeakMember = std::ambivalent_ptr<model::doughnut::Peer>;
+      using Members = std::vector<Member>;
 
     /*-------------.
     | Construction |
@@ -191,5 +190,3 @@ namespace infinit
     };
   }
 }
-
-#endif

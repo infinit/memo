@@ -92,8 +92,7 @@ namespace infinit
         throw Collision(key);
       boost::filesystem::ofstream output(path, std::ios::binary);
       if (!output.good())
-        throw elle::Error(
-          elle::sprintf("unable to open for writing: %s", path));
+        elle::err("unable to open for writing: %s", path);
       output.write(
         reinterpret_cast<const char*>(value.contents()), value.size());
       if (insert && update)
@@ -181,7 +180,7 @@ namespace infinit
     std::unique_ptr<infinit::storage::Storage>
     FilesystemStorageConfig::make()
     {
-      return elle::make_unique<infinit::storage::Filesystem>(this->path,
+      return std::make_unique<infinit::storage::Filesystem>(this->path,
                                                              this->capacity);
     }
 

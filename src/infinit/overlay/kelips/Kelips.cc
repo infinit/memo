@@ -73,9 +73,9 @@ namespace elle
 
 struct PrettyEndpoint
 {
-  PrettyEndpoint(
-    infinit::overlay::kelips::Endpoint const& e)
-    : _repr(e.address().to_string() + ":" + std::to_string(e.port()))
+  using Endpoint = infinit::overlay::kelips::Endpoint;
+  PrettyEndpoint(Endpoint const& e)
+    : _repr(elle::sprintf("%s:%s", e.address(), e.port()))
   {}
 
   PrettyEndpoint(elle::serialization::Serializer& input)
@@ -93,12 +93,12 @@ struct PrettyEndpoint
     s.serialize_forward(this->_repr);
   }
 
-  operator infinit::overlay::kelips::Endpoint()
+  operator Endpoint()
   {
     size_t sep = this->_repr.find_last_of(':');
     auto a = boost::asio::ip::address::from_string(this->_repr.substr(0, sep));
     int p = std::stoi(this->_repr.substr(sep + 1));
-    return infinit::overlay::kelips::Endpoint(a, p);
+    return {a, p};
   }
 
   ELLE_ATTRIBUTE_R(std::string, repr);
@@ -140,7 +140,7 @@ namespace infinit
         auto hit = std::find_if(endpoints.begin(), endpoints.end(),
             [&](TimedEndpoint const& e) { return e.first == entry;});
         if (hit == endpoints.end())
-          endpoints.push_back(TimedEndpoint(entry, now()));
+          endpoints.emplace_back(entry, now());
         else
           hit->second = std::max(t, hit->second);
       }
@@ -214,7 +214,7 @@ namespace infinit
         for (auto const& r: src)
         {
           auto it = std::find_if(dst.begin(), dst.end(),
-            [&]( const NodeLocation& a)
+            [&](const NodeLocation& a)
             {
               return a.id() == r.id();
             });
@@ -223,11 +223,13 @@ namespace infinit
           else
           {
             for (auto const& ep: r.endpoints())
-              if (std::find(it->endpoints().begin(), it->endpoints().end(), ep) == it->endpoints().end())
+              if (std::find(it->endpoints().begin(), it->endpoints().end(), ep)
+                  == it->endpoints().end())
                 it->endpoints().push_back(ep);
           }
         }
       }
+
       namespace packet
       {
         static bool disable_compression = elle::os::inenv("KELIPS_DISABLE_COMPRESSION");
@@ -249,7 +251,7 @@ namespace infinit
           return buf;
         }
 
-#define REGISTER(classname, type) \
+#define REGISTER(classname, type)                               \
         static const elle::serialization::Hierarchy<Packet>::   \
         Register<classname>                                     \
         _registerPacket##classname(type)
@@ -295,10 +297,9 @@ namespace infinit
             if (dn.version() >= elle::Version(0, 7, 0) && !disable_compression)
               input.set_context(CompressPeerLocations{});
             input.set_context(&dn);
-            std::unique_ptr<packet::Packet> packet;
-            input.serialize_forward(packet);
-            return packet;
-
+            auto res = std::unique_ptr<packet::Packet>{};
+            input.serialize_forward(res);
+            return res;
           }
 
           void encrypt(infinit::cryptography::SecretKey const& k,
@@ -382,9 +383,7 @@ namespace infinit
 
         struct Ping: public Packet
         {
-          Ping()
-          {}
-
+          Ping() = default;
           Ping(elle::serialization::SerializerIn& input)
           {
             serialize(input);
@@ -404,19 +403,14 @@ namespace infinit
 
         struct Pong: public Ping
         {
-          Pong()
-          {}
-          Pong(elle::serialization::SerializerIn& input)
-            : Ping(input)
-          {}
+          using Super = Ping;
+          using Super::Super;
         };
         REGISTER(Pong, "pong");
 
         struct BootstrapRequest: public Packet
         {
-          BootstrapRequest()
-          {}
-
+          BootstrapRequest() = default;
           BootstrapRequest(elle::serialization::SerializerIn& input)
           {
             serialize(input);
@@ -433,9 +427,7 @@ namespace infinit
 
         struct FileBootstrapRequest: public Packet
         {
-          FileBootstrapRequest()
-          {}
-
+          FileBootstrapRequest() = default;
           FileBootstrapRequest(elle::serialization::SerializerIn& input)
           {
             serialize(input);
@@ -457,9 +449,7 @@ namespace infinit
 
         struct Gossip: public Packet
         {
-          Gossip()
-          {}
-
+          Gossip() = default;
           Gossip(elle::serialization::SerializerIn& input)
           {
             serialize(input);
@@ -468,6 +458,8 @@ namespace infinit
           void
           serialize(elle::serialization::Serializer& s)
           {
+            using Cfiles
+              = std::unordered_multimap<Address, std::pair<Time, int>>;
             s.serialize("sender", sender);
             s.serialize("observer", observer);
             s.serialize("contacts", contacts);
@@ -477,7 +469,7 @@ namespace infinit
             { // out
               std::vector<Address> addresses;
               std::unordered_map<Address, int> index;
-              std::unordered_multimap<Address, std::pair<Time, int>> cfiles;
+              auto cfiles = Cfiles{};
               for (auto f: files)
               {
                 auto addr = f.second.second;
@@ -499,15 +491,14 @@ namespace infinit
             }
             else
             { // in
-              std::vector<Address> addresses;
-              std::unordered_multimap<Address, std::pair<Time, int>> cfiles;
-              s.serialize("file_addresses", addresses);
-              s.serialize("file_files", cfiles);
+              auto& sin = static_cast<elle::serialization::SerializerIn&>(s);
+              auto addresses = sin.deserialize<std::vector<Address>>("file_addresses");
+              auto cfiles = sin.deserialize<Cfiles>("file_files");
               files.clear();
               for (auto c: cfiles)
-                files.insert(std::make_pair(
-                  c.first,
-                  std::make_pair(c.second.first, addresses.at(c.second.second))));
+                files.emplace(c.first,
+                              std::make_pair(c.second.first,
+                                             addresses.at(c.second.second)));
             }
           }
           // address -> (last_seen, val)
@@ -565,13 +556,11 @@ namespace infinit
 
         static
         void
-        result_in(elle::serialization::Serializer& s,
+        result_in(elle::serialization::SerializerIn& s,
                   std::vector<NodeLocations> & results)
         {
-          NodeLocations locs;
-          std::vector<std::vector<int>> input;
-          s.serialize("result_endpoints", locs);
-          s.serialize("result_indexes", input);
+          auto locs = s.deserialize<NodeLocations>("result_endpoints");
+          auto input = s.deserialize<std::vector<std::vector<int>>>("result_indexes");
           results.clear();
           for (auto const& o: input)
           {
@@ -611,15 +600,16 @@ namespace infinit
             s.serialize("address", fileAddresses);
             s.serialize("ttl", ttl);
             s.serialize("count", count);
-            if (!serialize_compress(s))
-               s.serialize("result", results);
-            else
+            if (serialize_compress(s))
             {
-               if (s.in())
-                 result_in(s, results);
-               else
-                 result_out(s, results);
+              if (s.in())
+                result_in(static_cast<elle::serialization::SerializerIn&>(s),
+                          results);
+              else
+                result_out(s, results);
             }
+            else
+              s.serialize("result", results);
           }
 
           int request_id;
@@ -651,15 +641,16 @@ namespace infinit
             s.serialize("id", request_id);
             s.serialize("origin", origin);
             s.serialize("address", fileAddresses);
-            if (!serialize_compress(s))
-               s.serialize("result", results);
-            else
+            if (serialize_compress(s))
             {
-               if (s.in())
-                 result_in(s, results);
-               else
-                 result_out(s, results);
+              if (s.in())
+                result_in(static_cast<elle::serialization::SerializerIn&>(s),
+                          results);
+              else
+                result_out(s, results);
             }
+            else
+              s.serialize("result", results);
             s.serialize("ttl", ttl);
           }
 
@@ -1044,8 +1035,7 @@ namespace infinit
       Node::~Node()
       {
         ELLE_TRACE_SCOPE("%s: destruct", this);
-        if (this->local())
-          this->local()->utp_server()->socket()->unregister_reader("KELIPSGS");
+        this->doughnut()->dock().utp_server().socket()->unregister_reader("KELIPSGS");
         _emitter_thread.reset();
         _pinger_thread.reset();
         this->_state.contacts.clear();
@@ -1059,23 +1049,19 @@ namespace infinit
         try
         {
           ELLE_DEBUG_SCOPE("establish UTP connection");
-          infinit::model::doughnut::Remote peer(
-            elle::unconst(*this->doughnut()),
-            location.id(),
-            location.endpoints(),
-            elle::unconst(this)->doughnut()->dock().utp_server(),
+          auto peer = this->doughnut()->dock().make_peer(location,
             model::EndpointsRefetcher(
-              std::bind(&Node::_refetch_endpoints, this, location.id())),
-            this->_config.rpc_protocol);
-          peer.connect(5_sec);
+              std::bind(&Node::_refetch_endpoints, this, location.id()))).lock();
+          auto& remote = dynamic_cast<model::doughnut::Remote&>(*peer);
+          remote.connect(5_sec);
           if (this->doughnut()->version() < elle::Version(0, 7, 0) || packet::disable_compression)
           {
-            auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
+            auto rpc = remote.make_rpc<SerState()>("kelips_fetch_state");
             return rpc();
           }
           else
           {
-            auto rpc = peer.make_rpc<SerState2()>("kelips_fetch_state2");
+            auto rpc = remote.make_rpc<SerState2()>("kelips_fetch_state2");
             SerState2 state = rpc();
             SerState res;
             for (auto const& c: state.first)
@@ -1221,11 +1207,11 @@ namespace infinit
             std::placeholders::_2));
         ELLE_LOG("%s: listening on %s",
           this, this->doughnut()->dock().utp_server().local_endpoint());
+        this->_pinger_thread.reset(
+          new reactor::Thread(
+            "pinger", std::bind(&Node::pinger, this)));
         if (!_observer)
         {
-          this->_pinger_thread.reset(
-            new reactor::Thread(
-              "pinger", std::bind(&Node::pinger, this)));
           this->_emitter_thread.reset(
             new reactor::Thread(
               "emitter", std::bind(&Node::gossipEmitter, this)));
@@ -1262,7 +1248,7 @@ namespace infinit
         }
         else
         {
-          _keys.insert(std::make_pair(a, std::make_pair(std::move(sk), observer)));
+          _keys.emplace(a, std::make_pair(std::move(sk), observer));
         }
       }
 
@@ -1638,6 +1624,7 @@ namespace infinit
         {
           packet::Pong r;
           r.sender = _self;
+          r.observer = this->_observer;
           r.remote_endpoint = source;
           send(r, source, p->sender);
         }
@@ -3098,6 +3085,7 @@ namespace infinit
         std::uniform_int_distribution<> random(0, _config.ping_interval_ms);
         int v = random(_gen);
         reactor::sleep(boost::posix_time::milliseconds(v));
+        int counter = 0;
         while (true)
         {
           ELLE_DUMP("%s: sleep for %s ms", *this, _config.ping_interval_ms);
@@ -3141,9 +3129,22 @@ namespace infinit
           }
           packet::Ping p;
           p.sender = _self;
+          p.observer = this->_observer;
           ELLE_DUMP("%s: pinging %x", *this, target->address);
           _ping_time[target->address] = now();
           send(p, *target);
+          ++counter;
+          if (this->_observer && ! (counter % 50))
+          {
+            // observers get notified on new peers upon discovery by
+            // non-observer nodes. But it might fail if the packet is lost,
+            // or if the observer was dropped from the other's contact tables.
+            // so, periodically make a BootstrapRequest to get contacts.
+            packet::BootstrapRequest p;
+            p.sender = _self;
+            p.observer = true;
+            send(p, *target);
+          }
         }
       }
 
@@ -3189,6 +3190,21 @@ namespace infinit
               ++it;
           }
           ++idx;
+        }
+        // check observers too
+        {
+          auto it = this->_state.observers.begin();
+          while (it != this->_state.observers.end())
+          {
+            endpoints_cleanup(it->second.endpoints, now() - contact_timeout);
+            if (it->second.endpoints.empty())
+            {
+              ELLE_LOG("%s: erase %s from observers", *this, it->second);
+              it = this->_state.observers.erase(it);
+            }
+            else
+              ++it;
+          }
         }
         // Check ping timeouts
         auto today = now();
@@ -3410,6 +3426,17 @@ namespace infinit
       void
       Node::process_update(SerState const& s)
       {
+        auto notify_observers = [this](NodeLocation const& nl)
+        {
+          packet::Gossip p;
+          p.sender = this->id();
+          p.observer = false;
+          auto& c = p.contacts[nl.id()];
+          for (auto const& e: nl.endpoints())
+            c.emplace_back(e, now());
+          for (auto& obs: this->_state.observers)
+            this->send(p, obs.second);
+        };
         if (this->_observer)
           ELLE_WARN("Unexpected update received from observer");
         ELLE_DEBUG("register %s contacts and %s blocks",
@@ -3433,6 +3460,7 @@ namespace infinit
               ELLE_LOG("%s: register %f", this, contact);
               target[c.first] = std::move(contact);
               this->on_discover()(nl, false);
+              notify_observers(nl);
             }
           }
           else
@@ -3444,6 +3472,7 @@ namespace infinit
               it->second.discovered = true;
               NodeLocation nl(it->first, endpoints_extract(it->second.endpoints));
               this->on_discover()(nl, false);
+              notify_observers(nl);
             }
           }
         }
@@ -3603,10 +3632,10 @@ namespace infinit
             it->second.first.reset(new reactor::Thread("async_lookup",
               async_lookup));
             // and fast fail
-            throw elle::Error(elle::sprintf("Node %s not found", address));
+            elle::err("Node %s not found", address);
           }
           else // thread still running
-            throw elle::Error(elle::sprintf("Node %s not found", address));
+            elle::err("Node %s not found", address);
         }
         boost::optional<NodeLocation> result;
         elle::unconst(this)->kelipsGet(
@@ -3618,7 +3647,7 @@ namespace infinit
         { // mark for future fast fail
           _node_lookups.insert(std::make_pair(address, std::make_pair(
             reactor::Thread::unique_ptr(), false)));
-          throw elle::Error(elle::sprintf("Node %s not found", address));
+          elle::err("Node %s not found", address);
         }
         return make_peer(*result);
       }
@@ -3654,7 +3683,7 @@ namespace infinit
             else if (*v == "all")
               _config.rpc_protocol = Protocol::all;
             else
-              throw elle::Error("Invalid protocol");
+              elle::err("Invalid protocol");
           }
         }
         if (k == "stats")
@@ -3670,6 +3699,27 @@ namespace infinit
           rtts.push_back(
             std::chrono::duration_cast<std::chrono::microseconds>(c.second.rtt).count());
           res["ping_rtt"] = rtts;
+          elle::json::Array observers;
+          for (auto& contact: this->_state.observers)
+          {
+            auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
+              (std::chrono::system_clock::now() -
+               endpoints_max(contact.second.endpoints));
+            elle::json::Array endpoints;
+            for (auto const pair: contact.second.endpoints)
+              endpoints.push_back(PrettyEndpoint(pair.first).repr());
+            elle::json::Object obs {
+              { "id", elle::sprintf("%x", contact.second.address) },
+              { "validated_endpoint",
+                elle::sprintf("%s", (contact.second.validated_endpoint
+                  ? PrettyEndpoint(contact.second.validated_endpoint->first)
+                  : PrettyEndpoint(Endpoint())).repr()) },
+              { "endpoints", endpoints },
+              { "last_seen", elle::sprintf("%ss", last_seen.count()) },
+            };
+            observers.push_back(obs);
+          }
+          res["observers"] = observers;
         }
         if (k == "blockcount")
         {
@@ -3974,7 +4024,7 @@ namespace infinit
       Configuration::make(std::shared_ptr<model::doughnut::Local> local,
                           model::doughnut::Doughnut* dht)
       {
-        return elle::make_unique<Node>(*this, std::move(local), dht);
+        return std::make_unique<Node>(*this, std::move(local), dht);
       }
 
       static const

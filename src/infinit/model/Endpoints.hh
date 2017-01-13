@@ -55,7 +55,11 @@ namespace infinit
       tcp() const;
       std::vector<boost::asio::ip::udp::endpoint>
       udp() const;
-      void
+      /** Merge endpoints without duplicates.
+       *
+       *  @return Whether any endpoint was added.
+       */
+      bool
       merge(Endpoints const&);
     };
 
@@ -72,7 +76,7 @@ namespace infinit
     operator <<(std::ostream& output, NodeLocation const& loc);
 
     using NodeLocations = std::vector<NodeLocation>;
-    using EndpointsRefetcher = std::function<boost::optional<Endpoints> ()>;
+    using EndpointsRefetcher = std::function<boost::optional<Endpoints> (Address)>;
 
 
     Endpoints

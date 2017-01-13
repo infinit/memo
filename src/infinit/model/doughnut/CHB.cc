@@ -140,7 +140,7 @@ namespace infinit
           auto* acb = dynamic_cast<ACB*>(block.get());
           if (!acb)
           {
-            ELLE_WARN("CHB owner %x is not an ACB, cannot signe remove request",
+            ELLE_WARN("CHB owner %x is not an ACB, cannot sign remove request",
               this->_owner);
           }
           else
@@ -259,7 +259,7 @@ namespace infinit
           saltowner.append(owner.value(), sizeof(Address::Value));
         elle::IOStream stream(saltowner.istreambuf_combine(content));
         elle::Buffer hash;
-        if (content.size() > 262144)
+        if (content.size() > 262144 && reactor::Scheduler::scheduler())
         {
           reactor::background([&] {
               hash = cryptography::hash(stream, cryptography::Oneway::sha256);

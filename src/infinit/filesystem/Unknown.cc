@@ -95,7 +95,7 @@ namespace infinit
       else
         this->_owner.store_or_die(
           std::move(b), model::STORE_INSERT,
-          elle::make_unique<NewFolderResolver>(
+          std::make_unique<NewFolderResolver>(
             (this->_parent->_path / _name)));
       ELLE_ASSERT_EQ(this->_parent->_files.find(this->_name),
                      this->_parent->_files.end());
@@ -200,7 +200,7 @@ namespace infinit
       if (_parent->_files.find(_name) != _parent->_files.end())
       {
         if (flags & O_EXCL)
-          THROW_EXIST;
+          THROW_EXIST();
         ELLE_WARN("File %s exists where it should not", _name);
         File f(_owner, _parent->_files.at(_name).second, {}, _parent, _name);
         return f.open(flags, mode);
@@ -320,7 +320,7 @@ namespace infinit
       auto addr = b->address();
       _owner.store_or_die(
         std::move(b), model::STORE_INSERT,
-        elle::make_unique<NewSymlinkResolver>(this->_parent->_path / this->_name,
+        std::make_unique<NewSymlinkResolver>(this->_parent->_path / this->_name,
                                               where));
       this->_parent->_files.emplace(
         this->_name, std::make_pair(EntryType::symlink, addr));

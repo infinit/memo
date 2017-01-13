@@ -128,7 +128,7 @@ namespace infinit
         auto const& dht = dynamic_cast<Doughnut const&>(model);
         auto& keys = dht.keys();
         if (keys.K() != this->_key && keys.K() != *dht.owner())
-          throw elle::Error("Only block owner and network owner can delete UB");
+          elle::err("Only block owner and network owner can delete UB");
         auto to_sign = elle::serialization::binary::serialize((Block*)elle::unconst(this));
         auto signature = keys.k().sign(to_sign);
         blocks::RemoveSignature res;

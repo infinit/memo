@@ -75,7 +75,7 @@ namespace infinit
         std::unique_ptr<Storage> backend = elle::Factory<Storage>::instantiate(name, bargs);
         backends.push_back(std::move(backend));
       }
-      return elle::make_unique<Strip>(std::move(backends));
+      return std::make_unique<Strip>(std::move(backends));
     }
 
 
@@ -106,7 +106,7 @@ namespace infinit
       std::vector<std::unique_ptr<infinit::storage::Storage>> s;
       for(auto const& c: storage)
         s.push_back(c->make());
-      return elle::make_unique<infinit::storage::Strip>(
+      return std::make_unique<infinit::storage::Strip>(
         std::move(s));
     }
 

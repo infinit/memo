@@ -21,7 +21,7 @@ namespace infinit
         std::string const& v = args[3];
         salt = (v == "1" || v == "yes" || v == "true");
       }
-      return elle::make_unique<Crypt>(std::move(backend), password, salt);
+      return std::make_unique<Crypt>(std::move(backend), password, salt);
     }
 
     typedef  infinit::cryptography::SecretKey SecretKey;
@@ -91,7 +91,7 @@ namespace infinit
     std::unique_ptr<infinit::storage::Storage>
     CryptStorageConfig::make()
     {
-      return elle::make_unique<infinit::storage::Crypt>(
+      return std::make_unique<infinit::storage::Crypt>(
         storage->make(), password, salt);
     }
 

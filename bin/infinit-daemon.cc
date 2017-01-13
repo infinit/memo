@@ -172,7 +172,7 @@ void link_network(std::string const& name,
   ELLE_TRACE("checking if any user is owner");
   for (auto const& u: users)
   {
-    if (u.public_key == desc.owner)
+    if (u.public_key == desc.owner && u.private_key)
     {
       passport.emplace(u.public_key, desc.name,
         infinit::cryptography::rsa::KeyPair(u.public_key,
@@ -563,8 +563,13 @@ MountManager::start(std::string const& name,
     elle::err("already mounted: %s", volume.name);
   try
   {
-    auto nname = split(volume.network);
-    auto net = ifnt.network_get(nname.first, nname.second, true);
+    infinit::User u = [&] {
+      if (volume.mount_options.as)
+        return ifnt.user_get(*volume.mount_options.as);
+      else
+        return ifnt.user_get(volume.network.substr(0, volume.network.find_first_of('/')));
+    }();
+    auto net = ifnt.network_get(volume.network, u, true);
   }
   catch (infinit::MissingLocalResource const&)
   {
@@ -852,7 +857,11 @@ MountManager::create_volume(std::string const& name,
   auto user = ifnt.user_get(*username);
   auto netname = optional(options, "network");
   if (!netname)
+  {
+    if (!this->_default_network)
+      elle::err("either network or a default network must be set");
     netname = this->_default_network;
+  }
   auto nname = *netname;
   if (nname.find("/") == nname.npos)
     nname = *username + "/" + nname;

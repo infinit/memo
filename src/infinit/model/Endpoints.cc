@@ -176,12 +176,17 @@ namespace infinit
       return res;
     }
 
-    void
+    bool
     Endpoints::merge(Endpoints const& b)
     {
+      bool res = false;
       for (auto const& e: b)
         if (std::find(this->begin(), this->end(), e) == this->end())
+        {
           this->emplace_back(e);
+          res = true;
+        }
+      return res;
     }
 
     NodeLocation::NodeLocation(model::Address id, Endpoints endpoints)

@@ -90,7 +90,7 @@ namespace infinit
         latency_set = boost::posix_time::milliseconds(std::stoi(args[3]));
       if (args.size() > 4)
         latency_erase = boost::posix_time::milliseconds(std::stoi(args[4]));
-      return elle::make_unique<Latency>(std::move(backend),
+      return std::make_unique<Latency>(std::move(backend),
         latency_get, latency_set, latency_erase);
     }
 
@@ -130,7 +130,7 @@ namespace infinit
       std::unique_ptr<infinit::storage::Storage>
       make() override
       {
-        return elle::make_unique<infinit::storage::Latency>(
+        return std::make_unique<infinit::storage::Latency>(
           storage->make(), latency_get , latency_set, latency_erase);
       }
     };

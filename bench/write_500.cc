@@ -6,18 +6,19 @@
 
 ELLE_LOG_COMPONENT("bench");
 
+using Consensus = infinit::model::doughnut::consensus::Consensus;
+
 class NoCheatConsensus:
-  public infinit::model::doughnut::consensus::Consensus
+  public Consensus
 {
 public:
-  typedef infinit::model::doughnut::consensus::Consensus Super;
+  using Super = Consensus;
   NoCheatConsensus(std::unique_ptr<Super> backend)
     : Super(backend->doughnut())
     , _backend(std::move(backend))
   {}
 
 protected:
-  virtual
   std::unique_ptr<infinit::model::doughnut::Local>
   make_local(boost::optional<int> port,
              boost::optional<boost::asio::ip::address> listen,
@@ -27,28 +28,27 @@ protected:
     return _backend->make_local(port, listen, std::move(storage), p);
   }
 
-  virtual
   std::unique_ptr<infinit::model::blocks::Block>
   _fetch(infinit::model::Address address,
          boost::optional<int> local_version) override
   {
     auto res = _backend->fetch(address, local_version);
-    if (!res)
-      return res;
-    elle::Buffer buf;
+    if (res)
     {
-      elle::IOStream os(buf.ostreambuf());
-      elle::serialization::binary::serialize(res, os);
+      elle::Buffer buf;
+      {
+        elle::IOStream os(buf.ostreambuf());
+        elle::serialization::binary::serialize(res, os);
+      }
+      elle::IOStream is(buf.istreambuf());
+      elle::serialization::Context ctx;
+      ctx.set(&doughnut());
+      res = elle::serialization::binary::deserialize<
+        std::unique_ptr<blocks::Block>>(is, true, ctx);
     }
-    elle::IOStream is(buf.istreambuf());
-    elle::serialization::Context ctx;
-    ctx.set(&doughnut());
-    res = elle::serialization::binary::deserialize<
-      std::unique_ptr<blocks::Block>>(is, true, ctx);
     return res;
   }
 
-  virtual
   void
   _store(std::unique_ptr<infinit::model::blocks::Block> block,
     infinit::model::StoreMode mode,
@@ -57,7 +57,6 @@ protected:
     this->_backend->store(std::move(block), mode, std::move(resolver));
   }
 
-  virtual
   void
   _remove(infinit::model::Address address,
           infinit::model::blocks::RemoveSignature rs) override
@@ -82,16 +81,14 @@ protected:
   std::unique_ptr<Super> _backend;
 };
 
-std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
-no_cheat_consensus(
-  std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
+std::unique_ptr<Consensus>
+no_cheat_consensus(std::unique_ptr<Consensus> c)
 {
-  return elle::make_unique<NoCheatConsensus>(std::move(c));
+  return std::make_unique<NoCheatConsensus>(std::move(c));
 }
 
-std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
-same_consensus(
-  std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
+std::unique_ptr<Consensus>
+same_consensus(std::unique_ptr<Consensus> c)
 {
   return c;
 }
@@ -102,8 +99,8 @@ public:
   template <typename ... Args>
   DHTs(int count)
    : DHTs(count, {})
-  {
-  }
+  {}
+
   template <typename ... Args>
   DHTs(int count,
        boost::optional<infinit::cryptography::rsa::KeyPair> kp,
@@ -131,8 +128,8 @@ public:
   {
     Client(std::string const& name, DHT dht)
       : dht(std::move(dht))
-      , fs(elle::make_unique<reactor::filesystem::FileSystem>(
-             elle::make_unique<infinit::filesystem::FileSystem>(
+      , fs(std::make_unique<reactor::filesystem::FileSystem>(
+             std::make_unique<infinit::filesystem::FileSystem>(
                name, this->dht.dht,
                infinit::filesystem::allow_root_creation = true),
              true))
@@ -149,15 +146,15 @@ public:
          Args... args)
   {
     auto k = kp ? *kp
-        : new_key ? infinit::cryptography::rsa::keypair::generate(512)
-          : this->owner_keys;
+      : new_key ? infinit::cryptography::rsa::keypair::generate(512)
+      : this->owner_keys;
     ELLE_LOG("new client with owner=%f key=%f", this->owner_keys.K(), k.K());
     DHT client(owner = this->owner_keys,
                keys = k,
                storage = nullptr,
                make_consensus = no_cheat_consensus,
                paxos = pax,
-               std::forward<Args>(args) ...
+               std::forward<Args>(args)...
                );
     for (auto& dht: this->dhts)
       dht.overlay->connect(*client.overlay);

@@ -1,10 +1,9 @@
-#ifndef INFINIT_STORAGE_DROPBOX_HH
-# define INFINIT_STORAGE_DROPBOX_HH
+#pragma once
 
-# include <dropbox/Dropbox.hh>
+#include <dropbox/Dropbox.hh>
 
-# include <infinit/storage/Key.hh>
-# include <infinit/storage/Storage.hh>
+#include <infinit/storage/Key.hh>
+#include <infinit/storage/Storage.hh>
 
 namespace infinit
 {
@@ -20,19 +19,14 @@ namespace infinit
       ~Dropbox();
 
     protected:
-      virtual
       elle::Buffer
       _get(Key k) const override;
-      virtual
       int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
-      virtual
       int
       _erase(Key k) override;
-      virtual
       std::vector<Key>
       _list() override;
-      virtual
       BlockStatus
       _status(Key k) override;
       ELLE_ATTRIBUTE(dropbox::Dropbox, dropbox);
@@ -54,15 +48,11 @@ namespace infinit
       DropboxStorageConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;
-      virtual
       std::unique_ptr<infinit::storage::Storage>
       make() override;
 
       std::string token;
       boost::optional<std::string> root;
     };
-
   }
 }
-
-#endif

@@ -6,8 +6,8 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos.test");
 
 ELLE_TEST_SCHEDULED(availability_2)
 {
-  auto a = elle::make_unique<DHT>();
-  auto b = elle::make_unique<DHT>();
+  auto a = std::make_unique<DHT>();
+  auto b = std::make_unique<DHT>();
   a->overlay->connect(*b->overlay);
   auto block = a->dht->make_block<infinit::model::blocks::MutableBlock>();
   block->data(elle::Buffer("foo"));
@@ -23,9 +23,9 @@ ELLE_TEST_SCHEDULED(availability_2)
 
 ELLE_TEST_SCHEDULED(availability_3)
 {
-  auto a = elle::make_unique<DHT>();
-  auto b = elle::make_unique<DHT>();
-  auto c = elle::make_unique<DHT>();
+  auto a = std::make_unique<DHT>();
+  auto b = std::make_unique<DHT>();
+  auto c = std::make_unique<DHT>();
   a->overlay->connect(*b->overlay);
   a->overlay->connect(*c->overlay);
   b->overlay->connect(*c->overlay);
