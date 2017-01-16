@@ -1186,7 +1186,7 @@ namespace infinit
       infinit::cryptography::rsa::Padding::pkcs1,
       infinit::cryptography::Oneway::sha256);
     auto encoded_signature = elle::format::base64::encode(signature);
-    std::unordered_map<std::string, std::string> res = {
+    Headers res = {
       { "infinit-signature", encoded_signature.string() },
       { "infinit-time", now },
       { "infinit-user", self.name },
