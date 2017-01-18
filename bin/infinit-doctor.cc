@@ -174,13 +174,29 @@ namespace
     {
       if (!container.empty())
         out << ":\n";
-      for (auto const& item: container)
+      // Because print can be called from a const method, store indexes and sort
+      // them.
+      std::vector<size_t> indexes(container.size());
+      std::iota(indexes.begin(), indexes.end(), 0);
+      std::sort(indexes.begin(), indexes.end(),
+                [&container](auto i1, auto i2)
+                {
+                  auto const& l = container[i1];
+                  auto const& r = container[i2];
+                  return
+                    std::forward_as_tuple(l.sane(), !l.warning(), l.name())
+                    < std::forward_as_tuple(r.sane(), !r.warning(), r.name());
+                });
+      for (auto const& index: indexes)
+      {
+        auto item = container[index];
         if (verbose || !item.sane() || item.warning())
         {
           print_entry(out, item, item.sane(), item.warning());
           item.print(out, verbose);
           out << std::endl;
         }
+      }
     }
     else
       out << std::endl;
