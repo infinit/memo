@@ -309,8 +309,7 @@ namespace infinit
       {
         for (auto const& node: boost::any_cast<elle::json::Object>(user.second))
         {
-          infinit::model::Address uuid =
-            infinit::model::Address::from_string(node.first.substr(2));
+          auto uuid = infinit::model::Address::from_string(node.first.substr(2));
           elle::serialization::json::SerializerIn s(node.second, false);
           auto endpoints = s.deserialize<Endpoints>();
           auto eps = infinit::model::Endpoints{};
@@ -347,11 +346,11 @@ namespace infinit
     : descriptor::TemplatedBaseDescriptor<NetworkDescriptor>(
       std::move(name), std::move(description))
     , consensus(std::move(consensus))
-                                       , overlay(std::move(overlay))
-                                       , owner(std::move(owner))
-                                       , version(std::move(version))
-                                       , admin_keys(std::move(admin_keys))
-                                       , peers(std::move(peers))
+    , overlay(std::move(overlay))
+    , owner(std::move(owner))
+    , version(std::move(version))
+    , admin_keys(std::move(admin_keys))
+    , peers(std::move(peers))
   {}
 
   NetworkDescriptor::NetworkDescriptor(elle::serialization::SerializerIn& s)

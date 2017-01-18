@@ -46,7 +46,7 @@ namespace infinit
               boost::optional<bool> readonly,
               bool allow_root_creation,
               bool map_other_permissions
-#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
+#if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
               , boost::optional<std::string> volname_
 #endif
 #ifdef INFINIT_MACOSX
@@ -54,7 +54,7 @@ namespace infinit
 #endif
     )
   {
-#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
+#if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
     if (!volname_)
       volname_ = this->name;
 #endif
@@ -78,40 +78,40 @@ namespace infinit
       elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
     if (mountpoint)
     {
-      std::vector<std::string> fuse_options = {
+      auto fuse_options = std::vector<std::string>{
         "infinit-volume",
         "-o", "noatime",
         "-o", "hard_remove",
       };
       if (mount_options.readonly && mount_options.readonly.get())
       {
-        fuse_options.push_back("-o");
-        fuse_options.push_back("ro");
+        fuse_options.emplace_back("-o");
+        fuse_options.emplace_back("ro");
       }
 #ifndef INFINIT_WINDOWS
       if (mount_options.fuse_options)
         for (auto const& opt: *mount_options.fuse_options)
         {
-          fuse_options.push_back("-o");
-          fuse_options.push_back(opt);
+          fuse_options.emplace_back("-o");
+          fuse_options.emplace_back(opt);
         }
 #endif
-#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
+#if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
       auto add_option =
         [&fuse_options] (std::string const& opt_name,
                          std::string const& opt_val)
         {
-          fuse_options.push_back("-o");
-          fuse_options.push_back(elle::sprintf("%s=%s", opt_name, opt_val));
+          fuse_options.emplace_back("-o");
+          fuse_options.emplace_back(elle::sprintf("%s=%s", opt_name, opt_val));
         };
-      add_option("volname", volname_.get());
+      add_option("volname", *volname_);
 #endif
 #ifdef INFINIT_MACOSX
       add_option("daemon_timeout", "600");
       if (volicon_)
-        add_option("volicon", volicon_.get());
+        add_option("volicon", *volicon_);
 #endif
-      driver->mount(mountpoint.get(), fuse_options);
+      driver->mount(*mountpoint, fuse_options);
     }
     return driver;
   }
