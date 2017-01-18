@@ -257,7 +257,7 @@ namespace reporting
       `-------------*/
       LeftoversResult() = default;
       LeftoversResult(std::string const& name,
-                      Result::Reason r = Result::Reason{"should not be here"});
+                      Result::Reason r = Result::Reason{"shouldn't be there"});
       LeftoversResult(elle::serialization::SerializerIn& s);
 
       /*--------------.

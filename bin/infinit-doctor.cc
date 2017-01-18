@@ -127,7 +127,7 @@ namespace
         out << "[33;00;32m";
       out << "[OK]";
     }
-    return out << "[0m";
+    return out << (no_color ? "" : "[0m");
   }
 
   std::ostream&
@@ -178,7 +178,7 @@ namespace
         if (verbose || !item.sane() || item.warning())
         {
           print_entry(out, item, item.sane(), item.warning());
-          item.print(out << " ", verbose);
+          item.print(out, verbose);
           out << std::endl;
         }
     }
@@ -278,7 +278,7 @@ namespace reporting
     if (this->show(verbose))
     {
       if (this->sane())
-        out << " '" << this->user_name() << "' exists and has a private key";
+        out << " \"" << this->user_name() << "\" exists and has a private key";
     }
   }
 
@@ -342,7 +342,7 @@ namespace reporting
   {
     if (!this->linked)
     {
-      out << "is not linked";
+      out << "is not linked [for user \"" << username << "\"]";
     }
     if (this->storage_resources)
     {
@@ -354,7 +354,7 @@ namespace reporting
           [] (auto const& t)
           {
             std::stringstream out;
-            out << t.name();
+            out << "\"" << t.name() << "\"";
             if (t.reason)
               out << " (" << *t.reason << ")";
             return out.str();
@@ -393,13 +393,22 @@ namespace reporting
   ConfigurationIntegrityResults::VolumeResult::_print(
     std::ostream& out, bool) const
   {
-    if (this->faulty_network)
-      out << " network " << this->faulty_network->name() << " is ";
-    if (this->faulty_network && !this->faulty_network->linked)
-      out << "not linked";
-    else
-      out << "faulty";
-
+    if (!this->sane() || this->warning())
+    {
+      if (this->faulty_network)
+      {
+        out << " ";
+        if (this->sane())
+          out << "(";
+        out << "network \"" << this->faulty_network->name() << "\" is ";
+        if (!this->faulty_network->linked)
+          out << "not linked";
+        else
+          out << "faulty";
+        if (this->sane())
+          out << ")";
+      }
+    }
   }
 
   ConfigurationIntegrityResults::DriveResult::DriveResult(
@@ -429,20 +438,23 @@ namespace reporting
   ConfigurationIntegrityResults::DriveResult::_print(
     std::ostream& out, bool) const
   {
-    if (this->faulty_volume)
+    if (!this->sane())
     {
-      out << " volume " << this->faulty_volume->name() << " is ";
-      if (this->faulty_volume->reason)
-        out << this->faulty_volume->reason;
-      else
-        out << "faulty";
+      if (this->faulty_volume)
+      {
+        out << " volume \"" << this->faulty_volume->name() << "\" is ";
+        if (this->faulty_volume->reason)
+          out << this->faulty_volume->reason;
+        else
+          out << "faulty";
+      }
     }
   }
 
   ConfigurationIntegrityResults::LeftoversResult::LeftoversResult(
     std::string const& name,
     Result::Reason r)
-    : Result(name, true, r)
+    : Result(name, true, r, true)
   {}
 
   ConfigurationIntegrityResults::LeftoversResult::LeftoversResult(
@@ -1361,7 +1373,7 @@ namespace
   permissions(bfs::path const& path)
   {
     if (!bfs::exists(path))
-      elle::err("%s doesn't exist", path);
+      elle::err("doesn't exist");
     auto s = bfs::status(path);
     bool read = (s.permissions() & bfs::perms::owner_read)
       && (s.permissions() & bfs::perms::others_read);
@@ -1390,21 +1402,26 @@ namespace
     return std::make_pair(read, write);
   }
 
-  // Return the permissions as a string:
-  // r, w, rw, None, ...
+  // Return the permissions as a human readable string:
+  // "is read only"
+  // "is write only"
+  // "is readable and writable"
+  // "is not accessible (permissions denied)
   std::string
   permissions_string(bfs::path const& path)
   {
     try
     {
       auto perms = permissions(path);
-      std::string res = "";
-      if (perms.first)
-        res += "r";
-      if (perms.second)
-        res += "w";
-      if (res.empty())
-        res = "None";
+      std::string res = "is ";
+      if (perms.first && !perms.second)
+        res += "read only";
+      else if (perms.second && !perms.first)
+        res += "write only";
+      else if (perms.second && perms.first)
+        res += "readable and writable";
+      else
+        res += "not accessible (permissions denied)";
       return res;
     }
     catch (...)
@@ -1418,7 +1435,7 @@ namespace
                  bool mandatory = true)
   {
     auto res = permissions_string(path);
-    auto good = (res == "rw");
+    auto good = (res == "is readable and writable");
     auto sane = (good || !mandatory);
     return std::make_pair(sane, res);
   }
@@ -1588,13 +1605,15 @@ namespace
         if (status)
           store(results.storage_resources, storage->name, status, "S3");
         else
-          store(results.storage_resources, storage->name, status, "S3", std::string("Missing credentials"));
+          store(results.storage_resources, storage->name, status, "S3",
+                std::string("credentials are missing"));
         }
         if (auto fsconfig = dynamic_cast<infinit::storage::FilesystemStorageConfig const*>(storage.get()))
         {
           auto perms = has_permission(fsconfig->path);
           status = perms.first;
-          store(results.storage_resources, storage->name, status, "filesystem", perms.second);
+          store(results.storage_resources, storage->name, status, "filesystem",
+                elle::sprintf("\"%s\" %s", fsconfig->path, perms.second));
         }
         if (auto gcsconfig = dynamic_cast<infinit::storage::GCSConfig const*>(storage.get()))
         {
@@ -1610,7 +1629,8 @@ namespace
           if (status)
             store(results.storage_resources, storage->name, status, "GCS");
           else
-            store(results.storage_resources, storage->name, status, "GCS", std::string{"Missing credentials"});
+            store(results.storage_resources, storage->name, status, "GCS",
+                  std::string{"credentials are missing"});
         }
 #ifndef INFINIT_WINDOWS
         if (/* auto ssh = */
@@ -1849,7 +1869,7 @@ namespace
          bool verbose)
   {
     if (script_mode)
-      infinit::save(out, results);
+      infinit::save(out, results, false);
     else
       results.print(out, verbose);
   }
