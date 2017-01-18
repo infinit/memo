@@ -706,7 +706,7 @@ MountManager::status(std::string const& name,
 std::vector<MountInfo>
 MountManager::status()
 {
-  elle::make_vector(_mounts, [](auto&& m) {
+  return elle::make_vector(_mounts, [](auto&& m) {
       return MountInfo{
         m.first,
         !kill(m.second.process->pid(), 0),
