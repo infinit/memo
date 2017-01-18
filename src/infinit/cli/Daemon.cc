@@ -23,6 +23,7 @@
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/MountManager.hh>
 #include <infinit/cli/utility.hh>
+#include <infinit/storage/Filesystem.hh>
 
 ELLE_LOG_COMPONENT("cli.daemon");
 
@@ -30,6 +31,8 @@ namespace bfs = boost::filesystem;
 
 namespace infinit
 {
+  using Passport = infinit::model::doughnut::Passport;
+
   namespace cli
   {
     using Error = das::cli::Error;
@@ -37,6 +40,11 @@ namespace infinit
 
     Daemon::Daemon(Infinit& infinit)
       : Entity(infinit)
+      , fetch(
+        "Fetch volume and its dependencies from {hub}",
+        das::cli::Options(),
+        this->bind(modes::mode_fetch,
+                   cli::name))
       , run(
         "Run daemon in the foreground",
         das::cli::Options(),
@@ -93,7 +101,7 @@ namespace infinit
         this->bind(modes::mode_stop))
     {}
 
-    // daemon.
+
     namespace
     {
       class PIDFile
@@ -1016,6 +1024,169 @@ namespace infinit
           }
         };
       }
+    }
+
+    /*--------------.
+    | Mode: fetch.  |
+    `--------------*/
+
+    namespace
+    {
+      std::pair<std::string, infinit::User>
+      split(infinit::Infinit& ifnt,
+            std::string const& name)
+      {
+        auto p = name.find_first_of('/');
+        if (p == name.npos)
+          elle::err("Malformed qualified name");
+        return {name.substr(p+1), ifnt.user_get(name.substr(0, p))};
+      }
+
+      void link_network(infinit::Infinit& ifnt,
+                        std::string const& name,
+                        elle::json::Object const& options = elle::json::Object{})
+      {
+        auto cname = split(ifnt, name);
+        auto desc = ifnt.network_descriptor_get(cname.first, cname.second, false);
+        auto users = ifnt.users_get();
+        auto passport = boost::optional<infinit::Passport>{};
+        auto user = boost::optional<infinit::User>{};
+        ELLE_TRACE("checking if any user is owner");
+        for (auto const& u: users)
+          if (u.public_key == desc.owner && u.private_key)
+          {
+            passport.emplace(u.public_key, desc.name,
+              infinit::cryptography::rsa::KeyPair(u.public_key,
+                                                  u.private_key.get()));
+            user.emplace(u);
+            break;
+          }
+        if (!passport)
+        {
+          ELLE_TRACE("Trying to acquire passport");
+          for (auto const& u: users)
+          {
+            try
+            {
+              passport.emplace(ifnt.passport_get(name, u.name));
+              user.emplace(u);
+              break;
+            }
+            catch (infinit::MissingLocalResource const&)
+            {
+              try
+              {
+                passport.emplace(ifnt.beyond_fetch<infinit::Passport>(elle::sprintf(
+                  "networks/%s/passports/%s", name, u.name),
+                    "passport for",
+                    name,
+                    u));
+                user.emplace(u);
+                break;
+              }
+              catch (elle::Error const&)
+              {}
+            }
+          }
+        }
+        if (!passport)
+          elle::err("Failed to acquire passport.");
+        ELLE_TRACE("Passport found for user %s", user->name);
+
+        auto storage_config = [&] () -> std::unique_ptr<infinit::storage::StorageConfig> {
+          auto storagedesc = optional(options, "storage");
+          if (storagedesc && storagedesc->empty())
+          {
+            auto storagename = boost::replace_all_copy(name + "_storage", "/", "_");
+            ELLE_LOG("Creating local storage %s", storagename);
+            auto path = infinit::xdg_data_home() / "blocks" / storagename;
+            return
+              std::make_unique<infinit::storage::FilesystemStorageConfig>(
+                storagename, path.string(), boost::none, boost::none);
+          }
+          else if (storagedesc)
+          {
+            try
+            {
+              return ifnt.storage_get(*storagedesc);
+            }
+            catch (infinit::MissingLocalResource const&)
+            {
+              elle::err("storage specification for new storage not implemented");
+            }
+          }
+          else
+            return nullptr;
+        }();
+
+        auto network = infinit::Network(
+          desc.name,
+          std::make_unique<infinit::model::doughnut::Configuration>(
+            infinit::model::Address::random(0), // FIXME
+            std::move(desc.consensus),
+            std::move(desc.overlay),
+            std::move(storage_config),
+            user->keypair(),
+            std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
+            std::move(*passport),
+            user->name,
+            boost::optional<int>(),
+            desc.version,
+            desc.admin_keys,
+            std::vector<infinit::model::Endpoints>()),
+          boost::none);
+        ifnt.network_save(*user, network, true);
+        ifnt.network_save(std::move(network), true);
+      }
+
+      void
+      acquire_network(infinit::Infinit& ifnt,
+                      std::string const& name)
+      {
+        auto desc
+          = ifnt.beyond_fetch<infinit::NetworkDescriptor>("network", name);
+        ifnt.network_save(desc);
+        try
+        {
+          auto nname = split(ifnt, name);
+          auto net = ifnt.network_get(nname.first, nname.second, true);
+        }
+        catch (elle::Error const&)
+        {
+          link_network(ifnt, name);
+        }
+      }
+
+      void
+      acquire_volume(infinit::Infinit& ifnt,
+                     std::string const& name)
+      {
+        auto desc
+          = ifnt.beyond_fetch<infinit::Volume>("volume", name);
+        ifnt.volume_save(desc, true);
+        try
+        {
+          auto nname = split(ifnt, desc.network);
+          auto net = ifnt.network_get(nname.first, nname.second, true);
+        }
+        catch (infinit::MissingLocalResource const&)
+        {
+          acquire_network(ifnt, desc.network);
+        }
+        catch (elle::Error const&)
+        {
+          link_network(ifnt, desc.network);
+        }
+      }
+    }
+
+    void
+    Daemon::mode_fetch(std::string const& name)
+    {
+      ELLE_TRACE_SCOPE("fetch");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      acquire_volume(ifnt, name);
     }
 
     /*------------.

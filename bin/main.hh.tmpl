@@ -1132,11 +1132,11 @@ namespace infinit
     "name (%s) must only contain lower case alphanumeric and - . _ "
     "characters but not start with the . character");
 
-  typedef infinit::AWSCredentials AWSCredentials;
-  typedef infinit::Credentials Credentials;
-  typedef infinit::OAuthCredentials OAuthCredentials;
+  using AWSCredentials = infinit::AWSCredentials;
+  using Credentials = infinit::Credentials;
+  using OAuthCredentials = infinit::OAuthCredentials;
 
-  typedef infinit::model::doughnut::Passport Passport;
+  using Passport = infinit::model::doughnut::Passport;
 
   inline
   void

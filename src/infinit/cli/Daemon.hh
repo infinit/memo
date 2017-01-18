@@ -8,6 +8,11 @@
 #include <infinit/cli/symbols.hh>
 #include <infinit/symbols.hh>
 
+/// Whether to enable Docker support.
+#if !defined INFINIT_PRODUCTION_BUILD || defined INFINIT_LINUX
+# define WITH_DOCKER
+#endif
+
 namespace infinit
 {
   namespace cli
@@ -18,16 +23,22 @@ namespace infinit
     public:
       Daemon(Infinit& infinit);
       using Modes
-        = decltype(elle::meta::list(cli::run,
+        = decltype(elle::meta::list(cli::fetch,
+                                    cli::run,
                                     cli::start,
                                     cli::status,
                                     cli::stop));
       using Strings = std::vector<std::string>;
 
-      // Whether to enable Docker support.
-#if !defined INFINIT_PRODUCTION_BUILD || defined INFINIT_LINUX
-# define WITH_DOCKER
-#endif
+      /*--------------.
+      | Mode: fetch.  |
+      `--------------*/
+      using ModeFetch =
+        Mode<decltype(binding(modes::mode_fetch,
+                              cli::name))>;
+      ModeFetch fetch;
+      void
+      mode_fetch(std::string const& name);
 
       /*------------.
       | Mode: run.  |
