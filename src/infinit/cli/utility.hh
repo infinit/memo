@@ -50,14 +50,15 @@ namespace infinit
                                   infinit::symbols::port))>;
     };
 
-    static
-    auto const
-    mandatory = [] (auto optional, std::string const& name)
+    template <typename T>
+    T const&
+    mandatory(boost::optional<T> const& opt, std::string const& name)
     {
-      if (!optional)
+      if (opt)
+        return *opt;
+      else
         throw das::cli::MissingOption(name);
-      return optional.get();
-    };
+    }
   }
 }
 

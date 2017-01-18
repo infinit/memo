@@ -45,6 +45,16 @@ namespace infinit
         das::cli::Options(),
         this->bind(modes::mode_fetch,
                    cli::name))
+      , manage_volumes(
+        "Manage daemon controlled volumes",
+        das::cli::Options(),
+        this->bind(modes::mode_manage_volumes,
+                   cli::list = false,
+                   cli::status = false,
+                   cli::start = false,
+                   cli::stop = false,
+                   cli::restart = false,
+                   cli::name = boost::none))
       , run(
         "Run daemon in the foreground",
         das::cli::Options(),
@@ -1187,6 +1197,127 @@ namespace infinit
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       acquire_volume(ifnt, name);
+    }
+
+
+    /*-----------------------.
+    | Mode: manage_volumes.  |
+    `-----------------------*/
+
+    namespace
+    {
+      void
+      volume_list(infinit::cli::Infinit& cli)
+      {
+        auto json = daemon_command("{\"operation\": \"volume-list\"}");
+        if (cli.script())
+          std::cout << json;
+        else
+        {
+          auto res = cmd_response_serializer(json, "list volumes");
+          for (auto const& v: res.deserialize<std::vector<std::string>>("volumes"))
+            std::cout << v << std::endl;
+        }
+      }
+
+      void
+      volume_status(infinit::cli::Infinit& cli,
+                    boost::optional<std::string> name)
+      {
+        auto json = daemon_command(elle::sprintf(
+          "{\"operation\": \"volume-status\"%s}",
+          (name ? elle::sprintf(" ,\"volume\": \"%s\"", *name) : "")));
+        if (cli.script())
+          std::cout << json;
+        else
+        {
+          auto res = cmd_response_serializer(json, "fetch volume status");
+          if (name)
+            std::cout << res.deserialize<MountInfo>() << std::endl;
+          else
+            for (auto const& m: res.deserialize<std::vector<MountInfo>>("volumes"))
+              std::cout << m << std::endl;
+        }
+      }
+
+      void
+      volume_start(infinit::cli::Infinit& cli,
+                   std::string const& name)
+      {
+        auto json = daemon_command(
+          "{\"operation\": \"volume-start\", \"volume\": \"" + name +  "\"}");
+        if (cli.script())
+          std::cout << json;
+        else
+        {
+          auto res = cmd_response_serializer(json, "start volume");
+          std::cout << "Started: " << res.deserialize<std::string>("volume")
+                    << std::endl;
+        }
+      }
+
+      void
+      volume_stop(infinit::cli::Infinit& cli,
+                  std::string const& name)
+      {
+        auto json = daemon_command(
+          "{\"operation\": \"volume-stop\", \"volume\": \"" + name +  "\"}");
+        if (cli.script())
+          std::cout << json;
+        else
+        {
+          auto res = cmd_response_serializer(json, "stop volume");
+          std::cout << "Stopped: " << res.deserialize<std::string>("volume")
+                    << std::endl;
+        }
+      }
+
+      void
+      volume_restart(infinit::cli::Infinit& cli,
+                     std::string const& name)
+      {
+        auto json = daemon_command(
+          "{\"operation\": \"volume-restart\", \"volume\": \"" + name +  "\"}");
+        if (cli.script())
+          std::cout << json;
+        else
+        {
+          auto res = cmd_response_serializer(json, "restart volume");
+          std::cout << "Restarted: " << res.deserialize<std::string>("volume")
+                    << std::endl;
+        }
+      }
+    }
+
+    void
+    Daemon::mode_manage_volumes(bool list,
+                                bool status,
+                                bool start,
+                                bool stop,
+                                bool restart,
+                                boost::optional<std::string> const& name)
+    {
+      ELLE_TRACE_SCOPE("manage_volumes");
+      auto& cli = this->cli();
+
+      if (list + status + start + stop + restart != 1)
+      {
+        auto opts = std::string{};
+        for (auto const& f: { "list", "status", "start", "stop", "restart" })
+          opts += elle::sprintf("\"--%s\", ", f);
+        opts = opts.substr(0, opts.size() - 2);
+        elle::err<Error>("Specify one of %s", opts);
+      }
+      if (list)
+        volume_list(cli);
+      if (status)
+        volume_status(cli, name);
+      if (start)
+        volume_start(cli, mandatory(name, "name"));
+      if (stop)
+        volume_stop(cli, mandatory(name, "name"));
+      if (restart)
+        volume_restart(cli, mandatory(name, "name"));
     }
 
     /*------------.

@@ -40,6 +40,25 @@ namespace infinit
       void
       mode_fetch(std::string const& name);
 
+      /*-----------------------.
+      | Mode: manage_volumes.  |
+      `-----------------------*/
+      using ModeManageVolumes =
+        Mode<decltype(binding(modes::mode_manage_volumes,
+                              cli::list = false,
+                              cli::status = false,
+                              cli::start = false,
+                              cli::stop = false,
+                              cli::restart = false,
+                              cli::name = boost::none))>;
+      ModeManageVolumes manage_volumes;
+      void
+      mode_manage_volumes(bool list = false,
+                          bool status = false,
+                          bool start = false,
+                          bool stop = false,
+                          bool restart = false,
+                          boost::optional<std::string> const& name = {});
       /*------------.
       | Mode: run.  |
       `------------*/

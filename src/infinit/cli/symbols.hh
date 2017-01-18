@@ -147,6 +147,7 @@ namespace infinit
     DAS_CLI_SYMBOL(remove_group, '\0', "remove group from group", false);
     DAS_CLI_SYMBOL(remove_user, '\0', "remove user from group", false);
     DAS_CLI_SYMBOL(replication_factor, 'r', "data replication factor (default: 1)", false);
+    DAS_CLI_SYMBOL(restart, 0, "restart {type}", false);
     DAS_CLI_SYMBOL(s3, '\0', "store blocks on AWS S3", false);
     DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output", false);
     DAS_CLI_SYMBOL(service, 0, "fetch {type} from the network, not beyond", false);
@@ -183,6 +184,7 @@ namespace infinit
     DAS_SYMBOL(list_services);
     DAS_SYMBOL(list_storage);
     DAS_SYMBOL(login);
+    DAS_SYMBOL(manage_volumes);
     DAS_SYMBOL(run);
     DAS_SYMBOL(set);
     DAS_SYMBOL(set_xattr);
@@ -224,6 +226,7 @@ namespace infinit
       DAS_SYMBOL(mode_list_services);
       DAS_SYMBOL(mode_list_storage);
       DAS_SYMBOL(mode_login);
+      DAS_SYMBOL(mode_manage_volumes);
       DAS_SYMBOL(mode_mount);
       DAS_SYMBOL(mode_pull);
       DAS_SYMBOL(mode_push);
