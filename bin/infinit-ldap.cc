@@ -21,220 +21,215 @@ infinit::Infinit ifnt;
 
 using boost::program_options::variables_map;
 
-static
-void
-extract_fields(std::string const& pattern, std::vector<std::string>& res)
+namespace
 {
-  size_t p = 0;
-  while (true)
+  void
+  extract_fields(std::string const& pattern, std::vector<std::string>& res)
   {
-    p = pattern.find_first_of('$', p);
-    if (p == pattern.npos)
-      return;
-    auto pend = pattern.find_first_of(')', p);
-    if (pend == pattern.npos)
-      throw elle::Error("malformed pattern: " + pattern);
-    res.push_back(pattern.substr(p+2, pend-p-2));
-    p = pend+1;
-  }
-}
-
-static
-std::string
-make_field(
-  std::string pattern,
-  std::unordered_map<std::string, std::vector<std::string>> const& attrs,
-  int i = 0)
-{
-  std::vector<std::string> fields;
-  extract_fields(pattern, fields);
-  for (auto& f: fields)
-  {
-    pattern = boost::algorithm::replace_all_copy(
-      pattern, "$(" + f + ")", attrs.at(f)[0]);
-  }
-  if (i == 0)
-    pattern = boost::algorithm::replace_all_copy(pattern, "%", std::string());
-  else
-    pattern = boost::algorithm::replace_all_copy(pattern, "%", std::to_string(i));
-  return pattern;
-}
-
-struct UserData
-{
-  std::string dn;
-  std::string fullname;
-  std::string email;
-};
-
-elle::ldap::LDAPClient
-make_ldap(variables_map const& args)
-{
-  auto server = mandatory(args, "server");
-  auto domain = mandatory(args, "domain");
-  auto user = mandatory(args, "user");
-  auto password = optional(args, "password");
-  if (!password)
-    password = read_passphrase("LDAP password");
-  elle::ldap::LDAPClient ldap(server, domain, user, *password);
-  return ldap;
-}
-
-static
-std::unordered_map<std::string, infinit::User>
-_populate_network(boost::program_options::variables_map const& args,
-                  std::string const& network_name)
-{
-  auto self = self_user(ifnt, args);
-  auto network =
-    infinit::NetworkDescriptor(ifnt.network_get(network_name, self));
-  auto mountpoint = mandatory(args, "mountpoint");
-  enforce_in_mountpoint(mountpoint, false);
-  auto ldap = make_ldap(args);
-  auto searchbase = mandatory(args, "searchbase");
-  auto objectclass = optional(args, "object-class");
-  auto filter = optional(args, "filter");
-  if (filter && objectclass)
-    throw elle::Error("specify either --filter or --object-class");
-  if (objectclass)
-    filter = "objectClass=" + *objectclass;
-  else if (!filter)
-    filter = "objectClass=posixGroup";
-  auto res = ldap.search(searchbase, *filter, {"cn", "memberUid"});
-
-  std::unordered_set<std::string> all_members; // uids
-  std::unordered_map<std::string, std::string> dns; // uid -> dn
-
-  std::unordered_map<std::string, std::vector<std::string>> groups; //gname -> uids
-  for (auto const& r: res)
-  {
-    if (r.find("memberUid") == r.end())
-    { // assume this is an user
-      dns.insert(std::make_pair(r.at("dn")[0], r.at("dn")[0]));
-    }
-    else
+    size_t p = 0;
+    while (true)
     {
-      auto name = r.at("cn")[0];
-      auto members = r.at("memberUid");
-      all_members.insert(members.begin(), members.end());
-      groups[name] = members;
+      p = pattern.find_first_of('$', p);
+      if (p == pattern.npos)
+        return;
+      auto pend = pattern.find_first_of(')', p);
+      if (pend == pattern.npos)
+        throw elle::Error("malformed pattern: " + pattern);
+      res.push_back(pattern.substr(p+2, pend-p-2));
+      p = pend+1;
     }
   }
 
-  for (auto const& m: all_members)
+  std::string
+  make_field(
+    std::string pattern,
+    std::unordered_map<std::string, std::vector<std::string>> const& attrs,
+    int i = 0)
   {
-    auto r = ldap.search(searchbase, "uid="+m, {});
-    dns[m] = r.front().at("dn").front();
+    using boost::algorithm::replace_all;
+    auto fields = std::vector<std::string>{};
+    extract_fields(pattern, fields);
+    for (auto& f: fields)
+      replace_all(pattern, "$(" + f + ")", attrs.at(f)[0]);
+    replace_all(pattern, "%", i ? std::to_string(i) : "");
+    return pattern;
   }
 
-  std::unordered_map<std::string, infinit::User> users; // uid -> user
-  for (auto const& m: dns)
+  struct UserData
   {
-    try
-    {
-      auto u = infinit::beyond_fetch<infinit::User>(
-        elle::sprintf("ldap_users/%s", reactor::http::url_encode(m.second)),
-        "LDAP user",
-        m.second);
-      users.insert(std::make_pair(m.first, u));
-    }
-    catch (elle::Error const& e)
-    {
-      ELLE_WARN("Failed to fetch user %s from %s", m.second, infinit::beyond(true));
-    }
+    std::string dn;
+    std::string fullname;
+    std::string email;
+  };
+
+  elle::ldap::LDAPClient
+  make_ldap(variables_map const& args)
+  {
+    auto server = mandatory(args, "server");
+    auto domain = mandatory(args, "domain");
+    auto user = mandatory(args, "user");
+    auto password = optional(args, "password");
+    if (!password)
+      password = read_passphrase("LDAP password");
+    elle::ldap::LDAPClient ldap(server, domain, user, *password);
+    return ldap;
   }
 
-  // Push all users
-  for (auto const& u: users)
+  std::unordered_map<std::string, infinit::User>
+  _populate_network(boost::program_options::variables_map const& args,
+                    std::string const& network_name)
   {
-    auto user_name = u.second.name;
-    ELLE_TRACE("Pushing user %s (%s)", user_name, u.first);
-    infinit::model::doughnut::Passport passport(
-      u.second.public_key,
-      network.name,
-      infinit::cryptography::rsa::KeyPair(self.public_key,
-                                          self.private_key.get()),
-      self.public_key != network.owner,
-      !flag(args, "deny-write"),
-      !flag(args, "deny-storage"),
-      false);
-    try
+    auto self = self_user(ifnt, args);
+    auto network =
+      infinit::NetworkDescriptor(ifnt.network_get(network_name, self));
+    auto mountpoint = mandatory(args, "mountpoint");
+    enforce_in_mountpoint(mountpoint, false);
+    auto ldap = make_ldap(args);
+    auto searchbase = mandatory(args, "searchbase");
+    auto objectclass = optional(args, "object-class");
+    auto filter = optional(args, "filter");
+    if (filter && objectclass)
+      throw elle::Error("specify either --filter or --object-class");
+    if (objectclass)
+      filter = "objectClass=" + *objectclass;
+    else if (!filter)
+      filter = "objectClass=posixGroup";
+    auto res = ldap.search(searchbase, *filter, {"cn", "memberUid"});
+
+    std::unordered_set<std::string> all_members; // uids
+    std::unordered_map<std::string, std::string> dns; // uid -> dn
+
+    std::unordered_map<std::string, std::vector<std::string>> groups; //gname -> uids
+    for (auto const& r: res)
     {
-      beyond_push(
-        elle::sprintf("networks/%s/passports/%s", network.name, user_name),
-        "passport",
-        elle::sprintf("%s: %s", network.name, user_name),
-        passport,
-        self);
-    }
-    catch (elle::Error const& e)
-    {
-      ELLE_WARN("Failed to push passport for %s: %s", user_name, e);
-    }
-    auto passport_ser = elle::serialization::json::serialize(passport, false);
-    char buf[4096];
-    int res = port_getxattr(mountpoint,
-                            elle::sprintf("infinit.resolve.%s", user_name),
-                            buf, 4095, true);
-    if (res > 0)
-    {
-      std::cout
-         << elle::sprintf("User \"%s\" already registerd to network.", user_name)
-         << std::endl;
-      continue;
-    }
-    res = port_setxattr(mountpoint, "infinit.register." + user_name,
-                        passport_ser.string(), true);
-    if (res)
-      ELLE_WARN("Failed to set user %s: %s", user_name, res);
-    else
-    {
-      std::cout << elle::sprintf("Registered user \"%s\" to network.",
-                                 user_name)
-                << std::endl;
-    }
-  }
-  // Push groups
-  for (auto const& g: groups)
-  {
-    ELLE_TRACE_SCOPE("Creating group %s", g.first);
-    char buf[4096];
-    int res = port_getxattr(mountpoint,
-                            elle::sprintf("infinit.resolve.%s", g.first),
-                            buf, 4095, true);
-    if (res > 0)
-    {
-      std::cout
-        << elle::sprintf("Group \"%s\" already exists on network.", g.first)
-        << std::endl;
-    }
-    else
-    {
-      port_setxattr(mountpoint, "infinit.group.create", g.first, true);
-      std::cout << elle::sprintf("Added group \"%s\" to network.", g.first)
-                << std::endl;
-    }
-    for (auto const& m: g.second)
-    {
-      if (users.find(m) == users.end())
-      {
-        ELLE_TRACE("skipping user %s", m);
-        continue;
+      if (r.find("memberUid") == r.end())
+      { // assume this is an user
+        dns.insert(std::make_pair(r.at("dn")[0], r.at("dn")[0]));
       }
-      ELLE_TRACE("adding user %s", m);
-      int res = port_setxattr(mountpoint, "infinit.group.add",
-        g.first + ':' + users.at(m).name, true);
-      if (res)
-        ELLE_LOG("Failed to add %s to group %s: %s", m, g.first, res);
       else
       {
-        std::cout << elle::sprintf(
-          "Added user \"%s\" to group \"%s\" on network.", m, g.first);
-        std::cout << std::endl;
+        auto name = r.at("cn")[0];
+        auto members = r.at("memberUid");
+        all_members.insert(members.begin(), members.end());
+        groups[name] = members;
       }
     }
+
+    for (auto const& m: all_members)
+    {
+      auto r = ldap.search(searchbase, "uid="+m, {});
+      dns[m] = r.front().at("dn").front();
+    }
+
+    std::unordered_map<std::string, infinit::User> users; // uid -> user
+    for (auto const& m: dns)
+    {
+      try
+      {
+        auto u = infinit::beyond_fetch<infinit::User>(
+          elle::sprintf("ldap_users/%s", reactor::http::url_encode(m.second)),
+          "LDAP user",
+          m.second);
+        users.insert(std::make_pair(m.first, u));
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_WARN("Failed to fetch user %s from %s", m.second, infinit::beyond(true));
+      }
+    }
+
+    // Push all users
+    for (auto const& u: users)
+    {
+      auto user_name = u.second.name;
+      ELLE_TRACE("Pushing user %s (%s)", user_name, u.first);
+      infinit::model::doughnut::Passport passport(
+        u.second.public_key,
+        network.name,
+        infinit::cryptography::rsa::KeyPair(self.public_key,
+                                            self.private_key.get()),
+        self.public_key != network.owner,
+        !flag(args, "deny-write"),
+        !flag(args, "deny-storage"),
+        false);
+      try
+      {
+        beyond_push(
+          elle::sprintf("networks/%s/passports/%s", network.name, user_name),
+          "passport",
+          elle::sprintf("%s: %s", network.name, user_name),
+          passport,
+          self);
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_WARN("Failed to push passport for %s: %s", user_name, e);
+      }
+      auto passport_ser = elle::serialization::json::serialize(passport, false);
+      char buf[4096];
+      int res = port_getxattr(mountpoint,
+                              elle::sprintf("infinit.resolve.%s", user_name),
+                              buf, 4095, true);
+      if (res > 0)
+      {
+        std::cout
+           << elle::sprintf("User \"%s\" already registerd to network.", user_name)
+           << std::endl;
+        continue;
+      }
+      res = port_setxattr(mountpoint, "infinit.register." + user_name,
+                          passport_ser.string(), true);
+      if (res)
+        ELLE_WARN("Failed to set user %s: %s", user_name, res);
+      else
+      {
+        std::cout << elle::sprintf("Registered user \"%s\" to network.",
+                                   user_name)
+                  << std::endl;
+      }
+    }
+    // Push groups
+    for (auto const& g: groups)
+    {
+      ELLE_TRACE_SCOPE("Creating group %s", g.first);
+      char buf[4096];
+      int res = port_getxattr(mountpoint,
+                              elle::sprintf("infinit.resolve.%s", g.first),
+                              buf, 4095, true);
+      if (res > 0)
+      {
+        std::cout
+          << elle::sprintf("Group \"%s\" already exists on network.", g.first)
+          << std::endl;
+      }
+      else
+      {
+        port_setxattr(mountpoint, "infinit.group.create", g.first, true);
+        std::cout << elle::sprintf("Added group \"%s\" to network.", g.first)
+                  << std::endl;
+      }
+      for (auto const& m: g.second)
+      {
+        if (users.find(m) == users.end())
+        {
+          ELLE_TRACE("skipping user %s", m);
+          continue;
+        }
+        ELLE_TRACE("adding user %s", m);
+        int res = port_setxattr(mountpoint, "infinit.group.add",
+          g.first + ':' + users.at(m).name, true);
+        if (res)
+          ELLE_LOG("Failed to add %s to group %s: %s", m, g.first, res);
+        else
+        {
+          std::cout << elle::sprintf(
+            "Added user \"%s\" to group \"%s\" on network.", m, g.first);
+          std::cout << std::endl;
+        }
+      }
+    }
+    return users;
   }
-  return users;
 }
 
 COMMAND(populate_network)
@@ -261,11 +256,9 @@ COMMAND(drive_invite)
   std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
   auto it = std::find(allowed_modes.begin(), allowed_modes.end(), permissions);
   if (it == allowed_modes.end())
-  {
     throw CommandLineError(
       elle::sprintf("mode must be one of: %s", allowed_modes));
-  }
-  std::vector<std::string> modes_map = {"setr", "setw", "setrw", "", ""};
+  auto modes_map = std::vector<std::string>{"setr", "setw", "setrw", "", ""};
   auto mode = modes_map[it - allowed_modes.begin()];
   auto mountpoint = mountpoint_root(mandatory(args, "mountpoint"), true);
   auto users = _populate_network(args, drive.network);
@@ -277,9 +270,8 @@ COMMAND(drive_invite)
       check(port_setxattr, folder.string(),
         elle::sprintf("user.infinit.auth.%s", perms), user_name, true);
     };
-    if (!mode.empty())
-    {
-      if (u.second.public_key != network.owner)
+    if (!mode.empty()
+        && u.second.public_key != network.owner)
       {
         try
         {
@@ -291,7 +283,6 @@ COMMAND(drive_invite)
                     mountpoint, e);
         }
       }
-    }
     if (create_home)
     {
       auto home_dir = mountpoint / "home";
@@ -348,7 +339,7 @@ COMMAND(populate_hub)
   auto objectclass = optional(args, "object-class");
   auto filter = optional(args, "filter");
   if (filter && objectclass)
-    throw elle::Error("specify either --filter or --object-class");
+    elle::err("specify either --filter or --object-class");
   if (objectclass)
     filter = "objectClass=" + *objectclass;
   else if (!filter)
@@ -362,7 +353,7 @@ COMMAND(populate_hub)
   auto fullname_pattern = optional(args, "fullname-pattern");
   if (!fullname_pattern)
     fullname_pattern = "$(cn)";
-  std::vector<std::string> fields;
+  auto fields = std::vector<std::string>{};
   extract_fields(*pattern, fields);
   extract_fields(*email_pattern, fields);
   extract_fields(*fullname_pattern, fields);
@@ -371,7 +362,7 @@ COMMAND(populate_hub)
   ELLE_TRACE("LDAP returned %s", res);
 
   // username -> fields
-  std::unordered_map<std::string, UserData> missing;
+  auto missing = std::unordered_map<std::string, UserData>{};
   for (auto const& r: res)
   {
     auto dn = r.at("dn")[0];
