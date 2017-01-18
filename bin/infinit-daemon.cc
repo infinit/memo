@@ -1538,13 +1538,8 @@ DockerVolumePlugin::DockerVolumePlugin(MountManager& manager,
                                        SystemUser& user,
                                        reactor::Mutex& mutex)
   : _manager(manager)
-  , _server(nullptr)
-  , _mount_count()
   , _user(user)
   , _mutex(mutex)
-  , _socket_path()
-  , _spec_json_path()
-  , _spec_url_path()
 {}
 
 DockerVolumePlugin::~DockerVolumePlugin()
