@@ -142,6 +142,7 @@ namespace reporting
       /*------.
       | Types |
       `------*/
+      using Super = Result;
       using FaultyStorageResources = boost::optional<
         std::vector<StorageResoucesResult>
       >;
@@ -169,6 +170,12 @@ namespace reporting
       `--------------*/
       void
       serialize(elle::serialization::Serializer& s);
+
+      /*----------.
+      | Interface |
+      `----------*/
+      bool
+      warning() const override;
 
       /*-----------.
       | Attributes |

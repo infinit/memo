@@ -49,6 +49,7 @@ namespace
   std::string banished_log_level("reactor.network.UTPSocket:NONE");
 
   std::string username;
+  bool ignore_non_linked = false;
 
   std::string
   result(bool value)
@@ -352,6 +353,12 @@ namespace reporting
     s.serialize("storage_resources", this->storage_resources);
   }
 
+  bool
+  ConfigurationIntegrityResults::NetworkResult::warning() const
+  {
+    return Super::warning() || (!this->linked && !ignore_non_linked);
+  }
+
   void
   ConfigurationIntegrityResults::NetworkResult::_print(
     std::ostream& out, bool verbose) const
@@ -387,7 +394,8 @@ namespace reporting
     bool sane,
     FaultyNetwork faulty_network,
     Result::Reason extra_reason)
-    : Result(name, sane, extra_reason)
+    : Result(name, sane, extra_reason,
+             (faulty_network ? (!faulty_network->linked) : false))
     , faulty_network(faulty_network)
   {}
 
@@ -1574,6 +1582,7 @@ namespace
   _configuration_integrity(boost::program_options::variables_map const& args,
                            reporting::ConfigurationIntegrityResults& results)
   {
+    ignore_non_linked = flag(args, "ignore_non_linked");
     auto users = parse(ifnt.users_get());
     auto aws_credentials = ifnt.credentials_aws();
     auto gcs_credentials = ifnt.credentials_gcs();
@@ -1949,6 +1958,9 @@ main(int argc, char** argv)
 {
   using boost::program_options::value;
   using boost::program_options::bool_switch;
+  Mode::OptionDescription ignore_non_linked =
+    { "ignore_non_linked", bool_switch(),
+      "do not consider problematic non-linked networks"};
   Mode::OptionDescription upnp_tcp_port =
     { "upnp_tcp_port", value<uint16_t>(),
       "port to try to get an tcp upnp connection on" };
@@ -2024,6 +2036,7 @@ main(int argc, char** argv)
       "",
       {
         do_not_use_color,
+        ignore_non_linked,
         verbose
       }
     },
