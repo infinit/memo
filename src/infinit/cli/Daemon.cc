@@ -43,46 +43,46 @@ namespace infinit
         this->bind(modes::mode_run,
                    cli::login_user = Strings{},
                    cli::mount = Strings{},
-                   cli::mount_root,
-                   cli::default_network,
-                   cli::advertise_host,
-                   cli::fetch,
-                   cli::push,
+                   cli::mount_root = boost::none,
+                   cli::default_network = boost::none,
+                   cli::advertise_host = Strings{},
+                   cli::fetch = false,
+                   cli::push = false,
 #ifdef WITH_DOCKER
-                   cli::docker,
-                   cli::docker_user,
-                   cli::docker_home,
-                   cli::docker_socket_tcp,
-                   cli::docker_socket_port,
-                   cli::docker_socket_path,
-                   cli::docker_descriptor_path,
-                   cli::docker_mount_substitute,
+                   cli::docker = true,
+                   cli::docker_user = boost::none,
+                   cli::docker_home = boost::none,
+                   cli::docker_socket_tcp = false,
+                   cli::docker_socket_port = 0,
+                   cli::docker_socket_path = "/run/docker/plugins",
+                   cli::docker_descriptor_path = "/usr/lib/docker/plugins",
+                   cli::docker_mount_substitute = "",
 #endif
-                   cli::log_level,
-                   cli::log_path))
+                   cli::log_level = boost::none,
+                   cli::log_path = boost::none))
       , start(
         "Start daemon in the background",
         das::cli::Options(),
         this->bind(modes::mode_start,
                    cli::login_user = Strings{},
                    cli::mount = Strings{},
-                   cli::mount_root,
-                   cli::default_network,
-                   cli::advertise_host,
-                   cli::fetch,
-                   cli::push,
+                   cli::mount_root = boost::none,
+                   cli::default_network = boost::none,
+                   cli::advertise_host = Strings{},
+                   cli::fetch = false,
+                   cli::push = false,
 #ifdef WITH_DOCKER
-                   cli::docker,
-                   cli::docker_user,
-                   cli::docker_home,
-                   cli::docker_socket_tcp,
-                   cli::docker_socket_port,
-                   cli::docker_socket_path,
-                   cli::docker_descriptor_path,
-                   cli::docker_mount_substitute,
+                   cli::docker = true,
+                   cli::docker_user = boost::none,
+                   cli::docker_home = boost::none,
+                   cli::docker_socket_tcp = false,
+                   cli::docker_socket_port = 0,
+                   cli::docker_socket_path = "/run/docker/plugins",
+                   cli::docker_descriptor_path = "/usr/lib/docker/plugins",
+                   cli::docker_mount_substitute = "",
 #endif
-                   cli::log_level,
-                   cli::log_path))
+                   cli::log_level = boost::none,
+                   cli::log_path = boost::none))
       , status(
         "Query daemon status",
         das::cli::Options(),
@@ -786,7 +786,7 @@ namespace infinit
            Strings const& mount,
            boost::optional<std::string> const& mount_root,
            boost::optional<std::string> const& default_network,
-           boost::optional<Strings> const& advertise_host,
+           Strings const& advertise_host,
            bool fetch,
            bool push,
 #ifdef WITH_DOCKER
@@ -794,10 +794,10 @@ namespace infinit
            boost::optional<std::string> const& docker_user,
            boost::optional<std::string> const& docker_home,
            bool docker_socket_tcp,
-           boost::optional<int> const& docker_socket_port,
-           boost::optional<std::string> const& docker_socket_path,
-           boost::optional<std::string> const& docker_descriptor_path,
-           boost::optional<std::string> const& docker_mount_substitute,
+           int const& docker_socket_port,
+           std::string const& docker_socket_path,
+           std::string const& docker_descriptor_path,
+           std::string const& docker_mount_substitute,
 #endif
            boost::optional<std::string> const& log_level,
            boost::optional<std::string> const& log_path,
@@ -813,8 +813,7 @@ namespace infinit
             manager.push(push);
             manager.default_user(owner.name);
             manager.default_network(default_network);
-            if (advertise_host)
-              manager.advertise_host(*advertise_host);
+            manager.advertise_host(advertise_host);
           };
 
         ELLE_TRACE("starting daemon");
@@ -870,7 +869,6 @@ namespace infinit
           }
         };
         auto user_mount_root = get_mount_root(system_user);
-        auto docker_mount_sub = docker_mount_substitute.value_or("");
         // Scope for lock.
         {
           auto lock = system_user.enter(mutex);
@@ -889,7 +887,7 @@ namespace infinit
           ELLE_TRACE("starting initial manager");
           managers[getuid()].reset(new MountManager(ifnt, cli,
                                                     user_mount_root,
-                                                    docker_mount_sub));
+                                                    docker_mount_substitute));
           MountManager& root_manager = *managers[getuid()];
           fill_manager_options(root_manager);
           dvp = std::make_unique<DockerVolumePlugin>(
@@ -903,11 +901,8 @@ namespace infinit
 #ifdef WITH_DOCKER
           try
           {
-            dvp->install(
-              docker_socket_tcp,
-              docker_socket_port.value_or(0),
-              docker_socket_path.value_or("/run/docker/plugins"),
-              docker_descriptor_path.value_or("/usr/lib/docker/plugins"));
+            dvp->install(docker_socket_tcp, docker_socket_port,
+                         docker_socket_path, docker_descriptor_path);
           }
           catch (std::exception const& e)
           {
@@ -959,20 +954,23 @@ namespace infinit
 #endif
             static reactor::Mutex mutex;
             (void)gid;
-            SystemUser system_user(uid);
-            MountManager* user_manager = nullptr;
-            auto it = managers.find(uid);
-            if (it == managers.end())
-            {
-              auto peer_mount_root = get_mount_root(system_user);
-              auto lock = system_user.enter(mutex);
-              user_manager = new MountManager(ifnt, cli,
-                                              peer_mount_root, docker_mount_sub);
-              fill_manager_options(*user_manager);
-              managers[uid].reset(user_manager);
-            }
-            else
-              user_manager = it->second.get();
+            auto system_user = SystemUser{uid};
+            auto user_manager = [&]{
+              auto it = managers.find(uid);
+              if (it == managers.end())
+                {
+                  auto peer_mount_root = get_mount_root(system_user);
+                  auto lock = system_user.enter(mutex);
+                  auto res = new MountManager(ifnt, cli,
+                                              peer_mount_root,
+                                              docker_mount_substitute);
+                  fill_manager_options(*res);
+                  managers[uid].reset(res);
+                  return res;
+                }
+              else
+                return it->second.get();
+            }();
             auto name = elle::sprintf("%s server", **socket);
             scope.run_background(
               name,
@@ -1028,7 +1026,7 @@ namespace infinit
                      Strings const& mount,
                      boost::optional<std::string> const& mount_root,
                      boost::optional<std::string> const& default_network,
-                     boost::optional<Strings> const& advertise_host,
+                     Strings const& advertise_host,
                      bool fetch,
                      bool push,
 #ifdef WITH_DOCKER
@@ -1036,10 +1034,10 @@ namespace infinit
                      boost::optional<std::string> const& docker_user,
                      boost::optional<std::string> const& docker_home,
                      bool docker_socket_tcp,
-                     boost::optional<int> const& docker_socket_port,
-                     boost::optional<std::string> const& docker_socket_path,
-                     boost::optional<std::string> const& docker_descriptor_path,
-                     boost::optional<std::string> const& docker_mount_substitute,
+                     int const& docker_socket_port,
+                     std::string const& docker_socket_path,
+                     std::string const& docker_descriptor_path,
+                     std::string const& docker_mount_substitute,
 #endif
                      boost::optional<std::string> const& log_level,
                      boost::optional<std::string> const& log_path)
@@ -1078,7 +1076,7 @@ namespace infinit
                        Strings const& mount,
                        boost::optional<std::string> const& mount_root,
                        boost::optional<std::string> const& default_network,
-                       boost::optional<Strings> const& advertise_host,
+                       Strings const& advertise_host,
                        bool fetch,
                        bool push,
 #ifdef WITH_DOCKER
@@ -1086,10 +1084,10 @@ namespace infinit
                        boost::optional<std::string> const& docker_user,
                        boost::optional<std::string> const& docker_home,
                        bool docker_socket_tcp,
-                       boost::optional<int> const& docker_socket_port,
-                       boost::optional<std::string> const& docker_socket_path,
-                       boost::optional<std::string> const& docker_descriptor_path,
-                       boost::optional<std::string> const& docker_mount_substitute,
+                       int const& docker_socket_port,
+                       std::string const& docker_socket_path,
+                       std::string const& docker_descriptor_path,
+                       std::string const& docker_mount_substitute,
 #endif
                        boost::optional<std::string> const& log_level,
                        boost::optional<std::string> const& log_path)

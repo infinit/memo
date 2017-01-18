@@ -47,12 +47,12 @@ namespace infinit
     DAS_CLI_SYMBOL(description, '\0', "{type} description", false);
     DAS_CLI_SYMBOL(disable_UTF_8_conversion, 0, "disable FUSE conversion of UTF-8 to native format", false);
     DAS_CLI_SYMBOL(disable_inherit, '\0', "make new files and directories not inherit permissions", false);
-    DAS_CLI_SYMBOL(docker, 0, "Enable the Docker plugin (default: true)", false);
-    DAS_CLI_SYMBOL(docker_descriptor_path, 0, "Path to add plugin descriptor (default: /usr/lib/docker/plugins)", false);
+    DAS_CLI_SYMBOL(docker, 0, "Enable the Docker plugin", false);
+    DAS_CLI_SYMBOL(docker_descriptor_path, 0, "Path to add plugin descriptor", false);
     DAS_CLI_SYMBOL(docker_home, 0, "Home directory to use for Docker user (default: /home/<docker-user>)", false);
     DAS_CLI_SYMBOL(docker_mount_substitute, 0, "[from:to|prefix] : Substitute 'from' to 'to' in advertised path", false);
-    DAS_CLI_SYMBOL(docker_socket_path, 0, "Path for plugin socket (default: /run/docker/plugins)", false);
-    DAS_CLI_SYMBOL(docker_socket_port, 0, "TCP port to use to communicate with Docker (default: random)", false);
+    DAS_CLI_SYMBOL(docker_socket_path, 0, "Path for plugin socket", false);
+    DAS_CLI_SYMBOL(docker_socket_port, 0, "TCP port to use to communicate with Docker, 0 for random", false);
     DAS_CLI_SYMBOL(docker_socket_tcp, 0, "Use a TCP socket for docker plugin", false);
     DAS_CLI_SYMBOL(docker_user, 0, "System user to use for docker plugin",false);
     DAS_CLI_SYMBOL(dropbox, '\0', "store blocks on Dropbox", false);
