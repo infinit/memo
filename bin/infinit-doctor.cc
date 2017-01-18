@@ -237,8 +237,6 @@ namespace reporting
     this->_print(out, verbose);
     if (this->show(verbose) && this->reason)
       print_reason(out << std::endl, *this->reason, 2);
-    // status(out << std::endl << "  - ", this->sane(), this->warning())
-    //   << ": " << *this->reason;
     return out << std::endl;
   }
 
