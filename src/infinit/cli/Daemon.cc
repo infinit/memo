@@ -1,11 +1,6 @@
 #include <infinit/cli/Daemon.hh>
 
-#include <stdlib.h> // daemon
-
-namespace std
-{
-  using ::daemon;
-}
+#include <stdlib.h> // ::daemon
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -40,6 +35,14 @@ namespace infinit
 
     Daemon::Daemon(Infinit& infinit)
       : Entity(infinit)
+      , status(
+        "Query daemon status",
+        das::cli::Options(),
+        this->bind(modes::mode_status))
+      , stop(
+        "Stop daemon",
+        das::cli::Options(),
+        this->bind(modes::mode_stop))
     {}
 
     // daemon.
@@ -177,7 +180,7 @@ namespace infinit
       void
       daemonize()
       {
-        if (std::daemon(1, 0))
+        if (::daemon(1, 0))
           elle::err("failed to daemonize: %s", strerror(errno));
       }
 
@@ -351,6 +354,26 @@ namespace infinit
         ss << '\n';
         return ss.str();
       }
+    }
+
+    /*---------------.
+    | Mode: status.  |
+    `---------------*/
+    void
+    Daemon::mode_status()
+    {
+      ELLE_TRACE_SCOPE("status");
+      std::cout << (daemon_running() ? "Running" : "Stopped") << std::endl;
+    }
+
+    /*-------------.
+    | Mode: stop.  |
+    `-------------*/
+    void
+    Daemon::mode_stop()
+    {
+      ELLE_TRACE_SCOPE("stop");
+      daemon_stop();
     }
   }
 }

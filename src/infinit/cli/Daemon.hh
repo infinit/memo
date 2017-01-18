@@ -18,7 +18,26 @@ namespace infinit
     public:
       Daemon(Infinit& infinit);
       using Modes
-        = decltype(elle::meta::list());
+        = decltype(elle::meta::list(cli::status,
+                                    cli::stop));
+
+      /*---------------.
+      | Mode: status.  |
+      `---------------*/
+      using ModeStatus =
+        Mode<decltype(binding(modes::mode_status))>;
+      ModeStatus status;
+      void
+      mode_status();
+
+      /*-------------.
+      | Mode: stop.  |
+      `-------------*/
+      using ModeStop =
+        Mode<decltype(binding(modes::mode_stop))>;
+      ModeStop stop;
+      void
+      mode_stop();
     };
   }
 }
