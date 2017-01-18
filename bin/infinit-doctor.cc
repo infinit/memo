@@ -174,7 +174,8 @@ namespace
     if (verbose || broken)
     {
       if (!container.empty())
-        out << ":\n";
+        out << ":";
+      out << "\n";
       // Because print can be called from a const method, store indexes and sort
       // them.
       std::vector<size_t> indexes(container.size());
@@ -233,7 +234,12 @@ namespace reporting
 
   void
   Result::_print(std::ostream& out, bool verbose) const
-  {}
+  {
+    if (this->show(verbose) && this->sane())
+    {
+      out << " OK";
+    }
+  }
 
   bool
   Result::show(bool verbose) const
@@ -292,11 +298,9 @@ namespace reporting
   ConfigurationIntegrityResults::UserResult::_print(std::ostream& out,
                                                     bool verbose) const
   {
-    if (this->show(verbose))
-    {
-      if (this->sane())
-        out << " \"" << this->user_name() << "\" exists and has a private key";
-    }
+    if (this->show(verbose) && this->sane())
+      elle::fprintf(out,
+                    " \"%s\" exists and has a private key", this->user_name());
   }
 
   ConfigurationIntegrityResults::StorageResoucesResult::StorageResoucesResult(
@@ -364,9 +368,7 @@ namespace reporting
     std::ostream& out, bool verbose) const
   {
     if (!this->linked)
-    {
-      out << "is not linked [for user \"" << username << "\"]";
-    }
+      elle::fprintf(out, "is not linked [for user \"%s\"]", username);
     if (this->storage_resources)
     {
       auto s = this->storage_resources->size();
@@ -394,8 +396,7 @@ namespace reporting
     bool sane,
     FaultyNetwork faulty_network,
     Result::Reason extra_reason)
-    : Result(name, sane, extra_reason,
-             (faulty_network ? (!faulty_network->linked) : false))
+    : Result(name, sane, extra_reason, faulty_network && faulty_network->warning())
     , faulty_network(faulty_network)
   {}
 
@@ -417,21 +418,18 @@ namespace reporting
   ConfigurationIntegrityResults::VolumeResult::_print(
     std::ostream& out, bool) const
   {
-    if (!this->sane() || this->warning())
+    if ((!this->sane() || this->warning()) && this->faulty_network)
     {
-      if (this->faulty_network)
-      {
-        out << " ";
-        if (this->sane())
-          out << "(";
-        out << "network \"" << this->faulty_network->name() << "\" is ";
-        if (!this->faulty_network->linked)
-          out << "not linked";
-        else
-          out << "faulty";
-        if (this->sane())
-          out << ")";
-      }
+      out << " ";
+      if (this->sane())
+        out << "(";
+      out << "network \"" << this->faulty_network->name() << "\" is ";
+      if (!this->faulty_network->linked)
+        out << "not linked";
+      else
+        out << "faulty";
+      if (this->sane())
+        out << ")";
     }
   }
 
@@ -643,13 +641,13 @@ namespace reporting
 
   SystemSanityResults::EnvironResult::EnvironResult(
     Environ const& environ)
-    : Result("Environ",
+    : Result("Environment",
              true,
              (environ.empty()
               ? reporting::Result::Reason{}
               : reporting::Result::Reason{
-               "your environ contains variables that will modify "
-               "Infinit default behavior. For more details visit "
+               "your environment contains variables that will modify Infinit "
+               "default behavior. For more details visit "
                "https://infinit.sh/documentation/environment-variables"}),
              !environ.empty())
     , environ(environ)
@@ -708,7 +706,7 @@ namespace reporting
     if (this->show(verbose))
     {
       out
-        << "exists: " << result(this->exists)
+        << " exists: " << result(this->exists)
         << ", readable: " << result(this->read)
         << ", writable: " << result(this->write);
     }
@@ -1426,11 +1424,18 @@ namespace
     return std::make_pair(read, write);
   }
 
-  // Return the permissions as a human readable string:
-  // "is read only"
-  // "is write only"
-  // "is readable and writable"
-  // "is not accessible (permissions denied)
+  namespace
+  {
+    constexpr auto read_only = "read only";
+    constexpr auto read_write = "readable and writable";
+    constexpr auto write_only = "write only";
+    constexpr auto not_accessible = "not accessible (permissions denied)";
+  }
+  /// Return the permissions as a human readable string:
+  /// "is read only"
+  /// "is write only"
+  /// "is readable and writable"
+  /// "is not accessible (permissions denied)
   std::string
   permissions_string(bfs::path const& path)
   {
@@ -1439,13 +1444,13 @@ namespace
       auto perms = permissions(path);
       std::string res = "is ";
       if (perms.first && !perms.second)
-        res += "read only";
+        res += read_only;
       else if (perms.second && !perms.first)
-        res += "write only";
+        res += write_only;
       else if (perms.second && perms.first)
-        res += "readable and writable";
+        res += read_write;
       else
-        res += "not accessible (permissions denied)";
+        res += not_accessible;
       return res;
     }
     catch (...)
@@ -1459,7 +1464,7 @@ namespace
                  bool mandatory = true)
   {
     auto res = permissions_string(path);
-    auto good = (res == "is readable and writable");
+    auto good = (res.find(read_write) != std::string::npos);
     auto sane = (good || !mandatory);
     return std::make_pair(sane, res);
   }
@@ -1594,26 +1599,29 @@ namespace
     try
     {
       user = self_user(ifnt, args, false);
-      if (!user->private_key)
+      if (user->private_key)
+        results.user = {username, true};
+      else
         results.user = {
           username,
-          false, elle::sprintf("user \"%s\" has no private key", username)};
-      else
-        results.user = {username, true};
+          false, elle::sprintf("user \"%s\" has no private key", username)
+        };
     }
+    // XXX: Catch a specific error.
     catch (...)
     {
       results.user = {
         username,
         false, elle::sprintf("user \"%s\" is not an Infinit user", username)};
     }
+    using namespace infinit::storage;
     auto networks = parse(ifnt.networks_get(user));
     ELLE_TRACE("verify storage resources")
       for (auto& elem: storage_resources)
       {
         auto& storage = elem.second.first;
         auto& status = elem.second.second;
-        if (auto s3config = dynamic_cast<infinit::storage::S3StorageConfig const*>(
+        if (auto s3config = dynamic_cast<S3StorageConfig const*>(
               storage.get()))
         {
           auto it =
@@ -1633,20 +1641,21 @@ namespace
           store(results.storage_resources, storage->name, status, "S3",
                 std::string("credentials are missing"));
         }
-        if (auto fsconfig = dynamic_cast<infinit::storage::FilesystemStorageConfig const*>(storage.get()))
+        if (auto fsconfig
+            = dynamic_cast<FilesystemStorageConfig const*>(storage.get()))
         {
           auto perms = has_permission(fsconfig->path);
           status = perms.first;
           store(results.storage_resources, storage->name, status, "filesystem",
                 elle::sprintf("\"%s\" %s", fsconfig->path, perms.second));
         }
-        if (auto gcsconfig = dynamic_cast<infinit::storage::GCSConfig const*>(storage.get()))
+        if (auto gcsconfig = dynamic_cast<GCSConfig const*>(storage.get()))
         {
           auto it =
             std::find_if(
               gcs_credentials.begin(),
               gcs_credentials.end(),
-              [&gcsconfig] (std::unique_ptr<infinit::OAuthCredentials, std::default_delete<infinit::Credentials>> const& credentials)
+              [&gcsconfig] (auto const& credentials)
               {
                 return credentials->refresh_token == gcsconfig->refresh_token;
               });
@@ -1658,8 +1667,7 @@ namespace
                   std::string{"credentials are missing"});
         }
 #ifndef INFINIT_WINDOWS
-        if (/* auto ssh = */
-          dynamic_cast<infinit::storage::SFTPStorageConfig const*>(storage.get()))
+        if (dynamic_cast<SFTPStorageConfig const*>(storage.get()))
         {
           // XXX:
         }
@@ -1674,14 +1682,15 @@ namespace
         bool linked = network.model != nullptr;
         if (linked && network.model->storage)
         {
-          if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
+          if (auto strip = dynamic_cast<StripStorageConfig*>(
                 network.model->storage.get()))
             for (auto const& s: strip->storage)
               storage_names.emplace_back(s->name);
           else
             storage_names.emplace_back(network.model->storage->name);
         }
-        auto faulty = reporting::ConfigurationIntegrityResults::NetworkResult::FaultyStorageResources::value_type{};
+        auto faulty = reporting::ConfigurationIntegrityResults::NetworkResult
+          ::FaultyStorageResources::value_type{};
         status = storage_names.empty() || std::all_of(
           storage_names.begin(),
           storage_names.end(),
@@ -1693,11 +1702,13 @@ namespace
                                    {
                                      return name == t.name();
                                    });
-            auto res = (it == results.storage_resources.end() || it->show(false));
+            auto res = (it == results.storage_resources.end()
+                        || it->show(false));
             if (it != results.storage_resources.end())
               faulty.emplace_back(*it);
             else
-              faulty.emplace_back(name, false, "unknown", std::string{"missing"});
+              faulty.emplace_back(name, false, "unknown",
+                                  std::string{"missing"});
             return !res;
           });
         if (status)
