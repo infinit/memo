@@ -483,6 +483,8 @@ def configure(
     'src/infinit/cli/Infinit.hh',
     'src/infinit/cli/Journal.cc',
     'src/infinit/cli/Journal.hh',
+    'src/infinit/cli/MountManager.cc',
+    'src/infinit/cli/MountManager.hh',
     'src/infinit/cli/Network.cc',
     'src/infinit/cli/Network.hh',
     'src/infinit/cli/Passport.cc',
