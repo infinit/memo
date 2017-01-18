@@ -10,7 +10,7 @@ Introduction
 
 The Infinit command-line tools are composed of several binaries, each dealing with a specific resource or object.
 
-A *user* represents the entity performing operations on files, directly or indirectly. Every user possesses an RSA key pair that is used to identify him/her. A user can create a *network* which represents the interconnection of computing resources that will compose the storage infrastructure. A *storage* is a storage resource, local or remote, that can be connected to a device to support part of the overall storage load. Finally, several *volumes* --- i.e. logical drives ---  can be created within a network.
+A *user* represents the entity performing operations on files, directly or indirectly. Every user possesses an RSA key pair that is used to identify him/her. A user can create a *network* which represents the interconnection of computing resources that will compose the storage infrastructure. A *silo* is a storage resource, local or remote, that can be connected to a device to support part of the overall storage load. Finally, several *volumes* --- i.e. logical drives ---  can be created within a network.
 
 The *Hub* is a cloud service whose role is to ease the process of discovery, sharing and more.
 
@@ -100,7 +100,7 @@ $> infinit-volume --push personal
 Hub
 ---
 
-All objects (users, storages, networks, volumes etc.) are created locally by default with no server involved. The creation process may generate one or more files and store them in the `$INFINIT_HOME` directory, more specifically in the subdirectory `$INFINIT_DATA_HOME`.
+All objects (users, silos, networks, volumes etc.) are created locally by default with no server involved. The creation process may generate one or more files and store them in the `$INFINIT_HOME` directory, more specifically in the subdirectory `$INFINIT_DATA_HOME`.
 
 The command-line tools however provide a way to rely on the Hub for certain operations in order to simplify some administrative tasks such as inviting a user to a drive, sharing the volumes created within a network, moving the user identity to another of your devices and so on. In addition, some functionalities such as the consumption of storage capacity in a network are only available through the Hub. As a rule of thumb, we advise you to always rely on the Hub, unless you know exactly what you are doing.
 
@@ -312,20 +312,20 @@ Locally deleted credentials "s3-user".
 Storage
 -------
 
-The _infinit-storage_ binary allows for the definition of storage resources. Such storage resources can be local — storing blocks of data on a locally available file system — or remote in which case the blocks of data are stored through a cloud service API for instance.
+The _infinit-storage_ binary allows for the definition of silos. Such silos can be local — storing blocks of data on a locally available file system — or remote in which case the blocks of data are stored through a cloud service API for instance.
 
-Note that storage resources are device-specific. As such, resources cannot be pushed to the Hub since they only live locally.
+Note that silos are device-specific. As such, resources cannot be pushed to the Hub since they only live locally.
 
-### Create a storage resource ###
+### Create a silo ###
 
-To create a storage resource, simply specify the `--create` option along with the type of the storage resource. In the example below, a storage resource is created on top of an existing local file system by storing the blocks of encrypted data in a specific directory specified that can be specified through the `--path` option:
+To create a silo, simply specify the `--create` option along with the type of the silo. In the example below, a silo is created on top of an existing local file system by storing the blocks of encrypted data in a specific directory specified that can be specified through the `--path` option:
 
 ```
 $> infinit-storage --create --filesystem --capacity 2GB --name local
 Created storage "local".
 ```
 
-However, the process differs depending on the nature of the storage resource. Please follow the guide that is specific to the type of storage you want to create:
+However, the process differs depending on the nature of the silo. Please follow the guide that is specific to the type of silo you want to create:
 
 <ul class="horizontal">
   <li><a href="${route('doc_storages_filesystem')}"><img src="${url('images/icons/hierarchy.png')}" alt="file system logo"> Local Filesystem</a></li>
@@ -335,9 +335,9 @@ However, the process differs depending on the nature of the storage resource. Pl
 
 _**NOTE**: Do not hesitate to <a href="http://help.infinit.sh" target="_blank">vote for and/or request</a> the types of storage backends that you would like to see supported in the future._
 
-### Delete a storage resource ###
+### Delete a silo ###
 
-You can locally delete a storage resource using the `--delete` mode. For filesystem storage resources, you can clear their contents using the `--clear-content` option.
+You can locally delete a silo using the `--delete` mode. For filesystem silos, you can clear their contents using the `--clear-content` option.
 
 Using `--purge` will unlink all networks that use the storage locally.
 
@@ -348,11 +348,11 @@ With the _infinit-network_ utility you are able to create overlay networks, conf
 
 ### Create a network ###
 
-The example below creates a network named "cluster" which aggregates the storage resources controlled by the users involved in this network.
+The example below creates a network named "cluster" which aggregates the silos controlled by the users involved in this network.
 
 The network can be configured depending on the requirements of the storage infrastructure the administrator is setting up. For instance, the number of computing devices could be extremely small, the owners of those computers could be somewhat untrustworthy or their machines could be expected to be turned on and off throughout the day. To cater for this the network parameters can be tuned: the overlay's topology, the replication factor, the fault tolerance algorithm, etc.
 
-The following creates a small storage network, relying on the Kelips overlay network with a replication factor of 3. In addition, the administrator decides to contribute two storage resources to the network on creation.
+The following creates a small storage network, relying on the Kelips overlay network with a replication factor of 3. In addition, the administrator decides to contribute two silos to the network on creation.
 
 ```
 $> infinit-network --create --as alice --kelips --k 1 --replication-factor 2 --storage local --storage s3 --name cluster
@@ -436,7 +436,7 @@ _**NOTE**: This process must be performed on each new device, proving that the u
 
 ### Run a network ###
 
-Running a network means launching the Infinit software to act as a node in the storage network, also known as a "server". For a node to act as a server, it must [contribute some storage capacity](#create-a-storage-resource).
+Running a network means launching the Infinit software to act as a node in the storage network, also known as a "server". For a node to act as a server, it must [contribute some storage capacity](#create-a-silo).
 
 If you want your node to also provide a POSIX-compliant file system interface, please consider [running/mounting a volume](#mount-a-volume).
 
@@ -544,7 +544,7 @@ INFO: file or folder.
 Passport
 --------
 
-The _infinit-passport_ binary is used to control which users are allowed to connect to a network, granting him/her the right to link devices, contribute storage resources etc.
+The _infinit-passport_ binary is used to control which users are allowed to connect to a network, granting him/her the right to link devices, contribute silos etc.
 
 ### Create a passport ###
 
@@ -962,13 +962,13 @@ Imported user "alice".
 Drive
 -----
 
-Once you've created your storage infrastructure comprising of a network, storage resources and volumes, you may wish to invite other users, potentially non-tech-savvy, to use it to seamlessly store and access their files.
+Once you've created your storage infrastructure comprising of a network, silos and volumes, you may wish to invite other users, potentially non-tech-savvy, to use it to seamlessly store and access their files.
 
 A client application with a graphical interface called <a href="http://infinit.sh/drive">Infinit Drive</a> is provided for end-users to see the drives they are allowed to access, the people contributing to it, their permissions, etc.
 
 <img src="${url('images/desktop-client.png')}" alt="Infinit Drive">
 
-The notions of storage resources, networks and volumes are too technical for most end-users. Such users may also require a simple email guiding them through the set-up process.
+The notions of silos, networks and volumes are too technical for most end-users. Such users may also require a simple email guiding them through the set-up process.
 
 This is why the notion of a *drive* has been introduced. A drive is nothing more than an abstraction on top of a volume. In other words, a drive is a volume that will show up in the Infinit Drive's interface.
 
