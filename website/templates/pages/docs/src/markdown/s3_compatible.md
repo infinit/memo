@@ -36,12 +36,12 @@ Locally stored AWS credentials "minio".
 ```
 _**NOTE**: Credentials are only ever stored locally and cannot be pushed to the Hub._
 
-Creating the Infinit storage resource
--------------------------------------
+Creating the Infinit silo
+-------------------------
 
-With the service's credentials added to Infinit, you can now create the storage resource.
+With the service's credentials added to Infinit, you can now create the silo.
 
 ```
-$> infinit-storage --create minio-storage --s3 --account minio --bucket my-bucket --endpoint http://192.168.0.17:9000 --region us-east-1
-Create storage "minio-storage".
+$> infinit-storage --create minio-silo --s3 --account minio --bucket my-bucket --endpoint http://192.168.0.17:9000 --region us-east-1
+Create storage "minio-silo".
 ```
