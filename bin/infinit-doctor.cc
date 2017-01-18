@@ -835,22 +835,22 @@ namespace reporting
     }
   }
 
-  ConnectivityResults::NatResult::NatResult(bool cone)
-    : Result("Nat", true)
+  ConnectivityResults::NATResult::NATResult(bool cone)
+    : Result("NAT", true)
     , cone(cone)
   {}
 
-  ConnectivityResults::NatResult::NatResult(std::string const& error)
-    : Result("Nat", false, error)
+  ConnectivityResults::NATResult::NATResult(std::string const& error)
+    : Result("NAT", false, error)
   {}
 
-  ConnectivityResults::NatResult::NatResult(elle::serialization::SerializerIn& s)
+  ConnectivityResults::NATResult::NATResult(elle::serialization::SerializerIn& s)
   {
     this->serialize(s);
   }
 
   void
-  ConnectivityResults::NatResult::_print(
+  ConnectivityResults::NATResult::_print(
     std::ostream& out, bool verbose) const
   {
     if (this->show(verbose) && this->sane())
@@ -858,7 +858,7 @@ namespace reporting
   }
 
   void
-  ConnectivityResults::NatResult::serialize(elle::serialization::Serializer& s)
+  ConnectivityResults::NATResult::serialize(elle::serialization::Serializer& s)
   {
     Result::serialize(s);
     s.serialize("cone", cone);

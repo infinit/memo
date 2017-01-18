@@ -569,16 +569,16 @@ namespace reporting
     };
     typedef std::vector<ProtocolResult> ProtocolResults;
 
-    struct NatResult
+    struct NATResult
       : public reporting::Result
     {
       /*-------------.
       | Construction |
       `-------------*/
-      NatResult() = default;
-      NatResult(bool cone);
-      NatResult(std::string const& error);
-      NatResult(elle::serialization::SerializerIn& s);
+      NATResult() = default;
+      NATResult(bool cone);
+      NATResult(std::string const& error);
+      NATResult(elle::serialization::SerializerIn& s);
 
       /*---------.
       | Printing |
@@ -731,7 +731,7 @@ namespace reporting
     BeyondResult beyond;
     InterfaceResults interfaces;
     ProtocolResults protocols;
-    NatResult nat;
+    NATResult nat;
     UPnPResult upnp;
   };
 
