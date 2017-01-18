@@ -33,9 +33,56 @@ namespace infinit
   namespace cli
   {
     using Error = das::cli::Error;
+    using Strings = Daemon::Strings;
 
     Daemon::Daemon(Infinit& infinit)
       : Entity(infinit)
+      , run(
+        "Run daemon in the foreground",
+        das::cli::Options(),
+        this->bind(modes::mode_run,
+                   cli::login_user = Strings{},
+                   cli::mount = Strings{},
+                   cli::mount_root,
+                   cli::default_network,
+                   cli::advertise_host,
+                   cli::fetch,
+                   cli::push,
+#ifdef WITH_DOCKER
+                   cli::docker,
+                   cli::docker_user,
+                   cli::docker_home,
+                   cli::docker_socket_tcp,
+                   cli::docker_socket_port,
+                   cli::docker_socket_path,
+                   cli::docker_descriptor_path,
+                   cli::docker_mount_substitute,
+#endif
+                   cli::log_level,
+                   cli::log_path))
+      , start(
+        "Start daemon in the background",
+        das::cli::Options(),
+        this->bind(modes::mode_start,
+                   cli::login_user = Strings{},
+                   cli::mount = Strings{},
+                   cli::mount_root,
+                   cli::default_network,
+                   cli::advertise_host,
+                   cli::fetch,
+                   cli::push,
+#ifdef WITH_DOCKER
+                   cli::docker,
+                   cli::docker_user,
+                   cli::docker_home,
+                   cli::docker_socket_tcp,
+                   cli::docker_socket_port,
+                   cli::docker_socket_path,
+                   cli::docker_descriptor_path,
+                   cli::docker_mount_substitute,
+#endif
+                   cli::log_level,
+                   cli::log_path))
       , status(
         "Query daemon status",
         das::cli::Options(),
@@ -709,8 +756,7 @@ namespace infinit
       }
 
       void
-      auto_mounter(std::vector<std::string> mounts,
-                   DockerVolumePlugin& dvp)
+      auto_mounter(Strings mounts, DockerVolumePlugin& dvp)
       {
         ELLE_TRACE("entering automounter");
         while (!mounts.empty())
@@ -736,24 +782,26 @@ namespace infinit
       void
       _run(infinit::Infinit& ifnt,
            Infinit& cli,
+           Strings const& login_user,
+           Strings const& mount,
+           boost::optional<std::string> const& mount_root,
+           boost::optional<std::string> const& default_network,
+           boost::optional<Strings> const& advertise_host,
+           bool fetch,
+           bool push,
+#ifdef WITH_DOCKER
+           bool docker,
            boost::optional<std::string> const& docker_user,
            boost::optional<std::string> const& docker_home,
-           boost::optional<std::vector<std::string>> const& login_user,
-           boost::optional<std::vector<std::string>> const& mount,
-           boost::optional<std::string> const& mount_root,
-           bool docker,
            bool docker_socket_tcp,
            boost::optional<int> const& docker_socket_port,
            boost::optional<std::string> const& docker_socket_path,
            boost::optional<std::string> const& docker_descriptor_path,
            boost::optional<std::string> const& docker_mount_substitute,
-           bool detach,
+#endif
            boost::optional<std::string> const& log_level,
            boost::optional<std::string> const& log_path,
-           bool fetch,
-           bool push,
-           boost::optional<std::string> const& default_network,
-           boost::optional<std::vector<std::string>> const& advertise_host)
+           bool detach)
       {
         auto owner = cli.as_user();
         // Pass options to `manager`.
@@ -826,19 +874,18 @@ namespace infinit
         // Scope for lock.
         {
           auto lock = system_user.enter(mutex);
-          if (login_user)
-            for (auto const& u: *login_user)
-            {
-              auto sep = u.find(':');
-              auto name = u.substr(0, sep);
-              auto pass = u.substr(sep+1);
-              auto c = LoginCredentials{name, Infinit::hub_password_hash(pass)};
-              auto json = ifnt.beyond_login(name, c);
-              elle::serialization::json::SerializerIn input(json, false);
-              auto user = input.deserialize<infinit::User>();
-              ifnt.user_save(user, true);
-              cli.report_action("saved", "user", name, "locally");
-            }
+          for (auto const& u: login_user)
+          {
+            auto sep = u.find(':');
+            auto name = u.substr(0, sep);
+            auto pass = u.substr(sep+1);
+            auto c = LoginCredentials{name, Infinit::hub_password_hash(pass)};
+            auto json = ifnt.beyond_login(name, c);
+            elle::serialization::json::SerializerIn input(json, false);
+            auto user = input.deserialize<infinit::User>();
+            ifnt.user_save(user, true);
+            cli.report_action("saved", "user", name, "locally");
+          }
           ELLE_TRACE("starting initial manager");
           managers[getuid()].reset(new MountManager(ifnt, cli,
                                                     user_mount_root,
@@ -847,13 +894,13 @@ namespace infinit
           fill_manager_options(root_manager);
           dvp = std::make_unique<DockerVolumePlugin>(
             root_manager, system_user, mutex);
-          if (mount)
+          if (!mount.empty())
             mounter = std::make_unique<reactor::Thread>("mounter",
-              [&] {auto_mounter(*mount, *dvp);});
+              [&] {auto_mounter(mount, *dvp);});
         }
         if (docker)
         {
-#if !defined INFINIT_PRODUCTION_BUILD || defined INFINIT_LINUX
+#ifdef WITH_DOCKER
           try
           {
             dvp->install(
@@ -971,6 +1018,106 @@ namespace infinit
           }
         };
       }
+    }
+
+    /*------------.
+    | Mode: run.  |
+    `------------*/
+    void
+    Daemon::mode_run(Strings const& login_user,
+                     Strings const& mount,
+                     boost::optional<std::string> const& mount_root,
+                     boost::optional<std::string> const& default_network,
+                     boost::optional<Strings> const& advertise_host,
+                     bool fetch,
+                     bool push,
+#ifdef WITH_DOCKER
+                     bool docker,
+                     boost::optional<std::string> const& docker_user,
+                     boost::optional<std::string> const& docker_home,
+                     bool docker_socket_tcp,
+                     boost::optional<int> const& docker_socket_port,
+                     boost::optional<std::string> const& docker_socket_path,
+                     boost::optional<std::string> const& docker_descriptor_path,
+                     boost::optional<std::string> const& docker_mount_substitute,
+#endif
+                     boost::optional<std::string> const& log_level,
+                     boost::optional<std::string> const& log_path)
+    {
+      ELLE_TRACE_SCOPE("run");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      _run(ifnt, cli,
+           login_user,
+           mount,
+           mount_root,
+           default_network,
+           advertise_host,
+           fetch,
+           push,
+#ifdef WITH_DOCKER
+           docker,
+           docker_user,
+           docker_home,
+           docker_socket_tcp,
+           docker_socket_port,
+           docker_socket_path,
+           docker_descriptor_path,
+           docker_mount_substitute,
+#endif
+           log_level,
+           log_path,
+           false);
+    }
+
+    /*--------------.
+    | Mode: start.  |
+    `--------------*/
+    void
+    Daemon::mode_start(Strings const& login_user,
+                       Strings const& mount,
+                       boost::optional<std::string> const& mount_root,
+                       boost::optional<std::string> const& default_network,
+                       boost::optional<Strings> const& advertise_host,
+                       bool fetch,
+                       bool push,
+#ifdef WITH_DOCKER
+                       bool docker,
+                       boost::optional<std::string> const& docker_user,
+                       boost::optional<std::string> const& docker_home,
+                       bool docker_socket_tcp,
+                       boost::optional<int> const& docker_socket_port,
+                       boost::optional<std::string> const& docker_socket_path,
+                       boost::optional<std::string> const& docker_descriptor_path,
+                       boost::optional<std::string> const& docker_mount_substitute,
+#endif
+                       boost::optional<std::string> const& log_level,
+                       boost::optional<std::string> const& log_path)
+    {
+      ELLE_TRACE_SCOPE("start");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      _run(ifnt, cli,
+           login_user,
+           mount,
+           mount_root,
+           default_network,
+           advertise_host,
+           fetch,
+           push,
+#ifdef WITH_DOCKER
+           docker,
+           docker_user,
+           docker_home,
+           docker_socket_tcp,
+           docker_socket_port,
+           docker_socket_path,
+           docker_descriptor_path,
+           docker_mount_substitute,
+#endif
+           log_level,
+           log_path,
+           true);
     }
 
     /*---------------.

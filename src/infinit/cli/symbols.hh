@@ -40,19 +40,28 @@ namespace infinit
     DAS_CLI_SYMBOL(compatibility_version, '\0', "compatibility version to force", false);
     DAS_CLI_SYMBOL(create_root, 'R', "create root directory", false);
     DAS_CLI_SYMBOL(daemon, 'd', "run as a background daemon" , false);
+    DAS_CLI_SYMBOL(default_network, 0, "Default network for volume creation", false);
     DAS_CLI_SYMBOL(default_permissions, 'd', "default permissions (optional: r,rw)", false);
     DAS_CLI_SYMBOL(deny_storage, '\0', "deny user ability to contribute storage to the network", false);
     DAS_CLI_SYMBOL(deny_write, '\0', "deny user write access to the network", false);
     DAS_CLI_SYMBOL(description, '\0', "{type} description", false);
     DAS_CLI_SYMBOL(disable_UTF_8_conversion, 0, "disable FUSE conversion of UTF-8 to native format", false);
     DAS_CLI_SYMBOL(disable_inherit, '\0', "make new files and directories not inherit permissions", false);
+    DAS_CLI_SYMBOL(docker, 0, "Enable the Docker plugin (default: true)", false);
+    DAS_CLI_SYMBOL(docker_descriptor_path, 0, "Path to add plugin descriptor (default: /usr/lib/docker/plugins)", false);
+    DAS_CLI_SYMBOL(docker_home, 0, "Home directory to use for Docker user (default: /home/<docker-user>)", false);
+    DAS_CLI_SYMBOL(docker_mount_substitute, 0, "[from:to|prefix] : Substitute 'from' to 'to' in advertised path", false);
+    DAS_CLI_SYMBOL(docker_socket_path, 0, "Path for plugin socket (default: /run/docker/plugins)", false);
+    DAS_CLI_SYMBOL(docker_socket_port, 0, "TCP port to use to communicate with Docker (default: random)", false);
+    DAS_CLI_SYMBOL(docker_socket_tcp, 0, "Use a TCP socket for docker plugin", false);
+    DAS_CLI_SYMBOL(docker_user, 0, "System user to use for docker plugin",false);
     DAS_CLI_SYMBOL(dropbox, '\0', "store blocks on Dropbox", false);
     DAS_CLI_SYMBOL(email, 'e', "user email", false);
     DAS_CLI_SYMBOL(enable_inherit, 'i', "make new files and directories inherit permissions", false);
     DAS_CLI_SYMBOL(encrypt, 0,  "use encryption: no, lazy, yes (default: yes)", false);
     DAS_CLI_SYMBOL(endpoint, '\0', "S3 endpoint", false);
     DAS_CLI_SYMBOL(endpoints_file, 0, "write node listening endpoints to file (format: host:port)", false);
-    DAS_CLI_SYMBOL(eviction_delay, 'e', "missing servers eviction delay\n(default: 10 min)", false);
+    DAS_CLI_SYMBOL(eviction_delay, 'e', "missing servers eviction delay (default: 10 min)", false);
     DAS_CLI_SYMBOL(fallback_xattrs, '\0', "use fallback special file if extended attributes are not supported", false);
     DAS_CLI_SYMBOL(fetch, 'f', "fetch {type} from {hub}", false);
     DAS_CLI_SYMBOL(fetch_drive, 0, "update local drive descriptor from {hub}", false);
@@ -79,11 +88,16 @@ namespace infinit
     DAS_CLI_SYMBOL(kouncil, 0, "use a Kouncil overlay network", false);
     DAS_CLI_SYMBOL(ldap_name, 'l', "user LDAP distinguished name", false);
     DAS_CLI_SYMBOL(listen, 0, "specify which IP address to listen on (default: all)", false);
+    DAS_CLI_SYMBOL(log_level, 0, "Log level to start volumes with (default: LOG)", false);
+    DAS_CLI_SYMBOL(log_path, 0, "Store volume logs in given path", false);
+    DAS_CLI_SYMBOL(login_user, 0, "Login with selected user(s), of form 'user:password'", false);
     DAS_CLI_SYMBOL(map_other_permissions, 0, "allow chmod to set world permissions", false);
     DAS_CLI_SYMBOL(mode, 'm', "access mode {action}: r, w, rw, none", false);
     DAS_CLI_SYMBOL(monitoring, 0, "enable monitoring", false);
+    DAS_CLI_SYMBOL(mount, 0, "mount given volumes on startup, keep trying on error", false);
     DAS_CLI_SYMBOL(mount_icon, 0, "path to an icon for mounted volume" , false);
     DAS_CLI_SYMBOL(mount_name, 0, "name of mounted volume" , false);
+    DAS_CLI_SYMBOL(mount_root, 0, "Default root path for all mounts", false);
     DAS_CLI_SYMBOL(mountpoint, 'm', "where to mount the filesystem" , false);
     DAS_CLI_SYMBOL(name, 'n', "name of the {type} {action}", true);
     DAS_CLI_SYMBOL(network, 'N', "network {action} {type} for", false);
@@ -147,7 +161,7 @@ namespace infinit
     DAS_CLI_SYMBOL(verbose, '\0', "use verbose output", false);
     DAS_CLI_SYMBOL(volume, 'V', "associated volume name", false);
 
-    
+
     DAS_SYMBOL(acl);
     DAS_SYMBOL(block);
     DAS_SYMBOL(call);
@@ -169,7 +183,6 @@ namespace infinit
     DAS_SYMBOL(list_services);
     DAS_SYMBOL(list_storage);
     DAS_SYMBOL(login);
-    DAS_SYMBOL(mount);
     DAS_SYMBOL(run);
     DAS_SYMBOL(set);
     DAS_SYMBOL(set_xattr);
