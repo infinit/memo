@@ -1092,7 +1092,7 @@ namespace infinit
         }
         catch (elle::Error const& e)
         {
-          elle::err("connection failed to %s", location);
+          elle::err("connection failed to %s: %s", location, e);
         }
       }
 
@@ -3133,17 +3133,19 @@ namespace infinit
             auto it = _state.contacts[group].begin();
             while(v--) ++it;
             auto tit = _ping_time.find(it->second.address);
-            if (tit != _ping_time.end()
-              && now() - tit->second < std::chrono::milliseconds(_config.ping_timeout_ms))
+            if (tit != _ping_time.end())
             {
-              reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
-              continue;
-            }
-            else
-            {
-              it->second.ping_timeouts++;
-              ELLE_TRACE("%s: ping timeout on %s (%s)", this, it->first,
-                         it->second.ping_timeouts);
+              if (now() - tit->second < std::chrono::milliseconds(_config.ping_timeout_ms))
+              {
+                reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
+                continue;
+              }
+              else
+              {
+                it->second.ping_timeouts++;
+                ELLE_TRACE("%s: ping timeout on %s (%s)", this, it->first,
+                  it->second.ping_timeouts);
+              }
             }
             target = &it->second;
             break;
