@@ -1153,7 +1153,7 @@ namespace
       catch (reactor::http::RequestError const&)
       {
         results.beyond =
-          {false, elle::sprintf("Couldn't connecto to %s", infinit::beyond())};
+          {false, elle::sprintf("Couldn't connect to %s", infinit::beyond())};
       }
       catch (elle::Error const&)
       {
