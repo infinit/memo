@@ -686,20 +686,18 @@ namespace infinit
 
       if (cli.script())
       {
-        auto l = elle::json::Array{};
-        for (auto const& volume: ifnt.volumes_get())
-        {
-          auto o = elle::json::Object
+        auto l = elle::json::make_array(ifnt.volumes_get(), [&](auto const& volume) {
+          auto res = elle::json::Object
             {
               {"name", static_cast<std::string>(volume.name)},
               {"network", volume.network},
             };
           if (volume.mount_options.mountpoint)
-            o["mountpoint"] = *volume.mount_options.mountpoint;
+            res["mountpoint"] = *volume.mount_options.mountpoint;
           if (volume.description)
-            o["description"] = *volume.description;
-          l.emplace_back(std::move(o));
-        }
+            res["description"] = *volume.description;
+          return res;
+          });
         elle::json::write(std::cout, l);
       }
       else

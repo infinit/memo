@@ -504,16 +504,16 @@ namespace infinit
                 { return lhs.name < rhs.name; });
       if (this->cli().script())
       {
-        elle::json::Array l;
-        for (auto const& user: users)
-        {
-          elle::json::Object o;
-          o["name"] = static_cast<std::string>(user.name);
-          o["has_private_key"] = bool(user.private_key);
+        auto l = elle::json::make_array(users, [](auto const& user) {
+          auto res = elle::json::Object
+            {
+              {"name", static_cast<std::string>(user.name)},
+              {"has_private_key",  bool(user.private_key)},
+            };
           if (user.description)
-            o["description"] = user.description.get();
-          l.push_back(std::move(o));
-        }
+            res["description"] = user.description.get();
+          return res;
+          });
         elle::json::write(std::cout, l);
       }
       else

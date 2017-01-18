@@ -838,18 +838,17 @@ namespace infinit
 
       if (cli.script())
       {
-        auto l = elle::json::Array{};
-        for (auto const& network: ifnt.networks_get(owner))
-        {
-          auto o = elle::json::Object
+        auto l = elle::json::make_array(ifnt.networks_get(owner),
+                                        [&] (auto const& network) {
+          auto res = elle::json::Object
             {
               {"name", static_cast<std::string>(network.name)},
               {"linked", bool(network.model) && network.user_linked(owner)},
             };
           if (network.description)
-            o["description"] = network.description.get();
-          l.emplace_back(std::move(o));
-        }
+            res["description"] = network.description.get();
+          return res;
+        });
         elle::json::write(std::cout, l);
       }
       else
