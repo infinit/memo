@@ -1,5 +1,6 @@
 #include <infinit/cli/Daemon.hh>
 
+#include <pwd.h>
 #include <stdlib.h> // ::daemon
 
 #include <boost/algorithm/string.hpp>
@@ -83,6 +84,16 @@ namespace infinit
           return elle::PIDFile::read(PIDFile::path());
         }
       };
+
+      boost::optional<std::string>
+      optional(elle::json::Object const& options, std::string const& name)
+      {
+        auto it = options.find(name);
+        if (it == options.end())
+          return {};
+        else
+          return boost::any_cast<std::string>(it->second);
+      }
 
       elle::serialization::json::SerializerIn
       cmd_response_serializer(elle::json::Object const& json,
@@ -353,6 +364,612 @@ namespace infinit
         }
         ss << '\n';
         return ss.str();
+      }
+
+      struct SystemUser
+      {
+        SystemUser(unsigned int uid,
+                   unsigned int gid,
+                   std::string name,
+                   std::string home)
+          : uid(uid)
+          , gid(gid)
+          , name(name)
+          , home(home)
+        {}
+
+        SystemUser(unsigned int uid, boost::optional<std::string> home_ = {})
+          : uid(uid)
+          , gid(0)
+        {
+          passwd* pwd = getpwuid(uid);
+          if (!pwd)
+            elle::err("No user found with uid %s", uid);
+          name = pwd->pw_name;
+          home = home_.value_or(pwd->pw_dir);
+          gid = pwd->pw_gid;
+        }
+
+        SystemUser(std::string const& name_, boost::optional<std::string> home_ = {})
+        {
+          passwd* pwd = getpwnam(name_.c_str());
+          if (!pwd)
+            elle::err("No user found with name %s", name_);
+          name = pwd->pw_name;
+          home = home_.value_or(pwd->pw_dir);
+          uid = pwd->pw_uid;
+          gid = pwd->pw_gid;
+        }
+        unsigned int uid;
+        unsigned int gid;
+        std::string name;
+        std::string home;
+
+        struct Lock
+          : public reactor::Lock
+        {
+          Lock(SystemUser const& su, reactor::Lockable& l)
+            : reactor::Lock(l)
+          {
+            prev_home = elle::os::getenv("INFINIT_HOME", "");
+            prev_data_home = elle::os::getenv("INFINIT_DATA_HOME", "");
+            elle::os::setenv("INFINIT_HOME", su.home, 1);
+            if (!elle::os::getenv("INFINIT_HOME_OVERRIDE", "").empty())
+              elle::os::setenv("INFINIT_HOME",
+                elle::os::getenv("INFINIT_HOME_OVERRIDE", ""), 1);
+            elle::os::unsetenv("INFINIT_DATA_HOME");
+            prev_euid = geteuid();
+            prev_egid = getegid();
+            elle::setegid(su.gid);
+            elle::seteuid(su.uid);
+          }
+
+          Lock(Lock const& b) = delete;
+
+          Lock(Lock && b) = default;
+
+          ~Lock()
+          {
+            if (prev_home.empty())
+              elle::os::unsetenv("INFINIT_HOME");
+            else
+              elle::os::setenv("INFINIT_HOME", prev_home, 1);
+            if (!prev_data_home.empty())
+              elle::os::setenv("INFINIT_DATA_HOME", prev_data_home, 1);
+            elle::seteuid(prev_euid);
+            elle::setegid(prev_egid);
+          }
+
+          std::string prev_home, prev_data_home;
+          int prev_euid, prev_egid;
+        };
+
+        Lock
+        enter(reactor::Lockable& l) const
+        {
+          return {*this, l};
+        }
+      };
+
+      /*---------------------.
+      | DockerVolumePlugin.  |
+      `---------------------*/
+
+      class DockerVolumePlugin
+      {
+      public:
+        DockerVolumePlugin(MountManager& manager,
+                           SystemUser& user, reactor::Mutex& mutex);
+        ~DockerVolumePlugin();
+        void install(bool tcp, int tcp_port,
+                     bfs::path socket_folder,
+                     bfs::path descriptor_folder);
+        void uninstall();
+        std::string mount(std::string const& name);
+      private:
+        ELLE_ATTRIBUTE_R(MountManager&, manager);
+        std::unique_ptr<reactor::network::HttpServer> _server;
+        std::unordered_map<std::string, int> _mount_count;
+        SystemUser& _user;
+        reactor::Mutex& _mutex;
+        bfs::path _socket_path;
+        bfs::path _spec_json_path;
+        bfs::path _spec_url_path;
+      };
+
+      DockerVolumePlugin::DockerVolumePlugin(MountManager& manager,
+                                             SystemUser& user,
+                                             reactor::Mutex& mutex)
+        : _manager(manager)
+        , _user(user)
+        , _mutex(mutex)
+      {}
+
+      DockerVolumePlugin::~DockerVolumePlugin()
+      {
+        uninstall();
+      }
+
+      void
+      DockerVolumePlugin::uninstall()
+      {
+        boost::system::error_code erc;
+        if (!this->_socket_path.empty())
+          bfs::remove(this->_socket_path, erc);
+        if (!this->_spec_json_path.empty())
+          bfs::remove(this->_spec_json_path, erc);
+        if (!this->_spec_url_path.empty())
+          bfs::remove(this->_spec_url_path, erc);
+      }
+
+      std::string
+      DockerVolumePlugin::mount(std::string const& name)
+      {
+        auto it = _mount_count.find(name);
+        if (it != _mount_count.end())
+        {
+          ELLE_TRACE("Already mounted");
+          ++it->second;
+        }
+        else
+        {
+          _manager.start(name, {}, true, true);
+          _mount_count.insert(std::make_pair(name, 1));
+        }
+        return _manager.mountpoint(name);
+      }
+
+      void
+      DockerVolumePlugin::install(bool tcp,
+                                  int tcp_port,
+                                  bfs::path socket_folder,
+                                  bfs::path descriptor_folder)
+      {
+        // plugin path is either in /etc/docker/plugins or /usr/lib/docker/plugins
+        boost::system::error_code erc;
+        create_directories(descriptor_folder, erc);
+        if (erc)
+          elle::err("Unable to create descriptor folder (%s): %s",
+                    descriptor_folder, erc.message());
+        bfs::create_directories(socket_folder, erc);
+        if (erc)
+          elle::err("Unable to create socket folder (%s): %s",
+                    socket_folder, erc.message());
+        this->_socket_path = socket_folder / "infinit.sock";
+        bfs::remove(this->_socket_path, erc);
+        this->_spec_json_path = descriptor_folder / "infinit.json";
+        bfs::remove(this->_spec_json_path, erc);
+        this->_spec_url_path = descriptor_folder / "infinit.spec";
+        bfs::remove(this->_spec_url_path, erc);
+        if (tcp)
+        {
+          this->_server = std::make_unique<reactor::network::HttpServer>(tcp_port);
+          int port = this->_server->port();
+          auto url = elle::sprintf("tcp://localhost:%s", port);
+          bfs::ofstream ofs(this->_spec_url_path);
+          if (!ofs.good())
+            elle::err("Unable to write to URL .spec file: %s", this->_spec_url_path);
+          ofs << url;
+        }
+        else
+        {
+          auto us = std::make_unique<reactor::network::UnixDomainServer>();
+          us->listen(this->_socket_path);
+          this->_server =
+            std::make_unique<reactor::network::HttpServer>(std::move(us));
+        }
+        {
+          auto json = elle::json::Object {
+            {"Name", std::string{"infinit"}},
+            {"Addr", std::string{"https://infinit.sh"}},
+          };
+          bfs::ofstream ofs(this->_spec_json_path);
+          if (!ofs.good())
+            elle::err("Unable to write JSON plugin description: %s",
+                      this->_spec_json_path);
+          elle::json::write(ofs, json);
+        }
+#define ROUTE_SIG  (reactor::network::HttpServer::Headers const&,       \
+                    reactor::network::HttpServer::Cookies const&,       \
+                    reactor::network::HttpServer::Parameters const&,    \
+                    elle::Buffer const& data) -> std::string
+        _server->register_route("/Plugin.Activate",  reactor::http::Method::POST,
+          [] ROUTE_SIG {
+            ELLE_TRACE("Activating plugin");
+            return "{\"Implements\": [\"VolumeDriver\"]}";
+          });
+        _server->register_route("/VolumeDriver.Create", reactor::http::Method::POST,
+          [this] ROUTE_SIG {
+            auto lock = this->_user.enter(this->_mutex);
+            auto stream = elle::IOStream(data.istreambuf());
+            auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+            std::string err;
+            try
+            {
+              auto opts = elle::json::Object{};
+              try
+              {
+                opts = boost::any_cast<elle::json::Object>(json.at("Opts"));
+              }
+              catch(...)
+              {}
+              auto name = optional(json, "Name");
+              if (!name)
+                elle::err("missing 'Name' argument");
+              this->_manager.create_volume(name.get(), opts);
+            }
+            catch (infinit::ResourceAlreadyFetched const&)
+            {
+              // This can happen, docker seems to be caching volume list:
+              // a mount request can trigger a create request without any list.
+            }
+            catch (elle::Error const& e)
+            {
+              err = boost::replace_all_copy(elle::sprintf("%s", e), "\"", "'");
+              ELLE_WARN("error creating volume: %s", e);
+            }
+            return "{\"Err\": \"" + err + "\"}";
+          });
+        _server->register_route("/VolumeDriver.Remove", reactor::http::Method::POST,
+          [this] ROUTE_SIG {
+            elle::err("use infinit-volume --delete to delete volumes");
+            // auto lock = this->_user.enter(this->_mutex);
+            // // Reverse the Create process.
+            // auto stream = elle::IOStream(data.istreambuf());
+            // auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+            // std::string err;
+            // try
+            // {
+            //   auto name = optional(json, "Name");
+            //   if (!name)
+            //     elle::err("Missing 'Name' argument");
+            //   this->_manager.delete_volume(name.get());
+            // }
+            // catch (elle::Error const& e)
+            // {
+            //   err = elle::sprintf("%s", e);
+            //   ELLE_LOG("%s\n%s", e, e.backtrace());
+            // }
+            // boost::replace_all(err, "\"", "'");
+            // return "{\"Err\": \"" + err + "\"}";
+          });
+        _server->register_route("/VolumeDriver.Get", reactor::http::Method::POST,
+          [this] ROUTE_SIG {
+            auto lock = this->_user.enter(this->_mutex);
+            auto stream = elle::IOStream(data.istreambuf());
+            auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+            auto name = boost::any_cast<std::string>(json.at("Name"));
+            if (this->_manager.exists(name))
+              return "{\"Err\": \"\", \"Volume\": {\"Name\": \"" + name + "\" }}";
+            else
+              return "{\"Err\": \"No such mount\"}";
+          });
+        _server->register_route("/VolumeDriver.Mount", reactor::http::Method::POST,
+          [this] ROUTE_SIG {
+            auto lock = this->_user.enter(this->_mutex);
+            auto stream = elle::IOStream(data.istreambuf());
+            auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+            auto name = boost::any_cast<std::string>(json.at("Name"));
+            std::string mountpoint = mount(name);
+            std::string res = "{\"Err\": \"\", \"Mountpoint\": \""
+                + mountpoint +"\"}";
+            ELLE_TRACE("reply: %s", res);
+            return res;
+          });
+        _server->register_route("/VolumeDriver.Unmount", reactor::http::Method::POST,
+          [this] ROUTE_SIG {
+            auto lock = this->_user.enter(this->_mutex);
+            auto stream = elle::IOStream(data.istreambuf());
+            auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+            auto name = boost::any_cast<std::string>(json.at("Name"));
+            auto it = _mount_count.find(name);
+            if (it == _mount_count.end())
+              return "{\"Err\": \"No such mount\"}";
+            --it->second;
+            if (it->second == 0)
+            {
+              _mount_count.erase(it);
+              _manager.stop(name);
+            }
+            return "{\"Err\": \"\"}";
+          });
+        _server->register_route("/VolumeDriver.Path", reactor::http::Method::POST,
+          [this] ROUTE_SIG {
+            auto lock = this->_user.enter(this->_mutex);
+            auto stream = elle::IOStream(data.istreambuf());
+            auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+            auto name = boost::any_cast<std::string>(json.at("Name"));
+            try
+            {
+              return "{\"Err\": \"\", \"Mountpoint\": \""
+                + this->_manager.mountpoint(name) +"\"}";
+            }
+            catch (elle::Error const& e)
+            {
+              auto err = boost::replace_all_copy(elle::sprintf("%s", e), "\"", "'");
+              return "{\"Err\": \"" + err + "\"}";
+            }
+          });
+        _server->register_route("/VolumeDriver.List", reactor::http::Method::POST,
+          [this] ROUTE_SIG {
+            auto lock = this->_user.enter(this->_mutex);
+            auto res = std::string{"{\"Err\": \"\", \"Volumes\": [ "};
+            for (auto const& n: this->_manager.list())
+              res += "{\"Name\": \"" + n  + "\"},";
+            res = res.substr(0, res.size()-1);
+            res += "]}";
+            return res;
+          });
+         _server->register_route(
+           "/VolumeDriver.Capabilities",
+           reactor::http::Method::POST,
+           [this] ROUTE_SIG {
+             return "{}";
+         });
+      }
+
+      void
+      auto_mounter(std::vector<std::string> mounts,
+                   DockerVolumePlugin& dvp)
+      {
+        ELLE_TRACE("entering automounter");
+        while (!mounts.empty())
+        {
+          for (unsigned int i=0; i<mounts.size(); ++i)
+            try
+            {
+              dvp.mount(mounts[i]);
+              mounts[i] = mounts[mounts.size()-1];
+              mounts.pop_back();
+              --i;
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_TRACE("Mount of %s failed: %s", mounts[i], e);
+            }
+          if (!mounts.empty())
+            reactor::sleep(20_sec);
+        }
+        ELLE_TRACE("Exiting automounter");
+      }
+
+      void
+      _run(infinit::Infinit& ifnt,
+           Infinit& cli,
+           boost::optional<std::string> const& docker_user,
+           boost::optional<std::string> const& docker_home,
+           boost::optional<std::vector<std::string>> const& login_user,
+           boost::optional<std::vector<std::string>> const& mount,
+           boost::optional<std::string> const& mount_root,
+           bool docker,
+           bool docker_socket_tcp,
+           boost::optional<int> const& docker_socket_port,
+           boost::optional<std::string> const& docker_socket_path,
+           boost::optional<std::string> const& docker_descriptor_path,
+           boost::optional<std::string> const& docker_mount_substitute,
+           bool detach,
+           boost::optional<std::string> const& log_level,
+           boost::optional<std::string> const& log_path,
+           bool fetch,
+           bool push,
+           boost::optional<std::string> const& default_network,
+           boost::optional<std::vector<std::string>> const& advertise_host)
+      {
+        auto owner = cli.as_user();
+        // Pass options to `manager`.
+        auto fill_manager_options = [&](MountManager& manager)
+          {
+            manager.log_level(log_level);
+            manager.log_path(log_path);
+            manager.fetch(fetch);
+            manager.push(push);
+            manager.default_user(owner.name);
+            manager.default_network(default_network);
+            if (advertise_host)
+              manager.advertise_host(*advertise_host);
+          };
+
+        ELLE_TRACE("starting daemon");
+        if (daemon_running())
+          elle::err("daemon already running");
+        auto system_user = [&] {
+          if (docker_user)
+            return SystemUser(*docker_user, docker_home);
+          else
+            return SystemUser(getuid(), docker_home);
+        }();
+        reactor::Mutex mutex;
+        // uid -> manager.
+        auto managers = std::unordered_map<int, std::unique_ptr<MountManager>>{};
+        auto dvp = std::unique_ptr<DockerVolumePlugin>{};
+        auto mounter = std::unique_ptr<reactor::Thread>{};
+        // Always call get_mount_root() before entering the SystemUser.
+        auto get_mount_root = [&] (SystemUser const& user) {
+          if (mount_root)
+          {
+            auto res = bfs::path(*mount_root);
+            if (!bfs::exists(res))
+              elle::err("mount root does not exist");
+            if (!bfs::is_directory(res))
+              elle::err("mount root is not a directory");
+            // Add the uid so that we have a directory for each user.
+            res /= std::to_string(user.uid);
+            if (bfs::create_directories(res))
+            {
+              elle::chown(res.string(), user.uid, user.gid);
+              bfs::permissions(res.string(), bfs::owner_all);
+            }
+            return bfs::canonical(res).string();
+          }
+          else
+          {
+            auto env_run_dir = elle::os::getenv("XDG_RUNTIME_DIR", "");
+            auto user_run_dir = !env_run_dir.empty()
+              ? env_run_dir : elle::sprintf("/run/user/%s", user.uid);
+            if (bfs::create_directories(user_run_dir))
+            {
+              elle::chown(user_run_dir, user.uid, user.gid);
+              bfs::permissions(user_run_dir, bfs::owner_all);
+            }
+            {
+              if (mutex.locked())
+                elle::err("call get_mount_root() before .enter() on the SystemUser");
+              auto lock = user.enter(mutex);
+              auto res = elle::sprintf("%s/infinit/filesystem/mnt", user_run_dir);
+              bfs::create_directories(res);
+              return res;
+            }
+          }
+        };
+        auto user_mount_root = get_mount_root(system_user);
+        auto docker_mount_sub = docker_mount_substitute.value_or("");
+        // Scope for lock.
+        {
+          auto lock = system_user.enter(mutex);
+          if (login_user)
+            for (auto const& u: *login_user)
+            {
+              auto sep = u.find(':');
+              auto name = u.substr(0, sep);
+              auto pass = u.substr(sep+1);
+              auto c = LoginCredentials{name, Infinit::hub_password_hash(pass)};
+              auto json = ifnt.beyond_login(name, c);
+              elle::serialization::json::SerializerIn input(json, false);
+              auto user = input.deserialize<infinit::User>();
+              ifnt.user_save(user, true);
+              cli.report_action("saved", "user", name, "locally");
+            }
+          ELLE_TRACE("starting initial manager");
+          managers[getuid()].reset(new MountManager(ifnt, cli,
+                                                    user_mount_root,
+                                                    docker_mount_sub));
+          MountManager& root_manager = *managers[getuid()];
+          fill_manager_options(root_manager);
+          dvp = std::make_unique<DockerVolumePlugin>(
+            root_manager, system_user, mutex);
+          if (mount)
+            mounter = std::make_unique<reactor::Thread>("mounter",
+              [&] {auto_mounter(*mount, *dvp);});
+        }
+        if (docker)
+        {
+#if !defined INFINIT_PRODUCTION_BUILD || defined INFINIT_LINUX
+          try
+          {
+            dvp->install(
+              docker_socket_tcp,
+              docker_socket_port.value_or(0),
+              docker_socket_path.value_or("/run/docker/plugins"),
+              docker_descriptor_path.value_or("/usr/lib/docker/plugins"));
+          }
+          catch (std::exception const& e)
+          {
+            ELLE_ERR("Failed to install docker plugin: %s", e.what());
+            ELLE_ERR("Docker plugin disabled");
+          }
+#endif
+        }
+        if (detach)
+          daemonize();
+        PIDFile pid;
+        reactor::network::UnixDomainServer srv;
+        auto sockaddr = daemon_sock_path();
+        bfs::remove(sockaddr);
+        srv.listen(sockaddr);
+        chmod(sockaddr.string().c_str(), 0666);
+        elle::SafeFinally terminator([&] {
+          if (mounter)
+            mounter->terminate_now();
+          ELLE_LOG("stopped daemon");
+        });
+        elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+        {
+          ELLE_LOG("started daemon");
+          while (true)
+          {
+            auto socket = elle::utility::move_on_copy(srv.accept());
+            auto native = socket->socket()->native();
+            uid_t uid;
+            gid_t gid;
+#ifdef INFINIT_MACOSX
+            if (getpeereid(native, &uid, &gid))
+            {
+              ELLE_ERR("getpeerid failed: %s", strerror(errno));
+              continue;
+            }
+#elif defined INFINIT_LINUX
+            struct ucred ucred;
+            socklen_t len = sizeof ucred;
+            if (getsockopt(native, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1)
+            {
+               ELLE_ERR("getsocopt(peercred) failed: %s", strerror(errno));
+               continue;
+            }
+            uid = ucred.uid;
+            gid = ucred.gid;
+#else
+# error "unsupported platform"
+#endif
+            static reactor::Mutex mutex;
+            (void)gid;
+            SystemUser system_user(uid);
+            MountManager* user_manager = nullptr;
+            auto it = managers.find(uid);
+            if (it == managers.end())
+            {
+              auto peer_mount_root = get_mount_root(system_user);
+              auto lock = system_user.enter(mutex);
+              user_manager = new MountManager(ifnt, cli,
+                                              peer_mount_root, docker_mount_sub);
+              fill_manager_options(*user_manager);
+              managers[uid].reset(user_manager);
+            }
+            else
+              user_manager = it->second.get();
+            auto name = elle::sprintf("%s server", **socket);
+            scope.run_background(
+              name,
+              [socket, user_manager, system_user]
+              {
+                auto on_end = std::function<void()>{};
+                elle::SafeFinally sf([&] {
+                    try
+                    {
+                      if (on_end)
+                        on_end();
+                    }
+                    catch(elle::Error const& e)
+                    {
+                      ELLE_WARN("Unexpected exception in on_end: %s", e);
+                    }
+                });
+                try
+                {
+                  while (true)
+                  {
+                    auto json =
+                      boost::any_cast<elle::json::Object>(elle::json::read(**socket));
+                    auto reply = [&] {
+                      SystemUser::Lock lock(system_user.enter(mutex));
+                      return process_command(json, *user_manager, on_end);
+                    }();
+                    ELLE_TRACE("Writing reply: '%s'", reply);
+                    socket->write(reply);
+                  }
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_TRACE("%s", e);
+                  try
+                  {
+                    socket->write(elle::sprintf("{\"error\": \"%s\"}\n", e.what()));
+                  }
+                  catch (elle::Error const&)
+                  {}
+                }
+              });
+          }
+        };
       }
     }
 
