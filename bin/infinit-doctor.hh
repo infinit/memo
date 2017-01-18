@@ -40,9 +40,10 @@ namespace reporting
     std::ostream&
     print(std::ostream& out, bool verbose, bool rc = true) const;
 
-  protected:
+  public:
     bool
     show(bool verbose) const;
+  protected:
     virtual
     bool
     _show(bool verbose) const;
@@ -141,7 +142,9 @@ namespace reporting
       /*------.
       | Types |
       `------*/
-      using FaultyStorageResources = boost::optional<std::vector<std::string>>;
+      using FaultyStorageResources = boost::optional<
+        std::vector<StorageResoucesResult>
+      >;
 
       /*-------------.
       | Construction |
@@ -180,7 +183,7 @@ namespace reporting
       /*------.
       | Types |
       `------*/
-      using FaultyNetwork = boost::optional<std::string>;
+      using FaultyNetwork = boost::optional<NetworkResult>;
 
       /*-------------.
       | Construction |
@@ -216,7 +219,7 @@ namespace reporting
       /*------.
       | Types |
       `------*/
-      typedef boost::optional<std::string> FaultyVolume;
+      typedef boost::optional<VolumeResult> FaultyVolume;
 
       /*-------------.
       | Construction |

@@ -348,8 +348,17 @@ namespace reporting
     {
       auto s = this->storage_resources->size();
       if (s > 0)
-        out << elle::join(storage_resources->begin(),
-                          storage_resources->end(), "], [");
+        out << " " << elle::join(
+          *storage_resources,
+          "], [",
+          [] (auto const& t)
+          {
+            std::stringstream out;
+            out << t.name();
+            if (t.reason)
+              out << " (" << *t.reason << ")";
+            return out.str();
+          });
       if (s == 1)
         out << " storage resource is faulty";
       else if (s > 1)
@@ -385,7 +394,12 @@ namespace reporting
     std::ostream& out, bool) const
   {
     if (this->faulty_network)
-      out << "network " << *this->faulty_network << " is faulty";
+      out << " network " << this->faulty_network->name() << " is ";
+    if (this->faulty_network && !this->faulty_network->linked)
+      out << "not linked";
+    else
+      out << "faulty";
+
   }
 
   ConfigurationIntegrityResults::DriveResult::DriveResult(
@@ -417,7 +431,11 @@ namespace reporting
   {
     if (this->faulty_volume)
     {
-      out << "volume " << *this->faulty_volume << " is faulty";
+      out << " volume " << this->faulty_volume->name() << " is ";
+      if (this->faulty_volume->reason)
+        out << this->faulty_volume->reason;
+      else
+        out << "faulty";
     }
   }
 
@@ -1618,17 +1636,24 @@ namespace
           else
             storage_names.emplace_back(network.model->storage->name);
         }
-        auto faulty = std::vector<std::string>{};
+        auto faulty = reporting::ConfigurationIntegrityResults::NetworkResult::FaultyStorageResources::value_type{};
         status = storage_names.empty() || std::all_of(
           storage_names.begin(),
           storage_names.end(),
           [&] (std::string const& name) -> bool
           {
-            auto it = storage_resources.find(name);
-            auto res = (it != storage_resources.end() && it->second.second);
-            if (!res)
-              faulty.emplace_back(name);
-            return res;
+            auto it = std::find_if(results.storage_resources.begin(),
+                                   results.storage_resources.end(),
+                                   [name] (auto const& t)
+                                   {
+                                     return name == t.name();
+                                   });
+            auto res = (it == results.storage_resources.end() || it->show(false));
+            if (it != results.storage_resources.end())
+              faulty.emplace_back(*it);
+            else
+              faulty.emplace_back(name, false, "unknown", std::string{"missing"});
+            return !res;
           });
         if (status)
           store(results.networks, network.name, status, boost::none,
@@ -1645,10 +1670,26 @@ namespace
         auto network = networks.find(volume.network);
         auto network_presents = network != networks.end();
         status = network_presents && network->second.second;
+        auto network_result = std::find_if(results.networks.begin(),
+                                           results.networks.end(),
+                                           [volume] (auto const& n)
+                                           {
+                                             return volume.network == n.name();
+                                           });
+        if (network_result != results.networks.end())
+          status &= !network_result->warning();
         if (status)
           store(results.volumes, volume.name, status);
         else
-          store(results.volumes, volume.name, status, volume.network);
+        {
+          store(results.volumes, volume.name, status,
+                (network_result != results.networks.end())
+                ? *network_result
+                : reporting::ConfigurationIntegrityResults::NetworkResult(
+                  volume.network, false, {}, std::string{"missing"}
+                )
+            );
+        }
       }
     ELLE_TRACE("verify drives")
       for (auto& elems: drives)
@@ -1665,9 +1706,21 @@ namespace
         if (status)
           store(results.drives, drive.name, status);
         else
-          store(results.drives, drive.name, status, drive.volume);
+        {
+          auto it = std::find_if(results.volumes.begin(),
+                                 results.volumes.end(),
+                                 [drive] (auto const& v)
+                                 {
+                                   return drive.volume == v.name();
+                                 });
+          store(results.drives, drive.name, status,
+                (it != results.volumes.end())
+                ? *it
+                : reporting::ConfigurationIntegrityResults::VolumeResult(
+                  drive.volume, false, {}, std::string{"missing"})
+            );
+        }
       }
-
     namespace bf = bfs;
     auto& leftovers = results.leftovers;
     auto path_contains_file = [](bfs::path dir, bfs::path file) -> bool
