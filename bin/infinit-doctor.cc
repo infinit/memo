@@ -864,49 +864,49 @@ namespace reporting
     s.serialize("cone", cone);
   }
 
-  ConnectivityResults::UPNPResult::RedirectionResult::Address::Address(
+  ConnectivityResults::UPnPResult::RedirectionResult::Address::Address(
     std::string host,
     uint16_t port)
     : host(host)
     , port(port)
   {}
 
-  ConnectivityResults::UPNPResult::RedirectionResult::Address::Address(
+  ConnectivityResults::UPnPResult::RedirectionResult::Address::Address(
     elle::serialization::SerializerIn& s)
   {
     this->serialize(s);
   }
 
   void
-  ConnectivityResults::UPNPResult::RedirectionResult::Address::print(
+  ConnectivityResults::UPnPResult::RedirectionResult::Address::print(
     std::ostream& out) const
   {
     out << this->host << ":" << this->port;
   }
 
   void
-  ConnectivityResults::UPNPResult::RedirectionResult::Address::serialize(
+  ConnectivityResults::UPnPResult::RedirectionResult::Address::serialize(
     elle::serialization::Serializer& s)
   {
     s.serialize("host", this->host);
     s.serialize("port", this->port);
   }
 
-  ConnectivityResults::UPNPResult::RedirectionResult::RedirectionResult(
+  ConnectivityResults::UPnPResult::RedirectionResult::RedirectionResult(
     std::string const& name,
     bool sane,
     Result::Reason const& reason)
     : Result(name, true, reason, !sane)
   {}
 
-  ConnectivityResults::UPNPResult::RedirectionResult::RedirectionResult(
+  ConnectivityResults::UPnPResult::RedirectionResult::RedirectionResult(
     elle::serialization::SerializerIn& s)
   {
     this->serialize(s);
   }
 
   void
-  ConnectivityResults::UPNPResult::RedirectionResult::serialize(
+  ConnectivityResults::UPnPResult::RedirectionResult::serialize(
     elle::serialization::Serializer& s)
   {
     Result::serialize(s);
@@ -915,7 +915,7 @@ namespace reporting
   }
 
   void
-  ConnectivityResults::UPNPResult::RedirectionResult::print(
+  ConnectivityResults::UPnPResult::RedirectionResult::print(
     std::ostream& out, bool verbose) const
   {
     if (this->show(verbose))
@@ -930,18 +930,18 @@ namespace reporting
     }
   }
 
-  ConnectivityResults::UPNPResult::UPNPResult(bool available)
-    : Result("UPNP", available)
+  ConnectivityResults::UPnPResult::UPnPResult(bool available)
+    : Result("UPnP", available)
     , available(available)
   {}
 
-  ConnectivityResults::UPNPResult::UPNPResult(elle::serialization::SerializerIn& s)
+  ConnectivityResults::UPnPResult::UPnPResult(elle::serialization::SerializerIn& s)
   {
     this->serialize(s);
   }
 
   void
-  ConnectivityResults::UPNPResult::_print(std::ostream& out, bool verbose) const
+  ConnectivityResults::UPnPResult::_print(std::ostream& out, bool verbose) const
   {
     if (this->show(verbose))
     {
@@ -953,31 +953,31 @@ namespace reporting
   }
 
   bool
-  ConnectivityResults::UPNPResult::sane() const
+  ConnectivityResults::UPnPResult::sane() const
   {
     return Result::sane() && this->available && ::sane(this->redirections);
   }
 
   void
-  ConnectivityResults::UPNPResult::sane(bool s)
+  ConnectivityResults::UPnPResult::sane(bool s)
   {
     Result::sane(s);
   }
 
   bool
-  ConnectivityResults::UPNPResult::warning() const
+  ConnectivityResults::UPnPResult::warning() const
   {
     return Result::warning() || ::warning(this->redirections);
   }
 
   void
-  ConnectivityResults::UPNPResult::warning(bool w)
+  ConnectivityResults::UPnPResult::warning(bool w)
   {
     Result::warning(w);
   }
 
   void
-  ConnectivityResults::UPNPResult::serialize(elle::serialization::Serializer& s)
+  ConnectivityResults::UPnPResult::serialize(elle::serialization::Serializer& s)
   {
     Result::serialize(s);
     s.serialize("available", this->available);
@@ -1256,7 +1256,7 @@ namespace
         results.nat = {elle::exception_string()};
       }
     }
-    ELLE_TRACE("UPNP")
+    ELLE_TRACE("UPnP")
     {
       auto upnp = reactor::network::UPNP::make();
       try
@@ -1269,7 +1269,7 @@ namespace
         results.upnp.external = upnp->external_ip();
         results.upnp.warning(false);
         using Address =
-          reporting::ConnectivityResults::UPNPResult::RedirectionResult::Address;
+          reporting::ConnectivityResults::UPnPResult::RedirectionResult::Address;
         auto redirect = [&] (reactor::network::Protocol protocol,
                              uint16_t port)
           {
@@ -1309,7 +1309,7 @@ namespace
       }
       catch (...)
       {
-        // UPNP is always considered sane.
+        // UPnP is always considered sane.
         results.upnp.warning(true);
         results.upnp.reason = elle::exception_string();
       }

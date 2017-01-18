@@ -598,7 +598,7 @@ namespace reporting
       bool cone;
     };
 
-    struct UPNPResult
+    struct UPnPResult
       : public reporting::Result
     {
       struct RedirectionResult
@@ -664,8 +664,8 @@ namespace reporting
       /*-------------.
       | Construction |
       `-------------*/
-      UPNPResult(bool available = false);
-      UPNPResult(elle::serialization::SerializerIn& s);
+      UPnPResult(bool available = false);
+      UPnPResult(elle::serialization::SerializerIn& s);
 
       /*----------.
       | Interface |
@@ -732,7 +732,7 @@ namespace reporting
     InterfaceResults interfaces;
     ProtocolResults protocols;
     NatResult nat;
-    UPNPResult upnp;
+    UPnPResult upnp;
   };
 
   struct All
