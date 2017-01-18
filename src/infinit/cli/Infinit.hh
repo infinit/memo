@@ -9,6 +9,7 @@
 #include <infinit/cli/ACL.hh>
 #include <infinit/cli/Block.hh>
 #include <infinit/cli/Credentials.hh>
+#include <infinit/cli/Daemon.hh>
 #include <infinit/cli/Device.hh>
 #include <infinit/cli/Drive.hh>
 #include <infinit/cli/Journal.hh>
@@ -120,6 +121,7 @@ namespace infinit
       ACL acl = *this;
       Block block = *this;
       Credentials credentials = *this;
+      Daemon daemon = *this;
       Device device = *this;
       Drive drive = *this;
       Journal journal = *this;
@@ -132,6 +134,7 @@ namespace infinit
         = decltype(elle::meta::list(cli::acl,
                                     cli::block,
                                     cli::credentials,
+                                    cli::daemon,
                                     cli::device,
                                     cli::drive,
                                     cli::journal,
