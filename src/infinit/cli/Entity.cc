@@ -101,7 +101,9 @@ namespace infinit
     template class Entity<ACL>;
     template class Entity<Block>;
     template class Entity<Credentials>;
+#if INFINIT_WITH_DAEMON
     template class Entity<Daemon>;
+#endif
     template class Entity<Device>;
     template class Entity<Drive>;
     template class Entity<Journal>;

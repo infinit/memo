@@ -5,11 +5,15 @@
 #include <das/bound-method.hh>
 #include <das/named.hh>
 
+#include <infinit/cli/fwd.hh>
+
 #include <infinit/Infinit.hh>
 #include <infinit/cli/ACL.hh>
 #include <infinit/cli/Block.hh>
 #include <infinit/cli/Credentials.hh>
-#include <infinit/cli/Daemon.hh>
+#if INFINIT_WITH_DAEMON
+# include <infinit/cli/Daemon.hh>
+#endif
 #include <infinit/cli/Device.hh>
 #include <infinit/cli/Drive.hh>
 #include <infinit/cli/Journal.hh>
@@ -121,7 +125,9 @@ namespace infinit
       ACL acl = *this;
       Block block = *this;
       Credentials credentials = *this;
+#if INFINIT_WITH_DAEMON
       Daemon daemon = *this;
+#endif
       Device device = *this;
       Drive drive = *this;
       Journal journal = *this;
@@ -134,7 +140,9 @@ namespace infinit
         = decltype(elle::meta::list(cli::acl,
                                     cli::block,
                                     cli::credentials,
+#if INFINIT_WITH_DAEMON
                                     cli::daemon,
+#endif
                                     cli::device,
                                     cli::drive,
                                     cli::journal,

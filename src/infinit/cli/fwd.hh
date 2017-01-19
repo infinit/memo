@@ -6,7 +6,9 @@ namespace infinit
   {
     class Block;
     class Credentials;
+#if INFINIT_WITH_DAEMON
     class Daemon;
+#endif
     class Device;
     class Drive;
     class Infinit;

@@ -394,6 +394,7 @@ def configure(
   # Whether to add infinit-daemon support.
   with_daemon = (cxx_toolkit.os is drake.os.linux) or \
                 (production_build is False and cxx_toolkit.os is drake.os.macos)
+  bin_cxx_config.define('INFINIT_WITH_DAEMON', '1' if with_daemon else '0')
 
   # Build
   # ('binary name', [additional sources], [additional libraries], ship)
@@ -476,8 +477,6 @@ def configure(
     'src/infinit/cli/Block.hh',
     'src/infinit/cli/Credentials.cc',
     'src/infinit/cli/Credentials.hh',
-    'src/infinit/cli/Daemon.cc',
-    'src/infinit/cli/Daemon.hh',
     'src/infinit/cli/Device.cc',
     'src/infinit/cli/Device.hh',
     'src/infinit/cli/Drive.cc',
@@ -488,8 +487,6 @@ def configure(
     'src/infinit/cli/Infinit.hh',
     'src/infinit/cli/Journal.cc',
     'src/infinit/cli/Journal.hh',
-    'src/infinit/cli/MountManager.cc',
-    'src/infinit/cli/MountManager.hh',
     'src/infinit/cli/Network.cc',
     'src/infinit/cli/Network.hh',
     'src/infinit/cli/Passport.cc',
@@ -520,6 +517,12 @@ def configure(
   ]
   if with_daemon:
     infinit_modes.append('daemon')
+    infinit_cli_sources += drake.nodes(
+      'src/infinit/cli/Daemon.cc',
+      'src/infinit/cli/Daemon.hh',
+      'src/infinit/cli/MountManager.cc',
+      'src/infinit/cli/MountManager.hh',
+    )
   infinit_cli_instantiate = drake.node(
     'src/infinit/cli/Infinit-instantiate.cc')
   for b in infinit_modes:
