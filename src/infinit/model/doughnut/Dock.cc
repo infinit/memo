@@ -9,6 +9,7 @@
 #include <reactor/network/utp-server.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/HandshakeFailed.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/overlay/Overlay.hh>
@@ -25,26 +26,29 @@ namespace infinit
       | Construction |
       `-------------*/
 
-    static void retry_forever(elle::Duration start_delay, elle::Duration max_delay,
-                              std::string action_name,
-                              std::function<void()> action)
-    {
-      elle::Duration delay = start_delay;
-      while (true)
+      static
+      void
+      retry_forever(elle::Duration start_delay,
+                    elle::Duration max_delay,
+                    std::string action_name,
+                    std::function<void()> action)
       {
-        try
+        elle::Duration delay = start_delay;
+        while (true)
         {
-          action();
-          return;
-        }
-        catch (elle::Exception const& e)
-        {
-          ELLE_WARN("%s: execption %s", action_name, e.what());
-          delay = std::min(delay * 2, max_delay);
-          reactor::sleep(delay);
+          try
+          {
+            action();
+            return;
+          }
+          catch (elle::Exception const& e)
+          {
+            ELLE_WARN("%s: execption %s", action_name, e.what());
+            delay = std::min(delay * 2, max_delay);
+            reactor::sleep(delay);
+          }
         }
       }
-    }
 
       Dock::Dock(Doughnut& doughnut,
                  Protocol protocol,
@@ -109,89 +113,507 @@ namespace infinit
       }
 
       void
+      Dock::disconnect()
+      {
+        {
+          // First terminate thread asynchronoulsy, otherwise some of these
+          // thread could initiate new connection while we terminate others.
+          auto connecting_copy = this->connecting();
+          for (auto& connecting: connecting_copy)
+            if (auto c = connecting.lock())
+              if (c->_thread)
+                c->_thread->terminate();
+          auto connected_copy = this->_connected;
+          for (auto& connected: connected_copy)
+            if (auto c = connected.lock())
+              if (c->_thread)
+                c->_thread->terminate();
+          for (auto& connecting: connecting_copy)
+            if (auto c = connecting.lock())
+              c->disconnect();
+          for (auto& connected: connected_copy)
+            if (auto c = connected.lock())
+              c->disconnect();
+        }
+        auto peers_copy = this->peer_cache();
+        for (auto& peer: peers_copy)
+          if (auto p = peer.lock())
+            if (auto r = std::dynamic_pointer_cast<Remote>(p))
+              r->disconnect();
+      }
+
+
+      void
       Dock::cleanup()
       {
         ELLE_TRACE_SCOPE("%s: destruct", this);
         if (this->_rdv_connect_thread)
           this->_rdv_connect_thread->terminate_now();
         this->_rdv_connect_thread.reset();
+        // Disconnects peers, holding them alive so they don't unregister from
+        // _peer_cache while we iterate on it.
+        std::vector<overlay::Overlay::Member> hold;
         for (auto peer: this->_peer_cache)
-          peer.second->cleanup();
+        {
+          auto p = ELLE_ENFORCE(peer.lock());
+          p->cleanup();
+          hold.emplace_back(std::move(p));
+        }
+        // Release all peer. All peer should have unregistered, otherwise
+        // someone is still holding one alive and we are in trouble.
+        hold.clear();
+        if (!this->_peer_cache.empty())
+          ELLE_ERR("%s: some remotes are still alive", this)
+          {
+            for (auto wp: this->_peer_cache)
+              if (auto p = wp.lock())
+                ELLE_ERR("%s is held by %s references", p, p.use_count());
+          }
+        ELLE_ASSERT(this->_peer_cache.empty());
+      }
+
+      /*-----------.
+      | Connection |
+      `-----------*/
+
+      Address const&
+      Dock::Connection::id() const
+      {
+        return this->_location.id();
+      }
+
+      Endpoints const&
+      Dock::Connection::endpoints() const
+      {
+        return this->_location.endpoints();
+      }
+
+      std::shared_ptr<Dock::Connection>
+      Dock::connect(NodeLocation l)
+      {
+        ELLE_TRACE_SCOPE("%s: connect to %f", this, l);
+        // Check if we already have a connection to that peer.
+        auto connected = this->_connected.find(l.id());
+        if (l.id() != Address::null && connected != this->_connected.end())
+        {
+          auto res = ELLE_ENFORCE(connected->lock());
+          ELLE_TRACE("already connected: %s", res);
+          return res;
+        }
+        // Check if we are already connecting to that peer.
+        // FIXME: index by id + endpoints instead ?
+        {
+          auto connecting = this->_connecting.find(l.endpoints());
+          if (connecting != this->_connecting.end())
+          {
+            auto c = ELLE_ENFORCE(connecting->lock());
+            if (c->id() == l.id())
+            {
+              ELLE_TRACE("already connecting: %s", c);
+              return c;
+            }
+          }
+        }
+        // Otherwise start connection.
+        {
+          auto connection = std::make_shared<Connection>(*this, std::move(l));
+          ELLE_TRACE_SCOPE("initiate %s", connection);
+          connection->init();
+          connection->on_connection().connect(
+            [this, connection] () mutable
+            {
+              this->doughnut().dock().make_peer(connection);
+              // Delay termination from descructor.
+              elle::With<reactor::Thread::NonInterruptible>() << [&]
+              {
+                connection.reset();
+              };
+            });
+          return connection;
+        }
+      }
+
+      Dock::Connection::Connection(
+        Dock& dock,
+        NodeLocation l)
+        : _dock(dock)
+        , _location(l)
+        , _socket(nullptr)
+        , _serializer()
+        , _channels()
+        , _rpc_server()
+        , _credentials()
+        , _thread()
+        , _connected(false)
+        , _disconnected(false)
+        , _disconnected_since(std::chrono::system_clock::now())
+        , _disconnected_exception()
+        , _key_hash_cache()
+      {}
+
+      void
+      Dock::Connection::init()
+      {
+        static bool const disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
+        // BMI iterators are not invalidated on insertion and deletion.
+        auto connecting_it =
+          this->_dock._connecting.emplace(this->shared_from_this()).first;
+        this->_thread.reset(
+          new reactor::Thread(
+            elle::sprintf("%f", this),
+            [this, connecting_it]
+            {
+              bool connected = false;
+              ELLE_TRACE_SCOPE("%s: connection attempt to %s endpoints",
+                               this, this->_location.endpoints().size());
+              ELLE_DEBUG("endpoints: %s", this->_location.endpoints());
+              auto handshake = [&] (std::unique_ptr<std::iostream> socket)
+                {
+                  auto sv = elle_serialization_version(
+                    this->_dock.doughnut().version());
+                  auto serializer = elle::make_unique<protocol::Serializer>(
+                    *socket, sv, false);
+                  auto channels =
+                  elle::make_unique<protocol::ChanneledStream>(*serializer);
+                  if (!disable_key)
+                    this->_key_exchange(*channels);
+                  ELLE_TRACE("%s: connected", this);
+                  this->_socket = std::move(socket);
+                  this->_serializer = std::move(serializer);
+                  this->_channels = std::move(channels);
+                  ELLE_ASSERT(this->_channels);
+                  connected = true;
+                };
+              auto umbrella = [&, this] (std::function<void ()> const& f)
+                {
+                  return [f, this]
+                  {
+                    try
+                    {
+                      f();
+                    }
+                    catch (reactor::network::Exception const&)
+                    {
+                      // ignored
+                    }
+                    catch (HandshakeFailed const& hs)
+                    {
+                      ELLE_WARN("%s: %s", this, hs);
+                    }
+                  };
+                };
+              elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+              {
+                if (this->_dock.protocol() == Protocol::tcp ||
+                    this->_dock.protocol() == Protocol::all)
+                  for (auto const& e: this->_location.endpoints())
+                    scope.run_background(
+                      elle::sprintf("%s: tcp://%s",
+                                    reactor::scheduler().current()->name(), e),
+                      umbrella(
+                        [&, e = e]
+                        {
+                          using reactor::network::TCPSocket;
+                          handshake(elle::make_unique<TCPSocket>(e.tcp()));
+                          this->_connected_endpoint = e;
+                          scope.terminate_now();
+                        }));
+                if (this->_dock.protocol() == Protocol::utp ||
+                    this->_dock.protocol() == Protocol::all)
+                  scope.run_background(
+                    elle::sprintf("%s: utp://%s",
+                                  this, this->_location.endpoints()),
+                    umbrella(
+                      [&, eps = this->_location.endpoints().udp()]
+                      {
+                        std::string cid;
+                        if (this->_location.id() != Address::null)
+                          cid = elle::sprintf("%x", this->_location.id());
+                        auto socket =
+                          elle::make_unique<reactor::network::UTPSocket>(
+                            this->_dock._utp_server);
+                        this->_connected_endpoint = socket->peer();
+                        socket->connect(cid, eps);
+                        handshake(std::move(socket));
+                        scope.terminate_now();
+                      }));
+                reactor::wait(scope);
+              };
+              if (!connected)
+              {
+                this->_disconnected = true;
+                this->_disconnected_since = std::chrono::system_clock::now();
+                // FIXME: keep a better exception, for instance if the passport
+                // failed to validate etc.
+                this->_disconnected_exception = std::make_exception_ptr(
+                  reactor::network::ConnectionRefused());
+                ELLE_TRACE("%s: connection to %f failed",
+                           this, this->_location.endpoints());
+                this->_dock._connecting.erase(connecting_it);
+                this->_on_disconnection();
+                return;
+              }
+              // Check for duplicates.
+              auto id = this->_location.id();
+              ELLE_ASSERT_NEQ(id, Address::null);
+              if (this->_dock._connected.find(id) !=
+                  this->_dock._connected.end())
+              {
+                ELLE_TRACE("%s: drop duplicate", this);
+                auto hold = this->shared_from_this();
+                this->_thread->dispose(true);
+                this->_thread.release();
+                this->_on_connection.disconnect_all_slots();
+                this->_on_disconnection.disconnect_all_slots();
+                return;
+              }
+              this->_connected = true;
+              ELLE_TRACE("connected through %s", this->_connected_endpoint);
+              auto connected_it =
+                this->_dock._connected.insert(this->shared_from_this()).first;
+              this->_dock._connecting.erase(connecting_it);
+              auto const cleanup = [&]
+                {
+                  this->_dock._connected.erase(connected_it);
+                  this->_disconnected = true;
+                  this->_disconnected_since = std::chrono::system_clock::now();
+                  this->_on_disconnection();
+                  this->_on_disconnection.disconnect_all_slots();
+                };
+              try
+              {
+                ELLE_DEBUG("invoke connected hook")
+                {
+                  auto hold = this->shared_from_this();
+                  this->_on_connection();
+                  this->_on_connection.disconnect_all_slots();
+                  if (hold.use_count() == 1)
+                  {
+                    this->_thread.release()->dispose(true);
+                    return;
+                  }
+                }
+                ELLE_ASSERT(this->_channels);
+                ELLE_TRACE("serve RPCs")
+                  this->_rpc_server.serve(*this->_channels);
+                ELLE_TRACE("connection ended");
+                this->_disconnected_exception =
+                  std::make_exception_ptr(reactor::network::ConnectionClosed());
+              }
+              catch (reactor::network::Exception const& e)
+              {
+                ELLE_TRACE("connection fell: %s", e);
+                this->_disconnected_exception = std::current_exception();
+              }
+              catch (...)
+              {
+                cleanup();
+                throw;
+              }
+              cleanup();
+            }));
+      }
+
+      Dock::Connection::~Connection() noexcept(false)
+      {
+        if (this->_thread)
+          this->_thread->terminate_now(false);
+      }
+
+      void
+      Dock::Connection::disconnect()
+      {
+        if (this->_thread && !this->_thread->done())
+        {
+          ELLE_TRACE_SCOPE("%s: disconnect", this);
+          this->_thread->terminate_now();
+        }
+      }
+
+      static
+      std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+      _auth_0_3(Dock::Connection& self, protocol::ChanneledStream& channels)
+      {
+        using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+          (Passport const&);
+        RPC<AuthSyn> auth_syn(
+          "auth_syn", channels, self.dock().doughnut().version());
+        return auth_syn(self.dock().doughnut().passport());
+      }
+
+      static
+      std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+      _auth_0_4(Dock::Connection& self, protocol::ChanneledStream& channels)
+      {
+        using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+          (Passport const&, elle::Version const&);
+        RPC<AuthSyn> auth_syn(
+          "auth_syn", channels, self.dock().doughnut().version());
+        auth_syn.set_context<Doughnut*>(&self.dock().doughnut());
+        auto version = self.dock().doughnut().version();
+        // 0.5.0 and 0.6.0 compares the full version it receives for
+        // compatibility instead of dropping the subminor component. Set
+        // it to 0.
+        return auth_syn(
+          self.dock().doughnut().passport(),
+          elle::Version(version.major(), version.minor(), 0));
+      }
+
+      static
+      Remote::Auth
+      _auth_0_7(Dock::Connection& self, protocol::ChanneledStream& channels)
+      {
+        using AuthSyn =
+          Remote::Auth (Address, Passport const&, elle::Version const&);
+        RPC<AuthSyn> auth_syn(
+          "auth_syn", channels, self.dock().doughnut().version());
+        auth_syn.set_context<Doughnut*>(&self.dock().doughnut());
+        auto res = auth_syn(self.dock().doughnut().id(),
+                            self.dock().doughnut().passport(),
+                            self.dock().doughnut().version());
+        if (res.id == self.dock().doughnut().id())
+          throw HandshakeFailed(elle::sprintf("peer has same id as us: %s",
+                                              res.id));
+        if (self.location().id() != Address::null &&
+            self.location().id() != res.id)
+          throw HandshakeFailed(
+            elle::sprintf("peer id mismatch: expected %s, got %s",
+                          self.location().id(), res.id));
+        return res;
+      }
+
+      void
+      Dock::Connection::_key_exchange(protocol::ChanneledStream& channels)
+      {
+        ELLE_TRACE_SCOPE("%s: exchange keys", *this);
+        auto version = this->_dock.doughnut().version();
+        auto& dht = this->_dock.doughnut();
+        try
+        {
+          auto challenge_passport = [&]
+          {
+            if (version >= elle::Version(0, 7, 0))
+            {
+              auto res = _auth_0_7(*this, channels);
+              if (this->_location.id() == model::Address::null)
+                this->_location.id(res.id);
+              return std::make_pair(
+                res.challenge,
+                elle::make_unique<Passport>(std::move(res.passport)));
+            }
+            else if (version >= elle::Version(0, 4, 0))
+              return _auth_0_4(*this, channels);
+            else
+              return _auth_0_3(*this, channels);
+          }();
+          auto& remote_passport = challenge_passport.second;
+          ELLE_ASSERT(remote_passport);
+          if (!dht.verify(*remote_passport, false, false, false))
+          {
+            auto msg = elle::sprintf(
+              "passport validation failed for %s", this->_location.id());
+            ELLE_WARN("%s", msg);
+            throw elle::Error(msg);
+          }
+          if (!remote_passport->allow_storage())
+          {
+            auto msg = elle::sprintf(
+              "%s: Peer passport disallows storage", *this);
+            ELLE_WARN("%s", msg);
+            throw elle::Error(msg);
+          }
+          ELLE_DEBUG("got valid remote passport");
+          // sign the challenge
+          auto signed_challenge = dht.keys().k().sign(
+            challenge_passport.first.first,
+            infinit::cryptography::rsa::Padding::pss,
+            infinit::cryptography::Oneway::sha256);
+          // generate, seal
+          // dont set _key yet so that our 2 rpcs are in cleartext
+          auto key = infinit::cryptography::secretkey::generate(256);
+          elle::Buffer password = key.password();
+          auto sealed_key =
+            remote_passport->user().seal(password,
+                                         infinit::cryptography::Cipher::aes256,
+                                         infinit::cryptography::Mode::cbc);
+          ELLE_DEBUG("acknowledge authentication")
+          {
+            RPC<bool (elle::Buffer const&,
+                      elle::Buffer const&,
+                      elle::Buffer const&)>
+              auth_ack("auth_ack", channels, version, nullptr);
+            auth_ack(sealed_key,
+                     challenge_passport.first.second,
+                     signed_challenge);
+            this->_rpc_server._key.emplace(key);
+            this->_credentials = std::move(password);
+          }
+        }
+        catch (elle::Error& e)
+        {
+          ELLE_WARN("key exchange failed with %s: %s",
+                    this->_location.id(), elle::exception_string());
+          throw;
+        }
       }
 
       /*-----.
       | Peer |
       `-----*/
 
-      overlay::Overlay::Member
-      Dock::evict_peer(Address id)
-      {
-        auto it = this->_peer_cache.find(id);
-        if (it == this->_peer_cache.end())
-          elle::err("no such peer in cache: %f", id);
-        auto res = it->second;
-        this->_peer_cache.erase(id);
-        return res;
-      }
-
-      void
-      Dock::insert_peer(overlay::Overlay::Member m)
-      {
-        this->_peer_cache.emplace(m->id(), m);
-      }
-
       overlay::Overlay::WeakMember
-      Dock::make_peer(NodeLocation loc,
-                      boost::optional<EndpointsRefetcher> refetcher,
-                      OnPeerCreate on_create)
+      Dock::make_peer(NodeLocation loc)
       {
         ELLE_TRACE_SCOPE("%s: get %f", this, loc);
-        static bool disable_cache = getenv("INFINIT_DISABLE_PEER_CACHE");
+        ELLE_ASSERT(loc.id() != Address::null);
         if (loc.id() == this->_doughnut.id())
         {
           ELLE_TRACE("peer is ourself");
           return this->_doughnut.local();
         }
-        if (!disable_cache)
         {
           auto it = this->_peer_cache.find(loc.id());
-          if (it != _peer_cache.end())
-            return overlay::Overlay::WeakMember::own(it->second);
+          if (it != this->_peer_cache.end())
+            return overlay::Overlay::WeakMember::own(ELLE_ENFORCE(it->lock()));
         }
-        try
+        return overlay::Overlay::WeakMember::own(
+          this->make_peer(this->connect(loc)));
+      }
+
+      std::shared_ptr<Remote>
+      Dock::make_peer(std::shared_ptr<Connection> connection)
+      {
         {
-          using RemotePeer = consensus::Paxos::RemotePeer;
-          auto res =
-            std::make_shared<RemotePeer>(
-              this->doughnut(),
-              loc.id(),
-              loc.endpoints(),
-              this->_utp_server,
-              refetcher,
-              this->_protocol);
-          if (on_create)
-            on_create(res);
-          if (!disable_cache)
-            if (loc.id() != Address::null)
-              this->_peer_cache.emplace(loc.id(), res);
+          auto it = this->_peer_cache.find(connection->id());
+          if (it != this->_peer_cache.end())
+          {
+            auto peer = ELLE_ENFORCE(it->lock());
+            auto remote = ELLE_ENFORCE(std::dynamic_pointer_cast<Remote>(peer));
+            if (remote->connection() == connection)
+              this->_on_connect(remote);
+            // FIXME: This is messy. We could miss that current connection is
+            // broken and not replace it, but we don't want to replace a working
+            // connection with the new one and kill all RPCs.
+            else if (!remote->connection()->connected() ||
+                     remote->connection()->disconnected())
+            {
+              ELLE_TRACE("%s: replace broken connection for %s", this, remote);
+              remote->connection(connection);
+              this->_on_connect(remote);
+            }
             else
-              res->id_discovered().connect(
-                [this, remote = std::weak_ptr<RemotePeer>(res)]
-                {
-                  if (auto r = remote.lock())
-                  {
-                    ELLE_ASSERT_NEQ(r->id(), Address::null);
-                    this->_peer_cache.emplace(r->id(), r);
-                  }
-                });
-          this->_on_connect(*res);
-          auto weak_res = overlay::Overlay::WeakMember::own(std::move(res));
-          return weak_res;
+              ELLE_TRACE("%s: drop duplicate %s", this, connection);
+            return remote;
+          }
         }
-        catch (elle::Error const& e)
-        {
-          elle::err("failed to connect to %f", loc);
-        }
+        // FIXME: don't always spawn paxos
+        using RemotePeer = consensus::Paxos::RemotePeer;
+        auto peer = std::make_shared<RemotePeer>(this->_doughnut, connection);
+        auto insertion = this->_peer_cache.emplace(peer);
+        ELLE_ASSERT(insertion.second);
+        peer->_cache_iterator = insertion.first;
+        this->_on_connect(peer);
+        return peer;
       }
     }
   }

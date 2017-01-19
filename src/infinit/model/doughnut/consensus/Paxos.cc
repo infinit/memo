@@ -1997,7 +1997,9 @@ namespace infinit
       }
 
       static const elle::TypeInfo::RegisterAbbrevation
-      _dht_abbr("consensus::Paxos::LocalPeer", "PaxosLocal");
+      _local_abbr("consensus::Paxos::LocalPeer", "PaxosLocal");
+      static const elle::TypeInfo::RegisterAbbrevation
+      _remote_abbr("consensus::Paxos::RemotePeer", "PaxosRemote");
     }
   }
 }

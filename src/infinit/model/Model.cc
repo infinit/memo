@@ -201,6 +201,14 @@ namespace infinit
       this->_remove(address, std::move(rs));
     }
 
+    void
+    Model::print(std::ostream& out) const
+    {
+      elle::fprintf(out, "%s(%x)",
+                    elle::type_info(*this),
+                    reinterpret_cast<void const*>(this));
+    }
+
     ModelConfig::ModelConfig(std::unique_ptr<storage::StorageConfig> storage_,
                              elle::Version version_)
       : storage(std::move(storage_))

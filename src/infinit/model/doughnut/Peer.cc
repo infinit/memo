@@ -80,7 +80,7 @@ namespace infinit
       void
       Peer::print(std::ostream& stream) const
       {
-        elle::fprintf(stream, "%f(%f)", elle::type_info(*this), this->id());
+        elle::fprintf(stream, "%f(%x, %f)", elle::type_info(*this), (void*)this, this->id());
       }
     }
   }

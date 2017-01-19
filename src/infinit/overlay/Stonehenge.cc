@@ -94,8 +94,7 @@ namespace infinit
     {
       if (peer.endpoints().empty())
         throw elle::Error(elle::sprintf("missing endpoint for %f", peer.id()));
-      return this->doughnut()->dock().make_peer(
-        peer, model::EndpointsRefetcher());
+      return this->doughnut()->dock().make_peer(peer);
     }
 
     /*-----------.

@@ -173,7 +173,7 @@ _push(variables_map const& args, infinit::User& user, bool atomic)
   {
     if (!ldap_dn)
       user.password_hash = hub_password_hash(args);
-    infinit::beyond_push<infinit::PrivateUserPublish>(
+    infinit::beyond_push<das::Serializer<infinit::PrivateUserPublish>>(
       "user", user.name, user, user);
   }
   else
@@ -183,7 +183,8 @@ _push(variables_map const& args, infinit::User& user, bool atomic)
       throw CommandLineError(
         "Password is only used when pushing a full user");
     }
-    infinit::beyond_push<PublicUserPublish>("user", user.name, user, user);
+    infinit::beyond_push<das::Serializer<PublicUserPublish>>(
+      "user", user.name, user, user);
   }
   if (user_updated && !atomic)
     ifnt.user_save(user, true);

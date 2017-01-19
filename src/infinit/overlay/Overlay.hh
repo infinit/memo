@@ -25,6 +25,7 @@ namespace infinit
     using model::NodeLocations;
 
     class Overlay
+      : public elle::Printable
     {
     /*------.
     | Types |
@@ -154,6 +155,13 @@ namespace infinit
       virtual
       elle::json::Object
       stats() = 0;
+
+    /*----------.
+    | Printable |
+    `----------*/
+    public:
+      void
+      print(std::ostream& o) const override;
     };
 
     struct Configuration

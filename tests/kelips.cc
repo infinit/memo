@@ -938,8 +938,8 @@ ELLE_TEST_SCHEDULED(beyond_storage)
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
-  elle::os::setenv("INFINIT_CONNECT_TIMEOUT_MS", "2000", 1);
-  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT_MS", "5000", 1);
+  elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "2", 1);
+  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "5", 1);
   // disable RDV so that nodes won't find each other that way
   elle::os::setenv("INFINIT_RDV", "", 1);
   auto& suite = boost::unit_test::framework::master_test_suite();

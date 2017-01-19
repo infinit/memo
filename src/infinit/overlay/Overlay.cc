@@ -180,6 +180,21 @@ namespace infinit
         });
     }
 
+    /*----------.
+    | Printable |
+    `----------*/
+
+    void
+    Overlay::print(std::ostream& o) const
+    {
+      elle::fprintf(o, "%s(%f)", elle::type_info(*this), this->id());
+    }
+
+
+    /*--------------.
+    | Configuration |
+    `--------------*/
+
     void
     Configuration::serialize(elle::serialization::Serializer& s)
     {

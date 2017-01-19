@@ -1058,9 +1058,7 @@ namespace infinit
         try
         {
           ELLE_DEBUG_SCOPE("establish UTP connection");
-          auto peer = this->doughnut()->dock().make_peer(location,
-            model::EndpointsRefetcher(
-              std::bind(&Node::_refetch_endpoints, this, location.id()))).lock();
+          auto peer = this->doughnut()->dock().make_peer(location).lock();
           auto& remote = dynamic_cast<model::doughnut::Remote&>(*peer);
           remote.connect(5_sec);
           if (this->doughnut()->version() < elle::Version(0, 7, 0) || packet::disable_compression)
@@ -3309,11 +3307,7 @@ namespace infinit
       Overlay::WeakMember
       Node::make_peer(NodeLocation hosts) const
       {
-        return this->doughnut()->dock().make_peer(
-          hosts,
-          model::EndpointsRefetcher(
-            std::bind(&Node::_refetch_endpoints,
-                      elle::unconst(this), hosts.id())));
+        return this->doughnut()->dock().make_peer(hosts);
       }
 
       boost::optional<model::Endpoints>
@@ -3400,14 +3394,6 @@ namespace infinit
             elle::unconst(this)->kelipsGet(
               address, n, false, -1, false, fast, handle);
           });
-      }
-
-      void
-      Node::print(std::ostream& stream) const
-      {
-        stream << "Kelips(" <<
-          (_local_endpoints.empty() ? Endpoint() : _local_endpoints.front().first)
-          << ')';
       }
 
       void

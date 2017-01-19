@@ -26,7 +26,8 @@ namespace infinit
           this->name(),
           [&]
           {
-            this->_channels = _remote->channels().get();
+            ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote");
+            this->_channels = _remote->_connection->channels().get();
             auto creds = _remote->credentials();
             if (!creds.empty())
             {
@@ -50,9 +51,22 @@ namespace infinit
           elle::chrono::duration_parse<std::milli>(
             elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT", "20"));
         auto const rpc_start = std::chrono::system_clock::now();
-        // No matter what, if we are disconnected and not even trying, retry.
-        if (!this->_connected && !this->_connecting)
+        auto disconnected_for = std::chrono::system_clock::now() -
+          this->_connection->disconnected_since();
+        // No matter what, if we are disconnected, retry.
+        if (this->_connection->disconnected())
+        {
+          ELLE_TRACE("%s: reconnect before running \"%s\"", this, name);
           this->reconnect();
+        }
+        // If we exceeded the connection time, retry.
+        else if (!this->_connection->connected() &&
+                 disconnected_for >= rpc_timeout)
+        {
+          ELLE_TRACE("%s: drop stale connection before running \"%s\"",
+                     this, name);
+          this->reconnect();
+        }
         bool give_up = false;
         while (true)
         {
@@ -61,7 +75,6 @@ namespace infinit
           auto const disconnected_for =
             std::chrono::system_clock::now() - this->_disconnected_since;
           auto const soft_fail_delay = soft_fail - disconnected_for;
-          auto const connection_id = this->_connection_id;
           try
           {
             // Try connecting until we reach the RPC timeout or the Remote
@@ -71,25 +84,28 @@ namespace infinit
                 std::chrono::duration_cast<std::chrono::milliseconds>(
                   std::min(rpc_timeout_delay, soft_fail_delay)).count());
             if (reactor::wait(this->_connected, delay))
+            {
+              ELLE_TRACE("%s: run \"%s\"", this, name);
               return op();
+            }
             else
+            {
+              ELLE_TRACE("%s: soft-fail running \"%s\"", this, name);
               give_up = true;
+            }
           }
           catch(reactor::network::Exception const& e)
           {
             ELLE_TRACE("%s: network exception when invoking %s: %s",
                        this, name, e);
-            this->_disconnected_exception = std::current_exception();
           }
           catch(infinit::protocol::Serializer::EOF const& e)
           {
             ELLE_TRACE("%s: EOF when invoking %s: %s", this, name, e);
-            this->_disconnected_exception = std::current_exception();
           }
           catch (elle::Error const& e)
           {
             ELLE_TRACE("%s: connection error: %s", this, e);
-            this->_disconnected_exception = std::current_exception();
             throw;
           }
           if (give_up)
@@ -107,7 +123,7 @@ namespace infinit
               ELLE_ASSERT(this->_disconnected_exception);
               std::rethrow_exception(this->_disconnected_exception);
             }
-          else if (this->_connection_id == connection_id)
+          else
             this->reconnect();
         }
       }
@@ -115,7 +131,7 @@ namespace infinit
       template <typename F>
       RemoteRPC<F>::RemoteRPC(std::string name, Remote* remote)
         : Super(name,
-                *remote->channels(),
+                *remote->_connection->channels(),
                 remote->doughnut().version(),
                 elle::unconst(&remote->credentials()))
         , _remote(remote)

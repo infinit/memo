@@ -199,7 +199,7 @@ namespace infinit
         if (this->_local)
           this->_local->cleanup();
         this->_consensus.reset();
-        this->_dock.cleanup();
+        this->_dock.disconnect();
         this->_overlay.reset();
         this->_dock.cleanup();
         if (this->_local)
@@ -496,6 +496,12 @@ namespace infinit
           return it->key;
         }
         elle::err("%s: failed to resolve key hash locally: %x", this, hash);
+      }
+
+      void
+      Doughnut::print(std::ostream& out) const
+      {
+        elle::fprintf(out, "%s(%f)", elle::type_info(*this), this->id());
       }
 
       Configuration::~Configuration()

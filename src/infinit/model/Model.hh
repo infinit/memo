@@ -106,6 +106,7 @@ namespace infinit
     };
 
     class Model
+      : public elle::Printable
     {
     public:
       typedef std::pair<Address, boost::optional<int>> AddressVersion;
@@ -183,6 +184,10 @@ namespace infinit
       virtual
       void
       _remove(Address address, blocks::RemoveSignature sig) = 0;
+
+    public:
+      void
+      print(std::ostream& out) const override;
     };
 
     struct ModelConfig:

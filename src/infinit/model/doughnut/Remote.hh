@@ -52,28 +52,30 @@ namespace infinit
                        symbols::challenge,
                        symbols::passport))>;
         };
+        template<typename F>
+        friend
+        class RemoteRPC;
+        friend
+        class Dock;
 
       /*-------------.
       | Construction |
       `-------------*/
+      protected:
+        Remote(Doughnut& doughnut,
+               std::shared_ptr<Dock::Connection> connection);
       public:
-        Remote(
-          Doughnut& doughnut,
-          Address id,
-          Endpoints endpoints,
-          boost::optional<reactor::network::UTPServer&> server = boost::none,
-          boost::optional<EndpointsRefetcher> const& refetch = boost::none,
-          Protocol protocol = Protocol::all);
         virtual
         ~Remote();
       protected:
         void
         _cleanup() override;
-        ELLE_ATTRIBUTE(std::unique_ptr<std::iostream>, socket);
-        ELLE_ATTRIBUTE(std::unique_ptr<protocol::Serializer>, serializer);
-        ELLE_ATTRIBUTE_R(std::unique_ptr<protocol::ChanneledStream>,
-                         channels, protected);
-        ELLE_ATTRIBUTE_RX(RPCServer, rpc_server);
+        void
+        connection(std::shared_ptr<Dock::Connection> connection);
+        ELLE_ATTRIBUTE_R(std::shared_ptr<Dock::Connection>, connection);
+        ELLE_attribute_r(Endpoints, endpoints);
+        ELLE_attribute_r(elle::Buffer, credentials);
+        ELLE_ATTRIBUTE(Dock::PeerCache::iterator, cache_iterator);
 
       /*-----------.
       | Connection |
@@ -83,22 +85,16 @@ namespace infinit
         void
         connect(elle::DurationOpt timeout = elle::DurationOpt());
         void
-        disconnect();
-        void
         reconnect();
-      private:
         void
-        _connect();
+        disconnect();
+      private:
         ELLE_ATTRIBUTE(reactor::Barrier, connected);
-        ELLE_ATTRIBUTE(bool, connecting);
-        ELLE_ATTRIBUTE_R(int, connection_id);
         ELLE_ATTRIBUTE(
           std::chrono::system_clock::time_point, disconnected_since);
         ELLE_ATTRIBUTE(std::exception_ptr, disconnected_exception);
-        ELLE_ATTRIBUTE_R(Endpoints, endpoints);
-        ELLE_ATTRIBUTE(boost::optional<reactor::network::UTPServer&>,
-                       utp_server);
-        ELLE_ATTRIBUTE_RX(boost::signals2::signal<void()>, id_discovered);
+        ELLE_ATTRIBUTE(
+          std::vector<boost::signals2::scoped_connection>, connections);
 
       /*-----------.
       | Networking |
@@ -111,12 +107,8 @@ namespace infinit
         R
         safe_perform(std::string const& name, std::function<R()> op);
       private:
-        void
-        _key_exchange(protocol::ChanneledStream& channels);
         ELLE_ATTRIBUTE(Protocol, protocol);
-        ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
         ELLE_ATTRIBUTE_R(EndpointsRefetcher, refetch_endpoints);
-        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, thread);
 
       /*-------.
       | Blocks |
@@ -144,7 +136,7 @@ namespace infinit
         virtual
         std::unordered_map<int, cryptography::rsa::PublicKey>
         _resolve_all_keys() override;
-        ELLE_ATTRIBUTE_R(Doughnut::KeyCache, key_hash_cache);
+        ELLE_attribute_rx(KeyCache, key_hash_cache);
       };
 
       template <typename F>

@@ -64,20 +64,24 @@ namespace infinit
       merge(Endpoints const&);
     };
 
+    std::size_t
+    hash_value(Endpoint const& endpoint);
+
     class NodeLocation
     {
     public:
       NodeLocation(Address id, Endpoints endpoints);
       NodeLocation(const NodeLocation& b) = default;
-      ELLE_ATTRIBUTE_R(Address, id);
+      ELLE_ATTRIBUTE_RW(Address, id);
       ELLE_ATTRIBUTE_RX(Endpoints, endpoints);
     };
 
     std::ostream&
     operator <<(std::ostream& output, NodeLocation const& loc);
 
-    typedef std::vector<NodeLocation> NodeLocations;
-    typedef std::function<boost::optional<Endpoints> (Address)> EndpointsRefetcher;
+    using NodeLocations = std::vector<NodeLocation>;
+    using EndpointsRefetcher =
+      std::function<boost::optional<Endpoints> (Address)>;
   }
 }
 
@@ -85,7 +89,6 @@ namespace elle
 {
   namespace serialization
   {
-
     template<>
     struct Serialize<infinit::model::NodeLocation>
     {

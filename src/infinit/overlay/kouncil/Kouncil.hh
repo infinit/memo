@@ -19,8 +19,7 @@ namespace infinit
 {
   namespace symbols
   {
-    DAS_SYMBOL(endpoints_stamped);
-    DAS_SYMBOL(endpoints_unstamped);
+    DAS_SYMBOL(endpoints);
     DAS_SYMBOL(stamp);
   }
 }
@@ -60,28 +59,30 @@ namespace infinit
       `------*/
       public:
         /// Ourselves.
-        typedef Kouncil Self;
+        using Self = Kouncil;
         /// Parent class.
-        typedef Overlay Super;
-        /// Address book entry
+        using Super = Overlay;
+        /// Node and blocks address.
+        using Address = model::Address;
+        /// Address book entry.
         class Entry
         {
         public:
-          Entry(model::Address node, model::Address block);
-          ELLE_ATTRIBUTE_R(model::Address, node);
-          ELLE_ATTRIBUTE_R(model::Address, block);
+          Entry(Address node, Address block);
+          ELLE_ATTRIBUTE_R(Address, node);
+          ELLE_ATTRIBUTE_R(Address, block);
         };
         /// Node / owned block addresses mapping.
-        using AddressBook = boost::multi_index::multi_index_container<
+        using AddressBook = bmi::multi_index_container<
           Entry,
-          boost::multi_index::indexed_by<
-            boost::multi_index::hashed_non_unique<
-              boost::multi_index::const_mem_fun<
-                Entry, model::Address const&, &Entry::node>>,
-            boost::multi_index::hashed_non_unique<
-              boost::multi_index::const_mem_fun<
-                Entry, model::Address const&, &Entry::block>>,
-            boost::multi_index::sequenced<>
+          bmi::indexed_by<
+            bmi::hashed_non_unique<
+              bmi::const_mem_fun<
+                Entry, Address const&, &Entry::node>>,
+            bmi::hashed_non_unique<
+              bmi::const_mem_fun<
+                Entry, Address const&, &Entry::block>>,
+            bmi::sequenced<>
           >>;
         /// Peers by id
         using Peer = Overlay::Member;
@@ -91,19 +92,19 @@ namespace infinit
           bmi::indexed_by<
             bmi::hashed_unique<
               bmi::global_fun<
-                Peer const&, model::Address, &_details::peer_id> >,
+                Peer const&, Address, &_details::peer_id> >,
             bmi::random_access<> > >;
-
         using DisconectedPeers =
           bmi::multi_index_container<
           Peer,
           bmi::indexed_by<
             bmi::hashed_unique<
               bmi::global_fun<
-                Peer const&, model::Address, &_details::peer_id> >,
+                Peer const&, Address, &_details::peer_id> >,
             bmi::hashed_unique<
               bmi::global_fun<
                 Peer const&, model::doughnut::Peer*, &_details::peer_ptr> >>>;
+
       /*-------------.
       | Construction |
       `-------------*/
@@ -139,7 +140,7 @@ namespace infinit
       private:
         void
         _broadcast();
-        ELLE_ATTRIBUTE(reactor::Channel<model::Address>, new_entries);
+        ELLE_ATTRIBUTE(reactor::Channel<Address>, new_entries);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, broadcast_thread);
 
       /*------.
@@ -148,21 +149,45 @@ namespace infinit
       public:
         struct PeerInfo
         {
-          Endpoints endpoints_stamped;
-          Endpoints endpoints_unstamped;
-          int64_t stamp;
-          bool merge(PeerInfo const& from);
+          PeerInfo(Address id, Endpoints endpoints, int64_t stamp);
+          /** Merge peer informations in this.
+           *
+           *  @param info The endpoints to merge in this, iff they are more
+           *              recent wrt @attribute stamp.
+           *  @return Wether the endpoints were replaced.
+           */
+          bool
+          merge(PeerInfo const& from);
+          /** Convert to a NodeLocation
+           *
+           *  @return A node location with this peer id and endpoints.
+           */
+          NodeLocation
+          location() const;
 
-          // local info
-          Time last_seen;
-          Time last_contact_attempt;
+          /// Peer id.
+          ELLE_ATTRIBUTE_R(Address, id);
+          /// Peer endpoints.
+          ELLE_ATTRIBUTE_R(Endpoints, endpoints);
+          /// Lamport clock for when the endpoints were established by the peer.
+          ELLE_ATTRIBUTE_R(int64_t, stamp);
+          /// Last time we saw the peer online.
+          ELLE_ATTRIBUTE_RW(Time, last_seen);
+          /// Last time we tried to contact the peer, if offline.
+          ELLE_ATTRIBUTE_RW(Time, last_contact_attempt);
+          /// Default model: Serialize non-local information.
           using Model = das::Model<
             PeerInfo,
-            elle::meta::List<symbols::Symbol_endpoints_stamped,
-                             symbols::Symbol_endpoints_unstamped,
-                             symbols::Symbol_stamp>>;
+            decltype(elle::meta::list(symbols::id,
+                                      symbols::endpoints,
+                                      symbols::stamp))>;
         };
-        using PeerInfos = std::unordered_map<model::Address, PeerInfo>;
+        /// Peer informations by id.
+        using PeerInfos = bmi::multi_index_container<
+          PeerInfo,
+          bmi::indexed_by<
+            bmi::hashed_unique<
+              bmi::const_mem_fun<PeerInfo, Address const&, &PeerInfo::id>>>>;
         NodeLocations
         peers_locations() const;
         ELLE_ATTRIBUTE_R(PeerInfos, infos);
@@ -172,7 +197,7 @@ namespace infinit
         _discover(NodeLocations const& peers) override;
       private:
         void
-        _discover(PeerInfos::value_type const& peer);
+        _discover(NodeLocation const& peer);
         void
         _discover(PeerInfos const& pis);
         void
@@ -182,31 +207,29 @@ namespace infinit
         void
         _fetch_entries(model::doughnut::Remote& r);
         boost::optional<Endpoints>
-        _endpoints_refetch(model::Address id);
+        _endpoints_refetch(Address id);
         void
         _perform(std::string const& name, std::function<void()> job);
         void
-        _peer_disconnected(model::doughnut::Peer* peer);
+        _peer_disconnected(std::shared_ptr<model::doughnut::Remote> peer);
         void
-        _peer_connected(overlay::Overlay::Member peer,
-                        bool anonymous,
-                        PeerInfo const& pi);
+        _peer_connected(std::shared_ptr<model::doughnut::Remote> peer);
         void
         _watcher();
         reactor::Thread::unique_ptr _watcher_thread;
         ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>, tasks);
-        int _eviction_delay;
+        std::chrono::seconds _eviction_delay;
 
       /*-------.
       | Lookup |
       `-------*/
       protected:
         reactor::Generator<WeakMember>
-        _allocate(model::Address address, int n) const override;
+        _allocate(Address address, int n) const override;
         reactor::Generator<WeakMember>
-        _lookup(model::Address address, int n, bool fast) const override;
+        _lookup(Address address, int n, bool fast) const override;
         WeakMember
-        _lookup_node(model::Address address) const override;
+        _lookup_node(Address address) const override;
 
       /*-----------.
       | Monitoring |

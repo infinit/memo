@@ -180,7 +180,6 @@ namespace infinit
 
       class Node
         : public infinit::overlay::Overlay
-        , public elle::Printable
       {
       public:
         Node(Configuration const& config,
@@ -191,8 +190,6 @@ namespace infinit
         start();
         void
         engage();
-        void
-        print(std::ostream& stream) const override;
         /// local hooks interface
         void
         store(infinit::model::blocks::Block const& block);

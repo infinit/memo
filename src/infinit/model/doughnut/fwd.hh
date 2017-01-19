@@ -9,6 +9,7 @@ namespace infinit
   {
     namespace doughnut
     {
+      class Dock;
       class Doughnut;
       class Local;
       class Peer;
