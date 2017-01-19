@@ -125,5 +125,8 @@ namespace infinit
     void
     endpoints_to_file(infinit::model::Endpoints endpoints,
                       boost::filesystem::path const& path_);
+
+    void
+    ensure_version_is_supported(elle::Version const& version);
   }
 }

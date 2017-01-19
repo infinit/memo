@@ -25,8 +25,11 @@
 
 ELLE_LOG_COMPONENT("infinit");
 
-static
-char const* argv_0 = "infinit";
+namespace
+{
+  /// argv[0], for error messages.
+  char const* argv_0 = "infinit";
+}
 
 namespace infinit
 {

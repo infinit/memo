@@ -3,8 +3,9 @@
 #include <boost/regex.hpp>
 
 #include <elle/log.hh>
-#include <elle/system/unistd.hh> // chdir
 #include <elle/network/Interface.hh>
+#include <elle/string/algorithm.hh>
+#include <elle/system/unistd.hh> // chdir
 
 #include <reactor/FDStream.hh>
 #include <reactor/http/Request.hh>
@@ -343,6 +344,65 @@ namespace infinit
       Infinit::_open_write(f, path, "", "endpoint file", true);
       for (auto const& ep: endpoints)
         f << ep << std::endl;
+    }
+
+    /*-----------.
+    | Versions.  |
+    `-----------*/
+    namespace
+    {
+      bool
+      is_version_supported(elle::Version const& version)
+      {
+        auto const& deps = infinit::serialization_tag::dependencies;
+        return std::find_if(deps.begin(), deps.end(),
+                            [version] (auto const& kv) -> bool
+                            {
+                              return kv.first.major() == version.major() &&
+                                kv.first.minor() == version.minor();
+                            }) != deps.end();
+      }
+    }
+
+    void
+    ensure_version_is_supported(elle::Version const& version)
+    {
+      if (!is_version_supported(version))
+      {
+        auto const& deps = infinit::serialization_tag::dependencies;
+        auto supported_versions = std::vector<elle::Version>(deps.size());
+        std::transform(
+          deps.begin(), deps.end(), supported_versions.begin(),
+          [] (auto const& kv)
+          {
+            return elle::Version{kv.first.major(), kv.first.minor(), 0};
+          });
+        std::sort(supported_versions.begin(), supported_versions.end());
+        supported_versions.erase(
+          std::unique(supported_versions.begin(), supported_versions.end()),
+          supported_versions.end());
+        // Find the max value for the major.
+        auto versions_for_major = std::vector<elle::Version>{};
+        std::copy_if(supported_versions.begin(), supported_versions.end(),
+                     std::back_inserter(versions_for_major),
+                     [&] (elle::Version const& c)
+                     {
+                       return c.major() == version.major();
+                     });
+        if (!versions_for_major.empty())
+        {
+          if (version < versions_for_major.front())
+            elle::err("Minimum compatibility version for major version %s is %s",
+                      (int) version.major(), supported_versions.front());
+          else if (version > versions_for_major.back())
+            elle::err("Maximum compatibility version for major version %s is %s",
+                      (int) version.major(), versions_for_major.back());
+        }
+        elle::err("Unknown compatibility version, try one of %s",
+                  elle::join(supported_versions.begin(),
+                             supported_versions.end(),
+                             ", "));
+      }
     }
   }
 }

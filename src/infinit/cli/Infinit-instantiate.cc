@@ -1,7 +1,6 @@
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/Infinit-template.hxx>
-
-#include <elle/string/algorithm.hh>
+#include <infinit/cli/utility.hh> // ensure_version_is_supported
 
 namespace das
 {
@@ -10,7 +9,7 @@ namespace das
     template <typename ... Default, typename ... Args, typename ... NewArgs>
     Prototype<
       DefaultStore<NewArgs ..., Args...>,
-      typename std::remove_cv_reference<NewArgs>::type..., Args...>
+      std::remove_cv_reference_t<NewArgs>..., Args...>
     extend(Prototype<DefaultStore<Default...>, Args...> const& p,
            NewArgs&& ... args)
     {
@@ -27,61 +26,6 @@ namespace infinit
 {
   namespace cli
   {
-    static
-    bool
-    is_version_supported(elle::Version const& version)
-    {
-      auto const& deps = infinit::serialization_tag::dependencies;
-      return std::find_if(deps.begin(), deps.end(),
-                          [version] (auto const& kv) -> bool
-                          {
-                            return kv.first.major() == version.major() &&
-                              kv.first.minor() == version.minor();
-                          }) != deps.end();
-    }
-
-    static
-    void
-    ensure_version_is_supported(elle::Version const& version)
-    {
-      if (!is_version_supported(version))
-      {
-        auto const& deps = infinit::serialization_tag::dependencies;
-        std::vector<elle::Version> supported_versions(deps.size());
-        std::transform(
-          deps.begin(), deps.end(), supported_versions.begin(),
-          [] (auto const& kv)
-          {
-            return elle::Version{kv.first.major(), kv.first.minor(), 0};
-          });
-        std::sort(supported_versions.begin(), supported_versions.end());
-        supported_versions.erase(
-          std::unique(supported_versions.begin(), supported_versions.end()),
-          supported_versions.end());
-        // Find the max value for the major.
-        std::vector<elle::Version> versions_for_major;
-        std::copy_if(supported_versions.begin(), supported_versions.end(),
-                     std::back_inserter(versions_for_major),
-                     [&] (elle::Version const& c)
-                     {
-                       return c.major() == version.major();
-                     });
-        if (versions_for_major.size() > 0)
-        {
-          if (version < versions_for_major.front())
-            elle::err("Minimum compatibility version for major version %s is %s",
-                      (int) version.major(), supported_versions.front());
-          else if (version > versions_for_major.back())
-            elle::err("Maximum compatibility version for major version %s is %s",
-                      (int) version.major(), versions_for_major.back());
-        }
-        elle::err("Unknown compatibility version, try one of %s",
-                  elle::join(supported_versions.begin(),
-                             supported_versions.end(),
-                             ", "));
-      }
-    }
-
     template <typename Symbol, typename ObjectSymbol>
     struct mode_call
     {
@@ -232,13 +176,7 @@ namespace infinit
       else
         return false;
     }
-  }
-}
 
-namespace infinit
-{
-  namespace cli
-  {
     template
     struct object<std::decay<decltype(cli::INFINIT_CLI_OBJECT)>::type>;
   }
