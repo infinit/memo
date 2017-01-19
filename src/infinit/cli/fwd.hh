@@ -10,6 +10,7 @@ namespace infinit
     class Daemon;
 #endif
     class Device;
+    class Doctor;
     class Drive;
     class Infinit;
     class Journal;

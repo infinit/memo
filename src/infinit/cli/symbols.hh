@@ -173,6 +173,7 @@ namespace infinit
     DAS_SYMBOL(deserialize);
     DAS_SYMBOL(device);
     DAS_SYMBOL(disable_storage);
+    DAS_SYMBOL(doctor);
     DAS_SYMBOL(drive);
     DAS_SYMBOL(enable_storage);
     DAS_SYMBOL(get_xattr);

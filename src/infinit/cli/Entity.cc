@@ -105,6 +105,7 @@ namespace infinit
     template class Entity<Daemon>;
 #endif
     template class Entity<Device>;
+    template class Entity<Doctor>;
     template class Entity<Drive>;
     template class Entity<Journal>;
     template class Entity<Network>;

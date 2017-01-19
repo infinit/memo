@@ -405,10 +405,10 @@ def configure(
 #    ('infinit-block', [], [], True),
 #    ('infinit-credentials', [], [], True),
 #    ('infinit-device', [], [], True),
-    ('infinit-doctor',
-     [
-       drake.nodes('bin/networking.hh')
-     ], [protocol_lib], True),
+#    ('infinit-doctor',
+#     [
+#       drake.nodes('bin/networking.hh')
+#     ], [protocol_lib], True),
 #    ('infinit-drive', [], [], True),
 #    ('infinit-journal', [], [], True),
 #    ('infinit-network', [xattr_sources], [], True),
@@ -479,6 +479,8 @@ def configure(
     'src/infinit/cli/Credentials.hh',
     'src/infinit/cli/Device.cc',
     'src/infinit/cli/Device.hh',
+    'src/infinit/cli/Doctor.cc',
+    'src/infinit/cli/Doctor.hh',
     'src/infinit/cli/Drive.cc',
     'src/infinit/cli/Drive.hh',
     'src/infinit/cli/Entity.cc',
@@ -507,6 +509,7 @@ def configure(
       'block',
       'credentials',
       'device',
+      'doctor',
       'drive',
       'journal',
       'network',
@@ -541,6 +544,7 @@ def configure(
       cryptography_lib,
       elle_lib,
       infinit_lib,
+      protocol_lib,
       reactor_lib,
     ],
     cxx_toolkit,

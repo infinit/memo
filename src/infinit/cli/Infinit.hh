@@ -15,6 +15,7 @@
 # include <infinit/cli/Daemon.hh>
 #endif
 #include <infinit/cli/Device.hh>
+#include <infinit/cli/Doctor.hh>
 #include <infinit/cli/Drive.hh>
 #include <infinit/cli/Journal.hh>
 #include <infinit/cli/Network.hh>
@@ -129,6 +130,7 @@ namespace infinit
       Daemon daemon = *this;
 #endif
       Device device = *this;
+      Doctor doctor = *this;
       Drive drive = *this;
       Journal journal = *this;
       Network network = *this;
@@ -144,6 +146,7 @@ namespace infinit
                                     cli::daemon,
 #endif
                                     cli::device,
+                                    cli::doctor,
                                     cli::drive,
                                     cli::journal,
                                     cli::network,
