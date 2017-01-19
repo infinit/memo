@@ -299,18 +299,18 @@ namespace infinit
       parse_peers(Strings const& speers)
       {
         using tokenizer = boost::tokenizer<boost::char_separator<char>>;
-        return elle::make_vector(speers, [&](auto const& s)
+        auto sep = boost::char_separator<char>{","};
+        return elle::make_vector(speers, [&](auto const& peers)
           {
-            auto sep = boost::char_separator<char>{","};
             auto res = infinit::model::Endpoints{};
             try
             {
-              for (auto const& s: tokenizer{s, sep})
+              for (auto const& s: tokenizer{peers, sep})
                 res.emplace_back(s);
             }
             catch (elle::Error const& e)
             {
-              elle::err("Malformed endpoints '%s': %s", s, e);
+              elle::err("Malformed endpoints '%s': %s", peers, e);
             }
             return res;
           });
