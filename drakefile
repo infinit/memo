@@ -391,6 +391,10 @@ def configure(
       raise Exception('Unable to find %s with ldconfig -p' %
                       ', '.join(searched_for))
 
+  # Whether to add infinit-daemon support.
+  with_daemon = (cxx_toolkit.os is drake.os.linux) or \
+                (production_build is False and cxx_toolkit.os is drake.os.macos)
+
   # Build
   # ('binary name', [additional sources], [additional libraries], ship)
   binaries_config = [
@@ -408,7 +412,7 @@ def configure(
 #    ('infinit-journal', [], [], True),
 #    ('infinit-network', [xattr_sources], [], True),
 #    ('infinit-passport', [], [], True),
-    # ('infinit-user', [], [], True),
+#    ('infinit-user', [], [], True),
 #    ('infinit-volume', [], [], True),
     ('infinit-fsck', [], [], False),
     ('reactor-example', [], [], False),
@@ -416,9 +420,8 @@ def configure(
   ]
   if elle.elle.ldap:
     binaries_config.append(('infinit-ldap', [xattr_sources], [], True))
-  if (cxx_toolkit.os is drake.os.linux) or \
-      (production_build is False and cxx_toolkit.os is drake.os.macos):
-    binaries_config.append(('infinit-daemon', [], [], True))
+#  if with_daemon:
+#    binaries_config.append(('infinit-daemon', [], [], True))
   if not windows:
     binaries_config.append(('sshfs', [], [], False))
     if enable_crash_reporting:
@@ -502,13 +505,10 @@ def configure(
     'src/infinit/cli/xattrs.cc',
     'src/infinit/cli/xattrs.hh',
   )
-  infinit_cli_instantiate = drake.node(
-    'src/infinit/cli/Infinit-instantiate.cc')
-  for b in [
+  infinit_modes = [
       'acl',
       'block',
       'credentials',
-      'daemon',
       'device',
       'drive',
       'journal',
@@ -517,7 +517,12 @@ def configure(
       'silo',
       'user',
       'volume',
-  ]:
+  ]
+  if with_daemon:
+    infinit_modes.append('daemon')
+  infinit_cli_instantiate = drake.node(
+    'src/infinit/cli/Infinit-instantiate.cc')
+  for b in infinit_modes:
     o = drake.cxx.Object(
       'src/infinit/cli/Infinit-instantiate-%s.o' % b)
     infinit_cli_instantiate_config = drake.cxx.Config(bin_cxx_config)
@@ -539,19 +544,8 @@ def configure(
     bin_cxx_config,
     strip = windows)
   binaries.append(infinit_cli)
-  for b in [
-      'infinit-acl',
-      'infinit-block',
-      'infinit-credentials',
-      'infinit-device',
-      'infinit-drive',
-      'infinit-journal',
-      'infinit-network',
-      'infinit-passport',
-      'infinit-storage',
-      'infinit-user',
-      'infinit-volume',
-  ]:
+  for m in infinit_modes:
+    b = 'infinit-storage' if m == 'silo' else 'infinit-{}'.format(m)
     if windows:
       b = drake.Copy(infinit_cli, 'bin/%s.exe' % b).target()
     else:
