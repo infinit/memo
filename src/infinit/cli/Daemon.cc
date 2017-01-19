@@ -1,7 +1,7 @@
 #include <infinit/cli/Daemon.hh>
 
+#include <cstdlib> // ::daemon
 #include <pwd.h>
-#include <stdlib.h> // ::daemon
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -10,11 +10,11 @@
 #include <elle/Exit.hh>
 #include <elle/log.hh>
 #include <elle/make-vector.hh>
+#include <elle/serialization/json.hh>
 #include <elle/system/PIDFile.hh>
 #include <elle/system/Process.hh>
-#include <elle/system/unistd.hh>
-#include <elle/serialization/json.hh>
 #include <elle/system/self-path.hh>
+#include <elle/system/unistd.hh>
 
 #include <reactor/network/http-server.hh>
 #include <reactor/network/unix-domain-server.hh>

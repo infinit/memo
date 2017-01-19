@@ -1,8 +1,4 @@
-// http://opensource.apple.com/source/mDNSResponder/mDNSResponder-576.30.4/mDNSPosix/PosixDaemon.c
-#if __APPLE__
-# define daemon yes_we_know_that_daemon_is_deprecated_in_os_x_10_5_thankyou
-#endif
-
+#include <cstdlib>
 #include <memory>
 
 #include <elle/json/exceptions.hh>
@@ -33,11 +29,6 @@ ELLE_LOG_COMPONENT("infinit-network");
 #include <xattrs.hh>
 
 infinit::Infinit ifnt;
-
-#if __APPLE__
-# undef daemon
-extern "C" int daemon(int, int);
-#endif
 
 namespace dnut = infinit::model::doughnut;
 
