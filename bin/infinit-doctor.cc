@@ -1913,7 +1913,7 @@ namespace
 
 COMMAND(configuration_integrity)
 {
-  reporting::ConfigurationIntegrityResults results;
+  auto results = reporting::ConfigurationIntegrityResults{};
   _configuration_integrity(args, results);
   output(std::cout, results, flag(args, "verbose"));
   report_error(std::cout, results.sane(), results.warning());
@@ -1921,7 +1921,7 @@ COMMAND(configuration_integrity)
 
 COMMAND(connectivity)
 {
-  reporting::ConnectivityResults results;
+  auto results = reporting::ConnectivityResults{};
   _connectivity(args, results);
   output(std::cout, results, flag(args, "verbose"));
   report_error(std::cout, results.sane(), results.warning());
@@ -1929,7 +1929,7 @@ COMMAND(connectivity)
 
 COMMAND(system_sanity)
 {
-  reporting::SystemSanityResults results;
+  auto results = reporting::SystemSanityResults{};
   _system_sanity(args, results);
   output(std::cout, results, flag(args, "verbose"));
   report_error(std::cout, results.sane(), results.warning());
@@ -1956,7 +1956,7 @@ COMMAND(networking)
 
 COMMAND(run_all)
 {
-  reporting::All a;
+  auto a = reporting::All{};
   _system_sanity(args, a.system_sanity);
   _configuration_integrity(args, a.configuration_integrity);
   _connectivity(args, a.connectivity);
