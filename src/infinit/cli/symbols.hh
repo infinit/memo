@@ -76,6 +76,7 @@ namespace infinit
     DAS_CLI_SYMBOL(google_drive, '\0', "store blocks on Google Drive", false);
     DAS_CLI_SYMBOL(group, 'g', "group {action} {type} for", false);
     DAS_CLI_SYMBOL(help, 'h', "show this help message", false);
+    DAS_CLI_SYMBOL(hold, 0, "keep storage online until this process terminates", false);
     DAS_CLI_SYMBOL(home, 'h', "create a home directory for the invited user", false);
     DAS_CLI_SYMBOL(host, '\0', "SSH host", false);
     DAS_CLI_SYMBOL(icon, 'i', "path to an image to use as icon", false);
@@ -171,7 +172,9 @@ namespace infinit
     DAS_SYMBOL(describe);
     DAS_SYMBOL(deserialize);
     DAS_SYMBOL(device);
+    DAS_SYMBOL(disable_storage);
     DAS_SYMBOL(drive);
+    DAS_SYMBOL(enable_storage);
     DAS_SYMBOL(get_xattr);
     DAS_SYMBOL(hash);
     DAS_SYMBOL(import);
@@ -191,8 +194,8 @@ namespace infinit
     DAS_SYMBOL(signup);
     DAS_SYMBOL(silo);
     DAS_SYMBOL(start);
-    DAS_SYMBOL(status);
     DAS_SYMBOL(stats);
+    DAS_SYMBOL(status);
     DAS_SYMBOL(stop);
     DAS_SYMBOL(transmit);
     DAS_SYMBOL(unlink);
@@ -212,6 +215,8 @@ namespace infinit
       DAS_SYMBOL(mode_delete);
       DAS_SYMBOL(mode_describe);
       DAS_SYMBOL(mode_deserialize);
+      DAS_SYMBOL(mode_disable_storage);
+      DAS_SYMBOL(mode_enable_storage);
       DAS_SYMBOL(mode_export);
       DAS_SYMBOL(mode_fetch);
       DAS_SYMBOL(mode_get_xattr);

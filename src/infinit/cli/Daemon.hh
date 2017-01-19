@@ -23,12 +23,39 @@ namespace infinit
     public:
       Daemon(Infinit& infinit);
       using Modes
-        = decltype(elle::meta::list(cli::fetch,
+        = decltype(elle::meta::list(cli::disable_storage,
+                                    cli::enable_storage,
+                                    cli::fetch,
                                     cli::run,
                                     cli::start,
                                     cli::status,
-                                    cli::stop));
+                                    cli::stop,
+                                    cli::manage_volumes));
       using Strings = std::vector<std::string>;
+
+      /*------------------------.
+      | Mode: disable_storage.  |
+      `------------------------*/
+      using ModeDisableStorage =
+        Mode<decltype(binding(modes::mode_disable_storage,
+                              cli::name))>;
+      ModeDisableStorage disable_storage;
+      void
+      mode_disable_storage(std::string const& name);
+
+
+      /*-----------------------.
+      | Mode: enable_storage.  |
+      `-----------------------*/
+      using ModeEnableStorage =
+        Mode<decltype(binding(modes::mode_enable_storage,
+                              cli::name,
+                              cli::hold))>;
+      ModeEnableStorage enable_storage;
+      void
+      mode_enable_storage(std::string const& name,
+                          bool hold);
+
 
       /*--------------.
       | Mode: fetch.  |

@@ -40,6 +40,17 @@ namespace infinit
 
     Daemon::Daemon(Infinit& infinit)
       : Entity(infinit)
+      , disable_storage(
+        "Disable storage on associated network",
+        das::cli::Options(),
+        this->bind(modes::mode_disable_storage,
+                   cli::name))
+      , enable_storage(
+        "Enable storage on associated network",
+        das::cli::Options(),
+        this->bind(modes::mode_enable_storage,
+                   cli::name,
+                   cli::hold))
       , fetch(
         "Fetch volume and its dependencies from {hub}",
         das::cli::Options(),
@@ -1035,6 +1046,31 @@ namespace infinit
         };
       }
     }
+
+
+    /*------------------------.
+    | Mode: disable_storage.  |
+    `------------------------*/
+    void
+    Daemon::mode_disable_storage(std::string const& name)
+    {
+      std::cout << daemon_command(
+        "{\"operation\": \"disable-storage\", \"volume\": \"" + name +  "\"}");
+    }
+
+
+    /*-----------------------.
+    | Mode: enable_storage.  |
+    `-----------------------*/
+    void
+    Daemon::mode_enable_storage(std::string const& name,
+                                bool hold)
+    {
+      std::cout << daemon_command(
+        "{\"operation\": \"enable-storage\", \"volume\": \"" + name +  "\""
+        +",\"hold\": "  + (hold ? "true": "false")   + "}", hold);
+    }
+
 
     /*--------------.
     | Mode: fetch.  |
