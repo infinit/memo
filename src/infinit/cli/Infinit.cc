@@ -290,7 +290,10 @@ namespace infinit
     Infinit::report(std::string const& msg)
     {
       if (!this->script())
+      {
         elle::printf("%s%s.\n", (char)toupper(msg[0]), msg.substr(1));
+        std::cout.flush();
+      }
     }
 
     void
