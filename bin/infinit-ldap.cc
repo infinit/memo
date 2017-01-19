@@ -20,6 +20,7 @@ ELLE_LOG_COMPONENT("infinit-ldap");
 infinit::Infinit ifnt;
 
 using boost::program_options::variables_map;
+namespace bfs = boost::filesystem;
 
 namespace
 {
@@ -143,7 +144,7 @@ namespace
     {
       auto user_name = u.second.name;
       ELLE_TRACE("Pushing user %s (%s)", user_name, u.first);
-      infinit::model::doughnut::Passport passport(
+      auto passport = infinit::model::doughnut::Passport(
         u.second.public_key,
         network.name,
         infinit::cryptography::rsa::KeyPair(self.public_key,
@@ -245,14 +246,8 @@ COMMAND(drive_invite)
     ifnt.drive_get(ifnt.qualified_name(mandatory(args, "drive"), self));
   auto network = ifnt.network_descriptor_get(drive.network, self);
   bool create_home = flag(args, "create-home");
-  std::string permissions = "rw";
-  auto perm_arg = optional(args, "root-permissions");
-  if (perm_arg)
-  {
-    permissions = *perm_arg;
-    std::transform(permissions.begin(), permissions.end(), permissions.begin(),
-                   ::tolower);
-  }
+  using boost::algorithm::to_lower_copy;
+  auto permissions = to_lower_copy(optional(args, "root-permissions").value_or("rw"));
   std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
   auto it = std::find(allowed_modes.begin(), allowed_modes.end(), permissions);
   if (it == allowed_modes.end())
@@ -264,9 +259,9 @@ COMMAND(drive_invite)
   auto users = _populate_network(args, drive.network);
   for (auto const& u: users)
   {
-    auto set_permissions = [] (boost::filesystem::path const& folder,
-                               std::string const& perms,
-                               std::string const& user_name) {
+    auto const& user_name = u.second.name;
+    auto set_permissions = [&user_name] (bfs::path const& folder,
+                                         std::string const& perms) {
       check(port_setxattr, folder.string(),
         elle::sprintf("user.infinit.auth.%s", perms), user_name, true);
     };
@@ -275,7 +270,7 @@ COMMAND(drive_invite)
       {
         try
         {
-          set_permissions(mountpoint, mode, u.second.name);
+          set_permissions(mountpoint, mode);
         }
         catch (elle::Error const& e)
         {
@@ -286,17 +281,17 @@ COMMAND(drive_invite)
     if (create_home)
     {
       auto home_dir = mountpoint / "home";
-      auto user_dir = home_dir / u.second.name;
-      if (boost::filesystem::create_directories(user_dir))
+      auto user_dir = home_dir / user_name;
+      if (bfs::create_directories(user_dir))
       {
         if (u.second.public_key != network.owner)
         {
           try
           {
             if (mode.empty())
-              set_permissions(mountpoint, "setr", u.second.name);
-            set_permissions(home_dir, "setr", u.second.name);
-            set_permissions(user_dir, "setrw", u.second.name);
+              set_permissions(mountpoint, "setr");
+            set_permissions(home_dir, "setr");
+            set_permissions(user_dir, "setrw");
           }
           catch (elle::Error const& e)
           {
@@ -311,15 +306,15 @@ COMMAND(drive_invite)
       else
       {
         ELLE_WARN("Unable to create home directory for %s: %s.",
-                 u.second.name, user_dir);
+                 user_name, user_dir);
       }
     }
     try
     {
       beyond_push(
-        elle::sprintf("drives/%s/invitations/%s", drive.name, u.second.name),
+        elle::sprintf("drives/%s/invitations/%s", drive.name, user_name),
         "invitation",
-        elle::sprintf("%s: %s", drive.name, u.second.name),
+        elle::sprintf("%s: %s", drive.name, user_name),
         infinit::Drive::User(permissions, "ok", create_home),
         self,
         true,
@@ -327,7 +322,7 @@ COMMAND(drive_invite)
     }
     catch (elle::Error const& e)
     {
-      ELLE_WARN("failed to push drive invite for %s: %s", u.second.name, e);
+      ELLE_WARN("failed to push drive invite for %s: %s", user_name, e);
     }
   }
 }
@@ -386,7 +381,7 @@ COMMAND(populate_hub)
             "user",
             reactor::http::url_encode(username));
           ELLE_TRACE("username %s taken", username);
-          if ((*pattern).find('%') == std::string::npos)
+          if (pattern->find('%') == std::string::npos)
           {
             ELLE_ERR("Username %s already taken, skipping %s", username, dn);
             break;
