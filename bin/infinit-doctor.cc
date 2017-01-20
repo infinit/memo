@@ -1244,26 +1244,25 @@ namespace
           public_ips.emplace_back(i.second.ipv4_address);
       results.interfaces = {public_ips};
     }
+    using ConnectivityFunction
+      = std::function<reactor::connectivity::Result
+                      (std::string const& host, uint16_t port)>;
     // XXX: This should be nat.infinit.sh or something.
-    std::string host = get_connectivity_server_address(args);
+    auto server = get_connectivity_server_address(args);
     uint16_t port = 5456;
     auto run = [&] (std::string const& name,
-                    std::function<reactor::connectivity::Result (
-                      std::string const& host,
-                      uint16_t port)> const& function,
+                    ConnectivityFunction const& function,
                     int deltaport = 0)
       {
         static const reactor::Duration timeout = 3_sec;
-        ELLE_TRACE("connect using %s to %s:%s", name, host, port + deltaport);
+        ELLE_TRACE("connect using %s to %s:%s", name, server, port + deltaport);
         std::string result = elle::sprintf("  %s: ", name);
         try
         {
           reactor::TimeoutGuard guard(timeout);
-          auto address = function(host, port + deltaport);
-          bool external = std::find(
-            public_ips.begin(), public_ips.end(), address.host
-            ) == public_ips.end();
-          store(results.protocols, name, host, address.local_port,
+          auto address = function(server, port + deltaport);
+          bool external = !std::contains(public_ips, address.host);
+          store(results.protocols, name, server, address.local_port,
                 address.remote_port, !external);
         }
         catch (reactor::Terminate const&)
@@ -1288,34 +1287,26 @@ namespace
     run("TCP", reactor::connectivity::tcp);
     run("UDP", reactor::connectivity::udp);
     run("UTP",
-        std::bind(reactor::connectivity::utp,
-                  std::placeholders::_1,
-                  std::placeholders::_2,
-                  0),
+        [](auto const& host, auto const& port)
+        { return reactor::connectivity::utp(host, port, 0); },
         1);
     run("UTP (XOR)",
-        std::bind(reactor::connectivity::utp,
-                  std::placeholders::_1,
-                  std::placeholders::_2,
-                  0xFF),
+        [](auto const& host, auto const& port)
+        { return reactor::connectivity::utp(host, port, 0xFF); },
         2);
     run("RDV UTP",
-        std::bind(reactor::connectivity::rdv_utp,
-                  std::placeholders::_1,
-                  std::placeholders::_2,
-                  0),
+        [](auto const& host, auto const& port)
+        { return reactor::connectivity::rdv_utp(host, port, 0); },
         1);
     run("RDV UTP (XOR)",
-        std::bind(reactor::connectivity::rdv_utp,
-                  std::placeholders::_1,
-                  std::placeholders::_2,
-                  0xFF),
+        [](auto const& host, auto const& port)
+        { return reactor::connectivity::rdv_utp(host, port, 0xFF); },
         2);
     ELLE_TRACE("NAT")
     {
       try
       {
-        auto nat = reactor::connectivity::nat(host, port);
+        auto nat = reactor::connectivity::nat(server, port);
         // Super uglY.
         auto cone = nat.find("NOT_CONE") == std::string::npos &&
           nat.find("CONE") != std::string::npos;
