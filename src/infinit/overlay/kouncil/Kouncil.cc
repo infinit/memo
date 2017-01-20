@@ -311,8 +311,9 @@ namespace infinit
             continue;
           if (auto it = find(this->_infos, pi.id()))
           {
-            if (this->_infos.modify(
-                  it, [&](PeerInfo& p) { return p.merge(pi); }))
+            bool change;
+            this->_infos.modify(it, [&](PeerInfo& p) { change = p.merge(pi);});
+            if (change)
             {
               // New data on a connected peer, we need to notify observers
               // FIXME: maybe notify on reconnection instead?
