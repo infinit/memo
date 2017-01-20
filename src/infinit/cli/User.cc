@@ -243,7 +243,7 @@ namespace infinit
           password = Infinit::read_password();
         if (!user.ldap_dn)
           user.password_hash = Infinit::hub_password_hash(password.get());
-        infinit::Infinit::beyond_push<PrivateUserPublish>(
+        infinit::Infinit::beyond_push<das::Serializer<PrivateUserPublish>>(
           "user", user.name, user, user);
       }
       else
@@ -251,7 +251,7 @@ namespace infinit
         if (password)
           elle::err<Error>(
             "password is only used when pushing a full user");
-        infinit::Infinit::beyond_push<PublicUserPublish>(
+        infinit::Infinit::beyond_push<das::Serializer<PublicUserPublish>>(
           "user", user.name, user, user, !api.cli().script());
       }
     }
