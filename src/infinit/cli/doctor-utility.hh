@@ -2570,20 +2570,18 @@ namespace
           store(leftovers, it->path().string(), elle::exception_string());
         }
       }
-    for (auto it = bfs::recursive_directory_iterator(infinit::xdg_state_home());
-         it != bfs::recursive_directory_iterator();
-         ++it)
-      if (is_regular_file(it->status()) && !infinit::is_hidden_file(it->path()))
+    for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_state_home()))
+      if (is_regular_file(p.status()) && !infinit::is_hidden_file(p.path()))
       {
         try
         {
-          if (path_contains_file(infinit::xdg_state_home() / "cache", it->path()));
-          else if (it->path() == infinit::xdg_state_home() / "critical.log");
-          else if (it->path().filename() == "root_block")
+          if (path_contains_file(infinit::xdg_state_home() / "cache", p.path()));
+          else if (p.path() == infinit::xdg_state_home() / "critical.log");
+          else if (p.path().filename() == "root_block")
           {
             // The root block path is:
             // <qualified_network_name>/<qualified_volume_name>/root_block
-            auto network_volume = it->path().parent_path().lexically_relative(
+            auto network_volume = p.path().parent_path().lexically_relative(
               infinit::xdg_state_home());
             auto name = network_volume.begin();
             std::advance(name, 1); // <network_name>
@@ -2593,18 +2591,18 @@ namespace
             std::advance(name, 1); // <volume_name>
             auto volume = *volume_owner / *name;
             if (volumes.find(volume.string()) == volumes.end())
-              store(leftovers, it->path().string(),
+              store(leftovers, p.path().string(),
                     Result::Reason{"volume is gone"});
             if (networks.find(network.string()) == networks.end())
-              store(leftovers, it->path().string(),
+              store(leftovers, p.path().string(),
                     Result::Reason{"network is gone"});
           }
           else
-            store(leftovers, it->path().string());
+            store(leftovers, p.path().string());
         }
         catch (...)
         {
-          store(leftovers, it->path().string(), elle::exception_string());
+          store(leftovers, p.path().string(), elle::exception_string());
         }
       }
   }
