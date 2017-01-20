@@ -67,6 +67,11 @@ namespace infinit
                    cli::upnp_udt_port = boost::none,
                    cli::server = std::string{"connectivity.infinit.sh"},
                    cli::verbose = false))
+      , system(
+        "Perform sanity checks on your system",
+        das::cli::Options(),
+        this->bind(modes::mode_system,
+                   cli::verbose = false))
     {}
 
 
@@ -108,6 +113,23 @@ namespace infinit
                     upnp_tcp_port,
                     upnp_udt_port,
                     results);
+      _output(cli, std::cout, results, verbose);
+      _report_error(cli, std::cout, results.sane(), results.warning());
+    }
+
+
+    /*---------------.
+    | Mode: system.  |
+    `---------------*/
+
+    void
+    Doctor::mode_system(bool verbose)
+    {
+      ELLE_TRACE_SCOPE("system");
+      auto& cli = this->cli();
+
+      auto results = SystemSanityResults{};
+      _system_sanity(cli, results);
       _output(cli, std::cout, results, verbose);
       _report_error(cli, std::cout, results.sane(), results.warning());
     }

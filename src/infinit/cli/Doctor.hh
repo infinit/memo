@@ -19,7 +19,8 @@ namespace infinit
       Doctor(Infinit& infinit);
       using Modes
         = decltype(elle::meta::list(cli::configuration,
-                                    cli::connectivity));
+                                    cli::connectivity,
+                                    cli::system));
 
       /*----------------------.
       | Mode: configuration.  |
@@ -48,6 +49,16 @@ namespace infinit
                         boost::optional<uint16_t> upnp_udt_port,
                         boost::optional<std::string> const& server,
                         bool verbose);
+
+      /*---------------.
+      | Mode: system.  |
+      `---------------*/
+      using ModeSystem =
+        Mode<decltype(binding(modes::mode_system,
+                              cli::verbose = false))>;
+      ModeSystem system;
+      void
+      mode_system(bool verbose);
     };
   }
 }
