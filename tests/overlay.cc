@@ -719,8 +719,14 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("setup %s servers", nservers)
     for (int i = 0; i < nservers; ++i)
     {
+      infinit::model::Address::Value id;
+      memset(&id, 0, sizeof(id));
+      id[0] = i + 1;
       auto dht = std::make_unique<DHT>(
-        ::keys = keys, make_overlay = builder, paxos = pax,
+        ::id = id,
+        ::keys = keys,
+        make_overlay = builder,
+        paxos = pax,
         dht::consensus::rebalance_auto_expand = false
       );
       if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
@@ -743,8 +749,6 @@ ELLE_TEST_SCHEDULED(
       for (int i = 1; i < nservers; ++i)
         for (int j = 0; j < i; ++j)
           discover(*servers[i], *servers[j], false, true);
-  reactor::sleep(5_sec);
-  return;
   ELLE_LOG("waiting for servers")
     for (int i = 1; i < nservers; ++i)
       for (int j = 0; j < i; ++j)
@@ -1060,7 +1064,6 @@ void test_churn_socket(Doughnut::OverlayBuilder builder, bool pasv)
   static const int n = 5;
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   infinit::model::Address ids[n];
-  unsigned short ports[n];
   infinit::storage::Memory::Blocks blocks[n];
   std::vector<std::unique_ptr<DHT>> servers;
   for (int i=0; i<n; ++i)
@@ -1071,7 +1074,6 @@ void test_churn_socket(Doughnut::OverlayBuilder builder, bool pasv)
       ::keys = keys, make_overlay = builder, paxos = true,
       ::storage = elle::make_unique<infinit::storage::Memory>(blocks[i])
     );
-    ports[i] = dht->dht->dock().utp_server().local_endpoint().port();
     servers.emplace_back(std::move(dht));
   }
   for (int i=0; i<n; ++i)

@@ -377,8 +377,13 @@ namespace infinit
                   this->_dock._connected.erase(connected_it);
                   this->_disconnected = true;
                   this->_disconnected_since = std::chrono::system_clock::now();
-                  this->_on_disconnection();
-                  this->_on_disconnection.disconnect_all_slots();
+                  {
+                    auto hold = this->shared_from_this();
+                    this->_on_disconnection();
+                    this->_on_disconnection.disconnect_all_slots();
+                    if (hold.use_count() == 1)
+                      this->_thread.release()->dispose(true);
+                  }
                 };
               try
               {
@@ -423,7 +428,7 @@ namespace infinit
       void
       Dock::Connection::disconnect()
       {
-        if (this->_thread && !this->_thread->done())
+        if (!this->_disconnected && this->_thread && !this->_thread->done())
         {
           ELLE_TRACE_SCOPE("%s: disconnect", this);
           this->_thread->terminate_now();

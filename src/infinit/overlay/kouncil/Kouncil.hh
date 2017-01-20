@@ -94,16 +94,6 @@ namespace infinit
               bmi::global_fun<
                 Peer const&, Address, &_details::peer_id> >,
             bmi::random_access<> > >;
-        using DisconectedPeers =
-          bmi::multi_index_container<
-          Peer,
-          bmi::indexed_by<
-            bmi::hashed_unique<
-              bmi::global_fun<
-                Peer const&, Address, &_details::peer_id> >,
-            bmi::hashed_unique<
-              bmi::global_fun<
-                Peer const&, model::doughnut::Peer*, &_details::peer_ptr> >>>;
 
       /*-------------.
       | Construction |
@@ -135,7 +125,6 @@ namespace infinit
         ELLE_ATTRIBUTE_R(AddressBook, address_book);
         /// All known peers.
         ELLE_ATTRIBUTE_R(Peers, peers);
-        ELLE_ATTRIBUTE(DisconectedPeers, disconnected_peers);
         ELLE_ATTRIBUTE(std::default_random_engine, gen, mutable);
       private:
         void
@@ -174,6 +163,7 @@ namespace infinit
           /// Last time we saw the peer online.
           ELLE_ATTRIBUTE_RW(Time, last_seen);
           /// Last time we tried to contact the peer, if offline.
+          // FIXME: drop
           ELLE_ATTRIBUTE_RW(Time, last_contact_attempt);
           /// Default model: Serialize non-local information.
           using Model = das::Model<
@@ -188,8 +178,6 @@ namespace infinit
           bmi::indexed_by<
             bmi::hashed_unique<
               bmi::const_mem_fun<PeerInfo, Address const&, &PeerInfo::id>>>>;
-        NodeLocations
-        peers_locations() const;
         ELLE_ATTRIBUTE_R(PeerInfos, infos);
       protected:
         virtual
@@ -198,8 +186,6 @@ namespace infinit
         bool
         _discovered(model::Address id) override;
       private:
-        void
-        _discover(NodeLocation const& peer);
         void
         _discover(PeerInfos const& pis);
         void
@@ -216,8 +202,6 @@ namespace infinit
         _peer_disconnected(std::shared_ptr<model::doughnut::Remote> peer);
         void
         _peer_connected(std::shared_ptr<model::doughnut::Remote> peer);
-        void
-        _watcher();
         reactor::Thread::unique_ptr _watcher_thread;
         ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>, tasks);
         std::chrono::seconds _eviction_delay;
