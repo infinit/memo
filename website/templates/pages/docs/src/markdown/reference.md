@@ -10,8 +10,6 @@ Introduction
 
 The Infinit command-line tools are composed of several binaries, each dealing with a specific resource or object.
 
-<br><img src="${url('images/schema-terminology.png')}" alt="terminology Infinit storage platform"><br><br>
-
 A *user* represents the entity performing operations on files, directly or indirectly. Every user possesses an RSA key pair that is used to identify him/her. A user can create a *network* which represents the interconnection of computing resources that will compose the storage infrastructure. A *silo* is a storage resource, local or remote, that can be connected to a device to support part of the overall storage load. Finally, several *volumes* --- i.e. logical drives ---  can be created within a network.
 
 The *Hub* is a cloud service whose role is to ease the process of discovery, sharing and more.
