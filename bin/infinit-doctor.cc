@@ -1928,20 +1928,17 @@ COMMAND(system_sanity)
 
 COMMAND(networking)
 {
-  bool server = args.count("host") == 0;
-  auto v = ::version;
-  if (infinit::compatibility_version)
-    v = *infinit::compatibility_version;
-  if (server)
+  auto v = infinit::compatibility_version.value_or(::version);
+  if (args.count("host"))
   {
-    elle::fprintf(std::cout, "Server mode (version: %s):", v) << std::endl;
-    auto servers = infinit::networking::Servers(args, v);
-    reactor::sleep();
+    elle::printf("Client mode (version: %s):", v) << std::endl;
+    infinit::networking::perfom(mandatory<std::string>(args, "host"), args, v);
   }
   else
   {
-    elle::fprintf(std::cout, "Client mode (version: %s):", v) << std::endl;
-    infinit::networking::perfom(mandatory<std::string>(args, "host"), args, v);
+    elle::printf("Server mode (version: %s):", v) << std::endl;
+    auto servers = infinit::networking::Servers(args, v);
+    reactor::sleep();
   }
 }
 
