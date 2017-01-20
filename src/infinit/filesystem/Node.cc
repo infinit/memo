@@ -185,11 +185,11 @@ namespace infinit
 
       dir->_data->_files.insert(std::make_pair(newname, data));
       dir->_data->write(
-        *this->_owner.block_store(),
+        this->_owner,
         {OperationType::insert, newname, data.first, data.second});
 
       this->_parent->_files.erase(_name);
-      this->_parent->write(*this->_owner.block_store(),
+      this->_parent->write(this->_owner,
                             {OperationType::remove, this->_name});
 
       this->_name = newname;

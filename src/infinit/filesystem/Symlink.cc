@@ -90,7 +90,7 @@ namespace infinit
     Symlink::unlink()
     {
       this->_parent->_files.erase(this->_name);
-      this->_parent->write(*this->_owner.block_store(),
+      this->_parent->write(this->_owner,
                            {OperationType::remove, this->_name},
                            DirectoryData::null_block,
                            true);
