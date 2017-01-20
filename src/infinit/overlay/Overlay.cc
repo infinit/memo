@@ -81,6 +81,12 @@ namespace infinit
       this->_discover(peers);
     }
 
+    bool
+    Overlay::discovered(model::Address id)
+    {
+      return this->_discovered(id);
+    }
+
     /*-------.
     | Lookup |
     `-------*/

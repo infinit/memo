@@ -323,6 +323,12 @@ namespace infinit
         }
       }
 
+      bool
+      Kouncil::_discovered(model::Address id)
+      {
+        return this->_peers.find(id) != this->_peers.end();
+      }
+
       void
       Kouncil::_peer_connected(std::shared_ptr<model::doughnut::Remote> peer)
       {

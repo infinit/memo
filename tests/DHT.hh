@@ -54,6 +54,12 @@ public:
     ELLE_ABORT("not implemented");
   }
 
+  bool
+  _discovered(infinit::model::Address id) override
+  {
+    ELLE_ABORT("not implemented");
+  }
+
   static
   std::unique_ptr<Overlay>
   make(infinit::model::doughnut::Doughnut& d,

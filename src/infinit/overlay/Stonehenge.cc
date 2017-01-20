@@ -44,6 +44,13 @@ namespace infinit
       elle::err("Stonehenge cannot discover new nodes");
     }
 
+    bool
+    Stonehenge::_discovered(model::Address id)
+    {
+      return any(this->_peers,
+                 [&] (NodeLocation const& p) { return p.id() == id; });
+    }
+
     /*-------.
     | Lookup |
     `-------*/

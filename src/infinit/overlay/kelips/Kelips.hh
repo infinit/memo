@@ -316,6 +316,8 @@ namespace infinit
                   NodeLocations const& peers = {});
         void
         _discover(NodeLocations const& peers) override;
+        bool
+        _discovered(model::Address id) override;
         void
         send_bootstrap(NodeLocation const& l);
         SerState

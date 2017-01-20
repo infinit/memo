@@ -195,6 +195,8 @@ namespace infinit
         virtual
         void
         _discover(NodeLocations const& peers) override;
+        bool
+        _discovered(model::Address id) override;
       private:
         void
         _discover(NodeLocation const& peer);

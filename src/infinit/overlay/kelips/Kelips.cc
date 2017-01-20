@@ -1166,6 +1166,13 @@ namespace infinit
           send_bootstrap(peer);
       }
 
+      bool
+      Node::_discovered(model::Address id)
+      {
+        ELLE_ABORT("oh look here bearclaw an easy fix");
+        // return this->_contacts.find(id) != this->_contacts.end();
+      }
+
       void
       Node::send_bootstrap(NodeLocation const& l)
       {

@@ -59,10 +59,15 @@ namespace infinit
       discover(NodeLocation const& peer);
       void
       discover(NodeLocations const& peers);
+      bool
+      discovered(model::Address id);
     protected:
       virtual
       void
       _discover(NodeLocations const& peers) = 0;
+      virtual
+      bool
+      _discovered(model::Address id) = 0;
 
     /*------.
     | Hooks |

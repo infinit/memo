@@ -27,6 +27,12 @@ namespace infinit
       elle::err("Kalimero cannot discover new nodes");
     }
 
+    bool
+    Kalimero::_discovered(model::Address id)
+    {
+      return id == this->id();
+    }
+
     /*-------.
     | Lookup |
     `-------*/

@@ -41,6 +41,15 @@ namespace infinit
           backend->discover(peers);
       }
 
+      bool
+      Koordinate::_discovered(model::Address id)
+      {
+        // Any or all ? Better safe than sorry, if someone expects the overlay
+        // to have discovered a peer, make sure all backends have discovered it.
+        return all(this->_backends,
+                   [&] (Backend const& b) { return b->discovered(id); });
+      }
+
       /*-------.
       | Lookup |
       `-------*/
