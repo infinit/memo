@@ -2136,7 +2136,7 @@ namespace
     if (!read)
     {
       boost::system::error_code code;
-      bfs::recursive_directory_iterator it(path, code);
+      auto it = bfs::recursive_directory_iterator(path, code);
       if (!code)
         read = true;
     }
@@ -2505,56 +2505,52 @@ namespace
         file.remove_filename();
         return boost::equal(dir, file);
       };
-    for (auto it = bfs::recursive_directory_iterator(infinit::xdg_data_home());
-         it != bfs::recursive_directory_iterator();
-         ++it)
-      if (is_regular_file(it->status()) && !infinit::is_hidden_file(it->path()))
+    for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_data_home()))
+      if (is_regular_file(p.status()) && !infinit::is_hidden_file(p.path()))
       {
         try
         {
           // Share.
-          if (path_contains_file(ifnt._network_descriptors_path(), it->path()))
-            load<infinit::NetworkDescriptor>(it->path(), "network_descriptor");
-          else if (path_contains_file(ifnt._networks_path(), it->path()))
-            load<infinit::Network>(it->path(), "network");
-          else if (path_contains_file(ifnt._volumes_path(), it->path()))
-            load<infinit::Volume>(it->path(), "volume");
-          else if (path_contains_file(ifnt._drives_path(), it->path()))
-            load<infinit::Drive>(it->path(), "drive");
-          else if (path_contains_file(ifnt._passports_path(), it->path()))
-            load<infinit::Passport>(it->path(), "passport");
-          else if (path_contains_file(ifnt._users_path(), it->path()))
-            load<infinit::User>(it->path(), "users");
-          else if (path_contains_file(ifnt._storages_path(), it->path()))
-            load<std::unique_ptr<infinit::storage::StorageConfig>>(it->path(), "storage");
-          else if (path_contains_file(ifnt._credentials_path(), it->path()))
-            load<std::unique_ptr<infinit::Credentials>>(it->path(), "credentials");
-          else if (path_contains_file(infinit::xdg_data_home() / "blocks", it->path()))
+          if (path_contains_file(ifnt._network_descriptors_path(), p.path()))
+            load<infinit::NetworkDescriptor>(p.path(), "network_descriptor");
+          else if (path_contains_file(ifnt._networks_path(), p.path()))
+            load<infinit::Network>(p.path(), "network");
+          else if (path_contains_file(ifnt._volumes_path(), p.path()))
+            load<infinit::Volume>(p.path(), "volume");
+          else if (path_contains_file(ifnt._drives_path(), p.path()))
+            load<infinit::Drive>(p.path(), "drive");
+          else if (path_contains_file(ifnt._passports_path(), p.path()))
+            load<infinit::Passport>(p.path(), "passport");
+          else if (path_contains_file(ifnt._users_path(), p.path()))
+            load<infinit::User>(p.path(), "users");
+          else if (path_contains_file(ifnt._storages_path(), p.path()))
+            load<std::unique_ptr<infinit::storage::StorageConfig>>(p.path(), "storage");
+          else if (path_contains_file(ifnt._credentials_path(), p.path()))
+            load<std::unique_ptr<infinit::Credentials>>(p.path(), "credentials");
+          else if (path_contains_file(infinit::xdg_data_home() / "blocks", p.path()))
             {}
-          else if (path_contains_file(infinit::xdg_data_home() / "ui", it->path()))
+          else if (path_contains_file(infinit::xdg_data_home() / "ui", p.path()))
             {}
           else
-            store(leftovers, it->path().string());
+            store(leftovers, p.path().string());
         }
         catch (...)
         {
-          store(leftovers, it->path().string(), elle::exception_string());
+          store(leftovers, p.path().string(), elle::exception_string());
         }
       }
-    for (auto it = bfs::recursive_directory_iterator(infinit::xdg_cache_home());
-         it != bfs::recursive_directory_iterator();
-         ++it)
-      if (is_regular_file(it->status()) && !infinit::is_hidden_file(it->path()))
+    for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_cache_home()))
+      if (is_regular_file(p.status()) && !infinit::is_hidden_file(p.path()))
       {
         try
         {
-          if (!path_contains_file(ifnt._user_avatar_path(), it->path())
-              && !path_contains_file(ifnt._drive_icon_path(), it->path()))
-            store(leftovers, it->path().string());
+          if (!path_contains_file(ifnt._user_avatar_path(), p.path())
+              && !path_contains_file(ifnt._drive_icon_path(), p.path()))
+            store(leftovers, p.path().string());
         }
         catch (...)
         {
-          store(leftovers, it->path().string(), elle::exception_string());
+          store(leftovers, p.path().string(), elle::exception_string());
         }
       }
     for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_state_home()))
