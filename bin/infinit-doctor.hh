@@ -103,7 +103,7 @@ namespace reporting
       ELLE_ATTRIBUTE_RW(std::string, user_name);
     };
 
-    // Use inheritance maybe ?
+    // Use inheritance maybe?
     struct StorageResoucesResult
       : public Result
     {
@@ -226,7 +226,7 @@ namespace reporting
       /*------.
       | Types |
       `------*/
-      typedef boost::optional<VolumeResult> FaultyVolume;
+      using FaultyVolume = boost::optional<VolumeResult>;
 
       /*-------------.
       | Construction |

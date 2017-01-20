@@ -275,7 +275,7 @@ namespace
       ELLE_ATTRIBUTE_RW(std::string, user_name);
     };
 
-    // Use inheritance maybe ?
+    // Use inheritance maybe?
     struct StorageResoucesResult
       : public Result
     {
@@ -2298,15 +2298,15 @@ namespace
   std::map<std::string, std::pair<T, bool>>
   parse(std::vector<T> container)
   {
-    std::map<std::string, std::pair<T, bool>> output;
+    auto res = std::map<std::string, std::pair<T, bool>>{};
     for (auto& item: container)
     {
       auto name = item.name;
-      output.emplace(std::piecewise_construct,
-                     std::forward_as_tuple(name),
-                     std::forward_as_tuple(std::move(item), false));
+      res.emplace(std::piecewise_construct,
+                  std::forward_as_tuple(name),
+                  std::forward_as_tuple(std::move(item), false));
     }
-    return output;
+    return res;
   }
 
   template <typename T>
@@ -2629,8 +2629,8 @@ namespace
   }
 
   void
-  report_error(infinit::cli::Infinit& cli,
-               std::ostream& out, bool sane, bool warning = false)
+  _report_error(infinit::cli::Infinit& cli,
+                std::ostream& out, bool sane, bool warning = false)
   {
     if (!sane)
       elle::err("Please refer to each individual error message. "
@@ -2650,10 +2650,10 @@ namespace
 
   template <typename Report>
   void
-  output(infinit::cli::Infinit& cli,
-         std::ostream& out,
-         Report const& results,
-         bool verbose)
+  _output(infinit::cli::Infinit& cli,
+          std::ostream& out,
+          Report const& results,
+          bool verbose)
   {
     if (cli.script())
       infinit::Infinit::save(out, results, false);

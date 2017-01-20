@@ -80,6 +80,7 @@ namespace infinit
     DAS_CLI_SYMBOL(home, 'h', "create a home directory for the invited user", false);
     DAS_CLI_SYMBOL(host, '\0', "SSH host", false);
     DAS_CLI_SYMBOL(icon, 'i', "path to an image to use as icon", false);
+    DAS_CLI_SYMBOL(ignore_non_linked, 0, "do not consider problematic non-linked networks", false);
     DAS_CLI_SYMBOL(input, 'i', "file to read {type} from", false);
     DAS_CLI_SYMBOL(k, 0, "number of groups (default: 1)", false);
     DAS_CLI_SYMBOL(kalimero, 0, "use a Kalimero overlay network. Used for local testing", false);
@@ -103,6 +104,7 @@ namespace infinit
     DAS_CLI_SYMBOL(name, 'n', "name of the {type} {action}", true);
     DAS_CLI_SYMBOL(network, 'N', "network {action} {type} for", false);
     DAS_CLI_SYMBOL(no_avatar, '\0', "do not {action} avatars", false);
+    DAS_CLI_SYMBOL(no_color, 0, "don't use colored output", false);
     DAS_CLI_SYMBOL(no_consensus, 0, "use no consensus algorithm", false);
     DAS_CLI_SYMBOL(no_countdown, 0, "do not show countdown timer", false);
     DAS_CLI_SYMBOL(no_local_endpoints, 0, "Disable automatic detection of local endpoints", false);
@@ -111,6 +113,8 @@ namespace infinit
     DAS_CLI_SYMBOL(operation, 'O', "operation to {action}", false);
     DAS_CLI_SYMBOL(others_mode, 'o', "access mode {action} for other users: r, w, rw, none", false);
     DAS_CLI_SYMBOL(output, 'o', "file to write the {type} to", false);
+    DAS_CLI_SYMBOL(packet_size, 's', "size of the packet to send (client only)", false);
+    DAS_CLI_SYMBOL(packets_count, 'n', "number of packets to exchange (client only)", false);
     DAS_CLI_SYMBOL(passphrase, 0, "passphrase to secure identity (default: prompt for passphrase)", false);
     DAS_CLI_SYMBOL(passport, 0, "create passports for each invitee", false);
     DAS_CLI_SYMBOL(password, 'P', "password to authenticate with {hub}", false);
@@ -151,22 +155,31 @@ namespace infinit
     DAS_CLI_SYMBOL(restart, 0, "restart {type}", false);
     DAS_CLI_SYMBOL(s3, '\0', "store blocks on AWS S3", false);
     DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output", false);
+    DAS_CLI_SYMBOL(server, 0, "connectivity server address (default = 192.241.139.66)", false);
     DAS_CLI_SYMBOL(service, 0, "fetch {type} from the network, not beyond", false);
     DAS_CLI_SYMBOL(show, '\0', "list group users, administrators and description", false);
     DAS_CLI_SYMBOL(ssh, '\0', "store blocks via SSH", false);
     DAS_CLI_SYMBOL(stat, '\0', "show the remaining asynchronous operations count and size", false);
     DAS_CLI_SYMBOL(storage, 'S', "storage to contribute (optional, data striped over multiple)", false);
     DAS_CLI_SYMBOL(storage_class, '\0', "storage class to use: STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)", false);
+    DAS_CLI_SYMBOL(tcp_port, 't', "port to perform tcp tests on", false);
     DAS_CLI_SYMBOL(traverse, 't', "set read permission on parent directories", false);
+    DAS_CLI_SYMBOL(upnp_tcp_port, 0, "port to try to get an tcp upnp connection on", false);
+    DAS_CLI_SYMBOL(upnp_udt_port, 0, "port to try to get an udt upnp connection on", false);
     DAS_CLI_SYMBOL(user, 'u', "user {action} {type} for", false);
+    DAS_CLI_SYMBOL(utp_port, 'u', "port to perform utp tests on. (if unspecified, --xored_utp_port = utp_port + 1)", false);
     DAS_CLI_SYMBOL(value, 'v', "value {action}", false);
-    DAS_CLI_SYMBOL(verbose, '\0', "use verbose output", false);
+    DAS_CLI_SYMBOL(verbose, 'v', "use verbose output", false);
     DAS_CLI_SYMBOL(volume, 'V', "associated volume name", false);
+    DAS_CLI_SYMBOL(xored, 'X', "performs test applying a 0xFF xor on the utp traffic, value=yes,no,both", false);
+    DAS_CLI_SYMBOL(xored_utp_port, 'x', "port to perform xored utp tests on", false);
 
 
     DAS_SYMBOL(acl);
     DAS_SYMBOL(block);
     DAS_SYMBOL(call);
+    DAS_SYMBOL(configuration);
+    DAS_SYMBOL(connectivity);
     DAS_SYMBOL(create);
     DAS_SYMBOL(credentials);
     DAS_SYMBOL(describe);
@@ -189,6 +202,7 @@ namespace infinit
     DAS_SYMBOL(list_storage);
     DAS_SYMBOL(login);
     DAS_SYMBOL(manage_volumes);
+    DAS_SYMBOL(networking);
     DAS_SYMBOL(run);
     DAS_SYMBOL(set);
     DAS_SYMBOL(set_xattr);
@@ -198,6 +212,7 @@ namespace infinit
     DAS_SYMBOL(stats);
     DAS_SYMBOL(status);
     DAS_SYMBOL(stop);
+    DAS_SYMBOL(system);
     DAS_SYMBOL(transmit);
     DAS_SYMBOL(unlink);
     DAS_SYMBOL(update);
@@ -212,6 +227,9 @@ namespace infinit
     namespace modes
     {
       DAS_SYMBOL(mode_add);
+      DAS_SYMBOL(mode_all);
+      DAS_SYMBOL(mode_configuration);
+      DAS_SYMBOL(mode_connectivity);
       DAS_SYMBOL(mode_create);
       DAS_SYMBOL(mode_delete);
       DAS_SYMBOL(mode_describe);
@@ -234,6 +252,7 @@ namespace infinit
       DAS_SYMBOL(mode_login);
       DAS_SYMBOL(mode_manage_volumes);
       DAS_SYMBOL(mode_mount);
+      DAS_SYMBOL(mode_networking);
       DAS_SYMBOL(mode_pull);
       DAS_SYMBOL(mode_push);
       DAS_SYMBOL(mode_receive);
@@ -247,6 +266,7 @@ namespace infinit
       DAS_SYMBOL(mode_stats);
       DAS_SYMBOL(mode_status);
       DAS_SYMBOL(mode_stop);
+      DAS_SYMBOL(mode_system);
       DAS_SYMBOL(mode_transmit);
       DAS_SYMBOL(mode_unlink);
       DAS_SYMBOL(mode_update);

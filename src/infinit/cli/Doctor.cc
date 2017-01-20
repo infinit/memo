@@ -4,14 +4,11 @@
 #include <regex>
 
 #include <boost/algorithm/string/predicate.hpp>
-// FIXME: to remove once migrated to DAS.
-#include <boost/program_options.hpp>
 
 #include <elle/bytes.hh>
 #include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/filesystem/path.hh>
 #include <elle/log.hh>
-#include <elle/log/TextLogger.hh>
 #include <elle/network/Interface.hh>
 #include <elle/os/environ.hh>
 #include <elle/string/algorithm.hh> // elle::join
@@ -53,6 +50,30 @@ namespace infinit
 
     Doctor::Doctor(Infinit& infinit)
       : Entity(infinit)
+      , configuration(
+        "Perform integrity checks on the Infinit configuration files",
+        das::cli::Options(),
+        this->bind(modes::mode_configuration,
+                   cli::verbose = false,
+                   cli::ignore_non_linked = false))
     {}
+
+
+    /*----------------------.
+    | Mode: configuration.  |
+    `----------------------*/
+
+    void
+    Doctor::mode_configuration(bool verbose,
+                               bool ignore_non_linked)
+    {
+      ELLE_TRACE_SCOPE("configuration");
+      auto& cli = this->cli();
+
+      auto results = ConfigurationIntegrityResults{};
+      _configuration_integrity(cli, ignore_non_linked, results);
+      _output(cli, std::cout, results, verbose);
+      _report_error(cli, std::cout, results.sane(), results.warning());
+    }
   }
 }
