@@ -44,7 +44,7 @@ namespace infinit
         : Super(dht, connection->location().id())
         , _connection()
         , _connected()
-        , _disconnected_since(std::chrono::system_clock::now())
+        , _connecting_since(std::chrono::system_clock::now())
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_ASSERT_NEQ(connection->location().id(), Address::null);
@@ -142,13 +142,9 @@ namespace infinit
       {
         this->_connection->disconnect();
         if (this->_connection->connected())
-        {
-          this->_disconnected_since =
-            this->_connection->disconnected_since();
           this->_disconnected_exception =
             this->_connection->disconnected_exception();
-        }
-        // FIXME: refetch endpoints
+        this->_connecting_since = std::chrono::system_clock::now();
         this->_doughnut.dock().connect(this->_connection->location());
       }
 

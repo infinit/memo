@@ -91,7 +91,7 @@ namespace infinit
       private:
         ELLE_ATTRIBUTE(reactor::Barrier, connected);
         ELLE_ATTRIBUTE(
-          std::chrono::system_clock::time_point, disconnected_since);
+          std::chrono::system_clock::time_point, connecting_since);
         ELLE_ATTRIBUTE(std::exception_ptr, disconnected_exception);
         ELLE_ATTRIBUTE(
           std::vector<boost::signals2::scoped_connection>, connections);
