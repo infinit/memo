@@ -20,6 +20,7 @@ namespace infinit
       using Modes
         = decltype(elle::meta::list(cli::configuration,
                                     cli::connectivity,
+                                    cli::networking,
                                     cli::system));
 
       /*----------------------.
@@ -49,6 +50,36 @@ namespace infinit
                         boost::optional<uint16_t> upnp_udt_port,
                         boost::optional<std::string> const& server,
                         bool verbose);
+
+      /*-------------------.
+      | Mode: networking.  |
+      `-------------------*/
+      using ModeNetworking =
+        Mode<decltype(binding(modes::mode_networking,
+                              cli::mode = boost::none,
+                              cli::protocol = boost::none,
+                              cli::packet_size = boost::none,
+                              cli::packets_count = boost::none,
+                              cli::host = boost::none,
+                              cli::port = boost::none,
+                              cli::tcp_port = boost::none,
+                              cli::utp_port = boost::none,
+                              cli::xored_utp_port = boost::none,
+                              cli::xored = boost::none,
+                              cli::verbose = false))>;
+      ModeNetworking networking;
+      void
+      mode_networking(boost::optional<std::string> const& mode_name,
+                      boost::optional<std::string> const& protocol_name,
+                      boost::optional<elle::Buffer::Size> packet_size,
+                      boost::optional<int64_t> packets_count,
+                      boost::optional<std::string> const& host,
+                      boost::optional<uint16_t> port,
+                      boost::optional<uint16_t> tcp_port,
+                      boost::optional<uint16_t> utp_port,
+                      boost::optional<uint16_t> xored_utp_port,
+                      boost::optional<std::string> const& xored,
+                      bool verbose);
 
       /*---------------.
       | Mode: system.  |
