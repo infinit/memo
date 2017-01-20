@@ -323,9 +323,10 @@ namespace infinit
             this->_infos.modify(it, [&](PeerInfo& p) { change = p.merge(pi);});
             if (change)
             {
-              // New data on a connected peer, we need to notify observers
-              // FIXME: maybe notify on reconnection instead?
+              // New data on a known peer, we need to notify observers
               ELLE_DEBUG("discover new endpoints for %s", pi);
+              if (!find(this->_peers, pi.id()))
+                this->doughnut()->dock().connect(pi.location());
               this->_notify_observers(*it);
             }
             else
