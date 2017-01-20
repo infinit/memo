@@ -477,6 +477,8 @@ namespace infinit
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
         ELLE_TRACE("permission exception: %s", e.what());
+        // Evict entry from cache since we put invalid changes there
+        fs._directory_cache.erase(_address);
         throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
       }
       catch(rfs::Error const& e)

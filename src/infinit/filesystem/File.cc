@@ -401,6 +401,8 @@ namespace infinit
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
         ELLE_TRACE("permission exception: %s", e.what());
+        // We made changes to filedata that couldn't be pushed, evict from cache
+        fs._file_cache.erase(_address);
         throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
       }
       catch (model::MissingBlock const&)
