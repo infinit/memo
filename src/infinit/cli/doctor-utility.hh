@@ -10,6 +10,8 @@
 namespace
 {
   using Environ = elle::os::Environ;
+  using boost::algorithm::all_of;
+  using boost::algorithm::any_of;
 
   bool no_color = false;
 
@@ -53,25 +55,25 @@ namespace
   bool
   sane_(C const& c, bool all = true)
   {
-    auto filter = [&] (typename C::value_type const& x)
+    auto filter = [&] (auto const& x)
       {
         return x.sane();
       };
     if (all)
-      return std::all_of(c.begin(), c.end(), filter);
+      return all_of(c, filter);
     else
-      return std::any_of(c.begin(), c.end(), filter);
+      return any_of(c, filter);
   }
 
   template <typename C>
   bool
   warning_(C const& c)
   {
-    return std::any_of(c.begin(), c.end(),
-                       [&] (typename C::value_type const& x)
-                       {
-                         return x.warning();
-                       });
+    return any_of(c,
+                  [&] (auto const& x)
+                  {
+                    return x.warning();
+                  });
   }
 
   std::ostream&
@@ -1141,9 +1143,8 @@ namespace
     if (!this->linked)
       elle::fprintf(out, "is not linked [for user \"%s\"]", username);
     if (this->storage_resources)
-    {
-      auto s = this->storage_resources->size();
-      if (s > 0)
+      if (auto s = this->storage_resources->size())
+      {
         out << " " << elle::join(
           *storage_resources,
           "], [",
@@ -1155,11 +1156,11 @@ namespace
               out << " (" << *t.reason << ")";
             return out.str();
           });
-      if (s == 1)
-        out << " storage resource is faulty";
-      else if (s > 1)
-        out << " storage resources are faulty";
-    }
+        if (s == 1)
+          out << " storage resource is faulty";
+        else
+          out << " storage resources are faulty";
+      }
   }
 
   ConfigurationIntegrityResults::VolumeResult::VolumeResult(
@@ -1957,10 +1958,11 @@ namespace
 
 
   void
-  _connectivity(ConnectivityResults& results,
+  _connectivity(infinit::cli::Infinit& cli,
                 boost::optional<std::string> const& server,
                 boost::optional<uint16_t> upnp_tcp_port,
-                boost::optional<uint16_t> upnp_udt_port)
+                boost::optional<uint16_t> upnp_udt_port,
+                ConnectivityResults& results)
   {
     ELLE_TRACE("contact beyond")
     {
@@ -1994,26 +1996,23 @@ namespace
           public_ips.emplace_back(i.second.ipv4_address);
       results.interfaces = {public_ips};
     }
-    // XXX: This should be nat.infinit.sh or something.
-    auto host = server.value_or("192.241.139.66");
+    using ConnectivityFunction
+      = std::function<reactor::connectivity::Result
+                      (std::string const& host, uint16_t port)>;
     uint16_t port = 5456;
     auto run = [&] (std::string const& name,
-                    std::function<reactor::connectivity::Result (
-                      std::string const& host,
-                      uint16_t port)> const& function,
+                    ConnectivityFunction const& function,
                     int deltaport = 0)
       {
         static const reactor::Duration timeout = 3_sec;
-        ELLE_TRACE("connect using %s to %s:%s", name, host, port + deltaport);
+        ELLE_TRACE("connect using %s to %s:%s", name, *server, port + deltaport);
         std::string result = elle::sprintf("  %s: ", name);
         try
         {
           reactor::TimeoutGuard guard(timeout);
-          auto address = function(host, port + deltaport);
-          bool external = std::find(
-            public_ips.begin(), public_ips.end(), address.host
-            ) == public_ips.end();
-          store(results.protocols, name, host, address.local_port,
+          auto address = function(*server, port + deltaport);
+          bool external = !std::contains(public_ips, address.host);
+          store(results.protocols, name, *server, address.local_port,
                 address.remote_port, !external);
         }
         catch (reactor::Terminate const&)
@@ -2038,34 +2037,26 @@ namespace
     run("TCP", reactor::connectivity::tcp);
     run("UDP", reactor::connectivity::udp);
     run("UTP",
-        std::bind(reactor::connectivity::utp,
-                  std::placeholders::_1,
-                  std::placeholders::_2,
-                  0),
+        [](auto const& host, auto const& port)
+        { return reactor::connectivity::utp(host, port, 0); },
         1);
     run("UTP (XOR)",
-        std::bind(reactor::connectivity::utp,
-                  std::placeholders::_1,
-                  std::placeholders::_2,
-                  0xFF),
+        [](auto const& host, auto const& port)
+        { return reactor::connectivity::utp(host, port, 0xFF); },
         2);
     run("RDV UTP",
-        std::bind(reactor::connectivity::rdv_utp,
-                  std::placeholders::_1,
-                  std::placeholders::_2,
-                  0),
+        [](auto const& host, auto const& port)
+        { return reactor::connectivity::rdv_utp(host, port, 0); },
         1);
     run("RDV UTP (XOR)",
-        std::bind(reactor::connectivity::rdv_utp,
-                  std::placeholders::_1,
-                  std::placeholders::_2,
-                  0xFF),
+        [](auto const& host, auto const& port)
+        { return reactor::connectivity::rdv_utp(host, port, 0xFF); },
         2);
     ELLE_TRACE("NAT")
     {
       try
       {
-        auto nat = reactor::connectivity::nat(host, port);
+        auto nat = reactor::connectivity::nat(*server, port);
         // Super uglY.
         auto cone = nat.find("NOT_CONE") == std::string::npos &&
           nat.find("CONE") != std::string::npos;
@@ -2181,6 +2172,7 @@ namespace
     constexpr auto write_only = "write only";
     constexpr auto not_accessible = "not accessible (permissions denied)";
   }
+
   /// Return the permissions as a human readable string:
   /// "is read only"
   /// "is write only"
@@ -2214,8 +2206,8 @@ namespace
                  bool mandatory = true)
   {
     auto res = permissions_string(path);
-    auto good = (res.find(read_write) != std::string::npos);
-    auto sane = (good || !mandatory);
+    auto good = res.find(read_write) != std::string::npos;
+    auto sane = good || !mandatory;
     return std::make_pair(sane, res);
   }
 
@@ -2234,7 +2226,7 @@ namespace
       };
 
       reactor::filesystem::FileSystem f(std::make_unique<NoOp>(), false);
-      elle::filesystem::TemporaryDirectory d;
+      auto d = elle::filesystem::TemporaryDirectory{};
       f.mount(d.path(), {});
       f.unmount();
       f.kill();
@@ -2353,7 +2345,8 @@ namespace
       else
         results.user = {
           username,
-          false, elle::sprintf("user \"%s\" has no private key", username)
+          false,
+          elle::sprintf("user \"%s\" has no private key", username)
         };
     }
     // XXX: Catch a specific error.
@@ -2361,7 +2354,9 @@ namespace
     {
       results.user = {
         username,
-        false, elle::sprintf("user \"%s\" is not an Infinit user", username)};
+        false,
+        elle::sprintf("user \"%s\" is not an Infinit user", username)
+      };
     }
     using namespace infinit::storage;
     auto networks = parse(ifnt.networks_get(owner));
@@ -2373,17 +2368,13 @@ namespace
         if (auto s3config = dynamic_cast<S3StorageConfig const*>(
               storage.get()))
         {
-          auto it =
-            std::find_if(
-              aws_credentials.begin(),
-              aws_credentials.end(),
+          auto status = any_of(aws_credentials,
               [&s3config] (auto const& credentials)
               {
 #define COMPARE(field) (credentials->field == s3config->credentials.field())
                 return COMPARE(access_key_id) && COMPARE(secret_access_key);
 #undef COMPARE
               });
-          status = (it != aws_credentials.end());
         if (status)
           store(results.storage_resources, storage->name, status, "S3");
         else
@@ -2400,15 +2391,11 @@ namespace
         }
         if (auto gcsconfig = dynamic_cast<GCSConfig const*>(storage.get()))
         {
-          auto it =
-            std::find_if(
-              gcs_credentials.begin(),
-              gcs_credentials.end(),
+          auto status = any_of(gcs_credentials,
               [&gcsconfig] (auto const& credentials)
               {
                 return credentials->refresh_token == gcsconfig->refresh_token;
               });
-          status = (it != gcs_credentials.end());
           if (status)
             store(results.storage_resources, storage->name, status, "GCS");
           else
@@ -2440,26 +2427,22 @@ namespace
         }
         auto faulty = ConfigurationIntegrityResults::NetworkResult
           ::FaultyStorageResources::value_type{};
-        status = storage_names.empty() || std::all_of(
-          storage_names.begin(),
-          storage_names.end(),
-          [&] (std::string const& name) -> bool
-          {
-            auto it = std::find_if(results.storage_resources.begin(),
-                                   results.storage_resources.end(),
-                                   [name] (auto const& t)
-                                   {
-                                     return name == t.name();
-                                   });
-            auto res = (it == results.storage_resources.end()
-                        || it->show(false));
-            if (it != results.storage_resources.end())
-              faulty.emplace_back(*it);
-            else
-              faulty.emplace_back(name, false, "unknown",
-                                  std::string{"missing"});
-            return !res;
-          });
+        status = storage_names.empty()
+          || all_of(storage_names, [&] (std::string const& name) -> bool {
+              auto it = boost::find_if(results.storage_resources,
+                                       [name] (auto const& t)
+                                       {
+                                         return name == t.name();
+                                       });
+              auto res = (it == results.storage_resources.end()
+                          || it->show(false));
+              if (it != results.storage_resources.end())
+                faulty.emplace_back(*it);
+              else
+                faulty.emplace_back(name, false, "unknown",
+                                    std::string{"missing"});
+              return !res;
+            });
         if (status)
           store(results.networks, network.name, status, boost::none,
                 boost::none, linked);
@@ -2475,12 +2458,11 @@ namespace
         auto network = networks.find(volume.network);
         auto network_presents = network != networks.end();
         status = network_presents && network->second.second;
-        auto network_result = std::find_if(results.networks.begin(),
-                                           results.networks.end(),
-                                           [volume] (auto const& n)
-                                           {
-                                             return volume.network == n.name();
-                                           });
+        auto network_result = boost::find_if(results.networks,
+                                             [volume] (auto const& n)
+                                             {
+                                               return volume.network == n.name();
+                                             });
         if (network_result != results.networks.end())
           status &= !network_result->warning();
         if (status)
@@ -2512,12 +2494,11 @@ namespace
           store(results.drives, drive.name, status);
         else
         {
-          auto it = std::find_if(results.volumes.begin(),
-                                 results.volumes.end(),
-                                 [drive] (auto const& v)
-                                 {
-                                   return drive.volume == v.name();
-                                 });
+          auto it = boost::find_if(results.volumes,
+                                   [drive] (auto const& v)
+                                   {
+                                     return drive.volume == v.name();
+                                   });
           store(results.drives, drive.name, status,
                 (it != results.volumes.end())
                 ? *it

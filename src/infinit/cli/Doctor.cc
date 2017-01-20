@@ -3,7 +3,10 @@
 #include <numeric> // iota
 #include <regex>
 
+#include <boost/algorithm/cxx11/all_of.hpp>
+#include <boost/algorithm/cxx11/any_of.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/range/algorithm/find_if.hpp>
 
 #include <elle/bytes.hh>
 #include <elle/filesystem/TemporaryDirectory.hh>
@@ -45,7 +48,7 @@ namespace infinit
   {
     using Error = das::cli::Error;
     namespace bfs = boost::filesystem;
-    
+
 #include <infinit/cli/doctor-utility.hh>
 
     Doctor::Doctor(Infinit& infinit)
@@ -56,6 +59,14 @@ namespace infinit
         this->bind(modes::mode_configuration,
                    cli::verbose = false,
                    cli::ignore_non_linked = false))
+      , connectivity(
+        "Perform connectivity checks",
+        das::cli::Options(),
+        this->bind(modes::mode_connectivity,
+                   cli::upnp_tcp_port = boost::none,
+                   cli::upnp_udt_port = boost::none,
+                   cli::server = std::string{"connectivity.infinit.sh"},
+                   cli::verbose = false))
     {}
 
 
@@ -72,6 +83,31 @@ namespace infinit
 
       auto results = ConfigurationIntegrityResults{};
       _configuration_integrity(cli, ignore_non_linked, results);
+      _output(cli, std::cout, results, verbose);
+      _report_error(cli, std::cout, results.sane(), results.warning());
+    }
+
+
+
+    /*---------------------.
+    | Mode: connectivity.  |
+    `---------------------*/
+
+    void
+    Doctor::mode_connectivity(boost::optional<uint16_t> upnp_tcp_port,
+                              boost::optional<uint16_t> upnp_udt_port,
+                              boost::optional<std::string> const& server,
+                              bool verbose)
+    {
+      ELLE_TRACE_SCOPE("connectivity");
+      auto& cli = this->cli();
+
+      auto results = ConnectivityResults{};
+      _connectivity(cli,
+                    server,
+                    upnp_tcp_port,
+                    upnp_udt_port,
+                    results);
       _output(cli, std::cout, results, verbose);
       _report_error(cli, std::cout, results.sane(), results.warning());
     }
