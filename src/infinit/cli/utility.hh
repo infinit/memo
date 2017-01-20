@@ -16,6 +16,9 @@ namespace infinit
 {
   namespace cli
   {
+    namespace bfs = boost::filesystem;
+    namespace dnut = infinit::model::doughnut;
+
     std::unique_ptr<std::istream>
     commands_input(boost::optional<std::string> input_name);
 
@@ -95,8 +98,6 @@ namespace infinit
     | Daemon.  |
     `---------*/
 
-    namespace bfs = boost::filesystem;
-
     bfs::path
     daemon_sock_path();
 
@@ -128,5 +129,9 @@ namespace infinit
 
     void
     ensure_version_is_supported(elle::Version const& version);
+
+    /// Recognize "utp", "tcp", or "all".  Default is "all".
+    dnut::Protocol
+    protocol_get(boost::optional<std::string> const& proto);
   }
 }

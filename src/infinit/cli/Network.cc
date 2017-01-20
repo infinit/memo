@@ -224,20 +224,6 @@ namespace infinit
 
     namespace
     {
-      dnut::Protocol
-      protocol_get(std::string const& proto)
-      {
-        try
-        {
-          return elle::serialization::Serialize<dnut::Protocol>::convert(proto);
-        }
-        catch (elle::serialization::Error const& e)
-        {
-          elle::err<Error>("'protocol' must be 'utp', 'tcp' or 'all': %s",
-                           proto);
-        }
-      }
-
       auto
       make_kelips_config(boost::optional<int> nodes,
                          boost::optional<int> k,
@@ -291,7 +277,7 @@ namespace infinit
           res->accept_plain = false;
         }
         if (protocol)
-          res->rpc_protocol = protocol_get(*protocol);
+          res->rpc_protocol = protocol_get(protocol);
         return res;
       }
 

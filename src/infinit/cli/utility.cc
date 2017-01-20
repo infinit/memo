@@ -7,6 +7,8 @@
 #include <elle/string/algorithm.hh>
 #include <elle/system/unistd.hh> // chdir
 
+#include <das/cli.hh> // das::cli::Error
+
 #include <reactor/FDStream.hh>
 #include <reactor/http/Request.hh>
 #include <reactor/network/rdv-socket.hh>
@@ -402,6 +404,22 @@ namespace infinit
                   elle::join(supported_versions.begin(),
                              supported_versions.end(),
                              ", "));
+      }
+    }
+
+    dnut::Protocol
+    protocol_get(boost::optional<std::string> const& proto)
+    {
+      try
+      {
+        return elle::serialization::Serialize<dnut::Protocol>::convert
+          (proto.value_or("all"));
+      }
+      catch (elle::serialization::Error const& e)
+      {
+        elle::err<das::cli::Error>
+          ("'protocol' must be 'utp', 'tcp' or 'all': %s",
+           proto);
       }
     }
   }
