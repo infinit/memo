@@ -16,24 +16,46 @@ namespace infinit
       : public Entity<Doctor>
     {
     public:
+      /// Default server to ping with.
+      static std::string const connectivity_server;
+
       Doctor(Infinit& infinit);
       using Modes
-        = decltype(elle::meta::list(cli::configuration,
+        = decltype(elle::meta::list(cli::all,
+                                    cli::configuration,
                                     cli::connectivity,
                                     cli::networking,
                                     cli::system));
+
+      /*------------.
+      | Mode: all.  |
+      `------------*/
+      using ModeAll =
+        Mode<decltype(binding(modes::mode_all,
+                              cli::ignore_non_linked = false,
+                              cli::upnp_tcp_port = boost::none,
+                              cli::upnp_udt_port = boost::none,
+                              cli::server = connectivity_server,
+                              cli::verbose = false))>;
+      ModeAll all;
+      void
+      mode_all(bool ignore_non_linked,
+               boost::optional<uint16_t> upnp_tcp_port,
+               boost::optional<uint16_t> upnp_udt_port,
+               boost::optional<std::string> const& server,
+               bool verbose);
 
       /*----------------------.
       | Mode: configuration.  |
       `----------------------*/
       using ModeConfiguration =
         Mode<decltype(binding(modes::mode_configuration,
-                              cli::verbose = false,
-                              cli::ignore_non_linked = false))>;
+                              cli::ignore_non_linked = false,
+                              cli::verbose = false))>;
       ModeConfiguration configuration;
       void
-      mode_configuration(bool verbose,
-                         bool ignore_non_linked);
+      mode_configuration(bool ignore_non_linked,
+                         bool verbose);
 
       /*---------------------.
       | Mode: connectivity.  |
@@ -42,7 +64,7 @@ namespace infinit
         Mode<decltype(binding(modes::mode_connectivity,
                               cli::upnp_tcp_port = boost::none,
                               cli::upnp_udt_port = boost::none,
-                              cli::server = std::string{"connectivity.infinit.sh"},
+                              cli::server = connectivity_server,
                               cli::verbose = false))>;
       ModeConnectivity connectivity;
       void

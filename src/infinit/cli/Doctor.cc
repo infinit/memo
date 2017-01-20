@@ -52,21 +52,32 @@ namespace infinit
 
 #include <infinit/cli/doctor-utility.hh>
 
+    std::string const Doctor::connectivity_server = "connectivity.infinit.sh";
+
     Doctor::Doctor(Infinit& infinit)
       : Entity(infinit)
+      , all(
+        "Perform all possible checks",
+        das::cli::Options(),
+        this->bind(modes::mode_all,
+                   cli::ignore_non_linked = false,
+                   cli::upnp_tcp_port = boost::none,
+                   cli::upnp_udt_port = boost::none,
+                   cli::server = connectivity_server,
+                   cli::verbose = false))
       , configuration(
         "Perform integrity checks on the Infinit configuration files",
         das::cli::Options(),
         this->bind(modes::mode_configuration,
-                   cli::verbose = false,
-                   cli::ignore_non_linked = false))
+                   cli::ignore_non_linked = false,
+                   cli::verbose = false))
       , connectivity(
         "Perform connectivity checks",
         das::cli::Options(),
         this->bind(modes::mode_connectivity,
                    cli::upnp_tcp_port = boost::none,
                    cli::upnp_udt_port = boost::none,
-                   cli::server = std::string{"connectivity.infinit.sh"},
+                   cli::server = connectivity_server,
                    cli::verbose = false))
       , networking(
         "Perform networking speed tests between nodes",
@@ -91,13 +102,39 @@ namespace infinit
     {}
 
 
+    /*------------.
+    | Mode: all.  |
+    `------------*/
+
+    void
+    Doctor::mode_all(bool ignore_non_linked,
+                     boost::optional<uint16_t> upnp_tcp_port,
+                     boost::optional<uint16_t> upnp_udt_port,
+                     boost::optional<std::string> const& server,
+                     bool verbose)
+    {
+      ELLE_TRACE_SCOPE("all");
+      auto& cli = this->cli();
+
+      auto results = All{};
+      _system_sanity(cli, results.system_sanity);
+      _configuration_integrity(cli, ignore_non_linked, results.configuration_integrity);
+      _connectivity(cli,
+                    server,
+                    upnp_tcp_port,
+                    upnp_udt_port,
+                    results.connectivity);
+      _output(cli, std::cout, results, verbose);
+      _report_error(cli, std::cout, results.sane(), results.warning());
+    }
+
     /*----------------------.
     | Mode: configuration.  |
     `----------------------*/
 
     void
-    Doctor::mode_configuration(bool verbose,
-                               bool ignore_non_linked)
+    Doctor::mode_configuration(bool ignore_non_linked,
+                               bool verbose)
     {
       ELLE_TRACE_SCOPE("configuration");
       auto& cli = this->cli();
