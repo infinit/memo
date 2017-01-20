@@ -1148,10 +1148,8 @@ namespace infinit
               try
               {
                 bfs::status(root);
-                for (auto it = bfs::directory_iterator(root);
-                     it != bfs::directory_iterator();
-                     ++it)
-                  ;
+                for (auto const& p: bfs::directory_iterator(root))
+                  continue;
               }
               catch (bfs::filesystem_error const& e)
               {

@@ -9,7 +9,7 @@
 
 ELLE_LOG_COMPONENT("cli.journal");
 
-namespace fs = boost::filesystem;
+namespace bfs = boost::filesystem;
 
 namespace infinit
 {
@@ -50,9 +50,9 @@ namespace infinit
       get_operation(infinit::Infinit& ifnt,
                     infinit::User const& owner,
                     infinit::Network& network,
-                    fs::path const& path, std::string const& id)
+                    bfs::path const& path, std::string const& id)
       {
-        fs::ifstream f;
+        bfs::ifstream f;
         ifnt._open_read(f, path, id, "operation");
         auto dht = network.run(owner);
         auto ctx = elle::serialization::Context
@@ -75,8 +75,8 @@ namespace infinit
       auto owner = cli.as_user();
       auto network = ifnt.network_get(network_name, owner);
       auto dht = network.run(owner);
-      fs::path async_path = network.cache_dir(owner) / "async";
-      auto report = [&] (fs::path const& path)
+      bfs::path async_path = network.cache_dir(owner) / "async";
+      auto report = [&] (bfs::path const& path)
         {
           auto name = path.filename().string();
           std::cout << name << ": ";
@@ -127,9 +127,9 @@ namespace infinit
     namespace
     {
       bool
-      valid_block(fs::path const& path)
+      valid_block(bfs::path const& path)
       {
-        return fs::is_regular_file(path) && !infinit::is_hidden_file(path);
+        return bfs::is_regular_file(path) && !infinit::is_hidden_file(path);
       }
     }
 
@@ -148,17 +148,15 @@ namespace infinit
       auto res = elle::json::Object{};
       for (auto const& network: networks)
       {
-        fs::path async_path = network.cache_dir(owner) / "async";
+        bfs::path async_path = network.cache_dir(owner) / "async";
         int operation_count = 0;
         int64_t data_size = 0;
-        if (fs::exists(async_path))
-          for (auto it = fs::directory_iterator(async_path);
-               it != fs::directory_iterator();
-               ++it)
-            if (valid_block(it->path()))
+        if (bfs::exists(async_path))
+          for (auto const& p: bfs::directory_iterator(async_path))
+            if (valid_block(p.path()))
             {
               operation_count++;
-              data_size += fs::file_size(*it);
+              data_size += bfs::file_size(p);
             }
         if (cli.script())
           res[network.name] = elle::json::Object

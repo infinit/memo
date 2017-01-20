@@ -145,7 +145,7 @@ namespace infinit
     {
       boost::filesystem::ifstream icon;
       infinit::Infinit::_open_read(icon, avatar_path, self.name, "icon");
-      std::string s(
+      auto s = std::string(
         std::istreambuf_iterator<char>{icon},
         std::istreambuf_iterator<char>{});
       elle::ConstWeakBuffer data(s.data(), s.size());
