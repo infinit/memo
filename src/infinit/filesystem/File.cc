@@ -720,8 +720,10 @@ namespace infinit
       }
       else
       {
-        _ensure_first_block();
-        _owner.ensure_permissions(*_first_block.get(), needr, needw);
+        _fetch();
+        auto mode = this->_filedata->header().mode;
+        if ( (needr && !(mode & 0400) && !(mode & 0004)) || (needw && !(mode & 0200) && !(mode & 0002)))
+          throw rfs::Error(EACCES, "Access denied.");
       }
       return umbrella([&] {
         return std::unique_ptr<rfs::Handle>(
