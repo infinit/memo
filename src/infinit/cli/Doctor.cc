@@ -6,7 +6,10 @@
 #include <boost/algorithm/cxx11/all_of.hpp>
 #include <boost/algorithm/cxx11/any_of.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/range/algorithm/equal.hpp>
 #include <boost/range/algorithm/find_if.hpp>
+#include <boost/range/algorithm/sort.hpp>
+#include <boost/range/algorithm_ext/iota.hpp>
 
 #include <elle/bytes.hh>
 #include <elle/filesystem/TemporaryDirectory.hh>

@@ -115,17 +115,10 @@ namespace
     return out;
   }
 
-  template <typename T>
-  void
-  print_entry(std::ostream& out, T const& entry, bool sane, bool warning)
-  {
-    status(out << "  ", sane, warning) << " " << entry.name();
-  }
-
   template <typename C>
   void
   print_(std::ostream& out,
-         std::string name,
+         std::string const& name,
          C& container,
          bool verbose)
   {
@@ -139,8 +132,6 @@ namespace
         break;
     }
     bool broken = !sane || warning;
-    if (!name.empty())
-      name[0] = std::toupper(name[0]);
     status(out, sane, warning) << " " << name;
     if (verbose || broken)
     {
@@ -150,22 +141,22 @@ namespace
       // Because print can be called from a const method, store indexes and sort
       // them.
       auto indexes = std::vector<size_t>(container.size());
-      std::iota(indexes.begin(), indexes.end(), 0);
-      std::sort(indexes.begin(), indexes.end(),
-                [&container](auto i1, auto i2)
-                {
-                  auto const& l = container[i1];
-                  auto const& r = container[i2];
-                  return
-                    std::forward_as_tuple(l.sane(), !l.warning(), l.name())
-                    < std::forward_as_tuple(r.sane(), !r.warning(), r.name());
-                });
+      boost::iota(indexes, 0);
+      boost::sort(indexes,
+                  [&container](auto i1, auto i2)
+                  {
+                    auto const& l = container[i1];
+                    auto const& r = container[i2];
+                    return
+                      std::forward_as_tuple(l.sane(), !l.warning(), l.name())
+                      < std::forward_as_tuple(r.sane(), !r.warning(), r.name());
+                  });
       for (auto const& index: indexes)
       {
         auto item = container[index];
         if (verbose || !item.sane() || item.warning())
         {
-          print_entry(out, item, item.sane(), item.warning());
+          status(out << "  ", item.sane(), item.warning()) << " " << item.name();
           item.print(out, verbose);
           out << std::endl;
         }
@@ -2512,11 +2503,7 @@ namespace
     auto path_contains_file = [](bfs::path dir, bfs::path file) -> bool
       {
         file.remove_filename();
-        auto dir_len = std::distance(dir.begin(), dir.end());
-        auto file_len = std::distance(file.begin(), file.end());
-        if (dir_len > file_len)
-          return false;
-        return std::equal(dir.begin(), dir.end(), file.begin());
+        return boost::equal(dir, file);
       };
     for (auto it = bfs::recursive_directory_iterator(infinit::xdg_data_home());
          it != bfs::recursive_directory_iterator();
