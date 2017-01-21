@@ -66,6 +66,7 @@ namespace infinit
       public:
         class Connection
           : public std::enable_shared_from_this<Connection>
+          , public elle::Printable::as<Connection>
         {
         public:
           Connection(Dock& dock, NodeLocation loc);
@@ -101,6 +102,8 @@ namespace infinit
         public:
           void
           disconnect();
+          void
+          print(std::ostream& out) const;
         private:
           void
           _key_exchange(protocol::ChanneledStream& channels);

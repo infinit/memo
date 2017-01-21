@@ -142,7 +142,6 @@ namespace infinit
               r->disconnect();
       }
 
-
       void
       Dock::cleanup()
       {
@@ -434,6 +433,16 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: disconnect", this);
           this->_thread->terminate_now();
         }
+      }
+
+      void
+      Dock::Connection::print(std::ostream& out) const
+      {
+        elle::fprintf(out, "%f(%x, %f -> %f)",
+                      elle::type_info(*this),
+                      reinterpret_cast<void const*>(this),
+                      this->_dock.doughnut().id(),
+                      this->_location.id());
       }
 
       static
