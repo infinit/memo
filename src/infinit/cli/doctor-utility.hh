@@ -13,14 +13,10 @@ namespace
   using boost::algorithm::all_of;
   using boost::algorithm::any_of;
 
-  bool no_color = false;
-
-  infinit::Infinit ifnt;
-
   std::string banished_log_level("reactor.network.UTPSocket:NONE");
 
-  std::string username;
   bool ignore_non_linked = false;
+  std::string username;
 
   std::string
   result(bool value)
@@ -29,13 +25,12 @@ namespace
   }
 
   void
-  section(std::ostream& out,
-          std::string name)
+  section(std::ostream& out, bool no_color,
+          std::string const& name)
   {
-    boost::algorithm::to_upper(name);
     if (!no_color)
       out << "[1m";
-    out << name << ":";
+    out << boost::algorithm::to_upper_copy(name) << ":";
     if (!no_color)
       out << "[0m";
     out << std::endl;
@@ -77,9 +72,8 @@ namespace
   }
 
   std::ostream&
-  status(std::ostream& out,
-         bool sane,
-         bool warn = false)
+  status(std::ostream& out, bool no_color,
+         bool sane, bool warn = false)
   {
     if (!sane)
     {
@@ -103,7 +97,8 @@ namespace
   }
 
   std::ostream&
-  print_reason(std::ostream& out, std::string const& reason, int indent = 2)
+  print_reason(std::ostream& out, bool no_color,
+               std::string const& reason, int indent = 2)
   {
     out << std::string(indent, ' ');
     if (!no_color)
@@ -117,7 +112,7 @@ namespace
 
   template <typename C>
   void
-  print_(std::ostream& out,
+  print_(std::ostream& out, bool no_color,
          std::string const& name,
          C& container,
          bool verbose)
@@ -132,7 +127,7 @@ namespace
         break;
     }
     bool broken = !sane || warning;
-    status(out, sane, warning) << " " << name;
+    status(out, no_color, sane, warning) << " " << name;
     if (verbose || broken)
     {
       if (!container.empty())
@@ -156,8 +151,9 @@ namespace
         auto item = container[index];
         if (verbose || !item.sane() || item.warning())
         {
-          status(out << "  ", item.sane(), item.warning()) << " " << item.name();
-          item.print(out, verbose);
+          status(out << "  ", no_color,
+                 item.sane(), item.warning()) << " " << item.name();
+          item.print(out, no_color, verbose);
           out << std::endl;
         }
       }
@@ -196,9 +192,9 @@ namespace
     `---------*/
     virtual
     void
-    _print(std::ostream& out, bool verbose) const;
+    _print(std::ostream& out, bool no_color, bool verbose) const;
     std::ostream&
-    print(std::ostream& out, bool verbose, bool rc = true) const;
+    print(std::ostream& out, bool no_color, bool verbose, bool rc = true) const;
 
   public:
     bool
@@ -242,7 +238,7 @@ namespace
       | Printing |
       `---------*/
       std::ostream&
-      print(std::ostream& out, bool verbose) const;
+      print(std::ostream& out, bool no_color, bool verbose) const;
     };
 
     struct UserResult
@@ -260,7 +256,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool verbose) const override;
+      _print(std::ostream& out, bool no_color, bool verbose) const override;
 
       /*-----------.
       | Attributes |
@@ -287,7 +283,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool) const override;
+      _print(std::ostream& out, bool no_color, bool) const override;
 
       /*--------------.
       | Serialization |
@@ -328,7 +324,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool verbose) const override;
+      _print(std::ostream& out, bool no_color, bool verbose) const override;
 
       /*--------------.
       | Serialization |
@@ -371,7 +367,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool) const override;
+      _print(std::ostream& out, bool no_color, bool) const override;
 
       /*--------------.
       | Serialization |
@@ -407,7 +403,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool) const override;
+      _print(std::ostream& out, bool no_color, bool) const override;
 
       /*--------------.
       | Serialization |
@@ -457,7 +453,7 @@ namespace
     | Printing |
     `---------*/
     void
-    print(std::ostream& out, bool verbose) const;
+    print(std::ostream& out, bool no_color, bool verbose) const;
 
     /*--------------.
     | Serialization |
@@ -507,7 +503,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool verbose) const override;
+      _print(std::ostream& out, bool no_color, bool verbose) const override;
 
       /*--------------.
       | Serialization |
@@ -539,7 +535,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool verbose) const override;
+      _print(std::ostream& out, bool no_color, bool verbose) const override;
 
       /*--------------.
       | Serialization |
@@ -572,7 +568,7 @@ namespace
       bool
       _show(bool verbose) const override;
       void
-      _print(std::ostream& out, bool verbose) const override;
+      _print(std::ostream& out, bool no_color, bool verbose) const override;
 
       /*--------------.
       | Serialization |
@@ -601,7 +597,7 @@ namespace
       | Printing |
       `---------*/
       void
-      print(std::ostream& out, bool verbose) const;
+      print(std::ostream& out, bool no_color, bool verbose) const;
 
       /*--------------.
       | Serialization |
@@ -632,7 +628,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool verbose) const override;
+      _print(std::ostream& out, bool no_color, bool verbose) const override;
 
       /*--------------.
       | Serialization |
@@ -659,7 +655,7 @@ namespace
     | Printing |
     `---------*/
     void
-    print(std::ostream& out, bool verbose) const;
+    print(std::ostream& out, bool no_color, bool verbose) const;
 
     /*--------------.
     | Serialization |
@@ -719,7 +715,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool verbose) const override;
+      _print(std::ostream& out, bool no_color, bool verbose) const override;
 
       /*--------------.
       | Serialization |
@@ -754,7 +750,7 @@ namespace
       | Printing |
       `---------*/
       void
-      print(std::ostream& out, bool verbose) const;
+      print(std::ostream& out, bool no_color, bool verbose) const;
 
       /*--------------.
       | Serialization |
@@ -787,7 +783,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool verbose) const override;
+      _print(std::ostream& out, bool no_color, bool verbose) const override;
 
       /*--------------.
       | Serialization |
@@ -849,7 +845,7 @@ namespace
         | Printing |
         `---------*/
         void
-        print(std::ostream& out, bool verbose) const;
+        print(std::ostream& out, bool no_color, bool verbose) const;
 
         /*--------------.
         | Serialization |
@@ -885,7 +881,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool verbose) const override;
+      _print(std::ostream& out, bool no_color, bool verbose) const override;
 
       /*--------------.
       | Serialization |
@@ -911,7 +907,7 @@ namespace
     | Printing |
     `---------*/
     void
-    print(std::ostream& out, bool verbose) const;
+    print(std::ostream& out, bool no_color, bool verbose) const;
 
     /*----------.
     | Interface |
@@ -958,7 +954,7 @@ namespace
     | Printing |
     `---------*/
     void
-    print(std::ostream& out, bool verbose) const;
+    print(std::ostream& out, bool no_color, bool verbose) const;
 
     /*--------------.
     | Serialization |
@@ -1000,7 +996,7 @@ namespace
   {}
 
   void
-  Result::_print(std::ostream& out, bool verbose) const
+  Result::_print(std::ostream& out, bool no_color, bool verbose) const
   {
     if (this->show(verbose) && this->sane())
       out << " OK";
@@ -1019,14 +1015,16 @@ namespace
   }
 
   std::ostream&
-  Result::print(std::ostream& out, bool verbose, bool rc) const
+  Result::print(std::ostream& out, bool no_color,
+                bool verbose, bool rc) const
   {
-    status(out, this->sane(), this->warning()) << " " << this->name();
+    status(out, no_color,
+           this->sane(), this->warning()) << " " << this->name();
     if (this->show(verbose))
       out << ":";
-    this->_print(out, verbose);
+    this->_print(out, no_color, verbose);
     if (this->show(verbose) && this->reason)
-      print_reason(out << std::endl, *this->reason, 2);
+      print_reason(out << std::endl, no_color, *this->reason, 2);
     return out << std::endl;
   }
 
@@ -1041,11 +1039,11 @@ namespace
 
   std::ostream&
   ConfigurationIntegrityResults::Result::print(
-    std::ostream& out, bool verbose) const
+    std::ostream& out, bool no_color, bool verbose) const
   {
     if (!this->sane())
       out << " is faulty because";
-    this->_print(out, verbose);
+    this->_print(out, no_color, verbose);
     if (!this->sane() && this->reason)
       out << " " << *this->reason;
     return out;
@@ -1060,6 +1058,7 @@ namespace
 
   void
   ConfigurationIntegrityResults::UserResult::_print(std::ostream& out,
+                                                    bool no_color,
                                                     bool verbose) const
   {
     if (this->show(verbose) && this->sane())
@@ -1084,7 +1083,7 @@ namespace
 
   void
   ConfigurationIntegrityResults::StorageResoucesResult::_print(
-    std::ostream& out, bool) const
+    std::ostream& out, bool no_color, bool) const
   {}
 
   void
@@ -1129,7 +1128,7 @@ namespace
 
   void
   ConfigurationIntegrityResults::NetworkResult::_print(
-    std::ostream& out, bool verbose) const
+    std::ostream& out, bool no_color, bool verbose) const
   {
     if (!this->linked)
       elle::fprintf(out, "is not linked [for user \"%s\"]", username);
@@ -1179,7 +1178,7 @@ namespace
 
   void
   ConfigurationIntegrityResults::VolumeResult::_print(
-    std::ostream& out, bool) const
+    std::ostream& out, bool no_color, bool) const
   {
     if ((!this->sane() || this->warning()) && this->faulty_network)
     {
@@ -1221,7 +1220,7 @@ namespace
 
   void
   ConfigurationIntegrityResults::DriveResult::_print(
-    std::ostream& out, bool) const
+    std::ostream& out, bool no_color, bool) const
   {
     if (!this->sane())
     {
@@ -1303,16 +1302,17 @@ namespace
   }
 
   void
-  ConfigurationIntegrityResults::print(std::ostream& out, bool verbose) const
+  ConfigurationIntegrityResults::print(std::ostream& out, bool no_color,
+                                       bool verbose) const
   {
     if (!this->only())
-      section(out, "Configuration integrity");
-    this->user.print(out, verbose);
-    print_(out, "Storage resources", storage_resources, verbose);
-    print_(out, "Networks", networks, verbose);
-    print_(out, "Volumes", volumes, verbose);
-    print_(out, "Drives", drives, verbose);
-    print_(out, "Leftovers", leftovers, verbose);
+      section(out, no_color, "Configuration integrity");
+    this->user.print(out, no_color, verbose);
+    print_(out, no_color, "Storage resources", storage_resources, verbose);
+    print_(out, no_color, "Networks", networks, verbose);
+    print_(out, no_color, "Volumes", volumes, verbose);
+    print_(out, no_color, "Drives", drives, verbose);
+    print_(out, no_color, "Leftovers", leftovers, verbose);
     out << std::endl;
   }
 
@@ -1343,7 +1343,9 @@ namespace
   }
 
   void
-  SystemSanityResults::UserResult::_print(std::ostream& out, bool verbose) const
+  SystemSanityResults::UserResult::_print(std::ostream& out,
+                                          bool no_color,
+                                          bool verbose) const
   {
     if (this->show(verbose) && this->sane())
       out << " " << this->_user_name;
@@ -1379,7 +1381,8 @@ namespace
   }
 
   void
-  SystemSanityResults::SpaceLeft::_print(std::ostream& out, bool verbose) const
+  SystemSanityResults::SpaceLeft::_print(std::ostream& out, bool no_color,
+                                         bool verbose) const
   {
     if (this->show(verbose))
     {
@@ -1430,7 +1433,7 @@ namespace
 
   void
   SystemSanityResults::EnvironResult::_print(
-    std::ostream& out, bool verbose) const
+    std::ostream& out, bool no_color, bool verbose) const
   {
     if (this->show(verbose))
     {
@@ -1464,7 +1467,7 @@ namespace
 
   void
   SystemSanityResults::PermissionResult::print(
-    std::ostream& out, bool verbose) const
+    std::ostream& out, bool no_color, bool verbose) const
   {
     if (this->show(verbose))
     {
@@ -1504,7 +1507,8 @@ namespace
   }
 
   void
-  SystemSanityResults::FuseResult::_print(std::ostream& out, bool verbose) const
+  SystemSanityResults::FuseResult::_print(std::ostream& out, bool no_color,
+                                          bool verbose) const
   {
     if (verbose)
     {
@@ -1530,15 +1534,15 @@ namespace
   }
 
   void
-  SystemSanityResults::print(std::ostream& out, bool verbose) const
+  SystemSanityResults::print(std::ostream& out, bool no_color, bool verbose) const
   {
     if (!this->only())
-      section(out, "System sanity");
-    this->user.print(out, verbose);
-    this->space_left.print(out, verbose);
-    this->environ.print(out, verbose, false);
-    print_(out, "Permissions", this->permissions, verbose);
-    this->fuse.print(out, verbose);
+      section(out, no_color, "System sanity");
+    this->user.print(out, no_color, verbose);
+    this->space_left.print(out, no_color, verbose);
+    this->environ.print(out, no_color, verbose, false);
+    print_(out, no_color, "Permissions", this->permissions, verbose);
+    this->fuse.print(out, no_color, verbose);
     out << std::endl;
   }
 
@@ -1607,7 +1611,7 @@ namespace
 
   void
   ConnectivityResults::InterfaceResults::_print(
-    std::ostream& out, bool verbose) const
+    std::ostream& out, bool no_color, bool verbose) const
   {
     if (this->show(verbose))
       for (auto const& entry: this->entries)
@@ -1652,7 +1656,7 @@ namespace
 
   void
   ConnectivityResults::ProtocolResult::print(
-    std::ostream& out, bool verbose) const
+    std::ostream& out, bool no_color, bool verbose) const
   {
     if (this->show(verbose))
     {
@@ -1668,7 +1672,7 @@ namespace
           out << std::endl << "    Internal: " << (*this->internal ? "Yes" : "No");
       }
       if (this->reason)
-        print_reason(out << std::endl, *this->reason, 4);
+        print_reason(out << std::endl, no_color, *this->reason, 4);
     }
   }
 
@@ -1688,7 +1692,7 @@ namespace
 
   void
   ConnectivityResults::NATResult::_print(
-    std::ostream& out, bool verbose) const
+    std::ostream& out, bool no_color, bool verbose) const
   {
     if (this->show(verbose) && this->sane())
       out << " OK (" << (this->cone ? "CONE" : "NOT CONE") << ")";
@@ -1753,11 +1757,11 @@ namespace
 
   void
   ConnectivityResults::UPnPResult::RedirectionResult::print(
-    std::ostream& out, bool verbose) const
+    std::ostream& out, bool no_color, bool verbose) const
   {
     if (this->show(verbose))
     {
-      status(out << std::endl << "  ", this->sane(), this->warning())
+      status(out << std::endl << "  ", no_color, this->sane(), this->warning())
         << " " << this->name() << ": ";
       if (internal && external)
         out << "local endpoint (" << this->internal
@@ -1778,14 +1782,15 @@ namespace
   }
 
   void
-  ConnectivityResults::UPnPResult::_print(std::ostream& out, bool verbose) const
+  ConnectivityResults::UPnPResult::_print(std::ostream& out,
+                                          bool no_color, bool verbose) const
   {
     if (this->show(verbose))
     {
       if (this->external)
         out << " external IP address: " << this->external;
       for (auto const& redirection: redirections)
-        redirection.print(out, verbose);
+        redirection.print(out, no_color, verbose);
     }
   }
 
@@ -1832,15 +1837,15 @@ namespace
   }
 
   void
-  ConnectivityResults::print(std::ostream& out, bool verbose) const
+  ConnectivityResults::print(std::ostream& out, bool no_color, bool verbose) const
   {
     if (!this->only())
-      section(out, "Connectivity");
-    this->beyond.print(out, verbose);
-    this->interfaces.print(out, verbose, false);
-    this->nat.print(out, verbose);
-    this->upnp.print(out, verbose, false);
-    print_(out, "Protocols", this->protocols, verbose);
+      section(out, no_color, "Connectivity");
+    this->beyond.print(out, no_color, verbose);
+    this->interfaces.print(out, no_color, verbose, false);
+    this->nat.print(out, no_color, verbose);
+    this->upnp.print(out, no_color, verbose, false);
+    print_(out, no_color, "Protocols", this->protocols, verbose);
     out << std::endl;
   }
 
@@ -1893,11 +1898,11 @@ namespace
   {}
 
   void
-  All::print(std::ostream& out, bool verbose) const
+  All::print(std::ostream& out, bool no_color, bool verbose) const
   {
-    configuration_integrity.print(out, verbose);
-    system_sanity.print(out, verbose);
-    connectivity.print(out, verbose);
+    configuration_integrity.print(out, no_color, verbose);
+    system_sanity.print(out, no_color, verbose);
+    connectivity.print(out, no_color, verbose);
   }
 
   bool
@@ -2309,7 +2314,8 @@ namespace
 
   template <typename ExpectedType>
   void
-  load(bfs::path const& path, std::string const& type)
+  load(infinit::Infinit& ifnt,
+       bfs::path const& path, std::string const& type)
   {
     bfs::ifstream i;
     ifnt._open_read(i, path, type, path.filename().string());
@@ -2321,6 +2327,7 @@ namespace
                            bool ignore_non_linked,
                            ConfigurationIntegrityResults& results)
   {
+    auto& ifnt = cli.infinit();
     auto owner = cli.as_user();
     auto users = parse(ifnt.users_get());
     auto aws_credentials = ifnt.credentials_aws();
@@ -2498,7 +2505,6 @@ namespace
             );
         }
       }
-    namespace bf = bfs;
     auto& leftovers = results.leftovers;
     auto path_contains_file = [](bfs::path dir, bfs::path file) -> bool
       {
@@ -2512,21 +2518,21 @@ namespace
         {
           // Share.
           if (path_contains_file(ifnt._network_descriptors_path(), p.path()))
-            load<infinit::NetworkDescriptor>(p.path(), "network_descriptor");
+            load<infinit::NetworkDescriptor>(ifnt, p.path(), "network_descriptor");
           else if (path_contains_file(ifnt._networks_path(), p.path()))
-            load<infinit::Network>(p.path(), "network");
+            load<infinit::Network>(ifnt, p.path(), "network");
           else if (path_contains_file(ifnt._volumes_path(), p.path()))
-            load<infinit::Volume>(p.path(), "volume");
+            load<infinit::Volume>(ifnt, p.path(), "volume");
           else if (path_contains_file(ifnt._drives_path(), p.path()))
-            load<infinit::Drive>(p.path(), "drive");
+            load<infinit::Drive>(ifnt, p.path(), "drive");
           else if (path_contains_file(ifnt._passports_path(), p.path()))
-            load<infinit::Passport>(p.path(), "passport");
+            load<infinit::Passport>(ifnt, p.path(), "passport");
           else if (path_contains_file(ifnt._users_path(), p.path()))
-            load<infinit::User>(p.path(), "users");
+            load<infinit::User>(ifnt, p.path(), "users");
           else if (path_contains_file(ifnt._storages_path(), p.path()))
-            load<std::unique_ptr<infinit::storage::StorageConfig>>(p.path(), "storage");
+            load<std::unique_ptr<infinit::storage::StorageConfig>>(ifnt, p.path(), "storage");
           else if (path_contains_file(ifnt._credentials_path(), p.path()))
-            load<std::unique_ptr<infinit::Credentials>>(p.path(), "credentials");
+            load<std::unique_ptr<infinit::Credentials>>(ifnt, p.path(), "credentials");
           else if (path_contains_file(infinit::xdg_data_home() / "blocks", p.path()))
             {}
           else if (path_contains_file(infinit::xdg_data_home() / "ui", p.path()))
@@ -2615,11 +2621,12 @@ namespace
   _output(infinit::cli::Infinit& cli,
           std::ostream& out,
           Report const& results,
+          bool no_color,
           bool verbose)
   {
     if (cli.script())
       infinit::Infinit::save(out, results, false);
     else
-      results.print(out, verbose);
+      results.print(out, no_color, verbose);
   }
 }

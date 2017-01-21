@@ -67,12 +67,14 @@ namespace infinit
                    cli::upnp_tcp_port = boost::none,
                    cli::upnp_udt_port = boost::none,
                    cli::server = connectivity_server,
+                   cli::no_color = false,
                    cli::verbose = false))
       , configuration(
         "Perform integrity checks on the Infinit configuration files",
         das::cli::Options(),
         this->bind(modes::mode_configuration,
                    cli::ignore_non_linked = false,
+                   cli::no_color = false,
                    cli::verbose = false))
       , connectivity(
         "Perform connectivity checks",
@@ -81,6 +83,7 @@ namespace infinit
                    cli::upnp_tcp_port = boost::none,
                    cli::upnp_udt_port = boost::none,
                    cli::server = connectivity_server,
+                   cli::no_color = false,
                    cli::verbose = false))
       , networking(
         "Perform networking speed tests between nodes",
@@ -96,11 +99,13 @@ namespace infinit
                    cli::utp_port = boost::none,
                    cli::xored_utp_port = boost::none,
                    cli::xored = boost::none,
+                   cli::no_color = false,
                    cli::verbose = false))
       , system(
         "Perform sanity checks on your system",
         das::cli::Options(),
         this->bind(modes::mode_system,
+                   cli::no_color = false,
                    cli::verbose = false))
     {}
 
@@ -114,6 +119,7 @@ namespace infinit
                      boost::optional<uint16_t> upnp_tcp_port,
                      boost::optional<uint16_t> upnp_udt_port,
                      boost::optional<std::string> const& server,
+                     bool no_color,
                      bool verbose)
     {
       ELLE_TRACE_SCOPE("all");
@@ -127,7 +133,7 @@ namespace infinit
                     upnp_tcp_port,
                     upnp_udt_port,
                     results.connectivity);
-      _output(cli, std::cout, results, verbose);
+      _output(cli, std::cout, results, no_color, verbose);
       _report_error(cli, std::cout, results.sane(), results.warning());
     }
 
@@ -137,6 +143,7 @@ namespace infinit
 
     void
     Doctor::mode_configuration(bool ignore_non_linked,
+                               bool no_color,
                                bool verbose)
     {
       ELLE_TRACE_SCOPE("configuration");
@@ -144,7 +151,7 @@ namespace infinit
 
       auto results = ConfigurationIntegrityResults{};
       _configuration_integrity(cli, ignore_non_linked, results);
-      _output(cli, std::cout, results, verbose);
+      _output(cli, std::cout, results, no_color, verbose);
       _report_error(cli, std::cout, results.sane(), results.warning());
     }
 
@@ -158,6 +165,7 @@ namespace infinit
     Doctor::mode_connectivity(boost::optional<uint16_t> upnp_tcp_port,
                               boost::optional<uint16_t> upnp_udt_port,
                               boost::optional<std::string> const& server,
+                              bool no_color,
                               bool verbose)
     {
       ELLE_TRACE_SCOPE("connectivity");
@@ -169,7 +177,7 @@ namespace infinit
                     upnp_tcp_port,
                     upnp_udt_port,
                     results);
-      _output(cli, std::cout, results, verbose);
+      _output(cli, std::cout, results, no_color, verbose);
       _report_error(cli, std::cout, results.sane(), results.warning());
     }
 
@@ -189,6 +197,7 @@ namespace infinit
                             boost::optional<uint16_t> utp_port,
                             boost::optional<uint16_t> xored_utp_port,
                             boost::optional<std::string> const& xored,
+                            bool no_color,
                             bool verbose)
     {
       ELLE_TRACE_SCOPE("networking");
@@ -232,14 +241,14 @@ namespace infinit
     `---------------*/
 
     void
-    Doctor::mode_system(bool verbose)
+    Doctor::mode_system(bool no_color, bool verbose)
     {
       ELLE_TRACE_SCOPE("system");
       auto& cli = this->cli();
 
       auto results = SystemSanityResults{};
       _system_sanity(cli, results);
-      _output(cli, std::cout, results, verbose);
+      _output(cli, std::cout, results, no_color, verbose);
       _report_error(cli, std::cout, results.sane(), results.warning());
     }
   }

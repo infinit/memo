@@ -36,6 +36,7 @@ namespace infinit
                               cli::upnp_tcp_port = boost::none,
                               cli::upnp_udt_port = boost::none,
                               cli::server = connectivity_server,
+                              cli::no_color = false,
                               cli::verbose = false))>;
       ModeAll all;
       void
@@ -43,6 +44,7 @@ namespace infinit
                boost::optional<uint16_t> upnp_tcp_port,
                boost::optional<uint16_t> upnp_udt_port,
                boost::optional<std::string> const& server,
+               bool no_color,
                bool verbose);
 
       /*----------------------.
@@ -51,10 +53,12 @@ namespace infinit
       using ModeConfiguration =
         Mode<decltype(binding(modes::mode_configuration,
                               cli::ignore_non_linked = false,
+                              cli::no_color = false,
                               cli::verbose = false))>;
       ModeConfiguration configuration;
       void
       mode_configuration(bool ignore_non_linked,
+                         bool no_color,
                          bool verbose);
 
       /*---------------------.
@@ -65,12 +69,14 @@ namespace infinit
                               cli::upnp_tcp_port = boost::none,
                               cli::upnp_udt_port = boost::none,
                               cli::server = connectivity_server,
+                              cli::no_color = false,
                               cli::verbose = false))>;
       ModeConnectivity connectivity;
       void
       mode_connectivity(boost::optional<uint16_t> upnp_tcp_port,
                         boost::optional<uint16_t> upnp_udt_port,
                         boost::optional<std::string> const& server,
+                        bool no_color,
                         bool verbose);
 
       /*-------------------.
@@ -88,6 +94,7 @@ namespace infinit
                               cli::utp_port = boost::none,
                               cli::xored_utp_port = boost::none,
                               cli::xored = boost::none,
+                              cli::no_color = false,
                               cli::verbose = false))>;
       ModeNetworking networking;
       void
@@ -101,6 +108,7 @@ namespace infinit
                       boost::optional<uint16_t> utp_port,
                       boost::optional<uint16_t> xored_utp_port,
                       boost::optional<std::string> const& xored,
+                      bool no_color,
                       bool verbose);
 
       /*---------------.
@@ -108,10 +116,12 @@ namespace infinit
       `---------------*/
       using ModeSystem =
         Mode<decltype(binding(modes::mode_system,
+                              cli::no_color = false,
                               cli::verbose = false))>;
       ModeSystem system;
       void
-      mode_system(bool verbose);
+      mode_system(bool no_color,
+                  bool verbose);
     };
   }
 }
