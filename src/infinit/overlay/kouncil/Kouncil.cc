@@ -299,10 +299,13 @@ namespace infinit
       void
       Kouncil::_discover(NodeLocations const& peers)
       {
+        ELLE_TRACE_SCOPE("%s: discover %s endpoints", this, peers.size());
+        ELLE_DEBUG("endpoints: %f", peers);
         for (auto const& peer: peers)
           // FIXME: store endpoints in separate set
           if (!find(this->_peers, peer.id()))
-            this->doughnut()->dock().connect(peer);
+            ELLE_TRACE("connect to new %f", peer)
+              this->doughnut()->dock().connect(peer);
       }
 
       void
@@ -610,7 +613,7 @@ namespace infinit
               NodeLocations();
             auto peers = advertise(locations);
             ELLE_TRACE("fetched %s peers", peers.size());
-            ELLE_DUMP("peers: %s", peers);
+            ELLE_DEBUG("peers: %s", peers);
             PeerInfos infos;
             for (auto const& l: peers)
               infos.emplace(l.id(), l.endpoints(), -1);
