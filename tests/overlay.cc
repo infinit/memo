@@ -35,9 +35,9 @@ tcr()
 class UTPInstrument
 {
 public:
-  UTPInstrument(Endpoint endpoint)
+  UTPInstrument(int port)
     : server()
-    , _endpoint(std::move(endpoint))
+    , _endpoint(boost::asio::ip::address::from_string("127.0.0.1"), port)
     , _thread(new reactor::Thread(elle::sprintf("%s server", this),
                                   std::bind(&UTPInstrument::_serve, this)))
   {
@@ -47,6 +47,13 @@ public:
 
   reactor::network::UDPSocket server;
   ELLE_ATTRIBUTE_RX(reactor::Barrier, transmission);
+
+  Endpoint
+  endpoint()
+  {
+    return Endpoint(boost::asio::ip::address::from_string("127.0.0.1"),
+                    this->server.local_endpoint().port());
+  }
 
 private:
   ELLE_LOG_COMPONENT("infinit.overlay.test.UTPInstrument");
@@ -85,6 +92,26 @@ private:
 void
 discover(DHT& dht,
          DHT& target,
+         NodeLocation const& loc,
+         bool wait = false,
+         bool wait_back = false)
+{
+  auto discovered = reactor::waiter(
+    dht.dht->overlay()->on_discover(),
+    [&] (NodeLocation const& l, bool) { return l.id() == target.dht->id(); });
+  auto discovered_back = reactor::waiter(
+    target.dht->overlay()->on_discover(),
+    [&] (NodeLocation const& l, bool) { return l.id() == dht.dht->id(); });
+  dht.dht->overlay()->discover(loc);
+  if (wait)
+    reactor::wait(discovered);
+  if (wait_back)
+    reactor::wait(discovered_back);
+}
+
+void
+discover(DHT& dht,
+         DHT& target,
          bool anonymous,
          bool onlyfirst = false,
          bool wait = false,
@@ -95,22 +122,9 @@ discover(DHT& dht,
     eps = Endpoints {target.dht->local()->server_endpoints()[0]};
   else
     eps = target.dht->local()->server_endpoints();
-  reactor::Barrier b;
-  auto discovered = reactor::waiter(
-    dht.dht->overlay()->on_discover(),
-    [&] (NodeLocation const& l, bool) { return l.id() == target.dht->id(); });
-  auto discovered_back = reactor::waiter(
-    target.dht->overlay()->on_discover(),
-    [&] (NodeLocation const& l, bool) { return l.id() == dht.dht->id(); });
-  if (anonymous)
-    dht.dht->overlay()->discover(eps);
-  else
-    dht.dht->overlay()->discover(
-      NodeLocation(target.dht->id(), eps));
-  if (wait)
-    reactor::wait(discovered);
-  if (wait_back)
-    reactor::wait(discovered_back);
+  auto loc = NodeLocation(anonymous ? Address::null : target.dht->id(),
+                          eps);
+  discover(dht, target, loc, wait, wait_back);
 }
 
 static
@@ -315,17 +329,22 @@ ELLE_TEST_SCHEDULED(
   dead_peer, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
 {
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
-  auto dht_a = DHT(::keys = keys, make_overlay = builder, paxos = false);
-  elle::With<UTPInstrument>(
-    Endpoint("127.0.0.1",
-             dht_a.dht->local()->server_endpoints()[0].port())) <<
+  auto dht_a = DHT(::id = special_id(10),
+                   ::keys = keys,
+                   make_overlay = builder,
+                   paxos = false);
+  elle::With<UTPInstrument>(dht_a.dht->local()->server_endpoints()[0].port()) <<
     [&] (UTPInstrument& instrument)
     {
-      auto dht_b = DHT(::keys = keys,
+      auto dht_b = DHT(::id = special_id(11),
+                       ::keys = keys,
                        make_overlay = builder,
                        paxos = false,
                        ::storage = nullptr);
-      discover(dht_b, dht_a, anonymous, true, true);
+      auto loc = NodeLocation(
+        anonymous ? Address::null : dht_a.dht->id(), {instrument.endpoint()});
+      ELLE_LOG("connect DHTs")
+        discover(dht_b, dht_a, loc, true);
       // Ensure one request can go through.
       {
         auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
