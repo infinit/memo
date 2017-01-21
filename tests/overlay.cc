@@ -271,6 +271,15 @@ hard_wait(DHT& s, int n_servers,
   ELLE_DEBUG("hard_wait exiting");
 }
 
+infinit::model::Address
+special_id(int i)
+{
+  infinit::model::Address::Value id;
+  memset(&id, 0, sizeof(id));
+  id[0] = i;
+  return id;
+}
+
 ELLE_TEST_SCHEDULED(
   basics, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
 {
@@ -459,42 +468,81 @@ ELLE_TEST_SCHEDULED(chain_connect,
                     (bool, sync))
 {
   infinit::storage::Memory::Blocks b1, b2;
-  auto s1 = std::make_unique<infinit::storage::Memory>(b1);
-  auto s2 = std::make_unique<infinit::storage::Memory>(b2);
+  auto id_a = special_id(10);
+  auto id_b = special_id(11);
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("create DHTs");
   auto dht_a = std::make_unique<DHT>(
-    ::keys = keys, make_overlay = builder,
+    ::id = id_a,
+    ::keys = keys,
+    ::make_overlay = builder,
     dht::consensus::rebalance_auto_expand = false,
-    ::storage = std::move(s1));
+    ::storage = std::make_unique<infinit::storage::Memory>(b1));
   auto dht_b = std::make_unique<DHT>(
-    ::keys = keys, make_overlay = builder,
+    ::id = id_b,
+    ::keys = keys,
+    ::make_overlay = builder,
     dht::consensus::rebalance_auto_expand = false,
-    ::storage = std::move(s2));
+    ::storage = std::make_unique<infinit::storage::Memory>(b2));
   ELLE_LOG("connect DHTs")
     discover(*dht_b, *dht_a, anonymous, false, sync, sync);
+  auto client = DHT(
+    ::keys = keys, make_overlay = builder,
+    ::storage = nullptr);
+  ELLE_LOG("connect client")
   {
-    auto client = DHT(
-      ::keys = keys, make_overlay = builder,
-      ::storage = nullptr);
     auto discovered_a = reactor::waiter(
       client.dht->overlay()->on_discover(),
-      [&] (NodeLocation const& l, bool) { return l.id() == dht_a->dht->id(); });
+      [&] (NodeLocation const& l, bool) { return l.id() == id_a; });
     auto discovered_b = reactor::waiter(
       client.dht->overlay()->on_discover(),
-      [&] (NodeLocation const& l, bool) { return l.id() == dht_b->dht->id(); });
+      [&] (NodeLocation const& l, bool) { return l.id() == id_b; });
     ELLE_LOG("connect client")
       discover(client, *dht_a, anonymous);
     reactor::wait({discovered_a, discovered_b});
-    ELLE_LOG("store block")
+  }
+  ELLE_LOG("store block")
+  {
+    auto block = client.dht->make_block<ACLBlock>(
+      std::string("chain_connect"));
+    client.dht->store(std::move(block), STORE_INSERT);
+    BOOST_CHECK_EQUAL(b1.size(), 1);
+    BOOST_CHECK_EQUAL(b2.size(), 1);
+  }
+  ELLE_LOG("restart second DHT")
+  {
     {
-      auto block = client.dht->make_block<ACLBlock>(
-        std::string("chain_connect"));
-      client.dht->store(std::move(block), STORE_INSERT);
+      auto disappeared_a = reactor::waiter(
+        dht_a->dht->overlay()->on_disappear(),
+        [&] (Address id, bool) { return id == id_b; });
+      auto disappeared_client = reactor::waiter(
+        client.dht->overlay()->on_disappear(),
+        [&] (Address id, bool) { return id == id_b; });
+      dht_b.reset();
+      reactor::wait({disappeared_a, disappeared_client});
+    }
+    {
+      auto connected_client = reactor::waiter(
+        client.dht->overlay()->on_discover(),
+        [&] (NodeLocation const& l, bool) { return l.id() == id_b; });
+      dht_b = std::make_unique<DHT>(
+        ::id = id_b,
+        ::keys = keys,
+        ::make_overlay = builder,
+        dht::consensus::rebalance_auto_expand = false,
+        ::storage = std::make_unique<infinit::storage::Memory>(b2));
+      discover(*dht_b, *dht_a, anonymous, sync, sync);
+      reactor::wait(connected_client);
     }
   }
-  BOOST_CHECK_EQUAL(b1.size(), 1);
-  BOOST_CHECK_EQUAL(b2.size(), 1);
+  ELLE_LOG("store block")
+  {
+    auto block = client.dht->make_block<ACLBlock>(
+      std::string("chain_connect"));
+    client.dht->store(std::move(block), STORE_INSERT);
+    BOOST_CHECK_EQUAL(b1.size(), 2);
+    BOOST_CHECK_EQUAL(b2.size(), 2);
+  }
 }
 
 ELLE_TEST_SCHEDULED(
@@ -707,15 +755,6 @@ ELLE_TEST_SCHEDULED(
   for (auto const& a: addrs)
     client->dht->fetch(a);
   ELLE_LOG("teardown");
-}
-
-infinit::model::Address
-special_id(int i)
-{
-  infinit::model::Address::Value id;
-  memset(&id, 0, sizeof(id));
-  id[0] = i;
-  return id;
 }
 
 ELLE_TEST_SCHEDULED(
@@ -1303,7 +1342,7 @@ ELLE_TEST_SUITE()
   /* long, wild tests*/                                                 \
   TEST_ANON(Name, chain_connect_doom, chain_connect_doom, 30);          \
   TEST_NAMED(Name, storm_paxos, storm, 60, true, 5, 5, 100);            \
-  TEST_NAMED(Name, storm,       storm, 60, false, 3, 3, 200);           \
+  TEST_NAMED(Name, storm,       storm, 60, false, 5, 5, 200);           \
   TEST_NAMED(Name, churn, churn, 600, false, true, true);               \
   TEST_NAMED(Name, churn_socket, churn_socket, 600);                    \
 
