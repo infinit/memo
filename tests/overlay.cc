@@ -22,26 +22,6 @@ using namespace infinit::model::blocks;
 using namespace infinit::model::doughnut;
 using namespace infinit::overlay;
 
-/// Make several attempts to run `f` before giving up.
-template <typename Fun>
-auto
-persist(Fun f)
-{
-  auto num = 20;
-  for (int i=0; i<num; ++i)
-  {
-    try
-    {
-      return f();
-    }
-    catch (elle::Error const&)
-    {
-      reactor::sleep(100_ms);
-    }
-  }
-  elle::err("persist: failed after %s attempts", num);
-}
-
 class TestConflictResolver
   : public DummyConflictResolver
 {};
@@ -345,13 +325,7 @@ ELLE_TEST_SCHEDULED(
                        make_overlay = builder,
                        paxos = false,
                        ::storage = nullptr);
-      infinit::model::Endpoints ep = {
-        Endpoint("127.0.0.1", instrument.server.local_endpoint().port()),
-      };
-      if (anonymous)
-        dht_b.dht->overlay()->discover(ep);
-      else
-        dht_b.dht->overlay()->discover(NodeLocation(dht_a.dht->id(), ep));
+      discover(dht_b, dht_a, anonymous, true, true);
       // Ensure one request can go through.
       {
         auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
@@ -359,12 +333,8 @@ ELLE_TEST_SCHEDULED(
           dht_a.dht->store(*block, STORE_INSERT, tcr());
         ELLE_LOG("lookup block")
         {
-          persist([&] {
-            dht_b.dht->overlay()->lookup(block->address()).lock();
-          });
-          BOOST_CHECK_EQUAL(
-            dht_b.dht->overlay()->lookup(block->address()).lock()->id(),
-            dht_a.dht->id());
+          auto remote = dht_b.dht->overlay()->lookup(block->address()).lock();
+          BOOST_CHECK_EQUAL(remote->id(), dht_a.dht->id());
         }
       }
       // Partition peer
@@ -374,8 +344,8 @@ ELLE_TEST_SCHEDULED(
         auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
         ELLE_LOG("store block")
           dht_a.dht->store(*block, STORE_INSERT, tcr());
-    }
-  };
+      }
+    };
 }
 
 ELLE_TEST_SCHEDULED(
