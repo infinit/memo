@@ -614,7 +614,7 @@ namespace infinit
               NodeLocations();
             auto peers = advertise(locations);
             ELLE_TRACE("fetched %s peers", peers.size());
-            ELLE_DEBUG("peers: %s", peers);
+            ELLE_DEBUG("peers: %f", peers);
             PeerInfos infos;
             for (auto const& l: peers)
               infos.emplace(l.id(), l.endpoints(), -1);
