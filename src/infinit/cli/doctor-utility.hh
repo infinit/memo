@@ -2324,18 +2324,20 @@ namespace
 
   void
   _configuration_integrity(infinit::cli::Infinit& cli,
-                           bool ignore_non_linked,
+                           bool ignore_non_linked_arg,
                            ConfigurationIntegrityResults& results)
   {
     auto& ifnt = cli.infinit();
     auto owner = cli.as_user();
+    username = owner.name;
+    ignore_non_linked = ignore_non_linked_arg;
+
     auto users = parse(ifnt.users_get());
     auto aws_credentials = ifnt.credentials_aws();
     auto gcs_credentials = ifnt.credentials_gcs();
     auto storage_resources = parse(ifnt.storages_get());
     auto drives = parse(ifnt.drives_get());
     auto volumes = parse(ifnt.volumes_get());
-    username = owner.name;
     try
     {
       if (owner.private_key)
