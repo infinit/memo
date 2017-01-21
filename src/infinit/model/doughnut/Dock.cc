@@ -602,9 +602,9 @@ namespace infinit
             else if (!remote->connection()->connected() ||
                      remote->connection()->disconnected())
             {
-              ELLE_TRACE("%s: replace broken connection for %s", this, remote);
+              ELLE_TRACE_SCOPE(
+                "%s: replace broken connection for %s", this, remote);
               remote->connection(connection);
-              this->_on_connect(remote);
             }
             else
               ELLE_TRACE("%s: drop duplicate %s", this, connection);
