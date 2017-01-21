@@ -137,6 +137,7 @@ namespace infinit
       `------*/
       public:
         struct PeerInfo
+          : public elle::Printable::as<PeerInfo>
         {
           PeerInfo(Address id, Endpoints endpoints, int64_t stamp);
           /** Merge peer informations in this.
@@ -153,6 +154,8 @@ namespace infinit
            */
           NodeLocation
           location() const;
+          void
+          print(std::ostream& o) const;
 
           /// Peer id.
           ELLE_ATTRIBUTE_R(Address, id);

@@ -686,6 +686,12 @@ namespace infinit
         return NodeLocation(this->_id, this->_endpoints);
       }
 
+      void
+      Kouncil::PeerInfo::print(std::ostream& o) const
+      {
+        elle::fprintf(o, "%s(%f)", elle::type_info(*this), this->id());
+      }
+
       static const elle::TypeInfo::RegisterAbbrevation
       _kouncil_abbr("kouncil::Kouncil", "Kouncil");
     }
