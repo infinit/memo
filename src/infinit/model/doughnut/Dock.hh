@@ -49,7 +49,9 @@ namespace infinit
         ELLE_ATTRIBUTE_R(reactor::network::UTPServer&, utp_server);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, rdv_connect_thread);
         ELLE_ATTRIBUTE_RX(
-          boost::signals2::signal<void (std::shared_ptr<Remote>)>, on_connect);
+          boost::signals2::signal<void (Connection&)>, on_connection);
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<void (std::shared_ptr<Remote>)>, on_peer);
         template <typename T, typename R, R (T::*M)() const>
         static
         R

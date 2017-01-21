@@ -372,6 +372,7 @@ namespace infinit
               auto connected_it =
                 this->_dock._connected.insert(this->shared_from_this()).first;
               this->_dock._connecting.erase(connecting_it);
+              this->_dock.on_connection()(*this);
               auto const cleanup = [&]
                 {
                   this->_dock._connected.erase(connected_it);
@@ -595,7 +596,7 @@ namespace infinit
             auto peer = ELLE_ENFORCE(it->lock());
             auto remote = ELLE_ENFORCE(std::dynamic_pointer_cast<Remote>(peer));
             if (remote->connection() == connection)
-              this->_on_connect(remote);
+              ;
             // FIXME: This is messy. We could miss that current connection is
             // broken and not replace it, but we don't want to replace a working
             // connection with the new one and kill all RPCs.
@@ -617,7 +618,7 @@ namespace infinit
         auto insertion = this->_peer_cache.emplace(peer);
         ELLE_ASSERT(insertion.second);
         peer->_cache_iterator = insertion.first;
-        this->_on_connect(peer);
+        this->_on_peer(peer);
         return peer;
       }
     }

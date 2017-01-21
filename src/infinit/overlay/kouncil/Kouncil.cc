@@ -167,10 +167,9 @@ namespace infinit
         }
         // Add client-side Kouncil RPCs.
         this->_connections.emplace_back(
-          this->doughnut()->dock().on_connect().connect(
-            [this] (std::shared_ptr<model::doughnut::Remote> peer)
+          this->doughnut()->dock().on_connection().connect(
+            [this] (model::doughnut::Dock::Connection& r)
             {
-              auto& r = *peer->connection();
               // Notify this node of new peers.
               if (this->doughnut()->version() < elle::Version(0, 8, 0))
                 r.rpc_server().add(
@@ -202,6 +201,12 @@ namespace infinit
                     ELLE_TRACE("%s: added %s entries from %f",
                                this, entries.size(), r.id());
                   }));
+            }));
+        // React to peer connection status.
+        this->_connections.emplace_back(
+          this->doughnut()->dock().on_peer().connect(
+            [this] (std::shared_ptr<model::doughnut::Remote> peer)
+            {
               peer->connected().connect(
                 [this, p = std::weak_ptr<model::doughnut::Remote>(peer)]
                 {
