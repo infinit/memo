@@ -709,6 +709,15 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("teardown");
 }
 
+infinit::model::Address
+special_id(int i)
+{
+  infinit::model::Address::Value id;
+  memset(&id, 0, sizeof(id));
+  id[0] = i;
+  return id;
+}
+
 ELLE_TEST_SCHEDULED(
   storm, (Doughnut::OverlayBuilder, builder),
   (bool, pax), (int, nservers), (int, nclients), (int, nactions))
@@ -719,11 +728,8 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("setup %s servers", nservers)
     for (int i = 0; i < nservers; ++i)
     {
-      infinit::model::Address::Value id;
-      memset(&id, 0, sizeof(id));
-      id[0] = i + 1;
       auto dht = std::make_unique<DHT>(
-        ::id = id,
+        ::id = special_id(i + 1),
         ::keys = keys,
         make_overlay = builder,
         paxos = pax,
@@ -934,6 +940,55 @@ ELLE_TEST_SCHEDULED(
                  [npeers](auto&& s) { return peer_count(*s) == npeers; });
   }
   BOOST_CHECK_EQUAL(c, nservers);
+}
+
+ELLE_TEST_SCHEDULED(
+  change_endpoints,
+  (Doughnut::OverlayBuilder, builder),
+  (bool, anonymous),
+  (bool, back))
+{
+  auto keys = infinit::cryptography::rsa::keypair::generate(512);
+  auto storage = infinit::storage::Memory::Blocks();
+  ELLE_LOG("create DHTs");
+  auto dht_a = std::make_unique<DHT>(
+    ::id = special_id(10),
+    ::keys = keys,
+    make_overlay = builder,
+    dht::consensus::rebalance_auto_expand = false);
+  auto dht_b = std::make_unique<DHT>(
+    ::id = special_id(11),
+    ::keys = keys,
+    make_overlay = builder,
+    ::storage = std::make_unique<infinit::storage::Memory>(storage),
+    dht::consensus::rebalance_auto_expand = false);
+  ELLE_LOG("connect DHTs")
+    discover(*dht_a, *dht_b, anonymous, false, true, true);
+  infinit::model::Address addr;
+  {
+    auto block =
+      dht_a->dht->make_block<ACLBlock>(std::string("change_endpoints"));
+    addr = block->address();
+    dht_a->dht->store(std::move(block), STORE_INSERT);
+  }
+  // Keep the remote alive and change the endpoints.
+  auto remote = dht_a->dht->overlay()->lookup_node(dht_b->dht->id()).lock();
+  BOOST_CHECK_EQUAL(remote->id(), dht_b->dht->id());
+  BOOST_CHECK_EQUAL(dht_a->dht->fetch(addr, {})->data(), "change_endpoints");
+  ELLE_LOG("recreate second DHT")
+    dht_b = std::make_unique<DHT>(
+      ::id = special_id(11),
+      ::keys = keys,
+      make_overlay = builder,
+      ::storage = std::make_unique<infinit::storage::Memory>(storage),
+      dht::consensus::rebalance_auto_expand = false);
+  ELLE_LOG("reconnect second DHT")
+    if (back)
+      discover(*dht_b, *dht_a, anonymous, false, true, true);
+    else
+      discover(*dht_a, *dht_b, anonymous, false, true, true);
+
+  BOOST_CHECK_EQUAL(dht_a->dht->fetch(addr, {})->data(), "change_endpoints");
 }
 
 ELLE_TEST_SCHEDULED(churn, (Doughnut::OverlayBuilder, builder),
@@ -1243,6 +1298,8 @@ ELLE_TEST_SUITE()
   TEST_ANON(Name, chain_connect_sync, chain_connect, 30, true);         \
   TEST_ANON(Name, chain_connect_async, chain_connect, 30, false);       \
   TEST_ANON(Name, parallel_discover, parallel_discover, 20);            \
+  TEST_ANON(Name, change_endpoints_back, change_endpoints, 20, true);   \
+  TEST_ANON(Name, change_endpoints_forth, change_endpoints, 20, false); \
   /* long, wild tests*/                                                 \
   TEST_ANON(Name, chain_connect_doom, chain_connect_doom, 30);          \
   TEST_NAMED(Name, storm_paxos, storm, 60, true, 5, 5, 100);            \
