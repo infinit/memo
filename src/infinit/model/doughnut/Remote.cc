@@ -93,7 +93,7 @@ namespace infinit
               }
               else
               {
-                ELLE_TRACE("%s: disconnected XXX", this);
+                ELLE_TRACE_SCOPE("%s: disconnected", this);
                 auto hold = this->shared_from_this();
                 this->_connected.close();
               }
