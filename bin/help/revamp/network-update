@@ -1,0 +1,20 @@
+network: update: Usage: _build/macosx64/bin/infinit-network network update [OPTIONS]
+Update a network
+
+Options:
+  -h, --help             show this help message
+      --compatibility-version  compatibility version to force
+  -s, --script           suppress extraneous human friendly messages and use JSON output
+  -a, --as               user to run commands as (default: akim)
+  -n, --name             name of the network to update
+      --description      network description
+      --port             outbound port to use
+  -o, --output           file to write the network to
+      --push-network     push the network to https://beyond.infinit.sh
+  -p, --push             push network to https://beyond.infinit.sh
+      --admin-r          Set admin users that can read all data (default: [])
+      --admin-rw         Set admin users that can read and write all data (default: [])
+      --admin-remove     Remove given users from all admin lists (prefix: @<group>, requires mountpoint) (default: [])
+  -m, --mountpoint       where to mount the filesystem
+      --peer             peer address or file with list of peer addresses (host:port) (default: [])
+

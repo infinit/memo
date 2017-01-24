@@ -1,0 +1,11 @@
+passport: pull: Usage: _build/macosx64/bin/infinit-passport passport pull [OPTIONS]
+Remove a user's network passport from {hub}
+
+Options:
+  -h, --help             show this help message
+      --compatibility-version  compatibility version to force
+  -s, --script           suppress extraneous human friendly messages and use JSON output
+  -a, --as               user to run commands as (default: akim)
+  -N, --network          network to pull passport for
+  -u, --user             user to pull passport for
+

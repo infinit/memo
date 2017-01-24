@@ -1,0 +1,10 @@
+block: deserialize: Usage: _build/macosx64/bin/infinit-block --deserialize --path PATHS [OPTIONS...]
+
+Deserialized block:
+
+Deserialize options:
+  -p [ --path ] arg      Paths to blocks
+  -o [ --output ] arg    File to write the block to
+                         (default: stdout)
+
+

@@ -1,0 +1,16 @@
+Usage: _build/macosx64/bin/infinit-passport passport [MODE|--help]
+Infinit passport management utility.
+
+Modes:
+  create     Create a passport for a user to a network
+  delete     Locally delete a passport
+  export     Export a user's network passport
+  fetch      Fetch a user's network passport from https://beyond.infinit.sh
+  import     Import a passport for a user to a network
+  list       List all local passports
+  pull       Remove a user's network passport from https://beyond.infinit.sh
+  push       Push a user's network passport to https://beyond.infinit.sh
+
+Options:
+  -h, --help             show this help message
+

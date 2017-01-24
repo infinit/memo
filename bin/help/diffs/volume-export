@@ -1,0 +1,11 @@
+volume: export: Usage: _build/macosx64/bin/infinit-volume --export --name VOLUM volume: export: Usage: _build/macosx64/bin/infinit-volume volume export [OPTION
+										Export a volume for someone else to import
+Export a volume for someone else to import:
+										Options:
+Export options:									  -h, --help		 show this help message
+  -n [ --name ] arg	 Volume to export					      --compatibility-version  compatibility version to force
+  -o [ --output ] arg	 File to write the volume to				  -s, --script		 suppress extraneous human friendly messages and use JS
+			 (default: stdout)					  -a, --as		 user to run commands as (default: akim)
+										  -n, --name		 name of the volume to export
+										  -o, --output		 file to write the volume to
+

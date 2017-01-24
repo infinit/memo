@@ -1,0 +1,26 @@
+acl: group: Usage: _build/macosx64/bin/infinit-acl --group --name NAME --path P acl: group: Usage: _build/macosx64/bin/infinit-acl acl group [OPTIONS]
+										Edit groups
+Group control:
+										Options:
+Group options:									  -h, --help		 show this help message
+  -n [ --name ] arg	 Group name						      --compatibility-version  compatibility version to force
+  -c [ --create ]	 Create the group					  -s, --script		 suppress extraneous human friendly messages and use JS
+  --description arg	 Description of group					  -a, --as		 user to run commands as (default: akim)
+  --show		 List group users, administrators and description	      --path		 file whose acl to group
+  --add-user arg	 Add user to group					  -n, --name		 name of the acl to group
+  --add-admin arg	 Add administrator to group				      --create
+  --add-group arg	 Add group to group					      --delete
+  --add arg		 Add users, administrators and groups to group (prefix:	      --show		 list group users, administrators and description
+			 @<group>, ^<admin>)					      --description	 acl description
+  --remove-user arg	 Remove user from group					      --add-user	 add user to group (default: [])
+  --remove-admin arg	 Remove administrator from group			      --add-group	 add group to group (default: [])
+  --remove-group arg	 Remove group from group				      --add-admin	 add administrator to group (default: [])
+  --remove arg		 Remove users, administrators and groups from group	      --add		 add users, administrators and groups to group (prefix:
+			 (prefix: @<group>, ^<admin>)				      --remove-user	 remove user from group (default: [])
+  -p [ --path ] arg	 A path within the volume				      --remove-group	 remove group from group (default: [])
+  --verbose		 Verbose output						      --remove-admin	 remove administrator from group (default: [])
+  --fetch		 Fetch users from the Hub if needed			      --remove		 remove users, administrators and groups from group (pr
+										  -v, --verbose		 use verbose output
+Hidden options:									  -f, --fetch		 fetch acl from https://beyond.infinit.sh
+  --fallback-xattrs	 Fallback to alternate xattr mode if system xattrs are	      --fallback-xattrs	 use fallback special file if extended attributes are n
+			 not suppported

@@ -1,0 +1,44 @@
+volume: mount: Usage: _build/macosx64/bin/infinit-volume volume mount [OPTIONS]
+Mount a volume
+
+Options:
+  -h, --help             show this help message
+      --compatibility-version  compatibility version to force
+  -s, --script           suppress extraneous human friendly messages and use JSON output
+  -a, --as               user to run commands as (default: akim)
+  -n, --name             name of the volume to mount
+      --allow-root-creation  create the filesystem root if not found
+  -m, --mountpoint       where to mount the filesystem
+      --readonly         mount as readonly
+      --mount-name       name of mounted volume
+      --mount-icon       path to an icon for mounted volume
+      --finder-sidebar   show volume in Finder sidebar
+      --async            use asynchronous write operations
+  -d, --daemon           run as a background daemon
+      --monitoring       enable monitoring
+      --fuse-option      option to pass directly to FUSE (default: [])
+      --cache            enable caching with default values
+      --cache-ram-size   maximum RAM block cache size in bytes (default: 64 MB)
+      --cache-ram-ttl    RAM block cache time-to-live in seconds (default: 5 minute)
+      --cache-ram-invalidation  RAM block cache invalidation time in seconds (default: 15 seconds)
+      --cache-disk-size  size of disk cache for immutable data in bytes (default: 512 MB)
+      --fetch-endpoints  fetch endpoints from https://beyond.infinit.sh
+  -f, --fetch            fetch volume from https://beyond.infinit.sh
+      --peer             peer address or file with list of peer addresses (host:port) (default: [])
+      --peers-file       Periodically write list of known peers to given file
+      --push-endpoints   push endpoints to https://beyond.infinit.sh
+  -r, --register-service  register volume in the network
+      --no-local-endpoints  Disable automatic detection of local endpoints
+      --no-public-endpoints  Disable automatic detection of public endpoints
+  -p, --push             push volume to https://beyond.infinit.sh
+      --map-other-permissions  allow chmod to set world permissions
+      --publish          alias for --fetch-endpoints --push-endpoints
+      --advertise-host   advertise extra endpoint using given host (default: [])
+      --endpoints-file   write node listening endpoints to file (format: host:port)
+      --port-file        write node listening port to file
+      --port             outbound port to use
+      --listen           specify which IP address to listen on (default: all)
+      --fetch-endpoints-interval  period for repolling endpoints from the Hub in seconds (default: 300)
+  -i, --input            file to read volume from
+      --disable-UTF-8-conversion  disable FUSE conversion of UTF-8 to native format
+

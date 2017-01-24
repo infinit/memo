@@ -1,0 +1,11 @@
+user: login: Usage: _build/macosx64/bin/infinit-user --login [OPTIONS...]	user: login: Usage: _build/macosx64/bin/infinit-user user login [OPTIONS]
+										Login user to {hub}
+Log the user to the Hub:
+										Options:
+Login options:									  -h, --help		 show this help message
+  -n [ --name ] arg	 User name (default: system user)			      --compatibility-version  compatibility version to force
+  --password arg	 Password to authenticate with the Hub (default:	  -s, --script		 suppress extraneous human friendly messages and use JS
+			 prompt)						  -a, --as		 user to run commands as (default: akim)
+										  -n, --name		 name of the user to login (default: akim)
+										  -P, --password	 password to authenticate with https://beyond.infinit.s
+

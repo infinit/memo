@@ -1,0 +1,9 @@
+volume: import: Usage: _build/macosx64/bin/infinit-volume --import [OPTIONS...]
+
+Import a volume:
+
+Import options:
+  -i [ --input ] arg     File to read the volume from (default: stdin)
+  --mountpoint arg       Default location to mount the volume (optional)
+
+

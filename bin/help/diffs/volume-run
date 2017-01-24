@@ -1,0 +1,63 @@
+volume: run: Usage: _build/macosx64/bin/infinit-volume --run --name VOLUME [--m volume: run: Usage: _build/macosx64/bin/infinit-volume volume run [OPTIONS]
+										Run a volume
+Run a volume:
+										Options:
+Run options:									  -h, --help		 show this help message
+  --name arg				Volume name				      --compatibility-version  compatibility version to force
+  --allow-root-creation [=arg(=true)]	Create the filesystem root if not found	  -s, --script		 suppress extraneous human friendly messages and use JS
+  -m [ --mountpoint ] arg		Where to mount the filesystem		  -a, --as		 user to run commands as (default: akim)
+  --readonly [=arg(=true)]		Mount as readonly			  -n, --name		 name of the volume to run
+  --mount-name arg			Name of mounted volume			      --allow-root-creation  create the filesystem root if not found
+  --mount-icon arg			Path to an icon for mounted volume	  -m, --mountpoint	 where to mount the filesystem
+  --finder-sidebar [=arg(=true)]	Show volume in Finder sidebar		      --readonly	 mount as readonly
+  --async [=arg(=true)]			Use asynchronous write operations	      --mount-name	 name of mounted volume
+  -d [ --daemon ] [=arg(=true)]		Run as a background daemon		      --mount-icon	 path to an icon for mounted volume
+  --monitoring [=arg(=true)] (=true)	Enable monitoring (default: true)	      --finder-sidebar	 show volume in Finder sidebar
+  --fuse-option arg			Option to pass directly to FUSE		      --async		 use asynchronous write operations
+  --cache [=arg(=true)]			Enable caching with default values	  -d, --daemon		 run as a background daemon
+  --cache-ram-size arg			Maximum RAM block cache size in bytes	      --monitoring	 enable monitoring
+					(default: 64 MB)			      --fuse-option	 option to pass directly to FUSE (default: [])
+  --cache-ram-ttl arg			RAM block cache time-to-live in seconds	      --cache		 enable caching with default values
+					(default: 5 minutes)			      --cache-ram-size	 maximum RAM block cache size in bytes (default: 64 MB)
+  --cache-ram-invalidation arg		RAM block cache invalidation time in	      --cache-ram-ttl	 RAM block cache time-to-live in seconds (default: 5 mi
+					seconds (default: 15 seconds)		      --cache-ram-invalidation	RAM block cache invalidation time in seconds (d
+  --cache-disk-size arg			Size of disk cache for immutable data	      --cache-disk-size	 size of disk cache for immutable data in bytes (defaul
+					in bytes (default: 512 MB)		      --fetch-endpoints	 fetch endpoints from https://beyond.infinit.sh
+  --fetch-endpoints [=arg(=true)]	Fetch endpoints from the Hub		  -f, --fetch		 fetch volume from https://beyond.infinit.sh
+  -f [ --fetch ] [=arg(=true)]		Alias for --fetch-endpoints		      --peer		 peer address or file with list of peer addresses (host
+  --peer arg				Peer address or file with list of peer	      --peers-file	 Periodically write list of known peers to given file
+					addresses (host:port)			      --push-endpoints	 push endpoints to https://beyond.infinit.sh
+  --peers-file arg			Periodically write list of known peers	  -r, --register-service  register volume in the network
+					to given file				      --no-local-endpoints  Disable automatic detection of local endpoints
+  --push-endpoints [=arg(=true)]	Push endpoints to the Hub		      --no-public-endpoints  Disable automatic detection of public endpoints
+  -r [ --register-service ] [=arg(=true)]					  -p, --push		 push volume to https://beyond.infinit.sh
+					Register volume in the network		      --map-other-permissions  allow chmod to set world permissions
+  --no-local-endpoints [=arg(=true)]	Disable automatic detection of local	      --publish		 alias for --fetch-endpoints --push-endpoints
+					endpoints				      --advertise-host	 advertise extra endpoint using given host (default: []
+  --no-public-endpoints [=arg(=true)]	Disable automatic detection of public	      --endpoints-file	 write node listening endpoints to file (format: host:p
+					endpoints				      --port-file	 write node listening port to file
+  -p [ --push ] [=arg(=true)]		Alias for --push-endpoints		      --port		 outbound port to use
+  --map-other-permissions [=arg(=true)] (=true)					      --listen		 specify which IP address to listen on (default: all)
+					Allow chmod to set world permissions	      --fetch-endpoints-interval  period for repolling endpoints from the Hub i
+  --publish [=arg(=true)]		Alias for --fetch-endpoints		  -i, --input		 file to read volume from
+					--push-endpoints			      --disable-UTF-8-conversion  disable FUSE conversion of UTF-8 to native fo
+  --advertise-host arg			Advertise extra endpoint using given
+					host
+  --endpoints-file arg			Write node listening endpoints to file
+					(format: host:port\n)
+  --port-file arg			Write node listening port to file
+  --port arg				Outbound port to use
+  --listen arg				Specify which IP address to listen on
+					(default: all)
+  --fetch-endpoints-interval arg (=300) Period for repolling endpoints from the
+					Hub in seconds (default: 300s)
+  -i [ --input ] arg			File to read the commands from
+					(default: stdin)
+Deprecated options:
+  --cache-size arg			Use "--cache-ram-size" instead
+  --cache-ttl arg			Use "--cache-ram-ttl" instead
+  --cache-invalidation arg		Use "--cache-ram-invalidation" instead
+  --disk-cache-size arg			Use "--cache-disk-size" instead
+Hidden options:
+  --disable-utf-8-conversion		Disable FUSE conversion of UTF-8 to
+					native format

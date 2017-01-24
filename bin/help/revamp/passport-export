@@ -1,0 +1,12 @@
+passport: export: Usage: _build/macosx64/bin/infinit-passport passport export [OPTIONS]
+Export a user's network passport
+
+Options:
+  -h, --help             show this help message
+      --compatibility-version  compatibility version to force
+  -s, --script           suppress extraneous human friendly messages and use JSON output
+  -a, --as               user to run commands as (default: akim)
+  -N, --network          network to export passport for
+  -u, --user             user to export passport for
+  -o, --output           file to write the passport to
+

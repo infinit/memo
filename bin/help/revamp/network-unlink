@@ -1,0 +1,10 @@
+network: unlink: Usage: _build/macosx64/bin/infinit-network network unlink [OPTIONS]
+Unlink this device from a network
+
+Options:
+  -h, --help             show this help message
+      --compatibility-version  compatibility version to force
+  -s, --script           suppress extraneous human friendly messages and use JSON output
+  -a, --as               user to run commands as (default: akim)
+  -n, --name             name of the network to unlink
+

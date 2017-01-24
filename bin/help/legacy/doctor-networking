@@ -1,0 +1,24 @@
+doctor: networking: Usage: _build/macosx64/bin/infinit-doctor --networking [OPTIONS...]
+
+Perform networking speed tests between nodes:
+
+Networking options:
+  -m [ --mode ] arg            Mode to use: upload,download,all (default: all) 
+                               (client only)
+  --protocol arg               RPC protocol to use: tcp,utp,all (default: all)
+  -s [ --packet_size ] arg     Size of the packet to send (client only)
+  -n [ --packets_count ] arg   Number of packets to exchange (client only)
+  -H [ --host ] arg            The host to connect to (if not specified, you 
+                               are considered server)
+  -p [ --port ] arg            Port to perform tests on (if unspecified,
+                                 --tcp_port = port,
+                                 --utp_port = port + 1,
+                                 --xored_utp_port = port + 2)
+  -t [ --tcp_port ] arg        Port to perform tcp tests on
+  -u [ --utp_port ] arg        Port to perform utp tests on. (if unspecified,
+                                 --xored_utp_port = utp_port + 1)
+  -x [ --xored_utp_port ] arg  Port to perform xored utp tests on
+  --no-color                   Don't use colored output
+  -v [ --verbose ]             Output everything
+
+

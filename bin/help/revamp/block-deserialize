@@ -1,0 +1,11 @@
+block: deserialize: Usage: _build/macosx64/bin/infinit-block block deserialize [OPTIONS]
+Deserialized block
+
+Options:
+  -h, --help             show this help message
+      --compatibility-version  compatibility version to force
+  -s, --script           suppress extraneous human friendly messages and use JSON output
+  -a, --as               user to run commands as (default: akim)
+  -o, --output           file to write the block to
+  -p, --paths            paths to blocks (default: [])
+

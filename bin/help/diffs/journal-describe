@@ -1,0 +1,11 @@
+journal: describe: Usage: _build/macosx64/bin/infinit-journal --describe --netw journal: describe: Usage: _build/macosx64/bin/infinit-journal journal describe
+										Describe asynchronous operation(s)
+Describe asynchronous operation(s):
+										Options:
+Describe options:								  -h, --help		 show this help message
+  -N [ --network ] arg	  Network to check					      --compatibility-version  compatibility version to force
+  -O [ --operation ] arg  Operation to describe					  -s, --script		 suppress extraneous human friendly messages and use JS
+										  -a, --as		 user to run commands as (default: akim)
+										  -N, --network		 network to describe journal for
+										  -O, --operation	 operation to to describe
+

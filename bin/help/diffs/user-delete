@@ -1,0 +1,12 @@
+user: delete: Usage: _build/macosx64/bin/infinit-user --delete [OPTIONS...]	user: delete: Usage: _build/macosx64/bin/infinit-user user delete [OPTIONS]
+										Delete local user
+Delete a user locally:
+										Options:
+Delete options:									  -h, --help		 show this help message
+  -n [ --name ] arg	 User to delete (default: system user)			      --compatibility-version  compatibility version to force
+  --force		 Delete the user without any prompt			  -s, --script		 suppress extraneous human friendly messages and use JS
+  --pull		 Pull the user if it is on the Hub			  -a, --as		 user to run commands as (default: akim)
+  --purge		 Remove objects owned by the user			  -n, --name		 name of the user to delete (default: akim)
+										      --pull		 pull user from https://beyond.infinit.sh
+										      --purge		 purge objects owned by the user
+

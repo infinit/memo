@@ -1,0 +1,23 @@
+Usage: _build/macosx64/bin/infinit-passport MODE [OPTIONS...]
+
+Infinit volume management utility:
+
+Modes:
+  --create                     Create a passport for a user to a network
+  --export                     Export a user's network passport
+  --fetch                      Fetch a user's network passport from the Hub
+  --import                     Import a passport for a user to a network
+  --push                       Push a user's network passport to the Hub
+  --pull                       Remove a user's network passport from the Hub
+  --list                       List all local passports
+  --delete                     Locally delete a passport
+
+Miscellaneous:
+  -h [ --help ]                Display the help
+  -s [ --script ]              Silence all extraneous human friendly messages
+  --compatibility-version arg  Force compatibility version
+  -v [ --version ]             Display version
+  --critical-log               Path to critical log file, none to disable
+  -a [ --as ] arg              User to run commands as (default: system user)
+
+

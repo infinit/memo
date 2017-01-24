@@ -1,0 +1,12 @@
+passport: delete: Usage: _build/macosx64/bin/infinit-passport --delete --networ passport: delete: Usage: _build/macosx64/bin/infinit-passport passport delete [
+										Locally delete a passport
+Locally delete a passport:
+										Options:
+Delete options:									  -h, --help		 show this help message
+  -N [ --network ] arg	 Network name						      --compatibility-version  compatibility version to force
+  -u [ --user ] arg	 User name						  -s, --script		 suppress extraneous human friendly messages and use JS
+  --pull		 Pull the passport if it is on the Hub			  -a, --as		 user to run commands as (default: akim)
+										  -N, --network		 network to delete passport for
+										  -u, --user		 user to delete passport for
+										      --pull		 pull passport from https://beyond.infinit.sh
+

@@ -1,0 +1,9 @@
+network: pull: Usage: _build/macosx64/bin/infinit-network --pull --name NETWORK [OPTIONS...]
+
+Remove a network from the Hub:
+
+Pull options:
+  -n [ --name ] arg      Network to remove
+  --purge                Remove objects that depend on the network
+
+

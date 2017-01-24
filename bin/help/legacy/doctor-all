@@ -1,0 +1,9 @@
+doctor: all: Usage: _build/macosx64/bin/infinit-doctor --all [OPTIONS...]
+
+Perform all possible checks:
+
+All options:
+  --no-color             Don't use colored output
+  -v [ --verbose ]       Output everything
+
+

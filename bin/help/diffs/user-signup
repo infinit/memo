@@ -1,0 +1,18 @@
+user: signup: Usage: _build/macosx64/bin/infinit-user --signup [OPTIONS...]	user: signup: Usage: _build/macosx64/bin/infinit-user user signup [OPTIONS]
+										Create and push a user to {hub}
+Create and push a user to the Hub:
+										Options:
+Signup options:									  -h, --help		 show this help message
+  -n [ --name ] arg	  User name (default: system user)			      --compatibility-version  compatibility version to force
+  --description arg	  Description of user					  -s, --script		 suppress extraneous human friendly messages and use JS
+  --email arg		  Optional email address				  -a, --as		 user to run commands as (default: akim)
+  --fullname arg	  Fullname of user (optional)				  -n, --name		 name of the user to signup (default: akim)
+  --avatar arg		  Path to an image to use as avatar			      --description	 user description
+  -k [ --key ] arg	  RSA key pair in PEM format - e.g. your SSH key	  -k, --key		 RSA key pair in PEM format - e.g. your SSH key
+			  (default: generate key pair)				  -e, --email		 user email
+  --full		  Include private key in order to facilitate device	      --fullname	 user full name
+			  pairing and fetching lost keys			  -P, --password	 password to authenticate with https://beyond.infinit.s
+  --password arg	  Password to authenticate with the Hub. Used with	  -l, --ldap-name	 user LDAP distinguished name
+			  --full (default: prompt for password)			      --full		 include private key (do not use unless you understand
+  -l [ --ldap-name ] arg  LDAP distinguished name of the user, enables
+			  authentication through LDAP

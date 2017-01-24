@@ -1,0 +1,23 @@
+network: update: Usage: _build/macosx64/bin/infinit-network --update --name NAME [OPTIONS...]
+
+Update a network:
+
+Update options:
+  -n [ --name ] arg        Network to update
+  --description arg        Description of network
+  --port arg               Port to listen on (default: random)
+  -o [ --output ] arg      File to write the network to
+                           (default: stdout)
+  --push-network           Push the updated network to the Hub
+  -p [ --push ]            Alias for --push-network
+  --admin-r arg            Add an admin user that can read all data
+                           (prefix: @<group>, requires mountpoint)
+  --admin-rw arg           Add an admin user that can read and write all data
+                           (prefix: @<group>, requires mountpoint)
+  --admin-remove arg       Remove given users from all admin lists
+                           (prefix: @<group>, requires mountpoint)
+  -m [ --mountpoint ] arg  Mountpoint of a volume using this network, required 
+                           to add admin groups
+  --peer arg               List of known node endpoints
+
+

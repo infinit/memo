@@ -1,0 +1,34 @@
+daemon: start: Usage: _build/macosx64/bin/infinit-daemon --start [OPTIONS...]	daemon: start: Usage: _build/macosx64/bin/infinit-daemon daemon start [OPTIONS]
+										Start daemon in the background
+Start daemon in the background:
+										Options:
+Start options:									  -h, --help		 show this help message
+  --login-user arg		  Login with selected user(s), of form		      --compatibility-version  compatibility version to force
+				  'user:password'				  -s, --script		 suppress extraneous human friendly messages and use JS
+  --mount-root arg		  Default root path for all mounts		  -a, --as		 user to run commands as (default: akim)
+				  (default: /run/user/505/infinit/filesystem/mn	      --login-user	 Login with selected user(s), of form 'user:password' (
+				  t)						      --mount		 mount given volumes on startup, keep trying on error (
+  --default-network arg		  Default network for volume creation		      --mount-root	 Default root path for all mounts
+  --advertise-host arg		  Advertise given hostname as an extra endpoint	      --default-network	 Default network for volume creation
+				  when running volumes				      --advertise-host	 advertise extra endpoint using given host (default: []
+  -f [ --fetch ]		  Run volumes with --fetch			  -f, --fetch		 fetch daemon from https://beyond.infinit.sh
+  -p [ --push ]			  Run volumes with --push			  -p, --push		 push daemon to https://beyond.infinit.sh
+  --publish			  Alias for --publish				      --docker		 Enable the Docker plugin
+  --docker [=arg(=true)] (=true)  Enable the Docker plugin			      --docker-user	 System user to use for docker plugin
+				  (default: true)				      --docker-home	 Home directory to use for Docker user (default: /home/
+  --docker-user arg		  System user to use for docker plugin		      --docker-socket-tcp  Use a TCP socket for docker plugin
+				  (default: akim)				      --docker-socket-port  TCP port to use to communicate with Docker, 0 for r
+  --docker-home arg		  Home directory to use for Docker user		      --docker-socket-path  Path for plugin socket (default: /run/docker/plugin
+				  (default: /home/<docker-user>)		      --docker-descriptor-path	Path to add plugin descriptor (default: /usr/li
+  --docker-socket-tcp		  Use a TCP socket for docker plugin		      --docker-mount-substitute	 [from:to|prefix] : Substitute 'from' to 'to' i
+  --docker-socket-port arg	  TCP port to use to communicate with Docker	      --log-level	 Log level to start volumes with (default: LOG)
+				  (default: random)				      --log-path	 Store volume logs in given path
+  --docker-socket-path arg	  Path for plugin socket
+				  (default: /run/docker/plugins)
+  --docker-descriptor-path arg	  Path to add plugin descriptor
+				  (default: /usr/lib/docker/plugins)
+  --docker-mount-substitute arg	  [from:to|prefix] : Substitute 'from' to 'to'
+				  in advertised path
+  -l [ --log-level ] arg	  Log level to start volumes with (default:
+				  LOG)
+  -d [ --log-path ] arg		  Store volume logs in given path

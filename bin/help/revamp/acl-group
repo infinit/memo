@@ -1,0 +1,26 @@
+acl: group: Usage: _build/macosx64/bin/infinit-acl acl group [OPTIONS]
+Edit groups
+
+Options:
+  -h, --help             show this help message
+      --compatibility-version  compatibility version to force
+  -s, --script           suppress extraneous human friendly messages and use JSON output
+  -a, --as               user to run commands as (default: akim)
+      --path             file whose acl to group
+  -n, --name             name of the acl to group
+      --create         
+      --delete         
+      --show             list group users, administrators and description
+      --description      acl description
+      --add-user         add user to group (default: [])
+      --add-group        add group to group (default: [])
+      --add-admin        add administrator to group (default: [])
+      --add              add users, administrators and groups to group (prefix: @<group>, ^<admin> (default: [])
+      --remove-user      remove user from group (default: [])
+      --remove-group     remove group from group (default: [])
+      --remove-admin     remove administrator from group (default: [])
+      --remove           remove users, administrators and groups from group (prefix: @<group>, ^<admin> (default: [])
+  -v, --verbose          use verbose output
+  -f, --fetch            fetch acl from https://beyond.infinit.sh
+      --fallback-xattrs  use fallback special file if extended attributes are not supported
+

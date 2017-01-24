@@ -1,0 +1,29 @@
+Usage: _build/macosx64/bin/infinit-user MODE [OPTIONS...]
+
+Infinit user utility:
+
+Modes:
+  --create                     Create a user
+  --export                     Export a user so that it may be imported 
+                               elsewhere
+  --fetch                      Fetch a user from the Hub
+  --import                     Import a user
+  --pull                       Remove a user from the Hub
+  --delete                     Delete a user locally
+  --push                       Push a user to the Hub
+  --signup                     Create and push a user to the Hub
+  --login                      Log the user to the Hub
+  --list                       List users
+
+Hidden Modes:
+  --hash                       Get short hash of user's key
+
+Miscellaneous:
+  -h [ --help ]                Display the help
+  -s [ --script ]              Silence all extraneous human friendly messages
+  --compatibility-version arg  Force compatibility version
+  -v [ --version ]             Display version
+  --critical-log               Path to critical log file, none to disable
+  -a [ --as ] arg              User to run commands as (default: system user)
+
+

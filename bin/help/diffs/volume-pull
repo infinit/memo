@@ -1,0 +1,11 @@
+volume: pull: Usage: _build/macosx64/bin/infinit-volume --pull --name VOLUME [O volume: pull: Usage: _build/macosx64/bin/infinit-volume volume pull [OPTIONS]
+										Remove a volume from {hub}
+Remove a volume from the Hub:
+										Options:
+Pull options:									  -h, --help		 show this help message
+  -n [ --name ] arg	 Volume to remove					      --compatibility-version  compatibility version to force
+  --purge		 Remove objects that depend on the volume		  -s, --script		 suppress extraneous human friendly messages and use JS
+										  -a, --as		 user to run commands as (default: akim)
+										  -n, --name		 name of the volume to pull
+										      --purge		 purge objects owned by the volume
+

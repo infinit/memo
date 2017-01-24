@@ -1,0 +1,21 @@
+doctor: networking: Usage: _build/macosx64/bin/infinit-doctor doctor networking [OPTIONS]
+Perform networking speed tests between nodes
+
+Options:
+  -h, --help             show this help message
+      --compatibility-version  compatibility version to force
+  -s, --script           suppress extraneous human friendly messages and use JSON output
+  -a, --as               user to run commands as (default: akim)
+  -m, --mode             access mode to networking: r, w, rw, none
+      --protocol         RPC protocol to use: tcp, utp, all (default: all)
+  -s, --packet-size      size of the packet to send (client only)
+  -n, --packets-count    number of packets to exchange (client only)
+      --host             SSH host
+      --port             outbound port to use
+  -t, --tcp-port         port to perform tcp tests on
+  -u, --utp-port         port to perform utp tests on. (if unspecified, --xored_utp_port = utp_port + 1)
+  -x, --xored-utp-port   port to perform xored utp tests on
+  -X, --xored            performs test applying a 0xFF xor on the utp traffic, value=yes,no,both
+      --no-color         don't use colored output
+  -v, --verbose          use verbose output
+

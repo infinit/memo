@@ -1,0 +1,16 @@
+drive: create: Usage: _build/macosx64/bin/infinit-drive drive create [OPTIONS]
+Create a drive (a network and volume pair)
+
+Options:
+  -h, --help             show this help message
+      --compatibility-version  compatibility version to force
+  -s, --script           suppress extraneous human friendly messages and use JSON output
+  -a, --as               user to run commands as (default: akim)
+  -n, --name             name of the drive to create
+      --description      drive description
+  -N, --network          network to create drive for
+  -V, --volume           associated volume name
+  -i, --icon             path to an image to use as icon
+      --push-drive       push drive to https://beyond.infinit.sh
+  -p, --push             push drive to https://beyond.infinit.sh
+
