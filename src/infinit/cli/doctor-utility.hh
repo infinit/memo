@@ -689,8 +689,7 @@ namespace
       /*-------------.
       | Construction |
       `-------------*/
-      BeyondResult();
-      BeyondResult(bool sane, BasicResult::Reason const& r = {});
+      BeyondResult(BasicResult::Reason const& r = {});
 
       /*--------------.
       | Serialization |
@@ -1551,14 +1550,9 @@ namespace
     }
   }
 
-  ConnectivityResults::BeyondResult::BeyondResult(
-    bool sane, Result::Reason const& r)
+  ConnectivityResults::BeyondResult::BeyondResult(Result::Reason const& r)
     : BasicResult(
-      elle::sprintf("Connection to %s", infinit::beyond()), sane, r)
-  {}
-
-  ConnectivityResults::BeyondResult::BeyondResult()
-    : BasicResult(elle::sprintf("Connection to %s", infinit::beyond()))
+      elle::sprintf("Connection to %s", infinit::beyond()), !r, r)
   {}
 
   void
@@ -1909,19 +1903,18 @@ namespace
         reactor::http::Request r(infinit::beyond(),
                                  reactor::http::Method::GET, {10_sec});
         reactor::wait(r);
-        if (auto status = r.status() == reactor::http::StatusCode::OK)
-          results.beyond = {status};
-        else
-          results.beyond = {status, elle::sprintf("%s", r.status())};
+        if (r.status() != reactor::http::StatusCode::OK)
+          results.beyond = {elle::sprintf("%s", r.status())};
       }
       catch (reactor::http::RequestError const&)
       {
-        results.beyond =
-          {false, elle::sprintf("Couldn't connect to %s", infinit::beyond())};
+        results.beyond = {
+          elle::sprintf("Couldn't connect to %s", infinit::beyond())
+        };
       }
       catch (elle::Error const&)
       {
-        results.beyond = {false, elle::exception_string()};
+        results.beyond = {elle::exception_string()};
       }
     }
     auto public_ips = std::vector<std::string>{};
