@@ -859,6 +859,8 @@ namespace infinit
     `------------*/
 
 #ifdef INFINIT_MACOSX
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wdeprecated-declarations"
     namespace
     {
       void
@@ -965,6 +967,7 @@ namespace infinit
           CFRelease(favorite_items);
       }
     }
+# pragma clang diagnostic pop
 #endif
 
     void
