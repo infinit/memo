@@ -2271,8 +2271,8 @@ namespace
                            ConfigurationIntegrityResults& results)
   {
     auto& ifnt = cli.infinit();
-    auto owner = cli.as_user();
-    username = owner.name;
+    auto owner = boost::optional<infinit::User>{};
+    username = cli.as().value_or(cli.default_user_name());
     ignore_non_linked = ignore_non_linked_arg;
 
     auto users = parse(ifnt.users_get());
@@ -2283,7 +2283,8 @@ namespace
     auto volumes = parse(ifnt.volumes_get());
     try
     {
-      if (owner.private_key)
+      owner = cli.as_user();
+      if (owner->private_key)
         results.user = {username, true};
       else
         results.user = {
