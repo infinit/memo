@@ -2452,10 +2452,9 @@ namespace
         }
       }
     auto& leftovers = results.leftovers;
-    auto path_contains_file = [](bfs::path dir, bfs::path file) -> bool
+    auto is_parent_of = [](bfs::path const& dir, bfs::path const& file) -> bool
       {
-        file.remove_filename();
-        return boost::equal(dir, file);
+        return boost::starts_with(file.parent_path(), dir);
       };
     for (auto const& p: bfs::recursive_directory_iterator(infinit::xdg_data_home()))
       if (is_regular_file(p.status()) && !infinit::is_hidden_file(p.path()))
@@ -2463,25 +2462,25 @@ namespace
         try
         {
           // Share.
-          if (path_contains_file(ifnt._network_descriptors_path(), p.path()))
+          if (is_parent_of(ifnt._network_descriptors_path(), p.path()))
             load<infinit::NetworkDescriptor>(ifnt, p.path(), "network_descriptor");
-          else if (path_contains_file(ifnt._networks_path(), p.path()))
+          else if (is_parent_of(ifnt._networks_path(), p.path()))
             load<infinit::Network>(ifnt, p.path(), "network");
-          else if (path_contains_file(ifnt._volumes_path(), p.path()))
+          else if (is_parent_of(ifnt._volumes_path(), p.path()))
             load<infinit::Volume>(ifnt, p.path(), "volume");
-          else if (path_contains_file(ifnt._drives_path(), p.path()))
+          else if (is_parent_of(ifnt._drives_path(), p.path()))
             load<infinit::Drive>(ifnt, p.path(), "drive");
-          else if (path_contains_file(ifnt._passports_path(), p.path()))
+          else if (is_parent_of(ifnt._passports_path(), p.path()))
             load<infinit::Passport>(ifnt, p.path(), "passport");
-          else if (path_contains_file(ifnt._users_path(), p.path()))
+          else if (is_parent_of(ifnt._users_path(), p.path()))
             load<infinit::User>(ifnt, p.path(), "users");
-          else if (path_contains_file(ifnt._storages_path(), p.path()))
+          else if (is_parent_of(ifnt._storages_path(), p.path()))
             load<std::unique_ptr<infinit::storage::StorageConfig>>(ifnt, p.path(), "storage");
-          else if (path_contains_file(ifnt._credentials_path(), p.path()))
+          else if (is_parent_of(ifnt._credentials_path(), p.path()))
             load<std::unique_ptr<infinit::Credentials>>(ifnt, p.path(), "credentials");
-          else if (path_contains_file(infinit::xdg_data_home() / "blocks", p.path()))
+          else if (is_parent_of(infinit::xdg_data_home() / "blocks", p.path()))
             {}
-          else if (path_contains_file(infinit::xdg_data_home() / "ui", p.path()))
+          else if (is_parent_of(infinit::xdg_data_home() / "ui", p.path()))
             {}
           else
             store(leftovers, p.path().string());
@@ -2496,8 +2495,8 @@ namespace
       {
         try
         {
-          if (!path_contains_file(ifnt._user_avatar_path(), p.path())
-              && !path_contains_file(ifnt._drive_icon_path(), p.path()))
+          if (!is_parent_of(ifnt._user_avatar_path(), p.path())
+              && !is_parent_of(ifnt._drive_icon_path(), p.path()))
             store(leftovers, p.path().string());
         }
         catch (...)
@@ -2510,7 +2509,8 @@ namespace
       {
         try
         {
-          if (path_contains_file(infinit::xdg_state_home() / "cache", p.path()));
+          // XXX: Factor.
+          if (is_parent_of(infinit::xdg_state_home() / "cache", p.path()));
           else if (p.path() == infinit::xdg_state_home() / "critical.log");
           else if (p.path().filename() == "root_block")
           {
