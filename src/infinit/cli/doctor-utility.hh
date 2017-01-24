@@ -248,7 +248,7 @@ namespace
     };
 
     struct UserResult
-      : public Result
+      : public BasicResult
     {
       /*-------------.
       | Construction |
