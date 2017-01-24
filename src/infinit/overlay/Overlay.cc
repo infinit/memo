@@ -39,6 +39,16 @@ namespace infinit
       return {};
     }
 
+    void
+    Overlay::cleanup()
+    {
+      this->_cleanup();
+    }
+
+    void
+    Overlay::_cleanup()
+    {}
+
     /*------.
     | Peers |
     `------*/

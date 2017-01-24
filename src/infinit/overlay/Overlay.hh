@@ -43,9 +43,15 @@ namespace infinit
               std::shared_ptr<infinit::model::doughnut::Local> local);
       virtual
       ~Overlay();
+      void
+      cleanup();
       ELLE_ATTRIBUTE_R(model::doughnut::Doughnut*, doughnut);
       ELLE_attribute_r(model::Address, id);
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
+    protected:
+      virtual
+      void
+      _cleanup();
 
     /*------.
     | Peers |
