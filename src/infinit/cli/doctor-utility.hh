@@ -2175,15 +2175,7 @@ namespace
   {
     result.fuse = {fuse(false)};
     ELLE_TRACE("user name")
-      try
-      {
-        auto owner = cli.as_user();
-        result.user = {owner.name};
-      }
-      catch (...)
-      {
-        result.user = {};
-      }
+      result.user = {cli.as().value_or(cli.default_user_name())};
     ELLE_TRACE("calculate space left")
     {
       size_t min = 50 * 1024 * 1024;
