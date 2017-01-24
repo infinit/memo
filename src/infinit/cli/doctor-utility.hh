@@ -1258,12 +1258,6 @@ namespace
     : _only(only)
   {}
 
-  ConfigurationIntegrityResults::ConfigurationIntegrityResults(
-    elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
-
   bool
   ConfigurationIntegrityResults::sane() const
   {
@@ -1374,12 +1368,6 @@ namespace
     , capacity(capacity)
   {}
 
-  SystemSanityResults::SpaceLeft::SpaceLeft(
-    elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
-
   void
   SystemSanityResults::SpaceLeft::_print(std::ostream& out, bool no_color,
                                          bool verbose) const
@@ -1418,12 +1406,6 @@ namespace
              !environ.empty())
     , environ(environ)
   {}
-
-  SystemSanityResults::EnvironResult::EnvironResult(
-    elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
 
   bool
   SystemSanityResults::EnvironResult::_show(bool verbose) const
@@ -1500,12 +1482,6 @@ namespace
              !sane)
   {}
 
-  SystemSanityResults::FuseResult::FuseResult(
-    elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
-
   void
   SystemSanityResults::FuseResult::_print(std::ostream& out, bool no_color,
                                           bool verbose) const
@@ -1527,11 +1503,6 @@ namespace
   SystemSanityResults::SystemSanityResults(bool only)
     : _only(only)
   {}
-
-  SystemSanityResults::SystemSanityResults(elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
 
   void
   SystemSanityResults::print(std::ostream& out, bool no_color, bool verbose) const
@@ -1602,12 +1573,6 @@ namespace
     : Result("Local interfaces", !ips.empty())
     , entries(ips)
   {}
-
-  ConnectivityResults::InterfaceResults::InterfaceResults(
-    elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
 
   void
   ConnectivityResults::InterfaceResults::_print(
@@ -1684,11 +1649,6 @@ namespace
   ConnectivityResults::NATResult::NATResult(std::string const& error)
     : Result("NAT", false, error)
   {}
-
-  ConnectivityResults::NATResult::NATResult(elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
 
   void
   ConnectivityResults::NATResult::_print(
@@ -1776,11 +1736,6 @@ namespace
     , available(available)
   {}
 
-  ConnectivityResults::UPnPResult::UPnPResult(elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
-
   void
   ConnectivityResults::UPnPResult::_print(std::ostream& out,
                                           bool no_color, bool verbose) const
@@ -1830,11 +1785,6 @@ namespace
   ConnectivityResults::ConnectivityResults(bool only)
     : _only(only)
   {}
-
-  ConnectivityResults::ConnectivityResults(elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
 
   void
   ConnectivityResults::print(std::ostream& out, bool no_color, bool verbose) const
@@ -1888,13 +1838,6 @@ namespace
     : configuration_integrity(false)
     , system_sanity(false)
     , connectivity(false)
-  {}
-
-  All::All(elle::serialization::SerializerIn& s)
-    : configuration_integrity(
-      s.deserialize<ConfigurationIntegrityResults>("configuration_integrity"))
-    , system_sanity(s.deserialize<SystemSanityResults>("system_sanity"))
-    , connectivity(s.deserialize<ConnectivityResults>("connectivity"))
   {}
 
   void
