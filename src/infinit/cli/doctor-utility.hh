@@ -172,11 +172,17 @@ namespace
     /*-------------.
     | Construction |
     `-------------*/
-    Result(std::string const& name = "XXX");
+  public:
+    Result()
+      : Result{"XXXX", false, std::string("default constructed"), true}
+    {}
+
+  public:
     Result(std::string const& name,
            bool sane,
            Reason const& reason = {},
            bool warning = false);
+
     Result(elle::serialization::SerializerIn& s);
     virtual
     ~Result();
@@ -969,13 +975,6 @@ namespace
     SystemSanityResults system_sanity;
     ConnectivityResults connectivity;
   };
-
-  Result::Result(std::string const& name)
-    : _name(name)
-    , _sane(false)
-    , reason()
-    , _warning(false)
-  {}
 
   Result::Result(std::string const& name,
                  bool sane,
