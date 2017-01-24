@@ -981,6 +981,7 @@ def configure(
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
         test.dependencies_add(t.get('dependencies', []))
+        test.dependency_add(infinit_cli)
         test.dependency_add(drake.node('tests/functional/utils.py'))
         binaries_path = str(drake.path_build(installed_binaries[0].path(True).dirname(),
                                              absolute = True))
