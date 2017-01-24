@@ -573,9 +573,7 @@ namespace infinit
                 }
                 elle::With<reactor::Thread::NonInterruptible>() << [&]
                 {
-                  ELLE_DEBUG("%s: RESETING", this);
                   elle::unconst(socket).reset();
-                  ELLE_DEBUG("%s: RESETED", this);
                 };
               });
           }
