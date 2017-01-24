@@ -71,6 +71,7 @@ namespace infinit
         std::shared_ptr<infinit::model::doughnut::Local> local,
         boost::optional<int> eviction_delay)
         : Overlay(dht, local)
+        , _cleaning(false)
         , _address_book()
         , _peers()
         , _new_entries()
@@ -256,6 +257,13 @@ namespace infinit
         }
       }
 
+      void
+      Kouncil::_cleanup()
+      {
+        this->_cleaning = true;
+        this->_stale_endpoints.clear();
+      }
+
       elle::json::Json
       Kouncil::query(std::string const& k, boost::optional<std::string> const& v)
       {
@@ -299,13 +307,37 @@ namespace infinit
       void
       Kouncil::_discover(NodeLocations const& peers)
       {
-        ELLE_TRACE_SCOPE("%s: discover %s endpoints", this, peers.size());
-        ELLE_DEBUG("endpoints: %f", peers);
+        ELLE_TRACE_SCOPE("%s: discover %s nodes", this, peers.size());
         for (auto const& peer: peers)
-          // FIXME: store endpoints in separate set
-          if (!find(this->_peers, peer.id()))
+        {
+          ELLE_DEBUG("endpoints for %f: %s", peer, peer.endpoints());
+          if (find(this->_peers, peer.id()))
+          {
+            bool changed = false;
+            if (auto it = find(this->_stale_endpoints, peer.id()))
+            {
+              this->_stale_endpoints.modify(
+                it,
+                [&] (NodeLocation& l)
+                {
+                  changed = l.endpoints().merge(peer.endpoints());
+                });
+            }
+            else
+            {
+              changed = true;
+              this->_stale_endpoints.emplace(peer);
+            }
+            if (changed)
+            {
+              ELLE_TRACE("remember new stale endpoints for connected %f", peer)
+                ELLE_DEBUG("endpoints: %s", peer.endpoints());
+            }
+          }
+          else
             ELLE_TRACE("connect to new %f", peer)
               this->doughnut()->dock().connect(peer);
+        }
       }
 
       void
@@ -363,30 +395,44 @@ namespace infinit
       Kouncil::_peer_disconnected(std::shared_ptr<model::doughnut::Remote> peer)
       {
         ELLE_TRACE_SCOPE("%s: %s disconnected", this, peer);
+        auto loc = peer->connection()->location();
         auto it = this->_peers.find(peer->id());
         if (it == this->_peers.end() || *it != peer)
         {
           // FIXME: I don't think this should ever happen.
-          ELLE_WARN("disconnect on dropped peer %s", peer);
+          ELLE_WARN("disconnect on dropped peer %f", peer);
           return;
         }
         if (auto pi = find(this->_infos, peer->id()))
-        {
-          this->_infos.modify(
-            pi,
-            [] (PeerInfo& pi)
-            {
-              auto const now = std::chrono::high_resolution_clock::now();
-              pi.last_seen(now);
-              pi.last_contact_attempt(now);
-            });
-        }
+          this->_infos.erase(pi);
+        else
+          // FIXME: I don't think this should ever happen.
+          ELLE_WARN("no info for disconnected peer %f", peer);
         auto its = this->_address_book.equal_range(peer->id());
         this->_address_book.erase(its.first, its.second);
         auto id = peer->id();
         this->_peers.erase(it);
         this->on_disappear()(id, false);
-      }
+        peer.reset();
+        if (!this->_cleaning)
+          if (auto it = find(this->_stale_endpoints, id))
+          {
+            this->_stale_endpoints.modify(
+              it,
+              [&] (NodeLocation& l)
+              {
+                l.endpoints().merge(loc.endpoints());
+              });
+            ELLE_TRACE("retry connection with %s stale endpoints",
+                       it->endpoints().size())
+            {
+              ELLE_DEBUG("endpoints: %s", it->endpoints())
+              this->_discover({*it});
+            }
+          }
+          else
+            this->_stale_endpoints.emplace(loc);
+       }
 
       template<typename E>
       std::vector<int>

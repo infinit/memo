@@ -70,7 +70,7 @@ private:
       {
         reactor::network::UDPSocket::EndPoint ep;
         auto sz = server.receive_from(elle::WeakBuffer(buf), ep);
-        reactor::wait(_transmission);
+        reactor::wait(this->_transmission);
         if (ep.port() != _endpoint.port())
         {
           _client_endpoint = ep;
@@ -84,6 +84,86 @@ private:
         ELLE_LOG("ignoring exception %s", e);
       }
     }
+  }
+
+  ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, thread);
+};
+
+class TCPInstrument
+{
+public:
+  TCPInstrument(int port)
+    : server()
+    , socket("127.0.0.1", port)
+    , _endpoint(boost::asio::ip::address::from_string("127.0.0.1"), port)
+    , _thread(new reactor::Thread(elle::sprintf("%s server", this),
+                                  std::bind(&TCPInstrument::_serve, this)))
+  {
+    this->server.listen();
+    this->_transmission.open();
+  }
+
+  reactor::network::TCPServer server;
+  reactor::network::TCPSocket socket;
+  ELLE_ATTRIBUTE_RX(reactor::Barrier, transmission);
+
+  Endpoint
+  endpoint()
+  {
+    return Endpoint(boost::asio::ip::address::from_string("127.0.0.1"),
+                    this->server.local_endpoint().port());
+  }
+
+  void
+  close()
+  {
+    this->_thread->terminate_now();
+    this->socket.close();
+  }
+
+private:
+  ELLE_LOG_COMPONENT("infinit.overlay.test.TCPInstrument");
+
+  ELLE_ATTRIBUTE(Endpoint, endpoint);
+  ELLE_ATTRIBUTE(Endpoint, client_endpoint);
+
+  void
+  _forward(reactor::network::TCPSocket& in, reactor::network::TCPSocket& out)
+  {
+    char buf[10000];
+    while (true)
+    {
+      try
+      {
+        auto size = in.read_some(elle::WeakBuffer(buf));
+        reactor::wait(this->_transmission);
+        out.write(elle::WeakBuffer(buf, size));
+      }
+      catch (reactor::network::Exception const& e)
+      {
+        ELLE_LOG("ignoring exception %s", e);
+      }
+    }
+  }
+
+  void
+  _serve()
+  {
+    auto socket = this->server.accept();
+    elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+    {
+      scope.run_background(elle::sprintf("%s forward", this),
+                           std::bind(&TCPInstrument::_forward,
+                                     this,
+                                     std::ref(*socket),
+                                     std::ref(this->socket)));
+      scope.run_background(elle::sprintf("%s backward", this),
+                           std::bind(&TCPInstrument::_forward,
+                                     this,
+                                     std::ref(this->socket),
+                                     std::ref(*socket)));
+      reactor::wait(scope);
+    };
   }
 
   ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, thread);
@@ -118,6 +198,7 @@ discover(DHT& dht,
          bool wait_back = false)
 {
   Endpoints eps;
+  ELLE_ERR("%s", target.dht->local()->server_endpoints());
   if (onlyfirst)
     eps = Endpoints {target.dht->local()->server_endpoints()[0]};
   else
@@ -1015,8 +1096,78 @@ ELLE_TEST_SCHEDULED(
       discover(*dht_b, *dht_a, anonymous, false, true, true);
     else
       discover(*dht_a, *dht_b, anonymous, false, true, true);
-
   BOOST_CHECK_EQUAL(dht_a->dht->fetch(addr, {})->data(), "change_endpoints");
+}
+
+ELLE_TEST_SCHEDULED(
+  change_endpoints_stale,
+  (Doughnut::OverlayBuilder, builder),
+  (bool, back))
+{
+  auto storage = infinit::storage::Memory::Blocks();
+  auto keys = infinit::cryptography::rsa::keypair::generate(512);
+  auto make_dht_a = [&]
+    {
+      return std::make_unique<DHT>(
+        ::id = special_id(10),
+        ::keys = keys,
+        make_overlay = builder,
+        ::storage = std::make_unique<infinit::storage::Memory>(storage));
+    };
+  auto dht_a = make_dht_a();
+  elle::With<TCPInstrument>(
+    dht_a->dht->local()->server_endpoints()[0].port()) <<
+    [&] (TCPInstrument& instrument)
+    {
+      auto dht_b = DHT(
+        ::id = special_id(11),
+        ::keys = keys,
+        make_overlay = builder,
+        doughnut::connect_timeout = std::chrono::milliseconds(100),
+        doughnut::soft_fail_running = true);
+      auto loc = NodeLocation(dht_a->dht->id(), {instrument.endpoint()});
+      Address addr;
+      // Ensure one request can go through.
+      {
+        auto block = dht_a->dht->make_block<MutableBlock>(std::string("stale"));
+        addr = block->address();
+        ELLE_LOG("store block")
+          dht_a->dht->store(*block, STORE_INSERT, tcr());
+      }
+      ELLE_LOG("connect DHTs")
+        discover(dht_b, *dht_a, loc, true);
+      ELLE_LOG("lookup block")
+        BOOST_CHECK_EQUAL(dht_b.dht->fetch(addr)->data(), "stale");
+      ELLE_LOG("stale connection")
+      {
+        instrument.transmission().close();
+        dht_a.reset();
+      }
+      ELLE_LOG("check we can't lookup the block")
+        BOOST_CHECK_THROW(dht_b.dht->fetch(addr)->data(),
+                          athena::paxos::TooFewPeers);
+      ELLE_LOG("reset first DHT")
+        dht_a = make_dht_a();
+      ELLE_LOG("connect DHTs")
+        if (back)
+          discover(*dht_a, dht_b, false, true);
+        else
+          discover(dht_b, *dht_a, false);
+      ELLE_LOG("check we can't lookup the block")
+        BOOST_CHECK_THROW(dht_b.dht->fetch(addr)->data(),
+                          athena::paxos::TooFewPeers);
+      ELLE_LOG("close connection and lookup block")
+      {
+        instrument.close();
+        reactor::wait(
+          dht_b.dht->overlay()->on_discover(),
+          [&] (NodeLocation const& l, bool)
+          {
+            return l.id() == dht_a->dht->id();
+          });
+        BOOST_CHECK_EQUAL(dht_b.dht->fetch(addr)->data(), "stale");
+      }
+    };
 }
 
 ELLE_TEST_SCHEDULED(churn, (Doughnut::OverlayBuilder, builder),
@@ -1328,6 +1479,12 @@ ELLE_TEST_SUITE()
   TEST_ANON(Name, parallel_discover, parallel_discover, 20);            \
   TEST_ANON(Name, change_endpoints_back, change_endpoints, 20, true);   \
   TEST_ANON(Name, change_endpoints_forth, change_endpoints, 20, false); \
+  TEST_NAMED(                                                           \
+    Name, change_endpoints_stale_forth, change_endpoints_stale,         \
+    20, false);                                                         \
+  TEST_NAMED(                                                           \
+    Name, change_endpoints_stale_back, change_endpoints_stale,          \
+    20, true);                                                          \
   /* long, wild tests*/                                                 \
   TEST_ANON(Name, chain_connect_doom, chain_connect_doom, 30);          \
   TEST_NAMED(Name, storm_paxos, storm, 60, true, 5, 5, 100);            \

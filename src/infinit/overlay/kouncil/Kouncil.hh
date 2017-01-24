@@ -110,6 +110,10 @@ namespace infinit
         /// Destruct a Kouncil.
         virtual
         ~Kouncil();
+      protected:
+        void
+        _cleanup() override;
+        ELLE_ATTRIBUTE(bool, cleaning);
       private:
         /// Check invariants.
         void
@@ -182,6 +186,14 @@ namespace infinit
             bmi::hashed_unique<
               bmi::const_mem_fun<PeerInfo, Address const&, &PeerInfo::id>>>>;
         ELLE_ATTRIBUTE_R(PeerInfos, infos);
+        using StaleEndpoints = bmi::multi_index_container<
+          NodeLocation,
+          bmi::indexed_by<
+            bmi::hashed_unique<
+              bmi::const_mem_fun<NodeLocation,
+                                 Address const&,
+                                 &NodeLocation::id>>>>;
+        ELLE_ATTRIBUTE_R(StaleEndpoints, stale_endpoints);
       protected:
         virtual
         void
