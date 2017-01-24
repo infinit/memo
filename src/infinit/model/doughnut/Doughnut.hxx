@@ -1,6 +1,8 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_DOUGHNUT_HXX
 # define INFINIT_MODEL_DOUGHNUT_DOUGHNUT_HXX
 
+# include <elle/Defaulted.hh>
+
 # include <das/named.hh>
 
 namespace infinit
@@ -19,21 +21,24 @@ namespace infinit
           type, name, elle::serialization::binary::serialize(value));
       }
 
+      DAS_SYMBOL(admin_keys);
+      DAS_SYMBOL(connect_timeout);
+      DAS_SYMBOL(consensus_builder);
       DAS_SYMBOL(id);
-      DAS_SYMBOL(name);
       DAS_SYMBOL(keys);
+      DAS_SYMBOL(listen_address);
+      DAS_SYMBOL(monitoring_socket_path);
+      DAS_SYMBOL(name);
+      DAS_SYMBOL(overlay_builder);
       DAS_SYMBOL(owner);
       DAS_SYMBOL(passport);
-      DAS_SYMBOL(consensus_builder);
-      DAS_SYMBOL(overlay_builder);
       DAS_SYMBOL(port);
-      DAS_SYMBOL(listen_address);
+      DAS_SYMBOL(protocol);
+      DAS_SYMBOL(rdv_host);
+      DAS_SYMBOL(soft_fail_running);
+      DAS_SYMBOL(soft_fail_timeout);
       DAS_SYMBOL(storage);
       DAS_SYMBOL(version);
-      DAS_SYMBOL(admin_keys);
-      DAS_SYMBOL(rdv_host);
-      DAS_SYMBOL(monitoring_socket_path);
-      DAS_SYMBOL(protocol);
 
       struct Doughnut::Init
       {
@@ -52,6 +57,9 @@ namespace infinit
         boost::optional<std::string> rdv_host;
         boost::optional<boost::filesystem::path> monitoring_socket_path;
         Protocol protocol;
+        elle::Defaulted<std::chrono::milliseconds> connect_timeout;
+        elle::Defaulted<std::chrono::milliseconds> soft_fail_timeout;
+        elle::Defaulted<bool> soft_fail_running;
       };
 
       template <typename ... Args>
@@ -73,7 +81,12 @@ namespace infinit
             doughnut::rdv_host = boost::optional<std::string>(),
             doughnut::monitoring_socket_path =
               boost::optional<boost::filesystem::path>(),
-            doughnut::protocol = Protocol::all
+            doughnut::protocol = Protocol::all,
+            doughnut::connect_timeout =
+              elle::defaulted(std::chrono::milliseconds(5000)),
+            doughnut::soft_fail_timeout =
+              elle::defaulted(std::chrono::milliseconds(20000)),
+            doughnut::soft_fail_running = elle::defaulted(false)
             ).call(
               [] (Address id,
                   std::shared_ptr<cryptography::rsa::KeyPair> keys,
@@ -89,7 +102,10 @@ namespace infinit
                   AdminKeys const& admin_keys,
                   boost::optional<std::string> rdv_host,
                   boost::optional<boost::filesystem::path> monitoring_socket_path,
-                  Protocol p)
+                  Protocol p,
+                  elle::Defaulted<std::chrono::milliseconds> connect_timeout,
+                  elle::Defaulted<std::chrono::milliseconds> soft_fail_timeout,
+                  elle::Defaulted<bool> soft_fail_running)
               -> Init
               {
                 return Init{
@@ -108,6 +124,9 @@ namespace infinit
                   std::move(rdv_host),
                   std::move(monitoring_socket_path),
                   std::move(p),
+                  std::move(connect_timeout),
+                  std::move(soft_fail_timeout),
+                  std::move(soft_fail_running),
                 };
               },
               std::forward<Args>(args)...))

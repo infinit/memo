@@ -71,6 +71,9 @@ namespace infinit
       private:
         struct Init;
         Doughnut(Init init);
+        ELLE_ATTRIBUTE_R(std::chrono::milliseconds, connect_timeout);
+        ELLE_ATTRIBUTE_R(std::chrono::milliseconds, soft_fail_timeout);
+        ELLE_ATTRIBUTE_R(bool, soft_fail_running);
 
       /*-----.
       | Time |

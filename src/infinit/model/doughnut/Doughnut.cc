@@ -98,8 +98,57 @@ namespace infinit
           }
       }
 
+      static
+      std::chrono::milliseconds
+      _connect_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
+      {
+        static auto const env =
+          elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "");
+        if (arg || env.empty())
+          return arg.get();
+        else
+          return elle::chrono::duration_parse<std::milli>(env);
+      }
+
+      static
+      std::chrono::milliseconds
+      _soft_fail_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
+      {
+        static auto const env =
+          elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT", "");
+        if (arg || env.empty())
+          return arg.get();
+        else
+          return elle::chrono::duration_parse<std::milli>(env);
+      }
+
+      static
+      bool
+      _soft_fail_running_val(elle::Defaulted<bool> arg)
+      {
+        static auto const inenv =
+          elle::os::inenv("INFINIT_SOFTFAIL_RUNNING");
+        if (inenv)
+        {
+          static auto const env =
+            elle::os::getenv("INFINIT_SOFTFAIL_RUNNING");
+          if (arg || env.empty())
+            return arg.get();
+          else
+            return true; // FIXME: parse that value
+        }
+        else
+          return arg.get();
+      }
+
       Doughnut::Doughnut(Init init)
         : Model(std::move(init.version))
+        , _connect_timeout(
+          _connect_timeout_val(std::move(init.connect_timeout)))
+        , _soft_fail_timeout(
+          _soft_fail_timeout_val(std::move(init.soft_fail_timeout)))
+        , _soft_fail_running(
+          _soft_fail_running_val(std::move(init.soft_fail_running)))
         , _id(std::move(init.id))
         , _keys(std::move(init.keys))
         , _owner(std::move(init.owner))

@@ -44,15 +44,11 @@ namespace infinit
                            std::function<R()> op)
       {
         ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote");
-        static auto const rpc_timeout =
-          elle::chrono::duration_parse<std::milli>(
-            elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "5"));
-        static auto const soft_fail =
-          elle::chrono::duration_parse<std::milli>(
-            elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT", "20"));
+        auto const rpc_timeout = this->doughnut().connect_timeout();
+        auto const soft_fail = this->doughnut().soft_fail_timeout();
         auto const rpc_start = std::chrono::system_clock::now();
-        auto disconnected_for = std::chrono::system_clock::now() -
-          this->_connection->disconnected_since();
+        auto const disconnected_for =
+          rpc_start - this->_connection->disconnected_since();
         // No matter what, if we are disconnected, retry.
         if (this->_connection->disconnected())
         {
@@ -85,8 +81,31 @@ namespace infinit
                   std::min(rpc_timeout_delay, soft_fail_delay)).count());
             if (reactor::wait(this->_connected, delay))
             {
-              ELLE_TRACE("%s: run \"%s\"", this, name);
-              return op();
+              auto const rpc_timeout_delay =
+                rpc_timeout - (std::chrono::system_clock::now() - rpc_start);
+              reactor::Duration const delay =
+                boost::posix_time::millisec(
+                  std::chrono::duration_cast<std::chrono::milliseconds>(
+                    rpc_timeout_delay).count());
+              boost::asio::deadline_timer timeout(
+                reactor::scheduler().io_service(), delay);
+              if (this->doughnut().soft_fail_running())
+                timeout.async_wait(
+                  [&, this, t = reactor::scheduler().current()]
+                  (boost::system::error_code const& e)
+                  {
+                    if (!e)
+                    {
+                      ELLE_TRACE("%s: soft timeout on \"%s\" after %s",
+                                 this, name, delay);
+                      this->_disconnected_exception =
+                        std::make_exception_ptr(reactor::network::TimeOut());
+                      t->raise_and_wake<reactor::network::TimeOut>();
+                      give_up = true;
+                    }
+                  });
+              ELLE_TRACE("%s: run \"%s\"", this, name)
+                return op();
             }
             else
             {

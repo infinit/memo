@@ -251,6 +251,7 @@ public:
   template <typename ... Args>
   DHT(Args&& ... args)
   {
+    // FIXME: use named::extend to not repeat dht::Doughnut arguments
     das::named::prototype(
       paxos = true,
       keys = infinit::cryptography::rsa::keypair::generate(512),
@@ -271,7 +272,12 @@ public:
       user_name = "",
       yielding_overlay = false,
       protocol = dht::Protocol::all,
-      port = boost::none
+      port = boost::none,
+      dht::connect_timeout =
+        elle::defaulted(std::chrono::milliseconds(5000)),
+      dht::soft_fail_timeout =
+        elle::defaulted(std::chrono::milliseconds(20000)),
+      dht::soft_fail_running = elle::defaulted(false)
       ).call([this] (bool paxos,
                      infinit::cryptography::rsa::KeyPair keys,
                      boost::optional<infinit::cryptography::rsa::KeyPair> owner,
@@ -286,7 +292,10 @@ public:
                      std::string const& user_name,
                      bool yielding_overlay,
                      dht::Protocol p,
-                     boost::optional<int> port)
+                     boost::optional<int> port,
+                     elle::Defaulted<std::chrono::milliseconds> connect_timeout,
+                     elle::Defaulted<std::chrono::milliseconds> soft_fail_timeout,
+                     elle::Defaulted<bool> soft_fail_running)
              {
                this-> init(paxos,
                            keys,
@@ -302,7 +311,11 @@ public:
                            user_name,
                            yielding_overlay,
                            p,
-                           port);
+                           port,
+                           connect_timeout,
+                           soft_fail_timeout,
+                           soft_fail_running
+                 );
               }, std::forward<Args>(args)...);
   }
 
@@ -332,7 +345,11 @@ private:
        std::string const& user_name,
        bool yielding_overlay,
        dht::Protocol p,
-       boost::optional<int> port)
+       boost::optional<int> port,
+       elle::Defaulted<std::chrono::milliseconds> connect_timeout,
+       elle::Defaulted<std::chrono::milliseconds> soft_fail_timeout,
+       elle::Defaulted<bool> soft_fail_running
+    )
   {
     auto keys =
       std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_));
@@ -376,7 +393,11 @@ private:
         dht::port = port,
         dht::storage = std::move(storage),
         dht::version = version,
-        dht::protocol = p));
+        dht::protocol = p,
+        dht::connect_timeout = connect_timeout,
+        dht::soft_fail_timeout = soft_fail_timeout,
+        dht::soft_fail_running = soft_fail_running
+        ));
     else
       this->dht = std::make_shared<dht::Doughnut>(
         dht::id = id,
@@ -389,7 +410,11 @@ private:
         dht::storage = std::move(storage),
         dht::name = user_name,
         dht::version = version,
-        dht::protocol = p);
+        dht::protocol = p,
+        dht::connect_timeout = connect_timeout,
+        dht::soft_fail_timeout = soft_fail_timeout,
+        dht::soft_fail_running = soft_fail_running
+        );
   }
 };
 
