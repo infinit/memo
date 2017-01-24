@@ -16,6 +16,7 @@ Modes:
   pull       Remove a network from https://beyond.infinit.sh
   push       Push a network to https://beyond.infinit.sh
   run        Run a network
+  stats      Fetch stats of a network on https://beyond.infinit.sh
   update     Update a network
 
 Options:

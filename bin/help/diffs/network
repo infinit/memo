@@ -16,11 +16,11 @@ Modes:										  create     Create a network
   --pull		       Remove a network from the Hub			  pull	     Remove a network from https://beyond.infinit.sh
   --run			       Run a network					  push	     Push a network to https://beyond.infinit.sh
   --list-services	       List network registered services			  run	     Run a network
-  --list-storage	       List all storage contributed by this device to a	  update     Update a network
-			       network
-  --stats		       Fetch stats of a network on the Hub		Options:
-  --inspect		       Get information about a running network		  -h, --help		 show this help message
-
+  --list-storage	       List all storage contributed by this device to a	  stats	     Fetch stats of a network on https://beyond.infinit.sh
+			       network						  update     Update a network
+  --stats		       Fetch stats of a network on the Hub
+  --inspect		       Get information about a running network		Options:
+										  -h, --help		 show this help message
 Miscellaneous:
   -h [ --help ]		       Display the help
   -s [ --script ]	       Silence all extraneous human friendly messages

@@ -34,6 +34,7 @@ namespace infinit
                                     cli::pull,
                                     cli::push,
                                     cli::run,
+                                    cli::stats,
                                     cli::update));
 
       using Strings = std::vector<std::string>;
