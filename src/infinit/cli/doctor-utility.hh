@@ -2283,7 +2283,7 @@ namespace
       results.user = {
         username,
         false,
-        elle::sprintf("user \"%s\" is not an Infinit user", username)
+        elle::sprintf("user \"%s\" is not a local Infinit user", username)
       };
     }
     using namespace infinit::storage;
