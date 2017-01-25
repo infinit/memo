@@ -188,11 +188,6 @@ namespace
       , _warning(warning)
     {}
 
-    Result(elle::serialization::SerializerIn& s)
-    {
-      this->serialize(s);
-    }
-
     virtual
     ~Result() = default;
 
@@ -338,11 +333,6 @@ namespace
         , type(type)
       {}
 
-      StorageResoucesResult(elle::serialization::SerializerIn& s)
-      {
-        this->serialize(s);
-      }
-
       /*---------.
       | Printing |
       `---------*/
@@ -392,11 +382,6 @@ namespace
         , linked(linked)
         , storage_resources(storage_resources)
       {}
-
-      NetworkResult(elle::serialization::SerializerIn& s)
-      {
-        this->serialize(s);
-      }
 
       /*---------.
       | Printing |
@@ -476,11 +461,6 @@ namespace
         , faulty_network(faulty_network)
       {}
 
-      VolumeResult(elle::serialization::SerializerIn& s)
-      {
-        this->serialize(s);
-      }
-
       /*---------.
       | Printing |
       `---------*/
@@ -539,11 +519,6 @@ namespace
         , faulty_volume(faulty_volume)
       {}
 
-      DriveResult(elle::serialization::SerializerIn& s)
-      {
-        this->serialize(s);
-      }
-
       /*---------.
       | Printing |
       `---------*/
@@ -586,7 +561,6 @@ namespace
       LeftoversResult() = default;
       LeftoversResult(std::string const& name,
                       Result::Reason r = Result::Reason{"should not be there"});
-      LeftoversResult(elle::serialization::SerializerIn& s);
 
       /*--------------.
       | Serialization |
@@ -599,7 +573,6 @@ namespace
     | Construction |
     `-------------*/
     ConfigurationIntegrityResults(bool only = true);
-    ConfigurationIntegrityResults(elle::serialization::SerializerIn& s);
 
     /*----------.
     | Interface |
@@ -689,7 +662,6 @@ namespace
                 size_t available,
                 size_t capacity,
                 Result::Reason const& reason = {});
-      SpaceLeft(elle::serialization::SerializerIn& s);
 
       /*---------.
       | Printing |
@@ -720,7 +692,6 @@ namespace
       `-------------*/
       EnvironResult() = default;
       EnvironResult(Environ const& environ);
-      EnvironResult(elle::serialization::SerializerIn& s);
 
       /*---------.
       | Printing |
@@ -751,7 +722,6 @@ namespace
       PermissionResult() = default;
       PermissionResult(std::string const& name,
                        bool exists, bool read, bool write);
-      PermissionResult(elle::serialization::SerializerIn& s);
 
       /*---------.
       | Printing |
@@ -782,7 +752,6 @@ namespace
       `-------------*/
       FuseResult() = default;
       FuseResult(bool sane);
-      FuseResult(elle::serialization::SerializerIn& s);
 
       /*---------.
       | Printing |
@@ -801,7 +770,6 @@ namespace
     | Construction |
     `-------------*/
     SystemSanityResults(bool only = true);
-    SystemSanityResults(elle::serialization::SerializerIn& s);
 
     /*----------.
     | Interface |
@@ -868,7 +836,6 @@ namespace
 
       InterfaceResults() = default;
       InterfaceResults(IPs const& ips);
-      InterfaceResults(elle::serialization::SerializerIn& s);
 
       /*---------.
       | Printing |
@@ -936,7 +903,6 @@ namespace
       NATResult() = default;
       NATResult(bool cone);
       NATResult(std::string const& error);
-      NATResult(elle::serialization::SerializerIn& s);
 
       /*---------.
       | Printing |
@@ -998,7 +964,6 @@ namespace
         RedirectionResult(std::string const& name = "",
                           bool sane = false,
                           Result::Reason const& reason = {});
-        RedirectionResult(elle::serialization::SerializerIn& s);
 
         /*---------.
         | Printing |
@@ -1023,7 +988,6 @@ namespace
       | Construction |
       `-------------*/
       UPnPResult(bool available = false);
-      UPnPResult(elle::serialization::SerializerIn& s);
 
       /*----------.
       | Interface |
@@ -1060,7 +1024,6 @@ namespace
     | Construction |
     `-------------*/
     ConnectivityResults(bool only = true);
-    ConnectivityResults(elle::serialization::SerializerIn& s);
 
     /*---------.
     | Printing |
@@ -1099,7 +1062,6 @@ namespace
     | Construction |
     `-------------*/
     All();
-    All(elle::serialization::SerializerIn& s);
 
     /*----------.
     | Interface |
@@ -1134,12 +1096,6 @@ namespace
     Result::Reason r)
     : Result(name, true, r, true)
   {}
-
-  ConfigurationIntegrityResults::LeftoversResult::LeftoversResult(
-    elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
 
   void
   ConfigurationIntegrityResults::LeftoversResult::serialize(
@@ -1334,12 +1290,6 @@ namespace
     , read(read)
     , write(write)
   {}
-
-  SystemSanityResults::PermissionResult::PermissionResult(
-    elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
 
   void
   SystemSanityResults::PermissionResult::print(
@@ -1588,12 +1538,6 @@ namespace
     Result::Reason const& reason)
     : Result(name, true, reason, !sane)
   {}
-
-  ConnectivityResults::UPnPResult::RedirectionResult::RedirectionResult(
-    elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
 
   void
   ConnectivityResults::UPnPResult::RedirectionResult::serialize(
