@@ -181,34 +181,70 @@ namespace
     Result(std::string const& name,
            bool sane,
            Reason const& reason = {},
-           bool warning = false);
+           bool warning = false)
+      : _name(name)
+      , _sane(sane)
+      , reason(reason)
+      , _warning(warning)
+    {}
 
-    Result(elle::serialization::SerializerIn& s);
+    Result(elle::serialization::SerializerIn& s)
+    {
+      this->serialize(s);
+    }
+
     virtual
-    ~Result();
+    ~Result() = default;
 
     /*--------------.
     | Serialization |
     `--------------*/
     void
-    serialize(elle::serialization::Serializer& s);
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("name", this->_name);
+      s.serialize("sane", this->_sane);
+      s.serialize("reason", this->reason);
+      s.serialize("warning", this->_warning);
+    }
 
     /*---------.
     | Printing |
     `---------*/
     virtual
     void
-    _print(std::ostream& out, bool no_color, bool verbose) const;
+    _print(std::ostream& out, bool no_color, bool verbose) const
+    {
+      if (this->show(verbose) && this->sane())
+        out << " OK";
+    }
+
     std::ostream&
-    print(std::ostream& out, bool no_color, bool verbose, bool rc = true) const;
+    print(std::ostream& out, bool no_color, bool verbose, bool rc = true) const
+    {
+      status(out, no_color,
+             this->sane(), this->warning()) << " " << this->name();
+      if (this->show(verbose))
+        out << ":";
+      this->_print(out, no_color, verbose);
+      if (this->show(verbose) && this->reason)
+        print_reason(out << std::endl, no_color, *this->reason, 2);
+      return out << std::endl;
+    }
 
   public:
     bool
-    show(bool verbose) const;
+    show(bool verbose) const
+    {
+      return (!this->sane() || verbose || this->warning()) && this->_show(verbose);
+    }
   protected:
     virtual
     bool
-    _show(bool verbose) const;
+    _show(bool verbose) const
+    {
+      return true;
+    }
 
     /*-----------.
     | Attributes |
@@ -244,7 +280,15 @@ namespace
       | Printing |
       `---------*/
       std::ostream&
-      print(std::ostream& out, bool no_color, bool verbose) const;
+      print(std::ostream& out, bool no_color, bool verbose) const
+      {
+        if (!this->sane())
+          out << " is faulty because";
+        this->_print(out, no_color, verbose);
+        if (!this->sane() && this->reason)
+          out << " " << *this->reason;
+        return out;
+      }
     };
 
     struct UserResult
@@ -256,13 +300,21 @@ namespace
       UserResult() = default;
       UserResult(std::string const& name,
                  bool sane,
-                 Reason const& reason = Reason{});
+                 Reason const& reason = Reason{})
+        : Result("User", sane, reason)
+        , _user_name(name)
+      {}
 
       /*---------.
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool no_color, bool verbose) const override;
+      _print(std::ostream& out, bool no_color, bool verbose) const override
+      {
+        if (this->show(verbose) && this->sane())
+          elle::fprintf(out,
+                        " \"%s\" exists and has a private key", this->user_name());
+      }
 
       /*-----------.
       | Attributes |
@@ -278,24 +330,38 @@ namespace
       | Construction |
       `-------------*/
       StorageResoucesResult() = default;
-      StorageResoucesResult(
-        std::string const& name,
-        bool sane,
-        std::string const& type,
-        BasicResult::Reason const& reason = {});
-      StorageResoucesResult(elle::serialization::SerializerIn& s);
+      StorageResoucesResult(std::string const& name,
+                            bool sane,
+                            std::string const& type,
+                            BasicResult::Reason const& reason = {})
+        : Result(name, sane, reason)
+        , type(type)
+      {}
+
+      StorageResoucesResult(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
 
       /*---------.
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool no_color, bool) const override;
+      _print(std::ostream& out, bool no_color, bool) const override
+      {
+        unreachable();
+      }
 
       /*--------------.
       | Serialization |
       `--------------*/
       void
-      serialize(elle::serialization::Serializer& s);
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("type", this->type);
+      }
+
 
       /*-----------.
       | Attributes |
@@ -323,26 +389,65 @@ namespace
         bool sane,
         FaultyStorageResources storage_resources = {},
         Result::Reason extra_reason = {},
-        bool linked = true);
-      NetworkResult(elle::serialization::SerializerIn& s);
+        bool linked = true)
+        : Super(name, sane, extra_reason, !linked)
+        , linked(linked)
+        , storage_resources(storage_resources)
+      {}
+
+      NetworkResult(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
 
       /*---------.
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool no_color, bool verbose) const override;
+      _print(std::ostream& out, bool no_color, bool verbose) const override
+      {
+        if (!this->linked)
+          elle::fprintf(out, "is not linked [for user \"%s\"]", username);
+        if (this->storage_resources)
+          if (auto s = this->storage_resources->size())
+          {
+            out << " " << elle::join(
+              *storage_resources,
+              "], [",
+              [] (auto const& t)
+              {
+                std::stringstream out;
+                out << "\"" << t.name() << "\"";
+                if (t.reason)
+                  out << " (" << *t.reason << ")";
+                return out.str();
+              });
+            if (s == 1)
+              out << " storage resource is faulty";
+            else
+              out << " storage resources are faulty";
+          }
+      }
 
       /*--------------.
       | Serialization |
       `--------------*/
       void
-      serialize(elle::serialization::Serializer& s);
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+        s.serialize("linked", this->linked);
+        s.serialize("storage_resources", this->storage_resources);
+      }
 
       /*----------.
       | Interface |
       `----------*/
       bool
-      warning() const override;
+      warning() const override
+      {
+        return Super::warning() || (!this->linked && !ignore_non_linked);
+      }
 
       /*-----------.
       | Attributes |
@@ -366,8 +471,15 @@ namespace
       VolumeResult(std::string const& name,
                    bool sane,
                    FaultyNetwork faulty_network = {},
-                   Result::Reason extra_reason = {});
-      VolumeResult(elle::serialization::SerializerIn& s);
+                   Result::Reason extra_reason = {})
+        : Result(name, sane, extra_reason, faulty_network && faulty_network->warning())
+        , faulty_network(faulty_network)
+      {}
+
+      VolumeResult(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
 
       /*---------.
       | Printing |
@@ -974,197 +1086,6 @@ namespace
     SystemSanityResults system_sanity;
     ConnectivityResults connectivity;
   };
-
-  Result::Result(std::string const& name,
-                 bool sane,
-                 Reason const& reason,
-                 bool warning)
-    : _name(name)
-    , _sane(sane)
-    , reason(reason)
-    , _warning(warning)
-  {}
-
-  Result::Result(elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
-
-  Result::~Result()
-  {}
-
-  void
-  Result::_print(std::ostream& out, bool no_color, bool verbose) const
-  {
-    if (this->show(verbose) && this->sane())
-      out << " OK";
-  }
-
-  bool
-  Result::show(bool verbose) const
-  {
-    return (!this->sane() || verbose || this->warning()) && this->_show(verbose);
-  }
-
-  bool
-  Result::_show(bool verbose) const
-  {
-    return true;
-  }
-
-  std::ostream&
-  Result::print(std::ostream& out, bool no_color,
-                bool verbose, bool rc) const
-  {
-    status(out, no_color,
-           this->sane(), this->warning()) << " " << this->name();
-    if (this->show(verbose))
-      out << ":";
-    this->_print(out, no_color, verbose);
-    if (this->show(verbose) && this->reason)
-      print_reason(out << std::endl, no_color, *this->reason, 2);
-    return out << std::endl;
-  }
-
-  void
-  Result::serialize(elle::serialization::Serializer& s)
-  {
-    s.serialize("name", this->_name);
-    s.serialize("sane", this->_sane);
-    s.serialize("reason", this->reason);
-    s.serialize("warning", this->_warning);
-  }
-
-  std::ostream&
-  ConfigurationIntegrityResults::Result::print(
-    std::ostream& out, bool no_color, bool verbose) const
-  {
-    if (!this->sane())
-      out << " is faulty because";
-    this->_print(out, no_color, verbose);
-    if (!this->sane() && this->reason)
-      out << " " << *this->reason;
-    return out;
-  }
-
-  ConfigurationIntegrityResults::UserResult::UserResult(std::string const& name,
-                                                        bool sane,
-                                                        Reason const& reason)
-    : Result("User", sane, reason)
-    , _user_name(name)
-  {}
-
-  void
-  ConfigurationIntegrityResults::UserResult::_print(std::ostream& out,
-                                                    bool no_color,
-                                                    bool verbose) const
-  {
-    if (this->show(verbose) && this->sane())
-      elle::fprintf(out,
-                    " \"%s\" exists and has a private key", this->user_name());
-  }
-
-  ConfigurationIntegrityResults::StorageResoucesResult::StorageResoucesResult(
-    std::string const& name,
-    bool sane,
-    std::string const& type,
-    Result::Reason const& reason)
-    : Result(name, sane, reason)
-    , type(type)
-  {}
-
-  ConfigurationIntegrityResults::StorageResoucesResult::StorageResoucesResult(
-    elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
-
-  void
-  ConfigurationIntegrityResults::StorageResoucesResult::_print(
-    std::ostream& out, bool no_color, bool) const
-  {}
-
-  void
-  ConfigurationIntegrityResults::StorageResoucesResult::serialize(
-    elle::serialization::Serializer& s)
-  {
-    Result::serialize(s);
-    s.serialize("type", this->type);
-  }
-
-  ConfigurationIntegrityResults::NetworkResult::NetworkResult(
-    std::string const& name,
-    bool sane,
-    FaultyStorageResources storage_resources,
-    Result::Reason extra_reason,
-    bool linked)
-    : Result(name, sane, extra_reason, !linked)
-    , linked(linked)
-    , storage_resources(storage_resources)
-  {}
-
-  ConfigurationIntegrityResults::NetworkResult::NetworkResult(
-    elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
-
-  void
-  ConfigurationIntegrityResults::NetworkResult::serialize(
-    elle::serialization::Serializer& s)
-  {
-    Result::serialize(s);
-    s.serialize("linked", this->linked);
-    s.serialize("storage_resources", this->storage_resources);
-  }
-
-  bool
-  ConfigurationIntegrityResults::NetworkResult::warning() const
-  {
-    return Super::warning() || (!this->linked && !ignore_non_linked);
-  }
-
-  void
-  ConfigurationIntegrityResults::NetworkResult::_print(
-    std::ostream& out, bool no_color, bool verbose) const
-  {
-    if (!this->linked)
-      elle::fprintf(out, "is not linked [for user \"%s\"]", username);
-    if (this->storage_resources)
-      if (auto s = this->storage_resources->size())
-      {
-        out << " " << elle::join(
-          *storage_resources,
-          "], [",
-          [] (auto const& t)
-          {
-            std::stringstream out;
-            out << "\"" << t.name() << "\"";
-            if (t.reason)
-              out << " (" << *t.reason << ")";
-            return out.str();
-          });
-        if (s == 1)
-          out << " storage resource is faulty";
-        else
-          out << " storage resources are faulty";
-      }
-  }
-
-  ConfigurationIntegrityResults::VolumeResult::VolumeResult(
-    std::string const& name,
-    bool sane,
-    FaultyNetwork faulty_network,
-    Result::Reason extra_reason)
-    : Result(name, sane, extra_reason, faulty_network && faulty_network->warning())
-    , faulty_network(faulty_network)
-  {}
-
-  ConfigurationIntegrityResults::VolumeResult::VolumeResult(
-    elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
 
   void
   ConfigurationIntegrityResults::VolumeResult::serialize(
