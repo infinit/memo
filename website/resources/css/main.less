@@ -2296,7 +2296,7 @@ body.pricing {
 | Contact     |
 `------------*/
 
-body.contact, body.solutions {
+body.contact {
   section form { margin-top: 40px; }
 
   section.doc { padding-left: 20%; width: 60%; padding-right: 20%; }
@@ -2332,19 +2332,18 @@ body.opensource {
     
     // 3 columns layout
     .project { 
-      position: relative;
-      max-width: 31%; margin: 0 1% 1% 1%;   min-height: 315px;
+      position: relative; max-width: 31%; margin: 0 1% 1% 1%; min-height: 329px;
       .tagline { font-size: 15px; line-height: 21px; }
       .description { min-height: 102px; }
       .stage {
-        .next_status { width: 78px; margin-left: 10px; } 
-        progress { width: ~"calc(100% - 88px)"; }
+        .stage { width: 78px; margin-left: 10px; } 
+        progress { width: ~"calc(90% - 88px)"; }
       }
 
       &.contribute {
         .stage {
-          .next_status { width: 100px; }
-          progress { width: ~"calc(100% - 110px)"; }
+          .stage { width: 100px; }
+          progress { width: ~"calc(90% - 120px)"; }
         }
       }
     }
@@ -2355,8 +2354,13 @@ body.opensource {
     }
 
     .project {
-      float: left; text-align: left; border-radius: 3px;
+      float: left; text-align: left; border-radius: 3px; .transition();
       border: 1px solid #E2E2E2; box-shadow: 0 4px 7px 0 rgba(0,0,0,0.05);
+
+      &:hover {
+        box-shadow: 0 4px 7px 0 rgba(0,0,0,0.10); .transition();
+        .actions p { color: @infinitblack; .transition(); }
+      }
 
       .title, .tagline, .description, .stage, .stats, .date { 
         padding-left: 25px; padding-right: 25px;
@@ -2400,53 +2404,93 @@ body.opensource {
 
       .tagline { clear: both; }
       .description, .date { font-size: 15px; color: #797E8B; line-height: 21px;}
-
-      .stats { 
-        border-top: 1px solid #e2e2e2;
-        max-width: 86%; width: 100%; margin-top: 42px; min-height: 14px;
-        
-        > div { 
-          float: left; margin-right: 20px; padding-top: 12px;
-          font-family: @sf; text-transform: uppercase; font-size: 11px;
-
-          svg { margin-right: 5px; vertical-align: -4px; fill: @infinitblack; }
-          &.stars svg { margin-right: 2px; }
-        }
-      }
+      .date { font-size: 13px; color: #b1b1b1; }
 
       .stage {
-        background: white; padding: 17px 5% 1px 5%; 
-        border-top: 1px solid #DEDEDE; margin-top: 28px;
-        width: 90%;
+        background: white; padding: 0 0 1px 0;  position: absolute; bottom: 0;
+        border-top: 1px solid #DEDEDE; margin-top: 28px; width: 100%;
 
-        .next_status, progress { float: right; }
-        .next_status { 
-          strong {  font-family: @sf; font-size: 11px; text-transform: uppercase; }
-          a { 
-            color: white; font-size: 10px;  margin-left: 3px;
-            display: inline-block; padding: 1px 5px; border-radius: 50px;
+        .stats { 
+          border-bottom: 1px solid #e2e2e2; padding-top: 17px;
+          max-width: 86%; width: 100%; min-height: 29px;
+          
+          > div { 
+            float: left; margin-right: 20px;  padding-bottom: 12px;
+            font-family: @sf; text-transform: uppercase; font-size: 11px;
+
+            svg { margin-right: 5px; vertical-align: -4px; fill: @infinitblack; }
+            &.stars svg { margin-right: 2px; }
           }
         }
 
-        progress[value] {
-          -webkit-appearance: none; appearance: none; 
-          -moz-appearance: none; border: none; margin-top: 7px; 
+        .progress {
+           padding-top: 15px; padding-bottom: 10px;
+
+          .status { 
+            float: left; margin-right: 15px; clear: both; margin-left: 5%;
+            strong { font-family: @sf; font-size: 11px; text-transform: uppercase; }
+          }
+
+          a { 
+            color: white; font-size: 10px;  margin-left: 3px; vertical-align: super;
+            display: inline-block; padding: 1px 5px; border-radius: 50px; margin-left: 10px;
+          }
+
+          progress[value] {
+            -webkit-appearance: none; appearance: none; 
+            -moz-appearance: none; border: none; margin-top: 7px; 
+          }
+          progress[value]::-webkit-progress-bar {
+            background: #E9E9E9; border-radius: 3px; height: 6px;
+          }
+          progress[value]::-webkit-progress-value {
+            border-radius: 3px;
+          }
         }
-        progress[value]::-webkit-progress-bar {
-          background: #E9E9E9; border-radius: 3px; height: 6px;
+
+        hr {
+          background: #DEDEDE; height: 1px; width: 100%; clear: both; border: none; margin: 0;
         }
-        progress[value]::-webkit-progress-value {
-          border-radius: 3px;
+
+        .actions {
+          border-bottom: 1px solid #DEDEDE; 
+
+          p { 
+            line-height: 22px; padding-left: 5%; padding-right: 5%; max-height: 19px; 
+            color: #b1b1b1; overflow-y: hidden; .transition();
+          }
         }
 
         ul { clear: both; list-style-type: circle; margin-left: 17px; margin-top: 24px; }
         ul li { margin-bottom: 5px; font-size: 13px; }
       }
+
+      &.closed {
+        background: url('../images/bg-project-opensource.png') repeat;
+
+        .stage .stage strong, .stage ul li { color: @infinitblack; }
+
+        .stage a, 
+        .title .soon,
+        .stage progress[value]::-webkit-progress-value { 
+          background: @infinitblack;
+        }
+      }
+
+      &.access {   
+        .stage .status strong, .stage ul li { color: #F8BC24; }
+
+        .stage a, 
+        .title .soon,
+        .stage progress[value]::-webkit-progress-value { 
+          .openSourceAccessGradient();
+        }
+      }
       
       &.develop {
-        .stage .next_status strong, .stage ul li { color: #4BA9FF; }
+        .stage .status strong, .stage ul li { color: #4BA9FF; }
 
-        .stage .next_status a, 
+        .stage a, 
         .title .soon,
         .stage progress[value]::-webkit-progress-value { 
           .openSourceDevelopGradient();
@@ -2454,24 +2498,12 @@ body.opensource {
       }
 
       &.contribute {        
-        .stage .next_status strong, .stage ul li { color: #01BDAE; }
+        .stage .status strong, .stage ul li { color: #01BDAE; }
 
-        .stage .next_status a, 
+        .stage a, 
         .title .soon,
         .stage progress[value]::-webkit-progress-value { 
           .openSourceContributeGradient();
-        }
-      }
-
-      &.access {   
-        background: url('../images/bg-project-opensource.png') repeat;
-
-        .stage .next_status strong, .stage ul li { color: #F8BC24; }
-
-        .stage .next_status a, 
-        .title .soon,
-        .stage progress[value]::-webkit-progress-value { 
-          .openSourceAccessGradient();
         }
       }
     }
@@ -2489,11 +2521,16 @@ body.opensource {
     .progress {
       width: 90%; margin: 60px auto; 
       
-      .access, .develop, .contribute { 
-        float: left; width: 33%; text-align: right;
+      .closed, .access, .develop, .contribute { 
+        float: left; width: 25%; text-align: left;
         span { height: 12px; display: block; width: 104%; border-radius: 40px; }
-        strong, p { float: right }
+        strong, p { float: left; padding-left: 20px;}
         p { clear: both; }
+      }
+
+      .closed {
+        strong { color: @infinitblack; }
+        span { background: @infinitblack; }
       }
 
       .develop {

@@ -6,8 +6,7 @@
       "pinned": true,
       "title": "Software-defined decentralized storage platform.",
       "description": "Infinit is a next generation scalable and resilient storage platform that has been designed for modern environments like containers.",
-      "next_stage": "access",
-      "progress": 0,
+      "stage": "closed",
       "state": []
     },
 
@@ -17,8 +16,7 @@
       "pinned": true,
       "title": "The coroutine-based C++ development framework.",
       "description": "Elle is a collection of libraries, written in modern C++ (C++14), that contains a rich set of highly reusable concepts, algorithms, API wrappers and more.",
-      "next_stage": "access",
-      "progress": 0.9,
+      "stage": "closed",
       "state": ["Improve documentation (README files)", "Add more samples"]
     },
 
@@ -28,9 +26,8 @@
       "pinned": false,
       "title": "Modern and highly-customizable build system written in Python3.",
       "description": "",
-      "next_stage": "develop",
-      "progress": 0.9,
-      "state": ["Improve code documentation (docstrings)", "Improve general documentation (README files, wiki pages, ect.)", "Add more examples (including a Go module)"]
+      "stage": "access",
+      "state": ["Improving documentation", "Adding a Go example"]
     },
 
     {
@@ -39,8 +36,7 @@
       "pinned": false,
       "title": "A deterministic implementation of some OpenSSL functionalities.",
       "description": "",
-      "next_stage": "contribute",
-      "progress": 1,
+      "stage": "contribute",
       "state": []
     },
 
@@ -50,8 +46,7 @@
       "pinned": false,
       "title": "Decentralized policy-based key-value store.",
       "description": "Policy-based key-value store that has the particularity of being decentralized, doing away with the master/slave model that can incur bottlenecks and single points of failure.",
-      "next_stage": "access",
-      "progress": 0,
+      "stage": "closed",
       "state": []
     }
   ]
