@@ -413,12 +413,13 @@ namespace infinit
     }
 
     void
-    DirectoryData::write(model::Model& model,
+    DirectoryData::write(FileSystem& fs,
                          Operation op,
                          std::unique_ptr<model::blocks::ACLBlock>&block,
                          bool set_mtime,
                          bool first_write)
     {
+      model::Model& model = *fs.block_store();
       ELLE_DEBUG("%s: write at %s", this, _address);
       ELLE_DUMP("%s", print_files(_files));
       if (set_mtime)
@@ -476,6 +477,8 @@ namespace infinit
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
         ELLE_TRACE("permission exception: %s", e.what());
+        // Evict entry from cache since we put invalid changes there
+        fs._directory_cache.erase(_address);
         throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
       }
       catch (rfs::Error const& e)
@@ -539,7 +542,7 @@ namespace infinit
     void
     Directory::_commit(Operation op, bool set_mtime)
     {
-      _data->write(*_owner.block_store(), op, _block, set_mtime);
+      _data->write(_owner, op, _block, set_mtime);
     }
 
     std::shared_ptr<rfs::Path>
@@ -818,7 +821,7 @@ namespace infinit
         || !(_parent->_header.mode & 0200))
         THROW_ACCES();
       _parent->_files.erase(_name);
-      _parent->write(*_owner.block_store(), {OperationType::remove, _name});
+      _parent->write(_owner, {OperationType::remove, _name});
       umbrella([&] {_owner.block_store()->remove(_data->address());});
     }
 
@@ -924,14 +927,14 @@ namespace infinit
           bool on = !(value == "0" || value == "false" || value=="");
           this->_data->_inherit_auth = on;
           this->_data->write(
-            *_owner.block_store(),
+            _owner,
             {OperationType::update, on ? "/inherit" : "/disinherit"});
           return;
         }
         else if (*special == "fsck.deref")
         {
           this->_data->_files.erase(value);
-          this->_data->write(*_owner.block_store(),
+          this->_data->write(_owner,
                              {OperationType::remove, value},
                              DirectoryData::null_block,
                              true);
@@ -953,7 +956,7 @@ namespace infinit
           std::string ename = value.substr(p1+1, p2 - p1 - 1);
           Address eaddr = Address::from_string(value.substr(p2+1));
           this->_data->_files[ename] = std::make_pair(type, eaddr);
-          this->_data->write(*_owner.block_store(),
+          this->_data->write(_owner,
                              {OperationType::insert, ename},
                              DirectoryData::null_block,
                              true);
@@ -982,7 +985,7 @@ namespace infinit
               "%s: unlink of %s failed with %s, forcibly remove from parent",
               *this, value, e.what());
             this->_data->_files.erase(value);
-            this->_data->write(*_owner.block_store(),
+            this->_data->write(_owner,
                                Operation{OperationType::remove, value},
                                DirectoryData::null_block, true);
           }

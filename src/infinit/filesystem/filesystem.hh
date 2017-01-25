@@ -61,7 +61,7 @@ namespace infinit
       void
       update(model::blocks::Block& block, std::pair<bool, bool> perms);
       void
-      write(model::Model& model,
+      write(FileSystem& fs,
             Operation op,
             std::unique_ptr<model::blocks::ACLBlock>&block = null_block,
             bool set_mtime = false,
@@ -135,7 +135,7 @@ namespace infinit
       void
       update(model::blocks::Block& block, std::pair<bool, bool> perms);
       void
-      write(model::Model& model,
+      write(FileSystem& fs,
             WriteTarget target = WriteTarget::all,
             std::unique_ptr<ACLBlock>&block = DirectoryData::null_block,
             bool first_write = false);
@@ -296,6 +296,8 @@ namespace infinit
       FileBuffers;
       ELLE_ATTRIBUTE_RX(FileBuffers, file_buffers);
       static const int max_cache_size = 10000;
+      friend class FileData;
+      friend class DirectoryData;
     };
   }
 }

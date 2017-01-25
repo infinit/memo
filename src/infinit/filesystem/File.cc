@@ -331,13 +331,14 @@ namespace infinit
     }
 
     void
-    FileData::write(model::Model& model,
+    FileData::write(FileSystem& fs,
                     WriteTarget target,
                     std::unique_ptr<ACLBlock>& block_, bool first_write)
     {
       ELLE_DEBUG("%s: write at %f: sz=%s, links=%s, mode=%s, fatsize=%s, firstblocksize=%s",
                  this, _address,
                  _header.size, _header.links, print_mode(_header.mode), _fat.size(), _data.size());
+      auto& model = *fs.block_store();
       std::unique_ptr<ACLBlock> myblock_;
       auto& block = (&block_ == &DirectoryData::null_block) ? myblock_ : block_;
       bool block_allocated = !block;
@@ -400,6 +401,8 @@ namespace infinit
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
         ELLE_TRACE("permission exception: %s", e.what());
+        // We made changes to filedata that couldn't be pushed, evict from cache
+        fs._file_cache.erase(_address);
         throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
       }
       catch (model::MissingBlock const&)
@@ -419,7 +422,7 @@ namespace infinit
     File::_commit(WriteTarget target)
     {
       ELLE_ASSERT(this->_filedata);
-      _filedata->write(*_owner.block_store(), target, _first_block);
+      _filedata->write(_owner, target, _first_block);
     }
 
     void
@@ -445,7 +448,7 @@ namespace infinit
       _filedata->_header.links++;
       dir->_data->_files.insert(std::make_pair(newname, _parent->_files.at(_name)));
       dir->_data->write(
-        *_owner.block_store(),
+        _owner,
         {OperationType::insert, newname, EntryType::file,
         _parent->_files.at(_name).second},
         DirectoryData::null_block,
@@ -464,7 +467,7 @@ namespace infinit
       elle::SafeFinally revert([&] { _parent->_files[_name] = info;});
       _parent->_files.erase(_name);
       _parent->write(
-        *_owner.block_store(),
+        _owner,
         {OperationType::remove, _name},
         DirectoryData::null_block,
         true);
@@ -717,8 +720,10 @@ namespace infinit
       }
       else
       {
-        _ensure_first_block();
-        _owner.ensure_permissions(*_first_block.get(), needr, needw);
+        _fetch();
+        auto mode = this->_filedata->header().mode;
+        if ( (needr && !(mode & 0400) && !(mode & 0004)) || (needw && !(mode & 0200) && !(mode & 0002)))
+          throw rfs::Error(EACCES, "Access denied.");
       }
       return umbrella([&] {
         return std::unique_ptr<rfs::Handle>(
