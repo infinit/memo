@@ -358,8 +358,14 @@ special_id(int i)
   return id;
 }
 
+struct TestConfiguration
+{
+  Doughnut::OverlayBuilder overlay_builder;
+  boost::optional<elle::Version> version;
+};
+
 ELLE_TEST_SCHEDULED(
-  basics, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
+  basics, (TestConfiguration, config), (bool, anonymous))
 {
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   auto storage = infinit::storage::Memory::Blocks();
@@ -367,10 +373,11 @@ ELLE_TEST_SCHEDULED(
   auto make_dht_a = [&]
     {
       return DHT(
+        ::version = config.version,
         ::id = id,
         ::keys = keys,
         ::storage = std::make_unique<infinit::storage::Memory>(storage),
-        make_overlay = builder);
+        ::make_overlay = config.overlay_builder);
     };
   auto disk = [&]
     {
@@ -386,7 +393,10 @@ ELLE_TEST_SCHEDULED(
     dht_a.dht->store(*before, STORE_INSERT, tcr());
   ELLE_LOG("connect second DHT");
   DHT dht_b(
-    ::keys = keys, make_overlay = builder, ::storage = nullptr);
+    ::version = config.version,
+    ::keys = keys,
+    ::make_overlay = config.overlay_builder,
+    ::storage = nullptr);
   discover(dht_b, dht_a, anonymous, false, true);
   auto after = dht_a.dht->make_block<MutableBlock>(std::string("after"));
   ELLE_LOG("store third block")
@@ -410,19 +420,21 @@ ELLE_TEST_SCHEDULED(
 }
 
 ELLE_TEST_SCHEDULED(
-  dead_peer, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
+  dead_peer, (TestConfiguration, config), (bool, anonymous))
 {
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   auto dht_a = DHT(::id = special_id(10),
+                   ::version = config.version,
                    ::keys = keys,
-                   make_overlay = builder,
+                   make_overlay = config.overlay_builder,
                    paxos = false);
   elle::With<UTPInstrument>(dht_a.dht->local()->server_endpoints()[0].port()) <<
     [&] (UTPInstrument& instrument)
     {
       auto dht_b = DHT(::id = special_id(11),
+                       ::version = config.version,
                        ::keys = keys,
-                       make_overlay = builder,
+                       make_overlay = config.overlay_builder,
                        paxos = false,
                        ::storage = nullptr);
       auto loc = NodeLocation(
@@ -452,12 +464,16 @@ ELLE_TEST_SCHEDULED(
 }
 
 ELLE_TEST_SCHEDULED(
-  discover_endpoints, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
+  discover_endpoints, (TestConfiguration, config), (bool, anonymous))
 {
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
-    ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false);
+    ::id = id_a,
+    ::version = config.version,
+    ::keys = keys,
+    make_overlay = config.overlay_builder,
+    paxos = false);
   Address old_address;
   ELLE_LOG("store first block")
   {
@@ -466,7 +482,10 @@ ELLE_TEST_SCHEDULED(
     old_address = block->address();
   }
   DHT dht_b(
-    ::keys = keys, make_overlay = builder, ::storage = nullptr);
+    ::version = config.version,
+    ::keys = keys,
+    ::make_overlay = config.overlay_builder,
+    ::storage = nullptr);
   discover(dht_b, *dht_a, anonymous, false, true);
   ELLE_LOG("lookup block")
   {
@@ -485,7 +504,11 @@ ELLE_TEST_SCHEDULED(
   {
     dht_a.reset();
     dht_a = std::make_unique<DHT>(
-      ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false);
+      ::id = id_a,
+      ::version = config.version,
+      ::keys = keys,
+      ::make_overlay = config.overlay_builder,
+      ::paxos = false);
   }
   Address new_address;
   ELLE_LOG("store second block")
@@ -509,7 +532,7 @@ ELLE_TEST_SCHEDULED(
 }
 
 ELLE_TEST_SCHEDULED(reciprocate,
-                    (Doughnut::OverlayBuilder, builder), (bool, anonymous))
+                    (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks b1, b2;
   auto s1 = std::make_unique<infinit::storage::Memory>(b1);
@@ -517,11 +540,16 @@ ELLE_TEST_SCHEDULED(reciprocate,
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("create DHTs");
   auto dht_a = std::make_unique<DHT>(
-    ::keys = keys, make_overlay = builder, paxos = true,
+    ::keys = keys,
+    ::version = config.version,
+    ::make_overlay = config.overlay_builder,
+    ::paxos = true,
     dht::consensus::rebalance_auto_expand = false,
     ::storage = std::move(s1));
   auto dht_b = std::make_unique<DHT>(
-    ::keys = keys, make_overlay = builder,
+    ::keys = keys,
+    ::version = config.version,
+    ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = true,
     ::storage = std::move(s2));
@@ -536,7 +564,7 @@ ELLE_TEST_SCHEDULED(reciprocate,
 }
 
 ELLE_TEST_SCHEDULED(chain_connect,
-                    (Doughnut::OverlayBuilder, builder),
+                    (TestConfiguration, config),
                     (bool, anonymous),
                     (bool, sync))
 {
@@ -547,20 +575,24 @@ ELLE_TEST_SCHEDULED(chain_connect,
   ELLE_LOG("create DHTs");
   auto dht_a = std::make_unique<DHT>(
     ::id = id_a,
+    ::version = config.version,
     ::keys = keys,
-    ::make_overlay = builder,
+    ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::storage = std::make_unique<infinit::storage::Memory>(b1));
   auto dht_b = std::make_unique<DHT>(
     ::id = id_b,
+    ::version = config.version,
     ::keys = keys,
-    ::make_overlay = builder,
+    ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::storage = std::make_unique<infinit::storage::Memory>(b2));
   ELLE_LOG("connect DHTs")
     discover(*dht_b, *dht_a, anonymous, false, sync, sync);
   auto client = DHT(
-    ::keys = keys, make_overlay = builder,
+    ::keys = keys,
+    ::version = config.version,
+    ::make_overlay = config.overlay_builder,
     ::storage = nullptr);
   ELLE_LOG("connect client")
   {
@@ -600,8 +632,9 @@ ELLE_TEST_SCHEDULED(chain_connect,
         [&] (NodeLocation const& l, bool) { return l.id() == id_b; });
       dht_b = std::make_unique<DHT>(
         ::id = id_b,
+        ::version = config.version,
         ::keys = keys,
-        ::make_overlay = builder,
+        ::make_overlay = config.overlay_builder,
         dht::consensus::rebalance_auto_expand = false,
         ::storage = std::make_unique<infinit::storage::Memory>(b2));
       discover(*dht_b, *dht_a, anonymous, sync, sync);
@@ -619,19 +652,26 @@ ELLE_TEST_SCHEDULED(chain_connect,
 }
 
 ELLE_TEST_SCHEDULED(
-  key_cache_invalidation, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
+  key_cache_invalidation, (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks blocks;
   std::unique_ptr<infinit ::storage::Storage> s(new infinit::storage::Memory(blocks));
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
-    ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false,
+    ::id = id_a,
+    ::version = config.version,
+    ::keys = keys,
+    ::make_overlay = config.overlay_builder,
+    ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp,
     ::storage = std::move(s));
   int port = dht_a->dht->local()->server_endpoints()[0].port();
   DHT dht_b(
-    ::keys = keys, make_overlay = builder, ::storage = nullptr,
+    ::keys = keys,
+    ::version = config.version,
+    ::make_overlay = config.overlay_builder,
+    ::storage = nullptr,
     ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp);
   discover(dht_b, *dht_a, anonymous, false, true);
@@ -651,7 +691,11 @@ ELLE_TEST_SCHEDULED(
   s.reset(new infinit::storage::Memory(blocks));
   ELLE_LOG("recreate A");
   auto dht_aa = std::make_unique<DHT>(
-    ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false,
+    ::id = id_a,
+    ::version = config.version,
+    ::keys = keys,
+    ::make_overlay = config.overlay_builder,
+    ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp,
     ::storage = std::move(s),
     ::port = port);
@@ -672,7 +716,7 @@ ELLE_TEST_SCHEDULED(
 }
 
 ELLE_TEST_SCHEDULED(
-  chain_connect_doom, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
+  chain_connect_doom, (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks b1, b2, b3;
   std::unique_ptr<infinit::storage::Storage> s1(new infinit::storage::Memory(b1));
@@ -682,16 +726,24 @@ ELLE_TEST_SCHEDULED(
   auto id_a = infinit::model::Address::random();
   ELLE_LOG("create DHTs");
   auto dht_a = std::make_unique<DHT>(
-    ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false,
+    ::id = id_a,
+    ::version = config.version,
+    ::keys = keys,
+    ::make_overlay = config.overlay_builder,
+    ::paxos = false,
     dht::consensus::rebalance_auto_expand = false,
     ::storage = std::move(s1));
   auto dht_b = std::make_unique<DHT>(
-    ::keys = keys, make_overlay = builder,
+    ::keys = keys,
+    ::version = config.version,
+    make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = false,
     ::storage = std::move(s2));
   auto dht_c = std::make_unique<DHT>(
-    ::keys = keys, make_overlay = builder,
+    ::keys = keys,
+    ::version = config.version,
+    ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = false,
     ::storage = std::move(s3));
@@ -705,7 +757,9 @@ ELLE_TEST_SCHEDULED(
   {
     ELLE_LOG("store blocks in %s", tgt);
     auto client = std::make_unique<DHT>(
-      ::keys = keys, make_overlay = builder,
+      ::keys = keys,
+      ::version = config.version,
+      ::make_overlay = config.overlay_builder,
       ::paxos = false,
       ::storage = nullptr);
     discover(*client, *tgt, anonymous, false, true);
@@ -744,7 +798,7 @@ ELLE_TEST_SCHEDULED(
 }
 
 ELLE_TEST_SCHEDULED(
-  data_spread, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
+  data_spread, (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks b1, b2;
   std::unique_ptr<infinit::storage::Storage> s1(new infinit::storage::Memory(b1));
@@ -752,18 +806,26 @@ ELLE_TEST_SCHEDULED(
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
-    ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false,
+    ::id = id_a,
+    ::version = config.version,
+    ::keys = keys,
+    ::make_overlay = config.overlay_builder,
+    ::paxos = false,
     dht::consensus::rebalance_auto_expand = false,
     ::storage = std::move(s1));
   auto dht_b = std::make_unique<DHT>(
-    ::keys = keys, make_overlay = builder,
+    ::keys = keys,
+    ::version = config.version,
+    ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = false,
     ::storage = std::move(s2));
   discover(*dht_b, *dht_a, anonymous);
   // client. Hard-coded replication_factor=3 if paxos is enabled
   auto client = std::make_unique<DHT>(
-    ::keys = keys, make_overlay = builder,
+    ::keys = keys,
+    ::version = config.version,
+    ::make_overlay = config.overlay_builder,
     ::paxos = false,
     ::storage = nullptr);
   discover(*client, *dht_a, anonymous, false, true);
@@ -788,7 +850,7 @@ ELLE_TEST_SCHEDULED(
 }
 
 ELLE_TEST_SCHEDULED(
-  data_spread2, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
+  data_spread2, (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks b1, b2;
   std::unique_ptr<infinit::storage::Storage> s1(new infinit::storage::Memory(b1));
@@ -796,16 +858,24 @@ ELLE_TEST_SCHEDULED(
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
-    ::id = id_a, ::keys = keys, make_overlay = builder, paxos = false,
+    ::id = id_a,
+    ::version = config.version,
+    ::keys = keys,
+    ::make_overlay = config.overlay_builder,
+    ::paxos = false,
     dht::consensus::rebalance_auto_expand = false,
     ::storage = std::move(s1));
   auto dht_b = std::make_unique<DHT>(
-    ::keys = keys, make_overlay = builder,
+    ::keys = keys,
+    ::version = config.version,
+    ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = false,
     ::storage = std::move(s2));
   auto client = std::make_unique<DHT>(
-    ::keys = keys, make_overlay = builder,
+    ::keys = keys,
+    ::version = config.version,
+    ::make_overlay = config.overlay_builder,
     ::paxos = false,
     ::storage = nullptr);
   discover(*client, *dht_a, anonymous, false, true);
@@ -831,7 +901,7 @@ ELLE_TEST_SCHEDULED(
 }
 
 ELLE_TEST_SCHEDULED(
-  storm, (Doughnut::OverlayBuilder, builder),
+  storm, (TestConfiguration, config),
   (bool, pax), (int, nservers), (int, nclients), (int, nactions))
 {
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
@@ -842,8 +912,9 @@ ELLE_TEST_SCHEDULED(
     {
       auto dht = std::make_unique<DHT>(
         ::id = special_id(i + 1),
+        ::version = config.version,
         ::keys = keys,
-        make_overlay = builder,
+        make_overlay = config.overlay_builder,
         paxos = pax,
         dht::consensus::rebalance_auto_expand = false
       );
@@ -882,7 +953,11 @@ ELLE_TEST_SCHEDULED(
     for (int i = 0; i < nclients; ++i)
     {
       auto dht = std::make_unique<DHT>(
-        ::keys = keys, make_overlay = builder, paxos = pax, ::storage = nullptr,
+        ::keys = keys,
+        ::version = config.version,
+        ::make_overlay = config.overlay_builder,
+        ::paxos = pax,
+        ::storage = nullptr,
         dht::consensus::rebalance_auto_expand = false
         );
       if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
@@ -1017,7 +1092,7 @@ ELLE_TEST_SCHEDULED(
 }
 
 ELLE_TEST_SCHEDULED(
-  parallel_discover, (Doughnut::OverlayBuilder, builder), (bool, anonymous))
+  parallel_discover, (TestConfiguration, config), (bool, anonymous))
 {
   constexpr auto nservers = 5;
   constexpr auto npeers = nservers - 1;
@@ -1026,7 +1101,10 @@ ELLE_TEST_SCHEDULED(
   for (int i=0; i<nservers; ++i)
   {
     auto dht = std::make_unique<DHT>(
-      ::keys = keys, make_overlay = builder, paxos = false);
+      ::keys = keys,
+      ::version = config.version,
+      ::make_overlay = config.overlay_builder,
+      ::paxos = false);
     servers.emplace_back(std::move(dht));
   }
   elle::With<reactor::Scope>() << [&](reactor::Scope& s)
@@ -1056,7 +1134,7 @@ ELLE_TEST_SCHEDULED(
 
 ELLE_TEST_SCHEDULED(
   change_endpoints,
-  (Doughnut::OverlayBuilder, builder),
+  (TestConfiguration, config),
   (bool, anonymous),
   (bool, back))
 {
@@ -1065,13 +1143,15 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("create DHTs");
   auto dht_a = std::make_unique<DHT>(
     ::id = special_id(10),
+    ::version = config.version,
     ::keys = keys,
-    make_overlay = builder,
+    make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false);
   auto dht_b = std::make_unique<DHT>(
     ::id = special_id(11),
+    ::version = config.version,
     ::keys = keys,
-    make_overlay = builder,
+    make_overlay = config.overlay_builder,
     ::storage = std::make_unique<infinit::storage::Memory>(storage),
     dht::consensus::rebalance_auto_expand = false);
   ELLE_LOG("connect DHTs")
@@ -1087,19 +1167,21 @@ ELLE_TEST_SCHEDULED(
   auto remote = dht_a->dht->overlay()->lookup_node(dht_b->dht->id()).lock();
   BOOST_CHECK_EQUAL(remote->id(), dht_b->dht->id());
   BOOST_CHECK_EQUAL(dht_a->dht->fetch(addr, {})->data(), "change_endpoints");
-
-  ELLE_LOG("recreate second DHT");
-  auto disappear_b = reactor::waiter(
-    dht_a->dht->overlay()->on_disappear(),
+  ELLE_LOG("recreate second DHT")
+  {
+    auto disappear_b = reactor::waiter(
+      dht_a->dht->overlay()->on_disappear(),
       [&] (Address id, bool) { return id == special_id(11); });
-  dht_b.reset();
-  reactor::wait(disappear_b);
-  dht_b = std::make_unique<DHT>(
-    ::id = special_id(11),
-    ::keys = keys,
-    make_overlay = builder,
-    ::storage = std::make_unique<infinit::storage::Memory>(storage),
-    dht::consensus::rebalance_auto_expand = false);
+    dht_b.reset();
+    reactor::wait(disappear_b);
+    dht_b = std::make_unique<DHT>(
+      ::id = special_id(11),
+      ::version = config.version,
+      ::keys = keys,
+      ::make_overlay = config.overlay_builder,
+      ::storage = std::make_unique<infinit::storage::Memory>(storage),
+      dht::consensus::rebalance_auto_expand = false);
+  }
   ELLE_LOG("reconnect second DHT")
     if (back)
       discover(*dht_b, *dht_a, anonymous, false, true, true);
@@ -1110,7 +1192,7 @@ ELLE_TEST_SCHEDULED(
 
 ELLE_TEST_SCHEDULED(
   change_endpoints_stale,
-  (Doughnut::OverlayBuilder, builder),
+  (TestConfiguration, config),
   (bool, back))
 {
   auto storage = infinit::storage::Memory::Blocks();
@@ -1119,8 +1201,10 @@ ELLE_TEST_SCHEDULED(
     {
       return std::make_unique<DHT>(
         ::id = special_id(10),
+        ::version = config.version,
         ::keys = keys,
-        make_overlay = builder,
+        ::make_overlay = config.overlay_builder,
+        dht::consensus::rebalance_auto_expand = false,
         ::storage = std::make_unique<infinit::storage::Memory>(storage));
     };
   auto dht_a = make_dht_a();
@@ -1130,8 +1214,10 @@ ELLE_TEST_SCHEDULED(
     {
       auto dht_b = DHT(
         ::id = special_id(11),
+        ::version = config.version,
         ::keys = keys,
-        make_overlay = builder,
+        ::make_overlay = config.overlay_builder,
+        doughnut::consensus::rebalance_auto_expand = false,
         doughnut::connect_timeout = std::chrono::milliseconds(100),
         doughnut::soft_fail_running = true);
       auto loc = NodeLocation(dht_a->dht->id(), {instrument.endpoint()});
@@ -1182,7 +1268,7 @@ ELLE_TEST_SCHEDULED(
     };
 }
 
-ELLE_TEST_SCHEDULED(churn, (Doughnut::OverlayBuilder, builder),
+ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
   (bool, keep_port), (bool, wait_disconnect), (bool, wait_connect))
 {
   static const int n = 5;
@@ -1196,7 +1282,8 @@ ELLE_TEST_SCHEDULED(churn, (Doughnut::OverlayBuilder, builder),
     ids[i] = infinit::model::Address::random();
     auto dht = elle::make_unique<DHT>(
       ::id = ids[i],
-      ::keys = keys, make_overlay = builder, paxos = true,
+      ::version = config.version,
+      ::keys = keys, make_overlay = config.overlay_builder, paxos = true,
       ::storage = elle::make_unique<infinit::storage::Memory>(blocks[i])
     );
     ports[i] = dht->dht->dock().utp_server().local_endpoint().port();
@@ -1208,7 +1295,11 @@ ELLE_TEST_SCHEDULED(churn, (Doughnut::OverlayBuilder, builder),
   std::unique_ptr<DHT> client;
   auto spawn_client = [&] {
     client = elle::make_unique<DHT>(
-      ::keys = keys, make_overlay = builder, paxos = true, ::storage = nullptr);
+      ::keys = keys,
+      ::version = config.version,
+      ::make_overlay = config.overlay_builder,
+      ::paxos = true,
+      ::storage = nullptr);
     if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
       client->dht->overlay().get()))
     {
@@ -1231,7 +1322,9 @@ ELLE_TEST_SCHEDULED(churn, (Doughnut::OverlayBuilder, builder),
       ELLE_LOG("bringing node %s up with %s/%s block",
                down, blocks[down].size(), addrs.size());
       servers[down].reset(new DHT(
-        ::keys = keys, make_overlay = builder,
+        ::keys = keys,
+        ::version = config.version,
+        ::make_overlay = config.overlay_builder,
         paxos = true,
         ::id = ids[down],
         ::port = keep_port ? ports[down] : 0,
@@ -1305,7 +1398,8 @@ get_n(C& c, int idx)
 }
 
 
-void test_churn_socket(Doughnut::OverlayBuilder builder, bool pasv)
+void
+test_churn_socket(TestConfiguration config, bool pasv)
 {
   static const int n = 5;
   auto keys = infinit::cryptography::rsa::keypair::generate(512);
@@ -1317,7 +1411,8 @@ void test_churn_socket(Doughnut::OverlayBuilder builder, bool pasv)
     ids[i] = infinit::model::Address::random();
     auto dht = elle::make_unique<DHT>(
       ::id = ids[i],
-      ::keys = keys, make_overlay = builder, paxos = true,
+      ::version = config.version,
+      ::keys = keys, make_overlay = config.overlay_builder, paxos = true,
       ::storage = elle::make_unique<infinit::storage::Memory>(blocks[i])
     );
     servers.emplace_back(std::move(dht));
@@ -1328,7 +1423,11 @@ void test_churn_socket(Doughnut::OverlayBuilder builder, bool pasv)
   for (auto& s: servers)
     hard_wait(*s, n-1);
   std::unique_ptr<DHT> client = elle::make_unique<DHT>(
-      ::keys = keys, make_overlay = builder, paxos = true, ::storage = nullptr);
+    ::keys = keys,
+    ::version = config.version,
+    ::make_overlay = config.overlay_builder,
+    ::paxos = true,
+    ::storage = nullptr);
   if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
     client->dht->overlay().get()))
   {
@@ -1396,19 +1495,9 @@ void test_churn_socket(Doughnut::OverlayBuilder builder, bool pasv)
    BOOST_CHECK(true);
 }
 
-ELLE_TEST_SCHEDULED(churn_socket, (Doughnut::OverlayBuilder, builder))
+ELLE_TEST_SCHEDULED(churn_socket, (TestConfiguration, config))
 {
-  test_churn_socket(builder, false);
-}
-
-ELLE_TEST_SCHEDULED(churn_socket_pasv)
-{
-  auto const builder =
-    [] (Doughnut& dht, std::shared_ptr<Local> local)
-    {
-      return std::make_unique<kouncil::Kouncil>(&dht, local);
-    };
-  test_churn_socket(builder, true);
+  test_churn_socket(config, false);
 }
 
 static
@@ -1431,7 +1520,7 @@ ELLE_TEST_SUITE()
   elle::os::setenv("INFINIT_KOUNCIL_WATCHER_MAX_RETRY",
                    elle::sprintf("%sms", valgrind(20, 50)), 1);
   auto& master = boost::unit_test::framework::master_test_suite();
-  auto const kelips_builder =
+  auto const kelips_config = TestConfiguration {
     [] (Doughnut& dht, std::shared_ptr<Local> local)
     {
       auto conf = kelips::Configuration();
@@ -1444,12 +1533,20 @@ ELLE_TEST_SUITE()
       conf.ping_timeout_ms = windows_factor * valgrind(100, 2);
       return std::make_unique<kelips::Node>(
         conf, local, &dht);
-    };
-  auto const kouncil_builder =
+    }};
+  auto const kouncil_config = TestConfiguration {
     [] (Doughnut& dht, std::shared_ptr<Local> local)
     {
       return std::make_unique<kouncil::Kouncil>(&dht, local, valgrind(1, 5));
-    };
+    },
+    elle::Version(0, 8, 0)};
+  auto const kouncil_0_7_config = TestConfiguration {
+    [] (Doughnut& dht, std::shared_ptr<Local> local)
+    {
+      return std::make_unique<kouncil::Kouncil>(&dht, local, valgrind(1, 5));
+    },
+    elle::Version(0, 7, 0)};
+
 
 #define BOOST_NAMED_TEST_CASE(name, test_function)                      \
   boost::unit_test::make_test_case(                                     \
@@ -1459,7 +1556,7 @@ ELLE_TEST_SUITE()
   Suite->add(BOOST_NAMED_TEST_CASE(                                     \
                  Name,                                                  \
                  std::bind(::Function,                                  \
-                           BOOST_PP_CAT(Overlay, _builder),             \
+                           BOOST_PP_CAT(Overlay, _config),              \
                            ##__VA_ARGS__)),                             \
                0, valgrind(Timeout));                                   \
 
@@ -1506,7 +1603,8 @@ ELLE_TEST_SUITE()
 
   OVERLAY(kelips);
   OVERLAY(kouncil);
+  OVERLAY(kouncil_0_7);
 
-  kouncil->add(BOOST_TEST_CASE(churn_socket_pasv), 0, valgrind(120));
+  TEST(kouncil, kouncil, "churn_socket_pasv", 30, churn_socket);
 #undef OVERLAY
 }
