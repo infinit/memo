@@ -263,6 +263,9 @@ namespace infinit
             elle::sprintf("%f", this),
             [this, connecting_it]
             {
+              elle::SafeFinally remove_from_connecting([&] {
+                  this->_dock._connecting.erase(connecting_it);
+              });
               bool connected = false;
               ELLE_TRACE_SCOPE("%s: connection attempt to %s endpoints",
                                this, this->_location.endpoints().size());
@@ -339,6 +342,7 @@ namespace infinit
                       }));
                 reactor::wait(scope);
               };
+              remove_from_connecting.abort();
               if (!connected)
               {
                 this->_disconnected = true;
@@ -360,6 +364,7 @@ namespace infinit
                   this->_dock._connected.end())
               {
                 ELLE_TRACE("%s: drop duplicate", this);
+                this->_dock._connecting.erase(connecting_it);
                 auto hold = this->shared_from_this();
                 this->_thread->dispose(true);
                 this->_thread.release();
