@@ -359,6 +359,8 @@ namespace infinit
               ELLE_DEBUG("discover new endpoints for %s", pi);
               if (!find(this->_peers, pi.id()))
                 this->doughnut()->dock().connect(pi.location());
+              this->_stale_endpoints.erase(pi.id());
+              this->_stale_endpoints.emplace(pi.location());
               this->_notify_observers(*it);
             }
             else
