@@ -820,6 +820,7 @@ ELLE_TEST_SCHEDULED(
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = false,
     ::storage = std::move(s2));
+  ELLE_LOG("server discovery");
   discover(*dht_b, *dht_a, anonymous);
   // client. Hard-coded replication_factor=3 if paxos is enabled
   auto client = std::make_unique<DHT>(
@@ -828,9 +829,14 @@ ELLE_TEST_SCHEDULED(
     ::make_overlay = config.overlay_builder,
     ::paxos = false,
     ::storage = nullptr);
+  ELLE_LOG("client discovery");
+  auto discovered_client_b = reactor::waiter(
+    client->dht->overlay()->on_discover(),
+    [&] (NodeLocation const& l, bool) { return l.id() == dht_b->dht->id(); });
   discover(*client, *dht_a, anonymous, false, true);
-  discover(*client, *dht_b, anonymous, false, true);
+  reactor::wait(discovered_client_b);
   std::vector<infinit::model::Address> addrs;
+  ELLE_LOG("writing blocks");
   for (int a=0; a<10; ++a)
   {
     for (int i=0; i<50; ++i)
