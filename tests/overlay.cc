@@ -1252,9 +1252,9 @@ ELLE_TEST_SCHEDULED(churn, (Doughnut::OverlayBuilder, builder),
       {
         for (auto& s: servers)
           if (s)
-            hard_wait(*s, n-2, client->dht->id(), true, ids[down]);
+            hard_wait(*s, n-2, client->dht->id(), false);
           //spawn_client();
-          hard_wait(*client, n-1, client->dht->id(), true, ids[down]);
+          hard_wait(*client, n-1, client->dht->id(), false);
       }
       ELLE_LOG("resuming");
     }
