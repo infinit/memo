@@ -64,46 +64,6 @@ namespace infinit
     infinit::merge(listen_address, b.listen_address);
   }
 
-//   void
-//   MountOptions::merge(boost::program_options::variables_map const& args)
-//   {
-//     infinit::merge(this->fuse_options,
-//                    optional<Strings>(args, "fuse-option"));
-//     infinit::merge(this->peers,
-//                    optional<Strings>(args, "peer"));
-//     infinit::merge(this->mountpoint, optional(args, "mountpoint"));
-//     // FIXME: Why user and as?
-//     infinit::merge(this->as, optional(args, "as"));
-//     infinit::merge(this->as, optional(args, "user"));
-//     infinit::merge(this->readonly, optional<bool>(args, "readonly"));
-//     if (option_fetch(args, {"fetch-endpoints"}))
-//       this->fetch = true;
-//     if (option_push(args, {"push-endpoints"}))
-//       this->push = true;
-//     infinit::merge(this->cache, optional<bool>(args, option_cache));
-//     infinit::merge(this->async, optional<bool>(args, "async"));
-//     infinit::merge(this->cache_ram_size,
-//                    optional<int>(args, option_cache_ram_size));
-//     infinit::merge(this->cache_ram_ttl,
-//                    optional<int>(args, option_cache_ram_ttl));
-//     infinit::merge(this->cache_ram_invalidation,
-//                    optional<int>(args, option_cache_ram_invalidation));
-//     infinit::merge(this->cache_disk_size,
-//                    optional<uint64_t>(args, option_cache_disk_size));
-//     infinit::merge(this->poll_beyond,
-//                    optional<int>(args, option_poll_beyond),
-//                    option_poll_beyond);
-//     if (auto str = optional<std::string>(args, option_listen_interface))
-//       infinit::merge(this->listen_address,
-//                      boost::asio::ip::address::from_string(*str),
-//                      option_listen_interface);
-// #ifndef INFINIT_WINDOWS
-//     infinit::merge(this->enable_monitoring,
-//                    optional<bool>(args, option_monitoring),
-//                    option_monitoring);
-// #endif
-//   }
-
   void
   MountOptions::to_commandline(Strings& arguments, Environ& env) const
   {
