@@ -21,26 +21,26 @@ namespace infinit
         "help", das::cli::Option('h', "show this help message"));
     }
 
-    template <typename T, typename Names>
-    struct _find_name
-    {};
-
-    template <typename T, typename Head, typename ... Tail>
-    struct _find_name<T, elle::meta::List<Head, Tail...>>
-      : public std::conditional<
-          std::is_same<typename Head::template attr_type<Infinit>,
-                       T>::value,
-          Head,
-          _find_name<T, elle::meta::List<Tail...>>>::type
-    {};
-
-    template <typename T>
-    struct find_name
-      : public _find_name<T, Infinit::Entities>
-    {};
-
     namespace
     {
+      template <typename T, typename Names>
+      struct _find_name
+      {};
+
+      template <typename T, typename Head, typename ... Tail>
+      struct _find_name<T, elle::meta::List<Head, Tail...>>
+        : public std::conditional<
+            std::is_same<typename Head::template attr_type<Infinit>,
+                         T>::value,
+            Head,
+            _find_name<T, elle::meta::List<Tail...>>>::type
+      {};
+
+      template <typename T>
+      struct find_name
+        : public _find_name<T, Infinit::Entities>
+      {};
+
       template <typename Symbol, typename Entity>
       struct help_modes
       {
