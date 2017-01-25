@@ -321,6 +321,7 @@ namespace
     struct StorageResoucesResult
       : public Result
     {
+      using Super = Result;
       /*-------------.
       | Construction |
       `-------------*/
@@ -329,7 +330,7 @@ namespace
                             bool sane,
                             std::string const& type,
                             BasicResult::Reason const& reason = {})
-        : Result(name, sane, reason)
+        : Super(name, sane, reason)
         , type(type)
       {}
 
@@ -560,39 +561,86 @@ namespace
       `-------------*/
       LeftoversResult() = default;
       LeftoversResult(std::string const& name,
-                      Result::Reason r = Result::Reason{"should not be there"});
+                      Result::Reason r = Result::Reason{"should not be there"})
+        : Result(name, true, r, true)
+      {}
 
       /*--------------.
       | Serialization |
       `--------------*/
       void
-      serialize(elle::serialization::Serializer& s);
+      serialize(elle::serialization::Serializer& s)
+      {
+        Result::serialize(s);
+      }
     };
 
     /*-------------.
     | Construction |
     `-------------*/
-    ConfigurationIntegrityResults(bool only = true);
+    ConfigurationIntegrityResults(bool only = true)
+      : _only(only)
+    {}
 
     /*----------.
     | Interface |
     `----------*/
     bool
-    sane() const override;
+    sane() const override
+    {
+      return this->user.sane()
+        && sane_(this->storage_resources)
+        && sane_(this->networks)
+        && sane_(this->volumes)
+        && sane_(this->drives);
+      // Leftovers is always sane.
+    }
+
     bool
-    warning() const override;
+    warning() const override
+    {
+      return this->user.warning()
+        || warning_(this->storage_resources)
+        || warning_(this->networks)
+        || warning_(this->volumes)
+        || warning_(this->drives)
+        || warning_(this->leftovers);
+    }
 
     /*---------.
     | Printing |
     `---------*/
     void
-    print(std::ostream& out, bool no_color, bool verbose) const;
+    print(std::ostream& out, bool no_color, bool verbose) const
+    {
+      if (!this->only())
+        section(out, no_color, "Configuration integrity");
+      this->user.print(out, no_color, verbose);
+      print_(out, no_color, "Storage resources", storage_resources, verbose);
+      print_(out, no_color, "Networks", networks, verbose);
+      print_(out, no_color, "Volumes", volumes, verbose);
+      print_(out, no_color, "Drives", drives, verbose);
+      print_(out, no_color, "Leftovers", leftovers, verbose);
+      out << std::endl;
+    }
 
     /*--------------.
     | Serialization |
     `--------------*/
     void
-    serialize(elle::serialization::Serializer& s);
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("storage resources", this->storage_resources);
+      s.serialize("networks", this->networks);
+      s.serialize("volumes", this->volumes);
+      s.serialize("drives", this->drives);
+      s.serialize("leftovers", this->leftovers);
+      if (s.out())
+      {
+        bool sane = this->sane();
+        s.serialize("sane", sane);
+      }
+    }
 
     /*-----------.
     | Attributes |
@@ -623,14 +671,33 @@ namespace
       `-------------*/
       UserResult() = default;
       UserResult(std::tuple<bool, Result::Reason> const& validity,
-                 std::string const &name);
-      UserResult(std::string const& name);
+                 std::string const &name)
+        : BasicResult("Username", true, std::get<1>(validity), !std::get<0>(validity))
+        , _user_name(name)
+      {}
+
+      UserResult(std::string const& name)
+        : UserResult(valid(name), name)
+      {}
 
       /*----------.
       | Interface |
       `----------*/
       std::tuple<bool, Result::Reason>
-      valid(std::string const& name) const;
+      valid(std::string const& name) const
+      {
+        static const auto allowed = std::regex(infinit::User::name_regex());
+        if (std::regex_match(name, allowed))
+          return std::make_tuple(true, Result::Reason{});
+        else
+          return std::make_tuple(
+            false,
+            Result::Reason{
+              elle::sprintf(
+                "default system user name \"%s\" is not compatible with Infinit "
+                "naming policies, you'll need to use --as <other_name>", name)});
+      }
+
 
       /*---------.
       | Printing |
@@ -1090,101 +1157,6 @@ namespace
     SystemSanityResults system_sanity;
     ConnectivityResults connectivity;
   };
-
-  ConfigurationIntegrityResults::LeftoversResult::LeftoversResult(
-    std::string const& name,
-    Result::Reason r)
-    : Result(name, true, r, true)
-  {}
-
-  void
-  ConfigurationIntegrityResults::LeftoversResult::serialize(
-    elle::serialization::Serializer& s)
-  {
-    Result::serialize(s);
-  }
-
-  ConfigurationIntegrityResults::ConfigurationIntegrityResults(bool only)
-    : _only(only)
-  {}
-
-  bool
-  ConfigurationIntegrityResults::sane() const
-  {
-    return this->user.sane()
-      && sane_(this->storage_resources)
-      && sane_(this->networks)
-      && sane_(this->volumes)
-      && sane_(this->drives);
-    // Leftovers is always sane.
-  }
-
-  bool
-  ConfigurationIntegrityResults::warning() const
-  {
-    return this->user.warning()
-      || warning_(this->storage_resources)
-      || warning_(this->networks)
-      || warning_(this->volumes)
-      || warning_(this->drives)
-      || warning_(this->leftovers);
-  }
-
-  void
-  ConfigurationIntegrityResults::serialize(elle::serialization::Serializer& s)
-  {
-    s.serialize("storage resources", this->storage_resources);
-    s.serialize("networks", this->networks);
-    s.serialize("volumes", this->volumes);
-    s.serialize("drives", this->drives);
-    s.serialize("leftovers", this->leftovers);
-    if (s.out())
-    {
-      bool sane = this->sane();
-      s.serialize("sane", sane);
-    }
-  }
-
-  void
-  ConfigurationIntegrityResults::print(std::ostream& out, bool no_color,
-                                       bool verbose) const
-  {
-    if (!this->only())
-      section(out, no_color, "Configuration integrity");
-    this->user.print(out, no_color, verbose);
-    print_(out, no_color, "Storage resources", storage_resources, verbose);
-    print_(out, no_color, "Networks", networks, verbose);
-    print_(out, no_color, "Volumes", volumes, verbose);
-    print_(out, no_color, "Drives", drives, verbose);
-    print_(out, no_color, "Leftovers", leftovers, verbose);
-    out << std::endl;
-  }
-
-  SystemSanityResults::UserResult::UserResult(
-    std::tuple<bool, Result::Reason> const& validity,
-    std::string const &name)
-    : Result("Username", true, std::get<1>(validity), !std::get<0>(validity))
-    , _user_name(name)
-  {}
-
-  SystemSanityResults::UserResult::UserResult(std::string const& name)
-    : UserResult(valid(name), name)
-  {}
-
-  std::tuple<bool, Result::Reason>
-  SystemSanityResults::UserResult::valid(std::string const& name) const
-  {
-    static const auto allowed = std::regex(infinit::User::name_regex());
-    if (std::regex_match(name, allowed))
-      return std::make_tuple(true, Result::Reason{});
-    else
-      return std::make_tuple(
-        false,
-        Result::Reason{
-          elle::sprintf(
-            "default system user name \"%s\" is not compatible with Infinit "
-            "naming policies, you'll need to use --as <other_name>", name)});
-  }
 
   void
   SystemSanityResults::UserResult::_print(std::ostream& out,
