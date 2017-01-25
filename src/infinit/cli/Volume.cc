@@ -319,8 +319,8 @@ namespace infinit
     namespace
     {
       /// These two arguments are aliases.  Make them consistent.
-      void resolve_aliases(das::cli::Defaulted<bool>& arg1,
-                           das::cli::Defaulted<bool>& arg2)
+      void resolve_aliases(elle::Defaulted<bool>& arg1,
+                           elle::Defaulted<bool>& arg2)
       {
         if (arg1 && !arg2)
           arg2 = *arg1;
@@ -378,7 +378,7 @@ namespace infinit
       template <typename Symbol, typename T>
       void
       merge_(MountOptions& mo,
-             Symbol sym, das::cli::Defaulted<T> const& val)
+             Symbol sym, elle::Defaulted<T> const& val)
       {
         if (val)
           merge_(mo, sym, *val);

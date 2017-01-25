@@ -42,7 +42,7 @@ namespace infinit
 
       using Strings = std::vector<std::string>;
       template <typename T>
-      using Defaulted = das::cli::Defaulted<T>;
+      using Defaulted = elle::Defaulted<T>;
 
       /*---------.
       | Create.  |
