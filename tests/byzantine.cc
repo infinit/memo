@@ -22,8 +22,7 @@ ELLE_TEST_SCHEDULED(unknown_rpc)
   }
   DHT dht_b(keys = dht.dht->keys());
   auto peer = dht_b.dht->dock().make_peer(
-    infinit::model::NodeLocation(dht.dht->id(), dht.dht->local()->server_endpoints()),
-      boost::none).lock();
+    infinit::model::NodeLocation(dht.dht->id(), dht.dht->local()->server_endpoints())).lock();
   auto& r = dynamic_cast<infinit::model::doughnut::Remote&>(*peer);
   r.connect();
   // By default Local::broadcast ignores unknown RPCs.
