@@ -41,42 +41,42 @@ namespace infinit
         "Create a user",
         das::cli::Options(),
         this->bind(modes::mode_create,
-                   name = Infinit::default_user_name(),
-                   description = boost::none,
-                   key = boost::none,
+                   cli::name = Infinit::default_user_name(),
+                   cli::description = boost::none,
+                   cli::key = boost::none,
                    cli::email = boost::none,
                    cli::fullname = boost::none,
-                   password = boost::none,
-                   ldap_name = boost::none,
-                   output = boost::none,
-                   push_user = false,
+                   cli::password = boost::none,
+                   cli::ldap_name = boost::none,
+                   cli::output = boost::none,
+                   cli::push_user = false,
                    cli::push = false,
-                   full = false))
+                   cli::full = false))
       , delete_(
         "Delete local user",
         das::cli::Options(),
         this->bind(modes::mode_delete,
-                   name = Infinit::default_user_name(),
+                   cli::name = Infinit::default_user_name(),
                    cli::pull = false,
-                   purge = false))
+                   cli::purge = false))
       , export_(
         "Export local user",
         das::cli::Options(),
         this->bind(modes::mode_export,
-                   name = Infinit::default_user_name(),
-                   full = false,
-                   output = boost::none))
+                   cli::name = Infinit::default_user_name(),
+                   cli::full = false,
+                   cli::output = boost::none))
       , fetch(
         "Fetch users from {hub}",
         das::cli::Options(),
         this->bind(modes::mode_fetch,
-                   name = Infinit::default_user_name(),
+                   cli::name = Infinit::default_user_name(),
                    cli::no_avatar = false))
       , hash(
         "Get short hash of user's key",
         das::cli::Options(),
         this->bind(modes::mode_hash,
-                   name = Infinit::default_user_name()))
+                   cli::name = Infinit::default_user_name()))
       , import(
         "Import local user",
         das::cli::Options(),
@@ -90,36 +90,36 @@ namespace infinit
         "Login user to {hub}",
         das::cli::Options(),
         this->bind(modes::mode_login,
-                   name = Infinit::default_user_name(),
-                   password = boost::none))
+                   cli::name = Infinit::default_user_name(),
+                   cli::password = boost::none))
       , pull(
         "Pull a user from {hub}",
         das::cli::Options(),
         this->bind(modes::mode_pull,
-                   name = Infinit::default_user_name(),
-                   purge = false))
+                   cli::name = Infinit::default_user_name(),
+                   cli::purge = false))
       , push(
         "Push a user from {hub}",
         das::cli::Options(),
         this->bind(modes::mode_push,
-                   name = Infinit::default_user_name(),
+                   cli::name = Infinit::default_user_name(),
                    cli::email = boost::none,
-                   fullname = boost::none,
-                   password = boost::none,
+                   cli::fullname = boost::none,
+                   cli::password = boost::none,
                    cli::avatar = boost::none,
-                   full = false))
+                   cli::full = false))
       , signup(
         "Create and push a user to {hub}",
         das::cli::Options(),
         this->bind(modes::mode_signup,
-                   name = Infinit::default_user_name(),
-                   description = boost::none,
-                   key = boost::none,
+                   cli::name = Infinit::default_user_name(),
+                   cli::description = boost::none,
+                   cli::key = boost::none,
                    cli::email = boost::none,
                    cli::fullname = boost::none,
-                   password = boost::none,
-                   ldap_name = boost::none,
-                   full = false))
+                   cli::password = boost::none,
+                   cli::ldap_name = boost::none,
+                   cli::full = false))
     {}
 
     template <typename Buffer>
