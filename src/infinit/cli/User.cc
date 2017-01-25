@@ -470,8 +470,10 @@ namespace infinit
       auto key_hash = infinit::model::doughnut::short_key_hash(user.public_key);
       if (this->cli().script())
       {
-        elle::json::Object res;
-        res[name] = key_hash;
+        auto res = elle::json::Object
+          {
+            {name, key_hash},
+          };
         elle::json::write(std::cout, res);
       }
       else
@@ -518,9 +520,7 @@ namespace infinit
       }
       else
       {
-        bool user_in_list =
-          self ? std::find(users.begin(), users.end(), self) != users.end()
-               : false;
+        bool user_in_list = self && contains(users, self);
         for (auto const& user: users)
         {
           std::cout << (self && user == self ? "* " : user_in_list ? "  " : "")
