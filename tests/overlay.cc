@@ -707,7 +707,7 @@ ELLE_TEST_SCHEDULED(
       ::storage = nullptr);
     discover(*client, *tgt, anonymous, false, true);
     std::vector<infinit::model::Address> addrs;
-    for (int a = 0; a < 5; ++a)
+    for (int a = 0; a < 20; ++a)
     {
       try
       {
@@ -1084,13 +1084,19 @@ ELLE_TEST_SCHEDULED(
   auto remote = dht_a->dht->overlay()->lookup_node(dht_b->dht->id()).lock();
   BOOST_CHECK_EQUAL(remote->id(), dht_b->dht->id());
   BOOST_CHECK_EQUAL(dht_a->dht->fetch(addr, {})->data(), "change_endpoints");
-  ELLE_LOG("recreate second DHT")
-    dht_b = std::make_unique<DHT>(
-      ::id = special_id(11),
-      ::keys = keys,
-      make_overlay = builder,
-      ::storage = std::make_unique<infinit::storage::Memory>(storage),
-      dht::consensus::rebalance_auto_expand = false);
+
+  ELLE_LOG("recreate second DHT");
+  auto disappear_b = reactor::waiter(
+    dht_a->dht->overlay()->on_disappear(),
+      [&] (Address id, bool) { return id == special_id(11); });
+  dht_b.reset();
+  reactor::wait(disappear_b);
+  dht_b = std::make_unique<DHT>(
+    ::id = special_id(11),
+    ::keys = keys,
+    make_overlay = builder,
+    ::storage = std::make_unique<infinit::storage::Memory>(storage),
+    dht::consensus::rebalance_auto_expand = false);
   ELLE_LOG("reconnect second DHT")
     if (back)
       discover(*dht_b, *dht_a, anonymous, false, true, true);
@@ -1159,12 +1165,15 @@ ELLE_TEST_SCHEDULED(
       ELLE_LOG("close connection and lookup block")
       {
         instrument.close();
-        reactor::wait(
-          dht_b.dht->overlay()->on_discover(),
-          [&] (NodeLocation const& l, bool)
-          {
-            return l.id() == dht_a->dht->id();
-          });
+        ELLE_LOG("wait for discover");
+        if (dynamic_cast<infinit::overlay::kouncil::Kouncil*>(dht_b.dht->overlay().get()))
+          reactor::wait(
+            dht_b.dht->overlay()->on_discover(),
+            [&] (NodeLocation const& l, bool)
+            {
+              return l.id() == dht_a->dht->id();
+            });
+        ELLE_LOG("check fetching the block");
         BOOST_CHECK_EQUAL(dht_b.dht->fetch(addr)->data(), "stale");
       }
     };
