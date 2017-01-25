@@ -348,9 +348,7 @@ namespace
       `---------*/
       void
       _print(std::ostream& out, bool no_color, bool) const override
-      {
-        unreachable();
-      }
+      {}
 
       /*--------------.
       | Serialization |
