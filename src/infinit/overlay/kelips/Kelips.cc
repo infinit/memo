@@ -1389,7 +1389,7 @@ namespace infinit
         reactor::Lock l(_udp_send_mutex);
         static elle::Bench bench("kelips.send", 5_sec);
         elle::Bench::BenchScope bs(bench);
-        ELLE_DUMP("%s: sending %s bytes packet to %s\n%s", *this, b.size(), e, b.string());
+        ELLE_DUMP("%s: sending %s bytes packet to %s\n%x", *this, b.size(), e, b);
         b.size(b.size()+8);
         memmove(b.mutable_contents()+8, b.contents(), b.size()-8);
         memcpy(b.mutable_contents(), "KELIPSGS", 8);
@@ -3571,7 +3571,7 @@ namespace infinit
           res = it->second.validated_endpoint->first.udp();
         std::vector<elle::Buffer> buf;
         std::swap(it->second.pending, buf);
-        ELLE_DEBUG("flushing send buffer to %s on %s", id, res);
+        ELLE_DEBUG("flushing %s buffer(s) to %s on %s", buf.size(), id, res);
         for (auto& b: buf)
         {
           b.size(b.size()+8);
@@ -3585,6 +3585,14 @@ namespace infinit
           { // FIXME: do something
             ELLE_TRACE("network exception sending to %s: %s", res, e);
           }
+        }
+        if (!it->second.validated_endpoint && !it->second.pending.empty())
+        {
+          // validated_endpoint was reset, and new pending packets were added
+          // since we were still running, no contacter was restarded, so
+          // we need to do that now
+          ELLE_WARN("validated_endpoint was reset for %s", res);
+          contact(address);
         }
       }
 
@@ -3629,10 +3637,11 @@ namespace infinit
           this->on_discover()(nl, observer);
         if (!inserted.second)
         { // we still want the new endpoints
+          auto sz = inserted.first->second.endpoints.size();
           for (auto const& ep: endpoints)
             endpoints_update(inserted.first->second.endpoints, ep);
           // Reset validated endpoint so that contacter is re-run
-          if (!endpoints.empty())
+          if (sz != inserted.first->second.endpoints.size())
             inserted.first->second.validated_endpoint.reset();
         }
         return &inserted.first->second;
