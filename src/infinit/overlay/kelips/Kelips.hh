@@ -365,7 +365,7 @@ namespace infinit
         std::unordered_map<Address, int> _under_duplicated;
         std::unordered_map<std::string, elle::Buffer> _challenges;
         ELLE_ATTRIBUTE(
-          (std::unordered_map<Address, std::vector<Overlay::WeakMember>>),
+          (std::unordered_map<Address, Overlay::Member>),
           peer_cache);
         mutable
         std::unordered_map<Address,

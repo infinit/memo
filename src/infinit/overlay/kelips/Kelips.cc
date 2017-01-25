@@ -1058,17 +1058,25 @@ namespace infinit
         try
         {
           ELLE_DEBUG_SCOPE("establish UTP connection");
-          auto peer = this->doughnut()->dock().make_peer(location).lock();
-          auto& remote = dynamic_cast<model::doughnut::Remote&>(*peer);
-          remote.connect(5_sec);
+          auto conn = this->doughnut()->dock().connect(location, true);
+          if (!conn->connected())
+          {
+            reactor::Waiter waiter = reactor::waiter(conn->on_connection());
+            if (!reactor::wait(waiter, 5_sec))
+              throw elle::Error("connection timeout");
+          }
+          ELLE_DEBUG("linking remote");
+          auto remote = this->doughnut()->dock().make_peer(conn);
+          remote->connect(5_sec);
+          ELLE_DEBUG("remote ready");
           if (this->doughnut()->version() < elle::Version(0, 7, 0) || packet::disable_compression)
           {
-            auto rpc = remote.make_rpc<SerState()>("kelips_fetch_state");
+            auto rpc = remote->make_rpc<SerState()>("kelips_fetch_state");
             return rpc();
           }
           else
           {
-            auto rpc = remote.make_rpc<SerState2()>("kelips_fetch_state2");
+            auto rpc = remote->make_rpc<SerState2()>("kelips_fetch_state2");
             SerState2 state = rpc();
             SerState res;
             for (auto const& c: state.first)
@@ -1086,6 +1094,7 @@ namespace infinit
               prev = next;
             }
             // UGLY HACK we must preserve
+            ELLE_DEBUG("got %s contacts and %s files", res.first.size(), res.second.size());
             res.second.emplace_back(Address::null, state.first.front().first);
             return res;
           }
@@ -1169,8 +1178,9 @@ namespace infinit
       bool
       Node::_discovered(model::Address id)
       {
-        ELLE_ABORT("oh look here bearclaw an easy fix");
-        // return this->_contacts.find(id) != this->_contacts.end();
+        int g = group_of(id);
+        return this->_state.observers.find(id) != this->_state.observers.end()
+         || this->_state.contacts[g].find(id) != this->_state.contacts[g].end();
       }
 
       void
@@ -3316,7 +3326,12 @@ namespace infinit
       Overlay::WeakMember
       Node::make_peer(NodeLocation hosts) const
       {
-        return this->doughnut()->dock().make_peer(hosts);
+        auto it = this->_peer_cache.find(hosts.id());
+        if (it != this->_peer_cache.end())
+          return Overlay::WeakMember(it->second);
+        auto w = this->doughnut()->dock().make_peer(hosts);
+        elle::unconst(this->_peer_cache).emplace(hosts.id(), w.lock());
+        return w;
       }
 
       boost::optional<model::Endpoints>
