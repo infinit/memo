@@ -137,11 +137,10 @@ namespace infinit
          *  mismatch.
          *
          *  @param l         Location of the peer to connect to.
-         *  @param duplicate In case a connection already exists, whether to
-         *                   return it or null.
+         *  @param no_remote Do not automatically create a remote on this conneciton
          */
         std::shared_ptr<Connection>
-        connect(NodeLocation l);
+        connect(NodeLocation l, bool no_remote = false);
         ELLE_ATTRIBUTE_R(Connecting, connecting);
         ELLE_ATTRIBUTE(Connected, connected);
 

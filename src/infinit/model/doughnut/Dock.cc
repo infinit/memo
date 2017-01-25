@@ -188,7 +188,7 @@ namespace infinit
       }
 
       std::shared_ptr<Dock::Connection>
-      Dock::connect(NodeLocation l)
+      Dock::connect(NodeLocation l, bool no_remote)
       {
         ELLE_TRACE_SCOPE("%s: connect to %f", this, l);
         // Check if we already have a connection to that peer.
@@ -218,16 +218,17 @@ namespace infinit
           auto connection = std::make_shared<Connection>(*this, std::move(l));
           ELLE_TRACE_SCOPE("initiate %s", connection);
           connection->init();
-          connection->on_connection().connect(
-            [this, connection] () mutable
-            {
-              this->doughnut().dock().make_peer(connection);
-              // Delay termination from descructor.
-              elle::With<reactor::Thread::NonInterruptible>() << [&]
+          if (!no_remote)
+            connection->on_connection().connect(
+              [this, connection] () mutable
               {
-                connection.reset();
-              };
-            });
+                this->doughnut().dock().make_peer(connection);
+                // Delay termination from descructor.
+                elle::With<reactor::Thread::NonInterruptible>() << [&]
+                {
+                  connection.reset();
+                };
+              });
           return connection;
         }
       }
