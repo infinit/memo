@@ -517,9 +517,14 @@ namespace infinit
         elle::json::write(std::cout, l);
       }
       else
+      {
+        bool user_in_list =
+          self ? std::find(users.begin(), users.end(), self) != users.end()
+               : false;
         for (auto const& user: users)
         {
-          std::cout << (self && user == self ? "* " : "  ") << user.name;
+          std::cout << (self && user == self ? "* " : user_in_list ? "  " : "")
+                    << user.name;
           if (user.description)
             std::cout << " \"" << user.description.get() << "\"";
           std::cout << ": public";
@@ -529,6 +534,7 @@ namespace infinit
             std::cout << " key only";
           std::cout << std::endl;
         }
+      }
     }
 
     void
