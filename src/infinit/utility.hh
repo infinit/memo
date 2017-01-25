@@ -121,7 +121,19 @@ namespace infinit
       !infinit.empty() ? infinit :
       !xdg.empty() ? boost::filesystem::path(xdg) / "infinit/filesystem" :
       def;
-    return canonical_folder(dir);
+    try
+    {
+      return canonical_folder(dir);
+    }
+    catch (boost::filesystem::filesystem_error& e)
+    {
+      ELLE_LOG_COMPONENT("xdg");
+      std::string env =
+        !infinit.empty() ? "INFINIT_" : !xdg.empty() ? "XDG_" : "";
+      if (!env.empty())
+        ELLE_WARN("Invalid \"%s%s\" directory: %s", env, type, e.what());
+      elle::err(e.what());
+    }
   }
 
   inline
