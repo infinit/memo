@@ -1426,10 +1426,10 @@ ELLE_TEST_SUITE()
       conf.query_get_retries = 4;
       conf.query_put_retries = 4;
       conf.query_put_insert_ttl = 0;
-      conf.query_timeout_ms = valgrind(100 * windows_factor, 20);
+      conf.query_timeout_ms = valgrind(200 * windows_factor, 20);
       conf.contact_timeout_ms = windows_factor * valgrind(500, 20);
-      conf.ping_interval_ms = windows_factor * valgrind(50, 10);
-      conf.ping_timeout_ms = windows_factor * valgrind(1000, 2);
+      conf.ping_interval_ms = windows_factor * valgrind(20, 10);
+      conf.ping_timeout_ms = windows_factor * valgrind(100, 2);
       return std::make_unique<kelips::Node>(
         conf, local, &dht);
     };
