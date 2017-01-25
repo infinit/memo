@@ -139,6 +139,10 @@ private:
         reactor::wait(this->_transmission);
         out.write(elle::WeakBuffer(buf, size));
       }
+      catch (reactor::network::ConnectionClosed const&)
+      {
+        break;
+      }
       catch (reactor::network::Exception const& e)
       {
         ELLE_LOG("ignoring exception %s", e);
@@ -198,7 +202,6 @@ discover(DHT& dht,
          bool wait_back = false)
 {
   Endpoints eps;
-  ELLE_ERR("%s", target.dht->local()->server_endpoints());
   if (onlyfirst)
     eps = Endpoints {target.dht->local()->server_endpoints()[0]};
   else
