@@ -1069,6 +1069,7 @@ namespace infinit
           auto remote = this->doughnut()->dock().make_peer(conn);
           remote->connect(5_sec);
           ELLE_DEBUG("remote ready");
+          this->_peer_cache.emplace(remote->id(), remote);
           if (this->doughnut()->version() < elle::Version(0, 7, 0) || packet::disable_compression)
           {
             auto rpc = remote->make_rpc<SerState()>("kelips_fetch_state");
@@ -3328,7 +3329,16 @@ namespace infinit
       {
         auto it = this->_peer_cache.find(hosts.id());
         if (it != this->_peer_cache.end())
-          return Overlay::WeakMember(it->second);
+        {
+          auto* remote = dynamic_cast<model::doughnut::Remote*>(it->second.get());
+          if (!remote || !remote->connection()->disconnected())
+          {
+            ELLE_DEBUG("%s: returning existing remote for %s", this, hosts);
+            return Overlay::WeakMember(it->second);
+          }
+          elle::unconst(this->_peer_cache).erase(it);
+        }
+        ELLE_DEBUG("%s: querying new remote for %s", this, hosts);
         auto w = this->doughnut()->dock().make_peer(hosts);
         elle::unconst(this->_peer_cache).emplace(hosts.id(), w.lock());
         return w;
