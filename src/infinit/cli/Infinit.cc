@@ -25,6 +25,8 @@
 
 ELLE_LOG_COMPONENT("infinit");
 
+namespace bfs = boost::filesystem;
+
 namespace
 {
   /// argv[0], for error messages.
@@ -186,12 +188,12 @@ namespace infinit
       void
       main(std::vector<std::string>& args)
       {
-        if (boost::filesystem::path(args[0]).filename() == "infinit")
+        if (bfs::path(args[0]).filename() == "infinit")
           args.erase(args.begin());
         else
         {
           // The name of the command typed by the user, say `infinit-users`.
-          auto prev = boost::filesystem::path(args[0]).filename().string();
+          auto prev = bfs::path(args[0]).filename().string();
           // The corresponding entity, say `users`.
           args[0] = entity(prev);
           if (args.size() > 1 && das::cli::is_option(args[1]))
@@ -266,7 +268,7 @@ namespace infinit
           return nullptr;
     }
 
-    boost::filesystem::path
+    bfs::path
     Infinit::avatar_path() const
     {
       auto root = xdg_cache_home() / "avatars";
@@ -274,7 +276,7 @@ namespace infinit
       return root;
     }
 
-    boost::optional<boost::filesystem::path>
+    boost::optional<bfs::path>
     Infinit::avatar_path(std::string const& name) const
     {
       auto path = this->avatar_path() / name;
@@ -482,7 +484,7 @@ main(int argc, char** argv)
       elle::fprintf(std::cerr, "%s\n", e.backtrace());
     return 1;
   }
-  catch (boost::filesystem::filesystem_error const& e)
+  catch (bfs::filesystem_error const& e)
   {
     elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
     return 1;
