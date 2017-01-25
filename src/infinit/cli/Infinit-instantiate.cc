@@ -29,7 +29,7 @@ namespace infinit
     template <typename Symbol, typename ObjectSymbol>
     struct mode_call
     {
-      using Object = typename ObjectSymbol::template attr_type<Infinit>::type;
+      using Object = typename ObjectSymbol::template attr_type<Infinit>;
       using type = bool;
       static
       bool
@@ -136,7 +136,7 @@ namespace infinit
                           bool& found)
     {
       using Object =
-        typename Symbol::template attr_type<infinit::cli::Infinit>::type;
+        typename Symbol::template attr_type<infinit::cli::Infinit>;
       auto& object = Symbol::attr_get(infinit);
       if (!found && das::cli::option_name_from_c(Symbol::name()) == args[0])
       {

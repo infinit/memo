@@ -28,7 +28,7 @@ namespace infinit
     template <typename T, typename Head, typename ... Tail>
     struct _find_name<T, elle::meta::List<Head, Tail...>>
       : public std::conditional<
-          std::is_same<typename Head::template attr_type<Infinit>::type,
+          std::is_same<typename Head::template attr_type<Infinit>,
                        T>::value,
           Head,
           _find_name<T, elle::meta::List<Tail...>>>::type
