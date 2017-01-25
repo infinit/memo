@@ -482,6 +482,11 @@ main(int argc, char** argv)
       elle::fprintf(std::cerr, "%s\n", e.backtrace());
     return 1;
   }
+  catch (boost::filesystem::filesystem_error const& e)
+  {
+    elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
+    return 1;
+  }
   catch (elle::Exit const& e)
   {
     return e.return_code();
