@@ -460,6 +460,7 @@ namespace
       /*------.
       | Types |
       `------*/
+      using Super = Result;
       using FaultyNetwork = boost::optional<NetworkResult>;
 
       /*-------------.
@@ -470,7 +471,8 @@ namespace
                    bool sane,
                    FaultyNetwork faulty_network = {},
                    Result::Reason extra_reason = {})
-        : Result(name, sane, extra_reason, faulty_network && faulty_network->warning())
+        : Super(name, sane, extra_reason,
+                faulty_network && faulty_network->warning())
         , faulty_network(faulty_network)
       {}
 
@@ -483,13 +485,32 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool no_color, bool) const override;
+      _print(std::ostream& out, bool no_color, bool) const override
+      {
+        if ((!this->sane() || this->warning()) && this->faulty_network)
+        {
+          out << " ";
+          if (this->sane())
+            out << "(";
+          out << "network \"" << this->faulty_network->name() << "\" is ";
+          if (!this->faulty_network->linked)
+            out << "not linked";
+          else
+            out << "faulty";
+          if (this->sane())
+            out << ")";
+        }
+      }
 
       /*--------------.
       | Serialization |
       `--------------*/
       void
-      serialize(elle::serialization::Serializer& s);
+      serialize(elle::serialization::Serializer& s)
+      {
+        Super::serialize(s);
+        s.serialize("network", this->faulty_network);
+      }
 
       /*-----------.
       | Attributes |
@@ -503,6 +524,7 @@ namespace
       /*------.
       | Types |
       `------*/
+      using Super = Result;
       using FaultyVolume = boost::optional<VolumeResult>;
 
       /*-------------.
@@ -512,20 +534,42 @@ namespace
       DriveResult(std::string const& name,
                   bool sane,
                   FaultyVolume faulty_volume = {},
-                  Result::Reason extra_reason = {});
-      DriveResult(elle::serialization::SerializerIn& s);
+                  Result::Reason extra_reason = {})
+        : Super(name, sane, extra_reason)
+        , faulty_volume(faulty_volume)
+      {}
+
+      DriveResult(elle::serialization::SerializerIn& s)
+      {
+        this->serialize(s);
+      }
 
       /*---------.
       | Printing |
       `---------*/
       void
-      _print(std::ostream& out, bool no_color, bool) const override;
+      _print(std::ostream& out, bool no_color, bool) const override
+      {
+        if (!this->sane() && this->faulty_volume)
+        {
+          out << " volume \"" << this->faulty_volume->name() << "\" is ";
+          if (this->faulty_volume->reason)
+            out << this->faulty_volume->reason;
+          else
+            out << "faulty";
+        }
+      }
 
       /*--------------.
       | Serialization |
       `--------------*/
       void
-      serialize(elle::serialization::Serializer& s);
+      serialize(elle::serialization::Serializer& s)
+      {
+        Super::serialize(s);
+        s.serialize("volume", this->faulty_volume);
+      }
+
 
       /*-----------.
       | Attributes |
@@ -1084,73 +1128,6 @@ namespace
     SystemSanityResults system_sanity;
     ConnectivityResults connectivity;
   };
-
-  void
-  ConfigurationIntegrityResults::VolumeResult::serialize(
-    elle::serialization::Serializer& s)
-  {
-    Result::serialize(s);
-    s.serialize("network", this->faulty_network);
-  }
-
-  void
-  ConfigurationIntegrityResults::VolumeResult::_print(
-    std::ostream& out, bool no_color, bool) const
-  {
-    if ((!this->sane() || this->warning()) && this->faulty_network)
-    {
-      out << " ";
-      if (this->sane())
-        out << "(";
-      out << "network \"" << this->faulty_network->name() << "\" is ";
-      if (!this->faulty_network->linked)
-        out << "not linked";
-      else
-        out << "faulty";
-      if (this->sane())
-        out << ")";
-    }
-  }
-
-  ConfigurationIntegrityResults::DriveResult::DriveResult(
-    std::string const& name,
-    bool sane,
-    FaultyVolume faulty_volume,
-    Result::Reason extra_reason)
-    : Result(name, sane, extra_reason)
-    , faulty_volume(faulty_volume)
-  {}
-
-  ConfigurationIntegrityResults::DriveResult::DriveResult(
-    elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
-
-  void
-  ConfigurationIntegrityResults::DriveResult::serialize(
-    elle::serialization::Serializer& s)
-  {
-    Result::serialize(s);
-    s.serialize("volume", this->faulty_volume);
-  }
-
-  void
-  ConfigurationIntegrityResults::DriveResult::_print(
-    std::ostream& out, bool no_color, bool) const
-  {
-    if (!this->sane())
-    {
-      if (this->faulty_volume)
-      {
-        out << " volume \"" << this->faulty_volume->name() << "\" is ";
-        if (this->faulty_volume->reason)
-          out << this->faulty_volume->reason;
-        else
-          out << "faulty";
-      }
-    }
-  }
 
   ConfigurationIntegrityResults::LeftoversResult::LeftoversResult(
     std::string const& name,
