@@ -286,9 +286,8 @@ namespace infinit
 #ifdef INFINIT_WINDOWS
     elle::unreachable();
 #else
-    return infinit::xdg_runtime_dir(std::string("/var/tmp")) /
-      "infinit" / "filesystem" / "monitoring" /
-      user.name / elle::sprintf("%s.sock", this->name);
+    return infinit::xdg_runtime_dir() / "monitoring" / user.name
+      / elle::sprintf("%s.sock", this->name);
 #endif
   }
 
