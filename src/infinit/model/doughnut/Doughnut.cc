@@ -173,14 +173,23 @@ namespace infinit
           }
           if (!boost::filesystem::exists(m_path))
           {
-            auto unix_domain_server =
-              std::make_unique<reactor::network::UnixDomainServer>();
-            if (!boost::filesystem::exists(m_path.parent_path()))
-              boost::filesystem::create_directories(m_path.parent_path());
-            unix_domain_server->listen(m_path);
-            this->_monitoring_server.reset(
+            try
+            {
+              auto unix_domain_server =
+                std::make_unique<reactor::network::UnixDomainServer>();
+              if (!boost::filesystem::exists(m_path.parent_path()))
+                boost::filesystem::create_directories(m_path.parent_path());
+              unix_domain_server->listen(m_path);
+              this->_monitoring_server.reset(
               new MonitoringServer(std::move(unix_domain_server), *this));
-            ELLE_DEBUG("monitoring server listening on %s", m_path);
+              ELLE_DEBUG("monitoring server listening on %s", m_path);
+            }
+            catch (reactor::network::PermissionDenied const& e)
+            {
+              ELLE_WARN("unable to monitor, check "
+                        "INFINIT_RUNTIME_DIR or XDG_RUNTIME_DIR");
+              throw;
+            }
           }
         }
 #endif
