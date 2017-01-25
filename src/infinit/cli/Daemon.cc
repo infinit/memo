@@ -39,7 +39,7 @@ namespace infinit
     using Strings = Daemon::Strings;
 
     Daemon::Daemon(Infinit& infinit)
-      : Entity(infinit)
+      : Object(infinit)
       , disable_storage(
         "Disable storage on associated network",
         das::cli::Options(),

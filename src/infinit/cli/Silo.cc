@@ -96,7 +96,7 @@ namespace infinit
     }
 
     Silo::Silo(Infinit& infinit)
-      : Entity(infinit)
+      : Object(infinit)
       , create(
         "Create local silo",
         das::cli::Options{

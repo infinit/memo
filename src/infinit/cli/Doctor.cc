@@ -58,7 +58,7 @@ namespace infinit
     std::string const Doctor::connectivity_server = "connectivity.infinit.sh";
 
     Doctor::Doctor(Infinit& infinit)
-      : Entity(infinit)
+      : Object(infinit)
       , all(
         "Perform all possible checks",
         das::cli::Options(),

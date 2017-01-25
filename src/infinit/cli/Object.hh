@@ -13,21 +13,21 @@ namespace infinit
   namespace cli
   {
     template <typename Self>
-    class Entity;
+    class Object;
 
     template <typename Self>
-    using EntityCallable =
+    using ObjectCallable =
       decltype(
         das::named::function(
-          das::bind_method(std::declval<Entity<Self>&>(), cli::call),
+          das::bind_method(std::declval<Object<Self>&>(), cli::call),
           help = false));
 
     template <typename Self>
-    class Entity
-      : public EntityCallable<Self>
+    class Object
+      : public ObjectCallable<Self>
     {
     public:
-      Entity(Infinit& infinit);
+      Object(Infinit& infinit);
       void
       help(std::ostream& s);
       void

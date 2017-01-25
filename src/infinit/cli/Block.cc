@@ -12,7 +12,7 @@ namespace infinit
     using Error = das::cli::Error;
 
     Block::Block(Infinit& infinit)
-      : Entity(infinit)
+      : Object(infinit)
       , deserialize(
         "Deserialized block",
         das::cli::Options(),

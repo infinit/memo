@@ -38,7 +38,7 @@ namespace infinit
     namespace dnut = infinit::model::doughnut;
 
     Network::Network(Infinit& infinit)
-      : Entity(infinit)
+      : Object(infinit)
       , create(
         "Create a network",
         das::cli::Options(),

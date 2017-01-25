@@ -2,7 +2,7 @@
 
 #include <das/cli.hh>
 
-#include <infinit/cli/Entity.hh>
+#include <infinit/cli/Object.hh>
 #include <infinit/cli/Mode.hh>
 #include <infinit/cli/fwd.hh>
 #include <infinit/cli/symbols.hh>
@@ -13,7 +13,7 @@ namespace infinit
   namespace cli
   {
     class Passport
-      : public Entity<Passport>
+      : public Object<Passport>
     {
     public:
       Passport(Infinit& infinit);

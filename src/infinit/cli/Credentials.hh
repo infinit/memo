@@ -4,7 +4,7 @@
 
 #include <das/cli.hh>
 
-#include <infinit/cli/Entity.hh>
+#include <infinit/cli/Object.hh>
 #include <infinit/cli/Mode.hh>
 #include <infinit/cli/fwd.hh>
 #include <infinit/cli/symbols.hh>
@@ -15,7 +15,7 @@ namespace infinit
   namespace cli
   {
     class Credentials
-      : public Entity<Credentials>
+      : public Object<Credentials>
     {
     public:
       Credentials(Infinit& infinit);

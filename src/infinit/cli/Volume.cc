@@ -34,7 +34,7 @@ namespace infinit
     namespace bfs = boost::filesystem;
 
     Volume::Volume(Infinit& infinit)
-      : Entity(infinit)
+      : Object(infinit)
       , create(
         "Create a volume",
         das::cli::Options(),

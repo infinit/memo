@@ -36,7 +36,7 @@ namespace infinit
                  infinit::symbols::ldap_dn))>;
 
     User::User(Infinit& infinit)
-      : Entity(infinit)
+      : Object(infinit)
       , create(
         "Create a user",
         das::cli::Options(),

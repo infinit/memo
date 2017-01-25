@@ -449,7 +449,7 @@ namespace infinit
     using Error = das::cli::Error;
 
     ACL::ACL(Infinit& infinit)
-      : Entity(infinit)
+      : Object(infinit)
       , get_xattr(
         "Get an extended attribute value",
         das::cli::Options(),

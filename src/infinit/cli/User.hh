@@ -5,7 +5,7 @@
 #include <das/cli.hh>
 
 #include <infinit/User.hh>
-#include <infinit/cli/Entity.hh>
+#include <infinit/cli/Object.hh>
 #include <infinit/cli/Mode.hh>
 #include <infinit/cli/fwd.hh>
 #include <infinit/cli/symbols.hh>
@@ -16,7 +16,7 @@ namespace infinit
   namespace cli
   {
     class User
-      : public Entity<User>
+      : public Object<User>
     {
     public:
       User(Infinit& infinit);

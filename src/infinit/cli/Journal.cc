@@ -20,7 +20,7 @@ namespace infinit
     using Async = infinit::model::doughnut::consensus::Async;
 
     Journal::Journal(Infinit& infinit)
-      : Entity(infinit)
+      : Object(infinit)
       , describe(
         "Describe asynchronous operation(s)",
         das::cli::Options(),

@@ -13,7 +13,7 @@ namespace infinit
     using Error = das::cli::Error;
 
     Drive::Drive(Infinit& infinit)
-      : Entity(infinit)
+      : Object(infinit)
       , create(
         "Create a drive (a network and volume pair)",
         das::cli::Options(),

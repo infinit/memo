@@ -2,7 +2,7 @@
 
 #include <das/cli.hh>
 
-#include <infinit/cli/Entity.hh>
+#include <infinit/cli/Object.hh>
 #include <infinit/cli/Mode.hh>
 #include <infinit/cli/fwd.hh>
 #include <infinit/cli/symbols.hh>
@@ -13,7 +13,7 @@ namespace infinit
   namespace cli
   {
     class Doctor
-      : public Entity<Doctor>
+      : public Object<Doctor>
     {
     public:
       /// Default server to ping with.

@@ -2,7 +2,7 @@
 
 #include <das/cli.hh>
 
-#include <infinit/cli/Entity.hh>
+#include <infinit/cli/Object.hh>
 #include <infinit/cli/Mode.hh>
 #include <infinit/cli/fwd.hh>
 #include <infinit/cli/symbols.hh>
@@ -14,7 +14,7 @@ namespace infinit
   namespace cli
   {
     class Drive
-      : public Entity<Drive>
+      : public Object<Drive>
     {
     public:
       using Passport = infinit::model::doughnut::Passport;

@@ -1,9 +1,9 @@
-#include <infinit/cli/Entity.hh>
+#include <infinit/cli/Object.hh>
 
 #include <elle/Exit.hh>
 #include <elle/printf.hh>
 
-#include <infinit/cli/Entity.hh>
+#include <infinit/cli/Object.hh>
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/utility.hh>
 
@@ -12,8 +12,8 @@ namespace infinit
   namespace cli
   {
     template <typename Self>
-    Entity<Self>::Entity(Infinit& infinit)
-      : EntityCallable<Self>(
+    Object<Self>::Object(Infinit& infinit)
+      : ObjectCallable<Self>(
         das::bind_method(*this, cli::call), cli::help = false)
       , _cli(infinit)
     {
@@ -38,16 +38,16 @@ namespace infinit
 
       template <typename T>
       struct find_name
-        : public _find_name<T, Infinit::Entities>
+        : public _find_name<T, Infinit::Objects>
       {};
 
-      template <typename Symbol, typename Entity>
+      template <typename Symbol, typename Object>
       struct help_modes
       {
         using type = bool;
         static
         bool
-        value(std::ostream& s, Entity const& entity)
+        value(std::ostream& s, Object const& object)
         {
           auto vars = VarMap{
             {"action", elle::sprintf("to %s", Symbol::name())},
@@ -55,7 +55,7 @@ namespace infinit
           };
           elle::fprintf(s, "  %-10s %s\n",
                         das::cli::option_name_from_c(Symbol::name()),
-                        vars.expand(Symbol::attr_get(entity).help));
+                        vars.expand(Symbol::attr_get(object).help));
           return true;
         }
       };
@@ -63,7 +63,7 @@ namespace infinit
 
     template <typename Self>
     void
-    Entity<Self>::help(std::ostream& s)
+    Object<Self>::help(std::ostream& s)
     {
       using Symbol = find_name<Self>;
       Infinit::usage(
@@ -83,7 +83,7 @@ namespace infinit
 
     template <typename Self>
     void
-    Entity<Self>::call(bool help)
+    Object<Self>::call(bool help)
     {
       if (help)
         this->help(std::cout);
@@ -94,24 +94,24 @@ namespace infinit
       }
     }
 
-    /*-----------------------.
-    | Instantiate entities.  |
-    `-----------------------*/
+    /*----------------------.
+    | Instantiate objects.  |
+    `----------------------*/
 
-    template class Entity<ACL>;
-    template class Entity<Block>;
-    template class Entity<Credentials>;
+    template class Object<ACL>;
+    template class Object<Block>;
+    template class Object<Credentials>;
 #if INFINIT_WITH_DAEMON
-    template class Entity<Daemon>;
+    template class Object<Daemon>;
 #endif
-    template class Entity<Device>;
-    template class Entity<Doctor>;
-    template class Entity<Drive>;
-    template class Entity<Journal>;
-    template class Entity<Network>;
-    template class Entity<Passport>;
-    template class Entity<Silo>;
-    template class Entity<User>;
-    template class Entity<Volume>;
+    template class Object<Device>;
+    template class Object<Doctor>;
+    template class Object<Drive>;
+    template class Object<Journal>;
+    template class Object<Network>;
+    template class Object<Passport>;
+    template class Object<Silo>;
+    template class Object<User>;
+    template class Object<Volume>;
   }
 }

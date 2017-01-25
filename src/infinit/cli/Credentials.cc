@@ -14,7 +14,7 @@ namespace infinit
     using Error = das::cli::Error;
 
     Credentials::Credentials(Infinit& infinit)
-      : Entity(infinit)
+      : Object(infinit)
       , add(
         "Add credentials for a third-party service",
         das::cli::Options(),

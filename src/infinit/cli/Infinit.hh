@@ -138,7 +138,7 @@ namespace infinit
       Silo silo = *this;
       User user = *this;
       Volume volume = *this;
-      using Entities
+      using Objects
         = decltype(elle::meta::list(cli::acl,
                                     cli::block,
                                     cli::credentials,

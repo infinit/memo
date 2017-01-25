@@ -131,7 +131,7 @@ namespace infinit
       s << "Infinit decentralized storage platform.\n"
         << "\n"
         << "Object types:\n";
-      infinit::cli::Infinit::Entities::map<help_object>::value(s);
+      infinit::cli::Infinit::Objects::map<help_object>::value(s);
       s << "\n"
         << "Options:\n";
       das::cli::help(*this, s, options);
@@ -156,9 +156,9 @@ namespace infinit
     namespace
     {
       /// From an old executable name (e.g. `infinit-users` or
-      /// `infinit-users.exe`), extract the entity (e.g., `users`).
+      /// `infinit-users.exe`), extract the object (e.g., `users`).
       std::string
-      entity(std::string const& argv0)
+      object_from(std::string const& argv0)
       {
         // Mandatory prefix.
         static auto const prefix = std::string("infinit-");
@@ -169,7 +169,7 @@ namespace infinit
         static auto const suffix = std::string(".exe");
         if (boost::algorithm::ends_with(res, suffix))
           res.resize(res.size() - suffix.size());
-        // Renamed entities.
+        // Renamed objects.
         if (res == "storage")
           res = "silo";
         return res;
@@ -180,7 +180,7 @@ namespace infinit
       run_command(Infinit& cli, std::vector<std::string>& args)
       {
         bool res = false;
-        infinit::cli::Infinit::Entities::map<object>::value(cli, args, res);
+        infinit::cli::Infinit::Objects::map<object>::value(cli, args, res);
         return res;
       }
 
@@ -194,8 +194,8 @@ namespace infinit
         {
           // The name of the command typed by the user, say `infinit-users`.
           auto prev = bfs::path(args[0]).filename().string();
-          // The corresponding entity, say `users`.
-          args[0] = entity(prev);
+          // The corresponding object, say `users`.
+          args[0] = object_from(prev);
           if (args.size() > 1 && das::cli::is_option(args[1]))
             if (args[1] == "-v" || args[1] == "--version")
               args.erase(args.begin());

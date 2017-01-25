@@ -14,7 +14,7 @@ namespace infinit
     using Error = das::cli::Error;
 
     Passport::Passport(Infinit& infinit)
-      : Entity(infinit)
+      : Object(infinit)
       , create(
         "Create a passport for a user to a network",
         das::cli::Options(),

@@ -95,7 +95,7 @@ namespace infinit
     `---------*/
 
     Device::Device(Infinit& infinit)
-      : Entity(infinit)
+      : Object(infinit)
       , receive(
         "receive an object from another device using {hub}",
         das::cli::Options{

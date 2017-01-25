@@ -72,7 +72,7 @@ namespace infinit
                 elle::unordered_map<std::string, std::string> fmt{
                   {"action", elle::sprintf("to %s", action)},
                   {"hub", beyond(true)},
-                  {"type", ObjectSymbol::name()},
+                  {"object", ObjectSymbol::name()},
                   {"verb", action},
                 };
                 s << boost::regex_replace(
