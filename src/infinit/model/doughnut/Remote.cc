@@ -94,7 +94,14 @@ namespace infinit
               else
               {
                 ELLE_TRACE_SCOPE("%s: disconnected", this);
-                auto hold = this->shared_from_this();
+                std::shared_ptr<Peer> hold;
+                try
+                {
+                  hold = this->shared_from_this();
+                }
+                catch (std::bad_weak_ptr const&)
+                {
+                }
                 this->_connected.close();
               }
             }));
