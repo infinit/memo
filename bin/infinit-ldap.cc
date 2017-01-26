@@ -24,8 +24,10 @@ namespace bfs = boost::filesystem;
 
 namespace
 {
+  using Strings = std::vector<std::string>;
+
   void
-  extract_fields(std::string const& pattern, std::vector<std::string>& res)
+  extract_fields(std::string const& pattern, Strings& res)
   {
     size_t p = 0;
     while (true)
@@ -42,13 +44,12 @@ namespace
   }
 
   std::string
-  make_field(
-    std::string pattern,
-    std::unordered_map<std::string, std::vector<std::string>> const& attrs,
-    int i = 0)
+  make_field(std::string pattern,
+             std::unordered_map<std::string, Strings> const& attrs,
+             int i = 0)
   {
     using boost::algorithm::replace_all;
-    auto fields = std::vector<std::string>{};
+    auto fields = Strings{};
     extract_fields(pattern, fields);
     for (auto& f: fields)
       replace_all(pattern, "$(" + f + ")", attrs.at(f)[0]);
@@ -72,8 +73,7 @@ namespace
     auto password = optional(args, "password");
     if (!password)
       password = read_passphrase("LDAP password");
-    elle::ldap::LDAPClient ldap(server, domain, user, *password);
-    return ldap;
+    return {server, domain, user, *password};
   }
 
   std::unordered_map<std::string, infinit::User>
@@ -90,23 +90,23 @@ namespace
     auto objectclass = optional(args, "object-class");
     auto filter = optional(args, "filter");
     if (filter && objectclass)
-      throw elle::Error("specify either --filter or --object-class");
+      elle::err("specify either --filter or --object-class");
     if (objectclass)
       filter = "objectClass=" + *objectclass;
     else if (!filter)
       filter = "objectClass=posixGroup";
-    auto res = ldap.search(searchbase, *filter, {"cn", "memberUid"});
 
-    std::unordered_set<std::string> all_members; // uids
-    std::unordered_map<std::string, std::string> dns; // uid -> dn
-
-    std::unordered_map<std::string, std::vector<std::string>> groups; //gname -> uids
-    for (auto const& r: res)
+    // uids
+    auto all_members = std::unordered_set<std::string>{};
+    // uid -> dn
+    auto dns = std::unordered_map<std::string, std::string>{};
+    //gname -> uids
+    auto groups = std::unordered_map<std::string, Strings>{};
+    for (auto const& r: ldap.search(searchbase, *filter, {"cn", "memberUid"}))
     {
       if (r.find("memberUid") == r.end())
-      { // assume this is an user
+        // assume this is a user
         dns.insert(std::make_pair(r.at("dn")[0], r.at("dn")[0]));
-      }
       else
       {
         auto name = r.at("cn")[0];
@@ -122,22 +122,21 @@ namespace
       dns[m] = r.front().at("dn").front();
     }
 
-    std::unordered_map<std::string, infinit::User> users; // uid -> user
+    // uid -> user
+    auto users = std::unordered_map<std::string, infinit::User>{};
     for (auto const& m: dns)
-    {
       try
       {
         auto u = infinit::beyond_fetch<infinit::User>(
           elle::sprintf("ldap_users/%s", reactor::http::url_encode(m.second)),
           "LDAP user",
           m.second);
-        users.insert(std::make_pair(m.first, u));
+        users.emplace(m.first, u);
       }
       catch (elle::Error const& e)
       {
         ELLE_WARN("Failed to fetch user %s from %s", m.second, infinit::beyond(true));
       }
-    }
 
     // Push all users
     for (auto const& u: users)
@@ -248,12 +247,12 @@ COMMAND(drive_invite)
   bool create_home = flag(args, "create-home");
   using boost::algorithm::to_lower_copy;
   auto permissions = to_lower_copy(optional(args, "root-permissions").value_or("rw"));
-  std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
+  Strings allowed_modes = {"r", "w", "rw", "none", ""};
   auto it = std::find(allowed_modes.begin(), allowed_modes.end(), permissions);
   if (it == allowed_modes.end())
     throw CommandLineError(
       elle::sprintf("mode must be one of: %s", allowed_modes));
-  auto modes_map = std::vector<std::string>{"setr", "setw", "setrw", "", ""};
+  auto modes_map = Strings{"setr", "setw", "setrw", "", ""};
   auto mode = modes_map[it - allowed_modes.begin()];
   auto mountpoint = mountpoint_root(mandatory(args, "mountpoint"), true);
   auto users = _populate_network(args, drive.network);
@@ -339,19 +338,13 @@ COMMAND(populate_hub)
     filter = "objectClass=" + *objectclass;
   else if (!filter)
     filter = "objectClass=person";
-  auto pattern = optional(args, "username-pattern");
-  if (!pattern)
-    pattern = "$(cn)%";
-  auto email_pattern = optional(args, "email-pattern");
-  if (!email_pattern)
-    email_pattern = "$(mail)";
-  auto fullname_pattern = optional(args, "fullname-pattern");
-  if (!fullname_pattern)
-    fullname_pattern = "$(cn)";
-  auto fields = std::vector<std::string>{};
-  extract_fields(*pattern, fields);
-  extract_fields(*email_pattern, fields);
-  extract_fields(*fullname_pattern, fields);
+  auto pattern = optional(args, "username-pattern").value_or("$(cn)%");
+  auto email_pattern = optional(args, "email-pattern").value_or("$(mail)");
+  auto fullname_pattern = optional(args, "fullname-pattern").value_or("$(cn)");
+  auto fields = Strings{};
+  extract_fields(pattern, fields);
+  extract_fields(email_pattern, fields);
+  extract_fields(fullname_pattern, fields);
   ELLE_TRACE("will search %s and fetch fields %s", *filter, fields);
   auto res = ldap.search(searchbase, *filter, fields);
   ELLE_TRACE("LDAP returned %s", res);
@@ -374,14 +367,14 @@ COMMAND(populate_hub)
       ELLE_TRACE("%s not on %s: %s", dn, infinit::beyond(true), e);
       for (int i=0; ; ++i)
       {
-        auto username = make_field(*pattern, r, i);
+        auto username = make_field(pattern, r, i);
         try
         {
           auto u = infinit::beyond_fetch<infinit::User>(
             "user",
             reactor::http::url_encode(username));
           ELLE_TRACE("username %s taken", username);
-          if (pattern->find('%') == std::string::npos)
+          if (pattern.find('%') == std::string::npos)
           {
             ELLE_ERR("Username %s already taken, skipping %s", username, dn);
             break;
@@ -392,8 +385,8 @@ COMMAND(populate_hub)
         {
           // all good
           missing[username] = UserData{dn,
-            make_field(*fullname_pattern, r),
-          make_field(*email_pattern, r)};
+            make_field(fullname_pattern, r),
+          make_field(email_pattern, r)};
           break;
         }
       }
