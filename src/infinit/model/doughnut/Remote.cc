@@ -122,8 +122,8 @@ namespace infinit
       Remote::~Remote()
       {
         ELLE_TRACE_SCOPE("%s: destruct", this);
-        this->_cleanup();
         this->_doughnut.dock()._peer_cache.erase(this->_cache_iterator);
+        this->_cleanup();
       }
 
       void
