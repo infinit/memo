@@ -19,9 +19,6 @@ namespace infinit
     namespace bfs = boost::filesystem;
     namespace dnut = infinit::model::doughnut;
 
-    std::unique_ptr<std::istream>
-    commands_input(boost::optional<std::string> input_name);
-
     struct VarMap
     {
       /// Variable name -> value.
@@ -93,6 +90,9 @@ namespace infinit
       ELLE_ATTRIBUTE(reactor::network::PortMapping, port_map_tcp);
       ELLE_ATTRIBUTE(reactor::network::PortMapping, port_map_udp);
     };
+
+    std::unique_ptr<std::istream>
+    commands_input(boost::optional<std::string> input_name);
 
     /*---------.
     | Daemon.  |

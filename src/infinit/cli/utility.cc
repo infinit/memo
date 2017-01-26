@@ -148,35 +148,34 @@ namespace infinit
     }
 
     std::unique_ptr<std::istream>
-    commands_input(boost::optional<std::string> input_name)
+    commands_input(boost::optional<std::string> path)
     {
-      if (input_name)
+      if (path && *path != "-")
       {
-        auto path = *input_name;
-        if (path != "-")
-        {
-          auto file = std::make_unique<boost::filesystem::ifstream>(path);
-          if (!file->good())
-            elle::err("unable to open \"%s\" for reading", path);
-          return std::move(file);
-        }
+        auto file = std::make_unique<bfs::ifstream>(*path);
+        if (!file->good())
+          elle::err("unable to open \"%s\" for reading", *path);
+        return std::move(file);
       }
+      else
+      {
 #ifndef INFINIT_WINDOWS
-      return std::make_unique<reactor::FDStream>(0);
+        return std::make_unique<reactor::FDStream>(0);
 #else
-      // Windows does not support async io on stdin
-      auto res = std::make_unique<std::stringstream>();
-      while (true)
-      {
-        char buf[4096];
-        std::cin.read(buf, 4096);
-        if (int count = std::cin.gcount())
-          res->write(buf, count);
-        else
-          break;
+        // Windows does not support async io on stdin
+        auto res = std::make_unique<std::stringstream>();
+        while (true)
+        {
+          char buf[4096];
+          std::cin.read(buf, sizeof buf);
+          if (int count = std::cin.gcount())
+            res->write(buf, count);
+          else
+            break;
+        }
+        return res;
+#endif
       }
-      return res;
-  #endif
     }
 
     /// Perform metavariable substitution.
