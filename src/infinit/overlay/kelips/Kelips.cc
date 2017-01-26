@@ -3642,7 +3642,17 @@ namespace infinit
             endpoints_update(inserted.first->second.endpoints, ep);
           // Reset validated endpoint so that contacter is re-run
           if (sz != inserted.first->second.endpoints.size())
+          {
             inserted.first->second.validated_endpoint.reset();
+            // nodes will be notified in due time when the peer reconnects
+            // to them, but observers wont
+            packet::Gossip p;
+            p.sender = this->id();
+            p.observer = false;
+            p.contacts[nl.id()] = inserted.first->second.endpoints;
+            for (auto& obs: this->_state.observers)
+              this->send(p, obs.second);
+          }
         }
         return &inserted.first->second;
       }
