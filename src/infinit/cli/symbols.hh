@@ -31,13 +31,14 @@ namespace infinit
     DAS_CLI_SYMBOL(aws, 0, "Amazon Web Services (or S3 compatible) credentials", false);
     DAS_CLI_SYMBOL(bucket, '\0', "bucket name", false);
     DAS_CLI_SYMBOL(cache, 0, "enable caching with default values", false);
-    DAS_CLI_SYMBOL(cache_disk_size, 0, "size of disk cache for immutable data in bytes (default: 512 MB)", false);
-    DAS_CLI_SYMBOL(cache_ram_invalidation, 0, "RAM block cache invalidation time in seconds (default: 15 seconds)", false);
-    DAS_CLI_SYMBOL(cache_ram_size, 0, "maximum RAM block cache size in bytes (default: 64 MB)", false);
-    DAS_CLI_SYMBOL(cache_ram_ttl, 0, "RAM block cache time-to-live in seconds (default: 5 minute)", false);
+    DAS_CLI_SYMBOL(cache_disk_size, 0, "size of disk cache for immutable data in bytes (default: 512MB)", false);
+    DAS_CLI_SYMBOL(cache_ram_invalidation, 0, "RAM block cache invalidation time in seconds (default: 15s)", false);
+    DAS_CLI_SYMBOL(cache_ram_size, 0, "maximum RAM block cache size in bytes (default: 64MB)", false);
+    DAS_CLI_SYMBOL(cache_ram_ttl, 0, "RAM block cache time-to-live in seconds (default: 5min)", false);
     DAS_CLI_SYMBOL(capacity, 'c', "limit storage capacity (use: B,kB,kiB,MB,MiB,GB,GiB,TB,TiB)", false);
     DAS_CLI_SYMBOL(clear_content, '\0', "remove all blocks from disk (filesystem storage only)", false);
     DAS_CLI_SYMBOL(compatibility_version, '\0', "compatibility version to force", false);
+    DAS_CLI_SYMBOL(create, 'c', "create the {object}", false);
     DAS_CLI_SYMBOL(create_root, 'R', "create root directory", false);
     DAS_CLI_SYMBOL(daemon, 'd', "run as a background daemon" , false);
     DAS_CLI_SYMBOL(default_network, 0, "Default network for volume creation", false);
@@ -61,7 +62,7 @@ namespace infinit
     DAS_CLI_SYMBOL(encrypt, 0,  "use encryption: no, lazy, yes (default: yes)", false);
     DAS_CLI_SYMBOL(endpoint, '\0', "S3 endpoint", false);
     DAS_CLI_SYMBOL(endpoints_file, 0, "write node listening endpoints to file (format: host:port)", false);
-    DAS_CLI_SYMBOL(eviction_delay, 'e', "missing servers eviction delay (default: 10 min)", false);
+    DAS_CLI_SYMBOL(eviction_delay, 'e', "missing servers eviction delay (default: 10min)", false);
     DAS_CLI_SYMBOL(fallback_xattrs, '\0', "use fallback special file if extended attributes are not supported", false);
     DAS_CLI_SYMBOL(fetch, 'f', "fetch {object} from {hub}", false);
     DAS_CLI_SYMBOL(fetch_drive, 0, "update local drive descriptor from {hub}", false);
@@ -167,12 +168,14 @@ namespace infinit
     DAS_CLI_SYMBOL(upnp_tcp_port, 0, "port to try to get an tcp upnp connection on", false);
     DAS_CLI_SYMBOL(upnp_udt_port, 0, "port to try to get an udt upnp connection on", false);
     DAS_CLI_SYMBOL(user, 'u', "user {action} {object} for", false);
-    DAS_CLI_SYMBOL(utp_port, 'u', "port to perform utp tests on. (if unspecified, --xored_utp_port = utp_port + 1)", false);
+    DAS_CLI_SYMBOL(utp_port, 'u', "port to perform utp tests on (if unspecified, --xored_utp_port = utp_port + 1)", false);
     DAS_CLI_SYMBOL(value, 'v', "value {action}", false);
     DAS_CLI_SYMBOL(verbose, 'v', "use verbose output", false);
     DAS_CLI_SYMBOL(volume, 'V', "associated volume name", false);
     DAS_CLI_SYMBOL(xored, 'X', "performs test applying a 0xFF xor on the utp traffic, value=yes,no,both", false);
     DAS_CLI_SYMBOL(xored_utp_port, 'x', "port to perform xored utp tests on", false);
+
+    DAS_CLI_SYMBOL_NAMED(delete, delete_, 0, "delete the {object}", false);
 
 
     DAS_SYMBOL(acl);
@@ -180,7 +183,6 @@ namespace infinit
     DAS_SYMBOL(call);
     DAS_SYMBOL(configuration);
     DAS_SYMBOL(connectivity);
-    DAS_SYMBOL(create);
     DAS_SYMBOL(credentials);
     DAS_SYMBOL(describe);
     DAS_SYMBOL(deserialize);
@@ -218,7 +220,6 @@ namespace infinit
     DAS_SYMBOL(update);
     DAS_SYMBOL(version);
 
-    DAS_SYMBOL_NAMED(delete, delete_);
     DAS_SYMBOL_NAMED(export, export_);
     DAS_SYMBOL_NAMED(register, register_);
 
