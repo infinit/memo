@@ -1,21 +1,23 @@
-Usage: _build/macosx64/bin/infinit-acl MODE [OPTIONS...]			Usage: _build/macosx64/bin/infinit-acl acl [MODE|--help]
-										Infinit acl management utility.
-Infinit access control list utility:
-										Modes:
-Modes:										  get-xattr  Get an extended attribute value
-  --list		       List current ACL					  group	     Edit groups
-  --set			       Set ACL						  list	     List ACLs
-  --group		       Group control					  register   Register user's passport to the network
-  --register		       Register user's passport to the network		  set	     Set ACLs
-										  set-xattr  Set an extended attribute value
-Hidden Modes:
-  --set-xattr		       Set an extended attribute			Options:
-  --get-xattr		       Get an extended attribute			  -h, --help		 show this help message
-
-Miscellaneous:
-  -h [ --help ]		       Display the help
-  -s [ --script ]	       Silence all extraneous human friendly messages
-  --compatibility-version arg  Force compatibility version
-  -v [ --version ]	       Display version
-  --critical-log	       Path to critical log file, none to disable
-  -a [ --as ] arg	       User to run commands as (default: system user)
+Usage: _build/macosx64/bin/infinit-acl MODE [OPTIONS...]		       |Usage: _build/macosx64/bin/infinit-acl acl [MODE|--help]
+									       |Infinit acl management utility.
+Infinit access control list utility:					       |
+									       |Modes:
+Modes:									       |  get-xattr  Get an extended attribute value
+  --list		       List current ACL				       |  group	     Edit groups
+  --set			       Set ACL					       |  list	     List ACLs
+  --group		       Group control				       |  register   Register user's passport to the network
+  --register		       Register user's passport to the network	       |  set	     Set ACLs
+									       |  set-xattr  Set an extended attribute value
+Hidden Modes:								       |
+  --set-xattr		       Set an extended attribute		       |Options:
+  --get-xattr		       Get an extended attribute		       |  -h, --help		 show this help message
+									       |
+Miscellaneous:								       |
+  -h [ --help ]		       Display the help				       |
+  -s [ --script ]	       Silence all extraneous human friendly messages  |
+  --compatibility-version arg  Force compatibility version		       |
+  -v [ --version ]	       Display version				       |
+  --critical-log	       Path to critical log file, none to disable      |
+  -a [ --as ] arg	       User to run commands as (default: system user)  |
+									       |
+									       |

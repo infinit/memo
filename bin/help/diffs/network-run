@@ -1,53 +1,58 @@
-network: run: Usage: _build/macosx64/bin/infinit-network --run --name NETWORK [ network: run: Usage: _build/macosx64/bin/infinit-network network run [OPTIONS]
-										Run a network
-Run a network:
-										Options:
-Run options:									  -h, --help		 show this help message
-  -i [ --input ] arg			File to read the commands from		      --compatibility-version  compatibility version to force
-					(default: stdin)			  -s, --script		 suppress extraneous human friendly messages and use JS
-  -d [ --daemon ]			Run as a background daemon		  -a, --as		 user to run commands as (default: akim)
-  --monitoring [=arg(=true)] (=true)	Enable monitoring (default: true)	  -n, --name		 name of the network to run
-  -n [ --name ] arg			Network to run				  -i, --input		 file to read network from
-  --peer arg				Peer address or file with list of peer	  -d, --daemon		 run as a background daemon
-					addresses (host:port)			      --monitoring	 enable monitoring
-  --async				Use asynchronous operations		      --peer		 peer address or file with list of peer addresses (host
-  --cache [=arg(=true)]			Enable caching with default values	      --async		 use asynchronous write operations
-  --cache-ram-size arg			Maximum RAM block cache size in bytes	      --cache		 enable caching with default values
-					(default: 64 MB)			      --cache-ram-size	 maximum RAM block cache size in bytes (default: 64 MB)
-  --cache-ram-ttl arg			RAM block cache time-to-live in seconds	      --cache-ram-ttl	 RAM block cache time-to-live in seconds (default: 5 mi
-					(default: 5 minutes)			      --cache-ram-invalidation	RAM block cache invalidation time in seconds (d
-  --cache-ram-invalidation arg		RAM block cache invalidation time in	      --cache-disk-size	 size of disk cache for immutable data in bytes (defaul
-					seconds (default: 15 seconds)		      --fetch-endpoints	 fetch endpoints from https://beyond.infinit.sh
-  --cache-disk-size arg			Size of disk cache for immutable data	  -f, --fetch		 fetch network from https://beyond.infinit.sh
-					in bytes (default: 512 MB)		      --push-endpoints	 push endpoints to https://beyond.infinit.sh
-  --fetch-endpoints			Fetch endpoints from the Hub		  -p, --push		 push network to https://beyond.infinit.sh
-  -f [ --fetch ]			Alias for --fetch-endpoints		      --publish		 alias for --fetch-endpoints --push-endpoints
-  --push-endpoints			Push endpoints to the Hub		      --endpoints-file	 write node listening endpoints to file (format: host:p
-  -p [ --push ]				Alias for --push-endpoints		      --port-file	 write node listening port to file
-  --publish				Alias for --fetch-endpoints		      --port		 outbound port to use
-					--push-endpoints			      --peers-file	 Periodically write list of known peers to given file
-  --endpoints-file arg			Write node listening endpoints to file	      --listen		 specify which IP address to listen on (default: all)
-					(format: host:port\n)			      --fetch-endpoints-interval  period for repolling endpoints from the Hub i
-  --port-file arg			Write node listening port to file	      --no-local-endpoints  Disable automatic detection of local endpoints
-  --port arg				Outbound port to use			      --no-public-endpoints  Disable automatic detection of public endpoints
-  --peers-file arg			File to write peers to periodically	      --advertise-host	 advertise extra endpoint using given host (default: []
-  --listen arg				Specify which IP address to listen on	      --paxos-rebalancing-auto-expand  whether to automatically rebalance under
-					(default: all)				      --paxos-rebalancing-inspect  whether to inspect all blocks on startup and
-  --fetch-endpoints-interval arg (=300) Period for repolling endpoints from the
-					Hub in seconds (default: 300s)
-  --no-local-endpoints [=arg(=true)]	Disable automatic detection of local
-					endpoints
-  --no-public-endpoints [=arg(=true)]	Disable automatic detection of public
-					endpoints
-  --advertise-host arg			Advertise extra endpoint using given
-					host
-Deprecated options:
-  --cache-size arg			Use "--cache-ram-size" instead
-  --cache-ttl arg			Use "--cache-ram-ttl" instead
-  --cache-invalidation arg		Use "--cache-ram-invalidation" instead
-  --disk-cache-size arg			Use "--cache-disk-size" instead
-Hidden options:
-  --paxos-rebalancing-auto-expand arg	Whether to automatically rebalance
-					under-replicated blocks
-  --paxos-rebalancing-inspect arg	Whether to inspect all blocks on
-					startup and trigger rebalancing
+network: run: Usage: _build/macosx64/bin/infinit-network --run --name NETWORK  |network: run: Usage: _build/macosx64/bin/infinit-network network run [OPTIONS]
+[OPTIONS...]								       |Run a network
+									       |
+Run a network:								       |Options:
+									       |  -h, --help		 show this help message
+Run options:								       |      --compatibility-version  compatibility version to force
+  -i [ --input ] arg			File to read the commands from	       |  -s, --script		 suppress extraneous human friendly messages and use
+					(default: stdin)		       |JSON output
+  -d [ --daemon ]			Run as a background daemon	       |  -a, --as		 user to run commands as (default: akim)
+  --monitoring [=arg(=true)] (=true)	Enable monitoring (default: true)      |  -n, --name		 name of the network to run
+  -n [ --name ] arg			Network to run			       |  -i, --input		 file to read network from
+  --peer arg				Peer address or file with list of peer |  -d, --daemon		 run as a background daemon
+					addresses (host:port)		       |      --monitoring	 enable monitoring
+  --async				Use asynchronous operations	       |      --peer		 peer address or file with list of peer addresses
+  --cache [=arg(=true)]			Enable caching with default values     |(host:port) (default: [])
+  --cache-ram-size arg			Maximum RAM block cache size in bytes  |      --async		 use asynchronous write operations
+					(default: 64 MB)		       |      --cache		 enable caching with default values
+  --cache-ram-ttl arg			RAM block cache time-to-live in seconds|      --cache-ram-size	 maximum RAM block cache size in bytes (default: 64 MB)
+					(default: 5 minutes)		       |      --cache-ram-ttl	 RAM block cache time-to-live in seconds (default: 5
+  --cache-ram-invalidation arg		RAM block cache invalidation time in   |minute)
+					seconds (default: 15 seconds)	       |      --cache-ram-invalidation	RAM block cache invalidation time in seconds
+  --cache-disk-size arg			Size of disk cache for immutable data  |(default: 15 seconds)
+					in bytes (default: 512 MB)	       |      --cache-disk-size	 size of disk cache for immutable data in bytes
+  --fetch-endpoints			Fetch endpoints from the Hub	       |(default: 512 MB)
+  -f [ --fetch ]			Alias for --fetch-endpoints	       |      --fetch-endpoints	 fetch endpoints from https://beyond.infinit.sh
+  --push-endpoints			Push endpoints to the Hub	       |  -f, --fetch		 fetch network from https://beyond.infinit.sh
+  -p [ --push ]				Alias for --push-endpoints	       |      --push-endpoints	 push endpoints to https://beyond.infinit.sh
+  --publish				Alias for --fetch-endpoints	       |  -p, --push		 push network to https://beyond.infinit.sh
+					--push-endpoints		       |      --publish		 alias for --fetch-endpoints --push-endpoints
+  --endpoints-file arg			Write node listening endpoints to file |      --endpoints-file	 write node listening endpoints to file (format:
+					(format: host:port\n)		       |host:port)
+  --port-file arg			Write node listening port to file      |      --port-file	 write node listening port to file
+  --port arg				Outbound port to use		       |      --port		 outbound port to use
+  --peers-file arg			File to write peers to periodically    |      --peers-file	 Periodically write list of known peers to given file
+  --listen arg				Specify which IP address to listen on  |      --listen		 specify which IP address to listen on (default: all)
+					(default: all)			       |      --fetch-endpoints-interval  period for repolling endpoints from the Hub
+  --fetch-endpoints-interval arg (=300) Period for repolling endpoints from the|in seconds
+					Hub in seconds (default: 300s)	       |      --no-local-endpoints  Disable automatic detection of local endpoints
+  --no-local-endpoints [=arg(=true)]	Disable automatic detection of local   |      --no-public-endpoints  Disable automatic detection of public endpoints
+					endpoints			       |      --advertise-host	 advertise extra endpoint using given host (default: []
+  --no-public-endpoints [=arg(=true)]	Disable automatic detection of public  |      --paxos-rebalancing-auto-expand  whether to automatically rebalance
+					endpoints			       |under-replicated blocks
+  --advertise-host arg			Advertise extra endpoint using given   |      --paxos-rebalancing-inspect  whether to inspect all blocks on startup and
+					host				       |trigger rebalancing
+									       |
+Deprecated options:							       |
+  --cache-size arg			Use "--cache-ram-size" instead	       |
+  --cache-ttl arg			Use "--cache-ram-ttl" instead	       |
+  --cache-invalidation arg		Use "--cache-ram-invalidation" instead |
+  --disk-cache-size arg			Use "--cache-disk-size" instead	       |
+									       |
+Hidden options:								       |
+  --paxos-rebalancing-auto-expand arg	Whether to automatically rebalance     |
+					under-replicated blocks		       |
+  --paxos-rebalancing-inspect arg	Whether to inspect all blocks on       |
+					startup and trigger rebalancing	       |
+									       |
+									       |

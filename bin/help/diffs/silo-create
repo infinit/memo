@@ -1,35 +1,39 @@
-storage: create: Usage: _build/macosx64/bin/infinit-storage --create --name STO silo: create: Usage: _build/macosx64/bin/infinit-silo silo create [OPTIONS]
-										Create local silo
-Create a storage:
-										Options:
-Create options:									  -h, --help		 show this help message
-  -n [ --name ] arg	 Created storage name					      --compatibility-version  compatibility version to force
-  --description arg	 Description of storage					  -s, --script		 suppress extraneous human friendly messages and use JS
-  -c [ --capacity ] arg	 Limit the storage capacity				  -a, --as		 user to run commands as (default: akim)
-			 use: B,kB,kiB,GB,GiB,TB,TiB (optional)			  -n, --name		 name of the silo to create
-  -o [ --output ] arg	 File to write the storage to				      --description	 silo description
-			 (default: stdout)					  -c, --capacity	 limit storage capacity (use: B,kB,kiB,MB,MiB,GB,GiB,TB
-  --path arg		 Folder where blocks are stored (default:		  -o, --output		 file to write the silo to
-			   filesystem: "/Users/akim/.local/share/infinit/filesy	      --dropbox		 store blocks on Dropbox
-			 stem/blocks/<name>"					      --filesystem	 store blocks on local filesystem (default)
-			   GCS: <name>_blocks					      --gcs		 store blocks on Google Cloud Storage
-			   S3: <name>_blocks)					      --google-drive	 store blocks on Google Drive
-										      --ssh		 store blocks via SSH
-Storage types:									      --s3		 store blocks on AWS S3
-  --filesystem		 Store data on a local filesystem (default)		      --account		 cloud service account name
-  --gcs			 Store data using Google Cloud Storage			      --bucket		 bucket name
-  --s3			 Store data using Amazon S3				      --endpoint	 S3 endpoint (default: amazonaws.com)
-										      --host		 SSH host
-Cloud storage options:								      --region		 AWS region
-  --account arg		 Account name to use					      --path		 directory where to store blocks
-  --bucket arg		 Bucket to use						      --storage-class	 storage class to use: STANDARD, STANDARD_IA, REDUCED_R
-
-Amazon S3 storage options:
-  --storage-class arg	 Storage class to use: STANDARD, STANDARD_IA,
-			 REDUCED_REDUNDANCY (default: bucket default)
-  --region arg		 AWS region to use
-  --endpoint arg	 S3 compatible endpoint to use (default: amazonaws.com)
-Hidden storage types:
-  --dropbox		 Store data in a Dropbox
-  --google-drive	 Store data in a Google Drive
-  --ssh			 Store data over SSH
+storage: create: Usage: _build/macosx64/bin/infinit-storage --create --name    |silo: create: Usage: _build/macosx64/bin/infinit-silo silo create [OPTIONS]
+STORAGE STORAGE-TYPE [STORAGE-OPTIONS...] [OPTIONS...]			       |Create local silo
+									       |
+Create a storage:							       |Options:
+									       |  -h, --help		 show this help message
+Create options:								       |      --compatibility-version  compatibility version to force
+  -n [ --name ] arg	 Created storage name				       |  -s, --script		 suppress extraneous human friendly messages and use
+  --description arg	 Description of storage				       |JSON output
+  -c [ --capacity ] arg	 Limit the storage capacity			       |  -a, --as		 user to run commands as (default: akim)
+			 use: B,kB,kiB,GB,GiB,TB,TiB (optional)		       |  -n, --name		 name of the silo to create
+  -o [ --output ] arg	 File to write the storage to			       |      --description	 silo description
+			 (default: stdout)				       |  -c, --capacity	 limit storage capacity (use:
+  --path arg		 Folder where blocks are stored (default:	       |B,kB,kiB,MB,MiB,GB,GiB,TB,TiB)
+			   filesystem: "/Users/akim/.local/share/infinit/filesy|  -o, --output		 file to write the silo to
+			 stem/blocks/<name>"				       |      --dropbox		 store blocks on Dropbox
+			   GCS: <name>_blocks				       |      --filesystem	 store blocks on local filesystem (default)
+			   S3: <name>_blocks)				       |      --gcs		 store blocks on Google Cloud Storage
+									       |      --google-drive	 store blocks on Google Drive
+Storage types:								       |      --ssh		 store blocks via SSH
+  --filesystem		 Store data on a local filesystem (default)	       |      --s3		 store blocks on AWS S3
+  --gcs			 Store data using Google Cloud Storage		       |      --account		 cloud service account name
+  --s3			 Store data using Amazon S3			       |      --bucket		 bucket name
+									       |      --endpoint	 S3 endpoint (default: amazonaws.com)
+Cloud storage options:							       |      --host		 SSH host
+  --account arg		 Account name to use				       |      --region		 AWS region
+  --bucket arg		 Bucket to use					       |      --path		 directory where to store blocks
+									       |      --storage-class	 storage class to use: STANDARD, STANDARD_IA,
+Amazon S3 storage options:						       |REDUCED_REDUNDANCY (default: bucket default)
+  --storage-class arg	 Storage class to use: STANDARD, STANDARD_IA,	       |
+			 REDUCED_REDUNDANCY (default: bucket default)	       |
+  --region arg		 AWS region to use				       |
+  --endpoint arg	 S3 compatible endpoint to use (default: amazonaws.com)|
+									       |
+Hidden storage types:							       |
+  --dropbox		 Store data in a Dropbox			       |
+  --google-drive	 Store data in a Google Drive			       |
+  --ssh			 Store data over SSH				       |
+									       |
+									       |

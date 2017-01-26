@@ -1,12 +1,14 @@
-user: export: Usage: _build/macosx64/bin/infinit-user --export [OPTIONS...]	user: export: Usage: _build/macosx64/bin/infinit-user user export [OPTIONS]
-										Export local user
-Export a user so that it may be imported elsewhere:
-										Options:
-Export options:									  -h, --help		 show this help message
-  -n [ --name ] arg	 User to export (default: system user)			      --compatibility-version  compatibility version to force
-  --full		 Include private key (do not use this unless you	  -s, --script		 suppress extraneous human friendly messages and use JS
-			 understand the implications)				  -a, --as		 user to run commands as (default: akim)
-  -o [ --output ] arg	 File to write the user to				  -n, --name		 name of the user to export (default: akim)
-			 (default: stdout)					      --full		 include private key (do not use unless you understand
-										  -o, --output		 file to write the user to
-
+user: export: Usage: _build/macosx64/bin/infinit-user --export [OPTIONS...]    |user: export: Usage: _build/macosx64/bin/infinit-user user export [OPTIONS]
+									       |Export local user
+Export a user so that it may be imported elsewhere:			       |
+									       |Options:
+Export options:								       |  -h, --help		 show this help message
+  -n [ --name ] arg	 User to export (default: system user)		       |      --compatibility-version  compatibility version to force
+  --full		 Include private key (do not use this unless you       |  -s, --script		 suppress extraneous human friendly messages and use
+			 understand the implications)			       |JSON output
+  -o [ --output ] arg	 File to write the user to			       |  -a, --as		 user to run commands as (default: akim)
+			 (default: stdout)				       |  -n, --name		 name of the user to export (default: akim)
+									       |      --full		 include private key (do not use unless you understand
+									       |the implications
+									       |  -o, --output		 file to write the user to
+									       |

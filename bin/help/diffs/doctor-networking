@@ -1,22 +1,25 @@
-doctor: networking: Usage: _build/macosx64/bin/infinit-doctor --networking [OPT doctor: networking: Usage: _build/macosx64/bin/infinit-doctor doctor networking
-										Perform networking speed tests between nodes
-Perform networking speed tests between nodes:
-										Options:
-Networking options:								  -h, --help		 show this help message
-  -m [ --mode ] arg	       Mode to use: upload,download,all (default: all)	      --compatibility-version  compatibility version to force
-			       (client only)					  -s, --script		 suppress extraneous human friendly messages and use JS
-  --protocol arg	       RPC protocol to use: tcp,utp,all (default: all)	  -a, --as		 user to run commands as (default: akim)
-  -s [ --packet_size ] arg     Size of the packet to send (client only)		  -m, --mode		 access mode to networking: r, w, rw, none
-  -n [ --packets_count ] arg   Number of packets to exchange (client only)	      --protocol	 RPC protocol to use: tcp, utp, all (default: all)
-  -H [ --host ] arg	       The host to connect to (if not specified, you	  -s, --packet-size	 size of the packet to send (client only)
-			       are considered server)				  -n, --packets-count	 number of packets to exchange (client only)
-  -p [ --port ] arg	       Port to perform tests on (if unspecified,	      --host		 SSH host
-				 --tcp_port = port,				      --port		 outbound port to use
-				 --utp_port = port + 1,				  -t, --tcp-port	 port to perform tcp tests on
-				 --xored_utp_port = port + 2)			  -u, --utp-port	 port to perform utp tests on. (if unspecified, --xored
-  -t [ --tcp_port ] arg	       Port to perform tcp tests on			  -x, --xored-utp-port	 port to perform xored utp tests on
-  -u [ --utp_port ] arg	       Port to perform utp tests on. (if unspecified,	  -X, --xored		 performs test applying a 0xFF xor on the utp traffic,
-				 --xored_utp_port = utp_port + 1)		      --no-color	 don't use colored output
-  -x [ --xored_utp_port ] arg  Port to perform xored utp tests on		  -v, --verbose		 use verbose output
-  --no-color		       Don't use colored output
-  -v [ --verbose ]	       Output everything
+doctor: networking: Usage: _build/macosx64/bin/infinit-doctor --networking     |doctor: networking: Usage: _build/macosx64/bin/infinit-doctor doctor networking
+[OPTIONS...]								       |[OPTIONS]
+									       |Perform networking speed tests between nodes
+Perform networking speed tests between nodes:				       |
+									       |Options:
+Networking options:							       |  -h, --help		 show this help message
+  -m [ --mode ] arg	       Mode to use: upload,download,all (default: all) |      --compatibility-version  compatibility version to force
+			       (client only)				       |  -s, --script		 suppress extraneous human friendly messages and use
+  --protocol arg	       RPC protocol to use: tcp,utp,all (default: all) |JSON output
+  -s [ --packet_size ] arg     Size of the packet to send (client only)	       |  -a, --as		 user to run commands as (default: akim)
+  -n [ --packets_count ] arg   Number of packets to exchange (client only)     |  -m, --mode		 access mode to networking: r, w, rw, none
+  -H [ --host ] arg	       The host to connect to (if not specified, you   |      --protocol	 RPC protocol to use: tcp, utp, all (default: all)
+			       are considered server)			       |  -s, --packet-size	 size of the packet to send (client only)
+  -p [ --port ] arg	       Port to perform tests on (if unspecified,       |  -n, --packets-count	 number of packets to exchange (client only)
+				 --tcp_port = port,			       |      --host		 SSH host
+				 --utp_port = port + 1,			       |      --port		 outbound port to use
+				 --xored_utp_port = port + 2)		       |  -t, --tcp-port	 port to perform tcp tests on
+  -t [ --tcp_port ] arg	       Port to perform tcp tests on		       |  -u, --utp-port	 port to perform utp tests on. (if unspecified,
+  -u [ --utp_port ] arg	       Port to perform utp tests on. (if unspecified,  |--xored_utp_port = utp_port + 1)
+				 --xored_utp_port = utp_port + 1)	       |  -x, --xored-utp-port	 port to perform xored utp tests on
+  -x [ --xored_utp_port ] arg  Port to perform xored utp tests on	       |  -X, --xored		 performs test applying a 0xFF xor on the utp traffic,
+  --no-color		       Don't use colored output			       |value=yes,no,both
+  -v [ --verbose ]	       Output everything			       |      --no-color	 don't use colored output
+									       |  -v, --verbose		 use verbose output
+									       |

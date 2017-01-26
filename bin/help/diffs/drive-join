@@ -1,10 +1,11 @@
-drive: join: Usage: _build/macosx64/bin/infinit-drive --join --name DRIVE [OPTI drive: join: Usage: _build/macosx64/bin/infinit-drive drive join [OPTIONS]
-										Join a drive you were invited to (Hub operation)
-Join a drive you were invited to (Hub operation):
-										Options:
-Join options:									  -h, --help		 show this help message
-  -n [ --name ] arg	 Drive to invite the user on				      --compatibility-version  compatibility version to force
-										  -s, --script		 suppress extraneous human friendly messages and use JS
-										  -a, --as		 user to run commands as (default: akim)
-										  -n, --name		 name of the drive to join
-
+drive: join: Usage: _build/macosx64/bin/infinit-drive --join --name DRIVE      |drive: join: Usage: _build/macosx64/bin/infinit-drive drive join [OPTIONS]
+[OPTIONS...]								       |Join a drive you were invited to (Hub operation)
+									       |
+Join a drive you were invited to (Hub operation):			       |Options:
+									       |  -h, --help		 show this help message
+Join options:								       |      --compatibility-version  compatibility version to force
+  -n [ --name ] arg	 Drive to invite the user on			       |  -s, --script		 suppress extraneous human friendly messages and use
+									       |JSON output
+									       |  -a, --as		 user to run commands as (default: akim)
+									       |  -n, --name		 name of the drive to join
+									       |

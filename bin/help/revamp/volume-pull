@@ -1,5 +1,5 @@
 volume: pull: Usage: _build/macosx64/bin/infinit-volume volume pull [OPTIONS]
-Remove a volume from {hub}
+Remove a volume from https://beyond.infinit.sh
 
 Options:
   -h, --help             show this help message

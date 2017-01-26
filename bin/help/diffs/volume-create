@@ -1,62 +1,66 @@
-volume: create: Usage: _build/macosx64/bin/infinit-volume --create --name VOLUM volume: create: Usage: _build/macosx64/bin/infinit-volume volume create [OPTION
-										Create a volume
-Create a volume:
-										Options:
-Create options:									  -h, --help		 show this help message
-  --name arg				Volume name				      --compatibility-version  compatibility version to force
-  --description arg			Description of volume			  -s, --script		 suppress extraneous human friendly messages and use JS
-  -R [ --create-root ] [=arg(=true)]	Create root directory			  -a, --as		 user to run commands as (default: akim)
-  -N [ --network ] arg			Underlying network to use		  -n, --name		 name of the volume to create
-  --push-volume [=arg(=true)]		Push the volume to the Hub		  -N, --network		 network to create volume for
-  -o [ --output ] arg			File to write the volume to		      --description	 volume description
-					(default: stdout)			  -R, --create-root	 create root directory
-  -d [ --default-permissions ] arg	Default permissions (optional: r,rw)	      --push-volume	 push the volume to https://beyond.infinit.sh
-  -r [ --register-service ] [=arg(=true)]					  -o, --output		 file to write the volume to
-					Register volume in the network		  -d, --default-permissions  default permissions (optional: r,rw)
-  --allow-root-creation [=arg(=true)]	Create the filesystem root if not found	  -r, --register-service  register volume in the network
-  -m [ --mountpoint ] arg		Where to mount the filesystem		      --allow-root-creation  create the filesystem root if not found
-  --readonly [=arg(=true)]		Mount as readonly			  -m, --mountpoint	 where to mount the filesystem
-  --mount-name arg			Name of mounted volume			      --readonly	 mount as readonly
-  --mount-icon arg			Path to an icon for mounted volume	      --mount-name	 name of mounted volume
-  --finder-sidebar [=arg(=true)]	Show volume in Finder sidebar		      --mount-icon	 path to an icon for mounted volume
-  --async [=arg(=true)]			Use asynchronous write operations	      --finder-sidebar	 show volume in Finder sidebar
-  -d [ --daemon ] [=arg(=true)]		Run as a background daemon		      --async		 use asynchronous write operations
-  --monitoring [=arg(=true)] (=true)	Enable monitoring (default: true)	  -d, --daemon		 run as a background daemon
-  --fuse-option arg			Option to pass directly to FUSE		      --monitoring	 enable monitoring
-  --cache [=arg(=true)]			Enable caching with default values	      --fuse-option	 option to pass directly to FUSE (default: [])
-  --cache-ram-size arg			Maximum RAM block cache size in bytes	      --cache		 enable caching with default values
-					(default: 64 MB)			      --cache-ram-size	 maximum RAM block cache size in bytes (default: 64 MB)
-  --cache-ram-ttl arg			RAM block cache time-to-live in seconds	      --cache-ram-ttl	 RAM block cache time-to-live in seconds (default: 5 mi
-					(default: 5 minutes)			      --cache-ram-invalidation	RAM block cache invalidation time in seconds (d
-  --cache-ram-invalidation arg		RAM block cache invalidation time in	      --cache-disk-size	 size of disk cache for immutable data in bytes (defaul
-					seconds (default: 15 seconds)		      --fetch-endpoints	 fetch endpoints from https://beyond.infinit.sh
-  --cache-disk-size arg			Size of disk cache for immutable data	  -f, --fetch		 fetch volume from https://beyond.infinit.sh
-					in bytes (default: 512 MB)		      --peer		 peer address or file with list of peer addresses (host
-  --fetch-endpoints [=arg(=true)]	Fetch endpoints from the Hub		      --peers-file	 Periodically write list of known peers to given file
-  -f [ --fetch ] [=arg(=true)]		Alias for --fetch-endpoints		      --push-endpoints	 push endpoints to https://beyond.infinit.sh
-  --peer arg				Peer address or file with list of peer	  -p, --push		 push volume to https://beyond.infinit.sh
-					addresses (host:port)			      --publish		 alias for --fetch-endpoints --push-endpoints
-  --peers-file arg			Periodically write list of known peers	      --advertise-host	 advertise extra endpoint using given host (default: []
-					to given file				      --endpoints-file	 write node listening endpoints to file (format: host:p
-  --push-endpoints [=arg(=true)]	Push endpoints to the Hub		      --port-file	 write node listening port to file
-  -p [ --push ] [=arg(=true)]		Alias for --push-endpoints		      --port		 outbound port to use
-					--push-volume				      --listen		 specify which IP address to listen on (default: all)
-  --publish [=arg(=true)]		Alias for --fetch-endpoints		      --fetch-endpoints-interval  period for repolling endpoints from the Hub i
-					--push-endpoints			  -i, --input		 file to read volume from
-  --advertise-host arg			Advertise extra endpoint using given
-					host
-  --endpoints-file arg			Write node listening endpoints to file
-					(format: host:port\n)
-  --port-file arg			Write node listening port to file
-  --port arg				Outbound port to use
-  --listen arg				Specify which IP address to listen on
-					(default: all)
-  --fetch-endpoints-interval arg (=300) Period for repolling endpoints from the
-					Hub in seconds (default: 300s)
-  -i [ --input ] arg			File to read the commands from
-					(default: stdin)
-Deprecated options:
-  --cache-size arg			Use "--cache-ram-size" instead
-  --cache-ttl arg			Use "--cache-ram-ttl" instead
-  --cache-invalidation arg		Use "--cache-ram-invalidation" instead
-  --disk-cache-size arg			Use "--cache-disk-size" instead
+volume: create: Usage: _build/macosx64/bin/infinit-volume --create --name      |volume: create: Usage: _build/macosx64/bin/infinit-volume volume create
+VOLUME --network NETWORK [--mountpoint PATH] [OPTIONS...]		       |[OPTIONS]
+									       |Create a volume
+Create a volume:							       |
+									       |Options:
+Create options:								       |  -h, --help		 show this help message
+  --name arg				Volume name			       |      --compatibility-version  compatibility version to force
+  --description arg			Description of volume		       |  -s, --script		 suppress extraneous human friendly messages and use
+  -R [ --create-root ] [=arg(=true)]	Create root directory		       |JSON output
+  -N [ --network ] arg			Underlying network to use	       |  -a, --as		 user to run commands as (default: akim)
+  --push-volume [=arg(=true)]		Push the volume to the Hub	       |  -n, --name		 name of the volume to create
+  -o [ --output ] arg			File to write the volume to	       |  -N, --network		 network to create volume for
+					(default: stdout)		       |      --description	 volume description
+  -d [ --default-permissions ] arg	Default permissions (optional: r,rw)   |  -R, --create-root	 create root directory
+  -r [ --register-service ] [=arg(=true)]				       |      --push-volume	 push the volume to https://beyond.infinit.sh
+					Register volume in the network	       |  -o, --output		 file to write the volume to
+  --allow-root-creation [=arg(=true)]	Create the filesystem root if not found|  -d, --default-permissions  default permissions (optional: r,rw)
+  -m [ --mountpoint ] arg		Where to mount the filesystem	       |  -r, --register-service  register volume in the network
+  --readonly [=arg(=true)]		Mount as readonly		       |      --allow-root-creation  create the filesystem root if not found
+  --mount-name arg			Name of mounted volume		       |  -m, --mountpoint	 where to mount the filesystem
+  --mount-icon arg			Path to an icon for mounted volume     |      --readonly	 mount as readonly
+  --finder-sidebar [=arg(=true)]	Show volume in Finder sidebar	       |      --mount-name	 name of mounted volume
+  --async [=arg(=true)]			Use asynchronous write operations      |      --mount-icon	 path to an icon for mounted volume
+  -d [ --daemon ] [=arg(=true)]		Run as a background daemon	       |      --finder-sidebar	 show volume in Finder sidebar
+  --monitoring [=arg(=true)] (=true)	Enable monitoring (default: true)      |      --async		 use asynchronous write operations
+  --fuse-option arg			Option to pass directly to FUSE	       |  -d, --daemon		 run as a background daemon
+  --cache [=arg(=true)]			Enable caching with default values     |      --monitoring	 enable monitoring
+  --cache-ram-size arg			Maximum RAM block cache size in bytes  |      --fuse-option	 option to pass directly to FUSE (default: [])
+					(default: 64 MB)		       |      --cache		 enable caching with default values
+  --cache-ram-ttl arg			RAM block cache time-to-live in seconds|      --cache-ram-size	 maximum RAM block cache size in bytes (default: 64 MB)
+					(default: 5 minutes)		       |      --cache-ram-ttl	 RAM block cache time-to-live in seconds (default: 5
+  --cache-ram-invalidation arg		RAM block cache invalidation time in   |minute)
+					seconds (default: 15 seconds)	       |      --cache-ram-invalidation	RAM block cache invalidation time in seconds
+  --cache-disk-size arg			Size of disk cache for immutable data  |(default: 15 seconds)
+					in bytes (default: 512 MB)	       |      --cache-disk-size	 size of disk cache for immutable data in bytes
+  --fetch-endpoints [=arg(=true)]	Fetch endpoints from the Hub	       |(default: 512 MB)
+  -f [ --fetch ] [=arg(=true)]		Alias for --fetch-endpoints	       |      --fetch-endpoints	 fetch endpoints from https://beyond.infinit.sh
+  --peer arg				Peer address or file with list of peer |  -f, --fetch		 fetch volume from https://beyond.infinit.sh
+					addresses (host:port)		       |      --peer		 peer address or file with list of peer addresses
+  --peers-file arg			Periodically write list of known peers |(host:port) (default: [])
+					to given file			       |      --peers-file	 Periodically write list of known peers to given file
+  --push-endpoints [=arg(=true)]	Push endpoints to the Hub	       |      --push-endpoints	 push endpoints to https://beyond.infinit.sh
+  -p [ --push ] [=arg(=true)]		Alias for --push-endpoints	       |  -p, --push		 push volume to https://beyond.infinit.sh
+					--push-volume			       |      --publish		 alias for --fetch-endpoints --push-endpoints
+  --publish [=arg(=true)]		Alias for --fetch-endpoints	       |      --advertise-host	 advertise extra endpoint using given host (default: []
+					--push-endpoints		       |      --endpoints-file	 write node listening endpoints to file (format:
+  --advertise-host arg			Advertise extra endpoint using given   |host:port)
+					host				       |      --port-file	 write node listening port to file
+  --endpoints-file arg			Write node listening endpoints to file |      --port		 outbound port to use
+					(format: host:port\n)		       |      --listen		 specify which IP address to listen on (default: all)
+  --port-file arg			Write node listening port to file      |      --fetch-endpoints-interval  period for repolling endpoints from the Hub
+  --port arg				Outbound port to use		       |in seconds (default: 300)
+  --listen arg				Specify which IP address to listen on  |  -i, --input		 file to read volume from
+					(default: all)			       |
+  --fetch-endpoints-interval arg (=300) Period for repolling endpoints from the|
+					Hub in seconds (default: 300s)	       |
+  -i [ --input ] arg			File to read the commands from	       |
+					(default: stdin)		       |
+									       |
+Deprecated options:							       |
+  --cache-size arg			Use "--cache-ram-size" instead	       |
+  --cache-ttl arg			Use "--cache-ram-ttl" instead	       |
+  --cache-invalidation arg		Use "--cache-ram-invalidation" instead |
+  --disk-cache-size arg			Use "--cache-disk-size" instead	       |
+									       |
+									       |

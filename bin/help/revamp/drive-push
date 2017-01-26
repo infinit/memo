@@ -1,5 +1,5 @@
 drive: push: Usage: _build/macosx64/bin/infinit-drive drive push [OPTIONS]
-Push a drive to {hub}
+Push a drive to https://beyond.infinit.sh
 
 Options:
   -h, --help             show this help message

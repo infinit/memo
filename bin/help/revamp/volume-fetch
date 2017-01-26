@@ -1,5 +1,5 @@
 volume: fetch: Usage: _build/macosx64/bin/infinit-volume volume fetch [OPTIONS]
-Fetch a volume from {hub}
+Fetch a volume from https://beyond.infinit.sh
 
 Options:
   -h, --help             show this help message

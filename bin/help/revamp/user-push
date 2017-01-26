@@ -1,5 +1,5 @@
 user: push: Usage: _build/macosx64/bin/infinit-user user push [OPTIONS]
-Push a user from {hub}
+Push a user from https://beyond.infinit.sh
 
 Options:
   -h, --help             show this help message

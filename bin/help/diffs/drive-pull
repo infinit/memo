@@ -1,11 +1,12 @@
-drive: pull: Usage: _build/macosx64/bin/infinit-drive --pull --name NAME [OPTIO drive: pull: Usage: _build/macosx64/bin/infinit-drive drive pull [OPTIONS]
-										Remove a drive from {hub}
-Remove a drive from the Hub:
-										Options:
-Pull options:									  -h, --help		 show this help message
-  -n [ --name ] arg	 Drive to remove					      --compatibility-version  compatibility version to force
-  --purge		 Remove objects that depend on the drive		  -s, --script		 suppress extraneous human friendly messages and use JS
-										  -a, --as		 user to run commands as (default: akim)
-										  -n, --name		 name of the drive to pull
-										      --purge		 purge objects owned by the drive
-
+drive: pull: Usage: _build/macosx64/bin/infinit-drive --pull --name NAME       |drive: pull: Usage: _build/macosx64/bin/infinit-drive drive pull [OPTIONS]
+[OPTIONS...]								       |Remove a drive from https://beyond.infinit.sh
+									       |
+Remove a drive from the Hub:						       |Options:
+									       |  -h, --help		 show this help message
+Pull options:								       |      --compatibility-version  compatibility version to force
+  -n [ --name ] arg	 Drive to remove				       |  -s, --script		 suppress extraneous human friendly messages and use
+  --purge		 Remove objects that depend on the drive	       |JSON output
+									       |  -a, --as		 user to run commands as (default: akim)
+									       |  -n, --name		 name of the drive to pull
+									       |      --purge		 purge objects owned by the drive
+									       |

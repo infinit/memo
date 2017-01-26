@@ -1,11 +1,12 @@
-network: pull: Usage: _build/macosx64/bin/infinit-network --pull --name NETWORK network: pull: Usage: _build/macosx64/bin/infinit-network network pull [OPTIONS
-										Remove a network from {hub}
-Remove a network from the Hub:
-										Options:
-Pull options:									  -h, --help		 show this help message
-  -n [ --name ] arg	 Network to remove					      --compatibility-version  compatibility version to force
-  --purge		 Remove objects that depend on the network		  -s, --script		 suppress extraneous human friendly messages and use JS
-										  -a, --as		 user to run commands as (default: akim)
-										  -n, --name		 name of the network to pull
-										      --purge		 purge objects owned by the network
-
+network: pull: Usage: _build/macosx64/bin/infinit-network --pull --name NETWORK|network: pull: Usage: _build/macosx64/bin/infinit-network network pull [OPTIONS
+[OPTIONS...]								       |Remove a network from https://beyond.infinit.sh
+									       |
+Remove a network from the Hub:						       |Options:
+									       |  -h, --help		 show this help message
+Pull options:								       |      --compatibility-version  compatibility version to force
+  -n [ --name ] arg	 Network to remove				       |  -s, --script		 suppress extraneous human friendly messages and use
+  --purge		 Remove objects that depend on the network	       |JSON output
+									       |  -a, --as		 user to run commands as (default: akim)
+									       |  -n, --name		 name of the network to pull
+									       |      --purge		 purge objects owned by the network
+									       |

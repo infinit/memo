@@ -1,11 +1,13 @@
-block: deserialize: Usage: _build/macosx64/bin/infinit-block --deserialize --pa block: deserialize: Usage: _build/macosx64/bin/infinit-block block deserialize
-										Deserialized block
-Deserialized block:
-										Options:
-Deserialize options:								  -h, --help		 show this help message
-  -p [ --path ] arg	 Paths to blocks					      --compatibility-version  compatibility version to force
-  -o [ --output ] arg	 File to write the block to				  -s, --script		 suppress extraneous human friendly messages and use JS
-			 (default: stdout)					  -a, --as		 user to run commands as (default: akim)
-										  -o, --output		 file to write the block to
-										  -p, --paths		 paths to blocks (default: [])
-
+block: deserialize: Usage: _build/macosx64/bin/infinit-block --deserialize     |block: deserialize: Usage: _build/macosx64/bin/infinit-block block deserialize
+--path PATHS [OPTIONS...]						       |[OPTIONS]
+									       |Deserialized block
+Deserialized block:							       |
+									       |Options:
+Deserialize options:							       |  -h, --help		 show this help message
+  -p [ --path ] arg	 Paths to blocks				       |      --compatibility-version  compatibility version to force
+  -o [ --output ] arg	 File to write the block to			       |  -s, --script		 suppress extraneous human friendly messages and use
+			 (default: stdout)				       |JSON output
+									       |  -a, --as		 user to run commands as (default: akim)
+									       |  -o, --output		 file to write the block to
+									       |  -p, --paths		 paths to blocks (default: [])
+									       |

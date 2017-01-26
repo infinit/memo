@@ -1,5 +1,5 @@
 passport: pull: Usage: _build/macosx64/bin/infinit-passport passport pull [OPTIONS]
-Remove a user's network passport from {hub}
+Remove a user's network passport from https://beyond.infinit.sh
 
 Options:
   -h, --help             show this help message

@@ -1,21 +1,25 @@
-network: update: Usage: _build/macosx64/bin/infinit-network --update --name NAM network: update: Usage: _build/macosx64/bin/infinit-network network update [OPT
-										Update a network
-Update a network:
-										Options:
-Update options:									  -h, --help		 show this help message
-  -n [ --name ] arg	   Network to update					      --compatibility-version  compatibility version to force
-  --description arg	   Description of network				  -s, --script		 suppress extraneous human friendly messages and use JS
-  --port arg		   Port to listen on (default: random)			  -a, --as		 user to run commands as (default: akim)
-  -o [ --output ] arg	   File to write the network to				  -n, --name		 name of the network to update
-			   (default: stdout)					      --description	 network description
-  --push-network	   Push the updated network to the Hub			      --port		 outbound port to use
-  -p [ --push ]		   Alias for --push-network				  -o, --output		 file to write the network to
-  --admin-r arg		   Add an admin user that can read all data		      --push-network	 push the network to https://beyond.infinit.sh
-			   (prefix: @<group>, requires mountpoint)		  -p, --push		 push network to https://beyond.infinit.sh
-  --admin-rw arg	   Add an admin user that can read and write all data	      --admin-r		 Set admin users that can read all data (default: [])
-			   (prefix: @<group>, requires mountpoint)		      --admin-rw	 Set admin users that can read and write all data (defa
-  --admin-remove arg	   Remove given users from all admin lists		      --admin-remove	 Remove given users from all admin lists (prefix: @<gro
-			   (prefix: @<group>, requires mountpoint)		  -m, --mountpoint	 where to mount the filesystem
-  -m [ --mountpoint ] arg  Mountpoint of a volume using this network, required	      --peer		 peer address or file with list of peer addresses (host
-			   to add admin groups
-  --peer arg		   List of known node endpoints
+network: update: Usage: _build/macosx64/bin/infinit-network --update --name    |network: update: Usage: _build/macosx64/bin/infinit-network network update
+NAME [OPTIONS...]							       |[OPTIONS]
+									       |Update a network
+Update a network:							       |
+									       |Options:
+Update options:								       |  -h, --help		 show this help message
+  -n [ --name ] arg	   Network to update				       |      --compatibility-version  compatibility version to force
+  --description arg	   Description of network			       |  -s, --script		 suppress extraneous human friendly messages and use
+  --port arg		   Port to listen on (default: random)		       |JSON output
+  -o [ --output ] arg	   File to write the network to			       |  -a, --as		 user to run commands as (default: akim)
+			   (default: stdout)				       |  -n, --name		 name of the network to update
+  --push-network	   Push the updated network to the Hub		       |      --description	 network description
+  -p [ --push ]		   Alias for --push-network			       |      --port		 outbound port to use
+  --admin-r arg		   Add an admin user that can read all data	       |  -o, --output		 file to write the network to
+			   (prefix: @<group>, requires mountpoint)	       |      --push-network	 push the network to https://beyond.infinit.sh
+  --admin-rw arg	   Add an admin user that can read and write all data  |  -p, --push		 push network to https://beyond.infinit.sh
+			   (prefix: @<group>, requires mountpoint)	       |      --admin-r		 Set admin users that can read all data (default: [])
+  --admin-remove arg	   Remove given users from all admin lists	       |      --admin-rw	 Set admin users that can read and write all data
+			   (prefix: @<group>, requires mountpoint)	       |(default: [])
+  -m [ --mountpoint ] arg  Mountpoint of a volume using this network, required |      --admin-remove	 Remove given users from all admin lists (prefix:
+			   to add admin groups				       |@<group>, requires mountpoint) (default: [])
+  --peer arg		   List of known node endpoints			       |  -m, --mountpoint	 where to mount the filesystem
+									       |      --peer		 peer address or file with list of peer addresses
+									       |(host:port) (default: [])
+									       |

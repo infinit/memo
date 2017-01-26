@@ -1,12 +1,13 @@
-storage: delete: Usage: _build/macosx64/bin/infinit-storage --delete --name STO silo: delete: Usage: _build/macosx64/bin/infinit-silo silo delete [OPTIONS]
-										Delete local silo
-Delete a storage:
-										Options:
-Delete options:									  -h, --help		 show this help message
-  -n [ --name ] arg	 Storage to delete					      --compatibility-version  compatibility version to force
-  --clear-content	 Remove all blocks (filesystem only)			  -s, --script		 suppress extraneous human friendly messages and use JS
-  --purge		 Remove objects that depend on the storage		  -a, --as		 user to run commands as (default: akim)
-										  -n, --name		 name of the silo to delete
-										      --clear-content	 remove all blocks from disk (filesystem storage only)
-										      --purge		 purge objects owned by the silo
-
+storage: delete: Usage: _build/macosx64/bin/infinit-storage --delete --name    |silo: delete: Usage: _build/macosx64/bin/infinit-silo silo delete [OPTIONS]
+STORAGE [OPTIONS...]							       |Delete local silo
+									       |
+Delete a storage:							       |Options:
+									       |  -h, --help		 show this help message
+Delete options:								       |      --compatibility-version  compatibility version to force
+  -n [ --name ] arg	 Storage to delete				       |  -s, --script		 suppress extraneous human friendly messages and use
+  --clear-content	 Remove all blocks (filesystem only)		       |JSON output
+  --purge		 Remove objects that depend on the storage	       |  -a, --as		 user to run commands as (default: akim)
+									       |  -n, --name		 name of the silo to delete
+									       |      --clear-content	 remove all blocks from disk (filesystem storage only)
+									       |      --purge		 purge objects owned by the silo
+									       |

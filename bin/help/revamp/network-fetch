@@ -1,5 +1,5 @@
 network: fetch: Usage: _build/macosx64/bin/infinit-network network fetch [OPTIONS]
-Fetch a network from {hub}
+Fetch a network from https://beyond.infinit.sh
 
 Options:
   -h, --help             show this help message

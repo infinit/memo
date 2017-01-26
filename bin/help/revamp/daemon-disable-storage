@@ -1,11 +1,10 @@
-user: login: Usage: _build/macosx64/bin/infinit-user user login [OPTIONS]
-Login user to https://beyond.infinit.sh
+daemon: disable-storage: Usage: _build/macosx64/bin/infinit-daemon daemon disable-storage [OPTIONS]
+Disable storage on associated network
 
 Options:
   -h, --help             show this help message
       --compatibility-version  compatibility version to force
   -s, --script           suppress extraneous human friendly messages and use JSON output
   -a, --as               user to run commands as (default: akim)
-  -n, --name             name of the user to login (default: akim)
-  -P, --password         password to authenticate with https://beyond.infinit.sh
+  -n, --name             name of the daemon to disable
 

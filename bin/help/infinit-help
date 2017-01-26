@@ -33,23 +33,27 @@ def getargs():
 
 args = getargs()
 
+
+def mode_option(mode):
+    return '--{}'.format(mode) if args.legacy else mode
+
+
 def get_help(obj, mode=None):
-    if mode and args.legacy:
-        m = '--{}'.format(mode)
-    elif mode:
-        m = mode
-    else:
-        m = ''
+    m = mode_option(mode) if mode else ''
     cmd = '{}-{} {} --help'.format(args.infinit, obj, m).split()
     return subprocess.check_output(cmd).decode('utf-8')
 
+
 def get_modes(obj):
     try:
-        modes = re.findall(r'^Modes:\n(.*?)\n\n', get_help(obj), re.DOTALL | re.MULTILINE)[0]
+        modes = re.findall(r'^Modes:\n(.*?)\n\n',
+                           get_help(obj), re.DOTALL | re.MULTILINE)[0]
         # Exactly two leading spaces, to avoid catching wrapped help messages.
-        return re.findall(r'^  (?:--)?(\w+) ', modes, re.MULTILINE)
+        return re.findall(r'^  {} '.format(mode_option(r'(\S+)')),
+                          modes, re.MULTILINE)
     except:
         raise RuntimeError('cannot read modes for {}'.format(obj))
+
 
 for obj in objects:
     if args.legacy and obj == 'silo':

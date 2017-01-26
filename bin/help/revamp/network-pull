@@ -1,5 +1,5 @@
 network: pull: Usage: _build/macosx64/bin/infinit-network network pull [OPTIONS]
-Remove a network from {hub}
+Remove a network from https://beyond.infinit.sh
 
 Options:
   -h, --help             show this help message

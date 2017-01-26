@@ -1,10 +1,12 @@
-volume: status: Usage: _build/macosx64/bin/infinit-volume --status --name VOLUM volume: status: Usage: _build/macosx64/bin/infinit-volume volume status [OPTION
-										Get volume status
-Get volume status:
-										Options:
-Status options:									  -h, --help		 show this help message
-  -n [ --name ] arg	 Volume to query					      --compatibility-version  compatibility version to force
-										  -s, --script		 suppress extraneous human friendly messages and use JS
-										  -a, --as		 user to run commands as (default: akim)
-										  -n, --name		 name of the volume to status
-
+volume: status: Usage: _build/macosx64/bin/infinit-volume --status --name      |volume: status: Usage: _build/macosx64/bin/infinit-volume volume status
+VOLUME [OPTIONS...]							       |[OPTIONS]
+									       |Get volume status
+Get volume status:							       |
+									       |Options:
+Status options:								       |  -h, --help		 show this help message
+  -n [ --name ] arg	 Volume to query				       |      --compatibility-version  compatibility version to force
+									       |  -s, --script		 suppress extraneous human friendly messages and use
+									       |JSON output
+									       |  -a, --as		 user to run commands as (default: akim)
+									       |  -n, --name		 name of the volume to status
+									       |

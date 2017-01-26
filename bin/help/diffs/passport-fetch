@@ -1,11 +1,13 @@
-passport: fetch: Usage: _build/macosx64/bin/infinit-passport --fetch [--network passport: fetch: Usage: _build/macosx64/bin/infinit-passport passport fetch [OP
-										Fetch a user's network passport from {hub}
-Fetch a user's network passport from the Hub:
-										Options:
-Fetch options:									  -h, --help		 show this help message
-  -N [ --network ] arg	 Network to fetch the passport for (optional)		      --compatibility-version  compatibility version to force
-  -u [ --user ] arg	 User to fetch passports for (optional)			  -s, --script		 suppress extraneous human friendly messages and use JS
-										  -a, --as		 user to run commands as (default: akim)
-										  -N, --network		 network to fetch passport for
-										  -u, --user		 user to fetch passport for
-
+passport: fetch: Usage: _build/macosx64/bin/infinit-passport --fetch [--network|passport: fetch: Usage: _build/macosx64/bin/infinit-passport passport fetch
+NETWORK --user USER] [OPTIONS...]					       |[OPTIONS]
+									       |Fetch a user's network passport from https://beyond.infinit.sh
+Fetch a user's network passport from the Hub:				       |
+									       |Options:
+Fetch options:								       |  -h, --help		 show this help message
+  -N [ --network ] arg	 Network to fetch the passport for (optional)	       |      --compatibility-version  compatibility version to force
+  -u [ --user ] arg	 User to fetch passports for (optional)		       |  -s, --script		 suppress extraneous human friendly messages and use
+									       |JSON output
+									       |  -a, --as		 user to run commands as (default: akim)
+									       |  -N, --network		 network to fetch passport for
+									       |  -u, --user		 user to fetch passport for
+									       |

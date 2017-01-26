@@ -1,5 +1,5 @@
 user: signup: Usage: _build/macosx64/bin/infinit-user user signup [OPTIONS]
-Create and push a user to {hub}
+Create and push a user to https://beyond.infinit.sh
 
 Options:
   -h, --help             show this help message

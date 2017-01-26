@@ -1,9 +1,10 @@
-storage: list: Usage: _build/macosx64/bin/infinit-storage --list [OPTIONS...]	silo: list: Usage: _build/macosx64/bin/infinit-silo silo list [OPTIONS]
-										List local silos
-List storages:
-										Options:
-										  -h, --help		 show this help message
-										      --compatibility-version  compatibility version to force
-										  -s, --script		 suppress extraneous human friendly messages and use JS
-										  -a, --as		 user to run commands as (default: akim)
-
+storage: list: Usage: _build/macosx64/bin/infinit-storage --list [OPTIONS...]  |silo: list: Usage: _build/macosx64/bin/infinit-silo silo list [OPTIONS]
+									       |List local silos
+List storages:								       |
+									       |Options:
+									       |  -h, --help		 show this help message
+									       |      --compatibility-version  compatibility version to force
+									       |  -s, --script		 suppress extraneous human friendly messages and use
+									       |JSON output
+									       |  -a, --as		 user to run commands as (default: akim)
+									       |

@@ -1,5 +1,5 @@
 passport: fetch: Usage: _build/macosx64/bin/infinit-passport passport fetch [OPTIONS]
-Fetch a user's network passport from {hub}
+Fetch a user's network passport from https://beyond.infinit.sh
 
 Options:
   -h, --help             show this help message

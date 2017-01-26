@@ -1,5 +1,5 @@
 drive: pull: Usage: _build/macosx64/bin/infinit-drive drive pull [OPTIONS]
-Remove a drive from {hub}
+Remove a drive from https://beyond.infinit.sh
 
 Options:
   -h, --help             show this help message

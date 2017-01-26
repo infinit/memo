@@ -1,5 +1,5 @@
 daemon: fetch: Usage: _build/macosx64/bin/infinit-daemon daemon fetch [OPTIONS]
-Fetch volume and its dependencies from {hub}
+Fetch volume and its dependencies from https://beyond.infinit.sh
 
 Options:
   -h, --help             show this help message

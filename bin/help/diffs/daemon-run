@@ -1,34 +1,36 @@
-daemon: run: Usage: _build/macosx64/bin/infinit-daemon --run [OPTIONS...]	daemon: run: Usage: _build/macosx64/bin/infinit-daemon daemon run [OPTIONS]
-										Run daemon in the foreground
-Run daemon in the foreground:
-										Options:
-Run options:									  -h, --help		 show this help message
-  --login-user arg		  Login with selected user(s), of form		      --compatibility-version  compatibility version to force
-				  'user:password'				  -s, --script		 suppress extraneous human friendly messages and use JS
-  --mount-root arg		  Default root path for all mounts		  -a, --as		 user to run commands as (default: akim)
-				  (default: /run/user/505/infinit/filesystem/mn	      --login-user	 Login with selected user(s), of form 'user:password' (
-				  t)						      --mount		 mount given volumes on startup, keep trying on error (
-  --default-network arg		  Default network for volume creation		      --mount-root	 Default root path for all mounts
-  --advertise-host arg		  Advertise given hostname as an extra endpoint	      --default-network	 Default network for volume creation
-				  when running volumes				      --advertise-host	 advertise extra endpoint using given host (default: []
-  -f [ --fetch ]		  Run volumes with --fetch			  -f, --fetch		 fetch daemon from https://beyond.infinit.sh
-  -p [ --push ]			  Run volumes with --push			  -p, --push		 push daemon to https://beyond.infinit.sh
-  --publish			  Alias for --publish				      --docker		 Enable the Docker plugin
-  --docker [=arg(=true)] (=true)  Enable the Docker plugin			      --docker-user	 System user to use for docker plugin
-				  (default: true)				      --docker-home	 Home directory to use for Docker user (default: /home/
-  --docker-user arg		  System user to use for docker plugin		      --docker-socket-tcp  Use a TCP socket for docker plugin
-				  (default: akim)				      --docker-socket-port  TCP port to use to communicate with Docker, 0 for r
-  --docker-home arg		  Home directory to use for Docker user		      --docker-socket-path  Path for plugin socket (default: /run/docker/plugin
-				  (default: /home/<docker-user>)		      --docker-descriptor-path	Path to add plugin descriptor (default: /usr/li
-  --docker-socket-tcp		  Use a TCP socket for docker plugin		      --docker-mount-substitute	 [from:to|prefix] : Substitute 'from' to 'to' i
-  --docker-socket-port arg	  TCP port to use to communicate with Docker	      --log-level	 Log level to start volumes with (default: LOG)
-				  (default: random)				      --log-path	 Store volume logs in given path
-  --docker-socket-path arg	  Path for plugin socket
-				  (default: /run/docker/plugins)
-  --docker-descriptor-path arg	  Path to add plugin descriptor
-				  (default: /usr/lib/docker/plugins)
-  --docker-mount-substitute arg	  [from:to|prefix] : Substitute 'from' to 'to'
-				  in advertised path
-  -l [ --log-level ] arg	  Log level to start volumes with (default:
-				  LOG)
-  -d [ --log-path ] arg		  Store volume logs in given path
+daemon: run: Usage: _build/macosx64/bin/infinit-daemon --run [OPTIONS...]      |daemon: run: Usage: _build/macosx64/bin/infinit-daemon daemon run [OPTIONS]
+									       |Run daemon in the foreground
+Run daemon in the foreground:						       |
+									       |Options:
+Run options:								       |  -h, --help		 show this help message
+  --login-user arg		  Login with selected user(s), of form	       |      --compatibility-version  compatibility version to force
+				  'user:password'			       |  -s, --script		 suppress extraneous human friendly messages and use
+  --mount-root arg		  Default root path for all mounts	       |JSON output
+				  (default: /run/user/505/infinit/filesystem/mn|  -a, --as		 user to run commands as (default: akim)
+				  t)					       |      --login-user	 Login with selected user(s), of form 'user:password'
+  --default-network arg		  Default network for volume creation	       |(default: [])
+  --advertise-host arg		  Advertise given hostname as an extra endpoint|      --mount		 mount given volumes on startup, keep trying on error
+				  when running volumes			       |(default: [])
+  -f [ --fetch ]		  Run volumes with --fetch		       |      --mount-root	 Default root path for all mounts
+  -p [ --push ]			  Run volumes with --push		       |      --default-network	 Default network for volume creation
+  --publish			  Alias for --publish			       |      --advertise-host	 advertise extra endpoint using given host (default: []
+  --docker [=arg(=true)] (=true)  Enable the Docker plugin		       |  -f, --fetch		 fetch daemon from https://beyond.infinit.sh
+				  (default: true)			       |  -p, --push		 push daemon to https://beyond.infinit.sh
+  --docker-user arg		  System user to use for docker plugin	       |      --docker		 Enable the Docker plugin
+				  (default: akim)			       |      --docker-user	 System user to use for docker plugin
+  --docker-home arg		  Home directory to use for Docker user	       |      --docker-home	 Home directory to use for Docker user (default:
+				  (default: /home/<docker-user>)	       |/home/<docker-user>)
+  --docker-socket-tcp		  Use a TCP socket for docker plugin	       |      --docker-socket-tcp  Use a TCP socket for docker plugin
+  --docker-socket-port arg	  TCP port to use to communicate with Docker   |      --docker-socket-port  TCP port to use to communicate with Docker, 0 for
+				  (default: random)			       |random (default: 0)
+  --docker-socket-path arg	  Path for plugin socket		       |      --docker-socket-path  Path for plugin socket (default:
+				  (default: /run/docker/plugins)	       |/run/docker/plugins)
+  --docker-descriptor-path arg	  Path to add plugin descriptor		       |      --docker-descriptor-path	Path to add plugin descriptor (default:
+				  (default: /usr/lib/docker/plugins)	       |/usr/lib/docker/plugins)
+  --docker-mount-substitute arg	  [from:to|prefix] : Substitute 'from' to 'to' |      --docker-mount-substitute	 [from:to|prefix] : Substitute 'from' to 'to'
+				  in advertised path			       |in advertised path (default: )
+  -l [ --log-level ] arg	  Log level to start volumes with (default:    |      --log-level	 Log level to start volumes with (default: LOG)
+				  LOG)					       |      --log-path	 Store volume logs in given path
+  -d [ --log-path ] arg		  Store volume logs in given path	       |
+									       |
+									       |
