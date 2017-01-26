@@ -1254,9 +1254,10 @@ ELLE_TEST_SCHEDULED(
           discover(*dht_a, dht_b, false, true);
         else
           discover(dht_b, *dht_a, false);
-      ELLE_LOG("check we can't lookup the block")
-        BOOST_CHECK_THROW(dht_b.dht->fetch(addr)->data(),
-                          athena::paxos::TooFewPeers);
+      if (dynamic_cast<infinit::overlay::kouncil::Kouncil*>(dht_b.dht->overlay().get()))
+        ELLE_LOG("check we can't lookup the block")
+          BOOST_CHECK_THROW(dht_b.dht->fetch(addr)->data(),
+                            athena::paxos::TooFewPeers);
       ELLE_LOG("close connection and lookup block")
       {
         instrument.close();
