@@ -86,14 +86,14 @@ namespace
   make_filter(variables_map const& args,
               std::string const& default_object)
   {
-    auto objectclass = optional(args, "object-class");
+    auto object_class = optional(args, "object-class");
     auto filter = optional(args, "filter");
-    if (filter && objectclass)
+    if (filter && object_class)
       elle::err("specify either --filter or --object-class");
     if (filter)
       return *filter;
     else
-      return "objectClass=" + objectclass.value_or(default_object);
+      return "objectClass=" + object_class.value_or(default_object);
   }
 
   std::unordered_map<std::string, infinit::User>
