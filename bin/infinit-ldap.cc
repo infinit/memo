@@ -76,6 +76,20 @@ namespace
     return {server, domain, user, *password};
   }
 
+  std::string
+  make_filter(variables_map const& args,
+              std::string const& default_object)
+  {
+    auto objectclass = optional(args, "object-class");
+    auto filter = optional(args, "filter");
+    if (filter && objectclass)
+      elle::err("specify either --filter or --object-class");
+    if (filter)
+      return *filter;
+    else
+      return "objectClass=" + objectclass.value_or(default_object);
+  }
+
   std::unordered_map<std::string, infinit::User>
   _populate_network(boost::program_options::variables_map const& args,
                     std::string const& network_name)
@@ -87,22 +101,14 @@ namespace
     enforce_in_mountpoint(mountpoint, false);
     auto ldap = make_ldap(args);
     auto searchbase = mandatory(args, "searchbase");
-    auto objectclass = optional(args, "object-class");
-    auto filter = optional(args, "filter");
-    if (filter && objectclass)
-      elle::err("specify either --filter or --object-class");
-    if (objectclass)
-      filter = "objectClass=" + *objectclass;
-    else if (!filter)
-      filter = "objectClass=posixGroup";
-
+    auto filter = make_filter(args, "posixGroup");
     // uids
     auto all_members = std::unordered_set<std::string>{};
     // uid -> dn
     auto dns = std::unordered_map<std::string, std::string>{};
     //gname -> uids
     auto groups = std::unordered_map<std::string, Strings>{};
-    for (auto const& r: ldap.search(searchbase, *filter, {"cn", "memberUid"}))
+    for (auto const& r: ldap.search(searchbase, filter, {"cn", "memberUid"}))
     {
       if (r.find("memberUid") == r.end())
         // assume this is a user
@@ -247,7 +253,7 @@ COMMAND(drive_invite)
   bool create_home = flag(args, "create-home");
   using boost::algorithm::to_lower_copy;
   auto permissions = to_lower_copy(optional(args, "root-permissions").value_or("rw"));
-  Strings allowed_modes = {"r", "w", "rw", "none", ""};
+  auto allowed_modes = Strings{"r", "w", "rw", "none", ""};
   auto it = std::find(allowed_modes.begin(), allowed_modes.end(), permissions);
   if (it == allowed_modes.end())
     throw CommandLineError(
@@ -331,13 +337,7 @@ COMMAND(populate_hub)
   auto ldap = make_ldap(args);
   auto searchbase = mandatory(args, "searchbase");
   auto objectclass = optional(args, "object-class");
-  auto filter = optional(args, "filter");
-  if (filter && objectclass)
-    elle::err("specify either --filter or --object-class");
-  if (objectclass)
-    filter = "objectClass=" + *objectclass;
-  else if (!filter)
-    filter = "objectClass=person";
+  auto filter = make_filter(args, "person");
   auto pattern = optional(args, "username-pattern").value_or("$(cn)%");
   auto email_pattern = optional(args, "email-pattern").value_or("$(mail)");
   auto fullname_pattern = optional(args, "fullname-pattern").value_or("$(cn)");
@@ -345,8 +345,8 @@ COMMAND(populate_hub)
   extract_fields(pattern, fields);
   extract_fields(email_pattern, fields);
   extract_fields(fullname_pattern, fields);
-  ELLE_TRACE("will search %s and fetch fields %s", *filter, fields);
-  auto res = ldap.search(searchbase, *filter, fields);
+  ELLE_TRACE("will search %s and fetch fields %s", filter, fields);
+  auto res = ldap.search(searchbase, filter, fields);
   ELLE_TRACE("LDAP returned %s", res);
 
   // username -> fields
