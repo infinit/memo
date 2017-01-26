@@ -37,10 +37,18 @@ namespace
         return;
       auto pend = pattern.find_first_of(')', p);
       if (pend == pattern.npos)
-        throw elle::Error("malformed pattern: " + pattern);
-      res.push_back(pattern.substr(p+2, pend-p-2));
+        elle::err("malformed pattern: %s", pattern);
+      res.emplace_back(pattern.substr(p+2, pend-p-2));
       p = pend+1;
     }
+  }
+
+  Strings
+  extract_fields(std::string const& pattern)
+  {
+    auto res = Strings{};
+    extract_fields(pattern, res);
+    return res;
   }
 
   std::string
@@ -49,9 +57,7 @@ namespace
              int i = 0)
   {
     using boost::algorithm::replace_all;
-    auto fields = Strings{};
-    extract_fields(pattern, fields);
-    for (auto& f: fields)
+    for (auto& f: extract_fields(pattern))
       replace_all(pattern, "$(" + f + ")", attrs.at(f)[0]);
     replace_all(pattern, "%", i ? std::to_string(i) : "");
     return pattern;
@@ -94,21 +100,24 @@ namespace
   _populate_network(boost::program_options::variables_map const& args,
                     std::string const& network_name)
   {
-    auto self = self_user(ifnt, args);
+    auto owner = self_user(ifnt, args);
     auto network =
-      infinit::NetworkDescriptor(ifnt.network_get(network_name, self));
+      infinit::NetworkDescriptor(ifnt.network_get(network_name, owner));
     auto mountpoint = mandatory(args, "mountpoint");
     enforce_in_mountpoint(mountpoint, false);
     auto ldap = make_ldap(args);
     auto searchbase = mandatory(args, "searchbase");
-    auto filter = make_filter(args, "posixGroup");
+    auto results = [&]{
+      auto filter = make_filter(args, "posixGroup");
+      return ldap.search(searchbase, filter, {"cn", "memberUid"});
+    }();
     // uids
     auto all_members = std::unordered_set<std::string>{};
     // uid -> dn
     auto dns = std::unordered_map<std::string, std::string>{};
     //gname -> uids
     auto groups = std::unordered_map<std::string, Strings>{};
-    for (auto const& r: ldap.search(searchbase, filter, {"cn", "memberUid"}))
+    for (auto const& r: results)
     {
       if (r.find("memberUid") == r.end())
         // assume this is a user
@@ -124,7 +133,7 @@ namespace
 
     for (auto const& m: all_members)
     {
-      auto r = ldap.search(searchbase, "uid="+m, {});
+      auto r = ldap.search(searchbase, "uid="+m);
       dns[m] = r.front().at("dn").front();
     }
 
@@ -152,9 +161,9 @@ namespace
       auto passport = infinit::model::doughnut::Passport(
         u.second.public_key,
         network.name,
-        infinit::cryptography::rsa::KeyPair(self.public_key,
-                                            self.private_key.get()),
-        self.public_key != network.owner,
+        infinit::cryptography::rsa::KeyPair(owner.public_key,
+                                            owner.private_key.get()),
+        owner.public_key != network.owner,
         !flag(args, "deny-write"),
         !flag(args, "deny-storage"),
         false);
@@ -165,7 +174,7 @@ namespace
           "passport",
           elle::sprintf("%s: %s", network.name, user_name),
           passport,
-          self);
+          owner);
       }
       catch (elle::Error const& e)
       {
@@ -246,10 +255,10 @@ COMMAND(populate_network)
 
 COMMAND(drive_invite)
 {
-  auto self = self_user(ifnt, args);
+  auto owner = self_user(ifnt, args);
   auto drive =
-    ifnt.drive_get(ifnt.qualified_name(mandatory(args, "drive"), self));
-  auto network = ifnt.network_descriptor_get(drive.network, self);
+    ifnt.drive_get(ifnt.qualified_name(mandatory(args, "drive"), owner));
+  auto network = ifnt.network_descriptor_get(drive.network, owner);
   bool create_home = flag(args, "create-home");
   using boost::algorithm::to_lower_copy;
   auto permissions = to_lower_copy(optional(args, "root-permissions").value_or("rw"));
@@ -321,7 +330,7 @@ COMMAND(drive_invite)
         "invitation",
         elle::sprintf("%s: %s", drive.name, user_name),
         infinit::Drive::User(permissions, "ok", create_home),
-        self,
+        owner,
         true,
         true);
     }
@@ -335,7 +344,7 @@ COMMAND(drive_invite)
 COMMAND(populate_hub)
 {
   auto ldap = make_ldap(args);
-  auto pattern = optional(args, "username-pattern").value_or("$(cn)%");
+  auto username_pattern = optional(args, "username-pattern").value_or("$(cn)%");
   auto email_pattern = optional(args, "email-pattern").value_or("$(mail)");
   auto fullname_pattern = optional(args, "fullname-pattern").value_or("$(cn)");
   auto res = [&] {
@@ -343,7 +352,7 @@ COMMAND(populate_hub)
     auto filter = make_filter(args, "person");
     auto fields = [&] {
       auto res = Strings{};
-      extract_fields(pattern, res);
+      extract_fields(username_pattern, res);
       extract_fields(email_pattern, res);
       extract_fields(fullname_pattern, res);
       return res;
@@ -372,62 +381,63 @@ COMMAND(populate_hub)
       ELLE_TRACE("%s not on %s: %s", dn, infinit::beyond(true), e);
       for (int i=0; ; ++i)
       {
-        auto username = make_field(pattern, r, i);
+        auto username = make_field(username_pattern, r, i);
         try
         {
           auto u = infinit::beyond_fetch<infinit::User>(
             "user",
             reactor::http::url_encode(username));
           ELLE_TRACE("username %s taken", username);
-          if (pattern.find('%') == std::string::npos)
+          if (username_pattern.find('%') == std::string::npos)
           {
             ELLE_ERR("Username %s already taken, skipping %s", username, dn);
             break;
           }
-          continue;
         }
         catch (infinit::MissingResource const& e)
         {
           // all good
-          missing[username] = UserData{dn,
-            make_field(fullname_pattern, r),
-          make_field(email_pattern, r)};
+          missing.emplace(username,
+                          UserData{dn,
+                              make_field(fullname_pattern, r),
+                              make_field(email_pattern, r)});
           break;
         }
       }
     }
   }
 
-  if (!missing.size())
+  if (missing.empty())
   {
     std::cout << std::endl << "No new users to register" << std::endl;
     return;
   }
   std::cout << std::endl << "Will register the following users:" << std::endl;
   for (auto& m: missing)
-  {
-    std::cout << elle::sprintf(
-      "%s: %s (%s) DN: %s",
-      m.first, m.second.fullname, m.second.email, m.second.dn) << std::endl;
-  }
+    elle::printf("%s: %s (%s) DN: %s\n",
+                  m.first, m.second.fullname, m.second.email, m.second.dn);
   std::cout << std::endl;
-  std::cout << "Proceed? [y/n] ";
-  std::string line;
-  std::getline(std::cin, line);
-  std::transform(line.begin(), line.end(), line.begin(), ::tolower);
-  if (line != "y")
-  {
+  bool proceed = [&]
+    {
+      std::cout << "Proceed? [y/n] ";
+      std::string line;
+      std::getline(std::cin, line);
+      boost::to_lower(line);
+      return line == "y" || line == "yes";
+    }();
+  if (proceed)
+    for (auto& m: missing)
+    {
+      auto u = infinit::User
+        (m.first,
+         infinit::cryptography::rsa::keypair::generate(2048),
+         m.second.email, m.second.fullname, m.second.dn);
+      ELLE_TRACE("pushing %s", u.name);
+      infinit::beyond_push<das::Serializer<infinit::PrivateUserPublish>>
+        ("user", u.name, u, u);
+    }
+  else
     std::cout << "Aborting..." << std::endl;
-    return;
-  }
-  for (auto& m: missing)
-  {
-    infinit::User u(m.first,
-                    infinit::cryptography::rsa::keypair::generate(2048),
-                    m.second.email, m.second.fullname, m.second.dn);
-    ELLE_TRACE("pushing %s", u.name);
-    infinit::beyond_push<das::Serializer<infinit::PrivateUserPublish>>("user", u.name, u, u);
-  }
 }
 
 #define LDAP_CORE_OPTIONS                                     \
