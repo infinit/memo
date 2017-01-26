@@ -1,4 +1,4 @@
-* To add a new object, one needs to change several things:
+* To add a new object Thing, one needs to change several things:
 
 - create src/cli/infinit/Thing.{hh,cc}.
 - fwddecl in src/cli/infinit/fwd.hh.

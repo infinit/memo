@@ -19,7 +19,7 @@ namespace infinit
              std::string const& key,
              char* val,
              int val_size,
-             bool fallback_xattrs);
+             bool fallback);
 
     boost::optional<std::string>
     path_mountpoint(std::string const& path, bool fallback);

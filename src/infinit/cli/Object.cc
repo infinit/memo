@@ -108,6 +108,7 @@ namespace infinit
     template class Object<Doctor>;
     template class Object<Drive>;
     template class Object<Journal>;
+    template class Object<LDAP>;
     template class Object<Network>;
     template class Object<Passport>;
     template class Object<Silo>;

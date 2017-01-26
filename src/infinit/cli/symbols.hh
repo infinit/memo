@@ -56,6 +56,7 @@ namespace infinit
     DAS_CLI_SYMBOL(docker_socket_port, 0, "TCP port to use to communicate with Docker, 0 for random", false);
     DAS_CLI_SYMBOL(docker_socket_tcp, 0, "Use a TCP socket for docker plugin", false);
     DAS_CLI_SYMBOL(docker_user, 0, "System user to use for docker plugin",false);
+    DAS_CLI_SYMBOL(domain, 'd', "LDAP domain", false);
     DAS_CLI_SYMBOL(dropbox, '\0', "store blocks on Dropbox", false);
     DAS_CLI_SYMBOL(email, 'e', "user email", false);
     DAS_CLI_SYMBOL(enable_inherit, 'i', "make new files and directories inherit permissions", false);
@@ -69,6 +70,7 @@ namespace infinit
     DAS_CLI_SYMBOL(fetch_endpoints, 0, "fetch endpoints from {hub}" , false);
     DAS_CLI_SYMBOL(fetch_endpoints_interval, 0, "period for repolling endpoints from the Hub in seconds", false);
     DAS_CLI_SYMBOL(filesystem, '\0', "store blocks on local filesystem (default)", false);
+    DAS_CLI_SYMBOL(filter, 'f', "raw LDAP query to use (default: objectClass=posixGroup)", false);
     DAS_CLI_SYMBOL(finder_sidebar, 0, "show volume in Finder sidebar" , false);
     DAS_CLI_SYMBOL(full, '\0', "include private key (do not use unless you understand the implications", false);
     DAS_CLI_SYMBOL(fullname, '\0', "user full name", false);
@@ -111,6 +113,7 @@ namespace infinit
     DAS_CLI_SYMBOL(no_local_endpoints, 0, "Disable automatic detection of local endpoints", false);
     DAS_CLI_SYMBOL(no_public_endpoints, 0, "Disable automatic detection of public endpoints", false);
     DAS_CLI_SYMBOL(nodes, 0, "estimate of the total number of nodes", false);
+    DAS_CLI_SYMBOL(object_class, 'o', "filter results (default: posixGroup)", false);
     DAS_CLI_SYMBOL(operation, 'O', "operation to {action}", false);
     DAS_CLI_SYMBOL(others_mode, 'o', "access mode {action} for other users: r, w, rw, none", false);
     DAS_CLI_SYMBOL(output, 'o', "file to write the {object} to", false);
@@ -156,6 +159,7 @@ namespace infinit
     DAS_CLI_SYMBOL(restart, 0, "restart {object}", false);
     DAS_CLI_SYMBOL(s3, '\0', "store blocks on AWS S3", false);
     DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output", false);
+    DAS_CLI_SYMBOL(searchbase, 'b', "search starting point (without domain)", false); // FIXME: why not search_base?
     DAS_CLI_SYMBOL(server, 0, "connectivity server address (default = 192.241.139.66)", false);
     DAS_CLI_SYMBOL(service, 0, "fetch {object} from the network, not beyond", false);
     DAS_CLI_SYMBOL(show, '\0', "list group users, administrators and description", false);
@@ -190,6 +194,7 @@ namespace infinit
     DAS_SYMBOL(disable_storage);
     DAS_SYMBOL(doctor);
     DAS_SYMBOL(drive);
+    DAS_SYMBOL(drive_invite);
     DAS_SYMBOL(enable_storage);
     DAS_SYMBOL(get_xattr);
     DAS_SYMBOL(hash);
@@ -198,6 +203,7 @@ namespace infinit
     DAS_SYMBOL(invite);
     DAS_SYMBOL(join);
     DAS_SYMBOL(journal);
+    DAS_SYMBOL(ldap);
     DAS_SYMBOL(link);
     DAS_SYMBOL(list);
     DAS_SYMBOL(list_services);
@@ -205,6 +211,8 @@ namespace infinit
     DAS_SYMBOL(login);
     DAS_SYMBOL(manage_volumes);
     DAS_SYMBOL(networking);
+    DAS_SYMBOL(populate_hub);
+    DAS_SYMBOL(populate_network);
     DAS_SYMBOL(run);
     DAS_SYMBOL(set);
     DAS_SYMBOL(set_xattr);
@@ -236,6 +244,7 @@ namespace infinit
       DAS_SYMBOL(mode_describe);
       DAS_SYMBOL(mode_deserialize);
       DAS_SYMBOL(mode_disable_storage);
+      DAS_SYMBOL(mode_drive_invite);
       DAS_SYMBOL(mode_enable_storage);
       DAS_SYMBOL(mode_export);
       DAS_SYMBOL(mode_fetch);
@@ -246,6 +255,7 @@ namespace infinit
       DAS_SYMBOL(mode_inspect);
       DAS_SYMBOL(mode_invite);
       DAS_SYMBOL(mode_join);
+      DAS_SYMBOL(mode_ldap);
       DAS_SYMBOL(mode_link);
       DAS_SYMBOL(mode_list);
       DAS_SYMBOL(mode_list_services);
@@ -254,6 +264,8 @@ namespace infinit
       DAS_SYMBOL(mode_manage_volumes);
       DAS_SYMBOL(mode_mount);
       DAS_SYMBOL(mode_networking);
+      DAS_SYMBOL(mode_populate_hub);
+      DAS_SYMBOL(mode_populate_network);
       DAS_SYMBOL(mode_pull);
       DAS_SYMBOL(mode_push);
       DAS_SYMBOL(mode_receive);

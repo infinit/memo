@@ -14,6 +14,7 @@ namespace infinit
     class Drive;
     class Infinit;
     class Journal;
+    class LDAP;
     class Network;
     class Passport;
     class Silo;
