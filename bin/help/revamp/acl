@@ -10,5 +10,5 @@ Modes:
   set-xattr  Set an extended attribute value
 
 Options:
-  -h, --help             show this help message
+  -h, --help                show this help message
 

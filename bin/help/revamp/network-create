@@ -2,30 +2,30 @@ network: create: Usage: _build/macosx64/bin/infinit-network network create [OPTI
 Create a network
 
 Options:
-  -h, --help             show this help message
-      --compatibility-version  compatibility version to force
-  -s, --script           suppress extraneous human friendly messages and use JSON output
-  -a, --as               user to run commands as (default: akim)
-  -n, --name             name of the network to create
-      --description      network description
-  -S, --storage          storage to contribute (optional, data striped over multiple) (default: [])
-      --port             outbound port to use
-  -r, --replication-factor  data replication factor (default: 1) (default: 1)
-  -e, --eviction-delay   missing servers eviction delay (default: 10 min)
-  -o, --output           file to write the network to
-      --push-network     push the network to https://beyond.infinit.sh
-  -p, --push             push network to https://beyond.infinit.sh
-      --admin-r          Set admin users that can read all data (default: [])
-      --admin-rw         Set admin users that can read and write all data (default: [])
-      --peer             peer address or file with list of peer addresses (host:port) (default: [])
-      --paxos            use Paxos consensus algorithm (default)
-      --no-consensus     use no consensus algorithm
-      --kelips           use a Kelips overlay network (default)
-      --kalimero         use a Kalimero overlay network. Used for local testing
-      --kouncil          use a Kouncil overlay network
-      --nodes            estimate of the total number of nodes
-      --k                number of groups (default: 1)
-      --kelips-contact-timeout  ping timeout before considering a peer lost (default: 2min)
-      --encrypt          use encryption: no, lazy, yes (default: yes)
-      --protocol         RPC protocol to use: tcp, utp, all (default: all)
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: akim)
+  -n, --name arg            name of the network to create
+      --description arg     network description
+  -S, --storage arg         storage to contribute (optional, data striped over multiple) (default: [])
+      --port arg            outbound port to use
+  -r, --replication-factor arg  data replication factor (default: 1) (default: 1)
+  -e, --eviction-delay arg  missing servers eviction delay (default: 10min)
+  -o, --output arg          file to write the network to
+      --push-network        push the network to https://beyond.infinit.sh
+  -p, --push                push network to https://beyond.infinit.sh
+      --admin-r arg         Set admin users that can read all data (default: [])
+      --admin-rw arg        Set admin users that can read and write all data (default: [])
+      --peer arg            peer address or file with list of peer addresses (host:port) (default: [])
+      --paxos               use Paxos consensus algorithm (default)
+      --no-consensus        use no consensus algorithm
+      --kelips              use a Kelips overlay network (default)
+      --kalimero            use a Kalimero overlay network. Used for local testing
+      --kouncil             use a Kouncil overlay network
+      --nodes arg           estimate of the total number of nodes
+      --k arg               number of groups (default: 1)
+      --kelips-contact-timeout arg  ping timeout before considering a peer lost (default: 2min)
+      --encrypt arg         use encryption: no, lazy, yes (default: yes)
+      --protocol arg        RPC protocol to use: tcp, utp, all (default: all)
 

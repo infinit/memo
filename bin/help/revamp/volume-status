@@ -2,9 +2,9 @@ volume: status: Usage: _build/macosx64/bin/infinit-volume volume status [OPTIONS
 Get volume status
 
 Options:
-  -h, --help             show this help message
-      --compatibility-version  compatibility version to force
-  -s, --script           suppress extraneous human friendly messages and use JSON output
-  -a, --as               user to run commands as (default: akim)
-  -n, --name             name of the volume to status
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: akim)
+  -n, --name arg            name of the volume to status
 

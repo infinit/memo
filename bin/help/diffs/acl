@@ -10,7 +10,7 @@ Modes:									       |  get-xattr  Get an extended attribute value
 									       |  set-xattr  Set an extended attribute value
 Hidden Modes:								       |
   --set-xattr		       Set an extended attribute		       |Options:
-  --get-xattr		       Get an extended attribute		       |  -h, --help		 show this help message
+  --get-xattr		       Get an extended attribute		       |  -h, --help		    show this help message
 									       |
 Miscellaneous:								       |
   -h [ --help ]		       Display the help				       |

@@ -2,11 +2,11 @@ storage: export: Usage: _build/macosx64/bin/infinit-storage --export --name    |
 STORAGE [OPTIONS...]							       |Export local silo
 									       |
 Export storage information:						       |Options:
-									       |  -h, --help		 show this help message
-Export options:								       |      --compatibility-version  compatibility version to force
-  -n [ --name ] arg	 Storage to export				       |  -s, --script		 suppress extraneous human friendly messages and use
+									       |  -h, --help		    show this help message
+Export options:								       |      --compatibility-version arg  compatibility version to force
+  -n [ --name ] arg	 Storage to export				       |  -s, --script		    suppress extraneous human friendly messages and use
   -o [ --output ] arg	 File to write the storage to			       |JSON output
-			 (default: stdout)				       |  -a, --as		 user to run commands as (default: akim)
-									       |  -n, --name		 name of the silo to export
-									       |  -o, --output		 file to write the silo to
+			 (default: stdout)				       |  -a, --as arg		    user to run commands as (default: akim)
+									       |  -n, --name arg	    name of the silo to export
+									       |  -o, --output arg	    file to write the silo to
 									       |

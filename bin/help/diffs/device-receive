@@ -3,14 +3,14 @@ device: receive: Usage: _build/macosx64/bin/infinit-device --receive	       |dev
 									       |receive an object from another device using https://beyond.infinit.sh
 Receive an object from another device using the Hub:			       |
 									       |Options:
-Receive options:							       |  -h, --help		 show this help message
-  -n [ --name ] arg	 Name of object to receive			       |      --compatibility-version  compatibility version to force
-  -u [ --user ]		 Receive a user identity from another device using the |  -s, --script		 suppress extraneous human friendly messages and use
+Receive options:							       |  -h, --help		    show this help message
+  -n [ --name ] arg	 Name of object to receive			       |      --compatibility-version arg  compatibility version to force
+  -u [ --user ]		 Receive a user identity from another device using the |  -s, --script		    suppress extraneous human friendly messages and use
 			 Hub						       |JSON output
-  --passphrase arg	 Passphrase to secure identity (default: prompt for    |  -a, --as		 user to run commands as (default: akim)
-			 passphrase)					       |  -u, --user		 to receive user identity to another device using
+  --passphrase arg	 Passphrase to secure identity (default: prompt for    |  -a, --as arg		    user to run commands as (default: akim)
+			 passphrase)					       |  -u, --user		    to receive user identity to another device using
 									       |https://beyond.infinit.sh
-									       |  -n, --name		 name of the device to receive (default: akim)
-									       |      --passphrase	 passphrase to secure identity (default: prompt for
+									       |  -n, --name arg	    name of the device to receive (default: akim)
+									       |      --passphrase arg	    passphrase to secure identity (default: prompt for
 									       |passphrase)
 									       |

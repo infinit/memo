@@ -9,5 +9,5 @@ Modes:
   list       List local silos
 
 Options:
-  -h, --help             show this help message
+  -h, --help                show this help message
 

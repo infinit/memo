@@ -12,5 +12,5 @@ Modes:
   push       Push a user's network passport to https://beyond.infinit.sh
 
 Options:
-  -h, --help             show this help message
+  -h, --help                show this help message
 

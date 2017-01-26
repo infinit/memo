@@ -3,11 +3,11 @@ NETWORK --user USER] [OPTIONS...]					       |[OPTIONS]
 									       |Fetch a user's network passport from https://beyond.infinit.sh
 Fetch a user's network passport from the Hub:				       |
 									       |Options:
-Fetch options:								       |  -h, --help		 show this help message
-  -N [ --network ] arg	 Network to fetch the passport for (optional)	       |      --compatibility-version  compatibility version to force
-  -u [ --user ] arg	 User to fetch passports for (optional)		       |  -s, --script		 suppress extraneous human friendly messages and use
+Fetch options:								       |  -h, --help		    show this help message
+  -N [ --network ] arg	 Network to fetch the passport for (optional)	       |      --compatibility-version arg  compatibility version to force
+  -u [ --user ] arg	 User to fetch passports for (optional)		       |  -s, --script		    suppress extraneous human friendly messages and use
 									       |JSON output
-									       |  -a, --as		 user to run commands as (default: akim)
-									       |  -N, --network		 network to fetch passport for
-									       |  -u, --user		 user to fetch passport for
+									       |  -a, --as arg		    user to run commands as (default: akim)
+									       |  -N, --network arg	    network to fetch passport for
+									       |  -u, --user arg	    user to fetch passport for
 									       |

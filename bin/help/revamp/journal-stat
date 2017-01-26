@@ -2,9 +2,9 @@ journal: stat: Usage: _build/macosx64/bin/infinit-journal journal stat [OPTIONS]
 Show the remaining asynchronous operations count and size
 
 Options:
-  -h, --help             show this help message
-      --compatibility-version  compatibility version to force
-  -s, --script           suppress extraneous human friendly messages and use JSON output
-  -a, --as               user to run commands as (default: akim)
-  -N, --network          network to stat journal for
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: akim)
+  -N, --network arg         network to stat journal for
 

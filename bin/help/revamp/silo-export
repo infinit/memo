@@ -2,10 +2,10 @@ silo: export: Usage: _build/macosx64/bin/infinit-silo silo export [OPTIONS]
 Export local silo
 
 Options:
-  -h, --help             show this help message
-      --compatibility-version  compatibility version to force
-  -s, --script           suppress extraneous human friendly messages and use JSON output
-  -a, --as               user to run commands as (default: akim)
-  -n, --name             name of the silo to export
-  -o, --output           file to write the silo to
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: akim)
+  -n, --name arg            name of the silo to export
+  -o, --output arg          file to write the silo to
 

@@ -12,5 +12,5 @@ Modes:
   manage-volumes Manage daemon controlled volumes
 
 Options:
-  -h, --help             show this help message
+  -h, --help                show this help message
 

@@ -2,16 +2,16 @@ passport: create: Usage: _build/macosx64/bin/infinit-passport passport create [O
 Create a passport for a user to a network
 
 Options:
-  -h, --help             show this help message
-      --compatibility-version  compatibility version to force
-  -s, --script           suppress extraneous human friendly messages and use JSON output
-  -a, --as               user to run commands as (default: akim)
-  -N, --network          network to create passport for
-  -u, --user             user to create passport for
-      --push-passport    push passport to https://beyond.infinit.sh
-  -p, --push             push passport to https://beyond.infinit.sh
-      --deny-write       deny user write access to the network
-      --deny-storage     deny user ability to contribute storage to the network
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: akim)
+  -N, --network arg         network to create passport for
+  -u, --user arg            user to create passport for
+      --push-passport       push passport to https://beyond.infinit.sh
+  -p, --push                push passport to https://beyond.infinit.sh
+      --deny-write          deny user write access to the network
+      --deny-storage        deny user ability to contribute storage to the network
       --allow-create-passport  allow user to create passports for network
-  -o, --output           file to write the passport to
+  -o, --output arg          file to write the passport to
 

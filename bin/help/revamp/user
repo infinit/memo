@@ -15,5 +15,5 @@ Modes:
   signup     Create and push a user to https://beyond.infinit.sh
 
 Options:
-  -h, --help             show this help message
+  -h, --help                show this help message
 

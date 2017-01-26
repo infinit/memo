@@ -7,5 +7,5 @@ Modes:
   stat       Show the remaining asynchronous operations count and size
 
 Options:
-  -h, --help             show this help message
+  -h, --help                show this help message
 

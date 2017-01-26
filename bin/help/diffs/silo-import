@@ -2,10 +2,10 @@ storage: import: Usage: _build/macosx64/bin/infinit-storage --import --name    |
 STORAGE [OPTIONS...]							       |Import local silo
 									       |
 Import storage information:						       |Options:
-									       |  -h, --help		 show this help message
-Import options:								       |      --compatibility-version  compatibility version to force
-  -i [ --input ] arg	 File to read the storage from (default: stdin)	       |  -s, --script		 suppress extraneous human friendly messages and use
+									       |  -h, --help		    show this help message
+Import options:								       |      --compatibility-version arg  compatibility version to force
+  -i [ --input ] arg	 File to read the storage from (default: stdin)	       |  -s, --script		    suppress extraneous human friendly messages and use
 									       |JSON output
-									       |  -a, --as		 user to run commands as (default: akim)
-									       |  -i, --input		 file to read silo from
+									       |  -a, --as arg		    user to run commands as (default: akim)
+									       |  -i, --input arg	    file to read silo from
 									       |

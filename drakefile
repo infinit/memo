@@ -144,6 +144,8 @@ def configure(
   linux = elle.cxx_toolkit.os is drake.os.linux
 
   if not windows:
+    das_lib = drake.copy(elle.das.lib_dynamic, 'lib',
+                         strip_prefix = True)
     dropbox_lib = drake.copy(elle.dropbox.lib_dynamic, 'lib',
                              strip_prefix = True)
     cryptography_lib = drake.copy(elle.cryptography.lib_dynamic, 'lib',
@@ -160,6 +162,7 @@ def configure(
     athena_lib = drake.copy(elle.athena.lib_dynamic, 'lib',
                             strip_prefix = True)
   else:
+    das_lib = elle.das.lib_static
     dropbox_lib = elle.dropbox.lib_static
     cryptography_lib = elle.cryptography.lib_static
     protocol_lib = elle.protocol.lib_static
@@ -289,6 +292,7 @@ def configure(
     (windows and 'bin' or 'lib') + '/infinit',
     infinit_sources + [athena_lib,
                        cryptography_lib,
+                       das_lib,
                        aws_lib,
                        protocol_lib,
                        dropbox_lib,
@@ -427,7 +431,7 @@ def configure(
     binaries_config.append(('sshfs', [], [], False))
     if enable_crash_reporting:
       additional_libs.append(crash_reporter_lib)
-    additional_libs += [elle_lib, reactor_lib, cryptography_lib]
+    additional_libs += [das_lib, elle_lib, reactor_lib, cryptography_lib]
   else:
     pass
   binaries = []
@@ -543,6 +547,7 @@ def configure(
     infinit_cli_sources + [
       aws_lib,
       cryptography_lib,
+      das_lib,
       elle_lib,
       infinit_lib,
       protocol_lib,
@@ -896,6 +901,7 @@ def configure(
         crash_test_libs = drake.copy([
             crash_reporter_lib,
             cryptography_lib,
+            das_lib,
             elle_lib,
             reactor_lib,
           ] + additional_libs,
@@ -1099,7 +1105,7 @@ def configure(
     ('storage', [aws_lib]),
   ]
   if not windows:
-    tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
+    tests_extra_libs = [das_lib, elle_lib, cryptography_lib, reactor_lib, protocol_lib]
   else:
     tests_extra_libs = []
   for test_name, dependencies in tests_names:
@@ -1193,7 +1199,7 @@ def configure(
     infinit_lib_bench = drake.copy(infinit_lib, 'bench', strip_prefix = True)
     dokan_lib_bench = drake.copy(dokan_lib, 'bench', strip_prefix = True)
   if not windows:
-    bench_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
+    bench_extra_libs = [das_lib, elle_lib, cryptography_lib, reactor_lib, protocol_lib]
   else:
     bench_extra_libs = []
   for n in bench_names:

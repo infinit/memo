@@ -2,16 +2,16 @@ drive: create: Usage: _build/macosx64/bin/infinit-drive --create --name NAME   |
 --network NETWORK --volume VOLUME [--description DESCRIPTION] [OPTIONS...]     |Create a drive (a network and volume pair)
 									       |
 Create a drive (a network and volume pair):				       |Options:
-									       |  -h, --help		 show this help message
-Create options:								       |      --compatibility-version  compatibility version to force
-  -n [ --name ] arg	 Created drive name				       |  -s, --script		 suppress extraneous human friendly messages and use
+									       |  -h, --help		    show this help message
+Create options:								       |      --compatibility-version arg  compatibility version to force
+  -n [ --name ] arg	 Created drive name				       |  -s, --script		    suppress extraneous human friendly messages and use
   --description arg	 Description of drive				       |JSON output
-  -N [ --network ] arg	 Associated network name			       |  -a, --as		 user to run commands as (default: akim)
-  -V [ --volume ] arg	 Associated volume name				       |  -n, --name		 name of the drive to create
-  -i [ --icon ] arg	 Path to an image to use as icon		       |      --description	 drive description
-  --push-drive		 Push the created drive to the Hub		       |  -N, --network		 network to create drive for
-  -p [ --push ]		 Alias for --push-drive				       |  -V, --volume		 associated volume name
-									       |  -i, --icon		 path to an image to use as icon
-									       |      --push-drive	 push drive to https://beyond.infinit.sh
-									       |  -p, --push		 push drive to https://beyond.infinit.sh
+  -N [ --network ] arg	 Associated network name			       |  -a, --as arg		    user to run commands as (default: akim)
+  -V [ --volume ] arg	 Associated volume name				       |  -n, --name arg	    name of the drive to create
+  -i [ --icon ] arg	 Path to an image to use as icon		       |      --description arg	    drive description
+  --push-drive		 Push the created drive to the Hub		       |  -N, --network arg	    network to create drive for
+  -p [ --push ]		 Alias for --push-drive				       |  -V, --volume arg	    associated volume name
+									       |  -i, --icon arg	    path to an image to use as icon
+									       |      --push-drive	    push drive to https://beyond.infinit.sh
+									       |  -p, --push		    push drive to https://beyond.infinit.sh
 									       |

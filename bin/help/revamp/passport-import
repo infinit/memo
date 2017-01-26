@@ -2,9 +2,9 @@ passport: import: Usage: _build/macosx64/bin/infinit-passport passport import [O
 Import a passport for a user to a network
 
 Options:
-  -h, --help             show this help message
-      --compatibility-version  compatibility version to force
-  -s, --script           suppress extraneous human friendly messages and use JSON output
-  -a, --as               user to run commands as (default: akim)
-  -i, --input            file to read passport from
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: akim)
+  -i, --input arg           file to read passport from
 

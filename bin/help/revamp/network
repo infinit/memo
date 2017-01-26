@@ -20,5 +20,5 @@ Modes:
   update     Update a network
 
 Options:
-  -h, --help             show this help message
+  -h, --help                show this help message
 

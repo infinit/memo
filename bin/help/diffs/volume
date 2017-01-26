@@ -18,7 +18,7 @@ Modes:									       |  create     Create a volume
   --stop		       Stop a volume				       |  update     Update a volume with default run options
   --status		       Get volume status			       |
 									       |Options:
-Miscellaneous:								       |  -h, --help		 show this help message
+Miscellaneous:								       |  -h, --help		    show this help message
   -h [ --help ]		       Display the help				       |
   -s [ --script ]	       Silence all extraneous human friendly messages  |
   --compatibility-version arg  Force compatibility version		       |

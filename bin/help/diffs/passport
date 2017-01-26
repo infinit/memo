@@ -12,7 +12,7 @@ Modes:									       |  create     Create a passport for a user to a network
   --list		       List all local passports			       |  push	     Push a user's network passport to https://beyond.infinit.sh
   --delete		       Locally delete a passport		       |
 									       |Options:
-Miscellaneous:								       |  -h, --help		 show this help message
+Miscellaneous:								       |  -h, --help		    show this help message
   -h [ --help ]		       Display the help				       |
   -s [ --script ]	       Silence all extraneous human friendly messages  |
   --compatibility-version arg  Force compatibility version		       |

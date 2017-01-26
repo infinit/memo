@@ -2,11 +2,11 @@ device: transmit: Usage: _build/macosx64/bin/infinit-device device transmit [OPT
 transmit an object to another device using https://beyond.infinit.sh
 
 Options:
-  -h, --help             show this help message
-      --compatibility-version  compatibility version to force
-  -s, --script           suppress extraneous human friendly messages and use JSON output
-  -a, --as               user to run commands as (default: akim)
-  -u, --user             to transmit user identity to another device using https://beyond.infinit.sh
-      --passphrase       passphrase to secure identity (default: prompt for passphrase)
-      --no-countdown     do not show countdown timer
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: akim)
+  -u, --user                to transmit user identity to another device using https://beyond.infinit.sh
+      --passphrase arg      passphrase to secure identity (default: prompt for passphrase)
+      --no-countdown        do not show countdown timer
 

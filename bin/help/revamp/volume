@@ -18,5 +18,5 @@ Modes:
   update     Update a volume with default run options
 
 Options:
-  -h, --help             show this help message
+  -h, --help                show this help message
 

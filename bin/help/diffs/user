@@ -15,7 +15,7 @@ Modes:									       |  create     Create a user
   --login		       Log the user to the Hub			       |  signup     Create and push a user to https://beyond.infinit.sh
   --list		       List users				       |
 									       |Options:
-Hidden Modes:								       |  -h, --help		 show this help message
+Hidden Modes:								       |  -h, --help		    show this help message
   --hash		       Get short hash of user's key		       |
 									       |
 Miscellaneous:								       |

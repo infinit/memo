@@ -2,9 +2,9 @@ network: list: Usage: _build/macosx64/bin/infinit-network --list [OPTIONS...]  |
 									       |List networks
 List networks:								       |
 									       |Options:
-									       |  -h, --help		 show this help message
-									       |      --compatibility-version  compatibility version to force
-									       |  -s, --script		 suppress extraneous human friendly messages and use
+									       |  -h, --help		    show this help message
+									       |      --compatibility-version arg  compatibility version to force
+									       |  -s, --script		    suppress extraneous human friendly messages and use
 									       |JSON output
-									       |  -a, --as		 user to run commands as (default: akim)
+									       |  -a, --as arg		    user to run commands as (default: akim)
 									       |

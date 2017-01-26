@@ -9,7 +9,7 @@ Modes:									       |  all	     Perform all possible checks
 			       configuration files			       |  system     Perform sanity checks on your system
   --connectivity	       Perform connectivity checks		       |
   --networking		       Perform networking speed tests between nodes    |Options:
-									       |  -h, --help		 show this help message
+									       |  -h, --help		    show this help message
 Miscellaneous:								       |
   -h [ --help ]		       Display the help				       |
   -s [ --script ]	       Silence all extraneous human friendly messages  |

@@ -6,5 +6,5 @@ Modes:
   transmit   transmit an object to another device using https://beyond.infinit.sh
 
 Options:
-  -h, --help             show this help message
+  -h, --help                show this help message
 

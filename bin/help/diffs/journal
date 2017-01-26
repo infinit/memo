@@ -7,7 +7,7 @@ Modes:									       |  describe   Describe asynchronous operation(s)
 			       and size					       |  stat	     Show the remaining asynchronous operations count and size
   --export		       Export an operation			       |
   --describe		       Describe asynchronous operation(s)	       |Options:
-									       |  -h, --help		 show this help message
+									       |  -h, --help		    show this help message
 Miscellaneous:								       |
   -h [ --help ]		       Display the help				       |
   -s [ --script ]	       Silence all extraneous human friendly messages  |

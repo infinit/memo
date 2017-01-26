@@ -2,10 +2,10 @@ journal: stat: Usage: _build/macosx64/bin/infinit-journal --stat [--network    |
 NETWORK] [OPTIONS...]							       |Show the remaining asynchronous operations count and size
 									       |
 Show the remaining asynchronous operations count and size:		       |Options:
-									       |  -h, --help		 show this help message
-Stat options:								       |      --compatibility-version  compatibility version to force
-  -N [ --network ] arg	 Network to check				       |  -s, --script		 suppress extraneous human friendly messages and use
+									       |  -h, --help		    show this help message
+Stat options:								       |      --compatibility-version arg  compatibility version to force
+  -N [ --network ] arg	 Network to check				       |  -s, --script		    suppress extraneous human friendly messages and use
 									       |JSON output
-									       |  -a, --as		 user to run commands as (default: akim)
-									       |  -N, --network		 network to stat journal for
+									       |  -a, --as arg		    user to run commands as (default: akim)
+									       |  -N, --network arg	    network to stat journal for
 									       |

@@ -2,15 +2,15 @@ acl: register: Usage: _build/macosx64/bin/infinit-acl --register --user USER   |
 --network NETWORK --path PATH_TO_MOUNTPOINT [OPTIONS...]		       |Register user's passport to the network
 									       |
 Register user's passport to the network:				       |Options:
-									       |  -h, --help		 show this help message
-Register options:							       |      --compatibility-version  compatibility version to force
-  -u [ --user ] arg	 User to register				       |  -s, --script		 suppress extraneous human friendly messages and use
+									       |  -h, --help		    show this help message
+Register options:							       |      --compatibility-version arg  compatibility version to force
+  -u [ --user ] arg	 User to register				       |  -s, --script		    suppress extraneous human friendly messages and use
   -p [ --path ] arg	 Path to mountpoint				       |JSON output
-  -N [ --network ] arg	 Name of the network				       |  -a, --as		 user to run commands as (default: akim)
-  --fetch		 Fetch users from the Hub if needed		       |      --path		 file whose acl to register
-									       |  -u, --user		 user to register acl for
-Hidden options:								       |  -N, --network		 network to register acl for
-  --fallback-xattrs	 Fallback to alternate xattr mode if system xattrs are |  -f, --fetch		 fetch acl from https://beyond.infinit.sh
-			 not suppported					       |      --fallback-xattrs	 use fallback special file if extended attributes are
-									       |not supported
+  -N [ --network ] arg	 Name of the network				       |  -a, --as arg		    user to run commands as (default: akim)
+  --fetch		 Fetch users from the Hub if needed		       |      --path arg	    file whose acl to register
+									       |  -u, --user arg	    user to register acl for
+Hidden options:								       |  -N, --network arg	    network to register acl for
+  --fallback-xattrs	 Fallback to alternate xattr mode if system xattrs are |  -f, --fetch		    fetch acl from https://beyond.infinit.sh
+			 not suppported					       |      --fallback-xattrs	    use fallback special file if extended attributes
+									       |are not supported
 									       |

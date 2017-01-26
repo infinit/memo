@@ -12,7 +12,7 @@ Hidden Modes:								       |  stop	     Stop daemon
   --fetch		       Fetch volume and its dependencies from the Hub  |  manage-volumes Manage daemon controlled volumes
   --enable-storage	       Enable storage on associated network	       |
   --disable-storage	       Disable storage on associated network	       |Options:
-  --manage-volumes	       Manage daemon controlled volumes		       |  -h, --help		 show this help message
+  --manage-volumes	       Manage daemon controlled volumes		       |  -h, --help		    show this help message
 									       |
 Miscellaneous:								       |
   -h [ --help ]		       Display the help				       |

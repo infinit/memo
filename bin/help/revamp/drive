@@ -13,5 +13,5 @@ Modes:
   push       Push a drive to https://beyond.infinit.sh
 
 Options:
-  -h, --help             show this help message
+  -h, --help                show this help message
 

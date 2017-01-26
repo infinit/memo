@@ -3,12 +3,12 @@ VOLUME [OPTIONS...]							       |[OPTIONS]
 									       |Delete a volume locally
 Delete a volume locally:						       |
 									       |Options:
-Delete options:								       |  -h, --help		 show this help message
-  -n [ --name ] arg	 Volume to delete				       |      --compatibility-version  compatibility version to force
-  --pull		 Pull the volume if it is on the Hub		       |  -s, --script		 suppress extraneous human friendly messages and use
+Delete options:								       |  -h, --help		    show this help message
+  -n [ --name ] arg	 Volume to delete				       |      --compatibility-version arg  compatibility version to force
+  --pull		 Pull the volume if it is on the Hub		       |  -s, --script		    suppress extraneous human friendly messages and use
   --purge		 Remove objects that depend on the volume	       |JSON output
-									       |  -a, --as		 user to run commands as (default: akim)
-									       |  -n, --name		 name of the volume to delete
-									       |      --pull		 pull volume from https://beyond.infinit.sh
-									       |      --purge		 purge objects owned by the volume
+									       |  -a, --as arg		    user to run commands as (default: akim)
+									       |  -n, --name arg	    name of the volume to delete
+									       |      --pull		    pull volume from https://beyond.infinit.sh
+									       |      --purge		    purge objects owned by the volume
 									       |

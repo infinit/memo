@@ -3,10 +3,10 @@ VOLUME [OPTIONS...]							       |[OPTIONS]
 									       |Get volume status
 Get volume status:							       |
 									       |Options:
-Status options:								       |  -h, --help		 show this help message
-  -n [ --name ] arg	 Volume to query				       |      --compatibility-version  compatibility version to force
-									       |  -s, --script		 suppress extraneous human friendly messages and use
+Status options:								       |  -h, --help		    show this help message
+  -n [ --name ] arg	 Volume to query				       |      --compatibility-version arg  compatibility version to force
+									       |  -s, --script		    suppress extraneous human friendly messages and use
 									       |JSON output
-									       |  -a, --as		 user to run commands as (default: akim)
-									       |  -n, --name		 name of the volume to status
+									       |  -a, --as arg		    user to run commands as (default: akim)
+									       |  -n, --name arg	    name of the volume to status
 									       |

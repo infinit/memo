@@ -5,5 +5,5 @@ Modes:
   deserialize Deserialized block
 
 Options:
-  -h, --help             show this help message
+  -h, --help                show this help message
 

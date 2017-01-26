@@ -2,19 +2,19 @@ network: update: Usage: _build/macosx64/bin/infinit-network network update [OPTI
 Update a network
 
 Options:
-  -h, --help             show this help message
-      --compatibility-version  compatibility version to force
-  -s, --script           suppress extraneous human friendly messages and use JSON output
-  -a, --as               user to run commands as (default: akim)
-  -n, --name             name of the network to update
-      --description      network description
-      --port             outbound port to use
-  -o, --output           file to write the network to
-      --push-network     push the network to https://beyond.infinit.sh
-  -p, --push             push network to https://beyond.infinit.sh
-      --admin-r          Set admin users that can read all data (default: [])
-      --admin-rw         Set admin users that can read and write all data (default: [])
-      --admin-remove     Remove given users from all admin lists (prefix: @<group>, requires mountpoint) (default: [])
-  -m, --mountpoint       where to mount the filesystem
-      --peer             peer address or file with list of peer addresses (host:port) (default: [])
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: akim)
+  -n, --name arg            name of the network to update
+      --description arg     network description
+      --port arg            outbound port to use
+  -o, --output arg          file to write the network to
+      --push-network        push the network to https://beyond.infinit.sh
+  -p, --push                push network to https://beyond.infinit.sh
+      --admin-r arg         Set admin users that can read all data (default: [])
+      --admin-rw arg        Set admin users that can read and write all data (default: [])
+      --admin-remove arg    Remove given users from all admin lists (prefix: @<group>, requires mountpoint) (default: [])
+  -m, --mountpoint arg      where to mount the filesystem
+      --peer arg            peer address or file with list of peer addresses (host:port) (default: [])
 

@@ -3,10 +3,10 @@ NETWORK] [OPTIONS...]							       |[OPTIONS]
 									       |List all local passports
 List all local passports:						       |
 									       |Options:
-List options:								       |  -h, --help		 show this help message
-  -N [ --network ] arg	 Network to list passports for (optional)	       |      --compatibility-version  compatibility version to force
-									       |  -s, --script		 suppress extraneous human friendly messages and use
+List options:								       |  -h, --help		    show this help message
+  -N [ --network ] arg	 Network to list passports for (optional)	       |      --compatibility-version arg  compatibility version to force
+									       |  -s, --script		    suppress extraneous human friendly messages and use
 									       |JSON output
-									       |  -a, --as		 user to run commands as (default: akim)
-									       |  -N, --network		 network to list passport for
+									       |  -a, --as arg		    user to run commands as (default: akim)
+									       |  -N, --network arg	    network to list passport for
 									       |

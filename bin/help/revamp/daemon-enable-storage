@@ -2,10 +2,10 @@ daemon: enable-storage: Usage: _build/macosx64/bin/infinit-daemon daemon enable-
 Enable storage on associated network
 
 Options:
-  -h, --help             show this help message
-      --compatibility-version  compatibility version to force
-  -s, --script           suppress extraneous human friendly messages and use JSON output
-  -a, --as               user to run commands as (default: akim)
-  -n, --name             name of the daemon to enable
-      --hold             keep storage online until this process terminates
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: akim)
+  -n, --name arg            name of the daemon to enable
+      --hold arg            keep storage online until this process terminates
 
