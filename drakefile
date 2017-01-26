@@ -533,6 +533,7 @@ def configure(
       'src/infinit/cli/Infinit-instantiate-%s.o' % b)
     infinit_cli_instantiate_config = drake.cxx.Config(bin_cxx_config)
     infinit_cli_instantiate_config.define('INFINIT_CLI_OBJECT', b)
+    infinit_cli_instantiate_config.define('ELLE_LOG_DISABLE', 1)
     drake.cxx.Compiler(infinit_cli_instantiate, o,
                        cxx_toolkit,
                        infinit_cli_instantiate_config)
