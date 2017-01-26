@@ -1,6 +1,6 @@
-#include <sys/stat.h>
-
 #include <infinit/cli/ACL.hh>
+
+#include <sys/stat.h>
 
 #include <elle/print.hh>
 
@@ -73,31 +73,6 @@ namespace infinit
           [&] (std::string const& path) {
             output.push_back(action(path, args...));
           }, path);
-      }
-
-      boost::optional<std::string>
-      path_mountpoint(std::string const& path, bool fallback)
-      {
-        char buffer[4095];
-        int sz = getxattr(path, "infinit.mountpoint", buffer, 4095, fallback);
-        if (sz <= 0)
-          return {};
-        return std::string(buffer, sz);
-      }
-
-      void
-      enforce_in_mountpoint(std::string const& path_, bool fallback)
-      {
-        auto path = bfs::absolute(path_);
-        if (!bfs::exists(path))
-          elle::err(elle::sprintf("path does not exist: %s", path_));
-        for (auto const& p: {path, path.parent_path()})
-        {
-          auto mountpoint = path_mountpoint(p.string(), fallback);
-          if (mountpoint && !mountpoint.get().empty())
-            return;
-        }
-        elle::err("%s not in an Infinit volume", path_);
       }
 
       struct PermissionsResult

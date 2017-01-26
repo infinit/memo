@@ -16,22 +16,23 @@ namespace infinit
 {
   namespace cli
   {
-    static
-    boost::filesystem::path
-    file_xattrs_dir(std::string const& file)
+    namespace bfs = boost::filesystem;
+
+    namespace
     {
-      boost::filesystem::path p(file);
-      auto filename = p.filename();
-      auto dir = p.parent_path();
-      boost::filesystem::path res;
-      // dir might be outside the filesystem, so dont go below file if its a
-      // directory
-      if (boost::filesystem::is_directory(file))
-        res = p / "$xattrs..";
-      else
-        res = dir / ("$xattrs." + filename.string());
-      boost::system::error_code erc;
-      return res;
+      bfs::path
+      file_xattrs_dir(std::string const& file)
+      {
+        auto p = bfs::path{file};
+        auto filename = p.filename();
+        auto dir = p.parent_path();
+        // dir might be outside the filesystem, so dont go below file if its a
+        // directory
+        if (bfs::is_directory(file))
+          return p / "$xattrs..";
+        else
+          return dir / ("$xattrs." + filename.string());
+      }
     }
 
     void
@@ -56,7 +57,7 @@ namespace infinit
 #endif
       ELLE_ASSERT(fallback);
       auto path = file_xattrs_dir(file) / key;
-      boost::filesystem::ofstream ofs(path);
+      bfs::ofstream ofs(path);
       if (!ofs.good())
         elle::err("unable to open %s for writing", path);
       ofs.write(value.data(), value.size());
@@ -85,13 +86,39 @@ namespace infinit
 #endif
       ELLE_ASSERT(fallback);
       auto path = file_xattrs_dir(file) / key;
-      boost::filesystem::ifstream ifs(path);
+      bfs::ifstream ifs(path);
       if (!ifs.good())
         elle::err("unable to open %s for reading", path);
       ifs.read(val, val_size);
       if (ifs.fail())
         elle::err("unable to read attribute value in %s", path);
       return ifs.gcount();
+    }
+
+    boost::optional<std::string>
+    path_mountpoint(std::string const& path, bool fallback)
+    {
+      char buffer[4095];
+      int sz = getxattr(path, "infinit.mountpoint", buffer, sizeof buffer, fallback);
+      if (0 < sz)
+        return std::string{buffer, size_t(sz)};
+      else
+        return {};
+    }
+
+    void
+    enforce_in_mountpoint(std::string const& path_, bool fallback)
+    {
+      auto path = bfs::absolute(path_);
+      if (!bfs::exists(path))
+        elle::err("path does not exist: %s", path_);
+      for (auto const& p: {path, path.parent_path()})
+      {
+        auto mountpoint = path_mountpoint(p.string(), fallback);
+        if (mountpoint && !mountpoint.get().empty())
+          return;
+      }
+      elle::err("%s not in an Infinit volume", path_);
     }
   }
 }
