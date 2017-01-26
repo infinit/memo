@@ -3333,15 +3333,32 @@ namespace infinit
           auto* remote = dynamic_cast<model::doughnut::Remote*>(it->second.get());
           if (!remote || !remote->connection()->disconnected())
           {
-            ELLE_DEBUG("%s: returning existing remote for %s", this, hosts);
-            return Overlay::WeakMember(it->second);
+            // check if we have new endpoints available
+            bool new_endpoints = false;
+            if (remote)
+            {
+              auto const& eps = remote->endpoints();
+              for (auto const& ep: hosts.endpoints())
+              {
+                if (std::find(eps.begin(), eps.end(), ep) == eps.end())
+                {
+                  new_endpoints = true;
+                  break;
+                }
+              }
+            }
+            if (!new_endpoints)
+            {
+              ELLE_DEBUG("%s: returning existing remote for %s", this, hosts);
+              return Overlay::WeakMember::own(it->second);
+            }
           }
           elle::unconst(this->_peer_cache).erase(it);
         }
         ELLE_DEBUG("%s: querying new remote for %s", this, hosts);
         auto w = this->doughnut()->dock().make_peer(hosts);
         elle::unconst(this->_peer_cache).emplace(hosts.id(), w.lock());
-        return w;
+        return Overlay::WeakMember::own(w.lock());
       }
 
       boost::optional<model::Endpoints>
