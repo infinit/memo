@@ -3372,7 +3372,9 @@ namespace infinit
               return Overlay::WeakMember::own(it->second);
             }
           }
-          elle::unconst(this->_peer_cache).erase(it);
+          elle::With<reactor::Thread::NonInterruptible>() << [&](reactor::Thread::NonInterruptible&) {
+            elle::unconst(this->_peer_cache).erase(it);
+          };
         }
         ELLE_DEBUG("%s: querying new remote for %s", this, hosts);
         auto w = this->doughnut()->dock().make_peer(hosts);
