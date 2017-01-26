@@ -247,7 +247,8 @@ namespace infinit
         }
         if (this->_local)
           this->_local->cleanup();
-        this->_overlay->cleanup();
+        if (this->_overlay)
+          this->_overlay->cleanup();
         this->_consensus.reset();
         this->_dock.disconnect();
         this->_overlay.reset();
