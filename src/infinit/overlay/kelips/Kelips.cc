@@ -1061,15 +1061,34 @@ namespace infinit
           auto conn = this->doughnut()->dock().connect(location, true);
           if (!conn->connected())
           {
+            // connect() will silently drop everything if conn ends up
+            // being a duplicate
             reactor::Waiter waiter = reactor::waiter(conn->on_connection());
-            if (!reactor::wait(waiter, 5_sec))
-              throw elle::Error("connection timeout");
+            for (int i=0; i< 50; ++i)
+            {
+              if (reactor::wait(waiter, 100_ms) || conn->disconnected())
+                break;
+            }
           }
+          if (!conn->connected() && !conn->disconnected())
+            throw elle::Error("connect timeout");
           ELLE_DEBUG("linking remote");
-          auto remote = this->doughnut()->dock().make_peer(conn);
-          remote->connect(5_sec);
-          ELLE_DEBUG("remote ready");
-          this->_peer_cache.emplace(remote->id(), remote);
+          std::shared_ptr<model::doughnut::Remote> remote;
+          if (!conn->disconnected())
+          {
+            remote = this->doughnut()->dock().make_peer(conn);
+            remote->connect(5_sec);
+            ELLE_DEBUG("remote ready");
+            this->_peer_cache.emplace(remote->id(), remote);
+          }
+          else
+          {
+            auto id = conn->location().id();
+            auto it = this->_peer_cache.find(id);
+            if (it == this->_peer_cache.end())
+              elle::err("%s is duplicate but not found in cache", id);
+            remote = std::dynamic_pointer_cast<model::doughnut::Remote>(it->second);
+          }
           if (this->doughnut()->version() < elle::Version(0, 7, 0) || packet::disable_compression)
           {
             auto rpc = remote->make_rpc<SerState()>("kelips_fetch_state");
