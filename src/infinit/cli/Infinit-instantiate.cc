@@ -6,18 +6,13 @@ namespace das
 {
   namespace named
   {
-    template <typename ... Default, typename ... Args, typename ... NewArgs>
-    Prototype<
-      DefaultStore<NewArgs ..., Args...>,
-      std::remove_cv_reference_t<NewArgs>..., Args...>
-    extend(Prototype<DefaultStore<Default...>, Args...> const& p,
-           NewArgs&& ... args)
+    template <typename... Args, typename... NewArgs>
+    auto
+    extend(Prototype<Args...> const& p, NewArgs&& ... args)
     {
-      return Prototype<
-        DefaultStore<NewArgs ..., Args...>,
-        typename std::remove_cv_reference<NewArgs>::type..., Args...>
-        (DefaultStore<NewArgs ..., Args...>(std::forward<NewArgs>(args)...,
-                                            p.defaults));
+      return Prototype<NewArgs..., Args...>
+        (DefaultStore<NewArgs..., Args...>
+         (std::forward<NewArgs>(args)..., p.defaults));
     }
   }
 }
