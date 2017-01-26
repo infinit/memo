@@ -335,19 +335,24 @@ COMMAND(drive_invite)
 COMMAND(populate_hub)
 {
   auto ldap = make_ldap(args);
-  auto searchbase = mandatory(args, "searchbase");
-  auto objectclass = optional(args, "object-class");
-  auto filter = make_filter(args, "person");
   auto pattern = optional(args, "username-pattern").value_or("$(cn)%");
   auto email_pattern = optional(args, "email-pattern").value_or("$(mail)");
   auto fullname_pattern = optional(args, "fullname-pattern").value_or("$(cn)");
-  auto fields = Strings{};
-  extract_fields(pattern, fields);
-  extract_fields(email_pattern, fields);
-  extract_fields(fullname_pattern, fields);
-  ELLE_TRACE("will search %s and fetch fields %s", filter, fields);
-  auto res = ldap.search(searchbase, filter, fields);
-  ELLE_TRACE("LDAP returned %s", res);
+  auto res = [&] {
+    auto searchbase = mandatory(args, "searchbase");
+    auto filter = make_filter(args, "person");
+    auto fields = [&] {
+      auto res = Strings{};
+      extract_fields(pattern, res);
+      extract_fields(email_pattern, res);
+      extract_fields(fullname_pattern, res);
+      return res;
+    }();
+    ELLE_TRACE("will search %s and fetch fields %s", filter, fields);
+    auto res = ldap.search(searchbase, filter, fields);
+    ELLE_TRACE("LDAP returned %s", res);
+    return res;
+  }();
 
   // username -> fields
   auto missing = std::unordered_map<std::string, UserData>{};
