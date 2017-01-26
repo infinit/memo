@@ -364,6 +364,7 @@ namespace infinit
                   this->_dock._connected.end())
               {
                 ELLE_TRACE("%s: drop duplicate", this);
+                this->_disconnected = true;
                 this->_dock._connecting.erase(connecting_it);
                 auto hold = this->shared_from_this();
                 this->_thread->dispose(true);
