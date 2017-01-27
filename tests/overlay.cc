@@ -1559,6 +1559,11 @@ ELLE_TEST_SCHEDULED(churn_socket, (TestConfiguration, config))
   test_churn_socket(config, false);
 }
 
+ELLE_TEST_SCHEDULED(churn_socket_pasv, (TestConfiguration, config))
+{
+  test_churn_socket(config, true);
+}
+
 static
 int
 windows_factor =
@@ -1665,6 +1670,6 @@ ELLE_TEST_SUITE()
   OVERLAY(kouncil);
   OVERLAY(kouncil_0_7);
 
-  TEST(kouncil, kouncil, "churn_socket_pasv", 30, churn_socket);
+  TEST(kouncil, kouncil, "churn_socket_pasv", 30, churn_socket_pasv);
 #undef OVERLAY
 }
