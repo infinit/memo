@@ -1286,6 +1286,8 @@ ELLE_TEST_SCHEDULED(
     ::id = special_id(10),
     ::keys = keys,
     ::make_overlay = config.overlay_builder);
+  if (dynamic_cast<infinit::overlay::kelips::Node*>(a->dht->overlay().get()))
+    return; // kelips cannot handle automatic reconnection after on_disappear()
   auto b = std::make_unique<DHT>(
     ::version = config.version,
     ::id = special_id(11),
