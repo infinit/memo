@@ -338,6 +338,7 @@ namespace infinit
     {
       using infinit::MountOptions;
 
+#ifdef INFINIT_MACOSX
       void
       emplace_back(boost::optional<Volume::Strings>& ss,
                    std::string s)
@@ -346,6 +347,7 @@ namespace infinit
           ss = Volume::Strings{};
         ss->emplace_back(std::move(s));
       }
+#endif
 
       template <typename Symbol, typename T>
       void
