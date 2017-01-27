@@ -421,5 +421,24 @@ namespace infinit
            proto);
       }
     }
+
+    std::string
+    mode_get(boost::optional<std::string> const& mode)
+    {
+      static auto const modes = std::map<std::string, std::string>
+        {
+          {"r", "setr"},
+          {"w", "setw"},
+          {"rw", "setrw"},
+          {"none", "clear"},
+          {"", ""},
+        };
+      auto i = modes.find(mode ? boost::algorithm::to_lower_copy(*mode) : "");
+      if (i == modes.end())
+        elle::err<das::cli::Error>("invalid mode %s, must be one of: %s",
+                                   mode, elle::keys(modes));
+      else
+        return i->second;
+    }
   }
 }

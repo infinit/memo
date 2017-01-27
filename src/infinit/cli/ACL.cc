@@ -5,6 +5,7 @@
 #include <elle/print.hh>
 
 #include <infinit/cli/Infinit.hh>
+#include <infinit/cli/utility.hh>
 #include <infinit/cli/xattrs.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
@@ -666,25 +667,6 @@ namespace infinit
 
     namespace
     {
-      std::string
-      get_mode(boost::optional<std::string> const& mode)
-      {
-        static auto const modes = std::map<std::string, std::string>
-          {
-            {"r", "setr"},
-            {"w", "setw"},
-            {"rw", "setrw"},
-            {"none", "clear"},
-            {"", ""},
-          };
-        auto i = modes.find(mode ? boost::algorithm::to_lower_copy(*mode) : "");
-        if (i == modes.end())
-          elle::err<das::cli::Error>("invalid mode %s, must be one of: %s",
-                                     mode, elle::keys(modes));
-        else
-          return i->second;
-      }
-
       bool
       path_is_root(std::string const& path, bool fallback)
       {
@@ -819,8 +801,8 @@ namespace infinit
                   bool fallback)
     {
       // Validate arguments.
-      auto mode = get_mode(mode_name);
-      auto omode = get_mode(others_mode_name);
+      auto mode = mode_get(mode_name);
+      auto omode = mode_get(others_mode_name);
       {
         if (paths.empty())
           throw das::cli::MissingOption("path");

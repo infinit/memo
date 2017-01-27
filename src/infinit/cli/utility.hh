@@ -133,5 +133,9 @@ namespace infinit
     /// Recognize "utp", "tcp", or "all".  Default is "all".
     dnut::Protocol
     protocol_get(boost::optional<std::string> const& proto);
+
+    /// Map "(r|w|rw)" to "set$1", and "" to "".
+    std::string
+    mode_get(boost::optional<std::string> const& mode);
   }
 }
