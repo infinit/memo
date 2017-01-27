@@ -98,6 +98,7 @@ namespace infinit
             std::chrono::system_clock::time_point, disconnected_since);
           ELLE_ATTRIBUTE_R(std::exception_ptr, disconnected_exception);
           ELLE_ATTRIBUTE_RX(KeyCache, key_hash_cache);
+          ELLE_ATTRIBUTE(std::function<void()>, cleanup_on_disconnect);
 
         public:
           void

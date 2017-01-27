@@ -258,6 +258,9 @@ namespace infinit
         // BMI iterators are not invalidated on insertion and deletion.
         auto connecting_it =
           this->_dock._connecting.emplace(this->shared_from_this()).first;
+        this->_cleanup_on_disconnect = [this, connecting_it] {
+          this->_dock._connecting.erase(connecting_it);
+        };
         this->_thread.reset(
           new reactor::Thread(
             elle::sprintf("%f", this),
@@ -266,6 +269,7 @@ namespace infinit
               elle::SafeFinally remove_from_connecting([&] {
                   this->_dock._connecting.erase(connecting_it);
               });
+              this->_cleanup_on_disconnect = std::function<void()>();
               bool connected = false;
               ELLE_TRACE_SCOPE("%s: connection attempt to %s endpoints",
                                this, this->_location.endpoints().size());
@@ -439,6 +443,8 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: disconnect", this);
           this->_thread->terminate_now();
+          if (this->_cleanup_on_disconnect)
+            this->_cleanup_on_disconnect();
         }
       }
 
