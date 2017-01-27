@@ -186,14 +186,28 @@ namespace infinit
             bmi::hashed_unique<
               bmi::const_mem_fun<PeerInfo, Address const&, &PeerInfo::id>>>>;
         ELLE_ATTRIBUTE_R(PeerInfos, infos);
+        class StaleEndpoint
+          : public NodeLocation
+        {
+        public:
+          StaleEndpoint(NodeLocation const& l);
+          void
+          connect(model::doughnut::Doughnut& dht);
+          void
+          failed(model::doughnut::Doughnut& dht);
+          ELLE_ATTRIBUTE(boost::signals2::scoped_connection, slot);
+          ELLE_ATTRIBUTE(boost::asio::deadline_timer, retry_timer);
+          ELLE_ATTRIBUTE(int, retry_counter);
+        };
         using StaleEndpoints = bmi::multi_index_container<
-          NodeLocation,
+          StaleEndpoint,
           bmi::indexed_by<
             bmi::hashed_unique<
               bmi::const_mem_fun<NodeLocation,
                                  Address const&,
                                  &NodeLocation::id>>>>;
         ELLE_ATTRIBUTE_R(StaleEndpoints, stale_endpoints);
+
       protected:
         virtual
         void
@@ -218,8 +232,10 @@ namespace infinit
         void
         _peer_connected(std::shared_ptr<model::doughnut::Remote> peer);
         reactor::Thread::unique_ptr _watcher_thread;
+        void
+        _remember_stale(NodeLocation const& peer);
         ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>, tasks);
-        std::chrono::seconds _eviction_delay;
+        ELLE_ATTRIBUTE(std::chrono::seconds, eviction_delay);
 
       /*-------.
       | Lookup |

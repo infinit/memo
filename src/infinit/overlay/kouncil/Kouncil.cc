@@ -311,32 +311,13 @@ namespace infinit
         for (auto const& peer: peers)
         {
           ELLE_DEBUG("endpoints for %f: %s", peer, peer.endpoints());
-          if (find(this->_peers, peer.id()))
-          {
-            bool changed = false;
-            if (auto it = find(this->_stale_endpoints, peer.id()))
-            {
-              this->_stale_endpoints.modify(
-                it,
-                [&] (NodeLocation& l)
-                {
-                  changed = l.endpoints().merge(peer.endpoints());
-                });
-            }
-            else
-            {
-              changed = true;
-              this->_stale_endpoints.emplace(peer);
-            }
-            if (changed)
-            {
-              ELLE_TRACE("remember new stale endpoints for connected %f", peer)
-                ELLE_DEBUG("endpoints: %s", peer.endpoints());
-            }
-          }
-          else
+          if (!find(this->_peers, peer.id()))
             ELLE_TRACE("connect to new %f", peer)
-              this->doughnut()->dock().connect(peer);
+              this->doughnut()->dock().connect(peer, false);
+          if (peer.id() != Address::null)
+          {
+            this->_remember_stale(peer);
+          }
         }
       }
 
@@ -359,8 +340,7 @@ namespace infinit
               ELLE_DEBUG("discover new endpoints for %s", pi);
               if (!find(this->_peers, pi.id()))
                 this->doughnut()->dock().connect(pi.location());
-              this->_stale_endpoints.erase(pi.id());
-              this->_stale_endpoints.emplace(pi.location());
+              this->_remember_stale(pi.location());
               this->_notify_observers(*it);
             }
             else
@@ -379,7 +359,7 @@ namespace infinit
       bool
       Kouncil::_discovered(model::Address id)
       {
-        return this->_peers.find(id) != this->_peers.end();
+        return find(this->_peers, id);
       }
 
       void
@@ -387,6 +367,9 @@ namespace infinit
       {
         ELLE_ASSERT_NEQ(peer->id(), model::Address::null);
         this->_peers.emplace(peer);
+        if (auto it = find(this->_stale_endpoints, peer->id()))
+          this->_stale_endpoints.erase(it);
+        this->_stale_endpoints.emplace(peer->connection()->location());
         ELLE_TRACE_SCOPE("%s: %f connected", this, peer);
         this->_advertise(*peer);
         this->_fetch_entries(*peer);
@@ -417,24 +400,17 @@ namespace infinit
         this->on_disappear()(id, false);
         peer.reset();
         if (!this->_cleaning)
-          if (auto it = find(this->_stale_endpoints, id))
+        {
+          auto it = ELLE_ENFORCE(find(this->_stale_endpoints, id));
+          ELLE_TRACE("retry connection with %s stale endpoints",
+                     it->endpoints().size())
           {
+            ELLE_DEBUG("endpoints: %s", it->endpoints());
             this->_stale_endpoints.modify(
-              it,
-              [&] (NodeLocation& l)
-              {
-                l.endpoints().merge(loc.endpoints());
-              });
-            ELLE_TRACE("retry connection with %s stale endpoints",
-                       it->endpoints().size())
-            {
-              ELLE_DEBUG("endpoints: %s", it->endpoints())
-              this->_discover({*it});
-            }
+              it, [this] (StaleEndpoint& e) { e.connect(*this->doughnut()); });
           }
-          else
-            this->_stale_endpoints.emplace(loc);
-       }
+        }
+      }
 
       template<typename E>
       std::vector<int>
@@ -452,6 +428,31 @@ namespace infinit
           std::sort(res.begin(), res.end());
         }
         return res;
+      }
+
+      void
+      Kouncil::_remember_stale(NodeLocation const& peer)
+      {
+        bool changed = false;
+        if (auto it = find(this->_stale_endpoints, peer.id()))
+        {
+          this->_stale_endpoints.modify(
+            it,
+            [&] (NodeLocation& l)
+            {
+              changed = l.endpoints().merge(peer.endpoints());
+            });
+        }
+        else
+        {
+          changed = true;
+          this->_stale_endpoints.emplace(peer);
+        }
+        if (changed)
+        {
+          ELLE_TRACE("remember new stale endpoints for connected %f", peer)
+            ELLE_DEBUG("endpoints: %s", peer.endpoints());
+        }
       }
 
       /*-------.
@@ -751,6 +752,40 @@ namespace infinit
 
       static const elle::TypeInfo::RegisterAbbrevation
       _kouncil_abbr("kouncil::Kouncil", "Kouncil");
+
+      /*--------------.
+      | StaleEndpoint |
+      `--------------*/
+
+      Kouncil::StaleEndpoint::StaleEndpoint(NodeLocation const& l)
+        : NodeLocation(l)
+        , _retry_timer(reactor::scheduler().io_service())
+        , _retry_counter(0)
+      {}
+
+      void
+      Kouncil::StaleEndpoint::connect(model::doughnut::Doughnut& dht)
+      {
+        auto c = dht.dock().connect(*this);
+        this->_slot = c->on_disconnection().connect(
+          std::bind(&StaleEndpoint::failed, this, boost::ref(dht)));
+      }
+
+      void
+      Kouncil::StaleEndpoint::failed(model::doughnut::Doughnut& dht)
+      {
+        // FIXME: make that configurable
+        if (++this->_retry_counter > 10)
+          return;
+        this->_retry_timer.expires_from_now(
+          boost::posix_time::seconds(1) * std::pow(2, this->_retry_counter));
+        this->_retry_timer.async_wait(
+          [this, &dht] (boost::system::error_code const& e)
+          {
+            if (!e)
+              this->connect(dht);
+          });
+      }
     }
   }
 }

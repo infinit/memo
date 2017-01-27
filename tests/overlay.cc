@@ -1275,6 +1275,56 @@ ELLE_TEST_SCHEDULED(
     };
 }
 
+ELLE_TEST_SCHEDULED(
+  reboot,
+  (TestConfiguration, config),
+  (bool, anonymous))
+{
+  auto keys = infinit::cryptography::rsa::keypair::generate(512);
+  auto a = std::make_unique<DHT>(
+    ::version = config.version,
+    ::id = special_id(10),
+    ::keys = keys,
+    ::make_overlay = config.overlay_builder);
+  auto b = std::make_unique<DHT>(
+    ::version = config.version,
+    ::id = special_id(11),
+    ::keys = keys,
+    ::make_overlay = config.overlay_builder);
+  int port = b->dht->local()->server_endpoint().port();
+  ELLE_LOG("connect DHTs")
+    discover(*b, *a, anonymous, false, true, true);
+  ELLE_LOG("stop second DHT")
+  {
+    auto disappeared = reactor::waiter(
+      a->dht->overlay()->on_disappear(),
+      [&] (Address id, bool)
+      {
+        BOOST_CHECK_EQUAL(id, special_id(11));
+        return true;
+      });
+    b.reset();
+    reactor::wait(disappeared);
+  }
+  ELLE_LOG("start second DHT on port %s", port)
+  {
+    auto discovered = reactor::waiter(
+      a->dht->overlay()->on_discover(),
+      [&] (NodeLocation const& l, bool)
+      {
+        BOOST_CHECK_EQUAL(l.id(), special_id(11));
+        return true;
+      });
+    b = std::make_unique<DHT>(
+      ::version = config.version,
+      ::id = special_id(11),
+      ::keys = keys,
+      ::make_overlay = config.overlay_builder,
+      ::port = port);
+    reactor::wait(discovered);
+  }
+}
+
 ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
   (bool, keep_port), (bool, wait_disconnect), (bool, wait_connect))
 {
@@ -1601,6 +1651,7 @@ ELLE_TEST_SUITE()
   TEST_NAMED(                                                           \
     Name, change_endpoints_stale_back, change_endpoints_stale,          \
     20, true);                                                          \
+  TEST_ANON(Name, reboot, reboot, 5);                                   \
   /* long, wild tests*/                                                 \
   TEST_ANON(Name, chain_connect_doom, chain_connect_doom, 30);          \
   TEST_NAMED(Name, storm_paxos, storm, 60, true, 5, 5, 100);            \
