@@ -151,7 +151,7 @@ namespace infinit
         overlay::Overlay::WeakMember
         make_peer(NodeLocation peer);
         std::shared_ptr<Remote>
-        make_peer(std::shared_ptr<Connection> connection);
+        make_peer(std::shared_ptr<Connection> connection, bool ignored_result = false);
         /// Weak references to all remotes. They will never be null as they
         /// unregister themselves on destruction.
         using PeerCache = bmi::multi_index_container<

@@ -222,7 +222,7 @@ namespace infinit
             connection->on_connection().connect(
               [this, connection] () mutable
               {
-                this->doughnut().dock().make_peer(connection);
+                this->doughnut().dock().make_peer(connection, true);
                 // Delay termination from descructor.
                 elle::With<reactor::Thread::NonInterruptible>() << [&]
                 {
@@ -603,7 +603,7 @@ namespace infinit
       }
 
       std::shared_ptr<Remote>
-      Dock::make_peer(std::shared_ptr<Connection> connection)
+      Dock::make_peer(std::shared_ptr<Connection> connection, bool ignored_result)
       {
         {
           auto it = this->_peer_cache.find(connection->id());
@@ -629,6 +629,8 @@ namespace infinit
           }
         }
         // FIXME: don't always spawn paxos
+        if (ignored_result && this->_on_peer.empty())
+          return std::shared_ptr<Remote>();
         using RemotePeer = consensus::Paxos::RemotePeer;
         auto peer = std::make_shared<RemotePeer>(this->_doughnut, connection);
         auto insertion = this->_peer_cache.emplace(peer);
