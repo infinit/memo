@@ -1,6 +1,6 @@
 [ERROR] User:
   Reason: user "bob" has no private key
-[OK] Storage resources
+[OK] Silos
 [OK] Networks
 [OK] Volumes
 [OK] Drives

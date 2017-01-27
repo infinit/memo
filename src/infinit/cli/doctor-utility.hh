@@ -318,15 +318,15 @@ namespace
     };
 
     // Use inheritance maybe?
-    struct StorageResoucesResult
+    struct SilosResult
       : public Result
     {
       using Super = Result;
       /*-------------.
       | Construction |
       `-------------*/
-      StorageResoucesResult() = default;
-      StorageResoucesResult(std::string const& name,
+      SilosResult() = default;
+      SilosResult(std::string const& name,
                             bool sane,
                             std::string const& type,
                             BasicResult::Reason const& reason = {})
@@ -365,8 +365,8 @@ namespace
       | Types |
       `------*/
       using Super = Result;
-      using FaultyStorageResources = boost::optional<
-        std::vector<StorageResoucesResult>
+      using FaultySilos = boost::optional<
+        std::vector<SilosResult>
       >;
 
       /*-------------.
@@ -376,12 +376,12 @@ namespace
       NetworkResult(
         std::string const& name,
         bool sane,
-        FaultyStorageResources storage_resources = {},
+        FaultySilos silos = {},
         Result::Reason extra_reason = {},
         bool linked = true)
         : Super(name, sane, extra_reason, !linked)
         , linked(linked)
-        , storage_resources(storage_resources)
+        , silos(silos)
       {}
 
       /*---------.
@@ -392,11 +392,11 @@ namespace
       {
         if (!this->linked)
           elle::fprintf(out, "is not linked [for user \"%s\"]", username);
-        if (this->storage_resources)
-          if (auto s = this->storage_resources->size())
+        if (this->silos)
+          if (auto s = this->silos->size())
           {
             out << " " << elle::join(
-              *storage_resources,
+              *silos,
               "], [",
               [] (auto const& t)
               {
@@ -407,9 +407,9 @@ namespace
                 return out.str();
               });
             if (s == 1)
-              out << " storage resource is faulty";
+              out << " silo is faulty";
             else
-              out << " storage resources are faulty";
+              out << " silos are faulty";
           }
       }
 
@@ -421,7 +421,7 @@ namespace
       {
         Result::serialize(s);
         s.serialize("linked", this->linked);
-        s.serialize("storage_resources", this->storage_resources);
+        s.serialize("silos", this->silos);
       }
 
       /*----------.
@@ -437,7 +437,7 @@ namespace
       | Attributes |
       `-----------*/
       bool linked;
-      FaultyStorageResources storage_resources;
+      FaultySilos silos;
     };
 
     struct VolumeResult
@@ -589,7 +589,7 @@ namespace
     sane() const override
     {
       return this->user.sane()
-        && sane_(this->storage_resources)
+        && sane_(this->silos)
         && sane_(this->networks)
         && sane_(this->volumes)
         && sane_(this->drives);
@@ -600,7 +600,7 @@ namespace
     warning() const override
     {
       return this->user.warning()
-        || warning_(this->storage_resources)
+        || warning_(this->silos)
         || warning_(this->networks)
         || warning_(this->volumes)
         || warning_(this->drives)
@@ -616,7 +616,7 @@ namespace
       if (!this->only())
         section(out, no_color, "Configuration integrity");
       this->user.print(out, no_color, verbose);
-      print_(out, no_color, "Storage resources", storage_resources, verbose);
+      print_(out, no_color, "Silos", silos, verbose);
       print_(out, no_color, "Networks", networks, verbose);
       print_(out, no_color, "Volumes", volumes, verbose);
       print_(out, no_color, "Drives", drives, verbose);
@@ -630,7 +630,7 @@ namespace
     void
     serialize(elle::serialization::Serializer& s)
     {
-      s.serialize("storage resources", this->storage_resources);
+      s.serialize("silos", this->silos);
       s.serialize("networks", this->networks);
       s.serialize("volumes", this->volumes);
       s.serialize("drives", this->drives);
@@ -647,7 +647,7 @@ namespace
     `-----------*/
     ELLE_ATTRIBUTE_R(bool, only);
     UserResult user;
-    std::vector<StorageResoucesResult> storage_resources;
+    std::vector<SilosResult> silos;
     std::vector<NetworkResult> networks;
     std::vector<VolumeResult> volumes;
     std::vector<DriveResult> drives;
@@ -2074,7 +2074,7 @@ namespace
     auto users = parse(ifnt.users_get());
     auto aws_credentials = ifnt.credentials_aws();
     auto gcs_credentials = ifnt.credentials_gcs();
-    auto storage_resources = parse(ifnt.storages_get());
+    auto silos = parse(ifnt.storages_get());
     auto drives = parse(ifnt.drives_get());
     auto volumes = parse(ifnt.volumes_get());
     try
@@ -2100,8 +2100,8 @@ namespace
     }
     using namespace infinit::storage;
     auto networks = parse(ifnt.networks_get(owner));
-    ELLE_TRACE("verify storage resources")
-      for (auto& elem: storage_resources)
+    ELLE_TRACE("verify silos")
+      for (auto& elem: silos)
       {
         auto& storage = elem.second.first;
         auto& status = elem.second.second;
@@ -2116,9 +2116,9 @@ namespace
 #undef COMPARE
               });
         if (status)
-          store(results.storage_resources, storage->name, status, "S3");
+          store(results.silos, storage->name, status, "S3");
         else
-          store(results.storage_resources, storage->name, status, "S3",
+          store(results.silos, storage->name, status, "S3",
                 std::string("credentials are missing"));
         }
         if (auto fsconfig
@@ -2126,7 +2126,7 @@ namespace
         {
           auto perms = has_permission(fsconfig->path);
           status = perms.first;
-          store(results.storage_resources, storage->name, status, "filesystem",
+          store(results.silos, storage->name, status, "filesystem",
                 elle::sprintf("\"%s\" %s", fsconfig->path, perms.second));
         }
         if (auto gcsconfig = dynamic_cast<GCSConfig const*>(storage.get()))
@@ -2137,9 +2137,9 @@ namespace
                 return credentials->refresh_token == gcsconfig->refresh_token;
               });
           if (status)
-            store(results.storage_resources, storage->name, status, "GCS");
+            store(results.silos, storage->name, status, "GCS");
           else
-            store(results.storage_resources, storage->name, status, "GCS",
+            store(results.silos, storage->name, status, "GCS",
                   std::string{"credentials are missing"});
         }
 #ifndef INFINIT_WINDOWS
@@ -2166,17 +2166,17 @@ namespace
             storage_names.emplace_back(network.model->storage->name);
         }
         auto faulty = ConfigurationIntegrityResults::NetworkResult
-          ::FaultyStorageResources::value_type{};
+          ::FaultySilos::value_type{};
         status = storage_names.empty()
           || all_of(storage_names, [&] (std::string const& name) -> bool {
-              auto it = boost::find_if(results.storage_resources,
+              auto it = boost::find_if(results.silos,
                                        [name] (auto const& t)
                                        {
                                          return name == t.name();
                                        });
-              auto res = (it == results.storage_resources.end()
+              auto res = (it == results.silos.end()
                           || it->show(false));
-              if (it != results.storage_resources.end())
+              if (it != results.silos.end())
                 faulty.emplace_back(*it);
               else
                 faulty.emplace_back(name, false, "unknown",

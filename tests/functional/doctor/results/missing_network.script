@@ -33,7 +33,7 @@
         }
     ],
     "sane": false,
-    "storage resources": [
+    "silos": [
         {
             "name": "aws_storage",
             "sane": true,
