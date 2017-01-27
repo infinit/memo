@@ -19,7 +19,9 @@ ELLE_LOG_COMPONENT("infinit-fsck");
 using boost::program_options::variables_map;
 using infinit::model::Address;
 using infinit::model::MissingBlock;
+
 namespace ifs = infinit::filesystem;
+namespace dnut = infinit::model::doughnut;
 
 infinit::Infinit ifnt;
 
@@ -66,18 +68,19 @@ void
 fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
      std::unordered_map<Address, BlockInfo>& blocks)
 {
-  typedef std::shared_ptr<reactor::filesystem::Path> PathPtr;
+  using PathPtr = std::shared_ptr<reactor::filesystem::Path>;
   // account for root block
-  auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(fs->block_store());
-  Address addr = infinit::model::doughnut::NB::address(
-    *dn->owner(), fs->volume_name() + ".root", dn->version());
+  auto dn = std::dynamic_pointer_cast<dnut::Doughnut>(fs->block_store());
+  auto addr = dnut::NB::address
+    (*dn->owner(), fs->volume_name() + ".root", dn->version());
   account_for(blocks, addr, "root block address");
   auto block = fs->block_store()->fetch(addr);
-  addr = Address::from_string(block->data().string().substr(2));
-  account_for(blocks, addr, "root block");
-  std::vector<PathPtr> queue;
+  {
+    auto addr = Address::from_string(block->data().string().substr(2));
+    account_for(blocks, addr, "root block");
+  }
   auto root = fs->path("/");
-  queue.push_back(root);
+  auto queue = std::vector<PathPtr>{root};
   int longest = 0;
   while (!queue.empty())
   {
@@ -88,7 +91,7 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
       std::cerr << '\r' << std::string(longest, ' ');
       std::cerr << '\r' << d->full_path().string();
       longest = std::max(longest, int(d->full_path().string().size()));
-      std::vector<std::string> to_remove;
+      auto to_remove = std::vector<std::string>{};
       try
       {
         d->fetch();
@@ -151,9 +154,7 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
         }
       }
       for (auto const& rf : to_remove)
-      {
         d->setxattr("user.infinit.fsck.deref", rf, 0);
-      }
     }
     else if (auto f = std::dynamic_pointer_cast<ifs::File>(p))
     {
@@ -170,10 +171,8 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
         {
           if (prompt(elle::sprintf("Fat block missing for %s, nullify?",
                                    f->full_path())))
-          {
             f->setxattr("user.infinit.fsck.nullentry",
                         std::to_string(idx), 0);
-          }
           continue;
         }
         catch (...)
@@ -199,12 +198,10 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
   }
   catch(...) {}
   auto lostfound = root->child("lost+found");
-  std::set<Address> chbs;
-  std::set<Address> acbs;
+  auto chbs = std::set<Address>{};
+  auto acbs = std::set<Address>{};
   for (auto& b: blocks)
-  {
     if (!b.second.accounted_for)
-    {
       try
       {
         auto block = dn->fetch(b.first);
@@ -216,12 +213,12 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
           continue;
         }
         std::cerr << '\r' << b.first << " " << elle::type_info(*block).name();
-        if (dynamic_cast<infinit::model::doughnut::UB*>(block.get())
-          || dynamic_cast<infinit::model::doughnut::NB*>(block.get()))
+        if (dynamic_cast<dnut::UB*>(block.get())
+          || dynamic_cast<dnut::NB*>(block.get()))
           continue;
         if (dynamic_cast<infinit::model::blocks::ImmutableBlock*>(block.get()))
           chbs.insert(b.first);
-        else if (dynamic_cast<infinit::model::doughnut::ACB*>(block.get()))
+        else if (dynamic_cast<dnut::ACB*>(block.get()))
           acbs.insert(b.first);
         else
         {
@@ -239,8 +236,6 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
         ELLE_WARN("Unexpected exception processing unacounted %x: %s",
                   b.first, elle::exception_string());
       }
-    }
-  }
   if (acbs.empty() && chbs.empty())
     return;
   ELLE_LOG("%s chbs and %s acbs unaccounted for", chbs.size(), acbs.size());
@@ -343,7 +338,7 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
     std::string stype(type == infinit::filesystem::EntryType::directory ?
       "d" : type == infinit::filesystem::EntryType::file ?
       "f" : "s");
-    std::string addrstring = elle::sprintf("%x", a).substr(2);
+    auto addrstring = elle::sprintf("%x", a).substr(2);
     lostfound->setxattr("user.infinit.fsck.ref",
                         stype + ":" + addrstring + ":" + addrstring, 0);
   }
@@ -354,19 +349,22 @@ COMMAND(check)
 {
   auto name = mandatory(args, "name", "network name");
   auto blocklist_file = mandatory(args, "blocklist", "block list");
-  std::unordered_map<Address, BlockInfo> blocks;
-  std::ifstream ifs(blocklist_file);
-  while (ifs.good())
-  {
-    std::string saddr;
-    ifs >> saddr;
-    if (saddr.empty())
-      continue;
-    if (saddr.substr(0,2) == "0x")
-      saddr = saddr.substr(2);
-    Address addr = Address::from_string(saddr);
-    blocks[addr] = BlockInfo();
-  }
+  auto blocks = [&]{
+    auto res = std::unordered_map<Address, BlockInfo>{};
+    std::ifstream ifs(blocklist_file);
+    while (ifs.good())
+      {
+        std::string saddr;
+        ifs >> saddr;
+        if (saddr.empty())
+          continue;
+        if (saddr.substr(0,2) == "0x")
+          saddr = saddr.substr(2);
+        auto addr = Address::from_string(saddr);
+        res[addr] = BlockInfo();
+      }
+    return res;
+  }();
 
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
@@ -389,7 +387,7 @@ COMMAND(check)
   }
   auto fs = std::make_unique<infinit::filesystem::FileSystem>(
     args["volume"].as<std::string>(),
-    std::shared_ptr<infinit::model::doughnut::Doughnut>(model.release()));
+    std::shared_ptr<dnut::Doughnut>(model.release()));
   fsck(fs, blocks);
 }
 
