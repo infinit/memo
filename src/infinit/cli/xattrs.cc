@@ -7,8 +7,6 @@
 # include <sys/xattr.h>
 #endif
 
-#include <boost/filesystem.hpp>
-
 #include <elle/assert.hh>
 #include <elle/err.hh>
 
@@ -16,8 +14,6 @@ namespace infinit
 {
   namespace cli
   {
-    namespace bfs = boost::filesystem;
-
     namespace
     {
       bfs::path
@@ -119,6 +115,24 @@ namespace infinit
           return;
       }
       elle::err("%s not in an Infinit volume", path_);
+    }
+
+    bool
+    path_is_root(std::string const& path, bool fallback)
+    {
+      char buffer[4095];
+      int sz = getxattr(path, "infinit.root", buffer, sizeof buffer, fallback);
+      return 0 <= sz && std::string(buffer, sz) == "true";
+    }
+
+    bfs::path
+    mountpoint_root(std::string const& path_in_mount, bool fallback)
+    {
+      enforce_in_mountpoint(path_in_mount, fallback);
+      bfs::path res = bfs::absolute(path_in_mount);
+      while (!path_is_root(res.string(), fallback))
+        res = res.parent_path();
+      return res;
     }
   }
 }

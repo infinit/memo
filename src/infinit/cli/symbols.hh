@@ -39,6 +39,7 @@ namespace infinit
     DAS_CLI_SYMBOL(clear_content, '\0', "remove all blocks from disk (filesystem storage only)", false);
     DAS_CLI_SYMBOL(compatibility_version, '\0', "compatibility version to force", false);
     DAS_CLI_SYMBOL(create, 'c', "create the {object}", false);
+    DAS_CLI_SYMBOL(create_home, 0, "create user home directory of the form home/<user>", false);
     DAS_CLI_SYMBOL(create_root, 'R', "create root directory", false);
     DAS_CLI_SYMBOL(daemon, 'd', "run as a background daemon" , false);
     DAS_CLI_SYMBOL(default_network, 0, "Default network for volume creation", false);
@@ -157,6 +158,7 @@ namespace infinit
     DAS_CLI_SYMBOL(remove_user, '\0', "remove user from group", false);
     DAS_CLI_SYMBOL(replication_factor, 'r', "data replication factor (default: 1)", false);
     DAS_CLI_SYMBOL(restart, 0, "restart {object}", false);
+    DAS_CLI_SYMBOL(root_permissions, 0, "volume root permissions to give (optional: r, w, rw)", false);
     DAS_CLI_SYMBOL(s3, '\0', "store blocks on AWS S3", false);
     DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output", false);
     DAS_CLI_SYMBOL(searchbase, 'b', "search starting point (without domain)", false); // FIXME: why not search_base?

@@ -2,12 +2,15 @@
 
 #include <string>
 
+#include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
 
 namespace infinit
 {
   namespace cli
   {
+    namespace bfs = boost::filesystem;
+
     void
     setxattr(std::string const& path,
              std::string const& attribute,
@@ -26,5 +29,11 @@ namespace infinit
 
     void
     enforce_in_mountpoint(std::string const& path, bool fallback);
+
+    bool
+    path_is_root(std::string const& path, bool fallback);
+
+    bfs::path
+    mountpoint_root(std::string const& path_in_mount, bool fallback);
   }
 }

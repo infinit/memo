@@ -667,16 +667,6 @@ namespace infinit
 
     namespace
     {
-      bool
-      path_is_root(std::string const& path, bool fallback)
-      {
-        char buffer[4095];
-        int sz = getxattr(path, "infinit.root", buffer, 4095, fallback);
-        if (sz < 0)
-          return false;
-        return std::string(buffer, sz) == std::string("true");
-      }
-
       /// \param mode   one of ["setr", "setw", "setrw", "clear", ""].
       /// \param omode  likewise.
       void

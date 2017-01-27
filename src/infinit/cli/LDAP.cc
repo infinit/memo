@@ -4,9 +4,11 @@
 
 #include <reactor/http/url.hh>
 
+#include <infinit/Drive.hh>
 #include <infinit/cli/Infinit.hh>
+#include <infinit/cli/User.hh>
+#include <infinit/cli/utility.hh>
 #include <infinit/cli/xattrs.hh>
-#include <infinit/model/doughnut/consensus/Paxos.hh>
 
 ELLE_LOG_COMPONENT("cli.ldap");
 
@@ -18,6 +20,23 @@ namespace infinit
 
     LDAP::LDAP(Infinit& infinit)
       : Object(infinit)
+      , drive_invite(
+        "Invite LDAP users to a drive",
+        das::cli::Options(),
+        this->bind(modes::mode_drive_invite,
+                   cli::server,
+                   cli::domain,
+                   cli::user,
+                   cli::password = boost::none,
+                   cli::drive,
+                   cli::root_permissions = "rw",
+                   cli::create_home = false,
+                   cli::searchbase,
+                   cli::filter = boost::none,
+                   cli::object_class = boost::none,
+                   cli::mountpoint,
+                   cli::deny_write = false,
+                   cli::deny_storage = false))
       , populate_network(
         "Register LDAP users and groups to a network",
         das::cli::Options(),
@@ -168,7 +187,8 @@ namespace infinit
           }
           catch (elle::Error const& e)
           {
-            ELLE_WARN("Failed to fetch user %s from %s", m.second, infinit::beyond(true));
+            ELLE_WARN("Failed to fetch user %s from %s",
+                      m.second, infinit::beyond(true));
           }
 
         // Push all users
@@ -254,6 +274,119 @@ namespace infinit
       }
     }
 
+    /*---------------------.
+    | Mode: drive invite.  |
+    `---------------------*/
+
+    void
+    LDAP::mode_drive_invite(std::string const& server,
+                            std::string const& domain,
+                            std::string const& user,
+                            boost::optional<std::string> const& password,
+
+                            std::string const& drive_name,
+                            std::string const& root_permissions,
+                            bool create_home,
+
+                            std::string const& searchbase,
+                            boost::optional<std::string> const& filter,
+                            boost::optional<std::string> const& object_class,
+                            std::string const& mountpoint_name,
+                            bool deny_write,
+                            bool deny_storage)
+    {
+      ELLE_TRACE_SCOPE("drive_invite");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+      auto owner = cli.as_user();
+
+      auto drive = ifnt.drive_get(ifnt.qualified_name(drive_name, owner));
+      auto network = ifnt.network_descriptor_get(drive.network, owner);
+      auto mode = mode_get(root_permissions);
+      auto mountpoint = mountpoint_root(mountpoint_name, true);
+      auto users = _populate_network(cli,
+                                     server,
+                                     domain,
+                                     user,
+                                     password,
+
+                                     drive.network,
+
+                                     searchbase,
+                                     filter,
+                                     object_class,
+                                     mountpoint_name,
+                                     deny_write,
+                                     deny_storage);
+      for (auto const& u: users)
+      {
+        auto const& user_name = u.second.name;
+        auto set_permissions = [&user_name] (bfs::path const& folder,
+                                             std::string const& perms) {
+          setxattr(folder.string(),
+            elle::sprintf("user.infinit.auth.%s", perms), user_name, true);
+        };
+        if (!mode.empty()
+            && u.second.public_key != network.owner)
+          {
+            try
+            {
+              set_permissions(mountpoint, mode);
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_WARN("Unable to set permissions on root directory (%s): %s",
+                        mountpoint, e);
+            }
+          }
+        if (create_home)
+        {
+          auto home_dir = mountpoint / "home";
+          auto user_dir = home_dir / user_name;
+          if (bfs::create_directories(user_dir))
+          {
+            if (u.second.public_key != network.owner)
+            {
+              try
+              {
+                if (mode.empty())
+                  set_permissions(mountpoint, "setr");
+                set_permissions(home_dir, "setr");
+                set_permissions(user_dir, "setrw");
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_WARN(
+                  "Unable to set permissions on user home directory (%s): %s",
+                   user_dir, e);
+              }
+            }
+            elle::printf("Created home directory: %s.", user_dir)
+              << std::endl;
+          }
+          else
+          {
+            ELLE_WARN("Unable to create home directory for %s: %s.",
+                     user_name, user_dir);
+          }
+        }
+        try
+        {
+          ifnt.beyond_push(
+            elle::sprintf("drives/%s/invitations/%s", drive.name, user_name),
+            "invitation",
+            elle::sprintf("%s: %s", drive.name, user_name),
+            infinit::Drive::User(root_permissions, "ok", create_home),
+            owner,
+            true,
+            true);
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_WARN("failed to push drive invite for %s: %s", user_name, e);
+        }
+      }
+    }
 
     /*-------------------------.
     | Mode: populate network.  |

@@ -262,13 +262,15 @@ COMMAND(drive_invite)
   bool create_home = flag(args, "create-home");
   using boost::algorithm::to_lower_copy;
   auto permissions = to_lower_copy(optional(args, "root-permissions").value_or("rw"));
-  auto allowed_modes = Strings{"r", "w", "rw", "none", ""};
-  auto it = std::find(allowed_modes.begin(), allowed_modes.end(), permissions);
-  if (it == allowed_modes.end())
-    throw CommandLineError(
-      elle::sprintf("mode must be one of: %s", allowed_modes));
-  auto modes_map = Strings{"setr", "setw", "setrw", "", ""};
-  auto mode = modes_map[it - allowed_modes.begin()];
+  auto mode = [&]{
+    auto allowed_modes = Strings{"r", "w", "rw", "none", ""};
+    auto it = std::find(allowed_modes.begin(), allowed_modes.end(), permissions);
+    if (it == allowed_modes.end())
+      throw CommandLineError(
+                             elle::sprintf("mode must be one of: %s", allowed_modes));
+    auto modes_map = Strings{"setr", "setw", "setrw", "", ""};
+    return modes_map[it - allowed_modes.begin()];
+  }();
   auto mountpoint = mountpoint_root(mandatory(args, "mountpoint"), true);
   auto users = _populate_network(args, drive.network);
   for (auto const& u: users)
