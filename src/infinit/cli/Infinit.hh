@@ -18,7 +18,9 @@
 #include <infinit/cli/Doctor.hh>
 #include <infinit/cli/Drive.hh>
 #include <infinit/cli/Journal.hh>
-#include <infinit/cli/LDAP.hh>
+#if INFINIT_WITH_LDAP
+# include <infinit/cli/LDAP.hh>
+#endif
 #include <infinit/cli/Network.hh>
 #include <infinit/cli/Passport.hh>
 #include <infinit/cli/Silo.hh>
@@ -134,7 +136,9 @@ namespace infinit
       Doctor doctor = *this;
       Drive drive = *this;
       Journal journal = *this;
+#if INFINIT_WITH_LDAP
       LDAP ldap = *this;
+#endif
       Network network = *this;
       Passport passport = *this;
       Silo silo = *this;
@@ -151,7 +155,9 @@ namespace infinit
                                     cli::doctor,
                                     cli::drive,
                                     cli::journal,
+#if INFINIT_WITH_LDAP
                                     cli::ldap,
+#endif
                                     cli::network,
                                     cli::passport,
                                     cli::silo,

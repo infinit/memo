@@ -399,6 +399,7 @@ def configure(
   with_daemon = (cxx_toolkit.os is drake.os.linux) or \
                 (production_build is False and cxx_toolkit.os is drake.os.macos)
   bin_cxx_config.define('INFINIT_WITH_DAEMON', '1' if with_daemon else '0')
+  bin_cxx_config.define('INFINIT_WITH_LDAP', '1' if elle.elle.ldap else '0')
 
   # Build
   # ('binary name', [additional sources], [additional libraries], ship)
@@ -423,8 +424,8 @@ def configure(
     ('reactor-example', [], [], False),
     # ('s3fs', [], [aws_lib], False),
   ]
-  if elle.elle.ldap:
-    binaries_config.append(('infinit-ldap', [xattr_sources], [], True))
+#  if elle.elle.ldap:
+#    binaries_config.append(('infinit-ldap', [xattr_sources], [], True))
 #  if with_daemon:
 #    binaries_config.append(('infinit-daemon', [], [], True))
   if not windows:
@@ -491,8 +492,6 @@ def configure(
     'src/infinit/cli/Infinit.hh',
     'src/infinit/cli/Journal.cc',
     'src/infinit/cli/Journal.hh',
-    'src/infinit/cli/LDAP.cc',
-    'src/infinit/cli/LDAP.hh',
     'src/infinit/cli/Network.cc',
     'src/infinit/cli/Network.hh',
     'src/infinit/cli/Object.cc',
@@ -531,6 +530,12 @@ def configure(
       'src/infinit/cli/Daemon.hh',
       'src/infinit/cli/MountManager.cc',
       'src/infinit/cli/MountManager.hh',
+    )
+  if elle.elle.ldap:
+    infinit_modes.append('ldap')
+    infinit_cli_sources += drake.nodes(
+      'src/infinit/cli/LDAP.cc',
+      'src/infinit/cli/LDAP.hh',
     )
   infinit_cli_instantiate = drake.node(
     'src/infinit/cli/Infinit-instantiate.cc')
