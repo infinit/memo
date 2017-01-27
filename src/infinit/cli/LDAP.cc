@@ -37,6 +37,20 @@ namespace infinit
                    cli::mountpoint,
                    cli::deny_write = false,
                    cli::deny_storage = false))
+      , populate_hub(
+        "Register LDAP users on {hub}",
+        das::cli::Options(),
+        this->bind(modes::mode_populate_hub,
+                   cli::server,
+                   cli::domain,
+                   cli::user,
+                   cli::password = boost::none,
+                   cli::searchbase,
+                   cli::filter = boost::none,
+                   cli::object_class = boost::none,
+                   cli::username_pattern = "$(cn)%",
+                   cli::email_pattern = "$(mail)",
+                   cli::fullname_pattern = "$(cn)"))
       , populate_network(
         "Register LDAP users and groups to a network",
         das::cli::Options(),
@@ -387,6 +401,125 @@ namespace infinit
         }
       }
     }
+
+    /*---------------------.
+    | Mode: populate hub.  |
+    `---------------------*/
+
+    void
+    LDAP::mode_populate_hub(std::string const& server,
+                            std::string const& domain,
+                            std::string const& user,
+                            boost::optional<std::string> const& password,
+
+                            std::string const& searchbase,
+                            boost::optional<std::string> const& filter,
+                            boost::optional<std::string> const& object_class,
+
+                            std::string const& username_pattern,
+                            std::string const& email_pattern,
+                            std::string const& fullname_pattern)
+    {
+      ELLE_TRACE_SCOPE("populate_hub");
+      auto& cli = this->cli();
+      auto& ifnt = cli.infinit();
+
+      auto ldap = elle::ldap::LDAPClient{
+        server, domain, user,
+        password.value_or_eval([&] { return cli.read_secret("LDAP password"); })
+      };
+      auto res = [&] {
+        auto fields = [&] {
+          auto res = Strings{};
+          extract_fields(username_pattern, res);
+          extract_fields(email_pattern, res);
+          extract_fields(fullname_pattern, res);
+          return res;
+        }();
+        ELLE_TRACE("will search %s and fetch fields %s", filter, fields);
+        auto f = make_filter(filter, object_class, "person");
+        auto res = ldap.search(searchbase, f, fields);
+        ELLE_TRACE("LDAP returned %s", res);
+        return res;
+      }();
+
+      // username -> fields
+      auto missing = std::unordered_map<std::string, UserData>{};
+      for (auto const& r: res)
+      {
+        auto dn = r.at("dn")[0];
+        try
+        {
+          auto u = ifnt.beyond_fetch<infinit::User>(
+            elle::sprintf("ldap_users/%s", reactor::http::url_encode(dn)),
+            "LDAP user",
+            dn);
+          ELLE_TRACE("got %s -> %s", dn, u.name);
+        }
+        catch (infinit::MissingResource const& e)
+        {
+          ELLE_TRACE("%s not on %s: %s", dn, infinit::beyond(true), e);
+          for (int i=0; ; ++i)
+          {
+            auto username = make_field(username_pattern, r, i);
+            try
+            {
+              auto u = ifnt.beyond_fetch<infinit::User>(
+                "user",
+                reactor::http::url_encode(username));
+              ELLE_TRACE("username %s taken", username);
+              if (username_pattern.find('%') == std::string::npos)
+              {
+                ELLE_ERR("Username %s already taken, skipping %s", username, dn);
+                break;
+              }
+            }
+            catch (infinit::MissingResource const& e)
+            {
+              // all good
+              missing.emplace(username,
+                              UserData{dn,
+                                  make_field(fullname_pattern, r),
+                                  make_field(email_pattern, r)});
+              break;
+            }
+          }
+        }
+      }
+
+      if (missing.empty())
+      {
+        std::cout << std::endl << "No new users to register" << std::endl;
+        return;
+      }
+      std::cout << std::endl << "Will register the following users:" << std::endl;
+      for (auto& m: missing)
+        elle::printf("%s: %s (%s) DN: %s\n",
+                      m.first, m.second.fullname, m.second.email, m.second.dn);
+      std::cout << std::endl;
+      bool proceed = [&]
+        {
+          std::cout << "Proceed? [y/n] ";
+          std::string line;
+          std::getline(std::cin, line);
+          boost::to_lower(line);
+          return line == "y" || line == "yes";
+        }();
+      if (proceed)
+        for (auto& m: missing)
+        {
+          auto u = infinit::User
+            (m.first,
+             infinit::cryptography::rsa::keypair::generate(2048),
+             m.second.email, m.second.fullname, m.second.dn);
+          ELLE_TRACE("pushing %s", u.name);
+          ifnt.beyond_push<das::Serializer<PrivateUserPublish>>
+            ("user", u.name, u, u);
+        }
+      else
+        std::cout << "Aborting..." << std::endl;
+    }
+
 
     /*-------------------------.
     | Mode: populate network.  |

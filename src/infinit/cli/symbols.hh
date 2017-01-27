@@ -60,6 +60,7 @@ namespace infinit
     DAS_CLI_SYMBOL(domain, 'd', "LDAP domain", false);
     DAS_CLI_SYMBOL(dropbox, '\0', "store blocks on Dropbox", false);
     DAS_CLI_SYMBOL(email, 'e', "user email", false);
+    DAS_CLI_SYMBOL(email_pattern, 'e', "email address pattern)" , false);
     DAS_CLI_SYMBOL(enable_inherit, 'i', "make new files and directories inherit permissions", false);
     DAS_CLI_SYMBOL(encrypt, 0,  "use encryption: no, lazy, yes (default: yes)", false);
     DAS_CLI_SYMBOL(endpoint, '\0', "S3 endpoint", false);
@@ -75,6 +76,7 @@ namespace infinit
     DAS_CLI_SYMBOL(finder_sidebar, 0, "show volume in Finder sidebar" , false);
     DAS_CLI_SYMBOL(full, '\0', "include private key (do not use unless you understand the implications", false);
     DAS_CLI_SYMBOL(fullname, '\0', "user full name", false);
+    DAS_CLI_SYMBOL(fullname_pattern, 'F', "fullname pattern)" , false);
     DAS_CLI_SYMBOL(fuse_option, 0, "option to pass directly to FUSE" , false);
     DAS_CLI_SYMBOL(gcs, '\0', "store blocks on Google Cloud Storage", false);
     DAS_CLI_SYMBOL(google_drive, '\0', "store blocks on Google Drive", false);
@@ -174,6 +176,7 @@ namespace infinit
     DAS_CLI_SYMBOL(upnp_tcp_port, 0, "port to try to get an tcp upnp connection on", false);
     DAS_CLI_SYMBOL(upnp_udt_port, 0, "port to try to get an udt upnp connection on", false);
     DAS_CLI_SYMBOL(user, 'u', "user {action} {object} for", false);
+    DAS_CLI_SYMBOL(username_pattern, 'U', "Hub unique username to set (default: $(cn)%). Remove the '%' to disable unique username generator", false);
     DAS_CLI_SYMBOL(utp_port, 'u', "port to perform utp tests on (if unspecified, --xored_utp_port = utp_port + 1)", false);
     DAS_CLI_SYMBOL(value, 'v', "value {action}", false);
     DAS_CLI_SYMBOL(verbose, 'v', "use verbose output", false);

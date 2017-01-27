@@ -219,17 +219,6 @@ namespace infinit
       return infinit::User(name, keys, email, fullname, ldap_name, description);
     }
 
-    using PrivateUserPublish = das::Model<
-      infinit::User,
-      decltype(elle::meta::list(
-                 infinit::symbols::name,
-                 infinit::symbols::description,
-                 infinit::symbols::email,
-                 infinit::symbols::fullname,
-                 infinit::symbols::public_key,
-                 infinit::symbols::private_key,
-                 infinit::symbols::ldap_dn))>;
-
     static
     void
     user_push(User& api,
