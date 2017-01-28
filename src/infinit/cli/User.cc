@@ -599,16 +599,19 @@ namespace infinit
                               fullname,
                               ldap_name,
                               description);
+      auto user_exists = false;
       try
       {
         this->cli().infinit().user_get(name);
-        elle::err("user %s already exists locally", name);
+        user_exists = true;
       }
       catch (elle::Error const&)
       {
         user_push(*this, user, password, full);
         this->cli().infinit().user_save(user);
       }
+      if (user_exists)
+        elle::err("user %s already exists locally", name);
     }
   }
 }
