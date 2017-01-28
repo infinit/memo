@@ -260,6 +260,7 @@ namespace infinit
           this->_dock._connecting.emplace(this->shared_from_this()).first;
         this->_cleanup_on_disconnect = [this, connecting_it] {
           this->_dock._connecting.erase(connecting_it);
+          this->_on_connection.disconnect_all_slots();
         };
         this->_thread.reset(
           new reactor::Thread(
@@ -268,6 +269,9 @@ namespace infinit
             {
               elle::SafeFinally remove_from_connecting([&] {
                   this->_dock._connecting.erase(connecting_it);
+                  this->_thread->dispose(true);
+                  this->_thread.release();
+                  this->_on_connection.disconnect_all_slots();
               });
               this->_cleanup_on_disconnect = std::function<void()>();
               bool connected = false;
@@ -358,6 +362,10 @@ namespace infinit
                 ELLE_TRACE("%s: connection to %f failed",
                            this, this->_location.endpoints());
                 this->_dock._connecting.erase(connecting_it);
+                auto hold = this->shared_from_this();
+                this->_thread->dispose(true);
+                this->_thread.release();
+                this->_on_connection.disconnect_all_slots();
                 this->_on_disconnection();
                 return;
               }
@@ -382,7 +390,6 @@ namespace infinit
               auto connected_it =
                 this->_dock._connected.insert(this->shared_from_this()).first;
               this->_dock._connecting.erase(connecting_it);
-              this->_dock.on_connection()(*this);
               auto const cleanup = [&]
                 {
                   this->_dock._connected.erase(connected_it);
@@ -390,6 +397,7 @@ namespace infinit
                   this->_disconnected_since = std::chrono::system_clock::now();
                   {
                     auto hold = this->shared_from_this();
+                    this->_on_connection.disconnect_all_slots();
                     this->_on_disconnection();
                     this->_on_disconnection.disconnect_all_slots();
                     if (hold.use_count() == 1)
@@ -398,11 +406,16 @@ namespace infinit
                 };
               try
               {
+                this->_dock.on_connection()(*this);
                 ELLE_DEBUG("invoke connected hook")
                 {
                   auto hold = this->shared_from_this();
-                  this->_on_connection();
-                  this->_on_connection.disconnect_all_slots();
+                  {
+                    elle::SafeFinally sf([&] {
+                      this->_on_connection.disconnect_all_slots();
+                    });
+                    this->_on_connection();
+                  }
                   if (hold.use_count() == 1)
                   {
                     this->_thread.release()->dispose(true);
