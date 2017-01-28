@@ -1224,7 +1224,7 @@ ELLE_TEST_SCHEDULED(
         ::keys = keys,
         ::make_overlay = config.overlay_builder,
         doughnut::consensus::rebalance_auto_expand = false,
-        doughnut::connect_timeout = std::chrono::milliseconds(100),
+        doughnut::connect_timeout = std::chrono::milliseconds(valgrind(100, 10)),
         doughnut::soft_fail_running = true);
       auto loc = NodeLocation(dht_a->dht->id(), {instrument.endpoint()});
       Address addr;
