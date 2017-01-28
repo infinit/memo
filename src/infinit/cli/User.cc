@@ -11,6 +11,8 @@
 
 ELLE_LOG_COMPONENT("cli.user");
 
+namespace bfs = boost::filesystem;
+
 namespace infinit
 {
   namespace cli
@@ -122,126 +124,123 @@ namespace infinit
                    cli::full = false))
     {}
 
-    template <typename Buffer>
-    static
-    void
-    save_avatar(User& api,
-                std::string const& name,
-                Buffer const& buffer)
+    namespace
     {
-      boost::filesystem::ofstream f;
-      infinit::Infinit::_open_write(
-        f, api.cli().infinit()._user_avatar_path(name),
-        name, "avatar", true, std::ios::out | std::ios::binary);
-      f.write(reinterpret_cast<char const*>(buffer.contents()), buffer.size());
-      api.cli().report_action("saved", "avatar", name, "locally");
-    }
-
-    static
-    void
-    upload_avatar(User& api,
-                  infinit::User& self,
-                  boost::filesystem::path const& avatar_path)
-    {
-      boost::filesystem::ifstream icon;
-      infinit::Infinit::_open_read(icon, avatar_path, self.name, "icon");
-      auto s = std::string(
-        std::istreambuf_iterator<char>{icon},
-        std::istreambuf_iterator<char>{});
-      elle::ConstWeakBuffer data(s.data(), s.size());
-      auto url = elle::sprintf("users/%s/avatar", self.name);
-      switch (infinit::Infinit::beyond_push_data(
-                url, "avatar", self.name, data, "image/jpeg", self))
+      template <typename Buffer>
+      void
+      save_avatar(User& api,
+                  std::string const& name,
+                  Buffer const& buffer)
       {
-        case infinit::Infinit::PushResult::pushed:
-          api.cli().report_action("saved", "avatar", self.name, "remotely");
-          break;
-        case infinit::Infinit::PushResult::updated:
-          api.cli().report_action("updated", "avatar", self.name, "remotely");
-          break;
-        case infinit::Infinit::PushResult::alreadyPushed:
-          api.cli().report_action("already pushed", "avatar", self.name);
+        bfs::ofstream f;
+        infinit::Infinit::_open_write(
+          f, api.cli().infinit()._user_avatar_path(name),
+          name, "avatar", true, std::ios::out | std::ios::binary);
+        f.write(reinterpret_cast<char const*>(buffer.contents()), buffer.size());
+        api.cli().report_action("saved", "avatar", name, "locally");
       }
-      save_avatar(api, self.name, data);
-    }
 
-    static
-    void
-    fetch_avatar(User& api, std::string const& name)
-    {
-      auto url = elle::sprintf("users/%s/avatar", name);
-      auto request = infinit::Infinit::beyond_fetch_data(url, "avatar", name);
-      if (request->status() == reactor::http::StatusCode::OK)
+      void
+      upload_avatar(User& api,
+                    infinit::User& self,
+                    bfs::path const& avatar_path)
       {
-        auto response = request->response();
-        // XXX: Deserialize XML.
-        if (response.size() == 0 || response[0] == '<')
-          throw MissingResource(
-            elle::sprintf("avatar for %s not found on %s", name, beyond()));
-        save_avatar(api, name, response);
-      }
-    }
-
-    static
-    void
-    pull_avatar(infinit::User& self)
-    {
-      auto url = elle::sprintf("users/%s/avatar", self.name);
-      infinit::Infinit::beyond_delete(url, "avatar", self.name, self);
-    }
-
-    static
-    infinit::User
-    create_user(User& api,
-                std::string const& name,
-                boost::optional<std::string> keys_file,
-                boost::optional<std::string> email,
-                boost::optional<std::string> fullname,
-                boost::optional<std::string> ldap_name,
-                boost::optional<std::string> description)
-    {
-      if (email && !validate_email(email.get()))
-        elle::err<Error>("invalid email address: %s", email.get());
-      auto keys = [&]
-      {
-        if (keys_file)
+        bfs::ifstream icon;
+        infinit::Infinit::_open_read(icon, avatar_path, self.name, "icon");
+        auto s = std::string(
+          std::istreambuf_iterator<char>{icon},
+          std::istreambuf_iterator<char>{});
+        elle::ConstWeakBuffer data(s.data(), s.size());
+        auto url = elle::sprintf("users/%s/avatar", self.name);
+        switch (infinit::Infinit::beyond_push_data(
+                  url, "avatar", self.name, data, "image/jpeg", self))
         {
-          auto passphrase = Infinit::read_passphrase();
-          return infinit::cryptography::rsa::pem::import_keypair(
-              keys_file.get(), passphrase);
+          case infinit::Infinit::PushResult::pushed:
+            api.cli().report_action("saved", "avatar", self.name, "remotely");
+            break;
+          case infinit::Infinit::PushResult::updated:
+            api.cli().report_action("updated", "avatar", self.name, "remotely");
+            break;
+          case infinit::Infinit::PushResult::alreadyPushed:
+            api.cli().report_action("already pushed", "avatar", self.name);
+        }
+        save_avatar(api, self.name, data);
+      }
+
+      void
+      fetch_avatar(User& api, std::string const& name)
+      {
+        auto url = elle::sprintf("users/%s/avatar", name);
+        auto request = infinit::Infinit::beyond_fetch_data(url, "avatar", name);
+        if (request->status() == reactor::http::StatusCode::OK)
+        {
+          auto response = request->response();
+          // XXX: Deserialize XML.
+          if (response.size() == 0 || response[0] == '<')
+            throw MissingResource(
+              elle::sprintf("avatar for %s not found on %s", name, beyond()));
+          save_avatar(api, name, response);
+        }
+      }
+
+      void
+      pull_avatar(infinit::User& self)
+      {
+        auto url = elle::sprintf("users/%s/avatar", self.name);
+        infinit::Infinit::beyond_delete(url, "avatar", self.name, self);
+      }
+
+      infinit::User
+      create_user(User& api,
+                  std::string const& name,
+                  boost::optional<std::string> keys_file,
+                  boost::optional<std::string> email,
+                  boost::optional<std::string> fullname,
+                  boost::optional<std::string> ldap_name,
+                  boost::optional<std::string> description)
+      {
+        if (email && !validate_email(*email))
+          elle::err<Error>("invalid email address: %s", *email);
+        auto keys = [&]
+        {
+          if (keys_file)
+          {
+            auto passphrase = Infinit::read_passphrase();
+            return infinit::cryptography::rsa::pem::import_keypair(
+                *keys_file, passphrase);
+          }
+          else
+          {
+            api.cli().report("generating RSA keypair");
+            return infinit::cryptography::rsa::keypair::generate(2048);
+          }
+        }();
+        return {name, keys, email, fullname, ldap_name, description};
+      }
+
+      void
+      user_push(User& api,
+                infinit::User& user,
+                boost::optional<std::string> password,
+                bool full)
+      {
+        if (full)
+        {
+          if (!password)
+            password = Infinit::read_password();
+          if (!user.ldap_dn)
+            user.password_hash = Infinit::hub_password_hash(*password);
+          infinit::Infinit::beyond_push<das::Serializer<PrivateUserPublish>>(
+            "user", user.name, user, user);
         }
         else
         {
-          api.cli().report("generating RSA keypair");
-          return infinit::cryptography::rsa::keypair::generate(2048);
+          if (password)
+            elle::err<Error>(
+              "password is only used when pushing a full user");
+          infinit::Infinit::beyond_push<das::Serializer<PublicUserPublish>>(
+            "user", user.name, user, user, !api.cli().script());
         }
-      }();
-      return infinit::User(name, keys, email, fullname, ldap_name, description);
-    }
-
-    static
-    void
-    user_push(User& api,
-              infinit::User& user,
-              boost::optional<std::string> password,
-              bool full)
-    {
-      if (full)
-      {
-        if (!password)
-          password = Infinit::read_password();
-        if (!user.ldap_dn)
-          user.password_hash = Infinit::hub_password_hash(password.get());
-        infinit::Infinit::beyond_push<das::Serializer<PrivateUserPublish>>(
-          "user", user.name, user, user);
-      }
-      else
-      {
-        if (password)
-          elle::err<Error>(
-            "password is only used when pushing a full user");
-        infinit::Infinit::beyond_push<das::Serializer<PublicUserPublish>>(
-          "user", user.name, user, user, !api.cli().script());
       }
     }
 
@@ -338,7 +337,7 @@ namespace infinit
           if (ifnt.owner_name(drive) != user.name)
             continue;
           auto drive_path = ifnt._drive_path(drive);
-          if (boost::filesystem::remove(drive_path))
+          if (bfs::remove(drive_path))
             this->cli().report_action("deleted", "drive", drive, "locally");
         }
         for (auto const& volume_: ifnt.volumes_get())
@@ -347,7 +346,7 @@ namespace infinit
           if (ifnt.owner_name(volume) != user.name)
             continue;
           auto volume_path = ifnt._volume_path(volume);
-          if (boost::filesystem::remove(volume_path))
+          if (bfs::remove(volume_path))
             this->cli().report_action("deleted", "volume", volume, "locally");
         }
         for (auto const& pair: ifnt.passports_get())
@@ -359,7 +358,7 @@ namespace infinit
             continue;
           }
           auto passport_path = ifnt._passport_path(network, pair.second);
-          if (boost::filesystem::remove(passport_path))
+          if (bfs::remove(passport_path))
             this->cli().report_action("deleted", "passport",
                                       elle::sprintf("%s: %s", network, pair.second),
                                       "locally");
@@ -377,9 +376,9 @@ namespace infinit
         }
       }
       if (auto path = this->cli().avatar_path(name))
-        boost::filesystem::remove(path.get());
+        bfs::remove(*path);
       auto path = ifnt._user_path(user.name);
-      if (boost::filesystem::remove(path))
+      if (bfs::remove(path))
       {
         this->cli().report_action("deleted", "user", user.name, "locally");
       }
@@ -398,7 +397,7 @@ namespace infinit
       auto output = this->cli().get_output(path);
       auto avatar = this->cli().avatar_path(name);
       if (avatar)
-        user.avatar_path = avatar.get().string();
+        user.avatar_path = avatar->string();
       if (full)
       {
         if (!this->cli().script())
@@ -502,7 +501,7 @@ namespace infinit
               {"has_private_key",  bool(user.private_key)},
             };
           if (user.description)
-            res["description"] = user.description.get();
+            res["description"] = *user.description;
           return res;
           });
         elle::json::write(std::cout, l);
@@ -515,7 +514,7 @@ namespace infinit
           std::cout << (self && user == self ? "* " : user_in_list ? "  " : "")
                     << user.name;
           if (user.description)
-            std::cout << " \"" << user.description.get() << "\"";
+            std::cout << " \"" << *user.description << "\"";
           std::cout << ": public";
           if (user.private_key)
             std::cout << "/private keys";
@@ -556,13 +555,13 @@ namespace infinit
                     bool full)
     {
       auto user = this->cli().infinit().user_get(name);
-      // FIXME: why does push provide a way to update those fields ?
+      // FIXME: why does push provide a way to update those fields?
       if (email || fullname)
       {
         if (email)
-          user.email = email.get();
+          user.email = *email;
         if (fullname)
-          user.fullname = fullname.get();
+          user.fullname = *fullname;
         this->cli().infinit().user_save(user, true);
         this->cli().report_updated("user", user.name);
       }
@@ -570,11 +569,11 @@ namespace infinit
       // FIXME: avatar should probably be stored locally too
       if (avatar)
       {
-        if (avatar.get().length() > 0)
+        if (!avatar->empty())
         {
-          if (!boost::filesystem::exists(avatar.get()))
-            elle::err("avatar file doesn't exist: %s", avatar.get());
-          upload_avatar(*this, user, avatar.get());
+          if (!bfs::exists(*avatar))
+            elle::err("avatar file doesn't exist: %s", *avatar);
+          upload_avatar(*this, user, *avatar);
         }
         else
           pull_avatar(user);
@@ -591,16 +590,15 @@ namespace infinit
                       boost::optional<std::string> ldap_name,
                       bool full)
     {
-      std::cerr << "ldap: " << ldap_name << std::endl;
       if (ldap_name && !full)
-        elle::err<Error>("LDAPP user creation requires --full");
-      infinit::User user = create_user(*this,
-                                       name,
-                                       key,
-                                       email,
-                                       fullname,
-                                       ldap_name,
-                                       description);
+        elle::err<Error>("LDAP user creation requires --full");
+      auto user = create_user(*this,
+                              name,
+                              key,
+                              email,
+                              fullname,
+                              ldap_name,
+                              description);
       try
       {
         this->cli().infinit().user_get(name);
