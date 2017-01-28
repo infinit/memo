@@ -155,8 +155,20 @@ namespace infinit
 
     namespace
     {
-      /// From an old executable name (e.g. `infinit-users` or
-      /// `infinit-users.exe`), extract the object (e.g., `users`).
+      /// Filename, with possible `.exe` suffix removed.
+      std::string
+      program_name(std::string const& argv0)
+      {
+        // Possible suffix.
+        auto res = bfs::path(argv0).filename().string();
+        static auto const suffix = std::string(".exe");
+        if (boost::algorithm::ends_with(res, suffix))
+          res.resize(res.size() - suffix.size());
+        return res;
+      }
+
+      /// From an old executable name (e.g. `infinit-users`), extract
+      /// the object (e.g., `users`).
       std::string
       object_from(std::string const& argv0)
       {
@@ -165,10 +177,6 @@ namespace infinit
         if (!boost::algorithm::starts_with(argv0, prefix))
           elle::err("unrecognized infinit executable name: %s", argv0);
         auto res = argv0.substr(prefix.size());
-        // Possible suffix.
-        static auto const suffix = std::string(".exe");
-        if (boost::algorithm::ends_with(res, suffix))
-          res.resize(res.size() - suffix.size());
         // Renamed objects.
         if (res == "storage")
           res = "silo";
@@ -184,18 +192,17 @@ namespace infinit
         return res;
       }
 
-
       void
       main(std::vector<std::string>& args)
       {
-        if (bfs::path(args[0]).filename() == "infinit")
+        // The name of the command typed by the user, say `infinit-users`.
+        auto prog = program_name(args[0]);
+        if (prog == "infinit")
           args.erase(args.begin());
         else
         {
-          // The name of the command typed by the user, say `infinit-users`.
-          auto prev = bfs::path(args[0]).filename().string();
           // The corresponding object, say `users`.
-          args[0] = object_from(prev);
+          args[0] = object_from(prog);
           if (args.size() > 1 && das::cli::is_option(args[1]))
             if (args[1] == "-v" || args[1] == "--version")
               args.erase(args.begin());
@@ -203,7 +210,7 @@ namespace infinit
               // This is the mode.  We no longer require a leading `--`.
               args[1] = args[1].substr(2);
           ELLE_WARN("%s is deprecated, please run: infinit %s",
-                    prev, boost::algorithm::join(args, " "));
+                    prog, boost::algorithm::join(args, " "));
         }
         auto infinit = infinit::Infinit{};
         auto cli = Infinit(infinit);
