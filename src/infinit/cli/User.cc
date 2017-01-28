@@ -261,6 +261,7 @@ namespace infinit
                       bool push,
                       bool full)
     {
+      ELLE_TRACE_SCOPE("create");
       push = push || push_user;
       if (!push)
       {
@@ -297,6 +298,7 @@ namespace infinit
                       bool pull,
                       bool purge)
     {
+      ELLE_TRACE_SCOPE("delete");
       auto& ifnt = this->cli().infinit();
       auto user = ifnt.user_get(name);
       if (user.private_key && !this->cli().script())
@@ -393,6 +395,7 @@ namespace infinit
                       bool full,
                       boost::optional<std::string> path)
     {
+      ELLE_TRACE_SCOPE("export");
       auto user = this->cli().infinit().user_get(name);
       auto output = this->cli().get_output(path);
       auto avatar = this->cli().avatar_path(name);
@@ -423,6 +426,7 @@ namespace infinit
     User::mode_fetch(std::vector<std::string> const& user_names,
                      bool no_avatar)
     {
+      ELLE_TRACE_SCOPE("fetch");
       for (auto const& name: user_names)
       {
         auto avatar = [&] () {
@@ -454,6 +458,7 @@ namespace infinit
     void
     User::mode_hash(std::string const& name)
     {
+      ELLE_TRACE_SCOPE("hash");
       auto user = this->cli().infinit().user_get(name);
       auto key_hash = infinit::model::doughnut::short_key_hash(user.public_key);
       if (this->cli().script())
@@ -471,6 +476,7 @@ namespace infinit
     void
     User::mode_import(boost::optional<std::string> const& path)
     {
+      ELLE_TRACE_SCOPE("import");
       auto input = this->cli().get_input(path);
       auto user =
         elle::serialization::json::deserialize<infinit::User>(*input, false);
@@ -481,6 +487,7 @@ namespace infinit
     void
     User::mode_list()
     {
+      ELLE_TRACE_SCOPE("list");
       auto users = this->cli().infinit().users_get();
       boost::optional<infinit::User> self;
       try
@@ -529,6 +536,7 @@ namespace infinit
     User::mode_login(std::string const& name,
                      boost::optional<std::string> const& password)
     {
+      ELLE_TRACE_SCOPE("login");
       auto pass = password.value_or(Infinit::read_password());
       auto hashed_pass = Infinit::hub_password_hash(pass);
       auto c = LoginCredentials{ name, hashed_pass, pass };
@@ -542,6 +550,7 @@ namespace infinit
     void
     User::mode_pull(std::string const& name, bool purge)
     {
+      ELLE_TRACE_SCOPE("pull");
       auto self = this->cli().as_user();
       infinit::Infinit::beyond_delete("user", name, self, false, purge);
     }
@@ -554,6 +563,7 @@ namespace infinit
                     boost::optional<std::string> avatar,
                     bool full)
     {
+      ELLE_TRACE_SCOPE("push");
       auto user = this->cli().infinit().user_get(name);
       // FIXME: why does push provide a way to update those fields?
       if (email || fullname)
@@ -590,6 +600,7 @@ namespace infinit
                       boost::optional<std::string> ldap_name,
                       bool full)
     {
+      ELLE_TRACE_SCOPE("signup");
       if (ldap_name && !full)
         elle::err<Error>("LDAP user creation requires --full");
       auto user = create_user(*this,
