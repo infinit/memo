@@ -2,6 +2,7 @@
 
 #include <iterator>
 
+#include <boost/algorithm/cxx11/any_of.hpp>
 #include <elle/Error.hh>
 #include <elle/assert.hh>
 #include <elle/log.hh>
@@ -47,7 +48,7 @@ namespace infinit
     bool
     Stonehenge::_discovered(model::Address id)
     {
-      return any(this->_peers,
+      return boost::algorithm::any_of(this->_peers,
                  [&] (NodeLocation const& p) { return p.id() == id; });
     }
 
