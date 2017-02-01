@@ -1276,7 +1276,7 @@ ELLE_TEST_SCHEDULED(
 }
 
 ELLE_TEST_SCHEDULED(
-  reboot,
+  reboot_node,
   (TestConfiguration, config),
   (bool, anonymous))
 {
@@ -1658,7 +1658,7 @@ ELLE_TEST_SUITE()
   TEST_NAMED(                                                           \
     Name, change_endpoints_stale_back, change_endpoints_stale,          \
     20, true);                                                          \
-  TEST_ANON(Name, reboot, reboot, 5);                                   \
+  TEST_ANON(Name, reboot, reboot_node, 5);                              \
   /* long, wild tests*/                                                 \
   TEST_ANON(Name, chain_connect_doom, chain_connect_doom, 30);          \
   TEST_NAMED(Name, storm_paxos, storm, 60, true, 5, 5, 100);            \
