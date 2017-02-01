@@ -215,7 +215,7 @@ namespace infinit
         }
         // Otherwise start connection.
         {
-          auto connection = std::make_shared<Connection>(*this, std::move(l));
+          auto connection = Connection::make(*this, std::move(l));
           ELLE_TRACE_SCOPE("initiate %s", connection);
           connection->init();
           if (!no_remote)
@@ -250,6 +250,20 @@ namespace infinit
         , _disconnected_exception()
         , _key_hash_cache()
       {}
+
+      std::shared_ptr<Dock::Connection>
+      Dock::Connection::make(Dock& dock, NodeLocation loc)
+      {
+        auto res = std::shared_ptr<Dock::Connection>(new Connection(dock, loc));
+        res->_self = res;
+        return res;
+      }
+
+      std::shared_ptr<Dock::Connection>
+      Dock::Connection::shared_from_this()
+      {
+        return this->_self.lock();
+      }
 
       void
       Dock::Connection::init()

@@ -65,11 +65,16 @@ namespace infinit
       `-----------*/
       public:
         class Connection
-          : public std::enable_shared_from_this<Connection>
-          , public elle::Printable::as<Connection>
+          : public elle::Printable::as<Connection>
         {
-        public:
+        private:
           Connection(Dock& dock, NodeLocation loc);
+        public:
+          static
+          std::shared_ptr<Connection>
+          make(Dock& dock, NodeLocation loc);
+          std::shared_ptr<Connection>
+          shared_from_this();
           // Workaround shared_from_this in the constructor. Always build
           // connections through Dock::connect.
           void
@@ -99,6 +104,7 @@ namespace infinit
           ELLE_ATTRIBUTE_R(std::exception_ptr, disconnected_exception);
           ELLE_ATTRIBUTE_RX(KeyCache, key_hash_cache);
           ELLE_ATTRIBUTE(std::function<void()>, cleanup_on_disconnect);
+          ELLE_ATTRIBUTE_R(std::weak_ptr<Connection>, self);
 
         public:
           void
