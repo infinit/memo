@@ -549,17 +549,22 @@ def configure(
                        cxx_toolkit,
                        infinit_cli_instantiate_config)
     infinit_cli_sources.append(o)
-  infinit_cli = drake.cxx.Executable(
-    'bin/infinit',
-    infinit_cli_sources + [
+  infinit_cli_deps = [infinit_lib]
+  if not windows:
+    # Do not relink with the static libs again under windows
+    # they are allready whole_archive-d into infinit_lib
+    infinit_cli_deps += [
       aws_lib,
       cryptography_lib,
       das_lib,
       elle_lib,
-      infinit_lib,
       protocol_lib,
       reactor_lib,
-    ],
+    ]
+
+  infinit_cli = drake.cxx.Executable(
+    'bin/infinit',
+    infinit_cli_sources + infinit_cli_deps,
     cxx_toolkit,
     bin_cxx_config,
     strip = windows)
