@@ -168,12 +168,13 @@ namespace infinit
     get_permissions(model::Model& model,
                     model::blocks::Block const& block);
     DAS_SYMBOL(allow_root_creation);
+    DAS_SYMBOL(block_size);
     DAS_SYMBOL(model);
+    DAS_SYMBOL(map_other_permissions);
     DAS_SYMBOL(mountpoint);
     DAS_SYMBOL(owner);
     DAS_SYMBOL(root_block_cache_dir);
     DAS_SYMBOL(volume_name);
-    DAS_SYMBOL(map_other_permissions);
     /** Filesystem using a Block Storage as backend.
     * Directory: nodes are serialized, and contains name, stat() and block
     *            address of the directory content
@@ -203,7 +204,8 @@ namespace infinit
         boost::optional<boost::filesystem::path> root_block_cache_dir = {},
         boost::optional<boost::filesystem::path> mountpoint = {},
         bool allow_root_creation = false,
-        bool map_other_permissions = true);
+        bool map_other_permissions = true,
+        boost::optional<int> block_size = {});
       ~FileSystem();
     private:
       struct Init;
@@ -291,6 +293,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(FileCache, file_cache);
       ELLE_ATTRIBUTE_RX(std::vector<reactor::Thread::unique_ptr>, running);
       ELLE_ATTRIBUTE_RX(int, prefetching);
+      ELLE_ATTRIBUTE_R(boost::optional<int>, block_size);
       typedef
       std::unordered_map<Address, std::weak_ptr<FileBuffer>>
       FileBuffers;

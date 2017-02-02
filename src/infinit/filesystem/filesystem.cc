@@ -64,7 +64,8 @@ namespace infinit
         boost::optional<boost::filesystem::path> root_block_cache_dir,
         boost::optional<boost::filesystem::path> mountpoint,
         bool allow_root_creation,
-        bool map_other_permissions)
+        bool map_other_permissions,
+        boost::optional<int> block_size)
       : _block_store(std::move(model))
       , _single_mount(false)
       , _owner(owner)
@@ -75,6 +76,8 @@ namespace infinit
       , _allow_root_creation(allow_root_creation)
       , _map_other_permissions(map_other_permissions)
       , _prefetching(0)
+      , _block_size(block_size)
+      , _file_buffers()
     {
       auto& dht = dynamic_cast<model::doughnut::Doughnut&>(
         *this->_block_store.get());

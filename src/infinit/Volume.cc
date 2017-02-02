@@ -10,12 +10,14 @@ namespace infinit
                  std::string network,
                  MountOptions const& mount_options,
                  boost::optional<std::string> default_permissions,
-                 boost::optional<std::string> description)
+                 boost::optional<std::string> description,
+                 boost::optional<int> block_size)
     : descriptor::TemplatedBaseDescriptor<Volume>(std::move(name),
                                                   std::move(description))
     , network(std::move(network))
     , mount_options(mount_options)
     , default_permissions(std::move(default_permissions))
+    , block_size(std::move(block_size))
   {}
 
   Volume::Volume(elle::serialization::SerializerIn& s)
@@ -30,13 +32,15 @@ namespace infinit
     descriptor::TemplatedBaseDescriptor<Volume>::serialize(s);
     s.serialize("network", this->network);
     s.serialize("default_permissions", this->default_permissions);
+    s.serialize("block_size", this->block_size);
     try
     {
       s.serialize("mount_options", this->mount_options);
     }
     catch (elle::Error const&e)
     {
-      ELLE_TRACE("mount_options serialization error, assuming old version: %s", e);
+      ELLE_TRACE(
+        "mount options serialization error, assuming old version: %s", e);
     }
   }
 
@@ -73,7 +77,8 @@ namespace infinit
       infinit::filesystem::volume_name = this->name,
       infinit::filesystem::root_block_cache_dir = this->root_block_cache_dir(),
       infinit::filesystem::mountpoint = mountpoint,
-      infinit::filesystem::map_other_permissions = map_other_permissions);
+      infinit::filesystem::map_other_permissions = map_other_permissions,
+      infinit::filesystem::block_size = block_size);
     auto driver =
       elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
     if (mountpoint)

@@ -81,7 +81,8 @@ namespace infinit
                    cli::port = boost::none,
                    cli::listen = boost::none,
                    cli::fetch_endpoints_interval = 300,
-                   cli::input = boost::none))
+                   cli::input = boost::none,
+                   cli::block_size = 1024 * 1024))
       , delete_(
         "Delete a volume locally",
         das::cli::Options(),
@@ -312,7 +313,8 @@ namespace infinit
                    cli::listen = boost::none,
                    cli::fetch_endpoints_interval = 300,
                    cli::input = boost::none,
-                   cli::user = boost::none))
+                   cli::user = boost::none,
+                   cli::block_size = boost::none))
     {}
 
 
@@ -463,7 +465,8 @@ namespace infinit
                         boost::optional<int> port,
                         boost::optional<std::string> listen,
                         Defaulted<int> fetch_endpoints_interval,
-                        boost::optional<std::string> input)
+                        boost::optional<std::string> input,
+                        Defaulted<int> block_size)
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
@@ -484,8 +487,14 @@ namespace infinit
           && *default_permissions != "rw")
         elle::err("default-permissions must be 'r' or 'rw': %s",
                   *default_permissions);
-      auto volume = infinit::Volume(name, network.name, mo, default_permissions,
-                                    description);
+      auto volume = infinit::Volume(
+        name,
+        network.name,
+        mo,
+        default_permissions,
+        description,
+        block_size ?
+          boost::optional<int>(block_size.get()) : boost::optional<int>());
       if (output_name)
       {
         auto output = cli.get_output(output_name);
@@ -1815,7 +1824,8 @@ namespace infinit
                         boost::optional<std::string> listen,
                         Defaulted<int> fetch_endpoints_interval,
                         boost::optional<std::string> input,
-                        boost::optional<std::string> user)
+                        boost::optional<std::string> user,
+                        boost::optional<int> block_size)
     {
       ELLE_TRACE_SCOPE("update");
       auto& cli = this->cli();
@@ -1836,6 +1846,8 @@ namespace infinit
       MOUNT_OPTIONS_MERGE(volume.mount_options);
       if (description)
         volume.description = description;
+      if (block_size)
+        volume.block_size = block_size;
       ifnt.volume_save(volume, true);
       if (push_volume)
         ifnt.beyond_push("volume", name, volume, owner);
