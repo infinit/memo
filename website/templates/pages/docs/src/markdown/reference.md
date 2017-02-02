@@ -119,12 +119,33 @@ The _infinit-doctor_ binary provides an easy way to check the health of your loc
 
 ```
 $> infinit-doctor --all
+CONFIGURATION INTEGRITY:
+[OK] Storage resources
+[OK] Networks
+[OK] Volumes
+[OK] Drives
+[OK] Leftovers
+
+SYSTEM SANITY:
+[OK] Username
+[OK] Space left
+[OK] Environment
+[OK] Permissions
+[OK] FUSE
+
+CONNECTIVITY:
+[OK] Connection to https://beyond.infinit.sh
+[OK] Local interfaces
+[OK] Nat
+[OK] UPNP
+[OK] Protocols
+
 All good, everything should work.
 ```
 
-### Networking ###
+### Connectivity ###
 
-To ensure that a client has the required networking access to use Infinit, the `--networking` option runs several tests:
+To ensure that a client has the required networking access to use Infinit, the `--connectivity` option runs several tests:
 
 - Ensure HTTPS access to the Hub.
 - Check connectivity with a remote server using TCP and UDP.
@@ -138,6 +159,39 @@ A system sanity check can be run using the `--sanity` option. This will check th
 ### Integrity ###
 
 To ensure that the local infrastructure descriptors are valid, the `--integrity` option can be used. This will do things like check that networks used by volumes have been fetched and linked to, that the compatibility version of the networks work with the current binaries, etc.
+
+### Networking ###
+
+Finally, doctor has a `--networking` mode to test connectivity and transfer speed between nodes.
+
+_**NOTE**: For now, nodes must have a public IP address for the test to work._
+
+<pre><div><span>Device A</span></div><code> infinit-doctor$ --networking
+Server mode (version: 0.7.2):
+
+To perform tests, run the following command from another node:
+> infinit-doctor --networking --tcp_port 55848 --utp_port 41275 --xored_utp_port 54723 --host &lt;address_of_this_machine&gt;
+</code></pre>
+
+<pre class="device2"><div><span>Device B</span></div><code> infinit-doctor --networking --tcp_port 55848 --utp_port 41275 --xored_utp_port 54723 --host 127.0.0.1
+Client mode (version: 0.7.2):
+TCP:
+  Upload:
+    215ms for 5.2 MB (24.4 MB/sec)
+  Download:
+    219ms for 5.2 MB (23.9 MB/sec)
+UTP:
+  Upload:
+    377ms for 5.2 MB (13.9 MB/sec)
+  Download:
+    293ms for 5.2 MB (17.9 MB/sec)
+xored UTP:
+  Upload:
+    364ms for 5.2 MB (14.4 MB/sec)
+  Download:
+    299ms for 5.2 MB (17.5 MB/sec)
+</code></pre>
+
 
 User
 ----
