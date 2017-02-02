@@ -352,14 +352,14 @@ The example below creates a network named "cluster" which aggregates the storage
 
 The network can be configured depending on the requirements of the storage infrastructure the administrator is setting up. For instance, the number of computing devices could be extremely small, the owners of those computers could be somewhat untrustworthy or their machines could be expected to be turned on and off throughout the day. To cater for this the network parameters can be tuned: the overlay's topology, the replication factor, the fault tolerance algorithm, etc.
 
-The following creates a small storage network, relying on the Kelips overlay network with a replication factor of 3. In addition, the administrator decides to contribute two storage resources to the network on creation.
+The following creates a storage network, relying on the default overlay network with a replication factor of 3. In addition, the administrator decides to contribute two storage resources to the network on creation.
 
 ```
-$> infinit-network --create --as alice --kelips --k 1 --replication-factor 2 --storage local --storage s3 --name cluster
+$> infinit-network --create --as alice --replication-factor 2 --storage local --storage s3 --name cluster
 Locally created network "alice/cluster".
 ```
 
-The following overlay types are currently available:
+The overlay network (i.e the algorithm connecting the nodes together) can be configured. Below are listed some of the overlay networks available:
 
 - **Kalimero**: Simple test overlay supporting only one node.
 - **Kelips**: Overlay with support for node churn. The _k_ argument specifies the
