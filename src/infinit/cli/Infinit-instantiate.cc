@@ -51,7 +51,7 @@ namespace infinit
               s << vars.expand(mode.help) << "\n\nOptions:\n";
               {
                 std::stringstream buffer;
-                das::cli::help(f, buffer, options);
+                buffer << das::cli::help(f, options);
                 s << vars.expand(buffer.str());
               }
             };

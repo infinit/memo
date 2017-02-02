@@ -133,8 +133,8 @@ namespace infinit
         << "Object types:\n";
       infinit::cli::Infinit::Objects::map<help_object>::value(s);
       s << "\n"
-        << "Options:\n";
-      das::cli::help(*this, s, options);
+        << "Options:\n"
+        << das::cli::help(*this, options);
     }
 
     void
