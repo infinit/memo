@@ -17,6 +17,31 @@
 <!-- - Add new `Kouncil` overlay that stores all block search space in main -->
 <!--   memory on startup. -->
 
+## [0.7.3]
+
+Command line interface revamp to the "docker style" : `infinit
+<object> <mode> options...`. This change is mostly backward
+compatible, but some adjustment may be needed.
+
+### Added
+
+- Support `--advertise-host` in `infinit network`.
+- Add `--no-local-endpoints` and `--no-public-endpoints` options.
+
+### Changed
+
+- Support new CLI style `infinit <object> <mode>` and prefer it.
+- Limit the number of prefetching background task.
+- Do not advertise Apple Wireless Direct Link IP.
+
+### Fixed
+
+- Support transitive discovery and diverse connections patterns in
+  Kouncil.
+- Fix block leak when removing an unopened file.
+- Fix pure-TCP mode support.
+
+
 ## [0.7.2] - 2016-11-28
 
 New Kouncil overlay, network inspection and bugfixes.
