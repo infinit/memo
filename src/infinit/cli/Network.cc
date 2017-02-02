@@ -415,11 +415,11 @@ namespace infinit
             elle::err<Error>("only one overlay type must be specified");
           if (kalimero)
             return std::make_unique<infinit::overlay::KalimeroConfiguration>();
-          else if (kouncil)
-            return std::make_unique<infinit::overlay::kouncil::Configuration>();
-          else
+          else if (kelips)
             return make_kelips_config(nodes, k, kelips_contact_timeout,
                                       encrypt, protocol);
+          else
+            return std::make_unique<infinit::overlay::kouncil::Configuration>();
         }();
 
       auto storage = make_storage_config(ifnt, storage_names);
