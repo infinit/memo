@@ -83,7 +83,7 @@ namespace infinit
               ELLE_LOG("%s: listen on tcp://%s",
                        this, this->_server->local_endpoint());
             }
-            if (p == Protocol::utp || p == Protocol::all)
+            // Always enable UTP server
             {
               int udp_port = port;
               this->_utp_server =
