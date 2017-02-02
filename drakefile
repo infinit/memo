@@ -596,22 +596,10 @@ def configure(
 
   rule_build << binaries
 
-
-  ## ----- ##
-  ## Share ##
-  ## ----- ##
-
-  demo_home = drake.nodes(
-    'demo-home/linked_networks/demo/infinit/demo',
-    'demo-home/networks/infinit/demo',
-    'demo-home/passports/infinit/demo/demo',
-    'demo-home/users/demo',
-    'demo-home/volumes/infinit/demo',
-  )
-
   ## -------- ##
   ## Licenses ##
   ## -------- ##
+
   global license_file
   license_file = drake.node('OSS-licenses')
   drake.license_file.Packager('licenses', license_file)
@@ -620,13 +608,10 @@ def configure(
   ## Install ##
   ## ------- ##
 
-  def install_nodes(where, demo = True):
+  def install_nodes(where):
     where = drake.Path(where)
     yield from drake.copy(installed_binaries, where, None,
                           builder = PatchAndInstall)
-    if demo:
-      yield from drake.copy(
-        demo_home, where / 'share/infinit/filesystem/test/home', 'demo-home')
     yield from drake.copy(
       [license_file], where / 'share/infinit/filesystem/licenses')
 
@@ -782,7 +767,7 @@ def configure(
       'version': git.description(),
     })
   docker_file.run('apt-get update && apt-get install -y python3')
-  docker_file.add(install_nodes(docker_path, demo = False), '/usr')
+  docker_file.add(install_nodes(docker_path), '/usr')
   docker_file.add(
     drake.copy(drake.node('share/infinit/docker/infinit-static.sh'),
                docker_path / 'bin', strip_prefix = True),
@@ -810,7 +795,7 @@ def configure(
     labels = {
       'version': git.description(),
     })
-  docker_file.add(install_nodes(docker_path, demo = False), '/usr')
+  docker_file.add(install_nodes(docker_path), '/usr')
   docker_file.add(
     drake.copy(drake.node('share/infinit/docker/infinit-static.sh'),
                docker_path / 'bin', strip_prefix = True),
