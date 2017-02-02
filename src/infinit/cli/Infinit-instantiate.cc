@@ -2,21 +2,6 @@
 #include <infinit/cli/Infinit-template.hxx>
 #include <infinit/cli/utility.hh> // ensure_version_is_supported
 
-namespace das
-{
-  namespace named
-  {
-    template <typename... Args, typename... NewArgs>
-    auto
-    extend(Prototype<Args...> const& p, NewArgs&& ... args)
-    {
-      return Prototype<NewArgs..., Args...>
-        (DefaultStore<NewArgs..., Args...>
-         (std::forward<NewArgs>(args)..., p.defaults));
-    }
-  }
-}
-
 namespace infinit
 {
   namespace cli
@@ -39,8 +24,7 @@ namespace infinit
           args.erase(args.begin());
           auto& mode = Symbol::attr_get(o);
           auto options = mode.options;
-          auto f = das::named::extend(
-            mode.prototype(),
+          auto f = mode.prototype().extend(
             help = false,
             cli::compatibility_version = boost::none,
             script = false,
