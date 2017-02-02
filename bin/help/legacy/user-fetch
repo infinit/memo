@@ -1,0 +1,9 @@
+user: fetch: Usage: _build/macosx64/bin/infinit-user --fetch [OPTIONS...]
+
+Fetch a user from the Hub:
+
+Fetch options:
+  -n [ --name ] arg      User with name or hash to fetch
+  --no-avatar            Do not fetch user avatar
+
+

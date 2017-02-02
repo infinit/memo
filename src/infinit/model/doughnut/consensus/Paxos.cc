@@ -1135,9 +1135,7 @@ namespace infinit
             if (!data.block)
             {
               ELLE_TRACE("%s: plain fetch called on mutable block", *this);
-              throw elle::Error(
-                elle::sprintf(
-                  "plain fetch called on mutable block %f", address));
+              elle::err("plain fetch called on mutable block %f", address);
             }
             return std::unique_ptr<blocks::Block>(data.block.release());
           }

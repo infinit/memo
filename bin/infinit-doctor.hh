@@ -1,18 +1,17 @@
-#ifndef INFINIT_BIN_INFINIT_DOCTOR_HH
-# define INFINIT_BIN_INFINIT_DOCTOR_HH
+#pragma once
 
-# include <unordered_map>
+#include <unordered_map>
 
 namespace reporting
 {
-  typedef std::unordered_map<std::string, std::string> Environment;
+  using Environ = elle::os::Environ;
 
   struct Result
   {
     /*------.
     | Types |
     `------*/
-    typedef boost::optional<std::string> Reason;
+    using Reason = boost::optional<std::string>;
 
     /*-------------.
     | Construction |
@@ -20,7 +19,7 @@ namespace reporting
     Result(std::string const& name = "XXX");
     Result(std::string const& name,
            bool sane,
-           Reason const& reason = Reason{},
+           Reason const& reason = {},
            bool warning = false);
     Result(elle::serialization::SerializerIn& s);
     virtual
@@ -41,9 +40,10 @@ namespace reporting
     std::ostream&
     print(std::ostream& out, bool verbose, bool rc = true) const;
 
-  protected:
+  public:
     bool
     show(bool verbose) const;
+  protected:
     virtual
     bool
     _show(bool verbose) const;
@@ -80,7 +80,30 @@ namespace reporting
       print(std::ostream& out, bool verbose) const;
     };
 
-    // Use inheritance maybe ?
+    struct UserResult
+      : public reporting::Result::Result
+    {
+      /*-------------.
+      | Construction |
+      `-------------*/
+      UserResult() = default;
+      UserResult(std::string const& name,
+                 bool sane,
+                 Reason const& reason = Reason{});
+
+      /*---------.
+      | Printing |
+      `---------*/
+      void
+      _print(std::ostream& out, bool verbose) const override;
+
+      /*-----------.
+      | Attributes |
+      `-----------*/
+      ELLE_ATTRIBUTE_RW(std::string, user_name);
+    };
+
+    // Use inheritance maybe?
     struct StorageResoucesResult
       : public Result
     {
@@ -92,7 +115,7 @@ namespace reporting
         std::string const& name,
         bool sane,
         std::string const& type,
-        reporting::Result::Reason const& reason = reporting::Result::Reason{});
+        reporting::Result::Reason const& reason = {});
       StorageResoucesResult(elle::serialization::SerializerIn& s);
 
       /*---------.
@@ -119,7 +142,10 @@ namespace reporting
       /*------.
       | Types |
       `------*/
-      typedef boost::optional<std::vector<std::string>> FaultyStorageResources;
+      using Super = Result;
+      using FaultyStorageResources = boost::optional<
+        std::vector<StorageResoucesResult>
+      >;
 
       /*-------------.
       | Construction |
@@ -128,8 +154,8 @@ namespace reporting
       NetworkResult(
         std::string const& name,
         bool sane,
-        FaultyStorageResources storage_resources = FaultyStorageResources{},
-        Result::Reason extra_reason = Result::Reason{},
+        FaultyStorageResources storage_resources = {},
+        Result::Reason extra_reason = {},
         bool linked = true);
       NetworkResult(elle::serialization::SerializerIn& s);
 
@@ -145,6 +171,12 @@ namespace reporting
       void
       serialize(elle::serialization::Serializer& s);
 
+      /*----------.
+      | Interface |
+      `----------*/
+      bool
+      warning() const override;
+
       /*-----------.
       | Attributes |
       `-----------*/
@@ -158,7 +190,7 @@ namespace reporting
       /*------.
       | Types |
       `------*/
-      typedef boost::optional<std::string> FaultyNetwork;
+      using FaultyNetwork = boost::optional<NetworkResult>;
 
       /*-------------.
       | Construction |
@@ -166,8 +198,8 @@ namespace reporting
       VolumeResult() = default;
       VolumeResult(std::string const& name,
                    bool sane,
-                   FaultyNetwork faulty_network = FaultyNetwork{},
-                   Result::Reason extra_reason = Result::Reason{});
+                   FaultyNetwork faulty_network = {},
+                   Result::Reason extra_reason = {});
       VolumeResult(elle::serialization::SerializerIn& s);
 
       /*---------.
@@ -194,7 +226,7 @@ namespace reporting
       /*------.
       | Types |
       `------*/
-      typedef boost::optional<std::string> FaultyVolume;
+      using FaultyVolume = boost::optional<VolumeResult>;
 
       /*-------------.
       | Construction |
@@ -202,8 +234,8 @@ namespace reporting
       DriveResult() = default;
       DriveResult(std::string const& name,
                   bool sane,
-                  FaultyVolume faulty_volume = FaultyVolume{},
-                  Result::Reason extra_reason = Result::Reason{});
+                  FaultyVolume faulty_volume = {},
+                  Result::Reason extra_reason = {});
       DriveResult(elle::serialization::SerializerIn& s);
 
       /*---------.
@@ -232,7 +264,7 @@ namespace reporting
       `-------------*/
       LeftoversResult() = default;
       LeftoversResult(std::string const& name,
-                      Result::Reason r = Result::Reason{"shouldn't be there"});
+                      Result::Reason r = Result::Reason{"should not be there"});
       LeftoversResult(elle::serialization::SerializerIn& s);
 
       /*--------------.
@@ -272,6 +304,7 @@ namespace reporting
     | Attributes |
     `-----------*/
     ELLE_ATTRIBUTE_R(bool, only);
+    UserResult user;
     std::vector<StorageResoucesResult> storage_resources;
     std::vector<NetworkResult> networks;
     std::vector<VolumeResult> volumes;
@@ -333,7 +366,7 @@ namespace reporting
                 double minimum_ratio,
                 size_t available,
                 size_t capacity,
-                Result::Reason const& reason = Result::Reason {});
+                Result::Reason const& reason = {});
       SpaceLeft(elle::serialization::SerializerIn& s);
 
       /*---------.
@@ -357,15 +390,15 @@ namespace reporting
       uint64_t capacity;
     };
 
-    struct EnvironmentResult
+    struct EnvironResult
       : public reporting::Result
     {
       /*-------------.
       | Construction |
       `-------------*/
-      EnvironmentResult() = default;
-      EnvironmentResult(Environment const& environment);
-      EnvironmentResult(elle::serialization::SerializerIn& s);
+      EnvironResult() = default;
+      EnvironResult(Environ const& environ);
+      EnvironResult(elle::serialization::SerializerIn& s);
 
       /*---------.
       | Printing |
@@ -384,7 +417,7 @@ namespace reporting
       /*-----------.
       | Attributes |
       `-----------*/
-      Environment environment;
+      Environ environ;
     };
 
     struct PermissionResult
@@ -417,7 +450,7 @@ namespace reporting
       bool read;
       bool write;
     };
-    typedef std::vector<PermissionResult> PermissionResults;
+    using PermissionResults = std::vector<PermissionResult>;
 
     struct FuseResult
       : public reporting::Result
@@ -474,7 +507,7 @@ namespace reporting
     ELLE_ATTRIBUTE_R(bool, only);
     UserResult user;
     SpaceLeft space_left;
-    EnvironmentResult environment;
+    EnvironResult environ;
     PermissionResults permissions;
     FuseResult fuse;
   };
@@ -489,7 +522,7 @@ namespace reporting
       | Construction |
       `-------------*/
       BeyondResult();
-      BeyondResult(bool sane, reporting::Result::Reason const& r = boost::none);
+      BeyondResult(bool sane, reporting::Result::Reason const& r = {});
 
       /*--------------.
       | Serialization |
@@ -570,16 +603,16 @@ namespace reporting
     };
     typedef std::vector<ProtocolResult> ProtocolResults;
 
-    struct NatResult
+    struct NATResult
       : public reporting::Result
     {
       /*-------------.
       | Construction |
       `-------------*/
-      NatResult() = default;
-      NatResult(bool cone);
-      NatResult(std::string const& error);
-      NatResult(elle::serialization::SerializerIn& s);
+      NATResult() = default;
+      NATResult(bool cone);
+      NATResult(std::string const& error);
+      NATResult(elle::serialization::SerializerIn& s);
 
       /*---------.
       | Printing |
@@ -599,7 +632,7 @@ namespace reporting
       bool cone;
     };
 
-    struct UPNPResult
+    struct UPnPResult
       : public reporting::Result
     {
       struct RedirectionResult
@@ -640,7 +673,7 @@ namespace reporting
         `-------------*/
         RedirectionResult(std::string const& name = "",
                           bool sane = false,
-                          Result::Reason const& reason = Result::Reason {});
+                          Result::Reason const& reason = {});
         RedirectionResult(elle::serialization::SerializerIn& s);
 
         /*---------.
@@ -665,8 +698,8 @@ namespace reporting
       /*-------------.
       | Construction |
       `-------------*/
-      UPNPResult(bool available = false);
-      UPNPResult(elle::serialization::SerializerIn& s);
+      UPnPResult(bool available = false);
+      UPnPResult(elle::serialization::SerializerIn& s);
 
       /*----------.
       | Interface |
@@ -732,8 +765,8 @@ namespace reporting
     BeyondResult beyond;
     InterfaceResults interfaces;
     ProtocolResults protocols;
-    NatResult nat;
-    UPNPResult upnp;
+    NATResult nat;
+    UPnPResult upnp;
   };
 
   struct All
@@ -771,8 +804,4 @@ namespace reporting
     SystemSanityResults system_sanity;
     ConnectivityResults connectivity;
   };
-
-
 }
-
-#endif

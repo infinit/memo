@@ -1,0 +1,11 @@
+passport: export: Usage: _build/macosx64/bin/infinit-passport --export --network NETWORK --user USER [OPTIONS...]
+
+Export a user's network passport:
+
+Export options:
+  -N [ --network ] arg   Network to export passport for
+  -u [ --user ] arg      User to export passport for
+  -o [ --output ] arg    File to write the passport to
+                         (default: stdout)
+
+

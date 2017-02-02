@@ -1,22 +1,21 @@
-#ifndef INFINIT_FILESYSTEM_FILESYSTEM_HH
-# define INFINIT_FILESYSTEM_FILESYSTEM_HH
+#pragma once
 
-# include <chrono>
+#include <chrono>
 
-# include <boost/multi_index/hashed_index.hpp>
-# include <boost/multi_index/identity.hpp>
-# include <boost/multi_index/mem_fun.hpp>
-# include <boost/multi_index/ordered_index.hpp>
-# include <boost/multi_index/sequenced_index.hpp>
-# include <boost/multi_index_container.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/identity.hpp>
+#include <boost/multi_index/mem_fun.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/sequenced_index.hpp>
+#include <boost/multi_index_container.hpp>
 
-# include <cryptography/rsa/KeyPair.hh>
+#include <cryptography/rsa/KeyPair.hh>
 
-# include <reactor/filesystem.hh>
-# include <reactor/thread.hh>
+#include <reactor/filesystem.hh>
+#include <reactor/thread.hh>
 
-# include <infinit/model/Model.hh>
-# include <infinit/filesystem/FileData.hh>
+#include <infinit/model/Model.hh>
+#include <infinit/filesystem/FileData.hh>
 
 namespace infinit
 {
@@ -314,6 +313,4 @@ namespace std
               infinit::filesystem::OperationType operation);
 }
 
-# include <infinit/filesystem/Filesystem.hxx>
-
-#endif
+#include <infinit/filesystem/filesystem.hxx>

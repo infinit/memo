@@ -16,7 +16,7 @@ namespace infinit
       : _value()
       , _mutable_block(true)
     {
-      memset(this->_value, 0, sizeof(Address::Value));
+      memset(this->_value, 0, sizeof(Value));
     }
 
     Address::Address(Value const value, Flags flags, bool combine)
@@ -65,10 +65,7 @@ namespace infinit
     std::ostream&
     operator << (std::ostream& out, Address const& k)
     {
-      bool fixed = out.flags() & std::ios::fixed;
-      if (!fixed)
-        out << elle::ConstWeakBuffer(k._value);
-      else
+      if (out.flags() & std::ios::fixed)
       {
         out << "0x";
         out << elle::format::hexadecimal::encode(
@@ -76,6 +73,8 @@ namespace infinit
         out << elle::format::hexadecimal::encode(
           elle::ConstWeakBuffer(k._value + Address::flag_byte, 1));
       }
+      else
+        out << elle::ConstWeakBuffer(k._value);
       return out;
     }
 
@@ -99,15 +98,15 @@ namespace infinit
       }
       if (it != repr.end())
         elle::err("invalid address: %s", repr);
-      return Address(v);
+      return {v};
     }
 
     Address
     Address::random()
     {
       auto buf =
-        cryptography::random::generate<elle::Buffer>(sizeof(Address::Value));
-      ELLE_ASSERT_GTE(buf.size(), sizeof(Address::Value));
+        cryptography::random::generate<elle::Buffer>(sizeof(Value));
+      ELLE_ASSERT_GTE(buf.size(), sizeof(Value));
       return Address(buf.contents());
     }
 
@@ -138,25 +137,18 @@ namespace infinit
 
 namespace std
 {
-  // Shamelessly stolen from Boost, the internet and the universe.
-  inline
-  void
-  hash_combine(std::size_t& seed, std::size_t value)
-  {
-    seed ^= value + 0x9e3779b9 + (seed<<6) + (seed>>2);
-  }
-
   size_t
   std::hash<infinit::model::Address>::operator()(
     infinit::model::Address const& address) const
   {
-    std::size_t result = 0;
+    using boost::hash_combine;
+    std::size_t res = 0;
     for (unsigned int i = 0;
          i < sizeof(infinit::model::Address::Value);
          i += sizeof(std::size_t))
-      hash_combine(result,
+      hash_combine(res,
                    *reinterpret_cast<std::size_t const*>(address.value() + i));
-    return result;
+    return res;
   }
 }
 
@@ -179,7 +171,7 @@ namespace elle
       if (buffer.size() != sizeof(Address::Value))
         elle::err("invalid address: %x", buffer);
       Address::Value value;
-      memcpy(value, buffer.contents(), sizeof(value));
+      memcpy(value, buffer.contents(), sizeof(Address::Value));
       return Address(value);
     }
   }

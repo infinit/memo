@@ -1,3 +1,4 @@
+#include <elle/err.hh>
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
@@ -46,19 +47,19 @@ COMMAND(add)
   if (args.count("dropbox"))
   {
     std::cout << "Register your Dropbox account with infinit by visiting "
-              << beyond() << "/users/" << user.name
+              << infinit::beyond() << "/users/" << user.name
               << "/dropbox-oauth" << std::endl;
   }
   else if (args.count("google"))
   {
     std::cout << "Register your Google account with infinit by visiting "
-              << beyond() << "/users/" << user.name
+              << infinit::beyond() << "/users/" << user.name
               << "/google-oauth" << std::endl;
   }
   else if (args.count("gcs"))
   {
     std::cout << "Register your Google account with infinit by visiting "
-              << beyond() << "/users/" << user.name
+              << infinit::beyond() << "/users/" << user.name
               << "/gcs-oauth" << std::endl;
   }
   else if (args.count("aws"))
@@ -69,11 +70,10 @@ COMMAND(add)
       read_key("Access Key ID", _aws_access_key_regex);
     std::string secret_access_key =
       read_key("Secret Access Key", _aws_secrect_key_regex);
-    auto aws_credentials = elle::make_unique<infinit::AWSCredentials>(
+    auto aws_credentials = std::make_unique<infinit::AWSCredentials>(
       account, access_key_id, secret_access_key);
     ifnt.credentials_aws_add(std::move(aws_credentials));
-    report_action(
-      "stored", "AWS credentials", account, std::string("locally"));
+    report_action("stored", "AWS credentials", account, "locally");
   }
   else
     throw CommandLineError("service type not specified");
@@ -81,27 +81,40 @@ COMMAND(add)
 
 struct Enabled
 {
+  Enabled(bool aws_, bool dropbox_, bool gcs_, bool google_)
+    : aws(aws_)
+    , dropbox(dropbox_)
+    , gcs(gcs_)
+    , google(google_)
+  {
+    // None is all.
+    if (!aws && !dropbox && !gcs && !google)
+      aws = dropbox = gcs = google = true;
+  }
+
+  Enabled(boost::program_options::variables_map const& args)
+    : Enabled(bool(args.count("aws")),
+              bool(args.count("dropbox")),
+              bool(args.count("gcs")),
+              bool(args.count("google")))
+  {}
+
+  bool multi() const
+  {
+    return 1 < aws + dropbox + gcs + google;
+  }
+
+  bool all() const
+  {
+    return aws && dropbox && gcs && google;
+  }
+
   bool aws;
   bool dropbox;
   bool gcs;
   bool google;
-  bool multi;
 };
 
-Enabled
-enabled(boost::program_options::variables_map const& args)
-{
-  int aws = args.count("aws") ? 1 : 0;
-  int dropbox = args.count("dropbox") ? 1 : 0;
-  int gcs = args.count("gcs") ? 1 : 0;
-  int google = args.count("google") ? 1 : 0;
-  if (!aws && !dropbox && !gcs && !google)
-    aws = dropbox = gcs = google = 1;
-  return Enabled {
-    bool(aws), bool(dropbox), bool(gcs), bool(google),
-    aws + dropbox + gcs + google > 1
-  };
-}
 
 template <typename T>
 void
@@ -122,7 +135,7 @@ fetch_credentials(infinit::User const& user,
   for (auto const& a_json: credentials_vec)
   {
     elle::serialization::json::SerializerIn input(a_json, false);
-    auto a = elle::make_unique<T>(input.deserialize<T>());
+    auto a = std::make_unique<T>(input.deserialize<T>());
     elle::printf("Fetched %s credentials %s (%s)\n",
                  pretty, a->uid(), a->display_name());
     add(std::move(a));
@@ -131,14 +144,12 @@ fetch_credentials(infinit::User const& user,
 
 COMMAND(fetch)
 {
-  auto e = enabled(args);
-  bool fetch_all = false;
-  if (e.aws && e.dropbox && e.gcs && e.google)
-    fetch_all = true;
+  auto e = Enabled(args);
+  bool fetch_all = e.all();
   if (e.aws && !fetch_all)
   {
     throw CommandLineError(elle::sprintf("AWS credentials are not stored on %s",
-                           beyond(true)));
+                                         infinit::beyond(true)));
   }
   auto user = self_user(ifnt, args);
   if (e.dropbox)
@@ -158,46 +169,15 @@ COMMAND(fetch)
       { ifnt.credentials_google_add(std::move(a)); });
   if (!script_mode && fetch_all)
   {
-    std::cout << "INFO: AWS credentials are not stored on " << beyond(true)
+    std::cout << "INFO: AWS credentials are not stored on " << infinit::beyond(true)
               << " and so were not fetched" << std::endl;
   }
   // FIXME: remove deleted ones
 }
 
-#define SYMBOL(Sym)                                                     \
-namespace s                                                             \
-{                                                                       \
-  struct                                                                \
-  {                                                                     \
-    template <typename T>                                               \
-    static                                                              \
-    auto                                                                \
-    get_attribute(T const& o)                                           \
-      -> decltype(o.Sym)                                                \
-    {                                                                   \
-      return o.Sym;                                                     \
-    }                                                                   \
-                                                                        \
-    template <typename T, typename ... Args>                            \
-    static                                                              \
-    auto                                                                \
-    call_method(T const& o, Args&& ... args)                            \
-      -> decltype(o.Sym(std::forward<Args>(args)...))                   \
-    {                                                                   \
-      return o.Sym(std::forward<Args>(args)...);                        \
-    }                                                                   \
-  } Sym;                                                                \
-};                                                                      \
-
-SYMBOL(aws);
-SYMBOL(credentials_aws);
-SYMBOL(dropbox);
-SYMBOL(credentials_dropbox);
-SYMBOL(gcs);
-SYMBOL(credentials_gcs);
-SYMBOL(google);
-SYMBOL(credentials_google);
-
+/// \param multi   whether there are several services to list.
+/// \param fetch   function that returns the credentials.
+/// \param service_name  The displayed name.
 template <typename Service, typename Fetch>
 void
 list_(Enabled const& e,
@@ -205,24 +185,36 @@ list_(Enabled const& e,
       Fetch fetch,
       std::string const& service_name)
 {
-  if (!service.get_attribute(e))
+  if (!service.attr_get(e))
     return;
   bool first = true;
-  for (auto const& credentials: fetch.call_method(ifnt))
+  for (auto const& credentials: fetch.method_call(ifnt))
   {
-    if (e.multi && first)
-      std::cout << service_name << ":" << std::endl;
-    if (e.multi)
+    if (e.multi() && first)
+      std::cout << service_name << ":\n";
+    if (e.multi())
       std::cout << "  ";
     std::cout << credentials->uid() << ": "
-              << credentials->display_name() << std::endl;
+              << credentials->display_name() << '\n';
     first = false;
   }
 }
 
+namespace s
+{
+  DAS_SYMBOL(aws);
+  DAS_SYMBOL(credentials_aws);
+  DAS_SYMBOL(dropbox);
+  DAS_SYMBOL(credentials_dropbox);
+  DAS_SYMBOL(gcs);
+  DAS_SYMBOL(credentials_gcs);
+  DAS_SYMBOL(google);
+  DAS_SYMBOL(credentials_google);
+}
+
 COMMAND(list)
 {
-  auto e = enabled(args);
+  auto e = Enabled(args);
   list_(e, s::aws, s::credentials_aws, "AWS");
   list_(e, s::dropbox, s::credentials_dropbox, "Dropbox");
   list_(e, s::google, s::credentials_google, "Google");
@@ -245,14 +237,9 @@ COMMAND(delete_)
     throw CommandLineError("specify a service");
   auto path = ifnt._credentials_path(service, account);
   if (boost::filesystem::remove(path))
-  {
-    report_action("deleted", "credentials", account, std::string("locally"));
-  }
+    report_action("deleted", "credentials", account, "locally");
   else
-  {
-    throw elle::Error(
-      elle::sprintf("File for credentials could not be deleted: %s", path));
-  }
+    elle::err("File for credentials could not be deleted: %s", path);
 }
 
 int
@@ -286,7 +273,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("Fetch credentials from %s", beyond(true)),
+      elle::sprintf("Fetch credentials from %s", infinit::beyond(true)),
       &fetch,
       "[SERVICE]",
       {},

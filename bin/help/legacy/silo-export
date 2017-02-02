@@ -1,0 +1,10 @@
+storage: export: Usage: _build/macosx64/bin/infinit-storage --export --name STORAGE [OPTIONS...]
+
+Export storage information:
+
+Export options:
+  -n [ --name ] arg      Storage to export
+  -o [ --output ] arg    File to write the storage to
+                         (default: stdout)
+
+

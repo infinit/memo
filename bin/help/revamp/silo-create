@@ -1,0 +1,26 @@
+silo: create: Usage: _build/macosx64/bin/infinit-silo silo create [OPTIONS]
+Create local silo
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: akim)
+  -n, --name arg            name of the silo to create
+      --description arg     silo description
+  -c, --capacity arg        limit storage capacity (use: B,kB,kiB,MB,MiB,GB,GiB,TB,TiB)
+  -o, --output arg          file to write the silo to
+      --dropbox arg         store blocks on Dropbox
+      --filesystem arg      store blocks on local filesystem (default)
+      --gcs arg             store blocks on Google Cloud Storage
+      --google-drive arg    store blocks on Google Drive
+      --ssh arg             store blocks via SSH
+      --s3 arg              store blocks on AWS S3
+      --account arg         cloud service account name
+      --bucket arg          bucket name
+      --endpoint arg        S3 endpoint (default: amazonaws.com)
+      --host arg            SSH host
+      --region arg          AWS region
+      --path arg            directory where to store blocks
+      --storage-class arg   storage class to use: STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)
+

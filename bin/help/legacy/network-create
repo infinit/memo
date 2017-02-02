@@ -1,0 +1,42 @@
+network: create: Usage: _build/macosx64/bin/infinit-network --create --name NAME [OVERLAY-TYPE OVERLAY-OPTIONS...] [CONSENSUS-TYPE CONSENSUS-OPTIONS...] [--storage STORAGE...] [OPTIONS...]
+
+Create a network:
+
+Create options:
+  -n [ --name ] arg                Created network name
+  --description arg                Description of network
+  -S [ --storage ] arg             Storage to contribute (optional, data 
+                                   striped over multiple)
+  --port arg                       Port to listen on (default: random)
+  -r [ --replication-factor ] arg  Data replication factor (default: 1)
+  -e [ --eviction-delay ] arg      Missing servers eviction delay
+                                   (default: 10 min)
+  -o [ --output ] arg              File to write the network to
+                                   (default: stdout)
+  --push-network                   Push the network to the Hub
+  -p [ --push ]                    Alias for --push-network
+  --admin-r arg                    Set admin users that can read all data
+  --admin-rw arg                   Set admin users that can read and write all 
+                                   data
+  --peer arg                       List of known node endpoints
+
+Consensus types:
+  --paxos                          Use Paxos consensus algorithm (default)
+  --no-consensus                   Use no consensus algorithm
+
+Overlay types:
+  --kelips                         Use a Kelips overlay network (default)
+  --kalimero                       Use a Kalimero overlay network.
+                                   Used for local testing
+  --kouncil                        Use a Kouncil overlay network
+
+Kelips options:
+  --nodes arg                      Estimate of the total number of nodes
+  --k arg                          Number of groups (default: 1)
+  --kelips-contact-timeout arg     Ping timeout before considering a peer lost 
+                                   (default: 2 min)
+  --encrypt arg                    Use encryption: no,lazy,yes (default: yes)
+  --protocol arg                   RPC protocol to use: tcp,utp,all
+                                   (default: all)
+
+

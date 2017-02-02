@@ -1,0 +1,19 @@
+Usage: _build/macosx64/bin/infinit-user user [MODE|--help]
+Infinit user management utility.
+
+Modes:
+  create     Create a user
+  delete     Delete local user
+  export     Export local user
+  hash       Get short hash of user's key
+  import     Import local user
+  fetch      Fetch users from https://beyond.infinit.sh
+  list       List local users
+  login      Login user to https://beyond.infinit.sh
+  pull       Pull a user from https://beyond.infinit.sh
+  push       Push a user from https://beyond.infinit.sh
+  signup     Create and push a user to https://beyond.infinit.sh
+
+Options:
+  -h, --help                show this help message
+

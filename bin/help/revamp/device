@@ -1,0 +1,10 @@
+Usage: _build/macosx64/bin/infinit-device device [MODE|--help]
+Infinit device management utility.
+
+Modes:
+  receive    receive an object from another device using https://beyond.infinit.sh
+  transmit   transmit an object to another device using https://beyond.infinit.sh
+
+Options:
+  -h, --help                show this help message
+

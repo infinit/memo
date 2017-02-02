@@ -1,15 +1,14 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_ACB_HH
-# define INFINIT_MODEL_DOUGHNUT_ACB_HH
+#pragma once
 
-# include <thread>
+#include <thread>
 
-# include <elle/serialization/fwd.hh>
+#include <elle/serialization/fwd.hh>
 
-# include <cryptography/rsa/KeyPair.hh>
+#include <cryptography/rsa/KeyPair.hh>
 
-# include <infinit/model/User.hh>
-# include <infinit/model/blocks/ACLBlock.hh>
-# include <infinit/model/doughnut/OKB.hh>
+#include <infinit/model/User.hh>
+#include <infinit/model/blocks/ACLBlock.hh>
+#include <infinit/model/doughnut/OKB.hh>
 
 namespace infinit
 {
@@ -38,7 +37,7 @@ namespace infinit
 
         bool operator == (ACLEntry const& b) const;
 
-        typedef infinit::serialization_tag serialization_tag;
+        using serialization_tag = infinit::serialization_tag;
         static ACLEntry deserialize(elle::serialization::SerializerIn& s,
                                     elle::Version const& v);
       };
@@ -51,11 +50,14 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef BaseACB<Block> Self;
-        typedef BaseOKB<Block> Super;
+        using Self = BaseACB<Block>;
+        using Super = BaseOKB<Block>;
 
-        static_assert(!std::is_base_of<boost::optional_detail::optional_tag, ACLEntry>::value, "");
-        static_assert(std::is_constructible<ACLEntry, elle::serialization::SerializerIn&, elle::Version const&>::value, "");
+        static_assert(!std::is_base_of<boost::optional_detail::optional_tag,
+                                       ACLEntry>::value, "");
+        static_assert(std::is_constructible<ACLEntry,
+                                            elle::serialization::SerializerIn&,
+                                            elle::Version const&>::value, "");
 
       /*-------------.
       | Construction |
@@ -114,15 +116,13 @@ namespace infinit
         virtual
         void
         set_group_permissions(cryptography::rsa::PublicKey const& key,
-                        bool read,
-                        bool write
-                        );
+                              bool read,
+                              bool write);
         virtual
         void
         set_permissions(cryptography::rsa::PublicKey const& key,
                         bool read,
-                        bool write
-                        );
+                        bool write);
       protected:
         void
         _set_permissions(model::User const& key,
@@ -189,7 +189,7 @@ namespace infinit
         class DataSignature
         {
         public:
-          typedef infinit::serialization_tag serialization_tag;
+          using serialization_tag = infinit::serialization_tag;
           DataSignature(BaseACB<Block> const& block);
           virtual
           void
@@ -216,9 +216,8 @@ namespace infinit
                    elle::Version const& version);
       };
 
-      typedef BaseACB<blocks::ACLBlock> ACB;
+      using ACB = BaseACB<blocks::ACLBlock>;
     }
   }
 }
 
-#endif

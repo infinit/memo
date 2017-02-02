@@ -1,19 +1,93 @@
-#ifndef INFINIT_UTILITY_HH
-# define INFINIT_UTILITY_HH
+#pragma once
 
-# include <boost/filesystem.hpp>
+#include <boost/filesystem.hpp>
 
-# include <elle/Option.hh>
-# include <elle/Version.hh>
-# include <elle/err.hh>
-# include <elle/os/environ.hh>
-# include <elle/system/user_paths.hh>
-# include <elle/system/username.hh>
+#include <elle/Option.hh>
+#include <elle/Version.hh>
+#include <elle/err.hh>
+#include <elle/os/environ.hh>
+#include <elle/system/user_paths.hh>
+#include <elle/system/username.hh>
+#include <elle/unordered_map.hh>
+
+#include <reactor/http/Request.hh>
+
+#include <infinit/User.hh>
 
 namespace infinit
 {
   elle::Version
   version();
+
+  std::string
+  version_describe();
+
+  std::string
+  beyond(bool help = false);
+
+  /// Typically "hub".
+  std::string
+  beyond_delegate_user();
+
+  class MissingResource
+    : public elle::Error
+  {
+  public:
+    template <typename ... Args>
+    MissingResource(Args&& ... args)
+      : elle::Error(std::forward<Args>(args)...)
+    {}
+  };
+
+  class MissingLocalResource
+    : public MissingResource
+  {
+  public:
+    template <typename ... Args>
+    MissingLocalResource(Args&& ... args)
+      : MissingResource(std::forward<Args>(args)...)
+    {}
+  };
+
+  class ResourceGone
+    : public MissingResource
+  {
+  public:
+    template <typename ... Args>
+    ResourceGone(Args&& ... args)
+      : MissingResource(std::forward<Args>(args)...)
+    {}
+  };
+
+  class ResourceProtected
+    : public elle::Error
+  {
+  public:
+    template <typename ... Args>
+    ResourceProtected(Args&& ... args)
+      : elle::Error(std::forward<Args>(args)...)
+    {}
+  };
+
+  class ResourceAlreadyFetched
+    : public elle::Error
+  {
+  public:
+    template <typename ... Args>
+    ResourceAlreadyFetched(Args&& ... args)
+      : elle::Error(std::forward<Args>(args)...)
+    {}
+  };
+
+  class Redirected
+    : public elle::Error
+  {
+  public:
+    Redirected(std::string const& url)
+      : elle::Error(
+        elle::sprintf("%s caused an unsupported redirection", url))
+    {}
+  };
 
   inline
   boost::filesystem::path
@@ -39,7 +113,7 @@ namespace infinit
   inline
   boost::filesystem::path
   _xdg(std::string const& type,
-            boost::filesystem::path const& def)
+       boost::filesystem::path const& def)
   {
     auto const infinit = elle::os::getenv("INFINIT_" + type, "");
     auto const xdg = elle::os::getenv("XDG_" + type, "");
@@ -47,7 +121,19 @@ namespace infinit
       !infinit.empty() ? infinit :
       !xdg.empty() ? boost::filesystem::path(xdg) / "infinit/filesystem" :
       def;
-    return canonical_folder(dir);
+    try
+    {
+      return canonical_folder(dir);
+    }
+    catch (boost::filesystem::filesystem_error& e)
+    {
+      ELLE_LOG_COMPONENT("xdg");
+      std::string env =
+        !infinit.empty() ? "INFINIT_" : !xdg.empty() ? "XDG_" : "";
+      if (!env.empty())
+        ELLE_WARN("Invalid \"%s%s\" directory: %s", env, type, e.what());
+      elle::err(e.what());
+    }
   }
 
   inline
@@ -104,6 +190,44 @@ namespace infinit
   {
     return _xdg_home("STATE", ".local/state");
   }
+
+  using Headers = elle::unordered_map<std::string, std::string>;
+
+  bool
+  is_hidden_file(boost::filesystem::path const& path);
+
+  bool
+  validate_email(std::string const& candidate);
+
+  Headers
+  signature_headers(
+    reactor::http::Method method,
+    std::string const& where,
+    User const& self,
+    boost::optional<elle::ConstWeakBuffer> payload = {});
+
+  template <typename Exception>
+  ELLE_COMPILER_ATTRIBUTE_NORETURN
+  void
+  read_error(reactor::http::Request& r,
+             std::string const& type,
+             std::string const& name);
+
+
+  struct BeyondError
+    : public elle::Error
+  {
+    BeyondError(std::string const& error,
+                std::string const& reason,
+                boost::optional<std::string> const& name = boost::none);
+    BeyondError(elle::serialization::SerializerIn& s);
+
+    std::string
+    name_opt() const;
+
+    ELLE_ATTRIBUTE_R(std::string, error);
+    ELLE_ATTRIBUTE_R(boost::optional<std::string>, name);
+  };
 }
 
-#endif
+#include <infinit/utility.hxx>

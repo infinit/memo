@@ -1,11 +1,10 @@
-#ifndef INFINIT_DESCRIPTOR_TEMPLATED_BASE_DESCRIPTOR_HH
-# define INFINIT_DESCRIPTOR_TEMPLATED_BASE_DESCRIPTOR_HH
+#pragma once
 
-# include <boost/optional.hpp>
+#include <boost/optional.hpp>
 
-# include <elle/Error.hh>
+#include <elle/Error.hh>
 
-# include <infinit/descriptor/BaseDescriptor.hh>
+#include <infinit/descriptor/BaseDescriptor.hh>
 
 namespace infinit
 {
@@ -56,6 +55,4 @@ namespace infinit
   }
 }
 
-# include <infinit/descriptor/TemplatedBaseDescriptor.hxx>
-
-#endif // INFINIT_DESCRIPTOR_TEMPLATED_BASE_DESCRIPTOR_HH
+#include <infinit/descriptor/TemplatedBaseDescriptor.hxx>

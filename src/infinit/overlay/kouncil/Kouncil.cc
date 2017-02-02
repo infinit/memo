@@ -265,14 +265,17 @@ namespace infinit
         if (p.first == model::Address::null)
         {
           auto it = this->_infos.find(peer->id());
-          if (it != this->_infos.end())
+          if (it == this->_infos.end())
+          {
+            ELLE_DEBUG("%s: anon connect suceeded on %s", this, peer->id());
+            this->_infos.insert(std::make_pair(peer->id(), p.second));
+          }
+          else
           {
             ELLE_DEBUG("%s: anon connect gave us a known peer %f", this, peer->id());
             it->second.merge(p.second);
             return;
           }
-          ELLE_DEBUG("%s: anon connect suceeded on %s", this, peer->id());
-          this->_infos.insert(std::make_pair(peer->id(), p.second));
         }
         this->_discover(peer);
       }

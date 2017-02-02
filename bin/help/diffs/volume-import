@@ -1,0 +1,13 @@
+volume: import: Usage: _build/macosx64/bin/infinit-volume --import [OPTIONS...]|volume: import: Usage: _build/macosx64/bin/infinit-volume volume import
+									       |[OPTIONS]
+Import a volume:							       |Import a volume
+									       |
+Import options:								       |Options:
+  -i [ --input ] arg	 File to read the volume from (default: stdin)	       |  -h, --help		    show this help message
+  --mountpoint arg	 Default location to mount the volume (optional)       |      --compatibility-version arg  compatibility version to force
+									       |  -s, --script		    suppress extraneous human friendly messages and use
+									       |JSON output
+									       |  -a, --as arg		    user to run commands as (default: akim)
+									       |  -i, --input arg	    file to read volume from
+									       |  -m, --mountpoint arg	    where to mount the filesystem
+									       |

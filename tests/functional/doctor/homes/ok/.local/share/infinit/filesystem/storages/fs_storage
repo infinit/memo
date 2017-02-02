@@ -1,0 +1,5 @@
+{
+    "name" : "fs_storage",
+    "path" : "/tmp/",
+    "type" : "filesystem"
+}

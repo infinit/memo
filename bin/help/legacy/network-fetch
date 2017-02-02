@@ -1,0 +1,8 @@
+network: fetch: Usage: _build/macosx64/bin/infinit-network --fetch [OPTIONS...]
+
+Fetch a network from the Hub:
+
+Fetch options:
+  -n [ --name ] arg      Network to fetch (optional)
+
+

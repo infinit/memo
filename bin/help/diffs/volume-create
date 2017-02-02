@@ -1,0 +1,66 @@
+volume: create: Usage: _build/macosx64/bin/infinit-volume --create --name      |volume: create: Usage: _build/macosx64/bin/infinit-volume volume create
+VOLUME --network NETWORK [--mountpoint PATH] [OPTIONS...]		       |[OPTIONS]
+									       |Create a volume
+Create a volume:							       |
+									       |Options:
+Create options:								       |  -h, --help		    show this help message
+  --name arg				Volume name			       |      --compatibility-version arg  compatibility version to force
+  --description arg			Description of volume		       |  -s, --script		    suppress extraneous human friendly messages and use
+  -R [ --create-root ] [=arg(=true)]	Create root directory		       |JSON output
+  -N [ --network ] arg			Underlying network to use	       |  -a, --as arg		    user to run commands as (default: akim)
+  --push-volume [=arg(=true)]		Push the volume to the Hub	       |  -n, --name arg	    name of the volume to create
+  -o [ --output ] arg			File to write the volume to	       |  -N, --network arg	    network to create volume for
+					(default: stdout)		       |      --description arg	    volume description
+  -d [ --default-permissions ] arg	Default permissions (optional: r,rw)   |  -R, --create-root	    create root directory
+  -r [ --register-service ] [=arg(=true)]				       |      --push-volume	    push the volume to https://beyond.infinit.sh
+					Register volume in the network	       |  -o, --output arg	    file to write the volume to
+  --allow-root-creation [=arg(=true)]	Create the filesystem root if not found|  -d, --default-permissions arg	 default permissions (optional: r,rw)
+  -m [ --mountpoint ] arg		Where to mount the filesystem	       |  -r, --register-service    register volume in the network
+  --readonly [=arg(=true)]		Mount as readonly		       |      --allow-root-creation  create the filesystem root if not found
+  --mount-name arg			Name of mounted volume		       |  -m, --mountpoint arg	    where to mount the filesystem
+  --mount-icon arg			Path to an icon for mounted volume     |      --readonly	    mount as readonly
+  --finder-sidebar [=arg(=true)]	Show volume in Finder sidebar	       |      --mount-name arg	    name of mounted volume
+  --async [=arg(=true)]			Use asynchronous write operations      |      --mount-icon arg	    path to an icon for mounted volume
+  -d [ --daemon ] [=arg(=true)]		Run as a background daemon	       |      --finder-sidebar	    show volume in Finder sidebar
+  --monitoring [=arg(=true)] (=true)	Enable monitoring (default: true)      |      --async		    use asynchronous write operations
+  --fuse-option arg			Option to pass directly to FUSE	       |  -d, --daemon		    run as a background daemon
+  --cache [=arg(=true)]			Enable caching with default values     |      --monitoring	    enable monitoring
+  --cache-ram-size arg			Maximum RAM block cache size in bytes  |      --fuse-option arg	    option to pass directly to FUSE (default: [])
+					(default: 64 MB)		       |      --cache		    enable caching with default values
+  --cache-ram-ttl arg			RAM block cache time-to-live in seconds|      --cache-ram-size arg  maximum RAM block cache size in bytes (default:
+					(default: 5 minutes)		       |64MB)
+  --cache-ram-invalidation arg		RAM block cache invalidation time in   |      --cache-ram-ttl arg   RAM block cache time-to-live in seconds (default:
+					seconds (default: 15 seconds)	       |5min)
+  --cache-disk-size arg			Size of disk cache for immutable data  |      --cache-ram-invalidation arg  RAM block cache invalidation time in
+					in bytes (default: 512 MB)	       |seconds (default: 15s)
+  --fetch-endpoints [=arg(=true)]	Fetch endpoints from the Hub	       |      --cache-disk-size arg  size of disk cache for immutable data in bytes
+  -f [ --fetch ] [=arg(=true)]		Alias for --fetch-endpoints	       |(default: 512MB)
+  --peer arg				Peer address or file with list of peer |      --fetch-endpoints	    fetch endpoints from https://beyond.infinit.sh
+					addresses (host:port)		       |  -f, --fetch		    fetch volume from https://beyond.infinit.sh
+  --peers-file arg			Periodically write list of known peers |      --peer arg	    peer address or file with list of peer addresses
+					to given file			       |(host:port) (default: [])
+  --push-endpoints [=arg(=true)]	Push endpoints to the Hub	       |      --peers-file arg	    Periodically write list of known peers to given fil
+  -p [ --push ] [=arg(=true)]		Alias for --push-endpoints	       |      --push-endpoints	    push endpoints to https://beyond.infinit.sh
+					--push-volume			       |  -p, --push		    push volume to https://beyond.infinit.sh
+  --publish [=arg(=true)]		Alias for --fetch-endpoints	       |      --publish		    alias for --fetch-endpoints --push-endpoints
+					--push-endpoints		       |      --advertise-host arg  advertise extra endpoint using given host (default:
+  --advertise-host arg			Advertise extra endpoint using given   |[])
+					host				       |      --endpoints-file arg  write node listening endpoints to file (format:
+  --endpoints-file arg			Write node listening endpoints to file |host:port)
+					(format: host:port\n)		       |      --port-file arg	    write node listening port to file
+  --port-file arg			Write node listening port to file      |      --port arg	    outbound port to use
+  --port arg				Outbound port to use		       |      --listen arg	    specify which IP address to listen on (default: all
+  --listen arg				Specify which IP address to listen on  |      --fetch-endpoints-interval arg  period for repolling endpoints from the
+					(default: all)			       |Hub in seconds (default: 300)
+  --fetch-endpoints-interval arg (=300) Period for repolling endpoints from the|  -i, --input arg	    file to read volume from
+					Hub in seconds (default: 300s)	       |
+  -i [ --input ] arg			File to read the commands from	       |
+					(default: stdin)		       |
+									       |
+Deprecated options:							       |
+  --cache-size arg			Use "--cache-ram-size" instead	       |
+  --cache-ttl arg			Use "--cache-ram-ttl" instead	       |
+  --cache-invalidation arg		Use "--cache-ram-invalidation" instead |
+  --disk-cache-size arg			Use "--cache-disk-size" instead	       |
+									       |
+									       |

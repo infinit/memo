@@ -197,7 +197,7 @@ namespace infinit
         }
         catch (std::bad_cast const&)
         {
-          elle::err("doughnut was passed a non-doughnut user.");
+          elle::err("doughnut was passed a non-doughnut user");
         }
       }
 
@@ -215,7 +215,7 @@ namespace infinit
         }
         catch (std::bad_cast const&)
         {
-          elle::err("doughnut was passed a non-doughnut user.");
+          elle::err("doughnut was passed a non-doughnut user");
         }
       }
 

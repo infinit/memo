@@ -1,0 +1,12 @@
+drive: push: Usage: _build/macosx64/bin/infinit-drive --push --name NAME       |drive: push: Usage: _build/macosx64/bin/infinit-drive drive push [OPTIONS]
+[OPTIONS...]								       |Push a drive to https://beyond.infinit.sh
+									       |
+Push a drive to the Hub:						       |Options:
+									       |  -h, --help		    show this help message
+Push options:								       |      --compatibility-version arg  compatibility version to force
+  -n [ --name ] arg	 Drive to push to the Hub			       |  -s, --script		    suppress extraneous human friendly messages and use
+  -i [ --icon ] arg	 Path to an image to use as icon		       |JSON output
+									       |  -a, --as arg		    user to run commands as (default: akim)
+									       |  -n, --name arg	    name of the drive to push
+									       |  -i, --icon arg	    path to an image to use as icon
+									       |

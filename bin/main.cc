@@ -258,17 +258,17 @@ namespace infinit
       auto path = args["input"].as<std::string>();
       if (path != "-")
       {
-        auto file = elle::make_unique<boost::filesystem::ifstream>(path);
+        auto file = std::make_unique<boost::filesystem::ifstream>(path);
         if (!file->good())
           elle::err("unable to open \"%s\" for reading", path);
         return std::move(file);
       }
     }
 #ifndef INFINIT_WINDOWS
-    return elle::make_unique<reactor::FDStream>(0);
+    return std::make_unique<reactor::FDStream>(0);
 #else
     // Windows does not support async io on stdin
-    auto res = elle::make_unique<std::stringstream>();
+    auto res = std::make_unique<std::stringstream>();
     while (true)
     {
       char buf[4096];
@@ -296,24 +296,30 @@ namespace infinit
     {
       program = argv[0];
       std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
-#if  !defined(INFINIT_WINDOWS) && !defined(NO_EXECINFO)
-      std::unique_ptr<crash_reporting::CrashReporter> crash_reporter;
+#if  !defined INFINIT_WINDOWS && !defined NO_EXECINFO
+
+      auto crash_reporter = [&] () -> std::unique_ptr<crash_reporting::CrashReporter>
+        {
+          bool const production_build
 #ifdef INFINIT_PRODUCTION_BUILD
-      bool const production_build = true;
+          = true;
 #else
-      bool const production_build = false;
+          = false;
 #endif
-      if (production_build &&
-          elle::os::getenv("INFINIT_CRASH_REPORTER", "") != "0" ||
-          elle::os::getenv("INFINIT_CRASH_REPORTER", "") == "1")
-      {
-        std::string crash_url =
-          elle::sprintf("%s/crash/report",
-                        crash_host.length() ? crash_host : beyond());
-        auto dumps_path = canonical_folder(xdg_cache_home() / "crashes");
-        crash_reporter = elle::make_unique<crash_reporting::CrashReporter>(
-          crash_url, dumps_path, version_describe);
-      }
+          auto request = elle::os::getenv("INFINIT_CRASH_REPORTER", "");
+          if (production_build && request != "0"
+              || request == "1")
+            {
+              auto crash_url =
+                elle::sprintf("%s/crash/report",
+                              crash_host.length() ? crash_host : beyond());
+              auto dumps_path = canonical_folder(xdg_cache_home() / "crashes");
+              return std::make_unique<crash_reporting::CrashReporter>
+                (crash_url, dumps_path, version_describe());
+            }
+          else
+            return {};
+        }();
 #endif
       reactor::Scheduler sched;
       reactor::Thread main_thread(
@@ -397,7 +403,7 @@ namespace infinit
               }
               if (vm.count("version"))
               {
-                std::cout << version_describe << std::endl;
+                std::cout << version_describe() << std::endl;
                 throw elle::Exit(0);
               }
               auto critical_log_file = xdg_state_home() / "critical.log";
@@ -415,7 +421,7 @@ namespace infinit
                 boost::filesystem::create_directories(
                   critical_log_file.parent_path());
                 std::unique_ptr<elle::log::CompositeLogger> cl
-                  = elle::make_unique<elle::log::CompositeLogger>();
+                  = std::make_unique<elle::log::CompositeLogger>();
                 auto clptr = cl.get();
                 auto prev_logger = elle::log::logger(std::move(cl));
                 critical_log_stream.reset(new std::ofstream(
@@ -426,7 +432,7 @@ namespace infinit
                   env_log_level = elle::os::getenv("ELLE_LOG_LEVEL");
                 elle::os::unsetenv("ELLE_LOG_LEVEL");
                 std::unique_ptr<elle::log::Logger> crit
-                  = elle::make_unique<elle::log::TextLogger>(
+                  = std::make_unique<elle::log::TextLogger>(
                     *critical_log_stream, "LOG", false, true,
                     false, true, false, true, true);
                 if (env_log_level)
@@ -470,7 +476,8 @@ namespace infinit
                 get_mode(hidden_modes.get());
               if (misplaced_mode)
               {
-                (help ? std::cout : std::cerr) << "MODE must be the first argument." << std::endl;
+                (help ? std::cout : std::cerr)
+                  << "MODE must be the first argument." << std::endl;
                 mode = nullptr;
               }
               if (!mode)
@@ -492,7 +499,7 @@ namespace infinit
                 return;
               }
               std::unique_ptr<reactor::Thread> crash_upload_thread;
-#if !defined(INFINIT_WINDOWS) && !defined(NO_EXECINFO)
+#if !defined INFINIT_WINDOWS && !defined NO_EXECINFO
               if (crash_reporter && crash_reporter->crashes_pending_upload())
               {
                 crash_upload_thread.reset(new reactor::Thread("upload crashes",
@@ -558,8 +565,7 @@ namespace infinit
             }
             catch (boost::program_options::error_with_option_name const& e)
             {
-              throw elle::Error(
-                elle::sprintf("command line error: %s", e.what()));
+              elle::err("command line error: %s", e.what());
             }
           }
         });
@@ -573,14 +579,10 @@ namespace infinit
     {
       ELLE_TRACE("fatal error: %s\n%s", e.what(), e.backtrace());
       if (!elle::os::getenv("INFINIT_BACKTRACE", "").empty())
-      {
         elle::fprintf(std::cerr, "%s: fatal error: %s\n%s\n", argv[0],
                       e.what(), e.backtrace());
-      }
       else
-      {
         elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
-      }
       return 1;
     }
     catch (std::exception const& e)
@@ -600,11 +602,8 @@ namespace infinit
     reactor::http::Request r(url);
     reactor::wait(r);
     if (r.status() != reactor::http::StatusCode::OK)
-    {
-      throw elle::Error(
-        elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\"",
-                      r.status(), this->name));
-    }
+      elle::err("unexpected HTTP error %s fetching endpoints for \"%s\"",
+                r.status(), this->name);
     auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
     for (auto const& user: json)
     {
@@ -759,7 +758,7 @@ option_push(boost::program_options::variables_map const& args,
 void
 hook_stats_signals(infinit::model::doughnut::Doughnut& dht)
 {
-  #ifndef INFINIT_WINDOWS
+#ifndef INFINIT_WINDOWS
   reactor::scheduler().signal_handle(SIGUSR1, [&dht] {
       auto& o = dht.overlay();
       try
@@ -781,5 +780,5 @@ hook_stats_signals(infinit::model::doughnut::Doughnut& dht)
         ELLE_TRACE("overlay blockcount query error: %s", e);
       }
   });
-  #endif
+#endif
 }

@@ -1,0 +1,11 @@
+network: push: Usage: _build/macosx64/bin/infinit-network --push --name NETWORK|network: push: Usage: _build/macosx64/bin/infinit-network network push [OPTIONS
+[OPTIONS...]								       |Push a network to https://beyond.infinit.sh
+									       |
+Push a network to the Hub:						       |Options:
+									       |  -h, --help		    show this help message
+Push options:								       |      --compatibility-version arg  compatibility version to force
+  -n [ --name ] arg	 Network to push				       |  -s, --script		    suppress extraneous human friendly messages and use
+									       |JSON output
+									       |  -a, --as arg		    user to run commands as (default: akim)
+									       |  -n, --name arg	    name of the network to push
+									       |

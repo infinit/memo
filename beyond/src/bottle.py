@@ -106,6 +106,8 @@ class Bottle(bottle.Bottle):
         getattr(self, 'oauth_%s_get' % s))
       self.route('/users/<username>/credentials/%s' % s) \
         (getattr(self, 'user_%s_credentials_get' % s))
+      self.route('/users/<username>/credentials/%s/<id>' % s) \
+        (getattr(self, 'user_%s_credentials_get' % s))
       self.route('/users/<username>/credentials/%s' % s, method = 'DELETE') \
         (getattr(self, 'user_%s_credentials_delete' % s))
       self.route('/users/<username>/credentials/%s/<id>' % s,
@@ -1253,15 +1255,21 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       raise self._Bottle__user_not_found(username)
   oauth.__name__ = 'oauth_%s' % name
   setattr(Bottle, oauth.__name__, oauth)
-  def user_credentials_get(self, username, name = name):
+  def user_credentials_get(self, username, name = name, id = None):
     beyond = self._Bottle__beyond
     try:
       user = beyond.user_get(name = username)
       self.authenticate(user)
-      return {
+      res = {
         'credentials':
-          list(getattr(user, '%s_accounts' % name).values()),
+        list(
+          filter(lambda entry: True if id is None else entry.get('uid') == id,
+                 getattr(user, '%s_accounts' % name).values()))
       }
+      if id is not None and len(res['credentials']) == 0:
+        raise self._Bottle__not_found("%s_credentials_%s" % (name, id),
+                                      name)
+      return res
     except User.NotFound:
       raise self._Bottle__user_not_found(username)
   user_credentials_get.__name__ = 'user_%s_credentials_get' % name
@@ -1275,14 +1283,14 @@ for name, conf in Bottle._Bottle__oauth_services.items():
         accounts = getattr(user, '%s_accounts' % name)
         if id is not None:
           if id not in accounts.keys():
-            raise self._Bottle__not_found("%s credentials %s" % (name, id),
+            raise self._Bottle__not_found("%s_credentials_%s" % (name, id),
                                           name)
           getattr(user, '%s_accounts' % name)[id] = None
         else:
           getattr(user, '%s_accounts' % name).clear()
         user.save()
       else:
-        raise self._Bottle__not_found("%s credentials",  name)
+        raise self._Bottle__not_found("%s_credentials" % name,  name)
       return {
         'credentials':
           list(getattr(user, '%s_accounts' % name).values()),

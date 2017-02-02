@@ -358,7 +358,7 @@ namespace infinit
         if (!rpcs._key)
           elle::err("Authentication required");
         if (write_op && !this->_passports.at(&rpcs).allow_write())
-          elle::err("Write permission denied.");
+          elle::err("Write permission denied");
       }
 
       void

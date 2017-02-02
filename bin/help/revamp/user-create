@@ -1,0 +1,20 @@
+user: create: Usage: _build/macosx64/bin/infinit-user user create [OPTIONS]
+Create a user
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: akim)
+  -n, --name arg            name of the user to create (default: akim)
+      --description arg     user description
+  -k, --key arg             RSA key pair in PEM format - e.g. your SSH key
+  -e, --email arg           user email
+      --fullname arg        user full name
+  -P, --password arg        password to authenticate with https://beyond.infinit.sh
+  -l, --ldap-name arg       user LDAP distinguished name
+  -o, --output arg          file to write the user to
+      --push-user           push user to https://beyond.infinit.sh
+  -p, --push                push user to https://beyond.infinit.sh
+      --full                include private key (do not use unless you understand the implications
+

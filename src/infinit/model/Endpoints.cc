@@ -206,6 +206,20 @@ namespace infinit
         elle::fprintf(output, "unknown peer (%s)", loc.endpoints());
       return output;
     }
+
+    infinit::model::Endpoints
+    endpoints_from_file(boost::filesystem::path const& path)
+    {
+      boost::filesystem::ifstream f;
+      f.open(path);
+      if (!f.good())
+        elle::err("unable to open for reading: %s", path);
+      infinit::model::Endpoints res;
+      for (std::string line; std::getline(f, line); )
+        if (line.length())
+          res.emplace_back(infinit::model::Endpoint(line));
+      return res;
+    }
   }
 }
 

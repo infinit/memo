@@ -1,0 +1,11 @@
+acl: get-xattr: Usage: _build/macosx64/bin/infinit-acl acl get-xattr [OPTIONS]
+Get an extended attribute value
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: akim)
+      --path arg            file whose acl to get
+  -n, --name arg            name of the acl to get
+

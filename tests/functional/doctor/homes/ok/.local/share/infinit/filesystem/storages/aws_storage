@@ -1,0 +1,12 @@
+{
+    "aws_credentials" : {
+        "access_key_id" : "AKIAIOSFODNN7EXAMPLE",
+        "bucket" : "osef",
+        "folder" : "aws_storage_blocks",
+        "region" : "us-east-1",
+        "secret_access_key" : "debugdebugdebugdebugdebugdebugdebugdebug"
+    },
+    "name" : "aws_storage",
+    "storage_class" : "default",
+    "type" : "s3"
+}

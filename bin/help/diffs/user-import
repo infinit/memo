@@ -1,0 +1,11 @@
+user: import: Usage: _build/macosx64/bin/infinit-user --import [OPTIONS...]    |user: import: Usage: _build/macosx64/bin/infinit-user user import [OPTIONS]
+									       |Import local user
+Import a user:								       |
+									       |Options:
+Import options:								       |  -h, --help		    show this help message
+  -i [ --input ] arg	 File to read the user from (default: stdin)	       |      --compatibility-version arg  compatibility version to force
+									       |  -s, --script		    suppress extraneous human friendly messages and use
+									       |JSON output
+									       |  -a, --as arg		    user to run commands as (default: akim)
+									       |  -i, --input arg	    file to read user from
+									       |

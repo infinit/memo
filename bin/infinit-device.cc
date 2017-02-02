@@ -1,6 +1,6 @@
 #include <elle/log.hh>
 
-#include <das/serializer.hh>
+#include <elle/serialization/Serializer.hh>
 
 ELLE_LOG_COMPONENT("infinit-device");
 
@@ -24,6 +24,44 @@ std::string
 get_name(variables_map const& args, std::string const& name = "name")
 {
   return get_username(args, name);
+}
+
+namespace
+{
+  /// Add custom headers to be sent to the server.
+  ///
+  /// \param headers   a map of name -> content.
+  template <typename Map>
+  void
+  headers_add(reactor::http::Request::Configuration& c,
+              Map const& headers)
+  {
+    for (auto const& header: headers)
+      c.header_add(header.first, header.second);
+  }
+
+  /// Deserialize \a s as a \a T.
+  template <typename T>
+  auto
+  from_json(std::string const& s)
+    -> T
+  {
+    std::stringstream stream;
+    stream << s;
+    auto input = elle::serialization::json::SerializerIn(stream, false);
+    return input.deserialize<T>();
+  }
+
+  /// Serialize \a t as Json.
+  template <typename T>
+  auto
+  to_json(T const& t)
+    -> std::string
+  {
+    std::stringstream stream;
+    elle::serialization::json::serialize(t, stream, false);
+    return stream.str();
+  }
 }
 
 struct PairingInformation
@@ -50,23 +88,16 @@ public:
 
   boost::optional<elle::Buffer> data;
   boost::optional<std::string> passphrase_hash;
-
-  using Model =
-    das::Model<PairingInformation,
-               decltype(elle::meta::list(
-                          infinit::symbols::data,
-                          infinit::symbols::passphrase_hash))>;
 };
+
 
 COMMAND(transmit_user)
 {
   auto user = self_user(ifnt, args);
   auto passphrase = pairing_passphrase(args);
-  std::stringstream serialized_user;
-  elle::serialization::json::serialize(user, serialized_user, false);
-  infinit::cryptography::SecretKey key{passphrase};
-  PairingInformation p(
-    key.encipher(serialized_user.str(),
+  auto key = infinit::cryptography::SecretKey{passphrase};
+  auto p = PairingInformation(
+    key.encipher(to_json(user),
                  infinit::cryptography::Cipher::aes256),
     hash_password(passphrase, _pair_salt));
   beyond_push(
@@ -83,61 +114,59 @@ COMMAND(transmit_user)
         auto where = elle::sprintf("users/%s/pairing/status", user.name);
         while (timeout > 0)
         {
-          reactor::http::Request::Configuration c;
+          auto c = reactor::http::Request::Configuration{};
           auto headers =
-            signature_headers(reactor::http::Method::GET, where, user);
-          for (auto const& header: headers)
-            c.header_add(header.first, header.second);
-          reactor::http::Request r(
-            elle::sprintf("%s/%s", beyond(), where),
+            infinit::signature_headers(reactor::http::Method::GET, where, user);
+          headers_add(c, headers);
+          auto r = reactor::http::Request(
+            elle::sprintf("%s/%s", infinit::beyond(), where),
             reactor::http::Method::GET,
             std::move(c));
           reactor::wait(r);
-          if (r.status() == reactor::http::StatusCode::OK)
+          switch (r.status())
           {
+          case reactor::http::StatusCode::OK:
             // Do nothing.
-          }
-          else if (r.status() == reactor::http::StatusCode::Not_Found)
-          {
+            break;
+
+          case reactor::http::StatusCode::Not_Found:
             done = true;
             return;
-          }
-          else if (r.status() == reactor::http::StatusCode::Gone)
-          {
+
+          case reactor::http::StatusCode::Gone:
             timed_out = true;
             return;
-          }
-          else if (r.status() == reactor::http::StatusCode::Forbidden)
-          {
-            infinit::read_error<ResourceProtected>(r, "user identity", user.name);
-          }
-          else
-          {
-            throw elle::Error(
-              elle::sprintf("unexpected HTTP error %s fetching user identity",
-                            r.status()));
+
+          case reactor::http::StatusCode::Forbidden:
+            infinit::read_error<infinit::ResourceProtected>(
+              r, "user identity", user.name);
+            break;
+
+          default:
+            elle::err("unexpected HTTP error %s fetching user identity",
+                      r.status());
           }
           reactor::sleep(10_sec);
         }
       });
     for (; timeout > 0; timeout--)
     {
-      std::cout << elle::sprintf("User identity on %s for: ", beyond(true))
-                << timeout << " seconds" << std::flush;
+      elle::printf("User identity on %s for %s seconds",
+                   infinit::beyond(true), timeout);
+      std::cout.flush();
       reactor::sleep(1_sec);
-      std::cout << "\r" << std::string(80, ' ') << "\r";
+      std::cout << '\r' << std::string(80, ' ') << '\r';
       if (done)
       {
-        std::cout << "User identity received on another device" << std::endl;
+        std::cout << "User identity received on another device\n";
         return;
       }
-      if (timed_out)
+      else if (timed_out)
         break;
     }
     beyond_poller.terminate_now();
-    std::cout << elle::sprintf(
-      "Timed out, user identity no longer available on %s", beyond(true))
-              << std::endl;
+    elle::printf("Timed out, user identity no longer available on %s\n",
+                 infinit::beyond(true));
   }
 }
 
@@ -154,39 +183,34 @@ COMMAND(receive_user)
   auto name = get_name(args);
   auto passphrase = pairing_passphrase(args);
   auto hashed_passphrase = hash_password(passphrase, _pair_salt);
+  try
   {
-    try
-    {
-      auto pairing = beyond_fetch<PairingInformation>(
-        elle::sprintf("users/%s/pairing", name), "pairing",
-        name, boost::none,
-        {{"infinit-pairing-passphrase-hash", hashed_passphrase}},
-        false);
-      infinit::cryptography::SecretKey key{passphrase};
-      auto data = key.decipher(*pairing.data,
-                               infinit::cryptography::Cipher::aes256);
-      std::stringstream stream;
-      stream << data.string();
-      elle::serialization::json::SerializerIn input(stream, false);
-      auto user = input.deserialize<infinit::User>();
-      ifnt.user_save(user, true);
-    }
-    catch (ResourceGone const& e)
-    {
-      std::cerr << elle::sprintf("User identity no longer available on %s, "
-                                 "retransmit from the original device",
-                                 beyond(true))
-                << std::endl;
-      throw;
-    }
-    catch (MissingResource const& e)
-    {
-      if (e.what() == std::string("user/not_found"))
-        not_found(name, "User");
-      if (e.what() == std::string("pairing/not_found"))
-        not_found(name, "Pairing");
-      throw;
-    }
+    auto pairing = infinit::beyond_fetch<PairingInformation>(
+      elle::sprintf("users/%s/pairing", name), "pairing",
+      name, boost::none,
+      {{"infinit-pairing-passphrase-hash", hashed_passphrase}},
+      false);
+    auto key = infinit::cryptography::SecretKey{passphrase};
+    auto data = key.decipher(*pairing.data,
+                             infinit::cryptography::Cipher::aes256);
+    auto user = from_json<infinit::User>(data.string());
+    ifnt.user_save(user, true);
+  }
+  catch (infinit::ResourceGone const& e)
+  {
+    elle::fprintf(std::cerr,
+                  "User identity no longer available on %s, "
+                  "retransmit from the original device\n",
+                  infinit::beyond(true));
+    throw;
+  }
+  catch (infinit::MissingResource const& e)
+  {
+    if (e.what() == std::string("user/not_found"))
+      not_found(name, "User");
+    else if (e.what() == std::string("pairing/not_found"))
+      not_found(name, "Pairing");
+    throw;
   }
   report_action("received", "user identity for", name);
 }
@@ -212,13 +236,13 @@ main(int argc, char** argv)
     {
       "transmit",
       elle::sprintf("transmit object to another device using %s",
-                    beyond(true)).c_str(),
+                    infinit::beyond(true)).c_str(),
       &transmit,
       {},
       {
         { "user,u", bool_switch(),
           elle::sprintf("Transmit the user identity to another device using %s",
-                        beyond(true)).c_str(), },
+                        infinit::beyond(true)).c_str(), },
         option_passphrase,
         { "no-countdown", bool_switch(), "do not show countdown timer" },
       },
@@ -226,14 +250,14 @@ main(int argc, char** argv)
     {
       "receive",
       elle::sprintf("Receive an object from another device using %s",
-                    beyond(true)).c_str(),
+                    infinit::beyond(true)).c_str(),
       &receive,
       {},
       {
         { "name,n", value<std::string>(), "name of object to receive" },
         { "user,u", bool_switch(),
           elle::sprintf("receive a user identity from another device using %s",
-                        beyond(true)).c_str() },
+                        infinit::beyond(true)).c_str() },
         option_passphrase,
       },
     },

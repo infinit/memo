@@ -1,0 +1,12 @@
+volume: pull: Usage: _build/macosx64/bin/infinit-volume --pull --name VOLUME   |volume: pull: Usage: _build/macosx64/bin/infinit-volume volume pull [OPTIONS]
+[OPTIONS...]								       |Remove a volume from https://beyond.infinit.sh
+									       |
+Remove a volume from the Hub:						       |Options:
+									       |  -h, --help		    show this help message
+Pull options:								       |      --compatibility-version arg  compatibility version to force
+  -n [ --name ] arg	 Volume to remove				       |  -s, --script		    suppress extraneous human friendly messages and use
+  --purge		 Remove objects that depend on the volume	       |JSON output
+									       |  -a, --as arg		    user to run commands as (default: akim)
+									       |  -n, --name arg	    name of the volume to pull
+									       |      --purge		    purge objects owned by the volume
+									       |

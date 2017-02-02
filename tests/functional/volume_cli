@@ -61,8 +61,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
            '-V', 'v', '-N', 'n', '-p'])
   assertEq(
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 1)
-  bob.run(['infinit-volume', '--delete', '--as', 'bob',
-           '--purge', '--pull', 'v'])
+  bob.run(['infinit-volume', '--delete', '--name', 'v', '--as', 'bob',
+           '--purge', '--pull'])
   assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
   assertEq(
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)
@@ -76,7 +76,8 @@ def alice_bob_network_volume(alice, bob, network = "network", volume = "volume")
   bob.run(['infinit-user', '--fetch', 'alice', '--as', 'bob'])
   alice.run(['infinit-user', '--fetch', 'bob', '--as', 'alice'])
   bob.run(['infinit-storage', '--create', '--as', 'bob', 's', '--filesystem'])
-  bob.run(['infinit-network', '--create', '--kelips', '--as', 'bob', network,
+  # FIXME: try some permutations of the options.
+  bob.run(['infinit-network', '--create',  network, '--kelips', '--as', 'bob',
            '-S', 's', '-p'])
   bob.run(['infinit-volume', '--create', '--as', 'bob', volume, '-N', network, '-p'])
   return network, volume
@@ -142,7 +143,7 @@ with Infinit() as alice:
   assertEq(mount_opts['push'], True)
   assertEq(mount_opts['cache'], True)
   # Check unsetting of option
-  alice.run(['infinit-volume', '--update', '--as', 'alice', 'v', '--cache=no'])
+  alice.run(['infinit-volume', '--update', '--as', 'alice', 'v', '--cache=false'])
   mount_opts = vol()['mount_options']
   assertEq(mount_opts['cache'], False)
 

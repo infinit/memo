@@ -134,7 +134,7 @@ COMMAND(create)
     auto account_name = mandatory(args, "account");
     auto account = ifnt.credentials_gcs(account_name);
     config =
-      elle::make_unique<infinit::storage::GCSConfig>
+      std::make_unique<infinit::storage::GCSConfig>
       (name, bucket, *root, self_user(ifnt, {}).name, account->refresh_token,
        std::move(capacity), std::move(description));
   }
@@ -172,7 +172,7 @@ COMMAND(create)
                                              storage_class_str.get()));
       }
     }
-    config = elle::make_unique<infinit::storage::S3StorageConfig>(
+    config = std::make_unique<infinit::storage::S3StorageConfig>(
       name,
       std::move(aws_credentials),
       storage_class,
@@ -186,7 +186,7 @@ COMMAND(create)
       root = elle::sprintf("storage_%s", name);
     auto account_name = mandatory(args, "account", "Dropbox account");
     auto account = ifnt.credentials_dropbox(account_name);
-    config = elle::make_unique<infinit::storage::DropboxStorageConfig>(
+    config = std::make_unique<infinit::storage::DropboxStorageConfig>(
       name, account->token, std::move(root), std::move(capacity),
       std::move(description));
   }
@@ -198,7 +198,7 @@ COMMAND(create)
     auto account_name = mandatory(args, "account", "Google account");
     auto account = ifnt.credentials_google(account_name);
     config =
-      elle::make_unique<infinit::storage::GoogleDriveStorageConfig>
+      std::make_unique<infinit::storage::GoogleDriveStorageConfig>
       (name,
        std::move(root),
        account->refresh_token,
@@ -211,7 +211,7 @@ COMMAND(create)
   {
     auto host = mandatory(args, "host", "SSH remote host");
     auto path = mandatory(args, "path", "Remote path to store into");
-    config = elle::make_unique<infinit::storage::SFTPStorageConfig>(
+    config = std::make_unique<infinit::storage::SFTPStorageConfig>(
       name, host, path, capacity, std::move(description));
   }
 #endif
@@ -236,7 +236,7 @@ COMMAND(create)
                   << std::endl;
       }
     }
-    config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
+    config = std::make_unique<infinit::storage::FilesystemStorageConfig>(
       name, std::move(path.string()), std::move(capacity),
       std::move(description));
   }
