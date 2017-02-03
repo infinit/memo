@@ -668,11 +668,12 @@ namespace infinit
             fd = *fit;
             _file_cache.modify(fit,
               [](std::shared_ptr<FileData>& d) {d->_last_used = now();});
-            (*fit)->update(*block, perms);
+            (*fit)->update(*block, perms, block_size().value_or(File::default_block_size));
           }
           else
           {
-            fd = std::make_shared<FileData>(current_path / name, *block, perms);
+            fd = std::make_shared<FileData>(current_path / name, *block, perms,
+              block_size().value_or(File::default_block_size));
             _file_cache.insert(fd);
           }
         return std::shared_ptr<rfs::Path>(new File(*this, address, fd, d, name));

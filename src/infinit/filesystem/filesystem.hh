@@ -129,11 +129,15 @@ namespace infinit
     public:
       using clock = std::chrono::high_resolution_clock;
       FileData(boost::filesystem::path path,
-               Block& block, std::pair<bool, bool> perms);
+               Block& block, std::pair<bool, bool> perms,
+               int block_size);
       FileData(boost::filesystem::path path,
-               model::Address address, int mode);
+               model::Address address, int mode,
+               int block_size);
       void
-      update(model::blocks::Block& block, std::pair<bool, bool> perms);
+      update(model::blocks::Block& block,
+             std::pair<bool, bool> perms,
+             int block_size);
       void
       write(FileSystem& fs,
             WriteTarget target = WriteTarget::all,
@@ -293,7 +297,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(FileCache, file_cache);
       ELLE_ATTRIBUTE_RX(std::vector<reactor::Thread::unique_ptr>, running);
       ELLE_ATTRIBUTE_RX(int, prefetching);
-      ELLE_ATTRIBUTE_R(boost::optional<int>, block_size);
+      ELLE_ATTRIBUTE_RW(boost::optional<int>, block_size);
       typedef
       std::unordered_map<Address, std::weak_ptr<FileBuffer>>
       FileBuffers;
