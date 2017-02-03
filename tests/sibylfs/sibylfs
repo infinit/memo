@@ -9,7 +9,6 @@ with Infinit(user = 'bob') as bob:
   bob.run(['infinit-volume', '--create', 'v', '--network', 'n'])
   suites_path = os.environ['SIBYLFS_SUITE_PATH']
   sibylfs_bin = os.environ['SIBYLFS_BIN_PATH']
-  fails_expected = int(os.environ['EXPECTED_FAILS'])
   vol_proc = None
   try:
     mountpoint = '%s/mnt' % bob
@@ -35,28 +34,42 @@ with Infinit(user = 'bob') as bob:
     check_dir = '%s/%s' % (out_dir, os.listdir(out_dir)[0])
     bob.run([sibylfs_bin, 'check', 'posix_spec', check_dir])
     # Check that .err files generated while checking the traces are empty.
-    res = {}
-    fail_count = 0
     prefix = 'check_exec_' # prefix of output files from checking traces.
     results_dir = '%s/path=%s' % (check_dir, mountpoint)
+    unexpected_passes = []
+    unexpected_fails = []
+    def load_results(name):
+      res = []
+      dir = os.path.dirname(os.path.realpath(__file__))
+      with open('%s/%s' % (dir, name), 'r') as f:
+        for test in f:
+          res.append(test.strip())
+      return res
+    expected_passes = load_results('passes')
+    expected_fails = load_results('fails')
     for dir_path, _, file_names in os.walk(results_dir):
       if dir_path.split('/')[-1] == 'results':
         for name in file_names:
           if name.split('.')[-1] == 'err' and name.startswith(prefix):
             suite = dir_path.split('/')[-2]
-            if not res.get(suite):
-              res[suite] = {'total': 0, 'passed': 0}
-            res[suite]['total'] += 1
+            test_name = '%s/%s' % (suite, name.split('.')[0][len(prefix):])
             if os.path.getsize('%s/%s' % (dir_path, name)) > 0:
-              fail_count += 1
-              print('failed: %s -- %s' % (suite,
-                                          name.split('.')[0][len(prefix):]))
+              if test_name not in expected_fails:
+                unexpected_fails.append(test_name)
             else:
-              res[suite]['passed'] += 1
-    import json
-    print('failed %s tests' % fail_count)
-    print(json.dumps(res, indent = 2, sort_keys = True))
-    assertEq(fail_count, fails_expected)
+              if test_name not in expected_passes:
+                unexpected_passes.append(test_name)
+    if len(unexpected_passes):
+      print('Unexpected passes:')
+      for t in unexpected_passes:
+        print(t)
+      print()
+    if len(unexpected_fails):
+      print('Unexpected fails:')
+      for t in unexpected_fails:
+        print(t)
+    assertEq(len(unexpected_fails), 0)
+    assertEq(len(unexpected_passes), 0)
   finally:
     if vol_proc:
       vol_proc.terminate()

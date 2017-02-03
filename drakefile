@@ -1281,7 +1281,6 @@ def configure(
       'SIBYLFS_SUITE_PATH': str(
         drake.path_build(sibylfs_test_suite_version_file.path(True).dirname(),
                          absolute = True)),
-      'EXPECTED_FAILS': str(10205), # Change as we fix things (0.7.2 had 10205).
     }
     sibylfs_runner = drake.Runner(
       exe = sibylfs_test,
