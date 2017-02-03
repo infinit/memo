@@ -245,8 +245,8 @@ namespace infinit
             });
           for (; timeout > 0; timeout--)
           {
-            elle::printf("User identity on %s for %s seconds",
-                         infinit::beyond(true), timeout);
+            elle::fprintf(std::cout, "User identity on %s for %s seconds",
+                          infinit::beyond(true), timeout);
             std::cout.flush();
             reactor::sleep(1_sec);
             std::cout << '\r' << std::string(80, ' ') << '\r';
@@ -259,8 +259,9 @@ namespace infinit
               break;
           }
           beyond_poller.terminate_now();
-          elle::printf("Timed out, user identity no longer available on %s\n",
-                       infinit::beyond(true));
+          elle::fprintf(
+            std::cout, "Timed out, user identity no longer available on %s\n",
+            infinit::beyond(true));
         }
       }
     }
