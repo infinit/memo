@@ -839,5 +839,9 @@ namespace infinit
     {
       elle::fprintf(stream, "File(\"%s\")", this->_name);
     }
+
+    const
+    unsigned long
+    File::default_block_size = 1024 * 1024;
   }
 }
