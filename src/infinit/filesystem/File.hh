@@ -51,7 +51,7 @@ namespace infinit
       bool allow_cache() override;
       void print(std::ostream& output) const override;
 
-      static const unsigned long default_block_size = 1024 * 1024;
+      static const unsigned long default_block_size;
     private:
       friend class FileHandle;
       friend class Directory;

@@ -90,8 +90,8 @@ namespace infinit
                             cli::port = boost::none,
                             cli::listen = boost::none,
                             cli::fetch_endpoints_interval = 300,
-                            cli::input = boost::none
-                            ))>
+                            cli::input = boost::none,
+                            cli::block_size = int()))>
       create;
       void
       mode_create(std::string const& name,
@@ -136,7 +136,8 @@ namespace infinit
                   boost::optional<int> port = {},
                   boost::optional<std::string> listen = {},
                   Defaulted<int> fetch_endpoints_interval = 300,
-                  boost::optional<std::string> input = {});
+                  boost::optional<std::string> input = {},
+                  Defaulted<int> block_size = 1024 * 1024);
 
 
       /*---------------.
@@ -561,7 +562,8 @@ namespace infinit
                             cli::listen = boost::none,
                             cli::fetch_endpoints_interval = 300,
                             cli::input = boost::none,
-                            cli::user = boost::none))>
+                            cli::user = boost::none,
+                            cli::block_size = boost::none))>
       update;
       void
       mode_update(std::string const& name,
@@ -602,7 +604,8 @@ namespace infinit
                   boost::optional<std::string> listen = {},
                   Defaulted<int> fetch_endpoints_interval = 300,
                   boost::optional<std::string> input = {},
-                  boost::optional<std::string> user = {});
+                  boost::optional<std::string> user = {},
+                  boost::optional<int> block_size = {});
     };
   }
 }

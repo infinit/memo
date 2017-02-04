@@ -206,7 +206,7 @@ namespace infinit
       auto v = cli.compatibility_version().value_or(infinit::version());
       if (host)
       {
-        elle::printf("Client mode (version: %s):", v) << std::endl;
+        elle::fprintf(std::cout, "Client mode (version: %s):", v) << std::endl;
         infinit::networking::perform(mode_name,
                                      protocol_name,
                                      packet_size,
@@ -222,7 +222,7 @@ namespace infinit
       }
       else
       {
-        elle::printf("Server mode (version: %s):", v) << std::endl;
+        elle::fprintf(std::cout, "Server mode (version: %s):", v) << std::endl;
         auto servers = infinit::networking::Servers(protocol_name,
                                                     port,
                                                     tcp_port,

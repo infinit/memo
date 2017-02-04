@@ -14,7 +14,8 @@ namespace infinit
            std::string network,
            MountOptions const& mount_options,
            boost::optional<std::string> default_permissions,
-           boost::optional<std::string> description);
+           boost::optional<std::string> description,
+           boost::optional<int> block_size);
 
     Volume(elle::serialization::SerializerIn& s);
 
@@ -44,6 +45,7 @@ namespace infinit
     std::string network;
     MountOptions mount_options;
     boost::optional<std::string> default_permissions;
+    boost::optional<int> block_size;
     using serialization_tag = infinit::serialization_tag;
   };
 }

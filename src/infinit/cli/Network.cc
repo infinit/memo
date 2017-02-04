@@ -1383,8 +1383,8 @@ namespace infinit
           infinit::Headers());
 
       // FIXME: write Storages::operator(std::ostream&)
-      elle::printf("{\"usage\": %s, \"capacity\": %s}",
-                   res.usage, res.capacity);
+      elle::fprintf(std::cout, "{\"usage\": %s, \"capacity\": %s}",
+                    res.usage, res.capacity);
     }
 
 

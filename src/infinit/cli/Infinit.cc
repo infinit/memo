@@ -303,7 +303,8 @@ namespace infinit
     {
       if (!this->script())
       {
-        elle::printf("%s%s.\n", (char)toupper(msg[0]), msg.substr(1));
+        elle::fprintf(std::cout,
+                      "%s%s.\n", (char)toupper(msg[0]), msg.substr(1));
         std::cout.flush();
       }
     }
