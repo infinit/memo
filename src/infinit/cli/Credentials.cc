@@ -5,6 +5,7 @@
 #include <elle/err.hh>
 
 #include <infinit/cli/Infinit.hh>
+#include <infinit/cli/Object.hxx>
 #include <infinit/cli/utility.hh>
 
 namespace infinit

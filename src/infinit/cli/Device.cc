@@ -3,6 +3,7 @@
 #include <elle/serialization/Serializer.hh>
 
 #include <infinit/cli/Infinit.hh>
+#include <infinit/cli/Object.hxx>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
 ELLE_LOG_COMPONENT("cli.device");

@@ -12,19 +12,19 @@ namespace infinit
 {
   namespace cli
   {
-    template <typename Self>
+    template <typename Self, typename Owner = Infinit>
     class Object;
 
-    template <typename Self>
+    template <typename Self, typename Owner = Infinit>
     using ObjectCallable =
       decltype(
         das::named::function(
-          das::bind_method(std::declval<Object<Self>&>(), cli::call),
+          das::bind_method(std::declval<Object<Self, Owner>&>(), cli::call),
           help = false));
 
-    template <typename Self>
+    template <typename Self, typename Owner>
     class Object
-      : public ObjectCallable<Self>
+      : public ObjectCallable<Self, Owner>
     {
     public:
       Object(Infinit& infinit);
@@ -32,6 +32,8 @@ namespace infinit
       help(std::ostream& s);
       void
       call(bool help);
+      void
+      recurse(std::vector<std::string>& args);
       template <typename Symbol, typename ... Args>
       static
       auto

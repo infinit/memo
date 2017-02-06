@@ -1,6 +1,7 @@
 #include <infinit/cli/Drive.hh>
 
 #include <infinit/cli/Infinit.hh>
+#include <infinit/cli/Object.hxx>
 #include <infinit/cli/utility.hh> // infinit::beyond_delegate_user
 
 ELLE_LOG_COMPONENT("infinit-drive");

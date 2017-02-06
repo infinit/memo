@@ -4,6 +4,7 @@
 
 #include <infinit/MountOptions.hh>
 #include <infinit/cli/Infinit.hh>
+#include <infinit/cli/Object.hxx>
 #include <infinit/cli/utility.hh>
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/Model.hh>

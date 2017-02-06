@@ -97,29 +97,7 @@ namespace infinit
 
     Silo::Silo(Infinit& infinit)
       : Object(infinit)
-      , create(
-        "Create local silo",
-        das::cli::Options{
-          {"path", das::cli::Option{'\0', "directory where to store blocks", false}},
-        },
-        this->bind(modes::mode_create,
-                   name,
-                   description = boost::none,
-                   capacity = boost::none,
-                   output = boost::none,
-                   dropbox,
-                   filesystem,
-                   gcs,
-                   google_drive,
-                   ssh,
-                   s3,
-                   account = boost::none,
-                   bucket = boost::none,
-                   endpoint = "amazonaws.com",
-                   host = boost::none,
-                   region = boost::none,
-                   path = boost::none,
-                   storage_class = boost::none))
+      , create(infinit)
       , delete_("Delete local silo",
                 das::cli::Options(),
                 this->bind(modes::mode_delete,
@@ -140,137 +118,95 @@ namespace infinit
              this->bind(modes::mode_list))
     {}
 
+    Silo::Create::Create(Infinit& infinit)
+      : Object(infinit)
+      , dropbox(
+        "Store blocks on Dropbox",
+        das::cli::Options{
+          {"path", das::cli::Option{
+              '\0', "directory where to store blocks", false}}},
+        this->bind(modes::mode_dropbox,
+                   cli::name,
+                   cli::account,
+                   cli::description = boost::none,
+                   cli::capacity = boost::none,
+                   cli::output = boost::none,
+                   cli::path = boost::none))
+      , filesystem(
+        "Store blocks on local filesystem",
+        das::cli::Options{
+          {"path", das::cli::Option{
+              '\0', "directory where to store blocks", false}}},
+        this->bind(modes::mode_filesystem,
+                   cli::name,
+                   cli::description = boost::none,
+                   cli::capacity = boost::none,
+                   cli::output = boost::none,
+                   cli::path = boost::none))
+      , gcs(
+        "Store blocks on Google Cloud Storage",
+        das::cli::Options{
+          {"path", das::cli::Option{
+              '\0', "directory where to store blocks", false}}},
+        this->bind(modes::mode_gcs,
+                   cli::name,
+                   cli::account,
+                   cli::bucket,
+                   cli::description = boost::none,
+                   cli::capacity = boost::none,
+                   cli::output = boost::none,
+                   cli::path = boost::none))
+      , google_drive(
+        "Store blocks on Google Drive",
+        das::cli::Options{
+          {"path", das::cli::Option{
+              '\0', "directory where to store blocks", false}}},
+        this->bind(modes::mode_google_drive,
+                   cli::name,
+                   cli::account,
+                   cli::description = boost::none,
+                   cli::capacity = boost::none,
+                   cli::output = boost::none,
+                   cli::path = boost::none))
+      , s3(
+        "Store blocks on AWS S3",
+        das::cli::Options{
+          {"path", das::cli::Option{
+              '\0', "directory where to store blocks", false}}},
+        this->bind(modes::mode_s3,
+                   cli::name,
+                   cli::account,
+                   cli::bucket,
+                   cli::region,
+                   cli::description = boost::none,
+                   cli::capacity = boost::none,
+                   cli::output = boost::none,
+                   cli::endpoint = "amazonaws.com",
+                   cli::storage_class = boost::none,
+                   cli::path = boost::none))
+    {}
+
     void
-    Silo::mode_create(std::string name,
-                      boost::optional<std::string> description,
-                      boost::optional<std::string> capacity_repr,
-                      boost::optional<std::string> output,
-                      bool dropbox,
-                      bool filesystem,
-                      bool gcs,
-                      bool google_drive,
-                      bool ssh,
-                      bool s3,
-                      boost::optional<std::string> account_name,
-                      boost::optional<std::string> bucket,
-                      std::string endpoint,
-                      boost::optional<std::string> host,
-                      boost::optional<std::string> region,
-                      boost::optional<std::string> root,
-                      boost::optional<std::string> storage_class_str)
+    Silo::Create::mode_dropbox(std::string const& name,
+                               std::string const& account_name,
+                               boost::optional<std::string> description,
+                               boost::optional<std::string> capacity_repr,
+                               boost::optional<std::string> output,
+                               boost::optional<std::string> root)
     {
       boost::optional<int64_t> capacity;
       if (capacity_repr)
         capacity = convert_capacity(*capacity_repr);
-      std::unique_ptr<infinit::storage::StorageConfig> config;
-      int types = (dropbox ? 1 : 0)
-        + (filesystem ? 1 : 0)
-        + (gcs ? 1 : 0)
-        + (google_drive ? 1 : 0)
-        + (s3 ? 1 : 0);
-      if (types > 1)
-        elle::err<Error>("only one storage type may be specified");
-      if (gcs)
-      {
-        auto self = this->cli().as_user();
-        if (!root)
-          root = elle::print("{}_blocks", name);
-        auto account = this->cli().infinit().credentials_gcs(
-          mandatory(account_name, "account"));
-        config = elle::make_unique<infinit::storage::GCSConfig>(
+      if (!root)
+        root = elle::sprintf("storage_%s", name);
+      auto account = this->cli().infinit().credentials_dropbox(account_name);
+      std::unique_ptr<infinit::storage::StorageConfig> config =
+        elle::make_unique<infinit::storage::DropboxStorageConfig>(
           name,
-          mandatory(bucket, "bucket"),
-          *root,
-          self.name,
-          account->refresh_token,
+          account->token,
+          std::move(root),
           std::move(capacity),
           std::move(description));
-      }
-      else if (s3)
-      {
-        if (!root)
-          root = elle::sprintf("%s_blocks", name);
-        auto account = this->cli().infinit().credentials_aws(
-          mandatory(account_name, "account"));
-        auto aws_credentials = aws::Credentials(
-          account->access_key_id,
-          account->secret_access_key,
-          mandatory(region, "region"),
-          mandatory(bucket, "bucket"),
-          root.get(),
-          endpoint);
-        aws::S3::StorageClass storage_class = aws::S3::StorageClass::Default;
-        if (storage_class_str)
-        {
-          auto sc = boost::algorithm::to_lower_copy(*storage_class_str);
-          if (sc == "standard")
-            storage_class = aws::S3::StorageClass::Standard;
-          else if (sc == "standard_ia")
-            storage_class = aws::S3::StorageClass::StandardIA;
-          else if (sc == "reduced_redundancy")
-            storage_class = aws::S3::StorageClass::ReducedRedundancy;
-          else
-            elle::err<Error>("unrecognized storage class: %s",
-                             storage_class_str);
-        }
-        config = elle::make_unique<infinit::storage::S3StorageConfig>(
-          name,
-          std::move(aws_credentials),
-          storage_class,
-          std::move(capacity),
-          std::move(description));
-      }
-      else if (dropbox)
-      {
-        if (!root)
-          root = elle::sprintf("storage_%s", name);
-        auto account = this->cli().infinit().credentials_dropbox(
-          mandatory(account_name, "account"));
-        config = elle::make_unique<infinit::storage::DropboxStorageConfig>(
-          name, account->token, std::move(root), std::move(capacity),
-          std::move(description));
-      }
-      else if (google_drive)
-      {
-        auto self = this->cli().as_user();
-        if (!root)
-          root = elle::sprintf(".infinit_%s", name);
-        auto account = this->cli().infinit().credentials_google(
-          mandatory(account_name, "account"));
-        config =
-          elle::make_unique<infinit::storage::GoogleDriveStorageConfig>
-          (name,
-           std::move(root),
-           account->refresh_token,
-           self.name,
-           std::move(capacity),
-           std::move(description));
-      }
-    #ifndef INFINIT_WINDOWS
-      else if (ssh)
-        config = elle::make_unique<infinit::storage::SFTPStorageConfig>(
-          name, mandatory(host, "host"),
-          mandatory(root, "path"),
-          capacity,
-          std::move(description));
-    #endif
-      else // filesystem by default
-      {
-        auto path = root ?
-          infinit::canonical_folder(root.get()) :
-          (infinit::xdg_data_home() / "blocks" / name);
-        if (boost::filesystem::exists(path))
-        {
-          if (!boost::filesystem::is_directory(path))
-            elle::err("path is not directory: %s", path);
-          if (!boost::filesystem::is_empty(path))
-            std::cout << "WARNING: Path is not empty: " << path << '\n'
-                      << "WARNING: You may encounter unexpected behavior.\n";
-        }
-        config = elle::make_unique<infinit::storage::FilesystemStorageConfig>(
-          name, std::move(path.string()), std::move(capacity),
-          std::move(description));
-      }
       if (auto o = this->cli().get_output(output, false))
       {
         elle::serialization::json::SerializerOut s(*o, false);
@@ -284,7 +220,176 @@ namespace infinit
     }
 
     void
-    Silo::mode_export(std::string name,
+    Silo::Create::mode_filesystem(std::string const& name,
+                                  boost::optional<std::string> description,
+                                  boost::optional<std::string> capacity_repr,
+                                  boost::optional<std::string> output,
+                                  boost::optional<std::string> root)
+    {
+      boost::optional<int64_t> capacity;
+      if (capacity_repr)
+        capacity = convert_capacity(*capacity_repr);
+      auto path = root ?
+        infinit::canonical_folder(root.get()) :
+        (infinit::xdg_data_home() / "blocks" / name);
+      if (boost::filesystem::exists(path))
+      {
+        if (!boost::filesystem::is_directory(path))
+          elle::err("path is not directory: %s", path);
+        if (!boost::filesystem::is_empty(path))
+          std::cout << "WARNING: Path is not empty: " << path << '\n'
+                    << "WARNING: You may encounter unexpected behavior.\n";
+      }
+      std::unique_ptr<infinit::storage::StorageConfig> config =
+        elle::make_unique<infinit::storage::FilesystemStorageConfig>(
+          name,
+          std::move(path.string()),
+          std::move(capacity),
+          std::move(description));
+      if (auto o = this->cli().get_output(output, false))
+      {
+        elle::serialization::json::SerializerOut s(*o, false);
+        s.serialize_forward(config);
+      }
+      else
+      {
+        this->cli().infinit().storage_save(name, config);
+        this->cli().report_action("created", "storage", name);
+      }
+    }
+
+    void
+    Silo::Create::mode_gcs(std::string const& name,
+                           std::string const& account_name,
+                           std::string const& bucket,
+                           boost::optional<std::string> description,
+                           boost::optional<std::string> capacity_repr,
+                           boost::optional<std::string> output,
+                           boost::optional<std::string> root)
+    {
+      auto self = this->cli().as_user();
+      boost::optional<int64_t> capacity;
+      if (capacity_repr)
+        capacity = convert_capacity(*capacity_repr);
+      if (!root)
+        root = elle::print("{}_blocks", name);
+      auto account = this->cli().infinit().credentials_gcs(account_name);
+      std::unique_ptr<infinit::storage::StorageConfig> config =
+        elle::make_unique<infinit::storage::GCSConfig>(
+          name,
+          bucket,
+          root.get(),
+          self.name,
+          account->refresh_token,
+          std::move(capacity),
+          std::move(description));
+      if (auto o = this->cli().get_output(output, false))
+      {
+        elle::serialization::json::SerializerOut s(*o, false);
+        s.serialize_forward(config);
+      }
+      else
+      {
+        this->cli().infinit().storage_save(name, config);
+        this->cli().report_action("created", "storage", name);
+      }
+    }
+
+    void
+    Silo::Create::mode_s3(std::string const& name,
+                          std::string const& account_name,
+                          std::string const& bucket,
+                          std::string const& region,
+                          boost::optional<std::string> description,
+                          boost::optional<std::string> capacity_repr,
+                          boost::optional<std::string> output,
+                          std::string const& endpoint,
+                          boost::optional<std::string> const& storage_class_str,
+                          boost::optional<std::string> root)
+    {
+      boost::optional<int64_t> capacity;
+      if (capacity_repr)
+        capacity = convert_capacity(*capacity_repr);
+      if (!root)
+        root = elle::sprintf("%s_blocks", name);
+      auto account = this->cli().infinit().credentials_aws(account_name);
+      auto aws_credentials = aws::Credentials(
+        account->access_key_id,
+        account->secret_access_key,
+        region,
+        bucket,
+        root.get(),
+        endpoint);
+      aws::S3::StorageClass storage_class = aws::S3::StorageClass::Default;
+      if (storage_class_str)
+      {
+        auto sc = boost::algorithm::to_lower_copy(*storage_class_str);
+        if (sc == "standard")
+          storage_class = aws::S3::StorageClass::Standard;
+        else if (sc == "standard_ia")
+          storage_class = aws::S3::StorageClass::StandardIA;
+        else if (sc == "reduced_redundancy")
+          storage_class = aws::S3::StorageClass::ReducedRedundancy;
+        else
+          elle::err<Error>("unrecognized storage class: %s",
+                           storage_class_str);
+      }
+      std::unique_ptr<infinit::storage::StorageConfig> config =
+        elle::make_unique<infinit::storage::S3StorageConfig>(
+          name,
+          std::move(aws_credentials),
+          storage_class,
+          std::move(capacity),
+          std::move(description));
+      if (auto o = this->cli().get_output(output, false))
+      {
+        elle::serialization::json::SerializerOut s(*o, false);
+        s.serialize_forward(config);
+      }
+      else
+      {
+        this->cli().infinit().storage_save(name, config);
+        this->cli().report_action("created", "storage", name);
+      }
+    }
+
+    void
+    Silo::Create::mode_google_drive(std::string const& name,
+                                    std::string const& account_name,
+                                    boost::optional<std::string> description,
+                                    boost::optional<std::string> capacity_repr,
+                                    boost::optional<std::string> output,
+                                    boost::optional<std::string> root)
+    {
+      auto self = this->cli().as_user();
+      boost::optional<int64_t> capacity;
+      if (capacity_repr)
+        capacity = convert_capacity(*capacity_repr);
+      if (!root)
+        root = elle::sprintf(".infinit_%s", name);
+      auto account = this->cli().infinit().credentials_google(account_name);
+      std::unique_ptr<infinit::storage::StorageConfig> config =
+        elle::make_unique<infinit::storage::GoogleDriveStorageConfig>(
+          name,
+          std::move(root),
+          account->refresh_token,
+          self.name,
+          std::move(capacity),
+          std::move(description));
+      if (auto o = this->cli().get_output(output, false))
+      {
+        elle::serialization::json::SerializerOut s(*o, false);
+        s.serialize_forward(config);
+      }
+      else
+      {
+        this->cli().infinit().storage_save(name, config);
+        this->cli().report_action("created", "storage", name);
+      }
+    }
+
+    void
+    Silo::mode_export(std::string const& name,
                       boost::optional<std::string> output)
     {
       auto o = this->cli().get_output(output);
@@ -340,7 +445,7 @@ namespace infinit
     }
 
     void
-    Silo::mode_delete(std::string name,
+    Silo::mode_delete(std::string const& name,
                       bool clear,
                       bool purge)
     {
@@ -374,5 +479,18 @@ namespace infinit
       else
         elle::err("storage could not be deleted: %s", path);
     }
+  }
+}
+
+#include <infinit/cli/Object.hxx>
+
+namespace infinit
+{
+  namespace cli
+  {
+    template
+    class Object<Silo>;
+    template
+    class Object<Silo::Create, Silo>;
   }
 }

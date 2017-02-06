@@ -178,7 +178,7 @@ namespace infinit
       boost::signals2::signal<void ()> killed;
 
     private:
-      template <typename Symbol, typename ObjectSymbol>
+      template <typename Symbol, typename ObjectSymbol, typename Object>
       friend struct mode_call;
     };
   }

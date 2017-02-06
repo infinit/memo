@@ -13,8 +13,7 @@ with Infinit() as user:
   user.run(['infinit-user', '--create',
              '--name', 'user',
              '--email', 'user@infinit.io'])
-  user.run(['infinit-storage', '--create',
-             '--filesystem',
+  user.run(['infinit', 'silo', 'create', 'filesystem',
              '--name', 'storage',
              '--as', 'user'])
   user.run(['infinit-network',

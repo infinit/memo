@@ -494,8 +494,8 @@ def configure(
     'src/infinit/cli/Journal.hh',
     'src/infinit/cli/Network.cc',
     'src/infinit/cli/Network.hh',
-    'src/infinit/cli/Object.cc',
     'src/infinit/cli/Object.hh',
+    'src/infinit/cli/Object.hxx',
     'src/infinit/cli/Passport.cc',
     'src/infinit/cli/Passport.hh',
     'src/infinit/cli/Silo.cc',
@@ -537,18 +537,6 @@ def configure(
       'src/infinit/cli/LDAP.cc',
       'src/infinit/cli/LDAP.hh',
     )
-  infinit_cli_instantiate = drake.node(
-    'src/infinit/cli/Infinit-instantiate.cc')
-  for b in infinit_modes:
-    o = drake.cxx.Object(
-      'src/infinit/cli/Infinit-instantiate-%s.o' % b)
-    infinit_cli_instantiate_config = drake.cxx.Config(bin_cxx_config)
-    infinit_cli_instantiate_config.define('INFINIT_CLI_OBJECT', b)
-    infinit_cli_instantiate_config.define('ELLE_LOG_DISABLE', 1)
-    drake.cxx.Compiler(infinit_cli_instantiate, o,
-                       cxx_toolkit,
-                       infinit_cli_instantiate_config)
-    infinit_cli_sources.append(o)
   infinit_cli_deps = [infinit_lib]
   if not windows:
     # Do not relink with the static libs again under windows

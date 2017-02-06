@@ -1,5 +1,4 @@
 #include <infinit/cli/Infinit.hh>
-#include <infinit/cli/Infinit-template.hxx>
 
 #include <iostream>
 #include <iterator>
@@ -20,7 +19,7 @@
 #include <das/cli.hh>
 
 #include <infinit/utility.hh>
-
+#include <infinit/cli/Object.hxx>
 #include <infinit/cli/utility.hh>
 
 ELLE_LOG_COMPONENT("infinit");
@@ -188,7 +187,8 @@ namespace infinit
       run_command(Infinit& cli, std::vector<std::string>& args)
       {
         bool res = false;
-        infinit::cli::Infinit::Objects::map<object>::value(cli, args, res);
+        infinit::cli::Infinit::Objects::map<mode_call, cli::Symbol_hash, Infinit>::value(
+          cli, cli, args, res);
         return res;
       }
 

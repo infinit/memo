@@ -3,6 +3,7 @@
 #include <elle/bytes.hh>
 
 #include <infinit/cli/Infinit.hh>
+#include <infinit/cli/Object.hxx>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/OKB.hh>

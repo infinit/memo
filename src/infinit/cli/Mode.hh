@@ -11,10 +11,10 @@ namespace infinit
       template <typename ... Args>
       Mode(std::string help, das::cli::Options opts, Args&& ... args)
         : Super(std::forward<Args>(args)...)
-        , help(std::move(help))
+        , description(std::move(help))
         , options(std::move(opts))
       {}
-      std::string help;
+      std::string description;
       das::cli::Options options;
     };
   }

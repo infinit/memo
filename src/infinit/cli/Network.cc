@@ -6,6 +6,7 @@
 
 #include <infinit/Network.hh> // Storages
 #include <infinit/cli/Infinit.hh>
+#include <infinit/cli/Object.hxx>
 #include <infinit/cli/utility.hh>
 #include <infinit/cli/xattrs.hh>
 #include <infinit/model/MissingBlock.hh>
