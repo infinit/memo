@@ -70,6 +70,10 @@ namespace infinit
 
 
 
+    /*----------.
+    | Infinit.  |
+    `----------*/
+
     Infinit::Infinit(infinit::Infinit& infinit)
       : InfinitCallable(
         das::bind_method(*this, cli::call),
@@ -104,10 +108,11 @@ namespace infinit
 
     namespace
     {
-      das::cli::Options options = {
-        {"help", {'h', "show this help message"}},
-        {"version", {'v', "show software version"}},
-      };
+      auto const options = das::cli::Options
+        {
+          {"help", {'h', "show this help message"}},
+          {"version", {'v', "show software version"}},
+        };
 
       template <typename Symbol>
       struct help_object
@@ -217,10 +222,9 @@ namespace infinit
         if (args.empty() || das::cli::is_option(args[0], options))
           das::cli::call(cli, args, options);
         else if (!run_command(cli, args))
-          throw das::cli::Error
-            (elle::sprintf("unknown object type: %s\n"
-                           "Try '%s --help' for more information.",
-                           args[0], argv_0));
+          elle::err<das::cli::Error>("unknown object type: %s\n"
+                                     "Try '%s --help' for more information.",
+                                     args[0], argv_0);
       }
     }
 
@@ -462,10 +466,8 @@ namespace infinit
     void
     Infinit::print(std::ostream& o) const
     {
-      elle::fprintf(
-        o, "%s(%s)", elle::type_info(*this), this->_infinit);
+      elle::fprintf(o, "%s(%s)", elle::type_info(*this), this->_infinit);
     }
-
   }
 }
 
