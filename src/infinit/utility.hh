@@ -169,8 +169,7 @@ namespace infinit
   boost::filesystem::path
   tmpdir()
   {
-    auto const res = elle::os::getenv("TMPDIR", "/tmp");
-    return res;
+    return elle::os::getenv("TMPDIR", "/tmp");;
   }
 
   inline
@@ -181,7 +180,7 @@ namespace infinit
       "RUNTIME_DIR",
       fallback
         ? *fallback
-        : tmpdir() / elle::sprintf("infinit-%s", elle::system::username()));
+        : tmpdir() / "infinit" / elle::system::username());
   }
 
   inline
