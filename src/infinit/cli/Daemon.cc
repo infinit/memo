@@ -276,9 +276,9 @@ namespace infinit
       {
         reactor::Scheduler sched;
         elle::json::Object res;
-        reactor::Thread main_thread(
+        reactor::Thread daemon_query(
           sched,
-          "main",
+          "daemon-query",
           [&]
           {
             // try local then global
