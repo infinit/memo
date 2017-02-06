@@ -408,6 +408,7 @@ namespace infinit
       MERGE(Options, readonly);                                         \
       MERGE(Options, fetch);                                            \
       MERGE(Options, push);                                             \
+      MERGE(Options, publish);                                          \
       MERGE(Options, cache);                                            \
       MERGE(Options, async);                                            \
       MERGE(Options, cache_ram_size);                                   \
@@ -1101,10 +1102,8 @@ namespace infinit
         model->service_add("volumes", name, volume);
       }
       // Only push if we are contributing storage.
-      //
-      // FIXME: mo.push checks whether it has value, not whether the
-      // value is true.
-      bool push_p = mo.push && model->local();
+      bool push_p = mo.push.value_or(mo.publish.value_or(false)) &&
+        model->local();
       auto local_endpoint = boost::optional<infinit::model::Endpoint>{};
       if (model->local())
       {

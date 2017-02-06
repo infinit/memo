@@ -111,7 +111,7 @@ namespace infinit
 
     }
     reactor::Thread::unique_ptr poll_thread;
-    if (mo.fetch && *mo.fetch)
+    if (mo.fetch.value_or(mo.publish.value_or(false)))
     {
       beyond_fetch_endpoints(eps);
       if (mo.poll_beyond && *mo.poll_beyond > 0)
