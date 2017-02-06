@@ -2,6 +2,10 @@
 
 #include <boost/filesystem.hpp>
 
+#include <elle/format/hexadecimal.hh>
+
+#include <cryptography/hash.hh>
+
 #include <reactor/http/Request.hh>
 
 #include <infinit/Infinit.hh>
@@ -286,8 +290,15 @@ namespace infinit
 #ifdef INFINIT_WINDOWS
     elle::unreachable();
 #else
-    return infinit::xdg_runtime_dir() / "monitoring" / user.name
-      / elle::sprintf("%s.sock", this->name);
+    // UNIX-domain addresses are limited to 108 chars on Linux and 104 chars
+    // on macOS ¯\_(ツ)_/¯
+    namespace crypto = infinit::cryptography;
+    auto qualified_name = elle::sprintf(
+      "%s/%s/%s", elle::system::username(), user.name, this->name);
+    auto hashed = crypto::hash(qualified_name, crypto::Oneway::sha);
+    auto socket_id = elle::format::hexadecimal::encode(hashed);
+    return infinit::xdg_runtime_dir() / "monitor"
+      / elle::sprintf("%s.sock", std::string(socket_id).substr(0, 6));
 #endif
   }
 
