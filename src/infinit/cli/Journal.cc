@@ -15,8 +15,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
-
     using Async = infinit::model::doughnut::consensus::Async;
 
     Journal::Journal(Infinit& infinit)

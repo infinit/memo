@@ -8,6 +8,10 @@
 #include <infinit/cli/fwd.hh>
 
 #include <infinit/Infinit.hh>
+#include <infinit/symbols.hh>
+
+#include <infinit/cli/Error.hh>
+
 #include <infinit/cli/ACL.hh>
 #include <infinit/cli/Block.hh>
 #include <infinit/cli/Credentials.hh>
@@ -26,18 +30,11 @@
 #include <infinit/cli/Silo.hh>
 #include <infinit/cli/User.hh>
 #include <infinit/cli/Volume.hh>
-#include <infinit/symbols.hh>
 
 namespace infinit
 {
   namespace cli
   {
-    class CLIError
-      : public das::cli::Error
-    {
-      using das::cli::Error::Error;
-    };
-
     using InfinitCallable =
       decltype(das::named::function(
                  das::bind_method(std::declval<Infinit&>(), cli::call),

@@ -122,9 +122,8 @@ namespace infinit
             Object::Modes::template map<mode_call, Symbol>::value(
               infinit, object, args, found);
             if (!found)
-              throw das::cli::Error(
-                elle::sprintf("unknown mode for object %s: %s",
-                              Symbol::name(), args[0]));
+              elle::err<CLIError>("unknown mode for object %s: %s",
+                                  Symbol::name(), args[0]);
           }
           return true;
         }

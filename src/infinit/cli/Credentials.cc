@@ -48,7 +48,6 @@ namespace infinit
       template<>
       const std::string GoogleDrivePrint::pretty{"Google Drive"};
     }
-    using Error = das::cli::Error;
 
     Credentials::Credentials(Infinit& infinit)
       : Object(infinit)
@@ -334,8 +333,8 @@ namespace infinit
                              AWSPrint::pretty,
                              infinit::beyond(true));
         else
-          elle::err<Error>("%s credentials are not stored on %s",
-                           AWSPrint::pretty, infinit::beyond(true));
+          elle::err<CLIError>("%s credentials are not stored on %s",
+                              AWSPrint::pretty, infinit::beyond(true));
       }
       if (e.dropbox)
         fetch_
@@ -418,8 +417,8 @@ namespace infinit
                      AWSPrint::pretty,
                      infinit::beyond(true));
         else
-          elle::err<Error>("%s credentials are not stored on %s",
-                           AWSPrint::pretty, infinit::beyond(true));
+          elle::err<CLIError>("%s credentials are not stored on %s",
+                              AWSPrint::pretty, infinit::beyond(true));
       }
       if (e.dropbox)
         pull_(cli, cli::dropbox, account, false);

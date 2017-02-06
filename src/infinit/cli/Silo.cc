@@ -24,8 +24,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
-
     namespace
     {
       int64_t
@@ -169,7 +167,7 @@ namespace infinit
         + (google_drive ? 1 : 0)
         + (s3 ? 1 : 0);
       if (types > 1)
-        elle::err<Error>("only one storage type may be specified");
+        elle::err<CLIError>("only one storage type may be specified");
       if (gcs)
       {
         auto self = this->cli().as_user();
@@ -210,8 +208,8 @@ namespace infinit
           else if (sc == "reduced_redundancy")
             storage_class = aws::S3::StorageClass::ReducedRedundancy;
           else
-            elle::err<Error>("unrecognized storage class: %s",
-                             storage_class_str);
+            elle::err<CLIError>("unrecognized storage class: %s",
+                                storage_class_str);
         }
         config = elle::make_unique<infinit::storage::S3StorageConfig>(
           name,

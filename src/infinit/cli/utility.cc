@@ -7,8 +7,6 @@
 #include <elle/string/algorithm.hh>
 #include <elle/system/unistd.hh> // chdir
 
-#include <das/cli.hh> // das::cli::Error
-
 #include <reactor/FDStream.hh>
 #include <reactor/http/Request.hh>
 #include <reactor/network/rdv-socket.hh>
@@ -16,6 +14,9 @@
 
 #include <infinit/Infinit.hh>
 #include <infinit/utility.hh>
+
+#include <infinit/cli/Error.hh>
+
 
 ELLE_LOG_COMPONENT("ifnt.cli.utility");
 
@@ -416,9 +417,8 @@ namespace infinit
       }
       catch (elle::serialization::Error const& e)
       {
-        elle::err<das::cli::Error>
-          ("'protocol' must be 'utp', 'tcp' or 'all': %s",
-           proto);
+        elle::err<CLIError>("'protocol' must be 'utp', 'tcp' or 'all': %s",
+                            proto);
       }
     }
 
@@ -435,8 +435,8 @@ namespace infinit
         };
       auto i = modes.find(mode ? boost::algorithm::to_lower_copy(*mode) : "");
       if (i == modes.end())
-        elle::err<das::cli::Error>("invalid mode %s, must be one of: %s",
-                                   mode, elle::keys(modes));
+        elle::err<CLIError>("invalid mode %s, must be one of: %s",
+                            mode, elle::keys(modes));
       else
         return i->second;
     }

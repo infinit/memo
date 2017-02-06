@@ -489,6 +489,7 @@ def configure(
     'src/infinit/cli/Doctor.hh',
     'src/infinit/cli/Drive.cc',
     'src/infinit/cli/Drive.hh',
+    'src/infinit/cli/Error.hh',
     'src/infinit/cli/Infinit.cc',
     'src/infinit/cli/Infinit.hh',
     'src/infinit/cli/Journal.cc',

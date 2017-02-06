@@ -30,7 +30,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
     namespace bfs = boost::filesystem;
 
     Volume::Volume(Infinit& infinit)
@@ -611,7 +610,7 @@ namespace infinit
       if (service)
       {
         if (!network_name)
-          elle::err<Error>("--network is mandatory with --service");
+          elle::err<CLIError>("--network is mandatory with --service");
         auto net_name = ifnt.qualified_name(*network_name, owner);
         auto network = ifnt.network_get(net_name, owner);
         auto dht = network.run(owner);
@@ -782,7 +781,7 @@ namespace infinit
         auto name = ifnt.qualified_name(volume_name, owner);
         auto volume = ifnt.volume_get(name);
         if (!volume.mount_options.mountpoint)
-          elle::err<Error>("option --mountpoint is needed");
+          elle::err<CLIError>("option --mountpoint is needed");
       }
       mode_run(volume_name,
                allow_root_creation,
@@ -1076,7 +1075,7 @@ namespace infinit
         }
       }
       if (mo.fuse_options && !mo.mountpoint)
-        elle::err<Error>("FUSE options require the volume to be mounted");
+        elle::err<CLIError>("FUSE options require the volume to be mounted");
       auto network = ifnt.network_get(volume.network, owner);
       network.ensure_allowed(owner, "run", "volume");
       ELLE_TRACE("run network");

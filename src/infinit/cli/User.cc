@@ -17,7 +17,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
     using PublicUser = das::Model<
       infinit::User,
       decltype(elle::meta::list(
@@ -200,7 +199,7 @@ namespace infinit
                   boost::optional<std::string> description)
       {
         if (email && !validate_email(*email))
-          elle::err<Error>("invalid email address: %s", *email);
+          elle::err<CLIError>("invalid email address: %s", *email);
         auto keys = [&]
         {
           if (keys_file)
@@ -236,8 +235,8 @@ namespace infinit
         else
         {
           if (password)
-            elle::err<Error>(
-              "password is only used when pushing a full user");
+            elle::err<CLIError>
+              ("password is only used when pushing a full user");
           infinit::Infinit::beyond_push<das::Serializer<PublicUserPublish>>(
             "user", user.name, user, user, !api.cli().script());
         }
@@ -266,17 +265,17 @@ namespace infinit
       if (!push)
       {
         if (ldap_name)
-          elle::err<Error>(
+          elle::err<CLIError>(
             "LDAP can only be used with the Hub, add --push");
         if (full)
-          elle::err<Error>(
+          elle::err<CLIError>(
             "--full can only be used with the Hub, add --push");
         if (password)
-          elle::err<Error>(
+          elle::err<CLIError>(
             "--password can only be used with the Hub, add --push");
       }
       if (ldap_name && !full)
-        elle::err<Error>("LDAP user creation requires --full");
+        elle::err<CLIError>("LDAP user creation requires --full");
       infinit::User user =
         create_user(*this, name, key, email, fullname, ldap_name, description);
       if (auto output = this->cli().get_output(path, false))
@@ -602,7 +601,7 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("signup");
       if (ldap_name && !full)
-        elle::err<Error>("LDAP user creation requires --full");
+        elle::err<CLIError>("LDAP user creation requires --full");
       auto user = create_user(*this,
                               name,
                               key,

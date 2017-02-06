@@ -16,8 +16,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
-
     LDAP::LDAP(Infinit& infinit)
       : Object(infinit)
       , drive_invite(

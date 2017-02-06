@@ -35,7 +35,6 @@ namespace infinit
 
   namespace cli
   {
-    using Error = das::cli::Error;
     using Strings = Daemon::Strings;
 
     Daemon::Daemon(Infinit& infinit)
@@ -1012,7 +1011,7 @@ namespace infinit
                       if (on_end)
                         on_end();
                     }
-                    catch(elle::Error const& e)
+                    catch (elle::Error const& e)
                     {
                       ELLE_WARN("Unexpected exception in on_end: %s", e);
                     }
@@ -1342,7 +1341,7 @@ namespace infinit
         for (auto const& f: { "list", "status", "start", "stop", "restart" })
           opts += elle::sprintf("\"--%s\", ", f);
         opts = opts.substr(0, opts.size() - 2);
-        elle::err<Error>("Specify one of %s", opts);
+        elle::err<CLIError>("Specify one of %s", opts);
       }
       if (list)
         volume_list(cli);

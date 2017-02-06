@@ -422,8 +422,6 @@ namespace infinit
     | ACL |
     `----*/
 
-    using Error = das::cli::Error;
-
     ACL::ACL(Infinit& infinit)
       : Object(infinit)
       , get_xattr(
@@ -799,15 +797,15 @@ namespace infinit
         auto combined = collate_users(users, boost::none, boost::none, groups);
         // auto users = combined ? combined.get() : std::vector<std::string>();
         if (mode_name && combined.empty())
-          elle::err<das::cli::Error>("must specify user when setting mode");
+          elle::err<CLIError>("must specify user when setting mode");
         if (!mode_name && !combined.empty())
           throw das::cli::MissingOption("mode");
         if (inherit && disinherit)
-          elle::err<das::cli::Error>("inherit and disable-inherit are exclusive");
+          elle::err<CLIError>("inherit and disable-inherit are exclusive");
         if (!inherit && !disinherit && !mode_name && !others_mode_name)
-          elle::err<das::cli::Error>("no operation specified");
+          elle::err<CLIError>("no operation specified");
         if (traverse && mode_name && mode_name->find("r") == std::string::npos)
-          elle::err<das::cli::Error>(
+          elle::err<CLIError>(
             "--traverse can only be used with mode 'r' or 'rw'");
       }
       // Don't do any operations before checking paths.

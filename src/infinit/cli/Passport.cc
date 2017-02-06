@@ -11,8 +11,6 @@ namespace infinit
 
   namespace cli
   {
-    using Error = das::cli::Error;
-
     Passport::Passport(Infinit& infinit)
       : Object(infinit)
       , create(
@@ -255,7 +253,7 @@ namespace infinit
       }
       else if (user_name && user_name.get() != owner.name)
       {
-        elle::err<Error>("use the --as to fetch passports for another user");
+        elle::err<CLIError>("use the --as to fetch passports for another user");
       }
       // Fetch owner passports.
       else

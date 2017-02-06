@@ -9,9 +9,6 @@ namespace infinit
 {
   namespace cli
   {
-    /// Command line errors.
-    using Error = das::cli::Error;
-
     Drive::Drive(Infinit& infinit)
       : Object(infinit)
       , create(
@@ -135,7 +132,7 @@ namespace infinit
         if (icon_path
             && !icon_path->empty()
             && !boost::filesystem::exists(*icon_path))
-          elle::err<Error>("%s doesn't exist", *icon_path);
+          elle::err<CLIError>("%s doesn't exist", *icon_path);
         auto url = elle::sprintf("drives/%s", drive.name);
         cli.infinit().beyond_push(url, "drive", drive.name, drive, user);
         if (icon_path)
@@ -422,7 +419,7 @@ namespace infinit
       push |= push_invitations;
       ELLE_DEBUG("push: %s", push);
       if (emails.empty() && users.empty() && !push)
-        elle::err<Error>("specify users using --user and/or --email");
+        elle::err<CLIError>("specify users using --user and/or --email");
       ELLE_DEBUG("generate passports: %s", generate_passports);
       for (auto const& email: emails)
         validate_email(email);

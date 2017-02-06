@@ -32,7 +32,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
     using Strings = Network::Strings;
     namespace bfs = boost::filesystem;
     namespace dnut = infinit::model::doughnut;
@@ -269,7 +268,7 @@ namespace infinit
             res->accept_plain = false;
           }
           else
-            elle::err<Error>("'encrypt' must be 'no', 'lazy' or 'yes': %s", enc);
+            elle::err<CLIError>("'encrypt' must be 'no', 'lazy' or 'yes': %s", enc);
         }
         else
         {
@@ -331,11 +330,11 @@ namespace infinit
         -> std::unique_ptr<dnut::consensus::Configuration>
       {
         if (replication_factor < 1)
-          elle::err<Error>("replication factor must be greater than 0");
+          elle::err<CLIError>("replication factor must be greater than 0");
         if (!no_consensus)
           paxos = true;
         if (1 < no_consensus + paxos)
-          elle::err<Error>("more than one consensus specified");
+          elle::err<CLIError>("more than one consensus specified");
         if (paxos)
           return std::make_unique<
             dnut::consensus::Paxos::Configuration>(
@@ -412,7 +411,7 @@ namespace infinit
       auto overlay_config = [&]() -> std::unique_ptr<infinit::overlay::Configuration>
         {
           if (1 < kalimero + kelips + kouncil)
-            elle::err<Error>("only one overlay type must be specified");
+            elle::err<CLIError>("only one overlay type must be specified");
           if (kalimero)
             return std::make_unique<infinit::overlay::KalimeroConfiguration>();
           else if (kelips)
@@ -735,8 +734,8 @@ namespace infinit
         }
       }
       else
-        elle::err<Error>("specify either \"--status\", \"--peers\","
-                         " \"--redundancy\", or \"--all\"");
+        elle::err<CLIError>("specify either \"--status\", \"--peers\","
+                            " \"--redundancy\", or \"--all\"");
     }
 #endif
 
@@ -904,7 +903,7 @@ namespace infinit
             dnut::consensus::Paxos::Configuration*>(
               network.dht()->consensus.get());
           if (!paxos)
-            elle::err<Error>("paxos options on non-paxos consensus");
+            elle::err<CLIError>("paxos options on non-paxos consensus");
           if (paxos_rebalancing_auto_expand)
             paxos->rebalance_auto_expand(*paxos_rebalancing_auto_expand);
           if (paxos_rebalancing_inspect)
@@ -1479,9 +1478,9 @@ namespace infinit
       auto check_group_mount = [&] (bool group)
         {
           if (group && !mountpoint)
-            elle::err<Error>("must specify mountpoint of volume on "
-                             "network \"%s\" to edit group admins",
-                             network.name);
+            elle::err<CLIError>("must specify mountpoint of volume on "
+                                "network \"%s\" to edit group admins",
+                                network.name);
         };
       auto add_admin = [&] (infinit::cryptography::rsa::PublicKey const& key,
                             bool group, bool read, bool write)
