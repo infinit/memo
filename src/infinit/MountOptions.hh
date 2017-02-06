@@ -26,7 +26,7 @@ namespace infinit
 #ifndef INFINIT_WINDOWS
     DAS_SYMBOL(enable_monitoring); // aka monitoring.
 #endif
-    DAS_SYMBOL(fetch);             // aka fetch_endpoints_interval.
+    DAS_SYMBOL(fetch);             // aka fetch_endpoints.
     DAS_SYMBOL(fuse_options);      // aka fuse_option.
     DAS_SYMBOL(hub_url);
     DAS_SYMBOL(listen_address);    // aka listen
