@@ -615,7 +615,8 @@ def configure(
   def install_nodes(where):
     where = drake.Path(where)
     yield from drake.copy(installed_binaries, where, None,
-                          builder = PatchAndInstall)
+                          builder = PatchAndInstall,
+                          follow_symlinks = False)
     yield from drake.copy(
       [license_file], where / 'share/infinit/filesystem/licenses')
 
