@@ -296,8 +296,8 @@ namespace infinit
     {
       program = argv[0];
       std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
-#if  !defined INFINIT_WINDOWS && !defined NO_EXECINFO
 
+#if  !defined INFINIT_WINDOWS && !defined NO_EXECINFO
       auto crash_reporter = [&] () -> std::unique_ptr<crash_reporting::CrashReporter>
         {
           bool const production_build
@@ -321,13 +321,14 @@ namespace infinit
             return {};
         }();
 #endif
+
       reactor::Scheduler sched;
       reactor::Thread main_thread(
         sched,
         "main",
         [&sched, &modes, &desc, argc, argv,
          &positional_arg, &disable_as_arg, &hidden_modes, &main_thread
-#if !defined(INFINIT_WINDOWS) && !defined(NO_EXECINFO)
+#if !defined INFINIT_WINDOWS && !defined NO_EXECINFO
          , &crash_reporter
 #endif
           ]
