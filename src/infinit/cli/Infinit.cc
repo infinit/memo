@@ -7,6 +7,13 @@
 #include <type_traits>
 #include <vector>
 
+#if defined INFINIT_WINDOWS || defined NO_EXECINFO
+# define INFINIT_WITH_CRASH_REPORTER 0
+#else
+# define INFINIT_WITH_CRASH_REPORTER 1
+# include <crash_reporting/CrashReporter.hh>
+#endif
+
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -39,6 +46,13 @@ namespace infinit
   {
     namespace
     {
+      bool constexpr production_build
+#ifdef INFINIT_PRODUCTION_BUILD
+      = true;
+#else
+      = false;
+#endif
+
       void
       install_signal_handlers(Infinit& cli)
       {
@@ -66,6 +80,41 @@ namespace infinit
           }
         }
       }
+
+#if INFINIT_WITH_CRASH_REPORTER
+      /// Crash reporter.
+      boost::optional<crash_reporting::CrashReporter>
+      make_crash_reporter()
+      {
+        auto const request = elle::os::getenv("INFINIT_CRASH_REPORTER", "");
+        if (request == "1"
+            || production_build && request != "0")
+        {
+          auto const host = elle::os::getenv("INFINIT_CRASH_REPORT_HOST",
+                                             beyond());
+          auto const url = elle::sprintf("%s/crash/report", host);
+          auto const dumps_path = canonical_folder(xdg_cache_home() / "crashes");
+          return crash_reporting::CrashReporter(url, dumps_path,
+                                                version_describe());
+        }
+        else
+          return {};
+      }
+
+      /// Thread to send the crash reports (some might be pending from
+      /// previous runs, saved on disk).
+      std::unique_ptr<reactor::Thread>
+      make_crash_reporter_thread()
+      {
+        return std::make_unique<reactor::Thread>
+          ("crash report",
+           [cr = make_crash_reporter()]
+           {
+             if (cr)
+               cr->upload_existing();
+           });
+      }
+#endif
 
       void
       check_broken_locale()
@@ -219,10 +268,8 @@ namespace infinit
       }
 
       void
-      main(std::vector<std::string>& args)
+      main_impl(std::vector<std::string>& args)
       {
-        check_broken_locale();
-
         // The name of the command typed by the user, say `infinit-users`.
         auto prog = program_name(args[0]);
         if (prog == "infinit")
@@ -245,9 +292,33 @@ namespace infinit
         if (args.empty() || das::cli::is_option(args[0], options))
           das::cli::call(cli, args, options);
         else if (!run_command(cli, args))
-          elle::err<das::cli::Error>("unknown object type: %s\n"
-                                     "Try '%s --help' for more information.",
-                                     args[0], argv_0);
+          elle::err<CLIError>("unknown object type: %s\n"
+                              "Try '%s --help' for more information.",
+                              args[0], argv_0);
+      }
+
+      void
+      main(std::vector<std::string>& args)
+      {
+#if INFINIT_WITH_CRASH_REPORTER
+        auto report_thread = make_crash_reporter_thread();
+        auto report_upload = [&report_thread] {
+          if (report_thread)
+            reactor::wait(*report_thread);
+        };
+#else
+        auto report_upload = []{};
+#endif
+        try
+        {
+          check_broken_locale();
+          main_impl(args);
+        }
+        catch (...)
+        {
+          report_upload();
+          throw;
+        }
       }
     }
 
@@ -399,7 +470,7 @@ namespace infinit
       void
       echo_mode(bool enable)
       {
-#if defined(INFINIT_WINDOWS)
+#if defined INFINIT_WINDOWS
         HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
         DWORD mode;
         GetConsoleMode(hStdin, &mode);

@@ -562,6 +562,8 @@ def configure(
       protocol_lib,
       reactor_lib,
     ]
+  if enable_crash_reporting:
+    infinit_cli_deps.append(crash_reporter_lib)
 
   infinit_cli = drake.cxx.Executable(
     'bin/infinit',
