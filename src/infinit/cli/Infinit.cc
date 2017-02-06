@@ -66,6 +66,27 @@ namespace infinit
           }
         }
       }
+
+      void
+      check_broken_locale()
+      {
+#if defined INFINIT_LINUX
+        // boost::filesystem uses the default locale, detect here if it
+        // cant be instantiated.
+        // Not required on OS X, see: boost/libs/filesystem/src/path.cpp:819
+        try
+        {
+          std::locale("");
+        }
+        catch (std::exception const& e)
+        {
+          ELLE_WARN("Something is wrong with your locale settings,"
+                    " overriding: %s",
+                    e.what());
+          elle::os::setenv("LC_ALL", "C", 1);
+        }
+#endif
+      }
     }
 
 
@@ -200,6 +221,8 @@ namespace infinit
       void
       main(std::vector<std::string>& args)
       {
+        check_broken_locale();
+
         // The name of the command typed by the user, say `infinit-users`.
         auto prog = program_name(args[0]);
         if (prog == "infinit")
