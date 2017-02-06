@@ -579,6 +579,9 @@ main(int argc, char** argv)
   catch (das::cli::Error const& e)
   {
     elle::fprintf(std::cerr, "%s: command line error: %s\n", argv[0], e.what());
+    elle::fprintf(std::cerr,
+                  "Try '%s --help' for more information.\n",
+                  argv[0]);
     return 2;
   }
   catch (elle::Error const& e)
