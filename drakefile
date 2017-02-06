@@ -569,6 +569,10 @@ def configure(
     bin_cxx_config,
     strip = windows)
   binaries.append(infinit_cli)
+  installed_binaries.append(infinit_cli)
+  for lib in infinit_cli.dynamic_libraries:
+    if lib not in installed_libraries:
+      installed_libraries.append(lib)
   for m in infinit_modes:
     b = 'infinit-storage' if m == 'silo' else 'infinit-{}'.format(m)
     if windows:
