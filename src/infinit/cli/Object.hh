@@ -44,12 +44,7 @@ namespace infinit
       template <typename Symbol, typename ... Args>
       auto
       bind(Symbol const& s, Args&& ... args)
-        -> decltype(binding(s, std::forward<Args>(args)...))
-      {
-        return das::named::function(
-          das::bind_method<Self, Symbol>(static_cast<Self&>(*this)),
-          std::forward<Args>(args)...);
-      }
+        -> decltype(binding(s, std::forward<Args>(args)...));
       ELLE_ATTRIBUTE_R(Infinit&, cli);
       ELLE_ATTRIBUTE_R(das::cli::Options, options, protected);
     };

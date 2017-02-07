@@ -242,5 +242,16 @@ namespace infinit
         throw CLIError(msg);
       }
     }
+
+    template <typename Self, typename Owner>
+    template <typename Symbol, typename ... Args>
+    auto
+    Object<Self, Owner>::bind(Symbol const& s, Args&& ... args)
+      -> decltype(binding(s, std::forward<Args>(args)...))
+    {
+      return das::named::function(
+        das::bind_method<Self, Symbol>(static_cast<Self&>(*this)),
+        std::forward<Args>(args)...);
+    }
   }
 }
