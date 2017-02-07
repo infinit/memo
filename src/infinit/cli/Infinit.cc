@@ -83,7 +83,7 @@ namespace infinit
 
 #if INFINIT_WITH_CRASH_REPORTER
       /// Crash reporter.
-      boost::optional<crash_reporting::CrashReporter>
+      std::shared_ptr<crash_reporting::CrashReporter>
       make_crash_reporter()
       {
         auto const request = elle::os::getenv("INFINIT_CRASH_REPORTER", "");
@@ -94,8 +94,8 @@ namespace infinit
                                              beyond());
           auto const url = elle::sprintf("%s/crash/report", host);
           auto const dumps_path = canonical_folder(xdg_cache_home() / "crashes");
-          return crash_reporting::CrashReporter(url, dumps_path,
-                                                version_describe());
+          return std::make_shared<crash_reporting::CrashReporter>(url, dumps_path,
+                                                                  version_describe());
         }
         else
           return {};
