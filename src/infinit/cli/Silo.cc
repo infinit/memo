@@ -186,6 +186,24 @@ namespace infinit
                    cli::path = boost::none))
     {}
 
+    static
+    void
+    mode_create(Infinit& cli,
+                boost::optional<std::string> output,
+                std::unique_ptr<infinit::storage::StorageConfig> config)
+    {
+      if (auto o = cli.get_output(output, false))
+      {
+        elle::serialization::json::SerializerOut s(*o, false);
+        s.serialize_forward(config);
+      }
+      else
+      {
+        cli.infinit().storage_save(config->name, config);
+        cli.report_action("created", "storage", config->name);
+      }
+    }
+
     void
     Silo::Create::mode_dropbox(std::string const& name,
                                std::string const& account_name,
@@ -200,23 +218,15 @@ namespace infinit
       if (!root)
         root = elle::sprintf("storage_%s", name);
       auto account = this->cli().infinit().credentials_dropbox(account_name);
-      std::unique_ptr<infinit::storage::StorageConfig> config =
+      mode_create(
+        this->cli(),
+        output,
         elle::make_unique<infinit::storage::DropboxStorageConfig>(
           name,
           account->token,
           std::move(root),
           std::move(capacity),
-          std::move(description));
-      if (auto o = this->cli().get_output(output, false))
-      {
-        elle::serialization::json::SerializerOut s(*o, false);
-        s.serialize_forward(config);
-      }
-      else
-      {
-        this->cli().infinit().storage_save(name, config);
-        this->cli().report_action("created", "storage", name);
-      }
+          std::move(description)));
     }
 
     void
@@ -240,22 +250,14 @@ namespace infinit
           std::cout << "WARNING: Path is not empty: " << path << '\n'
                     << "WARNING: You may encounter unexpected behavior.\n";
       }
-      std::unique_ptr<infinit::storage::StorageConfig> config =
+      mode_create(
+        this->cli(),
+        output,
         elle::make_unique<infinit::storage::FilesystemStorageConfig>(
           name,
           std::move(path.string()),
           std::move(capacity),
-          std::move(description));
-      if (auto o = this->cli().get_output(output, false))
-      {
-        elle::serialization::json::SerializerOut s(*o, false);
-        s.serialize_forward(config);
-      }
-      else
-      {
-        this->cli().infinit().storage_save(name, config);
-        this->cli().report_action("created", "storage", name);
-      }
+          std::move(description)));
     }
 
     void
@@ -274,7 +276,9 @@ namespace infinit
       if (!root)
         root = elle::print("{}_blocks", name);
       auto account = this->cli().infinit().credentials_gcs(account_name);
-      std::unique_ptr<infinit::storage::StorageConfig> config =
+      mode_create(
+        this->cli(),
+        output,
         elle::make_unique<infinit::storage::GCSConfig>(
           name,
           bucket,
@@ -282,17 +286,7 @@ namespace infinit
           self.name,
           account->refresh_token,
           std::move(capacity),
-          std::move(description));
-      if (auto o = this->cli().get_output(output, false))
-      {
-        elle::serialization::json::SerializerOut s(*o, false);
-        s.serialize_forward(config);
-      }
-      else
-      {
-        this->cli().infinit().storage_save(name, config);
-        this->cli().report_action("created", "storage", name);
-      }
+          std::move(description)));
     }
 
     void
@@ -334,23 +328,15 @@ namespace infinit
           elle::err<Error>("unrecognized storage class: %s",
                            storage_class_str);
       }
-      std::unique_ptr<infinit::storage::StorageConfig> config =
+      mode_create(
+        this->cli(),
+        output,
         elle::make_unique<infinit::storage::S3StorageConfig>(
           name,
           std::move(aws_credentials),
           storage_class,
           std::move(capacity),
-          std::move(description));
-      if (auto o = this->cli().get_output(output, false))
-      {
-        elle::serialization::json::SerializerOut s(*o, false);
-        s.serialize_forward(config);
-      }
-      else
-      {
-        this->cli().infinit().storage_save(name, config);
-        this->cli().report_action("created", "storage", name);
-      }
+          std::move(description)));
     }
 
     void
@@ -368,24 +354,16 @@ namespace infinit
       if (!root)
         root = elle::sprintf(".infinit_%s", name);
       auto account = this->cli().infinit().credentials_google(account_name);
-      std::unique_ptr<infinit::storage::StorageConfig> config =
+      mode_create(
+        this->cli(),
+        output,
         elle::make_unique<infinit::storage::GoogleDriveStorageConfig>(
           name,
           std::move(root),
           account->refresh_token,
           self.name,
           std::move(capacity),
-          std::move(description));
-      if (auto o = this->cli().get_output(output, false))
-      {
-        elle::serialization::json::SerializerOut s(*o, false);
-        s.serialize_forward(config);
-      }
-      else
-      {
-        this->cli().infinit().storage_save(name, config);
-        this->cli().report_action("created", "storage", name);
-      }
+          std::move(description)));
     }
 
     void
