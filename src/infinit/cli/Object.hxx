@@ -26,7 +26,7 @@ namespace infinit
           found = true;
           args.erase(args.begin());
           auto& mode = Symbol::attr_get(o);
-          _handle(infinit, o, mode, args);
+          _handle(infinit, mode, args);
           return true;
         }
         else
@@ -37,7 +37,6 @@ namespace infinit
       static
       void
       _handle(Infinit& infinit,
-              Object& o,
               Mode<M>& mode,
               std::vector<std::string>& args)
       {
@@ -116,7 +115,6 @@ namespace infinit
       static
       void
       _handle(Infinit& infinit,
-              Object& o,
               cli::Object<SubObject, Owner>& sub,
               std::vector<std::string>& args)
       {
