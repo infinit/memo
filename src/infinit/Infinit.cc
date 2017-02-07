@@ -919,8 +919,7 @@ namespace infinit
   fetch_data(std::string const& url,
              std::string const& type,
              std::string const& name,
-             infinit::Headers const& extra_headers = {},
-             Infinit::Reporter report = {})
+             infinit::Headers const& extra_headers = {})
   {
     infinit::Headers headers;
     for (auto const& header: extra_headers)
@@ -933,8 +932,6 @@ namespace infinit
     reactor::wait(*r);
     if (r->status() == reactor::http::StatusCode::OK)
     {
-      if (report)
-        report(name);
     }
     else if (r->status() == reactor::http::StatusCode::Not_Found)
     {
@@ -979,8 +976,7 @@ namespace infinit
                              std::string const& type,
                              std::string const& name,
                              boost::optional<User const&> self,
-                             Headers const& extra_headers,
-                             Reporter report)
+                             Headers const& extra_headers) const
   {
     Headers headers;
     if (self)
@@ -992,8 +988,7 @@ namespace infinit
     return fetch_data(elle::sprintf("%s/%s", beyond(), where),
                       type,
                       name,
-                      headers,
-                      report);
+                      headers);
   }
 
   elle::json::Json
@@ -1001,11 +996,9 @@ namespace infinit
                              std::string const& type,
                              std::string const& name,
                              boost::optional<User const&> self,
-                             Headers const& extra_headers,
-                             Reporter report)
+                             Headers const& extra_headers) const
   {
-    auto r = beyond_fetch_data(
-      where, type, name, self, extra_headers, report);
+    auto r = beyond_fetch_data(where, type, name, self, extra_headers);
     return elle::json::read(*r);
   }
 
@@ -1015,8 +1008,7 @@ namespace infinit
                          std::string const& name,
                          User const& self,
                          bool ignore_missing,
-                         bool purge,
-                         Reporter report)
+                         bool purge) const
   {
     reactor::http::Request::Configuration c;
     auto headers = signature_headers(reactor::http::Method::DELETE,
@@ -1034,8 +1026,6 @@ namespace infinit
     reactor::wait(r);
     if (r.status() == reactor::http::StatusCode::OK)
     {
-      if (report)
-        report(name);
       return true;
     }
     else if (r.status() == reactor::http::StatusCode::Not_Found)
@@ -1073,11 +1063,10 @@ namespace infinit
                          std::string const& name,
                          User const& self,
                          bool ignore_missing,
-                         bool purge,
-                         Reporter report)
+                         bool purge) const
   {
     return beyond_delete(elle::sprintf("%ss/%s", type, name), type, name, self,
-                         ignore_missing, purge, report);
+                         ignore_missing, purge);
   }
 
   Infinit::PushResult
@@ -1088,7 +1077,7 @@ namespace infinit
                             std::string const& content_type,
                             User const& self,
                             bool beyond_error,
-                            bool update)
+                            bool update) const
   {
     reactor::http::Request::Configuration c;
     c.header_add("Content-Type", content_type);

@@ -127,12 +127,13 @@ namespace infinit
   }
 
   reactor::Thread::unique_ptr
-  Network::make_stat_update_thread(infinit::User const& self,
+  Network::make_stat_update_thread(infinit::Infinit const& infinit,
+                                   infinit::User const& self,
                                    infinit::model::doughnut::Doughnut& model)
   {
     auto notify = [&]
       {
-        this->notify_storage(self, model.id());
+        this->notify_storage(infinit, self, model.id());
       };
     model.local()->storage()->register_notifier(notify);
     return reactor::every(60_min, "periodic storage stat updater", notify);
@@ -234,7 +235,8 @@ namespace infinit
   }
 
   void
-  Network::notify_storage(infinit::User const& user,
+  Network::notify_storage(infinit::Infinit const& infinit,
+                          infinit::User const& user,
                           infinit::model::Address const& node_id)
   {
     ELLE_TRACE_SCOPE("push storage stats to %s", beyond());
@@ -244,7 +246,7 @@ namespace infinit
         "networks/%s/stat/%s/%s", name, user.name, node_id);
       auto storage = this->dht()->storage->make();
       auto s = Storages{storage->usage(), storage->capacity()};
-      Infinit::beyond_push(
+      infinit.beyond_push(
         url, "storage usage", name, std::move(s), user, false);
     }
     catch (elle::Error const& e)

@@ -272,40 +272,31 @@ namespace infinit
     elle::json::Json
     beyond_login(std::string const& name, LoginCredentials const& o) const;
 
-    static
     std::unique_ptr<reactor::http::Request>
     beyond_fetch_data(std::string const& where,
                       std::string const& type,
                       std::string const& name,
                       boost::optional<User const&> self = boost::none,
-                      Headers const& extra_headers = {},
-                      Reporter report = {});
-    static
+                      Headers const& extra_headers = {}) const;
     elle::json::Json
     beyond_fetch_json(std::string const& where,
                       std::string const& type,
                       std::string const& name,
                       boost::optional<User const&> self = boost::none,
-                      Headers const& extra_headers = {},
-                      Reporter report = {});
-    static
+                      Headers const& extra_headers = {}) const;
     bool
     beyond_delete(std::string const& where,
                   std::string const& type,
                   std::string const& name,
                   User const& self,
                   bool ignore_missing = false,
-                  bool purge = false,
-                  Reporter report = {});
-    static
+                  bool purge = false) const;
     bool
     beyond_delete(std::string const& type,
                   std::string const& name,
                   User const& self,
                   bool ignore_missing = false,
-                  bool purge = false,
-                  Reporter report = {});
-    static
+                  bool purge = false) const;
     PushResult
     beyond_push_data(std::string const& where,
                      std::string const& type,
@@ -314,26 +305,21 @@ namespace infinit
                      std::string const& content_type,
                      User const& self,
                      bool beyond_error = false,
-                     bool update = false);
-
+                     bool update = false) const;
     template <typename T>
-    static
     T
     beyond_fetch(std::string const& where,
                  std::string const& type,
                  std::string const& name,
                  boost::optional<infinit::User const&> self = boost::none,
-                 infinit::Headers const& extra_headers = infinit::Headers{},
-                 Reporter report = {});
+                 infinit::Headers const& extra_headers = infinit::Headers{}) const;
 
     template <typename T>
-    static
     T
     beyond_fetch(std::string const& type,
-                 std::string const& name);
+                 std::string const& name) const;
 
     template <typename Serializer = void, typename T>
-    static
     void
     beyond_push(std::string const& where,
                 std::string const& type,
@@ -341,17 +327,16 @@ namespace infinit
                 T const& o,
                 infinit::User const& self,
                 bool beyond_error = false,
-                bool update = false);
+                bool update = false) const;
 
     template <typename Serializer = void, typename T>
-    static
     void
     beyond_push(std::string const& type,
                 std::string const& name,
                 T const& o,
                 infinit::User const& self,
                 bool beyond_error = false,
-                bool update = false);
+                bool update = false) const;
   };
 }
 

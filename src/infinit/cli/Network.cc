@@ -985,6 +985,7 @@ namespace infinit
           };
         if (push_p)
           elle::With<InterfacePublisher>(
+            ifnt,
             network, owner, dht->id(),
             dht->local()->server_endpoint().port(),
             advertise_host,
@@ -1225,7 +1226,7 @@ namespace infinit
          {
           reactor::Thread::unique_ptr stat_thread;
           if (push)
-            stat_thread = network.make_stat_update_thread(owner, dht);
+            stat_thread = network.make_stat_update_thread(cli.infinit(), owner, dht);
           cli.report_action("running", "network", network.name);
           if (cli.script())
           {

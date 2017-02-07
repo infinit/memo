@@ -1117,7 +1117,7 @@ namespace infinit
       {
         reactor::Thread::unique_ptr stat_thread;
         if (push_p)
-          stat_thread = network.make_stat_update_thread(owner, *model);
+          stat_thread = network.make_stat_update_thread(ifnt, owner, *model);
         ELLE_TRACE_SCOPE("run volume");
         cli.report_action("running", "volume", volume.name);
         auto fs = volume.run(std::move(model),
@@ -1611,7 +1611,8 @@ namespace infinit
       };
       if (local_endpoint && push_p)
         elle::With<InterfacePublisher>(
-          network, owner, model->id(), local_endpoint->port(), advertise_host,
+          ifnt, network, owner, model->id(), local_endpoint->port(),
+          advertise_host,
           no_local_endpoints,
           no_public_endpoints) << [&]
         {

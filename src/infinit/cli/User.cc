@@ -151,18 +151,8 @@ namespace infinit
           std::istreambuf_iterator<char>{});
         elle::ConstWeakBuffer data(s.data(), s.size());
         auto url = elle::sprintf("users/%s/avatar", self.name);
-        switch (infinit::Infinit::beyond_push_data(
-                  url, "avatar", self.name, data, "image/jpeg", self))
-        {
-          case infinit::Infinit::PushResult::pushed:
-            api.cli().report_action("saved", "avatar", self.name, "remotely");
-            break;
-          case infinit::Infinit::PushResult::updated:
-            api.cli().report_action("updated", "avatar", self.name, "remotely");
-            break;
-          case infinit::Infinit::PushResult::alreadyPushed:
-            api.cli().report_action("already pushed", "avatar", self.name);
-        }
+        api.cli().infinit().beyond_push_data(
+          url, "avatar", self.name, data, "image/jpeg", self);
         save_avatar(api, self.name, data);
       }
 
@@ -170,7 +160,7 @@ namespace infinit
       fetch_avatar(User& api, std::string const& name)
       {
         auto url = elle::sprintf("users/%s/avatar", name);
-        auto request = infinit::Infinit::beyond_fetch_data(url, "avatar", name);
+        auto request = api.cli().infinit().beyond_fetch_data(url, "avatar", name);
         if (request->status() == reactor::http::StatusCode::OK)
         {
           auto response = request->response();
@@ -183,10 +173,10 @@ namespace infinit
       }
 
       void
-      pull_avatar(infinit::User& self)
+      pull_avatar(User& api, infinit::User& self)
       {
         auto url = elle::sprintf("users/%s/avatar", self.name);
-        infinit::Infinit::beyond_delete(url, "avatar", self.name, self);
+        api.cli().infinit().beyond_delete(url, "avatar", self.name, self);
       }
 
       infinit::User
@@ -229,7 +219,7 @@ namespace infinit
             password = Infinit::read_password();
           if (!user.ldap_dn)
             user.password_hash = Infinit::hub_password_hash(*password);
-          infinit::Infinit::beyond_push<das::Serializer<PrivateUserPublish>>(
+          api.cli().infinit().beyond_push<das::Serializer<PrivateUserPublish>>(
             "user", user.name, user, user);
         }
         else
@@ -237,7 +227,7 @@ namespace infinit
           if (password)
             elle::err<CLIError>
               ("password is only used when pushing a full user");
-          infinit::Infinit::beyond_push<das::Serializer<PublicUserPublish>>(
+          api.cli().infinit().beyond_push<das::Serializer<PublicUserPublish>>(
             "user", user.name, user, user, !api.cli().script());
         }
       }
@@ -320,7 +310,7 @@ namespace infinit
         try
         {
           auto self = this->cli().as_user();
-          infinit::Infinit::beyond_delete("user", name, self, true, purge);
+          ifnt.beyond_delete("user", name, self, true, purge);
         }
         catch (MissingLocalResource const& e)
         {
@@ -441,7 +431,7 @@ namespace infinit
         };
         try
         {
-          auto user = infinit::Infinit::beyond_fetch<infinit::User>(
+          auto user = this->cli().infinit().beyond_fetch<infinit::User>(
             "user", reactor::http::url_encode(name));
           this->cli().infinit().user_save(std::move(user));
           avatar();
@@ -551,7 +541,7 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("pull");
       auto self = this->cli().as_user();
-      infinit::Infinit::beyond_delete("user", name, self, false, purge);
+      this->cli().infinit().beyond_delete("user", name, self, false, purge);
     }
 
     void
@@ -585,7 +575,7 @@ namespace infinit
           upload_avatar(*this, user, *avatar);
         }
         else
-          pull_avatar(user);
+          pull_avatar(*this, user);
       }
     }
 
