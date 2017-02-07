@@ -72,6 +72,8 @@ def configure(
     def execute(self):
       if not super().execute():
         return False
+      if os.path.islink(str(self.target().path())):
+        return True
       if cxx_toolkit.os == drake.os.macos:
         def set_lib_id(path):
           subprocess.check_output([
