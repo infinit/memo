@@ -466,7 +466,6 @@ namespace infinit
               ifnt.network_save(owner, network);
               auto res = std::make_unique<infinit::NetworkDescriptor>(std::move(network));
               ifnt.network_save(*res);
-              cli.report_created("network", res->name);
               return res;
             }
           }();
@@ -507,33 +506,16 @@ namespace infinit
         // delete_volume function.  Actually, that's quite some
         // duplication with Volument::mode_delete, no?
         for (auto const& volume: volumes)
-          for (auto const& drive: ifnt.drives_for_volume(volume))
-          {
-            auto drive_path = ifnt._drive_path(drive);
-            if (bfs::remove(drive_path))
-              cli.report_action("deleted", "drive", drive, "locally");
-          }
+          for (auto const& drive: ifnt.drives_for_volume(volume.name))
+            ifnt.drive_delete(drive);
         for (auto const& volume: volumes)
-        {
-          auto vol_path = ifnt._volume_path(volume);
-          auto v = ifnt.volume_get(volume);
-          bfs::remove_all(v.root_block_cache_dir());
-          if (bfs::remove(vol_path))
-            cli.report_action("deleted", "volume", volume, "locally");
-        }
+          ifnt.volume_delete(ifnt.volume_get(volume.name));
         for (auto const& user: ifnt.user_passports_for_network(network.name))
-        {
-          auto passport_path = ifnt._passport_path(network.name, user);
-          if (bfs::remove(passport_path))
-            cli.report_action("deleted", "passport",
-                              elle::sprintf("%s: %s", network.name, user),
-                              "locally");
-        }
+          ifnt.passport_delete(network.name, user);
       }
       if (pull)
         ifnt.beyond_delete("network", network.name, owner, true, purge);
-      ifnt.network_delete(network_name, owner, unlink);
-      cli.report_action("deleted", "network", network_name, "locally");
+      ifnt.network_delete(network.name, owner, unlink);
     }
 
 
@@ -570,7 +552,7 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
 
-      auto save = [&ifnt,&owner] (infinit::NetworkDescriptor desc_) {
+      auto save = [&ifnt,&owner,&cli] (infinit::NetworkDescriptor desc_) {
         // Save or update network descriptor.
         ifnt.network_save(desc_, true);
         for (auto const& u: ifnt.network_linked_users(desc_.name))
@@ -608,7 +590,9 @@ namespace infinit
       if (network_name)
       {
         auto name = ifnt.qualified_name(*network_name, owner);
-        save(ifnt.beyond_fetch<infinit::NetworkDescriptor>("network", name));
+        auto network = ifnt.beyond_fetch<infinit::NetworkDescriptor>(
+          "network", name);
+        save(network);
       }
       else // Fetch all networks for owner.
       {
@@ -642,7 +626,6 @@ namespace infinit
       ifnt.network_save(desc);
       cli.report_imported("network", desc.name);
     }
-
 
 #ifndef INFINIT_WINDOWS
     /*----------------.
@@ -1126,9 +1109,8 @@ namespace infinit
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
-
       auto name = ifnt.qualified_name(network_name, owner);
-      ifnt.beyond_delete("network", network_name, owner, false, purge);
+      ifnt.beyond_delete("network", name, owner, false, purge);
     }
 
     /*-------------.
@@ -1149,7 +1131,6 @@ namespace infinit
         auto owner_uid = infinit::User::uid(*dht.owner);
         auto desc = infinit::NetworkDescriptor(std::move(network));
         ifnt.beyond_push("network", desc.name, desc, owner, false, true);
-        cli.report_action("pushed", "network", network_name);
       }
     }
 
@@ -1534,19 +1515,13 @@ namespace infinit
           else
           {
             ifnt.network_save(owner, network, true);
-            cli.report_updated("linked network", network.name);
             auto res
               = std::make_unique<infinit::NetworkDescriptor>(std::move(network));
-            cli.report_updated("network", res->name);
             return res;
           }
         }();
       if (push || push_network)
-        {
-          ifnt.beyond_push("network", desc->name, *desc, owner, false, true);
-          this->cli().report_action("pushed", "network", desc->name);
-          // FIXME: report.
-        }
+        ifnt.beyond_push("network", desc->name, *desc, owner, false, true);
       if (changed_admins && !output_name)
         std::cout << "INFO: Changes to network admins do not affect existing data:\n"
                   << "INFO: Admin access will be updated on the next write to each\n"

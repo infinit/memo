@@ -62,6 +62,7 @@ namespace infinit
   {
     auto json = beyond_fetch_json(where, type, name, self, extra_headers);
     elle::serialization::json::SerializerIn input(json, false);
+    this->report_local_action()("fetched", type, name);
     return input.deserialize<T>();
   }
 

@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include <boost/signals2.hpp>
+
 #include <infinit/Drive.hh>
 #include <infinit/LoginCredentials.hh>
 #include <infinit/Network.hh>
@@ -16,7 +18,12 @@ namespace infinit
   class Infinit
   {
   public:
-
+    /// ReportAction represents a signal Infinit will triggers when it perform
+    /// an action related to the resources / objects (e.g. Users, Networks, etc.)
+    using ReportAction =
+      boost::signals2::signal<void (std::string const& action,
+                                    std::string const& type,
+                                    std::string const& name)>;
   public:
     /// Whether has a `/`.
     static bool
@@ -47,7 +54,7 @@ namespace infinit
     void
     network_unlink(std::string const& name_,
                    User const& user);
-    void
+    bool
     network_delete(std::string const& name_,
                    User const& user,
                    bool unlink);
@@ -70,13 +77,15 @@ namespace infinit
     using Passport = model::doughnut::Passport;
     Passport
     passport_get(std::string const& network, std::string const& user);
-
     std::vector<std::pair<Passport, std::string>>
     passports_get(boost::optional<std::string> network = boost::none);
-
     void
     passport_save(Passport const& passport, bool overwrite = false);
-
+    bool
+    passport_delete(Passport const& passport);
+    bool
+    passport_delete(std::string const& network_name,
+                    std::string const& user_name);
     /*-------.
     | User.  |
     `-------*/
@@ -84,6 +93,8 @@ namespace infinit
     void
     user_save(User const& user,
               bool overwrite = false);
+    bool
+    user_delete(User const& user);
     User
     user_get(std::string const& user, bool beyond_fallback = false) const;
     std::vector<User>
@@ -92,6 +103,8 @@ namespace infinit
     _avatars_path() const;
     boost::filesystem::path
     _avatar_path(std::string const& name) const;
+    bool
+    avatar_delete(User const& user);
 
     /*----------.
     | Storage.  |
@@ -104,8 +117,9 @@ namespace infinit
     void
     storage_save(std::string const& name,
                  std::unique_ptr<storage::StorageConfig> const& storage);
-    void
-    storage_remove(std::string const& name);
+    bool
+    storage_delete(std::unique_ptr<storage::StorageConfig> const& storage,
+                   bool clear = false);
     std::unordered_map<std::string, std::vector<std::string>>
     storage_networks(std::string const& storage_name);
 
@@ -120,6 +134,8 @@ namespace infinit
     volume_get(std::string const& name);
     void
     volume_save(Volume const& volume, bool overwrite = false);
+    bool
+    volume_delete(Volume const& volume);
     std::vector<Volume>
     volumes_get() const;
 
@@ -130,6 +146,8 @@ namespace infinit
 
     void
     credentials_add(std::string const& name, std::unique_ptr<Credentials> a);
+    bool
+    credentials_delete(std::string const& type, std::string const& name);
     template <typename T = infinit::Credentials>
     std::vector<std::unique_ptr<T, std::default_delete<infinit::Credentials>>>
     credentials(std::string const& name) const;
@@ -252,7 +270,7 @@ namespace infinit
     Drive
     drive_get(std::string const& name);
     bool
-    drive_delete(std::string const& name);
+    drive_delete(Drive const& drive);
     boost::filesystem::path
     _drive_icon_path() const;
     boost::filesystem::path
@@ -262,9 +280,9 @@ namespace infinit
 
     std::vector<std::string>
     user_passports_for_network(std::string const& network_name);
-    std::vector<std::string>
+    std::vector<Volume>
     volumes_for_network(std::string const& network_name);
-    std::vector<std::string>
+    std::vector<Drive>
     drives_for_volume(std::string const& volume_name);
     // saving & loading
     template <typename T>
@@ -275,7 +293,16 @@ namespace infinit
     static
     void
     save(std::ostream& output, T const& resource, bool pretty = true);
-
+  private:
+    bool
+    _delete(boost::filesystem::path const& path,
+            std::string const& type,
+            std::string const& name);
+    bool
+    _delete_all(boost::filesystem::path const& path,
+                std::string const& type,
+                std::string const& name);
+  public:
     // Beyond
     enum class PushResult
     {
@@ -352,6 +379,17 @@ namespace infinit
                 infinit::User const& self,
                 bool beyond_error = false,
                 bool update = false) const;
+
+    /// report_local_action is triggered when a local resource is edited:
+    /// - saved
+    /// - updated
+    /// - deleted
+    ELLE_ATTRIBUTE_RX(ReportAction, report_local_action);
+    /// report_remote_action is triggered when a resource is edited on the hub.
+    /// - saved
+    /// - updated
+    /// - deleted
+    ELLE_ATTRIBUTE_RX(ReportAction, report_remote_action);
   };
 }
 

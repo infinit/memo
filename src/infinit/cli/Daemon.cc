@@ -910,7 +910,6 @@ namespace infinit
             elle::serialization::json::SerializerIn input(json, false);
             auto user = input.deserialize<infinit::User>();
             ifnt.user_save(user, true);
-            cli.report_action("saved", "user", name, "locally");
           }
           ELLE_TRACE("starting initial manager");
           managers[getuid()].reset(new MountManager(ifnt, cli,

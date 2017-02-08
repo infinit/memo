@@ -132,12 +132,14 @@ namespace infinit
                   std::string const& name,
                   Buffer const& buffer)
       {
+        // XXX: move to infinit::avatar_save maybe ?
         bfs::ofstream f;
-        infinit::Infinit::_open_write(
+        bool existed = infinit::Infinit::_open_write(
           f, api.cli().infinit()._avatar_path(name),
           name, "avatar", true, std::ios::out | std::ios::binary);
         f.write(reinterpret_cast<char const*>(buffer.contents()), buffer.size());
-        api.cli().report_action("saved", "avatar", name, "locally");
+        api.cli().report_action(existed ? "updated" : "saved",
+                                "avatar for", name, "locally");
       }
 
       void
@@ -275,10 +277,7 @@ namespace infinit
         this->cli().report_exported(std::cout, "user", user.name);
       }
       else
-      {
         this->cli().infinit().user_save(user);
-        this->cli().report_action("generated", "user", name, "locally");
-      }
       if (push)
         user_push(*this, user, password, full);
     }
@@ -324,37 +323,23 @@ namespace infinit
       {
         // XXX Remove volumes and drives that are on network owned by this user.
         // Currently only the owner of a network can create volumes/drives.
-        for (auto const& drive_: ifnt.drives_get())
+        for (auto const& drive: ifnt.drives_get())
         {
-          auto drive = drive_.name;
-          if (ifnt.owner_name(drive) != user.name)
-            continue;
-          auto drive_path = ifnt._drive_path(drive);
-          if (bfs::remove(drive_path))
-            this->cli().report_action("deleted", "drive", drive, "locally");
+          if (ifnt.owner_name(drive.name) == user.name)
+            ifnt.drive_delete(drive);
         }
-        for (auto const& volume_: ifnt.volumes_get())
+        for (auto const& volume: ifnt.volumes_get())
         {
-          auto volume = volume_.name;
-          if (ifnt.owner_name(volume) != user.name)
-            continue;
-          auto volume_path = ifnt._volume_path(volume);
-          if (bfs::remove(volume_path))
-            this->cli().report_action("deleted", "volume", volume, "locally");
+          if (ifnt.owner_name(volume.name) == user.name)
+            ifnt.volume_delete(volume);
         }
         for (auto const& pair: ifnt.passports_get())
         {
           auto network = pair.first.network();
           if (ifnt.owner_name(network) != user.name
               && pair.second != user.name)
-          {
             continue;
-          }
-          auto passport_path = ifnt._passport_path(network, pair.second);
-          if (bfs::remove(passport_path))
-            this->cli().report_action("deleted", "passport",
-                                      elle::sprintf("%s: %s", network, pair.second),
-                                      "locally");
+          ifnt.passport_delete(network, pair.second);
         }
         for (auto const& network_: ifnt.networks_get(user))
         {
@@ -362,23 +347,11 @@ namespace infinit
           if (ifnt.owner_name(network) == user.name)
             ifnt.network_delete(network, user, true);
           else
-          {
             ifnt.network_unlink(network, user);
-            this->cli().report_action("unlinked", "network", network.name());
-          }
         }
       }
-      if (auto path = this->cli().avatar_path(name))
-        bfs::remove(*path);
-      auto path = ifnt._user_path(user.name);
-      if (bfs::remove(path))
-      {
-        this->cli().report_action("deleted", "user", user.name, "locally");
-      }
-      else
-      {
-        elle::err("File for user could not be deleted: %s", path);
-      }
+      ifnt.avatar_delete(user);
+      ifnt.user_delete(user);
     }
 
     void
@@ -535,7 +508,6 @@ namespace infinit
       elle::serialization::json::SerializerIn input(json, false);
       auto user = input.deserialize<infinit::User>();
       this->cli().infinit().user_save(user, true);
-      this->cli().report_action("saved", "user", name, "locally");
     }
 
     void
@@ -564,16 +536,15 @@ namespace infinit
         if (fullname)
           user.fullname = *fullname;
         this->cli().infinit().user_save(user, true);
-        this->cli().report_updated("user", user.name);
       }
       user_push(*this, user, password, full);
-      // FIXME: avatar should probably be stored locally too
       if (avatar)
       {
         if (!avatar->empty())
         {
           if (!bfs::exists(*avatar))
             elle::err("avatar file doesn't exist: %s", *avatar);
+          // Also saves avatar locally.
           upload_avatar(*this, user, *avatar);
         }
         else

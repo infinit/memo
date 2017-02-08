@@ -43,7 +43,7 @@ namespace infinit
 
       template<typename A, typename ... Args>
       void
-      recursive_action(A action, std::string const& path, Args ... args)
+      recursive_action(A action, std::string const& path, Args const&... args)
       {
         boost::system::error_code erc;
         auto it = bfs::recursive_directory_iterator(path, erc);
@@ -360,7 +360,7 @@ namespace infinit
       }
 
       std::string
-      public_key_from_username(infinit::Infinit& ifnt,
+      public_key_from_username(infinit::Infinit const& ifnt,
                                std::string const& username, bool fetch)
       {
         auto user = ifnt.user_get(username, fetch);
@@ -669,7 +669,7 @@ namespace infinit
       /// \param omode  likewise.
       void
       set_action(std::string const& path,
-                 infinit::Infinit& infinit,
+                 infinit::Infinit const& infinit,
                  std::vector<std::string> const& users,
                  std::string const& mode,
                  std::string const& omode,

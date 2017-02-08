@@ -73,19 +73,20 @@ namespace infinit
       /// Report using a printf-format.
       void
       report(std::string const& format, Args&&... args);
+      /// Report action with the following formatting:
+      /// (<where> )<action> <type> <name>.
+      ///
+      /// XXX: Consider using an enum for argument 'action' to prevent typos.
       void
       report_action(std::string const& action,
                     std::string const& type,
                     std::string const& name,
                     std::string const& where = {});
-      void
-      report_created(std::string const& type, std::string const& name);
-      void
-      report_updated(std::string const& type, std::string const& name);
+      /// Report the import of resource.
+      ///
+      /// This function bounce to report_action with action = "imported".
       void
       report_imported(std::string const& type, std::string const& name);
-      void
-      report_saved(std::string const& type, std::string const& name);
       void
       report_action_output(std::ostream& output,
                            std::string const& action,

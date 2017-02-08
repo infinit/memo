@@ -277,7 +277,6 @@ namespace infinit
       else
       {
         this->cli().infinit().storage_save(name, config);
-        this->cli().report_action("created", "storage", name);
       }
     }
 
@@ -354,23 +353,7 @@ namespace infinit
           for (auto const& user_name: pair.second)
             infinit.network_unlink(
               pair.first, infinit.user_get(user_name));
-      if (clear)
-      {
-        try
-        {
-          boost::filesystem::remove_all(fs_storage->path);
-          this->cli().report_action("cleared", "storage", fs_storage->name);
-        }
-        catch (boost::filesystem::filesystem_error const& e)
-        {
-          elle::err("unable to clear storage contents: %s", e.what());
-        }
-      }
-      auto path = infinit._storage_path(name);
-      if (boost::filesystem::remove(path))
-        this->cli().report_action("deleted", "storage", storage->name);
-      else
-        elle::err("storage could not be deleted: %s", path);
+      infinit.storage_delete(storage, clear);
     }
   }
 }
