@@ -16,7 +16,6 @@ namespace infinit
   class Infinit
   {
   public:
-    using Reporter = std::function<void (std::string const&)>;
 
   public:
     /// Whether has a `/`.
@@ -47,13 +46,11 @@ namespace infinit
                          boost::optional<User> user = boost::none);
     void
     network_unlink(std::string const& name_,
-                   User const& user,
-                   Reporter report = {});
+                   User const& user);
     void
     network_delete(std::string const& name_,
                    User const& user,
-                   bool unlink,
-                   Reporter report = {});
+                   bool unlink);
     std::vector<Drive>
     drives_get() const;
     NetworkDescriptor

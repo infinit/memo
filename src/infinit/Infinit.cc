@@ -146,8 +146,7 @@ namespace infinit
 
   void
   Infinit::network_unlink(std::string const& name_,
-                          User const& user,
-                          Reporter report)
+                          User const& user)
   {
     auto name = qualified_name(name_, user);
     auto network = this->network_get(name, user, true);
@@ -158,12 +157,7 @@ namespace infinit
     {
       boost::system::error_code erc;
       bfs::remove(path, erc);
-      if (!erc)
-      {
-        if (report)
-          report(network.name);
-      }
-      else
+      if (erc)
       {
         ELLE_WARN("Unable to unlink network \"%s\": %s",
                   network.name, erc.message());
@@ -174,8 +168,7 @@ namespace infinit
   void
   Infinit::network_delete(std::string const& name_,
                           User const& user,
-                          bool unlink,
-                          Reporter report)
+                          bool unlink)
   {
     // Ensure if unqualified name is passed, we qualify with passed user.
     auto name = qualified_name(name_, user);
@@ -200,8 +193,6 @@ namespace infinit
         ELLE_WARN("Unable to unlink network \"%s\" for \"%s\": %s",
                   name, u.name, erc.message());
       }
-      else if (report)
-        report(name);
     }
     auto desc_path = this->_network_descriptor_path(name);
     bfs::remove(desc_path, erc);
@@ -210,8 +201,6 @@ namespace infinit
       ELLE_WARN("Unable to remove network descriptor \"%s\": %s",
                 name, erc.message());
     }
-    else if (report)
-      report(name);
   }
 
   std::vector<Drive>
