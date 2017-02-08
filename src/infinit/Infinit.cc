@@ -782,7 +782,7 @@ namespace infinit
                                       type, name);
   }
 
-  void
+  bool
   Infinit::_open_write(bfs::ofstream& f,
                        bfs::path const& path,
                        std::string const& name,
@@ -792,12 +792,14 @@ namespace infinit
   {
     ELLE_DEBUG("open %s \"%s\" (%s) for writing", type, name, path);
     create_directories(path.parent_path());
-    if (!overwrite && exists(path))
+    auto exists = bfs::exists(path);
+    if (!overwrite && exists)
       elle::err<ResourceAlreadyFetched>("%s \"%s\" already exists",
                                         type, name);
     f.open(path, mode);
     if (!f.good())
       elle::err("unable to open \"%s\" for writing", path);
+    return exists;
   }
 
   bfs::path

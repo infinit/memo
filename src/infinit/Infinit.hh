@@ -219,8 +219,27 @@ namespace infinit
                boost::filesystem::path const& path,
                std::string const& name,
                std::string const& type);
+    /// Open the given path, associating it with the given ofstream f.
+    ///
+    /// If overwrite isn't specify and the path already exists, throw
+    /// an ResourceAlreadyFetched exception.
+    ///
+    /// Otherwise, return whether the resource already exists and was
+    /// overwritten.
+    ///
+    /// \param f The stream to associate with the file.
+    /// \param path The path to the file to open.
+    /// \param name The name of the resource (e.g. "root")
+    /// \param type The type of the resource (e.g. "User")
+    /// \param overwrite Whether if the function is allowed to overwrite an
+    ///                  existing file.
+    /// \param mode Flags describing the requested input/output mode for the
+    ///                   file.
+    /// \return Whether if a file was overwritten.
+    /// \throw ResourceAlreadyFetched if the file already exists and overwrite
+    ///        was false.
     static
-    void
+    bool
     _open_write(boost::filesystem::ofstream& f,
                 boost::filesystem::path const& path,
                 std::string const& name,
