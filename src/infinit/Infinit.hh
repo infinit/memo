@@ -89,10 +89,9 @@ namespace infinit
     std::vector<User>
     users_get() const;
     boost::filesystem::path
-    _user_avatar_path() const;
+    _avatars_path() const;
     boost::filesystem::path
-    _user_avatar_path(std::string const& name) const;
-
+    _avatar_path(std::string const& name) const;
 
     /*----------.
     | Storage.  |

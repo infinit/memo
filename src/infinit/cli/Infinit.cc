@@ -373,18 +373,10 @@ namespace infinit
           return nullptr;
     }
 
-    bfs::path
-    Infinit::avatar_path() const
-    {
-      auto root = xdg_cache_home() / "avatars";
-      create_directories(root);
-      return root;
-    }
-
     boost::optional<bfs::path>
     Infinit::avatar_path(std::string const& name) const
     {
-      auto path = this->avatar_path() / name;
+      auto path = this->infinit()._avatar_path(name);
       if (exists(path))
         return path;
       else

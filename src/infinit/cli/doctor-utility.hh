@@ -2291,7 +2291,7 @@ namespace
       {
         try
         {
-          if (!is_parent_of(ifnt._user_avatar_path(), p.path())
+          if (!is_parent_of(ifnt._avatars_path(), p.path())
               && !is_parent_of(ifnt._drive_icon_path(), p.path()))
             store(leftovers, p.path().string());
         }

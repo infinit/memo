@@ -394,7 +394,7 @@ namespace infinit
   }
 
   bfs::path
-  Infinit::_user_avatar_path() const
+  Infinit::_avatars_path() const
   {
     auto root = xdg_cache_home() / "avatars";
     create_directories(root);
@@ -402,9 +402,9 @@ namespace infinit
   }
 
   bfs::path
-  Infinit::_user_avatar_path(std::string const& name) const
+  Infinit::_avatar_path(std::string const& name) const
   {
-    return this->_user_avatar_path() / name;
+    return this->_avatars_path() / name;
   }
 
   std::unique_ptr<storage::StorageConfig>

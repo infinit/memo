@@ -134,7 +134,7 @@ namespace infinit
       {
         bfs::ofstream f;
         infinit::Infinit::_open_write(
-          f, api.cli().infinit()._user_avatar_path(name),
+          f, api.cli().infinit()._avatar_path(name),
           name, "avatar", true, std::ios::out | std::ios::binary);
         f.write(reinterpret_cast<char const*>(buffer.contents()), buffer.size());
         api.cli().report_action("saved", "avatar", name, "locally");

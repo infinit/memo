@@ -58,8 +58,6 @@ namespace infinit
       std::unique_ptr<std::ostream, std::function<void (std::ostream*)>>
       get_output(boost::optional<std::string> path = {},
                  bool stdout_def = true);
-      boost::filesystem::path
-      avatar_path() const;
       boost::optional<boost::filesystem::path>
       avatar_path(std::string const& name) const;
       static
