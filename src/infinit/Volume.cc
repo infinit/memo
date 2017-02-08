@@ -122,7 +122,7 @@ namespace infinit
   }
 
   boost::filesystem::path
-  Volume::root_block_cache_dir()
+  Volume::root_block_cache_dir() const
   {
     return xdg_state_home() / this->network / std::string(this->name);
   }
