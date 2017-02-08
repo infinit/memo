@@ -59,7 +59,8 @@ namespace infinit
         this->bind(modes::mode_delete,
                    cli::name = Infinit::default_user_name(),
                    cli::pull = false,
-                   cli::purge = false))
+                   cli::purge = false,
+                   cli::force = false))
       , export_(
         "Export local user",
         das::cli::Options(),
@@ -285,12 +286,13 @@ namespace infinit
     void
     User::mode_delete(std::string const& name,
                       bool pull,
-                      bool purge)
+                      bool purge,
+                      bool force)
     {
       ELLE_TRACE_SCOPE("delete");
       auto& ifnt = this->cli().infinit();
       auto user = ifnt.user_get(name);
-      if (user.private_key && !this->cli().script())
+      if (user.private_key && !this->cli().script() && !force)
       {
         std::string res;
         {
