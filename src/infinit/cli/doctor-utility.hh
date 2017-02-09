@@ -2165,16 +2165,15 @@ namespace
               auto it = boost::find_if(results.silos,
                                        [name] (auto const& t)
                                        {
-                                         return name == t.name();
+                                         return t.name() == name;
                                        });
-              auto res = (it == results.silos.end()
-                          || it->show(false));
+              auto res = it != results.silos.end() && !it->show(false);
               if (it != results.silos.end())
                 faulty.emplace_back(*it);
               else
                 faulty.emplace_back(name, false, "unknown",
                                     std::string{"missing"});
-              return !res;
+              return res;
             });
         if (status)
           store(results.networks, network.name, status, ignore_non_linked,
@@ -2299,8 +2298,9 @@ namespace
         try
         {
           // XXX: Factor.
-          if (is_parent_of(infinit::xdg_state_home() / "cache", p.path()));
-          else if (p.path() == infinit::xdg_state_home() / "critical.log");
+          if (is_parent_of(infinit::xdg_state_home() / "cache", p.path())
+              || p.path() == infinit::xdg_state_home() / "critical.log")
+            {}
           else if (p.path().filename() == "root_block")
           {
             // The root block path is:
