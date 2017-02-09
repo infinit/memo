@@ -127,14 +127,16 @@ namespace infinit
 
       auto results = All{};
       _system_sanity(cli, results.system_sanity);
-      _configuration_integrity(cli, ignore_non_linked, results.configuration_integrity);
+      _configuration_integrity(cli, ignore_non_linked,
+                               results.configuration_integrity);
       _connectivity(cli,
                     server,
                     upnp_tcp_port,
                     upnp_udt_port,
                     results.connectivity);
-      _output(cli, std::cout, results, no_color, verbose);
-      _report_error(cli, std::cout, results.sane(), results.warning());
+      auto out = Output{std::cout, !no_color};
+      _output(cli, out, results, verbose);
+      _report_error(cli, out, results.sane(), results.warning());
     }
 
     /*----------------------.
@@ -151,8 +153,9 @@ namespace infinit
 
       auto results = ConfigurationIntegrityResults{};
       _configuration_integrity(cli, ignore_non_linked, results);
-      _output(cli, std::cout, results, no_color, verbose);
-      _report_error(cli, std::cout, results.sane(), results.warning());
+      auto out = Output{std::cout, !no_color};
+      _output(cli, out, results, verbose);
+      _report_error(cli, out, results.sane(), results.warning());
     }
 
 
@@ -177,8 +180,9 @@ namespace infinit
                     upnp_tcp_port,
                     upnp_udt_port,
                     results);
-      _output(cli, std::cout, results, no_color, verbose);
-      _report_error(cli, std::cout, results.sane(), results.warning());
+      auto out = Output{std::cout, !no_color};
+      _output(cli, out, results, verbose);
+      _report_error(cli, out, results.sane(), results.warning());
     }
 
 
@@ -248,8 +252,9 @@ namespace infinit
 
       auto results = SystemSanityResults{};
       _system_sanity(cli, results);
-      _output(cli, std::cout, results, no_color, verbose);
-      _report_error(cli, std::cout, results.sane(), results.warning());
+      auto out = Output{std::cout, !no_color};
+      _output(cli, out, results, verbose);
+      _report_error(cli, out, results.sane(), results.warning());
     }
   }
 }
