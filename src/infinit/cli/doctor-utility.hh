@@ -2102,11 +2102,14 @@ namespace
       for (auto& elem: silos)
       {
         auto& storage = elem.second.first;
+        // We really need to update this field, as when we verify
+        // volumes, we will skip those with broken silos.  Likewise
+        // for the other items.
         auto& status = elem.second.second;
         if (auto s3config = dynamic_cast<S3StorageConfig const*>(
               storage.get()))
         {
-          auto status = any_of(aws_credentials,
+          status = any_of(aws_credentials,
               [&s3config] (auto const& credentials)
               {
 #define COMPARE(field) (credentials->field == s3config->credentials.field())
@@ -2129,7 +2132,7 @@ namespace
         }
         if (auto gcsconfig = dynamic_cast<GCSConfig const*>(storage.get()))
         {
-          auto status = any_of(gcs_credentials,
+          status = any_of(gcs_credentials,
               [&gcsconfig] (auto const& credentials)
               {
                 return credentials->refresh_token == gcsconfig->refresh_token;
