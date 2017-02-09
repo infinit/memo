@@ -22,23 +22,17 @@ namespace infinit
 
     Journal::Journal(Infinit& infinit)
       : Object(infinit)
-      , describe(
-        "Describe asynchronous operation(s)",
-        das::cli::Options(),
-        this->bind(modes::mode_describe,
-                   cli::network,
-                   cli::operation = boost::none))
-      , export_(
-        "Export an operation",
-        das::cli::Options(),
-        this->bind(modes::mode_export,
-                   cli::network,
-                   cli::operation))
-      , stat(
-        "Show the remaining asynchronous operations count and size",
-        das::cli::Options(),
-        this->bind(modes::mode_stat,
-                   cli::network = boost::none))
+      , describe(*this,
+                 "Describe asynchronous operation(s)",
+                 cli::network,
+                 cli::operation = boost::none)
+      , export_(*this,
+                "Export an operation",
+                cli::network,
+                cli::operation)
+      , stat(*this,
+             "Show the remaining asynchronous operations count and size",
+             cli::network = boost::none)
     {}
 
     /*-----------------.
@@ -173,5 +167,8 @@ namespace infinit
       if (cli.script())
         elle::json::write(std::cout, res);
     }
+
+    // Instantiate
+    template class Object<Journal>;
   }
 }

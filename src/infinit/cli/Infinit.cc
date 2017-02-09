@@ -19,7 +19,6 @@
 #include <das/cli.hh>
 
 #include <infinit/utility.hh>
-#include <infinit/cli/Object.hxx>
 #include <infinit/cli/utility.hh>
 
 ELLE_LOG_COMPONENT("infinit");

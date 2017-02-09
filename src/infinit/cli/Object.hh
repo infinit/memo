@@ -33,7 +33,7 @@ namespace infinit
       void
       call(bool help);
       void
-      recurse(std::vector<std::string>& args);
+      apply(Infinit& cli, std::vector<std::string>& args);
       template <typename Symbol, typename ... Args>
       static
       auto
@@ -47,6 +47,30 @@ namespace infinit
         -> decltype(binding(s, std::forward<Args>(args)...));
       ELLE_ATTRIBUTE_R(Infinit&, cli);
       ELLE_ATTRIBUTE_R(das::cli::Options, options, protected);
+      // ELLE_ATTIRBUTE_R(elle::unordered_map<std::string, >);
+    };
+
+    template <typename Symbol, typename ObjectSymbol, typename Object>
+    struct mode_call
+    {
+      using type = bool;
+      static
+      bool
+      value(infinit::cli::Infinit& infinit,
+            Object& o,
+            std::vector<std::string>& args,
+            bool& found)
+      {
+        if (!found && das::cli::option_name_from_c(Symbol::name()) == args[0])
+        {
+          found = true;
+          args.erase(args.begin());
+          Symbol::attr_get(o).apply(infinit, args);
+          return true;
+        }
+        else
+          return false;
+      }
     };
   }
 }

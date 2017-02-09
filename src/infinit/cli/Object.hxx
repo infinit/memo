@@ -10,117 +10,13 @@ namespace infinit
 {
   namespace cli
   {
-    template <typename Symbol, typename ObjectSymbol, typename Object>
-    struct mode_call
-    {
-      using type = bool;
-      static
-      bool
-      value(infinit::cli::Infinit& infinit,
-            Object& o,
-            std::vector<std::string>& args,
-            bool& found)
-      {
-        if (!found && das::cli::option_name_from_c(Symbol::name()) == args[0])
-        {
-          found = true;
-          args.erase(args.begin());
-          auto& mode = Symbol::attr_get(o);
-          _handle(infinit, mode, args);
-          return true;
-        }
-        else
-          return false;
-      }
-
-      template <typename M>
-      static
-      void
-      _handle(Infinit& infinit,
-              Mode<M>& mode,
-              std::vector<std::string>& args)
-      {
-        auto options = mode.options;
-        auto f = mode.prototype().extend(
-          help = false,
-          cli::compatibility_version = boost::none,
-          script = false,
-          as = infinit.default_user_name());
-        auto show_help = [&] (std::ostream& s)
-          {
-            auto action = Symbol::name();
-            {
-              auto dash = action.find("_");
-              if (dash != std::string::npos)
-                action = action.substr(0, dash);
-            }
-            auto vars = VarMap{
-              {"action", elle::sprintf("to %s", action)},
-              {"hub", beyond(true)},
-              {"object", ObjectSymbol::name()},
-              {"verb", action},
-            };
-            Infinit::usage(
-              s, elle::sprintf(
-                "%s %s [OPTIONS]",
-                das::cli::option_name_from_c(ObjectSymbol::name()),
-                das::cli::option_name_from_c(Symbol::name())));
-            s << vars.expand(mode.description) << "\n\nOptions:\n";
-            {
-              std::stringstream buffer;
-              das::cli::help(f, buffer, options);
-              s << vars.expand(buffer.str());
-            }
-          };
-        try
-        {
-          das::cli::call(
-            f,
-            [&] (bool help,
-                 boost::optional<elle::Version> const& compatibility_version,
-                 bool script,
-                 std::string as,
-                 auto&& ... args)
-            {
-              infinit._as = as;
-              infinit._script = script;
-              if (compatibility_version)
-              {
-                ensure_version_is_supported(*compatibility_version);
-                infinit._compatibility_version =
-                  std::move(compatibility_version);
-              }
-              if (help)
-                show_help(std::cout);
-              else
-                mode.function()(std::forward<decltype(args)>(args)...);
-            },
-            args,
-            options);
-        }
-        catch (das::cli::Error const& e)
-        {
-          std::stringstream s;
-          s << e.what() << "\n\n";
-          show_help(s);
-          // object.help(s);
-          // Discard trailing newline
-          auto msg = s.str();
-          msg = msg.substr(0, msg.size() - 1);
-          throw CLIError(msg);
-        }
-      }
-
-      template <typename SubObject, typename Owner>
-      static
-      void
-      _handle(Infinit& infinit,
-              cli::Object<SubObject, Owner>& sub,
-              std::vector<std::string>& args)
-      {
-        static_cast<SubObject&>(sub).recurse(args);
-      }
-    };
+    // template <typename Symbol, typename ObjectSymbol, typename Object>
+    // bool
+    // mode_call<Symbol, ObjectSymbol, Object>::value(
+    //   infinit::cli::Infinit& infinit,
+    //   Object& o,
+    //   std::vector<std::string>& args,
+    //   bool& found)
 
     template <typename Self, typename Owner>
     Object<Self, Owner>::Object(Infinit& infinit)
@@ -207,7 +103,7 @@ namespace infinit
 
     template <typename Self, typename Owner>
     void
-    Object<Self, Owner>::recurse(std::vector<std::string>& args)
+    Object<Self, Owner>::apply(Infinit&, std::vector<std::string>& args)
     {
       using Symbol = find_name<Self, Owner>;
       try
@@ -250,6 +146,81 @@ namespace infinit
       return das::named::function(
         das::bind_method<Self, Symbol>(static_cast<Self&>(*this)),
         std::forward<Args>(args)...);
+    }
+
+    template <typename Self, typename Symbol, typename ... Args>
+    void
+    Mode<Self, Symbol, Args...>::apply(Infinit& infinit,
+                                       std::vector<std::string>& args)
+    {
+      auto options = this->options;
+      auto f = this->prototype().extend(
+        help = false,
+        cli::compatibility_version = boost::none,
+        script = false,
+        as = infinit.default_user_name());
+      auto show_help = [&] (std::ostream& s)
+        {
+          auto action = Symbol::name();
+          {
+            auto dash = action.find("_");
+            if (dash != std::string::npos)
+              action = action.substr(0, dash);
+          }
+          auto vars = VarMap{
+            {"action", elle::sprintf("to %s", action)},
+            {"hub", beyond(true)},
+            {"object", Symbol::name()},
+            {"verb", action},
+          };
+          Infinit::usage(
+            s, elle::sprintf(
+              "%s %s [OPTIONS]",
+              das::cli::option_name_from_c(Symbol::name()),
+              das::cli::option_name_from_c(Symbol::name())));
+          s << vars.expand(this->description) << "\n\nOptions:\n";
+          {
+            std::stringstream buffer;
+            das::cli::help(f, buffer, options);
+            s << vars.expand(buffer.str());
+          }
+        };
+      try
+      {
+        das::cli::call(
+          f,
+          [&] (bool help,
+               boost::optional<elle::Version> const& compatibility_version,
+               bool script,
+               std::string as,
+               auto&& ... args)
+          {
+            infinit.as(as);
+            infinit.script(script);
+            if (compatibility_version)
+            {
+              ensure_version_is_supported(*compatibility_version);
+              infinit.compatibility_version(std::move(compatibility_version));
+            }
+            if (help)
+              show_help(std::cout);
+            else
+              this->function()(std::forward<decltype(args)>(args)...);
+          },
+          args,
+          options);
+      }
+      catch (das::cli::Error const& e)
+      {
+        std::stringstream s;
+        s << e.what() << "\n\n";
+        show_help(s);
+        // object.help(s);
+        // Discard trailing newline
+        auto msg = s.str();
+        msg = msg.substr(0, msg.size() - 1);
+        throw CLIError(msg);
+      }
     }
   }
 }

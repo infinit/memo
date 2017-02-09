@@ -23,26 +23,29 @@ namespace infinit
                                     cli::stat));
 
       // describe.
-      Mode<decltype(binding(modes::mode_describe,
-                            cli::network,
-                            cli::operation = boost::none))>
+      Mode<Journal,
+           decltype(modes::mode_describe),
+           decltype(cli::network),
+           decltype(cli::operation = boost::none)>
       describe;
       void
       mode_describe(std::string const& network,
                     boost::optional<int> operation = boost::none);
 
       // export.
-      Mode<decltype(binding(modes::mode_export,
-                            cli::network,
-                            cli::operation))>
+      Mode<Journal,
+           decltype(modes::mode_export),
+           decltype(cli::network),
+           decltype(cli::operation)>
       export_;
       void
       mode_export(std::string const& network,
                   int operation);
 
       // stat.
-      Mode<decltype(binding(modes::mode_stat,
-                            cli::network = boost::none))>
+      Mode<Journal,
+           decltype(modes::mode_stat),
+           decltype(cli::network = boost::none)>
       stat;
       void
       mode_stat(boost::optional<std::string> const& network);

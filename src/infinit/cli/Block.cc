@@ -15,12 +15,10 @@ namespace infinit
 
     Block::Block(Infinit& infinit)
       : Object(infinit)
-      , deserialize(
-        "Deserialized block",
-        das::cli::Options(),
-        this->bind(modes::mode_deserialize,
-                   cli::output = boost::none,
-                   cli::paths = Paths{}))
+      , deserialize(*this,
+                    "Deserialized block",
+                    cli::output = boost::none,
+                    cli::paths = Paths{})
     {}
 
     /*--------------------.
@@ -48,5 +46,8 @@ namespace infinit
         elle::serialization::json::serialize(block, *output);
       }
     }
+
+    // Instantiate
+    template class Object<Block>;
   }
 }

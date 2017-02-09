@@ -98,23 +98,24 @@ namespace infinit
     Device::Device(Infinit& infinit)
       : Object(infinit)
       , receive(
-        "receive an object from another device using {hub}",
-        das::cli::Options{
-          {"user", {'u', "{action} user identity to another device using {hub}", false}}
-        },
-        this->bind(modes::mode_receive,
-                   cli::user = false,
-                   cli::name = Infinit::default_user_name(),
-                   cli::passphrase = boost::none))
-      , transmit(
-        "transmit an object to another device using {hub}",
-        das::cli::Options{
-          {"user", {'u', "{action} user identity to another device using {hub}", false}}
-        },
-        this->bind(modes::mode_transmit,
-                   cli::user = false,
-                   cli::passphrase = boost::none,
-                   cli::no_countdown = false))
+        *this,
+                "Receive an object from another device using {hub}",
+                das::cli::Options{
+                  {"user", {'u', "{action} user identity to "
+                                 "another device using {hub}", false}}
+                },
+                cli::user = false,
+                cli::name = Infinit::default_user_name(),
+                cli::passphrase = boost::none)
+      , transmit(*this,
+                 "transmit an object to another device using {hub}",
+                 das::cli::Options{
+                   {"user", {'u', "{action} user identity to "
+                                  "another device using {hub}", false}}
+                 },
+                 cli::user = false,
+                 cli::passphrase = boost::none,
+                 cli::no_countdown = false)
     {}
 
     /*----------------.
@@ -276,5 +277,8 @@ namespace infinit
       else
         elle::err<Error>("Must specify type of object to receive");
     }
+
+    // Instantiate
+    template class Object<Device>;
   }
 }

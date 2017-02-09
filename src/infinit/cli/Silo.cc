@@ -16,6 +16,7 @@
 #endif
 
 #include <infinit/cli/Infinit.hh>
+#include <infinit/cli/Object.hxx>
 #include <infinit/cli/utility.hh>
 
 ELLE_LOG_COMPONENT("cli.block");
@@ -98,92 +99,82 @@ namespace infinit
     Silo::Silo(Infinit& infinit)
       : Object(infinit)
       , create(infinit)
-      , delete_("Delete local silo",
-                das::cli::Options(),
-                this->bind(modes::mode_delete,
-                           name,
-                           clear_content = false,
-                           purge = false))
-      , export_("Export local silo",
-                das::cli::Options(),
-                this->bind(modes::mode_export,
-                           name,
-                           output = boost::none))
-      , import("Import local silo",
-               das::cli::Options(),
-               this->bind(modes::mode_import,
-                          input = boost::none))
-      , list("List local silos",
-             das::cli::Options(),
-             this->bind(modes::mode_list))
+      , delete_(*this,
+                "Delete local silo",
+                name,
+                clear_content = false,
+                purge = false)
+      , export_(*this,
+                "Export local silo",
+                name,
+                output = boost::none)
+      , import(*this,
+               "Import local silo",
+               input = boost::none)
+      , list(*this, "List local silos")
     {}
 
     Silo::Create::Create(Infinit& infinit)
       : Object(infinit)
-      , dropbox(
-        "Store blocks on Dropbox",
-        das::cli::Options{
-          {"path", das::cli::Option{
-              '\0', "directory where to store blocks", false}}},
-        this->bind(modes::mode_dropbox,
-                   cli::name,
-                   cli::account,
-                   cli::description = boost::none,
-                   cli::capacity = boost::none,
-                   cli::output = boost::none,
-                   cli::path = boost::none))
-      , filesystem(
-        "Store blocks on local filesystem",
-        das::cli::Options{
-          {"path", das::cli::Option{
-              '\0', "directory where to store blocks", false}}},
-        this->bind(modes::mode_filesystem,
+      , dropbox(*this,
+                "Store blocks on Dropbox",
+                das::cli::Options{
+                  {"path", das::cli::Option{
+                      '\0', "directory where to store blocks", false}}},
+                cli::name,
+                cli::account,
+                cli::description = boost::none,
+                cli::capacity = boost::none,
+                cli::output = boost::none,
+                cli::path = boost::none)
+      , filesystem(*this,
+                   "Store blocks on local filesystem",
+                   das::cli::Options{
+                     {"path", das::cli::Option{
+                         '\0', "directory where to store blocks", false}}},
                    cli::name,
                    cli::description = boost::none,
                    cli::capacity = boost::none,
                    cli::output = boost::none,
-                   cli::path = boost::none))
-      , gcs(
-        "Store blocks on Google Cloud Storage",
-        das::cli::Options{
-          {"path", das::cli::Option{
-              '\0', "directory where to store blocks", false}}},
-        this->bind(modes::mode_gcs,
-                   cli::name,
-                   cli::account,
-                   cli::bucket,
-                   cli::description = boost::none,
-                   cli::capacity = boost::none,
-                   cli::output = boost::none,
-                   cli::path = boost::none))
-      , google_drive(
-        "Store blocks on Google Drive",
-        das::cli::Options{
-          {"path", das::cli::Option{
-              '\0', "directory where to store blocks", false}}},
-        this->bind(modes::mode_google_drive,
-                   cli::name,
-                   cli::account,
-                   cli::description = boost::none,
-                   cli::capacity = boost::none,
-                   cli::output = boost::none,
-                   cli::path = boost::none))
-      , s3(
-        "Store blocks on AWS S3",
-        das::cli::Options{
-          {"path", das::cli::Option{
-              '\0', "directory where to store blocks", false}}},
-        this->bind(modes::mode_s3,
-                   cli::name,
-                   cli::account,
-                   cli::bucket,
-                   cli::region,
-                   cli::description = boost::none,
-                   cli::capacity = boost::none,
-                   cli::output = boost::none,
-                   cli::endpoint = "amazonaws.com",
-                   cli::storage_class = boost::none,
-                   cli::path = boost::none))
+                   cli::path = boost::none)
+      , gcs(*this,
+            "Store blocks on Google Cloud Storage",
+            das::cli::Options{
+              {"path", das::cli::Option{
+                  '\0', "directory where to store blocks", false}}},
+            cli::name,
+            cli::account,
+            cli::bucket,
+            cli::description = boost::none,
+            cli::capacity = boost::none,
+            cli::output = boost::none,
+            cli::path = boost::none)
+      , google_drive(*this,
+                     "Store blocks on Google Drive",
+                     das::cli::Options{
+                       {"path", das::cli::Option{
+                           '\0', "directory where to store blocks", false}}},
+                     cli::name,
+                     cli::account,
+                     cli::description = boost::none,
+                     cli::capacity = boost::none,
+                     cli::output = boost::none,
+                     cli::path = boost::none)
+      , s3(*this,
+           "Store blocks on AWS S3",
+           das::cli::Options{
+             {"path", das::cli::Option{
+                 '\0', "directory where to store blocks", false}}},
+           cli::name,
+           cli::account,
+           cli::bucket,
+           cli::region,
+           cli::description = boost::none,
+           cli::capacity = boost::none,
+           cli::output = boost::none,
+           cli::endpoint = "amazonaws.com",
+           cli::storage_class = boost::none,
+           cli::path = boost::none)
     {}
 
     static
@@ -457,18 +448,8 @@ namespace infinit
       else
         elle::err("storage could not be deleted: %s", path);
     }
-  }
-}
 
-#include <infinit/cli/Object.hxx>
-
-namespace infinit
-{
-  namespace cli
-  {
-    template
-    class Object<Silo>;
-    template
-    class Object<Silo::Create, Silo>;
+    // Instantiate
+    template class Object<Silo>;
   }
 }

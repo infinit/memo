@@ -38,13 +38,16 @@ namespace infinit
                                                 cli::google_drive,
                                                 cli::s3));
         Create(Infinit& infinit);
-        Mode<decltype(binding(modes::mode_dropbox,
-                              cli::name,
-                              cli::account,
-                              cli::description = boost::none,
-                              cli::capacity = boost::none,
-                              cli::output = boost::none,
-                              cli::path = boost::none))>
+
+        // Dropbox.
+        Mode<Create,
+             decltype(modes::mode_dropbox),
+             decltype(cli::name),
+             decltype(cli::account),
+             decltype(cli::description = boost::none),
+             decltype(cli::capacity = boost::none),
+             decltype(cli::output = boost::none),
+             decltype(cli::path = boost::none)>
         dropbox;
         void
         mode_dropbox(std::string const& name,
@@ -53,12 +56,15 @@ namespace infinit
                      boost::optional<std::string> capacity = {},
                      boost::optional<std::string> output = {},
                      boost::optional<std::string> root = {});
-        Mode<decltype(binding(modes::mode_filesystem,
-                              cli::name,
-                              cli::description = boost::none,
-                              cli::capacity = boost::none,
-                              cli::output = boost::none,
-                              cli::path = boost::none))>
+
+        // Filesystem.
+        Mode<Create,
+             decltype(modes::mode_filesystem),
+             decltype(cli::name),
+             decltype(cli::description = boost::none),
+             decltype(cli::capacity = boost::none),
+             decltype(cli::output = boost::none),
+             decltype(cli::path = boost::none)>
         filesystem;
         void
         mode_filesystem(std::string const& name,
@@ -66,14 +72,16 @@ namespace infinit
                         boost::optional<std::string> capacity,
                         boost::optional<std::string> output,
                         boost::optional<std::string> path);
-        Mode<decltype(binding(modes::mode_gcs,
-                              cli::name,
-                              cli::account,
-                              cli::bucket,
-                              cli::description = boost::none,
-                              cli::capacity = boost::none,
-                              cli::output = boost::none,
-                              cli::path = boost::none))>
+
+        Mode<Create,
+             decltype(modes::mode_gcs),
+             decltype(cli::name),
+             decltype(cli::account),
+             decltype(cli::bucket),
+             decltype(cli::description = boost::none),
+             decltype(cli::capacity = boost::none),
+             decltype(cli::output = boost::none),
+             decltype(cli::path = boost::none)>
         gcs;
         void
         mode_gcs(std::string const& name,
@@ -83,13 +91,15 @@ namespace infinit
                  boost::optional<std::string> capacity = {},
                  boost::optional<std::string> output = {},
                  boost::optional<std::string> path = {});
-        Mode<decltype(binding(modes::mode_google_drive,
-                              cli::name,
-                              cli::account,
-                              cli::description = boost::none,
-                              cli::capacity = boost::none,
-                              cli::output = boost::none,
-                              cli::path = boost::none))>
+
+        Mode<Create,
+             decltype(modes::mode_google_drive),
+             decltype(cli::name),
+             decltype(cli::account),
+             decltype(cli::description = boost::none),
+             decltype(cli::capacity = boost::none),
+             decltype(cli::output = boost::none),
+             decltype(cli::path = boost::none)>
         google_drive;
         void
         mode_google_drive(std::string const& name,
@@ -98,17 +108,19 @@ namespace infinit
                      boost::optional<std::string> capacity = {},
                      boost::optional<std::string> output = {},
                      boost::optional<std::string> root = {});
-        Mode<decltype(binding(modes::mode_s3,
-                              cli::name,
-                              cli::account,
-                              cli::bucket,
-                              cli::region,
-                              cli::description = boost::none,
-                              cli::capacity = boost::none,
-                              cli::output = boost::none,
-                              cli::endpoint = "amazonaws.com",
-                              cli::storage_class = boost::none,
-                              cli::path = boost::none))>
+
+        Mode<Create,
+             decltype(modes::mode_s3),
+             decltype(cli::name),
+             decltype(cli::account),
+             decltype(cli::bucket),
+             decltype(cli::region),
+             decltype(cli::description = boost::none),
+             decltype(cli::capacity = boost::none),
+             decltype(cli::output = boost::none),
+             decltype(cli::endpoint = "amazonaws.com"),
+             decltype(cli::storage_class = boost::none),
+             decltype(cli::path = boost::none)>
         s3;
         void
         mode_s3(std::string const& name,
@@ -125,10 +137,11 @@ namespace infinit
       } create;
 
       // Delete
-      Mode<decltype(binding(modes::mode_delete,
-                            name,
-                            clear_content = false,
-                            purge = false))>
+      Mode<Silo,
+           decltype(modes::mode_delete),
+           decltype(name),
+           decltype(clear_content = false),
+           decltype(purge = false)>
       delete_;
       void
       mode_delete(std::string const& name,
@@ -136,23 +149,26 @@ namespace infinit
                   bool purge);
 
       // Export
-      Mode<decltype(binding(modes::mode_export,
-                            name,
-                            output = boost::none))>
+      Mode<Silo,
+           decltype(modes::mode_export),
+           decltype(name),
+           decltype(output = boost::none)>
       export_;
       void
       mode_export(std::string const& name,
                   boost::optional<std::string> output);
 
       // Import
-      Mode<decltype(binding(modes::mode_import,
-                            input = boost::none))>
+      Mode<Silo,
+           decltype(modes::mode_import),
+           decltype(input = boost::none)>
       import;
       void
       mode_import(boost::optional<std::string> input);
 
       // List
-      Mode<decltype(binding(modes::mode_list))>
+      Mode<Silo,
+           decltype(modes::mode_list)>
       list;
       void
       mode_list();

@@ -22,10 +22,11 @@ namespace infinit
                                     cli::transmit));
 
       // Mode: receive.
-      Mode<decltype(binding(modes::mode_receive,
-                            cli::user = false,
-                            cli::name = std::string{},
-                            cli::passphrase = boost::none))>
+      Mode<Device,
+           decltype(modes::mode_receive),
+           decltype(cli::user = false),
+           decltype(cli::name = std::string{}),
+           decltype(cli::passphrase = boost::none)>
       receive;
       void
       mode_receive(bool user,
@@ -33,10 +34,11 @@ namespace infinit
                    boost::optional<std::string> const& passphrase);
 
       // Mode: transmit.
-      Mode<decltype(binding(modes::mode_transmit,
-                            cli::user = false,
-                            cli::passphrase = boost::none,
-                            cli::no_countdown = false))>
+      Mode<Device,
+           decltype(modes::mode_transmit),
+           decltype(cli::user = false),
+           decltype(cli::passphrase = boost::none),
+           decltype(cli::no_countdown = false)>
       transmit;
       void
       mode_transmit(bool user,

@@ -41,86 +41,68 @@ namespace infinit
 
     Daemon::Daemon(Infinit& infinit)
       : Object(infinit)
-      , disable_storage(
-        "Disable storage on associated network",
-        das::cli::Options(),
-        this->bind(modes::mode_disable_storage,
-                   cli::name))
-      , enable_storage(
-        "Enable storage on associated network",
-        das::cli::Options(),
-        this->bind(modes::mode_enable_storage,
-                   cli::name,
-                   cli::hold))
-      , fetch(
-        "Fetch volume and its dependencies from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_fetch,
-                   cli::name))
-      , manage_volumes(
-        "Manage daemon controlled volumes",
-        das::cli::Options(),
-        this->bind(modes::mode_manage_volumes,
-                   cli::list = false,
-                   cli::status = false,
-                   cli::start = false,
-                   cli::stop = false,
-                   cli::restart = false,
-                   cli::name = boost::none))
-      , run(
-        "Run daemon in the foreground",
-        das::cli::Options(),
-        this->bind(modes::mode_run,
-                   cli::login_user = Strings{},
-                   cli::mount = Strings{},
-                   cli::mount_root = boost::none,
-                   cli::default_network = boost::none,
-                   cli::advertise_host = Strings{},
-                   cli::fetch = false,
-                   cli::push = false,
+      , disable_storage(*this,
+                        "Disable storage on associated network",
+                        cli::name)
+      , enable_storage(*this,
+                       "Enable storage on associated network",
+                       cli::name,
+                       cli::hold)
+      , fetch(*this,
+              "Fetch volume and its dependencies from {hub}",
+              cli::name)
+      , manage_volumes(*this,
+                       "Manage daemon controlled volumes",
+                       cli::list = false,
+                       cli::status = false,
+                       cli::start = false,
+                       cli::stop = false,
+                       cli::restart = false,
+                       cli::name = boost::none)
+      , run(*this,
+            "Run daemon in the foreground",
+            cli::login_user = Strings{},
+            cli::mount = Strings{},
+            cli::mount_root = boost::none,
+            cli::default_network = boost::none,
+            cli::advertise_host = Strings{},
+            cli::fetch = false,
+            cli::push = false,
 #ifdef WITH_DOCKER
-                   cli::docker = true,
-                   cli::docker_user = boost::none,
-                   cli::docker_home = boost::none,
-                   cli::docker_socket_tcp = false,
-                   cli::docker_socket_port = 0,
-                   cli::docker_socket_path = "/run/docker/plugins",
-                   cli::docker_descriptor_path = "/usr/lib/docker/plugins",
-                   cli::docker_mount_substitute = "",
+            cli::docker = true,
+            cli::docker_user = boost::none,
+            cli::docker_home = boost::none,
+            cli::docker_socket_tcp = false,
+            cli::docker_socket_port = 0,
+            cli::docker_socket_path = "/run/docker/plugins",
+            cli::docker_descriptor_path = "/usr/lib/docker/plugins",
+            cli::docker_mount_substitute = "",
 #endif
-                   cli::log_level = boost::none,
-                   cli::log_path = boost::none))
-      , start(
-        "Start daemon in the background",
-        das::cli::Options(),
-        this->bind(modes::mode_start,
-                   cli::login_user = Strings{},
-                   cli::mount = Strings{},
-                   cli::mount_root = boost::none,
-                   cli::default_network = boost::none,
-                   cli::advertise_host = Strings{},
-                   cli::fetch = false,
-                   cli::push = false,
+            cli::log_level = boost::none,
+            cli::log_path = boost::none)
+      , start(*this,
+              "Start daemon in the background",
+              cli::login_user = Strings{},
+              cli::mount = Strings{},
+              cli::mount_root = boost::none,
+              cli::default_network = boost::none,
+              cli::advertise_host = Strings{},
+              cli::fetch = false,
+              cli::push = false,
 #ifdef WITH_DOCKER
-                   cli::docker = true,
-                   cli::docker_user = boost::none,
-                   cli::docker_home = boost::none,
-                   cli::docker_socket_tcp = false,
-                   cli::docker_socket_port = 0,
-                   cli::docker_socket_path = "/run/docker/plugins",
-                   cli::docker_descriptor_path = "/usr/lib/docker/plugins",
-                   cli::docker_mount_substitute = "",
+              cli::docker = true,
+              cli::docker_user = boost::none,
+              cli::docker_home = boost::none,
+              cli::docker_socket_tcp = false,
+              cli::docker_socket_port = 0,
+              cli::docker_socket_path = "/run/docker/plugins",
+              cli::docker_descriptor_path = "/usr/lib/docker/plugins",
+              cli::docker_mount_substitute = "",
 #endif
-                   cli::log_level = boost::none,
-                   cli::log_path = boost::none))
-      , status(
-        "Query daemon status",
-        das::cli::Options(),
-        this->bind(modes::mode_status))
-      , stop(
-        "Stop daemon",
-        das::cli::Options(),
-        this->bind(modes::mode_stop))
+              cli::log_level = boost::none,
+              cli::log_path = boost::none)
+      , status(*this, "Query daemon status")
+      , stop(*this, "Stop daemon")
     {}
 
 
@@ -1476,5 +1458,8 @@ namespace infinit
       ELLE_TRACE_SCOPE("stop");
       daemon_stop();
     }
+
+    // Instantiate
+    template class Object<Daemon>;
   }
 }

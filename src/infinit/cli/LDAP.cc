@@ -21,52 +21,46 @@ namespace infinit
 
     LDAP::LDAP(Infinit& infinit)
       : Object(infinit)
-      , drive_invite(
-        "Invite LDAP users to a drive",
-        das::cli::Options(),
-        this->bind(modes::mode_drive_invite,
-                   cli::server,
-                   cli::domain,
-                   cli::user,
-                   cli::password = boost::none,
-                   cli::drive,
-                   cli::root_permissions = "rw",
-                   cli::create_home = false,
-                   cli::searchbase,
-                   cli::filter = boost::none,
-                   cli::object_class = boost::none,
-                   cli::mountpoint,
-                   cli::deny_write = false,
-                   cli::deny_storage = false))
-      , populate_hub(
-        "Register LDAP users on {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_populate_hub,
-                   cli::server,
-                   cli::domain,
-                   cli::user,
-                   cli::password = boost::none,
-                   cli::searchbase,
-                   cli::filter = boost::none,
-                   cli::object_class = boost::none,
-                   cli::username_pattern = "$(cn)%",
-                   cli::email_pattern = "$(mail)",
-                   cli::fullname_pattern = "$(cn)"))
-      , populate_network(
-        "Register LDAP users and groups to a network",
-        das::cli::Options(),
-        this->bind(modes::mode_populate_network,
-                   cli::server,
-                   cli::domain,
-                   cli::user,
-                   cli::password = boost::none,
-                   cli::network,
-                   cli::searchbase,
-                   cli::filter = boost::none,
-                   cli::object_class = boost::none,
-                   cli::mountpoint,
-                   cli::deny_write = false,
-                   cli::deny_storage = false))
+      , drive_invite(*this,
+                     "Invite LDAP users to a drive",
+                     cli::server,
+                     cli::domain,
+                     cli::user,
+                     cli::password = boost::none,
+                     cli::drive,
+                     cli::root_permissions = "rw",
+                     cli::create_home = false,
+                     cli::searchbase,
+                     cli::filter = boost::none,
+                     cli::object_class = boost::none,
+                     cli::mountpoint,
+                     cli::deny_write = false,
+                     cli::deny_storage = false)
+      , populate_hub(*this,
+                     "Register LDAP users on {hub}",
+                     cli::server,
+                     cli::domain,
+                     cli::user,
+                     cli::password = boost::none,
+                     cli::searchbase,
+                     cli::filter = boost::none,
+                     cli::object_class = boost::none,
+                     cli::username_pattern = "$(cn)%",
+                     cli::email_pattern = "$(mail)",
+                     cli::fullname_pattern = "$(cn)")
+      , populate_network(*this,
+                         "Register LDAP users and groups to a network",
+                         cli::server,
+                         cli::domain,
+                         cli::user,
+                         cli::password = boost::none,
+                         cli::network,
+                         cli::searchbase,
+                         cli::filter = boost::none,
+                         cli::object_class = boost::none,
+                         cli::mountpoint,
+                         cli::deny_write = false,
+                         cli::deny_storage = false)
     {}
 
     /*----------.
@@ -558,5 +552,8 @@ namespace infinit
                         deny_write,
                         deny_storage);
     }
+
+    // Instantiate
+    template class Object<LDAP>;
   }
 }

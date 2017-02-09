@@ -28,15 +28,16 @@ namespace infinit
                                     cli::push));
 
       // Create.
-      Mode<decltype(binding(modes::mode_create,
-                            cli::network,
-                            cli::user,
-                            cli::push_passport = false,
-                            cli::push = false,
-                            cli::deny_write = false,
-                            cli::deny_storage = false,
-                            cli::allow_create_passport = false,
-                            cli::output = boost::none))>
+      Mode<Passport,
+           decltype(modes::mode_create),
+           decltype(cli::network),
+           decltype(cli::user),
+           decltype(cli::push_passport = false),
+           decltype(cli::push = false),
+           decltype(cli::deny_write = false),
+           decltype(cli::deny_storage = false),
+           decltype(cli::allow_create_passport = false),
+           decltype(cli::output = boost::none)>
       create;
       void
       mode_create(std::string const& network_name,
@@ -49,10 +50,11 @@ namespace infinit
                   boost::optional<std::string> const& output = {});
 
       // Delete.
-      Mode<decltype(binding(modes::mode_delete,
-                            cli::network,
-                            cli::user,
-                            cli::pull = false))>
+      Mode<Passport,
+           decltype(modes::mode_delete),
+           decltype(cli::network),
+           decltype(cli::user),
+           decltype(cli::pull = false)>
       delete_;
       void
       mode_delete(std::string const& network_name,
@@ -60,10 +62,11 @@ namespace infinit
                   bool pull = false);
 
       // Export.
-      Mode<decltype(binding(modes::mode_export,
-                            cli::network,
-                            cli::user,
-                            cli::output = boost::none))>
+      Mode<Passport,
+           decltype(modes::mode_export),
+           decltype(cli::network),
+           decltype(cli::user),
+           decltype(cli::output = boost::none)>
       export_;
       void
       mode_export(std::string const& network_name,
@@ -71,41 +74,46 @@ namespace infinit
                   boost::optional<std::string> const& output = {});
 
       // Fetch.
-      Mode<decltype(binding(modes::mode_fetch,
-                            cli::network = boost::none,
-                            cli::user = boost::none))>
+      Mode<Passport,
+           decltype(modes::mode_fetch),
+           decltype(cli::network = boost::none),
+           decltype(cli::user = boost::none)>
       fetch;
       void
       mode_fetch(boost::optional<std::string> network_name = {},
                  boost::optional<std::string> const& user_name = {});
 
       // Import.
-      Mode<decltype(binding(modes::mode_import,
-                            cli::input = boost::none))>
+      Mode<Passport,
+           decltype(modes::mode_import),
+           decltype(cli::input = boost::none)>
       import;
       void
       mode_import(boost::optional<std::string> const& input = {});
 
       // List.
-      Mode<decltype(binding(modes::mode_list,
-                            cli::network = boost::none))>
+      Mode<Passport,
+           decltype(modes::mode_list),
+           decltype(cli::network = boost::none)>
       list;
       void
       mode_list(boost::optional<std::string> network_name = {});
 
       // Pull.
-      Mode<decltype(binding(modes::mode_pull,
-                            cli::network,
-                            cli::user))>
+      Mode<Passport,
+           decltype(modes::mode_pull),
+           decltype(cli::network),
+           decltype(cli::user)>
       pull;
       void
       mode_pull(std::string const& network_name,
                 std::string const& user_name);
 
       // Push.
-      Mode<decltype(binding(modes::mode_push,
-                            cli::network,
-                            cli::user))>
+      Mode<Passport,
+           decltype(modes::mode_push),
+           decltype(cli::network),
+           decltype(cli::user)>
       push;
       void
       mode_push(std::string const& network_name,
