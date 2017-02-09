@@ -19,7 +19,8 @@ namespace
   struct Output
   {
     std::ostream& out;
-    bool color = true;
+    bool verbose;
+    bool color;
 
     /// General forwarding.
     template <typename T>
@@ -139,8 +140,7 @@ namespace
   void
   print_(Output& out,
          std::string const& name,
-         C& container,
-         bool verbose)
+         C& container)
   {
     bool sane = true;
     bool warning = false;
@@ -153,7 +153,7 @@ namespace
     }
     bool broken = !sane || warning;
     status(out, sane, warning) << " " << name;
-    if (verbose || broken)
+    if (out.verbose || broken)
     {
       if (!container.empty())
         out << ":";
@@ -174,11 +174,11 @@ namespace
       for (auto const& index: indexes)
       {
         auto item = container[index];
-        if (verbose || !item.sane() || item.warning())
+        if (out.verbose || !item.sane() || item.warning())
         {
           status(out << "  ",
                  item.sane(), item.warning()) << " " << item.name();
-          item.print(out, verbose);
+          item.print(out);
           out << std::endl;
         }
       }
@@ -233,21 +233,21 @@ namespace
     `---------*/
     virtual
     void
-    _print(Output& out, bool verbose) const
+    _print(Output& out) const
     {
-      if (this->show(verbose) && this->sane())
+      if (this->show(out.verbose) && this->sane())
         out << " OK";
     }
 
     Output&
-    print(Output& out, bool verbose, bool rc = true) const
+    print(Output& out, bool rc = true) const
     {
       status(out,
              this->sane(), this->warning()) << " " << this->name();
-      if (this->show(verbose))
+      if (this->show(out.verbose))
         out << ":";
-      this->_print(out, verbose);
-      if (this->show(verbose) && this->reason)
+      this->_print(out);
+      if (this->show(out.verbose) && this->reason)
         print_reason(out << std::endl, *this->reason, 2);
       return out << std::endl;
     }
@@ -256,12 +256,13 @@ namespace
     bool
     show(bool verbose) const
     {
-      return (!this->sane() || verbose || this->warning()) && this->_show(verbose);
+      return (verbose || !this->sane() || this->warning())
+        && this->_show(verbose);
     }
   protected:
     virtual
     bool
-    _show(bool verbose) const
+    _show(bool) const
     {
       return true;
     }
@@ -300,11 +301,11 @@ namespace
       | Printing |
       `---------*/
       Output&
-      print(Output& out, bool verbose) const
+      print(Output& out) const
       {
         if (!this->sane())
           out << " is faulty because";
-        this->_print(out, verbose);
+        this->_print(out);
         if (!this->sane() && this->reason)
           out << " " << *this->reason;
         return out;
@@ -329,9 +330,9 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(Output& out, bool verbose) const override
+      _print(Output& out) const override
       {
-        if (this->show(verbose) && this->sane())
+        if (this->show(out.verbose) && this->sane())
           elle::fprintf(out.out,
                         " \"%s\" exists and has a private key", this->user_name());
       }
@@ -363,7 +364,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(Output& out, bool) const override
+      _print(Output& out) const override
       {}
 
       /*--------------.
@@ -413,7 +414,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(Output& out, bool verbose) const override
+      _print(Output& out) const override
       {
         if (!this->linked)
           elle::fprintf(out.out, "is not linked [for user \"%s\"]", username);
@@ -491,7 +492,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(Output& out, bool) const override
+      _print(Output& out) const override
       {
         if ((!this->sane() || this->warning()) && this->faulty_network)
         {
@@ -549,7 +550,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(Output& out, bool) const override
+      _print(Output& out) const override
       {
         if (!this->sane() && this->faulty_volume)
         {
@@ -636,16 +637,16 @@ namespace
     | Printing |
     `---------*/
     void
-    print(Output& out, bool verbose) const
+    print(Output& out) const
     {
       if (!this->only())
         section(out, "Configuration integrity");
-      this->user.print(out, verbose);
-      print_(out, "Silos", silos, verbose);
-      print_(out, "Networks", networks, verbose);
-      print_(out, "Volumes", volumes, verbose);
-      print_(out, "Drives", drives, verbose);
-      print_(out, "Leftovers", leftovers, verbose);
+      this->user.print(out);
+      print_(out, "Silos", silos);
+      print_(out, "Networks", networks);
+      print_(out, "Volumes", volumes);
+      print_(out, "Drives", drives);
+      print_(out, "Leftovers", leftovers);
       out << std::endl;
     }
 
@@ -728,7 +729,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(Output& out, bool verbose) const override;
+      _print(Output& out) const override;
 
       /*--------------.
       | Serialization |
@@ -759,7 +760,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(Output& out, bool verbose) const override;
+      _print(Output& out) const override;
 
       /*--------------.
       | Serialization |
@@ -789,9 +790,12 @@ namespace
       | Printing |
       `---------*/
       bool
-      _show(bool verbose) const override;
+      _show(bool) const override
+      {
+        return !this->environ.empty();
+      }
       void
-      _print(Output& out, bool verbose) const override;
+      _print(Output& out) const override;
 
       /*--------------.
       | Serialization |
@@ -819,7 +823,7 @@ namespace
       | Printing |
       `---------*/
       void
-      print(Output& out, bool verbose) const;
+      print(Output& out) const;
 
       /*--------------.
       | Serialization |
@@ -849,7 +853,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(Output& out, bool verbose) const override;
+      _print(Output& out) const override;
 
       /*--------------.
       | Serialization |
@@ -875,7 +879,7 @@ namespace
     | Printing |
     `---------*/
     void
-    print(Output& out, bool verbose) const;
+    print(Output& out) const;
 
     /*--------------.
     | Serialization |
@@ -933,7 +937,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(Output& out, bool verbose) const override;
+      _print(Output& out) const override;
 
       /*--------------.
       | Serialization |
@@ -968,7 +972,7 @@ namespace
       | Printing |
       `---------*/
       void
-      print(Output& out, bool verbose) const;
+      print(Output& out) const;
 
       /*--------------.
       | Serialization |
@@ -1000,7 +1004,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(Output& out, bool verbose) const override;
+      _print(Output& out) const override;
 
       /*--------------.
       | Serialization |
@@ -1073,7 +1077,7 @@ namespace
         | Printing |
         `---------*/
         void
-        print(Output& out, bool verbose) const;
+        print(Output& out) const;
 
         /*--------------.
         | Serialization |
@@ -1108,7 +1112,7 @@ namespace
       | Printing |
       `---------*/
       void
-      _print(Output& out, bool verbose) const override;
+      _print(Output& out) const override;
 
       /*--------------.
       | Serialization |
@@ -1133,7 +1137,7 @@ namespace
     | Printing |
     `---------*/
     void
-    print(Output& out, bool verbose) const;
+    print(Output& out) const;
 
     /*----------.
     | Interface |
@@ -1179,7 +1183,7 @@ namespace
     | Printing |
     `---------*/
     void
-    print(Output& out, bool verbose) const;
+    print(Output& out) const;
 
     /*--------------.
     | Serialization |
@@ -1196,10 +1200,9 @@ namespace
   };
 
   void
-  SystemSanityResults::UserResult::_print(Output& out,
-                                          bool verbose) const
+  SystemSanityResults::UserResult::_print(Output& out) const
   {
-    if (this->show(verbose) && this->sane())
+    if (this->show(out.verbose) && this->sane())
       out << " " << this->_user_name;
   }
 
@@ -1227,10 +1230,9 @@ namespace
   {}
 
   void
-  SystemSanityResults::SpaceLeft::_print(Output& out,
-                                         bool verbose) const
+  SystemSanityResults::SpaceLeft::_print(Output& out) const
   {
-    if (this->show(verbose))
+    if (this->show(out.verbose))
     {
       if (!this->sane() || this->warning())
         out << std::endl << "  - " << "low";
@@ -1265,17 +1267,10 @@ namespace
     , environ(environ)
   {}
 
-  bool
-  SystemSanityResults::EnvironResult::_show(bool verbose) const
-  {
-    return !this->environ.empty();
-  }
-
   void
-  SystemSanityResults::EnvironResult::_print(
-    Output& out, bool verbose) const
+  SystemSanityResults::EnvironResult::_print(Output& out) const
   {
-    if (this->show(verbose))
+    if (this->show(out.verbose))
     {
       for (auto const& entry: this->environ)
         out << std::endl << "  " << entry.first << ": " << entry.second;
@@ -1300,16 +1295,13 @@ namespace
   {}
 
   void
-  SystemSanityResults::PermissionResult::print(
-    Output& out, bool verbose) const
+  SystemSanityResults::PermissionResult::print(Output& out) const
   {
-    if (this->show(verbose))
-    {
+    if (this->show(out.verbose))
       out
         << " exists: " << result(this->exists)
         << ", readable: " << result(this->read)
         << ", writable: " << result(this->write);
-    }
   }
 
   void
@@ -1335,14 +1327,10 @@ namespace
   {}
 
   void
-  SystemSanityResults::FuseResult::_print(Output& out,
-                                          bool verbose) const
+  SystemSanityResults::FuseResult::_print(Output& out) const
   {
-    if (verbose)
-    {
-      if (this->sane() && !this->warning())
-        out << " you will be able to mount a filesystem interface through FUSE";
-    }
+    if (out.verbose && this->sane() && !this->warning())
+      out << " you will be able to mount a filesystem interface through FUSE";
   }
 
   void
@@ -1357,15 +1345,15 @@ namespace
   {}
 
   void
-  SystemSanityResults::print(Output& out, bool verbose) const
+  SystemSanityResults::print(Output& out) const
   {
     if (!this->only())
       section(out, "System sanity");
-    this->user.print(out, verbose);
-    this->space_left.print(out, verbose);
-    this->environ.print(out, verbose, false);
-    print_(out, "Permissions", this->permissions, verbose);
-    this->fuse.print(out, verbose);
+    this->user.print(out);
+    this->space_left.print(out);
+    this->environ.print(out, false);
+    print_(out, "Permissions", this->permissions);
+    this->fuse.print(out);
     out << std::endl;
   }
 
@@ -1422,10 +1410,9 @@ namespace
   {}
 
   void
-  ConnectivityResults::InterfaceResults::_print(
-    Output& out, bool verbose) const
+  ConnectivityResults::InterfaceResults::_print(Output& out) const
   {
-    if (this->show(verbose))
+    if (this->show(out.verbose))
       for (auto const& entry: this->entries)
         out << std::endl << "  " << entry;
   }
@@ -1467,10 +1454,9 @@ namespace
   }
 
   void
-  ConnectivityResults::ProtocolResult::print(
-    Output& out, bool verbose) const
+  ConnectivityResults::ProtocolResult::print(Output& out) const
   {
-    if (this->show(verbose))
+    if (this->show(out.verbose))
     {
       if (this->sane())
       {
@@ -1498,10 +1484,9 @@ namespace
   {}
 
   void
-  ConnectivityResults::NATResult::_print(
-    Output& out, bool verbose) const
+  ConnectivityResults::NATResult::_print(Output& out) const
   {
-    if (this->show(verbose) && this->sane())
+    if (this->show(out.verbose) && this->sane())
       out << " OK (" << (this->cone ? "CONE" : "NOT CONE") << ")";
   }
 
@@ -1530,10 +1515,9 @@ namespace
   }
 
   void
-  ConnectivityResults::UPnPResult::RedirectionResult::print(
-    Output& out, bool verbose) const
+  ConnectivityResults::UPnPResult::RedirectionResult::print(Output& out) const
   {
-    if (this->show(verbose))
+    if (this->show(out.verbose))
     {
       status(out << std::endl << "  ", this->sane(), this->warning())
         << " " << this->name() << ": ";
@@ -1552,14 +1536,14 @@ namespace
   {}
 
   void
-  ConnectivityResults::UPnPResult::_print(Output& out, bool verbose) const
+  ConnectivityResults::UPnPResult::_print(Output& out) const
   {
-    if (this->show(verbose))
+    if (this->show(out.verbose))
     {
       if (this->external)
         out << " external IP address: " << this->external;
       for (auto const& redirection: redirections)
-        redirection.print(out, verbose);
+        redirection.print(out);
     }
   }
 
@@ -1601,15 +1585,15 @@ namespace
   {}
 
   void
-  ConnectivityResults::print(Output& out, bool verbose) const
+  ConnectivityResults::print(Output& out) const
   {
     if (!this->only())
       section(out, "Connectivity");
-    this->beyond.print(out, verbose);
-    this->interfaces.print(out, verbose, false);
-    this->nat.print(out, verbose);
-    this->upnp.print(out, verbose, false);
-    print_(out, "Protocols", this->protocols, verbose);
+    this->beyond.print(out);
+    this->interfaces.print(out, false);
+    this->nat.print(out);
+    this->upnp.print(out, false);
+    print_(out, "Protocols", this->protocols);
     out << std::endl;
   }
 
@@ -1655,11 +1639,11 @@ namespace
   {}
 
   void
-  All::print(Output& out, bool verbose) const
+  All::print(Output& out) const
   {
-    configuration_integrity.print(out, verbose);
-    system_sanity.print(out, verbose);
-    connectivity.print(out, verbose);
+    configuration_integrity.print(out);
+    system_sanity.print(out);
+    connectivity.print(out);
   }
 
   bool
@@ -2371,12 +2355,11 @@ namespace
   void
   _output(infinit::cli::Infinit& cli,
           Output& out,
-          Report const& results,
-          bool verbose)
+          Report const& results)
   {
     if (cli.script())
       infinit::Infinit::save(out.out, results, false);
     else
-      results.print(out, verbose);
+      results.print(out);
   }
 }

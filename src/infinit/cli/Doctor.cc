@@ -134,8 +134,8 @@ namespace infinit
                     upnp_tcp_port,
                     upnp_udt_port,
                     results.connectivity);
-      auto out = Output{std::cout, !no_color};
-      _output(cli, out, results, verbose);
+      auto out = Output{std::cout, verbose, !no_color};
+      _output(cli, out, results);
       _report_error(cli, out, results.sane(), results.warning());
     }
 
@@ -153,8 +153,8 @@ namespace infinit
 
       auto results = ConfigurationIntegrityResults{};
       _configuration_integrity(cli, ignore_non_linked, results);
-      auto out = Output{std::cout, !no_color};
-      _output(cli, out, results, verbose);
+      auto out = Output{std::cout, verbose, !no_color};
+      _output(cli, out, results);
       _report_error(cli, out, results.sane(), results.warning());
     }
 
@@ -180,8 +180,8 @@ namespace infinit
                     upnp_tcp_port,
                     upnp_udt_port,
                     results);
-      auto out = Output{std::cout, !no_color};
-      _output(cli, out, results, verbose);
+      auto out = Output{std::cout, verbose, !no_color};
+      _output(cli, out, results);
       _report_error(cli, out, results.sane(), results.warning());
     }
 
@@ -252,8 +252,8 @@ namespace infinit
 
       auto results = SystemSanityResults{};
       _system_sanity(cli, results);
-      auto out = Output{std::cout, !no_color};
-      _output(cli, out, results, verbose);
+      auto out = Output{std::cout, verbose, !no_color};
+      _output(cli, out, results);
       _report_error(cli, out, results.sane(), results.warning());
     }
   }
