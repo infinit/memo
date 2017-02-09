@@ -39,12 +39,6 @@ namespace
 
   std::string username;
 
-  std::string
-  result(bool value)
-  {
-    return value ? "OK" : "Bad";
-  }
-
   void
   section(Output& out,
           std::string const& name)
@@ -1296,11 +1290,15 @@ namespace
   void
   SystemSanityResults::PermissionResult::print(Output& out) const
   {
+    auto result = [](bool value)
+      {
+        return value ? "OK" : "Bad";
+      };
+
     if (this->show(out.verbose))
-      out
-        << " exists: " << result(this->exists)
-        << ", readable: " << result(this->read)
-        << ", writable: " << result(this->write);
+      out << " exists: " << result(this->exists)
+          << ", readable: " << result(this->read)
+          << ", writable: " << result(this->write);
   }
 
   void
