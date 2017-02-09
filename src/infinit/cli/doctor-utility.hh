@@ -37,8 +37,6 @@ namespace
     }
   };
 
-  std::string username;
-
   void
   section(Output& out,
           std::string const& name)
@@ -393,6 +391,7 @@ namespace
       NetworkResult(std::string const& name,
                     bool sane,
                     bool ignore_non_linked,
+                    std::string const& username,
                     FaultySilos silos = {},
                     Result::Reason extra_reason = {},
                     bool linked = true)
@@ -400,7 +399,9 @@ namespace
         , silos(silos)
         , linked(linked)
         , ignore_non_linked(ignore_non_linked)
+        , username(username)
       {}
+
       /*---------.
       | Printing |
       `---------*/
@@ -408,7 +409,7 @@ namespace
       _print(Output& out) const override
       {
         if (!this->linked)
-          elle::fprintf(out.out, "is not linked [for user \"%s\"]", username);
+          elle::fprintf(out.out, "is not linked [for user \"%s\"]", this->username);
         if (this->silos)
           if (auto s = this->silos->size())
           {
@@ -457,6 +458,7 @@ namespace
       FaultySilos silos;
       bool linked;
       bool ignore_non_linked;
+      std::string username;
     };
 
     struct VolumeResult
@@ -2181,9 +2183,11 @@ namespace
             });
         if (status)
           store(results.networks, network.name, status, ignore_non_linked,
+                username,
                 boost::none, boost::none, linked);
         else
           store(results.networks, network.name, status, ignore_non_linked,
+                username,
                 faulty, boost::none, linked);
       }
 
@@ -2209,7 +2213,8 @@ namespace
                 (network_result != results.networks.end())
                 ? *network_result
                 : ConfigurationIntegrityResults::NetworkResult(
-                  volume.network, false, ignore_non_linked, {}, std::string{"missing"}
+                  volume.network, false, ignore_non_linked,
+                  username, {}, std::string{"missing"}
                 )
             );
       }
