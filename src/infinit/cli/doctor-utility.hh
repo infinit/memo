@@ -13,8 +13,6 @@ namespace
   using boost::algorithm::all_of;
   using boost::algorithm::any_of;
 
-  std::string banished_log_level("reactor.network.UTPSocket:NONE");
-
   /// A stream, and some information about the formatting.
   struct Output
   {
@@ -399,12 +397,11 @@ namespace
       | Construction |
       `-------------*/
       NetworkResult() = default;
-      NetworkResult(
-        std::string const& name,
-        bool sane,
-        FaultySilos silos = {},
-        Result::Reason extra_reason = {},
-        bool linked = true)
+      NetworkResult(std::string const& name,
+                    bool sane,
+                    FaultySilos silos = {},
+                    Result::Reason extra_reason = {},
+                    bool linked = true)
         : Super(name, sane, extra_reason, !linked)
         , linked(linked)
         , silos(silos)
@@ -456,7 +453,8 @@ namespace
       bool
       warning() const override
       {
-        return Super::warning() || (!this->linked && !ignore_non_linked);
+        return Super::warning()
+          || (!this->linked && !ignore_non_linked);
       }
 
       /*-----------.
@@ -1675,14 +1673,14 @@ namespace
     }
   }
 
-  // Return the infinit related environment.
+  /// The Infinit related part of the environment.
   Environ
   infinit_related_environ()
   {
     using boost::algorithm::starts_with;
     return elle::os::environ([](auto const& k, auto const& v) {
         return ((starts_with(k, "INFINIT_") || starts_with(k, "ELLE_"))
-                && v != banished_log_level);
+                && v != "reactor.network.UTPSocket:NONE");
       });
   }
 
@@ -2093,6 +2091,7 @@ namespace
     }
     using namespace infinit::storage;
     auto networks = parse(ifnt.networks_get(owner));
+
     ELLE_TRACE("verify silos")
       for (auto& elem: silos)
       {
@@ -2142,6 +2141,7 @@ namespace
         }
 #endif
       }
+
     ELLE_TRACE("verify networks")
       for (auto& elem: networks)
       {
@@ -2183,6 +2183,7 @@ namespace
           store(results.networks, network.name, status, faulty,
                 boost::none, linked);
       }
+
     ELLE_TRACE("verify volumes")
       for (auto& elems: volumes)
       {
@@ -2201,7 +2202,6 @@ namespace
         if (status)
           store(results.volumes, volume.name, status);
         else
-        {
           store(results.volumes, volume.name, status,
                 (network_result != results.networks.end())
                 ? *network_result
@@ -2209,8 +2209,8 @@ namespace
                   volume.network, false, {}, std::string{"missing"}
                 )
             );
-        }
       }
+
     ELLE_TRACE("verify drives")
       for (auto& elems: drives)
       {
