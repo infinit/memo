@@ -1002,21 +1002,33 @@ namespace
           /*-------------.
           | Construction |
           `-------------*/
-          Address(std::string host,
-                  uint16_t port);
-          Address(elle::serialization::SerializerIn& s);
+          Address(std::string host, uint16_t port)
+            : host(host)
+            , port(port)
+          {}
+          Address(elle::serialization::SerializerIn& s)
+          {
+            this->serialize(s);
+          }
 
           /*---------.
           | Printing |
           `---------*/
           void
-          print(std::ostream& out) const override;
+          print(std::ostream& out) const override
+          {
+            out << this->host << ":" << this->port;
+          }
 
           /*--------------.
           | Serialization |
           `--------------*/
           void
-          serialize(elle::serialization::Serializer& s);
+          serialize(elle::serialization::Serializer& s)
+          {
+            s.serialize("host", this->host);
+            s.serialize("port", this->port);
+          }
 
           /*-----------.
           | Attributes |
@@ -1476,33 +1488,6 @@ namespace
     s.serialize("cone", cone);
   }
 
-  ConnectivityResults::UPnPResult::RedirectionResult::Address::Address(
-    std::string host,
-    uint16_t port)
-    : host(host)
-    , port(port)
-  {}
-
-  ConnectivityResults::UPnPResult::RedirectionResult::Address::Address(
-    elle::serialization::SerializerIn& s)
-  {
-    this->serialize(s);
-  }
-
-  void
-  ConnectivityResults::UPnPResult::RedirectionResult::Address::print(
-    std::ostream& out) const
-  {
-    out << this->host << ":" << this->port;
-  }
-
-  void
-  ConnectivityResults::UPnPResult::RedirectionResult::Address::serialize(
-    elle::serialization::Serializer& s)
-  {
-    s.serialize("host", this->host);
-    s.serialize("port", this->port);
-  }
 
   ConnectivityResults::UPnPResult::RedirectionResult::RedirectionResult(
     std::string const& name,
