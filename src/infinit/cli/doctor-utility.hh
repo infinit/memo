@@ -237,7 +237,7 @@ namespace
     }
 
     Output&
-    print(Output& out, bool rc = true) const
+    print(Output& out) const
     {
       status(out,
              this->sane(), this->warning()) << " " << this->name();
@@ -1350,7 +1350,7 @@ namespace
       section(out, "System sanity");
     this->user.print(out);
     this->space_left.print(out);
-    this->environ.print(out, false);
+    this->environ.print(out);
     print_(out, "Permissions", this->permissions);
     this->fuse.print(out);
     out << std::endl;
@@ -1589,9 +1589,9 @@ namespace
     if (!this->only())
       section(out, "Connectivity");
     this->beyond.print(out);
-    this->interfaces.print(out, false);
+    this->interfaces.print(out);
     this->nat.print(out);
-    this->upnp.print(out, false);
+    this->upnp.print(out);
     print_(out, "Protocols", this->protocols);
     out << std::endl;
   }
