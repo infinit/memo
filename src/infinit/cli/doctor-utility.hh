@@ -2059,8 +2059,7 @@ namespace
                            ConfigurationIntegrityResults& results)
   {
     auto& ifnt = cli.infinit();
-    auto owner = boost::optional<infinit::User>{};
-    username = cli.as().value_or(cli.default_user_name());
+    auto const& username = cli.as().value_or(cli.default_user_name());
 
     auto users = parse(ifnt.users_get());
     auto aws_credentials = ifnt.credentials_aws();
@@ -2068,27 +2067,34 @@ namespace
     auto silos = parse(ifnt.storages_get());
     auto drives = parse(ifnt.drives_get());
     auto volumes = parse(ifnt.volumes_get());
-    try
+
+    auto owner = [&]() -> boost::optional<infinit::User>
     {
-      owner = cli.as_user();
-      if (owner->private_key)
-        results.user = {username, true};
-      else
+      try
+      {
+        auto res = cli.as_user();
+        if (res.private_key)
+          results.user = {username, true};
+        else
+          results.user = {
+            username,
+            false,
+            elle::sprintf("user \"%s\" has no private key", username)
+          };
+        return res;
+      }
+      // XXX: Catch a specific error.
+      catch (...)
+      {
         results.user = {
           username,
           false,
-          elle::sprintf("user \"%s\" has no private key", username)
+          elle::sprintf("user \"%s\" is not a local Infinit user", username)
         };
-    }
-    // XXX: Catch a specific error.
-    catch (...)
-    {
-      results.user = {
-        username,
-        false,
-        elle::sprintf("user \"%s\" is not a local Infinit user", username)
-      };
-    }
+        return {};
+      }
+    }();
+
     using namespace infinit::storage;
     auto networks = parse(ifnt.networks_get(owner));
 
