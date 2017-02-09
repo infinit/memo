@@ -37,7 +37,6 @@ namespace
     }
   };
 
-  bool ignore_non_linked = false;
   std::string username;
 
   std::string
@@ -399,14 +398,15 @@ namespace
       NetworkResult() = default;
       NetworkResult(std::string const& name,
                     bool sane,
+                    bool ignore_non_linked,
                     FaultySilos silos = {},
                     Result::Reason extra_reason = {},
                     bool linked = true)
         : Super(name, sane, extra_reason, !linked)
-        , linked(linked)
         , silos(silos)
+        , linked(linked)
+        , ignore_non_linked(ignore_non_linked)
       {}
-
       /*---------.
       | Printing |
       `---------*/
@@ -454,14 +454,15 @@ namespace
       warning() const override
       {
         return Super::warning()
-          || (!this->linked && !ignore_non_linked);
+          || (!this->linked && !this->ignore_non_linked);
       }
 
       /*-----------.
       | Attributes |
       `-----------*/
-      bool linked;
       FaultySilos silos;
+      bool linked;
+      bool ignore_non_linked;
     };
 
     struct VolumeResult
@@ -2054,13 +2055,12 @@ namespace
 
   void
   _configuration_integrity(infinit::cli::Infinit& cli,
-                           bool ignore_non_linked_arg,
+                           bool ignore_non_linked,
                            ConfigurationIntegrityResults& results)
   {
     auto& ifnt = cli.infinit();
     auto owner = boost::optional<infinit::User>{};
     username = cli.as().value_or(cli.default_user_name());
-    ignore_non_linked = ignore_non_linked_arg;
 
     auto users = parse(ifnt.users_get());
     auto aws_credentials = ifnt.credentials_aws();
@@ -2177,11 +2177,11 @@ namespace
               return !res;
             });
         if (status)
-          store(results.networks, network.name, status, boost::none,
-                boost::none, linked);
+          store(results.networks, network.name, status, ignore_non_linked,
+                boost::none, boost::none, linked);
         else
-          store(results.networks, network.name, status, faulty,
-                boost::none, linked);
+          store(results.networks, network.name, status, ignore_non_linked,
+                faulty, boost::none, linked);
       }
 
     ELLE_TRACE("verify volumes")
@@ -2206,7 +2206,7 @@ namespace
                 (network_result != results.networks.end())
                 ? *network_result
                 : ConfigurationIntegrityResults::NetworkResult(
-                  volume.network, false, {}, std::string{"missing"}
+                  volume.network, false, ignore_non_linked, {}, std::string{"missing"}
                 )
             );
       }
