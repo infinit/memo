@@ -527,7 +527,6 @@ namespace infinit
           }
         }
         ifnt.volume_save(volume);
-        cli.report_created("volume", name);
       }
       if (*push || *push_volume)
         ifnt.beyond_push("volume", name, volume, owner);
@@ -549,25 +548,14 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
       auto name = ifnt.qualified_name(volume_name, owner);
-      auto path = ifnt._volume_path(name);
       auto volume = ifnt.volume_get(name);
       if (purge)
         for (auto const& drive: ifnt.drives_for_volume(name))
-        {
-          auto drive_path = ifnt._drive_path(drive);
-          if (bfs::remove(drive_path))
-            cli.report_action("deleted", "drive", drive, "locally");
-        }
+          ifnt.drive_delete(drive);
       if (pull)
         ifnt.beyond_delete("volume", name, owner, true, purge);
-      bfs::remove_all(volume.root_block_cache_dir());
-      if (bfs::remove(path))
-        cli.report_action("deleted", "volume", name, "locally");
-      else
-        elle::err("File for volume could not be deleted: %s", path);
+      ifnt.volume_delete(volume);
     }
-
-
 
     /*---------------.
     | Mode: export.  |
@@ -625,7 +613,6 @@ namespace infinit
               auto v = elle::serialization::binary::deserialize<infinit::Volume>
                 (dht->fetch(volume.second)->data());
               ifnt.volume_save(v);
-              cli.report_saved("volume", v.name);
             }
       }
       else if (volume_name)
@@ -862,6 +849,7 @@ namespace infinit
       auto network = ifnt.network_get(volume.network, owner);
       auto owner_uid = infinit::User::uid(*network.dht()->owner);
       ifnt.beyond_push("volume", name, volume, owner);
+
     }
 
 
@@ -1117,7 +1105,7 @@ namespace infinit
       {
         reactor::Thread::unique_ptr stat_thread;
         if (push_p)
-          stat_thread = network.make_stat_update_thread(owner, *model);
+          stat_thread = network.make_stat_update_thread(ifnt, owner, *model);
         ELLE_TRACE_SCOPE("run volume");
         cli.report_action("running", "volume", volume.name);
         auto fs = volume.run(std::move(model),
@@ -1611,7 +1599,8 @@ namespace infinit
       };
       if (local_endpoint && push_p)
         elle::With<InterfacePublisher>(
-          network, owner, model->id(), local_endpoint->port(), advertise_host,
+          ifnt, network, owner, model->id(), local_endpoint->port(),
+          advertise_host,
           no_local_endpoints,
           no_public_endpoints) << [&]
         {
@@ -1620,7 +1609,6 @@ namespace infinit
       else
         run();
     }
-
 
     /*--------------.
     | Mode: start.  |

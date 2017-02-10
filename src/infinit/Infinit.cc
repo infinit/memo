@@ -1,6 +1,8 @@
 #include <infinit/Infinit.hh>
 #include <infinit/utility.hh>
 
+#include <infinit/storage/Filesystem.hh>
+
 ELLE_LOG_COMPONENT("infinit");
 
 namespace bfs = boost::filesystem;
@@ -27,6 +29,42 @@ namespace infinit
   {
     assert(is_qualified_name(name));
     return name.substr(0, name.find('/'));
+  }
+
+  bool
+  Infinit::_delete(boost::filesystem::path const& path,
+                   std::string const& type,
+                   std::string const& name)
+  {
+    boost::system::error_code erc;
+    if (!bfs::exists(path))
+    {
+      ELLE_TRACE("Nothing to delete for %s \"%s\" (%s)", type, name, path);
+      return false;
+    }
+    bfs::remove(path, erc);
+    if (erc)
+      elle::err("Unable to delete %s \"%s\": %s", type, name, erc.message());
+    this->report_local_action()("deleted", type, name);
+    return true;
+  }
+
+  bool
+  Infinit::_delete_all(boost::filesystem::path const& path,
+                       std::string const& type,
+                       std::string const& name)
+  {
+    boost::system::error_code erc;
+    if (!bfs::exists(path))
+    {
+      ELLE_TRACE("Nothing to delete for %s \"%s\" (%s)", type, name, path);
+      return false;
+    }
+    bfs::remove_all(path, erc);
+    if (erc)
+      elle::err("Unable to delete %s \"%s\": %s", type, name, erc.message());
+    this->report_local_action()("deleted", type, name);
+    return true;
   }
 
   Network
@@ -146,8 +184,7 @@ namespace infinit
 
   void
   Infinit::network_unlink(std::string const& name_,
-                          User const& user,
-                          Reporter report)
+                          User const& user)
   {
     auto name = qualified_name(name_, user);
     auto network = this->network_get(name, user, true);
@@ -158,24 +195,19 @@ namespace infinit
     {
       boost::system::error_code erc;
       bfs::remove(path, erc);
-      if (!erc)
-      {
-        if (report)
-          report(network.name);
-      }
+      if (erc)
+        this->report_local_action()("unlinked", "network",
+                                    network.name);
       else
-      {
         ELLE_WARN("Unable to unlink network \"%s\": %s",
                   network.name, erc.message());
-      }
     }
   }
 
-  void
+  bool
   Infinit::network_delete(std::string const& name_,
                           User const& user,
-                          bool unlink,
-                          Reporter report)
+                          bool unlink)
   {
     // Ensure if unqualified name is passed, we qualify with passed user.
     auto name = qualified_name(name_, user);
@@ -189,29 +221,35 @@ namespace infinit
         user_names.emplace_back(u.name);
       elle::err("Network is still linked with this device by %s.", user_names);
     }
-    boost::system::error_code erc;
+    // XXX: Why do we need to pacify the exception to a WARN ?
+    auto pacify_exception = [] (std::function<bool ()> const& action) -> bool
+      {
+        try
+        {
+          return action();
+        }
+        catch (elle::Error const&)
+        {
+          ELLE_WARN("%s", elle::exception_string());
+        }
+        return false;
+      };
     for (auto const& u: linked_users)
     {
-      auto linked_path = this->_network_path(name, u);
-      bfs::remove(linked_path, erc);
-      bfs::remove_all(network.cache_dir(u).parent_path());
-      if (erc)
-      {
-        ELLE_WARN("Unable to unlink network \"%s\" for \"%s\": %s",
-                  name, u.name, erc.message());
-      }
-      else if (report)
-        report(name);
+      pacify_exception([&] {
+        return this->_delete(
+          this->_network_path(name, u), "link for network",
+          name);
+      });
+      pacify_exception([&] {
+        return this->_delete_all(network.cache_dir(u).parent_path(),
+                                 "cache for network", name);
+      });
     }
-    auto desc_path = this->_network_descriptor_path(name);
-    bfs::remove(desc_path, erc);
-    if (erc)
-    {
-      ELLE_WARN("Unable to remove network descriptor \"%s\": %s",
-                name, erc.message());
-    }
-    else if (report)
-      report(name);
+    return pacify_exception([&] {
+      return this->_delete(this->_network_descriptor_path(name),
+                           "network", name);
+    });
   }
 
   std::vector<Drive>
@@ -272,9 +310,12 @@ namespace infinit
   Infinit::network_save(NetworkDescriptor const& network, bool overwrite) const
   {
     bfs::ofstream f;
-    this->_open_write(f, this->_network_descriptor_path(network.name),
-                      network.name, "network", overwrite);
+    bool existed = this->_open_write(
+      f, this->_network_descriptor_path(network.name),
+      network.name, "network", overwrite);
     save(f, network);
+    this->report_local_action()(existed ? "updated" : "saved", "network",
+                                network.name);
   }
 
   void
@@ -282,8 +323,10 @@ namespace infinit
                         Network const& network, bool overwrite) const
   {
     bfs::ofstream f;
-    this->_open_write(f, this->_network_path(network.name, self),
-                      network.name, "network", overwrite);
+    bool existed = this->_open_write(f, this->_network_path(network.name, self),
+                                     network.name, "network", overwrite);
+    this->report_local_action()(existed ? "updated" : "saved", "network",
+                                network.name);
     save(f, network);
   }
 
@@ -295,6 +338,30 @@ namespace infinit
     this->_open_read(f, this->_passport_path(network, user),
                      elle::sprintf("%s: %s", network, user), "passport");
     return load<Passport>(f);
+  }
+
+  bool
+  Infinit::passport_delete(Passport const& passport)
+  {
+    for (auto const& user: this->users_get())
+    {
+      if (user.public_key == passport.user())
+      {
+        if (this->passport_delete(passport.network(), user.name))
+          return true;
+      }
+    }
+    return false;
+  }
+
+  bool
+  Infinit::passport_delete(std::string const& network_name,
+                           std::string const& user_name)
+  {
+    ELLE_ASSERT(this->is_qualified_name(network_name));
+    return this->_delete(this->_passport_path(network_name, user_name),
+                         "passport",
+                         elle::sprintf("%s: %s", network_name, user_name));
   }
 
   auto
@@ -334,13 +401,17 @@ namespace infinit
     {
       if (user.public_key == passport.user())
       {
-        this->_open_write(f,
-                          this->_passport_path(passport.network(), user.name),
-                          elle::sprintf("%s: %s", passport.network(),
-                                        user.name),
-                          "passport", overwrite);
+        bool existed = this->_open_write(
+          f,
+          this->_passport_path(passport.network(), user.name),
+          elle::sprintf("%s: %s", passport.network(),
+                        user.name),
+          "passport", overwrite);
         elle::serialization::json::SerializerOut s(f, false, true);
         s.serialize_forward(passport);
+        this->report_local_action()(
+          existed ? "updated" : "saved" , "passport",
+          elle::sprintf("%s: %s", passport.network(), user.name));
         return;
       }
     }
@@ -354,13 +425,20 @@ namespace infinit
   {
     auto path = this->_user_path(user.name);
     bfs::ofstream f;
-    this->_open_write(f, path, user.name, "user", overwrite);
+    bool existed = this->_open_write(f, path, user.name, "user", overwrite);
     save(f, user);
+    this->report_local_action()(existed ? "updated" : "saved", "user",
+                                user.name);
 #ifndef INFINIT_WINDOWS
     bfs::permissions(path,
-                                   bfs::remove_perms
-                                   | bfs::others_all | bfs::group_all);
+                     bfs::remove_perms | bfs::others_all | bfs::group_all);
 #endif
+  }
+
+  bool
+  Infinit::user_delete(User const& user)
+  {
+    return this->_delete(this->_user_path(user.name), "user", user.name);
   }
 
   User
@@ -405,7 +483,7 @@ namespace infinit
   }
 
   bfs::path
-  Infinit::_user_avatar_path() const
+  Infinit::_avatars_path() const
   {
     auto root = xdg_cache_home() / "avatars";
     create_directories(root);
@@ -413,9 +491,15 @@ namespace infinit
   }
 
   bfs::path
-  Infinit::_user_avatar_path(std::string const& name) const
+  Infinit::_avatar_path(std::string const& name) const
   {
-    return this->_user_avatar_path() / name;
+    return this->_avatars_path() / name;
+  }
+
+  bool
+  Infinit::avatar_delete(User const& user)
+  {
+    return this->_delete(this->_avatar_path(user.name), "avatar", user.name);
   }
 
   std::unique_ptr<storage::StorageConfig>
@@ -447,17 +531,27 @@ namespace infinit
                         std::unique_ptr<storage::StorageConfig> const& storage)
   {
     bfs::ofstream f;
-    this->_open_write(f, this->_storage_path(name), name, "storage", false);
+    bool existed = this->_open_write(f, this->_storage_path(name), name,
+                                     "storage", false);
     elle::serialization::json::SerializerOut s(f, false, true);
     s.serialize_forward(storage);
+    this->report_local_action()(existed ? "updated" : "saved", "silo", name);
   }
 
-  void
-  Infinit::storage_remove(std::string const& name)
+  bool
+  Infinit::storage_delete(
+    std::unique_ptr<storage::StorageConfig> const& storage,
+    bool clear)
   {
-    auto path = this->_storage_path(name);
-    if (!remove(path))
-      elle::err("storage \"%s\" does not exist", name);
+    if (clear)
+    {
+      if (auto fs_storage =
+          dynamic_cast<infinit::storage::FilesystemStorageConfig*>(storage.get()))
+        this->_delete_all(fs_storage->path, "silo content", storage->name);
+      else
+        elle::err("only filesystem storages can be cleared");
+    }
+    return this->_delete(this->_storage_path(storage->name), "silo", storage->name);
   }
 
   std::unordered_map<std::string, std::vector<std::string>>
@@ -506,9 +600,21 @@ namespace infinit
   Infinit::volume_save(Volume const& volume, bool overwrite)
   {
     bfs::ofstream f;
-    this->_open_write(
+    bool existed = this->_open_write(
       f, this->_volume_path(volume.name), volume.name, "volume", overwrite);
     save(f, volume);
+    this->report_local_action()(existed ? "updated" : "saved", "volume",
+                                volume.name);
+  }
+
+  bool
+  Infinit::volume_delete(Volume const& volume)
+  {
+    auto deleted =
+      this->_delete(this->_volume_path(volume.name), "volume", volume.name);
+    this->_delete_all(volume.root_block_cache_dir(), "root block for volume",
+                      volume.name);
+    return deleted;
   }
 
   std::vector<Volume>
@@ -535,8 +641,20 @@ namespace infinit
   {
     auto path = this->_credentials_path(name, elle::sprintf("%s", a->uid()));
     bfs::ofstream f;
-    this->_open_write(f, path, name, "credential", true);
+    bool existed = this->_open_write(f, path, name, "credential", true);
     save(f, a);
+    this->report_local_action()(
+      existed ? "updated" : "saved", elle::sprintf("%s credentials", name),
+      a->display_name());
+  }
+
+  bool
+  Infinit::credentials_delete(std::string const& type,
+                              std::string const& account_name)
+  {
+    return this->_delete(this->_credentials_path(type, account_name),
+                         elle::sprintf("%s credentials", type),
+                         account_name);
   }
 
   std::unique_ptr<Credentials>
@@ -782,7 +900,7 @@ namespace infinit
                                       type, name);
   }
 
-  void
+  bool
   Infinit::_open_write(bfs::ofstream& f,
                        bfs::path const& path,
                        std::string const& name,
@@ -792,12 +910,14 @@ namespace infinit
   {
     ELLE_DEBUG("open %s \"%s\" (%s) for writing", type, name, path);
     create_directories(path.parent_path());
-    if (!overwrite && exists(path))
+    auto exists = bfs::exists(path);
+    if (!overwrite && exists)
       elle::err<ResourceAlreadyFetched>("%s \"%s\" already exists",
                                         type, name);
     f.open(path, mode);
     if (!f.good())
       elle::err("unable to open \"%s\" for writing", path);
+    return exists;
   }
 
   bfs::path
@@ -819,9 +939,11 @@ namespace infinit
                       bool overwrite)
   {
     bfs::ofstream f;
-    this->_open_write(f, this->_drive_path(drive.name), drive.name, "drive",
-                      overwrite);
+    bool existed = this->_open_write(
+      f, this->_drive_path(drive.name), drive.name, "drive", overwrite);
     save(f, drive);
+    this->report_local_action()(existed ? "updated" : "saved", "drive",
+                                drive.name);
   }
 
   Drive
@@ -833,12 +955,9 @@ namespace infinit
   }
 
   bool
-  Infinit::drive_delete(std::string const& name)
+  Infinit::drive_delete(Drive const& drive)
   {
-    bfs::path drive_path = this->_drive_path(name);
-    if (bfs::exists(drive_path))
-      return bfs::remove(drive_path);
-    return false;
+    return this->_delete(this->_drive_path(drive.name), "drive", drive.name);
   }
 
   bfs::path
@@ -871,26 +990,26 @@ namespace infinit
     return res;
   }
 
-  std::vector<std::string>
+  std::vector<Volume>
   Infinit::volumes_for_network(std::string const& network_name)
   {
-    std::vector<std::string> res;
+    std::vector<Volume> res;
     for (auto const& volume: this->volumes_get())
     {
       if (volume.network == network_name)
-        res.push_back(volume.name);
+        res.push_back(volume);
     }
     return res;
   }
 
-  std::vector<std::string>
+  std::vector<Drive>
   Infinit::drives_for_volume(std::string const& volume_name)
   {
-    std::vector<std::string> res;
+    std::vector<Drive> res;
     for (auto const& drive: this->drives_get())
     {
       if (drive.volume == volume_name)
-        res.push_back(drive.name);
+        res.push_back(drive);
     }
     return res;
   }
@@ -919,8 +1038,7 @@ namespace infinit
   fetch_data(std::string const& url,
              std::string const& type,
              std::string const& name,
-             infinit::Headers const& extra_headers = {},
-             Infinit::Reporter report = {})
+             infinit::Headers const& extra_headers = {})
   {
     infinit::Headers headers;
     for (auto const& header: extra_headers)
@@ -933,8 +1051,6 @@ namespace infinit
     reactor::wait(*r);
     if (r->status() == reactor::http::StatusCode::OK)
     {
-      if (report)
-        report(name);
     }
     else if (r->status() == reactor::http::StatusCode::Not_Found)
     {
@@ -979,8 +1095,7 @@ namespace infinit
                              std::string const& type,
                              std::string const& name,
                              boost::optional<User const&> self,
-                             Headers const& extra_headers,
-                             Reporter report)
+                             Headers const& extra_headers) const
   {
     Headers headers;
     if (self)
@@ -992,8 +1107,7 @@ namespace infinit
     return fetch_data(elle::sprintf("%s/%s", beyond(), where),
                       type,
                       name,
-                      headers,
-                      report);
+                      headers);
   }
 
   elle::json::Json
@@ -1001,11 +1115,9 @@ namespace infinit
                              std::string const& type,
                              std::string const& name,
                              boost::optional<User const&> self,
-                             Headers const& extra_headers,
-                             Reporter report)
+                             Headers const& extra_headers) const
   {
-    auto r = beyond_fetch_data(
-      where, type, name, self, extra_headers, report);
+    auto r = beyond_fetch_data(where, type, name, self, extra_headers);
     return elle::json::read(*r);
   }
 
@@ -1015,8 +1127,7 @@ namespace infinit
                          std::string const& name,
                          User const& self,
                          bool ignore_missing,
-                         bool purge,
-                         Reporter report)
+                         bool purge) const
   {
     reactor::http::Request::Configuration c;
     auto headers = signature_headers(reactor::http::Method::DELETE,
@@ -1034,8 +1145,7 @@ namespace infinit
     reactor::wait(r);
     if (r.status() == reactor::http::StatusCode::OK)
     {
-      if (report)
-        report(name);
+      this->report_remote_action()("deleted", type, name);
       return true;
     }
     else if (r.status() == reactor::http::StatusCode::Not_Found)
@@ -1073,11 +1183,10 @@ namespace infinit
                          std::string const& name,
                          User const& self,
                          bool ignore_missing,
-                         bool purge,
-                         Reporter report)
+                         bool purge) const
   {
     return beyond_delete(elle::sprintf("%ss/%s", type, name), type, name, self,
-                         ignore_missing, purge, report);
+                         ignore_missing, purge);
   }
 
   Infinit::PushResult
@@ -1088,7 +1197,7 @@ namespace infinit
                             std::string const& content_type,
                             User const& self,
                             bool beyond_error,
-                            bool update)
+                            bool update) const
   {
     reactor::http::Request::Configuration c;
     c.header_add("Content-Type", content_type);
@@ -1103,13 +1212,22 @@ namespace infinit
     r.finalize();
     reactor::wait(r);
     if (r.status() == reactor::http::StatusCode::Created)
+    {
+      this->report_remote_action()("created", type, name);
       return Infinit::PushResult::pushed;
+    }
     else if (r.status() == reactor::http::StatusCode::OK)
     {
       if (update)
+      {
+        this->report_remote_action()("updated", type, name);
         return Infinit::PushResult::updated;
+      }
       else
+      {
+        this->report_remote_action()("already updated", type, name);
         return Infinit::PushResult::alreadyPushed;
+      }
     }
     else if (r.status() == reactor::http::StatusCode::Conflict)
     {

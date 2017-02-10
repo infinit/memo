@@ -197,10 +197,6 @@ namespace infinit
                                                     access_key_id,
                                                     secret_access_key);
         ifnt.credentials_aws_add(std::move(aws_credentials));
-        this->cli().report_action(
-          "stored",
-          elle::sprintf("%s credentials", AWSPrint::pretty),
-          account.get(), "locally");
       }
       else if (dropbox)
         web_doc(owner.name, cli::dropbox);
@@ -234,15 +230,7 @@ namespace infinit
         if (service.attr_get(enabled))
         {
           auto& ifnt = cred.cli().infinit();
-          auto path = ifnt._credentials_path(ServicePrint<Service>::name,
-                                             account_name);
-          if (boost::filesystem::remove(path))
-            cred.cli().report_action(
-              "deleted",
-              elle::sprintf("%s credentials", ServicePrint<Service>::pretty),
-              account_name, "locally");
-          else
-            elle::err("File for credentials could not be deleted: %s", path);
+          ifnt.credentials_delete(ServicePrint<Service>::name, account_name);
           if (pull)
             pull_(cred.cli(), service, account_name, true);
         }
@@ -282,7 +270,8 @@ namespace infinit
       /// \param account  name of a specific credentials to fetch
       template <typename Service>
       void
-      fetch_(infinit::User const& user,
+      fetch_(infinit::Infinit const& infinit,
+             infinit::User const& user,
              Service service,
              std::function<void (UCred)> add,
              boost::optional<std::string> const& account)
@@ -294,7 +283,7 @@ namespace infinit
         // FIXME: Workaround for using std::unique_ptr.
         // Remove when serialization does not require copy.
         auto res =
-          infinit::Infinit::beyond_fetch_json
+          infinit.beyond_fetch_json
           (where,
            elle::sprintf("\"%s\" credentials", ServicePrint<Service>::pretty),
            user.name, user);
@@ -338,19 +327,19 @@ namespace infinit
       }
       if (e.dropbox)
         fetch_
-          (owner, cli::dropbox,
+          (ifnt, owner, cli::dropbox,
            [&ifnt] (UCred a)
            { ifnt.credentials_dropbox_add(std::move(a)); },
            account);
       if (e.gcs)
         fetch_
-          (owner, cli::gcs,
+          (ifnt, owner, cli::gcs,
            [&ifnt] (UCred a)
            { ifnt.credentials_gcs_add(std::move(a)); },
            account);
       if (e.google_drive)
         fetch_
-          (owner, cli::google_drive,
+          (ifnt, owner, cli::google_drive,
            [&ifnt] (UCred a)
            { ifnt.credentials_google_add(std::move(a)); },
            account);
@@ -386,15 +375,10 @@ namespace infinit
                                    ServicePrint<Service>::name);
         if (account)
           where += elle::sprintf("/%s", *account);
-        if (cli.infinit().beyond_delete(
-              where,
-              elle::sprintf("%s credentials", ServicePrint<Service>::pretty),
-              ServicePrint<Service>::name, owner, allow_missing))
-          cli.report_action(
-            "deleted",
-            elle::sprintf("%s credentials", ServicePrint<Service>::pretty),
-            (account ? *account : std::string{"*"}),
-            "remotely");
+        cli.infinit().beyond_delete(
+          where,
+          elle::sprintf("%s credentials", ServicePrint<Service>::pretty),
+          ServicePrint<Service>::name, owner, allow_missing);
       }
     }
 

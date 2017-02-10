@@ -75,6 +75,7 @@ namespace infinit
     DAS_CLI_SYMBOL(filesystem, '\0', "store blocks on local filesystem (default)", false);
     DAS_CLI_SYMBOL(filter, 'f', "raw LDAP query to use (default: objectClass=posixGroup)", false);
     DAS_CLI_SYMBOL(finder_sidebar, 0, "show volume in Finder sidebar" , false);
+    DAS_CLI_SYMBOL(force, 'f', "do not ask for user confirmation", false);
     DAS_CLI_SYMBOL(full, '\0', "include private key (do not use unless you understand the implications", false);
     DAS_CLI_SYMBOL(fullname, '\0', "user full name", false);
     DAS_CLI_SYMBOL(fullname_pattern, 'F', "fullname pattern)" , false);

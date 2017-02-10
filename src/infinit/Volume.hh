@@ -37,7 +37,7 @@ namespace infinit
       );
 
     boost::filesystem::path
-    root_block_cache_dir();
+    root_block_cache_dir() const;
 
     void
     print(std::ostream& out) const override;

@@ -138,7 +138,23 @@ namespace infinit
       }
     }
 
-
+    namespace
+    {
+      std::string
+      pretty_object(std::string const& object)
+      {
+        if (object == "user")
+          return "identity for user";
+        else if (object == "network")
+          return "network descriptor";
+        else if (object == "volume")
+          return "volume descriptor";
+        else if (object == "drive")
+          return "drive descriptor";
+        else
+          return object;
+      }
+    }
 
     /*----------.
     | Infinit.  |
@@ -154,6 +170,20 @@ namespace infinit
       , _script(false)
     {
       install_signal_handlers(*this);
+      this->_infinit.report_local_action().connect(
+        [this] (std::string const& action,
+                std::string const& type,
+                std::string const& name)
+        {
+          this->report_action(action, pretty_object(type), name, "locally");
+        });
+      this->_infinit.report_remote_action().connect(
+        [this] (std::string const& action,
+                std::string const& type,
+                std::string const& name)
+        {
+          this->report_action(action, pretty_object(type), name, "remotely");
+        });
     }
 
     std::string
@@ -373,18 +403,10 @@ namespace infinit
           return nullptr;
     }
 
-    bfs::path
-    Infinit::avatar_path() const
-    {
-      auto root = xdg_cache_home() / "avatars";
-      create_directories(root);
-      return root;
-    }
-
     boost::optional<bfs::path>
     Infinit::avatar_path(std::string const& name) const
     {
-      auto path = this->avatar_path() / name;
+      auto path = this->infinit()._avatar_path(name);
       if (exists(path))
         return path;
       else
@@ -409,9 +431,9 @@ namespace infinit
 
     void
     Infinit::report_action(std::string const& action,
-                           std::string const& type,
-                           std::string const& name,
-                           std::string const& where)
+                            std::string const& type,
+                            std::string const& name,
+                            std::string const& where)
     {
       if (where.empty())
         report("%s %s \"\%s\"", action, type, name);
@@ -420,27 +442,9 @@ namespace infinit
     }
 
     void
-    Infinit::report_created(std::string const& type, std::string const& name)
-    {
-      report_action("created", type, name, "locally");
-    }
-
-    void
-    Infinit::report_updated(std::string const& type, std::string const& name)
-    {
-      report_action("updated", type, name, "locally");
-    }
-
-    void
     Infinit::report_imported(std::string const& type, std::string const& name)
     {
-      report_action("imported", type, name);
-    }
-
-    void
-    Infinit::report_saved(std::string const& type, std::string const& name)
-    {
-      report_action("saved", type, name);
+      this->report_action("imported", type, name);
     }
 
     void
@@ -450,7 +454,7 @@ namespace infinit
                                   std::string const& name)
     {
       if (&output != &std::cout)
-        report_action(action, type, name);
+        this->report_action(action, type, name);
     }
 
     void
@@ -458,7 +462,7 @@ namespace infinit
                              std::string const& type,
                              std::string const& name)
     {
-      report_action_output(output, "exported", type, name);
+      this->report_action_output(output, "exported", type, name);
     }
 
     /*---------.

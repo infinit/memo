@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include <boost/signals2.hpp>
+
 #include <infinit/Drive.hh>
 #include <infinit/LoginCredentials.hh>
 #include <infinit/Network.hh>
@@ -16,8 +18,12 @@ namespace infinit
   class Infinit
   {
   public:
-    using Reporter = std::function<void (std::string const&)>;
-
+    /// ReportAction represents a signal Infinit will triggers when it perform
+    /// an action related to the resources / objects (e.g. Users, Networks, etc.)
+    using ReportAction =
+      boost::signals2::signal<void (std::string const& action,
+                                    std::string const& type,
+                                    std::string const& name)>;
   public:
     /// Whether has a `/`.
     static bool
@@ -47,13 +53,11 @@ namespace infinit
                          boost::optional<User> user = boost::none);
     void
     network_unlink(std::string const& name_,
-                   User const& user,
-                   Reporter report = {});
-    void
+                   User const& user);
+    bool
     network_delete(std::string const& name_,
                    User const& user,
-                   bool unlink,
-                   Reporter report = {});
+                   bool unlink);
     std::vector<Drive>
     drives_get() const;
     NetworkDescriptor
@@ -73,13 +77,15 @@ namespace infinit
     using Passport = model::doughnut::Passport;
     Passport
     passport_get(std::string const& network, std::string const& user);
-
     std::vector<std::pair<Passport, std::string>>
     passports_get(boost::optional<std::string> network = boost::none);
-
     void
     passport_save(Passport const& passport, bool overwrite = false);
-
+    bool
+    passport_delete(Passport const& passport);
+    bool
+    passport_delete(std::string const& network_name,
+                    std::string const& user_name);
     /*-------.
     | User.  |
     `-------*/
@@ -87,15 +93,18 @@ namespace infinit
     void
     user_save(User const& user,
               bool overwrite = false);
+    bool
+    user_delete(User const& user);
     User
     user_get(std::string const& user, bool beyond_fallback = false) const;
     std::vector<User>
     users_get() const;
     boost::filesystem::path
-    _user_avatar_path() const;
+    _avatars_path() const;
     boost::filesystem::path
-    _user_avatar_path(std::string const& name) const;
-
+    _avatar_path(std::string const& name) const;
+    bool
+    avatar_delete(User const& user);
 
     /*----------.
     | Storage.  |
@@ -108,8 +117,9 @@ namespace infinit
     void
     storage_save(std::string const& name,
                  std::unique_ptr<storage::StorageConfig> const& storage);
-    void
-    storage_remove(std::string const& name);
+    bool
+    storage_delete(std::unique_ptr<storage::StorageConfig> const& storage,
+                   bool clear = false);
     std::unordered_map<std::string, std::vector<std::string>>
     storage_networks(std::string const& storage_name);
 
@@ -124,6 +134,8 @@ namespace infinit
     volume_get(std::string const& name);
     void
     volume_save(Volume const& volume, bool overwrite = false);
+    bool
+    volume_delete(Volume const& volume);
     std::vector<Volume>
     volumes_get() const;
 
@@ -134,6 +146,8 @@ namespace infinit
 
     void
     credentials_add(std::string const& name, std::unique_ptr<Credentials> a);
+    bool
+    credentials_delete(std::string const& type, std::string const& name);
     template <typename T = infinit::Credentials>
     std::vector<std::unique_ptr<T, std::default_delete<infinit::Credentials>>>
     credentials(std::string const& name) const;
@@ -219,8 +233,27 @@ namespace infinit
                boost::filesystem::path const& path,
                std::string const& name,
                std::string const& type);
+    /// Open the given path, associating it with the given ofstream f.
+    ///
+    /// If overwrite isn't specify and the path already exists, throw
+    /// an ResourceAlreadyFetched exception.
+    ///
+    /// Otherwise, return whether the resource already exists and was
+    /// overwritten.
+    ///
+    /// \param f The stream to associate with the file.
+    /// \param path The path to the file to open.
+    /// \param name The name of the resource (e.g. "root")
+    /// \param type The type of the resource (e.g. "User")
+    /// \param overwrite Whether if the function is allowed to overwrite an
+    ///                  existing file.
+    /// \param mode Flags describing the requested input/output mode for the
+    ///                   file.
+    /// \return Whether if a file was overwritten.
+    /// \throw ResourceAlreadyFetched if the file already exists and overwrite
+    ///        was false.
     static
-    void
+    bool
     _open_write(boost::filesystem::ofstream& f,
                 boost::filesystem::path const& path,
                 std::string const& name,
@@ -237,7 +270,7 @@ namespace infinit
     Drive
     drive_get(std::string const& name);
     bool
-    drive_delete(std::string const& name);
+    drive_delete(Drive const& drive);
     boost::filesystem::path
     _drive_icon_path() const;
     boost::filesystem::path
@@ -247,9 +280,9 @@ namespace infinit
 
     std::vector<std::string>
     user_passports_for_network(std::string const& network_name);
-    std::vector<std::string>
+    std::vector<Volume>
     volumes_for_network(std::string const& network_name);
-    std::vector<std::string>
+    std::vector<Drive>
     drives_for_volume(std::string const& volume_name);
     // saving & loading
     template <typename T>
@@ -260,7 +293,16 @@ namespace infinit
     static
     void
     save(std::ostream& output, T const& resource, bool pretty = true);
-
+  private:
+    bool
+    _delete(boost::filesystem::path const& path,
+            std::string const& type,
+            std::string const& name);
+    bool
+    _delete_all(boost::filesystem::path const& path,
+                std::string const& type,
+                std::string const& name);
+  public:
     // Beyond
     enum class PushResult
     {
@@ -272,40 +314,31 @@ namespace infinit
     elle::json::Json
     beyond_login(std::string const& name, LoginCredentials const& o) const;
 
-    static
     std::unique_ptr<reactor::http::Request>
     beyond_fetch_data(std::string const& where,
                       std::string const& type,
                       std::string const& name,
                       boost::optional<User const&> self = boost::none,
-                      Headers const& extra_headers = {},
-                      Reporter report = {});
-    static
+                      Headers const& extra_headers = {}) const;
     elle::json::Json
     beyond_fetch_json(std::string const& where,
                       std::string const& type,
                       std::string const& name,
                       boost::optional<User const&> self = boost::none,
-                      Headers const& extra_headers = {},
-                      Reporter report = {});
-    static
+                      Headers const& extra_headers = {}) const;
     bool
     beyond_delete(std::string const& where,
                   std::string const& type,
                   std::string const& name,
                   User const& self,
                   bool ignore_missing = false,
-                  bool purge = false,
-                  Reporter report = {});
-    static
+                  bool purge = false) const;
     bool
     beyond_delete(std::string const& type,
                   std::string const& name,
                   User const& self,
                   bool ignore_missing = false,
-                  bool purge = false,
-                  Reporter report = {});
-    static
+                  bool purge = false) const;
     PushResult
     beyond_push_data(std::string const& where,
                      std::string const& type,
@@ -314,26 +347,21 @@ namespace infinit
                      std::string const& content_type,
                      User const& self,
                      bool beyond_error = false,
-                     bool update = false);
-
+                     bool update = false) const;
     template <typename T>
-    static
     T
     beyond_fetch(std::string const& where,
                  std::string const& type,
                  std::string const& name,
                  boost::optional<infinit::User const&> self = boost::none,
-                 infinit::Headers const& extra_headers = infinit::Headers{},
-                 Reporter report = {});
+                 infinit::Headers const& extra_headers = infinit::Headers{}) const;
 
     template <typename T>
-    static
     T
     beyond_fetch(std::string const& type,
-                 std::string const& name);
+                 std::string const& name) const;
 
     template <typename Serializer = void, typename T>
-    static
     void
     beyond_push(std::string const& where,
                 std::string const& type,
@@ -341,17 +369,27 @@ namespace infinit
                 T const& o,
                 infinit::User const& self,
                 bool beyond_error = false,
-                bool update = false);
+                bool update = false) const;
 
     template <typename Serializer = void, typename T>
-    static
     void
     beyond_push(std::string const& type,
                 std::string const& name,
                 T const& o,
                 infinit::User const& self,
                 bool beyond_error = false,
-                bool update = false);
+                bool update = false) const;
+
+    /// report_local_action is triggered when a local resource is edited:
+    /// - saved
+    /// - updated
+    /// - deleted
+    ELLE_ATTRIBUTE_RX(ReportAction, report_local_action);
+    /// report_remote_action is triggered when a resource is edited on the hub.
+    /// - saved
+    /// - updated
+    /// - deleted
+    ELLE_ATTRIBUTE_RX(ReportAction, report_remote_action);
   };
 }
 
