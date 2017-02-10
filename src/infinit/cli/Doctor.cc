@@ -123,14 +123,16 @@ namespace infinit
 
       auto results = All{};
       _system_sanity(cli, results.system_sanity);
-      _configuration_integrity(cli, ignore_non_linked, results.configuration_integrity);
+      _configuration_integrity(cli, ignore_non_linked,
+                               results.configuration_integrity);
       _connectivity(cli,
                     server,
                     upnp_tcp_port,
                     upnp_udt_port,
                     results.connectivity);
-      _output(cli, std::cout, results, no_color, verbose);
-      _report_error(cli, std::cout, results.sane(), results.warning());
+      auto out = Output{std::cout, verbose, !no_color};
+      _output(cli, out, results);
+      _report_error(cli, out, results.sane(), results.warning());
     }
 
     /*----------------------.
@@ -147,8 +149,9 @@ namespace infinit
 
       auto results = ConfigurationIntegrityResults{};
       _configuration_integrity(cli, ignore_non_linked, results);
-      _output(cli, std::cout, results, no_color, verbose);
-      _report_error(cli, std::cout, results.sane(), results.warning());
+      auto out = Output{std::cout, verbose, !no_color};
+      _output(cli, out, results);
+      _report_error(cli, out, results.sane(), results.warning());
     }
 
 
@@ -173,8 +176,9 @@ namespace infinit
                     upnp_tcp_port,
                     upnp_udt_port,
                     results);
-      _output(cli, std::cout, results, no_color, verbose);
-      _report_error(cli, std::cout, results.sane(), results.warning());
+      auto out = Output{std::cout, verbose, !no_color};
+      _output(cli, out, results);
+      _report_error(cli, out, results.sane(), results.warning());
     }
 
 
@@ -202,7 +206,7 @@ namespace infinit
       auto v = cli.compatibility_version().value_or(infinit::version());
       if (host)
       {
-        elle::printf("Client mode (version: %s):", v) << std::endl;
+        elle::fprintf(std::cout, "Client mode (version: %s):", v) << std::endl;
         infinit::networking::perform(mode_name,
                                      protocol_name,
                                      packet_size,
@@ -218,7 +222,7 @@ namespace infinit
       }
       else
       {
-        elle::printf("Server mode (version: %s):", v) << std::endl;
+        elle::fprintf(std::cout, "Server mode (version: %s):", v) << std::endl;
         auto servers = infinit::networking::Servers(protocol_name,
                                                     port,
                                                     tcp_port,
@@ -243,8 +247,9 @@ namespace infinit
 
       auto results = SystemSanityResults{};
       _system_sanity(cli, results);
-      _output(cli, std::cout, results, no_color, verbose);
-      _report_error(cli, std::cout, results.sane(), results.warning());
+      auto out = Output{std::cout, verbose, !no_color};
+      _output(cli, out, results);
+      _report_error(cli, out, results.sane(), results.warning());
     }
 
     // Instantiate

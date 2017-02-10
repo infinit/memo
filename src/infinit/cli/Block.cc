@@ -11,8 +11,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
-
     Block::Block(Infinit& infinit)
       : Object(infinit)
       , deserialize(*this,

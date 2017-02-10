@@ -1626,11 +1626,11 @@ namespace
 #undef COMPARE
               });
           status = (it != aws_credentials.end());
-        if (status)
-          store(results.storage_resources, storage->name, status, "S3");
-        else
-          store(results.storage_resources, storage->name, status, "S3",
-                std::string("credentials are missing"));
+          if (status)
+            store(results.storage_resources, storage->name, status, "S3");
+          else
+            store(results.storage_resources, storage->name, status, "S3",
+                  std::string("credentials are missing"));
         }
         if (auto fsconfig
             = dynamic_cast<FilesystemStorageConfig const*>(storage.get()))

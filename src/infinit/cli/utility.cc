@@ -7,8 +7,6 @@
 #include <elle/string/algorithm.hh>
 #include <elle/system/unistd.hh> // chdir
 
-#include <das/cli.hh> // das::cli::Error
-
 #include <reactor/FDStream.hh>
 #include <reactor/http/Request.hh>
 #include <reactor/network/rdv-socket.hh>
@@ -17,20 +15,26 @@
 #include <infinit/Infinit.hh>
 #include <infinit/utility.hh>
 
+#include <infinit/cli/Error.hh>
+
+
 ELLE_LOG_COMPONENT("ifnt.cli.utility");
 
 namespace infinit
 {
   namespace cli
   {
-    InterfacePublisher::InterfacePublisher(infinit::Network const& network,
-                       infinit::User const& self,
-                       infinit::model::Address const& node_id,
-                       int port,
-                       boost::optional<std::vector<std::string>> advertise,
-                       bool no_local_endpoints,
-                       bool no_public_endpoints)
-      : _url(elle::sprintf("networks/%s/endpoints/%s/%x",
+    InterfacePublisher::InterfacePublisher(
+      infinit::Infinit const& infinit,
+      infinit::Network const& network,
+      infinit::User const& self,
+      infinit::model::Address const& node_id,
+      int port,
+      boost::optional<std::vector<std::string>> advertise,
+      bool no_local_endpoints,
+      bool no_public_endpoints)
+      : _infinit(infinit)
+      , _url(elle::sprintf("networks/%s/endpoints/%s/%x",
                            network.name, self.name, node_id))
       , _network(network)
       , _self(self)
@@ -137,13 +141,13 @@ namespace infinit
         }
       endpoints.port = port;
       ELLE_TRACE("Pushing endpoints");
-      Infinit::beyond_push(this->_url, std::string("endpoints for"),
-                           network.name, endpoints, self, false);
+      this->_infinit.beyond_push(this->_url, std::string("endpoints for"),
+                                 network.name, endpoints, self, false);
     }
 
     InterfacePublisher::~InterfacePublisher()
     {
-      Infinit::beyond_delete(
+      this->_infinit.beyond_delete(
         this->_url, "endpoints for", this->_network.name, _self);
     }
 
@@ -416,9 +420,8 @@ namespace infinit
       }
       catch (elle::serialization::Error const& e)
       {
-        elle::err<das::cli::Error>
-          ("'protocol' must be 'utp', 'tcp' or 'all': %s",
-           proto);
+        elle::err<CLIError>("'protocol' must be 'utp', 'tcp' or 'all': %s",
+                            proto);
       }
     }
 
@@ -435,8 +438,8 @@ namespace infinit
         };
       auto i = modes.find(mode ? boost::algorithm::to_lower_copy(*mode) : "");
       if (i == modes.end())
-        elle::err<das::cli::Error>("invalid mode %s, must be one of: %s",
-                                   mode, elle::keys(modes));
+        elle::err<CLIError>("invalid mode %s, must be one of: %s",
+                            mode, elle::keys(modes));
       else
         return i->second;
     }

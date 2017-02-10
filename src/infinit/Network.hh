@@ -66,7 +66,8 @@ namespace infinit
         boost::optional<int> port = {});
 
     reactor::Thread::unique_ptr
-    make_stat_update_thread(infinit::User const& self,
+    make_stat_update_thread(infinit::Infinit const& infinit,
+                            infinit::User const& self,
                             infinit::model::doughnut::Doughnut& model);
 
     reactor::Thread::unique_ptr
@@ -89,7 +90,8 @@ namespace infinit
         bool enable_monitoring = true);
 
     void
-    notify_storage(infinit::User const& user,
+    notify_storage(infinit::Infinit const& infinit,
+                   infinit::User const& user,
                    infinit::model::Address const& node_id);
 
     boost::filesystem::path

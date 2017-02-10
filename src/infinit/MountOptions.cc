@@ -49,6 +49,7 @@ namespace infinit
     infinit::merge(fetch, b.fetch);
     infinit::merge(push, b.push);
     infinit::merge(cache, b.cache);
+    infinit::merge(publish, b.publish);
     infinit::merge(async, b.async);
     infinit::merge(readonly, b.readonly);
     infinit::merge(cache_ram_size, b.cache_ram_size);
@@ -87,6 +88,7 @@ namespace infinit
         args("--peer", fo);
     if (fetch && *fetch) args("--fetch");
     if (push && *push) args("--push");
+    if (publish && *publish) args("--publish");
     if (cache && *cache) args("--cache");
     if (async && *async) args("--async");
     if (readonly && *readonly) args("--readonly");

@@ -92,7 +92,8 @@ namespace infinit
            decltype(cli::port = boost::none),
            decltype(cli::listen = boost::none),
            decltype(cli::fetch_endpoints_interval = 300),
-           decltype(cli::input = boost::none)>
+           decltype(cli::input = boost::none),
+           decltype(cli::block_size = int())>
       create;
       void
       mode_create(std::string const& name,
@@ -130,14 +131,15 @@ namespace infinit
                   boost::optional<std::string> peers_file = {},
                   Defaulted<bool> push_endpoints = false,
                   Defaulted<bool> push = false,
-                  bool publish = false,
+                  Defaulted<bool> publish = false,
                   Strings advertise_host = {},
                   boost::optional<std::string> endpoints_file = {},
                   boost::optional<std::string> port_file = {},
                   boost::optional<int> port = {},
                   boost::optional<std::string> listen = {},
                   Defaulted<int> fetch_endpoints_interval = 300,
-                  boost::optional<std::string> input = {});
+                  boost::optional<std::string> input = {},
+                  Defaulted<int> block_size = 1024 * 1024);
 
       /*---------------.
       | Mode: delete.  |
@@ -287,7 +289,7 @@ namespace infinit
                  bool no_public_endpoints = false,
                  Defaulted<bool> push = false,
                  bool map_other_permissions = true,
-                 bool publish = false,
+                 Defaulted<bool> publish = false,
                  Strings advertise_host = {},
                  boost::optional<std::string> endpoints_file = {},
                  boost::optional<std::string> port_file = {},
@@ -402,7 +404,7 @@ namespace infinit
                bool no_public_endpoints = false,
                Defaulted<bool> push = false,
                bool map_other_permissions = true,
-               bool publish = false,
+               Defaulted<bool> publish = false,
                Strings advertise_host = {},
                boost::optional<std::string> endpoints_file = {},
                boost::optional<std::string> port_file = {},
@@ -493,7 +495,7 @@ namespace infinit
                  bool no_public_endpoints = false,
                  Defaulted<bool> push = false,
                  bool map_other_permissions = true,
-                 bool publish = false,
+                 Defaulted<bool> publish = false,
                  Strings advertise_host = {},
                  boost::optional<std::string> endpoints_file = {},
                  boost::optional<std::string> port_file = {},
@@ -567,7 +569,8 @@ namespace infinit
            decltype(cli::listen = boost::none),
            decltype(cli::fetch_endpoints_interval = 300),
            decltype(cli::input = boost::none),
-           decltype(cli::user = boost::none)>
+           decltype(cli::user = boost::none),
+           decltype(cli::block_size = boost::none)>
       update;
       void
       mode_update(std::string const& name,
@@ -600,7 +603,7 @@ namespace infinit
                   Defaulted<bool> push_endpoints = false,
                   Defaulted<bool> push = false,
                   bool map_other_permissions = true,
-                  bool publish = false,
+                  Defaulted<bool> publish = false,
                   Strings advertise_host = {},
                   boost::optional<std::string> endpoints_file = {},
                   boost::optional<std::string> port_file = {},
@@ -608,7 +611,8 @@ namespace infinit
                   boost::optional<std::string> listen = {},
                   Defaulted<int> fetch_endpoints_interval = 300,
                   boost::optional<std::string> input = {},
-                  boost::optional<std::string> user = {});
+                  boost::optional<std::string> user = {},
+                  boost::optional<int> block_size = {});
     };
   }
 }

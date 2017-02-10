@@ -25,8 +25,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
-
     namespace
     {
       int64_t
@@ -189,10 +187,7 @@ namespace infinit
         s.serialize_forward(config);
       }
       else
-      {
         cli.infinit().storage_save(config->name, config);
-        cli.report_action("created", "storage", config->name);
-      }
     }
 
     void
@@ -316,7 +311,7 @@ namespace infinit
         else if (sc == "reduced_redundancy")
           storage_class = aws::S3::StorageClass::ReducedRedundancy;
         else
-          elle::err<Error>("unrecognized storage class: %s",
+          elle::err<CLIError>("unrecognized storage class: %s",
                            storage_class_str);
       }
       mode_create(
@@ -430,23 +425,7 @@ namespace infinit
           for (auto const& user_name: pair.second)
             infinit.network_unlink(
               pair.first, infinit.user_get(user_name));
-      if (clear)
-      {
-        try
-        {
-          boost::filesystem::remove_all(fs_storage->path);
-          this->cli().report_action("cleared", "storage", fs_storage->name);
-        }
-        catch (boost::filesystem::filesystem_error const& e)
-        {
-          elle::err("unable to clear storage contents: %s", e.what());
-        }
-      }
-      auto path = infinit._storage_path(name);
-      if (boost::filesystem::remove(path))
-        this->cli().report_action("deleted", "storage", storage->name);
-      else
-        elle::err("storage could not be deleted: %s", path);
+      infinit.storage_delete(storage, clear);
     }
 
     // Instantiate

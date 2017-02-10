@@ -77,12 +77,14 @@ namespace infinit
            decltype(modes::mode_delete),
            decltype(cli::name = std::string{}),
            decltype(cli::pull = false),
-           decltype(cli::purge = false)>
+           decltype(cli::purge = false),
+           decltype(cli::force = false)>
       delete_;
       void
       mode_delete(std::string const& name,
                   bool pull,
-                  bool purge);
+                  bool purge,
+                  bool force);
 
       // Export
       Mode<User,

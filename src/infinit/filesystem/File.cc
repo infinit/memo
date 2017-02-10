@@ -82,8 +82,8 @@ namespace infinit
       ELLE_LOG_SCOPE(
         "conflict: the file \"%s\" was modified since last read. Your"
         " changes will overwrite previous modifications", this->_path);
-      auto cd = FileData(_path, current, {true, true});
-      auto od = FileData(_path, b, {true, true});
+      auto cd = FileData(_path, current, {true, true}, 0);
+      auto od = FileData(_path, b, {true, true}, 0);
       od.merge(cd, _target);
       // write od data into current block
       elle::Buffer serdata;
@@ -206,21 +206,23 @@ namespace infinit
           this->_first_block.reset();
       });
       auto perms = get_permissions(*_owner.block_store(), *_first_block);
-      _filedata = std::make_shared<FileData>(_parent->_path / _name, *_first_block, perms);
+      _filedata = std::make_shared<FileData>(_parent->_path / _name, *_first_block, perms,
+        _owner.block_size().value_or(default_block_size));
       remove_undecoded_first_block.abort();
     }
 
     FileData::FileData(boost::filesystem::path path,
-                       Block& block, std::pair<bool, bool> perms)
+                       Block& block, std::pair<bool, bool> perms,
+                       int block_size)
       : _address(block.address())
       , _path(path)
     {
-      update(block, perms);
+      update(block, perms, block_size);
       _last_used = FileSystem::now();
     }
 
     void
-    FileData::update(Block& block, std::pair<bool, bool> perms)
+    FileData::update(Block& block, std::pair<bool, bool> perms, int block_size)
     {
       ELLE_TRACE_SCOPE("%s: update from %f (version: %s, worldperm: %s)",
                        this, block.address(),
@@ -240,7 +242,7 @@ namespace infinit
         auto now = time(nullptr);
         _header = FileHeader(0, 1, S_IFREG | 0600,
                              now, now, now, now,
-                             File::default_block_size);
+                             block_size);
       }
       else
       {
@@ -276,7 +278,7 @@ namespace infinit
                  _fat.size(), _data.size());
     }
 
-    FileData::FileData(boost::filesystem::path path, Address address, int mode)
+    FileData::FileData(boost::filesystem::path path, Address address, int mode, int block_size)
     {
       _path = path;
       _address = address;
@@ -284,7 +286,7 @@ namespace infinit
       _last_used = FileSystem::now();
       _header = FileHeader ( 0, 1, S_IFREG | mode,
         time(nullptr), time(nullptr), time(nullptr), time(nullptr),
-        File::default_block_size
+        block_size
       );
     }
 
@@ -307,7 +309,8 @@ namespace infinit
       {
         ELLE_DUMP("overwriting data");
         _header.size = previous._header.size;
-        _header.block_size = previous._header.block_size;
+        if (previous._header.block_size)
+          _header.block_size = previous._header.block_size;
         _fat = previous._fat;
         _data = elle::Buffer(previous._data.contents(), previous._data.size());
       }
@@ -328,6 +331,8 @@ namespace infinit
         ELLE_DUMP("overwriting links");
         _header.symlink_target = previous._header.symlink_target;
       }
+      if (!_header.block_size)
+        _header.block_size = previous._header.block_size;
     }
 
     void
@@ -357,7 +362,8 @@ namespace infinit
       ELLE_ASSERT(block);
       if (!block->data().empty())
       {
-        FileData previous(_path, *block, {true, true});
+        FileData previous(_path, *block, {true, true}, 0);
+        ELLE_ASSERT(previous.header().block_size);
         merge(previous, target);
         ELLE_DEBUG("%s: post-merge write %f: sz=%s, links=%s, mode=%s fatsize=%s, worldperm=%s version=%s", this, _address,
                    _header.size, _header.links, print_mode(_header.mode), _fat.size(), block->get_world_permissions(),
@@ -833,5 +839,9 @@ namespace infinit
     {
       elle::fprintf(stream, "File(\"%s\")", this->_name);
     }
+
+    const
+    unsigned long
+    File::default_block_size = 1024 * 1024;
   }
 }

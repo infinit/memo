@@ -10,9 +10,6 @@ namespace infinit
 {
   namespace cli
   {
-    /// Command line errors.
-    using Error = das::cli::Error;
-
     Drive::Drive(Infinit& infinit)
       : Object(infinit)
       , create(*this,
@@ -74,13 +71,15 @@ namespace infinit
                 std::string const& name,
                 Buffer const& buffer)
       {
+        // XXX: move to infinit::icon_save maybe ?
         boost::filesystem::ofstream f;
-        cli.infinit()._open_write
+        auto existed = cli.infinit()._open_write
           (f, cli.infinit()._drive_icon_path(name),
            name, "icon", true, std::ios::out | std::ios::binary);
         f.write(reinterpret_cast<char const*>(buffer.contents()),
                 buffer.size());
-        cli.report_action("fetched", "icon", name, "locally");
+        cli.report_action(existed ? "updated" : "saved",
+                          "icon for drive", name, "locally");
       }
 
       void
@@ -121,7 +120,7 @@ namespace infinit
         if (icon_path
             && !icon_path->empty()
             && !boost::filesystem::exists(*icon_path))
-          elle::err<Error>("%s doesn't exist", *icon_path);
+          elle::err<CLIError>("%s doesn't exist", *icon_path);
         auto url = elle::sprintf("drives/%s", drive.name);
         cli.infinit().beyond_push(url, "drive", drive.name, drive, user);
         if (icon_path)
@@ -159,7 +158,6 @@ namespace infinit
       auto drive = infinit::Drive{drive_name, owner, volume, network,
                                   description, users};
       ifnt.drive_save(drive);
-      cli.report_action("created", "drive", drive.name, "locally");
       if (push || push_drive)
         do_push(cli, owner, drive, icon);
     }
@@ -178,16 +176,12 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
       auto drive_name = ifnt.qualified_name(name, owner);
-      auto path = ifnt._drive_path(drive_name);
       if (pull)
         ifnt.beyond_delete("drive", drive_name, owner, true);
       if (purge)
-        { /* Nothing depends on a drive. */ }
-      if (boost::filesystem::remove(path))
-        cli.report_action("deleted", "drive", name, "locally");
-      else
-        elle::err<infinit::MissingLocalResource>
-          ("File for drive could not be deleted: %s", path);
+      { /* Nothing depends on a drive. */ }
+      auto drive = ifnt.drive_get(drive_name);
+      ifnt.drive_delete(drive);
     }
 
 
@@ -344,8 +338,6 @@ namespace infinit
                                                 owner.private_key.get()));
           ELLE_DEBUG("passport (%s: %s) created", network.name, user.name);
           cli.infinit().passport_save(passport);
-          cli.report_created("passport",
-                         elle::sprintf("%s: %s", network.name, user.name));
           if (push)
             do_push_passport(cli, network, passport, user, owner);
         }
@@ -369,11 +361,10 @@ namespace infinit
           auto it = drive.users.find(invitation.first);
           if (it != drive.users.end())
             continue;
-
           drive.users[invitation.first] = invitation.second;
-          cli.report_action("created", "invitation",
-                        elle::sprintf("%s: %s", drive.name, invitation.first),
-                        "locally");
+          cli.report_action(
+            "created", "invitation",
+            elle::sprintf("%s: %s", drive.name, invitation.first));
         }
         cli.infinit().drive_save(drive);
       }
@@ -408,7 +399,7 @@ namespace infinit
       push |= push_invitations;
       ELLE_DEBUG("push: %s", push);
       if (emails.empty() && users.empty() && !push)
-        elle::err<Error>("specify users using --user and/or --email");
+        elle::err<CLIError>("specify users using --user and/or --email");
       ELLE_DEBUG("generate passports: %s", generate_passports);
       for (auto const& email: emails)
         validate_email(email);
@@ -649,7 +640,7 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
       auto drive_name = ifnt.qualified_name(name, owner);
-      auto drive = ifnt.drive_get(name);
+      auto drive = ifnt.drive_get(drive_name);
       do_push(cli, owner, drive, icon);
     }
 

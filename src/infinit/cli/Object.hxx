@@ -10,14 +10,6 @@ namespace infinit
 {
   namespace cli
   {
-    // template <typename Symbol, typename ObjectSymbol, typename Object>
-    // bool
-    // mode_call<Symbol, ObjectSymbol, Object>::value(
-    //   infinit::cli::Infinit& infinit,
-    //   Object& o,
-    //   std::vector<std::string>& args,
-    //   bool& found)
-
     template <typename Self, typename Owner>
     Object<Self, Owner>::Object(Infinit& infinit)
       : ObjectCallable<Self, Owner>(
@@ -84,8 +76,9 @@ namespace infinit
         ::value(s, static_cast<Self&>(*this));
       elle::fprintf(s,
                     "\n"
-                    "Options:\n");
-      das::cli::help(static_cast<Self&>(*this), s, this->options());
+                    "Options:\n"
+                    "%s",
+                    das::cli::help(static_cast<Self&>(*this), this->options()));
     }
 
     template <typename Self, typename Owner>
@@ -113,7 +106,7 @@ namespace infinit
         else
         {
           bool found = false;
-          Self::Modes::template map<mode_call, Symbol, Self>::value(
+          Self::Modes::template map<mode_call, Self>::value(
             this->cli(), static_cast<Self&>(*this), args, found);
           if (!found)
             throw das::cli::Error(
@@ -161,16 +154,11 @@ namespace infinit
         as = infinit.default_user_name());
       auto show_help = [&] (std::ostream& s)
         {
-          auto action = Symbol::name();
-          {
-            auto dash = action.find("_");
-            if (dash != std::string::npos)
-              action = action.substr(0, dash);
-          }
+          auto action = infinit.command_line().at(1);
           auto vars = VarMap{
             {"action", elle::sprintf("to %s", action)},
             {"hub", beyond(true)},
-            {"object", Symbol::name()},
+            {"object", infinit.command_line().at(0)},
             {"verb", action},
           };
           Infinit::usage(
@@ -181,7 +169,7 @@ namespace infinit
           s << vars.expand(this->description) << "\n\nOptions:\n";
           {
             std::stringstream buffer;
-            das::cli::help(f, buffer, options);
+            buffer << das::cli::help(f, options);
             s << vars.expand(buffer.str());
           }
         };

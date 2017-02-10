@@ -47,10 +47,9 @@ namespace infinit
         -> decltype(binding(s, std::forward<Args>(args)...));
       ELLE_ATTRIBUTE_R(Infinit&, cli);
       ELLE_ATTRIBUTE_R(das::cli::Options, options, protected);
-      // ELLE_ATTIRBUTE_R(elle::unordered_map<std::string, >);
     };
 
-    template <typename Symbol, typename ObjectSymbol, typename Object>
+    template <typename Symbol, typename Object>
     struct mode_call
     {
       using type = bool;

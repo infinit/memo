@@ -64,7 +64,8 @@ namespace infinit
         boost::optional<boost::filesystem::path> root_block_cache_dir,
         boost::optional<boost::filesystem::path> mountpoint,
         bool allow_root_creation,
-        bool map_other_permissions)
+        bool map_other_permissions,
+        boost::optional<int> block_size)
       : _block_store(std::move(model))
       , _single_mount(false)
       , _owner(owner)
@@ -75,6 +76,8 @@ namespace infinit
       , _allow_root_creation(allow_root_creation)
       , _map_other_permissions(map_other_permissions)
       , _prefetching(0)
+      , _block_size(block_size)
+      , _file_buffers()
     {
       auto& dht = dynamic_cast<model::doughnut::Doughnut&>(
         *this->_block_store.get());
@@ -665,11 +668,12 @@ namespace infinit
             fd = *fit;
             _file_cache.modify(fit,
               [](std::shared_ptr<FileData>& d) {d->_last_used = now();});
-            (*fit)->update(*block, perms);
+            (*fit)->update(*block, perms, block_size().value_or(File::default_block_size));
           }
           else
           {
-            fd = std::make_shared<FileData>(current_path / name, *block, perms);
+            fd = std::make_shared<FileData>(current_path / name, *block, perms,
+              block_size().value_or(File::default_block_size));
             _file_cache.insert(fd);
           }
         return std::shared_ptr<rfs::Path>(new File(*this, address, fd, d, name));

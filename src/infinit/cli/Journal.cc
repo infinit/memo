@@ -1,6 +1,7 @@
 #include <infinit/cli/Journal.hh>
 
 #include <elle/bytes.hh>
+#include <elle/printf.hh>
 
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/Object.hxx>
@@ -160,9 +161,10 @@ namespace infinit
               {"size", data_size},
             };
         else
-          elle::printf("%s: %s operations, %s\n",
-                       network.name, operation_count,
-                       elle::human_data_size(data_size));
+          elle::fprintf(std::cout,
+                        "%s: %s operations, %s\n",
+                        network.name, operation_count,
+                        elle::human_data_size(data_size));
       }
       if (cli.script())
         elle::json::write(std::cout, res);

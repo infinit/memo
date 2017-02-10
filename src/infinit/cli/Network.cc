@@ -33,7 +33,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
     using Strings = Network::Strings;
     namespace bfs = boost::filesystem;
     namespace dnut = infinit::model::doughnut;
@@ -237,7 +236,7 @@ namespace infinit
             res->accept_plain = false;
           }
           else
-            elle::err<Error>("'encrypt' must be 'no', 'lazy' or 'yes': %s", enc);
+            elle::err<CLIError>("'encrypt' must be 'no', 'lazy' or 'yes': %s", enc);
         }
         else
         {
@@ -299,11 +298,11 @@ namespace infinit
         -> std::unique_ptr<dnut::consensus::Configuration>
       {
         if (replication_factor < 1)
-          elle::err<Error>("replication factor must be greater than 0");
+          elle::err<CLIError>("replication factor must be greater than 0");
         if (!no_consensus)
           paxos = true;
         if (1 < no_consensus + paxos)
-          elle::err<Error>("more than one consensus specified");
+          elle::err<CLIError>("more than one consensus specified");
         if (paxos)
           return std::make_unique<
             dnut::consensus::Paxos::Configuration>(
@@ -380,14 +379,14 @@ namespace infinit
       auto overlay_config = [&]() -> std::unique_ptr<infinit::overlay::Configuration>
         {
           if (1 < kalimero + kelips + kouncil)
-            elle::err<Error>("only one overlay type must be specified");
+            elle::err<CLIError>("only one overlay type must be specified");
           if (kalimero)
             return std::make_unique<infinit::overlay::KalimeroConfiguration>();
-          else if (kouncil)
-            return std::make_unique<infinit::overlay::kouncil::Configuration>();
-          else
+          else if (kelips)
             return make_kelips_config(nodes, k, kelips_contact_timeout,
                                       encrypt, protocol);
+          else
+            return std::make_unique<infinit::overlay::kouncil::Configuration>();
         }();
 
       auto storage = make_storage_config(ifnt, storage_names);
@@ -435,7 +434,6 @@ namespace infinit
               ifnt.network_save(owner, network);
               auto res = std::make_unique<infinit::NetworkDescriptor>(std::move(network));
               ifnt.network_save(*res);
-              cli.report_created("network", res->name);
               return res;
             }
           }();
@@ -476,33 +474,16 @@ namespace infinit
         // delete_volume function.  Actually, that's quite some
         // duplication with Volument::mode_delete, no?
         for (auto const& volume: volumes)
-          for (auto const& drive: ifnt.drives_for_volume(volume))
-          {
-            auto drive_path = ifnt._drive_path(drive);
-            if (bfs::remove(drive_path))
-              cli.report_action("deleted", "drive", drive, "locally");
-          }
+          for (auto const& drive: ifnt.drives_for_volume(volume.name))
+            ifnt.drive_delete(drive);
         for (auto const& volume: volumes)
-        {
-          auto vol_path = ifnt._volume_path(volume);
-          auto v = ifnt.volume_get(volume);
-          bfs::remove_all(v.root_block_cache_dir());
-          if (bfs::remove(vol_path))
-            cli.report_action("deleted", "volume", volume, "locally");
-        }
+          ifnt.volume_delete(ifnt.volume_get(volume.name));
         for (auto const& user: ifnt.user_passports_for_network(network.name))
-        {
-          auto passport_path = ifnt._passport_path(network.name, user);
-          if (bfs::remove(passport_path))
-            cli.report_action("deleted", "passport",
-                              elle::sprintf("%s: %s", network.name, user),
-                              "locally");
-        }
+          ifnt.passport_delete(network.name, user);
       }
       if (pull)
         ifnt.beyond_delete("network", network.name, owner, true, purge);
-      ifnt.network_delete(network_name, owner, unlink);
-      cli.report_action("deleted", "network", network_name, "locally");
+      ifnt.network_delete(network.name, owner, unlink);
     }
 
 
@@ -539,7 +520,7 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
 
-      auto save = [&ifnt,&owner] (infinit::NetworkDescriptor desc_) {
+      auto save = [&ifnt,&owner,&cli] (infinit::NetworkDescriptor desc_) {
         // Save or update network descriptor.
         ifnt.network_save(desc_, true);
         for (auto const& u: ifnt.network_linked_users(desc_.name))
@@ -577,7 +558,9 @@ namespace infinit
       if (network_name)
       {
         auto name = ifnt.qualified_name(*network_name, owner);
-        save(ifnt.beyond_fetch<infinit::NetworkDescriptor>("network", name));
+        auto network = ifnt.beyond_fetch<infinit::NetworkDescriptor>(
+          "network", name);
+        save(network);
       }
       else // Fetch all networks for owner.
       {
@@ -611,7 +594,6 @@ namespace infinit
       ifnt.network_save(desc);
       cli.report_imported("network", desc.name);
     }
-
 
 #ifndef INFINIT_WINDOWS
     /*----------------.
@@ -703,8 +685,8 @@ namespace infinit
         }
       }
       else
-        elle::err<Error>("specify either \"--status\", \"--peers\","
-                         " \"--redundancy\", or \"--all\"");
+        elle::err<CLIError>("specify either \"--status\", \"--peers\","
+                            " \"--redundancy\", or \"--all\"");
     }
 #endif
 
@@ -872,7 +854,7 @@ namespace infinit
             dnut::consensus::Paxos::Configuration*>(
               network.dht()->consensus.get());
           if (!paxos)
-            elle::err<Error>("paxos options on non-paxos consensus");
+            elle::err<CLIError>("paxos options on non-paxos consensus");
           if (paxos_rebalancing_auto_expand)
             paxos->rebalance_auto_expand(*paxos_rebalancing_auto_expand);
           if (paxos_rebalancing_inspect)
@@ -954,6 +936,7 @@ namespace infinit
           };
         if (push_p)
           elle::With<InterfacePublisher>(
+            ifnt,
             network, owner, dht->id(),
             dht->local()->server_endpoint().port(),
             advertise_host,
@@ -1094,9 +1077,8 @@ namespace infinit
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
-
       auto name = ifnt.qualified_name(network_name, owner);
-      ifnt.beyond_delete("network", network_name, owner, false, purge);
+      ifnt.beyond_delete("network", name, owner, false, purge);
     }
 
     /*-------------.
@@ -1117,7 +1099,6 @@ namespace infinit
         auto owner_uid = infinit::User::uid(*dht.owner);
         auto desc = infinit::NetworkDescriptor(std::move(network));
         ifnt.beyond_push("network", desc.name, desc, owner, false, true);
-        cli.report_action("pushed", "network", network_name);
       }
     }
 
@@ -1194,7 +1175,7 @@ namespace infinit
          {
           reactor::Thread::unique_ptr stat_thread;
           if (push)
-            stat_thread = network.make_stat_update_thread(owner, dht);
+            stat_thread = network.make_stat_update_thread(cli.infinit(), owner, dht);
           cli.report_action("running", "network", network.name);
           if (cli.script())
           {
@@ -1351,8 +1332,8 @@ namespace infinit
           infinit::Headers());
 
       // FIXME: write Storages::operator(std::ostream&)
-      elle::printf("{\"usage\": %s, \"capacity\": %s}",
-                   res.usage, res.capacity);
+      elle::fprintf(std::cout, "{\"usage\": %s, \"capacity\": %s}",
+                    res.usage, res.capacity);
     }
 
 
@@ -1447,9 +1428,9 @@ namespace infinit
       auto check_group_mount = [&] (bool group)
         {
           if (group && !mountpoint)
-            elle::err<Error>("must specify mountpoint of volume on "
-                             "network \"%s\" to edit group admins",
-                             network.name);
+            elle::err<CLIError>("must specify mountpoint of volume on "
+                                "network \"%s\" to edit group admins",
+                                network.name);
         };
       auto add_admin = [&] (infinit::cryptography::rsa::PublicKey const& key,
                             bool group, bool read, bool write)
@@ -1502,19 +1483,13 @@ namespace infinit
           else
           {
             ifnt.network_save(owner, network, true);
-            cli.report_updated("linked network", network.name);
             auto res
               = std::make_unique<infinit::NetworkDescriptor>(std::move(network));
-            cli.report_updated("network", res->name);
             return res;
           }
         }();
       if (push || push_network)
-        {
-          ifnt.beyond_push("network", desc->name, *desc, owner, false, true);
-          this->cli().report_action("pushed", "network", desc->name);
-          // FIXME: report.
-        }
+        ifnt.beyond_push("network", desc->name, *desc, owner, false, true);
       if (changed_admins && !output_name)
         std::cout << "INFO: Changes to network admins do not affect existing data:\n"
                   << "INFO: Admin access will be updated on the next write to each\n"

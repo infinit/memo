@@ -29,6 +29,7 @@ namespace infinit
     DAS_CLI_SYMBOL(async, 0, "use asynchronous write operations" , false);
     DAS_CLI_SYMBOL(avatar, '\0', "path to an image to use as avatar", false);
     DAS_CLI_SYMBOL(aws, 0, "Amazon Web Services (or S3 compatible) credentials", false);
+    DAS_CLI_SYMBOL(block_size, '\0', "{object} block size", false);
     DAS_CLI_SYMBOL(bucket, '\0', "bucket name", false);
     DAS_CLI_SYMBOL(cache, 0, "enable caching with default values", false);
     DAS_CLI_SYMBOL(cache_disk_size, 0, "size of disk cache for immutable data in bytes (default: 512MB)", false);
@@ -72,6 +73,7 @@ namespace infinit
     DAS_CLI_SYMBOL(fetch_endpoints_interval, 0, "period for repolling endpoints from the Hub in seconds", false);
     DAS_CLI_SYMBOL(filter, 'f', "raw LDAP query to use (default: objectClass=posixGroup)", false);
     DAS_CLI_SYMBOL(finder_sidebar, 0, "show volume in Finder sidebar" , false);
+    DAS_CLI_SYMBOL(force, 'f', "do not ask for user confirmation", false);
     DAS_CLI_SYMBOL(full, '\0', "include private key (do not use unless you understand the implications", false);
     DAS_CLI_SYMBOL(fullname, '\0', "user full name", false);
     DAS_CLI_SYMBOL(fullname_pattern, 'F', "fullname pattern)" , false);

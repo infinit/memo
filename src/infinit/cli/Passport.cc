@@ -12,8 +12,6 @@ namespace infinit
 
   namespace cli
   {
-    using Error = das::cli::Error;
-
     Passport::Passport(Infinit& infinit)
       : Object(infinit)
       , create(*this,
@@ -105,11 +103,7 @@ namespace infinit
         cli.report_action_output(*out, "wrote", "passport for", network.name);
       }
       else
-      {
         ifnt.passport_save(passport);
-        cli.report_created("passport",
-                           elle::sprintf("%s: %s", network.name, user_name));
-      }
       if (push || push_passport)
         ifnt.beyond_push(
           elle::sprintf("networks/%s/passports/%s", network.name, user.name),
@@ -133,9 +127,6 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
       auto network_name = ifnt.qualified_name(network_name_, owner);
-      auto path = ifnt._passport_path(network_name, user_name);
-      if (!exists(path))
-        elle::err("Passport for %s in %s not found", user_name, network_name);
       if (pull)
         ifnt.beyond_delete(
           elle::sprintf("networks/%s/passports/%s", network_name, user_name),
@@ -143,12 +134,7 @@ namespace infinit
           user_name,
           owner,
           true);
-      if (boost::filesystem::remove(path))
-        cli.report_action("deleted", "passport",
-                          elle::sprintf("%s: %s", network_name, user_name),
-                          "locally");
-      else
-        elle::err("File for passport could not be deleted: %s", path);
+      ifnt.passport_delete(network_name, user_name);
     }
 
     /*---------------.
@@ -248,7 +234,7 @@ namespace infinit
       }
       else if (user_name && user_name.get() != owner.name)
       {
-        elle::err<Error>("use the --as to fetch passports for another user");
+        elle::err<CLIError>("use the --as to fetch passports for another user");
       }
       // Fetch owner passports.
       else

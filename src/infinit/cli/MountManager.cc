@@ -624,7 +624,6 @@ namespace infinit
       auto fullname = _ifnt.qualified_name(*netname, owner);
       auto network = infinit::Network(fullname, std::move(dht), boost::none);
       _ifnt.network_save(std::move(network));
-      _cli.report_created("network", *netname);
       link_network(_ifnt, fullname, options);
       auto desc = infinit::NetworkDescriptor(_ifnt.network_get(*netname, owner, true));
       if (this->_push)
@@ -701,7 +700,6 @@ namespace infinit
         elle::err("volume creation failed");
       auto qname = elle::sprintf("%s/%s", this->_default_user, name);
       auto volume = _ifnt.volume_get(qname);
-      _cli.report_created("volume", volume.name);
       if (this->_push)
         try
         {
@@ -721,10 +719,7 @@ namespace infinit
       auto path = _ifnt._volume_path(qname);
       auto volume = _ifnt.volume_get(qname);
       _ifnt.beyond_delete("volume", qname, owner, true);
-      if (bfs::remove(path))
-        _cli.report_action("deleted", "volume", name, "locally");
-      else
-        elle::err("File for volume could not be deleted: %s", path);
+      _ifnt.volume_delete(volume);
     }
   }
 }

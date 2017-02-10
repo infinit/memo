@@ -73,7 +73,8 @@ namespace infinit
     public:
       friend class elle::With<InterfacePublisher>;
     private:
-      InterfacePublisher(infinit::Network const& network,
+      InterfacePublisher(infinit::Infinit const& infinit,
+                         infinit::Network const& network,
                          infinit::User const& self,
                          infinit::model::Address const& node_id,
                          int port,
@@ -83,6 +84,7 @@ namespace infinit
 
       ~InterfacePublisher();
 
+      ELLE_ATTRIBUTE(infinit::Infinit const&, infinit);
       ELLE_ATTRIBUTE(std::string, url);
       ELLE_ATTRIBUTE(infinit::Network const&, network);
       ELLE_ATTRIBUTE(infinit::User, self);

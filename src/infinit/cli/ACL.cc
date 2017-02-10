@@ -44,7 +44,7 @@ namespace infinit
 
       template<typename A, typename ... Args>
       void
-      recursive_action(A action, std::string const& path, Args ... args)
+      recursive_action(A action, std::string const& path, Args const&... args)
       {
         boost::system::error_code erc;
         auto it = bfs::recursive_directory_iterator(path, erc);
@@ -361,7 +361,7 @@ namespace infinit
       }
 
       std::string
-      public_key_from_username(infinit::Infinit& ifnt,
+      public_key_from_username(infinit::Infinit const& ifnt,
                                std::string const& username, bool fetch)
       {
         auto user = ifnt.user_get(username, fetch);
@@ -422,8 +422,6 @@ namespace infinit
     /*----.
     | ACL |
     `----*/
-
-    using Error = das::cli::Error;
 
     ACL::ACL(Infinit& infinit)
       : Object(infinit)
@@ -660,7 +658,7 @@ namespace infinit
       /// \param omode  likewise.
       void
       set_action(std::string const& path,
-                 infinit::Infinit& infinit,
+                 infinit::Infinit const& infinit,
                  std::vector<std::string> const& users,
                  std::string const& mode,
                  std::string const& omode,
@@ -788,15 +786,15 @@ namespace infinit
         auto combined = collate_users(users, boost::none, boost::none, groups);
         // auto users = combined ? combined.get() : std::vector<std::string>();
         if (mode_name && combined.empty())
-          elle::err<das::cli::Error>("must specify user when setting mode");
+          elle::err<CLIError>("must specify user when setting mode");
         if (!mode_name && !combined.empty())
           throw das::cli::MissingOption("mode");
         if (inherit && disinherit)
-          elle::err<das::cli::Error>("inherit and disable-inherit are exclusive");
+          elle::err<CLIError>("inherit and disable-inherit are exclusive");
         if (!inherit && !disinherit && !mode_name && !others_mode_name)
-          elle::err<das::cli::Error>("no operation specified");
+          elle::err<CLIError>("no operation specified");
         if (traverse && mode_name && mode_name->find("r") == std::string::npos)
-          elle::err<das::cli::Error>(
+          elle::err<CLIError>(
             "--traverse can only be used with mode 'r' or 'rw'");
       }
       // Don't do any operations before checking paths.
