@@ -39,7 +39,7 @@ namespace infinit
       auto
       binding(Symbol const&, Args&& ... args)
         -> decltype(das::named::function(
-                      das::bind_method<Self, Symbol>(std::declval<Self&>()),
+                      das::bind_method<Symbol, Self>(std::declval<Self&>()),
                       std::forward<Args>(args)...));
       template <typename Symbol, typename ... Args>
       auto

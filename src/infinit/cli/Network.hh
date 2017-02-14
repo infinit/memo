@@ -405,7 +405,8 @@ namespace infinit
            decltype(cli::admin_rw = Strings{}),
            decltype(cli::admin_remove = Strings{}),
            decltype(cli::mountpoint = boost::none),
-           decltype(cli::peer = Strings{})>
+           decltype(cli::peer = Strings{}),
+           decltype(cli::protocol = boost::none)>
       update;
       void
       mode_update(std::string const& network_name,
@@ -418,7 +419,8 @@ namespace infinit
                   Strings const& admin_rw = Strings{},
                   Strings const& admin_remove = Strings{},
                   boost::optional<std::string> const& mountpoint = {},
-                  Strings const& peer = Strings{});
+                  Strings const& peer = Strings{},
+                  boost::optional<std::string> const& protocol = boost::none);
     };
   }
 }

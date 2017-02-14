@@ -159,19 +159,24 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   e0 = alice.run_json(['infinit-network', '--export', '--name', 'bob/n', '--as', 'alice'])
   new_version = '0.3.0'
   assertEq(e0.get('description'), None)
-  bob.run(['infinit-network', '--update', '--name', 'n',
+  bob.run(['infinit', 'network', 'update', '--name', 'n',
            '--compatibility-version', new_version,
            '--as', 'bob',
            '--push',
+           '--protocol', 'tcp',
            '--description', 'some network'])
   alice.run(['infinit-network', '--fetch', '--name', 'bob/n', '--as', 'alice'])
   e1 = alice.run_json(['infinit-network', '--export', '--name', 'bob/n', '--as', 'alice'])
+  print(e1)
   assertEq(e1['description'], 'some network')
   assertNeq(e0['version'], e1['version'])
   assertEq(e1['version'], new_version)
+  assertEq(e1['overlay']['rpc_protocol'], 'tcp')
   del e0['version']
   del e1['version']
   del e1['description']
+  del e0['overlay']['rpc_protocol']
+  del e1['overlay']['rpc_protocol']
   assertEq(e0, e1)
 
 def setup(beyond, bob, alice):
@@ -179,7 +184,7 @@ def setup(beyond, bob, alice):
   alice.run(['infinit-user', '--signup',  'alice', '--email', 'alice@infinit.io'])
   bob.run(['infinit-user', '--fetch', '--name', 'alice'])
   # Create network.
-  bob.run(['infinit-network', '--create', '--name', 'n', '--as', 'bob', '--kelips', '--push', '--port', '8181'])
+  bob.run(['infinit-network', '--create', '--name', 'n', '--as', 'bob', '--kelips', '--push', '--port', '8181', '--protocol', 'utp'])
   bob.run(['infinit-passport', '--create', '--push', '--network', 'n', '--user', 'alice', '--as', 'bob'])
   # Fetch networks & passports.
   alice.run(['infinit-network', '--fetch', '--name', 'bob/n', '--as', 'alice'])

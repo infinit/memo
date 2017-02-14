@@ -8,7 +8,6 @@
 
 #include <infinit/LoginCredentials.hh>
 #include <infinit/cli/Infinit.hh>
-#include <infinit/cli/Object.hxx>
 
 ELLE_LOG_COMPONENT("cli.user");
 
@@ -564,9 +563,5 @@ namespace infinit
       if (user_exists)
         elle::err("user %s already exists locally", name);
     }
-
-
-    // Instantiate
-    template class Object<User>;
   }
 }

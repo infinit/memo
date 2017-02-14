@@ -1,7 +1,6 @@
 #include <infinit/cli/Passport.hh>
 
 #include <infinit/cli/Infinit.hh>
-#include <infinit/cli/Object.hxx>
 #include <infinit/model/doughnut/Passport.hh>
 
 ELLE_LOG_COMPONENT("cli.passport");
@@ -341,8 +340,5 @@ namespace infinit
           passport,
           owner);
     }
-
-    // Instantiate
-    template class Object<Passport>;
   }
 }

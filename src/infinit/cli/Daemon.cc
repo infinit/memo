@@ -22,7 +22,6 @@
 
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/MountManager.hh>
-#include <infinit/cli/Object.hxx>
 #include <infinit/cli/utility.hh>
 #include <infinit/storage/Filesystem.hh>
 
@@ -1456,8 +1455,5 @@ namespace infinit
       ELLE_TRACE_SCOPE("stop");
       daemon_stop();
     }
-
-    // Instantiate
-    template class Object<Daemon>;
   }
 }

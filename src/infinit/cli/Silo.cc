@@ -16,7 +16,6 @@
 #endif
 
 #include <infinit/cli/Infinit.hh>
-#include <infinit/cli/Object.hxx>
 #include <infinit/cli/utility.hh>
 
 ELLE_LOG_COMPONENT("cli.block");
@@ -427,8 +426,5 @@ namespace infinit
               pair.first, infinit.user_get(user_name));
       infinit.storage_delete(storage, clear);
     }
-
-    // Instantiate
-    template class Object<Silo>;
   }
 }

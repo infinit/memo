@@ -6,7 +6,6 @@
 
 #include <infinit/Drive.hh>
 #include <infinit/cli/Infinit.hh>
-#include <infinit/cli/Object.hxx>
 #include <infinit/cli/User.hh>
 #include <infinit/cli/utility.hh>
 #include <infinit/cli/xattrs.hh>
@@ -551,8 +550,5 @@ namespace infinit
                         deny_write,
                         deny_storage);
     }
-
-    // Instantiate
-    template class Object<LDAP>;
   }
 }

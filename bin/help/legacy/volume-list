@@ -1,5 +1,0 @@
-volume: list: Usage: _build/macosx64/bin/infinit-volume --list [OPTIONS...]
-
-List volumes:
-
-

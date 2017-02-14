@@ -30,7 +30,6 @@
 #include <reactor/http/exceptions.hh>
 
 #include <infinit/cli/Infinit.hh>
-#include <infinit/cli/Object.hxx>
 #include <infinit/storage/Dropbox.hh>
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/GCS.hh>
@@ -251,8 +250,5 @@ namespace infinit
       _output(cli, out, results);
       _report_error(cli, out, results.sane(), results.warning());
     }
-
-    // Instantiate
-    template class Object<Doctor>;
   }
 }

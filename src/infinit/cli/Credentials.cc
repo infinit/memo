@@ -5,7 +5,6 @@
 #include <elle/err.hh>
 
 #include <infinit/cli/Infinit.hh>
-#include <infinit/cli/Object.hxx>
 #include <infinit/cli/utility.hh>
 
 namespace infinit
@@ -451,8 +450,5 @@ namespace infinit
       list_(ifnt, e, cli::google_drive, s::credentials_google);
       list_(ifnt, e, cli::gcs,          s::credentials_gcs);
     }
-
-    // Instantiate
-    template class Object<Credentials>;
   }
 }

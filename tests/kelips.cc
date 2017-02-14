@@ -5,7 +5,9 @@
 
 #include <reactor/for-each.hh>
 
+#include <infinit/Network.hh>
 #include <infinit/filesystem/filesystem.hh>
+#include <infinit/model/Endpoints.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -22,8 +24,6 @@
 
 ELLE_LOG_COMPONENT("test");
 
-#include "main.hh"
-
 #ifdef INFINIT_WINDOWS
 # undef stat
 #endif
@@ -33,7 +33,7 @@ namespace rfs = reactor::filesystem;
 namespace bfs = boost::filesystem;
 namespace imd = infinit::model::doughnut;
 namespace iok = infinit::overlay::kelips;
-
+using infinit::model::Endpoints;
 
 class Beyond: public reactor::network::HttpServer
 {
@@ -73,7 +73,12 @@ public:
   }
   void push(infinit::model::doughnut::Doughnut& d)
   {
-    Endpoints eps{{"127.0.0.1"}, d.local()->server_endpoint().port()};
+    Endpoints eps {
+      {
+        boost::asio::ip::address::from_string("127.0.0.1"),
+        d.local()->server_endpoint().port(),
+      },
+    };
     push(d.id(), eps);
   }
   void pull(infinit::model::doughnut::Doughnut& d)

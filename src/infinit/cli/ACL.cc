@@ -5,7 +5,6 @@
 #include <elle/print.hh>
 
 #include <infinit/cli/Infinit.hh>
-#include <infinit/cli/Object.hxx>
 #include <infinit/cli/utility.hh>
 #include <infinit/cli/xattrs.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
@@ -846,7 +845,5 @@ namespace infinit
       setxattr(path, name, value, true);
     }
 
-    // Instantiate
-    template class Object<ACL>;
   }
 }

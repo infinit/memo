@@ -1,8 +1,0 @@
-volume: stop: Usage: _build/macosx64/bin/infinit-volume --stop --name VOLUME [OPTIONS...]
-
-Stop a volume:
-
-Stop options:
-  -n [ --name ] arg      Volume to remove
-
-

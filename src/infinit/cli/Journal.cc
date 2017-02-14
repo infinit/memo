@@ -4,7 +4,6 @@
 #include <elle/printf.hh>
 
 #include <infinit/cli/Infinit.hh>
-#include <infinit/cli/Object.hxx>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/OKB.hh>
@@ -169,8 +168,5 @@ namespace infinit
       if (cli.script())
         elle::json::write(std::cout, res);
     }
-
-    // Instantiate
-    template class Object<Journal>;
   }
 }

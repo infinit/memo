@@ -1,7 +1,6 @@
 #include <infinit/cli/Block.hh>
 
 #include <infinit/cli/Infinit.hh>
-#include <infinit/cli/Object.hxx>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
 
@@ -44,8 +43,5 @@ namespace infinit
         elle::serialization::json::serialize(block, *output);
       }
     }
-
-    // Instantiate
-    template class Object<Block>;
   }
 }

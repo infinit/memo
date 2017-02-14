@@ -6,7 +6,6 @@
 
 #include <infinit/Network.hh> // Storages
 #include <infinit/cli/Infinit.hh>
-#include <infinit/cli/Object.hxx>
 #include <infinit/cli/utility.hh>
 #include <infinit/cli/xattrs.hh>
 #include <infinit/model/MissingBlock.hh>
@@ -181,7 +180,8 @@ namespace infinit
                cli::admin_rw = Strings{},
                cli::admin_remove = Strings{},
                cli::mountpoint = boost::none,
-               cli::peer = Strings{})
+               cli::peer = Strings{},
+               cli::protocol = boost::none)
     {}
 
 
@@ -899,8 +899,8 @@ namespace infinit
           dht->overlay()->discover(eps);
         }
         // Only push if we have are contributing storage.
-        bool push_p = push && dht->local() && dht->local()->storage();
-        if (!dht->local() && (!cli.script() || push_p))
+        bool push_p = (push || publish) && dht->local() && dht->local()->storage();
+        if (!dht->local() && push_p)
           elle::err("network %s is client only since no storage is attached", name);
         if (dht->local())
         {
@@ -915,7 +915,7 @@ namespace infinit
         auto run = [&, push_p]
           {
             reactor::Thread::unique_ptr poll_thread;
-            if (fetch)
+            if (fetch || publish)
             {
               infinit::model::NodeLocations eps;
               network.beyond_fetch_endpoints(eps);
@@ -1398,23 +1398,24 @@ namespace infinit
     }
 
     void
-    Network::mode_update(std::string const& network_name,
-                         boost::optional<std::string> const& description,
-                         boost::optional<int> port,
-                         boost::optional<std::string> const& output_name,
-                         bool push_network,
-                         bool push,
-                         Strings const& admin_r,
-                         Strings const& admin_rw,
-                         Strings const& admin_remove,
-                         boost::optional<std::string> const& mountpoint,
-                         Strings const& peer)
+    Network::mode_update(
+      std::string const& network_name,
+      boost::optional<std::string> const& description,
+      boost::optional<int> port,
+      boost::optional<std::string> const& output_name,
+      bool push_network,
+      bool push,
+      Strings const& admin_r,
+      Strings const& admin_rw,
+      Strings const& admin_remove,
+      boost::optional<std::string> const& mountpoint,
+      Strings const& peer,
+      boost::optional<std::string> const& protocol)
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
-
       auto network = ifnt.network_get(network_name, owner);
       if (description)
         network.description = description;
@@ -1472,6 +1473,8 @@ namespace infinit
       }
       if (!peer.empty())
         dht.peers = parse_peers(peer);
+      if (protocol)
+        dht.overlay->rpc_protocol = protocol_get(protocol);
       auto desc = [&]
         {
           if (output_name)
@@ -1495,8 +1498,5 @@ namespace infinit
                   << "INFO: Admin access will be updated on the next write to each\n"
                   << "INFO: file or folder.\n";
     }
-
-    // Instantiate
-    template class Object<Network>;
   }
 }
