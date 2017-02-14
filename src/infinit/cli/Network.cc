@@ -933,7 +933,7 @@ namespace infinit
         }
         // Only push if we have are contributing storage.
         bool push_p = (push || publish) && dht->local() && dht->local()->storage();
-        if (!dht->local() && (!cli.script() || push_p))
+        if (!dht->local() && push_p)
           elle::err("network %s is client only since no storage is attached", name);
         if (dht->local())
         {
