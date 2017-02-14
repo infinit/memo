@@ -11,8 +11,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
-
     namespace
     {
       std::string _pair_salt = "5_C+m$:1Ex";
@@ -171,7 +169,7 @@ namespace infinit
       if (user)
         receive_user(this->cli(), name, passphrase);
       else
-        elle::err<Error>("Must specify type of object to receive");
+        elle::err<CLIError>("Must specify type of object to receive");
     }
 
 
@@ -245,8 +243,8 @@ namespace infinit
             });
           for (; timeout > 0; timeout--)
           {
-            elle::printf("User identity on %s for %s seconds",
-                         infinit::beyond(true), timeout);
+            elle::fprintf(std::cout, "User identity on %s for %s seconds",
+                          infinit::beyond(true), timeout);
             std::cout.flush();
             reactor::sleep(1_sec);
             std::cout << '\r' << std::string(80, ' ') << '\r';
@@ -259,8 +257,9 @@ namespace infinit
               break;
           }
           beyond_poller.terminate_now();
-          elle::printf("Timed out, user identity no longer available on %s\n",
-                       infinit::beyond(true));
+          elle::fprintf(
+            std::cout, "Timed out, user identity no longer available on %s\n",
+            infinit::beyond(true));
         }
       }
     }
@@ -273,7 +272,7 @@ namespace infinit
       if (user)
         transmit_user(this->cli(), passphrase, !no_countdown);
       else
-        elle::err<Error>("Must specify type of object to receive");
+        elle::err<CLIError>("Must specify type of object to receive");
     }
   }
 }

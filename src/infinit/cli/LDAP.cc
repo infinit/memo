@@ -16,8 +16,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
-
     LDAP::LDAP(Infinit& infinit)
       : Object(infinit)
       , drive_invite(
@@ -239,16 +237,17 @@ namespace infinit
                              elle::sprintf("infinit.resolve.%s", user_name),
                              buf, 4095, true);
             if (r > 0)
-              {
-                elle::printf("User \"%s\" already registerd to network.", user_name)
-                  << std::endl;
-                continue;
-              }
+            {
+              elle::fprintf(std::cout,
+                            "User \"%s\" already registerd to network.\n",
+                            user_name);
+              continue;
+            }
           }
           setxattr(mountpoint, "infinit.register." + user_name,
                    passport_ser.string(), true);
-          elle::printf("Registered user \"%s\" to network.", user_name)
-            << std::endl;
+          elle::fprintf(std::cout,
+                        "Registered user \"%s\" to network.\n", user_name);
         }
         // Push groups
         for (auto const& g: groups)
@@ -260,13 +259,13 @@ namespace infinit
                            buf, 4095, true);
           if (r > 0)
           {
-            elle::printf("Group \"%s\" already exists on network.", g.first)
+            elle::fprintf(std::cout, "Group \"%s\" already exists on network.", g.first)
               << std::endl;
           }
           else
           {
             setxattr(mountpoint, "infinit.group.create", g.first, true);
-            elle::printf("Added group \"%s\" to network.", g.first)
+            elle::fprintf(std::cout, "Added group \"%s\" to network.", g.first)
               << std::endl;
           }
           for (auto const& m: g.second)
@@ -279,7 +278,7 @@ namespace infinit
             ELLE_TRACE("adding user %s", m);
             setxattr(mountpoint, "infinit.group.add",
                      g.first + ':' + res.at(m).name, true);
-            elle::printf("Added user \"%s\" to group \"%s\" on network.",
+            elle::fprintf(std::cout, "Added user \"%s\" to group \"%s\" on network.",
                          m, g.first)
               << std::endl;
           }
@@ -375,7 +374,7 @@ namespace infinit
                    user_dir, e);
               }
             }
-            elle::printf("Created home directory: %s.", user_dir)
+            elle::fprintf(std::cout, "Created home directory: %s.", user_dir)
               << std::endl;
           }
           else
@@ -494,7 +493,7 @@ namespace infinit
       }
       std::cout << std::endl << "Will register the following users:" << std::endl;
       for (auto& m: missing)
-        elle::printf("%s: %s (%s) DN: %s\n",
+        elle::fprintf(std::cout, "%s: %s (%s) DN: %s\n",
                       m.first, m.second.fullname, m.second.email, m.second.dn);
       std::cout << std::endl;
       bool proceed = [&]

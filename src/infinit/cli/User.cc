@@ -17,7 +17,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
     using PublicUser = das::Model<
       infinit::User,
       decltype(elle::meta::list(
@@ -60,7 +59,8 @@ namespace infinit
         this->bind(modes::mode_delete,
                    cli::name = Infinit::default_user_name(),
                    cli::pull = false,
-                   cli::purge = false))
+                   cli::purge = false,
+                   cli::force = false))
       , export_(
         "Export local user",
         das::cli::Options(),
@@ -132,12 +132,14 @@ namespace infinit
                   std::string const& name,
                   Buffer const& buffer)
       {
+        // XXX: move to infinit::avatar_save maybe ?
         bfs::ofstream f;
-        infinit::Infinit::_open_write(
-          f, api.cli().infinit()._user_avatar_path(name),
+        bool existed = infinit::Infinit::_open_write(
+          f, api.cli().infinit()._avatar_path(name),
           name, "avatar", true, std::ios::out | std::ios::binary);
         f.write(reinterpret_cast<char const*>(buffer.contents()), buffer.size());
-        api.cli().report_action("saved", "avatar", name, "locally");
+        api.cli().report_action(existed ? "updated" : "saved",
+                                "avatar for", name, "locally");
       }
 
       void
@@ -152,18 +154,8 @@ namespace infinit
           std::istreambuf_iterator<char>{});
         elle::ConstWeakBuffer data(s.data(), s.size());
         auto url = elle::sprintf("users/%s/avatar", self.name);
-        switch (infinit::Infinit::beyond_push_data(
-                  url, "avatar", self.name, data, "image/jpeg", self))
-        {
-          case infinit::Infinit::PushResult::pushed:
-            api.cli().report_action("saved", "avatar", self.name, "remotely");
-            break;
-          case infinit::Infinit::PushResult::updated:
-            api.cli().report_action("updated", "avatar", self.name, "remotely");
-            break;
-          case infinit::Infinit::PushResult::alreadyPushed:
-            api.cli().report_action("already pushed", "avatar", self.name);
-        }
+        api.cli().infinit().beyond_push_data(
+          url, "avatar", self.name, data, "image/jpeg", self);
         save_avatar(api, self.name, data);
       }
 
@@ -171,7 +163,7 @@ namespace infinit
       fetch_avatar(User& api, std::string const& name)
       {
         auto url = elle::sprintf("users/%s/avatar", name);
-        auto request = infinit::Infinit::beyond_fetch_data(url, "avatar", name);
+        auto request = api.cli().infinit().beyond_fetch_data(url, "avatar", name);
         if (request->status() == reactor::http::StatusCode::OK)
         {
           auto response = request->response();
@@ -184,10 +176,10 @@ namespace infinit
       }
 
       void
-      pull_avatar(infinit::User& self)
+      pull_avatar(User& api, infinit::User& self)
       {
         auto url = elle::sprintf("users/%s/avatar", self.name);
-        infinit::Infinit::beyond_delete(url, "avatar", self.name, self);
+        api.cli().infinit().beyond_delete(url, "avatar", self.name, self);
       }
 
       infinit::User
@@ -200,7 +192,7 @@ namespace infinit
                   boost::optional<std::string> description)
       {
         if (email && !validate_email(*email))
-          elle::err<Error>("invalid email address: %s", *email);
+          elle::err<CLIError>("invalid email address: %s", *email);
         auto keys = [&]
         {
           if (keys_file)
@@ -230,15 +222,15 @@ namespace infinit
             password = Infinit::read_password();
           if (!user.ldap_dn)
             user.password_hash = Infinit::hub_password_hash(*password);
-          infinit::Infinit::beyond_push<das::Serializer<PrivateUserPublish>>(
+          api.cli().infinit().beyond_push<das::Serializer<PrivateUserPublish>>(
             "user", user.name, user, user);
         }
         else
         {
           if (password)
-            elle::err<Error>(
-              "password is only used when pushing a full user");
-          infinit::Infinit::beyond_push<das::Serializer<PublicUserPublish>>(
+            elle::err<CLIError>
+              ("password is only used when pushing a full user");
+          api.cli().infinit().beyond_push<das::Serializer<PublicUserPublish>>(
             "user", user.name, user, user, !api.cli().script());
         }
       }
@@ -266,17 +258,17 @@ namespace infinit
       if (!push)
       {
         if (ldap_name)
-          elle::err<Error>(
+          elle::err<CLIError>(
             "LDAP can only be used with the Hub, add --push");
         if (full)
-          elle::err<Error>(
+          elle::err<CLIError>(
             "--full can only be used with the Hub, add --push");
         if (password)
-          elle::err<Error>(
+          elle::err<CLIError>(
             "--password can only be used with the Hub, add --push");
       }
       if (ldap_name && !full)
-        elle::err<Error>("LDAP user creation requires --full");
+        elle::err<CLIError>("LDAP user creation requires --full");
       infinit::User user =
         create_user(*this, name, key, email, fullname, ldap_name, description);
       if (auto output = this->cli().get_output(path, false))
@@ -285,10 +277,7 @@ namespace infinit
         this->cli().report_exported(std::cout, "user", user.name);
       }
       else
-      {
         this->cli().infinit().user_save(user);
-        this->cli().report_action("generated", "user", name, "locally");
-      }
       if (push)
         user_push(*this, user, password, full);
     }
@@ -296,12 +285,13 @@ namespace infinit
     void
     User::mode_delete(std::string const& name,
                       bool pull,
-                      bool purge)
+                      bool purge,
+                      bool force)
     {
       ELLE_TRACE_SCOPE("delete");
       auto& ifnt = this->cli().infinit();
       auto user = ifnt.user_get(name);
-      if (user.private_key && !this->cli().script())
+      if (user.private_key && !this->cli().script() && !force)
       {
         std::string res;
         {
@@ -321,7 +311,7 @@ namespace infinit
         try
         {
           auto self = this->cli().as_user();
-          infinit::Infinit::beyond_delete("user", name, self, true, purge);
+          ifnt.beyond_delete("user", name, self, true, purge);
         }
         catch (MissingLocalResource const& e)
         {
@@ -333,37 +323,23 @@ namespace infinit
       {
         // XXX Remove volumes and drives that are on network owned by this user.
         // Currently only the owner of a network can create volumes/drives.
-        for (auto const& drive_: ifnt.drives_get())
+        for (auto const& drive: ifnt.drives_get())
         {
-          auto drive = drive_.name;
-          if (ifnt.owner_name(drive) != user.name)
-            continue;
-          auto drive_path = ifnt._drive_path(drive);
-          if (bfs::remove(drive_path))
-            this->cli().report_action("deleted", "drive", drive, "locally");
+          if (ifnt.owner_name(drive.name) == user.name)
+            ifnt.drive_delete(drive);
         }
-        for (auto const& volume_: ifnt.volumes_get())
+        for (auto const& volume: ifnt.volumes_get())
         {
-          auto volume = volume_.name;
-          if (ifnt.owner_name(volume) != user.name)
-            continue;
-          auto volume_path = ifnt._volume_path(volume);
-          if (bfs::remove(volume_path))
-            this->cli().report_action("deleted", "volume", volume, "locally");
+          if (ifnt.owner_name(volume.name) == user.name)
+            ifnt.volume_delete(volume);
         }
         for (auto const& pair: ifnt.passports_get())
         {
           auto network = pair.first.network();
           if (ifnt.owner_name(network) != user.name
               && pair.second != user.name)
-          {
             continue;
-          }
-          auto passport_path = ifnt._passport_path(network, pair.second);
-          if (bfs::remove(passport_path))
-            this->cli().report_action("deleted", "passport",
-                                      elle::sprintf("%s: %s", network, pair.second),
-                                      "locally");
+          ifnt.passport_delete(network, pair.second);
         }
         for (auto const& network_: ifnt.networks_get(user))
         {
@@ -371,23 +347,11 @@ namespace infinit
           if (ifnt.owner_name(network) == user.name)
             ifnt.network_delete(network, user, true);
           else
-          {
             ifnt.network_unlink(network, user);
-            this->cli().report_action("unlinked", "network", network.name());
-          }
         }
       }
-      if (auto path = this->cli().avatar_path(name))
-        bfs::remove(*path);
-      auto path = ifnt._user_path(user.name);
-      if (bfs::remove(path))
-      {
-        this->cli().report_action("deleted", "user", user.name, "locally");
-      }
-      else
-      {
-        elle::err("File for user could not be deleted: %s", path);
-      }
+      ifnt.avatar_delete(user);
+      ifnt.user_delete(user);
     }
 
     void
@@ -442,7 +406,7 @@ namespace infinit
         };
         try
         {
-          auto user = infinit::Infinit::beyond_fetch<infinit::User>(
+          auto user = this->cli().infinit().beyond_fetch<infinit::User>(
             "user", reactor::http::url_encode(name));
           this->cli().infinit().user_save(std::move(user));
           avatar();
@@ -544,7 +508,6 @@ namespace infinit
       elle::serialization::json::SerializerIn input(json, false);
       auto user = input.deserialize<infinit::User>();
       this->cli().infinit().user_save(user, true);
-      this->cli().report_action("saved", "user", name, "locally");
     }
 
     void
@@ -552,7 +515,7 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("pull");
       auto self = this->cli().as_user();
-      infinit::Infinit::beyond_delete("user", name, self, false, purge);
+      this->cli().infinit().beyond_delete("user", name, self, false, purge);
     }
 
     void
@@ -573,20 +536,19 @@ namespace infinit
         if (fullname)
           user.fullname = *fullname;
         this->cli().infinit().user_save(user, true);
-        this->cli().report_updated("user", user.name);
       }
       user_push(*this, user, password, full);
-      // FIXME: avatar should probably be stored locally too
       if (avatar)
       {
         if (!avatar->empty())
         {
           if (!bfs::exists(*avatar))
             elle::err("avatar file doesn't exist: %s", *avatar);
+          // Also saves avatar locally.
           upload_avatar(*this, user, *avatar);
         }
         else
-          pull_avatar(user);
+          pull_avatar(*this, user);
       }
     }
 
@@ -602,7 +564,7 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("signup");
       if (ldap_name && !full)
-        elle::err<Error>("LDAP user creation requires --full");
+        elle::err<CLIError>("LDAP user creation requires --full");
       auto user = create_user(*this,
                               name,
                               key,

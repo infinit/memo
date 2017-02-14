@@ -2,6 +2,10 @@
 
 #include <boost/filesystem.hpp>
 
+#include <elle/format/hexadecimal.hh>
+
+#include <cryptography/hash.hh>
+
 #include <reactor/http/Request.hh>
 
 #include <infinit/Infinit.hh>
@@ -111,7 +115,7 @@ namespace infinit
 
     }
     reactor::Thread::unique_ptr poll_thread;
-    if (mo.fetch && *mo.fetch)
+    if (mo.fetch.value_or(mo.publish.value_or(false)))
     {
       beyond_fetch_endpoints(eps);
       if (mo.poll_beyond && *mo.poll_beyond > 0)
@@ -123,12 +127,13 @@ namespace infinit
   }
 
   reactor::Thread::unique_ptr
-  Network::make_stat_update_thread(infinit::User const& self,
+  Network::make_stat_update_thread(infinit::Infinit const& infinit,
+                                   infinit::User const& self,
                                    infinit::model::doughnut::Doughnut& model)
   {
     auto notify = [&]
       {
-        this->notify_storage(self, model.id());
+        this->notify_storage(infinit, self, model.id());
       };
     model.local()->storage()->register_notifier(notify);
     return reactor::every(60_min, "periodic storage stat updater", notify);
@@ -230,7 +235,8 @@ namespace infinit
   }
 
   void
-  Network::notify_storage(infinit::User const& user,
+  Network::notify_storage(infinit::Infinit const& infinit,
+                          infinit::User const& user,
                           infinit::model::Address const& node_id)
   {
     ELLE_TRACE_SCOPE("push storage stats to %s", beyond());
@@ -240,7 +246,7 @@ namespace infinit
         "networks/%s/stat/%s/%s", name, user.name, node_id);
       auto storage = this->dht()->storage->make();
       auto s = Storages{storage->usage(), storage->capacity()};
-      Infinit::beyond_push(
+      infinit.beyond_push(
         url, "storage usage", name, std::move(s), user, false);
     }
     catch (elle::Error const& e)
@@ -286,8 +292,15 @@ namespace infinit
 #ifdef INFINIT_WINDOWS
     elle::unreachable();
 #else
-    return infinit::xdg_runtime_dir() / "monitoring" / user.name
-      / elle::sprintf("%s.sock", this->name);
+    // UNIX-domain addresses are limited to 108 chars on Linux and 104 chars
+    // on macOS ¯\_(ツ)_/¯
+    namespace crypto = infinit::cryptography;
+    auto qualified_name = elle::sprintf(
+      "%s/%s/%s", elle::system::username(), user.name, this->name);
+    auto hashed = crypto::hash(qualified_name, crypto::Oneway::sha);
+    auto socket_id = elle::format::hexadecimal::encode(hashed);
+    return infinit::xdg_runtime_dir() / "monitor"
+      / elle::sprintf("%s.sock", std::string(socket_id).substr(0, 6));
 #endif
   }
 

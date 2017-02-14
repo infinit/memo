@@ -35,7 +35,6 @@ namespace infinit
 
   namespace cli
   {
-    using Error = das::cli::Error;
     using Strings = Daemon::Strings;
 
     Daemon::Daemon(Infinit& infinit)
@@ -276,9 +275,9 @@ namespace infinit
       {
         reactor::Scheduler sched;
         elle::json::Object res;
-        reactor::Thread main_thread(
+        reactor::Thread daemon_query(
           sched,
-          "main",
+          "daemon-query",
           [&]
           {
             // try local then global
@@ -911,7 +910,6 @@ namespace infinit
             elle::serialization::json::SerializerIn input(json, false);
             auto user = input.deserialize<infinit::User>();
             ifnt.user_save(user, true);
-            cli.report_action("saved", "user", name, "locally");
           }
           ELLE_TRACE("starting initial manager");
           managers[getuid()].reset(new MountManager(ifnt, cli,
@@ -1012,7 +1010,7 @@ namespace infinit
                       if (on_end)
                         on_end();
                     }
-                    catch(elle::Error const& e)
+                    catch (elle::Error const& e)
                     {
                       ELLE_WARN("Unexpected exception in on_end: %s", e);
                     }
@@ -1342,7 +1340,7 @@ namespace infinit
         for (auto const& f: { "list", "status", "start", "stop", "restart" })
           opts += elle::sprintf("\"--%s\", ", f);
         opts = opts.substr(0, opts.size() - 2);
-        elle::err<Error>("Specify one of %s", opts);
+        elle::err<CLIError>("Specify one of %s", opts);
       }
       if (list)
         volume_list(cli);

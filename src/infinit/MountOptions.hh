@@ -26,7 +26,7 @@ namespace infinit
 #ifndef INFINIT_WINDOWS
     DAS_SYMBOL(enable_monitoring); // aka monitoring.
 #endif
-    DAS_SYMBOL(fetch);             // aka fetch_endpoints_interval.
+    DAS_SYMBOL(fetch);             // aka fetch_endpoints.
     DAS_SYMBOL(fuse_options);      // aka fuse_option.
     DAS_SYMBOL(hub_url);
     DAS_SYMBOL(listen_address);    // aka listen
@@ -34,6 +34,7 @@ namespace infinit
     DAS_SYMBOL(peers);             // aka peer.
     DAS_SYMBOL(poll_beyond);       // aka fetch_endpoints_interval.
     DAS_SYMBOL(push);              // aka push_endpoints.
+    DAS_SYMBOL(publish);           // aka push && fetch.
     DAS_SYMBOL(rdv);
     DAS_SYMBOL(readonly);
   }
@@ -53,6 +54,7 @@ namespace infinit
     boost::optional<std::string> as;
     boost::optional<bool> fetch;
     boost::optional<bool> push;
+    boost::optional<bool> publish;
     boost::optional<bool> cache;
     boost::optional<bool> async;
     boost::optional<bool> readonly;
@@ -76,6 +78,7 @@ namespace infinit
                  mount_options::fuse_options,
                  mount_options::fetch,
                  mount_options::push,
+                 mount_options::publish,
                  mount_options::cache,
                  mount_options::async,
                  mount_options::readonly,

@@ -394,7 +394,8 @@ namespace infinit
                               cli::admin_rw = Strings{},
                               cli::admin_remove = Strings{},
                               cli::mountpoint = boost::none,
-                              cli::peer = Strings{}))>;
+                              cli::peer = Strings{},
+                              cli::protocol = boost::none))>;
       ModeUpdate update;
       void
       mode_update(std::string const& network_name,
@@ -407,7 +408,8 @@ namespace infinit
                   Strings const& admin_rw = Strings{},
                   Strings const& admin_remove = Strings{},
                   boost::optional<std::string> const& mountpoint = {},
-                  Strings const& peer = Strings{});
+                  Strings const& peer = Strings{},
+                  boost::optional<std::string> const& protocol = boost::none);
     };
   }
 }

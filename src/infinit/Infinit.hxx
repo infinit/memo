@@ -58,19 +58,18 @@ namespace infinit
                         std::string const& type,
                         std::string const& name,
                         boost::optional<infinit::User const&> self,
-                        infinit::Headers const& extra_headers,
-                        Reporter report)
+                        infinit::Headers const& extra_headers) const
   {
-    auto json = beyond_fetch_json(
-      where, type, name, self, extra_headers, report);
+    auto json = beyond_fetch_json(where, type, name, self, extra_headers);
     elle::serialization::json::SerializerIn input(json, false);
+    this->report_local_action()("fetched", type, name);
     return input.deserialize<T>();
   }
 
   template <typename T>
   T
   Infinit::beyond_fetch(std::string const& type,
-                        std::string const& name)
+                        std::string const& name) const
   {
     return beyond_fetch<T>(elle::sprintf("%ss/%s", type, name), type, name);
   }
@@ -83,7 +82,7 @@ namespace infinit
                        T const& o,
                        infinit::User const& self,
                        bool beyond_error,
-                       bool update)
+                       bool update) const
   {
     ELLE_LOG_COMPONENT("infinit");
     auto payload_ = [&] {
@@ -105,7 +104,7 @@ namespace infinit
                        T const& o,
                        infinit::User const& self,
                        bool beyond_error,
-                       bool update)
+                       bool update) const
   {
     beyond_push<Serializer>(
       elle::sprintf("%ss/%s", type, name),

@@ -147,7 +147,8 @@ namespace infinit
       {
 
         // Handle acl inheritance
-        FileData fd(_parent->_path / _name, b->address(), mode & 0700);
+        FileData fd(_parent->_path / _name, b->address(), mode & 0700,
+          _owner.block_size().value_or(File::default_block_size));
         if (_parent->inherit_auth())
         {
           umbrella(
@@ -237,7 +238,8 @@ namespace infinit
           }
         }) << [&] (elle::Finally& remove_from_parent)
       {
-        FileData fd(_parent->_path / _name, b->address(), mode & 0700);
+        FileData fd(_parent->_path / _name, b->address(), mode & 0700,
+                    _owner.block_size().value_or(File::default_block_size));
         if (_parent->inherit_auth())
         {
           umbrella(

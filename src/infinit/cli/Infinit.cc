@@ -7,6 +7,13 @@
 #include <type_traits>
 #include <vector>
 
+#if defined INFINIT_WINDOWS || defined NO_EXECINFO
+# define INFINIT_WITH_CRASH_REPORTER 0
+#else
+# define INFINIT_WITH_CRASH_REPORTER 1
+# include <crash_reporting/CrashReporter.hh>
+#endif
+
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -39,6 +46,13 @@ namespace infinit
   {
     namespace
     {
+      bool constexpr production_build
+#ifdef INFINIT_PRODUCTION_BUILD
+      = true;
+#else
+      = false;
+#endif
+
       void
       install_signal_handlers(Infinit& cli)
       {
@@ -66,9 +80,85 @@ namespace infinit
           }
         }
       }
+
+#if INFINIT_WITH_CRASH_REPORTER
+      /// Crash reporter.
+      std::shared_ptr<crash_reporting::CrashReporter>
+      make_crash_reporter()
+      {
+        auto const request = elle::os::getenv("INFINIT_CRASH_REPORTER", "");
+        if (request == "1"
+            || production_build && request != "0")
+        {
+          auto const host = elle::os::getenv("INFINIT_CRASH_REPORT_HOST",
+                                             beyond());
+          auto const url = elle::sprintf("%s/crash/report", host);
+          auto const dumps_path = canonical_folder(xdg_cache_home() / "crashes");
+          return std::make_shared<crash_reporting::CrashReporter>(url, dumps_path,
+                                                                  version_describe());
+        }
+        else
+          return {};
+      }
+
+      /// Thread to send the crash reports (some might be pending from
+      /// previous runs, saved on disk).
+      std::unique_ptr<reactor::Thread>
+      make_crash_reporter_thread()
+      {
+        return std::make_unique<reactor::Thread>
+          ("crash report",
+           [cr = make_crash_reporter()]
+           {
+             if (cr)
+               cr->upload_existing();
+           });
+      }
+#endif
+
+      void
+      check_broken_locale()
+      {
+#if defined INFINIT_LINUX
+        // boost::filesystem uses the default locale, detect here if it
+        // cant be instantiated.
+        // Not required on OS X, see: boost/libs/filesystem/src/path.cpp:819
+        try
+        {
+          std::locale("");
+        }
+        catch (std::exception const& e)
+        {
+          ELLE_WARN("Something is wrong with your locale settings,"
+                    " overriding: %s",
+                    e.what());
+          elle::os::setenv("LC_ALL", "C", 1);
+        }
+#endif
+      }
     }
 
+    namespace
+    {
+      std::string
+      pretty_object(std::string const& object)
+      {
+        if (object == "user")
+          return "identity for user";
+        else if (object == "network")
+          return "network descriptor";
+        else if (object == "volume")
+          return "volume descriptor";
+        else if (object == "drive")
+          return "drive descriptor";
+        else
+          return object;
+      }
+    }
 
+    /*----------.
+    | Infinit.  |
+    `----------*/
 
     Infinit::Infinit(infinit::Infinit& infinit)
       : InfinitCallable(
@@ -80,6 +170,20 @@ namespace infinit
       , _script(false)
     {
       install_signal_handlers(*this);
+      this->_infinit.report_local_action().connect(
+        [this] (std::string const& action,
+                std::string const& type,
+                std::string const& name)
+        {
+          this->report_action(action, pretty_object(type), name, "locally");
+        });
+      this->_infinit.report_remote_action().connect(
+        [this] (std::string const& action,
+                std::string const& type,
+                std::string const& name)
+        {
+          this->report_action(action, pretty_object(type), name, "remotely");
+        });
     }
 
     std::string
@@ -104,10 +208,11 @@ namespace infinit
 
     namespace
     {
-      das::cli::Options options = {
-        {"help", {'h', "show this help message"}},
-        {"version", {'v', "show software version"}},
-      };
+      auto const options = das::cli::Options
+        {
+          {"help", {'h', "show this help message"}},
+          {"version", {'v', "show software version"}},
+        };
 
       template <typename Symbol>
       struct help_object
@@ -133,8 +238,8 @@ namespace infinit
         << "Object types:\n";
       infinit::cli::Infinit::Objects::map<help_object>::value(s);
       s << "\n"
-        << "Options:\n";
-      das::cli::help(*this, s, options);
+        << "Options:\n"
+        << das::cli::help(*this, options);
     }
 
     void
@@ -193,7 +298,7 @@ namespace infinit
       }
 
       void
-      main(std::vector<std::string>& args)
+      main_impl(std::vector<std::string>& args)
       {
         // The name of the command typed by the user, say `infinit-users`.
         auto prog = program_name(args[0]);
@@ -217,10 +322,33 @@ namespace infinit
         if (args.empty() || das::cli::is_option(args[0], options))
           das::cli::call(cli, args, options);
         else if (!run_command(cli, args))
-          throw das::cli::Error
-            (elle::sprintf("unknown object type: %s\n"
-                           "Try '%s --help' for more information.",
-                           args[0], argv_0));
+          elle::err<CLIError>("unknown object type: %s\n"
+                              "Try '%s --help' for more information.",
+                              args[0], argv_0);
+      }
+
+      void
+      main(std::vector<std::string>& args)
+      {
+#if INFINIT_WITH_CRASH_REPORTER
+        auto report_thread = make_crash_reporter_thread();
+        auto report_upload = [&report_thread] {
+          if (report_thread)
+            reactor::wait(*report_thread);
+        };
+#else
+        auto report_upload = []{};
+#endif
+        try
+        {
+          check_broken_locale();
+          main_impl(args);
+        }
+        catch (...)
+        {
+          report_upload();
+          throw;
+        }
       }
     }
 
@@ -275,18 +403,10 @@ namespace infinit
           return nullptr;
     }
 
-    bfs::path
-    Infinit::avatar_path() const
-    {
-      auto root = xdg_cache_home() / "avatars";
-      create_directories(root);
-      return root;
-    }
-
     boost::optional<bfs::path>
     Infinit::avatar_path(std::string const& name) const
     {
-      auto path = this->avatar_path() / name;
+      auto path = this->infinit()._avatar_path(name);
       if (exists(path))
         return path;
       else
@@ -303,16 +423,17 @@ namespace infinit
     {
       if (!this->script())
       {
-        elle::printf("%s%s.\n", (char)toupper(msg[0]), msg.substr(1));
+        elle::fprintf(std::cout,
+                      "%s%s.\n", (char)toupper(msg[0]), msg.substr(1));
         std::cout.flush();
       }
     }
 
     void
     Infinit::report_action(std::string const& action,
-                           std::string const& type,
-                           std::string const& name,
-                           std::string const& where)
+                            std::string const& type,
+                            std::string const& name,
+                            std::string const& where)
     {
       if (where.empty())
         report("%s %s \"\%s\"", action, type, name);
@@ -321,27 +442,9 @@ namespace infinit
     }
 
     void
-    Infinit::report_created(std::string const& type, std::string const& name)
-    {
-      report_action("created", type, name, "locally");
-    }
-
-    void
-    Infinit::report_updated(std::string const& type, std::string const& name)
-    {
-      report_action("updated", type, name, "locally");
-    }
-
-    void
     Infinit::report_imported(std::string const& type, std::string const& name)
     {
-      report_action("imported", type, name);
-    }
-
-    void
-    Infinit::report_saved(std::string const& type, std::string const& name)
-    {
-      report_action("saved", type, name);
+      this->report_action("imported", type, name);
     }
 
     void
@@ -351,7 +454,7 @@ namespace infinit
                                   std::string const& name)
     {
       if (&output != &std::cout)
-        report_action(action, type, name);
+        this->report_action(action, type, name);
     }
 
     void
@@ -359,7 +462,7 @@ namespace infinit
                              std::string const& type,
                              std::string const& name)
     {
-      report_action_output(output, "exported", type, name);
+      this->report_action_output(output, "exported", type, name);
     }
 
     /*---------.
@@ -371,7 +474,7 @@ namespace infinit
       void
       echo_mode(bool enable)
       {
-#if defined(INFINIT_WINDOWS)
+#if defined INFINIT_WINDOWS
         HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
         DWORD mode;
         GetConsoleMode(hStdin, &mode);
@@ -461,10 +564,8 @@ namespace infinit
     void
     Infinit::print(std::ostream& o) const
     {
-      elle::fprintf(
-        o, "%s(%s)", elle::type_info(*this), this->_infinit);
+      elle::fprintf(o, "%s(%s)", elle::type_info(*this), this->_infinit);
     }
-
   }
 }
 
@@ -482,6 +583,9 @@ main(int argc, char** argv)
   catch (das::cli::Error const& e)
   {
     elle::fprintf(std::cerr, "%s: command line error: %s\n", argv[0], e.what());
+    elle::fprintf(std::cerr,
+                  "Try '%s --help' for more information.\n",
+                  argv[0]);
     return 2;
   }
   catch (elle::Error const& e)

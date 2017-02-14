@@ -30,7 +30,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
     namespace bfs = boost::filesystem;
 
     Volume::Volume(Infinit& infinit)
@@ -81,7 +80,8 @@ namespace infinit
                    cli::port = boost::none,
                    cli::listen = boost::none,
                    cli::fetch_endpoints_interval = 300,
-                   cli::input = boost::none))
+                   cli::input = boost::none,
+                   cli::block_size = 1024 * 1024))
       , delete_(
         "Delete a volume locally",
         das::cli::Options(),
@@ -312,7 +312,8 @@ namespace infinit
                    cli::listen = boost::none,
                    cli::fetch_endpoints_interval = 300,
                    cli::input = boost::none,
-                   cli::user = boost::none))
+                   cli::user = boost::none,
+                   cli::block_size = boost::none))
     {}
 
 
@@ -406,6 +407,7 @@ namespace infinit
       MERGE(Options, readonly);                                         \
       MERGE(Options, fetch);                                            \
       MERGE(Options, push);                                             \
+      MERGE(Options, publish);                                          \
       MERGE(Options, cache);                                            \
       MERGE(Options, async);                                            \
       MERGE(Options, cache_ram_size);                                   \
@@ -455,7 +457,7 @@ namespace infinit
                         boost::optional<std::string> peers_file,
                         Defaulted<bool> push_endpoints,
                         Defaulted<bool> push,
-                        bool publish,
+                        Defaulted<bool> publish,
                         Strings advertise_host,
                         boost::optional<std::string> endpoints_file,
                         // We don't seem to use these guys (port, etc.).
@@ -463,7 +465,8 @@ namespace infinit
                         boost::optional<int> port,
                         boost::optional<std::string> listen,
                         Defaulted<int> fetch_endpoints_interval,
-                        boost::optional<std::string> input)
+                        boost::optional<std::string> input,
+                        Defaulted<int> block_size)
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
@@ -484,8 +487,14 @@ namespace infinit
           && *default_permissions != "rw")
         elle::err("default-permissions must be 'r' or 'rw': %s",
                   *default_permissions);
-      auto volume = infinit::Volume(name, network.name, mo, default_permissions,
-                                    description);
+      auto volume = infinit::Volume(
+        name,
+        network.name,
+        mo,
+        default_permissions,
+        description,
+        block_size ?
+          boost::optional<int>(block_size.get()) : boost::optional<int>());
       if (output_name)
       {
         auto output = cli.get_output(output_name);
@@ -518,7 +527,6 @@ namespace infinit
           }
         }
         ifnt.volume_save(volume);
-        cli.report_created("volume", name);
       }
       if (*push || *push_volume)
         ifnt.beyond_push("volume", name, volume, owner);
@@ -540,25 +548,14 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
       auto name = ifnt.qualified_name(volume_name, owner);
-      auto path = ifnt._volume_path(name);
       auto volume = ifnt.volume_get(name);
       if (purge)
         for (auto const& drive: ifnt.drives_for_volume(name))
-        {
-          auto drive_path = ifnt._drive_path(drive);
-          if (bfs::remove(drive_path))
-            cli.report_action("deleted", "drive", drive, "locally");
-        }
+          ifnt.drive_delete(drive);
       if (pull)
         ifnt.beyond_delete("volume", name, owner, true, purge);
-      bfs::remove_all(volume.root_block_cache_dir());
-      if (bfs::remove(path))
-        cli.report_action("deleted", "volume", name, "locally");
-      else
-        elle::err("File for volume could not be deleted: %s", path);
+      ifnt.volume_delete(volume);
     }
-
-
 
     /*---------------.
     | Mode: export.  |
@@ -601,7 +598,7 @@ namespace infinit
       if (service)
       {
         if (!network_name)
-          elle::err<Error>("--network is mandatory with --service");
+          elle::err<CLIError>("--network is mandatory with --service");
         auto net_name = ifnt.qualified_name(*network_name, owner);
         auto network = ifnt.network_get(net_name, owner);
         auto dht = network.run(owner);
@@ -616,7 +613,6 @@ namespace infinit
               auto v = elle::serialization::binary::deserialize<infinit::Volume>
                 (dht->fetch(volume.second)->data());
               ifnt.volume_save(v);
-              cli.report_saved("volume", v.name);
             }
       }
       else if (volume_name)
@@ -752,7 +748,7 @@ namespace infinit
                        bool no_public_endpoints,
                        Defaulted<bool> push,
                        bool map_other_permissions,
-                       bool publish,
+                       Defaulted<bool> publish,
                        Strings advertise_host,
                        boost::optional<std::string> endpoints_file,
                        boost::optional<std::string> port_file,
@@ -772,7 +768,7 @@ namespace infinit
         auto name = ifnt.qualified_name(volume_name, owner);
         auto volume = ifnt.volume_get(name);
         if (!volume.mount_options.mountpoint)
-          elle::err<Error>("option --mountpoint is needed");
+          elle::err<CLIError>("option --mountpoint is needed");
       }
       mode_run(volume_name,
                allow_root_creation,
@@ -853,6 +849,7 @@ namespace infinit
       auto network = ifnt.network_get(volume.network, owner);
       auto owner_uid = infinit::User::uid(*network.dht()->owner);
       ifnt.beyond_push("volume", name, volume, owner);
+
     }
 
 
@@ -1005,7 +1002,7 @@ namespace infinit
                      bool no_public_endpoints,
                      Defaulted<bool> push,
                      bool map_other_permissions,
-                     bool publish,
+                     Defaulted<bool> publish,
                      Strings advertise_host,
                      boost::optional<std::string> endpoints_file,
                      boost::optional<std::string> port_file,
@@ -1066,7 +1063,7 @@ namespace infinit
         }
       }
       if (mo.fuse_options && !mo.mountpoint)
-        elle::err<Error>("FUSE options require the volume to be mounted");
+        elle::err<CLIError>("FUSE options require the volume to be mounted");
       auto network = ifnt.network_get(volume.network, owner);
       network.ensure_allowed(owner, "run", "volume");
       ELLE_TRACE("run network");
@@ -1092,10 +1089,8 @@ namespace infinit
         model->service_add("volumes", name, volume);
       }
       // Only push if we are contributing storage.
-      //
-      // FIXME: mo.push checks whether it has value, not whether the
-      // value is true.
-      bool push_p = mo.push && model->local();
+      bool push_p = mo.push.value_or(mo.publish.value_or(false)) &&
+        model->local();
       auto local_endpoint = boost::optional<infinit::model::Endpoint>{};
       if (model->local())
       {
@@ -1110,7 +1105,7 @@ namespace infinit
       {
         reactor::Thread::unique_ptr stat_thread;
         if (push_p)
-          stat_thread = network.make_stat_update_thread(owner, *model);
+          stat_thread = network.make_stat_update_thread(ifnt, owner, *model);
         ELLE_TRACE_SCOPE("run volume");
         cli.report_action("running", "volume", volume.name);
         auto fs = volume.run(std::move(model),
@@ -1604,7 +1599,8 @@ namespace infinit
       };
       if (local_endpoint && push_p)
         elle::With<InterfacePublisher>(
-          network, owner, model->id(), local_endpoint->port(), advertise_host,
+          ifnt, network, owner, model->id(), local_endpoint->port(),
+          advertise_host,
           no_local_endpoints,
           no_public_endpoints) << [&]
         {
@@ -1613,7 +1609,6 @@ namespace infinit
       else
         run();
     }
-
 
     /*--------------.
     | Mode: start.  |
@@ -1653,7 +1648,7 @@ namespace infinit
                        bool no_public_endpoints,
                        Defaulted<bool> push,
                        bool map_other_permissions,
-                       bool publish,
+                       Defaulted<bool> publish,
                        Strings advertise_host,
                        boost::optional<std::string> endpoints_file,
                        boost::optional<std::string> port_file,
@@ -1807,7 +1802,7 @@ namespace infinit
                         Defaulted<bool> push_endpoints,
                         Defaulted<bool> push,
                         bool map_other_permissions,
-                        bool publish,
+                        Defaulted<bool> publish,
                         Strings advertise_host,
                         boost::optional<std::string> endpoints_file,
                         boost::optional<std::string> port_file,
@@ -1815,7 +1810,8 @@ namespace infinit
                         boost::optional<std::string> listen,
                         Defaulted<int> fetch_endpoints_interval,
                         boost::optional<std::string> input,
-                        boost::optional<std::string> user)
+                        boost::optional<std::string> user,
+                        boost::optional<int> block_size)
     {
       ELLE_TRACE_SCOPE("update");
       auto& cli = this->cli();
@@ -1836,6 +1832,8 @@ namespace infinit
       MOUNT_OPTIONS_MERGE(volume.mount_options);
       if (description)
         volume.description = description;
+      if (block_size)
+        volume.block_size = block_size;
       ifnt.volume_save(volume, true);
       if (push_volume)
         ifnt.beyond_push("volume", name, volume, owner);

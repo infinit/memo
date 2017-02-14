@@ -77,8 +77,10 @@ namespace infinit
         ::value(s, static_cast<Self&>(*this));
       elle::fprintf(s,
                     "\n"
-                    "Options:\n");
-      das::cli::help(static_cast<Self&>(*this), s, this->options());
+                    "Options:\n"
+                    "%s",
+                    das::cli::help(static_cast<Self&>(*this), this->options()));
+
     }
 
     template <typename Self>

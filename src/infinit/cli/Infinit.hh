@@ -8,6 +8,10 @@
 #include <infinit/cli/fwd.hh>
 
 #include <infinit/Infinit.hh>
+#include <infinit/symbols.hh>
+
+#include <infinit/cli/Error.hh>
+
 #include <infinit/cli/ACL.hh>
 #include <infinit/cli/Block.hh>
 #include <infinit/cli/Credentials.hh>
@@ -26,18 +30,11 @@
 #include <infinit/cli/Silo.hh>
 #include <infinit/cli/User.hh>
 #include <infinit/cli/Volume.hh>
-#include <infinit/symbols.hh>
 
 namespace infinit
 {
   namespace cli
   {
-    class CLIError
-      : public das::cli::Error
-    {
-      using das::cli::Error::Error;
-    };
-
     using InfinitCallable =
       decltype(das::named::function(
                  das::bind_method(std::declval<Infinit&>(), cli::call),
@@ -61,8 +58,6 @@ namespace infinit
       std::unique_ptr<std::ostream, std::function<void (std::ostream*)>>
       get_output(boost::optional<std::string> path = {},
                  bool stdout_def = true);
-      boost::filesystem::path
-      avatar_path() const;
       boost::optional<boost::filesystem::path>
       avatar_path(std::string const& name) const;
       static
@@ -78,19 +73,20 @@ namespace infinit
       /// Report using a printf-format.
       void
       report(std::string const& format, Args&&... args);
+      /// Report action with the following formatting:
+      /// (<where> )<action> <type> <name>.
+      ///
+      /// XXX: Consider using an enum for argument 'action' to prevent typos.
       void
       report_action(std::string const& action,
                     std::string const& type,
                     std::string const& name,
                     std::string const& where = {});
-      void
-      report_created(std::string const& type, std::string const& name);
-      void
-      report_updated(std::string const& type, std::string const& name);
+      /// Report the import of resource.
+      ///
+      /// This function bounce to report_action with action = "imported".
       void
       report_imported(std::string const& type, std::string const& name);
-      void
-      report_saved(std::string const& type, std::string const& name);
       void
       report_action_output(std::ostream& output,
                            std::string const& action,

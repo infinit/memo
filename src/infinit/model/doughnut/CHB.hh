@@ -29,6 +29,7 @@ namespace infinit
             elle::Buffer salt,
             Address owner = Address::null);
         CHB(CHB const& other);
+        CHB(CHB&& other);
 
       /*---------.
       | Clonable |

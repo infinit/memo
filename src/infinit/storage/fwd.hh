@@ -1,18 +1,15 @@
-#ifndef INFINIT_STORAGE_FWD_HH
-# define INFINIT_STORAGE_FWD_HH
+#pragma once
 
-# include <infinit/model/fwd.hh>
+#include <infinit/model/fwd.hh>
 
 namespace infinit
 {
   namespace storage
   {
-    typedef model::Address Key;
+    using Key = model::Address;
     class Collision;
     class Memory;
     class MissingKey;
     class Storage;
   }
 }
-
-#endif

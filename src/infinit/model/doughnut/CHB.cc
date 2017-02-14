@@ -42,6 +42,12 @@ namespace infinit
         , _owner(other._owner)
       {}
 
+      CHB::CHB(CHB&& other)
+       : Super(std::move(other))
+       , _salt(std::move(other._salt))
+       , _owner(std::move(other._owner))
+      {}
+
       /*---------.
       | Clonable |
       `---------*/

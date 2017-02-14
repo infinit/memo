@@ -51,47 +51,33 @@ namespace infinit
               s << vars.expand(mode.help) << "\n\nOptions:\n";
               {
                 std::stringstream buffer;
-                das::cli::help(f, buffer, options);
+                buffer << das::cli::help(f, options);
                 s << vars.expand(buffer.str());
               }
             };
-          try
-          {
-            das::cli::call(
-              f,
-              [&] (bool help,
-                   boost::optional<elle::Version> const& compatibility_version,
-                   bool script,
-                   std::string as,
-                   auto&& ... args)
+          das::cli::call(
+            f,
+            [&] (bool help,
+                 boost::optional<elle::Version> const& compatibility_version,
+                 bool script,
+                 std::string as,
+                 auto&& ... args)
+            {
+              infinit._as = as;
+              infinit._script = script;
+              if (compatibility_version)
               {
-                infinit._as = as;
-                infinit._script = script;
-                if (compatibility_version)
-                {
-                  ensure_version_is_supported(*compatibility_version);
-                  infinit._compatibility_version =
-                    std::move(compatibility_version);
-                }
-                if (help)
-                  show_help(std::cout);
-                else
-                  mode.function()(std::forward<decltype(args)>(args)...);
-              },
-              args,
-              options);
-          }
-          catch (das::cli::Error const& e)
-          {
-            std::stringstream s;
-            s << e.what() << "\n\n";
-            show_help(s);
-            // object.help(s);
-            // Discard trailing newline
-            auto msg = s.str();
-            msg = msg.substr(0, msg.size() - 1);
-            throw CLIError(msg);
-          }
+                ensure_version_is_supported(*compatibility_version);
+                infinit._compatibility_version =
+                  std::move(compatibility_version);
+              }
+              if (help)
+                show_help(std::cout);
+              else
+                mode.function()(std::forward<decltype(args)>(args)...);
+            },
+            args,
+            options);
           return true;
         }
         else
@@ -112,36 +98,18 @@ namespace infinit
       {
         found = true;
         args.erase(args.begin());
-        try
+        if (args.empty() || das::cli::is_option(args[0], object.options()))
+          das::cli::call(object, args, object.options());
+        else
         {
-          if (args.empty() || das::cli::is_option(args[0], object.options()))
-            das::cli::call(object, args, object.options());
-          else
-          {
-            bool found = false;
-            Object::Modes::template map<mode_call, Symbol>::value(
-              infinit, object, args, found);
-            if (!found)
-              throw das::cli::Error(
-                elle::sprintf("unknown mode for object %s: %s",
-                              Symbol::name(), args[0]));
-          }
-          return true;
+          bool found = false;
+          Object::Modes::template map<mode_call, Symbol>::value(
+            infinit, object, args, found);
+          if (!found)
+            elle::err<CLIError>("unknown mode for object %s: %s",
+                                Symbol::name(), args[0]);
         }
-        catch (CLIError const& e)
-        {
-          throw;
-        }
-        catch (das::cli::Error const& e)
-        {
-          std::stringstream s;
-          s << e.what() << "\n\n";
-          object.help(s);
-          // Discard trailing newline
-          auto msg = s.str();
-          msg = msg.substr(0, msg.size() - 1);
-          throw CLIError(msg);
-        }
+        return true;
       }
       else
         return false;

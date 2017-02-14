@@ -15,8 +15,6 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
-
     using Async = infinit::model::doughnut::consensus::Async;
 
     Journal::Journal(Infinit& infinit)
@@ -165,9 +163,9 @@ namespace infinit
               {"size", data_size},
             };
         else
-          elle::printf("%s: %s operations, %s\n",
-                       network.name, operation_count,
-                       elle::human_data_size(data_size));
+          elle::fprintf(std::cout, "%s: %s operations, %s\n",
+                        network.name, operation_count,
+                        elle::human_data_size(data_size));
       }
       if (cli.script())
         elle::json::write(std::cout, res);
