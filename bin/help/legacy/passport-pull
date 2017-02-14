@@ -1,9 +1,0 @@
-passport: pull: Usage: _build/macosx64/bin/infinit-passport --pull --network NETWORK --user USER [OPTIONS...]
-
-Remove a user's network passport from the Hub:
-
-Pull options:
-  -N [ --network ] arg   Network name
-  -u [ --user ] arg      User name
-
-

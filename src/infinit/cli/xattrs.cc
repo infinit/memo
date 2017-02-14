@@ -1,6 +1,6 @@
 #include <infinit/cli/xattrs.hh>
 
-#include <xattrs.hh>
+#include <infinit/cli/xattrs.hh>
 #if defined INFINIT_LINUX
 # include <attr/xattr.h>
 #elif defined INFINIT_MACOSX
