@@ -932,7 +932,7 @@ namespace infinit
           dht->overlay()->discover(eps);
         }
         // Only push if we have are contributing storage.
-        bool push_p = push && dht->local() && dht->local()->storage();
+        bool push_p = (push || publish) && dht->local() && dht->local()->storage();
         if (!dht->local() && (!cli.script() || push_p))
           elle::err("network %s is client only since no storage is attached", name);
         if (dht->local())
@@ -948,7 +948,7 @@ namespace infinit
         auto run = [&, push_p]
           {
             reactor::Thread::unique_ptr poll_thread;
-            if (fetch)
+            if (fetch || publish)
             {
               infinit::model::NodeLocations eps;
               network.beyond_fetch_endpoints(eps);
