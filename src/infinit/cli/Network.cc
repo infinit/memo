@@ -213,7 +213,8 @@ namespace infinit
                    cli::admin_rw = Strings{},
                    cli::admin_remove = Strings{},
                    cli::mountpoint = boost::none,
-                   cli::peer = Strings{}))
+                   cli::peer = Strings{},
+                   cli::protocol = boost::none))
     {}
 
 
@@ -1430,23 +1431,24 @@ namespace infinit
     }
 
     void
-    Network::mode_update(std::string const& network_name,
-                         boost::optional<std::string> const& description,
-                         boost::optional<int> port,
-                         boost::optional<std::string> const& output_name,
-                         bool push_network,
-                         bool push,
-                         Strings const& admin_r,
-                         Strings const& admin_rw,
-                         Strings const& admin_remove,
-                         boost::optional<std::string> const& mountpoint,
-                         Strings const& peer)
+    Network::mode_update(
+      std::string const& network_name,
+      boost::optional<std::string> const& description,
+      boost::optional<int> port,
+      boost::optional<std::string> const& output_name,
+      bool push_network,
+      bool push,
+      Strings const& admin_r,
+      Strings const& admin_rw,
+      Strings const& admin_remove,
+      boost::optional<std::string> const& mountpoint,
+      Strings const& peer,
+      boost::optional<std::string> const& protocol)
     {
       ELLE_TRACE_SCOPE("create");
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
-
       auto network = ifnt.network_get(network_name, owner);
       if (description)
         network.description = description;
@@ -1504,6 +1506,8 @@ namespace infinit
       }
       if (!peer.empty())
         dht.peers = parse_peers(peer);
+      if (protocol)
+        dht.overlay->rpc_protocol = protocol_get(protocol);
       auto desc = [&]
         {
           if (output_name)
