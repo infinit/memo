@@ -113,6 +113,7 @@ namespace infinit
 
     Silo::Create::Create(Infinit& infinit)
       : Object(infinit)
+      INFINIT_ENTREPRISE(
       , dropbox(*this,
                 "Store blocks on Dropbox",
                 das::cli::Options{
@@ -124,6 +125,7 @@ namespace infinit
                 cli::capacity = boost::none,
                 cli::output = boost::none,
                 cli::path = boost::none)
+      )
       , filesystem(*this,
                    "Store blocks on local filesystem",
                    das::cli::Options{
@@ -134,6 +136,7 @@ namespace infinit
                    cli::capacity = boost::none,
                    cli::output = boost::none,
                    cli::path = boost::none)
+      INFINIT_ENTREPRISE(
       , gcs(*this,
             "Store blocks on Google Cloud Storage",
             das::cli::Options{
@@ -172,6 +175,7 @@ namespace infinit
            cli::endpoint = "amazonaws.com",
            cli::storage_class = boost::none,
            cli::path = boost::none)
+      )
     {}
 
     static
@@ -189,6 +193,7 @@ namespace infinit
         cli.infinit().storage_save(config->name, config);
     }
 
+    INFINIT_ENTREPRISE(
     void
     Silo::Create::mode_dropbox(std::string const& name,
                                std::string const& account_name,
@@ -212,7 +217,7 @@ namespace infinit
           std::move(root),
           std::move(capacity),
           std::move(description)));
-    }
+    })
 
     void
     Silo::Create::mode_filesystem(std::string const& name,
@@ -245,6 +250,7 @@ namespace infinit
           std::move(description)));
     }
 
+    INFINIT_ENTREPRISE(
     void
     Silo::Create::mode_gcs(std::string const& name,
                            std::string const& account_name,
@@ -349,7 +355,7 @@ namespace infinit
           self.name,
           std::move(capacity),
           std::move(description)));
-    }
+    })
 
     void
     Silo::mode_export(std::string const& name,

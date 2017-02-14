@@ -32,12 +32,15 @@ namespace infinit
       {
       public:
         using Super = Object<Create, Silo>;
-        using Modes = decltype(elle::meta::list(cli::filesystem,
-                                                cli::dropbox,
-                                                cli::gcs,
-                                                cli::google_drive,
-                                                cli::s3));
+        using Modes = decltype(elle::meta::list(
+                                 cli::filesystem
+                                 INFINIT_ENTREPRISE(,cli::dropbox)
+                                 INFINIT_ENTREPRISE(,cli::gcs)
+                                 INFINIT_ENTREPRISE(,cli::google_drive)
+                                 INFINIT_ENTREPRISE(,cli::s3)));
         Create(Infinit& infinit);
+
+        INFINIT_ENTREPRISE(
 
         // Dropbox.
         Mode<Create,
@@ -57,6 +60,8 @@ namespace infinit
                      boost::optional<std::string> output = {},
                      boost::optional<std::string> root = {});
 
+        );
+
         // Filesystem.
         Mode<Create,
              decltype(modes::mode_filesystem),
@@ -72,6 +77,8 @@ namespace infinit
                         boost::optional<std::string> capacity,
                         boost::optional<std::string> output,
                         boost::optional<std::string> path);
+
+        INFINIT_ENTREPRISE(
 
         Mode<Create,
              decltype(modes::mode_gcs),
@@ -133,6 +140,9 @@ namespace infinit
                 std::string const& endpoint = "amazonaws.com",
                 boost::optional<std::string> const& storage_class = {},
                 boost::optional<std::string> path = {});
+
+        );
+
         std::string const description = "Create local silo";
       } create;
 

@@ -41,6 +41,7 @@ def configure(
     cxx_toolkit = None,
     cxx_config = drake.cxx.Config(),
     production_build = False,
+    entreprise_edition : bool = True,
     beyond_host = 'https://beyond.infinit.sh',
     boost = None,
     prefix = '/usr',
@@ -55,7 +56,6 @@ def configure(
     enable_crash_reporting: bool = True,
     cxx_toolkit_host = None
 ):
-
   if python3 is not None:
     python = python3
 
@@ -251,7 +251,9 @@ def configure(
   infinit_sources += drake.include('src/infinit/filesystem').sources
   infinit_sources += drake.include('src/infinit/model').sources
   infinit_sources += drake.include('src/infinit/overlay').sources
-  infinit_sources += drake.include('src/infinit/storage').sources
+  infinit_sources += drake.include(
+    'src/infinit/storage',
+    entreprise_edition = entreprise_edition).sources
   infinit_utility_config = drake.cxx.Config(cxx_config_infinit)
   infinit_utility_config.define('BEYOND_HOST', stringify(beyond_host))
   infinit_utility_config.define('BEYOND_DELEGATE_USER',
@@ -350,6 +352,8 @@ def configure(
       drake.copy(dokan_lib, 'bin', True))
     cli_cxx_config.library_add(elle.boost.program_options_static)
     cli_cxx_config.define('ELLE_SERIALIZATION_USE_DLL')
+  if entreprise_edition:
+    cli_cxx_config.define('INFINIT_ENTREPRISE_EDITION')
   # Ship libstdc++
   additional_libs = []
   if linux and cxx_toolkit.architecture is not drake.architecture.arm:
