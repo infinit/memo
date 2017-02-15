@@ -35,6 +35,30 @@ namespace imd = infinit::model::doughnut;
 namespace iok = infinit::overlay::kelips;
 using infinit::model::Endpoints;
 
+
+struct BEndpoints
+{
+  std::vector<std::string> addresses;
+  int port;
+  using Model = das::Model<
+    BEndpoints,
+    decltype(elle::meta::list(infinit::symbols::addresses,
+                              infinit::symbols::port))>;
+};
+DAS_SERIALIZE(BEndpoints);
+
+inline
+BEndpoints
+e2b(Endpoints e)
+{
+  BEndpoints res;
+  res.port = e.front().port();
+  for (auto const& a: e)
+    res.addresses.push_back(a.address().to_string());
+  return res;
+}
+
+
 class Beyond: public reactor::network::HttpServer
 {
 public:
@@ -65,7 +89,7 @@ public:
   }
   void push(infinit::model::Address id, Endpoints eps)
   {
-    _endpoints["bob"][elle::sprintf("%s", id)] = eps;
+    _endpoints["bob"][elle::sprintf("%s", id)] = e2b(eps);
   }
   void pull(infinit::model::Address id)
   {
@@ -92,7 +116,7 @@ public:
 private:
   // username -> {node_id -> endpoints}
   typedef std::unordered_map<std::string,
-    std::unordered_map<std::string, Endpoints>> NetEndpoints;
+    std::unordered_map<std::string, BEndpoints>> NetEndpoints;
   NetEndpoints _endpoints;
 };
 
