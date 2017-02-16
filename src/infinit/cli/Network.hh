@@ -42,34 +42,35 @@ namespace infinit
       /*---------------.
       | Mode: create.  |
       `---------------*/
-      using ModeCreate =
-        Mode<decltype(binding(modes::mode_create,
-                              cli::name,
-                              cli::description = boost::none,
-                              cli::storage = Strings{},
-                              cli::port = boost::none,
-                              cli::replication_factor = 1,
-                              cli::eviction_delay = boost::none,
-                              cli::output = boost::none,
-                              cli::push_network = false,
-                              cli::push = false,
-                              cli::admin_r = Strings{},
-                              cli::admin_rw = Strings{},
-                              cli::peer = Strings{},
-                              // Consensus types.
-                              cli::paxos = false,
-                              cli::no_consensus = false,
-                              // Overlay types.
-                              cli::kelips = false,
-                              cli::kalimero = false,
-                              cli::kouncil = false,
-                              // Kelips options,
-                              cli::nodes = boost::none,
-                              cli::k = boost::none,
-                              cli::kelips_contact_timeout = boost::none,
-                              cli::encrypt = boost::none,
-                              cli::protocol = boost::none))>;
-      ModeCreate create;
+
+      Mode<Network,
+           decltype(modes::mode_create),
+           decltype(cli::name),
+           decltype(cli::description = boost::none),
+           decltype(cli::storage = Strings{}),
+           decltype(cli::port = boost::none),
+           decltype(cli::replication_factor = 1),
+           decltype(cli::eviction_delay = boost::none),
+           decltype(cli::output = boost::none),
+           decltype(cli::push_network = false),
+           decltype(cli::push = false),
+           decltype(cli::admin_r = Strings{}),
+           decltype(cli::admin_rw = Strings{}),
+           decltype(cli::peer = Strings{}),
+           // Consensus types.
+           decltype(cli::paxos = false),
+           decltype(cli::no_consensus = false),
+           // Overlay types.
+           decltype(cli::kelips = false),
+           decltype(cli::kalimero = false),
+           decltype(cli::kouncil = false),
+           // Kelips options.
+           decltype(cli::nodes = boost::none),
+           decltype(cli::k = boost::none),
+           decltype(cli::kelips_contact_timeout = boost::none),
+           decltype(cli::encrypt = boost::none),
+           decltype(cli::protocol = boost::none)>
+      create;
       void
       mode_create(std::string const& network_name,
                   boost::optional<std::string> const& description = {},
@@ -102,13 +103,13 @@ namespace infinit
       | Mode: delete.  |
       `---------------*/
 
-      using ModeDelete =
-        Mode<decltype(binding(modes::mode_delete,
-                              cli::name,
-                              cli::pull = false,
-                              cli::purge = false,
-                              cli::unlink = false))>;
-      ModeDelete delete_;
+      Mode<Network,
+           decltype(modes::mode_delete),
+           decltype(cli::name),
+           decltype(cli::pull = false),
+           decltype(cli::purge = false),
+           decltype(cli::unlink = false)>
+      delete_;
       void
       mode_delete(std::string const& network_name,
                   bool pull = false,
@@ -118,11 +119,12 @@ namespace infinit
       /*---------------.
       | Mode: export.  |
       `---------------*/
-      using ModeExport =
-        Mode<decltype(binding(modes::mode_export,
-                              cli::name,
-                              cli::output = boost::none))>;
-      ModeExport export_;
+
+      Mode<Network,
+           decltype(modes::mode_export),
+           decltype(cli::name),
+           decltype(cli::output = boost::none)>
+      export_;
       void
       mode_export(std::string const& volume_name,
                   boost::optional<std::string> const& output_name = {});
@@ -131,21 +133,21 @@ namespace infinit
       | Mode: fetch.  |
       `--------------*/
 
-      using ModeFetch =
-        Mode<decltype(binding(modes::mode_fetch,
-                              cli::name = boost::none))>;
-      ModeFetch fetch;
+      Mode<Network,
+           decltype(modes::mode_fetch),
+           decltype(cli::name = boost::none)>
+      fetch;
       void
       mode_fetch(boost::optional<std::string> const& network_name = {});
-
 
       /*---------------.
       | Mode: import.  |
       `---------------*/
-      using ModeImport =
-        Mode<decltype(binding(modes::mode_import,
-                              cli::input = boost::none))>;
-      ModeImport import;
+
+      Mode<Network,
+           decltype(modes::mode_import),
+           decltype(cli::input = boost::none)>
+      import;
       void
       mode_import(boost::optional<std::string> const& input_name = {});
 
@@ -153,16 +155,17 @@ namespace infinit
       /*----------------.
       | Mode: inspect.  |
       `----------------*/
+
 #ifndef INFINIT_WINDOWS
-      using ModeInspect =
-        Mode<decltype(binding(modes::mode_inspect,
-                              cli::name,
-                              cli::output = boost::none,
-                              cli::status = false,
-                              cli::peers = false,
-                              cli::all = false,
-                              cli::redundancy = false))>;
-      ModeInspect inspect;
+      Mode<Network,
+           decltype(modes::mode_inspect),
+           decltype(cli::name),
+           decltype(cli::output = boost::none),
+           decltype(cli::status = false),
+           decltype(cli::peers = false),
+           decltype(cli::all = false),
+           decltype(cli::redundancy = false)>
+      inspect;
       void
       mode_inspect(std::string const& network_name,
                    boost::optional<std::string> const& output_name = {},
@@ -176,12 +179,13 @@ namespace infinit
       /*-------------.
       | Mode: link.  |
       `-------------*/
-      using ModeLink =
-        Mode<decltype(binding(modes::mode_link,
-                              cli::name,
-                              cli::storage = Strings{},
-                              cli::output = boost::none))>;
-      ModeLink link;
+
+      Mode<Network,
+           decltype(modes::mode_link),
+           decltype(cli::name),
+           decltype(cli::storage = Strings{}),
+           decltype(cli::output = boost::none)>
+      link;
       void
       mode_link(std::string const& network_name,
                 Strings const& storage_names = {},
@@ -191,9 +195,10 @@ namespace infinit
       /*-------------.
       | Mode: list.  |
       `-------------*/
-      using ModeList =
-        Mode<decltype(binding(modes::mode_list))>;
-      ModeList list;
+
+      Mode<Network,
+           decltype(modes::mode_list)>
+      list;
       void
       mode_list();
 
@@ -201,31 +206,32 @@ namespace infinit
       /*----------------------.
       | Mode: list_services.  |
       `----------------------*/
-      using ModeListServices =
-        Mode<decltype(binding(modes::mode_list_services,
-                              cli::name,
-                              cli::peer = boost::none,
-                              cli::async = false,
-                              cli::cache = false,
-                              cli::cache_ram_size = boost::none,
-                              cli::cache_ram_ttl = boost::none,
-                              cli::cache_ram_invalidation = boost::none,
-                              cli::cache_disk_size = boost::none,
-                              cli::fetch_endpoints = false,
-                              cli::fetch = false,
-                              cli::push_endpoints = false,
-                              cli::push = false,
-                              cli::publish = false,
-                              cli::endpoints_file = boost::none,
-                              cli::port_file = boost::none,
-                              cli::port = boost::none,
-                              cli::peers_file = boost::none,
-                              cli::listen = boost::none,
-                              cli::fetch_endpoints_interval = boost::none,
-                              cli::no_local_endpoints = false,
-                              cli::no_public_endpoints = false,
-                              cli::advertise_host = boost::none))>;
-      ModeListServices list_services;
+
+      Mode<Network,
+           decltype(modes::mode_list_services),
+           decltype(cli::name),
+           decltype(cli::peer = boost::none),
+           decltype(cli::async = false),
+           decltype(cli::cache = false),
+           decltype(cli::cache_ram_size = boost::none),
+           decltype(cli::cache_ram_ttl = boost::none),
+           decltype(cli::cache_ram_invalidation = boost::none),
+           decltype(cli::cache_disk_size = boost::none),
+           decltype(cli::fetch_endpoints = false),
+           decltype(cli::fetch = false),
+           decltype(cli::push_endpoints = false),
+           decltype(cli::push = false),
+           decltype(cli::publish = false),
+           decltype(cli::endpoints_file = boost::none),
+           decltype(cli::port_file = boost::none),
+           decltype(cli::port = boost::none),
+           decltype(cli::peers_file = boost::none),
+           decltype(cli::listen = boost::none),
+           decltype(cli::fetch_endpoints_interval = boost::none),
+           decltype(cli::no_local_endpoints = false),
+           decltype(cli::no_public_endpoints = false),
+           decltype(cli::advertise_host = boost::none)>
+      list_services;
       void
       mode_list_services(std::string const& network_name,
                          Strings peer = {},
@@ -254,10 +260,11 @@ namespace infinit
       /*---------------------.
       | Mode: list_storage.  |
       `---------------------*/
-      using ModeListStorage =
-        Mode<decltype(binding(modes::mode_list_storage,
-                              cli::name))>;
-      ModeListStorage list_storage;
+
+      Mode<Network,
+           decltype(modes::mode_list_storage),
+           decltype(cli::name)>
+      list_storage;
       void
       mode_list_storage(std::string const& network_name);
 
@@ -265,11 +272,12 @@ namespace infinit
       /*-------------.
       | Mode: pull.  |
       `-------------*/
-      using ModePull =
-        Mode<decltype(binding(modes::mode_pull,
-                              cli::name,
-                              cli::purge = false))>;
-      ModePull pull;
+
+      Mode<Network,
+           decltype(modes::mode_pull),
+           decltype(cli::name),
+           decltype(cli::purge = false)>
+      pull;
       void
       mode_pull(std::string const& network_name,
                 bool purge = false);
@@ -278,10 +286,11 @@ namespace infinit
       /*-------------.
       | Mode: push.  |
       `-------------*/
-      using ModePush =
-        Mode<decltype(binding(modes::mode_push,
-                              cli::name))>;
-      ModePush push;
+
+      Mode<Network,
+           decltype(modes::mode_push),
+           decltype(cli::name)>
+      push;
       void
       mode_push(std::string const& network_name);
 
@@ -289,40 +298,40 @@ namespace infinit
       /*------------.
       | Mode: run.  |
       `------------*/
-      using ModeRun =
-        Mode<decltype(binding(modes::mode_run,
-                              cli::name,
-                              cli::input = boost::none,
-#ifndef INFINIT_WINDOWS
-                              cli::daemon = false,
-                              cli::monitoring = true,
-#endif
-                              cli::peer = Strings{},
-                              cli::async = false,
-                              cli::cache = false,
-                              cli::cache_ram_size = boost::none,
-                              cli::cache_ram_ttl = boost::none,
-                              cli::cache_ram_invalidation = boost::none,
-                              cli::cache_disk_size = boost::none,
-                              cli::fetch_endpoints = false,
-                              cli::fetch = false,
-                              cli::push_endpoints = false,
-                              cli::push = false,
-                              cli::publish = false,
-                              cli::endpoints_file = boost::none,
-                              cli::port_file = boost::none,
-                              cli::port = boost::none,
-                              cli::peers_file = boost::none,
-                              cli::listen = boost::none,
-                              cli::fetch_endpoints_interval = boost::none,
-                              cli::no_local_endpoints = false,
-                              cli::no_public_endpoints = false,
-                              cli::advertise_host = Strings{},
-                              // Hisymdden options.
-                              cli::paxos_rebalancing_auto_expand = boost::none,
-                              cli::paxos_rebalancing_inspect = boost::none))>;
-      ModeRun run;
 
+      Mode<Network,
+           decltype(modes::mode_run),
+           decltype(cli::name),
+           decltype(cli::input = boost::none),
+#ifndef INFINIT_WINDOWS
+           decltype(cli::daemon = false),
+           decltype(cli::monitoring = true),
+#endif
+           decltype(cli::peer = Strings{}),
+           decltype(cli::async = false),
+           decltype(cli::cache = false),
+           decltype(cli::cache_ram_size = boost::none),
+           decltype(cli::cache_ram_ttl = boost::none),
+           decltype(cli::cache_ram_invalidation = boost::none),
+           decltype(cli::cache_disk_size = boost::none),
+           decltype(cli::fetch_endpoints = false),
+           decltype(cli::fetch = false),
+           decltype(cli::push_endpoints = false),
+           decltype(cli::push = false),
+           decltype(cli::publish = false),
+           decltype(cli::endpoints_file = boost::none),
+           decltype(cli::port_file = boost::none),
+           decltype(cli::port = boost::none),
+           decltype(cli::peers_file = boost::none),
+           decltype(cli::listen = boost::none),
+           decltype(cli::fetch_endpoints_interval = boost::none),
+           decltype(cli::no_local_endpoints = false),
+           decltype(cli::no_public_endpoints = false),
+           decltype(cli::advertise_host = Strings{}),
+           // Hidden options.
+           decltype(cli::paxos_rebalancing_auto_expand = boost::none),
+           decltype(cli::paxos_rebalancing_inspect = boost::none)>
+      run;
       void
       mode_run(std::string const& network_name,
                boost::optional<std::string> const& commands,
@@ -359,10 +368,11 @@ namespace infinit
       /*--------------.
       | Mode: stats.  |
       `--------------*/
-      using ModeStats =
-        Mode<decltype(binding(modes::mode_stats,
-                              cli::name))>;
-      ModeStats stats;
+
+      Mode<Network,
+           decltype(modes::mode_stats),
+           decltype(cli::name)>
+      stats;
       void
       mode_stats(std::string const& network_name);
 
@@ -370,10 +380,11 @@ namespace infinit
       /*---------------.
       | Mode: unlink.  |
       `---------------*/
-      using ModeUnlink =
-        Mode<decltype(binding(modes::mode_unlink,
-                              cli::name))>;
-      ModeUnlink unlink;
+
+      Mode<Network,
+           decltype(modes::mode_unlink),
+           decltype(cli::name)>
+      unlink;
       void
       mode_unlink(std::string const& network_name);
 
@@ -382,21 +393,21 @@ namespace infinit
       | Mode: update.  |
       `---------------*/
 
-      using ModeUpdate =
-        Mode<decltype(binding(modes::mode_update,
-                              cli::name,
-                              cli::description = boost::none,
-                              cli::port = boost::none,
-                              cli::output = boost::none,
-                              cli::push_network = false,
-                              cli::push = false,
-                              cli::admin_r = Strings{},
-                              cli::admin_rw = Strings{},
-                              cli::admin_remove = Strings{},
-                              cli::mountpoint = boost::none,
-                              cli::peer = Strings{},
-                              cli::protocol = boost::none))>;
-      ModeUpdate update;
+      Mode<Network,
+           decltype(modes::mode_update),
+           decltype(cli::name),
+           decltype(cli::description = boost::none),
+           decltype(cli::port = boost::none),
+           decltype(cli::output = boost::none),
+           decltype(cli::push_network = false),
+           decltype(cli::push = false),
+           decltype(cli::admin_r = Strings{}),
+           decltype(cli::admin_rw = Strings{}),
+           decltype(cli::admin_remove = Strings{}),
+           decltype(cli::mountpoint = boost::none),
+           decltype(cli::peer = Strings{}),
+           decltype(cli::protocol = boost::none)>
+      update;
       void
       mode_update(std::string const& network_name,
                   boost::optional<std::string> const& description = {},

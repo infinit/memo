@@ -59,36 +59,32 @@ namespace infinit
 
     Doctor::Doctor(Infinit& infinit)
       : Object(infinit)
-      , all(
-        "Perform all possible checks",
-        das::cli::Options(),
-        this->bind(modes::mode_all,
-                   cli::ignore_non_linked = false,
-                   cli::upnp_tcp_port = boost::none,
-                   cli::upnp_udt_port = boost::none,
-                   cli::server = connectivity_server,
-                   cli::no_color = false,
-                   cli::verbose = false))
-      , configuration(
-        "Perform integrity checks on the Infinit configuration files",
-        das::cli::Options(),
-        this->bind(modes::mode_configuration,
-                   cli::ignore_non_linked = false,
-                   cli::no_color = false,
-                   cli::verbose = false))
-      , connectivity(
-        "Perform connectivity checks",
-        das::cli::Options(),
-        this->bind(modes::mode_connectivity,
-                   cli::upnp_tcp_port = boost::none,
-                   cli::upnp_udt_port = boost::none,
-                   cli::server = connectivity_server,
-                   cli::no_color = false,
-                   cli::verbose = false))
-      , networking(
-        "Perform networking speed tests between nodes",
-        das::cli::Options(),
-        this->bind(modes::mode_networking,
+      , all(*this,
+            "Perform all possible checks",
+            das::cli::Options(),
+            cli::ignore_non_linked = false,
+            cli::upnp_tcp_port = boost::none,
+            cli::upnp_udt_port = boost::none,
+            cli::server = connectivity_server,
+            cli::no_color = false,
+            cli::verbose = false)
+      , configuration(*this,
+                      "Perform integrity checks on the Infinit configuration files",
+                      das::cli::Options(),
+                      cli::ignore_non_linked = false,
+                      cli::no_color = false,
+                      cli::verbose = false)
+      , connectivity(*this,
+                     "Perform connectivity checks",
+                     das::cli::Options(),
+                     cli::upnp_tcp_port = boost::none,
+                     cli::upnp_udt_port = boost::none,
+                     cli::server = connectivity_server,
+                     cli::no_color = false,
+                     cli::verbose = false)
+      , networking(*this,
+                   "Perform networking speed tests between nodes",
+                   das::cli::Options(),
                    cli::mode = boost::none,
                    cli::protocol = boost::none,
                    cli::packet_size = boost::none,
@@ -100,13 +96,12 @@ namespace infinit
                    cli::xored_utp_port = boost::none,
                    cli::xored = boost::none,
                    cli::no_color = false,
-                   cli::verbose = false))
-      , system(
-        "Perform sanity checks on your system",
-        das::cli::Options(),
-        this->bind(modes::mode_system,
-                   cli::no_color = false,
-                   cli::verbose = false))
+                   cli::verbose = false)
+      , system(*this,
+               "Perform sanity checks on your system",
+               das::cli::Options(),
+               cli::no_color = false,
+               cli::verbose = false)
     {}
 
 
@@ -238,7 +233,6 @@ namespace infinit
         reactor::sleep();
       }
     }
-
 
     /*---------------.
     | Mode: system.  |

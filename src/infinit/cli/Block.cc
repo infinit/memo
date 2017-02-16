@@ -3,6 +3,7 @@
 #include <infinit/cli/Infinit.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
+
 ELLE_LOG_COMPONENT("cli.block");
 
 namespace infinit
@@ -11,12 +12,10 @@ namespace infinit
   {
     Block::Block(Infinit& infinit)
       : Object(infinit)
-      , deserialize(
-        "Deserialized block",
-        das::cli::Options(),
-        this->bind(modes::mode_deserialize,
-                   cli::output = boost::none,
-                   cli::paths = Paths{}))
+      , deserialize(*this,
+                    "Deserialized block",
+                    cli::output = boost::none,
+                    cli::paths = Paths{})
     {}
 
     /*--------------------.

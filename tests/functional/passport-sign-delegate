@@ -16,7 +16,7 @@ def run(mode):
     user.run(['infinit-user', '--create', 'user'])
 
     owner.run(
-      ['infinit-storage', '--create', 'storage', '--filesystem',
+      ['infinit', 'silo', 'create', 'filesystem', 'storage',
        '--path', tmp.dir])
     owner.run(
       ['infinit-network', '--create', 'network', '--kelips',

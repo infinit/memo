@@ -53,7 +53,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
 # Purge.
 with Beyond() as beyond, Infinit(beyond = beyond) as bob:
   bob.run(['infinit-user', '--signup', 'bob', '--email', 'bob@infinit.io'])
-  bob.run(['infinit-storage', '--create', '--as', 'bob', 's', '--filesystem'])
+  bob.run(['infinit', 'silo', 'create', 'filesystem', '--as', 'bob', 's'])
   bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '-S', 's', '-p'])
   bob.run(['infinit-volume', '--create', '--as', 'bob', 'v', '-N', 'n', '-p'])
   assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 1)
@@ -75,7 +75,7 @@ def alice_bob_network_volume(alice, bob, network = "network", volume = "volume")
     ['infinit-user', '--signup', 'alice', '--email', 'alice@infinit.io'])
   bob.run(['infinit-user', '--fetch', 'alice', '--as', 'bob'])
   alice.run(['infinit-user', '--fetch', 'bob', '--as', 'alice'])
-  bob.run(['infinit-storage', '--create', '--as', 'bob', 's', '--filesystem'])
+  bob.run(['infinit', 'silo', 'create', 'filesystem', '--as', 'bob', 's'])
   # FIXME: try some permutations of the options.
   bob.run(['infinit-network', '--create',  network, '--kelips', '--as', 'bob',
            '-S', 's', '-p'])
@@ -125,7 +125,7 @@ with Beyond() as beyond, \
 # Update volume descriptor with mount options.
 with Infinit() as alice:
   alice.run(['infinit-user', '--create', 'alice'])
-  alice.run(['infinit-storage', '--create', 's', '--filesystem'])
+  alice.run(['infinit', 'silo', 'create', 'filesystem', 's'])
   alice.run(['infinit-network', '--create', '--as', 'alice', 'n',
              '--storage', 's'])
   alice.run(['infinit-volume', '--create', '--as', 'alice', 'v',
@@ -150,7 +150,7 @@ with Infinit() as alice:
 # Service discovery
 with Infinit() as alice:
   alice.run(['infinit-user', '--create',  'alice'])
-  alice.run(['infinit-storage', '--create', 's'])
+  alice.run(['infinit', 'silo', 'create', 'filesystem', 's'])
   alice.run([
     'infinit-network', '--create', '--name', 'network',
     '--storage', 's', '--as', 'alice'])

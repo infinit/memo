@@ -30,15 +30,15 @@ namespace infinit
       /*------------.
       | Mode: all.  |
       `------------*/
-      using ModeAll =
-        Mode<decltype(binding(modes::mode_all,
-                              cli::ignore_non_linked = false,
-                              cli::upnp_tcp_port = boost::none,
-                              cli::upnp_udt_port = boost::none,
-                              cli::server = connectivity_server,
-                              cli::no_color = false,
-                              cli::verbose = false))>;
-      ModeAll all;
+      Mode<Doctor,
+           decltype(modes::mode_all),
+           decltype(cli::ignore_non_linked = false),
+           decltype(cli::upnp_tcp_port = boost::none),
+           decltype(cli::upnp_udt_port = boost::none),
+           decltype(cli::server = connectivity_server),
+           decltype(cli::no_color = false),
+           decltype(cli::verbose = false)>
+      all;
       void
       mode_all(bool ignore_non_linked,
                boost::optional<uint16_t> upnp_tcp_port,
@@ -50,12 +50,12 @@ namespace infinit
       /*----------------------.
       | Mode: configuration.  |
       `----------------------*/
-      using ModeConfiguration =
-        Mode<decltype(binding(modes::mode_configuration,
-                              cli::ignore_non_linked = false,
-                              cli::no_color = false,
-                              cli::verbose = false))>;
-      ModeConfiguration configuration;
+      Mode<Doctor,
+           decltype(modes::mode_configuration),
+           decltype(cli::ignore_non_linked = false),
+           decltype(cli::no_color = false),
+           decltype(cli::verbose = false)>
+      configuration;
       void
       mode_configuration(bool ignore_non_linked,
                          bool no_color,
@@ -64,14 +64,14 @@ namespace infinit
       /*---------------------.
       | Mode: connectivity.  |
       `---------------------*/
-      using ModeConnectivity =
-        Mode<decltype(binding(modes::mode_connectivity,
-                              cli::upnp_tcp_port = boost::none,
-                              cli::upnp_udt_port = boost::none,
-                              cli::server = connectivity_server,
-                              cli::no_color = false,
-                              cli::verbose = false))>;
-      ModeConnectivity connectivity;
+      Mode<Doctor,
+           decltype(modes::mode_connectivity),
+           decltype(cli::upnp_tcp_port = boost::none),
+           decltype(cli::upnp_udt_port = boost::none),
+           decltype(cli::server = connectivity_server),
+           decltype(cli::no_color = false),
+           decltype(cli::verbose = false)>
+      connectivity;
       void
       mode_connectivity(boost::optional<uint16_t> upnp_tcp_port,
                         boost::optional<uint16_t> upnp_udt_port,
@@ -82,21 +82,21 @@ namespace infinit
       /*-------------------.
       | Mode: networking.  |
       `-------------------*/
-      using ModeNetworking =
-        Mode<decltype(binding(modes::mode_networking,
-                              cli::mode = boost::none,
-                              cli::protocol = boost::none,
-                              cli::packet_size = boost::none,
-                              cli::packets_count = boost::none,
-                              cli::host = boost::none,
-                              cli::port = boost::none,
-                              cli::tcp_port = boost::none,
-                              cli::utp_port = boost::none,
-                              cli::xored_utp_port = boost::none,
-                              cli::xored = boost::none,
-                              cli::no_color = false,
-                              cli::verbose = false))>;
-      ModeNetworking networking;
+      Mode<Doctor,
+           decltype(modes::mode_networking),
+           decltype(cli::mode = boost::none),
+           decltype(cli::protocol = boost::none),
+           decltype(cli::packet_size = boost::none),
+           decltype(cli::packets_count = boost::none),
+           decltype(cli::host = boost::none),
+           decltype(cli::port = boost::none),
+           decltype(cli::tcp_port = boost::none),
+           decltype(cli::utp_port = boost::none),
+           decltype(cli::xored_utp_port = boost::none),
+           decltype(cli::xored = boost::none),
+           decltype(cli::no_color = false),
+           decltype(cli::verbose = false)>
+      networking;
       void
       mode_networking(boost::optional<std::string> const& mode_name,
                       boost::optional<std::string> const& protocol_name,
@@ -114,11 +114,11 @@ namespace infinit
       /*---------------.
       | Mode: system.  |
       `---------------*/
-      using ModeSystem =
-        Mode<decltype(binding(modes::mode_system,
-                              cli::no_color = false,
-                              cli::verbose = false))>;
-      ModeSystem system;
+      Mode<Doctor,
+           decltype(modes::mode_system),
+           decltype(cli::no_color = false),
+           decltype(cli::verbose = false)>
+      system;
       void
       mode_system(bool no_color,
                   bool verbose);

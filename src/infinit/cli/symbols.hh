@@ -59,7 +59,6 @@ namespace infinit
     DAS_CLI_SYMBOL(docker_socket_tcp, 0, "Use a TCP socket for docker plugin", false);
     DAS_CLI_SYMBOL(docker_user, 0, "System user to use for docker plugin",false);
     DAS_CLI_SYMBOL(domain, 'd', "LDAP domain", false);
-    DAS_CLI_SYMBOL(dropbox, '\0', "store blocks on Dropbox", false);
     DAS_CLI_SYMBOL(email, 'e', "user email", false);
     DAS_CLI_SYMBOL(email_pattern, 'e', "email address pattern)" , false);
     DAS_CLI_SYMBOL(enable_inherit, 'i', "make new files and directories inherit permissions", false);
@@ -72,7 +71,6 @@ namespace infinit
     DAS_CLI_SYMBOL(fetch_drive, 0, "update local drive descriptor from {hub}", false);
     DAS_CLI_SYMBOL(fetch_endpoints, 0, "fetch endpoints from {hub}" , false);
     DAS_CLI_SYMBOL(fetch_endpoints_interval, 0, "period for repolling endpoints from the Hub in seconds", false);
-    DAS_CLI_SYMBOL(filesystem, '\0', "store blocks on local filesystem (default)", false);
     DAS_CLI_SYMBOL(filter, 'f', "raw LDAP query to use (default: objectClass=posixGroup)", false);
     DAS_CLI_SYMBOL(finder_sidebar, 0, "show volume in Finder sidebar" , false);
     DAS_CLI_SYMBOL(force, 'f', "do not ask for user confirmation", false);
@@ -80,8 +78,6 @@ namespace infinit
     DAS_CLI_SYMBOL(fullname, '\0', "user full name", false);
     DAS_CLI_SYMBOL(fullname_pattern, 'F', "fullname pattern)" , false);
     DAS_CLI_SYMBOL(fuse_option, 0, "option to pass directly to FUSE" , false);
-    DAS_CLI_SYMBOL(gcs, '\0', "store blocks on Google Cloud Storage", false);
-    DAS_CLI_SYMBOL(google_drive, '\0', "store blocks on Google Drive", false);
     DAS_CLI_SYMBOL(group, 'g', "group {action} {object} for", false);
     DAS_CLI_SYMBOL(help, 'h', "show this help message", false);
     DAS_CLI_SYMBOL(hold, 0, "keep storage online until this process terminates", false);
@@ -163,7 +159,6 @@ namespace infinit
     DAS_CLI_SYMBOL(replication_factor, 'r', "data replication factor (default: 1)", false);
     DAS_CLI_SYMBOL(restart, 0, "restart {object}", false);
     DAS_CLI_SYMBOL(root_permissions, 0, "volume root permissions to give (optional: r, w, rw)", false);
-    DAS_CLI_SYMBOL(s3, '\0', "store blocks on AWS S3", false);
     DAS_CLI_SYMBOL(script, 's', "suppress extraneous human friendly messages and use JSON output", false);
     DAS_CLI_SYMBOL(searchbase, 'b', "search starting point (without domain)", false); // FIXME: why not search_base?
     DAS_CLI_SYMBOL(server, 0, "connectivity server address (default = 192.241.139.66)", false);
@@ -188,7 +183,6 @@ namespace infinit
 
     DAS_CLI_SYMBOL_NAMED(delete, delete_, 0, "delete the {object}", false);
 
-
     DAS_SYMBOL(acl);
     DAS_SYMBOL(block);
     DAS_SYMBOL(call);
@@ -202,8 +196,12 @@ namespace infinit
     DAS_SYMBOL(doctor);
     DAS_SYMBOL(drive);
     DAS_SYMBOL(drive_invite);
+    DAS_SYMBOL(dropbox);
     DAS_SYMBOL(enable_storage);
+    DAS_SYMBOL(filesystem);
+    DAS_SYMBOL(gcs);
     DAS_SYMBOL(get_xattr);
+    DAS_SYMBOL(google_drive);
     DAS_SYMBOL(hash);
     DAS_SYMBOL(import);
     DAS_SYMBOL(inspect);
@@ -221,6 +219,7 @@ namespace infinit
     DAS_SYMBOL(populate_hub);
     DAS_SYMBOL(populate_network);
     DAS_SYMBOL(run);
+    DAS_SYMBOL(s3);
     DAS_SYMBOL(set);
     DAS_SYMBOL(set_xattr);
     DAS_SYMBOL(signup);
@@ -252,10 +251,14 @@ namespace infinit
       DAS_SYMBOL(mode_deserialize);
       DAS_SYMBOL(mode_disable_storage);
       DAS_SYMBOL(mode_drive_invite);
+      DAS_SYMBOL(mode_dropbox);
       DAS_SYMBOL(mode_enable_storage);
       DAS_SYMBOL(mode_export);
       DAS_SYMBOL(mode_fetch);
+      DAS_SYMBOL(mode_filesystem);
+      DAS_SYMBOL(mode_gcs);
       DAS_SYMBOL(mode_get_xattr);
+      DAS_SYMBOL(mode_google_drive);
       DAS_SYMBOL(mode_group);
       DAS_SYMBOL(mode_hash);
       DAS_SYMBOL(mode_import);
@@ -278,6 +281,7 @@ namespace infinit
       DAS_SYMBOL(mode_receive);
       DAS_SYMBOL(mode_register);
       DAS_SYMBOL(mode_run);
+      DAS_SYMBOL(mode_s3);
       DAS_SYMBOL(mode_set);
       DAS_SYMBOL(mode_set_xattr);
       DAS_SYMBOL(mode_signup);

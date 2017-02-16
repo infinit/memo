@@ -6,8 +6,8 @@ with TemporaryDirectory() as tmp, \
     Infinit() as infinit_1, Infinit() as infinit_2:
   infinit_1.run(['infinit-user', '--create',  'user'])
   infinit_1.run([
-    'infinit-storage', '--create', 'storage',
-    '--filesystem', '--path', tmp.dir,
+    'infinit', 'silo', 'create', 'filesystem', 'storage',
+    '--path', tmp.dir,
   ])
   network_name = infinit_1.run([
     'infinit-network', '--create', 'network',
@@ -31,8 +31,8 @@ with TemporaryDirectory() as tmp, \
   # Device 2
   infinit_2.run(['infinit-user', '--create', 'user2'])
   infinit_2.run([
-    'infinit-storage', '--create', 'storage',
-    '--filesystem', '--path', tmp.dir,
+    'infinit', 'silo', 'create', 'filesystem', 'storage',
+    '--path', tmp.dir,
   ])
   infinit_2.run(['infinit-network', '--import'], input = network)
   infinit_2.run(['infinit-volume', '--import'], input = volume)

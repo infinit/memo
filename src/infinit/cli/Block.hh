@@ -23,9 +23,10 @@ namespace infinit
       using Paths = std::vector<std::string>;
 
       // Deserialize.
-      Mode<decltype(binding(modes::mode_deserialize,
-                            cli::output = boost::none,
-                            cli::paths = Paths{}))>
+      Mode<Block,
+           decltype(modes::mode_deserialize),
+           decltype(cli::output = boost::none),
+           decltype(cli::paths = Paths{})>
       deserialize;
       void
       mode_deserialize(boost::optional<std::string> output,

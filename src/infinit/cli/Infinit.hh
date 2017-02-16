@@ -166,16 +166,13 @@ namespace infinit
       void
       print(std::ostream& o) const;
       ELLE_ATTRIBUTE_R(infinit::Infinit&, infinit);
-      ELLE_ATTRIBUTE_R(boost::optional<std::string>, as);
-      ELLE_ATTRIBUTE_R(boost::optional<elle::Version>, compatibility_version);
+      ELLE_ATTRIBUTE_RW(std::vector<std::string>, command_line);
+      ELLE_ATTRIBUTE_RW(boost::optional<std::string>, as);
+      ELLE_ATTRIBUTE_RW(boost::optional<elle::Version>, compatibility_version);
       /// Whether in script mode.
-      ELLE_ATTRIBUTE_R(bool, script);
+      ELLE_ATTRIBUTE_RW(bool, script);
       /// Signal handler for termination.
       boost::signals2::signal<void ()> killed;
-
-    private:
-      template <typename Symbol, typename ObjectSymbol>
-      friend struct mode_call;
     };
   }
 }

@@ -2106,22 +2106,23 @@ namespace
         // volumes, we will skip those with broken silos.  Likewise
         // for the other items.
         auto& status = elem.second.second;
+#define COMPARE(field) (credentials->field == s3config->credentials.field())
+        INFINIT_ENTREPRISE(
         if (auto s3config = dynamic_cast<S3StorageConfig const*>(
               storage.get()))
         {
           status = any_of(aws_credentials,
               [&s3config] (auto const& credentials)
               {
-#define COMPARE(field) (credentials->field == s3config->credentials.field())
                 return COMPARE(access_key_id) && COMPARE(secret_access_key);
-#undef COMPARE
               });
         if (status)
           store(results.silos, storage->name, status, "S3");
         else
           store(results.silos, storage->name, status, "S3",
                 std::string("credentials are missing"));
-        }
+        })
+#undef COMPARE
         if (auto fsconfig
             = dynamic_cast<FilesystemStorageConfig const*>(storage.get()))
         {
@@ -2130,6 +2131,7 @@ namespace
           store(results.silos, storage->name, status, "filesystem",
                 elle::sprintf("\"%s\" %s", fsconfig->path, perms.second));
         }
+        INFINIT_ENTREPRISE(
         if (auto gcsconfig = dynamic_cast<GCSConfig const*>(storage.get()))
         {
           status = any_of(gcs_credentials,
@@ -2142,13 +2144,7 @@ namespace
           else
             store(results.silos, storage->name, status, "GCS",
                   std::string{"credentials are missing"});
-        }
-#ifndef INFINIT_WINDOWS
-        if (dynamic_cast<SFTPStorageConfig const*>(storage.get()))
-        {
-          // XXX:
-        }
-#endif
+        })
       }
 
     ELLE_TRACE("verify networks")
