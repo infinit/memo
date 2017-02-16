@@ -35,7 +35,7 @@ namespace infinit
         Backends backends;
         for (auto& backend: this->_backends)
           backends.emplace_back(backend->clone());
-        return elle::make_unique<Self>(std::move(backends));
+        return std::make_unique<Self>(std::move(backends));
       }
 
       /*--------------.
@@ -69,7 +69,7 @@ namespace infinit
         Koordinate::Backends backends;
         for (auto& conf: this->_backends)
           backends.emplace_back(conf->make(local, doughnut));
-        return elle::make_unique<Koordinate>(
+        return std::make_unique<Koordinate>(
           doughnut, std::move(local), std::move(backends));
       }
     }

@@ -22,6 +22,7 @@ extern "C" int outguess_inject(u_char* data, int len, // data to embed
   char* filename // input/output image
   );
 ELLE_LOG_COMPONENT("infinit.fs.steg");
+
 namespace infinit
 {
   namespace model
@@ -86,14 +87,14 @@ Steg::_make_mutable_block() const
   if (!_root)
   {
     _root = _pick();
-    _root_data = elle::make_unique<blocks::Block>(*_root);
+    _root_data = std::make_unique<blocks::Block>(*_root);
     Address user_root = _pick();
     _root_data->data().append(user_root.value(), sizeof(Address));
     const_cast<Steg*>(this)->__store(*_root_data);
-    return elle::make_unique<blocks::Block>(*_root);
+    return std::make_unique<blocks::Block>(*_root);
   }
   Address address = _pick();
-  auto res = elle::make_unique<blocks::Block>(address);
+  auto res = std::make_unique<blocks::Block>(address);
   return res;
 }
 
@@ -177,7 +178,7 @@ Steg::__fetch(Address address) const
   {
     ELLE_WARN("Corrupted data");
     free(d);
-    return elle::make_unique<blocks::Block>(address);
+    return std::make_unique<blocks::Block>(address);
   }
   int32_t size = *((int32_t*)d + 1);
   size = ntohl(size);
@@ -189,7 +190,7 @@ Steg::__fetch(Address address) const
   data.append(d+8, size);
   free(d);
   ELLE_DEBUG("fetched %s: %s bytes", it->second, data.size());
-  auto res = elle::make_unique<blocks::Block>(address, std::move(data));
+  auto res = std::make_unique<blocks::Block>(address, std::move(data));
   return res;
 }
 

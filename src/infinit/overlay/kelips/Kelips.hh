@@ -42,7 +42,7 @@ namespace infinit
       typedef Time::duration Duration;
       //typedef std::chrono::duration<long, std::ratio<1, 1000000>> Duration;
 
-      typedef std::pair<Endpoint, Time> TimedEndpoint;
+      using TimedEndpoint = std::pair<Endpoint, Time>;
       struct Contact
       {
         // Endpoint we last received a message from
@@ -72,8 +72,8 @@ namespace infinit
         int gossip_count;
       };
 
-      typedef std::unordered_multimap<Address, File> Files;
-      typedef std::unordered_map<Address, Contact> Contacts;
+      using Files = std::unordered_multimap<Address, File>;
+      using Contacts = std::unordered_map<Address, Contact>;
       struct State
       {
         Files files;
@@ -128,8 +128,8 @@ namespace infinit
       struct Configuration
         : public overlay::Configuration
       {
-        typedef Configuration Self;
-        typedef overlay::Configuration Super;
+        using Self = Configuration;
+        using Super = overlay::Configuration;
 
         Configuration();
         Configuration(elle::serialization::SerializerIn& input);
@@ -192,10 +192,6 @@ namespace infinit
         void
         engage();
         void
-        address(Address file,
-                infinit::overlay::Operation op,
-                int n, std::function<void(NodeLocation)> yield);
-        void
         print(std::ostream& stream) const override;
         /// local hooks interface
         void
@@ -212,14 +208,12 @@ namespace infinit
       | Overlay |
       `--------*/
       protected:
-        virtual
         reactor::Generator<Overlay::WeakMember>
-        _lookup(infinit::model::Address address, int n,
-                infinit::overlay::Operation op) const override;
-        virtual
+        _allocate(infinit::model::Address address, int n) const override;
+        reactor::Generator<Overlay::WeakMember>
+        _lookup(infinit::model::Address address, int n, bool f) const override;
         reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
         _lookup(std::vector<infinit::model::Address> const& address, int n) const override;
-        virtual
         WeakMember
         _lookup_node(Address address) const override;
 
@@ -344,7 +338,7 @@ namespace infinit
         std::vector<TimedEndpoint> _local_endpoints;
         /// group we are in
         int _group;
-        Configuration _config;
+        ELLE_ATTRIBUTE_RX(Configuration, config);
         State _state;
         reactor::network::RDVSocket _gossip;
         reactor::Mutex _udp_send_mutex;

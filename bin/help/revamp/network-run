@@ -1,0 +1,36 @@
+network: run: Usage: _build/macosx64/bin/infinit-network network run [OPTIONS]
+Run a network
+
+Options:
+  -h, --help                show this help message
+      --compatibility-version arg  compatibility version to force
+  -s, --script              suppress extraneous human friendly messages and use JSON output
+  -a, --as arg              user to run commands as (default: akim)
+  -n, --name arg            name of the network to run
+  -i, --input arg           file to read network from
+  -d, --daemon              run as a background daemon
+      --monitoring          enable monitoring
+      --peer arg            peer address or file with list of peer addresses (host:port) (default: [])
+      --async               use asynchronous write operations
+      --cache               enable caching with default values
+      --cache-ram-size arg  maximum RAM block cache size in bytes (default: 64MB)
+      --cache-ram-ttl arg   RAM block cache time-to-live in seconds (default: 5min)
+      --cache-ram-invalidation arg  RAM block cache invalidation time in seconds (default: 15s)
+      --cache-disk-size arg  size of disk cache for immutable data in bytes (default: 512MB)
+      --fetch-endpoints     fetch endpoints from https://beyond.infinit.sh
+  -f, --fetch               fetch network from https://beyond.infinit.sh
+      --push-endpoints      push endpoints to https://beyond.infinit.sh
+  -p, --push                push network to https://beyond.infinit.sh
+      --publish             alias for --fetch-endpoints --push-endpoints
+      --endpoints-file arg  write node listening endpoints to file (format: host:port)
+      --port-file arg       write node listening port to file
+      --port arg            outbound port to use
+      --peers-file arg      Periodically write list of known peers to given file
+      --listen arg          specify which IP address to listen on (default: all)
+      --fetch-endpoints-interval arg  period for repolling endpoints from the Hub in seconds
+      --no-local-endpoints  Disable automatic detection of local endpoints
+      --no-public-endpoints  Disable automatic detection of public endpoints
+      --advertise-host arg  advertise extra endpoint using given host (default: [])
+      --paxos-rebalancing-auto-expand arg  whether to automatically rebalance under-replicated blocks
+      --paxos-rebalancing-inspect arg  whether to inspect all blocks on startup and trigger rebalancing
+

@@ -1,0 +1,24 @@
+acl: set: Usage: _build/macosx64/bin/infinit-acl --set --path PATHS [--user USERS] [OPTIONS...]
+
+Set ACL:
+
+Set options:
+  -p [ --path ] arg         Paths
+  -u [ --user ] arg         Users and groups (prefix: @<group>)
+  -g [ --group ] arg        Groups
+  -m [ --mode ] arg         Access mode: r,w,rw,none
+  -o [ --others-mode ] arg  Access mode for other network users: r,w,rw,none
+  -i [ --enable-inherit ]   New files/folders inherit from their parent 
+                            directory
+  --disable-inherit         New files/folders do not inherit from their parent 
+                            directory
+  -R [ --recursive ]        Apply recursively
+  --traverse                Add read permissions to parent directories
+  --verbose                 Verbose output
+  --fetch                   Fetch users from the Hub if needed
+
+Hidden options:
+  --fallback-xattrs         Fallback to alternate xattr mode if system xattrs 
+                            are not suppported
+
+

@@ -1,0 +1,13 @@
+doctor: system: Usage: _build/macosx64/bin/infinit-doctor --system [OPTIONS...]|doctor: system: Usage: _build/macosx64/bin/infinit-doctor doctor system
+									       |[OPTIONS]
+Perform sanity checks on your system:					       |Perform sanity checks on your system
+									       |
+System options:								       |Options:
+  --no-color		 Don't use colored output			       |  -h, --help		    show this help message
+  -v [ --verbose ]	 Output everything				       |      --compatibility-version arg  compatibility version to force
+									       |  -s, --script		    suppress extraneous human friendly messages and use
+									       |JSON output
+									       |  -a, --as arg		    user to run commands as (default: akim)
+									       |      --no-color	    don't use colored output
+									       |  -v, --verbose		    use verbose output
+									       |

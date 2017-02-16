@@ -1,6 +1,3 @@
-#ifndef INFINIT_OVERLAY_KELIPS_HXX
-# define INFINIT_OVERLAY_KELIPS_HXX
-
 namespace std
 {
   inline
@@ -8,9 +5,8 @@ namespace std
   hash<boost::asio::ip::udp::endpoint>::operator ()
     (boost::asio::ip::udp::endpoint const& e) const
   {
+    // FIXME: why not just hashing address and port?
     return std::hash<std::string>()(e.address().to_string()
                                     + ":" + std::to_string(e.port()));
   }
 }
-
-#endif

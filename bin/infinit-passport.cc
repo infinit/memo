@@ -6,6 +6,35 @@ ELLE_LOG_COMPONENT("infinit-passport");
 
 infinit::Infinit ifnt;
 
+namespace
+{
+  std::string
+  mandatory_network_name(boost::program_options::variables_map const& args,
+                         infinit::User const& self)
+  {
+    return ifnt.qualified_name(mandatory(args, "network", "network name"),
+                               self);
+  }
+
+  boost::optional<std::string>
+  optional_network_name(boost::program_options::variables_map const& args,
+                        boost::optional<infinit::User const&> self = {})
+  {
+    if (auto n = optional(args, "network"))
+    {
+      // Avoid calling self_user, unless really needed.  That avoids
+      // that the current user need to exist.
+      if (ifnt.is_qualified_name(*n))
+        return *n;
+      else
+        return ifnt.qualified_name(*n,
+                                   self ? *self : self_user(ifnt, args));
+    }
+    else
+      return boost::none;
+  }
+}
+
 COMMAND(create)
 {
   auto self = self_user(ifnt, args);
@@ -14,15 +43,11 @@ COMMAND(create)
   auto network = ifnt.network_descriptor_get(network_name, self, true);
   auto user = ifnt.user_get(user_name);
   if (self.public_key != network.owner)
-  {
-    std::cerr << "NOTICE: your key is not that of the owner of the network. "
-              << std::endl
-              << "A passport for you with the 'sign' permission needs to be "
-              << std::endl
-              << "pushed to the network using infinit-acl --register"
-              << std::endl;
-  }
-  infinit::model::doughnut::Passport passport(
+    std::cerr
+      << "NOTICE: your key is not that of the owner of the network.\n"
+      << "A passport for you with the 'sign' permission needs to be \n"
+      << "pushed to the network using infinit-acl --register\n";
+  auto passport = infinit::model::doughnut::Passport(
     user.public_key,
     network.name,
     infinit::cryptography::rsa::KeyPair(self.public_key,
@@ -58,13 +83,10 @@ COMMAND(export_)
 {
   auto self = self_user(ifnt, args);
   auto output = get_output(args);
-  auto network_name = mandatory(args, "network", "network name");
-  network_name = ifnt.qualified_name(network_name, self);
+  auto network_name = mandatory_network_name(args, self);
   auto user_name = mandatory(args, "user", "user name");
   auto passport = ifnt.passport_get(network_name, user_name);
-  {
-    elle::serialization::json::serialize(passport, *output, false);
-  }
+  elle::serialization::json::serialize(passport, *output, false);
   report_exported(*output, "passport",
                   elle::sprintf("%s: %s", network_name, user_name));
 }
@@ -72,13 +94,11 @@ COMMAND(export_)
 COMMAND(fetch)
 {
   auto self = self_user(ifnt, args);
-  auto network_name = optional(args, "network");
-  if (network_name)
-    network_name = ifnt.qualified_name(network_name.get(), self);
+  auto network_name = optional_network_name(args, self);
   auto user_name = optional(args, "user");
   if (network_name && user_name)
   {
-    auto passport = beyond_fetch<infinit::Passport>(
+    auto passport = infinit::beyond_fetch<infinit::Passport>(
       elle::sprintf("networks/%s/passports/%s",
                     network_name.get(), user_name.get()),
       "passport for",
@@ -101,14 +121,14 @@ COMMAND(fetch)
       auto json = boost::any_cast<elle::json::Object>(res);
       for (auto const& user_passport: json)
       {
-        elle::serialization::json::SerializerIn s(user_passport.second, false);
+        auto s = elle::serialization::json::SerializerIn(user_passport.second, false);
         auto passport = s.deserialize<infinit::Passport>();
         ifnt.passport_save(passport, true);
       }
     }
     else
     {
-      auto passport = beyond_fetch<infinit::Passport>(elle::sprintf(
+      auto passport = infinit::beyond_fetch<infinit::Passport>(elle::sprintf(
         "networks/%s/passports/%s", network_name.get(), self.name),
         "passport for",
         network_name.get(),
@@ -123,8 +143,9 @@ COMMAND(fetch)
   // Fetch self passports.
   else
   {
-    auto res = beyond_fetch<
-      std::unordered_map<std::string, std::vector<infinit::Passport>>>(
+    using Passports
+      = std::unordered_map<std::string, std::vector<infinit::Passport>>;
+    auto res = infinit::beyond_fetch<Passports>(
         elle::sprintf("users/%s/passports", self.name),
         "passports for user",
         self.name,
@@ -140,15 +161,13 @@ COMMAND(import)
   auto passport = elle::serialization::json::deserialize<infinit::Passport>
     (*input, false);
   ifnt.passport_save(passport);
-  std::string user_name;
-  for (auto const& user: ifnt.users_get())
-  {
-    if (user.public_key == passport.user())
+  auto user_name = [&] () -> std::string
     {
-      user_name = user.name;
-      break;
-    }
-  }
+      for (auto const& user: ifnt.users_get())
+        if (user.public_key == passport.user())
+          return user.name;
+      return {};
+    }();
   report_imported("passport",
                   elle::sprintf("%s: %s", passport.network(), user_name));
 }
@@ -156,94 +175,70 @@ COMMAND(import)
 COMMAND(push)
 {
   auto self = self_user(ifnt, args);
-  auto network_name = mandatory(args, "network", "network name");
-  network_name = ifnt.qualified_name(network_name, self);
+  auto network_name = mandatory_network_name(args, self);
   auto user_name = mandatory(args, "user", "user name");
   auto passport = ifnt.passport_get(network_name, user_name);
-  {
-    beyond_push(
+  beyond_push(
       elle::sprintf("networks/%s/passports/%s", network_name, user_name),
       "passport",
       elle::sprintf("%s: %s", network_name, user_name),
       passport,
       self);
-  }
 }
 
 COMMAND(pull)
 {
   auto self = self_user(ifnt, args);
-  auto network_name = mandatory(args, "network", "network name");
-  network_name = ifnt.qualified_name(network_name, self);
+  auto network_name = mandatory_network_name(args, self);
   auto user_name = mandatory(args, "user", "user name");
-  {
-    beyond_delete(
+  beyond_delete(
       elle::sprintf("networks/%s/passports/%s", network_name, user_name),
       "passport for",
       user_name,
       self);
-  }
 }
 
 COMMAND(list)
 {
-  namespace boost_fs = boost::filesystem;
-  auto network_name = optional(args, "network");
-  if (network_name && !ifnt.is_qualified_name(network_name.get()))
-  {
-    auto self = self_user(ifnt, args);
-    network_name = ifnt.qualified_name(network_name.get(), self);
-  }
+  auto network_name = optional_network_name(args);
   auto passports = ifnt.passports_get(network_name);
-  elle::json::Array l;
-  for (auto const& pair: passports)
-  {
-    if (script_mode)
-    {
-      elle::json::Object o;
-      o["network"] = pair.first.network();
-      o["user"] = pair.second;
-      l.push_back(std::move(o));
-    }
-    else
-      std::cout << pair.first.network() << ": " << pair.second << std::endl;
-  }
   if (script_mode)
-    elle::json::write(std::cout, l);
+    {
+      auto l = elle::json::Array{};
+      for (auto const& pair: passports)
+        l.emplace_back(elle::json::Object
+                       {
+                         {"network", pair.first.network()},
+                         {"user", pair.second},
+                       });
+      elle::json::write(std::cout, l);
+    }
+  else
+    for (auto const& pair: passports)
+      std::cout << pair.first.network() << ": " << pair.second << std::endl;
 }
 
 COMMAND(delete_)
 {
   auto self = self_user(ifnt, args);
-  auto network_name = mandatory(args, "network", "network name");
-  network_name = ifnt.qualified_name(network_name, self);
+  auto network_name = mandatory_network_name(args, self);
   auto user_name = mandatory(args, "user", "user name");
   auto path = ifnt._passport_path(network_name, user_name);
-  if (!boost::filesystem::exists(path))
-  {
-    throw elle::Error(elle::sprintf(
-      "Passport for %s in %s not found", user_name, network_name));
-  }
+  if (!exists(path))
+    elle::err("Passport for %s in %s not found", user_name, network_name);
   if (flag(args, "pull"))
-  {
     beyond_delete(
       elle::sprintf("networks/%s/passports/%s", network_name, user_name),
       "passport for",
       user_name,
       self,
       true);
-  }
-  if (boost::filesystem::remove(path))
-  {
+  if (remove(path))
     report_action("deleted", "passport",
                   elle::sprintf("%s: %s", network_name, user_name),
-                  std::string("locally"));
-  }
+                  "locally");
   else
-  {
-    throw elle::Error(
-      elle::sprintf("File for passport could not be deleted: %s", path));
-  }
+    elle::err("File for passport could not be deleted: %s", path);
 }
 
 int
@@ -262,7 +257,7 @@ main(int argc, char** argv)
           "network to create the passport to" },
         { "user,u", value<std::string>(), "user to create the passport for" },
         { "push-passport", bool_switch(),
-          elle::sprintf("push the passport to %s", beyond(true)) },
+          elle::sprintf("push the passport to %s", infinit::beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-passport" },
         { "deny-write", bool_switch(), "deny user write access to the network"},
         { "deny-storage", bool_switch(),
@@ -285,7 +280,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("Fetch a user's network passport from %s", beyond(true)),
+      elle::sprintf("Fetch a user's network passport from %s", infinit::beyond(true)),
       &fetch,
       "[--network NETWORK --user USER]",
       {
@@ -306,7 +301,7 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a user's network passport to %s", beyond(true)),
+      elle::sprintf("Push a user's network passport to %s", infinit::beyond(true)),
       &push,
       "--network NETWORK --user USER",
       {
@@ -316,7 +311,7 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      elle::sprintf("Remove a user's network passport from %s", beyond(true)),
+      elle::sprintf("Remove a user's network passport from %s", infinit::beyond(true)),
       &pull,
       "--network NETWORK --user USER",
       {
@@ -343,9 +338,9 @@ main(int argc, char** argv)
         { "network,N", value<std::string>(), "network name" },
         { "user,u", value<std::string>(), "user name" },
         { "pull", bool_switch(),
-          elle::sprintf("pull the passport if it is on %s", beyond(true)) },
+          elle::sprintf("pull the passport if it is on %s", infinit::beyond(true)) },
       },
     },
   };
-  return infinit::main("Infinit volume management utility", modes, argc, argv);
+  return infinit::main("Infinit passport management utility", modes, argc, argv);
 }

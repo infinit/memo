@@ -1,0 +1,8 @@
+network: stats: Usage: _build/macosx64/bin/infinit-network --stats --name NETWORK [OPTIONS...]
+
+Fetch stats of a network on the Hub:
+
+Stats options:
+  -n [ --name ] arg      Network name
+
+

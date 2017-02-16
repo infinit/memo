@@ -44,7 +44,7 @@ namespace infinit
     std::unique_ptr<rfs::Handle>
     XAttributeFile::open(int flags, mode_t mode)
     {
-      return elle::make_unique<XAttributeHandle>(_file, _name);
+      return std::make_unique<XAttributeHandle>(_file, _name);
     }
     std::unique_ptr<rfs::Handle>
     XAttributeFile::create(int flags, mode_t mode)

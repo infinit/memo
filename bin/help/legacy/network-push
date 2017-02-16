@@ -1,0 +1,8 @@
+network: push: Usage: _build/macosx64/bin/infinit-network --push --name NETWORK [OPTIONS...]
+
+Push a network to the Hub:
+
+Push options:
+  -n [ --name ] arg      Network to push
+
+

@@ -6,6 +6,11 @@
 
 #include <boost/asio.hpp>
 
+#include <elle/bench.hh>
+#include <elle/err.hh>
+#include <elle/log.hh>
+#include <elle/factory.hh>
+
 #include <reactor/scheduler.hh>
 #include <reactor/Barrier.hh>
 #include <reactor/lockable.hh>
@@ -13,10 +18,6 @@
 #include <infinit/storage/sftp.hh>
 #include <infinit/storage/MissingKey.hh>
 #include <infinit/model/Address.hh>
-
-#include <elle/bench.hh>
-#include <elle/log.hh>
-#include <elle/factory.hh>
 
 enum PacketType {
   SSH_FXP_INIT          =      1 ,
@@ -80,7 +81,7 @@ ELLE_LOG_COMPONENT("infinit.fs.sftp");
 
 static std::unique_ptr<infinit::storage::Storage> make(std::vector<std::string> const& args)
 {
-  return elle::make_unique<infinit::storage::SFTP>(args[0], args[1]);
+  return std::make_unique<infinit::storage::SFTP>(args[0], args[1]);
 }
 
 FACTORY_REGISTER(infinit::storage::Storage, "sftp", &make);
@@ -351,8 +352,7 @@ namespace infinit
     pipe(int pipefd[2])
     {
       if (::pipe(pipefd))
-        throw elle::Error(elle::sprintf(
-                            "unable to create pipe: %s", strerror(errno)));
+        elle::err("unable to create pipe: %s", strerror(errno));
     }
 
     void SFTP::_connect()
@@ -640,7 +640,7 @@ namespace infinit
     std::unique_ptr<infinit::storage::Storage>
     SFTPStorageConfig::make()
     {
-      return elle::make_unique<infinit::storage::SFTP>(host, path);
+      return std::make_unique<infinit::storage::SFTP>(host, path);
     }
 
 

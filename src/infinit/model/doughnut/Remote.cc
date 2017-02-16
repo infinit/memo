@@ -63,6 +63,14 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_ASSERT(server || protocol != Protocol::utp);
         this->_connect();
+        this->_connected.changed().connect(
+          [this] (bool opened)
+          {
+            if (opened)
+              this->Peer::connected()();
+            else
+              this->Peer::disconnected()();
+          });
       }
 
       Remote::~Remote()
@@ -82,9 +90,6 @@ namespace infinit
       | Networking |
       `-----------*/
 
-      static void hold_remote(overlay::Overlay::Member)
-      {}
-
       void
       Remote::_connect()
       {
@@ -100,6 +105,7 @@ namespace infinit
             elle::sprintf("%f worker", this),
             [this]
             {
+              bool connected = false;
               this->_key_hash_cache.clear();
               while (true)
               {
@@ -109,17 +115,18 @@ namespace infinit
                 auto handshake = [&] (std::unique_ptr<std::iostream> socket)
                   {
                     auto sv = elle_serialization_version(this->_doughnut.version());
-                    auto serializer = elle::make_unique<protocol::Serializer>(
+                    auto serializer = std::make_unique<protocol::Serializer>(
                       *socket, sv, false);
                     auto channels =
-                    elle::make_unique<protocol::ChanneledStream>(*serializer);
+                    std::make_unique<protocol::ChanneledStream>(*serializer);
                     if (!disable_key)
                       this->_key_exchange(*channels);
                     ELLE_TRACE("%s: connected", this);
                     this->_socket = std::move(socket);
                     this->_serializer = std::move(serializer);
                     this->_channels = std::move(channels);
-                    this->_connected.open();
+                    this->doughnut().dock().insert_peer(shared_from_this());
+                    connected = true;
                   };
                 auto umbrella = [&, this] (std::function<void ()> const& f)
                   {
@@ -151,7 +158,7 @@ namespace infinit
                           [&]
                           {
                             using reactor::network::TCPSocket;
-                            handshake(elle::make_unique<TCPSocket>(e.tcp()));
+                            handshake(std::make_unique<TCPSocket>(e.tcp()));
                             scope.terminate_now();
                           }));
                   if (this->_protocol == Protocol::utp ||
@@ -166,7 +173,7 @@ namespace infinit
                           if (this->id() != Address::null)
                             cid = elle::sprintf("%x", this->id());
                           auto socket =
-                            elle::make_unique<reactor::network::UTPSocket>(
+                            std::make_unique<reactor::network::UTPSocket>(
                               *this->_utp_server);
                           socket->connect(cid, this->_endpoints.udp());
                           handshake(std::move(socket));
@@ -174,7 +181,7 @@ namespace infinit
                         }));
                   reactor::wait(scope);
                 };
-                if (!this->_connected)
+                if (!connected)
                 {
                   ELLE_TRACE("%s: connection to %f failed",
                              this, this->_endpoints);
@@ -182,14 +189,27 @@ namespace infinit
                     elle::sprintf("connection to %f failed", this->_endpoints));
                   break;
                 }
+                // This allows the connected() signal to lose the last reference
+                // on this, by holding the refcount manually.
+                {
+                  auto holder = this->shared_from_this();
+                  this->_connected.open();
+                  if (holder.use_count() == 1)
+                  {
+                    this->_thread->dispose(true);
+                    this->_thread.release();
+                    return;
+                  }
+                }
                 ELLE_ASSERT(this->_channels);
                 ELLE_TRACE("%s: serve RPCs", this)
                   this->_rpc_server.serve(*this->_channels);
                 ELLE_TRACE("%s: connection ended, evicting", this);
                 auto self = this->doughnut().dock().evict_peer(this->id());
-                ++this->_reconnection_id;
                 this->_connected.close();
-                reactor::run_later("remote holder", std::bind(hold_remote, self));
+                ++this->_reconnection_id;
+                this->_thread->dispose(true);
+                this->_thread.release();
                 return;
               }
             }));
@@ -215,7 +235,7 @@ namespace infinit
           auto lock = elle::scoped_assignment(this->_reconnecting, true);
           ELLE_TRACE_SCOPE("%s: reconnect", this);
           if (this->_refetch_endpoints)
-            if (auto eps = this->_refetch_endpoints())
+            if (auto eps = this->_refetch_endpoints(this->id()))
               this->_endpoints = std::move(eps.get());
           this->_connect();
         }
@@ -300,7 +320,7 @@ namespace infinit
                           this->_id, res.id);
               return std::make_pair(
                 res.challenge,
-                elle::make_unique<Passport>(std::move(res.passport)));
+                std::make_unique<Passport>(std::move(res.passport)));
             }
             else if (this->_doughnut.version() >= elle::Version(0, 4, 0))
               return _auth_0_4(*this, channels);
@@ -314,14 +334,14 @@ namespace infinit
             auto msg = elle::sprintf(
               "passport validation failed for %s", this->id());
             ELLE_WARN("%s", msg);
-            throw elle::Error(msg);
+            elle::err(msg);
           }
           if (!remote_passport->allow_storage())
           {
             auto msg = elle::sprintf(
               "%s: Peer passport disallows storage", *this);
             ELLE_WARN("%s", msg);
-            throw elle::Error(msg);
+            elle::err(msg);
           }
           ELLE_DEBUG("got valid remote passport");
           // sign the challenge

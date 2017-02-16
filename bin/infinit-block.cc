@@ -15,11 +15,8 @@ COMMAND(deserialize)
   {
     boost::filesystem::ifstream f(path);
     if (!f.good())
-    {
-      throw elle::Error(
-        elle::sprintf("unable to open for reading: %s", path));
-    }
-    elle::serialization::Context ctx;
+      elle::err("unable to open for reading: %s", path);
+    auto ctx = elle::serialization::Context{};
     ctx.set<infinit::model::doughnut::Doughnut*>(nullptr);
     ctx.set<elle::Version>(elle::serialization_tag::version);
     auto block = elle::serialization::binary::deserialize<

@@ -1,15 +1,14 @@
-#ifndef INFINIT_DESCRIPTOR_BASE_DESCRIPTOR_HH
-# define INFINIT_DESCRIPTOR_BASE_DESCRIPTOR_HH
+#pragma once
 
-# include <boost/filesystem/path_traits.hpp>
-# include <boost/optional.hpp>
+#include <boost/filesystem/path_traits.hpp>
+#include <boost/optional.hpp>
 
-# include <elle/Printable.hh>
+#include <elle/Printable.hh>
 
-# include <das/model.hh>
-# include <das/serializer.hh>
+#include <das/model.hh>
+#include <das/serializer.hh>
 
-# include <infinit/symbols.hh>
+#include <infinit/symbols.hh>
 
 namespace infinit
 {
@@ -111,5 +110,3 @@ namespace boost
     }
   }
 }
-
-#endif // INFINIT_DESCRIPTOR_BASE_DESCRIPTOR_HH

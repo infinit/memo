@@ -32,10 +32,12 @@ namespace infinit
     | Lookup |
     `-------*/
     protected:
+      reactor::Generator<WeakMember>
+      _allocate(model::Address address, int n) const override;
       reactor::Generator<std::ambivalent_ptr<model::doughnut::Peer>>
       _lookup(model::Address address,
               int n,
-              Operation op) const override;
+              bool fast) const override;
       Overlay::WeakMember
       _lookup_node(model::Address address) const override;
 

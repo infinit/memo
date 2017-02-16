@@ -91,7 +91,7 @@ enforce_in_mountpoint(std::string const& path_, bool fallback)
 {
   auto path = boost::filesystem::absolute(path_);
   if (!boost::filesystem::exists(path))
-    elle::err(elle::sprintf("path does not exist: %s", path_));
+    elle::err("path does not exist: %s", path_);
   for (auto const& p: {path, path.parent_path()})
   {
     auto mountpoint = path_mountpoint(p.string(), fallback);

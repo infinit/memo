@@ -1,5 +1,4 @@
-#ifndef INFINIT_STORAGE_STRIP_HH
-#define INFINIT_STORAGE_STRIP_HH
+#pragma once
 
 #include <infinit/storage/Storage.hh>
 namespace infinit
@@ -14,16 +13,12 @@ namespace infinit
     public:
       Strip(std::vector<std::unique_ptr<Storage>> backend);
     protected:
-      virtual
       elle::Buffer
       _get(Key k) const override;
-      virtual
       int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
-      virtual
       int
       _erase(Key k) override;
-      virtual
       std::vector<Key>
       _list() override;
       ELLE_ATTRIBUTE(std::vector<std::unique_ptr<Storage>>, backend);
@@ -34,19 +29,16 @@ namespace infinit
       : public StorageConfig
     {
     public:
-      typedef std::vector<std::unique_ptr<StorageConfig>> Storages;
+      using Storages = std::vector<std::unique_ptr<StorageConfig>>;
       StripStorageConfig(Storages storages,
-                         boost::optional<int64_t> capacity,
-                         boost::optional<std::string> description);
+                         boost::optional<int64_t> capacity = {},
+                         boost::optional<std::string> description = {});
       StripStorageConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;
-      virtual
       std::unique_ptr<infinit::storage::Storage>
       make() override;
       Storages storage;
     };
   }
 }
-
-#endif

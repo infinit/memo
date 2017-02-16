@@ -103,7 +103,7 @@ namespace infinit
         std::unique_ptr<Storage> backend = elle::Factory<Storage>::instantiate(name, bargs);
         backends.push_back(std::move(backend));
       }
-      return elle::make_unique<Mirror>(std::move(backends), balance_reads, parallel);
+      return std::make_unique<Mirror>(std::move(backends), balance_reads, parallel);
     }
 
     struct MirrorStorageConfig
@@ -145,7 +145,7 @@ namespace infinit
           ELLE_ASSERT(!!c);
           s.push_back(c->make());
         }
-        return elle::make_unique<infinit::storage::Mirror>(
+        return std::make_unique<infinit::storage::Mirror>(
           std::move(s), balance, parallel);
       }
     };

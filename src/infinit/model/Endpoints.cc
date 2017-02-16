@@ -176,6 +176,19 @@ namespace infinit
       return res;
     }
 
+    bool
+    Endpoints::merge(Endpoints const& b)
+    {
+      bool res = false;
+      for (auto const& e: b)
+        if (std::find(this->begin(), this->end(), e) == this->end())
+        {
+          this->emplace_back(e);
+          res = true;
+        }
+      return res;
+    }
+
     NodeLocation::NodeLocation(model::Address id, Endpoints endpoints)
       : _id(std::move(id))
       , _endpoints(std::move(endpoints))
@@ -192,6 +205,20 @@ namespace infinit
       else
         elle::fprintf(output, "unknown peer (%s)", loc.endpoints());
       return output;
+    }
+
+    infinit::model::Endpoints
+    endpoints_from_file(boost::filesystem::path const& path)
+    {
+      boost::filesystem::ifstream f;
+      f.open(path);
+      if (!f.good())
+        elle::err("unable to open for reading: %s", path);
+      infinit::model::Endpoints res;
+      for (std::string line; std::getline(f, line); )
+        if (line.length())
+          res.emplace_back(infinit::model::Endpoint(line));
+      return res;
     }
   }
 }

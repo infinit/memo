@@ -1,0 +1,8 @@
+passport: list: Usage: _build/macosx64/bin/infinit-passport --list [--network NETWORK] [OPTIONS...]
+
+List all local passports:
+
+List options:
+  -N [ --network ] arg   Network to list passports for (optional)
+
+

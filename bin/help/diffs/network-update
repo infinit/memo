@@ -1,0 +1,25 @@
+network: update: Usage: _build/macosx64/bin/infinit-network --update --name    |network: update: Usage: _build/macosx64/bin/infinit-network network update
+NAME [OPTIONS...]							       |[OPTIONS]
+									       |Update a network
+Update a network:							       |
+									       |Options:
+Update options:								       |  -h, --help		    show this help message
+  -n [ --name ] arg	   Network to update				       |      --compatibility-version arg  compatibility version to force
+  --description arg	   Description of network			       |  -s, --script		    suppress extraneous human friendly messages and use
+  --port arg		   Port to listen on (default: random)		       |JSON output
+  -o [ --output ] arg	   File to write the network to			       |  -a, --as arg		    user to run commands as (default: akim)
+			   (default: stdout)				       |  -n, --name arg	    name of the network to update
+  --push-network	   Push the updated network to the Hub		       |      --description arg	    network description
+  -p [ --push ]		   Alias for --push-network			       |      --port arg	    outbound port to use
+  --admin-r arg		   Add an admin user that can read all data	       |  -o, --output arg	    file to write the network to
+			   (prefix: @<group>, requires mountpoint)	       |      --push-network	    push the network to https://beyond.infinit.sh
+  --admin-rw arg	   Add an admin user that can read and write all data  |  -p, --push		    push network to https://beyond.infinit.sh
+			   (prefix: @<group>, requires mountpoint)	       |      --admin-r arg	    Set admin users that can read all data (default: []
+  --admin-remove arg	   Remove given users from all admin lists	       |      --admin-rw arg	    Set admin users that can read and write all data
+			   (prefix: @<group>, requires mountpoint)	       |(default: [])
+  -m [ --mountpoint ] arg  Mountpoint of a volume using this network, required |      --admin-remove arg    Remove given users from all admin lists (prefix:
+			   to add admin groups				       |@<group>, requires mountpoint) (default: [])
+  --peer arg		   List of known node endpoints			       |  -m, --mountpoint arg	    where to mount the filesystem
+									       |      --peer arg	    peer address or file with list of peer addresses
+									       |(host:port) (default: [])
+									       |

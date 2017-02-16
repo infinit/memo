@@ -64,7 +64,8 @@ namespace infinit
         boost::optional<boost::filesystem::path> root_block_cache_dir,
         boost::optional<boost::filesystem::path> mountpoint,
         bool allow_root_creation,
-        bool map_other_permissions)
+        bool map_other_permissions,
+        boost::optional<int> block_size)
       : _block_store(std::move(model))
       , _single_mount(false)
       , _owner(owner)
@@ -74,6 +75,9 @@ namespace infinit
       , _root_address(Address::null)
       , _allow_root_creation(allow_root_creation)
       , _map_other_permissions(map_other_permissions)
+      , _prefetching(0)
+      , _block_size(block_size)
+      , _file_buffers()
     {
       auto& dht = dynamic_cast<model::doughnut::Doughnut&>(
         *this->_block_store.get());
@@ -165,9 +169,8 @@ namespace infinit
       }
       catch (infinit::storage::InsufficientSpace const& e)
       {
-
         ELLE_TRACE("store_or_die: %s", e.what());
-        THROW_ENOSPC;
+        THROW_ENOSPC();
       }
       catch(elle::Error const& e)
       {
@@ -404,12 +407,12 @@ namespace infinit
               ELLE_LOG_SCOPE(
                 "migrate old bootstrap block from %s to %s",
                 old_addr, bootstrap_addr);
-              auto nb = elle::make_unique<dht::NB>(
+              auto nb = std::make_unique<dht::NB>(
                 *dn, dn->owner(), bootstrap_name,
                 old->data(), old->signature());
               this->store_or_die(
                 std::move(nb), model::STORE_INSERT,
-                elle::make_unique<BlockMigration>(old_addr, bootstrap_addr));
+                std::make_unique<BlockMigration>(old_addr, bootstrap_addr));
               continue;
             }
             catch (model::MissingBlock const&)
@@ -434,7 +437,7 @@ namespace infinit
                 auto root = dn->make_block<ACLBlock>();
                 auto address = root->address();
                 this->store_or_die(move(root), model::STORE_INSERT,
-                                   elle::make_unique<InsertRootBlock>(address));
+                                   std::make_unique<InsertRootBlock>(address));
                 this->_root_address = address;
               }
               ELLE_TRACE("create missing root bootstrap block")
@@ -444,13 +447,13 @@ namespace infinit
                 auto k =
                   std::make_shared<infinit::cryptography::rsa::PublicKey>(
                     this->owner());
-                auto nb = elle::make_unique<dht::NB>(
+                auto nb = std::make_unique<dht::NB>(
                   *dn, k, bootstrap_name, baddr);
                 auto address = nb->address();
                 this->store_or_die(
                   std::move(nb),
                   model::STORE_INSERT,
-                  elle::make_unique<InsertRootBootstrapBlock>(address));
+                  std::make_unique<InsertRootBootstrapBlock>(address));
                 if (root_cache)
                   boost::filesystem::ofstream(*root_cache) << saddr;
               }
@@ -575,7 +578,7 @@ namespace infinit
         if (it == files.end() || it->second.first != EntryType::directory)
         {
           ELLE_DEBUG("%s: component '%s' is not a directory", this, name);
-          THROW_NOTDIR;
+          THROW_NOTDIR();
         }
         dp = d;
         current_path /= name;
@@ -665,11 +668,12 @@ namespace infinit
             fd = *fit;
             _file_cache.modify(fit,
               [](std::shared_ptr<FileData>& d) {d->_last_used = now();});
-            (*fit)->update(*block, perms);
+            (*fit)->update(*block, perms, block_size().value_or(File::default_block_size));
           }
           else
           {
-            fd = std::make_shared<FileData>(current_path / name, *block, perms);
+            fd = std::make_shared<FileData>(current_path / name, *block, perms,
+              block_size().value_or(File::default_block_size));
             _file_cache.insert(fd);
           }
         return std::shared_ptr<rfs::Path>(new File(*this, address, fd, d, name));

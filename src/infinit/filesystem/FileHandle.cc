@@ -44,7 +44,7 @@ namespace infinit
         this->_buffer = it->second.lock();
       if (!this->_buffer)
       {
-        this->_buffer = std::make_shared<FileBuffer>(*owner.block_store(), data, dirty);
+        this->_buffer = std::make_shared<FileBuffer>(owner, data, dirty);
         owner.file_buffers().insert(std::make_pair(data.address(), this->_buffer));
       }
       else
@@ -54,11 +54,11 @@ namespace infinit
       }
     }
 
-    FileBuffer::FileBuffer(model::Model& model,
+    FileBuffer::FileBuffer(FileSystem& fs,
                            FileData data,
                            bool dirty)
       : _dirty(dirty)
-      , _model(model)
+      , _fs(fs)
       , _file(data)
       , _first_block_new(false)
       , _fat_changed(false)
@@ -97,10 +97,10 @@ namespace infinit
         for (unsigned i = 0; i < this->_file._fat.size(); ++i)
         {
           ELLE_DEBUG_SCOPE("removing %s: %f", i, this->_file._fat[i].first);
-          unchecked_remove(this->_model, this->_file._fat[i].first);
+          unchecked_remove(*this->_fs.block_store(), this->_file._fat[i].first);
         }
         ELLE_DEBUG_SCOPE("removing first block at %f", this->_file.address());
-        unchecked_remove(this->_model, this->_file.address());
+        unchecked_remove(*this->_fs.block_store(), this->_file.address());
       }
     }
 
@@ -419,7 +419,7 @@ namespace infinit
         // Kick the block
         {
           ELLE_DEBUG("removing from fat at %s", i);
-          unchecked_remove(_model, _file._fat[i].first);
+          unchecked_remove(*this->_fs.block_store(), _file._fat[i].first);
           _file._fat.pop_back();
           _blocks.erase(i);
         }
@@ -515,7 +515,7 @@ namespace infinit
         elle::SafeFinally open_ready([&] {
             this->_blocks.at(index).ready.open();
         });
-        auto block = fetch_or_die(_model, addr, {},
+        auto block = fetch_or_die(*_fs.block_store(), addr, {},
                                   this->_file.path() / elle::sprintf("<%f>", addr));
         auto crypted = block->take_data();
         cryptography::SecretKey sk(secret);
@@ -563,7 +563,7 @@ namespace infinit
           std::unique_ptr<model::blocks::Block> bl;
           try
           {
-            bl = fetch_or_die(_model, addr, {}, this->_file.path() / elle::sprintf("<%f>", addr));
+            bl = fetch_or_die(*_fs.block_store(), addr, {}, this->_file.path() / elle::sprintf("<%f>", addr));
           }
           catch (elle::Error const& e)
           {
@@ -588,7 +588,7 @@ namespace infinit
     void
     FileBuffer::_commit_first(FileHandle* src)
     {
-      _file.write(_model, WriteTarget::data | WriteTarget::times,
+      _file.write(_fs, WriteTarget::data | WriteTarget::times,
                   DirectoryData::null_block, _first_block_new);
       _first_block_new = false;
     }
@@ -672,27 +672,32 @@ namespace infinit
         });
         auto key = cryptography::random::generate<elle::Buffer>(32).string();
         elle::Buffer cdata;
+        std::unique_ptr<ImmutableBlock> block;
         if (data_.size() >= 262144)
         {
           reactor::background([&] {
-              cdata = cryptography::SecretKey(key).encipher(data_);
+            cdata = cryptography::SecretKey(key).encipher(data_);
+            block = this->_fs.block_store()->make_block<ImmutableBlock>(
+              std::move(cdata), this->_file._address);
           });
         }
         else
+        {
           cdata = cryptography::SecretKey(key).encipher(data_);
-        auto block = this->_model.make_block<ImmutableBlock>(
-          std::move(cdata), this->_file._address);
+          block = this->_fs.block_store()->make_block<ImmutableBlock>(
+            std::move(cdata), this->_file._address);
+        }
         auto baddr = block->address();
-        this->_model.store(
+        this->_fs.block_store()->store(
           std::move(block), model::STORE_INSERT,
-          elle::make_unique<InsertBlockResolver>(this->_file.path(), baddr));
+          std::make_unique<InsertBlockResolver>(this->_file.path(), baddr));
         Address prev = Address::null;
         if (signed(this->_file._fat.size()) > id)
           prev = _file._fat.at(id).first;
         this->_file._fat[id] = FileData::FatEntry(baddr, key);
         this->_fat_changed = true;
         if (prev != Address::null)
-          unchecked_remove(this->_model, prev);
+          unchecked_remove(*this->_fs.block_store(), prev);
         if (ent)
           (*ent)->ready.open();
         interrupt_guard.abort();
@@ -813,7 +818,7 @@ namespace infinit
                 this->_flushers.emplace_back(
                   new reactor::Thread("flusher",
                                       [f] { f(); },
-                                      reactor::Thread::managed = true),
+                                      reactor::managed = true),
                   writers);
           }
         }

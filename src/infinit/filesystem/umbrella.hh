@@ -1,5 +1,4 @@
-#ifndef INFINIT_FILESYSTEM_UMBRELLA_HH
-# define INFINIT_FILESYSTEM_UMBRELLA_HH
+#pragma once
 
 #include <reactor/exception.hh>
 #include <reactor/filesystem.hh>
@@ -11,12 +10,23 @@
 #include <infinit/storage/InsufficientSpace.hh>
 
 #ifdef INFINIT_LINUX
-  #include <attr/xattr.h>
+# include <attr/xattr.h>
 #endif
 
 #ifdef INFINIT_WINDOWS
-  #define ENOATTR ENODATA
+# define ENOATTR ENODATA
 #endif
+
+#define THROW_ACCES()  throw rfs::Error(EACCES,  "Access denied")
+#define THROW_ENOSPC() throw rfs::Error(ENOSPC,  "No space left on device")
+#define THROW_EXIST()  throw rfs::Error(EEXIST,  "File exists")
+#define THROW_INVAL()  throw rfs::Error(EINVAL,  "Invalid argument")
+#define THROW_ISDIR()  throw rfs::Error(EISDIR,  "Is a directory")
+#define THROW_NOATTR() throw rfs::Error(ENOATTR, "No attribute")
+#define THROW_NODATA() throw rfs::Error(ENODATA, "No data")
+#define THROW_NOENT()  throw rfs::Error(ENOENT,  "No such file or directory")
+#define THROW_NOSYS()  throw rfs::Error(ENOSYS,  "Not implemented")
+#define THROW_NOTDIR() throw rfs::Error(ENOTDIR, "Is not a directory")
 
 namespace infinit
 {
@@ -24,15 +34,15 @@ namespace infinit
   {
     namespace rfs = reactor::filesystem;
 
-    typedef infinit::model::blocks::Block Block;
-    typedef infinit::model::blocks::MutableBlock MutableBlock;
-    typedef infinit::model::blocks::ImmutableBlock ImmutableBlock;
-    typedef infinit::model::blocks::ACLBlock ACLBlock;
-    typedef infinit::model::Address Address;
+    using Block = infinit::model::blocks::Block;
+    using MutableBlock = infinit::model::blocks::MutableBlock;
+    using ImmutableBlock = infinit::model::blocks::ImmutableBlock;
+    using ACLBlock = infinit::model::blocks::ACLBlock;
+    using Address = infinit::model::Address;
 
-
-    template<typename F>
-    auto umbrella(F f, int err = EIO) -> decltype(f())
+    template <typename F>
+    auto umbrella(F f, int err = EIO)
+      -> decltype(f())
     {
       ELLE_LOG_COMPONENT("infinit.fs");
       try {
@@ -50,7 +60,7 @@ namespace infinit
       catch (infinit::storage::InsufficientSpace const& e)
       {
         ELLE_TRACE("umbrella: %s", e);
-        throw rfs::Error(ENOSPC, "No space left on device.");
+        THROW_ENOSPC();
       }
       catch (rfs::Error const& e)
       {
@@ -68,17 +78,5 @@ namespace infinit
         throw rfs::Error(err, e.what());
       }
     }
-
-    #define THROW_NOENT { throw rfs::Error(ENOENT, "No such file or directory");}
-    #define THROW_NOSYS { throw rfs::Error(ENOSYS, "Not implemented");}
-    #define THROW_EXIST { throw rfs::Error(EEXIST, "File exists");}
-    #define THROW_ISDIR { throw rfs::Error(EISDIR, "Is a directory");}
-    #define THROW_NOTDIR { throw rfs::Error(ENOTDIR, "Is not a directory");}
-    #define THROW_NODATA { throw rfs::Error(ENODATA, "No data");}
-    #define THROW_NOATTR { throw rfs::Error(ENOATTR, "No attribute");}
-    #define THROW_INVAL { throw rfs::Error(EINVAL, "Invalid argument");}
-    #define THROW_ACCES { throw rfs::Error(EACCES, "Access denied");}
-    #define THROW_ENOSPC { throw rfs::Error(ENOSPC, "No space left on device");}
   }
 }
-#endif

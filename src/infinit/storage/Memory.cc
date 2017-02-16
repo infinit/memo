@@ -93,7 +93,7 @@ namespace infinit
     std::unique_ptr<Storage>
     make(std::vector<std::string> const& args)
     {
-      return elle::make_unique<infinit::storage::Memory>();
+      return std::make_unique<infinit::storage::Memory>();
     }
 
     MemoryStorageConfig::MemoryStorageConfig(
@@ -118,7 +118,7 @@ namespace infinit
     std::unique_ptr<infinit::storage::Storage>
     MemoryStorageConfig::make()
     {
-      return elle::make_unique<infinit::storage::Memory>();
+      return std::make_unique<infinit::storage::Memory>();
     }
 
     static const elle::serialization::Hierarchy<StorageConfig>::

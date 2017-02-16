@@ -22,10 +22,8 @@ namespace infinit
     {
       ELLE_LOG("%s: compatibility version %s", *this, this->_version);
       if (this->_version > infinit::version())
-        throw elle::Error(
-          elle::sprintf(
-            "compatibility version %s is too recent for infinit version %s",
-            this->_version, infinit::version()));
+        elle::err("compatibility version %s is too recent for infinit version %s",
+                  this->_version, infinit::version());
     }
 
     template <>
@@ -102,7 +100,7 @@ namespace infinit
     std::unique_ptr<User>
     Model::_make_user(elle::Buffer const&) const
     {
-      return elle::make_unique<User>(); // FIXME
+      return std::make_unique<User>(); // FIXME
     }
 
     void
@@ -138,7 +136,7 @@ namespace infinit
         {
           ELLE_WARN("%s: invalid block received for %s:%s", *this, address,
                     val.reason());
-          throw elle::Error("invalid block: " + val.reason());
+          elle::err("invalid block: %s", val.reason());
         }
         return res;
       }
@@ -366,7 +364,7 @@ namespace infinit
         return b;
       }
       else
-        return elle::make_unique<MergeConflictResolver>(
+        return std::make_unique<MergeConflictResolver>(
           std::move(a), std::move(b), config);
     }
 

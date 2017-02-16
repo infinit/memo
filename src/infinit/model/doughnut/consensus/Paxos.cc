@@ -164,7 +164,7 @@ namespace infinit
                           std::unique_ptr<storage::Storage> storage,
                           Protocol p)
         {
-          return elle::make_unique<consensus::Paxos::LocalPeer>(
+          return std::make_unique<consensus::Paxos::LocalPeer>(
             *this,
             this->factor(),
             this->_rebalance_auto_expand,
@@ -284,7 +284,7 @@ namespace infinit
         {
           Paxos::PaxosClient::Peers res;
           for (auto member: dht.overlay()->lookup_nodes(q))
-            res.push_back(elle::make_unique<PaxosPeer>(
+            res.push_back(std::make_unique<PaxosPeer>(
                             std::move(member), address, local_version));
           return res;
         }
@@ -474,12 +474,11 @@ namespace infinit
               {
                 ELLE_LOG_COMPONENT(
                   "infinit.model.doughnut.consensus.Paxos.rebalance");
-                static auto const op = overlay::OP_FETCH;
                 PaxosServer::Quorum q;
                 if (this->_quorums.find(address) == this->_quorums.end())
                 {
                   for (auto wpeer: this->doughnut().overlay()->lookup(
-                         address, this->_factor, op))
+                         address, this->_factor))
                   {
                     if (auto peer = wpeer.lock())
                       q.insert(peer->id());
@@ -515,10 +514,8 @@ namespace infinit
           {
             auto res = this->_load(address);
             if (res.block)
-              throw elle::Error(
-                elle::sprintf(
-                  "immutable block found when paxos was expected: %s",
-                  address));
+              elle::err("immutable block found when paxos was expected: %s",
+                        address);
             else
               return *res.paxos;
           }
@@ -1138,9 +1135,7 @@ namespace infinit
             if (!data.block)
             {
               ELLE_TRACE("%s: plain fetch called on mutable block", *this);
-              throw elle::Error(
-                elle::sprintf(
-                  "plain fetch called on mutable block %f", address));
+              elle::err("plain fetch called on mutable block %f", address);
             }
             return std::unique_ptr<blocks::Block>(data.block.release());
           }
@@ -1382,19 +1377,20 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: store %f", *this, *inblock);
           std::shared_ptr<blocks::Block> b(inblock.release());
           ELLE_ASSERT(b);
-          overlay::Operation op;
-          switch (mode)
+          auto owners = [&]
           {
-            case STORE_INSERT:
-              op = overlay::OP_INSERT;
-              break;
-            case STORE_UPDATE:
-              op = overlay::OP_UPDATE;
-              break;
-            default:
+            switch (mode)
+            {
+              case STORE_INSERT:
+                return this->doughnut().overlay()->allocate(
+                  b->address(), this->_factor);
+              case STORE_UPDATE:
+                return this->doughnut().overlay()->lookup(
+                  b->address(), this->_factor, false);
+              default:
               elle::unreachable();
-          }
-          auto owners = this->_owners(b->address(), this->_factor, op);
+            }
+          }();
           if (dynamic_cast<blocks::MutableBlock*>(b.get()))
           {
             Paxos::PaxosClient::Peers peers;
@@ -1410,12 +1406,12 @@ namespace infinit
               {
                 peers_id.insert(peer->id());
                 peers.push_back(
-                  elle::make_unique<PaxosPeer>(wpeer, b->address()));
+                  std::make_unique<PaxosPeer>(wpeer, b->address()));
               }
             }
             if (peers.empty())
               elle::err("no peer available for %s of %f",
-                        op == overlay::OP_INSERT ? "insertion" : "update",
+                        mode == STORE_INSERT ? "insertion" : "update",
                         b->address());
             ELLE_DEBUG("owners: %f", peers);
             // FIXME: client is persisted on conflict resolution, hence the
@@ -1492,7 +1488,7 @@ namespace infinit
             };
             if (reached.size() == 0u)
               elle::err("no peer available for %s of %f",
-                        op == overlay::OP_INSERT ? "insertion" : "update",
+                        mode == STORE_INSERT ? "insertion" : "update",
                         b->address());
             if (this->doughnut().version() >= elle::Version(0, 6, 0))
               for (auto peer: reached)
@@ -1580,7 +1576,7 @@ namespace infinit
           std::unordered_map<Address, PaxosClient::Peers> peers;
           for (auto r: hits)
             peers[r.first].push_back(
-              elle::make_unique<PaxosPeer>(r.second, r.first, versions.at(r.first)));
+              std::make_unique<PaxosPeer>(r.second, r.first, versions.at(r.first)));
           reactor::for_each_parallel(
             peers,
             [&] (std::pair<Address const, PaxosClient::Peers>& p)
@@ -1604,7 +1600,7 @@ namespace infinit
           if (this->doughnut().version() < elle::Version(0, 5, 0))
           {
             auto peers =
-              this->_owners(address, this->_factor, overlay::OP_FETCH);
+              this->doughnut().overlay()->lookup(address, this->_factor);
             return fetch_from_members(peers, address, std::move(local_version));
           }
           auto peers = this->_peers(address, local_version);
@@ -1681,15 +1677,12 @@ namespace infinit
         Paxos::_peers(Address const& address,
                       boost::optional<int> local_version)
         {
-          auto owners =
-            this->_owners(address,
-                          this->_factor,
-                          address.mutable_block() ?
-                            overlay::OP_FETCH_FAST : overlay::OP_FETCH);
+          auto owners = this->doughnut().overlay()->lookup(
+            address, this->_factor, address.mutable_block());
           PaxosClient::Peers peers;
           for (auto peer: owners)
             peers.push_back(
-              elle::make_unique<PaxosPeer>(peer, address, local_version));
+              std::make_unique<PaxosPeer>(peer, address, local_version));
           ELLE_DEBUG("peers: %f", peers);
           return peers;
         }
@@ -1739,8 +1732,8 @@ namespace infinit
           // Make sure we didn't lose a previous owner because of the overlay
           // failing to look it up.
           PaxosServer::Quorum new_q(q);
-          for (auto const& wowner: this->_owners(
-                 address, this->_factor, overlay::OP_INSERT))
+          for (auto const& wowner:
+                 this->doughnut().overlay()->allocate(address, this->_factor))
           {
             if (signed(new_q.size()) >= this->_factor)
               break;
@@ -1922,7 +1915,7 @@ namespace infinit
           //   auto node = elle::sprintf("%s", hit.node());
           //   stat_hits.emplace(node, std::move(hit));
           // }
-          // return elle::make_unique<PaxosStat>(std::move(stat_hits));
+          // return std::make_unique<PaxosStat>(std::move(stat_hits));
           return Super::stat(address);
         }
 
@@ -1965,7 +1958,7 @@ namespace infinit
         std::unique_ptr<Consensus>
         Paxos::Configuration::make(model::doughnut::Doughnut& dht)
         {
-          return elle::make_unique<Paxos>(
+          return std::make_unique<Paxos>(
             dht,
             consensus::replication_factor = this->_replication_factor,
             consensus::node_timeout = this->_node_timeout,

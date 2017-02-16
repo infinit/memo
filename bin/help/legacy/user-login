@@ -1,0 +1,10 @@
+user: login: Usage: _build/macosx64/bin/infinit-user --login [OPTIONS...]
+
+Log the user to the Hub:
+
+Login options:
+  -n [ --name ] arg      User name (default: system user)
+  --password arg         Password to authenticate with the Hub (default: 
+                         prompt)
+
+

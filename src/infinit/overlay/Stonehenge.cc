@@ -49,9 +49,13 @@ namespace infinit
     `-------*/
 
     reactor::Generator<Overlay::WeakMember>
-    Stonehenge::_lookup(model::Address address,
-                        int n,
-                        Operation) const
+    Stonehenge::_allocate(model::Address address, int n) const
+    {
+      return this->_lookup(address, n, false);
+    }
+
+    reactor::Generator<Overlay::WeakMember>
+    Stonehenge::_lookup(model::Address address, int n, bool) const
     {
       // Use modulo on the address to determine the owner and yield the n
       // following nodes.
@@ -89,7 +93,7 @@ namespace infinit
     Stonehenge::_make_member(NodeLocation const& peer) const
     {
       if (peer.endpoints().empty())
-        throw elle::Error(elle::sprintf("missing endpoint for %f", peer.id()));
+        elle::err("missing endpoint for %f", peer.id());
       return this->doughnut()->dock().make_peer(
         peer, model::EndpointsRefetcher());
     }
@@ -153,7 +157,7 @@ namespace infinit
           peer.id,
           Endpoints({model::Endpoint(peer.host, peer.port)}));
       }
-      return elle::make_unique<infinit::overlay::Stonehenge>(
+      return std::make_unique<infinit::overlay::Stonehenge>(
         peers, std::move(local), dht);
     }
 

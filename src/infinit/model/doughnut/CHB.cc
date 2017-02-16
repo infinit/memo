@@ -42,6 +42,12 @@ namespace infinit
         , _owner(other._owner)
       {}
 
+      CHB::CHB(CHB&& other)
+       : Super(std::move(other))
+       , _salt(std::move(other._salt))
+       , _owner(std::move(other._owner))
+      {}
+
       /*---------.
       | Clonable |
       `---------*/
@@ -125,7 +131,7 @@ namespace infinit
           return blocks::RemoveSignature();
         blocks::RemoveSignature res;
         // we need to figure out which key to use, the one giving us access to the owner
-        elle::Buffer to_sign(this->address().value(), sizeof(Address::Value));
+        elle::Buffer to_sign(this->address().value());
         elle::Buffer signature;
         auto& keys = dht.keys();
         auto block = dht.fetch(this->_owner);
@@ -140,7 +146,7 @@ namespace infinit
           auto* acb = dynamic_cast<ACB*>(block.get());
           if (!acb)
           {
-            ELLE_WARN("CHB owner %x is not an ACB, cannot signe remove request",
+            ELLE_WARN("CHB owner %x is not an ACB, cannot sign remove request",
               this->_owner);
           }
           else
@@ -196,7 +202,7 @@ namespace infinit
           return blocks::ValidationResult::failure("Missing field in signature");
         auto& key = *sig.signature_key;
         bool ok = key.verify(*sig.signature,
-          elle::ConstWeakBuffer(this->address().value(), sizeof(Address::Value)));
+          elle::ConstWeakBuffer(this->address().value()));
         if (!ok)
           return blocks::ValidationResult::failure("Invalid signature");
         // now verify that this key has access to owner
@@ -259,7 +265,7 @@ namespace infinit
           saltowner.append(owner.value(), sizeof(Address::Value));
         elle::IOStream stream(saltowner.istreambuf_combine(content));
         elle::Buffer hash;
-        if (content.size() > 262144)
+        if (content.size() > 262144 && reactor::Scheduler::scheduler())
         {
           reactor::background([&] {
               hash = cryptography::hash(stream, cryptography::Oneway::sha256);

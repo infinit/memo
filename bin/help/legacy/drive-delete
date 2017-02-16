@@ -1,0 +1,10 @@
+drive: delete: Usage: _build/macosx64/bin/infinit-drive --delete --name NAME [OPTIONS...]
+
+Delete a drive locally:
+
+Delete options:
+  -n [ --name ] arg      Drive to delete
+  --pull                 Pull the drive if it is on the Hub
+  --purge                Remove objects that depend on the drive
+
+

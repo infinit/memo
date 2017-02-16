@@ -52,7 +52,7 @@ def test(infinit, size, description = False):
     test.name += 1
     hsize = "%s%s" % (size, qual)
     args = [
-      'infinit-storage', '--create', '--filesystem', str(test.name),
+      'infinit-storage', '--create', str(test.name), '--filesystem',
       '--capacity', hsize,
     ]
     if description:
@@ -95,7 +95,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as tmp:
   bob.run(['infinit-network', '--run', '--name', 'n', '--as', 'bob',
            '--async', '--cache', '-s'])
   assertEq(len(os.listdir('%s/cache/bob/bob/n' % tmp.state_path)), 2)
-  bob.run(['infinit-storage', '--delete', '--as', 'bob', '--purge', 's'])
+  bob.run(['infinit-storage', '--delete', 's', '--as', 'bob', '--purge'])
   assertEq(len(bob.run_json(['infinit-storage', '--list', '-s', '--as', 'bob'])), 0)
   # Ensure the descriptor is still there.
   assertEq(len(os.listdir(tmp.networks_path)), 1)

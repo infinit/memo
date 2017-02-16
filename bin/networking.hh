@@ -1,44 +1,16 @@
-#ifndef INFINIT_BIN_NETWORKING_HH
-# define INFINIT_BIN_NETWORKING_HH
+#pragma once
 
 using namespace boost::posix_time;
 
-# include <reactor/Barrier.hh>
+#include <elle/bytes.hh>
 
-# include <protocol/exceptions.hh>
+#include <reactor/Barrier.hh>
 
-# include <infinit/model/doughnut/protocol.hh>
+#include <protocol/exceptions.hh>
 
-# include <version.hh>
+#include <infinit/model/doughnut/protocol.hh>
 
-namespace bytes
-{
-  // XXX: Move that somewhere to elle/elle/src/elle/bytes/conversion.hh or
-  // something like that.
-  static std::vector<std::pair<std::string, std::string>> capacities{
-    { "B",  "B"   },
-    { "kB", "KiB" },
-    { "MB", "MiB" },
-    { "GB", "GiB" },
-    { "TB", "TiB" },
-    { "EB", "EiB" },
-    { "ZB", "ZiB" },
-  };
-
-  std::string
-  to_human(uint64_t bytes,
-           bool si = true)
-  {
-    for (uint64_t i = 1; i < capacities.size() + 1; ++i)
-    {
-      if ((double) bytes / pow((si ? 1024 : 1000), i) < 1 || i == (capacities.size()))
-        return elle::sprintf("%.1f %s",
-                             bytes / pow((si ? 1024 : 1000), i - 1),
-                             (si ? capacities[i - 1].second : capacities[i - 1].first));
-    }
-    elle::unreachable();
-  }
-}
+#include <version.hh>
 
 namespace infinit
 {
@@ -95,8 +67,8 @@ namespace infinit
       return elle::sprintf(
         "%sms for %s (%s/sec)",
         duration.total_milliseconds(),
-        bytes::to_human(size, false),
-        bytes::to_human((double) 1000 * size / duration.total_milliseconds(), false));
+        elle::human_data_size(size, false),
+        elle::human_data_size(1000. * size / duration.total_milliseconds(), false));
     }
 
     static
@@ -207,7 +179,7 @@ namespace infinit
 
       {
         ELLE_TRACE("create tcp server (listening on port: %s)", port);
-        auto server = elle::make_unique<reactor::network::TCPServer>();
+        auto server = std::make_unique<reactor::network::TCPServer>();
         server->listen(port);
         port = server->port();
         if (verbose)
@@ -302,7 +274,7 @@ namespace infinit
       {
         ELLE_TRACE("open utp socket to %s:%s (xor: %s)", host, port, xorit);
         server.listen(0);
-        auto s = elle::make_unique<reactor::network::UTPSocket>(server);
+        auto s = std::make_unique<reactor::network::UTPSocket>(server);
         server.xorify(xorit);
         s->connect(host, port);
         return s;
@@ -562,112 +534,83 @@ namespace infinit
     };
 
 
-    static
-    void
-    perfom(std::string const& host,
-           boost::program_options::variables_map const& args,
-           elle::Version const& _version = ::version)
+    namespace
     {
-      elle::Version v = _version;
-      auto protocol = infinit::model::doughnut::Protocol::all;
-      if (args.count("protocol"))
-        protocol = infinit::protocol_get(args);
-      auto mode = get_mode(args);
-      int64_t packets_count = packets_count_get(args);
-      elle::Buffer::Size packet_size = packet_size_get(args);
-
-      auto action = [&] (infinit::protocol::ChanneledStream& stream) {
-        if (mode == Operations::all || mode == Operations::upload)
-        {
-          try
-          {
-            upload(stream, packet_size, packets_count, flag(args, "verbose"));
-          }
-          catch (reactor::network::Exception const&)
-          {
-            std::cerr << "  Something went wrong during upload:"
-            << elle::exception_string()
-            << std::endl;
-          }
-        }
-        if (mode == Operations::all || mode == Operations::download)
-        {
-          try
-          {
-            download(stream, packet_size, packets_count, flag(args, "verbose"));
-          }
-          catch (reactor::network::Exception const&)
-          {
-            std::cerr << "  Something went wrong during download:"
-            << elle::exception_string()
-            << std::endl;
-          }
-        }
-      };
-
-      auto match_versions = [&] (infinit::protocol::ChanneledStream& stream) {
-        infinit::RPC<elle::Version (elle::Version const&)> get_version{
-          "match_versions", stream, v
-        };
-        try
-        {
-          auto remote_version = get_version(_version);
-          if (v > remote_version)
-          {
-            ELLE_WARN("Behave as the remote version (%s)", remote_version);
-            v = remote_version;
-          }
-        }
-        // If protocol aren't compatible, it might just stall...
-        // XXX: Add a timeout.
-        catch (infinit::protocol::Error const& error)
-        {
-          elle::err("Protocol error establishing connection with the remote.\n"
-                    "Make sure it uses the same version or use "
-                    "--compatibility-version");
-        }
-      };
-
-      if (tcp_enabled(protocol))
+      void
+      perform(std::string const& host,
+             boost::program_options::variables_map const& args,
+             elle::Version const& _version = ::version)
       {
-        auto tcp = [&]
-        {
-          ELLE_TRACE_SCOPE("TCP: Client");
-          std::cout << "TCP:" << std::endl;
-          std::unique_ptr<reactor::network::TCPSocket> socket;
-          try
+        elle::Version v = _version;
+        auto protocol = infinit::model::doughnut::Protocol::all;
+        if (args.count("protocol"))
+          protocol = infinit::protocol_get(args);
+        auto mode = get_mode(args);
+        int64_t packets_count = packets_count_get(args);
+        elle::Buffer::Size packet_size = packet_size_get(args);
+
+        auto action = [&] (infinit::protocol::ChanneledStream& stream) {
+          if (mode == Operations::all || mode == Operations::upload)
           {
-            socket.reset(tcp::socket(host, get_tcp_port(args)).release());
-          }
-          catch (reactor::network::Exception const&)
-          {
-            std::cerr << "  Unable to establish connection: "
-                      << elle::exception_string()
-                      << std::endl;
-            return;
-          }
-          infinit::protocol::Serializer serializer{
-            *socket, infinit::elle_serialization_version(v), false};
-          auto stream = infinit::protocol::ChanneledStream{serializer};
-          match_versions(stream);
-          action(stream);
-        };
-        tcp();
-      }
-      if (utp_enabled(protocol))
-      {
-        auto utp = [&] (bool xored)
-          {
-            reactor::network::UTPServer server;
-            std::unique_ptr<reactor::network::UTPSocket> socket;
             try
             {
-              socket.reset(
-                utp::socket(
-                  server,
-                  host,
-                  xored ? get_xored_utp_port(args) : get_utp_port(args),
-                  xored ? 0xFF : 0).release());
+              upload(stream, packet_size, packets_count, flag(args, "verbose"));
+            }
+            catch (reactor::network::Exception const&)
+            {
+              std::cerr << "  Something went wrong during upload:"
+              << elle::exception_string()
+              << std::endl;
+            }
+          }
+          if (mode == Operations::all || mode == Operations::download)
+          {
+            try
+            {
+              download(stream, packet_size, packets_count, flag(args, "verbose"));
+            }
+            catch (reactor::network::Exception const&)
+            {
+              std::cerr << "  Something went wrong during download:"
+              << elle::exception_string()
+              << std::endl;
+            }
+          }
+        };
+
+        auto match_versions = [&] (infinit::protocol::ChanneledStream& stream) {
+          infinit::RPC<elle::Version (elle::Version const&)> get_version{
+            "match_versions", stream, v
+          };
+          try
+          {
+            auto remote_version = get_version(_version);
+            if (v > remote_version)
+            {
+              ELLE_WARN("Behave as the remote version (%s)", remote_version);
+              v = remote_version;
+            }
+          }
+          // If protocol aren't compatible, it might just stall...
+          // XXX: Add a timeout.
+          catch (infinit::protocol::Error const& error)
+          {
+            elle::err("Protocol error establishing connection with the remote.\n"
+                      "Make sure it uses the same version or use "
+                      "--compatibility-version");
+          }
+        };
+
+        if (tcp_enabled(protocol))
+        {
+          auto tcp = [&]
+          {
+            ELLE_TRACE_SCOPE("TCP: Client");
+            std::cout << "TCP:" << std::endl;
+            std::unique_ptr<reactor::network::TCPSocket> socket;
+            try
+            {
+              socket.reset(tcp::socket(host, get_tcp_port(args)).release());
             }
             catch (reactor::network::Exception const&)
             {
@@ -682,20 +625,48 @@ namespace infinit
             match_versions(stream);
             action(stream);
           };
-        if (non_xored_enabled(args))
-        {
-          std::cout << "UTP:" << std::endl;
-          utp(false);
+          tcp();
         }
-        if (xored_enabled(args))
+        if (utp_enabled(protocol))
         {
-          std::cout << "xored UTP:" << std::endl;
-          utp(true);
+          auto utp = [&] (bool xored)
+            {
+              reactor::network::UTPServer server;
+              std::unique_ptr<reactor::network::UTPSocket> socket;
+              try
+              {
+                socket.reset(
+                  utp::socket(
+                    server,
+                    host,
+                    xored ? get_xored_utp_port(args) : get_utp_port(args),
+                    xored ? 0xFF : 0).release());
+              }
+              catch (reactor::network::Exception const&)
+              {
+                std::cerr << "  Unable to establish connection: "
+                          << elle::exception_string()
+                          << std::endl;
+                return;
+              }
+              infinit::protocol::Serializer serializer{
+                *socket, infinit::elle_serialization_version(v), false};
+              auto stream = infinit::protocol::ChanneledStream{serializer};
+              match_versions(stream);
+              action(stream);
+            };
+          if (non_xored_enabled(args))
+          {
+            std::cout << "UTP:" << std::endl;
+            utp(false);
+          }
+          if (xored_enabled(args))
+          {
+            std::cout << "xored UTP:" << std::endl;
+            utp(true);
+          }
         }
       }
     }
   }
 }
-
-
-#endif

@@ -1,0 +1,18 @@
+Usage: _build/macosx64/bin/infinit-device MODE [OPTIONS...]		       |Usage: _build/macosx64/bin/infinit-device device [MODE|--help]
+									       |Infinit device management utility.
+Infinit device utility:							       |
+									       |Modes:
+Modes:									       |  receive    receive an object from another device using
+  --transmit		       Transmit object to another device using the Hub |https://beyond.infinit.sh
+  --receive		       Receive an object from another device using the |  transmit   transmit an object to another device using
+			       Hub					       |https://beyond.infinit.sh
+									       |
+Miscellaneous:								       |Options:
+  -h [ --help ]		       Display the help				       |  -h, --help		    show this help message
+  -s [ --script ]	       Silence all extraneous human friendly messages  |
+  --compatibility-version arg  Force compatibility version		       |
+  -v [ --version ]	       Display version				       |
+  --critical-log	       Path to critical log file, none to disable      |
+  -a [ --as ] arg	       User to run commands as (default: system user)  |
+									       |
+									       |

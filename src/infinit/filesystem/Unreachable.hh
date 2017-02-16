@@ -1,8 +1,7 @@
-#ifndef INFINIT_FILESYSTEM_UNREACHABLE_HH
-# define INFINIT_FILESYSTEM_UNREACHABLE_HH
+#pragma once
 
-# include <infinit/filesystem/Node.hh>
-# include <infinit/filesystem/umbrella.hh>
+#include <infinit/filesystem/Node.hh>
+#include <infinit/filesystem/umbrella.hh>
 
 namespace infinit
 {
@@ -40,37 +39,37 @@ namespace infinit
       void
       stat(struct stat*) override;
       void
-      list_directory(rfs::OnDirectoryEntry cb) override THROW_ACCES;
+      list_directory(rfs::OnDirectoryEntry cb) override { THROW_ACCES(); }
       std::unique_ptr<rfs::Handle>
-      open(int flags, mode_t mode) override THROW_ACCES;
+      open(int flags, mode_t mode) override { THROW_ACCES(); }
       std::unique_ptr<rfs::Handle>
-      create(int flags, mode_t mode) override THROW_ACCES;
+      create(int flags, mode_t mode) override { THROW_ACCES(); }
       void
-      unlink() override THROW_ACCES;
+      unlink() override { THROW_ACCES(); }
       void
-      mkdir(mode_t mode) override THROW_ACCES;
+      mkdir(mode_t mode) override { THROW_ACCES(); }
       void
-      rmdir() override THROW_ACCES;
+      rmdir() override { THROW_ACCES(); }
       void
-      rename(boost::filesystem::path const& where) override THROW_ACCES;
+      rename(boost::filesystem::path const& where) override { THROW_ACCES(); }
       boost::filesystem::path
-      readlink() override THROW_ACCES;
+      readlink() override { THROW_ACCES(); }
       void
-      symlink(boost::filesystem::path const& where) override THROW_ACCES;
+      symlink(boost::filesystem::path const& where) override { THROW_ACCES(); }
       void
-      link(boost::filesystem::path const& where) override THROW_ACCES;
+      link(boost::filesystem::path const& where) override { THROW_ACCES(); }
       void
-      chmod(mode_t mode) override THROW_ACCES;
+      chmod(mode_t mode) override { THROW_ACCES(); }
       void
-      chown(int uid, int gid) override THROW_ACCES;
+      chown(int uid, int gid) override { THROW_ACCES(); }
       void
-      statfs(struct statvfs *) override THROW_ACCES;
+      statfs(struct statvfs *) override { THROW_ACCES(); }
       void
-      utimens(const struct timespec tv[2]) override THROW_ACCES;
+      utimens(const struct timespec tv[2]) override { THROW_ACCES(); }
       void
-      truncate(off_t new_size) override THROW_ACCES;
+      truncate(off_t new_size) override { THROW_ACCES(); }
       std::shared_ptr<Path>
-      child(std::string const& name) override THROW_ACCES;
+      child(std::string const& name) override { THROW_ACCES(); }
       bool
       allow_cache() override;
       std::string
@@ -81,13 +80,13 @@ namespace infinit
       `-----*/
     public:
       void
-      _commit(WriteTarget target) override THROW_ACCES;
+      _commit(WriteTarget target) override { THROW_ACCES(); }
       void
-      _fetch() override THROW_ACCES;
+      _fetch() override { THROW_ACCES(); }
       FileHeader&
-      _header() override THROW_ACCES;
+      _header() override { THROW_ACCES(); }
       model::blocks::ACLBlock*
-      _header_block(bool force) override THROW_ACCES;
+      _header_block(bool force) override { THROW_ACCES(); }
 
       /*----------.
       | Printable |
@@ -99,4 +98,3 @@ namespace infinit
   }
 }
 
-# endif

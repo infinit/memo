@@ -1,0 +1,14 @@
+drive: create: Usage: _build/macosx64/bin/infinit-drive --create --name NAME --network NETWORK --volume VOLUME [--description DESCRIPTION] [OPTIONS...]
+
+Create a drive (a network and volume pair):
+
+Create options:
+  -n [ --name ] arg      Created drive name
+  --description arg      Description of drive
+  -N [ --network ] arg   Associated network name
+  -V [ --volume ] arg    Associated volume name
+  -i [ --icon ] arg      Path to an image to use as icon
+  --push-drive           Push the created drive to the Hub
+  -p [ --push ]          Alias for --push-drive
+
+

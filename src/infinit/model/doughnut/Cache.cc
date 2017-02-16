@@ -220,7 +220,7 @@ namespace infinit
           if (!b.validate(doughnut(), false))
           {
             ELLE_WARN("%s: invalid block received for %s", this, b.address());
-            throw elle::Error("invalid block");
+            elle::err("invalid block");
           }
           static bool decode = elle::os::getenv("INFINIT_NO_PREEMPT_DECODE", "").empty();
           if (decode)
@@ -378,7 +378,7 @@ namespace infinit
             elle::Bench::BenchScope bs(bench);
             this->_backend->store(
               std::move(block), mode,
-              elle::make_unique<CacheConflictResolver>(&cloned, std::move(resolver)));
+              std::make_unique<CacheConflictResolver>(&cloned, std::move(resolver)));
           }
           if (mb)
           {

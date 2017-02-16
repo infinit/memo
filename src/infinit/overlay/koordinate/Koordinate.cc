@@ -45,6 +45,14 @@ namespace infinit
       | Lookup |
       `-------*/
 
+      reactor::Generator<Overlay::WeakMember>
+      Koordinate::_allocate(model::Address address,
+                            int n) const
+      {
+        this->_validate();
+        return (*begin(this->_backends))->allocate(address, n);
+      }
+
       reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
       Koordinate::_lookup(std::vector<model::Address> const& addrs, int n) const
       {
@@ -53,10 +61,12 @@ namespace infinit
       }
 
       reactor::Generator<Overlay::WeakMember>
-      Koordinate::_lookup(model::Address address, int n, Operation op) const
+      Koordinate::_lookup(model::Address address,
+                          int n,
+                          bool fast) const
       {
         this->_validate();
-        return (*begin(this->_backends))->lookup(address, n, op);
+        return (*begin(this->_backends))->lookup(address, n, fast);
       }
 
       Overlay::WeakMember

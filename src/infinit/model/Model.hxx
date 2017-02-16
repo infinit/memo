@@ -1,6 +1,3 @@
-#ifndef INFINIT_MODEL_MODEL_HXX
-# define INFINIT_MODEL_MODEL_HXX
-
 namespace infinit
 {
   namespace model
@@ -38,5 +35,3 @@ namespace elle
     };
   }
 }
-
-#endif

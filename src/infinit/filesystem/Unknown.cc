@@ -90,12 +90,12 @@ namespace infinit
         });
         DirectoryData dd {this->_parent->_path / _name, address};
         dd._inherit_auth = true;
-        dd.write(*_owner.block_store(), Operation{OperationType::update, "/inherit"}, b, true, true);
+        dd.write(_owner, Operation{OperationType::update, "/inherit"}, b, true, true);
       }
       else
         this->_owner.store_or_die(
           std::move(b), model::STORE_INSERT,
-          elle::make_unique<NewFolderResolver>(
+          std::make_unique<NewFolderResolver>(
             (this->_parent->_path / _name)));
       ELLE_ASSERT_EQ(this->_parent->_files.find(this->_name),
                      this->_parent->_files.end());
@@ -106,7 +106,7 @@ namespace infinit
           this->_owner.unchecked_remove(address);
       });
       this->_parent->write(
-        *_owner.block_store(),
+        _owner,
         {OperationType::insert, this->_name, EntryType::directory, address},
         parent_block, true);
       revert.abort();
@@ -123,7 +123,7 @@ namespace infinit
       _parent->_files.insert(
         std::make_pair(_name,
           std::make_pair(EntryType::pending, b->address())));
-      _parent->write(*_owner.block_store(),
+      _parent->write(_owner,
                      Operation{
                        (flags & O_EXCL) ? OperationType::insert_exclusive : OperationType::insert,
                        _name, EntryType::pending, b->address()},
@@ -136,7 +136,7 @@ namespace infinit
           this->_parent->_files.erase(_name);
           try
           {
-            _parent->write(*_owner.block_store(),
+            _parent->write(_owner,
                            Operation{OperationType::remove, _name});
           }
           catch (elle::Error const& e)
@@ -147,7 +147,8 @@ namespace infinit
       {
 
         // Handle acl inheritance
-        FileData fd(_parent->_path / _name, b->address(), mode & 0700);
+        FileData fd(_parent->_path / _name, b->address(), mode & 0700,
+          _owner.block_size().value_or(File::default_block_size));
         if (_parent->inherit_auth())
         {
           umbrella(
@@ -158,7 +159,7 @@ namespace infinit
             });
         }
         // push b
-        fd.write(*_owner.block_store(), WriteTarget::all, b, true);
+        fd.write(_owner, WriteTarget::all, b, true);
         // arm rollback
         elle::With<elle::Finally>(
         [&]
@@ -175,7 +176,7 @@ namespace infinit
         {
           // push definitive entry to directory
           _parent->_files[_name] = std::make_pair(EntryType::file, b->address());
-          _parent->write(*_owner.block_store(),
+          _parent->write(_owner,
                          Operation{
                            OperationType::insert,
                            _name, EntryType::file, b->address()},
@@ -200,7 +201,7 @@ namespace infinit
       if (_parent->_files.find(_name) != _parent->_files.end())
       {
         if (flags & O_EXCL)
-          THROW_EXIST;
+          THROW_EXIST();
         ELLE_WARN("File %s exists where it should not", _name);
         File f(_owner, _parent->_files.at(_name).second, {}, _parent, _name);
         return f.open(flags, mode);
@@ -215,7 +216,7 @@ namespace infinit
       _parent->_files.insert(
         std::make_pair(_name,
           std::make_pair(EntryType::file, b->address())));
-      _parent->write(*_owner.block_store(),
+      _parent->write(_owner,
                      Operation{
                        (flags & O_EXCL) ? OperationType::insert_exclusive : OperationType::insert,
                        _name, EntryType::file, b->address()},
@@ -228,7 +229,7 @@ namespace infinit
           this->_parent->_files.erase(_name);
           try
           {
-            _parent->write(*_owner.block_store(),
+            _parent->write(_owner,
                            Operation{OperationType::remove, _name});
           }
           catch (elle::Error const& e)
@@ -237,7 +238,8 @@ namespace infinit
           }
         }) << [&] (elle::Finally& remove_from_parent)
       {
-        FileData fd(_parent->_path / _name, b->address(), mode & 0700);
+        FileData fd(_parent->_path / _name, b->address(), mode & 0700,
+                    _owner.block_size().value_or(File::default_block_size));
         if (_parent->inherit_auth())
         {
           umbrella(
@@ -247,7 +249,7 @@ namespace infinit
                 dynamic_cast<ACLBlock&>(*b));
             });
         }
-        fd.write(*_owner.block_store(), WriteTarget::all, b, true);
+        fd.write(_owner, WriteTarget::all, b, true);
         handle.reset(
           new FileHandle(_owner, fd, true));
         remove_from_parent.abort();
@@ -320,11 +322,11 @@ namespace infinit
       auto addr = b->address();
       _owner.store_or_die(
         std::move(b), model::STORE_INSERT,
-        elle::make_unique<NewSymlinkResolver>(this->_parent->_path / this->_name,
+        std::make_unique<NewSymlinkResolver>(this->_parent->_path / this->_name,
                                               where));
       this->_parent->_files.emplace(
         this->_name, std::make_pair(EntryType::symlink, addr));
-      _parent->write(*_owner.block_store(),
+      _parent->write(_owner,
                      Operation{OperationType::insert, _name, EntryType::symlink, addr},
                      DirectoryData::null_block, true);
     }

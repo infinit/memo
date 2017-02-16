@@ -1,0 +1,8 @@
+journal: stat: Usage: _build/macosx64/bin/infinit-journal --stat [--network NETWORK] [OPTIONS...]
+
+Show the remaining asynchronous operations count and size:
+
+Stat options:
+  -N [ --network ] arg   Network to check
+
+

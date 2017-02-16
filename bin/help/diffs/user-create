@@ -1,0 +1,23 @@
+user: create: Usage: _build/macosx64/bin/infinit-user --create [OPTIONS...]    |user: create: Usage: _build/macosx64/bin/infinit-user user create [OPTIONS]
+									       |Create a user
+Create a user:								       |
+									       |Options:
+Create options:								       |  -h, --help		    show this help message
+  -n [ --name ] arg	  User name (default: system user)		       |      --compatibility-version arg  compatibility version to force
+  --description arg	  Description of user				       |  -s, --script		    suppress extraneous human friendly messages and use
+  -k [ --key ] arg	  RSA key pair in PEM format - e.g. your SSH key       |JSON output
+			  (default: generate key pair)			       |  -a, --as arg		    user to run commands as (default: akim)
+  --push-user		  Push the user to the Hub			       |  -n, --name arg	    name of the user to create (default: akim)
+  -p [ --push ]		  Alias for --push-user				       |      --description arg	    user description
+  --email arg		  User email address (optional)			       |  -k, --key arg		    RSA key pair in PEM format - e.g. your SSH key
+  --fullname arg	  Fullname of user (optional)			       |  -e, --email arg	    user email
+  --full		  Include private key in order to facilitate device    |      --fullname arg	    user full name
+			  pairing and fetching lost keys		       |  -P, --password arg	    password to authenticate with
+  --password arg	  Password to authenticate with the Hub. Used with     |https://beyond.infinit.sh
+			  --full (default: prompt for password)		       |  -l, --ldap-name arg	    user LDAP distinguished name
+  -l [ --ldap-name ] arg  LDAP distinguished name of the user, enables	       |  -o, --output arg	    file to write the user to
+			  authentication through LDAP			       |      --push-user	    push user to https://beyond.infinit.sh
+  -o [ --output ] arg	  File to write the user to			       |  -p, --push		    push user to https://beyond.infinit.sh
+			  (default: stdout)				       |      --full		    include private key (do not use unless you
+									       |understand the implications
+									       |

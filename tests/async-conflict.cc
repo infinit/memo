@@ -46,11 +46,11 @@ make(
     [&] (infinit::model::doughnut::Doughnut& dht)
         -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
         {
-           auto backend = elle::make_unique<
+           auto backend = std::make_unique<
              infinit::model::doughnut::consensus::Paxos>(dht, 1);
            if (!enable_async)
              return std::move(backend);
-           auto async = elle::make_unique<
+           auto async = std::make_unique<
              infinit::model::doughnut::consensus::Async>(std::move(backend),
                where / "async", cache_size);
            return std::move(async);
@@ -59,7 +59,7 @@ make(
         [=] (infinit::model::doughnut::Doughnut& dht,
              std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return elle::make_unique<infinit::overlay::Kalimero>(&dht, local);
+          return std::make_unique<infinit::overlay::Kalimero>(&dht, local);
         };
   auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
     node_id,
@@ -71,9 +71,9 @@ make(
     boost::optional<int>(),
     boost::optional<boost::asio::ip::address>(),
     std::move(s));
-  auto ops = elle::make_unique<infinit::filesystem::FileSystem>(
+  auto ops = std::make_unique<infinit::filesystem::FileSystem>(
     "volume", dn, infinit::filesystem::allow_root_creation = true);
-  auto fs = elle::make_unique<reactor::filesystem::FileSystem>(
+  auto fs = std::make_unique<reactor::filesystem::FileSystem>(
     std::move(ops), true);
   return fs;
 }

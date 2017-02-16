@@ -126,9 +126,9 @@ namespace infinit
           friend class doughnut::Local;
           void
           _run();
-          ELLE_ATTRIBUTE(Local&, local);
-          ELLE_ATTRIBUTE(std::shared_ptr<std::iostream>, stream);
-          ELLE_ATTRIBUTE(protocol::Serializer, serializer);
+          ELLE_ATTRIBUTE_R(Local&, local);
+          ELLE_ATTRIBUTE_R(std::shared_ptr<std::iostream>, stream);
+          ELLE_ATTRIBUTE_R(protocol::Serializer, serializer);
           ELLE_ATTRIBUTE_R(protocol::ChanneledStream, channels);
           ELLE_ATTRIBUTE_R(RPCServer, rpcs);
         };

@@ -52,10 +52,15 @@ namespace infinit
         static const bool enable_fast_fail =
           !elle::os::getenv("INFINIT_SOFTFAIL_FAST", "true").empty();
         elle::DurationOpt connect_timeout;
-        if (connect_timeout_sec)
-          connect_timeout = boost::posix_time::seconds(connect_timeout_sec);
         int max_attempts = 0;
-        if (softfail_timeout_sec && connect_timeout_sec)
+        if (connect_timeout_sec > 0)
+          connect_timeout = boost::posix_time::seconds(connect_timeout_sec);
+        else if (connect_timeout_sec < 0)
+        {
+          connect_timeout = boost::posix_time::seconds(0);
+          max_attempts = 1;
+        }
+        if (softfail_timeout_sec && connect_timeout_sec>0)
         {
           int sts = std::max(softfail_timeout_sec, connect_timeout_sec);
           max_attempts = sts / connect_timeout_sec;

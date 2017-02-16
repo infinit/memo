@@ -261,7 +261,7 @@ COMMAND(create)
   else
   {
     ifnt.user_save(user);
-    report_action("generated", "user", name, std::string("locally"));
+    report_action("generated", "user", name, "locally");
   }
   if (push)
     _push(args, user, false);
@@ -341,7 +341,7 @@ COMMAND(delete_)
         continue;
       auto drive_path = ifnt._drive_path(drive);
       if (boost::filesystem::remove(drive_path))
-        report_action("deleted", "drive", drive, std::string("locally"));
+        report_action("deleted", "drive", drive, "locally");
     }
     for (auto const& volume_: ifnt.volumes_get())
     {
@@ -350,7 +350,7 @@ COMMAND(delete_)
         continue;
       auto volume_path = ifnt._volume_path(volume);
       if (boost::filesystem::remove(volume_path))
-        report_action("deleted", "volume", volume, std::string("locally"));
+        report_action("deleted", "volume", volume, "locally");
     }
     for (auto const& pair: ifnt.passports_get())
     {
@@ -365,7 +365,7 @@ COMMAND(delete_)
       {
         report_action("deleted", "passport",
                       elle::sprintf("%s: %s", network, pair.second),
-                      std::string("locally"));
+                      "locally");
       }
     }
     for (auto const& network_: ifnt.networks_get(user))
@@ -381,7 +381,7 @@ COMMAND(delete_)
     boost::filesystem::remove(avatar_path(name).get());
   auto path = ifnt._user_path(user.name);
   if (boost::filesystem::remove(path))
-    report_action("deleted", "user", user.name, std::string("locally"));
+    report_action("deleted", "user", user.name, "locally");
   else
   {
     throw elle::Error(
@@ -424,7 +424,7 @@ COMMAND(login)
   elle::serialization::json::SerializerIn input(json, false);
   auto user = input.deserialize<infinit::User>();
   ifnt.user_save(user, true);
-  report_action("saved", "user", name, std::string("locally"));
+  report_action("saved", "user", name, "locally");
 }
 
 COMMAND(list)
@@ -491,7 +491,7 @@ _save_avatar(std::string const& name,
   ifnt._open_write(f, ifnt._user_avatar_path(name),
                    name, "avatar", true, std::ios::out | std::ios::binary);
   f.write(reinterpret_cast<char const*>(buffer.contents()), buffer.size());
-  report_action("saved", "avatar", name, std::string("locally"));
+  report_action("saved", "avatar", name, "locally");
 }
 
 void
@@ -578,7 +578,7 @@ main(int argc, char** argv)
         { "push-user", bool_switch(),
           elle::sprintf("push the user to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-user" },
-        { "email", value<std::string>(), "optional email address" },
+        { "email", value<std::string>(), "user email address (optional)" },
         option_fullname,
         option_push_full,
         option_push_password,

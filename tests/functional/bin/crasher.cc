@@ -52,7 +52,7 @@ main(int argc, char** argv)
   std::string version =
     vm.count("version") ? option_str(vm, "version") : "test_version";
   auto crash_reporter =
-    elle::make_unique<crash_reporting::CrashReporter>(server, dumps, version);
+    std::make_unique<crash_reporting::CrashReporter>(server, dumps, version);
   if (crash)
     do_crash();
   reactor::Scheduler sched;
