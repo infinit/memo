@@ -328,6 +328,7 @@ namespace infinit
            decltype(cli::no_local_endpoints = false),
            decltype(cli::no_public_endpoints = false),
            decltype(cli::advertise_host = Strings{}),
+           decltype(cli::grpc = boost::none),
            // Hidden options.
            decltype(cli::paxos_rebalancing_auto_expand = boost::none),
            decltype(cli::paxos_rebalancing_inspect = boost::none)>
@@ -360,6 +361,7 @@ namespace infinit
                bool no_local_endpoints = false,
                bool no_public_endpoints = false,
                Strings advertise_host = {},
+               boost::optional<std::string> grpc = {},
                // Hidden options.
                boost::optional<bool> paxos_rebalancing_auto_expand = {},
                boost::optional<bool> paxos_rebalancing_inspect = {});

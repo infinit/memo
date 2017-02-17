@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+service KV {
+  rpc Get(Address) returns (BlockStatus) {}
+  rpc Set(Block) returns (Status) {}
+}
+
+message Address {
+  string address = 1;
+}
+
+message Block {
+  string address = 1;
+  string payload = 2;
+}
+
+message Status {
+  string error = 1;
+}
+
+message BlockStatus {
+  Status status = 1;
+  Block block = 2;
+}

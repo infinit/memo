@@ -275,6 +275,9 @@ def configure(
   outguess_configure = drake.node('src/infinit/model/steg/outguess-0.2/configure')
   outguess_makefile = drake.node('src/infinit/model/steg/outguess-0.2/Makefile')
 
+  if not windows:
+    grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config)
+    grpc_lib = grpc.grpc_lib
   if windows:
     cxx_config_infinit.lib('shlwapi')
     cxx_config_infinit.lib('ws2_32')
@@ -291,7 +294,7 @@ def configure(
   else:
     cxx_config_infinit.library_add(
       drake.copy(elle.boost.regex_dynamic, 'lib', True))
-    extra_libs = []
+    extra_libs = [grpc_lib]
     libtype = drake.cxx.DynLib
   infinit_lib = libtype(
     (windows and 'bin' or 'lib') + '/infinit',
@@ -482,6 +485,7 @@ def configure(
       elle_lib,
       protocol_lib,
       reactor_lib,
+      grpc_lib
     ]
   if enable_crash_reporting:
     infinit_cli_deps.append(crash_reporter_lib)

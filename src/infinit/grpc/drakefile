@@ -1,0 +1,75 @@
+import drake
+import drake.cxx
+
+grpc_lib = None
+
+with open(str(drake.path_source('../../../elle/drake-utils.py')), 'r') as f:
+  exec(f.read(), globals(), globals())
+
+class GRPCGen(drake.Builder):
+  def __init__(self, proto):
+    self.__proto = proto
+    base = proto.split('.')[0]
+    dsts = drake.nodes(
+      base + '.pb.h',
+      base + '.pb.cc',
+      base + '.grpc.pb.h',
+      base + '.grpc.pb.cc',
+    )
+    self.__dsts = dsts
+    self.__prefix = drake.Drake.current.prefix
+    print('BUILDER INIT %s' % drake.Drake.current.prefix)
+    drake.Builder.__init__(self, srcs = [drake.node(proto)], dsts = dsts)
+    print('DONE')
+  @property
+  def dsts(self):
+    return self.__dsts
+  def execute(self):
+    if not self.cmd('protoc grpc %s' % self.__proto,
+                    self.protoc_grpc_cmd):
+      return False
+    return self.cmd('protoc cc %s' % self.__proto,
+                    self.protoc_cc_cmd)
+  @property
+  def protoc_grpc_cmd(self):
+    return ['protoc',
+            '-I', drake.path_source() / self.__prefix,
+            '--grpc_out=%s' % self.__prefix,
+            # FIXME find me
+            '--plugin=protoc-gen-grpc=/usr/local/bin/grpc_cpp_plugin',
+            drake.path_source() / self.__prefix / self.__proto]
+  @property
+  def protoc_cc_cmd(self):
+    return ['protoc',
+            '-I', drake.path_source() / self.__prefix,
+            '--cpp_out=%s' % self.__prefix,
+            drake.path_source() / self.__prefix / self.__proto]
+  def hash(self):
+    return ''.join([
+      str(self.protoc_grpc_cmd),
+      str(self.protoc_cc_cmd),
+    ])
+  def __str__(self):
+    return '%s' % (self.__class__.__name__)
+  
+def configure(
+    cxx_toolkit,
+    cxx_config
+):
+  global grpc_lib
+  print('GENERATOR')
+  gen = GRPCGen('kv.proto')
+  print('LIB')
+  srcs = gen.dsts + drake.nodes('grpc.cc')
+  cxx_config_grpc = drake.cxx.Config(cxx_config)
+  cxx_config_grpc.lib('grpc++')
+  cxx_config_grpc.lib('grpc')
+  cxx_config_grpc.lib('gpr')
+  cxx_config_grpc.lib('protobuf')
+  cxx_config_grpc.ldflag('-Lboringssl/ssl')
+  cxx_config_grpc.ldflag('-Lboringssl/crypto')
+  cxx_config_grpc.lib('ssl')
+  cxx_config_grpc.lib('crypto')
+  grpc_lib = drake.cxx.DynLib('grpc', srcs, cxx_toolkit, cxx_config_grpc)
+  print('FINISHED')
+  

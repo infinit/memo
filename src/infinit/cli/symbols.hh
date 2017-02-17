@@ -79,6 +79,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(fullname_pattern, 'F', "fullname pattern)" , false);
     ELLE_DAS_CLI_SYMBOL(fuse_option, 0, "option to pass directly to FUSE" , false);
     ELLE_DAS_CLI_SYMBOL(group, 'g', "group {action} {object} for", false);
+    ELLE_DAS_CLI_SYMBOL(grpc, 0, "start grpc server on given endpoint", false);
     ELLE_DAS_CLI_SYMBOL(help, 'h', "show this help message", false);
     ELLE_DAS_CLI_SYMBOL(hold, 0, "keep storage online until this process terminates", false);
     ELLE_DAS_CLI_SYMBOL(home, 'h', "create a home directory for the invited user", false);
