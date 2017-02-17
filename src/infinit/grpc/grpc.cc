@@ -10,6 +10,9 @@
 #include <grpc++/create_channel.h>
 #include <grpc++/security/credentials.h>
 
+#include <elle/Duration.hh>
+#include <reactor/scheduler.hh>
+
 #include <infinit/model/Endpoints.hh>
 #include <infinit/model/Model.hh>
 #include <infinit/grpc/kv.grpc.pb.h>
@@ -42,6 +45,7 @@ public:
   {
     ELLE_LOG("Get %s", request.address());
     ::BlockStatus res;
+    reactor::sleep(2_sec);
     res.mutable_status()->set_error("not implemented");
     return res;
   }
@@ -139,8 +143,11 @@ public:
      // queue new request
      new CallManager<F, R>(_queue, _impl, _service, _backend, _initiator);
      // request received
-     reply_type res = (_impl.*_backend)(_request);
-     _reply.Finish(res, ::grpc::Status::OK, this);
+     // FIXME track me
+     new reactor::Thread("process", [&] {
+         reply_type res = (_impl.*_backend)(_request);
+         _reply.Finish(res, ::grpc::Status::OK, this);
+     }, true);
    }
  private:
    ::grpc::ServerContext _ctx;
