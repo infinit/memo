@@ -114,11 +114,10 @@ public:
    impl_type;
    typedef typename member_function_traits<F>::result_type
    reply_type;
-   CallManager(::grpc::ServerContext& ctx,
-               ::grpc::ServerCompletionQueue& queue,
+   CallManager(::grpc::ServerCompletionQueue& queue,
                impl_type& impl, service_type& service,
                F backend, R initiator)
-   : _ctx(ctx)
+   : _ctx()
    , _queue(queue)
    , _impl(impl)
    , _service(service)
@@ -136,14 +135,15 @@ public:
        delete this;
        return;
      }
+     _finalizing = true;
      // queue new request
-     new CallManager<F, R>(_ctx, _queue, _impl, _service, _backend, _initiator);
+     new CallManager<F, R>(_queue, _impl, _service, _backend, _initiator);
      // request received
      reply_type res = (_impl.*_backend)(_request);
      _reply.Finish(res, ::grpc::Status::OK, this);
    }
  private:
-   ::grpc::ServerContext& _ctx;
+   ::grpc::ServerContext _ctx;
    ::grpc::ServerCompletionQueue& _queue;
    impl_type& _impl;
    service_type& _service;
@@ -156,12 +156,11 @@ public:
 };
 
 template<typename F, typename I, typename B, typename S>
-void register_call(::grpc::ServerContext& ctx,
-                   ::grpc::ServerCompletionQueue& queue,
+void register_call(::grpc::ServerCompletionQueue& queue,
                    B& impl, S& service,
                    F backend, I initiator)
 {
-  new CallManager<F, I>(ctx, queue, impl, service, backend, initiator);
+  new CallManager<F, I>(queue, impl, service, backend, initiator);
 }
 
 namespace infinit
@@ -179,9 +178,8 @@ namespace infinit
       builder.RegisterService(&async);
       auto cq = builder.AddCompletionQueue();
       auto server = builder.BuildAndStart();
-      ::grpc::ServerContext ctx;
-      register_call(ctx, *cq, impl, async, &KVImpl::Get, &KV::AsyncService::RequestGet);
-      register_call(ctx, *cq, impl, async, &KVImpl::Set, &KV::AsyncService::RequestSet);
+      register_call(*cq, impl, async, &KVImpl::Get, &KV::AsyncService::RequestGet);
+      register_call(*cq, impl, async, &KVImpl::Set, &KV::AsyncService::RequestSet);
       while (true)
       {
         void* tag;
