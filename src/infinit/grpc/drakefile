@@ -18,9 +18,7 @@ class GRPCGen(drake.Builder):
     )
     self.__dsts = dsts
     self.__prefix = drake.Drake.current.prefix
-    print('BUILDER INIT %s' % drake.Drake.current.prefix)
     drake.Builder.__init__(self, srcs = [drake.node(proto)], dsts = dsts)
-    print('DONE')
   @property
   def dsts(self):
     return self.__dsts
@@ -57,9 +55,7 @@ def configure(
     cxx_config
 ):
   global grpc_lib
-  print('GENERATOR')
   gen = GRPCGen('kv.proto')
-  print('LIB')
   srcs = gen.dsts + drake.nodes('grpc.cc')
   cxx_config_grpc = drake.cxx.Config(cxx_config)
   cxx_config_grpc.lib('grpc++')
@@ -70,6 +66,9 @@ def configure(
   cxx_config_grpc.ldflag('-Lboringssl/crypto')
   cxx_config_grpc.lib('ssl')
   cxx_config_grpc.lib('crypto')
+  cxx_config_grpc.lib('z')
   grpc_lib = drake.cxx.DynLib('grpc', srcs, cxx_toolkit, cxx_config_grpc)
-  print('FINISHED')
-  
+
+  kv_client = drake.cxx.Executable('kv-client',
+    gen.dsts + drake.nodes('kv-client.cc'),
+    cxx_toolkit, cxx_config_grpc)
