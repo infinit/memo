@@ -31,6 +31,15 @@ def str2bool(v):
 ## Bottle ##
 ## ------ ##
 
+ADMINS = [
+  'antony.mechin@infinit.sh',
+  'christopher.crone@infinit.sh',
+  'gaetan.rochel@infinit.sh',
+  'julien.quintard@infinit.sh',
+  'matthieu.nottale@infinit.sh',
+  'mefyl@infinit.sh',
+]
+
 class Bottle(bottle.Bottle):
 
   __oauth_services = {
@@ -234,14 +243,7 @@ class Bottle(bottle.Bottle):
     if not hasattr(bottle.request, 'certificate'):
       raise exceptions.MissingCertificate()
     u = bottle.request.certificate
-    if u not in [
-        'antony.mechin@infinit.sh',
-        'christopher.crone@infinit.sh',
-        'gaetan.rochel@infinit.sh',
-        'julien.quintard@infinit.sh',
-        'matthieu.nottale@infinit.sh',
-        'mefyl@infinit.sh',
-    ]:
+    if u not in ADMINS:
       raise exceptions.UserNotAdmin(user = u)
 
   def is_admin(self):
@@ -371,15 +373,7 @@ class Bottle(bottle.Bottle):
 
   def debug(self):
     if hasattr(bottle.request, 'certificate') and \
-       bottle.request.certificate in [
-         'antony.mechin@infinit.io',
-         'baptiste.fradin@infinit.io',
-         'christopher.crone@infinit.io',
-         'gaetan.rochel@infinit.io',
-         'julien.quintard@infinit.io',
-         'matthieu.nottale@infinit.io',
-         'quentin.hocquet@infinit.io',
-       ]:
+       bottle.request.certificate in ADMINS:
       return True
     else:
       return super().debug()
