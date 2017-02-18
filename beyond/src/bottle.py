@@ -235,13 +235,12 @@ class Bottle(bottle.Bottle):
       raise exceptions.MissingCertificate()
     u = bottle.request.certificate
     if u not in [
-        'antony.mechin@infinit.io',
-        'baptiste.fradin@infinit.io',
-        'christopher.crone@infinit.io',
-        'gaetan.rochel@infinit.io',
-        'julien.quintard@infinit.io',
-        'matthieu.nottale@infinit.io',
-        'mefyl@infinit.io',
+        'antony.mechin@infinit.sh',
+        'christopher.crone@infinit.sh',
+        'gaetan.rochel@infinit.sh',
+        'julien.quintard@infinit.sh',
+        'matthieu.nottale@infinit.sh',
+        'mefyl@infinit.sh',
     ]:
       raise exceptions.UserNotAdmin(user = u)
 
