@@ -17,10 +17,14 @@
 #include <infinit/model/Model.hh>
 #include <infinit/grpc/kv.grpc.pb.h>
 
+#include <infinit/model/doughnut/CHB.hh>
+#include <infinit/model/doughnut/ACB.hh>
+
+
 ELLE_LOG_COMPONENT("infinit.grpc");
 
 
-/*
+/* This is what we would do if we were using the sync API (which uses a thread pool)
 class KVImpl: public KV::Service
 {
 public:
@@ -38,25 +42,7 @@ public:
   }
 };*/
 
-class KVImpl
-{
-public:
-  ::BlockStatus Get(const ::Address& request)
-  {
-    ELLE_LOG("Get %s", request.address());
-    ::BlockStatus res;
-    reactor::sleep(2_sec);
-    res.mutable_status()->set_error("not implemented");
-    return res;
-  }
-  ::Status Set(const ::Block& request)
-  {
-    ELLE_LOG("Set %s", request.address());
-    ::Status res;
-    res.set_error("not implemented");
-    return res;
-  }
-};
+
 
 class BaseCallManager
 {
@@ -174,11 +160,129 @@ namespace infinit
 {
   namespace grpc
   {
+    class KVImpl
+    {
+    public:
+      KVImpl(infinit::model::Model& model)
+        : _model(model)
+      {}
+      ::BlockStatus
+      Get(const ::Address& request);
+      ::Status
+      Set(const ::ModeBlock& request);
+
+      ELLE_ATTRIBUTE(infinit::model::Model&, model);
+    };
+
+    ::BlockStatus
+    KVImpl::Get(const ::Address& request)
+    {
+      ELLE_LOG("Get %s", request.address());
+      ::BlockStatus res;
+      auto addr = model::Address::from_string(request.address());
+      auto block = _model.fetch(addr);
+      auto* mblock = res.mutable_block();
+      mblock->set_address(elle::sprintf("%s", addr));
+      mblock->set_payload(block->data().string());
+      if (auto* chb = dynamic_cast<model::doughnut::CHB*>(block.get()))
+      {
+        ::ConstantBlockData* cbd = mblock->mutable_constant_block();
+        cbd->set_owner(elle::sprintf("%s", chb->owner()));
+      }
+      else if (auto* chb = dynamic_cast<model::blocks::ImmutableBlock*>(block.get()))
+      {
+        ELLE_WARN("unknown immutable block kind %s", elle::type_info(*chb));
+        ::ConstantBlockData* cbd = mblock->mutable_constant_block();
+        cbd->set_owner(std::string());
+      }
+      else if (auto* acb = dynamic_cast<model::blocks::ACLBlock*>(block.get()))
+      {
+        ::ACLBlockData* abd = mblock->mutable_acl_block();
+        abd->set_version(acb->version());
+        abd->set_world_read(acb->get_world_permissions().first);
+        abd->set_world_write(acb->get_world_permissions().second);
+        auto entries = acb->list_permissions(_model);
+        for (auto const& e: entries)
+        {
+          ::ACL* p = abd->add_permissions();
+          p->set_admin(e.admin);
+          p->set_owner(e.owner);
+          p->set_read(e.read);
+          p->set_write(e.write);
+          p->set_user(e.user->name());
+        }
+      }
+      else if (auto* mb = dynamic_cast<model::blocks::MutableBlock*>(block.get()))
+      {
+        ::MutableBlockData* mbd = mblock->mutable_mutable_block();
+        mbd->set_version(mb->version());
+      }
+      else
+      {
+        ELLE_ERR("unknown block type %s", elle::type_info(*block));
+      }
+
+      reactor::sleep(2_sec);
+      res.mutable_status()->set_error(std::string());
+      return res;
+    }
+
+    ::Status
+    KVImpl::Set(const ::ModeBlock& request)
+    {
+      auto const& iblock = request.block();
+      ELLE_LOG("Set %s", iblock.address());
+      ::Status res;
+      std::unique_ptr<model::blocks::Block> block;
+      if (iblock.has_constant_block())
+      {
+        auto const& rc = iblock.constant_block();
+        auto cblock = _model.make_block<model::blocks::ImmutableBlock>(
+          iblock.payload(),
+          rc.owner().empty() ?
+            model::Address::null
+            : model::Address::from_string(rc.owner()));
+        block = std::move(cblock);
+      }
+      else if (iblock.has_mutable_block())
+      {
+        auto mblock = _model.make_block<model::blocks::MutableBlock>();
+        mblock->data(iblock.payload());
+        auto const& rm = iblock.mutable_block();
+        block = std::move(mblock);
+      }
+      else if (iblock.has_acl_block())
+      {
+        auto ablock = _model.make_block<model::blocks::ACLBlock>();
+        ablock->data(iblock.payload());
+        auto const& ra = iblock.acl_block();
+        ablock->set_world_permissions(/*ra.has_world_read() &&*/ ra.world_read(),
+                                      /*ra.has_world_write() &&*/ ra.world_write());
+        for (int i=0; i< ra.permissions_size(); ++i)
+        {
+          auto const& p = ra.permissions(i);
+          auto user = _model.make_user(elle::Buffer(p.user()));
+          ablock->set_permissions(*user,
+                                  /*p.has_read() &&*/ p.read(),
+                                  /*p.has_write() &&*/ p.write());
+        }
+        if (/*ra.has_version() &&*/ ra.version() >= 0)
+          dynamic_cast<model::doughnut::ACB&>(*ablock).seal(ra.version());
+        block = std::move(ablock);
+      }
+      else
+        elle::err("unknown block kind in request");
+      _model.store(std::move(block), (infinit::model::StoreMode)request.mode());
+
+      res.set_error("not implemented");
+      return res;
+    }
+
     void serve_grpc(infinit::model::Model& dht, model::Endpoint ep)
     {
       ELLE_LOG("serving");
       KV::AsyncService async;
-      KVImpl impl;
+      KVImpl impl(dht);
       ::grpc::ServerBuilder builder;
       auto sep = ep.address().to_string() + ":" + std::to_string(ep.port());
       builder.AddListeningPort(sep, ::grpc::InsecureServerCredentials());

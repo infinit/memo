@@ -2,23 +2,62 @@ syntax = "proto3";
 
 service KV {
   rpc Get(Address) returns (BlockStatus) {}
-  rpc Set(Block) returns (Status) {}
+  rpc Set(ModeBlock) returns (Status) {}
 }
 
 message Address {
   string address = 1;
 }
 
+message ConstantBlockData {
+  string owner = 1; // address of mutable block owner
+}
+
+message MutableBlockData {
+  int64 version = 1;
+}
+
+message ACL {
+  string user = 1;
+  bool admin = 2;
+  bool owner = 3;
+  bool read = 4;
+  bool write = 5;
+}
+
+message ACLBlockData {
+  int64 version = 1;
+  bool world_read = 2;
+  bool world_write = 3;
+  repeated ACL permissions = 4;
+}
+
 message Block {
   string address = 1;
   string payload = 2;
+  oneof data {
+    ConstantBlockData constant_block = 3;
+    MutableBlockData mutable_block = 4;
+    ACLBlockData acl_block = 5;
+  }
 }
 
 message Status {
   string error = 1;
+  string address = 2;
 }
 
 message BlockStatus {
   Status status = 1;
+  Block block = 2;
+}
+
+enum Mode {
+  STORE_INSERT = 0;
+  STORE_UPDATE = 1;
+}
+
+message ModeBlock {
+  Mode mode = 1;
   Block block = 2;
 }
