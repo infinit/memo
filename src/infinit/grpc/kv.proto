@@ -3,6 +3,7 @@ syntax = "proto3";
 service KV {
   rpc Get(Address) returns (BlockStatus) {}
   rpc Set(ModeBlock) returns (Status) {}
+  rpc Remove(Address) returns (Status) {}
 }
 
 message Address {

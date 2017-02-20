@@ -173,6 +173,8 @@ namespace infinit
       Get(const ::Address& request);
       ::Status
       Set(const ::ModeBlock& request);
+      ::Status
+      Remove(const ::Address& request);
 
       ELLE_ATTRIBUTE(infinit::model::Model&, model);
     };
@@ -309,6 +311,15 @@ namespace infinit
       return res;
     }
 
+    ::Status
+    KVImpl::Remove(::Address const& address)
+    {
+      ::Status res;
+      _model.remove(model::Address::from_string(address.address()));
+      res.set_error(std::string());
+      return res;
+    }
+
     void serve_grpc(infinit::model::Model& dht, model::Endpoint ep)
     {
       ELLE_LOG("serving");
@@ -322,6 +333,7 @@ namespace infinit
       auto server = builder.BuildAndStart();
       register_call(*cq, impl, async, &KVImpl::Get, &KV::AsyncService::RequestGet);
       register_call(*cq, impl, async, &KVImpl::Set, &KV::AsyncService::RequestSet);
+      register_call(*cq, impl, async, &KVImpl::Remove, &KV::AsyncService::RequestRemove);
       while (true)
       {
         void* tag;
