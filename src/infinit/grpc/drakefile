@@ -7,7 +7,7 @@ with open(str(drake.path_source('../../../elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
 
 class GRPCGen(drake.Builder):
-  def __init__(self, proto):
+  def __init__(self, proto, protoc = None, grpc_cpp_plugin = None):
     self.__proto = proto
     base = proto.split('.')[0]
     dsts = drake.nodes(
@@ -16,9 +16,20 @@ class GRPCGen(drake.Builder):
       base + '.grpc.pb.h',
       base + '.grpc.pb.cc',
     )
+    srcs = drake.nodes(proto)
+    if protoc is not None:
+      self.__protoc = protoc
+      srcs += drake.nodes(protoc)
+    else:
+      self.__protoc = 'protoc'
+    if grpc_cpp_plugin is not None:
+      self.__grpc_cpp_plugin = grpc_cpp_plugin
+      srcs += drake.nodes(grpc_cpp_plugin)
+    else:
+      self.__grpc_cpp_plugin = '/usr/local/bin/grpc_cpp_plugin'
     self.__dsts = dsts
     self.__prefix = drake.Drake.current.prefix
-    drake.Builder.__init__(self, srcs = [drake.node(proto)], dsts = dsts)
+    drake.Builder.__init__(self, srcs = srcs, dsts = dsts)
   @property
   def dsts(self):
     return self.__dsts
@@ -30,15 +41,15 @@ class GRPCGen(drake.Builder):
                     self.protoc_cc_cmd)
   @property
   def protoc_grpc_cmd(self):
-    return ['protoc',
+    return [self.__protoc,
             '-I', drake.path_source() / self.__prefix,
             '--grpc_out=%s' % self.__prefix,
             # FIXME find me
-            '--plugin=protoc-gen-grpc=/usr/local/bin/grpc_cpp_plugin',
+            '--plugin=protoc-gen-grpc=%s' % self.__grpc_cpp_plugin,
             drake.path_source() / self.__prefix / self.__proto]
   @property
   def protoc_cc_cmd(self):
-    return ['protoc',
+    return [self.__protoc,
             '-I', drake.path_source() / self.__prefix,
             '--cpp_out=%s' % self.__prefix,
             drake.path_source() / self.__prefix / self.__proto]
@@ -55,18 +66,12 @@ def configure(
     cxx_config
 ):
   global grpc_lib
-  gen = GRPCGen('kv.proto')
+  grpc = drake.include('grpc', cxx_toolkit, cxx_config,
+    cmake_env = {'GO_EXECUTABLE': '/usr/lib/go-1.7/bin/go'}
+    )
+  gen = GRPCGen('kv.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
   srcs = gen.dsts + drake.nodes('grpc.cc')
-  cxx_config_grpc = drake.cxx.Config(cxx_config)
-  cxx_config_grpc.lib('grpc++')
-  cxx_config_grpc.lib('grpc')
-  cxx_config_grpc.lib('gpr')
-  cxx_config_grpc.lib('protobuf')
-  cxx_config_grpc.ldflag('-Lboringssl/ssl')
-  cxx_config_grpc.ldflag('-Lboringssl/crypto')
-  cxx_config_grpc.lib('ssl')
-  cxx_config_grpc.lib('crypto')
-  cxx_config_grpc.lib('z')
+  cxx_config_grpc = grpc.cxx_config
   grpc_lib = drake.cxx.DynLib('grpc', srcs, cxx_toolkit, cxx_config_grpc)
 
   kv_client = drake.cxx.Executable('kv-client',
