@@ -573,7 +573,8 @@ def configure(
     drake.copy(drake.nodes('debian-packaging/release/postinst'),
                            'debian/DEBIAN',
                            post_process = make_executable,
-                           strip_prefix = True),
+                           strip_prefix = True,
+                           follow_symlinks = False),
   )
   rule_debian = drake.Rule('debian')
   if cxx_toolkit.os is drake.os.linux:
@@ -645,7 +646,7 @@ def configure(
   redhat_nodes = chain(
     redhat_nodes,
     drake.copy(drake.nodes('redhat-packaging/package/infinit.spec'),
-               'redhat/SPECS', strip_prefix = True),
+               'redhat/SPECS', strip_prefix = True, follow_symlinks = False),
   )
 
   redhat_package = drake.redhat.Packager('infinit',
