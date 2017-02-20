@@ -666,17 +666,20 @@ def configure(
     drake.node('redhat-packaging/repository/infinit.repo.tmpl')
 
   redhat_repo_nodes = chain(
-    drake.copy(drake.nodes('redhat-packaging/repository/infinit-release.spec'),
-               'redhat-repo/SPECS', strip_prefix = True),
-    drake.copy(drake.nodes('redhat-packaging/repository/infinit.repo'),
-               'redhat-repo/BUILDROOT/etc/yum.repo.d', strip_prefix = True),
+    drake.copy(
+      drake.nodes('redhat-packaging/repository/infinit-release.spec'),
+      'redhat-repo/SPECS', strip_prefix = True),
+    drake.copy(
+      drake.nodes('redhat-packaging/repository/infinit.repo'),
+      'redhat-repo/BUILDROOT/etc/yum.repo.d', strip_prefix = True),
   )
 
-  redhat_repo_package = drake.redhat.Packager('infinit-release',
-                                              redhat_repo_version,
-                                              'el6', 'x86_64',
-                                              drake.path_build('redhat-repo'),
-                                              redhat_repo_nodes).package
+  redhat_repo_package = drake.redhat.Packager(
+    'infinit-release',
+    redhat_repo_version,
+    'el6', 'x86_64',
+    drake.path_build('redhat-repo'),
+    redhat_repo_nodes).package
   redhat_rule << redhat_repo_package
 
 
