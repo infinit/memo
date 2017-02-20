@@ -9,8 +9,8 @@
       % for i, project in enumerate(projects):
         <div ${'data-gh-project="' + project['repo'] + '"' if project['repo'] else ''} class="project ${project['stage'].lower()} ${'pinned' if project['pinned'] else ''}">
           <div class="title">
-            % if project['name'] == 'infinit':
-              <img src="${url('images/logos/infinit.png')}">
+            % if project['logo']:
+              <img src="${url('images/logos/' + project['logo'])}">
             % endif
 
             % if project['repo']:

@@ -375,6 +375,10 @@ def configure(
     'resources/images/logos/object-storages@2x.png',
     'resources/images/icons/block-device.png',
     'resources/images/icons/block-device@2x.png',
+    'resources/images/logos/elle.png',
+    'resources/images/logos/elle@2x.png',
+    'resources/images/logos/drake.png',
+    'resources/images/logos/drake@2x.png',
 
     'resources/scripts/get-started.sh',
     'resources/scripts/deployments/centralized.sh',
