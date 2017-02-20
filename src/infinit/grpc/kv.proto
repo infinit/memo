@@ -32,6 +32,11 @@ message ACLBlockData {
   repeated ACL permissions = 4;
 }
 
+message NamedBlockData {
+  string name = 1;
+  string owner = 2;
+}
+
 message Block {
   string address = 1;
   string payload = 2;
@@ -39,6 +44,7 @@ message Block {
     ConstantBlockData constant_block = 3;
     MutableBlockData mutable_block = 4;
     ACLBlockData acl_block = 5;
+    NamedBlockData named_block = 6;
   }
 }
 

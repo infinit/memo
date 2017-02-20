@@ -17,8 +17,11 @@
 #include <infinit/model/Model.hh>
 #include <infinit/grpc/kv.grpc.pb.h>
 
-#include <infinit/model/doughnut/CHB.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/CHB.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/NB.hh>
+#include <infinit/model/doughnut/User.hh>
 
 
 ELLE_LOG_COMPONENT("infinit.grpc");
@@ -184,7 +187,15 @@ namespace infinit
       auto* mblock = res.mutable_block();
       mblock->set_address(elle::sprintf("%s", addr));
       mblock->set_payload(block->data().string());
-      if (auto* chb = dynamic_cast<model::doughnut::CHB*>(block.get()))
+      if (auto* nb = dynamic_cast<model::doughnut::NB*>(block.get()))
+      {
+        ::NamedBlockData* nbd = mblock->mutable_named_block();
+        nbd->set_name(nb->name());
+        auto j = elle::serialization::json::serialize(*nb->owner());
+        auto user = _model.make_user(j);
+        nbd->set_owner(user->name());
+      }
+      else if (auto* chb = dynamic_cast<model::doughnut::CHB*>(block.get()))
       {
         ::ConstantBlockData* cbd = mblock->mutable_constant_block();
         cbd->set_owner(elle::sprintf("%s", chb->owner()));
@@ -248,7 +259,6 @@ namespace infinit
       {
         auto mblock = _model.make_block<model::blocks::MutableBlock>();
         mblock->data(iblock.payload());
-        auto const& rm = iblock.mutable_block();
         block = std::move(mblock);
       }
       else if (iblock.has_acl_block())
@@ -269,6 +279,27 @@ namespace infinit
         if (/*ra.has_version() &&*/ ra.version() >= 0)
           dynamic_cast<model::doughnut::ACB&>(*ablock).seal(ra.version());
         block = std::move(ablock);
+      }
+      else if (iblock.has_named_block())
+      {
+        auto const& rn = iblock.named_block();
+        if (rn.owner().empty())
+        {
+          block.reset(new model::doughnut::NB(
+            dynamic_cast<model::doughnut::Doughnut&>(_model),
+            rn.name(),
+            iblock.payload()));
+        }
+        else
+        {
+          auto user = _model.make_user(elle::Buffer(rn.owner()));
+          block.reset(new model::doughnut::NB(
+            dynamic_cast<model::doughnut::Doughnut&>(_model),
+            std::make_shared<cryptography::rsa::PublicKey>(
+              dynamic_cast<model::doughnut::User&>(*user).key()),
+            rn.name(),
+            iblock.payload()));
+        }
       }
       else
         elle::err("unknown block kind in request");
