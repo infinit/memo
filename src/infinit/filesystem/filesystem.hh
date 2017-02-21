@@ -73,7 +73,7 @@ namespace infinit
       using serialization_tag = infinit::serialization_tag;
       ELLE_ATTRIBUTE_R(model::Address, address);
       ELLE_ATTRIBUTE_R(int, block_version);
-      typedef elle::unordered_map<std::string, std::pair<EntryType, model::Address>> Files;
+      using Files = elle::unordered_map<std::string, std::pair<EntryType, model::Address>>;
       ELLE_ATTRIBUTE_R(FileHeader, header);
       ELLE_ATTRIBUTE_R(Files, files);
       ELLE_ATTRIBUTE_R(bool, inherit_auth);
@@ -149,7 +149,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(int, block_version);
       ELLE_ATTRIBUTE_R(clock::time_point, last_used);
       ELLE_ATTRIBUTE_R(FileHeader, header);
-      typedef std::pair<Address, std::string> FatEntry; // (address, key)
+      using FatEntry = std::pair<Address, std::string>; // (address, key)
       ELLE_ATTRIBUTE_R(std::vector<FatEntry>, fat);
       ELLE_ATTRIBUTE_R(elle::Buffer, data);
       ELLE_ATTRIBUTE_R(boost::filesystem::path, path);
@@ -269,7 +269,8 @@ namespace infinit
       ELLE_ATTRIBUTE_R(bool, allow_root_creation);
       ELLE_ATTRIBUTE_R(bool, map_other_permissions);
 
-      typedef bmi::multi_index_container<
+      using DirectoryCache
+      = bmi::multi_index_container<
         std::shared_ptr<DirectoryData>,
         bmi::indexed_by<
           bmi::hashed_unique<
@@ -280,9 +281,10 @@ namespace infinit
             bmi::const_mem_fun<
               DirectoryData,
               clock::time_point const&, &DirectoryData::last_used>>
-              > > DirectoryCache;
+              >>;
       ELLE_ATTRIBUTE_R(DirectoryCache, directory_cache);
-      typedef bmi::multi_index_container<
+      using FileCache
+      = bmi::multi_index_container<
         std::shared_ptr<FileData>,
         bmi::indexed_by<
           bmi::hashed_unique<
@@ -293,14 +295,12 @@ namespace infinit
             bmi::const_mem_fun<
               FileData,
               clock::time_point const&, &FileData::last_used>>
-              > > FileCache;
+              >>;
       ELLE_ATTRIBUTE_R(FileCache, file_cache);
       ELLE_ATTRIBUTE_RX(std::vector<reactor::Thread::unique_ptr>, running);
       ELLE_ATTRIBUTE_RX(int, prefetching);
       ELLE_ATTRIBUTE_RW(boost::optional<int>, block_size);
-      typedef
-      std::unordered_map<Address, std::weak_ptr<FileBuffer>>
-      FileBuffers;
+      using FileBuffers = std::unordered_map<Address, std::weak_ptr<FileBuffer>>;
       ELLE_ATTRIBUTE_RX(FileBuffers, file_buffers);
       static const int max_cache_size = 10000;
       friend class FileData;
