@@ -28,7 +28,7 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
 
-typedef elle::serialization::Binary Serializer;
+using Serializer = elle::serialization::Binary;
 
 namespace infinit
 {
@@ -63,9 +63,8 @@ namespace infinit
         while (true)
         {
           if (++num_run > 3)
-          { // we are looping on the same ports, try one at random instead
+            // we are looping on the same ports, try one at random instead
             port = 1025 + (rand()%(65536 - 1025));
-          }
           try
           {
             ELLE_TRACE_SCOPE("%s: construct", this);
@@ -372,45 +371,38 @@ namespace infinit
             this->_passports.erase(rpcs);
           });
         rpcs.add("store",
-                 std::function<void (blocks::Block const& data, StoreMode)>(
-                   [this,&rpcs] (blocks::Block const& block, StoreMode mode)
-                   {
-                     this->_require_auth(rpcs, true);
-                     return this->store(block, mode);
-                   }));
+                 [this, &rpcs] (blocks::Block const& block, StoreMode mode)
+                 {
+                   this->_require_auth(rpcs, true);
+                   return this->store(block, mode);
+                 });
         rpcs.add("fetch",
-                 std::function<
-                   std::unique_ptr<blocks::Block> (Address,
-                                                   boost::optional<int>)>(
-                  [this, &rpcs] (Address address, boost::optional<int> local_version)
-                  {
-                    this->_require_auth(rpcs, false);
-                    return this->fetch(address, local_version);
-                  }));
+                 [this, &rpcs] (Address address, boost::optional<int> local_version)
+                 {
+                   this->_require_auth(rpcs, false);
+                   return this->fetch(address, local_version);
+                 });
         if (this->_doughnut.version() >= elle::Version(0, 4, 0))
           rpcs.add("remove",
-                  std::function<void (Address address, blocks::RemoveSignature)>(
-                    [this, &rpcs] (Address address, blocks::RemoveSignature rs)
-                    {
-                      this->_require_auth(rpcs, true);
-                      this->remove(address, rs);
-                    }));
+                   [this, &rpcs] (Address address, blocks::RemoveSignature rs)
+                   {
+                     this->_require_auth(rpcs, true);
+                     this->remove(address, rs);
+                   });
         else
           rpcs.add("remove",
-                  std::function<void (Address address)>(
-                  [this, &rpcs] (Address address)
-                    {
-                      this->_require_auth(rpcs, true);
-                      this->remove(address, {});
-                    }));
+                   [this, &rpcs] (Address address)
+                   {
+                     this->_require_auth(rpcs, true);
+                     this->remove(address, {});
+                   });
         rpcs.add("ping",
-                std::function<int(int)>(
-                  [this] (int i)
-                  {
-                    return i;
-                  }));
+                 [this] (int i)
+                 {
+                   return i;
+                 });
         auto stored_challenge = std::make_shared<elle::Buffer>();
-        typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
+        using Challenge = std::pair<elle::Buffer, elle::Buffer>;
 
         auto auth_syn = [this, &rpcs, stored_challenge] (Passport const& p)
           -> std::pair<Challenge, Passport*>
@@ -432,54 +424,44 @@ namespace infinit
           };
         if (this->_doughnut.version() >= elle::Version(0, 7, 0))
         {
-          using AuthSyn =
-            Remote::Auth (Address id, Passport const&, elle::Version const&);
           rpcs.add(
-            "auth_syn", std::function<AuthSyn>(
-              [this, auth_syn]
-              (Address id, Passport const& p, elle::Version const& v)
-                -> Remote::Auth
-              {
-                if (this->doughnut().id() == id)
-                  throw HandshakeFailed(
-                    elle::sprintf("incoming peer has same id as us: %s", id));
-                auto dht_v = this->_doughnut.version();
-                if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
-                  throw HandshakeFailed(
-                    elle::sprintf("invalid version %s, we use %s", v, dht_v));
-                auto res = auth_syn(p);
-                return Remote::Auth(
-                  this->id(), std::move(res.first), *res.second);
-              }));
+            "auth_syn",
+            [this, auth_syn]
+            (Address id, Passport const& p, elle::Version const& v)
+            -> Remote::Auth
+            {
+              if (this->doughnut().id() == id)
+                throw HandshakeFailed(elle::sprintf("incoming peer has same id as us: %s", id));
+              auto dht_v = this->_doughnut.version();
+              if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
+                throw HandshakeFailed(elle::sprintf("invalid version %s, we use %s", v, dht_v));
+              auto res = auth_syn(p);
+              return Remote::Auth(this->id(), std::move(res.first), *res.second);
+            });
         }
         else if (this->_doughnut.version() >= elle::Version(0, 4, 0))
         {
-          typedef std::pair<Challenge, Passport*>
-            AuthSyn(Passport const&, elle::Version const&);
           rpcs.add(
-            "auth_syn", std::function<AuthSyn>(
-              [this, auth_syn] (Passport const& p, elle::Version const& v)
-                -> std::pair<Challenge, Passport*>
-              {
-                auto dht_v = this->_doughnut.version();
-                if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
-                  elle::err("invalid version %s, we use %s", v, dht_v);
-                return auth_syn(p);
-              }));
+            "auth_syn",
+            [this, auth_syn] (Passport const& p, elle::Version const& v)
+            -> std::pair<Challenge, Passport*>
+            {
+              auto dht_v = this->_doughnut.version();
+              if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
+                elle::err("invalid version %s, we use %s", v, dht_v);
+              return auth_syn(p);
+            });
         }
         else
         {
-          typedef std::pair<Challenge, Passport*> AuthSyn(Passport const&);
           rpcs.add(
-            "auth_syn", std::function<AuthSyn>(
-              [this, auth_syn] (Passport const& p)
-                -> std::pair<Challenge, Passport*>
-              {
-                return auth_syn(p);
-              }));
+            "auth_syn",
+            [this, auth_syn] (Passport const& p) -> std::pair<Challenge, Passport*>
+            {
+              return auth_syn(p);
+            });
         }
-        rpcs.add("auth_ack", std::function<bool(elle::Buffer const&,
-          elle::Buffer const&, elle::Buffer const&)>(
+        rpcs.add("auth_ack",
           [this, &rpcs, stored_challenge](
                  elle::Buffer const& enc_key,
                  elle::Buffer const& /*token*/,
@@ -506,16 +488,13 @@ namespace infinit
             rpcs._key.emplace(std::move(password));
             rpcs._ready(&rpcs);
             return true;
-          }));
-        using Keys = std::vector<cryptography::rsa::PublicKey>;
+          });
         rpcs.add(
           "resolve_keys",
-          std::function<Keys (std::vector<int> const&)>(
-            std::bind(&Local::_resolve_keys, this, std::placeholders::_1)));
-        using KeysMap = std::unordered_map<int, cryptography::rsa::PublicKey>;
+          [this](std::vector<int> const& ids) { return this->_resolve_keys(ids); });
         rpcs.add(
           "resolve_all_keys",
-          std::function<KeysMap()>(std::bind(&Local::_resolve_all_keys, this)));
+          [this]() { return this->_resolve_all_keys(); });
       }
 
       void

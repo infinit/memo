@@ -112,56 +112,52 @@ namespace infinit
               // List all blocks owned by this node.
               rpcs.add(
                 "kouncil_fetch_entries",
-                std::function<std::unordered_set<Address> ()>(
-                  [this] ()
-                  {
-                    auto res = std::unordered_set<Address>{};
-                    auto range = this->_address_book.equal_range(this->id());
-                    for (auto it = range.first; it != range.second; ++it)
-                      res.emplace(it->block());
-                    return res;
-                  }));
+                [this] ()
+                {
+                  auto res = std::unordered_set<Address>{};
+                  auto range = this->_address_book.equal_range(this->id());
+                  for (auto it = range.first; it != range.second; ++it)
+                    res.emplace(it->block());
+                  return res;
+                });
               // Lookup owners of a block on this node.
               rpcs.add(
                 "kouncil_lookup",
-                std::function<std::unordered_set<Address>(Address)>(
-                  [this] (Address const& addr)
-                  {
-                    auto res = std::unordered_set<Address>{};
-                    auto range = this->_address_book.get<1>().equal_range(addr);
-                    for (auto it = range.first; it != range.second; ++it)
-                      res.emplace(it->node());
-                    return res;
-                  }));
+                [this] (Address const& addr)
+                {
+                  auto res = std::unordered_set<Address>{};
+                  auto range = this->_address_book.get<1>().equal_range(addr);
+                  for (auto it = range.first; it != range.second; ++it)
+                    res.emplace(it->node());
+                  return res;
+                });
               // Send known peers to this node and retrieve its known peers.
               if (this->doughnut()->version() < elle::Version(0, 8, 0))
                 rpcs.add(
                   "kouncil_advertise",
-                  std::function<NodeLocations(NodeLocations const&)>(
-                    [this, &rpcs](NodeLocations const& peers)
-                    {
-                      ELLE_TRACE_SCOPE(
-                        "%s: receive advertisement of %s peers on %s",
-                        this, peers.size(), rpcs);
-                      this->_discover(peers);
-                      auto res = elle::make_vector(
-                        this->_infos,
-                        [] (PeerInfo const& i) { return i.location(); });
-                      ELLE_TRACE_SCOPE("return %s peers", res.size());
-                      return res;
-                    }));
+                  [this, &rpcs](NodeLocations const& peers)
+                  {
+                    ELLE_TRACE_SCOPE(
+                      "%s: receive advertisement of %s peers on %s",
+                      this, peers.size(), rpcs);
+                    this->_discover(peers);
+                    auto res = elle::make_vector(
+                      this->_infos,
+                      [] (PeerInfo const& i) { return i.location(); });
+                    ELLE_TRACE_SCOPE("return %s peers", res.size());
+                    return res;
+                  });
                 else
                   rpcs.add(
                     "kouncil_advertise",
-                    std::function<PeerInfos(PeerInfos const&)>(
-                      [this, &rpcs] (PeerInfos const& infos)
-                      {
-                        ELLE_TRACE_SCOPE(
-                          "%s: receive advertisement of %s peers on %s",
-                          this, infos.size(), rpcs);
-                        this->_discover(infos);
-                        return this->_infos;
-                      }));
+                    [this, &rpcs] (PeerInfos const& infos)
+                    {
+                      ELLE_TRACE_SCOPE(
+                        "%s: receive advertisement of %s peers on %s",
+                        this, infos.size(), rpcs);
+                      this->_discover(infos);
+                      return this->_infos;
+                    });
             }));
         }
         // Add client-side Kouncil RPCs.
@@ -173,33 +169,30 @@ namespace infinit
               if (this->doughnut()->version() < elle::Version(0, 8, 0))
                 r.rpc_server().add(
                   "kouncil_discover",
-                  std::function<void (NodeLocations const&)>(
-                    [this] (NodeLocations const& locs)
-                    {
-                      PeerInfos infos;
-                      for (auto const& l: locs)
-                        infos.emplace(l.id(), l.endpoints(), -1);
-                      this->_discover(infos);
-                    }));
+                  [this] (NodeLocations const& locs)
+                  {
+                    PeerInfos infos;
+                    for (auto const& l: locs)
+                      infos.emplace(l.id(), l.endpoints(), -1);
+                    this->_discover(infos);
+                  });
               else
                 r.rpc_server().add(
                   "kouncil_discover",
-                  std::function<void(PeerInfos const&)>(
-                    [this](PeerInfos const& pis)
-                    {
-                      this->_discover(pis);
-                    }));
+                  [this](PeerInfos const& pis)
+                  {
+                    this->_discover(pis);
+                  });
               // Notify this node of new blocks owned by the peer.
               r.rpc_server().add(
                 "kouncil_add_entries",
-                std::function<void (std::unordered_set<Address> const&)>(
-                  [this, &r] (std::unordered_set<Address> const& entries)
-                  {
-                    for (auto const& addr: entries)
-                      this->_address_book.emplace(r.id(), addr);
-                    ELLE_TRACE("%s: added %s entries from %f",
-                               this, entries.size(), r.id());
-                  }));
+                [this, &r] (std::unordered_set<Address> const& entries)
+                {
+                  for (auto const& addr: entries)
+                    this->_address_book.emplace(r.id(), addr);
+                  ELLE_TRACE("%s: added %s entries from %f",
+                             this, entries.size(), r.id());
+                });
             }));
         // React to peer connection status.
         this->_connections.emplace_back(
@@ -532,7 +525,8 @@ namespace infinit
                   }
                   catch (reactor::network::Exception const& e)
                   {
-                    ELLE_DEBUG("skipping peer with network issue: %s (%s)", peer, e);
+                    ELLE_DEBUG("skipping peer with network issue: %s (%s)",
+                               peer, e);
                     continue;
                   }
                   if (count > 0)
@@ -557,14 +551,12 @@ namespace infinit
       {
         this->_tasks.emplace_back(new reactor::Thread(name, job));
         for (unsigned i=0; i<this->_tasks.size(); ++i)
-        {
           if (!this->_tasks[i] || this->_tasks[i]->done())
           {
             std::swap(this->_tasks[i], this->_tasks[this->_tasks.size()-1]);
             this->_tasks.pop_back();
             --i;
           }
-        }
       }
 
       /*-----------.
@@ -580,11 +572,11 @@ namespace infinit
       elle::json::Array
       Kouncil::peer_list()
       {
-        elle::json::Array res;
+        auto res = elle::json::Array{};
         for (auto const& p: this->peers())
           if (auto r = dynamic_cast<model::doughnut::Remote const*>(p.get()))
           {
-            elle::json::Array endpoints;
+            auto endpoints = elle::json::Array{};
             for (auto const& e: r->endpoints())
               endpoints.push_back(elle::sprintf("%s", e));
             res.push_back(elle::json::Object{

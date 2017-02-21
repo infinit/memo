@@ -268,6 +268,13 @@ namespace infinit
         std::make_unique<ConcreteRPCHandler<R, Args...>>(name, f);
     }
 
+    template <typename Fun>
+    void
+    add(std::string const& name, Fun fun)
+    {
+      add(name, std::function<std::get_signature<Fun>>(fun));
+    }
+
     template <typename F, typename ... Args>
     static
     void
