@@ -1,6 +1,3 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_OKB_HXX
-# define INFINIT_MODEL_DOUGHNUT_OKB_HXX
-
 namespace infinit
 {
   namespace model
@@ -45,5 +42,3 @@ namespace infinit
     }
   }
 }
-
-#endif

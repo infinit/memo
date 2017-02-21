@@ -1,15 +1,14 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_OKB_HH
-# define INFINIT_MODEL_DOUGHNUT_OKB_HH
+#pragma once
 
-# include <elle/serialization/fwd.hh>
+#include <elle/serialization/fwd.hh>
 
-# include <reactor/BackgroundFuture.hh>
+#include <reactor/BackgroundFuture.hh>
 
-# include <cryptography/rsa/KeyPair.hh>
+#include <cryptography/rsa/KeyPair.hh>
 
-# include <infinit/model/blocks/MutableBlock.hh>
-# include <infinit/model/doughnut/fwd.hh>
-# include <infinit/serialization.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/doughnut/fwd.hh>
+#include <infinit/serialization.hh>
 
 namespace infinit
 {
@@ -69,7 +68,7 @@ namespace infinit
         hash_address(cryptography::rsa::PublicKey const& key,
                      elle::Buffer const& salt,
                      elle::Version const& compatibility_version);
-        typedef infinit::serialization_tag serialization_tag;
+        using serialization_tag = infinit::serialization_tag;
       };
 
       template <typename Block>
@@ -81,8 +80,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef BaseOKB<Block> Self;
-        typedef Block Super;
+        using Self = BaseOKB;
+        using Super = Block;
 
       /*-------------.
       | Construction |
@@ -98,7 +97,7 @@ namespace infinit
         BaseOKB(BaseOKB const& other);
         ELLE_ATTRIBUTE_R(int, version, virtual, override);
       protected:
-        typedef reactor::BackgroundFuture<elle::Buffer> SignFuture;
+        using SignFuture = reactor::BackgroundFuture<elle::Buffer>;
         ELLE_ATTRIBUTE(std::shared_ptr<SignFuture>, signature, protected);
         friend class Doughnut;
       private:
@@ -147,7 +146,7 @@ namespace infinit
         class OwnerSignature
         {
         public:
-          typedef infinit::serialization_tag serialization_tag;
+          using serialization_tag = infinit::serialization_tag;
           OwnerSignature(BaseOKB<Block> const& block);
           void
           serialize(elle::serialization::Serializer& s_,
@@ -193,7 +192,7 @@ namespace infinit
         serialize(elle::serialization::Serializer& s,
                   elle::Version const& version) override;
         // Solve ambiguity between Block and OKBHedar wich both have the tag.
-        typedef infinit::serialization_tag serialization_tag;
+        using serialization_tag = infinit::serialization_tag;
       private:
         void
         _serialize(elle::serialization::Serializer& input,
@@ -211,11 +210,9 @@ namespace infinit
                            elle::Version const& v,
                            std::string const& field_name,
                            Doughnut* dn = nullptr);
-      typedef BaseOKB<blocks::MutableBlock> OKB;
+      using OKB = BaseOKB<blocks::MutableBlock>;
     }
   }
 }
 
-# include <infinit/model/doughnut/OKB.hxx>
-
-#endif
+#include <infinit/model/doughnut/OKB.hxx>
