@@ -90,10 +90,8 @@ namespace infinit
         elle::serialization::json::SerializerIn serializer(input);
         CryptedBlock crypted(serializer);
         if (crypted.address != address)
-          throw elle::Error(
-            elle::sprintf(
-              "storage yielded a block with address %s at address %s",
-              crypted.address, address));
+          elle::err("storage yielded a block with address %s at address %s",
+                    crypted.address, address);
         return this->_construct_block<blocks::MutableBlock>
           (crypted.address, std::move(crypted.content));
       }
@@ -153,7 +151,7 @@ namespace infinit
             std::cout << "No key specified, generating fresh ones:" << std::endl;
             this->keys->serialize(output);
           }
-          return elle::make_unique<infinit::model::paranoid::Paranoid>(
+          return std::make_unique<infinit::model::paranoid::Paranoid>(
             std::move(*this->keys), this->storage->make(), this->version);
         }
       };

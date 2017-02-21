@@ -240,14 +240,14 @@ generate(std::string const& name, Base* b, boost::filesystem::path dir,
     auto path = dir / elle::sprintf("%s.bin", name);
     boost::filesystem::ofstream output(path);
     if (!output.good())
-      throw elle::Error(elle::sprintf("unable to open %s", path));
+       elle::err("unable to open %s", path);
     elle::serialization::binary::serialize(b, output, version, false);
   }
   {
     auto path = dir / elle::sprintf("%s.json", name);
     boost::filesystem::ofstream output(path);
     if (!output.good())
-      throw elle::Error(elle::sprintf("unable to open %s", path));
+      elle::err("unable to open %s", path);
     elle::serialization::json::serialize(b, output, version, false);
   }
 }
@@ -335,8 +335,8 @@ main(int argc, char** argv)
             }
             catch (std::exception const&)
             {
-              throw elle::Error(elle::sprintf("invalid directory in %s: %s",
-                                              root(), filename));
+              elle::err("invalid directory in %s: %s",
+                        root(), filename);
             }
           }();
           ELLE_LOG_SCOPE(
@@ -350,8 +350,8 @@ main(int argc, char** argv)
                 auto path = it->path() / elle::sprintf("%s.json", name);
                 boost::filesystem::ifstream input(path);
                 if (!input.good())
-                  throw elle::Error(elle::sprintf("unable to open %s", path));
-                elle::Buffer contents(
+                  elle::err("unable to open %s", path);
+                auto contents = elle::Buffer(
                   std::string((std::istreambuf_iterator<char>(input)),
                               std::istreambuf_iterator<char>()));
                 ELLE_ASSERT_EQ(
@@ -395,8 +395,8 @@ main(int argc, char** argv)
                 auto path = it->path() / elle::sprintf("%s.bin", name);
                 boost::filesystem::ifstream input(path, std::ios::binary);
                 if (!input.good())
-                  throw elle::Error(elle::sprintf("unable to open %s", path));
-                elle::Buffer contents(
+                  elle::err("unable to open %s", path);
+                auto contents = elle::Buffer(
                   std::string((std::istreambuf_iterator<char>(input)),
                               std::istreambuf_iterator<char>()));
                 ELLE_ASSERT_EQ(

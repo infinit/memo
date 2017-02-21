@@ -34,6 +34,7 @@ namespace infinit
       void
       Configuration::serialize(elle::serialization::Serializer& s)
       {
+        Super::serialize(s);
         s.serialize("eviction_delay", _eviction_delay);
       }
 
@@ -49,7 +50,7 @@ namespace infinit
       Configuration::make(std::shared_ptr<model::doughnut::Local> local,
                           model::doughnut::Doughnut* doughnut)
       {
-        return elle::make_unique<Kouncil>(doughnut, std::move(local),
+        return std::make_unique<Kouncil>(doughnut, std::move(local),
                                           this->_eviction_delay);
       }
     }

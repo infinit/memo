@@ -1,0 +1,7 @@
+{
+    "fullname" : "Demo User",
+    "name" : "demo",
+    "public_key" : {
+        "rsa" : "MIIBCgKCAQEAwz6qcDb4To5WDFLBtcBXyEc9wuEEZDChlkdS1YMvWSyduWMgIVPZsc6dIYdVMUyi5Oqrok9VkZRO1VmkWhWm3Yb2vSKv9CbUJ8w48UQFCLeLLHPo1UbcpIrkyrorlKeO8yVHjLI+lLscx2498DmllkxEnpuHNkOUAk1IWBnkDFKArioU2NOOnCJJrAny2m9tjSpA7ltjFiIZpfEZEKIBg7Ar5CEZSDrl7P5dWbFscbYci2tvie8+IVYh0QO8IpuhoCZgexef3cwMJT7vV7it1b6xxwo3zmP/V9obM4eKNd05eOuOXn8Y/TVLmobpt91va1Gq3h4OiPlim7VyUoqKMwIDAQAB"
+    }
+}

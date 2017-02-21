@@ -59,7 +59,7 @@ ELLE_TEST_SCHEDULED(move)
       s.add("coin",
             std::function<std::unique_ptr<int>(int, std::unique_ptr<int>)>(
               [] (int a, std::unique_ptr<int> b)
-              { return elle::make_unique<int>(a + *b); }));
+              { return std::make_unique<int>(a + *b); }));
     });
   auto stream = s.connect();
   infinit::protocol::Serializer serializer(stream, infinit::version(), false);
@@ -68,7 +68,7 @@ ELLE_TEST_SCHEDULED(move)
     rpc("coin", channels, infinit::version());
   try
   {
-    BOOST_CHECK_EQUAL(*rpc(7, elle::make_unique<int>(35)), 42);
+    BOOST_CHECK_EQUAL(*rpc(7, std::make_unique<int>(35)), 42);
   }
   catch (std::exception const& e)
   {
@@ -143,7 +143,7 @@ ELLE_TEST_SCHEDULED(bidirectional)
               reactor::yield();
             return a+2;
           }));
-  auto t = elle::make_unique<reactor::Thread>("rev serve", [&] {
+  auto t = std::make_unique<reactor::Thread>("rev serve", [&] {
       rev.serve(channels);
   });
   infinit::RPC<int (int)> ping("ping", channels, infinit::version());
@@ -154,10 +154,10 @@ ELLE_TEST_SCHEDULED(bidirectional)
     for (int i=0; i<100; ++i)
       BOOST_CHECK_EQUAL(p(i), i+delta);
   };
-  auto tfwd = elle::make_unique<reactor::Thread>("ping", [&] {
+  auto tfwd = std::make_unique<reactor::Thread>("ping", [&] {
       pinger(ping, 1);
   });
-  auto trev = elle::make_unique<reactor::Thread>("ping", [&] {
+  auto trev = std::make_unique<reactor::Thread>("ping", [&] {
       pinger(pingrev, 2);
   });
   reactor::wait(*tfwd);

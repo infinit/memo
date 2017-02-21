@@ -48,7 +48,7 @@ namespace infinit
     class FileBuffer
     {
     public:
-      FileBuffer(model::Model& model, FileData data, bool dirty);
+      FileBuffer(FileSystem& fs, FileData data, bool dirty);
       ~FileBuffer();
       int read(FileHandle* src, elle::WeakBuffer buffer, size_t size, off_t offset);
       int write(FileHandle* src, elle::ConstWeakBuffer buffer, size_t size, off_t offset);
@@ -84,7 +84,7 @@ namespace infinit
       *                else returns nullptr if creation was required
       */
       std::shared_ptr<elle::Buffer> _block_at(int index, bool create);
-      model::Model& _model;
+      FileSystem& _fs;
       FileData _file;
       typedef
       std::pair<

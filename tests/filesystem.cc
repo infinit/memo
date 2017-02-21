@@ -160,7 +160,7 @@ protected:
 std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
 no_cheat_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
 {
-  return elle::make_unique<NoCheatConsensus>(std::move(c));
+  return std::make_unique<NoCheatConsensus>(std::move(c));
 }
 
 std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
@@ -205,8 +205,8 @@ public:
     template<typename... Args>
     Client(std::string const& name, DHT dht, Args...args)
       : dht(std::move(dht))
-      , fs(elle::make_unique<reactor::filesystem::FileSystem>(
-             elle::make_unique<infinit::filesystem::FileSystem>(
+      , fs(std::make_unique<reactor::filesystem::FileSystem>(
+             std::make_unique<infinit::filesystem::FileSystem>(
                name, this->dht.dht, ifs::allow_root_creation = true,
                std::forward<Args>(args)...),
              true))
@@ -712,7 +712,7 @@ ELLE_TEST_SCHEDULED(multiple_writers)
   struct stat st;
   DHTs servers(1, {},
                with_cache = true,
-               storage = elle::make_unique<infinit::storage::Memory>(blocks));
+               storage = std::make_unique<infinit::storage::Memory>(blocks));
   auto client = servers.client(false);
   char buffer[1024], buffer2[1024];
   for (int i=0; i<1024; ++i)
@@ -1431,7 +1431,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
   {
     DHTs dhts(1, owner_key,
               keys = owner_key,
-              storage = elle::make_unique<infinit::storage::Memory>(blocks),
+              storage = std::make_unique<infinit::storage::Memory>(blocks),
               version = elle::Version(0,6,0),
               id = nid);
     auto client = dhts.client(false, {}, version = elle::Version(0, 6, 0));
@@ -1454,7 +1454,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
     DHTs dhts(1,
               owner_key,
               keys = owner_key,
-              storage = elle::make_unique<infinit::storage::Memory>(blocks),
+              storage = std::make_unique<infinit::storage::Memory>(blocks),
               version = elle::Version(0,7,0),
               dht::consensus::rebalance_auto_expand = false,
               id = nid
@@ -1488,7 +1488,7 @@ ELLE_TEST_SCHEDULED(upgrade_06_07)
     BOOST_CHECK(blocks.size());
     DHTs dhts(1, owner_key,
               keys = owner_key,
-              storage = elle::make_unique<infinit::storage::Memory>(blocks),
+              storage = std::make_unique<infinit::storage::Memory>(blocks),
               version = elle::Version(0,7,0),
               dht::consensus::rebalance_auto_expand = false,
               id = nid
@@ -1745,6 +1745,92 @@ ELLE_TEST_SCHEDULED(read_unlink_large)
   read_unlink_test(10 * 1024);
 }
 
+ELLE_TEST_SCHEDULED(block_size)
+{
+  int kchunks = 5 * 1024;
+  std::string content(1024 * kchunks, 'a');
+  for (unsigned int i=0; i<content.size(); ++i)
+    content[i] = i % 199;
+  auto check_file = [&](std::shared_ptr<reactor::filesystem::Path> p) -> bool {
+    auto h = p->open(O_RDONLY, 0644);
+    char buf[1024];
+    for (int i=0; i<kchunks; ++i)
+    {
+      if (h->read(elle::WeakBuffer(buf, 1024), 1024, i * 1024) != 1024)
+      {
+        ELLE_LOG("short read at %s", i);
+        return false;
+      }
+      for (int o=0; o<1024; ++o)
+        if ((unsigned char)buf[o] != (i * 1024 + o) % 199)
+        {
+          ELLE_LOG("bad data at %s,%s", i, o);
+          return false;
+        }
+    }
+    if (h->read(elle::WeakBuffer(buf, 1024), 1024, kchunks * 1024) > 0)
+    {
+      ELLE_LOG("extra data");
+      return false;
+    }
+    return true;
+  };
+  auto write_file_h = [&](std::unique_ptr<reactor::filesystem::Handle>& h) -> bool {
+    for (int i=0; i<kchunks; ++i)
+    {
+      if (h->write(elle::ConstWeakBuffer(content.data() + i * 1024, 1024), 1024, i * 1024) != 1024)
+        return false;
+    }
+    return true;
+  };
+  auto write_file = [&](std::shared_ptr<reactor::filesystem::Path> p) -> bool {
+     auto h = p->create(O_RDWR | O_CREAT | O_TRUNC, 0644);
+     if (!write_file_h(h))
+       return false;
+     h->close();
+     return true;
+  };
+  elle::ConstWeakBuffer cc(content.data(), content.size());
+  DHTs servers(3, {}, make_consensus = no_cheat_consensus, yielding_overlay = true);
+  auto client1 = servers.client(false, {}, yielding_overlay = true);
+  auto client2 = servers.client(false, {}, yielding_overlay = true);
+  BOOST_CHECK(write_file(client1.fs->path("/foo")));
+  BOOST_CHECK(check_file(client1.fs->path("/foo")));
+  BOOST_CHECK(check_file(client2.fs->path("/foo")));
+  dynamic_cast<infinit::filesystem::FileSystem*>(client1.fs->operations().get())
+    ->block_size(2 * 1024 * 1024);
+  BOOST_CHECK(check_file(client1.fs->path("/foo")));
+  BOOST_CHECK(check_file(client2.fs->path("/foo")));
+  BOOST_CHECK(write_file(client1.fs->path("/foo")));
+  BOOST_CHECK(check_file(client1.fs->path("/foo")));
+  BOOST_CHECK(check_file(client2.fs->path("/foo")));
+  BOOST_CHECK(write_file(client2.fs->path("/foo")));
+  BOOST_CHECK(check_file(client1.fs->path("/foo")));
+  BOOST_CHECK(check_file(client2.fs->path("/foo")));
+  // conflict
+  auto h1 = client1.fs->path("/foo1")->create(O_RDWR | O_CREAT | O_TRUNC, 0644);
+  auto h2 = client2.fs->path("/foo1")->create(O_RDWR | O_CREAT | O_TRUNC, 0644);
+  BOOST_CHECK(write_file_h(h2));
+  BOOST_CHECK(write_file_h(h1));
+  h2->close();
+  h1->close();
+  h2.reset();
+  h1.reset();
+  BOOST_CHECK(check_file(client1.fs->path("/foo1")));
+  BOOST_CHECK(check_file(client2.fs->path("/foo1")));
+  // other way round
+  h2 = client2.fs->path("/foo2")->create(O_RDWR | O_CREAT | O_TRUNC, 0644);
+  h1 = client1.fs->path("/foo2")->create(O_RDWR | O_CREAT | O_TRUNC, 0644);
+  BOOST_CHECK(write_file_h(h1));
+  BOOST_CHECK(write_file_h(h2));
+  h1->close();
+  h2->close();
+  h1.reset();
+  h2.reset();
+  BOOST_CHECK(check_file(client1.fs->path("/foo2")));
+  BOOST_CHECK(check_file(client2.fs->path("/foo2")));
+}
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -1778,4 +1864,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(world_perm_mode), 0, valgrind(5));
   suite.add(BOOST_TEST_CASE(read_unlink_small), 0, valgrind(5));
   suite.add(BOOST_TEST_CASE(read_unlink_large), 0, valgrind(5));
+  suite.add(BOOST_TEST_CASE(block_size), 0, valgrind(5));
 }

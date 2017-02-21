@@ -130,11 +130,11 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued)
   DummyDoughnut dht;
   {
     dht::consensus::Async async(
-      elle::make_unique<BlockingConsensus>(dht), d.path(), 1);
-    async.store(elle::make_unique<infinit::model::blocks::Block>(
+      std::make_unique<BlockingConsensus>(dht), d.path(), 1);
+    async.store(std::make_unique<infinit::model::blocks::Block>(
                   a1, elle::Buffer("a1", 2)),
                 infinit::model::STORE_INSERT, nullptr);
-    async.store(elle::make_unique<infinit::model::blocks::Block>(
+    async.store(std::make_unique<infinit::model::blocks::Block>(
                   a2, elle::Buffer("a2", 2)),
                 infinit::model::STORE_INSERT, nullptr);
     BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a1");
@@ -143,7 +143,7 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued)
   ELLE_LOG("reload from disk")
   {
     dht::consensus::Async async(
-      elle::make_unique<BlockingConsensus>(dht), d.path(), 1);
+      std::make_unique<BlockingConsensus>(dht), d.path(), 1);
     BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a1");
     BOOST_CHECK_EQUAL(async.fetch(a2)->data(), "a2");
   }
@@ -155,19 +155,19 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued_multiple)
   elle::filesystem::TemporaryDirectory d;
   auto a1 = infinit::model::Address::random(0); // FIXME
   {
-    auto scu = elle::make_unique<SyncedConsensus>(dht);
+    auto scu = std::make_unique<SyncedConsensus>(dht);
     auto& sc = *scu;
     dht::consensus::Async async(std::move(scu), d.path(), 1);
     ELLE_LOG("insert block")
-      async.store(elle::make_unique<infinit::model::blocks::Block>(
+      async.store(std::make_unique<infinit::model::blocks::Block>(
                     a1, elle::Buffer("a1", 2)),
                   infinit::model::STORE_INSERT, nullptr);
     ELLE_LOG("update block")
-      async.store(elle::make_unique<infinit::model::blocks::Block>(
+      async.store(std::make_unique<infinit::model::blocks::Block>(
                     a1, elle::Buffer("a2", 2)),
                   infinit::model::STORE_UPDATE, nullptr);
     ELLE_LOG("update block")
-      async.store(elle::make_unique<infinit::model::blocks::Block>(
+      async.store(std::make_unique<infinit::model::blocks::Block>(
                     a1, elle::Buffer("a3", 2)),
                   infinit::model::STORE_UPDATE, nullptr);
     ELLE_LOG("fetch block")

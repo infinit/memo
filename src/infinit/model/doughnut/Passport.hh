@@ -1,12 +1,11 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_PASSPORT_HH
-# define INFINIT_MODEL_DOUGHNUT_PASSPORT_HH
+#pragma once
 
-# include <elle/Buffer.hh>
-# include <elle/attribute.hh>
+#include <elle/Buffer.hh>
+#include <elle/attribute.hh>
 
-# include <cryptography/rsa/KeyPair.hh>
+#include <cryptography/rsa/KeyPair.hh>
 
-# include <infinit/serialization.hh>
+#include <infinit/serialization.hh>
 
 namespace infinit
 {
@@ -45,4 +44,3 @@ namespace infinit
   }
 }
 
-#endif

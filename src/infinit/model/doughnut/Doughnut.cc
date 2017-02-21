@@ -79,14 +79,14 @@ namespace infinit
           }
           catch (MissingBlock const&)
           {
-            auto user = elle::make_unique<UB>(create...);
+            auto user = std::make_unique<UB>(create...);
             ELLE_TRACE_SCOPE("%s: store %s at %f",
               d, what, user->address());
             try
             {
               d.store(
                 std::move(user), STORE_INSERT,
-                elle::make_unique<ConflictResolver>(what));
+                std::make_unique<ConflictResolver>(what));
             }
             catch (elle::Error const& e)
             {
@@ -169,7 +169,7 @@ namespace infinit
                 init.listen_address,
                 std::move(init.rdv_host))
         , _overlay(init.overlay_builder(*this, this->_local))
-        , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
+        , _pool([this] { return std::make_unique<ACB>(this); }, 100, 1)
         , _terminating()
       {
         if (this->_local)
@@ -222,14 +222,29 @@ namespace infinit
           }
           if (!boost::filesystem::exists(m_path))
           {
-            auto unix_domain_server =
-              elle::make_unique<reactor::network::UnixDomainServer>();
-            if (!boost::filesystem::exists(m_path.parent_path()))
-              boost::filesystem::create_directories(m_path.parent_path());
-            unix_domain_server->listen(m_path);
-            this->_monitoring_server.reset(
-              new MonitoringServer(std::move(unix_domain_server), *this));
-            ELLE_DEBUG("monitoring server listening on %s", m_path);
+            try
+            {
+              auto unix_domain_server =
+                std::make_unique<reactor::network::UnixDomainServer>();
+              if (!boost::filesystem::exists(m_path.parent_path()))
+                boost::filesystem::create_directories(m_path.parent_path());
+              unix_domain_server->listen(m_path);
+              this->_monitoring_server.reset(
+                new MonitoringServer(std::move(unix_domain_server), *this));
+              ELLE_DEBUG("monitoring server listening on %s", m_path);
+            }
+            catch (reactor::network::PermissionDenied const& e)
+            {
+              ELLE_WARN("unable to monitor, check "
+                        "INFINIT_RUNTIME_DIR or XDG_RUNTIME_DIR");
+              throw;
+            }
+            catch (reactor::network::InvalidEndpoint const& e)
+            {
+              ELLE_WARN("unable to monitor, check "
+                        "INFINIT_RUNTIME_DIR or XDG_RUNTIME_DIR");
+              throw;
+            }
           }
         }
 #endif
@@ -290,14 +305,14 @@ namespace infinit
       Doughnut::_make_mutable_block() const
       {
         ELLE_TRACE_SCOPE("%s: create OKB", *this);
-        return elle::make_unique<OKB>(elle::unconst(this));
+        return std::make_unique<OKB>(elle::unconst(this));
       }
 
       std::unique_ptr<blocks::ImmutableBlock>
       Doughnut::_make_immutable_block(elle::Buffer content, Address owner) const
       {
         ELLE_TRACE_SCOPE("%s: create CHB", *this);
-        return elle::make_unique<CHB>(elle::unconst(this),
+        return std::make_unique<CHB>(elle::unconst(this),
                                       std::move(content), owner);
       }
 
@@ -312,7 +327,7 @@ namespace infinit
       std::unique_ptr<blocks::GroupBlock>
       Doughnut::_make_group_block() const
       {
-        return elle::make_unique<GB>(
+        return std::make_unique<GB>(
           elle::unconst(this),
           cryptography::rsa::keypair::generate(2048));
       }
@@ -321,7 +336,7 @@ namespace infinit
       Doughnut::_make_user(elle::Buffer const& data) const
       {
         if (data.size() == 0)
-          throw elle::Error("invalid empty user");
+          elle::err("invalid empty user");
         if (data[0] == '{')
         {
           ELLE_TRACE_SCOPE("%s: fetch user from public key", *this);
@@ -332,13 +347,13 @@ namespace infinit
           {
             auto block = this->fetch(UB::hash_address(pub, *this));
             auto ub = elle::cast<UB>::runtime(block);
-            return elle::make_unique<doughnut::User>(ub->key(), ub->name());
+            return std::make_unique<doughnut::User>(ub->key(), ub->name());
           }
           catch (MissingBlock const&)
           {
             ELLE_TRACE("Reverse UB not found, returning public key hash");
             auto hash = short_key_hash(pub);
-            return elle::make_unique<doughnut::User>(pub, hash);
+            return std::make_unique<doughnut::User>(pub, hash);
           }
         }
         else if (data[0] == '@')
@@ -346,7 +361,7 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: fetch user from group", *this);
           auto gn = data.string().substr(1);
           Group g(*elle::unconst(this), gn);
-          return elle::make_unique<doughnut::User>(g.public_control_key(),
+          return std::make_unique<doughnut::User>(g.public_control_key(),
                                                    data.string());
         }
         else
@@ -356,7 +371,7 @@ namespace infinit
           {
             auto block = this->fetch(UB::hash_address(data.string(), *this));
             auto ub = elle::cast<UB>::runtime(block);
-            return elle::make_unique<doughnut::User>(ub->key(), data.string());
+            return std::make_unique<doughnut::User>(ub->key(), data.string());
           }
           catch (infinit::model::MissingBlock const&)
           {
@@ -468,7 +483,7 @@ namespace infinit
           auto block = this->make_block<blocks::MutableBlock>(
             elle::serialization::binary::serialize(ServicesTypes()));
           this->store(*block, STORE_INSERT);
-          auto beacon = elle::make_unique<NB>(
+          auto beacon = std::make_unique<NB>(
             *this, this->owner(),
             "infinit/services",
             elle::serialization::binary::serialize(block->address()));
@@ -669,12 +684,12 @@ namespace infinit
             auto consensus = this->consensus->make(dht);
             if (async)
             {
-              consensus = elle::make_unique<consensus::Async>(
+              consensus = std::make_unique<consensus::Async>(
                 std::move(consensus), p / "async");
             }
             if (cache)
             {
-              consensus = elle::make_unique<consensus::Cache>(
+              consensus = std::make_unique<consensus::Cache>(
                 std::move(consensus),
                 std::move(cache_size),
                 std::move(cache_invalidation),
@@ -697,7 +712,7 @@ namespace infinit
         std::unique_ptr<storage::Storage> storage;
         if (this->storage)
           storage = this->storage->make();
-        return elle::make_unique<infinit::model::doughnut::Doughnut>(
+        return std::make_unique<infinit::model::doughnut::Doughnut>(
           this->id,
           std::make_shared<cryptography::rsa::KeyPair>(keys),
           owner,

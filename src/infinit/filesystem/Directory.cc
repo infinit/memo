@@ -25,7 +25,7 @@
 
 
 #ifdef INFINIT_WINDOWS
-#undef stat
+# undef stat
 #endif
 
 ELLE_LOG_COMPONENT("infinit.filesystem.Directory");
@@ -86,7 +86,7 @@ namespace infinit
              if (deserialized)
                ELLE_WARN("Ignoring 'exclusive' create flag in asynchronous mode");
              else
-               THROW_EXIST;
+               THROW_EXIST();
            }
          }
          ELLE_TRACE("insert: Overriding entry %s", op.target);
@@ -389,7 +389,7 @@ namespace infinit
           _header.xattrs.clear();
           input.serialize_forward(*this);
         }
-        catch(elle::serialization::Error const& e)
+        catch (elle::serialization::Error const& e)
         {
           ELLE_WARN("Directory deserialization error: %s", e);
           ELLE_TRACE("%s", elle::Backtrace::current());
@@ -413,12 +413,13 @@ namespace infinit
     }
 
     void
-    DirectoryData::write(model::Model& model,
+    DirectoryData::write(FileSystem& fs,
                          Operation op,
                          std::unique_ptr<model::blocks::ACLBlock>&block,
                          bool set_mtime,
                          bool first_write)
     {
+      model::Model& model = *fs.block_store();
       ELLE_DEBUG("%s: write at %s", this, _address);
       ELLE_DUMP("%s", print_files(_files));
       if (set_mtime)
@@ -448,7 +449,7 @@ namespace infinit
           version = block->version();
           model.store(*block,
             first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-            elle::make_unique<DirectoryConflictResolver>(model, op, _address));
+            std::make_unique<DirectoryConflictResolver>(model, op, _address));
         }
         else
         {
@@ -468,7 +469,7 @@ namespace infinit
           version = b->version();
           model.store(std::move(b),
             first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-            elle::make_unique<DirectoryConflictResolver>(model, op, _address));
+            std::make_unique<DirectoryConflictResolver>(model, op, _address));
         }
         ELLE_TRACE("stored version %s of %f", version, _address);
         _block_version = version + 1;
@@ -476,15 +477,17 @@ namespace infinit
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
         ELLE_TRACE("permission exception: %s", e.what());
+        // Evict entry from cache since we put invalid changes there
+        fs._directory_cache.erase(_address);
         throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
       }
-      catch(rfs::Error const& e)
+      catch (rfs::Error const& e)
       {
         ELLE_TRACE("filesystem error storing %x: %s",
                   _address, e);
         throw;
       }
-      catch(elle::Error const& e)
+      catch (elle::Error const& e)
       {
         ELLE_WARN("unexpected elle error storing %x: %s",
                   _address, e);
@@ -539,7 +542,7 @@ namespace infinit
     void
     Directory::_commit(Operation op, bool set_mtime)
     {
-      _data->write(*_owner.block_store(), op, _block, set_mtime);
+      _data->write(_owner, op, _block, set_mtime);
     }
 
     std::shared_ptr<rfs::Path>
@@ -588,13 +591,17 @@ namespace infinit
         elle::os::getenv("INFINIT_PREFETCH_DEPTH", "2"));
       static int prefetch_group = std::stoi(
         elle::os::getenv("INFINIT_PREFETCH_GROUP", "5"));
+      static int prefetch_tasks = std::stoi(
+        elle::os::getenv("INFINIT_PREFETCH_TASKS", "5"));
       int group_size = prefetch_group;
       int nthreads = prefetch_threads;
       if (this->_prefetching ||
           nthreads == 0 ||
-          (FileSystem::now() - this->_last_prefetch) < std::chrono::seconds(15))
+          (FileSystem::now() - this->_last_prefetch) < std::chrono::seconds(15) ||
+          fs.prefetching() >= prefetch_tasks)
         return;
       this->_last_prefetch = FileSystem::now();
+      fs.prefetching()++;
       auto files = std::make_shared<std::vector<PrefetchEntry>>();
       for (auto const& f: this->_files)
         files->push_back(
@@ -681,11 +688,11 @@ namespace infinit
                   }
                 }
               }
-              catch(elle::Error const& e)
+              catch (elle::Error const& e)
               {
                 ELLE_TRACE("Exception while prefeching: %s", e.what());
               }
-              catch(std::out_of_range const& e)
+              catch (std::out_of_range const& e)
               {
                 ELLE_TRACE("Entry vanished from cache: %s", e.what());
               }
@@ -711,8 +718,7 @@ namespace infinit
                         {
                           auto it = fs->directory_cache().find(addr);
                           if (it == fs->directory_cache().end())
-                            throw elle::Error(
-                              elle::sprintf("directory at %f vanished from cache", addr));
+                            elle::err("directory at %f vanished from cache", addr);
                           d = *it;
                         }
                         for (auto const& f: d->_files)
@@ -736,8 +742,10 @@ namespace infinit
                    (boost::posix_time::microsec_clock::universal_time() - start_time)
                      .total_microseconds());
           if (!(--(*running)))
+          {
             self->_prefetching = false;
-          fs->pending().clear();
+            fs->prefetching()--;
+          }
           auto* self = reactor::scheduler().current();
           auto& running = fs->running();
           auto it = std::find_if(running.begin(), running.end(),
@@ -747,10 +755,13 @@ namespace infinit
             });
           if (it != running.end())
           {
-            fs->pending().emplace_back(std::move(*it));
+            (*it)->dispose(true);
+            it->release();
             std::swap(running.back(), *it);
             running.pop_back();
           }
+          else
+            ELLE_WARN("Thread %s not found in running list", self);
       };
       for (int i = 0; i < nthreads; ++i)
         fs.running().emplace_back(
@@ -808,9 +819,9 @@ namespace infinit
         throw rfs::Error(EINVAL, "Cannot delete root node");
       if ( !(_data->_header.mode & 0200)
         || !(_parent->_header.mode & 0200))
-        THROW_ACCES;
+        THROW_ACCES();
       _parent->_files.erase(_name);
-      _parent->write(*_owner.block_store(), {OperationType::remove, _name});
+      _parent->write(_owner, {OperationType::remove, _name});
       umbrella([&] {_owner.block_store()->remove(_data->address());});
     }
 
@@ -916,14 +927,14 @@ namespace infinit
           bool on = !(value == "0" || value == "false" || value=="");
           this->_data->_inherit_auth = on;
           this->_data->write(
-            *_owner.block_store(),
+            _owner,
             {OperationType::update, on ? "/inherit" : "/disinherit"});
           return;
         }
         else if (*special == "fsck.deref")
         {
           this->_data->_files.erase(value);
-          this->_data->write(*_owner.block_store(),
+          this->_data->write(_owner,
                              {OperationType::remove, value},
                              DirectoryData::null_block,
                              true);
@@ -934,7 +945,7 @@ namespace infinit
           auto p1 = value.find_first_of(':');
           auto p2 = value.find_last_of(':');
           if (p1 == p2 || p1 != 1)
-            THROW_INVAL;
+            THROW_INVAL();
           EntryType type;
           if (value[0] == 'd')
             type = EntryType::directory;
@@ -945,7 +956,7 @@ namespace infinit
           std::string ename = value.substr(p1+1, p2 - p1 - 1);
           Address eaddr = Address::from_string(value.substr(p2+1));
           this->_data->_files[ename] = std::make_pair(type, eaddr);
-          this->_data->write(*_owner.block_store(),
+          this->_data->write(_owner,
                              {OperationType::insert, ename},
                              DirectoryData::null_block,
                              true);
@@ -962,19 +973,19 @@ namespace infinit
         {
           auto it = _data->_files.find(value);
           if (it == _data->_files.end())
-            THROW_NOENT;
+            THROW_NOENT();
           File f(_owner, it->second.second, {}, _data, value);
           try
           {
             f.unlink();
           }
-          catch(std::exception const& e)
+          catch (std::exception const& e)
           {
             ELLE_WARN(
               "%s: unlink of %s failed with %s, forcibly remove from parent",
               *this, value, e.what());
             this->_data->_files.erase(value);
-            this->_data->write(*_owner.block_store(),
+            this->_data->write(_owner,
                                Operation{OperationType::remove, value},
                                DirectoryData::null_block, true);
           }

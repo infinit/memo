@@ -1339,11 +1339,11 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
   for (int i=0; i<n; ++i)
   {
     ids[i] = infinit::model::Address::random();
-    auto dht = elle::make_unique<DHT>(
+    auto dht = std::make_unique<DHT>(
       ::id = ids[i],
       ::version = config.version,
       ::keys = keys, make_overlay = config.overlay_builder, paxos = true,
-      ::storage = elle::make_unique<infinit::storage::Memory>(blocks[i])
+      ::storage = std::make_unique<infinit::storage::Memory>(blocks[i])
     );
     ports[i] = dht->dht->dock().utp_server().local_endpoint().port();
     servers.emplace_back(std::move(dht));
@@ -1353,7 +1353,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
       discover(*servers[i], *servers[j], false);
   std::unique_ptr<DHT> client;
   auto spawn_client = [&] {
-    client = elle::make_unique<DHT>(
+    client = std::make_unique<DHT>(
       ::keys = keys,
       ::version = config.version,
       ::make_overlay = config.overlay_builder,
@@ -1387,7 +1387,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
         paxos = true,
         ::id = ids[down],
         ::port = keep_port ? ports[down] : 0,
-        ::storage = elle::make_unique<infinit::storage::Memory>(blocks[down])));
+        ::storage = std::make_unique<infinit::storage::Memory>(blocks[down])));
       for (int s=0; s< n; ++s)
         if (s != down)
         {
@@ -1468,11 +1468,11 @@ test_churn_socket(TestConfiguration config, bool pasv)
   for (int i=0; i<n; ++i)
   {
     ids[i] = infinit::model::Address::random();
-    auto dht = elle::make_unique<DHT>(
+    auto dht = std::make_unique<DHT>(
       ::id = ids[i],
       ::version = config.version,
       ::keys = keys, make_overlay = config.overlay_builder, paxos = true,
-      ::storage = elle::make_unique<infinit::storage::Memory>(blocks[i])
+      ::storage = std::make_unique<infinit::storage::Memory>(blocks[i])
     );
     servers.emplace_back(std::move(dht));
   }
@@ -1481,7 +1481,7 @@ test_churn_socket(TestConfiguration config, bool pasv)
       discover(*servers[i], *servers[j], false);
   for (auto& s: servers)
     hard_wait(*s, n-1);
-  std::unique_ptr<DHT> client = elle::make_unique<DHT>(
+  std::unique_ptr<DHT> client = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
     ::make_overlay = config.overlay_builder,

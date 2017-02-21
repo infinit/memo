@@ -34,7 +34,7 @@ namespace infinit
       std::unique_ptr<Block>
       Block::clone() const
       {
-        return elle::make_unique<Block>(this->address(), this->data());
+        return std::make_unique<Block>(this->address(), this->data());
       }
 
       /*--------.

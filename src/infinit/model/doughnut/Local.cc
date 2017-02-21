@@ -72,22 +72,22 @@ namespace infinit
                 && dht.version() >= elle::Version(0, 7, 0);
             if (p == Protocol::tcp || p == Protocol::all)
             {
-              this->_server = elle::make_unique<reactor::network::TCPServer>();
+              this->_server = std::make_unique<reactor::network::TCPServer>();
               if (listen_address)
                 this->_server->listen(*listen_address, port, v6);
               else
                 this->_server->listen(port, v6);
-              this->_server_thread = elle::make_unique<reactor::Thread>(
+              this->_server_thread = std::make_unique<reactor::Thread>(
                 elle::sprintf("%s", this),
                 [this] { this->_serve_tcp(); });
               ELLE_LOG("%s: listen on tcp://%s",
                        this, this->_server->local_endpoint());
             }
-            if (p == Protocol::utp || p == Protocol::all)
+            // Always enable UTP server
             {
               int udp_port = port;
               this->_utp_server =
-                elle::make_unique<reactor::network::UTPServer>();
+                std::make_unique<reactor::network::UTPServer>();
               if (this->_server)
                 udp_port = this->_server->port();
               try
@@ -104,7 +104,7 @@ namespace infinit
                 else
                   throw; // port was specified in args, no retry
               }
-              this->_utp_server_thread = elle::make_unique<reactor::Thread>(
+              this->_utp_server_thread = std::make_unique<reactor::Thread>(
                 elle::sprintf("%s UTP", *this),
                 [this] { this->_serve_utp(); });
               ELLE_LOG("%s: listen on utp://%s",
@@ -326,7 +326,8 @@ namespace infinit
         Endpoints res;
         auto filter = (elle::network::Interface::Filter::only_up |
                        elle::network::Interface::Filter::no_loopback |
-                       elle::network::Interface::Filter::no_autoip);
+                       elle::network::Interface::Filter::no_autoip |
+                       elle::network::Interface::Filter::no_awdl);
         for (auto const& itf: elle::network::Interface::get_map(filter))
         {
           if (!itf.second.ipv4_address.empty()
@@ -355,9 +356,9 @@ namespace infinit
         if (disable)
           return;
         if (!rpcs._key)
-          throw elle::Error("Authentication required");
+          elle::err("Authentication required");
         if (write_op && !this->_passports.at(&rpcs).allow_write())
-          throw elle::Error("Write permission denied.");
+          elle::err("Write permission denied");
       }
 
       void
@@ -417,7 +418,7 @@ namespace infinit
             if (!verify)
             {
               ELLE_LOG("Passport validation failed");
-              throw elle::Error("Passport validation failed");
+              elle::err("Passport validation failed");
             }
             // generate and store a challenge to ensure remote owns the passport
             auto challenge = infinit::cryptography::random::generate<elle::Buffer>(128);
@@ -484,7 +485,7 @@ namespace infinit
           {
             ELLE_TRACE("%s: authentication ack", this);
             if (stored_challenge->empty())
-              throw elle::Error("auth_syn must be called before auth_ack");
+              elle::err("auth_syn must be called before auth_ack");
             auto& passport = this->_passports.at(&rpcs);
             bool ok = passport.user().verify(
               signed_challenge,
@@ -494,7 +495,7 @@ namespace infinit
             if (!ok)
             {
               ELLE_LOG("Challenge verification failed");
-              throw elle::Error("Challenge verification failed");
+              elle::err("Challenge verification failed");
             }
             elle::Buffer password = this->_doughnut.keys().k().open(
               enc_key,

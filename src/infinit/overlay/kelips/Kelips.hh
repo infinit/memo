@@ -42,7 +42,7 @@ namespace infinit
       typedef Time::duration Duration;
       //typedef std::chrono::duration<long, std::ratio<1, 1000000>> Duration;
 
-      typedef std::pair<Endpoint, Time> TimedEndpoint;
+      using TimedEndpoint = std::pair<Endpoint, Time>;
       struct Contact
       {
         // Endpoint we last received a message from
@@ -72,8 +72,8 @@ namespace infinit
         int gossip_count;
       };
 
-      typedef std::unordered_multimap<Address, File> Files;
-      typedef std::unordered_map<Address, Contact> Contacts;
+      using Files = std::unordered_multimap<Address, File>;
+      using Contacts = std::unordered_map<Address, Contact>;
       struct State
       {
         Files files;
@@ -128,8 +128,8 @@ namespace infinit
       struct Configuration
         : public overlay::Configuration
       {
-        typedef Configuration Self;
-        typedef overlay::Configuration Super;
+        using Self = Configuration;
+        using Super = overlay::Configuration;
 
         Configuration();
         Configuration(elle::serialization::SerializerIn& input);

@@ -178,9 +178,11 @@ class Infinit(TemporaryDirectory):
           return_code = 0,
           env = {},
           gdb = False,
-          timeout = 600):
+          timeout = 600,
+          noscript = False):
     try:
-      process = self.spawn(args, input, return_code, env, gdb = gdb)
+      process = self.spawn(
+        args, input, return_code, env, gdb = gdb, noscript = noscript)
       out, err = process.communicate(timeout = timeout)
       process.wait()
     except (subprocess.TimeoutExpired, KeyboardInterrupt):

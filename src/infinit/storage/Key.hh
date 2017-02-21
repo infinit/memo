@@ -1,7 +1,4 @@
-#ifndef INFINIT_STORAGE_KEY_HH
-# define INFINIT_STORAGE_KEY_HH
+#pragma once
 
-# include <infinit/model/Address.hh>
-# include <infinit/storage/fwd.hh>
-
-#endif
+#include <infinit/model/Address.hh>
+#include <infinit/storage/fwd.hh>

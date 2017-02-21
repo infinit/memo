@@ -24,6 +24,8 @@ namespace infinit
     {
       namespace consensus
       {
+        DAS_SYMBOL(remove_signature);
+
         namespace bmi = boost::multi_index;
         class Async
           : public Consensus
@@ -105,7 +107,7 @@ namespace infinit
                 symbols::Symbol_block,
                 symbols::Symbol_mode,
                 symbols::Symbol_resolver,
-                symbols::Symbol_remove_signature>>;
+                Symbol_remove_signature>>;
           };
 
         private:

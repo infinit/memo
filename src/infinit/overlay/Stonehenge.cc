@@ -101,7 +101,7 @@ namespace infinit
     Stonehenge::_make_member(NodeLocation const& peer) const
     {
       if (peer.endpoints().empty())
-        throw elle::Error(elle::sprintf("missing endpoint for %f", peer.id()));
+        elle::err("missing endpoint for %f", peer.id());
       return this->doughnut()->dock().make_peer(peer);
     }
 
@@ -164,7 +164,7 @@ namespace infinit
           peer.id,
           Endpoints({model::Endpoint(peer.host, peer.port)}));
       }
-      return elle::make_unique<infinit::overlay::Stonehenge>(
+      return std::make_unique<infinit::overlay::Stonehenge>(
         peers, std::move(local), dht);
     }
 

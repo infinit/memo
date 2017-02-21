@@ -1,20 +1,19 @@
-#ifndef INFINIT_OVERLAY_OVERLAY_HH
-# define INFINIT_OVERLAY_OVERLAY_HH
+#pragma once
 
-# include <unordered_map>
+#include <unordered_map>
 
-# include <elle/Clonable.hh>
-# include <elle/json/json.hh>
-# include <elle/log.hh>
+#include <elle/Clonable.hh>
+#include <elle/json/json.hh>
+#include <elle/log.hh>
 
-# include <reactor/network/tcp-socket.hh>
-# include <reactor/Generator.hh>
+#include <reactor/network/tcp-socket.hh>
+#include <reactor/Generator.hh>
 
-# include <infinit/model/Address.hh>
-# include <infinit/model/Endpoints.hh>
-# include <infinit/model/doughnut/fwd.hh>
-# include <infinit/model/doughnut/protocol.hh>
-# include <infinit/serialization.hh>
+#include <infinit/model/Address.hh>
+#include <infinit/model/Endpoints.hh>
+#include <infinit/model/doughnut/fwd.hh>
+#include <infinit/model/doughnut/protocol.hh>
+#include <infinit/serialization.hh>
 
 namespace infinit
 {
@@ -31,22 +30,35 @@ namespace infinit
     | Types |
     `------*/
     public:
-      typedef std::shared_ptr<model::doughnut::Peer> Member;
-      typedef std::ambivalent_ptr<model::doughnut::Peer> WeakMember;
-      typedef std::vector<Member> Members;
+      /// Remote or local peer.
+      using Member = std::shared_ptr<model::doughnut::Peer>;
+      /// Members with weak or strong ownerships.
+      using WeakMember = std::ambivalent_ptr<model::doughnut::Peer>;
+      /// Collection of members.
+      using Members = std::vector<Member>;
 
     /*-------------.
     | Construction |
     `-------------*/
     public:
+      /** Construct an Overlay.
+       *
+       *  @arg dht   The owning Doughnut.
+       *  @arg local The optional Local.
+       */
       Overlay(model::doughnut::Doughnut* dht,
               std::shared_ptr<infinit::model::doughnut::Local> local);
+      /// Destroy an Overlay.
       virtual
       ~Overlay();
+      /// Prepare for destruction.
       void
       cleanup();
+      /// The owning Doughnut.
       ELLE_ATTRIBUTE_R(model::doughnut::Doughnut*, doughnut);
+      /// This node's id.
       ELLE_attribute_r(model::Address, id);
+      /// The node's optional Local.
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
     protected:
       virtual
@@ -57,12 +69,16 @@ namespace infinit
     | Peers |
     `------*/
     public:
+      /// Discover one anonymous peer.
       void
       discover(Endpoints const& peer);
+      /// Discover anonymous peers.
       void
       discover(std::vector<Endpoints> const& peers);
+      /// Discover one peer.
       void
       discover(NodeLocation const& peer);
+      /// Discover peers.
       void
       discover(NodeLocations const& peers);
       bool
@@ -210,5 +226,3 @@ namespace infinit
     };
   }
 }
-
-#endif

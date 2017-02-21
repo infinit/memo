@@ -16,17 +16,26 @@ namespace infinit
     Adb::Adb(std::string const& root)
     :_root(root)
     {}
+
+    namespace
+    {
+      std::string remote(std::string const& root,
+                         Key const& key)
+      {
+        return elle::sprintf("%s/%x", root, key);
+      }
+
+      void
+      system(std::initializer_list<std::string> args)
+      {
+        elle::system::Process p(args);
+        p.wait();
+      }
+    }
+
     elle::Buffer Adb::_get(Key key) const
     {
-      std::string remote = elle::sprintf("%s/%x", _root, key);
-      std::vector<std::string> args = {
-        "adb",
-        "pull",
-        remote,
-        tmpIn
-      };
-      elle::system::Process p(args);
-      p.wait();
+      system({"adb", "pull", remote(_root, key), tmpIn});
       struct stat st;
       ::stat(tmpIn, &st);
       std::ifstream ifs(tmpIn, std::ios::binary);
@@ -40,48 +49,28 @@ namespace infinit
     int
     Adb::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
-      std::string remote = elle::sprintf("%s/%x", _root, key);
       std::ofstream ofs(tmpOut);
       ofs.write((char*)value.contents(), value.size());
       ofs.close();
-      std::vector<std::string> args = {
-        "adb",
-        "push",
-        tmpOut,
-        remote
-      };
-      elle::system::Process p(args);
-      p.wait();
+      system({"adb", "push", tmpOut, remote(_root, key)});
       unlink(tmpOut);
-
       return 0;
     }
 
     int
     Adb::_erase(Key key)
     {
-      std::string remote = elle::sprintf("%s/%x", _root, key);
-      std::vector<std::string> args = {
-        "adb",
-        "shell",
-        "rm",
-        remote
-      };
-      elle::system::Process p(args);
-      p.wait();
-
+      system({"adb", "shell", "rm", remote(_root, key)});
       return 0;
     }
 
     std::vector<Key> Adb::_list()
     {
-      std::vector<std::string> args = {
+      system({
         "sh",
         "-c",
         "adb shell ls " + _root + " > " + tmpOut
-      };
-      elle::system::Process p(args);
-      p.wait();
+      });
       std::ifstream ifs(tmpOut);
       std::vector<Key> res;
       while (true)
@@ -113,7 +102,7 @@ namespace infinit
     std::unique_ptr<infinit::storage::Storage>
     AdbStorageConfig::make()
     {
-      return elle::make_unique<infinit::storage::Adb>(root);
+      return std::make_unique<infinit::storage::Adb>(root);
     }
 
     static const elle::serialization::Hierarchy<StorageConfig>::

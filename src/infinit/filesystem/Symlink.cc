@@ -90,7 +90,7 @@ namespace infinit
     Symlink::unlink()
     {
       this->_parent->_files.erase(this->_name);
-      this->_parent->write(*this->_owner.block_store(),
+      this->_parent->write(this->_owner,
                            {OperationType::remove, this->_name},
                            DirectoryData::null_block,
                            true);
@@ -114,8 +114,8 @@ namespace infinit
     {
       auto p = this->_owner.filesystem()->path(where.string());
       Unknown* unk = dynamic_cast<Unknown*>(p.get());
-      if (unk == nullptr)
-        THROW_EXIST;
+      if (!unk)
+        THROW_EXIST();
       unk->symlink(readlink());
     }
 
@@ -176,7 +176,7 @@ namespace infinit
 #ifdef O_PATH
       if (!(flags & O_PATH))
 #endif
-        THROW_NOSYS;
+        THROW_NOSYS();
       return {};
     }
     void Symlink::utimens(const struct timespec tv[2])

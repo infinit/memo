@@ -100,7 +100,7 @@ namespace infinit
         make(bool,
              boost::filesystem::path const&) override
         {
-          return elle::make_unique<infinit::model::faith::Faith>(
+          return std::make_unique<infinit::model::faith::Faith>(
             this->storage->make(), this->version);
         }
       };

@@ -542,7 +542,7 @@ namespace infinit
                 return model->make_user(
                   elle::serialization::json::serialize(k, version));
               else
-                return elle::make_unique<doughnut::User>(k, "");
+                return std::make_unique<doughnut::User>(k, "");
             }
             catch(elle::Error const& e)
             {
@@ -586,7 +586,7 @@ namespace infinit
           catch(std::exception const& e)
           {
             ELLE_TRACE("Exception making user: %s", e);
-            res.emplace_back(elle::make_unique<model::User>(),
+            res.emplace_back(std::make_unique<model::User>(),
                              ent.read, ent.write, this->_admin_group(ent.key));
           }
         }
@@ -1040,7 +1040,7 @@ namespace infinit
       std::unique_ptr<typename BaseACB<Block>::Super::OwnerSignature>
       BaseACB<Block>::_sign() const
       {
-        return elle::make_unique<OwnerSignature>(*this);
+        return std::make_unique<OwnerSignature>(*this);
       }
 
       template<typename Block>
@@ -1118,7 +1118,7 @@ namespace infinit
       std::unique_ptr<typename BaseACB<Block>::DataSignature>
       BaseACB<Block>::_data_sign() const
       {
-        return elle::make_unique<DataSignature>(*this);
+        return std::make_unique<DataSignature>(*this);
       }
 
       template <typename Block>

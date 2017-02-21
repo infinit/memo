@@ -164,7 +164,7 @@ namespace infinit
                           std::unique_ptr<storage::Storage> storage,
                           Protocol p)
         {
-          return elle::make_unique<consensus::Paxos::LocalPeer>(
+          return std::make_unique<consensus::Paxos::LocalPeer>(
             *this,
             this->factor(),
             this->_rebalance_auto_expand,
@@ -284,7 +284,7 @@ namespace infinit
         {
           Paxos::PaxosClient::Peers res;
           for (auto member: dht.overlay()->lookup_nodes(q))
-            res.push_back(elle::make_unique<PaxosPeer>(
+            res.push_back(std::make_unique<PaxosPeer>(
                             std::move(member), address, local_version));
           return res;
         }
@@ -515,10 +515,8 @@ namespace infinit
           {
             auto res = this->_load(address);
             if (res.block)
-              throw elle::Error(
-                elle::sprintf(
-                  "immutable block found when paxos was expected: %s",
-                  address));
+              elle::err("immutable block found when paxos was expected: %s",
+                        address);
             else
               return *res.paxos;
           }
@@ -1138,9 +1136,7 @@ namespace infinit
             if (!data.block)
             {
               ELLE_TRACE("%s: plain fetch called on mutable block", *this);
-              throw elle::Error(
-                elle::sprintf(
-                  "plain fetch called on mutable block %f", address));
+              elle::err("plain fetch called on mutable block %f", address);
             }
             return std::unique_ptr<blocks::Block>(data.block.release());
           }
@@ -1411,7 +1407,7 @@ namespace infinit
               {
                 peers_id.insert(peer->id());
                 peers.push_back(
-                  elle::make_unique<PaxosPeer>(wpeer, b->address()));
+                  std::make_unique<PaxosPeer>(wpeer, b->address()));
               }
             }
             if (peers.empty())
@@ -1581,7 +1577,7 @@ namespace infinit
           std::unordered_map<Address, PaxosClient::Peers> peers;
           for (auto r: hits)
             peers[r.first].push_back(
-              elle::make_unique<PaxosPeer>(r.second, r.first, versions.at(r.first)));
+              std::make_unique<PaxosPeer>(r.second, r.first, versions.at(r.first)));
           reactor::for_each_parallel(
             peers,
             [&] (std::pair<Address const, PaxosClient::Peers>& p)
@@ -1687,7 +1683,7 @@ namespace infinit
           PaxosClient::Peers peers;
           for (auto peer: owners)
             peers.push_back(
-              elle::make_unique<PaxosPeer>(peer, address, local_version));
+              std::make_unique<PaxosPeer>(peer, address, local_version));
           ELLE_DEBUG("peers: %f", peers);
           return peers;
         }
@@ -1920,7 +1916,7 @@ namespace infinit
           //   auto node = elle::sprintf("%s", hit.node());
           //   stat_hits.emplace(node, std::move(hit));
           // }
-          // return elle::make_unique<PaxosStat>(std::move(stat_hits));
+          // return std::make_unique<PaxosStat>(std::move(stat_hits));
           return Super::stat(address);
         }
 
@@ -1963,7 +1959,7 @@ namespace infinit
         std::unique_ptr<Consensus>
         Paxos::Configuration::make(model::doughnut::Doughnut& dht)
         {
-          return elle::make_unique<Paxos>(
+          return std::make_unique<Paxos>(
             dht,
             consensus::replication_factor = this->_replication_factor,
             consensus::node_timeout = this->_node_timeout,

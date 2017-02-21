@@ -287,15 +287,15 @@ namespace kademlia
     _socket.socket()->close();
     _socket.bind(Endpoint({}, _config.port));
 
-    _looper = elle::make_unique<reactor::Thread>("looper",
+    _looper = std::make_unique<reactor::Thread>("looper",
       [this] { this->_loop();});
-    _pinger = elle::make_unique<reactor::Thread>("pinger",
+    _pinger = std::make_unique<reactor::Thread>("pinger",
       [this] { this->_ping();});
-    _refresher = elle::make_unique<reactor::Thread>("refresher",
+    _refresher = std::make_unique<reactor::Thread>("refresher",
       [this] { this->_refresh();});
-    _cleaner = elle::make_unique<reactor::Thread>("cleaner",
+    _cleaner = std::make_unique<reactor::Thread>("cleaner",
       [this] { this->_cleanup();});
-    _republisher = elle::make_unique<reactor::Thread>("republisher",
+    _republisher = std::make_unique<reactor::Thread>("republisher",
       [this] { this->_republish();});
     if (_config.wait)
     {
@@ -1025,7 +1025,7 @@ namespace infinit
         std::shared_ptr<infinit::model::doughnut::Local> local,
         model::doughnut::Doughnut* doughnut)
       {
-        return elle::make_unique< ::kademlia::Kademlia>(
+        return std::make_unique< ::kademlia::Kademlia>(
           config, std::move(local), doughnut);
       }
       static const elle::serialization::Hierarchy<overlay::Configuration>::

@@ -31,6 +31,15 @@ def str2bool(v):
 ## Bottle ##
 ## ------ ##
 
+ADMINS = [
+  'antony.mechin@infinit.sh',
+  'christopher.crone@infinit.sh',
+  'gaetan.rochel@infinit.sh',
+  'julien.quintard@infinit.sh',
+  'matthieu.nottale@infinit.sh',
+  'mefyl@infinit.sh',
+]
+
 class Bottle(bottle.Bottle):
 
   __oauth_services = {
@@ -105,6 +114,8 @@ class Bottle(bottle.Bottle):
       self.route('/users/<username>/%s-oauth' % s)(
         getattr(self, 'oauth_%s_get' % s))
       self.route('/users/<username>/credentials/%s' % s) \
+        (getattr(self, 'user_%s_credentials_get' % s))
+      self.route('/users/<username>/credentials/%s/<id>' % s) \
         (getattr(self, 'user_%s_credentials_get' % s))
       self.route('/users/<username>/credentials/%s' % s, method = 'DELETE') \
         (getattr(self, 'user_%s_credentials_delete' % s))
@@ -232,15 +243,7 @@ class Bottle(bottle.Bottle):
     if not hasattr(bottle.request, 'certificate'):
       raise exceptions.MissingCertificate()
     u = bottle.request.certificate
-    if u not in [
-        'antony.mechin@infinit.io',
-        'baptiste.fradin@infinit.io',
-        'christopher.crone@infinit.io',
-        'gaetan.rochel@infinit.io',
-        'julien.quintard@infinit.io',
-        'matthieu.nottale@infinit.io',
-        'mefyl@infinit.io',
-    ]:
+    if u not in ADMINS:
       raise exceptions.UserNotAdmin(user = u)
 
   def is_admin(self):
@@ -370,15 +373,7 @@ class Bottle(bottle.Bottle):
 
   def debug(self):
     if hasattr(bottle.request, 'certificate') and \
-       bottle.request.certificate in [
-         'antony.mechin@infinit.io',
-         'baptiste.fradin@infinit.io',
-         'christopher.crone@infinit.io',
-         'gaetan.rochel@infinit.io',
-         'julien.quintard@infinit.io',
-         'matthieu.nottale@infinit.io',
-         'quentin.hocquet@infinit.io',
-       ]:
+       bottle.request.certificate in ADMINS:
       return True
     else:
       return super().debug()
@@ -1253,15 +1248,21 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       raise self._Bottle__user_not_found(username)
   oauth.__name__ = 'oauth_%s' % name
   setattr(Bottle, oauth.__name__, oauth)
-  def user_credentials_get(self, username, name = name):
+  def user_credentials_get(self, username, name = name, id = None):
     beyond = self._Bottle__beyond
     try:
       user = beyond.user_get(name = username)
       self.authenticate(user)
-      return {
+      res = {
         'credentials':
-          list(getattr(user, '%s_accounts' % name).values()),
+        list(
+          filter(lambda entry: True if id is None else entry.get('uid') == id,
+                 getattr(user, '%s_accounts' % name).values()))
       }
+      if id is not None and len(res['credentials']) == 0:
+        raise self._Bottle__not_found("%s_credentials_%s" % (name, id),
+                                      name)
+      return res
     except User.NotFound:
       raise self._Bottle__user_not_found(username)
   user_credentials_get.__name__ = 'user_%s_credentials_get' % name
@@ -1275,14 +1276,14 @@ for name, conf in Bottle._Bottle__oauth_services.items():
         accounts = getattr(user, '%s_accounts' % name)
         if id is not None:
           if id not in accounts.keys():
-            raise self._Bottle__not_found("%s credentials %s" % (name, id),
+            raise self._Bottle__not_found("%s_credentials_%s" % (name, id),
                                           name)
           getattr(user, '%s_accounts' % name)[id] = None
         else:
           getattr(user, '%s_accounts' % name).clear()
         user.save()
       else:
-        raise self._Bottle__not_found("%s credentials",  name)
+        raise self._Bottle__not_found("%s_credentials" % name,  name)
       return {
         'credentials':
           list(getattr(user, '%s_accounts' % name).values()),

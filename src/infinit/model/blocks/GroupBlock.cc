@@ -27,31 +27,31 @@ namespace infinit
       void
       GroupBlock::add_member(model::User const& user)
       {
-        throw elle::Error("Not implemented");
+        elle::err("Not implemented");
       }
 
       void
       GroupBlock::remove_member(model::User const& user)
       {
-        throw elle::Error("Not implemented");
+        elle::err("Not implemented");
       }
 
       void
       GroupBlock::add_admin(model::User const& user)
       {
-        throw elle::Error("Not implemented");
+        elle::err("Not implemented");
       }
 
       void
       GroupBlock::remove_admin(model::User const& user)
       {
-        throw elle::Error("Not implemented");
+        elle::err("Not implemented");
       }
 
       std::vector<std::unique_ptr<User>>
       GroupBlock::list_admins(bool ommit_names) const
       {
-        throw elle::Error("Not implemented");
+        elle::err("Not implemented");
       }
     }
   }

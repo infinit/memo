@@ -1,17 +1,15 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_GB_HH
-# define INFINIT_MODEL_DOUGHNUT_GB_HH
+#pragma once
 
+#include <elle/serialization/fwd.hh>
+#include <elle/Buffer.hh>
 
-# include <elle/serialization/fwd.hh>
-# include <elle/Buffer.hh>
+#include <cryptography/rsa/KeyPair.hh>
 
-# include <cryptography/rsa/KeyPair.hh>
-
-# include <infinit/model/User.hh>
-# include <infinit/model/blocks/ACLBlock.hh>
-# include <infinit/model/blocks/GroupBlock.hh>
-# include <infinit/model/doughnut/OKB.hh>
-# include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/User.hh>
+#include <infinit/model/blocks/ACLBlock.hh>
+#include <infinit/model/blocks/GroupBlock.hh>
+#include <infinit/model/doughnut/OKB.hh>
+#include <infinit/model/doughnut/ACB.hh>
 
 namespace infinit
 {
@@ -26,26 +24,21 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        typedef GB Self;
-        typedef BaseACB<blocks::GroupBlock> Super;
+        using Self = GB;
+        using Super = BaseACB<blocks::GroupBlock>;
         GB(Doughnut* owner, cryptography::rsa::KeyPair master);
         GB(GB const& other);
         ~GB();
 
       public:
-        virtual
         void
         add_member(model::User const& user) override;
-        virtual
         void
         remove_member(model::User const& user) override;
-        virtual
         void
         add_admin(model::User const& user) override;
-        virtual
         void
         remove_admin(model::User const& user) override;
-        virtual
         std::vector<std::unique_ptr<model::User>>
         list_admins(bool ommit_names) const override;
         virtual
@@ -78,7 +71,6 @@ namespace infinit
                      elle::Version const& v);
           ELLE_ATTRIBUTE_R(GB const&, block);
         };
-        virtual
         std::unique_ptr<typename BaseOKB<blocks::GroupBlock>::OwnerSignature>
         _sign() const override;
         class DataSignature
@@ -92,7 +84,6 @@ namespace infinit
                     elle::Version const& v);
           ELLE_ATTRIBUTE_R(GB const&, block);
         };
-        virtual
         std::unique_ptr<Super::DataSignature>
         _data_sign() const override;
 
@@ -114,7 +105,6 @@ namespace infinit
       | Clonable |
       `---------*/
       public:
-        virtual
         std::unique_ptr<blocks::Block>
         clone() const override;
       private:
@@ -141,7 +131,6 @@ namespace infinit
       | Printable |
       `----------*/
       public:
-        virtual
         void
         print(std::ostream& ouptut) const override;
       };
@@ -149,4 +138,3 @@ namespace infinit
   }
 }
 
-#endif

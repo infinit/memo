@@ -319,7 +319,7 @@ namespace infinit
         std::unique_ptr<Consensus::Stat>
         Consensus::stat(Address const& address)
         {
-          return elle::make_unique<Stat>();
+          return std::make_unique<Stat>();
         }
 
         /*--------.
@@ -332,7 +332,7 @@ namespace infinit
                               std::unique_ptr<storage::Storage> storage,
                               Protocol p)
         {
-          return elle::make_unique<Local>(this->doughnut(),
+          return std::make_unique<Local>(this->doughnut(),
                                           this->doughnut().id(),
                                           std::move(storage),
                                           port ? port.get() : 0,
@@ -388,7 +388,7 @@ namespace infinit
         std::unique_ptr<Consensus>
         Configuration::make(model::doughnut::Doughnut& dht)
         {
-          return elle::make_unique<Consensus>(dht);
+          return std::make_unique<Consensus>(dht);
         }
 
         void

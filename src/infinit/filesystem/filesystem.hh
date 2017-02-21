@@ -1,22 +1,21 @@
-#ifndef INFINIT_FILESYSTEM_FILESYSTEM_HH
-# define INFINIT_FILESYSTEM_FILESYSTEM_HH
+#pragma once
 
-# include <chrono>
+#include <chrono>
 
-# include <boost/multi_index/hashed_index.hpp>
-# include <boost/multi_index/identity.hpp>
-# include <boost/multi_index/mem_fun.hpp>
-# include <boost/multi_index/ordered_index.hpp>
-# include <boost/multi_index/sequenced_index.hpp>
-# include <boost/multi_index_container.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/identity.hpp>
+#include <boost/multi_index/mem_fun.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/sequenced_index.hpp>
+#include <boost/multi_index_container.hpp>
 
-# include <cryptography/rsa/KeyPair.hh>
+#include <cryptography/rsa/KeyPair.hh>
 
-# include <reactor/filesystem.hh>
-# include <reactor/thread.hh>
+#include <reactor/filesystem.hh>
+#include <reactor/thread.hh>
 
-# include <infinit/model/Model.hh>
-# include <infinit/filesystem/FileData.hh>
+#include <infinit/model/Model.hh>
+#include <infinit/filesystem/FileData.hh>
 
 namespace infinit
 {
@@ -62,7 +61,7 @@ namespace infinit
       void
       update(model::blocks::Block& block, std::pair<bool, bool> perms);
       void
-      write(model::Model& model,
+      write(FileSystem& fs,
             Operation op,
             std::unique_ptr<model::blocks::ACLBlock>&block = null_block,
             bool set_mtime = false,
@@ -130,13 +129,17 @@ namespace infinit
     public:
       using clock = std::chrono::high_resolution_clock;
       FileData(boost::filesystem::path path,
-               Block& block, std::pair<bool, bool> perms);
+               Block& block, std::pair<bool, bool> perms,
+               int block_size);
       FileData(boost::filesystem::path path,
-               model::Address address, int mode);
+               model::Address address, int mode,
+               int block_size);
       void
-      update(model::blocks::Block& block, std::pair<bool, bool> perms);
+      update(model::blocks::Block& block,
+             std::pair<bool, bool> perms,
+             int block_size);
       void
-      write(model::Model& model,
+      write(FileSystem& fs,
             WriteTarget target = WriteTarget::all,
             std::unique_ptr<ACLBlock>&block = DirectoryData::null_block,
             bool first_write = false);
@@ -169,12 +172,13 @@ namespace infinit
     get_permissions(model::Model& model,
                     model::blocks::Block const& block);
     DAS_SYMBOL(allow_root_creation);
+    DAS_SYMBOL(block_size);
     DAS_SYMBOL(model);
+    DAS_SYMBOL(map_other_permissions);
     DAS_SYMBOL(mountpoint);
     DAS_SYMBOL(owner);
     DAS_SYMBOL(root_block_cache_dir);
     DAS_SYMBOL(volume_name);
-    DAS_SYMBOL(map_other_permissions);
     /** Filesystem using a Block Storage as backend.
     * Directory: nodes are serialized, and contains name, stat() and block
     *            address of the directory content
@@ -204,7 +208,8 @@ namespace infinit
         boost::optional<boost::filesystem::path> root_block_cache_dir = {},
         boost::optional<boost::filesystem::path> mountpoint = {},
         bool allow_root_creation = false,
-        bool map_other_permissions = true);
+        bool map_other_permissions = true,
+        boost::optional<int> block_size = {});
       ~FileSystem();
     private:
       struct Init;
@@ -291,12 +296,15 @@ namespace infinit
               > > FileCache;
       ELLE_ATTRIBUTE_R(FileCache, file_cache);
       ELLE_ATTRIBUTE_RX(std::vector<reactor::Thread::unique_ptr>, running);
-      ELLE_ATTRIBUTE_RX(std::vector<reactor::Thread::unique_ptr>, pending);
+      ELLE_ATTRIBUTE_RX(int, prefetching);
+      ELLE_ATTRIBUTE_RW(boost::optional<int>, block_size);
       typedef
       std::unordered_map<Address, std::weak_ptr<FileBuffer>>
       FileBuffers;
       ELLE_ATTRIBUTE_RX(FileBuffers, file_buffers);
       static const int max_cache_size = 10000;
+      friend class FileData;
+      friend class DirectoryData;
     };
   }
 }
@@ -312,6 +320,4 @@ namespace std
               infinit::filesystem::OperationType operation);
 }
 
-# include <infinit/filesystem/Filesystem.hxx>
-
-#endif
+#include <infinit/filesystem/filesystem.hxx>
