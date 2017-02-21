@@ -28,7 +28,7 @@ namespace infinit
         using Super = BaseACB<blocks::GroupBlock>;
         GB(Doughnut* owner, cryptography::rsa::KeyPair master);
         GB(GB const& other);
-        ~GB();
+        ~GB() override;
 
       public:
         void
@@ -125,7 +125,7 @@ namespace infinit
         ELLE_ATTRIBUTE_rw(boost::optional<std::string>, description);
 
       public:
-        typedef infinit::serialization_tag serialization_tag;
+        using serialization_tag = infinit::serialization_tag;
 
       /*----------.
       | Printable |

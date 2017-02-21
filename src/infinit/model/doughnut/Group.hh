@@ -67,8 +67,8 @@ namespace infinit
       private:
         void _stack_push();
         cryptography::rsa::KeyPair _control_key();
-        typedef std::vector<cryptography::rsa::PublicKey> GroupPublicBlockContent;
-        typedef std::vector<cryptography::rsa::KeyPair> GroupPrivateBlockContent;
+        using GroupPublicBlockContent = std::vector<cryptography::rsa::PublicKey>;
+        using GroupPrivateBlockContent = std::vector<cryptography::rsa::KeyPair>;
         ELLE_ATTRIBUTE(Doughnut&, dht);
         ELLE_ATTRIBUTE_R(std::string, name);
         ELLE_ATTRIBUTE(boost::optional<cryptography::rsa::PublicKey>,
@@ -94,7 +94,7 @@ namespace infinit
         GroupConflictResolver(GroupConflictResolver&& b);
         GroupConflictResolver(elle::serialization::SerializerIn& s,
                               elle::Version const& v);
-        ~GroupConflictResolver();
+        ~GroupConflictResolver() override;
         std::unique_ptr<blocks::Block>
         operator() (blocks::Block& block,
                     blocks::Block& current,
@@ -109,7 +109,7 @@ namespace infinit
         std::unique_ptr<cryptography::rsa::PublicKey> _key;
         boost::optional<std::string> _name;
         boost::optional<std::string> _description;
-        typedef infinit::serialization_tag serialization_tag;
+        using serialization_tag = infinit::serialization_tag;
       };
     }
   }

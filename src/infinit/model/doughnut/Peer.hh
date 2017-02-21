@@ -84,7 +84,7 @@ namespace infinit
       `----------*/
       public:
         /// Print pretty representation to \a stream.
-        virtual
+
         void
         print(std::ostream& stream) const override;
       };

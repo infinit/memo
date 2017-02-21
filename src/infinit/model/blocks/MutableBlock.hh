@@ -16,8 +16,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef MutableBlock Self;
-        typedef Block Super;
+        using Self = infinit::model::blocks::MutableBlock;
+        using Super = infinit::model::blocks::Block;
 
       /*-------------.
       | Construction |
@@ -33,7 +33,7 @@ namespace infinit
       | Clone  |
       `-------*/
       public:
-        virtual
+
         std::unique_ptr<Block>
         clone() const override;
 
@@ -43,7 +43,7 @@ namespace infinit
       public:
         MutableBlock(elle::serialization::Serializer& input,
                      elle::Version const& version);
-        virtual
+
         void
         serialize(elle::serialization::Serializer& s,
                   elle::Version const& version) override;

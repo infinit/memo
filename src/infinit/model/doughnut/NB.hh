@@ -22,8 +22,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef NB Self;
-        typedef blocks::ImmutableBlock Super;
+        using Self = infinit::model::doughnut::NB;
+        using Super = blocks::ImmutableBlock;
 
       /*-------------.
       | Construction |

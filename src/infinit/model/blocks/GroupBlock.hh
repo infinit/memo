@@ -16,8 +16,8 @@ namespace infinit
         : public ACLBlock
       {
       public:
-        typedef GroupBlock Self;
-        typedef ACLBlock Super;
+        using Self = infinit::model::blocks::GroupBlock;
+        using Super = infinit::model::blocks::ACLBlock;
 
         GroupBlock(GroupBlock const& other);
       protected:

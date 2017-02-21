@@ -27,7 +27,7 @@ namespace infinit
         ~Passport();
         void
         serialize(elle::serialization::Serializer& s);
-        typedef infinit::serialization_tag serialization_tag;
+        using serialization_tag = infinit::serialization_tag;
 
         bool
         verify(cryptography::rsa::PublicKey const& owner) const;

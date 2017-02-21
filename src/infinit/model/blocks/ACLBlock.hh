@@ -19,8 +19,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef ACLBlock Self;
-        typedef MutableBlock Super;
+        using Self = infinit::model::blocks::ACLBlock;
+        using Super = infinit::model::blocks::MutableBlock;
 
       /*-------------.
       | Construction |

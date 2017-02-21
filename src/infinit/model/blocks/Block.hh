@@ -20,7 +20,7 @@ namespace infinit
     {
       struct RemoveSignature
       {
-        typedef infinit::serialization_tag serialization_tag;
+        using serialization_tag = infinit::serialization_tag;
         RemoveSignature();
         RemoveSignature(RemoveSignature const& other);
         RemoveSignature(RemoveSignature && other) = default;
@@ -120,14 +120,14 @@ namespace infinit
         void
         serialize(elle::serialization::Serializer& s,
                   elle::Version const& version) override;
-        typedef infinit::serialization_tag serialization_tag;
+        using serialization_tag = infinit::serialization_tag;
 
       /*----------.
       | Printable |
       `----------*/
 
       public:
-        virtual
+
         void
         print(std::ostream& output) const override;
       };

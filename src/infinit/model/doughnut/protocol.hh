@@ -29,7 +29,7 @@ namespace elle
     template<>
     struct Serialize<infinit::model::doughnut::Protocol>
     {
-      typedef std::string Type;
+      using Type = std::string;
       static
       std::string
       convert(infinit::model::doughnut::Protocol p);

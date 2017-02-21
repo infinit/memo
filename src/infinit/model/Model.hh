@@ -49,7 +49,7 @@ namespace infinit
       : public elle::serialization::VirtuallySerializable<true>
     {
     public:
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
       using SquashStack = std::vector<std::unique_ptr<ConflictResolver>>;
       virtual
       std::unique_ptr<blocks::Block>
@@ -203,7 +203,7 @@ namespace infinit
       std::unique_ptr<infinit::model::Model>
       make(bool client,
            boost::filesystem::path const& dir) = 0;
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
     };
   }
 }

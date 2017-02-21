@@ -133,7 +133,7 @@ namespace infinit
         `--------*/
         public:
           Configuration() = default;
-          virtual
+
           std::unique_ptr<Configuration>
           clone() const override;
           virtual
@@ -146,10 +146,10 @@ namespace infinit
         public:
           Configuration(elle::serialization::SerializerIn& s);
           static constexpr char const* virtually_serializable_key = "type";
-          virtual
+
           void
           serialize(elle::serialization::Serializer& s) override;
-          typedef infinit::serialization_tag serialization_tag;
+          using serialization_tag = infinit::serialization_tag;
         };
       }
     }

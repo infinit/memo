@@ -16,8 +16,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef ValidationFailed Self;
-        typedef Error Super;
+        using Self = infinit::model::doughnut::ValidationFailed;
+        using Super = elle::Error;
 
       /*-------------.
       | Construction |

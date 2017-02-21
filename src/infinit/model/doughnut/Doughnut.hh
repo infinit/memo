@@ -63,12 +63,8 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        typedef std::function<
-          std::unique_ptr<infinit::overlay::Overlay>(
-            Doughnut& dht, std::shared_ptr<Local> server)>
-          OverlayBuilder;
-        typedef std::function<
-          std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;
+        using OverlayBuilder = std::function<std::unique_ptr<infinit::overlay::Overlay> (Doughnut &, std::shared_ptr<Local>)>;
+        using ConsensusBuilder = std::function<std::unique_ptr<consensus::Consensus> (Doughnut &)>;
         template <typename ... Args>
         Doughnut(Args&& ... args);
         ~Doughnut();
@@ -222,7 +218,7 @@ namespace infinit
           std::vector<Endpoints> peers);
         Configuration(Configuration&&) = default;
         Configuration(elle::serialization::SerializerIn& input);
-        ~Configuration();
+        ~Configuration() override;
         void
         serialize(elle::serialization::Serializer& s) override;
         virtual
