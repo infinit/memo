@@ -248,12 +248,7 @@ namespace infinit
       else if (version)
         std::cout << infinit::version_describe() << std::endl;
       else
-      {
-        elle::fprintf(std::cerr,
-                      "Try '%s --help' for more information.\n",
-                      argv_0);
-        throw elle::Exit(1);
-      }
+        elle::err<CLIError>("missing object type");
     }
 
     namespace
@@ -322,9 +317,7 @@ namespace infinit
         if (args.empty() || das::cli::is_option(args[0], options))
           das::cli::call(cli, args, options);
         else if (!run_command(cli, args))
-          elle::err<CLIError>("unknown object type: %s\n"
-                              "Try '%s --help' for more information.",
-                              args[0], argv_0);
+          elle::err<CLIError>("unknown object type: %s", args[0]);
       }
 
       void
