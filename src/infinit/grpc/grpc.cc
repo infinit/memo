@@ -6,23 +6,28 @@
 #include <grpc++/server.h>
 #include <grpc++/server_builder.h>
 #include <grpc++/server_context.h>
-
 #include <grpc++/create_channel.h>
 #include <grpc++/security/credentials.h>
 
 #include <elle/Duration.hh>
+
 #include <reactor/scheduler.hh>
 
+# include <athena/paxos/Client.hh>
+
 #include <infinit/model/Endpoints.hh>
+#include <infinit/model/MissingBlock.hh>
 #include <infinit/model/Model.hh>
-#include <infinit/grpc/kv.grpc.pb.h>
 
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/CHB.hh>
+#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/User.hh>
+#include <infinit/model/doughnut/ValidationFailed.hh>
 
+#include <infinit/grpc/kv.grpc.pb.h>
 
 ELLE_LOG_COMPONENT("infinit.grpc");
 
@@ -179,13 +184,55 @@ namespace infinit
       ELLE_ATTRIBUTE(infinit::model::Model&, model);
     };
 
+    bool exception_handler(::Status& res, std::function<void()> f)
+    {
+      try
+      {
+        f();
+        return true;
+      }
+      catch (model::MissingBlock const& err)
+      {
+        res.set_error(ERROR_MISSING_BLOCK);
+        res.set_message(err.what());
+      }
+      catch (model::doughnut::ValidationFailed const& err)
+      {
+        res.set_error(ERROR_VALIDATION_FAILED);
+        res.set_message(err.what());
+      }
+      catch (athena::paxos::TooFewPeers const& err)
+      {
+        res.set_error(ERROR_TOO_FEW_PEERS);
+        res.set_message(err.what());
+      }
+      catch (model::doughnut::Conflict const& err)
+      {
+        res.set_error(ERROR_CONFLICT);
+        res.set_message(err.what());
+        if (auto* mb = dynamic_cast<model::blocks::MutableBlock*>(err.current().get()))
+          res.set_version(mb->version());
+      }
+      catch (elle::Error const& err)
+      {
+        res.set_error(ERROR_OTHER);
+        res.set_message(err.what());
+      }
+      return false;
+    }
+
     ::BlockStatus
     KVImpl::Get(const ::Address& request)
     {
       ELLE_LOG("Get %s", request.address());
       ::BlockStatus res;
       auto addr = model::Address::from_string(request.address());
-      auto block = _model.fetch(addr);
+      res.mutable_status()->set_address(elle::sprintf("%s", addr));
+      std::unique_ptr<model::blocks::Block> block;
+      if (!exception_handler(*res.mutable_status(),
+        [&] {  block = _model.fetch(addr); }))
+        return res;
+
       auto* mblock = res.mutable_block();
       mblock->set_address(elle::sprintf("%s", addr));
       mblock->set_payload(block->data().string());
@@ -235,8 +282,8 @@ namespace infinit
         ELLE_ERR("unknown block type %s", elle::type_info(*block));
       }
 
-      reactor::sleep(2_sec);
-      res.mutable_status()->set_error(std::string());
+      res.mutable_status()->set_error(ERROR_OK);
+      res.mutable_status()->set_message(std::string());
       return res;
     }
 
@@ -305,9 +352,13 @@ namespace infinit
       }
       else
         elle::err("unknown block kind in request");
-      _model.store(std::move(block), (infinit::model::StoreMode)request.mode());
-
-      res.set_error("not implemented");
+      res.set_address(elle::sprintf("%s", block->address()));
+      res.set_error(ERROR_OK);
+      res.set_message(std::string());
+      exception_handler(res,
+        [&] {
+          _model.store(std::move(block), (infinit::model::StoreMode)request.mode());
+        });
       return res;
     }
 
@@ -315,8 +366,12 @@ namespace infinit
     KVImpl::Remove(::Address const& address)
     {
       ::Status res;
-      _model.remove(model::Address::from_string(address.address()));
-      res.set_error(std::string());
+      res.set_error(ERROR_OK);
+      res.set_message(std::string());
+      exception_handler(res,
+        [&] {
+        _model.remove(model::Address::from_string(address.address()));
+      });
       return res;
     }
 
