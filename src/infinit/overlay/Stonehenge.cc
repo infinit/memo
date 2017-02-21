@@ -118,21 +118,20 @@ namespace infinit
     elle::json::Array
     Stonehenge::peer_list()
     {
-      elle::json::Array res;
+      auto res = elle::json::Array{};
       for (auto const& peer: this->_peers)
-        res.push_back(elle::json::Object{
-          { "id", elle::sprintf("%x", peer.id()) },
-          { "endpoints", elle::sprintf("%s", peer.endpoints()) }
-        });
+        res.push_back
+          (elle::json::Object{
+            { "id", elle::sprintf("%x", peer.id()) },
+            { "endpoints", elle::sprintf("%s", peer.endpoints()) }
+          });
       return res;
     }
 
     elle::json::Object
     Stonehenge::stats()
     {
-      elle::json::Object res;
-      res["type"] = this->type_name();
-      return res;
+      return elle::json::Object{{"type", this->type_name()}};
     }
 
     StonehengeConfiguration::StonehengeConfiguration()
@@ -157,13 +156,10 @@ namespace infinit
     StonehengeConfiguration::make(std::shared_ptr<model::doughnut::Local> local,
                                   model::doughnut::Doughnut* dht)
     {
-      NodeLocations peers;
+      auto peers = NodeLocations{};
       for (auto const& peer: this->peers)
-      {
-        peers.emplace_back(
-          peer.id,
-          Endpoints({model::Endpoint(peer.host, peer.port)}));
-      }
+        peers.emplace_back(peer.id,
+                           Endpoints({model::Endpoint(peer.host, peer.port)}));
       return std::make_unique<infinit::overlay::Stonehenge>(
         peers, std::move(local), dht);
     }

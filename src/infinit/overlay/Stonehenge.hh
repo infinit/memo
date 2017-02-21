@@ -1,8 +1,7 @@
-#ifndef INFINIT_OVERLAY_STONEHENGE_HH
-# define INFINIT_OVERLAY_STONEHENGE_HH
+#pragma once
 
-# include <infinit/overlay/Overlay.hh>
-# include <infinit/symbols.hh>
+#include <infinit/overlay/Overlay.hh>
+#include <infinit/symbols.hh>
 
 namespace infinit
 {
@@ -87,5 +86,3 @@ namespace infinit
     };
   }
 }
-
-#endif
