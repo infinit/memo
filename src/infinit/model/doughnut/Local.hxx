@@ -1,7 +1,4 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_LOCAL_HXX
-# define INFINIT_MODEL_DOUGHNUT_LOCAL_HXX
-
-# include <reactor/for-each.hh>
+#include <reactor/for-each.hh>
 
 namespace infinit
 {
@@ -50,5 +47,3 @@ namespace infinit
     }
   }
 }
-
-#endif

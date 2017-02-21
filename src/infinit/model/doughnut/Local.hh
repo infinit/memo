@@ -1,19 +1,18 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_LOCAL_HH
-# define INFINIT_MODEL_DOUGHNUT_LOCAL_HH
+#pragma once
 
-# include <tuple>
+#include <tuple>
 
-# include <boost/signals2.hpp>
+#include <boost/signals2.hpp>
 
-# include <reactor/Barrier.hh>
-# include <reactor/network/tcp-server.hh>
-# include <reactor/network/utp-socket.hh>
+#include <reactor/Barrier.hh>
+#include <reactor/network/tcp-server.hh>
+#include <reactor/network/utp-socket.hh>
 
-# include <infinit/RPC.hh>
-# include <infinit/model/doughnut/Peer.hh>
-# include <infinit/model/doughnut/fwd.hh>
-# include <infinit/model/doughnut/protocol.hh>
-# include <infinit/storage/Storage.hh>
+#include <infinit/RPC.hh>
+#include <infinit/model/doughnut/Peer.hh>
+#include <infinit/model/doughnut/fwd.hh>
+#include <infinit/model/doughnut/protocol.hh>
+#include <infinit/storage/Storage.hh>
 
 namespace infinit
 {
@@ -151,6 +150,4 @@ namespace infinit
   }
 }
 
-# include <infinit/model/doughnut/Local.hxx>
-
-#endif
+#include <infinit/model/doughnut/Local.hxx>

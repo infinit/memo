@@ -1,8 +1,9 @@
 #include <infinit/model/doughnut/Local.hh>
 
 #include <elle/log.hh>
-#include <elle/os/environ.hh>
+#include <elle/make-vector.hh>
 #include <elle/network/Interface.hh>
+#include <elle/os/environ.hh>
 #include <elle/utility/Move.hh>
 
 #include <cryptography/random.hh>
@@ -284,16 +285,17 @@ namespace infinit
       std::vector<cryptography::rsa::PublicKey>
       Local::_resolve_keys(std::vector<int> ids)
       {
-        std::vector<infinit::cryptography::rsa::PublicKey> res;
-        for (auto const& h: ids)
-          res.emplace_back(*this->doughnut().resolve_key(h));
-        return res;
+        return elle::make_vector(ids,
+                                 [this](auto const& h)
+                                 {
+                                   return *this->doughnut().resolve_key(h);
+                                 });
       }
 
       std::unordered_map<int, cryptography::rsa::PublicKey>
       Local::_resolve_all_keys()
       {
-        std::unordered_map<int, cryptography::rsa::PublicKey> res;
+        auto res = std::unordered_map<int, cryptography::rsa::PublicKey>{};
         for (auto const& k: this->doughnut().key_cache())
           res.emplace(k.hash, *k.key);
         return res;
@@ -322,12 +324,12 @@ namespace infinit
         auto ep = this->server_endpoint();
         if (ep.address() != boost::asio::ip::address_v6::any()
          && ep.address() != boost::asio::ip::address_v4::any())
-          return { ep };
+          return {ep};
         Endpoints res;
-        auto filter = (elle::network::Interface::Filter::only_up |
-                       elle::network::Interface::Filter::no_loopback |
-                       elle::network::Interface::Filter::no_autoip |
-                       elle::network::Interface::Filter::no_awdl);
+        auto filter = (elle::network::Interface::Filter::only_up
+                       | elle::network::Interface::Filter::no_loopback
+                       | elle::network::Interface::Filter::no_autoip
+                       | elle::network::Interface::Filter::no_awdl);
         for (auto const& itf: elle::network::Interface::get_map(filter))
         {
           if (!itf.second.ipv4_address.empty()
@@ -365,7 +367,7 @@ namespace infinit
       Local::_register_rpcs(RPCServer& rpcs)
       {
         rpcs.set_context(this);
-        rpcs._destroying.connect([this] ( RPCServer* rpcs)
+        rpcs._destroying.connect([this] (RPCServer* rpcs)
           {
             this->_passports.erase(rpcs);
           });
