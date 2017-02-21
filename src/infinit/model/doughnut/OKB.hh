@@ -110,13 +110,13 @@ namespace infinit
       `--------*/
       public:
         ELLE_attribute_r(elle::Buffer, data, override);
-        virtual
+
         void
         data(elle::Buffer data) override;
-        virtual
+
         void
         data(std::function<void (elle::Buffer&)> transformation) override;
-        virtual
+
         bool
         operator ==(blocks::Block const& rhs) const override;
         ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PrivateKey>,
@@ -134,12 +134,12 @@ namespace infinit
       | Validation |
       `-----------*/
       protected:
-        virtual
+
         void
         _seal(boost::optional<int> version) override;
         void
         _seal_okb(boost::optional<int> version = {}, bool bump_version = true);
-        virtual
+
         blocks::ValidationResult
         _validate(Model const& model, bool writing) const override;
       protected:
@@ -187,7 +187,7 @@ namespace infinit
       public:
         BaseOKB(elle::serialization::SerializerIn& input,
                 elle::Version const& version);
-        virtual
+
         void
         serialize(elle::serialization::Serializer& s,
                   elle::Version const& version) override;
