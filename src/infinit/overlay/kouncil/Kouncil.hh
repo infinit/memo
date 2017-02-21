@@ -83,7 +83,7 @@ namespace infinit
                 Entry, Address const&, &Entry::block>>,
             bmi::sequenced<>
           >>;
-        /// Peers by id
+        /// Peers by id.
         using Peer = Overlay::Member;
         using Peers =
           bmi::multi_index_container<
@@ -91,8 +91,8 @@ namespace infinit
           bmi::indexed_by<
             bmi::hashed_unique<
               bmi::global_fun<
-                Peer const&, Address, &_details::peer_id> >,
-            bmi::random_access<> > >;
+                Peer const&, Address, &_details::peer_id>>,
+            bmi::random_access<>>>;
 
       /*-------------.
       | Construction |
@@ -107,8 +107,7 @@ namespace infinit
                 std::shared_ptr<infinit::model::doughnut::Local> local,
                 boost::optional<int> eviction_delay = boost::none);
         /// Destruct a Kouncil.
-        virtual
-        ~Kouncil();
+        ~Kouncil() override;
       protected:
         void
         _cleanup() override;
@@ -208,7 +207,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(StaleEndpoints, stale_endpoints);
 
       protected:
-        virtual
+
         void
         _discover(NodeLocations const& peers) override;
         bool

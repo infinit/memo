@@ -66,7 +66,7 @@ namespace infinit
          *  @arg dht   Owning Doughnut.
          *  @return The built Kouncil.
          */
-        virtual
+
         std::unique_ptr<infinit::overlay::Overlay>
         make(std::shared_ptr<model::doughnut::Local> local,
              model::doughnut::Doughnut* doughnut) override;
