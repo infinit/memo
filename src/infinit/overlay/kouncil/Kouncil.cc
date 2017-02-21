@@ -81,7 +81,7 @@ namespace infinit
         , _watcher_thread(/*new reactor::Thread(
                           elle::sprintf("%s: watch", this),
                           std::bind(&Kouncil::_watcher, this))*/)
-        , _eviction_delay(eviction_delay ? *eviction_delay : 12000)
+        , _eviction_delay(eviction_delay.value_or(12000))
       {
         using model::Address;
         ELLE_TRACE_SCOPE("%s: construct", this);
@@ -103,8 +103,6 @@ namespace infinit
             {
               ELLE_DEBUG("%s: register new block %f", this, b.address());
               this->_address_book.emplace(this->id(), b.address());
-              std::unordered_set<Address> entries;
-              entries.emplace(b.address());
               this->_new_entries.put(b.address());
             }));
           // Add server-side kouncil RPCs.
@@ -117,7 +115,7 @@ namespace infinit
                 std::function<std::unordered_set<Address> ()>(
                   [this] ()
                   {
-                    std::unordered_set<Address> res;
+                    auto res = std::unordered_set<Address>{};
                     auto range = this->_address_book.equal_range(this->id());
                     for (auto it = range.first; it != range.second; ++it)
                       res.emplace(it->block());
@@ -129,7 +127,7 @@ namespace infinit
                 std::function<std::unordered_set<Address>(Address)>(
                   [this] (Address const& addr)
                   {
-                   std::unordered_set<Address> res;
+                    auto res = std::unordered_set<Address>{};
                     auto range = this->_address_book.get<1>().equal_range(addr);
                     for (auto it = range.first; it != range.second; ++it)
                       res.emplace(it->node());
