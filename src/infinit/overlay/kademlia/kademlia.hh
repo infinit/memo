@@ -11,10 +11,10 @@
 
 namespace kademlia
 {
-  typedef boost::asio::ip::udp::endpoint Endpoint;
-  typedef infinit::model::Address Address;
-  typedef std::chrono::time_point<std::chrono::steady_clock> Time;
-  typedef Time::duration Duration;
+  using Endpoint = boost::asio::ip::udp::endpoint;
+  using Address = infinit::model::Address;
+  using Time = std::chrono::time_point<std::chrono::steady_clock>;
+  using Duration = Time::duration;
   struct PrettyEndpoint: public Endpoint
   {
     PrettyEndpoint() {}
@@ -109,8 +109,8 @@ namespace kademlia
     bool less(Address const& a, Address const& b);
     bool more(Address const& a, Address const& b);
     int bucket_of(Address const&);
-    typedef infinit::model::doughnut::Local Local;
-    typedef infinit::overlay::Overlay Overlay;
+    using Local = infinit::model::doughnut::Local;
+    using Overlay = infinit::overlay::Overlay;
     std::unique_ptr<reactor::Thread> _looper;
     std::unique_ptr<reactor::Thread> _pinger;
     std::unique_ptr<reactor::Thread> _refresher;
@@ -169,8 +169,8 @@ namespace infinit
       struct Configuration
         : public overlay::Configuration
       {
-        typedef Configuration Self;
-        typedef overlay::Configuration Super;
+        using Self = infinit::overlay::kademlia::Configuration;
+        using Super = overlay::Configuration;
         Configuration();
         Configuration(elle::serialization::SerializerIn& input);
         ELLE_CLONABLE();

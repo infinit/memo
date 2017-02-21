@@ -52,8 +52,8 @@ namespace infinit
     struct KalimeroConfiguration
       : public Configuration
     {
-      typedef KalimeroConfiguration Self;
-      typedef Configuration Super;
+      using Self = infinit::overlay::KalimeroConfiguration;
+      using Super = infinit::overlay::Configuration;
 
       KalimeroConfiguration();
       KalimeroConfiguration(elle::serialization::SerializerIn& input);

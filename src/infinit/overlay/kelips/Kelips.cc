@@ -44,7 +44,7 @@ ELLE_LOG_COMPONENT("infinit.overlay.kelips");
   static elle::Bench bench("bench.kelips." name, 10000_sec); \
   elle::Bench::BenchScope bs(bench)
 
-typedef elle::serialization::Binary Serializer;
+using Serializer = elle::serialization::Binary;
 
 namespace elle
 {
@@ -55,7 +55,7 @@ namespace elle
 
     template<> struct Serialize<kelips::Time>
     {
-      typedef uint64_t Type;
+      using Type = uint64_t;
       static uint64_t convert(kelips::Time& t)
       {
         Type res = std::chrono::duration_cast<std::chrono::milliseconds>(

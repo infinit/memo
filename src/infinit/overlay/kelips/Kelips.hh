@@ -34,12 +34,12 @@ namespace infinit
   {
     namespace kelips
     {
-      typedef model::Endpoint Endpoint;
-      typedef model::Endpoints Endpoints;
-      typedef model::NodeLocation NodeLocation;
-      typedef infinit::model::Address Address;
-      typedef std::chrono::time_point<std::chrono::system_clock> Time;
-      typedef Time::duration Duration;
+      using Endpoint = model::Endpoint;
+      using Endpoints = model::Endpoints;
+      using NodeLocation = model::NodeLocation;
+      using Address = infinit::model::Address;
+      using Time = std::chrono::time_point<std::chrono::system_clock>;
+      using Duration = Time::duration;
       //typedef std::chrono::duration<long, std::ratio<1, 1000000>> Duration;
 
       using TimedEndpoint = std::pair<Endpoint, Time>;
@@ -226,8 +226,8 @@ namespace infinit
         stats() override;
 
       private:
-        typedef infinit::model::doughnut::Local Local;
-        typedef infinit::overlay::Overlay Overlay;
+        using Local = infinit::model::doughnut::Local;
+        using Overlay = infinit::overlay::Overlay;
         void
         reload_state(Local& l);
         void

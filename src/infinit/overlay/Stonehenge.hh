@@ -14,7 +14,7 @@ namespace infinit
     | Construction |
     `-------------*/
     public:
-      typedef boost::asio::ip::tcp::endpoint Host;
+      using Host = boost::asio::ip::tcp::endpoint;
       Stonehenge(NodeLocations hosts,
                  std::shared_ptr<model::doughnut::Local> local,
                  model::doughnut::Doughnut* doughnut);
@@ -61,8 +61,8 @@ namespace infinit
     struct StonehengeConfiguration
       : public Configuration
     {
-      typedef StonehengeConfiguration Self;
-      typedef Configuration Super;
+      using Self = infinit::overlay::StonehengeConfiguration;
+      using Super = infinit::overlay::Configuration;
       struct Peer
       {
         std::string host;

@@ -18,9 +18,9 @@ namespace infinit
       `------*/
       public:
         /// Ourself.
-        typedef Configuration Self;
+        using Self = infinit::overlay::kouncil::Configuration;
         /// Parent class.
-        typedef overlay::Configuration Super;
+        using Super = overlay::Configuration;
 
       /*-------------.
       | Construction |

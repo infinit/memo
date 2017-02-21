@@ -206,7 +206,7 @@ namespace infinit
       // join();
       void
       serialize(elle::serialization::Serializer& s) override;
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
       make(std::shared_ptr<model::doughnut::Local> local,

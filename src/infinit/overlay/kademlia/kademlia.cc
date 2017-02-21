@@ -20,7 +20,7 @@
 
 ELLE_LOG_COMPONENT("infinit.overlay.kademlia");
 
-typedef elle::serialization::Json Serializer;
+using Serializer = elle::serialization::Json;
 
 static inline kademlia::Time now()
 {
@@ -34,7 +34,7 @@ namespace elle
     template<>
     struct Serialize<kademlia::PrettyEndpoint>
     {
-      typedef std::string Type;
+      using Type = std::string;
       static std::string convert(kademlia::PrettyEndpoint& ep)
       {
         return ep.address().to_string() + ":" + std::to_string(ep.port());
@@ -50,7 +50,7 @@ namespace elle
     template<typename T>
     struct SerializeEndpoint
     {
-      typedef elle::Buffer Type;
+      using Type = elle::Buffer;
       static Type convert(T& ep)
       {
         Type res;

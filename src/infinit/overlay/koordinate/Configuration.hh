@@ -18,9 +18,9 @@ namespace infinit
       `------*/
       public:
         /// Ourself.
-        typedef Configuration Self;
+        using Self = infinit::overlay::koordinate::Configuration;
         /// Parent class.
-        typedef overlay::Configuration Super;
+        using Super = overlay::Configuration;
         /// Underlying overlays configurations.
         using Backends = std::vector<std::unique_ptr<overlay::Configuration>>;
 

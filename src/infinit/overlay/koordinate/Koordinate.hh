@@ -23,13 +23,13 @@ namespace infinit
       `------*/
       public:
         /// Ourselves.
-        typedef Koordinate Self;
+        using Self = infinit::overlay::koordinate::Koordinate;
         /// Parent class.
-        typedef Overlay Super;
+        using Super = infinit::overlay::Overlay;
         /// Underlying overlay to run and forward requests to.
-        typedef std::unique_ptr<Overlay> Backend;
+        using Backend = std::unique_ptr<Overlay>;
         /// Set of underlying overlays.
-        typedef std::vector<Backend> Backends;
+        using Backends = std::vector<Backend>;
 
       /*-------------.
       | Construction |
