@@ -35,7 +35,7 @@ namespace infinit
       | Clone  |
       `-------*/
       public:
-        virtual
+
         std::unique_ptr<blocks::Block>
         clone() const override;
 
@@ -99,7 +99,7 @@ namespace infinit
       public:
         ACLBlock(elle::serialization::Serializer& input,
                  elle::Version const& version);
-        virtual
+
         void
         serialize(elle::serialization::Serializer& s,
                   elle::Version const& version) override;

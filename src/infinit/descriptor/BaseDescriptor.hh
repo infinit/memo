@@ -89,7 +89,7 @@ namespace infinit
     | Printable |
     `----------*/
     public:
-      virtual
+
       void
       print(std::ostream& out) const override;
     };

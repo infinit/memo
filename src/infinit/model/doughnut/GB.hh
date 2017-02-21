@@ -65,10 +65,10 @@ namespace infinit
         public:
           OwnerSignature(GB const& block);
         protected:
-          virtual
+
           void
           _serialize(elle::serialization::SerializerOut& s,
-                     elle::Version const& v);
+                     elle::Version const& v) override;
           ELLE_ATTRIBUTE_R(GB const&, block);
         };
         std::unique_ptr<typename BaseOKB<blocks::GroupBlock>::OwnerSignature>
@@ -78,10 +78,10 @@ namespace infinit
         {
         public:
           DataSignature(GB const& block);
-          virtual
+
           void
           serialize(elle::serialization::Serializer& s_,
-                    elle::Version const& v);
+                    elle::Version const& v) override;
           ELLE_ATTRIBUTE_R(GB const&, block);
         };
         std::unique_ptr<Super::DataSignature>

@@ -170,10 +170,10 @@ namespace infinit
         public:
           OwnerSignature(BaseACB<Block> const& block);
         protected:
-          virtual
+
           void
           _serialize(elle::serialization::SerializerOut& s,
-                     elle::Version const& v);
+                     elle::Version const& v) override;
           ELLE_ATTRIBUTE_R(BaseACB<Block> const&, block);
         };
         std::unique_ptr<typename Super::OwnerSignature>

@@ -62,7 +62,7 @@ namespace infinit
         void
         destroy();
         void
-        print(std::ostream& o) const;
+        print(std::ostream& o) const override;
         ELLE_ATTRIBUTE_rw(boost::optional<std::string>, description);
       private:
         void _stack_push();

@@ -115,37 +115,37 @@ namespace infinit
       public:
         ELLE_ATTRIBUTE_R(KeyCache, key_cache);
       protected:
-        virtual
+
         std::unique_ptr<blocks::MutableBlock>
         _make_mutable_block() const override;
-        virtual
+
         std::unique_ptr<blocks::ImmutableBlock>
         _make_immutable_block(elle::Buffer content,
                               Address owner) const override;
-        virtual
+
         std::unique_ptr<blocks::ACLBlock>
         _make_acl_block() const override;
-        virtual
+
         std::unique_ptr<blocks::GroupBlock>
         _make_group_block() const override;
-        virtual
+
         std::unique_ptr<model::User>
         _make_user(elle::Buffer const& data) const override;
-        virtual
+
         void
         _store(std::unique_ptr<blocks::Block> block,
                StoreMode mode,
                std::unique_ptr<ConflictResolver> resolver) override;
-        virtual
+
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
                boost::optional<int> local_version) const override;
-        virtual
+
         void
         _fetch(std::vector<AddressVersion> const& addresses,
                std::function<void(Address, std::unique_ptr<blocks::Block>,
                  std::exception_ptr)> res) const override;
-        virtual
+
         void
         _remove(Address address, blocks::RemoveSignature rs) override;
         friend class Local;
@@ -221,7 +221,7 @@ namespace infinit
         ~Configuration() override;
         void
         serialize(elle::serialization::Serializer& s) override;
-        virtual
+
         std::unique_ptr<infinit::model::Model>
         make(bool client,
              boost::filesystem::path const& p) override;

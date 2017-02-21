@@ -48,14 +48,14 @@ namespace infinit
         Block(Block const& other) = default;
         Block(Block&& other) = default;
         friend class infinit::model::Model;
-        virtual
-        ~Block() = default;
+
+        ~Block() override = default;
 
       /*---------.
       | Clonable |
       `---------*/
       public:
-        virtual
+
         std::unique_ptr<Block>
         clone() const override;
 

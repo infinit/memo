@@ -55,7 +55,7 @@ namespace infinit
       | Clone  |
       `-------*/
       public:
-        virtual
+
         std::unique_ptr<blocks::Block>
         clone() const override;
 
@@ -63,20 +63,20 @@ namespace infinit
       | Validation |
       `-----------*/
       protected:
-        virtual
+
         void
         _seal(boost::optional<int> version) override;
-        virtual
+
         blocks::ValidationResult
         _validate(Model const& model, bool writing) const override;
-        virtual
+
         blocks::RemoveSignature
         _sign_remove(Model& model) const override;
-        virtual
+
         blocks::ValidationResult
         _validate_remove(Model& model,
                          blocks::RemoveSignature const& sig) const override;
-        virtual
+
         blocks::ValidationResult
         _validate(Model const& model, const Block& new_block) const override;
       private:
@@ -89,7 +89,7 @@ namespace infinit
       public:
         NB(elle::serialization::SerializerIn& input,
            elle::Version const& version);
-        virtual
+
         void
         serialize(elle::serialization::Serializer& s,
                   elle::Version const& version) override;
