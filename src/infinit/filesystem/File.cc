@@ -571,7 +571,7 @@ namespace infinit
     struct NewBlockResolver
       : public model::DummyConflictResolver
     {
-      typedef DummyConflictResolver Super;
+      using Super = infinit::model::DummyConflictResolver;
       NewBlockResolver(std::string const& name,
                     Address const address)
         : Super()

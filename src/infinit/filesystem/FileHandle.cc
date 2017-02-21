@@ -603,7 +603,7 @@ namespace infinit
     struct InsertBlockResolver
       : public model::DummyConflictResolver
     {
-      typedef DummyConflictResolver Super;
+      using Super = infinit::model::DummyConflictResolver;
       InsertBlockResolver(boost::filesystem::path const& path,
                           Address const& address,
                           bool async = false)

@@ -36,7 +36,7 @@ namespace elle
   {
     template<> struct Serialize<infinit::filesystem::EntryType>
     {
-      typedef int Type;
+      using Type = int;
       static int convert(infinit::filesystem::EntryType& et)
       {
         return (int)et;
