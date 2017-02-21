@@ -267,11 +267,11 @@ namespace infinit
       elle::json::Json
       Kouncil::query(std::string const& k, boost::optional<std::string> const& v)
       {
-        elle::json::Object res;
+        auto res = elle::json::Object{};
         if (k == "stats")
         {
-          res["peers"] = this->peer_list();
-          res["id"] = elle::sprintf("%s", this->doughnut()->id());
+          res.emplace("peers", this->peer_list());
+          res.emplace("id", elle::sprintf("%s", this->doughnut()->id()));
         }
         return res;
       }
@@ -289,7 +289,7 @@ namespace infinit
       {
         while (true)
         {
-          std::unordered_set<model::Address> entries;
+          auto entries = std::unordered_set<model::Address>{};
           auto addr = this->_new_entries.get();
           entries.insert(addr);
           while (!this->_new_entries.empty())
@@ -315,9 +315,7 @@ namespace infinit
             ELLE_TRACE("connect to new %f", peer)
               this->doughnut()->dock().connect(peer, false);
           if (peer.id() != Address::null)
-          {
             this->_remember_stale(peer);
-          }
         }
       }
 

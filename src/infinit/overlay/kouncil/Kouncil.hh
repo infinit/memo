@@ -1,19 +1,18 @@
-#ifndef INFINIT_OVERLAY_KOUNCIL_HH
-# define INFINIT_OVERLAY_KOUNCIL_HH
+#pragma once
 
-# include <random>
+#include <random>
 
-# include <boost/multi_index/global_fun.hpp>
-# include <boost/multi_index/hashed_index.hpp>
-# include <boost/multi_index/mem_fun.hpp>
-# include <boost/multi_index/random_access_index.hpp>
-# include <boost/multi_index/sequenced_index.hpp>
-# include <boost/multi_index_container.hpp>
+#include <boost/multi_index/global_fun.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/mem_fun.hpp>
+#include <boost/multi_index/random_access_index.hpp>
+#include <boost/multi_index/sequenced_index.hpp>
+#include <boost/multi_index_container.hpp>
 
-# include <elle/unordered_map.hh>
+#include <elle/unordered_map.hh>
 
-# include <infinit/model/doughnut/Peer.hh>
-# include <infinit/overlay/Overlay.hh>
+#include <infinit/model/doughnut/Peer.hh>
+#include <infinit/overlay/Overlay.hh>
 
 namespace infinit
 {
@@ -269,5 +268,3 @@ namespace infinit
 }
 
 DAS_SERIALIZE(infinit::overlay::kouncil::Kouncil::PeerInfo);
-
-#endif
