@@ -658,8 +658,7 @@ def configure(
 
   redhat_repo_version = '0.1'
   with drake.templating.Context(content = {
-      'base_url': 'http://127.0.0.1',
-      'gpg_key': 'http://127.0.0.1/gpg.pub',
+      'base_url': 'https://yum.infinit.sh/',
       'files': '/etc/yum.repo.d/infinit.repo',
       'version': redhat_repo_version,
   }):
