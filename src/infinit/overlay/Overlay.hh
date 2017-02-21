@@ -29,32 +29,48 @@ namespace infinit
     | Types |
     `------*/
     public:
+      /// Remote or local peer.
       using Member = std::shared_ptr<model::doughnut::Peer>;
+      /// Members with weak or strong ownerships.
       using WeakMember = std::ambivalent_ptr<model::doughnut::Peer>;
+      /// Collection of members.
       using Members = std::vector<Member>;
 
     /*-------------.
     | Construction |
     `-------------*/
     public:
+      /** Construct an Overlay.
+       *
+       *  @arg dht   The owning Doughnut.
+       *  @arg local The optional Local.
+       */
       Overlay(model::doughnut::Doughnut* dht,
               std::shared_ptr<infinit::model::doughnut::Local> local);
+      /// Destroy an Overlay.
       virtual
       ~Overlay();
+      /// The owning Doughnut.
       ELLE_ATTRIBUTE_R(model::doughnut::Doughnut*, doughnut);
+      /// This node's id.
       ELLE_attribute_r(model::Address, id);
+      /// The node's optional Local.
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
 
     /*------.
     | Peers |
     `------*/
     public:
+      /// Discover one anonymous peer.
       void
       discover(Endpoints const& peer);
+      /// Discover anonymous peers.
       void
       discover(std::vector<Endpoints> const& peers);
+      /// Discover one peer.
       void
       discover(NodeLocation const& peer);
+      /// Discover peers.
       void
       discover(NodeLocations const& peers);
     protected:
