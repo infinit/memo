@@ -109,6 +109,7 @@ namespace infinit
       all = 255,
       block = 32768,
     };
+
     inline
     bool
     operator &(WriteTarget const& l, WriteTarget const& r)
@@ -116,6 +117,7 @@ namespace infinit
       using ut = std::underlying_type<WriteTarget>::type;
       return static_cast<ut>(l) & static_cast<ut>(r);
     }
+
     inline
     WriteTarget
     operator |(WriteTarget const& l, WriteTarget const& r)
@@ -124,6 +126,7 @@ namespace infinit
       return static_cast<WriteTarget>(
         static_cast<ut>(l) | static_cast<ut>(r));
     }
+
     class FileData
     {
     public:
@@ -160,14 +163,17 @@ namespace infinit
       friend class FileBuffer;
       friend class FileConflictResolver;
     };
+
     class Node;
     void unchecked_remove(model::Model& model,
                           model::Address address);
+
     std::unique_ptr<model::blocks::Block>
     fetch_or_die(model::Model& model,
                  model::Address address,
                  boost::optional<int> local_version = {},
                  boost::filesystem::path const& path = {});
+
     std::pair<bool, bool>
     get_permissions(model::Model& model,
                     model::blocks::Block const& block);
@@ -179,13 +185,14 @@ namespace infinit
     DAS_SYMBOL(owner);
     DAS_SYMBOL(root_block_cache_dir);
     DAS_SYMBOL(volume_name);
+
     /** Filesystem using a Block Storage as backend.
-    * Directory: nodes are serialized, and contains name, stat() and block
-    *            address of the directory content
-    * File    : In direct mode, one block with all the data
-    *           In index mode, one block containing headers
-    *           and the list of addresses for the content.
-    */
+     * Directory: nodes are serialized, and contains name, stat() and block
+     *            address of the directory content
+     * File    : In direct mode, one block with all the data
+     *           In index mode, one block containing headers
+     *           and the list of addresses for the content.
+     */
     class FileSystem
       : public reactor::filesystem::Operations
     {
@@ -250,9 +257,11 @@ namespace infinit
       get(boost::filesystem::path path, model::Address address);
       void filesystem(reactor::filesystem::FileSystem* fs) override;
       reactor::filesystem::FileSystem* filesystem();
+
     private:
       Address
       root_address();
+
     public:
       infinit::cryptography::rsa::PublicKey const&
       owner() const;
@@ -283,6 +292,7 @@ namespace infinit
               clock::time_point const&, &DirectoryData::last_used>>
               >>;
       ELLE_ATTRIBUTE_R(DirectoryCache, directory_cache);
+
       using FileCache
       = bmi::multi_index_container<
         std::shared_ptr<FileData>,
