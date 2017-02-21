@@ -18,7 +18,7 @@ def find_python3():
         return p
 
 python3 = find_python3()
-print("using python3 =", python3)
+print("using python3 =", python3, file=sys.stderr)
 
 tk = drake.cxx.GccToolkit('clang++')
 
