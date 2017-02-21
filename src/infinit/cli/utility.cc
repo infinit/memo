@@ -67,7 +67,7 @@ namespace infinit
         {
           _upnp = reactor::network::UPNP::make();
           _upnp->initialize();
-          _port_map_udp = _upnp->setup_redirect(reactor::network::Protocol::udt, port);
+          _port_map_udp = _upnp->setup_redirect(reactor::network::Protocol::utp, port);
           _port_map_tcp = _upnp->setup_redirect(reactor::network::Protocol::tcp, port);
           ELLE_TRACE("got mappings: %s, %s", _port_map_udp, _port_map_tcp);
           if ( (v4 && _port_map_udp.external_host.find_first_of(':') == std::string::npos)

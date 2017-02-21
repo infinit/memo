@@ -1697,7 +1697,7 @@ namespace
   _connectivity(infinit::cli::Infinit& cli,
                 boost::optional<std::string> const& server,
                 boost::optional<uint16_t> upnp_tcp_port,
-                boost::optional<uint16_t> upnp_udt_port,
+                boost::optional<uint16_t> upnp_utp_port,
                 ConnectivityResults& results)
   {
     ELLE_TRACE("contact beyond")
@@ -1851,7 +1851,7 @@ namespace
             }
           };
         redirect(reactor::network::Protocol::tcp, get_port(upnp_tcp_port));
-        redirect(reactor::network::Protocol::udt, get_port(upnp_udt_port));
+        redirect(reactor::network::Protocol::utp, get_port(upnp_utp_port));
       }
       catch (reactor::Terminate const&)
       {
