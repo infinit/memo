@@ -104,7 +104,7 @@ namespace infinit
       DirectoryConflictResolver(model::Model& model,
                                 Operation op,
                                 Address address);
-      ~DirectoryConflictResolver();
+      ~DirectoryConflictResolver() override;
       std::unique_ptr<Block>
       operator() (Block& block,
                   Block& current,

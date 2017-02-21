@@ -47,7 +47,7 @@ namespace infinit
       void _commit(WriteTarget target) override;
       model::blocks::ACLBlock* _header_block(bool) override;
       FileHeader& _header() override;
-      virtual void print(std::ostream& stream) const override;
+      void print(std::ostream& stream) const override;
       std::unique_ptr<MutableBlock> _block;
       FileHeader _h;
     };

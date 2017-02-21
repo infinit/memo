@@ -26,7 +26,7 @@ namespace infinit
            std::shared_ptr<FileData> data,
            std::shared_ptr<DirectoryData> parent,
            std::string const& name);
-      ~File();
+      ~File() override;
       void stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) override { THROW_NOTDIR();}
       std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override;

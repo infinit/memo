@@ -217,7 +217,7 @@ namespace infinit
         bool allow_root_creation = false,
         bool map_other_permissions = true,
         boost::optional<int> block_size = {});
-      ~FileSystem();
+      ~FileSystem() override;
     private:
       struct Init;
       FileSystem(Init);

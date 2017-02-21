@@ -26,7 +26,7 @@ namespace infinit
                   std::string const& name,
                   Address address,
                   EntryType type);
-      ~Unreachable();
+      ~Unreachable() override;
 
     private:
       ELLE_ATTRIBUTE(std::unique_ptr<model::blocks::Block>, data);

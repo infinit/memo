@@ -1,1 +1,1 @@
-Checks: '-*,modernize-use-using'
+Checks: '-*,modernize-use-using,modernize-use-override'
