@@ -116,10 +116,10 @@ namespace infinit
                     boost::optional<int64_t> capacity,
                     boost::optional<std::string> description);
       StorageConfig(elle::serialization::SerializerIn& input);
-      virtual
+
       void
-      serialize(elle::serialization::Serializer& s);
-      typedef infinit::serialization_tag serialization_tag;
+      serialize(elle::serialization::Serializer& s) override;
+      using serialization_tag = infinit::serialization_tag;
       static constexpr char const* virtually_serializable_key = "type";
       virtual
       std::unique_ptr<infinit::storage::Storage>
