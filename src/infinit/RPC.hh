@@ -1,21 +1,20 @@
-#ifndef INFINIT_RPC_HH
-# define INFINIT_RPC_HH
+#pragma once
 
-# include <elle/serialization/json.hh>
-# include <elle/serialization/binary.hh>
-# include <elle/log.hh>
-# include <elle/bench.hh>
+#include <elle/serialization/json.hh>
+#include <elle/serialization/binary.hh>
+#include <elle/log.hh>
+#include <elle/bench.hh>
 
-# include <cryptography/SecretKey.hh>
+#include <cryptography/SecretKey.hh>
 
-# include <reactor/network/exception.hh>
-# include <reactor/network/socket.hh>
-# include <reactor/storage.hh>
+#include <reactor/network/exception.hh>
+#include <reactor/network/socket.hh>
+#include <reactor/storage.hh>
 
-# include <protocol/ChanneledStream.hh>
-# include <protocol/Serializer.hh>
+#include <protocol/ChanneledStream.hh>
+#include <protocol/Serializer.hh>
 
-# include <infinit/model/doughnut/Passport.hh>
+#include <infinit/model/doughnut/Passport.hh>
 
 namespace infinit
 {
@@ -95,8 +94,8 @@ namespace infinit
   template <int I, typename Head_, typename ... Tail_>
   struct ListImpl<I, Head_, Tail_ ...>
   {
-    typedef Head_ Head;
-    typedef List<Tail_...> Tail;
+    using Head = Head_;
+    using Tail = List<Tail_...>;
     static constexpr bool empty = false;
   };
 
@@ -131,7 +130,7 @@ namespace infinit
     {}
     ELLE_ATTRIBUTE_R(std::function<R (Args...)>, function);
 
-    virtual
+
     void
     handle(elle::serialization::SerializerIn& input,
            elle::serialization::SerializerOut& output) override
@@ -145,17 +144,14 @@ namespace infinit
       !Remaining::empty &&
       !std::is_base_of<
         elle::serialization::VirtuallySerializableBase,
-        typename std::remove_reference<typename Remaining::Head>::type>::value,
+        std::remove_reference_t<typename Remaining::Head>>::value,
       void>::type
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
             Parsed&& ... parsed)
     {
-      typedef
-        typename std::remove_const<
-          typename std::remove_reference<typename Remaining::Head>::type>::type
-        Head;
+      using Head = std::remove_const_t<std::remove_reference_t<typename Remaining::Head>>;
       ELLE_LOG_COMPONENT("infinit.RPC");
       auto arg = input.deserialize<Head>(elle::sprintf("arg%s", n));
       ELLE_DUMP("got argument: %s", arg);
@@ -169,16 +165,14 @@ namespace infinit
       !Remaining::empty &&
       std::is_base_of<
         elle::serialization::VirtuallySerializableBase,
-        typename std::remove_reference<typename Remaining::Head>::type>::value,
+        std::remove_reference_t<typename Remaining::Head>>::value,
       void>::type
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
             Parsed&& ... parsed)
     {
-      typedef
-        typename std::remove_const<typename std::remove_reference<typename Remaining::Head>::type>::type
-        Head;
+      using Head = std::remove_const_t<std::remove_reference_t<typename Remaining::Head>>;
       ELLE_LOG_COMPONENT("infinit.RPC");
       auto arg =
         input.deserialize<std::unique_ptr<Head>>(elle::sprintf("arg%s", n));
@@ -507,7 +501,7 @@ namespace infinit
 
     void
     operator ()(Args const& ... args);
-    typedef void result_type;
+    using result_type = void;
   };
 
   template <typename R, typename ... Args>
@@ -537,7 +531,7 @@ namespace infinit
 
     R
     operator ()(Args const& ... args);
-    typedef R result_type;
+    using result_type = R;
   };
 
   template <typename T>
@@ -554,16 +548,14 @@ namespace infinit
     typename std::enable_if<
       std::is_base_of<
         elle::serialization::VirtuallySerializableBase,
-        typename std::remove_cv_reference<Head>::type>::value,
+        std::remove_cv_reference_t<Head>>::value,
       void>::type
     call_arguments(int n,
                    elle::serialization::SerializerOut& output,
                    Head&& head,
                    Tail&& ... tail)
     {
-      typedef
-      typename std::remove_const<typename std::remove_reference<Head>::type>::type
-        RawHead;
+      using RawHead = std::remove_const_t<std::remove_reference_t<Head>>;
       RawHead* ptr = const_cast<RawHead*>(&head);
       output.serialize(elle::sprintf("arg%s", n), ptr);
       call_arguments(n + 1, output, std::forward<Tail>(tail)...);
@@ -573,7 +565,7 @@ namespace infinit
     static
     typename std::enable_if<
       !std::is_base_of<elle::serialization::VirtuallySerializableBase,
-                       typename std::remove_reference<Head>::type>::value,
+                       std::remove_reference_t<Head>>::value,
     void>::type
     call_arguments(int n,
                    elle::serialization::SerializerOut& output,
@@ -707,8 +699,4 @@ namespace infinit
   operator <<(std::ostream& o, BaseRPC const& rpc);
 }
 
-
-
-# include <infinit/RPC.hxx>
-
-#endif
+#include <infinit/RPC.hxx>
