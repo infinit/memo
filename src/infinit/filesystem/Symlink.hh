@@ -10,7 +10,7 @@ namespace infinit
 {
   namespace filesystem
   {
-    typedef std::shared_ptr<Directory> DirectoryPtr;
+    using DirectoryPtr = std::shared_ptr<Directory>;
 
     class Symlink
       : public Node

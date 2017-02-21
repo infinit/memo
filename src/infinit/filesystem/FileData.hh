@@ -11,7 +11,7 @@ namespace infinit
 {
   namespace filesystem
   {
-    typedef infinit::model::Address Address;
+    using Address = infinit::model::Address;
 
 
     //Header embeded in each file
@@ -30,7 +30,7 @@ namespace infinit
       std::unordered_map<std::string, elle::Buffer> xattrs;
       boost::optional<std::string> symlink_target;
 
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
 
       FileHeader(uint64_t size, uint64_t links, uint32_t mode, uint64_t atime,
         uint64_t mtime, uint64_t ctime, uint64_t btime, uint64_t block_size,

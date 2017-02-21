@@ -121,7 +121,7 @@ namespace infinit
       Operation _op;
       Address _address;
       bool _deserialized;
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
     };
 
     std::unique_ptr<Block>

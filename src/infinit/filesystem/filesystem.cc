@@ -249,7 +249,7 @@ namespace infinit
     struct BlockMigration
       : public model::DummyConflictResolver
     {
-      typedef DummyConflictResolver Super;
+      using Super = infinit::model::DummyConflictResolver;
       BlockMigration(Address const& from,
              Address const& to)
         : Super()
@@ -289,7 +289,7 @@ namespace infinit
     struct InsertRootBlock
       : public model::DummyConflictResolver
     {
-      typedef DummyConflictResolver Super;
+      using Super = infinit::model::DummyConflictResolver;
       InsertRootBlock(Address const& address)
         : Super()
         , _address(address)
@@ -325,7 +325,7 @@ namespace infinit
     struct InsertRootBootstrapBlock
       : public model::DummyConflictResolver
     {
-      typedef DummyConflictResolver Super;
+      using Super = infinit::model::DummyConflictResolver;
       InsertRootBootstrapBlock(Address const& address)
         : Super()
         , _address(address)

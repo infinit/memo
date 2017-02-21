@@ -22,8 +22,8 @@ namespace infinit
   namespace filesystem
   {
     namespace bmi = boost::multi_index;
-    typedef model::blocks::Block Block;
-    typedef model::blocks::ACLBlock ACLBlock;
+    using Block = model::blocks::Block;
+    using ACLBlock = model::blocks::ACLBlock;
     class FileSystem;
     class FileBuffer;
     enum class EntryType
@@ -70,7 +70,7 @@ namespace infinit
       _prefetch(FileSystem& fs, std::shared_ptr<DirectoryData> self);
       void
       serialize(elle::serialization::Serializer&, elle::Version const& v);
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
       ELLE_ATTRIBUTE_R(model::Address, address);
       ELLE_ATTRIBUTE_R(int, block_version);
       typedef elle::unordered_map<std::string, std::pair<EntryType, model::Address>> Files;
@@ -113,14 +113,14 @@ namespace infinit
     bool
     operator &(WriteTarget const& l, WriteTarget const& r)
     {
-      typedef std::underlying_type<WriteTarget>::type ut;
+      using ut = std::underlying_type<WriteTarget>::type;
       return static_cast<ut>(l) & static_cast<ut>(r);
     }
     inline
     WriteTarget
     operator |(WriteTarget const& l, WriteTarget const& r)
     {
-      typedef std::underlying_type<WriteTarget>::type ut;
+      using ut = std::underlying_type<WriteTarget>::type;
       return static_cast<WriteTarget>(
         static_cast<ut>(l) | static_cast<ut>(r));
     }
@@ -153,7 +153,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(std::vector<FatEntry>, fat);
       ELLE_ATTRIBUTE_R(elle::Buffer, data);
       ELLE_ATTRIBUTE_R(boost::filesystem::path, path);
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
       friend class FileSystem;
       friend class File;
       friend class FileHandle;

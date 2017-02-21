@@ -13,8 +13,8 @@ namespace infinit
     namespace rfs = reactor::filesystem;
 
     class Directory;
-    typedef std::shared_ptr<Directory> DirectoryPtr;
-    typedef infinit::model::blocks::MutableBlock MutableBlock;
+    using DirectoryPtr = std::shared_ptr<Directory>;
+    using MutableBlock = infinit::model::blocks::MutableBlock;
     class FileHandle;
     class File
       : public rfs::Path

@@ -18,8 +18,8 @@ namespace infinit
 {
   namespace filesystem
   {
-    typedef infinit::model::blocks::Block Block;
-    typedef infinit::model::Address Address;
+    using Block = infinit::model::blocks::Block;
+    using Address = infinit::model::Address;
 
     class Directory;
 
@@ -27,7 +27,7 @@ namespace infinit
       : public elle::Printable
     {
     public:
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
       void
       fetch()
       {
