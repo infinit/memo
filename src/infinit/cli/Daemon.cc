@@ -894,7 +894,7 @@ namespace infinit
             ifnt.user_save(user, true);
           }
           ELLE_TRACE("starting initial manager");
-          managers[getuid()].reset(new MountManager(ifnt, cli,
+          managers[getuid()].reset(new MountManager(ifnt,
                                                     user_mount_root,
                                                     docker_mount_substitute));
           MountManager& root_manager = *managers[getuid()];
@@ -970,7 +970,7 @@ namespace infinit
                 {
                   auto peer_mount_root = get_mount_root(system_user);
                   auto lock = system_user.enter(mutex);
-                  auto res = new MountManager(ifnt, cli,
+                  auto res = new MountManager(ifnt,
                                               peer_mount_root,
                                               docker_mount_substitute);
                   fill_manager_options(*res);

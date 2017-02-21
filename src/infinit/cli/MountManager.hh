@@ -70,7 +70,6 @@ namespace infinit
     {
     public:
       MountManager(infinit::Infinit& ifnt,
-                   Infinit& cli,
                    bfs::path mount_root = bfs::temp_directory_path(),
                    std::string mount_substitute = "")
         : _mount_root(mount_root)
@@ -78,7 +77,6 @@ namespace infinit
         , _fetch(false)
         , _push(false)
         , _ifnt(ifnt)
-        , _cli(cli)
       {}
       ~MountManager();
       void
@@ -123,7 +121,6 @@ namespace infinit
     private:
       std::unordered_map<std::string, Mount> _mounts;
       infinit::Infinit& _ifnt;
-      infinit::cli::Infinit& _cli;
     };
   }
 }
