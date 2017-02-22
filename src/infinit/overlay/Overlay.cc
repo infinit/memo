@@ -1,4 +1,5 @@
 #include <elle/log.hh>
+#include <elle/make-vector.hh>
 
 #include <reactor/Scope.hh>
 
@@ -62,10 +63,12 @@ namespace infinit
     void
     Overlay::discover(std::vector<Endpoints> const& peers)
     {
-      NodeLocations locs;
-      for (auto const& eps: peers)
-        locs.emplace_back(model::Address::null, eps);
-      this->discover(std::move(locs));
+      this->discover
+        (elle::make_vector(peers,
+                           [](auto const& eps)
+                           {
+                             return NodeLocation{model::Address::null, eps};
+                           }));
     }
 
     void
@@ -78,7 +81,7 @@ namespace infinit
     Overlay::discover(NodeLocations const& peers_)
     {
       ELLE_TRACE_SCOPE("%s: discover %f", this, peers_);
-      NodeLocations peers(peers_);
+      auto peers = peers_;
       auto it = std::remove_if(peers.begin(), peers.end(),
         [this] (NodeLocation const& nl)
         {

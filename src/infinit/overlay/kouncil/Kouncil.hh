@@ -214,7 +214,6 @@ namespace infinit
         ELLE_ATTRIBUTE_R(StaleEndpoints, stale_endpoints);
 
       protected:
-
         void
         _discover(NodeLocations const& peers) override;
         bool
