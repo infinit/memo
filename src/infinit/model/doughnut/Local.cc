@@ -402,10 +402,7 @@ namespace infinit
                    return i;
                  });
         auto stored_challenge = std::make_shared<elle::Buffer>();
-        using Challenge = std::pair<elle::Buffer, elle::Buffer>;
-
         auto auth_syn = [this, &rpcs, stored_challenge] (Passport const& p)
-          -> std::pair<Challenge, Passport*>
           {
             ELLE_TRACE("%s: authentication syn", *this);
             bool verify = this->_doughnut.verify(p, false, false, false);
@@ -428,13 +425,14 @@ namespace infinit
             "auth_syn",
             [this, auth_syn]
             (Address id, Passport const& p, elle::Version const& v)
-            -> Remote::Auth
             {
               if (this->doughnut().id() == id)
-                throw HandshakeFailed(elle::sprintf("incoming peer has same id as us: %s", id));
+                elle::err<HandshakeFailed>
+                  ("incoming peer has same id as us: %s", id);
               auto dht_v = this->_doughnut.version();
               if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
-                throw HandshakeFailed(elle::sprintf("invalid version %s, we use %s", v, dht_v));
+                elle::err<HandshakeFailed>("invalid version %s, we use %s",
+                                           v, dht_v);
               auto res = auth_syn(p);
               return Remote::Auth(this->id(), std::move(res.first), *res.second);
             });
@@ -444,7 +442,6 @@ namespace infinit
           rpcs.add(
             "auth_syn",
             [this, auth_syn] (Passport const& p, elle::Version const& v)
-            -> std::pair<Challenge, Passport*>
             {
               auto dht_v = this->_doughnut.version();
               if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
@@ -456,7 +453,7 @@ namespace infinit
         {
           rpcs.add(
             "auth_syn",
-            [this, auth_syn] (Passport const& p) -> std::pair<Challenge, Passport*>
+            [this, auth_syn] (Passport const& p)
             {
               return auth_syn(p);
             });
@@ -465,7 +462,7 @@ namespace infinit
           [this, &rpcs, stored_challenge](
                  elle::Buffer const& enc_key,
                  elle::Buffer const& /*token*/,
-                 elle::Buffer const& signed_challenge) -> bool
+                 elle::Buffer const& signed_challenge)
           {
             ELLE_TRACE("%s: authentication ack", this);
             if (stored_challenge->empty())
@@ -491,7 +488,10 @@ namespace infinit
           });
         rpcs.add(
           "resolve_keys",
-          [this](std::vector<int> const& ids) { return this->_resolve_keys(ids); });
+          [this](std::vector<int> const& ids)
+          {
+            return this->_resolve_keys(ids);
+          });
         rpcs.add(
           "resolve_all_keys",
           [this]() { return this->_resolve_all_keys(); });
