@@ -1041,6 +1041,10 @@ def configure(
     tests_extra_libs = [das_lib, elle_lib, cryptography_lib, reactor_lib, protocol_lib]
   else:
     tests_extra_libs = []
+  if linux:
+    tests_names.append(('grpc', [grpc.grpc_lib]))
+    cxx_config_tests += grpc.grpc.cxx_config
+    cxx_config_tests.lib('dl')
   for test_name, dependencies in tests_names:
     ifnt_lib = test_name == 'consensus/async' and infinit_lib_tests_consensus or infinit_lib_tests
     if windows:
