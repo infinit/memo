@@ -10,6 +10,7 @@
 #include <grpc++/security/credentials.h>
 
 #include <elle/Duration.hh>
+#include <elle/os/environ.hh>
 
 #include <reactor/scheduler.hh>
 #include <reactor/network/SocketOperation.hh>
@@ -31,26 +32,6 @@
 #include <infinit/grpc/kv.grpc.pb.h>
 
 ELLE_LOG_COMPONENT("infinit.grpc");
-
-
-/* This is what we would do if we were using the sync API (which uses a thread pool)
-class KVImpl: public KV::Service
-{
-public:
-  ::grpc::Status Get(::grpc::ServerContext* context, const ::Address* request, ::BlockStatus* response)
-  {
-    ELLE_LOG("Get %s", request->address());
-    response->mutable_status()->set_error("not implemented");
-    return grpc::Status::OK;
-  }
-  ::grpc::Status Set(::grpc::ServerContext* context, const ::Block* request, ::Status* response)
-  {
-    ELLE_LOG("Set %s", request->address());
-    response->set_error("not implemented");
-    return grpc::Status::OK;
-  }
-};*/
-
 
 
 class BaseCallManager
@@ -183,6 +164,39 @@ namespace infinit
       Remove(const ::Address& request);
 
       ELLE_ATTRIBUTE(infinit::model::Model&, model);
+    };
+
+    // This is what we would do if we were using the sync API (which uses a thread pool)
+    class KVBounce: public KV::Service
+    {
+    public:
+      KVBounce(KVImpl& impl, reactor::Scheduler& sched)
+      : _impl(impl)
+      , _sched(sched)
+      {}
+      ::grpc::Status Get(::grpc::ServerContext* context, const ::Address* request, ::BlockStatus* response)
+      {
+        _sched.mt_run<void>("Get", [&] {
+            *response = std::move(_impl.Get(*request));
+        });
+        return ::grpc::Status::OK;
+      }
+      ::grpc::Status Set(::grpc::ServerContext* context, const ::ModeBlock* request, ::Status* response)
+      {
+        _sched.mt_run<void>("Set", [&] {
+            *response = std::move(_impl.Set(*request));
+        });
+        return ::grpc::Status::OK;
+      }
+      ::grpc::Status Remove(::grpc::ServerContext* context, const ::Address * request, ::Status* response)
+      {
+        _sched.mt_run<void>("Remove", [&] {
+            *response = std::move(_impl.Remove(*request));
+        });
+        return ::grpc::Status::OK;
+      }
+      KVImpl& _impl;
+      reactor::Scheduler& _sched;
     };
 
     bool exception_handler(::Status& res, std::function<void()> f)
@@ -411,6 +425,21 @@ namespace infinit
 
     void serve_grpc(infinit::model::Model& dht, model::Endpoint ep)
     {
+      ELLE_TRACE("serving grpc on %s", ep);
+      KVImpl impl(dht);
+      KVBounce service(impl, reactor::scheduler());
+      ::grpc::ServerBuilder builder;
+      auto sep = ep.address().to_string() + ":" + std::to_string(ep.port());
+      builder.AddListeningPort(sep, ::grpc::InsecureServerCredentials());
+      builder.RegisterService(&service);
+      auto server = builder.BuildAndStart();
+      reactor::sleep();
+    }
+
+    static
+    void serve_grpc_async(infinit::model::Model& dht, model::Endpoint ep)
+    {
+      elle::os::setenv("GRPC_EPOLL_SYMBOL", "reactor_epoll_pwait", 1);
       ELLE_TRACE("serving grpc on %s", ep);
       KV::AsyncService async;
       KVImpl impl(dht);
