@@ -78,7 +78,7 @@ namespace infinit
               else
                 this->_server->listen(port, v6);
               this->_server_thread = std::make_unique<reactor::Thread>(
-                elle::sprintf("%s server", *this),
+                elle::sprintf("%s", this),
                 [this] { this->_serve_tcp(); });
               ELLE_LOG("%s: listen on tcp://%s",
                        this, this->_server->local_endpoint());
@@ -105,7 +105,7 @@ namespace infinit
                   throw; // port was specified in args, no retry
               }
               this->_utp_server_thread = std::make_unique<reactor::Thread>(
-                elle::sprintf("%s utp server", *this),
+                elle::sprintf("%s UTP", *this),
                 [this] { this->_serve_utp(); });
               ELLE_LOG("%s: listen on utp://%s",
                        this, this->_utp_server->local_endpoint());
@@ -525,7 +525,7 @@ namespace infinit
           while (true)
           {
             auto socket = std::shared_ptr<std::iostream>(accept().release());
-            auto name = elle::sprintf("%s: %s server", this, socket);
+            auto name = elle::sprintf("%s: %s", this, socket);
             scope.run_background(
               name,
               [this, socket = std::move(socket)]
@@ -574,9 +574,7 @@ namespace infinit
                 }
                 elle::With<reactor::Thread::NonInterruptible>() << [&]
                 {
-                  ELLE_DEBUG("%s: RESETING", this);
                   elle::unconst(socket).reset();
-                  ELLE_DEBUG("%s: RESETED", this);
                 };
               });
           }

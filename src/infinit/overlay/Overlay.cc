@@ -39,6 +39,16 @@ namespace infinit
       return {};
     }
 
+    void
+    Overlay::cleanup()
+    {
+      this->_cleanup();
+    }
+
+    void
+    Overlay::_cleanup()
+    {}
+
     /*------.
     | Peers |
     `------*/
@@ -79,6 +89,12 @@ namespace infinit
         });
       peers.erase(it, peers.end());
       this->_discover(peers);
+    }
+
+    bool
+    Overlay::discovered(model::Address id)
+    {
+      return this->_discovered(id);
     }
 
     /*-------.
@@ -179,6 +195,21 @@ namespace infinit
             "fetch node by address");
         });
     }
+
+    /*----------.
+    | Printable |
+    `----------*/
+
+    void
+    Overlay::print(std::ostream& o) const
+    {
+      elle::fprintf(o, "%s(%f)", elle::type_info(*this), this->id());
+    }
+
+
+    /*--------------.
+    | Configuration |
+    `--------------*/
 
     void
     Configuration::serialize(elle::serialization::Serializer& s)

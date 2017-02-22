@@ -180,7 +180,6 @@ namespace infinit
 
       class Node
         : public infinit::overlay::Overlay
-        , public elle::Printable
       {
       public:
         Node(Configuration const& config,
@@ -191,8 +190,6 @@ namespace infinit
         start();
         void
         engage();
-        void
-        print(std::ostream& stream) const override;
         /// local hooks interface
         void
         store(infinit::model::blocks::Block const& block);
@@ -319,6 +316,8 @@ namespace infinit
                   NodeLocations const& peers = {});
         void
         _discover(NodeLocations const& peers) override;
+        bool
+        _discovered(model::Address id) override;
         void
         send_bootstrap(NodeLocation const& l);
         SerState
@@ -366,7 +365,7 @@ namespace infinit
         std::unordered_map<Address, int> _under_duplicated;
         std::unordered_map<std::string, elle::Buffer> _challenges;
         ELLE_ATTRIBUTE(
-          (std::unordered_map<Address, std::vector<Overlay::WeakMember>>),
+          (std::unordered_map<Address, Overlay::Member>),
           peer_cache);
         mutable
         std::unordered_map<Address,

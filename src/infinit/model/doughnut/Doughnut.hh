@@ -75,6 +75,9 @@ namespace infinit
       private:
         struct Init;
         Doughnut(Init init);
+        ELLE_ATTRIBUTE_R(std::chrono::milliseconds, connect_timeout);
+        ELLE_ATTRIBUTE_R(std::chrono::milliseconds, soft_fail_timeout);
+        ELLE_ATTRIBUTE_R(bool, soft_fail_running);
 
       /*-----.
       | Time |
@@ -114,35 +117,6 @@ namespace infinit
         ELLE_ATTRIBUTE_r(Protocol, protocol);
 
       public:
-        struct KeyHash
-        {
-          KeyHash(int h, cryptography::rsa::PublicKey k)
-            : hash(h)
-            , key(std::make_shared(std::move(k)))
-          {}
-
-          KeyHash(int h, std::shared_ptr<cryptography::rsa::PublicKey> k)
-            : hash(h)
-            , key(std::move(k))
-          {}
-
-          int hash;
-          std::shared_ptr<cryptography::rsa::PublicKey> key;
-          cryptography::rsa::PublicKey const& raw_key() const
-          {
-            return *key;
-          }
-        };
-        typedef bmi::multi_index_container<
-          KeyHash,
-          bmi::indexed_by<
-            bmi::hashed_unique<
-              bmi::const_mem_fun<
-                KeyHash,
-                cryptography::rsa::PublicKey const&, &KeyHash::raw_key>,
-                std::hash<infinit::cryptography::rsa::PublicKey>>,
-            bmi::hashed_unique<
-              bmi::member<KeyHash, int, &KeyHash::hash>>>> KeyCache;
         ELLE_ATTRIBUTE_R(KeyCache, key_cache);
       protected:
         virtual
@@ -201,6 +175,13 @@ namespace infinit
       private:
         std::unique_ptr<blocks::MutableBlock>
         _services_block(bool write);
+
+      /*----------.
+      | Printable |
+      `----------*/
+      public:
+        void
+        print(std::ostream& out) const override;
       };
 
       struct Configuration:

@@ -1049,19 +1049,45 @@ namespace infinit
         try
         {
           ELLE_DEBUG_SCOPE("establish UTP connection");
-          auto peer = this->doughnut()->dock().make_peer(location,
-            model::EndpointsRefetcher(
-              std::bind(&Node::_refetch_endpoints, this, location.id()))).lock();
-          auto& remote = dynamic_cast<model::doughnut::Remote&>(*peer);
-          remote.connect(5_sec);
+          auto conn = this->doughnut()->dock().connect(location, true);
+          if (!conn->connected())
+          {
+            // connect() will silently drop everything if conn ends up
+            // being a duplicate
+            reactor::Waiter waiter = reactor::waiter(conn->on_connection());
+            for (int i=0; i< 50; ++i)
+            {
+              if (reactor::wait(waiter, 100_ms) || conn->disconnected())
+                break;
+            }
+          }
+          if (!conn->connected() && !conn->disconnected())
+            throw elle::Error("connect timeout");
+          ELLE_DEBUG("linking remote");
+          std::shared_ptr<model::doughnut::Remote> remote;
+          if (!conn->disconnected())
+          {
+            remote = this->doughnut()->dock().make_peer(conn);
+            remote->connect(5_sec);
+            ELLE_DEBUG("remote ready");
+            this->_peer_cache.emplace(remote->id(), remote);
+          }
+          else
+          {
+            auto id = conn->location().id();
+            auto it = this->_peer_cache.find(id);
+            if (it == this->_peer_cache.end())
+              elle::err("%s is duplicate but not found in cache", id);
+            remote = std::dynamic_pointer_cast<model::doughnut::Remote>(it->second);
+          }
           if (this->doughnut()->version() < elle::Version(0, 7, 0) || packet::disable_compression)
           {
-            auto rpc = remote.make_rpc<SerState()>("kelips_fetch_state");
+            auto rpc = remote->make_rpc<SerState()>("kelips_fetch_state");
             return rpc();
           }
           else
           {
-            auto rpc = remote.make_rpc<SerState2()>("kelips_fetch_state2");
+            auto rpc = remote->make_rpc<SerState2()>("kelips_fetch_state2");
             SerState2 state = rpc();
             SerState res;
             for (auto const& c: state.first)
@@ -1079,13 +1105,14 @@ namespace infinit
               prev = next;
             }
             // UGLY HACK we must preserve
+            ELLE_DEBUG("got %s contacts and %s files", res.first.size(), res.second.size());
             res.second.emplace_back(Address::null, state.first.front().first);
             return res;
           }
         }
         catch (elle::Error const& e)
         {
-          elle::err("connection failed to %s", location);
+          elle::err("connection failed to %s: %s", location, e);
         }
       }
 
@@ -1159,6 +1186,14 @@ namespace infinit
           send_bootstrap(peer);
       }
 
+      bool
+      Node::_discovered(model::Address id)
+      {
+        int g = group_of(id);
+        return this->_state.observers.find(id) != this->_state.observers.end()
+         || this->_state.contacts[g].find(id) != this->_state.contacts[g].end();
+      }
+
       void
       Node::send_bootstrap(NodeLocation const& l)
       {
@@ -1191,8 +1226,12 @@ namespace infinit
             for (auto const& ep: l.endpoints())
               send(req, ep.udp(), Address::null);
           }
-          for (auto const& ep: l.endpoints())
+          for (auto ep: l.endpoints())
+          {
+            if (ep.address().is_v6() && ep.address().to_v6().is_v4_mapped())
+              ep = Endpoint(ep.address().to_v6().to_v4(), ep.port());
             this->_pending_bootstrap_endpoints.push_back(ep.udp());
+          }
         }
       }
 
@@ -1360,7 +1399,7 @@ namespace infinit
         reactor::Lock l(_udp_send_mutex);
         static elle::Bench bench("kelips.send", 5_sec);
         elle::Bench::BenchScope bs(bench);
-        ELLE_DUMP("%s: sending %s bytes packet to %s\n%s", *this, b.size(), e, b.string());
+        ELLE_DUMP("%s: sending %s bytes packet to %s\n%x", *this, b.size(), e, b);
         b.size(b.size()+8);
         memmove(b.mutable_contents()+8, b.contents(), b.size()-8);
         memcpy(b.mutable_contents(), "KELIPSGS", 8);
@@ -1567,12 +1606,15 @@ namespace infinit
           // Flush operations waiting on crypto ready
           bool bootstrap_requested = false;
           {
+            auto nsource = source;
+            if (source.address().is_v6() && source.address().to_v6().is_v4_mapped())
+              nsource = Endpoint(source.address().to_v6().to_v4(), source.port());
             auto it = std::find(_pending_bootstrap_endpoints.begin(),
               _pending_bootstrap_endpoints.end(),
-              source);
+              nsource);
             if (it != _pending_bootstrap_endpoints.end())
             {
-              ELLE_DEBUG("%s: processing queued operation to %s", *this, source);
+              ELLE_DEBUG("%s: processing queued operation to %s", *this, nsource);
               *it = _pending_bootstrap_endpoints[_pending_bootstrap_endpoints.size() - 1];
               _pending_bootstrap_endpoints.pop_back();
               bootstrap_requested = true;
@@ -3112,17 +3154,19 @@ namespace infinit
             auto it = _state.contacts[group].begin();
             while(v--) ++it;
             auto tit = _ping_time.find(it->second.address);
-            if (tit != _ping_time.end()
-              && now() - tit->second < std::chrono::milliseconds(_config.ping_timeout_ms))
+            if (tit != _ping_time.end())
             {
-              reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
-              continue;
-            }
-            else
-            {
-              it->second.ping_timeouts++;
-              ELLE_TRACE("%s: ping timeout on %s (%s)", this, it->first,
-                         it->second.ping_timeouts);
+              if (now() - tit->second < std::chrono::milliseconds(_config.ping_timeout_ms))
+              {
+                reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
+                continue;
+              }
+              else
+              {
+                it->second.ping_timeouts++;
+                ELLE_TRACE("%s: ping timeout on %s (%s)", this, it->first,
+                  it->second.ping_timeouts);
+              }
             }
             target = &it->second;
             break;
@@ -3293,11 +3337,40 @@ namespace infinit
       Overlay::WeakMember
       Node::make_peer(NodeLocation hosts) const
       {
-        return this->doughnut()->dock().make_peer(
-          hosts,
-          model::EndpointsRefetcher(
-            std::bind(&Node::_refetch_endpoints,
-                      elle::unconst(this), hosts.id())));
+        auto it = this->_peer_cache.find(hosts.id());
+        if (it != this->_peer_cache.end())
+        {
+          auto* remote = dynamic_cast<model::doughnut::Remote*>(it->second.get());
+          if (!remote || !remote->connection()->disconnected())
+          {
+            // check if we have new endpoints available
+            bool new_endpoints = false;
+            if (remote)
+            {
+              auto const& eps = remote->endpoints();
+              for (auto const& ep: hosts.endpoints())
+              {
+                if (std::find(eps.begin(), eps.end(), ep) == eps.end())
+                {
+                  new_endpoints = true;
+                  break;
+                }
+              }
+            }
+            if (!new_endpoints)
+            {
+              ELLE_DEBUG("%s: returning existing remote for %s", this, hosts);
+              return Overlay::WeakMember::own(it->second);
+            }
+          }
+          elle::With<reactor::Thread::NonInterruptible>() << [&](reactor::Thread::NonInterruptible&) {
+            elle::unconst(this->_peer_cache).erase(it);
+          };
+        }
+        ELLE_DEBUG("%s: querying new remote for %s", this, hosts);
+        auto w = this->doughnut()->dock().make_peer(hosts);
+        elle::unconst(this->_peer_cache).emplace(hosts.id(), w.lock());
+        return Overlay::WeakMember::own(w.lock());
       }
 
       boost::optional<model::Endpoints>
@@ -3384,14 +3457,6 @@ namespace infinit
             elle::unconst(this)->kelipsGet(
               address, n, false, -1, false, fast, handle);
           });
-      }
-
-      void
-      Node::print(std::ostream& stream) const
-      {
-        stream << "Kelips(" <<
-          (_local_endpoints.empty() ? Endpoint() : _local_endpoints.front().first)
-          << ')';
       }
 
       void
@@ -3535,7 +3600,7 @@ namespace infinit
           res = it->second.validated_endpoint->first.udp();
         std::vector<elle::Buffer> buf;
         std::swap(it->second.pending, buf);
-        ELLE_DEBUG("flushing send buffer to %s on %s", id, res);
+        ELLE_DEBUG("flushing %s buffer(s) to %s on %s", buf.size(), id, res);
         for (auto& b: buf)
         {
           b.size(b.size()+8);
@@ -3549,6 +3614,14 @@ namespace infinit
           { // FIXME: do something
             ELLE_TRACE("network exception sending to %s: %s", res, e);
           }
+        }
+        if (!it->second.validated_endpoint && !it->second.pending.empty())
+        {
+          // validated_endpoint was reset, and new pending packets were added
+          // since we were still running, no contacter was restarded, so
+          // we need to do that now
+          ELLE_WARN("validated_endpoint was reset for %s", res);
+          contact(address);
         }
       }
 
@@ -3593,11 +3666,22 @@ namespace infinit
           this->on_discover()(nl, observer);
         if (!inserted.second)
         { // we still want the new endpoints
+          auto sz = inserted.first->second.endpoints.size();
           for (auto const& ep: endpoints)
             endpoints_update(inserted.first->second.endpoints, ep);
           // Reset validated endpoint so that contacter is re-run
-          if (!endpoints.empty())
+          if (sz != inserted.first->second.endpoints.size())
+          {
             inserted.first->second.validated_endpoint.reset();
+            // nodes will be notified in due time when the peer reconnects
+            // to them, but observers wont
+            packet::Gossip p;
+            p.sender = this->id();
+            p.observer = false;
+            p.contacts[nl.id()] = inserted.first->second.endpoints;
+            for (auto& obs: this->_state.observers)
+              this->send(p, obs.second);
+          }
         }
         return &inserted.first->second;
       }

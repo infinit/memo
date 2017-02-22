@@ -680,7 +680,7 @@ namespace infinit
             this->_owner.block_store());
           elle::json::Object res;
           for (auto wpeer: dht->dock().peer_cache())
-            if (auto peer = wpeer.second)
+            if (auto peer = wpeer.lock())
             {
               elle::json::Array keys;
               for (auto const& key: peer->resolve_all_keys())

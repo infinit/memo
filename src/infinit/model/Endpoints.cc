@@ -4,6 +4,21 @@
 
 #include <infinit/model/Endpoints.hh>
 
+namespace boost
+{
+  namespace asio
+  {
+    namespace ip
+    {
+      std::size_t
+      hash_value(boost::asio::ip::address const& address)
+      {
+        return boost::hash_value(address.to_string());
+      }
+    }
+  }
+}
+
 namespace infinit
 {
   namespace model
@@ -128,6 +143,15 @@ namespace infinit
           }
         }
       }
+    }
+
+    std::size_t
+    hash_value(Endpoint const& endpoint)
+    {
+      std::size_t seed = 0;
+      boost::hash_combine(seed, endpoint.address());
+      boost::hash_combine(seed, endpoint.port());
+      return seed;
     }
 
     /*----------.

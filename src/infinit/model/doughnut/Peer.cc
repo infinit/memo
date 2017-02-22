@@ -26,6 +26,7 @@ namespace infinit
       void
       Peer::cleanup()
       {
+        ELLE_TRACE_SCOPE("%s: cleanup", this);
         this->_cleanup();
       }
 
@@ -80,7 +81,10 @@ namespace infinit
       void
       Peer::print(std::ostream& stream) const
       {
-        elle::fprintf(stream, "%f(%f)", elle::type_info(*this), this->id());
+        elle::fprintf(stream, "%f(%x, %f)",
+                      elle::type_info(*this),
+                      reinterpret_cast<void const*>(this),
+                      this->id());
       }
     }
   }

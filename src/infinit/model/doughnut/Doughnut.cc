@@ -98,8 +98,57 @@ namespace infinit
           }
       }
 
+      static
+      std::chrono::milliseconds
+      _connect_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
+      {
+        static auto const env =
+          elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "");
+        if (arg || env.empty())
+          return arg.get();
+        else
+          return elle::chrono::duration_parse<std::milli>(env);
+      }
+
+      static
+      std::chrono::milliseconds
+      _soft_fail_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
+      {
+        static auto const env =
+          elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT", "");
+        if (arg || env.empty())
+          return arg.get();
+        else
+          return elle::chrono::duration_parse<std::milli>(env);
+      }
+
+      static
+      bool
+      _soft_fail_running_val(elle::Defaulted<bool> arg)
+      {
+        static auto const inenv =
+          elle::os::inenv("INFINIT_SOFTFAIL_RUNNING");
+        if (inenv)
+        {
+          static auto const env =
+            elle::os::getenv("INFINIT_SOFTFAIL_RUNNING");
+          if (arg || env.empty())
+            return arg.get();
+          else
+            return true; // FIXME: parse that value
+        }
+        else
+          return arg.get();
+      }
+
       Doughnut::Doughnut(Init init)
         : Model(std::move(init.version))
+        , _connect_timeout(
+          _connect_timeout_val(std::move(init.connect_timeout)))
+        , _soft_fail_timeout(
+          _soft_fail_timeout_val(std::move(init.soft_fail_timeout)))
+        , _soft_fail_running(
+          _soft_fail_running_val(std::move(init.soft_fail_running)))
         , _id(std::move(init.id))
         , _keys(std::move(init.keys))
         , _owner(std::move(init.owner))
@@ -213,8 +262,10 @@ namespace infinit
         }
         if (this->_local)
           this->_local->cleanup();
+        if (this->_overlay)
+          this->_overlay->cleanup();
         this->_consensus.reset();
-        this->_dock.cleanup();
+        this->_dock.disconnect();
         this->_overlay.reset();
         this->_dock.cleanup();
         if (this->_local)
@@ -511,6 +562,12 @@ namespace infinit
           return it->key;
         }
         elle::err("%s: failed to resolve key hash locally: %x", this, hash);
+      }
+
+      void
+      Doughnut::print(std::ostream& out) const
+      {
+        elle::fprintf(out, "%s(%f)", elle::type_info(*this), this->id());
       }
 
       Configuration::~Configuration()

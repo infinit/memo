@@ -271,6 +271,19 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
     infinit::overlay::NodeLocations locs;
     tptr = net.make_poll_beyond_thread(*dn, locs, 1);
   }
+  while (true)
+  {
+    auto stats = dn->overlay()->query("stats", {});
+    auto ostats = boost::any_cast<elle::json::Object>(stats);
+    auto cts = boost::any_cast<elle::json::Array>(ostats["contacts"]);
+    if (!cts.empty())
+    {
+      auto c = boost::any_cast<elle::json::Object>(cts.front());
+      if (boost::any_cast<bool>(c.at("discovered")))
+        break;
+    }
+    reactor::sleep(50_ms);
+  }
   ELLE_LOG("Returning observer");
   return std::make_pair(std::move(fs), std::move(tptr));
 }

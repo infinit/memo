@@ -24,6 +24,7 @@ namespace infinit
     using model::NodeLocations;
 
     class Overlay
+      : public elle::Printable
     {
     /*------.
     | Types |
@@ -50,12 +51,19 @@ namespace infinit
       /// Destroy an Overlay.
       virtual
       ~Overlay();
+      /// Prepare for destruction.
+      void
+      cleanup();
       /// The owning Doughnut.
       ELLE_ATTRIBUTE_R(model::doughnut::Doughnut*, doughnut);
       /// This node's id.
       ELLE_attribute_r(model::Address, id);
       /// The node's optional Local.
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
+    protected:
+      virtual
+      void
+      _cleanup();
 
     /*------.
     | Peers |
@@ -73,10 +81,15 @@ namespace infinit
       /// Discover peers.
       void
       discover(NodeLocations const& peers);
+      bool
+      discovered(model::Address id);
     protected:
       virtual
       void
       _discover(NodeLocations const& peers) = 0;
+      virtual
+      bool
+      _discovered(model::Address id) = 0;
 
     /*------.
     | Hooks |
@@ -169,6 +182,13 @@ namespace infinit
       virtual
       elle::json::Object
       stats() = 0;
+
+    /*----------.
+    | Printable |
+    `----------*/
+    public:
+      void
+      print(std::ostream& o) const override;
     };
 
     struct Configuration

@@ -2,6 +2,7 @@
 
 #include <iterator>
 
+#include <boost/algorithm/cxx11/any_of.hpp>
 #include <elle/Error.hh>
 #include <elle/assert.hh>
 #include <elle/log.hh>
@@ -42,6 +43,13 @@ namespace infinit
     Stonehenge::_discover(NodeLocations const& peers)
     {
       elle::err("Stonehenge cannot discover new nodes");
+    }
+
+    bool
+    Stonehenge::_discovered(model::Address id)
+    {
+      return boost::algorithm::any_of(this->_peers,
+                 [&] (NodeLocation const& p) { return p.id() == id; });
     }
 
     /*-------.
@@ -94,8 +102,7 @@ namespace infinit
     {
       if (peer.endpoints().empty())
         elle::err("missing endpoint for %f", peer.id());
-      return this->doughnut()->dock().make_peer(
-        peer, model::EndpointsRefetcher());
+      return this->doughnut()->dock().make_peer(peer);
     }
 
     /*-----------.

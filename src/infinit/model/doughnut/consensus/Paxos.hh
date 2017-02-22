@@ -181,10 +181,11 @@ namespace infinit
           public:
             typedef doughnut::Remote Super;
             template <typename ... Args>
-            RemotePeer(Doughnut& dht, Address id, Args&& ... args)
-              : doughnut::Peer(dht, id)
-              , Paxos::Peer(dht, id)
-              , Super(dht, id, std::forward<Args>(args) ...)
+            RemotePeer(Doughnut& dht,
+                       std::shared_ptr<Dock::Connection> connection)
+              : doughnut::Peer(dht, connection->location().id())
+              , Paxos::Peer(dht, connection->location().id())
+              , Super(dht, std::move(connection))
             {}
             virtual
             boost::optional<PaxosClient::Accepted>
@@ -221,10 +222,12 @@ namespace infinit
           | Construction |
           `-------------*/
           public:
-            typedef Paxos::PaxosClient PaxosClient;
-            typedef Paxos::PaxosServer PaxosServer;
-            typedef Paxos::Value Value;
-            typedef PaxosServer::Quorum Quorum;
+            using Self = LocalPeer;
+            using Super = doughnut::Local;
+            using PaxosClient = Paxos::PaxosClient;
+            using PaxosServer = Paxos::PaxosServer;
+            using Value = Paxos::Value;
+            using Quorum = PaxosServer::Quorum;
             template <typename ... Args>
             LocalPeer(Paxos& paxos,
                       int factor,

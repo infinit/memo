@@ -1,5 +1,4 @@
 #include <infinit/model/doughnut/Remote.hh>
-#include <infinit/model/doughnut/HandshakeFailed.hh>
 
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
@@ -41,49 +40,119 @@ namespace infinit
       `-------------*/
 
       Remote::Remote(Doughnut& dht,
-                     Address id,
-                     Endpoints endpoints,
-                     boost::optional<reactor::network::UTPServer&> server,
-                     boost::optional<EndpointsRefetcher> const& refetch,
-                     Protocol protocol)
-        : Super(dht, std::move(id))
-        , _socket(nullptr)
-        , _serializer()
-        , _channels()
+                     std::shared_ptr<Dock::Connection> connection)
+        : Super(dht, connection->location().id())
+        , _connection()
         , _connected()
-        , _reconnecting(false)
-        , _reconnection_id(0)
-        , _endpoints(std::move(endpoints))
-        , _utp_server(server)
-        , _protocol(protocol)
-        , _refetch_endpoints(refetch? *refetch : EndpointsRefetcher())
-        , _fast_fail(false)
-        , _thread()
+        , _connecting_since(std::chrono::system_clock::now())
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
-        ELLE_ASSERT(server || protocol != Protocol::utp);
-        this->_connect();
+        ELLE_ASSERT_NEQ(connection->location().id(), Address::null);
+        this->connection(std::move(connection));
         this->_connected.changed().connect(
           [this] (bool opened)
           {
             if (opened)
-              this->Peer::connected()();
+            {
+              this->_disconnected_exception = {};
+              if (!this->_connected.exception())
+                this->Peer::connected()();
+            }
             else
               this->Peer::disconnected()();
           });
       }
 
+      void
+      Remote::connection(std::shared_ptr<Dock::Connection> connection)
+      {
+        this->_connection = std::move(connection);
+        this->_connections.clear();
+        this->_connections.emplace_back(
+          this->_connection->on_connection().connect(
+            // Make sure we note this peer is connected before anything else
+            // otherwise other slots trying to perform RPCs will deadlock
+            // (e.g. Kouncil).
+            boost::signals2::at_front,
+            [this]
+            {
+              ELLE_TRACE("%s: connected", this);
+              this->_connected.open();
+            }));
+        this->_connections.emplace_back(
+          this->_connection->on_disconnection().connect(
+            [this]
+            {
+              if (!this->_connection->connected())
+              {
+                ELLE_TRACE("%s: disconnected with exception",
+                           this, elle::exception_string(
+                             this->_connection->disconnected_exception()));
+                this->_connected.raise(
+                  this->_connection->disconnected_exception());
+              }
+              else
+              {
+                ELLE_TRACE_SCOPE("%s: disconnected", this);
+                std::shared_ptr<Peer> hold;
+                try
+                {
+                  hold = this->shared_from_this();
+                }
+                catch (std::bad_weak_ptr const&)
+                {
+                }
+                this->_connected.close();
+              }
+            }));
+        auto connected =
+          this->_connection->connected() && !this->_connection->disconnected();
+        if (!this->_connected && connected)
+        {
+          ELLE_TRACE("%s: connected", this);
+          this->_connected.open();
+        }
+        else if (this->_connected && !connected)
+        {
+          ELLE_TRACE("%s: disconnected YYY", this);
+          this->_connected.close();
+        }
+      }
+
       Remote::~Remote()
       {
         ELLE_TRACE_SCOPE("%s: destruct", this);
+        this->_doughnut.dock()._peer_cache.erase(this->_cache_iterator);
         this->_cleanup();
       }
 
       void
       Remote::_cleanup()
       {
-        if (this->_thread)
-          this->_thread->terminate_now();
+        this->_connection->disconnect();
+      }
+
+      Endpoints const&
+      Remote::endpoints() const
+      {
+        return this->_connection->location().endpoints();
+      }
+
+      elle::Buffer const&
+      Remote::credentials() const
+      {
+        return this->_connection->credentials();
+      }
+
+      void
+      Remote::reconnect()
+      {
+        this->_connection->disconnect();
+        if (this->_connection->connected())
+          this->_disconnected_exception =
+            this->_connection->disconnected_exception();
+        this->_connecting_since = std::chrono::system_clock::now();
+        this->_doughnut.dock().connect(this->_connection->location());
       }
 
       /*-----------.
@@ -91,135 +160,17 @@ namespace infinit
       `-----------*/
 
       void
-      Remote::_connect()
-      {
-        static bool disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
-        ELLE_TRACE_SCOPE("%s: connect", *this);
-        ++this->_reconnection_id;
-        if (this->_thread)
-          this->_thread->terminate_now();
-        this->_connected.close();
-        this->_credentials = {};
-        this->_thread.reset(
-          new reactor::Thread(
-            elle::sprintf("%f worker", this),
-            [this]
-            {
-              bool connected = false;
-              this->_key_hash_cache.clear();
-              while (true)
-              {
-                ELLE_DEBUG("%s: connection attempt to %s endpoints",
-                           this, this->_endpoints.size());
-                this->_connection_start_time = std::chrono::system_clock::now();
-                auto handshake = [&] (std::unique_ptr<std::iostream> socket)
-                  {
-                    auto sv = elle_serialization_version(this->_doughnut.version());
-                    auto serializer = std::make_unique<protocol::Serializer>(
-                      *socket, sv, false);
-                    auto channels =
-                    std::make_unique<protocol::ChanneledStream>(*serializer);
-                    if (!disable_key)
-                      this->_key_exchange(*channels);
-                    ELLE_TRACE("%s: connected", this);
-                    this->_socket = std::move(socket);
-                    this->_serializer = std::move(serializer);
-                    this->_channels = std::move(channels);
-                    this->doughnut().dock().insert_peer(shared_from_this());
-                    connected = true;
-                  };
-                auto umbrella = [&, this] (std::function<void ()> const& f)
-                  {
-                    return [f, this]
-                    {
-                      try
-                      {
-                        f();
-                      }
-                      catch (reactor::network::Exception const&)
-                      {
-                        // ignored
-                      }
-                      catch (HandshakeFailed const& hs)
-                      {
-                        ELLE_WARN("%s: %s", this, hs);
-                      }
-                    };
-                  };
-                elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
-                {
-                  if (this->_protocol == Protocol::tcp ||
-                      this->_protocol == Protocol::all)
-                    for (auto const& e: this->_endpoints)
-                      scope.run_background(
-                        elle::sprintf("%s: connect to tcp://%s",
-                                      reactor::scheduler().current()->name(), e),
-                        umbrella(
-                          [&]
-                          {
-                            using reactor::network::TCPSocket;
-                            handshake(std::make_unique<TCPSocket>(e.tcp()));
-                            scope.terminate_now();
-                          }));
-                  if (this->_protocol == Protocol::utp ||
-                      this->_protocol == Protocol::all)
-                    scope.run_background(
-                      elle::sprintf("%s: connect to utp://%s",
-                                    this, this->_endpoints),
-                      umbrella(
-                        [&]
-                        {
-                          std::string cid;
-                          if (this->id() != Address::null)
-                            cid = elle::sprintf("%x", this->id());
-                          auto socket =
-                            std::make_unique<reactor::network::UTPSocket>(
-                              *this->_utp_server);
-                          socket->connect(cid, this->_endpoints.udp());
-                          handshake(std::move(socket));
-                          scope.terminate_now();
-                        }));
-                  reactor::wait(scope);
-                };
-                if (!connected)
-                {
-                  ELLE_TRACE("%s: connection to %f failed",
-                             this, this->_endpoints);
-                  this->_connected.raise<reactor::network::ConnectionClosed>(
-                    elle::sprintf("connection to %f failed", this->_endpoints));
-                  break;
-                }
-                // This allows the connected() signal to lose the last reference
-                // on this, by holding the refcount manually.
-                {
-                  auto holder = this->shared_from_this();
-                  this->_connected.open();
-                  if (holder.use_count() == 1)
-                  {
-                    this->_thread->dispose(true);
-                    this->_thread.release();
-                    return;
-                  }
-                }
-                ELLE_ASSERT(this->_channels);
-                ELLE_TRACE("%s: serve RPCs", this)
-                  this->_rpc_server.serve(*this->_channels);
-                ELLE_TRACE("%s: connection ended, evicting", this);
-                auto self = this->doughnut().dock().evict_peer(this->id());
-                this->_connected.close();
-                ++this->_reconnection_id;
-                this->_thread->dispose(true);
-                this->_thread.release();
-                return;
-              }
-            }));
-      }
-
-      void
       Remote::connect(elle::DurationOpt timeout)
       {
         if (!this->_connected)
         {
+          if (this->_connection->disconnected())
+          {
+            ELLE_TRACE_SCOPE("%s: restart closed connection to %s",
+                             this, this->_connection->location());
+            this->connection(this->doughnut().dock().connect(
+                               this->_connection->location()));
+          }
           ELLE_DEBUG_SCOPE(
             "%s: wait for connection with timeout %s", this, timeout);
           if (!reactor::wait(this->_connected, timeout))
@@ -228,156 +179,14 @@ namespace infinit
       }
 
       void
-      Remote::reconnect(elle::DurationOpt timeout)
+      Remote::disconnect()
       {
-        if (!this->_reconnecting)
-        {
-          auto lock = elle::scoped_assignment(this->_reconnecting, true);
-          ELLE_TRACE_SCOPE("%s: reconnect", this);
-          if (this->_refetch_endpoints)
-            if (auto eps = this->_refetch_endpoints(this->id()))
-              this->_endpoints = std::move(eps.get());
-          this->_connect();
-        }
-        else
-          ELLE_DEBUG("skip overlapped reconnect");
-        connect(timeout);
+        this->_connection->disconnect();
       }
 
       /*-------.
       | Blocks |
       `-------*/
-
-      static
-      std::pair<Remote::Challenge, std::unique_ptr<Passport>>
-      _auth_0_3(Remote& self, protocol::ChanneledStream& channels)
-      {
-        using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
-          (Passport const&);
-        RPC<AuthSyn> auth_syn(
-          "auth_syn", channels, self.doughnut().version());
-        return auth_syn(self.doughnut().passport());
-      }
-
-      static
-      std::pair<Remote::Challenge, std::unique_ptr<Passport>>
-      _auth_0_4(Remote& self, protocol::ChanneledStream& channels)
-      {
-        using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
-          (Passport const&, elle::Version const&);
-        RPC<AuthSyn> auth_syn(
-          "auth_syn", channels, self.doughnut().version());
-        auth_syn.set_context<Doughnut*>(&self.doughnut());
-        auto version = self.doughnut().version();
-        // 0.5.0 and 0.6.0 compares the full version it receives for
-        // compatibility instead of dropping the subminor component. Set
-        // it to 0.
-        return auth_syn(
-          self.doughnut().passport(),
-          elle::Version(version.major(), version.minor(), 0));
-      }
-
-      static
-      Remote::Auth
-      _auth_0_7(Remote& self, protocol::ChanneledStream& channels)
-      {
-        using AuthSyn =
-          Remote::Auth (Address, Passport const&, elle::Version const&);
-        RPC<AuthSyn> auth_syn(
-          "auth_syn", channels, self.doughnut().version());
-        auth_syn.set_context<Doughnut*>(&self.doughnut());
-        auto res = auth_syn(self.doughnut().id(),
-                            self.doughnut().passport(),
-                            self.doughnut().version());
-        if (res.id == self.doughnut().id())
-          throw HandshakeFailed(elle::sprintf("peer has same id as us: %s",
-                                              res.id));
-        if (self.id() != Address::null && self.id() != res.id)
-          throw HandshakeFailed(
-            elle::sprintf("peer id mismatch: expected %s, got %s",
-                          self.id(), res.id));
-        return res;
-      }
-
-      void
-      Remote::_key_exchange(protocol::ChanneledStream& channels)
-      {
-        ELLE_TRACE_SCOPE("%s: exchange keys", *this);
-        try
-        {
-          auto challenge_passport = [&]
-          {
-            if (this->_doughnut.version() >= elle::Version(0, 7, 0))
-            {
-              auto res = _auth_0_7(*this, channels);
-              if (this->_id == model::Address::null)
-              {
-                this->_id = res.id;
-                this->_id_discovered();
-              }
-              else if (this->_id != res.id)
-                elle::err("peer id mismatch: expected %f, got %f",
-                          this->_id, res.id);
-              return std::make_pair(
-                res.challenge,
-                std::make_unique<Passport>(std::move(res.passport)));
-            }
-            else if (this->_doughnut.version() >= elle::Version(0, 4, 0))
-              return _auth_0_4(*this, channels);
-            else
-              return _auth_0_3(*this, channels);
-          }();
-          auto& remote_passport = challenge_passport.second;
-          ELLE_ASSERT(remote_passport);
-          if (!this->_doughnut.verify(*remote_passport, false, false, false))
-          {
-            auto msg = elle::sprintf(
-              "passport validation failed for %s", this->id());
-            ELLE_WARN("%s", msg);
-            elle::err(msg);
-          }
-          if (!remote_passport->allow_storage())
-          {
-            auto msg = elle::sprintf(
-              "%s: Peer passport disallows storage", *this);
-            ELLE_WARN("%s", msg);
-            elle::err(msg);
-          }
-          ELLE_DEBUG("got valid remote passport");
-          // sign the challenge
-          auto signed_challenge = this->_doughnut.keys().k().sign(
-            challenge_passport.first.first,
-            infinit::cryptography::rsa::Padding::pss,
-            infinit::cryptography::Oneway::sha256);
-          // generate, seal
-          // dont set _key yet so that our 2 rpcs are in cleartext
-          auto key = infinit::cryptography::secretkey::generate(256);
-          elle::Buffer password = key.password();
-          auto sealed_key =
-            remote_passport->user().seal(password,
-                                         infinit::cryptography::Cipher::aes256,
-                                         infinit::cryptography::Mode::cbc);
-          ELLE_DEBUG("acknowledge authentication")
-          {
-            RPC<bool (elle::Buffer const&,
-                      elle::Buffer const&,
-                      elle::Buffer const&)>
-              auth_ack("auth_ack",
-                       channels, this->_doughnut.version(), nullptr);
-            auth_ack(sealed_key,
-                     challenge_passport.first.second,
-                     signed_challenge);
-            this->_rpc_server._key.emplace(key);
-            this->_credentials = std::move(password);
-          }
-        }
-        catch (elle::Error& e)
-        {
-          ELLE_WARN("key exchange failed with %s: %s",
-                    this->id(), elle::exception_string());
-          throw;
-        }
-      }
 
       void
       Remote::store(blocks::Block const& block, StoreMode mode)
@@ -433,8 +242,8 @@ namespace infinit
         {
           std::vector<int> missing;
           for (auto id: ids)
-            if (this->_key_hash_cache.get<1>().find(id) ==
-                this->_key_hash_cache.get<1>().end())
+            if (this->key_hash_cache().get<1>().find(id) ==
+                this->key_hash_cache().get<1>().end())
               missing.emplace_back(id);
           if (missing.size())
           {
@@ -449,7 +258,7 @@ namespace infinit
             auto id_it = missing.begin();
             auto key_it = missing_keys.begin();
             for (; id_it != missing.end(); ++id_it, ++key_it)
-              this->_key_hash_cache.emplace(*id_it, std::move(*key_it));
+              this->key_hash_cache().emplace(*id_it, std::move(*key_it));
           }
           else
             bench.add(1);
@@ -457,8 +266,8 @@ namespace infinit
         std::vector<cryptography::rsa::PublicKey> res;
         for (auto id: ids)
         {
-          auto it = this->_key_hash_cache.get<1>().find(id);
-          ELLE_ASSERT(it != this->_key_hash_cache.get<1>().end());
+          auto it = this->key_hash_cache().get<1>().find(id);
+          ELLE_ASSERT(it != this->key_hash_cache().get<1>().end());
           res.emplace_back(*it->key);
         }
         return res;
@@ -470,10 +279,22 @@ namespace infinit
         using Keys = std::unordered_map<int, cryptography::rsa::PublicKey>;
         auto res = this->make_rpc<Keys()>("resolve_all_keys")();
         for (auto const& key: res)
-          if (this->_key_hash_cache.get<1>().find(key.first) ==
-              this->_key_hash_cache.get<1>().end())
-            this->_key_hash_cache.emplace(key.first, key.second);
+          if (this->key_hash_cache().get<1>().find(key.first) ==
+              this->key_hash_cache().get<1>().end())
+            this->key_hash_cache().emplace(key.first, key.second);
         return res;
+      }
+
+      KeyCache const&
+      Remote::key_hash_cache() const
+      {
+        return ELLE_ENFORCE(this->_connection)->key_hash_cache();
+      }
+
+      KeyCache&
+      Remote::key_hash_cache()
+      {
+        return ELLE_ENFORCE(this->_connection)->key_hash_cache();
       }
     }
   }
