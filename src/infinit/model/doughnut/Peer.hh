@@ -73,7 +73,7 @@ namespace infinit
       protected:
         virtual
         std::vector<cryptography::rsa::PublicKey>
-        _resolve_keys(std::vector<int>) = 0;
+        _resolve_keys(std::vector<int> const&) = 0;
         virtual
         std::unordered_map<int, cryptography::rsa::PublicKey>
         _resolve_all_keys() = 0;

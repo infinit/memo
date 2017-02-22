@@ -276,7 +276,7 @@ namespace infinit
           }
 
           void
-          serialize(elle::serialization::Serializer& s)
+          serialize(elle::serialization::Serializer& s) override
           {
             s.serialize("sender", sender);
             s.serialize("observer", observer);
@@ -332,7 +332,7 @@ namespace infinit
           }
 
           void
-          serialize(elle::serialization::Serializer& s)
+          serialize(elle::serialization::Serializer& s) override
           {
             passport.serialize(s);
             s.serialize("sender", sender);
@@ -364,7 +364,7 @@ namespace infinit
           }
 
           void
-          serialize(elle::serialization::Serializer& s)
+          serialize(elle::serialization::Serializer& s) override
           {
             passport.serialize(s);
             s.serialize("sender", sender);
@@ -390,7 +390,7 @@ namespace infinit
           }
 
           void
-          serialize(elle::serialization::Serializer& s)
+          serialize(elle::serialization::Serializer& s) override
           {
             s.serialize("sender", sender);
             s.serialize("observer", observer);
@@ -417,7 +417,7 @@ namespace infinit
           }
 
           void
-          serialize(elle::serialization::Serializer& s)
+          serialize(elle::serialization::Serializer& s) override
           {
             s.serialize("sender", sender);
             s.serialize("observer", observer);
@@ -434,7 +434,7 @@ namespace infinit
           }
 
           void
-          serialize(elle::serialization::Serializer& s)
+          serialize(elle::serialization::Serializer& s) override
           {
             s.serialize("sender", sender);
             s.serialize("observer", observer);
@@ -456,7 +456,7 @@ namespace infinit
           }
 
           void
-          serialize(elle::serialization::Serializer& s)
+          serialize(elle::serialization::Serializer& s) override
           {
             using Cfiles
               = std::unordered_multimap<Address, std::pair<Time, int>>;
@@ -590,7 +590,7 @@ namespace infinit
           }
 
           void
-          serialize(elle::serialization::Serializer& s)
+          serialize(elle::serialization::Serializer& s) override
           {
             s.serialize("sender", sender);
             s.serialize("observer", observer);
@@ -634,7 +634,7 @@ namespace infinit
 
 
           void
-          serialize(elle::serialization::Serializer& s)
+          serialize(elle::serialization::Serializer& s) override
           {
             s.serialize("sender", sender);
             s.serialize("observer", observer);
@@ -674,7 +674,7 @@ namespace infinit
           }
 
           void
-          serialize(elle::serialization::Serializer& s)
+          serialize(elle::serialization::Serializer& s) override
           {
             s.serialize("sender", sender);
             s.serialize("observer", observer);
@@ -715,7 +715,7 @@ namespace infinit
           }
 
           void
-          serialize(elle::serialization::Serializer& s)
+          serialize(elle::serialization::Serializer& s) override
           {
             s.serialize("sender", sender);
             s.serialize("observer", observer);
@@ -772,7 +772,7 @@ namespace infinit
           }
 
           void
-          serialize(elle::serialization::Serializer& s)
+          serialize(elle::serialization::Serializer& s) override
           {
             s.serialize("sender", sender);
             s.serialize("observer", observer);

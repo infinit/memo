@@ -282,7 +282,7 @@ namespace infinit
       `-----*/
 
       std::vector<cryptography::rsa::PublicKey>
-      Local::_resolve_keys(std::vector<int> ids)
+      Local::_resolve_keys(std::vector<int> const& ids)
       {
         return elle::make_vector(ids,
                                  [this](auto const& h)

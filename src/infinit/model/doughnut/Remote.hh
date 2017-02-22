@@ -128,7 +128,7 @@ namespace infinit
       `-----*/
       protected:
         std::vector<cryptography::rsa::PublicKey>
-        _resolve_keys(std::vector<int> ids) override;
+        _resolve_keys(std::vector<int> const& ids) override;
         std::unordered_map<int, cryptography::rsa::PublicKey>
         _resolve_all_keys() override;
         ELLE_attribute_rx(KeyCache, key_hash_cache);

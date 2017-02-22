@@ -237,7 +237,7 @@ namespace infinit
       `-----*/
 
       std::vector<cryptography::rsa::PublicKey>
-      Remote::_resolve_keys(std::vector<int> ids)
+      Remote::_resolve_keys(std::vector<int> const& ids)
       {
         static auto bench = elle::Bench{"bench.remote_key_cache_hit", 1000_sec};
         {

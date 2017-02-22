@@ -39,7 +39,7 @@ namespace infinit
         }
 
         std::vector<cryptography::rsa::PublicKey>
-        _resolve_keys(std::vector<int> ids) override
+        _resolve_keys(std::vector<int> const& ids) override
         {
           elle::unreachable();
         }
