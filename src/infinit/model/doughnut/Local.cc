@@ -521,20 +521,20 @@ namespace infinit
                   {
                     this->_peers.emplace_front(conn);
                     remove.action(
-                      [this, it = this->_peers.begin()] ()
+                      [this, it = this->_peers.begin()]
                       {
                         this->_peers.erase(it);
                       });
                   }
                   else
-                    elle::unconst(conn->rpcs()._ready).connect(
+                    elle::unconst(conn->rpcs())._ready.connect(
                       [this, &conn, &remove] (RPCServer*)
                       {
                         this->_peers.emplace_front(conn);
                         remove.action(
                           [this, &conn, it = this->_peers.begin()] ()
                           {
-                            elle::unconst(conn->rpcs()._ready).
+                            elle::unconst(conn->rpcs())._ready.
                               disconnect_all_slots();
                             this->_peers.erase(it);
                           });

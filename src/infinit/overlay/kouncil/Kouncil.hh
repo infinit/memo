@@ -94,6 +94,9 @@ namespace infinit
                 Peer const&, Address, &_details::peer_id>>,
             bmi::random_access<>>>;
 
+        using Local = infinit::model::doughnut::Local;
+        using Remote = infinit::model::doughnut::Remote;
+
       /*-------------.
       | Construction |
       `-------------*/
@@ -104,7 +107,7 @@ namespace infinit
          *  @arg   local    The local server, null if pure client.
          */
         Kouncil(model::doughnut::Doughnut* dht,
-                std::shared_ptr<infinit::model::doughnut::Local> local,
+                std::shared_ptr<Local> local,
                 boost::optional<int> eviction_delay = boost::none);
         /// Destruct a Kouncil.
         ~Kouncil() override;
@@ -218,17 +221,17 @@ namespace infinit
         void
         _notify_observers(PeerInfos::value_type const& pi);
         void
-        _advertise(model::doughnut::Remote& r);
+        _advertise(Remote& r);
         void
-        _fetch_entries(model::doughnut::Remote& r);
+        _fetch_entries(Remote& r);
         boost::optional<Endpoints>
         _endpoints_refetch(Address id);
         void
         _perform(std::string const& name, std::function<void()> job);
         void
-        _peer_disconnected(std::shared_ptr<model::doughnut::Remote> peer);
+        _peer_disconnected(std::shared_ptr<Remote> peer);
         void
-        _peer_connected(std::shared_ptr<model::doughnut::Remote> peer);
+        _peer_connected(std::shared_ptr<Remote> peer);
         void
         _remember_stale(NodeLocation const& peer);
         ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>, tasks);
