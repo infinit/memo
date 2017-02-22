@@ -2,6 +2,7 @@ import drake
 import drake.cxx
 
 grpc_lib = None
+grpc = None
 
 with open(str(drake.path_source('../../../elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
@@ -65,9 +66,12 @@ def configure(
     cxx_toolkit,
     cxx_config
 ):
-  global grpc_lib
+  global grpc_lib, grpc
   grpc = drake.include('grpc', cxx_toolkit, cxx_config,
-    cmake_env = {'GO_EXECUTABLE': '/usr/lib/go-1.7/bin/go'}
+    cmake_env = {
+      'GO_EXECUTABLE': '/usr/lib/go-1.7/bin/go',
+      'CMAKE_BUILD_TYPE' : 'Debug',
+    }
     )
   gen = GRPCGen('kv.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
   srcs = gen.dsts + drake.nodes('grpc.cc')
