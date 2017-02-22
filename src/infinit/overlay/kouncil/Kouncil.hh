@@ -116,6 +116,9 @@ namespace infinit
         _cleanup() override;
         ELLE_ATTRIBUTE(bool, cleaning);
       private:
+        ///
+        void
+        _register_local(std::shared_ptr<Local> local);
         /// Check invariants.
         void
         _validate() const;
@@ -145,6 +148,7 @@ namespace infinit
           : public elle::Printable::as<PeerInfo>
         {
           PeerInfo(Address id, Endpoints endpoints, int64_t stamp);
+          PeerInfo(Address id, Endpoints endpoints, Time t);
           /** Merge peer informations in this.
            *
            *  @param info The endpoints to merge in this, iff they are more
