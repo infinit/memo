@@ -17,11 +17,11 @@
 <!-- - Add new `Kouncil` overlay that stores all block search space in main -->
 <!--   memory on startup. -->
 
-## [0.7.3]
+## [0.7.3] - 2017-02-15
 
-Command line interface revamp to the "docker style" : `infinit
-<object> <mode> options...`. This change is mostly backward
-compatible, but some adjustment may be needed.
+Command line interface revamp to the "Docker style":
+`infinit <object> <mode> options...`. This change is mostly backward
+compatible, but some adjustments may be needed.
 
 ### Added
 
