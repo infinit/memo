@@ -78,9 +78,6 @@ namespace infinit
         , _broadcast_thread(new reactor::Thread(
                               elle::sprintf("%s: broadcast", this),
                               std::bind(&Kouncil::_broadcast, this)))
-        , _watcher_thread(/*new reactor::Thread(
-                          elle::sprintf("%s: watch", this),
-                          std::bind(&Kouncil::_watcher, this))*/)
         , _eviction_delay(eviction_delay.value_or(12000))
       {
         using model::Address;

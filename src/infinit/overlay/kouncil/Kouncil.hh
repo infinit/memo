@@ -229,7 +229,6 @@ namespace infinit
         _peer_disconnected(std::shared_ptr<model::doughnut::Remote> peer);
         void
         _peer_connected(std::shared_ptr<model::doughnut::Remote> peer);
-        reactor::Thread::unique_ptr _watcher_thread;
         void
         _remember_stale(NodeLocation const& peer);
         ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>, tasks);
