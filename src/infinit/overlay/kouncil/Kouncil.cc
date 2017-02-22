@@ -224,8 +224,8 @@ namespace infinit
         // Stop all background operations.
         this->_broadcast_thread->terminate_now();
         {
-          // Make sure one of the task does not wake up during the clear() and
-          // try to push a new task.
+          // Make sure none of the tasks will wake up during the
+          // clear() and try to push a new task.
           for (auto& task: this->_tasks)
             task->terminate();
           this->_tasks.clear();
@@ -237,14 +237,14 @@ namespace infinit
         // peers.
         for (auto const& peer: elle::make_vector(this->_peers))
           peer->cleanup();
-        // All peers must have been dropped, except local.
-        if (this->_peers.size() != (this->doughnut()->local() ? 1u : 0u))
+        // All peers must have been dropped, possibly except local.
+        auto expected_size = this->doughnut()->local() ? 1u : 0u;
+        if (this->_peers.size() != expected_size)
           ELLE_ERR("%s: some peers are still alive after cleanup", this)
           {
             for (auto const& peer: this->_peers)
               ELLE_ERR("%s", peer);
-            ELLE_ASSERT_EQ(
-              this->_peers.size(), this->doughnut()->local() ? 1u : 0u);
+            ELLE_ASSERT_EQ(this->_peers.size(), expected_size);
           }
       }
 
@@ -373,24 +373,23 @@ namespace infinit
       Kouncil::_peer_disconnected(std::shared_ptr<Remote> peer)
       {
         ELLE_TRACE_SCOPE("%s: %s disconnected", this, peer);
-        auto loc = peer->connection()->location();
-        auto it = this->_peers.find(peer->id());
+        auto const id = peer->id();
+        auto it = this->_peers.find(id);
         if (it == this->_peers.end() || *it != peer)
         {
           // FIXME: I don't think this should ever happen.
           ELLE_WARN("disconnect on dropped peer %f", peer);
           return;
         }
-        if (auto pi = find(this->_infos, peer->id()))
+        if (auto pi = find(this->_infos, id))
           this->_infos.erase(pi);
         else
           // FIXME: I don't think this should ever happen.
           ELLE_WARN("no info for disconnected peer %f", peer);
         {
-          auto its = this->_address_book.equal_range(peer->id());
+          auto its = this->_address_book.equal_range(id);
           this->_address_book.erase(its.first, its.second);
         }
-        auto id = peer->id();
         this->_peers.erase(it);
         this->on_disappear()(id, false);
         peer.reset();
@@ -501,9 +500,8 @@ namespace infinit
                                this, address, this->peers().size());
               for (auto peer: this->peers())
               {
-                // FIXME: handle local !
-                if (auto r = std::dynamic_pointer_cast<
-                    Remote>(peer))
+                // FIXME: handle local!
+                if (auto r = std::dynamic_pointer_cast<Remote>(peer))
                 {
                   auto lookup =
                     r->make_rpc<std::unordered_set<Address> (Address)>(
@@ -595,21 +593,22 @@ namespace infinit
       elle::json::Object
       Kouncil::stats()
       {
-        elle::json::Object res;
-        res["type"] = this->type_name();
-        res["id"] = elle::sprintf("%s", this->doughnut()->id());
-        return res;
+        return
+          {
+            {"type", this->type_name()},
+            {"id", elle::sprintf("%s", this->doughnut()->id())},
+          };
       }
 
       void
-      Kouncil::_notify_observers(PeerInfos::value_type const& pi)
+      Kouncil::_notify_observers(PeerInfo const& pi)
       {
         if (!this->local())
           return;
         // FIXME: One Thread and one RPC to notify them all by batch, not one by
         // one.
         this->_perform("notify observers",
-          [this, pi=pi]
+          [this, pi]
           {
             try
             {
@@ -656,7 +655,7 @@ namespace infinit
             auto peers = advertise(locations);
             ELLE_TRACE("fetched %s peers", peers.size());
             ELLE_DEBUG("peers: %f", peers);
-            PeerInfos infos;
+            auto infos = PeerInfos{};
             for (auto const& l: peers)
               infos.emplace(l.id(), l.endpoints(), -1);
             this->_discover(infos);
@@ -748,8 +747,11 @@ namespace infinit
         elle::fprintf(o, "%s(%f)", elle::type_info(*this), this->id());
       }
 
-      static const elle::TypeInfo::RegisterAbbrevation
-      _kouncil_abbr("kouncil::Kouncil", "Kouncil");
+      namespace
+      {
+        const auto _kouncil_abbr
+          = elle::TypeInfo::RegisterAbbrevation{"kouncil::Kouncil", "Kouncil"};
+      }
 
       /*--------------.
       | StaleEndpoint |

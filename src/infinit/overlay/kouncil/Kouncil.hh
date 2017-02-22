@@ -191,6 +191,9 @@ namespace infinit
             bmi::hashed_unique<
               bmi::const_mem_fun<PeerInfo, Address const&, &PeerInfo::id>>>>;
         ELLE_ATTRIBUTE_R(PeerInfos, infos);
+
+        /// Nodes with which we lost connection, but keep ready to see
+        /// coming back.
         class StaleEndpoint
           : public NodeLocation
         {
@@ -222,7 +225,7 @@ namespace infinit
         void
         _discover(PeerInfos const& pis);
         void
-        _notify_observers(PeerInfos::value_type const& pi);
+        _notify_observers(PeerInfo const& pi);
         void
         _advertise(Remote& r);
         void

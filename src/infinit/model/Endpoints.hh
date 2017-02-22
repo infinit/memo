@@ -46,7 +46,8 @@ namespace infinit
       : public std::vector<Endpoint>
     {
     public:
-      using std::vector<Endpoint>::vector;
+      using Super = std::vector<Endpoint>;
+      using Super::Super;
       Endpoints();
       Endpoints(std::vector<Endpoint> const&);
       Endpoints(std::vector<boost::asio::ip::udp::endpoint> const&);
