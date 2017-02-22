@@ -6,8 +6,8 @@
 
 #include <elle/serialization/json.hh>
 
-#include <reactor/network/exception.hh>
-#include <reactor/Scope.hh>
+#include <elle/reactor/network/exception.hh>
+#include <elle/reactor/Scope.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
 
@@ -128,7 +128,7 @@ namespace infinit
     `-------------*/
 
     MonitoringServer::MonitoringServer(
-      std::unique_ptr<reactor::network::Server> server,
+      std::unique_ptr<elle::reactor::network::Server> server,
       doughnut::Doughnut& owner)
       : _server(std::move(server))
       , _accepter()
@@ -137,7 +137,7 @@ namespace infinit
       ELLE_ASSERT_NEQ(this->_server, nullptr);
       ELLE_DEBUG("listening on: %s", *this->_server);
       this->_accepter.reset(
-        new reactor::Thread(*reactor::Scheduler::scheduler(),
+        new elle::reactor::Thread(*elle::reactor::Scheduler::scheduler(),
                             "accepter",
                             std::bind(&MonitoringServer::_accept,
                                       std::ref(*this))));
@@ -156,11 +156,11 @@ namespace infinit
     void
     MonitoringServer::_accept()
     {
-      elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+      elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
       {
         while (true)
         {
-          std::shared_ptr<reactor::network::Socket> socket{
+          std::shared_ptr<elle::reactor::network::Socket> socket{
             this->_server->accept().release()};
           ELLE_DEBUG("accept connection from %s", *socket);
           scope.run_background(
@@ -171,11 +171,11 @@ namespace infinit
               {
                 this->_serve(socket);
               }
-              catch (reactor::network::ConnectionClosed const& e)
+              catch (elle::reactor::network::ConnectionClosed const& e)
               {
                 ELLE_TRACE("ConnectionClosed: %s", e.backtrace());
               }
-              catch (reactor::network::SocketClosed const& e)
+              catch (elle::reactor::network::SocketClosed const& e)
               {
                 ELLE_TRACE("SocketClosed: %s", e.backtrace());
               }
@@ -207,7 +207,7 @@ namespace infinit
     }
 
     void
-    MonitoringServer::_serve(std::shared_ptr<reactor::network::Socket> socket)
+    MonitoringServer::_serve(std::shared_ptr<elle::reactor::network::Socket> socket)
     {
       try
       {
@@ -242,7 +242,7 @@ namespace infinit
             if (response)
               elle::json::write(*socket, response->as_object());
           }
-          catch (reactor::network::ConnectionClosed const&)
+          catch (elle::reactor::network::ConnectionClosed const&)
           {
             throw;
           }
@@ -254,7 +254,7 @@ namespace infinit
           }
         }
       }
-      catch (reactor::network::ConnectionClosed const&)
+      catch (elle::reactor::network::ConnectionClosed const&)
       {}
     }
   }

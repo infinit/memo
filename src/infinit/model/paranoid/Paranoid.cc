@@ -16,7 +16,7 @@ namespace infinit
   {
     namespace paranoid
     {
-      Paranoid::Paranoid(infinit::cryptography::rsa::KeyPair keys,
+      Paranoid::Paranoid(elle::cryptography::rsa::KeyPair keys,
                          std::unique_ptr<storage::Storage> storage,
                          elle::Version version)
         : Model(std::move(version))
@@ -116,7 +116,7 @@ namespace infinit
       public:
         // boost::optional does not support in-place construction, use a
         // std::unique_ptr instead since KeyPair is not copiable.
-        std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys;
+        std::unique_ptr<elle::cryptography::rsa::KeyPair> keys;
 
         ParanoidModelConfig(elle::serialization::SerializerIn& input)
           : ModelConfig(input)
@@ -145,8 +145,8 @@ namespace infinit
           if (!this->keys)
           {
             this->keys.reset(
-              new infinit::cryptography::rsa::KeyPair(
-                infinit::cryptography::rsa::keypair::generate(2048)));
+              new elle::cryptography::rsa::KeyPair(
+                elle::cryptography::rsa::keypair::generate(2048)));
             elle::serialization::json::SerializerOut output(std::cout);
             std::cout << "No key specified, generating fresh ones:" << std::endl;
             this->keys->serialize(output);

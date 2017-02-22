@@ -3,8 +3,8 @@
 
 # include <elle/attribute.hh>
 
-# include <cryptography/rsa/PublicKey.hh>
-# include <cryptography/rsa/KeyPair.hh>
+# include <elle/cryptography/rsa/PublicKey.hh>
+# include <elle/cryptography/rsa/KeyPair.hh>
 
 # include <infinit/model/blocks/ImmutableBlock.hh>
 # include <infinit/model/doughnut/fwd.hh>
@@ -30,7 +30,7 @@ namespace infinit
       `-------------*/
       public:
         NB(Doughnut& doughnut,
-           std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
+           std::shared_ptr<elle::cryptography::rsa::PublicKey> owner,
            std::string name,
            elle::Buffer data,
            elle::Buffer signature = {});
@@ -40,13 +40,13 @@ namespace infinit
            elle::Buffer signature = {});
         NB(NB const& other);
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
-        ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::cryptography::rsa::PublicKey>,
+        ELLE_ATTRIBUTE_R(std::shared_ptr<elle::cryptography::rsa::PublicKey>,
                          owner);
         ELLE_ATTRIBUTE_R(std::string, name);
         ELLE_ATTRIBUTE_R(elle::Buffer, signature);
         static
         Address
-        address(infinit::cryptography::rsa::PublicKey const& owner,
+        address(elle::cryptography::rsa::PublicKey const& owner,
                 std::string const& name,
                 elle::Version const& version);
         using Super::address;

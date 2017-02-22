@@ -2,9 +2,9 @@
 
 #include <iostream>
 
-#include <cryptography/rsa/pem.hh>
+#include <elle/cryptography/rsa/pem.hh>
 
-#include <reactor/http/url.hh>
+#include <elle/reactor/http/url.hh>
 
 #include <infinit/LoginCredentials.hh>
 #include <infinit/cli/Infinit.hh>
@@ -17,7 +17,7 @@ namespace infinit
 {
   namespace cli
   {
-    using PublicUser = das::Model<
+    using PublicUser = elle::das::Model<
       infinit::User,
       decltype(elle::meta::list(
                  infinit::symbols::name,
@@ -26,7 +26,7 @@ namespace infinit
                  infinit::symbols::public_key,
                  infinit::symbols::ldap_dn))>;
 
-    using PublicUserPublish = das::Model<
+    using PublicUserPublish = elle::das::Model<
       infinit::User,
       decltype(elle::meta::list(
                  infinit::symbols::name,
@@ -141,7 +141,7 @@ namespace infinit
       {
         auto url = elle::sprintf("users/%s/avatar", name);
         auto request = api.cli().infinit().beyond_fetch_data(url, "avatar", name);
-        if (request->status() == reactor::http::StatusCode::OK)
+        if (request->status() == elle::reactor::http::StatusCode::OK)
         {
           auto response = request->response();
           // XXX: Deserialize XML.
@@ -175,13 +175,13 @@ namespace infinit
           if (keys_file)
           {
             auto passphrase = Infinit::read_passphrase();
-            return infinit::cryptography::rsa::pem::import_keypair(
+            return elle::cryptography::rsa::pem::import_keypair(
                 *keys_file, passphrase);
           }
           else
           {
             api.cli().report("generating RSA keypair");
-            return infinit::cryptography::rsa::keypair::generate(2048);
+            return elle::cryptography::rsa::keypair::generate(2048);
           }
         }();
         return {name, keys, email, fullname, ldap_name, description};
@@ -199,7 +199,7 @@ namespace infinit
             password = Infinit::read_password();
           if (!user.ldap_dn)
             user.password_hash = Infinit::hub_password_hash(*password);
-          api.cli().infinit().beyond_push<das::Serializer<PrivateUserPublish>>(
+          api.cli().infinit().beyond_push<elle::das::Serializer<PrivateUserPublish>>(
             "user", user.name, user, user);
         }
         else
@@ -207,7 +207,7 @@ namespace infinit
           if (password)
             elle::err<CLIError>
               ("password is only used when pushing a full user");
-          api.cli().infinit().beyond_push<das::Serializer<PublicUserPublish>>(
+          api.cli().infinit().beyond_push<elle::das::Serializer<PublicUserPublish>>(
             "user", user.name, user, user, !api.cli().script());
         }
       }
@@ -358,7 +358,7 @@ namespace infinit
       else
       {
         elle::serialization::json::serialize<
-          das::Serializer<infinit::User, PublicUser>>(user, *output, false);
+          elle::das::Serializer<infinit::User, PublicUser>>(user, *output, false);
       }
       this->cli().report_exported(std::cout, "user", user.name);
     }
@@ -384,7 +384,7 @@ namespace infinit
         try
         {
           auto user = this->cli().infinit().beyond_fetch<infinit::User>(
-            "user", reactor::http::url_encode(name));
+            "user", elle::reactor::http::url_encode(name));
           this->cli().infinit().user_save(std::move(user));
           avatar();
         }

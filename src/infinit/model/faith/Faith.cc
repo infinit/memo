@@ -5,7 +5,7 @@
 #include <elle/log.hh>
 #include <elle/serialization/binary.hh>
 
-#include <cryptography/hash.hh>
+#include <elle/cryptography/hash.hh>
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/MissingBlock.hh>

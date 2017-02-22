@@ -1,10 +1,10 @@
 #include <elle/bench.hh>
 #include <elle/log.hh>
 
-#include <cryptography/hash.hh>
+#include <elle/cryptography/hash.hh>
 
-#include <reactor/duration.hh>
-#include <reactor/scheduler.hh>
+#include <elle/reactor/duration.hh>
+#include <elle/reactor/scheduler.hh>
 
 #include <infinit/model/doughnut/CHB.hh>
 #include <infinit/model/doughnut/ACB.hh>
@@ -265,14 +265,14 @@ namespace infinit
           saltowner.append(owner.value(), sizeof(Address::Value));
         elle::IOStream stream(saltowner.istreambuf_combine(content));
         elle::Buffer hash;
-        if (content.size() > 262144 && reactor::Scheduler::scheduler())
+        if (content.size() > 262144 && elle::reactor::Scheduler::scheduler())
         {
-          reactor::background([&] {
-              hash = cryptography::hash(stream, cryptography::Oneway::sha256);
+          elle::reactor::background([&] {
+              hash = elle::cryptography::hash(stream, elle::cryptography::Oneway::sha256);
             });
         }
         else
-          hash = cryptography::hash(stream, cryptography::Oneway::sha256);
+          hash = elle::cryptography::hash(stream, elle::cryptography::Oneway::sha256);
         return {hash.contents(),
                 flags::immutable_block,
                 version >= elle::Version(0, 5, 0)};

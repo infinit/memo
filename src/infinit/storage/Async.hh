@@ -2,8 +2,8 @@
 
 #include <deque>
 
-#include <reactor/scheduler.hh>
-#include <reactor/Barrier.hh>
+#include <elle/reactor/scheduler.hh>
+#include <elle/reactor/Barrier.hh>
 #include <infinit/storage/Storage.hh>
 #include <infinit/model/Address.hh>
 
@@ -48,9 +48,9 @@ namespace infinit
       std::unique_ptr<Storage> _backend;
       int _max_blocks;
       int64_t _max_size;
-      reactor::Barrier _dequeueing;
-      reactor::Barrier _queueing;
-      std::vector<std::unique_ptr<reactor::Thread>> _threads;
+      elle::reactor::Barrier _dequeueing;
+      elle::reactor::Barrier _queueing;
+      std::vector<std::unique_ptr<elle::reactor::Thread>> _threads;
       struct Entry
       {
         Entry(Key k, Operation op, elle::Buffer d, unsigned h)

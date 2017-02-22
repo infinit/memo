@@ -10,9 +10,9 @@
 # include <elle/unordered_map.hh>
 # include <elle/Error.hh>
 
-# include <reactor/Generator.hh>
+# include <elle/reactor/Generator.hh>
 
-# include <athena/paxos/Client.hh>
+# include <elle/athena/paxos/Client.hh>
 
 # include <infinit/model/doughnut/Consensus.hh>
 # include <infinit/model/doughnut/Local.hh>
@@ -28,12 +28,12 @@ namespace infinit
       {
         namespace bmi = boost::multi_index;
 
-        DAS_SYMBOL(doughnut);
-        DAS_SYMBOL(replication_factor);
-        DAS_SYMBOL(lenient_fetch);
-        DAS_SYMBOL(rebalance_auto_expand);
-        DAS_SYMBOL(rebalance_inspect);
-        DAS_SYMBOL(node_timeout);
+        ELLE_DAS_SYMBOL(doughnut);
+        ELLE_DAS_SYMBOL(replication_factor);
+        ELLE_DAS_SYMBOL(lenient_fetch);
+        ELLE_DAS_SYMBOL(rebalance_auto_expand);
+        ELLE_DAS_SYMBOL(rebalance_inspect);
+        ELLE_DAS_SYMBOL(node_timeout);
 
         struct BlockOrPaxos;
 
@@ -47,9 +47,9 @@ namespace infinit
           typedef Paxos Self;
           typedef Consensus Super;
           typedef
-          athena::paxos::Client<std::shared_ptr<blocks::Block>, int, Address>
+          elle::athena::paxos::Client<std::shared_ptr<blocks::Block>, int, Address>
           PaxosClient;
-          typedef athena::paxos::Server<
+          typedef elle::athena::paxos::Server<
             std::shared_ptr<blocks::Block>, int, Address>
           PaxosServer;
           typedef elle::Option<std::shared_ptr<blocks::Block>,
@@ -246,9 +246,9 @@ namespace infinit
             ELLE_ATTRIBUTE_R(int, factor);
             ELLE_ATTRIBUTE_RW(bool, rebalance_auto_expand);
             ELLE_ATTRIBUTE_RW(bool, rebalance_inspect);
-            ELLE_ATTRIBUTE_R(reactor::Thread::unique_ptr, rebalance_inspector);
+            ELLE_ATTRIBUTE_R(elle::reactor::Thread::unique_ptr, rebalance_inspector);
             ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
-            ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>,
+            ELLE_ATTRIBUTE(std::vector<elle::reactor::Thread::unique_ptr>,
                            evict_threads);
           protected:
             void
@@ -333,11 +333,11 @@ namespace infinit
           private:
             void
             _rebalance();
-            ELLE_ATTRIBUTE((reactor::Channel<std::pair<Address, bool>>),
+            ELLE_ATTRIBUTE((elle::reactor::Channel<std::pair<Address, bool>>),
                            rebalancable);
             ELLE_ATTRIBUTE_X(boost::signals2::signal<void(Address)>,
                              rebalanced);
-            ELLE_ATTRIBUTE(reactor::Thread, rebalance_thread);
+            ELLE_ATTRIBUTE(elle::reactor::Thread, rebalance_thread);
             struct BlockRepartition
             {
               BlockRepartition(Address address,

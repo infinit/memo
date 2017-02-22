@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
 #include <infinit/descriptor/TemplatedBaseDescriptor.hh>
 
@@ -10,7 +10,7 @@ namespace infinit
     : public descriptor::TemplatedBaseDescriptor<User>
   {
     User(std::string const& name,
-         cryptography::rsa::KeyPair const& keys,
+         elle::cryptography::rsa::KeyPair const& keys,
          boost::optional<std::string> email = {},
          boost::optional<std::string> fullname = {},
          boost::optional<std::string> ldap_dn = {},
@@ -19,21 +19,21 @@ namespace infinit
     bool
     permit_name_slash();
     User(elle::serialization::SerializerIn& s);
-    infinit::cryptography::rsa::KeyPair
+    elle::cryptography::rsa::KeyPair
     keypair() const;
     void
     serialize(elle::serialization::Serializer& s) override;
     static
     std::string
-    uid(cryptography::rsa::PublicKey const& key);
+    uid(elle::cryptography::rsa::PublicKey const& key);
     std::string
     uid() const;
     bool
     operator ==(User const& user) const;
     void
     print(std::ostream& out) const override;
-    cryptography::rsa::PublicKey public_key;
-    boost::optional<cryptography::rsa::PrivateKey> private_key;
+    elle::cryptography::rsa::PublicKey public_key;
+    boost::optional<elle::cryptography::rsa::PrivateKey> private_key;
     // Hub.
     boost::optional<std::string> email;
     boost::optional<std::string> fullname;
@@ -42,7 +42,7 @@ namespace infinit
     boost::optional<std::string> password;
     boost::optional<std::string> ldap_dn;
 
-    using Model = das::Model<
+    using Model = elle::das::Model<
       User,
       decltype(elle::meta::list(
                  infinit::symbols::name,

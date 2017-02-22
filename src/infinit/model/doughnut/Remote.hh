@@ -3,12 +3,12 @@
 
 # include <elle/utils.hh>
 
-# include <reactor/network/tcp-socket.hh>
-# include <reactor/network/utp-socket.hh>
-# include <reactor/thread.hh>
+# include <elle/reactor/network/tcp-socket.hh>
+# include <elle/reactor/network/utp-socket.hh>
+# include <elle/reactor/thread.hh>
 
-# include <protocol/Serializer.hh>
-# include <protocol/ChanneledStream.hh>
+# include <elle/protocol/Serializer.hh>
+# include <elle/protocol/ChanneledStream.hh>
 
 # include <infinit/model/doughnut/fwd.hh>
 # include <infinit/model/doughnut/Doughnut.hh>
@@ -45,7 +45,7 @@ namespace infinit
           Address id;
           Challenge challenge;
           Passport passport;
-          using Model = das::Model<
+          using Model = elle::das::Model<
             Auth,
             decltype(elle::meta::list(
                        symbols::id,
@@ -89,7 +89,7 @@ namespace infinit
         void
         disconnect();
       private:
-        ELLE_ATTRIBUTE(reactor::Barrier, connected);
+        ELLE_ATTRIBUTE(elle::reactor::Barrier, connected);
         ELLE_ATTRIBUTE(
           std::chrono::system_clock::time_point, connecting_since);
         ELLE_ATTRIBUTE(std::exception_ptr, disconnected_exception);
@@ -127,9 +127,9 @@ namespace infinit
       | Keys |
       `-----*/
       protected:
-        std::vector<cryptography::rsa::PublicKey>
+        std::vector<elle::cryptography::rsa::PublicKey>
         _resolve_keys(std::vector<int> const& ids) override;
-        std::unordered_map<int, cryptography::rsa::PublicKey>
+        std::unordered_map<int, elle::cryptography::rsa::PublicKey>
         _resolve_all_keys() override;
         ELLE_attribute_rx(KeyCache, key_hash_cache);
       };
@@ -150,7 +150,7 @@ namespace infinit
   }
 }
 
-DAS_SERIALIZE(infinit::model::doughnut::Remote::Auth);
+ELLE_DAS_SERIALIZE(infinit::model::doughnut::Remote::Auth);
 
 #include <infinit/model/doughnut/Remote.hxx>
 

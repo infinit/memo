@@ -5,7 +5,7 @@
 #include <boost/multi_index/global_fun.hpp>
 #include <boost/multi_index_container.hpp>
 
-#include <reactor/network/utp-socket.hh>
+#include <elle/reactor/network/utp-socket.hh>
 
 #include <infinit/RPC.hh>
 #include <infinit/model/Address.hh>
@@ -44,10 +44,10 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::vector<boost::asio::ip::address>,
                          local_ips);
         ELLE_ATTRIBUTE_R(Protocol, protocol);
-        ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::UTPServer>,
+        ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::network::UTPServer>,
                        local_utp_server);
-        ELLE_ATTRIBUTE_R(reactor::network::UTPServer&, utp_server);
-        ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, rdv_connect_thread);
+        ELLE_ATTRIBUTE_R(elle::reactor::network::UTPServer&, utp_server);
+        ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::Thread>, rdv_connect_thread);
         ELLE_ATTRIBUTE_RX(
           boost::signals2::signal<void (Connection&)>, on_connection);
         ELLE_ATTRIBUTE_RX(
@@ -85,12 +85,12 @@ namespace infinit
           ELLE_attribute_r(Address, id);
           ELLE_attribute_r(Endpoints, endpoints);
           ELLE_ATTRIBUTE(std::unique_ptr<std::iostream>, socket);
-          ELLE_ATTRIBUTE(std::unique_ptr<protocol::Serializer>, serializer);
-          ELLE_ATTRIBUTE_R(std::unique_ptr<protocol::ChanneledStream>,
+          ELLE_ATTRIBUTE(std::unique_ptr<elle::protocol::Serializer>, serializer);
+          ELLE_ATTRIBUTE_R(std::unique_ptr<elle::protocol::ChanneledStream>,
                            channels, protected);
           ELLE_ATTRIBUTE_RX(RPCServer, rpc_server);
           ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
-          ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, thread);
+          ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, thread);
           /// Whether the remote has ever connected.
           ELLE_ATTRIBUTE_R(bool, connected);
           ELLE_ATTRIBUTE_R(boost::optional<model::Endpoint>,
@@ -113,7 +113,7 @@ namespace infinit
           print(std::ostream& out) const;
         private:
           void
-          _key_exchange(protocol::ChanneledStream& channels);
+          _key_exchange(elle::protocol::ChanneledStream& channels);
           friend class Dock;
         };
         /// Connecting connections by endpoints.

@@ -5,10 +5,10 @@
 #include <elle/format/base64.hh>
 #include <elle/json/exceptions.hh>
 
-#include <cryptography/hash.hh>
-#include <cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/hash.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
-#include <reactor/scheduler.hh>
+#include <elle/reactor/scheduler.hh>
 
 #include <infinit/version.hh>
 
@@ -51,14 +51,14 @@ namespace infinit
   }
 
   Headers
-  signature_headers(reactor::http::Method method,
+  signature_headers(elle::reactor::http::Method method,
                     std::string const& where,
                     User const& self,
                     boost::optional<elle::ConstWeakBuffer> payload)
   {
     if (!self.private_key)
       elle::err("no private key for %s, unable to sign request", self.name);
-    using namespace infinit::cryptography;
+    using namespace elle::cryptography;
     auto semi_colon_append = [](elle::Buffer& buffer, std::string const& str)
       {
         std::string res = elle::sprintf("%s;", str);
@@ -77,8 +77,8 @@ namespace infinit
     string_to_sign.append(now.data(), now.size());
     auto signature = self.private_key->sign(
       string_to_sign,
-      cryptography::rsa::Padding::pkcs1,
-      cryptography::Oneway::sha256);
+      elle::cryptography::rsa::Padding::pkcs1,
+      elle::cryptography::Oneway::sha256);
     auto encoded_signature = elle::format::base64::encode(signature);
     return {
       { "infinit-signature", encoded_signature.string() },

@@ -9,8 +9,8 @@
 # include <boost/multi_index/member.hpp>
 # include <boost/multi_index/ordered_index.hpp>
 
-# include <reactor/Channel.hh>
-# include <reactor/thread.hh>
+# include <elle/reactor/Channel.hh>
+# include <elle/reactor/thread.hh>
 
 # include <elle/optional.hh>
 
@@ -24,7 +24,7 @@ namespace infinit
     {
       namespace consensus
       {
-        DAS_SYMBOL(remove_signature);
+        ELLE_DAS_SYMBOL(remove_signature);
 
         namespace bmi = boost::multi_index;
         class Async
@@ -100,7 +100,7 @@ namespace infinit
             blocks::RemoveSignature remove_signature;
             int index;
             int version;
-            using Model = das::Model<
+            using Model = elle::das::Model<
               Op,
               elle::meta::List<
                 symbols::Symbol_address,
@@ -138,7 +138,7 @@ namespace infinit
                 bmi::member<Op, int, &Op::index> >
             > > Operations;
           ELLE_ATTRIBUTE(Operations, operations);
-          ELLE_ATTRIBUTE(reactor::Channel<int>, queue);
+          ELLE_ATTRIBUTE(elle::reactor::Channel<int>, queue);
           ELLE_ATTRIBUTE(int, next_index);
           ELLE_ATTRIBUTE(int, last_processed_index);
           ELLE_ATTRIBUTE(boost::filesystem::path, journal_dir);
@@ -147,9 +147,9 @@ namespace infinit
           ELLE_ATTRIBUTE(boost::optional<int>, first_disk_index);
           /// Background loop processing asynchronous operations.
           ELLE_ATTRIBUTE(bool, exit_requested);
-          ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, process_thread);
-          ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, init_thread);
-          ELLE_ATTRIBUTE(reactor::Barrier, init_barrier);
+          ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, process_thread);
+          ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, init_thread);
+          ELLE_ATTRIBUTE(elle::reactor::Barrier, init_barrier);
           ELLE_ATTRIBUTE(bool, in_push);
           ELLE_ATTRIBUTE(std::vector<Op>, reentered_ops);
           ELLE_ATTRIBUTE_R(unsigned long, processed_op_count);

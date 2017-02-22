@@ -1,4 +1,4 @@
-#include <reactor/for-each.hh>
+#include <elle/reactor/for-each.hh>
 
 namespace infinit
 {
@@ -15,7 +15,7 @@ namespace infinit
         // Copy peers to hold connections refcount, as for_each_parallel
         // captures values by ref.
         auto peers = this->_peers;
-        reactor::for_each_parallel(
+        elle::reactor::for_each_parallel(
           peers,
           [&] (std::shared_ptr<Connection> const& c)
           {

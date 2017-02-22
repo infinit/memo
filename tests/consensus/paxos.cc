@@ -18,7 +18,7 @@ ELLE_TEST_SCHEDULED(availability_2)
   block->data(elle::Buffer("foobarbaz"));
   BOOST_CHECK_EQUAL(a->dht->fetch(block->address())->data(), "foobar");
   BOOST_CHECK_THROW(a->dht->store(*block, infinit::model::STORE_UPDATE),
-                                  athena::paxos::TooFewPeers);
+                                  elle::athena::paxos::TooFewPeers);
 }
 
 ELLE_TEST_SCHEDULED(availability_3)
@@ -48,10 +48,10 @@ ELLE_TEST_SCHEDULED(availability_3)
   {
     b.reset();
     BOOST_CHECK_THROW(a->dht->fetch(block->address())->data(),
-                      athena::paxos::TooFewPeers);
+                      elle::athena::paxos::TooFewPeers);
     block->data(elle::Buffer("foobarbazquux"));
     BOOST_CHECK_THROW(a->dht->store(*block, infinit::model::STORE_UPDATE),
-                      athena::paxos::TooFewPeers);
+                      elle::athena::paxos::TooFewPeers);
   }
 }
 

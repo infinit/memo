@@ -159,11 +159,11 @@ namespace infinit
           > > CHBDiskCache;
           ELLE_ATTRIBUTE(CHBDiskCache, disk_cache);
           ELLE_ATTRIBUTE(uint64_t, disk_cache_used);
-          ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, cleanup_thread);
+          ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, cleanup_thread);
         private:
           void _load_disk_cache();
           void _disk_cache_push(blocks::Block& block);
-          typedef std::unordered_map<Address, std::shared_ptr<reactor::Barrier>>
+          typedef std::unordered_map<Address, std::shared_ptr<elle::reactor::Barrier>>
           Pending;
           ELLE_ATTRIBUTE(Pending, pending);
         };

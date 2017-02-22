@@ -1,6 +1,6 @@
 #pragma once
 
-#include <reactor/filesystem.hh>
+#include <elle/reactor/filesystem.hh>
 #include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/umbrella.hh>
 #include <infinit/filesystem/FileData.hh>
@@ -10,7 +10,7 @@ namespace infinit
 {
   namespace filesystem
   {
-    namespace rfs = reactor::filesystem;
+    namespace rfs = elle::reactor::filesystem;
     using DirectoryPtr = std::shared_ptr<Directory>;
     using ACLBlock = infinit::model::blocks::ACLBlock;
 

@@ -16,7 +16,7 @@ namespace infinit
 {
   namespace cli
   {
-    using Error = das::cli::Error;
+    using Error = elle::das::cli::Error;
 
     using Async = infinit::model::doughnut::consensus::Async;
 

@@ -30,7 +30,7 @@ namespace infinit
                 cli::name)
       , fetch(*this,
               "Fetch drive from {hub}",
-              das::cli::Options(),
+              elle::das::cli::Options(),
               cli::name = boost::none,
               cli::icon = boost::none)
       , invite(*this,
@@ -47,17 +47,17 @@ namespace infinit
                cli::home = false)
       , join(*this,
              "Join a drive you were invited to (Hub operation)",
-             das::cli::Options(),
+             elle::das::cli::Options(),
              cli::name)
       , list(*this, "List drives")
       , pull(*this,
              "Remove a drive from {hub}",
-             das::cli::Options(),
+             elle::das::cli::Options(),
              cli::name,
              cli::purge = false)
       , push(*this,
              "Push a drive to {hub}",
-             das::cli::Options(),
+             elle::das::cli::Options(),
              cli::name,
              cli::icon = boost::none)
     {}
@@ -242,7 +242,7 @@ namespace infinit
       {
         auto url = elle::sprintf("drives/%s/icon", name);
         auto request = cli.infinit().beyond_fetch_data(url, "icon", name);
-        if (request->status() == reactor::http::StatusCode::OK)
+        if (request->status() == elle::reactor::http::StatusCode::OK)
         {
           auto response = request->response();
           // XXX: Deserialize XML.
@@ -333,7 +333,7 @@ namespace infinit
           auto passport = Passport(
             user.public_key,
             network.name,
-            infinit::cryptography::rsa::KeyPair(owner.public_key,
+            elle::cryptography::rsa::KeyPair(owner.public_key,
                                                 owner.private_key.get()));
           ELLE_DEBUG("passport (%s: %s) created", network.name, user.name);
           cli.infinit().passport_save(passport);

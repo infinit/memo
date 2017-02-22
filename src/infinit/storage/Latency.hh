@@ -2,7 +2,7 @@
 #define INFINIT_STORAGE_LATENCY_HH
 
 #include <deque>
-#include <reactor/scheduler.hh>
+#include <elle/reactor/scheduler.hh>
 #include <infinit/storage/Storage.hh>
 
 namespace infinit
@@ -13,9 +13,9 @@ namespace infinit
     {
     public:
       Latency(std::unique_ptr<Storage> backend,
-        reactor::DurationOpt latency_get,
-        reactor::DurationOpt latency_set,
-        reactor::DurationOpt latency_erase
+        elle::reactor::DurationOpt latency_get,
+        elle::reactor::DurationOpt latency_set,
+        elle::reactor::DurationOpt latency_erase
         );
     protected:
       virtual
@@ -32,9 +32,9 @@ namespace infinit
       _list() override;
     private:
       std::unique_ptr<Storage> _backend;
-      reactor::DurationOpt _latency_get;
-      reactor::DurationOpt _latency_set;
-      reactor::DurationOpt _latency_erase;
+      elle::reactor::DurationOpt _latency_get;
+      elle::reactor::DurationOpt _latency_set;
+      elle::reactor::DurationOpt _latency_erase;
     };
   }
 }

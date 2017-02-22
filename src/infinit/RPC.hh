@@ -5,14 +5,14 @@
 #include <elle/log.hh>
 #include <elle/bench.hh>
 
-#include <cryptography/SecretKey.hh>
+#include <elle/cryptography/SecretKey.hh>
 
-#include <reactor/network/exception.hh>
-#include <reactor/network/socket.hh>
-#include <reactor/storage.hh>
+#include <elle/reactor/network/exception.hh>
+#include <elle/reactor/network/socket.hh>
+#include <elle/reactor/storage.hh>
 
-#include <protocol/ChanneledStream.hh>
-#include <protocol/Serializer.hh>
+#include <elle/protocol/ChanneledStream.hh>
+#include <elle/protocol/Serializer.hh>
 
 #include <infinit/model/doughnut/Passport.hh>
 
@@ -285,11 +285,11 @@ namespace infinit
       {
         f(std::forward<Args>(args)...);
       }
-      catch (infinit::protocol::Serializer::EOF const&)
+      catch (elle::protocol::Serializer::EOF const&)
       {}
-      catch (reactor::network::ConnectionClosed const& e)
+      catch (elle::reactor::network::ConnectionClosed const& e)
       {}
-      catch (reactor::network::SocketClosed const& e)
+      catch (elle::reactor::network::SocketClosed const& e)
       {
         ELLE_TRACE("unexpected SocketClosed: %s", e.backtrace());
       }
@@ -301,33 +301,33 @@ namespace infinit
       umbrella(
         [&]
         {
-          protocol::Serializer serializer(
+          elle::protocol::Serializer serializer(
             s, elle_serialization_version(this->_version), false);
           this->_serve(serializer);
         });
     }
 
     void
-    serve(protocol::Serializer& serializer)
+    serve(elle::protocol::Serializer& serializer)
     {
       umbrella([&] { this->_serve(serializer); });
     }
 
     void
-    _serve(protocol::Serializer& serializer)
+    _serve(elle::protocol::Serializer& serializer)
     {
-      auto chans = protocol::ChanneledStream{serializer};
+      auto chans = elle::protocol::ChanneledStream{serializer};
       this->_serve(chans);
     }
 
     void
-    serve(protocol::ChanneledStream& channels)
+    serve(elle::protocol::ChanneledStream& channels)
     {
       umbrella([&] { this->_serve(channels); });
     }
 
     void
-    _serve(protocol::ChanneledStream& channels)
+    _serve(elle::protocol::ChanneledStream& channels)
     {
       ELLE_LOG_COMPONENT("infinit.RPC");
       while (true)
@@ -346,8 +346,8 @@ namespace infinit
 	    if (request.size() > 262144)
 	    {
 	      auto& key = this->_key.get();
-	      elle::With<reactor::Thread::NonInterruptible>() << [&] {
-	        reactor::background([&] {
+	      elle::With<elle::reactor::Thread::NonInterruptible>() << [&] {
+	        elle::reactor::background([&] {
 	            request = key.decipher(request);
 	        });
 	      };
@@ -406,8 +406,8 @@ namespace infinit
 	  if (response.size() >= 262144)
 	  {
 	    auto& key = this->_key.get();
-	    elle::With<reactor::Thread::NonInterruptible>() << [&] {
-	      reactor::background([&] {
+	    elle::With<elle::reactor::Thread::NonInterruptible>() << [&] {
+	      elle::reactor::background([&] {
 	          response = key.encipher(
 	            elle::ConstWeakBuffer(response.contents(),
                                           response.size()));
@@ -431,7 +431,7 @@ namespace infinit
 
     std::unordered_map<std::string, std::unique_ptr<RPCHandler>> _rpcs;
     elle::serialization::Context _context;
-    boost::optional<infinit::cryptography::SecretKey> _key;
+    boost::optional<elle::cryptography::SecretKey> _key;
     boost::signals2::signal<void(RPCServer*)> _destroying;
     boost::signals2::signal<void(RPCServer*)> _ready;
     ELLE_ATTRIBUTE(elle::Version, version);
@@ -446,9 +446,9 @@ namespace infinit
   public:
     using Passport = infinit::model::doughnut::Passport;
     BaseRPC(std::string name,
-            protocol::ChanneledStream& channels,
+            elle::protocol::ChanneledStream& channels,
             elle::Version const& version,
-            boost::optional<cryptography::SecretKey> key = {});
+            boost::optional<elle::cryptography::SecretKey> key = {});
 
     elle::Buffer
     credentials()
@@ -471,9 +471,9 @@ namespace infinit
 
     elle::serialization::Context _context;
     ELLE_ATTRIBUTE_R(std::string, name);
-    ELLE_ATTRIBUTE_R(protocol::ChanneledStream*, channels, protected);
+    ELLE_ATTRIBUTE_R(elle::protocol::ChanneledStream*, channels, protected);
     ELLE_ATTRIBUTE_RX(
-      boost::optional<infinit::cryptography::SecretKey>, key, protected);
+      boost::optional<elle::cryptography::SecretKey>, key, protected);
     ELLE_ATTRIBUTE_R(elle::Version, version, protected);
   };
 
@@ -487,14 +487,14 @@ namespace infinit
   {
   public:
     RPC(std::string name,
-        protocol::ChanneledStream& channels,
+        elle::protocol::ChanneledStream& channels,
         elle::Version const& version,
-        boost::optional<cryptography::SecretKey> key = {})
+        boost::optional<elle::cryptography::SecretKey> key = {})
       : BaseRPC(std::move(name), channels, version, std::move(key))
     {}
 
     RPC(std::string name,
-        protocol::ChanneledStream& channels,
+        elle::protocol::ChanneledStream& channels,
         elle::Version const& version,
         elle::Buffer* credentials)
       : RPC(
@@ -502,8 +502,8 @@ namespace infinit
         channels,
         version,
         credentials && !credentials->empty() ?
-        boost::optional<cryptography::SecretKey>(elle::Buffer(*credentials)) :
-        boost::optional<cryptography::SecretKey>())
+        boost::optional<elle::cryptography::SecretKey>(elle::Buffer(*credentials)) :
+        boost::optional<elle::cryptography::SecretKey>())
     {}
 
     void
@@ -517,14 +517,14 @@ namespace infinit
   {
   public:
     RPC(std::string name,
-        protocol::ChanneledStream& channels,
+        elle::protocol::ChanneledStream& channels,
         elle::Version const& version,
-        boost::optional<cryptography::SecretKey> key = {})
+        boost::optional<elle::cryptography::SecretKey> key = {})
       : BaseRPC(std::move(name), channels, version, std::move(key))
     {}
 
     RPC(std::string name,
-        protocol::ChanneledStream& channels,
+        elle::protocol::ChanneledStream& channels,
         elle::Version const& version,
         elle::Buffer* credentials)
       : RPC(
@@ -532,8 +532,8 @@ namespace infinit
         channels,
         version,
         credentials && !credentials->empty() ?
-        boost::optional<cryptography::SecretKey>(elle::Buffer(*credentials)) :
-        boost::optional<cryptography::SecretKey>())
+        boost::optional<elle::cryptography::SecretKey>(elle::Buffer(*credentials)) :
+        boost::optional<elle::cryptography::SecretKey>())
     {}
 
     R
@@ -614,7 +614,7 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: call", self);
       auto versions = elle::serialization::get_serialization_versions
         <infinit::serialization_tag>(version);
-      protocol::Channel channel(*self.channels());
+      elle::protocol::Channel channel(*self.channels());
       {
         elle::Buffer call;
         elle::IOStream outs(call.ostreambuf());
@@ -634,8 +634,8 @@ namespace infinit
           ELLE_DEBUG("encipher request")
             if (call.size() > 262144)
             {
-              elle::With<reactor::Thread::NonInterruptible>() << [&] {
-                reactor::background([&] {
+              elle::With<elle::reactor::Thread::NonInterruptible>() << [&] {
+                elle::reactor::background([&] {
                     call = self.key()->encipher(
                       elle::ConstWeakBuffer(call.contents(), call.size()));
                   });
@@ -657,8 +657,8 @@ namespace infinit
           elle::Bench::BenchScope bs(bench);
           if (response.size() > 262144)
           {
-            elle::With<reactor::Thread::NonInterruptible>() << [&] {
-              reactor::background([&] {
+            elle::With<elle::reactor::Thread::NonInterruptible>() << [&] {
+              elle::reactor::background([&] {
                   response = self.key()->decipher(
                     elle::ConstWeakBuffer(response.contents(), response.size()));
               });
@@ -693,9 +693,9 @@ namespace infinit
 
   inline
   BaseRPC::BaseRPC(std::string name,
-                   protocol::ChanneledStream& channels,
+                   elle::protocol::ChanneledStream& channels,
                    elle::Version const& version,
-                   boost::optional<cryptography::SecretKey> key)
+                   boost::optional<elle::cryptography::SecretKey> key)
     : _name(std::move(name))
     , _channels(&channels)
     , _key(std::move(key))

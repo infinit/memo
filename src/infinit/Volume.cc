@@ -44,7 +44,7 @@ namespace infinit
     }
   }
 
-  std::unique_ptr<reactor::filesystem::FileSystem>
+  std::unique_ptr<elle::reactor::filesystem::FileSystem>
   Volume::run(std::shared_ptr<model::doughnut::Doughnut> dht,
               boost::optional<std::string> mountpoint_,
               boost::optional<bool> readonly,
@@ -80,7 +80,7 @@ namespace infinit
       infinit::filesystem::map_other_permissions = map_other_permissions,
       infinit::filesystem::block_size = block_size);
     auto driver =
-      elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
+      elle::make_unique<elle::reactor::filesystem::FileSystem>(std::move(fs), true);
     if (mountpoint)
     {
       auto fuse_options = std::vector<std::string>{

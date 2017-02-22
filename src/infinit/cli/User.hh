@@ -2,7 +2,7 @@
 
 #include <boost/optional.hpp>
 
-#include <das/cli.hh>
+#include <elle/das/cli.hh>
 
 #include <infinit/User.hh>
 #include <infinit/cli/Object.hh>
@@ -15,7 +15,7 @@ namespace infinit
 {
   namespace cli
   {
-    using PrivateUserPublish = das::Model<
+    using PrivateUserPublish = elle::das::Model<
       infinit::User,
       decltype(elle::meta::list(
                  infinit::symbols::name,

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <das/serializer.hh>
+#include <elle/das/serializer.hh>
 
 #include <infinit/User.hh>
 #include <infinit/fwd.hh>
@@ -10,21 +10,21 @@
 
 namespace infinit
 {
-  DAS_SYMBOL(capacity);
-  DAS_SYMBOL(usage);
+  ELLE_DAS_SYMBOL(capacity);
+  ELLE_DAS_SYMBOL(usage);
 
   struct Storages
   {
     int64_t usage;
     boost::optional<int64_t> capacity;
 
-    using Model = das::Model<
+    using Model = elle::das::Model<
       Storages,
       decltype(elle::meta::list(infinit::usage,
                                 infinit::capacity))>;
   };
 }
-DAS_SERIALIZE(infinit::Storages);
+ELLE_DAS_SERIALIZE(infinit::Storages);
 
 
 namespace infinit
@@ -57,7 +57,7 @@ namespace infinit
                    std::string const& resource = "network") const;
 
     std::pair<
-      std::unique_ptr<model::doughnut::Doughnut>, reactor::Thread::unique_ptr>
+      std::unique_ptr<model::doughnut::Doughnut>, elle::reactor::Thread::unique_ptr>
     run(User const& user,
         MountOptions const& mo,
         bool client = false,
@@ -65,12 +65,12 @@ namespace infinit
         boost::optional<elle::Version> version = {},
         boost::optional<int> port = {});
 
-    reactor::Thread::unique_ptr
+    elle::reactor::Thread::unique_ptr
     make_stat_update_thread(infinit::Infinit const& infinit,
                             infinit::User const& self,
                             infinit::model::doughnut::Doughnut& model);
 
-    reactor::Thread::unique_ptr
+    elle::reactor::Thread::unique_ptr
     make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
                             infinit::overlay::NodeLocations const& locs,
                             int interval);
@@ -117,7 +117,7 @@ namespace infinit
       std::string name,
       std::unique_ptr<model::doughnut::consensus::Configuration> consensus,
       std::unique_ptr<overlay::Configuration> overlay,
-      cryptography::rsa::PublicKey owner,
+      elle::cryptography::rsa::PublicKey owner,
       elle::Version version,
       model::doughnut::AdminKeys admin_keys,
       std::vector<model::Endpoints> peers,
@@ -134,7 +134,7 @@ namespace infinit
 
     std::unique_ptr<model::doughnut::consensus::Configuration> consensus;
     std::unique_ptr<overlay::Configuration> overlay;
-    cryptography::rsa::PublicKey owner;
+    elle::cryptography::rsa::PublicKey owner;
     elle::Version version;
     model::doughnut::AdminKeys admin_keys;
     std::vector<model::Endpoints> peers;

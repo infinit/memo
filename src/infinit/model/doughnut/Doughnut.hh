@@ -11,10 +11,10 @@
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index_container.hpp>
 
-#include <das/model.hh>
-#include <das/serializer.hh>
+#include <elle/das/model.hh>
+#include <elle/das/serializer.hh>
 #include <elle/ProducerPool.hh>
-#include <cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
 #include <infinit/model/Model.hh>
 #include <infinit/model/doughnut/Consensus.hh>
@@ -32,10 +32,10 @@ namespace infinit
     {
       namespace bmi = boost::multi_index;
       struct ACLEntry;
-      DAS_SYMBOL(w);
-      DAS_SYMBOL(r);
-      DAS_SYMBOL(group_r);
-      DAS_SYMBOL(group_w);
+      ELLE_DAS_SYMBOL(w);
+      ELLE_DAS_SYMBOL(r);
+      ELLE_DAS_SYMBOL(group_r);
+      ELLE_DAS_SYMBOL(group_w);
       struct AdminKeys
       {
         AdminKeys() {}
@@ -43,12 +43,12 @@ namespace infinit
         AdminKeys(AdminKeys const& b) = default;
         AdminKeys&
         operator = (AdminKeys&& b) = default;
-        std::vector<infinit::cryptography::rsa::PublicKey> r;
-        std::vector<infinit::cryptography::rsa::PublicKey> w;
-        std::vector<infinit::cryptography::rsa::PublicKey> group_r;
-        std::vector<infinit::cryptography::rsa::PublicKey> group_w;
+        std::vector<elle::cryptography::rsa::PublicKey> r;
+        std::vector<elle::cryptography::rsa::PublicKey> w;
+        std::vector<elle::cryptography::rsa::PublicKey> group_r;
+        std::vector<elle::cryptography::rsa::PublicKey> group_w;
         using Model =
-          das::Model<AdminKeys,
+          elle::das::Model<AdminKeys,
                      decltype(elle::meta::list(doughnut::r,
                                                doughnut::w,
                                                doughnut::group_r,
@@ -84,32 +84,32 @@ namespace infinit
         now();
 
       public:
-        cryptography::rsa::KeyPair const&
+        elle::cryptography::rsa::KeyPair const&
         keys() const;
-        std::shared_ptr<cryptography::rsa::KeyPair>
+        std::shared_ptr<elle::cryptography::rsa::KeyPair>
         keys_shared() const;
         bool
         verify(Passport const& passport,
                bool require_write,
                bool require_storage,
                bool require_sign);
-        std::shared_ptr<cryptography::rsa::PublicKey>
+        std::shared_ptr<elle::cryptography::rsa::PublicKey>
         resolve_key(uint64_t hash);
         int
-        ensure_key(std::shared_ptr<cryptography::rsa::PublicKey> const& k);
+        ensure_key(std::shared_ptr<elle::cryptography::rsa::PublicKey> const& k);
         ELLE_ATTRIBUTE_R(Address, id);
-        ELLE_ATTRIBUTE(std::shared_ptr<cryptography::rsa::KeyPair>, keys);
-        ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PublicKey>, owner);
+        ELLE_ATTRIBUTE(std::shared_ptr<elle::cryptography::rsa::KeyPair>, keys);
+        ELLE_ATTRIBUTE_R(std::shared_ptr<elle::cryptography::rsa::PublicKey>, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
         ELLE_ATTRIBUTE_RX(AdminKeys, admin_keys);
         ELLE_ATTRIBUTE_R(std::unique_ptr<consensus::Consensus>, consensus)
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
         ELLE_ATTRIBUTE_RX(Dock, dock);
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
-        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, user_init)
+        ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, user_init)
         ELLE_ATTRIBUTE(
           elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
-        ELLE_ATTRIBUTE_RX(reactor::Barrier, terminating);
+        ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, terminating);
         ELLE_ATTRIBUTE_r(Protocol, protocol);
 
       public:
@@ -187,14 +187,14 @@ namespace infinit
         Address id;
         std::unique_ptr<consensus::Configuration> consensus;
         std::unique_ptr<overlay::Configuration> overlay;
-        cryptography::rsa::KeyPair keys;
-        std::shared_ptr<cryptography::rsa::PublicKey> owner;
+        elle::cryptography::rsa::KeyPair keys;
+        std::shared_ptr<elle::cryptography::rsa::PublicKey> owner;
         Passport passport;
         boost::optional<std::string> name;
         boost::optional<int> port;
         AdminKeys admin_keys;
         std::vector<Endpoints> peers;
-        using Model = das::Model<
+        using Model = elle::das::Model<
           Configuration,
           elle::meta::List<symbols::Symbol_overlay,
                            symbols::Symbol_keys,
@@ -208,8 +208,8 @@ namespace infinit
           std::unique_ptr<consensus::Configuration> consensus,
           std::unique_ptr<overlay::Configuration> overlay,
           std::unique_ptr<storage::StorageConfig> storage,
-          cryptography::rsa::KeyPair keys,
-          std::shared_ptr<cryptography::rsa::PublicKey> owner,
+          elle::cryptography::rsa::KeyPair keys,
+          std::shared_ptr<elle::cryptography::rsa::PublicKey> owner,
           Passport passport,
           boost::optional<std::string> name,
           boost::optional<int> port,
@@ -243,7 +243,7 @@ namespace infinit
       };
 
       std::string
-      short_key_hash(cryptography::rsa::PublicKey const& pub);
+      short_key_hash(elle::cryptography::rsa::PublicKey const& pub);
     }
   }
 }

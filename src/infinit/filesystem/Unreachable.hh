@@ -10,7 +10,7 @@ namespace infinit
     /*------.
     | Types |
     `------*/
-    namespace rfs = reactor::filesystem;
+    namespace rfs = elle::reactor::filesystem;
 
     class Unreachable
       : public rfs::Path

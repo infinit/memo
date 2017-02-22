@@ -19,17 +19,17 @@
 #include <elle/serialization/json.hh>
 #include <elle/utils.hh>
 
-#include <cryptography/SecretKey.hh>
-#include <cryptography/Error.hh>
-#include <cryptography/hash.hh>
-#include <cryptography/random.hh>
+#include <elle/cryptography/SecretKey.hh>
+#include <elle/cryptography/Error.hh>
+#include <elle/cryptography/hash.hh>
+#include <elle/cryptography/random.hh>
 
-#include <reactor/Barrier.hh>
-#include <reactor/Scope.hh>
-#include <reactor/exception.hh>
-#include <reactor/network/resolve.hh>
-#include <reactor/scheduler.hh>
-#include <reactor/thread.hh>
+#include <elle/reactor/Barrier.hh>
+#include <elle/reactor/Scope.hh>
+#include <elle/reactor/exception.hh>
+#include <elle/reactor/network/resolve.hh>
+#include <elle/reactor/scheduler.hh>
+#include <elle/reactor/thread.hh>
 
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/model/MissingBlock.hh>
@@ -199,10 +199,10 @@ namespace infinit
 
       static
       std::string
-      key_hash(infinit::cryptography::SecretKey const& k)
+      key_hash(elle::cryptography::SecretKey const& k)
       {
-        auto hk = infinit::cryptography::hash(k.password(),
-                                               infinit::cryptography::Oneway::sha256);
+        auto hk = elle::cryptography::hash(k.password(),
+                                               elle::cryptography::Oneway::sha256);
         std::string hkhex = elle::sprintf("%x", hk);
         return hkhex.substr(0,3) + hkhex.substr(hkhex.length()-3);
       }
@@ -284,14 +284,14 @@ namespace infinit
           }
 
           std::unique_ptr<Packet>
-          decrypt(infinit::cryptography::SecretKey const& k,
+          decrypt(elle::cryptography::SecretKey const& k,
                   model::doughnut::Doughnut& dn)
           {
             elle::Buffer plain = k.decipher(
               payload,
-              infinit::cryptography::Cipher::aes256,
-              infinit::cryptography::Mode::cbc,
-              infinit::cryptography::Oneway::sha256);
+              elle::cryptography::Cipher::aes256,
+              elle::cryptography::Mode::cbc,
+              elle::cryptography::Oneway::sha256);
             elle::IOStream stream(plain.istreambuf());
             Serializer::SerializerIn input(stream, false);
             if (dn.version() >= elle::Version(0, 7, 0) && !disable_compression)
@@ -302,15 +302,15 @@ namespace infinit
             return res;
           }
 
-          void encrypt(infinit::cryptography::SecretKey const& k,
+          void encrypt(elle::cryptography::SecretKey const& k,
                        Packet const& p,
                        model::doughnut::Doughnut& dn)
           {
             elle::Buffer plain = packet::serialize(p, dn);
             payload = k.encipher(plain,
-                                 infinit::cryptography::Cipher::aes256,
-                                 infinit::cryptography::Mode::cbc,
-                                 infinit::cryptography::Oneway::sha256);
+                                 elle::cryptography::Cipher::aes256,
+                                 elle::cryptography::Mode::cbc,
+                                 elle::cryptography::Oneway::sha256);
           }
           elle::Buffer payload;
         };
@@ -802,7 +802,7 @@ namespace infinit
         NodeLocations result;
         NodeLocations insert_result;
         std::vector<NodeLocations> multi_result;
-        reactor::Barrier barrier;
+        elle::reactor::Barrier barrier;
         Time startTime;
       };
 
@@ -1054,10 +1054,10 @@ namespace infinit
           {
             // connect() will silently drop everything if conn ends up
             // being a duplicate
-            reactor::Waiter waiter = reactor::waiter(conn->on_connection());
+            elle::reactor::Waiter waiter = elle::reactor::waiter(conn->on_connection());
             for (int i=0; i< 50; ++i)
             {
-              if (reactor::wait(waiter, 100_ms) || conn->disconnected())
+              if (elle::reactor::wait(waiter, 100_ms) || conn->disconnected())
                 break;
             }
           }
@@ -1123,7 +1123,7 @@ namespace infinit
         elle::Buffer buf(nbuf.contents()+8, nbuf.size()-8);
         static bool async = getenv("INFINIT_KELIPS_ASYNC");
         if (async)
-          new reactor::Thread("process",
+          new elle::reactor::Thread("process",
                               [=] { this->process(buf, source);}, true);
         else
           process(buf, source);
@@ -1247,12 +1247,12 @@ namespace infinit
         ELLE_LOG("%s: listening on %s",
           this, this->doughnut()->dock().utp_server().local_endpoint());
         this->_pinger_thread.reset(
-          new reactor::Thread(
+          new elle::reactor::Thread(
             "pinger", std::bind(&Node::pinger, this)));
         if (!_observer)
         {
           this->_emitter_thread.reset(
-            new reactor::Thread(
+            new elle::reactor::Thread(
               "emitter", std::bind(&Node::gossipEmitter, this)));
         }
         ELLE_DEBUG("contact group nodes")
@@ -1275,7 +1275,7 @@ namespace infinit
 
       void
       Node::setKey(Address const& a,
-                   infinit::cryptography::SecretKey sk,
+                   elle::cryptography::SecretKey sk,
                    bool observer)
       {
         auto oldkey = getKey(a);
@@ -1291,7 +1291,7 @@ namespace infinit
         }
       }
 
-      std::pair<infinit::cryptography::SecretKey*, bool>
+      std::pair<elle::cryptography::SecretKey*, bool>
       Node::getKey(Address const& a)
       {
         auto it = _keys.find(a);
@@ -1383,7 +1383,7 @@ namespace infinit
             {
               ELLE_DEBUG("Running contacter on %s", address);
               c->contacter.reset(
-                new reactor::Thread(
+                new elle::reactor::Thread(
                   "contacter",
                   [this, address] { this->contact(address);}));
             }
@@ -1396,7 +1396,7 @@ namespace infinit
         }
         static elle::Bench bencher("kelips.packet_size", 5_sec);
         bencher.add(b.size());
-        reactor::Lock l(_udp_send_mutex);
+        elle::reactor::Lock l(_udp_send_mutex);
         static elle::Bench bench("kelips.send", 5_sec);
         elle::Bench::BenchScope bs(bench);
         ELLE_DUMP("%s: sending %s bytes packet to %s\n%x", *this, b.size(), e, b);
@@ -1421,7 +1421,7 @@ namespace infinit
           {
             sock->send_to(elle::ConstWeakBuffer(b), e.udp());
           }
-          catch (reactor::network::Exception const&)
+          catch (elle::reactor::network::Exception const&)
           { // FIXME: do something
           }
         }
@@ -1503,7 +1503,7 @@ namespace infinit
               failure = false;
               was_crypted = true;
             }
-            catch (infinit::cryptography::Error const& e)
+            catch (elle::cryptography::Error const& e)
             {
               ELLE_DEBUG(
                 "%s: decryption with %s from %s : %s failed: %s",
@@ -1537,10 +1537,10 @@ namespace infinit
           // sign the challenge with our passport
           auto signed_challenge = doughnut()->keys().k().sign(
             p->challenge,
-            infinit::cryptography::rsa::Padding::pss,
-            infinit::cryptography::Oneway::sha256);
+            elle::cryptography::rsa::Padding::pss,
+            elle::cryptography::Oneway::sha256);
           // generate key
-          auto sk = infinit::cryptography::secretkey::generate(256);
+          auto sk = elle::cryptography::secretkey::generate(256);
           elle::Buffer password = sk.password();
           bool observer = !p->passport.allow_storage();
           setKey(p->sender, std::move(sk), observer);
@@ -1548,8 +1548,8 @@ namespace infinit
           kr.sender = _self;
           kr.encrypted_key = p->passport.user().seal(
             password,
-            infinit::cryptography::Cipher::aes256,
-            infinit::cryptography::Mode::cbc);
+            elle::cryptography::Cipher::aes256,
+            elle::cryptography::Mode::cbc);
           kr.token = std::move(p->token);
           kr.signed_challenge = std::move(signed_challenge);
           ELLE_DEBUG("%s: sending keyreply to %s", *this, source);
@@ -1586,8 +1586,8 @@ namespace infinit
           ok = p->passport.user().verify(
             p->signed_challenge,
             stored_challenge,
-            infinit::cryptography::rsa::Padding::pss,
-            infinit::cryptography::Oneway::sha256);
+            elle::cryptography::rsa::Padding::pss,
+            elle::cryptography::Oneway::sha256);
           bool observer = !p->passport.allow_storage();
           this->_challenges.erase(it);
           if (!ok)
@@ -1599,9 +1599,9 @@ namespace infinit
           // extract the key cyphered with our passport
           elle::Buffer password = doughnut()->keys().k().open(
             p->encrypted_key,
-            infinit::cryptography::Cipher::aes256,
-            infinit::cryptography::Mode::cbc);
-          infinit::cryptography::SecretKey sk(std::move(password));
+            elle::cryptography::Cipher::aes256,
+            elle::cryptography::Mode::cbc);
+          elle::cryptography::SecretKey sk(std::move(password));
           setKey(p->sender, std::move(sk), observer);
           // Flush operations waiting on crypto ready
           bool bootstrap_requested = false;
@@ -2051,13 +2051,13 @@ namespace infinit
       {
         std::uniform_int_distribution<> random(0, _config.gossip.interval_ms);
         int v = random(_gen);
-        reactor::sleep(boost::posix_time::milliseconds(v));
+        elle::reactor::sleep(boost::posix_time::milliseconds(v));
         packet::Gossip p;
         p.sender = _self;
         p.observer = _observer;
         while (true)
         {
-          reactor::sleep(boost::posix_time::millisec(_config.gossip.interval_ms));
+          elle::reactor::sleep(boost::posix_time::millisec(_config.gossip.interval_ms));
           p.contacts.clear();
           p.files.clear();
           p.contacts = pickContacts();
@@ -2234,8 +2234,8 @@ namespace infinit
         if (g == _group && !p->observer)
         {
           NodeLocation peer(p->sender, {ep});
-          reactor::Thread::unique_ptr t(
-            new reactor::Thread("reverse bootstraper",
+          elle::reactor::Thread::unique_ptr t(
+            new elle::reactor::Thread("reverse bootstraper",
             [this, peer] {
               try
               {
@@ -2322,7 +2322,7 @@ namespace infinit
 
       void
       Node::addLocalResults(packet::MultiGetFileRequest* p,
-        reactor::yielder<std::pair<Address, NodeLocation>>::type const* yield,
+        elle::reactor::yielder<std::pair<Address, NodeLocation>>::type const* yield,
         std::vector<std::set<Address>>& result_sets)
       {
         ELLE_ASSERT_LTE(p->results.size(), p->fileAddresses.size());
@@ -2345,7 +2345,7 @@ namespace infinit
 
       void
       Node::addLocalResults(packet::GetFileRequest* p,
-                            reactor::yielder<NodeLocation>::type const* yield)
+                            elle::reactor::yielder<NodeLocation>::type const* yield)
       {
         static elle::Bench nlocalhit("kelips.localhit", 10_sec);
         int nhit = 0;
@@ -2761,7 +2761,7 @@ namespace infinit
           ELLE_ASSERT(ir.second);
           ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
           send(req, it->second);
-                      reactor::wait(r->barrier,
+                      elle::reactor::wait(r->barrier,
               boost::posix_time::milliseconds(_config.query_timeout_ms));
           if (!r->barrier.opened())
           {
@@ -2883,7 +2883,7 @@ namespace infinit
             ELLE_ASSERT(ir.second);
             ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
             send(req, it->second);
-            reactor::wait(r->barrier,
+            elle::reactor::wait(r->barrier,
               boost::posix_time::milliseconds(_config.query_timeout_ms));
             if (!r->barrier.opened())
             {
@@ -2982,7 +2982,7 @@ namespace infinit
           _pending_requests[req.request_id] = r;
           ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
           send(req, it->second);
-          reactor::wait(r->barrier,
+          elle::reactor::wait(r->barrier,
             boost::posix_time::milliseconds(_config.query_timeout_ms));
           if (!r->barrier.opened())
           {
@@ -3126,12 +3126,12 @@ namespace infinit
       {
         std::uniform_int_distribution<> random(0, _config.ping_interval_ms);
         int v = random(_gen);
-        reactor::sleep(boost::posix_time::milliseconds(v));
+        elle::reactor::sleep(boost::posix_time::milliseconds(v));
         int counter = 0;
         while (true)
         {
           ELLE_DUMP("%s: sleep for %s ms", *this, _config.ping_interval_ms);
-          reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
+          elle::reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
           cleanup();
           // some stats
           static elle::Bench n_files("kelips.file_count", 10_sec);
@@ -3146,7 +3146,7 @@ namespace infinit
             group = random(_gen);
             if (_state.contacts[group].empty())
             {
-              reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
+              elle::reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
               continue;
             }
             std::uniform_int_distribution<> random2(0, _state.contacts[group].size()-1);
@@ -3158,7 +3158,7 @@ namespace infinit
             {
               if (now() - tit->second < std::chrono::milliseconds(_config.ping_timeout_ms))
               {
-                reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
+                elle::reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
                 continue;
               }
               else
@@ -3363,7 +3363,7 @@ namespace infinit
               return Overlay::WeakMember::own(it->second);
             }
           }
-          elle::With<reactor::Thread::NonInterruptible>() << [&](reactor::Thread::NonInterruptible&) {
+          elle::With<elle::reactor::Thread::NonInterruptible>() << [&](elle::reactor::Thread::NonInterruptible&) {
             elle::unconst(this->_peer_cache).erase(it);
           };
         }
@@ -3396,7 +3396,7 @@ namespace infinit
         return res;
       }
 
-      reactor::Generator<std::pair<model::Address, Node::WeakMember>>
+      elle::reactor::Generator<std::pair<model::Address, Node::WeakMember>>
       Node::_lookup(std::vector<infinit::model::Address> const& addresses,
                     int n) const
       {
@@ -3410,8 +3410,8 @@ namespace infinit
             grouped.resize(g+1);
           grouped[g].push_back(a);
         }
-        return reactor::generator<std::pair<Address, Node::WeakMember>>(
-          [this, n, grouped] (reactor::Generator<std::pair<Address,Node::WeakMember>>::yielder const& yield)
+        return elle::reactor::generator<std::pair<Address, Node::WeakMember>>(
+          [this, n, grouped] (elle::reactor::Generator<std::pair<Address,Node::WeakMember>>::yielder const& yield)
         {
           for (auto g: grouped)
           {
@@ -3426,29 +3426,29 @@ namespace infinit
         });
       }
 
-      reactor::Generator<Overlay::WeakMember>
+      elle::reactor::Generator<Overlay::WeakMember>
       Node::_allocate(infinit::model::Address address,
                       int n) const
       {
         BENCH("allocate");
-        return reactor::generator<Overlay::WeakMember>(
+        return elle::reactor::generator<Overlay::WeakMember>(
           [this, address, n]
-          (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+          (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
           {
             for (auto r: elle::unconst(this)->kelipsPut(address, n))
               yield(elle::unconst(this)->make_peer(r));
           });
       }
 
-      reactor::Generator<Overlay::WeakMember>
+      elle::reactor::Generator<Overlay::WeakMember>
       Node::_lookup(infinit::model::Address address,
                     int n,
                     bool fast) const
       {
         BENCH("lookup");
-        return reactor::generator<Overlay::WeakMember>(
+        return elle::reactor::generator<Overlay::WeakMember>(
           [this, address, n, fast]
-          (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+          (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
           {
             std::function<void(NodeLocation)> handle = [&](NodeLocation hosts)
               {
@@ -3471,9 +3471,9 @@ namespace infinit
           if (sum >= count)
             break;
           ELLE_LOG("%s: waiting for %s nodes, got %s", *this, count, sum);
-          reactor::sleep(1_sec);
+          elle::reactor::sleep(1_sec);
         }
-        reactor::sleep(1_sec);
+        elle::reactor::sleep(1_sec);
       }
 
       void
@@ -3610,7 +3610,7 @@ namespace infinit
           {
             rsock->send_to(elle::ConstWeakBuffer(b), res);
           }
-          catch (reactor::network::Exception const& e)
+          catch (elle::reactor::network::Exception const& e)
           { // FIXME: do something
             ELLE_TRACE("network exception sending to %s: %s", res, e);
           }
@@ -3713,7 +3713,7 @@ namespace infinit
           }
           else if (!it->second.first || it->second.first->done())
           { // restart async lookup
-            it->second.first.reset(new reactor::Thread("async_lookup",
+            it->second.first.reset(new elle::reactor::Thread("async_lookup",
               async_lookup));
             // and fast fail
             elle::err("Node %s not found", address);
@@ -3730,7 +3730,7 @@ namespace infinit
         if (!result)
         { // mark for future fast fail
           _node_lookups.insert(std::make_pair(address, std::make_pair(
-            reactor::Thread::unique_ptr(), false)));
+            elle::reactor::Thread::unique_ptr(), false)));
           elle::err("Node %s not found", address);
         }
         return make_peer(*result);
@@ -3741,8 +3741,8 @@ namespace infinit
       {
         packet::RequestKey req(doughnut()->passport());
         req.sender = _self;
-        req.token = infinit::cryptography::random::generate<elle::Buffer>(128);
-        req.challenge = infinit::cryptography::random::generate<elle::Buffer>(128);
+        req.token = elle::cryptography::random::generate<elle::Buffer>(128);
+        req.challenge = elle::cryptography::random::generate<elle::Buffer>(128);
         _challenges.insert(std::make_pair(req.token.string(), req.challenge));
         ELLE_DEBUG("Storing challenge %x", req.token);
         return req;
@@ -3851,7 +3851,7 @@ namespace infinit
             r->barrier.close();
             this->_pending_requests.insert(std::make_pair(gf.request_id, r));
             send(gf, c.second);
-            if (!reactor::wait(r->barrier, 100_ms))
+            if (!elle::reactor::wait(r->barrier, 100_ms))
               ++hits[0];
             else
             {
@@ -3900,11 +3900,11 @@ namespace infinit
               counts[res.size()]++;
             }
           };
-          elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
+          elle::With<elle::reactor::Scope>() <<  [&] (elle::reactor::Scope& s)
           {
             for (int i=0; i<10; ++i)
               s.run_background("scanner", scanner);
-            while (!reactor::wait(s, 10_sec))
+            while (!elle::reactor::wait(s, 10_sec))
               ELLE_TRACE("scanner: %s remaining", to_scan.size());
           };
           elle::json::Array ares;

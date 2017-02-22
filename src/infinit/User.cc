@@ -1,13 +1,13 @@
 #include <infinit/User.hh>
 
-#include <cryptography/hash.hh>
+#include <elle/cryptography/hash.hh>
 
 #include <elle/format/base64url.hh>
 
 namespace infinit
 {
   User::User(std::string const& name,
-             cryptography::rsa::KeyPair const& keys,
+             elle::cryptography::rsa::KeyPair const& keys,
              boost::optional<std::string> email,
              boost::optional<std::string> fullname,
              boost::optional<std::string> ldap_dn,
@@ -29,21 +29,21 @@ namespace infinit
 
   User::User(elle::serialization::SerializerIn& s)
     : descriptor::TemplatedBaseDescriptor<User>(s)
-    , public_key(s.deserialize<cryptography::rsa::PublicKey>("public_key"))
+    , public_key(s.deserialize<elle::cryptography::rsa::PublicKey>("public_key"))
     , private_key(s.deserialize<boost::optional<
-                  cryptography::rsa::PrivateKey>>("private_key"))
+                  elle::cryptography::rsa::PrivateKey>>("private_key"))
     , email(s.deserialize<boost::optional<std::string>>("email"))
     , fullname(s.deserialize<boost::optional<std::string>>("fullname"))
     , password_hash()
     , ldap_dn(s.deserialize<boost::optional<std::string>>("ldap_dn"))
   {}
 
-  infinit::cryptography::rsa::KeyPair
+  elle::cryptography::rsa::KeyPair
   User::keypair() const
   {
     if (!this->private_key)
       elle::err("user %s has no private key", this->name);
-    return infinit::cryptography::rsa::KeyPair(this->public_key,
+    return elle::cryptography::rsa::KeyPair(this->public_key,
                                                this->private_key.get());
   }
 
@@ -61,10 +61,10 @@ namespace infinit
   }
 
   std::string
-  User::uid(cryptography::rsa::PublicKey const& key)
+  User::uid(elle::cryptography::rsa::PublicKey const& key)
   {
-    auto serial = cryptography::rsa::publickey::der::encode(key);
-    auto hash = cryptography::hash(serial, cryptography::Oneway::sha256);
+    auto serial = elle::cryptography::rsa::publickey::der::encode(key);
+    auto hash = elle::cryptography::hash(serial, elle::cryptography::Oneway::sha256);
     return elle::format::base64url::encode(hash).string().substr(0, 8);
   }
 

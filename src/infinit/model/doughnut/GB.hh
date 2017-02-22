@@ -3,7 +3,7 @@
 #include <elle/serialization/fwd.hh>
 #include <elle/Buffer.hh>
 
-#include <cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
 #include <infinit/model/User.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
@@ -26,7 +26,7 @@ namespace infinit
       public:
         using Self = GB;
         using Super = BaseACB<blocks::GroupBlock>;
-        GB(Doughnut* owner, cryptography::rsa::KeyPair master);
+        GB(Doughnut* owner, elle::cryptography::rsa::KeyPair master);
         GB(GB const& other);
         ~GB() override;
 
@@ -42,21 +42,21 @@ namespace infinit
         std::vector<std::unique_ptr<model::User>>
         list_admins(bool ommit_names) const override;
         virtual
-        cryptography::rsa::PublicKey
+        elle::cryptography::rsa::PublicKey
         current_public_key() const;
         virtual
-        cryptography::rsa::KeyPair
+        elle::cryptography::rsa::KeyPair
         current_key() const;
         virtual
-        std::vector<cryptography::rsa::KeyPair>
+        std::vector<elle::cryptography::rsa::KeyPair>
         all_keys() const;
         virtual
-        std::vector<cryptography::rsa::PublicKey>
+        std::vector<elle::cryptography::rsa::PublicKey>
         all_public_keys() const;
         virtual
         int
         group_version() const;
-        std::shared_ptr<cryptography::rsa::PrivateKey>
+        std::shared_ptr<elle::cryptography::rsa::PrivateKey>
         control_key() const;
       protected:
         class OwnerSignature
@@ -111,12 +111,12 @@ namespace infinit
         void
         _extract_keys();
         /// The decrypted group keys.
-        ELLE_ATTRIBUTE(std::vector<infinit::cryptography::rsa::KeyPair>, keys);
+        ELLE_ATTRIBUTE(std::vector<elle::cryptography::rsa::KeyPair>, keys);
         /// The group public keys, for other user to give the group access.
-        ELLE_ATTRIBUTE_R(std::vector<infinit::cryptography::rsa::PublicKey>,
+        ELLE_ATTRIBUTE_R(std::vector<elle::cryptography::rsa::PublicKey>,
                          public_keys);
         // Order matter for signing, hence std::map.
-        typedef std::map<infinit::cryptography::rsa::PublicKey, elle::Buffer>
+        typedef std::map<elle::cryptography::rsa::PublicKey, elle::Buffer>
           AdminKeys;
         /// The group admin keys ciphered for every admin.
         ELLE_ATTRIBUTE_R(AdminKeys, admin_keys);

@@ -3,8 +3,8 @@
 # include <elle/json/json.hh>
 # include <elle/Printable.hh>
 
-# include <reactor/network/server.hh>
-# include <reactor/network/socket.hh>
+# include <elle/reactor/network/server.hh>
+# include <elle/reactor/network/socket.hh>
 
 # include <infinit/model/doughnut/fwd.hh>
 # include <infinit/serialization.hh>
@@ -60,12 +60,12 @@ namespace infinit
       | Construction |
       `-------------*/
     public:
-      MonitoringServer(std::unique_ptr<reactor::network::Server> server,
+      MonitoringServer(std::unique_ptr<elle::reactor::network::Server> server,
                        doughnut::Doughnut& owner);
       ~MonitoringServer();
 
-      ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::Server>, server);
-      ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, accepter);
+      ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::network::Server>, server);
+      ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::Thread>, accepter);
 
     private:
       ELLE_ATTRIBUTE(doughnut::Doughnut&, owner);
@@ -77,7 +77,7 @@ namespace infinit
       void
       _accept();
       void
-      _serve(std::shared_ptr<reactor::network::Socket> socket);
+      _serve(std::shared_ptr<elle::reactor::network::Socket> socket);
     };
   }
 }

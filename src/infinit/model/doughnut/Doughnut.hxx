@@ -1,6 +1,6 @@
 #include <elle/Defaulted.hh>
 
-#include <das/named.hh>
+#include <elle/das/named.hh>
 
 namespace infinit
 {
@@ -18,30 +18,30 @@ namespace infinit
           type, name, elle::serialization::binary::serialize(value));
       }
 
-      DAS_SYMBOL(admin_keys);
-      DAS_SYMBOL(connect_timeout);
-      DAS_SYMBOL(consensus_builder);
-      DAS_SYMBOL(id);
-      DAS_SYMBOL(keys);
-      DAS_SYMBOL(listen_address);
-      DAS_SYMBOL(monitoring_socket_path);
-      DAS_SYMBOL(name);
-      DAS_SYMBOL(overlay_builder);
-      DAS_SYMBOL(owner);
-      DAS_SYMBOL(passport);
-      DAS_SYMBOL(port);
-      DAS_SYMBOL(protocol);
-      DAS_SYMBOL(rdv_host);
-      DAS_SYMBOL(soft_fail_running);
-      DAS_SYMBOL(soft_fail_timeout);
-      DAS_SYMBOL(storage);
-      DAS_SYMBOL(version);
+      ELLE_DAS_SYMBOL(admin_keys);
+      ELLE_DAS_SYMBOL(connect_timeout);
+      ELLE_DAS_SYMBOL(consensus_builder);
+      ELLE_DAS_SYMBOL(id);
+      ELLE_DAS_SYMBOL(keys);
+      ELLE_DAS_SYMBOL(listen_address);
+      ELLE_DAS_SYMBOL(monitoring_socket_path);
+      ELLE_DAS_SYMBOL(name);
+      ELLE_DAS_SYMBOL(overlay_builder);
+      ELLE_DAS_SYMBOL(owner);
+      ELLE_DAS_SYMBOL(passport);
+      ELLE_DAS_SYMBOL(port);
+      ELLE_DAS_SYMBOL(protocol);
+      ELLE_DAS_SYMBOL(rdv_host);
+      ELLE_DAS_SYMBOL(soft_fail_running);
+      ELLE_DAS_SYMBOL(soft_fail_timeout);
+      ELLE_DAS_SYMBOL(storage);
+      ELLE_DAS_SYMBOL(version);
 
       struct Doughnut::Init
       {
         Address id;
-        std::shared_ptr<cryptography::rsa::KeyPair> keys;
-        std::shared_ptr<cryptography::rsa::PublicKey> owner;
+        std::shared_ptr<elle::cryptography::rsa::KeyPair> keys;
+        std::shared_ptr<elle::cryptography::rsa::PublicKey> owner;
         Passport passport;
         ConsensusBuilder consensus;
         OverlayBuilder overlay_builder;
@@ -62,7 +62,7 @@ namespace infinit
       template <typename ... Args>
       Doughnut::Doughnut(Args&& ... args)
         : Doughnut(
-          das::named::prototype(
+          elle::das::named::prototype(
             doughnut::id,
             doughnut::keys,
             doughnut::owner,
@@ -86,8 +86,8 @@ namespace infinit
             doughnut::soft_fail_running = elle::defaulted(false)
             ).call(
               [] (Address id,
-                  std::shared_ptr<cryptography::rsa::KeyPair> keys,
-                  std::shared_ptr<cryptography::rsa::PublicKey> owner,
+                  std::shared_ptr<elle::cryptography::rsa::KeyPair> keys,
+                  std::shared_ptr<elle::cryptography::rsa::PublicKey> owner,
                   Passport passport,
                   ConsensusBuilder consensus,
                   OverlayBuilder overlay_builder,
@@ -132,4 +132,4 @@ namespace infinit
   }
 }
 
-DAS_SERIALIZE(infinit::model::doughnut::AdminKeys);
+ELLE_DAS_SERIALIZE(infinit::model::doughnut::AdminKeys);

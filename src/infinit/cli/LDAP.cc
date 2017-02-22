@@ -2,7 +2,7 @@
 
 #include <elle/ldap.hh>
 
-#include <reactor/http/url.hh>
+#include <elle/reactor/http/url.hh>
 
 #include <infinit/Drive.hh>
 #include <infinit/cli/Infinit.hh>
@@ -186,7 +186,7 @@ namespace infinit
           try
           {
             auto u = ifnt.beyond_fetch<infinit::User>(
-              elle::sprintf("ldap_users/%s", reactor::http::url_encode(m.second)),
+              elle::sprintf("ldap_users/%s", elle::reactor::http::url_encode(m.second)),
               "LDAP user",
               m.second);
             res.emplace(m.first, u);
@@ -205,7 +205,7 @@ namespace infinit
           auto passport = infinit::model::doughnut::Passport(
             u.second.public_key,
             network.name,
-            infinit::cryptography::rsa::KeyPair(owner.public_key,
+            elle::cryptography::rsa::KeyPair(owner.public_key,
                                                 owner.private_key.get()),
             owner.public_key != network.owner,
             !deny_write,
@@ -444,7 +444,7 @@ namespace infinit
         try
         {
           auto u = ifnt.beyond_fetch<infinit::User>(
-            elle::sprintf("ldap_users/%s", reactor::http::url_encode(dn)),
+            elle::sprintf("ldap_users/%s", elle::reactor::http::url_encode(dn)),
             "LDAP user",
             dn);
           ELLE_TRACE("got %s -> %s", dn, u.name);
@@ -459,7 +459,7 @@ namespace infinit
             {
               auto u = ifnt.beyond_fetch<infinit::User>(
                 "user",
-                reactor::http::url_encode(username));
+                elle::reactor::http::url_encode(username));
               ELLE_TRACE("username %s taken", username);
               if (username_pattern.find('%') == std::string::npos)
               {
@@ -503,10 +503,10 @@ namespace infinit
         {
           auto u = infinit::User
             (m.first,
-             infinit::cryptography::rsa::keypair::generate(2048),
+             elle::cryptography::rsa::keypair::generate(2048),
              m.second.email, m.second.fullname, m.second.dn);
           ELLE_TRACE("pushing %s", u.name);
-          ifnt.beyond_push<das::Serializer<PrivateUserPublish>>
+          ifnt.beyond_push<elle::das::Serializer<PrivateUserPublish>>
             ("user", u.name, u, u);
         }
       else

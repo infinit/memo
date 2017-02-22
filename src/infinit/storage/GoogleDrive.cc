@@ -8,9 +8,9 @@
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
 
-#include <das/Symbol.hh>
-#include <das/model.hh>
-#include <das/serializer.hh>
+#include <elle/das/Symbol.hh>
+#include <elle/das/model.hh>
+#include <elle/das/serializer.hh>
 
 #include <infinit/storage/Collision.hh>
 #include <infinit/storage/GoogleDrive.hh>
@@ -30,7 +30,7 @@ namespace infinit
     struct Parent
     {
       std::string id;
-      using Model = das::Model<Parent,
+      using Model = elle::das::Model<Parent,
                                decltype(elle::meta::list(symbols::id))>;
     };
 
@@ -40,7 +40,7 @@ namespace infinit
       std::vector<Parent> parents;
       std::string mimeType;
 
-      using Model = das::Model<
+      using Model = elle::das::Model<
         Directory,
         decltype(elle::meta::list(
                    symbols::title,
@@ -52,7 +52,7 @@ namespace infinit
     {
       std::string title;
       std::vector<Parent> parents;
-      using Model = das::Model<
+      using Model = elle::das::Model<
         Metadata,
         decltype(elle::meta::list(
                    symbols::title,
@@ -61,9 +61,9 @@ namespace infinit
   }
 }
 
-DAS_SERIALIZE(infinit::storage::Parent);
-DAS_SERIALIZE(infinit::storage::Directory);
-DAS_SERIALIZE(infinit::storage::Metadata);
+ELLE_DAS_SERIALIZE(infinit::storage::Parent);
+ELLE_DAS_SERIALIZE(infinit::storage::Directory);
+ELLE_DAS_SERIALIZE(infinit::storage::Metadata);
 
 namespace infinit
 {
@@ -74,7 +74,7 @@ namespace infinit
      * GoogleDrive
      */
 
-    static reactor::Duration delay(int attempt)
+    static elle::reactor::Duration delay(int attempt)
     {
       if (attempt > 8)
         attempt = 8;
@@ -118,17 +118,17 @@ namespace infinit
       BENCH("get");
       ELLE_DEBUG("get %x", key);
 
-      using StatusCode = reactor::http::StatusCode;
+      using StatusCode = elle::reactor::http::StatusCode;
       std::string id = _exists(elle::sprintf("%x", key));
       if (id == "")
         throw MissingKey(key);
 
       auto url = elle::sprintf("https://www.googleapis.com/drive/v2/files/%s",
                                id);
-      auto conf = reactor::http::Request::Configuration();
+      auto conf = elle::reactor::http::Request::Configuration();
       auto r = this->_request(url,
-                              reactor::http::Method::GET,
-                              reactor::http::Request::QueryDict{{"alt", "media"}},
+                              elle::reactor::http::Method::GET,
+                              elle::reactor::http::Request::QueryDict{{"alt", "media"}},
                               conf,
                               {StatusCode::Not_Found});
 
@@ -152,7 +152,7 @@ namespace infinit
                       bool update)
     {
       BENCH("set");
-      using StatusCode = reactor::http::StatusCode;
+      using StatusCode = elle::reactor::http::StatusCode;
       ELLE_DEBUG("set %x", key);
       if (insert)
       {
@@ -186,9 +186,9 @@ namespace infinit
     {
       BENCH("erase");
       ELLE_DUMP("_erase");
-      using Request = reactor::http::Request;
-      using Method = reactor::http::Method;
-      using StatusCode = reactor::http::StatusCode;
+      using Request = elle::reactor::http::Request;
+      using Method = elle::reactor::http::Method;
+      using StatusCode = elle::reactor::http::StatusCode;
 
       Request::Configuration conf;
 
@@ -230,17 +230,17 @@ namespace infinit
         return BlockStatus::exists;
     }
 
-    reactor::http::Request
+    elle::reactor::http::Request
     GoogleDrive::_mkdir(std::string const& path) const
     {
       ELLE_DUMP("_mkdir");
-      using Request = reactor::http::Request;
-      using Method = reactor::http::Method;
-      using Configuration = reactor::http::Request::Configuration;
-      using StatusCode = reactor::http::StatusCode;
+      using Request = elle::reactor::http::Request;
+      using Method = elle::reactor::http::Method;
+      using Configuration = elle::reactor::http::Request::Configuration;
+      using StatusCode = elle::reactor::http::StatusCode;
 
       Configuration conf;
-      conf.timeout(reactor::DurationOpt());
+      conf.timeout(elle::reactor::DurationOpt());
 
       Directory dir{path,
                     {Parent{"root"}},
@@ -267,21 +267,21 @@ namespace infinit
         ELLE_DUMP("body: %s", r.response());
         std::cout << r;
 
-        reactor::sleep(delay(attempt++));
+        elle::reactor::sleep(delay(attempt++));
       }
     }
 
-    reactor::http::Request
+    elle::reactor::http::Request
     GoogleDrive::_insert(Key key, elle::Buffer const& value) const
     {
       ELLE_DUMP("_insert");
-      using Configuration = reactor::http::Request::Configuration;
-      using Method = reactor::http::Method;
-      using Request = reactor::http::Request;
-      using StatusCode = reactor::http::StatusCode;
+      using Configuration = elle::reactor::http::Request::Configuration;
+      using Method = elle::reactor::http::Method;
+      using Request = elle::reactor::http::Request;
+      using StatusCode = elle::reactor::http::StatusCode;
 
       Configuration conf;
-      conf.timeout(reactor::DurationOpt());
+      conf.timeout(elle::reactor::DurationOpt());
       unsigned attempt = 0;
 
       // https://developers.google.com/drive/web/manage-uploads#multipart
@@ -339,7 +339,7 @@ namespace infinit
             r.status(),
             attempt + 1);
         ELLE_DUMP("body: %s", r.response());
-        reactor::sleep(delay(attempt++));
+        elle::reactor::sleep(delay(attempt++));
       }
     }
 
@@ -347,15 +347,15 @@ namespace infinit
     GoogleDrive::_exists(std::string file_name) const
     {
       ELLE_DUMP("_exists");
-      using Configuration = reactor::http::Request::Configuration;
-      using Method = reactor::http::Method;
-      using Request = reactor::http::Request;
-      using StatusCode = reactor::http::StatusCode;
+      using Configuration = elle::reactor::http::Request::Configuration;
+      using Method = elle::reactor::http::Method;
+      using Request = elle::reactor::http::Request;
+      using StatusCode = elle::reactor::http::StatusCode;
 
       Configuration conf;
-      conf.timeout(reactor::DurationOpt());
+      conf.timeout(elle::reactor::DurationOpt());
       unsigned attempt = 0;
-      reactor::http::Request::QueryDict query;
+      elle::reactor::http::Request::QueryDict query;
 
       while (true)
       {
@@ -394,7 +394,7 @@ namespace infinit
           ELLE_DUMP("body: %s", r.response());
         }
 
-        reactor::sleep(delay(attempt++));
+        elle::reactor::sleep(delay(attempt++));
       }
     }
 

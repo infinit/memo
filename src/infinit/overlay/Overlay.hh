@@ -6,8 +6,8 @@
 #include <elle/json/json.hh>
 #include <elle/log.hh>
 
-#include <reactor/network/tcp-socket.hh>
-#include <reactor/Generator.hh>
+#include <elle/reactor/network/tcp-socket.hh>
+#include <elle/reactor/Generator.hh>
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/Endpoints.hh>
@@ -112,10 +112,10 @@ namespace infinit
        *  @arg n        How many owners to look for
        *  @arg fast     Whether to prefer a faster, partial answer.
        */
-      reactor::Generator<WeakMember>
+      elle::reactor::Generator<WeakMember>
       allocate(model::Address address, int n) const;
       /// Lookup multiple addresses (OP_FETCH/UPDATE only)
-      reactor::Generator<std::pair<model::Address, WeakMember>>
+      elle::reactor::Generator<std::pair<model::Address, WeakMember>>
       lookup(std::vector<model::Address> const& addresses, int n) const;
       /** Lookup blocks
        *
@@ -123,7 +123,7 @@ namespace infinit
        *  @arg n        How many owners to look for
        *  @arg fast     Whether to prefer a faster, partial answer.
        */
-      reactor::Generator<WeakMember>
+      elle::reactor::Generator<WeakMember>
       lookup(model::Address address, int n, bool fast = false) const;
       /// Lookup a single block owner
       WeakMember
@@ -140,17 +140,17 @@ namespace infinit
        * @arg ids ids of the nodes to lookup.
        * @raise elle::Error if the node is not found.
        */
-      reactor::Generator<WeakMember>
+      elle::reactor::Generator<WeakMember>
       lookup_nodes(std::unordered_set<model::Address> ids) const;
     protected:
       virtual
-      reactor::Generator<WeakMember>
+      elle::reactor::Generator<WeakMember>
       _allocate(model::Address address, int n) const = 0;
       virtual
-      reactor::Generator<std::pair<model::Address, WeakMember>>
+      elle::reactor::Generator<std::pair<model::Address, WeakMember>>
       _lookup(std::vector<model::Address> const& addresses, int n) const;
       virtual
-      reactor::Generator<WeakMember>
+      elle::reactor::Generator<WeakMember>
       _lookup(model::Address address, int n, bool fast) const = 0;
       /** Lookup a node by id
        *

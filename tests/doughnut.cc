@@ -10,7 +10,7 @@
 #include <elle/Version.hh>
 
 #ifndef INFINIT_WINDOWS
-# include <reactor/network/unix-domain-socket.hh>
+# include <elle/reactor/network/unix-domain-socket.hh>
 #endif
 
 #include <infinit/model/MissingBlock.hh>
@@ -41,19 +41,19 @@ namespace blocks = infinit::model::blocks;
 namespace dht = infinit::model::doughnut;
 using namespace infinit::storage;
 
-DAS_SYMBOL(keys_a);
-DAS_SYMBOL(keys_b);
-DAS_SYMBOL(keys_c);
-DAS_SYMBOL(id_a);
-DAS_SYMBOL(id_b);
-DAS_SYMBOL(id_c);
-DAS_SYMBOL(storage_a);
-DAS_SYMBOL(storage_b);
-DAS_SYMBOL(storage_c);
-DAS_SYMBOL(version_a);
-DAS_SYMBOL(version_b);
-DAS_SYMBOL(version_c);
-DAS_SYMBOL(monitoring_socket_path_a);
+ELLE_DAS_SYMBOL(keys_a);
+ELLE_DAS_SYMBOL(keys_b);
+ELLE_DAS_SYMBOL(keys_c);
+ELLE_DAS_SYMBOL(id_a);
+ELLE_DAS_SYMBOL(id_b);
+ELLE_DAS_SYMBOL(id_c);
+ELLE_DAS_SYMBOL(storage_a);
+ELLE_DAS_SYMBOL(storage_b);
+ELLE_DAS_SYMBOL(storage_c);
+ELLE_DAS_SYMBOL(version_a);
+ELLE_DAS_SYMBOL(version_b);
+ELLE_DAS_SYMBOL(version_c);
+ELLE_DAS_SYMBOL(monitoring_socket_path_a);
 
 static
 int
@@ -69,11 +69,11 @@ public:
   DHTs(Args&& ... args)
   {
     namespace ph = std::placeholders;
-    das::named::prototype(
+    elle::das::named::prototype(
       paxos = true,
-      ::keys_a = infinit::cryptography::rsa::keypair::generate(key_size()),
-      ::keys_b = infinit::cryptography::rsa::keypair::generate(key_size()),
-      ::keys_c = infinit::cryptography::rsa::keypair::generate(key_size()),
+      ::keys_a = elle::cryptography::rsa::keypair::generate(key_size()),
+      ::keys_b = elle::cryptography::rsa::keypair::generate(key_size()),
+      ::keys_c = elle::cryptography::rsa::keypair::generate(key_size()),
       id_a = infinit::model::Address::random(0), // FIXME
       id_b = infinit::model::Address::random(0), // FIXME
       id_c = infinit::model::Address::random(0), // FIXME
@@ -101,9 +101,9 @@ public:
       }
       ).call([this] (
         bool paxos,
-        infinit::cryptography::rsa::KeyPair keys_a,
-        infinit::cryptography::rsa::KeyPair keys_b,
-        infinit::cryptography::rsa::KeyPair keys_c,
+        elle::cryptography::rsa::KeyPair keys_a,
+        elle::cryptography::rsa::KeyPair keys_b,
+        elle::cryptography::rsa::KeyPair keys_c,
         infinit::model::Address id_a,
         infinit::model::Address id_b,
         infinit::model::Address id_c,
@@ -141,9 +141,9 @@ public:
               }, std::forward<Args>(args)...);
   }
 
-  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys_a;
-  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys_b;
-  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys_c;
+  std::shared_ptr<elle::cryptography::rsa::KeyPair> keys_a;
+  std::shared_ptr<elle::cryptography::rsa::KeyPair> keys_b;
+  std::shared_ptr<elle::cryptography::rsa::KeyPair> keys_c;
   std::shared_ptr<dht::Doughnut> dht_a;
   std::shared_ptr<dht::Doughnut> dht_b;
   std::shared_ptr<dht::Doughnut> dht_c;
@@ -151,9 +151,9 @@ public:
 private:
   void
   init(bool paxos,
-       infinit::cryptography::rsa::KeyPair keys_a,
-       infinit::cryptography::rsa::KeyPair keys_b,
-       infinit::cryptography::rsa::KeyPair keys_c,
+       elle::cryptography::rsa::KeyPair keys_a,
+       elle::cryptography::rsa::KeyPair keys_b,
+       elle::cryptography::rsa::KeyPair keys_c,
        infinit::model::Address id_a,
        infinit::model::Address id_b,
        infinit::model::Address id_c,
@@ -175,11 +175,11 @@ private:
            std::unique_ptr<dht::consensus::Consensus>)> make_consensus)
   {
     this->keys_a =
-      std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_a));
+      std::make_shared<elle::cryptography::rsa::KeyPair>(std::move(keys_a));
     this->keys_b =
-      std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_b));
+      std::make_shared<elle::cryptography::rsa::KeyPair>(std::move(keys_b));
     this->keys_c =
-      std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_c));
+      std::make_shared<elle::cryptography::rsa::KeyPair>(std::move(keys_c));
     if (!storage_a)
       storage_a = std::make_unique<Memory>();
     if (!storage_b)
@@ -636,9 +636,9 @@ noop(Storage*)
 
 ELLE_TEST_SCHEDULED(restart, (bool, paxos))
 {
-  auto keys_a = infinit::cryptography::rsa::keypair::generate(key_size());
-  auto keys_b = infinit::cryptography::rsa::keypair::generate(key_size());
-  auto keys_c = infinit::cryptography::rsa::keypair::generate(key_size());
+  auto keys_a = elle::cryptography::rsa::keypair::generate(key_size());
+  auto keys_b = elle::cryptography::rsa::keypair::generate(key_size());
+  auto keys_c = elle::cryptography::rsa::keypair::generate(key_size());
   auto id_a = infinit::model::Address::random(0); // FIXME
   auto id_b = infinit::model::Address::random(0); // FIXME
   auto id_c = infinit::model::Address::random(0); // FIXME
@@ -709,7 +709,7 @@ public:
   {}
 
   virtual
-  reactor::Generator<infinit::overlay::Overlay::WeakMember>
+  elle::reactor::Generator<infinit::overlay::Overlay::WeakMember>
   _lookup(infinit::model::Address address, int n, bool fast) const override
   {
     if (fail)
@@ -843,7 +843,7 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
     auto b =  dhts.dht_a->make_block<blocks::ACLBlock>();
     b->data(elle::Buffer("foo"));
     b->seal();
-    reactor::sleep(100_ms);
+    elle::reactor::sleep(100_ms);
     auto addr = b->address();
     auto cb = cycle(*dhts.dht_a, std::move(b));
     dhts.dht_a->store(std::move(cb), infinit::model::STORE_INSERT);
@@ -867,12 +867,12 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
     BOOST_CHECK_EQUAL(block_bob->data(), elle::Buffer("bob_1"));
   }
   { // signing with group key
-    std::unique_ptr<infinit::cryptography::rsa::PublicKey> gkey;
+    std::unique_ptr<elle::cryptography::rsa::PublicKey> gkey;
     {
       infinit::model::doughnut::Group g(*dhts.dht_a, "g");
       g.create();
       g.add_member(dht::User(dhts.keys_b->K(), "bob"));
-      gkey.reset(new infinit::cryptography::rsa::PublicKey(g.public_control_key()));
+      gkey.reset(new elle::cryptography::rsa::PublicKey(g.public_control_key()));
     }
     auto block_alice = dhts.dht_a->make_block<blocks::ACLBlock>();
     block_alice->data(elle::Buffer("alice_1", 7));
@@ -894,9 +894,9 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
 #ifndef INFINIT_WINDOWS
 ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
 {
-  auto keys_a = infinit::cryptography::rsa::keypair::generate(key_size());
-  auto keys_b = infinit::cryptography::rsa::keypair::generate(key_size());
-  auto keys_c = infinit::cryptography::rsa::keypair::generate(key_size());
+  auto keys_a = elle::cryptography::rsa::keypair::generate(key_size());
+  auto keys_b = elle::cryptography::rsa::keypair::generate(key_size());
+  auto keys_c = elle::cryptography::rsa::keypair::generate(key_size());
   auto id_a = infinit::model::Address::random(0); // FIXME
   auto id_b = infinit::model::Address::random(0); // FIXME
   auto id_c = infinit::model::Address::random(0); // FIXME
@@ -919,7 +919,7 @@ ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
     monitoring_socket_path_a = monitoring_path
   );
   BOOST_CHECK(boost::filesystem::exists(monitoring_path));
-  reactor::network::UnixDomainSocket socket(monitoring_path);
+  elle::reactor::network::UnixDomainSocket socket(monitoring_path);
   using Monitoring = infinit::model::MonitoringServer;
   using Query = infinit::model::MonitoringServer::MonitorQuery::Query;
   auto do_query = [&] (Query query_val) -> elle::json::Object
@@ -961,7 +961,7 @@ ELLE_TEST_SCHEDULED(monitoring, (bool, paxos))
 
 template <typename T>
 int
-size(reactor::Generator<T> const& g)
+size(elle::reactor::Generator<T> const& g)
 {
   int res = 0;
   for (auto const& m: elle::unconst(g))
@@ -1201,9 +1201,9 @@ namespace rebalancing
             PaxosClient::Proposal const& p) override
     {
       this->_proposing(address);
-      reactor::wait(this->all_barrier());
+      elle::reactor::wait(this->all_barrier());
       if (!this->_propose_bypass)
-        reactor::wait(this->propose_barrier());
+        elle::reactor::wait(this->propose_barrier());
       auto res = Super::propose(peers, address, p);
       this->_proposed(address);
       return res;
@@ -1216,9 +1216,9 @@ namespace rebalancing
            PaxosClient::Proposal const& p,
            Value const& value) override
     {
-      reactor::wait(this->all_barrier());
+      elle::reactor::wait(this->all_barrier());
       if (!this->_accept_bypass)
-        reactor::wait(this->accept_barrier());
+        elle::reactor::wait(this->accept_barrier());
       return Super::accept(peers, address, p, value);
     }
 
@@ -1228,9 +1228,9 @@ namespace rebalancing
             Address address,
             PaxosClient::Proposal const& p) override
     {
-      reactor::wait(this->all_barrier());
+      elle::reactor::wait(this->all_barrier());
       if (!this->_confirm_bypass)
-        reactor::wait(this->confirm_barrier());
+        elle::reactor::wait(this->confirm_barrier());
       Super::confirm(peers, address, p);
     }
 
@@ -1242,14 +1242,14 @@ namespace rebalancing
       this->_evict.connect([this, id] { this->_disappeared_evict(id); });
     }
 
-    ELLE_ATTRIBUTE_RX(reactor::Barrier, all_barrier);
-    ELLE_ATTRIBUTE_RX(reactor::Barrier, propose_barrier);
+    ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, all_barrier);
+    ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, propose_barrier);
     ELLE_ATTRIBUTE_RW(bool, propose_bypass);
     ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(Address)>, proposing);
     ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(Address)>, proposed);
-    ELLE_ATTRIBUTE_RX(reactor::Barrier, accept_barrier);
+    ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, accept_barrier);
     ELLE_ATTRIBUTE_RW(bool, accept_bypass);
-    ELLE_ATTRIBUTE_RX(reactor::Barrier, confirm_barrier);
+    ELLE_ATTRIBUTE_RX(elle::reactor::Barrier, confirm_barrier);
     ELLE_ATTRIBUTE_RW(bool, confirm_bypass);
     ELLE_ATTRIBUTE_RX(boost::signals2::signal<void()>, evict);
   };
@@ -1326,7 +1326,7 @@ namespace rebalancing
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 2)), 1u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 2)), 1u);
     ELLE_LOG("wait for rebalancing")
-      reactor::wait(local_a.rebalanced(), b->address());
+      elle::reactor::wait(local_a.rebalanced(), b->address());
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 2)), 2u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 2)), 2u);
     ELLE_LOG("disconnect second DHT")
@@ -1349,12 +1349,12 @@ namespace rebalancing
     // background.
     local_a.propose_barrier().close();
     // Wait until the first automatic expansion fails.
-    reactor::wait(dht_a.overlay->looked_up(), b->address());
+    elle::reactor::wait(dht_a.overlay->looked_up(), b->address());
     ELLE_LOG("connect second DHT")
       dht_b.overlay->connect(*dht_a.overlay);
     if (!immutable)
     {
-      reactor::wait(local_a.proposing(), b->address());
+      elle::reactor::wait(local_a.proposing(), b->address());
       BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3)), 1u);
       BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3)), 1u);
       // Insert another block, to check iterator invalidation while balancing.
@@ -1368,7 +1368,7 @@ namespace rebalancing
       local_a.propose_barrier().open();
     }
     ELLE_LOG("wait for rebalancing")
-      reactor::wait(local_a.rebalanced(), b->address());
+      elle::reactor::wait(local_a.rebalanced(), b->address());
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3)), 2u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3)), 2u);
     if (!immutable)
@@ -1416,7 +1416,7 @@ namespace rebalancing
         local_a.rebalanced().connect(rebalanced);
       boost::signals2::scoped_connection c_b =
         local_b.rebalanced().connect(rebalanced);
-      reactor::wait(rebalanced, b->address());
+      elle::reactor::wait(rebalanced, b->address());
     }
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3)), 3u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3)), 3u);
@@ -1446,7 +1446,7 @@ namespace rebalancing
       auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
       DHT dht_b(make_consensus = instrument(3));
       dht_b.overlay->connect(*dht_a.overlay);
-      reactor::wait(local_a.rebalanced(), address);
+      elle::reactor::wait(local_a.rebalanced(), address);
     }
   }
 
@@ -1499,7 +1499,7 @@ namespace rebalancing
         local_a.rebalanced().connect(rebalanced);
       boost::signals2::scoped_connection c_b =
         local_b.rebalanced().connect(rebalanced);
-      reactor::wait(rebalanced, b->address());
+      elle::reactor::wait(rebalanced, b->address());
     }
     ELLE_LOG("disconnect first DHT")
       dht_a.overlay->disconnect_all();
@@ -1531,7 +1531,7 @@ static void no_cheating(dht::Doughnut* d, std::unique_ptr<blocks::Block>& b)
 
 ELLE_TEST_SCHEDULED(batch_quorum)
 {
-  auto owner_key = infinit::cryptography::rsa::keypair::generate(512);
+  auto owner_key = elle::cryptography::rsa::keypair::generate(512);
   DHT dht_a(keys=owner_key, owner=owner_key);
   DHT dht_b(keys=owner_key, owner=owner_key);
   DHT dht_c(keys=owner_key, owner=owner_key);
@@ -1586,7 +1586,7 @@ ELLE_TEST_SCHEDULED(batch_quorum)
 
 ELLE_TEST_SCHEDULED(admin_keys)
 {
-  auto owner_key = infinit::cryptography::rsa::keypair::generate(512);
+  auto owner_key = elle::cryptography::rsa::keypair::generate(512);
   DHT dht(keys=owner_key, owner=owner_key);
   DHT client(storage = nullptr, keys=owner_key, owner=owner_key);
   client.overlay->connect(*dht.overlay);
@@ -1600,7 +1600,7 @@ ELLE_TEST_SCHEDULED(admin_keys)
   no_cheating(client.dht.get(), b2);
   BOOST_CHECK_EQUAL(b2->data().string(), "foo");
   // set server-side adm key but don't tell the client
-  auto admin = infinit::cryptography::rsa::keypair::generate(512);
+  auto admin = elle::cryptography::rsa::keypair::generate(512);
   dht.dht->admin_keys().r.push_back(admin.K());
   dynamic_cast<infinit::model::blocks::MutableBlock*>(b2.get())->data(std::string("bar"));
   BOOST_CHECK_THROW(client.dht->store(*b2, infinit::model::STORE_UPDATE), std::exception);
@@ -1655,10 +1655,10 @@ ELLE_TEST_SCHEDULED(admin_keys)
     false, false), elle::Error);
 
   // check group admin key
-  auto gadmin = infinit::cryptography::rsa::keypair::generate(512);
+  auto gadmin = elle::cryptography::rsa::keypair::generate(512);
   DHT cadmg(storage = nullptr, keys=gadmin, owner=owner_key);
   cadmg.overlay->connect(*dht.overlay);
-  std::unique_ptr<infinit::cryptography::rsa::PublicKey> g_K;
+  std::unique_ptr<elle::cryptography::rsa::PublicKey> g_K;
   {
     dht::Group g(*dht.dht, "g");
     g.create();
@@ -1668,7 +1668,7 @@ ELLE_TEST_SCHEDULED(admin_keys)
     dht.dht->admin_keys().group_r.push_back(g.public_control_key());
     client.dht->admin_keys().group_r.push_back(g.public_control_key());
     g_K.reset(
-      new infinit::cryptography::rsa::PublicKey(g.public_control_key()));
+      new elle::cryptography::rsa::PublicKey(g.public_control_key()));
   }
 
   auto bg = client.dht->make_block<blocks::ACLBlock>();

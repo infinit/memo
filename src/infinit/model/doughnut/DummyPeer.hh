@@ -1,6 +1,6 @@
 #pragma once
 
-#include <reactor/network/exception.hh>
+#include <elle/reactor/network/exception.hh>
 
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
@@ -22,29 +22,29 @@ namespace infinit
         void
         store(blocks::Block const& block, StoreMode mode) override
         {
-           throw reactor::network::Exception("Peer unavailable");
+           throw elle::reactor::network::Exception("Peer unavailable");
         }
 
         void
         remove(Address address, blocks::RemoveSignature rs) override
         {
-          throw reactor::network::Exception("Peer unavailable");
+          throw elle::reactor::network::Exception("Peer unavailable");
         }
 
          std::unique_ptr<blocks::Block>
         _fetch(Address address,
                boost::optional<int> local_version) const override
         {
-          throw reactor::network::Exception("Peer unavailable");
+          throw elle::reactor::network::Exception("Peer unavailable");
         }
 
-        std::vector<cryptography::rsa::PublicKey>
+        std::vector<elle::cryptography::rsa::PublicKey>
         _resolve_keys(std::vector<int> const& ids) override
         {
           elle::unreachable();
         }
 
-        std::unordered_map<int, cryptography::rsa::PublicKey>
+        std::unordered_map<int, elle::cryptography::rsa::PublicKey>
         _resolve_all_keys() override
         {
           elle::unreachable();
@@ -55,7 +55,7 @@ namespace infinit
                 Address address,
                 consensus::Paxos::PaxosClient::Proposal const& p) override
         {
-          throw athena::paxos::Unavailable();
+          throw elle::athena::paxos::Unavailable();
         }
 
         consensus::Paxos::PaxosClient::Proposal
@@ -64,7 +64,7 @@ namespace infinit
                consensus::Paxos::PaxosClient::Proposal const& p,
                consensus::Paxos::Value const& value) override
         {
-          throw athena::paxos::Unavailable();
+          throw elle::athena::paxos::Unavailable();
         }
 
         void
@@ -80,7 +80,7 @@ namespace infinit
             Address address,
             boost::optional<int> local_version) override
         {
-          throw athena::paxos::Unavailable();
+          throw elle::athena::paxos::Unavailable();
         }
 
         void

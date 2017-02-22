@@ -1,7 +1,7 @@
 #include <elle/test.hh>
 
-#include <protocol/Serializer.hh>
-#include <protocol/ChanneledStream.hh>
+#include <elle/protocol/Serializer.hh>
+#include <elle/protocol/ChanneledStream.hh>
 
 #include <infinit/RPC.hh>
 
@@ -15,8 +15,8 @@ ELLE_TEST_SCHEDULED(unknown_rpc)
   {
     auto s = dht.connect_tcp();
     auto elle_version = infinit::elle_serialization_version(dht.dht->version());
-    infinit::protocol::Serializer ser(s, elle_version, false);
-    auto channels = infinit::protocol::ChanneledStream{ser};
+    elle::protocol::Serializer ser(s, elle_version, false);
+    auto channels = elle::protocol::ChanneledStream{ser};
     auto rpc = infinit::RPC<void()>("doom_is_coming", channels, dht.dht->version());
     BOOST_CHECK_THROW(rpc(), infinit::UnknownRPC);
   }

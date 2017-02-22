@@ -1,6 +1,6 @@
 #include <infinit/storage/Crypt.hh>
 #include <infinit/model/Address.hh>
-#include <cryptography/SecretKey.hh>
+#include <elle/cryptography/SecretKey.hh>
 
 #include <elle/factory.hh>
 
@@ -24,7 +24,7 @@ namespace infinit
       return std::make_unique<Crypt>(std::move(backend), password, salt);
     }
 
-    typedef  infinit::cryptography::SecretKey SecretKey;
+    typedef  elle::cryptography::SecretKey SecretKey;
 
     Crypt::Crypt(std::unique_ptr<Storage> backend,
                  std::string const& password,

@@ -49,7 +49,7 @@ namespace infinit
           static
           std::unique_ptr<blocks::Block>
           fetch_from_members(
-            reactor::Generator<overlay::Overlay::WeakMember>& peers,
+            elle::reactor::Generator<overlay::Overlay::WeakMember>& peers,
             Address address,
             boost::optional<int> local_version);
           void

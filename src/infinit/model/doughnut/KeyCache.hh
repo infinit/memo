@@ -15,19 +15,19 @@ namespace infinit
 
       struct KeyHash
       {
-        KeyHash(int h, cryptography::rsa::PublicKey k)
+        KeyHash(int h, elle::cryptography::rsa::PublicKey k)
           : hash(h)
           , key(std::make_shared(std::move(k)))
         {}
 
-        KeyHash(int h, std::shared_ptr<cryptography::rsa::PublicKey> k)
+        KeyHash(int h, std::shared_ptr<elle::cryptography::rsa::PublicKey> k)
           : hash(h)
           , key(std::move(k))
         {}
 
         int hash;
-        std::shared_ptr<cryptography::rsa::PublicKey> key;
-        cryptography::rsa::PublicKey const& raw_key() const
+        std::shared_ptr<elle::cryptography::rsa::PublicKey> key;
+        elle::cryptography::rsa::PublicKey const& raw_key() const
         {
           return *key;
         }
@@ -39,8 +39,8 @@ namespace infinit
           bmi::hashed_unique<
             bmi::const_mem_fun<
               KeyHash,
-              cryptography::rsa::PublicKey const&, &KeyHash::raw_key>,
-            std::hash<infinit::cryptography::rsa::PublicKey>>,
+              elle::cryptography::rsa::PublicKey const&, &KeyHash::raw_key>,
+            std::hash<elle::cryptography::rsa::PublicKey>>,
           bmi::hashed_unique<
             bmi::member<KeyHash, int, &KeyHash::hash>>>>;
     }

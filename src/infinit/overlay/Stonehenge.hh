@@ -33,9 +33,9 @@ namespace infinit
     | Lookup |
     `-------*/
     protected:
-      reactor::Generator<WeakMember>
+      elle::reactor::Generator<WeakMember>
       _allocate(model::Address address, int n) const override;
-      reactor::Generator<std::ambivalent_ptr<model::doughnut::Peer>>
+      elle::reactor::Generator<std::ambivalent_ptr<model::doughnut::Peer>>
       _lookup(model::Address address,
               int n,
               bool fast) const override;
@@ -68,7 +68,7 @@ namespace infinit
         std::string host;
         int port;
         model::Address id;
-        using Model = das::Model<Peer,
+        using Model = elle::das::Model<Peer,
                                  decltype(elle::meta::list(symbols::host,
                                                            symbols::port,
                                                            symbols::id))>;

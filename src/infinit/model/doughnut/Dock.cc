@@ -6,7 +6,7 @@
 #include <elle/network/Interface.hh>
 #include <elle/os.hh>
 
-#include <reactor/network/utp-server.hh>
+#include <elle/reactor/network/utp-server.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/HandshakeFailed.hh>
@@ -45,7 +45,7 @@ namespace infinit
           {
             ELLE_WARN("%s: execption %s", action_name, e.what());
             delay = std::min(delay * 2, max_delay);
-            reactor::sleep(delay);
+            elle::reactor::sleep(delay);
           }
         }
       }
@@ -58,7 +58,7 @@ namespace infinit
         : _doughnut(doughnut)
         , _protocol(protocol)
         , _local_utp_server(
-          doughnut.local() ? nullptr : new reactor::network::UTPServer)
+          doughnut.local() ? nullptr : new elle::reactor::network::UTPServer)
         , _utp_server(doughnut.local() ?
                       *doughnut.local()->utp_server() :
                       *this->_local_utp_server)
@@ -76,7 +76,7 @@ namespace infinit
         {
           auto uid = elle::sprintf("%x", _doughnut.id());
           this->_rdv_connect_thread.reset(
-            new reactor::Thread(
+            new elle::reactor::Thread(
               "rdv_connect",
               [this, uid, rdv_host]
               {
@@ -224,7 +224,7 @@ namespace infinit
               {
                 this->doughnut().dock().make_peer(connection, true);
                 // Delay termination from descructor.
-                elle::With<reactor::Thread::NonInterruptible>() << [&]
+                elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
                 {
                   connection.reset();
                 };
@@ -277,7 +277,7 @@ namespace infinit
           this->_on_connection.disconnect_all_slots();
         };
         this->_thread.reset(
-          new reactor::Thread(
+          new elle::reactor::Thread(
             elle::sprintf("%f", this),
             [this, connecting_it]
             {
@@ -296,10 +296,10 @@ namespace infinit
                 {
                   auto sv = elle_serialization_version(
                     this->_dock.doughnut().version());
-                  auto serializer = elle::make_unique<protocol::Serializer>(
+                  auto serializer = elle::make_unique<elle::protocol::Serializer>(
                     *socket, sv, false);
                   auto channels =
-                  elle::make_unique<protocol::ChanneledStream>(*serializer);
+                  elle::make_unique<elle::protocol::ChanneledStream>(*serializer);
                   if (!disable_key)
                     this->_key_exchange(*channels);
                   ELLE_TRACE("%s: connected", this);
@@ -317,7 +317,7 @@ namespace infinit
                     {
                       f();
                     }
-                    catch (reactor::network::Exception const&)
+                    catch (elle::reactor::network::Exception const&)
                     {
                       // ignored
                     }
@@ -327,18 +327,18 @@ namespace infinit
                     }
                   };
                 };
-              elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+              elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
               {
                 if (this->_dock.protocol() == Protocol::tcp ||
                     this->_dock.protocol() == Protocol::all)
                   for (auto const& e: this->_location.endpoints())
                     scope.run_background(
                       elle::sprintf("%s: tcp://%s",
-                                    reactor::scheduler().current()->name(), e),
+                                    elle::reactor::scheduler().current()->name(), e),
                       umbrella(
                         [&, e = e]
                         {
-                          using reactor::network::TCPSocket;
+                          using elle::reactor::network::TCPSocket;
                           handshake(elle::make_unique<TCPSocket>(e.tcp()));
                           this->_connected_endpoint = e;
                           scope.terminate_now();
@@ -355,14 +355,14 @@ namespace infinit
                         if (this->_location.id() != Address::null)
                           cid = elle::sprintf("%x", this->_location.id());
                         auto socket =
-                          elle::make_unique<reactor::network::UTPSocket>(
+                          elle::make_unique<elle::reactor::network::UTPSocket>(
                             this->_dock._utp_server);
                         this->_connected_endpoint = socket->peer();
                         socket->connect(cid, eps);
                         handshake(std::move(socket));
                         scope.terminate_now();
                       }));
-                reactor::wait(scope);
+                elle::reactor::wait(scope);
               };
               remove_from_connecting.abort();
               if (!connected)
@@ -372,7 +372,7 @@ namespace infinit
                 // FIXME: keep a better exception, for instance if the passport
                 // failed to validate etc.
                 this->_disconnected_exception = std::make_exception_ptr(
-                  reactor::network::ConnectionRefused());
+                  elle::reactor::network::ConnectionRefused());
                 ELLE_TRACE("%s: connection to %f failed",
                            this, this->_location.endpoints());
                 this->_dock._connecting.erase(connecting_it);
@@ -441,9 +441,9 @@ namespace infinit
                   this->_rpc_server.serve(*this->_channels);
                 ELLE_TRACE("connection ended");
                 this->_disconnected_exception =
-                  std::make_exception_ptr(reactor::network::ConnectionClosed());
+                  std::make_exception_ptr(elle::reactor::network::ConnectionClosed());
               }
-              catch (reactor::network::Exception const& e)
+              catch (elle::reactor::network::Exception const& e)
               {
                 ELLE_TRACE("connection fell: %s", e);
                 this->_disconnected_exception = std::current_exception();
@@ -487,7 +487,7 @@ namespace infinit
 
       static
       std::pair<Remote::Challenge, std::unique_ptr<Passport>>
-      _auth_0_3(Dock::Connection& self, protocol::ChanneledStream& channels)
+      _auth_0_3(Dock::Connection& self, elle::protocol::ChanneledStream& channels)
       {
         using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
           (Passport const&);
@@ -498,7 +498,7 @@ namespace infinit
 
       static
       std::pair<Remote::Challenge, std::unique_ptr<Passport>>
-      _auth_0_4(Dock::Connection& self, protocol::ChanneledStream& channels)
+      _auth_0_4(Dock::Connection& self, elle::protocol::ChanneledStream& channels)
       {
         using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
           (Passport const&, elle::Version const&);
@@ -516,7 +516,7 @@ namespace infinit
 
       static
       Remote::Auth
-      _auth_0_7(Dock::Connection& self, protocol::ChanneledStream& channels)
+      _auth_0_7(Dock::Connection& self, elle::protocol::ChanneledStream& channels)
       {
         using AuthSyn =
           Remote::Auth (Address, Passport const&, elle::Version const&);
@@ -538,7 +538,7 @@ namespace infinit
       }
 
       void
-      Dock::Connection::_key_exchange(protocol::ChanneledStream& channels)
+      Dock::Connection::_key_exchange(elle::protocol::ChanneledStream& channels)
       {
         ELLE_TRACE_SCOPE("%s: exchange keys", *this);
         auto version = this->_dock.doughnut().version();
@@ -581,16 +581,16 @@ namespace infinit
           // sign the challenge
           auto signed_challenge = dht.keys().k().sign(
             challenge_passport.first.first,
-            infinit::cryptography::rsa::Padding::pss,
-            infinit::cryptography::Oneway::sha256);
+            elle::cryptography::rsa::Padding::pss,
+            elle::cryptography::Oneway::sha256);
           // generate, seal
           // dont set _key yet so that our 2 rpcs are in cleartext
-          auto key = infinit::cryptography::secretkey::generate(256);
+          auto key = elle::cryptography::secretkey::generate(256);
           elle::Buffer password = key.password();
           auto sealed_key =
             remote_passport->user().seal(password,
-                                         infinit::cryptography::Cipher::aes256,
-                                         infinit::cryptography::Mode::cbc);
+                                         elle::cryptography::Cipher::aes256,
+                                         elle::cryptography::Mode::cbc);
           ELLE_DEBUG("acknowledge authentication")
           {
             RPC<bool (elle::Buffer const&,

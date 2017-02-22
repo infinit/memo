@@ -5,7 +5,7 @@
 # include <elle/Printable.hh>
 # include <elle/Clonable.hh>
 
-# include <cryptography/rsa/PublicKey.hh>
+# include <elle/cryptography/rsa/PublicKey.hh>
 
 # include <infinit/model/Address.hh>
 # include <infinit/model/blocks/ValidationResult.hh>
@@ -28,9 +28,9 @@ namespace infinit
         RemoveSignature& operator = (RemoveSignature && other) = default;
         void serialize(elle::serialization::Serializer& s);
         std::unique_ptr<Block> block;
-        boost::optional<cryptography::rsa::PublicKey> group_key;
+        boost::optional<elle::cryptography::rsa::PublicKey> group_key;
         boost::optional<int> group_index;
-        boost::optional<cryptography::rsa::PublicKey> signature_key;
+        boost::optional<elle::cryptography::rsa::PublicKey> signature_key;
         boost::optional<elle::Buffer> signature;
       };
 

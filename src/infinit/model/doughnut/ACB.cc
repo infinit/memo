@@ -10,15 +10,15 @@
 #include <elle/serialization/json.hh>
 #include <elle/utility/Move.hh>
 
-#include <das/model.hh>
-#include <das/serializer.hh>
+#include <elle/das/model.hh>
+#include <elle/das/serializer.hh>
 
-#include <cryptography/rsa/KeyPair.hh>
-#include <cryptography/rsa/PublicKey.hh>
-#include <cryptography/SecretKey.hh>
-#include <cryptography/hash.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/rsa/PublicKey.hh>
+#include <elle/cryptography/SecretKey.hh>
+#include <elle/cryptography/hash.hh>
 
-#include <reactor/exception.hh>
+#include <elle/reactor/exception.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
@@ -39,13 +39,13 @@ namespace infinit
   {
     namespace doughnut
     {
-      using DasACLEntry = das::Model<
+      using DasACLEntry = elle::das::Model<
         ACLEntry,
         decltype(elle::meta::list(symbols::key,
                                   symbols::read,
                                   symbols::write,
                                   symbols::token))>;
-      using DasACLEntryPermissions = das::Model<
+      using DasACLEntryPermissions = elle::das::Model<
         ACLEntry,
         decltype(elle::meta::list(symbols::key,
                                   symbols::read,
@@ -54,10 +54,10 @@ namespace infinit
   }
 }
 
-DAS_MODEL_DEFAULT(infinit::model::doughnut::ACLEntry,
+ELLE_DAS_MODEL_DEFAULT(infinit::model::doughnut::ACLEntry,
                   infinit::model::doughnut::DasACLEntry);
 // FAILS in binary mode
-// DAS_MODEL_SERIALIZE(infinit::model::doughnut::ACB::ACLEntry);
+// ELLE_DAS_MODEL_SERIALIZE(infinit::model::doughnut::ACB::ACLEntry);
 
 namespace infinit
 {
@@ -67,14 +67,14 @@ namespace infinit
     {
       // default OAEP padding is 336 bits long, which prevents us from using
       // encrypt() with 256 bits secrets on 512 bits keys.
-      static const cryptography::rsa::Padding acb_padding
-        = infinit::cryptography::rsa::Padding::pkcs1;
+      static const elle::cryptography::rsa::Padding acb_padding
+        = elle::cryptography::rsa::Padding::pkcs1;
 
       /*---------.
       | ACLEntry |
       `---------*/
 
-      ACLEntry::ACLEntry(infinit::cryptography::rsa::PublicKey key_,
+      ACLEntry::ACLEntry(elle::cryptography::rsa::PublicKey key_,
                               bool read_,
                               bool write_,
                               elle::Buffer token_)
@@ -146,7 +146,7 @@ namespace infinit
       BaseACB<Block>::BaseACB(Doughnut* owner,
                               elle::Buffer data,
                               boost::optional<elle::Buffer> salt,
-                              cryptography::rsa::KeyPair const& keys)
+                              elle::cryptography::rsa::KeyPair const& keys)
         : Super(owner, std::move(data), std::move(salt), keys)
         , _editor(-1)
         , _owner_token()
@@ -192,15 +192,15 @@ namespace infinit
       void
       background_open(elle::Buffer & target,
                       elle::Buffer const& src,
-                      infinit::cryptography::rsa::PrivateKey const& k,
+                      elle::cryptography::rsa::PrivateKey const& k,
                       bool use_encrypt)
       {
         static bool bg = elle::os::getenv("INFINIT_NO_BACKGROUND_DECODE", "").empty();
         if (bg)
         {
-          elle::With<reactor::Thread::NonInterruptible>() << [&]
+          elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
           {
-            reactor::background([&] {
+            elle::reactor::background([&] {
                 target = use_encrypt ? k.decrypt(src, acb_padding) : k.open(src);
               });
           };
@@ -268,10 +268,10 @@ namespace infinit
         elle::Bench::BenchScope bs(bench);
         auto secret = [&]() {
           if (use_encrypt)
-            return cryptography::SecretKey(secret_buffer.string());
+            return elle::cryptography::SecretKey(secret_buffer.string());
           else
             return elle::serialization::json::deserialize
-               <cryptography::SecretKey>(secret_buffer);
+               <elle::cryptography::SecretKey>(secret_buffer);
         }();
         ELLE_DUMP("%s: secret: %s", *this, secret);
         return secret.decipher(this->_data);
@@ -283,7 +283,7 @@ namespace infinit
 
       template <typename Block>
       bool
-      BaseACB<Block>::_admin_user(cryptography::rsa::PublicKey const& key) const
+      BaseACB<Block>::_admin_user(elle::cryptography::rsa::PublicKey const& key) const
       {
         auto const& r_keys = this->doughnut()->admin_keys().r;
         if (std::find(r_keys.begin(), r_keys.end(), key) != r_keys.end())
@@ -297,7 +297,7 @@ namespace infinit
       template <typename Block>
       bool
       BaseACB<Block>::_admin_group(
-        cryptography::rsa::PublicKey const& key) const
+        elle::cryptography::rsa::PublicKey const& key) const
       {
         auto const& r_keys = this->doughnut()->admin_keys().group_r;
         if (std::find(r_keys.begin(), r_keys.end(), key) != r_keys.end())
@@ -330,7 +330,7 @@ namespace infinit
       template <typename Block>
       void
       BaseACB<Block>::set_group_permissions(
-        cryptography::rsa::PublicKey const& key,
+        elle::cryptography::rsa::PublicKey const& key,
         bool read,
         bool write)
       {
@@ -404,7 +404,7 @@ namespace infinit
       }
       template <typename Block>
       void
-      BaseACB<Block>::set_permissions(cryptography::rsa::PublicKey const& key,
+      BaseACB<Block>::set_permissions(elle::cryptography::rsa::PublicKey const& key,
                            bool read,
                            bool write)
       {
@@ -532,7 +532,7 @@ namespace infinit
         boost::optional<Model const&> model) const
       {
         auto make_user =
-          [&] (cryptography::rsa::PublicKey const& k)
+          [&] (elle::cryptography::rsa::PublicKey const& k)
           -> std::unique_ptr<infinit::model::User>
           {
             try
@@ -579,7 +579,7 @@ namespace infinit
             res.emplace_back(std::move(user), ent.read, ent.write,
                              this->_admin_group(ent.key));
           }
-          catch(reactor::Terminate const& e)
+          catch(elle::reactor::Terminate const& e)
           {
             throw;
           }
@@ -595,7 +595,7 @@ namespace infinit
 
       static
       bool
-      has_key(cryptography::rsa::PublicKey const& k,
+      has_key(elle::cryptography::rsa::PublicKey const& k,
               std::vector<ACLEntry> const& v, bool write)
       {
         auto it = std::find_if(v.begin(), v.end(),
@@ -769,7 +769,7 @@ namespace infinit
       template <typename Block>
       void
       BaseACB<Block>::seal(boost::optional<int> version,
-                           cryptography::SecretKey const& key)
+                           elle::cryptography::SecretKey const& key)
       {
         this->_seal(version, key);
       }
@@ -791,11 +791,11 @@ namespace infinit
       template <typename Block>
       void
       BaseACB<Block>::_seal(boost::optional<int> version,
-                            boost::optional<cryptography::SecretKey const&> key)
+                            boost::optional<elle::cryptography::SecretKey const&> key)
       {
         static elle::Bench bench("bench.acb.seal", 10000_sec);
         elle::Bench::BenchScope scope(bench);
-        std::shared_ptr<infinit::cryptography::rsa::PrivateKey> sign_key;
+        std::shared_ptr<elle::cryptography::rsa::PrivateKey> sign_key;
 
         // enforce admin keys
         auto const& aks = this->doughnut()->admin_keys();
@@ -842,10 +842,10 @@ namespace infinit
             sign_key = this->owner_private_key();
             this->_editor = -1;
           }
-          boost::optional<cryptography::SecretKey> secret;
+          boost::optional<elle::cryptography::SecretKey> secret;
           if (!key)
           {
-            secret = cryptography::secretkey::generate(256);
+            secret = elle::cryptography::secretkey::generate(256);
             key = secret;
           }
           ELLE_DUMP("new block secret: %s", key.get());
@@ -1025,11 +1025,11 @@ namespace infinit
         elle::serialization::SerializerOut& s,
         elle::Version const& v)
       {
-        s.serialize<das::Serializer<ACLEntry, DasACLEntryPermissions>>(
+        s.serialize<elle::das::Serializer<ACLEntry, DasACLEntryPermissions>>(
           "acls", this->_block.acl_entries());
         if (v >= elle::Version(0, 4, 0))
         {
-          s.serialize<das::Serializer<ACLEntry, DasACLEntryPermissions>>(
+          s.serialize<elle::das::Serializer<ACLEntry, DasACLEntryPermissions>>(
             "group_acls", this->_block.acl_group_entries());
           s.serialize("world_readable", this->_block.world_readable());
           s.serialize("world_writable", this->_block.world_writable());

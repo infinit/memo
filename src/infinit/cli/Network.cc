@@ -23,7 +23,7 @@
 #include <infinit/storage/Strip.hh>
 
 #ifndef INFINIT_WINDOWS
-# include <reactor/network/unix-domain-socket.hh>
+# include <elle/reactor/network/unix-domain-socket.hh>
 #endif
 
 ELLE_LOG_COMPONENT("cli.network");
@@ -327,7 +327,7 @@ namespace infinit
       {
         auto res = dnut::AdminKeys{};
         auto add =
-          [&res] (infinit::cryptography::rsa::PublicKey const& key,
+          [&res] (elle::cryptography::rsa::PublicKey const& key,
                   bool read, bool write)
           {
             if (read && !write)
@@ -407,11 +407,11 @@ namespace infinit
           std::move(overlay_config),
           std::move(storage),
           owner.keypair(),
-          std::make_shared<infinit::cryptography::rsa::PublicKey>(owner.public_key),
+          std::make_shared<elle::cryptography::rsa::PublicKey>(owner.public_key),
           dnut::Passport(
             owner.public_key,
             ifnt.qualified_name(network_name, owner),
-            infinit::cryptography::rsa::KeyPair(owner.public_key,
+            elle::cryptography::rsa::KeyPair(owner.public_key,
                                                 owner.private_key.get())),
           owner.name,
           std::move(port),
@@ -541,7 +541,7 @@ namespace infinit
                 std::move(desc.overlay),
                 std::move(d->storage),
                 u.keypair(),
-                std::make_shared<infinit::cryptography::rsa::PublicKey>(
+                std::make_shared<elle::cryptography::rsa::PublicKey>(
                   desc.owner),
                 d->passport,
                 u.name,
@@ -616,7 +616,7 @@ namespace infinit
       auto s_path = network.monitoring_socket_path(owner);
       if (!bfs::exists(s_path))
         elle::err("network not running or monitoring disabled");
-      reactor::network::UnixDomainSocket socket(s_path);
+      elle::reactor::network::UnixDomainSocket socket(s_path);
       using Monitoring = infinit::model::MonitoringServer;
       using Query = infinit::model::MonitoringServer::MonitorQuery::Query;
       auto do_query = [&] (Query query_val)
@@ -717,7 +717,7 @@ namespace infinit
         {
           if (owner.public_key == desc.owner)
             return {owner.public_key, desc.name,
-                    infinit::cryptography::rsa::KeyPair(owner.public_key,
+                    elle::cryptography::rsa::KeyPair(owner.public_key,
                                                         owner.private_key.get())};
           try
           {
@@ -742,7 +742,7 @@ namespace infinit
           std::move(desc.overlay),
           std::move(storage),
           owner.keypair(),
-          std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
+          std::make_shared<elle::cryptography::rsa::PublicKey>(desc.owner),
           std::move(passport),
           owner.name,
           boost::optional<int>(),
@@ -914,7 +914,7 @@ namespace infinit
 #endif
         auto run = [&, push_p]
           {
-            reactor::Thread::unique_ptr poll_thread;
+            elle::reactor::Thread::unique_ptr poll_thread;
             if (fetch || publish)
             {
               infinit::model::NodeLocations eps;
@@ -1173,7 +1173,7 @@ namespace infinit
               dnut::Doughnut& dht,
               bool push)
          {
-          reactor::Thread::unique_ptr stat_thread;
+          elle::reactor::Thread::unique_ptr stat_thread;
           if (push)
             stat_thread = network.make_stat_update_thread(cli.infinit(), owner, dht);
           cli.report_action("running", "network", network.name);
@@ -1306,7 +1306,7 @@ namespace infinit
             }
           }
           else
-            reactor::sleep();
+            elle::reactor::sleep();
         });
     }
 
@@ -1360,7 +1360,7 @@ namespace infinit
 
     namespace
     {
-      std::pair<infinit::cryptography::rsa::PublicKey, bool>
+      std::pair<elle::cryptography::rsa::PublicKey, bool>
       user_key(infinit::Infinit& ifnt,
                std::string name,
                boost::optional<std::string> const& mountpoint)
@@ -1376,7 +1376,7 @@ namespace infinit
           elle::Buffer buf(name);
           elle::IOStream is(buf.istreambuf());
           auto key = elle::serialization::json::deserialize
-            <infinit::cryptography::rsa::PublicKey>(is);
+            <elle::cryptography::rsa::PublicKey>(is);
           return std::make_pair(key, is_group);
         }
         if (!is_group)
@@ -1392,7 +1392,7 @@ namespace infinit
         elle::Buffer b(buf, res);
         elle::IOStream is(b.istreambuf());
         auto key = elle::serialization::json::deserialize
-          <infinit::cryptography::rsa::PublicKey>(is);
+          <elle::cryptography::rsa::PublicKey>(is);
         return std::make_pair(key, is_group);
       }
     }
@@ -1433,7 +1433,7 @@ namespace infinit
                                 "network \"%s\" to edit group admins",
                                 network.name);
         };
-      auto add_admin = [&] (infinit::cryptography::rsa::PublicKey const& key,
+      auto add_admin = [&] (elle::cryptography::rsa::PublicKey const& key,
                             bool group, bool read, bool write)
         {
           if (read && !write)

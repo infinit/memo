@@ -4,9 +4,9 @@
 
 # include <infinit/overlay/Overlay.hh>
 # include <elle/serialization/Serializer.hh>
-# include <reactor/network/udp-socket.hh>
-# include <reactor/Barrier.hh>
-# include <reactor/Generator.hh>
+# include <elle/reactor/network/udp-socket.hh>
+# include <elle/reactor/Barrier.hh>
+# include <elle/reactor/Generator.hh>
 # include <infinit/model/doughnut/Local.hh>
 
 namespace kademlia
@@ -66,10 +66,10 @@ namespace kademlia
   protected:
     void
     _discover(infinit::overlay::NodeLocations const& peers) override;
-    reactor::Generator<WeakMember>
+    elle::reactor::Generator<WeakMember>
     _allocate(infinit::model::Address address,
             int n) const override;
-    reactor::Generator<WeakMember>
+    elle::reactor::Generator<WeakMember>
     _lookup(infinit::model::Address address,
             int n,
             bool fast) const override;
@@ -111,13 +111,13 @@ namespace kademlia
     int bucket_of(Address const&);
     using Local = infinit::model::doughnut::Local;
     using Overlay = infinit::overlay::Overlay;
-    std::unique_ptr<reactor::Thread> _looper;
-    std::unique_ptr<reactor::Thread> _pinger;
-    std::unique_ptr<reactor::Thread> _refresher;
-    std::unique_ptr<reactor::Thread> _cleaner;
-    std::unique_ptr<reactor::Thread> _republisher;
-    reactor::network::UDPSocket _socket;
-    reactor::Mutex _udp_send_mutex;
+    std::unique_ptr<elle::reactor::Thread> _looper;
+    std::unique_ptr<elle::reactor::Thread> _pinger;
+    std::unique_ptr<elle::reactor::Thread> _refresher;
+    std::unique_ptr<elle::reactor::Thread> _cleaner;
+    std::unique_ptr<elle::reactor::Thread> _republisher;
+    elle::reactor::network::UDPSocket _socket;
+    elle::reactor::Mutex _udp_send_mutex;
     Configuration _config;
     Address _mask;
     Address _self;
@@ -142,7 +142,7 @@ namespace kademlia
       std::unordered_map<Address, Endpoint> endpoints;
       int pending; // number of requests in flight
       std::vector<Address> queried;
-      reactor::Barrier barrier;
+      elle::reactor::Barrier barrier;
       std::vector<Endpoint> storeResult;
       int n; // number ofr results requested
       int steps; // number of replies we got

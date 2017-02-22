@@ -6,12 +6,12 @@
 
 # include <elle/serialization/Serializer.hh>
 
-# include <cryptography/SecretKey.hh>
+# include <elle/cryptography/SecretKey.hh>
 
-# include <reactor/Barrier.hh>
-# include <reactor/Generator.hh>
-# include <reactor/network/rdv-socket.hh>
-# include <reactor/network/utp-server.hh>
+# include <elle/reactor/Barrier.hh>
+# include <elle/reactor/Generator.hh>
+# include <elle/reactor/network/rdv-socket.hh>
+# include <elle/reactor/network/utp-server.hh>
 
 # include <infinit/model/doughnut/Local.hh>
 # include <infinit/model/doughnut/Remote.hh>
@@ -54,7 +54,7 @@ namespace infinit
         Time last_gossip; // Last time we gossiped about this contact
         int gossip_count; // Number of times we gossiped about this contact
         // thread performing a contact() call on this node
-        reactor::Thread::unique_ptr contacter;
+        elle::reactor::Thread::unique_ptr contacter;
         std::vector<elle::Buffer> pending;
         bool discovered; // was on_discover signal sent for this contact
         int ping_timeouts; //Number of ping timeouts, resets on any incoming msg
@@ -205,11 +205,11 @@ namespace infinit
       | Overlay |
       `--------*/
       protected:
-        reactor::Generator<Overlay::WeakMember>
+        elle::reactor::Generator<Overlay::WeakMember>
         _allocate(infinit::model::Address address, int n) const override;
-        reactor::Generator<Overlay::WeakMember>
+        elle::reactor::Generator<Overlay::WeakMember>
         _lookup(infinit::model::Address address, int n, bool f) const override;
-        reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+        elle::reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
         _lookup(std::vector<infinit::model::Address> const& address, int n) const override;
         WeakMember
         _lookup_node(Address address) const override;
@@ -279,10 +279,10 @@ namespace infinit
         void
         cleanup();
         void
-        addLocalResults(packet::GetFileRequest* p, reactor::yielder<NodeLocation>::type const* yield);
+        addLocalResults(packet::GetFileRequest* p, elle::reactor::yielder<NodeLocation>::type const* yield);
         void
         addLocalResults(packet::MultiGetFileRequest* p,
-                        reactor::yielder<std::pair<Address, NodeLocation>>::type const* yield,
+                        elle::reactor::yielder<std::pair<Address, NodeLocation>>::type const* yield,
                         std::vector<std::set<Address>>& result_sets);
         void
         kelipsMGet(std::vector<Address> files, int n,
@@ -303,11 +303,11 @@ namespace infinit
         pickOutsideTargets();
         std::vector<Address>
         pickGroupTargets();
-        std::pair<infinit::cryptography::SecretKey*, bool>
+        std::pair<elle::cryptography::SecretKey*, bool>
         getKey(Address const& a);
         void
         setKey(Address const& a,
-               infinit::cryptography::SecretKey sk,
+               elle::cryptography::SecretKey sk,
                bool observer);
         void
         process_update(SerState const& s);
@@ -339,9 +339,9 @@ namespace infinit
         int _group;
         ELLE_ATTRIBUTE_RX(Configuration, config);
         State _state;
-        reactor::network::RDVSocket _gossip;
-        reactor::Mutex _udp_send_mutex;
-        reactor::Thread::unique_ptr
+        elle::reactor::network::RDVSocket _gossip;
+        elle::reactor::Mutex _udp_send_mutex;
+        elle::reactor::Thread::unique_ptr
           _emitter_thread, _pinger_thread,
           _rereplicator_thread;
         std::default_random_engine _gen;
@@ -351,7 +351,7 @@ namespace infinit
         std::vector<Address> _promised_files;
         // address -> (isObserver, key)
         std::unordered_map<Address,
-          std::pair<infinit::cryptography::SecretKey, bool>> _keys;
+          std::pair<elle::cryptography::SecretKey, bool>> _keys;
         /// Bootstrap pending auth.
         Endpoints _pending_bootstrap_endpoints;
         std::vector<Address> _pending_bootstrap_address;
@@ -369,8 +369,8 @@ namespace infinit
           peer_cache);
         mutable
         std::unordered_map<Address,
-          std::pair<reactor::Thread::unique_ptr, bool>> _node_lookups;
-        std::unordered_map<reactor::Thread*, reactor::Thread::unique_ptr>
+          std::pair<elle::reactor::Thread::unique_ptr, bool>> _node_lookups;
+        std::unordered_map<elle::reactor::Thread*, elle::reactor::Thread::unique_ptr>
           _bootstraper_threads;
       private:
         boost::optional<model::Endpoints>

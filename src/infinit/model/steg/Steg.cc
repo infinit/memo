@@ -3,12 +3,12 @@
 #include <boost/random.hpp>
 #include <boost/filesystem/fstream.hpp>
 
-#include <reactor/filesystem.hh>
+#include <elle/reactor/filesystem.hh>
 
 #include <infinit/model/steg/Steg.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/Block.hh>
-#include <cryptography/hash.hh>
+#include <elle/cryptography/hash.hh>
 #include <elle/system/Process.hh>
 
 extern "C" void outguess_extract(
@@ -32,11 +32,11 @@ namespace infinit
 
 namespace bfs = boost::filesystem;
 
-class InjectionFailure: public reactor::filesystem::Error
+class InjectionFailure: public elle::reactor::filesystem::Error
 {
 public:
   InjectionFailure()
-  : reactor::filesystem::Error(EIO, "injection failure")
+  : elle::reactor::filesystem::Error(EIO, "injection failure")
   {}
 };
 
@@ -55,7 +55,7 @@ Steg::Steg(boost::filesystem::path const& storage, std::string const& pass)
     {
       ELLE_DEBUG("caching %s", p);
       _free_blocks.push_back(p);
-      auto hash = cryptography::hash::sha256(p.string());
+      auto hash = elle::cryptography::hash::sha256(p.string());
       Address res = Address(hash.contents());
       _cache.insert(std::make_pair(res, p));
     }
@@ -72,7 +72,7 @@ Steg::_pick() const
   boost::filesystem::path p = _free_blocks[v];
   _free_blocks[v] =  _free_blocks[_free_blocks.size() - 1];
   _free_blocks.pop_back();
-  auto hash = cryptography::hash::sha256(p.string());
+  auto hash = elle::cryptography::hash::sha256(p.string());
   Address res = Address(hash.contents());
   _cache.insert(std::make_pair(res, p));
 

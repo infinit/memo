@@ -12,9 +12,9 @@ namespace infinit
   {
     namespace doughnut
     {
-      Passport::Passport(cryptography::rsa::PublicKey user,
+      Passport::Passport(elle::cryptography::rsa::PublicKey user,
                          std::string network,
-                         cryptography::rsa::KeyPair const& owner,
+                         elle::cryptography::rsa::KeyPair const& owner,
                          bool store_certifier,
                          bool allow_write,
                          bool allow_storage,
@@ -42,7 +42,7 @@ namespace infinit
       }
 
       Passport::Passport(elle::serialization::SerializerIn& s)
-        : _user(s.deserialize<cryptography::rsa::PublicKey>("user"))
+        : _user(s.deserialize<elle::cryptography::rsa::PublicKey>("user"))
         , _network(s.deserialize<std::string>("network"))
         , _signature(s.deserialize<elle::Buffer>("signature"))
         , _allow_write(true)
@@ -58,7 +58,7 @@ namespace infinit
             _allow_storage = s.deserialize<bool>("allow_storage");
             _allow_sign = s.deserialize<bool>("allow_sign");
             _certifier = s.deserialize
-              <boost::optional<cryptography::rsa::PublicKey>>("certifier");
+              <boost::optional<elle::cryptography::rsa::PublicKey>>("certifier");
           }
           catch (elle::Error const& e)
           {
@@ -91,7 +91,7 @@ namespace infinit
       }
 
       bool
-      Passport::verify(cryptography::rsa::PublicKey const& owner) const
+      Passport::verify(elle::cryptography::rsa::PublicKey const& owner) const
       {
         if (this->_certifier && *this->_certifier != owner)
         {

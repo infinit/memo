@@ -1,7 +1,7 @@
 #ifndef INFINIT_STORAGE_CRYPT_HH
 #define INFINIT_STORAGE_CRYPT_HH
 
-#include <cryptography/Cipher.hh>
+#include <elle/cryptography/Cipher.hh>
 
 #include <infinit/storage/Storage.hh>
 

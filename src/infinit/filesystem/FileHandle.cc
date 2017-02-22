@@ -1,7 +1,7 @@
 #include <infinit/filesystem/FileHandle.hh>
 
-#include <cryptography/SecretKey.hh>
-#include <cryptography/random.hh>
+#include <elle/cryptography/SecretKey.hh>
+#include <elle/cryptography/random.hh>
 
 #include <infinit/filesystem/Directory.hh>
 #include <elle/cast.hh>
@@ -90,7 +90,7 @@ namespace infinit
     FileBuffer::~FileBuffer()
     {
       while (_prefetchers_count)
-        reactor::sleep(20_ms);
+        elle::reactor::sleep(20_ms);
       if (this->_remove_data)
       {
         // FIXME optimize pass removal data
@@ -182,7 +182,7 @@ namespace infinit
         if (it != _blocks.end())
         {
           ELLE_DEBUG("obtained block %s from cache", start_block);
-          reactor::wait(it->second.ready);
+          elle::reactor::wait(it->second.ready);
           if (!it->second.block)
           {
             ELLE_WARN("read failure on block %s", start_block);
@@ -328,7 +328,7 @@ namespace infinit
       auto const it = _blocks.find(block_idx);
       if (it != _blocks.end())
       {
-        reactor::wait(it->second.ready);
+        elle::reactor::wait(it->second.ready);
         block = it->second.block;
         it->second.dirty = true;
         it->second.last_use = now();
@@ -346,7 +346,7 @@ namespace infinit
           it = _blocks.find(block_idx);
         }
         ELLE_ASSERT(it != _blocks.end());
-        reactor::wait(it->second.ready);
+        elle::reactor::wait(it->second.ready);
         it->second.dirty = true;
         it->second.last_use = now();
         it->second.writers.insert(src);
@@ -431,7 +431,7 @@ namespace infinit
           if (it != _blocks.end())
           {
             if (!it->second.block)
-              reactor::wait(it->second.ready);
+              elle::reactor::wait(it->second.ready);
             if (auto data = it->second.block)
             {
               data->size(targetsize);
@@ -484,7 +484,7 @@ namespace infinit
       auto it = this->_blocks.find(index);
       if (it != this->_blocks.end())
       {
-        reactor::wait(it->second.ready);
+        elle::reactor::wait(it->second.ready);
         it->second.last_use = now();
         return it->second.block;
       }
@@ -518,7 +518,7 @@ namespace infinit
         auto block = fetch_or_die(*_fs.block_store(), addr, {},
                                   this->_file.path() / elle::sprintf("<%f>", addr));
         auto crypted = block->take_data();
-        cryptography::SecretKey sk(secret);
+        elle::cryptography::SecretKey sk(secret);
         b = std::make_shared<elle::Buffer>(sk.decipher(crypted));
       }
       auto& c = this->_blocks.at(index);
@@ -559,7 +559,7 @@ namespace infinit
                           model::flags::immutable_block, false);
       auto key = _file._fat[idx].second;
       ++_prefetchers_count;
-      new reactor::Thread("prefetcher", [this, addr, idx, key] {
+      new elle::reactor::Thread("prefetcher", [this, addr, idx, key] {
           std::unique_ptr<model::blocks::Block> bl;
           try
           {
@@ -575,7 +575,7 @@ namespace infinit
           ELLE_TRACE("Prefetcher inserting value at %s", idx);
           auto crypted = bl->take_data();
           auto b = std::make_shared<elle::Buffer>(
-            cryptography::SecretKey(key).decipher(crypted));
+            elle::cryptography::SecretKey(key).decipher(crypted));
           this->_blocks[idx].last_use = now();
           this->_blocks[idx].block = b;
           this->_blocks[idx].ready.open();
@@ -662,7 +662,7 @@ namespace infinit
         {
           ent = &it->second;
           // FIXME: is this safe?
-          reactor::wait((*ent)->ready);
+          elle::reactor::wait((*ent)->ready);
           (*ent)->ready.close();
         }
         elle::SafeFinally interrupt_guard([&] {
@@ -670,20 +670,20 @@ namespace infinit
             if (ent)
               (*ent)->ready.open();
         });
-        auto key = cryptography::random::generate<elle::Buffer>(32).string();
+        auto key = elle::cryptography::random::generate<elle::Buffer>(32).string();
         elle::Buffer cdata;
         std::unique_ptr<ImmutableBlock> block;
         if (data_.size() >= 262144)
         {
-          reactor::background([&] {
-            cdata = cryptography::SecretKey(key).encipher(data_);
+          elle::reactor::background([&] {
+            cdata = elle::cryptography::SecretKey(key).encipher(data_);
             block = this->_fs.block_store()->make_block<ImmutableBlock>(
               std::move(cdata), this->_file._address);
           });
         }
         else
         {
-          cdata = cryptography::SecretKey(key).encipher(data_);
+          cdata = elle::cryptography::SecretKey(key).encipher(data_);
           block = this->_fs.block_store()->make_block<ImmutableBlock>(
             std::move(cdata), this->_file._address);
         }
@@ -723,7 +723,7 @@ namespace infinit
             break;
           it->second.erase(src);
           auto thread = it->first.get();
-          reactor::wait(*it->first);
+          elle::reactor::wait(*it->first);
           it = std::find_if(_flushers.begin(), _flushers.end(),
             [&](Flusher const& f) {
               return f.first.get() == thread;
@@ -740,7 +740,7 @@ namespace infinit
           if (_flushers[i].first->done()
             && _flushers[i].second.find(src) != _flushers[i].second.end())
           {
-            reactor::wait(*_flushers[i].first); // will not yield
+            elle::reactor::wait(*_flushers[i].first); // will not yield
             _flushers[i].second.erase(src);
             if (_flushers[i].second.empty())
             {
@@ -806,7 +806,7 @@ namespace infinit
             if (!it->second.ready.opened())
             {
               ELLE_DEBUG("Waiting for readyness");
-              reactor::wait(it->second.ready);
+              elle::reactor::wait(it->second.ready);
             }
             auto entry = std::move(*it);
             auto writers = entry.second.writers;
@@ -816,9 +816,9 @@ namespace infinit
                 f();
               else
                 this->_flushers.emplace_back(
-                  new reactor::Thread("flusher",
+                  new elle::reactor::Thread("flusher",
                                       [f] { f(); },
-                                      reactor::managed = true),
+                                      elle::reactor::managed = true),
                   writers);
           }
         }

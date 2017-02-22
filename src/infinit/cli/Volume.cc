@@ -10,14 +10,14 @@
 #include <infinit/model/doughnut/Local.hh>
 
 #ifdef INFINIT_MACOSX
-# include <reactor/network/reachability.hh>
+# include <elle/reactor/network/reachability.hh>
 # define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
 # include <crash_reporting/gcc_fix.hh>
 # include <CoreServices/CoreServices.h>
 #endif
 
 #ifndef INFINIT_WINDOWS
-# include <reactor/network/unix-domain-socket.hh>
+# include <elle/reactor/network/unix-domain-socket.hh>
 # define IF_NOT_WINDOWS(Action) Action
 #else
 # include <fcntl.h>
@@ -1074,7 +1074,7 @@ namespace infinit
       }
       auto run = [&, push_p]
       {
-        reactor::Thread::unique_ptr stat_thread;
+        elle::reactor::Thread::unique_ptr stat_thread;
         if (push_p)
           stat_thread = network.make_stat_update_thread(ifnt, owner, *model);
         ELLE_TRACE_SCOPE("run volume");
@@ -1160,12 +1160,12 @@ namespace infinit
         if (finder_sidebar && mo.mountpoint)
         {
           auto mountpoint = mo.mountpoint;
-          reactor::background([mountpoint]
+          elle::reactor::background([mountpoint]
             {
               add_path_to_finder_sidebar(mountpoint.get());
             });
         }
-        auto reachability = std::unique_ptr<reactor::network::Reachability>{};
+        auto reachability = std::unique_ptr<elle::reactor::network::Reachability>{};
 #endif
         elle::SafeFinally unmount([&]
         {
@@ -1175,7 +1175,7 @@ namespace infinit
           if (finder_sidebar && mo.mountpoint)
           {
             auto mountpoint = mo.mountpoint;
-            reactor::background([mountpoint]
+            elle::reactor::background([mountpoint]
               {
                 remove_path_from_finder_sidebar(mountpoint.get());
               });
@@ -1196,11 +1196,11 @@ namespace infinit
 #ifdef INFINIT_MACOSX
         if (elle::os::getenv("INFINIT_LOG_REACHABILITY", "") != "0")
         {
-          reachability.reset(new reactor::network::Reachability(
+          reachability.reset(new elle::reactor::network::Reachability(
             {},
-            [&] (reactor::network::Reachability::NetworkStatus status)
+            [&] (elle::reactor::network::Reachability::NetworkStatus status)
             {
-              using NetworkStatus = reactor::network::Reachability::NetworkStatus;
+              using NetworkStatus = elle::reactor::network::Reachability::NetworkStatus;
               if (status == NetworkStatus::Unreachable)
                 ELLE_LOG("lost network connection");
               else
@@ -1222,7 +1222,7 @@ namespace infinit
           auto input = commands_input(input_name);
           auto handles =
             std::unordered_map<std::string,
-                               std::unique_ptr<reactor::filesystem::Handle>>{};
+                               std::unique_ptr<elle::reactor::filesystem::Handle>>{};
           while (true)
           {
             std::string op;
@@ -1235,7 +1235,7 @@ namespace infinit
               ELLE_TRACE("got command: %s", json);
               auto command = elle::serialization::json::SerializerIn(json, false);
               op = command.deserialize<std::string>("operation");
-              auto path = std::shared_ptr<reactor::filesystem::Path>{};
+              auto path = std::shared_ptr<elle::reactor::filesystem::Path>{};
               try
               {
                 pathname = command.deserialize<std::string>("path");
@@ -1252,7 +1252,7 @@ namespace infinit
               auto require_path = [&]
                 {
                   if (!path)
-                    throw reactor::filesystem::Error(
+                    throw elle::reactor::filesystem::Error(
                       ENOENT,
                       elle::sprintf("no such file or directory: %s", pathname));
                 };
@@ -1534,7 +1534,7 @@ namespace infinit
               if (!pathname.empty())
                 response.serialize("path", pathname);
             }
-            catch (reactor::filesystem::Error const& e)
+            catch (elle::reactor::filesystem::Error const& e)
             {
               auto response = elle::serialization::json::SerializerOut(std::cout);
               response.serialize("success", false);
@@ -1565,7 +1565,7 @@ namespace infinit
         else
         {
           ELLE_TRACE("wait filesystem");
-          reactor::wait(*fs);
+          elle::reactor::wait(*fs);
         }
       };
       if (local_endpoint && push_p)
@@ -1636,7 +1636,7 @@ namespace infinit
 
       auto mo = infinit::MountOptions{};
       MOUNT_OPTIONS_MERGE(mo);
-      reactor::network::UnixDomainSocket sock(daemon_sock_path());
+      elle::reactor::network::UnixDomainSocket sock(daemon_sock_path());
       auto cmd = [&]
         {
           std::stringstream ss;
@@ -1675,7 +1675,7 @@ namespace infinit
       auto owner = cli.as_user();
       auto name = ifnt.qualified_name(volume_name, owner);
 
-      reactor::network::UnixDomainSocket sock(daemon_sock_path());
+      elle::reactor::network::UnixDomainSocket sock(daemon_sock_path());
       auto cmd = [&]
         {
           std::stringstream ss;
@@ -1713,7 +1713,7 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
       auto name = ifnt.qualified_name(volume_name, owner);
-      reactor::network::UnixDomainSocket sock(daemon_sock_path());
+      elle::reactor::network::UnixDomainSocket sock(daemon_sock_path());
       auto cmd = [&]
         {
           std::stringstream ss;

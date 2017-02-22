@@ -116,8 +116,8 @@ namespace infinit
       INFINIT_ENTREPRISE(
       , dropbox(*this,
                 "Store blocks on Dropbox",
-                das::cli::Options{
-                  {"path", das::cli::Option{
+                elle::das::cli::Options{
+                  {"path", elle::das::cli::Option{
                       '\0', "directory where to store blocks", false}}},
                 cli::name,
                 cli::account,
@@ -128,8 +128,8 @@ namespace infinit
       )
       , filesystem(*this,
                    "Store blocks on local filesystem",
-                   das::cli::Options{
-                     {"path", das::cli::Option{
+                   elle::das::cli::Options{
+                     {"path", elle::das::cli::Option{
                          '\0', "directory where to store blocks", false}}},
                    cli::name,
                    cli::description = boost::none,
@@ -139,8 +139,8 @@ namespace infinit
       INFINIT_ENTREPRISE(
       , gcs(*this,
             "Store blocks on Google Cloud Storage",
-            das::cli::Options{
-              {"path", das::cli::Option{
+            elle::das::cli::Options{
+              {"path", elle::das::cli::Option{
                   '\0', "directory where to store blocks", false}}},
             cli::name,
             cli::account,
@@ -151,8 +151,8 @@ namespace infinit
             cli::path = boost::none)
       , google_drive(*this,
                      "Store blocks on Google Drive",
-                     das::cli::Options{
-                       {"path", das::cli::Option{
+                     elle::das::cli::Options{
+                       {"path", elle::das::cli::Option{
                            '\0', "directory where to store blocks", false}}},
                      cli::name,
                      cli::account,
@@ -162,8 +162,8 @@ namespace infinit
                      cli::path = boost::none)
       , s3(*this,
            "Store blocks on AWS S3",
-           das::cli::Options{
-             {"path", das::cli::Option{
+           elle::das::cli::Options{
+             {"path", elle::das::cli::Option{
                  '\0', "directory where to store blocks", false}}},
            cli::name,
            cli::account,
@@ -298,23 +298,23 @@ namespace infinit
       if (!root)
         root = elle::sprintf("%s_blocks", name);
       auto account = this->cli().infinit().credentials_aws(account_name);
-      auto aws_credentials = aws::Credentials(
+      auto aws_credentials = elle::service::aws::Credentials(
         account->access_key_id,
         account->secret_access_key,
         region,
         bucket,
         root.get(),
         endpoint);
-      aws::S3::StorageClass storage_class = aws::S3::StorageClass::Default;
+      elle::service::aws::S3::StorageClass storage_class = elle::service::aws::S3::StorageClass::Default;
       if (storage_class_str)
       {
         auto sc = boost::algorithm::to_lower_copy(*storage_class_str);
         if (sc == "standard")
-          storage_class = aws::S3::StorageClass::Standard;
+          storage_class = elle::service::aws::S3::StorageClass::Standard;
         else if (sc == "standard_ia")
-          storage_class = aws::S3::StorageClass::StandardIA;
+          storage_class = elle::service::aws::S3::StorageClass::StandardIA;
         else if (sc == "reduced_redundancy")
-          storage_class = aws::S3::StorageClass::ReducedRedundancy;
+          storage_class = elle::service::aws::S3::StorageClass::ReducedRedundancy;
         else
           elle::err<CLIError>("unrecognized storage class: %s",
                            storage_class_str);

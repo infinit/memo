@@ -8,17 +8,17 @@
 #include <elle/log.hh>
 #include <elle/utils.hh>
 
-#include <das/serializer.hh>
+#include <elle/das/serializer.hh>
 
-#include <reactor/network/resolve.hh>
-#include <reactor/network/utp-server.hh>
+#include <elle/reactor/network/resolve.hh>
+#include <elle/reactor/network/utp-server.hh>
 
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh> // FIXME
 
 ELLE_LOG_COMPONENT("infinit.overlay.Stonehenge");
 
-DAS_SERIALIZE(infinit::overlay::StonehengeConfiguration::Peer);
+ELLE_DAS_SERIALIZE(infinit::overlay::StonehengeConfiguration::Peer);
 
 namespace infinit
 {
@@ -56,20 +56,20 @@ namespace infinit
     | Lookup |
     `-------*/
 
-    reactor::Generator<Overlay::WeakMember>
+    elle::reactor::Generator<Overlay::WeakMember>
     Stonehenge::_allocate(model::Address address, int n) const
     {
       return this->_lookup(address, n, false);
     }
 
-    reactor::Generator<Overlay::WeakMember>
+    elle::reactor::Generator<Overlay::WeakMember>
     Stonehenge::_lookup(model::Address address, int n, bool) const
     {
       // Use modulo on the address to determine the owner and yield the n
       // following nodes.
-      return reactor::generator<Overlay::WeakMember>(
+      return elle::reactor::generator<Overlay::WeakMember>(
         [this, address, n]
-        (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+        (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
         {
           int size = this->_peers.size();
           ELLE_ASSERT_LTE(n, size);

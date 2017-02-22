@@ -1,8 +1,8 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_GROUP_HH
 # define INFINIT_MODEL_DOUGHNUT_GROUP_HH
 
-#include <reactor/storage.hh>
-#include <cryptography/rsa/KeyPair.hh>
+#include <elle/reactor/storage.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/GB.hh>
@@ -19,19 +19,19 @@ namespace infinit
       {
       public:
         Group(Doughnut& dht, std::string const& name);
-        Group(Doughnut& dht, cryptography::rsa::PublicKey);
+        Group(Doughnut& dht, elle::cryptography::rsa::PublicKey);
         ~Group();
         void
         create();
-        cryptography::rsa::PublicKey
+        elle::cryptography::rsa::PublicKey
         public_control_key() const;
         GB const&
         block() const;
         GB&
         block();
-        cryptography::rsa::PublicKey
+        elle::cryptography::rsa::PublicKey
         current_public_key() const;
-        cryptography::rsa::KeyPair
+        elle::cryptography::rsa::KeyPair
         current_key() const;
         int
         version() const;
@@ -55,9 +55,9 @@ namespace infinit
         remove_admin(model::User const& user);
         void
         remove_admin(elle::Buffer const& user_data);
-        std::vector<cryptography::rsa::KeyPair>
+        std::vector<elle::cryptography::rsa::KeyPair>
         group_keys();
-        std::vector<cryptography::rsa::PublicKey>
+        std::vector<elle::cryptography::rsa::PublicKey>
         group_public_keys();
         void
         destroy();
@@ -66,15 +66,15 @@ namespace infinit
         ELLE_ATTRIBUTE_rw(boost::optional<std::string>, description);
       private:
         void _stack_push();
-        cryptography::rsa::KeyPair _control_key();
-        using GroupPublicBlockContent = std::vector<cryptography::rsa::PublicKey>;
-        using GroupPrivateBlockContent = std::vector<cryptography::rsa::KeyPair>;
+        elle::cryptography::rsa::KeyPair _control_key();
+        using GroupPublicBlockContent = std::vector<elle::cryptography::rsa::PublicKey>;
+        using GroupPrivateBlockContent = std::vector<elle::cryptography::rsa::KeyPair>;
         ELLE_ATTRIBUTE(Doughnut&, dht);
         ELLE_ATTRIBUTE_R(std::string, name);
-        ELLE_ATTRIBUTE(boost::optional<cryptography::rsa::PublicKey>,
+        ELLE_ATTRIBUTE(boost::optional<elle::cryptography::rsa::PublicKey>,
                        public_control_key);
         ELLE_ATTRIBUTE(std::unique_ptr<GB>, block);
-        static reactor::LocalStorage<std::vector<cryptography::rsa::PublicKey>> _stack;
+        static elle::reactor::LocalStorage<std::vector<elle::cryptography::rsa::PublicKey>> _stack;
       };
 
       class GroupConflictResolver : public ConflictResolver
@@ -106,7 +106,7 @@ namespace infinit
         description() const override;
 
         Action _action;
-        std::unique_ptr<cryptography::rsa::PublicKey> _key;
+        std::unique_ptr<elle::cryptography::rsa::PublicKey> _key;
         boost::optional<std::string> _name;
         boost::optional<std::string> _description;
         using serialization_tag = infinit::serialization_tag;

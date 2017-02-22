@@ -1,7 +1,7 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_FWD_HH
 # define INFINIT_MODEL_DOUGHNUT_FWD_HH
 
-# include <das/printer.hh>
+# include <elle/das/printer.hh>
 
 namespace infinit
 {
@@ -14,7 +14,7 @@ namespace infinit
       class Local;
       class Peer;
       class Remote;
-      using das::operator <<;
+      using elle::das::operator <<;
     }
   }
 }

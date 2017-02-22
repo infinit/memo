@@ -2,7 +2,7 @@
 
 #include <boost/optional.hpp>
 
-#include <das/cli.hh>
+#include <elle/das/cli.hh>
 
 #include <infinit/cli/Object.hh>
 #include <infinit/cli/Mode.hh>

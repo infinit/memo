@@ -8,10 +8,10 @@
 #include <elle/bench.hh>
 #include <elle/serialization/json/MissingKey.hh>
 
-#include <cryptography/rsa/PublicKey.hh>
-#include <cryptography/hash.hh>
+#include <elle/cryptography/rsa/PublicKey.hh>
+#include <elle/cryptography/hash.hh>
 
-#include <reactor/for-each.hh>
+#include <elle/reactor/for-each.hh>
 
 #include <infinit/RPC.hh>
 #include <infinit/model/MissingBlock.hh>
@@ -47,10 +47,10 @@ namespace infinit
           {
             return f();
           }
-          catch(reactor::network::Exception const& e)
+          catch(elle::reactor::network::Exception const& e)
           {
             ELLE_TRACE("network exception in paxos: %s", e);
-            throw athena::paxos::Unavailable();
+            throw elle::athena::paxos::Unavailable();
           }
         }
 
@@ -206,7 +206,7 @@ namespace infinit
             if (!member)
             {
               ELLE_WARN("%s: peer %f was deleted", this, this->id());
-              throw athena::paxos::Unavailable();
+              throw elle::athena::paxos::Unavailable();
             }
             return member;
           }
@@ -328,7 +328,7 @@ namespace infinit
               if (!value.is<std::shared_ptr<blocks::Block>>())
               {
                 ELLE_TRACE("unmanageable accept on non-block value");
-                throw reactor::network::Exception("Peer unavailable");
+                throw elle::reactor::network::Exception("Peer unavailable");
               }
               auto accept = make_rpc<Paxos::PaxosClient::Proposal (
                 PaxosServer::Quorum peers,
@@ -408,7 +408,7 @@ namespace infinit
             });
           if (this->_rebalance_inspect && this->_factor > 1)
             this->_rebalance_inspector.reset(
-              new reactor::Thread(
+              new elle::reactor::Thread(
                 elle::sprintf("%s: rebalancing inspector", this),
                 [this]
                 {
@@ -419,7 +419,7 @@ namespace infinit
                                      this);
                     for (auto address: this->storage()->list())
                     {
-                      reactor::sleep(100_ms);
+                      elle::reactor::sleep(100_ms);
                       try
                       {
                         auto b = this->_load(address);
@@ -483,7 +483,7 @@ namespace infinit
                   {
                     if (auto peer = wpeer.lock())
                       q.insert(peer->id());
-                    elle::With<reactor::Thread::NonInterruptible>() << [&] {
+                    elle::With<elle::reactor::Thread::NonInterruptible>() << [&] {
                         wpeer.reset();
                     };
                   }
@@ -592,7 +592,7 @@ namespace infinit
           auto it = this->_node_timeouts.emplace(
             std::piecewise_construct,
             std::forward_as_tuple(id),
-            std::forward_as_tuple(reactor::scheduler().io_service()));
+            std::forward_as_tuple(elle::reactor::scheduler().io_service()));
           it.first->second.cancel();
           it.first->second.expires_from_now(
             boost::posix_time::seconds(
@@ -604,7 +604,7 @@ namespace infinit
             {
               if (!error)
                 this->_evict_threads.emplace_back(
-                  new reactor::Thread(
+                  new elle::reactor::Thread(
                     elle::sprintf("%s: evict %f", this, id),
                     [this, id]
                     {
@@ -753,7 +753,7 @@ namespace infinit
                   }
                   else
                     ELLE_DEBUG("rebalance from %f to %f", q.quorum, new_q);
-                  elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+                  elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
                   {
                     bool rebalanced = false;
                     for (auto peer: new_q)
@@ -762,7 +762,7 @@ namespace infinit
                         continue;
                       scope.run_background(
                         elle::sprintf("%s: duplicate to %f",
-                                      reactor::scheduler().current()->name(),
+                                      elle::reactor::scheduler().current()->name(),
                                       peer),
                         [&, peer]
                         {
@@ -788,7 +788,7 @@ namespace infinit
                           }
                         });
                     }
-                    reactor::wait(scope);
+                    elle::reactor::wait(scope);
                     if (rebalanced)
                       this->_rebalanced(address);
                   };
@@ -1472,7 +1472,7 @@ namespace infinit
           {
             std::vector<std::shared_ptr<doughnut::Peer>> reached;
             PaxosClient::Quorum q;
-            elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+            elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
             {
               for (auto wpeer: owners)
               {
@@ -1578,7 +1578,7 @@ namespace infinit
           for (auto r: hits)
             peers[r.first].push_back(
               std::make_unique<PaxosPeer>(r.second, r.first, versions.at(r.first)));
-          reactor::for_each_parallel(
+          elle::reactor::for_each_parallel(
             peers,
             [&] (std::pair<Address const, PaxosClient::Peers>& p)
             {
@@ -2001,13 +2001,16 @@ namespace infinit
   }
 }
 
-namespace athena
+namespace elle
 {
-  namespace paxos
+  namespace athena
   {
-    static const elle::serialization::Hierarchy<elle::Exception>::
-    Register<TooFewPeers> _register_serialization;
-    static const elle::serialization::Hierarchy<elle::Exception>::
-    Register<Unavailable> _register_serialization_unavailable;
+    namespace paxos
+    {
+      static const elle::serialization::Hierarchy<elle::Exception>::
+      Register<TooFewPeers> _register_serialization;
+      static const elle::serialization::Hierarchy<elle::Exception>::
+      Register<Unavailable> _register_serialization_unavailable;
+    }
   }
 }

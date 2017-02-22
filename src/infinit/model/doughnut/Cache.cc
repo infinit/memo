@@ -107,7 +107,7 @@ namespace infinit
             disk_cache_size ? disk_cache_size.get() : 512_mB)
           , _disk_cache_used(0)
           , _cleanup_thread(
-            new reactor::Thread(elle::sprintf("%s cleanup", *this),
+            new elle::reactor::Thread(elle::sprintf("%s cleanup", *this),
                                 [this] { this->_cleanup();}))
         {
           ELLE_TRACE_SCOPE(
@@ -313,7 +313,7 @@ namespace infinit
               return _fetch(address, local_version);
             }
             it = this->_pending.insert(std::make_pair(
-              address, std::make_shared<reactor::Barrier>())).first;
+              address, std::make_shared<elle::reactor::Barrier>())).first;
             auto b = it->second;
             elle::SafeFinally sf([&]
               {
@@ -539,7 +539,7 @@ namespace infinit
                   }
                 }
               }
-            reactor::sleep(
+            elle::reactor::sleep(
               boost::posix_time::seconds(
                 this->_cache_invalidation.count()) / 10);
           }

@@ -6,9 +6,9 @@
 #include <boost/asio.hpp>
 #include <boost/optional.hpp>
 
-#include <das/Symbol.hh>
-#include <das/model.hh>
-#include <das/serializer.hh>
+#include <elle/das/Symbol.hh>
+#include <elle/das/model.hh>
+#include <elle/das/serializer.hh>
 
 #include <infinit/serialization.hh>
 
@@ -16,27 +16,27 @@ namespace infinit
 {
   namespace mount_options
   {
-    DAS_SYMBOL(as);
-    DAS_SYMBOL(async);
-    DAS_SYMBOL(cache);
-    DAS_SYMBOL(cache_disk_size);
-    DAS_SYMBOL(cache_ram_invalidation);
-    DAS_SYMBOL(cache_ram_size);
-    DAS_SYMBOL(cache_ram_ttl);
+    ELLE_DAS_SYMBOL(as);
+    ELLE_DAS_SYMBOL(async);
+    ELLE_DAS_SYMBOL(cache);
+    ELLE_DAS_SYMBOL(cache_disk_size);
+    ELLE_DAS_SYMBOL(cache_ram_invalidation);
+    ELLE_DAS_SYMBOL(cache_ram_size);
+    ELLE_DAS_SYMBOL(cache_ram_ttl);
 #ifndef INFINIT_WINDOWS
-    DAS_SYMBOL(enable_monitoring); // aka monitoring.
+    ELLE_DAS_SYMBOL(enable_monitoring); // aka monitoring.
 #endif
-    DAS_SYMBOL(fetch);             // aka fetch_endpoints.
-    DAS_SYMBOL(fuse_options);      // aka fuse_option.
-    DAS_SYMBOL(hub_url);
-    DAS_SYMBOL(listen_address);    // aka listen
-    DAS_SYMBOL(mountpoint);
-    DAS_SYMBOL(peers);             // aka peer.
-    DAS_SYMBOL(poll_beyond);       // aka fetch_endpoints_interval.
-    DAS_SYMBOL(push);              // aka push_endpoints.
-    DAS_SYMBOL(publish);           // aka push && fetch.
-    DAS_SYMBOL(rdv);
-    DAS_SYMBOL(readonly);
+    ELLE_DAS_SYMBOL(fetch);             // aka fetch_endpoints.
+    ELLE_DAS_SYMBOL(fuse_options);      // aka fuse_option.
+    ELLE_DAS_SYMBOL(hub_url);
+    ELLE_DAS_SYMBOL(listen_address);    // aka listen
+    ELLE_DAS_SYMBOL(mountpoint);
+    ELLE_DAS_SYMBOL(peers);             // aka peer.
+    ELLE_DAS_SYMBOL(poll_beyond);       // aka fetch_endpoints_interval.
+    ELLE_DAS_SYMBOL(push);              // aka push_endpoints.
+    ELLE_DAS_SYMBOL(publish);           // aka push && fetch.
+    ELLE_DAS_SYMBOL(rdv);
+    ELLE_DAS_SYMBOL(readonly);
   }
 
   struct MountOptions
@@ -70,7 +70,7 @@ namespace infinit
     boost::optional<bool> enable_monitoring;
 #endif
     using serialization_tag = infinit::serialization_tag;
-    using Model = das::Model<
+    using Model = elle::das::Model<
       MountOptions,
       decltype(elle::meta::list(
                  mount_options::hub_url,
@@ -98,4 +98,4 @@ namespace infinit
   };
 }
 
-DAS_SERIALIZE(infinit::MountOptions);
+ELLE_DAS_SERIALIZE(infinit::MountOptions);

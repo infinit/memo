@@ -46,7 +46,7 @@ namespace infinit
         ELLE_DEBUG("get path: %s", this->_path(key));
         return this->_dropbox.get(this->_path(key));
       }
-      catch (dropbox::NoSuchFile const&)
+      catch (elle::service::dropbox::NoSuchFile const&)
       {
         throw MissingKey(key);
       }
@@ -85,7 +85,7 @@ namespace infinit
       {
         this->_dropbox.delete_(this->_path(key));
       }
-      catch (dropbox::NoSuchFile const&)
+      catch (elle::service::dropbox::NoSuchFile const&)
       {
         throw MissingKey(key);
       }
@@ -113,7 +113,7 @@ namespace infinit
         }
         return res;
       }
-      catch (dropbox::NoSuchFile const& e)
+      catch (elle::service::dropbox::NoSuchFile const& e)
       {
         return {};
       }
@@ -130,7 +130,7 @@ namespace infinit
         ELLE_DEBUG("status check on %x: %s", p, metadata? "exists" : "unknown");
         return metadata? BlockStatus::exists : BlockStatus::unknown;
       }
-      catch (dropbox::NoSuchFile const &)
+      catch (elle::service::dropbox::NoSuchFile const &)
       {
         ELLE_DEBUG("status check on %s: %s", p, "missing");
         return BlockStatus::missing;

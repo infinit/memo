@@ -9,19 +9,19 @@ namespace elle
   namespace serialization
   {
     template <>
-    struct Serialize<reactor::Duration>
+    struct Serialize<elle::reactor::Duration>
     {
       typedef double Type;
 
       static
       double
-      convert(reactor::Duration const& d)
+      convert(elle::reactor::Duration const& d)
       {
         return (double)d.total_microseconds() / 1000000.0;
       }
 
       static
-      reactor::Duration
+      elle::reactor::Duration
       convert(double val)
       {
         return boost::posix_time::microseconds(val * 1000000.0);
@@ -35,9 +35,9 @@ namespace infinit
   namespace storage
   {
     Latency::Latency(std::unique_ptr<Storage> backend,
-                     reactor::DurationOpt latency_get,
-                     reactor::DurationOpt latency_set,
-                     reactor::DurationOpt latency_erase
+                     elle::reactor::DurationOpt latency_get,
+                     elle::reactor::DurationOpt latency_set,
+                     elle::reactor::DurationOpt latency_erase
                      )
     : _backend(std::move(backend))
     , _latency_get(latency_get)
@@ -49,7 +49,7 @@ namespace infinit
     Latency::_get(Key k) const
     {
       if (_latency_get)
-        reactor::sleep(*_latency_get);
+        elle::reactor::sleep(*_latency_get);
       return _backend->get(k);
     }
 
@@ -57,7 +57,7 @@ namespace infinit
     Latency::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
       if (_latency_set)
-        reactor::sleep(*_latency_set);
+        elle::reactor::sleep(*_latency_set);
       _backend->set(k, value, insert, update);
 
       return 0;
@@ -67,7 +67,7 @@ namespace infinit
     Latency::_erase(Key k)
     {
       if (_latency_erase)
-        reactor::sleep(*_latency_erase);
+        elle::reactor::sleep(*_latency_erase);
       _backend->erase(k);
 
       return 0;
@@ -83,7 +83,7 @@ namespace infinit
     make(std::vector<std::string> const& args)
     {
       std::unique_ptr<Storage> backend = instantiate(args[0], args[1]);
-      reactor::Duration latency_get, latency_set, latency_erase;
+      elle::reactor::Duration latency_get, latency_set, latency_erase;
       if (args.size() > 2)
         latency_get = boost::posix_time::milliseconds(std::stoi(args[2]));
       if (args.size() > 3)
@@ -98,9 +98,9 @@ namespace infinit
     public StorageConfig
     {
     public:
-      reactor::DurationOpt latency_get;
-      reactor::DurationOpt latency_set;
-      reactor::DurationOpt latency_erase;
+      elle::reactor::DurationOpt latency_get;
+      elle::reactor::DurationOpt latency_set;
+      elle::reactor::DurationOpt latency_erase;
       std::shared_ptr<StorageConfig> storage;
 
       LatencyStorageConfig(std::string name,

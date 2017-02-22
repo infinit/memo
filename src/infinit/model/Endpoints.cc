@@ -1,6 +1,6 @@
 #include <elle/os/environ.hh>
 
-#include <reactor/network/resolve.hh>
+#include <elle/reactor/network/resolve.hh>
 
 #include <infinit/model/Endpoints.hh>
 
@@ -36,7 +36,7 @@ namespace infinit
 
     Endpoint::Endpoint(std::string const& address,
                        int port)
-      : Endpoint(reactor::network::resolve_udp(address, std::to_string(port)))
+      : Endpoint(elle::reactor::network::resolve_udp(address, std::to_string(port)))
     {}
 
     Endpoint::Endpoint(boost::asio::ip::tcp::endpoint ep)
@@ -57,7 +57,7 @@ namespace infinit
         elle::err("invalid endpoint: %s", repr);
       std::string saddr = repr.substr(0, sep);
       std::string sport = repr.substr(sep + 1);
-      auto ep = reactor::network::resolve_udp(saddr, sport, !v6);
+      auto ep = elle::reactor::network::resolve_udp(saddr, sport, !v6);
       this->_address = ep.address();
       this->_port = ep.port();
     }

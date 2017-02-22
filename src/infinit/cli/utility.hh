@@ -5,9 +5,9 @@
 #include <boost/filesystem/path.hpp>
 
 #include <elle/unordered_map.hh>
-#include <das/cli.hh>
+#include <elle/das/cli.hh>
 
-#include <reactor/network/upnp.hh>
+#include <elle/reactor/network/upnp.hh>
 
 #include <infinit/Network.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -44,7 +44,7 @@ namespace infinit
     {
       std::vector<std::string> addresses;
       int port;
-      using Model = das::Model<
+      using Model = elle::das::Model<
         Endpoints,
         decltype(elle::meta::list(infinit::symbols::addresses,
                                   infinit::symbols::port))>;
@@ -57,12 +57,12 @@ namespace infinit
       if (opt)
         return *opt;
       else
-        throw das::cli::MissingOption(name);
+        throw elle::das::cli::MissingOption(name);
     }
   }
 }
 
-DAS_SERIALIZE(infinit::cli::Endpoints);
+ELLE_DAS_SERIALIZE(infinit::cli::Endpoints);
 
 namespace infinit
 {
@@ -88,9 +88,9 @@ namespace infinit
       ELLE_ATTRIBUTE(std::string, url);
       ELLE_ATTRIBUTE(infinit::Network const&, network);
       ELLE_ATTRIBUTE(infinit::User, self);
-      ELLE_ATTRIBUTE(std::shared_ptr<reactor::network::UPNP>, upnp);
-      ELLE_ATTRIBUTE(reactor::network::PortMapping, port_map_tcp);
-      ELLE_ATTRIBUTE(reactor::network::PortMapping, port_map_udp);
+      ELLE_ATTRIBUTE(std::shared_ptr<elle::reactor::network::UPNP>, upnp);
+      ELLE_ATTRIBUTE(elle::reactor::network::PortMapping, port_map_tcp);
+      ELLE_ATTRIBUTE(elle::reactor::network::PortMapping, port_map_udp);
     };
 
     std::unique_ptr<std::istream>

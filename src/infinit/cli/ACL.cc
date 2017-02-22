@@ -60,7 +60,7 @@ namespace infinit
             continue;
           }
           action(it->path().string(), args...);
-          reactor::yield();
+          elle::reactor::yield();
         }
       }
 
@@ -257,7 +257,7 @@ namespace infinit
             }
             return res;
           }
-          catch (reactor::Terminate const&)
+          catch (elle::reactor::Terminate const&)
           {
             throw;
           }
@@ -603,7 +603,7 @@ namespace infinit
                    bool fallback)
     {
       if (paths.empty())
-        throw das::cli::MissingOption("path");
+        throw elle::das::cli::MissingOption("path");
       for (auto const& path: paths)
       {
         enforce_in_mountpoint(path, fallback);
@@ -781,13 +781,13 @@ namespace infinit
       auto omode = mode_get(others_mode_name);
       {
         if (paths.empty())
-          throw das::cli::MissingOption("path");
+          throw elle::das::cli::MissingOption("path");
         auto combined = collate_users(users, boost::none, boost::none, groups);
         // auto users = combined ? combined.get() : std::vector<std::string>();
         if (mode_name && combined.empty())
           elle::err<CLIError>("must specify user when setting mode");
         if (!mode_name && !combined.empty())
-          throw das::cli::MissingOption("mode");
+          throw elle::das::cli::MissingOption("mode");
         if (inherit && disinherit)
           elle::err<CLIError>("inherit and disable-inherit are exclusive");
         if (!inherit && !disinherit && !mode_name && !others_mode_name)

@@ -4,7 +4,7 @@
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/Symlink.hh>
 #include <infinit/filesystem/umbrella.hh>
-#include <reactor/filesystem.hh>
+#include <elle/reactor/filesystem.hh>
 
 namespace infinit
 {

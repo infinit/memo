@@ -1,7 +1,7 @@
 #ifndef INFINIT_MODEL_BLOCKS_ACL_BLOCK_HH
 # define INFINIT_MODEL_BLOCKS_ACL_BLOCK_HH
 
-# include <cryptography/rsa/KeyPair.hh>
+# include <elle/cryptography/rsa/KeyPair.hh>
 
 # include <infinit/model/User.hh>
 # include <infinit/model/blocks/MutableBlock.hh>

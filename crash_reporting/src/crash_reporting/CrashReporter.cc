@@ -9,8 +9,8 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/range/algorithm/count_if.hpp>
 
-#include <reactor/http/exceptions.hh>
-#include <reactor/http/Request.hh>
+#include <elle/reactor/http/exceptions.hh>
+#include <elle/reactor/http/Request.hh>
 
 #ifdef INFINIT_LINUX
 # include <client/linux/handler/exception_handler.h>
@@ -132,9 +132,9 @@ namespace crash_reporting
       return;
     }
     ELLE_DEBUG("%s: uploading: %s", *this, path);
-    reactor::http::Request r(this->_crash_url,
-                             reactor::http::Method::PUT,
-                             "application/json");
+    elle::reactor::http::Request r(this->_crash_url,
+                                   elle::reactor::http::Method::PUT,
+                                   "application/json");
     elle::Buffer dump;
     elle::IOStream stream(dump.ostreambuf());
     elle::format::base64::Stream base64_stream(stream);
@@ -155,7 +155,7 @@ namespace crash_reporting
       };
     ELLE_DUMP("%s: content to upload: %s", *this, content);
     elle::json::write(r, content);
-    if (r.status() == reactor::http::StatusCode::OK)
+    if (r.status() == elle::reactor::http::StatusCode::OK)
     {
       ELLE_DUMP("%s: removing uploaded crash dump: %s", *this, path);
       f.close();
@@ -185,7 +185,7 @@ namespace crash_reporting
       {
         _upload(path);
       }
-      catch (reactor::http::RequestError const& e)
+      catch (elle::reactor::http::RequestError const& e)
       {
         ELLE_TRACE("%s: unable to complete upload of %s: %s", *this, path, e);
       }

@@ -75,23 +75,23 @@ namespace infinit
           {
             // Try connecting until we reach the RPC timeout or the Remote
             // softfail.
-            reactor::Duration const delay =
+            elle::reactor::Duration const delay =
               boost::posix_time::millisec(
                 std::chrono::duration_cast<std::chrono::milliseconds>(
                   std::min(rpc_timeout_delay, soft_fail_delay)).count());
-            if (reactor::wait(this->_connected, delay))
+            if (elle::reactor::wait(this->_connected, delay))
             {
               auto const rpc_timeout_delay =
                 rpc_timeout - (std::chrono::system_clock::now() - rpc_start);
-              reactor::Duration const delay =
+              elle::reactor::Duration const delay =
                 boost::posix_time::millisec(
                   std::chrono::duration_cast<std::chrono::milliseconds>(
                     rpc_timeout_delay).count());
               boost::asio::deadline_timer timeout(
-                reactor::scheduler().io_service(), delay);
+                elle::reactor::scheduler().io_service(), delay);
               if (this->doughnut().soft_fail_running())
                 timeout.async_wait(
-                  [&, this, t = reactor::scheduler().current()]
+                  [&, this, t = elle::reactor::scheduler().current()]
                   (boost::system::error_code const& e)
                   {
                     if (!e)
@@ -99,8 +99,8 @@ namespace infinit
                       ELLE_TRACE("%s: soft timeout on \"%s\" after %s",
                                  this, name, delay);
                       this->_disconnected_exception =
-                        std::make_exception_ptr(reactor::network::TimeOut());
-                      t->raise_and_wake<reactor::network::TimeOut>();
+                        std::make_exception_ptr(elle::reactor::network::TimeOut());
+                      t->raise_and_wake<elle::reactor::network::TimeOut>();
                       give_up = true;
                     }
                   });
@@ -113,12 +113,12 @@ namespace infinit
               give_up = true;
             }
           }
-          catch(reactor::network::Exception const& e)
+          catch(elle::reactor::network::Exception const& e)
           {
             ELLE_TRACE("%s: network exception when invoking %s: %s",
                        this, name, e);
           }
-          catch(infinit::protocol::Serializer::EOF const& e)
+          catch(elle::protocol::Serializer::EOF const& e)
           {
             ELLE_TRACE("%s: EOF when invoking %s: %s", this, name, e);
           }
@@ -132,7 +132,7 @@ namespace infinit
             {
               ELLE_TRACE("%s: give up rpc %s after %s",
                          this, name, rpc_timeout);
-              throw reactor::network::TimeOut();
+              throw elle::reactor::network::TimeOut();
             }
             else
             {

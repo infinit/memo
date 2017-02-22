@@ -9,10 +9,10 @@
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/MissingBlock.hh>
 
-#include <reactor/Channel.hh>
-#include <reactor/Scope.hh>
-#include <reactor/scheduler.hh>
-#include <reactor/network/exception.hh>
+#include <elle/reactor/Channel.hh>
+#include <elle/reactor/Scope.hh>
+#include <elle/reactor/scheduler.hh>
+#include <elle/reactor/network/exception.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Consensus");
 
@@ -175,7 +175,7 @@ namespace infinit
           // destructor.
           auto peers = this->doughnut().overlay()->lookup(address, factor);
           int count = 0;
-          elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
+          elle::With<elle::reactor::Scope>() <<  [&] (elle::reactor::Scope& s)
           {
             for (auto p: peers)
             {
@@ -185,7 +185,7 @@ namespace infinit
                 {
                   auto const cleanup = [&]
                     {
-                      elle::With<reactor::Thread::NonInterruptible>() << [&]
+                      elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
                       {
                         lock.reset();
                         elle::unconst(p).reset();
@@ -196,13 +196,13 @@ namespace infinit
                     lock->remove(address, rs);
                     cleanup();
                   }
-                  catch (reactor::network::Exception const& e)
+                  catch (elle::reactor::network::Exception const& e)
                   {
                     ELLE_TRACE("network exception removing %f: %s",
                                address, e.what());
                     cleanup();
                   }
-                  catch (infinit::protocol::Serializer::EOF const&)
+                  catch (elle::protocol::Serializer::EOF const&)
                   {
                     ELLE_TRACE("EOF while removing %f", address);
                     cleanup();
@@ -217,7 +217,7 @@ namespace infinit
                 else
                 {
                   ELLE_TRACE("peer was destroyed while removing");
-                  elle::With<reactor::Thread::NonInterruptible>() << [&]
+                  elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
                   {
                     elle::unconst(p).reset();
                   };
@@ -226,7 +226,7 @@ namespace infinit
             }
             try
             {
-              reactor::wait(s);
+              elle::reactor::wait(s);
             }
             catch (...)
             {
@@ -239,21 +239,21 @@ namespace infinit
 
         std::unique_ptr<blocks::Block>
         Consensus::fetch_from_members(
-          reactor::Generator<overlay::Overlay::WeakMember>& peers,
+          elle::reactor::Generator<overlay::Overlay::WeakMember>& peers,
           Address address,
           boost::optional<int> local_version)
         {
           std::unique_ptr<blocks::Block> result;
-          reactor::Channel<overlay::Overlay::Member> connected;
+          elle::reactor::Channel<overlay::Overlay::Member> connected;
           typedef
-            reactor::Generator<overlay::Overlay::WeakMember> PeerGenerator;
+            elle::reactor::Generator<overlay::Overlay::WeakMember> PeerGenerator;
           bool hit = false;
           // try connecting to all peers in parallel
           auto connected_peers = PeerGenerator(
             [&](PeerGenerator::yielder yield)
             {
-              elle::With<reactor::Scope>() <<
-              [&peers,&yield,&hit] (reactor::Scope& s)
+              elle::With<elle::reactor::Scope>() <<
+              [&peers,&yield,&hit] (elle::reactor::Scope& s)
               {
                 for (auto wp: peers)
                 {
@@ -278,7 +278,7 @@ namespace infinit
                     }
                   });
                 }
-                reactor::wait(s);
+                elle::reactor::wait(s);
               };
           });
           // try to get on all connected peers sequentially to avoid wasting

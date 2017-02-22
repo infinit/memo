@@ -64,18 +64,18 @@ namespace infinit
       | Keys |
       `-----*/
       public:
-        cryptography::rsa::PublicKey
+        elle::cryptography::rsa::PublicKey
         resolve_key(int);
-        std::vector<cryptography::rsa::PublicKey>
+        std::vector<elle::cryptography::rsa::PublicKey>
         resolve_keys(std::vector<int> const& ids);
-        std::unordered_map<int, cryptography::rsa::PublicKey>
+        std::unordered_map<int, elle::cryptography::rsa::PublicKey>
         resolve_all_keys();
       protected:
         virtual
-        std::vector<cryptography::rsa::PublicKey>
+        std::vector<elle::cryptography::rsa::PublicKey>
         _resolve_keys(std::vector<int> const&) = 0;
         virtual
-        std::unordered_map<int, cryptography::rsa::PublicKey>
+        std::unordered_map<int, elle::cryptography::rsa::PublicKey>
         _resolve_all_keys() = 0;
 
       /*----------.

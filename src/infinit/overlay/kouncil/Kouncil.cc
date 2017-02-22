@@ -4,7 +4,7 @@
 #include <elle/make-vector.hh>
 #include <elle/range.hh>
 
-#include <reactor/network/exception.hh>
+#include <elle/reactor/network/exception.hh>
 
 // FIXME: can be avoided with a `Dock` accessor in `Overlay`
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -83,7 +83,7 @@ namespace infinit
         boost::optional<int> eviction_delay)
         : Overlay(dht, local)
         , _cleaning(false)
-        , _broadcast_thread(new reactor::Thread(
+        , _broadcast_thread(new elle::reactor::Thread(
                               elle::sprintf("%s: broadcast", this),
                               std::bind(&Kouncil::_broadcast, this)))
         , _eviction_delay(eviction_delay.value_or(12000))
@@ -453,12 +453,12 @@ namespace infinit
       | Lookup |
       `-------*/
 
-      reactor::Generator<Overlay::WeakMember>
+      elle::reactor::Generator<Overlay::WeakMember>
       Kouncil::_allocate(Address address, int n) const
       {
-        return reactor::generator<Overlay::WeakMember>(
+        return elle::reactor::generator<Overlay::WeakMember>(
           [this, address, n]
-          (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+          (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
           {
             ELLE_DEBUG("%s: selecting %s nodes from %s peers",
                        this, n, this->_peers.size());
@@ -477,12 +477,12 @@ namespace infinit
           });
       }
 
-      reactor::Generator<Overlay::WeakMember>
+      elle::reactor::Generator<Overlay::WeakMember>
       Kouncil::_lookup(Address address, int n, bool) const
       {
-        return reactor::generator<Overlay::WeakMember>(
+        return elle::reactor::generator<Overlay::WeakMember>(
           [this, address, n]
-          (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+          (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
           {
             int count = 0;
             for (auto const& entry:
@@ -525,7 +525,7 @@ namespace infinit
                       }
                     }
                   }
-                  catch (reactor::network::Exception const& e)
+                  catch (elle::reactor::network::Exception const& e)
                   {
                     ELLE_DEBUG("skipping peer with network issue: %s (%s)",
                                peer, e);
@@ -551,7 +551,7 @@ namespace infinit
       void
       Kouncil::_perform(std::string const& name, std::function<void()> job)
       {
-        this->_tasks.emplace_back(new reactor::Thread(name, job));
+        this->_tasks.emplace_back(new elle::reactor::Thread(name, job));
         for (unsigned i=0; i<this->_tasks.size(); ++i)
           if (!this->_tasks[i] || this->_tasks[i]->done())
           {
@@ -670,7 +670,7 @@ namespace infinit
             this->_discover(npi);
           }
         }
-        catch (reactor::network::Exception const& e)
+        catch (elle::reactor::network::Exception const& e)
         {
           ELLE_TRACE("%s: network exception advertising %s: %s", this, r, e);
           // nothing to do, disconnected() will be emited and handled
@@ -759,7 +759,7 @@ namespace infinit
 
       Kouncil::StaleEndpoint::StaleEndpoint(NodeLocation const& l)
         : NodeLocation(l)
-        , _retry_timer(reactor::scheduler().io_service())
+        , _retry_timer(elle::reactor::scheduler().io_service())
         , _retry_counter(0)
       {}
 

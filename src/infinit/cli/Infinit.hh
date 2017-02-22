@@ -2,8 +2,8 @@
 
 #include <elle/meta.hh>
 
-#include <das/bound-method.hh>
-#include <das/named.hh>
+#include <elle/das/bound-method.hh>
+#include <elle/das/named.hh>
 
 #include <infinit/cli/fwd.hh>
 
@@ -36,8 +36,8 @@ namespace infinit
   namespace cli
   {
     using InfinitCallable =
-      decltype(das::named::function(
-                 das::bind_method(std::declval<Infinit&>(), cli::call),
+      decltype(elle::das::named::function(
+                 elle::das::bind_method(std::declval<Infinit&>(), cli::call),
                  help = false, version = false));
 
     class Infinit

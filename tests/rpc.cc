@@ -1,12 +1,12 @@
 #include <elle/test.hh>
 
-#include <reactor/scheduler.hh>
-#include <reactor/Scope.hh>
-#include <reactor/network/tcp-server.hh>
-#include <reactor/network/tcp-socket.hh>
+#include <elle/reactor/scheduler.hh>
+#include <elle/reactor/Scope.hh>
+#include <elle/reactor/network/tcp-server.hh>
+#include <elle/reactor/network/tcp-socket.hh>
 
-#include <protocol/Serializer.hh>
-#include <protocol/ChanneledStream.hh>
+#include <elle/protocol/Serializer.hh>
+#include <elle/protocol/ChanneledStream.hh>
 
 #include <infinit/RPC.hh>
 #include <infinit/utility.hh>
@@ -18,7 +18,7 @@ struct Server
   Server(std::function<void (infinit::RPCServer&)> rpcs = {})
     : server()
     , server_thread(
-      new reactor::Thread("server", std::bind(&Server::serve, this)))
+      new elle::reactor::Thread("server", std::bind(&Server::serve, this)))
     , rpcs(rpcs)
   {
     server.listen();
@@ -32,23 +32,23 @@ struct Server
     if (this->rpcs)
       this->rpcs(s);
     s.add("succ", std::function<int (int)>([] (int x) { return x + 1; }));
-    infinit::protocol::Serializer serializer(*socket, infinit::version(), false);
-    auto channels = infinit::protocol::ChanneledStream{serializer};
+    elle::protocol::Serializer serializer(*socket, infinit::version(), false);
+    auto channels = elle::protocol::ChanneledStream{serializer};
     this->channels = &channels;
     s.serve(channels);
     this->channels = nullptr;
   }
 
-  reactor::network::TCPSocket
+  elle::reactor::network::TCPSocket
   connect()
   {
-    return reactor::network::TCPSocket("127.0.0.1", this->server.port());
+    return elle::reactor::network::TCPSocket("127.0.0.1", this->server.port());
   }
 
-  reactor::network::TCPServer server;
-  reactor::Thread::unique_ptr server_thread;
+  elle::reactor::network::TCPServer server;
+  elle::reactor::Thread::unique_ptr server_thread;
   std::function<void (infinit::RPCServer&)> rpcs;
-  infinit::protocol::ChanneledStream* channels;
+  elle::protocol::ChanneledStream* channels;
 };
 
 ELLE_TEST_SCHEDULED(move)
@@ -62,8 +62,8 @@ ELLE_TEST_SCHEDULED(move)
               { return std::make_unique<int>(a + *b); }));
     });
   auto stream = s.connect();
-  infinit::protocol::Serializer serializer(stream, infinit::version(), false);
-  auto channels = infinit::protocol::ChanneledStream{serializer};
+  elle::protocol::Serializer serializer(stream, infinit::version(), false);
+  auto channels = elle::protocol::ChanneledStream{serializer};
   infinit::RPC<std::unique_ptr<int> (int, std::unique_ptr<int>)>
     rpc("coin", channels, infinit::version());
   try
@@ -80,8 +80,8 @@ ELLE_TEST_SCHEDULED(unknown)
 {
   Server s;
   auto stream = s.connect();
-  infinit::protocol::Serializer serializer(stream, infinit::version(), false);
-  auto channels = infinit::protocol::ChanneledStream{serializer};
+  elle::protocol::Serializer serializer(stream, infinit::version(), false);
+  auto channels = elle::protocol::ChanneledStream{serializer};
   infinit::RPC<int (int)> unknown("unknown", channels, infinit::version());
   BOOST_CHECK_THROW(unknown(0), infinit::UnknownRPC);
   infinit::RPC<int (int)> succ("succ", channels, infinit::version());
@@ -100,10 +100,10 @@ ELLE_TEST_SCHEDULED(simultaneous)
           }));
     });
   auto stream = s.connect();
-  infinit::protocol::Serializer serializer(stream, infinit::version(), false);
-  auto channels = infinit::protocol::ChanneledStream{serializer};
+  elle::protocol::Serializer serializer(stream, infinit::version(), false);
+  auto channels = elle::protocol::ChanneledStream{serializer};
   infinit::RPC<int (int)> ping("ping", channels, infinit::version());
-  elle::With<reactor::Scope>() << [&](reactor::Scope& s)
+  elle::With<elle::reactor::Scope>() << [&](elle::reactor::Scope& s)
   {
     for (int i=0; i<5; ++i)
       s.run_background("ping", [&] {
@@ -112,10 +112,10 @@ ELLE_TEST_SCHEDULED(simultaneous)
     for (int i=0; i<5; ++i)
       s.run_background("ping", [&,i] {
           for (int y=0; y<i; ++y)
-            reactor::yield();
+            elle::reactor::yield();
           BOOST_CHECK_EQUAL(ping(10), 11);
       });
-    reactor::wait(s);
+    elle::reactor::wait(s);
   };
 }
 
@@ -128,22 +128,22 @@ ELLE_TEST_SCHEDULED(bidirectional)
         std::function<int(int)>(
           [] (int a) {
             for (int i=0; i<rand()%5; ++i)
-              reactor::yield();
+              elle::reactor::yield();
             return a+1;
           }));
     });
   auto stream = s.connect();
-  infinit::protocol::Serializer serializer(stream, infinit::version(), false);
-  auto channels = infinit::protocol::ChanneledStream{serializer};
+  elle::protocol::Serializer serializer(stream, infinit::version(), false);
+  auto channels = elle::protocol::ChanneledStream{serializer};
   infinit::RPCServer rev;
   rev.add("ping",
         std::function<int(int)>(
           [] (int a) {
             for (int i=0; i<rand()%5; ++i)
-              reactor::yield();
+              elle::reactor::yield();
             return a+2;
           }));
-  auto t = std::make_unique<reactor::Thread>("rev serve", [&] {
+  auto t = std::make_unique<elle::reactor::Thread>("rev serve", [&] {
       rev.serve(channels);
   });
   infinit::RPC<int (int)> ping("ping", channels, infinit::version());
@@ -154,14 +154,14 @@ ELLE_TEST_SCHEDULED(bidirectional)
     for (int i=0; i<100; ++i)
       BOOST_CHECK_EQUAL(p(i), i+delta);
   };
-  auto tfwd = std::make_unique<reactor::Thread>("ping", [&] {
+  auto tfwd = std::make_unique<elle::reactor::Thread>("ping", [&] {
       pinger(ping, 1);
   });
-  auto trev = std::make_unique<reactor::Thread>("ping", [&] {
+  auto trev = std::make_unique<elle::reactor::Thread>("ping", [&] {
       pinger(pingrev, 2);
   });
-  reactor::wait(*tfwd);
-  reactor::wait(*trev);
+  elle::reactor::wait(*tfwd);
+  elle::reactor::wait(*trev);
   t->terminate_now();
 }
 

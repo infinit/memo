@@ -9,7 +9,7 @@
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/json.hh>
 
-#include <reactor/exception.hh>
+#include <elle/reactor/exception.hh>
 
 #include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/File.hh>
@@ -612,7 +612,7 @@ namespace infinit
       this->_prefetching = true;
       auto running = std::make_shared<int>(nthreads);
       auto parked = std::make_shared<int>(0);
-      auto available = std::make_shared<reactor::Barrier>("files_prefetchable");
+      auto available = std::make_shared<elle::reactor::Barrier>("files_prefetchable");
       if (!files->empty())
         available->open();
       auto prefetch_task =
@@ -640,7 +640,7 @@ namespace infinit
               else
                 ELLE_DEBUG("%s/%s threads parked", *parked, nthreads);
               available->close();
-              reactor::wait(*available);
+              elle::reactor::wait(*available);
               --*parked;
             }
             if (should_exit)
@@ -746,10 +746,10 @@ namespace infinit
             self->_prefetching = false;
             fs->prefetching()--;
           }
-          auto* self = reactor::scheduler().current();
+          auto* self = elle::reactor::scheduler().current();
           auto& running = fs->running();
           auto it = std::find_if(running.begin(), running.end(),
-            [self](reactor::Thread::unique_ptr const& p)
+            [self](elle::reactor::Thread::unique_ptr const& p)
             {
               return p.get() == self;
             });
@@ -765,7 +765,7 @@ namespace infinit
       };
       for (int i = 0; i < nthreads; ++i)
         fs.running().emplace_back(
-          new reactor::Thread(
+          new elle::reactor::Thread(
             elle::sprintf("prefetcher %x-%x-%s", (void*)&fs, (void*)parked.get(), i),
             prefetch_task
             ));

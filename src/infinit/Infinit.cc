@@ -1022,19 +1022,19 @@ namespace infinit
   Infinit::beyond_login(std::string const& name,
                         LoginCredentials const& o) const
   {
-    reactor::http::Request::Configuration c;
+    elle::reactor::http::Request::Configuration c;
     c.header_add("Content-Type", "application/json");
-    reactor::http::Request r(elle::sprintf("%s/users/%s/login", beyond(), name),
-                             reactor::http::Method::POST, std::move(c));
+    elle::reactor::http::Request r(elle::sprintf("%s/users/%s/login", beyond(), name),
+                             elle::reactor::http::Method::POST, std::move(c));
     elle::serialization::json::serialize(o, r, false);
     r.finalize();
-    if (r.status() != reactor::http::StatusCode::OK)
+    if (r.status() != elle::reactor::http::StatusCode::OK)
       infinit::read_error<BeyondError>(r, "login", name);
     return elle::json::read(r);
   }
 
   static
-  std::unique_ptr<reactor::http::Request>
+  std::unique_ptr<elle::reactor::http::Request>
   fetch_data(std::string const& url,
              std::string const& type,
              std::string const& name,
@@ -1043,29 +1043,29 @@ namespace infinit
     infinit::Headers headers;
     for (auto const& header: extra_headers)
       headers[header.first] = header.second;
-    reactor::http::Request::Configuration c;
+    elle::reactor::http::Request::Configuration c;
     for (auto const& header: headers)
       c.header_add(header.first, header.second);
-    auto r = elle::make_unique<reactor::http::Request>(
-      url, reactor::http::Method::GET, std::move(c));
-    reactor::wait(*r);
-    if (r->status() == reactor::http::StatusCode::OK)
+    auto r = elle::make_unique<elle::reactor::http::Request>(
+      url, elle::reactor::http::Method::GET, std::move(c));
+    elle::reactor::wait(*r);
+    if (r->status() == elle::reactor::http::StatusCode::OK)
     {
     }
-    else if (r->status() == reactor::http::StatusCode::Not_Found)
+    else if (r->status() == elle::reactor::http::StatusCode::Not_Found)
     {
       infinit::read_error<MissingResource>(*r, type, name);
     }
-    else if (r->status() == reactor::http::StatusCode::Gone)
+    else if (r->status() == elle::reactor::http::StatusCode::Gone)
     {
       infinit::read_error<ResourceGone>(*r, type, name);
     }
-    else if (r->status() == reactor::http::StatusCode::Forbidden)
+    else if (r->status() == elle::reactor::http::StatusCode::Forbidden)
     {
       infinit::read_error<ResourceProtected>(*r, type, name);
     }
-    else if (r->status() == reactor::http::StatusCode::See_Other
-             || r->status() == reactor::http::StatusCode::Temporary_Redirect)
+    else if (r->status() == elle::reactor::http::StatusCode::See_Other
+             || r->status() == elle::reactor::http::StatusCode::Temporary_Redirect)
     {
       auto redirection = r->headers().find("Location");
       if (redirection != r->headers().end())
@@ -1077,7 +1077,7 @@ namespace infinit
         }
       }
     }
-    else if (r->status() == reactor::http::StatusCode::Unauthorized)
+    else if (r->status() == elle::reactor::http::StatusCode::Unauthorized)
     {
       elle::err("Unauthorized fetching %s \"%s\", check the system clock",
                 type, name);
@@ -1090,7 +1090,7 @@ namespace infinit
     return r;
   }
 
-  std::unique_ptr<reactor::http::Request>
+  std::unique_ptr<elle::reactor::http::Request>
   Infinit::beyond_fetch_data(std::string const& where,
                              std::string const& type,
                              std::string const& name,
@@ -1100,7 +1100,7 @@ namespace infinit
     Headers headers;
     if (self)
     {
-      headers = signature_headers(reactor::http::Method::GET, where, self.get());
+      headers = signature_headers(elle::reactor::http::Method::GET, where, self.get());
     }
     for (auto const& header: extra_headers)
       headers[header.first] = header.second;
@@ -1129,42 +1129,42 @@ namespace infinit
                          bool ignore_missing,
                          bool purge) const
   {
-    reactor::http::Request::Configuration c;
-    auto headers = signature_headers(reactor::http::Method::DELETE,
+    elle::reactor::http::Request::Configuration c;
+    auto headers = signature_headers(elle::reactor::http::Method::DELETE,
                                      where,
                                      self);
     for (auto const& header: headers)
       c.header_add(header.first, header.second);
     auto url = elle::sprintf("%s/%s", beyond(), where);
-    reactor::http::Request::QueryDict query;
+    elle::reactor::http::Request::QueryDict query;
     if (purge)
       query["purge"] = "true";
-    reactor::http::Request r(url, reactor::http::Method::DELETE, std::move(c));
+    elle::reactor::http::Request r(url, elle::reactor::http::Method::DELETE, std::move(c));
     r.query_string(query);
     r.finalize();
-    reactor::wait(r);
-    if (r.status() == reactor::http::StatusCode::OK)
+    elle::reactor::wait(r);
+    if (r.status() == elle::reactor::http::StatusCode::OK)
     {
       this->report_remote_action()("deleted", type, name);
       return true;
     }
-    else if (r.status() == reactor::http::StatusCode::Not_Found)
+    else if (r.status() == elle::reactor::http::StatusCode::Not_Found)
     {
       if (!ignore_missing)
         read_error<MissingResource>(r, type, name);
       return false;
     }
-    else if (r.status() == reactor::http::StatusCode::See_Other ||
-             r.status() == reactor::http::StatusCode::Temporary_Redirect)
+    else if (r.status() == elle::reactor::http::StatusCode::See_Other ||
+             r.status() == elle::reactor::http::StatusCode::Temporary_Redirect)
     {
       throw Redirected(url);
     }
-    else if (r.status() == reactor::http::StatusCode::Unauthorized)
+    else if (r.status() == elle::reactor::http::StatusCode::Unauthorized)
     {
       elle::err("Unauthorized deleting %s \"%s\", check the system clock",
                 type, name);
     }
-    else if (r.status() == reactor::http::StatusCode::Forbidden)
+    else if (r.status() == elle::reactor::http::StatusCode::Forbidden)
     {
       elle::err("Forbidden deleting %s \"%s\", "
                 "ensure the user has been set using --as or INFINIT_USER",
@@ -1199,24 +1199,24 @@ namespace infinit
                             bool beyond_error,
                             bool update) const
   {
-    reactor::http::Request::Configuration c;
+    elle::reactor::http::Request::Configuration c;
     c.header_add("Content-Type", content_type);
     auto headers = signature_headers(
-      reactor::http::Method::PUT, where, self, object);
+      elle::reactor::http::Method::PUT, where, self, object);
     for (auto const& header: headers)
       c.header_add(header.first, header.second);
-    reactor::http::Request r(
+    elle::reactor::http::Request r(
       elle::sprintf("%s/%s", beyond(), where),
-      reactor::http::Method::PUT, std::move(c));
+      elle::reactor::http::Method::PUT, std::move(c));
     r << object.string();
     r.finalize();
-    reactor::wait(r);
-    if (r.status() == reactor::http::StatusCode::Created)
+    elle::reactor::wait(r);
+    if (r.status() == elle::reactor::http::StatusCode::Created)
     {
       this->report_remote_action()("created", type, name);
       return Infinit::PushResult::pushed;
     }
-    else if (r.status() == reactor::http::StatusCode::OK)
+    else if (r.status() == elle::reactor::http::StatusCode::OK)
     {
       if (update)
       {
@@ -1229,38 +1229,38 @@ namespace infinit
         return Infinit::PushResult::alreadyPushed;
       }
     }
-    else if (r.status() == reactor::http::StatusCode::Conflict)
+    else if (r.status() == elle::reactor::http::StatusCode::Conflict)
     {
       elle::err("%s \"%s\" already exists with a different key", type, name);
     }
-    else if (r.status() == reactor::http::StatusCode::Payment_Required)
+    else if (r.status() == elle::reactor::http::StatusCode::Payment_Required)
     {
       elle::err("Pushing %s failed (limit reached):"
                 " Please contact sales@infinit.sh.",
                 type);
     }
-    else if (r.status() == reactor::http::StatusCode::Not_Found)
+    else if (r.status() == elle::reactor::http::StatusCode::Not_Found)
     {
       if (beyond_error)
         read_error<BeyondError>(r, type, name);
       else
         read_error<MissingResource>(r, type, name);
     }
-    else if (r.status() == reactor::http::StatusCode::See_Other ||
-             r.status() == reactor::http::StatusCode::Temporary_Redirect)
+    else if (r.status() == elle::reactor::http::StatusCode::See_Other ||
+             r.status() == elle::reactor::http::StatusCode::Temporary_Redirect)
     {
       throw Redirected(r.url());
     }
-    else if (r.status() == reactor::http::StatusCode::Gone)
+    else if (r.status() == elle::reactor::http::StatusCode::Gone)
     {
       read_error<ResourceGone>(r, type, name);
     }
-    else if (r.status() == reactor::http::StatusCode::Unauthorized)
+    else if (r.status() == elle::reactor::http::StatusCode::Unauthorized)
     {
       elle::err("Unauthorized pushing %s \"%s\", check the system clock",
                 type, name);
     }
-    else if (r.status() == reactor::http::StatusCode::Forbidden)
+    else if (r.status() == elle::reactor::http::StatusCode::Forbidden)
     {
       elle::err("Forbidden pushing %s \"%s\", "
                 "ensure the user has been set using --as or INFINIT_USER",

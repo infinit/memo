@@ -4,7 +4,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <elle/factory.hh>
-#include <reactor/Scope.hh>
+#include <elle/reactor/Scope.hh>
 
 namespace infinit
 {

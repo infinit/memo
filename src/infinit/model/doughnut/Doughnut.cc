@@ -10,14 +10,14 @@
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
-#include <cryptography/hash.hh>
+#include <elle/cryptography/hash.hh>
 
-#include <reactor/Scope.hh>
-#include <reactor/exception.hh>
-#include <reactor/network/utp-server.hh>
+#include <elle/reactor/Scope.hh>
+#include <elle/reactor/exception.hh>
+#include <elle/reactor/network/utp-server.hh>
 #ifndef INFINIT_WINDOWS
-# include <reactor/network/unix-domain-server.hh>
-# include <reactor/network/unix-domain-socket.hh>
+# include <elle/reactor/network/unix-domain-server.hh>
+# include <elle/reactor/network/unix-domain-socket.hh>
 #endif
 
 #include <infinit/model/MissingBlock.hh>
@@ -93,7 +93,7 @@ namespace infinit
               ELLE_TRACE("%s: failed to store %s: %s", d, what, e);
               if (d.terminating().opened())
                 break;
-              reactor::wait(d.terminating(), 1_sec);
+              elle::reactor::wait(d.terminating(), 1_sec);
             }
           }
       }
@@ -199,7 +199,7 @@ namespace infinit
                 this, ':' + hash.string(), this->keys().K());
             };
           this->_user_init.reset(
-            new reactor::Thread(
+            new elle::reactor::Thread(
               elle::sprintf("%s: user blocks checker", *this),
               check_user_blocks));
         }
@@ -211,7 +211,7 @@ namespace infinit
           {
             try
             {
-              reactor::network::UnixDomainSocket socket(m_path);
+              elle::reactor::network::UnixDomainSocket socket(m_path);
               ELLE_WARN(
                 "unable to monitor, socket already present at: %s", m_path);
             }
@@ -225,7 +225,7 @@ namespace infinit
             try
             {
               auto unix_domain_server =
-                std::make_unique<reactor::network::UnixDomainServer>();
+                std::make_unique<elle::reactor::network::UnixDomainServer>();
               if (!boost::filesystem::exists(m_path.parent_path()))
                 boost::filesystem::create_directories(m_path.parent_path());
               unix_domain_server->listen(m_path);
@@ -233,13 +233,13 @@ namespace infinit
                 new MonitoringServer(std::move(unix_domain_server), *this));
               ELLE_DEBUG("monitoring server listening on %s", m_path);
             }
-            catch (reactor::network::PermissionDenied const& e)
+            catch (elle::reactor::network::PermissionDenied const& e)
             {
               ELLE_WARN("unable to monitor, check "
                         "INFINIT_RUNTIME_DIR or XDG_RUNTIME_DIR");
               throw;
             }
-            catch (reactor::network::InvalidEndpoint const& e)
+            catch (elle::reactor::network::InvalidEndpoint const& e)
             {
               ELLE_WARN("unable to monitor, check "
                         "INFINIT_RUNTIME_DIR or XDG_RUNTIME_DIR");
@@ -256,7 +256,7 @@ namespace infinit
         this->_terminating.open();
         if (this->_user_init)
         {
-          if (!reactor::wait(*this->_user_init, 5_sec))
+          if (!elle::reactor::wait(*this->_user_init, 5_sec))
             this->_user_init->terminate_now();
           this->_user_init.reset();
         }
@@ -289,13 +289,13 @@ namespace infinit
         return std::chrono::high_resolution_clock::now();
       }
 
-      cryptography::rsa::KeyPair const&
+      elle::cryptography::rsa::KeyPair const&
       Doughnut::keys() const
       {
         return *this->_keys;
       }
 
-      std::shared_ptr<cryptography::rsa::KeyPair>
+      std::shared_ptr<elle::cryptography::rsa::KeyPair>
       Doughnut::keys_shared() const
       {
         return this->_keys;
@@ -329,7 +329,7 @@ namespace infinit
       {
         return std::make_unique<GB>(
           elle::unconst(this),
-          cryptography::rsa::keypair::generate(2048));
+          elle::cryptography::rsa::keypair::generate(2048));
       }
 
       std::unique_ptr<model::User>
@@ -342,7 +342,7 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: fetch user from public key", *this);
           elle::IOStream input(data.istreambuf());
           elle::serialization::json::SerializerIn s(input);
-          cryptography::rsa::PublicKey pub(s);
+          elle::cryptography::rsa::PublicKey pub(s);
           try
           {
             auto block = this->fetch(UB::hash_address(pub, *this));
@@ -540,7 +540,7 @@ namespace infinit
       }
 
       int
-      Doughnut::ensure_key(std::shared_ptr<cryptography::rsa::PublicKey> const& k)
+      Doughnut::ensure_key(std::shared_ptr<elle::cryptography::rsa::PublicKey> const& k)
       {
         auto it = this->_key_cache.get<0>().find(*k);
         if (it != this->_key_cache.get<0>().end())
@@ -551,7 +551,7 @@ namespace infinit
         return index;
       }
 
-      std::shared_ptr<cryptography::rsa::PublicKey>
+      std::shared_ptr<elle::cryptography::rsa::PublicKey>
       Doughnut::resolve_key(uint64_t hash)
       {
         ELLE_DUMP("%s: resolve key from %x", this, hash);
@@ -578,8 +578,8 @@ namespace infinit
         std::unique_ptr<consensus::Configuration> consensus_,
         std::unique_ptr<overlay::Configuration> overlay_,
         std::unique_ptr<storage::StorageConfig> storage,
-        cryptography::rsa::KeyPair keys_,
-        std::shared_ptr<cryptography::rsa::PublicKey> owner_,
+        elle::cryptography::rsa::KeyPair keys_,
+        std::shared_ptr<elle::cryptography::rsa::PublicKey> owner_,
         Passport passport_,
         boost::optional<std::string> name_,
         boost::optional<int> port_,
@@ -606,9 +606,9 @@ namespace infinit
                       "consensus"))
         , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>(
                     "overlay"))
-        , keys(s.deserialize<cryptography::rsa::KeyPair>("keys"))
+        , keys(s.deserialize<elle::cryptography::rsa::KeyPair>("keys"))
         , owner(
-          s.deserialize<std::shared_ptr<cryptography::rsa::PublicKey>>("owner"))
+          s.deserialize<std::shared_ptr<elle::cryptography::rsa::PublicKey>>("owner"))
         , passport(s.deserialize<Passport>("passport"))
         , name(s.deserialize<boost::optional<std::string>>("name"))
         , port(s.deserialize<boost::optional<int>>("port"))
@@ -714,7 +714,7 @@ namespace infinit
           storage = this->storage->make();
         return std::make_unique<infinit::model::doughnut::Doughnut>(
           this->id,
-          std::make_shared<cryptography::rsa::KeyPair>(keys),
+          std::make_shared<elle::cryptography::rsa::KeyPair>(keys),
           owner,
           passport,
           std::move(consensus),
@@ -732,7 +732,7 @@ namespace infinit
       }
 
       std::string
-      short_key_hash(cryptography::rsa::PublicKey const& pub)
+      short_key_hash(elle::cryptography::rsa::PublicKey const& pub)
       {
         auto key_hash = UB::hash(pub);
         std::string hex_hash = elle::format::hexadecimal::encode(key_hash);

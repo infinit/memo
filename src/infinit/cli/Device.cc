@@ -20,7 +20,7 @@ namespace infinit
       /// \param headers   a map of name -> content.
       template <typename Map>
       void
-      headers_add(reactor::http::Request::Configuration& c,
+      headers_add(elle::reactor::http::Request::Configuration& c,
                   Map const& headers)
       {
         for (auto const& header: headers)
@@ -97,7 +97,7 @@ namespace infinit
       , receive(
         *this,
                 "Receive an object from another device using {hub}",
-                das::cli::Options{
+                elle::das::cli::Options{
                   {"user", {'u', "{action} user identity to "
                                  "another device using {hub}", false}}
                 },
@@ -106,7 +106,7 @@ namespace infinit
                 cli::passphrase = boost::none)
       , transmit(*this,
                  "transmit an object to another device using {hub}",
-                 das::cli::Options{
+                 elle::das::cli::Options{
                    {"user", {'u', "{action} user identity to "
                                   "another device using {hub}", false}}
                  },
@@ -135,9 +135,9 @@ namespace infinit
             elle::sprintf("users/%s/pairing", name), "pairing",
             name, boost::none,
             {{"infinit-pairing-passphrase-hash", hashed_pass}});
-          auto key = infinit::cryptography::SecretKey{pass};
+          auto key = elle::cryptography::SecretKey{pass};
           auto data = key.decipher(*pairing.data,
-                                   infinit::cryptography::Cipher::aes256);
+                                   elle::cryptography::Cipher::aes256);
           auto user = from_json<infinit::User>(data.string());
           ifnt.user_save(user, true);
         }
@@ -188,10 +188,10 @@ namespace infinit
         auto& ifnt = cli.infinit();
         auto user = cli.as_user();
         auto pass = passphrase ? *passphrase : Infinit::read_passphrase();
-        auto key = infinit::cryptography::SecretKey{pass};
+        auto key = elle::cryptography::SecretKey{pass};
         auto p = PairingInformation(
           key.encipher(to_json(user),
-                       infinit::cryptography::Cipher::aes256),
+                       elle::cryptography::Cipher::aes256),
           cli.hash_password(pass, _pair_salt));
         ifnt.beyond_push
           (elle::sprintf("users/%s/pairing", user.name),
@@ -202,35 +202,35 @@ namespace infinit
           int timeout = 5 * 60; // 5 min.
           bool timed_out = false;
           bool done = false;
-          reactor::Thread beyond_poller(reactor::scheduler(), "beyond poller", [&]
+          elle::reactor::Thread beyond_poller(elle::reactor::scheduler(), "beyond poller", [&]
             {
               auto where = elle::sprintf("users/%s/pairing/status", user.name);
               while (timeout > 0)
               {
-                auto c = reactor::http::Request::Configuration{};
+                auto c = elle::reactor::http::Request::Configuration{};
                 auto headers =
-                  infinit::signature_headers(reactor::http::Method::GET, where, user);
+                  infinit::signature_headers(elle::reactor::http::Method::GET, where, user);
                 headers_add(c, headers);
-                auto r = reactor::http::Request
+                auto r = elle::reactor::http::Request
                   (elle::sprintf("%s/%s", infinit::beyond(), where),
-                   reactor::http::Method::GET,
+                   elle::reactor::http::Method::GET,
                    std::move(c));
-                reactor::wait(r);
+                elle::reactor::wait(r);
                 switch (r.status())
                 {
-                case reactor::http::StatusCode::OK:
+                case elle::reactor::http::StatusCode::OK:
                   // Do nothing.
                   break;
 
-                case reactor::http::StatusCode::Not_Found:
+                case elle::reactor::http::StatusCode::Not_Found:
                   done = true;
                   return;
 
-                case reactor::http::StatusCode::Gone:
+                case elle::reactor::http::StatusCode::Gone:
                   timed_out = true;
                   return;
 
-                case reactor::http::StatusCode::Forbidden:
+                case elle::reactor::http::StatusCode::Forbidden:
                   infinit::read_error<infinit::ResourceProtected>
                     (r, "user identity", user.name);
                   break;
@@ -239,7 +239,7 @@ namespace infinit
                   elle::err("unexpected HTTP error %s fetching user identity",
                             r.status());
                 }
-                reactor::sleep(10_sec);
+                elle::reactor::sleep(10_sec);
               }
             });
           for (; timeout > 0; timeout--)
@@ -247,7 +247,7 @@ namespace infinit
             elle::fprintf(std::cout, "User identity on %s for %s seconds",
                           infinit::beyond(true), timeout);
             std::cout.flush();
-            reactor::sleep(1_sec);
+            elle::reactor::sleep(1_sec);
             std::cout << '\r' << std::string(80, ' ') << '\r';
             if (done)
             {

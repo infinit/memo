@@ -22,7 +22,7 @@ ELLE_LOG_COMPONENT("infinit.storage.GCS");
   static elle::Bench bench("bench.gcs." name, 10000_sec); \
   elle::Bench::BenchScope bs(bench)
 
-using StatusCode = reactor::http::StatusCode;
+using StatusCode = elle::reactor::http::StatusCode;
 
 namespace infinit
 {
@@ -52,8 +52,8 @@ namespace infinit
       ELLE_DEBUG("get %x", key);
       std::string url = this->_url(key);
       auto r = this->_request(url,
-                              reactor::http::Method::GET,
-                              reactor::http::Request::QueryDict(),
+                              elle::reactor::http::Method::GET,
+                              elle::reactor::http::Request::QueryDict(),
                               {},
                               {StatusCode::Not_Found});
       if (r.status() == StatusCode::Not_Found)
@@ -81,8 +81,8 @@ namespace infinit
         elle::err("neither inserting nor updating");
       std::string url = this->_url(key);
       auto r = this->_request(url,
-                              reactor::http::Method::PUT,
-                              reactor::http::Request::QueryDict(),
+                              elle::reactor::http::Method::PUT,
+                              elle::reactor::http::Request::QueryDict(),
                               {},
                               {},
                               value);
@@ -96,8 +96,8 @@ namespace infinit
       ELLE_DEBUG("erase %x", k);
       std::string url = this->_url(k);
       auto r = this->_request(url,
-                              reactor::http::Method::DELETE,
-                              reactor::http::Request::QueryDict(),
+                              elle::reactor::http::Method::DELETE,
+                              elle::reactor::http::Request::QueryDict(),
                               {},
                               {StatusCode::No_Content, StatusCode::Not_Found});
       return 0;
@@ -112,8 +112,8 @@ namespace infinit
       while (true)
       {
         auto r = this->_request(url,
-                                reactor::http::Method::GET,
-                                reactor::http::Request::QueryDict());
+                                elle::reactor::http::Method::GET,
+                                elle::reactor::http::Request::QueryDict());
         using boost::property_tree::ptree;
         ptree response;
         read_xml(r, response);

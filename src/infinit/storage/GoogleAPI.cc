@@ -3,7 +3,7 @@
 #include <elle/bench.hh>
 #include <elle/os/environ.hh>
 
-#include <reactor/scheduler.hh>
+#include <elle/reactor/scheduler.hh>
 #include <elle/log.hh>
 
 ELLE_LOG_COMPONENT("infinit.storage.GoogleAPI");
@@ -24,7 +24,7 @@ namespace infinit
       return res;
     }
 
-    static reactor::Duration delay(int attempt)
+    static elle::reactor::Duration delay(int attempt)
     {
       if (attempt > 8)
         attempt = 8;
@@ -39,22 +39,22 @@ namespace infinit
       , _refresh_token(refresh_token)
       {}
 
-    reactor::http::Request
+    elle::reactor::http::Request
     GoogleAPI::_request(std::string url,
-                          reactor::http::Method method,
-                          reactor::http::Request::QueryDict query,
-                          reactor::http::Request::Configuration conf,
-                          std::vector<reactor::http::StatusCode> expected_codes,
+                          elle::reactor::http::Method method,
+                          elle::reactor::http::Request::QueryDict query,
+                          elle::reactor::http::Request::Configuration conf,
+                          std::vector<elle::reactor::http::StatusCode> expected_codes,
                           elle::Buffer const& payload) const
     {
       ELLE_DUMP("_request %s", method);
-      using Request = reactor::http::Request;
-      using StatusCode = reactor::http::StatusCode;
+      using Request = elle::reactor::http::Request;
+      using StatusCode = elle::reactor::http::StatusCode;
 
       expected_codes.push_back(StatusCode::OK);
       unsigned attempt = 0;
 
-      conf.timeout(reactor::DurationOpt());
+      conf.timeout(elle::reactor::DurationOpt());
       conf.header_add("Authorization", elle::sprintf("Bearer %s", this->_token));
 
       if (this->_token.empty())
@@ -89,23 +89,23 @@ namespace infinit
                   attempt + 1);
         ELLE_DUMP("body: %s", r.response());
         ++attempt;
-        reactor::sleep(delay(attempt));
+        elle::reactor::sleep(delay(attempt));
       }
     }
     void
     GoogleAPI::_refresh()
     {
       ELLE_DUMP("_refresh");
-      using Configuration = reactor::http::Request::Configuration;
-      using Method = reactor::http::Method;
-      using Request = reactor::http::Request;
-      using StatusCode = reactor::http::StatusCode;
+      using Configuration = elle::reactor::http::Request::Configuration;
+      using Method = elle::reactor::http::Method;
+      using Request = elle::reactor::http::Request;
+      using StatusCode = elle::reactor::http::StatusCode;
 
       Configuration conf;
-      conf.timeout(reactor::DurationOpt());
+      conf.timeout(elle::reactor::DurationOpt());
       unsigned attempt = 0;
 
-      reactor::http::Request::QueryDict query{
+      elle::reactor::http::Request::QueryDict query{
         {"refresh_token", this->_refresh_token}};
 
       while (true)
@@ -130,7 +130,7 @@ namespace infinit
                   r.status(),
                   attempt + 1);
         ELLE_DUMP("body: %s", r.response());
-        reactor::sleep(delay(attempt++));
+        elle::reactor::sleep(delay(attempt++));
       }
     }
   }

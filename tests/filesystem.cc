@@ -33,7 +33,7 @@
 #include <elle/utils.hh>
 #include <elle/Version.hh>
 
-#include <reactor/scheduler.hh>
+#include <elle/reactor/scheduler.hh>
 
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -52,7 +52,7 @@
 ELLE_LOG_COMPONENT("test");
 
 namespace ifs = infinit::filesystem;
-namespace rfs = reactor::filesystem;
+namespace rfs = elle::reactor::filesystem;
 namespace bfs = boost::filesystem;
 
 
@@ -179,9 +179,9 @@ public:
   }
   template <typename ... Args>
   DHTs(int count,
-       boost::optional<infinit::cryptography::rsa::KeyPair> kp,
+       boost::optional<elle::cryptography::rsa::KeyPair> kp,
        Args ... args)
-    : owner_keys(kp? *kp : infinit::cryptography::rsa::keypair::generate(512))
+    : owner_keys(kp? *kp : elle::cryptography::rsa::keypair::generate(512))
     , dhts()
   {
     pax = true;
@@ -205,7 +205,7 @@ public:
     template<typename... Args>
     Client(std::string const& name, DHT dht, Args...args)
       : dht(std::move(dht))
-      , fs(std::make_unique<reactor::filesystem::FileSystem>(
+      , fs(std::make_unique<elle::reactor::filesystem::FileSystem>(
              std::make_unique<infinit::filesystem::FileSystem>(
                name, this->dht.dht, ifs::allow_root_creation = true,
                std::forward<Args>(args)...),
@@ -213,17 +213,17 @@ public:
     {}
 
     DHT dht;
-    std::unique_ptr<reactor::filesystem::FileSystem> fs;
+    std::unique_ptr<elle::reactor::filesystem::FileSystem> fs;
   };
 
   template<typename... Args>
   DHT
   dht(bool new_key,
-         boost::optional<infinit::cryptography::rsa::KeyPair> kp,
+         boost::optional<elle::cryptography::rsa::KeyPair> kp,
          Args... args)
   {
     auto k = kp ? *kp
-    : new_key ? infinit::cryptography::rsa::keypair::generate(512)
+    : new_key ? elle::cryptography::rsa::keypair::generate(512)
           : this->owner_keys;
     ELLE_LOG("new client with owner=%f key=%f", this->owner_keys.K(), k.K());
     DHT client(owner = this->owner_keys,
@@ -240,7 +240,7 @@ public:
   template<typename... Args>
   Client
   client(bool new_key,
-         boost::optional<infinit::cryptography::rsa::KeyPair> kp,
+         boost::optional<elle::cryptography::rsa::KeyPair> kp,
          Args... args)
   {
     DHT client = dht(new_key, kp, std::forward<Args>(args)...);
@@ -253,7 +253,7 @@ public:
     return client(new_key, {});
   }
 
-  infinit::cryptography::rsa::KeyPair owner_keys;
+  elle::cryptography::rsa::KeyPair owner_keys;
   std::vector<DHT> dhts;
   bool pax;
 };
@@ -369,7 +369,7 @@ ELLE_TEST_SCHEDULED(prefetcher_failure)
   auto handle = root->child("file")->open(O_RDWR, 0);
   BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 8192),
                     16384);
-  reactor::sleep(200_ms);
+  elle::reactor::sleep(200_ms);
   o->fail_addresses().clear();
   BOOST_CHECK_EQUAL(
     handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024 * 1024 + 8192),
@@ -388,9 +388,9 @@ ELLE_TEST_SCHEDULED(paxos_race)
   auto r2 = c2.fs->path("/");
   ELLE_LOG("create both directories")
   {
-    reactor::Thread t1("t1", [&] { r1->child("foo")->mkdir(0700);});
-    reactor::Thread t2("t2", [&] { r2->child("bar")->mkdir(0700);});
-    reactor::wait({t1, t2});
+    elle::reactor::Thread t1("t1", [&] { r1->child("foo")->mkdir(0700);});
+    elle::reactor::Thread t2("t2", [&] { r2->child("bar")->mkdir(0700);});
+    elle::reactor::wait({t1, t2});
   }
   ELLE_LOG("check")
   {
@@ -503,7 +503,7 @@ ELLE_TEST_SCHEDULED(short_hash_key)
 {
   DHTs servers(1);
   auto client1 = servers.client();
-  auto key = infinit::cryptography::rsa::keypair::generate(512);
+  auto key = elle::cryptography::rsa::keypair::generate(512);
   auto serkey = elle::serialization::json::serialize(key.K());
   client1.fs->path("/")->setxattr("infinit.auth.setr", serkey.string(), 0);
   auto jsperms = client1.fs->path("/")->getxattr("infinit.auth");
@@ -586,9 +586,9 @@ ELLE_TEST_SCHEDULED(erased_group)
     elle::ConstWeakBuffer("foo", 3), 3, 0);
   client1.fs->path("/")->setxattr("infinit.group.delete", "grp", 0);
   // cant write to /, because last author is a group member: it fails validation
-  BOOST_CHECK_THROW(client1.fs->path("/dir2")->mkdir(0666), reactor::filesystem::Error);
+  BOOST_CHECK_THROW(client1.fs->path("/dir2")->mkdir(0666), elle::reactor::filesystem::Error);
   // we have inherit enabled, copy_permissions will fail on the missing group
-  BOOST_CHECK_THROW(client2.fs->path("/dir/dir")->mkdir(0666), reactor::filesystem::Error);
+  BOOST_CHECK_THROW(client2.fs->path("/dir/dir")->mkdir(0666), elle::reactor::filesystem::Error);
   client2.fs->path("/file")->open(O_RDWR, 0644)->write(
     elle::ConstWeakBuffer("bar", 3), 3, 0);
 }
@@ -699,11 +699,11 @@ ELLE_TEST_SCHEDULED(create_excl)
   client1.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644);
   BOOST_CHECK_THROW(
     client2.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644),
-    reactor::filesystem::Error);
+    elle::reactor::filesystem::Error);
   // again, now that our cache knows the file
   BOOST_CHECK_THROW(
     client2.fs->path("/file")->create(O_RDWR|O_CREAT|O_EXCL, 0644),
-    reactor::filesystem::Error);
+    elle::reactor::filesystem::Error);
 }
 
 ELLE_TEST_SCHEDULED(multiple_writers)
@@ -740,17 +740,17 @@ ELLE_TEST_SCHEDULED(multiple_writers)
         {
           h->write(b, 1024, o*1024);
           if (do_yield)
-            reactor::yield();
+            elle::reactor::yield();
         }
       }
   };
   {
     do_yield = true;
-    reactor::Thread t1("writer 1", seq_write);
-    reactor::Thread t2("writer 2", seq_write);
-    reactor::Thread t3("writer 3", seq_write);
-    reactor::Thread t4("writer 4", seq_write);
-    reactor::wait({t1, t2, t3, t4});
+    elle::reactor::Thread t1("writer 1", seq_write);
+    elle::reactor::Thread t2("writer 2", seq_write);
+    elle::reactor::Thread t3("writer 3", seq_write);
+    elle::reactor::Thread t4("writer 4", seq_write);
+    elle::reactor::wait({t1, t2, t3, t4});
     client.fs->path("/file")->stat(&st);
     BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
     auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
@@ -763,17 +763,17 @@ ELLE_TEST_SCHEDULED(multiple_writers)
   }
   {
     do_yield = true;
-    reactor::Thread t1("writer 1", seq_write);
+    elle::reactor::Thread t1("writer 1", seq_write);
     for (int i=0; i<1024 * 10; ++i)
-      reactor::yield();
-    reactor::Thread t2("writer 2", seq_write);
+      elle::reactor::yield();
+    elle::reactor::Thread t2("writer 2", seq_write);
     for (int i=0; i<1024 * 10; ++i)
-      reactor::yield();
-    reactor::Thread t3("writer 3", seq_write);
+      elle::reactor::yield();
+    elle::reactor::Thread t3("writer 3", seq_write);
     for (int i=0; i<1024 * 10; ++i)
-      reactor::yield();
-    reactor::Thread t4("writer 4", seq_write);
-    reactor::wait({t1, t2, t3, t4});
+      elle::reactor::yield();
+    elle::reactor::Thread t4("writer 4", seq_write);
+    elle::reactor::wait({t1, t2, t3, t4});
     client.fs->path("/file")->stat(&st);
     BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
     auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
@@ -786,11 +786,11 @@ ELLE_TEST_SCHEDULED(multiple_writers)
   }
   {
     do_yield = false;
-    reactor::Thread t1("writer 1", seq_write);
-    reactor::Thread t2("writer 2", seq_write);
-    reactor::Thread t3("writer 3", seq_write);
-    reactor::Thread t4("writer 4", seq_write);
-    reactor::wait({t1, t2, t3, t4});
+    elle::reactor::Thread t1("writer 1", seq_write);
+    elle::reactor::Thread t2("writer 2", seq_write);
+    elle::reactor::Thread t3("writer 3", seq_write);
+    elle::reactor::Thread t4("writer 4", seq_write);
+    elle::reactor::wait({t1, t2, t3, t4});
     client.fs->path("/file")->stat(&st);
     BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 * 30);
     auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
@@ -810,16 +810,16 @@ ELLE_TEST_SCHEDULED(multiple_writers)
       auto o = (rand()%30)*1024 * 1024 +  (rand()%1024) * 1024 + (rand()%1024);
       h->write(b, 1024, o);
       if (do_yield)
-        reactor::yield();
+        elle::reactor::yield();
     }
   };
   {
     do_yield = true;
-    reactor::Thread t1("writer 1", random_write);
-    reactor::Thread t2("writer 2", random_write);
-    reactor::Thread t3("writer 3", random_write);
-    reactor::Thread t4("writer 4", random_write);
-    reactor::wait({t1, t2, t3, t4});
+    elle::reactor::Thread t1("writer 1", random_write);
+    elle::reactor::Thread t2("writer 2", random_write);
+    elle::reactor::Thread t3("writer 3", random_write);
+    elle::reactor::Thread t4("writer 4", random_write);
+    elle::reactor::wait({t1, t2, t3, t4});
     client.fs->path("/file2")->stat(&st);
     ELLE_TRACE("resulting file: %s bytes", st.st_size);
     auto h = client.fs->path("/file")->open(O_RDONLY, 0644);
@@ -867,7 +867,7 @@ ELLE_TEST_SCHEDULED(create_race)
   auto client1 = dhts.client(false, {}, /*version = elle::Version(0,6,0),*/ yielding_overlay = true);
   auto client2 = dhts.client(false, {}, /*version = elle::Version(0,6,0),*/ yielding_overlay = true);
   client1.fs->path("/");
-  reactor::Thread tpoll("poller", [&] {
+  elle::reactor::Thread tpoll("poller", [&] {
       while (true)
       {
         try
@@ -888,11 +888,11 @@ ELLE_TEST_SCHEDULED(create_race)
         {
           BOOST_CHECK_EQUAL(e.error_code(), ENOENT);
         }
-        reactor::yield();
+        elle::reactor::yield();
       }
   });
-  reactor::yield();
-  reactor::yield();
+  elle::reactor::yield();
+  elle::reactor::yield();
   try
   {
     auto h = client1.fs->path("/file")->create(O_CREAT|O_RDWR, 0644);
@@ -903,10 +903,10 @@ ELLE_TEST_SCHEDULED(create_race)
   {
     ELLE_WARN("kraboum %s", e);
   }
-  reactor::wait(tpoll);
+  elle::reactor::wait(tpoll);
 }
 
-int write_file(std::shared_ptr<reactor::filesystem::Path> p,
+int write_file(std::shared_ptr<elle::reactor::filesystem::Path> p,
                std::string const& content,
                int mode = O_CREAT|O_TRUNC|O_RDWR,
                int offset = 0)
@@ -917,7 +917,7 @@ int write_file(std::shared_ptr<reactor::filesystem::Path> p,
   return sz;
 }
 
-std::string read_file(std::shared_ptr<reactor::filesystem::Path> p,
+std::string read_file(std::shared_ptr<elle::reactor::filesystem::Path> p,
                       int size = 4096,
                       int offset = 0)
 {
@@ -929,7 +929,7 @@ std::string read_file(std::shared_ptr<reactor::filesystem::Path> p,
   return buf;
 }
 
-int directory_count(std::shared_ptr<reactor::filesystem::Path> p)
+int directory_count(std::shared_ptr<elle::reactor::filesystem::Path> p)
 {
   int count = 0;
   p->list_directory([&count](std::string const&, struct stat*) {++count;});
@@ -938,14 +938,14 @@ int directory_count(std::shared_ptr<reactor::filesystem::Path> p)
   return count;
 }
 
-size_t file_size(std::shared_ptr<reactor::filesystem::Path> p)
+size_t file_size(std::shared_ptr<elle::reactor::filesystem::Path> p)
 {
   struct stat st;
   p->stat(&st);
   return st.st_size;
 }
 
-void read_all(std::shared_ptr<reactor::filesystem::Path> p)
+void read_all(std::shared_ptr<elle::reactor::filesystem::Path> p)
 {
   auto h = p->open(O_RDONLY, 0644);
   char buf[16384];
@@ -1423,9 +1423,9 @@ ELLE_TEST_SCHEDULED(basic)
 ELLE_TEST_SCHEDULED(upgrade_06_07)
 {
   infinit::storage::Memory::Blocks blocks;
-  auto owner_key = infinit::cryptography::rsa::keypair::generate(512);
-  auto other_key = infinit::cryptography::rsa::keypair::generate(512);
-  auto other_key2 = infinit::cryptography::rsa::keypair::generate(512);
+  auto owner_key = elle::cryptography::rsa::keypair::generate(512);
+  auto other_key = elle::cryptography::rsa::keypair::generate(512);
+  auto other_key2 = elle::cryptography::rsa::keypair::generate(512);
   auto nid = infinit::model::Address::random(0);
   char buf[1024];
   {
@@ -1626,7 +1626,7 @@ ELLE_TEST_SCHEDULED(world_perm_conflict)
   DHTs servers(1);
   auto client1 = servers.client(false, {}, with_cache = true);
   auto client2 = servers.client(false);
-  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto skey = serialize(kp.K());
   write_file(client1.fs->path("/file"), "foo");
   client1.fs->path("/file")->setxattr("infinit.auth_others", "r", 0);
@@ -1751,7 +1751,7 @@ ELLE_TEST_SCHEDULED(block_size)
   std::string content(1024 * kchunks, 'a');
   for (unsigned int i=0; i<content.size(); ++i)
     content[i] = i % 199;
-  auto check_file = [&](std::shared_ptr<reactor::filesystem::Path> p) -> bool {
+  auto check_file = [&](std::shared_ptr<elle::reactor::filesystem::Path> p) -> bool {
     auto h = p->open(O_RDONLY, 0644);
     char buf[1024];
     for (int i=0; i<kchunks; ++i)
@@ -1775,7 +1775,7 @@ ELLE_TEST_SCHEDULED(block_size)
     }
     return true;
   };
-  auto write_file_h = [&](std::unique_ptr<reactor::filesystem::Handle>& h) -> bool {
+  auto write_file_h = [&](std::unique_ptr<elle::reactor::filesystem::Handle>& h) -> bool {
     for (int i=0; i<kchunks; ++i)
     {
       if (h->write(elle::ConstWeakBuffer(content.data() + i * 1024, 1024), 1024, i * 1024) != 1024)
@@ -1783,7 +1783,7 @@ ELLE_TEST_SCHEDULED(block_size)
     }
     return true;
   };
-  auto write_file = [&](std::shared_ptr<reactor::filesystem::Path> p) -> bool {
+  auto write_file = [&](std::shared_ptr<elle::reactor::filesystem::Path> p) -> bool {
      auto h = p->create(O_RDWR | O_CREAT | O_TRUNC, 0644);
      if (!write_file_h(h))
        return false;

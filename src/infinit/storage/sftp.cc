@@ -11,9 +11,9 @@
 #include <elle/log.hh>
 #include <elle/factory.hh>
 
-#include <reactor/scheduler.hh>
-#include <reactor/Barrier.hh>
-#include <reactor/lockable.hh>
+#include <elle/reactor/scheduler.hh>
+#include <elle/reactor/Barrier.hh>
+#include <elle/reactor/lockable.hh>
 
 #include <infinit/storage/sftp.hh>
 #include <infinit/storage/MissingKey.hh>
@@ -175,7 +175,7 @@ namespace infinit
       _pos = 0;
       namespace asio = boost::asio;
       size(4);
-      reactor::Barrier b;
+      elle::reactor::Barrier b;
       boost::system::error_code erc;
       size_t len = 0;
       auto cb2 = [&](boost::system::error_code e, size_t sz)
@@ -260,7 +260,7 @@ namespace infinit
       }
       else
       {
-        reactor::Semaphore b;
+        elle::reactor::Semaphore b;
         asio::async_write(s, v, [&](boost::system::error_code e, size_t sz)
           {
             if (e)
@@ -338,8 +338,8 @@ namespace infinit
     }
 
     SFTP::SFTP(std::string const& address, std::string const& path)
-      : _in(reactor::scheduler().io_service())
-      , _out(reactor::scheduler().io_service())
+      : _in(elle::reactor::scheduler().io_service())
+      , _out(elle::reactor::scheduler().io_service())
       ,_server_address(address)
       , _path(path)
       , _sem(1)
@@ -408,14 +408,14 @@ namespace infinit
     SFTP::_get(Key k) const
     {
       BENCH("get");
-      /*reactor::Lock lock(_sem);*/
+      /*elle::reactor::Lock lock(_sem);*/
       ELLE_TRACE("_get %x", k);
       std::string path = elle::sprintf("%s/%x", _path, k);
       Packet p;
       int req = ++_req;
       p.make(SSH_FXP_OPEN, req, path, SSH_FXF_READ, 0);
       {
-        reactor::Lock lock(_sem);
+        elle::reactor::Lock lock(_sem);
         p.writeTo(_out);
         p.readFrom(_in);
       }
@@ -438,7 +438,7 @@ namespace infinit
         int req = ++_req;
         p.make(SSH_FXP_READ, req, handle, 0, res.size(), 1000000000);
         {
-          reactor::Lock lock(_sem);
+          elle::reactor::Lock lock(_sem);
           p.writeTo(_out);
           p.readFrom(_in);
         }
@@ -450,7 +450,7 @@ namespace infinit
         { // read on a 0-byte file causes an error
           p.make(SSH_FXP_CLOSE, ++_req, handle);
           {
-            reactor::Lock lock(_sem);
+            elle::reactor::Lock lock(_sem);
             p.writeTo(_out);
             p.readFrom(_in);
           }
@@ -471,7 +471,7 @@ namespace infinit
       req = ++_req;
       p.make(SSH_FXP_CLOSE, req, handle);
       {
-        reactor::Lock lock(_sem);
+        elle::reactor::Lock lock(_sem);
         p.writeTo(_out);
         p.readFrom(_in);
         p.readByte();
@@ -485,14 +485,14 @@ namespace infinit
     SFTP::_erase(Key k)
     {
       BENCH("erase");
-      /*reactor::Lock lock(_sem);*/
+      /*elle::reactor::Lock lock(_sem);*/
       ELLE_TRACE("_erase %x", k);
       std::string path = elle::sprintf("%s/%x", _path, k);
       Packet p;
       int req = ++_req;
       p.make(SSH_FXP_REMOVE, req, path);
       {
-        reactor::Lock lock(_sem);
+        elle::reactor::Lock lock(_sem);
         p.writeTo(_out);
         p.readFrom(_in);
         p.readByte();
@@ -508,7 +508,7 @@ namespace infinit
     {
       BENCH("set");
       elle::Buffer value(value_.contents(), value_.size());
-      /*reactor::Lock lock(_sem);*/
+      /*elle::reactor::Lock lock(_sem);*/
       ELLE_TRACE("_set %x of size %s", k, value.size());
       std::string path = elle::sprintf("%s/%x", _path, k);
       Packet p;
@@ -517,7 +517,7 @@ namespace infinit
              SSH_FXF_WRITE | SSH_FXF_CREAT | SSH_FXF_TRUNC,
              0);
       {
-        reactor::Lock lock(_sem);
+        elle::reactor::Lock lock(_sem);
         p.writeTo(_out);
         p.readFrom(_in);
       }
@@ -539,7 +539,7 @@ namespace infinit
             elle::ConstWeakBuffer(
               value.contents() + o*block_size,
               std::min(block_size, int(value.size()) - o * block_size)));
-          reactor::Lock lock(_sem);
+          elle::reactor::Lock lock(_sem);
           p.writeTo(_out);
           p.readFrom(_in);
           p.readByte();
@@ -551,7 +551,7 @@ namespace infinit
       //close
       req = ++_req;
       p.make(SSH_FXP_CLOSE, req, handle);
-      reactor::Lock lock(_sem);
+      elle::reactor::Lock lock(_sem);
       p.writeTo(_out);
       p.readFrom(_in);
       p.readByte();
@@ -569,7 +569,7 @@ namespace infinit
       int req = ++_req;
       p.make(SSH_FXP_OPENDIR, req, _path);
       {
-        reactor::Lock lock(_sem);
+        elle::reactor::Lock lock(_sem);
         p.writeTo(_out);
         p.readFrom(_in);
       }
@@ -583,7 +583,7 @@ namespace infinit
       {
         int req = ++_req;
         p.make(SSH_FXP_READDIR, req, handle);
-        reactor::Lock lock(_sem);
+        elle::reactor::Lock lock(_sem);
         p.writeTo(_out);
         p.readFrom(_in);
         int type = p.readByte();
@@ -604,7 +604,7 @@ namespace infinit
       }
       p.make(SSH_FXP_CLOSE, ++_req, handle);
       {
-        reactor::Lock lock(_sem);
+        elle::reactor::Lock lock(_sem);
         p.writeTo(_out);
         p.readFrom(_in);
       }

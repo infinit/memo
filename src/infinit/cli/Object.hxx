@@ -13,11 +13,11 @@ namespace infinit
     template <typename Self, typename Owner>
     Object<Self, Owner>::Object(Infinit& infinit)
       : ObjectCallable<Self, Owner>(
-        das::bind_method(*this, cli::call), cli::help = false)
+        elle::das::bind_method(*this, cli::call), cli::help = false)
       , _cli(infinit)
     {
       this->_options.emplace(
-        "help", das::cli::Option('h', "show this help message"));
+        "help", elle::das::cli::Option('h', "show this help message"));
     }
 
     namespace
@@ -53,7 +53,7 @@ namespace infinit
             {"hub", beyond(true)},
           };
           elle::fprintf(s, "  %-10s %s\n",
-                        das::cli::option_name_from_c(Symbol::name()),
+                        elle::das::cli::option_name_from_c(Symbol::name()),
                         vars.expand(Symbol::attr_get(object).description));
           return true;
         }
@@ -78,7 +78,7 @@ namespace infinit
                     "\n"
                     "Options:\n"
                     "%s",
-                    das::cli::help(static_cast<Self&>(*this), this->options()));
+                    elle::das::cli::help(static_cast<Self&>(*this), this->options()));
     }
 
     template <typename Self, typename Owner>
@@ -101,15 +101,15 @@ namespace infinit
       using Symbol = find_name<Self, Owner>;
       try
       {
-        if (args.empty() || das::cli::is_option(args[0], this->options()))
-          das::cli::call(*this, args, this->options());
+        if (args.empty() || elle::das::cli::is_option(args[0], this->options()))
+          elle::das::cli::call(*this, args, this->options());
         else
         {
           bool found = false;
           Self::Modes::template map<mode_call, Self>::value(
             this->cli(), static_cast<Self&>(*this), args, found);
           if (!found)
-            throw das::cli::Error(
+            throw elle::das::cli::Error(
               elle::sprintf("unknown mode for object %s: %s",
                             Symbol::name(), args[0]));
         }
@@ -118,7 +118,7 @@ namespace infinit
       {
         throw;
       }
-      catch (das::cli::Error const& e)
+      catch (elle::das::cli::Error const& e)
       {
         std::stringstream s;
         s << e.what() << "\n\n";
@@ -136,8 +136,8 @@ namespace infinit
     Object<Self, Owner>::bind(Symbol const& s, Args&& ... args)
       -> decltype(binding(s, std::forward<Args>(args)...))
     {
-      return das::named::function(
-        das::bind_method<Symbol, Self>(static_cast<Self&>(*this)),
+      return elle::das::named::function(
+        elle::das::bind_method<Symbol, Self>(static_cast<Self&>(*this)),
         std::forward<Args>(args)...);
     }
 
@@ -164,18 +164,18 @@ namespace infinit
           Infinit::usage(
             s, elle::sprintf(
               "%s %s [OPTIONS]",
-              das::cli::option_name_from_c(Symbol::name()),
-              das::cli::option_name_from_c(Symbol::name())));
+              elle::das::cli::option_name_from_c(Symbol::name()),
+              elle::das::cli::option_name_from_c(Symbol::name())));
           s << vars.expand(this->description) << "\n\nOptions:\n";
           {
             std::stringstream buffer;
-            buffer << das::cli::help(f, options);
+            buffer << elle::das::cli::help(f, options);
             s << vars.expand(buffer.str());
           }
         };
       try
       {
-        das::cli::call(
+        elle::das::cli::call(
           f,
           [&] (bool help,
                boost::optional<elle::Version> const& compatibility_version,
@@ -198,7 +198,7 @@ namespace infinit
           args,
           options);
       }
-      catch (das::cli::Error const& e)
+      catch (elle::das::cli::Error const& e)
       {
         std::stringstream s;
         s << e.what() << "\n\n";

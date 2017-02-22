@@ -9,13 +9,13 @@ class DummyDoughnut
 public:
   DummyDoughnut()
     : DummyDoughnut(infinit::model::Address::random(0), // FIXME
-                    infinit::cryptography::rsa::keypair::generate(1024))
+                    elle::cryptography::rsa::keypair::generate(1024))
   {}
 
   DummyDoughnut(infinit::model::Address id,
-                infinit::cryptography::rsa::KeyPair keys)
+                elle::cryptography::rsa::KeyPair keys)
     : infinit::model::doughnut::Doughnut(
-      id, std::make_shared<infinit::cryptography::rsa::KeyPair>(keys),
+      id, std::make_shared<elle::cryptography::rsa::KeyPair>(keys),
       keys.public_key(),
       infinit::model::doughnut::Passport(keys.K(), "network", keys),
       [] (infinit::model::doughnut::Doughnut&)

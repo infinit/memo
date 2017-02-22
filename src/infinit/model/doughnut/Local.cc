@@ -6,12 +6,12 @@
 #include <elle/os/environ.hh>
 #include <elle/utility/Move.hh>
 
-#include <cryptography/random.hh>
-#include <cryptography/rsa/PublicKey.hh>
-#include <cryptography/rsa/Padding.hh>
+#include <elle/cryptography/random.hh>
+#include <elle/cryptography/rsa/PublicKey.hh>
+#include <elle/cryptography/rsa/Padding.hh>
 
-#include <reactor/Scope.hh>
-#include <reactor/network/utp-server.hh>
+#include <elle/reactor/Scope.hh>
+#include <elle/reactor/network/utp-server.hh>
 
 #include <infinit/model/Endpoints.hh>
 #include <infinit/model/MissingBlock.hh>
@@ -58,7 +58,7 @@ namespace infinit
         : Super(dht, std::move(id))
         , _storage(std::move(storage))
       {
-        std::unique_ptr<reactor::network::TCPServer> old_server;
+        std::unique_ptr<elle::reactor::network::TCPServer> old_server;
         int num_run = 0;
         while (true)
         {
@@ -72,12 +72,12 @@ namespace infinit
                 && dht.version() >= elle::Version(0, 7, 0);
             if (p == Protocol::tcp || p == Protocol::all)
             {
-              this->_server = std::make_unique<reactor::network::TCPServer>();
+              this->_server = std::make_unique<elle::reactor::network::TCPServer>();
               if (listen_address)
                 this->_server->listen(*listen_address, port, v6);
               else
                 this->_server->listen(port, v6);
-              this->_server_thread = std::make_unique<reactor::Thread>(
+              this->_server_thread = std::make_unique<elle::reactor::Thread>(
                 elle::sprintf("%s", this),
                 [this] { this->_serve_tcp(); });
               ELLE_LOG("%s: listen on tcp://%s",
@@ -87,7 +87,7 @@ namespace infinit
             {
               int udp_port = port;
               this->_utp_server =
-                std::make_unique<reactor::network::UTPServer>();
+                std::make_unique<elle::reactor::network::UTPServer>();
               if (this->_server)
                 udp_port = this->_server->port();
               try
@@ -104,7 +104,7 @@ namespace infinit
                 else
                   throw; // port was specified in args, no retry
               }
-              this->_utp_server_thread = std::make_unique<reactor::Thread>(
+              this->_utp_server_thread = std::make_unique<elle::reactor::Thread>(
                 elle::sprintf("%s UTP", *this),
                 [this] { this->_serve_utp(); });
               ELLE_LOG("%s: listen on utp://%s",
@@ -281,7 +281,7 @@ namespace infinit
       | Keys |
       `-----*/
 
-      std::vector<cryptography::rsa::PublicKey>
+      std::vector<elle::cryptography::rsa::PublicKey>
       Local::_resolve_keys(std::vector<int> const& ids)
       {
         return elle::make_vector(ids,
@@ -291,10 +291,10 @@ namespace infinit
                                  });
       }
 
-      std::unordered_map<int, cryptography::rsa::PublicKey>
+      std::unordered_map<int, elle::cryptography::rsa::PublicKey>
       Local::_resolve_all_keys()
       {
-        auto res = std::unordered_map<int, cryptography::rsa::PublicKey>{};
+        auto res = std::unordered_map<int, elle::cryptography::rsa::PublicKey>{};
         for (auto const& k: this->doughnut().key_cache())
           res.emplace(k.hash, *k.key);
         return res;
@@ -334,7 +334,7 @@ namespace infinit
           if (!itf.second.ipv4_address.empty()
               && itf.second.ipv4_address != boost::asio::ip::address_v4::any().to_string())
           {
-            res.push_back(reactor::network::TCPServer::EndPoint(
+            res.push_back(elle::reactor::network::TCPServer::EndPoint(
               boost::asio::ip::address::from_string(itf.second.ipv4_address),
               ep.port()));
           }
@@ -342,7 +342,7 @@ namespace infinit
           for (auto const& ip6: itf.second.ipv6_address)
           {
             if (ip6 != boost::asio::ip::address_v6::any().to_string())
-              res.push_back(reactor::network::TCPServer::EndPoint(
+              res.push_back(elle::reactor::network::TCPServer::EndPoint(
                 boost::asio::ip::address::from_string(ip6),
                 ep.port()));
           }
@@ -412,7 +412,7 @@ namespace infinit
               elle::err("Passport validation failed");
             }
             // generate and store a challenge to ensure remote owns the passport
-            auto challenge = infinit::cryptography::random::generate<elle::Buffer>(128);
+            auto challenge = elle::cryptography::random::generate<elle::Buffer>(128);
             *stored_challenge = std::move(challenge);
             this->_passports.insert(std::make_pair(&rpcs, p));
             return std::make_pair(
@@ -471,8 +471,8 @@ namespace infinit
             bool ok = passport.user().verify(
               signed_challenge,
               *stored_challenge,
-              infinit::cryptography::rsa::Padding::pss,
-              infinit::cryptography::Oneway::sha256);
+              elle::cryptography::rsa::Padding::pss,
+              elle::cryptography::Oneway::sha256);
             if (!ok)
             {
               ELLE_LOG("Challenge verification failed");
@@ -480,8 +480,8 @@ namespace infinit
             }
             elle::Buffer password = this->_doughnut.keys().k().open(
               enc_key,
-              infinit::cryptography::Cipher::aes256,
-              infinit::cryptography::Mode::cbc);
+              elle::cryptography::Cipher::aes256,
+              elle::cryptography::Mode::cbc);
             rpcs._key.emplace(std::move(password));
             rpcs._ready(&rpcs);
             return true;
@@ -501,7 +501,7 @@ namespace infinit
       Local::_serve(std::function<std::unique_ptr<std::iostream> ()> accept)
       {
         static bool disable_key = elle::os::inenv("INFINIT_RPC_DISABLE_CRYPTO");
-        elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+        elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
         {
           while (true)
           {
@@ -541,11 +541,11 @@ namespace infinit
                       });
                   conn->_run();
                 }
-                catch (infinit::protocol::Serializer::EOF const&)
+                catch (elle::protocol::Serializer::EOF const&)
                 {}
-                catch (reactor::network::ConnectionClosed const& e)
+                catch (elle::reactor::network::ConnectionClosed const& e)
                 {}
-                catch (reactor::network::SocketClosed const& e)
+                catch (elle::reactor::network::SocketClosed const& e)
                 {
                   ELLE_TRACE("unexpected SocketClosed: %s", e.backtrace());
                 }
@@ -553,7 +553,7 @@ namespace infinit
                 {
                   ELLE_WARN("drop client %s: %s", socket, e);
                 }
-                elle::With<reactor::Thread::NonInterruptible>() << [&]
+                elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
                 {
                   elle::unconst(socket).reset();
                 };

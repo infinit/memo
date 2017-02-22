@@ -18,8 +18,8 @@ namespace infinit
 {
   namespace symbols
   {
-    DAS_SYMBOL(endpoints);
-    DAS_SYMBOL(stamp);
+    ELLE_DAS_SYMBOL(endpoints);
+    ELLE_DAS_SYMBOL(stamp);
   }
 }
 namespace infinit
@@ -137,8 +137,8 @@ namespace infinit
       private:
         void
         _broadcast();
-        ELLE_ATTRIBUTE(reactor::Channel<Address>, new_entries);
-        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, broadcast_thread);
+        ELLE_ATTRIBUTE(elle::reactor::Channel<Address>, new_entries);
+        ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, broadcast_thread);
 
       /*------.
       | Peers |
@@ -178,7 +178,7 @@ namespace infinit
           // FIXME: drop
           ELLE_ATTRIBUTE_RW(Time, last_contact_attempt);
           /// Default model: Serialize non-local information.
-          using Model = das::Model<
+          using Model = elle::das::Model<
             PeerInfo,
             decltype(elle::meta::list(symbols::id,
                                       symbols::endpoints,
@@ -240,16 +240,16 @@ namespace infinit
         _peer_connected(std::shared_ptr<Remote> peer);
         void
         _remember_stale(NodeLocation const& peer);
-        ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>, tasks);
+        ELLE_ATTRIBUTE(std::vector<elle::reactor::Thread::unique_ptr>, tasks);
         ELLE_ATTRIBUTE(std::chrono::seconds, eviction_delay);
 
       /*-------.
       | Lookup |
       `-------*/
       protected:
-        reactor::Generator<WeakMember>
+        elle::reactor::Generator<WeakMember>
         _allocate(Address address, int n) const override;
-        reactor::Generator<WeakMember>
+        elle::reactor::Generator<WeakMember>
         _lookup(Address address, int n, bool fast) const override;
         WeakMember
         _lookup_node(Address address) const override;
@@ -274,4 +274,4 @@ namespace infinit
   }
 }
 
-DAS_SERIALIZE(infinit::overlay::kouncil::Kouncil::PeerInfo);
+ELLE_DAS_SERIALIZE(infinit::overlay::kouncil::Kouncil::PeerInfo);

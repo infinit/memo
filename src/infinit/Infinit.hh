@@ -314,7 +314,7 @@ namespace infinit
     elle::json::Json
     beyond_login(std::string const& name, LoginCredentials const& o) const;
 
-    std::unique_ptr<reactor::http::Request>
+    std::unique_ptr<elle::reactor::http::Request>
     beyond_fetch_data(std::string const& where,
                       std::string const& type,
                       std::string const& name,

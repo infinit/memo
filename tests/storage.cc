@@ -133,8 +133,8 @@ s3_storage_class_backward(bool reduced)
   auto config = deserialize<infinit::storage::S3StorageConfig>(ss, false);
   BOOST_CHECK_EQUAL(
     static_cast<int>(config.storage_class),
-    static_cast<int>(reduced ? aws::S3::StorageClass::ReducedRedundancy
-                             : aws::S3::StorageClass::Default));
+    static_cast<int>(reduced ? elle::service::aws::S3::StorageClass::ReducedRedundancy
+                             : elle::service::aws::S3::StorageClass::Default));
 }
 
 static

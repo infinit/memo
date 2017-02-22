@@ -3,7 +3,7 @@
 
 # include <elle/attribute.hh>
 
-# include <cryptography/rsa/PublicKey.hh>
+# include <elle/cryptography/rsa/PublicKey.hh>
 
 # include <infinit/model/blocks/ImmutableBlock.hh>
 
@@ -34,7 +34,7 @@ namespace infinit
            Passport const& passport,
            bool reverse = false);
         UB(Doughnut* dht, std::string name,
-           cryptography::rsa::PublicKey key,
+           elle::cryptography::rsa::PublicKey key,
            bool reverse = false);
         UB(UB const& other);
         static
@@ -42,13 +42,13 @@ namespace infinit
         hash_address(std::string const& name, Doughnut const& dht);
         static
         Address
-        hash_address(cryptography::rsa::PublicKey const& key,
+        hash_address(elle::cryptography::rsa::PublicKey const& key,
                      Doughnut const& dht);
         static
         elle::Buffer
-        hash(cryptography::rsa::PublicKey const& key);
+        hash(elle::cryptography::rsa::PublicKey const& key);
         ELLE_ATTRIBUTE_R(std::string, name);
-        ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, key);
+        ELLE_ATTRIBUTE_R(elle::cryptography::rsa::PublicKey, key);
         ELLE_ATTRIBUTE_R(bool, reverse);
         ELLE_ATTRIBUTE_R(boost::optional<Passport>, passport);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);

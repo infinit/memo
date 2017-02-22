@@ -6,9 +6,9 @@
 #include <elle/os/environ.hh>
 #include <elle/utils.hh>
 
-#include <reactor/Scope.hh>
-#include <reactor/scheduler.hh>
-#include <reactor/thread.hh>
+#include <elle/reactor/Scope.hh>
+#include <elle/reactor/scheduler.hh>
+#include <elle/reactor/thread.hh>
 
 #include <infinit/RPC.hh>
 
@@ -174,8 +174,8 @@ namespace infinit
           }
           ELLE_DEBUG_SCOPE(
             "%s: wait for connection with timeout %s", this, timeout);
-          if (!reactor::wait(this->_connected, timeout))
-            throw reactor::network::TimeOut();
+          if (!elle::reactor::wait(this->_connected, timeout))
+            throw elle::reactor::network::TimeOut();
         }
       }
 
@@ -236,7 +236,7 @@ namespace infinit
       | Keys |
       `-----*/
 
-      std::vector<cryptography::rsa::PublicKey>
+      std::vector<elle::cryptography::rsa::PublicKey>
       Remote::_resolve_keys(std::vector<int> const& ids)
       {
         static auto bench = elle::Bench{"bench.remote_key_cache_hit", 1000_sec};
@@ -250,7 +250,7 @@ namespace infinit
           {
             bench.add(0);
             ELLE_TRACE("%s: fetch %s keys by ids", this, missing.size());
-            auto rpc = this->make_rpc<std::vector<cryptography::rsa::PublicKey>(
+            auto rpc = this->make_rpc<std::vector<elle::cryptography::rsa::PublicKey>(
               std::vector<int> const&)>("resolve_keys");
             auto missing_keys = rpc(missing);
             if (missing_keys.size() != missing.size())
@@ -271,10 +271,10 @@ namespace infinit
           });
       }
 
-      std::unordered_map<int, cryptography::rsa::PublicKey>
+      std::unordered_map<int, elle::cryptography::rsa::PublicKey>
       Remote::_resolve_all_keys()
       {
-        using Keys = std::unordered_map<int, cryptography::rsa::PublicKey>;
+        using Keys = std::unordered_map<int, elle::cryptography::rsa::PublicKey>;
         auto res = this->make_rpc<Keys()>("resolve_all_keys")();
         auto& kcache = this->key_hash_cache();
         for (auto const& key: res)

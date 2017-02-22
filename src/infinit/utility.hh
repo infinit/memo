@@ -10,7 +10,7 @@
 #include <elle/system/username.hh>
 #include <elle/unordered_map.hh>
 
-#include <reactor/http/Request.hh>
+#include <elle/reactor/http/Request.hh>
 
 #include <infinit/User.hh>
 
@@ -200,7 +200,7 @@ namespace infinit
 
   Headers
   signature_headers(
-    reactor::http::Method method,
+    elle::reactor::http::Method method,
     std::string const& where,
     User const& self,
     boost::optional<elle::ConstWeakBuffer> payload = {});
@@ -208,7 +208,7 @@ namespace infinit
   template <typename Exception>
   ELLE_COMPILER_ATTRIBUTE_NORETURN
   void
-  read_error(reactor::http::Request& r,
+  read_error(elle::reactor::http::Request& r,
              std::string const& type,
              std::string const& name);
 

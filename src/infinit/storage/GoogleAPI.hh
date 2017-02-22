@@ -1,7 +1,7 @@
 #ifndef INFINIT_STORAGE_GOOGLE_API_HH
 # define INFINIT_STORAGE_GOOGLE_API_HH
 
-# include <reactor/http/Request.hh>
+# include <elle/reactor/http/Request.hh>
 
 namespace infinit
 {
@@ -15,14 +15,14 @@ namespace infinit
       void
       _refresh();
 
-      reactor::http::Request
+      elle::reactor::http::Request
       _request(std::string url,
-               reactor::http::Method method,
-               reactor::http::Request::QueryDict query,
-               reactor::http::Request::Configuration conf
-                 = reactor::http::Request::Configuration{},
-               std::vector<reactor::http::StatusCode>
-               = std::vector<reactor::http::StatusCode>{},
+               elle::reactor::http::Method method,
+               elle::reactor::http::Request::QueryDict query,
+               elle::reactor::http::Request::Configuration conf
+                 = elle::reactor::http::Request::Configuration{},
+               std::vector<elle::reactor::http::StatusCode>
+               = std::vector<elle::reactor::http::StatusCode>{},
                elle::Buffer const& payload = elle::Buffer()) const;
       ELLE_ATTRIBUTE_R(std::string, name, protected);
       ELLE_ATTRIBUTE_R(std::string, token, protected);

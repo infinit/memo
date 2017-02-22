@@ -8,9 +8,9 @@
 #include <elle/serialization/binary/SerializerOut.hh>
 #include <elle/serialization/json.hh>
 
-#include <cryptography/hash.hh>
+#include <elle/cryptography/hash.hh>
 
-#include <reactor/network/exception.hh>
+#include <elle/reactor/network/exception.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Local.hh>
@@ -287,15 +287,15 @@ namespace kademlia
     _socket.socket()->close();
     _socket.bind(Endpoint({}, _config.port));
 
-    _looper = std::make_unique<reactor::Thread>("looper",
+    _looper = std::make_unique<elle::reactor::Thread>("looper",
       [this] { this->_loop();});
-    _pinger = std::make_unique<reactor::Thread>("pinger",
+    _pinger = std::make_unique<elle::reactor::Thread>("pinger",
       [this] { this->_ping();});
-    _refresher = std::make_unique<reactor::Thread>("refresher",
+    _refresher = std::make_unique<elle::reactor::Thread>("refresher",
       [this] { this->_refresh();});
-    _cleaner = std::make_unique<reactor::Thread>("cleaner",
+    _cleaner = std::make_unique<elle::reactor::Thread>("cleaner",
       [this] { this->_cleanup();});
-    _republisher = std::make_unique<reactor::Thread>("republisher",
+    _republisher = std::make_unique<elle::reactor::Thread>("republisher",
       [this] { this->_republish();});
     if (_config.wait)
     {
@@ -307,10 +307,10 @@ namespace kademlia
         ELLE_TRACE("%s: Waiting for %s nodes, got %s", *this, _config.wait, n);
         if (n >= _config.wait)
           break;
-        reactor::sleep(1_sec);
+        elle::reactor::sleep(1_sec);
       }
     }
-    reactor::sleep(boost::posix_time::milliseconds(_config.wait_ms));
+    elle::reactor::sleep(boost::posix_time::milliseconds(_config.wait_ms));
     ELLE_LOG("%s: exiting ctor", *this);
   }
 
@@ -386,7 +386,7 @@ namespace kademlia
 
   void Kademlia::send(elle::Buffer const& b, Endpoint e)
   {
-    reactor::Lock l(_udp_send_mutex);
+    elle::reactor::Lock l(_udp_send_mutex);
     ELLE_DUMP("%s: sending packet to %s\n%s", *this, e, b.string());
     _socket.send_to(elle::ConstWeakBuffer(b), e);
   }
@@ -446,7 +446,7 @@ namespace kademlia
     while (_local_endpoint == Endpoint())
     {
       ELLE_TRACE("%s: Waiting for endpoint (ping)", *this);
-      reactor::sleep(500_ms);
+      elle::reactor::sleep(500_ms);
     }
     auto keys = l.storage()->list();
     for (auto const& k: keys)
@@ -469,7 +469,7 @@ namespace kademlia
     }
   }
 
-  reactor::Generator<Kademlia::WeakMember>
+  elle::reactor::Generator<Kademlia::WeakMember>
   Kademlia::_allocate(infinit::model::Address address,
                       int n) const
   {
@@ -499,19 +499,19 @@ namespace kademlia
         const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
         /* FIXME BEARCLAW */ infinit::model::Address(),
         infinit::model::Endpoints(s.value),
-        boost::optional<reactor::network::UTPServer&>(),
+        boost::optional<elle::reactor::network::UTPServer&>(),
         boost::optional<infinit::model::EndpointsRefetcher>(),
         infinit::model::doughnut::Protocol::tcp));
     ELLE_TRACE("%s: returning", *this);
-    return reactor::generator<WeakMember>(
-      [res] (reactor::yielder<WeakMember>::type const& yield)
+    return elle::reactor::generator<WeakMember>(
+      [res] (elle::reactor::yielder<WeakMember>::type const& yield)
       {
         for (auto r: res)
           yield(r);
       });
   }
 
-  reactor::Generator<Kademlia::WeakMember>
+  elle::reactor::Generator<Kademlia::WeakMember>
   Kademlia::_lookup(infinit::model::Address address,
                     int n,
                     bool) const
@@ -529,14 +529,14 @@ namespace kademlia
           const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
           /* FIXME BEARCLAW */ Address(),
           infinit::model::Endpoints(q->storeResult),
-          boost::optional<reactor::network::UTPServer&>(),
+          boost::optional<elle::reactor::network::UTPServer&>(),
           boost::optional<infinit::model::EndpointsRefetcher>(),
           infinit::model::doughnut::Protocol::tcp));
     }
     else
       throw infinit::model::MissingBlock(address);
-    return reactor::generator<WeakMember>(
-      [res] (reactor::yielder<WeakMember>::type const& yield)
+    return elle::reactor::generator<WeakMember>(
+      [res] (elle::reactor::yielder<WeakMember>::type const& yield)
       {
         for (auto r: res)
           yield(r);
@@ -863,7 +863,7 @@ namespace kademlia
 
   void Kademlia::_republish()
   {
-    reactor::sleep(boost::posix_time::seconds(rand() % 10));
+    elle::reactor::sleep(boost::posix_time::seconds(rand() % 10));
     while (true)
     {
       // count how many keys we have
@@ -874,12 +874,12 @@ namespace kademlia
             ++count;
       if (!count)
       {
-        reactor::sleep(10_sec);
+        elle::reactor::sleep(10_sec);
         continue;
       }
       int interval = _config.storage_lifetime_ms / count;
       ELLE_DEBUG("%s: set refresh interval to %s", *this, interval);
-      reactor::sleep(boost::posix_time::milliseconds(interval/3));
+      elle::reactor::sleep(boost::posix_time::milliseconds(interval/3));
       Address oldest;
       Time t = now();
       Store* match = nullptr;
@@ -912,7 +912,7 @@ namespace kademlia
   {
     while (true)
     {
-      reactor::sleep(10_sec);
+      elle::reactor::sleep(10_sec);
       for (auto& s: _storage)
       {
         for (unsigned int i=0; i < s.second.size(); ++i)
@@ -931,10 +931,10 @@ namespace kademlia
 
   void Kademlia::_ping()
   {
-    reactor::sleep(boost::posix_time::milliseconds(rand() % _config.ping_interval_ms));
+    elle::reactor::sleep(boost::posix_time::milliseconds(rand() % _config.ping_interval_ms));
     while (true)
     {
-      reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
+      elle::reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
       int ncount = 0;
       for (auto const& b: _routes)
         ncount += b.size();
@@ -961,7 +961,7 @@ namespace kademlia
   }
   void Kademlia::_refresh()
   {
-    reactor::sleep(boost::posix_time::milliseconds(rand() % _config.refresh_interval_ms));
+    elle::reactor::sleep(boost::posix_time::milliseconds(rand() % _config.refresh_interval_ms));
     while (true)
     {
       ELLE_DEBUG("%s: refresh query", *this);
@@ -971,7 +971,7 @@ namespace kademlia
         sq->barrier.wait();
         ELLE_DEBUG("%s: refresh query finished", *this);
       }
-      reactor::sleep(boost::posix_time::milliseconds(_config.refresh_interval_ms));
+      elle::reactor::sleep(boost::posix_time::milliseconds(_config.refresh_interval_ms));
     }
   }
 

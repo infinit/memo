@@ -1,13 +1,13 @@
 #pragma once
 
-#include <reactor/filesystem.hh>
+#include <elle/reactor/filesystem.hh>
 #include <infinit/filesystem/File.hh>
 
 namespace infinit
 {
   namespace filesystem
   {
-    namespace rfs = reactor::filesystem;
+    namespace rfs = elle::reactor::filesystem;
     class XAttributeFile
       : public rfs::Path
     {

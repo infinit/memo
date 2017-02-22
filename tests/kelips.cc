@@ -1,9 +1,9 @@
 #include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/test.hh>
 #include <elle/os/environ.hh>
-#include <reactor/network/http-server.hh>
+#include <elle/reactor/network/http-server.hh>
 
-#include <reactor/for-each.hh>
+#include <elle/reactor/for-each.hh>
 
 #include <infinit/Network.hh>
 #include <infinit/filesystem/filesystem.hh>
@@ -29,7 +29,7 @@ ELLE_LOG_COMPONENT("test");
 #endif
 
 namespace ifs = infinit::filesystem;
-namespace rfs = reactor::filesystem;
+namespace rfs = elle::reactor::filesystem;
 namespace bfs = boost::filesystem;
 namespace imd = infinit::model::doughnut;
 namespace iok = infinit::overlay::kelips;
@@ -40,12 +40,12 @@ struct BEndpoints
 {
   std::vector<std::string> addresses;
   int port;
-  using Model = das::Model<
+  using Model = elle::das::Model<
     BEndpoints,
     decltype(elle::meta::list(infinit::symbols::addresses,
                               infinit::symbols::port))>;
 };
-DAS_SERIALIZE(BEndpoints);
+ELLE_DAS_SERIALIZE(BEndpoints);
 
 inline
 BEndpoints
@@ -59,12 +59,12 @@ e2b(Endpoints e)
 }
 
 
-class Beyond: public reactor::network::HttpServer
+class Beyond: public elle::reactor::network::HttpServer
 {
 public:
   Beyond()
   {
-    register_route("/networks/bob/network/endpoints", reactor::http::Method::GET,
+    register_route("/networks/bob/network/endpoints", elle::reactor::http::Method::GET,
       [&] (
            Headers const&,
            Cookies const&,
@@ -125,12 +125,12 @@ infinit::Network net("bob/network", nullptr, boost::none);
 typedef std::vector<
          std::pair<
            std::shared_ptr<imd::Doughnut>,
-           reactor::Thread::unique_ptr
+           elle::reactor::Thread::unique_ptr
            >> Nodes;
 
 static
 Nodes
-run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
+run_nodes(bfs::path where,  elle::cryptography::rsa::KeyPair& kp,
           int count = 10, int groups = 1, int replication_factor = 3,
           bool paxos_lenient = false,
           int beyond_port = 0, int base_id=0)
@@ -177,7 +177,7 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
     v[0] = base_id + n + 1;
     auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
       infinit::model::Address(v),
-      std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
+      std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
       kp.public_key(),
       passport,
       consensus,
@@ -185,7 +185,7 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
       boost::optional<int>(),
       boost::optional<boost::asio::ip::address>(),
       std::move(s));
-    reactor::Thread::unique_ptr tptr;
+    elle::reactor::Thread::unique_ptr tptr;
     if (beyond_port)
     {
       infinit::overlay::NodeLocations locs;
@@ -204,10 +204,10 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
   return res;
 }
 
-static std::pair<std::unique_ptr<rfs::FileSystem>, reactor::Thread::unique_ptr>
+static std::pair<std::unique_ptr<rfs::FileSystem>, elle::reactor::Thread::unique_ptr>
 make_observer(std::shared_ptr<imd::Doughnut>& root_node,
               bfs::path where,
-              infinit::cryptography::rsa::KeyPair& kp,
+              elle::cryptography::rsa::KeyPair& kp,
               int groups,
               int replication_factor,
               bool cache, bool async,
@@ -253,7 +253,7 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   };
   auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
     infinit::model::Address::random(0), // FIXME
-    std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
+    std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
     kp.public_key(),
     passport,
     consensus,
@@ -263,9 +263,9 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
     std::unique_ptr<infinit::storage::Storage>());
   auto ops = std::make_unique<infinit::filesystem::FileSystem>(
     "volume", dn, infinit::filesystem::allow_root_creation = true);
-  auto fs = std::make_unique<reactor::filesystem::FileSystem>(
+  auto fs = std::make_unique<elle::reactor::filesystem::FileSystem>(
     std::move(ops), true);
-  reactor::Thread::unique_ptr tptr;
+  elle::reactor::Thread::unique_ptr tptr;
   if (beyond_port)
   {
     infinit::overlay::NodeLocations locs;
@@ -282,7 +282,7 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
       if (boost::any_cast<bool>(c.at("discovered")))
         break;
     }
-    reactor::sleep(50_ms);
+    elle::reactor::sleep(50_ms);
   }
   ELLE_LOG("Returning observer");
   return std::make_pair(std::move(fs), std::move(tptr));
@@ -296,7 +296,7 @@ node_to_fs(Nodes const& nodes)
   {
     auto ops = std::make_unique<infinit::filesystem::FileSystem>(
       "volume", n.first, infinit::filesystem::allow_root_creation = true);
-    auto fs = std::make_unique<reactor::filesystem::FileSystem>(
+    auto fs = std::make_unique<elle::reactor::filesystem::FileSystem>(
       std::move(ops), true);
     res.push_back(std::move(fs));
   }
@@ -348,7 +348,7 @@ ELLE_TEST_SCHEDULED(basic)
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
-  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto kp = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
     auto nodes = run_nodes(tmp, kp, 10 / valgrind(1, 2));
@@ -395,7 +395,7 @@ ELLE_TEST_SCHEDULED(list_directory)
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
-  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 1);
   auto fswrite = make_observer(nodes.front().first, tmp, kp, 1, 1, true, false, false);
   auto fsc = make_observer(nodes.front().first, tmp, kp, 1, 1, true, false, false);
@@ -423,7 +423,7 @@ ELLE_TEST_SCHEDULED(list_directory_3)
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
-  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 3);
   auto fswrite = make_observer(nodes.front().first, tmp, kp, 1, 3, true, false, false);
   auto fsc = make_observer(nodes.front().first, tmp, kp, 1, 3, true, false, false);
@@ -451,7 +451,7 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
-  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 5, 1, 3);
   auto fswrite = make_observer(nodes.front().first, tmp, kp, 1, 3, true, false, false);
   auto fsc = make_observer(nodes.front().first, tmp, kp, 1, 3, true, false, false);
@@ -491,9 +491,9 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
 //     {
 //       boost::filesystem::remove_all(tmp);
 //     });
-//   auto kp = infinit::cryptography::rsa::keypair::generate(2048);
+//   auto kp = elle::cryptography::rsa::keypair::generate(2048);
 //   auto nodes = run_nodes(tmp, kp, 3, 1, 3, false);
-//   std::vector<reactor::Thread::unique_ptr> v;
+//   std::vector<elle::reactor::Thread::unique_ptr> v;
 //   std::vector<std::unique_ptr<rfs::FileSystem>> fss;
 //   fss.reserve(3);
 //   for (int i=0; i<3; ++i)
@@ -501,12 +501,12 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
 //     fss.push_back(make_observer(nodes.front(), tmp, kp, 1, 3, false, false, false));
 //     if (i == 0)
 //       writefile(*fss.front(), "foo", "bar");
-//     reactor::sleep(100_ms);
+//     elle::reactor::sleep(100_ms);
 //   }
 //   for (int i=0; i<3; ++i)
 //   {
 //     auto fs = fss[i].get();
-//     v.emplace_back(new reactor::Thread("process", [fs] {
+//     v.emplace_back(new elle::reactor::Thread("process", [fs] {
 //         for (int j=0; j<100; ++j)
 //         {
 //           auto h = fs->path("/")->child("foo")->open(O_RDWR | O_TRUNC | O_CREAT, S_IFREG);
@@ -517,7 +517,7 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
 //     }));
 //   }
 //   for (int i=0; i<3; ++i)
-//     reactor::wait(*v[i]);
+//     elle::reactor::wait(*v[i]);
 //   ELLE_LOG("teardown");
 // }
 
@@ -530,7 +530,7 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
 //     {
 //       boost::filesystem::remove_all(tmp);
 //     });
-//   auto kp = infinit::cryptography::rsa::keypair::generate(2048);
+//   auto kp = elle::cryptography::rsa::keypair::generate(2048);
 //   auto nodes = run_nodes(tmp, kp, node_count, k, replication, lenient);
 //   auto fs = make_observer(nodes.front(), tmp, kp, k, replication, false, false, lenient);
 //   ELLE_LOG("initial file write");
@@ -614,7 +614,7 @@ ELLE_TEST_SCHEDULED(conflicts)
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
-  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto kp = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
     auto nodes = run_nodes(tmp, kp, 1);
@@ -693,7 +693,7 @@ ELLE_TEST_SCHEDULED(times)
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
-  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 1);
   auto fsp = make_observer(nodes.front().first, tmp, kp, 1, 1, false, false, false);
   auto& fs = fsp.first;
@@ -711,7 +711,7 @@ ELLE_TEST_SCHEDULED(times)
   BOOST_CHECK(now - st.st_mtime <= 1);
   BOOST_CHECK(now - st.st_ctime <= 1);
 
-  reactor::sleep(2100_ms);
+  elle::reactor::sleep(2100_ms);
   now = time(nullptr);
   appendfile(*fs, "dir/file", "foo"); //mtime changed, ctime unchanged, dir unchanged
   fs->path("/dir/file")->stat(&st);
@@ -721,7 +721,7 @@ ELLE_TEST_SCHEDULED(times)
   BOOST_CHECK(now - st.st_mtime >= 2);
   BOOST_CHECK(now - st.st_ctime >= 2);
 
-  reactor::sleep(2100_ms);
+  elle::reactor::sleep(2100_ms);
   now = time(nullptr);
   writefile(*fs, "dir/file2", "foo");
   fs->path("/dir2/dir")->mkdir(0600);
@@ -743,11 +743,11 @@ ELLE_TEST_SCHEDULED(clients_parallel)
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
-  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 4, /*k*/1, /*repfactor*/1);
   auto fss = node_to_fs(nodes);
   fss.front()->path("/");
-  reactor::for_each_parallel(fss, [&](std::unique_ptr<rfs::FileSystem>& fs)
+  elle::reactor::for_each_parallel(fss, [&](std::unique_ptr<rfs::FileSystem>& fs)
     {
       auto p = std::to_string((uint64_t)fs.get());
       CHECKED(fs->path("/" + p)->mkdir(0666);)
@@ -782,11 +782,11 @@ ELLE_TEST_SCHEDULED(many_conflicts)
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
-  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, node_count, /*k*/1, /*repfactor*/3);
   auto fss = node_to_fs(nodes);
   fss.front()->path("/");
-  reactor::for_each_parallel(fss, [&](std::unique_ptr<rfs::FileSystem>& fs)
+  elle::reactor::for_each_parallel(fss, [&](std::unique_ptr<rfs::FileSystem>& fs)
     {
       for (int i=0; i<iter_count; ++i)
       {
@@ -809,7 +809,7 @@ ELLE_TEST_SCHEDULED(remove_conflicts)
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
-  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 2, /*k*/1, /*repfactor*/1);
   auto fss = node_to_fs(nodes);
   fss.front()->path("/");
@@ -819,20 +819,20 @@ ELLE_TEST_SCHEDULED(remove_conflicts)
   {
     fss[0]->path("/foo")->mkdir(0666);
     std::vector<int> is{0, 1};
-    reactor::for_each_parallel(is, [i,&fss](int s) {
+    elle::reactor::for_each_parallel(is, [i,&fss](int s) {
       int which = (i/2)%2;
       if (s == (i%2))
         try {
           for (int y=0; y<i%10; ++y)
-            reactor::yield();
+            elle::reactor::yield();
           fss[which]->path("/foo")->setxattr("bar", "baz", 0);
         }
-        catch (reactor::filesystem::Error const&)
+        catch (elle::reactor::filesystem::Error const&)
         {}
       else
       {
         for (int y=0; y<i/10; ++y)
-          reactor::yield();
+          elle::reactor::yield();
         fss[1-which]->path("/foo")->rmdir();
       }
     });
@@ -857,7 +857,7 @@ void insist(std::function<void()> op, int max_retry_secs)
       ELLE_WARN("%s", elle::exception_string());
       throw;
     }
-    reactor::sleep(1_sec);
+    elle::reactor::sleep(1_sec);
   }
 }
 
@@ -865,7 +865,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
 {
   Beyond beyond;
   elle::filesystem::TemporaryDirectory d;
-  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
   auto fsp = make_observer(nodes.front().first, d.path(), kp, 1, 2, false, false, false, beyond.port());
   auto& fs = fsp.first;
@@ -888,7 +888,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_1)
   beyond.pull(*nodes[0].first);
   beyond.pull(*nodes[1].first);
   nodes.clear();
-  reactor::sleep(2_sec);
+  elle::reactor::sleep(2_sec);
   BOOST_CHECK_THROW(readfile(*fs, "file"), std::exception);
   nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
   beyond.push(*nodes[0].first);
@@ -903,7 +903,7 @@ ELLE_TEST_SCHEDULED(beyond_observer_2)
 {
   Beyond beyond;
   elle::filesystem::TemporaryDirectory d;
-  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(d.path(), kp, 2, 1, 2, false, beyond.port(), 0);
   auto fsp = make_observer(nodes.front().first, d.path(), kp, 1, 2, false, false, false, beyond.port());
   auto& fs = fsp.first;
@@ -926,7 +926,7 @@ ELLE_TEST_SCHEDULED(beyond_storage)
   // test reconnection between storages
   Beyond beyond;
   elle::filesystem::TemporaryDirectory d;
-  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(d.path(), kp, 2, 1, 1, false, beyond.port(), 0);
   auto fsp = make_observer(nodes.front().first, d.path(), kp, 1, 1, false, false, false, beyond.port());
   auto& fs = fsp.first;

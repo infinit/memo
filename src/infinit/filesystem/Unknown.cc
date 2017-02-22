@@ -6,7 +6,7 @@
 #include <infinit/filesystem/File.hh>
 #include <infinit/filesystem/Unreachable.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
-#include <reactor/filesystem.hh>
+#include <elle/reactor/filesystem.hh>
 
 #include <sys/stat.h> // S_IMFT...
 #include <fcntl.h> // O_EXCL

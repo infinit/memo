@@ -2,9 +2,9 @@
 
 #include <elle/cast.hh>
 
-#include <cryptography/rsa/KeyPair.hh>
-#include <cryptography/rsa/PublicKey.hh>
-#include <cryptography/hash.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/rsa/PublicKey.hh>
+#include <elle/cryptography/hash.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -25,10 +25,10 @@ namespace infinit
     namespace doughnut
     {
 
-      namespace rfs = reactor::filesystem;
+      namespace rfs = elle::reactor::filesystem;
 
       static const elle::Buffer group_block_key = elle::Buffer("group", 5);
-      reactor::LocalStorage<std::vector<cryptography::rsa::PublicKey>>
+      elle::reactor::LocalStorage<std::vector<elle::cryptography::rsa::PublicKey>>
       Group::_stack;
 
       Group::Group(Doughnut& dht, std::string const& name)
@@ -38,7 +38,7 @@ namespace infinit
         , _block()
       {}
 
-      Group::Group(Doughnut& dht, cryptography::rsa::PublicKey k)
+      Group::Group(Doughnut& dht, elle::cryptography::rsa::PublicKey k)
         : _dht(dht)
         , _name()
         , _public_control_key(k)
@@ -183,7 +183,7 @@ namespace infinit
         });
       }
 
-      cryptography::rsa::PublicKey
+      elle::cryptography::rsa::PublicKey
       Group::public_control_key() const
       {
         if (this->_public_control_key)
@@ -208,7 +208,7 @@ namespace infinit
         try
         {
           static
-          std::unordered_map<cryptography::rsa::PublicKey, Address>
+          std::unordered_map<elle::cryptography::rsa::PublicKey, Address>
           address_cache;
 
           Address addr;
@@ -256,16 +256,16 @@ namespace infinit
         return elle::unconst(res);
       }
 
-      cryptography::rsa::KeyPair
+      elle::cryptography::rsa::KeyPair
       Group::_control_key()
       {
         auto priv = this->block().control_key();
         if (!priv)
           elle::err("You are not a group admin");
-        return cryptography::rsa::KeyPair(public_control_key(), *priv);
+        return elle::cryptography::rsa::KeyPair(public_control_key(), *priv);
       }
 
-      cryptography::rsa::PublicKey
+      elle::cryptography::rsa::PublicKey
       Group::current_public_key() const
       {
         return this->block().current_public_key();
@@ -277,7 +277,7 @@ namespace infinit
         return this->block().group_version();
       }
 
-      cryptography::rsa::KeyPair
+      elle::cryptography::rsa::KeyPair
       Group::current_key() const
       {
         return this->block().current_key();
@@ -388,7 +388,7 @@ namespace infinit
         });
       }
 
-      std::vector<cryptography::rsa::KeyPair>
+      std::vector<elle::cryptography::rsa::KeyPair>
       Group::group_keys()
       {
         return filesystem::umbrella([&] {
@@ -396,7 +396,7 @@ namespace infinit
         });
       }
 
-      std::vector<cryptography::rsa::PublicKey>
+      std::vector<elle::cryptography::rsa::PublicKey>
       Group::group_public_keys()
       {
         return filesystem::umbrella([&] {
@@ -467,7 +467,7 @@ namespace infinit
         if (!duser)
           elle::err("User argument is not a doughnut user");
         this->_action = action;
-        this->_key = std::make_unique<cryptography::rsa::PublicKey>(duser->key());
+        this->_key = std::make_unique<elle::cryptography::rsa::PublicKey>(duser->key());
         this->_name = duser->name();
         this->_description = boost::none;
       }

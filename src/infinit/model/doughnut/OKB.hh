@@ -2,9 +2,9 @@
 
 #include <elle/serialization/fwd.hh>
 
-#include <reactor/BackgroundFuture.hh>
+#include <elle/reactor/BackgroundFuture.hh>
 
-#include <cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/fwd.hh>
@@ -28,7 +28,7 @@ namespace infinit
       `-------------*/
       public:
         OKBHeader(Doughnut* dht,
-                  cryptography::rsa::KeyPair const& keys,
+                  elle::cryptography::rsa::KeyPair const& keys,
                   boost::optional<elle::Buffer> salt);
         OKBHeader(OKBHeader const& other);
 
@@ -39,7 +39,7 @@ namespace infinit
         blocks::ValidationResult
         validate(Address const& address) const;
         ELLE_ATTRIBUTE_R(elle::Buffer, salt, protected);
-        ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PublicKey>,
+        ELLE_ATTRIBUTE_R(std::shared_ptr<elle::cryptography::rsa::PublicKey>,
                          owner_key);
         ELLE_ATTRIBUTE_R(elle::Buffer, signature);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut, protected);
@@ -61,11 +61,11 @@ namespace infinit
         static
         Address
         hash_address(Doughnut const& dht,
-                     cryptography::rsa::PublicKey const& key,
+                     elle::cryptography::rsa::PublicKey const& key,
                      elle::Buffer const& salt);
         static
         Address
-        hash_address(cryptography::rsa::PublicKey const& key,
+        hash_address(elle::cryptography::rsa::PublicKey const& key,
                      elle::Buffer const& salt,
                      elle::Version const& compatibility_version);
         using serialization_tag = infinit::serialization_tag;
@@ -93,17 +93,17 @@ namespace infinit
         BaseOKB(Doughnut* owner,
                 elle::Buffer data,
                 boost::optional<elle::Buffer> salt,
-                cryptography::rsa::KeyPair const& owner_keys);
+                elle::cryptography::rsa::KeyPair const& owner_keys);
         BaseOKB(BaseOKB const& other);
         ELLE_ATTRIBUTE_R(int, version, virtual, override);
       protected:
-        using SignFuture = reactor::BackgroundFuture<elle::Buffer>;
+        using SignFuture = elle::reactor::BackgroundFuture<elle::Buffer>;
         ELLE_ATTRIBUTE(std::shared_ptr<SignFuture>, signature, protected);
         friend class Doughnut;
       private:
         BaseOKB(OKBHeader header,
                 elle::Buffer data,
-                std::shared_ptr<cryptography::rsa::PrivateKey> owner_key);
+                std::shared_ptr<elle::cryptography::rsa::PrivateKey> owner_key);
 
       /*--------.
       | Content |
@@ -119,7 +119,7 @@ namespace infinit
 
         bool
         operator ==(blocks::Block const& rhs) const override;
-        ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PrivateKey>,
+        ELLE_ATTRIBUTE_R(std::shared_ptr<elle::cryptography::rsa::PrivateKey>,
                          owner_private_key, protected);
         ELLE_ATTRIBUTE_R(elle::Buffer, data_plain, protected);
         ELLE_ATTRIBUTE(bool, data_decrypted, protected);
@@ -162,7 +162,7 @@ namespace infinit
         std::unique_ptr<OwnerSignature>
         _sign() const;
         bool
-        _check_signature(cryptography::rsa::PublicKey const& key,
+        _check_signature(elle::cryptography::rsa::PublicKey const& key,
                          elle::Buffer const& signature,
                          elle::Buffer const& data,
                          std::string const& name) const;
@@ -202,10 +202,10 @@ namespace infinit
       void
       serialize_key_hash(elle::serialization::Serializer& s,
                          elle::Version const& v,
-                         cryptography::rsa::PublicKey& key,
+                         elle::cryptography::rsa::PublicKey& key,
                          std::string const& field_name,
                          Doughnut* dn = nullptr);
-      cryptography::rsa::PublicKey
+      elle::cryptography::rsa::PublicKey
       deserialize_key_hash(elle::serialization::SerializerIn& s,
                            elle::Version const& v,
                            std::string const& field_name,

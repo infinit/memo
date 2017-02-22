@@ -9,11 +9,11 @@
 #include <elle/bench.hh>
 #include <elle/ScopedAssignment.hh>
 
-#include <das/model.hh>
-#include <das/serializer.hh>
+#include <elle/das/model.hh>
+#include <elle/das/serializer.hh>
 
-#include <reactor/exception.hh>
-#include <reactor/scheduler.hh>
+#include <elle/reactor/exception.hh>
+#include <elle/reactor/scheduler.hh>
 
 #include <infinit/storage/Collision.hh>
 
@@ -74,7 +74,7 @@ namespace infinit
           , _journal_dir(journal_dir)
           , _exit_requested(false)
           , _process_thread(
-            new reactor::Thread(elle::sprintf("%s loop", *this),
+            new elle::reactor::Thread(elle::sprintf("%s loop", *this),
                                 [this] {
                                   bool freeze = getenv("INFINIT_ASYNC_NOPOP");
                                   if (freeze)
@@ -97,7 +97,7 @@ namespace infinit
           {
             this->_init_barrier.close();
             this->_init_thread.reset(
-              new reactor::Thread(elle::sprintf("%s: restore journal", this),
+              new elle::reactor::Thread(elle::sprintf("%s: restore journal", this),
                                   [this] { this->_init();}));
           }
           else
@@ -174,8 +174,8 @@ namespace infinit
           // Wake up the thread if needed.
           if (this->_queue.size() == 0)
             this->_queue.put(0);
-          if (!reactor::wait(*this->_process_thread, 10_sec)
-            || !reactor::wait(*this->_init_thread, 10_sec))
+          if (!elle::reactor::wait(*this->_process_thread, 10_sec)
+            || !elle::reactor::wait(*this->_init_thread, 10_sec))
             ELLE_WARN("forcefully kiling async process loop");
         }
 
@@ -195,7 +195,7 @@ namespace infinit
         {
           int wait_id = _next_index-1;
           while (_last_processed_index < wait_id)
-            reactor::sleep(100_ms);
+            elle::reactor::sleep(100_ms);
         }
 
         void
@@ -434,7 +434,7 @@ namespace infinit
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
-          reactor::wait(this->_init_barrier);
+          elle::reactor::wait(this->_init_barrier);
           this->_queue.open();
           this->_push_op(
             Op(block->address(), std::move(block), mode, std::move(resolver)));
@@ -443,7 +443,7 @@ namespace infinit
         void
         Async::_remove(Address address, blocks::RemoveSignature rs)
         {
-          reactor::wait(this->_init_barrier);
+          elle::reactor::wait(this->_init_barrier);
           this->_queue.open();
           this->_push_op(Op(address, nullptr, {}, {}, std::move(rs)));
         }
@@ -455,8 +455,8 @@ namespace infinit
         {
           // Do not deadlock from init_thread.
           if (this->_init_thread && !this->_init_thread->done() &&
-              reactor::scheduler().current() != this->_init_thread.get())
-            reactor::wait(this->_init_barrier);
+              elle::reactor::scheduler().current() != this->_init_thread.get())
+            elle::reactor::wait(this->_init_barrier);
           this->_queue.open();
           std::vector<AddressVersion> remain;
           for (auto addr: addresses)
@@ -483,8 +483,8 @@ namespace infinit
         {
           // Do not deadlock from init_thread.
           if (this->_init_thread && !this->_init_thread->done() &&
-              reactor::scheduler().current() != this->_init_thread.get())
-            reactor::wait(this->_init_barrier);
+              elle::reactor::scheduler().current() != this->_init_thread.get())
+            elle::reactor::wait(this->_init_barrier);
           this->_queue.open();
 
           bool hit = false;
@@ -535,7 +535,7 @@ namespace infinit
         void
         Async::_process_loop()
         {
-          reactor::wait(this->_init_barrier);
+          elle::reactor::wait(this->_init_barrier);
           while (!this->_exit_requested)
           {
             try
@@ -585,7 +585,7 @@ namespace infinit
           ++_processed_op_count;
           static const int delay = std::stoi(elle::os::getenv("INFINIT_ASYNC_POP_DELAY", "0"));
           if (delay)
-            reactor::sleep(boost::posix_time::milliseconds(delay));
+            elle::reactor::sleep(boost::posix_time::milliseconds(delay));
           Address addr = op->address;
           boost::optional<StoreMode> mode = op->mode;
           int attempt = 0;
@@ -652,7 +652,7 @@ namespace infinit
                 20000_ms,
                 boost::posix_time::milliseconds(200 * attempt));
               ELLE_DEBUG("wait %s before retrying", delay)
-                reactor::sleep(delay);
+                elle::reactor::sleep(delay);
             }
             // reload block and try again
             auto index = op->index;

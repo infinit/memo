@@ -93,7 +93,7 @@ namespace infinit
       /// A structure easy to query using das symbols.
       ///
       /// E.g., `google.attr_get(enabled)` -> true/false, where
-      /// `google` is a das::Symbol.
+      /// `google` is a elle::das::Symbol.
       struct Enabled
       {
         bool
@@ -433,10 +433,10 @@ namespace infinit
 
     namespace s
     {
-      DAS_SYMBOL(credentials_aws);
-      DAS_SYMBOL(credentials_dropbox);
-      DAS_SYMBOL(credentials_gcs);
-      DAS_SYMBOL(credentials_google);
+      ELLE_DAS_SYMBOL(credentials_aws);
+      ELLE_DAS_SYMBOL(credentials_dropbox);
+      ELLE_DAS_SYMBOL(credentials_gcs);
+      ELLE_DAS_SYMBOL(credentials_google);
     }
 
     void

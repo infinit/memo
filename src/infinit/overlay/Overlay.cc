@@ -1,7 +1,7 @@
 #include <elle/log.hh>
 #include <elle/make-vector.hh>
 
-#include <reactor/Scope.hh>
+#include <elle/reactor/Scope.hh>
 
 #include <infinit/overlay/Overlay.hh>
 #include <infinit/model/MissingBlock.hh>
@@ -104,21 +104,21 @@ namespace infinit
     | Lookup |
     `-------*/
 
-    reactor::Generator<Overlay::WeakMember>
+    elle::reactor::Generator<Overlay::WeakMember>
     Overlay::allocate(model::Address address, int n) const
     {
       ELLE_TRACE_SCOPE("%s: allocate %s nodes for %f", this, n, address);
       return this->_allocate(address, n);
     }
 
-    reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+    elle::reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
     Overlay::lookup(std::vector<model::Address> const& addresses, int n) const
     {
       ELLE_TRACE_SCOPE("%s: lookup %s nodes for %f", *this, n, addresses);
       return this->_lookup(addresses, n);
     }
 
-    reactor::Generator<Overlay::WeakMember>
+    elle::reactor::Generator<Overlay::WeakMember>
     Overlay::lookup(model::Address address, int n, bool fast) const
     {
       ELLE_TRACE_SCOPE("%s: lookup%s %s nodes for %f",
@@ -135,12 +135,12 @@ namespace infinit
       throw model::MissingBlock(address);
     }
 
-    reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+    elle::reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
     Overlay::_lookup(std::vector<model::Address> const& addresses, int n) const
     {
-      return reactor::Generator<std::pair<model::Address, WeakMember>>(
+      return elle::reactor::Generator<std::pair<model::Address, WeakMember>>(
         [this, addresses, n]
-        (reactor::Generator<std::pair<model::Address, WeakMember>>::yielder const& yield)
+        (elle::reactor::Generator<std::pair<model::Address, WeakMember>>::yielder const& yield)
         {
           for (auto const& a: addresses)
             for (auto res: this->_lookup(a, n, false))
@@ -167,15 +167,15 @@ namespace infinit
         throw NodeNotFound(address);
     }
 
-    reactor::Generator<Overlay::WeakMember>
+    elle::reactor::Generator<Overlay::WeakMember>
     Overlay::lookup_nodes(std::unordered_set<model::Address> addresses) const
     {
       ELLE_TRACE_SCOPE("%s: lookup nodes %f", this, addresses);
-      return reactor::generator<Overlay::WeakMember>(
+      return elle::reactor::generator<Overlay::WeakMember>(
         [this, addresses]
-        (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+        (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
         {
-          reactor::for_each_parallel(
+          elle::reactor::for_each_parallel(
             addresses,
             [&] (model::Address const& address)
             {

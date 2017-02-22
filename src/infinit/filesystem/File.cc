@@ -11,8 +11,8 @@
 #include <elle/cast.hh>
 #include <elle/os/environ.hh>
 
-#include <cryptography/random.hh>
-#include <cryptography/SecretKey.hh>
+#include <elle/cryptography/random.hh>
+#include <elle/cryptography/SecretKey.hh>
 
 #ifdef INFINIT_WINDOWS
 #undef stat
@@ -646,7 +646,7 @@ namespace infinit
           if (_filedata->_fat[i].first == Address::null)
             continue;
           auto targetsize = new_size - offset;
-          cryptography::SecretKey sk(_filedata->_fat[i].second);
+          elle::cryptography::SecretKey sk(_filedata->_fat[i].second);
           auto block = _owner.fetch_or_die(_filedata->_fat[i].first, {}, this->full_path());
           elle::Buffer buf(sk.decipher(block->data()));
           if (buf.size() > targetsize)
