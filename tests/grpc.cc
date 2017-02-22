@@ -114,7 +114,7 @@ public:
 
 ELLE_TEST_SCHEDULED(basic)
 {
-  DHTs dhts(1);
+  DHTs dhts(3);
   auto client = dhts.client();
   infinit::model::Endpoint ep("127.0.0.1", (rand()%10000)+50000);
   reactor::Barrier b;
@@ -133,7 +133,7 @@ ELLE_TEST_SCHEDULED(basic)
       elle::sprintf("127.0.0.1:%s", ep.port()),
       grpc::InsecureChannelCredentials());
   auto stub = KV::NewStub(chan);
-  {
+  { // get missing block
     grpc::ClientContext context;
     ::Address req;
     ::BlockStatus repl;
@@ -143,6 +143,107 @@ ELLE_TEST_SCHEDULED(basic)
     ELLE_LOG("...called");
     //BOOST_CHECK_EQUAL((int)res, (int)::grpc::Status::OK);
     BOOST_CHECK_EQUAL(repl.status().error(), ERROR_MISSING_BLOCK);
+  }
+  { // put/get chb
+    grpc::ClientContext context;
+    ::ModeBlock req;
+    req.set_mode(STORE_INSERT);
+    req.mutable_block()->set_payload("foo");
+    req.mutable_block()->mutable_constant_block();
+    ::Status repl;
+    stub->Set(&context, req, &repl);
+    ::Address addr;
+    addr.set_address(repl.address());
+    ::BlockStatus bs;
+    {
+      grpc::ClientContext context;
+      stub->Get(&context, addr, &bs);
+    }
+    BOOST_CHECK_EQUAL(bs.status().error(), ERROR_OK);
+    BOOST_CHECK_EQUAL(bs.block().payload(), "foo");
+    { // STORE_UPDATE chb
+      req.set_mode(STORE_UPDATE);
+      req.mutable_block()->set_payload("bar");
+      grpc::ClientContext context;
+      stub->Set(&context, req, &repl);
+      BOOST_CHECK_EQUAL(repl.error(), ERROR_NO_PEERS);
+    }
+  }
+  { // mb
+    ::ModeBlock req;
+    req.set_mode(STORE_INSERT);
+    req.mutable_block()->set_payload("foo");
+    req.mutable_block()->mutable_mutable_block();
+    ::Status repl;
+    { // insert
+      grpc::ClientContext context;
+      stub->Set(&context, req, &repl);
+      BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
+    }
+    ::Address addr;
+    addr.set_address(repl.address());
+    ::BlockStatus bs;
+    { // fetch
+      grpc::ClientContext context;
+      stub->Get(&context, addr, &bs);
+      BOOST_CHECK_EQUAL(bs.status().error(), ERROR_OK);
+      BOOST_CHECK_EQUAL(bs.block().payload(), "foo");
+    }
+    { // update
+      req.set_mode(STORE_UPDATE);
+      req.mutable_block()->set_payload("bar");
+      req.mutable_block()->set_address(addr.address());
+      {
+        grpc::ClientContext context;
+        stub->Set(&context, req, &repl);
+        BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
+      }
+    }
+    { // fetch
+      grpc::ClientContext context;
+      stub->Get(&context, addr, &bs);
+      BOOST_CHECK_EQUAL(bs.status().error(), ERROR_OK);
+      BOOST_CHECK_EQUAL(bs.block().payload(), "bar");
+      BOOST_CHECK_EQUAL(bs.block().address(), addr.address());
+    }
+  }
+  { // acb
+    ::ModeBlock req;
+    req.set_mode(STORE_INSERT);
+    req.mutable_block()->set_payload("foo");
+    req.mutable_block()->mutable_acl_block();
+    ::Status repl;
+    { // insert
+      grpc::ClientContext context;
+      stub->Set(&context, req, &repl);
+      BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
+    }
+    ::Address addr;
+    addr.set_address(repl.address());
+    ::BlockStatus bs;
+    { // fetch
+      grpc::ClientContext context;
+      stub->Get(&context, addr, &bs);
+      BOOST_CHECK_EQUAL(bs.status().error(), ERROR_OK);
+      BOOST_CHECK_EQUAL(bs.block().payload(), "foo");
+    }
+    { // update
+      req.set_mode(STORE_UPDATE);
+      req.mutable_block()->set_payload("bar");
+      req.mutable_block()->set_address(addr.address());
+      {
+        grpc::ClientContext context;
+        stub->Set(&context, req, &repl);
+        BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
+      }
+    }
+    { // fetch
+      grpc::ClientContext context;
+      stub->Get(&context, addr, &bs);
+      BOOST_CHECK_EQUAL(bs.status().error(), ERROR_OK);
+      BOOST_CHECK_EQUAL(bs.block().payload(), "bar");
+      BOOST_CHECK_EQUAL(bs.block().address(), addr.address());
+    }
   }
   ELLE_LOG("done");
 }

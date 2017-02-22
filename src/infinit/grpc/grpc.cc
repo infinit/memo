@@ -190,6 +190,7 @@ namespace infinit
       try
       {
         f();
+        ELLE_TRACE("no exception encountered");
         return true;
       }
       catch (model::MissingBlock const& err)
@@ -216,9 +217,16 @@ namespace infinit
       }
       catch (elle::Error const& err)
       {
-        res.set_error(ERROR_OTHER);
+        ELLE_TRACE("generic error handler for %s: %s",
+          elle::type_info(err), err);
+        // FIXME
+        if (std::string(err.what()).find("no peer available for") == 0)
+          res.set_error(ERROR_NO_PEERS);
+        else
+          res.set_error(ERROR_OTHER);
         res.set_message(err.what());
       }
+      ELLE_TRACE("an exception was encountered");
       return false;
     }
 
@@ -307,14 +315,39 @@ namespace infinit
       }
       else if (iblock.has_mutable_block())
       {
-        auto mblock = _model.make_block<model::blocks::MutableBlock>();
-        mblock->data(iblock.payload());
-        block = std::move(mblock);
+        if (request.mode() == STORE_INSERT)
+        {
+          auto mblock = _model.make_block<model::blocks::MutableBlock>();
+          block = std::move(mblock);
+        }
+        else
+        {
+          if (!exception_handler(res, [&] {
+              block = _model.fetch(model::Address::from_string(iblock.address()));
+          }))
+          return res;
+        }
+        dynamic_cast<model::blocks::MutableBlock&>(*block).data(iblock.payload());
       }
       else if (iblock.has_acl_block())
       {
-        auto ablock = _model.make_block<model::blocks::ACLBlock>();
-        ablock->data(iblock.payload());
+        model::blocks::ACLBlock* ablock;
+        if (request.mode() == STORE_INSERT)
+        {
+          auto ab = _model.make_block<model::blocks::ACLBlock>();
+          ablock = ab.get();
+          block = std::move(ab);
+        }
+        else
+        {
+          if (!exception_handler(res, [&] {
+              block = _model.fetch(model::Address::from_string(iblock.address()));
+          }))
+            return res;
+          ablock = dynamic_cast<model::blocks::ACLBlock*>(block.get());
+          ELLE_ASSERT(ablock);
+        }
+        dynamic_cast<model::blocks::MutableBlock&>(*block).data(iblock.payload());
         auto const& ra = iblock.acl_block();
         ablock->set_world_permissions(/*ra.has_world_read() &&*/ ra.world_read(),
                                       /*ra.has_world_write() &&*/ ra.world_write());
@@ -326,9 +359,8 @@ namespace infinit
                                   /*p.has_read() &&*/ p.read(),
                                   /*p.has_write() &&*/ p.write());
         }
-        if (/*ra.has_version() &&*/ ra.version() >= 0)
+        if (/*ra.has_version() &&*/ ra.version() > 0)
           dynamic_cast<model::doughnut::ACB&>(*ablock).seal(ra.version());
-        block = std::move(ablock);
       }
       else if (iblock.has_named_block())
       {
