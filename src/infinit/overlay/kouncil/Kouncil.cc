@@ -2,6 +2,7 @@
 
 #include <elle/log.hh>
 #include <elle/make-vector.hh>
+#include <elle/range.hh>
 
 #include <reactor/network/exception.hh>
 
@@ -112,9 +113,9 @@ namespace infinit
                 [this] ()
                 {
                   auto res = std::unordered_set<Address>{};
-                  auto range = this->_address_book.equal_range(this->id());
-                  for (auto it = range.first; it != range.second; ++it)
-                    res.emplace(it->block());
+                  for (auto const& e:
+                         elle::as_range(this->_address_book.equal_range(this->id())))
+                    res.emplace(e.block());
                   return res;
                 });
               // Lookup owners of a block on this node.
@@ -123,9 +124,9 @@ namespace infinit
                 [this] (Address const& addr)
                 {
                   auto res = std::unordered_set<Address>{};
-                  auto range = this->_address_book.get<1>().equal_range(addr);
-                  for (auto it = range.first; it != range.second; ++it)
-                    res.emplace(it->node());
+                  for (auto const& e:
+                         elle::as_range(_address_book.get<1>().equal_range(addr)))
+                    res.emplace(e.node());
                   return res;
                 });
               // Send known peers to this node and retrieve its known peers.
@@ -379,8 +380,10 @@ namespace infinit
         else
           // FIXME: I don't think this should ever happen.
           ELLE_WARN("no info for disconnected peer %f", peer);
-        auto its = this->_address_book.equal_range(peer->id());
-        this->_address_book.erase(its.first, its.second);
+        {
+          auto its = this->_address_book.equal_range(peer->id());
+          this->_address_book.erase(its.first, its.second);
+        }
         auto id = peer->id();
         this->_peers.erase(it);
         this->on_disappear()(id, false);
@@ -478,11 +481,11 @@ namespace infinit
           [this, address, n]
           (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
           {
-            auto range = this->_address_book.get<1>().equal_range(address);
             int count = 0;
-            for (auto it = range.first; it != range.second; ++it)
+            for (auto const& entry:
+                   elle::as_range(this->_address_book.get<1>().equal_range(address)))
             {
-              auto p = this->peers().find(it->node());
+              auto p = this->peers().find(entry.node());
               ELLE_ASSERT(p != this->peers().end());
               yield(*p);
               if (++count >= n)
