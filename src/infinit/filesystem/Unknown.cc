@@ -94,7 +94,7 @@ namespace infinit
       }
       else
         this->_owner.store_or_die(
-          std::move(b), model::STORE_INSERT,
+          std::move(b), true,
           std::make_unique<NewFolderResolver>(
             (this->_parent->_path / _name)));
       ELLE_ASSERT_EQ(this->_parent->_files.find(this->_name),
@@ -321,7 +321,7 @@ namespace infinit
       }
       auto addr = b->address();
       _owner.store_or_die(
-        std::move(b), model::STORE_INSERT,
+        std::move(b), true,
         std::make_unique<NewSymlinkResolver>(this->_parent->_path / this->_name,
                                               where));
       this->_parent->_files.emplace(

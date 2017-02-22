@@ -1206,10 +1206,10 @@ namespace infinit
                     std::unique_ptr<infinit::model::blocks::Block>>("value");
                   if (!block)
                     elle::err("missing field: value");
-                  dht.store(
-                    std::move(block),
-                    op == "insert" ?
-                    infinit::model::STORE_INSERT : infinit::model::STORE_UPDATE);
+                  if (op == "insert")
+                    dht.insert(std::move(block));
+                  else
+                    dht.update(std::move(block));
                   auto response = elle::serialization::json::SerializerOut(
                     std::cout, false, true);
                   response.serialize("success", true);
@@ -1219,7 +1219,7 @@ namespace infinit
                   auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(
                     elle::Buffer(command.deserialize<std::string>("data")));
                   auto addr = block->address();
-                  dht.store(std::move(block), infinit::model::STORE_INSERT);
+                  dht.insert(std::move(block));
                   auto response = elle::serialization::json::SerializerOut(
                     std::cout, false, true);
                   response.serialize("success", true);
@@ -1248,7 +1248,7 @@ namespace infinit
                   if (mb.version() >= version)
                     elle::err("Current version is %s", mb.version());
                   mb.data(elle::Buffer(data));
-                  dht.store(std::move(block), infinit::model::STORE_UPDATE);
+                  dht.update(std::move(block));
                   auto response = elle::serialization::json::SerializerOut(
                     std::cout, false, true);
                   response.serialize("success", true);
@@ -1272,9 +1272,9 @@ namespace infinit
                         elle::err("NB %s does not exist", name);
                       auto ab = dht.make_block<infinit::model::blocks::ACLBlock>();
                       auto addr = ab->address();
-                      dht.store(std::move(ab), infinit::model::STORE_INSERT);
+                      dht.insert(std::move(ab));
                       auto nb = dnut::NB(dht, name, elle::sprintf("%s", addr));
-                      dht.store(nb, infinit::model::STORE_INSERT);
+                      dht.insert(nb);
                       return addr;
                     }
                   }();

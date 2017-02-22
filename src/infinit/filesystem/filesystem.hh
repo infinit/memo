@@ -241,11 +241,11 @@ namespace infinit
 
       void
       store_or_die(std::unique_ptr<model::blocks::Block> block,
-                   model::StoreMode mode,
+                   bool insert,
                    std::unique_ptr<model::ConflictResolver> resolver = {});
       void
       store_or_die(model::blocks::Block& block,
-                   model::StoreMode mode,
+                   bool insert,
                    std::unique_ptr<model::ConflictResolver> resolver = {});
       // Check permissions and throws on access failure
       void

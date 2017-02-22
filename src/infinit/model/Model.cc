@@ -14,6 +14,10 @@ namespace infinit
 {
   namespace model
   {
+    /*-------------.
+    | Construction |
+    `-------------*/
+
     Model::Model(boost::optional<elle::Version> version)
       : _version(
         version ? *version :
@@ -25,6 +29,10 @@ namespace infinit
         elle::err("compatibility version %s is too recent for infinit version %s",
                   this->_version, infinit::version());
     }
+
+    /*-------.
+    | Blocks |
+    `-------*/
 
     template <>
     std::unique_ptr<blocks::MutableBlock>
@@ -103,27 +111,6 @@ namespace infinit
       return std::make_unique<User>(); // FIXME
     }
 
-    void
-    Model::store(std::unique_ptr<blocks::Block> block,
-                 StoreMode mode,
-                 std::unique_ptr<ConflictResolver> resolver)
-    {
-      ELLE_TRACE_SCOPE("%s: store %f", *this, *block);
-      block->seal();
-      return this->_store(std::move(block), mode, std::move(resolver));
-    }
-
-    void
-    Model::store(blocks::Block& block,
-                 StoreMode mode,
-                 std::unique_ptr<ConflictResolver> resolver)
-    {
-      ELLE_TRACE_SCOPE("%s: store %f", *this, block);
-      block.seal();
-      auto copy = block.clone();
-      return this->_store(std::move(copy), mode, std::move(resolver));
-    }
-
     std::unique_ptr<blocks::Block>
     Model::fetch(Address address, boost::optional<int> local_version) const
     {
@@ -182,6 +169,44 @@ namespace infinit
           res(addr.first, {}, std::current_exception());
         }
       }
+    }
+
+    void
+    Model::insert(std::unique_ptr<blocks::Block> block,
+                 std::unique_ptr<ConflictResolver> resolver)
+    {
+      ELLE_TRACE_SCOPE("%s: insert %f", *this, *block);
+      block->seal();
+      return this->_insert(std::move(block), std::move(resolver));
+    }
+
+    void
+    Model::insert(blocks::Block& block,
+                 std::unique_ptr<ConflictResolver> resolver)
+    {
+      ELLE_TRACE_SCOPE("%s: insert %f", *this, block);
+      block.seal();
+      auto copy = block.clone();
+      return this->_insert(std::move(copy), std::move(resolver));
+    }
+
+    void
+    Model::update(std::unique_ptr<blocks::Block> block,
+                 std::unique_ptr<ConflictResolver> resolver)
+    {
+      ELLE_TRACE_SCOPE("%s: update %f", *this, *block);
+      block->seal();
+      return this->_update(std::move(block), std::move(resolver));
+    }
+
+    void
+    Model::update(blocks::Block& block,
+                 std::unique_ptr<ConflictResolver> resolver)
+    {
+      ELLE_TRACE_SCOPE("%s: update %f", *this, block);
+      block.seal();
+      auto copy = block.clone();
+      return this->_update(std::move(copy), std::move(resolver));
     }
 
     void

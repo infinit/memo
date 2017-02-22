@@ -51,26 +51,6 @@ namespace infinit
         }
       };
 
-      void
-      Paranoid::_store(std::unique_ptr<blocks::Block> block,
-                       StoreMode mode,
-                       std::unique_ptr<ConflictResolver> resolver)
-      {
-        ELLE_TRACE_SCOPE("%s: store %f", *this, *block);
-        CryptedBlock crypted(block->address(), block->data());
-        elle::Buffer raw;
-        {
-          elle::IOStream output(raw.ostreambuf());
-          elle::serialization::json::SerializerOut serializer(output);
-          serializer.serialize_forward(crypted);
-        }
-        this->_storage->set(
-          block->address(),
-          this->_keys.K().seal(raw),
-          mode == STORE_INSERT,
-          mode == STORE_UPDATE);
-      }
-
       std::unique_ptr<blocks::Block>
       Paranoid::_fetch(Address address,
                        boost::optional<int>) const
@@ -94,6 +74,34 @@ namespace infinit
                     crypted.address, address);
         return this->_construct_block<blocks::MutableBlock>
           (crypted.address, std::move(crypted.content));
+      }
+
+      void
+      Paranoid::_insert(std::unique_ptr<blocks::Block> block,
+                        std::unique_ptr<ConflictResolver> resolver)
+      {
+        ELLE_TRACE_SCOPE("%s: insert %f", *this, *block);
+        CryptedBlock crypted(block->address(), block->data());
+        elle::Buffer raw = elle::serialization::json::serialize(crypted);
+        this->_storage->set(
+          block->address(),
+          this->_keys.K().seal(raw),
+          true,
+          false);
+      }
+
+      void
+      Paranoid::_update(std::unique_ptr<blocks::Block> block,
+                        std::unique_ptr<ConflictResolver> resolver)
+      {
+        ELLE_TRACE_SCOPE("%s: update %f", *this, *block);
+        CryptedBlock crypted(block->address(), block->data());
+        elle::Buffer raw = elle::serialization::json::serialize(crypted);
+        this->_storage->set(
+          block->address(),
+          this->_keys.K().seal(raw),
+          false,
+          true);
       }
 
       void

@@ -411,13 +411,13 @@ ELLE_TEST_SCHEDULED(
       ELLE_LOG_SCOPE("store first block on disk and restart first DHT");
       auto dht = make_dht_a();
       auto b = dht.dht->make_block<MutableBlock>(std::string("disk"));
-      dht.dht->store(*b, STORE_INSERT, tcr());
+      dht.dht->insert(*b, tcr());
       return b;
     }();
   auto dht_a = make_dht_a();
   auto before = dht_a.dht->make_block<MutableBlock>(std::string("before"));
   ELLE_LOG("store second block in memory")
-    dht_a.dht->store(*before, STORE_INSERT, tcr());
+    dht_a.dht->insert(*before, tcr());
   ELLE_LOG("connect second DHT");
   auto dht_b = DHT(
     ::version = config.version,
@@ -427,7 +427,7 @@ ELLE_TEST_SCHEDULED(
   discover(dht_b, dht_a, anonymous, false, true);
   auto after = dht_a.dht->make_block<MutableBlock>(std::string("after"));
   ELLE_LOG("store third block")
-    dht_a.dht->store(*after, STORE_INSERT, tcr());
+    dht_a.dht->insert(*after, tcr());
   ELLE_LOG("check non-existent block")
     BOOST_CHECK_THROW(
       dht_b.dht->overlay()->lookup(Address::random()),
@@ -472,7 +472,7 @@ ELLE_TEST_SCHEDULED(
       {
         auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
         ELLE_LOG("store block")
-          dht_a.dht->store(*block, STORE_INSERT, tcr());
+          dht_a.dht->insert(*block, tcr());
         ELLE_LOG("lookup block")
         {
           auto remote = dht_b.dht->overlay()->lookup(block->address()).lock();
@@ -485,7 +485,7 @@ ELLE_TEST_SCHEDULED(
       {
         auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
         ELLE_LOG("store block")
-          dht_a.dht->store(*block, STORE_INSERT, tcr());
+          dht_a.dht->insert(*block, tcr());
       }
     };
 }
@@ -505,7 +505,7 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("store first block")
   {
     auto block = dht_a->dht->make_block<MutableBlock>(std::string("block"));
-    dht_a->dht->store(*block, STORE_INSERT, tcr());
+    dht_a->dht->insert(*block, tcr());
     old_address = block->address();
   }
   DHT dht_b(
@@ -541,7 +541,7 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("store second block")
   {
     auto block = dht_a->dht->make_block<MutableBlock>(std::string("nblock"));
-    dht_a->dht->store(*block, STORE_INSERT, tcr());
+    dht_a->dht->insert(*block, tcr());
     new_address = block->address();
   }
   ELLE_LOG("lookup second block")
@@ -584,7 +584,7 @@ ELLE_TEST_SCHEDULED(reciprocate,
     discover(*dht_b, *dht_a, anonymous, false, true, true);
   {
     auto block = dht_a->dht->make_block<ACLBlock>(std::string("reciprocate"));
-    dht_a->dht->store(std::move(block), STORE_INSERT);
+    dht_a->dht->insert(std::move(block));
   }
   BOOST_CHECK_EQUAL(b1.size(), 1);
   BOOST_CHECK_EQUAL(b2.size(), 1);
@@ -637,7 +637,7 @@ ELLE_TEST_SCHEDULED(chain_connect,
   {
     auto block = client.dht->make_block<ACLBlock>(
       std::string("chain_connect"));
-    client.dht->store(std::move(block), STORE_INSERT);
+    client.dht->insert(std::move(block));
     BOOST_CHECK_EQUAL(b1.size(), 1);
     BOOST_CHECK_EQUAL(b2.size(), 1);
   }
@@ -672,7 +672,7 @@ ELLE_TEST_SCHEDULED(chain_connect,
   {
     auto block = client.dht->make_block<ACLBlock>(
       std::string("chain_connect"));
-    client.dht->store(std::move(block), STORE_INSERT);
+    client.dht->insert(std::move(block));
     BOOST_CHECK_EQUAL(b1.size(), 2);
     BOOST_CHECK_EQUAL(b2.size(), 2);
   }
@@ -708,10 +708,10 @@ ELLE_TEST_SCHEDULED(
     true, true);
   acb.set_permissions(elle::cryptography::rsa::keypair::generate(512).K(),
     true, true);
-  dht_a->dht->store(*block, STORE_INSERT, tcr());
+  dht_a->dht->insert(*block, tcr());
   auto b2 = dht_b.dht->fetch(block->address());
   dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
-  dht_b.dht->store(*b2, STORE_UPDATE, tcr());
+  dht_b.dht->update(*b2, tcr());
   // brutal restart of a
   ELLE_LOG("disconnect A");
   dht_a->dht->local()->utp_server()->socket()->close();
@@ -738,7 +738,7 @@ ELLE_TEST_SCHEDULED(
     dynamic_cast<infinit::model::doughnut::Remote&>(*peer).connect();
   ELLE_LOG("re-store block");
   dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
-  BOOST_CHECK_NO_THROW(dht_b.dht->store(*b2, STORE_UPDATE, tcr()));
+  BOOST_CHECK_NO_THROW(dht_b.dht->update(*b2, tcr()));
   ELLE_LOG("test end");
 }
 
@@ -799,7 +799,7 @@ ELLE_TEST_SCHEDULED(
         {
           auto block = client->dht->make_block<ACLBlock>(std::string("block"));
           addrs.push_back(block->address());
-          client->dht->store(std::move(block), STORE_INSERT, tcr());
+          client->dht->insert(std::move(block), tcr());
         }
       }
       catch (elle::Error const& e)
@@ -870,7 +870,7 @@ ELLE_TEST_SCHEDULED(
     {
       auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
       addrs.push_back(block->address());
-    client->dht->store(std::move(block), STORE_INSERT, tcr());
+    client->dht->insert(std::move(block), tcr());
     }
     if (b1.size() >=5 && b2.size() >=5)
       break;
@@ -920,7 +920,7 @@ ELLE_TEST_SCHEDULED(
     {
       auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
       addrs.push_back(block->address());
-    client->dht->store(std::move(block), STORE_INSERT, tcr());
+    client->dht->insert(std::move(block), tcr());
     }
     if (b1.size() >= 5 && b2.size() >= 5)
       break;
@@ -1048,7 +1048,7 @@ ELLE_TEST_SCHEDULED(
               auto a = block->address();
               try
               {
-                c->dht->store(std::move(block), STORE_INSERT, tcr());
+                c->dht->insert(std::move(block), tcr());
               }
               catch (elle::Error const& e)
               {
@@ -1076,7 +1076,7 @@ ELLE_TEST_SCHEDULED(
                   aclb->data(elle::Buffer("coincoin"));
                   try
                   {
-                    c->dht->store(std::move(block), STORE_UPDATE, tcr());
+                    c->dht->update(std::move(block), tcr());
                   }
                   catch (elle::Error const& e)
                   {
@@ -1192,7 +1192,7 @@ ELLE_TEST_SCHEDULED(
     auto block =
       dht_a->dht->make_block<ACLBlock>(std::string("change_endpoints"));
     addr = block->address();
-    dht_a->dht->store(std::move(block), STORE_INSERT);
+    dht_a->dht->insert(std::move(block));
   }
   // Keep the remote alive and change the endpoints.
   auto remote = dht_a->dht->overlay()->lookup_node(dht_b->dht->id()).lock();
@@ -1258,7 +1258,7 @@ ELLE_TEST_SCHEDULED(
         auto block = dht_a->dht->make_block<MutableBlock>(std::string("stale"));
         addr = block->address();
         ELLE_LOG("store block")
-          dht_a->dht->store(*block, STORE_INSERT, tcr());
+          dht_a->dht->insert(*block, tcr());
       }
       ELLE_LOG("connect DHTs")
         discover(dht_b, *dht_a, loc, true);
@@ -1450,7 +1450,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
     {
       auto block = client->dht->make_block<ACLBlock>(std::string("block"));
       auto a = block->address();
-      client->dht->store(std::move(block), STORE_INSERT, tcr());
+      client->dht->insert(std::move(block), tcr());
       ELLE_DEBUG("created %f", a);
       addrs.push_back(a);
     }
@@ -1460,7 +1460,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
     {
       dynamic_cast<infinit::model::blocks::ACLBlock*>(block.get())->data(
         elle::Buffer("coincoin"));
-      client->dht->store(std::move(block), STORE_UPDATE, tcr());
+      client->dht->update(std::move(block), tcr());
     }
   }
   }
@@ -1525,7 +1525,7 @@ test_churn_socket(TestConfiguration config, bool pasv)
   {
     auto block = client->dht->make_block<ACLBlock>(std::string("block"));
     auto a = block->address();
-    client->dht->store(std::move(block), STORE_INSERT, tcr());
+    client->dht->insert(std::move(block), tcr());
     ELLE_DEBUG("created %f", a);
     addrs.push_back(a);
   }

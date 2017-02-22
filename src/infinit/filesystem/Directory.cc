@@ -441,13 +441,16 @@ namespace infinit
       try
       {
         int version = 0;
+        auto resolver =
+          std::make_unique<DirectoryConflictResolver>(model, op, _address);
         if (block)
         {
           block->data(data);
           version = block->version();
-          model.store(*block,
-            first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-            std::make_unique<DirectoryConflictResolver>(model, op, _address));
+          if (first_write)
+            model.insert(*block, std::move(resolver));
+          else
+            model.update(*block, std::move(resolver));
         }
         else
         {
@@ -465,9 +468,10 @@ namespace infinit
           else
             b->data(data);
           version = b->version();
-          model.store(std::move(b),
-            first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-            std::make_unique<DirectoryConflictResolver>(model, op, _address));
+          if (first_write)
+            model.insert(std::move(b), std::move(resolver));
+          else
+            model.update(std::move(b), std::move(resolver));
         }
         ELLE_TRACE("stored version %s of %f", version, _address);
         _block_version = version + 1;

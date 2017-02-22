@@ -388,19 +388,21 @@ namespace infinit
       {
         ELLE_ASSERT(block);
         block->data(serdata);
-        if (!block_allocated)
+        auto resolver =
+          std::make_unique<FileConflictResolver>(this->_path, &model, target);
+        if (block_allocated)
         {
-          model.store(*block,
-                      first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-                      std::make_unique<FileConflictResolver>(
-                        _path, &model, target));
+          if (first_write)
+            model.insert(std::move(block), std::move(resolver));
+          else
+            model.update(std::move(block), std::move(resolver));
         }
         else
         {
-          model.store(std::move(block),
-                      first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-                      std::make_unique<FileConflictResolver>(
-                        _path, &model, target));
+          if (first_write)
+            model.insert(*block, std::move(resolver));
+          else
+            model.update(*block, std::move(resolver));
         }
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
@@ -657,7 +659,7 @@ namespace infinit
           _owner.unchecked_remove(_filedata->_fat[i].first);
           _filedata->_fat[i].first = newblock->address();
           this->_owner.store_or_die(
-            std::move(newblock), model::STORE_INSERT,
+            std::move(newblock), true,
             std::make_unique<NewBlockResolver>(this->_name, this->_address));
         }
       }

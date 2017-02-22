@@ -143,24 +143,29 @@ namespace infinit
 
     void
     FileSystem::store_or_die(model::blocks::Block& block,
-                             model::StoreMode mode,
+                             bool insert,
                              std::unique_ptr<model::ConflictResolver> resolver)
     {
       block.seal();
       auto copy = block.clone();
-      store_or_die(std::move(copy), mode, std::move(resolver));
+      store_or_die(std::move(copy), insert, std::move(resolver));
     }
 
     void
     FileSystem::store_or_die(std::unique_ptr<model::blocks::Block> block,
-                             model::StoreMode mode,
+                             bool insert,
                              std::unique_ptr<model::ConflictResolver> resolver)
     {
       ELLE_TRACE_SCOPE("%s: store or die: %s", this, block);
       auto address = block->address();
       try
       {
-        this->_block_store->store(std::move(block), mode, std::move(resolver));
+        if (insert)
+          this->_block_store->insert(
+            std::move(block), std::move(resolver));
+        else
+          this->_block_store->update(
+            std::move(block), std::move(resolver));
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
@@ -411,7 +416,7 @@ namespace infinit
                 *dn, dn->owner(), bootstrap_name,
                 old->data(), old->signature());
               this->store_or_die(
-                std::move(nb), model::STORE_INSERT,
+                std::move(nb), true,
                 std::make_unique<BlockMigration>(old_addr, bootstrap_addr));
               continue;
             }
@@ -436,7 +441,7 @@ namespace infinit
               {
                 auto root = dn->make_block<ACLBlock>();
                 auto address = root->address();
-                this->store_or_die(move(root), model::STORE_INSERT,
+                this->store_or_die(move(root), true,
                                    std::make_unique<InsertRootBlock>(address));
                 this->_root_address = address;
               }
@@ -452,7 +457,7 @@ namespace infinit
                 auto address = nb->address();
                 this->store_or_die(
                   std::move(nb),
-                  model::STORE_INSERT,
+                  true,
                   std::make_unique<InsertRootBootstrapBlock>(address));
                 if (root_cache)
                   boost::filesystem::ofstream(*root_cache) << saddr;
