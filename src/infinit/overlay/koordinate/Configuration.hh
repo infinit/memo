@@ -1,7 +1,6 @@
-#ifndef INFINIT_OVERLAY_KOORDINATE_CONFIGURATION_HH
-# define INFINIT_OVERLAY_KOORDINATE_CONFIGURATION_HH
+#pragma once
 
-# include <infinit/overlay/Overlay.hh>
+#include <infinit/overlay/Overlay.hh>
 
 namespace infinit
 {
@@ -18,7 +17,7 @@ namespace infinit
       `------*/
       public:
         /// Ourself.
-        using Self = infinit::overlay::koordinate::Configuration;
+        using Self = Configuration;
         /// Parent class.
         using Super = overlay::Configuration;
         /// Underlying overlays configurations.
@@ -45,7 +44,7 @@ namespace infinit
       | Clonable |
       `---------*/
       public:
-        virtual
+
         std::unique_ptr<overlay::Configuration>
         clone() const override;
 
@@ -76,7 +75,7 @@ namespace infinit
          *  @arg dht   Owning Doughnut.
          *  @return The built Koordinate.
          */
-        virtual
+
         std::unique_ptr<infinit::overlay::Overlay>
         make(std::shared_ptr<model::doughnut::Local> local,
              model::doughnut::Doughnut* doughnut) override;
@@ -84,5 +83,3 @@ namespace infinit
     }
   }
 }
-
-#endif

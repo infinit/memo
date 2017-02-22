@@ -1,20 +1,21 @@
 #include <infinit/model/doughnut/Remote.hh>
 
+#include <elle/bench.hh>
 #include <elle/log.hh>
+#include <elle/make-vector.hh>
 #include <elle/os/environ.hh>
 #include <elle/utils.hh>
-#include <elle/bench.hh>
 
 #include <reactor/Scope.hh>
-#include <reactor/thread.hh>
 #include <reactor/scheduler.hh>
+#include <reactor/thread.hh>
 
 #include <infinit/RPC.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote")
 
-#define BENCH(name)                                      \
-  static elle::Bench bench("bench.remote." name, 10000_sec); \
+#define BENCH(name)                                                     \
+  static auto bench = elle::Bench{"bench.remote." name, 10000_sec};     \
   elle::Bench::BenchScope bs(bench)
 
 namespace infinit
@@ -238,9 +239,9 @@ namespace infinit
       std::vector<cryptography::rsa::PublicKey>
       Remote::_resolve_keys(std::vector<int> ids)
       {
-        static elle::Bench bench("bench.remote_key_cache_hit", 1000_sec);
+        static auto bench = elle::Bench{"bench.remote_key_cache_hit", 1000_sec};
         {
-          std::vector<int> missing;
+          auto missing = std::vector<int>{};
           for (auto id: ids)
             if (this->key_hash_cache().get<1>().find(id) ==
                 this->key_hash_cache().get<1>().end())

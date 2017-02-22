@@ -1,9 +1,8 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_DUMMY_PEER_HH
-# define INFINIT_MODEL_DOUGHNUT_DUMMY_PEER_HH
+#pragma once
 
-# include <reactor/network/exception.hh>
+#include <reactor/network/exception.hh>
 
-# include <infinit/model/doughnut/consensus/Paxos.hh>
+#include <infinit/model/doughnut/consensus/Paxos.hh>
 
 namespace infinit
 {
@@ -51,7 +50,6 @@ namespace infinit
           elle::unreachable();
         }
 
-        virtual
         boost::optional<consensus::Paxos::PaxosClient::Accepted>
         propose(consensus::Paxos::PaxosServer::Quorum const& peers,
                 Address address,
@@ -60,7 +58,6 @@ namespace infinit
           throw athena::paxos::Unavailable();
         }
 
-        virtual
         consensus::Paxos::PaxosClient::Proposal
         accept(consensus::Paxos::PaxosServer::Quorum const& peers,
                Address address,
@@ -70,7 +67,6 @@ namespace infinit
           throw athena::paxos::Unavailable();
         }
 
-        virtual
         void
         confirm(consensus::Paxos::PaxosServer::Quorum const& peers,
                 Address address,
@@ -79,7 +75,6 @@ namespace infinit
 
         }
 
-        virtual
         boost::optional<consensus::Paxos::PaxosClient::Accepted>
         get(consensus::Paxos::PaxosServer::Quorum const& peers,
             Address address,
@@ -97,5 +92,3 @@ namespace infinit
     }
   }
 }
-
-#endif

@@ -1,7 +1,6 @@
-#ifndef INFINIT_OVERLAY_KOORDINATE_HH
-# define INFINIT_OVERLAY_KOORDINATE_HH
+#pragma once
 
-# include <infinit/overlay/Overlay.hh>
+#include <infinit/overlay/Overlay.hh>
 
 namespace infinit
 {
@@ -23,7 +22,7 @@ namespace infinit
       `------*/
       public:
         /// Ourselves.
-        using Self = infinit::overlay::koordinate::Koordinate;
+        using Self = Koordinate;
         /// Parent class.
         using Super = infinit::overlay::Overlay;
         /// Underlying overlay to run and forward requests to.
@@ -46,8 +45,8 @@ namespace infinit
                    std::shared_ptr<infinit::model::doughnut::Local> local,
                    Backends backends);
         /// Destruct a Koordinate.
-        virtual
-        ~Koordinate();
+
+        ~Koordinate() override;
         /// The underlying overlays.
         ELLE_ATTRIBUTE(Backends, backends);
       private:
@@ -59,7 +58,7 @@ namespace infinit
       | Peers |
       `------*/
       protected:
-        virtual
+
         void
         _discover(NodeLocations const& peers) override;
         bool
@@ -71,13 +70,13 @@ namespace infinit
       protected:
         reactor::Generator<WeakMember>
         _allocate(model::Address address, int n) const override;
-        virtual
+
         reactor::Generator<std::pair<model::Address, WeakMember>>
         _lookup(std::vector<model::Address> const& addrs, int n) const override;
-        virtual
+
         reactor::Generator<WeakMember>
         _lookup(model::Address address, int n, bool fast) const override;
-        virtual
+
         WeakMember
         _lookup_node(model::Address address) const override;
 
@@ -95,5 +94,3 @@ namespace infinit
     }
   }
 }
-
-#endif

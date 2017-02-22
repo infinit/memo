@@ -114,14 +114,11 @@ namespace infinit
       | Blocks |
       `-------*/
       public:
-        virtual
         void
         store(blocks::Block const& block, StoreMode mode) override;
-        virtual
         void
         remove(Address address, blocks::RemoveSignature rs) override;
       protected:
-        virtual
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
               boost::optional<int> local_version) const override;
@@ -130,10 +127,8 @@ namespace infinit
       | Keys |
       `-----*/
       protected:
-        virtual
         std::vector<cryptography::rsa::PublicKey>
         _resolve_keys(std::vector<int> ids) override;
-        virtual
         std::unordered_map<int, cryptography::rsa::PublicKey>
         _resolve_all_keys() override;
         ELLE_attribute_rx(KeyCache, key_hash_cache);

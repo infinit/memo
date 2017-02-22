@@ -185,7 +185,7 @@ namespace infinit
         Node(Configuration const& config,
              std::shared_ptr<model::doughnut::Local> local,
              infinit::model::doughnut::Doughnut* doughnut);
-        virtual ~Node();
+        ~Node() override;
         void
         start();
         void
