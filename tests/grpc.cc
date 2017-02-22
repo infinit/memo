@@ -5,6 +5,7 @@
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/UB.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Kouncil.hh>
 #include <infinit/storage/MissingKey.hh>
@@ -243,6 +244,83 @@ ELLE_TEST_SCHEDULED(basic)
       BOOST_CHECK_EQUAL(bs.status().error(), ERROR_OK);
       BOOST_CHECK_EQUAL(bs.block().payload(), "bar");
       BOOST_CHECK_EQUAL(bs.block().address(), addr.address());
+    }
+    // world perms
+    BOOST_CHECK_EQUAL(bs.block().acl_block().world_read(), false);
+    BOOST_CHECK_EQUAL(bs.block().acl_block().world_write(), false);
+    req.mutable_block()->mutable_acl_block()->set_world_read(true);
+    req.mutable_block()->mutable_acl_block()->set_world_write(true);
+    {
+      grpc::ClientContext context;
+      stub->Set(&context, req, &repl);
+      BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
+    }
+    {
+      grpc::ClientContext context;
+      stub->Get(&context, addr, &bs);
+      BOOST_CHECK_EQUAL(bs.status().error(), ERROR_OK);
+      BOOST_CHECK_EQUAL(bs.block().payload(), "bar");
+      BOOST_CHECK_EQUAL(bs.block().acl_block().world_read(), true);
+      BOOST_CHECK_EQUAL(bs.block().acl_block().world_write(), true);
+    }
+    // version conflict
+    req.mutable_block()->mutable_acl_block()->set_version(1);
+    req.mutable_block()->set_payload("baz");
+    {
+      grpc::ClientContext context;
+      stub->Set(&context, req, &repl);
+      BOOST_CHECK_EQUAL(repl.error(), ERROR_CONFLICT);
+    }
+    req.mutable_block()->mutable_acl_block()->set_version(repl.version()+1);
+    {
+      grpc::ClientContext context;
+      stub->Set(&context, req, &repl);
+      BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
+    }
+    // acls
+    req.mutable_block()->mutable_acl_block()->set_version(0);
+    auto alice = infinit::cryptography::rsa::keypair::generate(512);
+    auto ubf = infinit::model::doughnut::UB(
+      client.dht.dht.get(), "alice", alice.K(), false);
+    auto ubr = infinit::model::doughnut::UB(
+      client.dht.dht.get(), "alice", alice.K(), true);
+    client.dht.dht->store(ubf, infinit::model::STORE_INSERT);
+    client.dht.dht->store(ubr, infinit::model::STORE_INSERT);
+    { // add alice
+      auto acl = req.mutable_block()->mutable_acl_block()->add_permissions();
+      acl->set_user("alice");
+      acl->set_read(true);
+      acl->set_write(true);
+      grpc::ClientContext context;
+      stub->Set(&context, req, &repl);
+      BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
+    }
+    { // check alice
+      grpc::ClientContext context;
+      stub->Get(&context, addr, &bs);
+      BOOST_CHECK_EQUAL(bs.status().error(), ERROR_OK);
+      BOOST_CHECK_EQUAL(bs.block().payload(), "baz");
+      BOOST_CHECK_EQUAL(bs.block().acl_block().permissions_size(), 2);
+      auto const& p = bs.block().acl_block().permissions(1);
+      BOOST_CHECK_EQUAL(p.user(), "alice");
+      BOOST_CHECK_EQUAL(p.admin(), false);
+      BOOST_CHECK_EQUAL(p.owner(), false);
+      BOOST_CHECK_EQUAL(p.read(), true);
+      BOOST_CHECK_EQUAL(p.write(), true);
+    }
+    { // remove alice
+      auto acl = req.mutable_block()->mutable_acl_block()->mutable_permissions(0);
+      acl->set_read(false);
+      acl->set_write(false);
+      grpc::ClientContext context;
+      stub->Set(&context, req, &repl);
+      BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
+    }
+    { // check
+      grpc::ClientContext context;
+      stub->Get(&context, addr, &bs);
+      BOOST_CHECK_EQUAL(bs.status().error(), ERROR_OK);
+      BOOST_CHECK_EQUAL(bs.block().acl_block().permissions_size(), 1);
     }
   }
   ELLE_LOG("done");
