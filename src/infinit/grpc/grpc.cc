@@ -12,6 +12,7 @@
 #include <elle/Duration.hh>
 
 #include <reactor/scheduler.hh>
+#include <reactor/network/SocketOperation.hh>
 
 # include <athena/paxos/Client.hh>
 
@@ -357,7 +358,8 @@ namespace infinit
       res.set_message(std::string());
       exception_handler(res,
         [&] {
-          _model.store(std::move(block), (infinit::model::StoreMode)request.mode());
+          _model.store(std::move(block),
+                       (infinit::model::StoreMode)request.mode());
         });
       return res;
     }
@@ -377,7 +379,7 @@ namespace infinit
 
     void serve_grpc(infinit::model::Model& dht, model::Endpoint ep)
     {
-      ELLE_LOG("serving");
+      ELLE_TRACE("serving grpc on %s", ep);
       KV::AsyncService async;
       KVImpl impl(dht);
       ::grpc::ServerBuilder builder;
@@ -386,21 +388,52 @@ namespace infinit
       builder.RegisterService(&async);
       auto cq = builder.AddCompletionQueue();
       auto server = builder.BuildAndStart();
-      register_call(*cq, impl, async, &KVImpl::Get, &KV::AsyncService::RequestGet);
-      register_call(*cq, impl, async, &KVImpl::Set, &KV::AsyncService::RequestSet);
-      register_call(*cq, impl, async, &KVImpl::Remove, &KV::AsyncService::RequestRemove);
+      register_call(*cq, impl, async, &KVImpl::Get,
+                    &KV::AsyncService::RequestGet);
+      register_call(*cq, impl, async, &KVImpl::Set,
+                    &KV::AsyncService::RequestSet);
+      register_call(*cq, impl, async, &KVImpl::Remove,
+                    &KV::AsyncService::RequestRemove);
+      /* Pay attention: when this thread gets terminated, it will most likely
+      * occur in reactor_epoll_wait. This function will intercept the exception
+      * and invoke the reactor_epoll_interrupt callback.
+      * In theory we should be able to just call `cq->Shutdown()` from
+      * that callback, which should make `cq->Next()` return, but it doesn't
+      * work. I tried synchronously, asynchronously, and from a different
+      * OS thread, the Shutdown call has no effect whatsofuckingever.
+      * So instead we poll using AsyncNext with a 1s delay and detect the
+      * shutdown condition ourselve.
+      */
+      bool interrupted = false;
+      reactor::network::epoll_interrupt_callback([&] {
+          ELLE_DEBUG("epoll interrupted");
+          if (interrupted)
+            return;
+          interrupted = true;
+          cq->Shutdown();
+      }, reactor::scheduler().current());
       while (true)
       {
         void* tag;
         bool ok;
-        ELLE_LOG("next...");
-        auto res = cq->Next(&tag, &ok);
-        ELLE_LOG("...next");
-        if (!res)
+        ELLE_DUMP("next...");
+        auto res = cq->AsyncNext(&tag, &ok,
+          std::chrono::system_clock::now() + std::chrono::seconds(1));
+        ELLE_DUMP("...next %s %s", res, interrupted);
+        if (interrupted)
+        {
+          cq->Shutdown();
           break;
+        }
+        if (res == ::grpc::CompletionQueue::SHUTDOWN)
+          break;
+        else if (res == ::grpc::CompletionQueue::TIMEOUT)
+          continue;
         ((BaseCallManager*)tag)->proceed();
       }
-      ELLE_LOG("leaving");
+      ELLE_TRACE("leaving serve_grpc");
+      reactor::network::epoll_interrupt_callback(std::function<void()>(),
+                                                 reactor::scheduler().current());
     }
   }
 }
