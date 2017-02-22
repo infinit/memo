@@ -77,7 +77,7 @@ namespace infinit
                 throw;
               }
               ELLE_DEBUG_SCOPE("resolve conflict: %s", c);
-              nb = (*resolver)(*block, *c.current(), mode);
+              nb = (*resolver)(*block, *c.current());
               if (!nb)
               {
                 ELLE_TRACE("conflict resolution failed: %s", c);

@@ -80,8 +80,7 @@ namespace infinit
                            WriteTarget target);
       std::unique_ptr<Block>
       operator()(Block& b,
-                 Block& current,
-                 model::StoreMode store_mode) override;
+                 Block& current) override;
       void
       serialize(elle::serialization::Serializer& s,
                 elle::Version const& version) override;

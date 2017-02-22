@@ -54,8 +54,7 @@ namespace infinit
       virtual
       std::unique_ptr<blocks::Block>
       operator () (blocks::Block& failed,
-                   blocks::Block& current,
-                   StoreMode mode) = 0;
+                   blocks::Block& current) = 0;
       virtual
       SquashOperation
       squashable(SquashStack const& others)
@@ -92,8 +91,7 @@ namespace infinit
 
       std::unique_ptr<blocks::Block>
       operator() (blocks::Block& block,
-                  blocks::Block& current,
-                  model::StoreMode mode) final;
+                  blocks::Block& current) final;
 
       void
       serialize(elle::serialization::Serializer& s,
@@ -209,4 +207,3 @@ namespace infinit
 }
 
 #include <infinit/model/Model.hxx>
-

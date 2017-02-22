@@ -251,8 +251,7 @@ namespace infinit
 
     std::unique_ptr<blocks::Block>
     DummyConflictResolver::operator() (blocks::Block& block,
-                                       blocks::Block& current,
-                                       model::StoreMode mode)
+                                       blocks::Block& current)
     {
       ELLE_WARN("Conflict editing %f, dropping changes", block.address());
       if (auto mb = dynamic_cast<blocks::MutableBlock*>(&current))
@@ -312,12 +311,11 @@ namespace infinit
 
       std::unique_ptr<blocks::Block>
       operator() (blocks::Block& block,
-                  blocks::Block& current,
-                  model::StoreMode mode) override
+                  blocks::Block& current) override
       {
-        auto res = (*this->_resolvers.front())(block, current, mode);
+        auto res = (*this->_resolvers.front())(block, current);
         for (unsigned int i=1; i< _resolvers.size(); ++i)
-          res = (*this->_resolvers[i])(block, *res, mode);
+          res = (*this->_resolvers[i])(block, *res);
         return res;
       }
 

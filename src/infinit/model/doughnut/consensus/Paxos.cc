@@ -1336,7 +1336,6 @@ namespace infinit
         std::shared_ptr<blocks::Block>
         resolve(blocks::Block& b,
                 blocks::Block& newest,
-                StoreMode mode,
                 ConflictResolver* resolver)
         {
           if (newest == b)
@@ -1349,7 +1348,7 @@ namespace infinit
           if (resolver)
           {
             ELLE_TRACE_SCOPE("chosen block differs, run conflict resolution");
-            auto resolved = (*resolver)(b, newest, mode);
+            auto resolved = (*resolver)(b, newest);
             if (resolved)
               return std::shared_ptr<blocks::Block>(resolved.release());
             else
@@ -1445,7 +1444,7 @@ namespace infinit
                     {
                       auto block =
                         chosen->value.get<std::shared_ptr<blocks::Block>>();
-                      if (!(b = resolve(*b, *block, mode, resolver.get())))
+                      if (!(b = resolve(*b, *block, resolver.get())))
                         break;
                       ELLE_DEBUG("seal resolved block")
                         b->seal(chosen->proposal.version + 1);

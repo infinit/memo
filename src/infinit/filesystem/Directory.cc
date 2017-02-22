@@ -62,7 +62,6 @@ namespace infinit
     std::unique_ptr<Block>
     resolve_directory_conflict(Block& b,
                                Block& current,
-                               model::StoreMode store_mode,
                                model::Model& model,
                                Operation op,
                                Address address,
@@ -186,11 +185,10 @@ namespace infinit
 
     std::unique_ptr<Block>
     DirectoryConflictResolver::operator() (Block& block,
-                                           Block& current,
-                                           model::StoreMode mode)
+                                           Block& current)
     {
       return resolve_directory_conflict(
-        block, current, mode,
+        block, current,
         *this->_model, this->_op, this->_address, this->_deserialized);
     }
 
@@ -459,7 +457,7 @@ namespace infinit
             ELLE_TRACE("Conflict: block version not expected: %s vs %s",
                      b->version(), _block_version);
             DirectoryConflictResolver dcr(model, op, _address);
-            auto nb = dcr(*b, *b, first_write ? model::STORE_INSERT : model::STORE_UPDATE);
+            auto nb = dcr(*b, *b);
             b = elle::cast<ACLBlock>::runtime(nb);
             // Update this with the conflict resolved data
             update(*b, get_permissions(model, *b));

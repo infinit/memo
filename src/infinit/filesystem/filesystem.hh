@@ -90,7 +90,6 @@ namespace infinit
       friend std::unique_ptr<Block>
       resolve_directory_conflict(Block& b,
                                  Block& current,
-                                 model::StoreMode store_mode,
                                  model::Model& model,
                                  Operation op,
                                  Address address,

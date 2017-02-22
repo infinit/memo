@@ -97,8 +97,7 @@ namespace infinit
         ~GroupConflictResolver() override;
         std::unique_ptr<blocks::Block>
         operator() (blocks::Block& block,
-                    blocks::Block& current,
-                    model::StoreMode mode) override;
+                    blocks::Block& current) override;
         void serialize(elle::serialization::Serializer& s,
                        elle::Version const& v) override;
 

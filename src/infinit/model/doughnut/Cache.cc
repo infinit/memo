@@ -38,22 +38,22 @@ namespace infinit
         public:
           CacheConflictResolver(elle::serialization::SerializerIn& s,
                                 elle::Version const& v)
-          : _slot(nullptr)
+            : _slot(nullptr)
           {
             this->serialize(s, v);
           }
+
           CacheConflictResolver(std::unique_ptr<blocks::Block>* slot,
                                 std::unique_ptr<ConflictResolver> backend)
-          : _slot(slot)
-          , _backend(std::move(backend))
-          {
-          }
+            : _slot(slot)
+            , _backend(std::move(backend))
+          {}
+
           std::unique_ptr<blocks::Block>
           operator()(blocks::Block& b,
-                     blocks::Block& current,
-                     model::StoreMode store_mode)
+                     blocks::Block& current) override
           {
-            auto res = (*_backend)(b, current, store_mode);
+            auto res = (*_backend)(b, current);
             if (res && this->_slot)
             {
               res->validated(true); // block generated localy

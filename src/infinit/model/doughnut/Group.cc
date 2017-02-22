@@ -485,8 +485,7 @@ namespace infinit
 
       std::unique_ptr<blocks::Block>
       GroupConflictResolver::operator()(blocks::Block& block,
-                                        blocks::Block& current,
-                                        model::StoreMode mode)
+                                        blocks::Block& current)
       {
         ELLE_TRACE("Conflict editing group, replaying action on %s", this->_name);
         auto res = elle::cast<GB>::runtime(current.clone());

@@ -76,8 +76,7 @@ namespace infinit
 
     std::unique_ptr<Block>
     FileConflictResolver::operator()(Block& b,
-                                     Block& current,
-                                     model::StoreMode store_mode)
+                                     Block& current)
     {
       ELLE_LOG_SCOPE(
         "conflict: the file \"%s\" was modified since last read. Your"
