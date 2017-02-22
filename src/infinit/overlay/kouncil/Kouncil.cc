@@ -280,11 +280,15 @@ namespace infinit
       {
         while (true)
         {
-          auto entries = std::unordered_set<model::Address>{};
-          auto addr = this->_new_entries.get();
-          entries.insert(addr);
-          while (!this->_new_entries.empty())
-            entries.insert(this->_new_entries.get());
+          // Get all the available new entries, waiting for at least one.
+          auto entries = [&]
+            {
+              auto res = std::unordered_set<Address>{};
+              do
+                res.insert(this->_new_entries.get());
+              while (!this->_new_entries.empty());
+              return res;
+            }();
           ELLE_TRACE("%s: broadcast new entry: %f", this, entries);
           this->local()->broadcast<void>(
             "kouncil_add_entries", std::move(entries));
