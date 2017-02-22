@@ -264,14 +264,11 @@ namespace infinit
           else
             bench.add(1);
         }
-        std::vector<cryptography::rsa::PublicKey> res;
-        for (auto id: ids)
-        {
-          auto it = this->key_hash_cache().get<1>().find(id);
-          ELLE_ASSERT(it != this->key_hash_cache().get<1>().end());
-          res.emplace_back(*it->key);
-        }
-        return res;
+        return elle::make_vector(ids, [this] (auto id) {
+            auto it = this->key_hash_cache().get<1>().find(id);
+            ELLE_ASSERT(it != this->key_hash_cache().get<1>().end());
+            return *it->key;
+          });
       }
 
       std::unordered_map<int, cryptography::rsa::PublicKey>
@@ -279,10 +276,10 @@ namespace infinit
       {
         using Keys = std::unordered_map<int, cryptography::rsa::PublicKey>;
         auto res = this->make_rpc<Keys()>("resolve_all_keys")();
+        auto& kcache = this->key_hash_cache();
         for (auto const& key: res)
-          if (this->key_hash_cache().get<1>().find(key.first) ==
-              this->key_hash_cache().get<1>().end())
-            this->key_hash_cache().emplace(key.first, key.second);
+          if (kcache.get<1>().find(key.first) == kcache.get<1>().end())
+            kcache.emplace(key.first, key.second);
         return res;
       }
 
