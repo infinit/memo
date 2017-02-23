@@ -172,11 +172,6 @@ namespace infinit
           ELLE_ATTRIBUTE_R(Endpoints, endpoints);
           /// Lamport clock for when the endpoints were established by the peer.
           ELLE_ATTRIBUTE_R(int64_t, stamp);
-          /// Last time we saw the peer online.
-          ELLE_ATTRIBUTE_RW(Time, last_seen);
-          /// Last time we tried to contact the peer, if offline.
-          // FIXME: drop
-          ELLE_ATTRIBUTE_RW(Time, last_contact_attempt);
           /// Default model: Serialize non-local information.
           using Model = elle::das::Model<
             PeerInfo,
