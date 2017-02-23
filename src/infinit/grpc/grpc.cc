@@ -12,10 +12,10 @@
 #include <elle/Duration.hh>
 #include <elle/os/environ.hh>
 
-#include <reactor/scheduler.hh>
-#include <reactor/network/SocketOperation.hh>
+#include <elle/reactor/scheduler.hh>
+#include <elle/reactor/network/SocketOperation.hh>
 
-# include <athena/paxos/Client.hh>
+# include <elle/athena/paxos/Client.hh>
 
 #include <infinit/model/Endpoints.hh>
 #include <infinit/model/MissingBlock.hh>
@@ -120,7 +120,7 @@ public:
      new CallManager<F, R>(_queue, _impl, _service, _backend, _initiator);
      // request received
      // FIXME track me
-     new reactor::Thread("process", [&] {
+     new elle::reactor::Thread("process", [&] {
          reply_type res = (_impl.*_backend)(_request);
          _reply.Finish(res, ::grpc::Status::OK, this);
      }, true);
@@ -170,7 +170,7 @@ namespace infinit
     class KVBounce: public KV::Service
     {
     public:
-      KVBounce(KVImpl& impl, reactor::Scheduler& sched)
+      KVBounce(KVImpl& impl, elle::reactor::Scheduler& sched)
       : _impl(impl)
       , _sched(sched)
       {}
@@ -196,7 +196,7 @@ namespace infinit
         return ::grpc::Status::OK;
       }
       KVImpl& _impl;
-      reactor::Scheduler& _sched;
+      elle::reactor::Scheduler& _sched;
     };
 
     bool exception_handler(::Status& res, std::function<void()> f)
@@ -217,7 +217,7 @@ namespace infinit
         res.set_error(ERROR_VALIDATION_FAILED);
         res.set_message(err.what());
       }
-      catch (athena::paxos::TooFewPeers const& err)
+      catch (elle::athena::paxos::TooFewPeers const& err)
       {
         res.set_error(ERROR_TOO_FEW_PEERS);
         res.set_message(err.what());
@@ -391,7 +391,7 @@ namespace infinit
           auto user = _model.make_user(elle::Buffer(rn.owner()));
           block.reset(new model::doughnut::NB(
             dynamic_cast<model::doughnut::Doughnut&>(_model),
-            std::make_shared<cryptography::rsa::PublicKey>(
+            std::make_shared<elle::cryptography::rsa::PublicKey>(
               dynamic_cast<model::doughnut::User&>(*user).key()),
             rn.name(),
             iblock.payload()));
@@ -427,13 +427,13 @@ namespace infinit
     {
       ELLE_TRACE("serving grpc on %s", ep);
       KVImpl impl(dht);
-      KVBounce service(impl, reactor::scheduler());
+      KVBounce service(impl, elle::reactor::scheduler());
       ::grpc::ServerBuilder builder;
       auto sep = ep.address().to_string() + ":" + std::to_string(ep.port());
       builder.AddListeningPort(sep, ::grpc::InsecureServerCredentials());
       builder.RegisterService(&service);
       auto server = builder.BuildAndStart();
-      reactor::sleep();
+      elle::reactor::sleep();
     }
 
     static
@@ -466,13 +466,13 @@ namespace infinit
       * shutdown condition ourselve.
       */
       bool interrupted = false;
-      reactor::network::epoll_interrupt_callback([&] {
+      elle::reactor::network::epoll_interrupt_callback([&] {
           ELLE_DEBUG("epoll interrupted");
           if (interrupted)
             return;
           interrupted = true;
           cq->Shutdown();
-      }, reactor::scheduler().current());
+      }, elle::reactor::scheduler().current());
       while (true)
       {
         void* tag;
@@ -493,8 +493,8 @@ namespace infinit
         ((BaseCallManager*)tag)->proceed();
       }
       ELLE_TRACE("leaving serve_grpc");
-      reactor::network::epoll_interrupt_callback(std::function<void()>(),
-                                                 reactor::scheduler().current());
+      elle::reactor::network::epoll_interrupt_callback(std::function<void()>(),
+                                                       elle::reactor::scheduler().current());
     }
   }
 }

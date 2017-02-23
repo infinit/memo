@@ -884,7 +884,7 @@ namespace infinit
         if (grpc)
         {
           model::Endpoint ep(*grpc);
-          new reactor::Thread("grpc", [dht=dht.get(), ep] {
+          new elle::reactor::Thread("grpc", [dht=dht.get(), ep] {
               infinit::grpc::serve_grpc(*dht, ep);
           });
         }

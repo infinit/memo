@@ -1,7 +1,7 @@
 #include <elle/utils.hh>
 
-#include <reactor/filesystem.hh>
-#include <reactor/scheduler.hh>
+#include <elle/reactor/filesystem.hh>
+#include <elle/reactor/scheduler.hh>
 #include <infinit/grpc/fs.grpc.pb.h>
 
 
@@ -15,7 +15,7 @@ namespace infinit
     public:
       using Status = ::grpc::Status;
       using Ctx = ::grpc::ServerContext;
-      FSImpl(reactor::filesystem::FileSystem& fs);
+      FSImpl(elle::reactor::filesystem::FileSystem& fs);
       Status MkDir(Ctx*, const ::Path* request, ::FsStatus* response);
       Status ListDir(Ctx*, const ::Path* request, ::DirectoryContent* response);
       Status RmDir(Ctx*, const ::Path* request, ::FsStatus* response);
@@ -26,9 +26,9 @@ namespace infinit
       Status Write(Ctx*, const ::HandleBuffer* request, ::FsStatus* response);
     private:
       void managed(const char* name, ::FsStatus& status, std::function<void()> f);
-      reactor::Scheduler& _sched;
-      reactor::filesystem::FileSystem& _fs;
-      typedef std::unordered_map<std::string, std::unique_ptr<reactor::filesystem::Handle>> Handles;
+      elle::reactor::Scheduler& _sched;
+      elle::reactor::filesystem::FileSystem& _fs;
+      typedef std::unordered_map<std::string, std::unique_ptr<elle::reactor::filesystem::Handle>> Handles;
       Handles _handles;
       int _next_handle;
     };
@@ -96,7 +96,7 @@ namespace infinit
       managed("CloseFile", *response, [&] {
           auto it = _handles.find(request->handle());
           if (it == _handles.end())
-            throw reactor::filesystem::Error(EBADF, "bad handle");
+            throw elle::reactor::filesystem::Error(EBADF, "bad handle");
           it->second->close();
           _handles.erase(it);
       });
@@ -107,7 +107,7 @@ namespace infinit
       managed("Read", *response->mutable_status(), [&] {
           auto it = _handles.find(request->handle().handle());
           if (it == _handles.end())
-            throw reactor::filesystem::Error(EBADF, "bad handle");
+            throw elle::reactor::filesystem::Error(EBADF, "bad handle");
           auto* buf = response->mutable_buffer()->mutable_data();
           buf->resize(request->range().size());
           int sz = it->second->read(
@@ -124,7 +124,7 @@ namespace infinit
       managed("Write", *response, [&] {
           auto it = _handles.find(request->handle().handle());
           if (it == _handles.end())
-            throw reactor::filesystem::Error(EBADF, "bad handle");
+            throw elle::reactor::filesystem::Error(EBADF, "bad handle");
           it->second->write(
             elle::ConstWeakBuffer(request->buffer().data().data(),
                                   request->buffer().data().size()),

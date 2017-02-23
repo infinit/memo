@@ -2,6 +2,8 @@
 
 #include <elle/err.hh>
 
+#include <boost/optional.hpp>
+
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
@@ -33,9 +35,9 @@ public:
   }
   template <typename ... Args>
   DHTs(int count,
-       boost::optional<infinit::cryptography::rsa::KeyPair> kp,
+       boost::optional<elle::cryptography::rsa::KeyPair> kp,
        Args ... args)
-    : owner_keys(kp? *kp : infinit::cryptography::rsa::keypair::generate(512))
+    : owner_keys(kp? *kp : elle::cryptography::rsa::keypair::generate(512))
     , dhts()
   {
     pax = true;
@@ -59,7 +61,7 @@ public:
     template<typename... Args>
     Client(std::string const& name, DHT dht, Args...args)
       : dht(std::move(dht))
-      , fs(std::make_unique<reactor::filesystem::FileSystem>(
+      , fs(std::make_unique<elle::reactor::filesystem::FileSystem>(
              std::make_unique<infinit::filesystem::FileSystem>(
                name, this->dht.dht, infinit::filesystem::allow_root_creation = true,
                std::forward<Args>(args)...),
@@ -67,17 +69,17 @@ public:
     {}
 
     DHT dht;
-    std::unique_ptr<reactor::filesystem::FileSystem> fs;
+    std::unique_ptr<elle::reactor::filesystem::FileSystem> fs;
   };
 
   template<typename... Args>
   DHT
   dht(bool new_key,
-         boost::optional<infinit::cryptography::rsa::KeyPair> kp,
+         boost::optional<elle::cryptography::rsa::KeyPair> kp,
          Args... args)
   {
     auto k = kp ? *kp
-    : new_key ? infinit::cryptography::rsa::keypair::generate(512)
+    : new_key ? elle::cryptography::rsa::keypair::generate(512)
           : this->owner_keys;
     ELLE_LOG("new client with owner=%f key=%f", this->owner_keys.K(), k.K());
     DHT client(owner = this->owner_keys,
@@ -94,7 +96,7 @@ public:
   template<typename... Args>
   Client
   client(bool new_key,
-         boost::optional<infinit::cryptography::rsa::KeyPair> kp,
+         boost::optional<elle::cryptography::rsa::KeyPair> kp,
          Args... args)
   {
     DHT client = dht(new_key, kp, std::forward<Args>(args)...);
@@ -107,7 +109,7 @@ public:
     return client(new_key, {});
   }
 
-  infinit::cryptography::rsa::KeyPair owner_keys;
+  elle::cryptography::rsa::KeyPair owner_keys;
   std::vector<DHT> dhts;
   bool pax;
 };
@@ -118,8 +120,8 @@ ELLE_TEST_SCHEDULED(basic)
   DHTs dhts(3);
   auto client = dhts.client();
   infinit::model::Endpoint ep("127.0.0.1", (rand()%10000)+50000);
-  reactor::Barrier b;
-  auto t = std::make_unique<reactor::Thread>("grpc",
+  elle::reactor::Barrier b;
+  auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
       ELLE_LOG("open");
       b.open();
@@ -128,7 +130,7 @@ ELLE_TEST_SCHEDULED(basic)
       ELLE_LOG("done");
     });
   ELLE_LOG("wait");
-  reactor::wait(b);
+  elle::reactor::wait(b);
   ELLE_LOG("start");
   auto chan = grpc::CreateChannel(
       elle::sprintf("127.0.0.1:%s", ep.port()),
@@ -279,7 +281,7 @@ ELLE_TEST_SCHEDULED(basic)
     }
     // acls
     req.mutable_block()->mutable_acl_block()->set_version(0);
-    auto alice = infinit::cryptography::rsa::keypair::generate(512);
+    auto alice = elle::cryptography::rsa::keypair::generate(512);
     auto ubf = infinit::model::doughnut::UB(
       client.dht.dht.get(), "alice", alice.K(), false);
     auto ubr = infinit::model::doughnut::UB(
