@@ -254,7 +254,8 @@ namespace infinit
            decltype(cli::listen = boost::none),
            decltype(cli::fetch_endpoints_interval = 300),
            decltype(cli::input = boost::none),
-           decltype(cli::disable_UTF_8_conversion = false)>
+           decltype(cli::disable_UTF_8_conversion = false),
+           decltype(cli::grpc = boost::none)>
       mount;
       void
       mode_mount(std::string const& name,
@@ -297,7 +298,8 @@ namespace infinit
                  boost::optional<std::string> listen = {},
                  Defaulted<int> fetch_endpoints_interval = 300,
                  boost::optional<std::string> input = {},
-                 bool disable_UTF_8_conversion = false);
+                 bool disable_UTF_8_conversion = false,
+                 boost::optional<std::string> grpc = boost::none);
 
       /*-------------.
       | Mode: pull.  |
@@ -369,7 +371,8 @@ namespace infinit
            decltype(cli::listen = boost::none),
            decltype(cli::fetch_endpoints_interval = 300),
            decltype(cli::input = boost::none),
-           decltype(cli::disable_UTF_8_conversion = false)>
+           decltype(cli::disable_UTF_8_conversion = false),
+           decltype(cli::grpc = boost::none)>
       run;
       void
       mode_run(std::string const& name,
@@ -412,7 +415,8 @@ namespace infinit
                boost::optional<std::string> listen = {},
                Defaulted<int> fetch_endpoints_interval = 300,
                boost::optional<std::string> input = {},
-               bool disable_UTF_8_conversion = false);
+               bool disable_UTF_8_conversion = false,
+               boost::optional<std::string> grpc = boost::none);
 
       /*--------------.
       | Mode: start.  |
