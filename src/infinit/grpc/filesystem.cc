@@ -62,6 +62,12 @@ namespace infinit
           {
             f();
           }
+          catch (elle::reactor::filesystem::Error const& e)
+          {
+            ELLE_TRACE("filesystem error: %s", e);
+            status.set_code(e.error_code());
+            status.set_message(e.what());
+          }
           catch (elle::Error const& e)
           {
             ELLE_TRACE("filesystem error: %s", e);
