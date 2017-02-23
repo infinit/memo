@@ -1,0 +1,137 @@
+#include <elle/utils.hh>
+
+#include <reactor/filesystem.hh>
+#include <reactor/scheduler.hh>
+#include <infinit/grpc/fs.grpc.pb.h>
+
+
+
+namespace infinit
+{
+  namespace grpc
+  {
+    class FSImpl: public ::FileSystem::Service
+    {
+    public:
+      using Status = ::grpc::Status;
+      using Ctx = ::grpc::ServerContext;
+      FSImpl(reactor::filesystem::FileSystem& fs);
+      Status MkDir(Ctx*, const ::Path* request, ::FsStatus* response);
+      Status ListDir(Ctx*, const ::Path* request, ::DirectoryContent* response);
+      Status RmDir(Ctx*, const ::Path* request, ::FsStatus* response);
+      Status RMFile(Ctx*, const ::Path* request, ::FsStatus* response);
+      Status OpenFile(Ctx*, const ::Path* request, ::StatusHandle* response);
+      Status CloseFile(Ctx*, const ::Handle* request, ::FsStatus* response);
+      Status Read(Ctx*, const ::HandleRange* request, ::StatusBuffer* response);
+      Status Write(Ctx*, const ::HandleBuffer* request, ::FsStatus* response);
+    private:
+      void managed(const char* name, ::FsStatus& status, std::function<void()> f);
+      reactor::Scheduler& _sched;
+      reactor::filesystem::FileSystem& _fs;
+      typedef std::unordered_map<std::string, std::unique_ptr<reactor::filesystem::Handle>> Handles;
+      Handles _handles;
+      int _next_handle;
+    };
+
+    void FSImpl::managed(const char* name, ::FsStatus& status, std::function<void()> f)
+    {
+      _sched.mt_run<void>(name, [&] {
+          try
+          {
+            f();
+          }
+          catch (elle::Error const& e)
+          {
+            status.set_code(1);
+            status.set_message(e.what());
+          }
+      });
+    }
+
+    ::grpc::Status FSImpl::MkDir(Ctx*, const ::Path* request, ::FsStatus* response)
+    {
+      managed("MkDir", *response, [&] {
+          _fs.path(request->path())->mkdir(0644);
+      });
+      return Status::OK;
+    }
+    ::grpc::Status FSImpl::ListDir(Ctx*, const ::Path* request, ::DirectoryContent* response)
+    {
+      managed("ListDir", *response->mutable_status(), [&] {
+          _fs.path(request->path())->list_directory(
+            [&](std::string const& name, struct stat* st) { 
+              auto ent = response->add_content();
+              ent->set_name(name);
+              ent->set_type(S_ISDIR(st->st_mode) ? ENTRY_DIRECTORY : ENTRY_FILE);
+          });
+      });
+      return Status::OK;
+    }
+    ::grpc::Status FSImpl::RmDir(Ctx*, const ::Path* request, ::FsStatus* response)
+    {
+      managed("RmDir", *response, [&] {
+          _fs.path(request->path())->rmdir();
+      });
+      return Status::OK;
+    }
+    ::grpc::Status FSImpl::RMFile(Ctx*, const ::Path* request, ::FsStatus* response)
+    {
+      managed("RMFile", *response, [&] {
+          _fs.path(request->path())->unlink();
+      });
+      return Status::OK;
+    }
+    ::grpc::Status FSImpl::OpenFile(Ctx*, const ::Path* request, ::StatusHandle* response)
+    {
+      managed("OpenFile", *response->mutable_status(), [&] {
+          auto handle = _fs.path(request->path())->create(O_CREAT|O_RDWR, 0644);
+          auto id = std::to_string(++_next_handle);
+          _handles[id] = std::move(handle);
+          response->mutable_handle()->set_handle(id);
+      });
+      return Status::OK;
+    }
+    ::grpc::Status FSImpl::CloseFile(Ctx*, const ::Handle* request, ::FsStatus* response)
+    {
+      managed("CloseFile", *response, [&] {
+          auto it = _handles.find(request->handle());
+          if (it == _handles.end())
+            throw reactor::filesystem::Error(EBADF, "bad handle");
+          it->second->close();
+          _handles.erase(it);
+      });
+      return Status::OK;
+    }
+    ::grpc::Status FSImpl::Read(Ctx*, const ::HandleRange* request, ::StatusBuffer* response)
+    {
+      managed("Read", *response->mutable_status(), [&] {
+          auto it = _handles.find(request->handle().handle());
+          if (it == _handles.end())
+            throw reactor::filesystem::Error(EBADF, "bad handle");
+          auto* buf = response->mutable_buffer()->mutable_data();
+          buf->resize(request->range().size());
+          int sz = it->second->read(
+            elle::WeakBuffer(elle::unconst(buf->data()), buf->size()),
+            buf->size(),
+            request->range().offset());
+          buf->resize(sz);
+          response->mutable_buffer()->set_offset(request->range().offset());
+      });
+      return Status::OK;
+    }
+    ::grpc::Status FSImpl::Write(Ctx*, const ::HandleBuffer* request, ::FsStatus* response)
+    {
+      managed("Write", *response, [&] {
+          auto it = _handles.find(request->handle().handle());
+          if (it == _handles.end())
+            throw reactor::filesystem::Error(EBADF, "bad handle");
+          it->second->write(
+            elle::ConstWeakBuffer(request->buffer().data().data(),
+                                  request->buffer().data().size()),
+            request->buffer().data().size(),
+            request->buffer().offset());
+      });
+      return Status::OK;
+    }
+  }
+}

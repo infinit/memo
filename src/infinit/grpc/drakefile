@@ -73,11 +73,13 @@ def configure(
       'CMAKE_BUILD_TYPE' : 'Debug',
     }
     )
-  gen = GRPCGen('kv.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
-  srcs = gen.dsts + drake.nodes('grpc.cc')
+  genkv = GRPCGen('kv.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
+  genfs = GRPCGen('fs.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
+
+  srcs = genkv.dsts + genfs.dsts + drake.nodes('grpc.cc', 'filesystem.cc')
   cxx_config_grpc = grpc.cxx_config
   grpc_lib = drake.cxx.DynLib('grpc', srcs, cxx_toolkit, cxx_config_grpc)
 
   kv_client = drake.cxx.Executable('kv-client',
-    gen.dsts + drake.nodes('kv-client.cc'),
+    genkv.dsts + drake.nodes('kv-client.cc'),
     cxx_toolkit, cxx_config_grpc)
