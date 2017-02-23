@@ -119,6 +119,13 @@ ELLE_TEST_SCHEDULED(basic)
 {
   DHTs dhts(3);
   auto client = dhts.client();
+  auto alice = elle::cryptography::rsa::keypair::generate(512);
+  auto ubf = infinit::model::doughnut::UB(
+    client.dht.dht.get(), "alice", alice.K(), false);
+  auto ubr = infinit::model::doughnut::UB(
+    client.dht.dht.get(), "alice", alice.K(), true);
+  client.dht.dht->store(ubf, infinit::model::STORE_INSERT);
+  client.dht.dht->store(ubr, infinit::model::STORE_INSERT);
   infinit::model::Endpoint ep("127.0.0.1", (rand()%10000)+50000);
   elle::reactor::Barrier b;
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
@@ -132,6 +139,7 @@ ELLE_TEST_SCHEDULED(basic)
   ELLE_LOG("wait");
   elle::reactor::wait(b);
   ELLE_LOG("start");
+  elle::reactor::background([&] {
   auto chan = grpc::CreateChannel(
       elle::sprintf("127.0.0.1:%s", ep.port()),
       grpc::InsecureChannelCredentials());
@@ -281,13 +289,6 @@ ELLE_TEST_SCHEDULED(basic)
     }
     // acls
     req.mutable_block()->mutable_acl_block()->set_version(0);
-    auto alice = elle::cryptography::rsa::keypair::generate(512);
-    auto ubf = infinit::model::doughnut::UB(
-      client.dht.dht.get(), "alice", alice.K(), false);
-    auto ubr = infinit::model::doughnut::UB(
-      client.dht.dht.get(), "alice", alice.K(), true);
-    client.dht.dht->store(ubf, infinit::model::STORE_INSERT);
-    client.dht.dht->store(ubr, infinit::model::STORE_INSERT);
     { // add alice
       auto acl = req.mutable_block()->mutable_acl_block()->add_permissions();
       acl->set_user("alice");
@@ -324,7 +325,7 @@ ELLE_TEST_SCHEDULED(basic)
       BOOST_CHECK_EQUAL(bs.status().error(), ERROR_OK);
       BOOST_CHECK_EQUAL(bs.block().acl_block().permissions_size(), 1);
     }
-  }
+  }});
   ELLE_LOG("done");
 }
 
@@ -345,6 +346,7 @@ ELLE_TEST_SCHEDULED(filesystem)
   ELLE_LOG("wait");
   elle::reactor::wait(b);
   ELLE_LOG("start");
+  elle::reactor::background([&] {
   auto chan = grpc::CreateChannel(
       elle::sprintf("127.0.0.1:%s", ep.port()),
       grpc::InsecureChannelCredentials());
@@ -475,11 +477,11 @@ ELLE_TEST_SCHEDULED(filesystem)
     reader->Finish();
     BOOST_CHECK_EQUAL(payload.size(), 67 * 16384 - 1);
   }
+  });
 }
 
 ELLE_TEST_SUITE()
 {
-  elle::os::setenv("GRPC_EPOLL_SYMBOL", "reactor_epoll_pwait", 1);
   auto& master = boost::unit_test::framework::master_test_suite();
   master.add(BOOST_TEST_CASE(basic), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(filesystem), 0, valgrind(60));
