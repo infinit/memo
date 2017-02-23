@@ -1,3 +1,4 @@
+#include <infinit/grpc/grpc.hh>
 #include <grpc/grpc.h>
 
 #include <boost/type_traits/function_traits.hpp>
@@ -423,15 +424,22 @@ namespace infinit
       return res;
     }
 
-    void serve_grpc(infinit::model::Model& dht, model::Endpoint ep)
+    void serve_grpc(infinit::model::Model& dht,
+                    boost::optional<elle::reactor::filesystem::FileSystem&> fs,
+                    model::Endpoint ep)
     {
       ELLE_TRACE("serving grpc on %s", ep);
       KVImpl impl(dht);
       KVBounce service(impl, elle::reactor::scheduler());
+      std::unique_ptr< ::grpc::Service> fs_service;
+      if (fs)
+        fs_service = filesystem_service(*fs);
       ::grpc::ServerBuilder builder;
       auto sep = ep.address().to_string() + ":" + std::to_string(ep.port());
       builder.AddListeningPort(sep, ::grpc::InsecureServerCredentials());
       builder.RegisterService(&service);
+      if (fs_service)
+        builder.RegisterService(fs_service.get());
       auto server = builder.BuildAndStart();
       elle::reactor::sleep();
     }

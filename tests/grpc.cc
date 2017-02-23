@@ -15,8 +15,8 @@
 #include <infinit/filesystem/filesystem.hh>
 
 #include <infinit/grpc/kv.grpc.pb.h>
-#include <infinit/grpc/kv.grpc.pb.cc>
-#include <infinit/grpc/kv.pb.cc>
+#include <infinit/grpc/fs.grpc.pb.h>
+
 #include <infinit/grpc/grpc.hh>
 
 #include <grpc++/grpc++.h>
@@ -126,7 +126,7 @@ ELLE_TEST_SCHEDULED(basic)
       ELLE_LOG("open");
       b.open();
       ELLE_LOG("serve");
-      infinit::grpc::serve_grpc(*client.dht.dht, ep);
+      infinit::grpc::serve_grpc(*client.dht.dht, boost::none, ep);
       ELLE_LOG("done");
     });
   ELLE_LOG("wait");
@@ -328,9 +328,159 @@ ELLE_TEST_SCHEDULED(basic)
   ELLE_LOG("done");
 }
 
+ELLE_TEST_SCHEDULED(filesystem)
+{
+  DHTs dhts(3);
+  auto client = dhts.client();
+  infinit::model::Endpoint ep("127.0.0.1", (rand()%10000)+50000);
+  elle::reactor::Barrier b;
+  auto t = std::make_unique<elle::reactor::Thread>("grpc",
+    [&] {
+      ELLE_LOG("open");
+      b.open();
+      ELLE_LOG("serve");
+      infinit::grpc::serve_grpc(*client.dht.dht, *client.fs, ep);
+      ELLE_LOG("done");
+    });
+  ELLE_LOG("wait");
+  elle::reactor::wait(b);
+  ELLE_LOG("start");
+  auto chan = grpc::CreateChannel(
+      elle::sprintf("127.0.0.1:%s", ep.port()),
+      grpc::InsecureChannelCredentials());
+  auto stub = FileSystem::NewStub(chan);
+  ::Path path;
+  ::FsStatus status;
+  { // list /
+    path.set_path("/");
+    ::DirectoryContent dc;
+    grpc::ClientContext context;
+    stub->ListDir(&context, path, &dc);
+    BOOST_CHECK_EQUAL(dc.status().code(), 0);
+    BOOST_CHECK_EQUAL(dc.content_size(), 2);
+  }
+  // dirs
+  path.set_path("/foo");
+  { // mkdir
+    grpc::ClientContext context;
+    stub->MkDir(&context, path, &status);
+    BOOST_CHECK_EQUAL(status.code(), 0);
+  }
+  { // check
+    path.set_path("/");
+    ::DirectoryContent dc;
+    grpc::ClientContext context;
+    stub->ListDir(&context, path, &dc);
+    BOOST_CHECK_EQUAL(dc.status().code(), 0);
+    BOOST_CHECK_EQUAL(dc.content_size(), 3);
+    BOOST_CHECK_EQUAL(dc.content(2).name(), "foo");
+    BOOST_CHECK_EQUAL(dc.content(2).type(), ENTRY_DIRECTORY);
+  }
+  { // rmdir
+    path.set_path("/foo");
+    grpc::ClientContext context;
+    stub->RmDir(&context, path, &status);
+    BOOST_CHECK_EQUAL(status.code(), 0);
+  }
+  { // check
+    path.set_path("/");
+    ::DirectoryContent dc;
+    grpc::ClientContext context;
+    stub->ListDir(&context, path, &dc);
+    BOOST_CHECK_EQUAL(dc.status().code(), 0);
+    BOOST_CHECK_EQUAL(dc.content_size(), 2);
+  }
+  // files
+  ::Handle handle;
+  ::StatusHandle sh;
+  ::HandleBuffer hb;
+  ::StatusBuffer sb;
+  ::HandleRange hr;
+  { // open
+    path.set_path("/bar");
+    grpc::ClientContext context;
+    stub->OpenFile(&context, path, &sh);
+    BOOST_CHECK_EQUAL(sh.status().code(), 0);
+  }
+  { // write
+    hb.mutable_handle()->set_handle(sh.handle().handle());
+    hb.mutable_buffer()->set_data("barbarbar");
+    grpc::ClientContext context;
+    stub->Write(&context, hb, &status);
+    BOOST_CHECK_EQUAL(status.code(), 0);
+  }
+  { // close
+    grpc::ClientContext context;
+    stub->CloseFile(&context, sh.handle(), &status);
+    BOOST_CHECK_EQUAL(status.code(), 0);
+  }
+  { // open
+    grpc::ClientContext context;
+    stub->OpenFile(&context, path, &sh);
+    BOOST_CHECK_EQUAL(sh.status().code(), 0);
+  }
+  { // read
+    hr.mutable_handle()->set_handle(sh.handle().handle());
+    hr.mutable_range()->set_size(1000);
+    hr.mutable_range()->set_offset(1);
+    grpc::ClientContext context;
+    stub->Read(&context, hr, &sb);
+    BOOST_CHECK_EQUAL(sb.status().code(), 0);
+    BOOST_CHECK_EQUAL(sb.buffer().data(), "arbarbar");
+  }
+  { // open
+    path.set_path("/stream");
+    grpc::ClientContext context;
+    stub->OpenFile(&context, path, &sh);
+    BOOST_CHECK_EQUAL(sh.status().code(), 0);
+  }
+  { // write stream
+    grpc::ClientContext context;
+    std::unique_ptr<grpc::ClientWriter< ::HandleBuffer> > writer(
+      stub->WriteStream(&context, &status));
+    hb.mutable_handle()->set_handle(sh.handle().handle());
+    for (int i = 0; i< 67; ++i)
+    {
+      hb.mutable_buffer()->set_offset(16384 * i);
+      hb.mutable_buffer()->set_data(std::string(16384, 'a'));
+      writer->Write(hb);
+    }
+    writer->WritesDone();
+    writer->Finish();
+    BOOST_CHECK_EQUAL(status.code(), 0);
+  }
+  { // close
+    grpc::ClientContext context;
+    stub->CloseFile(&context, sh.handle(), &status);
+    BOOST_CHECK_EQUAL(status.code(), 0);
+  }
+  { // open
+    grpc::ClientContext context;
+    stub->OpenFile(&context, path, &sh);
+    BOOST_CHECK_EQUAL(sh.status().code(), 0);
+  }
+  { // read stream
+    hr.mutable_handle()->set_handle(sh.handle().handle());
+    hr.mutable_range()->set_size(-1);
+    hr.mutable_range()->set_offset(1);
+    grpc::ClientContext context;
+    std::unique_ptr<grpc::ClientReader< ::StatusBuffer> > reader(
+      stub->ReadStream(&context, hr));
+    std::string payload;
+    while (reader->Read(&sb))
+    {
+      BOOST_CHECK_EQUAL(sb.status().code(), 0);
+      payload += sb.buffer().data();
+    }
+    reader->Finish();
+    BOOST_CHECK_EQUAL(payload.size(), 67 * 16384 - 1);
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   elle::os::setenv("GRPC_EPOLL_SYMBOL", "reactor_epoll_pwait", 1);
   auto& master = boost::unit_test::framework::master_test_suite();
   master.add(BOOST_TEST_CASE(basic), 0, valgrind(10));
+  master.add(BOOST_TEST_CASE(filesystem), 0, valgrind(60));
 }

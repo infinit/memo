@@ -885,7 +885,7 @@ namespace infinit
         {
           model::Endpoint ep(*grpc);
           new elle::reactor::Thread("grpc", [dht=dht.get(), ep] {
-              infinit::grpc::serve_grpc(*dht, ep);
+              infinit::grpc::serve_grpc(*dht, boost::none, ep);
           });
         }
         if (peers_file)

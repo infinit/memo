@@ -1052,6 +1052,13 @@ def configure(
         tests_extra_libs += [dokan_lib_tests_consensus]
       else:
         tests_extra_libs += [dokan_lib_tests]
+    if test_name == 'grpc':
+      tests_extra_libs += drake.nodes(
+        'src/infinit/grpc/kv.grpc.pb.cc',
+        'src/infinit/grpc/kv.pb.cc',
+        'src/infinit/grpc/fs.grpc.pb.cc',
+        'src/infinit/grpc/fs.pb.cc',
+      )
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
       [
