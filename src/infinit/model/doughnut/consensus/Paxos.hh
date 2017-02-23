@@ -44,18 +44,15 @@ namespace infinit
         | Types |
         `------*/
         public:
-          typedef Paxos Self;
-          typedef Consensus Super;
-          typedef
-          elle::athena::paxos::Client<std::shared_ptr<blocks::Block>, int, Address>
-          PaxosClient;
-          typedef elle::athena::paxos::Server<
-            std::shared_ptr<blocks::Block>, int, Address>
-          PaxosServer;
-          typedef elle::Option<std::shared_ptr<blocks::Block>,
-                               Paxos::PaxosClient::Quorum> Value;
-          typedef
-            std::pair<AddressVersion, PaxosServer::Quorum> AddressVersionQuorum;
+          using Self = Paxos;
+          using Super = Consensus;
+          using PaxosClient =
+            elle::athena::paxos::Client<std::shared_ptr<blocks::Block>, int, Address>;
+          using PaxosServer = elle::athena::paxos::Server<
+            std::shared_ptr<blocks::Block>, int, Address> ;
+          using Value = elle::Option<std::shared_ptr<blocks::Block>,
+                               Paxos::PaxosClient::Quorum>;
+          using AddressVersionQuorum = std::pair<AddressVersion, PaxosServer::Quorum>;
 
         /*-------------.
         | Construction |
@@ -87,15 +84,12 @@ namespace infinit
           bool
           rebalance(Address address, PaxosClient::Quorum const& ids);
         protected:
-          virtual
           void
           _store(std::unique_ptr<blocks::Block> block,
                  StoreMode mode,
                  std::unique_ptr<ConflictResolver> resolver) override;
-          virtual
           std::unique_ptr<blocks::Block>
           _fetch(Address address, boost::optional<int> local_version) override;
-          virtual
           void
           _fetch(std::vector<AddressVersion> const& addresses,
                  std::function<void(Address, std::unique_ptr<blocks::Block>,
@@ -104,7 +98,6 @@ namespace infinit
           _fetch(Address address,
                  PaxosClient::Peers peers,
                  boost::optional<int> local_version);
-          virtual
           void
           _remove(Address address, blocks::RemoveSignature rs) override;
           bool
@@ -135,11 +128,9 @@ namespace infinit
                      std::unique_ptr<storage::Storage> storage,
                      Protocol p) override;
 
-          typedef std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
-                            std::shared_ptr<elle::Error>>
-          AcceptedOrError;
-          typedef std::unordered_map<Address, AcceptedOrError>
-          GetMultiResult;
+          using AcceptedOrError = std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
+                            std::shared_ptr<elle::Error>>;
+          using GetMultiResult = std::unordered_map<Address, AcceptedOrError>;
 
         /*-----.
         | Peer |
@@ -149,7 +140,7 @@ namespace infinit
             : public virtual doughnut::Peer
           {
           public:
-            typedef doughnut::Peer Super;
+            using Super = doughnut::Peer;
             Peer(Doughnut& dht, model::Address id);
             virtual
             boost::optional<PaxosClient::Accepted>
@@ -179,7 +170,7 @@ namespace infinit
             , public doughnut::Remote
           {
           public:
-            typedef doughnut::Remote Super;
+            using Super = doughnut::Remote;
             template <typename ... Args>
             RemotePeer(Doughnut& dht,
                        std::shared_ptr<Dock::Connection> connection)
@@ -187,23 +178,19 @@ namespace infinit
               , Paxos::Peer(dht, connection->location().id())
               , Super(dht, std::move(connection))
             {}
-            virtual
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum const& peers,
                     Address address,
                     PaxosClient::Proposal const& p) override;
-            virtual
             PaxosClient::Proposal
             accept(PaxosServer::Quorum const& peers,
                    Address address,
                    PaxosClient::Proposal const& p,
                    Value const& value) override;
-            virtual
             void
             confirm(PaxosServer::Quorum const& peers,
                     Address address,
                     PaxosClient::Proposal const& p) override;
-            virtual
             boost::optional<PaxosClient::Accepted>
             get(PaxosServer::Quorum const& peers,
                 Address address,
@@ -237,9 +224,7 @@ namespace infinit
                       Doughnut& dht,
                       Address id,
                       Args&& ... args);
-            virtual
-            ~LocalPeer();
-            virtual
+            ~LocalPeer() override;
             void
             initialize() override;
             ELLE_ATTRIBUTE_R(Paxos&, paxos);
@@ -258,34 +243,27 @@ namespace infinit
           | Paxos |
           `------*/
           public:
-            typedef
-              std::pair<AddressVersion, PaxosServer::Quorum>
-              AddressVersionQuorum;
-            virtual
+            using AddressVersionQuorum
+              = std::pair<AddressVersion, PaxosServer::Quorum>;
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum const& peers,
                     Address address,
                     PaxosClient::Proposal const& p) override;
-            virtual
             PaxosClient::Proposal
             accept(PaxosServer::Quorum const& peers,
                    Address address,
                    PaxosClient::Proposal const& p,
                    Value const& value) override;
-            virtual
             void
             confirm(PaxosServer::Quorum const& peers,
                     Address address,
                     PaxosClient::Proposal const& p) override;
-            virtual
             boost::optional<PaxosClient::Accepted>
             get(PaxosServer::Quorum const& peers,
                 Address address,
                 boost::optional<int> local_version) override;
-            virtual
             void
             store(blocks::Block const& block, StoreMode mode) override;
-            virtual
             void
             remove(Address address, blocks::RemoveSignature rs) override;
             struct Decision
@@ -294,19 +272,17 @@ namespace infinit
               Decision(elle::serialization::SerializerIn& s);
               void
               serialize(elle::serialization::Serializer& s);
-              typedef infinit::serialization_tag serialization_tag;
+              using serialization_tag = infinit::serialization_tag;
               int chosen;
               PaxosServer paxos;
             };
           protected:
-            virtual
             std::unique_ptr<blocks::Block>
             _fetch(Address address,
                   boost::optional<int> local_version) const override;
-            virtual
             void
             _register_rpcs(RPCServer& rpcs) override;
-            typedef elle::unordered_map<Address, Decision> Addresses;
+            using Addresses = elle::unordered_map<Address, Decision>;
             ELLE_ATTRIBUTE(Addresses, addresses);
           private:
             void
@@ -352,7 +328,7 @@ namespace infinit
               bool
               operator ==(BlockRepartition const& rhs) const;
             };
-            typedef bmi::multi_index_container<
+            using Quorums = bmi::multi_index_container<
               BlockRepartition,
               bmi::indexed_by<
                 bmi::hashed_unique<
@@ -365,18 +341,17 @@ namespace infinit
                     BlockRepartition,
                     int,
                     &BlockRepartition::replication_factor> >
-                >> Quorums;
+                >>;
 
             /// Blocks quorum
             ELLE_ATTRIBUTE_R(Quorums, quorums);
             /// Nodes blocks
-            typedef std::unordered_map<
-              Address, std::unordered_set<Address>> NodeBlocks;
+            using NodeBlocks = std::unordered_map<
+              Address, std::unordered_set<Address>>;
             ELLE_ATTRIBUTE_R(NodeBlocks, node_blocks);
             ELLE_ATTRIBUTE_R(std::unordered_set<Address>, nodes);
-            typedef
-              std::unordered_map<Address, boost::asio::deadline_timer>
-              NodeTimeouts;
+            using NodeTimeouts =
+              std::unordered_map<Address, boost::asio::deadline_timer>;
             ELLE_ATTRIBUTE_R(NodeTimeouts, node_timeouts);
           };
 
@@ -384,7 +359,6 @@ namespace infinit
         | Stat |
         `-----*/
         public:
-          virtual
           std::unique_ptr<Consensus::Stat>
           stat(Address const& address) override;
 
@@ -405,13 +379,12 @@ namespace infinit
             : public consensus::Configuration
           {
           public:
-            typedef Configuration Self;
-            typedef consensus::Configuration Super;
+            using Self = infinit::model::doughnut::consensus::Paxos::Configuration;
+            using Super = consensus::Configuration;
           public:
             Configuration(int replication_factor,
                           std::chrono::system_clock::duration node_timeout);
             ELLE_CLONABLE();
-            virtual
             std::unique_ptr<Consensus>
             make(model::doughnut::Doughnut& dht) override;
             ELLE_ATTRIBUTE_RW(int, replication_factor);
@@ -420,7 +393,6 @@ namespace infinit
             ELLE_ATTRIBUTE_RW(bool, rebalance_inspect);
           public:
             Configuration(elle::serialization::SerializerIn& s);
-            virtual
             void
             serialize(elle::serialization::Serializer& s) override;
           };
@@ -441,7 +413,7 @@ namespace infinit
             std::function<void(Paxos::LocalPeer::Decision*)>> paxos;
           void
           serialize(elle::serialization::Serializer& s);
-          typedef infinit::serialization_tag serialization_tag;
+          using serialization_tag = infinit::serialization_tag;
         };
       }
     }

@@ -33,7 +33,7 @@ namespace infinit
         | Blocks |
         `-------*/
         public:
-          typedef std::pair<Address, boost::optional<int>> AddressVersion;
+          using AddressVersion = std::pair<Address, boost::optional<int>>;
           void
           store(std::unique_ptr<blocks::Block> block,
                 StoreMode mode,

@@ -17,16 +17,12 @@ namespace infinit
       Filesystem(boost::filesystem::path root,
                  boost::optional<int64_t> capacity = {});
     protected:
-      virtual
       elle::Buffer
       _get(Key k) const override;
-      virtual
       int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
-      virtual
       int
       _erase(Key k) override;
-      virtual
       std::vector<Key>
       _list() override;
       ELLE_ATTRIBUTE_R(boost::filesystem::path, root);
@@ -45,7 +41,6 @@ namespace infinit
       FilesystemStorageConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;
-      virtual
       std::unique_ptr<infinit::storage::Storage>
       make() override;
       std::string path;
