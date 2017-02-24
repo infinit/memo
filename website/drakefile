@@ -88,6 +88,7 @@ def configure(
     'templates/pages/docs/src/markdown/technology.md',
     'templates/pages/docs/src/markdown/ldap.md',
     'templates/pages/docs/src/markdown/docker_volume_plugin.md',
+    'templates/pages/docs/src/markdown/kv.md',
   )
   changelog = drake.node(
     'ChangeLog.html',
