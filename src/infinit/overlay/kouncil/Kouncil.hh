@@ -9,6 +9,7 @@
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index_container.hpp>
 
+#include <elle/athena/LamportAge.hh>
 #include <elle/unordered_map.hh>
 
 #include <infinit/model/doughnut/Peer.hh>
@@ -18,6 +19,7 @@ namespace infinit
 {
   namespace symbols
   {
+    ELLE_DAS_SYMBOL(disappearance);
     ELLE_DAS_SYMBOL(endpoints);
     ELLE_DAS_SYMBOL(stamp);
   }
@@ -100,6 +102,9 @@ namespace infinit
         /// Remote node.
         using Remote = infinit::model::doughnut::Remote;
 
+        /// Transportable timeout.
+        using LamportAge = elle::athena::LamportAge;
+
       /*-------------.
       | Construction |
       `-------------*/
@@ -150,8 +155,10 @@ namespace infinit
         struct PeerInfo
           : public elle::Printable::as<PeerInfo>
         {
-          PeerInfo(Address id, Endpoints endpoints, int64_t stamp);
-          PeerInfo(Address id, Endpoints endpoints, Time t);
+          PeerInfo(Address id, Endpoints endpoints, int64_t stamp,
+                   LamportAge disappearance = {});
+          PeerInfo(Address id, Endpoints endpoints, Time t,
+                   LamportAge disappearance= {});
           /** Merge peer informations in this.
            *
            *  @param info The endpoints to merge in this, iff they are more
@@ -168,6 +175,9 @@ namespace infinit
           location() const;
           void
           print(std::ostream& o) const;
+          /// We lost contact with this peer at @a t.
+          void
+          disappear(Time t = Clock::now());
 
           /// Peer id.
           ELLE_ATTRIBUTE_R(Address, id);
@@ -175,12 +185,16 @@ namespace infinit
           ELLE_ATTRIBUTE_R(Endpoints, endpoints);
           /// Lamport clock for when the endpoints were established by the peer.
           ELLE_ATTRIBUTE_R(int64_t, stamp);
+          /// Time when we lost connection with this peer, or
+          /// LamportAge::null() if all is well.
+          ELLE_ATTRIBUTE_RWX(LamportAge, disappearance);
           /// Default model: Serialize non-local information.
           using Model = elle::das::Model<
             PeerInfo,
             decltype(elle::meta::list(symbols::id,
                                       symbols::endpoints,
-                                      symbols::stamp))>;
+                                      symbols::stamp,
+                                      symbols::disappearance))>;
         };
         /// Peer informations by id.
         using PeerInfos = bmi::multi_index_container<
@@ -232,8 +246,12 @@ namespace infinit
         _endpoints_refetch(Address id);
         void
         _perform(std::string const& name, std::function<void()> job);
+        /// A peer appears to have disappeared.  We hope to see it again.
         void
         _peer_disconnected(std::shared_ptr<Remote> peer);
+        /// Disconnection was too long, forget about this peer.
+        void
+        _peer_evicted(std::shared_ptr<Remote> peer);
         void
         _peer_connected(std::shared_ptr<Remote> peer);
         void

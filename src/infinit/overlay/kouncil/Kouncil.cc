@@ -280,6 +280,7 @@ namespace infinit
                               {"id", elle::sprintf("%s", pi.id())},
                               {"endpoints", elle::sprintf("%s", pi.endpoints())},
                               {"stamp", elle::sprintf("%s", pi.stamp())},
+                              {"disappearance", elle::sprintf("%s", pi.disappearance())},
                             });
             res.emplace("infos", pis);
           }
@@ -394,16 +395,11 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: %s disconnected", this, peer);
         auto const id = peer->id();
-        // Remove from infos.
+        // Start aging the infos.
         {
           auto pi = ELLE_ENFORCE(find(this->_infos, id));
-          ELLE_ASSERT(pi);
-          this->_infos.erase(pi);
-        }
-        // Remove from address book.
-        {
-          auto its = this->_address_book.equal_range(id);
-          this->_address_book.erase(its.first, its.second);
+          // FIXME: remove the unconst!
+          elle::unconst(*pi).disappearance().start();
         }
         // Remove from peers.
         {
@@ -423,6 +419,23 @@ namespace infinit
             this->_stale_endpoints.modify(
               it, [this] (StaleEndpoint& e) { e.connect(*this->doughnut()); });
           }
+        }
+      }
+
+      void
+      Kouncil::_peer_evicted(std::shared_ptr<Remote> peer)
+      {
+        ELLE_TRACE_SCOPE("%s: %s evicted", this, peer);
+        auto const id = peer->id();
+        // Remove from infos.
+        {
+          auto pi = ELLE_ENFORCE(find(this->_infos, id));
+          this->_infos.erase(pi);
+        }
+        // Remove from address book.
+        {
+          auto its = this->_address_book.equal_range(id);
+          this->_address_book.erase(its.first, its.second);
         }
       }
 
@@ -507,13 +520,12 @@ namespace infinit
             int count = 0;
             for (auto const& entry:
                    elle::as_range(this->_address_book.get<1>().equal_range(address)))
-            {
-              auto p = this->peers().find(entry.node());
-              ELLE_ASSERT(p != this->peers().end());
-              yield(*p);
-              if (++count >= n)
-                break;
-            }
+              if (auto p = find(this->peers(), entry.node()))
+              {
+                yield(*p);
+                if (++count >= n)
+                  break;
+              }
             if (count == 0)
             {
               ELLE_TRACE_SCOPE("%s: block %f not found, checking all %s peers",
@@ -728,16 +740,19 @@ namespace infinit
 
       Kouncil::PeerInfo::PeerInfo(Address id,
                                   Endpoints endpoints,
-                                  int64_t stamp)
+                                  int64_t stamp,
+                                  LamportAge d)
         : _id(id)
         , _endpoints(std::move(endpoints))
         , _stamp(stamp)
+        , _disappearance(d)
       {}
 
       Kouncil::PeerInfo::PeerInfo(Address id,
                                   Endpoints endpoints,
-                                  Time t)
-        : PeerInfo(id, endpoints, to_milliseconds(t))
+                                  Time t,
+                                  LamportAge d)
+        : PeerInfo(id, endpoints, to_milliseconds(t), d)
       {}
 
       bool
