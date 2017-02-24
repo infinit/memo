@@ -214,13 +214,15 @@ discover(DHT& dht,
 
 namespace
 {
+  /// Get n-th member of a container.
   template <typename C>
   auto
-  get_n(C& c, int idx)
+  get_n(C& c, int n)
   {
-    return *std::next(c.begin(), idx);
+    return *std::next(c.begin(), n);
   }
 
+  /// Get random member of a container.
   template <typename C>
   auto
   get_random(C& c)
@@ -301,6 +303,20 @@ namespace
     }
     ELLE_TRACE("counted %s peers for %s", res, client.dht);
     return res;
+  }
+
+  /// Close the connection to this peer.
+  template <typename Peer>
+  void
+  close_connection(Peer& p)
+  {
+    namespace net = elle::reactor::network;
+    if (auto* s = dynamic_cast<net::TCPSocket*>(p.stream().get()))
+      s->close();
+    else if (auto* s = dynamic_cast<net::UTPSocket*>(p.stream().get()))
+      s->close();
+    else
+      BOOST_FAIL(elle::sprintf("could not obtain socket pointer for %s", p));
   }
 }
 
@@ -728,7 +744,7 @@ ELLE_TEST_SCHEDULED(
   // brutal restart of a
   ELLE_LOG("disconnect A");
   dht_a->dht->local()->utp_server()->socket()->close();
-  s.reset(new infinit::storage::Memory(blocks));
+  s = std::make_unique<infinit::storage::Memory>(blocks);
   ELLE_LOG("recreate A");
   auto dht_aa = std::make_unique<DHT>(
     ::id = id_a,
@@ -1366,30 +1382,59 @@ ELLE_TEST_SCHEDULED(
   }
 }
 
-ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
-  (bool, keep_port), (bool, wait_disconnect), (bool, wait_connect))
+/// Factor the creation of a DHT cluster.
+struct Cluster
 {
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  using Self = Cluster;
   static const int n = 5;
+
+  Cluster(TestConfiguration const& config)
+  {
+    for (int i=0; i<n; ++i)
+    {
+      ids[i] = infinit::model::Address::random();
+      servers[i] = std::make_unique<DHT>(
+        ::id = ids[i],
+        ::version = config.version,
+        ::keys = keys,
+        ::make_overlay = config.overlay_builder,
+        ::paxos = true,
+        ::storage = std::make_unique<infinit::storage::Memory>(blocks[i]));
+      ports[i] = servers[i]->dht->dock().utp_server().local_endpoint().port();
+    }
+  }
+
+  /// Let members discover themselves.
+  void
+  discover()
+  {
+    for (int i=0; i<n; ++i)
+      for (int j=i+1; j<n; ++j)
+        ::discover(*servers[i], *servers[j], false);
+  }
+
+  using Keys = elle::cryptography::rsa::KeyPair;
+  Keys keys = elle::cryptography::rsa::keypair::generate(512);
   infinit::model::Address ids[n];
   unsigned short ports[n];
   infinit::storage::Memory::Blocks blocks[n];
-  auto servers = std::vector<std::unique_ptr<DHT>>{};
-  for (int i=0; i<n; ++i)
-  {
-    ids[i] = infinit::model::Address::random();
-    auto dht = std::make_unique<DHT>(
-      ::id = ids[i],
-      ::version = config.version,
-      ::keys = keys, make_overlay = config.overlay_builder, paxos = true,
-      ::storage = std::make_unique<infinit::storage::Memory>(blocks[i])
-    );
-    servers.emplace_back(std::move(dht));
-    ports[i] = servers[i]->dht->dock().utp_server().local_endpoint().port();
-  }
-  for (int i=0; i<n; ++i)
-    for (int j=i+1; j<n; ++j)
-      discover(*servers[i], *servers[j], false);
+  std::unique_ptr<DHT> servers[n];
+};
+
+
+ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
+  (bool, keep_port), (bool, wait_disconnect), (bool, wait_connect))
+{
+  auto cluster = Cluster{config};
+  const auto n = cluster.n;
+  auto& blocks = cluster.blocks;
+  const auto& ids = cluster.ids;
+  const auto& keys = cluster.keys;
+  const auto& ports = cluster.ports;
+  auto& servers = cluster.servers;
+
+  cluster.discover();
+
   auto client = std::unique_ptr<DHT>{};
   auto spawn_client = [&] {
     client = std::make_unique<DHT>(
@@ -1408,6 +1453,8 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
     hard_wait(*s, n-1, client->dht->id());
   hard_wait(*client, n, client->dht->id());
   auto addrs = std::vector<infinit::model::Address>{};
+  // The index in servers[] of a host we will disconnect, and later
+  // reconnect.
   int down = -1;
   try
   {
@@ -1417,14 +1464,14 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
     {
       ELLE_LOG("bringing node %s up with %s/%s block",
                down, blocks[down].size(), addrs.size());
-      servers[down].reset(new DHT(
+      servers[down] = std::make_unique<DHT>(
         ::keys = keys,
         ::version = config.version,
         ::make_overlay = config.overlay_builder,
         ::paxos = true,
         ::id = ids[down],
         ::port = keep_port ? ports[down] : 0,
-        ::storage = std::make_unique<infinit::storage::Memory>(blocks[down])));
+        ::storage = std::make_unique<infinit::storage::Memory>(blocks[down]));
       for (int s=0; s< n; ++s)
         if (s != down)
         {
@@ -1488,29 +1535,15 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
 void
 test_churn_socket(TestConfiguration config, bool pasv)
 {
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
-
-  // Create n servers.
-  static const int n = 5;
-  infinit::model::Address ids[n];
-  infinit::storage::Memory::Blocks blocks[n];
-  auto servers = std::vector<DHT>{};
-  for (int i=0; i<n; ++i)
-  {
-    ids[i] = infinit::model::Address::random();
-    servers.emplace_back(
-      ::id = ids[i],
-      ::version = config.version,
-      ::keys = keys, make_overlay = config.overlay_builder, paxos = true,
-      ::storage = std::make_unique<infinit::storage::Memory>(blocks[i]));
-  }
+  auto cluster = Cluster{config};
+  const auto n = cluster.n;
+  const auto& keys = cluster.keys;
+  auto& servers = cluster.servers;
 
   // Let the servers discover themselves.
-  for (int i=0; i<n; ++i)
-    for (int j=i+1; j<n; ++j)
-      discover(servers[i], servers[j], false);
+  cluster.discover();
   for (auto& s: servers)
-    hard_wait(s, n-1);
+    hard_wait(*s, n-1);
 
   // A client.
   auto client = DHT(
@@ -1525,7 +1558,7 @@ test_churn_socket(TestConfiguration config, bool pasv)
     kelips->config().query_timeout_ms = valgrind(1000, 4);
   }
   // Wait for it to discover the first server.
-  discover(client, servers[0], false);
+  discover(client, *servers[0], false);
   hard_wait(client, n, client.dht->id());
 
   // Write some blocks.
@@ -1545,20 +1578,9 @@ test_churn_socket(TestConfiguration config, bool pasv)
     // Shoot some connections.
     for (int i = 0; i < 5; ++i)
     {
-      auto& peers = servers[i].dht->local()->peers();
+      auto& peers = servers[i]->dht->local()->peers();
       for (int l = 0; l < 3; ++l)
-      {
-        auto peer = get_random(peers);
-        if (auto* s = dynamic_cast<elle::reactor::network::TCPSocket*>(
-              peer->stream().get()))
-          s->close();
-        else if (auto* s = dynamic_cast<elle::reactor::network::UTPSocket*>(
-                   peer->stream().get()))
-          s->close();
-        else
-          BOOST_FAIL(
-            elle::sprintf("could not obtain socket pointer for %s", peer));
-      }
+        close_connection(*get_random(peers));
     }
     if (pasv)
     {
@@ -1567,7 +1589,7 @@ test_churn_socket(TestConfiguration config, bool pasv)
         elle::reactor::yield();
       ELLE_TRACE("hard_wait servers");
       for (auto& s: servers)
-        kouncil_wait_pasv(s, n-1);
+        kouncil_wait_pasv(*s, n-1);
       ELLE_TRACE("hard_wait client");
       kouncil_wait_pasv(client, n);
     }
@@ -1575,7 +1597,7 @@ test_churn_socket(TestConfiguration config, bool pasv)
     {
       ELLE_TRACE("hard_wait servers");
       for (auto& s: servers)
-        hard_wait(s, n-1);
+        hard_wait(*s, n-1);
       ELLE_TRACE("hard_wait client");
       hard_wait(client, n, client.dht->id());
     }
@@ -1596,17 +1618,16 @@ ELLE_TEST_SCHEDULED(churn_socket_pasv, (TestConfiguration, config))
   test_churn_socket(config, true);
 }
 
-static
-int
-windows_factor =
-#ifdef INFINIT_WINDOWS
-        5;
-#else
-        1;
-#endif
 
 ELLE_TEST_SUITE()
 {
+  static int windows_factor =
+#ifdef INFINIT_WINDOWS
+    5;
+#else
+    1;
+#endif
+
   // elle::os::setenv("INFINIT_CONNECT_TIMEOUT",
   //                  elle::sprintf("%sms", valgrind(100, 20)), 1);
   // elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT",
