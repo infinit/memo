@@ -374,6 +374,17 @@ namespace infinit
           }))
           return res;
         }
+        // There is no API to seal a MutableBlock with a given version, so
+        // make the conflict version check ourselve.
+        auto vin = iblock.mutable_block().version();
+        auto vcurr = dynamic_cast<model::blocks::MutableBlock&>(*block).version();
+        if (vin != 0 && vin <= vcurr)
+        {
+          res.set_error(ERROR_CONFLICT);
+          res.set_message(elle::sprintf("version conflict, current=%s, target=%s", vcurr, vin));
+          res.set_version(vcurr);
+          return res;
+        }
         dynamic_cast<model::blocks::MutableBlock&>(*block).data(iblock.payload());
       }
       else if (iblock.has_acl_block())
