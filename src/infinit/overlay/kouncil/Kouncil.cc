@@ -711,8 +711,6 @@ namespace infinit
         : _id(id)
         , _endpoints(std::move(endpoints))
         , _stamp(stamp)
-        , _last_seen(std::chrono::high_resolution_clock::now())
-        , _last_contact_attempt(std::chrono::high_resolution_clock::now())
       {}
 
       Kouncil::PeerInfo::PeerInfo(Address id,
@@ -724,8 +722,8 @@ namespace infinit
       bool
       Kouncil::PeerInfo::merge(Kouncil::PeerInfo const& from)
       {
-        if ((this->_stamp < from._stamp || from._stamp == -1) &&
-            this->_endpoints != from._endpoints)
+        if ((this->_stamp < from._stamp || from._stamp == -1)
+            && this->_endpoints != from._endpoints)
         {
           this->_endpoints = from._endpoints;
           this->_stamp = from._stamp;

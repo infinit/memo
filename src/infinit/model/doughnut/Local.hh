@@ -27,8 +27,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef Local Self;
-        typedef Peer Super;
+        using Self = infinit::model::doughnut::Local;
+        using Super = infinit::model::doughnut::Peer;
 
       /*-------------.
       | Construction |
@@ -40,7 +40,7 @@ namespace infinit
               int port = 0,
               boost::optional<boost::asio::ip::address> listen_address = {},
               Protocol p = Protocol::all);
-        ~Local();
+        ~Local() override;
         /** Called after every element of the DHT has been initialized.
          *
          *  The overlay does not exist upon construction, for instance.
@@ -58,14 +58,11 @@ namespace infinit
       | Blocks |
       `-------*/
       public:
-        virtual
         void
         store(blocks::Block const& block, StoreMode mode) override;
-        virtual
         void
         remove(Address address, blocks::RemoveSignature rs) override;
       protected:
-        virtual
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
                boost::optional<int> local_version) const override;
@@ -74,10 +71,8 @@ namespace infinit
       | Keys |
       `-----*/
       protected:
-        virtual
         std::vector<elle::cryptography::rsa::PublicKey>
         _resolve_keys(std::vector<int> const& ids) override;
-        virtual
         std::unordered_map<int, elle::cryptography::rsa::PublicKey>
         _resolve_all_keys() override;
 

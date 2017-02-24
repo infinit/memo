@@ -33,8 +33,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef Remote Self;
-        typedef Peer Super;
+        using Self = infinit::model::doughnut::Remote;
+        using Super = infinit::model::doughnut::Peer;
         /// Challenge, token
         using Challenge = std::pair<elle::Buffer, elle::Buffer>;
         struct Auth
@@ -65,8 +65,7 @@ namespace infinit
         Remote(Doughnut& doughnut,
                std::shared_ptr<Dock::Connection> connection);
       public:
-        virtual
-        ~Remote();
+        ~Remote() override;
       protected:
         void
         _cleanup() override;
