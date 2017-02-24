@@ -65,24 +65,6 @@ template<typename F, typename R>
 class CallManager: public BaseCallManager
 {
 public:
-  /* FINME the damm thing fails on member functions
-   typedef typename
-   std::remove_reference<
-     typename std::remove_const<
-       typename boost::mpl::at_c<typename boost::function_traits<F>::parameter_types,1>::type
-       >::type
-     >::type
-   request_type;
-   typedef typename
-   boost::mpl::at_c<typename boost::function_traits<F>::parameter_types,0>::type
-   impl_type;
-   typedef typename
-   boost::mpl::at_c<typename boost::function_traits<R>::parameter_types,0>::type
-   service_type;
-   typedef typename
-   boost::function_traits<R>::result_type
-   reply_type;
-   */
    typedef typename
    std::remove_const<
      typename std::remove_reference<
@@ -407,17 +389,14 @@ namespace infinit
         }
         dynamic_cast<model::blocks::MutableBlock&>(*block).data(iblock.payload());
         auto const& ra = iblock.acl_block();
-        ablock->set_world_permissions(/*ra.has_world_read() &&*/ ra.world_read(),
-                                      /*ra.has_world_write() &&*/ ra.world_write());
+        ablock->set_world_permissions(ra.world_read(), ra.world_write());
         for (int i=0; i< ra.permissions_size(); ++i)
         {
           auto const& p = ra.permissions(i);
           auto user = _model.make_user(elle::Buffer(p.user()));
-          ablock->set_permissions(*user,
-                                  /*p.has_read() &&*/ p.read(),
-                                  /*p.has_write() &&*/ p.write());
+          ablock->set_permissions(*user, p.read(), p.write());
         }
-        if (/*ra.has_version() &&*/ ra.version() > 0)
+        if (ra.version() > 0)
           dynamic_cast<model::doughnut::ACB&>(*ablock).seal(ra.version());
       }
       else if (iblock.has_named_block())
