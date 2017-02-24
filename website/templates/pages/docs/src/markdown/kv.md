@@ -210,7 +210,7 @@ int main(int argc, char** argv)
     }
     else if (cmd == "list") {
       vector<string> docs = list_documents(argv[3]);
-      std::cout << boost::algorithm::join(docs, "\n");
+      std::cout << boost::algorithm::join(docs, "\n") << std::endl;
     }
     else if (cmd == "get")
       std::cout << get_document(argv[3], argv[4]) << std::endl;
