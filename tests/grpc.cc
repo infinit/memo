@@ -157,12 +157,11 @@ ELLE_TEST_SCHEDULED(basic)
   }
   { // put/get chb
     grpc::ClientContext context;
-    ::ModeBlock req;
-    req.set_mode(STORE_INSERT);
-    req.mutable_block()->set_payload("foo");
-    req.mutable_block()->mutable_constant_block();
+    ::Block req;
+    req.set_payload("foo");
+    req.mutable_constant_block();
     ::Status repl;
-    stub->Set(&context, req, &repl);
+    stub->Insert(&context, req, &repl);
     ::Address addr;
     addr.set_address(repl.address());
     ::BlockStatus bs;
@@ -173,22 +172,20 @@ ELLE_TEST_SCHEDULED(basic)
     BOOST_CHECK_EQUAL(bs.status().error(), ERROR_OK);
     BOOST_CHECK_EQUAL(bs.block().payload(), "foo");
     { // STORE_UPDATE chb
-      req.set_mode(STORE_UPDATE);
-      req.mutable_block()->set_payload("bar");
+      req.set_payload("bar");
       grpc::ClientContext context;
-      stub->Set(&context, req, &repl);
+      stub->Update(&context, req, &repl);
       BOOST_CHECK_EQUAL(repl.error(), ERROR_NO_PEERS);
     }
   }
   { // mb
-    ::ModeBlock req;
-    req.set_mode(STORE_INSERT);
-    req.mutable_block()->set_payload("foo");
-    req.mutable_block()->mutable_mutable_block();
+    ::Block req;
+    req.set_payload("foo");
+    req.mutable_mutable_block();
     ::Status repl;
     { // insert
       grpc::ClientContext context;
-      stub->Set(&context, req, &repl);
+      stub->Insert(&context, req, &repl);
       BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
     }
     ::Address addr;
@@ -201,12 +198,11 @@ ELLE_TEST_SCHEDULED(basic)
       BOOST_CHECK_EQUAL(bs.block().payload(), "foo");
     }
     { // update
-      req.set_mode(STORE_UPDATE);
-      req.mutable_block()->set_payload("bar");
-      req.mutable_block()->set_address(addr.address());
+      req.set_payload("bar");
+      req.set_address(addr.address());
       {
         grpc::ClientContext context;
-        stub->Set(&context, req, &repl);
+        stub->Update(&context, req, &repl);
         BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
       }
     }
@@ -219,14 +215,13 @@ ELLE_TEST_SCHEDULED(basic)
     }
   }
   { // acb
-    ::ModeBlock req;
-    req.set_mode(STORE_INSERT);
-    req.mutable_block()->set_payload("foo");
-    req.mutable_block()->mutable_acl_block();
+    ::Block req;
+    req.set_payload("foo");
+    req.mutable_acl_block();
     ::Status repl;
     { // insert
       grpc::ClientContext context;
-      stub->Set(&context, req, &repl);
+      stub->Insert(&context, req, &repl);
       BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
     }
     ::Address addr;
@@ -239,12 +234,11 @@ ELLE_TEST_SCHEDULED(basic)
       BOOST_CHECK_EQUAL(bs.block().payload(), "foo");
     }
     { // update
-      req.set_mode(STORE_UPDATE);
-      req.mutable_block()->set_payload("bar");
-      req.mutable_block()->set_address(addr.address());
+      req.set_payload("bar");
+      req.set_address(addr.address());
       {
         grpc::ClientContext context;
-        stub->Set(&context, req, &repl);
+        stub->Update(&context, req, &repl);
         BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
       }
     }
@@ -258,11 +252,11 @@ ELLE_TEST_SCHEDULED(basic)
     // world perms
     BOOST_CHECK_EQUAL(bs.block().acl_block().world_read(), false);
     BOOST_CHECK_EQUAL(bs.block().acl_block().world_write(), false);
-    req.mutable_block()->mutable_acl_block()->set_world_read(true);
-    req.mutable_block()->mutable_acl_block()->set_world_write(true);
+    req.mutable_acl_block()->set_world_read(true);
+    req.mutable_acl_block()->set_world_write(true);
     {
       grpc::ClientContext context;
-      stub->Set(&context, req, &repl);
+      stub->Update(&context, req, &repl);
       BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
     }
     {
@@ -274,28 +268,28 @@ ELLE_TEST_SCHEDULED(basic)
       BOOST_CHECK_EQUAL(bs.block().acl_block().world_write(), true);
     }
     // version conflict
-    req.mutable_block()->mutable_acl_block()->set_version(1);
-    req.mutable_block()->set_payload("baz");
+    req.mutable_acl_block()->set_version(1);
+    req.set_payload("baz");
     {
       grpc::ClientContext context;
-      stub->Set(&context, req, &repl);
+      stub->Update(&context, req, &repl);
       BOOST_CHECK_EQUAL(repl.error(), ERROR_CONFLICT);
     }
-    req.mutable_block()->mutable_acl_block()->set_version(repl.version()+1);
+    req.mutable_acl_block()->set_version(repl.version()+1);
     {
       grpc::ClientContext context;
-      stub->Set(&context, req, &repl);
+      stub->Update(&context, req, &repl);
       BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
     }
     // acls
-    req.mutable_block()->mutable_acl_block()->set_version(0);
+    req.mutable_acl_block()->set_version(0);
     { // add alice
-      auto acl = req.mutable_block()->mutable_acl_block()->add_permissions();
+      auto acl = req.mutable_acl_block()->add_permissions();
       acl->set_user("alice");
       acl->set_read(true);
       acl->set_write(true);
       grpc::ClientContext context;
-      stub->Set(&context, req, &repl);
+      stub->Update(&context, req, &repl);
       BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
     }
     { // check alice
@@ -312,11 +306,11 @@ ELLE_TEST_SCHEDULED(basic)
       BOOST_CHECK_EQUAL(p.write(), true);
     }
     { // remove alice
-      auto acl = req.mutable_block()->mutable_acl_block()->mutable_permissions(0);
+      auto acl = req.mutable_acl_block()->mutable_permissions(0);
       acl->set_read(false);
       acl->set_write(false);
       grpc::ClientContext context;
-      stub->Set(&context, req, &repl);
+      stub->Update(&context, req, &repl);
       BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
     }
     { // check

@@ -160,10 +160,14 @@ namespace infinit
       ::BlockStatus
       Get(const ::Address& request);
       ::Status
-      Set(const ::ModeBlock& request);
+      Insert(const ::Block& request);
+      ::Status
+      Update(const ::Block& request);
       ::Status
       Remove(const ::Address& request);
 
+      ::Status
+      Set(const ::Block& request, infinit::model::StoreMode mode);
       ELLE_ATTRIBUTE(infinit::model::Model&, model);
     };
 
@@ -182,10 +186,17 @@ namespace infinit
         });
         return ::grpc::Status::OK;
       }
-      ::grpc::Status Set(::grpc::ServerContext* context, const ::ModeBlock* request, ::Status* response)
+      ::grpc::Status Insert(::grpc::ServerContext* context, const ::Block* request, ::Status* response)
       {
-        _sched.mt_run<void>("Set", [&] {
-            *response = std::move(_impl.Set(*request));
+        _sched.mt_run<void>("Insert", [&] {
+            *response = std::move(_impl.Insert(*request));
+        });
+        return ::grpc::Status::OK;
+      }
+      ::grpc::Status Update(::grpc::ServerContext* context, const ::Block* request, ::Status* response)
+      {
+        _sched.mt_run<void>("Update", [&] {
+            *response = std::move(_impl.Update(*request));
         });
         return ::grpc::Status::OK;
       }
@@ -321,9 +332,21 @@ namespace infinit
     }
 
     ::Status
-    KVImpl::Set(const ::ModeBlock& request)
+    KVImpl::Insert(const ::Block& request)
     {
-      auto const& iblock = request.block();
+      return Set(request, infinit::model::STORE_INSERT);
+    }
+
+    ::Status
+    KVImpl::Update(const ::Block& request)
+    {
+      return Set(request, infinit::model::STORE_UPDATE);
+    }
+
+    ::Status
+    KVImpl::Set(const ::Block& request, infinit::model::StoreMode mode)
+    {
+      auto const& iblock = request;
       ELLE_LOG("Set %s", iblock.address());
       ::Status res;
       std::unique_ptr<model::blocks::Block> block;
@@ -339,7 +362,7 @@ namespace infinit
       }
       else if (iblock.has_mutable_block())
       {
-        if (request.mode() == STORE_INSERT)
+        if (mode == infinit::model::STORE_INSERT)
         {
           auto mblock = _model.make_block<model::blocks::MutableBlock>();
           block = std::move(mblock);
@@ -356,7 +379,7 @@ namespace infinit
       else if (iblock.has_acl_block())
       {
         model::blocks::ACLBlock* ablock;
-        if (request.mode() == STORE_INSERT)
+        if (mode == infinit::model::STORE_INSERT)
         {
           auto ab = _model.make_block<model::blocks::ACLBlock>();
           ablock = ab.get();
@@ -414,8 +437,7 @@ namespace infinit
       res.set_message(std::string());
       exception_handler(res,
         [&] {
-          _model.store(std::move(block),
-                       (infinit::model::StoreMode)request.mode());
+          _model.store(std::move(block), mode);
         });
       return res;
     }
@@ -468,8 +490,10 @@ namespace infinit
       auto server = builder.BuildAndStart();
       register_call(*cq, impl, async, &KVImpl::Get,
                     &KV::AsyncService::RequestGet);
-      register_call(*cq, impl, async, &KVImpl::Set,
-                    &KV::AsyncService::RequestSet);
+      register_call(*cq, impl, async, &KVImpl::Insert,
+                    &KV::AsyncService::RequestInsert);
+      register_call(*cq, impl, async, &KVImpl::Update,
+                    &KV::AsyncService::RequestUpdate);
       register_call(*cq, impl, async, &KVImpl::Remove,
                     &KV::AsyncService::RequestRemove);
       /* Pay attention: when this thread gets terminated, it will most likely

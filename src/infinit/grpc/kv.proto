@@ -2,7 +2,8 @@ syntax = "proto3";
 
 service KV {
   rpc Get(Address) returns (BlockStatus) {}
-  rpc Set(ModeBlock) returns (Status) {}
+  rpc Insert(Block) returns (Status) {}
+  rpc Update(Block) returns (Status) {}
   rpc Remove(Address) returns (Status) {}
 }
 
@@ -61,11 +62,6 @@ message BlockStatus {
   Block block = 2;
 }
 
-enum Mode {
-  STORE_INSERT = 0;
-  STORE_UPDATE = 1;
-}
-
 enum Error {
   ERROR_OK = 0;
   ERROR_MISSING_BLOCK = 1;
@@ -74,9 +70,4 @@ enum Error {
   ERROR_TOO_FEW_PEERS = 4;
   ERROR_NO_PEERS = 5;
   ERROR_OTHER = 1000;
-}
-
-message ModeBlock {
-  Mode mode = 1;
-  Block block = 2;
 }
