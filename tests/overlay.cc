@@ -246,14 +246,14 @@ namespace
     ELLE_DUMP("%s", elle::json::pretty_print(ostats.at(type)));
     auto cts = boost::any_cast<elle::json::Array>(ostats.at(type));
     return elle::make_vector(cts, [](auto& c) {
+      auto const& o = boost::any_cast<elle::json::Object>(c);
       return infinit::model::Address::from_string(
-        boost::any_cast<std::string>(
-          boost::any_cast<elle::json::Object>(c).at("id")));
+        boost::any_cast<std::string>(o.at("id")));
       });
   }
 
   std::vector<infinit::model::Address>
-  peers(DHT& client)
+  get_peers(DHT& client)
   {
     auto const ostats = get_ostats(client);
     if (get_kelips(client))
@@ -263,60 +263,60 @@ namespace
       // In Kouncil.
       return get_addresses(ostats, "peers");
   }
-}
 
-static
-int
-peer_count(DHT& client, bool discovered = false)
-{
-  auto stats = client.dht->overlay()->query("stats", {});
-  int res = -1;
-  auto ostats = boost::any_cast<elle::json::Object>(stats);
-  try
+  int
+  peer_count(DHT& client, bool discovered = false)
   {
-    auto cts = boost::any_cast<elle::json::Array>(ostats["contacts"]);
-    ELLE_DEBUG("%s", elle::json::pretty_print(ostats["contacts"]));
-    int count = 0;
-    ELLE_TRACE("checking %s candidates", cts.size());
-    for (auto& c: cts)
+    int res = -1;
+    auto const ostats = get_ostats(client);
+    if (get_kelips(client))
     {
-      if (!discovered || boost::any_cast<bool>(
-        boost::any_cast<elle::json::Object>(c).at("discovered")))
-        ++count;
+      auto cts = boost::any_cast<elle::json::Array>(ostats.at("contacts"));
+      ELLE_DEBUG("%s", elle::json::pretty_print(ostats.at("contacts")));
+      ELLE_TRACE("checking %s candidates", cts.size());
+      res = boost::count_if(cts, [&](auto& c) {
+          auto const& o = boost::any_cast<elle::json::Object>(c);
+          return (!discovered
+                  || boost::any_cast<bool>(o.at("discovered")));
+        });
     }
-    res = count;
+    else
+    {
+      assert(get_kouncil(client));
+      res = boost::any_cast<elle::json::Array>(ostats.at("peers")).size();
+    }
+    ELLE_TRACE("counted %s peers for %s", res, client.dht);
+    return res;
   }
-  catch (boost::bad_any_cast const&)
-  {
-    res = boost::any_cast<elle::json::Array>(ostats["peers"]).size();
-  }
-  ELLE_TRACE("counted %s peers for %s", res, client.dht);
-  return res;
 }
 
 static
 void
 kouncil_wait_pasv(DHT& s, int n_servers)
 {
+  // Get the addresses of the *connected* peers.
+  auto get_addresses = [](elle::json::Array const& cts)
+    {
+      auto res = std::vector<infinit::model::Address>{};
+      for (auto const& c: cts)
+      {
+        auto const& o = boost::any_cast<elle::json::Object>(c);
+        if (boost::any_cast<bool> (o.at("connected")))
+          res.emplace_back(infinit::model::Address::from_string
+                           (boost::any_cast<std::string>(o.at("id"))));
+      }
+      return res;
+    };
+
   while (true)
   {
-    std::vector<infinit::model::Address> res;
-    auto stats = s.dht->overlay()->query("stats", {});
-    auto ostats = boost::any_cast<elle::json::Object>(stats);
-    auto cts = boost::any_cast<elle::json::Array>(ostats["peers"]);
-    ELLE_DEBUG("%s", elle::json::pretty_print(ostats["peers"]));
-    for (auto& c: cts)
-    {
-      if (boost::any_cast<bool>(
-          boost::any_cast<elle::json::Object>(c).at("connected")))
-        res.push_back(infinit::model::Address::from_string(
-          boost::any_cast<std::string>(
-            boost::any_cast<elle::json::Object>(c).at("id"))));
-    }
-
-    if (res.size() >= unsigned(n_servers))
+    auto const ostats = get_ostats(s);
+    auto cts = boost::any_cast<elle::json::Array>(ostats.at("peers"));
+    ELLE_DEBUG("%s", elle::json::pretty_print(ostats.at("peers")));
+    auto servers = get_addresses(cts);
+    if (n_servers <= int(servers.size()))
       return;
-    ELLE_TRACE("%s/%s", res.size(), n_servers);
+    ELLE_TRACE("%s/%s", servers.size(), n_servers);
     elle::reactor::sleep(50_ms);
   }
 }
@@ -339,7 +339,7 @@ hard_wait(DHT& s, int n_servers,
       std::cerr << elle::json::pretty_print(stats) << std::endl;
     }
     bool ok = true;
-    auto peers = ::peers(s);
+    auto peers = get_peers(s);
     int hit = 0;
     if (peers.size() >= unsigned(n_servers))
     {
