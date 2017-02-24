@@ -36,9 +36,8 @@ namespace infinit
   namespace cli
   {
     using InfinitCallable =
-      decltype(elle::das::named::function(
-                 elle::das::bind_method(std::declval<Infinit&>(), cli::call),
-                 help = false, version = false));
+      elle::das::named::Function<
+        void (decltype(help = false), decltype(version = false))>;
 
     class Infinit
       : public elle::Printable::as<Infinit>

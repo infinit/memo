@@ -24,9 +24,9 @@ namespace infinit
 
       // Deserialize.
       Mode<Block,
-           decltype(modes::mode_deserialize),
-           decltype(cli::output = boost::none),
-           decltype(cli::paths = Paths{})>
+           void (decltype(cli::output = boost::optional<std::string>()),
+                 decltype(cli::paths = Paths{})),
+           decltype(modes::mode_deserialize)>
       deserialize;
       void
       mode_deserialize(boost::optional<std::string> output,

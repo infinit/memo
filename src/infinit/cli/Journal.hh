@@ -24,9 +24,9 @@ namespace infinit
 
       // describe.
       Mode<Journal,
-           decltype(modes::mode_describe),
-           decltype(cli::network),
-           decltype(cli::operation = boost::none)>
+           void (decltype(cli::network)::Formal<std::string const&>,
+                 decltype(cli::operation = boost::optional<int>())),
+           decltype(modes::mode_describe)>
       describe;
       void
       mode_describe(std::string const& network,
@@ -34,9 +34,9 @@ namespace infinit
 
       // export.
       Mode<Journal,
-           decltype(modes::mode_export),
-           decltype(cli::network),
-           decltype(cli::operation)>
+           void (decltype(cli::network)::Formal<std::string const&>,
+                 decltype(cli::operation)::Formal<int>),
+           decltype(modes::mode_export)>
       export_;
       void
       mode_export(std::string const& network,
@@ -44,8 +44,8 @@ namespace infinit
 
       // stat.
       Mode<Journal,
-           decltype(modes::mode_stat),
-           decltype(cli::network = boost::none)>
+           void (decltype(cli::network = boost::optional<std::string>())),
+           decltype(modes::mode_stat)>
       stat;
       void
       mode_stat(boost::optional<std::string> const& network);

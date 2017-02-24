@@ -37,8 +37,8 @@ namespace infinit
       | Mode: disable_storage.  |
       `------------------------*/
       Mode<Daemon,
-           decltype(modes::mode_disable_storage),
-           decltype(cli::name)>
+           void (decltype(cli::name)::Formal<std::string const&>),
+           decltype(modes::mode_disable_storage)>
       disable_storage;
       void
       mode_disable_storage(std::string const& name);
@@ -48,9 +48,9 @@ namespace infinit
       | Mode: enable_storage.  |
       `-----------------------*/
       Mode<Daemon,
-           decltype(modes::mode_enable_storage),
-           decltype(cli::name),
-           decltype(cli::hold)>
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::hold)::Formal<bool>),
+           decltype(modes::mode_enable_storage)>
       enable_storage;
       void
       mode_enable_storage(std::string const& name,
@@ -61,8 +61,8 @@ namespace infinit
       | Mode: fetch.  |
       `--------------*/
       Mode<Daemon,
-           decltype(modes::mode_fetch),
-           decltype(cli::name)>
+           void (decltype(cli::name)::Formal<std::string const&>),
+           decltype(modes::mode_fetch)>
       fetch;
       void
       mode_fetch(std::string const& name);
@@ -71,13 +71,13 @@ namespace infinit
       | Mode: manage_volumes.  |
       `-----------------------*/
       Mode<Daemon,
-           decltype(modes::mode_manage_volumes),
-           decltype(cli::list = false),
-           decltype(cli::status = false),
-           decltype(cli::start = false),
-           decltype(cli::stop = false),
-           decltype(cli::restart = false),
-           decltype(cli::name = boost::none)>
+           void (decltype(cli::list = false),
+                 decltype(cli::status = false),
+                 decltype(cli::start = false),
+                 decltype(cli::stop = false),
+                 decltype(cli::restart = false),
+                 decltype(cli::name = boost::optional<std::string>())),
+           decltype(modes::mode_manage_volumes)>
       manage_volumes;
       void
       mode_manage_volumes(bool list = false,
@@ -91,26 +91,26 @@ namespace infinit
       | Mode: run.  |
       `------------*/
       Mode<Daemon,
-           decltype(modes::mode_run),
-           decltype(cli::login_user = Strings{}),
-           decltype(cli::mount = Strings{}),
-           decltype(cli::mount_root = boost::none),
-           decltype(cli::default_network = boost::none),
-           decltype(cli::advertise_host = Strings{}),
-           decltype(cli::fetch = false),
-           decltype(cli::push = false),
+           void (decltype(cli::login_user = Strings{}),
+                 decltype(cli::mount = Strings{}),
+                 decltype(cli::mount_root = boost::optional<std::string>()),
+                 decltype(cli::default_network = boost::optional<std::string>()),
+                 decltype(cli::advertise_host = Strings{}),
+                 decltype(cli::fetch = false),
+                 decltype(cli::push = false),
 #ifdef WITH_DOCKER
-           decltype(cli::docker = true),
-           decltype(cli::docker_user = boost::none),
-           decltype(cli::docker_home = boost::none),
-           decltype(cli::docker_socket_tcp = false),
-           decltype(cli::docker_socket_port = 0),
-           decltype(cli::docker_socket_path = "/run/docker/plugins"),
-           decltype(cli::docker_descriptor_path = "/usr/lib/docker/plugins"),
-           decltype(cli::docker_mount_substitute = ""),
+                 decltype(cli::docker = true),
+                 decltype(cli::docker_user = boost::optional<std::string>()),
+                 decltype(cli::docker_home = boost::optional<std::string>()),
+                 decltype(cli::docker_socket_tcp = false),
+                 decltype(cli::docker_socket_port = 0),
+                 decltype(cli::docker_socket_path = std::string()),
+                 decltype(cli::docker_descriptor_path = std::string()),
+                 decltype(cli::docker_mount_substitute = std::string()),
 #endif
-           decltype(cli::log_level = boost::none),
-           decltype(cli::log_path = boost::none)>
+                 decltype(cli::log_level = boost::optional<std::string>()),
+                 decltype(cli::log_path = boost::optional<std::string>())),
+           decltype(modes::mode_run)>
       run;
       void
       mode_run(Strings const& login_user,
@@ -137,26 +137,26 @@ namespace infinit
       | Mode: start.  |
       `--------------*/
       Mode<Daemon,
-           decltype(modes::mode_start),
-           decltype(cli::login_user = Strings{}),
-           decltype(cli::mount = Strings{}),
-           decltype(cli::mount_root = boost::none),
-           decltype(cli::default_network = boost::none),
-           decltype(cli::advertise_host = Strings{}),
-           decltype(cli::fetch = false),
-           decltype(cli::push = false),
+           void (decltype(cli::login_user = Strings{}),
+                 decltype(cli::mount = Strings{}),
+                 decltype(cli::mount_root = boost::optional<std::string>()),
+                 decltype(cli::default_network = boost::optional<std::string>()),
+                 decltype(cli::advertise_host = Strings{}),
+                 decltype(cli::fetch = false),
+                 decltype(cli::push = false),
 #ifdef WITH_DOCKER
-           decltype(cli::docker = true),
-           decltype(cli::docker_user = boost::none),
-           decltype(cli::docker_home = boost::none),
-           decltype(cli::docker_socket_tcp = false),
-           decltype(cli::docker_socket_port = 0),
-           decltype(cli::docker_socket_path = "/run/docker/plugins"),
-           decltype(cli::docker_descriptor_path = "/usr/lib/docker/plugins"),
-           decltype(cli::docker_mount_substitute = ""),
+                 decltype(cli::docker = true),
+                 decltype(cli::docker_user = boost::optional<std::string>()),
+                 decltype(cli::docker_home = boost::optional<std::string>()),
+                 decltype(cli::docker_socket_tcp = false),
+                 decltype(cli::docker_socket_port = 0),
+                 decltype(cli::docker_socket_path = std::string()),
+                 decltype(cli::docker_descriptor_path = std::string()),
+                 decltype(cli::docker_mount_substitute = std::string()),
 #endif
-           decltype(cli::log_level = boost::none),
-           decltype(cli::log_path = boost::none)>
+                 decltype(cli::log_level = boost::optional<std::string>()),
+                 decltype(cli::log_path = boost::optional<std::string>())),
+           decltype(modes::mode_start)>
       start;
       void
       mode_start(Strings const& login_user,
@@ -184,6 +184,7 @@ namespace infinit
       | Mode: status.  |
       `---------------*/
       Mode<Daemon,
+           void (),
            decltype(modes::mode_status)>
       status;
       void
@@ -193,6 +194,7 @@ namespace infinit
       | Mode: stop.  |
       `-------------*/
       Mode<Daemon,
+           void (),
            decltype(modes::mode_stop)>
       stop;
       void

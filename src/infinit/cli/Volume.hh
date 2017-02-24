@@ -49,51 +49,51 @@ namespace infinit
       `---------*/
 
       Mode<Volume,
-           decltype(modes::mode_create),
-           decltype(cli::name),
-           decltype(cli::network),
-           decltype(cli::description = boost::none),
-           decltype(cli::create_root = false),
-           decltype(cli::push_volume = false),
-           decltype(cli::output = boost::none),
-           decltype(cli::default_permissions = boost::none),
-           decltype(cli::register_service = false),
-           decltype(cli::allow_root_creation = false),
-           decltype(cli::mountpoint = boost::none),
-           decltype(cli::readonly = false),
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::network)::Formal<std::string const&>,
+                 decltype(cli::description = boost::optional<std::string>()),
+                 decltype(cli::create_root = false),
+                 decltype(cli::push_volume = elle::defaulted(false)),
+                 decltype(cli::output = boost::optional<std::string>()),
+                 decltype(cli::default_permissions = boost::optional<std::string>()),
+                 decltype(cli::register_service = false),
+                 decltype(cli::allow_root_creation = false),
+                 decltype(cli::mountpoint = boost::optional<std::string>()),
+                 decltype(cli::readonly = elle::defaulted(false)),
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-           decltype(cli::mount_name = boost::none),
+                 decltype(cli::mount_name = boost::optional<std::string>()),
 #endif
 #if defined INFINIT_MACOSX
-           decltype(cli::mount_icon = boost::none),
-           decltype(cli::finder_sidebar = false),
+                 decltype(cli::mount_icon = boost::optional<std::string>()),
+                 decltype(cli::finder_sidebar = false),
 #endif
-           decltype(cli::async = false),
+                 decltype(cli::async = elle::defaulted(false)),
 #if ! defined INFINIT_WINDOWS
-           decltype(cli::daemon = false),
+                 decltype(cli::daemon = false),
 #endif
-           decltype(cli::monitoring = true),
-           decltype(cli::fuse_option = Strings{}),
-           decltype(cli::cache = false),
-           decltype(cli::cache_ram_size = boost::none),
-           decltype(cli::cache_ram_ttl = boost::none),
-           decltype(cli::cache_ram_invalidation = boost::none),
-           decltype(cli::cache_disk_size = boost::none),
-           decltype(cli::fetch_endpoints = false),
-           decltype(cli::fetch = false),
-           decltype(cli::peer = Strings{}),
-           decltype(cli::peers_file = boost::none),
-           decltype(cli::push_endpoints = false),
-           decltype(cli::push = false),
-           decltype(cli::publish = false),
-           decltype(cli::advertise_host = Strings{}),
-           decltype(cli::endpoints_file = boost::none),
-           decltype(cli::port_file = boost::none),
-           decltype(cli::port = boost::none),
-           decltype(cli::listen = boost::none),
-           decltype(cli::fetch_endpoints_interval = 300),
-           decltype(cli::input = boost::none),
-           decltype(cli::block_size = int())>
+                 decltype(cli::monitoring = elle::defaulted(true)),
+                 decltype(cli::fuse_option = elle::defaulted(Strings{})),
+                 decltype(cli::cache = elle::defaulted(false)),
+                 decltype(cli::cache_ram_size = boost::optional<int>()),
+                 decltype(cli::cache_ram_ttl = boost::optional<int>()),
+                 decltype(cli::cache_ram_invalidation = boost::optional<int>()),
+                 decltype(cli::cache_disk_size = boost::optional<uint64_t>()),
+                 decltype(cli::fetch_endpoints = elle::defaulted(false)),
+                 decltype(cli::fetch = elle::defaulted(false)),
+                 decltype(cli::peer = elle::defaulted(Strings{})),
+                 decltype(cli::peers_file = boost::optional<std::string>()),
+                 decltype(cli::push_endpoints = elle::defaulted(false)),
+                 decltype(cli::push = elle::defaulted(false)),
+                 decltype(cli::publish = elle::defaulted(false)),
+                 decltype(cli::advertise_host = Strings{}),
+                 decltype(cli::endpoints_file = boost::optional<std::string>()),
+                 decltype(cli::port_file = boost::optional<std::string>()),
+                 decltype(cli::port = boost::optional<int>()),
+                 decltype(cli::listen = boost::optional<std::string>()),
+                 decltype(cli::fetch_endpoints_interval = elle::defaulted(300)),
+                 decltype(cli::input = boost::optional<std::string>()),
+                 decltype(cli::block_size = elle::defaulted<int>(1024 * 1024))),
+           decltype(modes::mode_create)>
       create;
       void
       mode_create(std::string const& name,
@@ -119,7 +119,7 @@ namespace infinit
                   bool daemon = false,
 #endif
                   Defaulted<bool> monitoring = true,
-                  Defaulted<Strings> fuse_option = Strings{},
+                  Defaulted<Strings> fuse_option = elle::defaulted(Strings{}),
                   Defaulted<bool> cache = false,
                   boost::optional<int> cache_ram_size = {},
                   boost::optional<int> cache_ram_ttl = {},
@@ -127,7 +127,7 @@ namespace infinit
                   boost::optional<uint64_t> cache_disk_size = {},
                   Defaulted<bool> fetch_endpoints = false,
                   Defaulted<bool> fetch = false,
-                  Defaulted<Strings> peer = Strings{},
+                  Defaulted<Strings> peer = elle::defaulted(Strings{}),
                   boost::optional<std::string> peers_file = {},
                   Defaulted<bool> push_endpoints = false,
                   Defaulted<bool> push = false,
@@ -146,10 +146,10 @@ namespace infinit
       `---------------*/
 
       Mode<Volume,
-           decltype(modes::mode_delete),
-           decltype(cli::name),
-           decltype(cli::pull = false),
-           decltype(cli::purge = false)>
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::pull = false),
+                 decltype(cli::purge = false)),
+           decltype(modes::mode_delete)>
       delete_;
       void
       mode_delete(std::string const& name,
@@ -162,9 +162,9 @@ namespace infinit
       `---------------*/
 
       Mode<Volume,
-           decltype(modes::mode_export),
-           decltype(cli::name),
-           decltype(cli::output = boost::none)>
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::output = boost::optional<std::string>())),
+           decltype(modes::mode_export)>
       export_;
       void
       mode_export(std::string const& volume_name,
@@ -175,10 +175,10 @@ namespace infinit
       `--------------*/
 
       Mode<Volume,
-           decltype(modes::mode_fetch),
-           decltype(cli::name = boost::none),
-           decltype(cli::network = boost::none),
-           decltype(cli::service = false)>
+           void (decltype(cli::name = boost::optional<std::string>()),
+                 decltype(cli::network = boost::optional<std::string>()),
+                 decltype(cli::service = false)),
+           decltype(modes::mode_fetch)>
       fetch;
       void
       mode_fetch(boost::optional<std::string> volume_name = {},
@@ -190,9 +190,9 @@ namespace infinit
       `---------------*/
 
       Mode<Volume,
-           decltype(modes::mode_import),
-           decltype(cli::input = boost::none),
-           decltype(cli::mountpoint = boost::none)>
+           void (decltype(cli::input = boost::optional<std::string>()),
+                 decltype(cli::mountpoint = boost::optional<std::string>())),
+           decltype(modes::mode_import)>
       import;
       void
       mode_import(boost::optional<std::string> input_name = {},
@@ -203,6 +203,7 @@ namespace infinit
       `-------------*/
 
       Mode<Volume,
+           void (),
            decltype(modes::mode_list)>
       list;
       void
@@ -213,48 +214,48 @@ namespace infinit
       `--------------*/
 
       Mode<Volume,
-           decltype(modes::mode_mount),
-           decltype(cli::name),
-           decltype(cli::allow_root_creation = false),
-           decltype(cli::mountpoint = boost::none),
-           decltype(cli::readonly = false),
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::allow_root_creation = false),
+                 decltype(cli::mountpoint = boost::optional<std::string>()),
+                 decltype(cli::readonly = elle::defaulted(false)),
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-           decltype(cli::mount_name = boost::none),
+                 decltype(cli::mount_name = boost::optional<std::string>()),
 #endif
 #ifdef INFINIT_MACOSX
-           decltype(cli::mount_icon = boost::none),
-           decltype(cli::finder_sidebar = false),
+                 decltype(cli::mount_icon = boost::optional<std::string>()),
+                 decltype(cli::finder_sidebar = false),
 #endif
-           decltype(cli::async = false),
+                 decltype(cli::async = elle::defaulted(false)),
 #ifndef INFINIT_WINDOWS
-           decltype(cli::daemon = false),
+                 decltype(cli::daemon = false),
 #endif
-           decltype(cli::monitoring = true),
-           decltype(cli::fuse_option = Strings{}),
-           decltype(cli::cache = false),
-           decltype(cli::cache_ram_size = boost::none),
-           decltype(cli::cache_ram_ttl = boost::none),
-           decltype(cli::cache_ram_invalidation = boost::none),
-           decltype(cli::cache_disk_size = boost::none),
-           decltype(cli::fetch_endpoints = false),
-           decltype(cli::fetch = false),
-           decltype(cli::peer = Strings{}),
-           decltype(cli::peers_file = boost::none),
-           decltype(cli::push_endpoints = false),
-           decltype(cli::register_service = false),
-           decltype(cli::no_local_endpoints = false),
-           decltype(cli::no_public_endpoints = false),
-           decltype(cli::push = false),
-           decltype(cli::map_other_permissions = true),
-           decltype(cli::publish = false),
-           decltype(cli::advertise_host = Strings{}),
-           decltype(cli::endpoints_file = boost::none),
-           decltype(cli::port_file = boost::none),
-           decltype(cli::port = boost::none),
-           decltype(cli::listen = boost::none),
-           decltype(cli::fetch_endpoints_interval = 300),
-           decltype(cli::input = boost::none),
-           decltype(cli::disable_UTF_8_conversion = false)>
+                 decltype(cli::monitoring = elle::defaulted(true)),
+                 decltype(cli::fuse_option = elle::defaulted(Strings{})),
+                 decltype(cli::cache = elle::defaulted(false)),
+                 decltype(cli::cache_ram_size = boost::optional<int>()),
+                 decltype(cli::cache_ram_ttl = boost::optional<int>()),
+                 decltype(cli::cache_ram_invalidation = boost::optional<int>()),
+                 decltype(cli::cache_disk_size = boost::optional<uint64_t>()),
+                 decltype(cli::fetch_endpoints = elle::defaulted(false)),
+                 decltype(cli::fetch = elle::defaulted(false)),
+                 decltype(cli::peer = elle::defaulted(Strings{})),
+                 decltype(cli::peers_file = boost::optional<std::string>()),
+                 decltype(cli::push_endpoints = elle::defaulted(false)),
+                 decltype(cli::register_service = false),
+                 decltype(cli::no_local_endpoints = false),
+                 decltype(cli::no_public_endpoints = false),
+                 decltype(cli::push = elle::defaulted(false)),
+                 decltype(cli::map_other_permissions = true),
+                 decltype(cli::publish = elle::defaulted(false)),
+                 decltype(cli::advertise_host = Strings{}),
+                 decltype(cli::endpoints_file = boost::optional<std::string>()),
+                 decltype(cli::port_file = boost::optional<std::string>()),
+                 decltype(cli::port = boost::optional<int>()),
+                 decltype(cli::listen = boost::optional<std::string>()),
+                 decltype(cli::fetch_endpoints_interval = elle::defaulted(300)),
+                 decltype(cli::input = boost::optional<std::string>()),
+                 decltype(cli::disable_UTF_8_conversion = false)),
+           decltype(modes::mode_mount)>
       mount;
       void
       mode_mount(std::string const& name,
@@ -273,7 +274,7 @@ namespace infinit
                  bool daemon = false,
 #endif
                  Defaulted<bool> monitoring = true,
-                 Defaulted<Strings> fuse_option = Strings{},
+                 Defaulted<Strings> fuse_option = elle::defaulted(Strings{}),
                  Defaulted<bool> cache = false,
                  boost::optional<int> cache_ram_size = {},
                  boost::optional<int> cache_ram_ttl = {},
@@ -281,7 +282,7 @@ namespace infinit
                  boost::optional<uint64_t> cache_disk_size = {},
                  Defaulted<bool> fetch_endpoints = false,
                  Defaulted<bool> fetch = false,
-                 Defaulted<Strings> peer = Strings{},
+                 Defaulted<Strings> peer = elle::defaulted(Strings{}),
                  boost::optional<std::string> peers_file = {},
                  Defaulted<bool> push_endpoints = false,
                  bool register_service = false,
@@ -304,9 +305,9 @@ namespace infinit
       `-------------*/
 
       Mode<Volume,
-           decltype(modes::mode_pull),
-           decltype(cli::name),
-           decltype(cli::purge = false)>
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::purge = false)),
+           decltype(modes::mode_pull)>
       pull;
       void
       mode_pull(std::string const& name,
@@ -317,8 +318,8 @@ namespace infinit
       `-------------*/
 
       Mode<Volume,
-           decltype(modes::mode_push),
-           decltype(cli::name)>
+           void (decltype(cli::name)::Formal<std::string const&>),
+           decltype(modes::mode_push)>
       push;
       void
       mode_push(std::string const& name);
@@ -328,48 +329,48 @@ namespace infinit
       `------------*/
 
       Mode<Volume,
-           decltype(modes::mode_run),
-           decltype(cli::name),
-           decltype(cli::allow_root_creation = false),
-           decltype(cli::mountpoint = boost::none),
-           decltype(cli::readonly = false),
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::allow_root_creation = false),
+                 decltype(cli::mountpoint = boost::optional<std::string>()),
+                 decltype(cli::readonly = elle::defaulted(false)),
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-           decltype(cli::mount_name = boost::none),
+                 decltype(cli::mount_name = boost::optional<std::string>()),
 #endif
 #ifdef INFINIT_MACOSX
-           decltype(cli::mount_icon = boost::none),
-           decltype(cli::finder_sidebar = false),
+                 decltype(cli::mount_icon = boost::optional<std::string>()),
+                 decltype(cli::finder_sidebar = false),
 #endif
-           decltype(cli::async = false),
+                 decltype(cli::async = elle::defaulted(false)),
 #ifndef INFINIT_WINDOWS
-           decltype(cli::daemon = false),
+                 decltype(cli::daemon = false),
 #endif
-           decltype(cli::monitoring = true),
-           decltype(cli::fuse_option = Strings{}),
-           decltype(cli::cache = false),
-        decltype(cli::cache_ram_size = boost::none),
-           decltype(cli::cache_ram_ttl = boost::none),
-           decltype(cli::cache_ram_invalidation = boost::none),
-           decltype(cli::cache_disk_size = boost::none),
-           decltype(cli::fetch_endpoints = false),
-           decltype(cli::fetch = false),
-           decltype(cli::peer = Strings{}),
-           decltype(cli::peers_file = boost::none),
-           decltype(cli::push_endpoints = false),
-           decltype(cli::register_service = false),
-           decltype(cli::no_local_endpoints = false),
-           decltype(cli::no_public_endpoints = false),
-           decltype(cli::push = false),
-           decltype(cli::map_other_permissions = true),
-           decltype(cli::publish = false),
-           decltype(cli::advertise_host = Strings{}),
-           decltype(cli::endpoints_file = boost::none),
-           decltype(cli::port_file = boost::none),
-           decltype(cli::port = boost::none),
-           decltype(cli::listen = boost::none),
-           decltype(cli::fetch_endpoints_interval = 300),
-           decltype(cli::input = boost::none),
-           decltype(cli::disable_UTF_8_conversion = false)>
+                 decltype(cli::monitoring = elle::defaulted(true)),
+                 decltype(cli::fuse_option = elle::defaulted(Strings{})),
+                 decltype(cli::cache = elle::defaulted(false)),
+                 decltype(cli::cache_ram_size = boost::optional<int>()),
+                 decltype(cli::cache_ram_ttl = boost::optional<int>()),
+                 decltype(cli::cache_ram_invalidation = boost::optional<int>()),
+                 decltype(cli::cache_disk_size = boost::optional<uint64_t>()),
+                 decltype(cli::fetch_endpoints = elle::defaulted(false)),
+                 decltype(cli::fetch = elle::defaulted(false)),
+                 decltype(cli::peer = elle::defaulted(Strings{})),
+                 decltype(cli::peers_file = boost::optional<std::string>()),
+                 decltype(cli::push_endpoints = elle::defaulted(false)),
+                 decltype(cli::register_service = false),
+                 decltype(cli::no_local_endpoints = false),
+                 decltype(cli::no_public_endpoints = false),
+                 decltype(cli::push = elle::defaulted(false)),
+                 decltype(cli::map_other_permissions = true),
+                 decltype(cli::publish = elle::defaulted(false)),
+                 decltype(cli::advertise_host = Strings{}),
+                 decltype(cli::endpoints_file = boost::optional<std::string>()),
+                 decltype(cli::port_file = boost::optional<std::string>()),
+                 decltype(cli::port = boost::optional<int>()),
+                 decltype(cli::listen = boost::optional<std::string>()),
+                 decltype(cli::fetch_endpoints_interval = elle::defaulted(300)),
+                 decltype(cli::input = boost::optional<std::string>()),
+                 decltype(cli::disable_UTF_8_conversion = false)),
+           decltype(modes::mode_run)>
       run;
       void
       mode_run(std::string const& name,
@@ -388,7 +389,7 @@ namespace infinit
                bool daemon = false,
 #endif
                Defaulted<bool> monitoring = true,
-               Defaulted<Strings> fuse_option = Strings{},
+               Defaulted<Strings> fuse_option = elle::defaulted(Strings{}),
                Defaulted<bool> cache = false,
                boost::optional<int> cache_ram_size = {},
                boost::optional<int> cache_ram_ttl = {},
@@ -396,7 +397,7 @@ namespace infinit
                boost::optional<uint64_t> cache_disk_size = {},
                Defaulted<bool> fetch_endpoints = false,
                Defaulted<bool> fetch = false,
-               Defaulted<Strings> peer = Strings{},
+               Defaulted<Strings> peer = elle::defaulted(Strings{}),
                boost::optional<std::string> peers_file = {},
                Defaulted<bool> push_endpoints = false,
                bool register_service = false,
@@ -420,47 +421,47 @@ namespace infinit
 
 #if !defined INFINIT_WINDOWS
       Mode<Volume,
-           decltype(modes::mode_start),
-           decltype(cli::name),
-           decltype(cli::allow_root_creation = false),
-           decltype(cli::mountpoint = boost::none),
-           decltype(cli::readonly = false),
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::allow_root_creation = false),
+                 decltype(cli::mountpoint = boost::optional<std::string>()),
+                 decltype(cli::readonly = elle::defaulted(false)),
 # if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-           decltype(cli::mount_name = boost::none),
+                 decltype(cli::mount_name = boost::optional<std::string>()),
 # endif
 # ifdef INFINIT_MACOSX
-           decltype(cli::mount_icon = boost::none),
-           decltype(cli::finder_sidebar = false),
+                 decltype(cli::mount_icon = boost::optional<std::string>()),
+                 decltype(cli::finder_sidebar = false),
 # endif
-           decltype(cli::async = false),
+                 decltype(cli::async = elle::defaulted(false)),
 # ifndef INFINIT_WINDOWS
-           decltype(cli::daemon = false),
+                 decltype(cli::daemon = false),
 # endif
-           decltype(cli::monitoring = true),
-           decltype(cli::fuse_option = Strings{}),
-           decltype(cli::cache = false),
-           decltype(cli::cache_ram_size = boost::none),
-           decltype(cli::cache_ram_ttl = boost::none),
-           decltype(cli::cache_ram_invalidation = boost::none),
-           decltype(cli::cache_disk_size = boost::none),
-           decltype(cli::fetch_endpoints = false),
-           decltype(cli::fetch = false),
-           decltype(cli::peer = Strings{}),
-           decltype(cli::peers_file = boost::none),
-           decltype(cli::push_endpoints = false),
-           decltype(cli::register_service = false),
-           decltype(cli::no_local_endpoints = false),
-           decltype(cli::no_public_endpoints = false),
-           decltype(cli::push = false),
-           decltype(cli::map_other_permissions = true),
-           decltype(cli::publish = false),
-           decltype(cli::advertise_host = Strings{}),
-           decltype(cli::endpoints_file = boost::none),
-           decltype(cli::port_file = boost::none),
-           decltype(cli::port = boost::none),
-           decltype(cli::listen = boost::none),
-           decltype(cli::fetch_endpoints_interval = 300),
-           decltype(cli::input = boost::none)>
+                 decltype(cli::monitoring = elle::defaulted(true)),
+                 decltype(cli::fuse_option = elle::defaulted(Strings{})),
+                 decltype(cli::cache = elle::defaulted(false)),
+                 decltype(cli::cache_ram_size = boost::optional<int>()),
+                 decltype(cli::cache_ram_ttl = boost::optional<int>()),
+                 decltype(cli::cache_ram_invalidation = boost::optional<int>()),
+                 decltype(cli::cache_disk_size = boost::optional<uint64_t>()),
+                 decltype(cli::fetch_endpoints = elle::defaulted(false)),
+                 decltype(cli::fetch = elle::defaulted(false)),
+                 decltype(cli::peer = elle::defaulted(Strings{})),
+                 decltype(cli::peers_file = boost::optional<std::string>()),
+                 decltype(cli::push_endpoints = elle::defaulted(false)),
+                 decltype(cli::register_service = false),
+                 decltype(cli::no_local_endpoints = false),
+                 decltype(cli::no_public_endpoints = false),
+                 decltype(cli::push = elle::defaulted(false)),
+                 decltype(cli::map_other_permissions = true),
+                 decltype(cli::publish = elle::defaulted(false)),
+                 decltype(cli::advertise_host = Strings{}),
+                 decltype(cli::endpoints_file = boost::optional<std::string>()),
+                 decltype(cli::port_file = boost::optional<std::string>()),
+                 decltype(cli::port = boost::optional<int>()),
+                 decltype(cli::listen = boost::optional<std::string>()),
+                 decltype(cli::fetch_endpoints_interval = elle::defaulted(300)),
+                 decltype(cli::input = boost::optional<std::string>())),
+           decltype(modes::mode_start)>
       start;
       void
       mode_start(std::string const& name,
@@ -479,7 +480,7 @@ namespace infinit
                  bool daemon = false,
 # endif
                  Defaulted<bool> monitoring = true,
-                 Defaulted<Strings> fuse_option = Strings{},
+                 Defaulted<Strings> fuse_option = elle::defaulted(Strings{}),
                  Defaulted<bool> cache = false,
                  boost::optional<int> cache_ram_size = {},
                  boost::optional<int> cache_ram_ttl = {},
@@ -487,7 +488,7 @@ namespace infinit
                  boost::optional<uint64_t> cache_disk_size = {},
                  Defaulted<bool> fetch_endpoints = false,
                  Defaulted<bool> fetch = false,
-                 Defaulted<Strings> peer = Strings{},
+                 Defaulted<Strings> peer = elle::defaulted(Strings{}),
                  boost::optional<std::string> peers_file = {},
                  Defaulted<bool> push_endpoints = false,
                  bool register_service = false,
@@ -509,8 +510,8 @@ namespace infinit
       | Mode: status.  |
       `---------------*/
       Mode<Volume,
-           decltype(modes::mode_status),
-           decltype(cli::name)>
+           void (decltype(cli::name)::Formal<std::string const&>),
+           decltype(modes::mode_status)>
       status;
       void
       mode_status(std::string const& volume_name);
@@ -519,8 +520,8 @@ namespace infinit
       | Mode: stop.  |
       `-------------*/
       Mode<Volume,
-           decltype(modes::mode_stop),
-           decltype(cli::name)>
+           void (decltype(cli::name)::Formal<std::string const&>),
+           decltype(modes::mode_stop)>
       stop;
       void
       mode_stop(std::string const& volume_name);
@@ -530,47 +531,47 @@ namespace infinit
       | Mode: update.  |
       `---------------*/
       Mode<Volume,
-           decltype(modes::mode_update),
-           decltype(cli::name),
-           decltype(cli::description = boost::none),
-           decltype(cli::allow_root_creation = false),
-           decltype(cli::mountpoint = boost::none),
-           decltype(cli::readonly = false),
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::description = boost::optional<std::string>()),
+                 decltype(cli::allow_root_creation = false),
+                 decltype(cli::mountpoint = boost::optional<std::string>()),
+                 decltype(cli::readonly = elle::defaulted(false)),
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-           decltype(cli::mount_name = boost::none),
+                 decltype(cli::mount_name = boost::optional<std::string>()),
 #endif
 #ifdef INFINIT_MACOSX
-           decltype(cli::mount_icon = boost::none),
-           decltype(cli::finder_sidebar = false),
+                 decltype(cli::mount_icon = boost::optional<std::string>()),
+                 decltype(cli::finder_sidebar = false),
 #endif
-           decltype(cli::async = false),
+                 decltype(cli::async = elle::defaulted(false)),
 #ifndef INFINIT_WINDOWS
-        decltype(cli::daemon = false),
+                 decltype(cli::daemon = false),
 #endif
-           decltype(cli::monitoring = true),
-           decltype(cli::fuse_option = Strings{}),
-           decltype(cli::cache = false),
-           decltype(cli::cache_ram_size = boost::none),
-           decltype(cli::cache_ram_ttl = boost::none),
-           decltype(cli::cache_ram_invalidation = boost::none),
-           decltype(cli::cache_disk_size = boost::none),
-           decltype(cli::fetch_endpoints = false),
-           decltype(cli::fetch = false),
-           decltype(cli::peer = Strings{}),
-           decltype(cli::peers_file = boost::none),
-           decltype(cli::push_endpoints = false),
-           decltype(cli::push = false),
-           decltype(cli::map_other_permissions = true),
-           decltype(cli::publish = false),
-           decltype(cli::advertise_host = Strings{}),
-           decltype(cli::endpoints_file = boost::none),
-           decltype(cli::port_file = boost::none),
-           decltype(cli::port = boost::none),
-           decltype(cli::listen = boost::none),
-           decltype(cli::fetch_endpoints_interval = 300),
-           decltype(cli::input = boost::none),
-           decltype(cli::user = boost::none),
-           decltype(cli::block_size = boost::none)>
+                 decltype(cli::monitoring = elle::defaulted(true)),
+                 decltype(cli::fuse_option = elle::defaulted(Strings{})),
+                 decltype(cli::cache = elle::defaulted(false)),
+                 decltype(cli::cache_ram_size = boost::optional<int>()),
+                 decltype(cli::cache_ram_ttl = boost::optional<int>()),
+                 decltype(cli::cache_ram_invalidation = boost::optional<int>()),
+                 decltype(cli::cache_disk_size = boost::optional<uint64_t>()),
+                 decltype(cli::fetch_endpoints = elle::defaulted(false)),
+                 decltype(cli::fetch = elle::defaulted(false)),
+                 decltype(cli::peer = elle::defaulted(Strings{})),
+                 decltype(cli::peers_file = boost::optional<std::string>()),
+                 decltype(cli::push_endpoints = elle::defaulted(false)),
+                 decltype(cli::push = elle::defaulted(false)),
+                 decltype(cli::map_other_permissions = true),
+                 decltype(cli::publish = elle::defaulted(false)),
+                 decltype(cli::advertise_host = Strings{}),
+                 decltype(cli::endpoints_file = boost::optional<std::string>()),
+                 decltype(cli::port_file = boost::optional<std::string>()),
+                 decltype(cli::port = boost::optional<int>()),
+                 decltype(cli::listen = boost::optional<std::string>()),
+                 decltype(cli::fetch_endpoints_interval = elle::defaulted(300)),
+                 decltype(cli::input = boost::optional<std::string>()),
+                 decltype(cli::user = boost::optional<std::string>()),
+                 decltype(cli::block_size = boost::optional<int>())),
+           decltype(modes::mode_update)>
       update;
       void
       mode_update(std::string const& name,
