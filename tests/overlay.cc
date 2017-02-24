@@ -3,6 +3,7 @@
 #include <elle/test.hh>
 
 #include <elle/err.hh>
+#include <elle/make-vector.hh>
 
 #include <elle/reactor/network/udp-socket.hh>
 
@@ -211,32 +212,43 @@ discover(DHT& dht,
   discover(dht, target, loc, wait, wait_back);
 }
 
-static
-std::vector<infinit::model::Address>
-peers(DHT& client)
+namespace
 {
-  std::vector<infinit::model::Address> res;
-  auto stats = client.dht->overlay()->query("stats", {});
-  auto ostats = boost::any_cast<elle::json::Object>(stats);
-  try
+  /// @param ostats  A JSON stat object.
+  /// @param type    "contacts", or "peers", etc.
+  ///
+  /// @throw std::out_of_range when the type is not in ostats.
+  std::vector<infinit::model::Address>
+  get_addresses(elle::json::Object const& ostats,
+                std::string const& type)
   {
-    auto cts = boost::any_cast<elle::json::Array>(ostats["contacts"]);
-    ELLE_DUMP("%s", elle::json::pretty_print(ostats["contacts"]));
-    for (auto& c: cts)
-      res.push_back(infinit::model::Address::from_string(
+    ELLE_DUMP("%s", elle::json::pretty_print(ostats.at(type)));
+    auto cts = boost::any_cast<elle::json::Array>(ostats.at(type));
+    return elle::make_vector(cts, [](auto& c) {
+      return infinit::model::Address::from_string(
         boost::any_cast<std::string>(
-          boost::any_cast<elle::json::Object>(c).at("id"))));
+          boost::any_cast<elle::json::Object>(c).at("id")));
+      });
   }
-  catch (boost::bad_any_cast const&)
+
+  // FIXME: query the overlay to detect whether we need "peers" or
+  // "contacts".
+  std::vector<infinit::model::Address>
+  peers(DHT& client)
   {
-    auto cts = boost::any_cast<elle::json::Array>(ostats["peers"]);
-    ELLE_DUMP("%s", elle::json::pretty_print(ostats["peers"]));
-    for (auto& c: cts)
-      res.push_back(infinit::model::Address::from_string(
-        boost::any_cast<std::string>(
-          boost::any_cast<elle::json::Object>(c).at("id"))));
+    auto stats = client.dht->overlay()->query("stats", {});
+    auto ostats = boost::any_cast<elle::json::Object>(stats);
+    try
+    {
+      // In Kelips.
+      return get_addresses(ostats, "contacts");
+    }
+    catch (std::out_of_range const&)
+    {
+      // In Kouncil.
+      return get_addresses(ostats, "peers");
+    }
   }
-  return res;
 }
 
 static
@@ -342,7 +354,8 @@ hard_wait(DHT& s, int n_servers,
         }
       }
     }
-    if ( (hit == n_servers || (or_more && hit >n_servers)) && ok)
+    if ((hit == n_servers || (or_more && hit >n_servers))
+        && ok)
       break;
     elle::reactor::sleep(50_ms);
   }
@@ -392,7 +405,7 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("store second block in memory")
     dht_a.dht->store(*before, STORE_INSERT, tcr());
   ELLE_LOG("connect second DHT");
-  DHT dht_b(
+  auto dht_b = DHT(
     ::version = config.version,
     ::keys = keys,
     ::make_overlay = config.overlay_builder,
