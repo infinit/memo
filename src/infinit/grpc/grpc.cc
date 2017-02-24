@@ -250,7 +250,16 @@ namespace infinit
     {
       ELLE_LOG("Get %s", request.address());
       ::BlockStatus res;
-      auto addr = model::Address::from_string(request.address());
+      infinit::model::Address addr;
+      if (request.address().find("NB:") == 0)
+      {
+        addr = infinit::model::doughnut::NB::address(
+          dynamic_cast<model::doughnut::Doughnut&>(_model).keys().K(),
+          request.address().substr(3),
+          _model.version());
+      }
+      else
+        addr = model::Address::from_string(request.address());
       res.mutable_status()->set_address(elle::sprintf("%s", addr));
       std::unique_ptr<model::blocks::Block> block;
       if (!exception_handler(*res.mutable_status(),
