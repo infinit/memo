@@ -214,6 +214,27 @@ discover(DHT& dht,
 
 namespace
 {
+  auto
+  get_kelips(DHT& client)
+  {
+    return dynamic_cast<infinit::overlay::kelips::Node*>
+      (client.dht->overlay().get());
+  }
+
+  auto
+  get_kouncil(DHT& client)
+  {
+    return dynamic_cast<infinit::overlay::kouncil::Kouncil*>
+      (client.dht->overlay().get());
+  }
+
+  elle::json::Object
+  get_ostats(DHT& client)
+  {
+    auto stats = client.dht->overlay()->query("stats", {});
+    return boost::any_cast<elle::json::Object>(stats);
+  }
+
   /// @param ostats  A JSON stat object.
   /// @param type    "contacts", or "peers", etc.
   ///
@@ -231,23 +252,16 @@ namespace
       });
   }
 
-  // FIXME: query the overlay to detect whether we need "peers" or
-  // "contacts".
   std::vector<infinit::model::Address>
   peers(DHT& client)
   {
-    auto stats = client.dht->overlay()->query("stats", {});
-    auto ostats = boost::any_cast<elle::json::Object>(stats);
-    try
-    {
+    auto const ostats = get_ostats(client);
+    if (get_kelips(client))
       // In Kelips.
       return get_addresses(ostats, "contacts");
-    }
-    catch (std::out_of_range const&)
-    {
+    else
       // In Kouncil.
       return get_addresses(ostats, "peers");
-    }
   }
 }
 
@@ -439,19 +453,19 @@ ELLE_TEST_SCHEDULED(
   auto dht_a = DHT(::id = special_id(10),
                    ::version = config.version,
                    ::keys = keys,
-                   make_overlay = config.overlay_builder,
-                   paxos = false);
+                   ::make_overlay = config.overlay_builder,
+                   ::paxos = false);
   elle::With<UTPInstrument>(dht_a.dht->local()->server_endpoints()[0].port()) <<
     [&] (UTPInstrument& instrument)
     {
       auto dht_b = DHT(::id = special_id(11),
                        ::version = config.version,
                        ::keys = keys,
-                       make_overlay = config.overlay_builder,
-                       paxos = false,
+                       ::make_overlay = config.overlay_builder,
+                       ::paxos = false,
                        ::storage = nullptr);
-      auto loc = NodeLocation(
-        anonymous ? Address::null : dht_a.dht->id(), {instrument.endpoint()});
+      auto loc = NodeLocation{anonymous ? Address::null : dht_a.dht->id(),
+                              {instrument.endpoint()}};
       ELLE_LOG("connect DHTs")
         discover(dht_b, dht_a, loc, true);
       // Ensure one request can go through.
@@ -937,8 +951,7 @@ ELLE_TEST_SCHEDULED(
         paxos = pax,
         dht::consensus::rebalance_auto_expand = false
       );
-      if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
-        dht->dht->overlay().get()))
+      if (auto kelips = get_kelips(*dht))
       {
         is_kelips = true;
         kelips->config().query_put_retries = 6;
@@ -979,8 +992,7 @@ ELLE_TEST_SCHEDULED(
         ::storage = nullptr,
         dht::consensus::rebalance_auto_expand = false
         );
-      if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
-            dht->dht->overlay().get()))
+      if (auto kelips = get_kelips(*dht))
       {
         kelips->config().query_put_retries = 6;
         kelips->config().query_get_retries = 20;
@@ -1267,7 +1279,7 @@ ELLE_TEST_SCHEDULED(
           discover(*dht_a, dht_b, false, true);
         else
           discover(dht_b, *dht_a, false);
-      if (dynamic_cast<infinit::overlay::kouncil::Kouncil*>(dht_b.dht->overlay().get()))
+      if (get_kouncil(dht_b))
         ELLE_LOG("check we can't lookup the block")
           BOOST_CHECK_THROW(dht_b.dht->fetch(addr)->data(),
                             elle::athena::paxos::TooFewPeers);
@@ -1275,7 +1287,7 @@ ELLE_TEST_SCHEDULED(
       {
         instrument.close();
         ELLE_LOG("wait for discover");
-        if (dynamic_cast<infinit::overlay::kouncil::Kouncil*>(dht_b.dht->overlay().get()))
+        if (get_kouncil(dht_b))
           elle::reactor::wait(
             dht_b.dht->overlay()->on_discover(),
             [&] (NodeLocation const& l, bool)
@@ -1299,7 +1311,7 @@ ELLE_TEST_SCHEDULED(
     ::id = special_id(10),
     ::keys = keys,
     ::make_overlay = config.overlay_builder);
-  if (dynamic_cast<infinit::overlay::kelips::Node*>(a->dht->overlay().get()))
+  if (get_kelips(*a))
     return; // kelips cannot handle automatic reconnection after on_disappear()
   auto b = std::make_unique<DHT>(
     ::version = config.version,
@@ -1372,8 +1384,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
       ::make_overlay = config.overlay_builder,
       ::paxos = true,
       ::storage = nullptr);
-    if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
-      client->dht->overlay().get()))
+    if (auto kelips = get_kelips(*client))
     {
       kelips->config().query_put_retries = 6;
     }
@@ -1494,14 +1505,13 @@ test_churn_socket(TestConfiguration config, bool pasv)
       discover(*servers[i], *servers[j], false);
   for (auto& s: servers)
     hard_wait(*s, n-1);
-  std::unique_ptr<DHT> client = std::make_unique<DHT>(
+  auto client = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
     ::make_overlay = config.overlay_builder,
     ::paxos = true,
     ::storage = nullptr);
-  if (auto kelips = dynamic_cast<infinit::overlay::kelips::Node*>(
-    client->dht->overlay().get()))
+  if (auto kelips = get_kelips(*client))
   {
     kelips->config().query_put_retries = 6;
     kelips->config().query_timeout_ms = valgrind(1000, 4);
