@@ -64,7 +64,8 @@ namespace infinit
                 cli::output = boost::none)
       , fetch(*this,
               "Fetch users from {hub}",
-              cli::name = Infinit::default_user_name(),
+              cli::name =
+                std::vector<std::string>{Infinit::default_user_name()},
               cli::no_avatar = false)
       , hash(*this,
              "Get short hash of user's key",

@@ -29,40 +29,40 @@ namespace infinit
 
       // get-xattr
       Mode<ACL,
-           decltype(modes::mode_get_xattr),
-           decltype(cli::path),
-           decltype(cli::name)>
+           void (decltype(cli::path)::Formal<std::string const&>,
+                 decltype(cli::name)::Formal<std::string const&>),
+           decltype(modes::mode_get_xattr) >
       get_xattr;
       void
       mode_get_xattr(std::string const& path,
                      std::string const& name);
 
       // group
-    Mode<ACL,
-         decltype(modes::mode_group),
-         decltype(cli::path),
-         decltype(cli::name),
-         decltype(cli::create = false),
-         decltype(cli::delete_ = false),
-         decltype(cli::show = false),
-         decltype(cli::description = boost::none),
-         decltype(cli::add_user = std::vector<std::string>()),
-         decltype(cli::add_group = std::vector<std::string>()),
-         decltype(cli::add_admin = std::vector<std::string>()),
-         decltype(cli::add = std::vector<std::string>()),
-         decltype(cli::remove_user = std::vector<std::string>()),
-         decltype(cli::remove_group = std::vector<std::string>()),
-         decltype(cli::remove_admin = std::vector<std::string>()),
-         decltype(cli::remove = std::vector<std::string>()),
-         decltype(cli::verbose = false),
-         decltype(cli::fetch = false),
-         decltype(cli::fallback_xattrs =
+      Mode<ACL,
+           void (decltype(cli::path)::Formal<std::string const&>,
+                 decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::create = false),
+                 decltype(cli::delete_ = false),
+                 decltype(cli::show = false),
+                 decltype(cli::description = boost::optional<std::string>()),
+                 decltype(cli::add_user = std::vector<std::string>()),
+                 decltype(cli::add_group = std::vector<std::string>()),
+                 decltype(cli::add_admin = std::vector<std::string>()),
+                 decltype(cli::add = std::vector<std::string>()),
+                 decltype(cli::remove_user = std::vector<std::string>()),
+                 decltype(cli::remove_group = std::vector<std::string>()),
+                 decltype(cli::remove_admin = std::vector<std::string>()),
+                 decltype(cli::remove = std::vector<std::string>()),
+                 decltype(cli::verbose = false),
+                 decltype(cli::fetch = false),
+                 decltype(cli::fallback_xattrs =
 #ifdef INFINIT_WINDOWS
-         true
+                          true
 #else
-         false
+                          false
 #endif
-         )>
+                   )),
+           decltype(modes::mode_group)>
       group;
       void
       mode_group(std::string const& path,
@@ -85,17 +85,17 @@ namespace infinit
 
       // list
       Mode<ACL,
-           decltype(modes::mode_list),
-           decltype(cli::path),
-           decltype(cli::recursive = false),
-           decltype(cli::verbose = false),
-           decltype(cli::fallback_xattrs =
+           void (decltype(cli::path)::Formal<std::vector<std::string> const&>,
+                 decltype(cli::recursive = false),
+                 decltype(cli::verbose = false),
+                 decltype(cli::fallback_xattrs =
 #ifdef INFINIT_WINDOWS
-           true
+                          true
 #else
-           false
+                          false
 #endif
-           )>
+                   )),
+           decltype(modes::mode_list)>
       list;
       void
       mode_list(std::vector<std::string> const& paths,
@@ -105,26 +105,26 @@ namespace infinit
 
       // set
       Mode<ACL,
-           decltype(modes::mode_set),
-           decltype(cli::path),
-           decltype(cli::user),
-           decltype(cli::group),
-           decltype(cli::mode = boost::none),
-           decltype(cli::others_mode = boost::none),
-           // FIXME: change that to just "inherit"
-           decltype(cli::enable_inherit = false),
-           decltype(cli::disable_inherit = false),
-           decltype(cli::recursive = false),
-           decltype(cli::traverse = false),
-           decltype(cli::verbose = false),
-           decltype(cli::fetch = false),
-           decltype(cli::fallback_xattrs =
+           void (decltype(cli::path)::Formal<std::vector<std::string> const&>,
+                 decltype(cli::user)::Formal<std::vector<std::string> const&>,
+                 decltype(cli::group)::Formal<std::vector<std::string> const&>,
+                 decltype(cli::mode = boost::optional<std::string>()),
+                 decltype(cli::others_mode = boost::optional<std::string>()),
+                 // FIXME: change that to just "inherit"
+                 decltype(cli::enable_inherit = false),
+                 decltype(cli::disable_inherit = false),
+                 decltype(cli::recursive = false),
+                 decltype(cli::traverse = false),
+                 decltype(cli::verbose = false),
+                 decltype(cli::fetch = false),
+                 decltype(cli::fallback_xattrs =
 #ifdef INFINIT_WINDOWS
-                    true
+                          true
 #else
-                    false
+                          false
 #endif
-             )>
+                   )),
+           decltype(modes::mode_set)>
       set;
       void
       mode_set(std::vector<std::string> const& paths,
@@ -142,18 +142,18 @@ namespace infinit
 
       // register
       Mode<ACL,
-           decltype(modes::mode_register),
-           decltype(cli::path),
-           decltype(cli::user),
-           decltype(cli::network),
-           decltype(cli::fetch = false),
-           decltype(cli::fallback_xattrs =
+           void (decltype(cli::path)::Formal<std::string const&>,
+                 decltype(cli::user)::Formal<std::string const&>,
+                 decltype(cli::network)::Formal<std::string const&>,
+                 decltype(cli::fetch = false),
+                 decltype(cli::fallback_xattrs =
 #ifdef INFINIT_WINDOWS
-           true
+                          true
 #else
-           false
+                          false
 #endif
-           )>
+                   )),
+           decltype(modes::mode_register)>
       register_;
       void
       mode_register(std::string const& path,
@@ -164,10 +164,10 @@ namespace infinit
 
       // set-xattr
       Mode<ACL,
-           decltype(modes::mode_set_xattr),
-           decltype(cli::path),
-           decltype(cli::name),
-           decltype(cli::value)>
+           void (decltype(cli::path)::Formal<std::string const&>,
+                 decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::value)::Formal<std::string const&>),
+           decltype(modes::mode_set_xattr)>
       set_xattr;
       void
       mode_set_xattr(std::string const& path,

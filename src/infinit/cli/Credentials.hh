@@ -28,12 +28,12 @@ namespace infinit
 
       // Add.
       Mode<Credentials,
-           decltype(modes::mode_add),
-           decltype(name),
-           decltype(aws = false),
-           decltype(dropbox = false),
-           decltype(gcs = false),
-           decltype(google_drive = false)>
+           void (decltype(name)::Formal<std::string const&>,
+                 decltype(aws = false),
+                 decltype(dropbox = false),
+                 decltype(gcs = false),
+                 decltype(google_drive = false)),
+           decltype(modes::mode_add)>
       add;
       void
       mode_add(std::string const& account,
@@ -44,52 +44,61 @@ namespace infinit
 
       // Delete.
       Mode<Credentials,
-           decltype(modes::mode_delete),
-           decltype(name),
-           decltype(aws = false),
-           decltype(dropbox = false),
-           decltype(gcs = false),
-           decltype(google_drive = false),
-           decltype(cli::pull = false)>
+           void (decltype(name)::Formal<std::string const&>,
+                 decltype(aws = false),
+                 decltype(dropbox = false),
+                 decltype(gcs = false),
+                 decltype(google_drive = false),
+                 decltype(cli::pull = false)),
+           decltype(modes::mode_delete)>
       delete_;
       void
       mode_delete(std::string const& account,
-                  bool aws, bool dropbox, bool gcs, bool google_drive,
+                  bool aws,
+                  bool dropbox,
+                  bool gcs,
+                  bool google_drive,
                   bool pull);
 
       // Fetch.
       Mode<Credentials,
-           decltype(modes::mode_fetch),
-           decltype(name = boost::none),
-           decltype(aws = false),
-           decltype(dropbox = false),
-           decltype(gcs = false),
-           decltype(google_drive = false)>
+           void (decltype(name = boost::optional<std::string>()),
+                 decltype(aws = false),
+                 decltype(dropbox = false),
+                 decltype(gcs = false),
+                 decltype(google_drive = false)),
+           decltype(modes::mode_fetch)>
       fetch;
       void
       mode_fetch(boost::optional<std::string> const& account,
-                 bool aws, bool dropbox, bool gcs, bool google_drive);
+                 bool aws,
+                 bool dropbox,
+                 bool gcs,
+                 bool google_drive);
 
       // Pull.
       Mode<Credentials,
-           decltype(modes::mode_pull),
-           decltype(account = boost::none),
-           decltype(aws = false),
-           decltype(dropbox = false),
-           decltype(gcs = false),
-           decltype(google_drive = false)>
+           void (decltype(account = boost::optional<std::string>()),
+                 decltype(aws = false),
+                 decltype(dropbox = false),
+                 decltype(gcs = false),
+                 decltype(google_drive = false)),
+           decltype(modes::mode_pull)>
       pull;
       void
       mode_pull(boost::optional<std::string> const& account,
-                bool aws, bool dropbox, bool gcs, bool google_drive);
+                bool aws,
+                bool dropbox,
+                bool gcs,
+                bool google_drive);
 
       // List.
       Mode<Credentials,
-           decltype(modes::mode_list),
-           decltype(aws = false),
-           decltype(dropbox = false),
-           decltype(gcs = false),
-           decltype(google_drive = false)>
+           void (decltype(aws = false),
+                 decltype(dropbox = false),
+                 decltype(gcs = false),
+                 decltype(google_drive = false)),
+           decltype(modes::mode_list)>
       list;
       void
       mode_list(bool aws, bool dropbox, bool gcs, bool google_drive);

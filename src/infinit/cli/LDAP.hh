@@ -26,20 +26,20 @@ namespace infinit
       | Mode: drive invite.  |
       `---------------------*/
       Mode<LDAP,
-           decltype(modes::mode_drive_invite),
-           decltype(cli::server),
-           decltype(cli::domain),
-           decltype(cli::user),
-           decltype(cli::password = boost::none),
-           decltype(cli::drive),
-           decltype(cli::root_permissions = "rw"),
-           decltype(cli::create_home = false),
-           decltype(cli::searchbase),
-           decltype(cli::filter = boost::none),
-           decltype(cli::object_class = boost::none),
-           decltype(cli::mountpoint),
-           decltype(cli::deny_write = false),
-           decltype(cli::deny_storage = false)>
+           void (decltype(cli::server)::Formal<std::string const&>,
+                 decltype(cli::domain)::Formal<std::string const&>,
+                 decltype(cli::user)::Formal<std::string const&>,
+                 decltype(cli::password = boost::optional<std::string>()),
+                 decltype(cli::drive)::Formal<std::string const&>,
+                 decltype(cli::root_permissions = std::string()),
+                 decltype(cli::create_home = false),
+                 decltype(cli::searchbase)::Formal<std::string const&>,
+                 decltype(cli::filter = boost::optional<std::string>()),
+                 decltype(cli::object_class = boost::optional<std::string>()),
+                 decltype(cli::mountpoint)::Formal<std::string const&>,
+                 decltype(cli::deny_write = false),
+                 decltype(cli::deny_storage = false)),
+           decltype(modes::mode_drive_invite)>
       drive_invite;
       void
       mode_drive_invite(std::string const& server,
@@ -61,28 +61,26 @@ namespace infinit
       | Mode: populate hub.  |
       `---------------------*/
       Mode<LDAP,
-           decltype(modes::mode_populate_hub),
-           decltype(cli::server),
-           decltype(cli::domain),
-           decltype(cli::user),
-           decltype(cli::password = boost::none),
-           decltype(cli::searchbase),
-           decltype(cli::filter = boost::none),
-           decltype(cli::object_class = boost::none),
-           decltype(cli::username_pattern = "$(cn)%"),
-           decltype(cli::email_pattern = "$(mail)"),
-           decltype(cli::fullname_pattern = "$(cn)")>
+           void (decltype(cli::server)::Formal<std::string const&>,
+                 decltype(cli::domain)::Formal<std::string const&>,
+                 decltype(cli::user)::Formal<std::string const&>,
+                 decltype(cli::password = boost::optional<std::string>()),
+                 decltype(cli::searchbase)::Formal<std::string const&>,
+                 decltype(cli::filter = boost::optional<std::string>()),
+                 decltype(cli::object_class = boost::optional<std::string>()),
+                 decltype(cli::username_pattern = std::string()),
+                 decltype(cli::email_pattern = std::string()),
+                 decltype(cli::fullname_pattern = std::string())),
+           decltype(modes::mode_populate_hub)>
       populate_hub;
       void
       mode_populate_hub(std::string const& server,
                         std::string const& domain,
                         std::string const& user,
                         boost::optional<std::string> const& password,
-
                         std::string const& searchbase,
                         boost::optional<std::string> const& filter,
                         boost::optional<std::string> const& object_class,
-
                         std::string const& username_pattern,
                         std::string const& email_pattern,
                         std::string const& fullname_pattern);
@@ -91,18 +89,18 @@ namespace infinit
       | Mode: populate network.  |
       `-------------------------*/
       Mode<LDAP,
-           decltype(modes::mode_populate_network),
-           decltype(cli::server),
-           decltype(cli::domain),
-           decltype(cli::user),
-           decltype(cli::password = boost::none),
-           decltype(cli::network),
-           decltype(cli::searchbase),
-           decltype(cli::filter = boost::none),
-           decltype(cli::object_class = boost::none),
-           decltype(cli::mountpoint),
-           decltype(cli::deny_write = false),
-           decltype(cli::deny_storage = false)>
+           void (decltype(cli::server)::Formal<std::string const&>,
+                 decltype(cli::domain)::Formal<std::string const&>,
+                 decltype(cli::user)::Formal<std::string const&>,
+                 decltype(cli::password = boost::optional<std::string>()),
+                 decltype(cli::network)::Formal<std::string const&>,
+                 decltype(cli::searchbase)::Formal<std::string const&>,
+                 decltype(cli::filter = boost::optional<std::string>()),
+                 decltype(cli::object_class = boost::optional<std::string>()),
+                 decltype(cli::mountpoint)::Formal<std::string const&>,
+                 decltype(cli::deny_write = false),
+                 decltype(cli::deny_storage = false)),
+           decltype(modes::mode_populate_network)>
       populate_network;
       void
       mode_populate_network(std::string const& server,

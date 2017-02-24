@@ -15,16 +15,9 @@ namespace infinit
     template <typename Self, typename Owner = Infinit>
     class Object;
 
-    template <typename Self, typename Owner = Infinit>
-    using ObjectCallable =
-      decltype(
-        elle::das::named::function(
-          elle::das::bind_method(std::declval<Object<Self, Owner>&>(), cli::call),
-          help = false));
-
     template <typename Self, typename Owner>
     class Object
-      : public ObjectCallable<Self, Owner>
+      : public elle::das::named::Function<void (decltype(help = false))>
     {
     public:
       Object(Infinit& infinit);

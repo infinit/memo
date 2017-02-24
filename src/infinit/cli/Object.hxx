@@ -12,7 +12,7 @@ namespace infinit
   {
     template <typename Self, typename Owner>
     Object<Self, Owner>::Object(Infinit& infinit)
-      : ObjectCallable<Self, Owner>(
+      : elle::das::named::Function<void (decltype(cli::help = false))>(
         elle::das::bind_method(*this, cli::call), cli::help = false)
       , _cli(infinit)
     {
@@ -141,10 +141,10 @@ namespace infinit
         std::forward<Args>(args)...);
     }
 
-    template <typename Self, typename Symbol, typename ... Args>
+    template <typename Self, typename Sig, typename Symbol>
     void
-    Mode<Self, Symbol, Args...>::apply(Infinit& infinit,
-                                       std::vector<std::string>& args)
+    Mode<Self, Sig, Symbol>::apply(Infinit& infinit,
+                                   std::vector<std::string>& args)
     {
       auto options = this->options;
       auto f = this->prototype().extend(

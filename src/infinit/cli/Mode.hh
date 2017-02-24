@@ -4,21 +4,21 @@ namespace infinit
 {
   namespace cli
   {
-    template <typename Self, typename Symbol, typename ... Args>
+    template <typename Self,
+              typename Sig,
+              typename Symbol>
     struct Mode
-      : public elle::das::named::Function<elle::das::BoundMethod<Self, Symbol>,
-                                    std::decay_t<Args>...>
+      : public elle::das::named::Function<Sig>
     {
-      using Super =
-        elle::das::named::Function<elle::das::BoundMethod<Self, Symbol>,
-                             std::decay_t<Args>...>;
+      using Super = elle::das::named::Function<Sig>;
 
       template <typename ... EArgs>
       Mode(Self& self,
            std::string help,
            elle::das::cli::Options opts,
            EArgs&& ... args)
-        : Super(elle::das::bind_method<Symbol>(self), std::forward<EArgs>(args)...)
+        : Super(elle::das::bind_method<Symbol>(self),
+                std::forward<EArgs>(args)...)
         , description(std::move(help))
         , options(std::move(opts))
       {}

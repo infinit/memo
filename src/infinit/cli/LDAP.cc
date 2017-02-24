@@ -290,11 +290,9 @@ namespace infinit
                             std::string const& domain,
                             std::string const& user,
                             boost::optional<std::string> const& password,
-
                             std::string const& drive_name,
                             std::string const& root_permissions,
                             bool create_home,
-
                             std::string const& searchbase,
                             boost::optional<std::string> const& filter,
                             boost::optional<std::string> const& object_class,
@@ -306,7 +304,6 @@ namespace infinit
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
-
       auto drive = ifnt.drive_get(ifnt.qualified_name(drive_name, owner));
       auto network = ifnt.network_descriptor_get(drive.network, owner);
       auto mode = mode_get(root_permissions);
@@ -316,9 +313,7 @@ namespace infinit
                                      domain,
                                      user,
                                      password,
-
                                      drive.network,
-
                                      searchbase,
                                      filter,
                                      object_class,

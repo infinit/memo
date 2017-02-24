@@ -101,7 +101,7 @@ namespace infinit
       , list_services(*this,
                       "List network registered services",
                       cli::name,
-                      cli::peer = boost::none,
+                      cli::peer = Strings(),
                       cli::async = false,
                       cli::cache = false,
                       cli::cache_ram_size = boost::none,
@@ -121,7 +121,7 @@ namespace infinit
                       cli::fetch_endpoints_interval = boost::none,
                       cli::no_local_endpoints = false,
                       cli::no_public_endpoints = false,
-                      cli::advertise_host = boost::none)
+                      cli::advertise_host = Strings())
       , list_storage(*this,
                      "List all storage contributed by this device to a network",
                      cli::name)
