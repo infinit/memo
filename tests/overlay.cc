@@ -214,6 +214,20 @@ discover(DHT& dht,
 
 namespace
 {
+  template <typename C>
+  auto
+  get_n(C& c, int idx)
+  {
+    return *std::next(c.begin(), idx);
+  }
+
+  template <typename C>
+  auto
+  get_random(C& c)
+  {
+    return get_n(c, rand() % c.size());
+  }
+
   auto
   get_kelips(DHT& client)
   {
@@ -311,8 +325,8 @@ kouncil_wait_pasv(DHT& s, int n_servers)
   while (true)
   {
     auto const ostats = get_ostats(s);
-    auto cts = boost::any_cast<elle::json::Array>(ostats.at("peers"));
     ELLE_DEBUG("%s", elle::json::pretty_print(ostats.at("peers")));
+    auto cts = boost::any_cast<elle::json::Array>(ostats.at("peers"));
     auto servers = get_addresses(cts);
     if (n_servers <= int(servers.size()))
       return;
@@ -1022,7 +1036,8 @@ ELLE_TEST_SCHEDULED(
             ELLE_TRACE_SCOPE("action %s: %s, with %s addrs",
               i, r, addrs.size());
             if (r < 20 && !addrs.empty())
-            { // delete
+            {
+              // delete
               int p = rand()%addrs.size();
               auto addr = addrs[p];
               ELLE_DEBUG("deleting %f", addr);
@@ -1041,7 +1056,8 @@ ELLE_TEST_SCHEDULED(
               ELLE_DEBUG("deleted %f", addr);
             }
             else if (r < 50 || addrs.empty())
-            { // create
+            {
+              // create
               ELLE_DEBUG("creating");
               auto block = c->dht->make_block<ACLBlock>(std::string("block"));
               auto a = block->address();
@@ -1058,9 +1074,9 @@ ELLE_TEST_SCHEDULED(
               addrs.push_back(a);
             }
             else
-            { // read
-              int p = rand()%addrs.size();
-              auto addr = addrs[p];
+            {
+              // read
+              auto addr = get_random(addrs);
               ELLE_DEBUG_SCOPE("reading %f", addr);
               std::exception_ptr except;
               try
@@ -1150,14 +1166,13 @@ ELLE_TEST_SCHEDULED(
   // Number of servers that know all their peers.
   auto c = 0;
   // Previously we limit ourselves to 50 attempts.  When run
-  // repeatedly, it did happen to fail for lack of time.  Raise the
-  // limit to 100 attempts.
+  // repeatedly, it did happen to fail for lack of time.
   for (auto i = 0; i < 100 && c != nservers; ++i)
   {
     elle::reactor::sleep(100_ms);
-    using boost::range::count_if;
-    c = count_if(servers,
-                 [npeers](auto&& s) { return peer_count(*s) == npeers; });
+    c = boost::count_if(servers, [npeers](auto&& s) {
+        return peer_count(*s) == npeers;
+      });
   }
   BOOST_CHECK_EQUAL(c, nservers);
 }
@@ -1354,12 +1369,12 @@ ELLE_TEST_SCHEDULED(
 ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
   (bool, keep_port), (bool, wait_disconnect), (bool, wait_connect))
 {
-  static const int n = 5;
   auto keys = elle::cryptography::rsa::keypair::generate(512);
+  static const int n = 5;
   infinit::model::Address ids[n];
   unsigned short ports[n];
   infinit::storage::Memory::Blocks blocks[n];
-  std::vector<std::unique_ptr<DHT>> servers;
+  auto servers = std::vector<std::unique_ptr<DHT>>{};
   for (int i=0; i<n; ++i)
   {
     ids[i] = infinit::model::Address::random();
@@ -1369,13 +1384,13 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
       ::keys = keys, make_overlay = config.overlay_builder, paxos = true,
       ::storage = std::make_unique<infinit::storage::Memory>(blocks[i])
     );
-    ports[i] = dht->dht->dock().utp_server().local_endpoint().port();
     servers.emplace_back(std::move(dht));
+    ports[i] = servers[i]->dht->dock().utp_server().local_endpoint().port();
   }
   for (int i=0; i<n; ++i)
     for (int j=i+1; j<n; ++j)
       discover(*servers[i], *servers[j], false);
-  std::unique_ptr<DHT> client;
+  auto client = std::unique_ptr<DHT>{};
   auto spawn_client = [&] {
     client = std::make_unique<DHT>(
       ::keys = keys,
@@ -1384,16 +1399,15 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
       ::paxos = true,
       ::storage = nullptr);
     if (auto kelips = get_kelips(*client))
-    {
       kelips->config().query_put_retries = 6;
-    }
+    // We will shoot some servers.
     discover(*client, servers[0] ? *servers[0] : *servers[1], false);
   };
   spawn_client();
   for (auto& s: servers)
     hard_wait(*s, n-1, client->dht->id());
   hard_wait(*client, n, client->dht->id());
-  std::vector<infinit::model::Address> addrs;
+  auto addrs = std::vector<infinit::model::Address>{};
   int down = -1;
   try
   {
@@ -1407,7 +1421,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
         ::keys = keys,
         ::version = config.version,
         ::make_overlay = config.overlay_builder,
-        paxos = true,
+        ::paxos = true,
         ::id = ids[down],
         ::port = keep_port ? ports[down] : 0,
         ::storage = std::make_unique<infinit::storage::Memory>(blocks[down])));
@@ -1415,7 +1429,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
         if (s != down)
         {
           discover(*servers[down], *servers[s], false);
-          // cheating a bit...
+          // Cheating a bit...
           discover(*servers[s], *servers[down], false);
         }
       if (wait_connect)
@@ -1453,7 +1467,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
       ELLE_DEBUG("created %f", a);
       addrs.push_back(a);
     }
-    auto a = addrs[rand()%addrs.size()];
+    auto a = get_random(addrs);
     auto block = client->dht->fetch(a);
     if (i%2)
     {
@@ -1468,15 +1482,6 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
     ELLE_ERR("Exception from test: %s", elle::exception_string());
     throw;
   }
-}
-
-template<typename C>
-typename C::value_type
-get_n(C& c, int idx)
-{
-  auto it = c.begin();
-  while (idx--) ++it;
-  return *it;
 }
 
 
@@ -1543,7 +1548,7 @@ test_churn_socket(TestConfiguration config, bool pasv)
       auto& peers = servers[i].dht->local()->peers();
       for (int l = 0; l < 3; ++l)
       {
-        auto peer = get_n(peers, rand() % peers.size());
+        auto peer = get_random(peers);
         if (auto* s = dynamic_cast<elle::reactor::network::TCPSocket*>(
               peer->stream().get()))
           s->close();
