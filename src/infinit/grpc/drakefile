@@ -81,7 +81,6 @@ def configure(
   grpc = drake.include('grpc', cxx_toolkit, cxx_config,
     cmake_env = {
       'GO_EXECUTABLE': go,
-      'CMAKE_BUILD_TYPE' : 'Debug',
     }
     )
   genkv = GRPCGen('kv.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
