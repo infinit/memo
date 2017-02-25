@@ -275,9 +275,9 @@ def configure(
   outguess_configure = drake.node('src/infinit/model/steg/outguess-0.2/configure')
   outguess_makefile = drake.node('src/infinit/model/steg/outguess-0.2/Makefile')
 
-  if not windows:
-    grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config)
-    grpc_lib = grpc.grpc_lib
+  grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config)
+  grpc_lib = grpc.grpc_lib
+  extra_libs = [grpc_lib]
   if windows:
     cxx_config_infinit.lib('shlwapi')
     cxx_config_infinit.lib('ws2_32')
@@ -288,13 +288,12 @@ def configure(
     cxx_config_infinit.lib('crypt32')
     cxx_config_infinit.library_add(elle.boost.regex_static)
     libtype = drake.cxx.DynLib
-    extra_libs = [drake.copy(dokan_lib, 'bin', strip_prefix = True)]
+    extra_libs += [drake.copy(dokan_lib, 'bin', strip_prefix = True)]
     cxx_config_infinit.use_whole_archive()
     enable_crash_reporting = False
   else:
     cxx_config_infinit.library_add(
       drake.copy(elle.boost.regex_dynamic, 'lib', True))
-    extra_libs = [grpc_lib]
     libtype = drake.cxx.DynLib
   infinit_lib = libtype(
     (windows and 'bin' or 'lib') + '/infinit',
@@ -975,6 +974,7 @@ def configure(
   cxx_config_tests += elle.boost.config_test(link = False)
   cxx_config_tests += elle.boost.config_timer(link = False)
   cxx_config_tests.add_local_include_path('bin')
+  cxx_config_tests += grpc.grpc.cxx_config
   if not windows:
     cxx_config_tests.library_add(
       drake.copy(elle.boost.test_dynamic, 'lib', True))
@@ -1032,6 +1032,7 @@ def configure(
     ('doughnut', []),
     ('faith', []),
     ('filesystem', binaries),
+    ('grpc', [grpc.grpc_lib]),
     ('kelips', []),
     ('overlay', []),
     ('rpc', []),
@@ -1041,9 +1042,8 @@ def configure(
     tests_extra_libs = [das_lib, elle_lib, cryptography_lib, reactor_lib, protocol_lib]
   else:
     tests_extra_libs = []
+
   if linux:
-    tests_names.append(('grpc', [grpc.grpc_lib]))
-    cxx_config_tests += grpc.grpc.cxx_config
     cxx_config_tests.lib('dl')
   for test_name, dependencies in tests_names:
     ifnt_lib = test_name == 'consensus/async' and infinit_lib_tests_consensus or infinit_lib_tests
