@@ -1350,7 +1350,6 @@ namespace infinit
       auto owner = cli.as_user();
       auto network = ifnt.network_get(network_name, owner, true);
       ifnt.network_unlink(network.name, owner);
-      this->cli().report_action("unlinked", "network", network_name);
     }
 
 
