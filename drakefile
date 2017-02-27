@@ -276,7 +276,7 @@ def configure(
   outguess_makefile = drake.node('src/infinit/model/steg/outguess-0.2/Makefile')
 
   grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config)
-  grpc_lib = grpc.grpc_lib
+  grpc_lib = drake.copy(grpc.grpc_lib, 'lib', strip_prefix = True)
   extra_libs = [grpc_lib]
   if windows:
     cxx_config_infinit.lib('shlwapi')
