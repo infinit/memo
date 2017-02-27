@@ -134,8 +134,8 @@ Our task for this project is to provide a simple document storage system for mul
 Our goal is to implement the following simple API:
 
 ```
-  void create_user(string name);
-  vector<string> list_documents(string name);
+  void create_user(string user);
+  vector<string> list_documents(string user);
   string get_document(string user, string name);
   void set_document(string user, string name, string data);
 ```
