@@ -468,6 +468,7 @@ namespace infinit
     static
     void serve_grpc_async(infinit::model::Model& dht, model::Endpoint ep)
     {
+#ifdef INFINIT_LINUX
       elle::os::setenv("GRPC_EPOLL_SYMBOL", "reactor_epoll_pwait", 1);
       ELLE_TRACE("serving grpc on %s", ep);
       KV::AsyncService async;
@@ -526,6 +527,9 @@ namespace infinit
       ELLE_TRACE("leaving serve_grpc");
       elle::reactor::network::epoll_interrupt_callback(std::function<void()>(),
                                                        elle::reactor::scheduler().current());
+#else
+      elle::err("serve_grpc_async not implemented on this platform");
+#endif
     }
   }
 }
