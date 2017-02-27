@@ -95,6 +95,7 @@ def configure(
     # cant do that under windows, we end up with duplicated symbols
     # so make libgrpc a shared lib
     grpc_lib = drake.cxx.DynLib('grpc', [], cxx_toolkit, grpc.cxx_config_lib)
+    grpc_lib.dependency_add(drake.node(grpc.protoc))
 
   #kv_client = drake.cxx.Executable('kv-client',
   #  genkv.dsts + drake.nodes('kv-client.cc'),
