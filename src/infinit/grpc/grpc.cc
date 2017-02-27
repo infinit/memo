@@ -290,7 +290,7 @@ namespace infinit
         auto entries = acb->list_permissions(_model);
         for (auto const& e: entries)
         {
-          ::ACL* p = abd->add_permissions();
+          ::KVACL* p = abd->add_permissions();
           p->set_admin(e.admin);
           p->set_owner(e.owner);
           p->set_read(e.read);

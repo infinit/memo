@@ -19,7 +19,7 @@ message MutableBlockData {
   int64 version = 1;
 }
 
-message ACL {
+message KVACL {
   string user = 1;
   bool admin = 2;
   bool owner = 3;
@@ -31,7 +31,7 @@ message ACLBlockData {
   int64 version = 1;
   bool world_read = 2;
   bool world_write = 3;
-  repeated ACL permissions = 4;
+  repeated KVACL permissions = 4;
 }
 
 message NamedBlockData {
