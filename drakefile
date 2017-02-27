@@ -275,9 +275,12 @@ def configure(
   outguess_configure = drake.node('src/infinit/model/steg/outguess-0.2/configure')
   outguess_makefile = drake.node('src/infinit/model/steg/outguess-0.2/Makefile')
 
-  grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config)
-  grpc_lib = drake.copy(grpc.grpc_lib, 'lib', strip_prefix = True)
-  extra_libs = [grpc_lib]
+  grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config_infinit)
+  infinit_sources += grpc.sources
+  cxx_config_infinit += grpc.grpc.cxx_config
+  extra_libs = []
+  if grpc.grpc_lib:
+    extra_libs.append(drake.copy(grpc.grpc_lib, windows and 'bin' or lib, strip_prefix = True))
   if windows:
     cxx_config_infinit.lib('shlwapi')
     cxx_config_infinit.lib('ws2_32')
@@ -483,8 +486,7 @@ def configure(
       das_lib,
       elle_lib,
       protocol_lib,
-      reactor_lib,
-      grpc_lib
+      reactor_lib
     ]
   if enable_crash_reporting:
     infinit_cli_deps.append(crash_reporter_lib)
@@ -1032,7 +1034,7 @@ def configure(
     ('doughnut', []),
     ('faith', []),
     ('filesystem', binaries),
-    ('grpc', [grpc.grpc_lib]),
+    ('grpc', []),
     ('kelips', []),
     ('overlay', []),
     ('rpc', []),

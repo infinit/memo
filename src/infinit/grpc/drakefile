@@ -4,6 +4,8 @@ import os
 
 grpc_lib = None
 grpc = None
+sources = None
+cxx_config_grpc = None
 
 with open(str(drake.path_source('../../../elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
@@ -67,7 +69,7 @@ def configure(
     cxx_toolkit,
     cxx_config
 ):
-  global grpc_lib, grpc
+  global grpc_lib, grpc, sources
   # find GO
   for c in ['/usr/lib/go-1.7/bin/go',
             '/usr/lib/go/bin/go',
@@ -87,9 +89,13 @@ def configure(
   genfs = GRPCGen('fs.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
 
   srcs = genkv.dsts + genfs.dsts + drake.nodes('grpc.cc', 'filesystem.cc')
-  cxx_config_grpc = grpc.cxx_config
-  grpc_lib = drake.cxx.DynLib('grpc', srcs, cxx_toolkit, cxx_config_grpc)
+  sources = srcs
+  if cxx_toolkit.os is drake.os.windows:
+    # we need to link with our libssl and boringssl which diverged.
+    # cant do that under windows, we end up with duplicated symbols
+    # so make libgrpc a shared lib
+    grpc_lib = drake.cxx.DynLib('grpc', [], cxx_toolkit, grpc.cxx_config_lib)
 
-  kv_client = drake.cxx.Executable('kv-client',
-    genkv.dsts + drake.nodes('kv-client.cc'),
-    cxx_toolkit, cxx_config_grpc)
+  #kv_client = drake.cxx.Executable('kv-client',
+  #  genkv.dsts + drake.nodes('kv-client.cc'),
+  #  cxx_toolkit, cxx_config)
