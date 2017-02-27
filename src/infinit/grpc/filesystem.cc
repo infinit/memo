@@ -1,3 +1,10 @@
+#ifdef INFINIT_WINDOWS
+#include <fcntl.h>
+#endif
+
+#include <sys/stat.h> // S_IMFT...
+
+
 #include <elle/utils.hh>
 
 #include <elle/reactor/filesystem.hh>
