@@ -11,11 +11,26 @@
           <h2>A Resilient, Scalable Architecture</h2>
 
           <div class="schema">
+
+            <p class="controls">
+              <a id="play" href="#">
+                <img src="${url('images/icons/play.png')}" alt="Play">Play Demo
+              </a>
+              <a id="replay" href="#">
+                <img src="${url('images/icons/replay.png')}" alt="Replay">Replay
+              </a>
+            </p>
+
             <div class="figure">
-              <img src="${url('images/schema-scalability-infinit.png')}" alt="Infinit Decentralized Scalable Platform">
+              <hr>
 
               <div class="node" id="nodeA">
                 <span class="name">Node A</span><br>
+                <span class="block"></span>
+              </div>
+
+              <div class="node" id="nodeB">
+                <span class="name">Node B</span><br>
                 <span class="block"></span>
               </div>
 
@@ -24,10 +39,12 @@
                 <span class="block"></span>
               </div>
 
+              <div class="node" id="nodeD">
+                <span class="name">Node D</span><br>
+              </div>
+
               <div class="node" id="nodeE">
-                <span class="screenAlert"></span>
                 <span class="name">Node E</span><br>
-                <span class="block"></span>
               </div>
 
               <div class="node" id="nodeF">
@@ -39,43 +56,37 @@
               </div>
             </div>
 
-            <div class="steps">
-              <p class="controls">
-                <a id="play" href="#">
-                  <img src="${url('images/icons/play.png')}" alt="Play">Launch animation
-                </a>
-                <a id="replay" href="#">
-                  <img src="${url('images/icons/replay.png')}" alt="Replay">Replay
-                </a>
-              </p>
+            <p id="legend">An Infinit network is composed of 5 nodes with 3 redundant copies.</p>
 
-              <p id="step1"><strong>1</strong> An Infinit network is composed of 5 nodes with 3 redundant copies.</p>
-              <p id="step2"><strong>2</strong> Node E crashes with one of the 3 copies.</p>
-              <p id="step3"><strong>3</strong> Infinit ejects the failed node.</p>
-              <p id="step4"><strong>4</strong> Infinit automatically replicates the missing copy onto another node.</p>
-              <p id="step5"><strong>5</strong> Two new nodes join the network.</p>
-              <p id="step6"><strong>6</strong> A copy is rebalanced to one of the new nodes.</p>
+            <div class="steps">
+              <p id="step2"><strong>1</strong> Node C crashes with one of the 3 copies.</p>
+              <p id="step3"><strong>2</strong> Infinit ejects the failed node.</p>
+              <p id="step4"><strong>3</strong> Infinit automatically replicates the missing copy onto another node.</p>
+              <p id="step5"><strong>4</strong> Two new nodes join the network.</p>
+              <p id="step6"><strong>5</strong> A copy is rebalanced to one of the new nodes.</p>
             </div>
           </div>
         </section>
-
-        <section class="decentralized">
-          <div>
-            <img src="${url('images/schema-decentralized-theory.png')}" alt="Infinit Decentralized Schema"><br>
-            <h3>Decentralized</h3>
-            <p>Unlike most distributed systems relying on a master/slave model, Infinit benefits from a truly decentralized architecture (peer to peer).</p>
-            <p>This model protects Infinit from single points of failure and bottlenecks.</p>
-          </div>
-
-          <div class="reliable">
-            <img src="${url('images/schema-replication.png')}" alt="Infinit Replication Schema"><br>
-            <h3>Fault tolerant and self-healing</h3>
-            <p>Every data item is stored several times (configurable by the administrator) in order to ensure durability.</p>
-
-            <p>Should a failure occur, Infinit will automatically adapt the number of redundant copies to return to a healthy state.</p>
-          </div>
-        </section>
       </div>
+
+      <section class="decentralized">
+        <div>
+          <hr><br><br><br>
+          <h3>Decentralized Architecture</h3>
+          <p>Unlike most distributed systems relying on a master/slave model, Infinit benefits from a truly decentralized architecture (peer to peer).</p>
+          <p>This model protects Infinit from single points of failure and bottlenecks.</p>
+        </div>
+      </section>
+
+      <section class="replication">
+        <div>
+          <hr><br><br><br>
+          <h3>Fault tolerant and self-healing</h3>
+          <p>Every data item is stored several times (configurable by the administrator) in order to ensure durability.</p>
+
+          <p>Should a failure occur, Infinit will automatically adapt the number of redundant copies to return to a healthy state.</p>
+        </div>
+      </section>
 
       <section class="programmatic">
         <div class="wrapper">
