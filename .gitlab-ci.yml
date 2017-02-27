@@ -66,7 +66,7 @@ x86_64-ubuntu-gcc4:
   script:
     - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive
+    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - SOURCE_DIR="${CI_PROJECT_DIR}"
