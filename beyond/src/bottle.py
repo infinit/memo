@@ -109,6 +109,8 @@ class Bottle(bottle.Bottle):
     # GCS
     self.__gcs = gcs
     # OAuth
+    self.route('/users/<username>/credentials/google/refresh') \
+      (self.user_credentials_google_refresh)
     for s in Bottle.__oauth_services:
       self.route('/oauth/%s' % s)(getattr(self, 'oauth_%s' % s))
       self.route('/users/<username>/%s-oauth' % s)(
@@ -122,8 +124,6 @@ class Bottle(bottle.Bottle):
       self.route('/users/<username>/credentials/%s/<id>' % s,
                  method = 'DELETE') \
         (getattr(self, 'user_%s_credentials_delete' % s))
-    self.route('/users/<username>/credentials/google/refresh') \
-      (self.user_credentials_google_refresh)
 
     # Users
     self.route('/users', method = 'GET')(self.users_get)
