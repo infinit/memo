@@ -90,11 +90,8 @@ def configure(
 
   srcs = genkv.dsts + genfs.dsts + drake.nodes('grpc.cc', 'filesystem.cc')
   sources = srcs
-  if cxx_toolkit.os is drake.os.windows:
-    # we need to link with our libssl and boringssl which diverged.
-    # cant do that under windows, we end up with duplicated symbols
-    # so make libgrpc a shared lib
-    grpc_lib = drake.cxx.DynLib('grpc', grpc.sources, cxx_toolkit, grpc.cxx_config_lib)
+  # make a conveniance grpc lib with all libgrpc stuff
+  grpc_lib = drake.cxx.DynLib('grpc', grpc.sources, cxx_toolkit, grpc.cxx_config_lib)
 
   #kv_client = drake.cxx.Executable('kv-client',
   #  genkv.dsts + drake.nodes('kv-client.cc'),

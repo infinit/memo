@@ -275,12 +275,12 @@ def configure(
   outguess_configure = drake.node('src/infinit/model/steg/outguess-0.2/configure')
   outguess_makefile = drake.node('src/infinit/model/steg/outguess-0.2/Makefile')
 
-  grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config_infinit)
+  grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config)
   infinit_sources += grpc.sources
   cxx_config_infinit += grpc.grpc.cxx_config
   extra_libs = []
   if grpc.grpc_lib:
-    extra_libs.append(drake.copy(grpc.grpc_lib, windows and 'bin' or lib, strip_prefix = True))
+    extra_libs.append(drake.copy(grpc.grpc_lib, windows and 'bin' or 'lib', strip_prefix = True))
   else:
     infinit_sources += grpc.grpc.sources
   if windows:
@@ -979,6 +979,8 @@ def configure(
   cxx_config_tests += elle.boost.config_timer(link = False)
   cxx_config_tests.add_local_include_path('bin')
   cxx_config_tests += grpc.grpc.cxx_config
+  if grpc.grpc_lib:
+    cxx_config_tests.library_add(drake.copy(grpc.grpc_lib, 'tests', strip_prefix = True))
   if not windows:
     cxx_config_tests.library_add(
       drake.copy(elle.boost.test_dynamic, 'lib', True))
@@ -1050,14 +1052,15 @@ def configure(
   if linux:
     cxx_config_tests.lib('dl')
   for test_name, dependencies in tests_names:
+    that_test_libs = list(tests_extra_libs)
     ifnt_lib = test_name == 'consensus/async' and infinit_lib_tests_consensus or infinit_lib_tests
     if windows:
       if test_name == 'consensus/async':
-        tests_extra_libs += [dokan_lib_tests_consensus]
+        that_test_libs += [dokan_lib_tests_consensus]
       else:
-        tests_extra_libs += [dokan_lib_tests]
-    if test_name == 'grpc':
-      tests_extra_libs += drake.nodes(
+        that_test_libs += [dokan_lib_tests]
+    if test_name == 'grpc' and not windows:
+      that_test_libs += drake.nodes(
         'src/infinit/grpc/kv.grpc.pb.cc',
         'src/infinit/grpc/kv.pb.cc',
         'src/infinit/grpc/fs.grpc.pb.cc',
@@ -1068,7 +1071,7 @@ def configure(
       [
         drake.node('tests/%s.cc' % test_name),
         ifnt_lib
-      ] + tests_extra_libs,
+      ] + that_test_libs,
       cxx_toolkit,
       test_name == 'backward-compatibility' and cxx_config_tests_no_boost_test or cxx_config_tests)
     test.dependencies_add(dependencies)

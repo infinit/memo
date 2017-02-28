@@ -25,6 +25,19 @@
 
 ELLE_LOG_COMPONENT("test");
 
+
+
+namespace grpc {
+  std::ostream& operator << (std::ostream& o, ::grpc::Status const& s)
+  {
+    return o << s.error_message();
+  }
+  bool operator == (Status const& a, Status const& b)
+  {
+    return a.error_code() == b.error_code();
+  }
+}
+
 class DHTs
 {
 public:
@@ -138,6 +151,7 @@ ELLE_TEST_SCHEDULED(basic)
     });
   ELLE_LOG("wait");
   elle::reactor::wait(b);
+  elle::reactor::sleep(1_sec);
   ELLE_LOG("start");
   elle::reactor::background([&] {
   auto chan = grpc::CreateChannel(
@@ -152,7 +166,7 @@ ELLE_TEST_SCHEDULED(basic)
     ELLE_LOG("call...");
     auto res = stub->Get(&context, req, &repl);
     ELLE_LOG("...called");
-    //BOOST_CHECK_EQUAL((int)res, (int)::grpc::Status::OK);
+    BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
     BOOST_CHECK_EQUAL(repl.status().error(), ERROR_MISSING_BLOCK);
   }
   { // put/get chb
