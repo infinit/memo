@@ -281,6 +281,8 @@ def configure(
   extra_libs = []
   if grpc.grpc_lib:
     extra_libs.append(drake.copy(grpc.grpc_lib, windows and 'bin' or lib, strip_prefix = True))
+  else:
+    infinit_sources += grpc.grpc.sources
   if windows:
     cxx_config_infinit.lib('shlwapi')
     cxx_config_infinit.lib('ws2_32')
