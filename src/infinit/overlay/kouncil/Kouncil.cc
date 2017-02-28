@@ -382,23 +382,23 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: %s disconnected", this, peer);
         auto const id = peer->id();
-        auto it = this->_peers.find(id);
-        if (it == this->_peers.end() || *it != peer)
+        // Remove from infos.
         {
-          // FIXME: I don't think this should ever happen.
-          ELLE_WARN("disconnect on dropped peer %f", peer);
-          return;
-        }
-        if (auto pi = find(this->_infos, id))
+          auto pi = ELLE_ENFORCE(find(this->_infos, id));
+          ELLE_ASSERT(pi);
           this->_infos.erase(pi);
-        else
-          // FIXME: I don't think this should ever happen.
-          ELLE_WARN("no info for disconnected peer %f", peer);
+        }
+        // Remove from address book.
         {
           auto its = this->_address_book.equal_range(id);
           this->_address_book.erase(its.first, its.second);
         }
-        this->_peers.erase(it);
+        // Remove from peers.
+        {
+          auto it = ELLE_ENFORCE(find(this->_peers, id));
+          ELLE_ASSERT_EQ(*it, peer);
+          this->_peers.erase(it);
+        }
         this->on_disappear()(id, false);
         peer.reset();
         if (!this->_cleaning)
