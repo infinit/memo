@@ -31,6 +31,106 @@
 ELLE_LOG_COMPONENT("test");
 
 
+inline
+std::string
+base_name(std::string const& s)
+{
+  auto p = s.find_last_of(":");
+  if (p == s.npos)
+    return s;
+  else
+    return s.substr(p+1);
+}
+
+class Protogen
+{
+public:
+  Protogen() {}
+  template<typename T>
+  void
+  protogen();
+  std::unordered_map<std::string, std::string> messages;
+};
+
+template<typename T>
+struct ProtoTypeName
+{
+  static std::string value() { return base_name(elle::type_info<T>().name());}
+  static void recurse(Protogen& pg) { pg.protogen<T>();}
+};
+
+#define PROTO_TYPE(ctype, ptype)               \
+template<>                                     \
+struct ProtoTypeName<ctype>                    \
+{                                              \
+  static std::string value() { return ptype;}  \
+  static void recurse(Protogen& pg) {}         \
+}
+
+// FIXME maybe optimize by using 'sint*' protobuf types
+PROTO_TYPE(std::string, "string");
+PROTO_TYPE(elle::Buffer, "string");
+PROTO_TYPE(bool, "bool");
+PROTO_TYPE(int64_t, "int64");
+PROTO_TYPE(uint64_t, "uint64");
+PROTO_TYPE(int32_t, "int64");
+PROTO_TYPE(uint32_t, "uint64");
+PROTO_TYPE(int16_t, "int32");
+PROTO_TYPE(uint16_t, "uint32");
+PROTO_TYPE(int8_t, "int32");
+PROTO_TYPE(uint8_t, "uint32");
+PROTO_TYPE(double, "double");
+PROTO_TYPE(float, "double");
+
+template<typename T>
+struct ProtoTypeName<boost::optional<T>>
+{
+  static std::string value()
+  {
+    return ProtoTypeName<T>::value();
+  }
+  static void recurse(Protogen& pg) {}
+};
+
+template <typename O, typename M = typename elle::das::DefaultModel<O>::type>
+struct ProtoHelper
+{
+  template <typename T>
+  struct ProtoProcess
+  {
+    using type = int;
+    static
+    int
+    value(Protogen& pg, int& fid, std::string& msg)
+    {
+      using type = typename M::template FieldType<T>::type;
+      auto cls = ProtoTypeName<type>::value();
+      msg += "  " + cls + " " + T::name() + " = " + std::to_string(++fid) + ";\n";
+      ProtoTypeName<type>::recurse(pg);
+      return 0;
+    }
+  };
+  static
+  void
+  protogen(Protogen& pg)
+  {
+    auto tn = elle::type_info<O>().name();
+    pg.messages[tn]; // create it
+    int fid = 0;
+    std::string msg = "message " + base_name(tn) + " {\n";
+    M::Fields::template map<ProtoProcess>::value(pg, fid, msg);
+    msg += "}\n";
+    pg.messages[tn] = msg;
+  }
+};
+
+template<typename T>
+void
+Protogen::protogen()
+{
+   ProtoHelper<T>::protogen(*this);
+}
+
 
 namespace grpc {
   std::ostream& operator << (std::ostream& o, ::grpc::Status const& s)
@@ -286,6 +386,16 @@ ELLE_TEST_SCHEDULED(serialization_complex)
   }
   BOOST_CHECK(complex.opt_simple);
   BOOST_CHECK_EQUAL(complex.opt_simple->str, "foo");
+}
+
+ELLE_TEST_SCHEDULED(protogen)
+{
+  Protogen p;
+  p.protogen<structs::Complex>();
+  for (auto const& m: p.messages)
+  {
+    std::cout << m.second << std::endl;
+  }
 }
 
 ELLE_TEST_SCHEDULED(basic)
@@ -653,7 +763,9 @@ ELLE_TEST_SUITE()
   auto& master = boost::unit_test::framework::master_test_suite();
   master.add(BOOST_TEST_CASE(serialization), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(serialization_complex), 0, valgrind(10));
+  master.add(BOOST_TEST_CASE(protogen), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(basic), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(filesystem), 0, valgrind(60));
   atexit(google::protobuf::ShutdownProtobufLibrary);
 }
+
