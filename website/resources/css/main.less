@@ -1437,7 +1437,7 @@ body.product {
         }
 
         .controls {
-          margin-top: 28px; margin-bottom: 36px;
+          padding-top: 15px;
 
           #replay { display: none; }
           #replay, #play {
@@ -1454,7 +1454,7 @@ body.product {
           #replay img { width: 12px; height: 15px; }
         }
 
-        #legend { font-size: 20px; font-style: italic; text-align: center; margin-top: 222px; }
+        #legend { font-size: 20px; font-style: italic; text-align: center; padding-top: 192px; }
 
         .steps {
           width: 80%; margin: 0 auto;
@@ -1540,12 +1540,12 @@ body.product {
           }
 
           #nodeB .block.copy {
-            animation: blockFromBtoD 0.5s 12s ease-in 1,
-                       blockFromDtoG 0.5s 20.5s ease-in 1;
-             -webkit-animation: blockFromBtoD 0.5s 12s ease-in 1,
-                       blockFromDtoG 0.5s 20.5s ease-in 1;
-            -moz-animation: blockFromBtoD 0.5s 12s ease-in 1,
-                       blockFromDtoG 0.5s 20.5s ease-in 1;
+            animation: blockFromBtoD 0.5s 12s ease-in-out 1,
+                       blockFromDtoG 0.5s 20.5s ease-in-out 1;
+             -webkit-animation: blockFromBtoD 0.5s 12s ease-in-out 1,
+                       blockFromDtoG 0.5s 20.5s ease-in-out 1;
+            -moz-animation: blockFromBtoD 0.5s 12s ease-in-out 1,
+                       blockFromDtoG 0.5s 20.5s ease-in-out 1;
           }
 
           #step5 {
@@ -1716,7 +1716,7 @@ body.product {
 @keyframes hrGrow { from { width: 85% } to { width: 100% } }
 
 // block
-@-webkit-keyframes blockFromBtoD { from { left: 42% } to { left: 228% } }
+@-webkit-keyframes blockFromBtoD { from { left: 42%; } to { left: 228% } }
 @-moz-keyframes blockFromBtoD { from { left: 42% } to { left: 228% } }
 @keyframes blockFromBtoD { from { left: 42% } to { left: 228% } }
 
