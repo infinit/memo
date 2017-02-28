@@ -184,13 +184,15 @@ namespace infinit
       Mode<Network,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::storage = Strings{}),
-                 decltype(cli::output = boost::optional<std::string>())),
+                 decltype(cli::output = boost::optional<std::string>()),
+                 decltype(cli::node_id = boost::optional<std::string>())),
            decltype(modes::mode_link)>
       link;
       void
       mode_link(std::string const& network_name,
                 Strings const& storage_names = {},
-                boost::optional<std::string> const& output_name = {});
+                boost::optional<std::string> const& output_name = {},
+                boost::optional<std::string> const& node_id = {});
 
 
       /*-------------.

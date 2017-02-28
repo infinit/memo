@@ -1,6 +1,7 @@
 #include <infinit/cli/Network.hh>
 
 #include <boost/tokenizer.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include <elle/make-vector.hh>
 
@@ -95,7 +96,8 @@ namespace infinit
              "Link this device to a network",
              cli::name,
              cli::storage = Strings{},
-             cli::output = boost::none)
+             cli::output = boost::none,
+             cli::node_id = boost::none)
       , list(*this, "List networks")
       , list_services(*this,
                       "List network registered services",
@@ -698,7 +700,8 @@ namespace infinit
     void
     Network::mode_link(std::string const& network_name,
                        Strings const& storage_names,
-                       boost::optional<std::string> const& output_name)
+                       boost::optional<std::string> const& output_name,
+                       boost::optional<std::string> const& node_id)
     {
       ELLE_TRACE_SCOPE("link");
       auto& cli = this->cli();
@@ -734,10 +737,17 @@ namespace infinit
         elle::err("passport signature is invalid");
       if (storage && !passport.allow_storage())
         elle::err("passport does not allow storage");
+      auto id = infinit::model::Address::random(0); // FIXME
+      if (node_id)
+      {
+        std::stringstream ss(elle::sprintf("\"%s\"", *node_id));
+        namespace json = elle::serialization::json;
+        id = json::deserialize<infinit::model::Address>(ss, false);
+      }
       auto network = infinit::Network(
         desc.name,
         std::make_unique<dnut::Configuration>(
-          infinit::model::Address::random(0), // FIXME
+          id,
           std::move(desc.consensus),
           std::move(desc.overlay),
           std::move(storage),
@@ -1349,7 +1359,24 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
       auto network = ifnt.network_get(network_name, owner, true);
+      if (!network.model)
+        elle::err("%s is not linked", network.name);
+      boost::optional<std::string> node_id;
+      if (auto model = dynamic_cast<dnut::Configuration*>(network.model.get()))
+      {
+        std::stringstream ss;
+        {
+          elle::serialization::json::SerializerOut s(ss);
+          s.serialize_forward(model->id);
+        }
+        auto tmp = ss.str();
+        boost::trim(tmp);
+        boost::erase_all(tmp, "\"");
+        node_id = tmp;
+      }
       ifnt.network_unlink(network.name, owner);
+      if (node_id)
+        cli.report("if you relink this network, use \"--node-id %s\"", node_id);
     }
 
 
