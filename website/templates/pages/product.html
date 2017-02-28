@@ -7,7 +7,7 @@
     <div class="wrapper">
 
       <section class="resilient">
-        <h1>A Resilient, Scalable Architecture</h1>
+        <h1>An Elastic Platform</h1>
 
         <div class="schema">
 
@@ -19,7 +19,7 @@
               <img src="${url('images/icons/replay.png')}" alt="Replay">Replay
             </a>
           </p>
-   
+
           <div class="figure">
             <hr>
 
@@ -56,7 +56,7 @@
             </div>
           </div>
 
-          <p id="legend">An Infinit network is composed of 5 nodes with 3 redundant copies.</p>
+          <p id="legend">In this scenario, an Infinit cluster composed of 5 nodes maintains 3 redundant copies of a given piece of data.</p>
 
           <div class="steps">
             <p id="step2"><strong>1</strong> Node C crashes with one of the 3 copies.</p>
@@ -72,31 +72,30 @@
     <section class="decentralized">
       <div>
         <hr><br><br><br>
-        <h3>Decentralized Architecture</h3>
-        <p>Unlike most distributed systems relying on a master/slave model, Infinit benefits from a truly decentralized architecture (peer to peer).</p>
-        <p>This model protects Infinit from single points of failure and bottlenecks.</p>
+        <h3>Scalable Model</h3>
+        <p>Unlike most distributed systems relying on a master/slave model (also known as leader/follower), Infinit benefits from a truly decentralized architecture.</p>
+        <p>This model protects Infinit from single points of failure and bottlenecks while allowing for better scalability and performance.</p>
       </div>
     </section>
 
     <section class="replication">
       <div>
         <hr><br><br><br>
-        <h3>Fault tolerant and self-healing</h3>
-        <p>Every data item is stored several times (configurable by the administrator) in order to ensure durability.</p>
-
-        <p>Should a failure occur, Infinit will automatically adapt the number of redundant copies to return to a healthy state.</p>
+        <h3>Resilient Architecture</h3>
+        <p>Every data item can be stored redundantly in order to allow for Infinit to tolerate failures being software bugs, hardware crashes and more.</p>
+        <p>Should a failure occur, Infinit will automatically self-heal by recreating the missing redundant copies in order to quickly get back to a healthy state.</p>
       </div>
     </section>
 
     <section class="programmatic">
       <div class="wrapper">
-        <h2>Programmable For Your Applications</h2>
+        <h2>Customizable Through Policies</h2>
 
         <div>
           <img src="${url('images/icons/redundancy-yellow-big.png')}">
           <div>
             <h3 id="secure">Redundancy</h3>
-            <p>Choose between a replication system by giving a replication factor, erasure coding or none.</p>
+            <p>Choose the redundancy policy of your choice (replication, erasure coding or none at all) and configure it: replication factor etc.</p>
           </div>
         </div>
 
@@ -104,7 +103,7 @@
           <img src="${url('images/icons/lock-yellow-big.png')}">
           <div>
             <h3 id="secure">Encryption</h3>
-            <p>If activated, all the data items stored are encrypted (RSA/AES-256) and an access control mechanism is provided to manage keys.</p>
+            <p>While data in transit is always encrypted, you can decide to activate the encryption policy for every data item to be encrypted at rest (RSA/AES-256).</p>
           </div>
         </div>
 
@@ -112,7 +111,7 @@
           <img src="${url('images/icons/compression-yellow-big.png')}">
           <div>
             <h3 id="secure">Compression</h3>
-            <p>Activate compression to reduce storage consumption depending on the nature of the data being stored.</p>
+            <p>Activate compression to reduce storage consumption should the nature of the data being stored be adapted.</p>
           </div>
         </div>
 
@@ -120,7 +119,7 @@
           <img src="${url('images/icons/fault-tolerance-yellow-big.png')}">
           <div>
             <h3 id="secure">Data Placement</h3>
-            <p>Control the placement of the redundant pieces of data through several policies: rack-aware, region-aware (different data centers), etc.</p>
+            <p>Control the placement of the redundant pieces of data through several policies to prevent critical scenarios: rack-aware, region-aware (different data centers) etc.</p>
           </div>
         </div>
 
@@ -128,7 +127,7 @@
           <img src="${url('images/icons/deduplication-yellow-big.png')}">
           <div>
             <h3 id="secure">Deduplication</h3>
-            <p>Provide a policy to activate deduplication in order to avoid storing identical pieces of data.</p>
+            <p>Provides a way to activate deduplication in order to store identical pieces of data only once, hence further reducing storage consumption.</p>
           </div>
         </div>
 
@@ -136,7 +135,7 @@
           <img src="${url('images/icons/versioning-yellow-big.png')}">
           <div>
             <h3 id="versioning">Versioning</h3>
-            <p>Browse through the different versions of a file and rollback if necessary.</p>
+            <p>Allow one to browse through the history of a file/directory/object and to rollback to a specific version if necessary.</p>
           </div>
         </div>
       </div>
@@ -144,24 +143,24 @@
 
     <section class="interfaces programmatic">
       <div class="wrapper">
-        <h2>Adapt to your needs</h2>
+        <h2>For Each Use Case its Logic</h2>
 
         <div>
           <img src="${url('images/icons/block-device.png')}">
           <h3 id="secure">Block Device</h3>
-          <p>Deploy low level virtual block device interfaces that can be formatted in the file system of your choice (ext4, NTFS, etc.) and used for non-competition flows such as databases.</p>
+          <p>Deploy a low-level virtual block device that can be formatted in the file system of your choice (ext4, NTFS etc.) and used for a single node to access it.</p>
         </div>
 
         <div>
           <img src="${url('images/icons/file.png')}">
           <h3 id="secure">File System</h3>
-          <p>Access a hierarchical organization of files through POSIX-compliant file system interfaces that provide advanced functionalities such as access control, versioning, etc.</p>
+          <p>A POSIX-compliant hierarchical organization of files and folders that can be concurrently accessed from multiple client nodes.</p>
         </div>
 
         <div>
           <img src="${url('images/icons/object-storage.png')}">
           <h3 id="secure">Object Storage</h3>
-          <p>Use an object storage interface (Amazon S3, OpenStack Swift) to access and store unstructured data items aka blobs.</p>
+          <p>Use an object storage interface (Amazon S3, OpenStack Swift etc.) to access and store large amounts of unstructured data a.k.a <em>blobs</em>.</p>
         </div>
       </div>
     </section>

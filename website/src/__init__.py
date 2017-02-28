@@ -69,7 +69,7 @@ class Website(bottle.Bottle):
   @view('pages/product.html')
   def root(self):
     return {
-      'title': 'An Overview of the Infinit Storage Platform',
+      'title': 'The Infinit elastic storage platform',
       'description': 'Discover the benefits of the Infinit storage platform through its innovative technology.',
     }
 
