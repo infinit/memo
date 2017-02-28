@@ -1376,344 +1376,358 @@ body.docker {
 }
 
 body.product {
-  section.doc {
-    h2 {
-      text-align: center; letter-spacing: -0.2px;
-      font-size: 28px; clear: both; padding-top: 80px; padding-bottom: 0px;
+  h1 {
+    text-align: center; letter-spacing: -0.2px;
+    font-size: 36px; clear: both;  margin: 50px 5% 20px 5%; 
+  }
+
+  h2 { font-size: 36px; text-align: center; margin-bottom: 35px; }
+
+  .features {
+    &:after { display: table; content: ''; clear: both; }
+    div h3 { display: inline-block; margin-top: 0; }
+
+    section.resilient {
+      text-align: center;
+      &:after { display: table; content: ''; clear: both; }
+
+      h2 { margin-bottom: 10px;}
+      > p { max-width: 60%; margin:auto; margin-top: 0; clear: both; font-style: italic;}
+
+      .schema {
+
+        .figure {
+          width: 960px; margin: 0 auto; text-align: center;
+          position: relative; margin-bottom: 60px;
+
+          hr { 
+            height: 3px; background: @infinitblack; border: none; width: 85%; 
+            position: absolute; top: 85px; margin: 0 auto; left: 0; right: 0;
+            .transition();
+          }
+
+          img { float: left; margin-top: 30px; margin-bottom: 30px; }
+
+          .node {
+            width: 93px; min-height: 93px; position: absolute; top: 0;
+            .at2x('../images/icons/server-transparent.png', 55px, 93px);
+            background-repeat: no-repeat; background-position: top center;
+
+            span.name {
+              display: inline-block; margin-top: 103px; font-size: 16px;
+              font-weight: 500;
+            }
+
+            span.block {
+              background: #FFF088; border: 2px solid #252D3B; border-radius: 4px;
+              width: 12px; height: 12px; display: inline-block; margin-top: 7px;
+              position: absolute; left: 42%; 
+            }
+          }
+
+          #nodeA { left: 11%; }
+          #nodeB { left: 28%; }
+          #nodeC { left: 45.5%; }
+          #nodeD { left: 63%; }
+          #nodeE { left: 80.5%; }
+          #nodeF { left: 1%;}
+          #nodeG { left: 90%;}
+          
+          #nodeF, #nodeG { opacity: 0;}
+        }
+
+        .controls {
+          margin-top: 28px; margin-bottom: 36px;
+
+          #replay { display: none; }
+          #replay, #play {
+            text-transform: uppercase; font-weight: 600; font-size: 14px;
+            font-family: @sf; color: @infinitblue;  .transition(); 
+            &:hover { color: darken(@infinitblue, 10%); .transition(); }
+          }
+
+          a:hover img { opacity: 1; }
+          a:hover:after { opacity: 0; }
+
+          a img { margin-right: 6px; opacity: 0.75; .transition(); }
+          #play img { vertical-align: text-top;}
+          #replay img { width: 12px; height: 15px; }
+        }
+
+        #legend { font-size: 20px; font-style: italic; text-align: center; margin-top: 222px; }
+
+        .steps {
+          width: 80%; margin: 0 auto;
+          p { float:left; width: 18%; font-size: 17px; margin: 22px 1%; }
+
+          #step2, #step3, #step4, #step5, #step6 { opacity: 0.1; }
+        }
+
+        // Animations
+        // Sorted by timeline
+        &.play {
+
+          #step2 {
+            animation: stepFadeIn 0.3s 1s ease-in 1,
+                       stepFadeOut 0.3s 4.5s ease-out 1;
+            -webkit-animation: stepFadeIn 0.3s 1s ease-in 1,
+                               stepFadeOut 0.3s 4.5s ease-out 1;
+            -moz-animation: stepFadeIn 0.3s 1s ease-in 1,
+                            stepFadeOut 0.3s 4.5s ease-out 1;
+            .animationFillMode(forwards);
+          }
+
+          #nodeE .screenAlert {
+            .animation(blink, ease-in-out, infinite);
+            .animationDelay(3s);
+            .animationFillMode(forwards);
+            .animationDuration(0.7s);
+          }
+
+          #step3 {
+            animation: stepFadeIn 0.3s 5s ease-in 1,
+                       stepFadeOut 0.3s 10s ease-out 1;
+            -webkit-animation: stepFadeIn 0.3s 5s ease-in 1,
+                       stepFadeOut 0.3s 10s ease-out 1;
+            -moz-animation: stepFadeIn 0.3s 5s ease-in 1,
+                       stepFadeOut 0.3s 10s ease-out 1;
+            .animationFillMode(forwards);
+          }
+
+          #nodeC {
+            .animation(nodeCExit, ease-out, 1);
+            .animationDelay(7.5s);
+            .animationFillMode(forwards);
+            .animationDuration(0.5s);
+          }
+
+          #nodeA {
+            .animation(nodeASlide, ease-out, 1);
+            .animationDelay(9s);
+            .animationFillMode(forwards);
+            .animationDuration(0.5s);
+          }
+
+          #nodeB {
+            .animation(nodeBSlide, ease-out, 1);
+            .animationDelay(9s);
+            .animationFillMode(forwards);
+            .animationDuration(0.5s);
+          }
+
+          #nodeD {
+            .animation(nodeDSlide, ease-out, 1);
+            .animationDelay(9s);
+            .animationFillMode(forwards);
+            .animationDuration(0.5s);
+          }
+
+          #nodeE {
+            .animation(nodeESlide, ease-out, 1);
+            .animationDelay(9s);
+            .animationFillMode(forwards);
+            .animationDuration(0.5s);
+          }
+
+          #step4 {
+            animation: stepFadeIn 0.5s 10.5s ease-in 1,
+                       stepFadeOut 0.5s 14s ease-in 1;
+            -webkit-animation: stepFadeIn 0.5s 10.5s ease-in 1,
+                       stepFadeOut 0.5s 14s ease-in 1;
+            -moz-animation: stepFadeIn 0.5s 10.5s ease-in 1,
+                       stepFadeOut 0.5s 14s ease-in 1;
+            .animationFillMode(forwards);
+          }
+
+          #nodeB .block.copy {
+            animation: blockFromBtoD 0.5s 12s ease-in 1,
+                       blockFromDtoG 0.5s 20.5s ease-in 1;
+             -webkit-animation: blockFromBtoD 0.5s 12s ease-in 1,
+                       blockFromDtoG 0.5s 20.5s ease-in 1;
+            -moz-animation: blockFromBtoD 0.5s 12s ease-in 1,
+                       blockFromDtoG 0.5s 20.5s ease-in 1;
+          }
+
+          #step5 {
+            animation: stepFadeIn 0.5s 14.5s ease-in 1,
+                       stepFadeOut 0.5s 18s ease-in 1;
+             -webkit-animation: stepFadeIn 0.5s 14.5s ease-in 1,
+                       stepFadeOut 0.5s 18s ease-in 1;
+            -moz-animation: stepFadeIn 0.5s 14.5s ease-in 1,
+                       stepFadeOut 0.5s 18s ease-in 1;
+            .animationFillMode(forwards);
+          }
+
+          hr {
+            .animation(hrGrow, ease-out, 1);
+            .animationDelay(15s);
+            .animationFillMode(forwards);
+            .animationDuration(0.5s);
+          }
+
+          #nodeF {
+            .animation(nodeEnter, ease-out, 1);
+            .animationDelay(16s);
+            .animationFillMode(forwards);
+            .animationDuration(0.5s);
+          }
+
+          #nodeG {
+            .animation(nodeEnter, ease-out, 1);
+            .animationDelay(16s);
+            .animationFillMode(forwards);
+            .animationDuration(0.5s);
+          }
+
+          #step6 {
+            .animation(stepFadeIn, ease-out, 1);
+            .animationDelay(19s);
+            .animationFillMode(forwards);
+            .animationDuration(0.5s);
+          }
+        }
+      }
     }
 
-    h2:first-child { padding-top: 0; }
-
-    .features {
+    section.decentralized, section.replication {
+      padding-top: 60px;
       &:after { display: table; content: ''; clear: both; }
-      div h3 { display: inline-block; margin-top: 0; }
 
-      section.resilient {
-        text-align: center;
-        &:after { display: table; content: ''; clear: both; }
+      hr { 
+        width: 20%; float: left;
+        margin-bottom: 30px; height: 3px; background: @infinitblack; border: none; display: block;
+      }
+      h3, p { font-size: 19px; }
+      h3 { font-family: @sf; text-transform: uppercase; clear: both; }
+      p {  line-height: 1.7em; max-width: 40%;}
+    }
 
-        h2 { margin-bottom: 10px;}
-        > p { max-width: 60%; margin:auto; margin-top: 0; clear: both; font-style: italic;}
+    section.decentralized {
+      .at2x('../images/bg-decentralized.png', 976px, 425px); min-height: 425px;
+      background-position: 190% top; margin: 0 0 0 15%; margin-top: 100px;
+      background-repeat: no-repeat;
+    }
 
-        .schema {
+    section.replication {
+      .at2x('../images/bg-replication.png', 896px, 408px); min-height: 408px;
+      background-position: -50% top; margin: 0 15% 0 0;
+      background-repeat: no-repeat;
 
-          .figure {
-            width: 960px; margin: 0 auto; text-align: center;
-            position: relative; margin-bottom: 60px;
+      div, hr { float: right; }
+      div h3 { display: block; }
+      h3, p { text-align: right; }
+      p {  margin-left: 50%; max-width: 100%; }
+    }
 
-            hr { 
-              height: 3px; background: @infinitblack; border: none; width: 85%; 
-              position: absolute; top: 85px; margin: 0 auto; left: 0; right: 0;
-              .transition();
-            }
+    section.programmatic {
+      padding-top: 30px;
+      &:after { display: table; content: ''; clear: both; }
 
-            img { float: left; margin-top: 30px; margin-bottom: 30px; }
+      .wrapper {
+        max-width: 950px; margin: auto;
 
-            .node {
-              width: 93px; min-height: 93px; position: absolute; top: 0;
-              .at2x('../images/icons/server-transparent.png', 55px, 93px);
-              background-repeat: no-repeat; background-position: top center;
+        > p { margin-top: 7px; text-align: center;}
+        > div {
+          float: left; width: 45%; margin: 0 5%; min-height: 120px; margin-bottom: 15px;
 
-              span.name {
-                display: inline-block; margin-top: 103px; font-size: 16px;
-                font-weight: 500;
-              }
-
-              span.block {
-                background: #FFF088; border: 2px solid #252D3B; border-radius: 4px;
-                width: 12px; height: 12px; display: inline-block; margin-top: 7px;
-              }
-            }
-
-            #nodeA { left: 11%; }
-            #nodeB { left: 28%; }
-            #nodeC { left: 45.5%; }
-            #nodeD { left: 63%; }
-            #nodeE { left: 80.5%; }
-            #nodeG { left: 270px;}
-            #nodeF { left: 270px;}
-            #nodeF, #nodeG { opacity: 0;}
+          > div { width: 100%;}
+          img { margin: 28px 18px 45px 0; float: left; max-width: 20%; }
+          &:nth-child(2n) { clear: both; margin-left: 0;}
+          &:nth-child(2n+1) { margin-right: 0; }
+          h3 {
+            font-size: 14px; padding: 25px 0 0 0; vertical-align: super;
+            font-family: @sf; text-transform: uppercase; margin-bottom: 0;
           }
-
-          .controls {
-            margin-top: 28px; margin-bottom: 36px;
-
-            #replay { display: none; }
-            #replay, #play {
-              text-transform: uppercase; font-weight: 600; font-size: 14px;
-              font-family: @sf;
-            }
-
-            a:hover img { opacity: 1; }
-            a:hover:after { opacity: 0; }
-
-            a img { margin-right: 6px; opacity: 0.75; .transition(); }
-            #play img { vertical-align: text-top;}
-            #replay img { width: 12px; height: 15px; }
-          }
-
-          #legend { font-size: 20px; font-style: italic; text-align: center; margin-top: 222px; }
-
-          .steps {
-            width: 80%; margin: 0 auto;
-            p { float:left; width: 18%; font-size: 17px; margin: 22px 1%; }
-
-            #step2, #step3, #step4, #step5, #step6 { opacity: 0.1; }
-          }
-
-          // Animations
-          // Sorted by timeline
-          &.play {
-
-            #step2 {
-              animation: stepFadeIn 0.3s 1s ease-in 1,
-                         stepFadeOut 0.3s 4.5s ease-out 1;
-              -webkit-animation: stepFadeIn 0.3s 2s ease-in 1,
-                                 stepFadeOut 0.3s 4.5s ease-out 1;
-              -moz-animation: stepFadeIn 0.3s 2s ease-in 1,
-                              stepFadeOut 0.3s 4.5s ease-out 1;
-              .animationFillMode(forwards);
-            }
-
-            #nodeE .screenAlert {
-              .animation(blink, ease-in-out, infinite);
-              .animationDelay(3s);
-              .animationFillMode(forwards);
-              .animationDuration(0.7s);
-            }
-
-            #step3 {
-              animation: stepFadeIn 0.3s 5s ease-in 1,
-                         stepFadeOut 0.3s 9s ease-out 1;
-              -webkit-animation: stepFadeIn 0.3s 5s ease-in 1,
-                         stepFadeOut 0.3s 9s ease-out 1;
-              -moz-animation: stepFadeIn 0.3s 5s ease-in 1,
-                         stepFadeOut 0.3s 9s ease-out 1;
-              .animationFillMode(forwards);
-            }
-
-            #nodeC {
-              .animation(nodeCExit, ease-out, 1);
-              .animationDelay(7.5s);
-              .animationFillMode(forwards);
-              .animationDuration(0.5s);
-            }
-
-            #step4 {
-              animation: stepFadeIn 0.5s 9.5s ease-in 1,
-                         stepFadeOut 0.5s 14s ease-in 1;
-              -webkit-animation: stepFadeIn 0.5s 9.5s ease-in 1,
-                         stepFadeOut 0.5s 14s ease-in 1;
-              -moz-animation: stepFadeIn 0.5s 9.5s ease-in 1,
-                         stepFadeOut 0.5s 14s ease-in 1;
-              .animationFillMode(forwards);
-            }
-
-            #nodeC {
-              animation: nodeCSlideRight 0.5s 10s ease-out 1,
-                         nodeCSlideLeft 0.5s 16s ease-out 1;
-              -webkit-animation: nodeCSlideRight 0.5s 10s ease-out 1,
-                         nodeCSlideLeft 0.5s 16s ease-out 1;
-              -moz-animation: nodeCSlideRight 0.5s 10s ease-out 1,
-                         nodeCSlideLeft 0.5s 16s ease-out 1;
-              .animationFillMode(forwards);
-            }
-
-            #nodeC .block {
-              .animation(blockCEnter, ease-out, 1);
-              animation: blockCEnter 0.5s 11s ease-out 1,
-                         blockCSlide 0.5s 20.5s ease-out 1;
-              -webkit-animation: blockCEnter 0.5s 11s ease-out 1,
-                         blockCSlide 0.5s 20.5s ease-out 1;
-              -moz-animation: blockCEnter 0.5s 11s ease-out 1,
-                         blockCSlide 0.5s 20.5s ease-out 1;
-              .animationFillMode(forwards);
-            }
-
-            #step5 {
-              animation: stepFadeIn 0.5s 14.5s ease-in 1,
-                         stepFadeOut 0.5s 19s ease-in 1;
-               -webkit-animation: stepFadeIn 0.5s 14.5s ease-in 1,
-                         stepFadeOut 0.5s 19s ease-in 1;
-              -moz-animation: stepFadeIn 0.5s 14.5s ease-in 1,
-                         stepFadeOut 0.5s 19s ease-in 1;
-              .animationFillMode(forwards);
-            }
-
-            #nodeA {
-              .animation(nodeCSlideLeft, ease-out, 1);
-              .animationDelay(16s);
-              .animationFillMode(forwards);
-              .animationDuration(0.5s);
-            }
-
-            #nodeF {
-              .animation(nodeFEnter, ease-out, 1);
-              .animationDelay(17s);
-              .animationFillMode(forwards);
-              .animationDuration(0.5s);
-            }
-
-            #nodeG {
-              .animation(nodeGEnter, ease-out, 1);
-              .animationDelay(17.3s);
-              .animationFillMode(forwards);
-              .animationDuration(0.5s);
-            }
-
-            #step6 {
-              .animation(stepFadeIn, ease-out, 1);
-              .animationDelay(19.5s);
-              .animationFillMode(forwards);
-              .animationDuration(0.5s);
-            }
-          }
+          p { line-height: 23px; font-size: 16px;  margin-top: 0;}
         }
       }
+    }
 
-      section.decentralized, section.replication {
-        padding-top: 60px;
-        &:after { display: table; content: ''; clear: both; }
+    section.interfaces.programmatic {
+      padding-top: 50px; padding-bottom: 20px;
+      &:after { display: table; content: ''; clear: both; }
 
-        hr { 
-          width: 20%; float: left;
-          margin-bottom: 30px; height: 3px; background: @infinitblack; border: none; display: block;
+      .wrapper {
+        > div:nth-child(2n+1) { clear: none;}
+        > div:nth-child(2n+2) { }
+        > div {
+          text-align: center;
+          img { float: none; margin: 0;}
+          p { max-width: 85%; margin: auto; margin-bottom: 35px; }
+          h3 { display: block; padding: 9px 0 8px 0; }
         }
-        h3, p { font-size: 19px; }
-        h3 { font-family: @sf; text-transform: uppercase; clear: both; }
-        p {  line-height: 1.7em; max-width: 40%;}
-      }
-
-      section.decentralized {
-        .at2x('../images/bg-decentralized.png', 976px, 425px); min-height: 425px;
-        background-position: 190% top; margin: 0 0 0 15%; margin-top: 100px;
-        background-repeat: no-repeat;
-      }
-
-      section.replication {
-        .at2x('../images/bg-replication.png', 896px, 408px); min-height: 408px;
-        background-position: -50% top; margin: 0 15% 0 0;
-        background-repeat: no-repeat;
-
-        div, hr { float: right; }
-        div h3 { display: block; }
-        h3, p { text-align: right; }
-        p {  margin-left: 50%; max-width: 100%; }
-      }
-
-      section.programmatic {
-        padding-top: 30px;
-        &:after { display: table; content: ''; clear: both; }
-
-        .wrapper {
-          max-width: 950px; margin: auto;
-
-          h2 { margin-bottom: 0px;}
-          > p { margin-top: 7px; text-align: center;}
-          > div {
-            float: left; width: 45%; margin: 0 5%; min-height: 120px; margin-bottom: 15px;
-
-            > div { width: 100%;}
-            img { margin: 28px 18px 45px 0; float: left; max-width: 20%; }
-            &:nth-child(2n+1) { clear: both; margin-left: 0;}
-            &:nth-child(2n+2) { margin-right: 0; }
-            h3 {
-              font-size: 14px; padding: 25px 0 0 0; vertical-align: super;
-              font-family: @sf; text-transform: uppercase;
-            }
-            p { line-height: 23px; font-size: 16px;  margin-top: 0;}
-          }
+        > div:nth-child(4) {
+          float: none; width: 100%; margin:0;
+          p { max-width: 40%;}
         }
       }
+    }
 
-      section.interfaces.programmatic {
-        padding-top: 0; padding-bottom: 20px;
-        &:after { display: table; content: ''; clear: both; }
-        h2 { margin-bottom: 50px;}
-
-        .wrapper {
-          > div:nth-child(2n+1) { clear: none;}
-          > div:nth-child(2n+2) { }
-          > div {
-            text-align: center;
-            img { float: none; margin: 0;}
-            p { max-width: 85%; margin: auto; margin-bottom: 35px; }
-            h3 { display: block; padding: 9px 0 8px 0; }
-          }
-          > div:nth-child(4) {
-            float: none; width: 100%; margin:0;
-            p { max-width: 40%;}
-          }
-        }
-      }
-
-      div.cta {
-        text-align: center; padding-bottom: 70px;
-      }
+    div.cta {
+      text-align: center; padding-bottom: 100px;
     }
   }
 }
 
 
-// Animations for Docker & Product pages
-@-webkit-keyframes nodeFadeOut { from { opacity: 1; border: 2px solid @infinitblack; } to { opacity: 0.2; border: 2px solid @infinitred; } }
-@-moz-keyframes nodeFadeOut { from { opacity: 1; border: 2px solid @infinitblack; } to { opacity: 0.2; border: 2px solid @infinitred; } }
-@keyframes nodeFadeOut { from { opacity: 1; border: 2px solid @infinitblack; } to { opacity: 0.2; border: 2px solid @infinitred; } }
-
-@-webkit-keyframes crossFadeIn { from { opacity: 0; } to { opacity: 1; } }
-@-moz-keyframes crossFadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes crossFadeIn { from { opacity: 0; } to { opacity: 1; } }
+// Animations for Product page
 
 @-webkit-keyframes stepFadeIn { from { opacity: 0.1; } to { opacity: 1; } }
-@-moz-keyframes crossFadeIn { from { opacity: 0.1; } to { opacity: 1; } }
-@keyframes crossFadeIn { from { opacity: 0.1; } to { opacity: 1; } }
+@-moz-keyframes stepFadeIn { from { opacity: 0.1; } to { opacity: 1; } }
+@keyframes stepFadeIn { from { opacity: 0.1; } to { opacity: 1; } }
 
 @-webkit-keyframes stepFadeOut { from { opacity: 1; } to { opacity: 0.1; } }
 @-moz-keyframes stepFadeOut { from { opacity: 1; } to { opacity: 0.1; } }
 @keyframes stepFadeOut { from { opacity: 1; } to { opacity: 0.1; } }
 
-@-webkit-keyframes containerFadeOut { from { opacity: 1; } to { opacity: 0; } }
-@-moz-keyframes containerFadeOut { from { opacity: 1; } to { opacity: 0; } }
-@keyframes containerFadeOut { from { opacity: 1; } to { opacity: 0; } }
+// Node A
+@-webkit-keyframes nodeASlide { from { left: 11% } to { left: 18% } }
+@-moz-keyframes nodeASlide { from { left: 11% } to { left: 18% } }
+@keyframes nodeASlide { from { left: 11% } to { left: 18% } }
+
+// Node B
+@-webkit-keyframes nodeBSlide { from { left: 28% } to { left: 36% } }
+@-moz-keyframes nodeBSlide { from { left: 28% } to { left: 36% } }
+@keyframes nodeBSlide { from { left: 28% } to { left: 36% } }
 
 // Node C
-@-webkit-keyframes nodeCSlideRight { from { left: 68px; } to { left: 180px; } }
-@-moz-keyframes nodeCSlideRight { from { left: 68px; } to { left: 180px; } }
-@keyframes nodeCSlideRight { from { left: 68px; } to { left: 180px; } }
-
-@-webkit-keyframes nodeCSlideLeft { from { left: 180px; } to { left: 68px; } }
-@-moz-keyframes nodeCSlideLeft { from { left: 180px; } to { left: 68px; } }
-@keyframes nodeCSlideLeft { from { left: 180px; } to { left: 68px; } }
-
-@-webkit-keyframes blockCEnter { from { opacity: 0; margin-top: 30px; } to { opacity: 1; margin-top: 6px; } }
-@-moz-keyframes blockCEnter { from { opacity: 0; margin-top: 30px; } to { opacity: 1; margin-top: 6px; } }
-@keyframes blockCEnter { from { opacity: 0; margin-top: 30px; } to { opacity: 1; margin-top: 6px; } }
-
-
-// Node E
 @-webkit-keyframes nodeCExit { from { opacity: 1; top: 0 } to { opacity: 0; top: 150px } }
 @-moz-keyframes nodeCExit { from { opacity: 1; top: 0 } to { opacity: 0; top: 150px } }
 @keyframes nodeCExit { from { opacity: 1; top: 0 } to { opacity: 0; top: 150px } }
 
-// Node F
-@-webkit-keyframes nodeFEnter { from { opacity: 0; top: -50px; left: 320px; } to { opacity: 1; top: 0; left: 270px; } }
-@-moz-keyframes nodeFEnter { from { opacity: 0; top: -50px; left: 320px; } to { opacity: 1; top: 0; left: 270px; } }
-@keyframes nodeFEnter { from { opacity: 0; top: -50px; left: 320px; } to { opacity: 1; top: 0; left: 270px; } }
+// Node D
+@-webkit-keyframes nodeDSlide { from { left: 63% } to { left: 54% } }
+@-moz-keyframes nodeDSlide { from { left: 63% } to { left: 54% } }
+@keyframes nodeDSlide { from { left: 63% } to { left: 54% } }
 
-// Node G
-@-webkit-keyframes nodeGEnter { from { opacity: 0; top: 390px; left: 320px; } to { opacity: 1; top: 340px; left: 270px; } }
-@-moz-keyframes nodeGEnter { from { opacity: 0; top: 390px; left: 320px; } to { opacity: 1; top: 340px; left: 270px; } }
-@keyframes nodeGEnter { from { opacity: 0; top: 390px; left: 320px; } to { opacity: 1; top: 340px; left: 270px; } }
+// Node E
+@-webkit-keyframes nodeESlide { from { left: 80.5% } to { left: 72% } }
+@-moz-keyframes nodeESlide { from { left: 80.5% } to { left: 72% } }
+@keyframes nodeESlide { from { left: 80.5% } to { left: 72% } }
 
-@-webkit-keyframes blockCSlide { from { margin-left: 0px; } to { margin-left: 241px; } }
-@-moz-keyframes blockCSlide { from { margin-left: 0px; } to { margin-left: 241px; } }
-@keyframes blockCSlide { from { margin-left: 0px; } to { margin-left: 241px; } }
+// Node F + G
+@-webkit-keyframes nodeEnter { from { opacity: 0; top: 150px } to { opacity: 1; top: 0 } }
+@-moz-keyframes nodeEnter { from { opacity: 0; top: 150px } to { opacity: 1; top: 0 } }
+@keyframes nodeEnter { from { opacity: 0; top: 150px } to { opacity: 1; top: 0 } }
 
+// hr
+@-webkit-keyframes hrGrow { from { width: 85% } to { width: 100% } }
+@-moz-keyframes hrGrow { from { width: 85% } to { width: 100% } }
+@keyframes hrGrow { from { width: 85% } to { width: 100% } }
+
+// block
+@-webkit-keyframes blockFromBtoD { from { left: 42% } to { left: 228% } }
+@-moz-keyframes blockFromBtoD { from { left: 42% } to { left: 228% } }
+@keyframes blockFromBtoD { from { left: 42% } to { left: 228% } }
+
+@-webkit-keyframes blockFromDtoG { from { left: 228% } to { left: 600% } }
+@-moz-keyframes blockFromDtoG { from { left: 228% } to { left: 600% } }
+@keyframes blockFromDtoG { from { left: 228% } to { left: 600% } }
+
+// blink
 @-webkit-keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1 } }
 @-moz-keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1 } }
 @keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1 } }
-
-
 
 
 body.docker {
