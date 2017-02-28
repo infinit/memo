@@ -216,6 +216,7 @@ x86_64-osx-clang:
   script:
     - export LC_ALL=en_US.UTF-8
     - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
+    - export DRAKE_RAW=1 # debuging cmake issues
     - git submodule sync --recursive || git submodule sync
     - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
