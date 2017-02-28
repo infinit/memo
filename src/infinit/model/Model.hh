@@ -6,6 +6,8 @@
 
 #include <elle/UUID.hh>
 #include <elle/Version.hh>
+#include <elle/das/Symbol.hh>
+#include <elle/das/named.hh>
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/Endpoints.hh>
@@ -18,6 +20,9 @@ namespace infinit
 {
   namespace model
   {
+    ELLE_DAS_SYMBOL(address);
+    ELLE_DAS_SYMBOL(local_version);
+
     enum StoreMode
     {
       STORE_INSERT,
@@ -133,8 +138,11 @@ namespace infinit
        *          still local_version.
        *  \throws MissingBlock if the block does not exist.
        */
-      std::unique_ptr<blocks::Block>
-      fetch(Address address, boost::optional<int> local_version = {}) const;
+      elle::das::named::Function<
+        std::unique_ptr<blocks::Block> (
+          decltype(address)::Formal<Address>,
+          decltype(local_version = boost::optional<int>()))>
+      fetch;
       void
       multifetch(std::vector<AddressVersion> const& addresses,
                  std::function<void(Address, std::unique_ptr<blocks::Block>,
@@ -155,6 +163,9 @@ namespace infinit
       remove(Address address);
       void
       remove(Address address, blocks::RemoveSignature sig);
+    private:
+      std::unique_ptr<blocks::Block>
+      _fetch_impl(Address address, boost::optional<int> local_version) const;
     protected:
       template <typename Block, typename ... Args>
       static

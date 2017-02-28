@@ -1,3 +1,4 @@
+#include <elle/das/bound-method.hh>
 #include <elle/log.hh>
 
 #include <infinit/model/MissingBlock.hh>
@@ -23,6 +24,9 @@ namespace infinit
         version ? *version :
         elle::Version(
           infinit::version().major(), infinit::version().minor(), 0))
+      , fetch(elle::das::bind_method(*this, &Model::_fetch_impl),
+              address,
+              local_version = boost::optional<int>())
     {
       ELLE_LOG("%s: compatibility version %s", *this, this->_version);
       if (this->_version > infinit::version())
@@ -112,7 +116,8 @@ namespace infinit
     }
 
     std::unique_ptr<blocks::Block>
-    Model::fetch(Address address, boost::optional<int> local_version) const
+    Model::_fetch_impl(Address address,
+                       boost::optional<int> local_version) const
     {
       ELLE_TRACE_SCOPE("%s: fetch %f if newer than %s",
                        this, address, local_version);
