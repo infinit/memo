@@ -1,0 +1,136 @@
+#pragma once
+
+#include <elle/serialization/Serializer.hh>
+
+namespace google
+{
+  namespace protobuf
+  {
+    class Message;
+    class FieldDescriptor;
+  }
+}
+
+namespace infinit
+{
+  namespace grpc
+  {
+    class SerializerIn
+      : public elle::serialization::Serializer
+    {
+    public:
+      SerializerIn(const google::protobuf::Message* src);
+    protected:
+      bool
+      _enter(std::string const& name) override;
+      void
+      _leave(std::string const& name) override;
+      void
+      _serialize_array(int size, // -1 for in(), array size for out()
+                       std::function<void ()> const& f) override;
+      void
+      _serialize(int64_t& v) override;
+      void
+      _serialize(uint64_t& v) override;
+      void
+      _serialize(int32_t& v) override;
+      void
+      _serialize(uint32_t& v) override;
+      void
+      _serialize(int16_t& v) override;
+      void
+      _serialize(uint16_t& v) override;
+      void
+      _serialize(int8_t& v) override;
+      void
+      _serialize(uint8_t& v) override;
+      void
+      _serialize(double& v) override;
+      void
+      _serialize(bool& v) override;
+      void
+      _serialize(std::string& v) override;
+      void
+      _serialize(elle::Buffer& v) override;
+      void
+      _serialize(boost::posix_time::ptime& v) override;
+      void
+      _serialize_time_duration(std::int64_t& ticks,
+                               std::int64_t& num,
+                               std::int64_t& denom) override;
+      
+      void
+      _serialize_named_option(std::string const& name,
+                              bool present,
+                              std::function<void ()> const& f) override;
+      
+      void
+      _serialize_option(bool present,
+                        std::function<void ()> const& f) override;
+      template<typename T>
+      void _serialize_int(T& v);
+    private:
+      std::vector<const google::protobuf::Message*> _message_stack;
+      const google::protobuf::FieldDescriptor* _field;
+    };
+
+    class SerializerOut
+      : public elle::serialization::Serializer
+    {
+    public:
+      SerializerOut(google::protobuf::Message* dst);
+    protected:
+      bool
+      _enter(std::string const& name) override;
+      void
+      _leave(std::string const& name) override;
+      void
+      _serialize_array(int size, // -1 for in(), array size for out()
+                       std::function<void ()> const& f) override;
+      void
+      _serialize(int64_t& v) override;
+      void
+      _serialize(uint64_t& v) override;
+      void
+      _serialize(int32_t& v) override;
+      void
+      _serialize(uint32_t& v) override;
+      void
+      _serialize(int16_t& v) override;
+      void
+      _serialize(uint16_t& v) override;
+      void
+      _serialize(int8_t& v) override;
+      void
+      _serialize(uint8_t& v) override;
+      void
+      _serialize(double& v) override;
+      void
+      _serialize(bool& v) override;
+      void
+      _serialize(std::string& v) override;
+      void
+      _serialize(elle::Buffer& v) override;
+      void
+      _serialize(boost::posix_time::ptime& v) override;
+      void
+      _serialize_time_duration(std::int64_t& ticks,
+                               std::int64_t& num,
+                               std::int64_t& denom) override;
+      
+      void
+      _serialize_named_option(std::string const& name,
+                              bool present,
+                              std::function<void ()> const& f) override;
+      
+      void
+      _serialize_option(bool present,
+                        std::function<void ()> const& f) override;
+      template<typename T>
+      void _serialize_int(T& v);
+    private:
+      std::vector<google::protobuf::Message*> _message_stack;
+      const google::protobuf::FieldDescriptor* _field;
+    };
+  }
+}
