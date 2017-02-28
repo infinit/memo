@@ -137,8 +137,8 @@ ELLE_TEST_SCHEDULED(basic)
     client.dht.dht.get(), "alice", alice.K(), false);
   auto ubr = infinit::model::doughnut::UB(
     client.dht.dht.get(), "alice", alice.K(), true);
-  client.dht.dht->store(ubf, infinit::model::STORE_INSERT);
-  client.dht.dht->store(ubr, infinit::model::STORE_INSERT);
+  client.dht.dht->insert(ubf);
+  client.dht.dht->insert(ubr);
   infinit::model::Endpoint ep("127.0.0.1", (rand()%10000)+50000);
   elle::reactor::Barrier b;
   auto t = std::make_unique<elle::reactor::Thread>("grpc",

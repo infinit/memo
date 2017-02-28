@@ -427,7 +427,10 @@ namespace infinit
       res.set_message(std::string());
       exception_handler(res,
         [&] {
-          _model.store(std::move(block), mode);
+          if (mode == infinit::model::STORE_INSERT)
+            _model.insert(std::move(block));
+          else
+            _model.update(std::move(block));
         });
       return res;
     }
