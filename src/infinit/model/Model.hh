@@ -136,9 +136,9 @@ namespace infinit
       std::unique_ptr<blocks::Block>
       fetch(Address address, boost::optional<int> local_version = {}) const;
       void
-      fetch(std::vector<AddressVersion> const& addresses,
-            std::function<void(Address, std::unique_ptr<blocks::Block>,
-                               std::exception_ptr)> res) const;
+      multifetch(std::vector<AddressVersion> const& addresses,
+                 std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                    std::exception_ptr)> res) const;
       void
       insert(std::unique_ptr<blocks::Block> block,
              std::unique_ptr<ConflictResolver> = {});

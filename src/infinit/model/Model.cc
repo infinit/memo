@@ -135,9 +135,10 @@ namespace infinit
     }
 
     void
-    Model::fetch(std::vector<AddressVersion> const& addresses,
-            std::function<void(Address, std::unique_ptr<blocks::Block>,
-                               std::exception_ptr)> res) const
+    Model::multifetch(
+      std::vector<AddressVersion> const& addresses,
+      std::function<void(Address, std::unique_ptr<blocks::Block>,
+                         std::exception_ptr)> res) const
     {
       ELLE_TRACE_SCOPE("%s: fetch %s blocks", this, addresses.size());
       this->_fetch(addresses, [&](Address addr,

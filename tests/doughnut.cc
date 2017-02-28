@@ -1561,18 +1561,18 @@ ELLE_TEST_SCHEDULED(batch_quorum)
       if (b && !ex)
         ++hit;
     };
-  dht_b.dht->fetch(addrs, handler);
+  dht_b.dht->multifetch(addrs, handler);
   BOOST_CHECK_EQUAL(hit, 10);
   hit = 0;
-  dht_a.dht->fetch(addrs, handler);
+  dht_a.dht->multifetch(addrs, handler);
   BOOST_CHECK_EQUAL(hit, 10);
   dht_c.overlay->disconnect(*dht_a.overlay);
   dht_c.overlay->disconnect(*dht_b.overlay);
   hit = 0;
-  dht_b.dht->fetch(addrs, handler);
+  dht_b.dht->multifetch(addrs, handler);
   BOOST_CHECK_EQUAL(hit, 10);
   hit = 0;
-  dht_a.dht->fetch(addrs, handler);
+  dht_a.dht->multifetch(addrs, handler);
   BOOST_CHECK_EQUAL(hit, 10);
 }
 

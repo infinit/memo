@@ -702,7 +702,7 @@ namespace infinit
             else
             { // multifetch
               // FIXME: pass local versions
-              fs->block_store()->fetch(addresses,
+              fs->block_store()->multifetch(addresses,
                   [&](Address addr, std::unique_ptr<model::blocks::Block> block,
                       std::exception_ptr exception)
                   {
