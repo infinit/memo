@@ -4,10 +4,18 @@
 #include <grpc++/grpc++.h>
 #include <google/protobuf/message.h>
 
+ELLE_LOG_COMPONENT("infinit.grpc.serialization");
 namespace infinit
 {
   namespace grpc
   {
+
+    SerializerIn::SerializerIn(google::protobuf::Message const* msg)
+    : elle::serialization::Serializer(false)
+    {
+      _field = nullptr;
+      _message_stack.push_back(msg);
+    }
 
     bool
     SerializerIn::_enter(std::string const& name)
@@ -20,7 +28,10 @@ namespace infinit
       if (!_field)
         elle::err("field %s does not exist in %s", name, desc->name());
       if (!ref->HasField(*cur, _field))
+      { // HasField returns false on primitive fields with default value (empty string)
+        ELLE_LOG("missing key %s", name);
         throw elle::serialization::MissingKey(name);
+      }
       if (!_field->is_repeated() && _field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE)
       {
         auto* child = &ref->GetMessage(*cur, _field);
@@ -152,7 +163,7 @@ namespace infinit
     SerializerIn::_serialize_option(bool present,
                                     std::function<void ()> const& f)
     {
-      elle::err<elle::serialization::Error>("not implemented");
+      f();
     }
 
     void
@@ -167,6 +178,12 @@ namespace infinit
       elle::err("not implemented");
     }
 
+    SerializerOut::SerializerOut(google::protobuf::Message* msg)
+    : elle::serialization::Serializer(false)
+    {
+      _field = nullptr;
+      _message_stack.push_back(msg);
+    }
 
     bool
     SerializerOut::_enter(std::string const& name)
@@ -282,7 +299,26 @@ namespace infinit
     SerializerOut::_serialize_option(bool present,
                                     std::function<void ()> const& f)
     {
-      elle::err<elle::serialization::Error>("not implemented");
+      if (present)
+        f();
+      else if (!_field)
+      { // damm, we created a dummy default-initialized entry where we should not, remove it
+        if (!_names.empty())
+        {
+          ELLE_ASSERT(_message_stack.size() >= 2);
+          auto* parent = _message_stack[_message_stack.size()-2];
+          auto* ref = parent->GetReflection();
+          auto* desc = parent->GetDescriptor();
+          auto* field = desc->FindFieldByName(_names.back());
+          ref->ClearField(parent, field);
+        }
+      }
+      else
+      { // we still need to reset the field in case it was set in a prior use
+        // of the message
+        auto* cur = _message_stack.back();
+        cur->GetReflection()->ClearField(cur, _field);
+      }
     }
 
     void

@@ -2,6 +2,8 @@
 
 #include <elle/err.hh>
 
+#include <elle/das/Symbol.hh>
+
 #include <boost/optional.hpp>
 
 #include <infinit/model/MissingBlock.hh>
@@ -17,7 +19,10 @@
 #include <infinit/grpc/kv.grpc.pb.h>
 #include <infinit/grpc/fs.grpc.pb.h>
 
+#include <tests/grpc.grpc.pb.h>
+
 #include <infinit/grpc/grpc.hh>
+#include <infinit/grpc/serializer.hh>
 
 #include <grpc++/grpc++.h>
 
@@ -127,6 +132,161 @@ public:
   bool pax;
 };
 
+namespace symbols
+{
+  ELLE_DAS_SYMBOL(str);
+  ELLE_DAS_SYMBOL(i64);
+  ELLE_DAS_SYMBOL(ui64);
+  ELLE_DAS_SYMBOL(b);
+  ELLE_DAS_SYMBOL(simple);
+  ELLE_DAS_SYMBOL(opt_str);
+  ELLE_DAS_SYMBOL(opt_simple);
+}
+
+namespace structs
+{
+  struct Simple
+  {
+    std::string str;
+    int64_t i64;
+    uint64_t ui64;
+    bool b;
+    using Model = elle::das::Model<
+    Simple,
+    decltype(elle::meta::list(::symbols::str,
+                              ::symbols::i64, ::symbols::ui64, ::symbols::b))>;
+  };
+}
+ELLE_DAS_SERIALIZE(structs::Simple);
+
+ELLE_TEST_SCHEDULED(serialization)
+{
+  structs::Simple s{"foo", -42, 42, true};
+  ::Simple sout;
+  {
+    infinit::grpc::SerializerOut ser(&sout);
+    ser.serialize_forward(s);
+  }
+  BOOST_CHECK_EQUAL(sout.str(), "foo");
+  BOOST_CHECK_EQUAL(sout.i64(), -42);
+  BOOST_CHECK_EQUAL(sout.ui64(), 42);
+  BOOST_CHECK_EQUAL(sout.b(), true);
+  s = structs::Simple{"", 0, 0, false};
+  {
+    infinit::grpc::SerializerIn ser(&sout);
+    ser.serialize_forward(s);
+  }
+  BOOST_CHECK_EQUAL(s.str, "foo");
+  BOOST_CHECK_EQUAL(s.i64, -42);
+  BOOST_CHECK_EQUAL(s.ui64, 42);
+  BOOST_CHECK_EQUAL(s.b, true);
+}
+
+
+namespace structs
+{
+  struct Complex
+  {
+    Simple simple;
+    boost::optional<std::string> opt_str;
+    boost::optional<Simple> opt_simple;
+    using Model = elle::das::Model<
+    Complex,
+    decltype(elle::meta::list(::symbols::simple,
+                              ::symbols::opt_str,
+                              ::symbols::opt_simple))>;
+  };
+}
+ELLE_DAS_SERIALIZE(structs::Complex);
+
+ELLE_TEST_SCHEDULED(serialization_complex)
+{
+  structs::Complex complex {
+    structs::Simple{"foo", -42, 42, true},
+    std::string("bar")
+  };
+  ::Complex cplx;
+  {
+    infinit::grpc::SerializerOut ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  BOOST_CHECK_EQUAL(cplx.simple().str(), "foo");
+  BOOST_CHECK_EQUAL(cplx.simple().i64(), -42);
+  BOOST_CHECK_EQUAL(cplx.simple().ui64(), 42);
+  BOOST_CHECK_EQUAL(cplx.simple().b(), true);
+  BOOST_CHECK_EQUAL(cplx.opt_str(), "bar");
+  complex = structs::Complex {
+    structs::Simple{"", 0, 0, false},
+    std::string()
+  };
+  {
+    infinit::grpc::SerializerIn ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  BOOST_CHECK_EQUAL(complex.simple.str, "foo");
+  BOOST_CHECK_EQUAL(complex.simple.i64, -42);
+  BOOST_CHECK_EQUAL(complex.simple.ui64, 42);
+  BOOST_CHECK_EQUAL(complex.simple.b, true);
+  BOOST_CHECK_EQUAL(complex.opt_str.value_or("UNSET"), "bar");
+  // check unset optional<primitive>
+  complex.opt_str.reset();
+  {
+    infinit::grpc::SerializerOut ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  BOOST_CHECK_EQUAL(cplx.opt_str(), "");
+  complex = structs::Complex {
+    structs::Simple{"", 0, 0, false},
+    std::string("dummy")
+  };
+  {
+    infinit::grpc::SerializerIn ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  BOOST_CHECK_EQUAL(complex.simple.str, "foo");
+  BOOST_CHECK_EQUAL(complex.simple.i64, -42);
+  BOOST_CHECK_EQUAL(complex.simple.ui64, 42);
+  BOOST_CHECK_EQUAL(complex.simple.b, true);
+  // with grpc there is no such concept of optional primitive type, only default value
+  BOOST_CHECK_EQUAL(complex.opt_str.value_or("UNSET"), "UNSET");
+  // check default value on optional<primitive>
+  ELLE_LOG("empty optional<string>");
+  complex.opt_str = std::string();
+  {
+    infinit::grpc::SerializerOut ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  BOOST_CHECK_EQUAL(cplx.opt_str(), "");
+  complex = structs::Complex {
+    structs::Simple{"", 0, 0, false},
+    std::string("dummy")
+  };
+  {
+    infinit::grpc::SerializerIn ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  // FAILS BOOST_CHECK_EQUAL(complex.opt_str.value_or("UNSET"), "");
+
+  BOOST_CHECK(!complex.opt_simple);
+
+  complex.opt_simple = structs::Simple{"foo", -12, 12, true};
+  {
+    infinit::grpc::SerializerOut ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  BOOST_CHECK_EQUAL(cplx.opt_str(), "");
+  complex = structs::Complex {
+    structs::Simple{"", 0, 0, false},
+    std::string("dummy"),
+    boost::none
+  };
+  {
+    infinit::grpc::SerializerIn ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  BOOST_CHECK(complex.opt_simple);
+  BOOST_CHECK_EQUAL(complex.opt_simple->str, "foo");
+}
 
 ELLE_TEST_SCHEDULED(basic)
 {
@@ -491,6 +651,9 @@ ELLE_TEST_SCHEDULED(filesystem)
 ELLE_TEST_SUITE()
 {
   auto& master = boost::unit_test::framework::master_test_suite();
+  master.add(BOOST_TEST_CASE(serialization), 0, valgrind(10));
+  master.add(BOOST_TEST_CASE(serialization_complex), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(basic), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(filesystem), 0, valgrind(60));
+  atexit(google::protobuf::ShutdownProtobufLibrary);
 }

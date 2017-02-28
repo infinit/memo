@@ -20,6 +20,8 @@ namespace infinit
     {
     public:
       SerializerIn(const google::protobuf::Message* src);
+      bool
+      out() const override { return false;}
     protected:
       bool
       _enter(std::string const& name) override;
@@ -79,6 +81,8 @@ namespace infinit
     {
     public:
       SerializerOut(google::protobuf::Message* dst);
+            bool
+      out() const override { return true;}
     protected:
       bool
       _enter(std::string const& name) override;

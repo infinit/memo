@@ -978,6 +978,7 @@ def configure(
   cxx_config_tests += elle.boost.config_test(link = False)
   cxx_config_tests += elle.boost.config_timer(link = False)
   cxx_config_tests.add_local_include_path('bin')
+  cxx_config_tests.add_local_include_path('.')
   cxx_config_tests += grpc.grpc.cxx_config
   if grpc.grpc_lib:
     cxx_config_tests.library_add(drake.copy(grpc.grpc_lib, 'tests', strip_prefix = True))
@@ -1027,6 +1028,7 @@ def configure(
     dokan_lib_tests = drake.copy(dokan_lib, 'tests', strip_prefix = True)
     dokan_lib_tests_consensus = drake.copy(dokan_lib, 'tests/consensus',
                                              strip_prefix = True)
+  tests_proto = grpc.GRPCGen('tests/grpc.proto', grpc.grpc.protoc, grpc.grpc.grpc_cpp_plugin)
   tests_names = [
     ('async-conflict', []),
     ('backward-compatibility', []),
@@ -1066,6 +1068,8 @@ def configure(
         'src/infinit/grpc/fs.grpc.pb.cc',
         'src/infinit/grpc/fs.pb.cc',
       )
+    if test_name == 'grpc':
+        that_test_libs += tests_proto.dsts
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
       [
