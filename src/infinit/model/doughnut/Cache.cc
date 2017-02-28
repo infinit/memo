@@ -71,12 +71,12 @@ namespace infinit
           }
           void
           serialize(elle::serialization::Serializer& s,
-                    elle::Version const& v)
+                    elle::Version const& v) override
           {
             s.serialize("backend", this->_backend);
           }
           std::string
-          description() const
+          description() const override
           {
             return "cache wrapper for " + this->_backend->description();
           }
