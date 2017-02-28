@@ -81,9 +81,7 @@ namespace infinit
       }
 
       std::unique_ptr<Block>
-      operator() (Block& block,
-                  Block& current,
-                  model::StoreMode mode) override
+      operator() (Block& block, Block& current) override
       {
         ELLE_TRACE(
           "ACLConflictResolver: replaying set_permissions on new block.");
@@ -331,12 +329,10 @@ namespace infinit
               s, false);
           model::doughnut::UB ub(dht.get(), name, p, false);
           model::doughnut::UB rub(dht.get(), name, p, true);
-          this->_owner.block_store()->store(
-            ub, model::STORE_INSERT,
-            std::make_unique<model::doughnut::UserBlockUpserter>(name));
-          this->_owner.block_store()->store(
-            rub, model::STORE_INSERT,
-            std::make_unique<model::doughnut::ReverseUserBlockUpserter>(name));
+          this->_owner.block_store()->insert(
+            ub, std::make_unique<model::doughnut::UserBlockUpserter>(name));
+          this->_owner.block_store()->insert(
+            rub, std::make_unique<model::doughnut::ReverseUserBlockUpserter>(name));
           return;
         }
         else if (special->find("group.") == 0)
@@ -912,7 +908,7 @@ namespace infinit
         EACCES);
       this->_owner.store_or_die(
         std::move(acl),
-        model::STORE_UPDATE,
+        false,
         std::make_unique<ACLConflictResolver>(
           this->_owner.block_store().get(), perms.first, perms.second, userkey
         ));

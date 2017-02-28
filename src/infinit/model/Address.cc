@@ -160,19 +160,22 @@ namespace elle
     Serialize<Address>::Type
     Serialize<Address>::convert(Address& address)
     {
-      return Type(address._value, sizeof(Address::Value));
+      return {address._value, sizeof(Address::Value)};
     }
 
     Address
     Serialize<Address>::convert(Type buffer)
     {
-      if (buffer.size() == 0)
+      if (buffer.empty())
         return Address();
-      if (buffer.size() != sizeof(Address::Value))
+      else if (buffer.size() != sizeof(Address::Value))
         elle::err("invalid address: %x", buffer);
-      Address::Value value;
-      memcpy(value, buffer.contents(), sizeof(Address::Value));
-      return Address(value);
+      else
+      {
+        Address::Value value;
+        memcpy(value, buffer.contents(), sizeof(Address::Value));
+        return value;
+      }
     }
   }
 }

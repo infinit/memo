@@ -21,14 +21,14 @@ namespace infinit
     ELLE_DAS_SYMBOL(endpoints);
     ELLE_DAS_SYMBOL(stamp);
   }
-}
-namespace infinit
-{
+
   namespace overlay
   {
     namespace kouncil
     {
-      using Time = std::chrono::time_point<std::chrono::high_resolution_clock>;
+      using Clock = std::chrono::high_resolution_clock;
+      using Time = std::chrono::time_point<Clock>;
+
       /// BMI helpers
       namespace bmi = boost::multi_index;
       namespace _details
@@ -61,6 +61,7 @@ namespace infinit
         using Self = Kouncil;
         /// Parent class.
         using Super = Overlay;
+
         /// Node and blocks address.
         using Address = model::Address;
         /// Address book entry.
@@ -94,7 +95,9 @@ namespace infinit
                 Peer const&, Address, &_details::peer_id>>,
             bmi::random_access<>>>;
 
+        /// Local node.
         using Local = infinit::model::doughnut::Local;
+        /// Remote node.
         using Remote = infinit::model::doughnut::Remote;
 
       /*-------------.

@@ -131,12 +131,6 @@ namespace infinit
 
         std::unique_ptr<model::User>
         _make_user(elle::Buffer const& data) const override;
-
-        void
-        _store(std::unique_ptr<blocks::Block> block,
-               StoreMode mode,
-               std::unique_ptr<ConflictResolver> resolver) override;
-
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
                boost::optional<int> local_version) const override;
@@ -146,6 +140,14 @@ namespace infinit
                std::function<void(Address, std::unique_ptr<blocks::Block>,
                  std::exception_ptr)> res) const override;
 
+        void
+        _insert(std::unique_ptr<blocks::Block> block,
+                std::unique_ptr<ConflictResolver> resolver) override;
+        virtual
+        void
+        _update(std::unique_ptr<blocks::Block> block,
+                std::unique_ptr<ConflictResolver> resolver) override;
+        virtual
         void
         _remove(Address address, blocks::RemoveSignature rs) override;
         friend class Local;
@@ -249,4 +251,3 @@ namespace infinit
 }
 
 #include <infinit/model/doughnut/Doughnut.hxx>
-

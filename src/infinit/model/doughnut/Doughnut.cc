@@ -84,9 +84,8 @@ namespace infinit
               d, what, user->address());
             try
             {
-              d.store(
-                std::move(user), STORE_INSERT,
-                std::make_unique<ConflictResolver>(what));
+              d.insert(
+                std::move(user), std::make_unique<ConflictResolver>(what));
             }
             catch (elle::Error const& e)
             {
@@ -380,16 +379,6 @@ namespace infinit
         }
       }
 
-      void
-      Doughnut::_store(std::unique_ptr<blocks::Block> block,
-                       StoreMode mode,
-                       std::unique_ptr<ConflictResolver> resolver)
-      {
-        this->_consensus->store(std::move(block),
-                                mode,
-                                std::move(resolver));
-      }
-
       std::unique_ptr<blocks::Block>
       Doughnut::_fetch(Address address,
                        boost::optional<int> local_version) const
@@ -403,6 +392,24 @@ namespace infinit
           std::exception_ptr)> res) const
       {
         this->_consensus->fetch(addresses, res);
+      }
+
+      void
+      Doughnut::_insert(std::unique_ptr<blocks::Block> block,
+                        std::unique_ptr<ConflictResolver> resolver)
+      {
+        this->_consensus->store(std::move(block),
+                                StoreMode::STORE_INSERT,
+                                std::move(resolver));
+      }
+
+      void
+      Doughnut::_update(std::unique_ptr<blocks::Block> block,
+                        std::unique_ptr<ConflictResolver> resolver)
+      {
+        this->_consensus->store(std::move(block),
+                                StoreMode::STORE_UPDATE,
+                                std::move(resolver));
       }
 
       void
@@ -450,10 +457,10 @@ namespace infinit
         auto vblock = this->make_block<blocks::ImmutableBlock>(
           std::move(value));
         auto vaddr = vblock->address();
-        this->store(std::move(vblock), STORE_INSERT);
+        this->insert(std::move(vblock));
         services->second.emplace(name, vaddr);
         block->data(elle::serialization::binary::serialize(discovery));
-        this->store(std::move(block), STORE_UPDATE);
+        this->update(std::move(block));
       }
 
       std::unique_ptr<blocks::MutableBlock>
@@ -482,12 +489,12 @@ namespace infinit
             return nullptr;
           auto block = this->make_block<blocks::MutableBlock>(
             elle::serialization::binary::serialize(ServicesTypes()));
-          this->store(*block, STORE_INSERT);
+          this->insert(*block);
           auto beacon = std::make_unique<NB>(
             *this, this->owner(),
             "infinit/services",
             elle::serialization::binary::serialize(block->address()));
-          this->store(std::move(beacon), STORE_INSERT);
+          this->insert(std::move(beacon));
           return block;
         }
       }

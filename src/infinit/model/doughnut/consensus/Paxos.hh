@@ -52,7 +52,6 @@ namespace infinit
             std::shared_ptr<blocks::Block>, int, Address> ;
           using Value = elle::Option<std::shared_ptr<blocks::Block>,
                                Paxos::PaxosClient::Quorum>;
-          using AddressVersionQuorum = std::pair<AddressVersion, PaxosServer::Quorum>;
 
         /*-------------.
         | Construction |
@@ -243,8 +242,6 @@ namespace infinit
           | Paxos |
           `------*/
           public:
-            using AddressVersionQuorum
-              = std::pair<AddressVersion, PaxosServer::Quorum>;
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum const& peers,
                     Address address,

@@ -28,24 +28,6 @@ namespace infinit
         , _storage(std::move(storage))
       {}
 
-      void
-      Faith::_store(std::unique_ptr<blocks::Block> block,
-                    StoreMode mode,
-                    std::unique_ptr<ConflictResolver> resolver)
-      {
-        ELLE_TRACE_SCOPE("%s: store %f", *this, *block);
-        elle::Buffer data;
-        {
-          elle::IOStream s(data.ostreambuf());
-          Serializer::SerializerOut output(s, false);
-          output.serialize_forward(block);
-        }
-        this->_storage->set(block->address(),
-                            data,
-                            mode == STORE_INSERT,
-                            mode == STORE_UPDATE);
-      }
-
       std::unique_ptr<blocks::Block>
       Faith::_fetch(Address address, boost::optional<int>) const
       {
@@ -53,15 +35,37 @@ namespace infinit
         try
         {
           auto data = this->_storage->get(address);
-          elle::IOStream s(data.istreambuf());
-          Serializer::SerializerIn input(s, false);
-          auto res = input.deserialize<std::unique_ptr<blocks::Block>>();
-          return res;
+          return elle::serialization::deserialize<
+            Serializer, std::unique_ptr<blocks::Block>>(data, false);
         }
         catch (infinit::storage::MissingKey const&)
         {
           throw MissingBlock(address);
         }
+      }
+
+      void
+      Faith::_insert(std::unique_ptr<blocks::Block> block,
+                     std::unique_ptr<ConflictResolver> resolver)
+      {
+        ELLE_TRACE_SCOPE("%s: insert %f", *this, *block);
+        this->_storage->set(
+          block->address(),
+          elle::serialization::serialize<Serializer>(block, false),
+          true,
+          false);
+      }
+
+      void
+      Faith::_update(std::unique_ptr<blocks::Block> block,
+                     std::unique_ptr<ConflictResolver> resolver)
+      {
+        ELLE_TRACE_SCOPE("%s: update %f", *this, *block);
+        this->_storage->set(
+          block->address(),
+          elle::serialization::serialize<Serializer>(block, false),
+          false,
+          true);
       }
 
       void

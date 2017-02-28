@@ -77,6 +77,18 @@ namespace infinit
       | Construction |
       `-------------*/
 
+      namespace
+      {
+        Kouncil::PeerInfos
+        make_peer_infos(NodeLocations const& locs)
+        {
+          auto res = Kouncil::PeerInfos{};
+          for (auto const& l: locs)
+            res.emplace(l.id(), l.endpoints(), -1);
+          return res;
+        }
+      }
+
       Kouncil::Kouncil(
         model::doughnut::Doughnut* dht,
         std::shared_ptr<Local> local,
@@ -102,10 +114,7 @@ namespace infinit
                   "kouncil_discover",
                   [this] (NodeLocations const& locs)
                   {
-                    PeerInfos infos;
-                    for (auto const& l: locs)
-                      infos.emplace(l.id(), l.endpoints(), -1);
-                    this->_discover(infos);
+                    this->_discover(make_peer_infos(locs));
                   });
               else
                 r.rpc_server().add(
@@ -150,7 +159,7 @@ namespace infinit
       {
        this->_peers.emplace(local);
        this->_infos.emplace(local->id(), local->server_endpoints(),
-                            std::chrono::high_resolution_clock::now());
+                            Clock::now());
        for (auto const& key: local->storage()->list())
          this->_address_book.emplace(this->id(), key);
        ELLE_DEBUG("loaded %s entries from storage",

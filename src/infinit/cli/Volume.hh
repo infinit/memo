@@ -255,7 +255,7 @@ namespace infinit
                  decltype(cli::fetch_endpoints_interval = elle::defaulted(300)),
                  decltype(cli::input = boost::optional<std::string>()),
                  decltype(cli::disable_UTF_8_conversion = false),
-                 decltype(cli::grpc = boost::none)),
+                 decltype(cli::grpc = boost::optional<std::string>())),
            decltype(modes::mode_mount)>
       mount;
       void
@@ -372,7 +372,7 @@ namespace infinit
                  decltype(cli::fetch_endpoints_interval = elle::defaulted(300)),
                  decltype(cli::input = boost::optional<std::string>()),
                  decltype(cli::disable_UTF_8_conversion = false),
-                 decltype(cli::grpc = boost::none)),
+                 decltype(cli::grpc = boost::optional<std::string>())),
            decltype(modes::mode_run)>
       run;
       void

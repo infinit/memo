@@ -130,23 +130,23 @@ namespace infinit
             auto hub = std::make_unique<UB>(
               &_dht, ':' + UB::hash(*gb->owner_key()).string(), *gb->owner_key());
             // FIXME
-            _dht.store(
-              std::move(hub), STORE_INSERT,
+            _dht.insert(
+              std::move(hub),
               std::make_unique<UserBlockUpserter>(
                 elle::sprintf("@%s", this->_name))
             );
-            _dht.store(
-              std::move(ub), STORE_INSERT,
+            _dht.insert(
+              std::move(ub),
               std::make_unique<UserBlockUpserter>(
                 elle::sprintf("@%s", this->_name))
             );
-            _dht.store(
-              std::move(rub), STORE_INSERT,
+            _dht.insert(
+              std::move(rub),
               std::make_unique<ReverseUserBlockUpserter>(
                 elle::sprintf("@%s", this->_name))
             );
-            _dht.store(
-              std::move(gb), STORE_INSERT,
+            _dht.insert(
+              std::move(gb),
               std::make_unique<GroupBlockInserter>(
                 elle::sprintf("@%s", this->_name))
             );
@@ -304,11 +304,10 @@ namespace infinit
       Group::add_member(model::User const& user)
       {
         this->block().add_member(user);
-        this->_dht.store(this->block(), STORE_UPDATE,
-          std::make_unique<GroupConflictResolver>(
-            GroupConflictResolver::Action::add_member,
-            user
-        ));
+        this->_dht.update(this->block(),
+                          std::make_unique<GroupConflictResolver>(
+                            GroupConflictResolver::Action::add_member,
+                            user));
       }
 
       void
@@ -326,11 +325,10 @@ namespace infinit
       Group::add_admin(model::User const& user)
       {
         this->block().add_admin(user);
-        this->_dht.store(this->block(), STORE_UPDATE,
-          std::make_unique<GroupConflictResolver>(
-            GroupConflictResolver::Action::add_admin,
-            user
-        ));
+        this->_dht.update(this->block(),
+                          std::make_unique<GroupConflictResolver>(
+                            GroupConflictResolver::Action::add_admin,
+                            user));
       }
 
       void
@@ -348,11 +346,10 @@ namespace infinit
       Group::remove_member(model::User const& user)
       {
         this->block().remove_member(user);
-        this->_dht.store(this->block(), STORE_UPDATE,
-          std::make_unique<GroupConflictResolver>(
-            GroupConflictResolver::Action::remove_member,
-            user
-        ));
+        this->_dht.update(this->block(),
+                          std::make_unique<GroupConflictResolver>(
+                            GroupConflictResolver::Action::remove_member,
+                            user));
       }
 
       void
@@ -370,11 +367,10 @@ namespace infinit
       Group::remove_admin(model::User const& user)
       {
         this->block().remove_admin(user);
-        this->_dht.store(this->block(), STORE_UPDATE,
-          std::make_unique<GroupConflictResolver>(
-            GroupConflictResolver::Action::remove_admin,
-            user
-        ));
+        this->_dht.update(this->block(),
+                          std::make_unique<GroupConflictResolver>(
+                            GroupConflictResolver::Action::remove_admin,
+                            user));
       }
 
       void
@@ -419,12 +415,15 @@ namespace infinit
       void
       Group::description(boost::optional<std::string> const& description)
       {
-        infinit::filesystem::umbrella([&] {
-          this->block().description(description);
-          this->_dht.store(this->block(), STORE_UPDATE,
-            std::make_unique<GroupConflictResolver>(
-              GroupConflictResolver::Action::set_description, description));
-        });
+        infinit::filesystem::umbrella(
+          [&]
+          {
+            this->block().description(description);
+            this->_dht.update(
+              this->block(),
+              std::make_unique<GroupConflictResolver>(
+                GroupConflictResolver::Action::set_description, description));
+          });
       }
 
       void
@@ -485,8 +484,7 @@ namespace infinit
 
       std::unique_ptr<blocks::Block>
       GroupConflictResolver::operator()(blocks::Block& block,
-                                        blocks::Block& current,
-                                        model::StoreMode mode)
+                                        blocks::Block& current)
       {
         ELLE_TRACE("Conflict editing group, replaying action on %s", this->_name);
         auto res = elle::cast<GB>::runtime(current.clone());

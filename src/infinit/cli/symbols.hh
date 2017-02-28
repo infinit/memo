@@ -114,6 +114,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(no_countdown, 0, "do not show countdown timer", false);
     ELLE_DAS_CLI_SYMBOL(no_local_endpoints, 0, "Disable automatic detection of local endpoints", false);
     ELLE_DAS_CLI_SYMBOL(no_public_endpoints, 0, "Disable automatic detection of public endpoints", false);
+    ELLE_DAS_CLI_SYMBOL(node_id, 0, "node ID", false);
     ELLE_DAS_CLI_SYMBOL(nodes, 0, "estimate of the total number of nodes", false);
     ELLE_DAS_CLI_SYMBOL(object_class, 'o', "filter results (default: posixGroup)", false);
     ELLE_DAS_CLI_SYMBOL(operation, 'O', "operation to {action}", false);

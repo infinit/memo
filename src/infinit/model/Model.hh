@@ -54,8 +54,7 @@ namespace infinit
       virtual
       std::unique_ptr<blocks::Block>
       operator () (blocks::Block& failed,
-                   blocks::Block& current,
-                   StoreMode mode) = 0;
+                   blocks::Block& current) = 0;
       virtual
       SquashOperation
       squashable(SquashStack const& others)
@@ -92,8 +91,7 @@ namespace infinit
 
       std::unique_ptr<blocks::Block>
       operator() (blocks::Block& block,
-                  blocks::Block& current,
-                  model::StoreMode mode) final;
+                  blocks::Block& current) final;
 
       void
       serialize(elle::serialization::Serializer& s,
@@ -106,24 +104,24 @@ namespace infinit
     class Model
       : public elle::Printable
     {
+    /*-------------.
+    | Construction |
+    `-------------*/
     public:
       using AddressVersion = std::pair<Address, boost::optional<int>>;
       Model(boost::optional<elle::Version> version = {});
       ELLE_ATTRIBUTE_R(elle::Version, version);
+
+    /*-------.
+    | Blocks |
+    `-------*/
+    public:
       template <typename Block>
       std::unique_ptr<Block>
       make_block(elle::Buffer data = elle::Buffer(),
                  Address owner = Address::null) const;
       std::unique_ptr<User>
       make_user(elle::Buffer const& data) const;
-      void
-      store(std::unique_ptr<blocks::Block> block,
-            StoreMode mode,
-            std::unique_ptr<ConflictResolver> = {});
-      void
-      store(blocks::Block& block,
-            StoreMode mode,
-            std::unique_ptr<ConflictResolver> = {});
       /** Fetch block at \param address
        *
        *  Use \param local_version to avoid refetching the block if it did
@@ -141,6 +139,18 @@ namespace infinit
       fetch(std::vector<AddressVersion> const& addresses,
             std::function<void(Address, std::unique_ptr<blocks::Block>,
                                std::exception_ptr)> res) const;
+      void
+      insert(std::unique_ptr<blocks::Block> block,
+             std::unique_ptr<ConflictResolver> = {});
+      void
+      insert(blocks::Block& block,
+             std::unique_ptr<ConflictResolver> = {});
+      void
+      update(std::unique_ptr<blocks::Block> block,
+             std::unique_ptr<ConflictResolver> = {});
+      void
+      update(blocks::Block& block,
+             std::unique_ptr<ConflictResolver> = {});
       void
       remove(Address address);
       void
@@ -167,11 +177,6 @@ namespace infinit
       std::unique_ptr<User>
       _make_user(elle::Buffer const& data) const;
       virtual
-      void
-      _store(std::unique_ptr<blocks::Block> block,
-             StoreMode mode,
-             std::unique_ptr<ConflictResolver> resolver) = 0;
-      virtual
       std::unique_ptr<blocks::Block>
       _fetch(Address address, boost::optional<int> local_version) const = 0;
       virtual
@@ -179,6 +184,14 @@ namespace infinit
       _fetch(std::vector<AddressVersion> const& addresses,
              std::function<void(Address, std::unique_ptr<blocks::Block>,
                                std::exception_ptr)> res) const;
+      virtual
+      void
+      _insert(std::unique_ptr<blocks::Block> block,
+              std::unique_ptr<ConflictResolver> resolver) = 0;
+      virtual
+      void
+      _update(std::unique_ptr<blocks::Block> block,
+              std::unique_ptr<ConflictResolver> resolver) = 0;
       virtual
       void
       _remove(Address address, blocks::RemoveSignature sig) = 0;
@@ -209,4 +222,3 @@ namespace infinit
 }
 
 #include <infinit/model/Model.hxx>
-

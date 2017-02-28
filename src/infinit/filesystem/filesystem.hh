@@ -90,7 +90,6 @@ namespace infinit
       friend std::unique_ptr<Block>
       resolve_directory_conflict(Block& b,
                                  Block& current,
-                                 model::StoreMode store_mode,
                                  model::Model& model,
                                  Operation op,
                                  Address address,
@@ -242,11 +241,11 @@ namespace infinit
 
       void
       store_or_die(std::unique_ptr<model::blocks::Block> block,
-                   model::StoreMode mode,
+                   bool insert,
                    std::unique_ptr<model::ConflictResolver> resolver = {});
       void
       store_or_die(model::blocks::Block& block,
-                   model::StoreMode mode,
+                   bool insert,
                    std::unique_ptr<model::ConflictResolver> resolver = {});
       // Check permissions and throws on access failure
       void

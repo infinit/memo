@@ -85,11 +85,18 @@ with Infinit() as tmp:
   with open('%s/bob/n' % bob.infinit.networks_path, 'w') as f:
     f.write(linked_net)
   assertEq(len(os.listdir(bob.infinit.networks_path)), 1)
-  bob.run(['infinit-network', '--unlink', 'n'])
+  node_id = json.loads(linked_net)['model']['id']
+  assertEq(len(node_id), 44)
+  out, _ = bob.run(['infinit-network', '--unlink', 'n'])
+  assert node_id in out
   assertEq(len(os.listdir(bob.infinit.networks_path)), 1)
   with open('%s/bob/n' % bob.infinit.networks_path) as f:
     test = f.read()
     assertEq(test, descriptor)
+  bob.run(['infinit', 'network', 'link', 'n', '--node-id', node_id])
+  with open('%s/bob/bob/n' % bob.infinit.linked_networks_path, 'r') as f:
+    relinked_net = f.read()
+    assertEq(node_id, json.loads(relinked_net)['model']['id'])
 
 # Fetch & list.
 with Beyond() as beyond, Infinit(beyond = beyond) as bob, \

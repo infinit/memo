@@ -688,8 +688,8 @@ namespace infinit
             std::move(cdata), this->_file._address);
         }
         auto baddr = block->address();
-        this->_fs.block_store()->store(
-          std::move(block), model::STORE_INSERT,
+        this->_fs.block_store()->insert(
+          std::move(block),
           std::make_unique<InsertBlockResolver>(this->_file.path(), baddr));
         Address prev = Address::null;
         if (signed(this->_file._fat.size()) > id)

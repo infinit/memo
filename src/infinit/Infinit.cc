@@ -196,11 +196,15 @@ namespace infinit
       boost::system::error_code erc;
       bfs::remove(path, erc);
       if (erc)
-        this->report_local_action()("unlinked", "network",
-                                    network.name);
-      else
+      {
         ELLE_WARN("Unable to unlink network \"%s\": %s",
                   network.name, erc.message());
+      }
+      else
+      {
+        this->report_local_action()("unlinked", "network",
+                                    network.name);
+      }
     }
   }
 

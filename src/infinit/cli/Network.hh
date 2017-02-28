@@ -184,13 +184,15 @@ namespace infinit
       Mode<Network,
            void (decltype(cli::name)::Formal<std::string const&>,
                  decltype(cli::storage = Strings{}),
-                 decltype(cli::output = boost::optional<std::string>())),
+                 decltype(cli::output = boost::optional<std::string>()),
+                 decltype(cli::node_id = boost::optional<std::string>())),
            decltype(modes::mode_link)>
       link;
       void
       mode_link(std::string const& network_name,
                 Strings const& storage_names = {},
-                boost::optional<std::string> const& output_name = {});
+                boost::optional<std::string> const& output_name = {},
+                boost::optional<std::string> const& node_id = {});
 
 
       /*-------------.
@@ -331,7 +333,7 @@ namespace infinit
                  decltype(cli::no_local_endpoints = false),
                  decltype(cli::no_public_endpoints = false),
                  decltype(cli::advertise_host = Strings{}),
-                 decltype(cli::grpc = boost::none),
+                 decltype(cli::grpc = boost::optional<std::string>()),
                  // Hidden options.
                  decltype(cli::paxos_rebalancing_auto_expand =
                           boost::optional<bool>()),

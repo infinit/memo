@@ -107,8 +107,7 @@ namespace infinit
       ~DirectoryConflictResolver() override;
       std::unique_ptr<Block>
       operator() (Block& block,
-                  Block& current,
-                  model::StoreMode mode) override;
+                  Block& current) override;
       void
       serialize(elle::serialization::Serializer& s,
                 elle::Version const& v) override;
@@ -127,7 +126,6 @@ namespace infinit
     std::unique_ptr<Block>
     resolve_directory_conflict(Block& b,
                                Block& current,
-                               model::StoreMode store_mode,
                                boost::filesystem::path p,
                                FileSystem& owner,
                                Operation op,
