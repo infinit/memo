@@ -5,6 +5,7 @@ service Doughnut {
    rpc MakeACB(Empty) returns (ACB) {}
    rpc MakeOKB(Empty) returns (OKB) {}
    rpc MakeNB(String) returns (NB) {}
+   rpc NBAddress(String) returns (DNAddress) {}
    rpc Get(DNAddress) returns (AnyBlockOrStatus) {}
    rpc Update(AnyBlock) returns (DNStatus) {}
    rpc Insert(AnyBlock) returns (DNStatus) {}
@@ -33,6 +34,12 @@ message DNAddress {
 message Empty {
 }
 
+message Version {
+  int64 major = 1;
+  int64 minor = 2;
+  int64 subminor = 3;
+}
+
 message CHB {
   string type = 1;
   bytes address = 2;
@@ -45,7 +52,7 @@ message ACLEntry {
   KeyOrHash key_koh = 1;
   bool read = 2;
   bool write = 3;
-  string token = 4;
+  bytes token = 4;
 }
 
 message PublicKey
@@ -57,7 +64,7 @@ message KeyOrHash {
   int64 type = 1;
   oneof value {
     PublicKey value0 = 2;
-    string value1 = 3;
+    bytes value1 = 3;
     int64 value2 = 4;
   }
 }
@@ -72,38 +79,34 @@ message OKB {
   bytes signature = 7;
 }
 
-message Version {
-  int64 major = 1;
-  int64 minor = 2;
-  int64 subminor = 3;
-}
-
 message ACB {
-  string address = 1;
-  string data = 2;
-  KeyOrHash key_koh = 3;
-  string salt = 4;
-  int64 version = 5;
-  string signature = 6;
-  int64 editor = 7;
-  string owner_token = 8;
-  repeated ACLEntry acl = 9;
-  int64 data_version = 10;
-  string data_signature = 11;
-  bool world_readable = 12;
-  bool world_writable = 13;
-  repeated ACLEntry group_acl = 14;
-  repeated int64 group_version = 15;
-  bool deleted = 16;
-  Version seal_version = 17;
+  string type = 1;
+  bytes address = 2;
+  bytes data = 3;
+  KeyOrHash key_koh = 4;
+  bytes salt = 5;
+  int64 version = 6;
+  bytes signature = 7;
+  int64 editor = 8;
+  bytes owner_token = 9;
+  repeated ACLEntry acl = 10;
+  int64 data_version = 11;
+  bytes data_signature = 12;
+  bool world_readable = 13;
+  bool world_writable = 14;
+  repeated ACLEntry group_acl = 15;
+  repeated int64 group_version = 16;
+  bool deleted = 17;
+  Version seal_version = 18;
 }
 
 message NB {
-  string address = 1;
-  string data = 2;
-  PublicKey owner = 3;
-  string name = 4;
-  string signature = 5;
+  string type = 1;
+  bytes address = 2;
+  bytes data = 3;
+  PublicKey owner = 4;
+  bytes name = 5;
+  bytes signature = 6;
 }
 
 message AnyBlock {

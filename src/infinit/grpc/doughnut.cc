@@ -155,6 +155,7 @@ namespace infinit
       Status Update(Ctx*, const ::AnyBlock* request, ::DNStatus* response);
       Status Insert(Ctx*, const ::AnyBlock* request, ::DNStatus* response);
       Status Remove(Ctx*, const ::DNAddress* request, ::DNStatus* response);
+      Status NBAddress(Ctx*, const ::String* request, ::DNAddress* response);
     private:
       infinit::model::Model& _model;
       elle::reactor::Scheduler& _sched;
@@ -221,6 +222,17 @@ namespace infinit
       });
       return ::grpc::Status::OK;
     }
+    ::grpc::Status DoughnutImpl::NBAddress(Ctx*, const ::String* request, ::DNAddress* response)
+    {
+      _sched.mt_run<void>("NBAddress", [&] {
+          auto addr = infinit::model::doughnut::NB::address(
+            dynamic_cast<model::doughnut::Doughnut&>(_model).keys().K(),
+            request->str(),
+            _model.version());
+          response->set_address(std::string((const char*)addr.value(), 32));
+      });
+      return ::grpc::Status::OK;
+    }
     ::grpc::Status DoughnutImpl::Get(Ctx*, const ::DNAddress* request, ::AnyBlockOrStatus* response)
     {
       ::DNStatus status;
@@ -270,6 +282,7 @@ namespace infinit
               {
                 mb->data(anyblock_data(*request));
               }
+              ELLE_DEBUG("insert %s with %s", block->address(), block->data());
               _model.insert(std::move(block));
           });
       });

@@ -23,6 +23,7 @@ namespace infinit
       bool
       out() const override { return false;}
     protected:
+      bool _text() const { return false;}
       bool
       _enter(std::string const& name) override;
       void
@@ -83,9 +84,10 @@ namespace infinit
     {
     public:
       SerializerOut(google::protobuf::Message* dst);
-            bool
+      bool
       out() const override { return true;}
     protected:
+      bool _text() const { return false;}
       bool
       _enter(std::string const& name) override;
       void
