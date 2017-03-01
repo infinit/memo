@@ -288,7 +288,7 @@ namespace
     if (get_kelips(client))
     {
       auto cts = boost::any_cast<elle::json::Array>(ostats.at("contacts"));
-      ELLE_DEBUG("%s", elle::json::pretty_print(ostats.at("contacts")));
+      ELLE_DEBUG("%s", elle::json::pretty_print(cts));
       ELLE_TRACE("checking %s candidates", cts.size());
       res = boost::count_if(cts, [&](auto& c) {
           auto const& o = boost::any_cast<elle::json::Object>(c);
@@ -1721,7 +1721,7 @@ ELLE_TEST_SUITE()
   OVERLAY(kelips);
   OVERLAY(kouncil);
   OVERLAY(kouncil_0_7);
+#undef OVERLAY
 
   TEST(kouncil, kouncil, "churn_socket_pasv", 30, churn_socket_pasv);
-#undef OVERLAY
 }

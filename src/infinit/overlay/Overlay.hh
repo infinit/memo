@@ -95,9 +95,11 @@ namespace infinit
     | Hooks |
     `------*/
     public:
+      /// Announcing discovered nodes.
       ELLE_ATTRIBUTE_RX(
         boost::signals2::signal<void (NodeLocation id,
                                       bool observer)>, on_discover);
+      /// Announcing disconnected nodes.
       ELLE_ATTRIBUTE_RX(
         boost::signals2::signal<void (model::Address id,
                                       bool observer)>, on_disappear);
