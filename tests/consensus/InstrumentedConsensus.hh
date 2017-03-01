@@ -1,16 +1,15 @@
-#ifndef INSTRUMENTEDCONSENSUS_HH
-# define INSTRUMENTEDCONSENSUS_HH
+#pragma once
 
-# include <boost/signals2.hpp>
+#include <boost/signals2.hpp>
 
-# include <infinit/model/MissingBlock.hh>
-# include <infinit/model/doughnut/Consensus.hh>
+#include <infinit/model/MissingBlock.hh>
+#include <infinit/model/doughnut/Consensus.hh>
 
 class InstrumentedConsensus
   : public infinit::model::doughnut::consensus::Consensus
 {
 public:
-  typedef infinit::model::Address Address;
+  using Address = infinit::model::Address;
 
   InstrumentedConsensus(infinit::model::doughnut::Doughnut& dht)
     : infinit::model::doughnut::consensus::Consensus(dht)
@@ -23,21 +22,18 @@ public:
     this->_blocks.emplace(block.address(), block.clone());
   }
 
-  typedef std::unordered_map<
-    Address, std::unique_ptr<infinit::model::blocks::Block>>
-    Blocks;
+  using Blocks = std::unordered_map<
+    Address, std::unique_ptr<infinit::model::blocks::Block>>;
   ELLE_ATTRIBUTE_R(Blocks, blocks);
   ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(Address const&)>, fetched);
 
 protected:
-  virtual
   void
   _store(std::unique_ptr<infinit::model::blocks::Block>,
          infinit::model::StoreMode,
          std::unique_ptr<infinit::model::ConflictResolver>) override
   {}
 
-  virtual
   std::unique_ptr<infinit::model::blocks::Block>
   _fetch(Address addr, boost::optional<int>) override
   {
@@ -51,13 +47,9 @@ protected:
     }
   }
 
-  virtual
   void
   _remove(Address addr, infinit::model::blocks::RemoveSignature) override
   {
     this->_blocks.erase(addr);
   }
 };
-
-
-#endif

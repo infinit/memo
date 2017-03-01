@@ -40,7 +40,7 @@ public:
     : server()
     , _endpoint(boost::asio::ip::address::from_string("127.0.0.1"), port)
     , _thread(new elle::reactor::Thread(elle::sprintf("%s server", this),
-                                  std::bind(&UTPInstrument::_serve, this)))
+                                        [this] { this->_serve(); }))
   {
     this->server.bind({});
     this->_transmission.open();
@@ -98,7 +98,7 @@ public:
     , socket("127.0.0.1", port)
     , _endpoint(boost::asio::ip::address::from_string("127.0.0.1"), port)
     , _thread(new elle::reactor::Thread(elle::sprintf("%s server", this),
-                                  std::bind(&TCPInstrument::_serve, this)))
+                                        [this] { this->_serve(); }))
   {
     this->server.listen();
     this->_transmission.open();
@@ -158,15 +158,15 @@ private:
     elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
     {
       scope.run_background(elle::sprintf("%s forward", this),
-                           std::bind(&TCPInstrument::_forward,
-                                     this,
-                                     std::ref(*socket),
-                                     std::ref(this->socket)));
+                           [this, &socket]
+                           {
+                             this->_forward(*socket, this->socket);
+                           });
       scope.run_background(elle::sprintf("%s backward", this),
-                           std::bind(&TCPInstrument::_forward,
-                                     this,
-                                     std::ref(this->socket),
-                                     std::ref(*socket)));
+                           [this, &socket]
+                           {
+                             this->_forward(this->socket, *socket);
+                           });
       elle::reactor::wait(scope);
     };
   }
@@ -1642,10 +1642,9 @@ ELLE_TEST_SUITE()
 #define TEST(Suite, Overlay, Name, Timeout, Function, ...)              \
   Suite->add(BOOST_NAMED_TEST_CASE(                                     \
                  Name,                                                  \
-                 std::bind(::Function,                                  \
-                           BOOST_PP_CAT(Overlay, _config),              \
-                           ##__VA_ARGS__)),                             \
-               0, valgrind(Timeout));                                   \
+                 [=] { ::Function(BOOST_PP_CAT(Overlay, _config),       \
+                                  ##__VA_ARGS__); }),                   \
+             0, valgrind(Timeout));                                     \
 
 #define TEST_ANON(Overlay, Name, F, Timeout, ...)                       \
   {                                                                     \
