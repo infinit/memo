@@ -38,13 +38,15 @@ expectations = {
 # Path are hard to manage with wine. Just check if the important elements are
 # present in the output.
 def leftovers_json(res):
-  assertIn('leftovers', res['leftovers'][0]['name'])
-  assertIn('foo', res['leftovers'][0]['name'])
-  res['leftovers'][0]['name'] = 'foo'
-  assertIn('leftovers', res['leftovers'][1]['name'])
-  assertIn('linked_networks', res['leftovers'][1]['name'])
-  assertIn('bar', res['leftovers'][1]['name'])
-  res['leftovers'][1]['name'] = 'linked_networks/bar'
+  leftovers = sorted(res['leftovers'], key = lambda k: k['name'])
+  assertIn('leftovers', leftovers[0]['name'])
+  assertIn('foo', leftovers[0]['name'])
+  leftovers[0]['name'] = 'foo'
+  assertIn('leftovers', leftovers[1]['name'])
+  assertIn('linked_networks', leftovers[1]['name'])
+  assertIn('bar', leftovers[1]['name'])
+  leftovers[1]['name'] = 'linked_networks/bar'
+  res['leftovers'] = leftovers
   return res
 
 def leftovers_text(res):
