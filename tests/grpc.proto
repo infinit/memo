@@ -13,4 +13,5 @@ message Complex {
   Simple simple = 1;
   string opt_str = 2;
   Simple opt_simple = 3;
+  repeated Simple rsimple = 4;
 }

@@ -250,6 +250,7 @@ namespace symbols
   ELLE_DAS_SYMBOL(simple);
   ELLE_DAS_SYMBOL(opt_str);
   ELLE_DAS_SYMBOL(opt_simple);
+  ELLE_DAS_SYMBOL(rsimple);
 }
 
 namespace structs
@@ -305,14 +306,23 @@ namespace structs
 {
   struct Complex
   {
+    bool operator == (const Complex& b) const
+    {
+      return simple == b.simple
+        && opt_str == b.opt_str
+        && opt_simple == b.opt_simple
+        && rsimple == b.rsimple;
+    }
     Simple simple;
     boost::optional<std::string> opt_str;
     boost::optional<Simple> opt_simple;
+    std::vector<Simple> rsimple;
     using Model = elle::das::Model<
     Complex,
     decltype(elle::meta::list(::symbols::simple,
                               ::symbols::opt_str,
-                              ::symbols::opt_simple))>;
+                              ::symbols::opt_simple,
+                              ::symbols::rsimple))>;
   };
 }
 ELLE_DAS_SERIALIZE(structs::Complex);
@@ -404,6 +414,24 @@ ELLE_TEST_SCHEDULED(serialization_complex)
   }
   BOOST_CHECK(complex.opt_simple);
   BOOST_CHECK_EQUAL(complex.opt_simple->str, "foo");
+
+  complex.rsimple.push_back(structs::Simple{"foo", -12, 12, true});
+  {
+    infinit::grpc::SerializerOut ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  complex = structs::Complex {
+    structs::Simple{"", 0, 0, false},
+    std::string("dummy"),
+    boost::none
+  };
+  {
+    infinit::grpc::SerializerIn ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  BOOST_CHECK_EQUAL(complex.rsimple.size(), 1);
+  BOOST_CHECK_EQUAL(complex.rsimple.front(),
+                    (structs::Simple{"foo", -12, 12, true}));
 }
 
 ELLE_TEST_SCHEDULED(protogen)

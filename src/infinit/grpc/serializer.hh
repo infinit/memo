@@ -137,6 +137,8 @@ namespace infinit
       int _index;
       std::vector<google::protobuf::Message*> _message_stack;
       const google::protobuf::FieldDescriptor* _field;
+      // name path we are currently handling arrays for
+      std::vector<std::string> _array_handler;
     };
   }
 }

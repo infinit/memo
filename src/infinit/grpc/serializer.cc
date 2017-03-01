@@ -20,7 +20,11 @@ namespace infinit
     bool
     SerializerIn::_enter(std::string const& name)
     {
-      ELLE_ASSERT(!_field);
+      ELLE_DUMP("%s: enter %s %s", this, name, _names);
+      if (_field)
+      {
+        elle::err("_enter %s with _field set at %s", name, _names);
+      }
       auto* cur = _message_stack.back();
       auto* ref = cur->GetReflection();
       auto* desc = cur->GetDescriptor();
@@ -44,6 +48,7 @@ namespace infinit
     void
     SerializerIn::_leave(std::string const& name)
     {
+      ELLE_DUMP("%s: leave %s %s", this, name, _names);
       if (_field != nullptr)
         _field = nullptr;
       else
@@ -192,12 +197,39 @@ namespace infinit
       auto* ref = cur->GetReflection();
       int count = ref->FieldSize(*cur, _field);
       int prev_index = _index;
+      auto prev_field = _field;
       elle::SafeFinally restore_index([&] {
           _index = prev_index;
+          _field = prev_field;
       });
-      for (_index = 0; _index < count; ++_index)
+      std::string name;
+      if (!_names.empty())
+        name = _names.back();
+      ELLE_DUMP("%s: serialize_array count=%s name=%s object=%s", this, count,
+        _names.empty()? std::string("none") : _names.back(),
+        _field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE
+        );
+      if (_field->type() != google::protobuf::FieldDescriptor::TYPE_MESSAGE)
       {
-        f();
+        //if (!name.empty())
+        //  _leave(name);
+        for (_index = 0; _index < count; ++_index)
+        {
+          f();
+        }
+        //if (!name.empty())
+        //  _enter(name);
+      }
+      else
+      {
+        _field = nullptr;
+        for (_index = 0; _index < count; ++_index)
+        {
+          auto const* next = &ref->GetRepeatedMessage(*cur, prev_field, _index);
+          _message_stack.push_back(next);
+          f();
+          _message_stack.pop_back();
+        }
       }
     }
 
@@ -206,6 +238,7 @@ namespace infinit
     {
       _field = nullptr;
       _message_stack.push_back(msg);
+      _array_handler.push_back(" IN.VALID ");
     }
 
     bool
@@ -222,7 +255,17 @@ namespace infinit
       _field = desc->FindFieldByName(name);
       if (_field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE)
       {
-        auto* child = ref->MutableMessage(cur, _field);
+        google::protobuf::Message* child = nullptr;
+        if (_field->is_repeated())
+        {
+          ELLE_DUMP("enter repeated n=%s ah=%s", _names, _array_handler);
+          if (_array_handler == _names)
+            child = ref->AddMessage(cur, _field);
+          // else push a nullptr message to the stack, we will leave
+          // before doing anything
+        }
+        else
+          child = ref->MutableMessage(cur, _field);
         _message_stack.push_back(child);
         _field = nullptr;
       }
@@ -367,23 +410,28 @@ namespace infinit
     void
     SerializerOut::_serialize_array(int count, std::function<void ()> const& f)
     {
-      ELLE_ASSERT(_field);
       std::string name;
       if (!_names.empty())
         name = _names.back();
-      ELLE_DUMP("serialize_array count=%s name=%s", count,
-        _names.empty()? std::string("none") : _names.back());
-      auto* cur = _message_stack.back();
-      auto* ref = cur->GetReflection();
-      ref->ClearField(cur, _field);
+      ELLE_DUMP("serialize_array count=%s name=%s field=%s", count,
+        _names.empty()? std::string("none") : _names.back(), !!_field);
+      if (_field)
+      {
+        auto* cur = _message_stack.back();
+        auto* ref = cur->GetReflection();
+        ref->ClearField(cur, _field);
+      }
       int prev_index = _index;
+      auto prev_array_handler = _array_handler;
       elle::SafeFinally restore_index([&] {
           _index = prev_index;
       });
       // callback will call enter/leave for each array element
       if (!name.empty())
         _leave(name);
+      _array_handler = _names;
       f();
+      _array_handler = prev_array_handler;
       if (!name.empty())
         _enter(name);
     }
