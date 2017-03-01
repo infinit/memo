@@ -59,6 +59,13 @@ struct ProtoTypeName
   static void recurse(Protogen& pg) { pg.protogen<T>();}
 };
 
+template<typename T>
+struct ProtoTypeName<std::vector<T>>
+{
+  static std::string value() { return "repeated " + ProtoTypeName<T>::value();}
+  static void recurse(Protogen& pg) { ProtoTypeName<T>::recurse(pg);}
+};
+
 #define PROTO_TYPE(ctype, ptype)               \
 template<>                                     \
 struct ProtoTypeName<ctype>                    \
@@ -238,6 +245,8 @@ namespace symbols
   ELLE_DAS_SYMBOL(i64);
   ELLE_DAS_SYMBOL(ui64);
   ELLE_DAS_SYMBOL(b);
+  ELLE_DAS_SYMBOL(ri64);
+  ELLE_DAS_SYMBOL(rstr);
   ELLE_DAS_SYMBOL(simple);
   ELLE_DAS_SYMBOL(opt_str);
   ELLE_DAS_SYMBOL(opt_simple);
@@ -245,23 +254,34 @@ namespace symbols
 
 namespace structs
 {
+  using elle::das::operator << ;
   struct Simple
   {
+    bool operator == (const Simple& o) const
+    { // DAS save me!
+      return str == o.str && i64 == o.i64 && ui64 == o.ui64 && b == o.b && ri64 == o.ri64 && rstr == o.rstr;
+    };
     std::string str;
     int64_t i64;
     uint64_t ui64;
     bool b;
+    std::vector<int64_t> ri64;
+    std::vector<std::string> rstr;
     using Model = elle::das::Model<
     Simple,
     decltype(elle::meta::list(::symbols::str,
-                              ::symbols::i64, ::symbols::ui64, ::symbols::b))>;
+                              ::symbols::i64, ::symbols::ui64, ::symbols::b,
+                              ::symbols::ri64, ::symbols::rstr))>;
   };
 }
 ELLE_DAS_SERIALIZE(structs::Simple);
 
 ELLE_TEST_SCHEDULED(serialization)
 {
-  structs::Simple s{"foo", -42, 42, true};
+  structs::Simple s{"foo", -42, 42, true,
+                    std::vector<int64_t>{0, -12, 42},
+                    std::vector<std::string>{"foo", "", "bar"}};
+  auto reference = s;
   ::Simple sout;
   {
     infinit::grpc::SerializerOut ser(&sout);
@@ -271,15 +291,13 @@ ELLE_TEST_SCHEDULED(serialization)
   BOOST_CHECK_EQUAL(sout.i64(), -42);
   BOOST_CHECK_EQUAL(sout.ui64(), 42);
   BOOST_CHECK_EQUAL(sout.b(), true);
+  BOOST_CHECK_EQUAL(sout.ri64_size(), 3);
   s = structs::Simple{"", 0, 0, false};
   {
     infinit::grpc::SerializerIn ser(&sout);
     ser.serialize_forward(s);
   }
-  BOOST_CHECK_EQUAL(s.str, "foo");
-  BOOST_CHECK_EQUAL(s.i64, -42);
-  BOOST_CHECK_EQUAL(s.ui64, 42);
-  BOOST_CHECK_EQUAL(s.b, true);
+  BOOST_CHECK_EQUAL(s, reference);
 }
 
 

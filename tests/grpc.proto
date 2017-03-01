@@ -5,6 +5,8 @@ message Simple {
   int64 i64 = 2;
   uint64 ui64 = 3;
   bool  b = 4;
+  repeated int64 ri64 = 5;
+  repeated string rstr = 6;
 }
 
 message Complex {

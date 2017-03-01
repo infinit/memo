@@ -27,7 +27,7 @@ namespace infinit
       _field = desc->FindFieldByName(name);
       if (!_field)
         elle::err("field %s does not exist in %s", name, desc->name());
-      if (!ref->HasField(*cur, _field))
+      if (!_field->is_repeated() && !ref->HasField(*cur, _field))
       { // HasField returns false on primitive fields with default value (empty string)
         ELLE_LOG("missing key %s", name);
         throw elle::serialization::MissingKey(name);
@@ -58,7 +58,11 @@ namespace infinit
         elle::err<elle::serialization::Error>(
           "field %s is of type %s not string", _field->name(), _field->type());
       auto* cur = _message_stack.back();
-      auto str = cur->GetReflection()->GetString(*cur, _field);
+      std::string str;
+      if (_field->is_repeated())
+        str = cur->GetReflection()->GetRepeatedString(*cur, _field, _index);
+      else
+        str = cur->GetReflection()->GetString(*cur, _field);
       v = std::move(str);
     }
 
@@ -88,7 +92,11 @@ namespace infinit
       auto* cur = _message_stack.back();
       {
         // FIXME will this call pass for other int types
-        int64_t bigval = cur->GetReflection()->GetInt64(*cur, _field);
+        int64_t bigval;
+        if (_field->is_repeated())
+          bigval = cur->GetReflection()->GetRepeatedInt64(*cur, _field, _index);
+        else
+          bigval = cur->GetReflection()->GetInt64(*cur, _field);
         v = get_small_int<T>(bigval);
       }
     }
@@ -106,7 +114,11 @@ namespace infinit
     {
       ELLE_ASSERT(_field);
       auto* cur = _message_stack.back();
-      uint64_t bigval = cur->GetReflection()->GetUInt64(*cur, _field);
+      uint64_t bigval;
+      if (_field->is_repeated())
+        bigval = cur->GetReflection()->GetRepeatedUInt64(*cur, _field, _index);
+      else
+        bigval = cur->GetReflection()->GetUInt64(*cur, _field);
       v = get_small_int<uint64_t>(bigval);
     }
 
@@ -115,7 +127,10 @@ namespace infinit
     {
       ELLE_ASSERT(_field);
       auto* cur = _message_stack.back();
-      v = cur->GetReflection()->GetDouble(*cur, _field);
+      if (_field->is_repeated())
+        v = cur->GetReflection()->GetRepeatedDouble(*cur, _field, _index);
+      else
+        v = cur->GetReflection()->GetDouble(*cur, _field);
     }
 
     void
@@ -131,7 +146,10 @@ namespace infinit
     {
       ELLE_ASSERT(_field);
       auto* cur = _message_stack.back();
-      b = cur->GetReflection()->GetBool(*cur, _field);
+      if (_field->is_repeated())
+        b = cur->GetReflection()->GetRepeatedBool(*cur, _field, _index);
+      else
+        b = cur->GetReflection()->GetBool(*cur, _field);
     }
 
     void
@@ -169,13 +187,18 @@ namespace infinit
     void
     SerializerIn::_serialize_array(int, std::function<void ()> const& f)
     {
-      /*
       ELLE_ASSERT(_field);
       auto* cur = _message_stack.back();
       auto* ref = cur->GetReflection();
       int count = ref->FieldSize(*cur, _field);
-      */
-      elle::err("not implemented");
+      int prev_index = _index;
+      elle::SafeFinally restore_index([&] {
+          _index = prev_index;
+      });
+      for (_index = 0; _index < count; ++_index)
+      {
+        f();
+      }
     }
 
     SerializerOut::SerializerOut(google::protobuf::Message* msg)
@@ -188,7 +211,11 @@ namespace infinit
     bool
     SerializerOut::_enter(std::string const& name)
     {
-      ELLE_ASSERT(!_field);
+      ELLE_DUMP("enter %s %s", name, _names);
+      if (_field)
+      {
+        elle::err("_enter %s with _field set at %s", name, _names);
+      }
       auto* cur = _message_stack.back();
       auto* ref = cur->GetReflection();
       auto* desc = cur->GetDescriptor();
@@ -205,6 +232,7 @@ namespace infinit
     void
     SerializerOut::_leave(std::string const& name)
     {
+      ELLE_DUMP("leave %s %s", name, _names);
       if (_field != nullptr)
         _field = nullptr;
       else
@@ -219,7 +247,10 @@ namespace infinit
         elle::err<elle::serialization::Error>(
           "field %s is of type %s not string", _field->name(), _field->type());
       auto* cur = _message_stack.back();
-      cur->GetReflection()->SetString(cur, _field, v);
+      if (_field->is_repeated())
+        cur->GetReflection()->AddString(cur, _field, v);
+      else
+        cur->GetReflection()->SetString(cur, _field, v);
     }
 
     void
@@ -235,7 +266,10 @@ namespace infinit
     {
       ELLE_ASSERT(_field);
       auto* cur = _message_stack.back();
-      cur->GetReflection()->SetInt64(cur, _field, v);
+      if (_field->is_repeated())
+        cur->GetReflection()->AddInt64(cur, _field, v);
+      else
+        cur->GetReflection()->SetInt64(cur, _field, v);
     }
 
     void SerializerOut::_serialize(int8_t  & v) { _serialize_int(v);}
@@ -251,7 +285,10 @@ namespace infinit
     {
       ELLE_ASSERT(_field);
       auto* cur = _message_stack.back();
-      cur->GetReflection()->SetUInt64(cur, _field, v);
+      if (_field->is_repeated())
+        cur->GetReflection()->AddUInt64(cur, _field, v);
+      else
+        cur->GetReflection()->SetUInt64(cur, _field, v);
     }
 
     void
@@ -259,7 +296,10 @@ namespace infinit
     {
       ELLE_ASSERT(_field);
       auto* cur = _message_stack.back();
-      cur->GetReflection()->SetDouble(cur, _field, v);
+      if (_field->is_repeated())
+        cur->GetReflection()->AddDouble(cur, _field, v);
+      else
+        cur->GetReflection()->SetDouble(cur, _field, v);
     }
 
     void
@@ -274,7 +314,10 @@ namespace infinit
     {
       ELLE_ASSERT(_field);
       auto* cur = _message_stack.back();
-      cur->GetReflection()->SetBool(cur, _field, b);
+      if (_field->is_repeated())
+        cur->GetReflection()->AddBool(cur, _field, b);
+      else
+        cur->GetReflection()->SetBool(cur, _field, b);
     }
 
     void
@@ -322,15 +365,27 @@ namespace infinit
     }
 
     void
-    SerializerOut::_serialize_array(int, std::function<void ()> const& f)
+    SerializerOut::_serialize_array(int count, std::function<void ()> const& f)
     {
-      /*
       ELLE_ASSERT(_field);
+      std::string name;
+      if (!_names.empty())
+        name = _names.back();
+      ELLE_DUMP("serialize_array count=%s name=%s", count,
+        _names.empty()? std::string("none") : _names.back());
       auto* cur = _message_stack.back();
       auto* ref = cur->GetReflection();
-      int count = ref->FieldSize(*cur, _field);
-      */
-      elle::err("not implemented");
+      ref->ClearField(cur, _field);
+      int prev_index = _index;
+      elle::SafeFinally restore_index([&] {
+          _index = prev_index;
+      });
+      // callback will call enter/leave for each array element
+      if (!name.empty())
+        _leave(name);
+      f();
+      if (!name.empty())
+        _enter(name);
     }
   }
 }

@@ -72,6 +72,7 @@ namespace infinit
       template<typename T>
       void _serialize_int(T& v);
     private:
+      int _index;
       std::vector<const google::protobuf::Message*> _message_stack;
       const google::protobuf::FieldDescriptor* _field;
     };
@@ -133,6 +134,7 @@ namespace infinit
       template<typename T>
       void _serialize_int(T& v);
     private:
+      int _index;
       std::vector<google::protobuf::Message*> _message_stack;
       const google::protobuf::FieldDescriptor* _field;
     };
