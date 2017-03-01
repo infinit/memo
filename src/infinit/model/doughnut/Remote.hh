@@ -1,21 +1,20 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_REMOTE_HH
-# define INFINIT_MODEL_DOUGHNUT_REMOTE_HH
+#pragma once
 
-# include <elle/utils.hh>
+#include <elle/utils.hh>
 
-# include <elle/reactor/network/tcp-socket.hh>
-# include <elle/reactor/network/utp-socket.hh>
-# include <elle/reactor/thread.hh>
+#include <elle/reactor/network/tcp-socket.hh>
+#include <elle/reactor/network/utp-socket.hh>
+#include <elle/reactor/thread.hh>
 
-# include <elle/protocol/Serializer.hh>
-# include <elle/protocol/ChanneledStream.hh>
+#include <elle/protocol/Serializer.hh>
+#include <elle/protocol/ChanneledStream.hh>
 
-# include <infinit/model/doughnut/fwd.hh>
-# include <infinit/model/doughnut/Doughnut.hh>
-# include <infinit/model/doughnut/Peer.hh>
-# include <infinit/model/doughnut/protocol.hh>
+#include <infinit/model/doughnut/fwd.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Peer.hh>
+#include <infinit/model/doughnut/protocol.hh>
 
-# include <infinit/RPC.hh>
+#include <infinit/RPC.hh>
 
 namespace infinit
 {
@@ -152,5 +151,3 @@ namespace infinit
 ELLE_DAS_SERIALIZE(infinit::model::doughnut::Remote::Auth);
 
 #include <infinit/model/doughnut/Remote.hxx>
-
-#endif

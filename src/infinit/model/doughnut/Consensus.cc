@@ -245,8 +245,7 @@ namespace infinit
         {
           std::unique_ptr<blocks::Block> result;
           elle::reactor::Channel<overlay::Overlay::Member> connected;
-          typedef
-            elle::reactor::Generator<overlay::Overlay::WeakMember> PeerGenerator;
+          using PeerGenerator = elle::reactor::Generator<overlay::Overlay::WeakMember>;
           bool hit = false;
           // try connecting to all peers in parallel
           auto connected_peers = PeerGenerator(

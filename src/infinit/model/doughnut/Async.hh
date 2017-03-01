@@ -34,7 +34,7 @@ namespace infinit
           Async(std::unique_ptr<Consensus> backend,
                 boost::filesystem::path journal_dir,
                 int max_size = 100);
-          ~Async();
+          ~Async() override;
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
                      boost::optional<boost::asio::ip::address> listen_address,
@@ -43,20 +43,20 @@ namespace infinit
           void
           sync(); // wait until last pushed op gets processed
         protected:
-          virtual
+
           void
           _store(std::unique_ptr<blocks::Block> block,
                  StoreMode mode,
                  std::unique_ptr<ConflictResolver> resolver) override;
-          virtual
+
           std::unique_ptr<blocks::Block>
           _fetch(Address address, boost::optional<int> local_version) override;
-          virtual
+
           void
           _fetch(std::vector<AddressVersion> const& addresses,
                  std::function<void(Address, std::unique_ptr<blocks::Block>,
                                     std::exception_ptr)> res) override;
-          virtual
+
           void
           _remove(Address address, blocks::RemoveSignature rs) override;
 
@@ -80,7 +80,7 @@ namespace infinit
         public:
           struct Op
           {
-            typedef infinit::serialization_tag serialization_tag;
+            using serialization_tag = infinit::serialization_tag;
             Op() = default;
             Op(Address addr_,
                std::unique_ptr<blocks::Block>&& block_,

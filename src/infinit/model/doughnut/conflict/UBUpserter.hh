@@ -12,7 +12,7 @@ namespace infinit
       struct UserBlockUpserter
         : public DummyConflictResolver
       {
-        typedef DummyConflictResolver Super;
+        using Super = infinit::model::DummyConflictResolver;
 
         UserBlockUpserter(std::string const& name);
 
@@ -33,7 +33,7 @@ namespace infinit
       struct ReverseUserBlockUpserter
         : public DummyConflictResolver
       {
-        typedef DummyConflictResolver Super;
+        using Super = infinit::model::DummyConflictResolver;
 
         ReverseUserBlockUpserter(std::string const& name);
 

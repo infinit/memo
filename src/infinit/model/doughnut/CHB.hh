@@ -14,8 +14,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef CHB Self;
-        typedef blocks::ImmutableBlock Super;
+        using Self = infinit::model::doughnut::CHB;
+        using Super = blocks::ImmutableBlock;
 
       /*-------------.
       | Construction |
@@ -35,7 +35,6 @@ namespace infinit
       | Clonable |
       `---------*/
       public:
-        virtual
         std::unique_ptr<blocks::Block>
         clone() const override;
 
@@ -43,10 +42,8 @@ namespace infinit
       | Validation |
       `-----------*/
       protected:
-        virtual
         void
         _seal(boost::optional<int> version) override;
-        virtual
         blocks::ValidationResult
         _validate(Model const& model, bool writing) const override;
 
@@ -60,10 +57,8 @@ namespace infinit
                        elle::Version const& v) override;
 
       protected:
-        virtual
         blocks::RemoveSignature
         _sign_remove(Model& model) const override;
-        virtual
         blocks::ValidationResult
         _validate_remove(Model& model,
                          blocks::RemoveSignature const& sig) const override;
