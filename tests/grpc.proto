@@ -9,9 +9,19 @@ message Simple {
   repeated string rstr = 6;
 }
 
+message SIOption
+{
+  int64 type = 1;
+  oneof value {
+    string value0 = 2;
+    int64 value1 = 3;
+  }
+}
+
 message Complex {
   Simple simple = 1;
   string opt_str = 2;
   Simple opt_simple = 3;
   repeated Simple rsimple = 4;
+  SIOption siopt = 5;
 }

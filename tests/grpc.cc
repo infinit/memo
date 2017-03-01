@@ -1,6 +1,7 @@
 #include <elle/test.hh>
 
 #include <elle/err.hh>
+#include <elle/Option.hh>
 
 #include <elle/das/Symbol.hh>
 
@@ -64,6 +65,13 @@ struct ProtoTypeName<std::vector<T>>
 {
   static std::string value() { return "repeated " + ProtoTypeName<T>::value();}
   static void recurse(Protogen& pg) { ProtoTypeName<T>::recurse(pg);}
+};
+
+template<typename...T>
+struct ProtoTypeName<elle::Option<T...>>
+{
+  static std::string value() { return "NOTIMPLEMENTED";}
+  static void recurse(Protogen& pg) {}
 };
 
 #define PROTO_TYPE(ctype, ptype)               \
@@ -251,6 +259,7 @@ namespace symbols
   ELLE_DAS_SYMBOL(opt_str);
   ELLE_DAS_SYMBOL(opt_simple);
   ELLE_DAS_SYMBOL(rsimple);
+  ELLE_DAS_SYMBOL(siopt);
 }
 
 namespace structs
@@ -306,23 +315,39 @@ namespace structs
 {
   struct Complex
   {
+    Complex(Simple const& s = Simple{},
+            boost::optional<std::string> ost = boost::none,
+            boost::optional<Simple> osi = boost::none,
+            std::vector<Simple> rs = {},
+            elle::Option<std::string, int64_t> sio = (int64_t)0)
+    : simple(s)
+    , opt_str(ost)
+    , opt_simple(osi)
+    , rsimple(rs)
+    , siopt(sio)
+    {}
     bool operator == (const Complex& b) const
     {
       return simple == b.simple
         && opt_str == b.opt_str
         && opt_simple == b.opt_simple
-        && rsimple == b.rsimple;
+        && rsimple == b.rsimple
+        && siopt.is<std::string>() == b.siopt.is<std::string>()
+        && (siopt.is<std::string>() ? (siopt.get<std::string>() == b.siopt.get<std::string>())
+                                    : (siopt.get<int64_t>() == b.siopt.get<int64_t>()));
     }
     Simple simple;
     boost::optional<std::string> opt_str;
     boost::optional<Simple> opt_simple;
     std::vector<Simple> rsimple;
+    elle::Option<std::string, int64_t> siopt;
     using Model = elle::das::Model<
     Complex,
     decltype(elle::meta::list(::symbols::simple,
                               ::symbols::opt_str,
                               ::symbols::opt_simple,
-                              ::symbols::rsimple))>;
+                              ::symbols::rsimple,
+                              ::symbols::siopt))>;
   };
 }
 ELLE_DAS_SERIALIZE(structs::Complex);
@@ -331,7 +356,10 @@ ELLE_TEST_SCHEDULED(serialization_complex)
 {
   structs::Complex complex {
     structs::Simple{"foo", -42, 42, true},
-    std::string("bar")
+    std::string("bar"),
+    boost::none,
+    {},
+    std::string("foo")
   };
   ::Complex cplx;
   {
@@ -365,7 +393,10 @@ ELLE_TEST_SCHEDULED(serialization_complex)
   BOOST_CHECK_EQUAL(cplx.opt_str(), "");
   complex = structs::Complex {
     structs::Simple{"", 0, 0, false},
-    std::string("dummy")
+    std::string("dummy"),
+    boost::none,
+    {},
+    std::string()
   };
   {
     infinit::grpc::SerializerIn ser(&cplx);
@@ -387,7 +418,10 @@ ELLE_TEST_SCHEDULED(serialization_complex)
   BOOST_CHECK_EQUAL(cplx.opt_str(), "");
   complex = structs::Complex {
     structs::Simple{"", 0, 0, false},
-    std::string("dummy")
+    std::string("dummy"),
+    boost::none,
+    {},
+    std::string()
   };
   {
     infinit::grpc::SerializerIn ser(&cplx);
@@ -406,7 +440,9 @@ ELLE_TEST_SCHEDULED(serialization_complex)
   complex = structs::Complex {
     structs::Simple{"", 0, 0, false},
     std::string("dummy"),
-    boost::none
+    boost::none,
+    {},
+    std::string()
   };
   {
     infinit::grpc::SerializerIn ser(&cplx);
@@ -423,7 +459,9 @@ ELLE_TEST_SCHEDULED(serialization_complex)
   complex = structs::Complex {
     structs::Simple{"", 0, 0, false},
     std::string("dummy"),
-    boost::none
+    boost::none,
+    {},
+    std::string()
   };
   {
     infinit::grpc::SerializerIn ser(&cplx);
@@ -432,6 +470,29 @@ ELLE_TEST_SCHEDULED(serialization_complex)
   BOOST_CHECK_EQUAL(complex.rsimple.size(), 1);
   BOOST_CHECK_EQUAL(complex.rsimple.front(),
                     (structs::Simple{"foo", -12, 12, true}));
+  // Option
+  complex.siopt = std::string("foo");
+  {
+    infinit::grpc::SerializerOut ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  complex.siopt = (int64_t)42;
+  {
+    infinit::grpc::SerializerIn ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  BOOST_CHECK_EQUAL(complex.siopt.get<std::string>(), "foo");
+  complex.siopt = (int64_t)42;
+    {
+    infinit::grpc::SerializerOut ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  complex.siopt = std::string("foo");
+  {
+    infinit::grpc::SerializerIn ser(&cplx);
+    ser.serialize_forward(complex);
+  }
+  BOOST_CHECK_EQUAL(complex.siopt.get<int64_t>(), 42);
 }
 
 ELLE_TEST_SCHEDULED(protogen)

@@ -73,6 +73,7 @@ namespace infinit
       void _serialize_int(T& v);
     private:
       int _index;
+      int _last_serialized_int;
       std::vector<const google::protobuf::Message*> _message_stack;
       const google::protobuf::FieldDescriptor* _field;
     };
@@ -139,6 +140,7 @@ namespace infinit
       const google::protobuf::FieldDescriptor* _field;
       // name path we are currently handling arrays for
       std::vector<std::string> _array_handler;
+      int _last_serialized_int;
     };
   }
 }

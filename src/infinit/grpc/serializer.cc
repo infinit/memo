@@ -30,8 +30,12 @@ namespace infinit
       auto* desc = cur->GetDescriptor();
       _field = desc->FindFieldByName(name);
       if (!_field)
+        _field = desc->FindFieldByName(name + std::to_string(_last_serialized_int));
+      if (!_field)
         elle::err("field %s does not exist in %s", name, desc->name());
-      if (!_field->is_repeated() && !ref->HasField(*cur, _field))
+      if (!_field->is_repeated()
+        && _field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE
+        && !ref->HasField(*cur, _field))
       { // HasField returns false on primitive fields with default value (empty string)
         ELLE_LOG("missing key %s", name);
         throw elle::serialization::MissingKey(name);
@@ -88,7 +92,7 @@ namespace infinit
         elle::err<elle::serialization::Error>("underflow: %s does not fit in %s bytes or unsigned", v, sizeof(T));
       return static_cast<T>(v);
     }
- 
+
     template<typename T>
     void
     SerializerIn::_serialize_int(T& v)
@@ -103,6 +107,7 @@ namespace infinit
         else
           bigval = cur->GetReflection()->GetInt64(*cur, _field);
         v = get_small_int<T>(bigval);
+        _last_serialized_int = v;
       }
     }
 
@@ -125,6 +130,7 @@ namespace infinit
       else
         bigval = cur->GetReflection()->GetUInt64(*cur, _field);
       v = get_small_int<uint64_t>(bigval);
+      _last_serialized_int = v;
     }
 
     void
@@ -253,6 +259,10 @@ namespace infinit
       auto* ref = cur->GetReflection();
       auto* desc = cur->GetDescriptor();
       _field = desc->FindFieldByName(name);
+      if (!_field)
+        _field = desc->FindFieldByName(name + std::to_string(_last_serialized_int));
+      if (!_field)
+        elle::err("field %s not found at %s", name, _names);
       if (_field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE)
       {
         google::protobuf::Message* child = nullptr;
@@ -313,6 +323,7 @@ namespace infinit
         cur->GetReflection()->AddInt64(cur, _field, v);
       else
         cur->GetReflection()->SetInt64(cur, _field, v);
+      _last_serialized_int = v;
     }
 
     void SerializerOut::_serialize(int8_t  & v) { _serialize_int(v);}
@@ -332,6 +343,7 @@ namespace infinit
         cur->GetReflection()->AddUInt64(cur, _field, v);
       else
         cur->GetReflection()->SetUInt64(cur, _field, v);
+      _last_serialized_int = v;
     }
 
     void
