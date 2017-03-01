@@ -20,5 +20,7 @@ namespace infinit
                model::Endpoint ep);
     std::unique_ptr< ::grpc::Service>
     filesystem_service(elle::reactor::filesystem::FileSystem& fs);
+    std::unique_ptr< ::grpc::Service>
+    doughnut_service(infinit::model::Model& dht);
   }
 }

@@ -19,6 +19,7 @@
 
 #include <infinit/grpc/kv.grpc.pb.h>
 #include <infinit/grpc/fs.grpc.pb.h>
+#include <infinit/grpc/doughnut.grpc.pb.h>
 
 #include <tests/grpc.grpc.pb.h>
 
@@ -865,11 +866,183 @@ ELLE_TEST_SCHEDULED(filesystem)
   });
 }
 
+ELLE_TEST_SCHEDULED(doughnut)
+{
+  DHTs dhts(3);
+  auto client = dhts.client();
+  auto alice = elle::cryptography::rsa::keypair::generate(512);
+  auto ubf = infinit::model::doughnut::UB(
+    client.dht.dht.get(), "alice", alice.K(), false);
+  auto ubr = infinit::model::doughnut::UB(
+    client.dht.dht.get(), "alice", alice.K(), true);
+  client.dht.dht->insert(ubf);
+  client.dht.dht->insert(ubr);
+  infinit::model::Endpoint ep("127.0.0.1", (rand()%10000)+50000);
+  elle::reactor::Barrier b;
+  auto t = std::make_unique<elle::reactor::Thread>("grpc",
+    [&] {
+      ELLE_LOG("open");
+      b.open();
+      ELLE_LOG("serve");
+      infinit::grpc::serve_grpc(*client.dht.dht, boost::none, ep);
+      ELLE_LOG("done");
+    });
+  ELLE_LOG("wait");
+  elle::reactor::wait(b);
+  elle::reactor::sleep(1_sec);
+  ELLE_LOG("start");
+  auto& sched = elle::reactor::scheduler();
+  elle::reactor::background([&] {
+    auto chan = grpc::CreateChannel(
+        elle::sprintf("127.0.0.1:%s", ep.port()),
+        grpc::InsecureChannelCredentials());
+    auto stub = Doughnut::NewStub(chan);
+    { // get missing block
+      grpc::ClientContext context;
+      ::DNAddress req;
+      ::AnyBlockOrStatus repl;
+      req.set_address(elle::sprintf("%s", infinit::model::Address::null));
+      ELLE_LOG("call...");
+      auto res = stub->Get(&context, req, &repl);
+      ELLE_LOG("...called");
+      BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
+      BOOST_CHECK(repl.has_status());
+      BOOST_CHECK_EQUAL(repl.status().error(), DN_ERROR_MISSING_BLOCK);
+    }
+    // Basic CHB
+    ::CHB chb;
+    { // make
+      grpc::ClientContext context;
+      ::CHBData chb_data;
+      chb_data.set_data("bok");
+      stub->MakeCHB(&context, chb_data, &chb);
+      BOOST_CHECK_EQUAL(chb.address().size(), 32);
+      BOOST_CHECK_EQUAL(chb.data(), "bok");
+      ELLE_TRACE("addr: %s",
+        infinit::model::Address((const uint8_t*)chb.address().data()));
+    }
+    { // store
+      grpc::ClientContext context;
+      ::AnyBlock ab;
+      ::DNStatus repl;
+      ab.mutable_chb()->CopyFrom(chb);
+      stub->Insert(&context, ab, &repl);
+      BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_OK);
+    }
+    // dht fetch check
+    auto a = infinit::model::Address((const uint8_t*)chb.address().data());
+    std::string data;
+    sched.mt_run<void>("recheck", [&] {
+        auto b = client.dht.dht->fetch(a);
+        data = b->data().string();
+    });
+    BOOST_CHECK_EQUAL(data, "bok");
+    { // fetch
+      grpc::ClientContext context;
+      ::AnyBlockOrStatus abs;
+      ::DNAddress addr;
+      addr.set_address(chb.address());
+      stub->Get(&context, addr, &abs);
+      BOOST_CHECK(abs.has_block());
+      BOOST_CHECK(abs.block().has_chb());
+      BOOST_CHECK_EQUAL(abs.block().chb().address(), chb.address());
+      BOOST_CHECK_EQUAL(abs.block().chb().data(), "bok");
+    }
+
+    // basic OKB
+    ::OKB okb;
+    { // make
+      grpc::ClientContext context;
+      ::Empty arg;
+      stub->MakeOKB(&context, arg, &okb);
+      BOOST_CHECK_EQUAL(okb.address().size(), 32);
+      BOOST_CHECK_EQUAL(okb.data(), "");
+      ELLE_TRACE("addr: %s",
+        infinit::model::Address((const uint8_t*)okb.address().data()));
+    }
+    okb.set_data("bokbok");
+    { // store
+      grpc::ClientContext context;
+      ::AnyBlock ab;
+      ::DNStatus repl;
+      ab.mutable_okb()->CopyFrom(okb);
+      stub->Insert(&context, ab, &repl);
+      BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_OK);
+    }
+    ::AnyBlockOrStatus abs;
+    { // fetch
+      grpc::ClientContext context;
+      ::DNAddress addr;
+      addr.set_address(okb.address());
+      stub->Get(&context, addr, &abs);
+      BOOST_CHECK(abs.has_block());
+      BOOST_CHECK(abs.block().has_okb());
+      BOOST_CHECK_EQUAL(abs.block().okb().address(), okb.address());
+      BOOST_CHECK_EQUAL(abs.block().okb().data(), "bokbok");
+    }
+    // update
+    {
+      abs.mutable_block()->mutable_okb()->set_data("mooh");
+      grpc::ClientContext context;
+      ::DNStatus repl;
+      stub->Update(&context, abs.block(), &repl);
+      BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_OK);
+    }
+    { // fetch
+      ::AnyBlockOrStatus abs; // use another message to be sure
+      grpc::ClientContext context;
+      ::DNAddress addr;
+      addr.set_address(okb.address());
+      stub->Get(&context, addr, &abs);
+      BOOST_CHECK(abs.has_block());
+      BOOST_CHECK(abs.block().has_okb());
+      BOOST_CHECK_EQUAL(abs.block().okb().address(), okb.address());
+      BOOST_CHECK_EQUAL(abs.block().okb().data(), "mooh");
+    }
+    // update again from same object
+    {
+      abs.mutable_block()->mutable_okb()->set_data("merow");
+      grpc::ClientContext context;
+      ::DNStatus repl;
+      stub->Update(&context, abs.block(), &repl);
+      BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_CONFLICT);
+      { // fetch to get current version
+        ::AnyBlockOrStatus tabs;
+        grpc::ClientContext context;
+        ::DNAddress addr;
+        addr.set_address(okb.address());
+        stub->Get(&context, addr, &tabs);
+        BOOST_CHECK(tabs.has_block());
+        BOOST_CHECK(tabs.block().has_okb());
+        abs.mutable_block()->mutable_okb()->set_version(tabs.block().okb().version());
+      }
+      // retry update
+      {
+        grpc::ClientContext context;
+        ::DNStatus repl;
+        stub->Update(&context, abs.block(), &repl);
+        BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_OK);
+      }
+      { // fetch
+         ::AnyBlockOrStatus tabs;
+        grpc::ClientContext context;
+        ::DNAddress addr;
+        addr.set_address(okb.address());
+        stub->Get(&context, addr, &tabs);
+        BOOST_CHECK(tabs.has_block());
+        BOOST_CHECK(tabs.block().has_okb());
+        BOOST_CHECK_EQUAL(abs.block().okb().data(), "merow");
+      }
+    }
+  });
+}
+
 ELLE_TEST_SUITE()
 {
   auto& master = boost::unit_test::framework::master_test_suite();
   master.add(BOOST_TEST_CASE(serialization), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(serialization_complex), 0, valgrind(10));
+  master.add(BOOST_TEST_CASE(doughnut), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(protogen), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(basic), 0, valgrind(10));
   master.add(BOOST_TEST_CASE(filesystem), 0, valgrind(60));

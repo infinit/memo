@@ -64,7 +64,7 @@ class GRPCGen(drake.Builder):
     ])
   def __str__(self):
     return '%s' % (self.__class__.__name__)
-  
+
 def configure(
     cxx_toolkit,
     cxx_config
@@ -85,10 +85,17 @@ def configure(
       'GO_EXECUTABLE': go,
     }
     )
+  gendn = GRPCGen('doughnut.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
   genkv = GRPCGen('kv.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
   genfs = GRPCGen('fs.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
 
-  srcs = genkv.dsts + genfs.dsts + drake.nodes('grpc.cc', 'filesystem.cc', 'serializer.cc', 'serializer.hh')
+  srcs = genkv.dsts + genfs.dsts + gendn.dsts + drake.nodes(
+    'doughnut.cc',
+    'grpc.cc',
+    'filesystem.cc',
+    'serializer.cc',
+    'serializer.hh'
+  )
   sources = srcs
   # make a conveniance grpc lib with all libgrpc stuff
   grpc_lib = drake.cxx.DynLib('grpc', grpc.sources, cxx_toolkit, grpc.cxx_config_lib)

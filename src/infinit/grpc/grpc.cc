@@ -458,10 +458,12 @@ namespace infinit
       std::unique_ptr< ::grpc::Service> fs_service;
       if (fs)
         fs_service = filesystem_service(*fs);
+      auto ds = doughnut_service(dht);
       ::grpc::ServerBuilder builder;
       auto sep = ep.address().to_string() + ":" + std::to_string(ep.port());
       builder.AddListeningPort(sep, ::grpc::InsecureServerCredentials());
       builder.RegisterService(&service);
+      builder.RegisterService(ds.get());
       if (fs_service)
         builder.RegisterService(fs_service.get());
       auto server = builder.BuildAndStart();

@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+service Doughnut {
+   rpc MakeCHB(CHBData) returns (CHB) {}
+   rpc MakeACB(Empty) returns (ACB) {}
+   rpc MakeOKB(Empty) returns (OKB) {}
+   rpc MakeNB(String) returns (NB) {}
+   rpc Get(DNAddress) returns (AnyBlockOrStatus) {}
+   rpc Update(AnyBlock) returns (DNStatus) {}
+   rpc Insert(AnyBlock) returns (DNStatus) {}
+   rpc Remove(DNAddress) returns (DNStatus) {}
+}
+
+message CHBData {
+  string data = 1;
+  string owner = 2;
+}
+
+message DNStatus {
+  DNError error = 1;
+  string message = 2;
+  int64 version = 3;
+}
+
+message String {
+  string str = 1;
+}
+
+message DNAddress {
+  bytes address = 1;
+}
+
+message Empty {
+}
+
+message CHB {
+  string type = 1;
+  bytes address = 2;
+  bytes data = 3;
+  bytes salt = 4;
+  string owner = 5;
+}
+
+message ACLEntry {
+  KeyOrHash key_koh = 1;
+  bool read = 2;
+  bool write = 3;
+  string token = 4;
+}
+
+message PublicKey
+{
+  bytes rsa = 1;
+}
+
+message KeyOrHash {
+  int64 type = 1;
+  oneof value {
+    PublicKey value0 = 2;
+    string value1 = 3;
+    int64 value2 = 4;
+  }
+}
+
+message OKB {
+  string type = 1;
+  bytes address = 2;
+  bytes data = 3;
+  KeyOrHash key_koh = 4;
+  bytes salt = 5;
+  int64 version = 6;
+  bytes signature = 7;
+}
+
+message Version {
+  int64 major = 1;
+  int64 minor = 2;
+  int64 subminor = 3;
+}
+
+message ACB {
+  string address = 1;
+  string data = 2;
+  KeyOrHash key_koh = 3;
+  string salt = 4;
+  int64 version = 5;
+  string signature = 6;
+  int64 editor = 7;
+  string owner_token = 8;
+  repeated ACLEntry acl = 9;
+  int64 data_version = 10;
+  string data_signature = 11;
+  bool world_readable = 12;
+  bool world_writable = 13;
+  repeated ACLEntry group_acl = 14;
+  repeated int64 group_version = 15;
+  bool deleted = 16;
+  Version seal_version = 17;
+}
+
+message NB {
+  string address = 1;
+  string data = 2;
+  PublicKey owner = 3;
+  string name = 4;
+  string signature = 5;
+}
+
+message AnyBlock {
+  oneof block {
+    CHB chb = 1;
+    OKB okb = 2;
+    ACB acb = 3;
+    NB nb = 4;
+  }
+}
+
+message AnyBlockOrStatus {
+  oneof data {
+    DNStatus status = 1;
+    AnyBlock block = 2;
+  }
+}
+
+enum DNError {
+  DN_ERROR_OK = 0;
+  DN_ERROR_MISSING_BLOCK = 1;
+  DN_ERROR_CONFLICT = 2;
+  DN_ERROR_VALIDATION_FAILED = 3;
+  DN_ERROR_TOO_FEW_PEERS = 4;
+  DN_ERROR_NO_PEERS = 5;
+  DN_ERROR_OTHER = 1000;
+}

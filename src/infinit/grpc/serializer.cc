@@ -63,7 +63,8 @@ namespace infinit
     SerializerIn::_serialize(std::string& v)
     {
       ELLE_ASSERT(_field);
-      if (_field->type() != google::protobuf::FieldDescriptor::TYPE_STRING)
+      if (_field->type() != google::protobuf::FieldDescriptor::TYPE_STRING
+        && _field->type() != google::protobuf::FieldDescriptor::TYPE_BYTES)
         elle::err<elle::serialization::Error>(
           "field %s is of type %s not string", _field->name(), _field->type());
       auto* cur = _message_stack.back();
@@ -296,7 +297,8 @@ namespace infinit
     SerializerOut::_serialize(std::string& v)
     {
       ELLE_ASSERT(_field);
-      if (_field->type() != google::protobuf::FieldDescriptor::TYPE_STRING)
+      if (_field->type() != google::protobuf::FieldDescriptor::TYPE_STRING
+        &&_field->type() != google::protobuf::FieldDescriptor::TYPE_BYTES)
         elle::err<elle::serialization::Error>(
           "field %s is of type %s not string", _field->name(), _field->type());
       auto* cur = _message_stack.back();
@@ -317,6 +319,7 @@ namespace infinit
     void
     SerializerOut::_serialize_int(T& v)
     {
+      // FIXME: it is invalid to call SetInt64 on an INT32 field
       ELLE_ASSERT(_field);
       auto* cur = _message_stack.back();
       if (_field->is_repeated())

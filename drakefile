@@ -1067,6 +1067,8 @@ def configure(
         'src/infinit/grpc/kv.pb.cc',
         'src/infinit/grpc/fs.grpc.pb.cc',
         'src/infinit/grpc/fs.pb.cc',
+        'src/infinit/grpc/doughnut.grpc.pb.cc',
+        'src/infinit/grpc/doughnut.pb.cc',
       )
     if test_name == 'grpc':
         that_test_libs += tests_proto.dsts
