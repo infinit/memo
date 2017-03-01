@@ -90,6 +90,7 @@ private:
   ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, thread);
 };
 
+/// A TCP socket that we can close/reopen, for tests.
 class TCPInstrument
 {
 public:
@@ -356,48 +357,41 @@ kouncil_wait_pasv(DHT& s, int n_servers)
 static
 void
 hard_wait(DHT& s, int n_servers,
-  infinit::model::Address client = infinit::model::Address::null,
-  bool or_more = false,
-  infinit::model::Address blacklist = infinit::model::Address::null)
+          infinit::model::Address client = {},
+          bool or_more = false,
+          infinit::model::Address blacklist = {})
 {
   int attempts = 0;
   while (true)
   {
     if (++attempts > 50 && !(attempts % 40))
-    {
-      auto stats = s.dht->overlay()->query("stats", boost::none);
-      std::cerr << elle::json::pretty_print(stats) << std::endl;
-    }
+      ELLE_LOG("hard_wait, attempt %s: %s",
+               attempts, elle::json::pretty_print(get_ostats(s)));
     bool ok = true;
     auto peers = get_peers(s);
     int hit = 0;
     if (peers.size() >= unsigned(n_servers))
-    {
       for (auto const& pa: peers)
-      {
-        if (pa == client || pa == blacklist)
-          continue;
-        try
-        {
-          auto p = s.dht->overlay()->lookup_node(pa);
-          p.lock()->fetch(infinit::model::Address::random(), boost::none);
-        }
-        catch (infinit::storage::MissingKey const& mb)
-        { // FIXME why do we need this?
-          ++hit;
-        }
-        catch (infinit::model::MissingBlock const& mb)
-        {
-          ++hit;
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_TRACE("hard_wait %f: %s", pa, e);
-          if (!or_more)
-            ok = false;
-        }
-      }
-    }
+        if (pa != client && pa != blacklist)
+          try
+          {
+            auto p = s.dht->overlay()->lookup_node(pa);
+            p.lock()->fetch(infinit::model::Address::random(), boost::none);
+          }
+          catch (infinit::storage::MissingKey const& mb)
+          { // FIXME why do we need this?
+            ++hit;
+          }
+          catch (infinit::model::MissingBlock const& mb)
+          {
+            ++hit;
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_TRACE("hard_wait %f: %s", pa, e);
+            if (!or_more)
+              ok = false;
+          }
     if ((hit == n_servers || (or_more && hit >n_servers))
         && ok)
       break;
@@ -509,13 +503,15 @@ ELLE_TEST_SCHEDULED(
         }
       }
       // Partition peer
-      instrument.transmission().close();
+      ELLE_LOG("close transmission")
+        instrument.transmission().close();
       // Ensure we don't deadlock
       {
         auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
         ELLE_LOG("store block")
           dht_a.dht->seal_and_insert(*block, tcr());
       }
+      ELLE_LOG("done");
     };
 }
 

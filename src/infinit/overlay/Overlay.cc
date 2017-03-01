@@ -1,3 +1,5 @@
+#include <boost/range/algorithm_ext/erase.hpp>
+
 #include <elle/log.hh>
 #include <elle/make-vector.hh>
 
@@ -82,15 +84,14 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: discover %f", this, peers_);
       auto peers = peers_;
-      auto it = std::remove_if(peers.begin(), peers.end(),
+      auto it = boost::remove_erase_if(peers,
         [this] (NodeLocation const& nl)
         {
-          bool is_us = (nl.id() == this->doughnut()->id());
+          bool is_us = nl.id() == this->doughnut()->id();
           if (is_us)
             ELLE_TRACE("%s: removing ourself from peer list", this);
           return is_us;
         });
-      peers.erase(it, peers.end());
       this->_discover(peers);
     }
 

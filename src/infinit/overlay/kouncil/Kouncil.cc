@@ -89,10 +89,9 @@ namespace infinit
         }
       }
 
-      Kouncil::Kouncil(
-        model::doughnut::Doughnut* dht,
-        std::shared_ptr<Local> local,
-        boost::optional<int> eviction_delay)
+      Kouncil::Kouncil(model::doughnut::Doughnut* dht,
+                       std::shared_ptr<Local> local,
+                       boost::optional<int> eviction_delay)
         : Overlay(dht, local)
         , _cleaning(false)
         , _broadcast_thread(new elle::reactor::Thread(
