@@ -387,12 +387,7 @@ namespace infinit
           // FIXME: remove the unconst!
           elle::unconst(*pi).disappearance().start();
         }
-        // Remove from peers.
-        {
-          auto it = ELLE_ENFORCE(find(this->_peers, id));
-          ELLE_ASSERT_EQ(*it, peer);
-          this->_peers.erase(it);
-        }
+        this->_peers.erase(id);
         this->on_disappear()(id, false);
         peer.reset();
         if (!this->_cleaning)
@@ -413,16 +408,8 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: %s evicted", this, peer);
         auto const id = peer->id();
-        // Remove from infos.
-        {
-          auto pi = ELLE_ENFORCE(find(this->_infos, id));
-          this->_infos.erase(pi);
-        }
-        // Remove from address book.
-        {
-          auto its = this->_address_book.equal_range(id);
-          this->_address_book.erase(its.first, its.second);
-        }
+        this->_infos.erase(id);
+        this->_address_book.erase(id);
       }
 
       template<typename E>
