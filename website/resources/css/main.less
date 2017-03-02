@@ -1373,6 +1373,25 @@ body.docker {
     font-size: 12px; line-height: 19px;
     margin-right: 3px; border-radius: 8px; color: white;
   }
+
+  section.blog {
+    a {
+      display: block; width: 90%; padding: 70px 5% 55px 5%; margin-top: 20px; clear: both;
+      background: #F5F8FA; text-align: center;
+
+      span { 
+        border: 1px solid #9CB6C7; border-radius: 3px; color: #92A9B8; text-transform: uppercase;
+        font-family: @sf; font-size: 14px; padding: 9px 12px; .transition();
+        -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      }
+
+      h3, p { max-width: 650px; margin-left: auto; margin-right: auto; }
+      h3 { font-size: 29px; }
+      p { font-size: 18px; opacity: 0.5; line-height: 155%; }
+
+      &:hover span { background: white; .transition(); }
+    }
+  }
 }
 
 body.product {
@@ -1464,6 +1483,7 @@ body.product {
 
         .steps {
           width: 80%; margin: 0 auto;
+          strong { margin-bottom: 5px; }
           p { float:left; width: 18%; font-size: 17px; margin: 22px 1%; }
 
           #step2, #step3, #step4, #step5, #step6 { opacity: 0.1; }
@@ -1597,37 +1617,46 @@ body.product {
     }
 
     section.decentralized, section.replication {
-      padding-top: 60px;
+      padding-top: 60px; position: relative; overflow-x: hidden;
       &:after { display: table; content: ''; clear: both; }
 
       hr { 
         width: 20%; float: left;
         margin-bottom: 30px; height: 3px; background: @infinitblack; border: none; display: block;
       }
+
       h3, p { font-size: 19px; }
       h3 { font-family: @sf; text-transform: uppercase; clear: both; }
       p {  line-height: 1.7em; max-width: 40%;}
     }
 
     section.decentralized {
-      .at2x('../images/bg-decentralized.png', 976px, 425px); min-height: 425px;
-      background-position: 190% top; margin: 0 0 0 15%; margin-top: 100px; padding-top: 40px;
-      background-repeat: no-repeat;
+      min-height: 425px; margin: 0 0 0 8%; margin-top: 100px; padding-top: 40px;
+
+      .bg { 
+        .at2x('../images/bg-decentralized.png', 976px, 425px); background-repeat: no-repeat; 
+        width: 976px; height: 425px;
+        position: absolute; left: 40%;
+      }
     }
 
     section.replication {
-      .at2x('../images/bg-replication.png', 896px, 408px); min-height: 408px;
-      background-position: -50% top; margin: 0 15% 0 0;
-      background-repeat: no-repeat;
+       min-height: 408px; margin: 0 8% 0 0; padding-top: 100px;
 
-      div, hr { float: right; }
-      div h3 { display: block; }
+      .bg { 
+        .at2x('../images/bg-replication.png', 896px, 408px);  background-repeat: no-repeat;
+        background-repeat: no-repeat; width: 896px; height: 408px;
+        position: absolute; right: 40%;
+      }
+
+      .wrapper div, hr { float: right;}
+      .wrapper div h3 { display: block; }
       h3, p { text-align: right; }
-      p {  margin-left: 50%; max-width: 100%; }
+      p {  margin-left: 60%; max-width: 100%; }
     }
 
     section.programmatic {
-      padding-top: 30px;
+      padding-top: 90px;
       &:after { display: table; content: ''; clear: both; }
 
       .wrapper {
@@ -1670,8 +1699,8 @@ body.product {
       }
     }
 
-    div.cta {
-      text-align: center; padding-bottom: 100px;
+    section.blog {
+      a { float: left; width: 40%; clear: none; }
     }
   }
 }
@@ -1829,25 +1858,6 @@ body.docker {
         display: inline-block; background: #F3F3F3; font-weight: bold;
         border-radius: 3px; padding: 6px 9px; color: #79818E;
       }
-    }
-  }
-
-  section.blog {
-    a {
-      display: block; width: 90%; padding: 70px 5% 55px 5%; margin-top: 20px; clear: both;
-      background: #F5F8FA; text-align: center;
-
-      span { 
-        border: 1px solid #9CB6C7; border-radius: 3px; color: #92A9B8; text-transform: uppercase;
-        font-family: @sf; font-size: 14px; padding: 9px 12px; .transition();
-        -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-      }
-
-      h3, p { max-width: 650px; margin-left: auto; margin-right: auto; }
-      h3 { font-size: 29px; }
-      p { font-size: 18px; opacity: 0.5; line-height: 155%; }
-
-      &:hover span { background: white; .transition(); }
     }
   }
 }

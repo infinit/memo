@@ -59,18 +59,19 @@
           </p>
 
           <div class="steps">
-            <p id="step2"><strong>1</strong> Node C crashes, taking down with it one of the 3 copies of the data it hosted.</p>
-            <p id="step3"><strong>2</strong> Infinit ejects the unresponsive node from the cluster as soon as the failure is detected.</p>
-            <p id="step4"><strong>3</strong> In order to replace the missing copy, a new replica is created and placed on another node.</p>
-            <p id="step5"><strong>4</strong> At some point, two new nodes join the cluster, extending it to 6 nodes.</p>
-            <p id="step6"><strong>5</strong> The cluster is rebalanced to take into account the new nodes, moving a replica from Node D to G.</p>
+            <p id="step2"><strong>1</strong><br> Node C crashes, taking down with it one of the 3 copies of the data it hosted.</p>
+            <p id="step3"><strong>2</strong><br> Infinit ejects the unresponsive node from the cluster as soon as the failure is detected.</p>
+            <p id="step4"><strong>3</strong><br> In order to replace the missing copy, a new replica is created and placed on another node.</p>
+            <p id="step5"><strong>4</strong><br> At some point, two new nodes join the cluster, extending it to 6 nodes.</p>
+            <p id="step6"><strong>5</strong><br> The cluster is rebalanced to take into account the new nodes, moving a replica from Node D to G.</p>
           </div>
         </div>
       </section>
     </div>
 
     <section class="decentralized">
-      <div>
+      <div class="bg"></div>
+      <div class="wrapper">
         <hr><br><br><br>
         <h3>Scalable Model</h3>
         <p>Unlike most distributed systems relying on a master/slave model (also known as leader/follower), Infinit benefits from a truly decentralized architecture.</p>
@@ -79,11 +80,14 @@
     </section>
 
     <section class="replication">
-      <div>
-        <hr><br><br><br>
-        <h3>Resilient Architecture</h3>
-        <p>Every data item can be stored redundantly in order to allow for Infinit to tolerate failures being software bugs, hardware crashes and more.</p>
-        <p>Should a failure occur, Infinit will automatically self-heal by recreating the missing redundant copies in order to quickly get back to a healthy state.</p>
+      <div class="bg"></div>
+      <div class="wrapper">
+        <div>
+          <hr><br><br><br>
+          <h3>Resilient Architecture</h3>
+          <p>Every data item can be stored redundantly in order to allow for Infinit to tolerate failures being software bugs, hardware crashes and more.</p>
+          <p>Should a failure occur, Infinit will automatically self-heal by recreating the missing redundant copies in order to quickly get back to a healthy state.</p>
+        </div>
       </div>
     </section>
 
@@ -165,9 +169,19 @@
       </div>
     </section>
 
-    <div class="cta">
-      <a class="button" href="${route('doc_get_started')}">Get Started</a>
-    </div>
+    <section class="blog">
+      <a href="${route('docker')}">
+        <span>Check out</span>
+        <h3>Bringing Persistent Storage to Docker</h3>
+        <p>Deploy your stateful and/or legacy applications as easily as your modern stateless ones thanks to Infinit's elastic storage platform...</p>
+      </a>
+
+      <a href="${route('doc_get_started')}">
+        <span>Get Started</span>
+        <h3>Deploy your first Infinit architecture</h3>
+        <p>Follow a simple step-by-step guide to set up your first infrastructure for a single user with two devices...</p>
+      </a>
+    </section>
   </div>
 
 </%block>
