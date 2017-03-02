@@ -32,6 +32,15 @@ using namespace infinit::overlay;
 using boost::algorithm::any_of_equal;
 using boost::algorithm::none_of_equal;
 
+/// Check that Element ∈ Set.
+#define CHECK_IN(Element, Set)                  \
+  BOOST_CHECK(any_of_equal(Set, Element))
+
+/// Check that Element ∉ Set.
+#define CHECK_NOT_IN(Element, Set)              \
+  BOOST_CHECK(none_of_equal(Set, Element))
+
+
 
 class TestConflictResolver
   : public DummyConflictResolver
@@ -1680,7 +1689,7 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
   {
     auto ps = get_peers(*dht_a);
     ELLE_LOG("Peers of A (%s): %f", dht_a, ps);
-    BOOST_CHECK(none_of_equal(ps, id_b));
+    CHECK_NOT_IN(id_b, ps);
   }
 
   // C: A new peer, connected to A.  Node A should tell C about B.
@@ -1693,9 +1702,9 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
   {
     auto addrs = get_peers(*dht_c, "infos");
     ELLE_LOG("Infos of C (%s): %f", dht_c, addrs);
-    BOOST_CHECK(any_of_equal(addrs, id_b));
+    CHECK_IN(id_b, addrs);
     // B and C are not connected.
-    BOOST_CHECK(none_of_equal(get_peers(*dht_c), id_b));
+    CHECK_NOT_IN(id_b, get_peers(*dht_c));
   }
   // Kill server A, C remains alone, remembering about A and B.
   {
@@ -1711,13 +1720,13 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
     {
       auto addrs = get_peers(*dht_c, "infos");
       ELLE_LOG("Infos of C (%s): %f", dht_c, addrs);
-      BOOST_CHECK(any_of_equal(addrs, id_a));
-      BOOST_CHECK(any_of_equal(addrs, id_b));
+      CHECK_IN(id_a, addrs);
+      CHECK_IN(id_b, addrs);
 
       auto peers = get_peers(*dht_c);
       ELLE_LOG("Peers of C (%s): %f", dht_c, peers);
-      BOOST_CHECK(none_of_equal(peers, id_a));
-      BOOST_CHECK(none_of_equal(peers, id_b));
+      CHECK_NOT_IN(id_a, peers);
+      CHECK_NOT_IN(id_b, peers);
     }
   }
   // Recreate B, and expect C to connect to it, although they have
@@ -1733,9 +1742,17 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
       });
     elle::reactor::wait(b_appeared);
     {
+      // C heard about A and B.
+      auto addrs = get_peers(*dht_c, "infos");
+      ELLE_LOG("Infos of C (%s): %f", dht_c, addrs);
+      CHECK_IN(id_a, addrs);
+      CHECK_IN(id_b, addrs);
+
+      // And now C is in touch with B.
       auto peers = get_peers(*dht_c);
       ELLE_LOG("Peers of C (%s): %f", dht_c, peers);
-      BOOST_CHECK(any_of_equal(peers, id_b));
+      CHECK_NOT_IN(id_a, peers);
+      CHECK_IN(id_b, peers);
     }
   }
 }
