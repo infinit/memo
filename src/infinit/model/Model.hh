@@ -114,8 +114,11 @@ namespace infinit
     `-------------*/
     public:
       using AddressVersion = std::pair<Address, boost::optional<int>>;
-      Model(boost::optional<elle::Version> version = {});
+      template <typename ... Args>
+      Model(Args&& ... args);
       ELLE_ATTRIBUTE_R(elle::Version, version);
+    private:
+      Model(std::tuple<boost::optional<elle::Version>> args);
 
     /*-------.
     | Blocks |
