@@ -614,6 +614,8 @@ def configure(
     'resources/images/icons/hyperscalable@2x.png',
     'resources/images/icons/question-mark.png',
     'resources/images/icons/question-mark@2x.png',
+    'resources/images/icons/server-red.png',
+    'resources/images/icons/server-red@2x.png',
   )
 
   resources = resources + resources_icons
