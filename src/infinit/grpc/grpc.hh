@@ -22,5 +22,7 @@ namespace infinit
     filesystem_service(elle::reactor::filesystem::FileSystem& fs);
     std::unique_ptr< ::grpc::Service>
     doughnut_service(infinit::model::Model& dht);
+    std::unique_ptr< ::grpc::Service>
+    kv_service(infinit::model::Model& dht);
   }
 }

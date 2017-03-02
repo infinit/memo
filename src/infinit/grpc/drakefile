@@ -91,6 +91,7 @@ def configure(
 
   srcs = genkv.dsts + genfs.dsts + gendn.dsts + drake.nodes(
     'doughnut.cc',
+    'kv.cc',
     'grpc.cc',
     'filesystem.cc',
     'serializer.cc',

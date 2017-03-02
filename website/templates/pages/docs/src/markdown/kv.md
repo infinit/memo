@@ -242,7 +242,7 @@ void create_user(string user)
   }
   {
     grpc::ClientContext ctx;
-    ::DNStatus res;
+    ::Status res;
     kv->Insert(&ctx, doclist, &res);
   }
   // Create and insert a Named Block with the MB address as payload.
@@ -256,10 +256,10 @@ void create_user(string user)
   }
   nb.set_data(doclist.address());
   {
-    ::DNStatus res;
+    ::Status res;
     grpc::ClientContext ctx;
     kv->Insert(&ctx, nb, &res);
-    if (res.error() != DN_ERROR_OK)
+    if (res.error() != ERROR_OK)
       throw std::runtime_error("User already exists");
   }
 }
@@ -305,7 +305,7 @@ Let's factor the get part since we'll need it multiple times.
 ```
 map<string, string> get_documents(string user, ::Block* block = nullptr)
 {
-  ::DNAddress address;
+  ::Address address;
   ::Bytes key;
   key.set_data(user);
   // Get the NB address
@@ -356,7 +356,7 @@ string get_document(string user, string name)
   auto it = dl.find(name);
   if (it == dl.end())
     throw std::runtime_error("no such document");
-  ::DNAddress address;
+  ::Address address;
   address.set_address(unhex(it->second));
   ::BlockOrStatus res;
   {
@@ -389,7 +389,7 @@ void set_document(string user, string name, string data)
     grpc::ClientContext ctx;
     kv->MakeCHB(&ctx, cdata, &doc);
   }
-  ::DNStatus status;
+  ::Status status;
   {
     grpc::ClientContext ctx;
     kv->Insert(&ctx, doc, &status);
@@ -401,7 +401,7 @@ void set_document(string user, string name, string data)
     auto it = dl.find(name);
     if (it != dl.end())
     {
-      ::DNAddress address;
+      ::Address address;
       address.set_address(unhex(it->second));
       grpc::ClientContext ctx;
       kv->Remove(&ctx, address, &status);
@@ -412,9 +412,9 @@ void set_document(string user, string name, string data)
       grpc::ClientContext ctx;
       kv->Update(&ctx, mb, &status);
     }
-    if (status.error() == DN_ERROR_OK)
+    if (status.error() == ERROR_OK)
       break; // all good
-    if (status.error() != DN_ERROR_CONFLICT)
+    if (status.error() != ERROR_CONFLICT)
       throw std::runtime_error(status.message());
     // fetch the document list block again to get updated content and version
     dl = get_documents(user, &mb);

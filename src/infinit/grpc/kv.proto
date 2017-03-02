@@ -1,13 +1,13 @@
 syntax = "proto3";
 
 service KV {
-  rpc Get(Address) returns (BlockStatus) {}
-  rpc Insert(KVBlock) returns (Status) {}
-  rpc Update(KVBlock) returns (Status) {}
-  rpc Remove(Address) returns (Status) {}
+  rpc Get(KVAddress) returns (BlockStatus) {}
+  rpc Insert(KVBlock) returns (KVStatus) {}
+  rpc Update(KVBlock) returns (KVStatus) {}
+  rpc Remove(KVAddress) returns (KVStatus) {}
 }
 
-message Address {
+message KVAddress {
   string address = 1;
 }
 
@@ -50,24 +50,24 @@ message KVBlock {
   }
 }
 
-message Status {
-  Error error = 1;
+message KVStatus {
+  KVError error = 1;
   string message = 2;
   string address = 3;
   int64 version = 4; // current block version in case of conflict
 }
 
 message BlockStatus {
-  Status status = 1;
+  KVStatus status = 1;
   KVBlock block = 2;
 }
 
-enum Error {
-  ERROR_OK = 0;
-  ERROR_MISSING_BLOCK = 1;
-  ERROR_CONFLICT = 2;
-  ERROR_VALIDATION_FAILED = 3;
-  ERROR_TOO_FEW_PEERS = 4;
-  ERROR_NO_PEERS = 5;
-  ERROR_OTHER = 1000;
+enum KVError {
+  KV_ERROR_OK = 0;
+  KV_ERROR_MISSING_BLOCK = 1;
+  KV_ERROR_CONFLICT = 2;
+  KV_ERROR_VALIDATION_FAILED = 3;
+  KV_ERROR_TOO_FEW_PEERS = 4;
+  KV_ERROR_NO_PEERS = 5;
+  KV_ERROR_OTHER = 1000;
 }

@@ -32,9 +32,9 @@ namespace infinit
     }
     static
     bool
-    exception_handler(::DNStatus& res, std::function<void()> f)
+    exception_handler(::Status& res, std::function<void()> f)
     {
-      res.set_error(DN_ERROR_OK);
+      res.set_error(ERROR_OK);
       res.clear_message();
       try
       {
@@ -44,22 +44,22 @@ namespace infinit
       }
       catch (model::MissingBlock const& err)
       {
-        res.set_error(DN_ERROR_MISSING_BLOCK);
+        res.set_error(ERROR_MISSING_BLOCK);
         res.set_message(err.what());
       }
       catch (model::doughnut::ValidationFailed const& err)
       {
-        res.set_error(DN_ERROR_VALIDATION_FAILED);
+        res.set_error(ERROR_VALIDATION_FAILED);
         res.set_message(err.what());
       }
       catch (elle::athena::paxos::TooFewPeers const& err)
       {
-        res.set_error(DN_ERROR_TOO_FEW_PEERS);
+        res.set_error(ERROR_TOO_FEW_PEERS);
         res.set_message(err.what());
       }
       catch (model::doughnut::Conflict const& err)
       {
-        res.set_error(DN_ERROR_CONFLICT);
+        res.set_error(ERROR_CONFLICT);
         res.set_message(err.what());
         if (auto* mb = dynamic_cast<model::blocks::MutableBlock*>(err.current().get()))
           res.set_version(mb->version());
@@ -71,9 +71,9 @@ namespace infinit
         ELLE_TRACE("%s", err.backtrace());
         // FIXME
         if (std::string(err.what()).find("no peer available for") == 0)
-          res.set_error(DN_ERROR_NO_PEERS);
+          res.set_error(ERROR_NO_PEERS);
         else
-          res.set_error(DN_ERROR_OTHER);
+          res.set_error(ERROR_OTHER);
         res.set_message(err.what());
       }
       ELLE_TRACE("an exception was encountered");
@@ -93,11 +93,11 @@ namespace infinit
       Status MakeACB(Ctx*, const ::Empty* request, ::Block* response);
       Status MakeOKB(Ctx*, const ::Empty* request, ::Block* response);
       Status MakeNB(Ctx*, const ::Bytes* request, ::Block* response);
-      Status Get(Ctx*, const ::DNAddress* request, ::BlockOrStatus* response);
-      Status Update(Ctx*, const ::Block* request, ::DNStatus* response);
-      Status Insert(Ctx*, const ::Block* request, ::DNStatus* response);
-      Status Remove(Ctx*, const ::DNAddress* request, ::DNStatus* response);
-      Status NBAddress(Ctx*, const ::Bytes* request, ::DNAddress* response);
+      Status Get(Ctx*, const ::Address* request, ::BlockOrStatus* response);
+      Status Update(Ctx*, const ::Block* request, ::Status* response);
+      Status Insert(Ctx*, const ::Block* request, ::Status* response);
+      Status Remove(Ctx*, const ::Address* request, ::Status* response);
+      Status NBAddress(Ctx*, const ::Bytes* request, ::Address* response);
     private:
       infinit::model::Model& _model;
       elle::reactor::Scheduler& _sched;
@@ -105,7 +105,7 @@ namespace infinit
 
     ::grpc::Status DoughnutImpl::MakeCHB(Ctx*, const ::CHBData* request, ::Block* response)
     {
-      ::DNStatus status;
+      ::Status status;
       _sched.mt_run<void>("MakeCHB", [&] {
           if (!exception_handler(status, [&] {
               std::unique_ptr<model::blocks::Block> block
@@ -123,7 +123,7 @@ namespace infinit
     }
     ::grpc::Status DoughnutImpl::MakeACB(Ctx*, const ::Empty* request, ::Block* response)
     {
-      ::DNStatus status;
+      ::Status status;
       _sched.mt_run<void>("MakeACB", [&] {
           if (!exception_handler(status, [&] {
               std::unique_ptr<model::blocks::Block> block = _model.make_block<model::blocks::ACLBlock>();
@@ -138,7 +138,7 @@ namespace infinit
     }
     ::grpc::Status DoughnutImpl::MakeOKB(Ctx*, const ::Empty* request, ::Block* response)
     {
-      ::DNStatus status;
+      ::Status status;
 
       _sched.mt_run<void>("MakeOKB", [&] {
           if (!exception_handler(status, [&] {
@@ -164,7 +164,7 @@ namespace infinit
       });
       return ::grpc::Status::OK;
     }
-    ::grpc::Status DoughnutImpl::NBAddress(Ctx*, const ::Bytes* request, ::DNAddress* response)
+    ::grpc::Status DoughnutImpl::NBAddress(Ctx*, const ::Bytes* request, ::Address* response)
     {
       _sched.mt_run<void>("NBAddress", [&] {
           auto addr = infinit::model::doughnut::NB::address(
@@ -175,9 +175,9 @@ namespace infinit
       });
       return ::grpc::Status::OK;
     }
-    ::grpc::Status DoughnutImpl::Get(Ctx*, const ::DNAddress* request, ::BlockOrStatus* response)
+    ::grpc::Status DoughnutImpl::Get(Ctx*, const ::Address* request, ::BlockOrStatus* response)
     {
-      ::DNStatus status;
+      ::Status status;
       _sched.mt_run<void>("Get", [&] {
           if (!exception_handler(status, [&] {
               auto block = _model.fetch(to_address(request->address()));
@@ -191,7 +191,7 @@ namespace infinit
       });
       return ::grpc::Status::OK;
     }
-    ::grpc::Status DoughnutImpl::Update(Ctx*, const ::Block* request, ::DNStatus* response)
+    ::grpc::Status DoughnutImpl::Update(Ctx*, const ::Block* request, ::Status* response)
     {
       _sched.mt_run<void>("Update", [&] {
           exception_handler(*response, [&] {
@@ -210,7 +210,7 @@ namespace infinit
       });
       return ::grpc::Status::OK;
     }
-    ::grpc::Status DoughnutImpl::Insert(Ctx*, const ::Block* request, ::DNStatus* response)
+    ::grpc::Status DoughnutImpl::Insert(Ctx*, const ::Block* request, ::Status* response)
     {
       _sched.mt_run<void>("Insert", [&] {
           exception_handler(*response, [&] {
@@ -230,7 +230,7 @@ namespace infinit
       });
       return ::grpc::Status::OK;
     }
-    ::grpc::Status DoughnutImpl::Remove(Ctx*, const ::DNAddress* request, ::DNStatus* response)
+    ::grpc::Status DoughnutImpl::Remove(Ctx*, const ::Address* request, ::Status* response)
     {
       _sched.mt_run<void>("Remove", [&] {
           exception_handler(*response, [&] {
