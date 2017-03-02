@@ -80,64 +80,6 @@ namespace infinit
       return false;
     }
 
-    static
-    google::protobuf::Message const*
-    resolve_anyblock(::AnyBlock const& ab)
-    {
-      if (ab.has_chb())
-        return &ab.chb();
-      else if (ab.has_okb())
-        return &ab.okb();
-      else if (ab.has_acb())
-        return &ab.acb();
-      else if (ab.has_nb())
-        return &ab.nb();
-      else
-        return nullptr;
-    }
-
-    static
-    std::string
-    anyblock_data(::AnyBlock const& ab)
-    {
-      if (ab.has_chb())
-        return ab.chb().data();
-      else if (ab.has_okb())
-        return ab.okb().data();
-      else if (ab.has_acb())
-        return ab.acb().data();
-      else if (ab.has_nb())
-        return ab.nb().data();
-      else
-        elle::err("unknown block type!");
-      return std::string();
-    }
-
-    static
-    void
-    anyblock_data(::AnyBlock& ab, elle::Buffer const& data)
-    {
-      if (ab.has_okb())
-        ab.mutable_okb()->set_data(data.string());
-      else if (ab.has_acb())
-        ab.mutable_acb()->set_data(data.string());
-    }
-
-    static
-    google::protobuf::Message*
-    resolve_anyblock(::AnyBlock& ab, model::blocks::Block* b)
-    {
-      if (dynamic_cast<model::doughnut::NB*>(b))
-        return ab.mutable_nb();
-      if (dynamic_cast<model::doughnut::CHB*>(b))
-        return ab.mutable_chb();
-      if (dynamic_cast<model::doughnut::ACB*>(b))
-        return ab.mutable_acb();
-      if (dynamic_cast<model::doughnut::OKB*>(b))
-        return ab.mutable_okb();
-      return nullptr;
-    }
-
     class DoughnutImpl: public ::Doughnut::Service
     {
     public:
@@ -147,21 +89,21 @@ namespace infinit
       : _model(model)
       , _sched(elle::reactor::scheduler())
       {}
-      Status MakeCHB(Ctx*, const ::CHBData* request, ::CHB* response);
-      Status MakeACB(Ctx*, const ::Empty* request, ::ACB* response);
-      Status MakeOKB(Ctx*, const ::Empty* request, ::OKB* response);
-      Status MakeNB(Ctx*, const ::String* request, ::NB* response);
-      Status Get(Ctx*, const ::DNAddress* request, ::AnyBlockOrStatus* response);
-      Status Update(Ctx*, const ::AnyBlock* request, ::DNStatus* response);
-      Status Insert(Ctx*, const ::AnyBlock* request, ::DNStatus* response);
+      Status MakeCHB(Ctx*, const ::CHBData* request, ::Block* response);
+      Status MakeACB(Ctx*, const ::Empty* request, ::Block* response);
+      Status MakeOKB(Ctx*, const ::Empty* request, ::Block* response);
+      Status MakeNB(Ctx*, const ::Bytes* request, ::Block* response);
+      Status Get(Ctx*, const ::DNAddress* request, ::BlockOrStatus* response);
+      Status Update(Ctx*, const ::Block* request, ::DNStatus* response);
+      Status Insert(Ctx*, const ::Block* request, ::DNStatus* response);
       Status Remove(Ctx*, const ::DNAddress* request, ::DNStatus* response);
-      Status NBAddress(Ctx*, const ::String* request, ::DNAddress* response);
+      Status NBAddress(Ctx*, const ::Bytes* request, ::DNAddress* response);
     private:
       infinit::model::Model& _model;
       elle::reactor::Scheduler& _sched;
     };
 
-    ::grpc::Status DoughnutImpl::MakeCHB(Ctx*, const ::CHBData* request, ::CHB* response)
+    ::grpc::Status DoughnutImpl::MakeCHB(Ctx*, const ::CHBData* request, ::Block* response)
     {
       ::DNStatus status;
       _sched.mt_run<void>("MakeCHB", [&] {
@@ -179,7 +121,7 @@ namespace infinit
       });
       return ::grpc::Status::OK;
     }
-    ::grpc::Status DoughnutImpl::MakeACB(Ctx*, const ::Empty* request, ::ACB* response)
+    ::grpc::Status DoughnutImpl::MakeACB(Ctx*, const ::Empty* request, ::Block* response)
     {
       ::DNStatus status;
       _sched.mt_run<void>("MakeACB", [&] {
@@ -194,7 +136,7 @@ namespace infinit
       });
       return ::grpc::Status::OK;
     }
-    ::grpc::Status DoughnutImpl::MakeOKB(Ctx*, const ::Empty* request, ::OKB* response)
+    ::grpc::Status DoughnutImpl::MakeOKB(Ctx*, const ::Empty* request, ::Block* response)
     {
       ::DNStatus status;
 
@@ -210,38 +152,38 @@ namespace infinit
       });
       return ::grpc::Status::OK;
     }
-    ::grpc::Status DoughnutImpl::MakeNB(Ctx*, const ::String* request, ::NB* response)
+    ::grpc::Status DoughnutImpl::MakeNB(Ctx*, const ::Bytes* request, ::Block* response)
     {
       _sched.mt_run<void>("MakeNB", [&] {
           std::unique_ptr<model::blocks::Block> nb = std::make_unique<model::doughnut::NB>(
             dynamic_cast<model::doughnut::Doughnut&>(_model),
-            request->str(),
+            request->data(),
             elle::Buffer());
           SerializerOut sout(response);
           sout.serialize_forward(nb);
       });
       return ::grpc::Status::OK;
     }
-    ::grpc::Status DoughnutImpl::NBAddress(Ctx*, const ::String* request, ::DNAddress* response)
+    ::grpc::Status DoughnutImpl::NBAddress(Ctx*, const ::Bytes* request, ::DNAddress* response)
     {
       _sched.mt_run<void>("NBAddress", [&] {
           auto addr = infinit::model::doughnut::NB::address(
             dynamic_cast<model::doughnut::Doughnut&>(_model).keys().K(),
-            request->str(),
+            request->data(),
             _model.version());
           response->set_address(std::string((const char*)addr.value(), 32));
       });
       return ::grpc::Status::OK;
     }
-    ::grpc::Status DoughnutImpl::Get(Ctx*, const ::DNAddress* request, ::AnyBlockOrStatus* response)
+    ::grpc::Status DoughnutImpl::Get(Ctx*, const ::DNAddress* request, ::BlockOrStatus* response)
     {
       ::DNStatus status;
       _sched.mt_run<void>("Get", [&] {
           if (!exception_handler(status, [&] {
               auto block = _model.fetch(to_address(request->address()));
-              SerializerOut sout(resolve_anyblock(*response->mutable_block(), block.get()));
+              SerializerOut sout(response->mutable_block());
               sout.serialize_forward(block);
-              anyblock_data(*response->mutable_block(), block->data());
+              response->mutable_block()->set_data(block->data().string());
           }))
           {
             response->mutable_status()->CopyFrom(status);
@@ -249,11 +191,11 @@ namespace infinit
       });
       return ::grpc::Status::OK;
     }
-    ::grpc::Status DoughnutImpl::Update(Ctx*, const ::AnyBlock* request, ::DNStatus* response)
+    ::grpc::Status DoughnutImpl::Update(Ctx*, const ::Block* request, ::DNStatus* response)
     {
       _sched.mt_run<void>("Update", [&] {
           exception_handler(*response, [&] {
-              SerializerIn sin(resolve_anyblock(*request));
+              SerializerIn sin(request);
               sin.set_context<model::doughnut::Doughnut*>(
                 dynamic_cast<model::doughnut::Doughnut*>(&_model));
               std::unique_ptr<model::blocks::Block> block;
@@ -261,18 +203,18 @@ namespace infinit
               // force a seal
               if (auto mb = dynamic_cast<model::blocks::MutableBlock*>(block.get()))
               {
-                mb->data(anyblock_data(*request));
+                mb->data(request->data());
               }
               _model.update(std::move(block));
           });
       });
       return ::grpc::Status::OK;
     }
-    ::grpc::Status DoughnutImpl::Insert(Ctx*, const ::AnyBlock* request, ::DNStatus* response)
+    ::grpc::Status DoughnutImpl::Insert(Ctx*, const ::Block* request, ::DNStatus* response)
     {
       _sched.mt_run<void>("Insert", [&] {
           exception_handler(*response, [&] {
-              SerializerIn sin(resolve_anyblock(*request));
+              SerializerIn sin(request);
               sin.set_context<model::doughnut::Doughnut*>(
                 dynamic_cast<model::doughnut::Doughnut*>(&_model));
               std::unique_ptr<model::blocks::Block> block;
@@ -280,7 +222,7 @@ namespace infinit
               // force a seal
               if (auto mb = dynamic_cast<model::blocks::MutableBlock*>(block.get()))
               {
-                mb->data(anyblock_data(*request));
+                mb->data(request->data());
               }
               ELLE_DEBUG("insert %s with %s", block->address(), block->data());
               _model.insert(std::move(block));

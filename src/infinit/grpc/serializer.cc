@@ -21,13 +21,20 @@ namespace infinit
     SerializerIn::_enter(std::string const& name)
     {
       ELLE_DUMP("%s: enter %s %s", this, name, _names);
-      if (_field)
-      {
-        elle::err("_enter %s with _field set at %s", name, _names);
-      }
       auto* cur = _message_stack.back();
       auto* ref = cur->GetReflection();
       auto* desc = cur->GetDescriptor();
+      if (_field)
+      {
+        // try to see if we mapped foo.bar onto foo_bar
+        auto mapped = _names.back() + "_" + name;
+        auto field = desc->FindFieldByName(mapped);
+        if (!field)
+          elle::err("_enter %s with _field set at %s", name, _names);
+        _field = nullptr;
+        _message_stack.push_back(cur);
+        return _enter(mapped);
+      }
       _field = desc->FindFieldByName(name);
       if (!_field)
         _field = desc->FindFieldByName(name + std::to_string(_last_serialized_int));
@@ -252,13 +259,22 @@ namespace infinit
     SerializerOut::_enter(std::string const& name)
     {
       ELLE_DUMP("enter %s %s", name, _names);
-      if (_field)
-      {
-        elle::err("_enter %s with _field set at %s", name, _names);
-      }
       auto* cur = _message_stack.back();
       auto* ref = cur->GetReflection();
       auto* desc = cur->GetDescriptor();
+      if (_field)
+      {
+        // try to see if we mapped foo.bar onto foo_bar
+        auto mapped = _names.back() + "_" + name;
+        auto field = desc->FindFieldByName(mapped);
+        if (!field)
+          elle::err("_enter %s with _field set at %s", name, _names);
+        ELLE_DEBUG("remapping %s to %s at %s", name, mapped, _names);
+        _field = nullptr;
+        _message_stack.push_back(cur);
+        return _enter(mapped);
+      }
+
       _field = desc->FindFieldByName(name);
       if (!_field)
         _field = desc->FindFieldByName(name + std::to_string(_last_serialized_int));

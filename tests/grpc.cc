@@ -549,7 +549,7 @@ ELLE_TEST_SCHEDULED(basic)
   }
   { // put/get chb
     grpc::ClientContext context;
-    ::Block req;
+    ::KVBlock req;
     req.set_payload("foo");
     req.mutable_constant_block();
     ::Status repl;
@@ -571,7 +571,7 @@ ELLE_TEST_SCHEDULED(basic)
     }
   }
   { // mb
-    ::Block req;
+    ::KVBlock req;
     req.set_payload("foo");
     req.mutable_mutable_block();
     ::Status repl;
@@ -607,7 +607,7 @@ ELLE_TEST_SCHEDULED(basic)
     }
   }
   { // acb
-    ::Block req;
+    ::KVBlock req;
     req.set_payload("foo");
     req.mutable_acl_block();
     ::Status repl;
@@ -900,7 +900,7 @@ ELLE_TEST_SCHEDULED(doughnut)
     { // get missing block
       grpc::ClientContext context;
       ::DNAddress req;
-      ::AnyBlockOrStatus repl;
+      ::BlockOrStatus repl;
       req.set_address(elle::sprintf("%s", infinit::model::Address::null));
       ELLE_LOG("call...");
       auto res = stub->Get(&context, req, &repl);
@@ -910,7 +910,7 @@ ELLE_TEST_SCHEDULED(doughnut)
       BOOST_CHECK_EQUAL(repl.status().error(), DN_ERROR_MISSING_BLOCK);
     }
     // Basic CHB
-    ::CHB chb;
+    ::Block chb;
     { // make
       grpc::ClientContext context;
       ::CHBData chb_data;
@@ -923,9 +923,9 @@ ELLE_TEST_SCHEDULED(doughnut)
     }
     { // store
       grpc::ClientContext context;
-      ::AnyBlock ab;
+      ::Block ab;
       ::DNStatus repl;
-      ab.mutable_chb()->CopyFrom(chb);
+      ab.CopyFrom(chb);
       stub->Insert(&context, ab, &repl);
       BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_OK);
     }
@@ -939,18 +939,17 @@ ELLE_TEST_SCHEDULED(doughnut)
     BOOST_CHECK_EQUAL(data, "bok");
     { // fetch
       grpc::ClientContext context;
-      ::AnyBlockOrStatus abs;
+      ::BlockOrStatus abs;
       ::DNAddress addr;
       addr.set_address(chb.address());
       stub->Get(&context, addr, &abs);
       BOOST_CHECK(abs.has_block());
-      BOOST_CHECK(abs.block().has_chb());
-      BOOST_CHECK_EQUAL(abs.block().chb().address(), chb.address());
-      BOOST_CHECK_EQUAL(abs.block().chb().data(), "bok");
+      BOOST_CHECK_EQUAL(abs.block().address(), chb.address());
+      BOOST_CHECK_EQUAL(abs.block().data(), "bok");
     }
 
     // basic OKB
-    ::OKB okb;
+    ::Block okb;
     { // make
       grpc::ClientContext context;
       ::Empty arg;
@@ -963,61 +962,58 @@ ELLE_TEST_SCHEDULED(doughnut)
     okb.set_data("bokbok");
     { // store
       grpc::ClientContext context;
-      ::AnyBlock ab;
+      ::Block ab;
       ::DNStatus repl;
-      ab.mutable_okb()->CopyFrom(okb);
+      ab.CopyFrom(okb);
       stub->Insert(&context, ab, &repl);
       BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_OK);
     }
-    ::AnyBlockOrStatus abs;
+    ::BlockOrStatus abs;
     { // fetch
       grpc::ClientContext context;
       ::DNAddress addr;
       addr.set_address(okb.address());
       stub->Get(&context, addr, &abs);
       BOOST_CHECK(abs.has_block());
-      BOOST_CHECK(abs.block().has_okb());
-      BOOST_CHECK_EQUAL(abs.block().okb().address(), okb.address());
-      BOOST_CHECK_EQUAL(abs.block().okb().data(), "bokbok");
+      BOOST_CHECK_EQUAL(abs.block().address(), okb.address());
+      BOOST_CHECK_EQUAL(abs.block().data(), "bokbok");
     }
     // update
     {
-      abs.mutable_block()->mutable_okb()->set_data("mooh");
+      abs.mutable_block()->set_data("mooh");
       grpc::ClientContext context;
       ::DNStatus repl;
       stub->Update(&context, abs.block(), &repl);
       BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_OK);
     }
     { // fetch
-      ::AnyBlockOrStatus abs; // use another message to be sure
+      ::BlockOrStatus abs; // use another message to be sure
       grpc::ClientContext context;
       ::DNAddress addr;
       addr.set_address(okb.address());
       stub->Get(&context, addr, &abs);
       BOOST_CHECK(abs.has_block());
-      BOOST_CHECK(abs.block().has_okb());
-      BOOST_CHECK_EQUAL(abs.block().okb().address(), okb.address());
-      BOOST_CHECK_EQUAL(abs.block().okb().data(), "mooh");
+      BOOST_CHECK_EQUAL(abs.block().address(), okb.address());
+      BOOST_CHECK_EQUAL(abs.block().data(), "mooh");
     }
     // update again from same object
     {
-      abs.mutable_block()->mutable_okb()->set_data("merow");
+      abs.mutable_block()->set_data("merow");
       grpc::ClientContext context;
       ::DNStatus repl;
       stub->Update(&context, abs.block(), &repl);
       BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_CONFLICT);
       { // fetch to get current version
-        ::AnyBlockOrStatus tabs;
+        ::BlockOrStatus tabs;
         grpc::ClientContext context;
         ::DNAddress addr;
         addr.set_address(okb.address());
         stub->Get(&context, addr, &tabs);
         BOOST_CHECK(tabs.has_block());
-        BOOST_CHECK(tabs.block().has_okb());
         ELLE_TRACE("update version: %s -> %s",
-          abs.block().okb().version(),
-          tabs.block().okb().version());
-        abs.mutable_block()->mutable_okb()->set_version(tabs.block().okb().version());
+          abs.block().version(),
+          tabs.block().version());
+        abs.mutable_block()->set_version(tabs.block().version());
       }
       // retry update
       {
@@ -1027,19 +1023,18 @@ ELLE_TEST_SCHEDULED(doughnut)
         BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_OK);
       }
       { // fetch
-         ::AnyBlockOrStatus tabs;
+         ::BlockOrStatus tabs;
         grpc::ClientContext context;
         ::DNAddress addr;
         addr.set_address(okb.address());
         stub->Get(&context, addr, &tabs);
         BOOST_CHECK(tabs.has_block());
-        BOOST_CHECK(tabs.block().has_okb());
-        BOOST_CHECK_EQUAL(abs.block().okb().data(), "merow");
+        BOOST_CHECK_EQUAL(abs.block().data(), "merow");
       }
     }
 
     // ACB
-    ::ACB acb;
+    ::Block acb;
     { // make
       grpc::ClientContext context;
       ::Empty arg;
@@ -1052,9 +1047,9 @@ ELLE_TEST_SCHEDULED(doughnut)
     acb.set_data("bokbok");
     { // store
       grpc::ClientContext context;
-      ::AnyBlock ab;
+      ::Block ab;
       ::DNStatus repl;
-      ab.mutable_acb()->CopyFrom(acb);
+      ab.CopyFrom(acb);
       stub->Insert(&context, ab, &repl);
       BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_OK);
     }
@@ -1064,48 +1059,45 @@ ELLE_TEST_SCHEDULED(doughnut)
       addr.set_address(acb.address());
       stub->Get(&context, addr, &abs);
       BOOST_CHECK(abs.has_block());
-      BOOST_CHECK(abs.block().has_acb());
-      BOOST_CHECK_EQUAL(abs.block().acb().address(), acb.address());
-      BOOST_CHECK_EQUAL(abs.block().acb().data(), "bokbok");
+      BOOST_CHECK_EQUAL(abs.block().address(), acb.address());
+      BOOST_CHECK_EQUAL(abs.block().data(), "bokbok");
     }
     // update
     {
-      abs.mutable_block()->mutable_acb()->set_data("mooh");
+      abs.mutable_block()->set_data("mooh");
       grpc::ClientContext context;
       ::DNStatus repl;
       stub->Update(&context, abs.block(), &repl);
       BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_OK);
     }
     { // fetch
-      ::AnyBlockOrStatus abs; // use another message to be sure
+      ::BlockOrStatus abs; // use another message to be sure
       grpc::ClientContext context;
       ::DNAddress addr;
       addr.set_address(acb.address());
       stub->Get(&context, addr, &abs);
       BOOST_CHECK(abs.has_block());
-      BOOST_CHECK(abs.block().has_acb());
-      BOOST_CHECK_EQUAL(abs.block().acb().address(), acb.address());
-      BOOST_CHECK_EQUAL(abs.block().acb().data(), "mooh");
+      BOOST_CHECK_EQUAL(abs.block().address(), acb.address());
+      BOOST_CHECK_EQUAL(abs.block().data(), "mooh");
     }
     // update again from same object
     {
-      abs.mutable_block()->mutable_acb()->set_data("merow");
+      abs.mutable_block()->set_data("merow");
       grpc::ClientContext context;
       ::DNStatus repl;
       stub->Update(&context, abs.block(), &repl);
       BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_CONFLICT);
       { // fetch to get current version
-        ::AnyBlockOrStatus tabs;
+        ::BlockOrStatus tabs;
         grpc::ClientContext context;
         ::DNAddress addr;
         addr.set_address(acb.address());
         stub->Get(&context, addr, &tabs);
         BOOST_CHECK(tabs.has_block());
-        BOOST_CHECK(tabs.block().has_acb());
         ELLE_TRACE("update version: %s -> %s",
-          abs.block().acb().data_version(),
-          tabs.block().acb().data_version());
-        abs.mutable_block()->mutable_acb()->set_data_version(tabs.block().acb().data_version());
+          abs.block().data_version(),
+          tabs.block().data_version());
+        abs.mutable_block()->set_data_version(tabs.block().data_version());
       }
       // retry update
       {
@@ -1115,28 +1107,27 @@ ELLE_TEST_SCHEDULED(doughnut)
         BOOST_CHECK_EQUAL(repl.error(), DN_ERROR_OK);
       }
       { // fetch
-         ::AnyBlockOrStatus tabs;
+         ::BlockOrStatus tabs;
         grpc::ClientContext context;
         ::DNAddress addr;
         addr.set_address(acb.address());
         stub->Get(&context, addr, &tabs);
         BOOST_CHECK(tabs.has_block());
-        BOOST_CHECK(tabs.block().has_acb());
-        BOOST_CHECK_EQUAL(abs.block().acb().data(), "merow");
+        BOOST_CHECK_EQUAL(abs.block().data(), "merow");
       }
     }
     // NB
-    ::NB nb;
+    ::Block nb;
     { // make
       grpc::ClientContext context;
-      ::String str;
-      str.set_str("uid");
+      ::Bytes str;
+      str.set_data("uid");
       stub->MakeNB(&context, str, &nb);
     }
     { // insert
-      ::AnyBlock ab;
-      ab.mutable_nb()->CopyFrom(nb);
-      ab.mutable_nb()->set_data("coin");
+      ::Block ab;
+      ab.CopyFrom(nb);
+      ab.set_data("coin");
       grpc::ClientContext context;
       ::DNStatus status;
       stub->Insert(&context, ab, &status);
@@ -1145,27 +1136,26 @@ ELLE_TEST_SCHEDULED(doughnut)
     ::DNAddress nba;
     { // ask for address
       grpc::ClientContext context;
-      ::String str;
-      str.set_str("uid");
+      ::Bytes str;
+      str.set_data("uid");
       stub->NBAddress(&context, str, &nba);
     }
     { // fetch
       grpc::ClientContext context;
-      ::AnyBlockOrStatus ab;
+      ::BlockOrStatus ab;
       stub->Get(&context, nba, &ab);
       BOOST_CHECK(ab.has_block());
-      BOOST_CHECK(ab.block().has_nb());
-      BOOST_CHECK_EQUAL(ab.block().nb().data(), "coin");
+      BOOST_CHECK_EQUAL(ab.block().data(), "coin");
     }
     { // dummy address
       grpc::ClientContext context;
-      ::String str;
-      str.set_str("invalidid");
+      ::Bytes str;
+      str.set_data("invalidid");
       stub->NBAddress(&context, str, &nba);
     }
     { // fetch
       grpc::ClientContext context;
-      ::AnyBlockOrStatus ab;
+      ::BlockOrStatus ab;
       stub->Get(&context, nba, &ab);
       BOOST_CHECK(ab.has_status());
       BOOST_CHECK_EQUAL(ab.status().error(), DN_ERROR_MISSING_BLOCK);

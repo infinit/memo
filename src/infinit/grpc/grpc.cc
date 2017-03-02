@@ -142,14 +142,14 @@ namespace infinit
       ::BlockStatus
       Get(const ::Address& request);
       ::Status
-      Insert(const ::Block& request);
+      Insert(const ::KVBlock& request);
       ::Status
-      Update(const ::Block& request);
+      Update(const ::KVBlock& request);
       ::Status
       Remove(const ::Address& request);
 
       ::Status
-      Set(const ::Block& request, infinit::model::StoreMode mode);
+      Set(const ::KVBlock& request, infinit::model::StoreMode mode);
       ELLE_ATTRIBUTE(infinit::model::Model&, model);
     };
 
@@ -168,14 +168,14 @@ namespace infinit
         });
         return ::grpc::Status::OK;
       }
-      ::grpc::Status Insert(::grpc::ServerContext* context, const ::Block* request, ::Status* response)
+      ::grpc::Status Insert(::grpc::ServerContext* context, const ::KVBlock* request, ::Status* response)
       {
         _sched.mt_run<void>("Insert", [&] {
             *response = std::move(_impl.Insert(*request));
         });
         return ::grpc::Status::OK;
       }
-      ::grpc::Status Update(::grpc::ServerContext* context, const ::Block* request, ::Status* response)
+      ::grpc::Status Update(::grpc::ServerContext* context, const ::KVBlock* request, ::Status* response)
       {
         _sched.mt_run<void>("Update", [&] {
             *response = std::move(_impl.Update(*request));
@@ -314,19 +314,19 @@ namespace infinit
     }
 
     ::Status
-    KVImpl::Insert(const ::Block& request)
+    KVImpl::Insert(const ::KVBlock& request)
     {
       return Set(request, infinit::model::STORE_INSERT);
     }
 
     ::Status
-    KVImpl::Update(const ::Block& request)
+    KVImpl::Update(const ::KVBlock& request)
     {
       return Set(request, infinit::model::STORE_UPDATE);
     }
 
     ::Status
-    KVImpl::Set(const ::Block& request, infinit::model::StoreMode mode)
+    KVImpl::Set(const ::KVBlock& request, infinit::model::StoreMode mode)
     {
       auto const& iblock = request;
       ELLE_LOG("Set %s", iblock.address());

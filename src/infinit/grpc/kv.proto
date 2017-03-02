@@ -2,8 +2,8 @@ syntax = "proto3";
 
 service KV {
   rpc Get(Address) returns (BlockStatus) {}
-  rpc Insert(Block) returns (Status) {}
-  rpc Update(Block) returns (Status) {}
+  rpc Insert(KVBlock) returns (Status) {}
+  rpc Update(KVBlock) returns (Status) {}
   rpc Remove(Address) returns (Status) {}
 }
 
@@ -39,7 +39,7 @@ message NamedBlockData {
   string owner = 2;
 }
 
-message Block {
+message KVBlock {
   string address = 1;
   string payload = 2;
   oneof data {
@@ -59,7 +59,7 @@ message Status {
 
 message BlockStatus {
   Status status = 1;
-  Block block = 2;
+  KVBlock block = 2;
 }
 
 enum Error {

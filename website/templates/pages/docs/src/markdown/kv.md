@@ -12,7 +12,7 @@ specified in the file [kv.proto](kv.proto).
 At its most basic level, a key-value store provides a mapping from an Address to
 its corresponding content. The API is comprised of four main methods:
 
-* `Block Get(Address)`: Returns the data Block found at given address.
+* `BlockOrStatus Get(Address)`: Returns the data Block found at given address or an error.
 * `Status Remove(Address)`: Erase the data Block at given address.
 * `Address Insert(Block)`: Insert a new block into the KV store, and return
   the address that was attributed to it.
@@ -43,11 +43,10 @@ purposes. The most important ones are:
 Blocks are read and written on the KV store through the `Block` protobuf message
 type. Block contains two fields common to all block types:
 
-* `Address address`: The address of the Block. This field must be empty when
-calling the `insert()` method.
-* `string payload`: The data payload contained in the block.
+* `bytes address`: The address of the Block.
+* `bytes data`: The data payload contained in the block.
 
-Block contains also one union field whose content depends on the block type.
+Block contains more field whose meaning depends on the block type.
 
 ### Immutable blocks (CHB) ###
 
@@ -57,7 +56,7 @@ through the `Get` API call, infinit will recompute the hash of the content and c
 it against the address. If both hash do not match `Get` will return a `VALIDATION_FAILED`
 error.
 
-CHB exposes one additional feature through the `block.constant_block.owner` field:
+CHB exposes one additional feature through the `block.owner` field:
 if set to the address of an ACB, then removing the CHB will only be allowed if
 the user would be allowed to remove said ACB.
 
@@ -66,20 +65,16 @@ the user would be allowed to remove said ACB.
 
 Mutable blocks are versioned data blocks that can be updated.
 
-The `block.mutable_block` message contains a single field: `int64 version`.
-When reading a block through `Get`, this field is set with the current block version.
-When writing a block through `Update`, you have two options:
+Infinit enforces an atomic update scheme by using a versioning mechanism:
+When you `Get` a mutable block, the returned `Block` contains a version field
+that contains the block version at the moment the read occured.
+When you attempt to call `Update`, that version gets incremented by one, and
+the update will only succeed if the resulting number is above the current
+block version. Otheriwise the `Update` call will fail with a CONFLICT error
+message.
 
-* Set `version` to 0. In which case infinit will simply write the block by
-  incrementing the current version by 1. In case of two concurrent updates of the
-  same MB they will both succeed but one of them will be lost.
-* Set `version` to any non-zero value. In that case the update operation will only
-  succeed if the current version is strictly less than that value. Otherwise the
-  update will fail with an `ERROR_CONFLICT` message containing the current block
-  version.
-
-This second option is needed if you need to make an "atomic" update to a MB:
-for instance if your MB's payload is a list of values and you want to add one item
+Atomic updates is an important feature. For instance if your MB's payload is
+a list of values and you want to add one item
 to that list, you need to handle the case where another task is also making an
 update to the list at the same time. See the [example](#example) below for an
 illustration of this use case.
@@ -91,24 +86,17 @@ which users can read and write the data.
 
 By default an ACB can only be read and written by the user who created the block.
 
-The `block.acl_block` message of type `ACLBlockData` has the following fields:
+The `Block` message of type `ACLEntry` has the following fields used to control ACLs:
 
 * `world_read`: If true all users will be allowed to read the ACB payload. 
 * `world_write`: If true all users will be allowed to update the ACB payload.
-* `permissions`: A list of `ACL`.
+* `acl`: A list of `ACLEntry`.
 
-The `ACL` message exposes the following fields:
+The `ACLEntry` message exposes the following fields:
 
-* `user`: user concerned by this ACL. This can be either a user name (the KV store
-keeps a mapping between user names and their public keys), or a serialized public key.
+* `key_koh`: user concerned by this ACL. This field containes the serialized public key of the user.
 * `read`: give read access to the user.
 * `write`: give write access to the user.
-
-
-When reading an ACB, all ACLs will be returned in the `block.acl_block.permissions` field.
-When updating an ACB, ACLs will be *updated* (not replaced) with the content of that field.
-As a consequence, if you want to remove access to a given user, you need to set both
-`read` and `write` to false in its `permissions` ACL entry.
 
 <a name="NB"></a>
 ### Named blocks (NB) ###
@@ -118,10 +106,20 @@ They are typically used as an entry point to access further data, usually by sto
 the address of an other Mutable Block in their payload.
 
 NBs are currently Immutable and thus cannot be updated once created.
+Use the `NBAddress(Bytes)` function to obtain the NB block address from its unique id.
 
-To insert a NB, simply fill the `block.named_block.name` field with your unique id.
-To retrieve a NB, fill the `address` `Get` argument to your unique id, prefixed with *NB:* (no spaces).
+## Creating and inserting new blocks ##
 
+When inserting new blocks into the key-value store, one first needs to obtain
+a `Block` message through one of the builder functions:
+
+* Block MakeCHB(CHBData) : create CHB with given payload and owner
+* Block MakeOKB(Empty) : create OKB (no arguments)
+* Block MakeACB(Empty) : create ACB (no arguments)
+* Block MakeNB(Bytes) : create NB with given key
+
+You can then fill the `data` field with your payload (for mutable blocks) and
+call the `Insert` function.
 
 ## Example: a simple multi-user document storage system ##
 
@@ -151,7 +149,7 @@ We will use the following blocks:
 * For each document, one [CHB](#CHB) will store the document content.
 
 For the document list format, we will use a simple text serialization scheme of the form
-"name=address\nname2=address2\n...".
+"name=address\nname2=address2\n...". We will encode addresses in hexadecimal.
 
 ### Generating the GRPC and protobuf sources ###
 
@@ -159,15 +157,15 @@ The first step is to generate the sources from the [kv.proto] file. This can
 be achieved by the following two commands:
 
 ```
-$> protoc -I/path --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` /path/kv.proto
-$> protoc -I/path --cpp_out=. /path/kv.proto
+$> protoc -I/path --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` /path/doughnut.proto
+$> protoc -I/path --cpp_out=. /path/doughnut.proto
 ```
 
 where *path* is the path where *kv.proto* is stored.
 
-This step will generate four files, *kv.pb.h*, *kv.pb.cc*, *kv.grpc.pb.h* and *kv.grpc.pb.cc*.
+This step will generate four files, *doughnut.pb.h*, *doughnut.pb.cc*, *doughnut.grpc.pb.h* and *doughnut.grpc.pb.cc*.
 
-You need to include *kv.grpc.pb.h* in your source file, and compile the two *.cc* files.
+You need to include *doughnut.grpc.pb.h* in your source file, and compile the two *.cc* files.
 
 ### Connecting to the grpc KV store server ###
 
@@ -182,12 +180,13 @@ command line.
 #include <string>
 #include <map>
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/hex.hpp>
 
-#include <kv.grpc.pb.h>
+#include <doughnut.grpc.pb.h>
 #include <grpc++/grpc++.h>
 
 // Connection to the grpc server
-std::shared_ptr<KV::Stub> kv;
+std::shared_ptr<Doughnut::Stub> kv;
 
 using std::vector;
 using std::string;
@@ -199,10 +198,14 @@ vector<string> list_documents(string name);
 string get_document(string user, string name);
 void set_document(string user, string name, string data);
 
+// helper functions
+using boost::algorithm::hex;
+using boost::algorithm::unhex;
+
 int main(int argc, char** argv)
 {
     auto chan = grpc::CreateChannel(argv[1], grpc::InsecureChannelCredentials());
-    kv = KV::NewStub(chan);
+    kv = Doughnut::NewStub(chan);
     string cmd = argv[2];
     if (cmd == "create") {
       create_user(argv[3]);
@@ -228,26 +231,35 @@ name, that points to the document list block.
 
 <div id="code2"></div>
 ```
-void create_user(string name)
+void create_user(string user)
 {
   // Create and insert an empty mutable block
-  ::Block block;
-  block.set_address("");
-  block.set_payload("");
-  block.mutable_mutable_block(); // this sets the block type
-  ::Status res;
+  ::Block doclist;
+  ::Empty empty;
+  {
+     grpc::ClientContext ctx;
+     kv->MakeOKB(&ctx, empty, &doclist);
+  }
   {
     grpc::ClientContext ctx;
-    kv->Insert(&ctx, block, &res);
+    ::DNStatus res;
+    kv->Insert(&ctx, doclist, &res);
   }
   // Create and insert a Named Block with the MB address as payload.
   // We can reuse the block object
-  block.mutable_named_block()->set_name(name); // changes block type
-  block.set_payload(res.address());
+  ::Bytes key;
+  ::Block nb;
+  key.set_data(user);
   {
     grpc::ClientContext ctx;
-    kv->Insert(&ctx, block, &res);
-    if (res.error() != ERROR_OK)
+    kv->MakeNB(&ctx, key, &nb);
+  }
+  nb.set_data(doclist.address());
+  {
+    ::DNStatus res;
+    grpc::ClientContext ctx;
+    kv->Insert(&ctx, nb, &res);
+    if (res.error() != DN_ERROR_OK)
       throw std::runtime_error("User already exists");
   }
 }
@@ -291,29 +303,33 @@ Let's factor the get part since we'll need it multiple times.
 
 <div id="code4"></div>
 ```
-map<string, string> get_documents(string user, int* version = nullptr, string* db_address = nullptr)
+map<string, string> get_documents(string user, ::Block* block = nullptr)
 {
-  ::Address address;
+  ::DNAddress address;
+  ::Bytes key;
+  key.set_data(user);
+  // Get the NB address
+  {
+    grpc::ClientContext ctx;
+    kv->NBAddress(&ctx, key, &address);
+  }
   // Get the NB
-  address.set_address("NB:" + user);
-  ::BlockStatus res;
+  ::BlockOrStatus res;
   {
     grpc::ClientContext ctx;
     kv->Get(&ctx, address, &res);
-    if (res.status().error() != ERROR_OK)
-      throw std::runtime_error("No such user");
+    if (res.has_status())
+      throw std::runtime_error("No such user (" + res.status().message() + ")");
   }
   // Get the document list MB
-  address.set_address(res.block().payload());
+  address.set_address(res.block().data());
   {
     grpc::ClientContext ctx;
     kv->Get(&ctx, address, &res);
   }
-  if (version)
-    *version = res.status().version();
-  if (db_address)
-    *db_address = res.block().address();
-  auto dl = parse_document_list(res.block().payload());
+  if (block)
+    block->CopyFrom(res.block());
+  auto dl = parse_document_list(res.block().data());
   return dl;
 }
 
@@ -340,14 +356,14 @@ string get_document(string user, string name)
   auto it = dl.find(name);
   if (it == dl.end())
     throw std::runtime_error("no such document");
-  ::Address address;
-  address.set_address(it->second);
-  ::BlockStatus res;
+  ::DNAddress address;
+  address.set_address(unhex(it->second));
+  ::BlockOrStatus res;
   {
     grpc::ClientContext ctx;
     kv->Get(&ctx, address, &res);
   }
-  return res.block().payload();
+  return res.block().data();
 }
 ```
 
@@ -357,60 +373,51 @@ To create or update a document, we first need to create a new CHB with the docum
 content, and then add it to the user document list.
 Here comes the trickiest part: we need to update the document list atomically, in
 case two tasks try to update said document list at the same time. For that we will
-set the Mutable Block version number and retry until there is no update conflict.
+retry the update until there is no update conflict.
 
 <div id="code6"></div>
 ```
 void set_document(string user, string name, string data)
 {
-  int version;
-  string dl_address;
-  auto dl = get_documents(user, &version, &dl_address);
+  ::Block mb;
+  auto dl = get_documents(user, &mb);
   // Create and insert the document CHB
-  ::Block block;
-  block.mutable_constant_block(); // set block type
-  block.set_payload(data);
-  ::Status status;
+  ::CHBData cdata;
+  cdata.set_data(data);
+  ::Block doc;
   {
     grpc::ClientContext ctx;
-    kv->Insert(&ctx, block, &status);
+    kv->MakeCHB(&ctx, cdata, &doc);
   }
-  string chb_addr = status.address();
+  ::DNStatus status;
+  {
+    grpc::ClientContext ctx;
+    kv->Insert(&ctx, doc, &status);
+  }
+  string chb_addr = hex(doc.address());
   while (true)
   {
     // If name is already in the document list, cleanup the data CHB
     auto it = dl.find(name);
     if (it != dl.end())
     {
-      ::Address address;
-      address.set_address(it->second);
+      ::DNAddress address;
+      address.set_address(unhex(it->second));
       grpc::ClientContext ctx;
       kv->Remove(&ctx, address, &status);
     }
     dl[name] = chb_addr; // play or re-play our operation into dl
-    block.set_address(dl_address);
-    block.set_payload(serialize_document_list(dl));
-    block.mutable_mutable_block()->set_version(version + 1);
+    mb.set_data(serialize_document_list(dl));
     {
       grpc::ClientContext ctx;
-      kv->Update(&ctx, block, &status);
+      kv->Update(&ctx, mb, &status);
     }
-    if (status.error() == ERROR_OK)
+    if (status.error() == DN_ERROR_OK)
       break; // all good
-    if (status.error() != ERROR_CONFLICT)
+    if (status.error() != DN_ERROR_CONFLICT)
       throw std::runtime_error(status.message());
-    // fetch the document list block again
-    ::BlockStatus bs;
-    {
-      ::Address address;
-      address.set_address(dl_address);
-      grpc::ClientContext ctx;
-      kv->Get(&ctx, address, &bs);
-    }
-    // deserialize the content into dl, it was updated by some other task
-    dl = parse_document_list(bs.block().payload());
-    // update the version
-    version = bs.block().mutable_block().version();
+    // fetch the document list block again to get updated content and version
+    dl = get_documents(user, &mb);
     // try again
   }
 }

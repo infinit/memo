@@ -1,20 +1,20 @@
 syntax = "proto3";
 
 service Doughnut {
-   rpc MakeCHB(CHBData) returns (CHB) {}
-   rpc MakeACB(Empty) returns (ACB) {}
-   rpc MakeOKB(Empty) returns (OKB) {}
-   rpc MakeNB(String) returns (NB) {}
-   rpc NBAddress(String) returns (DNAddress) {}
-   rpc Get(DNAddress) returns (AnyBlockOrStatus) {}
-   rpc Update(AnyBlock) returns (DNStatus) {}
-   rpc Insert(AnyBlock) returns (DNStatus) {}
+   rpc MakeCHB(CHBData) returns (Block) {}
+   rpc MakeACB(Empty) returns (Block) {}
+   rpc MakeOKB(Empty) returns (Block) {}
+   rpc MakeNB(Bytes) returns (Block) {}
+   rpc NBAddress(Bytes) returns (DNAddress) {}
+   rpc Get(DNAddress) returns (BlockOrStatus) {}
+   rpc Update(Block) returns (DNStatus) {}
+   rpc Insert(Block) returns (DNStatus) {}
    rpc Remove(DNAddress) returns (DNStatus) {}
 }
 
 message CHBData {
-  string data = 1;
-  string owner = 2;
+  bytes data = 1;
+  bytes owner = 2;
 }
 
 message DNStatus {
@@ -23,8 +23,8 @@ message DNStatus {
   int64 version = 3;
 }
 
-message String {
-  string str = 1;
+message Bytes {
+  bytes data = 1;
 }
 
 message DNAddress {
@@ -38,14 +38,6 @@ message Version {
   int64 major = 1;
   int64 minor = 2;
   int64 subminor = 3;
-}
-
-message CHB {
-  string type = 1;
-  bytes address = 2;
-  bytes data = 3;
-  bytes salt = 4;
-  string owner = 5;
 }
 
 message ACLEntry {
@@ -69,59 +61,39 @@ message KeyOrHash {
   }
 }
 
-message OKB {
+message Block {
   string type = 1;
   bytes address = 2;
   bytes data = 3;
-  KeyOrHash key_koh = 4;
-  bytes salt = 5;
-  int64 version = 6;
-  bytes signature = 7;
-}
-
-message ACB {
-  string type = 1;
-  bytes address = 2;
-  bytes data = 3;
-  KeyOrHash key_koh = 4;
-  bytes salt = 5;
-  int64 version = 6;
-  bytes signature = 7;
-  int64 editor = 8;
-  bytes owner_token = 9;
-  repeated ACLEntry acl = 10;
-  int64 data_version = 11;
-  bytes data_signature = 12;
-  bool world_readable = 13;
-  bool world_writable = 14;
-  repeated ACLEntry group_acl = 15;
-  repeated int64 group_version = 16;
-  bool deleted = 17;
-  Version seal_version = 18;
-}
-
-message NB {
-  string type = 1;
-  bytes address = 2;
-  bytes data = 3;
-  PublicKey owner = 4;
-  bytes name = 5;
+  bytes salt = 4;
+  // CHB
+  bytes owner = 5;
+  // NB,OKB,ACB
   bytes signature = 6;
+  // NB
+  bytes owner_rsa = 7;
+  bytes name = 8;
+  // OKB, ACB
+  KeyOrHash key_koh = 9;
+  int64 version = 10;
+  // ACB
+  int64 editor = 11;
+  bytes owner_token = 12;
+  repeated ACLEntry acl = 13;
+  int64 data_version = 14;
+  bytes data_signature = 15;
+  bool world_readable = 16;
+  bool world_writable = 17;
+  repeated ACLEntry group_acl = 18;
+  repeated int64 group_version = 19;
+  bool deleted = 20;
+  Version seal_version = 21;
 }
 
-message AnyBlock {
-  oneof block {
-    CHB chb = 1;
-    OKB okb = 2;
-    ACB acb = 3;
-    NB nb = 4;
-  }
-}
-
-message AnyBlockOrStatus {
+message BlockOrStatus {
   oneof data {
     DNStatus status = 1;
-    AnyBlock block = 2;
+    Block block = 2;
   }
 }
 
