@@ -271,6 +271,18 @@ namespace infinit
         {
           res.emplace("peers", this->peer_list());
           res.emplace("id", elle::sprintf("%s", this->doughnut()->id()));
+          {
+            // FIXME: can DAS help serialization?
+            auto pis = elle::json::Array{};
+            for (auto& pi: _infos)
+              pis.push_back(elle::json::Object
+                            {
+                              {"id", elle::sprintf("%s", pi.id())},
+                              {"endpoints", elle::sprintf("%s", pi.endpoints())},
+                              {"stamp", elle::sprintf("%s", pi.stamp())},
+                            });
+            res.emplace("infos", pis);
+          }
         }
         return res;
       }

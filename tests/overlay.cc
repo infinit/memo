@@ -270,15 +270,14 @@ namespace
   }
 
   std::vector<infinit::model::Address>
-  get_peers(DHT& client)
+  get_peers(DHT& client, std::string const& field = {})
   {
-    auto const ostats = get_ostats(client);
-    if (get_kelips(client))
-      // In Kelips.
-      return get_addresses(ostats, "contacts");
-    else
-      // In Kouncil.
-      return get_addresses(ostats, "peers");
+    return get_addresses(get_ostats(client),
+                         !field.empty() ? field
+                         // In Kelips.
+                         : get_kelips(client) ? "contacts"
+                         // In Kouncil.
+                         : "peers");
   }
 
   int
