@@ -1029,7 +1029,7 @@ ELLE_TEST_SCHEDULED(doughnut)
         addr.set_address(okb.address());
         stub->Get(&context, addr, &tabs);
         BOOST_CHECK(tabs.has_block());
-        BOOST_CHECK_EQUAL(abs.block().data(), "merow");
+        BOOST_CHECK_EQUAL(tabs.block().data(), "merow");
       }
     }
 
@@ -1107,14 +1107,47 @@ ELLE_TEST_SCHEDULED(doughnut)
         BOOST_CHECK_EQUAL(repl.error(), ERROR_OK);
       }
       { // fetch
-         ::BlockOrStatus tabs;
         grpc::ClientContext context;
         ::Address addr;
         addr.set_address(acb.address());
-        stub->Get(&context, addr, &tabs);
-        BOOST_CHECK(tabs.has_block());
+        stub->Get(&context, addr, &abs);
+        BOOST_CHECK(abs.has_block());
         BOOST_CHECK_EQUAL(abs.block().data(), "merow");
       }
+    }
+    // acls
+    ::KeyOrHashOrStatus kohs;
+    {
+      grpc::ClientContext context;
+      ::Bytes name;
+      name.set_data("alice");
+      stub->UserKey(&context, name, &kohs);
+      BOOST_CHECK(kohs.has_key());
+    }
+    auto* acl = abs.mutable_block()->add_acl();
+    acl->set_read(true);
+    acl->set_write(true);
+    acl->mutable_key_koh()->CopyFrom(kohs.key());
+    {
+       grpc::ClientContext context;
+       ::Status status;
+       ELLE_TRACE("update with new world perms");
+       stub->Update(&context, abs.block(), &status);
+       BOOST_CHECK_EQUAL(status.error(), ERROR_OK);
+    }
+    // check read from alice
+    sched.mt_run<void>("alice", [&] {
+        auto ac = dhts.client(false, alice);
+        auto block = ac.dht.dht->fetch(infinit::model::Address((uint8_t*)abs.block().address().data()));
+        BOOST_CHECK_EQUAL(block->data(), "merow");
+    });
+    // username
+    {
+      grpc::ClientContext context;
+      ::BytesOrStatus bos;
+      stub->UserName(&context, kohs.key(), &bos);
+      BOOST_CHECK(bos.has_bytes());
+      BOOST_CHECK_EQUAL(bos.bytes().data(), "alice");
     }
     // NB
     ::Block nb;

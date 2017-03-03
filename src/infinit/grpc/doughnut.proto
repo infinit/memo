@@ -10,6 +10,8 @@ service Doughnut {
    rpc Update(Block) returns (Status) {}
    rpc Insert(Block) returns (Status) {}
    rpc Remove(Address) returns (Status) {}
+   rpc UserKey(Bytes) returns (KeyOrHashOrStatus) {}
+   rpc UserName(KeyOrHash) returns (BytesOrStatus) {}
 }
 
 message CHBData {
@@ -26,6 +28,14 @@ message Status {
 message Bytes {
   bytes data = 1;
 }
+
+message BytesOrStatus {
+  oneof data {
+    Bytes bytes = 1;
+    Status status = 2;
+  }
+}
+
 
 message Address {
   bytes address = 1;
@@ -58,6 +68,13 @@ message KeyOrHash {
     PublicKey value0 = 2;
     bytes value1 = 3;
     int64 value2 = 4;
+  }
+}
+
+message KeyOrHashOrStatus {
+  oneof data {
+    KeyOrHash key = 1;
+    Status status = 2;
   }
 }
 
