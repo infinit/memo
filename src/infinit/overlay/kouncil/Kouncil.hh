@@ -155,11 +155,13 @@ namespace infinit
         struct PeerInfo
           : public elle::Printable::as<PeerInfo>
         {
-          PeerInfo(Address id, Endpoints endpoints, int64_t stamp,
+          PeerInfo(Address id, Endpoints endpoints,
+                   int64_t stamp = -1,
                    LamportAge disappearance = {});
           PeerInfo(Address id, Endpoints endpoints, Time t,
                    LamportAge disappearance= {});
-          /** Merge peer informations in this.
+          explicit PeerInfo(NodeLocation const& loc);
+          /** Merge peer information in this.
            *
            *  @param info The endpoints to merge in this, iff they are more
            *              recent wrt @attribute stamp.

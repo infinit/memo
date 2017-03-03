@@ -77,18 +77,6 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      namespace
-      {
-        Kouncil::PeerInfos
-        make_peer_infos(NodeLocations const& locs)
-        {
-          auto res = Kouncil::PeerInfos{};
-          for (auto const& l: locs)
-            res.emplace(l.id(), l.endpoints(), -1);
-          return res;
-        }
-      }
-
       Kouncil::Kouncil(model::doughnut::Doughnut* dht,
                        std::shared_ptr<Local> local,
                        boost::optional<int> eviction_delay)
@@ -113,7 +101,7 @@ namespace infinit
                   "kouncil_discover",
                   [this] (NodeLocations const& locs)
                   {
-                    this->_discover(make_peer_infos(locs));
+                    this->_discover(PeerInfos{locs.begin(), locs.end()});
                   });
               else
                 r.rpc_server().add(
@@ -753,6 +741,10 @@ namespace infinit
                                   Time t,
                                   LamportAge d)
         : PeerInfo(id, endpoints, to_milliseconds(t), d)
+      {}
+
+      Kouncil::PeerInfo::PeerInfo(NodeLocation const& loc)
+        : PeerInfo(loc.id(), loc.endpoints())
       {}
 
       bool
