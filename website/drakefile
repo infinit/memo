@@ -197,6 +197,8 @@ def configure(
     'resources/images/schema-technology-dht-overlay@2x.png',
     'resources/images/schema-persistent-storage-docker.png',
     'resources/images/schema-persistent-storage-docker@2x.png',
+    'resources/images/schema-storage-platform.png',
+    'resources/images/schema-storage-platform@2x.png',
     'resources/images/desktop-client.png',
     'resources/images/desktop-client@2x.png',
     'resources/images/schema-file-system.png',
@@ -616,6 +618,8 @@ def configure(
     'resources/images/icons/question-mark@2x.png',
     'resources/images/icons/server-red.png',
     'resources/images/icons/server-red@2x.png',
+    'resources/images/icons/block-size.png',
+    'resources/images/icons/block-size@2x.png',
   )
 
   resources = resources + resources_icons

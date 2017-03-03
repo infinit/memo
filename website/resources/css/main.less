@@ -412,19 +412,26 @@ body.home {
     @-moz-keyframes fadefadeSchema { from { opacity: 0; margin-top: 100px; } to { opacity: 1; margin-top: 40px; } }
     @keyframes fadeSchema { from { opacity: 0; margin-top: 100px; } to { opacity: 1; margin-top: 40px; } }
 
+    .schema-full { display: none; 
+      img { width: 96%; height: auto; margin: 40px 2%;}
+    } 
+
     .schema {
       margin: 100px auto 40px auto; max-width: 708px; opacity: 0;
       .animation(fadeSchema, cubic-bezier(0.07, 0.88, 0.09, 0.95), 1);
       .animationFillMode(forwards);
       .animationDuration(0.5s);
-      .animationDelay(0.2s);
+      .animationDelay(0.2s); 
+
+      .legend h4,
+      .title h4 {
+        font-family: @sf; font-size: 14px; text-transform: uppercase;
+      }
 
       .legend {
         position: absolute; left: -116px; top: 87px;
-        h4 {
-          font-size: 18px; max-width: 80px; margin: 0; font-family: @sf;
-          font-size: 13px; text-transform: uppercase;
-        }
+
+        h4 { max-width: 80px; margin: 0; }
         span, h4 { text-align: right; }
         span { display: inline-block; float: right;}
 
@@ -459,6 +466,10 @@ body.home {
         padding: 18px 20px 7px 20px; border: 2px solid #E9E9E9; background: white;
         max-width: 580px; margin-left: 46px;
 
+        .title h4 {
+          margin-top: 3px; display: inline-block; margin-right: 6px;
+        }
+
         span.storage {
           background: #FFF088; border-radius: 3px; color: #6A6B19; font-family: @sf;
           padding: 3px 9px;  font-size: 11px; font-weight: bold; margin-top: 5px;
@@ -472,7 +483,7 @@ body.home {
           @-moz-keyframes disableGrayscale { from { .grayScaleOn(); } to { .grayScaleOff(); } }
           @keyframes disableGrayscale { from { .grayScaleOn(); } to { .grayScaleOff(); } }
 
-          div {
+          div.node {
             float: left; min-width: 120px; text-align: right; margin-right: 25px;
             margin-top: 20px; .grayScaleOn();
             .animation(disableGrayscale, linear, 1);
@@ -487,10 +498,10 @@ body.home {
             strong.note {
               font-size: 12px; color: @infinitgrey; color: #AEAEAE; font-weight: normal;
             }
-            &:nth-child(3) { .animationDelay(1s); }
-            &:nth-child(4) { .animationDelay(1.5s); }
-            &:nth-child(5) { .animationDelay(2s); }
-            &:nth-child(6) { .animationDelay(2.5s); }
+            &:nth-child(4) { .animationDelay(1s); }
+            &:nth-child(5) { .animationDelay(1.5s); }
+            &:nth-child(6) { .animationDelay(2s); }
+            &:nth-child(7) { .animationDelay(2.5s); }
           }
 
           // Slide Right Animation
@@ -500,7 +511,7 @@ body.home {
 
           hr {
             background: @infinitblack; height: 4px; border:none; margin-bottom: 30px;
-            clear: both; position: absolute; top: 88px; width: 0%;
+            clear: both; position: absolute; top: 129px; width: 0%;
             .animation(barSlide, linear, 1);
             .animationFillMode(forwards);
             .animationDuration(2s);
@@ -512,8 +523,10 @@ body.home {
           margin-left: 15px; clear: both; padding-top: 25px;
 
           ul li {
-            float: left; font-size: 12px; text-align: left; opacity: 0.7;
+            float: left; font-size: 12px; text-align: left;
             margin-right: 64px; min-width: 130px; margin-bottom: 28px;
+
+            strong { font-weight: normal; font-size: 15px;}
             img { float: left; margin-right: 7px; }
             &:nth-child(3n+1) { margin-left: 25px; }
             &:nth-child(3n) { margin-right: 0;}
@@ -524,25 +537,30 @@ body.home {
       }
 
       // Fade + Slide Top Animation
-      @-webkit-keyframes apisFade { from { opacity: 0; margin-top:85px; } to { opacity: 1; margin-top:30px; } }
-      @-moz-keyframes apisFade { from { opacity: 0; margin-top:85px; } to { opacity: 1; margin-top:30px; } }
-      @keyframes apisFade { from { opacity: 0; margin-top:85px; } to { opacity: 1; margin-top:30px; } }
+      @-webkit-keyframes logicsFade { from { opacity: 0; margin-top:85px; } to { opacity: 1; margin-top:30px; } }
+      @-moz-keyframes logicsFade { from { opacity: 0; margin-top:85px; } to { opacity: 1; margin-top:30px; } }
+      @keyframes logicsFade { from { opacity: 0; margin-top:85px; } to { opacity: 1; margin-top:30px; } }
 
-      .apis {
+      @-webkit-keyframes apisFade { from { opacity: 0; margin-top:30px; } to { opacity: 1; margin-top:0px; } }
+      @-moz-keyframes apisFade { from { opacity: 0; margin-top:30px; } to { opacity: 1; margin-top:0px; } }
+      @keyframes apisFade { from { opacity: 0; margin-top:30px; } to { opacity: 1; margin-top:0px; } }
+
+      .logics {
         margin-left: 34px; overflow: auto; zoom: 1; clear: both; position: relative;
 
         div.block, div.object, div.file {
           background: white; border: 2px solid #E9E9E9; padding: 15px 21px; margin: 0 12px;
-          float: left; min-width: 137px; min-height: 54px; position: relative;
-          opacity: 0; margin-top: 85px; font-size: 14px;
-          .animation(apisFade, cubic-bezier(0.07, 0.88, 0.09, 0.95), 1);
+          float: left; min-width: 146px; min-height: 54px; position: relative;
+          opacity: 0; margin-top: 85px; font-size: 14px; text-align: center;
+
+          .animation(logicsFade, cubic-bezier(0.07, 0.88, 0.09, 0.95), 1);
           .animationFillMode(forwards);
           .animationDuration(0.7s);
 
-          img { position: absolute; top: -26px; left: 48%;}
-          strong { float: left; display: block; margin-right: 27px; }
-          ul { float: left; margin: 0; }
-          ul li { text-align: left; }
+          p { font-size: 15px; margin: 9px 0; }
+          p:last-child { }
+          img { margin-right: 5px; vertical-align: -5px; }
+          strong { display: block; margin: 8px 0 21px 0; text-transform: uppercase; font-family: @sf;}
           &:before {
             content: ""; .at2x('../images/icons/arrow-up.png', 9px, 18px); display: block;
             position: absolute; width: 9px; height: 18px; top: -26px; left: 48%;
@@ -552,6 +570,31 @@ body.home {
         div.block { .animationDelay(3.5s); }
         div.object { .animationDelay(4s); }
         div.file { .animationDelay(4.5s); }
+      }
+
+      .apis { 
+        position: relative; margin-top: 42px; margin-bottom: 100px;
+
+        strong { 
+          font-size: 15px; position: absolute; opacity: 0; margin-top: 30px;
+          .animation(apisFade, cubic-bezier(0.07, 0.88, 0.09, 0.95), 1);
+          .animationFillMode(forwards);
+          .animationDuration(0.7s);
+
+          &:before {
+            content: ""; .at2x('../images/icons/arrow-up.png', 9px, 18px); display: block;
+            position: absolute; width: 9px; height: 18px; top: -26px; left: 48%;
+          }
+        }
+
+        strong:nth-child(1) { left: 10%; .animationDelay(5s); }
+        strong:nth-child(2) { left: 17.5%; .animationDelay(5.1s); }
+        strong:nth-child(3) { left: 25.5%; .animationDelay(5.2s); }
+        strong:nth-child(4) { left: 41%; .animationDelay(5.3s); }
+        strong:nth-child(5) { left: 55%; .animationDelay(5.4s); }
+        strong:nth-child(6) { left: 70%; .animationDelay(5.5s); }
+        strong:nth-child(7) { left: 78%; .animationDelay(5.6s); }
+        strong:nth-child(8) { left: 88%; .animationDelay(5.7s); }
       }
     }
   }
@@ -1779,7 +1822,10 @@ body.docker {
     }
 
     img { margin: 50px 0 20px 0;}
-    p.legend { font-style: italic; font-size: 18px; line-height: 120%; margin-bottom: 160px; }
+    p.legend { 
+      font-style: italic; font-size: 18px; line-height: 160%; margin: 30px auto 160px auto; 
+      color: darken(@infinitgray, 10%); max-width: 600px; padding: 0 3%;
+    }
   }
 
   div.projects,
