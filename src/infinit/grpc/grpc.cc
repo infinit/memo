@@ -123,7 +123,8 @@ namespace infinit
   {
     void serve_grpc(infinit::model::Model& dht,
                     boost::optional<elle::reactor::filesystem::FileSystem&> fs,
-                    model::Endpoint ep)
+                    model::Endpoint ep,
+                    int* effective_port)
     {
       ELLE_TRACE("serving grpc on %s", ep);
       std::unique_ptr< ::grpc::Service> fs_service;
@@ -133,7 +134,8 @@ namespace infinit
       auto kv = kv_service(dht);
       ::grpc::ServerBuilder builder;
       auto sep = ep.address().to_string() + ":" + std::to_string(ep.port());
-      builder.AddListeningPort(sep, ::grpc::InsecureServerCredentials());
+      builder.AddListeningPort(sep, ::grpc::InsecureServerCredentials(),
+        effective_port);
       builder.RegisterService(ds.get());
       builder.RegisterService(kv.get());
       if (fs_service)

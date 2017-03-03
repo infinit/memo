@@ -517,23 +517,18 @@ ELLE_TEST_SCHEDULED(basic)
     client.dht.dht.get(), "alice", alice.K(), true);
   client.dht.dht->insert(ubf);
   client.dht.dht->insert(ubr);
-  infinit::model::Endpoint ep("127.0.0.1", (rand()%10000)+50000);
+  infinit::model::Endpoint ep("127.0.0.1", 0);
   elle::reactor::Barrier b;
+  int listening_port = 0;
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
-      ELLE_LOG("open");
       b.open();
-      ELLE_LOG("serve");
-      infinit::grpc::serve_grpc(*client.dht.dht, boost::none, ep);
-      ELLE_LOG("done");
+      infinit::grpc::serve_grpc(*client.dht.dht, boost::none, ep, &listening_port);
     });
-  ELLE_LOG("wait");
   elle::reactor::wait(b);
-  elle::reactor::sleep(1_sec);
-  ELLE_LOG("start");
   elle::reactor::background([&] {
   auto chan = grpc::CreateChannel(
-      elle::sprintf("127.0.0.1:%s", ep.port()),
+      elle::sprintf("127.0.0.1:%s", listening_port),
       grpc::InsecureChannelCredentials());
   auto stub = KV::NewStub(chan);
   { // get missing block
@@ -719,22 +714,18 @@ ELLE_TEST_SCHEDULED(filesystem)
 {
   DHTs dhts(3);
   auto client = dhts.client();
-  infinit::model::Endpoint ep("127.0.0.1", (rand()%10000)+50000);
+  infinit::model::Endpoint ep("127.0.0.1", 0);
   elle::reactor::Barrier b;
+  int listening_port;
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
-      ELLE_LOG("open");
       b.open();
-      ELLE_LOG("serve");
-      infinit::grpc::serve_grpc(*client.dht.dht, *client.fs, ep);
-      ELLE_LOG("done");
+      infinit::grpc::serve_grpc(*client.dht.dht, *client.fs, ep, &listening_port);
     });
-  ELLE_LOG("wait");
   elle::reactor::wait(b);
-  ELLE_LOG("start");
   elle::reactor::background([&] {
   auto chan = grpc::CreateChannel(
-      elle::sprintf("127.0.0.1:%s", ep.port()),
+      elle::sprintf("127.0.0.1:%s", listening_port),
       grpc::InsecureChannelCredentials());
   auto stub = FileSystem::NewStub(chan);
   ::Path path;
@@ -877,24 +868,19 @@ ELLE_TEST_SCHEDULED(doughnut)
     client.dht.dht.get(), "alice", alice.K(), true);
   client.dht.dht->insert(ubf);
   client.dht.dht->insert(ubr);
-  infinit::model::Endpoint ep("127.0.0.1", (rand()%10000)+50000);
+  infinit::model::Endpoint ep("127.0.0.1", 0);
   elle::reactor::Barrier b;
+  int listening_port = 0;
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
     [&] {
-      ELLE_LOG("open");
       b.open();
-      ELLE_LOG("serve");
-      infinit::grpc::serve_grpc(*client.dht.dht, boost::none, ep);
-      ELLE_LOG("done");
+      infinit::grpc::serve_grpc(*client.dht.dht, boost::none, ep, &listening_port);
     });
-  ELLE_LOG("wait");
   elle::reactor::wait(b);
-  elle::reactor::sleep(1_sec);
-  ELLE_LOG("start");
   auto& sched = elle::reactor::scheduler();
   elle::reactor::background([&] {
     auto chan = grpc::CreateChannel(
-        elle::sprintf("127.0.0.1:%s", ep.port()),
+        elle::sprintf("127.0.0.1:%s", listening_port),
         grpc::InsecureChannelCredentials());
     auto stub = Doughnut::NewStub(chan);
     { // get missing block
