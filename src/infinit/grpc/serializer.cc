@@ -11,7 +11,7 @@ namespace infinit
   {
 
     SerializerIn::SerializerIn(google::protobuf::Message const* msg)
-    : elle::serialization::Serializer(false)
+    : elle::serialization::SerializerIn(false)
     {
       _field = nullptr;
       _message_stack.push_back(msg);
@@ -248,7 +248,7 @@ namespace infinit
     }
 
     SerializerOut::SerializerOut(google::protobuf::Message* msg)
-    : elle::serialization::Serializer(false)
+    : elle::serialization::SerializerOut(false)
     {
       _field = nullptr;
       _message_stack.push_back(msg);

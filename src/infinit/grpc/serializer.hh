@@ -16,12 +16,10 @@ namespace infinit
   namespace grpc
   {
     class SerializerIn
-      : public elle::serialization::Serializer
+      : public elle::serialization::SerializerIn
     {
     public:
       SerializerIn(const google::protobuf::Message* src);
-      bool
-      out() const override { return false;}
     protected:
       bool _text() const { return false;}
       bool
@@ -80,12 +78,10 @@ namespace infinit
     };
 
     class SerializerOut
-      : public elle::serialization::Serializer
+      : public elle::serialization::SerializerOut
     {
     public:
       SerializerOut(google::protobuf::Message* dst);
-      bool
-      out() const override { return true;}
     protected:
       bool _text() const { return false;}
       bool
