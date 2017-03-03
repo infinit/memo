@@ -22,6 +22,7 @@ namespace infinit
   {
     ELLE_DAS_SYMBOL(address);
     ELLE_DAS_SYMBOL(local_version);
+    ELLE_DAS_SYMBOL(version);
 
     enum StoreMode
     {
@@ -116,6 +117,10 @@ namespace infinit
       using AddressVersion = std::pair<Address, boost::optional<int>>;
       template <typename ... Args>
       Model(Args&& ... args);
+      using Init = decltype(
+        elle::das::make_tuple(
+          model::version = boost::optional<elle::Version>()));
+      Model(Init args);
       ELLE_ATTRIBUTE_R(elle::Version, version);
     private:
       Model(std::tuple<boost::optional<elle::Version>> args);

@@ -6,7 +6,6 @@
 # include <boost/multi_index/mem_fun.hpp>
 # include <boost/multi_index/ordered_index.hpp>
 
-# include <elle/named.hh>
 # include <elle/unordered_map.hh>
 # include <elle/Error.hh>
 

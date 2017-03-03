@@ -1,14 +1,21 @@
+#include <elle/das/bound-method.hh>
+
 #include <infinit/model/blocks/Block.hh>
+#include <infinit/utility.hh>
 
 namespace infinit
 {
   namespace model
   {
+    /*-------------.
+    | Construction |
+    `-------------*/
+
     template <typename ... Args>
     Model::Model(Args&& ... args)
-      : Model(std::tuple<boost::optional<elle::Version>>(
-                elle::das::named::prototype(address = boost::none).map(
-                  std::forward<Args>(args)...)))
+      : Model(elle::das::named::prototype(model::version = boost::none)
+              .template map<boost::optional<elle::Version>>(
+                std::forward<Args>(args)...))
     {}
 
     template <typename Block, typename ... Args>

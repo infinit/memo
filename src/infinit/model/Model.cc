@@ -1,4 +1,3 @@
-#include <elle/das/bound-method.hh>
 #include <elle/log.hh>
 
 #include <infinit/model/MissingBlock.hh>
@@ -19,14 +18,15 @@ namespace infinit
     | Construction |
     `-------------*/
 
-    Model::Model(std::tuple<boost::optional<elle::Version>> args)
-      : _version(std::get<0>(args) ? std::get<0>(args).get() :
-                 elle::Version(
-                   infinit::version().major(), infinit::version().minor(), 0))
+    Model::Model(Init args)
+      : _version(args.version ? std::move(args.version.get()) :
+                 elle::Version(infinit::version().major(),
+                               infinit::version().minor(), 0))
       , fetch(elle::das::bind_method(*this, &Model::_fetch_impl),
               address,
               local_version = boost::optional<int>())
     {
+      ELLE_LOG_COMPONENT("infinit.model.Model");
       ELLE_LOG("%s: compatibility version %s", this, this->_version);
       if (this->_version > infinit::version())
         elle::err(
