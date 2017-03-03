@@ -1197,7 +1197,7 @@ ELLE_TEST_SCHEDULED(
   // Keep the remote alive and change the endpoints.
   auto remote = dht_a->dht->overlay()->lookup_node(dht_b->dht->id()).lock();
   BOOST_CHECK_EQUAL(remote->id(), dht_b->dht->id());
-  BOOST_CHECK_EQUAL(dht_a->dht->fetch(addr, {})->data(), "change_endpoints");
+  BOOST_CHECK_EQUAL(dht_a->dht->fetch(addr)->data(), "change_endpoints");
   ELLE_LOG("recreate second DHT")
   {
     auto disappear_b = elle::reactor::waiter(
@@ -1218,7 +1218,7 @@ ELLE_TEST_SCHEDULED(
       discover(*dht_b, *dht_a, anonymous, false, true, true);
     else
       discover(*dht_a, *dht_b, anonymous, false, true, true);
-  BOOST_CHECK_EQUAL(dht_a->dht->fetch(addr, {})->data(), "change_endpoints");
+  BOOST_CHECK_EQUAL(dht_a->dht->fetch(addr)->data(), "change_endpoints");
 }
 
 ELLE_TEST_SCHEDULED(

@@ -6,6 +6,8 @@
 
 #include <elle/UUID.hh>
 #include <elle/Version.hh>
+#include <elle/das/Symbol.hh>
+#include <elle/das/named.hh>
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/Endpoints.hh>
@@ -18,6 +20,10 @@ namespace infinit
 {
   namespace model
   {
+    ELLE_DAS_SYMBOL(address);
+    ELLE_DAS_SYMBOL(local_version);
+    ELLE_DAS_SYMBOL(version);
+
     enum StoreMode
     {
       STORE_INSERT,
@@ -109,8 +115,15 @@ namespace infinit
     `-------------*/
     public:
       using AddressVersion = std::pair<Address, boost::optional<int>>;
-      Model(boost::optional<elle::Version> version = {});
+      template <typename ... Args>
+      Model(Args&& ... args);
+      using Init = decltype(
+        elle::das::make_tuple(
+          model::version = boost::optional<elle::Version>()));
+      Model(Init args);
       ELLE_ATTRIBUTE_R(elle::Version, version);
+    private:
+      Model(std::tuple<boost::optional<elle::Version>> args);
 
     /*-------.
     | Blocks |
@@ -133,12 +146,15 @@ namespace infinit
        *          still local_version.
        *  \throws MissingBlock if the block does not exist.
        */
-      std::unique_ptr<blocks::Block>
-      fetch(Address address, boost::optional<int> local_version = {}) const;
+      elle::das::named::Function<
+        std::unique_ptr<blocks::Block> (
+          decltype(address)::Formal<Address>,
+          decltype(local_version = boost::optional<int>()))>
+      fetch;
       void
-      fetch(std::vector<AddressVersion> const& addresses,
-            std::function<void(Address, std::unique_ptr<blocks::Block>,
-                               std::exception_ptr)> res) const;
+      multifetch(std::vector<AddressVersion> const& addresses,
+                 std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                    std::exception_ptr)> res) const;
       void
       insert(std::unique_ptr<blocks::Block> block,
              std::unique_ptr<ConflictResolver> = {});
@@ -155,6 +171,9 @@ namespace infinit
       remove(Address address);
       void
       remove(Address address, blocks::RemoveSignature sig);
+    private:
+      std::unique_ptr<blocks::Block>
+      _fetch_impl(Address address, boost::optional<int> local_version) const;
     protected:
       template <typename Block, typename ... Args>
       static

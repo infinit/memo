@@ -71,7 +71,7 @@ namespace infinit
                 boost::optional<elle::Buffer> salt,
                 elle::cryptography::rsa::KeyPair const& keys);
         BaseACB(Self const& other);
-        ~BaseACB();
+        ~BaseACB() override;
         ELLE_ATTRIBUTE_R(int, editor);
         ELLE_ATTRIBUTE_R(elle::Buffer, owner_token);
         ELLE_ATTRIBUTE(bool, acl_changed, protected);

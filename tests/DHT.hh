@@ -1,7 +1,6 @@
 #pragma once
 
 #include <elle/factory.hh>
-#include <elle/named.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>

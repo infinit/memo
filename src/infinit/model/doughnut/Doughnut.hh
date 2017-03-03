@@ -143,11 +143,9 @@ namespace infinit
         void
         _insert(std::unique_ptr<blocks::Block> block,
                 std::unique_ptr<ConflictResolver> resolver) override;
-        virtual
         void
         _update(std::unique_ptr<blocks::Block> block,
                 std::unique_ptr<ConflictResolver> resolver) override;
-        virtual
         void
         _remove(Address address, blocks::RemoveSignature rs) override;
         friend class Local;

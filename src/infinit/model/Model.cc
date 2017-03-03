@@ -18,16 +18,20 @@ namespace infinit
     | Construction |
     `-------------*/
 
-    Model::Model(boost::optional<elle::Version> version)
-      : _version(
-        version ? *version :
-        elle::Version(
-          infinit::version().major(), infinit::version().minor(), 0))
+    Model::Model(Init args)
+      : _version(args.version ? std::move(args.version.get()) :
+                 elle::Version(infinit::version().major(),
+                               infinit::version().minor(), 0))
+      , fetch(elle::das::bind_method(*this, &Model::_fetch_impl),
+              address,
+              local_version = boost::optional<int>())
     {
-      ELLE_LOG("%s: compatibility version %s", *this, this->_version);
+      ELLE_LOG_COMPONENT("infinit.model.Model");
+      ELLE_LOG("%s: compatibility version %s", this, this->_version);
       if (this->_version > infinit::version())
-        elle::err("compatibility version %s is too recent for infinit version %s",
-                  this->_version, infinit::version());
+        elle::err(
+          "compatibility version %s is too recent for infinit version %s",
+          this->_version, infinit::version());
     }
 
     /*-------.
@@ -112,7 +116,8 @@ namespace infinit
     }
 
     std::unique_ptr<blocks::Block>
-    Model::fetch(Address address, boost::optional<int> local_version) const
+    Model::_fetch_impl(Address address,
+                       boost::optional<int> local_version) const
     {
       ELLE_TRACE_SCOPE("%s: fetch %f if newer than %s",
                        this, address, local_version);
@@ -135,9 +140,10 @@ namespace infinit
     }
 
     void
-    Model::fetch(std::vector<AddressVersion> const& addresses,
-            std::function<void(Address, std::unique_ptr<blocks::Block>,
-                               std::exception_ptr)> res) const
+    Model::multifetch(
+      std::vector<AddressVersion> const& addresses,
+      std::function<void(Address, std::unique_ptr<blocks::Block>,
+                         std::exception_ptr)> res) const
     {
       ELLE_TRACE_SCOPE("%s: fetch %s blocks", this, addresses.size());
       this->_fetch(addresses, [&](Address addr,

@@ -16,8 +16,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef HandshakeFailed Self;
-        typedef Error Super;
+        using Self = infinit::model::doughnut::HandshakeFailed;
+        using Super = elle::Error;
 
       /*-------------.
       | Construction |

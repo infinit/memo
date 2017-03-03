@@ -69,7 +69,7 @@ namespace infinit
       struct GroupBlockInserter
         : public DummyConflictResolver
       {
-        typedef DummyConflictResolver Super;
+        using Super = infinit::model::DummyConflictResolver;
 
         GroupBlockInserter(std::string const& name)
           : Super()
