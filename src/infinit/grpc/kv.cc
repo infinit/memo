@@ -45,39 +45,39 @@ namespace infinit
     class KVBounce: public KV::Service
     {
     public:
-      KVBounce(KVImpl& impl, elle::reactor::Scheduler& sched)
-      : _impl(impl)
+      KVBounce(std::unique_ptr<KVImpl> impl, elle::reactor::Scheduler& sched)
+      : _impl(std::move(impl))
       , _sched(sched)
       {}
       ::grpc::Status Get(::grpc::ServerContext* context, const ::KVAddress* request, ::BlockStatus* response)
       {
         _sched.mt_run<void>("Get", [&] {
-            *response = std::move(_impl.Get(*request));
+            *response = std::move(_impl->Get(*request));
         });
         return ::grpc::Status::OK;
       }
       ::grpc::Status Insert(::grpc::ServerContext* context, const ::KVBlock* request, ::KVStatus* response)
       {
         _sched.mt_run<void>("Insert", [&] {
-            *response = std::move(_impl.Insert(*request));
+            *response = std::move(_impl->Insert(*request));
         });
         return ::grpc::Status::OK;
       }
       ::grpc::Status Update(::grpc::ServerContext* context, const ::KVBlock* request, ::KVStatus* response)
       {
         _sched.mt_run<void>("Update", [&] {
-            *response = std::move(_impl.Update(*request));
+            *response = std::move(_impl->Update(*request));
         });
         return ::grpc::Status::OK;
       }
       ::grpc::Status Remove(::grpc::ServerContext* context, const ::KVAddress * request, ::KVStatus* response)
       {
         _sched.mt_run<void>("Remove", [&] {
-            *response = std::move(_impl.Remove(*request));
+            *response = std::move(_impl->Remove(*request));
         });
         return ::grpc::Status::OK;
       }
-      KVImpl& _impl;
+      std::unique_ptr<KVImpl> _impl;
       elle::reactor::Scheduler& _sched;
     };
 
@@ -339,8 +339,8 @@ namespace infinit
     std::unique_ptr< ::grpc::Service>
     kv_service(model::Model& dht)
     {
-      KVImpl* impl = new KVImpl(dht);
-      return std::make_unique<KVBounce>(*impl, elle::reactor::scheduler());
+      auto impl = std::make_unique<KVImpl>(dht);
+      return std::make_unique<KVBounce>(std::move(impl), elle::reactor::scheduler());
     }
   }
 }
