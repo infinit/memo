@@ -50,14 +50,6 @@ namespace infinit
 
       template <typename C, typename E>
       auto
-      find(C const& c, E const& e)
-      {
-        auto it = c.find(e);
-        return BoolIterator<decltype(it)>(it, it != c.end());
-      }
-
-      template <typename C, typename E>
-      auto
       find(C& c, E const& e)
       {
         auto it = c.find(e);
