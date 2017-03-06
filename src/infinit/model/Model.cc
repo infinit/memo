@@ -26,6 +26,8 @@ namespace infinit
         elle::das::bind_method(*this, &Model::_make_immutable_block),
         data,
         owner = Address::null)
+      , make_mutable_block(
+        elle::das::bind_method(*this, &Model::_make_mutable_block))
       , fetch(
         elle::das::bind_method(*this, &Model::_fetch_impl),
         address,

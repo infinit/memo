@@ -144,10 +144,16 @@ namespace infinit
        *  \param owner Optional owning mutable block to restrict deletion.
        */
       elle::das::named::Function<
-        std::unique_ptr<blocks::ImmutableBlock> (
+        std::unique_ptr<blocks::ImmutableBlock>(
           decltype(data)::Formal<elle::Buffer>,
           decltype(owner = Address::null))>
       make_immutable_block;
+
+      /** Construct a mutable block.
+       */
+      elle::das::named::Function<
+        std::unique_ptr<blocks::MutableBlock>()>
+      make_mutable_block;
 
       /** Fetch block at \param address
        *
