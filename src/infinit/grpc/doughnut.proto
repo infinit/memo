@@ -22,7 +22,7 @@ message CHBData {
 message Status {
   Error error = 1;
   string message = 2;
-  int64 version = 3;
+  Block block = 3; // in case of conflict
 }
 
 message Bytes {

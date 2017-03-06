@@ -71,7 +71,8 @@ that contains the block version at the moment the read occured.
 When you attempt to call `Update`, that version gets incremented by one, and
 the update will only succeed if the resulting number is above the current
 block version. Otheriwise the `Update` call will fail with a CONFLICT error
-message.
+message. In that case the returned `Status` object will contain the current
+version of the block.
 
 Atomic updates is an important feature. For instance if your MB's payload is
 a list of values and you want to add one item
@@ -416,9 +417,9 @@ void set_document(string user, string name, string data)
       break; // all good
     if (status.error() != ERROR_CONFLICT)
       throw std::runtime_error(status.message());
-    // fetch the document list block again to get updated content and version
-    dl = get_documents(user, &mb);
-    // try again
+    // try again from the current block version
+    mb.CopyFrom(status.block());
+    dl = parse_document_list(mb.data());
   }
 }
 ```

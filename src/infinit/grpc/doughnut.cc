@@ -62,10 +62,10 @@ namespace infinit
       }
       catch (model::doughnut::Conflict const& err)
       {
+        SerializerOut sout(res.mutable_block());
+        sout.serialize_forward(err.current());
         res.set_error(ERROR_CONFLICT);
         res.set_message(err.what());
-        if (auto* mb = dynamic_cast<model::blocks::MutableBlock*>(err.current().get()))
-          res.set_version(mb->version());
       }
       catch (elle::Error const& err)
       {
