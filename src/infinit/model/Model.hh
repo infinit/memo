@@ -21,7 +21,9 @@ namespace infinit
   namespace model
   {
     ELLE_DAS_SYMBOL(address);
+    ELLE_DAS_SYMBOL(data);
     ELLE_DAS_SYMBOL(local_version);
+    ELLE_DAS_SYMBOL(owner);
     ELLE_DAS_SYMBOL(version);
 
     enum StoreMode
@@ -135,6 +137,18 @@ namespace infinit
                  Address owner = Address::null) const;
       std::unique_ptr<User>
       make_user(elle::Buffer const& data) const;
+
+      /** Construct an immutable block.
+       *
+       *  \param data  Payload of the block.
+       *  \param owner Optional owning mutable block to restrict deletion.
+       */
+      elle::das::named::Function<
+        std::unique_ptr<blocks::ImmutableBlock> (
+          decltype(data)::Formal<elle::Buffer>,
+          decltype(owner = Address::null))>
+      make_immutable_block;
+
       /** Fetch block at \param address
        *
        *  Use \param local_version to avoid refetching the block if it did

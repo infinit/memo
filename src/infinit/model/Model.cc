@@ -22,9 +22,14 @@ namespace infinit
       : _version(args.version ? std::move(args.version.get()) :
                  elle::Version(infinit::version().major(),
                                infinit::version().minor(), 0))
-      , fetch(elle::das::bind_method(*this, &Model::_fetch_impl),
-              address,
-              local_version = boost::optional<int>())
+      , make_immutable_block(
+        elle::das::bind_method(*this, &Model::_make_immutable_block),
+        data,
+        owner = Address::null)
+      , fetch(
+        elle::das::bind_method(*this, &Model::_fetch_impl),
+        address,
+        local_version = boost::optional<int>())
     {
       ELLE_LOG_COMPONENT("infinit.model.Model");
       ELLE_LOG("%s: compatibility version %s", this, this->_version);
