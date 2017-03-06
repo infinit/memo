@@ -11,6 +11,7 @@
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index_container.hpp>
 
+#include <elle/Defaulted.hh>
 #include <elle/das/model.hh>
 #include <elle/das/serializer.hh>
 #include <elle/ProducerPool.hh>
@@ -55,6 +56,25 @@ namespace infinit
                                                doughnut::group_w))>;
       };
 
+      ELLE_DAS_SYMBOL(admin_keys);
+      ELLE_DAS_SYMBOL(connect_timeout);
+      ELLE_DAS_SYMBOL(consensus_builder);
+      ELLE_DAS_SYMBOL(id);
+      ELLE_DAS_SYMBOL(keys);
+      ELLE_DAS_SYMBOL(listen_address);
+      ELLE_DAS_SYMBOL(monitoring_socket_path);
+      ELLE_DAS_SYMBOL(name);
+      ELLE_DAS_SYMBOL(overlay_builder);
+      ELLE_DAS_SYMBOL(owner);
+      ELLE_DAS_SYMBOL(passport);
+      ELLE_DAS_SYMBOL(port);
+      ELLE_DAS_SYMBOL(protocol);
+      ELLE_DAS_SYMBOL(rdv_host);
+      ELLE_DAS_SYMBOL(soft_fail_running);
+      ELLE_DAS_SYMBOL(soft_fail_timeout);
+      ELLE_DAS_SYMBOL(storage);
+      ELLE_DAS_SYMBOL(version);
+
       class Doughnut // Doughnut. DougHnuT. Get it ?
         : public Model
         , public std::enable_shared_from_this<Doughnut>
@@ -69,7 +89,34 @@ namespace infinit
         Doughnut(Args&& ... args);
         ~Doughnut();
       private:
-        struct Init;
+        using Init = decltype(
+          elle::das::make_tuple(
+            doughnut::id = std::declval<Address>(),
+            doughnut::keys =
+              std::declval<std::shared_ptr<elle::cryptography::rsa::KeyPair>>(),
+            doughnut::owner =
+              std::declval<std::shared_ptr<elle::cryptography::rsa::PublicKey>>(),
+            doughnut::passport = std::declval<Passport>(),
+            doughnut::consensus_builder = std::declval<ConsensusBuilder>(),
+            doughnut::overlay_builder = std::declval<OverlayBuilder>(),
+            doughnut::port = std::declval<boost::optional<int>>(),
+            doughnut::listen_address =
+              std::declval<boost::optional<boost::asio::ip::address>>(),
+            doughnut::storage =
+              std::declval<std::unique_ptr<storage::Storage>>(),
+            doughnut::name = std::declval<boost::optional<std::string>>(),
+            doughnut::version = std::declval<boost::optional<elle::Version>>(),
+            doughnut::admin_keys = std::declval<AdminKeys>(),
+            doughnut::rdv_host = std::declval<boost::optional<std::string>>(),
+            doughnut::monitoring_socket_path =
+              std::declval<boost::optional<boost::filesystem::path>>(),
+            doughnut::protocol = std::declval<Protocol>(),
+            doughnut::connect_timeout =
+              std::declval<elle::Defaulted<std::chrono::milliseconds>>(),
+            doughnut::soft_fail_timeout =
+              std::declval<elle::Defaulted<std::chrono::milliseconds>>(),
+            doughnut::soft_fail_running =
+              std::declval<elle::Defaulted<bool>>()));
         Doughnut(Init init);
         ELLE_ATTRIBUTE_R(std::chrono::milliseconds, connect_timeout);
         ELLE_ATTRIBUTE_R(std::chrono::milliseconds, soft_fail_timeout);

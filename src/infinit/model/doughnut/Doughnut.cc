@@ -153,7 +153,7 @@ namespace infinit
         , _owner(std::move(init.owner))
         , _passport(std::move(init.passport))
         , _admin_keys(std::move(init.admin_keys))
-        , _consensus(init.consensus(*this))
+        , _consensus(init.consensus_builder(*this))
         , _local(
           init.storage ?
           this->_consensus->make_local(
