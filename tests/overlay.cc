@@ -411,13 +411,13 @@ ELLE_TEST_SCHEDULED(
       ELLE_LOG_SCOPE("store first block on disk and restart first DHT");
       auto dht = make_dht_a();
       auto b = dht.dht->make_block<MutableBlock>(std::string("disk"));
-      dht.dht->insert(*b, tcr());
+      dht.dht->seal_and_insert(*b, tcr());
       return b;
     }();
   auto dht_a = make_dht_a();
   auto before = dht_a.dht->make_block<MutableBlock>(std::string("before"));
   ELLE_LOG("store second block in memory")
-    dht_a.dht->insert(*before, tcr());
+    dht_a.dht->seal_and_insert(*before, tcr());
   ELLE_LOG("connect second DHT");
   auto dht_b = DHT(
     ::version = config.version,
@@ -427,7 +427,7 @@ ELLE_TEST_SCHEDULED(
   discover(dht_b, dht_a, anonymous, false, true);
   auto after = dht_a.dht->make_block<MutableBlock>(std::string("after"));
   ELLE_LOG("store third block")
-    dht_a.dht->insert(*after, tcr());
+    dht_a.dht->seal_and_insert(*after, tcr());
   ELLE_LOG("check non-existent block")
     BOOST_CHECK_THROW(
       dht_b.dht->overlay()->lookup(Address::random()),
@@ -472,7 +472,7 @@ ELLE_TEST_SCHEDULED(
       {
         auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
         ELLE_LOG("store block")
-          dht_a.dht->insert(*block, tcr());
+          dht_a.dht->seal_and_insert(*block, tcr());
         ELLE_LOG("lookup block")
         {
           auto remote = dht_b.dht->overlay()->lookup(block->address()).lock();
@@ -485,7 +485,7 @@ ELLE_TEST_SCHEDULED(
       {
         auto block = dht_a.dht->make_block<MutableBlock>(std::string("block"));
         ELLE_LOG("store block")
-          dht_a.dht->insert(*block, tcr());
+          dht_a.dht->seal_and_insert(*block, tcr());
       }
     };
 }
@@ -505,7 +505,7 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("store first block")
   {
     auto block = dht_a->dht->make_block<MutableBlock>(std::string("block"));
-    dht_a->dht->insert(*block, tcr());
+    dht_a->dht->seal_and_insert(*block, tcr());
     old_address = block->address();
   }
   DHT dht_b(
@@ -541,7 +541,7 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("store second block")
   {
     auto block = dht_a->dht->make_block<MutableBlock>(std::string("nblock"));
-    dht_a->dht->insert(*block, tcr());
+    dht_a->dht->seal_and_insert(*block, tcr());
     new_address = block->address();
   }
   ELLE_LOG("lookup second block")
@@ -708,7 +708,7 @@ ELLE_TEST_SCHEDULED(
     true, true);
   acb.set_permissions(elle::cryptography::rsa::keypair::generate(512).K(),
     true, true);
-  dht_a->dht->insert(*block, tcr());
+  dht_a->dht->seal_and_insert(*block, tcr());
   auto b2 = dht_b.dht->fetch(block->address());
   dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
   dht_b.dht->update(*b2, tcr());
@@ -799,7 +799,8 @@ ELLE_TEST_SCHEDULED(
         {
           auto block = client->dht->make_block<ACLBlock>(std::string("block"));
           addrs.push_back(block->address());
-          client->dht->insert(std::move(block), tcr());
+          // FIXME: unique_ptr when default values are fixed
+          client->dht->insert(std::move(block), tcr().release());
         }
       }
       catch (elle::Error const& e)
@@ -870,7 +871,8 @@ ELLE_TEST_SCHEDULED(
     {
       auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
       addrs.push_back(block->address());
-    client->dht->insert(std::move(block), tcr());
+      // FIXME: unique_ptr when default values are fixed
+      client->dht->insert(std::move(block), tcr().release());
     }
     if (b1.size() >=5 && b2.size() >=5)
       break;
@@ -920,7 +922,8 @@ ELLE_TEST_SCHEDULED(
     {
       auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
       addrs.push_back(block->address());
-    client->dht->insert(std::move(block), tcr());
+      // FIXME: unique_ptr when default values are fixed
+      client->dht->insert(std::move(block), tcr().release());
     }
     if (b1.size() >= 5 && b2.size() >= 5)
       break;
@@ -1048,7 +1051,8 @@ ELLE_TEST_SCHEDULED(
               auto a = block->address();
               try
               {
-                c->dht->insert(std::move(block), tcr());
+                // FIXME: unique_ptr when default values are fixed
+                c->dht->insert(std::move(block), tcr().release());
               }
               catch (elle::Error const& e)
               {
@@ -1258,7 +1262,7 @@ ELLE_TEST_SCHEDULED(
         auto block = dht_a->dht->make_block<MutableBlock>(std::string("stale"));
         addr = block->address();
         ELLE_LOG("store block")
-          dht_a->dht->insert(*block, tcr());
+          dht_a->dht->seal_and_insert(*block, tcr());
       }
       ELLE_LOG("connect DHTs")
         discover(dht_b, *dht_a, loc, true);
@@ -1450,7 +1454,8 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
     {
       auto block = client->dht->make_block<ACLBlock>(std::string("block"));
       auto a = block->address();
-      client->dht->insert(std::move(block), tcr());
+      // FIXME: unique_ptr when default values are fixed
+      client->dht->insert(std::move(block), tcr().release());
       ELLE_DEBUG("created %f", a);
       addrs.push_back(a);
     }
@@ -1525,7 +1530,8 @@ test_churn_socket(TestConfiguration config, bool pasv)
   {
     auto block = client->dht->make_block<ACLBlock>(std::string("block"));
     auto a = block->address();
-    client->dht->insert(std::move(block), tcr());
+    // FIXME: unique_ptr when default values are fixed
+    client->dht->insert(std::move(block), tcr().release());
     ELLE_DEBUG("created %f", a);
     addrs.push_back(a);
   }

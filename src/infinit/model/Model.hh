@@ -21,6 +21,8 @@ namespace infinit
   namespace model
   {
     ELLE_DAS_SYMBOL(address);
+    ELLE_DAS_SYMBOL(block);
+    ELLE_DAS_SYMBOL(conflict_resolver);
     ELLE_DAS_SYMBOL(data);
     ELLE_DAS_SYMBOL(local_version);
     ELLE_DAS_SYMBOL(owner);
@@ -155,7 +157,7 @@ namespace infinit
         std::unique_ptr<blocks::MutableBlock>()>
       make_mutable_block;
 
-      /** Fetch block at \param address
+      /** Fetch block at \param address.
        *
        *  Use \param local_version to avoid refetching the block if it did
        *  not change.
@@ -175,12 +177,21 @@ namespace infinit
       multifetch(std::vector<AddressVersion> const& addresses,
                  std::function<void(Address, std::unique_ptr<blocks::Block>,
                                     std::exception_ptr)> res) const;
+
+      /** Insert a new block.
+       *
+       *  \param block             New block to insert.
+       *  \param conflict_resolver Optional automatic conflict resolver.
+       */
+      elle::das::named::Function<
+        void (
+          decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
+          // FIXME: unique_ptr does not fit default values.
+          decltype(conflict_resolver = std::declval<ConflictResolver*>()))>
+      insert;
       void
-      insert(std::unique_ptr<blocks::Block> block,
-             std::unique_ptr<ConflictResolver> = {});
-      void
-      insert(blocks::Block& block,
-             std::unique_ptr<ConflictResolver> = {});
+      seal_and_insert(blocks::Block& block,
+                      std::unique_ptr<ConflictResolver> = {});
       void
       update(std::unique_ptr<blocks::Block> block,
              std::unique_ptr<ConflictResolver> = {});

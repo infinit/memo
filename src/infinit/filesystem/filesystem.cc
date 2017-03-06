@@ -161,8 +161,9 @@ namespace infinit
       try
       {
         if (insert)
+          // FIXME: unique_ptr when default values are fixed
           this->_block_store->insert(
-            std::move(block), std::move(resolver));
+            std::move(block), resolver.release());
         else
           this->_block_store->update(
             std::move(block), std::move(resolver));

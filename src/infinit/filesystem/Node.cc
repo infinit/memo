@@ -329,9 +329,9 @@ namespace infinit
               s, false);
           model::doughnut::UB ub(dht.get(), name, p, false);
           model::doughnut::UB rub(dht.get(), name, p, true);
-          this->_owner.block_store()->insert(
+          this->_owner.block_store()->seal_and_insert(
             ub, std::make_unique<model::doughnut::UserBlockUpserter>(name));
-          this->_owner.block_store()->insert(
+          this->_owner.block_store()->seal_and_insert(
             rub, std::make_unique<model::doughnut::ReverseUserBlockUpserter>(name));
           return;
         }

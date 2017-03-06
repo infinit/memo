@@ -32,6 +32,16 @@ namespace infinit
         elle::das::bind_method(*this, &Model::_fetch_impl),
         address,
         local_version = boost::optional<int>())
+      , insert([this] (std::unique_ptr<blocks::Block> block,
+                       ConflictResolver* resolver)
+               {
+                 ELLE_TRACE_SCOPE("%s: insert %f", this, block);
+                 block->seal();
+                 this->_insert(std::move(block),
+                               std::unique_ptr<ConflictResolver>(resolver));
+               },
+               block,
+               conflict_resolver = nullptr)
     {
       ELLE_LOG_COMPONENT("infinit.model.Model");
       ELLE_LOG("%s: compatibility version %s", this, this->_version);
@@ -185,17 +195,8 @@ namespace infinit
     }
 
     void
-    Model::insert(std::unique_ptr<blocks::Block> block,
-                 std::unique_ptr<ConflictResolver> resolver)
-    {
-      ELLE_TRACE_SCOPE("%s: insert %f", *this, *block);
-      block->seal();
-      return this->_insert(std::move(block), std::move(resolver));
-    }
-
-    void
-    Model::insert(blocks::Block& block,
-                 std::unique_ptr<ConflictResolver> resolver)
+    Model::seal_and_insert(blocks::Block& block,
+                           std::unique_ptr<ConflictResolver> resolver)
     {
       ELLE_TRACE_SCOPE("%s: insert %f", *this, block);
       block.seal();

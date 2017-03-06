@@ -1284,7 +1284,7 @@ namespace infinit
                       auto addr = ab->address();
                       dht.insert(std::move(ab));
                       auto nb = dnut::NB(dht, name, elle::sprintf("%s", addr));
-                      dht.insert(nb);
+                      dht.seal_and_insert(nb);
                       return addr;
                     }
                   }();

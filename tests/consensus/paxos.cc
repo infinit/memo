@@ -11,7 +11,7 @@ ELLE_TEST_SCHEDULED(availability_2)
   a->overlay->connect(*b->overlay);
   auto block = a->dht->make_block<infinit::model::blocks::MutableBlock>();
   block->data(elle::Buffer("foo"));
-  a->dht->insert(*block);
+  a->dht->seal_and_insert(*block);
   block->data(elle::Buffer("foobar"));
   a->dht->update(*block);
   b.reset();
@@ -32,7 +32,7 @@ ELLE_TEST_SCHEDULED(availability_3)
   ELLE_LOG("store block")
   {
     block->data(elle::Buffer("foo"));
-    a->dht->insert(*block);
+    a->dht->seal_and_insert(*block);
     block->data(elle::Buffer("foobar"));
     a->dht->update(*block);
   }

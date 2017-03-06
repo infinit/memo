@@ -132,25 +132,28 @@ namespace infinit
             // FIXME
             _dht.insert(
               std::move(hub),
-              std::make_unique<UserBlockUpserter>(
+              // FIXME: unique_ptr when default values are fixed
+              new UserBlockUpserter(
                 elle::sprintf("@%s", this->_name))
             );
             _dht.insert(
               std::move(ub),
-              std::make_unique<UserBlockUpserter>(
+              // FIXME: unique_ptr when default values are fixed
+              new UserBlockUpserter(
                 elle::sprintf("@%s", this->_name))
             );
             _dht.insert(
               std::move(rub),
-              std::make_unique<ReverseUserBlockUpserter>(
+              // FIXME: unique_ptr when default values are fixed
+              new ReverseUserBlockUpserter(
                 elle::sprintf("@%s", this->_name))
             );
             _dht.insert(
               std::move(gb),
-              std::make_unique<GroupBlockInserter>(
+              // FIXME: unique_ptr when default values are fixed
+              new GroupBlockInserter(
                 elle::sprintf("@%s", this->_name))
             );
-            ELLE_DEBUG("...done");
         });
       }
 

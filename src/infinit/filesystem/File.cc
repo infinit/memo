@@ -393,14 +393,15 @@ namespace infinit
         if (block_allocated)
         {
           if (first_write)
-            model.insert(std::move(block), std::move(resolver));
+            // FIXME: unique_ptr when default values are fixed
+            model.insert(std::move(block), resolver.release());
           else
             model.update(std::move(block), std::move(resolver));
         }
         else
         {
           if (first_write)
-            model.insert(*block, std::move(resolver));
+            model.seal_and_insert(*block, std::move(resolver));
           else
             model.update(*block, std::move(resolver));
         }
