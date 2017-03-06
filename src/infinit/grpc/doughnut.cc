@@ -101,8 +101,8 @@ namespace infinit
       Status Insert(Ctx*, const ::Block* request, ::Status* response);
       Status Remove(Ctx*, const ::Address* request, ::Status* response);
       Status NBAddress(Ctx*, const ::Bytes* request, ::Address* response);
-      Status UserKey(Ctx*, const ::Bytes* request, ::KeyOrHashOrStatus* response);
-      Status UserName(Ctx*, const ::KeyOrHash* request, ::BytesOrStatus* response);
+      Status UserKey(Ctx*, const ::Bytes* request, ::KeyOrStatus* response);
+      Status UserName(Ctx*, const ::Key* request, ::BytesOrStatus* response);
     private:
       infinit::model::Model& _model;
       elle::reactor::Scheduler& _sched;
@@ -275,7 +275,7 @@ namespace infinit
       return ::grpc::Status::OK;
     }
 
-    ::grpc::Status DoughnutImpl::UserKey(Ctx*, const ::Bytes* request, ::KeyOrHashOrStatus* response)
+    ::grpc::Status DoughnutImpl::UserKey(Ctx*, const ::Bytes* request, ::KeyOrStatus* response)
     {
       ::Status status;
       _sched.mt_run<void>("UserKey", [&] {
@@ -294,20 +294,13 @@ namespace infinit
       return ::grpc::Status::OK;
     }
 
-    ::grpc::Status DoughnutImpl::UserName(Ctx*, const ::KeyOrHash* request, ::BytesOrStatus* response)
+    ::grpc::Status DoughnutImpl::UserName(Ctx*, const ::Key* request, ::BytesOrStatus* response)
     {
       ::Status status;
       _sched.mt_run<void>("UserName", [&] {
           if (!exception_handler(status, [&] {
-             elle::cryptography::rsa::PublicKey key = [&] {
-               if (request->has_value0())
-               {
-                 SerializerIn sin(&request->value0());
-                 return elle::cryptography::rsa::PublicKey(sin);
-               }
-               else
-                 return *dynamic_cast<model::doughnut::Doughnut&>(_model).resolve_key(request->value2());
-             }();
+             SerializerIn sin(&request->value());
+             elle::cryptography::rsa::PublicKey key(sin);
              auto user = _model.make_user(elle::serialization::json::serialize(key));
              response->mutable_bytes()->set_data(user->name());
           }))

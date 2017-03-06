@@ -10,8 +10,8 @@ service Doughnut {
    rpc Update(Block) returns (Status) {}
    rpc Insert(Block) returns (Status) {}
    rpc Remove(Address) returns (Status) {}
-   rpc UserKey(Bytes) returns (KeyOrHashOrStatus) {}
-   rpc UserName(KeyOrHash) returns (BytesOrStatus) {}
+   rpc UserKey(Bytes) returns (KeyOrStatus) {}
+   rpc UserName(Key) returns (BytesOrStatus) {}
 }
 
 message CHBData {
@@ -51,7 +51,7 @@ message Version {
 }
 
 message ACLEntry {
-  KeyOrHash key_koh = 1;
+  Key key_koh = 1;
   bool read = 2;
   bool write = 3;
   bytes token = 4;
@@ -62,18 +62,14 @@ message PublicKey
   bytes rsa = 1;
 }
 
-message KeyOrHash {
+message Key {
   int64 type = 1;
-  oneof value {
-    PublicKey value0 = 2;
-    bytes value1 = 3;
-    int64 value2 = 4;
-  }
+  PublicKey value = 2;
 }
 
-message KeyOrHashOrStatus {
+message KeyOrStatus {
   oneof data {
-    KeyOrHash key = 1;
+    Key key = 1;
     Status status = 2;
   }
 }
@@ -91,7 +87,7 @@ message Block {
   bytes owner_rsa = 7;
   bytes name = 8;
   // OKB, ACB
-  KeyOrHash key_koh = 9;
+  Key key_koh = 9;
   int64 version = 10;
   // ACB
   int64 editor = 11;

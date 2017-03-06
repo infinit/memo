@@ -1102,7 +1102,7 @@ ELLE_TEST_SCHEDULED(doughnut)
       }
     }
     // acls
-    ::KeyOrHashOrStatus kohs;
+    ::KeyOrStatus kohs;
     {
       grpc::ClientContext context;
       ::Bytes name;
