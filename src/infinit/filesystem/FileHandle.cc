@@ -690,8 +690,7 @@ namespace infinit
         auto baddr = block->address();
         this->_fs.block_store()->insert(
           std::move(block),
-          // FIXME: unique_ptr when default values are fixed
-          new InsertBlockResolver(this->_file.path(), baddr));
+          std::make_unique<InsertBlockResolver>(this->_file.path(), baddr));
         Address prev = Address::null;
         if (signed(this->_file._fat.size()) > id)
           prev = _file._fat.at(id).first;

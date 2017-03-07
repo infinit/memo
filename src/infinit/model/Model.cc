@@ -33,12 +33,11 @@ namespace infinit
         address,
         local_version = boost::optional<int>())
       , insert([this] (std::unique_ptr<blocks::Block> block,
-                       ConflictResolver* resolver)
+                       std::unique_ptr<ConflictResolver> resolver)
                {
                  ELLE_TRACE_SCOPE("%s: insert %f", this, block);
                  block->seal();
-                 this->_insert(std::move(block),
-                               std::unique_ptr<ConflictResolver>(resolver));
+                 this->_insert(std::move(block), std::move(resolver));
                },
                block,
                conflict_resolver = nullptr)

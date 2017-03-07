@@ -186,8 +186,8 @@ namespace infinit
       elle::das::named::Function<
         void (
           decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
-          // FIXME: unique_ptr does not fit default values.
-          decltype(conflict_resolver = std::declval<ConflictResolver*>()))>
+          decltype(conflict_resolver)::Effective<
+            std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>)>
       insert;
       void
       seal_and_insert(blocks::Block& block,

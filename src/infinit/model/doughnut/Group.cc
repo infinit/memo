@@ -130,30 +130,18 @@ namespace infinit
             auto hub = std::make_unique<UB>(
               &_dht, ':' + UB::hash(*gb->owner_key()).string(), *gb->owner_key());
             // FIXME
-            _dht.insert(
-              std::move(hub),
-              // FIXME: unique_ptr when default values are fixed
-              new UserBlockUpserter(
-                elle::sprintf("@%s", this->_name))
-            );
-            _dht.insert(
-              std::move(ub),
-              // FIXME: unique_ptr when default values are fixed
-              new UserBlockUpserter(
-                elle::sprintf("@%s", this->_name))
-            );
-            _dht.insert(
-              std::move(rub),
-              // FIXME: unique_ptr when default values are fixed
-              new ReverseUserBlockUpserter(
-                elle::sprintf("@%s", this->_name))
-            );
-            _dht.insert(
-              std::move(gb),
-              // FIXME: unique_ptr when default values are fixed
-              new GroupBlockInserter(
-                elle::sprintf("@%s", this->_name))
-            );
+            _dht.insert(std::move(hub),
+                        std::make_unique<UserBlockUpserter>(
+                          elle::sprintf("@%s", this->_name)));
+            _dht.insert(std::move(ub),
+                        std::make_unique<UserBlockUpserter>(
+                          elle::sprintf("@%s", this->_name)));
+            _dht.insert(std::move(rub),
+                        std::make_unique<ReverseUserBlockUpserter>(
+                          elle::sprintf("@%s", this->_name)));
+            _dht.insert(std::move(gb),
+                        std::make_unique<GroupBlockInserter>(
+                          elle::sprintf("@%s", this->_name)));
         });
       }
 
