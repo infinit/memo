@@ -429,7 +429,7 @@ body.home {
       }
 
       .legend {
-        position: absolute; left: -116px; top: 87px;
+        position: absolute; 
 
         h4 { max-width: 80px; margin: 0; }
         span, h4 { text-align: right; }
@@ -440,8 +440,8 @@ body.home {
         @-moz-keyframes fade { from { opacity: 0;  } to { opacity: 1; } }
         @keyframes fade { from { opacity: 0;  } to { opacity: 1; } }
 
-        &.total {
-          opacity: 0;
+        &.kv {
+          opacity: 0; left: -116px; top: 87px;
           .animation(fade, ease-in, 1);
           .animationFillMode(forwards);
           .animationDuration(0.3s);
@@ -454,11 +454,19 @@ body.home {
         @keyframes titleFade { from { opacity: 0; top:360px; } to { opacity: 1; top:316px; } }
 
         &.api {
-          top: 352px; left: -73px; opacity: 0;
-          .animation(titleFade, cubic-bezier(0.07, 0.88, 0.09, 0.95), 1);
+          top: 335px; left: -89px; opacity: 0;
+          .animation(fade, ease-in, 1);
           .animationFillMode(forwards);
           .animationDuration(0.7s);
           .animationDelay(3.5s);
+        }
+
+        &.logic {
+          top: 461px; left: -69px; opacity: 0;
+          .animation(fade, ease-in, 1);
+          .animationFillMode(forwards);
+          .animationDuration(0.7s);
+          .animationDelay(5.5s);
         }
       }
 
@@ -498,10 +506,10 @@ body.home {
             strong.note {
               font-size: 12px; color: @infinitgrey; color: #AEAEAE; font-weight: normal;
             }
-            &:nth-child(4) { .animationDelay(1s); }
-            &:nth-child(5) { .animationDelay(1.5s); }
-            &:nth-child(6) { .animationDelay(2s); }
-            &:nth-child(7) { .animationDelay(2.5s); }
+            &:nth-child(5) { .animationDelay(1s); }
+            &:nth-child(6) { .animationDelay(1.5s); }
+            &:nth-child(7) { .animationDelay(2s); }
+            &:nth-child(8) { .animationDelay(2.5s); }
           }
 
           // Slide Right Animation
