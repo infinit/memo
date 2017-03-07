@@ -84,9 +84,8 @@ namespace infinit
               d, what, user->address());
             try
             {
-              // FIXME: unique_ptr when default values are fixed
-              d.insert(
-                std::move(user), new ConflictResolver(what));
+              d.insert(std::move(user),
+                       std::make_unique<ConflictResolver>(what));
             }
             catch (elle::Error const& e)
             {

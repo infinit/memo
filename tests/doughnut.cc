@@ -240,7 +240,8 @@ private:
       boost::optional<boost::asio::ip::address>(),
       std::move(storage_a),
       dht::version = version_a,
-      infinit::model::doughnut::monitoring_socket_path = monitoring_socket_path_a);
+      infinit::model::doughnut::monitoring_socket_path =
+        monitoring_socket_path_a);
     this->dht_b = std::make_shared<dht::Doughnut>(
       id_b,
       this->keys_b,
@@ -337,7 +338,7 @@ ELLE_TEST_SCHEDULED(OKB, (bool, paxos))
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(addr)->data(), data);
     ELLE_LOG("store updated mutable block")
-      dht.update(*block);
+      dht.seal_and_update(*block);
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(addr)->data(), updated);
     ELLE_LOG("remove block")
@@ -382,7 +383,7 @@ ELLE_TEST_SCHEDULED(async, (bool, paxos))
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
     ELLE_LOG("store block")
-      dht.update(*block);
+      dht.seal_and_update(*block);
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), updated);
     ELLE_LOG("remove block")
@@ -405,12 +406,13 @@ ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
     auto acb = elle::cast<blocks::ACLBlock>::runtime(fetched);
     acb->data(elle::Buffer(":-(", 3));
     ELLE_LOG("other: stored edited ACB")
-      BOOST_CHECK_THROW(dhts.dht_b->update(*acb), dht::ValidationFailed);
+      BOOST_CHECK_THROW(dhts.dht_b->seal_and_update(*acb),
+                        dht::ValidationFailed);
   }
   ELLE_LOG("owner: add ACB read permissions")
     block->set_permissions(dht::User(dhts.keys_b->K(), ""), true, false);
   ELLE_LOG("owner: store ACB")
-    dhts.dht_a->update(*block);
+    dhts.dht_a->seal_and_update(*block);
   {
     ELLE_LOG("other: fetch ACB");
     auto fetched = dhts.dht_b->fetch(block->address());
@@ -418,12 +420,13 @@ ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
     auto acb = elle::cast<blocks::ACLBlock>::runtime(fetched);
     acb->data(elle::Buffer(":-(", 3));
     ELLE_LOG("other: stored edited ACB")
-      BOOST_CHECK_THROW(dhts.dht_b->update(*acb), dht::ValidationFailed);
+      BOOST_CHECK_THROW(dhts.dht_b->seal_and_update(*acb),
+                        dht::ValidationFailed);
   }
   ELLE_LOG("owner: add ACB write permissions")
     block->set_permissions(dht::User(dhts.keys_b->K(), ""), true, true);
   ELLE_LOG("owner: store ACB")
-    dhts.dht_a->update(*block);
+    dhts.dht_a->seal_and_update(*block);
   {
     ELLE_LOG("other: fetch ACB");
     auto fetched = dhts.dht_b->fetch(block->address());
@@ -431,7 +434,7 @@ ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
     auto acb = elle::cast<blocks::ACLBlock>::runtime(fetched);
     acb->data(elle::Buffer(":-)", 3));
     ELLE_LOG("other: stored edited ACB")
-      dhts.dht_b->update(*acb);
+      dhts.dht_b->seal_and_update(*acb);
   }
   ELLE_LOG("owner: fetch ACB")
   {
@@ -449,8 +452,8 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
     dhts.dht_a->seal_and_insert(*block);
   {
     ELLE_LOG("other: fetch NB");
-    auto fetched =
-      dhts.dht_b->fetch(dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_b->version()));
+    auto fetched = dhts.dht_b->fetch(
+      dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_b->version()));
     BOOST_CHECK_EQUAL(fetched->data(), "blockdata");
     auto nb = elle::cast<dht::NB>::runtime(fetched);
     BOOST_CHECK(nb);
@@ -458,14 +461,20 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
   { // overwrite
     auto block = std::make_unique<dht::NB>(
       *dhts.dht_a, "blockname", elle::Buffer("blockdatb", 9));
-    BOOST_CHECK_THROW(dhts.dht_a->update(*block), std::exception);
+    BOOST_CHECK_THROW(dhts.dht_a->seal_and_update(*block), std::exception);
   }
   // remove and remove protection
-  BOOST_CHECK_THROW(dhts.dht_a->remove(
-    dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_a->version()), {}), std::exception);
-  BOOST_CHECK_THROW(dhts.dht_b->remove(
-    dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_b->version())), std::exception);
-  dhts.dht_a->remove(dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_a->version()));
+  BOOST_CHECK_THROW(
+    dhts.dht_a->remove(dht::NB::address(dhts.keys_a->K(), "blockname",
+                                        dhts.dht_a->version()),
+                       infinit::model::blocks::RemoveSignature()),
+    std::exception);
+  BOOST_CHECK_THROW(
+    dhts.dht_b->remove(dht::NB::address(dhts.keys_a->K(), "blockname",
+                                        dhts.dht_b->version())),
+    std::exception);
+  dhts.dht_a->remove(dht::NB::address(dhts.keys_a->K(), "blockname",
+                                      dhts.dht_a->version()));
 }
 
 ELLE_TEST_SCHEDULED(UB, (bool, paxos))
@@ -493,8 +502,12 @@ ELLE_TEST_SCHEDULED(UB, (bool, paxos))
   ELLE_LOG("fail removing RUB")
   {
     BOOST_CHECK_THROW(dhtb->remove(ruba->address()), std::exception);
-    BOOST_CHECK_THROW(dhtb->remove(ruba->address(), {}), std::exception);
-    BOOST_CHECK_THROW(dhta->remove(ruba->address(), {}), std::exception);
+    BOOST_CHECK_THROW(
+      dhtb->remove(ruba->address(), infinit::model::blocks::RemoveSignature()),
+      std::exception);
+    BOOST_CHECK_THROW(
+      dhta->remove(ruba->address(), infinit::model::blocks::RemoveSignature()),
+      std::exception);
   }
   ELLE_LOG("remove RUB")
     dhta->remove(ruba->address());
@@ -525,7 +538,7 @@ namespace removal
       rs_bad =
         elle::serialization::binary::serialize(b->sign_remove(*dht.dht));
       b->data([] (elle::Buffer& b) { b.append("_", 1); });
-      dht.dht->update(*b);
+      dht.dht->seal_and_update(*b);
       rs_good =
         elle::serialization::binary::serialize(b->sign_remove(*dht.dht));
     }
@@ -539,8 +552,8 @@ namespace removal
         blocks::RemoveSignature>(rs_bad, true, ctx);
       // we send a remove with an obsolete signature, so consensus will retry,
       // but will fail to call sign_remove() since we don't have the proper keys
-      BOOST_CHECK_THROW(
-        dht.dht->remove(address, sig), infinit::model::doughnut::ValidationFailed);
+      BOOST_CHECK_THROW(dht.dht->remove(address, sig),
+                        infinit::model::doughnut::ValidationFailed);
     }
     ELLE_LOG("remove block")
     {
@@ -590,7 +603,8 @@ ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
   {
     block_alice = dhts.dht_a->make_block<blocks::ACLBlock>();
     block_alice->data(elle::Buffer("A", 1));
-    block_alice->set_permissions(dht::User(dhts.keys_b->K(), "bob"), true, true);
+    block_alice->set_permissions(
+      dht::User(dhts.keys_b->K(), "bob"), true, true);
   }
   ELLE_LOG("alice: store block")
     dhts.dht_a->seal_and_insert(*block_alice);
@@ -606,15 +620,16 @@ ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
   ELLE_LOG("alice: modify block")
   {
     block_alice->data(elle::Buffer("AA", 2));
-    dhts.dht_a->update(*block_alice);
+    dhts.dht_a->seal_and_update(*block_alice);
   }
   ELLE_LOG("bob: modify block")
   {
     block_bob->data(elle::Buffer("AB", 2));
     BOOST_CHECK_THROW(
-      dhts.dht_b->update(*block_bob),
+      dhts.dht_b->seal_and_update(*block_bob),
       infinit::model::doughnut::Conflict);
-    dhts.dht_b->update(*block_bob, std::make_unique<AppendConflictResolver>());
+    dhts.dht_b->seal_and_update(*block_bob,
+                                std::make_unique<AppendConflictResolver>());
   }
   ELLE_LOG("alice: fetch block")
   {
@@ -743,7 +758,7 @@ ELLE_TEST_SCHEDULED(wrong_quorum)
     block->data(elle::Buffer(updated));
     stonehenge->fail = true;
     ELLE_LOG("store updated block")
-      dhts.dht_a->update(*block);
+      dhts.dht_a->seal_and_update(*block);
   }
 }
 
@@ -846,7 +861,8 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
   { // block we dont own
     auto block_alice = dhts.dht_a->make_block<blocks::ACLBlock>();
     block_alice->data(elle::Buffer("alice_1", 7));
-    block_alice->set_permissions(dht::User(dhts.keys_b->K(), "bob"), true, true);
+    block_alice->set_permissions(dht::User(dhts.keys_b->K(), "bob"),
+                                 true, true);
     auto addr = block_alice->address();
     dhts.dht_a->insert(std::move(block_alice));
     auto block_bob = dhts.dht_b->fetch(addr);
@@ -865,7 +881,8 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
       infinit::model::doughnut::Group g(*dhts.dht_a, "g");
       g.create();
       g.add_member(dht::User(dhts.keys_b->K(), "bob"));
-      gkey.reset(new elle::cryptography::rsa::PublicKey(g.public_control_key()));
+      gkey.reset(new elle::cryptography::rsa::PublicKey(
+                   g.public_control_key()));
     }
     auto block_alice = dhts.dht_a->make_block<blocks::ACLBlock>();
     block_alice->data(elle::Buffer("alice_1", 7));
@@ -989,7 +1006,7 @@ namespace rebalancing
     ELLE_LOG("write block to quorum of 2")
     {
       b1->data(std::string("extend_and_write 1 bis"));
-      dht_a.dht->update(*b1);
+      dht_a.dht->seal_and_update(*b1);
     }
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 2u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 2u);
@@ -1015,7 +1032,7 @@ namespace rebalancing
     ELLE_LOG("write block to quorum of 1")
     {
       b1->data(std::string("extend_and_write 2"));
-      dht_a.dht->update(*b1);
+      dht_a.dht->seal_and_update(*b1);
     }
   }
 
@@ -1040,7 +1057,7 @@ namespace rebalancing
     ELLE_LOG("write block to quorum of 1")
     {
       b1->data(std::string("extend_and_write 2"));
-      dht_a.dht->update(*b1);
+      dht_a.dht->seal_and_update(*b1);
     }
   }
 
@@ -1075,7 +1092,7 @@ namespace rebalancing
     {
       BOOST_CHECK_EQUAL(mutable_block_count(dht_c.overlay->blocks()), 1u);
       b->data(std::string("quorum_duel_edited"));
-      dht_c.dht->update(*b);
+      dht_c.dht->seal_and_update(*b);
     }
   }
 
@@ -1110,7 +1127,7 @@ namespace rebalancing
     {
       BOOST_CHECK_EQUAL(mutable_block_count(dht_c.overlay->blocks()), 1u);
       b->data(std::string("quorum_duel_edited"));
-      dht_c.dht->update(*b);
+      dht_c.dht->seal_and_update(*b);
     }
   }
 
@@ -1370,7 +1387,7 @@ namespace rebalancing
       {
         auto resolver = std::make_unique<VersionHop>(mb);
         mb.data(std::string("expand'"));
-        dht_b.dht->update(mb, std::move(resolver));
+        dht_b.dht->seal_and_update(mb, std::move(resolver));
       }
     }
     ELLE_LOG("disconnect second DHT")
@@ -1536,7 +1553,8 @@ ELLE_TEST_SCHEDULED(batch_quorum)
     auto block = dht_a.dht->make_block<blocks::ACLBlock>();
     block->data(std::string("foo"));
     addrs.push_back(std::make_pair(block->address(), boost::optional<int>()));
-    const_cast<Overlay&>(dynamic_cast<Overlay const&>(*dht_a.overlay)).partial_addresses()[block->address()] = 1+(i%3);
+    const_cast<Overlay&>(dynamic_cast<Overlay const&>(*dht_a.overlay)).
+      partial_addresses()[block->address()] = 1 + (i % 3);
     dht_b.dht->seal_and_insert(*block);
   }
   int hit = 0;
@@ -1594,8 +1612,9 @@ ELLE_TEST_SCHEDULED(admin_keys)
   // set server-side adm key but don't tell the client
   auto admin = elle::cryptography::rsa::keypair::generate(512);
   dht.dht->admin_keys().r.push_back(admin.K());
-  dynamic_cast<infinit::model::blocks::MutableBlock*>(b2.get())->data(std::string("bar"));
-  BOOST_CHECK_THROW(client.dht->update(*b2), std::exception);
+  dynamic_cast<infinit::model::blocks::MutableBlock*>(b2.get())->
+    data(std::string("bar"));
+  BOOST_CHECK_THROW(client.dht->seal_and_update(*b2), std::exception);
   auto b3 = client.dht->make_block<blocks::ACLBlock>();
   b3->data(std::string("baz"));
   BOOST_CHECK_THROW(client.dht->seal_and_insert(*b3), std::exception);
@@ -1628,8 +1647,9 @@ ELLE_TEST_SCHEDULED(admin_keys)
   auto ba3 = client.dht->fetch(ba->address());
   no_cheating(client.dht.get(), ba3);
   BOOST_CHECK_EQUAL(ba3->data(), std::string("foo"));
-  dynamic_cast<infinit::model::blocks::MutableBlock*>(ba3.get())->data(std::string("bar"));
-  client.dht->update(*ba3);
+  dynamic_cast<infinit::model::blocks::MutableBlock*>(ba3.get())->data(
+    std::string("bar"));
+  client.dht->seal_and_update(*ba3);
   auto ba4 = cadm.dht->fetch(ba->address());
   no_cheating(cadm.dht.get(), ba4);
   BOOST_CHECK_EQUAL(ba4->data(), std::string("bar"));

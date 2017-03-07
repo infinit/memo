@@ -161,12 +161,9 @@ namespace infinit
       try
       {
         if (insert)
-          // FIXME: unique_ptr when default values are fixed
-          this->_block_store->insert(
-            std::move(block), resolver.release());
+          this->_block_store->insert(std::move(block), std::move(resolver));
         else
-          this->_block_store->update(
-            std::move(block), std::move(resolver));
+          this->_block_store->update(std::move(block), std::move(resolver));
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {

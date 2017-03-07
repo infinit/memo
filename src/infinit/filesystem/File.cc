@@ -393,8 +393,7 @@ namespace infinit
         if (block_allocated)
         {
           if (first_write)
-            // FIXME: unique_ptr when default values are fixed
-            model.insert(std::move(block), resolver.release());
+            model.insert(std::move(block), std::move(resolver));
           else
             model.update(std::move(block), std::move(resolver));
         }
@@ -403,7 +402,7 @@ namespace infinit
           if (first_write)
             model.seal_and_insert(*block, std::move(resolver));
           else
-            model.update(*block, std::move(resolver));
+            model.seal_and_update(*block, std::move(resolver));
         }
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)

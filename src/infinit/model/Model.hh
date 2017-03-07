@@ -13,6 +13,7 @@
 #include <infinit/model/Endpoints.hh>
 #include <infinit/model/User.hh>
 #include <infinit/model/blocks/fwd.hh>
+#include <infinit/model/blocks/Block.hh>
 #include <infinit/serialization.hh>
 #include <infinit/storage/Storage.hh>
 
@@ -26,6 +27,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(data);
     ELLE_DAS_SYMBOL(local_version);
     ELLE_DAS_SYMBOL(owner);
+    ELLE_DAS_SYMBOL(signature);
     ELLE_DAS_SYMBOL(version);
 
     enum StoreMode
@@ -186,22 +188,35 @@ namespace infinit
       elle::das::named::Function<
         void (
           decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
-          // FIXME: unique_ptr does not fit default values.
-          decltype(conflict_resolver = std::declval<ConflictResolver*>()))>
+          decltype(conflict_resolver)::Effective<
+            std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>)>
       insert;
+
       void
       seal_and_insert(blocks::Block& block,
                       std::unique_ptr<ConflictResolver> = {});
+      /** Update an existing block.
+       *
+       *  \param block             Block to update.
+       *  \param conflict_resolver Optional automatic conflict resolver.
+       */
+      elle::das::named::Function<
+        void (
+          decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
+          decltype(conflict_resolver)::Effective<
+            std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>)>
+      update;
       void
-      update(std::unique_ptr<blocks::Block> block,
-             std::unique_ptr<ConflictResolver> = {});
-      void
-      update(blocks::Block& block,
-             std::unique_ptr<ConflictResolver> = {});
-      void
-      remove(Address address);
-      void
-      remove(Address address, blocks::RemoveSignature sig);
+      seal_and_update(blocks::Block& block,
+                      std::unique_ptr<ConflictResolver> = {});
+      /** Remove an existing block.
+       */
+      elle::das::named::Function<
+        void (
+          decltype(address)::Formal<Address>,
+          decltype(signature = boost::optional<blocks::RemoveSignature>()))>
+      remove;
+
     private:
       std::unique_ptr<blocks::Block>
       _fetch_impl(Address address, boost::optional<int> local_version) const;

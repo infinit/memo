@@ -33,15 +33,38 @@ namespace infinit
         address,
         local_version = boost::optional<int>())
       , insert([this] (std::unique_ptr<blocks::Block> block,
-                       ConflictResolver* resolver)
+                       std::unique_ptr<ConflictResolver> resolver)
                {
                  ELLE_TRACE_SCOPE("%s: insert %f", this, block);
                  block->seal();
-                 this->_insert(std::move(block),
-                               std::unique_ptr<ConflictResolver>(resolver));
+                 this->_insert(std::move(block), std::move(resolver));
                },
                block,
                conflict_resolver = nullptr)
+      , update([this] (std::unique_ptr<blocks::Block> block,
+                       std::unique_ptr<ConflictResolver> resolver)
+               {
+                 ELLE_TRACE_SCOPE("%s: update %f", *this, *block);
+                 block->seal();
+                 return this->_update(std::move(block), std::move(resolver));
+               },
+               block,
+               conflict_resolver = nullptr)
+      , remove([this] (Address address,
+                       boost::optional<blocks::RemoveSignature> rs)
+               {
+                 ELLE_TRACE_SCOPE("%s: remove %f", this, address);
+                 if (rs)
+                   this->_remove(address, std::move(rs.get()));
+                 else
+                 {
+                   auto block = this->fetch(address);
+                   ELLE_ASSERT(block);
+                   this->_remove(address, block->sign_remove(*this));
+                 }
+               },
+               address,
+               signature = boost::none)
     {
       ELLE_LOG_COMPONENT("infinit.model.Model");
       ELLE_LOG("%s: compatibility version %s", this, this->_version);
@@ -205,37 +228,13 @@ namespace infinit
     }
 
     void
-    Model::update(std::unique_ptr<blocks::Block> block,
-                 std::unique_ptr<ConflictResolver> resolver)
-    {
-      ELLE_TRACE_SCOPE("%s: update %f", *this, *block);
-      block->seal();
-      return this->_update(std::move(block), std::move(resolver));
-    }
-
-    void
-    Model::update(blocks::Block& block,
-                 std::unique_ptr<ConflictResolver> resolver)
+    Model::seal_and_update(blocks::Block& block,
+                           std::unique_ptr<ConflictResolver> resolver)
     {
       ELLE_TRACE_SCOPE("%s: update %f", *this, block);
       block.seal();
       auto copy = block.clone();
       return this->_update(std::move(copy), std::move(resolver));
-    }
-
-    void
-    Model::remove(Address address)
-    {
-      ELLE_TRACE_SCOPE("%s: remove %f", this, address);
-      auto block = this->fetch(address);
-      auto rs = block->sign_remove(*this);
-      this->remove(address, std::move(rs));
-    }
-
-    void
-    Model::remove(Address address, blocks::RemoveSignature rs)
-    {
-      this->_remove(address, std::move(rs));
     }
 
     void

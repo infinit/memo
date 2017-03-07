@@ -711,7 +711,7 @@ ELLE_TEST_SCHEDULED(
   dht_a->dht->seal_and_insert(*block, tcr());
   auto b2 = dht_b.dht->fetch(block->address());
   dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
-  dht_b.dht->update(*b2, tcr());
+  dht_b.dht->seal_and_update(*b2, tcr());
   // brutal restart of a
   ELLE_LOG("disconnect A");
   dht_a->dht->local()->utp_server()->socket()->close();
@@ -738,7 +738,7 @@ ELLE_TEST_SCHEDULED(
     dynamic_cast<infinit::model::doughnut::Remote&>(*peer).connect();
   ELLE_LOG("re-store block");
   dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
-  BOOST_CHECK_NO_THROW(dht_b.dht->update(*b2, tcr()));
+  BOOST_CHECK_NO_THROW(dht_b.dht->seal_and_update(*b2, tcr()));
   ELLE_LOG("test end");
 }
 
@@ -799,8 +799,7 @@ ELLE_TEST_SCHEDULED(
         {
           auto block = client->dht->make_block<ACLBlock>(std::string("block"));
           addrs.push_back(block->address());
-          // FIXME: unique_ptr when default values are fixed
-          client->dht->insert(std::move(block), tcr().release());
+          client->dht->insert(std::move(block), tcr());
         }
       }
       catch (elle::Error const& e)
@@ -871,8 +870,7 @@ ELLE_TEST_SCHEDULED(
     {
       auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
       addrs.push_back(block->address());
-      // FIXME: unique_ptr when default values are fixed
-      client->dht->insert(std::move(block), tcr().release());
+      client->dht->insert(std::move(block), tcr());
     }
     if (b1.size() >=5 && b2.size() >=5)
       break;
@@ -922,8 +920,7 @@ ELLE_TEST_SCHEDULED(
     {
       auto block = dht_a->dht->make_block<ACLBlock>(std::string("block"));
       addrs.push_back(block->address());
-      // FIXME: unique_ptr when default values are fixed
-      client->dht->insert(std::move(block), tcr().release());
+      client->dht->insert(std::move(block), tcr());
     }
     if (b1.size() >= 5 && b2.size() >= 5)
       break;
@@ -1051,8 +1048,7 @@ ELLE_TEST_SCHEDULED(
               auto a = block->address();
               try
               {
-                // FIXME: unique_ptr when default values are fixed
-                c->dht->insert(std::move(block), tcr().release());
+                c->dht->insert(std::move(block), tcr());
               }
               catch (elle::Error const& e)
               {
@@ -1454,8 +1450,7 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
     {
       auto block = client->dht->make_block<ACLBlock>(std::string("block"));
       auto a = block->address();
-      // FIXME: unique_ptr when default values are fixed
-      client->dht->insert(std::move(block), tcr().release());
+      client->dht->insert(std::move(block), tcr());
       ELLE_DEBUG("created %f", a);
       addrs.push_back(a);
     }
@@ -1530,8 +1525,7 @@ test_churn_socket(TestConfiguration config, bool pasv)
   {
     auto block = client->dht->make_block<ACLBlock>(std::string("block"));
     auto a = block->address();
-    // FIXME: unique_ptr when default values are fixed
-    client->dht->insert(std::move(block), tcr().release());
+    client->dht->insert(std::move(block), tcr());
     ELLE_DEBUG("created %f", a);
     addrs.push_back(a);
   }

@@ -450,7 +450,7 @@ namespace infinit
           if (first_write)
             model.seal_and_insert(*block, std::move(resolver));
           else
-            model.update(*block, std::move(resolver));
+            model.seal_and_update(*block, std::move(resolver));
         }
         else
         {
@@ -469,8 +469,7 @@ namespace infinit
             b->data(data);
           version = b->version();
           if (first_write)
-            // FIXME: unique_ptr when default values are fixed
-            model.insert(std::move(b), resolver.release());
+            model.insert(std::move(b), std::move(resolver));
           else
             model.update(std::move(b), std::move(resolver));
         }
