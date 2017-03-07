@@ -466,7 +466,8 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
   // remove and remove protection
   BOOST_CHECK_THROW(
     dhts.dht_a->remove(dht::NB::address(dhts.keys_a->K(), "blockname",
-                                        dhts.dht_a->version()), {}),
+                                        dhts.dht_a->version()),
+                       infinit::model::blocks::RemoveSignature()),
     std::exception);
   BOOST_CHECK_THROW(
     dhts.dht_b->remove(dht::NB::address(dhts.keys_a->K(), "blockname",
@@ -501,8 +502,12 @@ ELLE_TEST_SCHEDULED(UB, (bool, paxos))
   ELLE_LOG("fail removing RUB")
   {
     BOOST_CHECK_THROW(dhtb->remove(ruba->address()), std::exception);
-    BOOST_CHECK_THROW(dhtb->remove(ruba->address(), {}), std::exception);
-    BOOST_CHECK_THROW(dhta->remove(ruba->address(), {}), std::exception);
+    BOOST_CHECK_THROW(
+      dhtb->remove(ruba->address(), infinit::model::blocks::RemoveSignature()),
+      std::exception);
+    BOOST_CHECK_THROW(
+      dhta->remove(ruba->address(), infinit::model::blocks::RemoveSignature()),
+      std::exception);
   }
   ELLE_LOG("remove RUB")
     dhta->remove(ruba->address());

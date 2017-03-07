@@ -13,6 +13,7 @@
 #include <infinit/model/Endpoints.hh>
 #include <infinit/model/User.hh>
 #include <infinit/model/blocks/fwd.hh>
+#include <infinit/model/blocks/Block.hh>
 #include <infinit/serialization.hh>
 #include <infinit/storage/Storage.hh>
 
@@ -26,6 +27,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(data);
     ELLE_DAS_SYMBOL(local_version);
     ELLE_DAS_SYMBOL(owner);
+    ELLE_DAS_SYMBOL(signature);
     ELLE_DAS_SYMBOL(version);
 
     enum StoreMode
@@ -207,10 +209,14 @@ namespace infinit
       void
       seal_and_update(blocks::Block& block,
                       std::unique_ptr<ConflictResolver> = {});
-      void
-      remove(Address address);
-      void
-      remove(Address address, blocks::RemoveSignature sig);
+      /** Remove an existing block.
+       */
+      elle::das::named::Function<
+        void (
+          decltype(address)::Formal<Address>,
+          decltype(signature = boost::optional<blocks::RemoveSignature>()))>
+      remove;
+
     private:
       std::unique_ptr<blocks::Block>
       _fetch_impl(Address address, boost::optional<int> local_version) const;
