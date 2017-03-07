@@ -84,8 +84,9 @@ namespace infinit
               d, what, user->address());
             try
             {
+              // FIXME: unique_ptr when default values are fixed
               d.insert(
-                std::move(user), std::make_unique<ConflictResolver>(what));
+                std::move(user), new ConflictResolver(what));
             }
             catch (elle::Error const& e)
             {
@@ -489,7 +490,7 @@ namespace infinit
             return nullptr;
           auto block = this->make_block<blocks::MutableBlock>(
             elle::serialization::binary::serialize(ServicesTypes()));
-          this->insert(*block);
+          this->seal_and_insert(*block);
           auto beacon = std::make_unique<NB>(
             *this, this->owner(),
             "infinit/services",

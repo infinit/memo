@@ -1,6 +1,8 @@
 #include <elle/das/bound-method.hh>
 
 #include <infinit/model/blocks/Block.hh>
+#include <infinit/model/blocks/ImmutableBlock.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/utility.hh>
 
 namespace infinit
