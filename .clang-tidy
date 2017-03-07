@@ -1,2 +1,2 @@
-Checks: '-*,modernize-use-using,modernize-use-override,modernize-avoid-bind,modernize-deprecated-headers,modernize-use-bool-litterals'
+Checks: '-*,modernize-*'
 HeaderFilterRegex: '\.\./\.\./src/infinit'
