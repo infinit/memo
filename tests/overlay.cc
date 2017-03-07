@@ -1696,15 +1696,19 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
   auto& dht_c = servers[2];
   ELLE_LOG("bringing node C up")
     discover(*dht_c, *dht_a, false);
-  ELLE_LOG("wait")
+  ELLE_LOG("wait for C to discover A")
     hard_wait(*dht_c, 1);
   // Check that C knows that B existed.
   {
+    auto peers = get_peers(*dht_c);
+    ELLE_LOG("Peers of C (%s): %f", dht_c, peers);
+    // B and C are not connected.
+    CHECK_IN(id_a, peers);
+    CHECK_NOT_IN(id_b, peers);
+
     auto addrs = get_peers(*dht_c, "infos");
     ELLE_LOG("Infos of C (%s): %f", dht_c, addrs);
     CHECK_IN(id_b, addrs);
-    // B and C are not connected.
-    CHECK_NOT_IN(id_b, get_peers(*dht_c));
   }
   // Kill server A, C remains alone, remembering about A and B.
   {

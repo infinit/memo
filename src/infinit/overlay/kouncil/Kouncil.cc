@@ -714,11 +714,11 @@ namespace infinit
                                   Endpoints endpoints,
                                   Time t,
                                   LamportAge d)
-        : PeerInfo(id, endpoints, to_milliseconds(t), d)
+        : PeerInfo{id, endpoints, to_milliseconds(t), d}
       {}
 
       Kouncil::PeerInfo::PeerInfo(NodeLocation const& loc)
-        : PeerInfo(loc.id(), loc.endpoints())
+        : PeerInfo{loc.id(), loc.endpoints()}
       {}
 
       bool
@@ -747,11 +747,6 @@ namespace infinit
         elle::fprintf(o, "%s(%f)", elle::type_info(*this), this->id());
       }
 
-      namespace
-      {
-        const auto _kouncil_abbr
-          = elle::TypeInfo::RegisterAbbrevation{"kouncil::Kouncil", "Kouncil"};
-      }
 
       /*--------------.
       | StaleEndpoint |
@@ -784,6 +779,12 @@ namespace infinit
             if (!e)
               this->connect(dht);
           });
+      }
+
+      namespace
+      {
+        const auto a
+          = elle::TypeInfo::RegisterAbbrevation{"kouncil::Kouncil", "Kouncil"};
       }
     }
   }
