@@ -861,20 +861,9 @@ body.drive {
 `----------------*/
 
 body.download, body.update {
-  h1, p.subtitle, .platform { text-align: center; }
+  h1, p.subtitle { text-align: center; }
   h1 { margin-bottom: 3px; margin-top: 40px; }
   p.subtitle { margin-top: 0; }
-
-  section.platforms {
-    margin: 70px 9%;
-
-    .platform {
-      width: 27%; margin: 0 3%; float: left;
-      a.button { margin-bottom: 9px; }
-      a.direct { font-size: 13px; color: #9A9A9A; }
-      p { margin-top: 0px; }
-    }
-  }
   p.legal { text-align: center; padding: 80px 30px; clear: both; opacity: 0.5; }
 
   .popup {
@@ -887,22 +876,69 @@ body.download, body.update {
   }
 }
 
-body.update {
-  section.platforms {
-    min-height: 300px;
-    .platform {
-      a {
-        font-size: 15px; display: inline-block; margin-bottom: 10px;
-        color: @infinitblue; .transition();
+body.download {
+  .wrapper { max-width: 1060px; }
 
-        &:hover {
-          color: darken(@infinitblue, 10%);
-          border-bottom: 2px solid darken(@infinitblue, 10%);
-        }
+  .os, .containers { float: left; width: 46%; margin: 0 2%;  }
+
+  .platform {
+    width: 100%; clear: both;  padding-top: 50px;
+
+    div.name { 
+      float: left; text-align: center; max-width: 15%; min-width: 100px; 
+      padding-top: 10px;
+
+      h2 { margin-top: 8px; font-size: 15px; text-transform: uppercase; font-family: @sf; } 
+    }
+
+    div.links { 
+      float: left; margin-left: 10px; background: #F8F8F8; padding: 30px 25px;
+      width: ~"calc(100% - 190px)"; font-size: 16px; min-height: 120px;
+
+      img { margin-right: 4px;}
+      p { margin-top: 0; }
+      a { vertical-align: 4px; }
+
+      p a:nth-child(3), a.direct { 
+        font-size: 12px; color: #9A9A9A; vertical-align: 4px; margin-left: 4px; 
+        &:after { opacity: 0;}
       }
+
+      a.direct { vertical-align: 34px; margin-left: 7px;  }
+      p:last-child img { margin-right: 2px; } 
+    }
+
+    &.soon {
+      text-align: center; text-transform: uppercase; font-family: @sf;
+      .name { opacity: 0.4; }
+      .name h2 { font-size: 14px;}
+      .links { color: @infinitgray;  min-height: 48px; padding: 37px 25px 13px 25px }
     }
   }
 }
+
+body.update {
+  section.platforms {
+    min-height: 250px; margin: 70px 9%;
+
+    .platform {
+      text-align: center;
+
+      h2 { margin-top: 15px;}
+      p { margin: 5px 0; }
+      a.button { margin-bottom: 9px; }
+      a.direct { font-size: 13px; color: #9A9A9A; }
+    }
+
+    .platform {
+      width: 27%; margin: 0 3%; float: left;
+
+      a { display: inline-block; }
+    }
+  }
+
+  p.legal { padding-top: 0; opacity: 1; }
+} 
 
 
 /*----------------.

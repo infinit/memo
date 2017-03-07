@@ -5,26 +5,30 @@
   <h1>Upgrade Infinit CLI</h1>
   <p class="subtitle">Get the latest version of our CLI tools.</p>
 
-  <section class="platforms">
-    <div class="platform mac">
-      <img src="${url('images/icons/apple.png')}">
-      <h2>macOS</h2>
-      <a class="open-popup" href="#mac-homebrew">Update via Homebrew</a><br>
-      <a class="open-popup" href="#mac-tarball">Update via tarball</a>
-    </div>
+  <section class="doc">
+    <section class="platforms">
+      <div class="platform mac">
+        <img src="${url('images/icons/apple.png')}">
+        <h2>macOS</h2>
+        <p><a class="open-popup" href="#mac-homebrew">Update via Homebrew</a></p>
+        <p><a class="open-popup" href="#mac-tarball">Update via tarball</a></p>
+      </div>
 
-    <div class="platform linux">
-      <img src="${url('images/icons/debian.png')}">
-      <h2>Linux (Debian)</h2>
-      <a class="open-popup" href="#linux-apt">Update via repository</a><br>
-      <a class="open-popup" href="#linux-tarball">Update via tarball</a>
-    </div>
+      <div class="platform linux">
+        <img src="${url('images/icons/debian.png')}">
+        <h2>Linux (Debian)</h2>
+        <p><a class="open-popup" href="#linux-apt">Update via repository</a></p>
+        <p><a class="open-popup" href="#linux-tarball">Update via tarball</a></p>
+      </div>
 
-    <div class="platform windows">
-      <img src="${url('images/icons/windows.png')}">
-      <h2>Windows</h2>
-      <a class="open-popup" href="#windows">Update via tarball</a>
-    </div>
+      <div class="platform windows">
+        <img src="${url('images/icons/windows.png')}">
+        <h2>Windows</h2>
+        <p><a class="open-popup" href="#windows">Update via tarball</a></p>
+      </div>
+    </section>
+
+    <p class="legal"><strong>NOTE:</strong> Read more <a href="${route('doc_upgrading')}">in the documentation</a> on how to upgrade an Infinit network to a newer version.</p>
   </section>
 
   <div class="popup" id="mac-homebrew">

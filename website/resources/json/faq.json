@@ -69,7 +69,7 @@
     "category": "general",
     "popularity": 7,
     "question": "What platforms does Infinit support?",
-    "answer" : "<p>Currently Infinit supports Linux and OS X but we have plans for Windows and mobile (iPhone, Android), check <a href=\"/documentation/roadmap\">our roadmap</a>.</p> <p>We're also considering supporting FreeBSD, CentOS or Raspberry Pi. You can upvote or tell us what other platforms you want us to support <a href=\"http://help.infinit.sh\">here</a>!</p>"
+    "answer" : "<p>Currently Infinit supports Linux and OS X but we have plans for Windows and mobile (iPhone, Android), check <a href=\"/documentation/roadmap\">our roadmap</a>.</p> <p>We're also considering supporting FreeBSD, CentOS or Raspberry Pi. You can upvote or tell us what other platforms you want us to support <a href=\"http://infinit.uservoice.com\">here</a>!</p>"
   },
   {
     "category": "technology",

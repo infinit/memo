@@ -16,7 +16,7 @@
         <a href="#create-infrastructure">2. Create Infrastructure</a>
         <ul>
           <li class="create-a-user"><a href="#create-a-user">Create a user</a></li>
-          <li class="create-a-storage-resource"><a href="#create-a-storage-resource">Create a storage resource</a></li>
+          <li class="create-a-silo"><a href="#create-a-silo">Create a silo</a></li>
           <li class="create-a-network"><a href="#create-a-network">Create a network</a></li>
           <li class="create-a-volume"><a href="#create-a-volume">Create a volume</a></li>
           <li class="mount-the-volume"><a href="#mount-the-volume">Mount the volume</a></li>
@@ -257,11 +257,11 @@ Generating RSA keypair.
 Remotely saved user "alice".
 </code></pre>
 
-    <h3 id="create-a-storage-resource">Create a storage resource</h3>
+    <h3 id="create-a-silo">Create a silo</h3>
 
-    <p>A storage resource behaves like a hard disk, storing data blocks without understanding the data’s meaning. The beauty of Infinit is that it is completely agnostic of the nature of such storage resources.</p>
+    <p>A silo behaves like a hard disk, storing data blocks without understanding the data’s meaning. The beauty of Infinit is that it is completely agnostic of the nature of such silo.</p>
 
-    <p>Next, we are going to declare a local storage resource. A local storage stores data blocks as files in a directory (such as <code>${guide_storage_dir}</code>) on the local filesystem.</p>
+    <p>Next, we are going to declare a local silo. A local silo stores data blocks as files in a directory (such as <code>${guide_storage_dir}</code>) on the local filesystem.</p>
 
     <p>The binary <em>infinit-storage</em> is used for this purpose. The option <code>--filesystem</code> is used to indicate that the storage will be on the local filesystem:</p>
 
@@ -270,9 +270,9 @@ Created storage "local".</code></pre>
 
     <h3 id="create-a-network">Create a network</h3>
 
-    <p>Now that we have at least one storage resource to store data, we can create a network interconnecting different machines.</p>
+    <p>Now that we have at least one silo to store data, we can create a network interconnecting different machines.</p>
 
-    <p>The <em>infinit-network</em> command is used to create the network, specifying a name along with the list of storage resources to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the <code>local</code> storage resource is used but you could plug as many as you like. Obviously, you need to substitute <code>alice</code> with your username:</p>
+    <p>The <em>infinit-network</em> command is used to create the network, specifying a name along with the list of silos to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the <code>local</code> silo is used but you could plug as many as you like. Obviously, you need to substitute <code>alice</code> with your username:</p>
 
     <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-network --create --as alice --storage local --name my-network --push
 Locally created network "alice/my-network".
@@ -290,7 +290,7 @@ Locally created volume "alice/my-volume".
 Remotely saved volume "alice/my-volume".
 </code></pre>
 
-    <p>That’s it, you’ve created a volume named <code>my-volume</code> i.e. a filesystem. The blocks that the files are composed of will be distributed across the network named <code>my-network</code>, currently composed of a single computer with a single storage resource.</p>
+    <p>That’s it, you’ve created a volume named <code>my-volume</code> i.e. a filesystem. The blocks that the files are composed of will be distributed across the network named <code>my-network</code>, currently composed of a single computer with a single silo.</p>
 
     <h3 id="mount-the-volume">Mount the volume</h3>
 
