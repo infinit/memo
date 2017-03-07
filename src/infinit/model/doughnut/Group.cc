@@ -295,10 +295,10 @@ namespace infinit
       Group::add_member(model::User const& user)
       {
         this->block().add_member(user);
-        this->_dht.update(this->block(),
-                          std::make_unique<GroupConflictResolver>(
-                            GroupConflictResolver::Action::add_member,
-                            user));
+        this->_dht.seal_and_update(this->block(),
+                                   std::make_unique<GroupConflictResolver>(
+                                     GroupConflictResolver::Action::add_member,
+                                     user));
       }
 
       void
@@ -316,10 +316,10 @@ namespace infinit
       Group::add_admin(model::User const& user)
       {
         this->block().add_admin(user);
-        this->_dht.update(this->block(),
-                          std::make_unique<GroupConflictResolver>(
-                            GroupConflictResolver::Action::add_admin,
-                            user));
+        this->_dht.seal_and_update(this->block(),
+                                   std::make_unique<GroupConflictResolver>(
+                                     GroupConflictResolver::Action::add_admin,
+                                     user));
       }
 
       void
@@ -337,10 +337,11 @@ namespace infinit
       Group::remove_member(model::User const& user)
       {
         this->block().remove_member(user);
-        this->_dht.update(this->block(),
-                          std::make_unique<GroupConflictResolver>(
-                            GroupConflictResolver::Action::remove_member,
-                            user));
+        this->_dht.seal_and_update(
+          this->block(),
+          std::make_unique<GroupConflictResolver>(
+            GroupConflictResolver::Action::remove_member,
+            user));
       }
 
       void
@@ -358,10 +359,11 @@ namespace infinit
       Group::remove_admin(model::User const& user)
       {
         this->block().remove_admin(user);
-        this->_dht.update(this->block(),
-                          std::make_unique<GroupConflictResolver>(
-                            GroupConflictResolver::Action::remove_admin,
-                            user));
+        this->_dht.seal_and_update(
+          this->block(),
+          std::make_unique<GroupConflictResolver>(
+            GroupConflictResolver::Action::remove_admin,
+            user));
       }
 
       void
@@ -410,7 +412,7 @@ namespace infinit
           [&]
           {
             this->block().description(description);
-            this->_dht.update(
+            this->_dht.seal_and_update(
               this->block(),
               std::make_unique<GroupConflictResolver>(
                 GroupConflictResolver::Action::set_description, description));

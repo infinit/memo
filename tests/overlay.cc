@@ -711,7 +711,7 @@ ELLE_TEST_SCHEDULED(
   dht_a->dht->seal_and_insert(*block, tcr());
   auto b2 = dht_b.dht->fetch(block->address());
   dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
-  dht_b.dht->update(*b2, tcr());
+  dht_b.dht->seal_and_update(*b2, tcr());
   // brutal restart of a
   ELLE_LOG("disconnect A");
   dht_a->dht->local()->utp_server()->socket()->close();
@@ -738,7 +738,7 @@ ELLE_TEST_SCHEDULED(
     dynamic_cast<infinit::model::doughnut::Remote&>(*peer).connect();
   ELLE_LOG("re-store block");
   dynamic_cast<MutableBlock*>(b2.get())->data(elle::Buffer("foo"));
-  BOOST_CHECK_NO_THROW(dht_b.dht->update(*b2, tcr()));
+  BOOST_CHECK_NO_THROW(dht_b.dht->seal_and_update(*b2, tcr()));
   ELLE_LOG("test end");
 }
 

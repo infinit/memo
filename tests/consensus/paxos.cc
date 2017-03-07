@@ -13,11 +13,12 @@ ELLE_TEST_SCHEDULED(availability_2)
   block->data(elle::Buffer("foo"));
   a->dht->seal_and_insert(*block);
   block->data(elle::Buffer("foobar"));
-  a->dht->update(*block);
+  a->dht->seal_and_update(*block);
   b.reset();
   block->data(elle::Buffer("foobarbaz"));
   BOOST_CHECK_EQUAL(a->dht->fetch(block->address())->data(), "foobar");
-  BOOST_CHECK_THROW(a->dht->update(*block), elle::athena::paxos::TooFewPeers);
+  BOOST_CHECK_THROW(a->dht->seal_and_update(*block),
+                    elle::athena::paxos::TooFewPeers);
 }
 
 ELLE_TEST_SCHEDULED(availability_3)
@@ -34,14 +35,14 @@ ELLE_TEST_SCHEDULED(availability_3)
     block->data(elle::Buffer("foo"));
     a->dht->seal_and_insert(*block);
     block->data(elle::Buffer("foobar"));
-    a->dht->update(*block);
+    a->dht->seal_and_update(*block);
   }
   ELLE_LOG("test 2/3 nodes")
   {
     c.reset();
     BOOST_CHECK_EQUAL(b->dht->fetch(block->address())->data(), "foobar");
     block->data(elle::Buffer("foobarbaz"));
-    a->dht->update(*block);
+    a->dht->seal_and_update(*block);
   }
   ELLE_LOG("test 1/3 nodes")
   {
@@ -49,7 +50,8 @@ ELLE_TEST_SCHEDULED(availability_3)
     BOOST_CHECK_THROW(a->dht->fetch(block->address())->data(),
                       elle::athena::paxos::TooFewPeers);
     block->data(elle::Buffer("foobarbazquux"));
-    BOOST_CHECK_THROW(a->dht->update(*block), elle::athena::paxos::TooFewPeers);
+    BOOST_CHECK_THROW(a->dht->seal_and_update(*block),
+                      elle::athena::paxos::TooFewPeers);
   }
 }
 

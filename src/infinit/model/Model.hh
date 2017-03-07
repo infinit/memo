@@ -189,15 +189,24 @@ namespace infinit
           decltype(conflict_resolver)::Effective<
             std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>)>
       insert;
+
       void
       seal_and_insert(blocks::Block& block,
                       std::unique_ptr<ConflictResolver> = {});
+      /** Update an existing block.
+       *
+       *  \param block             Block to update.
+       *  \param conflict_resolver Optional automatic conflict resolver.
+       */
+      elle::das::named::Function<
+        void (
+          decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
+          decltype(conflict_resolver)::Effective<
+            std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>)>
+      update;
       void
-      update(std::unique_ptr<blocks::Block> block,
-             std::unique_ptr<ConflictResolver> = {});
-      void
-      update(blocks::Block& block,
-             std::unique_ptr<ConflictResolver> = {});
+      seal_and_update(blocks::Block& block,
+                      std::unique_ptr<ConflictResolver> = {});
       void
       remove(Address address);
       void

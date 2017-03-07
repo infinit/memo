@@ -450,7 +450,7 @@ namespace infinit
           if (first_write)
             model.seal_and_insert(*block, std::move(resolver));
           else
-            model.update(*block, std::move(resolver));
+            model.seal_and_update(*block, std::move(resolver));
         }
         else
         {

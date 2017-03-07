@@ -41,6 +41,15 @@ namespace infinit
                },
                block,
                conflict_resolver = nullptr)
+      , update([this] (std::unique_ptr<blocks::Block> block,
+                       std::unique_ptr<ConflictResolver> resolver)
+               {
+                 ELLE_TRACE_SCOPE("%s: update %f", *this, *block);
+                 block->seal();
+                 return this->_update(std::move(block), std::move(resolver));
+               },
+               block,
+               conflict_resolver = nullptr)
     {
       ELLE_LOG_COMPONENT("infinit.model.Model");
       ELLE_LOG("%s: compatibility version %s", this, this->_version);
@@ -204,17 +213,8 @@ namespace infinit
     }
 
     void
-    Model::update(std::unique_ptr<blocks::Block> block,
-                 std::unique_ptr<ConflictResolver> resolver)
-    {
-      ELLE_TRACE_SCOPE("%s: update %f", *this, *block);
-      block->seal();
-      return this->_update(std::move(block), std::move(resolver));
-    }
-
-    void
-    Model::update(blocks::Block& block,
-                 std::unique_ptr<ConflictResolver> resolver)
+    Model::seal_and_update(blocks::Block& block,
+                           std::unique_ptr<ConflictResolver> resolver)
     {
       ELLE_TRACE_SCOPE("%s: update %f", *this, block);
       block.seal();
