@@ -102,6 +102,12 @@ namespace infinit
         /// Remote node.
         using Remote = infinit::model::doughnut::Remote;
 
+        /// A clock.
+        using Clock = std::chrono::high_resolution_clock;
+        /// A reference date.
+        using Time = std::chrono::time_point<Clock>;
+        /// The type of our timers.
+        using Timer = boost::asio::basic_waitable_timer<Clock>;
         /// Transportable timeout.
         using LamportAge = elle::athena::LamportAge;
 
@@ -116,7 +122,7 @@ namespace infinit
          */
         Kouncil(model::doughnut::Doughnut* dht,
                 std::shared_ptr<Local> local,
-                boost::optional<int> eviction_delay = boost::none);
+                boost::optional<int> eviction_delay = {});
         /// Destruct a Kouncil.
         ~Kouncil() override;
       protected:
@@ -234,7 +240,7 @@ namespace infinit
           ELLE_ATTRIBUTE(boost::signals2::scoped_connection, slot);
           ELLE_ATTRIBUTE(boost::asio::deadline_timer, retry_timer);
           ELLE_ATTRIBUTE(int, retry_counter);
-          ELLE_ATTRIBUTE(boost::asio::deadline_timer, evict_timer);
+          ELLE_ATTRIBUTE(Timer, evict_timer);
         };
         using StaleEndpoints = bmi::multi_index_container<
           StaleEndpoint,

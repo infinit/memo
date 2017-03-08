@@ -77,9 +77,10 @@ namespace infinit
         , _broadcast_thread(new elle::reactor::Thread(
                               elle::sprintf("%s: broadcast", this),
                               std::bind(&Kouncil::_broadcast, this)))
-        , _eviction_delay(eviction_delay.value_or(12000))
+        , _eviction_delay(std::chrono::seconds{eviction_delay.value_or(12000)})
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
+        ELLE_DEBUG("Eviction delay: %s", _eviction_delay);
         if (local)
           _register_local(local);
         // Add client-side Kouncil RPCs.
@@ -765,18 +766,26 @@ namespace infinit
       void
       Kouncil::StaleEndpoint::reconnect(Kouncil& kouncil)
       {
-        // Be ready to evict.
-        ELLE_DEBUG("%f: initiating reconnection", this);
-        this->_evict_timer.expires_from_now(boost::posix_time::seconds(10));
-        this->_evict_timer.async_wait(
-          [this, &kouncil] (boost::system::error_code const& e)
-          {
-            if (!e)
+        {
+          // The age so forth.
+          auto age =
+            ELLE_ENFORCE(find(kouncil._infos, this->id()))
+            ->disappearance().age();
+          // How much it is still credited.
+          auto respite = kouncil._eviction_delay - age;
+          ELLE_DEBUG("%f: initiating reconnection with timeout %s",
+                     this, respite);
+          this->_evict_timer.expires_from_now(respite);
+          this->_evict_timer.async_wait(
+            [this, &kouncil] (boost::system::error_code const& e)
             {
-              ELLE_DEBUG("%f: reconnection timed out, evicting", this);
-              kouncil._peer_evicted(id());
-            }
-          });
+              if (!e)
+              {
+                ELLE_DEBUG("%f: reconnection timed out, evicting", this);
+                kouncil._peer_evicted(id());
+              }
+            });
+        }
         // Initiate the reconnection attempts.
         this->connect(kouncil);
       }
