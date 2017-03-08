@@ -139,7 +139,7 @@ namespace infinit
       public:
         /// Global address book.
         ELLE_ATTRIBUTE_R(AddressBook, address_book);
-        /// All known peers.
+        /// All peers we are currently connected to.
         ELLE_ATTRIBUTE_R(Peers, peers);
         ELLE_ATTRIBUTE(std::default_random_engine, gen, mutable);
       private:
@@ -152,6 +152,10 @@ namespace infinit
       | Peers |
       `------*/
       public:
+        /// A peer we heard about: we are connected to it, or we
+        /// expect to be able to connect to it (either because we were
+        /// disconnected from it, or because another peer told us
+        /// about it).
         struct PeerInfo
           : public elle::Printable::as<PeerInfo>
         {
@@ -204,7 +208,9 @@ namespace infinit
           bmi::indexed_by<
             bmi::hashed_unique<
               bmi::const_mem_fun<PeerInfo, Address const&, &PeerInfo::id>>>>;
+        /// The peers we heard about.
         ELLE_ATTRIBUTE_R(PeerInfos, infos);
+
 
         /// Nodes with which we lost connection, but keep ready to see
         /// coming back.
@@ -236,6 +242,9 @@ namespace infinit
         bool
         _discovered(model::Address id) override;
       private:
+        /// A new endpoint was discovered.
+        void
+        _discover(PeerInfo const& pi);
         void
         _discover(PeerInfos const& pis);
         void

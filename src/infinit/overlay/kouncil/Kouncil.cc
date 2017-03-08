@@ -324,36 +324,33 @@ namespace infinit
       }
 
       void
+      Kouncil::_discover(PeerInfo const& pi)
+      {
+        ELLE_ASSERT_NEQ(pi.id(), Address::null);
+        auto changed = true;
+        if (auto it = find(this->_infos, pi.id()))
+          this->_infos.modify(it, [&](auto& p) { changed = p.merge(pi);});
+        else
+          this->_infos.insert(pi);
+
+        if (changed)
+        {
+          ELLE_DEBUG("discover new endpoints for %s", pi);
+          if (!find(this->_peers, pi.id()))
+            this->doughnut()->dock().connect(pi.location());
+          this->_remember_stale(pi.location());
+          this->_notify_observers(pi);
+        }
+        else
+          ELLE_DEBUG("skip rediscovery of %s", pi);
+      }
+
+      void
       Kouncil::_discover(PeerInfos const& pis)
       {
         for (auto const& pi: pis)
           if (pi.id() != this->doughnut()->id())
-          {
-            ELLE_ASSERT_NEQ(pi.id(), Address::null);
-            if (auto it = find(this->_infos, pi.id()))
-            {
-              bool change;
-              this->_infos.modify(it, [&](PeerInfo& p) { change = p.merge(pi);});
-              if (change)
-              {
-                // New data on a known peer, we need to notify observers
-                ELLE_DEBUG("discover new endpoints for %s", pi);
-                if (!find(this->_peers, pi.id()))
-                  this->doughnut()->dock().connect(pi.location());
-                this->_remember_stale(pi.location());
-                this->_notify_observers(*it);
-              }
-              else
-                ELLE_DEBUG("skip rediscovery of %s", pi);
-            }
-            else
-            {
-              ELLE_DEBUG("discover named peer %s", pi);
-              this->_infos.insert(pi);
-              this->doughnut()->dock().connect(pi.location());
-              this->_notify_observers(pi);
-            }
-          }
+            _discover(pi);
       }
 
       bool
