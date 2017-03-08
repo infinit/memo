@@ -1684,6 +1684,7 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
     dht_b = nullptr;
     elle::reactor::wait(b_disappeared);
   }
+  ELLE_LOG("A knows B disappeared")
 
   // A no longer sees B.
   {
@@ -1710,8 +1711,13 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
     ELLE_LOG("Infos of C (%s): %f", dht_c, addrs);
     CHECK_IN(id_b, addrs);
   }
+
+  // Let some time pass.
+  elle::reactor::sleep(2_sec);
+
   // Kill server A, C remains alone, remembering about A and B.
   {
+    ELLE_LOG("killing A and waiting for C to notice");
     auto a_disappeared = elle::reactor::waiter(
       dht_c->dht->overlay()->on_disappear(),
       [&] (Address id, bool)
@@ -1757,6 +1763,24 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
       ELLE_LOG("Peers of C (%s): %f", dht_c, peers);
       CHECK_NOT_IN(id_a, peers);
       CHECK_IN(id_b, peers);
+    }
+  }
+  /// FIXME: why do I need this???  Who sent std::hex to std::cerr?
+  std::cerr << std::dec;
+  ELLE_LOG("waiting for A to be evicted by C")
+  {
+    auto a_evicted = elle::reactor::waiter(
+      get_kouncil(*dht_c)->on_evicted(),
+      [&] (Address id)
+      {
+        BOOST_TEST(id == id_a);
+        return true;
+      });
+    elle::reactor::wait(a_evicted);
+    {
+      auto addrs = get_peers(*dht_c, "infos");
+      CHECK_NOT_IN(id_a, addrs);
+      CHECK_IN(id_b, addrs);
     }
   }
 }
@@ -1865,6 +1889,6 @@ ELLE_TEST_SUITE()
   OVERLAY(kouncil_0_7);
 #undef OVERLAY
 
-  TEST_NAMED(kouncil, eviction, eviction, 60);
+  TEST_NAMED(kouncil, eviction, eviction, 600);
   TEST(kouncil, kouncil, "churn_socket_pasv", 30, churn_socket_pasv);
 }

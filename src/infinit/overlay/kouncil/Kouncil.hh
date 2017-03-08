@@ -211,6 +211,9 @@ namespace infinit
         /// The peers we heard about.
         ELLE_ATTRIBUTE_R(PeerInfos, infos);
 
+        /// Announcing evicted nodes.
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<void (Address id)>, on_evicted);
 
         /// Nodes with which we lost connection, but keep ready to see
         /// coming back.
@@ -219,6 +222,9 @@ namespace infinit
         {
         public:
           StaleEndpoint(NodeLocation const& l);
+          /// Start reconnection attempts, start the overall eviction timer.
+          void
+          reconnect(Kouncil& kouncil);
           /// Start one new attempt to reconnect.
           void
           connect(Kouncil& kouncil);
@@ -228,6 +234,7 @@ namespace infinit
           ELLE_ATTRIBUTE(boost::signals2::scoped_connection, slot);
           ELLE_ATTRIBUTE(boost::asio::deadline_timer, retry_timer);
           ELLE_ATTRIBUTE(int, retry_counter);
+          ELLE_ATTRIBUTE(boost::asio::deadline_timer, evict_timer);
         };
         using StaleEndpoints = bmi::multi_index_container<
           StaleEndpoint,
@@ -264,7 +271,7 @@ namespace infinit
         _peer_disconnected(std::shared_ptr<Remote> peer);
         /// Disconnection was too long, forget about this peer.
         void
-        _peer_evicted(std::shared_ptr<Remote> peer);
+        _peer_evicted(Address id);
         void
         _peer_connected(std::shared_ptr<Remote> peer);
         void

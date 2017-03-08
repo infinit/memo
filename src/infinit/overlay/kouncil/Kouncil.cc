@@ -357,6 +357,7 @@ namespace infinit
         ELLE_ASSERT_NEQ(peer->id(), Address::null);
         this->_peers.emplace(peer);
         if (auto it = find(this->_stale_endpoints, peer->id()))
+          // Stop reconnection/eviction timers.
           this->_stale_endpoints.erase(it);
         this->_stale_endpoints.emplace(peer->connection()->location());
         ELLE_TRACE_SCOPE("%s: %f connected", this, peer);
@@ -387,18 +388,20 @@ namespace infinit
           {
             ELLE_DEBUG("endpoints: %s", it->endpoints());
             this->_stale_endpoints.modify(
-              it, [this] (StaleEndpoint& e) { e.connect(*this); });
+              it, [this] (StaleEndpoint& e) { e.reconnect(*this); });
           }
         }
       }
 
       void
-      Kouncil::_peer_evicted(std::shared_ptr<Remote> peer)
+      Kouncil::_peer_evicted(Address const id)
       {
-        ELLE_TRACE_SCOPE("%s: %s evicted", this, peer);
-        auto const id = peer->id();
+        ELLE_TRACE_SCOPE("%s: %f evicted", this, id);
+        assert(!this->_discovered(id));
         this->_infos.erase(id);
         this->_address_book.erase(id);
+        this->_stale_endpoints.erase(id);
+        this->on_evicted()(id);
       }
 
       template<typename E>
@@ -756,11 +759,33 @@ namespace infinit
         : NodeLocation(l)
         , _retry_timer(elle::reactor::scheduler().io_service())
         , _retry_counter(0)
+        , _evict_timer(elle::reactor::scheduler().io_service())
       {}
+
+      void
+      Kouncil::StaleEndpoint::reconnect(Kouncil& kouncil)
+      {
+        // Be ready to evict.
+        ELLE_DEBUG("%f: initiating reconnection", this);
+        this->_evict_timer.expires_from_now(boost::posix_time::seconds(10));
+        this->_evict_timer.async_wait(
+          [this, &kouncil] (boost::system::error_code const& e)
+          {
+            if (!e)
+            {
+              ELLE_DEBUG("%f: reconnection timed out, evicting", this);
+              kouncil._peer_evicted(id());
+            }
+          });
+        // Initiate the reconnection attempts.
+        this->connect(kouncil);
+      }
 
       void
       Kouncil::StaleEndpoint::connect(Kouncil& kouncil)
       {
+        ++this->_retry_counter;
+        ELLE_DEBUG("%f: connection attempt #%s", this, this->_retry_counter);
         auto c = kouncil.doughnut()->dock().connect(*this);
         this->_slot
           = c->on_disconnection().connect([&]{ this->failed(kouncil); });
@@ -769,11 +794,10 @@ namespace infinit
       void
       Kouncil::StaleEndpoint::failed(Kouncil& kouncil)
       {
-        // FIXME: make that configurable
-        if (++this->_retry_counter > 10)
-          return;
-        this->_retry_timer.expires_from_now(
-          boost::posix_time::seconds(std::pow(2, this->_retry_counter)));
+        auto d = boost::posix_time::seconds(std::pow(2, this->_retry_counter));
+        ELLE_DEBUG("%f: connection attempt #%s failed, waiting %s before next",
+                   this, this->_retry_counter, d);
+        this->_retry_timer.expires_from_now(d);
         this->_retry_timer.async_wait(
           [this, &kouncil] (boost::system::error_code const& e)
           {
