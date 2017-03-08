@@ -309,7 +309,7 @@ namespace infinit
           ELLE_DEBUG("endpoints for %f: %s", peer, peer.endpoints());
           if (!find(this->_peers, peer.id()))
             ELLE_TRACE("connect to new %f", peer)
-              this->doughnut()->dock().connect(peer, false);
+              this->doughnut()->dock().connect(peer);
           if (peer.id() != Address::null)
             this->_remember_stale(peer);
         }
