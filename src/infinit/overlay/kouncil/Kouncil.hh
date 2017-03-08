@@ -238,7 +238,7 @@ namespace infinit
           void
           failed(Kouncil& kouncil);
           ELLE_ATTRIBUTE(boost::signals2::scoped_connection, slot);
-          ELLE_ATTRIBUTE(boost::asio::deadline_timer, retry_timer);
+          ELLE_ATTRIBUTE(Timer, retry_timer);
           ELLE_ATTRIBUTE(int, retry_counter);
           ELLE_ATTRIBUTE(Timer, evict_timer);
         };

@@ -803,7 +803,7 @@ namespace infinit
       void
       Kouncil::StaleEndpoint::failed(Kouncil& kouncil)
       {
-        auto d = boost::posix_time::seconds(std::pow(2, this->_retry_counter));
+        auto d = std::chrono::seconds{1 << std::min(10, this->_retry_counter)};
         ELLE_DEBUG("%f: connection attempt #%s failed, waiting %s before next",
                    this, this->_retry_counter, d);
         this->_retry_timer.expires_from_now(d);
