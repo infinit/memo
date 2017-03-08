@@ -1,7 +1,6 @@
-#ifndef INFINIT_OVERLAY_KOUNCIL_CONFIGURATION_HH
-# define INFINIT_OVERLAY_KOUNCIL_CONFIGURATION_HH
+#pragma once
 
-# include <infinit/overlay/Overlay.hh>
+#include <infinit/overlay/Overlay.hh>
 
 namespace infinit
 {
@@ -18,7 +17,7 @@ namespace infinit
       `------*/
       public:
         /// Ourself.
-        using Self = infinit::overlay::kouncil::Configuration;
+        using Self = Configuration;
         /// Parent class.
         using Super = overlay::Configuration;
 
@@ -76,5 +75,3 @@ namespace infinit
     }
   }
 }
-
-#endif
