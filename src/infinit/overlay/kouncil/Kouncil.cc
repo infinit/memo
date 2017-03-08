@@ -387,7 +387,7 @@ namespace infinit
           {
             ELLE_DEBUG("endpoints: %s", it->endpoints());
             this->_stale_endpoints.modify(
-              it, [this] (StaleEndpoint& e) { e.connect(*this->doughnut()); });
+              it, [this] (StaleEndpoint& e) { e.connect(*this); });
           }
         }
       }
@@ -759,25 +759,26 @@ namespace infinit
       {}
 
       void
-      Kouncil::StaleEndpoint::connect(model::doughnut::Doughnut& dht)
+      Kouncil::StaleEndpoint::connect(Kouncil& kouncil)
       {
-        auto c = dht.dock().connect(*this);
-        this->_slot = c->on_disconnection().connect([&]{ this->failed(dht); });
+        auto c = kouncil.doughnut()->dock().connect(*this);
+        this->_slot
+          = c->on_disconnection().connect([&]{ this->failed(kouncil); });
       }
 
       void
-      Kouncil::StaleEndpoint::failed(model::doughnut::Doughnut& dht)
+      Kouncil::StaleEndpoint::failed(Kouncil& kouncil)
       {
         // FIXME: make that configurable
         if (++this->_retry_counter > 10)
           return;
         this->_retry_timer.expires_from_now(
-          boost::posix_time::seconds(1) * std::pow(2, this->_retry_counter));
+          boost::posix_time::seconds(std::pow(2, this->_retry_counter)));
         this->_retry_timer.async_wait(
-          [this, &dht] (boost::system::error_code const& e)
+          [this, &kouncil] (boost::system::error_code const& e)
           {
             if (!e)
-              this->connect(dht);
+              this->connect(kouncil);
           });
       }
 

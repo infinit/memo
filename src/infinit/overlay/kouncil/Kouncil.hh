@@ -219,10 +219,12 @@ namespace infinit
         {
         public:
           StaleEndpoint(NodeLocation const& l);
+          /// Start one new attempt to reconnect.
           void
-          connect(model::doughnut::Doughnut& dht);
+          connect(Kouncil& kouncil);
+          /// Callback when an attempt timed out.
           void
-          failed(model::doughnut::Doughnut& dht);
+          failed(Kouncil& kouncil);
           ELLE_ATTRIBUTE(boost::signals2::scoped_connection, slot);
           ELLE_ATTRIBUTE(boost::asio::deadline_timer, retry_timer);
           ELLE_ATTRIBUTE(int, retry_counter);
