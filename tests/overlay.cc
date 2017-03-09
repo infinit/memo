@@ -606,8 +606,6 @@ ELLE_TEST_SCHEDULED(reciprocate,
                     (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks b1, b2;
-  auto s1 = std::make_unique<infinit::storage::Memory>(b1);
-  auto s2 = std::make_unique<infinit::storage::Memory>(b2);
   auto keys = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("create DHTs");
   auto dht_a = std::make_unique<DHT>(
@@ -616,14 +614,14 @@ ELLE_TEST_SCHEDULED(reciprocate,
     ::make_overlay = config.overlay_builder,
     ::paxos = true,
     dht::consensus::rebalance_auto_expand = false,
-    ::storage = std::move(s1));
+    ::storage = std::make_unique<infinit::storage::Memory>(b1));
   auto dht_b = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
     ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = true,
-    ::storage = std::move(s2));
+    ::storage = std::make_unique<infinit::storage::Memory>(b2));
   ELLE_LOG("connect DHTs")
     discover(*dht_b, *dht_a, anonymous, false, true, true);
   {
@@ -726,7 +724,6 @@ ELLE_TEST_SCHEDULED(
   key_cache_invalidation, (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks blocks;
-  std::unique_ptr<infinit ::storage::Storage> s(new infinit::storage::Memory(blocks));
   auto keys = elle::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
@@ -736,7 +733,7 @@ ELLE_TEST_SCHEDULED(
     ::make_overlay = config.overlay_builder,
     ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp,
-    ::storage = std::move(s));
+    ::storage = std::make_unique<infinit::storage::Memory>(blocks));
   int port = dht_a->dht->local()->server_endpoints()[0].port();
   DHT dht_b(
     ::keys = keys,
@@ -759,7 +756,6 @@ ELLE_TEST_SCHEDULED(
   // brutal restart of a
   ELLE_LOG("disconnect A");
   dht_a->dht->local()->utp_server()->socket()->close();
-  s = std::make_unique<infinit::storage::Memory>(blocks);
   ELLE_LOG("recreate A");
   auto dht_aa = std::make_unique<DHT>(
     ::id = id_a,
@@ -768,7 +764,7 @@ ELLE_TEST_SCHEDULED(
     ::make_overlay = config.overlay_builder,
     ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp,
-    ::storage = std::move(s),
+    ::storage = std::make_unique<infinit::storage::Memory>(blocks),
     ::port = port);
   // rebind local somewhere else or we get EBADF from local_endpoint
   dht_a->dht->local()->utp_server()->socket()->bind(
@@ -790,9 +786,6 @@ ELLE_TEST_SCHEDULED(
   chain_connect_doom, (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks b1, b2, b3;
-  std::unique_ptr<infinit::storage::Storage> s1(new infinit::storage::Memory(b1));
-  std::unique_ptr<infinit::storage::Storage> s2(new infinit::storage::Memory(b2));
-  std::unique_ptr<infinit::storage::Storage> s3(new infinit::storage::Memory(b3));
   auto keys = elle::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   ELLE_LOG("create DHTs");
@@ -803,21 +796,21 @@ ELLE_TEST_SCHEDULED(
     ::make_overlay = config.overlay_builder,
     ::paxos = false,
     dht::consensus::rebalance_auto_expand = false,
-    ::storage = std::move(s1));
+    ::storage = std::make_unique<infinit::storage::Memory>(b1));
   auto dht_b = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
     make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = false,
-    ::storage = std::move(s2));
+    ::storage = std::make_unique<infinit::storage::Memory>(b2));
   auto dht_c = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
     ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = false,
-    ::storage = std::move(s3));
+    ::storage = std::make_unique<infinit::storage::Memory>(b3));
   ELLE_LOG("connect DHTs")
   {
     discover(*dht_b, *dht_a, anonymous, false, true, true);
@@ -872,8 +865,6 @@ ELLE_TEST_SCHEDULED(
   data_spread, (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks b1, b2;
-  std::unique_ptr<infinit::storage::Storage> s1(new infinit::storage::Memory(b1));
-  std::unique_ptr<infinit::storage::Storage> s2(new infinit::storage::Memory(b2));
   auto keys = elle::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
@@ -883,14 +874,14 @@ ELLE_TEST_SCHEDULED(
     ::make_overlay = config.overlay_builder,
     ::paxos = false,
     dht::consensus::rebalance_auto_expand = false,
-    ::storage = std::move(s1));
+    ::storage = std::make_unique<infinit::storage::Memory>(b1));
   auto dht_b = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
     ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = false,
-    ::storage = std::move(s2));
+    ::storage = std::make_unique<infinit::storage::Memory>(b2));
   ELLE_LOG("server discovery");
   discover(*dht_b, *dht_a, anonymous);
   // client. Hard-coded replication_factor=3 if paxos is enabled
@@ -930,8 +921,6 @@ ELLE_TEST_SCHEDULED(
   data_spread2, (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks b1, b2;
-  std::unique_ptr<infinit::storage::Storage> s1(new infinit::storage::Memory(b1));
-  std::unique_ptr<infinit::storage::Storage> s2(new infinit::storage::Memory(b2));
   auto keys = elle::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
@@ -941,14 +930,14 @@ ELLE_TEST_SCHEDULED(
     ::make_overlay = config.overlay_builder,
     ::paxos = false,
     dht::consensus::rebalance_auto_expand = false,
-    ::storage = std::move(s1));
+    ::storage = std::make_unique<infinit::storage::Memory>(b1));
   auto dht_b = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
     ::make_overlay = config.overlay_builder,
     dht::consensus::rebalance_auto_expand = false,
     ::paxos = false,
-    ::storage = std::move(s2));
+    ::storage = std::make_unique<infinit::storage::Memory>(b2));
   auto client = std::make_unique<DHT>(
     ::keys = keys,
     ::version = config.version,
