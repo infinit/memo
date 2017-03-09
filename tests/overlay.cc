@@ -149,7 +149,8 @@ private:
   ELLE_ATTRIBUTE(Endpoint, client_endpoint);
 
   void
-  _forward(elle::reactor::network::TCPSocket& in, elle::reactor::network::TCPSocket& out)
+  _forward(elle::reactor::network::TCPSocket& in,
+           elle::reactor::network::TCPSocket& out)
   {
     char buf[10000];
     while (true)
@@ -337,101 +338,101 @@ namespace
     else
       BOOST_FAIL(elle::sprintf("could not obtain socket pointer for %s", p));
   }
-}
 
-static
-void
-kouncil_wait_pasv(DHT& s, int n_servers)
-{
-  // Get the addresses of the *connected* peers.
-  auto get_addresses = [](elle::json::Array const& cts)
-    {
-      auto res = std::vector<infinit::model::Address>{};
-      for (auto const& c: cts)
+
+  void
+  kouncil_wait_pasv(DHT& s, int n_servers)
+  {
+    // Get the addresses of the *connected* peers.
+    auto get_addresses = [](elle::json::Array const& cts)
       {
-        auto const& o = boost::any_cast<elle::json::Object>(c);
-        if (boost::any_cast<bool> (o.at("connected")))
-          res.emplace_back(infinit::model::Address::from_string
-                           (boost::any_cast<std::string>(o.at("id"))));
-      }
-      return res;
-    };
+        auto res = std::vector<infinit::model::Address>{};
+        for (auto const& c: cts)
+        {
+          auto const& o = boost::any_cast<elle::json::Object>(c);
+          if (boost::any_cast<bool> (o.at("connected")))
+            res.emplace_back(infinit::model::Address::from_string
+                             (boost::any_cast<std::string>(o.at("id"))));
+        }
+        return res;
+      };
 
-  while (true)
-  {
-    auto const ostats = get_ostats(s);
-    ELLE_DEBUG("%s", elle::json::pretty_print(ostats.at("peers")));
-    auto cts = boost::any_cast<elle::json::Array>(ostats.at("peers"));
-    auto servers = get_addresses(cts);
-    if (n_servers <= int(servers.size()))
-      return;
-    ELLE_TRACE("%s/%s", servers.size(), n_servers);
-    elle::reactor::sleep(50_ms);
+    while (true)
+    {
+      auto const ostats = get_ostats(s);
+      ELLE_DEBUG("%s", elle::json::pretty_print(ostats.at("peers")));
+      auto cts = boost::any_cast<elle::json::Array>(ostats.at("peers"));
+      auto servers = get_addresses(cts);
+      if (n_servers <= int(servers.size()))
+        return;
+      ELLE_TRACE("%s/%s", servers.size(), n_servers);
+      elle::reactor::sleep(50_ms);
+    }
   }
-}
 
-// Wait until s sees n_servers and can make RPC calls to all of them
-// If or_more is true, accept extra non-working peers
-static
-void
-hard_wait(DHT& s, int n_servers,
-          infinit::model::Address client = {},
-          bool or_more = false,
-          infinit::model::Address blacklist = {})
-{
-  int attempts = 0;
-  while (true)
+  // Wait until s sees n_servers and can make RPC calls to all of them
+  // If or_more is true, accept extra non-working peers
+  void
+  hard_wait(DHT& s, int n_servers,
+            infinit::model::Address client = {},
+            bool or_more = false,
+            infinit::model::Address blacklist = {})
   {
-    if (++attempts > 50 && !(attempts % 40))
-      ELLE_LOG("hard_wait, attempt %s: %s",
-               attempts, elle::json::pretty_print(get_ostats(s)));
-    bool ok = true;
-    auto peers = get_peers(s);
-    int hit = 0;
-    if (peers.size() >= unsigned(n_servers))
-      for (auto const& pa: peers)
-        if (pa != client && pa != blacklist)
-          try
-          {
-            auto p = s.dht->overlay()->lookup_node(pa);
-            p.lock()->fetch(infinit::model::Address::random(), boost::none);
-          }
-          catch (infinit::storage::MissingKey const& mb)
-          { // FIXME why do we need this?
-            ++hit;
-          }
-          catch (infinit::model::MissingBlock const& mb)
-          {
-            ++hit;
-          }
-          catch (elle::Error const& e)
-          {
-            ELLE_TRACE("hard_wait %f: %s", pa, e);
-            if (!or_more)
-              ok = false;
-          }
-    if ((hit == n_servers || (or_more && hit >n_servers))
-        && ok)
-      break;
-    elle::reactor::sleep(50_ms);
+    int attempts = 0;
+    while (true)
+    {
+      if (++attempts > 50 && !(attempts % 40))
+        ELLE_LOG("hard_wait, attempt %s: %s",
+                 attempts, elle::json::pretty_print(get_ostats(s)));
+      bool ok = true;
+      auto peers = get_peers(s);
+      int hit = 0;
+      if (peers.size() >= unsigned(n_servers))
+        for (auto const& pa: peers)
+          if (pa != client && pa != blacklist)
+            try
+            {
+              auto p = s.dht->overlay()->lookup_node(pa);
+              p.lock()->fetch(infinit::model::Address::random(), boost::none);
+            }
+            catch (infinit::storage::MissingKey const& mb)
+            { // FIXME why do we need this?
+              ++hit;
+            }
+            catch (infinit::model::MissingBlock const& mb)
+            {
+              ++hit;
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_TRACE("hard_wait %f: %s", pa, e);
+              if (!or_more)
+                ok = false;
+            }
+      if ((hit == n_servers || (or_more && hit >n_servers))
+          && ok)
+        break;
+      elle::reactor::sleep(50_ms);
+    }
+    ELLE_DEBUG("hard_wait exiting");
   }
-  ELLE_DEBUG("hard_wait exiting");
-}
 
-infinit::model::Address
-special_id(int i)
-{
-  infinit::model::Address::Value id;
-  memset(&id, 0, sizeof(id));
-  id[0] = i;
-  return id;
-}
+  /// An Address easy to read in the logs.
+  infinit::model::Address
+  special_id(int i)
+  {
+    infinit::model::Address::Value id;
+    memset(&id, 0, sizeof(id));
+    id[0] = i;
+    return id;
+  }
 
-struct TestConfiguration
-{
-  Doughnut::OverlayBuilder overlay_builder;
-  boost::optional<elle::Version> version;
-};
+  struct TestConfiguration
+  {
+    Doughnut::OverlayBuilder overlay_builder;
+    boost::optional<elle::Version> version;
+  };
+}
 
 ELLE_TEST_SCHEDULED(
   basics, (TestConfiguration, config), (bool, anonymous))
