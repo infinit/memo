@@ -7,11 +7,14 @@
 #include <utility>
 #include <unordered_map>
 
+#include <boost/algorithm/cxx11/none_of.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/range/algorithm/find.hpp>
 
 #include <elle/bench.hh>
 #include <elle/network/Interface.hh>
 #include <elle/os/environ.hh>
+#include <elle/range.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/binary/SerializerIn.hh>
@@ -3040,7 +3043,7 @@ namespace infinit
             res.push_back(e.first);
           return res;
         }
-        typedef std::chrono::duration<int, std::ratio<1, 1000000>> US;
+        using US = std::chrono::duration<int, std::ratio<1, 1000000>>;
         // get average latency, will be used for those with no rtt information
         long total = 0;
         int okcount = 0;
@@ -3306,13 +3309,14 @@ namespace infinit
       void
       Node::store(infinit::model::blocks::Block const& block)
       {
-        auto its = _state.files.equal_range(block.address());
-        if (std::find_if(its.first, its.second, [&](Files::value_type const& f) {
-            return f.second.home_node == _self;
-        }) == its.second)
-          _state.files.insert(std::make_pair(block.address(),
-            File{block.address(), _self, now(), Time(), 0}));
-        auto itp = std::find(_promised_files.begin(), _promised_files.end(), block.address());
+        using boost::algorithm::none_of;
+        if (none_of(elle::as_range(_state.files.equal_range(block.address())),
+                    [&](Files::value_type const& f) {
+                      return f.second.home_node == _self;
+                    }))
+          _state.files.emplace(block.address(),
+                               File{block.address(), _self, now(), Time(), 0});
+        auto itp = boost::find(_promised_files, block.address());
         if (itp != _promised_files.end())
         {
           std::swap(*itp, _promised_files.back());
@@ -3388,7 +3392,8 @@ namespace infinit
                   true);
         if (result)
         {
-          ELLE_LOG("%s: got endpoints from network: %s", this, result->endpoints());
+          ELLE_LOG("%s: got endpoints from network: %s",
+                   this, result->endpoints());
           res = result->endpoints();
         }
         if (!res || res->empty())
@@ -3414,15 +3419,15 @@ namespace infinit
           [this, n, grouped] (elle::reactor::Generator<std::pair<Address,Node::WeakMember>>::yielder const& yield)
         {
           for (auto g: grouped)
-          {
-            if (g.empty())
-              continue;
-            elle::unconst(this)->kelipsMGet(g, n, [&](std::pair<Address, NodeLocation> ap)
+            if (!g.empty())
+            {
+              elle::unconst(this)->kelipsMGet(g, n,
+                                              [&](std::pair<Address, NodeLocation> ap)
               {
                 yield(std::make_pair(ap.first,
                                      elle::unconst(this)->make_peer(ap.second)));
               });
-          }
+            }
         });
       }
 
@@ -3518,10 +3523,11 @@ namespace infinit
             if (g == this->_group ||
                 signed(target.size()) < this->_config.max_other_contacts)
             {
-              Contact contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
+              auto contact =
+                Contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
               for (auto const& ep: c.second)
                 contact.endpoints.push_back(TimedEndpoint(ep, now()));
-              NodeLocation nl(c.first, c.second);
+              auto nl = NodeLocation(c.first, c.second);
               ELLE_LOG("%s: register %f", this, contact);
               target[c.first] = std::move(contact);
               this->on_discover()(nl, false);
@@ -3535,7 +3541,8 @@ namespace infinit
             if (!it->second.discovered)
             {
               it->second.discovered = true;
-              NodeLocation nl(it->first, endpoints_extract(it->second.endpoints));
+              auto nl =
+                NodeLocation(it->first, endpoints_extract(it->second.endpoints));
               this->on_discover()(nl, false);
               notify_observers(nl);
             }
