@@ -355,13 +355,18 @@ namespace infinit
       void
       Kouncil::_peer_connected(std::shared_ptr<Remote> peer)
       {
+        ELLE_TRACE_SCOPE("%s: %f connected", this, peer);
         ELLE_ASSERT_NEQ(peer->id(), Address::null);
         this->_peers.emplace(peer);
         if (auto it = find(this->_stale_endpoints, peer->id()))
+        {
           // Stop reconnection/eviction timers.
-          this->_stale_endpoints.erase(it);
-        this->_stale_endpoints.emplace(peer->connection()->location());
-        ELLE_TRACE_SCOPE("%s: %f connected", this, peer);
+          this->_stale_endpoints.modify(
+            it, [] (StaleEndpoint& e) { e.clear(); });
+          //this->_stale_endpoints.erase(it);
+        }
+        else
+          this->_stale_endpoints.emplace(peer->connection()->location());
         this->_advertise(*peer);
         this->_fetch_entries(*peer);
         this->on_discover()(peer->connection()->location(), false);
@@ -762,6 +767,15 @@ namespace infinit
         , _retry_counter(0)
         , _evict_timer(elle::reactor::scheduler().io_service())
       {}
+
+      void
+      Kouncil::StaleEndpoint::clear()
+      {
+        ELLE_TRACE("%f: clear", this);
+        this->_retry_counter = 0;
+        this->_retry_timer.cancel();
+        this->_evict_timer.cancel();
+      }
 
       void
       Kouncil::StaleEndpoint::reconnect(Kouncil& kouncil)

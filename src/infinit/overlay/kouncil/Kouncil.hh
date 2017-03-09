@@ -228,6 +228,9 @@ namespace infinit
         {
         public:
           StaleEndpoint(NodeLocation const& l);
+          /// Reset this and cancel timers.
+          void
+          clear();
           /// Start reconnection attempts, start the overall eviction timer.
           void
           reconnect(Kouncil& kouncil);
@@ -240,7 +243,7 @@ namespace infinit
           ELLE_ATTRIBUTE(boost::signals2::scoped_connection, slot);
           ELLE_ATTRIBUTE(Timer, retry_timer);
           ELLE_ATTRIBUTE(int, retry_counter);
-          ELLE_ATTRIBUTE(Timer, evict_timer);
+          ELLE_ATTRIBUTE_X(Timer, evict_timer);
         };
         using StaleEndpoints = bmi::multi_index_container<
           StaleEndpoint,
