@@ -543,8 +543,8 @@ ELLE_TEST_SCHEDULED(
     ::id = id_a,
     ::version = config.version,
     ::keys = keys,
-    make_overlay = config.overlay_builder,
-    paxos = false);
+    ::make_overlay = config.overlay_builder,
+    ::paxos = false);
   Address old_address;
   ELLE_LOG("store first block")
   {
@@ -552,7 +552,7 @@ ELLE_TEST_SCHEDULED(
     dht_a->dht->seal_and_insert(*block, tcr());
     old_address = block->address();
   }
-  DHT dht_b(
+  auto dht_b = DHT(
     ::version = config.version,
     ::keys = keys,
     ::make_overlay = config.overlay_builder,
@@ -560,9 +560,9 @@ ELLE_TEST_SCHEDULED(
   discover(dht_b, *dht_a, anonymous, false, true);
   ELLE_LOG("lookup block")
   {
-    BOOST_CHECK_EQUAL(
-      dht_b.dht->overlay()->lookup(old_address).lock()->id(),
-      id_a);
+    BOOST_TEST(
+      dht_b.dht->overlay()->lookup(old_address).lock()->id()
+      == id_a);
   }
   auto disappeared = elle::reactor::waiter(
     dht_b.dht->overlay()->on_disappear(),
@@ -1390,11 +1390,14 @@ ELLE_TEST_SCHEDULED(
 struct Cluster
 {
   using Self = Cluster;
-  static const int n = 5;
-
-  Cluster(TestConfiguration const& config)
+  Cluster(TestConfiguration const& config, int n = 5)
     : config{config}
+    , n{n}
   {
+    ids.resize(n);
+    ports.resize(n);
+    blocks.resize(n);
+    servers.resize(n);
     for (int i=0; i<n; ++i)
     {
       ELLE_LOG("creating server %s", i);
@@ -1436,12 +1439,14 @@ struct Cluster
   }
 
   TestConfiguration const& config;
+  /// Number of machines.
+  int n;
   using Keys = elle::cryptography::rsa::KeyPair;
   Keys keys = elle::cryptography::rsa::keypair::generate(512);
-  infinit::model::Address ids[n];
-  unsigned short ports[n];
-  infinit::storage::Memory::Blocks blocks[n];
-  std::unique_ptr<DHT> servers[n];
+  std::vector<infinit::model::Address> ids;
+  std::vector<unsigned short> ports;
+  std::vector<infinit::storage::Memory::Blocks> blocks;
+  std::vector<std::unique_ptr<DHT>> servers;
 };
 
 
@@ -1637,7 +1642,7 @@ ELLE_TEST_SCHEDULED(churn_socket_pasv, (TestConfiguration, config))
 
 ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
 {
-  auto cluster = Cluster{config};
+  auto cluster = Cluster{config, 3};
   const auto& ids = cluster.ids;
   auto& servers = cluster.servers;
 
