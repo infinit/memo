@@ -524,6 +524,11 @@ namespace infinit
         , _data_plain()
         , _data_decrypted(false)
       {
+        if (version >= elle::Version(0, 8, 0) && this->_data.empty())
+        {
+          s.serialize("data_plain", this->_data_plain);
+          this->_data_changed = true;
+        }
         this->_serialize(s, version);
         if (this->doughnut() &&
             *this->owner_key() == this->doughnut()->keys().K())
@@ -541,7 +546,15 @@ namespace infinit
         if (version < elle::Version(0, 8, 0))
           s.serialize("owner", static_cast<OKBHeader&>(*this));
         else
+        {
           s.serialize("salt", this->_salt);
+          if (this->_data.empty())
+          {
+            s.serialize("data_plain", this->_data_plain);
+            if (s.in())
+              this->_data_changed = true;
+          }
+        }
         this->_serialize(s, version);
       }
 
