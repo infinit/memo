@@ -628,6 +628,14 @@ namespace infinit
         }
       }
 
+      template <typename Block>
+      void
+      BaseOKB<Block>::_decrypt()
+      {
+        this->_decrypt_data();
+        this->_data = elle::Buffer();
+      }
+
       template
       class BaseOKB<blocks::MutableBlock>;
       template

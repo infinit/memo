@@ -89,6 +89,9 @@ namespace infinit
         ValidationResult
         validate_remove(Model& model, RemoveSignature const& sig) const;
         ELLE_ATTRIBUTE_RW(bool, validated, protected);
+        /// Put the block in dercypted state. It might not be possible to seal it again.
+        void
+        decrypt();
       protected:
         virtual
         void
@@ -109,6 +112,9 @@ namespace infinit
         ValidationResult
         _validate_remove(Model& model,
                          RemoveSignature const& sig) const;
+        virtual
+        void
+        _decrypt();
 
       /*--------------.
       | Serialization |
