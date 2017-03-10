@@ -2,7 +2,8 @@
 
 set -e
 
-image=mefyl/infinit:0.8.0-kouncil-lamport-clocks-merge-145-gd21d5f0
+#image=mefyl/infinit:0.8.0-kouncil-lamport-clocks-merge-145-gd21d5f0
+image=mefyl/infinit:0.8.0-kouncil-lamport-clocks-merge-159-g6f0ca35
 network_options="--kelips --replication-factor 3 --eviction-delay 1s --kelips-contact-timeout 10s"
 docker_mounts=
 grpc_port=9000
@@ -43,14 +44,13 @@ command=" \
     exec > /tmp/logs/run.log 2>&1
     apt-get update && \
     apt-get install -y fping dnsutils iputils-ping net-tools && \
-    export ip=\$(ifconfig eth0 | awk '/inet addr/{print substr(\$2,6)}') && \
-    export peers=\"\$(fping -q -r 0 -a -A -t 10 -i 5 -g \$ip/24 | sed -e 's/^/--peer /' -e 's/\$/:$infinit_port/')\" && \
+    export peers=\"\$(host tasks.infinit | grep 'has address' | cut '-d ' -f 4 | sed -e 's/^/--peer /' -e 's/\$/:$infinit_port/')\" && \
     infinit user import -i /run/secrets/infinit_user && \
     infinit network import --as docker -i /run/secrets/infinit_network && \
     infinit volume import --as docker -i /run/secrets/infinit_volume && \
     infinit silo create filesystem --name docker --as docker && \
     infinit network link --as docker -n docker/docker --storage docker && \
-    export ELLE_LOG_LEVEL='*model*:DEBUG' && \
+    export ELLE_LOG_TIME=1 ELLE_LOG_LEVEL='*model*:DEBUG,*grpc*:DEBUG' && \
     infinit network run --as docker docker --grpc $grpc_host --port $infinit_port \$peers"
     
 docker service create --name infinit --mode global  \
@@ -59,7 +59,7 @@ docker service create --name infinit --mode global  \
   --secret infinit_volume \
   $docker_mounts \
   --network infinit \
-  --publish $infinit_port \
+  --publish $infinit_port/udp \
   --publish $grpc_port \
   --mount type=bind,source=/tmp,destination=/tmp/logs \
   $image  \
