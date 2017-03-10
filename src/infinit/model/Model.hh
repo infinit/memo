@@ -26,6 +26,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(conflict_resolver);
     ELLE_DAS_SYMBOL(data);
     ELLE_DAS_SYMBOL(decrypt_data);
+    ELLE_DAS_SYMBOL(key);
     ELLE_DAS_SYMBOL(local_version);
     ELLE_DAS_SYMBOL(owner);
     ELLE_DAS_SYMBOL(signature);
@@ -160,6 +161,16 @@ namespace infinit
         std::unique_ptr<blocks::MutableBlock>()>
       make_mutable_block;
 
+      /** Construct a named block.
+       */
+      elle::das::named::Function<
+        std::unique_ptr<blocks::Block>(decltype(key)::Formal<elle::Buffer>)>
+      make_named_block;
+
+      elle::das::named::Function<
+        Address(decltype(key)::Formal<elle::Buffer>)>
+      named_block_address;
+
       /** Fetch block at \param address.
        *
        *  Use \param local_version to avoid refetching the block if it did
@@ -245,6 +256,12 @@ namespace infinit
       virtual
       std::unique_ptr<User>
       _make_user(elle::Buffer const& data) const;
+      virtual
+      std::unique_ptr<blocks::Block>
+      _make_named_block(elle::Buffer const& key) const;
+      virtual
+      Address
+      _named_block_address(elle::Buffer const& key) const;
       virtual
       std::unique_ptr<blocks::Block>
       _fetch(Address address, boost::optional<int> local_version) const = 0;

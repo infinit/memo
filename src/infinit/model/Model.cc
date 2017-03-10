@@ -28,6 +28,12 @@ namespace infinit
         owner = Address::null)
       , make_mutable_block(
         elle::das::bind_method(*this, &Model::_make_mutable_block))
+      , make_named_block(
+        elle::das::bind_method(*this, &Model::_make_named_block),
+        key)
+      , named_block_address(
+        elle::das::bind_method(*this, &Model::_named_block_address),
+        key)
       , fetch(
         elle::das::bind_method(*this, &Model::_fetch_impl),
         address,
@@ -112,6 +118,18 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: create block", *this);
       return this->_construct_block<blocks::ImmutableBlock>(
         Address::random(flags::immutable_block), std::move(data));
+    }
+
+    std::unique_ptr<blocks::Block>
+    Model::_make_named_block(elle::Buffer const& key) const
+    {
+      elle::err("named blocks are not implemented in this model");
+    }
+
+    Address
+    Model:: _named_block_address(elle::Buffer const& key) const
+    {
+      elle::err("named blocks are not implemented in this model");
     }
 
     template <>
