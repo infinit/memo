@@ -2,8 +2,7 @@
 
 set -e
 
-#image=mefyl/infinit:0.8.0-kouncil-lamport-clocks-merge-145-gd21d5f0
-image=mefyl/infinit:0.8.0-kouncil-lamport-clocks-merge-159-g6f0ca35
+image=mefyl/infinit:0.8.0-kouncil-lamport-clocks-merge-192-g41b6a48
 network_options="--kelips --replication-factor 3 --eviction-delay 1s --kelips-contact-timeout 10s"
 docker_mounts=
 grpc_port=9000

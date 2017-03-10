@@ -114,10 +114,10 @@ Use the `NBAddress(Bytes)` function to obtain the NB block address from its uniq
 When inserting new blocks into the key-value store, one first needs to obtain
 a `Block` message through one of the builder functions:
 
-* Block MakeCHB(CHBData) : create CHB with given payload and owner
-* Block MakeOKB(Empty) : create OKB (no arguments)
-* Block MakeACB(Empty) : create ACB (no arguments)
-* Block MakeNB(Bytes) : create NB with given key
+* Block make_immutable_block(CHBData) : create CHB with given payload and owner
+* Block make_mutable_block(Empty) : create OKB (no arguments)
+* Block make_acl_block(Empty) : create ACB (no arguments)
+* Block make_named_block(Bytes) : create NB with given key
 
 You can then fill the `data` field with your payload (for mutable blocks) and
 call the `Insert` function.
@@ -239,28 +239,32 @@ void create_user(string user)
   ::Empty empty;
   {
      grpc::ClientContext ctx;
-     kv->MakeOKB(&ctx, empty, &doclist);
+     kv->make_mutable_block(&ctx, empty, &doclist);
   }
   {
     grpc::ClientContext ctx;
-    ::Status res;
-    kv->Insert(&ctx, doclist, &res);
+    ::Insert insert;
+    insert.mutable_block()->CopyFrom(doclist);
+    ::EmptyOrException res;
+    kv->insert(&ctx, insert, &res);
   }
   // Create and insert a Named Block with the MB address as payload.
   // We can reuse the block object
-  ::Bytes key;
+  ::NamedBlockKey key;
   ::Block nb;
-  key.set_data(user);
+  key.set_key(user);
   {
     grpc::ClientContext ctx;
-    kv->MakeNB(&ctx, key, &nb);
+    kv->make_named_block(&ctx, key, &nb);
   }
   nb.set_data(doclist.address());
   {
-    ::Status res;
+    ::EmptyOrException res;
+    ::Insert insert;
+    insert.mutable_block()->CopyFrom(nb);
     grpc::ClientContext ctx;
-    kv->Insert(&ctx, nb, &res);
-    if (res.error() != ERROR_OK)
+    kv->insert(&ctx, insert, &res);
+    if (res.has_exception_ptr())
       throw std::runtime_error("User already exists");
   }
 }
@@ -307,30 +311,35 @@ Let's factor the get part since we'll need it multiple times.
 map<string, string> get_documents(string user, ::Block* block = nullptr)
 {
   ::Address address;
-  ::Bytes key;
-  key.set_data(user);
+  ::NamedBlockKey key;
+  key.set_key(user);
   // Get the NB address
   {
     grpc::ClientContext ctx;
-    kv->NBAddress(&ctx, key, &address);
+    kv->named_block_address(&ctx, key, &address);
   }
   // Get the NB
-  ::BlockOrStatus res;
+  ::BlockOrException res;
   {
     grpc::ClientContext ctx;
-    kv->Get(&ctx, address, &res);
-    if (res.has_status())
-      throw std::runtime_error("No such user (" + res.status().message() + ")");
+    ::Fetch fetch;
+    fetch.set_address(address.address());
+    kv->fetch(&ctx, fetch, &res);
+    if (res.has_exception_ptr())
+      throw std::runtime_error("No such user (" + res.exception_ptr().exception().message() + ")");
   }
   // Get the document list MB
   address.set_address(res.block().data());
   {
     grpc::ClientContext ctx;
-    kv->Get(&ctx, address, &res);
+    ::Fetch fetch;
+    fetch.set_address(res.block().data());
+    fetch.set_decrypt_data(true);
+    kv->fetch(&ctx, fetch, &res);
   }
   if (block)
     block->CopyFrom(res.block());
-  auto dl = parse_document_list(res.block().data());
+  auto dl = parse_document_list(res.block().data_plain());
   return dl;
 }
 
@@ -357,13 +366,11 @@ string get_document(string user, string name)
   auto it = dl.find(name);
   if (it == dl.end())
     throw std::runtime_error("no such document");
-  ::Address address;
-  address.set_address(unhex(it->second));
-  ::BlockOrStatus res;
-  {
-    grpc::ClientContext ctx;
-    kv->Get(&ctx, address, &res);
-  }
+  ::BlockOrException res;
+  grpc::ClientContext ctx;
+  ::Fetch fetch;
+  fetch.set_address(unhex(it->second));
+  kv->fetch(&ctx, fetch, &res);
   return res.block().data();
 }
 ```
@@ -388,12 +395,14 @@ void set_document(string user, string name, string data)
   ::Block doc;
   {
     grpc::ClientContext ctx;
-    kv->MakeCHB(&ctx, cdata, &doc);
+    kv->make_immutable_block(&ctx, cdata, &doc);
   }
-  ::Status status;
+  ::EmptyOrException status;
   {
     grpc::ClientContext ctx;
-    kv->Insert(&ctx, doc, &status);
+    ::Insert insert;
+    insert.mutable_block()->CopyFrom(doc);
+    kv->insert(&ctx, insert, &status);
   }
   string chb_addr = hex(doc.address());
   while (true)
@@ -405,20 +414,23 @@ void set_document(string user, string name, string data)
       ::Address address;
       address.set_address(unhex(it->second));
       grpc::ClientContext ctx;
-      kv->Remove(&ctx, address, &status);
+      kv->remove(&ctx, address, &status);
     }
     dl[name] = chb_addr; // play or re-play our operation into dl
-    mb.set_data(serialize_document_list(dl));
+    mb.set_data_plain(serialize_document_list(dl));
+    mb.set_data("");
     {
       grpc::ClientContext ctx;
-      kv->Update(&ctx, mb, &status);
+      ::Update update;
+      update.mutable_block()->CopyFrom(mb);
+      kv->update(&ctx, update, &status);
     }
-    if (status.error() == ERROR_OK)
+    if (!status.has_exception_ptr())
       break; // all good
-    if (status.error() != ERROR_CONFLICT)
-      throw std::runtime_error(status.message());
+    if (!status.exception_ptr().exception().has_current())
+      throw std::runtime_error(status.exception_ptr().exception().message());
     // try again from the current block version
-    mb.CopyFrom(status.block());
+    mb.CopyFrom(status.exception_ptr().exception().current());
     dl = parse_document_list(mb.data());
   }
 }
