@@ -3,12 +3,25 @@ syntax = "proto3";
 service Doughnut {
    rpc make_immutable_block(CHBData) returns (BlockOrException) {}
    rpc make_mutable_block(Empty) returns (BlockOrException) {}
+   rpc make_named_block(NamedBlockKey) returns (BlockOrException) {}
+   rpc named_block_address(NamedBlockKey) returns (AddressOrException) {}
    rpc fetch(Fetch) returns (BlockOrException) {}
    rpc insert(Insert) returns (EmptyOrException) {}
    rpc update(Update) returns (EmptyOrException) {}
    rpc remove(Address) returns (EmptyOrException) {}
 }
 
+message NamedBlockKey {
+  bytes key = 1;
+}
+
+message AddressOrException {
+  string type = 1;
+  oneof data {
+    bytes address = 2;
+    ExceptionPtr exepcion_ptr = 3;
+  }
+}
 
 message Insert {
   Block block = 1;

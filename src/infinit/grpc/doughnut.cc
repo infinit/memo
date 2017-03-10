@@ -112,12 +112,12 @@ namespace infinit
       sched.mt_run<void>("invoke", [&] {
           try
           {
-            ELLE_LOG("invoking some method: %s -> %s", elle::type_info<REQ>().name(), elle::type_info<RESP>().name());
+            ELLE_TRACE("invoking some method: %s -> %s", elle::type_info<REQ>().name(), elle::type_info<RESP>().name());
             SerializerIn sin(request);
             sin.set_context<model::doughnut::Doughnut*>(&dht);
             typename NF::Call call(sin);
             typename NF::Result res = nf(std::move(call));
-            ELLE_LOG("adapter with %s", elle::type_info<typename NF::Result>());
+            ELLE_DUMP("adapter with %s", elle::type_info<typename NF::Result>());
             SerializerOut sout(response);
             sout.set_context<model::doughnut::Doughnut*>(&dht);
             auto adapted = Adapter<typename NF::Result, typename NF::Result::Super>::adapt(std::move(res));
@@ -161,6 +161,8 @@ namespace infinit
       ptr->AddMethod<::Update, ::EmptyOrException>(dht.update, dht, "/Doughnut/update");
       ptr->AddMethod<::Empty, ::BlockOrException>(dht.make_mutable_block, dht, "/Doughnut/make_mutable_block");
       ptr->AddMethod<::CHBData, ::BlockOrException>(dht.make_immutable_block, dht,"/Doughnut/make_immutable_block");
+      ptr->AddMethod<::NamedBlockKey, ::BlockOrException>(dht.make_named_block, dht, "/Doughnut/make_named_block");
+      ptr->AddMethod<::NamedBlockKey, ::AddressOrException>(dht.named_block_address, dht, "/Doughnut/named_block_address");
       return ptr;
     }
   }

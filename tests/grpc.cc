@@ -1163,51 +1163,61 @@ ELLE_TEST_SCHEDULED(doughnut)
       BOOST_CHECK(bos.has_bytes());
       BOOST_CHECK_EQUAL(bos.bytes().data(), "alice");
     }*/
-    /*
+
     // NB
     ::Block nb;
     { // make
       grpc::ClientContext context;
-      ::Bytes str;
-      str.set_data("uid");
-      stub->MakeNB(&context, str, &nb);
+      ::NamedBlockKey str;
+      str.set_key("uid");
+      ::BlockOrException nbo;
+      stub->make_named_block(&context, str, &nbo);
+      BOOST_CHECK(!nbo.has_exception_ptr());
+      nb.CopyFrom(nbo.block());
     }
     { // insert
-      ::Block ab;
-      ab.CopyFrom(nb);
-      ab.set_data("coin");
+      ::Insert insert;
+      insert.mutable_block()->CopyFrom(nb);
+      insert.mutable_block()->set_data("coin");
       grpc::ClientContext context;
       ::EmptyOrException status;
-      stub->insert(&context, ab, &status);
-      BOOST_CHECK_EQUAL(status.has_exception(), false);
+      stub->insert(&context, insert, &status);
+      BOOST_CHECK_EQUAL(status.has_exception_ptr(), false);
     }
     ::Address nba;
     { // ask for address
       grpc::ClientContext context;
-      ::Bytes str;
-      str.set_data("uid");
-      stub->NBAddress(&context, str, &nba);
+      ::NamedBlockKey str;
+      ::AddressOrException aoe;
+      str.set_key("uid");
+      stub->named_block_address(&context, str, &aoe);
+      nba.set_address(aoe.address());
     }
     { // fetch
       grpc::ClientContext context;
+      ::Fetch fetch;
+      fetch.set_address(nba.address());
       ::BlockOrException ab;
-      stub->fetch(&context, nba, &ab);
+      stub->fetch(&context, fetch, &ab);
       BOOST_CHECK(ab.has_block());
       BOOST_CHECK_EQUAL(ab.block().data(), "coin");
     }
     { // dummy address
       grpc::ClientContext context;
-      ::Bytes str;
-      str.set_data("invalidid");
-      stub->NBAddress(&context, str, &nba);
+      ::NamedBlockKey str;
+      ::AddressOrException aoe;
+      str.set_key("invalidid");
+      stub->named_block_address(&context, str, &aoe);
+      nba.set_address(aoe.address());
     }
     { // fetch
       grpc::ClientContext context;
       ::BlockOrException ab;
-      stub->fetch(&context, nba, &ab);
-      BOOST_CHECK(ab.has_status());
-      BOOST_CHECK_EQUAL(ab.status().error(), ERROR_MISSING_BLOCK);
-    }*/
+      ::Fetch fetch;
+      fetch.set_address(nba.address());
+      stub->fetch(&context, fetch, &ab);
+      BOOST_CHECK(ab.has_exception_ptr());
+    }
   });
 }
 
