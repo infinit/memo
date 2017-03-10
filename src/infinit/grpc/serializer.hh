@@ -139,7 +139,10 @@ namespace infinit
                                      int index, // out: filled, in: -1
                                      std::function<void(int)> const& f) override;
       template<typename T>
-      void _serialize_int(T& v);
+      void
+      _serialize_int(T& v);
+      void
+      _field_check();
     private:
       int _index;
       std::vector<google::protobuf::Message*> _message_stack;

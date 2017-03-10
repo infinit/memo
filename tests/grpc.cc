@@ -911,30 +911,30 @@ ELLE_TEST_SCHEDULED(doughnut)
       BOOST_CHECK_EQUAL(repl.exception_ptr().exception().type(), "infinit::model::MissingBlock");
     }
     // Basic CHB
-    ::BlockOrException chb;
+    ::Block chb;
     { // make
       grpc::ClientContext context;
       ::CHBData chb_data;
       chb_data.set_data("bok");
       stub->make_immutable_block(&context, chb_data, &chb);
-      ELLE_LOG("addr: %s", chb.block().address());
-      BOOST_CHECK_EQUAL(chb.block().address().size(), 32);
-      BOOST_CHECK_EQUAL(chb.block().data(), "bok");
+      ELLE_LOG("addr: %s", chb.address());
+      BOOST_CHECK_EQUAL(chb.address().size(), 32);
+      BOOST_CHECK_EQUAL(chb.data(), "bok");
       ELLE_TRACE("addr: %s",
-        infinit::model::Address((const uint8_t*)chb.block().address().data()));
+        infinit::model::Address((const uint8_t*)chb.address().data()));
     }
     { // store
       grpc::ClientContext context;
       ::EmptyOrException repl;
       ::Insert insert;
-      insert.mutable_block()->CopyFrom(chb.block());
+      insert.mutable_block()->CopyFrom(chb);
       ELLE_LOG("insert, type '%s'", insert.block().type());
       stub->insert(&context, insert, &repl);
       ELLE_LOG("...inserted");
       BOOST_CHECK_EQUAL(repl.has_exception_ptr(), false);
     }
     // dht fetch check
-    auto a = infinit::model::Address((const uint8_t*)chb.block().address().data());
+    auto a = infinit::model::Address((const uint8_t*)chb.address().data());
     std::string data;
     sched.mt_run<void>("recheck", [&] {
         auto b = client.dht.dht->fetch(a);
@@ -945,10 +945,10 @@ ELLE_TEST_SCHEDULED(doughnut)
       grpc::ClientContext context;
       ::BlockOrException abs;
       ::Fetch addr;
-      addr.set_address(chb.block().address());
+      addr.set_address(chb.address());
       stub->fetch(&context, addr, &abs);
       BOOST_CHECK(abs.has_block());
-      BOOST_CHECK_EQUAL(abs.block().address(), chb.block().address());
+      BOOST_CHECK_EQUAL(abs.block().address(), chb.address());
       BOOST_CHECK_EQUAL(abs.block().data(), "bok");
     }
 
@@ -957,9 +957,7 @@ ELLE_TEST_SCHEDULED(doughnut)
     { // make
       grpc::ClientContext context;
       ::Empty arg;
-      ::BlockOrException boe;
-      stub->make_mutable_block(&context, arg, &boe);
-      okb.CopyFrom(boe.block());
+      stub->make_mutable_block(&context, arg, &okb);
       BOOST_CHECK_EQUAL(okb.address().size(), 32);
       BOOST_CHECK_EQUAL(okb.data(), "");
       ELLE_TRACE("addr: %s",
@@ -1170,10 +1168,7 @@ ELLE_TEST_SCHEDULED(doughnut)
       grpc::ClientContext context;
       ::NamedBlockKey str;
       str.set_key("uid");
-      ::BlockOrException nbo;
-      stub->make_named_block(&context, str, &nbo);
-      BOOST_CHECK(!nbo.has_exception_ptr());
-      nb.CopyFrom(nbo.block());
+      stub->make_named_block(&context, str, &nb);
     }
     { // insert
       ::Insert insert;
@@ -1188,10 +1183,8 @@ ELLE_TEST_SCHEDULED(doughnut)
     { // ask for address
       grpc::ClientContext context;
       ::NamedBlockKey str;
-      ::AddressOrException aoe;
       str.set_key("uid");
-      stub->named_block_address(&context, str, &aoe);
-      nba.set_address(aoe.address());
+      stub->named_block_address(&context, str, &nba);
     }
     { // fetch
       grpc::ClientContext context;
@@ -1205,10 +1198,8 @@ ELLE_TEST_SCHEDULED(doughnut)
     { // dummy address
       grpc::ClientContext context;
       ::NamedBlockKey str;
-      ::AddressOrException aoe;
       str.set_key("invalidid");
-      stub->named_block_address(&context, str, &aoe);
-      nba.set_address(aoe.address());
+      stub->named_block_address(&context, str, &nba);
     }
     { // fetch
       grpc::ClientContext context;

@@ -323,6 +323,21 @@ namespace infinit
       _array_handler.push_back(" IN.VALID ");
     }
 
+    void
+    SerializerOut::_field_check()
+    { // grpc can't handle raw value as output, only messages
+      // so if C++ outputs something that serializes as a value, we need
+      // to wrap it.
+      // Assume the field name is the lowercase version of the message name
+      if (!_field)
+      {
+        auto* cur = _message_stack.back();
+        auto* desc = cur->GetDescriptor();
+        _field = desc->FindFieldByName(uppercase_to_underscore(desc->name()));
+        ELLE_ASSERT(_field);
+      }
+    }
+
     bool
     SerializerOut::_enter(std::string const& _name)
     {
@@ -382,7 +397,7 @@ namespace infinit
     SerializerOut::_serialize(std::string& v)
     {
       ELLE_DUMP("serializing string: '%s'", v);
-      ELLE_ASSERT(_field);
+      _field_check();
       if (_field->type() != google::protobuf::FieldDescriptor::TYPE_STRING
         &&_field->type() != google::protobuf::FieldDescriptor::TYPE_BYTES)
         elle::err<elle::serialization::Error>(
@@ -406,7 +421,7 @@ namespace infinit
     SerializerOut::_serialize_int(T& v)
     {
       // FIXME: it is invalid to call SetInt64 on an INT32 field
-      ELLE_ASSERT(_field);
+      _field_check();
       auto* cur = _message_stack.back();
       if (_field->is_repeated())
         cur->GetReflection()->AddInt64(cur, _field, v);
@@ -438,7 +453,7 @@ namespace infinit
     void
     SerializerOut::_serialize(double& v)
     {
-      ELLE_ASSERT(_field);
+      _field_check();
       auto* cur = _message_stack.back();
       if (_field->is_repeated())
         cur->GetReflection()->AddDouble(cur, _field, v);
@@ -456,7 +471,7 @@ namespace infinit
     void
     SerializerOut::_serialize(bool& b)
     {
-      ELLE_ASSERT(_field);
+      _field_check();
       auto* cur = _message_stack.back();
       if (_field->is_repeated())
         cur->GetReflection()->AddBool(cur, _field, b);
