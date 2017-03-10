@@ -569,13 +569,13 @@ namespace infinit
       `-----------*/
 
       std::string
-      Kouncil::type_name()
+      Kouncil::type_name() const
       {
         return "kouncil";
       }
 
       elle::json::Array
-      Kouncil::peer_list()
+      Kouncil::peer_list() const
       {
         auto res = elle::json::Array{};
         for (auto const& p: this->peers())
@@ -594,7 +594,7 @@ namespace infinit
       }
 
       elle::json::Object
-      Kouncil::stats()
+      Kouncil::stats() const
       {
         return
           {

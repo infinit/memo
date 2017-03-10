@@ -1,5 +1,7 @@
 #include <infinit/overlay/koordinate/Koordinate.hh>
 
+#include <elle/make-vector.hh>
+
 #include <boost/algorithm/cxx11/all_of.hpp>
 
 namespace infinit
@@ -92,13 +94,13 @@ namespace infinit
       `-----------*/
 
       std::string
-      Koordinate::type_name()
+      Koordinate::type_name() const
       {
         return "koordinate";
       }
 
       elle::json::Array
-      Koordinate::peer_list()
+      Koordinate::peer_list() const
       {
         elle::json::Array res;
         for (auto const& backend: this->_backends)
@@ -110,15 +112,17 @@ namespace infinit
       }
 
       elle::json::Object
-      Koordinate::stats()
+      Koordinate::stats() const
       {
-        elle::json::Object res;
-        res["type"] = this->type_name();
-        std::vector<std::string> types;
-        for (auto const& backend: this->_backends)
-          types.push_back(backend->type_name());
-        res["types"] = types;
-        return res;
+        return
+          {
+            {"type", this->type_name()},
+            {"types", elle::make_vector(this->_backends,
+                                        [](auto const& backend)
+                                        {
+                                          return backend->type_name();
+                                        })},
+            };
       }
     }
   }

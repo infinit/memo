@@ -68,23 +68,21 @@ namespace infinit
     `-----------*/
 
     std::string
-    Kalimero::type_name()
+    Kalimero::type_name() const
     {
       return "kalimero";
     }
 
     elle::json::Array
-    Kalimero::peer_list()
+    Kalimero::peer_list() const
     {
-      return elle::json::Array();
+      return {};
     }
 
     elle::json::Object
-    Kalimero::stats()
+    Kalimero::stats() const
     {
-      elle::json::Object res;
-      res["type"] = this->type_name();
-      return res;
+      return {{"type", this->type_name()}};
     }
 
     KalimeroConfiguration::KalimeroConfiguration()

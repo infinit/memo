@@ -112,13 +112,13 @@ namespace infinit
     `-----------*/
 
     std::string
-    Stonehenge::type_name()
+    Stonehenge::type_name() const
     {
       return "stonehenge";
     }
 
     elle::json::Array
-    Stonehenge::peer_list()
+    Stonehenge::peer_list() const
     {
       auto res = elle::json::Array{};
       for (auto const& peer: this->_peers)
@@ -131,9 +131,9 @@ namespace infinit
     }
 
     elle::json::Object
-    Stonehenge::stats()
+    Stonehenge::stats() const
     {
-      return elle::json::Object{{"type", this->type_name()}};
+      return {{"type", this->type_name()}};
     }
 
     StonehengeConfiguration::StonehengeConfiguration()

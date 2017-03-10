@@ -3746,7 +3746,7 @@ namespace infinit
       packet::RequestKey
       Node::make_key_request()
       {
-        packet::RequestKey req(doughnut()->passport());
+        auto req = packet::RequestKey(doughnut()->passport());
         req.sender = _self;
         req.token = elle::cryptography::random::generate<elle::Buffer>(128);
         req.challenge = elle::cryptography::random::generate<elle::Buffer>(128);
@@ -3868,10 +3868,7 @@ namespace infinit
               hits[nh]++;
             }
           }
-          elle::json::Array ares;
-          for (auto c: hits)
-            ares.push_back(c);
-          res["counts"] = ares;
+          res["counts"] = elle::make_vector(hits);
         }
         if (k.substr(0, strlen("scan.")) == "scan.")
         {
@@ -3885,9 +3882,7 @@ namespace infinit
               continue;
             processed.insert(f.first);
             auto its = _state.files.equal_range(f.first);
-            int count=0;
-            for (; its.first != its.second; ++count, ++its.first)
-              ;
+            auto count = std::distance(its.first, its.second);
             if (count < factor)
               to_scan.push_back(f.first);
           }
@@ -3959,15 +3954,15 @@ namespace infinit
       `-----------*/
 
       std::string
-      Node::type_name()
+      Node::type_name() const
       {
         return "kelips";
       }
 
       elle::json::Array
-      Node::peer_list()
+      Node::peer_list() const
       {
-        elle::json::Array res;
+        auto res = elle::json::Array{};
         for (int i = 0; i < signed(this->_state.contacts.size()); ++i)
         {
           auto const& group = this->_state.contacts[i];
@@ -3998,7 +3993,7 @@ namespace infinit
       }
 
       elle::json::Object
-      Node::stats()
+      Node::stats() const
       {
         elle::json::Object res;
         res["type"] = this->type_name();
@@ -4007,13 +4002,12 @@ namespace infinit
           this->_config.rpc_protocol == Protocol::utp ? "utp"
           : (this->_config.rpc_protocol == Protocol::tcp ? "tcp" : "all");
         res["group"] = this->_group;
-        elle::json::Object stats{
+        res["statistics"] = elle::json::Object{
           { "files", this->_state.files.size() },
           { "dropped_puts", this->_dropped_puts },
           { "dropped_gets", this->_dropped_gets },
           { "failed_puts", this->_failed_puts },
         };
-        res["statistics"] = stats;
         return res;
       }
 

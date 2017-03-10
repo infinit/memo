@@ -218,11 +218,11 @@ namespace infinit
       `-----------*/
       public:
         std::string
-        type_name() override;
+        type_name() const override;
         elle::json::Array
-        peer_list() override;
+        peer_list() const override;
         elle::json::Object
-        stats() override;
+        stats() const override;
 
       private:
         using Local = infinit::model::doughnut::Local;
