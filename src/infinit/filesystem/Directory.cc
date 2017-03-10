@@ -670,7 +670,7 @@ namespace infinit
               try
               {
                 Address addr = addresses.front().first;
-                block = fs->block_store()->fetch(addr, addresses.front().second);
+                block = fs->block_store()->fetch(addr, false, addresses.front().second);
                 if (!recurse.empty())
                 {
                   std::shared_ptr<DirectoryData> d;

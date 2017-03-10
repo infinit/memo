@@ -25,6 +25,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(block);
     ELLE_DAS_SYMBOL(conflict_resolver);
     ELLE_DAS_SYMBOL(data);
+    ELLE_DAS_SYMBOL(decrypt_data);
     ELLE_DAS_SYMBOL(local_version);
     ELLE_DAS_SYMBOL(owner);
     ELLE_DAS_SYMBOL(signature);
@@ -173,6 +174,7 @@ namespace infinit
       elle::das::named::Function<
         std::unique_ptr<blocks::Block> (
           decltype(address)::Formal<Address>,
+          decltype(decrypt_data = boost::optional<bool>()),
           decltype(local_version = boost::optional<int>()))>
       fetch;
       void
@@ -219,7 +221,9 @@ namespace infinit
 
     private:
       std::unique_ptr<blocks::Block>
-      _fetch_impl(Address address, boost::optional<int> local_version) const;
+      _fetch_impl(Address address,
+                  boost::optional<bool> decrypt_data,
+                  boost::optional<int> local_version) const;
     protected:
       template <typename Block, typename ... Args>
       static

@@ -31,6 +31,7 @@ namespace infinit
       , fetch(
         elle::das::bind_method(*this, &Model::_fetch_impl),
         address,
+        decrypt_data = boost::optional<bool>(),
         local_version = boost::optional<int>())
       , insert([this] (std::unique_ptr<blocks::Block> block,
                        std::unique_ptr<ConflictResolver> resolver)
@@ -160,6 +161,7 @@ namespace infinit
 
     std::unique_ptr<blocks::Block>
     Model::_fetch_impl(Address address,
+                       boost::optional<bool> decrypt_data,
                        boost::optional<int> local_version) const
     {
       ELLE_TRACE_SCOPE("%s: fetch %f if newer than %s",
@@ -172,6 +174,10 @@ namespace infinit
           ELLE_WARN("%s: invalid block received for %s:%s", *this, address,
                     val.reason());
           elle::err("invalid block: %s", val.reason());
+        }
+        if (decrypt_data && *decrypt_data)
+        {
+          res->decrypt();
         }
         return res;
       }
