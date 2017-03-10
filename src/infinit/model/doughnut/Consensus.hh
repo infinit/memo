@@ -125,7 +125,7 @@ namespace infinit
         `--------------*/
 
         class Configuration
-          : public elle::serialization::VirtuallySerializable<false>
+          : public elle::serialization::VirtuallySerializable<Configuration, false>
           , public elle::Clonable<Configuration>
         {
         /*--------.

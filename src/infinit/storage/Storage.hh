@@ -109,7 +109,7 @@ namespace infinit
 
     struct StorageConfig
       : public descriptor::TemplatedBaseDescriptor<StorageConfig>
-      , public elle::serialization::VirtuallySerializable<false>
+      , public elle::serialization::VirtuallySerializable<StorageConfig, false>
     {
       StorageConfig() = default;
       StorageConfig(std::string name,
