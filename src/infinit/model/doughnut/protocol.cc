@@ -12,6 +12,12 @@ namespace infinit
       {
         return out << Serialize<Protocol>::convert(protocol);
       }
+
+      Protocol
+      make_protocol(std::string const& name)
+      {
+        return elle::serialization::Serialize<Protocol>::convert(name);
+      }
     }
   }
 }
@@ -32,9 +38,8 @@ namespace elle
           return "utp";
         case Protocol::all:
           return "all";
-        default:
-          elle::unreachable();
       }
+      elle::unreachable();
     }
 
     Protocol
@@ -50,8 +55,4 @@ namespace elle
         throw Error("Expected one of tcp, utp, all,  got '" + repr + "'");
     }
   }
-}
-
-namespace std
-{
 }

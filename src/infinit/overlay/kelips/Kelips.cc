@@ -3756,28 +3756,18 @@ namespace infinit
       }
 
       elle::json::Json
-      Node::query(std::string const& k, boost::optional<std::string> const& v)
+      Node::query(std::string const& k,
+                  boost::optional<std::string> const& v)
       {
         elle::json::Object res;
         if (k == "protocol")
         {
-          using Protocol = infinit::model::doughnut::Protocol;
-          if (!v)
-            res["protocol"] = _config.rpc_protocol == Protocol::utp ?
-          "utp" : (_config.rpc_protocol == Protocol::tcp ? "tcp" : "all");
+          if (v)
+            _config.rpc_protocol = model::doughnut::make_protocol(*v);
           else
-          {
-            if (*v == "tcp")
-              _config.rpc_protocol = Protocol::tcp;
-            else if (*v == "utp")
-              _config.rpc_protocol = Protocol::utp;
-            else if (*v == "all")
-              _config.rpc_protocol = Protocol::all;
-            else
-              elle::err("Invalid protocol");
-          }
+            res["protocol"] = elle::sprintf("%s", _config.rpc_protocol);
         }
-        if (k == "stats")
+        else if (k == "stats")
         {
           res["group"] = this->_group;
           res["contacts"] = this->peer_list();
@@ -3995,20 +3985,19 @@ namespace infinit
       elle::json::Object
       Node::stats() const
       {
-        elle::json::Object res;
-        res["type"] = this->type_name();
-        using Protocol = infinit::model::doughnut::Protocol;
-        res["protocol"] =
-          this->_config.rpc_protocol == Protocol::utp ? "utp"
-          : (this->_config.rpc_protocol == Protocol::tcp ? "tcp" : "all");
-        res["group"] = this->_group;
-        res["statistics"] = elle::json::Object{
-          { "files", this->_state.files.size() },
-          { "dropped_puts", this->_dropped_puts },
-          { "dropped_gets", this->_dropped_gets },
-          { "failed_puts", this->_failed_puts },
+        return
+          {
+            {"type", this->type_name()},
+            {"protocol", elle::sprintf("%s", this->_config.rpc_protocol)},
+            {"group", this->_group},
+            {"statistics", elle::json::Object{
+                { "files", this->_state.files.size() },
+                { "dropped_puts", this->_dropped_puts },
+                { "dropped_gets", this->_dropped_gets },
+                { "failed_puts", this->_failed_puts },
+              }
+            },
         };
-        return res;
       }
 
       std::ostream&
