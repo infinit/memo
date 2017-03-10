@@ -1,3 +1,5 @@
+#include <boost/function_types/function_type.hpp>
+
 #include <elle/reactor/scheduler.hh>
 #include <elle/serialization/json.hh>
 
@@ -19,303 +21,147 @@
 
 ELLE_LOG_COMPONENT("infinit.grpc.doughnut");
 
+
+namespace elle
+{
+  namespace serialization
+  {
+    template<> struct Serialize<std::unique_ptr<infinit::model::blocks::MutableBlock >>
+    {
+      static void serialize(
+        std::unique_ptr<infinit::model::blocks::MutableBlock> const& b,
+        SerializerOut&s)
+      {
+        auto* ptr = static_cast<infinit::model::blocks::Block*>(b.get());
+        s.serialize_forward(ptr);
+      }
+      static
+      std::unique_ptr<infinit::model::blocks::MutableBlock>
+      deserialize(SerializerIn& s)
+      {
+        std::unique_ptr<infinit::model::blocks::Block> bl;
+        s.serialize_forward(bl);
+        return std::unique_ptr<infinit::model::blocks::MutableBlock>(
+          dynamic_cast<infinit::model::blocks::MutableBlock*>(bl.release()));
+      }
+    };
+    template<> struct Serialize<std::unique_ptr<infinit::model::blocks::ImmutableBlock>>
+    {
+      static void serialize(
+        std::unique_ptr<infinit::model::blocks::ImmutableBlock> const& b,
+        SerializerOut&s)
+      {
+        auto* ptr = static_cast<infinit::model::blocks::Block*>(b.get());
+        s.serialize_forward(ptr);
+      }
+      static
+      std::unique_ptr<infinit::model::blocks::ImmutableBlock>
+      deserialize(SerializerIn& s)
+      {
+        std::unique_ptr<infinit::model::blocks::Block> bl;
+        s.serialize_forward(bl);
+        return std::unique_ptr<infinit::model::blocks::ImmutableBlock>(
+          dynamic_cast<infinit::model::blocks::ImmutableBlock*>(bl.release()));
+      }
+    };
+  }
+}
+
 namespace infinit
 {
   namespace grpc
   {
-    inline
-    model::Address
-    to_address(std::string const& s)
+
+    template<typename RT, typename SUBT>
+    struct Adapter
     {
-      if (s.empty())
-        return model::Address::null;
-      if (s.size() == 32)
-        return model::Address((const uint8_t*)s.data());
-      return model::Address::from_string(s);
-    }
-    static
-    bool
-    exception_handler(::Status& res, std::function<void()> f)
+      template<typename T2>
+      static
+      RT adapt(T2 v)
+      {
+        return std::move(v);
+      }
+    };
+    template<typename SB, typename EO2>
+    struct AdapterHelper
     {
-      res.set_error(ERROR_OK);
-      res.clear_message();
-      try
+      using type = elle::Option<SB,EO2>;
+      using target = elle::Option<std::unique_ptr<infinit::model::blocks::Block>, EO2>;
+      template<typename T>
+      static target adapt(T v)
       {
-        f();
-        ELLE_TRACE("no exception encountered");
-        return true;
-      }
-      catch (model::MissingBlock const& err)
-      {
-        res.set_error(ERROR_MISSING_BLOCK);
-        res.set_message(err.what());
-      }
-      catch (model::doughnut::ValidationFailed const& err)
-      {
-        res.set_error(ERROR_VALIDATION_FAILED);
-        res.set_message(err.what());
-      }
-      catch (elle::athena::paxos::TooFewPeers const& err)
-      {
-        res.set_error(ERROR_TOO_FEW_PEERS);
-        res.set_message(err.what());
-      }
-      catch (model::doughnut::Conflict const& err)
-      {
-        SerializerOut sout(res.mutable_block());
-        sout.serialize_forward(err.current());
-        res.set_error(ERROR_CONFLICT);
-        res.set_message(err.what());
-      }
-      catch (elle::Error const& err)
-      {
-        ELLE_TRACE("generic error handler for %s: %s",
-          elle::type_info(err), err);
-        ELLE_TRACE("%s", err.backtrace());
-        // FIXME
-        if (std::string(err.what()).find("no peer available for") == 0)
-          res.set_error(ERROR_NO_PEERS);
+        if (v.template is<EO2>())
+          return target(v.template get<EO2>());
         else
-          res.set_error(ERROR_OTHER);
-        res.set_message(err.what());
+          return target(std::unique_ptr<infinit::model::blocks::Block>(
+            v.template get<SB>().release()));
       }
-      ELLE_TRACE("an exception was encountered");
-      return false;
+    };
+    template<typename RT, typename EO2>
+    struct Adapter<RT, elle::Option<std::unique_ptr<infinit::model::blocks::ImmutableBlock>, EO2>>
+    : public AdapterHelper<std::unique_ptr<infinit::model::blocks::ImmutableBlock>, EO2>
+    {};
+    template<typename RT, typename EO2>
+    struct Adapter<RT, elle::Option<std::unique_ptr<infinit::model::blocks::MutableBlock>, EO2>>
+    : public AdapterHelper<std::unique_ptr<infinit::model::blocks::MutableBlock>, EO2>
+    {};
+    template<typename NF, typename REQ, typename RESP>
+    ::grpc::Status
+    invoke_named(elle::reactor::Scheduler& sched, model::doughnut::Doughnut& dht, NF& nf, ::grpc::ServerContext* ctx, const REQ* request, RESP* response)
+    {
+      sched.mt_run<void>("invoke", [&] {
+          try
+          {
+            ELLE_LOG("invoking some method: %s -> %s", elle::type_info<REQ>().name(), elle::type_info<RESP>().name());
+            SerializerIn sin(request);
+            sin.set_context<model::doughnut::Doughnut*>(&dht);
+            typename NF::Call call(sin);
+            typename NF::Result res = nf(std::move(call));
+            ELLE_LOG("adapter with %s", elle::type_info<typename NF::Result>());
+            SerializerOut sout(response);
+            sout.set_context<model::doughnut::Doughnut*>(&dht);
+            auto adapted = Adapter<typename NF::Result, typename NF::Result::Super>::adapt(std::move(res));
+            sout.serialize_forward(adapted);
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_ERR("boum %s", e);
+            ELLE_ERR("%s", e.backtrace());
+          }
+      });
+      return ::grpc::Status::OK;
     }
 
-    class DoughnutImpl: public ::Doughnut::Service
+    class Service: public ::grpc::Service
     {
     public:
-      using Status = ::grpc::Status;
-      using Ctx = ::grpc::ServerContext;
-      DoughnutImpl(infinit::model::Model& model)
-      : _model(model)
-      , _sched(elle::reactor::scheduler())
-      {}
-      Status MakeCHB(Ctx*, const ::CHBData* request, ::Block* response);
-      Status MakeACB(Ctx*, const ::Empty* request, ::Block* response);
-      Status MakeOKB(Ctx*, const ::Empty* request, ::Block* response);
-      Status MakeNB(Ctx*, const ::Bytes* request, ::Block* response);
-      Status Get(Ctx*, const ::Address* request, ::BlockOrStatus* response);
-      Status Update(Ctx*, const ::Block* request, ::Status* response);
-      Status Insert(Ctx*, const ::Block* request, ::Status* response);
-      Status Remove(Ctx*, const ::Address* request, ::Status* response);
-      Status NBAddress(Ctx*, const ::Bytes* request, ::Address* response);
-      Status UserKey(Ctx*, const ::Bytes* request, ::KeyOrStatus* response);
-      Status UserName(Ctx*, const ::Key* request, ::BytesOrStatus* response);
-    private:
-      infinit::model::Model& _model;
-      elle::reactor::Scheduler& _sched;
+      template<typename GArg, typename GRet, typename NF>
+      void AddMethod(NF& nf, model::doughnut::Doughnut& dht, std::string const& name)
+      {
+        auto& sched = elle::reactor::scheduler();
+        using sig = std::function<::grpc::Status(Service*,::grpc::ServerContext*, const GArg *, GRet*)>;
+        ::grpc::Service::AddMethod(new ::grpc::RpcServiceMethod(
+          (new std::string(name))->c_str(), ::grpc::RpcMethod::NORMAL_RPC,
+          new ::grpc::RpcMethodHandler<Service, GArg, GRet>(
+            (sig)std::bind(
+              &invoke_named<NF, GArg, GRet>,
+              std::ref(sched), std::ref(dht), std::ref(nf),
+              std::placeholders::_2, std::placeholders::_3, std::placeholders::_4),
+            this)));
+      }
     };
 
-    ::grpc::Status DoughnutImpl::MakeCHB(Ctx*, const ::CHBData* request, ::Block* response)
-    {
-      ::Status status;
-      _sched.mt_run<void>("MakeCHB", [&] {
-          if (!exception_handler(status, [&] {
-              std::unique_ptr<model::blocks::Block> block
-                = _model.make_block<model::blocks::ImmutableBlock>(
-                    elle::Buffer(request->data()),
-                    to_address(request->owner()));
-              SerializerOut sout(response);
-              sout.serialize_forward(block);
-          }))
-          {
-            ELLE_ERR("exception: %s", status.message());
-          }
-      });
-      return ::grpc::Status::OK;
-    }
-
-    ::grpc::Status DoughnutImpl::MakeACB(Ctx*, const ::Empty* request, ::Block* response)
-    {
-      ::Status status;
-      _sched.mt_run<void>("MakeACB", [&] {
-          if (!exception_handler(status, [&] {
-              std::unique_ptr<model::blocks::Block> block = _model.make_block<model::blocks::ACLBlock>();
-              SerializerOut sout(response);
-              sout.serialize_forward(block);
-          }))
-          {
-            ELLE_ERR("exception: %s", status.message());
-          }
-      });
-      return ::grpc::Status::OK;
-    }
-
-    ::grpc::Status DoughnutImpl::MakeOKB(Ctx*, const ::Empty* request, ::Block* response)
-    {
-      ::Status status;
-
-      _sched.mt_run<void>("MakeOKB", [&] {
-          if (!exception_handler(status, [&] {
-              std::unique_ptr<model::blocks::Block> block = _model.make_block<model::blocks::MutableBlock>();
-              SerializerOut sout(response);
-              sout.serialize_forward(block);
-          }))
-          {
-            ELLE_ERR("exception: %s", status.message());
-          }
-      });
-      return ::grpc::Status::OK;
-    }
-
-    ::grpc::Status DoughnutImpl::MakeNB(Ctx*, const ::Bytes* request, ::Block* response)
-    {
-      _sched.mt_run<void>("MakeNB", [&] {
-          std::unique_ptr<model::blocks::Block> nb = std::make_unique<model::doughnut::NB>(
-            dynamic_cast<model::doughnut::Doughnut&>(_model),
-            request->data(),
-            elle::Buffer());
-          SerializerOut sout(response);
-          sout.serialize_forward(nb);
-      });
-      return ::grpc::Status::OK;
-    }
-
-    ::grpc::Status DoughnutImpl::NBAddress(Ctx*, const ::Bytes* request, ::Address* response)
-    {
-      _sched.mt_run<void>("NBAddress", [&] {
-          auto addr = infinit::model::doughnut::NB::address(
-            dynamic_cast<model::doughnut::Doughnut&>(_model).keys().K(),
-            request->data(),
-            _model.version());
-          response->set_address(std::string((const char*)addr.value(), 32));
-      });
-      return ::grpc::Status::OK;
-    }
-
-    ::grpc::Status DoughnutImpl::Get(Ctx*, const ::Address* request, ::BlockOrStatus* response)
-    {
-      ::Status status;
-      _sched.mt_run<void>("Get", [&] {
-          if (!exception_handler(status, [&] {
-              auto block = _model.fetch(to_address(request->address()));
-              SerializerOut sout(response->mutable_block());
-              sout.serialize_forward(block);
-              response->mutable_block()->set_data(block->data().string());
-          }))
-          {
-            response->mutable_status()->CopyFrom(status);
-          }
-      });
-      return ::grpc::Status::OK;
-    }
-
-    ::grpc::Status DoughnutImpl::Update(Ctx*, const ::Block* request, ::Status* response)
-    {
-      _sched.mt_run<void>("Update", [&] {
-          exception_handler(*response, [&] {
-              SerializerIn sin(request);
-              sin.set_context<model::doughnut::Doughnut*>(
-                dynamic_cast<model::doughnut::Doughnut*>(&_model));
-              std::unique_ptr<model::blocks::Block> block;
-              sin.serialize_forward(block);
-              // force a seal
-              if (auto mb = dynamic_cast<model::blocks::MutableBlock*>(block.get()))
-              {
-                mb->data(request->data());
-              }
-              try
-              {
-                _model.update(std::move(block));
-              }
-              catch (model::doughnut::ValidationFailed const&)
-              { // maybe the acls where updated
-                // this is a rare case so keep the path above optimized
-                SerializerIn sin(request);
-                sin.set_context<model::doughnut::Doughnut*>(
-                  dynamic_cast<model::doughnut::Doughnut*>(&_model));
-                std::unique_ptr<model::blocks::Block> block;
-                sin.serialize_forward(block);
-                if (auto acb = dynamic_cast<model::doughnut::ACB*>(block.get()))
-                {
-                  acb->data(request->data());
-                  auto wp = acb->get_world_permissions();
-                  acb->set_world_permissions(!wp.first, wp.second);
-                  acb->set_world_permissions(wp.first, wp.second);
-                  _model.update(std::move(block));
-                }
-                else
-                  throw;
-              }
-          });
-      });
-      return ::grpc::Status::OK;
-    }
-
-    ::grpc::Status DoughnutImpl::Insert(Ctx*, const ::Block* request, ::Status* response)
-    {
-      _sched.mt_run<void>("Insert", [&] {
-          exception_handler(*response, [&] {
-              SerializerIn sin(request);
-              sin.set_context<model::doughnut::Doughnut*>(
-                dynamic_cast<model::doughnut::Doughnut*>(&_model));
-              std::unique_ptr<model::blocks::Block> block;
-              sin.serialize_forward(block);
-              // force a seal
-              if (auto mb = dynamic_cast<model::blocks::MutableBlock*>(block.get()))
-              {
-                mb->data(request->data());
-              }
-              ELLE_DEBUG("insert %s with %s", block->address(), block->data());
-              _model.insert(std::move(block));
-          });
-      });
-      return ::grpc::Status::OK;
-    }
-
-    ::grpc::Status DoughnutImpl::Remove(Ctx*, const ::Address* request, ::Status* response)
-    {
-      _sched.mt_run<void>("Remove", [&] {
-          exception_handler(*response, [&] {
-              _model.remove(to_address(request->address()));
-          });
-      });
-      return ::grpc::Status::OK;
-    }
-
-    ::grpc::Status DoughnutImpl::UserKey(Ctx*, const ::Bytes* request, ::KeyOrStatus* response)
-    {
-      ::Status status;
-      _sched.mt_run<void>("UserKey", [&] {
-         if (!exception_handler(status, [&] {
-             auto user = _model.make_user(elle::Buffer(request->data()));
-             auto const& key = dynamic_cast<model::doughnut::User&>(*user).key();
-             elle::Option<elle::cryptography::rsa::PublicKey, int, bool> opt(key);
-             SerializerOut sout(response->mutable_key());
-             sout.serialize_forward(opt);
-          }))
-         {
-           ELLE_ERR("exception: %s", status.message());
-           response->mutable_status()->CopyFrom(status);
-         }
-      });
-      return ::grpc::Status::OK;
-    }
-
-    ::grpc::Status DoughnutImpl::UserName(Ctx*, const ::Key* request, ::BytesOrStatus* response)
-    {
-      ::Status status;
-      _sched.mt_run<void>("UserName", [&] {
-          if (!exception_handler(status, [&] {
-             SerializerIn sin(&request->value());
-             elle::cryptography::rsa::PublicKey key(sin);
-             auto user = _model.make_user(elle::serialization::json::serialize(key));
-             response->mutable_bytes()->set_data(user->name());
-          }))
-         {
-           ELLE_ERR("exception: %s", status.message());
-           response->mutable_status()->CopyFrom(status);
-         }
-      });
-      return ::grpc::Status::OK;
-    }
-
     std::unique_ptr< ::grpc::Service>
-    doughnut_service(model::Model& dht)
+    doughnut_service(model::Model& model)
     {
-      return std::make_unique<DoughnutImpl>(dht);
+      auto& dht = dynamic_cast<model::doughnut::Doughnut&>(model);
+      auto ptr = std::make_unique<Service>();
+      ptr->AddMethod<::Fetch, ::BlockOrException>(dht.fetch, dht, "/Doughnut/fetch");
+      ptr->AddMethod<::Insert, ::EmptyOrException>(dht.insert, dht, "/Doughnut/insert");
+      ptr->AddMethod<::Update, ::EmptyOrException>(dht.update, dht, "/Doughnut/update");
+      ptr->AddMethod<::Empty, ::BlockOrException>(dht.make_mutable_block, dht, "/Doughnut/make_mutable_block");
+      ptr->AddMethod<::CHBData, ::BlockOrException>(dht.make_immutable_block, dht,"/Doughnut/make_immutable_block");
+      return ptr;
     }
   }
 }

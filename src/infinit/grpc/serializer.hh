@@ -68,6 +68,10 @@ namespace infinit
       void
       _serialize_option(bool present,
                         std::function<void ()> const& f) override;
+      void
+      _serialize_variant(std::vector<std::string> const& names,
+                         int index, // out: filled, in: -1
+                         std::function<void(int)> const& f) override;
       template<typename T>
       void _serialize_int(T& v);
     private:
@@ -130,6 +134,10 @@ namespace infinit
       void
       _serialize_option(bool present,
                         std::function<void ()> const& f) override;
+      void
+      _serialize_variant(std::vector<std::string> const& names,
+                                     int index, // out: filled, in: -1
+                                     std::function<void(int)> const& f) override;
       template<typename T>
       void _serialize_int(T& v);
     private:

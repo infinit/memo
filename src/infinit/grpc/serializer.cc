@@ -10,6 +10,49 @@ namespace infinit
   namespace grpc
   {
 
+    static
+    std::string
+    uppercase_to_underscore(std::string const& src)
+    {
+      std::string res;
+      for (unsigned int i=0; i<src.size(); ++i)
+      {
+        auto c = src[i];
+        if (c == '.')
+          continue;
+        if (std::tolower(c) != c && i != 0)
+          res += "_";
+        res += std::tolower(c);
+      }
+      return res;
+    }
+
+    static
+    std::string
+    filter_field_name(std::string const& name)
+    {
+      std::string res;
+      for (auto c: name)
+      {
+        if (c == '.')
+          continue;
+        res += c;
+      }
+      return res;
+    }
+
+    static
+    std::string
+    cxx_to_message_name(std::string name)
+    {
+      auto p = name.find_last_of(':');
+      if (p != name.npos)
+        name = name.substr(p+1);
+      p = name.find_first_of('>');
+      name = name.substr(0, p);
+      return uppercase_to_underscore(name);
+    }
+
     SerializerIn::SerializerIn(google::protobuf::Message const* msg)
     : elle::serialization::SerializerIn(false)
     {
@@ -18,9 +61,10 @@ namespace infinit
     }
 
     bool
-    SerializerIn::_enter(std::string const& name)
+    SerializerIn::_enter(std::string const& _name)
     {
-      ELLE_DUMP("%s: enter %s %s", this, name, _names);
+      ELLE_DUMP("%s: enter %s %s", this, _name, _names);
+      std::string name = filter_field_name(_name);
       auto* cur = _message_stack.back();
       auto* ref = cur->GetReflection();
       auto* desc = cur->GetDescriptor();
@@ -81,6 +125,7 @@ namespace infinit
       else
         str = cur->GetReflection()->GetString(*cur, _field);
       v = std::move(str);
+      ELLE_DUMP("deserialized string '%s'", v);
     }
 
     void
@@ -106,6 +151,8 @@ namespace infinit
     SerializerIn::_serialize_int(T& v)
     {
       ELLE_ASSERT(_field);
+      if (_field->type() == google::protobuf::FieldDescriptor::TYPE_STRING)
+        elle::err("got a string where an int was expected");
       auto* cur = _message_stack.back();
       {
         // FIXME will this call pass for other int types
@@ -117,6 +164,7 @@ namespace infinit
         v = get_small_int<T>(bigval);
         _last_serialized_int = v;
       }
+      ELLE_DUMP("deserialized int: %s", v);
     }
 
     void SerializerIn::_serialize(int8_t  & v) { _serialize_int(v);}
@@ -184,6 +232,7 @@ namespace infinit
                                           bool present,
                                           std::function<void ()> const& f)
     {
+      ELLE_DUMP("deserialize_named_option %s", name);
       ELLE_ASSERT(!_field);
       auto* cur = _message_stack.back();
       auto* ref = cur->GetReflection();
@@ -247,6 +296,25 @@ namespace infinit
       }
     }
 
+    void
+    SerializerIn::_serialize_variant(std::vector<std::string> const& names,
+                                     int index, // out: filled, in: -1
+                                     std::function<void(int)> const& f)
+    {
+      ELLE_DUMP("deserializing variant at %s with %s", index, names);
+      std::string name;
+      this->serialize("type", name);
+      ELLE_DUMP("got: %s", name);
+      auto it = std::find(names.begin(), names.end(), name);
+      if (it == names.end())
+        elle::err<elle::serialization::Error>("type %s not found in %s", name, names);
+      index = it - names.begin();
+      name = cxx_to_message_name(name);
+      this->_enter(name);
+      elle::SafeFinally leave([&] { this->_leave(name);});
+      f(index);
+    }
+
     SerializerOut::SerializerOut(google::protobuf::Message* msg)
     : elle::serialization::SerializerOut(false)
     {
@@ -256,9 +324,10 @@ namespace infinit
     }
 
     bool
-    SerializerOut::_enter(std::string const& name)
+    SerializerOut::_enter(std::string const& _name)
     {
-      ELLE_DUMP("enter %s %s", name, _names);
+      ELLE_DUMP("enter %s %s", _name, _names);
+      std::string name = filter_field_name(_name);
       auto* cur = _message_stack.back();
       auto* ref = cur->GetReflection();
       auto* desc = cur->GetDescriptor();
@@ -279,7 +348,7 @@ namespace infinit
       if (!_field)
         _field = desc->FindFieldByName(name + std::to_string(_last_serialized_int));
       if (!_field)
-        elle::err("field %s not found at %s", name, _names);
+        elle::err("field %s not found at %s in %s", name, _names, desc->name());
       if (_field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE)
       {
         google::protobuf::Message* child = nullptr;
@@ -312,6 +381,7 @@ namespace infinit
     void
     SerializerOut::_serialize(std::string& v)
     {
+      ELLE_DUMP("serializing string: '%s'", v);
       ELLE_ASSERT(_field);
       if (_field->type() != google::protobuf::FieldDescriptor::TYPE_STRING
         &&_field->type() != google::protobuf::FieldDescriptor::TYPE_BYTES)
@@ -407,8 +477,9 @@ namespace infinit
                                           bool present,
                                           std::function<void ()> const& f)
     {
+      ELLE_DUMP("serialize_named_option %s", name);
       ELLE_ASSERT(!_field);
-      _enter(name);
+      //_enter(name);
       f();
     }
 
@@ -465,6 +536,21 @@ namespace infinit
       _array_handler = prev_array_handler;
       if (!name.empty())
         _enter(name);
+    }
+
+    void
+    SerializerOut::_serialize_variant(std::vector<std::string> const& names,
+                                     int index, // out: filled, in: -1
+                                     std::function<void(int)> const& f)
+    {
+      ELLE_DUMP("serializing variant at %s with %s", index, names);
+      ELLE_ASSERT_GT((signed)names.size(), index);
+      std::string name = names[index];
+      this->serialize("type", names[index]);
+      name = cxx_to_message_name(name);
+      this->_enter(name);
+      elle::SafeFinally leave([&] { this->_leave(name);});
+      f(index);
     }
   }
 }
