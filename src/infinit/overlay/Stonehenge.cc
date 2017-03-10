@@ -3,9 +3,11 @@
 #include <iterator>
 
 #include <boost/algorithm/cxx11/any_of.hpp>
+
 #include <elle/Error.hh>
 #include <elle/assert.hh>
 #include <elle/log.hh>
+#include <elle/make-vector.hh>
 #include <elle/utils.hh>
 
 #include <elle/das/serializer.hh>
@@ -156,15 +158,25 @@ namespace infinit
     StonehengeConfiguration::make(std::shared_ptr<model::doughnut::Local> local,
                                   model::doughnut::Doughnut* dht)
     {
-      auto peers = NodeLocations{};
-      for (auto const& peer: this->peers)
-        peers.emplace_back(peer.id,
-                           Endpoints({model::Endpoint(peer.host, peer.port)}));
+      auto peers =
+        elle::make_vector(this->peers,
+                          [](auto const& peer) -> NodeLocation
+                          {
+                            return
+                              {
+                                peer.id,
+                                Endpoints({model::Endpoint(peer.host, peer.port)})
+                              };
+                          });
       return std::make_unique<infinit::overlay::Stonehenge>(
         peers, std::move(local), dht);
     }
 
-    static const elle::serialization::Hierarchy<Configuration>::
-    Register<StonehengeConfiguration> _registerStonehengeConfiguration("stonehenge");
+    namespace
+    {
+      auto const res =
+        elle::serialization::Hierarchy<Configuration>
+        ::Register<StonehengeConfiguration>("stonehenge");
+    }
   }
 }
