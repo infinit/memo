@@ -89,10 +89,9 @@ namespace infinit
         }
       }
 
-      Kouncil::Kouncil(
-        model::doughnut::Doughnut* dht,
-        std::shared_ptr<Local> local,
-        boost::optional<int> eviction_delay)
+      Kouncil::Kouncil(model::doughnut::Doughnut* dht,
+                       std::shared_ptr<Local> local,
+                       boost::optional<int> eviction_delay)
         : Overlay(dht, local)
         , _cleaning(false)
         , _broadcast_thread(new elle::reactor::Thread(
@@ -707,7 +706,8 @@ namespace infinit
                      id, it->endpoints().size());
           return it->endpoints();
         }
-        return boost::none;
+        else
+          return boost::none;
       }
 
       /*---------.
@@ -774,8 +774,7 @@ namespace infinit
       Kouncil::StaleEndpoint::connect(model::doughnut::Doughnut& dht)
       {
         auto c = dht.dock().connect(*this);
-        this->_slot = c->on_disconnection().connect(
-          std::bind(&StaleEndpoint::failed, this, boost::ref(dht)));
+        this->_slot = c->on_disconnection().connect([&]{ this->failed(dht); });
       }
 
       void

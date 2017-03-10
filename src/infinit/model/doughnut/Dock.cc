@@ -68,9 +68,10 @@ namespace infinit
           bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
             && doughnut.version() >= elle::Version(0, 7, 0);
           if (listen_address)
-            this->_local_utp_server->listen(*listen_address, port?*port:0, v6);
+            this->_local_utp_server->listen(*listen_address,
+                                            port.value_or(0), v6);
           else
-            this->_local_utp_server->listen(port? *port:0, v6);
+            this->_local_utp_server->listen(port.value_or(0), v6);
         }
         if (rdv_host)
         {
