@@ -257,7 +257,7 @@ namespace infinit
         _registerPacket##classname(type)
 
         struct Packet
-          : public elle::serialization::VirtuallySerializable<false>
+          : public elle::serialization::VirtuallySerializable<Packet, false>
         {
           Endpoint endpoint;
           Address sender;

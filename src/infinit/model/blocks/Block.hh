@@ -36,7 +36,7 @@ namespace infinit
 
       class Block
         : public elle::Printable
-        , public elle::serialization::VirtuallySerializable<true>
+        , public elle::serialization::VirtuallySerializable<Block, true>
         , public elle::Clonable<Block>
       {
       /*-------------.

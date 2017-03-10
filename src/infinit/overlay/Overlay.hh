@@ -194,7 +194,7 @@ namespace infinit
     };
 
     struct Configuration
-      : public elle::serialization::VirtuallySerializable<false>
+      : public elle::serialization::VirtuallySerializable<Configuration, false>
       , public elle::Clonable<Configuration>
     {
       model::doughnut::Protocol rpc_protocol;
