@@ -186,7 +186,7 @@ namespace infinit
        *  \param conflict_resolver Optional automatic conflict resolver.
        */
       elle::das::named::Function<
-        void (
+        bool (
           decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
           decltype(conflict_resolver)::Effective<
             std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>)>
@@ -201,7 +201,7 @@ namespace infinit
        *  \param conflict_resolver Optional automatic conflict resolver.
        */
       elle::das::named::Function<
-        void (
+        bool (
           decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
           decltype(conflict_resolver)::Effective<
             std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>)>
@@ -212,7 +212,7 @@ namespace infinit
       /** Remove an existing block.
        */
       elle::das::named::Function<
-        void (
+        bool (
           decltype(address)::Formal<Address>,
           decltype(signature = boost::optional<blocks::RemoveSignature>()))>
       remove;
