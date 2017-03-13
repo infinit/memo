@@ -173,8 +173,6 @@ def configure(
     'resources/sitemap.xml',
 
     'resources/images/favicon@2x.png',
-    'resources/images/logo.png',
-    'resources/images/logo@2x.png',
     'resources/images/logotype.png',
     'resources/images/logotype-small.png',
     'resources/images/logotype-small@2x.png',
