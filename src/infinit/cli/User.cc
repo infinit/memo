@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include <elle/algorithm.hh>
+
 #include <elle/cryptography/rsa/pem.hh>
 
 #include <elle/reactor/http/url.hh>
@@ -457,7 +459,7 @@ namespace infinit
       }
       else
       {
-        bool user_in_list = self && contains(users, self);
+        bool user_in_list = self && elle::contains(users, self);
         for (auto const& user: users)
         {
           std::cout << (self && user == self ? "* " : user_in_list ? "  " : "")

@@ -11,6 +11,7 @@
 #include <boost/range/algorithm/sort.hpp>
 #include <boost/range/algorithm_ext/iota.hpp>
 
+#include <elle/algorithm.hh>
 #include <elle/bytes.hh>
 #include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/filesystem/path.hh>

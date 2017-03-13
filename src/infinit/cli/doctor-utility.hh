@@ -1,5 +1,7 @@
 #pragma once
 
+// NO INCLUDES!!!
+//
 // This file is not public, it is made to be included by Doctor.cc
 // only.  It could be merged into it, it's here only to avoid
 // megafiles.
@@ -1746,7 +1748,7 @@ namespace
         {
           elle::reactor::TimeoutGuard guard(timeout);
           auto address = function(*server, port + deltaport);
-          bool external = !std::contains(public_ips, address.host);
+          bool external = !elle::contains(public_ips, address.host);
           store(results.protocols, name, *server, address.local_port,
                 address.remote_port, !external);
         }
