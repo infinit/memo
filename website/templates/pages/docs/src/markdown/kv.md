@@ -12,11 +12,11 @@ specified in the file [kv.proto](kv.proto).
 At its most basic level, a key-value store provides a mapping from an Address to
 its corresponding content. The API is comprised of four main methods:
 
-* `BlockOrStatus Get(Address)`: Returns the data Block found at given address or an error.
-* `Status Remove(Address)`: Erase the data Block at given address.
-* `Address Insert(Block)`: Insert a new block into the KV store, and return
+* `BlockOrException fetch(Address)`: Returns the data Block found at given address or an error.
+* `EmptyOrException remove(Address)`: Erase the data Block at given address.
+* `EmptyOrException insert(Block)`: Insert a new block into the KV store, and return
   the address that was attributed to it.
-* `Status Update(Block)`: Update a data block without changing its address.
+* `EmptyOrException update(Block)`: Update a data block without changing its address.
 
 One thing of importance should be noted at this point: in the infinit KV-store
 one cannot chose the address that will be allocated to a given block: the
@@ -41,10 +41,11 @@ purposes. The most important ones are:
 ### The Block message type ###
 
 Blocks are read and written on the KV store through the `Block` protobuf message
-type. Block contains two fields common to all block types:
+type. The most important fields are:
 
 * `bytes address`: The address of the Block.
-* `bytes data`: The data payload contained in the block.
+* `bytes data`: The raw data payload contained in the block.
+* `bytes data_plain`: The decyphered data payload (for mutable blocks which are encyphered by the kv store).
 
 Block contains more field whose meaning depends on the block type.
 
@@ -52,13 +53,13 @@ Block contains more field whose meaning depends on the block type.
 
 The CHB is an immutable block (it cannot be updated) whose address is the hash of
 its content. This feature ensures the data is tamper-proof: when fetching a CHB
-through the `Get` API call, infinit will recompute the hash of the content and check
-it against the address. If both hash do not match `Get` will return a `VALIDATION_FAILED`
-error.
+through the `fetch` API call, infinit will recompute the hash of the content and check
+it against the address. If both hash do not match `fetch` will return
+an exception.
 
 CHB exposes one additional feature through the `block.owner` field:
-if set to the address of an ACB, then removing the CHB will only be allowed if
-the user would be allowed to remove said ACB.
+if set to the address of mutable block, then removing the CHB will only be allowed if
+the user would be allowed to remove said mutable block.
 
 <a name="MB"></a>
 ### Mutable blocks (MB) ###
@@ -66,13 +67,13 @@ the user would be allowed to remove said ACB.
 Mutable blocks are versioned data blocks that can be updated.
 
 Infinit enforces an atomic update scheme by using a versioning mechanism:
-When you `Get` a mutable block, the returned `Block` contains a version field
+When you `fetch` a mutable block, the returned `Block` contains a version field
 that contains the block version at the moment the read occured.
-When you attempt to call `Update`, that version gets incremented by one, and
+When you attempt to call `update`, that version gets incremented by one, and
 the update will only succeed if the resulting number is above the current
-block version. Otheriwise the `Update` call will fail with a CONFLICT error
-message. In that case the returned `Status` object will contain the current
-version of the block.
+block version. Otheriwise the `update` call will fail with an exception.
+In that case the returned `Exception` object will contain the current
+version of the block in the `current` field.
 
 Atomic updates is an important feature. For instance if your MB's payload is
 a list of values and you want to add one item
@@ -87,10 +88,10 @@ which users can read and write the data.
 
 By default an ACB can only be read and written by the user who created the block.
 
-The `Block` message of type `ACLEntry` has the following fields used to control ACLs:
+The `Block` message has the following fields used to control ACLs:
 
-* `world_read`: If true all users will be allowed to read the ACB payload. 
-* `world_write`: If true all users will be allowed to update the ACB payload.
+* `world_readable`: If true all users will be allowed to read the ACB payload.
+* `world_writable`: If true all users will be allowed to update the ACB payload.
 * `acl`: A list of `ACLEntry`.
 
 The `ACLEntry` message exposes the following fields:
@@ -107,7 +108,7 @@ They are typically used as an entry point to access further data, usually by sto
 the address of an other Mutable Block in their payload.
 
 NBs are currently Immutable and thus cannot be updated once created.
-Use the `NBAddress(Bytes)` function to obtain the NB block address from its unique id.
+Use the `named_block_address(NamedBlockKey)` function to obtain the NB block address from its unique id.
 
 ## Creating and inserting new blocks ##
 
@@ -117,10 +118,10 @@ a `Block` message through one of the builder functions:
 * Block make_immutable_block(CHBData) : create CHB with given payload and owner
 * Block make_mutable_block(Empty) : create OKB (no arguments)
 * Block make_acl_block(Empty) : create ACB (no arguments)
-* Block make_named_block(Bytes) : create NB with given key
+* Block make_named_block(NamedBlockKey) : create NB with given key
 
-You can then fill the `data` field with your payload (for mutable blocks) and
-call the `Insert` function.
+You can then fill the `data` (CHB) or `data_plain` (MB) field with your payload and
+call the `insert` function.
 
 ## Example: a simple multi-user document storage system ##
 
