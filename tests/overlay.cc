@@ -1371,7 +1371,7 @@ ELLE_TEST_SCHEDULED(
       a->dht->overlay()->on_disappear(),
       [&] (Address id, bool)
       {
-        BOOST_CHECK_EQUAL(id, special_id(11));
+        BOOST_TEST(id == special_id(11));
         return true;
       });
     b.reset();
@@ -1383,7 +1383,7 @@ ELLE_TEST_SCHEDULED(
       a->dht->overlay()->on_discover(),
       [&] (NodeLocation const& l, bool)
       {
-        BOOST_CHECK_EQUAL(l.id(), special_id(11));
+        BOOST_TEST(l.id() == special_id(11));
         return true;
       });
     b = std::make_unique<DHT>(
@@ -1468,20 +1468,16 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
 
   cluster.discover();
 
-  auto client = std::unique_ptr<DHT>{};
-  auto spawn_client = [&] {
-    client = std::make_unique<DHT>(
+  auto client = std::make_unique<DHT>(
       ::keys = keys,
       ::version = config.version,
       ::make_overlay = config.overlay_builder,
       ::paxos = true,
       ::storage = nullptr);
-    if (auto kelips = get_kelips(*client))
-      kelips->config().query_put_retries = 6;
-    // We will shoot some servers.
-    discover(*client, servers[0] ? *servers[0] : *servers[1], false);
-  };
-  spawn_client();
+  if (auto kelips = get_kelips(*client))
+    kelips->config().query_put_retries = 6;
+  // We will shoot some servers.
+  discover(*client, servers[0] ? *servers[0] : *servers[1], false);
   for (auto& s: servers)
     hard_wait(*s, n-1, client->dht->id());
   hard_wait(*client, n, client->dht->id());
@@ -1516,7 +1512,6 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
       {
         for (auto& s: servers)
           hard_wait(*s, n-1, client->dht->id());
-        //spawn_client();
         hard_wait(*client, n, client->dht->id());
         ELLE_LOG("resuming");
       }
@@ -1534,7 +1529,6 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
         for (auto& s: servers)
           if (s)
             hard_wait(*s, n-2, client->dht->id(), false);
-          //spawn_client();
           hard_wait(*client, n-1, client->dht->id(), false);
       }
       ELLE_LOG("resuming");
