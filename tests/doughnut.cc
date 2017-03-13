@@ -1012,6 +1012,76 @@ namespace rebalancing
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 2u);
   }
 
+  template<typename BT>
+  void
+  run_extend_shrink_and_write()
+  {
+    DHT dht_a(dht::consensus::rebalance_auto_expand = true,
+      dht::consensus::node_timeout = std::chrono::seconds(0));
+    ELLE_LOG("first DHT: %s", dht_a.dht->id());
+    DHT dht_b(dht::consensus::rebalance_auto_expand = true,
+      dht::consensus::node_timeout = std::chrono::seconds(0));
+    DHT dht_c(dht::consensus::rebalance_auto_expand = false);
+    ELLE_LOG("third DHT: %s", dht_b.dht->id());
+    dht_b.overlay->connect(*dht_a.overlay);
+    dht_c.overlay->connect(*dht_a.overlay);
+    dht_b.overlay->connect(*dht_c.overlay);
+    auto b1 = dht_a.dht->make_block<BT>();
+    ELLE_LOG("write block to quorum of 3")
+    {
+      b1->data(std::string("extend_and_write 1"));
+      dht_a.dht->seal_and_insert(*b1);
+    }
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 3u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 3u);
+    dht_c.overlay->disconnect(*dht_a.overlay);
+    dht_c.overlay->disconnect(*dht_b.overlay);
+    auto& paxos_a =
+      dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
+    ELLE_LOG("rebalance block to quorum of 2")
+      paxos_a.rebalance(b1->address());
+      DHT dht_d(dht::consensus::rebalance_auto_expand = false);
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 2u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 2u);
+    dht_d.overlay->connect(*dht_a.overlay);
+    dht_d.overlay->connect(*dht_b.overlay);
+    ELLE_LOG("rebalance block to quorum of 3")
+      paxos_a.rebalance(b1->address());
+    ELLE_LOG("write block to quorum of 3")
+    {
+      b1->data(std::string("extend_and_write 1 bis"));
+      try
+      {
+        dht_a.dht->seal_and_update(*b1);
+      }
+      catch (infinit::model::doughnut::Conflict const& c)
+      {
+        ELLE_LOG("second write attempt");
+        dynamic_cast<infinit::model::blocks::MutableBlock&>(*c.current())
+          .data(std::string("extend_and_write 1 bis"));
+        try
+        {
+          dht_a.dht->seal_and_update(*c.current());
+        }
+        catch (infinit::model::doughnut::Conflict const& c)
+        {
+          ELLE_LOG("third write attempt");
+          dynamic_cast<infinit::model::blocks::MutableBlock&>(*c.current())
+            .data(std::string("extend_and_write 1 bis"));
+          dht_a.dht->seal_and_update(*c.current());
+        }
+      }
+    }
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3)), 3u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3)), 3u);
+  }
+
+  ELLE_TEST_SCHEDULED(extend_shrink_and_write)
+  {
+    run_extend_shrink_and_write<infinit::model::blocks::MutableBlock>();
+    run_extend_shrink_and_write<infinit::model::blocks::ACLBlock>();
+  }
+
   ELLE_TEST_SCHEDULED(shrink_and_write)
   {
     DHT dht_a(dht::consensus::rebalance_auto_expand = false);
@@ -1753,6 +1823,7 @@ ELLE_TEST_SUITE()
     using namespace rebalancing;
     rebalancing->add(BOOST_TEST_CASE(extend_and_write), 0, valgrind(3));
     rebalancing->add(BOOST_TEST_CASE(shrink_and_write), 0, valgrind(3));
+    rebalancing->add(BOOST_TEST_CASE(extend_shrink_and_write), 0, valgrind(3));
     rebalancing->add(BOOST_TEST_CASE(shrink_kill_and_write), 0, valgrind(3));
     rebalancing->add(BOOST_TEST_CASE(quorum_duel_1), 0, valgrind(3));
     rebalancing->add(BOOST_TEST_CASE(quorum_duel_2), 0, valgrind(3));
