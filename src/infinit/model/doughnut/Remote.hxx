@@ -1,3 +1,4 @@
+#include <elle/chrono.hh>
 #include <elle/os/environ.hh>
 
 namespace infinit
@@ -25,7 +26,8 @@ namespace infinit
           this->name(),
           [&]
           {
-            this->_channels = _remote->channels().get();
+            ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote");
+            this->_channels = _remote->_connection->channels().get();
             auto creds = _remote->credentials();
             if (!creds.empty())
             {
@@ -42,119 +44,113 @@ namespace infinit
                            std::function<R()> op)
       {
         ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote");
-        // We use one timeout for each connect attempt (in order to maybe
-        // refresh endpoints), and a second timeout for the overall operation
-        // setting INFINIT_SOFTFAIL_TIMEOUT to 0 will retry forever
-        static const int connect_timeout_sec =
-          std::stoi(elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "10"));
-        static const int softfail_timeout_sec =
-          std::stoi(elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT", "50"));
-        static const bool enable_fast_fail =
-          !elle::os::getenv("INFINIT_SOFTFAIL_FAST", "true").empty();
-        elle::DurationOpt connect_timeout;
-        int max_attempts = 0;
-        if (connect_timeout_sec > 0)
-          connect_timeout = boost::posix_time::seconds(connect_timeout_sec);
-        else if (connect_timeout_sec < 0)
+        auto const rpc_timeout = this->doughnut().connect_timeout();
+        auto const soft_fail = this->doughnut().soft_fail_timeout();
+        auto const rpc_start = std::chrono::system_clock::now();
+        auto const disconnected_for =
+          rpc_start - this->_connection->disconnected_since();
+        // No matter what, if we are disconnected, retry.
+        if (this->_connection->disconnected())
         {
-          connect_timeout = boost::posix_time::seconds(0);
-          max_attempts = 1;
+          ELLE_TRACE("%s: reconnect before running \"%s\"", this, name);
+          this->reconnect();
         }
-        if (softfail_timeout_sec && connect_timeout_sec>0)
+        // If we exceeded the connection time, retry.
+        else if (!this->_connection->connected() &&
+                 disconnected_for >= rpc_timeout)
         {
-          int sts = std::max(softfail_timeout_sec, connect_timeout_sec);
-          max_attempts = sts / connect_timeout_sec;
+          ELLE_TRACE("%s: drop stale connection before running \"%s\"",
+                     this, name);
+          this->reconnect();
         }
-        int attempt = 0;
-        bool need_reconnect = false;
-        /* Fast-fail mode: The idea is that the first failed operation
-        * will retry for the full INFINIT_SOFTFAIL_TIMEOUT, but subsequent
-        * operations will fail 'instantly', while trying to reconnect in
-        * the background.
-        */
-        if (_fast_fail && enable_fast_fail)
-        {
-          bool connect_running = false;
-          try
-          {
-            if (!this->_connected)
-            { // still connecting
-              ELLE_DEBUG("%s is still connecting on attempt %s",
-                         this, _reconnection_id);
-              connect_running = true;
-              if (std::chrono::system_clock::now() - this->_connection_start_time
-                > std::chrono::seconds(connect_timeout_sec))
-              {
-                this->_reconnecting = false;
-                connect_running = false;
-                ELLE_DEBUG("%s: scheduling reconnection attempts", this);
-              }
-              throw reactor::network::ConnectionClosed("Connection pending");
-            }
-            // if we reach here, connection thread finished without exception,
-            // go on
-            _fast_fail = false;
-          }
-          catch (reactor::network::Exception const& e)
-          {
-            if (connect_running)
-              throw;
-            ELLE_DEBUG("connection attempt failed, restarting");
-            try
-            {
-              reconnect(0_sec);
-            }
-            catch (reactor::network::Exception const& e)
-            {}
-            throw reactor::network::ConnectionClosed("Connection attempt restarted");
-          }
-        }
+        bool give_up = false;
         while (true)
         {
-          // We need to know if someone else made a reconnection attempt
-          // while we were waiting, and if so try this new connection
-          // without making a reconnect of our own
-          int prev_reconnection_id = _reconnection_id;
+          auto const rpc_timeout_delay =
+            rpc_timeout - (std::chrono::system_clock::now() - rpc_start);
+          auto const disconnected_for =
+            std::chrono::system_clock::now() - this->_connecting_since;
+          auto const soft_fail_delay = soft_fail - disconnected_for;
           try
           {
-            if (need_reconnect)
-              reconnect(connect_timeout);
+            // Try connecting until we reach the RPC timeout or the Remote
+            // softfail.
+            elle::reactor::Duration const delay =
+              boost::posix_time::millisec(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::min(rpc_timeout_delay, soft_fail_delay)).count());
+            if (elle::reactor::wait(this->_connected, delay))
+            {
+              auto const rpc_timeout_delay =
+                rpc_timeout - (std::chrono::system_clock::now() - rpc_start);
+              elle::reactor::Duration const delay =
+                boost::posix_time::millisec(
+                  std::chrono::duration_cast<std::chrono::milliseconds>(
+                    rpc_timeout_delay).count());
+              boost::asio::deadline_timer timeout(
+                elle::reactor::scheduler().io_service(), delay);
+              if (this->doughnut().soft_fail_running())
+                timeout.async_wait(
+                  [&, this, t = elle::reactor::scheduler().current()]
+                  (boost::system::error_code const& e)
+                  {
+                    if (!e)
+                    {
+                      ELLE_TRACE("%s: soft timeout on \"%s\" after %s",
+                                 this, name, delay);
+                      this->_disconnected_exception =
+                        std::make_exception_ptr(elle::reactor::network::TimeOut());
+                      t->raise_and_wake<elle::reactor::network::TimeOut>();
+                      give_up = true;
+                    }
+                  });
+              ELLE_TRACE("%s: run \"%s\"", this, name)
+                return op();
+            }
             else
-              connect(connect_timeout);
-            return op();
+            {
+              ELLE_TRACE("%s: soft-fail running \"%s\"", this, name);
+              give_up = true;
+            }
           }
-          catch(reactor::network::Exception const& e)
+          catch(elle::reactor::network::Exception const& e)
           {
-            ELLE_TRACE("network exception when invoking %s (attempt %s/%s): %s",
-                       name, attempt + 1, max_attempts, e);
+            ELLE_TRACE("%s: network exception when invoking %s: %s",
+                       this, name, e);
           }
-          catch(infinit::protocol::Serializer::EOF const& e)
+          catch(elle::protocol::Serializer::EOF const& e)
           {
-            ELLE_TRACE("EOF when invoking %s (attempt %s/%s): %s",
-                       name, attempt+1, max_attempts, e);
+            ELLE_TRACE("%s: EOF when invoking %s: %s", this, name, e);
           }
           catch (elle::Error const& e)
           {
             ELLE_TRACE("%s: connection error: %s", this, e);
             throw;
           }
-          if (max_attempts && ++attempt >= max_attempts)
-          {
-            _fast_fail = true;
-            throw reactor::network::ConnectionClosed(
-              elle::sprintf("could not establish channel for operation '%s'",
-                            name));
-          }
-          reactor::sleep(boost::posix_time::milliseconds(
-            200 * std::min(10, attempt)));
-          need_reconnect = (_reconnection_id == prev_reconnection_id);
+          if (give_up)
+            if (rpc_timeout_delay < soft_fail_delay)
+            {
+              ELLE_TRACE("%s: give up rpc %s after %s",
+                         this, name, rpc_timeout);
+              throw elle::reactor::network::TimeOut();
+            }
+            else
+            {
+              ELLE_TRACE(
+                "%s: soft-fail rpc %s after remote was disconnected for %s",
+                this, name, disconnected_for);
+              ELLE_ASSERT(this->_disconnected_exception);
+              std::rethrow_exception(this->_disconnected_exception);
+            }
+          else
+            this->reconnect();
         }
       }
 
       template <typename F>
       RemoteRPC<F>::RemoteRPC(std::string name, Remote* remote)
         : Super(name,
-                *remote->channels(),
+                *remote->_connection->channels(),
                 remote->doughnut().version(),
                 elle::unconst(&remote->credentials()))
         , _remote(remote)

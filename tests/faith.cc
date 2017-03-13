@@ -14,11 +14,14 @@ static
 void
 copy_and_store(B const& block,
                infinit::model::faith::Faith& d,
-               infinit::model::StoreMode mode)
+               bool insert)
 {
   namespace blk = infinit::model::blocks;
   auto ptr = block.clone();
-  d.store(std::move(ptr), mode);
+  if (insert)
+    d.insert(std::move(ptr));
+  else
+    d.update(std::move(ptr));
 }
 
 static
@@ -34,9 +37,9 @@ faith()
   BOOST_CHECK_NE(block1->address(), block2->address());
   ELLE_LOG("store blocks")
   {
-    copy_and_store(*block1, faith, infinit::model::STORE_INSERT);
+    copy_and_store(*block1, faith, true);
     BOOST_CHECK_EQUAL(*faith.fetch(block1->address()), *block1);
-    copy_and_store(*block2, faith, infinit::model::STORE_INSERT);
+    copy_and_store(*block2, faith, true);
     BOOST_CHECK_EQUAL(*faith.fetch(block2->address()), *block2);
   }
   ELLE_LOG("update block")
@@ -45,7 +48,7 @@ faith()
     block2->data(elle::Buffer(update.c_str(), update.length()));
     BOOST_CHECK_NE(*faith.fetch(block2->address()), *block2);
     ELLE_LOG("STORE %x", block2->data());
-    copy_and_store(*block2, faith, infinit::model::STORE_UPDATE);
+    copy_and_store(*block2, faith, false);
     ELLE_LOG("STORED %x", block2->data());
     BOOST_CHECK_EQUAL(*faith.fetch(block2->address()), *block2);
   }

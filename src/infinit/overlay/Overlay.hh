@@ -6,8 +6,8 @@
 #include <elle/json/json.hh>
 #include <elle/log.hh>
 
-#include <reactor/network/tcp-socket.hh>
-#include <reactor/Generator.hh>
+#include <elle/reactor/network/tcp-socket.hh>
+#include <elle/reactor/Generator.hh>
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/Endpoints.hh>
@@ -24,51 +24,82 @@ namespace infinit
     using model::NodeLocations;
 
     class Overlay
+      : public elle::Printable
     {
     /*------.
     | Types |
     `------*/
     public:
+      /// Remote or local peer.
       using Member = std::shared_ptr<model::doughnut::Peer>;
+      /// Members with weak or strong ownerships.
       using WeakMember = std::ambivalent_ptr<model::doughnut::Peer>;
+      /// Collection of members.
       using Members = std::vector<Member>;
 
     /*-------------.
     | Construction |
     `-------------*/
     public:
+      /** Construct an Overlay.
+       *
+       *  @arg dht   The owning Doughnut.
+       *  @arg local The optional Local.
+       */
       Overlay(model::doughnut::Doughnut* dht,
               std::shared_ptr<infinit::model::doughnut::Local> local);
+      /// Destroy an Overlay.
       virtual
       ~Overlay();
+      /// Prepare for destruction.
+      void
+      cleanup();
+      /// The owning Doughnut.
       ELLE_ATTRIBUTE_R(model::doughnut::Doughnut*, doughnut);
+      /// This node's id.
       ELLE_attribute_r(model::Address, id);
+      /// The node's optional Local.
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
+    protected:
+      virtual
+      void
+      _cleanup();
 
     /*------.
     | Peers |
     `------*/
     public:
+      /// Discover one anonymous peer.
       void
       discover(Endpoints const& peer);
+      /// Discover anonymous peers.
       void
       discover(std::vector<Endpoints> const& peers);
+      /// Discover one peer.
       void
       discover(NodeLocation const& peer);
+      /// Discover peers.
       void
       discover(NodeLocations const& peers);
+      bool
+      discovered(model::Address id);
     protected:
       virtual
       void
       _discover(NodeLocations const& peers) = 0;
+      virtual
+      bool
+      _discovered(model::Address id) = 0;
 
     /*------.
     | Hooks |
     `------*/
     public:
+      /// Announcing discovered nodes.
       ELLE_ATTRIBUTE_RX(
         boost::signals2::signal<void (NodeLocation id,
                                       bool observer)>, on_discover);
+      /// Announcing disconnected nodes.
       ELLE_ATTRIBUTE_RX(
         boost::signals2::signal<void (model::Address id,
                                       bool observer)>, on_disappear);
@@ -83,10 +114,10 @@ namespace infinit
        *  @arg n        How many owners to look for
        *  @arg fast     Whether to prefer a faster, partial answer.
        */
-      reactor::Generator<WeakMember>
+      elle::reactor::Generator<WeakMember>
       allocate(model::Address address, int n) const;
       /// Lookup multiple addresses (OP_FETCH/UPDATE only)
-      reactor::Generator<std::pair<model::Address, WeakMember>>
+      elle::reactor::Generator<std::pair<model::Address, WeakMember>>
       lookup(std::vector<model::Address> const& addresses, int n) const;
       /** Lookup blocks
        *
@@ -94,7 +125,7 @@ namespace infinit
        *  @arg n        How many owners to look for
        *  @arg fast     Whether to prefer a faster, partial answer.
        */
-      reactor::Generator<WeakMember>
+      elle::reactor::Generator<WeakMember>
       lookup(model::Address address, int n, bool fast = false) const;
       /// Lookup a single block owner
       WeakMember
@@ -111,17 +142,17 @@ namespace infinit
        * @arg ids ids of the nodes to lookup.
        * @raise elle::Error if the node is not found.
        */
-      reactor::Generator<WeakMember>
+      elle::reactor::Generator<WeakMember>
       lookup_nodes(std::unordered_set<model::Address> ids) const;
     protected:
       virtual
-      reactor::Generator<WeakMember>
+      elle::reactor::Generator<WeakMember>
       _allocate(model::Address address, int n) const = 0;
       virtual
-      reactor::Generator<std::pair<model::Address, WeakMember>>
+      elle::reactor::Generator<std::pair<model::Address, WeakMember>>
       _lookup(std::vector<model::Address> const& addresses, int n) const;
       virtual
-      reactor::Generator<WeakMember>
+      elle::reactor::Generator<WeakMember>
       _lookup(model::Address address, int n, bool fast) const = 0;
       /** Lookup a node by id
        *
@@ -153,10 +184,17 @@ namespace infinit
       virtual
       elle::json::Object
       stats() = 0;
+
+    /*----------.
+    | Printable |
+    `----------*/
+    public:
+      void
+      print(std::ostream& o) const override;
     };
 
     struct Configuration
-      : public elle::serialization::VirtuallySerializable<false>
+      : public elle::serialization::VirtuallySerializable<Configuration, false>
       , public elle::Clonable<Configuration>
     {
       model::doughnut::Protocol rpc_protocol;
@@ -170,7 +208,7 @@ namespace infinit
       // join();
       void
       serialize(elle::serialization::Serializer& s) override;
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
       make(std::shared_ptr<model::doughnut::Local> local,

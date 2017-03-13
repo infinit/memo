@@ -18,8 +18,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef Conflict Self;
-        typedef Error Super;
+        using Self = infinit::model::doughnut::Conflict;
+        using Super = elle::Error;
 
       /*-------------.
       | Construction |
@@ -35,7 +35,7 @@ namespace infinit
       `--------------*/
       public:
         Conflict(elle::serialization::SerializerIn& input);
-        virtual
+
         void
         serialize(elle::serialization::Serializer& s,
                   elle::Version const&) override;

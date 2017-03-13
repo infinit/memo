@@ -114,7 +114,8 @@ class Infinit(TemporaryDirectory):
             return_code = 0,
             env = {},
             noscript = False,
-            gdb = False):
+            gdb = False,
+            valgrind = False):
     if isinstance(args, str):
       args = args.split(' ')
     if args[0][0] != '/':
@@ -125,10 +126,12 @@ class Infinit(TemporaryDirectory):
         args[0] = '%s/%s' % (build_dir, args[0])
     args[0] += os.environ.get('EXE_EXT', '')
     if gdb:
-      args = ['/usr/bin/gdb', '--args'] + args
+      args = ['/usr/bin/gdb', '--args'] + args + ['-s']
       if input is not None:
-        print('GDB input: %r' % input)
+        print('GDB input: %s' % json.dumps(input))
         input = None
+    elif valgrind:
+      args = ['/usr/bin/valgrind'] + args
     env_ = {
       'INFINIT_RDV': '',
       'INFINIT_BACKTRACE': '1',
@@ -178,11 +181,14 @@ class Infinit(TemporaryDirectory):
           return_code = 0,
           env = {},
           gdb = False,
+          valgrind = False,
           timeout = 600,
           noscript = False):
     try:
       process = self.spawn(
-        args, input, return_code, env, gdb = gdb, noscript = noscript)
+        args, input, return_code, env,
+        gdb = gdb, valgrind = valgrind,
+        noscript = noscript)
       out, err = process.communicate(timeout = timeout)
       process.wait()
     except (subprocess.TimeoutExpired, KeyboardInterrupt):
@@ -206,8 +212,10 @@ class Infinit(TemporaryDirectory):
     self.last_err = err
     return out, err
 
-  def run_json(self, args, gdb = False, *largs, **kwargs):
-    out, err = self.run(args, gdb = gdb, *largs, **kwargs)
+  def run_json(self, args, gdb = False, valgrind = False,
+               *largs, **kwargs):
+    out, err = self.run(args, gdb = gdb, valgrind = valgrind,
+                        *largs, **kwargs)
     try:
       res = [json.loads(l) for l in out.split(cr) if l]
       if len(res) == 0:
@@ -225,13 +233,15 @@ class Infinit(TemporaryDirectory):
                  seq = None,
                  peer = None,
                  gdb = False,
+                 valgrind = False,
                  **kwargs):
     cmd = ['infinit-volume', '--run', volume, '--allow-root-creation']
     if user is not None:
       cmd += ['--as', user]
     if peer is not None:
       cmd += ['--peer', peer]
-    response = self.run_json(cmd, gdb = gdb, input = seq or kwargs)
+    response = self.run_json(cmd, gdb = gdb, valgrind = valgrind,
+                             input = seq or kwargs)
     return response
 
 def assertEq(a, b):

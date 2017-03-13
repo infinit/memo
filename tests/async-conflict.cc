@@ -26,16 +26,16 @@
 ELLE_LOG_COMPONENT("test");
 
 namespace ifs = infinit::filesystem;
-namespace rfs = reactor::filesystem;
+namespace rfs = elle::reactor::filesystem;
 namespace bfs = boost::filesystem;
 
-std::unique_ptr<reactor::filesystem::FileSystem>
+std::unique_ptr<elle::reactor::filesystem::FileSystem>
 make(
   bfs::path where,
   infinit::model::Address node_id,
   bool enable_async,
   int cache_size,
-  infinit::cryptography::rsa::KeyPair& kp)
+  elle::cryptography::rsa::KeyPair& kp)
 {
   std::unique_ptr<infinit::storage::Storage> s;
   boost::filesystem::create_directories(where / "store");
@@ -63,7 +63,7 @@ make(
         };
   auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
     node_id,
-    std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
+    std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
     kp.public_key(),
     passport,
     consensus,
@@ -73,7 +73,7 @@ make(
     std::move(s));
   auto ops = std::make_unique<infinit::filesystem::FileSystem>(
     "volume", dn, infinit::filesystem::allow_root_creation = true);
-  auto fs = std::make_unique<reactor::filesystem::FileSystem>(
+  auto fs = std::make_unique<elle::reactor::filesystem::FileSystem>(
     std::move(ops), true);
   return fs;
 }
@@ -85,7 +85,7 @@ cleanup(bfs::path where)
 }
 
 void
-writefile(std::unique_ptr<reactor::filesystem::FileSystem>& fs,
+writefile(std::unique_ptr<elle::reactor::filesystem::FileSystem>& fs,
                std::string const& name,
                std::string const& content)
 {
@@ -97,7 +97,7 @@ writefile(std::unique_ptr<reactor::filesystem::FileSystem>& fs,
 }
 
 int
-root_count(std::unique_ptr<reactor::filesystem::FileSystem>& fs)
+root_count(std::unique_ptr<elle::reactor::filesystem::FileSystem>& fs)
 {
   int count = 0;
   fs->path("/")->list_directory([&](std::string const&, struct stat*)
@@ -109,7 +109,7 @@ ELLE_TEST_SCHEDULED(async_cache)
 {
   auto node_id = infinit::model::Address::random(0);
   auto path = bfs::temp_directory_path() / bfs::unique_path();
-  auto kp = infinit::cryptography::rsa::keypair::generate(1024);
+  auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
   elle::os::setenv("INFINIT_HOME", path.string(), true);
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
@@ -233,7 +233,7 @@ ELLE_TEST_SCHEDULED(async_cache)
 
   ELLE_LOG("ACL conflict")
   {
-    auto kp2 = infinit::cryptography::rsa::keypair::generate(1024);
+    auto kp2 = elle::cryptography::rsa::keypair::generate(1024);
     auto pub2 = elle::serialization::json::serialize(kp2.K());
     elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
     fs = make(path, node_id, true, 10, kp);
@@ -262,7 +262,7 @@ ELLE_TEST_SCHEDULED(async_groups)
 {
   auto node_id = infinit::model::Address::random(0);
   auto path = bfs::temp_directory_path() / bfs::unique_path();
-  auto kp = infinit::cryptography::rsa::keypair::generate(1024);
+  auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
   elle::os::setenv("INFINIT_HOME", path.string(), true);
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
@@ -333,7 +333,7 @@ ELLE_TEST_SCHEDULED(async_groups)
 }
 
 infinit::model::doughnut::consensus::Async*
-async(std::unique_ptr<reactor::filesystem::FileSystem>& fs)
+async(std::unique_ptr<elle::reactor::filesystem::FileSystem>& fs)
 {
   auto dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
     dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
@@ -345,7 +345,7 @@ ELLE_TEST_SCHEDULED(async_squash2)
 {
   auto node_id = infinit::model::Address::random(0);
   auto path = bfs::temp_directory_path() / bfs::unique_path();
-  auto kp = infinit::cryptography::rsa::keypair::generate(1024);
+  auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
   elle::os::setenv("INFINIT_HOME", path.string(), true);
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
@@ -408,7 +408,7 @@ ELLE_TEST_SCHEDULED(async_squash)
 {
   auto node_id = infinit::model::Address::random(0);
   auto path = bfs::temp_directory_path() / bfs::unique_path();
-  auto kp = infinit::cryptography::rsa::keypair::generate(1024);
+  auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
   elle::os::setenv("INFINIT_HOME", path.string(), true);
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
@@ -439,7 +439,7 @@ ELLE_TEST_SCHEDULED(async_squash_conflict)
 {
   auto node_id = infinit::model::Address::random(0);
   auto path = bfs::temp_directory_path() / bfs::unique_path();
-  auto kp = infinit::cryptography::rsa::keypair::generate(1024);
+  auto kp = elle::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
   elle::os::setenv("INFINIT_HOME", path.string(), true);
   elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
@@ -481,7 +481,7 @@ ELLE_TEST_SCHEDULED(async_squash_conflict)
       are_7 = true;
       break;
     }
-    reactor::sleep(100_ms);
+    elle::reactor::sleep(100_ms);
   }
   BOOST_CHECK(are_7);
 

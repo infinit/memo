@@ -1,6 +1,9 @@
-#include <elle/log.hh>
+#include <boost/range/algorithm_ext/erase.hpp>
 
-#include <reactor/Scope.hh>
+#include <elle/log.hh>
+#include <elle/make-vector.hh>
+
+#include <elle/reactor/Scope.hh>
 
 #include <infinit/overlay/Overlay.hh>
 #include <infinit/model/MissingBlock.hh>
@@ -39,6 +42,16 @@ namespace infinit
       return {};
     }
 
+    void
+    Overlay::cleanup()
+    {
+      this->_cleanup();
+    }
+
+    void
+    Overlay::_cleanup()
+    {}
+
     /*------.
     | Peers |
     `------*/
@@ -52,10 +65,12 @@ namespace infinit
     void
     Overlay::discover(std::vector<Endpoints> const& peers)
     {
-      NodeLocations locs;
-      for (auto const& eps: peers)
-        locs.emplace_back(model::Address::null, eps);
-      this->discover(std::move(locs));
+      this->discover
+        (elle::make_vector(peers,
+                           [](auto const& eps)
+                           {
+                             return NodeLocation{model::Address::null, eps};
+                           }));
     }
 
     void
@@ -68,38 +83,43 @@ namespace infinit
     Overlay::discover(NodeLocations const& peers_)
     {
       ELLE_TRACE_SCOPE("%s: discover %f", this, peers_);
-      NodeLocations peers(peers_);
-      auto it = std::remove_if(peers.begin(), peers.end(),
+      auto peers = peers_;
+      auto it = boost::remove_erase_if(peers,
         [this] (NodeLocation const& nl)
         {
-          bool is_us = (nl.id() == this->doughnut()->id());
+          bool is_us = nl.id() == this->doughnut()->id();
           if (is_us)
             ELLE_TRACE("%s: removing ourself from peer list", this);
           return is_us;
         });
-      peers.erase(it, peers.end());
       this->_discover(peers);
+    }
+
+    bool
+    Overlay::discovered(model::Address id)
+    {
+      return this->_discovered(id);
     }
 
     /*-------.
     | Lookup |
     `-------*/
 
-    reactor::Generator<Overlay::WeakMember>
+    elle::reactor::Generator<Overlay::WeakMember>
     Overlay::allocate(model::Address address, int n) const
     {
       ELLE_TRACE_SCOPE("%s: allocate %s nodes for %f", this, n, address);
       return this->_allocate(address, n);
     }
 
-    reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+    elle::reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
     Overlay::lookup(std::vector<model::Address> const& addresses, int n) const
     {
       ELLE_TRACE_SCOPE("%s: lookup %s nodes for %f", *this, n, addresses);
       return this->_lookup(addresses, n);
     }
 
-    reactor::Generator<Overlay::WeakMember>
+    elle::reactor::Generator<Overlay::WeakMember>
     Overlay::lookup(model::Address address, int n, bool fast) const
     {
       ELLE_TRACE_SCOPE("%s: lookup%s %s nodes for %f",
@@ -116,12 +136,12 @@ namespace infinit
       throw model::MissingBlock(address);
     }
 
-    reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+    elle::reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
     Overlay::_lookup(std::vector<model::Address> const& addresses, int n) const
     {
-      return reactor::Generator<std::pair<model::Address, WeakMember>>(
+      return elle::reactor::Generator<std::pair<model::Address, WeakMember>>(
         [this, addresses, n]
-        (reactor::Generator<std::pair<model::Address, WeakMember>>::yielder const& yield)
+        (elle::reactor::Generator<std::pair<model::Address, WeakMember>>::yielder const& yield)
         {
           for (auto const& a: addresses)
             for (auto res: this->_lookup(a, n, false))
@@ -148,15 +168,15 @@ namespace infinit
         throw NodeNotFound(address);
     }
 
-    reactor::Generator<Overlay::WeakMember>
+    elle::reactor::Generator<Overlay::WeakMember>
     Overlay::lookup_nodes(std::unordered_set<model::Address> addresses) const
     {
       ELLE_TRACE_SCOPE("%s: lookup nodes %f", this, addresses);
-      return reactor::generator<Overlay::WeakMember>(
+      return elle::reactor::generator<Overlay::WeakMember>(
         [this, addresses]
-        (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+        (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
         {
-          reactor::for_each_parallel(
+          elle::reactor::for_each_parallel(
             addresses,
             [&] (model::Address const& address)
             {
@@ -179,6 +199,21 @@ namespace infinit
             "fetch node by address");
         });
     }
+
+    /*----------.
+    | Printable |
+    `----------*/
+
+    void
+    Overlay::print(std::ostream& o) const
+    {
+      elle::fprintf(o, "%s(%f)", elle::type_info(*this), this->id());
+    }
+
+
+    /*--------------.
+    | Configuration |
+    `--------------*/
 
     void
     Configuration::serialize(elle::serialization::Serializer& s)

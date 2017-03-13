@@ -1,6 +1,6 @@
 #pragma once
 
-#include <reactor/filesystem.hh>
+#include <elle/reactor/filesystem.hh>
 
 #include <infinit/MountOptions.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -22,7 +22,7 @@ namespace infinit
     void
     serialize(elle::serialization::Serializer& s) override;
 
-    std::unique_ptr<reactor::filesystem::FileSystem>
+    std::unique_ptr<elle::reactor::filesystem::FileSystem>
     run(std::shared_ptr<model::doughnut::Doughnut> dht,
         boost::optional<std::string> mountpoint_ = {},
         boost::optional<bool> readonly = {},

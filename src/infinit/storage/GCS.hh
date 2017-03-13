@@ -9,8 +9,8 @@
 # include <infinit/storage/Key.hh>
 # include <infinit/storage/GoogleAPI.hh>
 
-# include <reactor/http/Request.hh>
-# include <reactor/http/url.hh>
+# include <elle/reactor/http/Request.hh>
+# include <elle/reactor/http/url.hh>
 
 namespace infinit
 {

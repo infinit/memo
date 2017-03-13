@@ -18,12 +18,11 @@ namespace infinit
          it != end;
          ++it)
     {
-      if (is_regular_file(it->status()))
-      {
-        boost::filesystem::ifstream f;
-        this->_open_read(f, it->path(), name, "credential");
-        res.push_back(std::dynamic_pointer_cast<T>(load<std::unique_ptr<Credentials>>(f)));
-      }
+      if (!is_regular_file(it->status()) || is_hidden_file(it->path()))
+        continue;
+      boost::filesystem::ifstream f;
+      this->_open_read(f, it->path(), name, "credential");
+      res.push_back(std::dynamic_pointer_cast<T>(load<std::unique_ptr<Credentials>>(f)));
     }
     return res;
   }

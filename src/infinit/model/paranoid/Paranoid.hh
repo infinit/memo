@@ -3,7 +3,7 @@
 
 # include <memory>
 
-# include <cryptography/rsa/KeyPair.hh>
+# include <elle/cryptography/rsa/KeyPair.hh>
 
 # include <infinit/model/Model.hh>
 
@@ -17,7 +17,7 @@ namespace infinit
         : public Model
       {
       public:
-        Paranoid(infinit::cryptography::rsa::KeyPair keys,
+        Paranoid(elle::cryptography::rsa::KeyPair keys,
                  std::unique_ptr<storage::Storage> storage,
                  elle::Version version);
         virtual
@@ -25,18 +25,19 @@ namespace infinit
 
       protected:
         virtual
-        void
-        _store(std::unique_ptr<blocks::Block> block,
-               StoreMode mode,
-               std::unique_ptr<ConflictResolver> resolver) override;
-        virtual
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
                boost::optional<int> local_version) const override;
+        void
+        _insert(std::unique_ptr<blocks::Block> block,
+                std::unique_ptr<ConflictResolver> resolver) override;
+        void
+        _update(std::unique_ptr<blocks::Block> block,
+                std::unique_ptr<ConflictResolver> resolver) override;
         virtual
         void
         _remove(Address address, blocks::RemoveSignature) override;
-        ELLE_ATTRIBUTE_R(infinit::cryptography::rsa::KeyPair, keys);
+        ELLE_ATTRIBUTE_R(elle::cryptography::rsa::KeyPair, keys);
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
       };
     }

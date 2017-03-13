@@ -33,7 +33,7 @@ namespace infinit
         | Blocks |
         `-------*/
         public:
-          typedef std::pair<Address, boost::optional<int>> AddressVersion;
+          using AddressVersion = std::pair<Address, boost::optional<int>>;
           void
           store(std::unique_ptr<blocks::Block> block,
                 StoreMode mode,
@@ -49,7 +49,7 @@ namespace infinit
           static
           std::unique_ptr<blocks::Block>
           fetch_from_members(
-            reactor::Generator<overlay::Overlay::WeakMember>& peers,
+            elle::reactor::Generator<overlay::Overlay::WeakMember>& peers,
             Address address,
             boost::optional<int> local_version);
           void
@@ -125,7 +125,7 @@ namespace infinit
         `--------------*/
 
         class Configuration
-          : public elle::serialization::VirtuallySerializable<false>
+          : public elle::serialization::VirtuallySerializable<Configuration, false>
           , public elle::Clonable<Configuration>
         {
         /*--------.
@@ -133,7 +133,7 @@ namespace infinit
         `--------*/
         public:
           Configuration() = default;
-          virtual
+
           std::unique_ptr<Configuration>
           clone() const override;
           virtual
@@ -146,10 +146,10 @@ namespace infinit
         public:
           Configuration(elle::serialization::SerializerIn& s);
           static constexpr char const* virtually_serializable_key = "type";
-          virtual
+
           void
           serialize(elle::serialization::Serializer& s) override;
-          typedef infinit::serialization_tag serialization_tag;
+          using serialization_tag = infinit::serialization_tag;
         };
       }
     }

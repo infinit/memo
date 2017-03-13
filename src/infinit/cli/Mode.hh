@@ -4,18 +4,36 @@ namespace infinit
 {
   namespace cli
   {
-    template <typename Super>
+    template <typename Self,
+              typename Sig,
+              typename Symbol>
     struct Mode
-      : public Super
+      : public elle::das::named::Function<Sig>
     {
-      template <typename ... Args>
-      Mode(std::string help, das::cli::Options opts, Args&& ... args)
-        : Super(std::forward<Args>(args)...)
-        , help(std::move(help))
+      using Super = elle::das::named::Function<Sig>;
+
+      template <typename ... EArgs>
+      Mode(Self& self,
+           std::string help,
+           elle::das::cli::Options opts,
+           EArgs&& ... args)
+        : Super(elle::das::bind_method<Symbol>(self),
+                std::forward<EArgs>(args)...)
+        , description(std::move(help))
         , options(std::move(opts))
       {}
-      std::string help;
-      das::cli::Options options;
+
+      template <typename ... EArgs>
+      Mode(Self& self, std::string help, EArgs&& ... args)
+        : Mode(self, std::move(help), elle::das::cli::Options(),
+               std::forward<EArgs>(args)...)
+      {}
+
+      void
+      apply(Infinit& infinit, std::vector<std::string>& args);
+
+      std::string description;
+      elle::das::cli::Options options;
     };
   }
 }

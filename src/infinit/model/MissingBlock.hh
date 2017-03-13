@@ -14,7 +14,7 @@ namespace infinit
       : public elle::Error
     {
     public:
-      typedef elle::Error Super;
+      using Super = elle::Error;
       MissingBlock(Address address);
       MissingBlock(elle::serialization::SerializerIn& input);
       void

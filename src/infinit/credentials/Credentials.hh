@@ -8,7 +8,7 @@
 namespace infinit
 {
   class Credentials
-    : public elle::serialization::VirtuallySerializable<false>
+    : public elle::serialization::VirtuallySerializable<Credentials, false>
   {
   public:
     Credentials() = default;

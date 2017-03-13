@@ -1,8 +1,8 @@
 #pragma once
 
-#include <reactor/filesystem.hh>
-#include <reactor/Barrier.hh>
-#include <reactor/thread.hh>
+#include <elle/reactor/filesystem.hh>
+#include <elle/reactor/Barrier.hh>
+#include <elle/reactor/thread.hh>
 #include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/umbrella.hh>
 
@@ -10,11 +10,11 @@ namespace infinit
 {
   namespace filesystem
   {
-    namespace rfs = reactor::filesystem;
+    namespace rfs = elle::reactor::filesystem;
 
     class Directory;
-    typedef std::shared_ptr<Directory> DirectoryPtr;
-    typedef infinit::model::blocks::MutableBlock MutableBlock;
+    using DirectoryPtr = std::shared_ptr<Directory>;
+    using MutableBlock = infinit::model::blocks::MutableBlock;
     class FileHandle;
     class File
       : public rfs::Path
@@ -26,7 +26,7 @@ namespace infinit
            std::shared_ptr<FileData> data,
            std::shared_ptr<DirectoryData> parent,
            std::string const& name);
-      ~File();
+      ~File() override;
       void stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) override { THROW_NOTDIR();}
       std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override;
@@ -80,8 +80,7 @@ namespace infinit
                            WriteTarget target);
       std::unique_ptr<Block>
       operator()(Block& b,
-                 Block& current,
-                 model::StoreMode store_mode) override;
+                 Block& current) override;
       void
       serialize(elle::serialization::Serializer& s,
                 elle::Version const& version) override;

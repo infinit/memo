@@ -4,13 +4,13 @@
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/Symlink.hh>
 #include <infinit/filesystem/umbrella.hh>
-#include <reactor/filesystem.hh>
+#include <elle/reactor/filesystem.hh>
 
 namespace infinit
 {
   namespace filesystem
   {
-    typedef std::shared_ptr<Directory> DirectoryPtr;
+    using DirectoryPtr = std::shared_ptr<Directory>;
 
     class Symlink
       : public Node
@@ -47,7 +47,7 @@ namespace infinit
       void _commit(WriteTarget target) override;
       model::blocks::ACLBlock* _header_block(bool) override;
       FileHeader& _header() override;
-      virtual void print(std::ostream& stream) const override;
+      void print(std::ostream& stream) const override;
       std::unique_ptr<MutableBlock> _block;
       FileHeader _h;
     };

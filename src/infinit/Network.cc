@@ -4,9 +4,9 @@
 
 #include <elle/format/hexadecimal.hh>
 
-#include <cryptography/hash.hh>
+#include <elle/cryptography/hash.hh>
 
-#include <reactor/http/Request.hh>
+#include <elle/reactor/http/Request.hh>
 
 #include <infinit/Infinit.hh>
 #include <infinit/MountOptions.hh>
@@ -23,12 +23,12 @@ struct Endpoints
 {
   std::vector<std::string> addresses;
   int port;
-  using Model = das::Model<
+  using Model = elle::das::Model<
     Endpoints,
     decltype(elle::meta::list(infinit::symbols::addresses,
                               infinit::symbols::port))>;
 };
-DAS_SERIALIZE(Endpoints);
+ELLE_DAS_SERIALIZE(Endpoints);
 
 namespace infinit
 {
@@ -78,7 +78,7 @@ namespace infinit
   }
 
   std::pair<
-    std::unique_ptr<model::doughnut::Doughnut>, reactor::Thread::unique_ptr>
+    std::unique_ptr<model::doughnut::Doughnut>, elle::reactor::Thread::unique_ptr>
   Network::run(User const& user,
                MountOptions const& mo,
                bool client,
@@ -114,7 +114,7 @@ namespace infinit
           eps.emplace_back(model::Address::null, model::Endpoints({obj}));
 
     }
-    reactor::Thread::unique_ptr poll_thread;
+    elle::reactor::Thread::unique_ptr poll_thread;
     if (mo.fetch.value_or(mo.publish.value_or(false)))
     {
       beyond_fetch_endpoints(eps);
@@ -126,7 +126,7 @@ namespace infinit
     return {std::move(dht), std::move(poll_thread)};
   }
 
-  reactor::Thread::unique_ptr
+  elle::reactor::Thread::unique_ptr
   Network::make_stat_update_thread(infinit::Infinit const& infinit,
                                    infinit::User const& self,
                                    infinit::model::doughnut::Doughnut& model)
@@ -136,10 +136,10 @@ namespace infinit
         this->notify_storage(infinit, self, model.id());
       };
     model.local()->storage()->register_notifier(notify);
-    return reactor::every(60_min, "periodic storage stat updater", notify);
+    return elle::reactor::every(60_min, "periodic storage stat updater", notify);
   }
 
-  reactor::Thread::unique_ptr
+  elle::reactor::Thread::unique_ptr
   Network::make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
                                    infinit::overlay::NodeLocations const& locs_,
                                    int interval)
@@ -149,7 +149,7 @@ namespace infinit
         infinit::overlay::NodeLocations locs = locs_;
         while (true)
         {
-          reactor::sleep(boost::posix_time::seconds(interval));
+          elle::reactor::sleep(boost::posix_time::seconds(interval));
           infinit::overlay::NodeLocations news;
           try
           {
@@ -188,7 +188,7 @@ namespace infinit
           locs.erase(it, locs.end());
         }
       };
-    return reactor::Thread::unique_ptr(new reactor::Thread("beyond poller", poll));
+    return elle::reactor::Thread::unique_ptr(new elle::reactor::Thread("beyond poller", poll));
   }
 
   std::unique_ptr<model::doughnut::Doughnut>
@@ -294,7 +294,7 @@ namespace infinit
 #else
     // UNIX-domain addresses are limited to 108 chars on Linux and 104 chars
     // on macOS ¯\_(ツ)_/¯
-    namespace crypto = infinit::cryptography;
+    namespace crypto = elle::cryptography;
     auto qualified_name = elle::sprintf(
       "%s/%s/%s", elle::system::username(), user.name, this->name);
     auto hashed = crypto::hash(qualified_name, crypto::Oneway::sha);
@@ -309,9 +309,9 @@ namespace infinit
                                   Reporter report)
   {
     auto url = elle::sprintf("%s/networks/%s/endpoints", beyond(), this->name);
-    reactor::http::Request r(url);
-    reactor::wait(r);
-    if (r.status() != reactor::http::StatusCode::OK)
+    elle::reactor::http::Request r(url);
+    elle::reactor::wait(r);
+    if (r.status() != elle::reactor::http::StatusCode::OK)
       elle::err("unexpected HTTP error %s fetching endpoints for \"%s\"",
                 r.status(), this->name);
     auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
@@ -350,7 +350,7 @@ namespace infinit
     std::string name,
     std::unique_ptr<model::doughnut::consensus::Configuration> consensus,
     std::unique_ptr<overlay::Configuration> overlay,
-    cryptography::rsa::PublicKey owner,
+    elle::cryptography::rsa::PublicKey owner,
     elle::Version version,
     model::doughnut::AdminKeys admin_keys,
     std::vector<model::Endpoints> peers,
@@ -371,7 +371,7 @@ namespace infinit
                 model::doughnut::consensus::Configuration>>("consensus"))
     , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
               ("overlay"))
-    , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
+    , owner(s.deserialize<elle::cryptography::rsa::PublicKey>("owner"))
     , version()
   {
     try

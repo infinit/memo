@@ -1,8 +1,23 @@
 #include <elle/os/environ.hh>
 
-#include <reactor/network/resolve.hh>
+#include <elle/reactor/network/resolve.hh>
 
 #include <infinit/model/Endpoints.hh>
+
+namespace boost
+{
+  namespace asio
+  {
+    namespace ip
+    {
+      std::size_t
+      hash_value(boost::asio::ip::address const& address)
+      {
+        return boost::hash_value(address.to_string());
+      }
+    }
+  }
+}
 
 namespace infinit
 {
@@ -21,7 +36,7 @@ namespace infinit
 
     Endpoint::Endpoint(std::string const& address,
                        int port)
-      : Endpoint(reactor::network::resolve_udp(address, std::to_string(port)))
+      : Endpoint(elle::reactor::network::resolve_udp(address, std::to_string(port)))
     {}
 
     Endpoint::Endpoint(boost::asio::ip::tcp::endpoint ep)
@@ -42,7 +57,7 @@ namespace infinit
         elle::err("invalid endpoint: %s", repr);
       std::string saddr = repr.substr(0, sep);
       std::string sport = repr.substr(sep + 1);
-      auto ep = reactor::network::resolve_udp(saddr, sport, !v6);
+      auto ep = elle::reactor::network::resolve_udp(saddr, sport, !v6);
       this->_address = ep.address();
       this->_port = ep.port();
     }
@@ -128,6 +143,15 @@ namespace infinit
           }
         }
       }
+    }
+
+    std::size_t
+    hash_value(Endpoint const& endpoint)
+    {
+      std::size_t seed = 0;
+      boost::hash_combine(seed, endpoint.address());
+      boost::hash_combine(seed, endpoint.port());
+      return seed;
     }
 
     /*----------.

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <elle/factory.hh>
-#include <elle/named.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
@@ -49,6 +48,12 @@ public:
 
   void
   _discover(infinit::model::NodeLocations const& peers) override
+  {
+    ELLE_ABORT("not implemented");
+  }
+
+  bool
+  _discovered(infinit::model::Address id) override
   {
     ELLE_ABORT("not implemented");
   }
@@ -128,29 +133,29 @@ public:
   }
 
 protected:
-  reactor::Generator<WeakMember>
+  elle::reactor::Generator<WeakMember>
   _allocate(infinit::model::Address address, int n) const override
   {
     return this->_find(address, n, true);
   }
 
-  reactor::Generator<WeakMember>
+  elle::reactor::Generator<WeakMember>
   _lookup(infinit::model::Address address, int n, bool) const override
   {
     return this->_find(address, n, false);
   }
 
-  reactor::Generator<WeakMember>
+  elle::reactor::Generator<WeakMember>
   _find(infinit::model::Address address, int n, bool write) const
   {
     if (_yield)
-      reactor::yield();
+      elle::reactor::yield();
     ELLE_LOG_COMPONENT("Overlay");
     ELLE_TRACE_SCOPE("%s: lookup %s%s owners for %f",
                      this, n, write ? " new" : "", address);
-    return reactor::generator<Overlay::WeakMember>(
+    return elle::reactor::generator<Overlay::WeakMember>(
       [=]
-      (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+      (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
       {
         if (this->_fail_addresses.find(address) != this->_fail_addresses.end())
           return;
@@ -202,20 +207,20 @@ protected:
   ELLE_ATTRIBUTE_RX((std::unordered_map<infinit::model::Address, int>), partial_addresses);
 };
 
-DAS_SYMBOL(paxos);
-DAS_SYMBOL(keys);
-DAS_SYMBOL(owner);
-DAS_SYMBOL(id);
-DAS_SYMBOL(node_timeout);
-DAS_SYMBOL(storage);
-DAS_SYMBOL(make_overlay);
-DAS_SYMBOL(make_consensus);
-DAS_SYMBOL(version);
-DAS_SYMBOL(with_cache);
-DAS_SYMBOL(user_name);
-DAS_SYMBOL(yielding_overlay);
-DAS_SYMBOL(protocol);
-DAS_SYMBOL(port);
+ELLE_DAS_SYMBOL(paxos);
+ELLE_DAS_SYMBOL(keys);
+ELLE_DAS_SYMBOL(owner);
+ELLE_DAS_SYMBOL(id);
+ELLE_DAS_SYMBOL(node_timeout);
+ELLE_DAS_SYMBOL(storage);
+ELLE_DAS_SYMBOL(make_overlay);
+ELLE_DAS_SYMBOL(make_consensus);
+ELLE_DAS_SYMBOL(version);
+ELLE_DAS_SYMBOL(with_cache);
+ELLE_DAS_SYMBOL(user_name);
+ELLE_DAS_SYMBOL(yielding_overlay);
+ELLE_DAS_SYMBOL(protocol);
+ELLE_DAS_SYMBOL(port);
 
 std::unique_ptr<dht::consensus::Consensus>
 add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
@@ -243,10 +248,11 @@ public:
   template <typename ... Args>
   DHT(Args&& ... args)
   {
-    das::named::prototype(
+    // FIXME: use named::extend to not repeat dht::Doughnut arguments
+    elle::das::named::prototype(
       paxos = true,
-      keys = infinit::cryptography::rsa::keypair::generate(512),
-      owner = boost::optional<infinit::cryptography::rsa::KeyPair>(),
+      keys = elle::cryptography::rsa::keypair::generate(512),
+      owner = boost::optional<elle::cryptography::rsa::KeyPair>(),
       id = infinit::model::Address::random(0), // FIXME
       storage = elle::factory(
         [] { return std::make_unique<infinit::storage::Memory>(); }),
@@ -263,10 +269,15 @@ public:
       user_name = "",
       yielding_overlay = false,
       protocol = dht::Protocol::all,
-      port = boost::none
+      port = boost::none,
+      dht::connect_timeout =
+        elle::defaulted(std::chrono::milliseconds(5000)),
+      dht::soft_fail_timeout =
+        elle::defaulted(std::chrono::milliseconds(20000)),
+      dht::soft_fail_running = elle::defaulted(false)
       ).call([this] (bool paxos,
-                     infinit::cryptography::rsa::KeyPair keys,
-                     boost::optional<infinit::cryptography::rsa::KeyPair> owner,
+                     elle::cryptography::rsa::KeyPair keys,
+                     boost::optional<elle::cryptography::rsa::KeyPair> owner,
                      infinit::model::Address id,
                      std::unique_ptr<infinit::storage::Storage> storage,
                      boost::optional<elle::Version> version,
@@ -278,7 +289,10 @@ public:
                      std::string const& user_name,
                      bool yielding_overlay,
                      dht::Protocol p,
-                     boost::optional<int> port)
+                     boost::optional<int> port,
+                     elle::Defaulted<std::chrono::milliseconds> connect_timeout,
+                     elle::Defaulted<std::chrono::milliseconds> soft_fail_timeout,
+                     elle::Defaulted<bool> soft_fail_running)
              {
                this->init(paxos,
                           keys,
@@ -294,14 +308,18 @@ public:
                           user_name,
                           yielding_overlay,
                           p,
-                          port);
-             }, std::forward<Args>(args)...);
+                          port,
+                          connect_timeout,
+                          soft_fail_timeout,
+                          soft_fail_running
+                 );
+              }, std::forward<Args>(args)...);
   }
 
-  reactor::network::TCPSocket
+  elle::reactor::network::TCPSocket
   connect_tcp()
   {
-    return reactor::network::TCPSocket(
+    return elle::reactor::network::TCPSocket(
       this->dht->local()->server_endpoint().tcp());
   }
 
@@ -311,8 +329,8 @@ public:
 private:
   void
   init(bool paxos,
-       infinit::cryptography::rsa::KeyPair keys_,
-       infinit::cryptography::rsa::KeyPair owner,
+       elle::cryptography::rsa::KeyPair keys_,
+       elle::cryptography::rsa::KeyPair owner,
        infinit::model::Address id,
        std::unique_ptr<infinit::storage::Storage> storage,
        boost::optional<elle::Version> version,
@@ -324,10 +342,14 @@ private:
        std::string const& user_name,
        bool yielding_overlay,
        dht::Protocol p,
-       boost::optional<int> port)
+       boost::optional<int> port,
+       elle::Defaulted<std::chrono::milliseconds> connect_timeout,
+       elle::Defaulted<std::chrono::milliseconds> soft_fail_timeout,
+       elle::Defaulted<bool> soft_fail_running
+    )
   {
     auto keys =
-      std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_));
+      std::make_shared<elle::cryptography::rsa::KeyPair>(std::move(keys_));
     auto consensus = [&]() -> dht::Doughnut::ConsensusBuilder
       {
         if (paxos)
@@ -370,7 +392,10 @@ private:
         dht::port = port,
         dht::storage = std::move(storage),
         dht::version = version,
-        dht::protocol = p);
+        dht::protocol = p,
+        dht::connect_timeout = connect_timeout,
+        dht::soft_fail_timeout = soft_fail_timeout,
+        dht::soft_fail_running = soft_fail_running);
     else
       this->dht = std::make_shared<dht::Doughnut>(
         dht::name = user_name,
@@ -383,7 +408,9 @@ private:
         dht::port = port,
         dht::storage = std::move(storage),
         dht::version = version,
-        dht::protocol = p);
+        dht::protocol = p,
+        dht::connect_timeout = connect_timeout,
+        dht::soft_fail_timeout = soft_fail_timeout,
+        dht::soft_fail_running = soft_fail_running);
   }
 };
-

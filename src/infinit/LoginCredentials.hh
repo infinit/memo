@@ -1,6 +1,6 @@
 #pragma once
 
-#include <das/serializer.hh>
+#include <elle/das/serializer.hh>
 
 #include <infinit/symbols.hh>
 
@@ -17,7 +17,7 @@ namespace infinit
     std::string password_hash;
     std::string password;
 
-    using Model = das::Model<
+    using Model = elle::das::Model<
       LoginCredentials,
       decltype(elle::meta::list(
                  infinit::symbols::name,
@@ -26,4 +26,4 @@ namespace infinit
   };
 }
 
-DAS_SERIALIZE(infinit::LoginCredentials);
+ELLE_DAS_SERIALIZE(infinit::LoginCredentials);

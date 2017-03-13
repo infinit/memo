@@ -11,70 +11,55 @@ namespace infinit
   {
     Drive::Drive(Infinit& infinit)
       : Object(infinit)
-      , create(
-        "Create a drive (a network and volume pair)",
-        das::cli::Options(),
-        this->bind(modes::mode_create,
-                   cli::name,
-                   cli::description = boost::none,
-                   cli::network,
-                   cli::volume,
-                   cli::icon = boost::none,
-                   cli::push_drive = false,
-                   cli::push = false))
-      , delete_(
-        "Delete a drive locally",
-        das::cli::Options(),
-        this->bind(modes::mode_delete,
-                   cli::name,
-                   cli::pull = false,
-                   cli::purge = false))
-      , export_(
-        "Export a drive",
-        das::cli::Options(),
-        this->bind(modes::mode_export,
-                   cli::name))
-      , fetch(
-        "Fetch drive from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_fetch,
-                   cli::name = boost::none,
-                   cli::icon = boost::none))
-      , invite(
-        "Invite a user to join the drive",
-        das::cli::Options(),
-        this->bind(modes::mode_invite,
-                   cli::name,
-                   cli::user,
-                   cli::email,
-                   cli::fetch_drive = false,
-                   cli::fetch = false,
-                   cli::push_invitations = false,
-                   cli::push = false,
-                   cli::passport = false,
-                   // FIXME: should be hidden.
-                   cli::home = false))
-      , join(
-        "Join a drive you were invited to (Hub operation)",
-        das::cli::Options(),
-        this->bind(modes::mode_join,
-                   cli::name))
-      , list(
-        "List drives",
-        das::cli::Options(),
-        this->bind(modes::mode_list))
-      , pull(
-        "Remove a drive from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_pull,
-                   cli::name,
-                   cli::purge = false))
-      , push(
-        "Push a drive to {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_push,
-                   cli::name,
-                   cli::icon = boost::none))
+      , create(*this,
+               "Create a drive (a network and volume pair)",
+               cli::name,
+               cli::description = boost::none,
+               cli::network,
+               cli::volume,
+               cli::icon = boost::none,
+               cli::push_drive = false,
+               cli::push = false)
+      , delete_(*this,
+                "Delete a drive locally",
+                cli::name,
+                cli::pull = false,
+                cli::purge = false)
+      , export_(*this,
+                "Export a drive",
+                cli::name)
+      , fetch(*this,
+              "Fetch drive from {hub}",
+              elle::das::cli::Options(),
+              cli::name = boost::none,
+              cli::icon = boost::none)
+      , invite(*this,
+               "Invite a user to join the drive",
+               cli::name,
+               cli::user,
+               cli::email,
+               cli::fetch_drive = false,
+               cli::fetch = false,
+               cli::push_invitations = false,
+               cli::push = false,
+               cli::passport = false,
+               // FIXME: should be hidden.
+               cli::home = false)
+      , join(*this,
+             "Join a drive you were invited to (Hub operation)",
+             elle::das::cli::Options(),
+             cli::name)
+      , list(*this, "List drives")
+      , pull(*this,
+             "Remove a drive from {hub}",
+             elle::das::cli::Options(),
+             cli::name,
+             cli::purge = false)
+      , push(*this,
+             "Push a drive to {hub}",
+             elle::das::cli::Options(),
+             cli::name,
+             cli::icon = boost::none)
     {}
 
     namespace
@@ -257,7 +242,7 @@ namespace infinit
       {
         auto url = elle::sprintf("drives/%s/icon", name);
         auto request = cli.infinit().beyond_fetch_data(url, "icon", name);
-        if (request->status() == reactor::http::StatusCode::OK)
+        if (request->status() == elle::reactor::http::StatusCode::OK)
         {
           auto response = request->response();
           // XXX: Deserialize XML.
@@ -348,7 +333,7 @@ namespace infinit
           auto passport = Passport(
             user.public_key,
             network.name,
-            infinit::cryptography::rsa::KeyPair(owner.public_key,
+            elle::cryptography::rsa::KeyPair(owner.public_key,
                                                 owner.private_key.get()));
           ELLE_DEBUG("passport (%s: %s) created", network.name, user.name);
           cli.infinit().passport_save(passport);

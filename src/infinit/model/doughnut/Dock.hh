@@ -1,14 +1,18 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_DOCK
-# define INFINIT_MODEL_DOUGHNUT_DOCK
+#pragma once
 
-# include <boost/asio.hpp>
+#include <boost/asio.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/global_fun.hpp>
+#include <boost/multi_index_container.hpp>
 
-# include <reactor/network/utp-socket.hh>
+#include <elle/reactor/network/utp-socket.hh>
 
-# include <infinit/RPC.hh>
-# include <infinit/model/Address.hh>
-# include <infinit/model/doughnut/protocol.hh>
-# include <infinit/overlay/Overlay.hh>
+#include <infinit/RPC.hh>
+#include <infinit/model/Address.hh>
+#include <infinit/model/doughnut/KeyCache.hh>
+#include <infinit/model/doughnut/Peer.hh>
+#include <infinit/model/doughnut/protocol.hh>
+#include <infinit/overlay/Overlay.hh>
 
 namespace infinit
 {
@@ -16,12 +20,14 @@ namespace infinit
   {
     namespace doughnut
     {
+      namespace bmi = boost::multi_index;
       class Dock
       {
       /*-------------.
       | Construction |
       `-------------*/
       public:
+        class Connection;
         Dock(Doughnut& dht,
              Protocol protocol = Protocol::all,
              boost::optional<int> port = {},
@@ -30,35 +36,141 @@ namespace infinit
         Dock(Dock const&) = delete;
         Dock(Dock&&);
         ~Dock();
-        void cleanup();
+        void
+        disconnect();
+        void
+        cleanup();
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
         ELLE_ATTRIBUTE_R(std::vector<boost::asio::ip::address>,
                          local_ips);
         ELLE_ATTRIBUTE_R(Protocol, protocol);
-        ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::UTPServer>,
+        ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::network::UTPServer>,
                        local_utp_server);
-        ELLE_ATTRIBUTE_R(reactor::network::UTPServer&, utp_server);
-        ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, rdv_connect_thread);
+        ELLE_ATTRIBUTE_R(elle::reactor::network::UTPServer&, utp_server);
+        ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::Thread>, rdv_connect_thread);
         ELLE_ATTRIBUTE_RX(
-          boost::signals2::signal<void (Remote&)>,
-          on_connect);
+          boost::signals2::signal<void (Connection&)>, on_connection);
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<void (std::shared_ptr<Remote>)>, on_peer);
+        template <typename T, typename R, R (T::*M)() const>
+        static
+        R
+        weak_access(std::weak_ptr<T> const& p)
+        {
+          return (ELLE_ENFORCE(p.lock()).get()->*M)();
+        }
+
+      /*-----------.
+      | Connection |
+      `-----------*/
+      public:
+        class Connection
+          : public elle::Printable::as<Connection>
+        {
+        private:
+          Connection(Dock& dock, NodeLocation loc);
+        public:
+          static
+          std::shared_ptr<Connection>
+          make(Dock& dock, NodeLocation loc);
+          std::shared_ptr<Connection>
+          shared_from_this();
+          // Workaround shared_from_this in the constructor. Always build
+          // connections through Dock::connect.
+          void
+          init();
+          ~Connection() noexcept(false);
+          ELLE_ATTRIBUTE_R(Dock&, dock);
+          ELLE_ATTRIBUTE_R(NodeLocation, location);
+          ELLE_attribute_r(Address, id);
+          ELLE_attribute_r(Endpoints, endpoints);
+          ELLE_ATTRIBUTE(std::unique_ptr<std::iostream>, socket);
+          ELLE_ATTRIBUTE(std::unique_ptr<elle::protocol::Serializer>, serializer);
+          ELLE_ATTRIBUTE_R(std::unique_ptr<elle::protocol::ChanneledStream>,
+                           channels, protected);
+          ELLE_ATTRIBUTE_RX(RPCServer, rpc_server);
+          ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
+          ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, thread);
+          /// Whether the remote has ever connected.
+          ELLE_ATTRIBUTE_R(bool, connected);
+          ELLE_ATTRIBUTE_R(boost::optional<model::Endpoint>,
+                           connected_endpoint);
+          /// Whether the remote has disconnected or won't ever connect.
+          ELLE_ATTRIBUTE_R(bool, disconnected);
+          ELLE_ATTRIBUTE_RX(boost::signals2::signal<void ()>, on_connection);
+          ELLE_ATTRIBUTE_RX(boost::signals2::signal<void ()>, on_disconnection);
+          ELLE_ATTRIBUTE_R(
+            std::chrono::system_clock::time_point, disconnected_since);
+          ELLE_ATTRIBUTE_R(std::exception_ptr, disconnected_exception);
+          ELLE_ATTRIBUTE_RX(KeyCache, key_hash_cache);
+          ELLE_ATTRIBUTE(std::function<void()>, cleanup_on_disconnect);
+          ELLE_ATTRIBUTE_R(std::weak_ptr<Connection>, self);
+
+        public:
+          void
+          disconnect();
+          void
+          print(std::ostream& out) const;
+        private:
+          void
+          _key_exchange(elle::protocol::ChanneledStream& channels);
+          friend class Dock;
+        };
+        /// Connecting connections by endpoints.
+        using Connecting = bmi::multi_index_container<
+          std::weak_ptr<Connection>,
+          bmi::indexed_by<
+            bmi::hashed_unique<
+              bmi::global_fun<
+                std::weak_ptr<Connection> const&,
+                Endpoints const&,
+                &weak_access<
+                  Connection, Endpoints const&, &Connection::endpoints>>>>>;
+        /// Connected connections by peer id.
+        using Connected = bmi::multi_index_container<
+          std::weak_ptr<Connection>,
+          bmi::indexed_by<
+            bmi::hashed_unique<
+              bmi::global_fun<
+                std::weak_ptr<Connection> const&,
+                Address const&,
+                &weak_access<Connection, Address const&, &Connection::id>>>>>;
+        /** Get a connection to the given location.
+         *
+         *  Retreive a connection to the current location, either already
+         *  connected or currently connecting, or open a new one if there is
+         *  none. Ownership is not kept by the Dock. If the location id is null,
+         *  fill it after connection. If it is set, disconnect in case of
+         *  mismatch.
+         *
+         *  @param l         Location of the peer to connect to.
+         *  @param no_remote Do not automatically create a remote on this conneciton
+         */
+        std::shared_ptr<Connection>
+        connect(NodeLocation l, bool no_remote = false);
+        ELLE_ATTRIBUTE_R(Connecting, connecting);
+        ELLE_ATTRIBUTE(Connected, connected);
 
       /*-----.
       | Peer |
       `-----*/
       public:
-        overlay::Overlay::Member
-        evict_peer(Address id);
-        void
-        insert_peer(overlay::Overlay::Member peer);
         overlay::Overlay::WeakMember
-        make_peer(NodeLocation peer,
-                  boost::optional<EndpointsRefetcher> refetcher);
-        using PeerCache = std::unordered_map<Address, overlay::Overlay::Member>;
+        make_peer(NodeLocation peer);
+        std::shared_ptr<Remote>
+        make_peer(std::shared_ptr<Connection> connection, bool ignored_result = false);
+        /// Weak references to all remotes. They will never be null as they
+        /// unregister themselves on destruction.
+        using PeerCache = bmi::multi_index_container<
+          std::weak_ptr<Peer>,
+          bmi::indexed_by<
+            bmi::hashed_unique<
+              bmi::global_fun<std::weak_ptr<Peer> const&,
+                              Address const&,
+                              &weak_access<Peer, Address const&, &Peer::id>>>>>;
         ELLE_ATTRIBUTE_R(PeerCache, peer_cache);
+        friend class Remote;
       };
     }
   }
 }
-
-#endif

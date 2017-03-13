@@ -3,8 +3,8 @@
 #include <elle/log.hh>
 #include <elle/utils.hh>
 
-#include <cryptography/hash.hh>
-#include <cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/hash.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
 #include <elle/serialization/json.hh>
 
@@ -31,7 +31,7 @@ namespace infinit
         , _doughnut(dn)
       {}
 
-      UB::UB(Doughnut* dn, std::string name, cryptography::rsa::PublicKey key, bool reverse)
+      UB::UB(Doughnut* dn, std::string name, elle::cryptography::rsa::PublicKey key, bool reverse)
         : Super(reverse ?
                 UB::hash_address(key, *dn) : UB::hash_address(name, *dn))
         , _name(std::move(name))
@@ -53,28 +53,28 @@ namespace infinit
       Address
       UB::hash_address(std::string const& name, Doughnut const& dht)
       {
-        auto hash = cryptography::hash (elle::sprintf("UB/%s", name),
-                                        cryptography::Oneway::sha256);
+        auto hash = elle::cryptography::hash (elle::sprintf("UB/%s", name),
+                                        elle::cryptography::Oneway::sha256);
         return Address(hash.contents(), flags::immutable_block,
                        dht.version() >= elle::Version(0, 5, 0));
       }
 
       Address
-      UB::hash_address(cryptography::rsa::PublicKey const& key,
+      UB::hash_address(elle::cryptography::rsa::PublicKey const& key,
                        Doughnut const& dht)
       {
-        auto buf = cryptography::rsa::publickey::der::encode(key);
-        auto hash = cryptography::hash (elle::sprintf("RUB/%s", buf),
-                                        cryptography::Oneway::sha256);
+        auto buf = elle::cryptography::rsa::publickey::der::encode(key);
+        auto hash = elle::cryptography::hash (elle::sprintf("RUB/%s", buf),
+                                        elle::cryptography::Oneway::sha256);
         return Address(hash.contents(), flags::immutable_block,
                        dht.version() >= elle::Version(0, 5, 0));
       }
 
       elle::Buffer
-      UB::hash(cryptography::rsa::PublicKey const& key)
+      UB::hash(elle::cryptography::rsa::PublicKey const& key)
       {
-        auto serial = cryptography::rsa::publickey::der::encode(key);
-        auto hash = cryptography::hash(serial, cryptography::Oneway::sha256);
+        auto serial = elle::cryptography::rsa::publickey::der::encode(key);
+        auto hash = elle::cryptography::hash(serial, elle::cryptography::Oneway::sha256);
         return hash;
       }
 
@@ -176,7 +176,7 @@ namespace infinit
              elle::Version const& version)
         : Super(input, version)
         , _name(input.deserialize<std::string>("name"))
-        , _key(input.deserialize<cryptography::rsa::PublicKey>("key"))
+        , _key(input.deserialize<elle::cryptography::rsa::PublicKey>("key"))
         , _reverse(input.deserialize<bool>("reverse"))
       {
         input.serialize_context<Doughnut*>(this->_doughnut);

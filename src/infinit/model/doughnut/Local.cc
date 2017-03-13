@@ -1,16 +1,17 @@
 #include <infinit/model/doughnut/Local.hh>
 
 #include <elle/log.hh>
-#include <elle/os/environ.hh>
+#include <elle/make-vector.hh>
 #include <elle/network/Interface.hh>
+#include <elle/os/environ.hh>
 #include <elle/utility/Move.hh>
 
-#include <cryptography/random.hh>
-#include <cryptography/rsa/PublicKey.hh>
-#include <cryptography/rsa/Padding.hh>
+#include <elle/cryptography/random.hh>
+#include <elle/cryptography/rsa/PublicKey.hh>
+#include <elle/cryptography/rsa/Padding.hh>
 
-#include <reactor/Scope.hh>
-#include <reactor/network/utp-server.hh>
+#include <elle/reactor/Scope.hh>
+#include <elle/reactor/network/utp-server.hh>
 
 #include <infinit/model/Endpoints.hh>
 #include <infinit/model/MissingBlock.hh>
@@ -27,7 +28,7 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
 
-typedef elle::serialization::Binary Serializer;
+using Serializer = elle::serialization::Binary;
 
 namespace infinit
 {
@@ -57,14 +58,13 @@ namespace infinit
         : Super(dht, std::move(id))
         , _storage(std::move(storage))
       {
-        std::unique_ptr<reactor::network::TCPServer> old_server;
+        std::unique_ptr<elle::reactor::network::TCPServer> old_server;
         int num_run = 0;
         while (true)
         {
           if (++num_run > 3)
-          { // we are looping on the same ports, try one at random instead
+            // we are looping on the same ports, try one at random instead
             port = 1025 + (rand()%(65536 - 1025));
-          }
           try
           {
             ELLE_TRACE_SCOPE("%s: construct", this);
@@ -72,13 +72,13 @@ namespace infinit
                 && dht.version() >= elle::Version(0, 7, 0);
             if (p == Protocol::tcp || p == Protocol::all)
             {
-              this->_server = std::make_unique<reactor::network::TCPServer>();
+              this->_server = std::make_unique<elle::reactor::network::TCPServer>();
               if (listen_address)
                 this->_server->listen(*listen_address, port, v6);
               else
                 this->_server->listen(port, v6);
-              this->_server_thread = std::make_unique<reactor::Thread>(
-                elle::sprintf("%s server", *this),
+              this->_server_thread = std::make_unique<elle::reactor::Thread>(
+                elle::sprintf("%s", this),
                 [this] { this->_serve_tcp(); });
               ELLE_LOG("%s: listen on tcp://%s",
                        this, this->_server->local_endpoint());
@@ -87,7 +87,7 @@ namespace infinit
             {
               int udp_port = port;
               this->_utp_server =
-                std::make_unique<reactor::network::UTPServer>();
+                std::make_unique<elle::reactor::network::UTPServer>();
               if (this->_server)
                 udp_port = this->_server->port();
               try
@@ -104,8 +104,8 @@ namespace infinit
                 else
                   throw; // port was specified in args, no retry
               }
-              this->_utp_server_thread = std::make_unique<reactor::Thread>(
-                elle::sprintf("%s utp server", *this),
+              this->_utp_server_thread = std::make_unique<elle::reactor::Thread>(
+                elle::sprintf("%s UTP", *this),
                 [this] { this->_serve_utp(); });
               ELLE_LOG("%s: listen on utp://%s",
                        this, this->_utp_server->local_endpoint());
@@ -281,19 +281,20 @@ namespace infinit
       | Keys |
       `-----*/
 
-      std::vector<cryptography::rsa::PublicKey>
-      Local::_resolve_keys(std::vector<int> ids)
+      std::vector<elle::cryptography::rsa::PublicKey>
+      Local::_resolve_keys(std::vector<int> const& ids)
       {
-        std::vector<infinit::cryptography::rsa::PublicKey> res;
-        for (auto const& h: ids)
-          res.emplace_back(*this->doughnut().resolve_key(h));
-        return res;
+        return elle::make_vector(ids,
+                                 [this](auto const& h)
+                                 {
+                                   return *this->doughnut().resolve_key(h);
+                                 });
       }
 
-      std::unordered_map<int, cryptography::rsa::PublicKey>
+      std::unordered_map<int, elle::cryptography::rsa::PublicKey>
       Local::_resolve_all_keys()
       {
-        std::unordered_map<int, cryptography::rsa::PublicKey> res;
+        auto res = std::unordered_map<int, elle::cryptography::rsa::PublicKey>{};
         for (auto const& k: this->doughnut().key_cache())
           res.emplace(k.hash, *k.key);
         return res;
@@ -322,18 +323,18 @@ namespace infinit
         auto ep = this->server_endpoint();
         if (ep.address() != boost::asio::ip::address_v6::any()
          && ep.address() != boost::asio::ip::address_v4::any())
-          return { ep };
+          return {ep};
         Endpoints res;
-        auto filter = (elle::network::Interface::Filter::only_up |
-                       elle::network::Interface::Filter::no_loopback |
-                       elle::network::Interface::Filter::no_autoip |
-                       elle::network::Interface::Filter::no_awdl);
+        auto filter = (elle::network::Interface::Filter::only_up
+                       | elle::network::Interface::Filter::no_loopback
+                       | elle::network::Interface::Filter::no_autoip
+                       | elle::network::Interface::Filter::no_awdl);
         for (auto const& itf: elle::network::Interface::get_map(filter))
         {
           if (!itf.second.ipv4_address.empty()
               && itf.second.ipv4_address != boost::asio::ip::address_v4::any().to_string())
           {
-            res.push_back(reactor::network::TCPServer::EndPoint(
+            res.push_back(elle::reactor::network::TCPServer::EndPoint(
               boost::asio::ip::address::from_string(itf.second.ipv4_address),
               ep.port()));
           }
@@ -341,7 +342,7 @@ namespace infinit
           for (auto const& ip6: itf.second.ipv6_address)
           {
             if (ip6 != boost::asio::ip::address_v6::any().to_string())
-              res.push_back(reactor::network::TCPServer::EndPoint(
+              res.push_back(elle::reactor::network::TCPServer::EndPoint(
                 boost::asio::ip::address::from_string(ip6),
                 ep.port()));
           }
@@ -365,53 +366,43 @@ namespace infinit
       Local::_register_rpcs(RPCServer& rpcs)
       {
         rpcs.set_context(this);
-        rpcs._destroying.connect([this] ( RPCServer* rpcs)
+        rpcs._destroying.connect([this] (RPCServer* rpcs)
           {
             this->_passports.erase(rpcs);
           });
         rpcs.add("store",
-                 std::function<void (blocks::Block const& data, StoreMode)>(
-                   [this,&rpcs] (blocks::Block const& block, StoreMode mode)
-                   {
-                     this->_require_auth(rpcs, true);
-                     return this->store(block, mode);
-                   }));
+                 [this, &rpcs] (blocks::Block const& block, StoreMode mode)
+                 {
+                   this->_require_auth(rpcs, true);
+                   return this->store(block, mode);
+                 });
         rpcs.add("fetch",
-                 std::function<
-                   std::unique_ptr<blocks::Block> (Address,
-                                                   boost::optional<int>)>(
-                  [this, &rpcs] (Address address, boost::optional<int> local_version)
-                  {
-                    this->_require_auth(rpcs, false);
-                    return this->fetch(address, local_version);
-                  }));
+                 [this, &rpcs] (Address address, boost::optional<int> local_version)
+                 {
+                   this->_require_auth(rpcs, false);
+                   return this->fetch(address, local_version);
+                 });
         if (this->_doughnut.version() >= elle::Version(0, 4, 0))
           rpcs.add("remove",
-                  std::function<void (Address address, blocks::RemoveSignature)>(
-                    [this, &rpcs] (Address address, blocks::RemoveSignature rs)
-                    {
-                      this->_require_auth(rpcs, true);
-                      this->remove(address, rs);
-                    }));
+                   [this, &rpcs] (Address address, blocks::RemoveSignature rs)
+                   {
+                     this->_require_auth(rpcs, true);
+                     this->remove(address, rs);
+                   });
         else
           rpcs.add("remove",
-                  std::function<void (Address address)>(
-                  [this, &rpcs] (Address address)
-                    {
-                      this->_require_auth(rpcs, true);
-                      this->remove(address, {});
-                    }));
+                   [this, &rpcs] (Address address)
+                   {
+                     this->_require_auth(rpcs, true);
+                     this->remove(address, {});
+                   });
         rpcs.add("ping",
-                std::function<int(int)>(
-                  [this] (int i)
-                  {
-                    return i;
-                  }));
+                 [this] (int i)
+                 {
+                   return i;
+                 });
         auto stored_challenge = std::make_shared<elle::Buffer>();
-        typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
-
         auto auth_syn = [this, &rpcs, stored_challenge] (Passport const& p)
-          -> std::pair<Challenge, Passport*>
           {
             ELLE_TRACE("%s: authentication syn", *this);
             bool verify = this->_doughnut.verify(p, false, false, false);
@@ -421,7 +412,7 @@ namespace infinit
               elle::err("Passport validation failed");
             }
             // generate and store a challenge to ensure remote owns the passport
-            auto challenge = infinit::cryptography::random::generate<elle::Buffer>(128);
+            auto challenge = elle::cryptography::random::generate<elle::Buffer>(128);
             *stored_challenge = std::move(challenge);
             this->_passports.insert(std::make_pair(&rpcs, p));
             return std::make_pair(
@@ -430,58 +421,48 @@ namespace infinit
           };
         if (this->_doughnut.version() >= elle::Version(0, 7, 0))
         {
-          using AuthSyn =
-            Remote::Auth (Address id, Passport const&, elle::Version const&);
           rpcs.add(
-            "auth_syn", std::function<AuthSyn>(
-              [this, auth_syn]
-              (Address id, Passport const& p, elle::Version const& v)
-                -> Remote::Auth
-              {
-                if (this->doughnut().id() == id)
-                  throw HandshakeFailed(
-                    elle::sprintf("incoming peer has same id as us: %s", id));
-                auto dht_v = this->_doughnut.version();
-                if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
-                  throw HandshakeFailed(
-                    elle::sprintf("invalid version %s, we use %s", v, dht_v));
-                auto res = auth_syn(p);
-                return Remote::Auth(
-                  this->id(), std::move(res.first), *res.second);
-              }));
+            "auth_syn",
+            [this, auth_syn]
+            (Address id, Passport const& p, elle::Version const& v)
+            {
+              if (this->doughnut().id() == id)
+                elle::err<HandshakeFailed>
+                  ("incoming peer has same id as us: %s", id);
+              auto dht_v = this->_doughnut.version();
+              if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
+                elle::err<HandshakeFailed>("invalid version %s, we use %s",
+                                           v, dht_v);
+              auto res = auth_syn(p);
+              return Remote::Auth(this->id(), std::move(res.first), *res.second);
+            });
         }
         else if (this->_doughnut.version() >= elle::Version(0, 4, 0))
         {
-          typedef std::pair<Challenge, Passport*>
-            AuthSyn(Passport const&, elle::Version const&);
           rpcs.add(
-            "auth_syn", std::function<AuthSyn>(
-              [this, auth_syn] (Passport const& p, elle::Version const& v)
-                -> std::pair<Challenge, Passport*>
-              {
-                auto dht_v = this->_doughnut.version();
-                if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
-                  elle::err("invalid version %s, we use %s", v, dht_v);
-                return auth_syn(p);
-              }));
+            "auth_syn",
+            [this, auth_syn] (Passport const& p, elle::Version const& v)
+            {
+              auto dht_v = this->_doughnut.version();
+              if (v.major() != dht_v.major() || v.minor() != dht_v.minor())
+                elle::err("invalid version %s, we use %s", v, dht_v);
+              return auth_syn(p);
+            });
         }
         else
         {
-          typedef std::pair<Challenge, Passport*> AuthSyn(Passport const&);
           rpcs.add(
-            "auth_syn", std::function<AuthSyn>(
-              [this, auth_syn] (Passport const& p)
-                -> std::pair<Challenge, Passport*>
-              {
-                return auth_syn(p);
-              }));
+            "auth_syn",
+            [this, auth_syn] (Passport const& p)
+            {
+              return auth_syn(p);
+            });
         }
-        rpcs.add("auth_ack", std::function<bool(elle::Buffer const&,
-          elle::Buffer const&, elle::Buffer const&)>(
+        rpcs.add("auth_ack",
           [this, &rpcs, stored_challenge](
                  elle::Buffer const& enc_key,
                  elle::Buffer const& /*token*/,
-                 elle::Buffer const& signed_challenge) -> bool
+                 elle::Buffer const& signed_challenge)
           {
             ELLE_TRACE("%s: authentication ack", this);
             if (stored_challenge->empty())
@@ -490,8 +471,8 @@ namespace infinit
             bool ok = passport.user().verify(
               signed_challenge,
               *stored_challenge,
-              infinit::cryptography::rsa::Padding::pss,
-              infinit::cryptography::Oneway::sha256);
+              elle::cryptography::rsa::Padding::pss,
+              elle::cryptography::Oneway::sha256);
             if (!ok)
             {
               ELLE_LOG("Challenge verification failed");
@@ -499,33 +480,33 @@ namespace infinit
             }
             elle::Buffer password = this->_doughnut.keys().k().open(
               enc_key,
-              infinit::cryptography::Cipher::aes256,
-              infinit::cryptography::Mode::cbc);
+              elle::cryptography::Cipher::aes256,
+              elle::cryptography::Mode::cbc);
             rpcs._key.emplace(std::move(password));
             rpcs._ready(&rpcs);
             return true;
-          }));
-        using Keys = std::vector<cryptography::rsa::PublicKey>;
+          });
         rpcs.add(
           "resolve_keys",
-          std::function<Keys (std::vector<int> const&)>(
-            std::bind(&Local::_resolve_keys, this, std::placeholders::_1)));
-        using KeysMap = std::unordered_map<int, cryptography::rsa::PublicKey>;
+          [this](std::vector<int> const& ids)
+          {
+            return this->_resolve_keys(ids);
+          });
         rpcs.add(
           "resolve_all_keys",
-          std::function<KeysMap()>(std::bind(&Local::_resolve_all_keys, this)));
+          [this]() { return this->_resolve_all_keys(); });
       }
 
       void
       Local::_serve(std::function<std::unique_ptr<std::iostream> ()> accept)
       {
         static bool disable_key = elle::os::inenv("INFINIT_RPC_DISABLE_CRYPTO");
-        elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+        elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
         {
           while (true)
           {
             auto socket = std::shared_ptr<std::iostream>(accept().release());
-            auto name = elle::sprintf("%s: %s server", this, socket);
+            auto name = elle::sprintf("%s: %s", this, socket);
             scope.run_background(
               name,
               [this, socket = std::move(socket)]
@@ -540,31 +521,31 @@ namespace infinit
                   {
                     this->_peers.emplace_front(conn);
                     remove.action(
-                      [this, it = this->_peers.begin()] ()
+                      [this, it = this->_peers.begin()]
                       {
                         this->_peers.erase(it);
                       });
                   }
                   else
-                    elle::unconst(conn->rpcs()._ready).connect(
+                    elle::unconst(conn->rpcs())._ready.connect(
                       [this, &conn, &remove] (RPCServer*)
                       {
                         this->_peers.emplace_front(conn);
                         remove.action(
                           [this, &conn, it = this->_peers.begin()] ()
                           {
-                            elle::unconst(conn->rpcs()._ready).
+                            elle::unconst(conn->rpcs())._ready.
                               disconnect_all_slots();
                             this->_peers.erase(it);
                           });
                       });
                   conn->_run();
                 }
-                catch (infinit::protocol::Serializer::EOF const&)
+                catch (elle::protocol::Serializer::EOF const&)
                 {}
-                catch (reactor::network::ConnectionClosed const& e)
+                catch (elle::reactor::network::ConnectionClosed const& e)
                 {}
-                catch (reactor::network::SocketClosed const& e)
+                catch (elle::reactor::network::SocketClosed const& e)
                 {
                   ELLE_TRACE("unexpected SocketClosed: %s", e.backtrace());
                 }
@@ -572,11 +553,9 @@ namespace infinit
                 {
                   ELLE_WARN("drop client %s: %s", socket, e);
                 }
-                elle::With<reactor::Thread::NonInterruptible>() << [&]
+                elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
                 {
-                  ELLE_DEBUG("%s: RESETING", this);
                   elle::unconst(socket).reset();
-                  ELLE_DEBUG("%s: RESETED", this);
                 };
               });
           }

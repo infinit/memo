@@ -1,7 +1,7 @@
 #pragma once
 
-#include <reactor/exception.hh>
-#include <reactor/filesystem.hh>
+#include <elle/reactor/exception.hh>
+#include <elle/reactor/filesystem.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/Address.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
@@ -32,7 +32,7 @@ namespace infinit
 {
   namespace filesystem
   {
-    namespace rfs = reactor::filesystem;
+    namespace rfs = elle::reactor::filesystem;
 
     using Block = infinit::model::blocks::Block;
     using MutableBlock = infinit::model::blocks::MutableBlock;
@@ -48,7 +48,7 @@ namespace infinit
       try {
         return f();
       }
-      catch(reactor::Terminate const& e)
+      catch(elle::reactor::Terminate const& e)
       {
         throw;
       }

@@ -5,8 +5,8 @@
 
 #include <elle/Printable.hh>
 
-#include <das/model.hh>
-#include <das/serializer.hh>
+#include <elle/das/model.hh>
+#include <elle/das/serializer.hh>
 
 #include <infinit/symbols.hh>
 
@@ -71,7 +71,7 @@ namespace infinit
       BaseDescriptor(BaseDescriptor const& descriptor);
       Name name;
       boost::optional<std::string> description;
-      using Model = das::Model<
+      using Model = elle::das::Model<
         BaseDescriptor,
         elle::meta::List<symbols::Symbol_name, symbols::Symbol_description>>;
 
@@ -89,7 +89,7 @@ namespace infinit
     | Printable |
     `----------*/
     public:
-      virtual
+
       void
       print(std::ostream& out) const override;
     };

@@ -1,5 +1,7 @@
 #include <infinit/overlay/koordinate/Koordinate.hh>
 
+#include <boost/algorithm/cxx11/all_of.hpp>
+
 namespace infinit
 {
   namespace overlay
@@ -41,11 +43,20 @@ namespace infinit
           backend->discover(peers);
       }
 
+      bool
+      Koordinate::_discovered(model::Address id)
+      {
+        // Any or all ? Better safe than sorry, if someone expects the overlay
+        // to have discovered a peer, make sure all backends have discovered it.
+        return boost::algorithm::all_of(this->_backends,
+                   [&] (Backend const& b) { return b->discovered(id); });
+      }
+
       /*-------.
       | Lookup |
       `-------*/
 
-      reactor::Generator<Overlay::WeakMember>
+      elle::reactor::Generator<Overlay::WeakMember>
       Koordinate::_allocate(model::Address address,
                             int n) const
       {
@@ -53,14 +64,14 @@ namespace infinit
         return (*begin(this->_backends))->allocate(address, n);
       }
 
-      reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+      elle::reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
       Koordinate::_lookup(std::vector<model::Address> const& addrs, int n) const
       {
         this->_validate();
         return (*begin(this->_backends))->lookup(addrs, n);
       }
 
-      reactor::Generator<Overlay::WeakMember>
+      elle::reactor::Generator<Overlay::WeakMember>
       Koordinate::_lookup(model::Address address,
                           int n,
                           bool fast) const

@@ -6,11 +6,14 @@
 
 #include <elle/UUID.hh>
 #include <elle/Version.hh>
+#include <elle/das/Symbol.hh>
+#include <elle/das/named.hh>
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/Endpoints.hh>
 #include <infinit/model/User.hh>
 #include <infinit/model/blocks/fwd.hh>
+#include <infinit/model/blocks/Block.hh>
 #include <infinit/serialization.hh>
 #include <infinit/storage/Storage.hh>
 
@@ -18,6 +21,15 @@ namespace infinit
 {
   namespace model
   {
+    ELLE_DAS_SYMBOL(address);
+    ELLE_DAS_SYMBOL(block);
+    ELLE_DAS_SYMBOL(conflict_resolver);
+    ELLE_DAS_SYMBOL(data);
+    ELLE_DAS_SYMBOL(local_version);
+    ELLE_DAS_SYMBOL(owner);
+    ELLE_DAS_SYMBOL(signature);
+    ELLE_DAS_SYMBOL(version);
+
     enum StoreMode
     {
       STORE_INSERT,
@@ -46,16 +58,15 @@ namespace infinit
     // Called in case of conflict error. Returns the new block to retry with
     // or null to abort
     class ConflictResolver
-      : public elle::serialization::VirtuallySerializable<true>
+      : public elle::serialization::VirtuallySerializable<ConflictResolver, true>
     {
     public:
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
       using SquashStack = std::vector<std::unique_ptr<ConflictResolver>>;
       virtual
       std::unique_ptr<blocks::Block>
       operator () (blocks::Block& failed,
-                   blocks::Block& current,
-                   StoreMode mode) = 0;
+                   blocks::Block& current) = 0;
       virtual
       SquashOperation
       squashable(SquashStack const& others)
@@ -92,8 +103,7 @@ namespace infinit
 
       std::unique_ptr<blocks::Block>
       operator() (blocks::Block& block,
-                  blocks::Block& current,
-                  model::StoreMode mode) final;
+                  blocks::Block& current) final;
 
       void
       serialize(elle::serialization::Serializer& s,
@@ -104,26 +114,52 @@ namespace infinit
     };
 
     class Model
+      : public elle::Printable
     {
+    /*-------------.
+    | Construction |
+    `-------------*/
     public:
       using AddressVersion = std::pair<Address, boost::optional<int>>;
-      Model(boost::optional<elle::Version> version = {});
+      template <typename ... Args>
+      Model(Args&& ... args);
+      using Init = decltype(
+        elle::das::make_tuple(
+          model::version = boost::optional<elle::Version>()));
+      Model(Init args);
       ELLE_ATTRIBUTE_R(elle::Version, version);
+    private:
+      Model(std::tuple<boost::optional<elle::Version>> args);
+
+    /*-------.
+    | Blocks |
+    `-------*/
+    public:
       template <typename Block>
       std::unique_ptr<Block>
       make_block(elle::Buffer data = elle::Buffer(),
                  Address owner = Address::null) const;
       std::unique_ptr<User>
       make_user(elle::Buffer const& data) const;
-      void
-      store(std::unique_ptr<blocks::Block> block,
-            StoreMode mode,
-            std::unique_ptr<ConflictResolver> = {});
-      void
-      store(blocks::Block& block,
-            StoreMode mode,
-            std::unique_ptr<ConflictResolver> = {});
-      /** Fetch block at \param address
+
+      /** Construct an immutable block.
+       *
+       *  \param data  Payload of the block.
+       *  \param owner Optional owning mutable block to restrict deletion.
+       */
+      elle::das::named::Function<
+        std::unique_ptr<blocks::ImmutableBlock>(
+          decltype(data)::Formal<elle::Buffer>,
+          decltype(owner = Address::null))>
+      make_immutable_block;
+
+      /** Construct a mutable block.
+       */
+      elle::das::named::Function<
+        std::unique_ptr<blocks::MutableBlock>()>
+      make_mutable_block;
+
+      /** Fetch block at \param address.
        *
        *  Use \param local_version to avoid refetching the block if it did
        *  not change.
@@ -134,16 +170,56 @@ namespace infinit
        *          still local_version.
        *  \throws MissingBlock if the block does not exist.
        */
+      elle::das::named::Function<
+        std::unique_ptr<blocks::Block> (
+          decltype(address)::Formal<Address>,
+          decltype(local_version = boost::optional<int>()))>
+      fetch;
+      void
+      multifetch(std::vector<AddressVersion> const& addresses,
+                 std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                    std::exception_ptr)> res) const;
+
+      /** Insert a new block.
+       *
+       *  \param block             New block to insert.
+       *  \param conflict_resolver Optional automatic conflict resolver.
+       */
+      elle::das::named::Function<
+        void (
+          decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
+          decltype(conflict_resolver)::Effective<
+            std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>)>
+      insert;
+
+      void
+      seal_and_insert(blocks::Block& block,
+                      std::unique_ptr<ConflictResolver> = {});
+      /** Update an existing block.
+       *
+       *  \param block             Block to update.
+       *  \param conflict_resolver Optional automatic conflict resolver.
+       */
+      elle::das::named::Function<
+        void (
+          decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
+          decltype(conflict_resolver)::Effective<
+            std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>)>
+      update;
+      void
+      seal_and_update(blocks::Block& block,
+                      std::unique_ptr<ConflictResolver> = {});
+      /** Remove an existing block.
+       */
+      elle::das::named::Function<
+        void (
+          decltype(address)::Formal<Address>,
+          decltype(signature = boost::optional<blocks::RemoveSignature>()))>
+      remove;
+
+    private:
       std::unique_ptr<blocks::Block>
-      fetch(Address address, boost::optional<int> local_version = {}) const;
-      void
-      fetch(std::vector<AddressVersion> const& addresses,
-            std::function<void(Address, std::unique_ptr<blocks::Block>,
-                               std::exception_ptr)> res) const;
-      void
-      remove(Address address);
-      void
-      remove(Address address, blocks::RemoveSignature sig);
+      _fetch_impl(Address address, boost::optional<int> local_version) const;
     protected:
       template <typename Block, typename ... Args>
       static
@@ -166,11 +242,6 @@ namespace infinit
       std::unique_ptr<User>
       _make_user(elle::Buffer const& data) const;
       virtual
-      void
-      _store(std::unique_ptr<blocks::Block> block,
-             StoreMode mode,
-             std::unique_ptr<ConflictResolver> resolver) = 0;
-      virtual
       std::unique_ptr<blocks::Block>
       _fetch(Address address, boost::optional<int> local_version) const = 0;
       virtual
@@ -180,11 +251,23 @@ namespace infinit
                                std::exception_ptr)> res) const;
       virtual
       void
+      _insert(std::unique_ptr<blocks::Block> block,
+              std::unique_ptr<ConflictResolver> resolver) = 0;
+      virtual
+      void
+      _update(std::unique_ptr<blocks::Block> block,
+              std::unique_ptr<ConflictResolver> resolver) = 0;
+      virtual
+      void
       _remove(Address address, blocks::RemoveSignature sig) = 0;
+
+    public:
+      void
+      print(std::ostream& out) const override;
     };
 
     struct ModelConfig
-      : public elle::serialization::VirtuallySerializable<false>
+      : public elle::serialization::VirtuallySerializable<ModelConfig, false>
     {
       static constexpr char const* virtually_serializable_key = "type";
       std::unique_ptr<infinit::storage::StorageConfig> storage;
@@ -198,10 +281,9 @@ namespace infinit
       std::unique_ptr<infinit::model::Model>
       make(bool client,
            boost::filesystem::path const& dir) = 0;
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
     };
   }
 }
 
 #include <infinit/model/Model.hxx>
-

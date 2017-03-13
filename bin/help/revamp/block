@@ -1,9 +1,0 @@
-Usage: _build/macosx64/bin/infinit-block block [MODE|--help]
-Infinit block management utility.
-
-Modes:
-  deserialize Deserialized block
-
-Options:
-  -h, --help                show this help message
-

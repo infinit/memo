@@ -1,6 +1,6 @@
 #pragma once
 
-#include <das/cli.hh>
+#include <elle/das/cli.hh>
 
 #include <infinit/cli/Object.hh>
 #include <infinit/cli/Mode.hh>
@@ -34,16 +34,16 @@ namespace infinit
       /*---------------.
       | Mode: create.  |
       `---------------*/
-      using ModeCreate =
-        Mode<decltype(binding(modes::mode_create,
-                              cli::name,
-                              cli::description = boost::none,
-                              cli::network,
-                              cli::volume,
-                              cli::icon = boost::none,
-                              cli::push_drive = false,
-                              cli::push = false))>;
-      ModeCreate create;
+      Mode<Drive,
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::description = boost::optional<std::string>()),
+                 decltype(cli::network)::Formal<std::string const&>,
+                 decltype(cli::volume)::Formal<std::string const&>,
+                 decltype(cli::icon = boost::optional<std::string>()),
+                 decltype(cli::push_drive = false),
+                 decltype(cli::push = false)),
+           decltype(modes::mode_create)>
+      create;
       void
       mode_create(std::string const& name,
                   boost::optional<std::string> const& description,
@@ -57,12 +57,12 @@ namespace infinit
       /*---------------.
       | Mode: delete.  |
       `---------------*/
-      using ModeDelete =
-        Mode<decltype(binding(modes::mode_delete,
-                              cli::name,
-                              cli::pull = false,
-                              cli::purge = false))>;
-      ModeDelete delete_;
+      Mode<Drive,
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::pull = false),
+                 decltype(cli::purge = false)),
+           decltype(modes::mode_delete)>
+      delete_;
       void
       mode_delete(std::string const& name,
                   bool pull,
@@ -72,10 +72,10 @@ namespace infinit
       /*---------------.
       | Mode: export.  |
       `---------------*/
-      using ModeExport =
-        Mode<decltype(binding(modes::mode_export,
-                              cli::name))>;
-      ModeExport export_;
+      Mode<Drive,
+           void (decltype(cli::name)::Formal<std::string const&>),
+           decltype(modes::mode_export)>
+      export_;
       void
       mode_export(std::string const& name);
 
@@ -83,32 +83,31 @@ namespace infinit
       /*--------------.
       | Mode: fetch.  |
       `--------------*/
-      using ModeFetch =
-        Mode<decltype(binding(modes::mode_fetch,
-                              cli::name = boost::none,
-                              cli::icon = boost::none))>;
-      ModeFetch fetch;
+      Mode<Drive,
+           void (decltype(cli::name = boost::optional<std::string>()),
+                 decltype(cli::icon = boost::optional<std::string>())),
+           decltype(modes::mode_fetch)>
+      fetch;
       void
       mode_fetch(boost::optional<std::string> const& name,
                  boost::optional<std::string> const& icon);
 
-
       /*---------------.
       | Mode: invite.  |
       `---------------*/
-      using ModeInvite =
-        Mode<decltype(binding(modes::mode_invite,
-                              cli::name,
-                              cli::user,
-                              cli::email,
-                              cli::fetch_drive = false,
-                              cli::fetch = false,
-                              cli::push_invitations = false,
-                              cli::push = false,
-                              cli::passport = false,
-                              // FIXME: should be hidden.
-                              cli::home = false))>;
-      ModeInvite invite;
+      Mode<Drive,
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::user)::Formal<std::vector<std::string> const&>,
+                 decltype(cli::email)::Formal<std::vector<std::string> const&>,
+                 decltype(cli::fetch_drive = false),
+                 decltype(cli::fetch = false),
+                 decltype(cli::push_invitations = false),
+                 decltype(cli::push = false),
+                 decltype(cli::passport = false),
+                 // FIXME: should be hidden.
+                 decltype(cli::home = false)),
+           decltype(modes::mode_invite)>
+      invite;
       void
       mode_invite(std::string const& name,
                   std::vector<std::string> const& user,
@@ -120,37 +119,35 @@ namespace infinit
                   bool passport,
                   bool home = false);
 
-
       /*-------------.
       | Mode: join.  |
       `-------------*/
-      using ModeJoin =
-        Mode<decltype(binding(modes::mode_join,
-                              cli::name))>;
-      ModeJoin join;
+      Mode<Drive,
+           void (decltype(cli::name)::Formal<std::string const&>),
+           decltype(modes::mode_join)>
+      join;
       void
       mode_join(std::string const& name);
-
 
       /*-------------.
       | Mode: list.  |
       `-------------*/
-      using ModeList =
-        Mode<decltype(binding(modes::mode_list))>;
-      ModeList list;
+      Mode<Drive,
+           void (),
+           decltype(modes::mode_list)>
+      list;
       void
       mode_list();
-
 
 
       /*-------------.
       | Mode: pull.  |
       `-------------*/
-      using ModePull =
-        Mode<decltype(binding(modes::mode_pull,
-                              cli::name,
-                              cli::purge = false))>;
-      ModePull pull;
+      Mode<Drive,
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::purge = false)),
+           decltype(modes::mode_pull)>
+      pull;
       void
       mode_pull(std::string const& name,
                 bool purge);
@@ -159,11 +156,11 @@ namespace infinit
       /*-------------.
       | Mode: push.  |
       `-------------*/
-      using ModePush =
-        Mode<decltype(binding(modes::mode_push,
-                              cli::name,
-                              cli::icon = boost::none))>;
-      ModePush push;
+      Mode<Drive,
+           void (decltype(cli::name)::Formal<std::string const&>,
+                 decltype(cli::icon = boost::optional<std::string>())),
+           decltype(modes::mode_push)>
+      push;
       void
       mode_push(std::string const& name,
                 boost::optional<std::string> const& icon);

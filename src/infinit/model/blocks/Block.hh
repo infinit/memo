@@ -5,7 +5,7 @@
 # include <elle/Printable.hh>
 # include <elle/Clonable.hh>
 
-# include <cryptography/rsa/PublicKey.hh>
+# include <elle/cryptography/rsa/PublicKey.hh>
 
 # include <infinit/model/Address.hh>
 # include <infinit/model/blocks/ValidationResult.hh>
@@ -20,7 +20,7 @@ namespace infinit
     {
       struct RemoveSignature
       {
-        typedef infinit::serialization_tag serialization_tag;
+        using serialization_tag = infinit::serialization_tag;
         RemoveSignature();
         RemoveSignature(RemoveSignature const& other);
         RemoveSignature(RemoveSignature && other) = default;
@@ -28,15 +28,15 @@ namespace infinit
         RemoveSignature& operator = (RemoveSignature && other) = default;
         void serialize(elle::serialization::Serializer& s);
         std::unique_ptr<Block> block;
-        boost::optional<cryptography::rsa::PublicKey> group_key;
+        boost::optional<elle::cryptography::rsa::PublicKey> group_key;
         boost::optional<int> group_index;
-        boost::optional<cryptography::rsa::PublicKey> signature_key;
+        boost::optional<elle::cryptography::rsa::PublicKey> signature_key;
         boost::optional<elle::Buffer> signature;
       };
 
       class Block
         : public elle::Printable
-        , public elle::serialization::VirtuallySerializable<true>
+        , public elle::serialization::VirtuallySerializable<Block, true>
         , public elle::Clonable<Block>
       {
       /*-------------.
@@ -48,14 +48,14 @@ namespace infinit
         Block(Block const& other) = default;
         Block(Block&& other) = default;
         friend class infinit::model::Model;
-        virtual
-        ~Block() = default;
+
+        ~Block() override = default;
 
       /*---------.
       | Clonable |
       `---------*/
       public:
-        virtual
+
         std::unique_ptr<Block>
         clone() const override;
 
@@ -120,14 +120,14 @@ namespace infinit
         void
         serialize(elle::serialization::Serializer& s,
                   elle::Version const& version) override;
-        typedef infinit::serialization_tag serialization_tag;
+        using serialization_tag = infinit::serialization_tag;
 
       /*----------.
       | Printable |
       `----------*/
 
       public:
-        virtual
+
         void
         print(std::ostream& output) const override;
       };

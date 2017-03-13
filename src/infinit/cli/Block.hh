@@ -1,6 +1,6 @@
 #pragma once
 
-#include <das/cli.hh>
+#include <elle/das/cli.hh>
 
 #include <infinit/cli/Object.hh>
 #include <infinit/cli/Mode.hh>
@@ -23,9 +23,10 @@ namespace infinit
       using Paths = std::vector<std::string>;
 
       // Deserialize.
-      Mode<decltype(binding(modes::mode_deserialize,
-                            cli::output = boost::none,
-                            cli::paths = Paths{}))>
+      Mode<Block,
+           void (decltype(cli::output = boost::optional<std::string>()),
+                 decltype(cli::paths = Paths{})),
+           decltype(modes::mode_deserialize)>
       deserialize;
       void
       mode_deserialize(boost::optional<std::string> output,

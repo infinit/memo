@@ -54,7 +54,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
 with Infinit() as tmp:
   bob = User(name = 'bob', infinit = tmp)
   bob.run(['infinit-user', '--create'])
-  bob.run(['infinit-storage', '--create', 's', '--filesystem'])
+  bob.run(['infinit', 'silo', 'create', 'filesystem', 's'])
   bob.run(['infinit-network', '--create', 'n', '--storage', 's'])
   # Check descriptor is created.
   assertEq(len(os.listdir(bob.infinit.networks_path)), 1)
@@ -85,11 +85,18 @@ with Infinit() as tmp:
   with open('%s/bob/n' % bob.infinit.networks_path, 'w') as f:
     f.write(linked_net)
   assertEq(len(os.listdir(bob.infinit.networks_path)), 1)
-  bob.run(['infinit-network', '--unlink', 'n'])
+  node_id = json.loads(linked_net)['model']['id']
+  assertEq(len(node_id), 44)
+  out, _ = bob.run(['infinit-network', '--unlink', 'n'])
+  assert node_id in out
   assertEq(len(os.listdir(bob.infinit.networks_path)), 1)
   with open('%s/bob/n' % bob.infinit.networks_path) as f:
     test = f.read()
     assertEq(test, descriptor)
+  bob.run(['infinit', 'network', 'link', 'n', '--node-id', node_id])
+  with open('%s/bob/bob/n' % bob.infinit.linked_networks_path, 'r') as f:
+    relinked_net = f.read()
+    assertEq(node_id, json.loads(relinked_net)['model']['id'])
 
 # Fetch & list.
 with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
@@ -251,9 +258,9 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   alice.run(['infinit-user', '--signup',  'alice',
              '--email', 'alice@infinit.io'])
   bob.run(['infinit-user', '--fetch', '--name', 'alice'])
-  bob.run(['infinit-storage', '--create', '--filesystem',
+  bob.run(['infinit', 'silo', 'create', 'filesystem',
            '--name', 'bob_storage_1'])
-  bob.run(['infinit-storage', '--create', '--filesystem',
+  bob.run(['infinit', 'silo', 'create', 'filesystem',
            '--name', 'bob_storage_2'])
   bob.run(['infinit-network', '--create', '--name', 'n', '--as', 'bob',
            '--kelips', '--push',
@@ -265,8 +272,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
 
   alice.run(['infinit-network', '--fetch', '--name', 'bob/n', '--as', 'alice'])
-  alice.run(['infinit-storage', '--create', 'alice_storage_1', '--filesystem'])
-  alice.run(['infinit-storage', '--create', 'alice_storage_2', '--filesystem'])
+  alice.run(['infinit', 'silo', 'create', 'filesystem', 'alice_storage_1'])
+  alice.run(['infinit', 'silo', 'create', 'filesystem', 'alice_storage_2'])
   alice.run(['infinit-network', '--link', '--name', 'bob/n', '--as', 'alice',
              '--storage', 'alice_storage_1', '--storage', 'alice_storage_2'])
   s2 = alice.run(['infinit-network', '--list-storage', '--name', 'bob/n',
@@ -376,7 +383,7 @@ with Beyond() as beyond, \
   bob.run(['infinit-user', '--signup', 'bob', '--email', 'bob@infinit.io'])
   alice.run(
     ['infinit-user', '--signup', 'alice', '--email', 'alice@infinit.io'])
-  bob.run(['infinit-storage', '--create', '--as', 'bob', 's', '--filesystem'])
+  bob.run(['infinit', 'silo', 'create', 'filesystem', '--as', 'bob', 's'])
   bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '-S', 's', '-p'])
   assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 1)
   bob.run(['infinit-network', '--run', '--name', 'n', '--as', 'bob',
@@ -447,7 +454,7 @@ with Beyond() as beyond, Infinit(beyond = beyond, user = 'bob') as bob, \
   _signup(charlie)
   _signup(dave)
   # Create network and volume.
-  bob.run(['infinit-storage', '--create', '--filesystem', '--name', 's'])
+  bob.run(['infinit', 'silo', 'create', 'filesystem', '--name', 's'])
   bob.run(['infinit-network', '--create', '--as', 'bob', '--name', 'n',
            '--storage', 's',
            '--admin-rw', 'alice',

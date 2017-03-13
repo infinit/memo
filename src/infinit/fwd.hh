@@ -2,6 +2,6 @@
 
 namespace infinit
 {
-  struct Infinit;
+  class Infinit;
   struct MountOptions;
 }

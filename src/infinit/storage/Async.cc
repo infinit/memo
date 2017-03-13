@@ -59,7 +59,7 @@ namespace infinit
       _queueing.open();
       for (int i=0; i< n_threads; ++i)
       {
-        auto t = std::make_unique<reactor::Thread>("async deque " + std::to_string(i),
+        auto t = std::make_unique<elle::reactor::Thread>("async deque " + std::to_string(i),
           [&]
           {
             try {
@@ -89,7 +89,7 @@ namespace infinit
       else
         _dequeueing.open();
       for (auto & t: _threads)
-        reactor::wait(*t);
+        elle::reactor::wait(*t);
       ELLE_TRACE("...~Async");
     }
 
@@ -134,7 +134,7 @@ namespace infinit
     void
     Async::flush()
     {
-      reactor::wait(!_dequeueing);
+      elle::reactor::wait(!_dequeueing);
     }
 
     elle::Buffer
@@ -262,7 +262,7 @@ namespace infinit
       while (true)
       {
         ELLE_DEBUG("worker waiting...");
-        reactor::wait(_dequeueing);
+        elle::reactor::wait(_dequeueing);
         ELLE_DEBUG("worker woken up");
         while (!_op_cache.empty())
         {
@@ -349,7 +349,7 @@ namespace infinit
     {
       while (true)
       {
-        reactor::wait(_queueing);
+        elle::reactor::wait(_queueing);
         if ( (_max_size == -1 || _max_size >= _bytes)
              && (_max_blocks == -1 || _max_blocks >= _blocks))
           break;

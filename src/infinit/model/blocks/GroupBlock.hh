@@ -1,7 +1,7 @@
 #ifndef INFINIT_MODEL_BLOCKS_GROUP_BLOCK_HH
 # define INFINIT_MODEL_BLOCKS_GROUP_BLOCK_HH
 
-# include <cryptography/rsa/KeyPair.hh>
+# include <elle/cryptography/rsa/KeyPair.hh>
 
 # include <infinit/model/User.hh>
 # include <infinit/model/blocks/ACLBlock.hh>
@@ -16,8 +16,8 @@ namespace infinit
         : public ACLBlock
       {
       public:
-        typedef GroupBlock Self;
-        typedef ACLBlock Super;
+        using Self = infinit::model::blocks::GroupBlock;
+        using Super = infinit::model::blocks::ACLBlock;
 
         GroupBlock(GroupBlock const& other);
       protected:

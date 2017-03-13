@@ -1,5 +1,4 @@
 #include <infinit/cli/Infinit.hh>
-#include <infinit/cli/Infinit-template.hxx>
 
 #include <iostream>
 #include <iterator>
@@ -21,13 +20,12 @@
 #include <elle/format/hexadecimal.hh>
 #include <elle/printf.hh>
 
-#include <cryptography/hash.hh>
+#include <elle/cryptography/hash.hh>
 
-#include <das/Symbol.hh>
-#include <das/cli.hh>
+#include <elle/das/Symbol.hh>
+#include <elle/das/cli.hh>
 
 #include <infinit/utility.hh>
-
 #include <infinit/cli/utility.hh>
 
 ELLE_LOG_COMPONENT("infinit");
@@ -56,7 +54,7 @@ namespace infinit
       void
       install_signal_handlers(Infinit& cli)
       {
-        auto main_thread = reactor::scheduler().current();
+        auto main_thread = elle::reactor::scheduler().current();
         assert(main_thread);
         if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
         {
@@ -70,7 +68,7 @@ namespace infinit
 #ifndef INFINIT_WINDOWS
             ELLE_DEBUG("set signal handler for %s", strsignal(signal));
 #endif
-            reactor::scheduler().signal_handle(
+            elle::reactor::scheduler().signal_handle(
               signal,
               [main_thread, &cli]
               {
@@ -103,10 +101,10 @@ namespace infinit
 
       /// Thread to send the crash reports (some might be pending from
       /// previous runs, saved on disk).
-      std::unique_ptr<reactor::Thread>
+      std::unique_ptr<elle::reactor::Thread>
       make_crash_reporter_thread()
       {
-        return std::make_unique<reactor::Thread>
+        return std::make_unique<elle::reactor::Thread>
           ("crash report",
            [cr = make_crash_reporter()]
            {
@@ -162,7 +160,7 @@ namespace infinit
 
     Infinit::Infinit(infinit::Infinit& infinit)
       : InfinitCallable(
-        das::bind_method(*this, cli::call),
+        elle::das::bind_method(*this, cli::call),
         cli::help = false,
         cli::version = false)
       , _infinit(infinit)
@@ -208,7 +206,7 @@ namespace infinit
 
     namespace
     {
-      auto const options = das::cli::Options
+      auto const options = elle::das::cli::Options
         {
           {"help", {'h', "show this help message"}},
           {"version", {'v', "show software version"}},
@@ -223,7 +221,7 @@ namespace infinit
         value(std::ostream& s)
         {
           elle::fprintf(
-            s, "  %s\n", das::cli::option_name_from_c(Symbol::name()));
+            s, "  %s\n", elle::das::cli::option_name_from_c(Symbol::name()));
           return true;
         }
       };
@@ -239,7 +237,7 @@ namespace infinit
       infinit::cli::Infinit::Objects::map<help_object>::value(s);
       s << "\n"
         << "Options:\n"
-        << das::cli::help(*this, options);
+        << elle::das::cli::help(*this, options);
     }
 
     void
@@ -250,12 +248,7 @@ namespace infinit
       else if (version)
         std::cout << infinit::version_describe() << std::endl;
       else
-      {
-        elle::fprintf(std::cerr,
-                      "Try '%s --help' for more information.\n",
-                      argv_0);
-        throw elle::Exit(1);
-      }
+        elle::err<CLIError>("missing object type");
     }
 
     namespace
@@ -292,8 +285,10 @@ namespace infinit
       bool
       run_command(Infinit& cli, std::vector<std::string>& args)
       {
+        cli.command_line(args);
         bool res = false;
-        infinit::cli::Infinit::Objects::map<object>::value(cli, args, res);
+        infinit::cli::Infinit::Objects::map<mode_call, Infinit>::value(
+          cli, cli, args, res);
         return res;
       }
 
@@ -308,7 +303,7 @@ namespace infinit
         {
           // The corresponding object, say `users`.
           args[0] = object_from(prog);
-          if (args.size() > 1 && das::cli::is_option(args[1]))
+          if (args.size() > 1 && elle::das::cli::is_option(args[1]))
             if (args[1] == "-v" || args[1] == "--version")
               args.erase(args.begin());
             else if (args[1] != "-h" && args[1] != "--help")
@@ -319,12 +314,10 @@ namespace infinit
         }
         auto infinit = infinit::Infinit{};
         auto cli = Infinit(infinit);
-        if (args.empty() || das::cli::is_option(args[0], options))
-          das::cli::call(cli, args, options);
+        if (args.empty() || elle::das::cli::is_option(args[0], options))
+          elle::das::cli::call(cli, args, options);
         else if (!run_command(cli, args))
-          elle::err<CLIError>("unknown object type: %s\n"
-                              "Try '%s --help' for more information.",
-                              args[0], argv_0);
+          elle::err<CLIError>("unknown object type: %s", args[0]);
       }
 
       void
@@ -334,7 +327,7 @@ namespace infinit
         auto report_thread = make_crash_reporter_thread();
         auto report_upload = [&report_thread] {
           if (report_thread)
-            reactor::wait(*report_thread);
+            elle::reactor::wait(*report_thread);
         };
 #else
         auto report_upload = []{};
@@ -544,8 +537,8 @@ namespace infinit
     {
       auto password = password_ + salt;
       return elle::format::hexadecimal::encode(
-        infinit::cryptography::hash(
-          password, infinit::cryptography::Oneway::sha256).string()
+        elle::cryptography::hash(
+          password, elle::cryptography::Oneway::sha256).string()
         );
       return password;
     };
@@ -558,7 +551,7 @@ namespace infinit
     }
 
     // This overload is required, otherwise Infinit is printed as a
-    // das::Function, which then prints its function, which is a
+    // elle::das::Function, which then prints its function, which is a
     // BoundMethod<Infinit, call>, which prints its object, that is the Infinit,
     // which recurses indefinitely.
     void
@@ -576,11 +569,11 @@ main(int argc, char** argv)
   try
   {
     auto args = std::vector<std::string>(argv, argv + argc);
-    reactor::Scheduler s;
-    reactor::Thread main(s, "main", [&] { infinit::cli::main(args); });
+    elle::reactor::Scheduler s;
+    elle::reactor::Thread main(s, "main", [&] { infinit::cli::main(args); });
     s.run();
   }
-  catch (das::cli::Error const& e)
+  catch (elle::das::cli::Error const& e)
   {
     elle::fprintf(std::cerr, "%s: command line error: %s\n", argv[0], e.what());
     elle::fprintf(std::cerr,

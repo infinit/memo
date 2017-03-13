@@ -11,8 +11,8 @@
 #include <elle/cast.hh>
 #include <elle/os/environ.hh>
 
-#include <cryptography/random.hh>
-#include <cryptography/SecretKey.hh>
+#include <elle/cryptography/random.hh>
+#include <elle/cryptography/SecretKey.hh>
 
 #ifdef INFINIT_WINDOWS
 #undef stat
@@ -76,8 +76,7 @@ namespace infinit
 
     std::unique_ptr<Block>
     FileConflictResolver::operator()(Block& b,
-                                     Block& current,
-                                     model::StoreMode store_mode)
+                                     Block& current)
     {
       ELLE_LOG_SCOPE(
         "conflict: the file \"%s\" was modified since last read. Your"
@@ -389,19 +388,21 @@ namespace infinit
       {
         ELLE_ASSERT(block);
         block->data(serdata);
-        if (!block_allocated)
+        auto resolver =
+          std::make_unique<FileConflictResolver>(this->_path, &model, target);
+        if (block_allocated)
         {
-          model.store(*block,
-                      first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-                      std::make_unique<FileConflictResolver>(
-                        _path, &model, target));
+          if (first_write)
+            model.insert(std::move(block), std::move(resolver));
+          else
+            model.update(std::move(block), std::move(resolver));
         }
         else
         {
-          model.store(std::move(block),
-                      first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-                      std::make_unique<FileConflictResolver>(
-                        _path, &model, target));
+          if (first_write)
+            model.seal_and_insert(*block, std::move(resolver));
+          else
+            model.seal_and_update(*block, std::move(resolver));
         }
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
@@ -571,7 +572,7 @@ namespace infinit
     struct NewBlockResolver
       : public model::DummyConflictResolver
     {
-      typedef DummyConflictResolver Super;
+      using Super = infinit::model::DummyConflictResolver;
       NewBlockResolver(std::string const& name,
                     Address const address)
         : Super()
@@ -646,7 +647,7 @@ namespace infinit
           if (_filedata->_fat[i].first == Address::null)
             continue;
           auto targetsize = new_size - offset;
-          cryptography::SecretKey sk(_filedata->_fat[i].second);
+          elle::cryptography::SecretKey sk(_filedata->_fat[i].second);
           auto block = _owner.fetch_or_die(_filedata->_fat[i].first, {}, this->full_path());
           elle::Buffer buf(sk.decipher(block->data()));
           if (buf.size() > targetsize)
@@ -658,7 +659,7 @@ namespace infinit
           _owner.unchecked_remove(_filedata->_fat[i].first);
           _filedata->_fat[i].first = newblock->address();
           this->_owner.store_or_die(
-            std::move(newblock), model::STORE_INSERT,
+            std::move(newblock), true,
             std::make_unique<NewBlockResolver>(this->_name, this->_address));
         }
       }

@@ -1,7 +1,6 @@
-#ifndef INFINIT_OVERLAY_KOORDINATE_HH
-# define INFINIT_OVERLAY_KOORDINATE_HH
+#pragma once
 
-# include <infinit/overlay/Overlay.hh>
+#include <infinit/overlay/Overlay.hh>
 
 namespace infinit
 {
@@ -23,13 +22,13 @@ namespace infinit
       `------*/
       public:
         /// Ourselves.
-        typedef Koordinate Self;
+        using Self = Koordinate;
         /// Parent class.
-        typedef Overlay Super;
+        using Super = infinit::overlay::Overlay;
         /// Underlying overlay to run and forward requests to.
-        typedef std::unique_ptr<Overlay> Backend;
+        using Backend = std::unique_ptr<Overlay>;
         /// Set of underlying overlays.
-        typedef std::vector<Backend> Backends;
+        using Backends = std::vector<Backend>;
 
       /*-------------.
       | Construction |
@@ -46,8 +45,8 @@ namespace infinit
                    std::shared_ptr<infinit::model::doughnut::Local> local,
                    Backends backends);
         /// Destruct a Koordinate.
-        virtual
-        ~Koordinate();
+
+        ~Koordinate() override;
         /// The underlying overlays.
         ELLE_ATTRIBUTE(Backends, backends);
       private:
@@ -59,23 +58,25 @@ namespace infinit
       | Peers |
       `------*/
       protected:
-        virtual
+
         void
         _discover(NodeLocations const& peers) override;
+        bool
+        _discovered(model::Address id) override;
 
       /*-------.
       | Lookup |
       `-------*/
       protected:
-        reactor::Generator<WeakMember>
+        elle::reactor::Generator<WeakMember>
         _allocate(model::Address address, int n) const override;
-        virtual
-        reactor::Generator<std::pair<model::Address, WeakMember>>
+
+        elle::reactor::Generator<std::pair<model::Address, WeakMember>>
         _lookup(std::vector<model::Address> const& addrs, int n) const override;
-        virtual
-        reactor::Generator<WeakMember>
+
+        elle::reactor::Generator<WeakMember>
         _lookup(model::Address address, int n, bool fast) const override;
-        virtual
+
         WeakMember
         _lookup_node(model::Address address) const override;
 
@@ -93,5 +94,3 @@ namespace infinit
     }
   }
 }
-
-#endif

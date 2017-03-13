@@ -2,7 +2,7 @@
 
 #include <elle/ldap.hh>
 
-#include <reactor/http/url.hh>
+#include <elle/reactor/http/url.hh>
 
 #include <infinit/Drive.hh>
 #include <infinit/cli/Infinit.hh>
@@ -18,52 +18,46 @@ namespace infinit
   {
     LDAP::LDAP(Infinit& infinit)
       : Object(infinit)
-      , drive_invite(
-        "Invite LDAP users to a drive",
-        das::cli::Options(),
-        this->bind(modes::mode_drive_invite,
-                   cli::server,
-                   cli::domain,
-                   cli::user,
-                   cli::password = boost::none,
-                   cli::drive,
-                   cli::root_permissions = "rw",
-                   cli::create_home = false,
-                   cli::searchbase,
-                   cli::filter = boost::none,
-                   cli::object_class = boost::none,
-                   cli::mountpoint,
-                   cli::deny_write = false,
-                   cli::deny_storage = false))
-      , populate_hub(
-        "Register LDAP users on {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_populate_hub,
-                   cli::server,
-                   cli::domain,
-                   cli::user,
-                   cli::password = boost::none,
-                   cli::searchbase,
-                   cli::filter = boost::none,
-                   cli::object_class = boost::none,
-                   cli::username_pattern = "$(cn)%",
-                   cli::email_pattern = "$(mail)",
-                   cli::fullname_pattern = "$(cn)"))
-      , populate_network(
-        "Register LDAP users and groups to a network",
-        das::cli::Options(),
-        this->bind(modes::mode_populate_network,
-                   cli::server,
-                   cli::domain,
-                   cli::user,
-                   cli::password = boost::none,
-                   cli::network,
-                   cli::searchbase,
-                   cli::filter = boost::none,
-                   cli::object_class = boost::none,
-                   cli::mountpoint,
-                   cli::deny_write = false,
-                   cli::deny_storage = false))
+      , drive_invite(*this,
+                     "Invite LDAP users to a drive",
+                     cli::server,
+                     cli::domain,
+                     cli::user,
+                     cli::password = boost::none,
+                     cli::drive,
+                     cli::root_permissions = "rw",
+                     cli::create_home = false,
+                     cli::searchbase,
+                     cli::filter = boost::none,
+                     cli::object_class = boost::none,
+                     cli::mountpoint,
+                     cli::deny_write = false,
+                     cli::deny_storage = false)
+      , populate_hub(*this,
+                     "Register LDAP users on {hub}",
+                     cli::server,
+                     cli::domain,
+                     cli::user,
+                     cli::password = boost::none,
+                     cli::searchbase,
+                     cli::filter = boost::none,
+                     cli::object_class = boost::none,
+                     cli::username_pattern = "$(cn)%",
+                     cli::email_pattern = "$(mail)",
+                     cli::fullname_pattern = "$(cn)")
+      , populate_network(*this,
+                         "Register LDAP users and groups to a network",
+                         cli::server,
+                         cli::domain,
+                         cli::user,
+                         cli::password = boost::none,
+                         cli::network,
+                         cli::searchbase,
+                         cli::filter = boost::none,
+                         cli::object_class = boost::none,
+                         cli::mountpoint,
+                         cli::deny_write = false,
+                         cli::deny_storage = false)
     {}
 
     /*----------.
@@ -192,7 +186,7 @@ namespace infinit
           try
           {
             auto u = ifnt.beyond_fetch<infinit::User>(
-              elle::sprintf("ldap_users/%s", reactor::http::url_encode(m.second)),
+              elle::sprintf("ldap_users/%s", elle::reactor::http::url_encode(m.second)),
               "LDAP user",
               m.second);
             res.emplace(m.first, u);
@@ -211,7 +205,7 @@ namespace infinit
           auto passport = infinit::model::doughnut::Passport(
             u.second.public_key,
             network.name,
-            infinit::cryptography::rsa::KeyPair(owner.public_key,
+            elle::cryptography::rsa::KeyPair(owner.public_key,
                                                 owner.private_key.get()),
             owner.public_key != network.owner,
             !deny_write,
@@ -296,11 +290,9 @@ namespace infinit
                             std::string const& domain,
                             std::string const& user,
                             boost::optional<std::string> const& password,
-
                             std::string const& drive_name,
                             std::string const& root_permissions,
                             bool create_home,
-
                             std::string const& searchbase,
                             boost::optional<std::string> const& filter,
                             boost::optional<std::string> const& object_class,
@@ -312,7 +304,6 @@ namespace infinit
       auto& cli = this->cli();
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
-
       auto drive = ifnt.drive_get(ifnt.qualified_name(drive_name, owner));
       auto network = ifnt.network_descriptor_get(drive.network, owner);
       auto mode = mode_get(root_permissions);
@@ -322,9 +313,7 @@ namespace infinit
                                      domain,
                                      user,
                                      password,
-
                                      drive.network,
-
                                      searchbase,
                                      filter,
                                      object_class,
@@ -450,7 +439,7 @@ namespace infinit
         try
         {
           auto u = ifnt.beyond_fetch<infinit::User>(
-            elle::sprintf("ldap_users/%s", reactor::http::url_encode(dn)),
+            elle::sprintf("ldap_users/%s", elle::reactor::http::url_encode(dn)),
             "LDAP user",
             dn);
           ELLE_TRACE("got %s -> %s", dn, u.name);
@@ -465,7 +454,7 @@ namespace infinit
             {
               auto u = ifnt.beyond_fetch<infinit::User>(
                 "user",
-                reactor::http::url_encode(username));
+                elle::reactor::http::url_encode(username));
               ELLE_TRACE("username %s taken", username);
               if (username_pattern.find('%') == std::string::npos)
               {
@@ -509,10 +498,10 @@ namespace infinit
         {
           auto u = infinit::User
             (m.first,
-             infinit::cryptography::rsa::keypair::generate(2048),
+             elle::cryptography::rsa::keypair::generate(2048),
              m.second.email, m.second.fullname, m.second.dn);
           ELLE_TRACE("pushing %s", u.name);
-          ifnt.beyond_push<das::Serializer<PrivateUserPublish>>
+          ifnt.beyond_push<elle::das::Serializer<PrivateUserPublish>>
             ("user", u.name, u, u);
         }
       else

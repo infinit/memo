@@ -27,24 +27,30 @@ namespace infinit
       elle::err("Kalimero cannot discover new nodes");
     }
 
+    bool
+    Kalimero::_discovered(model::Address id)
+    {
+      return id == this->id();
+    }
+
     /*-------.
     | Lookup |
     `-------*/
 
-    reactor::Generator<Overlay::WeakMember>
+    elle::reactor::Generator<Overlay::WeakMember>
     Kalimero::_allocate(model::Address address, int n) const
     {
       return this->_lookup(address, n, false);
     }
 
-    reactor::Generator<Kalimero::WeakMember>
+    elle::reactor::Generator<Kalimero::WeakMember>
     Kalimero::_lookup(model::Address address, int n, bool) const
     {
       if (n != 1)
         elle::err("kalimero cannot fetch several (%s) nodes", n);
       if (!this->local())
         elle::err("kalimero can only be a server");
-      return reactor::generator<Kalimero::WeakMember>(
+      return elle::reactor::generator<Kalimero::WeakMember>(
         [this] (std::function<void (Kalimero::WeakMember)> yield)
         {
           yield(this->local());

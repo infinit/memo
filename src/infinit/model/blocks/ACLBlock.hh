@@ -1,7 +1,7 @@
 #ifndef INFINIT_MODEL_BLOCKS_ACL_BLOCK_HH
 # define INFINIT_MODEL_BLOCKS_ACL_BLOCK_HH
 
-# include <cryptography/rsa/KeyPair.hh>
+# include <elle/cryptography/rsa/KeyPair.hh>
 
 # include <infinit/model/User.hh>
 # include <infinit/model/blocks/MutableBlock.hh>
@@ -19,8 +19,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef ACLBlock Self;
-        typedef MutableBlock Super;
+        using Self = infinit::model::blocks::ACLBlock;
+        using Super = infinit::model::blocks::MutableBlock;
 
       /*-------------.
       | Construction |
@@ -35,7 +35,7 @@ namespace infinit
       | Clone  |
       `-------*/
       public:
-        virtual
+
         std::unique_ptr<blocks::Block>
         clone() const override;
 
@@ -99,7 +99,7 @@ namespace infinit
       public:
         ACLBlock(elle::serialization::Serializer& input,
                  elle::Version const& version);
-        virtual
+
         void
         serialize(elle::serialization::Serializer& s,
                   elle::Version const& version) override;

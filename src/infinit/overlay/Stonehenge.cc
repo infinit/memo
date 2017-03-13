@@ -2,22 +2,23 @@
 
 #include <iterator>
 
+#include <boost/algorithm/cxx11/any_of.hpp>
 #include <elle/Error.hh>
 #include <elle/assert.hh>
 #include <elle/log.hh>
 #include <elle/utils.hh>
 
-#include <das/serializer.hh>
+#include <elle/das/serializer.hh>
 
-#include <reactor/network/resolve.hh>
-#include <reactor/network/utp-server.hh>
+#include <elle/reactor/network/resolve.hh>
+#include <elle/reactor/network/utp-server.hh>
 
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh> // FIXME
 
 ELLE_LOG_COMPONENT("infinit.overlay.Stonehenge");
 
-DAS_SERIALIZE(infinit::overlay::StonehengeConfiguration::Peer);
+ELLE_DAS_SERIALIZE(infinit::overlay::StonehengeConfiguration::Peer);
 
 namespace infinit
 {
@@ -44,24 +45,31 @@ namespace infinit
       elle::err("Stonehenge cannot discover new nodes");
     }
 
+    bool
+    Stonehenge::_discovered(model::Address id)
+    {
+      return boost::algorithm::any_of(this->_peers,
+                 [&] (NodeLocation const& p) { return p.id() == id; });
+    }
+
     /*-------.
     | Lookup |
     `-------*/
 
-    reactor::Generator<Overlay::WeakMember>
+    elle::reactor::Generator<Overlay::WeakMember>
     Stonehenge::_allocate(model::Address address, int n) const
     {
       return this->_lookup(address, n, false);
     }
 
-    reactor::Generator<Overlay::WeakMember>
+    elle::reactor::Generator<Overlay::WeakMember>
     Stonehenge::_lookup(model::Address address, int n, bool) const
     {
       // Use modulo on the address to determine the owner and yield the n
       // following nodes.
-      return reactor::generator<Overlay::WeakMember>(
+      return elle::reactor::generator<Overlay::WeakMember>(
         [this, address, n]
-        (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
+        (elle::reactor::Generator<Overlay::WeakMember>::yielder const& yield)
         {
           int size = this->_peers.size();
           ELLE_ASSERT_LTE(n, size);
@@ -94,8 +102,7 @@ namespace infinit
     {
       if (peer.endpoints().empty())
         elle::err("missing endpoint for %f", peer.id());
-      return this->doughnut()->dock().make_peer(
-        peer, model::EndpointsRefetcher());
+      return this->doughnut()->dock().make_peer(peer);
     }
 
     /*-----------.
@@ -111,21 +118,20 @@ namespace infinit
     elle::json::Array
     Stonehenge::peer_list()
     {
-      elle::json::Array res;
+      auto res = elle::json::Array{};
       for (auto const& peer: this->_peers)
-        res.push_back(elle::json::Object{
-          { "id", elle::sprintf("%x", peer.id()) },
-          { "endpoints", elle::sprintf("%s", peer.endpoints()) }
-        });
+        res.push_back
+          (elle::json::Object{
+            { "id", elle::sprintf("%x", peer.id()) },
+            { "endpoints", elle::sprintf("%s", peer.endpoints()) }
+          });
       return res;
     }
 
     elle::json::Object
     Stonehenge::stats()
     {
-      elle::json::Object res;
-      res["type"] = this->type_name();
-      return res;
+      return elle::json::Object{{"type", this->type_name()}};
     }
 
     StonehengeConfiguration::StonehengeConfiguration()
@@ -150,13 +156,10 @@ namespace infinit
     StonehengeConfiguration::make(std::shared_ptr<model::doughnut::Local> local,
                                   model::doughnut::Doughnut* dht)
     {
-      NodeLocations peers;
+      auto peers = NodeLocations{};
       for (auto const& peer: this->peers)
-      {
-        peers.emplace_back(
-          peer.id,
-          Endpoints({model::Endpoint(peer.host, peer.port)}));
-      }
+        peers.emplace_back(peer.id,
+                           Endpoints({model::Endpoint(peer.host, peer.port)}));
       return std::make_unique<infinit::overlay::Stonehenge>(
         peers, std::move(local), dht);
     }

@@ -60,7 +60,7 @@ namespace infinit
             continue;
           }
           action(it->path().string(), args...);
-          reactor::yield();
+          elle::reactor::yield();
         }
       }
 
@@ -257,7 +257,7 @@ namespace infinit
             }
             return res;
           }
-          catch (reactor::Terminate const&)
+          catch (elle::reactor::Terminate const&)
           {
             throw;
           }
@@ -424,98 +424,86 @@ namespace infinit
 
     ACL::ACL(Infinit& infinit)
       : Object(infinit)
-      , get_xattr(
-        "Get an extended attribute value",
-        das::cli::Options(),
-        this->bind(modes::mode_get_xattr,
-                   cli::path,
-                   cli::name))
-      , group(
-        "Edit groups",
-        das::cli::Options(),
-        this->bind(modes::mode_group,
-                   cli::path,
-                   cli::name,
-                   cli::create = false,
-                   cli::delete_ = false,
-                   cli::show = false,
-                   cli::description = boost::none,
-                   cli::add_user = std::vector<std::string>(),
-                   cli::add_group = std::vector<std::string>(),
-                   cli::add_admin = std::vector<std::string>(),
-                   cli::add = std::vector<std::string>(),
-                   cli::remove_user = std::vector<std::string>(),
-                   cli::remove_group = std::vector<std::string>(),
-                   cli::remove_admin = std::vector<std::string>(),
-                   cli::remove = std::vector<std::string>(),
-                   cli::verbose = false,
-                   cli::fetch = false,
-                   cli::fallback_xattrs =
+      , get_xattr(*this,
+                  "Get an extended attribute value",
+                  cli::path,
+                  cli::name)
+      , group(*this,
+              "Edit groups",
+              cli::path,
+              cli::name,
+              cli::create = false,
+              cli::delete_ = false,
+              cli::show = false,
+              cli::description = boost::none,
+              cli::add_user = std::vector<std::string>(),
+              cli::add_group = std::vector<std::string>(),
+              cli::add_admin = std::vector<std::string>(),
+              cli::add = std::vector<std::string>(),
+              cli::remove_user = std::vector<std::string>(),
+              cli::remove_group = std::vector<std::string>(),
+              cli::remove_admin = std::vector<std::string>(),
+              cli::remove = std::vector<std::string>(),
+              cli::verbose = false,
+              cli::fetch = false,
+              cli::fallback_xattrs =
 #ifdef INFINIT_WINDOWS
-                   true
+              true
 #else
-                   false
+              false
 #endif
-          ))
-      , list(
-        "List ACLs",
-        das::cli::Options(),
-        this->bind(modes::mode_list,
-                   cli::path,
-                   cli::recursive = false,
-                   cli::verbose = false,
-                   cli::fallback_xattrs =
+        )
+      , list(*this,
+             "List ACLs",
+             cli::path,
+             cli::recursive = false,
+             cli::verbose = false,
+             cli::fallback_xattrs =
 #ifdef INFINIT_WINDOWS
-                   true
+             true
 #else
-                   false
+             false
 #endif
-          ))
-      , set(
-        "Set ACLs",
-        das::cli::Options(),
-        this->bind(modes::mode_set,
-                   cli::path,
-                   cli::user,
-                   cli::group,
-                   cli::mode = boost::none,
-                   cli::others_mode = boost::none,
-                   // FIXME: change that to just "inherit"
-                   cli::enable_inherit = false,
-                   cli::disable_inherit = false,
-                   cli::recursive = false,
-                   cli::traverse = false,
-                   cli::verbose = false,
-                   cli::fetch = false,
-                   cli::fallback_xattrs =
+        )
+      , set(*this,
+            "Set ACLs",
+            cli::path,
+            cli::user,
+            cli::group,
+            cli::mode = boost::none,
+            cli::others_mode = boost::none,
+            // FIXME: change that to just "inherit"
+            cli::enable_inherit = false,
+            cli::disable_inherit = false,
+            cli::recursive = false,
+            cli::traverse = false,
+            cli::verbose = false,
+            cli::fetch = false,
+            cli::fallback_xattrs =
 #ifdef INFINIT_WINDOWS
-                   true
+            true
 #else
-                   false
+            false
 #endif
-          ))
-      , register_(
-        "Register user's passport to the network",
-        das::cli::Options(),
-        this->bind(modes::mode_register,
-                   cli::path,
-                   cli::user,
-                   cli::network,
-                   cli::fetch = false,
-                   cli::fallback_xattrs =
+        )
+      , register_(*this,
+                  "Register user's passport to the network",
+                  cli::path,
+                  cli::user,
+                  cli::network,
+                  cli::fetch = false,
+                  cli::fallback_xattrs =
 #ifdef INFINIT_WINDOWS
-                   true
+                  true
 #else
-                   false
+                  false
 #endif
-          ))
-      , set_xattr(
-        "Set an extended attribute value",
-        das::cli::Options(),
-        this->bind(modes::mode_set_xattr,
-                   cli::path,
-                   cli::name,
-                   cli::value))
+        )
+      , set_xattr(*this,
+                  "Set an extended attribute value",
+                  cli::path,
+                  cli::name,
+                  cli::value)
     {}
 
     /*------------.
@@ -615,7 +603,7 @@ namespace infinit
                    bool fallback)
     {
       if (paths.empty())
-        throw das::cli::MissingOption("path");
+        throw elle::das::cli::MissingOption("path");
       for (auto const& path: paths)
       {
         enforce_in_mountpoint(path, fallback);
@@ -793,13 +781,13 @@ namespace infinit
       auto omode = mode_get(others_mode_name);
       {
         if (paths.empty())
-          throw das::cli::MissingOption("path");
+          throw elle::das::cli::MissingOption("path");
         auto combined = collate_users(users, boost::none, boost::none, groups);
         // auto users = combined ? combined.get() : std::vector<std::string>();
         if (mode_name && combined.empty())
           elle::err<CLIError>("must specify user when setting mode");
         if (!mode_name && !combined.empty())
-          throw das::cli::MissingOption("mode");
+          throw elle::das::cli::MissingOption("mode");
         if (inherit && disinherit)
           elle::err<CLIError>("inherit and disable-inherit are exclusive");
         if (!inherit && !disinherit && !mode_name && !others_mode_name)
@@ -856,5 +844,6 @@ namespace infinit
     {
       setxattr(path, name, value, true);
     }
+
   }
 }

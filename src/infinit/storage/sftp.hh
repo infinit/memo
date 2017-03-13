@@ -5,7 +5,7 @@
 
 #include <infinit/storage/Storage.hh>
 
-#include <reactor/semaphore.hh>
+#include <elle/reactor/semaphore.hh>
 namespace infinit
 {
   namespace storage
@@ -35,7 +35,7 @@ namespace infinit
       std::string _server_address;
       std::string _path;
       int _child;
-      mutable reactor::Semaphore _sem;
+      mutable elle::reactor::Semaphore _sem;
       mutable int _req;
     };
 

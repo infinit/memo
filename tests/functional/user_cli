@@ -239,7 +239,7 @@ with Beyond() as beyond, \
   bob.run(['infinit-user', '--signup', 'b', '--email', 'b@infinit.io'])
   alice.run(['infinit-user', '--signup', 'a', '--email', 'b@infinit.io'])
   # Create basic infrastructure.
-  bob.run(['infinit-storage', '--create', '--as', 'b', 's', '--filesystem'])
+  bob.run(['infinit', 'silo', 'create', 'filesystem', '--as', 'b', 's'])
   bob.run(
     ['infinit-network', '--create', '--as', 'b', 'n', '--storage', 's', '-p'])
   assert path.exists('%s/b/n' % bob.networks_path)

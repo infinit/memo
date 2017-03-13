@@ -1,7 +1,4 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_LOCAL_HXX
-# define INFINIT_MODEL_DOUGHNUT_LOCAL_HXX
-
-# include <reactor/for-each.hh>
+#include <elle/reactor/for-each.hh>
 
 namespace infinit
 {
@@ -14,11 +11,11 @@ namespace infinit
       Local::broadcast(std::string const& name, Args&& ... args)
       {
         ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
-        ELLE_TRACE_SCOPE("%s: broadcast %s", this, name);
+        ELLE_TRACE_SCOPE("%s: broadcast %s to %s peers", this, name, this->_peers.size());
         // Copy peers to hold connections refcount, as for_each_parallel
         // captures values by ref.
         auto peers = this->_peers;
-        reactor::for_each_parallel(
+        elle::reactor::for_each_parallel(
           peers,
           [&] (std::shared_ptr<Connection> const& c)
           {
@@ -50,5 +47,3 @@ namespace infinit
     }
   }
 }
-
-#endif

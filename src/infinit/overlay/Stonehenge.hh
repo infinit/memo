@@ -1,8 +1,7 @@
-#ifndef INFINIT_OVERLAY_STONEHENGE_HH
-# define INFINIT_OVERLAY_STONEHENGE_HH
+#pragma once
 
-# include <infinit/overlay/Overlay.hh>
-# include <infinit/symbols.hh>
+#include <infinit/overlay/Overlay.hh>
+#include <infinit/symbols.hh>
 
 namespace infinit
 {
@@ -15,7 +14,7 @@ namespace infinit
     | Construction |
     `-------------*/
     public:
-      typedef boost::asio::ip::tcp::endpoint Host;
+      using Host = boost::asio::ip::tcp::endpoint;
       Stonehenge(NodeLocations hosts,
                  std::shared_ptr<model::doughnut::Local> local,
                  model::doughnut::Doughnut* doughnut);
@@ -27,14 +26,16 @@ namespace infinit
     protected:
       void
       _discover(NodeLocations const& peers) override;
+      bool
+      _discovered(model::Address id) override;
 
     /*-------.
     | Lookup |
     `-------*/
     protected:
-      reactor::Generator<WeakMember>
+      elle::reactor::Generator<WeakMember>
       _allocate(model::Address address, int n) const override;
-      reactor::Generator<std::ambivalent_ptr<model::doughnut::Peer>>
+      elle::reactor::Generator<std::ambivalent_ptr<model::doughnut::Peer>>
       _lookup(model::Address address,
               int n,
               bool fast) const override;
@@ -60,14 +61,14 @@ namespace infinit
     struct StonehengeConfiguration
       : public Configuration
     {
-      typedef StonehengeConfiguration Self;
-      typedef Configuration Super;
+      using Self = infinit::overlay::StonehengeConfiguration;
+      using Super = infinit::overlay::Configuration;
       struct Peer
       {
         std::string host;
         int port;
         model::Address id;
-        using Model = das::Model<Peer,
+        using Model = elle::das::Model<Peer,
                                  decltype(elle::meta::list(symbols::host,
                                                            symbols::port,
                                                            symbols::id))>;
@@ -85,5 +86,3 @@ namespace infinit
     };
   }
 }
-
-#endif

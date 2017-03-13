@@ -1,7 +1,7 @@
 #include <boost/program_options.hpp>
 
-#include <reactor/scheduler.hh>
-#include <reactor/thread.hh>
+#include <elle/reactor/scheduler.hh>
+#include <elle/reactor/thread.hh>
 
 #include <crash_reporting/CrashReporter.hh>
 
@@ -55,8 +55,8 @@ main(int argc, char** argv)
     std::make_unique<crash_reporting::CrashReporter>(server, dumps, version);
   if (crash)
     do_crash();
-  reactor::Scheduler sched;
-  reactor::Thread main_thread(
+  elle::reactor::Scheduler sched;
+  elle::reactor::Thread main_thread(
     sched,
     "main",
     [&crash_reporter]

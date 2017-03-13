@@ -8,8 +8,8 @@
 #include <elle/Option.hh>
 #include <elle/utility/Move.hh>
 
-#include <cryptography/hash.hh>
-#include <cryptography/random.hh>
+#include <elle/cryptography/hash.hh>
+#include <elle/cryptography/random.hh>
 
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
@@ -30,17 +30,17 @@ namespace infinit
       /* Maintain backward compatibility with a short-livel 0.7.0 using
        * key hashes instead of ids
       */
-      typedef elle::Option<cryptography::rsa::PublicKey, elle::Buffer, int>
+      typedef elle::Option<elle::cryptography::rsa::PublicKey, elle::Buffer, int>
       KeyOrHash;
 
-      cryptography::rsa::PublicKey
+      elle::cryptography::rsa::PublicKey
       deserialize_key_hash(elle::serialization::SerializerIn& s,
                            elle::Version const& v,
                            std::string const& field_name,
                            Doughnut* dn)
       {
         if (v < elle::Version(0, 7, 0))
-          return s.deserialize<cryptography::rsa::PublicKey>(field_name);
+          return s.deserialize<elle::cryptography::rsa::PublicKey>(field_name);
         KeyOrHash koh = s.deserialize<KeyOrHash>(field_name + "_koh");
         if (koh.is<elle::Buffer>())
         {
@@ -75,14 +75,14 @@ namespace infinit
         }
         else
         {
-          return std::move(koh.get<cryptography::rsa::PublicKey>());
+          return std::move(koh.get<elle::cryptography::rsa::PublicKey>());
         }
       }
 
       void
       serialize_key_hash(elle::serialization::Serializer& s,
                          elle::Version const& v,
-                         cryptography::rsa::PublicKey& key,
+                         elle::cryptography::rsa::PublicKey& key,
                          std::string const& field_name,
                          Doughnut* dn)
       {
@@ -111,7 +111,7 @@ namespace infinit
                 elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
               ELLE_ASSERT(dn);
               auto hash = dn->ensure_key(
-                std::make_shared<cryptography::rsa::PublicKey>(key));
+                std::make_shared<elle::cryptography::rsa::PublicKey>(key));
               ELLE_DUMP("serialize key hash for %s: %s", key, hash);
               KeyOrHash koh(hash);
               s.serialize(field_name + "_koh", koh);
@@ -143,7 +143,7 @@ namespace infinit
       }
 
       OKBHeader::OKBHeader(Doughnut* dht,
-                           cryptography::rsa::KeyPair const& keys,
+                           elle::cryptography::rsa::KeyPair const& keys,
                            boost::optional<elle::Buffer> salt)
         : _owner_key(keys.public_key())
         , _signature()
@@ -153,7 +153,7 @@ namespace infinit
           this->_salt = std::move(salt.get());
         else
         {
-          this->_salt = cryptography::random::generate<elle::Buffer>(24);
+          this->_salt = elle::cryptography::random::generate<elle::Buffer>(24);
           uint64_t now = (boost::posix_time::microsec_clock::universal_time()
             - boost::posix_time::ptime(boost::posix_time::min_date_time))
             .total_milliseconds();
@@ -178,14 +178,14 @@ namespace infinit
 
       Address
       OKBHeader::hash_address(Doughnut const& dht,
-                              cryptography::rsa::PublicKey const& key,
+                              elle::cryptography::rsa::PublicKey const& key,
                               elle::Buffer const& salt)
       {
         return hash_address(key, salt, dht.version());
       }
 
       Address
-      OKBHeader::hash_address(cryptography::rsa::PublicKey const& key,
+      OKBHeader::hash_address(elle::cryptography::rsa::PublicKey const& key,
                               elle::Buffer const& salt,
                               elle::Version const& compatibility_version)
       {
@@ -193,7 +193,7 @@ namespace infinit
           key, elle::Version(0, 0, 0));
         key_buffer.append(salt.contents(), salt.size());
         auto hash =
-          cryptography::hash(key_buffer, cryptography::Oneway::sha256);
+          elle::cryptography::hash(key_buffer, elle::cryptography::Oneway::sha256);
         return Address(hash.contents(), flags::mutable_block,
                        compatibility_version >= elle::Version(0, 5, 0));
       }
@@ -262,7 +262,7 @@ namespace infinit
       BaseOKB<Block>::BaseOKB(Doughnut* owner,
                               elle::Buffer data,
                               boost::optional<elle::Buffer> salt,
-                              cryptography::rsa::KeyPair const& owner_keys)
+                              elle::cryptography::rsa::KeyPair const& owner_keys)
         : BaseOKB(OKBHeader(owner, owner_keys, std::move(salt)),
                   std::move(data), owner_keys.private_key())
       {}
@@ -271,7 +271,7 @@ namespace infinit
       BaseOKB<Block>::BaseOKB(
         OKBHeader header,
         elle::Buffer data,
-        std::shared_ptr<cryptography::rsa::PrivateKey> owner_key)
+        std::shared_ptr<elle::cryptography::rsa::PrivateKey> owner_key)
         : Super(header._hash_address())
         , OKBHeader(std::move(header))
         , _version(-1)
@@ -492,7 +492,7 @@ namespace infinit
 
       template <typename Block>
       bool
-      BaseOKB<Block>::_check_signature(cryptography::rsa::PublicKey const& key,
+      BaseOKB<Block>::_check_signature(elle::cryptography::rsa::PublicKey const& key,
                             elle::Buffer const& signature,
                             elle::Buffer const& data,
                             std::string const& name) const

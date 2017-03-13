@@ -1,6 +1,6 @@
 #pragma once
 
-#include <reactor/filesystem.hh>
+#include <elle/reactor/filesystem.hh>
 #include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/umbrella.hh>
 #include <infinit/filesystem/FileData.hh>
@@ -10,7 +10,7 @@ namespace infinit
 {
   namespace filesystem
   {
-    namespace rfs = reactor::filesystem;
+    namespace rfs = elle::reactor::filesystem;
     using DirectoryPtr = std::shared_ptr<Directory>;
     using ACLBlock = infinit::model::blocks::ACLBlock;
 
@@ -104,11 +104,10 @@ namespace infinit
       DirectoryConflictResolver(model::Model& model,
                                 Operation op,
                                 Address address);
-      ~DirectoryConflictResolver();
+      ~DirectoryConflictResolver() override;
       std::unique_ptr<Block>
       operator() (Block& block,
-                  Block& current,
-                  model::StoreMode mode) override;
+                  Block& current) override;
       void
       serialize(elle::serialization::Serializer& s,
                 elle::Version const& v) override;
@@ -121,13 +120,12 @@ namespace infinit
       Operation _op;
       Address _address;
       bool _deserialized;
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
     };
 
     std::unique_ptr<Block>
     resolve_directory_conflict(Block& b,
                                Block& current,
-                               model::StoreMode store_mode,
                                boost::filesystem::path p,
                                FileSystem& owner,
                                Operation op,

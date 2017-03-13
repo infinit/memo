@@ -9,11 +9,11 @@
 # include <infinit/storage/Key.hh>
 # include <infinit/storage/GoogleAPI.hh>
 
-# include <reactor/Barrier.hh>
-# include <reactor/http/Request.hh>
-# include <reactor/http/url.hh>
-# include <reactor/scheduler.hh>
-# include <reactor/Scope.hh>
+# include <elle/reactor/Barrier.hh>
+# include <elle/reactor/http/Request.hh>
+# include <elle/reactor/http/url.hh>
+# include <elle/reactor/scheduler.hh>
+# include <elle/reactor/Scope.hh>
 
 namespace infinit
 {
@@ -63,11 +63,11 @@ namespace infinit
       boost::filesystem::path _path(Key key) const;
 
       // Create a directory on GoogleDrive.
-      reactor::http::Request
+      elle::reactor::http::Request
       _mkdir(std::string const& path) const;
 
       // Insert a file on GoogleDrive.
-      reactor::http::Request
+      elle::reactor::http::Request
       _insert(Key key, elle::Buffer const& value) const;
 
       /* Check if a file exists.

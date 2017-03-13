@@ -1,7 +1,7 @@
 #include <infinit/storage/Mirror.hh>
 #include <infinit/model/Address.hh>
 
-#include <reactor/Scope.hh>
+#include <elle/reactor/Scope.hh>
 
 #include <boost/algorithm/string.hpp>
 
@@ -33,7 +33,7 @@ namespace infinit
     {
       if (_parallel)
       {
-        elle::With<reactor::Scope>() << [&] (reactor::Scope& s)
+        elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& s)
         {
           for (auto& e: _backend)
           {
@@ -59,7 +59,7 @@ namespace infinit
     {
       if (_parallel)
       {
-        elle::With<reactor::Scope>() << [&] (reactor::Scope& s)
+        elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& s)
         {
           for (auto& e: _backend)
           {

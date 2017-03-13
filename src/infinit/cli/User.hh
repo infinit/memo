@@ -2,7 +2,7 @@
 
 #include <boost/optional.hpp>
 
-#include <das/cli.hh>
+#include <elle/das/cli.hh>
 
 #include <infinit/User.hh>
 #include <infinit/cli/Object.hh>
@@ -15,7 +15,7 @@ namespace infinit
 {
   namespace cli
   {
-    using PrivateUserPublish = das::Model<
+    using PrivateUserPublish = elle::das::Model<
       infinit::User,
       decltype(elle::meta::list(
                  infinit::symbols::name,
@@ -43,19 +43,21 @@ namespace infinit
                                cli::pull,
                                cli::push,
                                cli::signup));
+
       // Create
-      Mode<decltype(binding(modes::mode_create,
-                            cli::name = std::string{},
-                            cli::description = boost::none,
-                            cli::key = boost::none,
-                            cli::email = boost::none,
-                            cli::fullname = boost::none,
-                            cli::password = boost::none,
-                            cli::ldap_name = boost::none,
-                            cli::output = boost::none,
-                            cli::push_user = false,
-                            cli::push = false,
-                            cli::full = false))>
+      Mode<User,
+           void (decltype(cli::name = std::string{}),
+                 decltype(cli::description = boost::optional<std::string>()),
+                 decltype(cli::key = boost::optional<std::string>()),
+                 decltype(cli::email = boost::optional<std::string>()),
+                 decltype(cli::fullname = boost::optional<std::string>()),
+                 decltype(cli::password = boost::optional<std::string>()),
+                 decltype(cli::ldap_name = boost::optional<std::string>()),
+                 decltype(cli::output = boost::optional<std::string>()),
+                 decltype(cli::push_user = false),
+                 decltype(cli::push = false),
+                 decltype(cli::full = false)),
+           decltype(modes::mode_create)>
       create;
       void
       mode_create(std::string const& name,
@@ -69,76 +71,95 @@ namespace infinit
                   bool push_user,
                   bool push,
                   bool full);
+
       // Delete
-      Mode<decltype(binding(modes::mode_delete,
-                            cli::name = std::string{},
-                            cli::pull = false,
-                            cli::purge = false,
-                            cli::force = false))>
+      Mode<User,
+           void (decltype(cli::name = std::string{}),
+                 decltype(cli::pull = false),
+                 decltype(cli::purge = false),
+                 decltype(cli::force = false)),
+           decltype(modes::mode_delete)>
       delete_;
       void
       mode_delete(std::string const& name,
                   bool pull,
                   bool purge,
                   bool force);
+
       // Export
-      Mode<decltype(binding(modes::mode_export,
-                            cli::name = std::string{},
-                            cli::full = false,
-                            cli::output = boost::none))>
+      Mode<User,
+           void (decltype(cli::name = std::string{}),
+                 decltype(cli::full = false),
+                 decltype(cli::output = boost::optional<std::string>())),
+           decltype(modes::mode_export)>
       export_;
       void
       mode_export(std::string const& name,
                   bool full,
                   boost::optional<std::string> path);
+
       // Fetch
-      Mode<decltype(binding(modes::mode_fetch,
-                            cli::name = std::string{},
-                            cli::no_avatar = false))>
+      Mode<User,
+           void (decltype(cli::name = std::vector<std::string>{}),
+                 decltype(cli::no_avatar = false)),
+           decltype(modes::mode_fetch)>
       fetch;
       void
       mode_fetch(std::vector<std::string> const& names,
                  bool no_avatar);
+
       // Hash
-      Mode<decltype(binding(modes::mode_hash,
-                            cli::name = std::string{}))>
+      Mode<User,
+           void (decltype(cli::name = std::string{})),
+           decltype(modes::mode_hash)>
       hash;
       void
       mode_hash(std::string const& name);
+
       // Import
-      Mode<decltype(binding(modes::mode_import,
-                            cli::input = boost::none))>
+      Mode<User,
+           void (decltype(cli::input = boost::optional<std::string>())),
+           decltype(modes::mode_import)>
       import;
       void
       mode_import(boost::optional<std::string> const& input);
+
       // List
-      Mode<decltype(binding(modes::mode_list))>
+      Mode<User,
+           void (),
+           decltype(modes::mode_list)>
       list;
       void
       mode_list();
+
       // Login
-      Mode<decltype(binding(modes::mode_login,
-                            cli::name = std::string{},
-                            cli::password = boost::none))>
+      Mode<User,
+           void (decltype(cli::name = std::string{}),
+                 decltype(cli::password = boost::optional<std::string>())),
+           decltype(modes::mode_login)>
       login;
       void
       mode_login(std::string const& name,
                  boost::optional<std::string> const& password);
+
       // Pull
-      Mode<decltype(binding(modes::mode_pull,
-                            cli::name = std::string{},
-                            cli::purge = false))>
+      Mode<User,
+           void (decltype(cli::name = std::string{}),
+                 decltype(cli::purge = false)),
+           decltype(modes::mode_pull)>
       pull;
       void
       mode_pull(std::string const& name, bool purge);
+
       // Push
-      Mode<decltype(binding(modes::mode_push,
-                            cli::name = std::string{},
-                            cli::email = boost::none,
-                            cli::fullname = boost::none,
-                            cli::password = boost::none,
-                            cli::avatar = boost::none,
-                            cli::full = false))>
+      Mode<User,
+           void (decltype(cli::name = std::string{}),
+                 decltype(cli::email = boost::optional<std::string>()),
+                 decltype(cli::fullname = boost::optional<std::string>()),
+                 decltype(cli::password = boost::optional<std::string>()),
+                 decltype(cli::avatar = boost::optional<std::string>()),
+                 decltype(cli::full = false)),
+           decltype(modes::mode_push)>
       push;
       void
       mode_push(std::string const& name,
@@ -147,16 +168,18 @@ namespace infinit
                 boost::optional<std::string> password,
                 boost::optional<std::string> avatar,
                 bool full);
+
       // Signup
-      Mode<decltype(binding(modes::mode_signup,
-                            cli::name = std::string{},
-                            cli::description = boost::none,
-                            cli::key = boost::none,
-                            cli::email = boost::none,
-                            cli::fullname = boost::none,
-                            cli::password = boost::none,
-                            cli::ldap_name = boost::none,
-                            cli::full = false))>
+      Mode<User,
+           void (decltype(cli::name = std::string{}),
+                 decltype(cli::description = boost::optional<std::string>()),
+                 decltype(cli::key = boost::optional<std::string>()),
+                 decltype(cli::email = boost::optional<std::string>()),
+                 decltype(cli::fullname = boost::optional<std::string>()),
+                 decltype(cli::password = boost::optional<std::string>()),
+                 decltype(cli::ldap_name = boost::optional<std::string>()),
+                 decltype(cli::full = false)),
+           decltype(modes::mode_signup)>
       signup;
       void
       mode_signup(std::string const& name,

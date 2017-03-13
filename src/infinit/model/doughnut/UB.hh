@@ -3,7 +3,7 @@
 
 # include <elle/attribute.hh>
 
-# include <cryptography/rsa/PublicKey.hh>
+# include <elle/cryptography/rsa/PublicKey.hh>
 
 # include <infinit/model/blocks/ImmutableBlock.hh>
 
@@ -23,8 +23,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef UB Self;
-        typedef blocks::ImmutableBlock Super;
+        using Self = infinit::model::doughnut::UB;
+        using Super = blocks::ImmutableBlock;
 
       /*-------------.
       | Construction |
@@ -34,7 +34,7 @@ namespace infinit
            Passport const& passport,
            bool reverse = false);
         UB(Doughnut* dht, std::string name,
-           cryptography::rsa::PublicKey key,
+           elle::cryptography::rsa::PublicKey key,
            bool reverse = false);
         UB(UB const& other);
         static
@@ -42,13 +42,13 @@ namespace infinit
         hash_address(std::string const& name, Doughnut const& dht);
         static
         Address
-        hash_address(cryptography::rsa::PublicKey const& key,
+        hash_address(elle::cryptography::rsa::PublicKey const& key,
                      Doughnut const& dht);
         static
         elle::Buffer
-        hash(cryptography::rsa::PublicKey const& key);
+        hash(elle::cryptography::rsa::PublicKey const& key);
         ELLE_ATTRIBUTE_R(std::string, name);
-        ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, key);
+        ELLE_ATTRIBUTE_R(elle::cryptography::rsa::PublicKey, key);
         ELLE_ATTRIBUTE_R(bool, reverse);
         ELLE_ATTRIBUTE_R(boost::optional<Passport>, passport);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
@@ -57,7 +57,6 @@ namespace infinit
       | Clone  |
       `-------*/
       public:
-        virtual
         std::unique_ptr<blocks::Block>
         clone() const override;
 
@@ -65,20 +64,15 @@ namespace infinit
       | Validation |
       `-----------*/
       protected:
-        virtual
         void
         _seal(boost::optional<int> version) override;
-        virtual
         blocks::ValidationResult
         _validate(Model const& model, bool writing) const override;
-        virtual
         blocks::RemoveSignature
         _sign_remove(Model& model) const override;
-        virtual
         blocks::ValidationResult
         _validate_remove(Model& model,
                          blocks::RemoveSignature const& sig) const override;
-        virtual
         blocks::ValidationResult
         _validate(Model const& model, const Block& new_block) const override;
       /*--------------.
@@ -87,7 +81,6 @@ namespace infinit
       public:
         UB(elle::serialization::SerializerIn& input,
            elle::Version const& version);
-        virtual
         void
         serialize(elle::serialization::Serializer& s,
                   elle::Version const& version) override;

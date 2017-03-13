@@ -5,8 +5,8 @@
 #include <elle/Buffer.hh>
 #include <elle/format/hexadecimal.hh>
 
-#include <cryptography/hash.hh>
-#include <cryptography/random.hh>
+#include <elle/cryptography/hash.hh>
+#include <elle/cryptography/random.hh>
 
 namespace infinit
 {
@@ -33,9 +33,9 @@ namespace infinit
     {}
 
     Address::Address(elle::UUID const& id)
-      : Address(infinit::cryptography::hash(
+      : Address(elle::cryptography::hash(
                   elle::ConstWeakBuffer(id.data, id.static_size()),
-                  infinit::cryptography::Oneway::sha256).contents())
+                  elle::cryptography::Oneway::sha256).contents())
     {}
 
     int
@@ -105,7 +105,7 @@ namespace infinit
     Address::random()
     {
       auto buf =
-        cryptography::random::generate<elle::Buffer>(sizeof(Value));
+        elle::cryptography::random::generate<elle::Buffer>(sizeof(Value));
       ELLE_ASSERT_GTE(buf.size(), sizeof(Value));
       return Address(buf.contents());
     }
@@ -160,19 +160,22 @@ namespace elle
     Serialize<Address>::Type
     Serialize<Address>::convert(Address& address)
     {
-      return Type(address._value, sizeof(Address::Value));
+      return {address._value, sizeof(Address::Value)};
     }
 
     Address
     Serialize<Address>::convert(Type buffer)
     {
-      if (buffer.size() == 0)
+      if (buffer.empty())
         return Address();
-      if (buffer.size() != sizeof(Address::Value))
+      else if (buffer.size() != sizeof(Address::Value))
         elle::err("invalid address: %x", buffer);
-      Address::Value value;
-      memcpy(value, buffer.contents(), sizeof(Address::Value));
-      return Address(value);
+      else
+      {
+        Address::Value value;
+        memcpy(value, buffer.contents(), sizeof(Address::Value));
+        return value;
+      }
     }
   }
 }

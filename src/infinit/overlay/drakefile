@@ -13,8 +13,8 @@ sources = drake.nodes(
   'Overlay.hh',
   'Stonehenge.cc',
   'Stonehenge.hh',
-  'kademlia/kademlia.cc',
-  'kademlia/kademlia.hh',
+  # 'kademlia/kademlia.cc',
+  # 'kademlia/kademlia.hh',
   'kelips/Kelips.cc',
   'kelips/Kelips.hh',
 )

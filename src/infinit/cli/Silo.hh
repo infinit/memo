@@ -2,7 +2,7 @@
 
 #include <boost/optional.hpp>
 
-#include <das/cli.hh>
+#include <elle/das/cli.hh>
 
 #include <infinit/cli/Object.hh>
 #include <infinit/cli/Mode.hh>
@@ -24,66 +24,162 @@ namespace infinit
                                               cli::export_,
                                               cli::import,
                                               cli::list));
+      using Objects = decltype(elle::meta::list(cli::create));
+
       // Create
-      Mode<decltype(binding(modes::mode_create,
-                            name,
-                            description = boost::none,
-                            capacity = boost::none,
-                            output = boost::none,
-                            dropbox,
-                            filesystem,
-                            gcs,
-                            google_drive,
-                            ssh,
-                            s3,
-                            account = boost::none,
-                            bucket = boost::none,
-                            endpoint = "amazonaws.com",
-                            host = boost::none,
-                            region = boost::none,
-                            path = boost::none,
-                            storage_class = boost::none))>
-      create;
-      void
-      mode_create(std::string name,
-                  boost::optional<std::string> description,
-                  boost::optional<std::string> capacity,
-                  boost::optional<std::string> output,
-                  bool dropbox,
-                  bool filesystem,
-                  bool gcs,
-                  bool google_drive,
-                  bool ssh,
-                  bool s3,
-                  boost::optional<std::string> account,
-                  boost::optional<std::string> bucket,
-                  std::string endpoint,
-                  boost::optional<std::string> host,
-                  boost::optional<std::string> region,
-                  boost::optional<std::string> path,
-                  boost::optional<std::string> storage_class);
-      Mode<decltype(binding(modes::mode_delete,
-                            name,
-                            clear_content = false,
-                            purge = false))>
+      class Create
+        : public Object<Create, Silo>
+      {
+      public:
+        using Super = Object<Create, Silo>;
+        using Modes = decltype(elle::meta::list(
+                                 cli::filesystem
+                                 INFINIT_ENTREPRISE(,cli::dropbox)
+                                 INFINIT_ENTREPRISE(,cli::gcs)
+                                 INFINIT_ENTREPRISE(,cli::google_drive)
+                                 INFINIT_ENTREPRISE(,cli::s3)));
+        Create(Infinit& infinit);
+
+        INFINIT_ENTREPRISE(
+
+        // Dropbox.
+        Mode<Create,
+             void (decltype(cli::name)::Formal<std::string const&>,
+                   decltype(cli::account)::Formal<std::string const&>,
+                   decltype(cli::description = boost::optional<std::string>()),
+                   decltype(cli::capacity = boost::optional<std::string>()),
+                   decltype(cli::output = boost::optional<std::string>()),
+                   decltype(cli::path = boost::optional<std::string>())),
+             decltype(modes::mode_dropbox)>
+        dropbox;
+        void
+        mode_dropbox(std::string const& name,
+                     std::string const& account,
+                     boost::optional<std::string> description = {},
+                     boost::optional<std::string> capacity = {},
+                     boost::optional<std::string> output = {},
+                     boost::optional<std::string> root = {});
+
+        );
+
+        // Filesystem.
+        Mode<Create,
+             void (decltype(cli::name)::Formal<std::string const&>,
+                   decltype(cli::description = boost::optional<std::string>()),
+                   decltype(cli::capacity = boost::optional<std::string>()),
+                   decltype(cli::output = boost::optional<std::string>()),
+                   decltype(cli::path = boost::optional<std::string>())),
+             decltype(modes::mode_filesystem)>
+        filesystem;
+        void
+        mode_filesystem(std::string const& name,
+                        boost::optional<std::string> description,
+                        boost::optional<std::string> capacity,
+                        boost::optional<std::string> output,
+                        boost::optional<std::string> path);
+
+        INFINIT_ENTREPRISE(
+
+        Mode<Create,
+             void (decltype(cli::name)::Formal<std::string const&>,
+                   decltype(cli::account)::Formal<std::string const&>,
+                   decltype(cli::bucket)::Formal<std::string const&>,
+                   decltype(cli::description = boost::optional<std::string>()),
+                   decltype(cli::capacity = boost::optional<std::string>()),
+                   decltype(cli::output = boost::optional<std::string>()),
+                   decltype(cli::path = boost::optional<std::string>())),
+             decltype(modes::mode_gcs)>
+        gcs;
+        void
+        mode_gcs(std::string const& name,
+                 std::string const& account,
+                 std::string const& bucket,
+                 boost::optional<std::string> description = {},
+                 boost::optional<std::string> capacity = {},
+                 boost::optional<std::string> output = {},
+                 boost::optional<std::string> path = {});
+
+        Mode<Create,
+             void (decltype(cli::name)::Formal<std::string const&>,
+                   decltype(cli::account)::Formal<std::string const&>,
+                   decltype(cli::description = boost::optional<std::string>()),
+                   decltype(cli::capacity = boost::optional<std::string>()),
+                   decltype(cli::output = boost::optional<std::string>()),
+                   decltype(cli::path = boost::optional<std::string>())),
+             decltype(modes::mode_google_drive)>
+        google_drive;
+        void
+        mode_google_drive(std::string const& name,
+                          std::string const& account,
+                          boost::optional<std::string> description = {},
+                          boost::optional<std::string> capacity = {},
+                          boost::optional<std::string> output = {},
+                          boost::optional<std::string> root = {});
+
+        Mode<Create,
+             void (decltype(cli::name)::Formal<std::string const&>,
+                   decltype(cli::account)::Formal<std::string const&>,
+                   decltype(cli::bucket)::Formal<std::string const&>,
+                   decltype(cli::region)::Formal<std::string const&>,
+                   decltype(cli::description = boost::optional<std::string>()),
+                   decltype(cli::capacity = boost::optional<std::string>()),
+                   decltype(cli::output = boost::optional<std::string>()),
+                   decltype(cli::endpoint = std::string()),
+                   decltype(cli::storage_class = boost::optional<std::string>()),
+                   decltype(cli::path = boost::optional<std::string>())),
+             decltype(modes::mode_s3)>
+        s3;
+        void
+        mode_s3(std::string const& name,
+                std::string const& account,
+                std::string const& bucket,
+                std::string const& region,
+                boost::optional<std::string> description = {},
+                boost::optional<std::string> capacity = {},
+                boost::optional<std::string> output = {},
+                std::string const& endpoint = std::string(),
+                boost::optional<std::string> const& storage_class = {},
+                boost::optional<std::string> path = {});
+
+        );
+
+        std::string const description = "Create local silo";
+      } create;
+
+      // Delete
+      Mode<Silo,
+           void (decltype(name)::Formal<std::string const&>,
+                 decltype(clear_content = false),
+                 decltype(purge = false)),
+           decltype(modes::mode_delete)>
       delete_;
       void
-      mode_delete(std::string name,
+      mode_delete(std::string const& name,
                   bool clear,
                   bool purge);
-      Mode<decltype(binding(modes::mode_export,
-                            name,
-                            output = boost::none))>
+
+      // Export
+      Mode<Silo,
+           void (decltype(name)::Formal<std::string const&>,
+                 decltype(output = boost::optional<std::string>())),
+           decltype(modes::mode_export)>
       export_;
       void
-      mode_export(std::string name,
+      mode_export(std::string const& name,
                   boost::optional<std::string> output);
-      Mode<decltype(binding(modes::mode_import,
-                            input = boost::none))>
+
+      // Import
+      Mode<Silo,
+           void (decltype(input = boost::optional<std::string>())),
+           decltype(modes::mode_import)>
       import;
       void
       mode_import(boost::optional<std::string> input);
-      Mode<decltype(binding(modes::mode_list))>
+
+      // List
+      Mode<Silo,
+           void (),
+           decltype(modes::mode_list)>
       list;
       void
       mode_list();

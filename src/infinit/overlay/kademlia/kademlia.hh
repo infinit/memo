@@ -4,17 +4,17 @@
 
 # include <infinit/overlay/Overlay.hh>
 # include <elle/serialization/Serializer.hh>
-# include <reactor/network/udp-socket.hh>
-# include <reactor/Barrier.hh>
-# include <reactor/Generator.hh>
+# include <elle/reactor/network/udp-socket.hh>
+# include <elle/reactor/Barrier.hh>
+# include <elle/reactor/Generator.hh>
 # include <infinit/model/doughnut/Local.hh>
 
 namespace kademlia
 {
-  typedef boost::asio::ip::udp::endpoint Endpoint;
-  typedef infinit::model::Address Address;
-  typedef std::chrono::time_point<std::chrono::steady_clock> Time;
-  typedef Time::duration Duration;
+  using Endpoint = boost::asio::ip::udp::endpoint;
+  using Address = infinit::model::Address;
+  using Time = std::chrono::time_point<std::chrono::steady_clock>;
+  using Duration = Time::duration;
   struct PrettyEndpoint: public Endpoint
   {
     PrettyEndpoint() {}
@@ -66,10 +66,10 @@ namespace kademlia
   protected:
     void
     _discover(infinit::overlay::NodeLocations const& peers) override;
-    reactor::Generator<WeakMember>
+    elle::reactor::Generator<WeakMember>
     _allocate(infinit::model::Address address,
             int n) const override;
-    reactor::Generator<WeakMember>
+    elle::reactor::Generator<WeakMember>
     _lookup(infinit::model::Address address,
             int n,
             bool fast) const override;
@@ -109,15 +109,15 @@ namespace kademlia
     bool less(Address const& a, Address const& b);
     bool more(Address const& a, Address const& b);
     int bucket_of(Address const&);
-    typedef infinit::model::doughnut::Local Local;
-    typedef infinit::overlay::Overlay Overlay;
-    std::unique_ptr<reactor::Thread> _looper;
-    std::unique_ptr<reactor::Thread> _pinger;
-    std::unique_ptr<reactor::Thread> _refresher;
-    std::unique_ptr<reactor::Thread> _cleaner;
-    std::unique_ptr<reactor::Thread> _republisher;
-    reactor::network::UDPSocket _socket;
-    reactor::Mutex _udp_send_mutex;
+    using Local = infinit::model::doughnut::Local;
+    using Overlay = infinit::overlay::Overlay;
+    std::unique_ptr<elle::reactor::Thread> _looper;
+    std::unique_ptr<elle::reactor::Thread> _pinger;
+    std::unique_ptr<elle::reactor::Thread> _refresher;
+    std::unique_ptr<elle::reactor::Thread> _cleaner;
+    std::unique_ptr<elle::reactor::Thread> _republisher;
+    elle::reactor::network::UDPSocket _socket;
+    elle::reactor::Mutex _udp_send_mutex;
     Configuration _config;
     Address _mask;
     Address _self;
@@ -142,7 +142,7 @@ namespace kademlia
       std::unordered_map<Address, Endpoint> endpoints;
       int pending; // number of requests in flight
       std::vector<Address> queried;
-      reactor::Barrier barrier;
+      elle::reactor::Barrier barrier;
       std::vector<Endpoint> storeResult;
       int n; // number ofr results requested
       int steps; // number of replies we got
@@ -169,8 +169,8 @@ namespace infinit
       struct Configuration
         : public overlay::Configuration
       {
-        typedef Configuration Self;
-        typedef overlay::Configuration Super;
+        using Self = infinit::overlay::kademlia::Configuration;
+        using Super = overlay::Configuration;
         Configuration();
         Configuration(elle::serialization::SerializerIn& input);
         ELLE_CLONABLE();

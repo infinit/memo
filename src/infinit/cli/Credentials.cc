@@ -51,51 +51,41 @@ namespace infinit
 
     Credentials::Credentials(Infinit& infinit)
       : Object(infinit)
-      , add(
-        "Add credentials for a third-party service",
-        das::cli::Options(),
-        this->bind(modes::mode_add,
-                   name = boost::none,
-                   aws = false,
-                   dropbox = false,
-                   gcs = false,
-                   google_drive = false))
-      , delete_(
-        "Delete locally credentials for a third-party service",
-        das::cli::Options(),
-        this->bind(modes::mode_delete,
-                   name,
-                   aws = false,
-                   dropbox = false,
-                   gcs = false,
-                   google_drive = false,
-                   cli::pull = false))
-      , fetch(
-        "Fetch credentials from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_fetch,
-                   name = boost::none,
-                   aws = false,
-                   dropbox = false,
-                   gcs = false,
-                   google_drive = false))
-      , pull(
-        "Pull credentials from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_pull,
-                   account = boost::none,
-                   aws = false,
-                   dropbox = false,
-                   gcs = false,
-                   google_drive = false))
-      , list(
-        "List local credentials",
-        das::cli::Options(),
-        this->bind(modes::mode_list,
-                   aws = false,
-                   dropbox = false,
-                   gcs = false,
-                   google_drive = false))
+      , add(*this,
+            "Add credentials for a third-party service",
+            name,
+            aws = false,
+            dropbox = false,
+            gcs = false,
+            google_drive = false)
+      , delete_(*this,
+                "Delete locally credentials for a third-party service",
+                name,
+                aws = false,
+                dropbox = false,
+                gcs = false,
+                google_drive = false,
+                cli::pull = false)
+      , fetch(*this,
+              "Fetch credentials from {hub}",
+              name = boost::none,
+              aws = false,
+              dropbox = false,
+              gcs = false,
+              google_drive = false)
+      , pull(*this,
+             "Pull credentials from {hub}",
+             account = boost::none,
+             aws = false,
+             dropbox = false,
+             gcs = false,
+             google_drive = false)
+      , list(*this,
+             "List local credentials",
+             aws = false,
+             dropbox = false,
+             gcs = false,
+             google_drive = false)
     {}
 
     namespace
@@ -103,7 +93,7 @@ namespace infinit
       /// A structure easy to query using das symbols.
       ///
       /// E.g., `google.attr_get(enabled)` -> true/false, where
-      /// `google` is a das::Symbol.
+      /// `google` is a elle::das::Symbol.
       struct Enabled
       {
         bool
@@ -172,7 +162,7 @@ namespace infinit
     }
 
     void
-    Credentials::mode_add(boost::optional<std::string> const& account,
+    Credentials::mode_add(std::string const& account,
                           bool aws,
                           bool dropbox,
                           bool gcs,
@@ -185,7 +175,6 @@ namespace infinit
       e.ensure_at_least_one("add");
       if (aws)
       {
-        auto account_name = mandatory(account, "account");
         std::cout << "Please enter your " << AWSPrint::pretty
                   << "  credentials\n";
         auto access_key_id
@@ -193,7 +182,7 @@ namespace infinit
         auto secret_access_key
           = this->cli().read_secret("Secret Access Key", "[A-Za-z0-9/+=]{40}");
         auto aws_credentials =
-          std::make_unique<infinit::AWSCredentials>(account_name,
+          std::make_unique<infinit::AWSCredentials>(account,
                                                     access_key_id,
                                                     secret_access_key);
         ifnt.credentials_aws_add(std::move(aws_credentials));
@@ -444,10 +433,10 @@ namespace infinit
 
     namespace s
     {
-      DAS_SYMBOL(credentials_aws);
-      DAS_SYMBOL(credentials_dropbox);
-      DAS_SYMBOL(credentials_gcs);
-      DAS_SYMBOL(credentials_google);
+      ELLE_DAS_SYMBOL(credentials_aws);
+      ELLE_DAS_SYMBOL(credentials_dropbox);
+      ELLE_DAS_SYMBOL(credentials_gcs);
+      ELLE_DAS_SYMBOL(credentials_google);
     }
 
     void

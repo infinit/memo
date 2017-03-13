@@ -2,9 +2,9 @@
 
 #include <iostream>
 
-#include <cryptography/rsa/pem.hh>
+#include <elle/cryptography/rsa/pem.hh>
 
-#include <reactor/http/url.hh>
+#include <elle/reactor/http/url.hh>
 
 #include <infinit/LoginCredentials.hh>
 #include <infinit/cli/Infinit.hh>
@@ -17,7 +17,7 @@ namespace infinit
 {
   namespace cli
   {
-    using PublicUser = das::Model<
+    using PublicUser = elle::das::Model<
       infinit::User,
       decltype(elle::meta::list(
                  infinit::symbols::name,
@@ -26,7 +26,7 @@ namespace infinit
                  infinit::symbols::public_key,
                  infinit::symbols::ldap_dn))>;
 
-    using PublicUserPublish = das::Model<
+    using PublicUserPublish = elle::das::Model<
       infinit::User,
       decltype(elle::meta::list(
                  infinit::symbols::name,
@@ -38,90 +38,68 @@ namespace infinit
 
     User::User(Infinit& infinit)
       : Object(infinit)
-      , create(
-        "Create a user",
-        das::cli::Options(),
-        this->bind(modes::mode_create,
-                   cli::name = Infinit::default_user_name(),
-                   cli::description = boost::none,
-                   cli::key = boost::none,
-                   cli::email = boost::none,
-                   cli::fullname = boost::none,
-                   cli::password = boost::none,
-                   cli::ldap_name = boost::none,
-                   cli::output = boost::none,
-                   cli::push_user = false,
-                   cli::push = false,
-                   cli::full = false))
-      , delete_(
-        "Delete local user",
-        das::cli::Options(),
-        this->bind(modes::mode_delete,
-                   cli::name = Infinit::default_user_name(),
-                   cli::pull = false,
-                   cli::purge = false,
-                   cli::force = false))
-      , export_(
-        "Export local user",
-        das::cli::Options(),
-        this->bind(modes::mode_export,
-                   cli::name = Infinit::default_user_name(),
-                   cli::full = false,
-                   cli::output = boost::none))
-      , fetch(
-        "Fetch users from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_fetch,
-                   cli::name = Infinit::default_user_name(),
-                   cli::no_avatar = false))
-      , hash(
-        "Get short hash of user's key",
-        das::cli::Options(),
-        this->bind(modes::mode_hash,
-                   cli::name = Infinit::default_user_name()))
-      , import(
-        "Import local user",
-        das::cli::Options(),
-        this->bind(modes::mode_import,
-                   cli::input = boost::none))
-      , list(
-        "List local users",
-        das::cli::Options(),
-        this->bind(modes::mode_list))
-      , login(
-        "Login user to {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_login,
-                   cli::name = Infinit::default_user_name(),
-                   cli::password = boost::none))
-      , pull(
-        "Pull a user from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_pull,
-                   cli::name = Infinit::default_user_name(),
-                   cli::purge = false))
-      , push(
-        "Push a user from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_push,
-                   cli::name = Infinit::default_user_name(),
-                   cli::email = boost::none,
-                   cli::fullname = boost::none,
-                   cli::password = boost::none,
-                   cli::avatar = boost::none,
-                   cli::full = false))
-      , signup(
-        "Create and push a user to {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_signup,
-                   cli::name = Infinit::default_user_name(),
-                   cli::description = boost::none,
-                   cli::key = boost::none,
-                   cli::email = boost::none,
-                   cli::fullname = boost::none,
-                   cli::password = boost::none,
-                   cli::ldap_name = boost::none,
-                   cli::full = false))
+      , create(*this,
+               "Create a user",
+               cli::name = Infinit::default_user_name(),
+               cli::description = boost::none,
+               cli::key = boost::none,
+               cli::email = boost::none,
+               cli::fullname = boost::none,
+               cli::password = boost::none,
+               cli::ldap_name = boost::none,
+               cli::output = boost::none,
+               cli::push_user = false,
+               cli::push = false,
+               cli::full = false)
+      , delete_(*this,
+                "Delete local user",
+                cli::name = Infinit::default_user_name(),
+                cli::pull = false,
+                cli::purge = false,
+                cli::force = false)
+      , export_(*this,
+                "Export local user",
+                cli::name = Infinit::default_user_name(),
+                cli::full = false,
+                cli::output = boost::none)
+      , fetch(*this,
+              "Fetch users from {hub}",
+              cli::name =
+                std::vector<std::string>{Infinit::default_user_name()},
+              cli::no_avatar = false)
+      , hash(*this,
+             "Get short hash of user's key",
+             cli::name = Infinit::default_user_name())
+      , import(*this,
+               "Import local user",
+               cli::input = boost::none)
+      , list(*this, "List local users")
+      , login(*this,
+              "Login user to {hub}",
+              cli::name = Infinit::default_user_name(),
+              cli::password = boost::none)
+      , pull(*this,
+             "Pull a user from {hub}",
+             cli::name = Infinit::default_user_name(),
+             cli::purge = false)
+      , push(*this,
+             "Push a user from {hub}",
+             cli::name = Infinit::default_user_name(),
+             cli::email = boost::none,
+             cli::fullname = boost::none,
+             cli::password = boost::none,
+             cli::avatar = boost::none,
+             cli::full = false)
+      , signup(*this,
+               "Create and push a user to {hub}",
+               cli::name = Infinit::default_user_name(),
+               cli::description = boost::none,
+               cli::key = boost::none,
+               cli::email = boost::none,
+               cli::fullname = boost::none,
+               cli::password = boost::none,
+               cli::ldap_name = boost::none,
+               cli::full = false)
     {}
 
     namespace
@@ -164,7 +142,7 @@ namespace infinit
       {
         auto url = elle::sprintf("users/%s/avatar", name);
         auto request = api.cli().infinit().beyond_fetch_data(url, "avatar", name);
-        if (request->status() == reactor::http::StatusCode::OK)
+        if (request->status() == elle::reactor::http::StatusCode::OK)
         {
           auto response = request->response();
           // XXX: Deserialize XML.
@@ -198,13 +176,13 @@ namespace infinit
           if (keys_file)
           {
             auto passphrase = Infinit::read_passphrase();
-            return infinit::cryptography::rsa::pem::import_keypair(
+            return elle::cryptography::rsa::pem::import_keypair(
                 *keys_file, passphrase);
           }
           else
           {
             api.cli().report("generating RSA keypair");
-            return infinit::cryptography::rsa::keypair::generate(2048);
+            return elle::cryptography::rsa::keypair::generate(2048);
           }
         }();
         return {name, keys, email, fullname, ldap_name, description};
@@ -222,7 +200,7 @@ namespace infinit
             password = Infinit::read_password();
           if (!user.ldap_dn)
             user.password_hash = Infinit::hub_password_hash(*password);
-          api.cli().infinit().beyond_push<das::Serializer<PrivateUserPublish>>(
+          api.cli().infinit().beyond_push<elle::das::Serializer<PrivateUserPublish>>(
             "user", user.name, user, user);
         }
         else
@@ -230,7 +208,7 @@ namespace infinit
           if (password)
             elle::err<CLIError>
               ("password is only used when pushing a full user");
-          api.cli().infinit().beyond_push<das::Serializer<PublicUserPublish>>(
+          api.cli().infinit().beyond_push<elle::das::Serializer<PublicUserPublish>>(
             "user", user.name, user, user, !api.cli().script());
         }
       }
@@ -381,7 +359,7 @@ namespace infinit
       else
       {
         elle::serialization::json::serialize<
-          das::Serializer<infinit::User, PublicUser>>(user, *output, false);
+          elle::das::Serializer<infinit::User, PublicUser>>(user, *output, false);
       }
       this->cli().report_exported(std::cout, "user", user.name);
     }
@@ -407,7 +385,7 @@ namespace infinit
         try
         {
           auto user = this->cli().infinit().beyond_fetch<infinit::User>(
-            "user", reactor::http::url_encode(name));
+            "user", elle::reactor::http::url_encode(name));
           this->cli().infinit().user_save(std::move(user));
           avatar();
         }

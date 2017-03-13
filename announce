@@ -2,6 +2,7 @@
 
 import mistune
 import slacker
+import sys
 
 class SlackRenderer(mistune.Renderer):
 

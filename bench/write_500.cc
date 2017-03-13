@@ -103,9 +103,9 @@ public:
 
   template <typename ... Args>
   DHTs(int count,
-       boost::optional<infinit::cryptography::rsa::KeyPair> kp,
+       boost::optional<elle::cryptography::rsa::KeyPair> kp,
        Args ... args)
-    : owner_keys(kp? *kp : infinit::cryptography::rsa::keypair::generate(512))
+    : owner_keys(kp? *kp : elle::cryptography::rsa::keypair::generate(512))
     , dhts()
   {
     pax = true;
@@ -128,7 +128,7 @@ public:
   {
     Client(std::string const& name, DHT dht)
       : dht(std::move(dht))
-      , fs(std::make_unique<reactor::filesystem::FileSystem>(
+      , fs(std::make_unique<elle::reactor::filesystem::FileSystem>(
              std::make_unique<infinit::filesystem::FileSystem>(
                name, this->dht.dht,
                infinit::filesystem::allow_root_creation = true),
@@ -136,17 +136,17 @@ public:
     {}
 
     DHT dht;
-    std::unique_ptr<reactor::filesystem::FileSystem> fs;
+    std::unique_ptr<elle::reactor::filesystem::FileSystem> fs;
   };
 
   template<typename... Args>
   Client
   client(bool new_key,
-         boost::optional<infinit::cryptography::rsa::KeyPair> kp,
+         boost::optional<elle::cryptography::rsa::KeyPair> kp,
          Args... args)
   {
     auto k = kp ? *kp
-      : new_key ? infinit::cryptography::rsa::keypair::generate(512)
+      : new_key ? elle::cryptography::rsa::keypair::generate(512)
       : this->owner_keys;
     ELLE_LOG("new client with owner=%f key=%f", this->owner_keys.K(), k.K());
     DHT client(owner = this->owner_keys,
@@ -167,7 +167,7 @@ public:
     return client(new_key, {});
   }
 
-  infinit::cryptography::rsa::KeyPair owner_keys;
+  elle::cryptography::rsa::KeyPair owner_keys;
   std::vector<DHT> dhts;
   bool pax;
 };
@@ -200,8 +200,8 @@ write_test(int64_t total_size)
 int
 main(int argc, char const* argv[])
 {
-  reactor::Scheduler sched;
-  reactor::Thread main(
+  elle::reactor::Scheduler sched;
+  elle::reactor::Thread main(
     sched, "main",
     [&]
     {

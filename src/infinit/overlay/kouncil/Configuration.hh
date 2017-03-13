@@ -1,7 +1,6 @@
-#ifndef INFINIT_OVERLAY_KOUNCIL_CONFIGURATION_HH
-# define INFINIT_OVERLAY_KOUNCIL_CONFIGURATION_HH
+#pragma once
 
-# include <infinit/overlay/Overlay.hh>
+#include <infinit/overlay/Overlay.hh>
 
 namespace infinit
 {
@@ -18,9 +17,9 @@ namespace infinit
       `------*/
       public:
         /// Ourself.
-        typedef Configuration Self;
+        using Self = Configuration;
         /// Parent class.
-        typedef overlay::Configuration Super;
+        using Super = overlay::Configuration;
 
       /*-------------.
       | Construction |
@@ -66,7 +65,7 @@ namespace infinit
          *  @arg dht   Owning Doughnut.
          *  @return The built Kouncil.
          */
-        virtual
+
         std::unique_ptr<infinit::overlay::Overlay>
         make(std::shared_ptr<model::doughnut::Local> local,
              model::doughnut::Doughnut* doughnut) override;
@@ -76,5 +75,3 @@ namespace infinit
     }
   }
 }
-
-#endif

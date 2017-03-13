@@ -9,7 +9,7 @@
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/json.hh>
 
-#include <reactor/exception.hh>
+#include <elle/reactor/exception.hh>
 
 #include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/File.hh>
@@ -36,7 +36,7 @@ namespace elle
   {
     template<> struct Serialize<infinit::filesystem::EntryType>
     {
-      typedef int Type;
+      using Type = int;
       static int convert(infinit::filesystem::EntryType& et)
       {
         return (int)et;
@@ -62,7 +62,6 @@ namespace infinit
     std::unique_ptr<Block>
     resolve_directory_conflict(Block& b,
                                Block& current,
-                               model::StoreMode store_mode,
                                model::Model& model,
                                Operation op,
                                Address address,
@@ -186,11 +185,10 @@ namespace infinit
 
     std::unique_ptr<Block>
     DirectoryConflictResolver::operator() (Block& block,
-                                           Block& current,
-                                           model::StoreMode mode)
+                                           Block& current)
     {
       return resolve_directory_conflict(
-        block, current, mode,
+        block, current,
         *this->_model, this->_op, this->_address, this->_deserialized);
     }
 
@@ -443,13 +441,16 @@ namespace infinit
       try
       {
         int version = 0;
+        auto resolver =
+          std::make_unique<DirectoryConflictResolver>(model, op, _address);
         if (block)
         {
           block->data(data);
           version = block->version();
-          model.store(*block,
-            first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-            std::make_unique<DirectoryConflictResolver>(model, op, _address));
+          if (first_write)
+            model.seal_and_insert(*block, std::move(resolver));
+          else
+            model.seal_and_update(*block, std::move(resolver));
         }
         else
         {
@@ -459,7 +460,7 @@ namespace infinit
             ELLE_TRACE("Conflict: block version not expected: %s vs %s",
                      b->version(), _block_version);
             DirectoryConflictResolver dcr(model, op, _address);
-            auto nb = dcr(*b, *b, first_write ? model::STORE_INSERT : model::STORE_UPDATE);
+            auto nb = dcr(*b, *b);
             b = elle::cast<ACLBlock>::runtime(nb);
             // Update this with the conflict resolved data
             update(*b, get_permissions(model, *b));
@@ -467,9 +468,10 @@ namespace infinit
           else
             b->data(data);
           version = b->version();
-          model.store(std::move(b),
-            first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-            std::make_unique<DirectoryConflictResolver>(model, op, _address));
+          if (first_write)
+            model.insert(std::move(b), std::move(resolver));
+          else
+            model.update(std::move(b), std::move(resolver));
         }
         ELLE_TRACE("stored version %s of %f", version, _address);
         _block_version = version + 1;
@@ -612,7 +614,7 @@ namespace infinit
       this->_prefetching = true;
       auto running = std::make_shared<int>(nthreads);
       auto parked = std::make_shared<int>(0);
-      auto available = std::make_shared<reactor::Barrier>("files_prefetchable");
+      auto available = std::make_shared<elle::reactor::Barrier>("files_prefetchable");
       if (!files->empty())
         available->open();
       auto prefetch_task =
@@ -640,7 +642,7 @@ namespace infinit
               else
                 ELLE_DEBUG("%s/%s threads parked", *parked, nthreads);
               available->close();
-              reactor::wait(*available);
+              elle::reactor::wait(*available);
               --*parked;
             }
             if (should_exit)
@@ -700,7 +702,7 @@ namespace infinit
             else
             { // multifetch
               // FIXME: pass local versions
-              fs->block_store()->fetch(addresses,
+              fs->block_store()->multifetch(addresses,
                   [&](Address addr, std::unique_ptr<model::blocks::Block> block,
                       std::exception_ptr exception)
                   {
@@ -746,10 +748,10 @@ namespace infinit
             self->_prefetching = false;
             fs->prefetching()--;
           }
-          auto* self = reactor::scheduler().current();
+          auto* self = elle::reactor::scheduler().current();
           auto& running = fs->running();
           auto it = std::find_if(running.begin(), running.end(),
-            [self](reactor::Thread::unique_ptr const& p)
+            [self](elle::reactor::Thread::unique_ptr const& p)
             {
               return p.get() == self;
             });
@@ -765,7 +767,7 @@ namespace infinit
       };
       for (int i = 0; i < nthreads; ++i)
         fs.running().emplace_back(
-          new reactor::Thread(
+          new elle::reactor::Thread(
             elle::sprintf("prefetcher %x-%x-%s", (void*)&fs, (void*)parked.get(), i),
             prefetch_task
             ));

@@ -3,8 +3,8 @@
 
 #include <elle/log.hh>
 
-#include <cryptography/hash.hh>
-#include <cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/hash.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
 #include <elle/serialization/json.hh>
 
@@ -21,7 +21,7 @@ namespace infinit
       `-------------*/
 
       NB::NB(Doughnut& doughnut,
-             std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
+             std::shared_ptr<elle::cryptography::rsa::PublicKey> owner,
              std::string name,
              elle::Buffer data,
              elle::Buffer signature)
@@ -52,13 +52,13 @@ namespace infinit
       {}
 
       Address
-      NB::address(infinit::cryptography::rsa::PublicKey const& owner,
+      NB::address(elle::cryptography::rsa::PublicKey const& owner,
                   std::string const& name, elle::Version const& version)
       {
-        auto der = cryptography::rsa::publickey::der::encode(owner);
-        auto hash = cryptography::hash(
+        auto der = elle::cryptography::rsa::publickey::der::encode(owner);
+        auto hash = elle::cryptography::hash(
           elle::sprintf("NB/%s/%s", std::move(der), name),
-          cryptography::Oneway::sha256);
+          elle::cryptography::Oneway::sha256);
         return Address(hash.contents(), flags::immutable_block,
                        version >= elle::Version(0, 5, 0));
       }
@@ -199,7 +199,7 @@ namespace infinit
         : Super(input, version)
         , _doughnut(dht(input))
         , _owner(std::make_shared(
-                   input.deserialize<cryptography::rsa::PublicKey>("owner")))
+                   input.deserialize<elle::cryptography::rsa::PublicKey>("owner")))
         , _name(input.deserialize<std::string>("name"))
         , _signature(input.deserialize<elle::Buffer>("signature"))
       {}

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <das/cli.hh>
+#include <elle/das/cli.hh>
 
 #include <infinit/cli/Object.hh>
 #include <infinit/cli/Mode.hh>
@@ -22,10 +22,11 @@ namespace infinit
                                     cli::transmit));
 
       // Mode: receive.
-      Mode<decltype(binding(modes::mode_receive,
-                            cli::user = false,
-                            cli::name = std::string{},
-                            cli::passphrase = boost::none))>
+      Mode<Device,
+           void (decltype(cli::user = false),
+                 decltype(cli::name = std::string{}),
+                 decltype(cli::passphrase = boost::optional<std::string>())),
+           decltype(modes::mode_receive)>
       receive;
       void
       mode_receive(bool user,
@@ -33,10 +34,11 @@ namespace infinit
                    boost::optional<std::string> const& passphrase);
 
       // Mode: transmit.
-      Mode<decltype(binding(modes::mode_transmit,
-                            cli::user = false,
-                            cli::passphrase = boost::none,
-                            cli::no_countdown = false))>
+      Mode<Device,
+           void (decltype(cli::user = false),
+                 decltype(cli::passphrase = boost::optional<std::string>()),
+                 decltype(cli::no_countdown = false)),
+           decltype(modes::mode_transmit)>
       transmit;
       void
       mode_transmit(bool user,

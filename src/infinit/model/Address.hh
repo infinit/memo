@@ -28,6 +28,7 @@ namespace infinit
       using Value = uint8_t[32];
       using Flags = uint8_t;
       static constexpr int flag_byte = 31;
+      /// The null address.
       Address();
       Address(Value const value);
       Address(Value const value, Flags flags, bool combine);
@@ -53,6 +54,7 @@ namespace infinit
       static
       Address
       random(Flags flags);
+      /// A default initialized Address.
       static Address const null;
     private:
       friend

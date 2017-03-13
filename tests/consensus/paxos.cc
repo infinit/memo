@@ -11,14 +11,14 @@ ELLE_TEST_SCHEDULED(availability_2)
   a->overlay->connect(*b->overlay);
   auto block = a->dht->make_block<infinit::model::blocks::MutableBlock>();
   block->data(elle::Buffer("foo"));
-  a->dht->store(*block, infinit::model::STORE_INSERT);
+  a->dht->seal_and_insert(*block);
   block->data(elle::Buffer("foobar"));
-  a->dht->store(*block, infinit::model::STORE_UPDATE);
+  a->dht->seal_and_update(*block);
   b.reset();
   block->data(elle::Buffer("foobarbaz"));
   BOOST_CHECK_EQUAL(a->dht->fetch(block->address())->data(), "foobar");
-  BOOST_CHECK_THROW(a->dht->store(*block, infinit::model::STORE_UPDATE),
-                                  athena::paxos::TooFewPeers);
+  BOOST_CHECK_THROW(a->dht->seal_and_update(*block),
+                    elle::athena::paxos::TooFewPeers);
 }
 
 ELLE_TEST_SCHEDULED(availability_3)
@@ -33,25 +33,25 @@ ELLE_TEST_SCHEDULED(availability_3)
   ELLE_LOG("store block")
   {
     block->data(elle::Buffer("foo"));
-    a->dht->store(*block, infinit::model::STORE_INSERT);
+    a->dht->seal_and_insert(*block);
     block->data(elle::Buffer("foobar"));
-    a->dht->store(*block, infinit::model::STORE_UPDATE);
+    a->dht->seal_and_update(*block);
   }
   ELLE_LOG("test 2/3 nodes")
   {
     c.reset();
     BOOST_CHECK_EQUAL(b->dht->fetch(block->address())->data(), "foobar");
     block->data(elle::Buffer("foobarbaz"));
-    a->dht->store(*block, infinit::model::STORE_UPDATE);
+    a->dht->seal_and_update(*block);
   }
   ELLE_LOG("test 1/3 nodes")
   {
     b.reset();
     BOOST_CHECK_THROW(a->dht->fetch(block->address())->data(),
-                      athena::paxos::TooFewPeers);
+                      elle::athena::paxos::TooFewPeers);
     block->data(elle::Buffer("foobarbazquux"));
-    BOOST_CHECK_THROW(a->dht->store(*block, infinit::model::STORE_UPDATE),
-                      athena::paxos::TooFewPeers);
+    BOOST_CHECK_THROW(a->dht->seal_and_update(*block),
+                      elle::athena::paxos::TooFewPeers);
   }
 }
 

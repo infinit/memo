@@ -7,7 +7,7 @@
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/json.hh>
 
-#include <cryptography/SecretKey.hh>
+#include <elle/cryptography/SecretKey.hh>
 
 #include <infinit/model/blocks/Block.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -60,10 +60,10 @@ static const elle::Buffer secret_buffer(
   "WfHvUOnQ=\"}");
 
 class DeterministicPublicKey
-  : public infinit::cryptography::rsa::PublicKey
+  : public elle::cryptography::rsa::PublicKey
 {
 public:
-  typedef infinit::cryptography::rsa::PublicKey Super;
+  typedef elle::cryptography::rsa::PublicKey Super;
   using Super::Super;
 
   DeterministicPublicKey(Super const& model)
@@ -73,8 +73,8 @@ public:
   virtual
   elle::Buffer
   seal(elle::ConstWeakBuffer const& plain,
-       infinit::cryptography::Cipher const cipher,
-       infinit::cryptography::Mode const mode) const override
+       elle::cryptography::Cipher const cipher,
+       elle::cryptography::Mode const mode) const override
   {
     return elle::Buffer(plain);
   }
@@ -82,7 +82,7 @@ public:
   virtual
   elle::Buffer
   encrypt(elle::ConstWeakBuffer const& plain,
-          infinit::cryptography::rsa::Padding const padding) const override
+          elle::cryptography::rsa::Padding const padding) const override
   {
     return elle::Buffer(plain);
   }
@@ -91,44 +91,44 @@ public:
   bool
   _verify(elle::ConstWeakBuffer const& signature,
          elle::ConstWeakBuffer const& plain,
-         infinit::cryptography::rsa::Padding const,
-         infinit::cryptography::Oneway const) const override
+         elle::cryptography::rsa::Padding const,
+         elle::cryptography::Oneway const) const override
   {
     return signature == plain;
   }
 };
 
 class DeterministicPrivateKey
-  : public infinit::cryptography::rsa::PrivateKey
+  : public elle::cryptography::rsa::PrivateKey
 {
 public:
-  typedef infinit::cryptography::rsa::PrivateKey Super;
+  typedef elle::cryptography::rsa::PrivateKey Super;
   using Super::Super;
 
   virtual
   elle::Buffer
   sign(elle::ConstWeakBuffer const& plain,
-       infinit::cryptography::rsa::Padding const padding,
-       infinit::cryptography::Oneway const oneway) const override
+       elle::cryptography::rsa::Padding const padding,
+       elle::cryptography::Oneway const oneway) const override
   {
     return elle::Buffer(plain);
   }
 };
 
 class DeterministicSecretKey
-  : public infinit::cryptography::SecretKey
+  : public elle::cryptography::SecretKey
 {
 public:
-  typedef infinit::cryptography::SecretKey Super;
+  typedef elle::cryptography::SecretKey Super;
   using Super::Super;
 
   virtual
   void
   encipher(std::istream& plain,
            std::ostream& code,
-           infinit::cryptography::Cipher const cipher,
-           infinit::cryptography::Mode const mode,
-           infinit::cryptography::Oneway const oneway) const override
+           elle::cryptography::Cipher const cipher,
+           elle::cryptography::Mode const mode,
+           elle::cryptography::Oneway const oneway) const override
   {
     std::copy(std::istreambuf_iterator<char>(plain),
               std::istreambuf_iterator<char>(),
@@ -147,7 +147,7 @@ class DummyDoughnut
   : public dht::Doughnut
 {
 public:
-  DummyDoughnut(std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
+  DummyDoughnut(std::shared_ptr<elle::cryptography::rsa::KeyPair> keys,
                 boost::optional<elle::Version> v)
     : dht::Doughnut(
       infinit::model::Address::null, keys, keys->public_key(),
@@ -162,7 +162,7 @@ public:
 
 struct TestSet
 {
-  TestSet(std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
+  TestSet(std::shared_ptr<elle::cryptography::rsa::KeyPair> keys,
           boost::optional<elle::Version> v)
     : dht(keys, std::move(v))
     , chb(new dht::CHB(&dht, std::string("CHB contents"), salt))
@@ -209,7 +209,7 @@ struct TestSet
 
 struct TestSetConflictResolver
 {
-  TestSetConflictResolver(std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
+  TestSetConflictResolver(std::shared_ptr<elle::cryptography::rsa::KeyPair> keys,
           boost::optional<elle::Version> v)
   : dht(keys, v)
   , dir(new fs::DirectoryConflictResolver(dht,
@@ -280,8 +280,8 @@ main(int argc, char** argv)
     std::cout << infinit::version() << std::endl;
     return 0;
   }
-  reactor::Scheduler sched;
-  reactor::Thread main(
+  elle::reactor::Scheduler sched;
+  elle::reactor::Thread main(
     sched,
     "main",
     [&]
@@ -291,7 +291,7 @@ main(int argc, char** argv)
       auto k = elle::serialization::json::deserialize
         <std::shared_ptr<DeterministicPrivateKey>>(private_key);
       auto keys = std::make_shared
-        <infinit::cryptography::rsa::KeyPair>(K, k);
+        <elle::cryptography::rsa::KeyPair>(K, k);
       if (vm.count("generate"))
       {
         elle::Version current_version(

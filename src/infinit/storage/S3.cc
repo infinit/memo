@@ -6,7 +6,7 @@
 #include <elle/bench.hh>
 #include <elle/serialization/json/SerializerIn.hh>
 #include <elle/serialization/json/MissingKey.hh>
-#include <aws/S3.hh>
+#include <elle/service/aws/S3.hh>
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/MissingBlock.hh>
@@ -23,8 +23,8 @@ namespace infinit
 {
   namespace storage
   {
-    S3::S3(std::unique_ptr<aws::S3> storage,
-           aws::S3::StorageClass storage_class,
+    S3::S3(std::unique_ptr<elle::service::aws::S3> storage,
+           elle::service::aws::S3::StorageClass storage_class,
            boost::optional<int64_t> capacity)
       : Storage(std::move(capacity))
       , _storage(std::move(storage))
@@ -42,7 +42,7 @@ namespace infinit
       {
         return this->_storage->get_object(elle::sprintf("%x", key));
       }
-      catch (aws::AWSException const& e)
+      catch (elle::service::aws::AWSException const& e)
       {
         if (e.inner_exception())
         {
@@ -50,7 +50,7 @@ namespace infinit
           {
             std::rethrow_exception(e.inner_exception());
           }
-          catch (aws::FileNotFound const& e)
+          catch (elle::service::aws::FileNotFound const& e)
           {
             ELLE_TRACE("unable to GET block: %s", e);
             throw MissingKey(key);
@@ -74,7 +74,7 @@ namespace infinit
       // FIXME: Use multipart upload for blocks bigger than 5 MiB.
       this->_storage->put_object(value,
                                  elle::sprintf("%x", key),
-                                 aws::RequestQuery(),
+                                 elle::service::aws::RequestQuery(),
                                  this->storage_class());
       return 0;
     }
@@ -86,7 +86,7 @@ namespace infinit
       {
         this->_storage->delete_object(elle::sprintf("%x", key));
       }
-      catch (aws::AWSException const& e)
+      catch (elle::service::aws::AWSException const& e)
       {
         if (e.inner_exception())
         {
@@ -94,7 +94,7 @@ namespace infinit
           {
             std::rethrow_exception(e.inner_exception());
           }
-          catch (aws::FileNotFound const& e)
+          catch (elle::service::aws::FileNotFound const& e)
           {
             ELLE_WARN("unable to DELETE block: %s", e);
             throw MissingKey(key);
@@ -129,8 +129,8 @@ namespace infinit
     }
 
     S3StorageConfig::S3StorageConfig(std::string name,
-                                    aws::Credentials credentials,
-                                    aws::S3::StorageClass storage_class,
+                                    elle::service::aws::Credentials credentials,
+                                    elle::service::aws::S3::StorageClass storage_class,
                                     boost::optional<int64_t> capacity,
                                     boost::optional<std::string> description)
       : StorageConfig(
@@ -155,13 +155,13 @@ namespace infinit
         std::string out;
         switch (this->storage_class)
         {
-          case aws::S3::StorageClass::Standard:
+          case elle::service::aws::S3::StorageClass::Standard:
             out = "standard";
             break;
-          case aws::S3::StorageClass::StandardIA:
+          case elle::service::aws::S3::StorageClass::StandardIA:
             out = "standard_ia";
             break;
-          case aws::S3::StorageClass::ReducedRedundancy:
+          case elle::service::aws::S3::StorageClass::ReducedRedundancy:
             out = "reduced_redundancy";
             break;
 
@@ -178,24 +178,24 @@ namespace infinit
           std::string in;
           s.serialize("storage_class", in);
           if (in == "standard")
-            this->storage_class = aws::S3::StorageClass::Standard;
+            this->storage_class = elle::service::aws::S3::StorageClass::Standard;
           else if (in == "standard_ia")
           {
-            this->storage_class = aws::S3::StorageClass::StandardIA;
+            this->storage_class = elle::service::aws::S3::StorageClass::StandardIA;
           }
           else if (in == "reduced_redundancy")
-            this->storage_class = aws::S3::StorageClass::ReducedRedundancy;
+            this->storage_class = elle::service::aws::S3::StorageClass::ReducedRedundancy;
           else
-            this->storage_class = aws::S3::StorageClass::Default;
+            this->storage_class = elle::service::aws::S3::StorageClass::Default;
         }
         catch (elle::serialization::MissingKey const& e)
         {
           bool reduced_redundancy;
           s.serialize("reduced_redundancy", reduced_redundancy);
           if (reduced_redundancy)
-            this->storage_class = aws::S3::StorageClass::ReducedRedundancy;
+            this->storage_class = elle::service::aws::S3::StorageClass::ReducedRedundancy;
           else
-            this->storage_class = aws::S3::StorageClass::Default;
+            this->storage_class = elle::service::aws::S3::StorageClass::Default;
         }
       }
     }
@@ -203,7 +203,7 @@ namespace infinit
     std::unique_ptr<infinit::storage::Storage>
     S3StorageConfig::make()
     {
-      auto s3 = std::make_unique<aws::S3>(credentials);
+      auto s3 = std::make_unique<elle::service::aws::S3>(credentials);
       return std::make_unique<infinit::storage::S3>(std::move(s3),
                                                      this->storage_class,
                                                      this->capacity);

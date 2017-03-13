@@ -4,10 +4,10 @@ using namespace boost::posix_time;
 
 #include <elle/bytes.hh>
 
-#include <reactor/Barrier.hh>
-#include <reactor/network/tcp-server.hh>
+#include <elle/reactor/Barrier.hh>
+#include <elle/reactor/network/tcp-server.hh>
 
-#include <protocol/exceptions.hh>
+#include <elle/protocol/exceptions.hh>
 
 #include <infinit/cli/utility.hh>
 
@@ -72,7 +72,7 @@ namespace infinit
       }
 
       time_duration
-      upload(infinit::protocol::ChanneledStream& channels,
+      upload(elle::protocol::ChanneledStream& channels,
              elle::Buffer::Size packet_size,
              int64_t packets_count,
              bool verbose)
@@ -107,7 +107,7 @@ namespace infinit
       }
 
       time_duration
-      download(infinit::protocol::ChanneledStream& channels,
+      download(elle::protocol::ChanneledStream& channels,
                elle::Buffer::Size packet_size,
                int64_t packets_count,
                bool verbose)
@@ -153,7 +153,7 @@ namespace infinit
           ELLE_TRACE("serve rpcs")
             rpc_server.serve(socket);
         }
-        catch (reactor::Terminate const&)
+        catch (elle::reactor::Terminate const&)
         {
           throw;
         }
@@ -168,19 +168,19 @@ namespace infinit
         void
         serve(uint16_t& port,
               elle::Version const& version,
-              reactor::Barrier& listening,
+              elle::reactor::Barrier& listening,
               bool verbose)
 
         {
           ELLE_TRACE("create tcp server (listening on port: %s)", port);
-          auto server = std::make_unique<reactor::network::TCPServer>();
+          auto server = std::make_unique<elle::reactor::network::TCPServer>();
           server->listen(port);
           port = server->port();
           if (verbose)
             std::cout << "  Listen to tcp connections on port " << port
                       << std::endl;
           listening.open();
-          elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
+          elle::With<elle::reactor::Scope>() <<  [&] (elle::reactor::Scope& s)
           {
             s.run_background(
               "acceptor", [&]
@@ -197,16 +197,16 @@ namespace infinit
                     });
                 }
               });
-            reactor::yield();
+            elle::reactor::yield();
             s.wait();
           };
         }
 
-        std::unique_ptr<reactor::network::TCPSocket>
+        std::unique_ptr<elle::reactor::network::TCPSocket>
         socket(std::string const& host, uint16_t port)
         {
           ELLE_TRACE("open tcp socket to %s:%s", host, port);
-          return std::make_unique<reactor::network::TCPSocket>(host, port, 5_sec);
+          return std::make_unique<elle::reactor::network::TCPSocket>(host, port, 5_sec);
         }
       }
 
@@ -216,12 +216,12 @@ namespace infinit
         serve(uint16_t& port,
               int xorit,
               elle::Version const& version,
-              reactor::Barrier& listening,
+              elle::reactor::Barrier& listening,
               bool verbose)
         {
           ELLE_TRACE("create utp server (listening on port: %s) (xor: %s)",
                      port, xorit);
-          reactor::network::UTPServer server;
+          elle::reactor::network::UTPServer server;
           server.xorify(xorit);
           server.listen(port);
           port = server.local_endpoint().port();
@@ -235,7 +235,7 @@ namespace infinit
           server.rdv_connect("connectivity-server:" + std::to_string(port),
                              "rdv.infinit.sh:7890");
           listening.open();
-          elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
+          elle::With<elle::reactor::Scope>() <<  [&] (elle::reactor::Scope& s)
           {
             s.run_background(
               "acceptor", [&]
@@ -252,20 +252,20 @@ namespace infinit
                     });
                 }
               });
-            reactor::yield();
+            elle::reactor::yield();
             s.wait();
           };
         }
 
-        std::unique_ptr<reactor::network::UTPSocket>
-        socket(reactor::network::UTPServer& server,
+        std::unique_ptr<elle::reactor::network::UTPSocket>
+        socket(elle::reactor::network::UTPServer& server,
                std::string const& host,
                uint16_t port,
                uint8_t xorit = 0)
         {
           ELLE_TRACE("open utp socket to %s:%s (xor: %s)", host, port, xorit);
           server.listen(0);
-          auto s = std::make_unique<reactor::network::UTPSocket>(server);
+          auto s = std::make_unique<elle::reactor::network::UTPSocket>(server);
           server.xorify(xorit);
           s->connect(host, port);
           return s;
@@ -404,7 +404,7 @@ namespace infinit
           , _xored_utp()
         {
           auto protocol = cli::protocol_get(protocol_name);
-          reactor::Barrier listening;
+          elle::reactor::Barrier listening;
           auto base_port = get_port(port);
           uint16_t tcp_port_ = 0;
           uint16_t utp_port_ = 0;
@@ -413,7 +413,7 @@ namespace infinit
           {
             tcp_port_ = get_tcp_port(tcp_port, port);
             this->_tcp.reset(
-              new reactor::Thread(
+              new elle::reactor::Thread(
                 "tcp",
                 [&]
                 {
@@ -428,7 +428,7 @@ namespace infinit
             {
               utp_port_ = get_utp_port(utp_port, port);
               this->_utp.reset(
-                new reactor::Thread(
+                new elle::reactor::Thread(
                   "utp",
                   [&]
                   {
@@ -442,7 +442,7 @@ namespace infinit
             {
               xored_utp_port_ = get_xored_utp_port(xored_utp_port, utp_port, port);
               this->_xored_utp.reset(
-                new reactor::Thread(
+                new elle::reactor::Thread(
                   "utp", [&]
                   {
                     utp::serve(xored_utp_port_, 255, this->_version, listening,
@@ -492,9 +492,9 @@ namespace infinit
         }
 
         ELLE_ATTRIBUTE_R(elle::Version, version);
-        ELLE_ATTRIBUTE_R(std::unique_ptr<reactor::Thread>, tcp);
-        ELLE_ATTRIBUTE_R(std::unique_ptr<reactor::Thread>, utp);
-        ELLE_ATTRIBUTE_R(std::unique_ptr<reactor::Thread>, xored_utp);
+        ELLE_ATTRIBUTE_R(std::unique_ptr<elle::reactor::Thread>, tcp);
+        ELLE_ATTRIBUTE_R(std::unique_ptr<elle::reactor::Thread>, utp);
+        ELLE_ATTRIBUTE_R(std::unique_ptr<elle::reactor::Thread>, xored_utp);
       };
 
       void
@@ -517,14 +517,14 @@ namespace infinit
         packets_count_resolve(packets_count);
         packet_size_resolve(packet_size);
 
-        auto action = [&] (infinit::protocol::ChanneledStream& stream) {
+        auto action = [&] (elle::protocol::ChanneledStream& stream) {
           if (mode == Operations::all || mode == Operations::upload)
           {
             try
             {
               upload(stream, *packet_size, *packets_count, verbose);
             }
-            catch (reactor::network::Exception const&)
+            catch (elle::reactor::network::Exception const&)
             {
               std::cerr << "  Something went wrong during upload:"
                         << elle::exception_string()
@@ -537,7 +537,7 @@ namespace infinit
             {
               download(stream, *packet_size, *packets_count, verbose);
             }
-            catch (reactor::network::Exception const&)
+            catch (elle::reactor::network::Exception const&)
             {
               std::cerr << "  Something went wrong during download:"
                         << elle::exception_string()
@@ -546,7 +546,7 @@ namespace infinit
           }
         };
 
-        auto match_versions = [&] (infinit::protocol::ChanneledStream& stream) {
+        auto match_versions = [&] (elle::protocol::ChanneledStream& stream) {
           infinit::RPC<elle::Version (elle::Version const&)> get_version{
             "match_versions", stream, v
           };
@@ -561,7 +561,7 @@ namespace infinit
           }
           // If protocol aren't compatible, it might just stall...
           // XXX: Add a timeout.
-          catch (infinit::protocol::Error const& error)
+          catch (elle::protocol::Error const& error)
           {
             elle::err("Protocol error establishing connection with the remote.\n"
                       "Make sure it uses the same version or use "
@@ -575,21 +575,21 @@ namespace infinit
           {
             ELLE_TRACE_SCOPE("TCP: Client");
             std::cout << "TCP:" << std::endl;
-            std::unique_ptr<reactor::network::TCPSocket> socket;
+            std::unique_ptr<elle::reactor::network::TCPSocket> socket;
             try
             {
               socket.reset(tcp::socket(host, get_tcp_port(tcp_port, port)).release());
             }
-            catch (reactor::network::Exception const&)
+            catch (elle::reactor::network::Exception const&)
             {
               std::cerr << "  Unable to establish connection: "
                         << elle::exception_string()
                         << std::endl;
               return;
             }
-            infinit::protocol::Serializer serializer{
+            elle::protocol::Serializer serializer{
               *socket, infinit::elle_serialization_version(v), false};
-            auto stream = infinit::protocol::ChanneledStream{serializer};
+            auto stream = elle::protocol::ChanneledStream{serializer};
             match_versions(stream);
             action(stream);
           };
@@ -599,8 +599,8 @@ namespace infinit
         {
           auto utp = [&] (bool xored)
             {
-              reactor::network::UTPServer server;
-              auto socket = [&]() -> std::unique_ptr<reactor::network::UTPSocket> {
+              elle::reactor::network::UTPServer server;
+              auto socket = [&]() -> std::unique_ptr<elle::reactor::network::UTPSocket> {
                 try
                 {
                   return utp::socket(
@@ -611,7 +611,7 @@ namespace infinit
                       : get_utp_port(utp_port, port),
                       xored ? 0xFF : 0);
                 }
-                catch (reactor::network::Exception const&)
+                catch (elle::reactor::network::Exception const&)
                 {
                   std::cerr << "  Unable to establish connection: "
                             << elle::exception_string()
@@ -619,9 +619,9 @@ namespace infinit
                   return nullptr;
                 }
               }();
-              infinit::protocol::Serializer serializer{
+              elle::protocol::Serializer serializer{
                 *socket, infinit::elle_serialization_version(v), false};
-              auto stream = infinit::protocol::ChanneledStream{serializer};
+              auto stream = elle::protocol::ChanneledStream{serializer};
               match_versions(stream);
               action(stream);
             };

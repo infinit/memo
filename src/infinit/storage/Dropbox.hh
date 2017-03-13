@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dropbox/Dropbox.hh>
+#include <elle/service/dropbox/Dropbox.hh>
 
 #include <infinit/storage/Key.hh>
 #include <infinit/storage/Storage.hh>
@@ -29,7 +29,7 @@ namespace infinit
       _list() override;
       BlockStatus
       _status(Key k) override;
-      ELLE_ATTRIBUTE(dropbox::Dropbox, dropbox);
+      ELLE_ATTRIBUTE(elle::service::dropbox::Dropbox, dropbox);
       ELLE_ATTRIBUTE_R(boost::filesystem::path, root);
 
     private:

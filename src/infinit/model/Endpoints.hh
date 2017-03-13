@@ -46,7 +46,8 @@ namespace infinit
       : public std::vector<Endpoint>
     {
     public:
-      using std::vector<Endpoint>::vector;
+      using Super = std::vector<Endpoint>;
+      using Super::Super;
       Endpoints();
       Endpoints(std::vector<Endpoint> const&);
       Endpoints(std::vector<boost::asio::ip::udp::endpoint> const&);
@@ -63,12 +64,15 @@ namespace infinit
       merge(Endpoints const&);
     };
 
+    std::size_t
+    hash_value(Endpoint const& endpoint);
+
     class NodeLocation
     {
     public:
       NodeLocation(Address id, Endpoints endpoints);
       NodeLocation(const NodeLocation& b) = default;
-      ELLE_ATTRIBUTE_R(Address, id);
+      ELLE_ATTRIBUTE_RW(Address, id);
       ELLE_ATTRIBUTE_RX(Endpoints, endpoints);
     };
 
@@ -76,8 +80,8 @@ namespace infinit
     operator <<(std::ostream& output, NodeLocation const& loc);
 
     using NodeLocations = std::vector<NodeLocation>;
-    using EndpointsRefetcher = std::function<boost::optional<Endpoints> (Address)>;
-
+    using EndpointsRefetcher =
+      std::function<boost::optional<Endpoints> (Address)>;
 
     Endpoints
     endpoints_from_file(boost::filesystem::path const& path);
@@ -88,7 +92,6 @@ namespace elle
 {
   namespace serialization
   {
-
     template<>
     struct Serialize<infinit::model::NodeLocation>
     {

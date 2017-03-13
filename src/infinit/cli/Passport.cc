@@ -13,60 +13,52 @@ namespace infinit
   {
     Passport::Passport(Infinit& infinit)
       : Object(infinit)
-      , create(
-        "Create a passport for a user to a network",
-        das::cli::Options(),
-        this->bind(modes::mode_create,
-                   cli::network,
-                   cli::user,
-                   cli::push_passport = false,
-                   cli::push = false,
-                   cli::deny_write = false,
-                   cli::deny_storage = false,
-                   cli::allow_create_passport = false,
-                   cli::output = boost::none))
-      , delete_(
-        "Locally delete a passport",
-        das::cli::Options(),
-        this->bind(modes::mode_delete,
-                   cli::network,
-                   cli::user,
-                   cli::pull = false))
-      , export_(
-        "Export a user's network passport",
-        das::cli::Options(),
-        this->bind(modes::mode_export,
-                   cli::network,
-                   cli::user,
-                   cli::output = boost::none))
-      , fetch(
-        "Fetch a user's network passport from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_fetch,
-                   cli::network = boost::none,
-                   cli::user = boost::none))
-      , import(
-        "Import a passport for a user to a network",
-        das::cli::Options(),
-        this->bind(modes::mode_import,
-                   cli::input = boost::none))
-      , list(
-        "List all local passports",
-        das::cli::Options(),
-        this->bind(modes::mode_list,
-                   cli::network = boost::none))
-      , pull(
-        "Remove a user's network passport from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_pull,
-                   cli::network,
-                   cli::user))
-      , push(
-        "Push a user's network passport to {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_push,
-                   cli::network,
-                   cli::user))
+      , create(*this,
+               "Create a passport for a user to a network",
+               elle::das::cli::Options(),
+               cli::network,
+               cli::user,
+               cli::push_passport = false,
+               cli::push = false,
+               cli::deny_write = false,
+               cli::deny_storage = false,
+               cli::allow_create_passport = false,
+               cli::output = boost::none)
+      , delete_(*this,
+                "Locally delete a passport",
+                elle::das::cli::Options(),
+                cli::network,
+                cli::user,
+                cli::pull = false)
+      , export_(*this,
+                "Export a user's network passport",
+                elle::das::cli::Options(),
+                cli::network,
+                cli::user,
+                cli::output = boost::none)
+      , fetch(*this,
+              "Fetch a user's network passport from {hub}",
+              elle::das::cli::Options(),
+              cli::network = boost::none,
+              cli::user = boost::none)
+      , import(*this,
+               "Import a passport for a user to a network",
+               elle::das::cli::Options(),
+               cli::input = boost::none)
+      , list(*this,
+             "List all local passports",
+             elle::das::cli::Options(),
+             cli::network = boost::none)
+      , pull(*this,
+             "Remove a user's network passport from {hub}",
+             elle::das::cli::Options(),
+             cli::network,
+             cli::user)
+      , push(*this,
+             "Push a user's network passport to {hub}",
+             elle::das::cli::Options(),
+             cli::network,
+             cli::user)
     {}
 
     /*---------------.
@@ -97,7 +89,7 @@ namespace infinit
       auto passport = infinit::model::doughnut::Passport(
         user.public_key,
         network.name,
-        infinit::cryptography::rsa::KeyPair(owner.public_key,
+        elle::cryptography::rsa::KeyPair(owner.public_key,
                                             owner.private_key.get()),
         owner.public_key != network.owner,
         !deny_write,

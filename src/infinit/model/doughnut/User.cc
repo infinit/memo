@@ -6,7 +6,7 @@ namespace infinit
   {
     namespace doughnut
     {
-      User::User(cryptography::rsa::PublicKey key, std::string const& name)
+      User::User(elle::cryptography::rsa::PublicKey key, std::string const& name)
         : _key(std::move(key))
         , _name(name)
       {}

@@ -70,7 +70,7 @@ namespace infinit
         if (u.public_key == desc.owner && u.private_key)
         {
           passport.emplace(u.public_key, desc.name,
-            infinit::cryptography::rsa::KeyPair(u.public_key,
+            elle::cryptography::rsa::KeyPair(u.public_key,
                                                 u.private_key.get()));
           user.emplace(u);
           break;
@@ -142,7 +142,7 @@ namespace infinit
           std::move(desc.overlay),
           std::move(storage_config),
           user->keypair(),
-          std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
+          std::make_shared<elle::cryptography::rsa::PublicKey>(desc.owner),
           std::move(*passport),
           user->name,
           boost::optional<int>(),
@@ -461,7 +461,7 @@ namespace infinit
           }
           if (is_mounted(mountpoint.get()))
             return;
-          reactor::sleep(100_ms);
+          elle::reactor::sleep(100_ms);
         }
         this->stop(name);
         elle::err("unable to mount %s", name);
@@ -479,7 +479,7 @@ namespace infinit
       bool force_kill = true;
       for (int i = 0; i < 15; ++i)
       {
-        reactor::sleep(1_sec);
+        elle::reactor::sleep(1_sec);
         if (::kill(pid, 0))
         {
           force_kill = false;
@@ -610,11 +610,11 @@ namespace infinit
           std::move(kelips),
           std::unique_ptr<infinit::storage::StorageConfig>(),
           owner.keypair(),
-          std::make_shared<infinit::cryptography::rsa::PublicKey>(owner.public_key),
+          std::make_shared<elle::cryptography::rsa::PublicKey>(owner.public_key),
           infinit::model::doughnut::Passport(
             owner.public_key,
             _ifnt.qualified_name(*netname, owner),
-            infinit::cryptography::rsa::KeyPair(owner.public_key,
+            elle::cryptography::rsa::KeyPair(owner.public_key,
                                                 owner.private_key.get())),
           owner.name,
           port,

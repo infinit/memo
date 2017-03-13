@@ -4,7 +4,7 @@
 
 #include <elle/serialization/fwd.hh>
 
-#include <cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
 #include <infinit/model/User.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
@@ -20,12 +20,12 @@ namespace infinit
 
       struct ACLEntry
       {
-        infinit::cryptography::rsa::PublicKey key;
+        elle::cryptography::rsa::PublicKey key;
         bool read;
         bool write;
         elle::Buffer token;
 
-        ACLEntry(infinit::cryptography::rsa::PublicKey key_,
+        ACLEntry(elle::cryptography::rsa::PublicKey key_,
                  bool read_,
                  bool write_,
                  elle::Buffer token_);
@@ -69,9 +69,9 @@ namespace infinit
         BaseACB(Doughnut* owner,
                 elle::Buffer data,
                 boost::optional<elle::Buffer> salt,
-                cryptography::rsa::KeyPair const& keys);
+                elle::cryptography::rsa::KeyPair const& keys);
         BaseACB(Self const& other);
-        ~BaseACB();
+        ~BaseACB() override;
         ELLE_ATTRIBUTE_R(int, editor);
         ELLE_ATTRIBUTE_R(elle::Buffer, owner_token);
         ELLE_ATTRIBUTE(bool, acl_changed, protected);
@@ -79,12 +79,12 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::vector<ACLEntry>, acl_group_entries);
         ELLE_ATTRIBUTE_R(std::vector<int>, group_version);
         ELLE_ATTRIBUTE_R(int, data_version, protected);
-        ELLE_ATTRIBUTE(std::shared_ptr<reactor::BackgroundFuture<elle::Buffer>>,
+        ELLE_ATTRIBUTE(std::shared_ptr<elle::reactor::BackgroundFuture<elle::Buffer>>,
                        data_signature);
         ELLE_ATTRIBUTE_R(bool, world_readable);
         ELLE_ATTRIBUTE_R(bool, world_writable);
         ELLE_ATTRIBUTE_R(bool, deleted);
-        ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PrivateKey>, sign_key);
+        ELLE_ATTRIBUTE_R(std::shared_ptr<elle::cryptography::rsa::PrivateKey>, sign_key);
         // Version used for tokens and secrets. Can differ from block version
         ELLE_ATTRIBUTE_R(elle::Version, seal_version);
       protected:
@@ -115,12 +115,12 @@ namespace infinit
       public:
         virtual
         void
-        set_group_permissions(cryptography::rsa::PublicKey const& key,
+        set_group_permissions(elle::cryptography::rsa::PublicKey const& key,
                               bool read,
                               bool write);
         virtual
         void
-        set_permissions(cryptography::rsa::PublicKey const& key,
+        set_permissions(elle::cryptography::rsa::PublicKey const& key,
                         bool read,
                         bool write);
       protected:
@@ -139,9 +139,9 @@ namespace infinit
 
       private:
         bool
-        _admin_user(cryptography::rsa::PublicKey const& key) const;
+        _admin_user(elle::cryptography::rsa::PublicKey const& key) const;
         bool
-        _admin_group(cryptography::rsa::PublicKey const& key) const;
+        _admin_group(elle::cryptography::rsa::PublicKey const& key) const;
 
       /*-----------.
       | Validation |
@@ -150,7 +150,7 @@ namespace infinit
         using Super::seal;
         // Seal with a specific secret key.
         void
-        seal(boost::optional<int> version, cryptography::SecretKey const& key);
+        seal(boost::optional<int> version, elle::cryptography::SecretKey const& key);
         // Seal with a specific version
         void seal(int version);
       protected:
@@ -163,17 +163,17 @@ namespace infinit
         _seal(boost::optional<int> version) override;
         void
         _seal(boost::optional<int> version,
-              boost::optional<cryptography::SecretKey const&> key);
+              boost::optional<elle::cryptography::SecretKey const&> key);
         class OwnerSignature
           : public Super::OwnerSignature
         {
         public:
           OwnerSignature(BaseACB<Block> const& block);
         protected:
-          virtual
+
           void
           _serialize(elle::serialization::SerializerOut& s,
-                     elle::Version const& v);
+                     elle::Version const& v) override;
           ELLE_ATTRIBUTE_R(BaseACB<Block> const&, block);
         };
         std::unique_ptr<typename Super::OwnerSignature>

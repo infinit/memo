@@ -16,7 +16,7 @@ namespace infinit
       using Super = elle::Error;
       InsufficientSpace(int delta, int64_t usage, int64_t capacity);
       InsufficientSpace(elle::serialization::SerializerIn& in);
-      virtual
+
       void
       serialize(elle::serialization::Serializer& s,
                 elle::Version const&) override;

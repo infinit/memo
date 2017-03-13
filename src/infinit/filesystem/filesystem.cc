@@ -19,11 +19,11 @@
 #include <elle/serialization/json/SerializerIn.hh>
 #include <elle/serialization/json/SerializerOut.hh>
 
-#include <reactor/filesystem.hh>
-#include <reactor/scheduler.hh>
-#include <reactor/exception.hh>
+#include <elle/reactor/filesystem.hh>
+#include <elle/reactor/scheduler.hh>
+#include <elle/reactor/exception.hh>
 
-#include <cryptography/hash.hh>
+#include <elle/cryptography/hash.hh>
 
 #include <infinit/utility.hh>
 #include <infinit/model/Address.hh>
@@ -50,7 +50,7 @@
 
 ELLE_LOG_COMPONENT("infinit.filesystem");
 
-namespace rfs = reactor::filesystem;
+namespace rfs = elle::reactor::filesystem;
 namespace dht = infinit::model::doughnut;
 
 namespace infinit
@@ -60,7 +60,7 @@ namespace infinit
     FileSystem::FileSystem(
         std::string volume_name,
         std::shared_ptr<model::Model> model,
-        boost::optional<infinit::cryptography::rsa::PublicKey> owner,
+        boost::optional<elle::cryptography::rsa::PublicKey> owner,
         boost::optional<boost::filesystem::path> root_block_cache_dir,
         boost::optional<boost::filesystem::path> mountpoint,
         bool allow_root_creation,
@@ -87,13 +87,13 @@ namespace infinit
     }
 
     void
-    FileSystem::filesystem(reactor::filesystem::FileSystem* fs)
+    FileSystem::filesystem(elle::reactor::filesystem::FileSystem* fs)
     {
       this->_filesystem = fs;
       fs->full_tree(false);
     }
 
-    reactor::filesystem::FileSystem*
+    elle::reactor::filesystem::FileSystem*
     FileSystem::filesystem()
     {
       return _filesystem;
@@ -143,24 +143,27 @@ namespace infinit
 
     void
     FileSystem::store_or_die(model::blocks::Block& block,
-                             model::StoreMode mode,
+                             bool insert,
                              std::unique_ptr<model::ConflictResolver> resolver)
     {
       block.seal();
       auto copy = block.clone();
-      store_or_die(std::move(copy), mode, std::move(resolver));
+      store_or_die(std::move(copy), insert, std::move(resolver));
     }
 
     void
     FileSystem::store_or_die(std::unique_ptr<model::blocks::Block> block,
-                             model::StoreMode mode,
+                             bool insert,
                              std::unique_ptr<model::ConflictResolver> resolver)
     {
       ELLE_TRACE_SCOPE("%s: store or die: %s", this, block);
       auto address = block->address();
       try
       {
-        this->_block_store->store(std::move(block), mode, std::move(resolver));
+        if (insert)
+          this->_block_store->insert(std::move(block), std::move(resolver));
+        else
+          this->_block_store->update(std::move(block), std::move(resolver));
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
@@ -190,7 +193,7 @@ namespace infinit
       {
         return model.fetch(address, std::move(local_version));
       }
-      catch(reactor::Terminate const& e)
+      catch(elle::reactor::Terminate const& e)
       {
         throw;
       }
@@ -249,7 +252,7 @@ namespace infinit
     struct BlockMigration
       : public model::DummyConflictResolver
     {
-      typedef DummyConflictResolver Super;
+      using Super = infinit::model::DummyConflictResolver;
       BlockMigration(Address const& from,
              Address const& to)
         : Super()
@@ -289,7 +292,7 @@ namespace infinit
     struct InsertRootBlock
       : public model::DummyConflictResolver
     {
-      typedef DummyConflictResolver Super;
+      using Super = infinit::model::DummyConflictResolver;
       InsertRootBlock(Address const& address)
         : Super()
         , _address(address)
@@ -325,7 +328,7 @@ namespace infinit
     struct InsertRootBootstrapBlock
       : public model::DummyConflictResolver
     {
-      typedef DummyConflictResolver Super;
+      using Super = infinit::model::DummyConflictResolver;
       InsertRootBootstrapBlock(Address const& address)
         : Super()
         , _address(address)
@@ -411,7 +414,7 @@ namespace infinit
                 *dn, dn->owner(), bootstrap_name,
                 old->data(), old->signature());
               this->store_or_die(
-                std::move(nb), model::STORE_INSERT,
+                std::move(nb), true,
                 std::make_unique<BlockMigration>(old_addr, bootstrap_addr));
               continue;
             }
@@ -436,7 +439,7 @@ namespace infinit
               {
                 auto root = dn->make_block<ACLBlock>();
                 auto address = root->address();
-                this->store_or_die(move(root), model::STORE_INSERT,
+                this->store_or_die(move(root), true,
                                    std::make_unique<InsertRootBlock>(address));
                 this->_root_address = address;
               }
@@ -445,14 +448,14 @@ namespace infinit
                 auto saddr = elle::sprintf("%x", this->_root_address);
                 elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
                 auto k =
-                  std::make_shared<infinit::cryptography::rsa::PublicKey>(
+                  std::make_shared<elle::cryptography::rsa::PublicKey>(
                     this->owner());
                 auto nb = std::make_unique<dht::NB>(
                   *dn, k, bootstrap_name, baddr);
                 auto address = nb->address();
                 this->store_or_die(
                   std::move(nb),
-                  model::STORE_INSERT,
+                  true,
                   std::make_unique<InsertRootBootstrapBlock>(address));
                 if (root_cache)
                   boost::filesystem::ofstream(*root_cache) << saddr;
@@ -461,12 +464,12 @@ namespace infinit
               return this->_root_address;
             }
           }
-          reactor::sleep(1_sec);
+          elle::reactor::sleep(1_sec);
         }
       }
     }
 
-    infinit::cryptography::rsa::PublicKey const&
+    elle::cryptography::rsa::PublicKey const&
     FileSystem::owner() const
     {
       if (this->_owner)
@@ -537,7 +540,7 @@ namespace infinit
         throw rfs::Error(EACCES, "Access denied.");
     }
 
-    std::shared_ptr<reactor::filesystem::Path>
+    std::shared_ptr<elle::reactor::filesystem::Path>
     FileSystem::path(std::string const& path)
     {
       // cache cleanup, this place is as good as any
@@ -641,7 +644,7 @@ namespace infinit
             return std::make_shared<Unreachable>(*this, std::move(block), d,
               name, address, EntryType::file);
           }
-          catch (reactor::filesystem::Error const& e)
+          catch (elle::reactor::filesystem::Error const& e)
           {
             if (e.error_code() == EACCES)
             {
@@ -685,7 +688,7 @@ namespace infinit
             auto dd = get(current_path / name, address);
             return std::shared_ptr<rfs::Path>(new Directory(*this, dd, d, name));
           }
-          catch (reactor::filesystem::Error const& e)
+          catch (elle::reactor::filesystem::Error const& e)
           {
             if (e.error_code() == EACCES)
             {

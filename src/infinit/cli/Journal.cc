@@ -1,6 +1,7 @@
 #include <infinit/cli/Journal.hh>
 
 #include <elle/bytes.hh>
+#include <elle/printf.hh>
 
 #include <infinit/cli/Infinit.hh>
 #include <infinit/model/doughnut/ACB.hh>
@@ -15,27 +16,23 @@ namespace infinit
 {
   namespace cli
   {
+    using Error = elle::das::cli::Error;
+
     using Async = infinit::model::doughnut::consensus::Async;
 
     Journal::Journal(Infinit& infinit)
       : Object(infinit)
-      , describe(
-        "Describe asynchronous operation(s)",
-        das::cli::Options(),
-        this->bind(modes::mode_describe,
-                   cli::network,
-                   cli::operation = boost::none))
-      , export_(
-        "Export an operation",
-        das::cli::Options(),
-        this->bind(modes::mode_export,
-                   cli::network,
-                   cli::operation))
-      , stat(
-        "Show the remaining asynchronous operations count and size",
-        das::cli::Options(),
-        this->bind(modes::mode_stat,
-                   cli::network = boost::none))
+      , describe(*this,
+                 "Describe asynchronous operation(s)",
+                 cli::network,
+                 cli::operation = boost::none)
+      , export_(*this,
+                "Export an operation",
+                cli::network,
+                cli::operation)
+      , stat(*this,
+             "Show the remaining asynchronous operations count and size",
+             cli::network = boost::none)
     {}
 
     /*-----------------.
@@ -163,7 +160,8 @@ namespace infinit
               {"size", data_size},
             };
         else
-          elle::fprintf(std::cout, "%s: %s operations, %s\n",
+          elle::fprintf(std::cout,
+                        "%s: %s operations, %s\n",
                         network.name, operation_count,
                         elle::human_data_size(data_size));
       }

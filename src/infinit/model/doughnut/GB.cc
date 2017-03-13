@@ -17,11 +17,11 @@ namespace infinit
       static elle::Version group_description_version(0, 8, 0);
 
       GB::GB(Doughnut* owner,
-             cryptography::rsa::KeyPair master)
+             elle::cryptography::rsa::KeyPair master)
         : Super(owner, {}, elle::Buffer("group", 5), master)
       {
         ELLE_TRACE_SCOPE("%s: create", *this);
-        auto first_group_key = cryptography::rsa::keypair::generate(2048);
+        auto first_group_key = elle::cryptography::rsa::keypair::generate(2048);
         this->_public_keys.push_back(first_group_key.K());
         this->_keys.push_back(first_group_key);
         auto user_key = owner->keys();
@@ -49,7 +49,7 @@ namespace infinit
             ELLE_DEBUG("we are group admin");
             this->_owner_private_key =
               std::make_shared(elle::serialization::binary::deserialize<
-                             cryptography::rsa::PrivateKey>(
+                             elle::cryptography::rsa::PrivateKey>(
                                keys.k().open(it->second)));
           }
           else
@@ -122,13 +122,13 @@ namespace infinit
         return std::make_unique<DataSignature>(*this);
       }
 
-      cryptography::rsa::PublicKey
+      elle::cryptography::rsa::PublicKey
       GB::current_public_key() const
       {
         return this->_public_keys.back();
       }
 
-      cryptography::rsa::KeyPair
+      elle::cryptography::rsa::KeyPair
       GB::current_key() const
       {
         if (this->_keys.empty())
@@ -142,7 +142,7 @@ namespace infinit
         return this->_public_keys.size();
       }
 
-      std::vector<cryptography::rsa::KeyPair>
+      std::vector<elle::cryptography::rsa::KeyPair>
       GB::all_keys() const
       {
         if (this->_keys.empty())
@@ -150,7 +150,7 @@ namespace infinit
         return this->_keys;
       }
 
-      std::vector<cryptography::rsa::PublicKey>
+      std::vector<elle::cryptography::rsa::PublicKey>
       GB::all_public_keys() const
       {
         return this->_public_keys;
@@ -176,7 +176,7 @@ namespace infinit
         this->_set_permissions(user, false, false);
         this->_acl_changed = true;
         _extract_keys();
-        auto new_key = infinit::cryptography::rsa::keypair::generate(2048);
+        auto new_key = elle::cryptography::rsa::keypair::generate(2048);
         this->_public_keys.push_back(new_key.K());
         this->_keys.push_back(new_key);
         this->data(elle::serialization::binary::serialize(this->_keys));
@@ -239,7 +239,7 @@ namespace infinit
         return res;
       }
 
-      std::shared_ptr<cryptography::rsa::PrivateKey>
+      std::shared_ptr<elle::cryptography::rsa::PrivateKey>
       GB::control_key() const
       {
         return _owner_private_key;

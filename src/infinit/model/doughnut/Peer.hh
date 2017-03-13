@@ -1,15 +1,14 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_PEER_HH
-# define INFINIT_MODEL_DOUGHNUT_PEER_HH
+#pragma once
 
-# include <memory>
+#include <memory>
 
-# include <boost/signals2.hpp>
+#include <boost/signals2.hpp>
 
-# include <elle/Duration.hh>
+#include <elle/Duration.hh>
 
-# include <infinit/model/blocks/Block.hh>
-# include <infinit/model/doughnut/fwd.hh>
-# include <infinit/model/Model.hh>
+#include <infinit/model/blocks/Block.hh>
+#include <infinit/model/doughnut/fwd.hh>
+#include <infinit/model/Model.hh>
 
 namespace infinit
 {
@@ -65,18 +64,18 @@ namespace infinit
       | Keys |
       `-----*/
       public:
-        cryptography::rsa::PublicKey
+        elle::cryptography::rsa::PublicKey
         resolve_key(int);
-        std::vector<cryptography::rsa::PublicKey>
+        std::vector<elle::cryptography::rsa::PublicKey>
         resolve_keys(std::vector<int> const& ids);
-        std::unordered_map<int, cryptography::rsa::PublicKey>
+        std::unordered_map<int, elle::cryptography::rsa::PublicKey>
         resolve_all_keys();
       protected:
         virtual
-        std::vector<cryptography::rsa::PublicKey>
-        _resolve_keys(std::vector<int>) = 0;
+        std::vector<elle::cryptography::rsa::PublicKey>
+        _resolve_keys(std::vector<int> const&) = 0;
         virtual
-        std::unordered_map<int, cryptography::rsa::PublicKey>
+        std::unordered_map<int, elle::cryptography::rsa::PublicKey>
         _resolve_all_keys() = 0;
 
       /*----------.
@@ -84,12 +83,10 @@ namespace infinit
       `----------*/
       public:
         /// Print pretty representation to \a stream.
-        virtual
+
         void
         print(std::ostream& stream) const override;
       };
     }
   }
 }
-
-#endif

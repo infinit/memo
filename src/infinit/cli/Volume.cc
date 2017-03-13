@@ -10,14 +10,14 @@
 #include <infinit/model/doughnut/Local.hh>
 
 #ifdef INFINIT_MACOSX
-# include <reactor/network/reachability.hh>
+# include <elle/reactor/network/reachability.hh>
 # define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
 # include <crash_reporting/gcc_fix.hh>
 # include <CoreServices/CoreServices.h>
 #endif
 
 #ifndef INFINIT_WINDOWS
-# include <reactor/network/unix-domain-socket.hh>
+# include <elle/reactor/network/unix-domain-socket.hh>
 # define IF_NOT_WINDOWS(Action) Action
 #else
 # include <fcntl.h>
@@ -34,286 +34,257 @@ namespace infinit
 
     Volume::Volume(Infinit& infinit)
       : Object(infinit)
-      , create(
-        "Create a volume",
-        das::cli::Options(),
-        this->bind(modes::mode_create,
-                   cli::name,
-                   cli::network,
-                   cli::description = boost::none,
-                   cli::create_root = false,
-                   cli::push_volume = false,
-                   cli::output = boost::none,
-                   cli::default_permissions = boost::none,
-                   cli::register_service = false,
-                   cli::allow_root_creation = false,
-                   cli::mountpoint = boost::none,
-                   cli::readonly = false,
+      , create(*this,
+               "Create a volume",
+               cli::name,
+               cli::network,
+               cli::description = boost::optional<std::string>(),
+               cli::create_root = false,
+               cli::push_volume = elle::defaulted(false),
+               cli::output = boost::optional<std::string>(),
+               cli::default_permissions = boost::optional<std::string>(),
+               cli::register_service = false,
+               cli::allow_root_creation = false,
+               cli::mountpoint = boost::optional<std::string>(),
+               cli::readonly = elle::defaulted(false),
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-                   cli::mount_name = boost::none,
+               cli::mount_name = boost::optional<std::string>(),
 #endif
-#ifdef INFINIT_MACOSX
-                   cli::mount_icon = boost::none,
-                   cli::finder_sidebar = false,
+#if defined INFINIT_MACOSX
+               cli::mount_icon = boost::optional<std::string>(),
+               cli::finder_sidebar = false,
 #endif
-                   cli::async = false,
-#ifndef INFINIT_WINDOWS
-                   cli::daemon = false,
+               cli::async = elle::defaulted(false),
+#if ! defined INFINIT_WINDOWS
+               cli::daemon = false,
 #endif
-                   cli::monitoring = true,
-                   cli::fuse_option = Strings{},
-                   cli::cache = false,
-                   cli::cache_ram_size = boost::none,
-                   cli::cache_ram_ttl = boost::none,
-                   cli::cache_ram_invalidation = boost::none,
-                   cli::cache_disk_size = boost::none,
-                   cli::fetch_endpoints = false,
-                   cli::fetch = false,
-                   cli::peer = Strings{},
-                   cli::peers_file = boost::none,
-                   cli::push_endpoints = false,
-                   cli::push = false,
-                   cli::publish = false,
-                   cli::advertise_host = Strings{},
-                   cli::endpoints_file = boost::none,
-                   cli::port_file = boost::none,
-                   cli::port = boost::none,
-                   cli::listen = boost::none,
-                   cli::fetch_endpoints_interval = 300,
-                   cli::input = boost::none,
-                   cli::block_size = 1024 * 1024))
-      , delete_(
-        "Delete a volume locally",
-        das::cli::Options(),
-        this->bind(modes::mode_delete,
-                   cli::name,
-                   cli::pull = false,
-                   cli::purge = false))
-      , export_(
-        "Export a volume for someone else to import",
-        das::cli::Options(),
-        this->bind(modes::mode_export,
-                   cli::name,
-                   cli::output = boost::none))
-      , fetch(
-        "Fetch a volume from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_fetch,
-                   cli::name = boost::none,
-                   cli::network = boost::none,
-                   cli::service = false))
-      , import(
-        "Import a volume",
-        das::cli::Options(),
-        this->bind(modes::mode_import,
-                   cli::input = boost::none,
-                   cli::mountpoint = boost::none))
-      , list(
-        "List volumes",
-        das::cli::Options(),
-        this->bind(modes::mode_list))
+               cli::monitoring = elle::defaulted(true),
+               cli::fuse_option = elle::defaulted(Strings{}),
+               cli::cache = elle::defaulted(false),
+               cli::cache_ram_size = boost::optional<int>(),
+               cli::cache_ram_ttl = boost::optional<int>(),
+               cli::cache_ram_invalidation = boost::optional<int>(),
+               cli::cache_disk_size = boost::optional<uint64_t>(),
+               cli::fetch_endpoints = elle::defaulted(false),
+               cli::fetch = elle::defaulted(false),
+               cli::peer = elle::defaulted(Strings{}),
+               cli::peers_file = boost::optional<std::string>(),
+               cli::push_endpoints = elle::defaulted(false),
+               cli::push = elle::defaulted(false),
+               cli::publish = elle::defaulted(false),
+               cli::advertise_host = Strings{},
+               cli::endpoints_file = boost::optional<std::string>(),
+               cli::port_file = boost::optional<std::string>(),
+               cli::port = boost::optional<int>(),
+               cli::listen = boost::optional<std::string>(),
+               cli::fetch_endpoints_interval = elle::defaulted(300),
+               cli::input = boost::optional<std::string>(),
+               cli::block_size = elle::defaulted(1024 * 1024))
+      , delete_(*this,
+                "Delete a volume locally",
+                cli::name,
+                cli::pull = false,
+                cli::purge = false)
+      , export_(*this,
+                "Export a volume for someone else to import",
+                cli::name,
+                cli::output = boost::none)
+      , fetch(*this,
+              "Fetch a volume from {hub}",
+              cli::name = boost::none,
+              cli::network = boost::none,
+              cli::service = false)
+      , import(*this,
+               "Import a volume",
+               cli::input = boost::none,
+               cli::mountpoint = boost::none)
+      , list(*this, "List volumes")
         // FIXME: Same options as run, large duplication.
-      , mount(
-        "Mount a volume",
-        das::cli::Options(),
-        this->bind(modes::mode_mount,
-                   cli::name,
-                   cli::allow_root_creation = false,
-                   cli::mountpoint = boost::none,
-                   cli::readonly = false,
+      , mount(*this,
+              "Mount a volume",
+              cli::name,
+              cli::allow_root_creation = false,
+              cli::mountpoint = boost::optional<std::string>(),
+              cli::readonly = elle::defaulted(false),
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-                   cli::mount_name = boost::none,
+              cli::mount_name = boost::optional<std::string>(),
 #endif
 #ifdef INFINIT_MACOSX
-                   cli::mount_icon = boost::none,
-                   cli::finder_sidebar = false,
+              cli::mount_icon = boost::optional<std::string>(),
+              cli::finder_sidebar = false,
 #endif
-                   cli::async = false,
+              cli::async = elle::defaulted(false),
 #ifndef INFINIT_WINDOWS
-                   cli::daemon = false,
+              cli::daemon = false,
 #endif
-                   cli::monitoring = true,
-                   cli::fuse_option = Strings{},
-                   cli::cache = false,
-                   cli::cache_ram_size = boost::none,
-                   cli::cache_ram_ttl = boost::none,
-                   cli::cache_ram_invalidation = boost::none,
-                   cli::cache_disk_size = boost::none,
-                   cli::fetch_endpoints = false,
-                   cli::fetch = false,
-                   cli::peer = Strings{},
-                   cli::peers_file = boost::none,
-                   cli::push_endpoints = false,
-                   cli::register_service = false,
-                   cli::no_local_endpoints = false,
-                   cli::no_public_endpoints = false,
-                   cli::push = false,
-                   cli::map_other_permissions = true,
-                   cli::publish = false,
-                   cli::advertise_host = Strings{},
-                   cli::endpoints_file = boost::none,
-                   cli::port_file = boost::none,
-                   cli::port = boost::none,
-                   cli::listen = boost::none,
-                   cli::fetch_endpoints_interval = 300,
-                   cli::input = boost::none,
-                   cli::disable_UTF_8_conversion = false))
-      , pull(
-        "Remove a volume from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_pull,
-                   cli::name,
-                   cli::purge = false))
-      , push(
-        "Push a volume to {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_push,
-                   cli::name))
-      , run(
-        "Run a volume",
-        das::cli::Options(),
-        this->bind(modes::mode_run,
-                   cli::name,
-                   cli::allow_root_creation = false,
-                   cli::mountpoint = boost::none,
-                   cli::readonly = false,
+              cli::monitoring = elle::defaulted(true),
+              cli::fuse_option = elle::defaulted(Strings{}),
+              cli::cache = elle::defaulted(false),
+              cli::cache_ram_size = boost::optional<int>(),
+              cli::cache_ram_ttl = boost::optional<int>(),
+              cli::cache_ram_invalidation = boost::optional<int>(),
+              cli::cache_disk_size = boost::optional<uint64_t>(),
+              cli::fetch_endpoints = elle::defaulted(false),
+              cli::fetch = elle::defaulted(false),
+              cli::peer = elle::defaulted(Strings{}),
+              cli::peers_file = boost::optional<std::string>(),
+              cli::push_endpoints = elle::defaulted(false),
+              cli::register_service = false,
+              cli::no_local_endpoints = false,
+              cli::no_public_endpoints = false,
+              cli::push = elle::defaulted(false),
+              cli::map_other_permissions = true,
+              cli::publish = elle::defaulted(false),
+              cli::advertise_host = Strings{},
+              cli::endpoints_file = boost::optional<std::string>(),
+              cli::port_file = boost::optional<std::string>(),
+              cli::port = boost::optional<int>(),
+              cli::listen = boost::optional<std::string>(),
+              cli::fetch_endpoints_interval = elle::defaulted(300),
+              cli::input = boost::optional<std::string>(),
+              cli::disable_UTF_8_conversion = false)
+      , pull(*this,
+             "Remove a volume from {hub}",
+             cli::name,
+             cli::purge = false)
+      , push(*this,
+             "Push a volume to {hub}",
+             cli::name)
+      , run(*this,
+            "Run a volume",
+            cli::name,
+            cli::allow_root_creation = false,
+            cli::mountpoint = boost::optional<std::string>(),
+            cli::readonly = elle::defaulted(false),
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-                   cli::mount_name = boost::none,
+            cli::mount_name = boost::optional<std::string>(),
 #endif
 #ifdef INFINIT_MACOSX
-                   cli::mount_icon = boost::none,
-                   cli::finder_sidebar = false,
+            cli::mount_icon = boost::optional<std::string>(),
+            cli::finder_sidebar = false,
 #endif
-                   cli::async = false,
+            cli::async = elle::defaulted(false),
 #ifndef INFINIT_WINDOWS
-                   cli::daemon = false,
+            cli::daemon = false,
 #endif
-                   cli::monitoring = true,
-                   cli::fuse_option = Strings{},
-                   cli::cache = false,
-                   cli::cache_ram_size = boost::none,
-                   cli::cache_ram_ttl = boost::none,
-                   cli::cache_ram_invalidation = boost::none,
-                   cli::cache_disk_size = boost::none,
-                   cli::fetch_endpoints = false,
-                   cli::fetch = false,
-                   cli::peer = Strings{},
-                   cli::peers_file = boost::none,
-                   cli::push_endpoints = false,
-                   cli::register_service = false,
-                   cli::no_local_endpoints = false,
-                   cli::no_public_endpoints = false,
-                   cli::push = false,
-                   cli::map_other_permissions = true,
-                   cli::publish = false,
-                   cli::advertise_host = Strings{},
-                   cli::endpoints_file = boost::none,
-                   cli::port_file = boost::none,
-                   cli::port = boost::none,
-                   cli::listen = boost::none,
-                   cli::fetch_endpoints_interval = 300,
-                   cli::input = boost::none,
-                   cli::disable_UTF_8_conversion = false))
+            cli::monitoring = elle::defaulted(true),
+            cli::fuse_option = elle::defaulted(Strings{}),
+            cli::cache = elle::defaulted(false),
+            cli::cache_ram_size = boost::optional<int>(),
+            cli::cache_ram_ttl = boost::optional<int>(),
+            cli::cache_ram_invalidation = boost::optional<int>(),
+            cli::cache_disk_size = boost::optional<uint64_t>(),
+            cli::fetch_endpoints = elle::defaulted(false),
+            cli::fetch = elle::defaulted(false),
+            cli::peer = elle::defaulted(Strings{}),
+            cli::peers_file = boost::optional<std::string>(),
+            cli::push_endpoints = elle::defaulted(false),
+            cli::register_service = false,
+            cli::no_local_endpoints = false,
+            cli::no_public_endpoints = false,
+            cli::push = elle::defaulted(false),
+            cli::map_other_permissions = true,
+            cli::publish = elle::defaulted(false),
+            cli::advertise_host = Strings{},
+            cli::endpoints_file = boost::optional<std::string>(),
+            cli::port_file = boost::optional<std::string>(),
+            cli::port = boost::optional<int>(),
+            cli::listen = boost::optional<std::string>(),
+            cli::fetch_endpoints_interval = elle::defaulted(300),
+            cli::input = boost::optional<std::string>(),
+            cli::disable_UTF_8_conversion = false)
 #if !defined INFINIT_WINDOWS
-      , start(
-        "Start a volume through the daemon",
-        das::cli::Options(),
-        this->bind(modes::mode_start,
-                   cli::name,
-                   cli::allow_root_creation = false,
-                   cli::mountpoint = boost::none,
-                   cli::readonly = false,
+      , start(*this,
+              "Start a volume through the daemon",
+              cli::name,
+              cli::allow_root_creation = false,
+              cli::mountpoint = boost::optional<std::string>(),
+              cli::readonly = elle::defaulted(false),
 # if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-                   cli::mount_name = boost::none,
+              cli::mount_name = boost::optional<std::string>(),
 # endif
 # ifdef INFINIT_MACOSX
-                   cli::mount_icon = boost::none,
-                   cli::finder_sidebar = false,
+              cli::mount_icon = boost::optional<std::string>(),
+              cli::finder_sidebar = false,
 # endif
-                   cli::async = false,
+              cli::async = elle::defaulted(false),
 # ifndef INFINIT_WINDOWS
-                   cli::daemon = false,
+              cli::daemon = false,
 # endif
-                   cli::monitoring = true,
-                   cli::fuse_option = Strings{},
-                   cli::cache = false,
-                   cli::cache_ram_size = boost::none,
-                   cli::cache_ram_ttl = boost::none,
-                   cli::cache_ram_invalidation = boost::none,
-                   cli::cache_disk_size = boost::none,
-                   cli::fetch_endpoints = false,
-                   cli::fetch = false,
-                   cli::peer = Strings{},
-                   cli::peers_file = boost::none,
-                   cli::push_endpoints = false,
-                   cli::register_service = false,
-                   cli::no_local_endpoints = false,
-                   cli::no_public_endpoints = false,
-                   cli::push = false,
-                   cli::map_other_permissions = true,
-                   cli::publish = false,
-                   cli::advertise_host = Strings{},
-                   cli::endpoints_file = boost::none,
-                   cli::port_file = boost::none,
-                   cli::port = boost::none,
-                   cli::listen = boost::none,
-                   cli::fetch_endpoints_interval = 300,
-                   cli::input = boost::none))
-      , status(
-        "Get volume status",
-        das::cli::Options(),
-        this->bind(modes::mode_status,
-                   cli::name))
-      , stop(
-        "Stop a volume",
-        das::cli::Options(),
-        this->bind(modes::mode_stop,
-                   cli::name))
+              cli::monitoring = elle::defaulted(true),
+              cli::fuse_option = elle::defaulted(Strings{}),
+              cli::cache = elle::defaulted(false),
+              cli::cache_ram_size = boost::optional<int>(),
+              cli::cache_ram_ttl = boost::optional<int>(),
+              cli::cache_ram_invalidation = boost::optional<int>(),
+              cli::cache_disk_size = boost::optional<uint64_t>(),
+              cli::fetch_endpoints = elle::defaulted(false),
+              cli::fetch = elle::defaulted(false),
+              cli::peer = elle::defaulted(Strings{}),
+              cli::peers_file = boost::optional<std::string>(),
+              cli::push_endpoints = elle::defaulted(false),
+              cli::register_service = false,
+              cli::no_local_endpoints = false,
+              cli::no_public_endpoints = false,
+              cli::push = elle::defaulted(false),
+              cli::map_other_permissions = true,
+              cli::publish = elle::defaulted(false),
+              cli::advertise_host = Strings{},
+              cli::endpoints_file = boost::optional<std::string>(),
+              cli::port_file = boost::optional<std::string>(),
+              cli::port = boost::optional<int>(),
+              cli::listen = boost::optional<std::string>(),
+              cli::fetch_endpoints_interval = elle::defaulted(300),
+              cli::input = boost::optional<std::string>())
+      , status(*this,
+               "Get volume status",
+               cli::name)
+      , stop(*this,
+             "Stop a volume",
+             cli::name)
 #endif
-      , update(
-        "Update a volume with default run options",
-        das::cli::Options(),
-        this->bind(modes::mode_update,
-                   cli::name,
-                   cli::description = boost::none,
-                   cli::allow_root_creation = false,
-                   cli::mountpoint = boost::none,
-                   cli::readonly = false,
+      , update(*this,
+               "Update a volume with default run options",
+               cli::name,
+               cli::description = boost::optional<std::string>(),
+               cli::allow_root_creation = false,
+               cli::mountpoint = boost::optional<std::string>(),
+               cli::readonly = elle::defaulted(false),
 #if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-                   cli::mount_name = boost::none,
+               cli::mount_name = boost::optional<std::string>(),
 #endif
 #ifdef INFINIT_MACOSX
-                   cli::mount_icon = boost::none,
-                   cli::finder_sidebar = false,
+               cli::mount_icon = boost::optional<std::string>(),
+               cli::finder_sidebar = false,
 #endif
-                   cli::async = false,
+               cli::async = elle::defaulted(false),
 #ifndef INFINIT_WINDOWS
-                   cli::daemon = false,
+               cli::daemon = false,
 #endif
-                   cli::monitoring = true,
-                   cli::fuse_option = Strings{},
-                   cli::cache = false,
-                   cli::cache_ram_size = boost::none,
-                   cli::cache_ram_ttl = boost::none,
-                   cli::cache_ram_invalidation = boost::none,
-                   cli::cache_disk_size = boost::none,
-                   cli::fetch_endpoints = false,
-                   cli::fetch = false,
-                   cli::peer = Strings{},
-                   cli::peers_file = boost::none,
-                   cli::push_endpoints = false,
-                   cli::push = false,
-                   cli::map_other_permissions = true,
-                   cli::publish = false,
-                   cli::advertise_host = Strings{},
-                   cli::endpoints_file = boost::none,
-                   cli::port_file = boost::none,
-                   cli::port = boost::none,
-                   cli::listen = boost::none,
-                   cli::fetch_endpoints_interval = 300,
-                   cli::input = boost::none,
-                   cli::user = boost::none,
-                   cli::block_size = boost::none))
+               cli::monitoring = elle::defaulted(true),
+               cli::fuse_option = elle::defaulted(Strings{}),
+               cli::cache = elle::defaulted(false),
+               cli::cache_ram_size = boost::optional<int>(),
+               cli::cache_ram_ttl = boost::optional<int>(),
+               cli::cache_ram_invalidation = boost::optional<int>(),
+               cli::cache_disk_size = boost::optional<uint64_t>(),
+               cli::fetch_endpoints = elle::defaulted(false),
+               cli::fetch = elle::defaulted(false),
+               cli::peer = elle::defaulted(Strings{}),
+               cli::peers_file = boost::optional<std::string>(),
+               cli::push_endpoints = elle::defaulted(false),
+               cli::push = elle::defaulted(false),
+               cli::map_other_permissions = true,
+               cli::publish = elle::defaulted(false),
+               cli::advertise_host = Strings{},
+               cli::endpoints_file = boost::optional<std::string>(),
+               cli::port_file = boost::optional<std::string>(),
+               cli::port = boost::optional<int>(),
+               cli::listen = boost::optional<std::string>(),
+               cli::fetch_endpoints_interval = elle::defaulted(300),
+               cli::input = boost::optional<std::string>(),
+               cli::user = boost::optional<std::string>(),
+               cli::block_size = boost::optional<int>())
     {}
 
 
@@ -323,6 +294,7 @@ namespace infinit
       void resolve_aliases(elle::Defaulted<bool>& arg1,
                            elle::Defaulted<bool>& arg2)
       {
+        ELLE_ERR("%s %s %s %s", bool(arg1), bool(arg2), arg1.get(), arg2.get());
         if (arg1 && !arg2)
           arg2 = *arg1;
         else if (!arg1 && arg2)
@@ -1103,7 +1075,7 @@ namespace infinit
       }
       auto run = [&, push_p]
       {
-        reactor::Thread::unique_ptr stat_thread;
+        elle::reactor::Thread::unique_ptr stat_thread;
         if (push_p)
           stat_thread = network.make_stat_update_thread(ifnt, owner, *model);
         ELLE_TRACE_SCOPE("run volume");
@@ -1189,12 +1161,12 @@ namespace infinit
         if (finder_sidebar && mo.mountpoint)
         {
           auto mountpoint = mo.mountpoint;
-          reactor::background([mountpoint]
+          elle::reactor::background([mountpoint]
             {
               add_path_to_finder_sidebar(mountpoint.get());
             });
         }
-        auto reachability = std::unique_ptr<reactor::network::Reachability>{};
+        auto reachability = std::unique_ptr<elle::reactor::network::Reachability>{};
 #endif
         elle::SafeFinally unmount([&]
         {
@@ -1204,7 +1176,7 @@ namespace infinit
           if (finder_sidebar && mo.mountpoint)
           {
             auto mountpoint = mo.mountpoint;
-            reactor::background([mountpoint]
+            elle::reactor::background([mountpoint]
               {
                 remove_path_from_finder_sidebar(mountpoint.get());
               });
@@ -1225,11 +1197,11 @@ namespace infinit
 #ifdef INFINIT_MACOSX
         if (elle::os::getenv("INFINIT_LOG_REACHABILITY", "") != "0")
         {
-          reachability.reset(new reactor::network::Reachability(
+          reachability.reset(new elle::reactor::network::Reachability(
             {},
-            [&] (reactor::network::Reachability::NetworkStatus status)
+            [&] (elle::reactor::network::Reachability::NetworkStatus status)
             {
-              using NetworkStatus = reactor::network::Reachability::NetworkStatus;
+              using NetworkStatus = elle::reactor::network::Reachability::NetworkStatus;
               if (status == NetworkStatus::Unreachable)
                 ELLE_LOG("lost network connection");
               else
@@ -1251,7 +1223,7 @@ namespace infinit
           auto input = commands_input(input_name);
           auto handles =
             std::unordered_map<std::string,
-                               std::unique_ptr<reactor::filesystem::Handle>>{};
+                               std::unique_ptr<elle::reactor::filesystem::Handle>>{};
           while (true)
           {
             std::string op;
@@ -1264,7 +1236,7 @@ namespace infinit
               ELLE_TRACE("got command: %s", json);
               auto command = elle::serialization::json::SerializerIn(json, false);
               op = command.deserialize<std::string>("operation");
-              auto path = std::shared_ptr<reactor::filesystem::Path>{};
+              auto path = std::shared_ptr<elle::reactor::filesystem::Path>{};
               try
               {
                 pathname = command.deserialize<std::string>("path");
@@ -1281,7 +1253,7 @@ namespace infinit
               auto require_path = [&]
                 {
                   if (!path)
-                    throw reactor::filesystem::Error(
+                    throw elle::reactor::filesystem::Error(
                       ENOENT,
                       elle::sprintf("no such file or directory: %s", pathname));
                 };
@@ -1563,7 +1535,7 @@ namespace infinit
               if (!pathname.empty())
                 response.serialize("path", pathname);
             }
-            catch (reactor::filesystem::Error const& e)
+            catch (elle::reactor::filesystem::Error const& e)
             {
               auto response = elle::serialization::json::SerializerOut(std::cout);
               response.serialize("success", false);
@@ -1594,7 +1566,7 @@ namespace infinit
         else
         {
           ELLE_TRACE("wait filesystem");
-          reactor::wait(*fs);
+          elle::reactor::wait(*fs);
         }
       };
       if (local_endpoint && push_p)
@@ -1665,7 +1637,7 @@ namespace infinit
 
       auto mo = infinit::MountOptions{};
       MOUNT_OPTIONS_MERGE(mo);
-      reactor::network::UnixDomainSocket sock(daemon_sock_path());
+      elle::reactor::network::UnixDomainSocket sock(daemon_sock_path());
       auto cmd = [&]
         {
           std::stringstream ss;
@@ -1704,7 +1676,7 @@ namespace infinit
       auto owner = cli.as_user();
       auto name = ifnt.qualified_name(volume_name, owner);
 
-      reactor::network::UnixDomainSocket sock(daemon_sock_path());
+      elle::reactor::network::UnixDomainSocket sock(daemon_sock_path());
       auto cmd = [&]
         {
           std::stringstream ss;
@@ -1742,7 +1714,7 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
       auto name = ifnt.qualified_name(volume_name, owner);
-      reactor::network::UnixDomainSocket sock(daemon_sock_path());
+      elle::reactor::network::UnixDomainSocket sock(daemon_sock_path());
       auto cmd = [&]
         {
           std::stringstream ss;

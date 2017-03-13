@@ -26,6 +26,7 @@ namespace infinit
       void
       Peer::cleanup()
       {
+        ELLE_TRACE_SCOPE("%s: cleanup", this);
         this->_cleanup();
       }
 
@@ -54,19 +55,19 @@ namespace infinit
       | Keys |
       `-----*/
 
-      cryptography::rsa::PublicKey
+      elle::cryptography::rsa::PublicKey
       Peer::resolve_key(int id)
       {
         return this->resolve_keys({id})[0];
       }
 
-      std::vector<cryptography::rsa::PublicKey>
+      std::vector<elle::cryptography::rsa::PublicKey>
       Peer::resolve_keys(std::vector<int> const& ids)
       {
         return this->_resolve_keys(ids);
       }
 
-      std::unordered_map<int, cryptography::rsa::PublicKey>
+      std::unordered_map<int, elle::cryptography::rsa::PublicKey>
       Peer::resolve_all_keys()
       {
         return this->_resolve_all_keys();
@@ -80,7 +81,10 @@ namespace infinit
       void
       Peer::print(std::ostream& stream) const
       {
-        elle::fprintf(stream, "%f(%f)", elle::type_info(*this), this->id());
+        elle::fprintf(stream, "%f(%x, %f)",
+                      elle::type_info(*this),
+                      reinterpret_cast<void const*>(this),
+                      this->id());
       }
     }
   }

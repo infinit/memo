@@ -16,9 +16,9 @@
 #include <elle/system/self-path.hh>
 #include <elle/system/unistd.hh>
 
-#include <reactor/network/http-server.hh>
-#include <reactor/network/unix-domain-server.hh>
-#include <reactor/network/unix-domain-socket.hh>
+#include <elle/reactor/network/http-server.hh>
+#include <elle/reactor/network/unix-domain-server.hh>
+#include <elle/reactor/network/unix-domain-socket.hh>
 
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/MountManager.hh>
@@ -39,86 +39,68 @@ namespace infinit
 
     Daemon::Daemon(Infinit& infinit)
       : Object(infinit)
-      , disable_storage(
-        "Disable storage on associated network",
-        das::cli::Options(),
-        this->bind(modes::mode_disable_storage,
-                   cli::name))
-      , enable_storage(
-        "Enable storage on associated network",
-        das::cli::Options(),
-        this->bind(modes::mode_enable_storage,
-                   cli::name,
-                   cli::hold))
-      , fetch(
-        "Fetch volume and its dependencies from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_fetch,
-                   cli::name))
-      , manage_volumes(
-        "Manage daemon controlled volumes",
-        das::cli::Options(),
-        this->bind(modes::mode_manage_volumes,
-                   cli::list = false,
-                   cli::status = false,
-                   cli::start = false,
-                   cli::stop = false,
-                   cli::restart = false,
-                   cli::name = boost::none))
-      , run(
-        "Run daemon in the foreground",
-        das::cli::Options(),
-        this->bind(modes::mode_run,
-                   cli::login_user = Strings{},
-                   cli::mount = Strings{},
-                   cli::mount_root = boost::none,
-                   cli::default_network = boost::none,
-                   cli::advertise_host = Strings{},
-                   cli::fetch = false,
-                   cli::push = false,
+      , disable_storage(*this,
+                        "Disable storage on associated network",
+                        cli::name)
+      , enable_storage(*this,
+                       "Enable storage on associated network",
+                       cli::name,
+                       cli::hold)
+      , fetch(*this,
+              "Fetch volume and its dependencies from {hub}",
+              cli::name)
+      , manage_volumes(*this,
+                       "Manage daemon controlled volumes",
+                       cli::list = false,
+                       cli::status = false,
+                       cli::start = false,
+                       cli::stop = false,
+                       cli::restart = false,
+                       cli::name = boost::none)
+      , run(*this,
+            "Run daemon in the foreground",
+            cli::login_user = Strings{},
+            cli::mount = Strings{},
+            cli::mount_root = boost::none,
+            cli::default_network = boost::none,
+            cli::advertise_host = Strings{},
+            cli::fetch = false,
+            cli::push = false,
 #ifdef WITH_DOCKER
-                   cli::docker = true,
-                   cli::docker_user = boost::none,
-                   cli::docker_home = boost::none,
-                   cli::docker_socket_tcp = false,
-                   cli::docker_socket_port = 0,
-                   cli::docker_socket_path = "/run/docker/plugins",
-                   cli::docker_descriptor_path = "/usr/lib/docker/plugins",
-                   cli::docker_mount_substitute = "",
+            cli::docker = true,
+            cli::docker_user = boost::none,
+            cli::docker_home = boost::none,
+            cli::docker_socket_tcp = false,
+            cli::docker_socket_port = 0,
+            cli::docker_socket_path = "/run/docker/plugins",
+            cli::docker_descriptor_path = "/usr/lib/docker/plugins",
+            cli::docker_mount_substitute = "",
 #endif
-                   cli::log_level = boost::none,
-                   cli::log_path = boost::none))
-      , start(
-        "Start daemon in the background",
-        das::cli::Options(),
-        this->bind(modes::mode_start,
-                   cli::login_user = Strings{},
-                   cli::mount = Strings{},
-                   cli::mount_root = boost::none,
-                   cli::default_network = boost::none,
-                   cli::advertise_host = Strings{},
-                   cli::fetch = false,
-                   cli::push = false,
+            cli::log_level = boost::none,
+            cli::log_path = boost::none)
+      , start(*this,
+              "Start daemon in the background",
+              cli::login_user = Strings{},
+              cli::mount = Strings{},
+              cli::mount_root = boost::none,
+              cli::default_network = boost::none,
+              cli::advertise_host = Strings{},
+              cli::fetch = false,
+              cli::push = false,
 #ifdef WITH_DOCKER
-                   cli::docker = true,
-                   cli::docker_user = boost::none,
-                   cli::docker_home = boost::none,
-                   cli::docker_socket_tcp = false,
-                   cli::docker_socket_port = 0,
-                   cli::docker_socket_path = "/run/docker/plugins",
-                   cli::docker_descriptor_path = "/usr/lib/docker/plugins",
-                   cli::docker_mount_substitute = "",
+              cli::docker = true,
+              cli::docker_user = boost::none,
+              cli::docker_home = boost::none,
+              cli::docker_socket_tcp = false,
+              cli::docker_socket_port = 0,
+              cli::docker_socket_path = "/run/docker/plugins",
+              cli::docker_descriptor_path = "/usr/lib/docker/plugins",
+              cli::docker_mount_substitute = "",
 #endif
-                   cli::log_level = boost::none,
-                   cli::log_path = boost::none))
-      , status(
-        "Query daemon status",
-        das::cli::Options(),
-        this->bind(modes::mode_status))
-      , stop(
-        "Stop daemon",
-        das::cli::Options(),
-        this->bind(modes::mode_stop))
+              cli::log_level = boost::none,
+              cli::log_path = boost::none)
+      , status(*this, "Query daemon status")
+      , stop(*this, "Stop daemon")
     {}
 
 
@@ -235,7 +217,7 @@ namespace infinit
           auto json = daemon_command("{\"operation\": \"stop\"}");
           cmd_response_serializer(json, "stop daemon");
         }
-        catch (reactor::network::ConnectionClosed const&)
+        catch (elle::reactor::network::ConnectionClosed const&)
         {}
         auto signal_and_wait_exit = [pid] (boost::optional<int> signal = {}) {
           if (kill(pid, 0) && errno == EPERM)
@@ -273,29 +255,29 @@ namespace infinit
       elle::json::Object
       daemon_command(std::string const& s, bool hold)
       {
-        reactor::Scheduler sched;
+        elle::reactor::Scheduler sched;
         elle::json::Object res;
-        reactor::Thread daemon_query(
+        elle::reactor::Thread daemon_query(
           sched,
           "daemon-query",
           [&]
           {
             // try local then global
-            std::unique_ptr<reactor::network::UnixDomainSocket> sock = [] {
+            std::unique_ptr<elle::reactor::network::UnixDomainSocket> sock = [] {
               try
               {
                 try
                 {
-                  return std::make_unique<reactor::network::UnixDomainSocket>(
+                  return std::make_unique<elle::reactor::network::UnixDomainSocket>(
                     daemon_sock_path());
                 }
                 catch (elle::Error const&)
                 {
-                  return std::make_unique<reactor::network::UnixDomainSocket>(
+                  return std::make_unique<elle::reactor::network::UnixDomainSocket>(
                     bfs::path("/tmp/infinit-root/daemon.sock"));
                 }
               }
-              catch (reactor::network::ConnectionRefused const&)
+              catch (elle::reactor::network::ConnectionRefused const&)
               {
                 elle::err("ensure that an instance of infinit-daemon is running");
               }
@@ -308,7 +290,7 @@ namespace infinit
             auto stream = elle::IOStream(buffer.istreambuf());
             res = boost::any_cast<elle::json::Object>(elle::json::read(stream));
             if (hold)
-              reactor::sleep();
+              elle::reactor::sleep();
           });
         sched.run();
         return res;
@@ -334,7 +316,7 @@ namespace infinit
           if (!always_start)
             throw;
         }
-        reactor::sleep(5_sec);
+        elle::reactor::sleep(5_sec);
         manager.start(volume, mo, false, true);
       }
 
@@ -481,10 +463,10 @@ namespace infinit
         std::string home;
 
         struct Lock
-          : public reactor::Lock
+          : public elle::reactor::Lock
         {
-          Lock(SystemUser const& su, reactor::Lockable& l)
-            : reactor::Lock(l)
+          Lock(SystemUser const& su, elle::reactor::Lockable& l)
+            : elle::reactor::Lock(l)
           {
             prev_home = elle::os::getenv("INFINIT_HOME", "");
             prev_data_home = elle::os::getenv("INFINIT_DATA_HOME", "");
@@ -520,7 +502,7 @@ namespace infinit
         };
 
         Lock
-        enter(reactor::Lockable& l) const
+        enter(elle::reactor::Lockable& l) const
         {
           return {*this, l};
         }
@@ -534,7 +516,7 @@ namespace infinit
       {
       public:
         DockerVolumePlugin(MountManager& manager,
-                           SystemUser& user, reactor::Mutex& mutex);
+                           SystemUser& user, elle::reactor::Mutex& mutex);
         ~DockerVolumePlugin();
         void install(bool tcp, int tcp_port,
                      bfs::path socket_folder,
@@ -543,10 +525,10 @@ namespace infinit
         std::string mount(std::string const& name);
       private:
         ELLE_ATTRIBUTE_R(MountManager&, manager);
-        std::unique_ptr<reactor::network::HttpServer> _server;
+        std::unique_ptr<elle::reactor::network::HttpServer> _server;
         std::unordered_map<std::string, int> _mount_count;
         SystemUser& _user;
-        reactor::Mutex& _mutex;
+        elle::reactor::Mutex& _mutex;
         bfs::path _socket_path;
         bfs::path _spec_json_path;
         bfs::path _spec_url_path;
@@ -554,7 +536,7 @@ namespace infinit
 
       DockerVolumePlugin::DockerVolumePlugin(MountManager& manager,
                                              SystemUser& user,
-                                             reactor::Mutex& mutex)
+                                             elle::reactor::Mutex& mutex)
         : _manager(manager)
         , _user(user)
         , _mutex(mutex)
@@ -618,7 +600,7 @@ namespace infinit
         bfs::remove(this->_spec_url_path, erc);
         if (tcp)
         {
-          this->_server = std::make_unique<reactor::network::HttpServer>(tcp_port);
+          this->_server = std::make_unique<elle::reactor::network::HttpServer>(tcp_port);
           int port = this->_server->port();
           auto url = elle::sprintf("tcp://localhost:%s", port);
           bfs::ofstream ofs(this->_spec_url_path);
@@ -628,10 +610,10 @@ namespace infinit
         }
         else
         {
-          auto us = std::make_unique<reactor::network::UnixDomainServer>();
+          auto us = std::make_unique<elle::reactor::network::UnixDomainServer>();
           us->listen(this->_socket_path);
           this->_server =
-            std::make_unique<reactor::network::HttpServer>(std::move(us));
+            std::make_unique<elle::reactor::network::HttpServer>(std::move(us));
         }
         {
           auto json = elle::json::Object {
@@ -644,16 +626,16 @@ namespace infinit
                       this->_spec_json_path);
           elle::json::write(ofs, json);
         }
-#define ROUTE_SIG  (reactor::network::HttpServer::Headers const&,       \
-                    reactor::network::HttpServer::Cookies const&,       \
-                    reactor::network::HttpServer::Parameters const&,    \
+#define ROUTE_SIG  (elle::reactor::network::HttpServer::Headers const&,       \
+                    elle::reactor::network::HttpServer::Cookies const&,       \
+                    elle::reactor::network::HttpServer::Parameters const&,    \
                     elle::Buffer const& data) -> std::string
-        _server->register_route("/Plugin.Activate",  reactor::http::Method::POST,
+        _server->register_route("/Plugin.Activate",  elle::reactor::http::Method::POST,
           [] ROUTE_SIG {
             ELLE_TRACE("Activating plugin");
             return "{\"Implements\": [\"VolumeDriver\"]}";
           });
-        _server->register_route("/VolumeDriver.Create", reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.Create", elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
             auto lock = this->_user.enter(this->_mutex);
             auto stream = elle::IOStream(data.istreambuf());
@@ -685,7 +667,7 @@ namespace infinit
             }
             return "{\"Err\": \"" + err + "\"}";
           });
-        _server->register_route("/VolumeDriver.Remove", reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.Remove", elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
             elle::err("use infinit-volume --delete to delete volumes");
             // auto lock = this->_user.enter(this->_mutex);
@@ -708,7 +690,7 @@ namespace infinit
             // boost::replace_all(err, "\"", "'");
             // return "{\"Err\": \"" + err + "\"}";
           });
-        _server->register_route("/VolumeDriver.Get", reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.Get", elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
             auto lock = this->_user.enter(this->_mutex);
             auto stream = elle::IOStream(data.istreambuf());
@@ -719,7 +701,7 @@ namespace infinit
             else
               return "{\"Err\": \"No such mount\"}";
           });
-        _server->register_route("/VolumeDriver.Mount", reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.Mount", elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
             auto lock = this->_user.enter(this->_mutex);
             auto stream = elle::IOStream(data.istreambuf());
@@ -731,7 +713,7 @@ namespace infinit
             ELLE_TRACE("reply: %s", res);
             return res;
           });
-        _server->register_route("/VolumeDriver.Unmount", reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.Unmount", elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
             auto lock = this->_user.enter(this->_mutex);
             auto stream = elle::IOStream(data.istreambuf());
@@ -748,7 +730,7 @@ namespace infinit
             }
             return "{\"Err\": \"\"}";
           });
-        _server->register_route("/VolumeDriver.Path", reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.Path", elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
             auto lock = this->_user.enter(this->_mutex);
             auto stream = elle::IOStream(data.istreambuf());
@@ -765,7 +747,7 @@ namespace infinit
               return "{\"Err\": \"" + err + "\"}";
             }
           });
-        _server->register_route("/VolumeDriver.List", reactor::http::Method::POST,
+        _server->register_route("/VolumeDriver.List", elle::reactor::http::Method::POST,
           [this] ROUTE_SIG {
             auto lock = this->_user.enter(this->_mutex);
             auto res = std::string{"{\"Err\": \"\", \"Volumes\": [ "};
@@ -777,7 +759,7 @@ namespace infinit
           });
          _server->register_route(
            "/VolumeDriver.Capabilities",
-           reactor::http::Method::POST,
+           elle::reactor::http::Method::POST,
            [this] ROUTE_SIG {
              return "{}";
          });
@@ -802,7 +784,7 @@ namespace infinit
               ELLE_TRACE("Mount of %s failed: %s", mounts[i], e);
             }
           if (!mounts.empty())
-            reactor::sleep(20_sec);
+            elle::reactor::sleep(20_sec);
         }
         ELLE_TRACE("Exiting automounter");
       }
@@ -853,11 +835,11 @@ namespace infinit
           else
             return SystemUser(getuid(), docker_home);
         }();
-        reactor::Mutex mutex;
+        elle::reactor::Mutex mutex;
         // uid -> manager.
         auto managers = std::unordered_map<int, std::unique_ptr<MountManager>>{};
         auto dvp = std::unique_ptr<DockerVolumePlugin>{};
-        auto mounter = std::unique_ptr<reactor::Thread>{};
+        auto mounter = std::unique_ptr<elle::reactor::Thread>{};
         // Always call get_mount_root() before entering the SystemUser.
         auto get_mount_root = [&] (SystemUser const& user) {
           if (mount_root)
@@ -912,7 +894,7 @@ namespace infinit
             ifnt.user_save(user, true);
           }
           ELLE_TRACE("starting initial manager");
-          managers[getuid()].reset(new MountManager(ifnt, cli,
+          managers[getuid()].reset(new MountManager(ifnt,
                                                     user_mount_root,
                                                     docker_mount_substitute));
           MountManager& root_manager = *managers[getuid()];
@@ -920,7 +902,7 @@ namespace infinit
           dvp = std::make_unique<DockerVolumePlugin>(
             root_manager, system_user, mutex);
           if (!mount.empty())
-            mounter = std::make_unique<reactor::Thread>("mounter",
+            mounter = std::make_unique<elle::reactor::Thread>("mounter",
               [&] {auto_mounter(mount, *dvp);});
         }
         if (docker)
@@ -941,7 +923,7 @@ namespace infinit
         if (detach)
           daemonize();
         PIDFile pid;
-        reactor::network::UnixDomainServer srv;
+        elle::reactor::network::UnixDomainServer srv;
         auto sockaddr = daemon_sock_path();
         bfs::remove(sockaddr);
         srv.listen(sockaddr);
@@ -951,7 +933,7 @@ namespace infinit
             mounter->terminate_now();
           ELLE_LOG("stopped daemon");
         });
-        elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+        elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
         {
           ELLE_LOG("started daemon");
           while (true)
@@ -979,7 +961,7 @@ namespace infinit
 #else
 # error "unsupported platform"
 #endif
-            static reactor::Mutex mutex;
+            static elle::reactor::Mutex mutex;
             (void)gid;
             auto system_user = SystemUser{uid};
             auto user_manager = [&]{
@@ -988,7 +970,7 @@ namespace infinit
                 {
                   auto peer_mount_root = get_mount_root(system_user);
                   auto lock = system_user.enter(mutex);
-                  auto res = new MountManager(ifnt, cli,
+                  auto res = new MountManager(ifnt,
                                               peer_mount_root,
                                               docker_mount_substitute);
                   fill_manager_options(*res);
@@ -1100,7 +1082,7 @@ namespace infinit
           if (u.public_key == desc.owner && u.private_key)
           {
             passport.emplace(u.public_key, desc.name,
-              infinit::cryptography::rsa::KeyPair(u.public_key,
+              elle::cryptography::rsa::KeyPair(u.public_key,
                                                   u.private_key.get()));
             user.emplace(u);
             break;
@@ -1171,7 +1153,7 @@ namespace infinit
             std::move(desc.overlay),
             std::move(storage_config),
             user->keypair(),
-            std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
+            std::make_shared<elle::cryptography::rsa::PublicKey>(desc.owner),
             std::move(*passport),
             user->name,
             boost::optional<int>(),

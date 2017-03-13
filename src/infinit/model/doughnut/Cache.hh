@@ -35,13 +35,12 @@ namespace infinit
                 boost::optional<boost::filesystem::path> disk_cache_path = {},
                 boost::optional<uint64_t> disk_cache_size = {}
                 );
-          ~Cache();
+          ~Cache() override;
 
         /*--------.
         | Factory |
         `--------*/
         public:
-          virtual
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
                      boost::optional<boost::asio::ip::address> listen_address,
@@ -52,20 +51,16 @@ namespace infinit
         | Consensus |
         `----------*/
         protected:
-          virtual
           void
           _store(std::unique_ptr<blocks::Block> block,
                  StoreMode mode,
                  std::unique_ptr<ConflictResolver> resolver) override;
-          virtual
           std::unique_ptr<blocks::Block>
           _fetch(Address address, boost::optional<int> local_version) override;
-          virtual
           void
           _fetch(std::vector<AddressVersion> const& addresses,
                  std::function<void(Address, std::unique_ptr<blocks::Block>,
                                     std::exception_ptr)> res) override;
-          virtual
           void
           _remove(Address address, blocks::RemoveSignature rs) override;
 
@@ -159,11 +154,11 @@ namespace infinit
           > > CHBDiskCache;
           ELLE_ATTRIBUTE(CHBDiskCache, disk_cache);
           ELLE_ATTRIBUTE(uint64_t, disk_cache_used);
-          ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, cleanup_thread);
+          ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, cleanup_thread);
         private:
           void _load_disk_cache();
           void _disk_cache_push(blocks::Block& block);
-          typedef std::unordered_map<Address, std::shared_ptr<reactor::Barrier>>
+          typedef std::unordered_map<Address, std::shared_ptr<elle::reactor::Barrier>>
           Pending;
           ELLE_ATTRIBUTE(Pending, pending);
         };

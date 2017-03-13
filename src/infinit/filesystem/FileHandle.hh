@@ -68,7 +68,7 @@ namespace infinit
         std::shared_ptr<elle::Buffer> block;
         bool dirty;
         std::chrono::high_resolution_clock::time_point last_use;
-        reactor::Barrier ready;
+        elle::reactor::Barrier ready;
         std::unordered_set<FileHandle*> writers;
       };
       void _commit_first(FileHandle* src);
@@ -88,7 +88,7 @@ namespace infinit
       FileData _file;
       typedef
       std::pair<
-        reactor::Thread::unique_ptr,
+        elle::reactor::Thread::unique_ptr,
         std::unordered_set<FileHandle*>>
       Flusher;
       std::vector<Flusher> _flushers;

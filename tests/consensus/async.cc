@@ -3,11 +3,11 @@
 #include <elle/memory.hh>
 #include <elle/test.hh>
 
-#include <cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
-#include <reactor/scheduler.hh>
-#include <reactor/semaphore.hh>
-#include <reactor/signal.hh>
+#include <elle/reactor/scheduler.hh>
+#include <elle/reactor/semaphore.hh>
+#include <elle/reactor/signal.hh>
 
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Consensus.hh>
@@ -22,7 +22,7 @@ class SyncedConsensus
   : public dht::consensus::Consensus
 {
 public:
-  reactor::Semaphore sem;
+  elle::reactor::Semaphore sem;
   int nstore, nremove;
   SyncedConsensus(infinit::model::doughnut::Doughnut& dht)
     : dht::consensus::Consensus(dht)
@@ -37,7 +37,7 @@ public:
          std::unique_ptr<infinit::model::ConflictResolver>) override
   {
     while (!sem.acquire())
-      reactor::wait(sem);
+      elle::reactor::wait(sem);
     this->_stored.signal();
     ++nstore;
   }
@@ -54,11 +54,11 @@ public:
   _remove(infinit::model::Address, infinit::model::blocks::RemoveSignature) override
   {
     while (!sem.acquire())
-      reactor::wait(sem);
+      elle::reactor::wait(sem);
     ++nremove;
   }
 
-  ELLE_ATTRIBUTE_RX(reactor::Signal, stored);
+  ELLE_ATTRIBUTE_RX(elle::reactor::Signal, stored);
 };
 
 class BlockingConsensus
@@ -75,7 +75,7 @@ public:
          infinit::model::StoreMode,
          std::unique_ptr<infinit::model::ConflictResolver>) override
   {
-    reactor::sleep();
+    elle::reactor::sleep();
     elle::unreachable();
   }
 
@@ -83,7 +83,7 @@ public:
   std::unique_ptr<infinit::model::blocks::Block>
   _fetch(infinit::model::Address, boost::optional<int>) override
   {
-    reactor::sleep();
+    elle::reactor::sleep();
     elle::unreachable();
   }
 
@@ -91,7 +91,7 @@ public:
   void
   _remove(infinit::model::Address, infinit::model::blocks::RemoveSignature) override
   {
-    reactor::sleep();
+    elle::reactor::sleep();
     elle::unreachable();
   }
 };
@@ -102,14 +102,14 @@ class DummyDoughnut
 public:
   DummyDoughnut()
     : DummyDoughnut(infinit::model::Address::random(0), // FIXME
-                    infinit::cryptography::rsa::keypair::generate(1024))
+                    elle::cryptography::rsa::keypair::generate(1024))
   {}
 
   DummyDoughnut(infinit::model::Address id,
-                infinit::cryptography::rsa::KeyPair keys)
+                elle::cryptography::rsa::KeyPair keys)
     : dht::Doughnut(
       id,
-      std::make_shared<infinit::cryptography::rsa::KeyPair>(keys),
+      std::make_shared<elle::cryptography::rsa::KeyPair>(keys),
       keys.public_key(),
       infinit::model::doughnut::Passport(keys.K(), "network", keys),
       [] (dht::Doughnut&)
@@ -125,7 +125,7 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued)
   elle::filesystem::TemporaryDirectory d;
   auto a1 = infinit::model::Address::random(0); // FIXME
   auto a2 = infinit::model::Address::random(0); // FIXME
-  auto keys = infinit::cryptography::rsa::keypair::generate(1024);
+  auto keys = elle::cryptography::rsa::keypair::generate(1024);
   infinit::model::doughnut::Passport passport(keys.K(), "network", keys);
   DummyDoughnut dht;
   {
@@ -173,15 +173,15 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued_multiple)
     ELLE_LOG("fetch block")
       BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
     sc.sem.release();
-    reactor::wait(sc.stored());
+    elle::reactor::wait(sc.stored());
     ELLE_LOG("fetch block")
       BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
     sc.sem.release();
-    reactor::wait(sc.stored());
+    elle::reactor::wait(sc.stored());
     ELLE_LOG("fetch block")
       BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
     sc.sem.release();
-    reactor::wait(sc.stored());
+    elle::reactor::wait(sc.stored());
   }
 }
 

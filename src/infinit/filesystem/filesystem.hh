@@ -9,10 +9,10 @@
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index_container.hpp>
 
-#include <cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
-#include <reactor/filesystem.hh>
-#include <reactor/thread.hh>
+#include <elle/reactor/filesystem.hh>
+#include <elle/reactor/thread.hh>
 
 #include <infinit/model/Model.hh>
 #include <infinit/filesystem/FileData.hh>
@@ -22,8 +22,8 @@ namespace infinit
   namespace filesystem
   {
     namespace bmi = boost::multi_index;
-    typedef model::blocks::Block Block;
-    typedef model::blocks::ACLBlock ACLBlock;
+    using Block = model::blocks::Block;
+    using ACLBlock = model::blocks::ACLBlock;
     class FileSystem;
     class FileBuffer;
     enum class EntryType
@@ -70,10 +70,10 @@ namespace infinit
       _prefetch(FileSystem& fs, std::shared_ptr<DirectoryData> self);
       void
       serialize(elle::serialization::Serializer&, elle::Version const& v);
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
       ELLE_ATTRIBUTE_R(model::Address, address);
       ELLE_ATTRIBUTE_R(int, block_version);
-      typedef elle::unordered_map<std::string, std::pair<EntryType, model::Address>> Files;
+      using Files = elle::unordered_map<std::string, std::pair<EntryType, model::Address>>;
       ELLE_ATTRIBUTE_R(FileHeader, header);
       ELLE_ATTRIBUTE_R(Files, files);
       ELLE_ATTRIBUTE_R(bool, inherit_auth);
@@ -90,7 +90,6 @@ namespace infinit
       friend std::unique_ptr<Block>
       resolve_directory_conflict(Block& b,
                                  Block& current,
-                                 model::StoreMode store_mode,
                                  model::Model& model,
                                  Operation op,
                                  Address address,
@@ -109,21 +108,24 @@ namespace infinit
       all = 255,
       block = 32768,
     };
+
     inline
     bool
     operator &(WriteTarget const& l, WriteTarget const& r)
     {
-      typedef std::underlying_type<WriteTarget>::type ut;
+      using ut = std::underlying_type<WriteTarget>::type;
       return static_cast<ut>(l) & static_cast<ut>(r);
     }
+
     inline
     WriteTarget
     operator |(WriteTarget const& l, WriteTarget const& r)
     {
-      typedef std::underlying_type<WriteTarget>::type ut;
+      using ut = std::underlying_type<WriteTarget>::type;
       return static_cast<WriteTarget>(
         static_cast<ut>(l) | static_cast<ut>(r));
     }
+
     class FileData
     {
     public:
@@ -149,45 +151,49 @@ namespace infinit
       ELLE_ATTRIBUTE_R(int, block_version);
       ELLE_ATTRIBUTE_R(clock::time_point, last_used);
       ELLE_ATTRIBUTE_R(FileHeader, header);
-      typedef std::pair<Address, std::string> FatEntry; // (address, key)
+      using FatEntry = std::pair<Address, std::string>; // (address, key)
       ELLE_ATTRIBUTE_R(std::vector<FatEntry>, fat);
       ELLE_ATTRIBUTE_R(elle::Buffer, data);
       ELLE_ATTRIBUTE_R(boost::filesystem::path, path);
-      typedef infinit::serialization_tag serialization_tag;
+      using serialization_tag = infinit::serialization_tag;
       friend class FileSystem;
       friend class File;
       friend class FileHandle;
       friend class FileBuffer;
       friend class FileConflictResolver;
     };
+
     class Node;
     void unchecked_remove(model::Model& model,
                           model::Address address);
+
     std::unique_ptr<model::blocks::Block>
     fetch_or_die(model::Model& model,
                  model::Address address,
                  boost::optional<int> local_version = {},
                  boost::filesystem::path const& path = {});
+
     std::pair<bool, bool>
     get_permissions(model::Model& model,
                     model::blocks::Block const& block);
-    DAS_SYMBOL(allow_root_creation);
-    DAS_SYMBOL(block_size);
-    DAS_SYMBOL(model);
-    DAS_SYMBOL(map_other_permissions);
-    DAS_SYMBOL(mountpoint);
-    DAS_SYMBOL(owner);
-    DAS_SYMBOL(root_block_cache_dir);
-    DAS_SYMBOL(volume_name);
+    ELLE_DAS_SYMBOL(allow_root_creation);
+    ELLE_DAS_SYMBOL(block_size);
+    ELLE_DAS_SYMBOL(model);
+    ELLE_DAS_SYMBOL(map_other_permissions);
+    ELLE_DAS_SYMBOL(mountpoint);
+    ELLE_DAS_SYMBOL(owner);
+    ELLE_DAS_SYMBOL(root_block_cache_dir);
+    ELLE_DAS_SYMBOL(volume_name);
+
     /** Filesystem using a Block Storage as backend.
-    * Directory: nodes are serialized, and contains name, stat() and block
-    *            address of the directory content
-    * File    : In direct mode, one block with all the data
-    *           In index mode, one block containing headers
-    *           and the list of addresses for the content.
-    */
+     * Directory: nodes are serialized, and contains name, stat() and block
+     *            address of the directory content
+     * File    : In direct mode, one block with all the data
+     *           In index mode, one block containing headers
+     *           and the list of addresses for the content.
+     */
     class FileSystem
-      : public reactor::filesystem::Operations
+      : public elle::reactor::filesystem::Operations
     {
     /*------.
     | Types |
@@ -204,13 +210,13 @@ namespace infinit
       FileSystem(
         std::string volume_name,
         std::shared_ptr<infinit::model::Model> model,
-        boost::optional<infinit::cryptography::rsa::PublicKey> owner = {},
+        boost::optional<elle::cryptography::rsa::PublicKey> owner = {},
         boost::optional<boost::filesystem::path> root_block_cache_dir = {},
         boost::optional<boost::filesystem::path> mountpoint = {},
         bool allow_root_creation = false,
         bool map_other_permissions = true,
         boost::optional<int> block_size = {});
-      ~FileSystem();
+      ~FileSystem() override;
     private:
       struct Init;
       FileSystem(Init);
@@ -221,7 +227,7 @@ namespace infinit
       now();
       void
       print_cache_stats();
-      std::shared_ptr<reactor::filesystem::Path>
+      std::shared_ptr<elle::reactor::filesystem::Path>
       path(std::string const& path) override;
 
       void unchecked_remove(model::Address address);
@@ -235,11 +241,11 @@ namespace infinit
 
       void
       store_or_die(std::unique_ptr<model::blocks::Block> block,
-                   model::StoreMode mode,
+                   bool insert,
                    std::unique_ptr<model::ConflictResolver> resolver = {});
       void
       store_or_die(model::blocks::Block& block,
-                   model::StoreMode mode,
+                   bool insert,
                    std::unique_ptr<model::ConflictResolver> resolver = {});
       // Check permissions and throws on access failure
       void
@@ -248,17 +254,19 @@ namespace infinit
       boost::signals2::signal<void()> on_root_block_create;
       std::shared_ptr<DirectoryData>
       get(boost::filesystem::path path, model::Address address);
-      void filesystem(reactor::filesystem::FileSystem* fs) override;
-      reactor::filesystem::FileSystem* filesystem();
+      void filesystem(elle::reactor::filesystem::FileSystem* fs) override;
+      elle::reactor::filesystem::FileSystem* filesystem();
+
     private:
       Address
       root_address();
+
     public:
-      infinit::cryptography::rsa::PublicKey const&
+      elle::cryptography::rsa::PublicKey const&
       owner() const;
       ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::model::Model>, block_store);
       ELLE_ATTRIBUTE_RW(bool, single_mount);
-      ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::PublicKey>, owner);
+      ELLE_ATTRIBUTE(boost::optional<elle::cryptography::rsa::PublicKey>, owner);
       ELLE_ATTRIBUTE_R(std::string, volume_name);
       ELLE_ATTRIBUTE_R(std::string, network_name);
       ELLE_ATTRIBUTE_R(bool, read_only);
@@ -269,7 +277,8 @@ namespace infinit
       ELLE_ATTRIBUTE_R(bool, allow_root_creation);
       ELLE_ATTRIBUTE_R(bool, map_other_permissions);
 
-      typedef bmi::multi_index_container<
+      using DirectoryCache
+      = bmi::multi_index_container<
         std::shared_ptr<DirectoryData>,
         bmi::indexed_by<
           bmi::hashed_unique<
@@ -280,9 +289,11 @@ namespace infinit
             bmi::const_mem_fun<
               DirectoryData,
               clock::time_point const&, &DirectoryData::last_used>>
-              > > DirectoryCache;
+              >>;
       ELLE_ATTRIBUTE_R(DirectoryCache, directory_cache);
-      typedef bmi::multi_index_container<
+
+      using FileCache
+      = bmi::multi_index_container<
         std::shared_ptr<FileData>,
         bmi::indexed_by<
           bmi::hashed_unique<
@@ -293,14 +304,12 @@ namespace infinit
             bmi::const_mem_fun<
               FileData,
               clock::time_point const&, &FileData::last_used>>
-              > > FileCache;
+              >>;
       ELLE_ATTRIBUTE_R(FileCache, file_cache);
-      ELLE_ATTRIBUTE_RX(std::vector<reactor::Thread::unique_ptr>, running);
+      ELLE_ATTRIBUTE_RX(std::vector<elle::reactor::Thread::unique_ptr>, running);
       ELLE_ATTRIBUTE_RX(int, prefetching);
       ELLE_ATTRIBUTE_RW(boost::optional<int>, block_size);
-      typedef
-      std::unordered_map<Address, std::weak_ptr<FileBuffer>>
-      FileBuffers;
+      using FileBuffers = std::unordered_map<Address, std::weak_ptr<FileBuffer>>;
       ELLE_ATTRIBUTE_RX(FileBuffers, file_buffers);
       static const int max_cache_size = 10000;
       friend class FileData;

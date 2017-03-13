@@ -7,10 +7,10 @@
 #include <elle/string/algorithm.hh>
 #include <elle/system/unistd.hh> // chdir
 
-#include <reactor/FDStream.hh>
-#include <reactor/http/Request.hh>
-#include <reactor/network/rdv-socket.hh>
-#include <reactor/network/resolve.hh>
+#include <elle/reactor/FDStream.hh>
+#include <elle/reactor/http/Request.hh>
+#include <elle/reactor/network/rdv-socket.hh>
+#include <elle/reactor/network/resolve.hh>
 
 #include <infinit/Infinit.hh>
 #include <infinit/utility.hh>
@@ -50,11 +50,11 @@ namespace infinit
         {
           try
           {
-            auto host = reactor::network::resolve_tcp(a, std::to_string(port),
+            auto host = elle::reactor::network::resolve_tcp(a, std::to_string(port),
               elle::os::inenv("INFINIT_NO_IPV6"));
             endpoints.addresses.push_back(host.address().to_string());
           }
-          catch (reactor::network::ResolutionError const& e)
+          catch (elle::reactor::network::ResolutionError const& e)
           {
             ELLE_LOG("failed to resolve %s: %s", a, e);
           }
@@ -65,10 +65,10 @@ namespace infinit
       {
         try
         {
-          _upnp = reactor::network::UPNP::make();
+          _upnp = elle::reactor::network::UPNP::make();
           _upnp->initialize();
-          _port_map_udp = _upnp->setup_redirect(reactor::network::Protocol::udt, port);
-          _port_map_tcp = _upnp->setup_redirect(reactor::network::Protocol::tcp, port);
+          _port_map_udp = _upnp->setup_redirect(elle::reactor::network::Protocol::utp, port);
+          _port_map_tcp = _upnp->setup_redirect(elle::reactor::network::Protocol::tcp, port);
           ELLE_TRACE("got mappings: %s, %s", _port_map_udp, _port_map_tcp);
           if ( (v4 && _port_map_udp.external_host.find_first_of(':') == std::string::npos)
             || (v6 && _port_map_udp.external_host.find_first_of(':') != std::string::npos))
@@ -94,11 +94,11 @@ namespace infinit
             port = std::stoi(host.substr(p+1));
             host = host.substr(0, p);
           }
-          reactor::network::RDVSocket socket;
+          elle::reactor::network::RDVSocket socket;
           socket.close();
           socket.bind(boost::asio::ip::udp::endpoint(
             boost::asio::ip::udp::v4(), 0));
-          reactor::Thread poller("poll", [&]
+          elle::reactor::Thread poller("poll", [&]
           {
             while (true)
             {
@@ -164,7 +164,7 @@ namespace infinit
       else
       {
 #ifndef INFINIT_WINDOWS
-        return std::make_unique<reactor::FDStream>(0);
+        return std::make_unique<elle::reactor::FDStream>(0);
 #else
         // Windows does not support async io on stdin
         auto res = std::make_unique<std::stringstream>();
@@ -260,7 +260,7 @@ namespace infinit
     hook_stats_signals(infinit::model::doughnut::Doughnut& dht)
     {
 #ifndef INFINIT_WINDOWS
-      reactor::scheduler().signal_handle(SIGUSR1, [&dht] {
+      elle::reactor::scheduler().signal_handle(SIGUSR1, [&dht] {
           auto& o = dht.overlay();
           try
           {

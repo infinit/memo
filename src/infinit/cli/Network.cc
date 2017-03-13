@@ -1,6 +1,7 @@
 #include <infinit/cli/Network.hh>
 
 #include <boost/tokenizer.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include <elle/make-vector.hh>
 
@@ -23,7 +24,7 @@
 #include <infinit/storage/Strip.hh>
 
 #ifndef INFINIT_WINDOWS
-# include <reactor/network/unix-domain-socket.hh>
+# include <elle/reactor/network/unix-domain-socket.hh>
 #endif
 
 ELLE_LOG_COMPONENT("cli.network");
@@ -38,183 +39,151 @@ namespace infinit
 
     Network::Network(Infinit& infinit)
       : Object(infinit)
-      , create(
-        "Create a network",
-        das::cli::Options(),
-        this->bind(modes::mode_create,
-                   cli::name,
-                   cli::description = boost::none,
-                   cli::storage = Strings{},
-                   cli::port = boost::none,
-                   cli::replication_factor = 1,
-                   cli::eviction_delay = boost::none,
-                   cli::output = boost::none,
-                   cli::push_network = false,
-                   cli::push = false,
-                   cli::admin_r = Strings{},
-                   cli::admin_rw = Strings{},
-                   cli::peer = Strings{},
-                   // Consensus types.
-                   cli::paxos = false,
-                   cli::no_consensus = false,
-                   // Overlay types.
-                   cli::kelips = false,
-                   cli::kalimero = false,
-                   cli::kouncil = false,
-                   // Kelips options,
-                   cli::nodes = boost::none,
-                   cli::k = boost::none,
-                   cli::kelips_contact_timeout = boost::none,
-                   cli::encrypt = boost::none,
-                   cli::protocol = boost::none))
-      , delete_(
-        "Delete a network locally",
-        das::cli::Options(),
-        this->bind(modes::mode_delete,
-                   cli::name,
-                   cli::pull = false,
-                   cli::purge = false,
-                   cli::unlink = false))
-      , export_(
-        "Export a network",
-        das::cli::Options(),
-        this->bind(modes::mode_export,
-                   cli::name,
-                   cli::output = boost::none))
-      , fetch(
-        "Fetch a network from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_fetch,
-                   cli::name = boost::none))
-      , import(
-        "Fetch a network",
-        das::cli::Options(),
-        this->bind(modes::mode_import,
-                   cli::input = boost::none))
+      , create(*this,
+               "Create a network",
+               cli::name,
+               cli::description = boost::none,
+               cli::storage = Strings{},
+               cli::port = boost::none,
+               cli::replication_factor = 1,
+               cli::eviction_delay = boost::none,
+               cli::output = boost::none,
+               cli::push_network = false,
+               cli::push = false,
+               cli::admin_r = Strings{},
+               cli::admin_rw = Strings{},
+               cli::peer = Strings{},
+               // Consensus types.
+               cli::paxos = false,
+               cli::no_consensus = false,
+               // Overlay types.
+               cli::kelips = false,
+               cli::kalimero = false,
+               cli::kouncil = false,
+               // Kelips options,
+               cli::nodes = boost::none,
+               cli::k = boost::none,
+               cli::kelips_contact_timeout = boost::none,
+               cli::encrypt = boost::none,
+               cli::protocol = boost::none)
+      , delete_(*this,
+                "Delete a network locally",
+                cli::name,
+                cli::pull = false,
+                cli::purge = false,
+                cli::unlink = false)
+      , export_(*this,
+                "Export a network",
+                cli::name,
+                cli::output = boost::none)
+      , fetch(*this,
+              "Fetch a network from {hub}",
+              cli::name = boost::none)
+      , import(*this,
+               "Fetch a network",
+               cli::input = boost::none)
 #ifndef INFINIT_WINDOWS
-      , inspect(
-        "Get information about a running network",
-        das::cli::Options(),
-        this->bind(modes::mode_inspect,
-                   cli::name,
-                   cli::output = boost::none,
-                   cli::status = false,
-                   cli::peers = false,
-                   cli::all = false,
-                   cli::redundancy = false))
+      , inspect(*this,
+                "Get information about a running network",
+                cli::name,
+                cli::output = boost::none,
+                cli::status = false,
+                cli::peers = false,
+                cli::all = false,
+                cli::redundancy = false)
 #endif
-      , link(
-        "Link this device to a network",
-        das::cli::Options(),
-        this->bind(modes::mode_link,
-                   cli::name,
-                   cli::storage = Strings{},
-                   cli::output = boost::none))
-      , list(
-        "List networks",
-        das::cli::Options(),
-        this->bind(modes::mode_list))
-      , list_services(
-        "List network registered services",
-        das::cli::Options(),
-        this->bind(modes::mode_list_services,
-                   cli::name,
-                   cli::peer = boost::none,
-                   cli::async = false,
-                   cli::cache = false,
-                   cli::cache_ram_size = boost::none,
-                   cli::cache_ram_ttl = boost::none,
-                   cli::cache_ram_invalidation = boost::none,
-                   cli::cache_disk_size = boost::none,
-                   cli::fetch_endpoints = false,
-                   cli::fetch = false,
-                   cli::push_endpoints = false,
-                   cli::push = false,
-                   cli::publish = false,
-                   cli::endpoints_file = boost::none,
-                   cli::port_file = boost::none,
-                   cli::port = boost::none,
-                   cli::peers_file = boost::none,
-                   cli::listen = boost::none,
-                   cli::fetch_endpoints_interval = boost::none,
-                   cli::no_local_endpoints = false,
-                   cli::no_public_endpoints = false,
-                   cli::advertise_host = boost::none))
-      , list_storage(
-        "List all storage contributed by this device to a network",
-        das::cli::Options(),
-        this->bind(modes::mode_list_storage,
-                   cli::name))
-      , pull(
-        "Remove a network from {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_pull,
-                   cli::name,
-                   cli::purge = false))
-      , push(
-        "Push a network to {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_push,
-                   cli::name))
-      , run(
-        "Run a network",
-        das::cli::Options(),
-        this->bind(modes::mode_run,
-                   cli::name,
-                   cli::input = boost::none,
+      , link(*this,
+             "Link this device to a network",
+             cli::name,
+             cli::storage = Strings{},
+             cli::output = boost::none,
+             cli::node_id = boost::none)
+      , list(*this, "List networks")
+      , list_services(*this,
+                      "List network registered services",
+                      cli::name,
+                      cli::peer = Strings(),
+                      cli::async = false,
+                      cli::cache = false,
+                      cli::cache_ram_size = boost::none,
+                      cli::cache_ram_ttl = boost::none,
+                      cli::cache_ram_invalidation = boost::none,
+                      cli::cache_disk_size = boost::none,
+                      cli::fetch_endpoints = false,
+                      cli::fetch = false,
+                      cli::push_endpoints = false,
+                      cli::push = false,
+                      cli::publish = false,
+                      cli::endpoints_file = boost::none,
+                      cli::port_file = boost::none,
+                      cli::port = boost::none,
+                      cli::peers_file = boost::none,
+                      cli::listen = boost::none,
+                      cli::fetch_endpoints_interval = boost::none,
+                      cli::no_local_endpoints = false,
+                      cli::no_public_endpoints = false,
+                      cli::advertise_host = Strings())
+      , list_storage(*this,
+                     "List all storage contributed by this device to a network",
+                     cli::name)
+      , pull(*this,
+             "Remove a network from {hub}",
+             cli::name,
+             cli::purge = false)
+      , push(*this,
+             "Push a network to {hub}",
+             cli::name)
+      , run(*this,
+            "Run a network",
+            cli::name,
+            cli::input = boost::none,
 #ifndef INFINIT_WINDOWS
-                   cli::daemon = false,
-                   cli::monitoring = true,
+            cli::daemon = false,
+            cli::monitoring = true,
 #endif
-                   cli::peer = Strings{},
-                   cli::async = false,
-                   cli::cache = false,
-                   cli::cache_ram_size = boost::none,
-                   cli::cache_ram_ttl = boost::none,
-                   cli::cache_ram_invalidation = boost::none,
-                   cli::cache_disk_size = boost::none,
-                   cli::fetch_endpoints = false,
-                   cli::fetch = false,
-                   cli::push_endpoints = false,
-                   cli::push = false,
-                   cli::publish = false,
-                   cli::endpoints_file = boost::none,
-                   cli::port_file = boost::none,
-                   cli::port = boost::none,
-                   cli::peers_file = boost::none,
-                   cli::listen = boost::none,
-                   cli::fetch_endpoints_interval = boost::none,
-                   cli::no_local_endpoints = false,
-                   cli::no_public_endpoints = false,
-                   cli::advertise_host = Strings{},
-                   cli::paxos_rebalancing_auto_expand = boost::none,
-                   cli::paxos_rebalancing_inspect = boost::none))
-      , stats(
-        "Fetch stats of a network on {hub}",
-        das::cli::Options(),
-        this->bind(modes::mode_stats,
-                   cli::name))
-      , unlink(
-        "Unlink this device from a network",
-        das::cli::Options(),
-        this->bind(modes::mode_unlink,
-                   cli::name))
-      , update(
-        "Update a network",
-        das::cli::Options(),
-        this->bind(modes::mode_update,
-                   cli::name,
-                   cli::description = boost::none,
-                   cli::port = boost::none,
-                   cli::output = boost::none,
-                   cli::push_network = false,
-                   cli::push = false,
-                   cli::admin_r = Strings{},
-                   cli::admin_rw = Strings{},
-                   cli::admin_remove = Strings{},
-                   cli::mountpoint = boost::none,
-                   cli::peer = Strings{},
-                   cli::protocol = boost::none))
+            cli::peer = Strings{},
+            cli::async = false,
+            cli::cache = false,
+            cli::cache_ram_size = boost::none,
+            cli::cache_ram_ttl = boost::none,
+            cli::cache_ram_invalidation = boost::none,
+            cli::cache_disk_size = boost::none,
+            cli::fetch_endpoints = false,
+            cli::fetch = false,
+            cli::push_endpoints = false,
+            cli::push = false,
+            cli::publish = false,
+            cli::endpoints_file = boost::none,
+            cli::port_file = boost::none,
+            cli::port = boost::none,
+            cli::peers_file = boost::none,
+            cli::listen = boost::none,
+            cli::fetch_endpoints_interval = boost::none,
+            cli::no_local_endpoints = false,
+            cli::no_public_endpoints = false,
+            cli::advertise_host = Strings{},
+            cli::paxos_rebalancing_auto_expand = boost::none,
+            cli::paxos_rebalancing_inspect = boost::none)
+      , stats(*this,
+              "Fetch stats of a network on {hub}",
+              cli::name)
+      , unlink(*this,
+               "Unlink this device from a network",
+               cli::name)
+      , update(*this,
+               "Update a network",
+               cli::name,
+               cli::description = boost::none,
+               cli::port = boost::none,
+               cli::output = boost::none,
+               cli::push_network = false,
+               cli::push = false,
+               cli::admin_r = Strings{},
+               cli::admin_rw = Strings{},
+               cli::admin_remove = Strings{},
+               cli::mountpoint = boost::none,
+               cli::peer = Strings{},
+               cli::protocol = boost::none)
     {}
 
 
@@ -360,7 +329,7 @@ namespace infinit
       {
         auto res = dnut::AdminKeys{};
         auto add =
-          [&res] (infinit::cryptography::rsa::PublicKey const& key,
+          [&res] (elle::cryptography::rsa::PublicKey const& key,
                   bool read, bool write)
           {
             if (read && !write)
@@ -440,11 +409,11 @@ namespace infinit
           std::move(overlay_config),
           std::move(storage),
           owner.keypair(),
-          std::make_shared<infinit::cryptography::rsa::PublicKey>(owner.public_key),
+          std::make_shared<elle::cryptography::rsa::PublicKey>(owner.public_key),
           dnut::Passport(
             owner.public_key,
             ifnt.qualified_name(network_name, owner),
-            infinit::cryptography::rsa::KeyPair(owner.public_key,
+            elle::cryptography::rsa::KeyPair(owner.public_key,
                                                 owner.private_key.get())),
           owner.name,
           std::move(port),
@@ -574,7 +543,7 @@ namespace infinit
                 std::move(desc.overlay),
                 std::move(d->storage),
                 u.keypair(),
-                std::make_shared<infinit::cryptography::rsa::PublicKey>(
+                std::make_shared<elle::cryptography::rsa::PublicKey>(
                   desc.owner),
                 d->passport,
                 u.name,
@@ -649,7 +618,7 @@ namespace infinit
       auto s_path = network.monitoring_socket_path(owner);
       if (!bfs::exists(s_path))
         elle::err("network not running or monitoring disabled");
-      reactor::network::UnixDomainSocket socket(s_path);
+      elle::reactor::network::UnixDomainSocket socket(s_path);
       using Monitoring = infinit::model::MonitoringServer;
       using Query = infinit::model::MonitoringServer::MonitorQuery::Query;
       auto do_query = [&] (Query query_val)
@@ -731,7 +700,8 @@ namespace infinit
     void
     Network::mode_link(std::string const& network_name,
                        Strings const& storage_names,
-                       boost::optional<std::string> const& output_name)
+                       boost::optional<std::string> const& output_name,
+                       boost::optional<std::string> const& node_id)
     {
       ELLE_TRACE_SCOPE("link");
       auto& cli = this->cli();
@@ -750,7 +720,7 @@ namespace infinit
         {
           if (owner.public_key == desc.owner)
             return {owner.public_key, desc.name,
-                    infinit::cryptography::rsa::KeyPair(owner.public_key,
+                    elle::cryptography::rsa::KeyPair(owner.public_key,
                                                         owner.private_key.get())};
           try
           {
@@ -767,15 +737,22 @@ namespace infinit
         elle::err("passport signature is invalid");
       if (storage && !passport.allow_storage())
         elle::err("passport does not allow storage");
+      auto id = infinit::model::Address::random(0); // FIXME
+      if (node_id)
+      {
+        std::stringstream ss(elle::sprintf("\"%s\"", *node_id));
+        namespace json = elle::serialization::json;
+        id = json::deserialize<infinit::model::Address>(ss, false);
+      }
       auto network = infinit::Network(
         desc.name,
         std::make_unique<dnut::Configuration>(
-          infinit::model::Address::random(0), // FIXME
+          id,
           std::move(desc.consensus),
           std::move(desc.overlay),
           std::move(storage),
           owner.keypair(),
-          std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
+          std::make_shared<elle::cryptography::rsa::PublicKey>(desc.owner),
           std::move(passport),
           owner.name,
           boost::optional<int>(),
@@ -947,7 +924,7 @@ namespace infinit
 #endif
         auto run = [&, push_p]
           {
-            reactor::Thread::unique_ptr poll_thread;
+            elle::reactor::Thread::unique_ptr poll_thread;
             if (fetch || publish)
             {
               infinit::model::NodeLocations eps;
@@ -1206,7 +1183,7 @@ namespace infinit
               dnut::Doughnut& dht,
               bool push)
          {
-          reactor::Thread::unique_ptr stat_thread;
+          elle::reactor::Thread::unique_ptr stat_thread;
           if (push)
             stat_thread = network.make_stat_update_thread(cli.infinit(), owner, dht);
           cli.report_action("running", "network", network.name);
@@ -1239,10 +1216,10 @@ namespace infinit
                     std::unique_ptr<infinit::model::blocks::Block>>("value");
                   if (!block)
                     elle::err("missing field: value");
-                  dht.store(
-                    std::move(block),
-                    op == "insert" ?
-                    infinit::model::STORE_INSERT : infinit::model::STORE_UPDATE);
+                  if (op == "insert")
+                    dht.insert(std::move(block));
+                  else
+                    dht.update(std::move(block));
                   auto response = elle::serialization::json::SerializerOut(
                     std::cout, false, true);
                   response.serialize("success", true);
@@ -1252,7 +1229,7 @@ namespace infinit
                   auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(
                     elle::Buffer(command.deserialize<std::string>("data")));
                   auto addr = block->address();
-                  dht.store(std::move(block), infinit::model::STORE_INSERT);
+                  dht.insert(std::move(block));
                   auto response = elle::serialization::json::SerializerOut(
                     std::cout, false, true);
                   response.serialize("success", true);
@@ -1281,7 +1258,7 @@ namespace infinit
                   if (mb.version() >= version)
                     elle::err("Current version is %s", mb.version());
                   mb.data(elle::Buffer(data));
-                  dht.store(std::move(block), infinit::model::STORE_UPDATE);
+                  dht.update(std::move(block));
                   auto response = elle::serialization::json::SerializerOut(
                     std::cout, false, true);
                   response.serialize("success", true);
@@ -1305,9 +1282,9 @@ namespace infinit
                         elle::err("NB %s does not exist", name);
                       auto ab = dht.make_block<infinit::model::blocks::ACLBlock>();
                       auto addr = ab->address();
-                      dht.store(std::move(ab), infinit::model::STORE_INSERT);
+                      dht.insert(std::move(ab));
                       auto nb = dnut::NB(dht, name, elle::sprintf("%s", addr));
-                      dht.store(nb, infinit::model::STORE_INSERT);
+                      dht.seal_and_insert(nb);
                       return addr;
                     }
                   }();
@@ -1339,7 +1316,7 @@ namespace infinit
             }
           }
           else
-            reactor::sleep();
+            elle::reactor::sleep();
         });
     }
 
@@ -1382,8 +1359,24 @@ namespace infinit
       auto& ifnt = cli.infinit();
       auto owner = cli.as_user();
       auto network = ifnt.network_get(network_name, owner, true);
+      if (!network.model)
+        elle::err("%s is not linked", network.name);
+      boost::optional<std::string> node_id;
+      if (auto model = dynamic_cast<dnut::Configuration*>(network.model.get()))
+      {
+        std::stringstream ss;
+        {
+          elle::serialization::json::SerializerOut s(ss);
+          s.serialize_forward(model->id);
+        }
+        auto tmp = ss.str();
+        boost::trim(tmp);
+        boost::erase_all(tmp, "\"");
+        node_id = tmp;
+      }
       ifnt.network_unlink(network.name, owner);
-      this->cli().report_action("unlinked", "network", network_name);
+      if (node_id)
+        cli.report("if you relink this network, use \"--node-id %s\"", node_id);
     }
 
 
@@ -1393,7 +1386,7 @@ namespace infinit
 
     namespace
     {
-      std::pair<infinit::cryptography::rsa::PublicKey, bool>
+      std::pair<elle::cryptography::rsa::PublicKey, bool>
       user_key(infinit::Infinit& ifnt,
                std::string name,
                boost::optional<std::string> const& mountpoint)
@@ -1409,7 +1402,7 @@ namespace infinit
           elle::Buffer buf(name);
           elle::IOStream is(buf.istreambuf());
           auto key = elle::serialization::json::deserialize
-            <infinit::cryptography::rsa::PublicKey>(is);
+            <elle::cryptography::rsa::PublicKey>(is);
           return std::make_pair(key, is_group);
         }
         if (!is_group)
@@ -1425,7 +1418,7 @@ namespace infinit
         elle::Buffer b(buf, res);
         elle::IOStream is(b.istreambuf());
         auto key = elle::serialization::json::deserialize
-          <infinit::cryptography::rsa::PublicKey>(is);
+          <elle::cryptography::rsa::PublicKey>(is);
         return std::make_pair(key, is_group);
       }
     }
@@ -1466,7 +1459,7 @@ namespace infinit
                                 "network \"%s\" to edit group admins",
                                 network.name);
         };
-      auto add_admin = [&] (infinit::cryptography::rsa::PublicKey const& key,
+      auto add_admin = [&] (elle::cryptography::rsa::PublicKey const& key,
                             bool group, bool read, bool write)
         {
           if (read && !write)

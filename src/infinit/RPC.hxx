@@ -1,6 +1,3 @@
-#ifndef INFINIT_RPC_HXX
-# define INFINIT_RPC_HXX
-
 namespace infinit
 {
   template <typename ... Args>
@@ -25,5 +22,3 @@ namespace infinit
     return o;
   }
 }
-
-#endif

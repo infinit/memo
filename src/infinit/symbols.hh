@@ -1,43 +1,43 @@
 #pragma once
 
-#include <das/Symbol.hh>
+#include <elle/das/Symbol.hh>
 
 namespace infinit
 {
   namespace symbols
   {
-    DAS_SYMBOL(address);
-    DAS_SYMBOL(addresses);
-    DAS_SYMBOL(avatar_path);
-    DAS_SYMBOL(block);
-    DAS_SYMBOL(challenge);
-    DAS_SYMBOL(data);
-    DAS_SYMBOL(description);
-    DAS_SYMBOL(email);
-    DAS_SYMBOL(fullname);
-    DAS_SYMBOL(host);
-    DAS_SYMBOL(id);
-    DAS_SYMBOL(key);
-    DAS_SYMBOL(keys);
-    DAS_SYMBOL(ldap_dn);
-    DAS_SYMBOL(mimeType);
-    DAS_SYMBOL(mode);
-    DAS_SYMBOL(name);
-    DAS_SYMBOL(overlay);
-    DAS_SYMBOL(owner);
-    DAS_SYMBOL(parents);
-    DAS_SYMBOL(passphrase);
-    DAS_SYMBOL(passphrase_hash);
-    DAS_SYMBOL(passport);
-    DAS_SYMBOL(password);
-    DAS_SYMBOL(password_hash);
-    DAS_SYMBOL(port);
-    DAS_SYMBOL(private_key);
-    DAS_SYMBOL(public_key);
-    DAS_SYMBOL(read);
-    DAS_SYMBOL(resolver);
-    DAS_SYMBOL(title);
-    DAS_SYMBOL(token);
-    DAS_SYMBOL(write);
+    ELLE_DAS_SYMBOL(address);
+    ELLE_DAS_SYMBOL(addresses);
+    ELLE_DAS_SYMBOL(avatar_path);
+    ELLE_DAS_SYMBOL(block);
+    ELLE_DAS_SYMBOL(challenge);
+    ELLE_DAS_SYMBOL(data);
+    ELLE_DAS_SYMBOL(description);
+    ELLE_DAS_SYMBOL(email);
+    ELLE_DAS_SYMBOL(fullname);
+    ELLE_DAS_SYMBOL(host);
+    ELLE_DAS_SYMBOL(id);
+    ELLE_DAS_SYMBOL(key);
+    ELLE_DAS_SYMBOL(keys);
+    ELLE_DAS_SYMBOL(ldap_dn);
+    ELLE_DAS_SYMBOL(mimeType);
+    ELLE_DAS_SYMBOL(mode);
+    ELLE_DAS_SYMBOL(name);
+    ELLE_DAS_SYMBOL(overlay);
+    ELLE_DAS_SYMBOL(owner);
+    ELLE_DAS_SYMBOL(parents);
+    ELLE_DAS_SYMBOL(passphrase);
+    ELLE_DAS_SYMBOL(passphrase_hash);
+    ELLE_DAS_SYMBOL(passport);
+    ELLE_DAS_SYMBOL(password);
+    ELLE_DAS_SYMBOL(password_hash);
+    ELLE_DAS_SYMBOL(port);
+    ELLE_DAS_SYMBOL(private_key);
+    ELLE_DAS_SYMBOL(public_key);
+    ELLE_DAS_SYMBOL(read);
+    ELLE_DAS_SYMBOL(resolver);
+    ELLE_DAS_SYMBOL(title);
+    ELLE_DAS_SYMBOL(token);
+    ELLE_DAS_SYMBOL(write);
   }
 }

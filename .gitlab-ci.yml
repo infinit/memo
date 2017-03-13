@@ -29,6 +29,7 @@ x86_64-centos6-gcc4:
     - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
+    - pip3 install -r drake/requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -42,7 +43,8 @@ x86_64-centos6-gcc4:
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //check"
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //install"
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //redhat"
-    - scp infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh:tmp
+    - scp infinit-$(echo $DESC | sed -e 's:-:_:g' )-1.el6.x86_64.rpm buildslave@packages.infinit.sh:yum
+    - ssh buildslave@packages.infinit.sh 'make yum'
     - scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //debian-debug"
     - if GIT_DIR="$SOURCE_DIR"/.git git describe --exact-match HEAD; then scp infinit-debug-symbols-centos-${DESC}_0_amd64.deb buildslave@packages.infinit.sh:debian; fi
     - if GIT_DIR="$SOURCE_DIR"/.git git describe --exact-match HEAD; then ssh buildslave@packages.infinit.sh 'make debian'; fi
@@ -68,6 +70,7 @@ x86_64-ubuntu-gcc4:
     - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
+    - pip3 install -r drake/requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -110,6 +113,7 @@ x86_64-alpine-gcc:
     - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
+    - pip3 install -r drake/requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -148,6 +152,7 @@ x86_64-jessie-gcc4:
     - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
+    - pip3 install -r drake/requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -183,6 +188,7 @@ x86_64-windows-mingw4:
     - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
+    - pip3 install -r drake/requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"
@@ -250,6 +256,7 @@ website:
     - git submodule update --force --init --recursive || git submodule update --init --recursive
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
+    - pip3 install -r drake/requirements.txt
     - SOURCE_DIR="${CI_PROJECT_DIR}"
     - BUILD_DIR="$(dirname ${CI_PROJECT_DIR})/${CI_PROJECT_NAME}-build"
     - INSTALL_DIR="${SOURCE_DIR}/_install"

@@ -33,7 +33,7 @@ namespace infinit
 
   template <typename Exception>
   void
-  read_error(reactor::http::Request& r,
+  read_error(elle::reactor::http::Request& r,
              std::string const& type,
              std::string const& name)
   {

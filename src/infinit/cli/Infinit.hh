@@ -2,8 +2,8 @@
 
 #include <elle/meta.hh>
 
-#include <das/bound-method.hh>
-#include <das/named.hh>
+#include <elle/das/bound-method.hh>
+#include <elle/das/named.hh>
 
 #include <infinit/cli/fwd.hh>
 
@@ -36,9 +36,8 @@ namespace infinit
   namespace cli
   {
     using InfinitCallable =
-      decltype(das::named::function(
-                 das::bind_method(std::declval<Infinit&>(), cli::call),
-                 help = false, version = false));
+      elle::das::named::Function<
+        void (decltype(help = false), decltype(version = false))>;
 
     class Infinit
       : public elle::Printable::as<Infinit>
@@ -166,16 +165,13 @@ namespace infinit
       void
       print(std::ostream& o) const;
       ELLE_ATTRIBUTE_R(infinit::Infinit&, infinit);
-      ELLE_ATTRIBUTE_R(boost::optional<std::string>, as);
-      ELLE_ATTRIBUTE_R(boost::optional<elle::Version>, compatibility_version);
+      ELLE_ATTRIBUTE_RW(std::vector<std::string>, command_line);
+      ELLE_ATTRIBUTE_RW(boost::optional<std::string>, as);
+      ELLE_ATTRIBUTE_RW(boost::optional<elle::Version>, compatibility_version);
       /// Whether in script mode.
-      ELLE_ATTRIBUTE_R(bool, script);
+      ELLE_ATTRIBUTE_RW(bool, script);
       /// Signal handler for termination.
       boost::signals2::signal<void ()> killed;
-
-    private:
-      template <typename Symbol, typename ObjectSymbol>
-      friend struct mode_call;
     };
   }
 }

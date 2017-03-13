@@ -2,7 +2,7 @@
 # define INFINIT_STORAGE_S3_HH
 
 # include <infinit/storage/Storage.hh>
-# include <aws/S3.hh>
+# include <elle/service/aws/S3.hh>
 
 namespace infinit
 {
@@ -12,8 +12,8 @@ namespace infinit
       : public Storage
     {
     public:
-      S3(std::unique_ptr<aws::S3> storage,
-         aws::S3::StorageClass storage_class,
+      S3(std::unique_ptr<elle::service::aws::S3> storage,
+         elle::service::aws::S3::StorageClass storage_class,
          boost::optional<int64_t> capacity);
       ~S3();
 
@@ -31,20 +31,20 @@ namespace infinit
       std::vector<Key>
       _list() override;
 
-      ELLE_ATTRIBUTE_RX(std::unique_ptr<aws::S3>, storage);
-      ELLE_ATTRIBUTE_R(aws::S3::StorageClass, storage_class);
+      ELLE_ATTRIBUTE_RX(std::unique_ptr<elle::service::aws::S3>, storage);
+      ELLE_ATTRIBUTE_R(elle::service::aws::S3::StorageClass, storage_class);
     };
 
     struct S3StorageConfig
       : public StorageConfig
     {
     public:
-      typedef aws::S3::StorageClass StorageClass;
+      typedef elle::service::aws::S3::StorageClass StorageClass;
 
     public:
       S3StorageConfig(std::string name,
-                      aws::Credentials credentials,
-                      aws::S3::StorageClass storage_class,
+                      elle::service::aws::Credentials credentials,
+                      elle::service::aws::S3::StorageClass storage_class,
                       boost::optional<int64_t> capacity,
                       boost::optional<std::string> description);
       S3StorageConfig(elle::serialization::SerializerIn& input);
@@ -56,8 +56,8 @@ namespace infinit
       std::unique_ptr<infinit::storage::Storage>
       make() override;
 
-      aws::Credentials credentials;
-      aws::S3::StorageClass storage_class;
+      elle::service::aws::Credentials credentials;
+      elle::service::aws::S3::StorageClass storage_class;
     };
   }
 }

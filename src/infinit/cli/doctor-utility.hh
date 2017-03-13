@@ -1688,7 +1688,7 @@ namespace
   uint16_t
   get_port(boost::optional<uint16_t> const& port)
   {
-    namespace random = infinit::cryptography::random;
+    namespace random = elle::cryptography::random;
     return port.value_or(random::generate<uint16_t>(10000, 65535));
   }
 
@@ -1697,20 +1697,20 @@ namespace
   _connectivity(infinit::cli::Infinit& cli,
                 boost::optional<std::string> const& server,
                 boost::optional<uint16_t> upnp_tcp_port,
-                boost::optional<uint16_t> upnp_udt_port,
+                boost::optional<uint16_t> upnp_utp_port,
                 ConnectivityResults& results)
   {
     ELLE_TRACE("contact beyond")
     {
       try
       {
-        reactor::http::Request r(infinit::beyond(),
-                                 reactor::http::Method::GET, {10_sec});
-        reactor::wait(r);
-        if (r.status() != reactor::http::StatusCode::OK)
+        elle::reactor::http::Request r(infinit::beyond(),
+                                 elle::reactor::http::Method::GET, {10_sec});
+        elle::reactor::wait(r);
+        if (r.status() != elle::reactor::http::StatusCode::OK)
           results.beyond = {elle::sprintf("%s", r.status())};
       }
-      catch (reactor::http::RequestError const&)
+      catch (elle::reactor::http::RequestError const&)
       {
         results.beyond = {
           elle::sprintf("Couldn't connect to %s", infinit::beyond())
@@ -1732,34 +1732,34 @@ namespace
       results.interfaces = {public_ips};
     }
     using ConnectivityFunction
-      = std::function<reactor::connectivity::Result
+      = std::function<elle::reactor::connectivity::Result
                       (std::string const& host, uint16_t port)>;
     uint16_t port = 5456;
     auto run = [&] (std::string const& name,
                     ConnectivityFunction const& function,
                     int deltaport = 0)
       {
-        static const reactor::Duration timeout = 3_sec;
+        static const elle::reactor::Duration timeout = 3_sec;
         ELLE_TRACE("connect using %s to %s:%s", name, *server, port + deltaport);
         std::string result = elle::sprintf("  %s: ", name);
         try
         {
-          reactor::TimeoutGuard guard(timeout);
+          elle::reactor::TimeoutGuard guard(timeout);
           auto address = function(*server, port + deltaport);
           bool external = !std::contains(public_ips, address.host);
           store(results.protocols, name, *server, address.local_port,
                 address.remote_port, !external);
         }
-        catch (reactor::Terminate const&)
+        catch (elle::reactor::Terminate const&)
         {
           throw;
         }
-        catch (reactor::network::ResolutionError const& error)
+        catch (elle::reactor::network::ResolutionError const& error)
         {
           store(results.protocols, name,
                 elle::sprintf("Couldn't connect to %s", error.host()));
         }
-        catch (reactor::Timeout const&)
+        catch (elle::reactor::Timeout const&)
         {
           store(results.protocols, name,
                 elle::sprintf("Couldn't connect after 3 seconds"));
@@ -1769,35 +1769,35 @@ namespace
           store(results.protocols, name, elle::exception_string());
         }
       };
-    run("TCP", reactor::connectivity::tcp);
-    run("UDP", reactor::connectivity::udp);
+    run("TCP", elle::reactor::connectivity::tcp);
+    run("UDP", elle::reactor::connectivity::udp);
     run("UTP",
         [](auto const& host, auto const& port)
-        { return reactor::connectivity::utp(host, port, 0); },
+        { return elle::reactor::connectivity::utp(host, port, 0); },
         1);
     run("UTP (XOR)",
         [](auto const& host, auto const& port)
-        { return reactor::connectivity::utp(host, port, 0xFF); },
+        { return elle::reactor::connectivity::utp(host, port, 0xFF); },
         2);
     run("RDV UTP",
         [](auto const& host, auto const& port)
-        { return reactor::connectivity::rdv_utp(host, port, 0); },
+        { return elle::reactor::connectivity::rdv_utp(host, port, 0); },
         1);
     run("RDV UTP (XOR)",
         [](auto const& host, auto const& port)
-        { return reactor::connectivity::rdv_utp(host, port, 0xFF); },
+        { return elle::reactor::connectivity::rdv_utp(host, port, 0xFF); },
         2);
     ELLE_TRACE("NAT")
     {
       try
       {
-        auto nat = reactor::connectivity::nat(*server, port);
+        auto nat = elle::reactor::connectivity::nat(*server, port);
         // Super uglY.
         auto cone = nat.find("NOT_CONE") == std::string::npos &&
           nat.find("CONE") != std::string::npos;
         results.nat = {cone};
       }
-      catch (reactor::Terminate const&)
+      catch (elle::reactor::Terminate const&)
       {
         throw;
       }
@@ -1808,7 +1808,7 @@ namespace
     }
     ELLE_TRACE("UPnP")
     {
-      auto upnp = reactor::network::UPNP::make();
+      auto upnp = elle::reactor::network::UPNP::make();
       try
       {
         results.upnp.sane(true);
@@ -1820,7 +1820,7 @@ namespace
         results.upnp.warning(false);
         using Address =
           ConnectivityResults::UPnPResult::RedirectionResult::Address;
-        auto redirect = [&] (reactor::network::Protocol protocol,
+        auto redirect = [&] (elle::reactor::network::Protocol protocol,
                              uint16_t port)
           {
             auto type = elle::sprintf("%s", protocol);
@@ -1841,7 +1841,7 @@ namespace
               res.internal = Address{pm.internal_host, convert(pm.internal_port)};
               res.external = Address{pm.external_host, convert(pm.external_port)};
             }
-            catch (reactor::Terminate const&)
+            catch (elle::reactor::Terminate const&)
             {
               throw;
             }
@@ -1850,10 +1850,10 @@ namespace
               res = {type, false, elle::exception_string()};
             }
           };
-        redirect(reactor::network::Protocol::tcp, get_port(upnp_tcp_port));
-        redirect(reactor::network::Protocol::udt, get_port(upnp_udt_port));
+        redirect(elle::reactor::network::Protocol::tcp, get_port(upnp_tcp_port));
+        redirect(elle::reactor::network::Protocol::utp, get_port(upnp_utp_port));
       }
-      catch (reactor::Terminate const&)
+      catch (elle::reactor::Terminate const&)
       {
         throw;
       }
@@ -1951,16 +1951,16 @@ namespace
   {
     try
     {
-      struct NoOp : reactor::filesystem::Operations
+      struct NoOp : elle::reactor::filesystem::Operations
       {
-        std::shared_ptr<reactor::filesystem::Path>
+        std::shared_ptr<elle::reactor::filesystem::Path>
         path(std::string const& path) override
         {
           return nullptr;
         }
       };
 
-      reactor::filesystem::FileSystem f(std::make_unique<NoOp>(), false);
+      elle::reactor::filesystem::FileSystem f(std::make_unique<NoOp>(), false);
       auto d = elle::filesystem::TemporaryDirectory{};
       f.mount(d.path(), {});
       f.unmount();
@@ -2106,22 +2106,23 @@ namespace
         // volumes, we will skip those with broken silos.  Likewise
         // for the other items.
         auto& status = elem.second.second;
+#define COMPARE(field) (credentials->field == s3config->credentials.field())
+        INFINIT_ENTREPRISE(
         if (auto s3config = dynamic_cast<S3StorageConfig const*>(
               storage.get()))
         {
           status = any_of(aws_credentials,
               [&s3config] (auto const& credentials)
               {
-#define COMPARE(field) (credentials->field == s3config->credentials.field())
                 return COMPARE(access_key_id) && COMPARE(secret_access_key);
-#undef COMPARE
               });
         if (status)
           store(results.silos, storage->name, status, "S3");
         else
           store(results.silos, storage->name, status, "S3",
                 std::string("credentials are missing"));
-        }
+        })
+#undef COMPARE
         if (auto fsconfig
             = dynamic_cast<FilesystemStorageConfig const*>(storage.get()))
         {
@@ -2130,6 +2131,7 @@ namespace
           store(results.silos, storage->name, status, "filesystem",
                 elle::sprintf("\"%s\" %s", fsconfig->path, perms.second));
         }
+        INFINIT_ENTREPRISE(
         if (auto gcsconfig = dynamic_cast<GCSConfig const*>(storage.get()))
         {
           status = any_of(gcs_credentials,
@@ -2142,13 +2144,7 @@ namespace
           else
             store(results.silos, storage->name, status, "GCS",
                   std::string{"credentials are missing"});
-        }
-#ifndef INFINIT_WINDOWS
-        if (dynamic_cast<SFTPStorageConfig const*>(storage.get()))
-        {
-          // XXX:
-        }
-#endif
+        })
       }
 
     ELLE_TRACE("verify networks")

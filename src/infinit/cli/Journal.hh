@@ -1,6 +1,6 @@
 #pragma once
 
-#include <das/cli.hh>
+#include <elle/das/cli.hh>
 
 #include <infinit/cli/Object.hh>
 #include <infinit/cli/Mode.hh>
@@ -23,26 +23,29 @@ namespace infinit
                                     cli::stat));
 
       // describe.
-      Mode<decltype(binding(modes::mode_describe,
-                            cli::network,
-                            cli::operation = boost::none))>
+      Mode<Journal,
+           void (decltype(cli::network)::Formal<std::string const&>,
+                 decltype(cli::operation = boost::optional<int>())),
+           decltype(modes::mode_describe)>
       describe;
       void
       mode_describe(std::string const& network,
                     boost::optional<int> operation = boost::none);
 
       // export.
-      Mode<decltype(binding(modes::mode_export,
-                            cli::network,
-                            cli::operation))>
+      Mode<Journal,
+           void (decltype(cli::network)::Formal<std::string const&>,
+                 decltype(cli::operation)::Formal<int>),
+           decltype(modes::mode_export)>
       export_;
       void
       mode_export(std::string const& network,
                   int operation);
 
       // stat.
-      Mode<decltype(binding(modes::mode_stat,
-                            cli::network = boost::none))>
+      Mode<Journal,
+           void (decltype(cli::network = boost::optional<std::string>())),
+           decltype(modes::mode_stat)>
       stat;
       void
       mode_stat(boost::optional<std::string> const& network);

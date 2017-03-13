@@ -38,22 +38,22 @@ namespace infinit
         public:
           CacheConflictResolver(elle::serialization::SerializerIn& s,
                                 elle::Version const& v)
-          : _slot(nullptr)
+            : _slot(nullptr)
           {
             this->serialize(s, v);
           }
+
           CacheConflictResolver(std::unique_ptr<blocks::Block>* slot,
                                 std::unique_ptr<ConflictResolver> backend)
-          : _slot(slot)
-          , _backend(std::move(backend))
-          {
-          }
+            : _slot(slot)
+            , _backend(std::move(backend))
+          {}
+
           std::unique_ptr<blocks::Block>
           operator()(blocks::Block& b,
-                     blocks::Block& current,
-                     model::StoreMode store_mode)
+                     blocks::Block& current) override
           {
-            auto res = (*_backend)(b, current, store_mode);
+            auto res = (*_backend)(b, current);
             if (res && this->_slot)
             {
               res->validated(true); // block generated localy
@@ -71,12 +71,12 @@ namespace infinit
           }
           void
           serialize(elle::serialization::Serializer& s,
-                    elle::Version const& v)
+                    elle::Version const& v) override
           {
             s.serialize("backend", this->_backend);
           }
           std::string
-          description() const
+          description() const override
           {
             return "cache wrapper for " + this->_backend->description();
           }
@@ -107,7 +107,7 @@ namespace infinit
             disk_cache_size ? disk_cache_size.get() : 512_mB)
           , _disk_cache_used(0)
           , _cleanup_thread(
-            new reactor::Thread(elle::sprintf("%s cleanup", *this),
+            new elle::reactor::Thread(elle::sprintf("%s cleanup", *this),
                                 [this] { this->_cleanup();}))
         {
           ELLE_TRACE_SCOPE(
@@ -313,7 +313,7 @@ namespace infinit
               return _fetch(address, local_version);
             }
             it = this->_pending.insert(std::make_pair(
-              address, std::make_shared<reactor::Barrier>())).first;
+              address, std::make_shared<elle::reactor::Barrier>())).first;
             auto b = it->second;
             elle::SafeFinally sf([&]
               {
@@ -539,7 +539,7 @@ namespace infinit
                   }
                 }
               }
-            reactor::sleep(
+            elle::reactor::sleep(
               boost::posix_time::seconds(
                 this->_cache_invalidation.count()) / 10);
           }

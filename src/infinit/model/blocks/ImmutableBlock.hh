@@ -16,8 +16,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        typedef ImmutableBlock Self;
-        typedef Block Super;
+        using Self = infinit::model::blocks::ImmutableBlock;
+        using Super = infinit::model::blocks::Block;
 
       /*-------------.
       | Construction |
@@ -35,7 +35,7 @@ namespace infinit
       | Clone  |
       `-------*/
       public:
-      virtual
+
       std::unique_ptr<Block>
       clone() const override;
 
