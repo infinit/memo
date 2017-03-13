@@ -499,7 +499,7 @@ def configure(
   for m in infinit_modes:
     b = 'infinit-storage' if m == 'silo' else 'infinit-{}'.format(m)
     if windows:
-      b = drake.Copy(infinit_cli, 'bin/%s.exe' % b).target()
+      b = drake.Copy(infinit_cli, 'bin/%s.exe' % b).target
     else:
       b = drake.Symlink('bin/%s' % b, infinit_cli)
     binaries.append(b)
