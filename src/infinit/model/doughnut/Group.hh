@@ -1,5 +1,4 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_GROUP_HH
-# define INFINIT_MODEL_DOUGHNUT_GROUP_HH
+#pragma once
 
 #include <elle/reactor/storage.hh>
 #include <elle/cryptography/rsa/KeyPair.hh>
@@ -110,14 +109,9 @@ namespace infinit
         boost::optional<std::string> _description;
         using serialization_tag = infinit::serialization_tag;
       };
+
+      std::ostream&
+      operator << (std::ostream& out, GroupConflictResolver::Action action);
     }
   }
 }
-
-namespace std
-{
-  std::ostream&
-  operator << (std::ostream& out,
-               infinit::model::doughnut::GroupConflictResolver::Action action);
-}
-#endif
