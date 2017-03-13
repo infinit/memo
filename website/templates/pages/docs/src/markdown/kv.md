@@ -5,7 +5,7 @@ Infinit provides a distributed decentralized key-value store, with built-in
 replication and security.
 
 This key-value store is accessible through a [grpc](http://www.grpc.io) interface
-specified in the file [kv.proto](kv.proto).
+specified in the file [doughnut.proto](doughnut.proto).
 
 ## API overview ##
 
@@ -28,11 +28,10 @@ or compromised storage nodes from tampering with the content.
 The infinit KV store supports many different block types that serve different
 purposes. The most important ones are:
 
-* Constant Hash Block(CHB): The simplest of all blocks, the CHB is an immutable
-  block whose address is simply the hash of its content.
+* Immutable blocks (IB): The simplest of all blocks, whose address is simply the hash of their content.
 * Mutable Block (MB): Basic mutable block, providing atomic update (read-then-write)
-  using a versioning mechanism.
-* Address Control List Block (ACB): Refinement over mutable blocks providing a
+  using a versioning mechanism, and security since the payload is encrypted.
+* Address Control List Block (ACLB): Refinement over mutable blocks providing a
   fined-grained ACL system which can be used to defined which users can read and
   write the block content.
 * Named Block (NB): Blocks whose address can be deduced from their unique name.
@@ -49,16 +48,16 @@ type. The most important fields are:
 
 Block contains more field whose meaning depends on the block type.
 
-### Immutable blocks (CHB) ###
+### Immutable blocks (IB) ###
 
-The CHB is an immutable block (it cannot be updated) whose address is the hash of
-its content. This feature ensures the data is tamper-proof: when fetching a CHB
+The IB is an immutable block (it cannot be updated) whose address is the hash of
+its content. This feature ensures the data is tamper-proof: when fetching an IB
 through the `fetch` API call, infinit will recompute the hash of the content and check
 it against the address. If both hash do not match `fetch` will return
 an exception.
 
-CHB exposes one additional feature through the `block.owner` field:
-if set to the address of mutable block, then removing the CHB will only be allowed if
+IB exposes one additional feature through the `block.owner` field:
+if set to the address of another mutable block, then removing the IB will only be allowed if
 the user would be allowed to remove said mutable block.
 
 <a name="MB"></a>
@@ -73,7 +72,7 @@ When you attempt to call `update`, that version gets incremented by one, and
 the update will only succeed if the resulting number is above the current
 block version. Otheriwise the `update` call will fail with an exception.
 In that case the returned `Exception` object will contain the current
-version of the block in the `current` field.
+value of the block in the KV store, in the `current` field.
 
 Atomic updates is an important feature. For instance if your MB's payload is
 a list of values and you want to add one item
@@ -81,17 +80,17 @@ to that list, you need to handle the case where another task is also making an
 update to the list at the same time. See the [example](#example) below for an
 illustration of this use case.
 
-### ACL blocks (ACB) ###
+### ACL blocks (ACLB) ###
 
-ACB inherits the feature of Mutable Block and provide additional fields to control
+ACLB inherits the features of mutable blocks and provide additional fields to control
 which users can read and write the data.
 
-By default an ACB can only be read and written by the user who created the block.
+By default an ACLB can only be read and written by the user who created the block.
 
 The `Block` message has the following fields used to control ACLs:
 
-* `world_readable`: If true all users will be allowed to read the ACB payload.
-* `world_writable`: If true all users will be allowed to update the ACB payload.
+* `world_readable`: If true all users will be allowed to read the ACLB payload.
+* `world_writable`: If true all users will be allowed to update the ACLB payload.
 * `acl`: A list of `ACLEntry`.
 
 The `ACLEntry` message exposes the following fields:
@@ -105,7 +104,7 @@ The `ACLEntry` message exposes the following fields:
 
 Named Blocks have the unique feature of being accessible from a user-defined unique-id.
 They are typically used as an entry point to access further data, usually by storing
-the address of an other Mutable Block in their payload.
+the address of an other mutable block in their payload.
 
 NBs are currently Immutable and thus cannot be updated once created.
 Use the `named_block_address(NamedBlockKey)` function to obtain the NB block address from its unique id.
@@ -115,12 +114,12 @@ Use the `named_block_address(NamedBlockKey)` function to obtain the NB block add
 When inserting new blocks into the key-value store, one first needs to obtain
 a `Block` message through one of the builder functions:
 
-* Block make_immutable_block(CHBData) : create CHB with given payload and owner
-* Block make_mutable_block(Empty) : create OKB (no arguments)
-* Block make_acl_block(Empty) : create ACB (no arguments)
+* Block make_immutable_block(CHBData) : create IB with given payload and owner
+* Block make_mutable_block(Empty) : create MB (no arguments)
+* Block make_acl_block(Empty) : create ACLB (no arguments)
 * Block make_named_block(NamedBlockKey) : create NB with given key
 
-You can then fill the `data` (CHB) or `data_plain` (MB) field with your payload and
+You can then fill the `data` (IB) or `data_plain` (MB) field with your payload and
 call the `insert` function.
 
 ## Example: a simple multi-user document storage system ##
@@ -148,14 +147,14 @@ We will use the following blocks:
   of the document list block.
 * For each user, one [MB](#MB) will serve as the document list. Its payload will
   be a serialized map of document names to the document content address.
-* For each document, one [CHB](#CHB) will store the document content.
+* For each document, one [IB](#IB) will store the document content.
 
 For the document list format, we will use a simple text serialization scheme of the form
 "name=address\nname2=address2\n...". We will encode addresses in hexadecimal.
 
 ### Generating the GRPC and protobuf sources ###
 
-The first step is to generate the sources from the [kv.proto] file. This can
+The first step is to generate the sources from the [doughnut.proto] file. This can
 be achieved by the following two commands:
 
 ```
@@ -206,7 +205,9 @@ using boost::algorithm::unhex;
 
 int main(int argc, char** argv)
 {
+    // create the connection to the infinit kv grpc server
     auto chan = grpc::CreateChannel(argv[1], grpc::InsecureChannelCredentials());
+    // instanciate the client stub whose code was autogenerated
     kv = Doughnut::NewStub(chan);
     string cmd = argv[2];
     if (cmd == "create") {
@@ -235,22 +236,21 @@ name, that points to the document list block.
 ```
 void create_user(string user)
 {
-  // Create and insert an empty mutable block
-  ::Block doclist;
+  // Create an insert message
+  ::Insert insert;
+  // Fill it with a new mutable block
   ::Empty empty;
   {
      grpc::ClientContext ctx;
-     kv->make_mutable_block(&ctx, empty, &doclist);
+     kv->make_mutable_block(&ctx, empty, insert.mutable_block());
   }
+  // Call the insert method
   {
     grpc::ClientContext ctx;
-    ::Insert insert;
-    insert.mutable_block()->CopyFrom(doclist);
     ::EmptyOrException res;
     kv->insert(&ctx, insert, &res);
   }
-  // Create and insert a Named Block with the MB address as payload.
-  // We can reuse the block object
+  // Create a new named block with key the user name
   ::NamedBlockKey key;
   ::Block nb;
   key.set_key(user);
@@ -258,7 +258,9 @@ void create_user(string user)
     grpc::ClientContext ctx;
     kv->make_named_block(&ctx, key, &nb);
   }
+  // Set it's payload to the address of the document list mutable block
   nb.set_data(doclist.address());
+  // Insert the block into the kv store
   {
     ::EmptyOrException res;
     ::Insert insert;
@@ -357,7 +359,7 @@ vector<string> list_documents(string user)
 ### get_document ###
 
 To get the content of one specific document, we use the above `get_documents` function,
-extract the document address, and fetch its CHB
+extract the document address, and fetch its IB:
 
 <div id="code5"></div>
 ```
@@ -378,7 +380,7 @@ string get_document(string user, string name)
 
 ### set_document ###
 
-To create or update a document, we first need to create a new CHB with the document
+To create or update a document, we first need to create a new IB with the document
 content, and then add it to the user document list.
 Here comes the trickiest part: we need to update the document list atomically, in
 case two tasks try to update said document list at the same time. For that we will
