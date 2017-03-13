@@ -1,7 +1,8 @@
 #include <elle/filesystem/TemporaryDirectory.hh>
-#include <elle/test.hh>
+#include <elle/make-vector.hh>
 #include <elle/os/environ.hh>
 #include <elle/reactor/network/http-server.hh>
+#include <elle/test.hh>
 
 #include <elle/reactor/for-each.hh>
 
@@ -115,18 +116,18 @@ public:
   }
 private:
   // username -> {node_id -> endpoints}
-  typedef std::unordered_map<std::string,
-    std::unordered_map<std::string, BEndpoints>> NetEndpoints;
+  using NetEndpoints = std::unordered_map<std::string,
+    std::unordered_map<std::string, BEndpoints>>;
   NetEndpoints _endpoints;
 };
 
 std::vector<infinit::model::Endpoints> endpoints;
 infinit::Network net("bob/network", nullptr, boost::none);
-typedef std::vector<
+using Nodes = std::vector<
          std::pair<
            std::shared_ptr<imd::Doughnut>,
            elle::reactor::Thread::unique_ptr
-           >> Nodes;
+           >>;
 
 static
 Nodes
@@ -155,7 +156,7 @@ run_nodes(bfs::path where,  elle::cryptography::rsa::KeyPair& kp,
   for (int n=0; n<count; ++n)
   {
     std::unique_ptr<infinit::storage::Storage> s;
-    boost::filesystem::create_directories(where / "store");
+    bfs::create_directories(where / "store");
     s.reset(new infinit::storage::Filesystem(where / ("store" + std::to_string(n))));
     infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp);
     infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
@@ -221,36 +222,31 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   config.accept_plain = false;
   config.query_get_retries = 3;
   config.ping_timeout_ms = valgrind(500, 20);
-  infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp);
-  infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
-  [&] (infinit::model::doughnut::Doughnut& dht)
-  -> std::unique_ptr<imd::consensus::Consensus>
-  {
-    std::unique_ptr<imd::consensus::Consensus> backend =
-      std::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient);
-    if (async)
+  auto passport = infinit::model::doughnut::Passport(kp.K(), "testnet", kp);
+  auto consensus =
+    [&] (infinit::model::doughnut::Doughnut& dht)
     {
-      auto async = std::make_unique<
-        infinit::model::doughnut::consensus::Async>(std::move(backend),
-          where / boost::filesystem::unique_path());
-        backend = std::move(async);
-    }
-    if (cache)
+      auto backend =
+        std::unique_ptr<imd::consensus::Consensus>{
+          std::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient)
+        };
+      if (async)
+        backend = std::make_unique<
+          infinit::model::doughnut::consensus::Async>(std::move(backend),
+            where / bfs::unique_path());
+      if (cache)
+        backend = std::make_unique<imd::consensus::Cache>(
+          std::move(backend));
+      return backend;
+    };
+  auto overlay =
+    [&] (infinit::model::doughnut::Doughnut& dht,
+         std::shared_ptr<infinit::model::doughnut::Local> local)
     {
-      auto cache = std::make_unique<imd::consensus::Cache>(
-        std::move(backend));
-      backend = std::move(cache);
-    }
-    return backend;
-  };
-  infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
-  [&] (infinit::model::doughnut::Doughnut& dht,
-       std::shared_ptr<infinit::model::doughnut::Local> local)
-  {
-    auto res = config.make(local, &dht);
-    res->discover(endpoints);
-    return res;
-  };
+      auto res = config.make(local, &dht);
+      res->discover(endpoints);
+      return res;
+    };
   auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
     infinit::model::Address::random(0), // FIXME
     std::make_shared<elle::cryptography::rsa::KeyPair>(kp),
@@ -261,8 +257,8 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
     boost::optional<int>(),
     boost::optional<boost::asio::ip::address>(),
     std::unique_ptr<infinit::storage::Storage>());
-  auto ops = std::make_unique<infinit::filesystem::FileSystem>(
-    "volume", dn, infinit::filesystem::allow_root_creation = true);
+  auto ops = std::make_unique<ifs::FileSystem>(
+    "volume", dn, ifs::allow_root_creation = true);
   auto fs = std::make_unique<elle::reactor::filesystem::FileSystem>(
     std::move(ops), true);
   elle::reactor::Thread::unique_ptr tptr;
@@ -288,19 +284,18 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   return std::make_pair(std::move(fs), std::move(tptr));
 }
 
-static std::vector<std::unique_ptr<rfs::FileSystem>>
-node_to_fs(Nodes const& nodes)
+namespace
 {
-  std::vector<std::unique_ptr<rfs::FileSystem>> res;
-  for (auto& n: nodes)
+  std::vector<std::unique_ptr<rfs::FileSystem>>
+  node_to_fs(Nodes const& nodes)
   {
-    auto ops = std::make_unique<infinit::filesystem::FileSystem>(
-      "volume", n.first, infinit::filesystem::allow_root_creation = true);
-    auto fs = std::make_unique<elle::reactor::filesystem::FileSystem>(
-      std::move(ops), true);
-    res.push_back(std::move(fs));
+    return elle::make_vector(nodes, [](auto const& n) {
+        auto ops = std::make_unique<ifs::FileSystem>(
+          "volume", n.first, ifs::allow_root_creation = true);
+        return std::make_unique<elle::reactor::filesystem::FileSystem>(
+          std::move(ops), true);
+      });
   }
-  return res;
 }
 
 void
@@ -345,7 +340,7 @@ readfile(rfs::FileSystem& fs,
 
 ELLE_TEST_SCHEDULED(basic)
 {
-  elle::filesystem::TemporaryDirectory d;
+  auto d = elle::filesystem::TemporaryDirectory{};
   auto tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
   auto kp = elle::cryptography::rsa::keypair::generate(512);
@@ -486,10 +481,10 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
 }
 // ELLE_TEST_SCHEDULED(conflictor)
 // {
-//   auto tmp = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+//   auto tmp = bfs::temp_directory_path() / bfs::unique_path();
 //   elle::SafeFinally cleanup([&]
 //     {
-//       boost::filesystem::remove_all(tmp);
+//       bfs::remove_all(tmp);
 //     });
 //   auto kp = elle::cryptography::rsa::keypair::generate(2048);
 //   auto nodes = run_nodes(tmp, kp, 3, 1, 3, false);
@@ -525,10 +520,10 @@ ELLE_TEST_SCHEDULED(list_directory_5_3)
 // {
 //   static const int file_count = 20;
 //   ELLE_LOG("kill_nodes n=%s k=%s r=%s", node_count, kill, replication);
-//   auto tmp = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+//   auto tmp = bfs::temp_directory_path() / bfs::unique_path();
 //   elle::SafeFinally cleanup([&]
 //     {
-//       boost::filesystem::remove_all(tmp);
+//       bfs::remove_all(tmp);
 //     });
 //   auto kp = elle::cryptography::rsa::keypair::generate(2048);
 //   auto nodes = run_nodes(tmp, kp, node_count, k, replication, lenient);
@@ -625,12 +620,12 @@ ELLE_TEST_SCHEDULED(conflicts)
     auto cache1 =
       dynamic_cast<infinit::model::doughnut::consensus::Cache*>(
         dynamic_cast<infinit::model::doughnut::Doughnut*>(
-          dynamic_cast<infinit::filesystem::FileSystem*>(
+          dynamic_cast<ifs::FileSystem*>(
            fs1->operations().get())->block_store().get())->consensus().get());
     auto cache2 =
       dynamic_cast<infinit::model::doughnut::consensus::Cache*>(
         dynamic_cast<infinit::model::doughnut::Doughnut*>(
-          dynamic_cast<infinit::filesystem::FileSystem*>(
+          dynamic_cast<ifs::FileSystem*>(
            fs2->operations().get())->block_store().get())->consensus().get());
     struct stat st;
     fs1->path("/dir")->mkdir(0600);
@@ -763,8 +758,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
     ELLE_LOG("%x: %s", n.get(), items);
     BOOST_CHECK(items.size() == fss.size()+2);
   }
-  for(auto const& n: fss)
-  {
+  for (auto const& n: fss)
     for (auto const& t: fss)
     {
       auto p = std::to_string((uint64_t)t.get());
@@ -772,7 +766,6 @@ ELLE_TEST_SCHEDULED(clients_parallel)
       n->path("/" + p +"/0")->stat(&st);
       BOOST_CHECK(S_ISDIR(st.st_mode));
     }
-  }
 }
 
 ELLE_TEST_SCHEDULED(many_conflicts)
