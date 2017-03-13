@@ -15,7 +15,7 @@ RUN apt-get install -y python3-mako
 RUN apt-get install -y python3-pip
 RUN apt-get install -y realpath
 RUN pip3 install mistune
-RUN pip3 install oset
+RUN pip3 install orderedset
 
 ADD . /root/fs
 

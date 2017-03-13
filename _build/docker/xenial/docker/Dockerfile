@@ -23,7 +23,7 @@ RUN apt-get install -y                          \
     python3-requests                            \
     realpath
 RUN pip3 install --upgrade pip
-RUN pip3 install mistune oset
+RUN pip3 install mistune orderedset
 RUN chmod a+r /etc/couchdb/local.ini
 
 # Setup compilers, distcc and ccache

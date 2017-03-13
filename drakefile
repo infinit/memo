@@ -9,7 +9,6 @@ import drake.redhat
 import drake.valgrind
 
 import os
-import oset
 import re
 import shutil
 
