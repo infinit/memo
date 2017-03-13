@@ -45,11 +45,22 @@ namespace infinit
     std::string
     cxx_to_message_name(std::string name)
     {
-      auto p = name.find_last_of(':');
+      auto p = name.find_first_of('<');
+      if (p != name.npos)
+      {
+        if (name.find("unique_ptr") != name.npos
+          || name.find("shared_ptr") != name.npos)
+          name = name.substr(p+1);
+        else
+          name = name.substr(0, p);
+      }
+      p = name.find_last_of(':');
       if (p != name.npos)
         name = name.substr(p+1);
       p = name.find_first_of('>');
       name = name.substr(0, p);
+      if (name == "basic_string")
+        name = "string";
       return uppercase_to_underscore(name);
     }
 

@@ -1023,7 +1023,6 @@ ELLE_TEST_SCHEDULED(doughnut)
         BOOST_CHECK(repl.exception_ptr().exception().has_current());
         update.mutable_block()->CopyFrom(repl.exception_ptr().exception().current());
         update.mutable_block()->set_data_plain("merow");
-        update.mutable_block()->set_data("");
         stub->update(&context, update, &repl);
         BOOST_CHECK_EQUAL(repl.has_exception_ptr(), false);
       }

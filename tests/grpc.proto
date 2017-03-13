@@ -11,10 +11,10 @@ message Simple {
 
 message SIOption
 {
-  int64 type = 1;
+  string type = 1;
   oneof value {
-    string value0 = 2;
-    int64 value1 = 3;
+    string string = 2;
+    int64 long = 3;
   }
 }
 
