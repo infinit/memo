@@ -29,15 +29,16 @@ def configure(
   class PythonCopy(drake.Copy):
 
     def execute(self):
+      print(self.cmd, self.source.path)
       if not super().execute():
         return False
       script = ';'.join([
         'import py_compile',
         'res = py_compile.compile(file = %r, dfile = %r)',
         'exit(1 if res is None else 0)',
-      ]) % (str(self.target().path()), str(self.source.path()))
+      ]) % (str(self.target.path()), str(self.source.path()))
       self.cmd(
-        'Check syntax of %s' % self.target(),
+        'Check syntax of %s' % self.target,
         ['%s/bin/python%s' % (python.prefix, python.version),
          '-c', script],
         throw = True)
