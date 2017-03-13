@@ -418,7 +418,6 @@ void set_document(string user, string name, string data)
     }
     dl[name] = chb_addr; // play or re-play our operation into dl
     mb.set_data_plain(serialize_document_list(dl));
-    mb.set_data("");
     {
       grpc::ClientContext ctx;
       ::Update update;

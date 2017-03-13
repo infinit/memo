@@ -70,7 +70,10 @@ message Key {
 message Block {
   string type = 1;
   bytes address = 2;
-  bytes data = 3;
+  oneof payload {
+    bytes data = 3;
+    bytes data_plain = 22;
+  }
   bytes salt = 4;
   // CHB
   bytes owner = 5;
@@ -80,7 +83,6 @@ message Block {
   bytes owner_rsa = 7;
   bytes name = 8;
   // OKB, ACB
-  bytes data_plain = 22;
   Key key_koh = 9;
   int64 version = 10;
   // ACB
