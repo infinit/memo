@@ -175,6 +175,8 @@ def configure(
     'resources/images/logo.png',
     'resources/images/logo@2x.png',
     'resources/images/logotype.png',
+    'resources/images/logotype-small.png',
+    'resources/images/logotype-small@2x.png',
     'resources/images/schema-infrastructure.png',
     'resources/images/schema-infrastructure@2x.png',
     'resources/images/schema-global.png',

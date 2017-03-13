@@ -431,7 +431,7 @@ body.home {
       .legend {
         position: absolute; 
 
-        h4 { max-width: 80px; margin: 0; }
+        h4 { margin: 0; }
         span, h4 { text-align: right; }
         span { display: inline-block; float: right;}
 
@@ -441,11 +441,13 @@ body.home {
         @keyframes fade { from { opacity: 0;  } to { opacity: 1; } }
 
         &.kv {
-          opacity: 0; left: -116px; top: 87px;
+          opacity: 0; left: -123px; top: 87px;
           .animation(fade, ease-in, 1);
           .animationFillMode(forwards);
           .animationDuration(0.3s);
           .animationDelay(2.7s);
+
+          h4 { max-width: 90px; }
         }
 
         // Fade + Slide Top Animation
@@ -462,7 +464,7 @@ body.home {
         }
 
         &.logic {
-          top: 461px; left: -69px; opacity: 0;
+          top: 461px; left: -142px; opacity: 0;
           .animation(fade, ease-in, 1);
           .animationFillMode(forwards);
           .animationDuration(0.7s);
