@@ -174,43 +174,29 @@ private:
          std::unique_ptr<dht::consensus::Consensus>(
            std::unique_ptr<dht::consensus::Consensus>)> make_consensus)
   {
-    this->keys_a =
-      std::make_shared<elle::cryptography::rsa::KeyPair>(std::move(keys_a));
-    this->keys_b =
-      std::make_shared<elle::cryptography::rsa::KeyPair>(std::move(keys_b));
-    this->keys_c =
-      std::make_shared<elle::cryptography::rsa::KeyPair>(std::move(keys_c));
-    if (!storage_a)
-      storage_a = std::make_unique<Memory>();
-    if (!storage_b)
-      storage_b = std::make_unique<Memory>();
-    if (!storage_c)
-      storage_c = std::make_unique<Memory>();
-    dht::Doughnut::ConsensusBuilder consensus;
-    if (paxos)
-      consensus =
-        [&] (dht::Doughnut& dht)
-        {
-          return make_consensus(
-            std::make_unique<dht::consensus::Paxos>(dht, 3));
-        };
-    else
-      consensus =
-        [&] (dht::Doughnut& dht)
-        {
-          return make_consensus(
-            std::make_unique<dht::consensus::Consensus>(dht));
-        };
-    dht::Passport passport_a(
-      this->keys_a->K(), "network-name", *this->keys_a);
-    dht::Passport passport_b(
-      this->keys_b->K(), "network-name", *this->keys_a);
-    dht::Passport passport_c(
-      this->keys_c->K(), "network-name", *this->keys_a);
-    infinit::model::NodeLocations members;
-    members.emplace_back(id_a, infinit::model::Endpoints());
-    members.emplace_back(id_b, infinit::model::Endpoints());
-    members.emplace_back(id_c, infinit::model::Endpoints());
+    auto const consensus = [&paxos, &make_consensus] () -> dht::Doughnut::ConsensusBuilder
+      {
+        if (paxos)
+          return
+            [&] (dht::Doughnut& dht)
+            {
+              return make_consensus(
+                std::make_unique<dht::consensus::Paxos>(dht, 3));
+            };
+        else
+          return
+            [&] (dht::Doughnut& dht)
+            {
+              return make_consensus(
+                std::make_unique<dht::consensus::Consensus>(dht));
+            };
+      }();
+    auto const members = infinit::model::NodeLocations
+      {
+        {id_a, infinit::model::Endpoints()},
+        {id_b, infinit::model::Endpoints()},
+        {id_c, infinit::model::Endpoints()},
+      };
     std::vector<infinit::overlay::Stonehenge*> stonehenges;
     make_overlay =
       [make_overlay, &stonehenges] (
@@ -224,70 +210,100 @@ private:
         stonehenges.emplace_back(res.get());
         return res;
       };
-    this->dht_a = std::make_shared<dht::Doughnut>(
-      id_a,
-      this->keys_a,
-      this->keys_a->public_key(),
-      passport_a,
-      consensus,
-      infinit::model::doughnut::Doughnut::OverlayBuilder(
-        [=] (infinit::model::doughnut::Doughnut& d,
-             std::shared_ptr<infinit::model::doughnut::Local> local)
-        {
-          return make_overlay(0, members, std::move(local), d);
-        }),
-      boost::optional<int>(),
-      boost::optional<boost::asio::ip::address>(),
-      std::move(storage_a),
-      dht::version = version_a,
-      infinit::model::doughnut::monitoring_socket_path =
-        monitoring_socket_path_a);
-    this->dht_b = std::make_shared<dht::Doughnut>(
-      id_b,
-      this->keys_b,
-      this->keys_a->public_key(),
-      passport_b,
-      consensus,
-      infinit::model::doughnut::Doughnut::OverlayBuilder(
-        [=] (infinit::model::doughnut::Doughnut& d,
-             std::shared_ptr<infinit::model::doughnut::Local> local)
-        {
-          return make_overlay(1, members, std::move(local), d);
-        }),
-      boost::optional<int>(),
-      boost::optional<boost::asio::ip::address>(),
-      std::move(storage_b),
-      dht::version = version_b);
-    this->dht_c = std::make_shared<dht::Doughnut>(
-      id_c,
-      this->keys_c,
-      this->keys_a->public_key(),
-      passport_c,
-      consensus,
-      infinit::model::doughnut::Doughnut::OverlayBuilder(
-        [=] (infinit::model::doughnut::Doughnut& d,
-             std::shared_ptr<infinit::model::doughnut::Local> local)
-        {
-          return make_overlay(2, members, std::move(local), d);
-        }),
-      boost::optional<int>(),
-      boost::optional<boost::asio::ip::address>(),
-      std::move(storage_c),
-      dht::version = version_c);
+    // dht_a.
+    {
+      this->keys_a =
+        std::make_shared<elle::cryptography::rsa::KeyPair>(std::move(keys_a));
+      if (!storage_a)
+        storage_a = std::make_unique<Memory>();
+      auto const passport_a = dht::Passport{
+        this->keys_a->K(), "network-name", *this->keys_a};
+      this->dht_a = std::make_shared<dht::Doughnut>(
+        id_a,
+        this->keys_a,
+        this->keys_a->public_key(),
+        passport_a,
+        consensus,
+        infinit::model::doughnut::Doughnut::OverlayBuilder(
+          [=] (infinit::model::doughnut::Doughnut& d,
+               std::shared_ptr<infinit::model::doughnut::Local> local)
+          {
+            return make_overlay(0, members, std::move(local), d);
+          }),
+        boost::optional<int>(),
+        boost::optional<boost::asio::ip::address>(),
+        std::move(storage_a),
+        dht::version = version_a,
+        infinit::model::doughnut::monitoring_socket_path =
+          monitoring_socket_path_a);
+    }
+    // dht_b.
+    {
+      this->keys_b =
+        std::make_shared<elle::cryptography::rsa::KeyPair>(std::move(keys_b));
+      if (!storage_b)
+        storage_b = std::make_unique<Memory>();
+      auto const passport_b = dht::Passport{
+        this->keys_b->K(), "network-name", *this->keys_a};
+      this->dht_b = std::make_shared<dht::Doughnut>(
+        id_b,
+        this->keys_b,
+        this->keys_a->public_key(),
+        passport_b,
+        consensus,
+        infinit::model::doughnut::Doughnut::OverlayBuilder(
+          [=] (infinit::model::doughnut::Doughnut& d,
+               std::shared_ptr<infinit::model::doughnut::Local> local)
+          {
+            return make_overlay(1, members, std::move(local), d);
+          }),
+        boost::optional<int>(),
+        boost::optional<boost::asio::ip::address>(),
+        std::move(storage_b),
+        dht::version = version_b);
+    }
+    // dht_c.
+    {
+      this->keys_c =
+        std::make_shared<elle::cryptography::rsa::KeyPair>(std::move(keys_c));
+      if (!storage_c)
+        storage_c = std::make_unique<Memory>();
+      auto const passport_c = dht::Passport{
+        this->keys_c->K(), "network-name", *this->keys_a};
+      this->dht_c = std::make_shared<dht::Doughnut>(
+        id_c,
+        this->keys_c,
+        this->keys_a->public_key(),
+        passport_c,
+        consensus,
+        infinit::model::doughnut::Doughnut::OverlayBuilder(
+          [=] (infinit::model::doughnut::Doughnut& d,
+               std::shared_ptr<infinit::model::doughnut::Local> local)
+          {
+            return make_overlay(2, members, std::move(local), d);
+          }),
+        boost::optional<int>(),
+        boost::optional<boost::asio::ip::address>(),
+        std::move(storage_c),
+        dht::version = version_c);
+    }
     for (auto* stonehenge: stonehenges)
       for (auto& peer: stonehenge->peers())
       {
-        int port;
-        if (peer.id() == id_a)
-          port = this->dht_a->local()->server_endpoint().port();
-        else if (peer.id() == id_b)
-          port = this->dht_b->local()->server_endpoint().port();
-        else if (peer.id() == id_c)
-          port = this->dht_c->local()->server_endpoint().port();
-        else
-          ELLE_ABORT("unknown doughnut id: %f", peer.id());
+        auto const dht = [this, &peer, &id_a, &id_b, &id_c]
+          {
+            if (peer.id() == id_a)
+              return this->dht_a;
+            else if (peer.id() == id_b)
+              return this->dht_b;
+            else if (peer.id() == id_c)
+              return this->dht_c;
+            else
+              ELLE_ABORT("unknown doughnut id: %f", peer.id());
+          }();
         elle::unconst(peer.endpoints()).emplace_back(
-          boost::asio::ip::address::from_string("127.0.0.1"), port);
+          boost::asio::ip::address::from_string("127.0.0.1"),
+          dht->local()->server_endpoint().port());
       }
   }
 };
