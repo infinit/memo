@@ -195,10 +195,12 @@ run_nodes(bfs::path where,  elle::cryptography::rsa::KeyPair& kp,
     res.push_back(std::make_pair(dn, std::move(tptr)));
     //if (res.size() == 1)
     {
-      infinit::model::Endpoints eps;
-      eps.emplace_back(
-        boost::asio::ip::address::from_string("127.0.0.1"),
-        dn->local()->server_endpoint().port());
+      auto eps = infinit::model::Endpoints{
+        {
+          boost::asio::ip::address::from_string("127.0.0.1"),
+          dn->local()->server_endpoint().port()
+        }
+      };
       endpoints.emplace_back(eps);
     }
   }

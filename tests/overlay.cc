@@ -437,7 +437,7 @@ namespace
 ELLE_TEST_SCHEDULED(
   basics, (TestConfiguration, config), (bool, anonymous))
 {
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto storage = infinit::storage::Memory::Blocks();
   auto id = infinit::model::Address::random();
   auto make_dht_a = [&]
@@ -491,7 +491,7 @@ ELLE_TEST_SCHEDULED(
 ELLE_TEST_SCHEDULED(
   dead_peer, (TestConfiguration, config), (bool, anonymous))
 {
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto dht_a = DHT(::id = special_id(10),
                    ::version = config.version,
                    ::keys = keys,
@@ -537,7 +537,7 @@ ELLE_TEST_SCHEDULED(
 ELLE_TEST_SCHEDULED(
   discover_endpoints, (TestConfiguration, config), (bool, anonymous))
 {
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
     ::id = id_a,
@@ -606,7 +606,7 @@ ELLE_TEST_SCHEDULED(reciprocate,
                     (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks b1, b2;
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("create DHTs");
   auto dht_a = std::make_unique<DHT>(
     ::keys = keys,
@@ -640,7 +640,7 @@ ELLE_TEST_SCHEDULED(chain_connect,
   infinit::storage::Memory::Blocks b1, b2;
   auto id_a = special_id(10);
   auto id_b = special_id(11);
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("create DHTs");
   auto dht_a = std::make_unique<DHT>(
     ::id = id_a,
@@ -724,7 +724,7 @@ ELLE_TEST_SCHEDULED(
   key_cache_invalidation, (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks blocks;
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
     ::id = id_a,
@@ -786,7 +786,7 @@ ELLE_TEST_SCHEDULED(
   chain_connect_doom, (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks b1, b2, b3;
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   ELLE_LOG("create DHTs");
   auto dht_a = std::make_unique<DHT>(
@@ -865,7 +865,7 @@ ELLE_TEST_SCHEDULED(
   data_spread, (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks b1, b2;
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
     ::id = id_a,
@@ -921,7 +921,7 @@ ELLE_TEST_SCHEDULED(
   data_spread2, (TestConfiguration, config), (bool, anonymous))
 {
   infinit::storage::Memory::Blocks b1, b2;
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   auto dht_a = std::make_unique<DHT>(
     ::id = id_a,
@@ -970,7 +970,7 @@ ELLE_TEST_SCHEDULED(
   storm, (TestConfiguration, config),
   (bool, pax), (int, nservers), (int, nclients), (int, nactions))
 {
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   bool is_kelips = false;
   auto servers = std::vector<std::unique_ptr<DHT>>{};
   ELLE_LOG("setup %s servers", nservers)
@@ -1162,7 +1162,7 @@ ELLE_TEST_SCHEDULED(
 {
   constexpr auto nservers = 5;
   constexpr auto npeers = nservers - 1;
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto servers = std::vector<std::unique_ptr<DHT>>{};
   for (int i=0; i<nservers; ++i)
   {
@@ -1203,7 +1203,7 @@ ELLE_TEST_SCHEDULED(
   (bool, anonymous),
   (bool, back))
 {
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto storage = infinit::storage::Memory::Blocks();
   ELLE_LOG("create DHTs");
   auto dht_a = std::make_unique<DHT>(
@@ -1261,7 +1261,7 @@ ELLE_TEST_SCHEDULED(
   (bool, back))
 {
   auto storage = infinit::storage::Memory::Blocks();
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto make_dht_a = [&]
     {
       return std::make_unique<DHT>(
@@ -1339,7 +1339,7 @@ ELLE_TEST_SCHEDULED(
   (TestConfiguration, config),
   (bool, anonymous))
 {
-  auto keys = elle::cryptography::rsa::keypair::generate(512);
+  auto const keys = elle::cryptography::rsa::keypair::generate(512);
   auto a = std::make_unique<DHT>(
     ::version = config.version,
     ::id = special_id(10),
