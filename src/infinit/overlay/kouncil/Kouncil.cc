@@ -138,8 +138,9 @@ namespace infinit
       Kouncil::_register_local(std::shared_ptr<Local> local)
       {
        this->_peers.emplace(local);
-       this->_infos.emplace(local->id(), local->server_endpoints(),
-                            Clock::now());
+       auto local_endpoints = local->server_endpoints();
+       ELLE_DEBUG("local endpoints: %s", local_endpoints);
+       this->_infos.emplace(local->id(), local_endpoints, Clock::now());
        for (auto const& key: local->storage()->list())
          this->_address_book.emplace(this->id(), key);
        ELLE_DEBUG("loaded %s entries from storage",
