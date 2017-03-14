@@ -297,7 +297,6 @@ namespace infinit
       void resolve_aliases(elle::Defaulted<bool>& arg1,
                            elle::Defaulted<bool>& arg2)
       {
-        ELLE_ERR("%s %s %s %s", bool(arg1), bool(arg2), arg1.get(), arg2.get());
         if (arg1 && !arg2)
           arg2 = *arg1;
         else if (!arg1 && arg2)

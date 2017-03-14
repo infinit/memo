@@ -1,17 +1,25 @@
 #include <infinit/overlay/kelips/Kelips.hh>
 
-#include <utility>
 #include <algorithm>
 #include <random>
-#include <vector>
-#include <utility>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
+#include <boost/algorithm/cxx11/any_of.hpp>
+#include <boost/algorithm/cxx11/none_of.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/range/algorithm/find.hpp>
+#include <boost/range/algorithm/find_if.hpp>
+#include <boost/range/algorithm/max_element.hpp>
 
+#include <elle/algorithm.hh>
 #include <elle/bench.hh>
+#include <elle/make-vector.hh>
 #include <elle/network/Interface.hh>
 #include <elle/os/environ.hh>
+#include <elle/range.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/binary/SerializerIn.hh>
@@ -45,6 +53,12 @@ ELLE_LOG_COMPONENT("infinit.overlay.kelips");
   elle::Bench::BenchScope bs(bench)
 
 using Serializer = elle::serialization::Binary;
+
+using boost::algorithm::any_of;
+using boost::algorithm::any_of_equal;
+using boost::algorithm::none_of;
+using boost::algorithm::none_of_equal;
+using boost::algorithm::starts_with;
 
 namespace elle
 {
@@ -137,7 +151,7 @@ namespace infinit
       endpoints_update(std::vector<TimedEndpoint>& endpoints, Endpoint entry,
                        Time t = now())
       {
-        auto hit = std::find_if(endpoints.begin(), endpoints.end(),
+        auto hit = boost::find_if(endpoints,
             [&](TimedEndpoint const& e) { return e.first == entry;});
         if (hit == endpoints.end())
           endpoints.emplace_back(entry, now());
@@ -173,7 +187,7 @@ namespace infinit
       Time
       endpoints_max(std::vector<TimedEndpoint> const& endpoints)
       {
-        return std::max_element(endpoints.begin(), endpoints.end(),
+        return boost::max_element(endpoints,
           [](TimedEndpoint const& a, TimedEndpoint const& b) {
             return a.second < b.second;
           })->second;
@@ -212,21 +226,17 @@ namespace infinit
       merge_peerlocations(NodeLocations& dst, NodeLocations const& src)
       {
         for (auto const& r: src)
-        {
-          auto it = std::find_if(dst.begin(), dst.end(),
-            [&](const NodeLocation& a)
-            {
-              return a.id() == r.id();
-            });
+          {
+            auto it = boost::find_if(dst,
+                                     [&](const NodeLocation& a)
+                                     {
+                                       return a.id() == r.id();
+                                     });
           if (it == dst.end())
             dst.push_back(r);
           else
-          {
             for (auto const& ep: r.endpoints())
-              if (std::find(it->endpoints().begin(), it->endpoints().end(), ep)
-                  == it->endpoints().end())
-                it->endpoints().push_back(ep);
-          }
+              elle::push_back_if_missing(it->endpoints(), ep);
         }
       }
 
@@ -557,24 +567,21 @@ namespace infinit
         static
         void
         result_in(elle::serialization::SerializerIn& s,
-                  std::vector<NodeLocations> & results)
+                  std::vector<NodeLocations>& results)
         {
-          auto locs = s.deserialize<NodeLocations>("result_endpoints");
-          auto input = s.deserialize<std::vector<std::vector<int>>>("result_indexes");
+          auto const locs = s.deserialize<NodeLocations>("result_endpoints");
+          auto const input = s.deserialize<std::vector<std::vector<int>>>("result_indexes");
           results.clear();
           for (auto const& o: input)
           {
             if (o.size() == 1 && o.front() < 0)
-            {
-              results.push_back(results.at((o.front()+1)*(-1)));
-            }
+              results.emplace_back(results.at((o.front()+1)*(-1)));
             else
-            {
-              NodeLocations r;
-              for (auto i: o)
-                r.push_back(locs.at(i));
-              results.push_back(r);
-            }
+              results.emplace_back(elle::make_vector(o,
+                                                     [&locs](auto i)
+                                                     {
+                                                       return locs.at(i);
+                                                     }));
           }
         }
 
@@ -868,7 +875,7 @@ namespace infinit
           do {
             v = random(generator);
           }
-          while (std::find(res.begin(), res.end(), src[v])!= res.end());
+          while (any_of_equal(res, src[v]));
           res.push_back(src[v]);
         }
         return res;
@@ -1609,9 +1616,7 @@ namespace infinit
             auto nsource = source;
             if (source.address().is_v6() && source.address().to_v6().is_v4_mapped())
               nsource = Endpoint(source.address().to_v6().to_v4(), source.port());
-            auto it = std::find(_pending_bootstrap_endpoints.begin(),
-              _pending_bootstrap_endpoints.end(),
-              nsource);
+            auto it = boost::range::find(_pending_bootstrap_endpoints, nsource);
             if (it != _pending_bootstrap_endpoints.end())
             {
               ELLE_DEBUG("%s: processing queued operation to %s", *this, nsource);
@@ -1621,9 +1626,7 @@ namespace infinit
             }
           }
           {
-            auto it = std::find(_pending_bootstrap_address.begin(),
-              _pending_bootstrap_address.end(),
-              p->sender);
+            auto it = boost::range::find(_pending_bootstrap_address, p->sender);
             if (it != _pending_bootstrap_address.end())
             {
               *it = _pending_bootstrap_address[_pending_bootstrap_address.size() - 1];
@@ -1632,9 +1635,7 @@ namespace infinit
             }
           }
           if (bootstrap_requested &&
-            std::find(_bootstrap_requests_sent.begin(),
-              _bootstrap_requests_sent.end(),
-              p->sender) == _bootstrap_requests_sent.end())
+              none_of_equal(_bootstrap_requests_sent, p->sender))
           {
             _bootstrap_requests_sent.push_back(p->sender);
             packet::BootstrapRequest req;
@@ -1867,8 +1868,8 @@ namespace infinit
       has(C const& c, K const& k, V const& v)
       {
         auto its = c.equal_range(k);
-        return std::find_if(its.first, its.second,
-          [&](decltype(*its.first) e) { return e.second.second == v;}) != its.second;
+        return boost::find_if(its,
+          [&](auto const& e) { return e.second.second == v;}) != its.second;
       }
 
       std::unordered_multimap<Address, std::pair<Time, Address>>
@@ -1908,7 +1909,7 @@ namespace infinit
           for (int i=0; i<max_new; ++i)
           {
             int v = random(_gen);
-            if (std::find(indexes.begin(), indexes.end(), v) != indexes.end())
+            if (any_of_equal(indexes, v))
               --i;
             else
               indexes.push_back(v);
@@ -1963,7 +1964,7 @@ namespace infinit
           for (int i=0; i<max_old; ++i)
           {
             int v = random(_gen);
-            if (std::find(indexes.begin(), indexes.end(), v) != indexes.end())
+            if (any_of_equal(indexes, v))
               --i;
             else
               indexes.push_back(v);
@@ -2037,8 +2038,8 @@ namespace infinit
         for (auto const& r: res)
         {
           auto its = _state.files.equal_range(r.first);
-          auto it = std::find_if(its.first, its.second,
-            [&](decltype(*its.first) e) { return r.second.second == e.second.home_node;});
+          auto it = boost::find_if(its,
+            [&](auto const& e) { return r.second.second == e.second.home_node;});
           it->second.gossip_count++;
           it->second.last_gossip = current_time;
         }
@@ -2191,9 +2192,8 @@ namespace infinit
           for (auto const& f: p->files)
           {
             auto its = _state.files.equal_range(f.first);
-            auto it = std::find_if(its.first, its.second,
-              [&](decltype(*its.first) i) -> bool {
-              return i.second.home_node == f.second.second;});
+            auto it = boost::find_if(its, [&](auto const& i) {
+                return i.second.home_node == f.second.second;});
             if (it == its.second)
             {
               _state.files.insert(std::make_pair(f.first,
@@ -2361,11 +2361,11 @@ namespace infinit
           ++nhit;
           auto it = *iti;
           // Check if this one is already in results
-          if (std::find_if(p->result.begin(), p->result.end(),
-            [&](NodeLocation const& r) -> bool {
-              return r.id() == it->second.home_node;
-            }) != p->result.end())
-          continue;
+          if (any_of(p->result,
+                     [&](NodeLocation const& r) {
+                       return r.id() == it->second.home_node;
+                     }))
+            continue;
           // find the corresponding endpoints
           Endpoints endpoints;
           bool found = false;
@@ -2589,11 +2589,12 @@ namespace infinit
       static bool in_peerlocation(NodeLocations const& pl,
                                   Address addr)
       {
-        return std::find_if(pl.begin(), pl.end(),
-            [&] ( NodeLocation const& r) {
-              return r.id() == addr;
-            }) != pl.end();
+        return any_of(pl,
+                      [&] (NodeLocation const& r) {
+                        return r.id() == addr;
+                      });
       }
+
       void
       Node::onPutFileRequest(packet::PutFileRequest* p)
       {
@@ -2621,8 +2622,7 @@ namespace infinit
           {
             // Check if we already have the block
             auto its = _state.files.equal_range(p->fileAddress);
-            auto it = std::find_if(its.first, its.second,
-              [&](decltype(*its.first) i) ->bool {
+            auto it = boost::find_if(its, [&](auto const& i) {
                 return i.second.home_node == _self;
               });
             if (it == its.second)
@@ -2824,7 +2824,7 @@ namespace infinit
           {
             // check if we have it locally
             auto its = _state.files.equal_range(file);
-            auto it_us = std::find_if(its.first, its.second,
+            auto it_us = boost::find_if(its,
               [&](std::pair<const infinit::model::Address, File> const& f) {
                 return f.second.home_node == _self;
               });
@@ -2900,7 +2900,7 @@ namespace infinit
                 if (fg == _group && !query_node)
                 { // oportunistically add the entry to our tables
                   auto its = _state.files.equal_range(file);
-                  auto it_r = std::find_if(its.first, its.second,
+                  auto it_r = boost::find_if(its,
                     [&](std::pair<const infinit::model::Address, File> const& f) {
                       return f.second.home_node == e.id();
                     });
@@ -3040,7 +3040,7 @@ namespace infinit
             res.push_back(e.first);
           return res;
         }
-        typedef std::chrono::duration<int, std::ratio<1, 1000000>> US;
+        using US = std::chrono::duration<int, std::ratio<1, 1000000>>;
         // get average latency, will be used for those with no rtt information
         long total = 0;
         int okcount = 0;
@@ -3306,13 +3306,13 @@ namespace infinit
       void
       Node::store(infinit::model::blocks::Block const& block)
       {
-        auto its = _state.files.equal_range(block.address());
-        if (std::find_if(its.first, its.second, [&](Files::value_type const& f) {
-            return f.second.home_node == _self;
-        }) == its.second)
-          _state.files.insert(std::make_pair(block.address(),
-            File{block.address(), _self, now(), Time(), 0}));
-        auto itp = std::find(_promised_files.begin(), _promised_files.end(), block.address());
+        if (none_of(elle::as_range(_state.files.equal_range(block.address())),
+                    [&](Files::value_type const& f) {
+                      return f.second.home_node == _self;
+                    }))
+          _state.files.emplace(block.address(),
+                               File{block.address(), _self, now(), Time(), 0});
+        auto itp = boost::range::find(_promised_files, block.address());
         if (itp != _promised_files.end())
         {
           std::swap(*itp, _promised_files.back());
@@ -3349,13 +3349,11 @@ namespace infinit
             {
               auto const& eps = remote->endpoints();
               for (auto const& ep: hosts.endpoints())
-              {
-                if (std::find(eps.begin(), eps.end(), ep) == eps.end())
+                if (none_of_equal(eps, ep))
                 {
                   new_endpoints = true;
                   break;
                 }
-              }
             }
             if (!new_endpoints)
             {
@@ -3388,7 +3386,8 @@ namespace infinit
                   true);
         if (result)
         {
-          ELLE_LOG("%s: got endpoints from network: %s", this, result->endpoints());
+          ELLE_LOG("%s: got endpoints from network: %s",
+                   this, result->endpoints());
           res = result->endpoints();
         }
         if (!res || res->empty())
@@ -3414,15 +3413,15 @@ namespace infinit
           [this, n, grouped] (elle::reactor::Generator<std::pair<Address,Node::WeakMember>>::yielder const& yield)
         {
           for (auto g: grouped)
-          {
-            if (g.empty())
-              continue;
-            elle::unconst(this)->kelipsMGet(g, n, [&](std::pair<Address, NodeLocation> ap)
+            if (!g.empty())
+            {
+              elle::unconst(this)->kelipsMGet(g, n,
+                                              [&](std::pair<Address, NodeLocation> ap)
               {
                 yield(std::make_pair(ap.first,
                                      elle::unconst(this)->make_peer(ap.second)));
               });
-          }
+            }
         });
       }
 
@@ -3518,10 +3517,11 @@ namespace infinit
             if (g == this->_group ||
                 signed(target.size()) < this->_config.max_other_contacts)
             {
-              Contact contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
+              auto contact =
+                Contact{{}, {}, c.first, Duration(0), Time(), 0, {}, {}, true};
               for (auto const& ep: c.second)
                 contact.endpoints.push_back(TimedEndpoint(ep, now()));
-              NodeLocation nl(c.first, c.second);
+              auto nl = NodeLocation(c.first, c.second);
               ELLE_LOG("%s: register %f", this, contact);
               target[c.first] = std::move(contact);
               this->on_discover()(nl, false);
@@ -3535,7 +3535,8 @@ namespace infinit
             if (!it->second.discovered)
             {
               it->second.discovered = true;
-              NodeLocation nl(it->first, endpoints_extract(it->second.endpoints));
+              auto nl =
+                NodeLocation(it->first, endpoints_extract(it->second.endpoints));
               this->on_discover()(nl, false);
               notify_observers(nl);
             }
@@ -3548,9 +3549,8 @@ namespace infinit
           if (f.second == _self)
             continue;
           auto its = _state.files.equal_range(f.first);
-          auto it = std::find_if(its.first, its.second,
-            [&](decltype(*its.first) i) -> bool {
-            return i.second.home_node == f.second;});
+          auto it = boost::find_if(its, [&](auto const& i) {
+              return i.second.home_node == f.second;});
           if (it == its.second)
           {
             _state.files.insert(std::make_pair(
@@ -3739,7 +3739,7 @@ namespace infinit
       packet::RequestKey
       Node::make_key_request()
       {
-        packet::RequestKey req(doughnut()->passport());
+        auto req = packet::RequestKey(doughnut()->passport());
         req.sender = _self;
         req.token = elle::cryptography::random::generate<elle::Buffer>(128);
         req.challenge = elle::cryptography::random::generate<elle::Buffer>(128);
@@ -3749,28 +3749,18 @@ namespace infinit
       }
 
       elle::json::Json
-      Node::query(std::string const& k, boost::optional<std::string> const& v)
+      Node::query(std::string const& k,
+                  boost::optional<std::string> const& v)
       {
         elle::json::Object res;
         if (k == "protocol")
         {
-          using Protocol = infinit::model::doughnut::Protocol;
-          if (!v)
-            res["protocol"] = _config.rpc_protocol == Protocol::utp ?
-          "utp" : (_config.rpc_protocol == Protocol::tcp ? "tcp" : "all");
+          if (v)
+            _config.rpc_protocol = model::doughnut::make_protocol(*v);
           else
-          {
-            if (*v == "tcp")
-              _config.rpc_protocol = Protocol::tcp;
-            else if (*v == "utp")
-              _config.rpc_protocol = Protocol::utp;
-            else if (*v == "all")
-              _config.rpc_protocol = Protocol::all;
-            else
-              elle::err("Invalid protocol");
-          }
+            res["protocol"] = elle::sprintf("%s", _config.rpc_protocol);
         }
-        if (k == "stats")
+        else if (k == "stats")
         {
           res["group"] = this->_group;
           res["contacts"] = this->peer_list();
@@ -3805,7 +3795,7 @@ namespace infinit
           }
           res["observers"] = observers;
         }
-        if (k == "blockcount")
+        else if (k == "blockcount")
         {
           auto files = _state.files;
           std::vector<int> counts;
@@ -3828,7 +3818,7 @@ namespace infinit
             ares.push_back(c);
           res["counts"] = ares;
         }
-        if (k.substr(0, strlen("cachecheck.")) == "cachecheck.")
+        else if (starts_with(k, "cachecheck."))
         {
           Address addr = Address::from_string(k.substr(strlen("cachecheck.")));
           int g = group_of(addr);
@@ -3861,12 +3851,9 @@ namespace infinit
               hits[nh]++;
             }
           }
-          elle::json::Array ares;
-          for (auto c: hits)
-            ares.push_back(c);
-          res["counts"] = ares;
+          res["counts"] = elle::make_vector(hits);
         }
-        if (k.substr(0, strlen("scan.")) == "scan.")
+        else if (starts_with(k, "scan."))
         {
           int factor = std::stoi(k.substr(strlen("scan.")));
           std::vector<Address> to_scan;
@@ -3878,9 +3865,7 @@ namespace infinit
               continue;
             processed.insert(f.first);
             auto its = _state.files.equal_range(f.first);
-            int count=0;
-            for (; its.first != its.second; ++count, ++its.first)
-              ;
+            auto count = std::distance(its.first, its.second);
             if (count < factor)
               to_scan.push_back(f.first);
           }
@@ -3912,11 +3897,11 @@ namespace infinit
             ares.push_back(c);
           res["counts"] = ares;
         }
-        if (k == "bootstrap")
+        else if (k == "bootstrap")
         {
           bootstrap(false);
         }
-        if (k == "gossip")
+        else if (k == "gossip")
         {
           if (!v)
             return elle::sprintf("files per packet: %s,  interval: %s ms, timeout: %s",
@@ -3931,7 +3916,7 @@ namespace infinit
           _config.gossip.interval_ms = std::stol(interval);
           _config.file_timeout_ms = std::stol(timeout);
         }
-        if (k.substr(0,5) == "node.")
+        else if (starts_with(k, "node."))
         {
           Address target = Address::from_string(k.substr(5));
           Overlay::WeakMember n;
@@ -3952,15 +3937,15 @@ namespace infinit
       `-----------*/
 
       std::string
-      Node::type_name()
+      Node::type_name() const
       {
         return "kelips";
       }
 
       elle::json::Array
-      Node::peer_list()
+      Node::peer_list() const
       {
-        elle::json::Array res;
+        auto res = elle::json::Array{};
         for (int i = 0; i < signed(this->_state.contacts.size()); ++i)
         {
           auto const& group = this->_state.contacts[i];
@@ -3969,10 +3954,13 @@ namespace infinit
             auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
               (std::chrono::system_clock::now() -
                endpoints_max(contact.second.endpoints));
-            elle::json::Array endpoints;
-            for (auto const pair: contact.second.endpoints)
-              endpoints.push_back(PrettyEndpoint(pair.first).repr());
-            elle::json::Object peer_info{
+            auto endpoints
+              = elle::make_vector(contact.second.endpoints,
+                                  [](auto const pair)
+                                  {
+                                    return PrettyEndpoint(pair.first).repr();
+                                  });
+            res.emplace_back(elle::json::Object{
               { "id", elle::sprintf("%x", contact.second.address) },
               { "validated_endpoint",
                 elle::sprintf("%s", (contact.second.validated_endpoint
@@ -3983,31 +3971,28 @@ namespace infinit
               { "discovered", contact.second.discovered },
               { "group", i },
               { "ping_timeouts", contact.second.ping_timeouts},
-            };
-            res.push_back(peer_info);
+            });
           }
         }
         return res;
       }
 
       elle::json::Object
-      Node::stats()
+      Node::stats() const
       {
-        elle::json::Object res;
-        res["type"] = this->type_name();
-        using Protocol = infinit::model::doughnut::Protocol;
-        res["protocol"] =
-          this->_config.rpc_protocol == Protocol::utp ? "utp"
-          : (this->_config.rpc_protocol == Protocol::tcp ? "tcp" : "all");
-        res["group"] = this->_group;
-        elle::json::Object stats{
-          { "files", this->_state.files.size() },
-          { "dropped_puts", this->_dropped_puts },
-          { "dropped_gets", this->_dropped_gets },
-          { "failed_puts", this->_failed_puts },
+        return
+          {
+            {"type", this->type_name()},
+            {"protocol", elle::sprintf("%s", this->_config.rpc_protocol)},
+            {"group", this->_group},
+            {"statistics", elle::json::Object{
+                { "files", this->_state.files.size() },
+                { "dropped_puts", this->_dropped_puts },
+                { "dropped_gets", this->_dropped_gets },
+                { "failed_puts", this->_failed_puts },
+              }
+            },
         };
-        res["statistics"] = stats;
-        return res;
       }
 
       std::ostream&

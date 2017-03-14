@@ -9,7 +9,6 @@ import drake.redhat
 import drake.valgrind
 
 import os
-import oset
 import re
 import shutil
 
@@ -72,7 +71,7 @@ def configure(
     def execute(self):
       if not super().execute():
         return False
-      if os.path.islink(str(self.target().path())):
+      if os.path.islink(str(self.target.path())):
         return True
       if cxx_toolkit.os == drake.os.macos:
         def set_lib_id(path):
@@ -113,7 +112,7 @@ def configure(
                 os.chmod(dep_file, 0o555)
             os.chmod(str(path), 0o555)
 
-        path = self.target().path()
+        path = self.target.path()
         get_deps_fix_rpaths(path)
       return True
 
@@ -507,7 +506,7 @@ def configure(
   for m in infinit_modes:
     b = 'infinit-storage' if m == 'silo' else 'infinit-{}'.format(m)
     if windows:
-      b = drake.Copy(infinit_cli, 'bin/%s.exe' % b).target()
+      b = drake.Copy(infinit_cli, 'bin/%s.exe' % b).target
     else:
       b = drake.Symlink('bin/%s' % b, infinit_cli)
     binaries.append(b)

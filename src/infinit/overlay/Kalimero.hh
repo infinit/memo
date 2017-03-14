@@ -1,7 +1,6 @@
-#ifndef INFINIT_OVERLAY_KALIMERO_HH
-# define INFINIT_OVERLAY_KALIMERO_HH
+#pragma once
 
-# include <infinit/overlay/Overlay.hh>
+#include <infinit/overlay/Overlay.hh>
 
 namespace infinit
 {
@@ -42,11 +41,11 @@ namespace infinit
     `-----------*/
     public:
       std::string
-      type_name() override;
+      type_name() const override;
       elle::json::Array
-      peer_list() override;
+      peer_list() const override;
       elle::json::Object
-      stats() override;
+      stats() const override;
     };
 
     struct KalimeroConfiguration
@@ -66,5 +65,3 @@ namespace infinit
     };
   }
 }
-
-#endif

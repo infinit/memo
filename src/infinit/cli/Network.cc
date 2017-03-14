@@ -3,6 +3,7 @@
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
+#include <elle/algorithm.hh>
 #include <elle/make-vector.hh>
 
 #include <infinit/Network.hh> // Storages

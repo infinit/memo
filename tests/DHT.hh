@@ -113,23 +113,21 @@ public:
   }
 
   std::string
-  type_name() override
+  type_name() const override
   {
     return "test";
   }
 
   elle::json::Array
-  peer_list() override
+  peer_list() const override
   {
-    return elle::json::Array();
+    return {};
   }
 
   elle::json::Object
-  stats() override
+  stats() const override
   {
-    elle::json::Object res;
-    res["type"] = this->type_name();
-    return res;
+    return {{"type", this->type_name()}};
   }
 
 protected:

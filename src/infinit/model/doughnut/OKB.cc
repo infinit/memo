@@ -30,8 +30,8 @@ namespace infinit
       /* Maintain backward compatibility with a short-livel 0.7.0 using
        * key hashes instead of ids
       */
-      typedef elle::Option<elle::cryptography::rsa::PublicKey, elle::Buffer, int>
-      KeyOrHash;
+      using KeyOrHash
+        = elle::Option<elle::cryptography::rsa::PublicKey, elle::Buffer, int>;
 
       elle::cryptography::rsa::PublicKey
       deserialize_key_hash(elle::serialization::SerializerIn& s,

@@ -80,11 +80,11 @@ def configure(
         'import py_compile',
         'res = py_compile.compile(file = %r, dfile = %r)',
         'exit(1 if res is None else 0)',
-      ]) % (str(self.target().path()), str(self.source.path()))
-      if not isinstance(self.target(),
+      ]) % (str(self.target.path()), str(self.source.path()))
+      if not isinstance(self.target,
                         (drake.cxx.Module, drake.cxx.DynLib)):
         self.cmd(
-          'Check syntax of %s' % self.target(),
+          'Check syntax of %s' % self.target,
           ['%s/bin/python%s' % (python.prefix, python.version),
            '-c', script],
           throw = True)
@@ -455,3 +455,7 @@ def configure(
   docker_file.ports([80, 443])
   docker_file.entry_point(['/usr/bin/python3', '/scripts/entry.py'])
   drake.docker.DockerBuilder(docker_image, docker_file)
+
+# Local Variables:
+# mode: python
+# End:
