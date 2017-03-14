@@ -134,10 +134,12 @@ namespace infinit
                elle::network::Interface::Filter::no_loopback |
                elle::network::Interface::Filter::no_autoip))
         {
-          if (itf.second.ipv4_address.size() > 0 && v4)
-            endpoints.addresses.push_back(itf.second.ipv4_address);
-          if (v6) for (auto const& addr: itf.second.ipv6_address)
-            endpoints.addresses.push_back(addr);
+          if (v4)
+            for (auto const& addr: itf.second.ipv4_address)
+              endpoints.addresses.push_back(addr);
+          if (v6)
+            for (auto const& addr: itf.second.ipv6_address)
+              endpoints.addresses.push_back(addr);
         }
       endpoints.port = port;
       ELLE_TRACE("Pushing endpoints");

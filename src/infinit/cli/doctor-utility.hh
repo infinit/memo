@@ -1729,8 +1729,12 @@ namespace
       auto interfaces = elle::network::Interface::get_map(
         elle::network::Interface::Filter::no_loopback);
       for (auto i: interfaces)
-        if (!i.second.ipv4_address.empty())
-          public_ips.emplace_back(i.second.ipv4_address);
+      {
+        for (auto const& ip: i.second.ipv4_address)
+          public_ips.emplace_back(ip);
+        for (auto const& ip: i.second.ipv6_address)
+          public_ips.emplace_back(ip);
+      }
       results.interfaces = {public_ips};
     }
     using ConnectivityFunction
