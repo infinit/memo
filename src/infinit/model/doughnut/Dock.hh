@@ -41,8 +41,6 @@ namespace infinit
         void
         cleanup();
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
-        ELLE_ATTRIBUTE_R(std::vector<boost::asio::ip::address>,
-                         local_ips);
         ELLE_ATTRIBUTE_R(Protocol, protocol);
         ELLE_ATTRIBUTE(std::unique_ptr<elle::reactor::network::UTPServer>,
                        local_utp_server);
