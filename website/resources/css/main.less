@@ -656,25 +656,22 @@ body.home {
   }
 
   section.docker {
-    background-image: -webkit-linear-gradient(#1288BD 0%, #089FC8 50%, #07A399 100%);
-    background-image: -o-linear-gradient(#1288BD 0%, #089FC8 50%, #07A399 100%);
-    background-image: linear-gradient(#1288BD 0%, #089FC8 50%, #07A399 100%);
-    color:white; min-height: 310px; margin: 80px 0 0 0;
-    padding-top: 60px; -webkit-font-smoothing: antialiased;
+    .wrapper { width: 80%; }
+    background-image: linear-gradient(-120deg, rgba(245, 33, 33, 0) 87%, rgba(255, 255, 255, 0.08) 15%), linear-gradient(-110deg, rgba(27, 0, 255, 0) 85%, rgba(255, 255, 255, 0.08) 15%), linear-gradient(-103deg, rgba(255, 33, 33, 0) 84%, rgba(255, 255, 255, 0.08) 15%), radial-gradient(circle, #0087C9 0%, #0087C9 100%);
+    color:white; min-height: 310px; margin: 80px 0 0 0; overflow: hidden; position: relative;
+    padding: 80px 0; -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 
     h2 { text-align: left; margin-top: 20px; }
-    img { float: right; margin: 0 6%; }
-    p { font-size: 17px; max-width: 500px; line-height: 24px; font-weight: 400; padding-bottom: 10px;}
-    h2, p, a.button { margin-left: 6%; }
-    a.button { margin-bottom: 70px}
+    img { position: absolute; bottom: 0px; left: 40%; width: 900px; height: auto;}
+    p { font-size: 20px; max-width: 500px; line-height: 1.5em; padding-bottom: 10px;}
+    h2, p, a.button { margin-left: 4%; }
   }
 
 
 
   section.encore {
-    text-align: center; padding:80px 7% 0 7%; font-size: 15px;
-    .at2x('../images/bg/dots.png', 27px, 15px); background-repeat: repeat;
+    text-align: center; padding: 100px 7% 0 7%; font-size: 15px;
     &:after { content: ""; display: table; clear: both; }
 
     p.title {
