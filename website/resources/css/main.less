@@ -929,15 +929,19 @@ body.download {
 
 body.update {
   section.platforms {
-    min-height: 250px; margin: 70px 9%;
+    min-height: 370px; margin: 70px 9%;
 
     .platform {
       text-align: center;
 
+      &.linux img:first-child { margin-top: -12px; }
       h2 { margin-top: 15px;}
-      p { margin: 5px 0; }
+      p { margin: 9px 0; }
       a.button { margin-bottom: 9px; }
       a.direct { font-size: 13px; color: #9A9A9A; }
+      p img { vertical-align: -4px; margin-right: 4px; }
+
+      hr { width: 70%; margin: 20px auto; height: 1px; border: none; background: #e4e4e4;} 
     }
 
     .platform {
