@@ -2,6 +2,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/operators.hpp>
 
 #include <elle/attribute.hh>
 
@@ -11,20 +12,22 @@ namespace infinit
 {
   namespace model
   {
+
+    /*-----------.
+    | Endpoint.  |
+    `-----------*/
     class Endpoint
       : public elle::Printable
+      , private boost::totally_ordered<Endpoint>
     {
     public:
-      Endpoint(boost::asio::ip::address address,
-               int port);
-      Endpoint(std::string const& address,
-               int port);
+      Endpoint(boost::asio::ip::address address, int port);
+      Endpoint(std::string const& address, int port);
       Endpoint(boost::asio::ip::tcp::endpoint ep);
       Endpoint(boost::asio::ip::udp::endpoint ep);
       Endpoint(std::string const& repr);
       Endpoint(const Endpoint& b) = default;
       Endpoint();
-      bool operator == (Endpoint const& b) const;
       boost::asio::ip::tcp::endpoint
       tcp() const;
       boost::asio::ip::udp::endpoint
@@ -34,14 +37,31 @@ namespace infinit
       ELLE_ATTRIBUTE_R(boost::asio::ip::address, address);
       ELLE_ATTRIBUTE_R(int, port);
 
-    /*----------.
-    | Printable |
-    `----------*/
     public:
+      /// Same address and port.
+      friend
+      bool operator == (Endpoint const& a, Endpoint const& b);
+      /// Lexicographical on address then port.
+      friend
+      bool operator < (Endpoint const& a, Endpoint const& b);
+
       void
       print(std::ostream& stream) const override;
     };
 
+
+    /// Combine hash on address and port.
+    void
+    hash_combine(std::size_t& seed, Endpoint const& endpoint);
+
+    /// Hash on address and port.
+    std::size_t
+    hash_value(Endpoint const& endpoint);
+
+
+    /*------------.
+    | Endpoints.  |
+    `------------*/
     class Endpoints
       : public std::vector<Endpoint>
     {
@@ -64,9 +84,15 @@ namespace infinit
       merge(Endpoints const&);
     };
 
-    std::size_t
-    hash_value(Endpoint const& endpoint);
+    Endpoints
+    endpoints_from_file(boost::filesystem::path const& path);
 
+    using EndpointsRefetcher =
+      std::function<boost::optional<Endpoints> (Address)>;
+
+    /*---------------.
+    | NodeLocation.  |
+    `---------------*/
     class NodeLocation
     {
     public:
@@ -80,11 +106,6 @@ namespace infinit
     operator <<(std::ostream& output, NodeLocation const& loc);
 
     using NodeLocations = std::vector<NodeLocation>;
-    using EndpointsRefetcher =
-      std::function<boost::optional<Endpoints> (Address)>;
-
-    Endpoints
-    endpoints_from_file(boost::filesystem::path const& path);
   }
 }
 

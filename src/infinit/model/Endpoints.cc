@@ -63,12 +63,6 @@ namespace infinit
       this->_port = ep.port();
     }
 
-    bool
-    Endpoint::operator == (Endpoint const& b) const
-    {
-      return _address == b._address && _port == b._port;
-    }
-
     boost::asio::ip::tcp::endpoint
     Endpoint::tcp() const
     {
@@ -146,18 +140,38 @@ namespace infinit
       }
     }
 
+    bool
+    operator == (Endpoint const& a, Endpoint const& b)
+    {
+      return std::tie(a._address, a._port)
+        == std::tie(b._address, b._port);
+    }
+
+    bool
+    operator < (Endpoint const& a, Endpoint const& b)
+    {
+      return std::tie(a._address, a._port)
+        < std::tie(b._address, b._port);
+    }
+
+    void
+    hash_combine(std::size_t& seed, Endpoint const& endpoint)
+    {
+      boost::hash_combine(seed, endpoint.address());
+      boost::hash_combine(seed, endpoint.port());
+    }
+
     std::size_t
     hash_value(Endpoint const& endpoint)
     {
-      std::size_t seed = 0;
-      boost::hash_combine(seed, endpoint.address());
-      boost::hash_combine(seed, endpoint.port());
-      return seed;
+      std::size_t res = 0;
+      hash_combine(res, endpoint);
+      return res;
     }
 
-    /*----------.
-    | Printable |
-    `----------*/
+    /*------------.
+    | Endpoints.  |
+    `------------*/
 
     Endpoints::Endpoints()
     {}
@@ -210,6 +224,24 @@ namespace infinit
       return res;
     }
 
+    infinit::model::Endpoints
+    endpoints_from_file(boost::filesystem::path const& path)
+    {
+      boost::filesystem::ifstream f;
+      f.open(path);
+      if (!f.good())
+        elle::err("unable to open for reading: %s", path);
+      infinit::model::Endpoints res;
+      for (std::string line; std::getline(f, line); )
+        if (!line.empty())
+          res.emplace_back(infinit::model::Endpoint(line));
+      return res;
+    }
+
+    /*---------------.
+    | NodeLocation.  |
+    `---------------*/
+
     NodeLocation::NodeLocation(model::Address id, Endpoints endpoints)
       : _id(std::move(id))
       , _endpoints(std::move(endpoints))
@@ -226,20 +258,6 @@ namespace infinit
       else
         elle::fprintf(output, "unknown peer (%s)", loc.endpoints());
       return output;
-    }
-
-    infinit::model::Endpoints
-    endpoints_from_file(boost::filesystem::path const& path)
-    {
-      boost::filesystem::ifstream f;
-      f.open(path);
-      if (!f.good())
-        elle::err("unable to open for reading: %s", path);
-      infinit::model::Endpoints res;
-      for (std::string line; std::getline(f, line); )
-        if (line.length())
-          res.emplace_back(infinit::model::Endpoint(line));
-      return res;
     }
   }
 }
