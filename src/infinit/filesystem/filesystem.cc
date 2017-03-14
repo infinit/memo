@@ -191,7 +191,7 @@ namespace infinit
     {
       try
       {
-        return model.fetch(address, false, std::move(local_version));
+        return model.fetch(address, std::move(local_version));
       }
       catch(elle::reactor::Terminate const& e)
       {

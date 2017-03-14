@@ -185,8 +185,8 @@ namespace infinit
       elle::das::named::Function<
         std::unique_ptr<blocks::Block> (
           decltype(address)::Formal<Address>,
-          decltype(decrypt_data = boost::optional<bool>()),
-          decltype(local_version = boost::optional<int>()))>
+          decltype(local_version = boost::optional<int>()),
+          decltype(decrypt_data = boost::optional<bool>()))>
       fetch;
       void
       multifetch(std::vector<AddressVersion> const& addresses,
@@ -234,8 +234,9 @@ namespace infinit
     private:
       std::unique_ptr<blocks::Block>
       _fetch_impl(Address address,
-                  boost::optional<bool> decrypt_data,
-                  boost::optional<int> local_version) const;
+                  boost::optional<int> local_version,
+                  boost::optional<bool> decrypt_data
+                  ) const;
     protected:
       template <typename Block, typename ... Args>
       static

@@ -38,8 +38,8 @@ namespace infinit
       , fetch(
         elle::das::bind_method(*this, &Model::_fetch_impl),
         address,
-        decrypt_data = boost::optional<bool>(),
-        local_version = boost::optional<int>())
+        local_version = boost::optional<int>(),
+        decrypt_data = boost::optional<bool>())
       , insert([this] (std::unique_ptr<blocks::Block> block,
                        std::unique_ptr<ConflictResolver> resolver)
                {
@@ -191,8 +191,9 @@ namespace infinit
 
     std::unique_ptr<blocks::Block>
     Model::_fetch_impl(Address address,
-                       boost::optional<bool> decrypt_data,
-                       boost::optional<int> local_version) const
+                       boost::optional<int> local_version,
+                       boost::optional<bool> decrypt_data
+                       ) const
     {
       ELLE_TRACE_SCOPE("%s: fetch %f if newer than %s",
                        this, address, local_version);
