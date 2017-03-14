@@ -193,14 +193,16 @@ namespace infinit
           })->second;
       }
 
-      static
-      Endpoints
-      endpoints_extract(std::vector<TimedEndpoint> const& endpoints)
+      namespace
       {
-        Endpoints res;
-        for (auto const& ep: endpoints)
-          res.push_back(ep.first);
-        return res;
+        Endpoints
+        to_endpoints(std::vector<TimedEndpoint> const& v)
+        {
+          auto res = Endpoints{};
+          for (auto const& e: v)
+            res.emplace_back(e.first);
+          return res;
+        }
       }
 
       static
@@ -934,20 +936,13 @@ namespace infinit
                   [this] ()
                   {
                     SerState res;
-                    Endpoints eps;
-                    for (auto const& e: _local_endpoints)
-                      eps.push_back(e.first);
-                    res.first.insert(std::make_pair(_self, eps));
+                    res.first.emplace(_self, to_endpoints(_local_endpoints));
                     for (auto const& contacts: this->_state.contacts)
                       for (auto const& c: contacts)
-                      {
-                        Endpoints eps;
-                        for (auto const& e: c.second.endpoints)
-                          eps.push_back(e.first);
-                        res.first.insert(std::make_pair(c.second.address, eps));
-                      }
+                        res.first.emplace(c.second.address,
+                                          to_endpoints(c.second.endpoints));
                     for (auto const& f: this->_state.files)
-                      res.second.push_back(std::make_pair(f.second.address, f.second.home_node));
+                      res.second.emplace_back(f.second.address, f.second.home_node);
                     // OH THE UGLY HACK, we need a place to store our own address
                     res.second.push_back(std::make_pair(Address::null, _self));
                     return res;
@@ -959,19 +954,14 @@ namespace infinit
                   {
                     SerState2 res;
                     std::unordered_map<Address, int> index;
-                    Endpoints eps;
-                    for (auto const& e: _local_endpoints)
-                      eps.push_back(e.first);
-                    res.first.emplace_back(this->_self, eps);
+                    res.first.emplace_back(this->_self, to_endpoints(_local_endpoints));
                     index[_self] = 0;
                     for (auto const& contacts: this->_state.contacts)
                       for (auto const& c: contacts)
                       {
-                        Endpoints eps;
-                        for (auto const& e: c.second.endpoints)
-                          eps.push_back(e.first);
                         index[c.second.address] = res.first.size();
-                        res.first.emplace_back(c.second.address, eps);
+                        res.first.emplace_back(c.second.address,
+                                               to_endpoints(c.second.endpoints));
                       }
                     std::multimap<Address, Address> ofiles; // ordered fileId -> owner
                     for (auto const& f: this->_state.files)
@@ -1147,7 +1137,7 @@ namespace infinit
           for (auto const& c: this->_state.contacts[_group])
             candidates.emplace_back(
               c.second.address,
-              endpoints_extract(c.second.endpoints));
+              to_endpoints(c.second.endpoints));
         candidates.insert(candidates.end(), peers.begin(), peers.end());
         while (!candidates.empty())
         {
@@ -1173,7 +1163,7 @@ namespace infinit
               if (!contains(scanned, c.first))
                 candidates.emplace_back(
                   c.first,
-                  endpoints_extract(c.second.endpoints));
+                  to_endpoints(c.second.endpoints));
           }
           catch (elle::Error const& e)
           {
@@ -1266,7 +1256,7 @@ namespace infinit
           for (auto& c: _state.contacts[_group])
             this->send_bootstrap(
               NodeLocation(c.second.address,
-                           endpoints_extract(c.second.endpoints)));
+                           to_endpoints(c.second.endpoints)));
         if (this->_config.wait)
           wait(this->_config.wait);
       }
@@ -2367,7 +2357,7 @@ namespace infinit
                      }))
             continue;
           // find the corresponding endpoints
-          Endpoints endpoints;
+          auto endpoints = Endpoints{};
           bool found = false;
           if (it->second.home_node == _self)
           {
@@ -2375,13 +2365,13 @@ namespace infinit
             if (_local_endpoints.empty())
             {
               ELLE_TRACE("Endpoint yet unknown, assuming localhost");
-              endpoints.push_back(Endpoint(
+              endpoints.emplace_back(
                 boost::asio::ip::address::from_string("127.0.0.1"),
-                this->_port));
+                this->_port);
             }
             else
             {
-              endpoints = endpoints_extract(_local_endpoints);
+              endpoints = to_endpoints(_local_endpoints);
             }
             found = true;
           }
@@ -2390,8 +2380,7 @@ namespace infinit
             auto contact_it = _state.contacts[fg].find(it->second.home_node);
             if (contact_it != _state.contacts[fg].end())
             {
-              endpoints =
-                endpoints_extract(contact_it->second.endpoints);
+              endpoints = to_endpoints(contact_it->second.endpoints);
               ELLE_DEBUG("%s: found other at %f:%s",
                          *this, it->second.home_node, endpoints);
               found = true;
@@ -2480,7 +2469,7 @@ namespace infinit
           if (it != target.end())
             p->result.emplace_back(
               it->first,
-              endpoints_extract(it->second.endpoints));
+              to_endpoints(it->second.endpoints));
         }
         else if (fg == _group)
         {
@@ -2631,7 +2620,7 @@ namespace infinit
               // wait until we get the RPC to store anything
               ELLE_DEBUG("%s: inserting in insert_result", *this);
               p->insert_result.emplace_back(
-                this->_self, endpoints_extract(_local_endpoints));
+                this->_self, to_endpoints(_local_endpoints));
               _promised_files.push_back(p->fileAddress);
             }
             else
@@ -2854,7 +2843,7 @@ namespace infinit
               yield(
                 NodeLocation(
                   it->first,
-                  endpoints_extract(it->second.endpoints)));
+                  to_endpoints(it->second.endpoints)));
               return;
             }
           }
@@ -2927,7 +2916,7 @@ namespace infinit
                 yield(
                   NodeLocation(
                     it->first,
-                    endpoints_extract(it->second.endpoints)));
+                    to_endpoints(it->second.endpoints)));
               }
             }
           }
@@ -3536,7 +3525,7 @@ namespace infinit
             {
               it->second.discovered = true;
               auto nl =
-                NodeLocation(it->first, endpoints_extract(it->second.endpoints));
+                NodeLocation(it->first, to_endpoints(it->second.endpoints));
               this->on_discover()(nl, false);
               notify_observers(nl);
             }
@@ -3580,7 +3569,7 @@ namespace infinit
           }
           contacts = &_state.observers;
         }
-        auto peers = endpoints_extract(it->second.endpoints);
+        auto peers = to_endpoints(it->second.endpoints);
         // this yields, thus invalidating the iterator
         ELLE_TRACE("contacting %s on %s", id, peers);
         auto& rsock = this->doughnut()->dock().utp_server().socket();
@@ -3627,7 +3616,7 @@ namespace infinit
 
       Contact*
       Node::get_or_make(Address address, bool observer,
-                        std::vector<Endpoint> endpoints,
+                        Endpoints const& endpoints,
                         bool make)
       {
         Contacts* target = observer ?

@@ -332,7 +332,7 @@ namespace infinit
         void process(elle::Buffer const& buf, Endpoint source);
         Contact*
         get_or_make(Address address, bool observer,
-          std::vector<Endpoint> endpoints, bool make=true);
+                    Endpoints const& endpoints, bool make=true);
         Overlay::WeakMember
         make_peer(NodeLocation pl) const;
         packet::RequestKey make_key_request();
