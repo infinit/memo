@@ -13,6 +13,7 @@
 # include <elle/reactor/network/unix-domain-socket.hh>
 #endif
 
+#include <infinit/model/Conflict.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/MonitoringServer.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
@@ -20,7 +21,6 @@
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Cache.hh>
-#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/Local.hh>
@@ -627,7 +627,7 @@ ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
     block_bob->data(elle::Buffer("AB", 2));
     BOOST_CHECK_THROW(
       dhts.dht_b->seal_and_update(*block_bob),
-      infinit::model::doughnut::Conflict);
+      infinit::model::Conflict);
     dhts.dht_b->seal_and_update(*block_bob,
                                 std::make_unique<AppendConflictResolver>());
   }
@@ -1054,7 +1054,7 @@ namespace rebalancing
       {
         dht_a.dht->seal_and_update(*b1);
       }
-      catch (infinit::model::doughnut::Conflict const& c)
+      catch (infinit::model::Conflict const& c)
       {
         ELLE_LOG("second write attempt");
         dynamic_cast<infinit::model::blocks::MutableBlock&>(*c.current())
@@ -1063,7 +1063,7 @@ namespace rebalancing
         {
           dht_a.dht->seal_and_update(*c.current());
         }
-        catch (infinit::model::doughnut::Conflict const& c)
+        catch (infinit::model::Conflict const& c)
         {
           ELLE_LOG("third write attempt");
           dynamic_cast<infinit::model::blocks::MutableBlock&>(*c.current())

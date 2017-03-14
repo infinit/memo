@@ -14,8 +14,9 @@
 #include <elle/reactor/for-each.hh>
 
 #include <infinit/RPC.hh>
+
+#include <infinit/model/Conflict.hh>
 #include <infinit/model/MissingBlock.hh>
-#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
@@ -1355,7 +1356,7 @@ namespace infinit
             {
               ELLE_TRACE("resolution failed");
               // FIXME: useless clone, find a way to steal ownership
-              throw infinit::model::doughnut::Conflict(
+              throw infinit::model::Conflict(
                 "Paxos chose a different value", newest.clone());
             }
           }
@@ -1363,7 +1364,7 @@ namespace infinit
           {
             ELLE_TRACE("chosen block differs, signal conflict");
             // FIXME: useless clone, find a way to steal ownership
-            throw infinit::model::doughnut::Conflict(
+            throw infinit::model::Conflict(
               "Paxos chose a different value",
               newest.clone());
           }

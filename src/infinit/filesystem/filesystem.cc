@@ -30,11 +30,11 @@
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
+#include <infinit/model/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
-#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/serialization.hh>

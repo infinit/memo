@@ -9,6 +9,7 @@
 # include <elle/athena/paxos/Client.hh>
 
 #include <infinit/model/Model.hh>
+#include <infinit/model/Conflict.hh>
 #include <infinit/model/MissingBlock.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -16,7 +17,6 @@
 #include <infinit/model/doughnut/CHB.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/User.hh>
-#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 
 ELLE_LOG_COMPONENT("infinit.grpc.doughnut");

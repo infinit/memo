@@ -3,9 +3,9 @@
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/Model.hh>
 
+#include <infinit/model/Conflict.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/CHB.hh>
-#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/User.hh>
@@ -104,7 +104,7 @@ namespace infinit
         res.set_error(KV_ERROR_TOO_FEW_PEERS);
         res.set_message(err.what());
       }
-      catch (model::doughnut::Conflict const& err)
+      catch (model::Conflict const& err)
       {
         res.set_error(KV_ERROR_CONFLICT);
         res.set_message(err.what());
