@@ -141,7 +141,7 @@ function show(lang) {
 function prepare() {
   for (l in languages) {
     lang = languages[l]
-    for (i=1; i<7; ++i) {
+    for (i=0; i<7; ++i) {
       e = document.getElementById(lang + "_" + i);
       if (!e) {
         console.log("no such: " + lang + "_" + i);
@@ -197,16 +197,28 @@ For the document list format, we will use a simple text serialization scheme of 
 The first step is to generate the sources from the [doughnut.proto] file. This can
 be achieved by the following two commands:
 
+<div id="go_0"></div>
+```
+$> mkdir -p doughnut/src/doughnut
+$> protoc -I path --go_out=plugins=grpc:doughnut/src/doughnut path/doughnut.proto
+```
+
+<div id="python_0"></div>
+```
+$> protoc -I path --python_out=. --grpc_python_out=.  --plugin=protoc-gen-grpc_python=$(which grpc_python_plugin) path/doughnut.proto
+
+```
+
+<div id="cxx_0"></div>
 ```
 $> protoc -I/path --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` /path/doughnut.proto
 $> protoc -I/path --cpp_out=. /path/doughnut.proto
 ```
 
-where *path* is the path where *kv.proto* is stored.
+where *path* is the path where *doughnut.proto* is stored.
 
-This step will generate four files, *doughnut.pb.h*, *doughnut.pb.cc*, *doughnut.grpc.pb.h* and *doughnut.grpc.pb.cc*.
+This step will generate a few source and headers file depending on the language.
 
-You need to include *doughnut.grpc.pb.h* in your source file, and compile the two *.cc* files.
 
 ### Connecting to the grpc KV store server ###
 
