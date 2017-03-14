@@ -425,6 +425,7 @@ void set_document(string user, string name, string data)
       grpc::ClientContext ctx;
       ::Update update;
       update.mutable_block()->CopyFrom(mb);
+      update.set_decrypt_data(true);
       kv->update(&ctx, update, &status);
     }
     if (!status.has_exception_ptr())
@@ -433,7 +434,7 @@ void set_document(string user, string name, string data)
       throw std::runtime_error(status.exception_ptr().exception().message());
     // try again from the current block version
     mb.CopyFrom(status.exception_ptr().exception().current());
-    dl = parse_document_list(mb.data());
+    dl = parse_document_list(mb.data_plain());
   }
 }
 ```

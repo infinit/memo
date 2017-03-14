@@ -21,6 +21,7 @@ message Insert {
 
 message Update {
   Block block = 1;
+  bool decrypt_data = 2;
 }
 
 message CHBData {
