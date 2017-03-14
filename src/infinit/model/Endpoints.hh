@@ -5,6 +5,7 @@
 #include <boost/operators.hpp>
 
 #include <elle/attribute.hh>
+#include <elle/flat-set.hh>
 
 #include <infinit/model/Address.hh>
 
@@ -63,13 +64,14 @@ namespace infinit
     | Endpoints.  |
     `------------*/
     class Endpoints
-      : public std::vector<Endpoint>
+      : public boost::container::flat_set<Endpoint>
     {
     public:
-      using Super = std::vector<Endpoint>;
+      using Super = boost::container::flat_set<Endpoint>;
       using Super::Super;
       Endpoints();
       Endpoints(std::vector<Endpoint> const&);
+      Endpoints(Super const&);
       Endpoints(std::vector<boost::asio::ip::udp::endpoint> const&);
       Endpoints(boost::asio::ip::udp::endpoint);
       std::vector<boost::asio::ip::tcp::endpoint>
@@ -117,7 +119,7 @@ namespace elle
     struct Serialize<infinit::model::NodeLocation>
     {
       using Type = std::pair<infinit::model::Address,
-                             std::vector<infinit::model::Endpoint>>;
+                             boost::container::flat_set<infinit::model::Endpoint>>;
       static
       Type
       convert(infinit::model::NodeLocation const& nl);

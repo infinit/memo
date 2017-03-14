@@ -301,7 +301,7 @@ private:
             else
               ELLE_ABORT("unknown doughnut id: %f", peer.id());
           }();
-        elle::unconst(peer.endpoints()).emplace_back(
+        elle::unconst(peer.endpoints()).emplace(
           boost::asio::ip::address::from_string("127.0.0.1"),
           dht->local()->server_endpoint().port());
       }

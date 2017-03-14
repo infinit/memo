@@ -50,11 +50,11 @@ ELLE_DAS_SERIALIZE(BEndpoints);
 
 inline
 BEndpoints
-e2b(Endpoints e)
+e2b(Endpoints const& eps)
 {
-  BEndpoints res;
-  res.port = e.front().port();
-  for (auto const& a: e)
+  auto res = BEndpoints{};
+  res.port = eps.begin()->port();
+  for (auto const& a: eps)
     res.addresses.push_back(a.address().to_string());
   return res;
 }

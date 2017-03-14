@@ -334,7 +334,7 @@ namespace infinit
           if (!itf.second.ipv4_address.empty()
               && itf.second.ipv4_address != boost::asio::ip::address_v4::any().to_string())
           {
-            res.push_back(elle::reactor::network::TCPServer::EndPoint(
+            res.insert(elle::reactor::network::TCPServer::EndPoint(
               boost::asio::ip::address::from_string(itf.second.ipv4_address),
               ep.port()));
           }
@@ -342,7 +342,7 @@ namespace infinit
           for (auto const& ip6: itf.second.ipv6_address)
           {
             if (ip6 != boost::asio::ip::address_v6::any().to_string())
-              res.push_back(elle::reactor::network::TCPServer::EndPoint(
+              res.insert(elle::reactor::network::TCPServer::EndPoint(
                 boost::asio::ip::address::from_string(ip6),
                 ep.port()));
           }

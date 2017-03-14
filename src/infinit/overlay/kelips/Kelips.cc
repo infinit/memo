@@ -201,7 +201,7 @@ namespace infinit
         {
           auto res = Endpoints{};
           for (auto const& e: v)
-            res.emplace_back(e.first);
+            res.emplace(e.first);
           return res;
         }
       }
@@ -238,8 +238,9 @@ namespace infinit
           if (it == dst.end())
             dst.push_back(r);
           else
+            // FIXME: check for some union algorithm.
             for (auto const& ep: r.endpoints())
-              elle::push_back_if_missing(it->endpoints(), ep);
+              it->endpoints().insert(ep);
         }
       }
 
@@ -1228,7 +1229,7 @@ namespace infinit
           {
             if (ep.address().is_v6() && ep.address().to_v6().is_v4_mapped())
               ep = Endpoint(ep.address().to_v6().to_v4(), ep.port());
-            this->_pending_bootstrap_endpoints.push_back(ep.udp());
+            this->_pending_bootstrap_endpoints.emplace(ep.udp());
           }
         }
       }
@@ -1606,13 +1607,12 @@ namespace infinit
           {
             auto nsource = source;
             if (source.address().is_v6() && source.address().to_v6().is_v4_mapped())
-              nsource = Endpoint(source.address().to_v6().to_v4(), source.port());
-            auto it = boost::range::find(_pending_bootstrap_endpoints, nsource);
+              nsource = Endpoint{source.address().to_v6().to_v4(), source.port()};
+            auto it = _pending_bootstrap_endpoints.find(nsource);
             if (it != _pending_bootstrap_endpoints.end())
             {
               ELLE_DEBUG("%s: processing queued operation to %s", *this, nsource);
-              *it = _pending_bootstrap_endpoints[_pending_bootstrap_endpoints.size() - 1];
-              _pending_bootstrap_endpoints.pop_back();
+              _pending_bootstrap_endpoints.erase(it);
               bootstrap_requested = true;
             }
           }
@@ -2366,7 +2366,7 @@ namespace infinit
             if (_local_endpoints.empty())
             {
               ELLE_TRACE("Endpoint yet unknown, assuming localhost");
-              endpoints.emplace_back(
+              endpoints.emplace(
                 boost::asio::ip::address::from_string("127.0.0.1"),
                 this->_port);
             }

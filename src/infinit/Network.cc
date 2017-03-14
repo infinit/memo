@@ -326,8 +326,8 @@ namespace infinit
           auto endpoints = s.deserialize<Endpoints>();
           auto eps = infinit::model::Endpoints{};
           for (auto const& addr: endpoints.addresses)
-            eps.emplace_back(boost::asio::ip::address::from_string(addr),
-                             endpoints.port);
+            eps.emplace(boost::asio::ip::address::from_string(addr),
+                        endpoints.port);
           hosts.emplace_back(uuid, std::move(eps));
         }
       }

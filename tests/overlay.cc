@@ -223,13 +223,12 @@ discover(DHT& dht,
          bool wait = false,
          bool wait_back = false)
 {
-  Endpoints eps;
-  if (onlyfirst)
-    eps = Endpoints {target.dht->local()->server_endpoints()[0]};
-  else
-    eps = target.dht->local()->server_endpoints();
-  auto loc = NodeLocation(anonymous ? Address::null : target.dht->id(),
-                          eps);
+  auto const eps
+    = onlyfirst
+    ? Endpoints{*target.dht->local()->server_endpoints().begin()}
+    : target.dht->local()->server_endpoints();
+  auto const loc = NodeLocation(anonymous ? Address::null : target.dht->id(),
+                                eps);
   discover(dht, target, loc, wait, wait_back);
 }
 
@@ -497,7 +496,7 @@ ELLE_TEST_SCHEDULED(
                    ::keys = keys,
                    ::make_overlay = config.overlay_builder,
                    ::paxos = false);
-  elle::With<UTPInstrument>(dht_a.dht->local()->server_endpoints()[0].port()) <<
+  elle::With<UTPInstrument>(dht_a.dht->local()->server_endpoints().begin()->port()) <<
     [&] (UTPInstrument& instrument)
     {
       auto dht_b = DHT(::id = special_id(11),
@@ -734,7 +733,7 @@ ELLE_TEST_SCHEDULED(
     ::paxos = false,
     ::protocol = infinit::model::doughnut::Protocol::utp,
     ::storage = std::make_unique<infinit::storage::Memory>(blocks));
-  int port = dht_a->dht->local()->server_endpoints()[0].port();
+  int port = dht_a->dht->local()->server_endpoints().begin()->port();
   DHT dht_b(
     ::keys = keys,
     ::version = config.version,
@@ -1274,7 +1273,7 @@ ELLE_TEST_SCHEDULED(
     };
   auto dht_a = make_dht_a();
   elle::With<TCPInstrument>(
-    dht_a->dht->local()->server_endpoints()[0].port()) <<
+    dht_a->dht->local()->server_endpoints().begin()->port()) <<
     [&] (TCPInstrument& instrument)
     {
       auto dht_b = DHT(

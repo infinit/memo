@@ -176,19 +176,23 @@ namespace infinit
     Endpoints::Endpoints()
     {}
 
-    Endpoints::Endpoints(std::vector<Endpoint> const& ep)
-      : std::vector<Endpoint>(ep)
+    Endpoints::Endpoints(std::vector<Endpoint> const& eps)
+      : Super{std::begin(eps), std::end(eps)}
+    {}
+
+    Endpoints::Endpoints(Super const& eps)
+      : Super{eps}
     {}
 
     Endpoints::Endpoints(std::vector<boost::asio::ip::udp::endpoint> const& eps)
     {
       for (auto const& e: eps)
-        this->emplace_back(e);
+        this->emplace(e);
     }
 
     Endpoints::Endpoints(boost::asio::ip::udp::endpoint ep)
     {
-      this->emplace_back(std::move(ep));
+      this->emplace(std::move(ep));
     }
 
     void
@@ -216,9 +220,9 @@ namespace infinit
     {
       bool res = false;
       for (auto const& e: b)
-        if (std::find(this->begin(), this->end(), e) == this->end())
+        if (this->find(e) == this->end())
         {
-          this->emplace_back(e);
+          this->emplace(e);
           res = true;
         }
       return res;
@@ -231,10 +235,10 @@ namespace infinit
       f.open(path);
       if (!f.good())
         elle::err("unable to open for reading: %s", path);
-      infinit::model::Endpoints res;
+      auto res = infinit::model::Endpoints{};
       for (std::string line; std::getline(f, line); )
         if (!line.empty())
-          res.emplace_back(infinit::model::Endpoint(line));
+          res.emplace(infinit::model::Endpoint(line));
       return res;
     }
 
