@@ -13,6 +13,7 @@
 #include <boost/range/algorithm/find.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/max_element.hpp>
+#include <boost/range/algorithm/sort.hpp>
 
 #include <elle/algorithm.hh>
 #include <elle/bench.hh>
@@ -1904,7 +1905,7 @@ namespace infinit
             else
               indexes.push_back(v);
           }
-          std::sort(indexes.begin(), indexes.end());
+          boost::sort(indexes);
           int ipos = 0;
           int idx = 0;
           for (auto& f: _state.files)
@@ -1959,7 +1960,7 @@ namespace infinit
             else
               indexes.push_back(v);
           }
-          std::sort(indexes.begin(), indexes.end());
+          boost::sort(indexes);
           int ipos = 0;
           int idx = 0;
           for (auto& f: _state.files)

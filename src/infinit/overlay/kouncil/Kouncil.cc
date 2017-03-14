@@ -1,5 +1,7 @@
 #include <chrono>
 
+#include <boost/range/algorithm/sort.hpp>
+
 #include <elle/log.hh>
 #include <elle/make-vector.hh>
 #include <elle/range.hh>
@@ -424,7 +426,7 @@ namespace infinit
             if (v >= r)
               ++v;
           res.push_back(v);
-          std::sort(res.begin(), res.end());
+          boost::sort(res);
         }
         return res;
       }

@@ -121,8 +121,8 @@ private:
   NetEndpoints _endpoints;
 };
 
-std::vector<infinit::model::Endpoints> endpoints;
-infinit::Network net("bob/network", nullptr, boost::none);
+auto endpoints = std::vector<infinit::model::Endpoints>{};
+auto net = infinit::Network("bob/network", nullptr, boost::none);
 using Nodes = std::vector<
          std::pair<
            std::shared_ptr<imd::Doughnut>,
@@ -194,15 +194,11 @@ run_nodes(bfs::path where,  elle::cryptography::rsa::KeyPair& kp,
     }
     res.push_back(std::make_pair(dn, std::move(tptr)));
     //if (res.size() == 1)
-    {
-      auto eps = infinit::model::Endpoints{
-        {
-          boost::asio::ip::address::from_string("127.0.0.1"),
-          dn->local()->server_endpoint().port()
-        }
-      };
-      endpoints.emplace_back(eps);
-    }
+    endpoints.emplace_back(
+        infinit::model::Endpoints{{
+            boost::asio::ip::address::from_string("127.0.0.1"),
+            dn->local()->server_endpoint().port(),
+        }});
   }
   return res;
 }

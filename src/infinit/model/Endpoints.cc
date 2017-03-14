@@ -1,3 +1,4 @@
+#include <elle/make-vector.hh>
 #include <elle/os/environ.hh>
 
 #include <elle/reactor/network/resolve.hh>
@@ -55,8 +56,8 @@ namespace infinit
       size_t sep = repr.find_last_of(':');
       if (sep == std::string::npos || sep == repr.length())
         elle::err("invalid endpoint: %s", repr);
-      std::string saddr = repr.substr(0, sep);
-      std::string sport = repr.substr(sep + 1);
+      auto saddr = repr.substr(0, sep);
+      auto sport = repr.substr(sep + 1);
       auto ep = elle::reactor::network::resolve_udp(saddr, sport, !v6);
       this->_address = ep.address();
       this->_port = ep.port();
@@ -185,19 +186,15 @@ namespace infinit
     std::vector<boost::asio::ip::tcp::endpoint>
     Endpoints::tcp() const
     {
-      std::vector<boost::asio::ip::tcp::endpoint> res;
-      std::transform(this->begin(), this->end(), std::back_inserter(res),
-                     [] (Endpoint const& e) { return e.tcp(); });
-      return res;
+      return elle::make_vector(*this,
+                               [](Endpoint const& e) { return e.tcp(); });
     }
 
     std::vector<boost::asio::ip::udp::endpoint>
     Endpoints::udp() const
     {
-      std::vector<boost::asio::ip::udp::endpoint> res;
-      std::transform(this->begin(), this->end(), std::back_inserter(res),
-                     [] (Endpoint const& e) { return e.udp(); });
-      return res;
+      return elle::make_vector(*this,
+                               [](Endpoint const& e) { return e.udp(); });
     }
 
     bool
@@ -257,6 +254,7 @@ namespace elle
     {
       return std::make_pair(nl.id(), nl.endpoints());
     }
+
     infinit::model::NodeLocation
     Serialize<infinit::model::NodeLocation>::convert(Type const& repr)
     {
