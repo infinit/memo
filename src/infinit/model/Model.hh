@@ -217,7 +217,8 @@ namespace infinit
         bool (
           decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
           decltype(conflict_resolver)::Effective<
-            std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>)>
+            std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>,
+          decltype(decrypt_data = false))>
       update;
       void
       seal_and_update(blocks::Block& block,

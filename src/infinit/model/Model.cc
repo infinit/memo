@@ -1,5 +1,6 @@
 #include <elle/log.hh>
 
+#include <infinit/model/Conflict.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/Model.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
@@ -50,15 +51,26 @@ namespace infinit
                block,
                conflict_resolver = nullptr)
       , update([this] (std::unique_ptr<blocks::Block> block,
-                       std::unique_ptr<ConflictResolver> resolver)
+                       std::unique_ptr<ConflictResolver> resolver,
+                       bool decypher)
                {
                  ELLE_TRACE_SCOPE("%s: update %f", *this, *block);
                  block->seal();
-                 this->_update(std::move(block), std::move(resolver));
+                 try
+                 {
+                   this->_update(std::move(block), std::move(resolver));
+                 }
+                 catch (Conflict const& c)
+                 {
+                   if (decypher && c.current())
+                     c.current()->decrypt();
+                   throw;
+                 }
                  return true;
                },
                block,
-               conflict_resolver = nullptr)
+               conflict_resolver = nullptr,
+               decrypt_data = false)
       , remove([this] (Address address,
                        boost::optional<blocks::RemoveSignature> rs)
                {
