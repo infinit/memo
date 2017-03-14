@@ -1444,10 +1444,12 @@ namespace infinit
                     {
                       auto block =
                         chosen->value.get<std::shared_ptr<blocks::Block>>();
+                      if (auto* mb = dynamic_cast<blocks::MutableBlock*>(block.get()))
+                        mb->seal_version(chosen->proposal.version + 1);
                       if (!(b = resolve(*b, *block, resolver.get())))
                         break;
                       ELLE_DEBUG("seal resolved block")
-                        b->seal(chosen->proposal.version + 1);
+                        b->seal();
                     }
                   }
                   else

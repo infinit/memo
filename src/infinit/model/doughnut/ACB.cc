@@ -795,6 +795,11 @@ namespace infinit
       {
         static elle::Bench bench("bench.acb.seal", 10000_sec);
         elle::Bench::BenchScope scope(bench);
+        if (!version && this->Super::_seal_version && *this->Super::_seal_version)
+        {
+          version = this->Super::_seal_version;
+          this->Super::_seal_version.reset();
+        }
         std::shared_ptr<elle::cryptography::rsa::PrivateKey> sign_key;
 
         // enforce admin keys

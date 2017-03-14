@@ -415,6 +415,11 @@ namespace infinit
       void
       BaseOKB<Block>::_seal(boost::optional<int> version)
       {
+        if (!version && this->_seal_version && *this->_seal_version)
+        {
+          version = this->_seal_version;
+          this->_seal_version.reset();
+        }
         if (this->_data_changed)
         {
           ELLE_DEBUG_SCOPE("%s: data changed, seal", *this);
@@ -524,10 +529,14 @@ namespace infinit
         , _data_plain()
         , _data_decrypted(false)
       {
-        if (version >= elle::Version(0, 8, 0) && this->_data.empty())
+        if (version >= elle::Version(0, 8, 0))
         {
-          s.serialize("data_plain", this->_data_plain);
-          this->_data_changed = true;
+          s.serialize("next_seal_version", this->_seal_version);
+          if (this->_data.empty())
+          {
+            s.serialize("data_plain", this->_data_plain);
+            this->_data_changed = true;
+          }
         }
         this->_serialize(s, version);
         if (this->doughnut() &&
@@ -554,6 +563,7 @@ namespace infinit
             if (s.in())
               this->_data_changed = true;
           }
+          s.serialize("next_seal_version", this->_seal_version);
         }
         this->_serialize(s, version);
       }

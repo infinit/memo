@@ -65,6 +65,7 @@ namespace infinit
         virtual
         void
         data(std::function<void (elle::Buffer&)> transformation);
+        ELLE_ATTRIBUTE_RW(boost::optional<int>, seal_version, protected);
       };
     }
   }
