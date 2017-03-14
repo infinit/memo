@@ -392,7 +392,7 @@ void set_document(string user, string name, string data)
 {
   ::Block mb;
   auto dl = get_documents(user, &mb);
-  // Create and insert the document CHB
+  // Create and insert the document IB
   ::CHBData cdata;
   cdata.set_data(data);
   ::Block doc;
@@ -410,7 +410,7 @@ void set_document(string user, string name, string data)
   string chb_addr = hex(doc.address());
   while (true)
   {
-    // If name is already in the document list, cleanup the data CHB
+    // If name is already in the document list, cleanup the data IB
     auto it = dl.find(name);
     if (it != dl.end())
     {

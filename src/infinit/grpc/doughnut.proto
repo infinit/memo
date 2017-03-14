@@ -85,6 +85,7 @@ message Block {
   // OKB, ACB
   Key key_koh = 9;
   int64 version = 10;
+  int64 next_seal_version = 23;
   // ACB
   int64 editor = 11;
   bytes owner_token = 12;
