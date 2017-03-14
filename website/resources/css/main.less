@@ -159,11 +159,8 @@ header {
 
     li {
       float: left; margin-left: 30px;
-      a {
-        font-family: @helvetica; font-weight: 400;
-        display: block; font-size: 14px;
-        .transition();
-      }
+
+      a { font-size: 15px; .transition(); }
       a.get_started {
         border: 1px solid lighten(@infinitred, 15%); border-radius: 3px;
         padding: 7px 11px; color: @infinitred;
@@ -871,6 +868,7 @@ body.drive {
 `----------------*/
 
 body.download, body.update {
+  h1 { font-size: 36px; }
   h1, p.subtitle { text-align: center; }
   h1 { margin-bottom: 3px; margin-top: 40px; }
   p.subtitle { margin-top: 0; }

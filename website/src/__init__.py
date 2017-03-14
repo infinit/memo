@@ -69,8 +69,8 @@ class Website(bottle.Bottle):
   @view('pages/product.html')
   def root(self):
     return {
-      'title': 'The Infinit elastic storage platform',
-      'description': 'Discover the benefits of the Infinit storage platform through its innovative technology.',
+      'title': 'Product',
+      'description': 'Discover the benefits of the Infinit decentralized storage platform: scalabilty, elasticity and resilience.',
     }
 
   @route('/docker', name = 'docker')
@@ -117,16 +117,16 @@ class Website(bottle.Bottle):
   @view('pages/download.html')
   def root(self):
     return {
-      'title': 'Download Infinit CLI Tools',
-      'description': 'Download the Infinit command line tools for Mac, Linux or Windows.',
+      'title': 'Download',
+      'description': 'Download the Infinit command line tools for Mac, Windows or Linux (Ubuntu, Debian, CentOS, Alpine, Raspberry).',
     }
 
   @route('/update', name = 'update')
   @view('pages/update.html')
   def root(self):
     return {
-      'title': 'Upgrade Infinit CLI Tools',
-      'description': 'Upgrade your Infinit command line tools to the latest version to get all the new features.',
+      'title': 'Update',
+      'description': 'Update your Infinit command line tools to the latest version to get all the new features.',
     }
 
   @route('/faq', name = 'faq')
@@ -141,7 +141,7 @@ class Website(bottle.Bottle):
   @view('pages/docs/get_started.html')
   def root(self):
     return {
-      'title': 'Get Started with Infinit',
+      'title': 'Get Started',
       'description': 'A step by step guide to getting started with the Infinit storage platform.',
     }
 
@@ -149,7 +149,7 @@ class Website(bottle.Bottle):
   @view('pages/docs/get_started.html')
   def root(self):
     return {
-      'title': 'Get Started with Infinit - Mac Guide',
+      'title': 'Get Started for Mac',
       'description': 'A step by step guide to getting started with the Infinit storage platform.',
     }
 
@@ -157,7 +157,7 @@ class Website(bottle.Bottle):
   @view('pages/docs/get_started.html')
   def root(self):
     return {
-      'title': 'Get Started with Infinit - Windows Guide',
+      'title': 'Get Started for Windows',
       'description': 'A step by step guide for Windows to getting started with the Infinit storage platform.',
     }
 
@@ -165,7 +165,7 @@ class Website(bottle.Bottle):
   @view('pages/docs/get_started.html')
   def root(self):
     return {
-      'title': 'Get Started with Infinit - Linux Guide',
+      'title': 'Get Started for Linux',
       'description': 'A step by step guide for linux to getting started with the Infinit storage platform.',
     }
 
@@ -307,7 +307,7 @@ class Website(bottle.Bottle):
       json_data = json.load(json_file)
 
     return {
-      'title': 'Contribute to the Infinit Storage Platform',
+      'title': 'Projects',
       'description': 'Check out our open source projects and join a growing community of developers.',
       'projects': json_data['projects']
     }

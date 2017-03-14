@@ -202,7 +202,11 @@
 }
 
 @media (max-width:720px) {
-
+  header {
+    > ul { display: none; }
+    nav { display: block; }
+  }
+  
   body.docker {
     section.presentation {
       .schema {
@@ -261,11 +265,6 @@
 }
 
 @media (max-width:600px) {
-  header {
-    > ul { display: none; }
-    nav { display: block; }
-  }
-
   body.home {
     section.features {
       p.title { padding-top: 0; margin-bottom: 0; }
