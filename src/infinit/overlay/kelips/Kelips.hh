@@ -1,22 +1,21 @@
-#ifndef INFINIT_OVERLAY_KELIPS_HH
-# define INFINIT_OVERLAY_KELIPS_HH
+#pragma once
 
-# include <chrono>
-# include <random>
+#include <chrono>
+#include <random>
 
-# include <elle/serialization/Serializer.hh>
+#include <elle/serialization/Serializer.hh>
 
-# include <elle/cryptography/SecretKey.hh>
+#include <elle/cryptography/SecretKey.hh>
 
-# include <elle/reactor/Barrier.hh>
-# include <elle/reactor/Generator.hh>
-# include <elle/reactor/network/rdv-socket.hh>
-# include <elle/reactor/network/utp-server.hh>
+#include <elle/reactor/Barrier.hh>
+#include <elle/reactor/Generator.hh>
+#include <elle/reactor/network/rdv-socket.hh>
+#include <elle/reactor/network/utp-server.hh>
 
-# include <infinit/model/doughnut/Local.hh>
-# include <infinit/model/doughnut/Remote.hh>
-# include <infinit/overlay/Overlay.hh>
-# include <infinit/storage/Storage.hh>
+#include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Remote.hh>
+#include <infinit/overlay/Overlay.hh>
+#include <infinit/storage/Storage.hh>
 
 namespace std
 {
@@ -40,7 +39,7 @@ namespace infinit
       using Address = infinit::model::Address;
       using Time = std::chrono::time_point<std::chrono::system_clock>;
       using Duration = Time::duration;
-      //typedef std::chrono::duration<long, std::ratio<1, 1000000>> Duration;
+      //using Duration = std::chrono::duration<long, std::ratio<1, 1000000>>;
 
       using TimedEndpoint = std::pair<Endpoint, Time>;
       struct Contact
@@ -219,11 +218,11 @@ namespace infinit
       `-----------*/
       public:
         std::string
-        type_name() override;
+        type_name() const override;
         elle::json::Array
-        peer_list() override;
+        peer_list() const override;
         elle::json::Object
-        stats() override;
+        stats() const override;
 
       private:
         using Local = infinit::model::doughnut::Local;
@@ -279,14 +278,18 @@ namespace infinit
         void
         cleanup();
         void
-        addLocalResults(packet::GetFileRequest* p, elle::reactor::yielder<NodeLocation>::type const* yield);
+        addLocalResults(
+          packet::GetFileRequest* p,
+          elle::reactor::yielder<NodeLocation>::type const* yield);
         void
-        addLocalResults(packet::MultiGetFileRequest* p,
-                        elle::reactor::yielder<std::pair<Address, NodeLocation>>::type const* yield,
-                        std::vector<std::set<Address>>& result_sets);
+        addLocalResults(
+          packet::MultiGetFileRequest* p,
+          elle::reactor::yielder<std::pair<Address, NodeLocation>>::type const* yield,
+          std::vector<std::set<Address>>& result_sets);
         void
-        kelipsMGet(std::vector<Address> files, int n,
-                   std::function<void (std::pair<Address, NodeLocation>)> yield);
+        kelipsMGet(
+          std::vector<Address> files, int n,
+          std::function<void (std::pair<Address, NodeLocation>)> yield);
         void
         kelipsGet(Address file, int n, bool local_override, int attempts,
           bool query_node,
@@ -322,8 +325,9 @@ namespace infinit
         send_bootstrap(NodeLocation const& l);
         SerState
         get_serstate(NodeLocation const& peer);
+        // Establish contact with peer and flush buffer.
         void
-        contact(Address address); // establish contact with peer and flush buffer
+        contact(Address address);
         void onPacket(elle::ConstWeakBuffer buf, Endpoint source);
         void process(elle::Buffer const& buf, Endpoint source);
         Contact*
@@ -380,6 +384,4 @@ namespace infinit
   }
 }
 
-# include <infinit/overlay/kelips/Kelips.hxx>
-
-#endif
+#include <infinit/overlay/kelips/Kelips.hxx>

@@ -69,12 +69,14 @@ namespace infinit
             }
             return res;
           }
+
           void
           serialize(elle::serialization::Serializer& s,
                     elle::Version const& v) override
           {
             s.serialize("backend", this->_backend);
           }
+
           std::string
           description() const override
           {
@@ -354,6 +356,7 @@ namespace infinit
             this->_cache.emplace(std::move(cloned));
           }
         }
+
         void
         Cache::_store(std::unique_ptr<blocks::Block> block,
                       StoreMode mode,
@@ -580,7 +583,6 @@ namespace infinit
         {
           return this->_backend->stats();
         }
-
       }
     }
   }

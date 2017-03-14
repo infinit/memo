@@ -116,8 +116,8 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::vector<elle::cryptography::rsa::PublicKey>,
                          public_keys);
         // Order matter for signing, hence std::map.
-        typedef std::map<elle::cryptography::rsa::PublicKey, elle::Buffer>
-          AdminKeys;
+        using AdminKeys
+          = std::map<elle::cryptography::rsa::PublicKey, elle::Buffer>;
         /// The group admin keys ciphered for every admin.
         ELLE_ATTRIBUTE_R(AdminKeys, admin_keys);
       public:

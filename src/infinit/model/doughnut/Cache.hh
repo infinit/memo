@@ -1,18 +1,17 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_CACHE_HH
-# define INFINIT_MODEL_DOUGHNUT_CACHE_HH
+#pragma once
 
-# include <unordered_map>
-# include <chrono>
+#include <unordered_map>
+#include <chrono>
 
-# include <boost/multi_index_container.hpp>
-# include <boost/multi_index/hashed_index.hpp>
-# include <boost/multi_index/identity.hpp>
-# include <boost/multi_index/mem_fun.hpp>
-# include <boost/multi_index/ordered_index.hpp>
-# include <boost/multi_index/sequenced_index.hpp>
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/identity.hpp>
+#include <boost/multi_index/mem_fun.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/sequenced_index.hpp>
 
-# include <infinit/model/blocks/MutableBlock.hh>
-# include <infinit/model/doughnut/Consensus.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/doughnut/Consensus.hh>
 
 namespace infinit
 {
@@ -33,8 +32,7 @@ namespace infinit
                 boost::optional<std::chrono::seconds> cache_invalidation = {},
                 boost::optional<std::chrono::seconds> cache_ttl = {},
                 boost::optional<boost::filesystem::path> disk_cache_path = {},
-                boost::optional<uint64_t> disk_cache_size = {}
-                );
+                boost::optional<uint64_t> disk_cache_size = {});
           ~Cache() override;
 
         /*--------.
@@ -115,7 +113,7 @@ namespace infinit
             operator ()(CachedBlock const& lhs, CachedBlock const& rhs) const;
           };
 
-          typedef bmi::multi_index_container<
+          using BlockCache = bmi::multi_index_container<
             CachedBlock,
             bmi::indexed_by<
               bmi::hashed_unique<
@@ -130,7 +128,7 @@ namespace infinit
                 bmi::const_mem_fun<
                   CachedBlock,
                   clock::time_point const&, &CachedBlock::last_fetched> >
-            > > BlockCache;
+            > >;
           ELLE_ATTRIBUTE(BlockCache, cache);
           class CachedCHB
           {
@@ -140,7 +138,7 @@ namespace infinit
             ELLE_ATTRIBUTE_R(uint64_t, size);
             ELLE_ATTRIBUTE_RW(clock::time_point, last_used);
           };
-          typedef bmi::multi_index_container<
+          using CHBDiskCache = bmi::multi_index_container<
             CachedCHB,
             bmi::indexed_by<
               bmi::hashed_unique<
@@ -151,20 +149,18 @@ namespace infinit
                 bmi::const_mem_fun<
                   CachedCHB,
                   clock::time_point const&, &CachedCHB::last_used> >
-          > > CHBDiskCache;
+          > >;
           ELLE_ATTRIBUTE(CHBDiskCache, disk_cache);
           ELLE_ATTRIBUTE(uint64_t, disk_cache_used);
           ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, cleanup_thread);
         private:
           void _load_disk_cache();
           void _disk_cache_push(blocks::Block& block);
-          typedef std::unordered_map<Address, std::shared_ptr<elle::reactor::Barrier>>
-          Pending;
+          using Pending
+            = std::unordered_map<Address, std::shared_ptr<elle::reactor::Barrier>>;
           ELLE_ATTRIBUTE(Pending, pending);
         };
       }
     }
   }
 }
-
-#endif

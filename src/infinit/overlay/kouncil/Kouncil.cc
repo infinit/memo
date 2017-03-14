@@ -77,9 +77,10 @@ namespace infinit
         , _broadcast_thread(new elle::reactor::Thread(
                               elle::sprintf("%s: broadcast", this),
                               std::bind(&Kouncil::_broadcast, this)))
-        , _eviction_delay(eviction_delay.value_or(12000))
+        , _eviction_delay(std::chrono::seconds{eviction_delay.value_or(12000)})
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
+        ELLE_DEBUG("Eviction delay: %s", _eviction_delay);
         if (local)
           _register_local(local);
         // Add client-side Kouncil RPCs.
@@ -309,7 +310,7 @@ namespace infinit
           ELLE_DEBUG("endpoints for %f: %s", peer, peer.endpoints());
           if (!find(this->_peers, peer.id()))
             ELLE_TRACE("connect to new %f", peer)
-              this->doughnut()->dock().connect(peer, false);
+              this->doughnut()->dock().connect(peer);
           if (peer.id() != Address::null)
             this->_remember_stale(peer);
         }
@@ -354,12 +355,18 @@ namespace infinit
       void
       Kouncil::_peer_connected(std::shared_ptr<Remote> peer)
       {
+        ELLE_TRACE_SCOPE("%s: %f connected", this, peer);
         ELLE_ASSERT_NEQ(peer->id(), Address::null);
         this->_peers.emplace(peer);
         if (auto it = find(this->_stale_endpoints, peer->id()))
-          this->_stale_endpoints.erase(it);
-        this->_stale_endpoints.emplace(peer->connection()->location());
-        ELLE_TRACE_SCOPE("%s: %f connected", this, peer);
+        {
+          // Stop reconnection/eviction timers.
+          this->_stale_endpoints.modify(
+            it, [] (StaleEndpoint& e) { e.clear(); });
+          //this->_stale_endpoints.erase(it);
+        }
+        else
+          this->_stale_endpoints.emplace(peer->connection()->location());
         this->_advertise(*peer);
         this->_fetch_entries(*peer);
         this->on_discover()(peer->connection()->location(), false);
@@ -387,18 +394,20 @@ namespace infinit
           {
             ELLE_DEBUG("endpoints: %s", it->endpoints());
             this->_stale_endpoints.modify(
-              it, [this] (StaleEndpoint& e) { e.connect(*this->doughnut()); });
+              it, [this] (StaleEndpoint& e) { e.reconnect(*this); });
           }
         }
       }
 
       void
-      Kouncil::_peer_evicted(std::shared_ptr<Remote> peer)
+      Kouncil::_peer_evicted(Address const id)
       {
-        ELLE_TRACE_SCOPE("%s: %s evicted", this, peer);
-        auto const id = peer->id();
+        ELLE_TRACE_SCOPE("%s: %f evicted", this, id);
+        assert(!this->_discovered(id));
         this->_infos.erase(id);
         this->_address_book.erase(id);
+        this->_stale_endpoints.erase(id);
+        this->on_evicted()(id);
       }
 
       template<typename E>
@@ -560,13 +569,13 @@ namespace infinit
       `-----------*/
 
       std::string
-      Kouncil::type_name()
+      Kouncil::type_name() const
       {
         return "kouncil";
       }
 
       elle::json::Array
-      Kouncil::peer_list()
+      Kouncil::peer_list() const
       {
         auto res = elle::json::Array{};
         for (auto const& p: this->peers())
@@ -585,7 +594,7 @@ namespace infinit
       }
 
       elle::json::Object
-      Kouncil::stats()
+      Kouncil::stats() const
       {
         return
           {
@@ -756,28 +765,67 @@ namespace infinit
         : NodeLocation(l)
         , _retry_timer(elle::reactor::scheduler().io_service())
         , _retry_counter(0)
+        , _evict_timer(elle::reactor::scheduler().io_service())
       {}
 
       void
-      Kouncil::StaleEndpoint::connect(model::doughnut::Doughnut& dht)
+      Kouncil::StaleEndpoint::clear()
       {
-        auto c = dht.dock().connect(*this);
-        this->_slot = c->on_disconnection().connect([&]{ this->failed(dht); });
+        ELLE_TRACE("%f: clear", this);
+        this->_retry_counter = 0;
+        this->_retry_timer.cancel();
+        this->_evict_timer.cancel();
       }
 
       void
-      Kouncil::StaleEndpoint::failed(model::doughnut::Doughnut& dht)
+      Kouncil::StaleEndpoint::reconnect(Kouncil& kouncil)
       {
-        // FIXME: make that configurable
-        if (++this->_retry_counter > 10)
-          return;
-        this->_retry_timer.expires_from_now(
-          boost::posix_time::seconds(1) * std::pow(2, this->_retry_counter));
+        {
+          // The age so forth.
+          auto age =
+            ELLE_ENFORCE(find(kouncil._infos, this->id()))
+            ->disappearance().age();
+          // How much it is still credited.
+          auto respite = kouncil._eviction_delay - age;
+          ELLE_DEBUG("%f: initiating reconnection with timeout %s",
+                     this, respite);
+          this->_evict_timer.expires_from_now(respite);
+          this->_evict_timer.async_wait(
+            [this, &kouncil] (boost::system::error_code const& e)
+            {
+              if (!e)
+              {
+                ELLE_DEBUG("%f: reconnection timed out, evicting", this);
+                kouncil._peer_evicted(id());
+              }
+            });
+        }
+        // Initiate the reconnection attempts.
+        this->connect(kouncil);
+      }
+
+      void
+      Kouncil::StaleEndpoint::connect(Kouncil& kouncil)
+      {
+        ++this->_retry_counter;
+        ELLE_DEBUG("%f: connection attempt #%s", this, this->_retry_counter);
+        auto c = kouncil.doughnut()->dock().connect(*this);
+        this->_slot
+          = c->on_disconnection().connect([&]{ this->failed(kouncil); });
+      }
+
+      void
+      Kouncil::StaleEndpoint::failed(Kouncil& kouncil)
+      {
+        auto d = std::chrono::seconds{1 << std::min(10, this->_retry_counter)};
+        ELLE_DEBUG("%f: connection attempt #%s failed, waiting %s before next",
+                   this, this->_retry_counter, d);
+        this->_retry_timer.expires_from_now(d);
         this->_retry_timer.async_wait(
-          [this, &dht] (boost::system::error_code const& e)
+          [this, &kouncil] (boost::system::error_code const& e)
           {
             if (!e)
-              this->connect(dht);
+              this->connect(kouncil);
           });
       }
 

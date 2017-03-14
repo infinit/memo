@@ -102,6 +102,12 @@ namespace infinit
         /// Remote node.
         using Remote = infinit::model::doughnut::Remote;
 
+        /// A clock.
+        using Clock = std::chrono::high_resolution_clock;
+        /// A reference date.
+        using Time = std::chrono::time_point<Clock>;
+        /// The type of our timers.
+        using Timer = boost::asio::basic_waitable_timer<Clock>;
         /// Transportable timeout.
         using LamportAge = elle::athena::LamportAge;
 
@@ -116,7 +122,7 @@ namespace infinit
          */
         Kouncil(model::doughnut::Doughnut* dht,
                 std::shared_ptr<Local> local,
-                boost::optional<int> eviction_delay = boost::none);
+                boost::optional<int> eviction_delay = {});
         /// Destruct a Kouncil.
         ~Kouncil() override;
       protected:
@@ -211,6 +217,9 @@ namespace infinit
         /// The peers we heard about.
         ELLE_ATTRIBUTE_R(PeerInfos, infos);
 
+        /// Announcing evicted nodes.
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<void (Address id)>, on_evicted);
 
         /// Nodes with which we lost connection, but keep ready to see
         /// coming back.
@@ -219,13 +228,22 @@ namespace infinit
         {
         public:
           StaleEndpoint(NodeLocation const& l);
+          /// Reset this and cancel timers.
           void
-          connect(model::doughnut::Doughnut& dht);
+          clear();
+          /// Start reconnection attempts, start the overall eviction timer.
           void
-          failed(model::doughnut::Doughnut& dht);
+          reconnect(Kouncil& kouncil);
+          /// Start one new attempt to reconnect.
+          void
+          connect(Kouncil& kouncil);
+          /// Callback when an attempt timed out.
+          void
+          failed(Kouncil& kouncil);
           ELLE_ATTRIBUTE(boost::signals2::scoped_connection, slot);
-          ELLE_ATTRIBUTE(boost::asio::deadline_timer, retry_timer);
+          ELLE_ATTRIBUTE(Timer, retry_timer);
           ELLE_ATTRIBUTE(int, retry_counter);
+          ELLE_ATTRIBUTE_X(Timer, evict_timer);
         };
         using StaleEndpoints = bmi::multi_index_container<
           StaleEndpoint,
@@ -262,7 +280,7 @@ namespace infinit
         _peer_disconnected(std::shared_ptr<Remote> peer);
         /// Disconnection was too long, forget about this peer.
         void
-        _peer_evicted(std::shared_ptr<Remote> peer);
+        _peer_evicted(Address id);
         void
         _peer_connected(std::shared_ptr<Remote> peer);
         void
@@ -286,11 +304,11 @@ namespace infinit
       `-----------*/
       public:
         std::string
-        type_name() override;
+        type_name() const override;
         elle::json::Array
-        peer_list() override;
+        peer_list() const override;
         elle::json::Object
-        stats() override;
+        stats() const override;
 
       public:
         elle::json::Json
