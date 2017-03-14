@@ -153,7 +153,7 @@ namespace infinit
       ptr->AddMethod<::NamedBlockKey, ::Block, true>(dht.make_named_block, dht, "/Doughnut/make_named_block");
       ptr->AddMethod<::NamedBlockKey, ::Address, true>(dht.named_block_address, dht, "/Doughnut/named_block_address");
       ptr->AddMethod<::Address, ::EmptyOrException>(dht.remove, dht, "/Doughnut/remove");
-      return ptr;
+      return std::move(ptr);
     }
   }
 }
