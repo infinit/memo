@@ -362,12 +362,9 @@ namespace infinit
         ELLE_ASSERT_NEQ(peer->id(), Address::null);
         this->_peers.emplace(peer);
         if (auto it = find(this->_stale_endpoints, peer->id()))
-        {
           // Stop reconnection/eviction timers.
           this->_stale_endpoints.modify(
             it, [] (StaleEndpoint& e) { e.clear(); });
-          //this->_stale_endpoints.erase(it);
-        }
         else
           this->_stale_endpoints.emplace(peer->connection()->location());
         this->_advertise(*peer);
@@ -381,11 +378,9 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: %s disconnected", this, peer);
         auto const id = peer->id();
         // Start aging the infos.
-        {
-          auto pi = ELLE_ENFORCE(find(this->_infos, id));
-          // FIXME: remove the unconst!
-          elle::unconst(*pi).disappearance().start();
-        }
+        this->_infos.modify(
+          ELLE_ENFORCE(find(this->_infos, id)),
+          [this] (PeerInfo& pi) { pi.disappearance().start(); });
         this->_peers.erase(id);
         this->on_disappear()(id, false);
         peer.reset();
