@@ -1723,18 +1723,25 @@ namespace
         results.beyond = {elle::exception_string()};
       }
     }
-    auto public_ips = std::vector<std::string>{};
-    ELLE_TRACE("list interfaces")
-    {
-      // FIXME: no ipv6?
-      auto interfaces = elle::network::Interface::get_map(
-        elle::network::Interface::Filter::no_loopback);
-      for (auto const& i: interfaces)
-        public_ips.insert(public_ips.end(),
-                          i.second.ipv4_address.begin(),
-                          i.second.ipv4_address.end());
-      results.interfaces = {public_ips};
-    }
+    auto const public_ips = []
+      {
+        ELLE_TRACE("list interfaces")
+        {
+          auto res = std::vector<std::string>{};
+          auto interfaces = elle::network::Interface::get_map(
+            elle::network::Interface::Filter::no_loopback);
+          for (auto const& i: interfaces)
+          {
+            auto add = [&res](auto const& addrs){
+              res.insert(res.end(), addrs.begin(), addrs.end());
+            };
+            add(i.second.ipv4_address);
+            add(i.second.ipv6_address);
+          }
+          return res;
+        }
+      }();
+    results.interfaces = {public_ips};
     using ConnectivityFunction
       = std::function<elle::reactor::connectivity::Result
                       (std::string const& host, uint16_t port)>;
