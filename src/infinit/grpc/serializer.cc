@@ -45,6 +45,10 @@ namespace infinit
     std::string
     cxx_to_message_name(std::string name)
     {
+      /* Map a C++ type name to a valid message name.
+      * We take the first type seen without the namespace, with
+      * special handling of smart pointers.
+      */
       auto p = name.find_first_of('<');
       if (p != name.npos)
       {
@@ -61,6 +65,7 @@ namespace infinit
       name = name.substr(0, p);
       if (name == "basic_string")
         name = "string";
+      name = name.substr(0, name.find_first_of(" "));
       return uppercase_to_underscore(name);
     }
 
