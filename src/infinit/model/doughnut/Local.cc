@@ -318,31 +318,34 @@ namespace infinit
       Endpoints
       Local::server_endpoints()
       {
-        bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
-                  && this->doughnut().version() >= elle::Version(0, 7, 0);
-        auto ep = this->server_endpoint();
+        auto const ep = this->server_endpoint();
         if (ep.address() != boost::asio::ip::address_v6::any()
-         && ep.address() != boost::asio::ip::address_v4::any())
+            && ep.address() != boost::asio::ip::address_v4::any())
           return {ep};
-        Endpoints res;
-        auto filter = (elle::network::Interface::Filter::only_up
-                       | elle::network::Interface::Filter::no_loopback
-                       | elle::network::Interface::Filter::no_autoip
-                       | elle::network::Interface::Filter::no_awdl);
-        for (auto const& itf: elle::network::Interface::get_map(filter))
+        else
         {
-          // FIXME: no condition on v4?
-          for (auto const& addr: itf.second.ipv4_address)
-            if (addr != boost::asio::ip::address_v4::any().to_string())
-              res.emplace(boost::asio::ip::address::from_string(addr),
-                          ep.port());
-          if (v6)
-            for (auto const& addr: itf.second.ipv6_address)
-              if (addr != boost::asio::ip::address_v6::any().to_string())
-                res.emplace(boost::asio::ip::address::from_string(addr),
-                            ep.port());
+          bool const v4 = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
+          bool const v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+            && this->doughnut().version() >= elle::Version(0, 7, 0);
+          Endpoints res;
+          using Filter = elle::network::Interface::Filter;
+          auto const filter = Filter::only_up | Filter::no_loopback
+            | Filter::no_autoip | Filter::no_awdl;
+          for (auto const& itf: elle::network::Interface::get_map(filter))
+          {
+            if (v4)
+              for (auto const& addr: itf.second.ipv4_address)
+                if (addr != boost::asio::ip::address_v4::any().to_string())
+                  res.emplace(boost::asio::ip::address::from_string(addr),
+                              ep.port());
+            if (v6)
+              for (auto const& addr: itf.second.ipv6_address)
+                if (addr != boost::asio::ip::address_v6::any().to_string())
+                  res.emplace(boost::asio::ip::address::from_string(addr),
+                              ep.port());
+          }
+          return res;
         }
-        return res;
       }
 
       void
