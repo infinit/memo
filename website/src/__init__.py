@@ -299,6 +299,14 @@ class Website(bottle.Bottle):
       'show_comparison': show_comparison,
     }
 
+  @route('/documentation/key-value-store', name = 'doc_kv')
+  @view('pages/docs/kv.html')
+  def root(self):
+    return {
+      'title': 'Key-Value Store',
+      'description': 'Learn about the Infinit key-value store.',
+    }
+
   @route('/open-source', name = 'opensource')
   @view('pages/opensource.html')
   def root(self):

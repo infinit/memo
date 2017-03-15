@@ -153,6 +153,7 @@ def configure(
     'templates/pages/docs/best_practices.html',
     'templates/pages/docs/technology.html',
     'templates/pages/docs/docker_volume_plugin.html',
+    'templates/pages/docs/kv.html',
 
     'templates/pages/docs/get_started.html',
 
