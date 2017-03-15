@@ -87,21 +87,15 @@ def configure(
     } or dict()
     )
   gendn = GRPCGen('doughnut.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
-  genkv = GRPCGen('kv.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
   genfs = GRPCGen('fs.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
 
-  srcs = genkv.dsts + genfs.dsts + gendn.dsts + drake.nodes(
+  srcs = genfs.dsts + gendn.dsts + drake.nodes(
     'doughnut.cc',
-    'kv.cc',
     'grpc.cc',
     'filesystem.cc',
     'serializer.cc',
     'serializer.hh'
   )
   sources = srcs
-  # make a conveniance grpc lib with all libgrpc stuff
+  # make a convenience grpc lib with all libgrpc stuff
   grpc_lib = drake.cxx.DynLib('grpc', grpc.sources, cxx_toolkit, grpc.cxx_config_lib)
-
-  #kv_client = drake.cxx.Executable('kv-client',
-  #  genkv.dsts + drake.nodes('kv-client.cc'),
-  #  cxx_toolkit, cxx_config)
