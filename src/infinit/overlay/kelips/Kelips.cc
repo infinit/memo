@@ -3356,30 +3356,6 @@ namespace infinit
         return Overlay::WeakMember::own(w.lock());
       }
 
-      boost::optional<model::Endpoints>
-      Node::_refetch_endpoints(model::Address id)
-      {
-        // Perform a lookup for the node
-        ELLE_LOG("%s: refetch endpoints for %s", this, id);
-        boost::optional<model::Endpoints> res;
-        boost::optional<NodeLocation> result;
-        kelipsGet(id, 1, false, -1, true, false,
-                  [&] (NodeLocation p)
-                  {
-                    result = p;
-                  },
-                  true);
-        if (result)
-        {
-          ELLE_LOG("%s: got endpoints from network: %s",
-                   this, result->endpoints());
-          res = result->endpoints();
-        }
-        if (!res || res->empty())
-          return {};
-        return res;
-      }
-
       elle::reactor::Generator<std::pair<model::Address, Node::WeakMember>>
       Node::_lookup(std::vector<infinit::model::Address> const& addresses,
                     int n) const

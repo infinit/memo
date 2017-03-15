@@ -267,8 +267,6 @@ namespace infinit
         _advertise(Remote& r);
         void
         _fetch_entries(Remote& r);
-        boost::optional<Endpoints>
-        _endpoints_refetch(Address id);
         void
         _perform(std::string const& name, std::function<void()> job);
         /// A peer appears to have disappeared.  We hope to see it again.

@@ -690,19 +690,6 @@ namespace infinit
         ELLE_DEBUG("added %s entries from %f", entries.size(), r);
       }
 
-      boost::optional<Endpoints>
-      Kouncil::_endpoints_refetch(Address id)
-      {
-        if (auto it = find(this->_infos, id))
-        {
-          ELLE_DEBUG("updating endpoints for %s with %s entries",
-                     id, it->endpoints().size());
-          return it->endpoints();
-        }
-        else
-          return boost::none;
-      }
-
       /*---------.
       | PeerInfo |
       `---------*/

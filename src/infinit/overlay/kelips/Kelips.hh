@@ -376,9 +376,6 @@ namespace infinit
           std::pair<elle::reactor::Thread::unique_ptr, bool>> _node_lookups;
         std::unordered_map<elle::reactor::Thread*, elle::reactor::Thread::unique_ptr>
           _bootstraper_threads;
-      private:
-        boost::optional<model::Endpoints>
-        _refetch_endpoints(model::Address id);
       };
     }
   }
