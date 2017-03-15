@@ -274,7 +274,7 @@ $(document).ready(function() {
     $('code.lang-python').parent().hide();
 
     // Switch language
-    $('a[data-language]').click(function() {
+    $('a[data-language]').click(function(e) {
       var elementstoShow;
       var language = $(this).attr('data-language');
 
@@ -288,9 +288,9 @@ $(document).ready(function() {
       elementstoShow.parent().show();
 
       $('a[data-language]').removeClass('active');
-      $('a[data-language=' + language).addClass('active');
+      $('a[data-language=' + language + ']').addClass('active');
 
-      return false;
+      e.preventDefault();
     });
 
     // Merge all snippets of the page
