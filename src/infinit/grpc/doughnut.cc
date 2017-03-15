@@ -129,8 +129,9 @@ namespace infinit
       {
         auto& sched = elle::reactor::scheduler();
         using sig = std::function<::grpc::Status(Service*,::grpc::ServerContext*, const GArg *, GRet*)>;
+        _method_names.push_back(std::make_unique<std::string>(name));
         ::grpc::Service::AddMethod(new ::grpc::RpcServiceMethod(
-          (new std::string(name))->c_str(), ::grpc::RpcMethod::NORMAL_RPC,
+          _method_names.back()->c_str(), ::grpc::RpcMethod::NORMAL_RPC,
           new ::grpc::RpcMethodHandler<Service, GArg, GRet>(
             (sig)std::bind(
               &invoke_named<NF, GArg, GRet, NOEXCEPT>,
@@ -138,6 +139,8 @@ namespace infinit
               std::placeholders::_2, std::placeholders::_3, std::placeholders::_4),
             this)));
       }
+    private:
+      std::vector<std::unique_ptr<std::string>> _method_names;
     };
 
     std::unique_ptr< ::grpc::Service>
