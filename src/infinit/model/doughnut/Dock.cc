@@ -91,14 +91,6 @@ namespace infinit
                   });
               }));
         }
-        for (auto const& interface: elle::network::Interface::get_map(
-               elle::network::Interface::Filter::only_up |
-               elle::network::Interface::Filter::no_loopback |
-               elle::network::Interface::Filter::no_autoip))
-          if (interface.second.ipv4_address.size() > 0)
-            this->_local_ips.emplace_back(
-              boost::asio::ip::address::from_string(
-                interface.second.ipv4_address));
       }
 
       Dock::Dock(Dock&& source)

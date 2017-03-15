@@ -177,13 +177,13 @@ namespace infinit
     public:
       virtual
       std::string
-      type_name() = 0;
+      type_name() const = 0;
       virtual
       elle::json::Array
-      peer_list() = 0;
+      peer_list() const = 0;
       virtual
       elle::json::Object
-      stats() = 0;
+      stats() const = 0;
 
     /*----------.
     | Printable |

@@ -455,3 +455,7 @@ def configure(
   docker_file.ports([80, 443])
   docker_file.entry_point(['/usr/bin/python3', '/scripts/entry.py'])
   drake.docker.DockerBuilder(docker_image, docker_file)
+
+# Local Variables:
+# mode: python
+# End:

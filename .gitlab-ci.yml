@@ -26,7 +26,7 @@ x86_64-centos6-gcc4:
     - export LC_ALL=en_US.utf8
     - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive
+    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
@@ -67,7 +67,7 @@ x86_64-ubuntu-gcc4:
   script:
     - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive
+    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
@@ -110,7 +110,7 @@ x86_64-alpine-gcc:
   script:
     - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive
+    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
@@ -149,7 +149,7 @@ x86_64-jessie-gcc4:
   script:
     - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive
+    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
@@ -185,7 +185,7 @@ x86_64-windows-mingw4:
   script:
     - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive
+    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt
@@ -221,8 +221,9 @@ x86_64-osx-clang:
   script:
     - export LC_ALL=en_US.UTF-8
     - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
+    - export DRAKE_RAW=1 # debuging cmake issues
     - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive
+    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - mkdir -p ../fs-build
@@ -253,7 +254,7 @@ website:
   script:
     - export DRAKE_MTIME=0 # rsync and mtime comparisons don't play along very well
     - git submodule sync --recursive || git submodule sync
-    - git submodule update --force --init --recursive || git submodule update --init --recursive
+    - git submodule update --force --init --recursive || git submodule update --init --recursive || ( (git submodule sync --recursive || git submodule sync) && (git submodule update --force --init --recursive || git submodule update --init --recursive))
     - git fetch origin --tags
     - git fetch origin --force "refs/notes/*:refs/notes/*"
     - pip3 install -r drake/requirements.txt

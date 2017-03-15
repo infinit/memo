@@ -9,6 +9,7 @@
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index_container.hpp>
 
+#include <elle/athena/LamportAge.hh>
 #include <elle/unordered_map.hh>
 
 #include <infinit/model/doughnut/Peer.hh>
@@ -18,6 +19,7 @@ namespace infinit
 {
   namespace symbols
   {
+    ELLE_DAS_SYMBOL(disappearance);
     ELLE_DAS_SYMBOL(endpoints);
     ELLE_DAS_SYMBOL(stamp);
   }
@@ -100,6 +102,15 @@ namespace infinit
         /// Remote node.
         using Remote = infinit::model::doughnut::Remote;
 
+        /// A clock.
+        using Clock = std::chrono::high_resolution_clock;
+        /// A reference date.
+        using Time = std::chrono::time_point<Clock>;
+        /// The type of our timers.
+        using Timer = boost::asio::basic_waitable_timer<Clock>;
+        /// Transportable timeout.
+        using LamportAge = elle::athena::LamportAge;
+
       /*-------------.
       | Construction |
       `-------------*/
@@ -111,7 +122,7 @@ namespace infinit
          */
         Kouncil(model::doughnut::Doughnut* dht,
                 std::shared_ptr<Local> local,
-                boost::optional<int> eviction_delay = boost::none);
+                boost::optional<int> eviction_delay = {});
         /// Destruct a Kouncil.
         ~Kouncil() override;
       protected:
@@ -134,7 +145,7 @@ namespace infinit
       public:
         /// Global address book.
         ELLE_ATTRIBUTE_R(AddressBook, address_book);
-        /// All known peers.
+        /// All peers we are currently connected to.
         ELLE_ATTRIBUTE_R(Peers, peers);
         ELLE_ATTRIBUTE(std::default_random_engine, gen, mutable);
       private:
@@ -147,12 +158,20 @@ namespace infinit
       | Peers |
       `------*/
       public:
+        /// A peer we heard about: we are connected to it, or we
+        /// expect to be able to connect to it (either because we were
+        /// disconnected from it, or because another peer told us
+        /// about it).
         struct PeerInfo
           : public elle::Printable::as<PeerInfo>
         {
-          PeerInfo(Address id, Endpoints endpoints, int64_t stamp);
-          PeerInfo(Address id, Endpoints endpoints, Time t);
-          /** Merge peer informations in this.
+          PeerInfo(Address id, Endpoints endpoints,
+                   int64_t stamp = -1,
+                   LamportAge disappearance = {});
+          PeerInfo(Address id, Endpoints endpoints, Time t,
+                   LamportAge disappearance= {});
+          explicit PeerInfo(NodeLocation const& loc);
+          /** Merge peer information in this.
            *
            *  @param info The endpoints to merge in this, iff they are more
            *              recent wrt @attribute stamp.
@@ -168,6 +187,9 @@ namespace infinit
           location() const;
           void
           print(std::ostream& o) const;
+          /// We lost contact with this peer at @a t.
+          void
+          disappear(Time t = Clock::now());
 
           /// Peer id.
           ELLE_ATTRIBUTE_R(Address, id);
@@ -175,12 +197,16 @@ namespace infinit
           ELLE_ATTRIBUTE_R(Endpoints, endpoints);
           /// Lamport clock for when the endpoints were established by the peer.
           ELLE_ATTRIBUTE_R(int64_t, stamp);
+          /// Time when we lost connection with this peer, or
+          /// LamportAge::null() if all is well.
+          ELLE_ATTRIBUTE_RWX(LamportAge, disappearance);
           /// Default model: Serialize non-local information.
           using Model = elle::das::Model<
             PeerInfo,
             decltype(elle::meta::list(symbols::id,
                                       symbols::endpoints,
-                                      symbols::stamp))>;
+                                      symbols::stamp,
+                                      symbols::disappearance))>;
         };
         /// Peer informations by id.
         using PeerInfos = bmi::multi_index_container<
@@ -188,7 +214,12 @@ namespace infinit
           bmi::indexed_by<
             bmi::hashed_unique<
               bmi::const_mem_fun<PeerInfo, Address const&, &PeerInfo::id>>>>;
+        /// The peers we heard about.
         ELLE_ATTRIBUTE_R(PeerInfos, infos);
+
+        /// Announcing evicted nodes.
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<void (Address id)>, on_evicted);
 
         /// Nodes with which we lost connection, but keep ready to see
         /// coming back.
@@ -197,13 +228,22 @@ namespace infinit
         {
         public:
           StaleEndpoint(NodeLocation const& l);
+          /// Reset this and cancel timers.
           void
-          connect(model::doughnut::Doughnut& dht);
+          clear();
+          /// Start reconnection attempts, start the overall eviction timer.
           void
-          failed(model::doughnut::Doughnut& dht);
+          reconnect(Kouncil& kouncil);
+          /// Start one new attempt to reconnect.
+          void
+          connect(Kouncil& kouncil);
+          /// Callback when an attempt timed out.
+          void
+          failed(Kouncil& kouncil);
           ELLE_ATTRIBUTE(boost::signals2::scoped_connection, slot);
-          ELLE_ATTRIBUTE(boost::asio::deadline_timer, retry_timer);
+          ELLE_ATTRIBUTE(Timer, retry_timer);
           ELLE_ATTRIBUTE(int, retry_counter);
+          ELLE_ATTRIBUTE_X(Timer, evict_timer);
         };
         using StaleEndpoints = bmi::multi_index_container<
           StaleEndpoint,
@@ -220,6 +260,9 @@ namespace infinit
         bool
         _discovered(model::Address id) override;
       private:
+        /// A new endpoint was discovered.
+        void
+        _discover(PeerInfo const& pi);
         void
         _discover(PeerInfos const& pis);
         void
@@ -232,8 +275,12 @@ namespace infinit
         _endpoints_refetch(Address id);
         void
         _perform(std::string const& name, std::function<void()> job);
+        /// A peer appears to have disappeared.  We hope to see it again.
         void
         _peer_disconnected(std::shared_ptr<Remote> peer);
+        /// Disconnection was too long, forget about this peer.
+        void
+        _peer_evicted(Address id);
         void
         _peer_connected(std::shared_ptr<Remote> peer);
         void
@@ -257,11 +304,11 @@ namespace infinit
       `-----------*/
       public:
         std::string
-        type_name() override;
+        type_name() const override;
         elle::json::Array
-        peer_list() override;
+        peer_list() const override;
         elle::json::Object
-        stats() override;
+        stats() const override;
 
       public:
         elle::json::Json

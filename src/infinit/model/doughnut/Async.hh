@@ -1,20 +1,19 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_ASYNC_HH
-# define INFINIT_MODEL_DOUGHNUT_ASYNC_HH
+#pragma once
 
-# include <functional>
-# include <unordered_map>
+#include <functional>
+#include <unordered_map>
 
-# include <boost/multi_index_container.hpp>
-# include <boost/multi_index/hashed_index.hpp>
-# include <boost/multi_index/member.hpp>
-# include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/ordered_index.hpp>
 
-# include <elle/reactor/Channel.hh>
-# include <elle/reactor/thread.hh>
+#include <elle/reactor/Channel.hh>
+#include <elle/reactor/thread.hh>
 
-# include <elle/optional.hh>
+#include <elle/optional.hh>
 
-# include <infinit/model/doughnut/Consensus.hh>
+#include <infinit/model/doughnut/Consensus.hh>
 
 namespace infinit
 {
@@ -129,14 +128,14 @@ namespace infinit
           void
           _load_operations();
           ELLE_ATTRIBUTE_R(std::unique_ptr<Consensus>, backend);
-          typedef bmi::multi_index_container<
+          using Operations = bmi::multi_index_container<
             Op,
             bmi::indexed_by<
               bmi::hashed_non_unique<
                 bmi::member<Op, Address, &Op::address> >,
               bmi::ordered_unique<
                 bmi::member<Op, int, &Op::index> >
-            > > Operations;
+            > >;
           ELLE_ATTRIBUTE(Operations, operations);
           ELLE_ATTRIBUTE(elle::reactor::Channel<int>, queue);
           ELLE_ATTRIBUTE(int, next_index);
@@ -156,15 +155,10 @@ namespace infinit
           void
           print_queue();
         };
+
+        std::ostream&
+        operator <<(std::ostream& o, Async::Op const& op);
       }
     }
   }
 }
-
-namespace std
-{
-  std::ostream&
-  operator <<(std::ostream& o,
-              infinit::model::doughnut::consensus::Async::Op const& op);
-}
-#endif

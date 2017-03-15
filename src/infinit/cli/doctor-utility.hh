@@ -1,5 +1,7 @@
 #pragma once
 
+// NO INCLUDES!!!
+//
 // This file is not public, it is made to be included by Doctor.cc
 // only.  It could be merged into it, it's here only to avoid
 // megafiles.
@@ -1727,8 +1729,12 @@ namespace
       auto interfaces = elle::network::Interface::get_map(
         elle::network::Interface::Filter::no_loopback);
       for (auto i: interfaces)
-        if (!i.second.ipv4_address.empty())
-          public_ips.emplace_back(i.second.ipv4_address);
+      {
+        for (auto const& ip: i.second.ipv4_address)
+          public_ips.emplace_back(ip);
+        for (auto const& ip: i.second.ipv6_address)
+          public_ips.emplace_back(ip);
+      }
       results.interfaces = {public_ips};
     }
     using ConnectivityFunction
@@ -1746,7 +1752,7 @@ namespace
         {
           elle::reactor::TimeoutGuard guard(timeout);
           auto address = function(*server, port + deltaport);
-          bool external = !std::contains(public_ips, address.host);
+          bool external = !elle::contains(public_ips, address.host);
           store(results.protocols, name, *server, address.local_port,
                 address.remote_port, !external);
         }

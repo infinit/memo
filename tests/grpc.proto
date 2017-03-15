@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+message Simple {
+  string str = 1;
+  int64 i64 = 2;
+  uint64 ui64 = 3;
+  bool  b = 4;
+  repeated int64 ri64 = 5;
+  repeated string rstr = 6;
+}
+
+message SIOption
+{
+  string type = 1;
+  oneof value {
+    string string = 2;
+    int64 long = 3;
+  }
+}
+
+message Complex {
+  Simple simple = 1;
+  string opt_str = 2;
+  Simple opt_simple = 3;
+  repeated Simple rsimple = 4;
+  SIOption siopt = 5;
+}

@@ -30,8 +30,8 @@ namespace infinit
       /* Maintain backward compatibility with a short-livel 0.7.0 using
        * key hashes instead of ids
       */
-      typedef elle::Option<elle::cryptography::rsa::PublicKey, elle::Buffer, int>
-      KeyOrHash;
+      using KeyOrHash
+        = elle::Option<elle::cryptography::rsa::PublicKey, elle::Buffer, int>;
 
       elle::cryptography::rsa::PublicKey
       deserialize_key_hash(elle::serialization::SerializerIn& s,
@@ -415,6 +415,11 @@ namespace infinit
       void
       BaseOKB<Block>::_seal(boost::optional<int> version)
       {
+        if (!version && this->_seal_version && *this->_seal_version)
+        {
+          version = this->_seal_version;
+          this->_seal_version.reset();
+        }
         if (this->_data_changed)
         {
           ELLE_DEBUG_SCOPE("%s: data changed, seal", *this);
@@ -524,6 +529,15 @@ namespace infinit
         , _data_plain()
         , _data_decrypted(false)
       {
+        if (version >= elle::Version(0, 8, 0))
+        {
+          s.serialize("next_seal_version", this->_seal_version);
+          if (this->_data.empty())
+          {
+            s.serialize("data_plain", this->_data_plain);
+            this->_data_changed = true;
+          }
+        }
         this->_serialize(s, version);
         if (this->doughnut() &&
             *this->owner_key() == this->doughnut()->keys().K())
@@ -541,7 +555,16 @@ namespace infinit
         if (version < elle::Version(0, 8, 0))
           s.serialize("owner", static_cast<OKBHeader&>(*this));
         else
+        {
           s.serialize("salt", this->_salt);
+          if (this->_data.empty())
+          {
+            s.serialize("data_plain", this->_data_plain);
+            if (s.in())
+              this->_data_changed = true;
+          }
+          s.serialize("next_seal_version", this->_seal_version);
+        }
         this->_serialize(s, version);
       }
 
@@ -613,6 +636,14 @@ namespace infinit
             s.serialize("signature", this->_signature->value());
           }
         }
+      }
+
+      template <typename Block>
+      void
+      BaseOKB<Block>::_decrypt()
+      {
+        this->_decrypt_data();
+        this->_data = elle::Buffer();
       }
 
       template

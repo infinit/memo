@@ -17,10 +17,10 @@
 
 #include <infinit/storage/Collision.hh>
 
+#include <infinit/model/Conflict.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Async.hh>
-#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 
@@ -709,11 +709,13 @@ namespace infinit
             remove_signature.block.get()))
             version = mb->version();
         }
+
         Async::Op::Op(Op&& b)
         : address(b.address)
         {
           *this = std::move(b);
         }
+
         void
         Async::Op::operator=(Op&& b)
         {
@@ -729,6 +731,7 @@ namespace infinit
             remove_signature.block.get()))
             version = mb->version();
         }
+
         void
         Async::print_queue()
         {
@@ -738,21 +741,17 @@ namespace infinit
             ELLE_LOG("%s: %s", op.index, op.resolver->description());
           }
         }
+
+        std::ostream&
+        operator <<(std::ostream& o, Async::Op const& op)
+        {
+          if (op.mode)
+            elle::fprintf(o, "Op::store(%s, %s)", op.index, op.block);
+          else
+            elle::fprintf(o, "Op::remove(%s)", op.index);
+          return o;
+        }
       }
     }
-  }
-}
-
-namespace std
-{
-  std::ostream&
-  operator <<(std::ostream& o,
-              infinit::model::doughnut::consensus::Async::Op const& op)
-  {
-    if (op.mode)
-      elle::fprintf(o, "Op::store(%s, %s)", op.index, op.block);
-    else
-      elle::fprintf(o, "Op::remove(%s)", op.index);
-    return o;
   }
 }

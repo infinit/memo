@@ -190,22 +190,6 @@ namespace infinit
       };
     }
 
-    static
-    std::string
-    protocol_str(doughnut::Protocol protocol)
-    {
-      switch (protocol)
-      {
-        case doughnut::Protocol::all:
-          return "all";
-        case doughnut::Protocol::tcp:
-          return "tcp";
-        case doughnut::Protocol::utp:
-          return "utp";
-      }
-      elle::unreachable();
-    }
-
     void
     MonitoringServer::_serve(std::shared_ptr<elle::reactor::network::Socket> socket)
     {
@@ -225,12 +209,13 @@ namespace infinit
             {
               case Query::Stats:
               {
-                elle::json::Object res;
-                res["consensus"] = this->_owner.consensus()->stats();
-                res["overlay"] = this->_owner.overlay()->stats();
-                res["peers"] = this->_owner.overlay()->peer_list();
-                res["protocol"] = protocol_str(this->_owner.protocol());
-                res["redundancy"] = this->_owner.consensus()->redundancy();
+                auto res = elle::json::Object{
+                  {"consensus", this->_owner.consensus()->stats()},
+                  {"overlay", this->_owner.overlay()->stats()},
+                  {"peers", this->_owner.overlay()->peer_list()},
+                  {"protocol", elle::sprintf("%s", this->_owner.protocol())},
+                  {"redundancy", this->_owner.consensus()->redundancy()},
+                };
                 response.reset(new MonitoringServer::MonitorResponse(
                   true, {}, res));
                 break;

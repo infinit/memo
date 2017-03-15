@@ -1,7 +1,6 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_PROTOCOL
-# define INFINIT_MODEL_DOUGHNUT_PROTOCOL
+#pragma once
 
-# include <elle/serialization/Serializer.hh>
+#include <elle/serialization/Serializer.hh>
 
 namespace infinit
 {
@@ -18,6 +17,9 @@ namespace infinit
 
       std::ostream&
       operator <<(std::ostream&, Protocol);
+
+      Protocol
+      make_protocol(std::string const& name);
     }
   }
 }
@@ -39,5 +41,3 @@ namespace elle
     };
   }
 }
-
-#endif

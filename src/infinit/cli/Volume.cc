@@ -6,6 +6,7 @@
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/utility.hh>
 #include <infinit/filesystem/filesystem.hh>
+#include <infinit/grpc/grpc.hh>
 #include <infinit/model/Model.hh>
 #include <infinit/model/doughnut/Local.hh>
 
@@ -142,7 +143,8 @@ namespace infinit
               cli::listen = boost::optional<std::string>(),
               cli::fetch_endpoints_interval = elle::defaulted(300),
               cli::input = boost::optional<std::string>(),
-              cli::disable_UTF_8_conversion = false)
+              cli::disable_UTF_8_conversion = false,
+              cli::grpc = boost::optional<std::string>())
       , pull(*this,
              "Remove a volume from {hub}",
              cli::name,
@@ -192,7 +194,8 @@ namespace infinit
             cli::listen = boost::optional<std::string>(),
             cli::fetch_endpoints_interval = elle::defaulted(300),
             cli::input = boost::optional<std::string>(),
-            cli::disable_UTF_8_conversion = false)
+            cli::disable_UTF_8_conversion = false,
+            cli::grpc = boost::optional<std::string>())
 #if !defined INFINIT_WINDOWS
       , start(*this,
               "Start a volume through the daemon",
@@ -294,7 +297,6 @@ namespace infinit
       void resolve_aliases(elle::Defaulted<bool>& arg1,
                            elle::Defaulted<bool>& arg2)
       {
-        ELLE_ERR("%s %s %s %s", bool(arg1), bool(arg2), arg1.get(), arg2.get());
         if (arg1 && !arg2)
           arg2 = *arg1;
         else if (!arg1 && arg2)
@@ -728,7 +730,8 @@ namespace infinit
                        boost::optional<std::string> listen,
                        Defaulted<int> fetch_endpoints_interval,
                        boost::optional<std::string> input_name,
-                       bool disable_UTF_8_conversion)
+                       bool disable_UTF_8_conversion,
+                       boost::optional<std::string> grpc)
     {
       ELLE_TRACE_SCOPE("mount");
       auto& cli = this->cli();
@@ -782,7 +785,8 @@ namespace infinit
                listen,
                fetch_endpoints_interval,
                input_name,
-               disable_UTF_8_conversion);
+               disable_UTF_8_conversion,
+               grpc);
     }
 
 
@@ -982,7 +986,8 @@ namespace infinit
                      boost::optional<std::string> listen,
                      Defaulted<int> fetch_endpoints_interval,
                      boost::optional<std::string> input_name,
-                     bool disable_UTF_8_conversion)
+                     bool disable_UTF_8_conversion,
+                     boost::optional<std::string> grpc)
     {
       ELLE_TRACE_SCOPE("run");
       auto& cli = this->cli();
@@ -1080,6 +1085,7 @@ namespace infinit
           stat_thread = network.make_stat_update_thread(ifnt, owner, *model);
         ELLE_TRACE_SCOPE("run volume");
         cli.report_action("running", "volume", volume.name);
+        auto& dht = *model;
         auto fs = volume.run(std::move(model),
                              mo.mountpoint,
                              mo.readonly,
@@ -1092,6 +1098,13 @@ namespace infinit
                              , mount_icon
 #endif
                              );
+        if (grpc)
+        {
+          model::Endpoint ep(*grpc);
+          new elle::reactor::Thread("grpc", [&dht, fs=fs.get(), ep] {
+              infinit::grpc::serve_grpc(dht, *fs, ep);
+          });
+        }
         auto killer = cli.killed.connect([&, count = std::make_shared<int>(0)]
           {
             switch ((*count)++)
