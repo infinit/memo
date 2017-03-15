@@ -1745,11 +1745,10 @@ namespace
       {
         static const elle::reactor::Duration timeout = 3_sec;
         ELLE_TRACE("connect using %s to %s:%s", name, *server, port + deltaport);
-        std::string result = elle::sprintf("  %s: ", name);
         try
         {
           elle::reactor::TimeoutGuard guard(timeout);
-          auto address = function(*server, port + deltaport);
+          auto const address = function(*server, port + deltaport);
           bool external = !elle::contains(public_ips, address.host);
           store(results.protocols, name, *server, address.local_port,
                 address.remote_port, !external);
@@ -2199,8 +2198,8 @@ namespace
       {
         auto const& volume = elems.second.first;
         auto& status = elems.second.second;
-        auto network = networks.find(volume.network);
-        auto network_presents = network != networks.end();
+        auto const network = networks.find(volume.network);
+        auto const network_presents = network != networks.end();
         status = network_presents && network->second.second;
         auto network_result = boost::find_if(results.networks,
                                              [volume] (auto const& n)
@@ -2227,12 +2226,12 @@ namespace
       {
         auto const& drive = elems.second.first;
         auto& status = elems.second.second;
-        auto volume = volumes.find(drive.volume);
-        auto volume_presents = volume != volumes.end();
-        auto volume_ok = volume_presents && volume->second.second;
-        auto network = networks.find(drive.network);
-        auto network_presents = network != networks.end();
-        auto network_ok = network_presents && network->second.second;
+        auto const volume = volumes.find(drive.volume);
+        auto const volume_presents = volume != volumes.end();
+        auto const volume_ok = volume_presents && volume->second.second;
+        auto const network = networks.find(drive.network);
+        auto const network_presents = network != networks.end();
+        auto const network_ok = network_presents && network->second.second;
         status = network_ok && volume_ok;
         if (status)
           store(results.drives, drive.name, status);

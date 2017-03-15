@@ -147,7 +147,7 @@ namespace infinit
       }
       endpoints.port = port;
       ELLE_TRACE("Pushing endpoints");
-      this->_infinit.beyond_push(this->_url, std::string("endpoints for"),
+      this->_infinit.beyond_push(this->_url, "endpoints for",
                                  network.name, endpoints, self, false);
     }
 
