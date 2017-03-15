@@ -1,7 +1,8 @@
 #include <infinit/cli/Network.hh>
 
-#include <boost/tokenizer.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/range/algorithm_ext/erase.hpp>
+#include <boost/tokenizer.hpp>
 
 #include <elle/algorithm.hh>
 #include <elle/make-vector.hh>
@@ -1416,7 +1417,7 @@ namespace infinit
                            buf, 16384, true);
         if (res <= 0)
           elle::err("Unable to fetch group %s", name);
-        elle::Buffer b(buf, res);
+        auto b = elle::Buffer(buf, res);
         elle::IOStream is(b.istreambuf());
         auto key = elle::serialization::json::deserialize
           <elle::cryptography::rsa::PublicKey>(is);
@@ -1460,37 +1461,35 @@ namespace infinit
                                 "network \"%s\" to edit group admins",
                                 network.name);
         };
-      auto add_admin = [&] (elle::cryptography::rsa::PublicKey const& key,
-                            bool group, bool read, bool write)
+      auto add_admin = [&keys = dht.admin_keys, &changed_admins]
+        (elle::cryptography::rsa::PublicKey const& key,
+         bool group, bool read, bool write)
         {
           if (read && !write)
-            push_back_if_missing(group ? dht.admin_keys.group_r : dht.admin_keys.r,
-                                 key);
+            push_back_if_missing(group ? keys.group_r : keys.r, key);
           if (write) // Implies RW.
-            push_back_if_missing(group ? dht.admin_keys.group_w : dht.admin_keys.w,
-                                 key);
+            push_back_if_missing(group ? keys.group_w : keys.w, key);
           changed_admins = true;
         };
-      for (auto u: admin_r)
+      for (auto const& u: admin_r)
       {
-        auto r = user_key(ifnt, u, mountpoint);
+        auto const r = user_key(ifnt, u, mountpoint);
         check_group_mount(r.second);
         add_admin(r.first, r.second, true, false);
       }
-      for (auto u: admin_rw)
+      for (auto const& u: admin_rw)
       {
-        auto r = user_key(ifnt, u, mountpoint);
+        auto const r = user_key(ifnt, u, mountpoint);
         check_group_mount(r.second);
         add_admin(r.first, r.second, true, true);
       }
-      for (auto u: admin_remove)
+      for (auto const& u: admin_remove)
       {
-        auto r = user_key(ifnt, u, mountpoint);
+        auto const r = user_key(ifnt, u, mountpoint);
         check_group_mount(r.second);
         auto del = [&r](auto& cont)
           {
-            cont.erase(std::remove(cont.begin(), cont.end(), r.first),
-                       cont.end());
+            boost::remove_erase(cont, r.first);
           };
         del(dht.admin_keys.r);
         del(dht.admin_keys.w);
