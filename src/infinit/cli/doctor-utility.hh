@@ -1726,11 +1726,13 @@ namespace
     auto public_ips = std::vector<std::string>{};
     ELLE_TRACE("list interfaces")
     {
+      // FIXME: no ipv6?
       auto interfaces = elle::network::Interface::get_map(
         elle::network::Interface::Filter::no_loopback);
-      for (auto i: interfaces)
-        if (!i.second.ipv4_address.empty())
-          public_ips.emplace_back(i.second.ipv4_address);
+      for (auto const& i: interfaces)
+        public_ips.insert(public_ips.end(),
+                          i.second.ipv4_address.begin(),
+                          i.second.ipv4_address.end());
       results.interfaces = {public_ips};
     }
     using ConnectivityFunction

@@ -994,25 +994,24 @@ namespace infinit
                   }));
             });
           this->_port = l->server_endpoint().port();
-          for (auto const& itf: elle::network::Interface::get_map(
-                 elle::network::Interface::Filter::only_up |
-                 elle::network::Interface::Filter::no_loopback |
-                 elle::network::Interface::Filter::no_autoip))
           {
-            if (itf.second.ipv4_address.size() > 0 && v4)
+            using Filter = elle::network::Interface::Filter;
+            auto filter = Filter::only_up | Filter::no_loopback | Filter::no_autoip;
+            for (auto const& itf: elle::network::Interface::get_map(filter))
             {
-              this->_local_endpoints.push_back(TimedEndpoint(Endpoint(
-                boost::asio::ip::address::from_string(itf.second.ipv4_address),
-                _port), now()));
-              ELLE_DEBUG("add local endpoint %s:%s",
-                         itf.second.ipv4_address, this->_port);
-            }
-            if (v6) for (auto const& addr: itf.second.ipv6_address)
-            {
-              this->_local_endpoints.push_back(TimedEndpoint(Endpoint(
-                boost::asio::ip::address::from_string(addr),
-                _port), now()));
-              ELLE_DEBUG("add local endpoint %s:%s", addr, this->_port);
+              auto add = [this](auto const& addrs){
+                for (auto const& addr: addrs)
+                {
+                  this->_local_endpoints.emplace_back(Endpoint(
+                    boost::asio::ip::address::from_string(addr),
+                    this->_port), now());
+                  ELLE_DEBUG("add local endpoint %s:%s", addr, this->_port);
+                }
+              };
+              if (v4)
+                add(itf.second.ipv4_address);
+              if (v6)
+                add(itf.second.ipv6_address);
             }
           }
           reload_state(*l);

@@ -129,16 +129,22 @@ namespace infinit
       }
       ELLE_TRACE("Obtaining local endpoints");
       if (!no_local_endpoints)
-        for (auto const& itf: elle::network::Interface::get_map(
-               elle::network::Interface::Filter::only_up |
-               elle::network::Interface::Filter::no_loopback |
-               elle::network::Interface::Filter::no_autoip))
+      {
+        using Filter = elle::network::Interface::Filter;
+        auto const filter = Filter::only_up | Filter::no_loopback | Filter::no_autoip;
+        for (auto const& itf: elle::network::Interface::get_map(filter))
         {
-          if (itf.second.ipv4_address.size() > 0 && v4)
-            endpoints.addresses.push_back(itf.second.ipv4_address);
-          if (v6) for (auto const& addr: itf.second.ipv6_address)
-            endpoints.addresses.push_back(addr);
+          auto add = [&endpoints](auto const& addrs) {
+            endpoints.addresses
+            .insert(endpoints.addresses.end(),
+                    addrs.cbegin(), addrs.cend());
+          };
+          if (v4)
+            add(itf.second.ipv4_address);
+          if (v6)
+            add(itf.second.ipv6_address);
         }
+      }
       endpoints.port = port;
       ELLE_TRACE("Pushing endpoints");
       this->_infinit.beyond_push(this->_url, std::string("endpoints for"),

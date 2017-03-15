@@ -331,21 +331,16 @@ namespace infinit
                        | elle::network::Interface::Filter::no_awdl);
         for (auto const& itf: elle::network::Interface::get_map(filter))
         {
-          if (!itf.second.ipv4_address.empty()
-              && itf.second.ipv4_address != boost::asio::ip::address_v4::any().to_string())
-          {
-            res.insert(elle::reactor::network::TCPServer::EndPoint(
-              boost::asio::ip::address::from_string(itf.second.ipv4_address),
-              ep.port()));
-          }
+          // FIXME: no condition on v4?
+          for (auto const& addr: itf.second.ipv4_address)
+            if (addr != boost::asio::ip::address_v4::any().to_string())
+              res.emplace(boost::asio::ip::address::from_string(addr),
+                          ep.port());
           if (v6)
-          for (auto const& ip6: itf.second.ipv6_address)
-          {
-            if (ip6 != boost::asio::ip::address_v6::any().to_string())
-              res.insert(elle::reactor::network::TCPServer::EndPoint(
-                boost::asio::ip::address::from_string(ip6),
-                ep.port()));
-          }
+            for (auto const& addr: itf.second.ipv6_address)
+              if (addr != boost::asio::ip::address_v6::any().to_string())
+                res.emplace(boost::asio::ip::address::from_string(addr),
+                            ep.port());
         }
         return res;
       }
