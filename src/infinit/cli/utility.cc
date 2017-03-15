@@ -50,8 +50,8 @@ namespace infinit
         {
           try
           {
-            auto host = elle::reactor::network::resolve_tcp(a, std::to_string(port),
-              elle::os::inenv("INFINIT_NO_IPV6"));
+            auto host = elle::reactor::network::resolve_tcp(a, port,
+              elle::os::inenv("INFINIT_NO_IPV6"))[0];
             endpoints.addresses.push_back(host.address().to_string());
           }
           catch (elle::reactor::network::ResolutionError const& e)

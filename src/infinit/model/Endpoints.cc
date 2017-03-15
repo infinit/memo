@@ -37,7 +37,7 @@ namespace infinit
 
     Endpoint::Endpoint(std::string const& address,
                        int port)
-      : Endpoint(elle::reactor::network::resolve_udp(address, std::to_string(port)))
+      : Endpoint(elle::reactor::network::resolve_udp(address, port)[0])
     {}
 
     Endpoint::Endpoint(boost::asio::ip::tcp::endpoint ep)
@@ -58,7 +58,7 @@ namespace infinit
         elle::err("invalid endpoint: %s", repr);
       auto saddr = repr.substr(0, sep);
       auto sport = repr.substr(sep + 1);
-      auto ep = elle::reactor::network::resolve_udp(saddr, sport, !v6);
+      auto ep = elle::reactor::network::resolve_udp(saddr, sport, !v6)[0];
       this->_address = ep.address();
       this->_port = ep.port();
     }
