@@ -492,13 +492,13 @@ namespace infinit
                 if (it == index.end())
                 {
                   addresses.push_back(addr);
-                  index.insert(std::make_pair(addr, addresses.size()-1));
+                  index.emplace(addr, addresses.size()-1);
                   idx = addresses.size()-1;
                 }
                 else
                   idx = it->second;
-                cfiles.insert(std::make_pair(f.first,
-                                             std::make_pair(f.second.first, idx)));
+                cfiles.emplace(f.first,
+                               std::make_pair(f.second.first, idx));
               }
               s.serialize("file_addresses", addresses);
               s.serialize("file_files", cfiles);
@@ -536,7 +536,7 @@ namespace infinit
               if (it == loc_indexes.end())
               {
                 locs.push_back(loc);
-                loc_indexes.insert(std::make_pair(loc.id(), locs.size() - 1));
+                loc_indexes.emplace(loc.id(), locs.size() - 1);
               }
             }
           }
@@ -557,7 +557,7 @@ namespace infinit
             if (it == res_indexes.end())
             {
               output.push_back(o);
-              res_indexes.insert(std::make_pair(o, output.size()-1));
+              res_indexes.emplace(o, output.size()-1);
             }
             else
             {
@@ -967,7 +967,7 @@ namespace infinit
                       }
                     std::multimap<Address, Address> ofiles; // ordered fileId -> owner
                     for (auto const& f: this->_state.files)
-                      ofiles.insert(std::make_pair(f.second.address, f.second.home_node));
+                      ofiles.emplace(f.second.address, f.second.home_node);
                     Address prev = Address::null;
                     for (auto const& f: ofiles)
                     {
@@ -1702,8 +1702,7 @@ namespace infinit
         for (auto const& f: files)
         {
           auto& fd = data.find(f)->second;
-          res.insert(std::make_pair(f,
-            std::make_pair(fd.last_seen, fd.*access)));
+          res.emplace(f, std::make_pair(fd.last_seen, fd.*access));
           fd.last_gossip = now();
           fd.gossip_count++;
         }
@@ -1724,7 +1723,7 @@ namespace infinit
         for (auto const& f: files)
         {
           auto& fd = _state.contacts[group].find(f)->second;
-          res.insert(std::make_pair(f, fd.endpoints));
+          res.emplace(f, fd.endpoints);
           fd.last_gossip = now();
           fd.gossip_count++;
         }
@@ -1754,7 +1753,7 @@ namespace infinit
         }
         for (auto const& f: new_contacts)
         {
-          res.insert(std::make_pair(f->address, f->endpoints));
+          res.emplace(f->address, f->endpoints);
           f->last_gossip = now();
           f->gossip_count++;
         }
@@ -1915,8 +1914,8 @@ namespace infinit
             {
               if (idx == indexes[ipos])
               {
-                res.insert(std::make_pair(f.first,
-                  std::make_pair(f.second.last_seen, f.second.home_node)));
+                res.emplace(f.first,
+                            std::make_pair(f.second.last_seen, f.second.home_node));
                 ipos++;
               }
               ++idx;
@@ -1971,8 +1970,8 @@ namespace infinit
             {
               if (idx == indexes[ipos])
               {
-                res.insert(std::make_pair(f.first,
-                  std::make_pair(f.second.last_seen, f.second.home_node)));
+                res.emplace(f.first,
+                            std::make_pair(f.second.last_seen, f.second.home_node));
                 ipos++;
               }
               ++idx;
@@ -2186,8 +2185,8 @@ namespace infinit
                 return i.second.home_node == f.second.second;});
             if (it == its.second)
             {
-              _state.files.insert(std::make_pair(f.first,
-                File{f.first, f.second.second, f.second.first, Time(), 0}));
+              _state.files.emplace(f.first,
+                                   File{f.first, f.second.second, f.second.first, Time(), 0});
               ELLE_DUMP("%s: registering %x live since %s (%s)", *this,
                          f.first,
                          std::chrono::duration_cast<std::chrono::seconds>(now() - f.second.first).count(),
@@ -2240,7 +2239,7 @@ namespace infinit
               }
             }, false));
           auto ptr = t.get();
-          _bootstraper_threads.insert(std::make_pair(ptr, std::move(t)));
+          _bootstraper_threads.emplace(ptr, std::move(t));
         }
         packet::Gossip res;
         res.sender = _self;
@@ -2249,8 +2248,7 @@ namespace infinit
         if (group_count <= _config.gossip.bootstrap_group_target + 5)
         {
           for (auto const& e: _state.contacts[g])
-            res.contacts.insert(std::make_pair(e.first,
-              e.second.endpoints));
+            res.contacts.emplace(e.first, e.second.endpoints);
         }
         else
         {
@@ -2281,7 +2279,7 @@ namespace infinit
               continue;
             else
               for (auto const& e: _state.contacts[i])
-                res.contacts.insert(std::make_pair(e.first, e.second.endpoints));
+                res.contacts.emplace(e.first, e.second.endpoints);
           }
         }
         else
@@ -2746,7 +2744,7 @@ namespace infinit
             continue;
           }
           auto ir =
-            this->_pending_requests.insert(std::make_pair(req.request_id, r));
+            this->_pending_requests.emplace(req.request_id, r);
           ELLE_ASSERT(ir.second);
           ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
           send(req, it->second);
@@ -2867,8 +2865,7 @@ namespace infinit
               ELLE_TRACE("no contact to forward GET to");
               break;
             }
-            auto ir =
-              this->_pending_requests.insert(std::make_pair(req.request_id, r));
+            auto ir = this->_pending_requests.emplace(req.request_id, r);
             ELLE_ASSERT(ir.second);
             ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
             send(req, it->second);
@@ -2894,8 +2891,7 @@ namespace infinit
                       return f.second.home_node == e.id();
                     });
                   if (it_r == its.second)
-                  _state.files.insert(std::make_pair(file,
-                    File{file, e.id(), now(), Time(), 0}));
+                  _state.files.emplace(file, File{file, e.id(), now(), Time(), 0});
                 }
                 if (result_set.insert(e.id()).second)
                   yield(e);
@@ -3470,8 +3466,8 @@ namespace infinit
         auto keys = l.storage()->list();
         for (auto const& k: keys)
         {
-          _state.files.insert(std::make_pair(k,
-            File{k, _self, now(), now(), _config.gossip.new_threshold + 1}));
+          _state.files.emplace(k,
+            File{k, _self, now(), now(), _config.gossip.new_threshold + 1});
           //ELLE_DUMP("%s: reloaded %x", *this, k);
         }
       }
@@ -3541,12 +3537,9 @@ namespace infinit
           auto it = boost::find_if(its, [&](auto const& i) {
               return i.second.home_node == f.second;});
           if (it == its.second)
-          {
-            _state.files.insert(std::make_pair(
-                                  f.first,
-                                  File{f.first, f.second, now(), now(),
-                                      this->_config.gossip.new_threshold + 1}));
-          }
+            _state.files.emplace(f.first,
+                                 File{f.first, f.second, now(), now(),
+                                     this->_config.gossip.new_threshold + 1});
         }
       }
 
@@ -3718,8 +3711,8 @@ namespace infinit
           });
         if (!result)
         { // mark for future fast fail
-          _node_lookups.insert(std::make_pair(address, std::make_pair(
-            elle::reactor::Thread::unique_ptr(), false)));
+          _node_lookups.emplace(address, std::make_pair(
+            elle::reactor::Thread::unique_ptr(), false));
           elle::err("Node %s not found", address);
         }
         return make_peer(*result);
@@ -3732,7 +3725,7 @@ namespace infinit
         req.sender = _self;
         req.token = elle::cryptography::random::generate<elle::Buffer>(128);
         req.challenge = elle::cryptography::random::generate<elle::Buffer>(128);
-        _challenges.insert(std::make_pair(req.token.string(), req.challenge));
+        _challenges.emplace(req.token.string(), req.challenge);
         ELLE_DEBUG("Storing challenge %x", req.token);
         return req;
       }
@@ -3828,7 +3821,7 @@ namespace infinit
             auto r = std::make_shared<PendingRequest>();
             r->startTime = now();
             r->barrier.close();
-            this->_pending_requests.insert(std::make_pair(gf.request_id, r));
+            this->_pending_requests.emplace(gf.request_id, r);
             send(gf, c.second);
             if (!elle::reactor::wait(r->barrier, 100_ms))
               ++hits[0];
