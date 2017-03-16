@@ -137,12 +137,12 @@ void set_document(string user, string name, string data);
 
 We will use the following blocks:
 
-* For each user, one [NB](#NB) keyed with the user name will contain
+* For each user, one [NB](#named-blocks--nb-) keyed with the user name will contain
   the address of the document list block.
-* For each user, one [MB](#MB) will serve as the document list. Its
+* For each user, one [MB](#mutable-blocks--mb-) will serve as the document list. Its
   payload will be a serialized map of document names to the document
   content address.
-* For each document, one [IB](#IB) will store the document content.
+* For each document, one [IB](#immutable-blocks--ib-) will store the document content.
 
 For the document list format, we will use a simple text serialization
 scheme of the form `"name=address\nname2=address2\n..."`. We will
