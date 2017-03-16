@@ -30,9 +30,9 @@ purposes. The most important ones are:
 * __Immutable blocks (IB)__: The simplest of all blocks, whose address is simply the hash of their content.
 * __Mutable Block (MB)__: Basic mutable block, providing atomic update (read-then-write)
   using a versioning mechanism, and security since the payload is encrypted.
-* __Address Control List Block (ACB)__: Refinement over mutable blocks providing a
-  fined-grained ACL system which can be used to defined which users can read and
-  write the block content.
+<!-- * __Address Control List Block (ACB)__: Refinement over mutable blocks providing a -->
+<!--   fined-grained ACL system which can be used to defined which users can read and -->
+<!--   write the block content. -->
 * __Named Block (NB)__: Blocks whose address can be deduced from their unique name.
   They typically store the address of another MB as their payload.
 
@@ -78,24 +78,24 @@ to that list, you need to handle the case where another task is also making an
 update to the list at the same time. See the [example](#example) below for an
 illustration of this use case.
 
-### ACL blocks (ACB) ###
+<!-- ### ACL blocks (ACB) ### -->
 
-ACB inherits the features of mutable blocks and provide additional fields to control
-which users can read and write the data.
+<!-- ACB inherits the features of mutable blocks and provide additional fields to control -->
+<!-- which users can read and write the data. -->
 
-By default an ACB can only be read and written by the user who created the block.
+<!-- By default an ACB can only be read and written by the user who created the block. -->
 
-The `Block` message has the following fields used to control ACLs:
+<!-- The `Block` message has the following fields used to control ACLs: -->
 
-* `world_readable`: If true all users will be allowed to read the ACB payload.
-* `world_writable`: If true all users will be allowed to update the ACB payload.
-* `acl`: A list of `ACLEntry`.
+<!-- * `world_readable`: If true all users will be allowed to read the ACB payload. -->
+<!-- * `world_writable`: If true all users will be allowed to update the ACB payload. -->
+<!-- * `acl`: A list of `ACLEntry`. -->
 
-The `ACLEntry` message exposes the following fields:
+<!-- The `ACLEntry` message exposes the following fields: -->
 
-* `key_koh`: user concerned by this ACL. This field containes the serialized public key of the user.
-* `read`: give read access to the user.
-* `write`: give write access to the user.
+<!-- * `key_koh`: user concerned by this ACL. This field containes the serialized public key of the user. -->
+<!-- * `read`: give read access to the user. -->
+<!-- * `write`: give write access to the user. -->
 
 ### Named blocks (NB) ###
 
@@ -113,7 +113,7 @@ a `Block` message through one of the builder functions:
 
 * Block make_immutable_block(IBData) : create IB with given payload and owner
 * Block make_mutable_block(Empty) : create MB (no arguments)
-* Block make_acl_block(Empty) : create ACB (no arguments)
+<!-- * Block make_acl_block(Empty) : create ACB (no arguments) -->
 * Block make_named_block(NamedBlockKey) : create NB with given key
 
 You can then fill the `data` (IB) or `data_plain` (MB) field with your payload and
