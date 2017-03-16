@@ -135,6 +135,10 @@ x86_64-alpine-gcc:
     - docker tag infinit-alpine:$DESC mefyl/infinit-alpine:$DESC
     - docker push mefyl/infinit-alpine:$DESC
     - docker rmi {,mefyl/}infinit-alpine:$DESC
+    - python3 drake --website=false //src/infinit/grpc/docker
+    - docker tag infinit-client-python:$DESC mefyl/infinit-client-python:$DESC
+    - docker push mefyl/infinit-client-python:$DESC
+    - docker rmi {,mefyl/}infinit-client-python:$DESC
     - time cd "${SOURCE_DIR}"
     - time ./buildenv --cache-upload-build-tree --exclude='*.deb,*.rpm,*.tbz' --branch "$CI_BUILD_REF_NAME" --build-trees-root "/cache/$CI_PROJECT_NAME" --cache-namespace "$CI_RUNNER_DESCRIPTION/$CI_PROJECT_NAME" --cache-id "$CI_RUNNER_ID" --verbose
   tags:
