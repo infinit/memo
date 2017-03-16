@@ -1,6 +1,6 @@
 @gray: darken(white, 25%);
 @infinitred: #F25E5A;
-@infinitblue: #2BBEBD;
+@infinitblue: #0197e6;
 @infinitgray: #B7B7B7;
 
 @black: #353535;
@@ -17,6 +17,7 @@
 @terminalbg: #23241f;
 
 @helvetica: 'Helvetica', 'Helvetica', 'Arial', sans-serif;
+@sf: 'sf_ui_textbold', 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
 @sourcesans: 'Source Sans Pro', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
 @monospace: 'Ubuntu Mono';
 
@@ -77,6 +78,30 @@
 .grayScaleOff() {
   filter: grayscale(0%);
   -webkit-filter: grayscale(0);
+}
+
+.pinnedProject() {
+  max-width: 45.5%; min-width: 45.5%; margin: 0 2% 2% 2%; min-height: 304px;
+  .tagline { font-size: 17px; line-height: 23px;}
+  .description { min-height: 67px; }
+}
+
+.openSourceDevelopGradient() {
+  background: linear-gradient(180deg, #1FD0FF 0%, #6891FF 100%);
+  background: -webkit-linear-gradient(180deg, #1FD0FF 0%, #6891FF 100%);
+  background: -o-linear-gradient(180deg, #1FD0FF 0%, #6891FF 100%);
+}
+
+.openSourceContributeGradient() {
+  background: linear-gradient(0deg, #02AAB0 0%, #00CDAC 100%);
+  background: -webkit-linear-gradient(0deg, #02AAB0 0%, #00CDAC 100%);
+  background: -o-linear-gradient(0deg, #02AAB0 0%, #00CDAC 100%);
+}
+
+.openSourceAccessGradient() {
+  background: linear-gradient(0deg, #FFAF2F 0%, #F0D419 100%);
+  background: -webkit-linear-gradient(0deg, #FFAF2F 0%, #F0D419 100%);
+  background: -o-linear-gradient(0deg, #FFAF2F 0%, #F0D419 100%);
 }
 
 

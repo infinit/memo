@@ -12,108 +12,109 @@
     <h1>Infinit Storage Platform</h1>
     <h2>An open-source decentralized software-based storage platform for modern environments.</h2>
 
+    <div class="schema-full">
+      <img src="${url('images/schema-storage-platform.png')}" alt="Schema Infinit Storage Platform">
+    </div>
+
     <div class="schema">
       <div class="pool">
         <div class="servers">
-          <dl class="legend total">
-            <h4>Storage Pool</h4>
-            <span class="storage">160 TB</span>
+          <dl class="legend kv">
+            <h4>Key-Value Store</h4>
           </dl>
           <dl class="legend api">
-            <h4>APIs</h4>
+            <h4>Logics</h4>
           </dl>
 
-          <div>
+          <dl class="legend logic">
+            <h4>Integrations</h4>
+          </dl>
+
+          <div class="title">
+            <h4>Storage Pool</h4>
+            <span class="storage">160 TB</span>
+          </div>
+
+          <div class="node">
             <img src="${url('images/icons/server.png')}" alt="Infinit Server">
             <p>Server</p>
             <strong class="note">(bare metal)</strong><br>
             <span class="storage">15 TB</span>
           </div>
-          <div>
+          <div class="node">
             <img src="${url('images/icons/server.png')}" alt="Infinit Server">
             <p>Server</p>
             <strong class="note">(vm)</strong><br>
             <span class="storage">70 TB</span>
           </div>
-          <div>
+          <div class="node">
             <img src="${url('images/icons/server.png')}" alt="Infinit Server">
             <p>Server</p>
             <strong class="note">(container)</strong><br>
             <span class="storage">60 TB</span>
           </div>
-          <div>
+          <div class="node">
             <img src="${url('images/icons/server.png')}" alt="Infinit Server">
             <p>NAS</p>
             <strong class="note">(bare metal)</strong><br>
             <span class="storage">15 TB</span>
           </div>
+
           <hr class="spacer" />
         </div>
 
         <div class="functionalities">
           <ul>
             <li>
-              <img src="${url('images/icons/fault_tolerance-small.png')}" alt="Data Placement">
-              <strong>Data Placement</strong> <br>
-              Agnostic
+              <img src="${url('images/icons/fault-tolerance-small.png')}" alt="Data Placement">
+              <strong>Data Placement</strong>
             </li>
             <li>
-              <img src="${url('images/icons/lock-small.png')}" alt="Data Placement">
-              <strong>Encryption</strong> <br>
-              RSA 2048/AES-256
+              <img src="${url('images/icons/redundancy-small.png')}" alt="Redundancy">
+              <strong>Redundancy</strong>
             </li>
             <li>
-              <img src="${url('images/icons/versioning.png')}" alt="Data Placement">
-              <strong>Versioning</strong> <br>
-              Deactivated
-            </li>
-            <li>
-              <img src="${url('images/icons/redundancy-small.png')}" alt="Data Placement">
-              <strong>Redundancy</strong> <br>
-              Replication F=3
-            </li>
-            <li>
-              <img src="${url('images/icons/compression.png')}" alt="Data Placement">
-              <strong>Compression</strong> <br>
-              Activated
-            </li>
-            <li>
-              <img src="${url('images/icons/deduplication.png')}" alt="Data Placement">
+              <img src="${url('images/icons/deduplication.png')}" alt="Deduplication">
               <strong>Deduplication</strong> <br>
-              Deactivated
             </li>
           </ul>
         </div>
         <div class="spacer"></div>
       </div>
 
-      <div class="apis">
+      <div class="logics">
         <div class="block">
           <strong>Block</strong>
-          <ul>
-            <li>iSCSI</li>
-            <li>NBD</li>
-            <li>FCOE</li>
-          </ul>
+          <p><img src="${url('images/icons/compression.png')}" alt="Compression"> Compression</p>
+          <p><img src="${url('images/icons/lock-small.png')}" alt="Encryption"> Encryption</p>
+          <p>...</p>
         </div>
 
         <div class="object">
           <strong>Object</strong>
-          <ul>
-            <li>AWS S3</li>
-            <li>OpenStack Swift</li>
-          </ul>
+          <p><img src="${url('images/icons/block-size.png')}" alt="Block Size"> Block Size</p>
+          <p><img src="${url('images/icons/lock-small.png')}" alt="Encryption"> Encryption</p>
+          <p>...</p>
         </div>
 
         <div class="file">
           <strong>File</strong>
-          <ul>
-            <li>FUSE</li>
-            <li>NFS</li>
-            <li>SMB</li>
-          </ul>
+          <p><img src="${url('images/icons/versioning.png')}" alt="Versioning"> Versioning</p>
+          <p><img src="${url('images/icons/compression.png')}" alt="Compression"> Compression</p>
+          <p>...</p>
         </div>
         <div class="spacer"></div>
+      </div>
+
+      <div class="apis">
+        <strong>NBD</strong>
+        <strong>iSCSi</strong>
+        <strong>FCoE</strong>
+        <strong>Amazon S3</strong>
+        <strong>GCS</strong>
+        <strong>FUSE</strong>
+        <strong>Dokan</strong>
+        <strong>NFS</strong>
       </div>
     </div>
   </section>
@@ -199,9 +200,9 @@
   <section class="docker">
     <div class="wrapper">
       <img src="${url('images/logos/docker-big.png')}" alt="docker logo">
-      <h2>Infinit + Docker = ❤</h2>
+      <h2>Persistent storage for Docker with Infinit</h2>
       <p>The Infinit platform comes with several Docker integrations, from a Docker volume plugin to more cluster-based integrations at the Docker Swarm level, allowing for container migration and stateful application scaling.</p>
-      <a class="button white" href="${route('doc_docker_plugin')}">See Docs</a>
+      <a class="button white" href="${route('docker')}">Read more</a>
     </div>
   </section>
 
@@ -241,21 +242,21 @@
       <strong class="title">Latest blogposts</strong>
 
       <div class="article">
-        <h3><a href="http://blog.infinit.sh/our-presentation-at-docker-distributed-systems-summit/" target="_blank">Our Presentation at the Docker Distributed Systems Summit</a></h3>
-        <span class="date">— 07 October 2016</span>
-        <p>Our CTO, Quentin Hocquet, was invited to speak at the Docker Distributed Systems Summit in Berlin this week... <a href="http://blog.infinit.sh/our-presentation-at-docker-distributed-systems-summit/">Read More</a></p>
+        <h3><a href="http://blog.infinit.sh/a-new-look-for-a-new-life/" target="_blank">A new look for a new life</a></h3>
+        <span class="date">— 13 March 2017</span>
+        <p>A lot of changes have happened at Infinit over the last few months. The Docker acquisition, the focus on our Storage Platform, the closure of... <a href="http://blog.infinit.sh/a-new-look-for-a-new-life/">Read More</a></p>
       </div>
 
       <div class="article">
-        <h3><a href="http://blog.infinit.sh/release-0-7-0-infinit-for-windows-ipv6-more/" target="_blank">Release 0.7.0 — Infinit for Windows, IPv6 & more...</a></h3>
-        <span class="date">— 28 September 2016</span>
-        <p>We just released our 0.7 version of our filesystem! A lot of things have been integrated into this release, including... <a href="http://blog.infinit.sh/release-0-7-0-infinit-for-windows-ipv6-more/">Read More</a></p>
+        <h3><a href="http://blog.infinit.sh/elle-our-c-core-library-is-now-open-source/" target="_blank">Elle, our C++ core library, is now open source</a></h3>
+        <span class="date">— 20 February 2017</span>
+        <p>We are proud to finally open source Elle, Infinit's C++ core library providing a C++ asynchronous framework, based on coroutines... <a href="http://blog.infinit.sh/elle-our-c-core-library-is-now-open-source/">Read More</a></p>
       </div>
 
       <div class="article">
-        <h3><a href="http://blog.infinit.sh/announcing-the-infinit-docker-volume-plugin/" target="_blank">Announcing the Infinit Docker volume plugin</a></h3>
-        <span class="date">— 27 September 2016</span>
-        <p>Docker's lightweight virtualization, portable container format and orchestration tools are driving a revolution in software engineering... <a href="http://blog.infinit.sh/announcing-the-infinit-docker-volume-plugin/">Read More</a></p>
+        <h3><a href="http://blog.infinit.sh/hyperconvergent-and-hyperscalable-storage-for-docker-2/" target="_blank">How to choose between hyper-convergent and hyper-scalable storage architectures</a></h3>
+        <span class="date">— 14 February 2017</span>
+        <p>Before jumping directly into the heart of the article, let's clarify these two terms with their definition to bring some context... <a href="http://blog.infinit.sh/hyperconvergent-and-hyperscalable-storage-for-docker-2/">Read More</a></p>
       </div>
     </div>
 
@@ -264,19 +265,17 @@
 
       <div class="tweet">
         <img src="${url('images/logos/twitter-infinit.png')}" alt="twitter infinit logo">
-        <p><a href="https://twitter.com/infinit/status/784332986598567938">@infinit_sh</a>: Live demo of our filesystem 🙏 #dockersummit <span class="date">— 7 Oct 2016</span></p>
+        <p><a href="https://twitter.com/jquintard/status/827434786306273280">@jquintard</a>: I will be presenting <a href="https://twitter.com/infinit">@Infinit</a>'s storage platform at <a href="https://twitter.com/DockerCon">@DockerCon</a> in April. Feel free to <a href="https://blog.docker.com/2017/02/dockercon-speakers-announced/">join us</a>! <span class="date">— 3 Feb 2017</span></p>
+      </div>
+
+      <div class="tweet">
+        <img src="${url('images/logos/docker-big.png')}" alt="twitter docker logo">
+        <p><a href="https://twitter.com/docker/status/806146369983578112">@docker</a>: #Docker Acquires Distributed Storage Startup <a href="https://twitter.com/infinit">@Infinit</a> to Provide Support for Stateful Containerized Applications: <a href="https://blog.docker.com/2016/12/docker-acquires-infinit/">blog.docker.com/2016...</a> <span class="date">— 6 Dec 2016</span></p>
       </div>
 
       <div class="tweet">
         <img src="${url('images/logos/twitter-infinit.png')}" alt="twitter infinit logo">
-        <p><a href="https://twitter.com/infinit_sh/status/755680080232325120">@infinit_sh</a>: .@mefyl presenting our new Docker volume plugin at the @docker meetup yesterday in Paris. <a href="http://www.meetup.com/Docker-Paris/events/232467995/">meetup.com/Docker-Paris/events...</a> <span class="date">— 19 July 2016</span></p>
-      </div>
-
-      <div class="event">
-        <img src="${url('images/logos/meetup.png')}" alt="meetup logo">
-        <strong>Infinit Meetup #2 — Drinks and Talks</strong>
-        <span class="date">05 July 2016 - Paris</span>
-        <a target="_blank" href="http://www.meetup.com/Infinit-Paris/events/231333549/">Learn More</a>
+        <p><a href="https://twitter.com/infinit/status/806153366573318145">@infinit_sh</a>: We’re joining @docker! 🐳 🎉 <a href="http://blog.infinit.sh/infinit-joins-docker/">blog.infinit.sh/infinit-joins...</a> <span class="date">— 6 Dec 2016</span></p>
       </div>
     </div>
   </section>

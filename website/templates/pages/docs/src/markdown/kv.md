@@ -2,10 +2,8 @@ The Infinit Key-Value store
 ===========================
 
 Infinit provides a distributed decentralized key-value store, with built-in
-replication and security.
-
-This key-value store is accessible through a [grpc](http://www.grpc.io) interface
-specified in the file [doughnut.proto](doughnut.proto).
+replication and security. This key-value store is accessible through a [grpc](http://www.grpc.io) interface
+specified in the file `doughnut.proto`.
 
 ## API overview ##
 
@@ -28,13 +26,13 @@ or compromised storage nodes from tampering with the content.
 The infinit KV store supports many different block types that serve different
 purposes. The most important ones are:
 
-* Immutable blocks (IB): The simplest of all blocks, whose address is simply the hash of their content.
-* Mutable Block (MB): Basic mutable block, providing atomic update (read-then-write)
+* __Immutable blocks (IB)__: The simplest of all blocks, whose address is simply the hash of their content.
+* __Mutable Block (MB)__: Basic mutable block, providing atomic update (read-then-write)
   using a versioning mechanism, and security since the payload is encrypted.
-* Address Control List Block (ACLB): Refinement over mutable blocks providing a
+* __Address Control List Block (ACLB)__: Refinement over mutable blocks providing a
   fined-grained ACL system which can be used to defined which users can read and
   write the block content.
-* Named Block (NB): Blocks whose address can be deduced from their unique name.
+* __Named Block (NB)__: Blocks whose address can be deduced from their unique name.
   They typically store the address of another MB as their payload.
 
 ### The Block message type ###
@@ -60,7 +58,6 @@ IB exposes one additional feature through the `block.owner` field:
 if set to the address of another mutable block, then removing the IB will only be allowed if
 the user would be allowed to remove said mutable block.
 
-<a name="MB"></a>
 ### Mutable blocks (MB) ###
 
 Mutable blocks are versioned data blocks that can be updated.
@@ -99,7 +96,6 @@ The `ACLEntry` message exposes the following fields:
 * `read`: give read access to the user.
 * `write`: give write access to the user.
 
-<a name="NB"></a>
 ### Named blocks (NB) ###
 
 Named Blocks have the unique feature of being accessible from a user-defined unique-id.
@@ -122,64 +118,25 @@ a `Block` message through one of the builder functions:
 You can then fill the `data` (IB) or `data_plain` (MB) field with your payload and
 call the `insert` function.
 
-<script src="http://code.jquery.com/jquery-latest.min.js" type="text/javascript"></script>
-<script language="javascript">
-languages = ["cxx", "go", "python"];
-function reach(n) {
-  return n.nextSibling.nextSibling.nextSibling;
-}
-function show(lang) {
-  for (i in languages)
-  {
-    l = languages[i]
-    if (l == lang)
-      $("."+l).show();
-    else
-      $("."+l).hide();
-  }
-}
-function prepare() {
-  for (l in languages) {
-    lang = languages[l]
-    for (i=0; i<7; ++i) {
-      e = document.getElementById(lang + "_" + i);
-      if (!e) {
-        console.log("no such: " + lang + "_" + i);
-        continue;
-      }
-      console.log(e);
-      console.log(reach(e));
-      re = reach(e);
-      re.className += lang;
-    }
-  }
-  show("cxx");
-}
+## Example##
 
-</script>
+*A simple multi-user document storage system*
 
-## Example: a simple multi-user document storage system ##
+This section provides a complete example of a simple use case of the infinit KV store. Our task for this project is to provide a simple document storage system for multiple users.
 
-This section provides a complete example of a simple use case of the infinit KV store.
-
-<a href="javascript: show('cxx')"> show in c++</a>
-<a href="javascript: show('go')"> show in go</a>
-<a href="javascript: show('python')"> show in python</a>
-
-Our task for this project is to provide a simple document storage system for multiple users.
-
-### The public API ###
+### Public API ###
 
 Our goal is to implement the following simple API:
 
-```
-  void create_user(string user);
-  vector<string> list_documents(string user);
-  string get_document(string user, string name);
-  void set_document(string user, string name, string data);
-```
+<pre class="goal">
+<code class="notInFullCode">void create_user(string user);
+vector<string> list_documents(string user);
+string get_document(string user, string name);
+void set_document(string user, string name, string data);
+</code>
+</pre>
 
-### specifying our block layout ###
+### Specifying our block layout ###
 
 We will use the following blocks:
 
@@ -190,45 +147,47 @@ We will use the following blocks:
 * For each document, one [IB](#IB) will store the document content.
 
 For the document list format, we will use a simple text serialization scheme of the form
-"name=address\nname2=address2\n...". We will encode addresses in hexadecimal.
+`"name=address\nname2=address2\n..."`. We will encode addresses in hexadecimal.
 
-### Generating the GRPC and protobuf sources ###
+### Generating the gRPC and protobuf sources ###
 
 The first step is to generate the sources from the [doughnut.proto] file. This can
 be achieved by the following two commands:
 
-<div id="go_0"></div>
-```
-$> mkdir -p doughnut/src/doughnut
+<ul class="switchLanguage">
+  <li><a class="active" data-language="go" href="#">Go</a></li>
+  <li><a data-language="cpp" href="#">C++</a></li>
+  <li><a data-language="python" href="#">Python</a></li>
+</ul>
+
+<pre>
+<code class="lang-python notInFullCode">$> protoc -I path --python_out=. --grpc_python_out=.  --plugin=protoc-gen-grpc_python=$(which grpc_python_plugin) path/doughnut.proto
+</code>
+</pre>
+
+<pre>
+<code class="lang-go notInFullCode">$> mkdir -p doughnut/src/doughnut
 $> protoc -I path --go_out=plugins=grpc:doughnut/src/doughnut path/doughnut.proto
-```
+</code>
+</pre>
 
-<div id="python_0"></div>
-```
-$> protoc -I path --python_out=. --grpc_python_out=.  --plugin=protoc-gen-grpc_python=$(which grpc_python_plugin) path/doughnut.proto
-
-```
-
-<div id="cxx_0"></div>
-```
-$> protoc -I/path --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` /path/doughnut.proto
+<pre>
+<code class="c++ notInFullCode">$> protoc -I/path --grpc_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` /path/doughnut.proto
 $> protoc -I/path --cpp_out=. /path/doughnut.proto
-```
+</code>
+</pre>
 
-where *path* is the path where *doughnut.proto* is stored.
-
-This step will generate a few source and headers file depending on the language.
+... where *path* is the path where *doughnut.proto* is stored. This step will generate a few source and headers file depending on the language.
 
 
-### Connecting to the grpc KV store server ###
+### Connecting to the gRPC KV store server ###
 
 Let us start with the boilerplate needed to connect to the grpc server. We will
 accept the grpc endpoint name into the first command line argument.
 We also take a command from *create*, *list*, *get*, *set* and its arguments from the
 command line.
 
-<div id="python_1"></div>
-```
+```python
 #! /usr/bin/env python3
 
 import sys
@@ -260,19 +219,18 @@ elif command == 'set':
   set_document(sys.argv[3], sys.argv[4], sys.argv[5])
 ```
 
-<div id="go_1"></div>
-```
+```go
 package main
 
 import (
   "encoding/hex"
-	"fmt"
-	"os"
-	"strings"
+  "fmt"
+  "os"
+  "strings"
   "doughnut"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/grpclog"
+  "golang.org/x/net/context"
+  "google.golang.org/grpc"
+  "google.golang.org/grpc/grpclog"
 )
 
 func from_hex(input string) []byte {
@@ -307,8 +265,7 @@ func main() {
 }
 ```
 
-<div id="cxx_1"></div>
-```
+```c++
 #include <vector>
 #include <string>
 #include <map>
@@ -363,8 +320,7 @@ Implementing `create_user` is easy: we first create a Mutable Block with an empt
 which will be our document list block. We then create a Named Block keyed with our user
 name, that points to the document list block.
 
-<div id="python_2"></div>
-```
+```python
 def create_user(user):
   # Create and insert the document list MB
   doclist = stub.make_mutable_block(doughnut.Empty())
@@ -378,8 +334,7 @@ def create_user(user):
 
 ```
 
-<div id="go_2"></div>
-```
+```go
 func create_user(client doughnut.DoughnutClient, user string) {
   doclist,_ := client.MakeMutableBlock(context.Background(), &doughnut.Empty{})
   client.Insert(context.Background(), &doughnut.Insert{Block: doclist})
@@ -394,8 +349,7 @@ func create_user(client doughnut.DoughnutClient, user string) {
 }
 ```
 
-<div id="cxx_2"></div>
-```
+```c++
 void create_user(string user)
 {
   // Create an insert message
@@ -440,8 +394,7 @@ void create_user(string user)
 Let's first factor the serialization functions since we
 are going to need them multiple times.
 
-<div id="python_3"></div>
-```
+```python
 def parse_document_list(payload):
   lines = payload.split('\n')
   res = dict()
@@ -459,8 +412,7 @@ def serialize_document_list(dl):
 ```
 
 
-<div id="go_3"></div>
-```
+```go
 func parse_document_list(payload string) map[string]string {
   m := make(map[string]string)
   lines := strings.Split(payload, "\n")
@@ -482,8 +434,7 @@ func serialize_document_list(dl map[string]string) string {
 }
 ```
 
-<div id="cxx_3"></div>
-```
+```c++
 map<string, string> parse_document_list(string payload)
 {
   vector<string> lines;
@@ -513,8 +464,7 @@ will be the address of the document list block.
 
 Let's factor the get part since we'll need it multiple times.
 
-<div id="python_4"></div>
-```
+```python
 def get_documents(user):
   addr = stub.named_block_address(doughnut.NamedBlockKey(key=user.encode('utf-8')))
   nb_or_err = stub.fetch(doughnut.Fetch(address = addr.address))
@@ -530,8 +480,7 @@ def list_documents(user):
   return dl.keys()
 ```
 
-<div id="go_4"></div>
-```
+```go
 func get_documents(client doughnut.DoughnutClient, user string) (map[string]string, doughnut.Block) {
   addr,_ := client.NamedBlockAddress(context.Background(),
     &doughnut.NamedBlockKey{Key: []byte(user)})
@@ -559,8 +508,7 @@ func list_documents(client doughnut.DoughnutClient, user string) []string {
 }
 ```
 
-<div id="cxx_4"></div>
-```
+```c++
 map<string, string> get_documents(string user, ::Block* block = nullptr)
 {
   ::Address address;
@@ -611,8 +559,7 @@ vector<string> list_documents(string user)
 To get the content of one specific document, we use the above `get_documents` function,
 extract the document address, and fetch its IB:
 
-<div id="python_5"></div>
-```
+```python
 def get_document(user, name):
   dl, unused = get_documents(user)
   hexaddr = dl.get(name, None)
@@ -622,8 +569,7 @@ def get_document(user, name):
   return doc.block.data
 ```
 
-<div id="go_5"></div>
-```
+```go
 func get_document(client doughnut.DoughnutClient, user string, name string) []byte {
   dl, _ := get_documents(client, user)
   addr := from_hex(dl[name])
@@ -632,8 +578,7 @@ func get_document(client doughnut.DoughnutClient, user string, name string) []by
 }
 ```
 
-<div id="cxx_5"></div>
-```
+```c++
 string get_document(string user, string name)
 {
   auto dl = get_documents(user);
@@ -657,8 +602,7 @@ Here comes the trickiest part: we need to update the document list atomically, i
 case two tasks try to update said document list at the same time. For that we will
 retry the update until there is no update conflict.
 
-<div id="python_6"></div>
-```
+```python
 def set_document(user, name, data):
   # create and insert the document IB
   doc = stub.make_immutable_block(doughnut.CHBData(data=data.encode('utf-8')))
@@ -682,8 +626,7 @@ def set_document(user, name, data):
     dl = parse_document_list(block.data_plain.decode())
 ```
 
-<div id="go_6"></div>
-```
+```go
 func set_document(client doughnut.DoughnutClient, user string, name string, data []byte) {
   // create and insert the document IB
   doc, _ := client.MakeImmutableBlock(context.Background(),
@@ -715,8 +658,7 @@ func set_document(client doughnut.DoughnutClient, user string, name string, data
 }
 ```
 
-<div id="cxx_6"></div>
-```
+```c++
 void set_document(string user, string name, string data)
 {
   ::Block mb;
@@ -768,38 +710,8 @@ void set_document(string user, string name, string data)
 }
 ```
 
-### the complete code ###
+## Complete code ##
 
-<pre><code><div id="complete_cxx" class="cxx"></div></code></pre>
-<pre><code><div id="complete_go" class="go"></div></code></pre>
-<pre><code><div id="complete_python" class="python"></div></code></pre>
-
-<script language="javascript">
-document.getElementById("complete_cxx").innerHTML = (""
-    + document.getElementById("cxx_1").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("cxx_2").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("cxx_3").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("cxx_4").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("cxx_5").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("cxx_6").nextSibling.nextSibling.nextSibling.innerHTML);
-document.getElementById("complete_go").innerHTML = (""
-    + document.getElementById("go_1").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("go_2").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("go_3").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("go_4").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("go_5").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("go_6").nextSibling.nextSibling.nextSibling.innerHTML);
-document.getElementById("complete_python").innerHTML = (""
-    + document.getElementById("python_1").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("python_2").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("python_3").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("python_4").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("python_5").nextSibling.nextSibling.nextSibling.innerHTML
-    + document.getElementById("python_6").nextSibling.nextSibling.nextSibling.innerHTML);
-
-</script>
-
-<script language="javascript">
-prepare();
-show("cxx");
-</script>
+<pre><code class="complete lang-python notInFullCode"></code></pre>
+<pre><code class="complete lang-go notInFullCode"></code></pre>
+<pre><code class="complete cpp notInFullCode"></code></pre>

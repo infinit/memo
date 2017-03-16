@@ -645,31 +645,31 @@ echo "[Client/Server E] Home location: ${infinit_home_Dcs}"
 # create user A
 set_home "${infinit_home_Acs}"
 echo "[Client/Server A] Create user: ${USER_NAME_A}"
-create_user "${USER_NAME_A}" "--email nobody+${USER_NAME_A}@infinit.sh --push"
+create_user "${USER_NAME_A}" "--push"
 track_user "${infinit_home_Acs}" "${USER_NAME_A}"
 
 # create user B
 set_home "${infinit_home_Bc}"
 echo "[Client B] Create user: ${USER_NAME_B}"
-create_user "${USER_NAME_B}" "--email nobody+${USER_NAME_B}@infinit.sh --push"
+create_user "${USER_NAME_B}" "--push"
 track_user "${infinit_home_Bc}" "${USER_NAME_B}"
 
 # create user C
 set_home "${infinit_home_Cs}"
 echo "[Server C] Create user: ${USER_NAME_C}"
-create_user "${USER_NAME_C}" "--email nobody+${USER_NAME_C}@infinit.sh --push"
+create_user "${USER_NAME_C}" "--push"
 track_user "${infinit_home_Cs}" "${USER_NAME_C}"
 
 # create user D
 set_home "${infinit_home_Dcs}"
 echo "[Client/Server D] Create user: ${USER_NAME_D}"
-create_user "${USER_NAME_D}" "--email nobody+${USER_NAME_D}@infinit.sh --push"
+create_user "${USER_NAME_D}" "--push"
 track_user "${infinit_home_Dcs}" "${USER_NAME_D}"
 
 # create user E
 set_home "${infinit_home_Ecs}"
 echo "[Client/Server E] Create user: ${USER_NAME_E}"
-create_user "${USER_NAME_E}" "--email nobody+${USER_NAME_E}@infinit.sh --push"
+create_user "${USER_NAME_E}" "--push"
 track_user "${infinit_home_Ecs}" "${USER_NAME_E}"
 
 # ---------- client/server A -------------------------------------------------

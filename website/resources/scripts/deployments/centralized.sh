@@ -636,19 +636,19 @@ echo "[Client C] Home location: ${infinit_home_Cc}"
 # create user A
 set_home "${infinit_home_Ac}"
 echo "[Client A] Create user: ${USER_NAME_A}"
-create_user "${USER_NAME_A}" "--email nobody+${USER_NAME_A}@infinit.sh --push"
+create_user "${USER_NAME_A}" "--push"
 track_user "${infinit_home_Ac}" "${USER_NAME_A}"
 
 # create user B
 set_home "${infinit_home_Bc}"
 echo "[Client B] Create user: ${USER_NAME_B}"
-create_user "${USER_NAME_B}" "--email nobody+${USER_NAME_B}@infinit.sh --push"
+create_user "${USER_NAME_B}" "--push"
 track_user "${infinit_home_Bc}" "${USER_NAME_B}"
 
 # create user C
 set_home "${infinit_home_Cc}"
 echo "[Client B] Create user: ${USER_NAME_C}"
-create_user "${USER_NAME_C}" "--email nobody+${USER_NAME_C}@infinit.sh --push"
+create_user "${USER_NAME_C}" "--push"
 track_user "${infinit_home_Cc}" "${USER_NAME_C}"
 
 # transmit user identity from client A to server A

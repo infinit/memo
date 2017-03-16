@@ -2,58 +2,48 @@
 
 <%block name="content">
 
-  <%include file='menu.html'/>
-
   <section class="doc">
-    <h1>Overview</h1>
-
-    <!-- <p class="note">The Infinit Storage Platform allows for the creation of scalable, resilient and secure storage infrastructure for modern and container environments. This software-defined storage platform beneficing from several advantages over the centralized and distributed systems commonly used.</p> -->
 
     <div class="features">
       <div class="resilient">
-        <h2 id="resilient">A resilient self-healing architecture.</h2>
+        <h2 id="resilient">A Resilient Architecture</h2>
         <div class="decentralized">
           <img src="${url('images/schema-decentralized-4-devices.png')}" alt="Infinit Decentralized Platform">
           <h3 id="decentralized">Decentralized</h3>
-          <p>Unlike most distributed systems with a master/slave model, Infinit benefits from a truly peer-to-peer architecture protecting from single points of failure or bottlenecks.</p>
+          <p>Unlike most distributed systems relying on a master/slave model, Infinit benefits from a truly decentralized architecture (peer to peer). This model protects Infinit from single points of failure or bottlenecks.</p>
         </div>
 
         <div class="reliable">
           <img src="${url('images/schema-replication.png')}" alt="Infinit Replication Schema">
-          <h3 id="reliable">Reliable and fault tolerant</h3>
-          <p>Every block of every file is dynamically replicated several times (configurable by the administrator) in order to ensure durability and availability of the data.</p>
+          <h3 id="reliable">Fault tolerant and self-healing</h3>
+          <p>Every block of every file is dynamically replicated several times (configurable by the administrator) in order to ensure durability and availability.</p>
 
-          <p>In case of failures, Infinit will automatically adapt the number of replicas in order to guarantee the reliability of the data.</p>
+          <p>Should a failure occur, Infinit will automatically adapt the number of redundant copies to come back to an healthy state.</p>
         </div>
       </div>
 
 
       <div class="scalable">
-        <h2>Scalable to peta bytes.</h2>
-        <p>Manage your needs in terms of storage capacity by increasing/decreasing (<strong>scale up/down</strong>) contributions from existing providers and/or adding/removing (<strong>scale out/in</strong>) storage resources without interrupting the service.</p>
+        <h2>Scalable To Petabytes</h2>
+        <p>Manage your needs in terms of storage capacity by increasing/decreasing (scale up/down) contributions from existing nodes and/or adding/removing (scale out/in) storage servers without interrupting the service.</p>
 
         <img src="${url('images/schema-decentralized-scalable.png')}" alt="Infinit Sclable Schema">
-
-        <div>
-          <h3 id="adaptability">Hyperconvergent vs hyperscalable</h3>
-          <p>Scale your storage along with your application cluster to create a hyperconvergent architecture or keep a hyperscalable infrastrcture by dissociating your storage ressources from the rest of your cluster.</p>
-        </div>
       </div>
 
       <div class="programmatic">
-        <h2>Programmatic.</h2>
-        <p class="note">Easily enable and configure key features for your needs.</p>
+        <h2>Programmable For Your Applications</h2>
+        <p class="note">Easily activate and configure policies for your needs.</p>
 
         <div>
         <img src="${url('images/icons/redundancy-small.png')}">
         <h3 id="secure">Redundancy</h3>
-        <p>Define the replication factor for every block of every file system object (file, directory etc.) to be stored multiple times.</p>
+        <p>Choose between a replication system by giving a replication factor, erasure coding or none.</p>
         </div>
 
         <div>
         <img src="${url('images/icons/lock-small.png')}">
         <h3 id="secure">Encryption</h3>
-        <p>All the files stored are cut into chunk and every chunk is encrypted (RSA/AES-256) with a unique key.</p>
+        <p>If activated, all the data items stored are encrypted (RSA/AES-256) and an access control mechanism is provided to manage keys.</p>
         </div>
 
         <div>
@@ -65,13 +55,13 @@
         <div>
         <img src="${url('images/icons/fault_tolerance-small.png')}">
         <h3 id="secure">Data Placement</h3>
-        <p>Control the placement of the redundant pieces of data through data placement policies: rack-aware, region-aware etc.</p>
+        <p>Control the placement of the redundant pieces of data through several policies: rack-aware, region-aware (different data centers) etc.</p>
         </div>
 
         <div>
         <img src="${url('images/icons/deduplication.png')}">
         <h3 id="secure">Deduplication</h3>
-        <p>Provide a policy to activate deduplication in order to reduce storage consumption when storing identical pieces of data.</p>
+        <p>Provide a policy to activate deduplication in order to avoid storing identical pieces of data.</p>
         </div>
 
         <div>
@@ -83,23 +73,22 @@
 
       <div class="multi">
         <h2>Adapt to your needs.</h2>
+        <div class="block">
+          <img src="${url('images/icons/block-device.pne')}">
+          <h3 id="versioning">Block Device</h3>
+          <p>Deploy low level virtual block device interfaces that can be formatted in the file system of your choice (ext4, NTFS, etc.) and used for non-competition flows such as databases.</p>
+        </div>
 
         <div class="fs">
           <img src="${url('images/schema-file-system.png')}">
           <h3 id="versioning">File System</h3>
-          <p>Builds a low-level virtual disk interface on top of the DHT in order to provide a hierarchical organization of files, access-control, versioning for storing your entreprise documents, logs, and more.</p>
+          <p>Access an hierarchocal organization of files through POSIX-compliant file system interfaces that provide advanced functionalities such as access control, versioning, etc.</p>
         </div>
 
         <div class="object">
           <img src="${url('images/logos/object-storages.png')}">
           <h3 id="versioning">Object Storage</h3>
-          <p>Use an S3, GCS or OpenStack compatible object store to store your Wordpress media files.</p>
-        </div>
-
-        <div class="block">
-          <img src="${url('images/icons/block-device.png')}">
-          <h3 id="versioning">Block Device</h3>
-          <p>Deploy block device backends for your MongoDB database.</p>
+          <p>Use an object storage interface (Amazon S3, OpenStack Swift) to access and store unstrctured data items aka blobs</p>
         </div>
       </div>
     </div>
