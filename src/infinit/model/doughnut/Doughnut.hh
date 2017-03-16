@@ -37,17 +37,19 @@ namespace infinit
       ELLE_DAS_SYMBOL(r);
       ELLE_DAS_SYMBOL(group_r);
       ELLE_DAS_SYMBOL(group_w);
+
       struct AdminKeys
       {
-        AdminKeys() {}
+        using PublicKeys = std::vector<elle::cryptography::rsa::PublicKey>;
+        AdminKeys() = default;
         AdminKeys(AdminKeys&& b) = default;
         AdminKeys(AdminKeys const& b) = default;
         AdminKeys&
         operator = (AdminKeys&& b) = default;
-        std::vector<elle::cryptography::rsa::PublicKey> r;
-        std::vector<elle::cryptography::rsa::PublicKey> w;
-        std::vector<elle::cryptography::rsa::PublicKey> group_r;
-        std::vector<elle::cryptography::rsa::PublicKey> group_w;
+        PublicKeys r;
+        PublicKeys w;
+        PublicKeys group_r;
+        PublicKeys group_w;
         using Model =
           elle::das::Model<AdminKeys,
                      decltype(elle::meta::list(doughnut::r,
@@ -227,8 +229,8 @@ namespace infinit
         print(std::ostream& out) const override;
       };
 
-      struct Configuration:
-        public ModelConfig
+      struct Configuration
+        : public ModelConfig
       {
       public:
         Address id;
@@ -243,11 +245,11 @@ namespace infinit
         std::vector<Endpoints> peers;
         using Model = elle::das::Model<
           Configuration,
-          elle::meta::List<symbols::Symbol_overlay,
-                           symbols::Symbol_keys,
-                           symbols::Symbol_owner,
-                           symbols::Symbol_passport,
-                           symbols::Symbol_name>>;
+          decltype(elle::meta::list(symbols::overlay,
+                                    symbols::keys,
+                                    symbols::owner,
+                                    symbols::passport,
+                                    symbols::name))>;
 
 
         Configuration(
