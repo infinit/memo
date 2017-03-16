@@ -23,10 +23,8 @@ namespace infinit
     {
     public:
       Endpoint(boost::asio::ip::address address, int port);
-      Endpoint(std::string const& address, int port);
       Endpoint(boost::asio::ip::tcp::endpoint ep);
       Endpoint(boost::asio::ip::udp::endpoint ep);
-      Endpoint(std::string const& repr);
       Endpoint(const Endpoint& b) = default;
       Endpoint();
       boost::asio::ip::tcp::endpoint
@@ -74,6 +72,19 @@ namespace infinit
       Endpoints(Super const&);
       Endpoints(std::vector<boost::asio::ip::udp::endpoint> const&);
       Endpoints(boost::asio::ip::udp::endpoint);
+      Endpoints(std::string const& address, int port);
+      Endpoints(std::string const& repr);
+
+      /// Import overloads.
+      using Super::insert;
+      /// Insert new addresses.
+      ///
+      /// flat_set is using a very broad signature for emplace, we
+      /// can't intercept it.
+      ///
+      /// @param repr A "hostname:port" string.
+      void
+      insert(std::string const& repr);
       std::vector<boost::asio::ip::tcp::endpoint>
       tcp() const;
       std::vector<boost::asio::ip::udp::endpoint>

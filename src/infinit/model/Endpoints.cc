@@ -38,6 +38,12 @@ namespace boost
   }
 }
 
+namespace
+{
+  /// Whether IPv6 support is disabled.
+  static bool ipv4_only = !elle::os::getenv("INFINIT_NO_IPV6", "").empty();
+}
+
 namespace infinit
 {
   namespace model
@@ -56,11 +62,6 @@ namespace infinit
       , _port(port)
     {}
 
-    Endpoint::Endpoint(std::string const& address,
-                       int port)
-      : Endpoint(elle::reactor::network::resolve_udp(address, port)[0])
-    {}
-
     Endpoint::Endpoint(boost::asio::ip::tcp::endpoint ep)
       : _address(ep.address())
       , _port(ep.port())
@@ -70,19 +71,6 @@ namespace infinit
       : _address(ep.address())
       , _port(ep.port())
     {}
-
-    Endpoint::Endpoint(std::string const& repr)
-    {
-      static bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty();
-      size_t sep = repr.find_last_of(':');
-      if (sep == std::string::npos || sep == repr.length())
-        elle::err("invalid endpoint: %s", repr);
-      auto saddr = repr.substr(0, sep);
-      auto sport = repr.substr(sep + 1);
-      auto ep = elle::reactor::network::resolve_udp(saddr, sport, !v6)[0];
-      this->_address = ep.address();
-      this->_port = ep.port();
-    }
 
     boost::asio::ip::tcp::endpoint
     Endpoint::tcp() const
@@ -222,6 +210,18 @@ namespace infinit
       this->emplace(std::move(ep));
     }
 
+    Endpoints::Endpoints(std::string const& repr)
+    {
+      this->insert(repr);
+    }
+
+    void
+    Endpoints::insert(std::string const& repr)
+    {
+      for (auto&& ep: elle::reactor::network::resolve_udp_repr(repr, ipv4_only))
+        this->emplace(std::move(ep));
+    }
+
     std::vector<boost::asio::ip::tcp::endpoint>
     Endpoints::tcp() const
     {
@@ -259,7 +259,7 @@ namespace infinit
       auto res = Endpoints{};
       for (std::string line; std::getline(f, line); )
         if (!line.empty())
-          res.emplace(infinit::model::Endpoint(line));
+          res.insert(line);
       return res;
     }
 

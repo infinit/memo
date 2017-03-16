@@ -263,7 +263,7 @@ namespace infinit
             try
             {
               for (auto const& s: tokenizer{peers, sep})
-                res.emplace(s);
+                res.insert(s);
             }
             catch (elle::Error const& e)
             {
