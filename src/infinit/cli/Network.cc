@@ -2,10 +2,10 @@
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
-#include <boost/tokenizer.hpp>
 
 #include <elle/algorithm.hh>
 #include <elle/make-vector.hh>
+#include <elle/reactor/network/resolve.hh>
 
 #include <infinit/Network.hh> // Storages
 #include <infinit/cli/Infinit.hh>
@@ -252,25 +252,27 @@ namespace infinit
         return res;
       }
 
+      /// Turn a list of addresses (e.g., `foo.bar.fr:http`) and/or
+      /// filenames that contains such addresses, into a list of
+      /// Endpoints.
+      ///
+      /// Yes, a list of Endpoints, not a list of Endpoint, because
+      /// foo.bar.fr might actually denote several hosts, and we want
+      /// to reach each one individually.
       std::vector<infinit::model::Endpoints>
-      parse_peers(Strings const& speers)
+      parse_peers(Strings const& peers)
       {
-        using tokenizer = boost::tokenizer<boost::char_separator<char>>;
-        auto sep = boost::char_separator<char>{","};
-        return elle::make_vector(speers, [&](auto const& peers)
-          {
-            auto res = infinit::model::Endpoints{};
-            try
-            {
-              for (auto const& s: tokenizer{peers, sep})
-                res.insert(s);
-            }
-            catch (elle::Error const& e)
-            {
-              elle::err("Malformed endpoints '%s': %s", peers, e);
-            }
-            return res;
-          });
+        auto res = std::vector<infinit::model::Endpoints>{};
+        for (auto const& peer: peers)
+        {
+          auto const eps
+            = bfs::exists(peer)
+            ? model::endpoints_from_file(peer)
+            : elle::reactor::network::resolve_udp_repr(peer);
+          for (auto const& ep: eps)
+            res.emplace_back(infinit::model::Endpoints{ep});
+        }
+        return res;
       }
 
       std::unique_ptr<infinit::storage::StorageConfig>
@@ -400,10 +402,6 @@ namespace infinit
                                                     eviction_delay);
       auto admin_keys = make_admin_keys(ifnt, admin_r, admin_rw);
 
-      auto peers = std::vector<infinit::model::Endpoints>{};
-      if (!peer.empty())
-        peers = parse_peers(peer);
-
       auto dht =
         std::make_unique<dnut::Configuration>(
           infinit::model::Address::random(0),
@@ -421,7 +419,7 @@ namespace infinit
           std::move(port),
           infinit::version(),
           admin_keys,
-          peers);
+          parse_peers(peer));
       {
         auto network = infinit::Network(ifnt.qualified_name(network_name, owner),
                                         std::move(dht),
@@ -898,18 +896,7 @@ namespace infinit
             dht->overlay()->discover(more_peers);
         }
         if (!peer.empty())
-        {
-          auto eps
-            = elle::make_vector(peer,
-                                [](auto const& peer)
-                                {
-                                  if (bfs::exists(peer))
-                                    return infinit::model::endpoints_from_file(peer);
-                                  else
-                                    return infinit::model::Endpoints({peer});
-                                });
-          dht->overlay()->discover(eps);
-        }
+          dht->overlay()->discover(parse_peers(peer));
         // Only push if we have are contributing storage.
         bool push_p = (push || publish) && dht->local() && dht->local()->storage();
         if (!dht->local() && push_p)
