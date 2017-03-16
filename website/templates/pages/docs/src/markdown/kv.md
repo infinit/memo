@@ -1,128 +1,125 @@
 The Infinit Key-Value store
 ===========================
 
-Infinit provides a distributed decentralized key-value store, with built-in
-replication and security. This key-value store is accessible through a [grpc](http://www.grpc.io) interface
-specified in the file `doughnut.proto`.
+Infinit provides a distributed decentralized key-value store, with
+built-in replication and security. This key-value store is accessible
+through a [grpc](http://www.grpc.io) interface specified in the file
+`doughnut.proto`.
 
 ## API overview ##
 
-At its most basic level, a key-value store provides a mapping from an Address to
-its corresponding content. The API is comprised of four main methods:
+At its most basic level, a key-value store provides a mapping from an
+Address to its corresponding content. The API is comprised of four
+main methods:
 
-* `BlockOrException fetch(Address)`: Returns the data Block found at given address or an error.
-* `EmptyOrException remove(Address)`: Erase the data Block at given address.
-* `EmptyOrException insert(Block)`: Insert a new block into the KV store, and return
-  the address that was attributed to it.
-* `EmptyOrException update(Block)`: Update a data block without changing its address.
+* `fetch(Fetch) returns (BlockOrException)`: Fetch the block at given
+  address.
+* `insert(Insert) returns (EmptyOrException)`: Insert a new block.
+  store.
+* `update(Update) returns (EmptyOrException)`: Update an exsiting block.
+* `remove(Address) returns (EmptyOrException)`: Erase the block at
+  given address.
 
-One thing of importance should be noted at this point: in the infinit KV-store
-one cannot chose the address that will be allocated to a given block: the
-address is allocated by infinit in a way that prevents unauthorized users
-or compromised storage nodes from tampering with the content.
-
-## Block types ##
+## Blocks ##
 
 The infinit KV store supports many different block types that serve different
 purposes. The most important ones are:
 
-* __Immutable blocks (IB)__: The simplest of all blocks, whose address is simply the hash of their content.
-* __Mutable Block (MB)__: Basic mutable block, providing atomic update (read-then-write)
-  using a versioning mechanism, and security since the payload is encrypted.
-* __Address Control List Block (ACLB)__: Refinement over mutable blocks providing a
-  fined-grained ACL system which can be used to defined which users can read and
-  write the block content.
-* __Named Block (NB)__: Blocks whose address can be deduced from their unique name.
-  They typically store the address of another MB as their payload.
+* __Immutable blocks (IB)__: A block whose contents may never change
+  and thus cannot be updated.
+* __Mutable Block (MB)__: A block whose contents can change.
+<!-- * __Address Control List Block (ACB)__: Refinement over mutable blocks providing a -->
+<!--   fined-grained ACL system which can be used to defined which users can read and -->
+<!--   write the block content. -->
+* __Named Block (NB)__: A named immutable block whose address can be
+  deduced from its name.
+
+Due to the infinit security model, only the KV store can create blocks
+and pick their address through the following methods:
+
+* `make_immutable_block(CHBData) returns (Block)`
+* `make_mutable_block(Empty) returns (Block)`
+* `make_named_block(NamedBlockKey) returns (Block)`
+
+You can then fill the `data` (IB) or `data_plain` (MB) field with your
+payload and call the `insert` procedure .
 
 ### The Block message type ###
 
-Blocks are read and written on the KV store through the `Block` protobuf message
-type. The most important fields are:
+Blocks are read and written on the KV store through the `Block`
+protobuf message type. Most fields are opaque internal data you don't
+need to worry about. The relevant fields common to all blocks are:
 
 * `bytes address`: The address of the Block.
 * `bytes data`: The raw data payload contained in the block.
-* `bytes data_plain`: The decyphered data payload (for mutable blocks which are encyphered by the kv store).
-
-Block contains more field whose meaning depends on the block type.
+* `bytes data_plain`: The decyphered data payload.
 
 ### Immutable blocks (IB) ###
 
-The IB is an immutable block (it cannot be updated) whose address is the hash of
-its content. This feature ensures the data is tamper-proof: when fetching an IB
-through the `fetch` API call, infinit will recompute the hash of the content and check
-it against the address. If both hash do not match `fetch` will return
-an exception.
+While immutable blocks are less potent that mutable blocks, they are
+much faster because they are cachable and are much easier to verify
+and not subject to conflicts. One should thus use immutable blocks
+whenever possible, especially for big payloads.
 
-IB exposes one additional feature through the `block.owner` field:
-if set to the address of another mutable block, then removing the IB will only be allowed if
-the user would be allowed to remove said mutable block.
+The IB address is the hash of its content, which ensures the data is
+tamper-proof: when fetching an IB through the `fetch` API call,
+infinit will recompute the hash of the content and check it against
+the address. If both hash do not match `fetch` will return an
+exception.
+
+IB exposes one additional feature through the `block.owner` field: if
+set to the address of a mutable block, then removing the IB will only
+be allowed if the user would be allowed to remove said mutable block.
 
 ### Mutable blocks (MB) ###
 
-Mutable blocks are versioned data blocks that can be updated.
-
-Infinit enforces an atomic update scheme by using a versioning mechanism:
-When you `fetch` a mutable block, the returned `Block` contains a version field
-that contains the block version at the moment the read occured.
-When you attempt to call `update`, that version gets incremented by one, and
-the update will only succeed if the resulting number is above the current
-block version. Otheriwise the `update` call will fail with an exception.
-In that case the returned `Exception` object will contain the current
-value of the block in the KV store, in the `current` field.
-
-Atomic updates is an important feature. For instance if your MB's payload is
-a list of values and you want to add one item
-to that list, you need to handle the case where another task is also making an
-update to the list at the same time. See the [example](#example) below for an
+Infinit enforces an atomic update scheme by using a versioning
+mechanism.  When you `fetch` a mutable block, the returned `Block`
+contains in the `int64 version` field that contains the block version.
+When you attempt to call `update`, that version is incremented and the
+update will succeed only if the pushed version is stricly superior to
+the current one. This prevents data loss if the block was updated by
+someone else between your `fetch` and your `update`. In case of such a
+conflict, the `update` call will return an `Exception` that contains
+the latest block in its `current` field. One may then replay its
+modification on the new block and retry the update. This system
+enables atomic updates - see the [example](#example) below for an
 illustration of this use case.
 
-### ACL blocks (ACLB) ###
+<!-- ### ACL blocks (ACB) ### -->
 
-ACLB inherits the features of mutable blocks and provide additional fields to control
-which users can read and write the data.
+<!-- ACB inherits the features of mutable blocks and provide additional fields to control -->
+<!-- which users can read and write the data. -->
 
-By default an ACLB can only be read and written by the user who created the block.
+<!-- By default an ACB can only be read and written by the user who created the block. -->
 
-The `Block` message has the following fields used to control ACLs:
+<!-- The `Block` message has the following fields used to control ACLs: -->
 
-* `world_readable`: If true all users will be allowed to read the ACLB payload.
-* `world_writable`: If true all users will be allowed to update the ACLB payload.
-* `acl`: A list of `ACLEntry`.
+<!-- * `world_readable`: If true all users will be allowed to read the ACB payload. -->
+<!-- * `world_writable`: If true all users will be allowed to update the ACB payload. -->
+<!-- * `acl`: A list of `ACLEntry`. -->
 
-The `ACLEntry` message exposes the following fields:
+<!-- The `ACLEntry` message exposes the following fields: -->
 
-* `key_koh`: user concerned by this ACL. This field containes the serialized public key of the user.
-* `read`: give read access to the user.
-* `write`: give write access to the user.
+<!-- * `key_koh`: user concerned by this ACL. This field containes the serialized public key of the user. -->
+<!-- * `read`: give read access to the user. -->
+<!-- * `write`: give write access to the user. -->
 
 ### Named blocks (NB) ###
 
-Named Blocks have the unique feature of being accessible from a user-defined unique-id.
-They are typically used as an entry point to access further data, usually by storing
-the address of an other mutable block in their payload.
-
-NBs are currently Immutable and thus cannot be updated once created.
-Use the `named_block_address(NamedBlockKey)` function to obtain the NB block address from its unique id.
-
-## Creating and inserting new blocks ##
-
-When inserting new blocks into the key-value store, one first needs to obtain
-a `Block` message through one of the builder functions:
-
-* Block make_immutable_block(CHBData) : create IB with given payload and owner
-* Block make_mutable_block(Empty) : create MB (no arguments)
-* Block make_acl_block(Empty) : create ACLB (no arguments)
-* Block make_named_block(NamedBlockKey) : create NB with given key
-
-You can then fill the `data` (IB) or `data_plain` (MB) field with your payload and
-call the `insert` function.
+Since block addresses are picked by infinit, named blocks enable to
+have a named root block to a block hierarchy. NBs are immutable blocks
+and thus cannot be updated once created.  Use the
+`named_block_address(NamedBlockKey) returns (Address)` procedure to
+obtain the NB block address from its name.
 
 ## Example##
 
 *A simple multi-user document storage system*
 
-This section provides a complete example of a simple use case of the infinit KV store. Our task for this project is to provide a simple document storage system for multiple users.
+This section provides a complete example of a simple use case of the
+infinit KV store. Our task for this project is to provide a simple
+document storage system for multiple users.
 
 ### Public API ###
 
@@ -140,19 +137,21 @@ void set_document(string user, string name, string data);
 
 We will use the following blocks:
 
-* For each user, one [NB](#NB) keyed with the user name will contain the address
-  of the document list block.
-* For each user, one [MB](#MB) will serve as the document list. Its payload will
-  be a serialized map of document names to the document content address.
+* For each user, one [NB](#NB) keyed with the user name will contain
+  the address of the document list block.
+* For each user, one [MB](#MB) will serve as the document list. Its
+  payload will be a serialized map of document names to the document
+  content address.
 * For each document, one [IB](#IB) will store the document content.
 
-For the document list format, we will use a simple text serialization scheme of the form
-`"name=address\nname2=address2\n..."`. We will encode addresses in hexadecimal.
+For the document list format, we will use a simple text serialization
+scheme of the form `"name=address\nname2=address2\n..."`. We will
+encode addresses in hexadecimal.
 
 ### Generating the gRPC and protobuf sources ###
 
-The first step is to generate the sources from the [doughnut.proto] file. This can
-be achieved by the following two commands:
+The first step is to generate the sources from the [doughnut.proto]
+file. This can be achieved by the following two commands:
 
 <ul class="switchLanguage">
   <li><a class="active" data-language="go" href="#">Go</a></li>
@@ -177,15 +176,17 @@ $> protoc -I/path --cpp_out=. /path/doughnut.proto
 </code>
 </pre>
 
-... where *path* is the path where *doughnut.proto* is stored. This step will generate a few source and headers file depending on the language.
+... where *path* is the path where *doughnut.proto* is stored. This
+step will generate a few source and headers file depending on the
+language.
 
 
 ### Connecting to the gRPC KV store server ###
 
-Let us start with the boilerplate needed to connect to the grpc server. We will
-accept the grpc endpoint name into the first command line argument.
-We also take a command from *create*, *list*, *get*, *set* and its arguments from the
-command line.
+Let us start with the boilerplate needed to connect to the grpc
+server. We will accept the grpc endpoint name into the first command
+line argument.  We also take a command from *create*, *list*, *get*,
+*set* and its arguments from the command line.
 
 ```python
 #! /usr/bin/env python3
@@ -605,7 +606,7 @@ retry the update until there is no update conflict.
 ```python
 def set_document(user, name, data):
   # create and insert the document IB
-  doc = stub.make_immutable_block(doughnut.CHBData(data=data.encode('utf-8')))
+  doc = stub.make_immutable_block(doughnut.IBData(data=data.encode('utf-8')))
   stub.insert(doughnut.Insert(block=doc))
   blockaddr = to_hex(doc.address)
   dl, block = get_documents(user)
@@ -630,7 +631,7 @@ def set_document(user, name, data):
 func set_document(client doughnut.DoughnutClient, user string, name string, data []byte) {
   // create and insert the document IB
   doc, _ := client.MakeImmutableBlock(context.Background(),
-    &doughnut.CHBData{Data: data})
+    &doughnut.IBData{Data: data})
   client.Insert(context.Background(), &doughnut.Insert{Block: doc})
   blockaddr := to_hex(doc.Address)
   dl, block := get_documents(client, user)
@@ -664,7 +665,7 @@ void set_document(string user, string name, string data)
   ::Block mb;
   auto dl = get_documents(user, &mb);
   // Create and insert the document IB
-  ::CHBData cdata;
+  ::IBData cdata;
   cdata.set_data(data);
   ::Block doc;
   {

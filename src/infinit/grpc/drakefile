@@ -1,14 +1,12 @@
 import drake
 import drake.cxx
+import drake.go
 import os
 
 grpc_lib = None
 grpc = None
 sources = None
 cxx_config_grpc = None
-
-with open(str(drake.path_source('../../../elle/drake-utils.py')), 'r') as f:
-  exec(f.read(), globals(), globals())
 
 class GRPCGen(drake.Builder):
   def __init__(self, proto, protoc = None, grpc_cpp_plugin = None):
@@ -67,40 +65,55 @@ class GRPCGen(drake.Builder):
 
 def configure(
     cxx_toolkit,
-    cxx_config
+    cxx_config,
+    git = None,
 ):
   global grpc_lib, grpc, sources
-  # find GO
-  for c in ['/usr/lib/go-1.7/bin/go',
-            '/usr/lib/go/bin/go',
-            '/usr/lib/golang/bin/go',
-            '/usr/local/go/bin/go',
-            '/usr/local/bin/go',
-            '/usr/bin/go']:
-    if os.path.exists(c):
-      go = c
-      break
-  grpc = drake.include('grpc', cxx_toolkit, cxx_config,
+  go = drake.go.Toolkit()
+  grpc = drake.include(
+    'grpc',
+    cxx_toolkit,
+    cxx_config,
     cmake_env = {
-      'GO_EXECUTABLE': go,
-    }
-    )
+      'GO_EXECUTABLE': go.go,
+    })
   gendn = GRPCGen('doughnut.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
-  genkv = GRPCGen('kv.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
   genfs = GRPCGen('fs.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
 
-  srcs = genkv.dsts + genfs.dsts + gendn.dsts + drake.nodes(
+  srcs = genfs.dsts + gendn.dsts + drake.nodes(
     'doughnut.cc',
-    'kv.cc',
     'grpc.cc',
     'filesystem.cc',
     'serializer.cc',
     'serializer.hh'
   )
   sources = srcs
-  # make a conveniance grpc lib with all libgrpc stuff
+  # make a convenience grpc lib with all libgrpc stuff
   grpc_lib = drake.cxx.DynLib('grpc', grpc.sources, cxx_toolkit, grpc.cxx_config_lib)
 
-  #kv_client = drake.cxx.Executable('kv-client',
-  #  genkv.dsts + drake.nodes('kv-client.cc'),
-  #  cxx_toolkit, cxx_config)
+  ## ------------- ##
+  ## Docker client ##
+  ## ------------- ##
+
+  git = git or drake.git.Git()
+
+  docker_path = drake.Path('docker')
+  docker_image = drake.docker.DockerImage(
+    'docker', 'infinit-client-python', git.description())
+  docker_file = drake.docker.DockerFile(
+    docker_path / 'Dockerfile',
+    image = 'alpine',
+    maintainer = 'Infinit <contact@infinit.sh>',
+    labels = {
+      'version': git.description(),
+    })
+  docker_file.run('apk add --update python3' \
+                  '&& apk add --virtual build-deps python3-dev gcc g++' \
+                  '&& pip3 install grpcio ' \
+                  '&& apk del build-deps ' \
+                  '&& rm -rf /var/cache/apk/*')
+  docker_file.env('PYTHONPATH', '/root')
+  docker_file.add(drake.copy(drake.node('doughnut.py'), docker_path, strip_prefix = True), '/root/')
+  docker_file.entry_point(
+    ['/usr/bin/env', 'python3', '-i', '-m', 'doughnut'])
+  drake.docker.DockerBuilder(docker_image, docker_file)
