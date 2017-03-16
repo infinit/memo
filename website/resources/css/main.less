@@ -2355,6 +2355,27 @@ body.contact {
 | Open Source   |
 `--------------*/
 
+div.star {
+  margin-top: 5px; margin-left: 8px; 
+  a { 
+    background: -webkit-linear-gradient(#FFFFFF 0%, #F2F2F2 100%);
+    background: -o-linear-gradient(#FFFFFF 0%, #F2F2F2 100%);
+    background: linear-gradient(#FFFFFF 0%, #F2F2F2 100%);
+    border-radius: 3px 0 0 3px;
+    text-transform: uppercase; color: #787878;
+
+    &:hover { background: white; }
+    svg { vertical-align: -4px; margin-right: 2px; fill: #787878 }
+  }  
+  span {     
+    display: inline-block; margin-left: -4px; background: white; 
+  } 
+  a, span {
+    font-size: 11px; font-family: @sf; padding: 5px 8px; 
+    border: 1px solid #DEDEDE;
+  }
+}
+
 body.opensource {
   
   h1, h2 { font-size: 36px; margin: 45px 0 10px 0; }
@@ -2413,29 +2434,9 @@ body.opensource {
         h3 a { .transition(); }
         h3 a:hover { color: lighten(@infinitblack, 25%); .transition(); }
 
-        .star a, .star span, .soon { 
+        .soon { 
           font-size: 11px; font-family: @sf; padding: 5px 8px; 
           border: 1px solid #DEDEDE;
-        }
-
-        .star {
-          margin-top: 5px; margin-left: 8px; 
-          a { 
-            background: -webkit-linear-gradient(#FFFFFF 0%, #F2F2F2 100%);
-            background: -o-linear-gradient(#FFFFFF 0%, #F2F2F2 100%);
-            background: linear-gradient(#FFFFFF 0%, #F2F2F2 100%);
-            border-radius: 3px 0 0 3px;
-            text-transform: uppercase; color: #787878;
-
-            &:hover { background: white; }
-            svg { vertical-align: -4px; margin-right: 2px; fill: #787878 }
-          }  
-          span {     
-            display: inline-block; margin-left: -4px; background: white; 
-          } 
-        }
-
-        .soon {
           color: white; border-radius: 3px; border: none; display: inline-block;
           text-transform: uppercase;  margin-top: 9px; padding: 3px 6px;
         }
