@@ -42,13 +42,16 @@ namespace infinit
 {
   namespace model
   {
+    /*-----------.
+    | Endpoint.  |
+    `-----------*/
+
     Endpoint::Endpoint()
       : _address()
       , _port(0)
     {}
 
-    Endpoint::Endpoint(boost::asio::ip::address address,
-                       int port)
+    Endpoint::Endpoint(boost::asio::ip::address address, int port)
       : _address(std::move(address))
       , _port(port)
     {}
@@ -158,6 +161,12 @@ namespace infinit
       }
     }
 
+    void
+    Endpoint::print(std::ostream& output) const
+    {
+      elle::fprintf(output, "%s:%s", this->address(), this->port());
+    }
+
     bool
     operator == (Endpoint const& a, Endpoint const& b)
     {
@@ -173,10 +182,10 @@ namespace infinit
     }
 
     void
-    hash_combine(std::size_t& seed, Endpoint const& endpoint)
+    hash_combine(std::size_t& h, Endpoint const& endpoint)
     {
-      boost::hash_combine(seed, endpoint.address());
-      boost::hash_combine(seed, endpoint.port());
+      boost::hash_combine(h, endpoint.address());
+      boost::hash_combine(h, endpoint.port());
     }
 
     std::size_t
@@ -213,12 +222,6 @@ namespace infinit
       this->emplace(std::move(ep));
     }
 
-    void
-    Endpoint::print(std::ostream& output) const
-    {
-      elle::fprintf(output, "%s:%s", this->address(), this->port());
-    }
-
     std::vector<boost::asio::ip::tcp::endpoint>
     Endpoints::tcp() const
     {
@@ -246,14 +249,14 @@ namespace infinit
       return res;
     }
 
-    infinit::model::Endpoints
+    Endpoints
     endpoints_from_file(boost::filesystem::path const& path)
     {
       boost::filesystem::ifstream f;
       f.open(path);
       if (!f.good())
         elle::err("unable to open for reading: %s", path);
-      auto res = infinit::model::Endpoints{};
+      auto res = Endpoints{};
       for (std::string line; std::getline(f, line); )
         if (!line.empty())
           res.emplace(infinit::model::Endpoint(line));
