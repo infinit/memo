@@ -50,8 +50,7 @@ namespace infinit
         }
       }
 
-      /** An overlay that keeps global knowledge locally.
-       */
+      /// An overlay that keeps global knowledge locally.
       class Kouncil
         : public Overlay
       {
@@ -115,11 +114,10 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        /** Construct a Kouncil with the given backends.
-         *
-         *  @arg   dht      The owning Doughnut.
-         *  @arg   local    The local server, null if pure client.
-         */
+        /// Construct a Kouncil with the given backends.
+        ///
+        /// @arg   dht      The owning Doughnut.
+        /// @arg   local    The local server, null if pure client.
         Kouncil(model::doughnut::Doughnut* dht,
                 std::shared_ptr<Local> local,
                 boost::optional<int> eviction_delay = {});
@@ -171,18 +169,16 @@ namespace infinit
           PeerInfo(Address id, Endpoints endpoints, Time t,
                    LamportAge disappearance= {});
           explicit PeerInfo(NodeLocation const& loc);
-          /** Merge peer information in this.
-           *
-           *  @param info The endpoints to merge in this, iff they are more
-           *              recent wrt @attribute stamp.
-           *  @return Wether the endpoints were replaced.
-           */
+          /// Merge peer information in this.
+          ///
+          /// @param info The endpoints to merge in this, iff they are more
+          ///             recent wrt @attribute stamp.
+          /// @return Wether the endpoints were replaced.
           bool
           merge(PeerInfo const& from);
-          /** Convert to a NodeLocation
-           *
-           *  @return A node location with this peer id and endpoints.
-           */
+          /// Convert to a NodeLocation
+          ///
+          /// @return A node location with this peer id and endpoints.
           NodeLocation
           location() const;
           void
@@ -271,8 +267,6 @@ namespace infinit
         _advertise(Remote& r);
         void
         _fetch_entries(Remote& r);
-        boost::optional<Endpoints>
-        _endpoints_refetch(Address id);
         void
         _perform(std::string const& name, std::function<void()> job);
         /// A peer appears to have disappeared.  We hope to see it again.

@@ -42,15 +42,13 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        /** Deserialize a Configuration.
-         *
-         *  @arg input Source serializer.
-         */
+        /// Deserialize a Configuration.
+        ///
+        /// @arg input Source serializer.
         Configuration(elle::serialization::SerializerIn& input);
-        /** Serialize Configuration.
-         *
-         *  @arg s Source or target serializer.
-         */
+        /// Serialize Configuration.
+        ///
+        /// @arg s Source or target serializer.
         void
         serialize(elle::serialization::Serializer& s) override;
 
@@ -58,14 +56,11 @@ namespace infinit
       | Factory |
       `--------*/
       public:
-        /** Construct Kouncil from this configuration.
-         *
-         *  @arg hosts Initial peer list.
-         *  @arg local Local server, null if pure client.
-         *  @arg dht   Owning Doughnut.
-         *  @return The built Kouncil.
-         */
-
+        /// Construct Kouncil from this configuration.
+        ///
+        /// @arg local       Local server, null if pure client.
+        /// @arg doughnut   Owning Doughnut.
+        /// @return The built Kouncil.
         std::unique_ptr<infinit::overlay::Overlay>
         make(std::shared_ptr<model::doughnut::Local> local,
              model::doughnut::Doughnut* doughnut) override;

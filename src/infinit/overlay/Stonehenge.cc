@@ -165,11 +165,11 @@ namespace infinit
                             return
                               {
                                 peer.id,
-                                Endpoints({model::Endpoint(peer.host, peer.port)})
+                                Endpoints(peer.host, peer.port)
                               };
                           });
       return std::make_unique<infinit::overlay::Stonehenge>(
-        peers, std::move(local), dht);
+        std::move(peers), std::move(local), dht);
     }
 
     namespace

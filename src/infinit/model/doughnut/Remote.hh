@@ -106,7 +106,6 @@ namespace infinit
         safe_perform(std::string const& name, std::function<R()> op);
       private:
         ELLE_ATTRIBUTE(Protocol, protocol);
-        ELLE_ATTRIBUTE_R(EndpointsRefetcher, refetch_endpoints);
 
       /*-------.
       | Blocks |

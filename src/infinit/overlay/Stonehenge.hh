@@ -15,7 +15,7 @@ namespace infinit
     `-------------*/
     public:
       using Host = boost::asio::ip::tcp::endpoint;
-      Stonehenge(NodeLocations hosts,
+      Stonehenge(NodeLocations peers,
                  std::shared_ptr<model::doughnut::Local> local,
                  model::doughnut::Doughnut* doughnut);
       ELLE_ATTRIBUTE_R(NodeLocations, peers);
