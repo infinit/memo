@@ -1,9 +1,10 @@
 The Infinit Key-Value store
 ===========================
 
-Infinit provides a distributed decentralized key-value store, with built-in
-replication and security. This key-value store is accessible through a [grpc](http://www.grpc.io) interface
-specified in the file `doughnut.proto`.
+Infinit provides a distributed decentralized key-value store, with
+built-in replication and security. This key-value store is accessible
+through a [grpc](http://www.grpc.io) interface specified in the file
+`doughnut.proto`.
 
 ## API overview ##
 
@@ -29,7 +30,7 @@ purposes. The most important ones are:
 * __Immutable blocks (IB)__: The simplest of all blocks, whose address is simply the hash of their content.
 * __Mutable Block (MB)__: Basic mutable block, providing atomic update (read-then-write)
   using a versioning mechanism, and security since the payload is encrypted.
-* __Address Control List Block (ACLB)__: Refinement over mutable blocks providing a
+* __Address Control List Block (ACB)__: Refinement over mutable blocks providing a
   fined-grained ACL system which can be used to defined which users can read and
   write the block content.
 * __Named Block (NB)__: Blocks whose address can be deduced from their unique name.
@@ -77,17 +78,17 @@ to that list, you need to handle the case where another task is also making an
 update to the list at the same time. See the [example](#example) below for an
 illustration of this use case.
 
-### ACL blocks (ACLB) ###
+### ACL blocks (ACB) ###
 
-ACLB inherits the features of mutable blocks and provide additional fields to control
+ACB inherits the features of mutable blocks and provide additional fields to control
 which users can read and write the data.
 
-By default an ACLB can only be read and written by the user who created the block.
+By default an ACB can only be read and written by the user who created the block.
 
 The `Block` message has the following fields used to control ACLs:
 
-* `world_readable`: If true all users will be allowed to read the ACLB payload.
-* `world_writable`: If true all users will be allowed to update the ACLB payload.
+* `world_readable`: If true all users will be allowed to read the ACB payload.
+* `world_writable`: If true all users will be allowed to update the ACB payload.
 * `acl`: A list of `ACLEntry`.
 
 The `ACLEntry` message exposes the following fields:
@@ -110,9 +111,9 @@ Use the `named_block_address(NamedBlockKey)` function to obtain the NB block add
 When inserting new blocks into the key-value store, one first needs to obtain
 a `Block` message through one of the builder functions:
 
-* Block make_immutable_block(CHBData) : create IB with given payload and owner
+* Block make_immutable_block(IBData) : create IB with given payload and owner
 * Block make_mutable_block(Empty) : create MB (no arguments)
-* Block make_acl_block(Empty) : create ACLB (no arguments)
+* Block make_acl_block(Empty) : create ACB (no arguments)
 * Block make_named_block(NamedBlockKey) : create NB with given key
 
 You can then fill the `data` (IB) or `data_plain` (MB) field with your payload and
@@ -605,7 +606,7 @@ retry the update until there is no update conflict.
 ```python
 def set_document(user, name, data):
   # create and insert the document IB
-  doc = stub.make_immutable_block(doughnut.CHBData(data=data.encode('utf-8')))
+  doc = stub.make_immutable_block(doughnut.IBData(data=data.encode('utf-8')))
   stub.insert(doughnut.Insert(block=doc))
   blockaddr = to_hex(doc.address)
   dl, block = get_documents(user)
@@ -630,7 +631,7 @@ def set_document(user, name, data):
 func set_document(client doughnut.DoughnutClient, user string, name string, data []byte) {
   // create and insert the document IB
   doc, _ := client.MakeImmutableBlock(context.Background(),
-    &doughnut.CHBData{Data: data})
+    &doughnut.IBData{Data: data})
   client.Insert(context.Background(), &doughnut.Insert{Block: doc})
   blockaddr := to_hex(doc.Address)
   dl, block := get_documents(client, user)
@@ -664,7 +665,7 @@ void set_document(string user, string name, string data)
   ::Block mb;
   auto dl = get_documents(user, &mb);
   // Create and insert the document IB
-  ::CHBData cdata;
+  ::IBData cdata;
   cdata.set_data(data);
   ::Block doc;
   {
