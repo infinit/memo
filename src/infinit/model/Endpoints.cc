@@ -1,3 +1,4 @@
+#include <elle/functional.hh>
 #include <elle/make-vector.hh>
 #include <elle/os/environ.hh>
 
@@ -11,10 +12,27 @@ namespace boost
   {
     namespace ip
     {
+      /// See http://stackoverflow.com/a/22747097/1353549.
+      void
+      hash_combine(std::size_t& h, address const& v)
+      {
+        if (v.is_v4())
+          elle::hash_combine(h, v.to_v4().to_ulong());
+        else if (v.is_v6())
+          elle::hash_combine(h, v.to_v6().to_bytes());
+        else if (v.is_unspecified())
+          // guaranteed to be random: chosen by fair dice roll
+          elle::hash_combine(h, 0x4751301174351161ul);
+        else
+          elle::hash_combine(h, v.to_string());
+      }
+
       std::size_t
       hash_value(boost::asio::ip::address const& address)
       {
-        return boost::hash_value(address.to_string());
+        std::size_t res = 0;
+        hash_combine(res, address);
+        return res;
       }
     }
   }
