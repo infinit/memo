@@ -180,3 +180,7 @@ def configure(
   docker_file.entry_point(
     ['/usr/bin/env', 'python3', '-i', '-m', 'doughnut'])
   drake.docker.DockerBuilder(docker_image, docker_file)
+
+# Local Variables:
+# mode: python
+# End:

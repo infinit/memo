@@ -161,9 +161,8 @@ namespace infinit
         virtual
         std::unique_ptr<OwnerSignature>
         _sign() const;
-        virtual
         void
-        _decrypt();
+        _decrypt() override;
         bool
         _check_signature(elle::cryptography::rsa::PublicKey const& key,
                          elle::Buffer const& signature,
