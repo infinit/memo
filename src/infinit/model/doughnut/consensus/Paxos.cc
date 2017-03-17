@@ -55,12 +55,6 @@ namespace infinit
           }
         }
 
-        template <typename T>
-        static
-        void
-        null_deleter(T*)
-        {}
-
         BlockOrPaxos::BlockOrPaxos(blocks::Block& b)
           : block(&b, [] (blocks::Block*) {})
           , paxos()
