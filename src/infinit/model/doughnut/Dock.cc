@@ -43,7 +43,7 @@ namespace infinit
           }
           catch (elle::Exception const& e)
           {
-            ELLE_WARN("%s: execption %s", action_name, e.what());
+            ELLE_WARN("%s: exception %s", action_name, e.what());
             delay = std::min(delay * 2, max_delay);
             elle::reactor::sleep(delay);
           }

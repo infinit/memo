@@ -210,6 +210,13 @@ namespace infinit
       this->emplace(std::move(ep));
     }
 
+    // FIXME: make insert generic and use it.
+    Endpoints::Endpoints(std::string const& address, int port)
+    {
+      for (auto&& ep: elle::reactor::network::resolve_udp(address, port, ipv4_only))
+        this->emplace(std::move(ep));
+    }
+
     Endpoints::Endpoints(std::string const& repr)
     {
       this->insert(repr);

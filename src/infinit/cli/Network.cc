@@ -893,7 +893,8 @@ namespace infinit
         hook_stats_signals(*dht);
         if (grpc)
         {
-          model::Endpoint ep(*grpc);
+          model::Endpoints eps(*grpc);
+          auto ep = *eps.begin();
           new elle::reactor::Thread("grpc", [dht=dht.get(), ep] {
               infinit::grpc::serve_grpc(*dht, boost::none, ep);
           });
