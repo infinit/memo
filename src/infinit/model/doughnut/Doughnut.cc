@@ -43,6 +43,52 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
 
+namespace
+{
+  std::chrono::milliseconds
+  _connect_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
+  {
+    static auto const env = elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "");
+    if (arg || env.empty())
+      return arg.get();
+    else
+      return elle::chrono::duration_parse<std::milli>(env);
+  }
+
+  std::chrono::milliseconds
+  _soft_fail_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
+  {
+    static auto const env = elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT", "");
+    if (arg || env.empty())
+      return arg.get();
+    else
+      return elle::chrono::duration_parse<std::milli>(env);
+  }
+
+  bool
+  _soft_fail_running_val(elle::Defaulted<bool> arg)
+  {
+    static auto const inenv = elle::os::inenv("INFINIT_SOFTFAIL_RUNNING");
+    if (inenv)
+    {
+      static auto const env = elle::os::getenv("INFINIT_SOFTFAIL_RUNNING");
+      if (arg || env.empty())
+        return arg.get();
+      else
+        return true; // FIXME: parse that value
+    }
+    else
+      return arg.get();
+  }
+
+  const auto _dht_ser
+    = elle::serialization::Hierarchy<infinit::model::ModelConfig>
+    ::Register<infinit::model::doughnut::Configuration>("doughnut");
+
+  const auto _dht_abbr
+    = elle::TypeInfo::RegisterAbbrevation("infinit::model::doughnut", "dht");
+}
+
 namespace infinit
 {
   namespace model
@@ -97,49 +143,6 @@ namespace infinit
           }
       }
 
-      static
-      std::chrono::milliseconds
-      _connect_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
-      {
-        static auto const env =
-          elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "");
-        if (arg || env.empty())
-          return arg.get();
-        else
-          return elle::chrono::duration_parse<std::milli>(env);
-      }
-
-      static
-      std::chrono::milliseconds
-      _soft_fail_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
-      {
-        static auto const env =
-          elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT", "");
-        if (arg || env.empty())
-          return arg.get();
-        else
-          return elle::chrono::duration_parse<std::milli>(env);
-      }
-
-      static
-      bool
-      _soft_fail_running_val(elle::Defaulted<bool> arg)
-      {
-        static auto const inenv =
-          elle::os::inenv("INFINIT_SOFTFAIL_RUNNING");
-        if (inenv)
-        {
-          static auto const env =
-            elle::os::getenv("INFINIT_SOFTFAIL_RUNNING");
-          if (arg || env.empty())
-            return arg.get();
-          else
-            return true; // FIXME: parse that value
-        }
-        else
-          return arg.get();
-      }
-
       Doughnut::Doughnut(Init init)
         : Model(std::move(init.version))
         , _connect_timeout(
@@ -189,7 +192,7 @@ namespace infinit
                 &UB::name,
                 name,
                 this, name, this->passport(), true);
-              auto hash = UB::hash(this->keys().K());
+              auto const hash = UB::hash(this->keys().K());
               check_push<UserBlockUpserter>(*this,
                 elle::sprintf("key hash block for %s", name),
                 UB::hash_address(':' + hash.string(), *this),
@@ -728,7 +731,6 @@ namespace infinit
                 "invalid network configuration, missing field \"overlay\"");
             return this->overlay->make(std::move(local), &dht);
           };
-        auto port = port_ ? port_.get() : this->port ? this->port.get() : 0;
         std::unique_ptr<storage::Storage> storage;
         if (this->storage)
           storage = this->storage->make();
@@ -739,30 +741,24 @@ namespace infinit
           passport,
           std::move(consensus),
           std::move(overlay),
-          std::move(port),
+          port_.value_or(this->port.value_or(0)),
           std::move(listen_address),
           std::move(storage),
           client ? this->name : boost::optional<std::string>(),
-          version ? version.get() : this->version,
+          version.value_or(this->version),
           admin_keys,
           std::move(rdv_host),
           std::move(monitoring_socket_path),
-          this->overlay->rpc_protocol
-          );
+          this->overlay->rpc_protocol);
       }
 
       std::string
       short_key_hash(elle::cryptography::rsa::PublicKey const& pub)
       {
-        auto key_hash = UB::hash(pub);
-        std::string hex_hash = elle::format::hexadecimal::encode(key_hash);
+        auto const key_hash = UB::hash(pub);
+        auto const hex_hash = elle::format::hexadecimal::encode(key_hash);
         return elle::sprintf("#%s", hex_hash.substr(0, 6));
       }
-
-      static const elle::serialization::Hierarchy<ModelConfig>::
-      Register<Configuration> _register_Configuration("doughnut");
-      static const elle::TypeInfo::RegisterAbbrevation
-      _dht_abbr("infinit::model::doughnut", "dht");
     }
   }
 }
