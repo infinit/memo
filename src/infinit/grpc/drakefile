@@ -61,6 +61,7 @@ class GRPCCxxGen(GRPCGen):
   def execute(self):
     self.cmd('GRPC protoc %s' % self.proto, self.protoc_grpc_cmd, throw = True)
     self.cmd('GRPC protoc cc %s' % self.proto, self.protoc_cc_cmd, throw = True)
+    return True
 
   @property
   def protoc_grpc_cmd(self):
