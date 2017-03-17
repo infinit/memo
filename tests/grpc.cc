@@ -709,9 +709,9 @@ ELLE_TEST_SCHEDULED(doughnut)
     ::Block chb;
     { // make
       grpc::ClientContext context;
-      ::CHBData chb_data;
-      chb_data.set_data("bok");
-      stub->make_immutable_block(&context, chb_data, &chb);
+      ::IBData data;
+      data.set_data("bok");
+      stub->make_immutable_block(&context, data, &chb);
       ELLE_LOG("addr: %s", chb.address());
       BOOST_CHECK_EQUAL(chb.address().size(), 32);
       BOOST_CHECK_EQUAL(chb.data(), "bok");

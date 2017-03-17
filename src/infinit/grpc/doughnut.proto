@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 service Doughnut {
-   rpc make_immutable_block(CHBData) returns (Block) {}
+   rpc make_immutable_block(IBData) returns (Block) {}
    rpc make_mutable_block(Empty) returns (Block) {}
    rpc make_named_block(NamedBlockKey) returns (Block) {}
    rpc named_block_address(NamedBlockKey) returns (Address) {}
@@ -24,7 +24,7 @@ message Update {
   bool decrypt_data = 2;
 }
 
-message CHBData {
+message IBData {
   bytes data = 1;
   bytes owner = 2;
 }

@@ -152,7 +152,7 @@ namespace infinit
       ptr->AddMethod<::Insert, ::EmptyOrException>(dht.insert, dht, "/Doughnut/insert");
       ptr->AddMethod<::Update, ::EmptyOrException>(dht.update, dht, "/Doughnut/update");
       ptr->AddMethod<::Empty, ::Block, true>(dht.make_mutable_block, dht, "/Doughnut/make_mutable_block");
-      ptr->AddMethod<::CHBData, ::Block, true>(dht.make_immutable_block, dht,"/Doughnut/make_immutable_block");
+      ptr->AddMethod<::IBData, ::Block, true>(dht.make_immutable_block, dht,"/Doughnut/make_immutable_block");
       ptr->AddMethod<::NamedBlockKey, ::Block, true>(dht.make_named_block, dht, "/Doughnut/make_named_block");
       ptr->AddMethod<::NamedBlockKey, ::Address, true>(dht.named_block_address, dht, "/Doughnut/named_block_address");
       ptr->AddMethod<::Address, ::EmptyOrException>(dht.remove, dht, "/Doughnut/remove");
