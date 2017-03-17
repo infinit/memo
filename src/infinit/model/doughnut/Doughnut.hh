@@ -41,7 +41,8 @@ namespace infinit
       struct AdminKeys
       {
         using PublicKeys = std::vector<elle::cryptography::rsa::PublicKey>;
-        AdminKeys() = default;
+        // Fails to compile on jessie if we use = default.
+        AdminKeys() {};
         AdminKeys(AdminKeys&& b) = default;
         AdminKeys(AdminKeys const& b) = default;
         AdminKeys&
