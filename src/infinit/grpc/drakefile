@@ -9,59 +9,84 @@ sources = None
 cxx_config_grpc = None
 
 class GRPCGen(drake.Builder):
-  def __init__(self, proto, protoc = None, grpc_cpp_plugin = None):
+
+  def __init__(self, proto, protoc, plugin, targets):
     self.__proto = proto
-    base = proto.split('.')[0]
-    dsts = drake.nodes(
-      base + '.pb.h',
-      base + '.pb.cc',
-      base + '.grpc.pb.h',
-      base + '.grpc.pb.cc',
-    )
-    srcs = drake.nodes(proto)
-    if protoc is not None:
-      self.__protoc = protoc
-      srcs += drake.nodes(protoc)
-    else:
-      self.__protoc = 'protoc'
-    if grpc_cpp_plugin is not None:
-      self.__grpc_cpp_plugin = grpc_cpp_plugin
-      srcs += drake.nodes(grpc_cpp_plugin)
-    else:
-      self.__grpc_cpp_plugin = '/usr/local/bin/grpc_cpp_plugin'
-    self.__dsts = dsts
-    self.__prefix = drake.Drake.current.prefix
-    drake.Builder.__init__(self, srcs = srcs, dsts = dsts)
+    if protoc is None:
+      self.__protoc = drake.node(drake.which.which('protoc'))
+    self.__protoc = protoc
+    self.__plugin = plugin
+    self.__output = drake.path_build()
+    super().__init__([proto, protoc, plugin], targets)
+
   @property
-  def dsts(self):
-    return self.__dsts
+  def proto(self):
+    return self.__proto
+
+  @property
+  def protoc(self):
+    return self.__protoc
+
+  @property
+  def plugin(self):
+    return self.__plugin
+
+  @property
+  def output_dir(self):
+    return self.__output
+
+  # def execute(self):
+  #   if not self.cmd('protoc grpc %s' % self.__proto,
+  #                   self.protoc_grpc_cmd):
+  #     return False
+  #   return self.cmd('protoc cc %s' % self.__proto,
+  #                   self.protoc_cc_cmd)
+
+
+class GRPCCxxGen(GRPCGen):
+
+  def __init__(self, proto, protoc = None, plugin = None):
+    name = proto.name_relative
+    dsts = drake.nodes(
+      name.with_extension('pb.h'),
+      name.with_extension('pb.cc'),
+      name.with_extension('grpc.pb.h'),
+      name.with_extension('grpc.pb.cc'),
+    )
+    srcs = []
+    if plugin is None:
+      plugin = drake.node('/usr/local/bin/grpc_cpp_plugin')
+    super().__init__(proto, protoc = protoc, plugin = plugin, targets = dsts)
+
   def execute(self):
-    if not self.cmd('protoc grpc %s' % self.__proto,
-                    self.protoc_grpc_cmd):
-      return False
-    return self.cmd('protoc cc %s' % self.__proto,
-                    self.protoc_cc_cmd)
+    self.cmd('GRPC protoc %s' % self.proto, self.protoc_grpc_cmd, throw = True)
+    self.cmd('GRPC protoc cc %s' % self.proto, self.protoc_cc_cmd, throw = True)
+
   @property
   def protoc_grpc_cmd(self):
-    return [self.__protoc,
-            '-I', drake.path_source() / self.__prefix,
-            '--grpc_out=%s' % self.__prefix,
-            # FIXME find me
-            '--plugin=protoc-gen-grpc=%s' % self.__grpc_cpp_plugin,
-            drake.path_source() / self.__prefix / self.__proto]
+    return [
+      self.protoc,
+      '-I', self.proto.path().dirname(),
+      '--grpc_out=%s' % self.output_dir,
+      '--plugin=protoc-gen-grpc=%s' % self.plugin.path(),
+      self.proto.path(),
+    ]
+
   @property
   def protoc_cc_cmd(self):
-    return [self.__protoc,
-            '-I', drake.path_source() / self.__prefix,
-            '--cpp_out=%s' % self.__prefix,
-            drake.path_source() / self.__prefix / self.__proto]
+    return [
+      self.protoc,
+      '-I', self.proto.path().dirname(),
+      '--cpp_out=%s' % self.output_dir,
+      self.proto.path(),
+    ]
+
   def hash(self):
-    return ''.join([
-      str(self.protoc_grpc_cmd),
-      str(self.protoc_cc_cmd),
-    ])
-  def __str__(self):
-    return '%s' % (self.__class__.__name__)
+    return {
+      'grpc-cmd': list(map(str, self.protoc_grpc_cmd)),
+      'protoc-cmd': list(map(str, self.protoc_cc_cmd)),
+    }
+
 
 def configure(
     cxx_toolkit,
@@ -77,10 +102,16 @@ def configure(
     cmake_env = {
       'GO_EXECUTABLE': go.go,
     })
-  gendn = GRPCGen('doughnut.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
-  genfs = GRPCGen('fs.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
+  gendn = GRPCCxxGen(
+    drake.node('doughnut.proto'),
+    protoc = drake.node(grpc.protoc),
+    plugin = drake.node(grpc.grpc_cpp_plugin))
+  genfs = GRPCCxxGen(
+    drake.node('fs.proto'),
+    protoc = drake.node(grpc.protoc),
+    plugin = drake.node(grpc.grpc_cpp_plugin))
 
-  srcs = genfs.dsts + gendn.dsts + drake.nodes(
+  srcs = genfs.targets() + gendn.targets() + drake.nodes(
     'doughnut.cc',
     'grpc.cc',
     'filesystem.cc',
