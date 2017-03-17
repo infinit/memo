@@ -35,13 +35,6 @@ class GRPCGen(drake.Builder):
   def output_dir(self):
     return self.__output
 
-  # def execute(self):
-  #   if not self.cmd('protoc grpc %s' % self.__proto,
-  #                   self.protoc_grpc_cmd):
-  #     return False
-  #   return self.cmd('protoc cc %s' % self.__proto,
-  #                   self.protoc_cc_cmd)
-
 
 class GRPCCxxGen(GRPCGen):
 
@@ -89,6 +82,38 @@ class GRPCCxxGen(GRPCGen):
     }
 
 
+class GRPCPyGen(GRPCGen):
+
+  def __init__(self, proto, protoc = None, plugin = None):
+    name = proto.name_relative.without_last_extension()
+    dsts = drake.nodes(
+      '{}_pb2.py'.format(name),
+      '{}_pb2_grpc.py'.format(name),
+    )
+    srcs = []
+    if plugin is None:
+      plugin = drake.node('/usr/local/bin/grpc_cpp_plugin')
+    super().__init__(proto, protoc = protoc, plugin = plugin, targets = dsts)
+
+  def execute(self):
+    self.cmd('GRPC protoc python %s' % self.proto, self.command, throw = True)
+    return True
+
+  @property
+  def command(self):
+    return [
+      self.protoc,
+      '-I', self.proto.path().dirname(),
+      '--python_out=%s' % self.output_dir,
+      '--grpc_python_out=%s' % self.output_dir,
+      '--plugin=protoc-gen-grpc_python=%s' % self.plugin.path(),
+      self.proto.path(),
+    ]
+
+  def hash(self):
+    return list(map(str, self.command))
+
+
 def configure(
     cxx_toolkit,
     cxx_config,
@@ -103,15 +128,15 @@ def configure(
     cmake_env = {
       'GO_EXECUTABLE': go.go,
     })
+  doughnut_proto = drake.node('doughnut.proto')
   gendn = GRPCCxxGen(
-    drake.node('doughnut.proto'),
+    doughnut_proto,
     protoc = drake.node(grpc.protoc),
     plugin = drake.node(grpc.grpc_cpp_plugin))
   genfs = GRPCCxxGen(
     drake.node('fs.proto'),
     protoc = drake.node(grpc.protoc),
     plugin = drake.node(grpc.grpc_cpp_plugin))
-
   srcs = genfs.targets() + gendn.targets() + drake.nodes(
     'doughnut.cc',
     'grpc.cc',
@@ -123,11 +148,15 @@ def configure(
   # make a convenience grpc lib with all libgrpc stuff
   grpc_lib = drake.cxx.DynLib('grpc', grpc.sources, cxx_toolkit, grpc.cxx_config_lib)
 
-  ## ------------- ##
-  ## Docker client ##
-  ## ------------- ##
+  ## -------------------- ##
+  ## Docker python client ##
+  ## -------------------- ##
 
   git = git or drake.git.Git()
+
+  grpcgen_py = GRPCPyGen(doughnut_proto,
+                         protoc = drake.node(grpc.protoc),
+                         plugin = drake.node(grpc.grpc_python_plugin))
 
   docker_path = drake.Path('docker')
   docker_image = drake.docker.DockerImage(
@@ -145,7 +174,8 @@ def configure(
                   '&& apk del build-deps ' \
                   '&& rm -rf /var/cache/apk/*')
   docker_file.env('PYTHONPATH', '/root')
-  docker_file.add(drake.copy(drake.node('doughnut.py'), docker_path, strip_prefix = True), '/root/')
+  docker_file.add(drake.copy([drake.node('doughnut.py')] + grpcgen_py.targets(),
+                             docker_path, strip_prefix = True), '/root/')
   docker_file.entry_point(
     ['/usr/bin/env', 'python3', '-i', '-m', 'doughnut'])
   drake.docker.DockerBuilder(docker_image, docker_file)
