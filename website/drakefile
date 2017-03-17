@@ -435,8 +435,6 @@ def configure(
     'resources/js/instantsearch.min.js',
     'resources/js/scripts.min.js',
   )
-  resources.append(drake.copy(doughnut_proto, 'website/resources',
-                              strip_prefix = True))
 
   resources_icons = drake.nodes(
     'resources/images/icons/storage.png',
@@ -677,6 +675,8 @@ def configure(
       yield node
     for node in how(resources, where / 'share/infinit/website'):
       yield node
+    yield drake.copy(doughnut_proto, where / 'share/infinit/website/resources/scripts/kv',
+                              strip_prefix = True)
 
   build = drake.Rule('build')
   build << copy_sources(where = '.', how = copy_python)
