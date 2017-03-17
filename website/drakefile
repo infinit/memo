@@ -21,6 +21,7 @@ def configure(
     bottle,
     sendwithus,
     PatchAndInstall,
+    doughnut_proto,
     prefix = drake.Path('/usr'),
 ):
 
@@ -29,7 +30,6 @@ def configure(
   class PythonCopy(drake.Copy):
 
     def execute(self):
-      print(self.cmd, self.source.path)
       if not super().execute():
         return False
       script = ';'.join([
@@ -435,6 +435,8 @@ def configure(
     'resources/js/instantsearch.min.js',
     'resources/js/scripts.min.js',
   )
+  resources.append(drake.copy(doughnut_proto, 'website/resources',
+                              strip_prefix = True))
 
   resources_icons = drake.nodes(
     'resources/images/icons/storage.png',

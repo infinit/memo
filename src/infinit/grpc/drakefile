@@ -7,6 +7,7 @@ grpc_lib = None
 grpc = None
 sources = None
 cxx_config_grpc = None
+doughnut_proto = None
 
 class GRPCGen(drake.Builder):
 
@@ -119,7 +120,7 @@ def configure(
     cxx_config,
     git = None,
 ):
-  global grpc_lib, grpc, sources
+  global doughnut_proto, grpc_lib, grpc, sources
   go = drake.go.Toolkit()
   grpc = drake.include(
     'grpc',
