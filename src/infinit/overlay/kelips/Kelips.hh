@@ -332,7 +332,7 @@ namespace infinit
         void process(elle::Buffer const& buf, Endpoint source);
         Contact*
         get_or_make(Address address, bool observer,
-          std::vector<Endpoint> endpoints, bool make=true);
+                    Endpoints const& endpoints, bool make=true);
         Overlay::WeakMember
         make_peer(NodeLocation pl) const;
         packet::RequestKey make_key_request();
@@ -376,9 +376,6 @@ namespace infinit
           std::pair<elle::reactor::Thread::unique_ptr, bool>> _node_lookups;
         std::unordered_map<elle::reactor::Thread*, elle::reactor::Thread::unique_ptr>
           _bootstraper_threads;
-      private:
-        boost::optional<model::Endpoints>
-        _refetch_endpoints(model::Address id);
       };
     }
   }

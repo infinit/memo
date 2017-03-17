@@ -38,46 +38,6 @@ namespace infinit
                   elle::cryptography::Oneway::sha256).contents())
     {}
 
-    int
-    Address::cmp(Address const& rhs) const
-    {
-      return memcmp(this->_value, rhs._value, sizeof(Value));
-    }
-
-    bool
-    Address::operator ==(Address const& rhs) const
-    {
-      return cmp(rhs) == 0;
-    }
-
-    bool
-    Address::operator !=(Address const& rhs) const
-    {
-      return cmp(rhs) != 0;
-    }
-
-    bool
-    Address::operator <(Address const& rhs) const
-    {
-      return cmp(rhs) < 0;
-    }
-
-    std::ostream&
-    operator << (std::ostream& out, Address const& k)
-    {
-      if (out.flags() & std::ios::fixed)
-      {
-        out << "0x";
-        out << elle::format::hexadecimal::encode(
-          elle::ConstWeakBuffer(k._value, 4));
-        out << elle::format::hexadecimal::encode(
-          elle::ConstWeakBuffer(k._value + Address::flag_byte, 1));
-      }
-      else
-        out << elle::ConstWeakBuffer(k._value);
-      return out;
-    }
-
     Address
     Address::from_string(std::string const& repr)
     {
@@ -117,6 +77,40 @@ namespace infinit
     }
 
     Address const Address::null;
+
+    int
+    Address::cmp(Address const& rhs) const
+    {
+      return memcmp(this->_value, rhs._value, sizeof(Value));
+    }
+
+    bool
+    operator ==(Address const& lhs, Address const& rhs)
+    {
+      return lhs.cmp(rhs) == 0;
+    }
+
+    bool
+    operator <(Address const& lhs, Address const& rhs)
+    {
+      return lhs.cmp(rhs) < 0;
+    }
+
+    std::ostream&
+    operator << (std::ostream& out, Address const& k)
+    {
+      if (out.flags() & std::ios::fixed)
+      {
+        out << "0x";
+        out << elle::format::hexadecimal::encode(
+          elle::ConstWeakBuffer(k._value, 4));
+        out << elle::format::hexadecimal::encode(
+          elle::ConstWeakBuffer(k._value + Address::flag_byte, 1));
+      }
+      else
+        out << elle::ConstWeakBuffer(k._value);
+      return out;
+    }
 
     std::size_t
     hash_value(Address const& address)

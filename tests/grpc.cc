@@ -509,7 +509,8 @@ ELLE_TEST_SCHEDULED(filesystem)
 {
   DHTs dhts(3);
   auto client = dhts.client();
-  infinit::model::Endpoint ep("127.0.0.1", 0);
+  infinit::model::Endpoints eps("127.0.0.1", 0);
+  auto ep = *eps.begin();
   elle::reactor::Barrier b;
   int listening_port;
   auto t = std::make_unique<elle::reactor::Thread>("grpc",
@@ -675,7 +676,8 @@ ELLE_TEST_SCHEDULED(doughnut)
   client.dht.dht->insert(std::move(ubf));
   client.dht.dht->insert(std::move(ubr));
 
-  infinit::model::Endpoint ep("127.0.0.1", 0);
+  infinit::model::Endpoints eps("127.0.0.1", 0);
+  auto ep = *eps.begin();
   elle::reactor::Barrier b;
   int listening_port = 0;
   auto t = std::make_unique<elle::reactor::Thread>("grpc",

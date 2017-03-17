@@ -760,12 +760,6 @@ namespace infinit
         return blocks::ValidationResult::success();
       }
 
-      template <typename T>
-      static
-      void
-      null_deleter(T*)
-      {}
-
       template <typename Block>
       void
       BaseACB<Block>::seal(boost::optional<int> version,

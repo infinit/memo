@@ -1,5 +1,7 @@
 #include <chrono>
 
+#include <boost/range/algorithm/sort.hpp>
+
 #include <elle/log.hh>
 #include <elle/make-vector.hh>
 #include <elle/range.hh>
@@ -360,12 +362,9 @@ namespace infinit
         ELLE_ASSERT_NEQ(peer->id(), Address::null);
         this->_peers.emplace(peer);
         if (auto it = find(this->_stale_endpoints, peer->id()))
-        {
           // Stop reconnection/eviction timers.
           this->_stale_endpoints.modify(
             it, [] (StaleEndpoint& e) { e.clear(); });
-          //this->_stale_endpoints.erase(it);
-        }
         else
           this->_stale_endpoints.emplace(peer->connection()->location());
         this->_advertise(*peer);
@@ -379,11 +378,9 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: %s disconnected", this, peer);
         auto const id = peer->id();
         // Start aging the infos.
-        {
-          auto pi = ELLE_ENFORCE(find(this->_infos, id));
-          // FIXME: remove the unconst!
-          elle::unconst(*pi).disappearance().start();
-        }
+        this->_infos.modify(
+          ELLE_ENFORCE(find(this->_infos, id)),
+          [this] (PeerInfo& pi) { pi.disappearance().start(); });
         this->_peers.erase(id);
         this->on_disappear()(id, false);
         peer.reset();
@@ -424,7 +421,7 @@ namespace infinit
             if (v >= r)
               ++v;
           res.push_back(v);
-          std::sort(res.begin(), res.end());
+          boost::sort(res);
         }
         return res;
       }
@@ -691,19 +688,6 @@ namespace infinit
         for (auto const& b: entries)
           this->_address_book.emplace(r.id(), b);
         ELLE_DEBUG("added %s entries from %f", entries.size(), r);
-      }
-
-      boost::optional<Endpoints>
-      Kouncil::_endpoints_refetch(Address id)
-      {
-        if (auto it = find(this->_infos, id))
-        {
-          ELLE_DEBUG("updating endpoints for %s with %s entries",
-                     id, it->endpoints().size());
-          return it->endpoints();
-        }
-        else
-          return boost::none;
       }
 
       /*---------.

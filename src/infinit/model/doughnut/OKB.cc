@@ -437,12 +437,6 @@ namespace infinit
           ELLE_DEBUG("%s: data didn't change", *this);
       }
 
-      template <typename T>
-      static
-      void
-      null_deleter(T*)
-      {}
-
       template <typename Block>
       void
       BaseOKB<Block>::_seal_okb(boost::optional<int> version, bool bump_version)

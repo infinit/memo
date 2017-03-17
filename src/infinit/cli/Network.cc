@@ -1,10 +1,11 @@
 #include <infinit/cli/Network.hh>
 
-#include <boost/tokenizer.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/range/algorithm_ext/erase.hpp>
 
 #include <elle/algorithm.hh>
 #include <elle/make-vector.hh>
+#include <elle/reactor/network/resolve.hh>
 
 #include <infinit/Network.hh> // Storages
 #include <infinit/cli/Infinit.hh>
@@ -253,25 +254,27 @@ namespace infinit
         return res;
       }
 
+      /// Turn a list of addresses (e.g., `foo.bar.fr:http`) and/or
+      /// filenames that contains such addresses, into a list of
+      /// Endpoints.
+      ///
+      /// Yes, a list of Endpoints, not a list of Endpoint, because
+      /// foo.bar.fr might actually denote several hosts, and we want
+      /// to reach each one individually.
       std::vector<infinit::model::Endpoints>
-      parse_peers(Strings const& speers)
+      parse_peers(Strings const& peers)
       {
-        using tokenizer = boost::tokenizer<boost::char_separator<char>>;
-        auto sep = boost::char_separator<char>{","};
-        return elle::make_vector(speers, [&](auto const& peers)
-          {
-            auto res = infinit::model::Endpoints{};
-            try
-            {
-              for (auto const& s: tokenizer{peers, sep})
-                res.emplace_back(s);
-            }
-            catch (elle::Error const& e)
-            {
-              elle::err("Malformed endpoints '%s': %s", peers, e);
-            }
-            return res;
-          });
+        auto res = std::vector<infinit::model::Endpoints>{};
+        for (auto const& peer: peers)
+        {
+          auto const eps
+            = bfs::exists(peer)
+            ? model::endpoints_from_file(peer)
+            : elle::reactor::network::resolve_udp_repr(peer);
+          for (auto const& ep: eps)
+            res.emplace_back(infinit::model::Endpoints{ep});
+        }
+        return res;
       }
 
       std::unique_ptr<infinit::storage::StorageConfig>
@@ -401,10 +404,6 @@ namespace infinit
                                                     eviction_delay);
       auto admin_keys = make_admin_keys(ifnt, admin_r, admin_rw);
 
-      auto peers = std::vector<infinit::model::Endpoints>{};
-      if (!peer.empty())
-        peers = parse_peers(peer);
-
       auto dht =
         std::make_unique<dnut::Configuration>(
           infinit::model::Address::random(0),
@@ -422,7 +421,7 @@ namespace infinit
           std::move(port),
           infinit::version(),
           admin_keys,
-          peers);
+          parse_peers(peer));
       {
         auto network = infinit::Network(ifnt.qualified_name(network_name, owner),
                                         std::move(dht),
@@ -894,7 +893,8 @@ namespace infinit
         hook_stats_signals(*dht);
         if (grpc)
         {
-          model::Endpoint ep(*grpc);
+          model::Endpoints eps(*grpc);
+          auto ep = *eps.begin();
           new elle::reactor::Thread("grpc", [dht=dht.get(), ep] {
               infinit::grpc::serve_grpc(*dht, boost::none, ep);
           });
@@ -907,18 +907,7 @@ namespace infinit
             dht->overlay()->discover(more_peers);
         }
         if (!peer.empty())
-        {
-          auto eps
-            = elle::make_vector(peer,
-                                [](auto const& peer)
-                                {
-                                  if (bfs::exists(peer))
-                                    return infinit::model::endpoints_from_file(peer);
-                                  else
-                                    return infinit::model::Endpoints({peer});
-                                });
-          dht->overlay()->discover(eps);
-        }
+          dht->overlay()->discover(parse_peers(peer));
         // Only push if we have are contributing storage.
         bool push_p = (push || publish) && dht->local() && dht->local()->storage();
         if (!dht->local() && push_p)
@@ -1429,7 +1418,7 @@ namespace infinit
                            buf, 16384, true);
         if (res <= 0)
           elle::err("Unable to fetch group %s", name);
-        elle::Buffer b(buf, res);
+        auto b = elle::Buffer(buf, res);
         elle::IOStream is(b.istreambuf());
         auto key = elle::serialization::json::deserialize
           <elle::cryptography::rsa::PublicKey>(is);
@@ -1473,37 +1462,35 @@ namespace infinit
                                 "network \"%s\" to edit group admins",
                                 network.name);
         };
-      auto add_admin = [&] (elle::cryptography::rsa::PublicKey const& key,
-                            bool group, bool read, bool write)
+      auto add_admin = [&keys = dht.admin_keys, &changed_admins]
+        (elle::cryptography::rsa::PublicKey const& key,
+         bool group, bool read, bool write)
         {
           if (read && !write)
-            push_back_if_missing(group ? dht.admin_keys.group_r : dht.admin_keys.r,
-                                 key);
+            push_back_if_missing(group ? keys.group_r : keys.r, key);
           if (write) // Implies RW.
-            push_back_if_missing(group ? dht.admin_keys.group_w : dht.admin_keys.w,
-                                 key);
+            push_back_if_missing(group ? keys.group_w : keys.w, key);
           changed_admins = true;
         };
-      for (auto u: admin_r)
+      for (auto const& u: admin_r)
       {
-        auto r = user_key(ifnt, u, mountpoint);
+        auto const r = user_key(ifnt, u, mountpoint);
         check_group_mount(r.second);
         add_admin(r.first, r.second, true, false);
       }
-      for (auto u: admin_rw)
+      for (auto const& u: admin_rw)
       {
-        auto r = user_key(ifnt, u, mountpoint);
+        auto const r = user_key(ifnt, u, mountpoint);
         check_group_mount(r.second);
         add_admin(r.first, r.second, true, true);
       }
-      for (auto u: admin_remove)
+      for (auto const& u: admin_remove)
       {
-        auto r = user_key(ifnt, u, mountpoint);
+        auto const r = user_key(ifnt, u, mountpoint);
         check_group_mount(r.second);
         auto del = [&r](auto& cont)
           {
-            cont.erase(std::remove(cont.begin(), cont.end(), r.first),
-                       cont.end());
+            boost::remove_erase(cont, r.first);
           };
         del(dht.admin_keys.r);
         del(dht.admin_keys.w);

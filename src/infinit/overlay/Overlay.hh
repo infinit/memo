@@ -41,11 +41,10 @@ namespace infinit
     | Construction |
     `-------------*/
     public:
-      /** Construct an Overlay.
-       *
-       *  @arg dht   The owning Doughnut.
-       *  @arg local The optional Local.
-       */
+      /// Construct an Overlay.
+      ///
+      /// @arg dht   The owning Doughnut.
+      /// @arg local The optional Local.
       Overlay(model::doughnut::Doughnut* dht,
               std::shared_ptr<infinit::model::doughnut::Local> local);
       /// Destroy an Overlay.
@@ -108,40 +107,36 @@ namespace infinit
     | Lookup |
     `-------*/
     public:
-      /** Find owner for a new block
-       *
-       *  @arg address  Address of the blocks to place
-       *  @arg n        How many owners to look for
-       *  @arg fast     Whether to prefer a faster, partial answer.
-       */
+      /// Find owner for a new block
+      ///
+      /// @arg address  Address of the blocks to place
+      /// @arg n        How many owners to look for
+      /// @arg fast     Whether to prefer a faster, partial answer.
       elle::reactor::Generator<WeakMember>
       allocate(model::Address address, int n) const;
       /// Lookup multiple addresses (OP_FETCH/UPDATE only)
       elle::reactor::Generator<std::pair<model::Address, WeakMember>>
       lookup(std::vector<model::Address> const& addresses, int n) const;
-      /** Lookup blocks
-       *
-       *  @arg address  Address of the blocks to search
-       *  @arg n        How many owners to look for
-       *  @arg fast     Whether to prefer a faster, partial answer.
-       */
+      /// Lookup blocks
+      ///
+      /// @arg address  Address of the blocks to search
+      /// @arg n        How many owners to look for
+      /// @arg fast     Whether to prefer a faster, partial answer.
       elle::reactor::Generator<WeakMember>
       lookup(model::Address address, int n, bool fast = false) const;
       /// Lookup a single block owner
       WeakMember
       lookup(model::Address address) const;
-      /** Lookup a node from its id.
-       *
-       * @arg id Id of the node to lookup.
-       * @raise elle::Error if the node is not found.
-       */
+      /// Lookup a node from its id.
+      ///
+      /// @arg id Id of the node to lookup.
+      /// @raise elle::Error if the node is not found.
       WeakMember
       lookup_node(model::Address id) const;
-      /** Lookup nodes from their ids.
-       *
-       * @arg ids ids of the nodes to lookup.
-       * @raise elle::Error if the node is not found.
-       */
+      /// Lookup nodes from their ids.
+      ///
+      /// @arg ids ids of the nodes to lookup.
+      /// @raise elle::Error if the node is not found.
       elle::reactor::Generator<WeakMember>
       lookup_nodes(std::unordered_set<model::Address> ids) const;
     protected:
@@ -154,10 +149,9 @@ namespace infinit
       virtual
       elle::reactor::Generator<WeakMember>
       _lookup(model::Address address, int n, bool fast) const = 0;
-      /** Lookup a node by id
-       *
-       *  @raise elle::Error if the node cannot be found.
-       */
+      /// Lookup a node by id
+      ///
+      /// @raise elle::Error if the node cannot be found.
       virtual
       WeakMember
       _lookup_node(model::Address address) const = 0;

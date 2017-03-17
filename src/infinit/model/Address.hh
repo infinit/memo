@@ -5,6 +5,8 @@
 #include <functional>
 #include <utility>
 
+#include <boost/operators.hpp>
+
 #include <elle/UUID.hh>
 #include <elle/attribute.hh>
 #include <elle/serialization/Serializer.hh>
@@ -13,8 +15,6 @@ namespace infinit
 {
   namespace model
   {
-    using namespace std::rel_ops;
-
     namespace flags
     {
       static const uint8_t block_kind = 1;
@@ -23,6 +23,7 @@ namespace infinit
     }
 
     class Address
+      : private boost::totally_ordered<Address>
     {
     public:
       using Value = uint8_t[32];
@@ -36,12 +37,6 @@ namespace infinit
       /// Ternary comparison, as with memcmp.
       int
       cmp(Address const& rhs) const;
-      bool
-      operator ==(Address const& rhs) const;
-      bool
-      operator !=(Address const& rhs) const;
-      bool
-      operator <(Address const& rhs) const;
       friend
       std::ostream&
       operator << (std::ostream& out, Address const& k);
@@ -62,6 +57,12 @@ namespace infinit
       ELLE_ATTRIBUTE_R(Value, value);
       ELLE_ATTRIBUTE_R(bool, mutable_block);
     };
+
+    bool
+    operator ==(Address const& lhs, Address const& rhs);
+
+    bool
+    operator <(Address const& lhs, Address const& rhs);
 
     std::ostream&
     operator << (std::ostream& out, Address const& k);
@@ -102,4 +103,3 @@ namespace elle
     };
   }
 }
-

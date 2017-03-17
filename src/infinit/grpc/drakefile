@@ -7,68 +7,120 @@ grpc_lib = None
 grpc = None
 sources = None
 cxx_config_grpc = None
+doughnut_proto = None
 
 class GRPCGen(drake.Builder):
-  def __init__(self, proto, protoc = None, grpc_cpp_plugin = None):
+
+  def __init__(self, proto, protoc, plugin, targets):
     self.__proto = proto
-    base = proto.split('.')[0]
-    dsts = drake.nodes(
-      base + '.pb.h',
-      base + '.pb.cc',
-      base + '.grpc.pb.h',
-      base + '.grpc.pb.cc',
-    )
-    srcs = drake.nodes(proto)
-    if protoc is not None:
-      self.__protoc = protoc
-      srcs += drake.nodes(protoc)
-    else:
-      self.__protoc = 'protoc'
-    if grpc_cpp_plugin is not None:
-      self.__grpc_cpp_plugin = grpc_cpp_plugin
-      srcs += drake.nodes(grpc_cpp_plugin)
-    else:
-      self.__grpc_cpp_plugin = '/usr/local/bin/grpc_cpp_plugin'
-    self.__dsts = dsts
-    self.__prefix = drake.Drake.current.prefix
-    drake.Builder.__init__(self, srcs = srcs, dsts = dsts)
+    if protoc is None:
+      self.__protoc = drake.node(drake.which.which('protoc'))
+    self.__protoc = protoc
+    self.__plugin = plugin
+    self.__output = drake.path_build()
+    super().__init__([proto, protoc, plugin], targets)
+
   @property
-  def dsts(self):
-    return self.__dsts
+  def proto(self):
+    return self.__proto
+
+  @property
+  def protoc(self):
+    return self.__protoc
+
+  @property
+  def plugin(self):
+    return self.__plugin
+
+  @property
+  def output_dir(self):
+    return self.__output
+
+
+class GRPCCxxGen(GRPCGen):
+
+  def __init__(self, proto, protoc = None, plugin = None):
+    name = proto.name_relative
+    dsts = drake.nodes(
+      name.with_extension('pb.h'),
+      name.with_extension('pb.cc'),
+      name.with_extension('grpc.pb.h'),
+      name.with_extension('grpc.pb.cc'),
+    )
+    srcs = []
+    if plugin is None:
+      plugin = drake.node('/usr/local/bin/grpc_cpp_plugin')
+    super().__init__(proto, protoc = protoc, plugin = plugin, targets = dsts)
+
   def execute(self):
-    if not self.cmd('protoc grpc %s' % self.__proto,
-                    self.protoc_grpc_cmd):
-      return False
-    return self.cmd('protoc cc %s' % self.__proto,
-                    self.protoc_cc_cmd)
+    self.cmd('GRPC protoc %s' % self.proto, self.protoc_grpc_cmd, throw = True)
+    self.cmd('GRPC protoc cc %s' % self.proto, self.protoc_cc_cmd, throw = True)
+    return True
+
   @property
   def protoc_grpc_cmd(self):
-    return [self.__protoc,
-            '-I', drake.path_source() / self.__prefix,
-            '--grpc_out=%s' % self.__prefix,
-            # FIXME find me
-            '--plugin=protoc-gen-grpc=%s' % self.__grpc_cpp_plugin,
-            drake.path_source() / self.__prefix / self.__proto]
+    return [
+      self.protoc,
+      '-I', self.proto.path().dirname(),
+      '--grpc_out=%s' % self.output_dir,
+      '--plugin=protoc-gen-grpc=%s' % self.plugin.path(),
+      self.proto.path(),
+    ]
+
   @property
   def protoc_cc_cmd(self):
-    return [self.__protoc,
-            '-I', drake.path_source() / self.__prefix,
-            '--cpp_out=%s' % self.__prefix,
-            drake.path_source() / self.__prefix / self.__proto]
+    return [
+      self.protoc,
+      '-I', self.proto.path().dirname(),
+      '--cpp_out=%s' % self.output_dir,
+      self.proto.path(),
+    ]
+
   def hash(self):
-    return ''.join([
-      str(self.protoc_grpc_cmd),
-      str(self.protoc_cc_cmd),
-    ])
-  def __str__(self):
-    return '%s' % (self.__class__.__name__)
+    return {
+      'grpc-cmd': list(map(str, self.protoc_grpc_cmd)),
+      'protoc-cmd': list(map(str, self.protoc_cc_cmd)),
+    }
+
+
+class GRPCPyGen(GRPCGen):
+
+  def __init__(self, proto, protoc = None, plugin = None):
+    name = proto.name_relative.without_last_extension()
+    dsts = drake.nodes(
+      '{}_pb2.py'.format(name),
+      '{}_pb2_grpc.py'.format(name),
+    )
+    srcs = []
+    if plugin is None:
+      plugin = drake.node('/usr/local/bin/grpc_cpp_plugin')
+    super().__init__(proto, protoc = protoc, plugin = plugin, targets = dsts)
+
+  def execute(self):
+    self.cmd('GRPC protoc python %s' % self.proto, self.command, throw = True)
+    return True
+
+  @property
+  def command(self):
+    return [
+      self.protoc,
+      '-I', self.proto.path().dirname(),
+      '--python_out=%s' % self.output_dir,
+      '--grpc_python_out=%s' % self.output_dir,
+      '--plugin=protoc-gen-grpc_python=%s' % self.plugin.path(),
+      self.proto.path(),
+    ]
+
+  def hash(self):
+    return list(map(str, self.command))
+
 
 def configure(
     cxx_toolkit,
     cxx_config,
     git = None,
 ):
-  global grpc_lib, grpc, sources
+  global doughnut_proto, grpc_lib, grpc, sources
   go = drake.go.Toolkit()
   grpc = drake.include(
     'grpc',
@@ -77,10 +129,16 @@ def configure(
     cmake_env = {
       'GO_EXECUTABLE': go.go,
     })
-  gendn = GRPCGen('doughnut.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
-  genfs = GRPCGen('fs.proto', protoc = grpc.protoc, grpc_cpp_plugin = grpc.grpc_cpp_plugin)
-
-  srcs = genfs.dsts + gendn.dsts + drake.nodes(
+  doughnut_proto = drake.node('doughnut.proto')
+  gendn = GRPCCxxGen(
+    doughnut_proto,
+    protoc = drake.node(grpc.protoc),
+    plugin = drake.node(grpc.grpc_cpp_plugin))
+  genfs = GRPCCxxGen(
+    drake.node('fs.proto'),
+    protoc = drake.node(grpc.protoc),
+    plugin = drake.node(grpc.grpc_cpp_plugin))
+  srcs = genfs.targets() + gendn.targets() + drake.nodes(
     'doughnut.cc',
     'grpc.cc',
     'filesystem.cc',
@@ -91,11 +149,15 @@ def configure(
   # make a convenience grpc lib with all libgrpc stuff
   grpc_lib = drake.cxx.DynLib('grpc', grpc.sources, cxx_toolkit, grpc.cxx_config_lib)
 
-  ## ------------- ##
-  ## Docker client ##
-  ## ------------- ##
+  ## -------------------- ##
+  ## Docker python client ##
+  ## -------------------- ##
 
   git = git or drake.git.Git()
+
+  grpcgen_py = GRPCPyGen(doughnut_proto,
+                         protoc = drake.node(grpc.protoc),
+                         plugin = drake.node(grpc.grpc_python_plugin))
 
   docker_path = drake.Path('docker')
   docker_image = drake.docker.DockerImage(
@@ -113,7 +175,12 @@ def configure(
                   '&& apk del build-deps ' \
                   '&& rm -rf /var/cache/apk/*')
   docker_file.env('PYTHONPATH', '/root')
-  docker_file.add(drake.copy(drake.node('doughnut.py'), docker_path, strip_prefix = True), '/root/')
+  docker_file.add(drake.copy([drake.node('doughnut.py')] + grpcgen_py.targets(),
+                             docker_path, strip_prefix = True), '/root/')
   docker_file.entry_point(
     ['/usr/bin/env', 'python3', '-i', '-m', 'doughnut'])
   drake.docker.DockerBuilder(docker_image, docker_file)
+
+# Local Variables:
+# mode: python
+# End:

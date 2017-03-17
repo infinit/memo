@@ -50,8 +50,8 @@ namespace infinit
         {
           try
           {
-            auto host = elle::reactor::network::resolve_tcp(a, std::to_string(port),
-              elle::os::inenv("INFINIT_NO_IPV6"));
+            auto host = elle::reactor::network::resolve_tcp(a, port,
+              elle::os::inenv("INFINIT_NO_IPV6"))[0];
             endpoints.addresses.push_back(host.address().to_string());
           }
           catch (elle::reactor::network::ResolutionError const& e)
@@ -129,21 +129,25 @@ namespace infinit
       }
       ELLE_TRACE("Obtaining local endpoints");
       if (!no_local_endpoints)
-        for (auto const& itf: elle::network::Interface::get_map(
-               elle::network::Interface::Filter::only_up |
-               elle::network::Interface::Filter::no_loopback |
-               elle::network::Interface::Filter::no_autoip))
+      {
+        using Filter = elle::network::Interface::Filter;
+        auto const filter = Filter::only_up | Filter::no_loopback | Filter::no_autoip;
+        for (auto const& itf: elle::network::Interface::get_map(filter))
         {
+          auto add = [&endpoints](auto const& addrs) {
+            endpoints.addresses
+            .insert(endpoints.addresses.end(),
+                    addrs.cbegin(), addrs.cend());
+          };
           if (v4)
-            for (auto const& addr: itf.second.ipv4_address)
-              endpoints.addresses.push_back(addr);
+            add(itf.second.ipv4_address);
           if (v6)
-            for (auto const& addr: itf.second.ipv6_address)
-              endpoints.addresses.push_back(addr);
+            add(itf.second.ipv6_address);
         }
+      }
       endpoints.port = port;
       ELLE_TRACE("Pushing endpoints");
-      this->_infinit.beyond_push(this->_url, std::string("endpoints for"),
+      this->_infinit.beyond_push(this->_url, "endpoints for",
                                  network.name, endpoints, self, false);
     }
 

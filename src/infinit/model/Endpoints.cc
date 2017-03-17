@@ -1,3 +1,5 @@
+#include <elle/functional.hh>
+#include <elle/make-vector.hh>
 #include <elle/os/environ.hh>
 
 #include <elle/reactor/network/resolve.hh>
@@ -10,33 +12,54 @@ namespace boost
   {
     namespace ip
     {
+      /// See http://stackoverflow.com/a/22747097/1353549.
+      void
+      hash_combine(std::size_t& h, address const& v)
+      {
+        if (v.is_v4())
+          elle::hash_combine(h, v.to_v4().to_ulong());
+        else if (v.is_v6())
+          elle::hash_combine(h, v.to_v6().to_bytes());
+        else if (v.is_unspecified())
+          // guaranteed to be random: chosen by fair dice roll
+          elle::hash_combine(h, 0x4751301174351161ul);
+        else
+          elle::hash_combine(h, v.to_string());
+      }
+
       std::size_t
       hash_value(boost::asio::ip::address const& address)
       {
-        return boost::hash_value(address.to_string());
+        std::size_t res = 0;
+        hash_combine(res, address);
+        return res;
       }
     }
   }
+}
+
+namespace
+{
+  /// Whether IPv6 support is disabled.
+  static bool ipv4_only = !elle::os::getenv("INFINIT_NO_IPV6", "").empty();
 }
 
 namespace infinit
 {
   namespace model
   {
+    /*-----------.
+    | Endpoint.  |
+    `-----------*/
+
     Endpoint::Endpoint()
       : _address()
       , _port(0)
     {}
 
-    Endpoint::Endpoint(boost::asio::ip::address address,
-                       int port)
+    Endpoint::Endpoint(boost::asio::ip::address address, int port)
       : _address(std::move(address))
       , _port(port)
-    {}
-
-    Endpoint::Endpoint(std::string const& address,
-                       int port)
-      : Endpoint(elle::reactor::network::resolve_udp(address, std::to_string(port)))
     {}
 
     Endpoint::Endpoint(boost::asio::ip::tcp::endpoint ep)
@@ -48,25 +71,6 @@ namespace infinit
       : _address(ep.address())
       , _port(ep.port())
     {}
-
-    Endpoint::Endpoint(std::string const& repr)
-    {
-      static bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty();
-      size_t sep = repr.find_last_of(':');
-      if (sep == std::string::npos || sep == repr.length())
-        elle::err("invalid endpoint: %s", repr);
-      std::string saddr = repr.substr(0, sep);
-      std::string sport = repr.substr(sep + 1);
-      auto ep = elle::reactor::network::resolve_udp(saddr, sport, !v6);
-      this->_address = ep.address();
-      this->_port = ep.port();
-    }
-
-    bool
-    Endpoint::operator == (Endpoint const& b) const
-    {
-      return _address == b._address && _port == b._port;
-    }
 
     boost::asio::ip::tcp::endpoint
     Endpoint::tcp() const
@@ -145,59 +149,98 @@ namespace infinit
       }
     }
 
-    std::size_t
-    hash_value(Endpoint const& endpoint)
-    {
-      std::size_t seed = 0;
-      boost::hash_combine(seed, endpoint.address());
-      boost::hash_combine(seed, endpoint.port());
-      return seed;
-    }
-
-    /*----------.
-    | Printable |
-    `----------*/
-
-    Endpoints::Endpoints()
-    {}
-
-    Endpoints::Endpoints(std::vector<Endpoint> const& ep)
-      : std::vector<Endpoint>(ep)
-    {}
-
-    Endpoints::Endpoints(std::vector<boost::asio::ip::udp::endpoint> const& eps)
-    {
-      for (auto const& e: eps)
-        this->emplace_back(e);
-    }
-
-    Endpoints::Endpoints(boost::asio::ip::udp::endpoint ep)
-    {
-      this->emplace_back(std::move(ep));
-    }
-
     void
     Endpoint::print(std::ostream& output) const
     {
       elle::fprintf(output, "%s:%s", this->address(), this->port());
     }
 
+    bool
+    operator == (Endpoint const& a, Endpoint const& b)
+    {
+      return std::tie(a._address, a._port)
+        == std::tie(b._address, b._port);
+    }
+
+    bool
+    operator < (Endpoint const& a, Endpoint const& b)
+    {
+      return std::tie(a._address, a._port)
+        < std::tie(b._address, b._port);
+    }
+
+    void
+    hash_combine(std::size_t& h, Endpoint const& endpoint)
+    {
+      boost::hash_combine(h, endpoint.address());
+      boost::hash_combine(h, endpoint.port());
+    }
+
+    std::size_t
+    hash_value(Endpoint const& endpoint)
+    {
+      std::size_t res = 0;
+      hash_combine(res, endpoint);
+      return res;
+    }
+
+    /*------------.
+    | Endpoints.  |
+    `------------*/
+
+    Endpoints::Endpoints()
+    {}
+
+    Endpoints::Endpoints(std::vector<Endpoint> const& eps)
+      : Super{std::begin(eps), std::end(eps)}
+    {}
+
+    Endpoints::Endpoints(Super const& eps)
+      : Super{eps}
+    {}
+
+    Endpoints::Endpoints(std::vector<boost::asio::ip::udp::endpoint> const& eps)
+    {
+      for (auto const& e: eps)
+        this->emplace(e);
+    }
+
+    Endpoints::Endpoints(boost::asio::ip::udp::endpoint ep)
+    {
+      this->emplace(std::move(ep));
+    }
+
+    // FIXME: make insert generic and use it.
+    Endpoints::Endpoints(std::string const& address, int port)
+    {
+      for (auto&& ep: elle::reactor::network::resolve_udp(address, port, ipv4_only))
+        this->emplace(std::move(ep));
+    }
+
+    Endpoints::Endpoints(std::string const& repr)
+    {
+      this->insert(repr);
+    }
+
+    void
+    Endpoints::insert(std::string const& repr)
+    {
+      for (auto&& ep: elle::reactor::network::resolve_udp_repr(repr, ipv4_only))
+        this->emplace(std::move(ep));
+    }
+
     std::vector<boost::asio::ip::tcp::endpoint>
     Endpoints::tcp() const
     {
-      std::vector<boost::asio::ip::tcp::endpoint> res;
-      std::transform(this->begin(), this->end(), std::back_inserter(res),
-                     [] (Endpoint const& e) { return e.tcp(); });
-      return res;
+      return elle::make_vector(*this,
+                               [](Endpoint const& e) { return e.tcp(); });
     }
 
     std::vector<boost::asio::ip::udp::endpoint>
     Endpoints::udp() const
     {
-      std::vector<boost::asio::ip::udp::endpoint> res;
-      std::transform(this->begin(), this->end(), std::back_inserter(res),
-                     [] (Endpoint const& e) { return e.udp(); });
-      return res;
+      return elle::make_vector(*this,
+                               [](Endpoint const& e) { return e.udp(); });
     }
 
     bool
@@ -205,13 +248,31 @@ namespace infinit
     {
       bool res = false;
       for (auto const& e: b)
-        if (std::find(this->begin(), this->end(), e) == this->end())
+        if (this->find(e) == this->end())
         {
-          this->emplace_back(e);
+          this->emplace(e);
           res = true;
         }
       return res;
     }
+
+    Endpoints
+    endpoints_from_file(boost::filesystem::path const& path)
+    {
+      boost::filesystem::ifstream f;
+      f.open(path);
+      if (!f.good())
+        elle::err("unable to open for reading: %s", path);
+      auto res = Endpoints{};
+      for (std::string line; std::getline(f, line); )
+        if (!line.empty())
+          res.insert(line);
+      return res;
+    }
+
+    /*---------------.
+    | NodeLocation.  |
+    `---------------*/
 
     NodeLocation::NodeLocation(model::Address id, Endpoints endpoints)
       : _id(std::move(id))
@@ -230,20 +291,6 @@ namespace infinit
         elle::fprintf(output, "unknown peer (%s)", loc.endpoints());
       return output;
     }
-
-    infinit::model::Endpoints
-    endpoints_from_file(boost::filesystem::path const& path)
-    {
-      boost::filesystem::ifstream f;
-      f.open(path);
-      if (!f.good())
-        elle::err("unable to open for reading: %s", path);
-      infinit::model::Endpoints res;
-      for (std::string line; std::getline(f, line); )
-        if (line.length())
-          res.emplace_back(infinit::model::Endpoint(line));
-      return res;
-    }
   }
 }
 
@@ -257,6 +304,7 @@ namespace elle
     {
       return std::make_pair(nl.id(), nl.endpoints());
     }
+
     infinit::model::NodeLocation
     Serialize<infinit::model::NodeLocation>::convert(Type const& repr)
     {

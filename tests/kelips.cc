@@ -50,11 +50,11 @@ ELLE_DAS_SERIALIZE(BEndpoints);
 
 inline
 BEndpoints
-e2b(Endpoints e)
+e2b(Endpoints const& eps)
 {
-  BEndpoints res;
-  res.port = e.front().port();
-  for (auto const& a: e)
+  auto res = BEndpoints{};
+  res.port = eps.begin()->port();
+  for (auto const& a: eps)
     res.addresses.push_back(a.address().to_string());
   return res;
 }
@@ -121,8 +121,8 @@ private:
   NetEndpoints _endpoints;
 };
 
-std::vector<infinit::model::Endpoints> endpoints;
-infinit::Network net("bob/network", nullptr, boost::none);
+auto endpoints = std::vector<infinit::model::Endpoints>{};
+auto net = infinit::Network("bob/network", nullptr, boost::none);
 using Nodes = std::vector<
          std::pair<
            std::shared_ptr<imd::Doughnut>,
@@ -194,13 +194,11 @@ run_nodes(bfs::path where,  elle::cryptography::rsa::KeyPair& kp,
     }
     res.push_back(std::make_pair(dn, std::move(tptr)));
     //if (res.size() == 1)
-    {
-      infinit::model::Endpoints eps;
-      eps.emplace_back(
-        boost::asio::ip::address::from_string("127.0.0.1"),
-        dn->local()->server_endpoint().port());
-      endpoints.emplace_back(eps);
-    }
+    endpoints.emplace_back(
+        infinit::model::Endpoints{{
+            boost::asio::ip::address::from_string("127.0.0.1"),
+            dn->local()->server_endpoint().port(),
+        }});
   }
   return res;
 }

@@ -1723,20 +1723,25 @@ namespace
         results.beyond = {elle::exception_string()};
       }
     }
-    auto public_ips = std::vector<std::string>{};
-    ELLE_TRACE("list interfaces")
-    {
-      auto interfaces = elle::network::Interface::get_map(
-        elle::network::Interface::Filter::no_loopback);
-      for (auto i: interfaces)
+    auto const public_ips = []
       {
-        for (auto const& ip: i.second.ipv4_address)
-          public_ips.emplace_back(ip);
-        for (auto const& ip: i.second.ipv6_address)
-          public_ips.emplace_back(ip);
-      }
-      results.interfaces = {public_ips};
-    }
+        ELLE_TRACE("list interfaces")
+        {
+          auto res = std::vector<std::string>{};
+          auto interfaces = elle::network::Interface::get_map(
+            elle::network::Interface::Filter::no_loopback);
+          for (auto const& i: interfaces)
+          {
+            auto add = [&res](auto const& addrs){
+              res.insert(res.end(), addrs.begin(), addrs.end());
+            };
+            add(i.second.ipv4_address);
+            add(i.second.ipv6_address);
+          }
+          return res;
+        }
+      }();
+    results.interfaces = {public_ips};
     using ConnectivityFunction
       = std::function<elle::reactor::connectivity::Result
                       (std::string const& host, uint16_t port)>;
@@ -1747,11 +1752,10 @@ namespace
       {
         static const elle::reactor::Duration timeout = 3_sec;
         ELLE_TRACE("connect using %s to %s:%s", name, *server, port + deltaport);
-        std::string result = elle::sprintf("  %s: ", name);
         try
         {
           elle::reactor::TimeoutGuard guard(timeout);
-          auto address = function(*server, port + deltaport);
+          auto const address = function(*server, port + deltaport);
           bool external = !elle::contains(public_ips, address.host);
           store(results.protocols, name, *server, address.local_port,
                 address.remote_port, !external);
@@ -2201,8 +2205,8 @@ namespace
       {
         auto const& volume = elems.second.first;
         auto& status = elems.second.second;
-        auto network = networks.find(volume.network);
-        auto network_presents = network != networks.end();
+        auto const network = networks.find(volume.network);
+        auto const network_presents = network != networks.end();
         status = network_presents && network->second.second;
         auto network_result = boost::find_if(results.networks,
                                              [volume] (auto const& n)
@@ -2229,12 +2233,12 @@ namespace
       {
         auto const& drive = elems.second.first;
         auto& status = elems.second.second;
-        auto volume = volumes.find(drive.volume);
-        auto volume_presents = volume != volumes.end();
-        auto volume_ok = volume_presents && volume->second.second;
-        auto network = networks.find(drive.network);
-        auto network_presents = network != networks.end();
-        auto network_ok = network_presents && network->second.second;
+        auto const volume = volumes.find(drive.volume);
+        auto const volume_presents = volume != volumes.end();
+        auto const volume_ok = volume_presents && volume->second.second;
+        auto const network = networks.find(drive.network);
+        auto const network_presents = network != networks.end();
+        auto const network_ok = network_presents && network->second.second;
         status = network_ok && volume_ok;
         if (status)
           store(results.drives, drive.name, status);

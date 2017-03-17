@@ -1,6 +1,8 @@
 #include <infinit/Network.hh>
 
 #include <boost/filesystem.hpp>
+#include <boost/range/algorithm/find_if.hpp>
+#include <boost/range/algorithm_ext/erase.hpp>
 
 #include <elle/format/hexadecimal.hh>
 
@@ -144,12 +146,12 @@ namespace infinit
                                    infinit::overlay::NodeLocations const& locs_,
                                    int interval)
   {
-    auto poll = [&, locs_, interval]
+    auto poll = [&, locs_, interval = boost::posix_time::seconds(interval)]
       {
         infinit::overlay::NodeLocations locs = locs_;
         while (true)
         {
-          elle::reactor::sleep(boost::posix_time::seconds(interval));
+          elle::reactor::sleep(interval);
           infinit::overlay::NodeLocations news;
           try
           {
@@ -160,12 +162,12 @@ namespace infinit
             ELLE_WARN("exception fetching endpoints: %s", e);
             continue;
           }
-          std::unordered_set<infinit::model::Address> new_addresses;
+          auto new_addresses = std::unordered_set<infinit::model::Address>{};
           for (auto const& n: news)
           {
-            new_addresses.insert(n.id());
-            auto uid = n.id();
-            auto it = std::find_if(locs.begin(), locs.end(),
+            auto const uid = n.id();
+            new_addresses.insert(uid);
+            auto it = boost::find_if(locs,
               [&](infinit::model::NodeLocation const& nl) { return nl.id() == uid;});
             if (it == locs.end())
             {
@@ -180,12 +182,11 @@ namespace infinit
               model.overlay()->discover({n});
             }
           }
-          auto it = std::remove_if(locs.begin(), locs.end(),
+          boost::remove_erase_if(locs,
             [&](infinit::model::NodeLocation const& nl)
             {
               return new_addresses.find(nl.id()) == new_addresses.end();
             });
-          locs.erase(it, locs.end());
         }
       };
     return elle::reactor::Thread::unique_ptr(new elle::reactor::Thread("beyond poller", poll));
@@ -326,8 +327,8 @@ namespace infinit
           auto endpoints = s.deserialize<Endpoints>();
           auto eps = infinit::model::Endpoints{};
           for (auto const& addr: endpoints.addresses)
-            eps.emplace_back(boost::asio::ip::address::from_string(addr),
-                             endpoints.port);
+            eps.emplace(boost::asio::ip::address::from_string(addr),
+                        endpoints.port);
           hosts.emplace_back(uuid, std::move(eps));
         }
       }

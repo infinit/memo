@@ -1100,7 +1100,8 @@ namespace infinit
                              );
         if (grpc)
         {
-          model::Endpoint ep(*grpc);
+          model::Endpoints eps(*grpc);
+          auto ep = *eps.begin();
           new elle::reactor::Thread("grpc", [&dht, fs=fs.get(), ep] {
               infinit::grpc::serve_grpc(dht, *fs, ep);
           });
