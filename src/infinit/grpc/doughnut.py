@@ -12,4 +12,4 @@ import doughnut_pb2_grpc
 from doughnut_pb2 import *
 
 channel = grpc.insecure_channel(args.endpoint)
-dht = doughnut_pb2_grpc.DoughnutStub(channel)
+kv = doughnut_pb2_grpc.DoughnutStub(channel)
