@@ -4,7 +4,7 @@ The Infinit Key-Value store
 Infinit provides a distributed decentralized key-value store, with
 built-in replication and security. This key-value store is accessible
 through a [grpc](http://www.grpc.io) interface specified in the file
-`doughnut.proto`.
+<a class="open-popup" href="#doughnut-proto">doughnut.proto</a>.
 
 ## API overview ##
 
@@ -37,7 +37,7 @@ purposes. The most important ones are:
 Due to the infinit security model, only the KV store can create blocks
 and pick their address through the following methods:
 
-* `make_immutable_block(CHBData) returns (Block)`
+* `make_immutable_block(IBData) returns (Block)`
 * `make_mutable_block(Empty) returns (Block)`
 * `make_named_block(NamedBlockKey) returns (Block)`
 
@@ -150,7 +150,7 @@ encode addresses in hexadecimal.
 
 ### Generating the gRPC and protobuf sources ###
 
-The first step is to generate the sources from the [doughnut.proto]
+The first step is to generate the sources from the <a class="open-popup" href="#doughnut-proto">doughnut.proto</a>
 file. This can be achieved by the following two commands:
 
 <ul class="switchLanguage">
@@ -176,8 +176,7 @@ $> protoc -I/path --cpp_out=. /path/doughnut.proto
 </code>
 </pre>
 
-... where *path* is the path where *doughnut.proto* is stored. This
-step will generate a few source and headers file depending on the
+... where *path* is the path where <a class="open-popup" href="#doughnut-proto">doughnut.proto</a> is stored. This step will generate a few source and headers file depending on the
 language.
 
 
