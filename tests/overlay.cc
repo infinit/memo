@@ -1809,14 +1809,14 @@ ELLE_TEST_SUITE()
     [] (Doughnut& dht, std::shared_ptr<Local> local)
     {
       return std::make_unique<kouncil::Kouncil>(&dht, local,
-                                                valgrind(1, 5) * 60);
+                                                valgrind(1, 5));
     },
     elle::Version(0, 8, 0)};
   auto const kouncil_0_7_config = TestConfiguration {
     [] (Doughnut& dht, std::shared_ptr<Local> local)
     {
       return std::make_unique<kouncil::Kouncil>(&dht, local,
-                                                valgrind(1, 5) * 60);
+                                                valgrind(1, 5));
     },
     elle::Version(0, 7, 0)};
 
