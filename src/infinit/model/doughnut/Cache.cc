@@ -239,7 +239,7 @@ namespace infinit
           if (this->_disk_cache_size &&
             dynamic_cast<blocks::ImmutableBlock*>(&b))
           this->_disk_cache_push(b);
-          else if (dynamic_cast<blocks::MutableBlock*>(&b))
+          else if (dynamic_cast<blocks::MutableBlock*>(&b) && this->_cache_size)
             this->_cache.emplace(b.clone());
 
         }
