@@ -273,6 +273,7 @@ def configure(
     'resources/images/arrow-schema-docker@2x.png',
     'resources/images/schema-scalability-infinit.png',
     'resources/images/schema-scalability-infinit@2x.png',
+    'resources/images/share-image.png',
 
     'resources/images/docs/gcs/create-bucket.png',
     'resources/images/docs/gcs/oauth-permissions.png',

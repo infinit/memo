@@ -409,7 +409,7 @@ The network can be configured depending on the requirements of the storage infra
 The following creates a storage network, relying on the default overlay network with a replication factor of 3. In addition, the administrator decides to contribute two silos to the network on creation.
 
 ```
-$> infinit network --create --as alice --replication-factor 2 --storage local --storage s3 --name cluster
+$> infinit network --create --as alice --replication-factor 2 --silo local --silo s3 --name cluster
 Locally created network "alice/cluster".
 ```
 
@@ -451,7 +451,7 @@ alice/cluster
 
 Before a network can be connected to, it must be linked to a user on the device. When creating the network with the `--create` option, the network is linked automatically.
 
-Upon linking to (or creating) the network, storage can be contributed to it using the `--storage` argument. This will be demonstrated below.
+Upon linking to (or creating) the network, storage can be contributed to it using the `--silo` argument. This will be demonstrated below.
 
 There are two distinct cases for linking networks which depend on the given user's relation to the network: the user is the owner on another device or the user is an invitee.
 
@@ -462,7 +462,7 @@ As the owner of the network, the system automatically recognizes you and allows 
 In the example below, Alice connects one of her other devices and contributes storage capacity from her personal Network-Attached Storage (NAS).
 
 ```
-$> infinit network --link --as alice --name cluster --storage nas
+$> infinit network --link --as alice --name cluster --silo nas
 Linked device to network "alice/cluster".
 ```
 
@@ -479,7 +479,7 @@ $> infinit network --fetch --as bob --name alice/cluster
 Fetched network "alice/cluster".
 ```
 
-You now have both the network descriptor and a passport locally allowing you to link new devices to it. Let's link Bob's current device to Alice's "cluster" network. Note that one can decide to contribute additional storage capacity through the `--storage` option.
+You now have both the network descriptor and a passport locally allowing you to link new devices to it. Let's link Bob's current device to Alice's "cluster" network. Note that one can decide to contribute additional storage capacity through the `--silo` option.
 
 ```
 $> infinit network --link --as bob --name alice/cluster
@@ -564,7 +564,7 @@ Networks can be assigned administrators who have either read only or read/write 
 On creation of a network, individual administrators can be added using the `--admin-r` and `--admin-rw` arguments as shown in the example that follows:
 
 ```
-$> infinit network --create --as alice --storage local --admin-r bob --name administrated-cluster --push
+$> infinit network --create --as alice --silo local --admin-r bob --name administrated-cluster --push
 Locally created network "alice/administrated-cluster".
 Remotely saved network "alice/administrated-cluster".
 ```
