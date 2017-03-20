@@ -145,8 +145,6 @@ def configure(
   linux = elle.cxx_toolkit.os is drake.os.linux
 
   if not windows:
-    das_lib = drake.copy(elle.das.lib_dynamic, 'lib',
-                         strip_prefix = True)
     dropbox_lib = drake.copy(elle.dropbox.lib_dynamic, 'lib',
                              strip_prefix = True)
     cryptography_lib = drake.copy(elle.cryptography.lib_dynamic, 'lib',
@@ -163,7 +161,6 @@ def configure(
     athena_lib = drake.copy(elle.athena.lib_dynamic, 'lib',
                             strip_prefix = True)
   else:
-    das_lib = elle.das.lib_static
     dropbox_lib = elle.dropbox.lib_static
     cryptography_lib = elle.cryptography.lib_static
     protocol_lib = elle.protocol.lib_static
@@ -172,7 +169,6 @@ def configure(
     elle_lib = elle.elle.lib_static
     dokan_lib = elle.reactor.dokan_lib
     athena_lib = elle.athena.lib_static
-
 
   cxx_toolkit = elle.cxx_toolkit
   cxx_config += elle.config
@@ -296,7 +292,6 @@ def configure(
     (windows and 'bin' or 'lib') + '/infinit',
     infinit_sources + [athena_lib,
                        cryptography_lib,
-                       das_lib,
                        aws_lib,
                        protocol_lib,
                        dropbox_lib,
@@ -386,7 +381,7 @@ def configure(
   cli_cxx_config.define('INFINIT_WITH_LDAP', '1' if elle.elle.ldap else '0')
   if enable_crash_reporting:
     additional_libs.append(crash_reporter_lib)
-  additional_libs += [das_lib, elle_lib, reactor_lib, cryptography_lib]
+  additional_libs += [elle_lib, reactor_lib, cryptography_lib]
   binaries = []
   global installed_binaries
   installed_binaries = []
@@ -477,7 +472,6 @@ def configure(
     infinit_cli_deps += [
       aws_lib,
       cryptography_lib,
-      das_lib,
       elle_lib,
       protocol_lib,
       reactor_lib,
@@ -516,12 +510,11 @@ def configure(
       for s in installed_symbols:
         rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
 
-  if elle.reactor.fnetusermount_binaries is not None:
-    for f in elle.reactor.fnetusermount_binaries:
-      t = drake.copy(f, '.', strip_prefix = 'elle/src/elle/reactor')
-      installed_binaries.append(t)
-
-  rule_build << binaries
+  # if elle.reactor.fnetusermount_binaries is not None:
+  #   for f in elle.reactor.fnetusermount_binaries:
+  #     t = drake.copy(f, '.', strip_prefix = 'elle/src/elle/reactor')
+  #     installed_binaries.append(t)
+  # rule_build << binaries
 
   ## -------- ##
   ## Licenses ##
@@ -829,7 +822,6 @@ def configure(
         crash_test_libs = drake.copy([
             crash_reporter_lib,
             cryptography_lib,
-            das_lib,
             elle_lib,
             reactor_lib,
           ] + additional_libs,
@@ -965,6 +957,7 @@ def configure(
 
   cxx_config_tests = drake.cxx.Config(cxx_config)
   cxx_config_tests += elle.das.config
+  cxx_config_tests.add_local_include_path('elle/tests')
   cxx_config_tests.lib_path_runtime('../lib')
   cxx_config_tests.lib_path_runtime('../../lib') # For consensus/async test.
   cxx_config_tests += elle.boost.config_test(link = False)
@@ -1033,7 +1026,7 @@ def configure(
     ('storage', [aws_lib]),
   ]
   if not windows:
-    tests_extra_libs = [das_lib, elle_lib, cryptography_lib, reactor_lib, protocol_lib]
+    tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
   else:
     tests_extra_libs = []
   for test_name, dependencies in tests_names:
@@ -1123,7 +1116,7 @@ def configure(
     infinit_lib_bench = drake.copy(infinit_lib, 'bench', strip_prefix = True)
     dokan_lib_bench = drake.copy(dokan_lib, 'bench', strip_prefix = True)
   if not windows:
-    bench_extra_libs = [das_lib, elle_lib, cryptography_lib, reactor_lib, protocol_lib]
+    bench_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
   else:
     bench_extra_libs = []
   for n in bench_names:
