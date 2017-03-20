@@ -146,9 +146,7 @@ infinit-${tarball_version}/
 infinit-${tarball_version}/bin/
 infinit-${tarball_version}/lib
 ...
-infinit-${tarball_version}/bin/infinit-storage
-infinit-${tarball_version}/bin/infinit-user
-infinit-${tarball_version}/bin/infinit-volume
+infinit-${tarball_version}/bin/infinit
 ...</code></pre>
 
       <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
@@ -202,9 +200,7 @@ bin/    lib/    share/
     infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/
     infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/lib
     ...
-    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-storage
-    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-user
-    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-volume
+    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit
     ...
     </code></pre>
 
@@ -221,7 +217,7 @@ bin/    lib/    share/</code></pre>
     % endif
 
     <ul>
-      <li>The <code>bin${dir_end}</code> subdirectory contains the actual Infinit binaries such as <em>infinit-user${exe}</em>, <em>infinit-network${exe}</em>, etc.</li>
+      <li>The <code>bin${dir_end}</code> subdirectory contains the actual Infinit binary <em>infinit${exe}</em>.</li>
       % if osname == "mac" or osname == "linux":
       <li>The <code>lib${dir_end}</code> subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).</li>
       % endif
@@ -252,7 +248,7 @@ bin/    lib/    share/</code></pre>
 
     <p>All the commands that follow use the user name <code>alice</code> but you should <strong>pick your own unique user name</strong>:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-user --signup --name alice --fullname "Alice"
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit user --signup --name alice --fullname "Alice"
 Generating RSA keypair.
 Remotely saved user "alice".
 </code></pre>
@@ -263,18 +259,18 @@ Remotely saved user "alice".
 
     <p>Next, we are going to declare a local silo. A local silo stores data blocks as files in a directory (such as <code>${guide_storage_dir}</code>) on the local filesystem.</p>
 
-    <p>The binary <em>infinit-storage</em> is used for this purpose. The option <code>--filesystem</code> is used to indicate that the storage will be on the local filesystem:</p>
+    <p>The binary <em>infinit silo</em> is used for this purpose. The option <code>--filesystem</code> is used to indicate that the storage will be on the local filesystem:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-storage --create --filesystem --name local --capacity 1GB
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit silo --create --filesystem --name local --capacity 1GB
 Created storage "local".</code></pre>
 
     <h3 id="create-a-network">Create a network</h3>
 
     <p>Now that we have at least one silo to store data, we can create a network interconnecting different machines.</p>
 
-    <p>The <em>infinit-network</em> command is used to create the network, specifying a name along with the list of silos to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the <code>local</code> silo is used but you could plug as many as you like. Obviously, you need to substitute <code>alice</code> with your username:</p>
+    <p>The <em>infinit network</em> command is used to create the network, specifying a name along with the list of silos to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the <code>local</code> silo is used but you could plug as many as you like. Obviously, you need to substitute <code>alice</code> with your username:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-network --create --as alice --storage local --name my-network --push
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit network --create --as alice --storage local --name my-network --push
 Locally created network "alice/my-network".
 Remotely saved network "alice/my-network".
 </code></pre>
@@ -283,9 +279,9 @@ Remotely saved network "alice/my-network".
 
     <h3 id="create-a-volume">Create a volume</h3>
 
-    <p>The last step on this device consists of creating a logical volume to store and access files through a file system interface. Volumes can be manipulated through the <em>infinit-volume</em> binary as shown next:</p>
+    <p>The last step on this device consists of creating a logical volume to store and access files through a file system interface. Volumes can be manipulated through the <em>infinit volume</em> binary as shown next:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-volume --create --as alice --network my-network --name my-volume --push
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit volume --create --as alice --network my-network --name my-volume --push
 Locally created volume "alice/my-volume".
 Remotely saved volume "alice/my-volume".
 </code></pre>
@@ -296,7 +292,7 @@ Remotely saved volume "alice/my-volume".
 
     <p>For now, only configuration files have been created. Nothing has been run. Let’s start the server and access the volume by mounting it through FUSE, as easily as any other filesystem:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-volume --mount --as alice --name my-volume --mountpoint ${guide_mountpoint} --allow-root-creation --cache --publish
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit volume --mount --as alice --name my-volume --mountpoint ${guide_mountpoint} --allow-root-creation --cache --publish
 Running network "alice/my-network".
 Fetched endpoints for "alice/my-network".
 Running volume "alice/my-volume".
@@ -319,7 +315,7 @@ everything is</code></pre>
 
     <p>Let’s transmit the user’s identity to the other device. Note that it will be encrypted with a passphrase chosen by you. Also you will only have 5 minutes to retrieve it on device B.</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-device --transmit --user --as alice
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit device --transmit --user --as alice
 Passphrase: ********
 Transmitted user identity for "alice".
 User identity on the Hub for: 297 seconds
@@ -327,7 +323,7 @@ User identity on the Hub for: 297 seconds
 
     <p>Now let’s move to device B. First, you need to download, install and configure the Infinit command-line tools on this new device as you did for device A. Please refer to the first sections of this guide for that purpose.</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit-device --receive --user --name alice
+    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit device --receive --user --name alice
 Passphrase: ********
 Received user identity for "alice".
 </code></pre>
@@ -336,21 +332,21 @@ Received user identity for "alice".
 
     <p>The next steps consist of fetching the resources that you previously pushed on the Hub: network and volume.</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit-network --fetch --as alice --name my-network
+    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit network --fetch --as alice --name my-network
 Fetched network "alice/my-network".
-${term} infinit-volume --fetch --as alice --name my-volume
+${term} infinit volume --fetch --as alice --name my-volume
 Fetched volume "alice/my-volume".
 </code></pre>
 
     <p>Let’s link this device to the <code>my-network</code> network you created on device A for this new device to be authorized to connect.</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit-network --link --as alice --name my-network
+    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit network --link --as alice --name my-network
 Linked device to network "alice/my-network".
     </code></pre>
 
     <p>Finally, the volume can be mounted on device B as simply as on device A:</p>
 
-    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit-volume --mount --as alice --name my-volume --mountpoint ${guide_mountpoint} --cache --publish
+    <pre class="device2"><div><span>Device B</span></div><code>${term} infinit volume --mount --as alice --name my-volume --mountpoint ${guide_mountpoint} --cache --publish
 Fetch endpoints for "alice/my-network".
 Running network "alice/my-network".
 Running volume "alice/my-volume".
@@ -373,43 +369,43 @@ everything is
 
     <p>First, let us create another user, unconventially named Bob, on a completely new device C. As mentioned earlier, if you don't have another device available, you can simulate one through the use of the <a href="${route('doc_environment_variables')}#infinit_home">INFINIT_HOME</a> environment variable.</em></p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit-user --signup --name bob --fullname "Bob"
+    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit user --signup --name bob --fullname "Bob"
 Generating RSA keypair.
 Remotely saved user "bob".
 </code></pre>
 
-    <p>In order for another user (e.g Bob) to be able to connect to someone else's storage infrastructure, a passport is required. Only the infrastructure owner, in this case Alice, can issue such passports through the use of the <em>infinit-passport</em> binary.</p>
+    <p>In order for another user (e.g Bob) to be able to connect to someone else's storage infrastructure, a passport is required. Only the infrastructure owner, in this case Alice, can issue such passports through the use of the <em>infinit passport</em> binary.</p>
 
     <p>Back to device A and Alice to generate a passport for Bob. Note that in order to reference another user by its name, for generating a passport for instance, you first need to retrieve his/her user public identity from the Hub (or otherwise).</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-user --fetch --as alice --name bob
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit user --fetch --as alice --name bob
 Fetched user "bob".
-${term} infinit-passport --create --as alice --network my-network --user bob --push
+${term} infinit passport --create --as alice --network my-network --user bob --push
 Locally created passport "alice/my-network: bob".
 Remotely saved passport "alice/my-network: bob".
 </code></pre>
 
     <p>Now that a passport has been issued, Bob can very easily retrieve it from the Hub in order to join Alice's storage network. For this, Bob must fetch Alice's public user identity, Alice's <code>alice/my-network</code> network descriptor along with the freshly issued passport:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit-user --fetch --as bob --name alice
+    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit user --fetch --as bob --name alice
 Fetched user "alice".
-${term} infinit-network --fetch --as bob --name alice/my-network
+${term} infinit network --fetch --as bob --name alice/my-network
 Fetched network "alice/my-network".
-${term} infinit-passport --fetch --as bob --network alice/my-network
+${term} infinit passport --fetch --as bob --network alice/my-network
 Fetched passport for "alice/my-network".
 </code></pre>
 
     <p>With all the pieces fetched from the Hub, Bob can now link his current device C to Alice's storage network <code>alice/my-network</code>:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit-network --link --as bob --name alice/my-network
+    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit network --link --as bob --name alice/my-network
 Linked device to network "alice/my-network".
 </code></pre>
 
     <p>Once his device linked to the network, Bob can now mount Alice's volume. Note that the volume descriptor <code>alice/my-volume</code> must first be retrieved from the Hub in order for it to be mounted:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit-volume --fetch --as bob --name alice/my-volume
+    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit volume --fetch --as bob --name alice/my-volume
 Fetched volume "alice/my-volume".
-${term} infinit-volume --mount --as bob --name alice/my-volume --mountpoint ${guide_mountpoint} --cache --publish
+${term} infinit volume --mount --as bob --name alice/my-volume --mountpoint ${guide_mountpoint} --cache --publish
 Running network "alice/my-network".
 Fetched endpoints for "alice/my-network".
 Running volume "alice/my-volume".
@@ -428,18 +424,18 @@ ${ls_command}: ${guide_mountpoint}: Permission denied
 
     <p>As you can see, Bob cannot access Alice's volume because he has not been granted the permission to browse the root directory of <code>alice/my-volume</code>. Indeed, Infinit provides two layers of protections: passports prevent unauthorized computers to communicate with the servers of your storage infrastructure while an access control mechanism is provided to authorize other users to access/modify specific files and directories within a volume.</p>
 
-    <p>This lack of permission can be verified on Alice's device A, through the <em>infinit-acl</em> binary which can be used for access control purposes:</p>
+    <p>This lack of permission can be verified on Alice's device A, through the <em>infinit acl</em> binary which can be used for access control purposes:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-acl --list --path ${guide_mountpoint_abs}
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit acl --list --path ${guide_mountpoint_abs}
 ${guide_mountpoint_abs}:
         alice: rw (owner)
 </code></pre>
 
     <p>For Bob to access the file <code>awesome.txt</code> located in the volume, Alice needs to grant him access on both the root directory and the file itself:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit-acl --set --mode r --user bob --path ${guide_mountpoint_abs}
-${term} infinit-acl --set --mode r --user bob --path ${guide_mountpoint}${dir}awesome.txt
-${term} infinit-acl --list --path ${guide_mountpoint_abs} --path ${guide_mountpoint}${dir}awesome.txt
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit acl --set --mode r --user bob --path ${guide_mountpoint_abs}
+${term} infinit acl --set --mode r --user bob --path ${guide_mountpoint}${dir}awesome.txt
+${term} infinit acl --list --path ${guide_mountpoint_abs} --path ${guide_mountpoint}${dir}awesome.txt
 ${guide_mountpoint_abs}:
   inherit: no
         alice: rw (owner)
@@ -450,11 +446,11 @@ ${guide_mountpoint}${dir}awesome.txt:
         bob: r
 </code></pre>
 
-    <p><em><strong>NOTE:</strong> One could have relied on the <code>--traverse</code> option to grant read permission on all the directories leading to the target object. In other words, the following would have achieved the same result <code>infinit-acl --set --mode r --user bob --traverse --path ${guide_mountpoint}${dir}awesome.txt</code>.</em></p>
+    <p><em><strong>NOTE:</strong> One could have relied on the <code>--traverse</code> option to grant read permission on all the directories leading to the target object. In other words, the following would have achieved the same result <code>infinit acl --set --mode r --user bob --traverse --path ${guide_mountpoint}${dir}awesome.txt</code>.</em></p>
 
     <p>Bob should now be able to browse the volume's root directory and read its file. Note however that he should not be able to modify it since Alice did not grant Bob the permission to write the file:</p>
 
-    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit-acl --list --path ${guide_mountpoint}${dir}awesome.txt
+    <pre class="device3"><div><span>Device C</span></div><code>${term} infinit acl --list --path ${guide_mountpoint}${dir}awesome.txt
 ${guide_mountpoint}${dir}awesome.txt:
         alice: rw (owner)
         bob: r
@@ -472,9 +468,9 @@ zsh: permission denied: ${guide_mountpoint}${dir}awesome.txt
 
     <h2 id="doctor">3. Diagnose Problems</h2>
 
-    <p>The <em>infinit-doctor</em> binary is provided to automatically analyze your environment and detect common issues for you to quickly understand why Infinit may not be behaving as expected. Issues may range from incorrect permissions on some files/directories, to a router blocking UDP packets and more. The easiest way to run <em>infinit-doctor</em> is to use the <code>--all</code> so as to analyze the operarting system, environment variables, networking capabilities, configuration files etc.</p>
+    <p>The <em>infinit doctor</em> binary is provided to automatically analyze your environment and detect common issues for you to quickly understand why Infinit may not be behaving as expected. Issues may range from incorrect permissions on some files/directories, to a router blocking UDP packets and more. The easiest way to run <em>infinit doctor</em> is to use the <code>--all</code> so as to analyze the operarting system, environment variables, networking capabilities, configuration files etc.</p>
 
-    <pre><code>$> infinit-doctor --all
+    <pre><code>$> infinit doctor --all
 CONFIGURATION INTEGRITY:
 [OK] Storage resources
 [OK] Networks
