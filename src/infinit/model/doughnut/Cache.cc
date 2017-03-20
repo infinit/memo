@@ -381,7 +381,10 @@ namespace infinit
             elle::Bench::BenchScope bs(bench);
             this->_backend->store(
               std::move(block), mode,
-              std::make_unique<CacheConflictResolver>(&cloned, std::move(resolver)));
+              resolver ?
+                std::make_unique<CacheConflictResolver>(&cloned,
+                                                        std::move(resolver))
+                :  std::unique_ptr<ConflictResolver>());
           }
           if (mb)
           {
