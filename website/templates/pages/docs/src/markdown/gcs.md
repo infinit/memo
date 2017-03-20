@@ -1,7 +1,7 @@
 Creating a storage using Google Cloud Storage
 =============================================
 
-This will guide you through setting up a Google Cloud Storage (GCS) bucket as a storage resource for Infinit.
+This will guide you through setting up a Google Cloud Storage (GCS) bucket as a silo for Infinit.
 
 Prerequisites
 -------------
@@ -36,20 +36,20 @@ Navigate to this link with your Web browser and allow Infinit to access your acc
 Infinit is now allowed access to your bucket. You however need to fetch the credentials from the Hub in order to proceed.
 
 ```
-$> infinit-credentials --fetch --as alice
+$> infinit credentials --fetch --as alice
 Fetched Google Cloud Storage credentials alice@example.com (Alice)
 ```
 
 Make note of the email address associated with the account as this is used to reference the credentials in the next step.
 
-Creating the Infinit storage resource
--------------------------------------
+Creating the Infinit silo
+-------------------------
 
 Now that the bucket has been created and Infinit has the GCS credentials, you can create the silo.
 
 Take care of referencing the bucket name you chose in the first step through the `--bucket` option along with the name of the credentials you just registered i.e. the email address associated with your GCS account, in this example _alice@example.com_. Finally, the `--path` option can be used to specify a folder within the bucket to hold the blocks of encrypted data that Infinit will store.
 
 ```
-$> infinit-storage --create --as alice --gcs --name gcs-storage --account "alice@example.com" --bucket infinit-gcs-storage-eu-example-com --path blocks-folder
+$> infinit silo --create --as alice --gcs --name gcs-storage --account "alice@example.com" --bucket infinit-gcs-storage-eu-example-com --path blocks-folder
 Created storage "gcs-storage".
 ```

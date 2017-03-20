@@ -10,7 +10,7 @@ Introduction
 
 The Infinit command-line tools are composed of several binaries, each dealing with a specific resource or object.
 
-A *user* represents the entity performing operations on files, directly or indirectly. Every user possesses an RSA key pair that is used to identify him/her. A user can create a *network* which represents the interconnection of computing resources that will compose the storage infrastructure. A *storage* is a storage resource, local or remote, that can be connected to a device to support part of the overall storage load. Finally, several *volumes* --- i.e. logical drives ---  can be created within a network.
+A *user* represents the entity performing operations on files, directly or indirectly. Every user possesses an RSA key pair that is used to identify him/her. A user can create a *network* which represents the interconnection of computing resources that will compose the storage infrastructure. A *silo* is a storage resource, local or remote, that can be connected to a device to support part of the overall storage load. Finally, several *volumes* --- i.e. logical drives ---  can be created within a network.
 
 The *Hub* is a cloud service whose role is to ease the process of discovery, sharing and more.
 
@@ -32,11 +32,11 @@ All the command-line tools rely on the same terminology when it comes to options
 
 For more information on the options provided by a binary, do not hesitate to rely on the `--help` option. Note that the help is relative to the options already provided.
 
-For example, the help for _infinit-user_ displays the general options available: export, create, import, list, etc.:
+For example, the help for _infinit user_ displays the general options available: export, create, import, list, etc.:
 
 ```
-$> infinit-user --help
-Usage: infinit-user MODE [OPTIONS...]
+$> infinit user --help
+Usage: infinit user MODE [OPTIONS...]
 
 Infinit user utility:
 
@@ -62,11 +62,11 @@ Miscellaneous:
   -a [ --as ] arg              User to run commands as (default: system user)
 ```
 
-Each mode of each binary has its own help as well. For example the help when invoking the `--create` mode of _infinit-user_ shows the options associated with creating a user:
+Each mode of each binary has its own help as well. For example the help when invoking the `--create` mode of _infinit user_ shows the options associated with creating a user:
 
 ```
-$> infinit-user --create --help
-Usage: infinit-user --create [OPTIONS...]
+$> infinit user --create --help
+Usage: infinit user --create [OPTIONS...]
 
 Create a user:
 
@@ -93,8 +93,8 @@ Every binary follows the same semantic with the first option representing the mo
 The name/identifier of the object on which you wish to operate can be specified through the `--name` option or simply by providing it outside of any option. As such both commands below are equivalent:
 
 ```
-$> infinit-volume --push --name personal
-$> infinit-volume --push personal
+$> infinit volume --push --name personal
+$> infinit volume --push personal
 ```
 
 Hub
@@ -108,17 +108,17 @@ The use of the Hub can be activated through specific options, mostly `--push`, `
 
 One can decide to either create objects locally before pushing them to the Hub or to perform both tasks through a single action by specifying `--push` option when invoking the command.
 
-Note that some binaries operate in hub mode by default. For instance the _infinit-drive_ binary would not make sense without the Hub since its role is to bridge the gap between a low-level storage infrastructure and potential non-tech-savvy users.
+Note that some binaries operate in hub mode by default. For instance the _infinit drive_ binary would not make sense without the Hub since its role is to bridge the gap between a low-level storage infrastructure and potential non-tech-savvy users.
 
 **IMPORTANT**: This document mainly covers flows involving the Hub. For users wanting to use Infinit in a pure decentralized environment, the `--push`/`--fetch` operations must be replaced with `--export`/`--import` operations and the resulting files must be manually shared with other users and moved between devices. You will sometimes need to provide additional information such as the IP address of bootstrap nodes in order to discover the other nodes of a network.
 
 Doctor
 ------
 
-The _infinit-doctor_ binary provides an easy way to check the health of your local environment: configuration files, version of the software, networking capabilities etc. To run all available tests, the `--all` option can be used.
+The _infinit doctor_ binary provides an easy way to check the health of your local environment: configuration files, version of the software, networking capabilities etc. To run all available tests, the `--all` option can be used.
 
 ```
-$> infinit-doctor --all
+$> infinit doctor --all
 CONFIGURATION INTEGRITY:
 [OK] Storage resources
 [OK] Networks
@@ -166,14 +166,14 @@ Finally, doctor has a `--networking` mode to test connectivity and transfer spee
 
 _**NOTE**: For now, nodes must have a public IP address for the test to work._
 
-<pre><div><span>Device A</span></div><code> infinit-doctor$ --networking
+<pre><div><span>Device A</span></div><code> infinit doctor$ --networking
 Server mode (version: 0.7.2):
 
 To perform tests, run the following command from another node:
-> infinit-doctor --networking --tcp_port 55848 --utp_port 41275 --xored_utp_port 54723 --host &lt;address_of_this_machine&gt;
+> infinit doctor --networking --tcp_port 55848 --utp_port 41275 --xored_utp_port 54723 --host &lt;address_of_this_machine&gt;
 </code></pre>
 
-<pre class="device2"><div><span>Device B</span></div><code> infinit-doctor --networking --tcp_port 55848 --utp_port 41275 --xored_utp_port 54723 --host 127.0.0.1
+<pre class="device2"><div><span>Device B</span></div><code> infinit doctor --networking --tcp_port 55848 --utp_port 41275 --xored_utp_port 54723 --host 127.0.0.1
 Client mode (version: 0.7.2):
 TCP:
   Upload:
@@ -196,7 +196,7 @@ xored UTP:
 User
 ----
 
-The _infinit-user_ binary allows one to create a user identity, push it to the Hub so that it can be referenced by other users and perform other user based operations.
+The _infinit user_ binary allows one to create a user identity, push it to the Hub so that it can be referenced by other users and perform other user based operations.
 
 ### Create a user ###
 
@@ -207,7 +207,7 @@ Note that the name of the user is deduced from the system if you do not specify 
 ```
 $> echo $USER
 alice
-$> infinit-user --create
+$> infinit user --create
 Generating RSA keypair.
 Locally generated user "alice".
 ```
@@ -215,7 +215,7 @@ Locally generated user "alice".
 You may want to specify the RSA key pair to use rather than generating a new one. You can use the `--key` option to reference a PEM-formatted RSA private key (e.g your SSH RSA key) and Infinit will create a user identity based on it.
 
 ```
-$> infinit-user --create --name alice --key ~/.ssh/id_rsa
+$> infinit user --create --name alice --key ~/.ssh/id_rsa
 Key passphrase: ********
 Locally generated user "alice".
 ```
@@ -228,12 +228,12 @@ To register on the Hub, you can either use the `--push` option <a href="#create-
 
 #### Push an existing user to the Hub ####
 
-To push an existing user, simply invoke _infinit-user_ with the `--push` mode. You can also specify an optional email address using `--email` but needless to say that this email address will *never* be shared with third parties and will solely be used for Infinit to communicate news of its file storage platform.
+To push an existing user, simply invoke _infinit user_ with the `--push` mode. You can also specify an optional email address using `--email` but needless to say that this email address will *never* be shared with third parties and will solely be used for Infinit to communicate news of its file storage platform.
 
 **IMPORTANT**: Given the critical nature of the user identity, we strongly advise you to read the <a href="#log-in-on-another-device">Log in on another device</a> section in order to completely understand the ramifications of the options used when pushing your user.
 
 ```
-$> infinit-user --push --name alice --fullname "Alice"
+$> infinit user --push --name alice --fullname "Alice"
 Remotely saved user "alice".
 ```
 
@@ -244,7 +244,7 @@ Unfortunately, since names are unique, your user name may already be taken on th
 We advise users to sign up to the Hub before performing other operations to avoid complications:
 
 ```
-$> infinit-user --signup --name alice --fullname "Alice"
+$> infinit user --signup --name alice --fullname "Alice"
 Generating RSA keypair.
 Remotely saved user "alice".
 ```
@@ -254,7 +254,7 @@ Remotely saved user "alice".
 One can very easily fetch the public identity of another user through the `--fetch` mode:
 
 ```
-$> infinit-user --fetch --name bob
+$> infinit user --fetch --name bob
 Fetched user "bob".
 ```
 
@@ -263,7 +263,7 @@ Fetched user "bob".
 The list of users kept locally can contain both user identities that you created and therefore own as well as public identities of users that you fetched from the Hub for instance.
 
 ```
-$> infinit-user --list
+$> infinit user --list
 alice: public/private keys
 bob: public key only
 ```
@@ -273,14 +273,14 @@ bob: public key only
 To remove a user from the Hub, you can use the `--pull` mode. The `--name` option specifies which user to pull while the `--as` option specifies which user should sign the pull request. Currently a user can only pull themself but in the future there will be the concept of administrator users who can pull other users.
 
 ```
-$> infinit-user --pull --as alice --name --alice
+$> infinit user --pull --as alice --name --alice
 Remotely deleted user "alice".
 ```
 
 To pull all objects that the user has pushed to the Hub along with the user itself, you can specify the `--purge` option:
 
 ```
-$> infinit-user --pull --as alice --name --alice --purge
+$> infinit user --pull --as alice --name --alice --purge
 Remotely deleted user "alice".
 ```
 
@@ -289,7 +289,7 @@ Remotely deleted user "alice".
 Users can be locally deleted using the `--delete` mode. If the user has a private key, you will be prompted before the user is deleted as losing a user's public key will mean that you can no longer perform actions as that user. This includes pulling the user or any objects they have pushed to the Hub. To avoid being prompted, the `--force` option can be used.
 
 ```
-$> infinit-user --delete --name alice
+$> infinit user --delete --name alice
 WARNING: The local copy of the user’s private key will be removed.
 WARNING: You will no longer be able to perform actions on the Hub
 WARNING: for this user.
@@ -301,7 +301,7 @@ Locally deleted user "alice".
 To be symmetric with the `--push` option of the create mode, the `--pull` is provided with the delete mode. This will remove the user both on the Hub and locally.
 
 ```
-$> infinit-user --delete --as alice --name alice --pull
+$> infinit user --delete --as alice --name alice --pull
 WARNING: The local copy of the user’s private key will be removed.
 WARNING: You will no longer be able to perform actions on the Hub
 WARNING: for this user.
@@ -316,7 +316,7 @@ There is also the option `--purge` to locally remove all objects created by the 
 Credentials
 -----------
 
-The _infinit-credentials_ binary manages the credentials for your cloud services. Cloud services, such as Amazon Web Services, Google Cloud Storage and Dropbox, can be used to add storage to your networks. Infinit considers these cloud services as basic and unprivileged datastores that are used to store blocks of encrypted data.
+The _infinit credentials_ binary manages the credentials for your cloud services. Cloud services, such as Amazon Web Services, Google Cloud Storage and Dropbox, can be used to add storage to your networks. Infinit considers these cloud services as basic and unprivileged datastores that are used to store blocks of encrypted data.
 
 _**NOTE**: Because this binary requires the Hub for some types of credentials (such as Dropbox and Google), you may need to register your user on the Infinit Hub. For more information, please refer to the <a href="#user">User</a> section, more specifically how to <a href="#sign-up-on-the-hub">Sign up on the Hub</a>._
 
@@ -326,7 +326,7 @@ _**NOTE**: Because this binary requires the Hub for some types of credentials (s
 The basic process for adding credentials consists in using the `--add` option as shown in the example below with Amazon Web Services:
 
 ```
-$> infinit-credentials --add --aws --name s3-user
+$> infinit credentials --add --aws --name s3-user
 Please enter your AWS credentials
 Access Key ID: AKIAIOSFODNN7EXAMPLE
 Secret Access Key: ****************************************
@@ -347,7 +347,7 @@ _**NOTE**: Do not hesitate to <a href="http://help.infinit.sh" target="_blank">v
 At any point, you can list your local credentials using the `--list` option:
 
 ```
-$> infinit-credentials --list
+$> infinit credentials --list
 AWS:
   AKIAIOSFODNN7EXAMPLE: s3-user
 GCS:
@@ -359,27 +359,27 @@ GCS:
 Credentials can be locally removed using the `--delete` mode:
 
 ```
-$> infinit-credentials --delete --aws --name s3-user
+$> infinit credentials --delete --aws --name s3-user
 Locally deleted credentials "s3-user".
 ```
 
 Storage
 -------
 
-The _infinit-storage_ binary allows for the definition of storage resources. Such storage resources can be local — storing blocks of data on a locally available file system — or remote in which case the blocks of data are stored through a cloud service API for instance.
+The _infinit silo_ binary allows for the definition of silos. Such silos can be local — storing blocks of data on a locally available file system — or remote in which case the blocks of data are stored through a cloud service API for instance.
 
-Note that storage resources are device-specific. As such, resources cannot be pushed to the Hub since they only live locally.
+Note that silos are device-specific. As such, resources cannot be pushed to the Hub since they only live locally.
 
-### Create a storage resource ###
+### Create a silo ###
 
-To create a storage resource, simply specify the `--create` option along with the type of the storage resource. In the example below, a storage resource is created on top of an existing local file system by storing the blocks of encrypted data in a specific directory specified that can be specified through the `--path` option:
+To create a silo, simply specify the `--create` option along with the type of the silo. In the example below, a silo is created on top of an existing local file system by storing the blocks of encrypted data in a specific directory specified that can be specified through the `--path` option:
 
 ```
-$> infinit-storage --create --filesystem --capacity 2GB --name local
+$> infinit silo --create --filesystem --capacity 2GB --name local
 Created storage "local".
 ```
 
-However, the process differs depending on the nature of the storage resource. Please follow the guide that is specific to the type of storage you want to create:
+However, the process differs depending on the nature of the silo. Please follow the guide that is specific to the type of storage you want to create:
 
 <ul class="horizontal">
   <li><a href="${route('doc_storages_filesystem')}"><img src="${url('images/icons/hierarchy.png')}" alt="file system logo"> Local Filesystem</a></li>
@@ -389,27 +389,27 @@ However, the process differs depending on the nature of the storage resource. Pl
 
 _**NOTE**: Do not hesitate to <a href="http://help.infinit.sh" target="_blank">vote for and/or request</a> the types of storage backends that you would like to see supported in the future._
 
-### Delete a storage resource ###
+### Delete a silo ###
 
-You can locally delete a storage resource using the `--delete` mode. For filesystem storage resources, you can clear their contents using the `--clear-content` option.
+You can locally delete a silo using the `--delete` mode. For filesystem silos, you can clear their contents using the `--clear-content` option.
 
 Using `--purge` will unlink all networks that use the storage locally.
 
 Network
 -------
 
-With the _infinit-network_ utility you are able to create overlay networks, configure the way the distributed hash table behaves and much more.
+With the _infinit network_ utility you are able to create overlay networks, configure the way the distributed hash table behaves and much more.
 
 ### Create a network ###
 
-The example below creates a network named "cluster" which aggregates the storage resources controlled by the users involved in this network.
+The example below creates a network named "cluster" which aggregates the silos controlled by the users involved in this network.
 
 The network can be configured depending on the requirements of the storage infrastructure the administrator is setting up. For instance, the number of computing devices could be extremely small, the owners of those computers could be somewhat untrustworthy or their machines could be expected to be turned on and off throughout the day. To cater for this the network parameters can be tuned: the overlay's topology, the replication factor, the fault tolerance algorithm, etc.
 
-The following creates a storage network, relying on the default overlay network with a replication factor of 3. In addition, the administrator decides to contribute two storage resources to the network on creation.
+The following creates a storage network, relying on the default overlay network with a replication factor of 3. In addition, the administrator decides to contribute two silos to the network on creation.
 
 ```
-$> infinit-network --create --as alice --replication-factor 2 --storage local --storage s3 --name cluster
+$> infinit network --create --as alice --replication-factor 2 --storage local --storage s3 --name cluster
 Locally created network "alice/cluster".
 ```
 
@@ -430,7 +430,7 @@ You can now push a network onto the Hub for other users to retrieve it. Note tha
 As with the other utilities, you can otherwise push the network to the Hub with the `--push` option:
 
 ```
-$> infinit-network --push --as alice --name cluster
+$> infinit network --push --as alice --name cluster
 Remotely saved network "alice/cluster".
 ```
 
@@ -441,9 +441,9 @@ You can also manipulate networks without relying on the Hub. Please refer to the
 You can list the networks that you have locally using the `--list` mode. Do not forget that you may need to fetch the networks from the Hub in order to be up to date:
 
 ```
-$> infinit-network --fetch --as alice
+$> infinit network --fetch --as alice
 Fetched networks for user "alice".
-$> infinit-network --list
+$> infinit network --list
 alice/cluster
 ```
 
@@ -462,7 +462,7 @@ As the owner of the network, the system automatically recognizes you and allows 
 In the example below, Alice connects one of her other devices and contributes storage capacity from her personal Network-Attached Storage (NAS).
 
 ```
-$> infinit-network --link --as alice --name cluster --storage nas
+$> infinit network --link --as alice --name cluster --storage nas
 Linked device to network "alice/cluster".
 ```
 
@@ -475,14 +475,14 @@ In this case, you should have <a href="#receive-a-passport">received</a>, throug
 In order to link a device to a network, you must first retrieve its descriptor. This network descriptor can be fetched from the Hub through a single command:
 
 ```
-$> infinit-network --fetch --as bob --name alice/cluster
+$> infinit network --fetch --as bob --name alice/cluster
 Fetched network "alice/cluster".
 ```
 
 You now have both the network descriptor and a passport locally allowing you to link new devices to it. Let's link Bob's current device to Alice's "cluster" network. Note that one can decide to contribute additional storage capacity through the `--storage` option.
 
 ```
-$> infinit-network --link --as bob --name alice/cluster
+$> infinit network --link --as bob --name alice/cluster
 Linked device to network "alice/cluster".
 ```
 
@@ -497,7 +497,7 @@ If you want your node to also provide a POSIX-compliant file system interface, p
 In order to run a network, just use the option `--run`. Note that the `--publish` option tells the binary to rely on the Hub to ease the process of connecting to the network by providing you with the endpoint of bootstrap nodes while publishing your own endpoint for other nodes to find you as well:
 
 ```
-$> infinit-network --run --as alice --name cluster --publish
+$> infinit network --run --as alice --name cluster --publish
 Running network "alice/cluster".
 Fetched endpoints for "alice/cluster".
 Remotely pushed endpoints for "alice/cluster".
@@ -509,7 +509,7 @@ Remotely pushed endpoints for "alice/cluster".
 Once a network is running, you can easily get information about it using the `--inspect` option. This information includes things such as which peers are connected to, data redundancy information and the type of consensus used.
 
 ```
-$> infinit-network --inspect --name alice/company --all
+$> infinit network --inspect --name alice/company --all
 {
     "consensus" : {
         "node_timeout" : "600s",
@@ -564,7 +564,7 @@ Networks can be assigned administrators who have either read only or read/write 
 On creation of a network, individual administrators can be added using the `--admin-r` and `--admin-rw` arguments as shown in the example that follows:
 
 ```
-$> infinit-network --create --as alice --storage local --admin-r bob --name administrated-cluster --push
+$> infinit network --create --as alice --storage local --admin-r bob --name administrated-cluster --push
 Locally created network "alice/administrated-cluster".
 Remotely saved network "alice/administrated-cluster".
 ```
@@ -572,7 +572,7 @@ Remotely saved network "alice/administrated-cluster".
 Once a network has been created, administrator users and groups can be added using the `--update` action. Note that as [groups](#create-a-group) are stored internally in the network DHT, you will need to have [created](#create-a-volume) and [mounted](#mount-a-volume) a volume on the network to add an administrator group.
 
 ```
-$> infinit-network --update --as alice --admin-rw charlie @managers --mountpoint /path/to/mounted/volume/on/network --push
+$> infinit network --update --as alice --admin-rw charlie @managers --mountpoint /path/to/mounted/volume/on/network --push
 Updated linked network "alice/administrated-cluster".
 Updated network "alice/administrated-cluster".
 Remotely updated "alice/adminstrated-cluster".
@@ -586,7 +586,7 @@ INFO: file or folder.
 Similarly, administrators can be removed using the `--admin-remove` argument.
 
 ```
-$> infinit-network --update --as alice --admin-remove bob --mountpoint /path/to/mounted/volume/on/network --push
+$> infinit network --update --as alice --admin-remove bob --mountpoint /path/to/mounted/volume/on/network --push
 Updated linked network "alice/administrated-cluster".
 Updated network "alice/administrated-cluster".
 Remotely updated "alice/adminstrated-cluster".
@@ -598,7 +598,7 @@ INFO: file or folder.
 Passport
 --------
 
-The _infinit-passport_ binary is used to control which users are allowed to connect to a network, granting him/her the right to link devices, contribute storage resources etc.
+The _infinit passport_ binary is used to control which users are allowed to connect to a network, granting him/her the right to link devices, contribute silos etc.
 
 ### Create a passport ###
 
@@ -607,14 +607,14 @@ To allow another user to join a network and link devices, you must issue a passp
 Let's say that you want to invite the user "bob" to your network. First you need to fetch his identity from the Hub (or retrieve it manually if operating without the Hub, see `--export` and `--import`):
 
 ```
-$> infinit-user --fetch --as alice --name bob
+$> infinit user --fetch --as alice --name bob
 Fetched user "bob".
 ```
 
 The passport that you are about to create will be sealed, allowing only Bob to <a href="#link-a-device-to-a-network">connect new devices</a> to the network:
 
 ```
-$> infinit-passport --create --as alice --network cluster --user bob
+$> infinit passport --create --as alice --network cluster --user bob
 Locally created passport "alice/cluster: bob".
 ```
 
@@ -630,7 +630,7 @@ Now that the passport has been created, read the <a href="#distribute-a-passport
 You can list both the passports you've created for other users to join your networks and the passports issued by other users for you to join their networks:
 
 ```
-$> infinit-passport --list --as alice
+$> infinit passport --list --as alice
 alice/cluster: bob
 ```
 
@@ -643,7 +643,7 @@ The easiest way to do this is to rely on the Hub, by appending the `--push` opti
 You can otherwise push a local passport by invoking the `--push` action option as shown below:
 
 ```
-$> infinit-passport --push --as alice --network cluster --user bob
+$> infinit passport --push --as alice --network cluster --user bob
 Remotely saved passport "alice/cluster: bob".
 ```
 
@@ -656,13 +656,13 @@ If you are using the pure decentralized environment i.e. without the Hub, you wi
 You can fetch your passports from the Hub in order to refresh the local snapshots using the `--fetch` option:
 
 ```
-$> infinit-passport --fetch --as bob
+$> infinit passport --fetch --as bob
 Fetched passports for user "bob"
-$> infinit-passport --list --as bob
+$> infinit passport --list --as bob
 alice/cluster: bob
 ```
 
-_**NOTE**: The _infinit-passport_ binary also provides options to fetch all the passports for a specific user or for a specific network._
+_**NOTE**: The _infinit passport_ binary also provides options to fetch all the passports for a specific user or for a specific network._
 
 That's it, you will now be able to <a href="#link-a-device-to-a-network">link devices to the networks</a> these passports allow you to.
 
@@ -673,16 +673,16 @@ The network administrator may not want to be the only user to be able to issue p
 The process of delegation is performed in two steps. The first is to create the passport with the `--allow-create-passport` flag:
 
 ```
-$> infinit-passport --create --as alice --network cluster --user bob --allow-create-passport --push
+$> infinit passport --create --as alice --network cluster --user bob --allow-create-passport --push
 Locally created passport "alice/cluster: bob".
 ```
 
 The second is to register the user's public key.
 
-**IMPORTANT**: This can only be done once you have created a volume on the network as you will be required to mount the volume and use the _infinit-acl_ binary to register the user.
+**IMPORTANT**: This can only be done once you have created a volume on the network as you will be required to mount the volume and use the _infinit acl_ binary to register the user.
 
 ```
-$> infinit-acl --register --network cluster --user bob --path /path/to/mountpoint
+$> infinit acl --register --network cluster --user bob --path /path/to/mountpoint
 ```
 
 Bob can now [fetch the new passport](#receive-a-passport), at which point he will in turn be able to [issue passports](#create-a-passport) for other users to connect to the network.
@@ -699,7 +699,7 @@ Note that several volumes can be created on the same network, which is analogous
 The command below creates a volume on a network. You can specify the default mount point for the volume through the `--mountpoint` option even though the following example does not:
 
 ```
-$> infinit-volume --create --as alice --network cluster --name shared
+$> infinit volume --create --as alice --network cluster --name shared
 Locally created volume "alice/shared".
 ```
 
@@ -710,7 +710,7 @@ _**NOTE**: You may have noticed that the name of the network is sometimes prepen
 A volume can be created with default permissions of either read-only or read-write. These permissions apply to anyone who has a passport for the network. Such permissions are quite handy when one wants to create a collaboration space in which everyone trusts each other for instance.
 
 ```
-$> infinit-volume --create --as alice --network cluster --name shared --default-permissions rw
+$> infinit volume --create --as alice --network cluster --name shared --default-permissions rw
 Locally created volume "alice/shared".
 ```
 
@@ -721,7 +721,7 @@ _**NOTE**: The one exception to this is if a user has a passport with the `--den
 A volume often needs to be shared with the other users in the network. As with the other resources, the easiest way to do this is to rely on the Hub, either using the `--push` option on volume creation or by pushing the volume as a separate action:
 
 ```
-$> infinit-volume --push --as alice --name shared
+$> infinit volume --push --as alice --name shared
 Remotely saved volume "alice/shared".
 ```
 
@@ -732,9 +732,9 @@ _**NOTE**: You may want to keep your volume hidden from the users on a network, 
 You can list the volumes that you have local descriptors for with the `--list` option. Remember that you can also fetch the volumes on your networks which have been pushed to the Hub:
 
 ```
-$> infinit-volume --fetch --as alice
+$> infinit volume --fetch --as alice
 Fetched volumes for user "alice".
-$> infinit-volume --list
+$> infinit volume --list
 alice/shared: network alice/cluster
 ```
 
@@ -747,7 +747,7 @@ Note that if you have been invited to join the network, you will need to fetch t
 The following command mounts an Infinit file system. If a volume is being mounted for the first time, the `--allow-root-creation` option must be passed so that the volume root block is written. Note that the `--publish` option tells the binary to rely on the Hub to ease the process of connecting to the underlying network by providing you with the endpoint of bootstrap nodes while publishing your own endpoint for other nodes to find you as well:
 
 ```
-$> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --allow-root-creation --publish
+$> infinit volume --mount --as alice --name shared --mountpoint /mnt/shared/ --allow-root-creation --publish
 Running network "alice/cluster".
 Fetched endpoints for "alice/cluster".
 Running volume "alice/shared".
@@ -788,19 +788,19 @@ Unlike other file systems, Infinit provides advanced decentralized (i.e. without
 
 The owner of a volume is automatically granted access to its root directory. It is then his/her responsibility to manage the permissions on the root directory for other users to use the volume.
 
-Note that most access control actions use POSIX mechanisms such as standard permissions and extended attributes. The _infinit-acl_ utility can be considered as a wrapper on top of extended attributes which allows one to manipulate the ACL of an Infinit volume.
+Note that most access control actions use POSIX mechanisms such as standard permissions and extended attributes. The _infinit acl_ utility can be considered as a wrapper on top of extended attributes which allows one to manipulate the ACL of an Infinit volume.
 
 ### Grant/revoke access ###
 
-In order to grant or revoke access to a file or directory, one uses the _infinit-acl_ binary, providing the path to the object to manage and the permissions to apply.
+In order to grant or revoke access to a file or directory, one uses the _infinit acl_ binary, providing the path to the object to manage and the permissions to apply.
 
 The following grants Bob the permissions required to read and write the root directory of Alice's volume mounted to `/mnt/shared/`.
 
 ```
-$> infinit-acl --set --path /mnt/shared/ --mode rw --user bob
+$> infinit acl --set --path /mnt/shared/ --mode rw --user bob
 ```
 
-_**NOTE:** The infinit-acl binary provides additional options to better manage hierarchical permissions. Do not hesitate to rely on the help to learn more._
+_**NOTE:** The infinit acl binary provides additional options to better manage hierarchical permissions. Do not hesitate to rely on the help to learn more._
 
 Once the command has been run, Bob will be able to read and write files/directories in the root directory of Alice's "shared" volume.
 
@@ -829,14 +829,14 @@ $> chmod o+w /mnt/shared/awesome.txt
 -rw----rw-  1 alice  users     14B Jan 20 16:55 awesome.txt
 ```
 
-_**NOTE**: The option `--others-mode` can also be used in the binary infinit-acl to set and list the permissions associated with 'everybody'._
+_**NOTE**: The option `--others-mode` can also be used in the binary infinit acl to set and list the permissions associated with 'everybody'._
 
 ### List permissions ###
 
 Every user with the volume descriptor and read permissions can consult the Access Control List (ACL) associated with a file system object:
 
 ```
-$> infinit-acl --list --path /mnt/shared/awesome.txt
+$> infinit acl --list --path /mnt/shared/awesome.txt
 /mnt/shared/awesome.txt:
      alice: rw (owner)
      bob: r
@@ -870,22 +870,22 @@ Infinit supports the concept of groups i.e a collection of users. Such groups ea
 Each group is identified by a unique name, and can be created by any user in the network. It stores a list of group members that can be users and other groups, resulting in hierarchical groups. A group's member list can be modified only by the users administrating the group. By default only the user who created it is the administrator of the group. Below is shown an example of group creation:
 
 ```
-$> infinit-acl --group --create --name marketing --path .
+$> infinit acl --group --create --name marketing --path .
 ```
 
-_**NOTE**: The `--path` option must be provided for the infinit-acl to know which volume, hence network, you want the group to be created in. You can use the `--path` option to reference the volume's mountpoint or any of its files/folders._
+_**NOTE**: The `--path` option must be provided for the infinit acl to know which volume, hence network, you want the group to be created in. You can use the `--path` option to reference the volume's mountpoint or any of its files/folders._
 
 From that point, it is very easy to display information on a group using the `--show` action:
 
 ```
-$> infinit-acl --group --show --name marketing --path .
+$> infinit acl --group --show --name marketing --path .
 {"admins":["alice"],"members":["@marketing","alice"]}
 ```
 
-Once created, a group can be added to any object's ACLs using _infinit-acl --set_. The process is the same as granting access to a user except that the group name must be prefixed with an '@' character:
+Once created, a group can be added to any object's ACLs using _infinit acl --set_. The process is the same as granting access to a user except that the group name must be prefixed with an '@' character:
 
 ```
-$> infinit-acl --set --mode rw --user @marketing --path /mnt/shared/awesome.txt
+$> infinit acl --set --mode rw --user @marketing --path /mnt/shared/awesome.txt
 ```
 
 ### Add/remove group members ###
@@ -893,15 +893,15 @@ $> infinit-acl --set --mode rw --user @marketing --path /mnt/shared/awesome.txt
 Any group administrator can add and remove members through the `--add` and `--remove` options. In the example below, Alice first adds Bob as a member of her Marketing group. Then, Alice creates a group named "marketing/tokyo" and adds it to her Marketing group.
 
 ```
-$> infinit-acl --group --name marketing --add-user bob --path .
-$> infinit-acl --group --create --name marketing/tokyo --path .
-$> infinit-acl --group --name marketing --add-group marketing/tokyo --path .
+$> infinit acl --group --name marketing --add-user bob --path .
+$> infinit acl --group --create --name marketing/tokyo --path .
+$> infinit acl --group --name marketing --add-group marketing/tokyo --path .
 ```
 
 The "marketing/tokyo" group could also be added or removed using the `--add` or `--remove` option and a '@' prefix before the group name:
 
 ```
-$> infinit-acl --group --name --marketing --add @marketing/tokyo --path .
+$> infinit acl --group --name --marketing --add @marketing/tokyo --path .
 ```
 
 ### Add/remove group administrators ###
@@ -909,15 +909,15 @@ $> infinit-acl --group --name --marketing --add @marketing/tokyo --path .
 A group can be administered by multiple users at once, increasing the flexibility of the group concept a bit more. To add/remove administrator to a group, simply rely on the `--add-admin` and `--remove-admin` actions:
 
 ```
-$> infinit-acl --group --name marketing --add-admin bob --path .
-$> infinit-acl --group --show --name marketing --path .
+$> infinit acl --group --name marketing --add-admin bob --path .
+$> infinit acl --group --show --name marketing --path .
 {"admins":["alice","bob"],"members":["@marketing","alice","bob"]}
 ```
 
 As before, administrators can be added and removed using the `--add` and `--remove` option with a '^' prefix:
 
 ```
-$> infinit-acl --group --name marketing --add ^bob --path .
+$> infinit acl --group --name marketing --add ^bob --path .
 ```
 
 Device
@@ -937,7 +937,7 @@ The easiest (but least secure) way to retrieve your user identity on another dev
 
 To activate this mode, you need to specify the `--full` option when signing up on the Hub, along with a password, as shown below. Note that the password can be provided in-line using the `--password` option or entered when prompted:
 
-<pre><div><span>Device A</span></div><code>$> infinit-user --signup --name alice --fullname Alice --full
+<pre><div><span>Device A</span></div><code>$> infinit user --signup --name alice --fullname Alice --full
 Password: ********
 Remotely saved user "alice".
 </code>
@@ -945,7 +945,7 @@ Remotely saved user "alice".
 
 Following this operation, one can login on another device very simply by invoking the `--login` option:
 
-<pre class="alternate"><div><span>Device B</span></div><code>$> infinit-user --login --name alice
+<pre class="alternate"><div><span>Device B</span></div><code>$> infinit user --login --name alice
 Password: ********
 Locally saved user "alice".
 </code>
@@ -953,7 +953,7 @@ Locally saved user "alice".
 
 That's it, you can see by listing the local users that your private user identity has been retrieved:
 
-<pre class="alternate"><div><span>Device B</span></div><code>$> infinit-user --list
+<pre class="alternate"><div><span>Device B</span></div><code>$> infinit user --list
 alice: public/private keys
 </code>
 </pre>
@@ -966,7 +966,7 @@ If you are uncomfortable with us keeping your user identity, there is another (p
 
 The method relies on the Hub as a temporary store for your user identity to be kept until it is retrieved on another device. If not retrieved after 5 minutes, the user identity will be removed from the Hub. The user identity is also encrypted with a key of your choice so that we cannot access it. In the future, a direct point-to-point method will be used to bypass the Hub altogether.
 
-<pre><div><span>Device A</span></div><code>$> infinit-device --transmit --as alice --user
+<pre><div><span>Device A</span></div><code>$> infinit device --transmit --as alice --user
 Passphrase: ********
 Transmitted user identity for "alice".
 User identity on the Hub for: 297 seconds
@@ -975,7 +975,7 @@ User identity on the Hub for: 297 seconds
 
 Once the command has been launched, you have 5 minutes to retrieve the user identity on another device using the following command:
 
-<pre class="alternate"><div><span>Device B</span></div><code>$> infinit-device --receive --user --name alice
+<pre class="alternate"><div><span>Device B</span></div><code>$> infinit device --receive --user --name alice
 Passphrase: ********
 Received user identity for "alice".
 </code>
@@ -983,7 +983,7 @@ Received user identity for "alice".
 
 You can verify that the user has been saved locally by listing the local users:
 
-<pre class="alternate"><div><span>Device B</span></div><code>$> infinit-user --list
+<pre class="alternate"><div><span>Device B</span></div><code>$> infinit user --list
 alice: public/private keys
 </code>
 </pre>
@@ -996,7 +996,7 @@ For users that either do not trust the two methods above or who are using a comp
 
 First, export the user identity to a file:
 
-<pre><div><span>Device A</span></div><code>$> infinit-user --export --name alice --full --output alice.user
+<pre><div><span>Device A</span></div><code>$> infinit user --export --name alice --full --output alice.user
 WARNING: you are exporting the user "alice" including the private key
 WARNING: anyone in possession of this information can impersonate that user
 WARNING: if you mean to export your user for someone else, remove the --full flag
@@ -1008,7 +1008,7 @@ $> cat alice.user
 
 At this point, it is your responsibility to move the file to your other device, using _SCP_ for instance. Re-creating the user entity the just requires an import:
 
-<pre class="alternate"><div><span>Device B</span></div><code>$> infinit-user --import --input alice.user
+<pre class="alternate"><div><span>Device B</span></div><code>$> infinit user --import --input alice.user
 Imported user "alice".
 </code>
 </pre>
@@ -1016,13 +1016,13 @@ Imported user "alice".
 Drive
 -----
 
-Once you've created your storage infrastructure comprising of a network, storage resources and volumes, you may wish to invite other users, potentially non-tech-savvy, to use it to seamlessly store and access their files.
+Once you've created your storage infrastructure comprising of a network, silos and volumes, you may wish to invite other users, potentially non-tech-savvy, to use it to seamlessly store and access their files.
 
 A client application with a graphical interface called <a href="http://infinit.sh/drive">Infinit Drive</a> is provided for end-users to see the drives they are allowed to access, the people contributing to it, their permissions, etc.
 
 <img src="${url('images/desktop-client.png')}" alt="Infinit Drive">
 
-The notions of storage resources, networks and volumes are too technical for most end-users. Such users may also require a simple email guiding them through the set-up process.
+The notions of silos, networks and volumes are too technical for most end-users. Such users may also require a simple email guiding them through the set-up process.
 
 This is why the notion of a *drive* has been introduced. A drive is nothing more than an abstraction on top of a volume. In other words, a drive is a volume that will show up in the Infinit Drive's interface.
 
@@ -1035,7 +1035,7 @@ As such, the network administrator can define the volumes that will be usable by
 Creating a drive is as easy as any other operation. The following creates a drive named "workspace" based on the network "cluster" and volume "shared".
 
 ```
-$> infinit-drive --create --as alice --network cluster --volume shared --name workspace --description "Alice's, Bob's, Charlie's and Dave's workspace" --push
+$> infinit drive --create --as alice --network cluster --volume shared --name workspace --description "Alice's, Bob's, Charlie's and Dave's workspace" --push
 Locally created drive "alice/workspace".
 Remotely saved drive "alice/workspace".
 ```
@@ -1047,9 +1047,9 @@ Note that the `--push` option is included to push the drive to the Hub so that i
 As for the other resources, one can very simply list the local drives. Note that refreshing the local snapshots can be achieved with the `--fetch` action:
 
 ```
-$> infinit-drive --fetch --as alice
+$> infinit drive --fetch --as alice
 Fetched drives for user "alice".
-$> infinit-drive --list
+$> infinit drive --list
 alice/workspace: ok
 ```
 
@@ -1059,16 +1059,16 @@ There are two ways to invite users to join a drive depending on the fact that th
 
 #### Existing users (by public identity) ####
 
-Before you can invite a user to a drive, you need to be able to reference him/her. For that, you need to fetch his/her public identity using the `infinit-user --fetch` command (assuming you are using the Hub).
+Before you can invite a user to a drive, you need to be able to reference him/her. For that, you need to fetch his/her public identity using the `infinit user --fetch` command (assuming you are using the Hub).
 
-Every user that will be invited must have been [issued a passport](#create-a-passport) to connect to the network. Since creating a passport for many users may be cumbersome, a `--passport` option is provided to the _infinit-drive_ binary in order to automatically create any missing passport.
+Every user that will be invited must have been [issued a passport](#create-a-passport) to connect to the network. Since creating a passport for many users may be cumbersome, a `--passport` option is provided to the _infinit drive_ binary in order to automatically create any missing passport.
 
 The sequence of commands below shows how to invite both Bob and Charlie. Note that the user Bob has already been fetched locally and has already been issued a passport. However, Charlie is a freshly created user for whom no passport has been created.
 
 ```
-$> infinit-user --fetch --as alice --name charlie
+$> infinit user --fetch --as alice --name charlie
 Fetched user "charlie".
-$> infinit-drive --invite --as alice --name workspace --user bob --user charlie --passport --push
+$> infinit drive --invite --as alice --name workspace --user bob --user charlie --passport --push
 Locally created passport "alice/cluster: charlie".
 Locally created invitation for "bob".
 Locally created invitation for "charlie".
@@ -1081,7 +1081,7 @@ That's it, Bob and Charlie have been invited to join the drive named "alice/work
 If you would like to prepare invitations locally and push them all later, you can do this by omitting the option `--push` in the previous sequence of commands and later call the command as shown below:
 
 ```
-$> infinit-drive --invite --as alice --name workspace --push
+$> infinit drive --invite --as alice --name workspace --push
 Remotely saved invitations "alice/workspace: bob, charlie".
 ```
 
@@ -1104,25 +1104,25 @@ If, as the network administrator, you want the experience to be as smooth as pos
 The following demonstrates how to delegate the passport creation to the Hub for a passport to be generated following the invited user's registration:
 
 ```
-$> infinit-user --fetch --as alice --name hub
+$> infinit user --fetch --as alice --name hub
 Fetched user "hub".
-$> infinit-passport --create --as alice --network cluster --user hub --allow-create-passport --push
+$> infinit passport --create --as alice --network cluster --user hub --allow-create-passport --push
 Locally created passport "alice/cluster: hub".
 Remotely saved passport "alice/cluster: hub".
 ```
 
-The Hub's user then needs to be registered to the network. This requires that the volume is mounted so that the _infinit-acl_ binary can be used to write the block.
+The Hub's user then needs to be registered to the network. This requires that the volume is mounted so that the _infinit acl_ binary can be used to write the block.
 
 ```
-$> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --publish
+$> infinit volume --mount --as alice --name shared --mountpoint /mnt/shared/ --publish
 ...
-$> infinit-acl --register --network cluster --user hub --path /mnt/shared/
+$> infinit acl --register --network cluster --user hub --path /mnt/shared/
 ```
 
 Users can now be invited using their email addresses. They will receive an email asking them to install the graphical client and sign up. Note that the Hub will only generate their passport once they have confirmed their email address.
 
 ```
-$> infinit-drive --invite --as alice --name workspace --email dave@company.com --push
+$> infinit drive --invite --as alice --name workspace --email dave@company.com --push
 Locally created invitation "alice/workspace: dave@company.com".
 Remotely saved invitation "alice/workspace: dave@company.com".
 ```
@@ -1134,16 +1134,16 @@ Even though the drive abstraction has been introduced for users of graphical int
 First, remember to update your local drive descriptors by fetching the drives you've been invited to and already have access to. Once fetched, you can list the drives you have locally.
 
 ```
-$> infinit-drive --fetch --as charlie
+$> infinit drive --fetch --as charlie
 Fetched drive for user "charlie"
-$> infinit-drive --list --as charlie
+$> infinit drive --list --as charlie
 alice/workspace
 ```
 
 You can then join a drive using the following command:
 
 ```
-$> infinit-drive --join --as charlie --name alice/workspace
+$> infinit drive --join --as charlie --name alice/workspace
 Joined drive "alice/workspace".
 ```
 
@@ -1171,12 +1171,12 @@ Journal
 -------
 When running a network or volume with the asynchronous option `--async`, operations are written to the local disk before being sent to the storage nodes. This ensures a better end user experience by not exposing them directly to the network latency or bandwidth.
 
-The _infinit-journal_ binary provides the means for checking the status of the asynchronous write buffer or _journal_.
+The _infinit journal_ binary provides the means for checking the status of the asynchronous write buffer or _journal_.
 
 ### Check asynchronous network cache ###
 In order to check the number of pending asynchronous operations and/or the amount of data remaining to be sent to the storage nodes, you can use the `--stat` option.
 
 ```
-$> infinit-journal --stat --as alice --network alice/cluster
+$> infinit journal --stat --as alice --network alice/cluster
 alice/cluster: 185 operations, 71 MB
 ```

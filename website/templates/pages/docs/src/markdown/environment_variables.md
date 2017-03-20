@@ -23,8 +23,8 @@ Noteworthy is that the '\*' wildcard character can be used to form glob patterns
 By default the log level is set to `*:LOG` meaning that all the components are activated with the least verbose log level `LOG`:
 
 ```
-$> infinit-volume --mount --as alice --name shared
-[           infinit-volume           ] [main] client version: 0.5.5-dev
+$> infinit volume --mount --as alice --name shared
+[           infinit volume           ] [main] client version: 0.5.5-dev
 [        infinit.model.Model         ] [main] infinit::model::Model(0x168f2a0): compatibility version 0.5.5
 [       infinit.overlay.kelips       ] [main] Filesystem running in bootstrap read/write mode.
 [       infinit.overlay.kelips       ] [main] Kelips(10.0.3.1:60441): listening on 10.0.3.1:60441
@@ -46,16 +46,16 @@ Note that the `NONE` level can be used to deactivate a component. For instance `
 
 Finally, you will find next some of the components that can be activated or not to control the level of logging:
 - **Command-line tools**:
-  - `infinit-acl`
-  - `infinit-block`
-  - `infinit-credentials`
-  - `infinit-device`
-  - `infinit-drive`
-  - `infinit-network`
-  - `infinit-passport`
-  - `infinit-storage`
-  - `infinit-user`
-  - `infinit-volume`
+  - `infinit acl`
+  - `infinit block`
+  - `infinit credentials`
+  - `infinit device`
+  - `infinit drive`
+  - `infinit network`
+  - `infinit passport`
+  - `infinit storage`
+  - `infinit user`
+  - `infinit volume`
   - etc.
 - **Reactor**: the very core component that provides the coroutine system
   - `reactor.network`
@@ -87,10 +87,10 @@ Finally, you will find next some of the components that can be activated or not 
 The example below activates several components in different log levels to demonstrate the use of the `ELLE_LOG_LEVEL` environment variable:
 
 ```
-$> ELLE_LOG_LEVEL="infinit.cryptography*:TRACE,infinit.filesystem*:DEBUG" ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+$> ELLE_LOG_LEVEL="infinit.cryptography*:TRACE,infinit.filesystem*:DEBUG" ./bin/infinit volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
 Fetched endpoints for "infinit/demo".
 Running network "infinit/demo".
-[           infinit-volume           ] [main] client version: 0.5.4-136-g83aa53b
+[           infinit volume           ] [main] client version: 0.5.4-136-g83aa53b
 [    infinit.cryptography.rsa.low    ] [main] RSA_dup(0x7f8bb3430140)
 [    infinit.cryptography.rsa.low    ] [main] RSA_dup(0x7f8bb3431540)
 [    infinit.cryptography.rsa.low    ] [main] RSA_dup(0x7f8bb3431d30)
@@ -127,7 +127,7 @@ Note that depending on the verbosity of the logs, it may have an impact on the p
 The `ELLE_LOG_FILE` takes a path as argument that references the file in which the logs will be stored rather than being displayed on the standard error (`stderr`) stream.
 
 ```
-$> ELLE_LOG_FILE=$PWD/demo.log ELLE_LOG_LEVEL="infinit.protocol*:DEBUG,infinit.filesystem*:DEBUG" ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+$> ELLE_LOG_FILE=$PWD/demo.log ELLE_LOG_LEVEL="infinit.protocol*:DEBUG,infinit.filesystem*:DEBUG" ./bin/infinit volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
 Fetched endpoints for "infinit/demo".
 Running network "infinit/demo".
 Running volume "infinit/demo".
@@ -138,7 +138,7 @@ The logs have been, as expected, stored in the file referenced through the `ELLE
 
 ```
 $> cat demo.log
-[           infinit-volume           ] [main] client version: 0.5.4-136-g83aa53b
+[           infinit volume           ] [main] client version: 0.5.4-136-g83aa53b
 [        infinit.model.Model         ] [main] infinit::model::Model(0x7ffd2b714c30): compatibility version 0.3.0
 [        infinit.overlay.kelips        ] [main] Running in observer mode
 [        infinit.overlay.kelips        ] [main] Filesystem is read-only until peers are reached
@@ -170,10 +170,10 @@ In the example below, only the `ELLE_LOG_PID` variable is activated, resulting i
 These environment variables are particularly helpful when logs from different programs are written to the same file.
 
 ```
-$> ELLE_LOG_PID=1 ELLE_LOG_LEVEL="infinit.protocol*:DEBUG,infinit.filesystem*:DEBUG" ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+$> ELLE_LOG_PID=1 ELLE_LOG_LEVEL="infinit.protocol*:DEBUG,infinit.filesystem*:DEBUG" ./bin/infinit volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
 Fetched endpoints for "infinit/demo".
 Running network "infinit/demo".
-[           infinit-volume           ] [29607] [main] client version: 0.5.4-136-g83aa53b
+[           infinit volume           ] [29607] [main] client version: 0.5.4-136-g83aa53b
 [        infinit.model.Model         ] [29607] [main] infinit::model::Model(0x7ffd81c0c310): compatibility version 0.3.0
 [        infinit.overlay.kelips        ] [29607] [main] Running in observer mode
 [        infinit.overlay.kelips        ] [29607] [main] Filesystem is read-only until peers are reached
@@ -194,10 +194,10 @@ Running volume "infinit/demo".
 The `ELLE_LOG_TIME` environment variables can be set to `1` to add a section in the logs that displays the current time. This option is particularly useful when trying to understand why some operations take a long time.
 
 ```
-$> ELLE_LOG_TIME=1 ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+$> ELLE_LOG_TIME=1 ./bin/infinit volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
 Fetched endpoints for "infinit/demo".
 Running network "infinit/demo".
-2016-Mar-18 13:23:13: [           infinit-volume           ] [main] client version: 0.5.4-136-g83aa53b
+2016-Mar-18 13:23:13: [           infinit volume           ] [main] client version: 0.5.4-136-g83aa53b
 2016-Mar-18 13:23:13: [        infinit.model.Model         ] [main] infinit::model::Model(0x7fe7795106b0): compatibility version 0.3.0
 2016-Mar-18 13:23:13: [        infinit.overlay.kelips        ] [main] Running in observer mode
 2016-Mar-18 13:23:13: [        infinit.overlay.kelips        ] [main] Filesystem is read-only until peers are reached
