@@ -389,13 +389,13 @@ namespace infinit
         void
         Paxos::LocalPeer::initialize()
         {
-          this->doughnut().overlay()->on_discover().connect(
+          this->doughnut().overlay()->on_discovery().connect(
             [this] (NodeLocation node, bool observer)
             {
               if (!observer)
                 this->_discovered(node.id());
             });
-          this->doughnut().overlay()->on_disappear().connect(
+          this->doughnut().overlay()->on_disappearance().connect(
             [this] (Address id, bool observer)
             {
               if (!observer)

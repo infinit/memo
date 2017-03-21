@@ -372,7 +372,7 @@ namespace infinit
           this->_stale_endpoints.emplace(peer->connection()->location());
         this->_advertise(*peer);
         this->_fetch_entries(*peer);
-        this->on_discover()(peer->connection()->location(), false);
+        this->on_discovery()(peer->connection()->location(), false);
       }
 
       void
@@ -385,7 +385,7 @@ namespace infinit
           ELLE_ENFORCE(find(this->_infos, id)),
           [this] (PeerInfo& pi) { pi.disappearance().start(); });
         this->_peers.erase(id);
-        this->on_disappear()(id, false);
+        this->on_disappearance()(id, false);
         peer.reset();
         if (!this->_cleaning)
         {
@@ -408,7 +408,7 @@ namespace infinit
         this->_infos.erase(id);
         this->_address_book.erase(id);
         this->_stale_endpoints.erase(id);
-        this->on_evicted()(id);
+        this->on_eviction()(id);
       }
 
       template<typename E>

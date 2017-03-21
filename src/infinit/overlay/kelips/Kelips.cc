@@ -2147,7 +2147,7 @@ namespace infinit
           if (!c->discovered)
           {
             c->discovered = true;
-            this->on_discover()(NodeLocation(p->sender, {p->endpoint}), false);
+            this->on_discovery()(NodeLocation(p->sender, {p->endpoint}), false);
           }
         }
         if (g != _group && !p->files.empty())
@@ -3213,7 +3213,7 @@ namespace infinit
               bool discovered = it->second.discovered;
               it = contacts.erase(it);
               if (discovered)
-                this->on_disappear()(addr, false);
+                this->on_disappearance()(addr, false);
             }
             else
               ++it;
@@ -3485,7 +3485,7 @@ namespace infinit
               auto nl = NodeLocation(c.first, c.second);
               ELLE_LOG("%s: register %f", this, contact);
               target[c.first] = std::move(contact);
-              this->on_discover()(nl, false);
+              this->on_discovery()(nl, false);
               notify_observers(nl);
             }
           }
@@ -3498,7 +3498,7 @@ namespace infinit
               it->second.discovered = true;
               auto nl =
                 NodeLocation(it->first, to_endpoints(it->second.endpoints));
-              this->on_discover()(nl, false);
+              this->on_discovery()(nl, false);
               notify_observers(nl);
             }
           }
@@ -3621,7 +3621,7 @@ namespace infinit
         auto inserted = target->insert(std::make_pair(address, std::move(c)));
         // for non-observers, only notify discovery after bootstrap completes
         if (inserted.second && observer)
-          this->on_discover()(nl, observer);
+          this->on_discovery()(nl, observer);
         if (!inserted.second)
         { // we still want the new endpoints
           auto sz = inserted.first->second.endpoints.size();

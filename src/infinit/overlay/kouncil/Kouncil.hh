@@ -217,7 +217,7 @@ namespace infinit
 
         /// Announcing evicted nodes.
         ELLE_ATTRIBUTE_RX(
-          boost::signals2::signal<void (Address id)>, on_evicted);
+          boost::signals2::signal<void (Address id)>, on_eviction);
 
         /// Nodes with which we lost connection, but keep ready to see
         /// coming back.

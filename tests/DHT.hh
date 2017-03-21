@@ -78,11 +78,11 @@ public:
   connect(Overlay& other)
   {
     if (this->_peers.emplace(&other).second)
-      this->on_discover()(
+      this->on_discovery()(
         infinit::model::NodeLocation(other.doughnut()->id(), {}),
         !other.doughnut()->local());
     if (other._peers.emplace(this).second)
-      other.on_discover()(
+      other.on_discovery()(
         infinit::model::NodeLocation(this->doughnut()->id(), {}),
         !this->doughnut()->local());
   }
@@ -99,9 +99,9 @@ public:
   {
     bool me = this->_peers.erase(&other);
     if (other._peers.erase(this))
-      other.on_disappear()(this->doughnut()->id(), !this->doughnut()->local());
+      other.on_disappearance()(this->doughnut()->id(), !this->doughnut()->local());
     if (me)
-      this->on_disappear()(other.doughnut()->id(), !other.doughnut()->local());
+      this->on_disappearance()(other.doughnut()->id(), !other.doughnut()->local());
   }
 
   void

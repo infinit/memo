@@ -401,7 +401,7 @@ namespace
   monitor_eviction(DHT& dht, DHT& target)
   {
     if (auto kouncil = get_kouncil(dht))
-      return kouncil->on_evicted().connect([&](Address id)
+      return kouncil->on_eviction().connect([&](Address id)
       {
         if (id == target.dht->id())
           ELLE_ERR
@@ -420,10 +420,10 @@ namespace
            bool wait_back = false)
   {
     auto discovered = elle::reactor::waiter(
-      dht.dht->overlay()->on_discover(),
+      dht.dht->overlay()->on_discovery(),
       [&] (NodeLocation const& l, bool) { return l.id() == target.dht->id(); });
     auto discovered_back = elle::reactor::waiter(
-      target.dht->overlay()->on_discover(),
+      target.dht->overlay()->on_discovery(),
       [&] (NodeLocation const& l, bool) { return l.id() == dht.dht->id(); });
     auto eviction = monitor_eviction(dht, target);
     auto eviction_back = monitor_eviction(target, dht);
@@ -590,7 +590,7 @@ ELLE_TEST_SCHEDULED(
       == id_a);
   }
   auto disappeared = elle::reactor::waiter(
-    dht_b.dht->overlay()->on_disappear(),
+    dht_b.dht->overlay()->on_disappearance(),
     [&] (Address id, bool)
     {
       BOOST_CHECK_EQUAL(id, id_a);
@@ -615,7 +615,7 @@ ELLE_TEST_SCHEDULED(
   }
   ELLE_LOG("lookup second block")
     BOOST_CHECK_THROW(dht_b.dht->overlay()->lookup(new_address), MissingBlock);
-  // If the peer does not disappear first, we can't wait for on_discover.
+  // If the peer does not disappear first, we can't wait for on_discovery.
   elle::reactor::wait(disappeared);
   ELLE_LOG("discover new endpoints")
     discover(dht_b, *dht_a, anonymous, false, true);
@@ -691,10 +691,10 @@ ELLE_TEST_SCHEDULED(chain_connect,
   ELLE_LOG("connect client")
   {
     auto discovered_a = elle::reactor::waiter(
-      client.dht->overlay()->on_discover(),
+      client.dht->overlay()->on_discovery(),
       [&] (NodeLocation const& l, bool) { return l.id() == id_a; });
     auto discovered_b = elle::reactor::waiter(
-      client.dht->overlay()->on_discover(),
+      client.dht->overlay()->on_discovery(),
       [&] (NodeLocation const& l, bool) { return l.id() == id_b; });
     ELLE_LOG("connect client")
       discover(client, *dht_a, anonymous);
@@ -712,17 +712,17 @@ ELLE_TEST_SCHEDULED(chain_connect,
   {
     {
       auto disappeared_a = elle::reactor::waiter(
-        dht_a->dht->overlay()->on_disappear(),
+        dht_a->dht->overlay()->on_disappearance(),
         [&] (Address id, bool) { return id == id_b; });
       auto disappeared_client = elle::reactor::waiter(
-        client.dht->overlay()->on_disappear(),
+        client.dht->overlay()->on_disappearance(),
         [&] (Address id, bool) { return id == id_b; });
       dht_b.reset();
       elle::reactor::wait({disappeared_a, disappeared_client});
     }
     {
       auto connected_client = elle::reactor::waiter(
-        client.dht->overlay()->on_discover(),
+        client.dht->overlay()->on_discovery(),
         [&] (NodeLocation const& l, bool) { return l.id() == id_b; });
       dht_b = std::make_unique<DHT>(
         ::id = id_b,
@@ -918,7 +918,7 @@ ELLE_TEST_SCHEDULED(
     ::storage = nullptr);
   ELLE_LOG("client discovery");
   auto discovered_client_b = elle::reactor::waiter(
-    client->dht->overlay()->on_discover(),
+    client->dht->overlay()->on_discovery(),
     [&] (NodeLocation const& l, bool) { return l.id() == dht_b->dht->id(); });
   discover(*client, *dht_a, anonymous, false, true);
   elle::reactor::wait(discovered_client_b);
@@ -1033,7 +1033,7 @@ ELLE_TEST_SCHEDULED(
       for (int j = 0; j < i; ++j)
         if (!servers[i]->dht->overlay()->discovered(servers[j]->dht->id()))
           elle::reactor::wait(
-            servers[i]->dht->overlay()->on_discover(),
+            servers[i]->dht->overlay()->on_discovery(),
             [&] (NodeLocation const& l, bool)
             {
               return l.id() == servers[j]->dht->id();
@@ -1260,7 +1260,7 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("recreate second DHT")
   {
     auto disappear_b = elle::reactor::waiter(
-      dht_a->dht->overlay()->on_disappear(),
+      dht_a->dht->overlay()->on_disappearance(),
       [&] (Address id, bool) { return id == special_id(11); });
     dht_b.reset();
     elle::reactor::wait(disappear_b);
@@ -1348,7 +1348,7 @@ ELLE_TEST_SCHEDULED(
         ELLE_LOG("wait for discover");
         if (get_kouncil(dht_b))
           elle::reactor::wait(
-            dht_b.dht->overlay()->on_discover(),
+            dht_b.dht->overlay()->on_discovery(),
             [&] (NodeLocation const& l, bool)
             {
               return l.id() == dht_a->dht->id();
@@ -1371,7 +1371,7 @@ ELLE_TEST_SCHEDULED(
     ::keys = keys,
     ::make_overlay = config.overlay_builder);
   if (get_kelips(*a))
-    return; // kelips cannot handle automatic reconnection after on_disappear()
+    return; // kelips cannot handle automatic reconnection after on_disappearance()
   auto b = std::make_unique<DHT>(
     ::version = config.version,
     ::id = special_id(11),
@@ -1383,7 +1383,7 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("stop second DHT")
   {
     auto disappeared = elle::reactor::waiter(
-      a->dht->overlay()->on_disappear(),
+      a->dht->overlay()->on_disappearance(),
       [&] (Address id, bool)
       {
         BOOST_TEST(id == special_id(11));
@@ -1395,7 +1395,7 @@ ELLE_TEST_SCHEDULED(
   ELLE_LOG("start second DHT on port %s", port)
   {
     auto discovered = elle::reactor::waiter(
-      a->dht->overlay()->on_discover(),
+      a->dht->overlay()->on_discovery(),
       [&] (NodeLocation const& l, bool)
       {
         BOOST_TEST(l.id() == special_id(11));
@@ -1689,7 +1689,7 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
   ELLE_LOG("shooting B")
   {
     auto b_disappeared = elle::reactor::waiter(
-      dht_a->dht->overlay()->on_disappear(),
+      dht_a->dht->overlay()->on_disappearance(),
       [&] (Address id, bool)
       {
         BOOST_TEST(id == id_b);
@@ -1733,7 +1733,7 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
   {
     ELLE_LOG("killing A and waiting for C to notice");
     auto a_disappeared = elle::reactor::waiter(
-      dht_c->dht->overlay()->on_disappear(),
+      dht_c->dht->overlay()->on_disappearance(),
       [&] (Address id, bool)
       {
         BOOST_TEST(id == id_a);
@@ -1758,7 +1758,7 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
   {
     cluster.recreate_server(1);
     auto b_appeared = elle::reactor::waiter(
-      dht_c->dht->overlay()->on_discover(),
+      dht_c->dht->overlay()->on_discovery(),
       [&] (NodeLocation const& l, bool)
       {
         BOOST_TEST(l.id() == id_b);
@@ -1784,7 +1784,7 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
   ELLE_LOG("waiting for A to be evicted by C")
   {
     auto a_evicted = elle::reactor::waiter(
-      get_kouncil(*dht_c)->on_evicted(),
+      get_kouncil(*dht_c)->on_eviction(),
       [&] (Address id)
       {
         BOOST_TEST(id == id_a);

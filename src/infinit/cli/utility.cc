@@ -295,7 +295,7 @@ namespace infinit
     {
       ELLE_TRACE("Hooking discovery on %s, to %s", model, file);
       auto nls = std::make_shared<model::NodeLocations>();
-      model.overlay()->on_discover().connect(
+      model.overlay()->on_discovery().connect(
         [nls, file] (model::NodeLocation nl, bool observer) {
           if (observer)
             return;
@@ -311,7 +311,7 @@ namespace infinit
           std::ofstream ofs(file);
           elle::serialization::json::serialize(*nls, ofs, false);
         });
-      model.overlay()->on_disappear().connect(
+      model.overlay()->on_disappearance().connect(
         [nls, file] (model::Address id, bool observer) {
           if (observer)
             return;

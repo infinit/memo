@@ -95,13 +95,13 @@ namespace infinit
     `------*/
     public:
       /// Announcing discovered nodes.
-      ELLE_ATTRIBUTE_RX(
-        boost::signals2::signal<void (NodeLocation id,
-                                      bool observer)>, on_discover);
+      using DiscoveryEvent =
+        boost::signals2::signal<auto (NodeLocation id, bool observer) -> void>;
+      ELLE_ATTRIBUTE_RX(DiscoveryEvent, on_discovery);
       /// Announcing disconnected nodes.
-      ELLE_ATTRIBUTE_RX(
-        boost::signals2::signal<void (model::Address id,
-                                      bool observer)>, on_disappear);
+      using DisappearanceEvent =
+        boost::signals2::signal<auto (model::Address id, bool observer) -> void>;
+      ELLE_ATTRIBUTE_RX(DisappearanceEvent, on_disappearance);
 
     /*-------.
     | Lookup |
