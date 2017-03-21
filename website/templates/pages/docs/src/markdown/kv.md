@@ -9,13 +9,12 @@ through a [grpc](http://www.grpc.io) interface specified in the file
 ## API overview ##
 
 At its most basic level, a key-value store provides a mapping from an
-Address to its corresponding content. The API is comprised of four
-main methods:
+Address to its corresponding content. The API relies on of four main
+methods:
 
 * `fetch(Fetch) returns (BlockOrException)`: Fetch the block at given
   address.
 * `insert(Insert) returns (EmptyOrException)`: Insert a new block.
-  store.
 * `update(Update) returns (EmptyOrException)`: Update an exsiting block.
 * `remove(Address) returns (EmptyOrException)`: Erase the block at
   given address.
