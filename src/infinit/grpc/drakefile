@@ -17,7 +17,7 @@ class GRPCGen(drake.Builder):
       self.__protoc = drake.node(drake.which.which('protoc'))
     self.__protoc = protoc
     self.__plugin = plugin
-    self.__output = drake.path_build()
+    self.__output = proto.name().dirname()
     super().__init__([proto, protoc, plugin], targets)
 
   @property
@@ -34,7 +34,7 @@ class GRPCGen(drake.Builder):
 
   @property
   def output_dir(self):
-    return self.__output
+    return drake.path_build(self.__output)
 
 
 class GRPCCxxGen(GRPCGen):
