@@ -261,19 +261,18 @@ namespace infinit
                            boost::optional<std::string> root)
     {
       auto self = this->cli().as_user();
-      boost::optional<int64_t> capacity;
-      if (capacity_repr)
-        capacity = convert_capacity(*capacity_repr);
-      if (!root)
-        root = elle::print("{}_blocks", name);
-      auto account = this->cli().infinit().credentials_gcs(account_name);
+      auto const capacity
+        = capacity_repr
+        ? convert_capacity(*capacity_repr)
+        : boost::optional<int64_t>{};
+      auto const account = this->cli().infinit().credentials_gcs(account_name);
       mode_create(
         this->cli(),
         output,
         elle::make_unique<infinit::storage::GCSConfig>(
           name,
           bucket,
-          root.get(),
+          root.value_or(elle::print("{}_blocks", name)),
           self.name,
           account->refresh_token,
           std::move(capacity),
