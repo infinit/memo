@@ -1,4 +1,4 @@
-#include <regex>
+#include <boost/regex.hpp>
 
 #include <elle/serialization/Serializer.hh>
 
@@ -17,8 +17,8 @@ namespace infinit
         = slash_pos == std::string::npos
         ? name
         : name.substr(slash_pos + 1);
-      static auto const allowed = std::regex{T::name_regex()};
-      if (!std::regex_match(test_name, allowed))
+      static auto const allowed = boost::regex{T::name_regex()};
+      if (!boost::regex_match(test_name, allowed))
         throw DescriptorNameError(name);
     }
 
@@ -29,8 +29,8 @@ namespace infinit
     {
       if (!description)
         return;
-      static auto const allowed = std::regex{T::description_regex()};
-      if (!std::regex_match(description.get(), allowed))
+      static auto const allowed = boost::regex{T::description_regex()};
+      if (!boost::regex_match(description.get(), allowed))
         throw DescriptorDescriptionError(description.get());
     }
 
