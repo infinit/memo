@@ -1817,7 +1817,7 @@ ELLE_TEST_SUITE()
   elle::os::setenv("INFINIT_KOUNCIL_WATCHER_MAX_RETRY",
                    elle::sprintf("%sms", valgrind(20, 50)), 1);
   auto& master = boost::unit_test::framework::master_test_suite();
-  auto const kelips_config = TestConfiguration {
+  auto const kelips_config = TestConfiguration{
     [] (Doughnut& dht, std::shared_ptr<Local> local)
     {
       auto conf = kelips::Configuration();
@@ -1831,20 +1831,18 @@ ELLE_TEST_SUITE()
       return std::make_unique<kelips::Node>(
         conf, local, &dht);
     }};
-  auto const kouncil_config = TestConfiguration {
-    [] (Doughnut& dht, std::shared_ptr<Local> local)
+
+  auto kouncil_conf = [](Doughnut& dht, std::shared_ptr<Local> local)
     {
-      return std::make_unique<kouncil::Kouncil>(&dht, local,
-                                                valgrind(1, 5));
-    },
-    elle::Version(0, 8, 0)};
-  auto const kouncil_0_7_config = TestConfiguration {
-    [] (Doughnut& dht, std::shared_ptr<Local> local)
-    {
-      return std::make_unique<kouncil::Kouncil>(&dht, local,
-                                                valgrind(1, 5));
-    },
-    elle::Version(0, 7, 0)};
+      // WARNING: too low an eviction delay with result in impossible
+      // reconnections.
+      auto const eviction_delay = valgrind(1, 5) * 5;
+      return std::make_unique<kouncil::Kouncil>(&dht, local, eviction_delay);
+    };
+  auto const kouncil_config
+    = TestConfiguration{kouncil_conf, elle::Version(0, 8, 0)};
+  auto const kouncil_0_7_config
+    = TestConfiguration{kouncil_conf, elle::Version(0, 7, 0)};
 
 
 #define BOOST_NAMED_TEST_CASE(name, test_function)                      \
