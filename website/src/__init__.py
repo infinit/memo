@@ -65,13 +65,20 @@ class Website(bottle.Bottle):
       'description': 'The page you were looking for isn\'t here.',
     }
 
-  @route('/documentation', name = 'doc_overview')
-  @route('/documentation/overview', name = 'doc_overview')
-  @view('pages/docs/overview.html')
+  @route('/product', name = 'product')
+  @view('pages/product.html')
   def root(self):
     return {
-      'title': 'An Overview of the Infinit Storage Platform',
-      'description': 'Discover the benefits of the Infinit storage platform through its innovative technology.',
+      'title': 'Product',
+      'description': 'Discover the benefits of the Infinit decentralized storage platform: scalabilty, elasticity and resilience.',
+    }
+
+  @route('/docker', name = 'docker')
+  @view('pages/docker.html')
+  def root(self):
+    return {
+      'title': 'Persistent Storage Solutions for Docker',
+      'description': 'Infinit provdides many persistent storage solutions to make your containerized Docker applications stateful.',
     }
 
   @route('/drive', name = 'drive')
@@ -110,16 +117,16 @@ class Website(bottle.Bottle):
   @view('pages/download.html')
   def root(self):
     return {
-      'title': 'Download Infinit CLI Tools',
-      'description': 'Download the Infinit command line tools for Mac, Linux or Windows.',
+      'title': 'Download',
+      'description': 'Download the Infinit command line tools for Mac, Windows or Linux (Ubuntu, Debian, CentOS, Alpine, Raspberry).',
     }
 
   @route('/update', name = 'update')
   @view('pages/update.html')
   def root(self):
     return {
-      'title': 'Upgrade Infinit CLI Tools',
-      'description': 'Upgrade your Infinit command line tools to the latest version to get all the new features.',
+      'title': 'Update',
+      'description': 'Update your Infinit command line tools to the latest version to get all the new features.',
     }
 
   @route('/faq', name = 'faq')
@@ -134,7 +141,7 @@ class Website(bottle.Bottle):
   @view('pages/docs/get_started.html')
   def root(self):
     return {
-      'title': 'Get Started with Infinit',
+      'title': 'Get Started',
       'description': 'A step by step guide to getting started with the Infinit storage platform.',
     }
 
@@ -142,7 +149,7 @@ class Website(bottle.Bottle):
   @view('pages/docs/get_started.html')
   def root(self):
     return {
-      'title': 'Get Started with Infinit - Mac Guide',
+      'title': 'Get Started for Mac',
       'description': 'A step by step guide to getting started with the Infinit storage platform.',
     }
 
@@ -150,7 +157,7 @@ class Website(bottle.Bottle):
   @view('pages/docs/get_started.html')
   def root(self):
     return {
-      'title': 'Get Started with Infinit - Windows Guide',
+      'title': 'Get Started for Windows',
       'description': 'A step by step guide for Windows to getting started with the Infinit storage platform.',
     }
 
@@ -158,7 +165,7 @@ class Website(bottle.Bottle):
   @view('pages/docs/get_started.html')
   def root(self):
     return {
-      'title': 'Get Started with Infinit - Linux Guide',
+      'title': 'Get Started for Linux',
       'description': 'A step by step guide for linux to getting started with the Infinit storage platform.',
     }
 
@@ -178,6 +185,7 @@ class Website(bottle.Bottle):
       'description': 'Discover how Infinit can be used to deploy various types of storage infrastructure.',
     }
 
+  @route('/documentation', name = 'doc_reference')
   @route('/documentation/reference', name = 'doc_reference')
   @view('pages/docs/reference.html')
   def root(self):
@@ -291,12 +299,25 @@ class Website(bottle.Bottle):
       'show_comparison': show_comparison,
     }
 
+  @route('/documentation/key-value-store', name = 'doc_kv')
+  @view('pages/docs/kv.html')
+  def root(self):
+    return {
+      'title': 'Key-Value Store',
+      'description': 'Learn about the Infinit key-value store.',
+    }
+
   @route('/open-source', name = 'opensource')
   @view('pages/opensource.html')
   def root(self):
+    file = resources_path() + '/json/opensource.json'
+    with open(file, encoding = 'utf-8') as json_file:
+      json_data = json.load(json_file)
+
     return {
-      'title': 'Contribute to the Infinit Storage Platform',
+      'title': 'Projects',
       'description': 'Check out our open source projects and join a growing community of developers.',
+      'projects': json_data['projects']
     }
 
   @route('/pricing', name = 'pricing')

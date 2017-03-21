@@ -27,21 +27,21 @@
         <hr>
         <div class="desc">
           <h2 id="byzantine-fault-tolerance">Byzantine fault tolerance</h2>
-          <p>Allow for the creation of untrustworthy networks (in which data is stored on storage resources that users may not trust) while ensuring reliability and security.</p>
+          <p>Allow for the creation of untrustworthy networks (in which data is stored on silos that users may not trust) while ensuring reliability and security.</p>
         </div>
       </div>
       <div class="step">
         <hr>
         <div class="desc">
           <h2 id="heterogeneous-storage-contributions">Heterogeneous storage contributions</h2>
-          <p>Balance the data while taking into account that some storage resources have more capacity than others.</p>
+          <p>Balance the data while taking into account that some silos have more capacity than others.</p>
         </div>
       </div>
       <div class="step">
         <hr>
         <div class="desc">
           <h2 id="storage-reliability-level">Storage reliability level</h2>
-          <p>Allow the administrator to define the reliability of storage resources/providers. For instance, S3 already replicates data internally while a standalone server does not.</p>
+          <p>Allow the administrator to define the reliability of silos/providers. For instance, S3 already replicates data internally while a standalone server does not.</p>
         </div>
       </div>
       <div class="step">
@@ -126,8 +126,22 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2 id="data-placement">Data Placement</h2>
+          <h2 id="data-placement">Data placement</h2>
           <p>Control the placement of the redundant pieces of data through data placement policies: rack-aware, region-aware etc.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="s3">S3 interface</h2>
+          <p>Provide an AWS S3-compatible interface for storing objects.</p>
+        </div>
+      </div>
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2 id="kubernetes-volumes">Kubernetes volumes</h2>
+          <p>Provide an integration for Kubernetes to use Infinit as a resilient and scalable storage backend.</p>
         </div>
       </div>
 
@@ -145,13 +159,6 @@
         <div class="desc">
           <h2 id="nbd">NBD interface</h2>
           <p>Provide an network block device interface.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2 id="s3">S3 interface</h2>
-          <p>Provide an AWS S3-compatible interface for storing objects.</p>
         </div>
       </div>
 
@@ -256,7 +263,7 @@
         <div class="desc">
           <h2 id="scale-up-down">Scale up/down</h2>
           <span>0.6.0 release</span>
-          <p>Allow to attach additional/detach storage resources and/or increase/decrease the storage capacity contributions from a device to an existing network, without incurring any interruption of service.</p>
+          <p>Allow to attach additional/detach silos and/or increase/decrease the storage capacity contributions from a device to an existing network, without incurring any interruption of service.</p>
         </div>
       </div>
       <div class="step done">
@@ -285,19 +292,19 @@
           Feb <br><span>2016</span>
         </div>
         <div class="desc">
-          <h2 id="gcs-storage">Google Cloud Storage storage resource</h2>
+          <h2 id="gcs-storage">Google Cloud Storage silo</h2>
           <span>0.5.2 release</span>
           <a href="${route('doc_storages_gcs')}">&raquo; read more</a>
-          <p>Allow Google Cloud Storage to be used as a block storage resource.</p>
+          <p>Allow Google Cloud Storage to be used as a block silo.</p>
         </div>
       </div>
       <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="aws-s3-storage">AWS S3 storage resource</h2>
+          <h2 id="aws-s3-storage">AWS S3 silo</h2>
           <span>0.3.5 release</span>
           <a href="${route('doc_storages_s3')}">&raquo; read more</a>
-          <p>Allow AWS S3 to be used as a block storage resource.</p>
+          <p>Allow AWS S3 to be used as a block silo.</p>
         </div>
       </div>
 
@@ -326,7 +333,7 @@
         <div class="desc">
           <h2 id="fine-grained-passports">Fine-grained passports</h2>
           <span>0.3.0 release</span>
-          <p>Allow the administrator to issue passport for a user to act either as a client and/or server (preventing a user from attaching additional storage resources) but also to control whether a user can put and/or get blocks in the network.</p>
+          <p>Allow the administrator to issue passport for a user to act either as a client and/or server (preventing a user from attaching additional silos) but also to control whether a user can put and/or get blocks in the network.</p>
         </div>
       </div>
       <div class="step done">
@@ -334,7 +341,7 @@
         <div class="desc">
           <h2 id="storage-distribution">Storage load network-wide balancing</h2>
           <span>0.3.0 release</span>
-          <p>Support distributing the blocks across several storage nodes that contribute storage capacity through one or more storage resources.</p>
+          <p>Support distributing the blocks across several storage nodes that contribute storage capacity through one or more silos.</p>
         </div>
       </div>
 
@@ -502,7 +509,7 @@
       <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="multi-storage">Multiple storage resources per server</h2>
+          <h2 id="multi-storage">Multiple silos per server</h2>
           <span>0.3.0 release</span>
           <p>Allow nodes to attach several storage nodes and distribute blocks among those storages.</p>
         </div>
@@ -526,9 +533,9 @@
       <div class="step done">
         <hr>
         <div class="desc">
-          <h2 id="local-storage">Local storage resource</h2>
+          <h2 id="local-storage">Local silo</h2>
           <span>0.3.0 release</span>
-          <p>Allow a local file system to act as a storage resource by storing blocks of encrypted data as local files.</p>
+          <p>Allow a local file system to act as a silo by storing blocks of encrypted data as local files.</p>
         </div>
       </div>
 

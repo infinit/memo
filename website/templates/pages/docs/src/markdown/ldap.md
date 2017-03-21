@@ -48,7 +48,7 @@ Importing LDAP users to the Hub
 A single LDAP user can be added to the Hub using the `infinit-user` binary. As Infinit uses its own mechanism for authentication – an RSA key pair for each user – one will be created and uploaded to the on premise Hub.
 
 ```
-$> infinit-user --signup --name asmith --ldap-name "cn=asmith,ou=engineering,dc=company,dc=com" --email asmith@company.com --fullname "Alice Smith" --full
+$> infinit-user --signup --name asmith --ldap-name "cn=asmith,ou=engineering,dc=company,dc=com" --fullname "Alice Smith" --full
 Generating RSA keypair.
 Locally generated user "asmith".
 Remotely saved user "asmith".

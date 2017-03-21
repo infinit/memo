@@ -1,5 +1,6 @@
 #include <elle/log.hh>
 
+#include <infinit/model/Conflict.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/Model.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
@@ -28,28 +29,48 @@ namespace infinit
         owner = Address::null)
       , make_mutable_block(
         elle::das::bind_method(*this, &Model::_make_mutable_block))
+      , make_named_block(
+        elle::das::bind_method(*this, &Model::_make_named_block),
+        key)
+      , named_block_address(
+        elle::das::bind_method(*this, &Model::_named_block_address),
+        key)
       , fetch(
         elle::das::bind_method(*this, &Model::_fetch_impl),
         address,
-        local_version = boost::optional<int>())
+        local_version = boost::optional<int>(),
+        decrypt_data = boost::optional<bool>())
       , insert([this] (std::unique_ptr<blocks::Block> block,
                        std::unique_ptr<ConflictResolver> resolver)
                {
                  ELLE_TRACE_SCOPE("%s: insert %f", this, block);
                  block->seal();
                  this->_insert(std::move(block), std::move(resolver));
+                 return true;
                },
                block,
                conflict_resolver = nullptr)
       , update([this] (std::unique_ptr<blocks::Block> block,
-                       std::unique_ptr<ConflictResolver> resolver)
+                       std::unique_ptr<ConflictResolver> resolver,
+                       bool decypher)
                {
                  ELLE_TRACE_SCOPE("%s: update %f", *this, *block);
                  block->seal();
-                 return this->_update(std::move(block), std::move(resolver));
+                 try
+                 {
+                   this->_update(std::move(block), std::move(resolver));
+                 }
+                 catch (Conflict const& c)
+                 {
+                   if (decypher && c.current())
+                     c.current()->decrypt();
+                   throw;
+                 }
+                 return true;
                },
                block,
-               conflict_resolver = nullptr)
+               conflict_resolver = nullptr,
+               decrypt_data = false)
       , remove([this] (Address address,
                        boost::optional<blocks::RemoveSignature> rs)
                {
@@ -62,6 +83,7 @@ namespace infinit
                    ELLE_ASSERT(block);
                    this->_remove(address, block->sign_remove(*this));
                  }
+                 return true;
                },
                address,
                signature = boost::none)
@@ -108,6 +130,18 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: create block", *this);
       return this->_construct_block<blocks::ImmutableBlock>(
         Address::random(flags::immutable_block), std::move(data));
+    }
+
+    std::unique_ptr<blocks::Block>
+    Model::_make_named_block(elle::Buffer const& key) const
+    {
+      elle::err("named blocks are not implemented in this model");
+    }
+
+    Address
+    Model:: _named_block_address(elle::Buffer const& key) const
+    {
+      elle::err("named blocks are not implemented in this model");
     }
 
     template <>
@@ -157,7 +191,9 @@ namespace infinit
 
     std::unique_ptr<blocks::Block>
     Model::_fetch_impl(Address address,
-                       boost::optional<int> local_version) const
+                       boost::optional<int> local_version,
+                       boost::optional<bool> decrypt_data
+                       ) const
     {
       ELLE_TRACE_SCOPE("%s: fetch %f if newer than %s",
                        this, address, local_version);
@@ -169,6 +205,10 @@ namespace infinit
           ELLE_WARN("%s: invalid block received for %s:%s", *this, address,
                     val.reason());
           elle::err("invalid block: %s", val.reason());
+        }
+        if (decrypt_data && *decrypt_data)
+        {
+          res->decrypt();
         }
         return res;
       }

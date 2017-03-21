@@ -1,3 +1,31 @@
+@media (min-width:1200px) {
+  body.opensource {
+    section.projects.wrapper,
+    section.methodology,
+    section.licenses .wrapper {
+      max-width: 1100px;
+    }
+  }
+}
+
+@media (max-width:1155px) {
+  body.opensource {
+    section.projects.wrapper {
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width:1010px) {
+  body.opensource {
+    section.projects.wrapper {
+      .project {
+        .pinnedProject;
+      }
+    }
+  }
+}
+
 @media (max-width:950px) {
   body.home {
     section.presentation {
@@ -76,9 +104,6 @@
     }
   }
 
-
-
-
   body.faq {
     main { margin: 0 5%;}
     .filters { width: 100%; margin:0; }
@@ -86,45 +111,90 @@
   }
 }
 
-@media (max-width:800px) {
+
+@media (max-width:870px) {
+  body.product {
+    section.doc .features {
+      section.resilient {
+        .schema {
+          width: 100%;
+          .steps { margin-top: 60px; }
+        }
+      }
+      section.decentralized {
+        div { width: 90%; padding-top: 50px;  }
+      }
+      section.programmatic {
+        .wrapper > div { width: 95%; margin-left: 0; }
+      }
+    }
+  }
+}
+
+
+@media (max-width:800px) { 
   body.home {
     section.presentation {
+      .schema-full { display: block;}
       .schema {
-        margin-left: 4%; margin-right: 4%; margin-top: 70px;
-        .servers {
-          .legend {
-            &.total {
-              left: 18%;top: -67px;
-              h4 { max-width: 500px; float: left;}
-              span { float: left; margin-left: 9px; margin-top: 2px;}
-            }
-            &.api { display: none; }
-          }
-        }
-        .pool {
-          margin: auto; max-width: 309px;
+        display: none; 
+    //     margin-left: 4%; margin-right: 4%; margin-top: 70px;
+    //     .servers {
+    //       .legend {
+    //         &.total {
+    //           left: 18%;top: -67px;
+    //           h4 { max-width: 500px; float: left;}
+    //           span { float: left; margin-left: 9px; margin-top: 2px;}
+    //         }
+    //         &.api { display: none; }
+    //       }
+    //     }
+    //     .pool {
+    //       margin: auto; max-width: 309px;
 
-          div.servers div {
-            &:nth-child(5) { clear: both ;}
-          }
+    //       div.servers div {
+    //         &:nth-child(5) { clear: both ;}
+    //       }
 
-          div.functionalities {
-            ul li {
-              margin-left: 0px; margin-right: 10px;
-              &:nth-child(2n+1) { margin-left: 0px; clear: both; }
-              &:nth-child(2n) { margin-right: 0;}
-              &:nth-child(3n+1) { margin-left: 0px; }
-              &:nth-child(3n+1) { margin-left: 5px; }
-            }
-          }
+    //       div.functionalities {
+    //         ul li {
+    //           margin-left: 0px; margin-right: 10px;
+    //           &:nth-child(2n+1) { margin-left: 0px; clear: both; }
+    //           &:nth-child(2n) { margin-right: 0;}
+    //           &:nth-child(3n+1) { margin-left: 0px; }
+    //           &:nth-child(3n+1) { margin-left: 5px; }
+    //         }
+    //       }
+    //     }
+    //     .apis {
+    //       margin-left: 0;
+    //       div.block, div.object, div.file {
+    //         max-width: 60%; min-width: 50%; float: none;
+    //         margin: 0 auto;
+    //       }
+    //       div.object, div.file { position: static; }
+    //     }
+      }
+    }
+  }
+
+  body.opensource {
+    section.projects.wrapper {
+      p { max-width: 90%;}
+      .project {
+        max-width: 96%; margin: 0 2% 2% 2%; min-height: 284px;
+        .date { padding-bottom: 120px; }
+        &.access {
+          min-height: 0px;
+          .stage { position: relative; }
         }
-        .apis {
-          margin-left: 0;
-          div.block, div.object, div.file {
-            max-width: 60%; min-width: 50%; float: none;
-            margin: 0 auto;
-          }
-          div.object, div.file { position: static; }
+      }
+    }
+    section.methodology {
+      p.explain { max-width: 100%; }
+      .progress {
+        .access, .develop, .contribute {
+          width: 100%;
         }
       }
     }
@@ -132,10 +202,52 @@
 }
 
 @media (max-width:720px) {
+  header {
+    > ul { display: none; }
+    nav { display: block; }
+  }
+  
+  body.docker {
+    section.presentation {
+      .schema {
+        width: 100%; margin-left: 3%; margin-right: 3%;
+        .figure {
+          > img { margin-bottom: 150px; }
+          img { width: 100%; }
+        }
+        .steps { margin-top: 0; margin-bottom: 60px; }
+      }
+    }
+    section.projects {
+      .wrapper { width: 90%; }
+      .project {
+        width: auto; margin-left: 0; margin-right: 0; margin-bottom: 30px;
+        h3 { margin-top: 5px; }
+        &.volume { width: auto; }
+        &.soon { width: 33%; margin-right: 5%; }
+      }
+    }
+    section.scale {
+      padding-top: 30px; padding-bottom: 0;
+      .wrapper {
+        width: 92%;
+        div.hyperscalable {
+          padding-left: 0; border-right: 0;
+          img { margin-left: 0;}
+        }
+        p { max-width: 87%; }
+        div { width: 100%; padding: 0; }
+        div img { margin-bottom: 40px; max-width: 100%; height: auto;}
+      }
+    }
+  }
+
+
   body.pricing {
     section.doc {
       > p { width: 80%;}
-      .version { width: 90%; border-right: 0px; margin-bottom: 50px; }
+      .version { width: 90%; border-right: 0px; margin-bottom: 50px;  }
+      .version.community, .version.enterprise { margin-left: 5%; margin-right: 5%; }
       .version.community { border-right: 0; }
       .plan p { padding-left: 0;}
       .plan hr { margin: 15px auto; width: 50%;}
@@ -153,11 +265,6 @@
 }
 
 @media (max-width:600px) {
-  header {
-    > ul { display: none; }
-    nav { display: block; }
-  }
-
   body.home {
     section.features {
       p.title { padding-top: 0; margin-bottom: 0; }

@@ -158,6 +158,16 @@ namespace infinit
         s.serialize("data", this->_data);
       }
 
+      void
+      Block::decrypt()
+      {
+        this->_decrypt();
+      }
+
+      void
+      Block::_decrypt()
+      {}
+
       static const elle::serialization::Hierarchy<Block>::
       Register<Block> _register_serialization("block");
 

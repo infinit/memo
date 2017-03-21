@@ -45,7 +45,7 @@ $(document).ready(function() {
     }
   }
 
-  if ($('body').hasClass('documentation') || $('body').hasClass('opensource')) {
+  if ($('body').hasClass('documentation')) {
     var a = function () {
       var height = $(window).scrollTop();
       var menu_anchor = $("#menu-anchor").offset().top - 13;
@@ -85,6 +85,54 @@ $(document).ready(function() {
     $(window).scroll(a);
   }
 
+
+  /*----------------.
+  | Product         |
+  `----------------*/
+
+  if ($('body').hasClass('product') || $('body').hasClass('docker')) {
+
+    $('#play').click(function(e) {
+      e.preventDefault();
+      $('.schema').addClass('play');
+      $('#play').hide();
+      $('#replay').show();
+    });
+
+    $("#replay").click(function(e) {
+      e.preventDefault();
+      var el = $('.schema');
+      var newone = el.clone(true);
+
+      el.before(newone);
+      $(".schema" + ":last").remove();
+    });
+  }
+
+
+
+  /*----------------.
+  | Reference       |
+  `----------------*/
+
+  if ($('body').hasClass('opensource')) {
+    // Gets the full repo name from the data attribute and
+    // fetches the data from the api.
+    $('[data-gh-project]').each(function() {
+      var $proj = $(this);
+      var repo = $proj.data('gh-project');
+      $.get('https://api.github.com/repos/' + repo).success(function(data) {
+        //$proj.find('.star span').text(data.forks_count);
+        $proj.find('.star span').text(data.stargazers_count);
+
+        $proj.find('.stats .stars span').text(data.stargazers_count);
+        $proj.find('.stats .forks span').text(data.forks);
+        $proj.find('.stats .issues span').text(data.open_issues);
+        $proj.find('.date span').text(moment(data.pushed_at).fromNow());
+      });
+    });
+  }
+
   /*----------------.
   | Reference       |
   `----------------*/
@@ -114,12 +162,12 @@ $(document).ready(function() {
   }
 
 
-  if ($('body').hasClass('doc_reference') || $('body').hasClass('doc_deployments') || $('body').hasClass('doc_get_started')) {
+  if ($('body').hasClass('doc_reference') || $('body').hasClass('doc_deployments') || $('body').hasClass('doc_get_started') || $('body').hasClass('doc_kv')) {
     var enableSubMenu = function () {
       var position = $(window).scrollTop() + 100;
       var anchors, targets;
 
-      if ($('body').hasClass('doc_get_started')) {
+      if ($('body').hasClass('doc_get_started') || $('body').hasClass('doc_kv')) {
         anchors = $('h2, h3');
       } else {
         anchors = $('h2');
@@ -135,7 +183,7 @@ $(document).ready(function() {
           position > $(anchor).offset().top)
         )
         {
-          if ($('body').hasClass('doc_get_started')) {
+          if ($('body').hasClass('doc_get_started') || $('body').hasClass('doc_kv')) {
             targets = 'ul.menu li';
           } else {
             targets = 'ul.menu li.scroll_menu ul li';
@@ -198,6 +246,69 @@ $(document).ready(function() {
   if ($('body').hasClass('doc_deployments') || $('body').hasClass('doc_get_started') || $('body').hasClass('doc_storages_s3')) {
     tabby.init();
   }
+
+  /*----------------.
+  | KV              |
+  `----------------*/
+
+  function mergeAllSnippets(language) {
+    var fullCode;
+    var pre_elements = $('pre code.lang-' + language);
+
+    if (language === 'cpp') { pre_elements = 'pre code.cpp'; }
+
+    $(pre_elements).not('pre code.notInFullCode').each(function(index, obj) {
+      if (index === 0) { 
+        fullCode = $(this).text();
+      } else {
+        fullCode += $(this).text() + '\r';
+      }
+    });
+    return fullCode;
+  }
+
+  if ($('body').hasClass('doc_kv')) {
+
+    // Display Go snippets by default
+    $('code.cpp').parent().not('pre.goal').hide();
+    $('code.lang-python').parent().hide();
+
+    // Switch language
+    $('a[data-language]').click(function(e) {
+      var elementstoShow;
+      var language = $(this).attr('data-language');
+
+      if (language === 'cpp') {
+        elementstoShow = $('code.' + language);
+      } else {
+        elementstoShow = $('code.lang-' + language);
+      }
+
+      $('pre').not('pre.goal').hide();
+      elementstoShow.parent().show();
+
+      $('a[data-language]').removeClass('active');
+      $('a[data-language=' + language + ']').addClass('active');
+
+      e.preventDefault();
+    });
+
+    // Merge all snippets of the page
+    // While excluding generic ones
+    $('pre code.complete.lang-go').text(mergeAllSnippets('go'));
+    $('pre code.complete.lang-python').text(mergeAllSnippets('python'));
+    $('pre code.complete.cpp').text(mergeAllSnippets('cpp'));
+
+    // Clone language bar before all the snippets
+    $('code.lang-python').parent().before($('ul.switchLanguage'));
+
+    // Refresh highlight.js
+    $('pre code').each(function(i, block) {
+      hljs.highlightBlock(block);
+    });
+  }
+
+
 
 
   /*----------------.

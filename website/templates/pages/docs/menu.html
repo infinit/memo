@@ -3,23 +3,6 @@
 
   <ul class="menu">
     <li><input type="text" id="docsearch"></li>
-    <li ${'class="active"' if request.route.name == 'doc_overview' else ''}>
-      <a href="${route('doc_overview')}">Overview</a>
-    </li>
-
-    <li ${'class="active"' if request.route.name == 'doc_technology' else ''}>
-      <a href="${route('doc_technology')}">Technology</a>
-    </li>
-
-    <li class="scroll_menu examples ${'active clicked' if request.route.name == 'doc_deployments' else ''}">
-      <a href="${route('doc_deployments')}">Examples </a>
-
-      <ul>
-        <li class="centralized"><a href="${route('doc_deployments')}#centralized">Centralized (single server)</a></li>
-        <li class="distributed"><a href="${route('doc_deployments')}#distributed">Distributed (several servers)</a></li>
-        <li class="decentralized"><a href="${route('doc_deployments')}#decentralized">Decentralized (all servers)</a></li>
-      </ul>
-    </li>
 
     <li class="scroll_menu reference ${'active clicked' if request.route.name == 'doc_reference' else ''}">
       <a href="${route('doc_reference')}">Reference </a>
@@ -43,6 +26,20 @@
       </ul>
     </li>
 
+    <li ${'class="active"' if request.route.name == 'doc_technology' else ''}>
+      <a href="${route('doc_technology')}">Technology</a>
+    </li>
+
+    <li class="scroll_menu examples ${'active clicked' if request.route.name == 'doc_deployments' else ''}">
+      <a href="${route('doc_deployments')}">Examples </a>
+
+      <ul>
+        <li class="centralized"><a href="${route('doc_deployments')}#centralized">Centralized (single server)</a></li>
+        <li class="distributed"><a href="${route('doc_deployments')}#distributed">Distributed (several servers)</a></li>
+        <li class="decentralized"><a href="${route('doc_deployments')}#decentralized">Decentralized (all servers)</a></li>
+      </ul>
+    </li>
+
     <li ${'class="active"' if request.route.name == 'doc_upgrading' else ''}>
       <a href="${route('doc_upgrading')}">Upgrading</a>
     </li>
@@ -52,7 +49,7 @@
 
       <ul>
         <li ${'class="active"' if request.route.name == 'doc_storages_filesystem' else ''}><a href="${route('doc_storages_filesystem')}">Local Filesystem</a></li>
-        <li ${'class="active"' if request.route.name == 'doc_storages_s3' else ''}><a href="${route('doc_storages_s3')}">Amazon S3</a></li>
+        <li ${'class="active"' if request.route.name == 'doc_storages_s3' else ''}><a href="${route('doc_storages_s3')}">Amazon S3 &amp; Compatible</a></li>
         <li ${'class="active"' if request.route.name == 'doc_storages_gcs' else ''}><a href="${route('doc_storages_gcs')}">Google Cloud Storage</a></li>
         <li class="request"><a href="http://help.infinit.sh" target="_blank">Request new provider</a></li>
       </ul>

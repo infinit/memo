@@ -412,3 +412,78 @@ private:
         dht::soft_fail_running = soft_fail_running);
   }
 };
+
+class NoCheatConsensus: public infinit::model::doughnut::consensus::Consensus
+{
+public:
+  typedef infinit::model::doughnut::consensus::Consensus Super;
+  NoCheatConsensus(std::unique_ptr<Super> backend)
+  : Super(backend->doughnut())
+  , _backend(std::move(backend))
+  {}
+protected:
+  virtual
+  std::unique_ptr<infinit::model::doughnut::Local>
+  make_local(boost::optional<int> port,
+             boost::optional<boost::asio::ip::address> listen,
+             std::unique_ptr<infinit::storage::Storage> storage,
+             dht::Protocol p) override
+  {
+    return _backend->make_local(port, listen, std::move(storage), p);
+  }
+
+  virtual
+  std::unique_ptr<infinit::model::blocks::Block>
+  _fetch(infinit::model::Address address, boost::optional<int> local_version) override
+  {
+    auto res = _backend->fetch(address, local_version);
+    if (!res)
+      return res;
+    elle::Buffer buf;
+    {
+      elle::IOStream os(buf.ostreambuf());
+      elle::serialization::binary::serialize(res, os);
+    }
+    elle::IOStream is(buf.istreambuf());
+    elle::serialization::Context ctx;
+    ctx.set(&doughnut());
+    res = elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
+      is, true, ctx);
+    return res;
+  }
+  virtual
+  void
+  _store(std::unique_ptr<infinit::model::blocks::Block> block,
+    infinit::model::StoreMode mode,
+    std::unique_ptr<infinit::model::ConflictResolver> resolver) override
+  {
+    this->_backend->store(std::move(block), mode, std::move(resolver));
+  }
+  virtual
+  void
+  _remove(infinit::model::Address address, infinit::model::blocks::RemoveSignature rs) override
+  {
+    if (rs.block)
+    {
+      elle::Buffer buf;
+      {
+        elle::IOStream os(buf.ostreambuf());
+        elle::serialization::binary::serialize(rs.block, os);
+      }
+      elle::IOStream is(buf.istreambuf());
+      elle::serialization::Context ctx;
+      ctx.set(&doughnut());
+      auto res = elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
+        is, true, ctx);
+      rs.block = std::move(res);
+    }
+    _backend->remove(address, rs);
+  }
+  std::unique_ptr<Super> _backend;
+};
+
+std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
+no_cheat_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
+{
+  return std::make_unique<NoCheatConsensus>(std::move(c));
+}

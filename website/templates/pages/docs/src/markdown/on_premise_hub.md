@@ -108,7 +108,7 @@ Using an on premise Hub
 The Hub used by the Infinit binaries can be set using the `INFINIT_BEYOND` environment variable.
 
 ```
-$> INFINIT_BEYOND=https://your.server.name infinit-user --signup --email your@email.com
+$> INFINIT_BEYOND=https://your.server.name infinit-user --signup
 ```
 
 It may be more convenient to *export* the variable in your terminal's initialisation script so that it is always set.

@@ -34,7 +34,7 @@
     <div data-tabs-content class="data-tabs-content">
       <div data-tabs-pane class="tabs-pane active" id="centralized-server">
 <pre><code>$> infinit-storage --create --filesystem --capacity 100GB --name local
-$> infinit-network --create --as alice --storage local --kelips --replication-factor 1 --name cluster --push
+$> infinit-network --create --as alice --storage local --replication-factor 1 --name cluster --push
 $> infinit-volume --create --as alice --network cluster --name shared --push
 
 $> infinit-user --fetch --as alice --name bob
@@ -90,7 +90,7 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
     <div data-tabs-content class="data-tabs-content">
       <div data-tabs-pane class="tabs-pane active" id="distributed-server-1">
 <pre><code>$> infinit-storage --create --filesystem --capacity 20GB --name local
-$> infinit-network --create --as alice --storage local --kelips --replication-factor 2 --name cluster --push
+$> infinit-network --create --as alice --storage local --replication-factor 2 --name cluster --push
 $> infinit-volume --create --as alice --network cluster --name shared --push
 
 $> infinit-user --fetch --as alice --name bob
@@ -157,7 +157,7 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
     <div data-tabs-content class="data-tabs-content">
       <div data-tabs-pane class="tabs-pane active" id="decentralized-node-a">
 <pre><code>$> infinit-storage --create --filesystem --capacity 15GB --name local
-$> infinit-network --create --as alice --storage local --kelips --replication-factor 3 --name cluster --push
+$> infinit-network --create --as alice --storage local --replication-factor 3 --name cluster --push
 $> infinit-volume --create --as alice --network cluster --name shared --push
 
 $> infinit-user --fetch --as alice --name bob

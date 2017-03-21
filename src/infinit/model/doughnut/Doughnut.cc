@@ -334,6 +334,19 @@ namespace infinit
           elle::cryptography::rsa::keypair::generate(2048));
       }
 
+      std::unique_ptr<blocks::Block>
+      Doughnut::_make_named_block(elle::Buffer const& key) const
+      {
+        return std::make_unique<model::doughnut::NB>(
+            elle::unconst(*this), key.string(), elle::Buffer());
+      }
+
+      Address
+      Doughnut::_named_block_address(elle::Buffer const& key) const
+      {
+        return NB::address(this->keys().K(), key.string(), version());
+      }
+
       std::unique_ptr<model::User>
       Doughnut::_make_user(elle::Buffer const& data) const
       {

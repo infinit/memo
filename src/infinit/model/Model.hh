@@ -25,6 +25,8 @@ namespace infinit
     ELLE_DAS_SYMBOL(block);
     ELLE_DAS_SYMBOL(conflict_resolver);
     ELLE_DAS_SYMBOL(data);
+    ELLE_DAS_SYMBOL(decrypt_data);
+    ELLE_DAS_SYMBOL(key);
     ELLE_DAS_SYMBOL(local_version);
     ELLE_DAS_SYMBOL(owner);
     ELLE_DAS_SYMBOL(signature);
@@ -159,6 +161,16 @@ namespace infinit
         std::unique_ptr<blocks::MutableBlock>()>
       make_mutable_block;
 
+      /** Construct a named block.
+       */
+      elle::das::named::Function<
+        std::unique_ptr<blocks::Block>(decltype(key)::Formal<elle::Buffer>)>
+      make_named_block;
+
+      elle::das::named::Function<
+        Address(decltype(key)::Formal<elle::Buffer>)>
+      named_block_address;
+
       /** Fetch block at \param address.
        *
        *  Use \param local_version to avoid refetching the block if it did
@@ -173,7 +185,8 @@ namespace infinit
       elle::das::named::Function<
         std::unique_ptr<blocks::Block> (
           decltype(address)::Formal<Address>,
-          decltype(local_version = boost::optional<int>()))>
+          decltype(local_version = boost::optional<int>()),
+          decltype(decrypt_data = boost::optional<bool>()))>
       fetch;
       void
       multifetch(std::vector<AddressVersion> const& addresses,
@@ -186,7 +199,7 @@ namespace infinit
        *  \param conflict_resolver Optional automatic conflict resolver.
        */
       elle::das::named::Function<
-        void (
+        bool (
           decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
           decltype(conflict_resolver)::Effective<
             std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>)>
@@ -201,10 +214,11 @@ namespace infinit
        *  \param conflict_resolver Optional automatic conflict resolver.
        */
       elle::das::named::Function<
-        void (
+        bool (
           decltype(block)::Formal<std::unique_ptr<blocks::Block>>,
           decltype(conflict_resolver)::Effective<
-            std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>)>
+            std::nullptr_t, std::nullptr_t, std::unique_ptr<ConflictResolver>>,
+          decltype(decrypt_data = false))>
       update;
       void
       seal_and_update(blocks::Block& block,
@@ -212,14 +226,17 @@ namespace infinit
       /** Remove an existing block.
        */
       elle::das::named::Function<
-        void (
+        bool (
           decltype(address)::Formal<Address>,
           decltype(signature = boost::optional<blocks::RemoveSignature>()))>
       remove;
 
     private:
       std::unique_ptr<blocks::Block>
-      _fetch_impl(Address address, boost::optional<int> local_version) const;
+      _fetch_impl(Address address,
+                  boost::optional<int> local_version,
+                  boost::optional<bool> decrypt_data
+                  ) const;
     protected:
       template <typename Block, typename ... Args>
       static
@@ -241,6 +258,12 @@ namespace infinit
       virtual
       std::unique_ptr<User>
       _make_user(elle::Buffer const& data) const;
+      virtual
+      std::unique_ptr<blocks::Block>
+      _make_named_block(elle::Buffer const& key) const;
+      virtual
+      Address
+      _named_block_address(elle::Buffer const& key) const;
       virtual
       std::unique_ptr<blocks::Block>
       _fetch(Address address, boost::optional<int> local_version) const = 0;

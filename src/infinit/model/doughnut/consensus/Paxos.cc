@@ -14,8 +14,9 @@
 #include <elle/reactor/for-each.hh>
 
 #include <infinit/RPC.hh>
+
+#include <infinit/model/Conflict.hh>
 #include <infinit/model/MissingBlock.hh>
-#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
@@ -53,12 +54,6 @@ namespace infinit
             throw elle::athena::paxos::Unavailable();
           }
         }
-
-        template <typename T>
-        static
-        void
-        null_deleter(T*)
-        {}
 
         BlockOrPaxos::BlockOrPaxos(blocks::Block& b)
           : block(&b, [] (blocks::Block*) {})
@@ -1355,7 +1350,7 @@ namespace infinit
             {
               ELLE_TRACE("resolution failed");
               // FIXME: useless clone, find a way to steal ownership
-              throw infinit::model::doughnut::Conflict(
+              throw infinit::model::Conflict(
                 "Paxos chose a different value", newest.clone());
             }
           }
@@ -1363,7 +1358,7 @@ namespace infinit
           {
             ELLE_TRACE("chosen block differs, signal conflict");
             // FIXME: useless clone, find a way to steal ownership
-            throw infinit::model::doughnut::Conflict(
+            throw infinit::model::Conflict(
               "Paxos chose a different value",
               newest.clone());
           }
@@ -1444,10 +1439,14 @@ namespace infinit
                     {
                       auto block =
                         chosen->value.get<std::shared_ptr<blocks::Block>>();
+                      if (auto* mb = dynamic_cast<blocks::MutableBlock*>(block.get()))
+                        mb->seal_version(chosen->proposal.version + 1);
+                      if (auto* mb = dynamic_cast<blocks::MutableBlock*>(b.get()))
+                        mb->seal_version(chosen->proposal.version + 1);
                       if (!(b = resolve(*b, *block, resolver.get())))
                         break;
                       ELLE_DEBUG("seal resolved block")
-                        b->seal(chosen->proposal.version + 1);
+                        b->seal();
                     }
                   }
                   else

@@ -1,6 +1,8 @@
 sources = drake.nodes(
   'Address.cc',
   'Address.hh',
+  'Conflict.cc',
+  'Conflict.hh',
   'Endpoints.cc',
   'Endpoints.hh',
   'MissingBlock.cc',
@@ -32,8 +34,6 @@ sources = drake.nodes(
   'doughnut/CHB.hh',
   'doughnut/Cache.cc',
   'doughnut/Cache.hh',
-  'doughnut/Conflict.cc',
-  'doughnut/Conflict.hh',
   'doughnut/Consensus.cc',
   'doughnut/Consensus.hh',
   'doughnut/Dock.cc',

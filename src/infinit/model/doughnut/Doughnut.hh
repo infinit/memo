@@ -179,6 +179,12 @@ namespace infinit
         std::unique_ptr<blocks::GroupBlock>
         _make_group_block() const override;
 
+        std::unique_ptr<blocks::Block>
+        _make_named_block(elle::Buffer const& key) const override;
+
+        Address
+        _named_block_address(elle::Buffer const& key) const override;
+
         std::unique_ptr<model::User>
         _make_user(elle::Buffer const& data) const override;
         std::unique_ptr<blocks::Block>

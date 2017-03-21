@@ -11,6 +11,7 @@
 #include <infinit/cli/Infinit.hh>
 #include <infinit/cli/utility.hh>
 #include <infinit/cli/xattrs.hh>
+#include <infinit/grpc/grpc.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/MonitoringServer.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
@@ -164,6 +165,7 @@ namespace infinit
             cli::no_local_endpoints = false,
             cli::no_public_endpoints = false,
             cli::advertise_host = Strings{},
+            cli::grpc = boost::none,
             cli::paxos_rebalancing_auto_expand = boost::none,
             cli::paxos_rebalancing_inspect = boost::none)
       , stats(*this,
@@ -851,6 +853,7 @@ namespace infinit
                   bool no_local_endpoints = false,
                   bool no_public_endpoints = false,
                   Strings advertise_host = {},
+                  boost::optional<std::string> grpc = {},
                   boost::optional<bool> paxos_rebalancing_auto_expand = {},
                   boost::optional<bool> paxos_rebalancing_inspect = {},
                   Action const& action = {})
@@ -888,6 +891,14 @@ namespace infinit
 #endif
         );
         hook_stats_signals(*dht);
+        if (grpc)
+        {
+          model::Endpoints eps(*grpc);
+          auto ep = *eps.begin();
+          new elle::reactor::Thread("grpc", [dht=dht.get(), ep] {
+              infinit::grpc::serve_grpc(*dht, boost::none, ep);
+          });
+        }
         if (peers_file)
         {
           auto more_peers = hook_peer_discovery(*dht, *peers_file);
@@ -1004,6 +1015,7 @@ namespace infinit
          no_local_endpoints,
          no_public_endpoints,
          advertise_host,
+         {},
          {},
          {},
          [&] (infinit::User& owner,
@@ -1133,6 +1145,7 @@ namespace infinit
                       bool no_local_endpoints,
                       bool no_public_endpoints,
                       Strings advertise_host,
+                      boost::optional<std::string> grpc,
                       boost::optional<bool> paxos_rebalancing_auto_expand,
                       boost::optional<bool> paxos_rebalancing_inspect)
     {
@@ -1165,6 +1178,7 @@ namespace infinit
          no_local_endpoints,
          no_public_endpoints,
          advertise_host,
+         grpc,
          paxos_rebalancing_auto_expand,
          paxos_rebalancing_inspect,
          [&] (infinit::User& owner,

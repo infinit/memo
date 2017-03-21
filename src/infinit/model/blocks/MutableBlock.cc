@@ -19,6 +19,7 @@ namespace infinit
       MutableBlock::MutableBlock(MutableBlock const& other)
         : Super(other)
         , _data_changed(other._data_changed)
+        , _seal_version(other._seal_version)
       {}
 
       void
