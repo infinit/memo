@@ -310,13 +310,13 @@ namespace infinit
                     {
                       f();
                     }
-                    catch (elle::reactor::network::Exception const&)
+                    catch (elle::reactor::network::Exception const& e)
                     {
-                      // ignored
+                      ELLE_DEBUG("%s: endpoint failed: %s", this, e);
                     }
                     catch (HandshakeFailed const& hs)
                     {
-                      ELLE_WARN("%s: %s", this, hs);
+                      ELLE_WARN("%s: endpoint failed: %s", this, hs);
                     }
                   };
                 };
