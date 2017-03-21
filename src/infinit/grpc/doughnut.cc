@@ -139,15 +139,16 @@ namespace infinit
       void AddMethod(NF& nf, model::doughnut::Doughnut& dht, std::string const& name)
       {
         auto& sched = elle::reactor::scheduler();
-        using sig = std::function<::grpc::Status(Service*,::grpc::ServerContext*, const GArg *, GRet*)>;
         _method_names.push_back(std::make_unique<std::string>(name));
         ::grpc::Service::AddMethod(new ::grpc::RpcServiceMethod(
-          _method_names.back()->c_str(), ::grpc::RpcMethod::NORMAL_RPC,
+          _method_names.back()->c_str(),
+          ::grpc::RpcMethod::NORMAL_RPC,
           new ::grpc::RpcMethodHandler<Service, GArg, GRet>(
-            (sig)std::bind(
-              &invoke_named<NF, GArg, GRet, NOEXCEPT>,
-              std::ref(sched), std::ref(dht), std::ref(nf),
-              std::placeholders::_2, std::placeholders::_3, std::placeholders::_4),
+            [&](Service*,
+                ::grpc::ServerContext* ctx, const GArg* arg, GRet* ret)
+            {
+              return invoke_named<NF, GArg, GRet, NOEXCEPT>(sched, dht, nf, ctx, arg, ret);
+            },
             this)));
       }
     private:
