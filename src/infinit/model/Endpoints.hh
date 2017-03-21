@@ -89,10 +89,9 @@ namespace infinit
       tcp() const;
       std::vector<boost::asio::ip::udp::endpoint>
       udp() const;
-      /** Merge endpoints without duplicates.
-       *
-       *  @return Whether any endpoint was added.
-       */
+      /// Merge endpoints without duplicates.
+      ///
+      /// @return Whether any endpoint was added.
       bool
       merge(Endpoints const&);
     };

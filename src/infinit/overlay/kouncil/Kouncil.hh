@@ -10,6 +10,7 @@
 #include <boost/multi_index_container.hpp>
 
 #include <elle/athena/LamportAge.hh>
+#include <elle/multi_index_container.hh>
 #include <elle/unordered_map.hh>
 
 #include <infinit/model/doughnut/Peer.hh>

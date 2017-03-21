@@ -644,7 +644,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("send %s peers and fetch known peers of %s",
                          send_peers ? this->_infos.size() : 0, r);
         if (send_peers)
-          ELLE_DUMP("peers: %s", this->_infos);
+          ELLE_DUMP("peers: %f", this->_infos);
         try
         {
           if (this->doughnut()->version() < elle::Version(0, 8, 0))
@@ -741,7 +741,7 @@ namespace infinit
       void
       Kouncil::PeerInfo::print(std::ostream& o) const
       {
-        elle::fprintf(o, "%s(%f)", elle::type_info(*this), this->id());
+        elle::fprintf(o, "%f(%f)", elle::type_info(*this), this->id());
       }
 
 
@@ -820,7 +820,7 @@ namespace infinit
       namespace
       {
         const auto a
-          = elle::TypeInfo::RegisterAbbrevation{"kouncil::Kouncil", "Kouncil"};
+          = elle::TypeInfo::RegisterAbbrevation{"infinit::overlay::kouncil::Kouncil", "Kouncil"};
       }
     }
   }
