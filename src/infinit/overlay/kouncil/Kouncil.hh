@@ -116,10 +116,12 @@ namespace infinit
       public:
         /// Construct a Kouncil with the given backends.
         ///
-        /// @arg   dht      The owning Doughnut.
-        /// @arg   local    The local server, null if pure client.
+        /// @arg dht              The owning Doughnut.
+        /// @arg local            The local server, null if pure client.
+        /// @arg eviction_delay   A time out, in seconds.
         Kouncil(model::doughnut::Doughnut* dht,
                 std::shared_ptr<Local> local,
+                // FIXME: bad typing, unit is not specified.
                 boost::optional<int> eviction_delay = {});
         /// Destruct a Kouncil.
         ~Kouncil() override;

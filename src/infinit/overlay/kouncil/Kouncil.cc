@@ -83,6 +83,9 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_DEBUG("Eviction delay: %s", _eviction_delay);
+        if (_eviction_delay < std::chrono::seconds(3))
+          ELLE_WARN("Eviction is dangerously low, peers might be evicted"
+                    " before any reconnection attempt");
         if (local)
           _register_local(local);
         // Add client-side Kouncil RPCs.
