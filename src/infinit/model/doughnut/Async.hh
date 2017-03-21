@@ -41,8 +41,8 @@ namespace infinit
                      Protocol p) override;
           void
           sync(); // wait until last pushed op gets processed
-        protected:
 
+        protected:
           void
           _store(std::unique_ptr<blocks::Block> block,
                  StoreMode mode,
@@ -101,12 +101,11 @@ namespace infinit
             int version;
             using Model = elle::das::Model<
               Op,
-              elle::meta::List<
-                symbols::Symbol_address,
-                symbols::Symbol_block,
-                symbols::Symbol_mode,
-                symbols::Symbol_resolver,
-                Symbol_remove_signature>>;
+              decltype(elle::meta::list(symbols::address,
+                                        symbols::block,
+                                        symbols::mode,
+                                        symbols::resolver,
+                                        remove_signature))>;
           };
 
         private:

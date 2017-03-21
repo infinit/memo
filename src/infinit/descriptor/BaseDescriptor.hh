@@ -73,7 +73,8 @@ namespace infinit
       boost::optional<std::string> description;
       using Model = elle::das::Model<
         BaseDescriptor,
-        elle::meta::List<symbols::Symbol_name, symbols::Symbol_description>>;
+        decltype(elle::meta::list(symbols::name,
+                                  symbols::description))>;
 
     /*--------------.
     | Serialization |
