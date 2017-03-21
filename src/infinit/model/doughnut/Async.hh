@@ -9,7 +9,7 @@
 #include <boost/multi_index/ordered_index.hpp>
 
 #include <elle/reactor/Channel.hh>
-#include <elle/reactor/thread.hh>
+#include <elle/reactor/Thread.hh>
 
 #include <elle/optional.hh>
 

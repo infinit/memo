@@ -4,7 +4,7 @@
 
 #include <elle/reactor/network/tcp-socket.hh>
 #include <elle/reactor/network/utp-socket.hh>
-#include <elle/reactor/thread.hh>
+#include <elle/reactor/Thread.hh>
 
 #include <elle/protocol/Serializer.hh>
 #include <elle/protocol/ChanneledStream.hh>

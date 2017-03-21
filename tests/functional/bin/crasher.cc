@@ -1,7 +1,7 @@
 #include <boost/program_options.hpp>
 
 #include <elle/reactor/scheduler.hh>
-#include <elle/reactor/thread.hh>
+#include <elle/reactor/Thread.hh>
 
 #include <crash_reporting/CrashReporter.hh>
 

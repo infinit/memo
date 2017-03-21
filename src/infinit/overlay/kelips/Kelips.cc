@@ -38,7 +38,7 @@
 #include <elle/reactor/exception.hh>
 #include <elle/reactor/network/resolve.hh>
 #include <elle/reactor/scheduler.hh>
-#include <elle/reactor/thread.hh>
+#include <elle/reactor/Thread.hh>
 
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/model/MissingBlock.hh>

@@ -12,7 +12,7 @@
 #include <elle/cryptography/rsa/KeyPair.hh>
 
 #include <elle/reactor/filesystem.hh>
-#include <elle/reactor/thread.hh>
+#include <elle/reactor/Thread.hh>
 
 #include <infinit/model/Model.hh>
 #include <infinit/filesystem/FileData.hh>

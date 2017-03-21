@@ -2,7 +2,7 @@
 
 #include <elle/reactor/filesystem.hh>
 #include <elle/reactor/Barrier.hh>
-#include <elle/reactor/thread.hh>
+#include <elle/reactor/Thread.hh>
 #include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/umbrella.hh>
 
