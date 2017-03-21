@@ -2169,7 +2169,7 @@ namespace infinit
           auto it = target.find(c.first);
           if (it == target.end())
           {
-            ELLE_LOG("%s: registering contact %x from gossip(%x)", *this, c.first, p->sender);
+            ELLE_LOG("%s: registering contact %f from gossip(%f)", *this, c.first, p->sender);
             if (g == _group || target.size() < (unsigned)_config.max_other_contacts)
               target[c.first] = Contact{{}, c.second, c.first, Duration(), Time(), 0};
           }
@@ -2187,7 +2187,7 @@ namespace infinit
             {
               _state.files.emplace(f.first,
                                    File{f.first, f.second.second, f.second.first, Time(), 0});
-              ELLE_DUMP("%s: registering %x live since %s (%s)", *this,
+              ELLE_DUMP("%s: registering %f live since %s (%s)", *this,
                          f.first,
                          std::chrono::duration_cast<std::chrono::seconds>(now() - f.second.first).count(),
                          (now() - f.second.first).count());
