@@ -26,7 +26,8 @@ namespace elle
 {
   namespace serialization
   {
-    template<> struct Serialize<std::unique_ptr<infinit::model::blocks::MutableBlock >>
+    template<>
+    struct Serialize<std::unique_ptr<infinit::model::blocks::MutableBlock >>
     {
       static void serialize(
         std::unique_ptr<infinit::model::blocks::MutableBlock> const& b,
@@ -35,6 +36,7 @@ namespace elle
         auto* ptr = static_cast<infinit::model::blocks::Block*>(b.get());
         s.serialize_forward(ptr);
       }
+
       static
       std::unique_ptr<infinit::model::blocks::MutableBlock>
       deserialize(SerializerIn& s)
@@ -45,7 +47,9 @@ namespace elle
           dynamic_cast<infinit::model::blocks::MutableBlock*>(bl.release()));
       }
     };
-    template<> struct Serialize<std::unique_ptr<infinit::model::blocks::ImmutableBlock>>
+
+    template<>
+    struct Serialize<std::unique_ptr<infinit::model::blocks::ImmutableBlock>>
     {
       static void serialize(
         std::unique_ptr<infinit::model::blocks::ImmutableBlock> const& b,
@@ -54,6 +58,7 @@ namespace elle
         auto* ptr = static_cast<infinit::model::blocks::Block*>(b.get());
         s.serialize_forward(ptr);
       }
+
       static
       std::unique_ptr<infinit::model::blocks::ImmutableBlock>
       deserialize(SerializerIn& s)
@@ -75,32 +80,38 @@ namespace infinit
     template <typename T>
     struct OptionFirst
     {};
-    template<typename A, typename E>
+
+    template <typename A, typename E>
     struct OptionFirst<elle::Option<A, E>>
     {
-      template<typename T>
+      template <typename T>
       static
       A& value(T& v)
       {
         if (v.template is<E>())
-        {
           elle::err("unexpected exception: %s", v.template get<E>());
-        }
         return v.template get<A>();
       }
     };
-    template<typename NF, typename REQ, typename RESP, bool NOEXCEPT>
+
+    template <typename NF, typename REQ, typename RESP, bool NOEXCEPT>
     ::grpc::Status
-    invoke_named(elle::reactor::Scheduler& sched, model::doughnut::Doughnut& dht, NF& nf, ::grpc::ServerContext* ctx, const REQ* request, RESP* response)
+    invoke_named(elle::reactor::Scheduler& sched,
+                 model::doughnut::Doughnut& dht,
+                 NF& nf,
+                 ::grpc::ServerContext* ctx,
+                 const REQ* request,
+                 RESP* response)
     {
       sched.mt_run<void>("invoke", [&] {
           try
           {
-            ELLE_TRACE("invoking some method: %s -> %s", elle::type_info<REQ>().name(), elle::type_info<RESP>().name());
+            ELLE_TRACE("invoking some method: %s -> %s",
+                       elle::type_info<REQ>().name(), elle::type_info<RESP>().name());
             SerializerIn sin(request);
             sin.set_context<model::doughnut::Doughnut*>(&dht);
-            typename NF::Call call(sin);
-            typename NF::Result res = nf(std::move(call));
+            auto call = typename NF::Call(sin);
+            auto res = nf(std::move(call));
             ELLE_DUMP("adapter with %s", elle::type_info<typename NF::Result>());
             SerializerOut sout(response);
             sout.set_context<model::doughnut::Doughnut*>(&dht);
@@ -124,7 +135,7 @@ namespace infinit
     class Service: public ::grpc::Service
     {
     public:
-      template<typename GArg, typename GRet, bool NOEXCEPT=false, typename NF>
+      template <typename GArg, typename GRet, bool NOEXCEPT=false, typename NF>
       void AddMethod(NF& nf, model::doughnut::Doughnut& dht, std::string const& name)
       {
         auto& sched = elle::reactor::scheduler();
@@ -143,7 +154,7 @@ namespace infinit
       std::vector<std::unique_ptr<std::string>> _method_names;
     };
 
-    std::unique_ptr< ::grpc::Service>
+    std::unique_ptr<::grpc::Service>
     doughnut_service(model::Model& model)
     {
       auto& dht = dynamic_cast<model::doughnut::Doughnut&>(model);
