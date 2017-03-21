@@ -1,4 +1,4 @@
-#include <boost/regex.hpp>
+#include <regex>
 
 #include <elle/serialization/Serializer.hh>
 
@@ -10,17 +10,15 @@ namespace infinit
     void
     TemplatedBaseDescriptor<T>::check_name(std::string const& name)
     {
-      std::string test_name;
-      auto slash_pos = name.find_first_of("/");
+      auto const slash_pos = name.find_first_of("/");
       if (!T::permit_name_slash() && slash_pos != std::string::npos)
         throw DescriptorNameError(name);
-      if (slash_pos == std::string::npos)
-        test_name = name;
-      else
-        test_name = name.substr(slash_pos + 1);
-      static const boost::regex allowed(T::name_regex());
-      boost::smatch str_matches;
-      if (!boost::regex_match(test_name, str_matches, allowed))
+      auto const test_name
+        = slash_pos == std::string::npos
+        ? name
+        : name.substr(slash_pos + 1);
+      static auto const allowed = std::regex{T::name_regex()};
+      if (!std::regex_match(test_name, allowed))
         throw DescriptorNameError(name);
     }
 
@@ -31,9 +29,8 @@ namespace infinit
     {
       if (!description)
         return;
-      static const boost::regex allowed(T::description_regex());
-      boost::smatch str_matches;
-      if (!boost::regex_match(description.get(), str_matches, allowed))
+      static auto const allowed = std::regex{T::description_regex()};
+      if (!std::regex_match(description.get(), allowed))
         throw DescriptorDescriptionError(description.get());
     }
 
@@ -77,15 +74,18 @@ namespace infinit
     std::string
     TemplatedBaseDescriptor<T>::name_regex()
     {
-        return "${name_regex}";
+      return "${name_regex}";
     }
 
     template <typename T>
     std::string
     TemplatedBaseDescriptor<T>::description_regex()
     {
-    return "${description_regex}";
+      return "${description_regex}";
     }
-
   }
 }
+
+// Local Variables:
+// mode: c++
+// End:
