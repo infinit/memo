@@ -517,12 +517,6 @@ def configure(
       for s in installed_symbols:
         rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
 
-  # if elle.reactor.fnetusermount_binaries is not None:
-  #   for f in elle.reactor.fnetusermount_binaries:
-  #     t = drake.copy(f, '.', strip_prefix = 'elle/src/elle/reactor')
-  #     installed_binaries.append(t)
-  # rule_build << binaries
-
   ## -------- ##
   ## Licenses ##
   ## -------- ##
@@ -714,7 +708,6 @@ def configure(
   docker_file.run('ln -s /usr/bin/fnetusermount-client /bin/fusermount')
   drake.docker.DockerBuilder(docker_image, docker_file)
 
-
   # infinit alpine image
   docker_path = drake.Path('docker-alpine')
   docker_image = drake.docker.DockerImage(
@@ -743,32 +736,6 @@ def configure(
   docker_file.run("ln -s 'libstdc++.so' '/usr/lib/libstdc++.so.6'")
   docker_file.run("ln -s 'libgcc_s.so' '/usr/lib/libgcc_s.so.1'")
   drake.docker.DockerBuilder(docker_image, docker_file)
-
-  #fnetusermount-server image
-  # if elle.reactor.fnetusermount_binaries is not None:
-  #   docker_path = drake.Path('docker-fnetusermount')
-  #   docker_image = drake.docker.DockerImage(
-  #     'docker-fnetusermount',
-  #     'infinit-fnetusermount', git.description())
-  #   docker_file = drake.docker.DockerFile(
-  #     docker_path / 'Dockerfile',
-  #     image = 'ubuntu',
-  #     maintainer = 'Infinit <contact@infinit.sh>',
-  #     labels = {
-  #       'version': git.description(),
-  #     })
-  #   docker_file.add(
-  #     drake.copy(
-  #       elle.reactor.fnetusermount_binaries, docker_path / 'bin',
-  #       strip_prefix = True),
-  #     '/usr')
-  #   docker_file.add(
-  #     drake.copy(additional_libs, docker_path / 'lib',
-  #       strip_prefix = True),
-  #     '/usr')
-  #   docker_file.run('apt-get update')
-  #   docker_file.run('apt-get install -y fuse') # for fusermount
-  #   drake.docker.DockerBuilder(docker_image, docker_file)
 
   #deployment script image
   docker_path = drake.Path('docker-deploy')
