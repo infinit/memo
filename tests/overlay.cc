@@ -195,42 +195,6 @@ private:
   ELLE_ATTRIBUTE(elle::reactor::Thread::unique_ptr, thread);
 };
 
-void
-discover(DHT& dht,
-         DHT& target,
-         NodeLocation const& loc,
-         bool wait = false,
-         bool wait_back = false)
-{
-  auto discovered = elle::reactor::waiter(
-    dht.dht->overlay()->on_discover(),
-    [&] (NodeLocation const& l, bool) { return l.id() == target.dht->id(); });
-  auto discovered_back = elle::reactor::waiter(
-    target.dht->overlay()->on_discover(),
-    [&] (NodeLocation const& l, bool) { return l.id() == dht.dht->id(); });
-  dht.dht->overlay()->discover(loc);
-  if (wait)
-    elle::reactor::wait(discovered);
-  if (wait_back)
-    elle::reactor::wait(discovered_back);
-}
-
-void
-discover(DHT& dht,
-         DHT& target,
-         bool anonymous,
-         bool onlyfirst = false,
-         bool wait = false,
-         bool wait_back = false)
-{
-  auto const eps
-    = onlyfirst
-    ? Endpoints{*target.dht->local()->server_endpoints().begin()}
-    : target.dht->local()->server_endpoints();
-  auto const loc = NodeLocation(anonymous ? Address::null : target.dht->id(),
-                                eps);
-  discover(dht, target, loc, wait, wait_back);
-}
 
 namespace
 {
@@ -431,6 +395,68 @@ namespace
     Doughnut::OverlayBuilder overlay_builder;
     boost::optional<elle::Version> version;
   };
+
+  /// Watch and warn about @a target being evicted by @a dht.
+  boost::signals2::scoped_connection
+  monitor_eviction(DHT& dht, DHT& target)
+  {
+    if (auto kouncil = get_kouncil(dht))
+      return kouncil->on_evicted().connect([&](Address id)
+      {
+        if (id == target.dht->id())
+          ELLE_ERR
+            ("dht = %s was waiting for target = %s, but target was evicted by dht",
+             dht, target);
+      });
+    else
+      return {};
+  }
+
+  void
+  discover(DHT& dht,
+           DHT& target,
+           NodeLocation const& loc,
+           bool wait = false,
+           bool wait_back = false)
+  {
+    auto discovered = elle::reactor::waiter(
+      dht.dht->overlay()->on_discover(),
+      [&] (NodeLocation const& l, bool) { return l.id() == target.dht->id(); });
+    auto discovered_back = elle::reactor::waiter(
+      target.dht->overlay()->on_discover(),
+      [&] (NodeLocation const& l, bool) { return l.id() == dht.dht->id(); });
+    auto eviction = monitor_eviction(dht, target);
+    auto eviction_back = monitor_eviction(target, dht);
+    ELLE_LOG("%s invited to discover %s via %s", dht, target, loc)
+      dht.dht->overlay()->discover(loc);
+    if (wait)
+    {
+      elle::reactor::wait(discovered);
+      ELLE_LOG("%s discovered %s", dht, target);
+    }
+    if (wait_back)
+    {
+      elle::reactor::wait(discovered_back);
+      ELLE_LOG("%s discovered back by %s", dht, target);
+    }
+  }
+
+  void
+  discover(DHT& dht,
+           DHT& target,
+           bool anonymous,
+           bool onlyfirst = false,
+           bool wait = false,
+           bool wait_back = false)
+  {
+    auto const eps
+      = onlyfirst
+      ? Endpoints{*target.dht->local()->server_endpoints().begin()}
+      : target.dht->local()->server_endpoints();
+    auto const addr = anonymous ? Address::null : target.dht->id();
+    auto const loc = NodeLocation{addr, eps};
+    discover(dht, target, loc, wait, wait_back);
+  }
 }
 
 ELLE_TEST_SCHEDULED(
