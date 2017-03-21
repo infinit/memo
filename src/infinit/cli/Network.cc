@@ -396,7 +396,8 @@ namespace infinit
           else
             return std::make_unique<infinit::overlay::kouncil::Configuration>();
         }();
-
+      if (protocol)
+        overlay_config->rpc_protocol = protocol_get(protocol);
       auto storage = make_storage_config(ifnt, storage_names);
       auto consensus_config = make_consensus_config(paxos,
                                                     no_consensus,
