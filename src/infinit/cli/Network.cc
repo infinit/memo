@@ -205,27 +205,28 @@ namespace infinit
                          boost::optional<std::string> const& protocol)
       {
         auto res = std::make_unique<infinit::overlay::kelips::Configuration>();
-        // k.
-        if (k)
-          res->k = *k;
-        else if (nodes)
-        {
-          if (*nodes < 10)
-            res->k = 1;
-          else if (sqrt(*nodes) < 5)
-            res->k = *nodes / 5;
+        res->k = [&]{
+          if (k)
+            return *k;
+          else if (nodes)
+            {
+              if (*nodes < 10)
+                return 1;
+              else if (*nodes < 25)
+                return *nodes / 5;
+              else
+                return int(sqrt(*nodes));
+            }
           else
-            res->k = sqrt(*nodes);
-        }
-        else
-          res->k = 1;
+            return 1;
+        }();
         if (timeout)
           res->contact_timeout_ms =
             std::chrono::duration_from_string<std::chrono::milliseconds>(*timeout)
             .count();
-        if (encrypt)
+        // encrypt support.
         {
-          std::string enc = *encrypt;
+          auto enc = encrypt.value_or("yes");
           if (enc == "no")
           {
             res->encrypt = false;
@@ -242,12 +243,8 @@ namespace infinit
             res->accept_plain = false;
           }
           else
-            elle::err<CLIError>("'encrypt' must be 'no', 'lazy' or 'yes': %s", enc);
-        }
-        else
-        {
-          res->encrypt = true;
-          res->accept_plain = false;
+            elle::err<CLIError>("'encrypt' must be 'no', 'lazy' or 'yes': %s",
+                                enc);
         }
         if (protocol)
           res->rpc_protocol = protocol_get(protocol);

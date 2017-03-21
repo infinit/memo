@@ -56,8 +56,10 @@ namespace infinit
                    std::string const& action,
                    std::string const& resource = "network") const;
 
-    std::pair<
-      std::unique_ptr<model::doughnut::Doughnut>, elle::reactor::Thread::unique_ptr>
+    using ThreadedOverlay
+      = std::pair<std::unique_ptr<model::doughnut::Doughnut>,
+                  elle::reactor::Thread::unique_ptr>;
+    ThreadedOverlay
     run(User const& user,
         MountOptions const& mo,
         bool client = false,

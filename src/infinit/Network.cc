@@ -34,6 +34,27 @@ ELLE_DAS_SERIALIZE(Endpoints);
 
 namespace infinit
 {
+  namespace
+  {
+    using Strings = std::vector<std::string>;
+
+    /// Convert a list of peer names and/or file name of peer names,
+    /// into a list of node locations.
+    model::NodeLocations
+    make_node_locations(boost::optional<Strings> peers)
+    {
+      auto res = model::NodeLocations{};
+      if (peers)
+        for (auto const& obj: *peers)
+          if (bfs::exists(obj))
+            for (auto const& peer: model::endpoints_from_file(obj))
+              res.emplace_back(model::Address::null, model::Endpoints({peer}));
+          else
+            res.emplace_back(model::Address::null, model::Endpoints({obj}));
+      return res;
+    }
+  }
+
   Network::Network(std::string name,
                    std::unique_ptr<model::ModelConfig> model,
                    boost::optional<std::string> description)
@@ -79,14 +100,14 @@ namespace infinit
                 action, resource, user.name);
   }
 
-  std::pair<
-    std::unique_ptr<model::doughnut::Doughnut>, elle::reactor::Thread::unique_ptr>
+  auto
   Network::run(User const& user,
                MountOptions const& mo,
                bool client,
                bool enable_monitoring,
                boost::optional<elle::Version> version,
                boost::optional<int> port)
+    -> ThreadedOverlay
   {
     auto dht = this->run(
       user,
@@ -105,25 +126,17 @@ namespace infinit
          || enable_monitoring)
 #endif
       );
-    auto eps = model::NodeLocations{};
-    if (mo.peers)
-    {
-      for (auto const& obj: *mo.peers)
-        if (bfs::exists(obj))
-          for (auto const& peer: model::endpoints_from_file(obj))
-            eps.emplace_back(model::Address::null, model::Endpoints({peer}));
-        else
-          eps.emplace_back(model::Address::null, model::Endpoints({obj}));
-
-    }
-    elle::reactor::Thread::unique_ptr poll_thread;
-    if (mo.fetch.value_or(mo.publish.value_or(false)))
-    {
-      beyond_fetch_endpoints(eps);
-      if (mo.poll_beyond && *mo.poll_beyond > 0)
-        poll_thread =
-          this->make_poll_beyond_thread(*dht, eps, *mo.poll_beyond);
-    }
+    auto eps = make_node_locations(mo.peers);
+    auto poll_thread = [&] () -> elle::reactor::Thread::unique_ptr {
+      if (mo.fetch.value_or(mo.publish.value_or(false)))
+      {
+        beyond_fetch_endpoints(eps);
+        if (mo.poll_beyond && *mo.poll_beyond > 0)
+         return
+           this->make_poll_beyond_thread(*dht, eps, *mo.poll_beyond);
+      }
+      return {};
+    }();
     dht->overlay()->discover(eps);
     return {std::move(dht), std::move(poll_thread)};
   }
@@ -148,7 +161,7 @@ namespace infinit
   {
     auto poll = [&, locs_, interval = boost::posix_time::seconds(interval)]
       {
-        infinit::overlay::NodeLocations locs = locs_;
+        auto locs = locs_;
         while (true)
         {
           elle::reactor::sleep(interval);
@@ -185,7 +198,7 @@ namespace infinit
           boost::remove_erase_if(locs,
             [&](infinit::model::NodeLocation const& nl)
             {
-              return new_addresses.find(nl.id()) == new_addresses.end();
+              return !contains(new_addresses, nl.id());
             });
         }
       };
@@ -265,16 +278,10 @@ namespace infinit
     create_directories(new_dir / "async");
     if (bfs::exists(old_dir / "async") && !bfs::is_empty(old_dir / "async"))
     {
-      for (auto it = bfs::recursive_directory_iterator(old_dir / "async");
-           it != bfs::recursive_directory_iterator();
-           ++it)
-      {
-        if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
-        {
-          bfs::copy_file(it->path(),
-                         new_dir / "async" / it->path().filename());
-        }
-      }
+      for (auto p: bfs::recursive_directory_iterator(old_dir / "async"))
+        if (is_regular_file(p.status()) && !is_hidden_file(p.path()))
+          bfs::copy_file(p.path(),
+                         new_dir / "async" / p.path().filename());
       bfs::remove_all(old_dir / "async");
     }
     if (bfs::exists(old_dir / "cache") && !bfs::is_empty(old_dir / "cache"))
