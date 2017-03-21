@@ -1,16 +1,15 @@
-#ifndef INFINIT_MODEL_BLOCKS_BLOCK_HH
-# define INFINIT_MODEL_BLOCKS_BLOCK_HH
+#pragma once
 
-# include <elle/Buffer.hh>
-# include <elle/Printable.hh>
-# include <elle/Clonable.hh>
+#include <elle/Buffer.hh>
+#include <elle/Printable.hh>
+#include <elle/Clonable.hh>
 
-# include <elle/cryptography/rsa/PublicKey.hh>
+#include <elle/cryptography/rsa/PublicKey.hh>
 
-# include <infinit/model/Address.hh>
-# include <infinit/model/blocks/ValidationResult.hh>
-# include <infinit/model/fwd.hh>
-# include <infinit/serialization.hh>
+#include <infinit/model/Address.hh>
+#include <infinit/model/blocks/ValidationResult.hh>
+#include <infinit/model/fwd.hh>
+#include <infinit/serialization.hh>
 
 namespace infinit
 {
@@ -89,7 +88,7 @@ namespace infinit
         ValidationResult
         validate_remove(Model& model, RemoveSignature const& sig) const;
         ELLE_ATTRIBUTE_RW(bool, validated, protected);
-        /// Put the block in dercypted state. It might not be possible to seal it again.
+        /// Put the block in decrypted state. It might not be possible to seal it again.
         void
         decrypt();
       protected:
@@ -133,12 +132,9 @@ namespace infinit
       `----------*/
 
       public:
-
         void
         print(std::ostream& output) const override;
       };
     }
   }
 }
-
-#endif

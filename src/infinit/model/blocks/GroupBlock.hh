@@ -1,10 +1,9 @@
-#ifndef INFINIT_MODEL_BLOCKS_GROUP_BLOCK_HH
-# define INFINIT_MODEL_BLOCKS_GROUP_BLOCK_HH
+#pragma once
 
-# include <elle/cryptography/rsa/KeyPair.hh>
+#include <elle/cryptography/rsa/KeyPair.hh>
 
-# include <infinit/model/User.hh>
-# include <infinit/model/blocks/ACLBlock.hh>
+#include <infinit/model/User.hh>
+#include <infinit/model/blocks/ACLBlock.hh>
 
 namespace infinit
 {
@@ -15,9 +14,12 @@ namespace infinit
       class GroupBlock
         : public ACLBlock
       {
+      /*------.
+      | Types |
+      `------*/
       public:
-        using Self = infinit::model::blocks::GroupBlock;
-        using Super = infinit::model::blocks::ACLBlock;
+        using Self = GroupBlock;
+        using Super = ACLBlock;
 
         GroupBlock(GroupBlock const& other);
       protected:
@@ -49,7 +51,3 @@ namespace infinit
     }
   }
 }
-
-
-
-#endif

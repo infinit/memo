@@ -1,5 +1,4 @@
-#ifndef INFINIT_MODEL_BLOCKS_FWD_HH
-# define INFINIT_MODEL_BLOCKS_FWD_HH
+#pragma once
 
 namespace infinit
 {
@@ -17,5 +16,3 @@ namespace infinit
     }
   }
 }
-
-#endif

@@ -1,7 +1,6 @@
-#ifndef INFINIT_MODEL_BLOCKS_IMMUTABLE_BLOCK_HH
-# define INFINIT_MODEL_BLOCKS_IMMUTABLE_BLOCK_HH
+#pragma once
 
-# include <infinit/model/blocks/Block.hh>
+#include <infinit/model/blocks/Block.hh>
 
 namespace infinit
 {
@@ -50,5 +49,3 @@ namespace infinit
     }
   }
 }
-
-#endif

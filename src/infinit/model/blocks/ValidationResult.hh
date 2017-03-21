@@ -1,9 +1,8 @@
-#ifndef INFINIT_MODEL_BLOCKS_ACL_VALIDATIONRESULT_HH
-# define INFINIT_MODEL_BLOCKS_ACL_VALIDATIONRESULT_HH
+#pragma once
 
-# include <string>
+#include <string>
 
-# include <elle/attribute.hh>
+#include <elle/attribute.hh>
 
 namespace infinit
 {
@@ -34,5 +33,3 @@ namespace infinit
     }
   }
 }
-
-#endif
