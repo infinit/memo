@@ -1,7 +1,4 @@
 #include <dirent.h>
-#include <errno.h>
-#include <random>
-
 #include <sys/types.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -21,9 +18,13 @@
 # include <sys/xattr.h>
 #endif
 
+#include <cerrno>
+#include <random>
+
 #include <boost/filesystem/fstream.hpp>
 
 #include <elle/UUID.hh>
+#include <elle/algorithm.hh>
 #include <elle/format/base64.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/Serializer.hh>
@@ -57,131 +58,129 @@ namespace bfs = boost::filesystem;
 
 
 #ifdef INFINIT_WINDOWS
-#define O_CREAT _O_CREAT
-#define O_RDWR _O_RDWR
-#define O_EXCL _O_EXCL
-#define S_IFREG _S_IFREG
+# define O_CREAT _O_CREAT
+# define O_RDWR _O_RDWR
+# define O_EXCL _O_EXCL
+# define S_IFREG _S_IFREG
 #endif
 
-template<typename T>
-std::string
-serialize(T & t)
+namespace
 {
-  elle::Buffer buf;
+  template<typename T>
+  std::string
+  serialize(T & t)
   {
-    elle::IOStream ios(buf.ostreambuf());
-    elle::serialization::json::SerializerOut so(ios, false);
-    so.serialize_forward(t);
-  }
-  return buf.string();
-}
-
-std::vector<infinit::model::Address>
-get_fat(std::string const& attr)
-{
-  std::stringstream input(attr);
-  std::vector<infinit::model::Address> res;
-  for (auto const& entry:
-         boost::any_cast<elle::json::Array>(elle::json::read(input)))
-    res.push_back(infinit::model::Address::from_string(
-                    boost::any_cast<std::string>(entry)));
-  return res;
-}
-
-std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
-same_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
-{
-  return c;
-}
-
-class DHTs
-{
-public:
-  template <typename ... Args>
-  DHTs(int count)
-   : DHTs(count, {})
-  {
-  }
-  template <typename ... Args>
-  DHTs(int count,
-       boost::optional<elle::cryptography::rsa::KeyPair> kp,
-       Args ... args)
-    : owner_keys(kp? *kp : elle::cryptography::rsa::keypair::generate(512))
-    , dhts()
-  {
-    pax = true;
-    if (count < 0)
+    elle::Buffer buf;
     {
-      pax = false;
-      count *= -1;
+      elle::IOStream ios(buf.ostreambuf());
+      elle::serialization::json::SerializerOut so(ios, false);
+      so.serialize_forward(t);
     }
-    for (int i = 0; i < count; ++i)
-    {
-      this->dhts.emplace_back(paxos = pax,
-                              owner = this->owner_keys,
-                              std::forward<Args>(args) ...);
-      for (int j = 0; j < i; ++j)
-        this->dhts[j].overlay->connect(*this->dhts[i].overlay);
-    }
+    return buf.string();
   }
 
-  struct Client
+  std::vector<infinit::model::Address>
+  get_fat(std::string const& attr)
   {
-    template<typename... Args>
-    Client(std::string const& name, DHT dht, Args...args)
-      : dht(std::move(dht))
-      , fs(std::make_unique<elle::reactor::filesystem::FileSystem>(
-             std::make_unique<infinit::filesystem::FileSystem>(
-               name, this->dht.dht, ifs::allow_root_creation = true,
-               std::forward<Args>(args)...),
-             true))
+    std::stringstream input(attr);
+    return elle::make_vector(boost::any_cast<elle::json::Array>(elle::json::read(input)),
+                             [](auto const& entry)
+                             {
+                               return infinit::model::Address::from_string(
+                                 boost::any_cast<std::string>(entry));
+                             });
+  }
+
+  class DHTs
+  {
+  public:
+    template <typename ... Args>
+    DHTs(int count)
+     : DHTs(count, {})
     {}
 
-    DHT dht;
-    std::unique_ptr<elle::reactor::filesystem::FileSystem> fs;
+    template <typename ... Args>
+    DHTs(int count,
+         boost::optional<elle::cryptography::rsa::KeyPair> kp,
+         Args ... args)
+      : owner_keys(kp? *kp : elle::cryptography::rsa::keypair::generate(512))
+      , dhts()
+    {
+      pax = true;
+      if (count < 0)
+      {
+        pax = false;
+        count *= -1;
+      }
+      for (int i = 0; i < count; ++i)
+      {
+        this->dhts.emplace_back(paxos = pax,
+                                owner = this->owner_keys,
+                                std::forward<Args>(args) ...);
+        for (int j = 0; j < i; ++j)
+          this->dhts[j].overlay->connect(*this->dhts[i].overlay);
+      }
+    }
+
+    struct Client
+    {
+      template<typename... Args>
+      Client(std::string const& name, DHT dht, Args...args)
+        : dht(std::move(dht))
+        , fs(std::make_unique<elle::reactor::filesystem::FileSystem>(
+               std::make_unique<infinit::filesystem::FileSystem>(
+                 name, this->dht.dht, ifs::allow_root_creation = true,
+                 std::forward<Args>(args)...),
+               true))
+      {}
+
+      DHT dht;
+      std::unique_ptr<elle::reactor::filesystem::FileSystem> fs;
+    };
+
+    template<typename... Args>
+    DHT
+    dht(bool new_key,
+           boost::optional<elle::cryptography::rsa::KeyPair> kp,
+           Args... args)
+    {
+      auto k = kp ? *kp
+      : new_key ? elle::cryptography::rsa::keypair::generate(512)
+            : this->owner_keys;
+      ELLE_LOG("new client with owner=%f key=%f", this->owner_keys.K(), k.K());
+      DHT client(owner = this->owner_keys,
+                 keys = k,
+                 storage = nullptr,
+                 make_consensus = no_cheat_consensus,
+                 paxos = pax,
+                 std::forward<Args>(args) ...
+                 );
+      for (auto& dht: this->dhts)
+        dht.overlay->connect(*client.overlay);
+      return client;
+    }
+
+    template<typename... Args>
+    Client
+    client(bool new_key,
+           boost::optional<elle::cryptography::rsa::KeyPair> kp,
+           Args... args)
+    {
+      DHT client = dht(new_key, kp, std::forward<Args>(args)...);
+      return Client("volume", std::move(client));
+    }
+
+    Client
+    client(bool new_key = false)
+    {
+      return client(new_key, {});
+    }
+
+    elle::cryptography::rsa::KeyPair owner_keys;
+    std::vector<DHT> dhts;
+    bool pax;
   };
-
-  template<typename... Args>
-  DHT
-  dht(bool new_key,
-         boost::optional<elle::cryptography::rsa::KeyPair> kp,
-         Args... args)
-  {
-    auto k = kp ? *kp
-    : new_key ? elle::cryptography::rsa::keypair::generate(512)
-          : this->owner_keys;
-    ELLE_LOG("new client with owner=%f key=%f", this->owner_keys.K(), k.K());
-    DHT client(owner = this->owner_keys,
-               keys = k,
-               storage = nullptr,
-               make_consensus = no_cheat_consensus,
-               paxos = pax,
-               std::forward<Args>(args) ...
-               );
-    for (auto& dht: this->dhts)
-      dht.overlay->connect(*client.overlay);
-    return client;
-  }
-  template<typename... Args>
-  Client
-  client(bool new_key,
-         boost::optional<elle::cryptography::rsa::KeyPair> kp,
-         Args... args)
-  {
-    DHT client = dht(new_key, kp, std::forward<Args>(args)...);
-    return Client("volume", std::move(client));
-  }
-
-  Client
-  client(bool new_key = false)
-  {
-    return client(new_key, {});
-  }
-
-  elle::cryptography::rsa::KeyPair owner_keys;
-  std::vector<DHT> dhts;
-  bool pax;
-};
+}
 
 ELLE_TEST_SCHEDULED(write_truncate)
 {
@@ -1495,10 +1494,10 @@ ELLE_TEST_SCHEDULED(group_description)
   auto admin = servers.client(true);
   owner.fs->path("/");
   owner.fs->path("/")->setxattr("infinit.group.create", "grp", 0);
-  auto member_key =
+  auto const member_key =
     elle::serialization::json::serialize(member.dht.dht->keys().K()).string();
   owner.fs->path("/")->setxattr("infinit.group.add", "grp:" + member_key, 0);
-  auto admin_key =
+  auto const admin_key =
     elle::serialization::json::serialize(admin.dht.dht->keys().K()).string();
   owner.fs->path("/")->setxattr(
     "infinit.group.addadmin", "grp:" + admin_key, 0);
@@ -1520,8 +1519,7 @@ ELLE_TEST_SCHEDULED(group_description)
   else
   {
     // Check there is no description.
-    BOOST_CHECK(
-      group_list(owner).find("description") == group_list(owner).end());
+    BOOST_CHECK(!elle::contains(group_list(owner), "description"));
     // Admin adds a description.
     std::string description = "some generic description";
     set_description(owner, description);
@@ -1541,8 +1539,7 @@ ELLE_TEST_SCHEDULED(group_description)
     BOOST_CHECK_EQUAL(get_description(owner), description);
     // Unset the description.
     set_description(owner, "");
-    BOOST_CHECK(
-      group_list(admin).find("description") == group_list(admin).end());
+    BOOST_CHECK(!contains(group_list(admin), "description"));
   }
 }
 
@@ -1673,7 +1670,7 @@ ELLE_TEST_SCHEDULED(read_unlink_large)
 ELLE_TEST_SCHEDULED(block_size)
 {
   int kchunks = 5 * 1024;
-  std::string content(1024 * kchunks, 'a');
+  auto content = std::string(1024 * kchunks, 'a');
   for (unsigned int i=0; i<content.size(); ++i)
     content[i] = i % 199;
   auto check_file = [&](std::shared_ptr<elle::reactor::filesystem::Path> p) -> bool {
