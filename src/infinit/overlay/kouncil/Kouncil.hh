@@ -122,8 +122,7 @@ namespace infinit
         /// @arg eviction_delay   A time out, in seconds.
         Kouncil(model::doughnut::Doughnut* dht,
                 std::shared_ptr<Local> local,
-                // FIXME: bad typing, unit is not specified.
-                boost::optional<int> eviction_delay = {});
+                std::chrono::seconds eviction_delay = std::chrono::seconds{12000});
         /// Destruct a Kouncil.
         ~Kouncil() override;
       protected:
@@ -287,7 +286,7 @@ namespace infinit
         StaleEndpoint&
         _remember_stale(NodeLocation const& peer);
         ELLE_ATTRIBUTE(std::vector<elle::reactor::Thread::unique_ptr>, tasks);
-        ELLE_ATTRIBUTE(std::chrono::seconds, eviction_delay);
+        ELLE_ATTRIBUTE_RW(std::chrono::seconds, eviction_delay);
 
       /*-------.
       | Lookup |

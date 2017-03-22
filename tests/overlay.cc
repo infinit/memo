@@ -885,7 +885,7 @@ ELLE_TEST_SCHEDULED(
     ::storage = nullptr);
   discover(*client, *dht_a, anonymous, false, true);
   discover(*dht_a, *dht_b, anonymous, false, true);
-  std::vector<infinit::model::Address> addrs;
+  auto addrs = std::vector<infinit::model::Address>{};
   for (int a=0; a<10; ++a)
   {
     for (int i=0; i<50; ++i)
@@ -898,8 +898,8 @@ ELLE_TEST_SCHEDULED(
       break;
   }
   ELLE_LOG("stores: %s %s", b1.size(), b2.size());
-  BOOST_CHECK_GE(b1.size(), 5);
-  BOOST_CHECK_GE(b2.size(), 5);
+  BOOST_TEST(b1.size() >= 5);
+  BOOST_TEST(b2.size() >= 5);
   for (auto const& a: addrs)
     client->dht->fetch(a);
   ELLE_LOG("teardown");
@@ -1370,6 +1370,9 @@ struct Cluster
         ::discover(*servers[i], *servers[j], false);
   }
 
+  auto begin() { return servers.begin(); }
+  auto end() { return servers.end(); }
+
   TestConfiguration const& config;
   /// Number of machines.
   int n;
@@ -1577,6 +1580,9 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
   auto cluster = Cluster{config, 3};
   auto const& ids = cluster.ids;
   auto& servers = cluster.servers;
+  /// Let's not wait eviction for too long.
+  for (auto& c: cluster)
+    get_kouncil(*c)->eviction_delay(std::chrono::seconds{valgrind(1, 5) * 10});
 
   /// A: the main peer.
   auto& dht_a = servers[0];
@@ -1638,7 +1644,7 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
 
   // Kill server A, C remains alone, remembering about A and B.
   {
-    ELLE_LOG("killing A and waiting for C to notice");
+    ELLE_LOG("kill A and wait for C to notice");
     auto a_disappeared = elle::reactor::waiter(
       dht_c->dht->overlay()->on_disappearance(),
       [&] (Address id, bool)
@@ -1647,6 +1653,7 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
         return true;
       });
     dht_a = nullptr;
+    ELLE_LOG("wait for C to notice A disappeared");
     elle::reactor::wait(a_disappeared);
     {
       auto addrs = get_peers(*dht_c, "infos");
@@ -1663,7 +1670,6 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
   // Recreate B, and expect C to connect to it, although they have
   // never been in touch yet.
   {
-    cluster.recreate_server(1);
     auto b_appeared = elle::reactor::waiter(
       dht_c->dht->overlay()->on_discovery(),
       [&] (NodeLocation const& l, bool)
@@ -1671,7 +1677,9 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
         BOOST_TEST(l.id() == id_b);
         return true;
       });
-    elle::reactor::wait(b_appeared);
+    cluster.recreate_server(1);
+    ELLE_LOG("wait for C to see B")
+      elle::reactor::wait(b_appeared);
     {
       // C heard about A and B.
       auto addrs = get_peers(*dht_c, "infos");
@@ -1688,8 +1696,15 @@ ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
   }
   /// FIXME: why do I need this???  Who sent std::hex to std::cerr?
   std::cerr << std::dec;
-  ELLE_LOG("waiting for A to be evicted by C")
+  ELLE_LOG("wait for C to evict A")
   {
+    {
+      // C still knows about A and B.
+      auto addrs = get_peers(*dht_c, "infos");
+      ELLE_LOG("Infos of C (%s): %f", dht_c, addrs);
+      CHECK_IN(id_a, addrs);
+      CHECK_IN(id_b, addrs);
+    }
     auto a_evicted = elle::reactor::waiter(
       get_kouncil(*dht_c)->on_eviction(),
       [&] (Address id)
@@ -1741,10 +1756,7 @@ ELLE_TEST_SUITE()
 
   auto make_kouncil = [](Doughnut& dht, std::shared_ptr<Local> local)
     {
-      // WARNING: too low an eviction delay with result in impossible
-      // reconnections.
-      auto const eviction_delay = valgrind(1, 5) * 5;
-      return std::make_unique<kouncil::Kouncil>(&dht, local, eviction_delay);
+      return std::make_unique<kouncil::Kouncil>(&dht, local);
     };
   auto const kouncil_config
     = TestConfiguration{make_kouncil, elle::Version(0, 8, 0)};
@@ -1810,6 +1822,6 @@ ELLE_TEST_SUITE()
   OVERLAY(kouncil_0_7);
 #undef OVERLAY
 
-  //  TEST_NAMED(kouncil, eviction, eviction, 600);
+  // TEST_NAMED(kouncil, eviction, eviction, 600);
   TEST(kouncil, kouncil, "churn_socket_pasv", 30, churn_socket_pasv);
 }

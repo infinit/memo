@@ -26,7 +26,7 @@ namespace infinit
       `-------------*/
       public:
         /// Construct a configuration.
-        Configuration();
+        Configuration(std::chrono::seconds eviction_delay = std::chrono::seconds{12000});
       private:
         /// Check construction postconditions.
         void
@@ -65,7 +65,7 @@ namespace infinit
         make(std::shared_ptr<model::doughnut::Local> local,
              model::doughnut::Doughnut* doughnut) override;
 
-        ELLE_ATTRIBUTE_R(boost::optional<int>, eviction_delay)
+        ELLE_ATTRIBUTE_RW(std::chrono::seconds, eviction_delay)
       };
     }
   }
