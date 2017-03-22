@@ -2046,7 +2046,7 @@ ELLE_TEST_SUITE()
   OVERLAY(kouncil_0_7);
 #undef OVERLAY
 
-  // TEST_NAMED(kouncil, eviction, eviction, 600);
+  TEST_NAMED(kouncil, eviction, eviction, 600);
   TEST(kouncil, kouncil, "churn_socket_pasv", 30, churn_socket_pasv);
   // FIXME: Kouncil < 0.8 does not handle removal, but kelips should pass those
   // two tests.
