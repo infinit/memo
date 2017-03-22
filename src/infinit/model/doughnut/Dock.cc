@@ -3,8 +3,10 @@
 #include <infinit/model/doughnut/Dock.hh>
 
 #include <elle/log.hh>
+#include <elle/multi_index_container.hh>
 #include <elle/network/Interface.hh>
 #include <elle/os.hh>
+#include <elle/range.hh>
 
 #include <elle/reactor/network/utp-server.hh>
 
@@ -20,6 +22,29 @@ namespace
 {
   bool const disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
   auto const ipv6_enabled = elle::os::getenv("INFINIT_NO_IPV6", "").empty();
+
+  template <typename Action>
+  void
+  retry_forever(elle::Duration delay,
+                elle::Duration max_delay,
+                std::string const& action_name,
+                Action action)
+  {
+    while (true)
+    {
+      try
+      {
+        action();
+        return;
+      }
+      catch (elle::Exception const& e)
+      {
+        ELLE_WARN("%s: exception %s", action_name, e.what());
+        delay = std::min(delay * 2, max_delay);
+        elle::reactor::sleep(delay);
+      }
+    }
+  }
 }
 
 namespace infinit
@@ -31,30 +56,6 @@ namespace infinit
       /*-------------.
       | Construction |
       `-------------*/
-
-      static
-      void
-      retry_forever(elle::Duration start_delay,
-                    elle::Duration max_delay,
-                    std::string action_name,
-                    std::function<void()> action)
-      {
-        elle::Duration delay = start_delay;
-        while (true)
-        {
-          try
-          {
-            action();
-            return;
-          }
-          catch (elle::Exception const& e)
-          {
-            ELLE_WARN("%s: exception %s", action_name, e.what());
-            delay = std::min(delay * 2, max_delay);
-            elle::reactor::sleep(delay);
-          }
-        }
-      }
 
       Dock::Dock(Doughnut& doughnut,
                  Protocol protocol,
@@ -114,6 +115,7 @@ namespace infinit
       void
       Dock::disconnect()
       {
+        ELLE_TRACE_SCOPE("%s: disconnect", this);
         {
           // First terminate thread asynchronoulsy, otherwise some of these
           // thread could initiate new connection while we terminate others.
@@ -144,22 +146,24 @@ namespace infinit
       void
       Dock::cleanup()
       {
-        ELLE_TRACE_SCOPE("%s: destruct", this);
+        ELLE_TRACE_SCOPE("%s: cleanup", this);
         if (this->_rdv_connect_thread)
           this->_rdv_connect_thread->terminate_now();
         this->_rdv_connect_thread.reset();
         // Disconnects peers, holding them alive so they don't unregister from
         // _peer_cache while we iterate on it.
-        std::vector<overlay::Overlay::Member> hold;
-        for (auto peer: this->_peer_cache)
         {
-          auto p = ELLE_ENFORCE(peer.lock());
-          p->cleanup();
-          hold.emplace_back(std::move(p));
+          auto hold = elle::make_vector(this->_peer_cache,
+                                        [] (auto peer)
+                                        {
+                                          auto p = ELLE_ENFORCE(peer.lock());
+                                          p->cleanup();
+                                          return std::move(p);
+                                        });
+          // Release all peer. All peers should have unregistered, otherwise
+          // someone is still holding one alive and we are in trouble.
+          hold.clear();
         }
-        // Release all peer. All peer should have unregistered, otherwise
-        // someone is still holding one alive and we are in trouble.
-        hold.clear();
         if (!this->_peer_cache.empty())
           ELLE_ERR("%s: some remotes are still alive", this)
           {
@@ -201,14 +205,14 @@ namespace infinit
         // Check if we are already connecting to that peer.
         {
           // FIXME: index by id + endpoints instead ?
-          auto connecting = this->_connecting.equal_range(l.endpoints());
-          for (auto wc = connecting.first; wc != connecting.second; ++wc)
+          auto connecting
+            = elle::as_range(this->_connecting.equal_range(l.endpoints()));
+          for (auto wc: connecting)
           {
-            auto c = ELLE_ENFORCE(wc->lock());
+            auto c = ELLE_ENFORCE(wc.lock());
             if (c->id() == l.id())
             {
               ELLE_TRACE("already connecting: %s", c);
-
               return c;
             }
           }
@@ -308,7 +312,7 @@ namespace infinit
                   ELLE_ASSERT(this->_channels);
                   connected = true;
                 };
-              auto umbrella = [&, this] (std::function<void ()> const& f)
+              auto umbrella = [&, this] (auto const& f)
                 {
                   return [f, this]
                   {
@@ -318,11 +322,11 @@ namespace infinit
                     }
                     catch (elle::reactor::network::Exception const& e)
                     {
-                      ELLE_DEBUG("%s: endpoint failed: %s", this, e);
+                      ELLE_DEBUG("%s: endpoint network failure: %s", this, e);
                     }
                     catch (HandshakeFailed const& hs)
                     {
-                      ELLE_WARN("%s: endpoint failed: %s", this, hs);
+                      ELLE_WARN("%s: endpoint handshake failure: %s", this, hs);
                     }
                   };
                 };
@@ -335,7 +339,7 @@ namespace infinit
                       elle::sprintf("%s: tcp://%s",
                                     elle::reactor::scheduler().current()->name(), e),
                       umbrella(
-                        [&, e = e]
+                        [&, e]
                         {
                           using elle::reactor::network::TCPSocket;
                           handshake(elle::make_unique<TCPSocket>(e.tcp()));
@@ -385,8 +389,7 @@ namespace infinit
               // Check for duplicates.
               auto id = this->_location.id();
               ELLE_ASSERT_NEQ(id, Address::null);
-              if (this->_dock._connected.find(id) !=
-                  this->_dock._connected.end())
+              if (elle::contains(this->_dock._connected, id))
               {
                 ELLE_TRACE("%s: drop duplicate", this);
                 this->_disconnected = true;
