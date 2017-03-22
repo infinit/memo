@@ -38,9 +38,12 @@ namespace infinit
         s.serialize("eviction_delay", _eviction_delay);
       }
 
-      static const
-      elle::serialization::Hierarchy<overlay::Configuration>::
-      Register<Configuration> _registerConfiguration("kouncil");
+      namespace
+      {
+        static auto const _reg =
+          elle::serialization::Hierarchy<overlay::Configuration>::
+          Register<Configuration>("kouncil");
+      }
 
       /*--------.
       | Factory |
@@ -51,7 +54,7 @@ namespace infinit
                           model::doughnut::Doughnut* doughnut)
       {
         return std::make_unique<Kouncil>(doughnut, std::move(local),
-                                          this->_eviction_delay);
+                                         this->_eviction_delay);
       }
     }
   }

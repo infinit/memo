@@ -23,6 +23,10 @@ namespace infinit
   {
     namespace kouncil
     {
+      using Address = model::Address;
+      /// A set of Address, used in RPCs.
+      using AddressSet = std::unordered_set<Address>;
+
       namespace
       {
         int64_t
@@ -111,7 +115,7 @@ namespace infinit
               // Notify this node of new blocks owned by the peer.
               r.rpc_server().add(
                 "kouncil_add_entries",
-                [this, &r] (std::unordered_set<Address> const& entries)
+                [this, &r] (AddressSet const& entries)
                 {
                   for (auto const& addr: entries)
                     this->_address_book.emplace(r.id(), addr);
@@ -166,7 +170,7 @@ namespace infinit
              "kouncil_fetch_entries",
              [this] ()
              {
-               auto res = std::unordered_set<Address>{};
+               auto res = AddressSet{};
                for (auto const& e:
                       elle::as_range(this->_address_book.equal_range(this->id())))
                  res.emplace(e.block());
@@ -177,7 +181,7 @@ namespace infinit
              "kouncil_lookup",
              [this] (Address const& addr)
              {
-               auto res = std::unordered_set<Address>{};
+               auto res = AddressSet{};
                for (auto const& e:
                       elle::as_range(_address_book.get<1>().equal_range(addr)))
                  res.emplace(e.node());
@@ -291,7 +295,7 @@ namespace infinit
           // Get all the available new entries, waiting for at least one.
           auto entries = [&]
             {
-              auto res = std::unordered_set<Address>{};
+              auto res = AddressSet{};
               do
                 res.insert(this->_new_entries.get());
               while (!this->_new_entries.empty());
@@ -521,7 +525,7 @@ namespace infinit
                 if (auto r = std::dynamic_pointer_cast<Remote>(peer))
                 {
                   auto lookup =
-                    r->make_rpc<std::unordered_set<Address> (Address)>(
+                    r->make_rpc<AddressSet (Address)>(
                       "kouncil_lookup");
                   try
                   {
@@ -690,15 +694,14 @@ namespace infinit
         catch (elle::reactor::network::Exception const& e)
         {
           ELLE_TRACE("%s: network exception advertising %s: %s", this, r, e);
-          // nothing to do, disconnected() will be emited and handled
+          // nothing to do, disconnected() will be emited and handled.
         }
       }
 
       void
       Kouncil::_fetch_entries(Remote& r)
       {
-        auto fetch = r.make_rpc<std::unordered_set<Address> ()>(
-          "kouncil_fetch_entries");
+        auto fetch = r.make_rpc<AddressSet()>("kouncil_fetch_entries");
         auto entries = fetch();
         ELLE_ASSERT_NEQ(r.id(), Address::null);
         for (auto const& b: entries)
