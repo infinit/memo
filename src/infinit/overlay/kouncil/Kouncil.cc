@@ -77,13 +77,13 @@ namespace infinit
 
       Kouncil::Kouncil(model::doughnut::Doughnut* dht,
                        std::shared_ptr<Local> local,
-                       boost::optional<int> eviction_delay)
+                       std::chrono::seconds eviction_delay)
         : Overlay(dht, local)
         , _cleaning(false)
         , _broadcast_thread(new elle::reactor::Thread(
                               elle::sprintf("%s: broadcast", this),
-                              std::bind(&Kouncil::_broadcast, this)))
-        , _eviction_delay(std::chrono::seconds{eviction_delay.value_or(12000)})
+                              [this] { this->_broadcast(); }))
+        , _eviction_delay(eviction_delay)
       {
         ELLE_TRACE_SCOPE("%s: construct", this);
         ELLE_DEBUG("Eviction delay: %s", _eviction_delay);
@@ -131,7 +131,7 @@ namespace infinit
               peer->connected().connect(
                 [this, p = std::weak_ptr<Remote>(peer)]
                 {
-                  this->_peer_connected(ELLE_ENFORCE(p.lock()));
+		  this->_peer_connected(ELLE_ENFORCE(p.lock()));
                 });
               peer->disconnected().connect(
                 [this, p = std::weak_ptr<Remote>(peer)]
@@ -382,6 +382,8 @@ namespace infinit
           this->_stale_endpoints.emplace(peer->connection()->location());
         this->_advertise(*peer);
         this->_fetch_entries(*peer);
+        ELLE_DUMP("%f: signaling connection to %f",
+                  this, peer->connection()->location());
         this->on_discovery()(peer->connection()->location(), false);
       }
 
@@ -701,6 +703,7 @@ namespace infinit
       void
       Kouncil::_fetch_entries(Remote& r)
       {
+        ELLE_TRACE_SCOPE("%f: fetch_entries of %f", this, r);
         auto fetch = r.make_rpc<AddressSet()>("kouncil_fetch_entries");
         auto entries = fetch();
         ELLE_ASSERT_NEQ(r.id(), Address::null);
@@ -794,17 +797,19 @@ namespace infinit
             age = info->disappearance().age();
           // How much it is still credited.
           auto respite = kouncil._eviction_delay - age;
-          ELLE_DEBUG("%f: initiating reconnection with timeout %s",
-                     this, respite);
+          ELLE_DEBUG("%f: initiating eviction of %f with timeout %s",
+                     kouncil, this, respite);
           this->_evict_timer.expires_from_now(respite);
           this->_evict_timer.async_wait(
             [this, &kouncil] (boost::system::error_code const& e)
             {
-              if (!e)
-              {
-                ELLE_DEBUG("%f: reconnection timed out, evicting", this);
-                kouncil._peer_evicted(id());
-              }
+	      if (e == boost::system::errc::operation_canceled)
+		return;
+	      if (e)
+		ELLE_ABORT("unexpected timer error: %s", e);
+	      ELLE_TRACE("%f: reconnection to %f timed out, evicting",
+			 kouncil, id());
+	      kouncil._peer_evicted(id());
             });
         }
         // Initiate the reconnection attempts.
@@ -815,7 +820,7 @@ namespace infinit
       Kouncil::StaleEndpoint::connect(Kouncil& kouncil)
       {
         ++this->_retry_counter;
-        ELLE_DEBUG("%f: connection attempt #%s", this, this->_retry_counter);
+        ELLE_DEBUG("%f: connection attempt #%s to %f", kouncil, this->_retry_counter, this);
         auto c = kouncil.doughnut()->dock().connect(*this);
         this->_slot
           = c->on_disconnection().connect([&]{ this->failed(kouncil); });
@@ -825,14 +830,17 @@ namespace infinit
       Kouncil::StaleEndpoint::failed(Kouncil& kouncil)
       {
         auto d = std::chrono::seconds{1 << std::min(10, this->_retry_counter)};
-        ELLE_DEBUG("%f: connection attempt #%s failed, waiting %s before next",
-                   this, this->_retry_counter, d);
+        ELLE_DEBUG("%f: connection attempt #%s to %f failed, waiting %s before next",
+                   kouncil, this->_retry_counter, this, d);
         this->_retry_timer.expires_from_now(d);
         this->_retry_timer.async_wait(
           [this, &kouncil] (boost::system::error_code const& e)
           {
-            if (!e)
-              this->connect(kouncil);
+	    if (e == boost::system::errc::operation_canceled)
+	      return;
+	    if (e)
+	      ELLE_ABORT("unexpected timer error: %s", e);
+	    this->connect(kouncil);
           });
       }
 
