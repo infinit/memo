@@ -243,6 +243,7 @@ namespace infinit
           ELLE_ATTRIBUTE(Timer, retry_timer);
           ELLE_ATTRIBUTE(int, retry_counter);
           ELLE_ATTRIBUTE_X(Timer, evict_timer);
+          friend class Kouncil;
         };
         using StaleEndpoints = bmi::multi_index_container<
           StaleEndpoint,

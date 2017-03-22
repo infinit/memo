@@ -331,13 +331,19 @@ namespace infinit
           this->_infos.modify(it, [&](auto& p) { changed = p.merge(pi);});
         else
           this->_infos.insert(pi);
-
         if (changed)
         {
           ELLE_DEBUG("discover new endpoints for %s", pi);
+          auto& stale = this->_remember_stale(pi.location());
           if (!find(this->_peers, pi.id()))
-            this->doughnut()->dock().connect(pi.location());
-          this->_remember_stale(pi.location());
+          {
+            auto c = this->doughnut()->dock().connect(pi.location());
+            stale._slot = c->on_disconnection().connect(
+              [&stale, this]
+              {
+                stale.failed(*this);
+              });
+          }
           this->_notify_observers(pi);
         }
         else
@@ -456,6 +462,7 @@ namespace infinit
           ELLE_TRACE("remember new stale endpoints for connected %f", peer)
             ELLE_DEBUG("endpoints: %s", peer.endpoints());
         }
+        ELLE_ASSERT(res);
         return *res;
       }
 
@@ -765,6 +772,7 @@ namespace infinit
       Kouncil::StaleEndpoint::clear()
       {
         ELLE_TRACE("%f: clear", this);
+        this->_slot.disconnect();
         this->_retry_counter = 0;
         this->_retry_timer.cancel();
         this->_evict_timer.cancel();

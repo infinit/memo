@@ -1,21 +1,12 @@
 # Change Log
 
-<!-- ## [0.8.0] -->
+## [0.8.0]
 
-<!-- xxx summary -->
+### Changed
 
-<!-- ### Added -->
+- In Kouncil, also retry connecting if the very first connection
+  attempt fails.
 
-<!-- - Add groups description. -->
-
-<!-- ## [0.7.1] -->
-
-<!-- New overlay implementation, -->
-
-<!-- ### Added -->
-
-<!-- - Add new `Kouncil` overlay that stores all block search space in main -->
-<!--   memory on startup. -->
 
 ## [0.7.3] - 2017-02-15
 
