@@ -429,29 +429,34 @@ namespace infinit
         return res;
       }
 
-      void
+      Kouncil::StaleEndpoint&
       Kouncil::_remember_stale(NodeLocation const& peer)
       {
         bool changed = false;
+        StaleEndpoint* res = nullptr;
         if (auto it = find(this->_stale_endpoints, peer.id()))
         {
           this->_stale_endpoints.modify(
             it,
-            [&] (NodeLocation& l)
+            [&] (StaleEndpoint& l)
             {
+              res = &l;
               changed = l.endpoints().merge(peer.endpoints());
             });
         }
         else
         {
           changed = true;
-          this->_stale_endpoints.emplace(peer);
+          auto emplaced = this->_stale_endpoints.emplace(peer);
+          ELLE_ASSERT(emplaced.second);
+          res = elle::unconst(&*emplaced.first);
         }
         if (changed)
         {
           ELLE_TRACE("remember new stale endpoints for connected %f", peer)
             ELLE_DEBUG("endpoints: %s", peer.endpoints());
         }
+        return *res;
       }
 
       /*-------.

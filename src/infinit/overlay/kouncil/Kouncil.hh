@@ -280,7 +280,7 @@ namespace infinit
         _peer_evicted(Address id);
         void
         _peer_connected(std::shared_ptr<Remote> peer);
-        void
+        StaleEndpoint&
         _remember_stale(NodeLocation const& peer);
         ELLE_ATTRIBUTE(std::vector<elle::reactor::Thread::unique_ptr>, tasks);
         ELLE_ATTRIBUTE(std::chrono::seconds, eviction_delay);
