@@ -224,6 +224,7 @@ namespace infinit
         /// coming back.
         class StaleEndpoint
           : public NodeLocation
+          , public elle::Printable::as<StaleEndpoint>
         {
         public:
           StaleEndpoint(NodeLocation const& l);
@@ -239,6 +240,8 @@ namespace infinit
           /// Callback when an attempt timed out.
           void
           failed(Kouncil& kouncil);
+          void
+          print(std::ostream& stream) const;
           ELLE_ATTRIBUTE(boost::signals2::scoped_connection, slot);
           ELLE_ATTRIBUTE(Timer, retry_timer);
           ELLE_ATTRIBUTE(int, retry_counter);

@@ -830,6 +830,12 @@ namespace infinit
           });
       }
 
+      void
+      Kouncil::StaleEndpoint::print(std::ostream& stream) const
+      {
+        elle::fprintf(stream, "%f(%f)", elle::type_info(*this), this->id());
+      }
+
       namespace
       {
         const auto a
