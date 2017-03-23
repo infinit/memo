@@ -15,9 +15,12 @@ def parse_args():
                    help='number of parallel jobs')
     p.add_argument('args', nargs='*',
                    help='arguments to pass to drake')
+    p.add_argument('-v', '--verbose', action='store_true',
+                   help='whether to show the logs')
     return p.parse_args()
 
 args = parse_args()
+out = sys.stderr if args.verbose else None
 SELF = os.path.realpath(sys.argv[0])
 ROOT = os.path.dirname(SELF)
 BUILD = '{root}/_build/{build}'.format(root=ROOT,
@@ -28,7 +31,8 @@ def report(msg):
 
 git = sh.git.bake(_cwd = ROOT)
 try:
-  git('submodule', 'update', '--init', '--recursive')
+  git('submodule', 'update', '--init', '--force', '--recursive',
+      _out = out, _err = out)
 except Exception as e:
   print(e, file = sys.stderr)
   report('unable to update submodules, skipping commit')
@@ -36,7 +40,8 @@ except Exception as e:
 
 drake = sh.Command('python3').bake('%s/drake' % BUILD, _cwd = BUILD)
 try:
-  drake('-j', args.jobs, *args.args)
+  drake('-j', args.jobs, *args.args,
+        _out = out, _err = out)
 except Exception as e:
   report(e)
   exit(1)
