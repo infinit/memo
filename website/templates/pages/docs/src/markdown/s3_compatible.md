@@ -25,10 +25,10 @@ _**NOTE**: With Minio, you will need to create a new bucket. This can be done ei
 Adding service credentials to Infinit
 -------------------------------------
 
-First, you will need to add your service credentials to Infinit. This can be done using the `infinit-credentials` binary.
+First, you will need to add your service credentials to Infinit. This can be done using the `infinit credentials` binary.
 
 ```
-$> infinit-credentials --add --as alice --aws --name minio
+$> infinit credentials --add --as alice --aws --name minio
 Please enter your AWS credentials
 Access Key ID: AKIAIOSFODNN7EXAMPLE
 Secret Access Key: ****************************************
@@ -36,12 +36,12 @@ Locally stored AWS credentials "minio".
 ```
 _**NOTE**: Credentials are only ever stored locally and cannot be pushed to the Hub._
 
-Creating the Infinit storage resource
--------------------------------------
+Creating the Infinit silo
+-------------------------
 
-With the service's credentials added to Infinit, you can now create the storage resource.
+With the service's credentials added to Infinit, you can now create the silo.
 
 ```
-$> infinit-storage --create minio-storage --s3 --account minio --bucket my-bucket --endpoint http://192.168.0.17:9000 --region us-east-1
+$> infinit silo --create minio-storage --s3 --account minio --bucket my-bucket --endpoint http://192.168.0.17:9000 --region us-east-1
 Create storage "minio-storage".
 ```

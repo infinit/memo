@@ -182,7 +182,7 @@ create_user()
   name="${1}"
   options="${2}"
 
-  execute_foreground "infinit-user --create --name ${name} ${options}"
+  execute_foreground "infinit user --create --name ${name} ${options}"
 }
 
 create_filesystem_storage()
@@ -191,7 +191,7 @@ create_filesystem_storage()
   capacity="${2}"
   storage_path="${3}"
 
-  execute_foreground "infinit-storage --create --filesystem --path ${storage_path} --name ${name} --capacity ${capacity}"
+  execute_foreground "infinit silo --create --filesystem --path ${storage_path} --name ${name} --capacity ${capacity}"
 }
 
 create_network()
@@ -206,7 +206,7 @@ create_network()
     _storages="${_storages} --storage ${_storage}"
   done
 
-  execute_foreground "infinit-network --create --as ${as} ${_storages} --name ${name} ${options}"
+  execute_foreground "infinit network --create --as ${as} ${_storages} --name ${name} ${options}"
 }
 
 run_network()
@@ -223,7 +223,7 @@ run_network()
 
   endpoints_path=$(mktemp)
 
-  pid=$(execute_background "infinit-network --run --as ${as} --name ${name} --endpoints-file ${endpoints_path} ${_peers} ${options}")
+  pid=$(execute_background "infinit network --run --as ${as} --name ${name} --endpoints-file ${endpoints_path} ${_peers} ${options}")
 
   # wait for the endpoints to be published
   set +e
@@ -255,7 +255,7 @@ create_volume()
   name="${3}"
   options="${4}"
 
-  execute_foreground "infinit-volume --create --as ${as} --network ${network} --name ${name} ${options}"
+  execute_foreground "infinit volume --create --as ${as} --network ${network} --name ${name} ${options}"
 }
 
 mount_volume()
@@ -273,7 +273,7 @@ mount_volume()
 
   endpoints_path=$(mktemp)
 
-  pid=$(execute_background "infinit-volume --mount --as ${as} --name ${name} --mountpoint ${mount_point} --endpoints-file ${endpoints_path} ${_peers} ${options}")
+  pid=$(execute_background "infinit volume --mount --as ${as} --name ${name} --mountpoint ${mount_point} --endpoints-file ${endpoints_path} ${_peers} ${options}")
 
   # wait for the endpoints to be published, if hub-assisted
   set +e
@@ -319,7 +319,7 @@ transmit_identity()
   passphrase="${2}"
   options="${3}"
 
-  execute_foreground "infinit-device --transmit --as ${name} --user --passphrase ${passphrase} --no-countdown ${options}"
+  execute_foreground "infinit device --transmit --as ${name} --user --passphrase ${passphrase} --no-countdown ${options}"
 }
 
 receive_identity()
@@ -328,7 +328,7 @@ receive_identity()
   passphrase="${2}"
   options="${3}"
 
-  execute_foreground "infinit-device --receive --user --name ${name} --passphrase ${passphrase} ${options}"
+  execute_foreground "infinit device --receive --user --name ${name} --passphrase ${passphrase} ${options}"
 }
 
 export_item()
@@ -338,7 +338,7 @@ export_item()
   name="${3}"
   file_path=$(mktemp)
 
-  execute_foreground "infinit-${object} --export --as ${as} --name ${name} --output ${file_path}"
+  execute_foreground "infinit ${object} --export --as ${as} --name ${name} --output ${file_path}"
 
   echo "${file_path}"
 }
@@ -349,7 +349,7 @@ export_user()
   options="${2}"
   file_path=$(mktemp)
 
-  execute_foreground "infinit-user --export --name ${name} --output ${file_path} ${options}"
+  execute_foreground "infinit user --export --name ${name} --output ${file_path} ${options}"
 
   echo "${file_path}"
 }
@@ -361,7 +361,7 @@ export_passport()
   invitee="${3}"
   file_path=$(mktemp)
 
-  execute_foreground "infinit-passport --export --as ${as} --network ${network} --user ${invitee} --output ${file_path}"
+  execute_foreground "infinit passport --export --as ${as} --network ${network} --user ${invitee} --output ${file_path}"
 
   echo "${file_path}"
 }
@@ -391,7 +391,7 @@ import_item()
   object="${1}"
   file_path="${2}"
 
-  execute_foreground "infinit-${object} --import --input ${file_path}"
+  execute_foreground "infinit ${object} --import --input ${file_path}"
 }
 
 import_user()
@@ -442,7 +442,7 @@ create_passport()
   invitee="${3}"
   options="${4}"
 
-  execute_foreground "infinit-passport --create --as ${as} --network ${network} --user ${invitee} ${options}"
+  execute_foreground "infinit passport --create --as ${as} --network ${network} --user ${invitee} ${options}"
 }
 
 link_device()
@@ -457,7 +457,7 @@ link_device()
     _storages="${_storages} --storage ${_storage}"
   done
 
-  execute_foreground "infinit-network --link --as ${as} --name ${network} ${_storages} ${options}"
+  execute_foreground "infinit network --link --as ${as} --name ${network} ${_storages} ${options}"
 }
 
 grant_access()
@@ -466,7 +466,7 @@ grant_access()
   mode="${2}"
   target="${3}"
 
-  execute_foreground "infinit-acl --set --mode ${mode} --path ${path} --user ${target}"
+  execute_foreground "infinit acl --set --mode ${mode} --path ${path} --user ${target}"
 }
 
 storage_blocks()
@@ -474,7 +474,7 @@ storage_blocks()
   user="${1}"
   storage="${2}"
 
-  storage_path=$(json_get $(infinit-storage --export --as "${user}" --name "${storage}") "print(object['path'])")
+  storage_path=$(json_get $(infinit silo --export --as "${user}" --name "${storage}") "print(object['path'])")
 
   for block in $(find ${storage_path} -type f) ; do
     basename ${block}
@@ -488,7 +488,7 @@ fetch_user()
   as="${1}"
   name="${2}"
 
-  execute_foreground "infinit-user --fetch --as ${as} --name ${name}"
+  execute_foreground "infinit user --fetch --as ${as} --name ${name}"
 }
 
 fetch_network()
@@ -502,7 +502,7 @@ fetch_network()
     _name=""
   fi
 
-  execute_foreground "infinit-network --fetch --as ${as} ${_name}"
+  execute_foreground "infinit network --fetch --as ${as} ${_name}"
 }
 
 fetch_volume()
@@ -523,7 +523,7 @@ fetch_volume()
     _name=""
   fi
 
-  execute_foreground "infinit-volume --fetch --as ${as} ${_network} ${_name}"
+  execute_foreground "infinit volume --fetch --as ${as} ${_network} ${_name}"
 }
 
 fetch_passport()
@@ -537,7 +537,7 @@ fetch_passport()
     _network=""
   fi
 
-  execute_foreground "infinit-passport --fetch --as ${as} ${_network}"
+  execute_foreground "infinit passport --fetch --as ${as} ${_network}"
 }
 
 pull_item()
@@ -546,14 +546,14 @@ pull_item()
   as="${2}"
   name="${3}"
 
-  execute_foreground "infinit-${object} --pull --as ${as} --name ${name}"
+  execute_foreground "infinit ${object} --pull --as ${as} --name ${name}"
 }
 
 pull_user()
 {
   name="${1}"
 
-  execute_foreground "infinit-user --pull --as ${name} --name ${name}"
+  execute_foreground "infinit user --pull --as ${name} --name ${name}"
 }
 
 pull_network()
@@ -578,7 +578,7 @@ pull_passport()
   network="${2}"
   user="${3}"
 
-  execute_foreground "infinit-passport --pull --as ${as} --network ${network} --user ${user}"
+  execute_foreground "infinit passport --pull --as ${as} --network ${network} --user ${user}"
 }
 
 # ---------- track -----------------------------------------------------------
@@ -735,9 +735,9 @@ trap clean EXIT
 # ---------- arguments -------------------------------------------------------
 
 if ! [ -z ${1} ] ; then
-  if ! [ -f ${1}/infinit-user ] ; then
+  if ! [ -f ${1}/infinit ] ; then
     echo ""
-    echo "[WARNING] ${1} does not seem to contain the binary infinit-user etc."
+    echo "[WARNING] ${1} does not seem to contain the binary infinit etc."
     echo ""
   fi
   export PATH="${1}:${PATH}"
@@ -747,7 +747,7 @@ if ! [ -z ${2} ] ; then
   export INFINIT_BEYOND="${2}"
 fi
 
-which infinit-user >/dev/null 2>&1
+which infinit >/dev/null 2>&1
 if [ ${?} != 0 ] ; then
   echo "[usage] ${0} {path to command-line tools} {beyond's hostname:port}"
 fi

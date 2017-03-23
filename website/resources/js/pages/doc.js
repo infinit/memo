@@ -302,6 +302,17 @@ $(document).ready(function() {
     // Clone language bar before all the snippets
     $('code.lang-python').parent().before($('ul.switchLanguage'));
 
+    $.ajax({
+      url : '/scripts/kv/doughnut.proto',
+      dataType: "text",
+      success : function (data) {
+        $("#doughnut-proto pre code").text(data);
+        $('.popup pre code').each(function(i, block) {
+          hljs.highlightBlock(block);
+        });
+      }
+    });
+
     // Refresh highlight.js
     $('pre code').each(function(i, block) {
       hljs.highlightBlock(block);

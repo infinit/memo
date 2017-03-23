@@ -8,7 +8,7 @@ However, at the technology level, Infinit is a set of independent layers that ca
 <br><img src="${url('images/schema-technology-infinit.png')}" alt="Infinit Technology">
 <p class="note">System calls issued by applications go through the kernel, back to the userspace through FUSE to finally reach Infinit software stack.</p>
 
-<p class="github"><a href="https://github.com/infinit/elle" target="_blank"><span class="star">soon on github</span></a></p>
+<p class="github"><a href="https://github.com/infinit/elle" target="_blank"><span class="star">see on github</span></a></p>
 
 Elle
 ----

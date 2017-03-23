@@ -23,7 +23,7 @@
 
     <p>In order to set up such an infrastructure, please follow the instructions below, taking care to adjust the options according to your needs (storage capacity contributed by the server, names of the network/volumes etc.).</p>
 
-    <p><strong>IMPORTANT</strong>: For Bob and subsequent users to be able to list/edit the volume's root directory, Alice needs to grant them access to do so through the <a href="/documentation/reference#access-control-list"><em>infinit-acl</em></a>. Without this step, users would simply get a <em>Permission Denied</em> error.
+    <p><strong>IMPORTANT</strong>: For Bob and subsequent users to be able to list/edit the volume's root directory, Alice needs to grant them access to do so through the <a href="/documentation/reference#access-control-list"><em>infinit acl</em></a>. Without this step, users would simply get a <em>Permission Denied</em> error.
 
     <ul data-tabs class="tabs">
       <li><a data-tab href="#centralized-server" class="active">Server <span>(Alice)</span></a></li>
@@ -33,35 +33,35 @@
 
     <div data-tabs-content class="data-tabs-content">
       <div data-tabs-pane class="tabs-pane active" id="centralized-server">
-<pre><code>$> infinit-storage --create --filesystem --capacity 100GB --name local
-$> infinit-network --create --as alice --storage local --replication-factor 1 --name cluster --push
-$> infinit-volume --create --as alice --network cluster --name shared --push
+<pre><code>$> infinit silo --create --filesystem --capacity 100GB --name local
+$> infinit network --create --as alice --storage local --replication-factor 1 --name cluster --push
+$> infinit volume --create --as alice --network cluster --name shared --push
 
-$> infinit-user --fetch --as alice --name bob
-$> infinit-passport --create --as alice --network cluster --user bob --push
+$> infinit user --fetch --as alice --name bob
+$> infinit passport --create --as alice --network cluster --user bob --push
 
-$> infinit-network --run --as alice --name cluster --async --cache --publish
+$> infinit network --run --as alice --name cluster --cache --publish
 </code></pre>
       </div>
       <div data-tabs-pane class="tabs-pane" id="centralized-client-a">
-<pre><code>$> infinit-network --fetch --as alice
-$> infinit-volume --fetch --as alice
+<pre><code>$> infinit network --fetch --as alice
+$> infinit volume --fetch --as alice
 
-$> infinit-network --link --as alice --name cluster
+$> infinit network --link --as alice --name cluster
 
-$> infinit-volume --mount --as alice --name shared --async --cache --publish --mountpoint mnt/shared/
+$> infinit volume --mount --as alice --name shared --cache --publish --mountpoint mnt/shared/
 </code></pre>
       </div>
       <div data-tabs-pane class="tabs-pane" id="centralized-client-b-x">
-<pre><code>$> infinit-user --fetch --as bob --name alice
+<pre><code>$> infinit user --fetch --as bob --name alice
 
-$> infinit-network --fetch --as bob
-$> infinit-volume --fetch --as bob
-$> infinit-passport --fetch --as bob
+$> infinit network --fetch --as bob
+$> infinit volume --fetch --as bob
+$> infinit passport --fetch --as bob
 
-$> infinit-network --link --as bob --name alice/cluster
+$> infinit network --link --as bob --name alice/cluster
 
-$> infinit-volume --mount --as bob --name alice/shared --async --cache --publish --mountpoint mnt/shared/
+$> infinit volume --mount --as bob --name alice/shared --cache --publish --mountpoint mnt/shared/
 </code></pre>
       </div>
     </div>
@@ -89,44 +89,44 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
 
     <div data-tabs-content class="data-tabs-content">
       <div data-tabs-pane class="tabs-pane active" id="distributed-server-1">
-<pre><code>$> infinit-storage --create --filesystem --capacity 20GB --name local
-$> infinit-network --create --as alice --storage local --replication-factor 2 --name cluster --push
-$> infinit-volume --create --as alice --network cluster --name shared --push
+<pre><code>$> infinit silo --create --filesystem --capacity 20GB --name local
+$> infinit network --create --as alice --storage local --replication-factor 2 --name cluster --push
+$> infinit volume --create --as alice --network cluster --name shared --push
 
-$> infinit-user --fetch --as alice --name bob
-$> infinit-passport --create --as alice --network cluster --user bob --push
+$> infinit user --fetch --as alice --name bob
+$> infinit passport --create --as alice --network cluster --user bob --push
 
-$> infinit-network --run --as alice --name cluster --async --cache --publish
+$> infinit network --run --as alice --name cluster --cache --publish
 </code></pre>
       </div>
       <div data-tabs-pane class="tabs-pane" id="distributed-server-2-n">
-<pre><code>$> infinit-network --fetch --as alice
+<pre><code>$> infinit network --fetch --as alice
 
-$> infinit-storage --create --filesystem --capacity 50GB --name local
-$> infinit-network --link --as alice --name cluster --storage local
+$> infinit silo --create --filesystem --capacity 50GB --name local
+$> infinit network --link --as alice --name cluster --storage local
 
-$> infinit-network --run --as alice --name cluster --async --cache --publish
+$> infinit network --run --as alice --name cluster --cache --publish
 </code></pre>
       </div>
       <div data-tabs-pane class="tabs-pane" id="distributed-client-a">
-<pre><code>$> infinit-network --fetch --as alice
-$> infinit-volume --fetch --as alice
+<pre><code>$> infinit network --fetch --as alice
+$> infinit volume --fetch --as alice
 
-$> infinit-network --link --as alice --name cluster
+$> infinit network --link --as alice --name cluster
 
-$> infinit-volume --mount --as alice --name shared --async --cache --publish --mountpoint mnt/shared/
+$> infinit volume --mount --as alice --name shared --cache --publish --mountpoint mnt/shared/
 </code></pre>
       </div>
       <div data-tabs-pane class="tabs-pane" id="distributed-client-b-x">
-<pre><code>$> infinit-user --fetch --as bob --name alice
+<pre><code>$> infinit user --fetch --as bob --name alice
 
-$> infinit-network --fetch --as bob
-$> infinit-volume --fetch --as bob
-$> infinit-passport --fetch --as bob
+$> infinit network --fetch --as bob
+$> infinit volume --fetch --as bob
+$> infinit passport --fetch --as bob
 
-$> infinit-network --link --as bob --name alice/cluster
+$> infinit network --link --as bob --name alice/cluster
 
-$> infinit-volume --mount --as bob --name alice/shared --async --cache --publish --mountpoint mnt/shared/
+$> infinit volume --mount --as bob --name alice/shared --cache --publish --mountpoint mnt/shared/
 </code></pre>
       </div>
     </div>
@@ -156,61 +156,61 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
 
     <div data-tabs-content class="data-tabs-content">
       <div data-tabs-pane class="tabs-pane active" id="decentralized-node-a">
-<pre><code>$> infinit-storage --create --filesystem --capacity 15GB --name local
-$> infinit-network --create --as alice --storage local --replication-factor 3 --name cluster --push
-$> infinit-volume --create --as alice --network cluster --name shared --push
+<pre><code>$> infinit silo --create --filesystem --capacity 15GB --name local
+$> infinit network --create --as alice --storage local --replication-factor 3 --name cluster --push
+$> infinit volume --create --as alice --network cluster --name shared --push
 
-$> infinit-user --fetch --as alice --name bob
-$> infinit-user --fetch --as alice --name charlie
-$> infinit-user --fetch --as alice --name dave
+$> infinit user --fetch --as alice --name bob
+$> infinit user --fetch --as alice --name charlie
+$> infinit user --fetch --as alice --name dave
 
-$> infinit-passport --create --as alice --network cluster --user bob --push
-$> infinit-passport --create --as alice --network cluster --user charlie --push
-$> infinit-passport --create --as alice --network cluster --user dave --push
+$> infinit passport --create --as alice --network cluster --user bob --push
+$> infinit passport --create --as alice --network cluster --user charlie --push
+$> infinit passport --create --as alice --network cluster --user dave --push
 
-$> infinit-volume --mount --as alice --name shared --async --cache --publish --mountpoint mnt/shared/
+$> infinit volume --mount --as alice --name shared --cache --publish --mountpoint mnt/shared/
 </code></pre>
       </div>
       <div data-tabs-pane class="tabs-pane" id="decentralized-node-b">
-<pre><code>$> infinit-user --fetch --as bob --name alice
+<pre><code>$> infinit user --fetch --as bob --name alice
 
-$> infinit-network --fetch --as bob
-$> infinit-volume --fetch --as bob
-$> infinit-passport --fetch --as bob
+$> infinit network --fetch --as bob
+$> infinit volume --fetch --as bob
+$> infinit passport --fetch --as bob
 
-$> infinit-network --link --as bob --name alice/cluster
+$> infinit network --link --as bob --name alice/cluster
 
-$> infinit-volume --mount --as bob --name alice/shared --async --cache --publish --mountpoint mnt/shared/
+$> infinit volume --mount --as bob --name alice/shared --cache --publish --mountpoint mnt/shared/
 </code></pre>
       </div>
       <div data-tabs-pane class="tabs-pane" id="decentralized-node-c">
-<pre><code>$> infinit-user --fetch --as charlie --name alice
+<pre><code>$> infinit user --fetch --as charlie --name alice
 
-$> infinit-network --fetch --as charlie
-$> infinit-volume --fetch --as charlie
-$> infinit-passport --fetch --as charlie
+$> infinit network --fetch --as charlie
+$> infinit volume --fetch --as charlie
+$> infinit passport --fetch --as charlie
 
-$> infinit-storage --create --filesystem --capacity 30GB --name local
-$> infinit-credentials --add --as charlie --aws --account aws
+$> infinit silo --create --filesystem --capacity 30GB --name local
+$> infinit credentials --add --as charlie --aws --account aws
 Access Key ID: ********
 Secret Access Key: ********
-$> infinit-storage --create --s3 --account aws --region eu-central-1 --bucket charlie --path alice.cluster --capacity 100GB --name s3
-$> infinit-network --link --as charlie --name alice/cluster --storage local --storage s3
+$> infinit silo --create --s3 --account aws --region eu-central-1 --bucket charlie --path alice.cluster --capacity 100GB --name s3
+$> infinit network --link --as charlie --name alice/cluster --storage local --storage s3
 
-$> infinit-network --run --as charlie --name alice/cluster --async --cache --publish
+$> infinit network --run --as charlie --name alice/cluster --cache --publish
 </code></pre>
       </div>
       <div data-tabs-pane class="tabs-pane" id="decentralized-node-d-x">
-<pre><code>$> infinit-user --fetch --as dave --name alice
+<pre><code>$> infinit user --fetch --as dave --name alice
 
-$> infinit-network --fetch --as dave
-$> infinit-volume --fetch --as dave
-$> infinit-passport --fetch --as dave
+$> infinit network --fetch --as dave
+$> infinit volume --fetch --as dave
+$> infinit passport --fetch --as dave
 
-$> infinit-storage --create --filesystem --capacity 50GB --name local
-$> infinit-network --link --as dave --name alice/cluster --storage local
+$> infinit silo --create --filesystem --capacity 50GB --name local
+$> infinit network --link --as dave --name alice/cluster --storage local
 
-$> infinit-volume --mount --as dave --name alice/shared --async --cache --publish --mountpoint mnt/shared/
+$> infinit volume --mount --as dave --name alice/shared --cache --publish --mountpoint mnt/shared/
 </code></pre>
       </div>
     </div>
