@@ -193,18 +193,18 @@ namespace infinit
           return res;
         }
         // Check if we are already connecting to that peer.
-        // FIXME: index by id + endpoints instead ?
         {
-          auto connecting = this->_connecting.find(l.endpoints());
-          if (connecting != this->_connecting.end())
+          // FIXME: index by id + endpoints instead ?
+          auto connecting = this->_connecting.equal_range(l.endpoints());
+          for (auto wc = connecting.first; wc != connecting.second; ++wc)
           {
-            // Return the entry even if the ids mismatch, we do not support
-            // multiple Connections with the same key in _connecting.
-            auto c = ELLE_ENFORCE(connecting->lock());
-            if (c->id() != l.id())
-              ELLE_TRACE("returning connection with mismatche id: %f vs %f",
-                         c->id(), l.id());
-            return c;
+            auto c = ELLE_ENFORCE(wc->lock());
+            if (c->id() == l.id())
+            {
+              ELLE_TRACE("already connecting: %s", c);
+
+              return c;
+            }
           }
         }
         // Otherwise start connection.

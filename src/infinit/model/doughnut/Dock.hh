@@ -118,7 +118,7 @@ namespace infinit
         using Connecting = bmi::multi_index_container<
           std::weak_ptr<Connection>,
           bmi::indexed_by<
-            bmi::hashed_unique<
+            bmi::hashed_non_unique<
               bmi::global_fun<
                 std::weak_ptr<Connection> const&,
                 Endpoints const&,
