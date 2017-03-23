@@ -270,7 +270,7 @@ Created storage "local".</code></pre>
 
     <p>The <em>infinit network</em> command is used to create the network, specifying a name along with the list of silos to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the <code>local</code> silo is used but you could plug as many as you like. Obviously, you need to substitute <code>alice</code> with your username:</p>
 
-    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit network --create --as alice --silo local --name my-network --push
+    <pre class="device1"><div><span>Device A</span></div><code>${term} infinit network --create --as alice --storage local --name my-network --push
 Locally created network "alice/my-network".
 Remotely saved network "alice/my-network".
 </code></pre>
