@@ -331,13 +331,19 @@ namespace infinit
           this->_infos.modify(it, [&](auto& p) { changed = p.merge(pi);});
         else
           this->_infos.insert(pi);
-
         if (changed)
         {
           ELLE_DEBUG("discover new endpoints for %s", pi);
+          auto& stale = this->_remember_stale(pi.location());
           if (!find(this->_peers, pi.id()))
-            this->doughnut()->dock().connect(pi.location());
-          this->_remember_stale(pi.location());
+          {
+            auto c = this->doughnut()->dock().connect(pi.location());
+            stale._slot = c->on_disconnection().connect(
+              [&stale, this]
+              {
+                stale.failed(*this);
+              });
+          }
           this->_notify_observers(pi);
         }
         else
@@ -434,29 +440,35 @@ namespace infinit
         return res;
       }
 
-      void
+      Kouncil::StaleEndpoint&
       Kouncil::_remember_stale(NodeLocation const& peer)
       {
         bool changed = false;
+        StaleEndpoint* res = nullptr;
         if (auto it = find(this->_stale_endpoints, peer.id()))
         {
           this->_stale_endpoints.modify(
             it,
-            [&] (NodeLocation& l)
+            [&] (StaleEndpoint& l)
             {
+              res = &l;
               changed = l.endpoints().merge(peer.endpoints());
             });
         }
         else
         {
           changed = true;
-          this->_stale_endpoints.emplace(peer);
+          auto emplaced = this->_stale_endpoints.emplace(peer);
+          ELLE_ASSERT(emplaced.second);
+          res = elle::unconst(&*emplaced.first);
         }
         if (changed)
         {
           ELLE_TRACE("remember new stale endpoints for connected %f", peer)
             ELLE_DEBUG("endpoints: %s", peer.endpoints());
         }
+        ELLE_ASSERT(res);
+        return *res;
       }
 
       /*-------.
@@ -765,6 +777,7 @@ namespace infinit
       Kouncil::StaleEndpoint::clear()
       {
         ELLE_TRACE("%f: clear", this);
+        this->_slot.disconnect();
         this->_retry_counter = 0;
         this->_retry_timer.cancel();
         this->_evict_timer.cancel();
@@ -820,6 +833,12 @@ namespace infinit
             if (!e)
               this->connect(kouncil);
           });
+      }
+
+      void
+      Kouncil::StaleEndpoint::print(std::ostream& stream) const
+      {
+        elle::fprintf(stream, "%f(%f)", elle::type_info(*this), this->id());
       }
 
       namespace

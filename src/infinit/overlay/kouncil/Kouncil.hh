@@ -224,6 +224,7 @@ namespace infinit
         /// coming back.
         class StaleEndpoint
           : public NodeLocation
+          , public elle::Printable::as<StaleEndpoint>
         {
         public:
           StaleEndpoint(NodeLocation const& l);
@@ -239,10 +240,13 @@ namespace infinit
           /// Callback when an attempt timed out.
           void
           failed(Kouncil& kouncil);
+          void
+          print(std::ostream& stream) const;
           ELLE_ATTRIBUTE(boost::signals2::scoped_connection, slot);
           ELLE_ATTRIBUTE(Timer, retry_timer);
           ELLE_ATTRIBUTE(int, retry_counter);
           ELLE_ATTRIBUTE_X(Timer, evict_timer);
+          friend class Kouncil;
         };
         using StaleEndpoints = bmi::multi_index_container<
           StaleEndpoint,
@@ -280,7 +284,7 @@ namespace infinit
         _peer_evicted(Address id);
         void
         _peer_connected(std::shared_ptr<Remote> peer);
-        void
+        StaleEndpoint&
         _remember_stale(NodeLocation const& peer);
         ELLE_ATTRIBUTE(std::vector<elle::reactor::Thread::unique_ptr>, tasks);
         ELLE_ATTRIBUTE(std::chrono::seconds, eviction_delay);
