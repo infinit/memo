@@ -380,6 +380,11 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: %s disconnected", this, peer);
         auto const id = peer->id();
+        if (!find(this->_infos, id))
+        { // This can only happen if the failure occurred when kouncil_advertise
+          // is invoked from _advertise.
+          this->_infos.emplace(id, peer->endpoints());
+        }
         // Start aging the infos.
         this->_infos.modify(
           ELLE_ENFORCE(find(this->_infos, id)),
