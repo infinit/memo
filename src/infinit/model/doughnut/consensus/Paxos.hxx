@@ -1,6 +1,3 @@
-#ifndef INFINIT_MODEL_CONSENSUS_PAXOS_HXX
-# define INFINIT_MODEL_CONSENSUS_PAXOS_HXX
-
 namespace infinit
 {
   namespace model
@@ -70,5 +67,3 @@ namespace infinit
     }
   }
 }
-
-#endif

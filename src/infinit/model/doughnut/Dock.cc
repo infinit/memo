@@ -479,56 +479,56 @@ namespace infinit
                       this->_location.id());
       }
 
-      static
-      std::pair<Remote::Challenge, std::unique_ptr<Passport>>
-      _auth_0_3(Dock::Connection& self, elle::protocol::ChanneledStream& channels)
+      namespace
       {
-        using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
-          (Passport const&);
-        RPC<AuthSyn> auth_syn(
-          "auth_syn", channels, self.dock().doughnut().version());
-        return auth_syn(self.dock().doughnut().passport());
-      }
+        std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+        _auth_0_3(Dock::Connection& self, elle::protocol::ChanneledStream& channels)
+        {
+          using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+            (Passport const&);
+          RPC<AuthSyn> auth_syn(
+            "auth_syn", channels, self.dock().doughnut().version());
+          return auth_syn(self.dock().doughnut().passport());
+        }
 
-      static
-      std::pair<Remote::Challenge, std::unique_ptr<Passport>>
-      _auth_0_4(Dock::Connection& self, elle::protocol::ChanneledStream& channels)
-      {
-        using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
-          (Passport const&, elle::Version const&);
-        RPC<AuthSyn> auth_syn(
-          "auth_syn", channels, self.dock().doughnut().version());
-        auth_syn.set_context<Doughnut*>(&self.dock().doughnut());
-        auto version = self.dock().doughnut().version();
-        // 0.5.0 and 0.6.0 compares the full version it receives for
-        // compatibility instead of dropping the subminor component. Set
-        // it to 0.
-        return auth_syn(
-          self.dock().doughnut().passport(),
-          elle::Version(version.major(), version.minor(), 0));
-      }
+        std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+        _auth_0_4(Dock::Connection& self, elle::protocol::ChanneledStream& channels)
+        {
+          using AuthSyn = std::pair<Remote::Challenge, std::unique_ptr<Passport>>
+            (Passport const&, elle::Version const&);
+          RPC<AuthSyn> auth_syn(
+            "auth_syn", channels, self.dock().doughnut().version());
+          auth_syn.set_context<Doughnut*>(&self.dock().doughnut());
+          auto version = self.dock().doughnut().version();
+          // 0.5.0 and 0.6.0 compares the full version it receives for
+          // compatibility instead of dropping the subminor component. Set
+          // it to 0.
+          return auth_syn(
+            self.dock().doughnut().passport(),
+            elle::Version(version.major(), version.minor(), 0));
+        }
 
-      static
-      Remote::Auth
-      _auth_0_7(Dock::Connection& self, elle::protocol::ChanneledStream& channels)
-      {
-        using AuthSyn =
-          Remote::Auth (Address, Passport const&, elle::Version const&);
-        RPC<AuthSyn> auth_syn(
-          "auth_syn", channels, self.dock().doughnut().version());
-        auth_syn.set_context<Doughnut*>(&self.dock().doughnut());
-        auto res = auth_syn(self.dock().doughnut().id(),
-                            self.dock().doughnut().passport(),
-                            self.dock().doughnut().version());
-        if (res.id == self.dock().doughnut().id())
-          throw HandshakeFailed(elle::sprintf("peer has same id as us: %s",
-                                              res.id));
-        if (self.location().id() != Address::null &&
-            self.location().id() != res.id)
-          throw HandshakeFailed(
-            elle::sprintf("peer id mismatch: expected %s, got %s",
-                          self.location().id(), res.id));
-        return res;
+        Remote::Auth
+        _auth_0_7(Dock::Connection& self, elle::protocol::ChanneledStream& channels)
+        {
+          using AuthSyn =
+            Remote::Auth (Address, Passport const&, elle::Version const&);
+          RPC<AuthSyn> auth_syn(
+            "auth_syn", channels, self.dock().doughnut().version());
+          auth_syn.set_context<Doughnut*>(&self.dock().doughnut());
+          auto res = auth_syn(self.dock().doughnut().id(),
+                              self.dock().doughnut().passport(),
+                              self.dock().doughnut().version());
+          if (res.id == self.dock().doughnut().id())
+            throw HandshakeFailed(elle::sprintf("peer has same id as us: %s",
+                                                res.id));
+          if (self.location().id() != Address::null &&
+              self.location().id() != res.id)
+            throw HandshakeFailed(
+              elle::sprintf("peer id mismatch: expected %s, got %s",
+                            self.location().id(), res.id));
+          return res;
+        }
       }
 
       void

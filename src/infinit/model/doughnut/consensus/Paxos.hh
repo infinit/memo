@@ -1,21 +1,20 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_CONSENSUS_PAXOS_HH
-# define INFINIT_MODEL_DOUGHNUT_CONSENSUS_PAXOS_HH
+#pragma once
 
-# include <boost/multi_index_container.hpp>
-# include <boost/multi_index/hashed_index.hpp>
-# include <boost/multi_index/mem_fun.hpp>
-# include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/mem_fun.hpp>
+#include <boost/multi_index/ordered_index.hpp>
 
-# include <elle/unordered_map.hh>
-# include <elle/Error.hh>
+#include <elle/unordered_map.hh>
+#include <elle/Error.hh>
 
-# include <elle/reactor/Generator.hh>
+#include <elle/reactor/Generator.hh>
 
-# include <elle/athena/paxos/Client.hh>
+#include <elle/athena/paxos/Client.hh>
 
-# include <infinit/model/doughnut/Consensus.hh>
-# include <infinit/model/doughnut/Local.hh>
-# include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/Consensus.hh>
+#include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Remote.hh>
 
 namespace infinit
 {
@@ -416,6 +415,4 @@ namespace infinit
   }
 }
 
-# include <infinit/model/doughnut/consensus/Paxos.hxx>
-
-#endif
+#include <infinit/model/doughnut/consensus/Paxos.hxx>

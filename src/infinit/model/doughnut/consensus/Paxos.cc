@@ -1934,10 +1934,10 @@ namespace infinit
         elle::json::Object
         Paxos::stats()
         {
-          elle::json::Object res;
-          res["type"] = "paxos";
-          res["node_timeout"] = elle::sprintf("%s", this->node_timeout());
-          return res;
+          return {
+            {"type", "paxos"},
+            {"node_timeout", elle::sprintf("%s", this->node_timeout())},
+          };
         }
 
         /*--------------.
