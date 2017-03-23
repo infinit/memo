@@ -30,6 +30,12 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
 
 using Serializer = elle::serialization::Binary;
 
+namespace
+{
+  auto const ipv4_enabled = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
+  auto const ipv6_enabled = elle::os::getenv("INFINIT_NO_IPV6", "").empty();
+}
+
 namespace infinit
 {
   namespace model
@@ -68,7 +74,7 @@ namespace infinit
           try
           {
             ELLE_TRACE_SCOPE("%s: construct", this);
-            bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+            bool v6 = ipv6_enabled
                 && dht.version() >= elle::Version(0, 7, 0);
             if (p == Protocol::tcp || p == Protocol::all)
             {
@@ -324,8 +330,7 @@ namespace infinit
           return {ep};
         else
         {
-          bool const v4 = elle::os::getenv("INFINIT_NO_IPV4", "").empty();
-          bool const v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+          bool const ipv6 = ipv6_enabled
             && this->doughnut().version() >= elle::Version(0, 7, 0);
           Endpoints res;
           using Filter = elle::network::Interface::Filter;
@@ -333,12 +338,12 @@ namespace infinit
             | Filter::no_autoip | Filter::no_awdl;
           for (auto const& itf: elle::network::Interface::get_map(filter))
           {
-            if (v4)
+            if (ipv4_enabled)
               for (auto const& addr: itf.second.ipv4_address)
                 if (addr != boost::asio::ip::address_v4::any().to_string())
                   res.emplace(boost::asio::ip::address::from_string(addr),
                               ep.port());
-            if (v6)
+            if (ipv6)
               for (auto const& addr: itf.second.ipv6_address)
                 if (addr != boost::asio::ip::address_v6::any().to_string())
                   res.emplace(boost::asio::ip::address::from_string(addr),

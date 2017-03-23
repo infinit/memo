@@ -16,6 +16,12 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Dock")
 
+namespace
+{
+  bool const disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
+  auto const ipv6_enabled = elle::os::getenv("INFINIT_NO_IPV6", "").empty();
+}
+
 namespace infinit
 {
   namespace model
@@ -65,7 +71,7 @@ namespace infinit
       {
         if (this->_local_utp_server)
         {
-          bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+          bool v6 = ipv6_enabled
             && doughnut.version() >= elle::Version(0, 7, 0);
           if (listen_address)
             this->_local_utp_server->listen(*listen_address,
@@ -217,7 +223,7 @@ namespace infinit
               [this, connection] () mutable
               {
                 this->doughnut().dock().make_peer(connection, true);
-                // Delay termination from descructor.
+                // Delay termination from destructor.
                 elle::With<elle::reactor::Thread::NonInterruptible>() << [&]
                 {
                   connection.reset();
@@ -262,7 +268,6 @@ namespace infinit
       void
       Dock::Connection::init()
       {
-        static bool const disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
         // BMI iterators are not invalidated on insertion and deletion.
         auto connecting_it =
           this->_dock._connecting.emplace(this->shared_from_this()).first;
