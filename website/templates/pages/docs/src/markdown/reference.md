@@ -1169,11 +1169,13 @@ This binary is only provided in the **Enterprise** version of the Infinit storag
 
 Journal
 -------
+
 When running a network or volume with the asynchronous option `--async`, operations are written to the local disk before being sent to the storage nodes. This ensures a better end user experience by not exposing them directly to the network latency or bandwidth.
 
-The _infinit journal_ binary provides the means for checking the status of the asynchronous write buffer or _journal_.
+The _infinit journal_ binary provides the means for checking the status of the asynchronous write buffer, also known as _journal_.
 
 ### Check asynchronous network cache ###
+
 In order to check the number of pending asynchronous operations and/or the amount of data remaining to be sent to the storage nodes, you can use the `--stat` option.
 
 ```
