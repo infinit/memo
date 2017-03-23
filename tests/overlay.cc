@@ -1425,24 +1425,17 @@ struct Cluster
     servers.resize(n);
     for (int i=0; i<n; ++i)
     {
-      ELLE_LOG("creating server %s", i);
       ids[i] = special_id(i + 1);
-      servers[i] = std::make_unique<DHT>(
-        ::id = ids[i],
-        ::version = config.version,
-        ::keys = keys,
-        ::make_overlay = config.overlay_builder,
-        ::paxos = true,
-        ::storage = std::make_unique<infinit::storage::Memory>(blocks[i]));
-      ports[i] = servers[i]->dht->dock().utp_server().local_endpoint().port();
+      recreate_server(i, "create");
+      ports[i] = servers[i]->dht->local()->server_endpoint().port();
     }
   }
 
   /// Regenerate the i-th server with the same id, port, and storage.
   void
-  recreate_server(int i)
+  recreate_server(int i, std::string const& log = "recreate")
   {
-    ELLE_LOG("recreating server %s", i);
+    ELLE_LOG("%s server %s", log, i);
     servers[i] = std::make_unique<DHT>(
         ::id = ids[i],
         ::version = config.version,
