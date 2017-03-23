@@ -198,12 +198,13 @@ namespace infinit
           auto connecting = this->_connecting.find(l.endpoints());
           if (connecting != this->_connecting.end())
           {
+            // Return the entry even if the ids mismatch, we do not support
+            // multiple Connections with the same key in _connecting.
             auto c = ELLE_ENFORCE(connecting->lock());
-            if (c->id() == l.id())
-            {
-              ELLE_TRACE("already connecting: %s", c);
-              return c;
-            }
+            if (c->id() != l.id())
+              ELLE_TRACE("returning connection with mismatche id: %f vs %f",
+                         c->id(), l.id());
+            return c;
           }
         }
         // Otherwise start connection.
