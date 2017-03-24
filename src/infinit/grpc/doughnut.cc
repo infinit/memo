@@ -242,7 +242,7 @@ namespace infinit
         (dht.insert, dht, "/Doughnut/insert");
       ptr->AddMethod<::UpdateRequest, ::UpdateResponse>
         (dht.update, dht, "/Doughnut/update");
-      ptr->AddMethod<::Empty, ::Block, true>
+      ptr->AddMethod<::MakeMutableBlockRequest, ::Block, true>
         (dht.make_mutable_block, dht, "/Doughnut/make_mutable_block");
       ptr->AddMethod<::MakeImmutableBlockRequest, ::Block, true>
         (dht.make_immutable_block, dht,"/Doughnut/make_immutable_block");

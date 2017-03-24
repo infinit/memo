@@ -37,7 +37,7 @@ Due to the infinit security model, only the KV store can create blocks
 and pick their address through the following methods:
 
 * `MakeImmutableBlock(MakeImmutableBlockRequest) returns (Block)`
-* `MakeMutableBlock(Empty) returns (Block)`
+* `MakeMutableBlock(MakeMutableBlockRequest) returns (Block)`
 * `MakeNamedBlock(MakeNamedBlockRequest) returns (Block)`
 
 You can then fill the `data` (IB) or `data_plain` (MB) field with your
@@ -322,7 +322,7 @@ name, that points to the document list block.
 ```python
 def create_user(user):
   # Create and insert the document list MB
-  doclist = stub.MakeMutableBlock(doughnut.Empty())
+  doclist = stub.MakeMutableBlock(doughnut.MakeMutableBlockRequest())
   stub.Insert(doughnut.InsertRequest(block=doclist))
   # Create a NB keyed by the user name
   nb = stub.MakeNamedBlock(doughnut.MakeNamedBlockRequest(key=user.encode('utf-8')))
@@ -336,7 +336,7 @@ def create_user(user):
 
 ```go
 func create_user(client doughnut.DoughnutClient, user string) {
-  doclist,_ := client.MakeMutableBlock(context.Background(), &doughnut.Empty{})
+  doclist,_ := client.MakeMutableBlock(context.Background(), &doughnut.MakeMutableBlockRequest{})
   client.Insert(context.Background(), &doughnut.InsertRequest{Block: doclist})
 
   nb, _ := client.MakeNamedBlock(context.Background(),
@@ -355,7 +355,7 @@ void create_user(string user)
   // Create an insert message
   ::InsertRequest insert;
   // Fill it with a new mutable block
-  ::Empty empty;
+  ::MakeMutableBlockRequest empty;
   {
      grpc::ClientContext ctx;
      kv->MakeMutableBlock(&ctx, empty, insert.mutable_block());

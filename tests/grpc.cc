@@ -753,7 +753,7 @@ ELLE_TEST_SCHEDULED(doughnut)
     ::Block okb;
     { // make
       grpc::ClientContext context;
-      ::Empty arg;
+      ::MakeMutableBlockRequest arg;
       stub->MakeMutableBlock(&context, arg, &okb);
       BOOST_CHECK_EQUAL(okb.address().size(), 32);
       BOOST_CHECK_EQUAL(okb.data(), "");
