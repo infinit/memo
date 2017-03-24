@@ -784,9 +784,11 @@ namespace infinit
       {
         {
           // The age so forth.
-          auto age =
-            ELLE_ENFORCE(find(kouncil._infos, this->id()))
-            ->disappearance().age();
+          elle::athena::LamportAge::Duration age;
+          // If we're not in the info, we got disconnected before the
+          // advertisement and the age is pretty much 0.
+          if (auto info = find(kouncil._infos, this->id()))
+            age = info->disappearance().age();
           // How much it is still credited.
           auto respite = kouncil._eviction_delay - age;
           ELLE_DEBUG("%f: initiating reconnection with timeout %s",
