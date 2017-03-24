@@ -12,11 +12,11 @@ At its most basic level, a key-value store provides a mapping from an
 Address to its corresponding content. The API relies on of four main
 methods:
 
-* `fetch(Fetch) returns (BlockOrException)`: Fetch the block at given
+* `Fetch(FetchRequest) returns (Block)`: Fetch the block at given
   address.
-* `insert(Insert) returns (EmptyOrException)`: Insert a new block.
-* `update(Update) returns (EmptyOrException)`: Update an exsiting block.
-* `remove(Address) returns (EmptyOrException)`: Erase the block at
+* `Insert(InsertRequest) returns (InsertResponse)`: Insert a new block.
+* `Update(Update) returns (UpdateResponse)`: Update an exsiting block.
+* `Remove(Address) returns (RemoveResponse)`: Erase the block at
   given address.
 
 ## Blocks ##
@@ -36,9 +36,9 @@ purposes. The most important ones are:
 Due to the infinit security model, only the KV store can create blocks
 and pick their address through the following methods:
 
-* `make_immutable_block(IBData) returns (Block)`
-* `make_mutable_block(Empty) returns (Block)`
-* `make_named_block(NamedBlockKey) returns (Block)`
+* `MakeImmutableBlock(MakeImmutableBlockRequest) returns (Block)`
+* `MakeMutableBlock(Empty) returns (Block)`
+* `MakeNamedBlock(MakeNamedBlockRequest) returns (Block)`
 
 You can then fill the `data` (IB) or `data_plain` (MB) field with your
 payload and call the `insert` procedure .
@@ -61,9 +61,9 @@ and not subject to conflicts. One should thus use immutable blocks
 whenever possible, especially for big payloads.
 
 The IB address is the hash of its content, which ensures the data is
-tamper-proof: when fetching an IB through the `fetch` API call,
+tamper-proof: when fetching an IB through the `Fetch` API call,
 infinit will recompute the hash of the content and check it against
-the address. If both hash do not match `fetch` will return an
+the address. If both hash do not match `Fetch` will return an
 exception.
 
 IB exposes one additional feature through the `block.owner` field: if
@@ -73,13 +73,13 @@ be allowed if the user would be allowed to remove said mutable block.
 ### Mutable blocks (MB) ###
 
 Infinit enforces an atomic update scheme by using a versioning
-mechanism.  When you `fetch` a mutable block, the returned `Block`
+mechanism.  When you `Fetch` a mutable block, the returned `Block`
 contains in the `int64 version` field that contains the block version.
-When you attempt to call `update`, that version is incremented and the
+When you attempt to call `Update`, that version is incremented and the
 update will succeed only if the pushed version is stricly superior to
 the current one. This prevents data loss if the block was updated by
-someone else between your `fetch` and your `update`. In case of such a
-conflict, the `update` call will return an `Exception` that contains
+someone else between your `Fetch` and your `Update`. In case of such a
+conflict, the `Update` call will return
 the latest block in its `current` field. One may then replay its
 modification on the new block and retry the update. This system
 enables atomic updates - see the [example](#example) below for an
@@ -109,8 +109,8 @@ illustration of this use case.
 Since block addresses are picked by infinit, named blocks enable to
 have a named root block to a block hierarchy. NBs are immutable blocks
 and thus cannot be updated once created.  Use the
-`named_block_address(NamedBlockKey) returns (Address)` procedure to
-obtain the NB block address from its name.
+`NamedBlockAddress(NamedBlockAddressRequest) returns (NamedBlockAddressResponse)`
+procedure to obtain the NB block address from its name.
 
 ## Example##
 
@@ -322,27 +322,28 @@ name, that points to the document list block.
 ```python
 def create_user(user):
   # Create and insert the document list MB
-  doclist = stub.make_mutable_block(doughnut.Empty())
-  stub.insert(doughnut.Insert(block=doclist))
+  doclist = stub.MakeMutableBlock(doughnut.Empty())
+  stub.Insert(doughnut.InsertRequest(block=doclist))
   # Create a NB keyed by the user name
-  nb = stub.make_named_block(doughnut.NamedBlockKey(key=user.encode('utf-8')))
+  nb = stub.MakeNamedBlock(doughnut.MakeNamedBlockRequest(key=user.encode('utf-8')))
   nb.data = doclist.address
-  res = stub.insert(doughnut.Insert(block=nb))
-  if res.HasField('exception_ptr'):
-    raise Exception('User already exists: %s' % res.exception_ptr.exception.message)
+  try:
+    stub.Insert(doughnut.InsertRequest(block=nb))
+  except Exception:
+    raise Exception('User already exists')
 
 ```
 
 ```go
 func create_user(client doughnut.DoughnutClient, user string) {
   doclist,_ := client.MakeMutableBlock(context.Background(), &doughnut.Empty{})
-  client.Insert(context.Background(), &doughnut.Insert{Block: doclist})
+  client.Insert(context.Background(), &doughnut.InsertRequest{Block: doclist})
 
   nb, _ := client.MakeNamedBlock(context.Background(),
-    &doughnut.NamedBlockKey{Key: []byte(user)})
+    &doughnut.MakeNamedBlockRequest{Key: []byte(user)})
   nb.Payload = &doughnut.Block_Data{doclist.Address}
-  res, _ := client.Insert(context.Background(), &doughnut.Insert{Block: nb})
-  if res.GetExceptionPtr() != nil {
+  _, err := client.Insert(context.Background(), &doughnut.InsertRequest{Block: nb})
+  if err != nil {
     fmt.Printf("User already exists")
   }
 }
@@ -352,37 +353,37 @@ func create_user(client doughnut.DoughnutClient, user string) {
 void create_user(string user)
 {
   // Create an insert message
-  ::Insert insert;
+  ::InsertRequest insert;
   // Fill it with a new mutable block
   ::Empty empty;
   {
      grpc::ClientContext ctx;
-     kv->make_mutable_block(&ctx, empty, insert.mutable_block());
+     kv->MakeMutableBlock(&ctx, empty, insert.mutable_block());
   }
   // Call the insert method
   {
     grpc::ClientContext ctx;
-    ::EmptyOrException res;
-    kv->insert(&ctx, insert, &res);
+    ::InsertResponse res;
+    kv->Insert(&ctx, insert, &res);
   }
   // Create a new named block with key the user name
-  ::NamedBlockKey key;
+  ::MakeNamedBlockRequest key;
   ::Block nb;
   key.set_key(user);
   {
     grpc::ClientContext ctx;
-    kv->make_named_block(&ctx, key, &nb);
+    kv->MakeNamedBlock(&ctx, key, &nb);
   }
   // Set it's payload to the address of the document list mutable block
-  nb.set_data(doclist.address());
+  nb.set_data(insert.block().address());
   // Insert the block into the kv store
   {
-    ::EmptyOrException res;
-    ::Insert insert;
+    ::InsertResponse res;
+    ::InsertRequest insert;
     insert.mutable_block()->CopyFrom(nb);
     grpc::ClientContext ctx;
-    kv->insert(&ctx, insert, &res);
-    if (res.has_exception_ptr())
+    grpc::Status status = kv->Insert(&ctx, insert, &res);
+    if (!status.ok())
       throw std::runtime_error("User already exists");
   }
 }
@@ -465,14 +466,15 @@ Let's factor the get part since we'll need it multiple times.
 
 ```python
 def get_documents(user):
-  addr = stub.named_block_address(doughnut.NamedBlockKey(key=user.encode('utf-8')))
-  nb_or_err = stub.fetch(doughnut.Fetch(address = addr.address))
-  if nb_or_err.HasField('exception_ptr'):
+  addr = stub.NamedBlockAddress(doughnut.NamedBlockAddressRequest(key=user.encode('utf-8')))
+  try:
+    nb = stub.Fetch(doughnut.FetchRequest(address = addr.address))
+  except Exception:
     raise Exception('No such user')
-  block_or_err = stub.fetch(doughnut.Fetch(address = nb_or_err.block.data, decrypt_data = True))
+  mb = stub.Fetch(doughnut.FetchRequest(address = nb.block.data, decrypt_data = True))
   b = doughnut.Block()
-  b.CopyFrom(block_or_err.block)
-  return (parse_document_list(block_or_err.block.data_plain.decode()), b)
+  b.CopyFrom(mb.block)
+  return (parse_document_list(mb.block.data_plain.decode()), b)
 
 def list_documents(user):
   dl,unused = get_documents(user)
@@ -482,17 +484,17 @@ def list_documents(user):
 ```go
 func get_documents(client doughnut.DoughnutClient, user string) (map[string]string, doughnut.Block) {
   addr,_ := client.NamedBlockAddress(context.Background(),
-    &doughnut.NamedBlockKey{Key: []byte(user)})
-  nb_or_err,_ := client.Fetch(context.Background(),
-    &doughnut.Fetch{Address: addr.Address})
-  if nb_or_err.GetExceptionPtr() != nil {
-    fmt.Println("No such user", user, ": ", string(nb_or_err.GetExceptionPtr().Exception.Message))
+    &doughnut.NamedBlockAddressRequest{Key: []byte(user)})
+  nb, err := client.Fetch(context.Background(),
+    &doughnut.FetchRequest{Address: addr.Address})
+  if err != nil {
+    fmt.Println("No such user", user)
     return make(map[string]string), doughnut.Block{}
   }
-  block_or_err,_ := client.Fetch(context.Background(),
-    &doughnut.Fetch{Address: nb_or_err.GetBlock().GetData(), DecryptData: true})
+  mb,_ := client.Fetch(context.Background(),
+    &doughnut.FetchRequest{Address: nb.GetBlock().GetData(), DecryptData: true})
   return parse_document_list(
-    string((*block_or_err.GetBlock()).GetDataPlain())), *block_or_err.GetBlock()
+    string((*mb.GetBlock()).GetDataPlain())), *mb.GetBlock()
 }
 
 func list_documents(client doughnut.DoughnutClient, user string) []string {
@@ -510,32 +512,32 @@ func list_documents(client doughnut.DoughnutClient, user string) []string {
 ```c++
 map<string, string> get_documents(string user, ::Block* block = nullptr)
 {
-  ::Address address;
-  ::NamedBlockKey key;
+  ::NamedBlockAddressResponse address;
+  ::NamedBlockAddressRequest key;
   key.set_key(user);
   // Get the NB address
   {
     grpc::ClientContext ctx;
-    kv->named_block_address(&ctx, key, &address);
+    kv->NamedBlockAddress(&ctx, key, &address);
   }
   // Get the NB
-  ::BlockOrException res;
+  ::FetchResponse res;
   {
     grpc::ClientContext ctx;
-    ::Fetch fetch;
+    ::FetchRequest fetch;
     fetch.set_address(address.address());
-    kv->fetch(&ctx, fetch, &res);
-    if (res.has_exception_ptr())
-      throw std::runtime_error("No such user (" + res.exception_ptr().exception().message() + ")");
+    grpc::Status status = kv->Fetch(&ctx, fetch, &res);
+    if (!status.ok())
+      throw std::runtime_error("No such user");
   }
   // Get the document list MB
   address.set_address(res.block().data());
   {
     grpc::ClientContext ctx;
-    ::Fetch fetch;
+    ::FetchRequest fetch;
     fetch.set_address(res.block().data());
     fetch.set_decrypt_data(true);
-    kv->fetch(&ctx, fetch, &res);
+    kv->Fetch(&ctx, fetch, &res);
   }
   if (block)
     block->CopyFrom(res.block());
@@ -564,7 +566,7 @@ def get_document(user, name):
   hexaddr = dl.get(name, None)
   if not hexaddr:
     raise Exception('No such document')
-  doc = stub.fetch(doughnut.Fetch(address = from_hex(hexaddr)))
+  doc = stub.Fetch(doughnut.FetchRequest(address = from_hex(hexaddr)))
   return doc.block.data
 ```
 
@@ -572,7 +574,7 @@ def get_document(user, name):
 func get_document(client doughnut.DoughnutClient, user string, name string) []byte {
   dl, _ := get_documents(client, user)
   addr := from_hex(dl[name])
-  doc, _ := client.Fetch(context.Background(), &doughnut.Fetch{Address: addr})
+  doc, _ := client.Fetch(context.Background(), &doughnut.FetchRequest{Address: addr})
   return doc.GetBlock().GetData()
 }
 ```
@@ -584,11 +586,11 @@ string get_document(string user, string name)
   auto it = dl.find(name);
   if (it == dl.end())
     throw std::runtime_error("no such document");
-  ::BlockOrException res;
+  ::FetchResponse res;
   grpc::ClientContext ctx;
-  ::Fetch fetch;
+  ::FetchRequest fetch;
   fetch.set_address(unhex(it->second));
-  kv->fetch(&ctx, fetch, &res);
+  kv->Fetch(&ctx, fetch, &res);
   return res.block().data();
 }
 ```
@@ -604,24 +606,22 @@ retry the update until there is no update conflict.
 ```python
 def set_document(user, name, data):
   # create and insert the document IB
-  doc = stub.make_immutable_block(doughnut.IBData(data=data.encode('utf-8')))
-  stub.insert(doughnut.Insert(block=doc))
+  doc = stub.MakeImmutableBlock(doughnut.MakeImmutableBlockRequest(data=data.encode('utf-8')))
+  stub.Insert(doughnut.InsertRequest(block=doc))
   blockaddr = to_hex(doc.address)
   dl, block = get_documents(user)
   while True:
     # If name is already in the document list, cleanup the data IB
     prev = dl.get(name, None)
     if prev:
-      pass #stub.remove(doughnut.Address(address = from_hex(prev)))
+      stub.Remove(doughnut.RemoveRequest(address = from_hex(prev)))
     # play or re-play our operation into dl
     dl[name] = blockaddr
     block.data_plain = serialize_document_list(dl).encode('utf-8')
-    status = stub.update(doughnut.Update(block = block, decrypt_data = True))
-    if not status.HasField('exception_ptr'):
+    status = stub.Update(doughnut.UpdateRequest(block = block, decrypt_data = True))
+    if not status.HasField('current'):
       break
-    if not status.exception_ptr.exception.HasField('current'):
-      raise Exception(status.exception_ptr.exception.message)
-    block.CopyFrom(status.exception_ptr.exception.current)
+    block.CopyFrom(status.current)
     dl = parse_document_list(block.data_plain.decode())
 ```
 
@@ -629,29 +629,25 @@ def set_document(user, name, data):
 func set_document(client doughnut.DoughnutClient, user string, name string, data []byte) {
   // create and insert the document IB
   doc, _ := client.MakeImmutableBlock(context.Background(),
-    &doughnut.IBData{Data: data})
-  client.Insert(context.Background(), &doughnut.Insert{Block: doc})
+    &doughnut.MakeImmutableBlockRequest{Data: data})
+  client.Insert(context.Background(), &doughnut.InsertRequest{Block: doc})
   blockaddr := to_hex(doc.Address)
   dl, block := get_documents(client, user)
   for {
     // If name is already in the document list, cleanup the data IB
     if val, ok := dl[name]; ok {
-      client.Remove(context.Background(), &doughnut.Address{Address: from_hex(val)})
+      client.Remove(context.Background(), &doughnut.RemoveRequest{Address: from_hex(val)})
     }
     // play or re-play our operation into dl
     dl[name] = blockaddr
     payload := []byte(serialize_document_list(dl))
     block.Payload = &doughnut.Block_DataPlain{payload}
     status, _ := client.Update(context.Background(),
-      &doughnut.Update{Block: &block, DecryptData: true})
-    if status.GetExceptionPtr() == nil {
+      &doughnut.UpdateRequest{Block: &block, DecryptData: true})
+    if status.GetCurrent() == nil {
       break
     }
-    if status.GetExceptionPtr().Exception.GetCurrent() == nil {
-      fmt.Printf("fatal exception %s", status.GetExceptionPtr().Exception.Message)
-      break
-    }
-    block = *status.GetExceptionPtr().Exception.Current
+    block = *status.Current
     dl = parse_document_list(string(block.GetDataPlain()))
   }
 }
@@ -663,47 +659,47 @@ void set_document(string user, string name, string data)
   ::Block mb;
   auto dl = get_documents(user, &mb);
   // Create and insert the document IB
-  ::IBData cdata;
+  ::MakeImmutableBlockRequest cdata;
   cdata.set_data(data);
   ::Block doc;
   {
     grpc::ClientContext ctx;
-    kv->make_immutable_block(&ctx, cdata, &doc);
+    kv->MakeImmutableBlock(&ctx, cdata, &doc);
   }
-  ::EmptyOrException status;
+  ::InsertResponse status;
   {
     grpc::ClientContext ctx;
-    ::Insert insert;
+    ::InsertRequest insert;
     insert.mutable_block()->CopyFrom(doc);
-    kv->insert(&ctx, insert, &status);
+    kv->Insert(&ctx, insert, &status);
   }
   string chb_addr = hex(doc.address());
+  ::UpdateResponse response;
   while (true)
   {
     // If name is already in the document list, cleanup the data IB
     auto it = dl.find(name);
     if (it != dl.end())
     {
-      ::Address address;
+      ::RemoveRequest address;
+      ::RemoveResponse status;
       address.set_address(unhex(it->second));
       grpc::ClientContext ctx;
-      kv->remove(&ctx, address, &status);
+      kv->Remove(&ctx, address, &status);
     }
     dl[name] = chb_addr; // play or re-play our operation into dl
     mb.set_data_plain(serialize_document_list(dl));
     {
       grpc::ClientContext ctx;
-      ::Update update;
+      ::UpdateRequest update;
       update.mutable_block()->CopyFrom(mb);
       update.set_decrypt_data(true);
-      kv->update(&ctx, update, &status);
+      kv->Update(&ctx, update, &response);
     }
-    if (!status.has_exception_ptr())
+    if (!response.has_current())
       break; // all good
-    if (!status.exception_ptr().exception().has_current())
-      throw std::runtime_error(status.exception_ptr().exception().message());
     // try again from the current block version
-    mb.CopyFrom(status.exception_ptr().exception().current());
+    mb.CopyFrom(response.current());
     dl = parse_document_list(mb.data_plain());
   }
 }

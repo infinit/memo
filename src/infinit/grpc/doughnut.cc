@@ -77,6 +77,27 @@ namespace infinit
   namespace grpc
   {
 
+    namespace
+    {
+      std::string
+      underscore_to_uppercase(std::string const& src)
+      {
+        std::string res;
+        bool upperize = true;
+        for (char c: src)
+        {
+          if (c == '_')
+          {
+            upperize = true;
+            continue;
+          }
+          res += upperize ? std::toupper(c) : c;
+          upperize = (c == '/');
+        }
+        return res;
+      }
+    }
+
     template <typename T>
     struct OptionFirst
     {};
@@ -86,11 +107,61 @@ namespace infinit
     {
       template <typename T>
       static
-      A& value(T& v)
+      A* value(T& v, ::grpc::Status& err)
       {
         if (v.template is<E>())
+        {
           elle::err("unexpected exception: %s", v.template get<E>());
-        return v.template get<A>();
+          err = ::grpc::Status(::grpc::INTERNAL, elle::exception_string(v.template get<E>()));
+          return nullptr;
+        }
+        return &v.template get<A>();
+      }
+    };
+
+    template<typename T>
+    struct ExceptionExtracter
+    {};
+
+    template <typename A, typename E>
+    struct ExceptionExtracter <elle::Option<A, E>>
+    {
+      template <typename T>
+      static
+      void value(SerializerOut& sout, T& v, ::grpc::Status& err,
+                 elle::Version const& version)
+      {
+         if (v.template is<E>())
+         {
+           try
+           {
+             std::rethrow_exception(v.template get<E>());
+           }
+           catch (infinit::model::MissingBlock const& mb)
+           {
+             err = ::grpc::Status(::grpc::NOT_FOUND, mb.what());
+           }
+           catch (infinit::model::doughnut::ValidationFailed const& vf)
+           {
+             err = ::grpc::Status(::grpc::PERMISSION_DENIED, vf.what());
+           }
+           catch (elle::athena::paxos::TooFewPeers const& tfp)
+           {
+             err = ::grpc::Status(::grpc::UNAVAILABLE, tfp.what());
+           }
+           catch (infinit::model::Conflict const& c)
+           {
+             elle::unconst(c).serialize(sout, version);
+           }
+           catch (elle::Error const& e)
+           {
+             err = ::grpc::Status(::grpc::INTERNAL, e.what());
+           }
+         }
+         else
+         {
+           sout.serialize_forward(v);
+         }
       }
     };
 
@@ -103,6 +174,7 @@ namespace infinit
                  const REQ* request,
                  RESP* response)
     {
+      ::grpc::Status status = ::grpc::Status::OK;
       sched.mt_run<void>("invoke", [&] {
           try
           {
@@ -117,11 +189,14 @@ namespace infinit
             sout.set_context<model::doughnut::Doughnut*>(&dht);
             if (NOEXCEPT) // it will compile anyway no need for static switch
             {
-              auto& adapted = OptionFirst<typename NF::Result::Super>::value(res);
-              sout.serialize_forward(adapted);
+              auto* adapted = OptionFirst<typename NF::Result::Super>::value(res, status);
+              if (status.ok())
+                sout.serialize_forward(*adapted);
             }
             else
-              sout.serialize_forward(res);
+            {
+              ExceptionExtracter<typename NF::Result::Super>::value(sout, res, status, dht.version());
+            }
           }
           catch (elle::Error const& e)
           {
@@ -129,7 +204,7 @@ namespace infinit
             ELLE_ERR("%s", e.backtrace());
           }
       });
-      return ::grpc::Status::OK;
+      return status;
     }
 
     class Service: public ::grpc::Service
@@ -139,7 +214,8 @@ namespace infinit
       void AddMethod(NF& nf, model::doughnut::Doughnut& dht, std::string const& name)
       {
         auto& sched = elle::reactor::scheduler();
-        _method_names.push_back(std::make_unique<std::string>(name));
+        _method_names.push_back(std::make_unique<std::string>(
+          underscore_to_uppercase(name)));
         ::grpc::Service::AddMethod(new ::grpc::RpcServiceMethod(
           _method_names.back()->c_str(),
           ::grpc::RpcMethod::NORMAL_RPC,
@@ -160,14 +236,22 @@ namespace infinit
     {
       auto& dht = dynamic_cast<model::doughnut::Doughnut&>(model);
       auto ptr = std::make_unique<Service>();
-      ptr->AddMethod<::Fetch, ::BlockOrException>(dht.fetch, dht, "/Doughnut/fetch");
-      ptr->AddMethod<::Insert, ::EmptyOrException>(dht.insert, dht, "/Doughnut/insert");
-      ptr->AddMethod<::Update, ::EmptyOrException>(dht.update, dht, "/Doughnut/update");
-      ptr->AddMethod<::Empty, ::Block, true>(dht.make_mutable_block, dht, "/Doughnut/make_mutable_block");
-      ptr->AddMethod<::IBData, ::Block, true>(dht.make_immutable_block, dht,"/Doughnut/make_immutable_block");
-      ptr->AddMethod<::NamedBlockKey, ::Block, true>(dht.make_named_block, dht, "/Doughnut/make_named_block");
-      ptr->AddMethod<::NamedBlockKey, ::Address, true>(dht.named_block_address, dht, "/Doughnut/named_block_address");
-      ptr->AddMethod<::Address, ::EmptyOrException>(dht.remove, dht, "/Doughnut/remove");
+      ptr->AddMethod<::FetchRequest, ::FetchResponse>
+        (dht.fetch, dht, "/Doughnut/fetch");
+      ptr->AddMethod<::InsertRequest, ::InsertResponse>
+        (dht.insert, dht, "/Doughnut/insert");
+      ptr->AddMethod<::UpdateRequest, ::UpdateResponse>
+        (dht.update, dht, "/Doughnut/update");
+      ptr->AddMethod<::Empty, ::Block, true>
+        (dht.make_mutable_block, dht, "/Doughnut/make_mutable_block");
+      ptr->AddMethod<::MakeImmutableBlockRequest, ::Block, true>
+        (dht.make_immutable_block, dht,"/Doughnut/make_immutable_block");
+      ptr->AddMethod<::MakeNamedBlockRequest, ::Block, true>
+        (dht.make_named_block, dht, "/Doughnut/make_named_block");
+      ptr->AddMethod<::NamedBlockAddressRequest , ::NamedBlockAddressResponse , true>
+        (dht.named_block_address, dht, "/Doughnut/named_block_address");
+      ptr->AddMethod<::RemoveRequest, ::RemoveResponse>
+        (dht.remove, dht, "/Doughnut/remove");
       return std::move(ptr);
     }
   }

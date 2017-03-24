@@ -345,13 +345,19 @@ namespace infinit
       // so if C++ outputs something that serializes as a value, we need
       // to wrap it.
       // Assume the field name is the lowercase version of the message name
-      if (!_field)
+      if (!_field && _message_stack.size() == 1)
       {
         auto* cur = _message_stack.back();
         auto* desc = cur->GetDescriptor();
+        ELLE_DEBUG("field check for %s", desc->name());
         _field = desc->FindFieldByName(uppercase_to_underscore(desc->name()));
-        ELLE_ASSERT(_field);
+        if (!_field)
+        { // Nice heuristic bearclaw, but the Message names are constrained
+          // by protobuf standards, just take the first field
+          _field = desc->FindFieldByNumber(1);
+        }
       }
+      ELLE_ASSERT(_field);
     }
 
     bool

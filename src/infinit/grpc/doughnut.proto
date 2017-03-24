@@ -1,48 +1,52 @@
 syntax = "proto3";
 
 service Doughnut {
-   rpc make_immutable_block(IBData) returns (Block) {}
-   rpc make_mutable_block(Empty) returns (Block) {}
-   rpc make_named_block(NamedBlockKey) returns (Block) {}
-   rpc named_block_address(NamedBlockKey) returns (Address) {}
-   rpc fetch(Fetch) returns (BlockOrException) {}
-   rpc insert(Insert) returns (EmptyOrException) {}
-   rpc update(Update) returns (EmptyOrException) {}
-   rpc remove(Address) returns (EmptyOrException) {}
+   rpc MakeImmutableBlock(MakeImmutableBlockRequest) returns (Block) {}
+   rpc MakeMutableBlock(Empty) returns (Block) {}
+   rpc MakeNamedBlock(MakeNamedBlockRequest) returns (Block) {}
+   rpc NamedBlockAddress(NamedBlockAddressRequest) returns (NamedBlockAddressResponse) {}
+   rpc Fetch(FetchRequest) returns (FetchResponse) {}
+   rpc Insert(InsertRequest) returns (InsertResponse) {}
+   rpc Update(UpdateRequest) returns (UpdateResponse) {}
+   rpc Remove(RemoveRequest) returns (RemoveResponse) {}
 }
 
-message NamedBlockKey {
+message Empty {
+}
+
+message MakeNamedBlockRequest {
   bytes key = 1;
 }
 
-message Insert {
+message NamedBlockAddressRequest {
+  bytes key = 1;
+}
+
+message InsertRequest {
   Block block = 1;
 }
 
-message Update {
+message UpdateRequest {
   Block block = 1;
   bool decrypt_data = 2;
 }
 
-message IBData {
+message MakeImmutableBlockRequest {
   bytes data = 1;
   bytes owner = 2;
 }
 
-message Bytes {
-  bytes data = 1;
-}
-
-message Fetch {
+message FetchRequest {
   bytes address = 1;
   bool decrypt_data = 2;
 }
 
-message Address {
+message NamedBlockAddressResponse {
   bytes address = 1;
 }
 
-message Empty {
+message RemoveRequest {
+  bytes address = 1;
 }
 
 message Version {
@@ -101,36 +105,25 @@ message Block {
   Version seal_version = 21;
 }
 
-message Exception
-{
+
+message FetchResponse {
   string type = 1;
-  // Exception
+  Block block = 2;
+}
+
+message InsertResponse {
+  string type = 1;
+  bool bool = 2;
+}
+
+message UpdateResponse {
+  string type = 1;
   bytes message = 2;
-  // MissingBlock
-  bytes address = 3;
-  // Conflict
-  Block current = 4;
-  // ValidationFailed
-  // TooFewPeers
-};
-
-message ExceptionPtr {
-  Exception exception = 1;
+  Block current = 3;
+  bool bool = 4;
 }
 
-message BlockOrException {
+message RemoveResponse {
   string type = 1;
-  oneof data {
-    Block block = 2;
-    ExceptionPtr exception_ptr = 3;
-  }
-}
-
-
-message EmptyOrException {
-  string type = 1;
-  oneof data {
-    bool bool = 2;
-    ExceptionPtr exception_ptr = 3;
-  }
+  bool bool = 2;
 }

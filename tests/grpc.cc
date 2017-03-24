@@ -156,6 +156,10 @@ namespace grpc {
   {
     return a.error_code() == b.error_code();
   }
+  bool operator == (Status const& a, grpc::StatusCode const& b)
+  {
+    return a.error_code() == b;
+  }
 }
 
 class DHTs
@@ -694,24 +698,22 @@ ELLE_TEST_SCHEDULED(doughnut)
     auto stub = Doughnut::NewStub(chan);
     { // get missing block
       grpc::ClientContext context;
-      ::Fetch req;
-      ::BlockOrException repl;
+      ::FetchRequest req;
+      ::FetchResponse repl;
       req.set_address(
         std::string((const char*)infinit::model::Address::null.value(), 32));
       ELLE_LOG("call...");
-      auto res = stub->fetch(&context, req, &repl);
+      auto res = stub->Fetch(&context, req, &repl);
       ELLE_LOG("...called");
-      BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
-      BOOST_CHECK(repl.has_exception_ptr());
-      BOOST_CHECK_EQUAL(repl.exception_ptr().exception().type(), "infinit::model::MissingBlock");
+      BOOST_CHECK_EQUAL(res, ::grpc::NOT_FOUND);
     }
     // Basic CHB
     ::Block chb;
     { // make
       grpc::ClientContext context;
-      ::IBData data;
+      ::MakeImmutableBlockRequest data;
       data.set_data("bok");
-      stub->make_immutable_block(&context, data, &chb);
+      stub->MakeImmutableBlock(&context, data, &chb);
       ELLE_LOG("addr: %s", chb.address());
       BOOST_CHECK_EQUAL(chb.address().size(), 32);
       BOOST_CHECK_EQUAL(chb.data(), "bok");
@@ -720,13 +722,13 @@ ELLE_TEST_SCHEDULED(doughnut)
     }
     { // store
       grpc::ClientContext context;
-      ::EmptyOrException repl;
-      ::Insert insert;
+      ::InsertResponse repl;
+      ::InsertRequest insert;
       insert.mutable_block()->CopyFrom(chb);
       ELLE_LOG("insert, type '%s'", insert.block().type());
-      stub->insert(&context, insert, &repl);
+      auto res = stub->Insert(&context, insert, &repl);
       ELLE_LOG("...inserted");
-      BOOST_CHECK_EQUAL(repl.has_exception_ptr(), false);
+      BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
     }
     // dht fetch check
     auto a = infinit::model::Address((const uint8_t*)chb.address().data());
@@ -738,10 +740,10 @@ ELLE_TEST_SCHEDULED(doughnut)
     BOOST_CHECK_EQUAL(data, "bok");
     { // fetch
       grpc::ClientContext context;
-      ::BlockOrException abs;
-      ::Fetch addr;
+      ::FetchResponse abs;
+      ::FetchRequest addr;
       addr.set_address(chb.address());
-      stub->fetch(&context, addr, &abs);
+      stub->Fetch(&context, addr, &abs);
       BOOST_CHECK(abs.has_block());
       BOOST_CHECK_EQUAL(abs.block().address(), chb.address());
       BOOST_CHECK_EQUAL(abs.block().data(), "bok");
@@ -752,7 +754,7 @@ ELLE_TEST_SCHEDULED(doughnut)
     { // make
       grpc::ClientContext context;
       ::Empty arg;
-      stub->make_mutable_block(&context, arg, &okb);
+      stub->MakeMutableBlock(&context, arg, &okb);
       BOOST_CHECK_EQUAL(okb.address().size(), 32);
       BOOST_CHECK_EQUAL(okb.data(), "");
       ELLE_TRACE("addr: %s",
@@ -761,20 +763,20 @@ ELLE_TEST_SCHEDULED(doughnut)
     okb.set_data_plain("bokbok");
     { // store
       grpc::ClientContext context;
-      ::Insert insert;
-      ::EmptyOrException repl;
+      ::InsertRequest insert;
+      ::InsertResponse repl;
       insert.mutable_block()->CopyFrom(okb);
       ELLE_LOG("insert, type %s", insert.block().type());
-      stub->insert(&context, insert, &repl);
-      BOOST_CHECK_EQUAL(repl.has_exception_ptr(), false);
+      auto res = stub->Insert(&context, insert, &repl);
+      BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
     }
-    ::BlockOrException abs;
+    ::FetchResponse abs;
     { // fetch
       grpc::ClientContext context;
-      ::Fetch fetch;
+      ::FetchRequest fetch;
       fetch.set_address(okb.address());
       fetch.set_decrypt_data(true);
-      stub->fetch(&context, fetch, &abs);
+      stub->Fetch(&context, fetch, &abs);
       BOOST_CHECK(abs.has_block());
       BOOST_CHECK_EQUAL(abs.block().address(), okb.address());
       BOOST_CHECK_EQUAL(abs.block().data_plain(), "bokbok");
@@ -783,19 +785,19 @@ ELLE_TEST_SCHEDULED(doughnut)
     {
       abs.mutable_block()->set_data_plain("mooh");
       grpc::ClientContext context;
-      ::EmptyOrException repl;
-      ::Update update;
+      ::UpdateResponse repl;
+      ::UpdateRequest update;
       update.mutable_block()->CopyFrom(abs.block());
-      stub->update(&context, update, &repl);
-      BOOST_CHECK_EQUAL(repl.has_exception_ptr(), false);
+      auto res = stub->Update(&context, update, &repl);
+      BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
     }
     { // fetch
-      ::BlockOrException abs; // use another message to be sure
+      ::FetchResponse abs; // use another message to be sure
       grpc::ClientContext context;
-      ::Fetch fetch;
+      ::FetchRequest fetch;
       fetch.set_address(okb.address());
       fetch.set_decrypt_data(true);
-      stub->fetch(&context, fetch, &abs);
+      stub->Fetch(&context, fetch, &abs);
       BOOST_CHECK(abs.has_block());
       BOOST_CHECK_EQUAL(abs.block().address(), okb.address());
       BOOST_CHECK_EQUAL(abs.block().data_plain(), "mooh");
@@ -804,30 +806,27 @@ ELLE_TEST_SCHEDULED(doughnut)
     {
       abs.mutable_block()->set_data_plain("merow");
       grpc::ClientContext context;
-      ::EmptyOrException repl;
-      ::Update update;
+      ::UpdateResponse repl;
+      ::UpdateRequest update;
       update.mutable_block()->CopyFrom(abs.block());
-      stub->update(&context, update, &repl);
-      if (repl.has_exception_ptr())
-      ELLE_LOG("update: %s", repl.exception_ptr().exception().message());
-      BOOST_CHECK_EQUAL(repl.has_exception_ptr(), true);
+      auto res = stub->Update(&context, update, &repl);
+      BOOST_CHECK(repl.has_current());
       // retry update
       {
         grpc::ClientContext context;
-        ::Update update;
-        BOOST_CHECK(repl.exception_ptr().exception().has_current());
-        update.mutable_block()->CopyFrom(repl.exception_ptr().exception().current());
+        ::UpdateRequest update;
+        update.mutable_block()->CopyFrom(repl.current());
         update.mutable_block()->set_data_plain("merow");
-        stub->update(&context, update, &repl);
-        BOOST_CHECK_EQUAL(repl.has_exception_ptr(), false);
+        res = stub->Update(&context, update, &repl);
+        BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
       }
       { // fetch
-        ::BlockOrException tabs;
+        ::FetchResponse tabs;
         grpc::ClientContext context;
-        ::Fetch fetch;
+        ::FetchRequest fetch;
         fetch.set_address(okb.address());
         fetch.set_decrypt_data(true);
-        stub->fetch(&context, fetch, &tabs);
+        stub->Fetch(&context, fetch, &tabs);
         BOOST_CHECK(tabs.has_block());
         BOOST_CHECK_EQUAL(tabs.block().data_plain(), "merow");
       }
@@ -960,48 +959,48 @@ ELLE_TEST_SCHEDULED(doughnut)
     ::Block nb;
     { // make
       grpc::ClientContext context;
-      ::NamedBlockKey str;
+      ::MakeNamedBlockRequest str;
       str.set_key("uid");
-      stub->make_named_block(&context, str, &nb);
+      stub->MakeNamedBlock(&context, str, &nb);
     }
     { // insert
-      ::Insert insert;
+      ::InsertRequest insert;
       insert.mutable_block()->CopyFrom(nb);
       insert.mutable_block()->set_data("coin");
       grpc::ClientContext context;
-      ::EmptyOrException status;
-      stub->insert(&context, insert, &status);
-      BOOST_CHECK_EQUAL(status.has_exception_ptr(), false);
+      ::InsertResponse status;
+      auto res = stub->Insert(&context, insert, &status);
+      BOOST_CHECK_EQUAL(res, ::grpc::Status::OK);
     }
-    ::Address nba;
+    ::NamedBlockAddressResponse nba;
     { // ask for address
       grpc::ClientContext context;
-      ::NamedBlockKey str;
+      ::NamedBlockAddressRequest str;
       str.set_key("uid");
-      stub->named_block_address(&context, str, &nba);
+      stub->NamedBlockAddress(&context, str, &nba);
     }
     { // fetch
       grpc::ClientContext context;
-      ::Fetch fetch;
+      ::FetchRequest fetch;
       fetch.set_address(nba.address());
-      ::BlockOrException ab;
-      stub->fetch(&context, fetch, &ab);
+      ::FetchResponse ab;
+      stub->Fetch(&context, fetch, &ab);
       BOOST_CHECK(ab.has_block());
       BOOST_CHECK_EQUAL(ab.block().data(), "coin");
     }
     { // dummy address
       grpc::ClientContext context;
-      ::NamedBlockKey str;
+      ::NamedBlockAddressRequest str;
       str.set_key("invalidid");
-      stub->named_block_address(&context, str, &nba);
+      stub->NamedBlockAddress(&context, str, &nba);
     }
     { // fetch
       grpc::ClientContext context;
-      ::BlockOrException ab;
-      ::Fetch fetch;
+      ::FetchResponse ab;
+      ::FetchRequest fetch;
       fetch.set_address(nba.address());
-      stub->fetch(&context, fetch, &ab);
-      BOOST_CHECK(ab.has_exception_ptr());
+      auto res = stub->Fetch(&context, fetch, &ab);
+      BOOST_CHECK_EQUAL(res, ::grpc::NOT_FOUND);
     }
   });
 }
