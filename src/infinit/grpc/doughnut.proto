@@ -2,7 +2,7 @@ syntax = "proto3";
 
 service Doughnut {
    rpc MakeImmutableBlock(MakeImmutableBlockRequest) returns (Block) {}
-   rpc MakeMutableBlock(Empty) returns (Block) {}
+   rpc MakeMutableBlock(MakeMutableBlockRequest) returns (Block) {}
    rpc MakeNamedBlock(MakeNamedBlockRequest) returns (Block) {}
    rpc NamedBlockAddress(NamedBlockAddressRequest) returns (NamedBlockAddressResponse) {}
    rpc Fetch(FetchRequest) returns (FetchResponse) {}
@@ -11,7 +11,7 @@ service Doughnut {
    rpc Remove(RemoveRequest) returns (RemoveResponse) {}
 }
 
-message Empty {
+message MakeMutableBlockRequest {
 }
 
 message MakeNamedBlockRequest {
