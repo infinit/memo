@@ -332,8 +332,7 @@ namespace infinit
                 };
               elle::With<elle::reactor::Scope>() << [&] (elle::reactor::Scope& scope)
               {
-                if (this->_dock.protocol() == Protocol::tcp ||
-                    this->_dock.protocol() == Protocol::all)
+                if (this->_dock.protocol().with_tcp())
                   for (auto const& e: this->_location.endpoints())
                     scope.run_background(
                       elle::sprintf("%s: tcp://%s",
@@ -346,8 +345,7 @@ namespace infinit
                           this->_connected_endpoint = e;
                           scope.terminate_now();
                         }));
-                if (this->_dock.protocol() == Protocol::utp ||
-                    this->_dock.protocol() == Protocol::all)
+                if (this->_dock.protocol().with_utp())
                   scope.run_background(
                     elle::sprintf("%s: utp://%s",
                                   this, this->_location.endpoints()),

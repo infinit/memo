@@ -149,12 +149,7 @@ namespace infinit
         });
     }
 
-    Configuration::Configuration()
-      : rpc_protocol(infinit::model::doughnut::Protocol::all)
-    {}
-
     Configuration::Configuration(elle::serialization::SerializerIn& input)
-      : rpc_protocol(infinit::model::doughnut::Protocol::all)
     {
       this->serialize(input);
     }

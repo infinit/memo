@@ -32,12 +32,12 @@ namespace elle
     {
       switch (p)
       {
-        case Protocol::tcp:
-          return "tcp";
-        case Protocol::utp:
-          return "utp";
-        case Protocol::all:
-          return "all";
+      case Protocol::tcp:
+        return "tcp";
+      case Protocol::utp:
+        return "utp";
+      case Protocol::all:
+        return "all";
       }
       elle::unreachable();
     }

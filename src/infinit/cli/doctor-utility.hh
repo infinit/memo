@@ -1802,7 +1802,7 @@ namespace
       try
       {
         auto nat = elle::reactor::connectivity::nat(*server, port);
-        // Super uglY.
+        // Super ugly.
         auto cone = nat.find("NOT_CONE") == std::string::npos &&
           nat.find("CONE") != std::string::npos;
         results.nat = {cone};

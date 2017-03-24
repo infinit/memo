@@ -292,20 +292,6 @@ namespace infinit
           elle::err("unknown mode '%s'", *mode);
       }
 
-      bool
-      tcp_enabled(infinit::model::doughnut::Protocol protocol)
-      {
-        return protocol == infinit::model::doughnut::Protocol::tcp
-          || protocol == infinit::model::doughnut::Protocol::all;
-      }
-
-      bool
-      utp_enabled(infinit::model::doughnut::Protocol protocol)
-      {
-        return protocol == infinit::model::doughnut::Protocol::utp
-          || protocol == infinit::model::doughnut::Protocol::all;
-      }
-
       /// Variable "port".
       uint16_t
       get_port(boost::optional<uint16_t> port)
@@ -409,7 +395,7 @@ namespace infinit
           uint16_t tcp_port_ = 0;
           uint16_t utp_port_ = 0;
           uint16_t xored_utp_port_ = 0;
-          if (tcp_enabled(protocol))
+          if (protocol.with_tcp())
           {
             tcp_port_ = get_tcp_port(tcp_port, port);
             this->_tcp.reset(
@@ -422,7 +408,7 @@ namespace infinit
             listening.wait();
             listening.close();
           }
-          if (utp_enabled(protocol))
+          if (protocol.with_utp())
           {
             if (non_xored_enabled(xored))
             {
@@ -458,7 +444,7 @@ namespace infinit
             << "To perform tests, run the following command from another node:"
             << std::endl;
           std::cout << "> infinit-doctor --networking";
-          if (protocol != infinit::model::doughnut::Protocol::all)
+          if (!protocol.with_all())
             std::cout << " --protocol " << protocol;
           if (base_port)
             std::cout << " --port " << get_port(port);
@@ -569,7 +555,7 @@ namespace infinit
           }
         };
 
-        if (tcp_enabled(protocol))
+        if (protocol.with_tcp())
         {
           auto tcp = [&]
           {
@@ -595,7 +581,7 @@ namespace infinit
           };
           tcp();
         }
-        if (utp_enabled(protocol))
+        if (protocol.with_utp())
         {
           auto utp = [&] (bool xored)
             {

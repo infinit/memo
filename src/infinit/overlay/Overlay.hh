@@ -193,7 +193,7 @@ namespace infinit
     {
       model::doughnut::Protocol rpc_protocol;
 
-      Configuration();
+      Configuration() = default;
       Configuration(elle::serialization::SerializerIn& input);
       static constexpr char const* virtually_serializable_key = "type";
       /// Perform any initialization required at join time.

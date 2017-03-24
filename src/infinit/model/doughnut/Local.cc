@@ -76,7 +76,7 @@ namespace infinit
             ELLE_TRACE_SCOPE("%s: construct", this);
             bool v6 = ipv6_enabled
                 && dht.version() >= elle::Version(0, 7, 0);
-            if (p == Protocol::tcp || p == Protocol::all)
+            if (p.with_tcp())
             {
               this->_server = std::make_unique<elle::reactor::network::TCPServer>();
               if (listen_address)
