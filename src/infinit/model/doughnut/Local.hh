@@ -39,7 +39,7 @@ namespace infinit
               std::unique_ptr<storage::Storage> storage,
               int port = 0,
               boost::optional<boost::asio::ip::address> listen_address = {},
-              Protocol p = Protocol::all);
+              Protocol p = {});
         ~Local() override;
         /** Called after every element of the DHT has been initialized.
          *

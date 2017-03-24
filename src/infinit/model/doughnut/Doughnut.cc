@@ -350,9 +350,9 @@ namespace infinit
       std::unique_ptr<model::User>
       Doughnut::_make_user(elle::Buffer const& data) const
       {
-        if (data.size() == 0)
+        if (data.empty())
           elle::err("invalid empty user");
-        if (data[0] == '{')
+        else if (data[0] == '{')
         {
           ELLE_TRACE_SCOPE("%s: fetch user from public key", *this);
           elle::IOStream input(data.istreambuf());
@@ -434,7 +434,8 @@ namespace infinit
         this->_consensus->remove(address, std::move(rs));
       }
 
-      Protocol
+
+      Protocol const&
       Doughnut::protocol() const
       {
         return this->_dock.protocol();

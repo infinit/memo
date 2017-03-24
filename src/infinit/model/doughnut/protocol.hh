@@ -8,11 +8,27 @@ namespace infinit
   {
     namespace doughnut
     {
-      enum class Protocol
+      /// Whether to support UTP and/or TCP.
+      class Protocol
       {
-        tcp = 1,
-        utp = 2,
-        all = 3
+      public:
+        enum protocol
+        {
+          tcp = 1,
+          utp = 2,
+          all = 3
+        };
+        Protocol(protocol p = all)
+          : _p{p}
+        {}
+        operator protocol() const { return _p; }
+
+        bool with_all() const { return _p == all; }
+        bool with_tcp() const { return _p == tcp || _p == all; }
+        bool with_utp() const { return _p == utp || _p == all; }
+
+      private:
+        protocol _p;
       };
 
       std::ostream&
