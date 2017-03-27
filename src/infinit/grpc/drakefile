@@ -132,11 +132,11 @@ def configure(
   doughnut_proto = drake.node('doughnut.proto')
   gendn = GRPCCxxGen(
     doughnut_proto,
-    protoc = drake.node(grpc.protoc),
+    protoc = grpc.protoc,
     plugin = drake.node(grpc.grpc_cpp_plugin))
   genfs = GRPCCxxGen(
     drake.node('fs.proto'),
-    protoc = drake.node(grpc.protoc),
+    protoc = grpc.protoc,
     plugin = drake.node(grpc.grpc_cpp_plugin))
   srcs = genfs.targets() + gendn.targets() + drake.nodes(
     'doughnut.cc',
@@ -156,7 +156,7 @@ def configure(
   git = git or drake.git.Git()
 
   grpcgen_py = GRPCPyGen(doughnut_proto,
-                         protoc = drake.node(grpc.protoc),
+                         protoc = grpc.protoc,
                          plugin = drake.node(grpc.grpc_python_plugin))
 
   docker_path = drake.Path('docker')

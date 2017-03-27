@@ -270,6 +270,10 @@ def configure(
   outguess_configure = drake.node('src/infinit/model/steg/outguess-0.2/configure')
   outguess_makefile = drake.node('src/infinit/model/steg/outguess-0.2/Makefile')
 
+
+  ## ------ ##
+  ## grpc.  ##
+  ## ------ ##
   grpc = drake.include('src/infinit/grpc', cxx_toolkit = cxx_toolkit, cxx_config = cxx_config)
   infinit_sources += grpc.sources
   cxx_config_infinit += grpc.grpc.cxx_config
@@ -989,7 +993,7 @@ def configure(
     dokan_lib_tests_consensus = drake.copy(dokan_lib, 'tests/consensus',
                                              strip_prefix = True)
   tests_proto = grpc.GRPCCxxGen(drake.node('tests/grpc.proto'),
-                                drake.node(grpc.grpc.protoc),
+                                grpc.grpc.protoc,
                                 drake.node(grpc.grpc.grpc_cpp_plugin))
   tests_names = [
     ('async-conflict', []),
