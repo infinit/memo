@@ -140,14 +140,17 @@ Note that one can configure a device to use a limited amount of local storage ca
 
 Another problem with most cloud storage providers is that the files are not encrypted, leaving the user with no choice but to trust the cloud storage provider. Infinit has been conceived with the assumption that no storage provider can be trusted. In addition to relying on fault-tolerant algorithms, Infinit makes use of strong encryption. Whenever a document is edited for instance, the file is cut into chunks, every chunk is encrypted and then distributed and replicated throughout the distributed hash table. Every key used for encrypting a block is unique and known to the file owner only (along with the users who have been granted access).
 
+<div>
 <br>
 <a href="#encryption-schema" class="open-popup">
   <img src="${url('images/schema-technology-dht-overlay.png')}" alt="Infinit Encryption Schema" title="Click to see larger image">
 </a>
 <br>
+</div>
 
 <div class="popup mfp-hide" id="encryption-schema">
   <img src="${url('images/schema-technology-dht-overlay.png')}" alt="Infinit Encryption Schema">
 </div>
+
 
 Finally, the file system layer also provides access control (without the use of a centralized server), versioning and other file-system-related features.

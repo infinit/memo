@@ -899,7 +899,8 @@ body.download {
       float: left; margin-left: 10px; background: #F8F8F8; padding: 30px 25px;
       width: ~"calc(100% - 190px)"; font-size: 16px; min-height: 120px;
 
-      img { margin-right: 4px;}
+      img { margin-right: 4px; height: 19px; width: auto; }
+
       p { margin-top: 0; }
       a { vertical-align: 4px; }
 
@@ -1305,7 +1306,9 @@ body.doc_get_started {
     h3#download-and-install-infinit-s-dependencies + p { margin-top: 5px; }
     h3#download-and-install-the-infinit-command-line-tools + p { margin-top: 18px; }
 
-    a.go_deployments, a.go_reference {
+    img#twodevices { width: 488px; height: 143px; }
+
+    a.go_deployments, a.go_reference, a.go_docker {
       float: left; display: block; background: darken(white, 5%); padding: 25px 3%;
       border-radius: 5px; text-align: center; .transition();
       font-family: @helvetica; font-size: 18px; font-weight: 300;
@@ -1316,7 +1319,7 @@ body.doc_get_started {
       &:hover { background: darken(white, 8%)}
     }
 
-    a.go_deployments { margin-left: 0;}
+    a.go_deployments, a.go_docker { margin-left: 0;}
     a.go_reference { margin-right: 0; }
 
     a.go_reference img { height: 32px; margin-bottom: 9px; margin-top: 4px;}
@@ -1331,6 +1334,97 @@ body.doc_get_started {
     //   float: left; width: 33%; text-align: center; margin-top: 20px; margin-bottom: 40px;
     //   &:hover { border-bottom: 0; }
     // }
+
+    .tabs-circle {
+      text-align: center; position: relative; overflow: visible; margin: 0 auto; width: 100%;
+      min-height: 80px; margin-top: 55px;
+      
+      nav {
+        margin-left: -10px;
+
+        ul {
+          position: relative; margin: 0 auto; padding: 0; list-style: none;
+          width: 100%;
+        }
+
+        li { 
+          position: relative; z-index: 1; display: block; margin: 0; text-align: center;
+          float: left; width: 18%; margin-right: 2%;
+        }
+
+        li::before {
+          position: absolute; top: 50%; left: 50%;
+          margin: -64px 0 0 -60px; width: 120px; height: 120px;
+          border: 1px solid @infinitblue; border-radius: 50%; content: ''; opacity: 0;
+          -webkit-transition: -webkit-transform 0.2s, opacity 0.2s;
+          transition: transform 0.2s, opacity 0.2s;
+          -webkit-transition-timing-function: cubic-bezier(0.7,0,0.3,1);
+          transition-timing-function: cubic-bezier(0.7,0,0.3,1);
+          .transition();
+        }
+
+        @media screen and (max-width: 58em) {
+          li::before {
+            margin: -40px 0 0 -40px; width: 80px; height: 80px;
+          }
+        }
+
+        li.active {
+          &::before {
+            opacity: 1; .transition();
+            -webkit-transform: scale3d(1,1,1); transform: scale3d(1,1,1);
+          }
+
+          img { filter: none; -webkit-filter: none; .transition(); }
+          a { color: @infinitblue; }
+        }
+
+        img { 
+          display: block; margin: 0 auto; max-height: 26px; width: auto; 
+          filter: gray; filter: grayscale(1);
+          -webkit-filter: grayscale(1); 
+          .transition();
+        }
+
+        a {
+          position: relative; display: block; font-family: @sf; font-size: 12px; text-transform: uppercase;
+          text-overflow: ellipsis; white-space: nowrap; overflow: visible; color: @infinitgray;
+          margin: 0; background-repeat: no-repeat;
+
+          -webkit-transition: color 0.3s cubic-bezier(0.7,0,0.3,1); 
+          transition: color 0.3s cubic-bezier(0.7,0,0.3,1);
+
+          span { display: inline-block; margin-top: 5px; }
+
+          &:after { opacity: 0; }
+          &:hover,
+          &:focus { color: @infinitblack; outline: none; }
+        }
+
+        li[data-platform=debian] {
+          &.active a { color: #DD4814; }
+          &::before { border-color: #DD4814; }
+        }
+        li[data-platform=centos] {
+          &.active a { color: #EFA63B; }
+          &::before { border-color: #EFA63B; }
+        }
+        li[data-platform=alpine] {
+          &.active a { color: #0D597F; }
+          &::before { border-color: #0D597F; }
+        }
+        li[data-platform=arm] {
+          &.active a { color: #BB2843; }
+          &::before { border-color: #BB2843 }
+        }
+        li[data-platform=mac], li[data-platform=windows] {
+          img { opacity: 0.6; }
+          &.active img { opacity: 1; }
+          &.active a { color: @infinitblack; }
+          &::before { border-color: @infinitblack }
+        }
+      }
+    }
   }
 }
 

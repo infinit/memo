@@ -232,6 +232,8 @@ def configure(
     'resources/images/schema-nfs-like@2x.png',
     'resources/images/schema-two-clients.png',
     'resources/images/schema-two-clients@2x.png',
+    'resources/images/schema-two-containers.png',
+    'resources/images/schema-two-containers@2x.png',
     'resources/images/infinit-sh.png',
     'resources/images/infinit-sh@2x.png',
     'resources/images/schema-chord.png',
@@ -289,6 +291,30 @@ def configure(
     'resources/images/bg/dots@2x.png',
     'resources/images/bg/grey@2x.gif',
 
+    'resources/scripts/get-started.sh',
+    'resources/scripts/deployments/centralized.sh',
+    'resources/scripts/deployments/distributed.sh',
+    'resources/scripts/deployments/decentralized.sh',
+
+    'resources/fonts/icons.eot',
+    'resources/fonts/icons.svg',
+    'resources/fonts/icons.ttf',
+    'resources/fonts/icons.woff',
+    'resources/fonts/icons.ttf',
+    'resources/fonts/sf-bold-webfont.woff',
+    'resources/fonts/sf-bold-webfont.woff2',
+
+    'resources/json/comparisons.json',
+    'resources/json/opensource.json',
+
+    'resources/css/normalize.css',
+    'resources/css/main.min.css',
+
+    'resources/js/instantsearch.min.js',
+    'resources/js/scripts.min.js',
+  )
+
+  resources_logos = drake.nodes(
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',
     'resources/images/logos/alvencapital.png',
@@ -409,32 +435,12 @@ def configure(
     'resources/images/logos/kubernetes-small@2x.png',
     'resources/images/logos/docker-small.png',
     'resources/images/logos/docker-small@2x.png',
+    'resources/images/logos/docker-vector.png',
+    'resources/images/logos/docker-vector@2x.png',
     'resources/images/logos/openstack-small.png',
     'resources/images/logos/openstack-small@2x.png',
     'resources/images/logos/gnu.png',
     'resources/images/logos/gnu@2x.png',
-
-    'resources/scripts/get-started.sh',
-    'resources/scripts/deployments/centralized.sh',
-    'resources/scripts/deployments/distributed.sh',
-    'resources/scripts/deployments/decentralized.sh',
-
-    'resources/fonts/icons.eot',
-    'resources/fonts/icons.svg',
-    'resources/fonts/icons.ttf',
-    'resources/fonts/icons.woff',
-    'resources/fonts/icons.ttf',
-    'resources/fonts/sf-bold-webfont.woff',
-    'resources/fonts/sf-bold-webfont.woff2',
-
-    'resources/json/comparisons.json',
-    'resources/json/opensource.json',
-
-    'resources/css/normalize.css',
-    'resources/css/main.min.css',
-
-    'resources/js/instantsearch.min.js',
-    'resources/js/scripts.min.js',
   )
 
   resources_icons = drake.nodes(
@@ -650,7 +656,7 @@ def configure(
     'resources/images/icons/block-size@2x.png',
   )
 
-  resources = resources + resources_icons
+  resources = resources + resources_icons + resources_logos
 
   if python is not None:
     python_version = python.version

@@ -205,10 +205,39 @@ $(document).ready(function() {
   | Get Started     |
   `----------------*/
 
+  function showInstallProcedure(platform) {
+
+    // Reset Debian tabs choice package/tarball 
+    if (platform !== 'debian') {
+      $('.tabs-pane').addClass('active');
+    } else {
+      $('.tabs-pane').removeClass('active');
+      $('.tabs-pane#linux-repository-install').addClass('active');
+    }
+
+    // Toggle platform instructions display throughout the guide
+    $('[data-platform]').not('[data-os]').hide();
+    $('[data-platform~="' + platform + '"]').not('[data-os]').show();
+  }
+
   if ($('body').hasClass('doc_get_started') ) {
     $('a.button').click(function() {
       ga('send', 'event', 'download', $(this).text(), navigator.userAgent);
     });
+
+    $('.tabs-circle a').click(function(e) {
+      $('.tabs-circle li').removeClass('active');
+      $(this).parent().addClass('active');
+
+      var platform = $(this).parent().attr('data-platform');
+
+      showInstallProcedure(platform);
+      e.preventDefault();
+    });
+
+    if (!$('#get_started').hasClass('windows')) {
+      showInstallProcedure($('.tabs-circle li.active').attr('data-platform'));
+    }
 
     var winHeight = $(window).height(),
         docHeight = $(document).height(),

@@ -1,11 +1,15 @@
-<p>First intall yum utilities:</p>
-<pre><code>$> sudo yum install yum-utils</code></pre>
+First intall yum utilities:
 
-<p>Then add the repository locally:</p>
-<pre><code>$> sudo yum-config-manager --add-repo https://yum.infinit.sh/infinit.repo
-</code></pre>
+```
+$> sudo yum install yum-utils
+```
 
-<p>Finally, just install Infinit:</p>
+Then add the repository locally:
 
-<pre><code>$> sudo yum install infinit
-</code></pre>
+<pre style="white-space: nowrap;"><code class="nohighlight">$> sudo yum-config-manager --add-repo https://yum.infinit.sh/infinit.repo</code></pre>
+
+Finally, just install Infinit:
+
+```
+$> sudo yum install infinit
+```
