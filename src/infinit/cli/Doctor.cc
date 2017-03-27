@@ -18,7 +18,6 @@
 #include <elle/log.hh>
 #include <elle/network/Interface.hh>
 #include <elle/os/environ.hh>
-#include <elle/string/algorithm.hh> // elle::join
 #include <elle/system/Process.hh>
 
 #include <elle/cryptography/random.hh>
