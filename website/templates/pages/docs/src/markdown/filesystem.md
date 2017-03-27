@@ -15,6 +15,6 @@ Creating the Infinit silo
 An Infinit silo can be created using any locally accessible filesystem folder indicated with the `--path` flag. Note that should the `--path` be omitted, the blocks of encrypted data would be stored at a defaut location within the $INFINIT_HOME/blocks/<storage name>. In addition, the capacity can be limited through the `--capacity` flag while omitting it will make the storage unlimited.
 
 ```
-$> infinit silo --create --filesystem --name filesystem-storage --path /path/to/folder --capacity 10GB
+$> infinit silo create --filesystem --name filesystem-storage --path /path/to/folder --capacity 10GB
 Created storage "filesystem-storage".
 ```
