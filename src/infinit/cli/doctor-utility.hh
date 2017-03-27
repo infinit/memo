@@ -413,23 +413,18 @@ namespace
         if (!this->linked)
           elle::fprintf(out.out, "is not linked [for user \"%s\"]", this->username);
         if (this->silos)
-          if (auto s = this->silos->size())
+          if (auto num = this->silos->size())
           {
-            out << " " << elle::join(
-              *silos,
-              "], [",
-              [] (auto const& t)
-              {
-                std::stringstream out;
-                out << "\"" << t.name() << "\"";
-                if (t.reason)
-                  out << " (" << *t.reason << ")";
-                return out.str();
-              });
-            if (s == 1)
-              out << " silo is faulty";
-            else
-              out << " silos are faulty";
+            char const* sep = "";
+            for (auto const& s: *silos)
+            {
+              out << sep;
+              sep = ", ";
+              out << " \"" << s.name() << '"';
+              if (s.reason)
+                out << " (" << *s.reason << ')';
+            }
+            out << (num == 1 ? " silo is faulty" : " silos are faulty");
           }
       }
 

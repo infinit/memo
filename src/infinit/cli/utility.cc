@@ -1,10 +1,11 @@
 #include <infinit/cli/utility.hh>
 
+#include <boost/algorithm/cxx11/any_of.hpp>
+#include <boost/algorithm/string/join.hpp>
 #include <boost/regex.hpp>
 
 #include <elle/log.hh>
 #include <elle/network/Interface.hh>
-#include <elle/string/algorithm.hh>
 #include <elle/system/unistd.hh> // chdir
 
 #include <elle/reactor/FDStream.hh>
@@ -366,12 +367,13 @@ namespace infinit
       is_version_supported(elle::Version const& version)
       {
         auto const& deps = infinit::serialization_tag::dependencies;
-        return std::find_if(deps.begin(), deps.end(),
-                            [version] (auto const& kv) -> bool
-                            {
-                              return kv.first.major() == version.major() &&
-                                kv.first.minor() == version.minor();
-                            }) != deps.end();
+        return boost::algorithm::any_of(
+          deps,
+          [version] (auto const& kv) -> bool
+          {
+            return kv.first.major() == version.major() &&
+              kv.first.minor() == version.minor();
+          });
       }
     }
 
@@ -380,39 +382,33 @@ namespace infinit
     {
       if (!is_version_supported(version))
       {
-        auto const& deps = infinit::serialization_tag::dependencies;
-        auto supported_versions = std::vector<elle::Version>(deps.size());
-        std::transform(
-          deps.begin(), deps.end(), supported_versions.begin(),
+        auto const supported_versions =
+          elle::make_set(infinit::serialization_tag::dependencies,
           [] (auto const& kv)
           {
             return elle::Version{kv.first.major(), kv.first.minor(), 0};
           });
-        std::sort(supported_versions.begin(), supported_versions.end());
-        supported_versions.erase(
-          std::unique(supported_versions.begin(), supported_versions.end()),
-          supported_versions.end());
         // Find the max value for the major.
-        auto versions_for_major = std::vector<elle::Version>{};
-        std::copy_if(supported_versions.begin(), supported_versions.end(),
-                     std::back_inserter(versions_for_major),
-                     [&] (elle::Version const& c)
-                     {
-                       return c.major() == version.major();
-                     });
+        auto const versions_for_major = make_vector_if
+          (supported_versions,
+           [&] (elle::Version const& c)
+           {
+             return c.major() == version.major();
+           });
         if (!versions_for_major.empty())
         {
           if (version < versions_for_major.front())
             elle::err("Minimum compatibility version for major version %s is %s",
-                      (int) version.major(), supported_versions.front());
+                      (int) version.major(), *supported_versions.begin());
           else if (version > versions_for_major.back())
             elle::err("Maximum compatibility version for major version %s is %s",
                       (int) version.major(), versions_for_major.back());
         }
+        auto const vers
+          = elle::make_vector(supported_versions,
+                              [](auto const& v) { return elle::sprintf("%s", v); });
         elle::err("Unknown compatibility version, try one of %s",
-                  elle::join(supported_versions.begin(),
-                             supported_versions.end(),
-                             ", "));
+                  boost::algorithm::join(vers, ", "));
       }
     }
 
