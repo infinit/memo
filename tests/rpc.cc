@@ -31,7 +31,7 @@ struct Server
     infinit::RPCServer s;
     if (this->rpcs)
       this->rpcs(s);
-    s.add("succ", std::function<int (int)>([] (int x) { return x + 1; }));
+    s.add("succ", [] (int x) { return x + 1; });
     elle::protocol::Serializer serializer(*socket, infinit::version(), false);
     auto channels = elle::protocol::ChanneledStream{serializer};
     this->channels = &channels;
@@ -57,9 +57,8 @@ ELLE_TEST_SCHEDULED(move)
     [] (infinit::RPCServer& s)
     {
       s.add("coin",
-            std::function<std::unique_ptr<int>(int, std::unique_ptr<int>)>(
-              [] (int a, std::unique_ptr<int> b)
-              { return std::make_unique<int>(a + *b); }));
+            [] (int a, std::unique_ptr<int> b)
+            { return std::make_unique<int>(a + *b); });
     });
   auto stream = s.connect();
   elle::protocol::Serializer serializer(stream, infinit::version(), false);
@@ -93,11 +92,7 @@ ELLE_TEST_SCHEDULED(simultaneous)
   Server s(
     [] (infinit::RPCServer& s)
     {
-      s.add("ping",
-        std::function<int(int)>(
-          [] (int a) {
-            return a+1;
-          }));
+      s.add("ping", [] (int a) {return a+1;});
     });
   auto stream = s.connect();
   elle::protocol::Serializer serializer(stream, infinit::version(), false);
@@ -125,24 +120,22 @@ ELLE_TEST_SCHEDULED(bidirectional)
     [] (infinit::RPCServer& s)
     {
       s.add("ping",
-        std::function<int(int)>(
-          [] (int a) {
-            for (int i=0; i<rand()%5; ++i)
-              elle::reactor::yield();
-            return a+1;
-          }));
+            [] (int a) {
+              for (int i=0; i<rand()%5; ++i)
+                elle::reactor::yield();
+              return a+1;
+            });
     });
   auto stream = s.connect();
   elle::protocol::Serializer serializer(stream, infinit::version(), false);
   auto channels = elle::protocol::ChanneledStream{serializer};
   infinit::RPCServer rev;
   rev.add("ping",
-        std::function<int(int)>(
           [] (int a) {
             for (int i=0; i<rand()%5; ++i)
               elle::reactor::yield();
             return a+2;
-          }));
+          });
   auto t = std::make_unique<elle::reactor::Thread>("rev serve", [&] {
       rev.serve(channels);
   });
