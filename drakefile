@@ -1057,7 +1057,7 @@ def configure(
     # |_|   |___/_/\_\_|  |_|_____|
     #
     # Really, really do run these tests on valgrind !!!
-    if valgrind_tests and test_name not in ['filesystem', 'kelips']:
+    if valgrind_tests and test_name not in ['filesystem']:
       runner = drake.valgrind.ValgrindRunner(
         exe = test,
         valgrind = elle.valgrind,
