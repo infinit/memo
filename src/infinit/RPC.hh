@@ -76,13 +76,13 @@ namespace infinit
 #ifdef __clang__
   // Clang fails on the other simpler list implementation by
   // matching List<Foo> to the default impl on some conditions.
-  template<int I, typename ... Args> struct ListImpl {};
+  template <int I, typename ... Args>
+  struct ListImpl {};
 
-  template<typename ... Args>
+  template <typename ... Args>
   struct List
    : public ListImpl<sizeof...(Args), Args...>
-  {
-  };
+  {};
 
   template <typename ... Args>
   struct ListImpl<0, Args...>
@@ -98,9 +98,7 @@ namespace infinit
     using Tail = List<Tail_...>;
     static constexpr bool empty = false;
   };
-
 #else
-
   template <typename ... Args>
   struct List
   {
@@ -110,26 +108,24 @@ namespace infinit
   template <typename Head_, typename ... Tail_>
   struct List<Head_, Tail_...>
   {
-    typedef Head_ Head;
-    typedef List<Tail_...> Tail;
+    using Head = Head_;
+    using Tail = List<Tail_...>;
     static constexpr bool empty = false;
   };
-
 #endif
 
   template <typename R, typename ... Args>
-  class
-  ConcreteRPCHandler
+  class ConcreteRPCHandler
     : public RPCHandler
   {
   public:
+    using Function = std::function<R (Args...)>;
     ConcreteRPCHandler(std::string name,
-                       std::function<R (Args...)> const& function)
+                       Function const& function)
       : RPCHandler(std::move(name))
       , _function(function)
     {}
-    ELLE_ATTRIBUTE_R(std::function<R (Args...)>, function);
-
+    ELLE_ATTRIBUTE_R(Function, function);
 
     void
     handle(elle::serialization::SerializerIn& input,
@@ -140,18 +136,18 @@ namespace infinit
 
   private:
     template <typename Remaining, typename ... Parsed>
-    typename std::enable_if<
+    std::enable_if_t<
       !Remaining::empty &&
       !std::is_base_of<
         elle::serialization::VirtuallySerializableBase,
         std::remove_reference_t<typename Remaining::Head>>::value,
-      void>::type
+      void>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
             Parsed&& ... parsed)
     {
-      using Head = std::remove_const_t<std::remove_reference_t<typename Remaining::Head>>;
+      using Head = std::remove_cv_reference_t<typename Remaining::Head>;
       ELLE_LOG_COMPONENT("infinit.RPC");
       auto arg = input.deserialize<Head>(elle::sprintf("arg%s", n));
       ELLE_DUMP("got argument: %s", arg);
@@ -161,18 +157,18 @@ namespace infinit
     }
 
     template <typename Remaining, typename ... Parsed>
-    typename std::enable_if<
+    std::enable_if_t<
       !Remaining::empty &&
       std::is_base_of<
         elle::serialization::VirtuallySerializableBase,
         std::remove_reference_t<typename Remaining::Head>>::value,
-      void>::type
+      void>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
             Parsed&& ... parsed)
     {
-      using Head = std::remove_const_t<std::remove_reference_t<typename Remaining::Head>>;
+      using Head = std::remove_cv_reference_t<typename Remaining::Head>;
       ELLE_LOG_COMPONENT("infinit.RPC");
       auto arg =
         input.deserialize<std::unique_ptr<Head>>(elle::sprintf("arg%s", n));
@@ -181,10 +177,11 @@ namespace infinit
                     Parsed..., typename Remaining::Head>(
         n + 1, input, output, std::forward<Parsed>(parsed)..., std::move(*arg));
     }
+
     template <typename Remaining, typename ... Parsed>
-    typename std::enable_if<
+    std::enable_if_t<
       Remaining::empty && std::is_same<R, void>::value,
-      void>::type
+      void>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
@@ -214,9 +211,9 @@ namespace infinit
     }
 
     template <typename Remaining, typename ... Parsed>
-    typename std::enable_if<
+    std::enable_if_t<
       Remaining::empty && !std::is_same<R, void>::value,
-      void>::type
+      void>
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
@@ -552,17 +549,17 @@ namespace infinit
   {
     template <typename Head, typename ... Tail>
     static
-    typename std::enable_if<
+    std::enable_if_t<
       std::is_base_of<
         elle::serialization::VirtuallySerializableBase,
         std::remove_cv_reference_t<Head>>::value,
-      void>::type
+      void>
     call_arguments(int n,
                    elle::serialization::SerializerOut& output,
                    Head&& head,
                    Tail&& ... tail)
     {
-      using RawHead = std::remove_const_t<std::remove_reference_t<Head>>;
+      using RawHead = std::remove_cv_reference_t<Head>;
       RawHead* ptr = const_cast<RawHead*>(&head);
       output.serialize(elle::sprintf("arg%s", n), ptr);
       call_arguments(n + 1, output, std::forward<Tail>(tail)...);
@@ -570,10 +567,10 @@ namespace infinit
 
     template <typename Head, typename ... Tail>
     static
-    typename std::enable_if<
+    std::enable_if_t<
       !std::is_base_of<elle::serialization::VirtuallySerializableBase,
                        std::remove_reference_t<Head>>::value,
-    void>::type
+    void>
     call_arguments(int n,
                    elle::serialization::SerializerOut& output,
                    Head&& head,
@@ -590,7 +587,7 @@ namespace infinit
 
     template <typename Res>
     static
-    typename std::enable_if<std::is_same<Res, void>::value, int>::type
+    std::enable_if_t<std::is_same<Res, void>::value, int>
     get_result(elle::serialization::SerializerIn&)
     {
       return 0;
@@ -598,14 +595,14 @@ namespace infinit
 
     template <typename Res>
     static
-    typename std::enable_if<!std::is_same<Res, void>::value, R>::type
+    std::enable_if_t<!std::is_same<Res, void>::value, R>
     get_result(elle::serialization::SerializerIn& input)
     {
       return input.deserialize<R>("value");
     }
 
     static
-    typename std::conditional<std::is_same<R, void>::value, int, R>::type
+    std::conditional_t<std::is_same<R, void>::value, int, R>
     _call(elle::Version const& version,
           RPC<R (Args...)>& self,
           Args const&... args)
