@@ -19,6 +19,9 @@ namespace infinit
     return output;
   }
 
-  static const elle::serialization::Hierarchy<elle::Exception>::
-  Register<UnknownRPC> _register_serialization;
+  namespace
+  {
+    auto const _register_serialization =
+      elle::serialization::Hierarchy<elle::Exception>::Register<UnknownRPC>{};
+  }
 }
