@@ -1050,62 +1050,48 @@ namespace infinit
           namespace ph = std::placeholders;
           rpcs.add(
             "propose",
-            std::function<
-            boost::optional<Paxos::PaxosClient::Accepted>(
-              PaxosServer::Quorum, Address,
-              Paxos::PaxosClient::Proposal const&)> (
                 [this, &rpcs](PaxosServer::Quorum q, Address a,
                               Paxos::PaxosClient::Proposal const& p)
                 {
                   this->_require_auth(rpcs, true);
                   return this->propose(std::move(q), a, p);
-                }));
+                });
           if (this->doughnut().version() < elle::Version(0, 5, 0))
             rpcs.add(
               "accept",
-              std::function<
-              Paxos::PaxosClient::Proposal(
-                PaxosServer::Quorum, Address,
-                Paxos::PaxosClient::Proposal const& p,
-		std::shared_ptr<blocks::Block> const& b)>
-              ([this, &rpcs] (PaxosServer::Quorum q, Address a,
-                              Paxos::PaxosClient::Proposal const& p,
-                              std::shared_ptr<blocks::Block> const& b)
+              [this, &rpcs] (PaxosServer::Quorum q, Address a,
+                             Paxos::PaxosClient::Proposal const& p,
+                             std::shared_ptr<blocks::Block> const& b)
                -> Paxos::PaxosClient::Proposal
               {
                 this->_require_auth(rpcs, true);
                 return this->accept(q, a, p, std::move(b));
-              }));
+              });
           else
             rpcs.add(
               "accept",
-              std::function<
-              Paxos::PaxosClient::Proposal(
-                PaxosServer::Quorum,
-                Address,
-                Paxos::PaxosClient::Proposal const& p,
-                Value const& value)>
-              ([this, &rpcs](PaxosServer::Quorum q,
-                             Address a,
-                             Paxos::PaxosClient::Proposal const& p,
-                             Value const& value)
+              [this, &rpcs](PaxosServer::Quorum q,
+                            Address a,
+                            Paxos::PaxosClient::Proposal const& p,
+                            Value const& value)
                {
                  this->_require_auth(rpcs, true);
                  return this->accept(std::move(q), a, p, value);
-               }));
+               });
           rpcs.add(
             "confirm",
-            std::function<
-            void(
-              PaxosServer::Quorum, Address,
-              Paxos::PaxosClient::Proposal const&)>
-            (std::bind(&LocalPeer::confirm, this, ph::_1, ph::_2, ph::_3)));
+            [this](PaxosServer::Quorum q, Address a,
+                   Paxos::PaxosClient::Proposal const& p)
+            {
+              return this->confirm(q, a, p);
+            });
           rpcs.add(
             "get",
-            std::function<
-            boost::optional<Paxos::PaxosClient::Accepted>(
-              PaxosServer::Quorum, Address, boost::optional<int>)>
-            (std::bind(&LocalPeer::get, this, ph::_1, ph::_2, ph::_3)));
+            [this](PaxosServer::Quorum q, Address a,
+                   boost::optional<int> v)
+            {
+              return this->get(q, a, v);
+            });
         }
 
         template <typename T>
