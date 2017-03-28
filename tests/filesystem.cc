@@ -1078,16 +1078,20 @@ ELLE_TEST_SCHEDULED(basic)
   auto servers = DHTs(3);
   auto client = servers.client();
   auto& fs = client.fs;
-  write_file(fs->path("/test"), "Test");
-  BOOST_CHECK_EQUAL(read_file(fs->path("/test"), 4096), "Test");
-  write_file(fs->path("/test"), "coin", O_WRONLY, 4);
-  BOOST_CHECK_EQUAL(read_file(fs->path("/test"), 4096), "Testcoin");
-  BOOST_CHECK_EQUAL(file_size(fs->path("/test")), 8);
-  fs->path("/test")->unlink();
+
+  ELLE_LOG("write, read")
+  {
+    write_file(fs->path("/test"), "Test");
+    BOOST_CHECK_EQUAL(read_file(fs->path("/test"), 4096), "Test");
+    write_file(fs->path("/test"), "coin", O_WRONLY, 4);
+    BOOST_CHECK_EQUAL(read_file(fs->path("/test"), 4096), "Testcoin");
+    BOOST_CHECK_EQUAL(file_size(fs->path("/test")), 8);
+    fs->path("/test")->unlink();
+  }
 
   BOOST_CHECK_THROW(read_file(fs->path("/foo")), rfs::Error);
 
-  ELLE_LOG("truncate");
+  ELLE_LOG("truncate")
   {
     auto h = fs->path("/tt")->create(O_RDWR|O_TRUNC|O_CREAT, 0666);
     char buffer[16384];
@@ -1105,8 +1109,9 @@ ELLE_TEST_SCHEDULED(basic)
     BOOST_CHECK_EQUAL(file_size(fs->path("/tt")), 32413);
     fs->path("/tt")->unlink();
   }
+
+  ELLE_LOG("hard-link")
   {
-    ELLE_LOG("hard-link");
     write_file(fs->path("/test"), "Test");
     fs->path("/test")->link("/test2");
     write_file(fs->path("/test2"), "coinB", O_WRONLY, 4);
@@ -1136,8 +1141,8 @@ ELLE_TEST_SCHEDULED(basic)
     fs->path("/test2")->unlink();
   }
 
+  ELLE_LOG("Holes")
   {
-    ELLE_LOG("Holes");
     auto h = fs->path("/test")->create(O_RDWR|O_CREAT, 0644);
     h->write(elle::ConstWeakBuffer("foo", 3), 3, 0);
     h->write(elle::ConstWeakBuffer("foo", 3), 3, 13);
@@ -1148,8 +1153,9 @@ ELLE_TEST_SCHEDULED(basic)
     BOOST_CHECK_EQUAL(std::string(expect, expect+16), content);
     fs->path("/test")->unlink();
   }
+
+  ELLE_LOG("use after unlink")
   {
-    ELLE_LOG("use after unlink");
     auto h = fs->path("/test")->create(O_RDWR|O_CREAT, 0644);
     h->write(elle::ConstWeakBuffer("foo", 3), 3, 0);
     fs->path("/test")->unlink();
@@ -1161,8 +1167,9 @@ ELLE_TEST_SCHEDULED(basic)
     h->close();
     BOOST_CHECK_EQUAL(directory_count(fs->path("/")), 2);
   }
+
+  ELLE_LOG("rename")
   {
-    ELLE_LOG("rename");
     write_file(fs->path("/test"), "Test");
     fs->path("/test")->rename("/test2");
     write_file(fs->path("/test3"), "foo");
@@ -1179,8 +1186,9 @@ ELLE_TEST_SCHEDULED(basic)
     fs->path("/foo")->unlink();
     fs->path("/test3")->unlink();
   }
+
+  ELLE_LOG("cross-block")
   {
-    ELLE_LOG("cross-block");
     auto h = fs->path("/babar")->create(O_RDWR|O_CREAT, 0644);
     const char* data = "abcdefghijklmnopqrstuvwxyz";
     auto res = h->write(elle::ConstWeakBuffer(data, strlen(data)), strlen(data),
@@ -1199,8 +1207,9 @@ ELLE_TEST_SCHEDULED(basic)
     h->close();
     fs->path("/babar")->unlink();
   }
+
+  ELLE_LOG("cross-block 2")
   {
-    ELLE_LOG("cross-block 2");
     auto h = fs->path("/babar")->create(O_RDWR|O_CREAT, 0644);
     const char* data = "abcdefghijklmnopqrstuvwxyz";
     auto res = h->write(elle::ConstWeakBuffer(data, strlen(data)), strlen(data),
@@ -1219,13 +1228,15 @@ ELLE_TEST_SCHEDULED(basic)
     h->close();
     fs->path("/babar")->unlink();
   }
+
+  ELLE_LOG("link/unlink")
   {
-    ELLE_LOG("link/unlink");
     fs->path("/u")->create(O_RDWR|O_CREAT, 0644);
     fs->path("/u")->unlink();
   }
+
+  ELLE_LOG("multiple opens")
   {
-    ELLE_LOG("multiple opens");
     {
       write_file(fs->path("/test"), "Test");
       fs->path("/test")->open(O_RDWR, 0644);
@@ -1245,8 +1256,9 @@ ELLE_TEST_SCHEDULED(basic)
     BOOST_CHECK_EQUAL(read_file(fs->path("/test")), "TestTest");
     fs->path("/test")->unlink();
   }
+
+  ELLE_LOG("randomizing a file")
   {
-    ELLE_LOG("randomizing a file");
     std::default_random_engine gen;
     std::uniform_int_distribution<>dist(0, 255);
     auto const random_size = 10000;
@@ -1274,8 +1286,9 @@ ELLE_TEST_SCHEDULED(basic)
     }
     BOOST_CHECK_EQUAL(file_size(fs->path("/tbig")), random_size);
   }
+
+  ELLE_LOG("truncate")
   {
-    ELLE_LOG("truncate");
     auto p = fs->path("/tbig");
     p->truncate(9000000);
     read_all(p);
@@ -1289,8 +1302,9 @@ ELLE_TEST_SCHEDULED(basic)
     read_all(p);
     p->unlink();
   }
+
+  ELLE_LOG("extended attributes")
   {
-    ELLE_LOG("extended attributes");
     fs->path("/")->setxattr("testattr", "foo", 0);
     write_file(fs->path("/file"), "test");
     fs->path("/file")->setxattr("testattr", "foo", 0);
@@ -1304,8 +1318,9 @@ ELLE_TEST_SCHEDULED(basic)
     BOOST_CHECK_THROW(fs->path("/file")->getxattr("nope"), rfs::Error);
     fs->path("/file")->unlink();
   }
+
+  ELLE_LOG("simultaneus read/write")
   {
-    ELLE_LOG("simultaneus read/write");
     auto h = fs->path("/test")->create(O_RDWR|O_CREAT, 0644);
     char buf[1024];
     for (int i=0; i< 22 * 1024; ++i)
@@ -1317,8 +1332,9 @@ ELLE_TEST_SCHEDULED(basic)
     h->close();
     fs->path("/test")->unlink();
   }
+
+  ELLE_LOG("symlink")
   {
-    ELLE_LOG("symlink");
     write_file(fs->path("/real_file"), "something");
     fs->path("/symlink")->symlink("/real_file");
     // Fuse handles symlinks for us
@@ -1326,8 +1342,9 @@ ELLE_TEST_SCHEDULED(basic)
     fs->path("/symlink")->unlink();
     fs->path("/real_file")->unlink();
   }
+
+  ELLE_LOG("utf-8")
   {
-    ELLE_LOG("utf-8");
     const char* name = "/éùßñЂ";
     write_file(fs->path(name), "foo");
     BOOST_CHECK_EQUAL(read_file(fs->path(name)), "foo");
