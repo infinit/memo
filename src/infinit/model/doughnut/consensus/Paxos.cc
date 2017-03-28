@@ -1094,13 +1094,6 @@ namespace infinit
             });
         }
 
-        template <typename T>
-        T&
-        unconst(T const& v)
-        {
-          return const_cast<T&>(v);
-        }
-
         std::unique_ptr<blocks::Block>
         Paxos::LocalPeer::_fetch(Address address,
                                  boost::optional<int> local_version) const
@@ -1179,7 +1172,7 @@ namespace infinit
               auto chosen = client.choose(version, block);
               // FIXME: factor with the end of doughnut::Local::store
               ELLE_DEBUG("%s: store chosen block", *this)
-              unconst(decision->second).chosen = version;
+              elle::unconst(decision->second).chosen = version;
               {
                 BlockOrPaxos data(const_cast<Decision*>(&decision->second));
                 this->storage()->set(
