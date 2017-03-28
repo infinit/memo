@@ -195,20 +195,15 @@ def configure(
   def install_nodes(where, how, python_version = python.version):
     prefix = python_prefix(python_version)
     where = drake.Path(where)
-    for node in how(sources,
-                    where / prefix / 'infinit/beyond',
-                    strip_prefix = 'src'):
-      yield node
-    for node in how(couchdb_sources,
-                    where / prefix,
-                    strip_prefix = 'couchdb-python'):
-      yield node
-    for node in how(sendwithus.nodes,
-                    where / prefix,
-                    strip_prefix = '../%s' % sendwithus.root):
-      yield node
-    yield how(bottle,
-              where / prefix, strip_prefix = True)
+    yield from how(sources, where / prefix / 'infinit/beyond',
+                   strip_prefix = 'src')
+    yield from how(couchdb_sources,
+                   where / prefix,
+                   strip_prefix = 'couchdb-python')
+    yield from how(sendwithus.nodes,
+                     where / prefix,
+                     strip_prefix = '../%s' % sendwithus.root)
+    yield how(bottle, where / prefix, strip_prefix = True)
     yield how(drake.node('bin/beyond'), where)
     if cryptography_python_module:
       yield how(cryptography_python_module,
@@ -412,25 +407,26 @@ def configure(
     labels = {
       'version': git.description(),
     })
-  docker_file.add(
-    install_nodes(docker_path, how = drake.copy,
-                  python_version = drake.Version(3, 5)), '/usr')
-  docker_file.add(
-    drake.copy(binaries, docker_path / 'bin',
-               strip_prefix = True), '/usr')
+  docker_file.add(install_nodes(docker_path, how = drake.copy,
+                                 python_version = drake.Version(3, 5)), '/usr/')
+  binaries = drake.copy(binaries, docker_path / 'bin/couille',
+                        strip_prefix = 'bin',
+                        follow_symlinks = False)
+  docker_file.add(binaries, '/usr/')
   docker_service_templates = drake.copy(drake.nodes(
     'docker/couchdb.ini.tmpl',
     'docker/uwsgi.json.tmpl',
   ), docker_path / 'scripts' / 'templates', strip_prefix = True)
-  docker_file.add(docker_service_templates, '')
+  docker_file.add(docker_service_templates, '/')
   docker_script_utils = drake.copy(drake.nodes(
     'docker/nginx_conf.py',
     'docker/tools.py',
   ), docker_path / 'scripts' / 'utils', strip_prefix = True)
-  docker_file.add(docker_script_utils, '')
+  docker_file.add(docker_script_utils, '/')
   docker_file.add(
-    drake.copy(drake.node('docker/entry.py'), docker_path / 'scripts',
-               strip_prefix = True), '')
+    drake.copy(drake.node('docker/entry.py'),
+               docker_path / 'scripts',
+               strip_prefix = True), '/')
   docker_file.run('apt-get update')
   for dep in docker_dependencies:
     docker_file.run('apt-get install -y %s' % dep)
