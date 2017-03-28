@@ -17,6 +17,15 @@ namespace infinit
 {
   namespace filesystem
   {
+    namespace
+    {
+      std::chrono::high_resolution_clock::time_point
+      now()
+      {
+        return std::chrono::high_resolution_clock::now();
+      }
+    }
+
     const uint64_t FileBuffer::default_first_block_size =
       std::stoi(elle::os::getenv("INFINIT_FIRST_BLOCK_DATA_SIZE", "0"));;
     static const int max_embed_size =
@@ -25,13 +34,6 @@ namespace infinit
       std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_BLOCKS", "5"));
     static const int max_lookahead_threads =
       std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_THREADS", "3"));
-
-    static
-    std::chrono::high_resolution_clock::time_point
-    now()
-    {
-      return std::chrono::high_resolution_clock::now();
-    }
 
     FileHandle::FileHandle(FileSystem& owner,
                            FileData data,
@@ -82,7 +84,8 @@ namespace infinit
       }
       catch (elle::Error const& e)
       {
-       ELLE_ERR("fatal error: exception escaping ~FileHandle: %s\n%s", elle::exception_string(), e.backtrace());
+       ELLE_ERR("fatal error: exception escaping ~FileHandle: %s\n%s",
+                elle::exception_string(), e.backtrace());
        throw;
       }
     }
@@ -650,11 +653,7 @@ namespace infinit
     {
       if (!entry.dirty)
         return {};
-
-
-      elle::Buffer data(*entry.block);
-
-      return [this, id, data_ = std::move(data)] () mutable
+      return [this, id, data_ = elle::Buffer(*entry.block)] () mutable
       {
         boost::optional<CacheEntry*> ent;
         auto it = this->_blocks.find(id);
@@ -670,20 +669,20 @@ namespace infinit
             if (ent)
               (*ent)->ready.open();
         });
-        auto key = elle::cryptography::random::generate<elle::Buffer>(32).string();
-        elle::Buffer cdata;
+        auto const key
+          = elle::cryptography::random::generate<elle::Buffer>(32).string();
         std::unique_ptr<ImmutableBlock> block;
         if (data_.size() >= 262144)
         {
           elle::reactor::background([&] {
-            cdata = elle::cryptography::SecretKey(key).encipher(data_);
+            auto cdata = elle::cryptography::SecretKey(key).encipher(data_);
             block = this->_fs.block_store()->make_block<ImmutableBlock>(
               std::move(cdata), this->_file._address);
           });
         }
         else
         {
-          cdata = elle::cryptography::SecretKey(key).encipher(data_);
+          auto cdata = elle::cryptography::SecretKey(key).encipher(data_);
           block = this->_fs.block_store()->make_block<ImmutableBlock>(
             std::move(cdata), this->_file._address);
         }
@@ -709,7 +708,7 @@ namespace infinit
     {
       if (cache_size < 0)
         cache_size = max_cache_size;
-      typedef std::pair<const int, CacheEntry> Elem;
+      using Elem = std::pair<const int, CacheEntry>;
       if (cache_size == 0)
       {
         // Final flush, wait on all async ops concerning src
