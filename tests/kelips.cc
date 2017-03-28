@@ -131,7 +131,8 @@ using Nodes = std::vector<
 
 static
 Nodes
-run_nodes(bfs::path where,  elle::cryptography::rsa::KeyPair& kp,
+run_nodes(bfs::path where,
+	  elle::cryptography::rsa::KeyPair const& kp,
           int count = 10, int groups = 1, int replication_factor = 3,
           bool paxos_lenient = false,
           int beyond_port = 0, int base_id=0)
@@ -206,7 +207,7 @@ run_nodes(bfs::path where,  elle::cryptography::rsa::KeyPair& kp,
 static std::pair<std::unique_ptr<rfs::FileSystem>, elle::reactor::Thread::unique_ptr>
 make_observer(std::shared_ptr<imd::Doughnut>& root_node,
               bfs::path where,
-              elle::cryptography::rsa::KeyPair& kp,
+              elle::cryptography::rsa::KeyPair const& kp,
               int groups,
               int replication_factor,
               bool cache, bool async,
@@ -684,49 +685,52 @@ ELLE_TEST_SCHEDULED(conflicts)
 ELLE_TEST_SCHEDULED(times)
 {
   elle::filesystem::TemporaryDirectory d;
-  auto tmp = d.path();
+  auto const tmp = d.path();
   elle::os::setenv("INFINIT_HOME", tmp.string(), true);
-  auto kp = elle::cryptography::rsa::keypair::generate(512);
+  auto const kp = elle::cryptography::rsa::keypair::generate(512);
   auto nodes = run_nodes(tmp, kp, 1);
-  auto fsp = make_observer(nodes.front().first, tmp, kp, 1, 1, false, false, false);
+  auto fsp
+    = make_observer(nodes.front().first, tmp, kp, 1, 1, false, false, false);
   auto& fs = fsp.first;
   struct stat st;
-  // we only have second resolution, so test in batches to avoid too much sleeping
+  // We only have second resolution, so test in batches to avoid too
+  // much sleeping.
+  auto const delta = valgrind(1, 5);
   fs->path("/dir")->mkdir(0600);
   fs->path("/dir2")->mkdir(0600);
   writefile(*fs, "dir/file", "foo");
   writefile(*fs, "dir2/file", "foo");
   fs->path("/dir")->stat(&st);
   auto now = time(nullptr);
-  BOOST_CHECK(now - st.st_mtime <= 1);
-  BOOST_CHECK(now - st.st_ctime <= 1);
+  BOOST_TEST(now - st.st_mtime <= delta);
+  BOOST_TEST(now - st.st_ctime <= delta);
   fs->path("/dir/file")->stat(&st);
-  BOOST_CHECK(now - st.st_mtime <= 1);
-  BOOST_CHECK(now - st.st_ctime <= 1);
+  BOOST_TEST(now - st.st_mtime <= delta);
+  BOOST_TEST(now - st.st_ctime <= delta);
 
   elle::reactor::sleep(2100_ms);
   now = time(nullptr);
   appendfile(*fs, "dir/file", "foo"); //mtime changed, ctime unchanged, dir unchanged
   fs->path("/dir/file")->stat(&st);
-  BOOST_CHECK(now - st.st_mtime <= 1);
-  BOOST_CHECK(now - st.st_ctime >= 2);
+  BOOST_TEST(now - st.st_mtime <= delta);
+  BOOST_TEST(now - st.st_ctime >= 2);
   fs->path("/dir")->stat(&st);
-  BOOST_CHECK(now - st.st_mtime >= 2);
-  BOOST_CHECK(now - st.st_ctime >= 2);
+  BOOST_TEST(now - st.st_mtime >= 2);
+  BOOST_TEST(now - st.st_ctime >= 2);
 
   elle::reactor::sleep(2100_ms);
   now = time(nullptr);
   writefile(*fs, "dir/file2", "foo");
   fs->path("/dir2/dir")->mkdir(0600);
   fs->path("/dir/file")->stat(&st);
-  BOOST_CHECK(now - st.st_mtime >= 2);
-  BOOST_CHECK(now - st.st_ctime >= 2);
+  BOOST_TEST(now - st.st_mtime >= 2);
+  BOOST_TEST(now - st.st_ctime >= 2);
   fs->path("/dir")->stat(&st); // new file created: mtime change
-  BOOST_CHECK(now - st.st_mtime <= 1);
-  BOOST_CHECK(now - st.st_ctime >= 2);
+  BOOST_TEST(now - st.st_mtime <= delta);
+  BOOST_TEST(now - st.st_ctime >= 2);
   fs->path("/dir2")->stat(&st); // new dir created: mtime change
-  BOOST_CHECK(now - st.st_mtime <= 1);
-  BOOST_CHECK(now - st.st_ctime >= 2);
+  BOOST_TEST(now - st.st_mtime <= delta);
+  BOOST_TEST(now - st.st_ctime >= 2);
 }
 
 #define CHECKED(exp) \
@@ -754,7 +758,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
         items.push_back(n);
       });
     ELLE_LOG("%x: %s", n.get(), items);
-    BOOST_CHECK(items.size() == fss.size()+2);
+    BOOST_TEST(items.size() == fss.size()+2);
   }
   for (auto const& n: fss)
     for (auto const& t: fss)
@@ -762,7 +766,7 @@ ELLE_TEST_SCHEDULED(clients_parallel)
       auto p = std::to_string((uint64_t)t.get());
       struct stat st;
       n->path("/" + p +"/0")->stat(&st);
-      BOOST_CHECK(S_ISDIR(st.st_mode));
+      BOOST_TEST(S_ISDIR(st.st_mode));
     }
 }
 
@@ -791,7 +795,7 @@ ELLE_TEST_SCHEDULED(many_conflicts)
       {
         ++count;
       });
-    BOOST_CHECK(count == iter_count * node_count + 2);
+    BOOST_TEST(count == iter_count * node_count + 2);
   }
 }
 
