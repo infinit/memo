@@ -11,6 +11,10 @@
 namespace dht = infinit::model::doughnut;
 namespace blocks = infinit::model::blocks;
 
+/*----------.
+| Overlay.  |
+`----------*/
+
 class Overlay
   : public infinit::overlay::Overlay
 {
@@ -148,7 +152,7 @@ protected:
   {
     if (_yield)
       elle::reactor::yield();
-    ELLE_LOG_COMPONENT("Overlay");
+    ELLE_LOG_COMPONENT("tests.Overlay");
     ELLE_TRACE_SCOPE("%s: lookup %s%s owners for %f",
                      this, n, write ? " new" : "", address);
     return elle::reactor::generator<Overlay::WeakMember>(
@@ -230,6 +234,11 @@ add_cache(bool enable, std::unique_ptr<dht::consensus::Consensus> c)
   else
     return c;
 }
+
+
+/*------.
+| DHT.  |
+`------*/
 
 class DHT
 {
@@ -413,16 +422,17 @@ private:
   }
 };
 
-class NoCheatConsensus: public infinit::model::doughnut::consensus::Consensus
+class NoCheatConsensus
+  : public infinit::model::doughnut::consensus::Consensus
 {
 public:
-  typedef infinit::model::doughnut::consensus::Consensus Super;
+  using Super = infinit::model::doughnut::consensus::Consensus;
   NoCheatConsensus(std::unique_ptr<Super> backend)
-  : Super(backend->doughnut())
-  , _backend(std::move(backend))
+    : Super(backend->doughnut())
+    , _backend(std::move(backend))
   {}
+
 protected:
-  virtual
   std::unique_ptr<infinit::model::doughnut::Local>
   make_local(boost::optional<int> port,
              boost::optional<boost::asio::ip::address> listen,
@@ -432,7 +442,6 @@ protected:
     return _backend->make_local(port, listen, std::move(storage), p);
   }
 
-  virtual
   std::unique_ptr<infinit::model::blocks::Block>
   _fetch(infinit::model::Address address, boost::optional<int> local_version) override
   {
@@ -451,7 +460,7 @@ protected:
       is, true, ctx);
     return res;
   }
-  virtual
+
   void
   _store(std::unique_ptr<infinit::model::blocks::Block> block,
     infinit::model::StoreMode mode,
@@ -459,7 +468,7 @@ protected:
   {
     this->_backend->store(std::move(block), mode, std::move(resolver));
   }
-  virtual
+
   void
   _remove(infinit::model::Address address, infinit::model::blocks::RemoveSignature rs) override
   {
@@ -479,6 +488,7 @@ protected:
     }
     _backend->remove(address, rs);
   }
+
   std::unique_ptr<Super> _backend;
 };
 
