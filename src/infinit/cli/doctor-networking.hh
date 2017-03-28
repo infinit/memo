@@ -25,7 +25,6 @@ namespace infinit
           , _version(version)
         {
           this->add("match_versions",
-                    std::function<elle::Version (elle::Version)>(
                     [this, version] (elle::Version const& client_version)
                     {
                       ELLE_TRACE("version (%s) asked by client (%s)",
@@ -36,25 +35,23 @@ namespace infinit
                         this->_version = client_version;
                       }
                       return version;
-                    }));
+                    });
 
           this->add("download",
-                    std::function<elle::Buffer::Size (elle::Buffer const&)>(
                     [this] (elle::Buffer const& body)
                     {
                       ELLE_TRACE("%s uploaded to server (version: %s)",
                                  body.size(), this->_version);
                       return body.size();
-                    }));
+                    });
 
           this->add("upload",
-                    std::function<elle::Buffer (elle::Buffer::Size)>(
                     [this] (elle::Buffer::Size size)
                     {
                       ELLE_TRACE("download %s from server (version: %s)",
                                  size, this->_version);
                       return elle::Buffer(size);
-                    }));
+                    });
         }
 
         ELLE_ATTRIBUTE_R(elle::Version, version);
