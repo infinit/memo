@@ -1,8 +1,7 @@
-#ifndef INFINIT_FILESYSTEM_FILEHANDLE_HH
-# define INFINIT_FILESYSTEM_FILEHANDLE_HH
+#pragma once
 
-# include <infinit/filesystem/umbrella.hh>
-# include <infinit/filesystem/File.hh>
+#include <infinit/filesystem/umbrella.hh>
+#include <infinit/filesystem/File.hh>
 
 namespace infinit
 {
@@ -18,25 +17,18 @@ namespace infinit
                  FileData data,
                  bool mark_dirty = false);
       ~FileHandle();
-      virtual
       int
       read(elle::WeakBuffer buffer, size_t size, off_t offset) override;
-      virtual
       int
       write(elle::ConstWeakBuffer buffer, size_t size, off_t offset) override;
-      virtual
       void
       ftruncate(off_t offset) override;
-      virtual
       void
       fsync(int datasync) override;
-      virtual
       void
       fsyncdir(int datasync) override;
-      virtual
       void
       close() override;
-      virtual
       void
       print(std::ostream& stream) const override;
     private:
@@ -86,11 +78,9 @@ namespace infinit
       std::shared_ptr<elle::Buffer> _block_at(int index, bool create);
       FileSystem& _fs;
       FileData _file;
-      typedef
-      std::pair<
+      using Flusher = std::pair<
         elle::reactor::Thread::unique_ptr,
-        std::unordered_set<FileHandle*>>
-      Flusher;
+        std::unordered_set<FileHandle*>>;
       std::vector<Flusher> _flushers;
       std::unordered_map<int, CacheEntry> _blocks;
       bool _first_block_new;
@@ -99,11 +89,9 @@ namespace infinit
       int _last_read_block; // block hit by last read operation
       bool _remove_data; // there are no more links, remove data.
       static const uint64_t default_first_block_size;
-      static const unsigned long max_cache_size = 20; // in blocks    };
+      static const unsigned long max_cache_size = 20; // in blocks
       friend class File;
       friend class FileHandle;
     };
   }
 }
-
-#endif
