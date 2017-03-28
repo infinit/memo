@@ -934,64 +934,62 @@ namespace infinit
             {
               rpcs.add(
                 "kelips_fetch_state",
-                std::function<SerState ()>(
-                  [this] ()
-                  {
-                    SerState res;
-                    res.first.emplace(_self, to_endpoints(_local_endpoints));
-                    for (auto const& contacts: this->_state.contacts)
-                      for (auto const& c: contacts)
-                        res.first.emplace(c.second.address,
-                                          to_endpoints(c.second.endpoints));
-                    for (auto const& f: this->_state.files)
-                      res.second.emplace_back(f.second.address, f.second.home_node);
-                    // OH THE UGLY HACK, we need a place to store our own address
-                    res.second.push_back(std::make_pair(Address::null, _self));
-                    return res;
-                  }));
+                [this] ()
+                {
+                  SerState res;
+                  res.first.emplace(_self, to_endpoints(_local_endpoints));
+                  for (auto const& contacts: this->_state.contacts)
+                    for (auto const& c: contacts)
+                      res.first.emplace(c.second.address,
+                                        to_endpoints(c.second.endpoints));
+                  for (auto const& f: this->_state.files)
+                    res.second.emplace_back(f.second.address, f.second.home_node);
+                  // OH THE UGLY HACK, we need a place to store our own address
+                  res.second.push_back(std::make_pair(Address::null, _self));
+                  return res;
+                });
               rpcs.add(
                 "kelips_fetch_state2",
-                std::function<SerState2 ()>(
-                  [this] ()
-                  {
-                    SerState2 res;
-                    std::unordered_map<Address, int> index;
-                    res.first.emplace_back(this->_self, to_endpoints(_local_endpoints));
-                    index[_self] = 0;
-                    for (auto const& contacts: this->_state.contacts)
-                      for (auto const& c: contacts)
-                      {
-                        index[c.second.address] = res.first.size();
-                        res.first.emplace_back(c.second.address,
-                                               to_endpoints(c.second.endpoints));
-                      }
-                    std::multimap<Address, Address> ofiles; // ordered fileId -> owner
-                    for (auto const& f: this->_state.files)
-                      ofiles.emplace(f.second.address, f.second.home_node);
-                    Address prev = Address::null;
-                    for (auto const& f: ofiles)
+                [this] ()
+                {
+                  SerState2 res;
+                  std::unordered_map<Address, int> index;
+                  res.first.emplace_back(this->_self, to_endpoints(_local_endpoints));
+                  index[_self] = 0;
+                  for (auto const& contacts: this->_state.contacts)
+                    for (auto const& c: contacts)
                     {
-                      auto faddr = f.first;
-                      auto fhome = f.second;
-                      int p = 0;
-                      while (p<32 && faddr.value()[p] == prev.value()[p])
-                        ++p;
-                      std::string daddr(faddr.value()+p, faddr.value()+32);
-                      int idx = 0;
-                      auto it = index.find(fhome);
-                      if (it == index.end())
-                      {
-                        res.first.emplace_back(fhome, Endpoints());
-                        index[fhome] = res.first.size()-1;
-                        idx = res.first.size()-1;
-                      }
-                      else
-                        idx = it->second;
-                      res.second.push_back(std::make_pair(daddr, idx));
-                      prev = faddr;
+                      index[c.second.address] = res.first.size();
+                      res.first.emplace_back(c.second.address,
+                                             to_endpoints(c.second.endpoints));
                     }
-                    return res;
-                  }));
+                  std::multimap<Address, Address> ofiles; // ordered fileId -> owner
+                  for (auto const& f: this->_state.files)
+                    ofiles.emplace(f.second.address, f.second.home_node);
+                  Address prev = Address::null;
+                  for (auto const& f: ofiles)
+                  {
+                    auto faddr = f.first;
+                    auto fhome = f.second;
+                    int p = 0;
+                    while (p<32 && faddr.value()[p] == prev.value()[p])
+                      ++p;
+                    std::string daddr(faddr.value()+p, faddr.value()+32);
+                    int idx = 0;
+                    auto it = index.find(fhome);
+                    if (it == index.end())
+                    {
+                      res.first.emplace_back(fhome, Endpoints());
+                      index[fhome] = res.first.size()-1;
+                      idx = res.first.size()-1;
+                    }
+                    else
+                      idx = it->second;
+                    res.second.push_back(std::make_pair(daddr, idx));
+                    prev = faddr;
+                  }
+                  return res;
+                });
             });
           this->_port = l->server_endpoint().port();
           {
