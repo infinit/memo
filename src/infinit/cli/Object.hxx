@@ -154,18 +154,14 @@ namespace infinit
         as = infinit.default_user_name());
       auto show_help = [&] (std::ostream& s)
         {
-          auto action = infinit.command_line().at(1);
-          auto vars = VarMap{
-            {"action", elle::sprintf("to %s", action)},
+          auto const verb = infinit.command_line().at(1);
+          auto const vars = VarMap{
+            {"action", elle::sprintf("to %s", verb)},
             {"hub", beyond(true)},
             {"object", infinit.command_line().at(0)},
-            {"verb", action},
+            {"verb", verb},
           };
-          Infinit::usage(
-            s, elle::sprintf(
-              "%s %s [OPTIONS]",
-              elle::das::cli::option_name_from_c(Symbol::name()),
-              elle::das::cli::option_name_from_c(Symbol::name())));
+          Infinit::usage(s, vars.expand("{object} {verb} [OPTIONS]"));
           s << vars.expand(this->description) << "\n\nOptions:\n";
           {
             std::stringstream buffer;

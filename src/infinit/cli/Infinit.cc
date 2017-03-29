@@ -352,11 +352,13 @@ namespace infinit
     void
     Infinit::usage(std::ostream& s, std::string const& usage)
     {
-      s << "Usage: " << argv_0 << " " << usage << std::endl;
+      s << "Usage: " << argv_0 << ' ' << usage << std::endl;
     }
 
+    /// An input file, and its clean-up function.
     using Input =
       std::unique_ptr<std::istream, std::function<void (std::istream*)>>;
+
     Input
     Infinit::get_input(boost::optional<std::string> const& path)
     {
