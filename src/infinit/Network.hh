@@ -72,6 +72,7 @@ namespace infinit
                             infinit::User const& self,
                             infinit::model::doughnut::Doughnut& model);
 
+    /// @param interval in seconds.
     elle::reactor::Thread::unique_ptr
     make_poll_beyond_thread(infinit::model::doughnut::Doughnut& model,
                             infinit::overlay::NodeLocations const& locs,

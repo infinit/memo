@@ -716,7 +716,7 @@ namespace infinit
 
       auto storage = make_storage_config(ifnt, storage_names);
       auto desc = ifnt.network_descriptor_get(network_name, owner);
-      auto passport = [&] () -> infinit::Infinit::Passport
+      auto const passport = [&] () -> infinit::Infinit::Passport
         {
           if (owner.public_key == desc.owner)
             return {owner.public_key, desc.name,
@@ -737,13 +737,17 @@ namespace infinit
         elle::err("passport signature is invalid");
       if (storage && !passport.allow_storage())
         elle::err("passport does not allow storage");
-      auto id = infinit::model::Address::random(0); // FIXME
-      if (node_id)
-      {
-        std::stringstream ss(elle::sprintf("\"%s\"", *node_id));
-        namespace json = elle::serialization::json;
-        id = json::deserialize<infinit::model::Address>(ss, false);
-      }
+      auto const id = [&]
+        {
+          if (node_id)
+            {
+              std::stringstream ss(elle::sprintf("\"%s\"", *node_id));
+              namespace json = elle::serialization::json;
+              return json::deserialize<infinit::model::Address>(ss, false);
+            }
+          else
+            return infinit::model::Address::random(0); // FIXME
+        }();
       auto network = infinit::Network(
         desc.name,
         std::make_unique<dnut::Configuration>(
@@ -874,7 +878,7 @@ namespace infinit
         network.ensure_allowed(owner, "run");
         cache |= (cache_ram_size || cache_ram_ttl
                   || cache_ram_invalidation || cache_disk_size);
-        auto listen_address
+        auto const listen_address
           = listen
           ? boost::asio::ip::address::from_string(*listen)
           : boost::optional<boost::asio::ip::address>{};
@@ -891,8 +895,8 @@ namespace infinit
         hook_stats_signals(*dht);
         if (grpc)
         {
-          model::Endpoints eps(*grpc);
-          auto ep = *eps.begin();
+          auto const eps = model::Endpoints{*grpc};
+          auto const ep = *eps.begin();
           new elle::reactor::Thread("grpc", [dht=dht.get(), ep] {
               infinit::grpc::serve_grpc(*dht, boost::none, ep);
           });
@@ -1115,6 +1119,35 @@ namespace infinit
     | Mode: run.  |
     `------------*/
 
+    namespace
+    {
+      /// An auxiliary struct to make reports.
+      ///
+      /// Respond
+      ///   ("success", true)
+      ///   ("value", block);
+      ///
+      /// serializes to std::cout.
+      struct Respond
+      {
+        template <typename T>
+        Respond(std::string const& k, T&& v)
+          : response(std::cout, false, true)
+        {
+          response.serialize(k, std::forward<T>(v));
+        }
+
+        template <typename T>
+        Respond&
+        operator()(std::string const& k, T&& v)
+        {
+          response.serialize(k, std::forward<T>(v));
+          return *this;
+        }
+        elle::serialization::json::SerializerOut response;
+      };
+    }
+
     void
     Network::mode_run(std::string const& network_name,
                       boost::optional<std::string> const& commands,
@@ -1184,141 +1217,135 @@ namespace infinit
               dnut::Doughnut& dht,
               bool push)
          {
-          elle::reactor::Thread::unique_ptr stat_thread;
-          if (push)
-            stat_thread = network.make_stat_update_thread(cli.infinit(), owner, dht);
-          cli.report_action("running", "network", network.name);
-          if (cli.script())
-          {
-            auto input = commands_input(commands);
-            while (true)
-            {
-              try
-              {
-                auto json = boost::any_cast<elle::json::Object>(
-                  elle::json::read(*input));
-                elle::serialization::json::SerializerIn command(json, false);
-                command.set_context<dnut::Doughnut*>(&dht);
-                auto op = command.deserialize<std::string>("operation");
-                if (op == "fetch")
-                {
-                  auto address =
-                    command.deserialize<infinit::model::Address>("address");
-                  auto block = dht.fetch(address);
-                  ELLE_ASSERT(block);
-                  auto response = elle::serialization::json::SerializerOut(
-                    std::cout, false, true);
-                  response.serialize("success", true);
-                  response.serialize("value", block);
-                }
-                else if (op == "insert" || op == "update")
-                {
-                  auto block = command.deserialize<
-                    std::unique_ptr<infinit::model::blocks::Block>>("value");
-                  if (!block)
-                    elle::err("missing field: value");
-                  if (op == "insert")
-                    dht.insert(std::move(block));
-                  else
-                    dht.update(std::move(block));
-                  auto response = elle::serialization::json::SerializerOut(
-                    std::cout, false, true);
-                  response.serialize("success", true);
-                }
-                else if (op == "write_immutable")
-                {
-                  auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(
-                    elle::Buffer(command.deserialize<std::string>("data")));
-                  auto addr = block->address();
-                  dht.insert(std::move(block));
-                  auto response = elle::serialization::json::SerializerOut(
-                    std::cout, false, true);
-                  response.serialize("success", true);
-                  response.serialize("address", addr);
-                }
-                else if (op == "read")
-                {
-                  auto block = dht.fetch(
-                      command.deserialize<infinit::model::Address>("address"));
-                  auto response = elle::serialization::json::SerializerOut(
-                    std::cout, false, true);
-                  response.serialize("success", true);
-                  response.serialize("data", block->data().string());
-                  int version = -1;
-                  if (auto mb = dynamic_cast<infinit::model::blocks::MutableBlock*>(block.get()))
-                    version = mb->version();
-                  response.serialize("version", version);
-                }
-                else if (op == "update_mutable")
-                {
-                  auto addr = command.deserialize<infinit::model::Address>("address");
-                  auto version = command.deserialize<int>("version");
-                  auto data = command.deserialize<std::string>("data");
-                  auto block = dht.fetch(addr);
-                  auto& mb = dynamic_cast<infinit::model::blocks::MutableBlock&>(*block);
-                  if (mb.version() >= version)
-                    elle::err("Current version is %s", mb.version());
-                  mb.data(elle::Buffer(data));
-                  dht.update(std::move(block));
-                  auto response = elle::serialization::json::SerializerOut(
-                    std::cout, false, true);
-                  response.serialize("success", true);
-                }
-                else if (op == "resolve_named")
-                {
-                  auto name = command.deserialize<std::string>("name");
-                  bool create = command.deserialize<bool>("create_if_missing");
-                  auto addr = dnut::NB::address(*dht.owner(),
-                    name, dht.version());
-                  auto res = [&] {
-                    try
-                    {
-                      auto block = dht.fetch(addr);
-                      auto& nb = dynamic_cast<dnut::NB&>(*block);
-                      return infinit::model::Address::from_string(nb.data().string());
-                    }
-                    catch (infinit::model::MissingBlock const& mb)
-                    {
-                      if (!create)
-                        elle::err("NB %s does not exist", name);
-                      auto ab = dht.make_block<infinit::model::blocks::ACLBlock>();
-                      auto addr = ab->address();
-                      dht.insert(std::move(ab));
-                      auto nb = dnut::NB(dht, name, elle::sprintf("%s", addr));
-                      dht.seal_and_insert(nb);
-                      return addr;
-                    }
-                  }();
-                  auto response = elle::serialization::json::SerializerOut(
-                    std::cout, false, true);
-                  response.serialize("success", true);
-                  response.serialize("address", res);
-                }
-                else if (op == "remove")
-                {
-                  auto addr = command.deserialize<infinit::model::Address>("address");
-                  dht.remove(addr);
-                  auto response = elle::serialization::json::SerializerOut(
-                    std::cout, false, true);
-                  response.serialize("success", true);
-                }
-                else
-                  elle::err("invalid operation: %s", op);
-              }
-              catch (elle::Error const& e)
-              {
-                if (input->eof())
-                  return;
-                auto response =elle::serialization::json::SerializerOut(
-                  std::cout, false, true);
-                response.serialize("success", false);
-                response.serialize("message", e.what());
-              }
-            }
-          }
-          else
-            elle::reactor::sleep();
-        });
+           auto stat_thread = elle::reactor::Thread::unique_ptr{};
+           if (push)
+             stat_thread = network.make_stat_update_thread(cli.infinit(), owner, dht);
+           cli.report_action("running", "network", network.name);
+           if (cli.script())
+           {
+             auto input = commands_input(commands);
+             while (true)
+             {
+               try
+               {
+                 auto const json = boost::any_cast<elle::json::Object>(
+                   elle::json::read(*input));
+                 auto command
+                   = elle::serialization::json::SerializerIn(json, false);
+                 command.set_context<dnut::Doughnut*>(&dht);
+                 auto const op = command.deserialize<std::string>("operation");
+                 if (op == "fetch")
+                 {
+                   auto const address =
+                     command.deserialize<infinit::model::Address>("address");
+                   auto const block = dht.fetch(address);
+                   ELLE_ASSERT(block);
+                   Respond
+                     ("success", true)
+                     ("value", block);
+                 }
+                 else if (op == "insert" || op == "update")
+                 {
+                   auto block = command.deserialize<
+                     std::unique_ptr<infinit::model::blocks::Block>>("value");
+                   if (!block)
+                     elle::err("missing field: value");
+                   if (op == "insert")
+                     dht.insert(std::move(block));
+                   else
+                     dht.update(std::move(block));
+                   Respond("success", true);
+                 }
+                 else if (op == "write_immutable")
+                 {
+                   auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(
+                     elle::Buffer(command.deserialize<std::string>("data")));
+                   auto const addr = block->address();
+                   dht.insert(std::move(block));
+                   Respond
+                     ("success", true)
+                     ("address", addr);
+                 }
+                 else if (op == "read")
+                 {
+                   auto const block = dht.fetch(
+                       command.deserialize<infinit::model::Address>("address"));
+                   int const version = [&]{
+                     if (auto mb =
+                         dynamic_cast<infinit::model::blocks::MutableBlock*>(block.get()))
+                       return mb->version();
+                     else
+                       return -1;
+                   }();
+                   Respond
+                      ("success", true)
+                      ("data", block->data().string())
+                      ("version", version);
+                 }
+                 else if (op == "update_mutable")
+                 {
+                   auto const addr = command.deserialize<infinit::model::Address>("address");
+                   auto const version = command.deserialize<int>("version");
+                   auto const data = command.deserialize<std::string>("data");
+                   auto block = dht.fetch(addr);
+                   auto& mb = dynamic_cast<infinit::model::blocks::MutableBlock&>(*block);
+                   if (mb.version() >= version)
+                     elle::err("Current version is %s", mb.version());
+                   mb.data(elle::Buffer(data));
+                   dht.update(std::move(block));
+                   Respond("success", true);
+                 }
+                 else if (op == "resolve_named")
+                 {
+                   auto const name = command.deserialize<std::string>("name");
+                   bool const create = command.deserialize<bool>("create_if_missing");
+                   auto const addr = dnut::NB::address(*dht.owner(),
+                     name, dht.version());
+                   auto res = [&] {
+                     try
+                     {
+                       auto const block = dht.fetch(addr);
+                       auto& nb = dynamic_cast<dnut::NB&>(*block);
+                       return infinit::model::Address::from_string(nb.data().string());
+                     }
+                     catch (infinit::model::MissingBlock const& mb)
+                     {
+                       if (!create)
+                         elle::err("NB %s does not exist", name);
+                       auto ab = dht.make_block<infinit::model::blocks::ACLBlock>();
+                       auto const addr = ab->address();
+                       dht.insert(std::move(ab));
+                       auto nb = dnut::NB(dht, name, elle::sprintf("%s", addr));
+                       dht.seal_and_insert(nb);
+                       return addr;
+                     }
+                   }();
+                   Respond
+                     ("success", true)
+                     ("address", res);
+                 }
+                 else if (op == "remove")
+                 {
+                   auto const addr = command.deserialize<infinit::model::Address>("address");
+                   dht.remove(addr);
+                   Respond("success", true);
+                 }
+                 else
+                   elle::err("invalid operation: %s", op);
+               }
+               catch (elle::Error const& e)
+               {
+                 if (input->eof())
+                   return;
+                 Respond
+                   ("success", false)
+                   ("message", e.what());
+               }
+             }
+           }
+           else
+             elle::reactor::sleep();
+         });
     }
 
 
@@ -1500,22 +1527,14 @@ namespace infinit
         dht.peers = parse_peers(peer);
       if (protocol)
         dht.overlay->rpc_protocol = protocol_get(protocol);
-      auto desc = [&]
-        {
-          if (output_name)
-          {
-            auto output = cli.get_output(output_name);
-            elle::serialization::json::serialize(network, *output, false);
-            return std::make_unique<infinit::NetworkDescriptor>(std::move(network));
-          }
-          else
-          {
-            ifnt.network_save(owner, network, true);
-            auto res
-              = std::make_unique<infinit::NetworkDescriptor>(std::move(network));
-            return res;
-          }
-        }();
+      if (output_name)
+      {
+        auto output = cli.get_output(output_name);
+        elle::serialization::json::serialize(network, *output, false);
+      }
+      else
+        ifnt.network_save(owner, network, true);
+      auto desc = std::make_unique<infinit::NetworkDescriptor>(std::move(network));
       if (push || push_network)
         ifnt.beyond_push("network", desc->name, *desc, owner, false, true);
       if (changed_admins && !output_name)
