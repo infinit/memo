@@ -1472,11 +1472,11 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
   (bool, keep_port), (bool, wait_disconnect), (bool, wait_connect))
 {
   auto cluster = Cluster{config};
-  const auto n = cluster.n;
+  auto const n = cluster.n;
   auto& blocks = cluster.blocks;
-  const auto& ids = cluster.ids;
-  const auto& keys = cluster.keys;
-  const auto& ports = cluster.ports;
+  auto const& ids = cluster.ids;
+  auto const& keys = cluster.keys;
+  auto const& ports = cluster.ports;
   auto& servers = cluster.servers;
 
   cluster.discover();
@@ -1576,8 +1576,8 @@ void
 test_churn_socket(TestConfiguration config, bool pasv)
 {
   auto cluster = Cluster{config};
-  const auto n = cluster.n;
-  const auto& keys = cluster.keys;
+  auto const n = cluster.n;
+  auto const& keys = cluster.keys;
   auto& servers = cluster.servers;
 
   // Let the servers discover themselves.
@@ -1661,7 +1661,7 @@ ELLE_TEST_SCHEDULED(churn_socket_pasv, (TestConfiguration, config))
 ELLE_TEST_SCHEDULED(eviction, (TestConfiguration, config))
 {
   auto cluster = Cluster{config, 3};
-  const auto& ids = cluster.ids;
+  auto const& ids = cluster.ids;
   auto& servers = cluster.servers;
 
   /// A: the main peer.
