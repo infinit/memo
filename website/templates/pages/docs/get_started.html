@@ -165,14 +165,10 @@
       <section data-platform="docker">
         <%include file='generated/get_started/docker_install.html'/>
 
-        <p>You could also specify a name by adding <code>-name infinit-node1</code>. Now that you’ve launched your container, take a look at what's included. The image contains the following:</p>
+        <p>Now that you’ve launched your container, let's test that Infinit is correctly installed:</p>
 
-        <pre><code>$> cd /usr/bin
-$> ls
-...
-infinit
-...
-</code></pre>
+        <pre><code>${term} infinit --version
+${tarball_version}</code></pre>
       </section>
     % endif
 
@@ -329,11 +325,11 @@ bin/    lib/    share/</code></pre>
 
     % endif
 
-    <ul>
+    <ul data-platform="mac windows debian centos alpine arm">
       <li>The <code>bin${dir_end}</code> subdirectory contains the actual Infinit binary <em>infinit${exe}</em>.</li>
 
       % if osname == "mac" or osname == "linux":
-        <li data-platform="mac debian centos alpine arm">The <code>lib${dir_end}</code> subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).</li>
+        <li>The <code>lib${dir_end}</code> subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).</li>
       % endif
     </ul>
 
@@ -347,15 +343,17 @@ bin/    lib/    share/</code></pre>
 
     <p><em><strong>NOTE:</strong> For more information to learn how to set up completely decentralized infrastructure, how to plug cloud storage services such as AWS S3, Google Cloud Storage etc. or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files as usual, you can skip this tutorial and refer directly to the <a href="${route('doc_reference')}">reference documentation</a>.</em></p>
 
-    <p>First, add the <code>bin${dir_end}</code> directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:</p>
+    <div data-platform="mac windows debian centos alpine arm">
+      <p>First, add the <code>bin${dir_end}</code> directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:</p>
 
-    <div>
-    % if osname == "windows":
-    <pre><code>> set PATH=%CD%\bin;%PATH%
-    </code></pre>
-    % else:
-    <pre><code>$> export PATH=$PWD/bin/:$PATH</code></pre>
-    % endif
+      <div>
+      % if osname == "windows":
+      <pre><code>> set PATH=%CD%\bin;%PATH%
+      </code></pre>
+      % else:
+      <pre><code>$> export PATH=$PWD/bin/:$PATH</code></pre>
+      % endif
+      </div>
     </div>
 
     <h3 id="create-a-user">Create a user</h3>

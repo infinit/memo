@@ -165,15 +165,15 @@ Finally, doctor has a `networking` mode to test connectivity and transfer speed 
 
 _**NOTE**: For now, nodes must have a public IP address for the test to work._
 
-<pre><div><span>Device A</span></div><code> infinit doctor$ networking
-Server mode (version: 0.7.2):
+<pre><div><span>Device A</span></div><code>$> infinit doctor networking
+Server mode (version: ${tarball_version}):
 
 To perform tests, run the following command from another node:
-> infinit doctor networking --tcp_port 55848 --utp_port 41275 --xored_utp_port 54723 --host &lt;address_of_this_machine&gt;
+$> infinit doctor networking --tcp_port 55848 --utp_port 41275 --xored_utp_port 54723 --host &lt;address_of_this_machine&gt;
 </code></pre>
 
-<pre class="device2"><div><span>Device B</span></div><code> infinit doctor networking --tcp_port 55848 --utp_port 41275 --xored_utp_port 54723 --host 127.0.0.1
-Client mode (version: 0.7.2):
+<pre class="device2"><div><span>Device B</span></div><code>$> infinit doctor networking --tcp_port 55848 --utp_port 41275 --xored_utp_port 54723 --host 127.0.0.1
+Client mode (version: ${tarball_version}):
 TCP:
   Upload:
     215ms for 5.2 MB (24.4 MB/sec)
