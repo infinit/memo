@@ -43,6 +43,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(create_home, 0, "create user home directory of the form home/<user>", false);
     ELLE_DAS_CLI_SYMBOL(create_root, 'R', "create root directory", false);
     ELLE_DAS_CLI_SYMBOL(daemon, 'd', "run as a background daemon" , false);
+    ELLE_DAS_CLI_SYMBOL(decrypt, '\0', "decrypt the value  stored by the block", false);
     ELLE_DAS_CLI_SYMBOL(default_network, 0, "Default network for volume creation", false);
     ELLE_DAS_CLI_SYMBOL(default_permissions, 'd', "default permissions (optional: r,rw)", false);
     ELLE_DAS_CLI_SYMBOL(deny_storage, '\0', "deny user ability to contribute storage to the network", false);
@@ -176,13 +177,14 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(upnp_udt_port, 0, "port to try to get an udt upnp connection on", false);
     ELLE_DAS_CLI_SYMBOL(user, 'u', "user {action} {object} for", false);
     ELLE_DAS_CLI_SYMBOL(username_pattern, 'U', "Hub unique username to set (default: $(cn)%). Remove the '%' to disable unique username generator", false);
-    ELLE_DAS_CLI_SYMBOL(utp_port, 'u', "port to perform utp tests on (if unspecified, --xored_utp_port = utp_port + 1)", false);
+    ELLE_DAS_CLI_SYMBOL(utp_port, 'u', "port to perform utp tests on (if unspecified, --xored-utp-port = utp-port + 1)", false);
     ELLE_DAS_CLI_SYMBOL(value, 'v', "value {action}", false);
     ELLE_DAS_CLI_SYMBOL(verbose, 'v', "use verbose output", false);
     ELLE_DAS_CLI_SYMBOL(volume, 'V', "associated volume name", false);
     ELLE_DAS_CLI_SYMBOL(xored, 'X', "performs test applying a 0xFF xor on the utp traffic, value=yes,no,both", false);
     ELLE_DAS_CLI_SYMBOL(xored_utp_port, 'x', "port to perform xored utp tests on", false);
 
+    ELLE_DAS_CLI_SYMBOL_NAMED(mutable, mutable_, '\0', "whether to create a mutable block", false);
     ELLE_DAS_CLI_SYMBOL_NAMED(delete, delete_, 0, "delete the {object}", false);
 
     ELLE_DAS_SYMBOL(acl);
@@ -206,6 +208,7 @@ namespace infinit
     ELLE_DAS_SYMBOL(google_drive);
     ELLE_DAS_SYMBOL(hash);
     ELLE_DAS_SYMBOL(import);
+    ELLE_DAS_SYMBOL(insert);
     ELLE_DAS_SYMBOL(inspect);
     ELLE_DAS_SYMBOL(invite);
     ELLE_DAS_SYMBOL(join);
@@ -239,12 +242,14 @@ namespace infinit
     ELLE_DAS_SYMBOL_NAMED(export, export_);
     ELLE_DAS_SYMBOL_NAMED(register, register_);
 
+
     // Modes must be defined twice: once as a regular symbol, then as
     // a `modes::mode_*` symbol.
     namespace modes
     {
       ELLE_DAS_SYMBOL(mode_add);
       ELLE_DAS_SYMBOL(mode_all);
+      ELLE_DAS_SYMBOL(mode_block);
       ELLE_DAS_SYMBOL(mode_configuration);
       ELLE_DAS_SYMBOL(mode_connectivity);
       ELLE_DAS_SYMBOL(mode_create);
@@ -264,6 +269,7 @@ namespace infinit
       ELLE_DAS_SYMBOL(mode_group);
       ELLE_DAS_SYMBOL(mode_hash);
       ELLE_DAS_SYMBOL(mode_import);
+      ELLE_DAS_SYMBOL(mode_insert);
       ELLE_DAS_SYMBOL(mode_inspect);
       ELLE_DAS_SYMBOL(mode_invite);
       ELLE_DAS_SYMBOL(mode_join);
@@ -282,6 +288,7 @@ namespace infinit
       ELLE_DAS_SYMBOL(mode_push);
       ELLE_DAS_SYMBOL(mode_receive);
       ELLE_DAS_SYMBOL(mode_register);
+      ELLE_DAS_SYMBOL(mode_remove);
       ELLE_DAS_SYMBOL(mode_run);
       ELLE_DAS_SYMBOL(mode_s3);
       ELLE_DAS_SYMBOL(mode_set);

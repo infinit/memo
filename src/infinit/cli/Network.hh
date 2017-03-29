@@ -35,9 +35,92 @@ namespace infinit
                                     cli::push,
                                     cli::run,
                                     cli::stats,
-                                    cli::update));
+                                    cli::update,
+                                    cli::block
+                     ));
 
       using Strings = std::vector<std::string>;
+      using Objects = decltype(elle::meta::list(cli::block));
+
+      // Block.
+      class Block
+        : public Object<Block, Network>
+      {
+      public:
+        using Super = Object<Block, Network>;
+        using Modes = decltype(elle::meta::list(
+                                 cli::insert,
+                                 cli::fetch,
+                                 cli::update,
+                                 cli::remove));
+        Block(Infinit& infinit);
+
+        /*----------------------.
+        | Mode: block::insert.  |
+        `----------------------*/
+
+        Mode<Block,
+             void (decltype(cli::grpc)::Formal<std::string const&>,
+                   decltype(cli::value)::Formal<std::string const&>,
+                   decltype(cli::name = boost::optional<std::string>()),
+                   decltype(cli::mutable_ = false)),
+             decltype(modes::mode_insert)>
+        insert;
+        void
+        mode_insert(std::string const& grpc,
+                    std::string const& value,
+                    boost::optional<std::string> const& name = boost::none,
+                    bool mutable_ = false);
+
+        /*---------------------.
+        | Mode: block::fetch.  |
+        `---------------------*/
+
+        Mode<Block,
+             void (decltype(cli::grpc)::Formal<std::string const&>,
+                   decltype(cli::key = boost::optional<std::string>()),
+                   decltype(cli::name = boost::optional<std::string>()),
+                   decltype(cli::decrypt = true)),
+             decltype(modes::mode_fetch)>
+        fetch;
+        void
+        mode_fetch(std::string const& grpc,
+                   boost::optional<std::string> const& key = boost::none,
+                   boost::optional<std::string> const& name = boost::none,
+                   bool decrypt = true);
+
+        /*---------------------.
+        | Mode: block::update.  |
+        `---------------------*/
+
+        Mode<Block,
+             void (decltype(cli::grpc)::Formal<std::string const&>,
+                   decltype(cli::key)::Formal<std::string const&>,
+                   decltype(cli::value)::Formal<std::string const&>),
+             decltype(modes::mode_update)>
+        update;
+        void
+        mode_update(std::string const& grpc,
+                    std::string const& key,
+                    std::string const& value);
+
+        /*---------------------.
+        | Mode: block::erase.  |
+        `---------------------*/
+
+        Mode<Block,
+             void (decltype(cli::grpc)::Formal<std::string const&>,
+                   decltype(cli::key = boost::optional<std::string>()),
+                   decltype(cli::name = boost::optional<std::string>())),
+             decltype(modes::mode_remove)>
+        remove;
+        void
+        mode_remove(std::string const& grpc,
+                    boost::optional<std::string> const& key = boost::none,
+                    boost::optional<std::string> const& name = boost::none);
+
+        std::string const description = "Manipulate blocks";
+      } block;
 
       /*---------------.
       | Mode: create.  |
