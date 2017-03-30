@@ -78,7 +78,10 @@ namespace infinit
       ELLE_DAS_SYMBOL(storage);
       ELLE_DAS_SYMBOL(version);
 
-      class Doughnut // Doughnut. DougHnuT. Get it ?
+      /// Doughnut.
+      ///
+      /// DougHnuT. Get it?
+      class Doughnut
         : public Model
         , public std::enable_shared_from_this<Doughnut>
       {
@@ -86,11 +89,15 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        using OverlayBuilder = std::function<std::unique_ptr<infinit::overlay::Overlay> (Doughnut &, std::shared_ptr<Local>)>;
-        using ConsensusBuilder = std::function<std::unique_ptr<consensus::Consensus> (Doughnut &)>;
+        using OverlayBuilder
+          = std::function<std::unique_ptr<infinit::overlay::Overlay> (Doughnut &, std::shared_ptr<Local>)>;
+        using ConsensusBuilder
+          = std::function<std::unique_ptr<consensus::Consensus> (Doughnut &)>;
+
         template <typename ... Args>
         Doughnut(Args&& ... args);
         ~Doughnut();
+
       private:
         using Init = decltype(
           elle::das::make_tuple(

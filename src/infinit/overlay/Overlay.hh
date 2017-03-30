@@ -47,6 +47,11 @@ namespace infinit
       /// @arg local The optional Local.
       Overlay(model::doughnut::Doughnut* dht,
               std::shared_ptr<infinit::model::doughnut::Local> local);
+      Overlay() = delete;
+      Overlay(Overlay const&) = delete;
+      Overlay(Overlay&&) = delete;
+      Overlay& operator= (Overlay const&) = delete;
+      Overlay& operator= (Overlay&&) = delete;
       /// Destroy an Overlay.
       virtual
       ~Overlay();
@@ -59,6 +64,7 @@ namespace infinit
       ELLE_attribute_r(model::Address, id);
       /// The node's optional Local.
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
+
     protected:
       virtual
       void
