@@ -6,7 +6,7 @@
 
 #include <elle/serialization/json.hh>
 
-#include <elle/reactor/network/exception.hh>
+#include <elle/reactor/network/Error.hh>
 #include <elle/reactor/Scope.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>

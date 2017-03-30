@@ -6,7 +6,7 @@
 #include <elle/make-vector.hh>
 #include <elle/range.hh>
 
-#include <elle/reactor/network/exception.hh>
+#include <elle/reactor/network/Error.hh>
 
 // FIXME: can be avoided with a `Dock` accessor in `Overlay`
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -546,7 +546,7 @@ namespace infinit
                       }
                     }
                   }
-                  catch (elle::reactor::network::Exception const& e)
+                  catch (elle::reactor::network::Error const& e)
                   {
                     ELLE_DEBUG("skipping peer with network issue: %s (%s)",
                                peer, e);
@@ -691,7 +691,7 @@ namespace infinit
             this->_discover(npi);
           }
         }
-        catch (elle::reactor::network::Exception const& e)
+        catch (elle::reactor::network::Error const& e)
         {
           ELLE_TRACE("%s: network exception advertising %s: %s", this, r, e);
           // nothing to do, disconnected() will be emited and handled.

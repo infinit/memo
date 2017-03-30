@@ -48,7 +48,7 @@ namespace infinit
           {
             return f();
           }
-          catch(elle::reactor::network::Exception const& e)
+          catch(elle::reactor::network::Error const& e)
           {
             ELLE_TRACE("network exception in paxos: %s", e);
             throw elle::athena::paxos::Unavailable();
@@ -323,7 +323,7 @@ namespace infinit
               if (!value.is<std::shared_ptr<blocks::Block>>())
               {
                 ELLE_TRACE("unmanageable accept on non-block value");
-                throw elle::reactor::network::Exception("Peer unavailable");
+                throw elle::reactor::network::Error("Peer unavailable");
               }
               auto accept = make_rpc<Paxos::PaxosClient::Proposal (
                 PaxosServer::Quorum peers,

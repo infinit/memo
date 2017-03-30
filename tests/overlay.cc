@@ -99,7 +99,7 @@ private:
         else
           server.send_to(elle::ConstWeakBuffer(buf, sz), _client_endpoint.udp());
       }
-      catch (elle::reactor::network::Exception const& e)
+      catch (elle::reactor::network::Error const& e)
       {
         ELLE_LOG("ignoring exception %s", e);
       }
@@ -165,7 +165,7 @@ private:
       {
         break;
       }
-      catch (elle::reactor::network::Exception const& e)
+      catch (elle::reactor::network::Error const& e)
       {
         ELLE_LOG("ignoring exception %s", e);
       }

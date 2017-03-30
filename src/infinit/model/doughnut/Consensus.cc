@@ -12,7 +12,7 @@
 #include <elle/reactor/Channel.hh>
 #include <elle/reactor/Scope.hh>
 #include <elle/reactor/scheduler.hh>
-#include <elle/reactor/network/exception.hh>
+#include <elle/reactor/network/Error.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Consensus");
 
@@ -196,7 +196,7 @@ namespace infinit
                     lock->remove(address, rs);
                     cleanup();
                   }
-                  catch (elle::reactor::network::Exception const& e)
+                  catch (elle::reactor::network::Error const& e)
                   {
                     ELLE_TRACE("network exception removing %f: %s",
                                address, e.what());

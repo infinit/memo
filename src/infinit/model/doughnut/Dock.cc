@@ -320,7 +320,7 @@ namespace infinit
                     {
                       f();
                     }
-                    catch (elle::reactor::network::Exception const& e)
+                    catch (elle::reactor::network::Error const& e)
                     {
                       ELLE_DEBUG("%s: endpoint network failure: %s", this, e);
                     }
@@ -443,7 +443,7 @@ namespace infinit
                 this->_disconnected_exception =
                   std::make_exception_ptr(elle::reactor::network::ConnectionClosed());
               }
-              catch (elle::reactor::network::Exception const& e)
+              catch (elle::reactor::network::Error const& e)
               {
                 ELLE_TRACE("connection fell: %s", e);
                 this->_disconnected_exception = std::current_exception();
