@@ -2,14 +2,21 @@
 
 #include <elle/factory.hh>
 
+#include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
-#include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
+#include <infinit/overlay/kelips/Kelips.hh>
+#include <infinit/overlay/kouncil/Kouncil.hh>
 #include <infinit/storage/Memory.hh>
 
 namespace dht = infinit::model::doughnut;
 namespace blocks = infinit::model::blocks;
+
+using Address = infinit::model::Address;
+using Endpoint = infinit::model::Endpoint;
+using Endpoints = infinit::model::Endpoints;
+using NodeLocation = infinit::model::NodeLocation;
 
 /*----------.
 | Overlay.  |
@@ -496,4 +503,109 @@ std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
 no_cheat_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
 {
   return std::make_unique<NoCheatConsensus>(std::move(c));
+}
+
+/// The Kelips node in this client.
+auto*
+get_kelips(DHT& client)
+{
+  return dynamic_cast<infinit::overlay::kelips::Node*>
+    (client.dht->overlay().get());
+}
+
+/// The Kouncil node in this client.
+auto*
+get_kouncil(DHT& client)
+{
+  return dynamic_cast<infinit::overlay::kouncil::Kouncil*>
+    (client.dht->overlay().get());
+}
+
+
+/// An Address easy to read in the logs.
+infinit::model::Address
+special_id(int i)
+{
+  assert(i);
+  infinit::model::Address::Value id;
+  memset(&id, 0, sizeof(id));
+  id[0] = i;
+  return id;
+}
+
+
+/// Watch and warn about @a target being evicted by @a dht.
+boost::signals2::scoped_connection
+monitor_eviction(DHT& dht, DHT& target)
+{
+  ELLE_LOG_COMPONENT("infinit.tests.DHT");
+  if (auto kouncil = get_kouncil(dht))
+    return kouncil->on_eviction().connect([&](Address id)
+    {
+      if (id == target.dht->id())
+        ELLE_ERR
+          ("dht = %s was waiting for target = %s, but target was evicted by dht",
+           dht, target);
+    });
+  else
+    return {};
+}
+
+/// Let an overlay peer discover another one.
+///
+/// @param dht     the discoverer
+/// @param target  the discovered
+/// @param loc     the adress via which @a target is to be discovered
+/// @param wait    whether to wait for @a dht to discover @a target
+/// @param wait_back  whether to wait for @a target to discover @a dht
+void
+discover(DHT& dht,
+         DHT& target,
+         infinit::model::NodeLocation const& loc,
+         bool wait = false,
+         bool wait_back = false)
+{
+  ELLE_LOG_COMPONENT("infinit.tests.DHT");
+  auto discovered = elle::reactor::waiter(
+    dht.dht->overlay()->on_discovery(),
+    [&] (NodeLocation const& l, bool) { return l.id() == target.dht->id(); });
+  auto discovered_back = elle::reactor::waiter(
+    target.dht->overlay()->on_discovery(),
+    [&] (NodeLocation const& l, bool) { return l.id() == dht.dht->id(); });
+  auto eviction = monitor_eviction(dht, target);
+  auto eviction_back = monitor_eviction(target, dht);
+  ELLE_LOG("%f invited to discover %f via %f", dht, target, loc)
+    dht.dht->overlay()->discover(loc);
+  if (wait)
+  {
+    elle::reactor::wait(discovered);
+    ELLE_LOG("%s discovered %s", dht, target);
+  }
+  if (wait_back)
+  {
+    elle::reactor::wait(discovered_back);
+    ELLE_LOG("%s discovered back by %s", dht, target);
+  }
+}
+
+/// Let an overlay peer discover another one.
+///
+/// @param dht     the discoverer
+/// @param target  the discovered
+/// @param wait    whether to wait for @a dht to discover @a target
+/// @param wait_back  whether to wait for @a target to discover @a dht
+void
+discover(DHT& dht,
+         DHT& target,
+         bool anonymous,
+         bool onlyfirst = false,
+         bool wait = false,
+         bool wait_back = false)
+{
+  auto const all_eps = target.dht->local()->server_endpoints();
+  assert(!all_eps.empty());
+  auto const eps = onlyfirst ? Endpoints{*all_eps.begin()} : all_eps;
+  auto const addr = anonymous ? Address::null : target.dht->id();
+  auto const loc = NodeLocation{addr, eps};
+  discover(dht, target, loc, wait, wait_back);
 }
