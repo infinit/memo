@@ -158,13 +158,13 @@ namespace infinit
         , _admin_keys(std::move(init.admin_keys))
         , _consensus(init.consensus_builder(*this))
         , _local(
-          init.storage ?
-          this->_consensus->make_local(
+          init.storage
+          ? this->_consensus->make_local(
             init.port,
             init.listen_address,
             std::move(init.storage),
-            init.protocol) :
-          nullptr)
+            init.protocol)
+          : nullptr)
         , _dock(*this,
                 init.protocol,
                 init.port,
