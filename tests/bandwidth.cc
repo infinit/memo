@@ -25,9 +25,9 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
   elle::SafeFinally cleanup_path([&] {
       bfs::remove_all(path);
   });
-  auto k = elle::cryptography::rsa::keypair::generate(512);
-  DHT server_a(owner = k);
-  DHT client(keys = k, storage = nullptr);
+  auto const k = elle::cryptography::rsa::keypair::generate(512);
+  auto server_a = DHT(owner = k);
+  auto client = DHT(keys = k, storage = nullptr);
   client.overlay->connect(*server_a.overlay);
   auto fs = std::make_unique<infinit::filesystem::FileSystem>(
     "test/bandwidth", client.dht,
