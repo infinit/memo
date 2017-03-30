@@ -1417,7 +1417,7 @@ namespace infinit
           {
             sock->send_to(elle::ConstWeakBuffer(b), e.udp());
           }
-          catch (elle::reactor::network::Exception const&)
+          catch (elle::reactor::network::Error const&)
           { // FIXME: do something
           }
         }
@@ -3566,7 +3566,7 @@ namespace infinit
           {
             rsock->send_to(elle::ConstWeakBuffer(b), res);
           }
-          catch (elle::reactor::network::Exception const& e)
+          catch (elle::reactor::network::Error const& e)
           { // FIXME: do something
             ELLE_TRACE("network exception sending to %s: %s", res, e);
           }

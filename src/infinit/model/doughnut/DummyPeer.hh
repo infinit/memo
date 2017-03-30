@@ -1,6 +1,6 @@
 #pragma once
 
-#include <elle/reactor/network/exception.hh>
+#include <elle/reactor/network/Error.hh>
 
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
@@ -22,20 +22,20 @@ namespace infinit
         void
         store(blocks::Block const& block, StoreMode mode) override
         {
-           throw elle::reactor::network::Exception("Peer unavailable");
+          throw elle::reactor::network::Error("Peer unavailable");
         }
 
         void
         remove(Address address, blocks::RemoveSignature rs) override
         {
-          throw elle::reactor::network::Exception("Peer unavailable");
+          throw elle::reactor::network::Error("Peer unavailable");
         }
 
-         std::unique_ptr<blocks::Block>
+        std::unique_ptr<blocks::Block>
         _fetch(Address address,
                boost::optional<int> local_version) const override
         {
-          throw elle::reactor::network::Exception("Peer unavailable");
+          throw elle::reactor::network::Error("Peer unavailable");
         }
 
         std::vector<elle::cryptography::rsa::PublicKey>
@@ -71,9 +71,7 @@ namespace infinit
         confirm(consensus::Paxos::PaxosServer::Quorum const& peers,
                 Address address,
                 consensus::Paxos::PaxosClient::Proposal const& p) override
-        {
-
-        }
+        {}
 
         boost::optional<consensus::Paxos::PaxosClient::Accepted>
         get(consensus::Paxos::PaxosServer::Quorum const& peers,

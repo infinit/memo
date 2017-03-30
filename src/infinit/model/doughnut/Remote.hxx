@@ -113,7 +113,7 @@ namespace infinit
               give_up = true;
             }
           }
-          catch(elle::reactor::network::Exception const& e)
+          catch(elle::reactor::network::Error const& e)
           {
             ELLE_TRACE("%s: network exception when invoking %s: %s",
                        this, name, e);

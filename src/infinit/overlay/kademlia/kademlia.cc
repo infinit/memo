@@ -10,7 +10,7 @@
 
 #include <elle/cryptography/hash.hh>
 
-#include <elle/reactor/network/exception.hh>
+#include <elle/reactor/network/Error.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Local.hh>

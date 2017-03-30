@@ -507,7 +507,7 @@ namespace infinit
             {
               upload(stream, *packet_size, *packets_count, verbose);
             }
-            catch (elle::reactor::network::Exception const&)
+            catch (elle::reactor::network::Error const&)
             {
               std::cerr << "  Something went wrong during upload:"
                         << elle::exception_string()
@@ -520,7 +520,7 @@ namespace infinit
             {
               download(stream, *packet_size, *packets_count, verbose);
             }
-            catch (elle::reactor::network::Exception const&)
+            catch (elle::reactor::network::Error const&)
             {
               std::cerr << "  Something went wrong during download:"
                         << elle::exception_string()
@@ -563,7 +563,7 @@ namespace infinit
             {
               socket.reset(tcp::socket(host, get_tcp_port(tcp_port, port)).release());
             }
-            catch (elle::reactor::network::Exception const&)
+            catch (elle::reactor::network::Error const&)
             {
               std::cerr << "  Unable to establish connection: "
                         << elle::exception_string()
@@ -594,7 +594,7 @@ namespace infinit
                       : get_utp_port(utp_port, port),
                       xored ? 0xFF : 0);
                 }
-                catch (elle::reactor::network::Exception const&)
+                catch (elle::reactor::network::Error const&)
                 {
                   std::cerr << "  Unable to establish connection: "
                             << elle::exception_string()

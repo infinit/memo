@@ -7,7 +7,7 @@
 
 #include <elle/cryptography/SecretKey.hh>
 
-#include <elle/reactor/network/exception.hh>
+#include <elle/reactor/network/Error.hh>
 #include <elle/reactor/network/socket.hh>
 #include <elle/reactor/storage.hh>
 
