@@ -20,6 +20,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
+#include <infinit/model/prometheus.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/kouncil/Configuration.hh>
@@ -168,6 +169,7 @@ namespace infinit
             cli::no_public_endpoints = false,
             cli::advertise_host = Strings{},
             cli::grpc = boost::none,
+            cli::prometheus = boost::none,
             cli::paxos_rebalancing_auto_expand = boost::none,
             cli::paxos_rebalancing_inspect = boost::none)
       , stats(*this,
@@ -829,6 +831,7 @@ namespace infinit
 
     namespace
     {
+      /// Action to run by network_run.
       using Action =
         std::function<void (infinit::User& owner,
                             infinit::Network& network,
@@ -861,6 +864,7 @@ namespace infinit
                   bool no_public_endpoints = false,
                   Strings advertise_host = {},
                   boost::optional<std::string> grpc = {},
+                  boost::optional<std::string> prometheus = {},
                   boost::optional<bool> paxos_rebalancing_auto_expand = {},
                   boost::optional<bool> paxos_rebalancing_inspect = {},
                   Action const& action = {})
@@ -906,6 +910,8 @@ namespace infinit
               infinit::grpc::serve_grpc(*dht, boost::none, ep);
           });
         }
+        if (prometheus)
+          infinit::prometheus::prometheus_endpoint(*prometheus);
         if (peers_file)
         {
           auto more_peers = hook_peer_discovery(*dht, *peers_file);
@@ -1023,6 +1029,7 @@ namespace infinit
          no_public_endpoints,
          advertise_host,
          {}, // grpc
+         {}, // prometheus
          {}, // paxos_rebalancing_auto_expand
          {}, // paxos_rebalancing_inspect
          [&] (infinit::User& owner,
@@ -1180,6 +1187,7 @@ namespace infinit
                       bool no_public_endpoints,
                       Strings advertise_host,
                       boost::optional<std::string> grpc,
+                      boost::optional<std::string> prometheus,
                       boost::optional<bool> paxos_rebalancing_auto_expand,
                       boost::optional<bool> paxos_rebalancing_inspect)
     {
@@ -1213,6 +1221,7 @@ namespace infinit
          no_public_endpoints,
          advertise_host,
          grpc,
+         prometheus,
          paxos_rebalancing_auto_expand,
          paxos_rebalancing_inspect,
          [&] (infinit::User& owner,

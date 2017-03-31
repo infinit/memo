@@ -136,6 +136,7 @@ namespace infinit
     ELLE_DAS_CLI_SYMBOL(permissions, 0, "set default user permissions to XXX", false);
     ELLE_DAS_CLI_SYMBOL(port, 0, "outbound port to use", false);
     ELLE_DAS_CLI_SYMBOL(port_file, 0, "write node listening port to file", false);
+    ELLE_DAS_CLI_SYMBOL(prometheus, 0, "start Prometheus server on given endpoint", false);
     ELLE_DAS_CLI_SYMBOL(protocol, 0, "RPC protocol to use: tcp, utp, all (default: all)", false);
     ELLE_DAS_CLI_SYMBOL(publish, 0, "alias for --fetch-endpoints --push-endpoints" , false);
     ELLE_DAS_CLI_SYMBOL(pull, '\0', "pull {object} from {hub}", false);
