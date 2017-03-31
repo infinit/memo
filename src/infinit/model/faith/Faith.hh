@@ -1,9 +1,8 @@
-#ifndef INFINIT_MODEL_FAITH_FAITH_HH
-# define INFINIT_MODEL_FAITH_FAITH_HH
+#pragma once
 
-# include <memory>
+#include <memory>
 
-# include <infinit/model/Model.hh>
+#include <infinit/model/Model.hh>
 
 namespace infinit
 {
@@ -17,6 +16,7 @@ namespace infinit
       public:
         Faith(std::unique_ptr<storage::Storage> storage,
               boost::optional<elle::Version> version = {});
+
       protected:
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
@@ -27,7 +27,6 @@ namespace infinit
         void
         _update(std::unique_ptr<blocks::Block> block,
                 std::unique_ptr<ConflictResolver> resolver) override;
-        virtual
         void
         _remove(Address address, blocks::RemoveSignature rs) override;
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
@@ -35,5 +34,3 @@ namespace infinit
     }
   }
 }
-
-#endif
