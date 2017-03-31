@@ -602,6 +602,8 @@ discover(DHT& dht,
          bool wait = false,
          bool wait_back = false)
 {
+  assert(target.dht);
+  assert(target.dht->local());
   auto const all_eps = target.dht->local()->server_endpoints();
   assert(!all_eps.empty());
   auto const eps = onlyfirst ? Endpoints{*all_eps.begin()} : all_eps;

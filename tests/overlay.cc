@@ -1739,7 +1739,7 @@ ELLE_TEST_SUITE()
         conf, local, &dht);
     }};
 
-  auto kouncil_conf = [](Doughnut& dht, std::shared_ptr<Local> local)
+  auto make_kouncil = [](Doughnut& dht, std::shared_ptr<Local> local)
     {
       // WARNING: too low an eviction delay with result in impossible
       // reconnections.
@@ -1747,9 +1747,9 @@ ELLE_TEST_SUITE()
       return std::make_unique<kouncil::Kouncil>(&dht, local, eviction_delay);
     };
   auto const kouncil_config
-    = TestConfiguration{kouncil_conf, elle::Version(0, 8, 0)};
+    = TestConfiguration{make_kouncil, elle::Version(0, 8, 0)};
   auto const kouncil_0_7_config
-    = TestConfiguration{kouncil_conf, elle::Version(0, 7, 0)};
+    = TestConfiguration{make_kouncil, elle::Version(0, 7, 0)};
 
 
 #define BOOST_NAMED_TEST_CASE(name, test_function)                      \
