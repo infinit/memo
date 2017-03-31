@@ -1,5 +1,4 @@
-#ifndef INFINIT_STORAGE_CRYPT_HH
-#define INFINIT_STORAGE_CRYPT_HH
+#pragma once
 
 #include <elle/cryptography/Cipher.hh>
 
@@ -16,21 +15,18 @@ namespace infinit
       Crypt(std::unique_ptr<Storage> backend,
             std::string const& password,
             // Mix address and password to get a different key per block.
-            bool salt = true
-        );
+            bool salt = true);
+
     protected:
-      virtual
       elle::Buffer
       _get(Key k) const override;
-      virtual
       int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
-      virtual
       int
       _erase(Key k) override;
-      virtual
       std::vector<Key>
       _list() override;
+
     private:
       std::unique_ptr<Storage> _backend;
       std::string _password;
@@ -40,6 +36,7 @@ namespace infinit
     struct CryptStorageConfig
       : public StorageConfig
     {
+      using Super = StorageConfig;
       CryptStorageConfig(std::string name,
                          boost::optional<int64_t> capacity,
                          boost::optional<std::string> description);
@@ -48,7 +45,6 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s) override;
 
-      virtual
       std::unique_ptr<infinit::storage::Storage>
       make() override;
 
@@ -58,5 +54,3 @@ namespace infinit
     };
   }
 }
-
-#endif

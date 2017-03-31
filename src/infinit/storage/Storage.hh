@@ -1,20 +1,19 @@
-#ifndef INFINIT_STORAGE_HH
-# define INFINIT_STORAGE_HH
+#pragma once
 
-# include <iosfwd>
-# include <cstdint>
+#include <iosfwd>
+#include <cstdint>
 
-# include <boost/signals2.hpp>
+#include <boost/signals2.hpp>
 
-# include <elle/Buffer.hh>
-# include <elle/attribute.hh>
-# include <elle/optional.hh>
-# include <elle/serialization/Serializer.hh>
+#include <elle/Buffer.hh>
+#include <elle/attribute.hh>
+#include <elle/optional.hh>
+#include <elle/serialization/Serializer.hh>
 
-# include <infinit/descriptor/TemplatedBaseDescriptor.hh>
-# include <infinit/model/Address.hh>
-# include <infinit/serialization.hh>
-# include <infinit/storage/fwd.hh>
+#include <infinit/descriptor/TemplatedBaseDescriptor.hh>
+#include <infinit/model/Address.hh>
+#include <infinit/serialization.hh>
+#include <infinit/storage/fwd.hh>
 
 namespace infinit
 {
@@ -129,10 +128,7 @@ namespace infinit
 
       static
       std::string
-      name_regex() ;
+      name_regex();
     };
   }
 }
-
-
-#endif

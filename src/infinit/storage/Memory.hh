@@ -1,37 +1,34 @@
-#ifndef INFINIT_STORAGE_MEMORY_HH
-# define INFINIT_STORAGE_MEMORY_HH
+#pragma once
 
-# include <infinit/storage/Key.hh>
-# include <infinit/storage/Storage.hh>
+#include <infinit/storage/Key.hh>
+#include <infinit/storage/Storage.hh>
 
 namespace infinit
 {
   namespace storage
   {
+    /// In-memory storage.
     class Memory
       : public Storage
     {
     public:
-      typedef std::unordered_map<Key, elle::Buffer> Blocks;
+      using Blocks = std::unordered_map<Key, elle::Buffer>;
       Memory();
       Memory(Blocks& blocks);
-      /// Number of bytes stored
+      /// Number of bytes stored.
       std::size_t
       size() const;
 
     protected:
-      virtual
       elle::Buffer
       _get(Key k) const override;
-      virtual
       int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
-      virtual
       int
       _erase(Key k) override;
-      virtual
       std::vector<Key>
       _list() override;
+      /// The blocks, with their deleter.
       ELLE_ATTRIBUTE((std::unique_ptr<Blocks, std::function<void (Blocks*)>>),
                      blocks);
     };
@@ -39,19 +36,13 @@ namespace infinit
     struct MemoryStorageConfig
       : public StorageConfig
     {
-      MemoryStorageConfig(std::string name,
-                          int64_t capacity,
-                          boost::optional<std::string> description);
-      MemoryStorageConfig(elle::serialization::SerializerIn& input);
-
+      using Super = StorageConfig;
+      using Super::Super;
       void
       serialize(elle::serialization::Serializer& s) override;
 
-      virtual
       std::unique_ptr<infinit::storage::Storage>
       make() override;
     };
   }
 }
-
-#endif
