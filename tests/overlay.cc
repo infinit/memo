@@ -1596,7 +1596,6 @@ ELLE_TEST_SCHEDULED(churn, (TestConfiguration, config),
   }
 }
 
-
 void
 test_churn_socket(TestConfiguration config, bool pasv)
 {

@@ -287,6 +287,25 @@ def configure(
     extra_libs.append(protobuf_lib)
   else:
     infinit_sources += grpc.grpc.sources
+
+
+  ## ------------ ##
+  ## Prometheus.  ##
+  ## ------------ ##
+  prometheus = drake.include('prometheus/prometheus-cpp',
+                             cxx_toolkit = cxx_toolkit,
+                             in_cxx_config = cxx_config,
+                             protoc = grpc.grpc.protoc,
+                             protobuf_include = grpc.grpc.protobuf_include,
+                             protobuf_lib = grpc.grpc.protobuf_lib)
+  for p in prometheus.prometheus_include_path:
+    cxx_config_infinit.add_system_include_path(p)
+  extra_libs.append(drake.copy(prometheus.prometheus_lib,
+                               'bin' if windows else 'lib',
+                               strip_prefix = True))
+  drake.node('src/infinit/model/prometheus.hh')\
+       .dependencies_add(drake.nodes('prometheus/prometheus-cpp/lib/cpp/metrics.pb.h'))
+
   if windows:
     cxx_config_infinit.lib('shlwapi')
     cxx_config_infinit.lib('ws2_32')
@@ -337,6 +356,12 @@ def configure(
   cli_cxx_config = drake.cxx.Config(cxx_config)
   cli_cxx_config += elle.das.config
   cli_cxx_config.add_local_include_path('crash_reporting/src')
+
+  # Needed for Prometheus.
+  for p in prometheus.prometheus_include_path:
+    cli_cxx_config.add_system_include_path(p)
+  cli_cxx_config.add_system_include_path(grpc.grpc.protobuf_include)
+
   cli_cxx_config.lib_path_runtime('../lib')
   if not windows:
     cli_cxx_config.library_add(
@@ -1015,6 +1040,7 @@ def configure(
     ('grpc', []),
     ('kelips', []),
     ('overlay', []),
+    ('prometheus', []),
     ('rpc', []),
     ('storage', [aws_lib]),
   ]

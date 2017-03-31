@@ -15,6 +15,11 @@
 #include <infinit/model/doughnut/protocol.hh>
 #include <infinit/serialization.hh>
 
+namespace prometheus
+{
+  class Gauge;
+}
+
 namespace infinit
 {
   namespace overlay
@@ -100,11 +105,11 @@ namespace infinit
     | Hooks |
     `------*/
     public:
-      /// Announcing discovered nodes.
+      /// Announcing discovered/connected nodes.
       using DiscoveryEvent =
         boost::signals2::signal<auto (NodeLocation id, bool observer) -> void>;
       ELLE_ATTRIBUTE_RX(DiscoveryEvent, on_discovery);
-      /// Announcing disconnected nodes.
+      /// Announcing disappeared/disconnected nodes.
       using DisappearanceEvent =
         boost::signals2::signal<auto (model::Address id, bool observer) -> void>;
       ELLE_ATTRIBUTE_RX(DisappearanceEvent, on_disappearance);

@@ -38,6 +38,7 @@
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/doughnut/conflict/UBUpserter.hh>
+#include <infinit/model/prometheus.hh>
 #include <infinit/model/MonitoringServer.hh>
 #include <infinit/storage/MissingKey.hh>
 
@@ -45,6 +46,41 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
 
 namespace
 {
+  /// Create the family of counters used to count the number of
+  /// connected members for this DHT.
+  ::prometheus::Family<prometheus::Gauge>*
+  member_gauge_family()
+  {
+    static auto* res = [] () -> ::prometheus::Family<prometheus::Gauge>*
+    {
+      // Add a new member gauge family to the registry.
+      if (auto reg = infinit::prometheus::registry())
+      {
+        static auto& res = ::prometheus::BuildGauge()
+          .Name("infinit_overlay_peers")
+          .Help("How many overlay peers this overlay member is connected to")
+          .Register(*infinit::prometheus::registry());
+        return &res;
+      }
+      else
+        return {};
+    }();
+    return res;
+  }
+
+  /// Build a new Prometheus gauge.
+  ///
+  /// May return nullptr if set up failed.
+  ::prometheus::Gauge*
+  make_member_gauge(infinit::model::Address const& id)
+  {
+    if (auto* f = member_gauge_family())
+      return &f->Add({{"id", elle::sprintf("%f", id)}});
+    else
+      return nullptr;
+  }
+
+
   std::chrono::milliseconds
   _connect_timeout_val(elle::Defaulted<std::chrono::milliseconds> arg)
   {
@@ -155,6 +191,7 @@ namespace infinit
         , _soft_fail_running(
           _soft_fail_running_val(std::move(init.soft_fail_running)))
         , _id(std::move(init.id))
+        , _member_gauge(make_member_gauge(this->id()))
         , _keys(std::move(init.keys))
         , _owner(std::move(init.owner))
         , _passport(std::move(init.passport))
@@ -283,6 +320,8 @@ namespace infinit
           }
           this->_local.reset();
         }
+        if (this->_member_gauge)
+          member_gauge_family()->Remove(this->_member_gauge);
       }
 
       void

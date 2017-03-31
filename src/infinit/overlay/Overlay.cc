@@ -8,6 +8,7 @@
 #include <infinit/overlay/Overlay.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/DummyPeer.hh>
+#include <infinit/model/prometheus.hh>
 
 ELLE_LOG_COMPONENT("infinit.overlay.Overlay");
 
@@ -23,7 +24,23 @@ namespace infinit
                      std::shared_ptr<infinit::model::doughnut::Local> local)
       : _doughnut(dht)
       , _local(local)
-    {}
+    {
+      if (auto* g = _doughnut->_member_gauge)
+      {
+        ELLE_LOG_COMPONENT("infinit.overlay.Overlay.prometheus");
+        ELLE_TRACE("%s: construct, gauge: %s", this, g->Value());
+        this->on_discovery().connect([this, g](NodeLocation, bool){
+            ELLE_DEBUG("%s: signaling one more than %s",
+                     this, g->Value());
+            g->Increment();
+          });
+        this->on_disappearance().connect([this, g](model::Address, bool){
+            ELLE_DEBUG("%s: signaling one less than %s",
+                     this, g->Value());
+            g->Decrement();
+          });
+      }
+    }
 
     Overlay::~Overlay()
     {
