@@ -26,8 +26,11 @@ namespace infinit
       auto it = this->_blocks->find(key);
       if (it == this->_blocks->end())
         throw MissingKey(key);
-      auto& buffer = it->second;
-      return elle::Buffer(buffer.contents(), buffer.size());
+      else
+      {
+        auto& buffer = it->second;
+        return elle::Buffer(buffer.contents(), buffer.size());
+      }
     }
 
     std::size_t
@@ -57,13 +60,13 @@ namespace infinit
       }
       else
       {
-        auto search = this->_blocks->find(key);
-        if (search == this->_blocks->end())
+        auto i = this->_blocks->find(key);
+        if (i == this->_blocks->end())
           throw MissingKey(key);
         else
         {
           ELLE_DEBUG("%s: block updated", *this);
-          search->second = elle::Buffer(value.contents(), value.size());
+          i->second = elle::Buffer(value.contents(), value.size());
         }
       }
       // FIXME: impl.
@@ -75,39 +78,20 @@ namespace infinit
     {
       if (this->_blocks->erase(key) == 0)
         throw MissingKey(key);
-
-      // FIXME: impl.
-      return 0;
+      else
+        // FIXME: impl.
+        return 0;
     }
 
     std::vector<Key>
     Memory::_list()
     {
-      std::vector<Key> res;
-      for (auto const& b: *this->_blocks)
-        res.push_back(b.first);
-      return res;
+      return elle::make_vector(*this->_blocks,
+                               [](auto const& b)
+                               {
+                                 return b.first;
+                               });
     }
-
-    static
-    std::unique_ptr<Storage>
-    make(std::vector<std::string> const& args)
-    {
-      return std::make_unique<infinit::storage::Memory>();
-    }
-
-    MemoryStorageConfig::MemoryStorageConfig(
-      std::string name,
-      int64_t capacity,
-      boost::optional<std::string> description)
-      : StorageConfig(
-          std::move(name), std::move(capacity), std::move(description))
-    {}
-
-    MemoryStorageConfig::MemoryStorageConfig(
-      elle::serialization::SerializerIn& input)
-      : StorageConfig(input)
-    {}
 
     void
     MemoryStorageConfig::serialize(elle::serialization::Serializer& s)
@@ -120,10 +104,20 @@ namespace infinit
     {
       return std::make_unique<infinit::storage::Memory>();
     }
-
-    static const elle::serialization::Hierarchy<StorageConfig>::
-    Register<MemoryStorageConfig> _register_MemoryStorageConfig("memory");
   }
 }
 
-FACTORY_REGISTER(infinit::storage::Storage, "memory", &infinit::storage::make);
+namespace
+{
+  const auto reg
+    = elle::serialization::Hierarchy<infinit::storage::StorageConfig>::
+    Register<infinit::storage::MemoryStorageConfig>("memory");
+
+  std::unique_ptr<infinit::storage::Storage>
+  make(std::vector<std::string> const& args)
+  {
+    return std::make_unique<infinit::storage::Memory>();
+  }
+
+  FACTORY_REGISTER(infinit::storage::Storage, "memory", make);
+}

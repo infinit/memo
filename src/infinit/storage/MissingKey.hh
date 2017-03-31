@@ -1,9 +1,8 @@
-#ifndef INFINIT_STORAGE_MISSING_KEY_HH
-# define INFINIT_STORAGE_MISSING_KEY_HH
+#pragma once
 
-# include <elle/Error.hh>
+#include <elle/Error.hh>
 
-# include <infinit/storage/Key.hh>
+#include <infinit/storage/Key.hh>
 
 namespace infinit
 {
@@ -13,7 +12,7 @@ namespace infinit
       : public elle::Error
     {
     public:
-      typedef elle::Error Super;
+      using Super = elle::Error;
       MissingKey(Key key);
       MissingKey(elle::serialization::SerializerIn& input);
       void
@@ -23,5 +22,3 @@ namespace infinit
     };
   }
 }
-
-#endif

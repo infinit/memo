@@ -88,12 +88,12 @@ namespace infinit
     void
     Cache::_init() const
     {
-      if (!_use_list || this->_keys)
-        return;
-      ELLE_TRACE("%s: sync keys", *this);
-      auto keys = this->_storage->list();
-      this->_keys = Keys();
-      this->_keys->insert(keys.begin(), keys.end());
+      if (_use_list && !this->_keys)
+      {
+        ELLE_TRACE("%s: sync keys", *this);
+        auto keys = this->_storage->list();
+        this->_keys = Keys(keys.begin(), keys.end());
+      }
     }
 
     std::vector<Key>
@@ -102,7 +102,7 @@ namespace infinit
       if (_use_list)
       {
         _init();
-        return std::vector<Key>(this->_keys->begin(), this->_keys->end());
+        return {this->_keys->begin(), this->_keys->end()};
       }
       else
         return _storage->list();

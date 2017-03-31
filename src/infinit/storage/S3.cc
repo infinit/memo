@@ -129,18 +129,18 @@ namespace infinit
     }
 
     S3StorageConfig::S3StorageConfig(std::string name,
-                                    elle::service::aws::Credentials credentials,
-                                    elle::service::aws::S3::StorageClass storage_class,
-                                    boost::optional<int64_t> capacity,
-                                    boost::optional<std::string> description)
-      : StorageConfig(
+                                     elle::service::aws::Credentials credentials,
+                                     elle::service::aws::S3::StorageClass storage_class,
+                                     boost::optional<int64_t> capacity,
+                                     boost::optional<std::string> description)
+      : Super(
           std::move(name), std::move(capacity), std::move(description))
       , credentials(std::move(credentials))
       , storage_class(storage_class)
     {}
 
     S3StorageConfig::S3StorageConfig(elle::serialization::SerializerIn& s)
-      : StorageConfig(s)
+      : Super(s)
     {
       this->serialize(s);
     }
@@ -152,23 +152,19 @@ namespace infinit
       s.serialize("aws_credentials", this->credentials);
       if (s.out())
       {
-        std::string out;
-        switch (this->storage_class)
-        {
-          case elle::service::aws::S3::StorageClass::Standard:
-            out = "standard";
-            break;
-          case elle::service::aws::S3::StorageClass::StandardIA:
-            out = "standard_ia";
-            break;
-          case elle::service::aws::S3::StorageClass::ReducedRedundancy:
-            out = "reduced_redundancy";
-            break;
-
-          default:
-            out = "default";
-            break;
-        }
+        auto out = [this] () -> std::string {
+          switch (this->storage_class)
+          {
+            case StorageClass::Standard:
+              return "standard";
+            case StorageClass::StandardIA:
+              return "standard_ia";
+            case StorageClass::ReducedRedundancy:
+              return "reduced_redundancy";
+            default:
+              return "default";
+          }
+        }();
         s.serialize("storage_class", out);
       }
       else
@@ -178,15 +174,13 @@ namespace infinit
           std::string in;
           s.serialize("storage_class", in);
           if (in == "standard")
-            this->storage_class = elle::service::aws::S3::StorageClass::Standard;
+            this->storage_class = StorageClass::Standard;
           else if (in == "standard_ia")
-          {
-            this->storage_class = elle::service::aws::S3::StorageClass::StandardIA;
-          }
+            this->storage_class = StorageClass::StandardIA;
           else if (in == "reduced_redundancy")
-            this->storage_class = elle::service::aws::S3::StorageClass::ReducedRedundancy;
+            this->storage_class = StorageClass::ReducedRedundancy;
           else
-            this->storage_class = elle::service::aws::S3::StorageClass::Default;
+            this->storage_class = StorageClass::Default;
         }
         catch (elle::serialization::MissingKey const& e)
         {
@@ -208,9 +202,12 @@ namespace infinit
                                                      this->storage_class,
                                                      this->capacity);
     }
-
-    static const elle::serialization::Hierarchy<StorageConfig>::
-    Register<S3StorageConfig>
-    _register_S3StorageConfig("s3");
   }
+}
+
+namespace
+{
+  auto const res =
+    elle::serialization::Hierarchy<infinit::storage::StorageConfig>::
+    Register<infinit::storage::S3StorageConfig>("s3");
 }

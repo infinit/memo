@@ -1,8 +1,8 @@
-#ifndef INFINIT_STORAGE_CACHE_HH
-# define INFINIT_STORAGE_CACHE_HH
+#pragma once
 
-# include <set>
-# include <infinit/storage/Storage.hh>
+#include <set>
+
+#include <infinit/storage/Storage.hh>
 
 namespace infinit
 {
@@ -17,16 +17,12 @@ namespace infinit
             bool use_list = false, // optimize trusting keys from backend._list()
             bool use_status = true // optimize using backend._status()
             );
-      virtual
       elle::Buffer
       _get(Key k) const override;
-      virtual
       int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
-      virtual
       int
       _erase(Key k) override;
-      virtual
       std::vector<Key>
       _list() override;
       void
@@ -36,12 +32,10 @@ namespace infinit
       ELLE_ATTRIBUTE_R(boost::optional<int>, size);
       ELLE_ATTRIBUTE_R(bool, use_list);
       ELLE_ATTRIBUTE_R(bool, use_status);
-      typedef std::unordered_map<Key, elle::Buffer> Blocks;
+      using Blocks = std::unordered_map<Key, elle::Buffer>;
       ELLE_ATTRIBUTE(Blocks, blocks, mutable);
-      typedef std::set<Key> Keys;
+      using Keys = std::set<Key>;
       ELLE_ATTRIBUTE(boost::optional<Keys>, keys, mutable);
     };
   }
 }
-
-#endif

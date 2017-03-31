@@ -8,23 +8,24 @@ namespace infinit
 {
   namespace storage
   {
-
-    static
-    std::unique_ptr<infinit::storage::Storage>
-    make(std::vector<std::string> const& args)
+    namespace
     {
-      std::unique_ptr<Storage> backend = instantiate(args[0], args[1]);
-      std::string const& password = args[2];
-      bool salt = true;
-      if (args.size() > 3)
+      std::unique_ptr<infinit::storage::Storage>
+      make(std::vector<std::string> const& args)
       {
-        std::string const& v = args[3];
-        salt = (v == "1" || v == "yes" || v == "true");
+        auto backend = instantiate(args[0], args[1]);
+        std::string const& password = args[2];
+        bool salt = true;
+        if (args.size() > 3)
+        {
+          std::string const& v = args[3];
+          salt = v == "1" || v == "yes" || v == "true";
+        }
+        return std::make_unique<Crypt>(std::move(backend), password, salt);
       }
-      return std::make_unique<Crypt>(std::move(backend), password, salt);
     }
 
-    typedef  elle::cryptography::SecretKey SecretKey;
+    using SecretKey = elle::cryptography::SecretKey;
 
     Crypt::Crypt(std::unique_ptr<Storage> backend,
                  std::string const& password,
@@ -69,7 +70,7 @@ namespace infinit
       std::string name,
       boost::optional<int64_t> capacity,
       boost::optional<std::string> description)
-      : StorageConfig(name, std::move(capacity), std::move(description))
+      : Super(name, std::move(capacity), std::move(description))
     {}
 
     CryptStorageConfig::CryptStorageConfig(elle::serialization::SerializerIn& s)
@@ -94,12 +95,14 @@ namespace infinit
       return std::make_unique<infinit::storage::Crypt>(
         storage->make(), password, salt);
     }
-
-
-    static const elle::serialization::Hierarchy<StorageConfig>::
-    Register<CryptStorageConfig>
-    _register_CryptStorageConfig("crypt");
   }
 }
 
-FACTORY_REGISTER(infinit::storage::Storage, "crypt", &infinit::storage::make);
+namespace
+{
+  auto const reg
+  = elle::serialization::Hierarchy<infinit::storage::StorageConfig>::
+      Register<infinit::storage::CryptStorageConfig>("crypt");
+
+  FACTORY_REGISTER(infinit::storage::Storage, "crypt", &infinit::storage::make);
+}
