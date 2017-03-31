@@ -14,7 +14,7 @@
 
 ELLE_LOG_COMPONENT("infinit.model.faith.Faith");
 
-typedef elle::serialization::Binary Serializer;
+using Serializer = elle::serialization::Binary;
 
 namespace infinit
 {
