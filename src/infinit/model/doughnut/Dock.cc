@@ -289,18 +289,25 @@ namespace infinit
                   this->_thread->dispose(true);
                   this->_thread.release();
                   this->_on_connection.disconnect_all_slots();
-              });
+                });
               this->_cleanup_on_disconnect = std::function<void()>();
               bool connected = false;
               ELLE_TRACE_SCOPE("%s: connection attempt to %s endpoints",
                                this, this->_location.endpoints().size());
               ELLE_DEBUG("endpoints: %s", this->_location.endpoints());
-              auto handshake = [&] (std::unique_ptr<std::iostream> socket)
+              auto handshake = [&] (std::unique_ptr<std::iostream> socket,
+                                    bool pings)
                 {
+                  boost::optional<std::chrono::milliseconds> ping_time;
+                  if (pings)
+                    ping_time = std::chrono::milliseconds(10000);
                   auto sv = elle_serialization_version(
                     this->_dock.doughnut().version());
-                  auto serializer = elle::make_unique<elle::protocol::Serializer>(
-                    *socket, sv, false);
+                  auto serializer =
+                    elle::make_unique<elle::protocol::Serializer>(
+                      *socket, sv, false,
+                      ping_time,
+                      ping_time);
                   auto channels =
                   elle::make_unique<elle::protocol::ChanneledStream>(*serializer);
                   if (!disable_key)
@@ -341,7 +348,17 @@ namespace infinit
                         [&, e]
                         {
                           using elle::reactor::network::TCPSocket;
-                          handshake(elle::make_unique<TCPSocket>(e.tcp()));
+                          handshake(elle::make_unique<TCPSocket>(e.tcp()),
+                                    true);
+                          this->_serializer->ping_timeout().connect(
+                            [this]
+                            {
+                              ELLE_WARN("%s: heartbeat timeout", this);
+                              this->_disconnected_exception =
+                                std::make_exception_ptr(
+                                  elle::reactor::network::ConnectionClosed());
+                              this->_thread->terminate();
+                            });
                           this->_connected_endpoint = e;
                           scope.terminate_now();
                         }));
@@ -360,7 +377,7 @@ namespace infinit
                             this->_dock._utp_server);
                         this->_connected_endpoint = socket->peer();
                         socket->connect(cid, eps);
-                        handshake(std::move(socket));
+                        handshake(std::move(socket), false);
                         scope.terminate_now();
                       }));
                 elle::reactor::wait(scope);
