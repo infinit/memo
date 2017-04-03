@@ -70,7 +70,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Product',
-      'description': 'Discover the benefits of the Infinit decentralized storage platform: scalabilty, elasticity and resilience.',
+      'description': 'Discover the benefits of the Infinit decentralized storage platform: scalabilty, resilience and more.',
     }
 
   @route('/docker', name = 'docker')
@@ -78,7 +78,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Persistent Storage Solutions for Docker',
-      'description': 'Infinit provdides many persistent storage solutions to make your containerized Docker applications stateful.',
+      'description': 'Infinit provides persistent storage through several solutions well suited to make your containerized Docker applications stateful.',
     }
 
   @route('/drive', name = 'drive')
