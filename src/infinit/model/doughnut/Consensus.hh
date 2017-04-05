@@ -1,16 +1,15 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_CONSENSUS_HH
-# define INFINIT_MODEL_DOUGHNUT_CONSENSUS_HH
+#pragma once
 
-# include <elle/Clonable.hh>
+#include <elle/Clonable.hh>
 
-# include <infinit/model/doughnut/Peer.hh>
-# include <infinit/model/doughnut/fwd.hh>
-# include <infinit/model/doughnut/protocol.hh>
-# include <infinit/overlay/Overlay.hh>
+#include <infinit/model/doughnut/Peer.hh>
+#include <infinit/model/doughnut/fwd.hh>
+#include <infinit/model/doughnut/protocol.hh>
+#include <infinit/overlay/Overlay.hh>
 
-# ifdef stat
-#  undef stat
-# endif
+#ifdef stat
+# undef stat
+#endif
 
 namespace infinit
 {
@@ -155,5 +154,3 @@ namespace infinit
     }
   }
 }
-
-#endif
