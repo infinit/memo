@@ -46,7 +46,7 @@ namespace infinit
 
   std::unique_ptr<elle::reactor::filesystem::FileSystem>
   Volume::run(std::shared_ptr<model::doughnut::Doughnut> dht,
-              boost::optional<std::string> mountpoint_,
+              boost::optional<std::string> mountpoint_, // FIXME: unused.
               boost::optional<bool> readonly,
               bool allow_root_creation,
               bool map_other_permissions
@@ -58,17 +58,13 @@ namespace infinit
 #endif
     )
   {
-#if defined INFINIT_MACOSX || defined INFINIT_WINDOWS
-    if (!volname_)
-      volname_ = this->name;
-#endif
     {
-      std::vector<std::string> opts;
-      std::unordered_map<std::string, std::string> env;
+      auto opts = std::vector<std::string>{};
+      auto env = std::unordered_map<std::string, std::string>{};
       mount_options.to_commandline(opts, env);
       ELLE_TRACE("mount options: %s  environ %s", opts, env);
     }
-    boost::optional<boost::filesystem::path> mountpoint;
+    auto mountpoint = boost::optional<boost::filesystem::path>{};
     if (this->mount_options.mountpoint)
       mountpoint = boost::filesystem::path(this->mount_options.mountpoint.get());
     auto fs = elle::make_unique<filesystem::FileSystem>(
@@ -109,7 +105,7 @@ namespace infinit
           fuse_options.emplace_back("-o");
           fuse_options.emplace_back(elle::sprintf("%s=%s", opt_name, opt_val));
         };
-      add_option("volname", *volname_);
+      add_option("volname", volname_.value_or(this->name));
 #endif
 #ifdef INFINIT_MACOSX
       add_option("daemon_timeout", "600");
