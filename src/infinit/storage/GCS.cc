@@ -1,4 +1,3 @@
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
@@ -28,7 +27,6 @@ namespace infinit
 {
   namespace storage
   {
-
     std::string
     GCS::_url(Key key) const
     {
@@ -108,7 +106,7 @@ namespace infinit
     {
       auto url = elle::sprintf("https://storage.googleapis.com/%s?prefix=%s",
                                this->_bucket, this->_root);
-      std::vector<Key> result;
+      auto res = std::vector<Key>{};
       while (true)
       {
         auto r = this->_request(url,
@@ -118,14 +116,12 @@ namespace infinit
         ptree response;
         read_xml(r, response);
         for (auto const& base_element: response.get_child("ListBucketResult"))
-        {
           if (base_element.first == "Contents")
           {
              std::string fname = base_element.second.get<std::string>("Key");
              auto pos = fname.find("0x");
-             result.push_back(Key::from_string(fname.substr(pos+2)));
+             res.emplace_back(Key::from_string(fname.substr(pos+2)));
           }
-        }
         try
         {
           auto next = response.get_child("ListBucketResult").get<std::string>("NextMarker");
@@ -139,12 +135,12 @@ namespace infinit
           break;
         }
       }
-      if (result.empty())
+      if (res.empty())
         ELLE_TRACE("listing is empty");
       else
-        ELLE_TRACE("reloaded %s keys from %s to %s", result.size(),
-          result.front(), result.back());
-      return result;
+        ELLE_TRACE("reloaded %s keys from %s to %s", res.size(),
+          res.front(), res.back());
+      return res;
     }
 
     GCSConfig::GCSConfig(std::string const& name,

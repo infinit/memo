@@ -40,7 +40,7 @@ namespace infinit
             this->_usage += _file_size;
           }
       ELLE_DEBUG("Recovering _usage (%s) and _size_cache (%s)",
-                 this->_usage , this->_size_cache.size());
+                 this->_usage, this->_size_cache.size());
     }
 
     elle::Buffer
@@ -70,11 +70,9 @@ namespace infinit
       ELLE_TRACE("set %x", key);
       static elle::Bench bench("bench.fsstorage.set", 10000_sec);
       elle::Bench::BenchScope bs(bench);
-      auto path = this->_path(key);
-      bool exists = bfs::exists(path);
-      int size = 0;
-      if (exists)
-        size = bfs::file_size(path);
+      auto const path = this->_path(key);
+      bool const exists = bfs::exists(path);
+      int const size = exists ? bfs::file_size(path) : 0;
       int delta = value.size() - size;
       if (this->capacity() && this->usage() + delta > this->capacity())
         throw InsufficientSpace(delta, this->usage(), this->capacity().get());
@@ -101,12 +99,12 @@ namespace infinit
       ELLE_TRACE("erase %x", key);
       static elle::Bench bench("bench.fsstorage.erase", 10000_sec);
       elle::Bench::BenchScope bs(bench);
-      auto path = this->_path(key);
+      auto const path = this->_path(key);
       if (!exists(path))
         throw MissingKey(key);
       remove(path);
 
-      int delta = this->_size_cache[key];
+      int const delta = this->_size_cache[key];
       this->_size_cache.erase(key);
       ELLE_DEBUG("_erase: -delta = %s", -delta);
       return -delta;
