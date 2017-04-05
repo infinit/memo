@@ -1,14 +1,14 @@
 #ifdef INFINIT_WINDOWS
-#include <fcntl.h>
+# include <fcntl.h>
 #endif
 
 #include <sys/stat.h> // S_IMFT...
-
 
 #include <elle/utils.hh>
 
 #include <elle/reactor/filesystem.hh>
 #include <elle/reactor/scheduler.hh>
+
 #include <infinit/grpc/fs.grpc.pb.h>
 
 ELLE_LOG_COMPONENT("infinit.grpc.filesystem");
@@ -40,15 +40,17 @@ namespace infinit
       Status
       Write(Ctx*, const ::HandleBuffer* request, ::FsStatus* response);
       Status
-      ReadStream(Ctx*, const ::HandleRange* request, ::grpc::ServerWriter< ::StatusBuffer>* writer);
+      ReadStream(Ctx*, const ::HandleRange* request, ::grpc::ServerWriter<::StatusBuffer>* writer);
       Status
-      WriteStream(Ctx*, ::grpc::ServerReader< ::HandleBuffer>* reader, ::FsStatus* response);
+      WriteStream(Ctx*, ::grpc::ServerReader<::HandleBuffer>* reader, ::FsStatus* response);
     private:
       void
       managed(const char* name, ::FsStatus& status, std::function<void()> f);
       elle::reactor::Scheduler& _sched;
       elle::reactor::filesystem::FileSystem& _fs;
-      typedef std::unordered_map<std::string, std::unique_ptr<elle::reactor::filesystem::Handle>> Handles;
+      using Handles =
+        std::unordered_map<std::string,
+                           std::unique_ptr<elle::reactor::filesystem::Handle>>;
       Handles _handles;
       int _next_handle;
     };
@@ -57,9 +59,7 @@ namespace infinit
       : _sched(elle::reactor::scheduler())
       , _fs(fs)
       , _next_handle(0)
-    {
-
-    }
+    {}
 
     void
     FSImpl::managed(const char* name, ::FsStatus& status, std::function<void()> f)
@@ -186,7 +186,7 @@ namespace infinit
     }
 
     ::grpc::Status
-    FSImpl::ReadStream(Ctx*, const ::HandleRange* request, ::grpc::ServerWriter< ::StatusBuffer>* writer)
+    FSImpl::ReadStream(Ctx*, const ::HandleRange* request, ::grpc::ServerWriter<::StatusBuffer>* writer)
     {
       static const int64_t chunk = 1 << 19; // 512K
       ::FsStatus status;
@@ -200,7 +200,7 @@ namespace infinit
           auto pos = start;
           ::StatusBuffer sb;
           sb.mutable_buffer()->mutable_data()->resize(chunk);
-          while ((size < 0) ? true : (pos < start + size))
+          while (size < 0 || pos < start + size)
           {
             auto sz = chunk;
             if (size >= 0)
