@@ -15,8 +15,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        using Self = infinit::model::blocks::MutableBlock;
-        using Super = infinit::model::blocks::Block;
+        using Self = MutableBlock;
+        using Super = Block;
 
       /*-------------.
       | Construction |
@@ -32,7 +32,6 @@ namespace infinit
       | Clone  |
       `-------*/
       public:
-
         std::unique_ptr<Block>
         clone() const override;
 

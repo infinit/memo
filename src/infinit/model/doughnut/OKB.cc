@@ -27,9 +27,8 @@ namespace infinit
   {
     namespace doughnut
     {
-      /* Maintain backward compatibility with a short-livel 0.7.0 using
-       * key hashes instead of ids
-      */
+      /// Maintain backward compatibility with a short-lived 0.7.0
+      /// using key hashes instead of ids.
       using KeyOrHash
         = elle::Option<elle::cryptography::rsa::PublicKey, elle::Buffer, int>;
 
@@ -41,7 +40,7 @@ namespace infinit
       {
         if (v < elle::Version(0, 7, 0))
           return s.deserialize<elle::cryptography::rsa::PublicKey>(field_name);
-        KeyOrHash koh = s.deserialize<KeyOrHash>(field_name + "_koh");
+        auto koh = s.deserialize<KeyOrHash>(field_name + "_koh");
         if (koh.is<elle::Buffer>())
         {
           if (!dn)
@@ -123,19 +122,20 @@ namespace infinit
               if (it != key_hash_cache.get<0>().end())
               {
                 ELLE_DUMP("serialize key hash for %s: %s", key, it->hash);
-                KeyOrHash koh(it->hash);
+                auto koh = KeyOrHash(it->hash);
                 s.serialize(field_name + "_koh", koh);
               }
               else
-              { // Local peer never sent us that key: no hash
+              {
+                // Local peer never sent us that key: no hash
                 ELLE_TRACE("No hash available for %f", key);
-                KeyOrHash koh(key);
+                auto koh = KeyOrHash(key);
                 s.serialize(field_name + "_koh", koh);
               }
             }
             else
             {
-              KeyOrHash koh(key);
+              auto koh = KeyOrHash(key);
               s.serialize(field_name + "_koh", koh);
             }
           }
@@ -227,8 +227,7 @@ namespace infinit
       OKBHeader::OKBHeader(elle::serialization::SerializerIn& s,
                            elle::Version const& v)
         : _salt()
-        , _owner_key(std::make_shared(
-            deserialize_key_hash(s, v, "key")))
+        , _owner_key(std::make_shared(deserialize_key_hash(s, v, "key")))
         , _signature()
       {
         s.serialize_context<Doughnut*>(this->_doughnut);
@@ -303,15 +302,11 @@ namespace infinit
       BaseOKB<Block>::operator ==(blocks::Block const& other) const
       {
         auto other_okb = dynamic_cast<Self const*>(&other);
-        if (!other_okb)
-          return false;
-        if (this->_salt != other_okb->_salt)
-          return false;
-        if (*this->_owner_key != *other_okb->_owner_key)
-          return false;
-        //if (this->_signature->value() != other_okb->_signature->value())
-        //  return false;
-        return this->Super::operator ==(other);
+        return (other_okb
+                && this->_salt == other_okb->_salt
+                && *this->_owner_key == *other_okb->_owner_key
+                // && this->_signature->value() == other_okb->_signature->value()
+                && this->Super::operator ==(other));
       }
 
       template <typename Block>
@@ -445,7 +440,7 @@ namespace infinit
           this->_version = *version;
         else
           if (bump_version)
-            ++this->_version; // FIXME: idempotence in case the write fails ?
+            ++this->_version; // FIXME: idempotence in case the write fails?
         if (!this->_owner_private_key)
           elle::err("attempting to seal an unowned OKB");
         this->_signature =
@@ -467,8 +462,10 @@ namespace infinit
       {
         static elle::Bench bench("bench.okb._validate", 10000_sec);
         elle::Bench::BenchScope scope(bench);
-        if (auto res = static_cast<OKBHeader const*>
-            (this)->validate(this->address())); else
+        if (auto res =
+            static_cast<OKBHeader const*>(this)->validate(this->address()))
+          {}
+        else
           return res;
         ELLE_DEBUG("check signature")
         {

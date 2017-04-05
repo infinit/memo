@@ -1,9 +1,8 @@
-#ifndef INFINIT_MODEL_DOUGHNUT_CONFLICT_HH
-# define INFINIT_MODEL_DOUGHNUT_CONFLICT_HH
+#pragma once
 
-# include <elle/Error.hh>
+#include <elle/Error.hh>
 
-# include <infinit/model/blocks/Block.hh>
+#include <infinit/model/blocks/Block.hh>
 
 namespace infinit
 {
@@ -16,7 +15,7 @@ namespace infinit
     | Types |
     `------*/
     public:
-      using Self = infinit::model::Conflict;
+      using Self = Conflict;
       using Super = elle::Error;
 
     /*-------------.
@@ -43,5 +42,3 @@ namespace infinit
     };
   }
 }
-
-#endif

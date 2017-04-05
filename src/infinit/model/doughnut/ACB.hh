@@ -42,6 +42,7 @@ namespace infinit
                                     elle::Version const& v);
       };
 
+      /// Common implementation for ACB and GB blocks.
       template<typename Block>
       class BaseACB
         : public BaseOKB<Block>
@@ -97,11 +98,11 @@ namespace infinit
         ELLE_CLONABLE();
         int
         version() const override;
+
       /*--------.
       | Content |
       `--------*/
       protected:
-
         elle::Buffer
         _decrypt_data(elle::Buffer const& data) const override;
         void
@@ -148,10 +149,10 @@ namespace infinit
       `-----------*/
       public:
         using Super::seal;
-        // Seal with a specific secret key.
+        /// Seal with a specific secret key.
         void
         seal(boost::optional<int> version, elle::cryptography::SecretKey const& key);
-        // Seal with a specific version
+        /// Seal with a specific version
         void seal(int version);
       protected:
         blocks::ValidationResult
@@ -170,7 +171,6 @@ namespace infinit
         public:
           OwnerSignature(BaseACB<Block> const& block);
         protected:
-
           void
           _serialize(elle::serialization::SerializerOut& s,
                      elle::Version const& v) override;
