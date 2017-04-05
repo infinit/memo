@@ -85,8 +85,7 @@ namespace infinit
 
       void
       ACLBlock::_set_world_permissions(bool, bool)
-      {
-      }
+      {}
 
       std::pair<bool, bool>
       ACLBlock::_get_world_permissions() const
@@ -96,8 +95,7 @@ namespace infinit
 
       void
       ACLBlock::_copy_permissions(ACLBlock& to)
-      {
-      }
+      {}
 
       std::vector<ACLBlock::Entry>
       ACLBlock::_list_permissions(boost::optional<Model const&>) const

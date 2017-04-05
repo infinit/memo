@@ -15,8 +15,8 @@ namespace infinit
       | Types |
       `------*/
       public:
-        using Self = infinit::model::blocks::ImmutableBlock;
-        using Super = infinit::model::blocks::Block;
+        using Self = ImmutableBlock;
+        using Super = Block;
 
       /*-------------.
       | Construction |

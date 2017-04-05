@@ -1,10 +1,9 @@
-#ifndef INFINIT_MODEL_MISSING_BLOCK_HH
-# define INFINIT_MODEL_MISSING_BLOCK_HH
+#pragma once
 
-# include <elle/Error.hh>
-# include <elle/attribute.hh>
+#include <elle/Error.hh>
+#include <elle/attribute.hh>
 
-# include <infinit/model/Address.hh>
+#include <infinit/model/Address.hh>
 
 namespace infinit
 {
@@ -24,5 +23,3 @@ namespace infinit
     };
   }
 }
-
-#endif

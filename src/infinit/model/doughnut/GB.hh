@@ -28,7 +28,7 @@ namespace infinit
         using Super = BaseACB<blocks::GroupBlock>;
         GB(Doughnut* owner, elle::cryptography::rsa::KeyPair master);
         GB(GB const& other);
-        ~GB() override;
+        ~GB() override = default;
 
       public:
         void
@@ -58,6 +58,7 @@ namespace infinit
         group_version() const;
         std::shared_ptr<elle::cryptography::rsa::PrivateKey>
         control_key() const;
+
       protected:
         class OwnerSignature
           : public Super::OwnerSignature
@@ -65,7 +66,6 @@ namespace infinit
         public:
           OwnerSignature(GB const& block);
         protected:
-
           void
           _serialize(elle::serialization::SerializerOut& s,
                      elle::Version const& v) override;
@@ -137,4 +137,3 @@ namespace infinit
     }
   }
 }
-

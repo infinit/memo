@@ -11,16 +11,21 @@
 #include <elle/cryptography/hash.hh>
 #include <elle/system/Process.hh>
 
-extern "C" void outguess_extract(
-  u_char* key, int key_length, // secret key
-  u_char** out, u_int* out_len, // output extracted/decrypted data
-  char* filename // input image
+extern "C"
+{
+  void outguess_extract(
+    u_char* key, int key_length, // secret key
+    u_char** out, u_int* out_len, // output extracted/decrypted data
+    char* filename // input image
   );
 
-extern "C" int outguess_inject(u_char* data, int len, // data to embed
-  u_char* key, int key_length,  // secret key
-  char* filename // input/output image
+  int outguess_inject(
+    u_char* data, int len, // data to embed
+    u_char* key, int key_length,  // secret key
+    char* filename // input/output image
   );
+}
+
 ELLE_LOG_COMPONENT("infinit.fs.steg");
 
 namespace infinit
@@ -36,30 +41,26 @@ class InjectionFailure: public elle::reactor::filesystem::Error
 {
 public:
   InjectionFailure()
-  : elle::reactor::filesystem::Error(EIO, "injection failure")
+    : elle::reactor::filesystem::Error(EIO, "injection failure")
   {}
 };
 
 
 Steg::Steg(boost::filesystem::path const& storage, std::string const& pass)
-: _storage_path(storage)
-, _passphrase(pass)
+  : _storage_path(storage)
+  , _passphrase(pass)
 {
   _rng.seed(static_cast<unsigned int>(std::time(0)));
   // populate file list
-  auto it = bfs::recursive_directory_iterator(_storage_path);
-  for (;it != bfs::recursive_directory_iterator(); ++it)
-  {
-    bfs::path p(*it);
+  for (auto const& p: bfs::recursive_directory_iterator(_storage_path))
     if (p.extension() == ".jpg" || p.extension() == ".JPG")
     {
       ELLE_DEBUG("caching %s", p);
       _free_blocks.push_back(p);
       auto hash = elle::cryptography::hash::sha256(p.string());
-      Address res = Address(hash.contents());
-      _cache.insert(std::make_pair(res, p));
+      auto const res = Address(hash.contents());
+      _cache.emplace(res, p);
     }
-  }
 }
 
 Address
@@ -67,13 +68,13 @@ Steg::_pick() const
 {
   if (_free_blocks.empty())
     throw std::bad_alloc();
-  boost::random::uniform_int_distribution<> random(0, _free_blocks.size());
+  auto random =boost::random::uniform_int_distribution<>(0, _free_blocks.size());
   int v = random(_rng);
   boost::filesystem::path p = _free_blocks[v];
   _free_blocks[v] =  _free_blocks[_free_blocks.size() - 1];
   _free_blocks.pop_back();
-  auto hash = elle::cryptography::hash::sha256(p.string());
-  Address res = Address(hash.contents());
+  auto const hash = elle::cryptography::hash::sha256(p.string());
+  auto const res = Address(hash.contents());
   _cache.insert(std::make_pair(res, p));
 
   _used_blocks.push_back(res);
@@ -84,7 +85,13 @@ Steg::_pick() const
 std::unique_ptr<blocks::MutableBlock>
 Steg::_make_mutable_block() const
 {
-  if (!_root)
+  if (_root)
+  {
+    Address address = _pick();
+    auto res = std::make_unique<blocks::Block>(address);
+    return res;
+  }
+  else
   {
     _root = _pick();
     _root_data = std::make_unique<blocks::Block>(*_root);
@@ -93,9 +100,6 @@ Steg::_make_mutable_block() const
     const_cast<Steg*>(this)->__store(*_root_data);
     return std::make_unique<blocks::Block>(*_root);
   }
-  Address address = _pick();
-  auto res = std::make_unique<blocks::Block>(address);
-  return res;
 }
 
 void
@@ -190,8 +194,7 @@ Steg::__fetch(Address address) const
   data.append(d+8, size);
   free(d);
   ELLE_DEBUG("fetched %s: %s bytes", it->second, data.size());
-  auto res = std::make_unique<blocks::Block>(address, std::move(data));
-  return res;
+  return std::make_unique<blocks::Block>(address, std::move(data));
 }
 
 void
