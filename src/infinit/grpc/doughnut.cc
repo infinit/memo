@@ -124,7 +124,7 @@ namespace infinit
     {};
 
     template <typename A, typename E>
-    struct ExceptionExtracter <elle::Option<A, E>>
+    struct ExceptionExtracter<elle::Option<A, E>>
     {
       template <typename T>
       static
