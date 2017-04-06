@@ -9,6 +9,7 @@
 #include <infinit/model/Address.hh>
 #include <infinit/model/blocks/ValidationResult.hh>
 #include <infinit/model/fwd.hh>
+#include <infinit/model/prometheus.hh>
 #include <infinit/serialization.hh>
 
 namespace infinit
@@ -33,10 +34,75 @@ namespace infinit
         boost::optional<elle::Buffer> signature;
       };
 
+      /// A gauge to track the number of members of a DHT.
+      ///
+      /// May return nullptr if set up failed.
+      infinit::prometheus::GaugePtr
+      make_block_gauge(std::string const& type);
+
+      /// A base class to bind a gauge to a number of instances.
+      template <typename Self>
+      struct InstanceTracker
+      {
+        InstanceTracker()
+        {
+          _block_gauge_increment();
+        }
+
+        InstanceTracker(InstanceTracker&&)
+        {
+          _block_gauge_increment();
+        }
+
+        InstanceTracker(InstanceTracker const&)
+        {
+          _block_gauge_increment();
+        }
+
+        ~InstanceTracker()
+        {
+          _block_gauge_decrement();
+        }
+
+        static
+        infinit::prometheus::Gauge*
+        _block_gauge()
+        {
+          static auto res
+            = infinit::model::blocks::make_block_gauge(Self::type);
+          return res.get();
+        }
+
+        static
+        void
+        _block_gauge_increment()
+        {
+          if (auto g = _block_gauge())
+          {
+            ELLE_LOG_COMPONENT("infinit.model.blocks.Block.prometheus");
+            ELLE_DEBUG("increment: %s", Self::type);
+            g->Increment();
+          }
+        }
+
+        static
+        void
+        _block_gauge_decrement()
+        {
+          if (auto g = _block_gauge())
+          {
+            ELLE_LOG_COMPONENT("infinit.model.blocks.Block.prometheus");
+            ELLE_DEBUG("decrement: %s", Self::type);
+            g->Decrement();
+          }
+        }
+      };
+
       class Block
         : public elle::Printable
         , public elle::serialization::VirtuallySerializable<Block, true>
         , public elle::Clonable<Block>
+        , private InstanceTracker<Block>
       {
       /*-------------.
       | Construction |
@@ -49,6 +115,7 @@ namespace infinit
         friend class infinit::model::Model;
 
         ~Block() override = default;
+        static char const* type;
 
       /*---------.
       | Clonable |

@@ -14,6 +14,7 @@ namespace infinit
       GroupBlock::GroupBlock(Address a)
         : ACLBlock(a)
       {}
+      char const* GroupBlock::type = "group";
 
       GroupBlock::GroupBlock(Address a, elle::Buffer data)
         : ACLBlock(a, data)

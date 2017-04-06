@@ -13,6 +13,7 @@ namespace infinit
     {
       class GroupBlock
         : public ACLBlock
+        , private InstanceTracker<GroupBlock>
       {
       /*------.
       | Types |
@@ -20,6 +21,8 @@ namespace infinit
       public:
         using Self = GroupBlock;
         using Super = ACLBlock;
+        static char const* type;
+
 
         GroupBlock(GroupBlock const& other);
       protected:

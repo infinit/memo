@@ -10,6 +10,7 @@ namespace infinit
     {
       class ImmutableBlock
         : public Block
+        , private InstanceTracker<ImmutableBlock>
       {
       /*------.
       | Types |
@@ -17,6 +18,7 @@ namespace infinit
       public:
         using Self = ImmutableBlock;
         using Super = Block;
+        static char const* type;
 
       /*-------------.
       | Construction |

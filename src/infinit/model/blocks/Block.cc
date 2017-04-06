@@ -11,6 +11,21 @@ namespace infinit
   {
     namespace blocks
     {
+      infinit::prometheus::GaugePtr
+      make_block_gauge(std::string const& type)
+      {
+        /// The family of COUNTERs used to count the number of
+        /// connected members for this DHT.
+        static auto* family
+          = infinit::prometheus::instance().make_gauge_family(
+            "infinit_blocks",
+            "Number of blocks");
+        return infinit::prometheus::instance()
+          .make(family, {{"type", type}});
+      }
+
+      char const* Block::type = "block";
+
       /*-------------.
       | Construction |
       `-------------*/
@@ -20,7 +35,6 @@ namespace infinit
         , _data()
         , _validated(false)
       {}
-
       Block::Block(Address address, elle::Buffer data)
         : _address(std::move(address))
         , _data(std::move(data))

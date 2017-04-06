@@ -10,6 +10,7 @@ namespace infinit
         : Super(address)
         , _data_changed(true)
       {}
+      char const* MutableBlock::type = "mutable";
 
       MutableBlock::MutableBlock(Address address, elle::Buffer data)
         : Super(address, data)

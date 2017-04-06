@@ -10,6 +10,8 @@ namespace infinit
   {
     namespace blocks
     {
+      char const* ACLBlock::type = "acl";
+
       /*-------------.
       | Construction |
       `-------------*/

@@ -301,9 +301,10 @@ def configure(
   for p in prometheus.prometheus_include_path:
     cxx_config_infinit.add_system_include_path(p)
     cxx_config.add_system_include_path(p)
-  extra_libs.append(drake.copy(prometheus.prometheus_lib,
-                               'bin' if windows else 'lib',
-                               strip_prefix = True))
+  prometheus_lib = drake.copy(prometheus.prometheus_lib,
+                              'bin' if windows else 'lib',
+                              strip_prefix = True)
+  extra_libs.append(prometheus_lib)
   drake.node('src/infinit/model/prometheus.hh')\
        .dependencies_add(drake.nodes('prometheus/prometheus-cpp/lib/cpp/metrics.pb.h'))
 
@@ -516,7 +517,8 @@ def configure(
       cryptography_lib,
       elle_lib,
       protocol_lib,
-      reactor_lib
+      reactor_lib,
+      prometheus_lib
     ]
   if enable_crash_reporting:
     infinit_cli_deps.append(crash_reporter_lib)
@@ -1046,7 +1048,7 @@ def configure(
     ('storage', [aws_lib]),
   ]
   if not windows:
-    tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
+    tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib, prometheus_lib]
   else:
     tests_extra_libs = []
 
