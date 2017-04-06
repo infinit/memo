@@ -567,12 +567,14 @@ namespace infinit
       Doughnut::ensure_key(std::shared_ptr<elle::cryptography::rsa::PublicKey> const& k)
       {
         auto it = this->_key_cache.get<0>().find(*k);
-        if (it != this->_key_cache.get<0>().end())
+        if (it == this->_key_cache.get<0>().end())
+        {
+          int index = this->_key_cache.get<0>().size();
+          this->_key_cache.insert(KeyHash(index, k));
+          return index;
+        }
+        else
           return it->hash;
-
-        int index = this->_key_cache.get<0>().size();
-        this->_key_cache.insert(KeyHash(index, k));
-        return index;
       }
 
       std::shared_ptr<elle::cryptography::rsa::PublicKey>
@@ -580,12 +582,13 @@ namespace infinit
       {
         ELLE_DUMP("%s: resolve key from %x", this, hash);
         auto it = this->_key_cache.get<1>().find(hash);
-        if (it != this->_key_cache.get<1>().end())
+        if (it == this->_key_cache.get<1>().end())
+          elle::err("%s: failed to resolve key hash locally: %x", this, hash);
+        else
         {
           ELLE_DUMP("%s: resolved from cache: %x", this, hash);
           return it->key;
         }
-        elle::err("%s: failed to resolve key hash locally: %x", this, hash);
       }
 
       void
